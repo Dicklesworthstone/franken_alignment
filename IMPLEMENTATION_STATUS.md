@@ -1,6 +1,12 @@
 # Implementation status · design revision 0.3
 
-## Latest qualified batch: full-input witnesses, frontiers and initial admission
+## Latest qualified batch: capped reduction and owned registry checks
+
+The third isolated batch passed on `hz4` under `nightly-2026-09-07`: **56 reference unit tests, 16 reference integration tests, 102 xtask tests and 2 doctests passed; zero failed**. Qualified source is committed in `84eeca9`; [the receipt](artifacts/execution/2026-09-07-epoch3-receipt.json) identifies the exact base, nine overlay files and passing [remote log](artifacts/execution/2026-09-07-epoch3-attempt3.log). The preceding Clippy failure and real Cargo ancestor-workspace discovery failure are retained. The latter was fixed by explicitly binding metadata collection to the requested `Cargo.toml`; its test was not weakened.
+
+The reference reducer clips empirical weights per member and cohort using name-independent floor-proportional allocation, discards fractional remainders, rejects actor statements and preserves exact disqualifier dominance. It grants no authority and does not implement credibility or helper selection. The owned xtask now checks registry IDs, DAGs, declared links, retained files and scoped Rust test declarations. It rejects lexical lookalikes and escaping symlinks, and checks the actual compiler-reported identity against the qualified Linux commit. Those checks do not authenticate operator binaries or prove the referenced invariants. Full founding-concordance validation, source-snapshot verification and general dependency admission remain separate unfinished work.
+
+## Second qualified batch: full-input witnesses, frontiers and initial admission
 
 The second isolated batch passed the complete gate remotely on `hz4` under `nightly-2026-09-07` (rustc `5a2be9f5f075d31e3ca5526b5b029881ce441253`): **44 reference unit tests, 16 reference integration tests, 69 xtask tests, one positive doctest and one private-field compile-fail doctest passed; zero failed**. The driver actually collected `cargo metadata --locked --offline --filter-platform` for `aarch64-apple-darwin` and `x86_64-unknown-linux-gnu`, checked their exact initial inventory, and resolved workspace/manifest/target paths against the real filesystem. Compilation and tests ran on Linux; collecting an Apple target graph is not Apple execution.
 
@@ -22,8 +28,8 @@ The round uses a deliberately non-cryptographic FNV comparison and proves no cry
 | Founding essays | Both read in full again for revision 0.3; head commits recorded in `registry/sources.json` | Complete premise; no missing post |
 | Ten donor/build project deep dives | Targeted code/manifest/plan review at fixed refs (revision 0.2) | Exact files/scopes recorded; not full repository audits or builds |
 | Pure-Rust reference workspace | Source present, zero external packages, formatted with `cargo fmt --all` on 2026-09-06 | Selected logical semantics only; not a broker |
-| Rust test functions | **44 unit + 16 integration reference tests, 69 xtask tests and 2 doctests passed remotely on 2026-09-07**; earlier runs remain dated below | Exact frozen batch above; not production evidence or credit for other work in progress |
-| Rust local gate driver | **Complete reference gate PASS remotely on 2026-09-07** under `nightly-2026-09-07`; earlier local 2026-09-06 gate retained below | Initial inventory metadata checks execute; general admission and registry validation remain incomplete; new source requires a new run |
+| Rust test functions | **56 unit + 16 integration reference tests, 102 xtask tests and 2 doctests passed remotely on 2026-09-07**; earlier runs remain dated below | Exact frozen batch above; not production evidence or credit for other work in progress |
+| Rust local gate driver | **Complete reference gate PASS remotely on 2026-09-07** under `nightly-2026-09-07`; earlier local 2026-09-06 gate retained below | Initial inventory and registry-core checks execute; general admission and full concordance validation remain incomplete; new source requires a new run |
 | Production release gate | Explicitly refuses release | No qualified broker/toolchain/target/signing closure |
 | Machine-readable registries | 40 invariants, 21 hypotheses, 143 packets, 5 SLO targets, founding concordance (38 ideas, 9 syntheses, 25 engineering additions), preregistration ledger with no preregistered protocol yet, system map (9 layers) and vocabulary (26 nouns, 35 verbs, 12 reason codes) | Static structural checks are not proofs of their claims |
 | Beads task graph | `.beads/` initialized 2026-09-06; the 2026-09-07 campaign is implementing reference extensions and missing prerequisites | Completion requires exact acceptance and new execution evidence; the original graph omits many foundational roadmap packets |
@@ -57,7 +63,7 @@ What these facts do and do not establish:
 | Founding idea family | Mechanism in plan | Reference-model check | Production status |
 |---|---|---|---|
 | Effect gate, one-shot permits, conserved rights (FI-A01, FI-A02) | §8 | `effect_binding_and_one_shot_dispatch`, `rights_unknown_cannot_be_refunded_by_cancel`, `revocation_fences_reserved_not_history`, `reserve_budget_and_duplicate_fail_closed` and `resolved_non_effect_returns_rights_once`; executed 2026-09-06 | planned |
-| Congress: independent votes, commit–reveal, consequences, credibility, escalation reports (FI-A06 through FI-A09, FI-A13 through FI-A16) | §9.2 through §9.10 | Nine bounded commit–reveal unit tests plus public-API framing/replay tests executed 2026-09-07; non-cryptographic comparison only. Consequence lattice, capped reducer and credibility remain unimplemented | planned |
+| Congress: independent votes, commit–reveal, consequences, credibility, escalation reports (FI-A06 through FI-A09, FI-A13 through FI-A16) | §9.2 through §9.10 | Nine bounded commit–reveal unit tests plus public-API framing/replay tests executed 2026-09-07; non-cryptographic comparison only. Twelve capped empirical reducer tests also passed in epoch3. Consequence lattice and credibility remain unimplemented | planned |
 | Activation channel, sidecar-to-congress, certified margins (FI-A05, FI-I04, FI-I06) | §10 | `integer_probe_requests_refinement_at_margin`, `integer_probe_bound_matches_exhaustive_small_errors`; executed 2026-09-06 | planned |
 | Elicitation, signatures, honeypots, surprise (FI-A10 through FI-A12) | §12.6, §12.7 | none; research packets FA-109 through FA-111 | planned |
 | Rewind as containment (FI-A09, FI-A16, FI-I03) | §11.10 | Six bounded reset tests executed 2026-09-07: rights, spent units, epochs, dispatched/unknown effects, counter monotonicity and overflow. No host restore or persistent escalation | planned |

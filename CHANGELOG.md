@@ -1,5 +1,9 @@
 # Changelog
 
+## 2026-09-07: capped reducer and owned registry gate
+
+Added name-independent capped empirical reduction and an owned registry-core checker, including causal string/comment, module-scope, symlink and identity negatives. The gate now checks the qualified compiler identity and binds real Cargo metadata collection to the intended manifest. The complete isolated RCH run passed 56 reference unit tests, 16 integration tests, 102 xtask tests and 2 doctests. Both preceding failures and the exact passing snapshot are retained in the epoch3 execution artifacts. This is bounded reference and operator-check evidence; full dependency admission, concordance coverage and production control remain unfinished.
+
 ## 2026-09-07: full-input and frontier reference models; initial admission checks
 
 Added bounded whole-input witnesses with private validated construction, independent projection/stage frontiers with explicit closing markers, strict JSON parsing and per-target metadata inventory checks in the existing xtask. The complete remote gate passed 44 reference unit tests, 16 integration tests, 69 xtask tests and 2 doctests on nightly-2026-09-07. The preceding Clippy failure is retained in artifacts/execution; epoch2-receipt.json binds the exact passing source. The unchanged lock guard still admits only the two original local packages. This does not complete general dependency admission or any production broker, capture, cryptographic or persistence feature.

@@ -293,9 +293,11 @@
         "artifacts/execution/2026-09-07-reference-epoch-1-final.log",
         "artifacts/execution/2026-09-07-reference-epoch-1-receipt.json",
         "artifacts/execution/2026-09-07-epoch2-attempt2.log",
-        "artifacts/execution/2026-09-07-epoch2-receipt.json"
+        "artifacts/execution/2026-09-07-epoch2-receipt.json",
+        "artifacts/execution/2026-09-07-epoch3-receipt.json",
+        "artifacts/execution/2026-09-07-epoch3-attempt3.log"
       ],
-      "reference_status": "executed_remotely_2026_09_07_pass",
+      "reference_status": "executed_remotely_2026_09_07_epoch3",
       "founding_ideas": [
         "FI-A06",
         "FI-A14"
@@ -868,7 +870,7 @@
         "crates/fa-reference/src/reducer.rs::tests::actor_statement_not_a_reducer_input",
         "crates/fa-reference/src/reducer.rs::tests::actor_statement_is_refused_alongside_empirical_votes"
       ],
-      "reference_status": "source_present_pending_new_execution",
+      "reference_status": "executed_remotely_2026_09_07_epoch3",
       "reference_scope": "Bounded empirical reducer refuses actor-statement inputs; no actor-facing API, vote secrecy, timing-leakage or production control proof.",
       "required_negative_campaigns": [
         "Attach an actor-authored defense message to a round; it must be typed untrusted evidence or rejected, never a reducer input.",
@@ -879,7 +881,10 @@
         "Helper hosts and the round transcript are outside the actor's writable surfaces.",
         "Timing and success/failure outcomes remain declared residual channels."
       ],
-      "evidence_artifacts": [],
+      "evidence_artifacts": [
+        "artifacts/execution/2026-09-07-epoch3-receipt.json",
+        "artifacts/execution/2026-09-07-epoch3-attempt3.log"
+      ],
       "founding_ideas": [
         "FI-A15",
         "FI-A16"
@@ -906,7 +911,7 @@
         "crates/fa-reference/src/reducer.rs::tests::overflow_is_refused_before_an_empirical_result",
         "crates/fa-reference/src/reducer.rs::tests::same_cohort_max_weights_clip_without_denominator_overflow"
       ],
-      "reference_status": "source_present_pending_new_execution",
+      "reference_status": "executed_remotely_2026_09_07_epoch3",
       "reference_scope": "Only per-member/cohort empirical influence caps and caller-trusted exact disqualification are modeled. Floor-proportional cohort clipping discards fractional remainder and grants no authority. Helper selection, attack-conditioned metrics, andon budgets, credibility persistence and rotation remain unimplemented.",
       "required_negative_campaigns": [
         "Propose replacing a helper immediately after it correctly held a real violation; the change must be refused or flagged for independent review.",
@@ -917,7 +922,10 @@
         "An independent evaluation owner exists and controls labels (plan §22.4).",
         "Credibility ledger entries are durable and lineage-tracked."
       ],
-      "evidence_artifacts": [],
+      "evidence_artifacts": [
+        "artifacts/execution/2026-09-07-epoch3-receipt.json",
+        "artifacts/execution/2026-09-07-epoch3-attempt3.log"
+      ],
       "founding_ideas": [
         "FI-A08",
         "FI-A13",
@@ -973,7 +981,7 @@
         "crates/fa-reference/src/lib.rs::tests::reset_keeps_dispatched_liability",
         "crates/fa-reference/src/lib.rs::tests::reset_overflow_is_before_mutation"
       ],
-      "reference_status": "executed_remotely_2026_09_07_pass",
+      "reference_status": "executed_remotely_2026_09_07_epoch3",
       "reference_scope": "Bounded in-memory rights arithmetic and monotonic incident count only. No actor restore, persistent counter, escalation threshold, narrowed-authority transition or production-containment claim.",
       "required_negative_campaigns": [
         "Reset after a dispatched effect; spent units and the effect record must be unchanged.",
@@ -986,7 +994,9 @@
       ],
       "evidence_artifacts": [
         "artifacts/execution/2026-09-07-reference-epoch-1-final.log",
-        "artifacts/execution/2026-09-07-reference-epoch-1-receipt.json"
+        "artifacts/execution/2026-09-07-reference-epoch-1-receipt.json",
+        "artifacts/execution/2026-09-07-epoch3-receipt.json",
+        "artifacts/execution/2026-09-07-epoch3-attempt3.log"
       ],
       "founding_ideas": [
         "FI-A09",

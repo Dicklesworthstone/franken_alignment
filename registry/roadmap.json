@@ -72,7 +72,9 @@
         "artifacts/execution/2026-09-06-cargo-test.log",
         "artifacts/execution/2026-09-06-xtask-check.log",
         "artifacts/execution/2026-09-06-xtask-check-nightly-2026-08-31.log",
-        "artifacts/execution/2026-09-06-xtask-check-nightly-2026-08-31-local.log"
+        "artifacts/execution/2026-09-06-xtask-check-nightly-2026-08-31-local.log",
+        "artifacts/execution/2026-09-07-epoch3-receipt.json",
+        "artifacts/execution/2026-09-07-epoch3-attempt3.log"
       ]
     },
     {
@@ -106,7 +108,9 @@
         "artifacts/execution/2026-09-06-cargo-test.log",
         "artifacts/execution/2026-09-06-xtask-check.log",
         "artifacts/execution/2026-09-06-xtask-check-nightly-2026-08-31.log",
-        "artifacts/execution/2026-09-06-xtask-check-nightly-2026-08-31-local.log"
+        "artifacts/execution/2026-09-06-xtask-check-nightly-2026-08-31-local.log",
+        "artifacts/execution/2026-09-07-epoch3-receipt.json",
+        "artifacts/execution/2026-09-07-epoch3-attempt3.log"
       ]
     },
     {
@@ -1345,7 +1349,9 @@
       "owner_role": "systems",
       "result_artifacts": [
         "artifacts/execution/2026-09-07-epoch2-receipt.json",
-        "artifacts/execution/2026-09-07-epoch2-attempt2.log"
+        "artifacts/execution/2026-09-07-epoch2-attempt2.log",
+        "artifacts/execution/2026-09-07-epoch3-receipt.json",
+        "artifacts/execution/2026-09-07-epoch3-attempt3.log"
       ]
     },
     {
