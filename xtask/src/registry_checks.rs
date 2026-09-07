@@ -6,15 +6,19 @@
 
 use std::collections::{BTreeMap, BTreeSet};
 use std::fs;
+use std::io::Read;
 use std::path::{Component, Path};
 
-use crate::json::{parse, Json, Limits};
+use crate::json::{Json, Limits, parse};
 
 const INVARIANTS: &str = "registry/invariants.json";
 const ROADMAP: &str = "registry/roadmap.json";
 const CLAIMS: &str = "registry/claims.json";
 const SOURCES: &str = "registry/sources.json";
 const FOUNDING: &str = "registry/founding_concordance.json";
+const MAX_ROADMAP_NODES: usize = 1_000;
+const MAX_DEPENDENCIES_PER_PACKET: usize = 1_000;
+const MAX_REFERENCE_SOURCE_BYTES: usize = 1_048_576;
 
 /// One causal registry refusal.
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -72,6 +76,21 @@ struct Documents {
     founding: Json,
 }
 
+/// Raw bytes for the five registry inputs covered by the FA-003 core checker.
+///
+/// This is intentionally a byte-level input: independent tests can mutate one
+/// document while keeping the other four valid, and the strict JSON parser
+/// remains the single decoding boundary.
+#[cfg(test)]
+#[derive(Clone, Copy, Debug)]
+pub struct RegistryInputs<'a> {
+    pub invariants: &'a [u8],
+    pub roadmap: &'a [u8],
+    pub claims: &'a [u8],
+    pub sources: &'a [u8],
+    pub founding: &'a [u8],
+}
+
 /// Read the current registry inputs and validate the FA-003 core boundaries.
 ///
 /// I/O and JSON parse failures are returned as findings rather than becoming
@@ -88,7 +107,36 @@ pub fn check_repository(root: &Path) -> Report {
 
     match (invariants, roadmap, claims, sources, founding) {
         (Some(invariants), Some(roadmap), Some(claims), Some(sources), Some(founding)) => {
-            check_documents(
+            check_parsed_documents(
+                root,
+                Documents {
+                    invariants,
+                    roadmap,
+                    claims,
+                    sources,
+                    founding,
+                },
+                findings,
+            )
+        }
+        _ => finish(findings),
+    }
+}
+
+/// Validate supplied registry bytes using the same strict parser and semantic
+/// checks as [`check_repository`].
+#[cfg(test)]
+#[must_use]
+pub fn check_inputs(root: &Path, inputs: RegistryInputs<'_>) -> Report {
+    let mut findings = Vec::new();
+    let invariants = parse_document(inputs.invariants, INVARIANTS, &mut findings);
+    let roadmap = parse_document(inputs.roadmap, ROADMAP, &mut findings);
+    let claims = parse_document(inputs.claims, CLAIMS, &mut findings);
+    let sources = parse_document(inputs.sources, SOURCES, &mut findings);
+    let founding = parse_document(inputs.founding, FOUNDING, &mut findings);
+    match (invariants, roadmap, claims, sources, founding) {
+        (Some(invariants), Some(roadmap), Some(claims), Some(sources), Some(founding)) => {
+            check_parsed_documents(
                 root,
                 Documents {
                     invariants,
@@ -119,7 +167,11 @@ fn read_json(root: &Path, file: &'static str, findings: &mut Vec<Finding>) -> Op
             return None;
         }
     };
-    match parse(&bytes, Limits::default()) {
+    parse_document(&bytes, file, findings)
+}
+
+fn parse_document(bytes: &[u8], file: &'static str, findings: &mut Vec<Finding>) -> Option<Json> {
+    match parse(bytes, Limits::default()) {
         Ok(value) => Some(value),
         Err(error) => {
             findings.push(Finding::new(
@@ -134,29 +186,24 @@ fn read_json(root: &Path, file: &'static str, findings: &mut Vec<Finding>) -> Op
     }
 }
 
-fn check_documents(root: &Path, docs: Documents, mut findings: Vec<Finding>) -> Report {
+fn check_parsed_documents(root: &Path, docs: Documents, mut findings: Vec<Finding>) -> Report {
     let invariant_rows = rows(&docs.invariants, INVARIANTS, "invariants", &mut findings);
     let roadmap_rows = rows(&docs.roadmap, ROADMAP, "packets", &mut findings);
     let claim_rows = rows(&docs.claims, CLAIMS, "claims", &mut findings);
     let source_rows = rows(&docs.sources, SOURCES, "sources", &mut findings);
     let founding_rows = rows(&docs.founding, FOUNDING, "founding_ideas", &mut findings);
 
-    let invariant_ids = ids(
-        invariant_rows.as_deref(),
-        INVARIANTS,
-        "FA-INV-",
-        &mut findings,
-    );
-    let roadmap_ids = ids(roadmap_rows.as_deref(), ROADMAP, "FA-", &mut findings);
-    let claim_ids = ids(claim_rows.as_deref(), CLAIMS, "H", &mut findings);
-    let source_ids = ids(source_rows.as_deref(), SOURCES, "", &mut findings);
-    let founding_ids = ids(founding_rows.as_deref(), FOUNDING, "FOUNDING", &mut findings);
+    let invariant_ids = ids(invariant_rows, INVARIANTS, "FA-INV-", &mut findings);
+    let roadmap_ids = ids(roadmap_rows, ROADMAP, "FA-", &mut findings);
+    drop(ids(claim_rows, CLAIMS, "H", &mut findings));
+    let source_ids = ids(source_rows, SOURCES, "SOURCE", &mut findings);
+    let founding_ids = ids(founding_rows, FOUNDING, "FOUNDING", &mut findings);
 
-    if let Some(rows) = roadmap_rows.as_deref() {
+    if let Some(rows) = roadmap_rows {
         check_roadmap(rows, &roadmap_ids, &invariant_ids, &mut findings);
         check_artifact_references(rows, ROADMAP, "result_artifacts", root, &mut findings);
     }
-    if let Some(rows) = invariant_rows.as_deref() {
+    if let Some(rows) = invariant_rows {
         check_string_references(
             rows,
             INVARIANTS,
@@ -168,7 +215,7 @@ fn check_documents(root: &Path, docs: Documents, mut findings: Vec<Finding>) -> 
         check_artifact_references(rows, INVARIANTS, "evidence_artifacts", root, &mut findings);
         check_reference_checks(rows, root, &mut findings);
     }
-    if let Some(rows) = claim_rows.as_deref() {
+    if let Some(rows) = claim_rows {
         check_string_references(
             rows,
             CLAIMS,
@@ -188,7 +235,7 @@ fn check_documents(root: &Path, docs: Documents, mut findings: Vec<Finding>) -> 
         check_file_references(rows, CLAIMS, "experiment_card", root, &mut findings);
         check_artifact_references(rows, CLAIMS, "result_artifacts", root, &mut findings);
     }
-    if let Some(rows) = founding_rows.as_deref() {
+    if let Some(rows) = founding_rows {
         check_single_string_references(
             rows,
             FOUNDING,
@@ -244,7 +291,14 @@ fn rows<'a>(
     let object = match document.as_object() {
         Some(object) => object,
         None => {
-            findings.push(type_finding(file, None, "expected_object", "$", "object", document));
+            findings.push(type_finding(
+                file,
+                None,
+                "expected_object",
+                "$",
+                "object",
+                document,
+            ));
             return None;
         }
     };
@@ -290,7 +344,14 @@ fn ids(
     for (index, row) in rows.iter().enumerate() {
         let location = format!("$[{index}]");
         let Some(object) = row.as_object() else {
-            findings.push(type_finding(file, None, "expected_object", location, "object", row));
+            findings.push(type_finding(
+                file,
+                None,
+                "expected_object",
+                location,
+                "object",
+                row,
+            ));
             continue;
         };
         let Some(value) = object.get("id") else {
@@ -337,11 +398,14 @@ fn ids(
 }
 
 fn well_formed_id(id: &str, prefix: &str) -> bool {
-    if prefix.is_empty() {
-        return !id.is_empty()
-            && id
-                .bytes()
-                .all(|byte| byte.is_ascii_uppercase() || byte.is_ascii_digit() || byte == b'-');
+    if prefix == "SOURCE" {
+        return id.contains('-')
+            && id.split('-').all(|segment| {
+                !segment.is_empty()
+                    && segment
+                        .bytes()
+                        .all(|byte| byte.is_ascii_uppercase() || byte.is_ascii_digit())
+            });
     }
     if prefix == "FOUNDING" {
         if let Some(number) = id.strip_prefix("FS-") {
@@ -350,10 +414,10 @@ fn well_formed_id(id: &str, prefix: &str) -> bool {
         let Some(suffix) = id.strip_prefix("FI-") else {
             return false;
         };
-        let (family, number) = suffix.split_at(1.min(suffix.len()));
-        return matches!(family, "A" | "I" | "S")
-            && number.len() == 2
-            && number.bytes().all(|byte| byte.is_ascii_digit());
+        let bytes = suffix.as_bytes();
+        return bytes.len() == 3
+            && matches!(bytes[0], b'A' | b'I' | b'S')
+            && bytes[1..].iter().all(|byte| byte.is_ascii_digit());
     }
     let Some(suffix) = id.strip_prefix(prefix) else {
         return false;
@@ -422,6 +486,19 @@ fn check_roadmap(
     invariant_ids: &BTreeSet<String>,
     findings: &mut Vec<Finding>,
 ) {
+    if rows.len() > MAX_ROADMAP_NODES {
+        findings.push(Finding::new(
+            ROADMAP,
+            None,
+            "graph_node_limit_exceeded",
+            "$.packets",
+            format!(
+                "roadmap contains {} packet rows; the graph limit is {MAX_ROADMAP_NODES}",
+                rows.len()
+            ),
+        ));
+        return;
+    }
     let mut edges = BTreeMap::new();
     for (index, row) in rows.iter().enumerate() {
         let Some(object) = row.as_object() else {
@@ -431,11 +508,30 @@ fn check_roadmap(
             continue;
         };
         let base = format!("$.packets[{index}]");
+        if !well_formed_id(id, "FA-") {
+            // `ids` has retained the causal malformed-id finding.  Invalid
+            // identifiers never become graph vertices, even if another row
+            // names the same malformed string as a dependency.
+            continue;
+        }
         let dependencies = string_array(object, ROADMAP, id, &base, "depends_on", findings);
         let invariants = string_array(object, ROADMAP, id, &base, "invariants", findings);
         if let Some(dependencies) = dependencies {
+            if dependencies.len() > MAX_DEPENDENCIES_PER_PACKET {
+                findings.push(Finding::new(
+                    ROADMAP,
+                    Some(id),
+                    "dependency_limit_exceeded",
+                    format!("{base}.depends_on"),
+                    format!(
+                        "packet `{id}` has {} dependencies; the per-packet limit is {MAX_DEPENDENCIES_PER_PACKET}",
+                        dependencies.len()
+                    ),
+                ));
+                continue;
+            }
             for dependency in &dependencies {
-                if !roadmap_ids.contains(dependency) {
+                if !well_formed_id(dependency, "FA-") || !roadmap_ids.contains(dependency) {
                     findings.push(Finding::new(
                         ROADMAP,
                         Some(id),
@@ -469,7 +565,14 @@ fn detect_cycles(edges: &BTreeMap<String, Vec<String>>, findings: &mut Vec<Findi
     let mut visited = BTreeSet::new();
     let mut stack = Vec::new();
     for node in edges.keys() {
-        visit(node, edges, &mut visiting, &mut visited, &mut stack, findings);
+        visit(
+            node,
+            edges,
+            &mut visiting,
+            &mut visited,
+            &mut stack,
+            findings,
+        );
     }
 }
 
@@ -527,7 +630,14 @@ fn check_string_references(
         }
         let id = object.get("id").and_then(Json::as_str);
         let base = format!("$[{index}]");
-        let Some(values) = string_array(object, file, id.unwrap_or("<missing>"), &base, key, findings) else {
+        let Some(values) = string_array(
+            object,
+            file,
+            id.unwrap_or("<missing>"),
+            &base,
+            key,
+            findings,
+        ) else {
             continue;
         };
         for value in values {
@@ -560,7 +670,14 @@ fn check_artifact_references(
         }
         let id = object.get("id").and_then(Json::as_str);
         let base = format!("$[{index}]");
-        let Some(paths) = string_array(object, file, id.unwrap_or("<missing>"), &base, key, findings) else {
+        let Some(paths) = string_array(
+            object,
+            file,
+            id.unwrap_or("<missing>"),
+            &base,
+            key,
+            findings,
+        ) else {
             continue;
         };
         for path in paths {
@@ -580,7 +697,7 @@ fn check_file_references(
         let Some(object) = row.as_object() else {
             continue;
         };
-        if !object.contains_key("reference_checks") {
+        if !object.contains_key(key) {
             continue;
         }
         let id = object.get("id").and_then(Json::as_str);
@@ -596,7 +713,9 @@ fn check_file_references(
             continue;
         };
         match value.as_str() {
-            Some(path) => check_existing_file(file, id, &format!("{base}.{key}"), path, root, findings),
+            Some(path) => {
+                check_existing_file(file, id, &format!("{base}.{key}"), path, root, findings)
+            }
             None => findings.push(type_finding(
                 file,
                 id,
@@ -614,9 +733,19 @@ fn check_reference_checks(rows: &[Json], root: &Path, findings: &mut Vec<Finding
         let Some(object) = row.as_object() else {
             continue;
         };
+        if !object.contains_key("reference_checks") {
+            continue;
+        }
         let id = object.get("id").and_then(Json::as_str);
         let base = format!("$[{index}]");
-        let Some(symbols) = string_array(object, INVARIANTS, id.unwrap_or("<missing>"), &base, "reference_checks", findings) else {
+        let Some(symbols) = string_array(
+            object,
+            INVARIANTS,
+            id.unwrap_or("<missing>"),
+            &base,
+            "reference_checks",
+            findings,
+        ) else {
             continue;
         };
         for symbol in symbols {
@@ -630,13 +759,19 @@ fn check_reference_checks(rows: &[Json], root: &Path, findings: &mut Vec<Finding
                 ));
                 continue;
             };
-            if name.is_empty() || name.contains("::") {
+            if path.is_empty()
+                || Path::new(path)
+                    .extension()
+                    .and_then(|extension| extension.to_str())
+                    != Some("rs")
+                || !rust_identifier(name)
+            {
                 findings.push(Finding::new(
                     INVARIANTS,
                     id,
                     "malformed_reference_check",
                     format!("{base}.reference_checks"),
-                    format!("`{symbol}` has no single test function name"),
+                    format!("`{symbol}` must name a Rust source file and Rust test identifier"),
                 ));
                 continue;
             }
@@ -650,10 +785,49 @@ fn check_reference_checks(rows: &[Json], root: &Path, findings: &mut Vec<Finding
                 ));
                 continue;
             };
-            let source_path = root.join(source_path);
-            let source = match fs::read_to_string(&source_path) {
+            let source_path = match canonical_repository_file(root, source_path) {
+                Ok(path) => path,
+                Err(RepositoryFileError::Outside { root, candidate }) => {
+                    findings.push(Finding::new(
+                        INVARIANTS,
+                        id,
+                        "unsafe_reference_path",
+                        format!("{base}.reference_checks"),
+                        format!(
+                            "`{symbol}` resolves outside {}: {}",
+                            root.display(),
+                            candidate.display()
+                        ),
+                    ));
+                    continue;
+                }
+                Err(RepositoryFileError::Unavailable(error)) => {
+                    findings.push(Finding::new(
+                        INVARIANTS,
+                        id,
+                        "reference_source_missing",
+                        format!("{base}.reference_checks"),
+                        format!("cannot resolve `{symbol}` inside the repository: {error}"),
+                    ));
+                    continue;
+                }
+            };
+            let source = match read_reference_source(&source_path) {
                 Ok(source) => source,
-                Err(error) => {
+                Err(ReferenceSourceError::Limit) => {
+                    findings.push(Finding::new(
+                        INVARIANTS,
+                        id,
+                        "reference_source_limit",
+                        format!("{base}.reference_checks"),
+                        format!(
+                            "{} exceeds the {MAX_REFERENCE_SOURCE_BYTES}-byte reference-source limit",
+                            source_path.display()
+                        ),
+                    ));
+                    continue;
+                }
+                Err(ReferenceSourceError::Io(error)) => {
                     findings.push(Finding::new(
                         INVARIANTS,
                         id,
@@ -678,20 +852,241 @@ fn check_reference_checks(rows: &[Json], root: &Path, findings: &mut Vec<Finding
 }
 
 fn declares_test(source: &str, name: &str) -> bool {
-    let expected = format!("fn {name}(");
-    let mut saw_test = false;
-    for line in source.lines() {
-        let line = line.trim();
-        if line == "#[test]" {
-            saw_test = true;
-        } else if saw_test && !line.is_empty() {
-            if line.starts_with(&expected) {
-                return true;
-            }
-            saw_test = false;
+    let tokens = rust_tokens(source);
+    let mut scopes = Vec::new();
+    let mut index = 0;
+    while index < tokens.len() {
+        if let Some(next) = skip_macro_body(&tokens, index) {
+            index = next;
+            continue;
         }
+        if scope_is_direct_tests(&scopes) && test_declaration_at(&tokens, index, name) {
+            return true;
+        }
+        match tokens[index] {
+            RustToken::Punctuation('{') => {
+                scopes.push(module_opening_at(&tokens, index));
+            }
+            RustToken::Punctuation('}') if scopes.pop().is_none() => return false,
+            _ => {}
+        }
+        index += 1;
     }
     false
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum RustToken<'a> {
+    Word(&'a str),
+    Punctuation(char),
+}
+
+fn scope_is_direct_tests(scopes: &[Option<&str>]) -> bool {
+    matches!(scopes, [Some("tests")])
+}
+
+fn module_opening_at<'a>(tokens: &[RustToken<'a>], brace: usize) -> Option<&'a str> {
+    match (
+        tokens.get(brace.checked_sub(2)?),
+        tokens.get(brace.checked_sub(1)?),
+    ) {
+        (Some(RustToken::Word(keyword)), Some(RustToken::Word(name))) if *keyword == "mod" => {
+            Some(*name)
+        }
+        _ => None,
+    }
+}
+
+fn test_declaration_at(tokens: &[RustToken<'_>], index: usize, name: &str) -> bool {
+    matches!(
+        tokens.get(index..index.saturating_add(7)),
+        Some([
+            RustToken::Punctuation('#'),
+            RustToken::Punctuation('['),
+            RustToken::Word(test),
+            RustToken::Punctuation(']'),
+            RustToken::Word(function),
+            RustToken::Word(actual_name),
+            RustToken::Punctuation('('),
+        ]) if *test == "test" && *function == "fn" && *actual_name == name
+    )
+}
+
+fn skip_macro_body(tokens: &[RustToken<'_>], bang: usize) -> Option<usize> {
+    if !matches!(tokens.get(bang), Some(RustToken::Punctuation('!'))) {
+        return None;
+    }
+    let group = match tokens.get(bang + 1) {
+        Some(RustToken::Punctuation(open @ ('{' | '[' | '('))) => Some((bang + 1, *open)),
+        Some(RustToken::Word(_)) => match tokens.get(bang + 2) {
+            Some(RustToken::Punctuation(open @ ('{' | '[' | '('))) => Some((bang + 2, *open)),
+            _ => None,
+        },
+        _ => None,
+    }?;
+    let close = match group.1 {
+        '{' => '}',
+        '[' => ']',
+        '(' => ')',
+        _ => return None,
+    };
+    let mut depth = 1_usize;
+    let mut index = group.0 + 1;
+    while index < tokens.len() {
+        if matches!(tokens[index], RustToken::Punctuation(punctuation) if punctuation == group.1) {
+            depth += 1;
+        } else if matches!(tokens[index], RustToken::Punctuation(punctuation) if punctuation == close)
+        {
+            depth -= 1;
+            if depth == 0 {
+                return Some(index + 1);
+            }
+        }
+        index += 1;
+    }
+    Some(tokens.len())
+}
+
+fn rust_identifier(value: &str) -> bool {
+    let mut bytes = value.bytes();
+    matches!(bytes.next(), Some(byte) if byte == b'_' || byte.is_ascii_alphabetic())
+        && bytes.all(|byte| byte == b'_' || byte.is_ascii_alphanumeric())
+}
+
+fn rust_tokens(source: &str) -> Vec<RustToken<'_>> {
+    let bytes = source.as_bytes();
+    let mut tokens = Vec::new();
+    let mut index = 0;
+    while index < bytes.len() {
+        if bytes[index].is_ascii_whitespace() {
+            index += 1;
+        } else if bytes[index..].starts_with(b"//") {
+            index += 2;
+            while index < bytes.len() && bytes[index] != b'\n' {
+                index += 1;
+            }
+        } else if bytes[index..].starts_with(b"/*") {
+            index = skip_block_comment(bytes, index);
+        } else if let Some(next) = raw_string_end(bytes, index) {
+            index = next;
+        } else if bytes[index] == b'"' {
+            index = skip_quoted(bytes, index, b'"');
+        } else if bytes[index] == b'\'' {
+            if let Some(next) = char_literal_end(source, index) {
+                index = next;
+            } else {
+                tokens.push(RustToken::Punctuation('\''));
+                index += 1;
+            }
+        } else if bytes[index].is_ascii_alphabetic() || bytes[index] == b'_' {
+            let start = index;
+            index += 1;
+            while index < bytes.len()
+                && (bytes[index].is_ascii_alphanumeric() || bytes[index] == b'_')
+            {
+                index += 1;
+            }
+            // This slice begins and ends at ASCII identifier boundaries.
+            tokens.push(RustToken::Word(&source[start..index]));
+        } else {
+            tokens.push(RustToken::Punctuation(char::from(bytes[index])));
+            index += 1;
+        }
+    }
+    tokens
+}
+
+fn skip_block_comment(bytes: &[u8], mut index: usize) -> usize {
+    let mut depth = 1_u32;
+    index += 2;
+    while index < bytes.len() && depth > 0 {
+        if bytes[index..].starts_with(b"/*") {
+            depth = depth.saturating_add(1);
+            index += 2;
+        } else if bytes[index..].starts_with(b"*/") {
+            depth -= 1;
+            index += 2;
+        } else {
+            index += 1;
+        }
+    }
+    index
+}
+
+fn raw_string_end(bytes: &[u8], index: usize) -> Option<usize> {
+    let mut marker = index;
+    if matches!(bytes.get(marker), Some(b'b' | b'c')) {
+        marker += 1;
+    }
+    if bytes.get(marker) != Some(&b'r') {
+        return None;
+    }
+    marker += 1;
+    let hashes_start = marker;
+    while bytes.get(marker) == Some(&b'#') {
+        marker += 1;
+    }
+    if bytes.get(marker) != Some(&b'"') {
+        return None;
+    }
+    let hash_count = marker - hashes_start;
+    marker += 1;
+    while marker < bytes.len() {
+        if bytes[marker] == b'"'
+            && bytes
+                .get(marker + 1..marker + 1 + hash_count)
+                .is_some_and(|closing| closing.iter().all(|byte| *byte == b'#'))
+        {
+            return Some(marker + 1 + hash_count);
+        }
+        marker += 1;
+    }
+    Some(bytes.len())
+}
+
+fn skip_quoted(bytes: &[u8], mut index: usize, quote: u8) -> usize {
+    index += 1;
+    while index < bytes.len() {
+        if bytes[index] == b'\\' {
+            index = index.saturating_add(2);
+        } else if bytes[index] == quote {
+            return index + 1;
+        } else {
+            index += 1;
+        }
+    }
+    bytes.len()
+}
+
+fn char_literal_end(source: &str, index: usize) -> Option<usize> {
+    let bytes = source.as_bytes();
+    let literal = source.get(index + 1..)?;
+    let mut characters = literal.chars();
+    let first = characters.next()?;
+    let mut end = index + 1 + first.len_utf8();
+    if first == '\\' {
+        let escaped = characters.next()?;
+        end += escaped.len_utf8();
+        if escaped == 'x' {
+            let digits = bytes.get(end..end + 2)?;
+            if !digits.iter().all(|byte| byte.is_ascii_hexdigit()) {
+                return None;
+            }
+            end += 2;
+        } else if escaped == 'u' && bytes.get(end) == Some(&b'{') {
+            end += 1;
+            let digits_start = end;
+            while matches!(bytes.get(end), Some(byte) if byte.is_ascii_hexdigit() || *byte == b'_')
+            {
+                end += 1;
+            }
+            if end == digits_start || bytes.get(end) != Some(&b'}') {
+                return None;
+            }
+            end += 1;
+        }
+    }
+    (bytes.get(end) == Some(&b'\'')).then_some(end + 1)
 }
 
 fn string_array(
@@ -764,23 +1159,79 @@ fn check_existing_file(
         ));
         return;
     };
-    if !root.join(path).is_file() {
-        findings.push(Finding::new(
+    match canonical_repository_file(root, path) {
+        Ok(_) => {}
+        Err(RepositoryFileError::Outside { root, candidate }) => findings.push(Finding::new(
+            file,
+            id,
+            "unsafe_file_reference",
+            location,
+            format!(
+                "retained reference `{referenced}` resolves outside {}: {}",
+                root.display(),
+                candidate.display()
+            ),
+        )),
+        Err(RepositoryFileError::Unavailable(error)) => findings.push(Finding::new(
             file,
             id,
             "referenced_file_missing",
             location,
-            format!("retained reference `{referenced}` does not exist as a file"),
-        ));
+            format!("retained reference `{referenced}` is unavailable: {error}"),
+        )),
     }
+}
+
+enum ReferenceSourceError {
+    Io(std::io::Error),
+    Limit,
+}
+
+fn read_reference_source(path: &Path) -> Result<String, ReferenceSourceError> {
+    let file = fs::File::open(path).map_err(ReferenceSourceError::Io)?;
+    let mut source = String::new();
+    file.take((MAX_REFERENCE_SOURCE_BYTES + 1) as u64)
+        .read_to_string(&mut source)
+        .map_err(ReferenceSourceError::Io)?;
+    if source.len() > MAX_REFERENCE_SOURCE_BYTES {
+        return Err(ReferenceSourceError::Limit);
+    }
+    Ok(source)
+}
+
+enum RepositoryFileError {
+    Outside {
+        root: std::path::PathBuf,
+        candidate: std::path::PathBuf,
+    },
+    Unavailable(std::io::Error),
+}
+
+fn canonical_repository_file(
+    root: &Path,
+    relative: &Path,
+) -> Result<std::path::PathBuf, RepositoryFileError> {
+    let root = fs::canonicalize(root).map_err(RepositoryFileError::Unavailable)?;
+    let candidate =
+        fs::canonicalize(root.join(relative)).map_err(RepositoryFileError::Unavailable)?;
+    if !candidate.starts_with(&root) {
+        return Err(RepositoryFileError::Outside { root, candidate });
+    }
+    if !candidate.is_file() {
+        return Err(RepositoryFileError::Unavailable(std::io::Error::new(
+            std::io::ErrorKind::InvalidInput,
+            "resolved path is not a file",
+        )));
+    }
+    Ok(candidate)
 }
 
 fn safe_relative_path(value: &str) -> Option<&Path> {
     let path = Path::new(value);
     if path.is_absolute()
-        || path.components().any(|component| {
-            !matches!(component, Component::Normal(_))
-        })
+        || path
+            .components()
+            .any(|component| !matches!(component, Component::Normal(_)))
     {
         return None;
     }
@@ -806,7 +1257,10 @@ fn type_finding(
 
 #[cfg(test)]
 mod tests {
+    use std::fs;
+    use std::io::Write;
     use std::path::PathBuf;
+    use std::time::{SystemTime, UNIX_EPOCH};
 
     use super::*;
 
@@ -847,7 +1301,7 @@ mod tests {
     }
 
     fn fixture_report(bytes: &str) -> Report {
-        check_documents(&repository_root(), fixture_documents(bytes), Vec::new())
+        check_parsed_documents(&repository_root(), fixture_documents(bytes), Vec::new())
     }
 
     fn assert_cause(report: &Report, file: &str, code: &str) {
@@ -859,7 +1313,36 @@ mod tests {
             "expected causal refusal {file}:{code}; got {:?}",
             report.findings
         );
-        assert!(!report.is_clean(), "a refusal cannot be a clean registry pass");
+        assert!(
+            !report.is_clean(),
+            "a refusal cannot be a clean registry pass"
+        );
+    }
+
+    #[test]
+    fn reference_source_read_refuses_more_than_the_declared_byte_limit() {
+        let nonce = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .expect("system clock is after the Unix epoch")
+            .as_nanos();
+        let path = std::env::temp_dir().join(format!(
+            "franken-alignment-reference-source-limit-{}-{nonce}.rs",
+            std::process::id()
+        ));
+        let mut file = fs::OpenOptions::new()
+            .write(true)
+            .create_new(true)
+            .open(&path)
+            .expect("atomically claim temporary over-limit source");
+        file.write_all(&vec![b'x'; MAX_REFERENCE_SOURCE_BYTES + 1])
+            .expect("temporary over-limit source is writable");
+        drop(file);
+        let result = read_reference_source(&path);
+        let _ = fs::remove_file(&path);
+        assert!(
+            matches!(result, Err(ReferenceSourceError::Limit)),
+            "over-limit reference source must fail with its causal limit error"
+        );
     }
 
     #[test]
@@ -879,12 +1362,20 @@ mod tests {
 
     #[test]
     fn dependency_cycle_is_refused_as_a_dag_violation() {
-        assert_cause(&fixture_report(DEPENDENCY_CYCLE), ROADMAP, "dependency_cycle");
+        assert_cause(
+            &fixture_report(DEPENDENCY_CYCLE),
+            ROADMAP,
+            "dependency_cycle",
+        );
     }
 
     #[test]
     fn unknown_roadmap_invariant_is_refused_at_the_link() {
-        assert_cause(&fixture_report(MISSING_INVARIANT), ROADMAP, "unknown_invariant");
+        assert_cause(
+            &fixture_report(MISSING_INVARIANT),
+            ROADMAP,
+            "unknown_invariant",
+        );
     }
 
     #[test]

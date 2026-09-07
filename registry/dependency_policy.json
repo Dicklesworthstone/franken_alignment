@@ -146,7 +146,9 @@
         "--locked",
         "--offline",
         "--filter-platform",
-        "<target>"
+        "<target>",
+        "--manifest-path",
+        "<workspace>/Cargo.toml"
       ],
       "why_locked_and_offline": "cargo metadata without --locked may rewrite Cargo.lock, which would trip the exact lockfile guard from inside the gate that enforces it. --offline additionally prevents a network fetch during a check.",
       "why_not_no_deps": "--no-deps omits the resolve section entirely. docs/DEPENDENCY_CONSTITUTION.md forbids treating it as a transitive audit, so metadata whose resolve is null is refused rather than read as an empty passing graph.",
@@ -160,5 +162,13 @@
       "That any target other than a listed profile is admissible.",
       "That the toolchain, std or operating system are themselves trustworthy."
     ]
+  },
+  "operator_qualification": {
+    "scope": "initial_reference_gate",
+    "host": "x86_64-unknown-linux-gnu",
+    "channel": "nightly-2026-09-07",
+    "rustc_commit": "5a2be9f5f075d31e3ca5526b5b029881ce441253",
+    "qualification_receipt": "artifacts/execution/2026-09-07-epoch2-receipt.json",
+    "boundary": "Compiler-reported identity, checked against the prior qualified operator run; not binary authentication, Apple execution, or a complete release toolchain closure."
   }
 }

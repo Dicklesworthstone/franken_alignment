@@ -864,9 +864,12 @@
       "production_status": "planned",
       "waiver": "forbidden",
       "production_checker": null,
-      "reference_checks": [],
-      "reference_status": "not_implemented_in_rust_revision",
-      "reference_scope": "Only the declared small logical case; not production protocol/host correctness.",
+      "reference_checks": [
+        "crates/fa-reference/src/reducer.rs::tests::actor_statement_not_a_reducer_input",
+        "crates/fa-reference/src/reducer.rs::tests::actor_statement_is_refused_alongside_empirical_votes"
+      ],
+      "reference_status": "source_present_pending_new_execution",
+      "reference_scope": "Bounded empirical reducer refuses actor-statement inputs; no actor-facing API, vote secrecy, timing-leakage or production control proof.",
       "required_negative_campaigns": [
         "Attach an actor-authored defense message to a round; it must be typed untrusted evidence or rejected, never a reducer input.",
         "Attempt to read votes, justifications or membership through the actor's API; must return authorization-filtered denial.",
@@ -893,9 +896,18 @@
       "production_status": "planned",
       "waiver": "forbidden",
       "production_checker": null,
-      "reference_checks": [],
-      "reference_status": "not_implemented_in_rust_revision",
-      "reference_scope": "Only the declared small logical case; not production protocol/host correctness.",
+      "reference_checks": [
+        "crates/fa-reference/src/reducer.rs::tests::caps_bound_influence",
+        "crates/fa-reference/src/reducer.rs::tests::disqualifier_dominates_weighted_majority",
+        "crates/fa-reference/src/reducer.rs::tests::exhaustive_small_caps_never_admit_more_than_a_member_cap",
+        "crates/fa-reference/src/reducer.rs::tests::proportional_clipping_is_invariant_under_member_rename",
+        "crates/fa-reference/src/reducer.rs::tests::separate_cohorts_each_receive_their_own_cap",
+        "crates/fa-reference/src/reducer.rs::tests::input_order_cannot_change_the_reduction",
+        "crates/fa-reference/src/reducer.rs::tests::overflow_is_refused_before_an_empirical_result",
+        "crates/fa-reference/src/reducer.rs::tests::same_cohort_max_weights_clip_without_denominator_overflow"
+      ],
+      "reference_status": "source_present_pending_new_execution",
+      "reference_scope": "Only per-member/cohort empirical influence caps and caller-trusted exact disqualification are modeled. Floor-proportional cohort clipping discards fractional remainder and grants no authority. Helper selection, attack-conditioned metrics, andon budgets, credibility persistence and rotation remain unimplemented.",
       "required_negative_campaigns": [
         "Propose replacing a helper immediately after it correctly held a real violation; the change must be refused or flagged for independent review.",
         "Exhaust the declared false-stop budget; the system must open an incident, not lower a threshold.",

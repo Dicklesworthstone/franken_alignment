@@ -8,10 +8,17 @@ mod json;
 #[cfg(test)]
 mod json_tests;
 #[cfg(test)]
+mod metadata_collection_tests;
+#[cfg(test)]
 mod metadata_path_tests;
+mod registry_checks;
+#[cfg(test)]
+mod registry_negative_tests;
+mod toolchain_identity;
 
 use std::env;
 use std::fs;
+use std::io::Write;
 use std::path::{Path, PathBuf};
 use std::process::{Command, ExitCode, Stdio};
 
@@ -138,45 +145,120 @@ fn check_metadata_paths(root: &Path, bytes: &[u8]) -> Result<(), String> {
     Ok(())
 }
 
+fn collect_metadata(root: &Path, target: &str) -> Result<Vec<u8>, String> {
+    let arguments = [
+        "metadata",
+        "--format-version",
+        "1",
+        "--locked",
+        "--offline",
+        "--filter-platform",
+        target,
+    ];
+    let manifest = root.join("Cargo.toml");
+    println!(
+        "EXECUTE cargo {} --manifest-path {}",
+        arguments.join(" "),
+        manifest.display()
+    );
+    let output = Command::new("cargo")
+        .args(arguments)
+        .arg("--manifest-path")
+        .arg(&manifest)
+        .current_dir(root)
+        .stderr(Stdio::inherit())
+        .output()
+        .map_err(|error| format!("Cannot collect metadata for {target}: {error}"))?;
+    if !output.status.success() {
+        return Err(format!(
+            "Metadata collection for {target} failed: {}",
+            output.status
+        ));
+    }
+    Ok(output.stdout)
+}
+
 fn check_admission(root: &Path) -> Result<(), String> {
     let bytes = fs::read(root.join("registry/dependency_policy.json"))
         .map_err(|error| format!("Cannot read dependency policy: {error}"))?;
     let policy = admission::parse_policy(&bytes)?;
     for profile in &policy.profiles {
         let target = profile.target.as_str();
-        let arguments = [
-            "metadata",
-            "--format-version",
-            "1",
-            "--locked",
-            "--offline",
-            "--filter-platform",
-            target,
-        ];
-        println!("EXECUTE cargo {}", arguments.join(" "));
-        let output = Command::new("cargo")
-            .args(arguments)
-            .current_dir(root)
-            .stderr(Stdio::inherit())
-            .output()
-            .map_err(|error| format!("Cannot collect metadata for {target}: {error}"))?;
-        if !output.status.success() {
-            return Err(format!(
-                "Metadata collection for {target} failed: {}",
-                output.status
-            ));
-        }
-        let report = admission::check(&output.stdout, &policy, target)?;
+        let metadata = collect_metadata(root, target)?;
+        let report = admission::check(&metadata, &policy, target)?;
         if !report.is_admitted() {
             print!("{}", report.render());
             return Err(format!("Dependency admission refused for {target}"));
         }
-        check_metadata_paths(root, &output.stdout)?;
+        check_metadata_paths(root, &metadata)?;
         print!("{}", report.render());
         println!(
             "PASS collected_metadata_paths[{target}]: actual workspace, manifests and target source files"
         );
     }
+    Ok(())
+}
+
+fn check_toolchain(root: &Path) -> Result<(), String> {
+    let policy_bytes = fs::read(root.join("registry/dependency_policy.json"))
+        .map_err(|error| format!("Cannot read toolchain qualification: {error}"))?;
+    let policy = json::parse(&policy_bytes, json::Limits::default())
+        .map_err(|error| format!("Invalid qualification policy: {error}"))?;
+    let qualification = policy
+        .get("operator_qualification")
+        .ok_or("Missing operator toolchain qualification")?;
+    let expected_commit = qualification
+        .get("rustc_commit")
+        .and_then(json::Json::as_str)
+        .ok_or("Missing qualified rustc commit")?;
+    let expected_host = qualification
+        .get("host")
+        .and_then(json::Json::as_str)
+        .ok_or("Missing qualified operator host")?;
+    println!("EXECUTE rustc -Vv");
+    let output = Command::new("rustc")
+        .arg("-Vv")
+        .current_dir(root)
+        .stderr(Stdio::inherit())
+        .output()
+        .map_err(|error| format!("Cannot collect rustc identity: {error}"))?;
+    if !output.status.success() {
+        return Err(format!(
+            "rustc identity collection failed: {}",
+            output.status
+        ));
+    }
+    std::io::stdout()
+        .write_all(&output.stdout)
+        .map_err(|error| format!("Cannot retain rustc identity output: {error}"))?;
+    toolchain_identity::check_verbose_version(&output.stdout, expected_commit, expected_host)?;
+    println!(
+        "PASS qualified_rustc_identity: {expected_commit} on {expected_host}; compiler-reported identity only"
+    );
+    Ok(())
+}
+
+fn check_registries(root: &Path) -> Result<(), String> {
+    let report = registry_checks::check_repository(root);
+    for finding in &report.findings {
+        eprintln!(
+            "REFUSE registry[{}] {} {} {}: {}",
+            finding.file,
+            finding.id.as_deref().unwrap_or("<document>"),
+            finding.code,
+            finding.location,
+            finding.detail
+        );
+    }
+    if !report.is_clean() {
+        return Err(format!(
+            "Registry core refused {} structural findings",
+            report.findings.len()
+        ));
+    }
+    println!(
+        "PASS registry_core: IDs, roadmap DAG, declared links, retained files and scoped source test declarations; not execution or invariant proof"
+    );
     Ok(())
 }
 
@@ -190,8 +272,9 @@ fn execute() -> Result<(), String> {
         [command] if command == "check" => {
             check_lock(&root)?;
             check_source(&root)?;
-            run(&root, "rustc", &["-Vv"])?;
+            check_toolchain(&root)?;
             check_admission(&root)?;
+            check_registries(&root)?;
             run(&root, "cargo", &["fmt", "--all", "--check"])?;
             run(&root, "cargo", &["check", "--workspace", "--all-targets", "--frozen"])?;
             run(&root, "cargo", &["clippy", "--workspace", "--all-targets", "--frozen", "--", "-D", "warnings"])?;

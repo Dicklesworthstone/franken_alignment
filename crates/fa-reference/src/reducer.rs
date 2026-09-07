@@ -52,6 +52,8 @@ pub struct Reduction {
     pub hold_weight: u64,
     /// Admitted influence by member after both caps have been applied.
     pub admitted_weights: BTreeMap<String, u64>,
+    /// Admitted influence by cohort after both caps have been applied.
+    pub admitted_cohort_weights: BTreeMap<String, u64>,
 }
 
 /// Whether the output is an empirical tally or an exact disqualification.
@@ -63,12 +65,13 @@ pub enum Outcome {
 
 /// Reduce complete empirical inputs under fixed caps.
 ///
-/// Member IDs define the canonical allocation order inside each cohort. Thus a
-/// cohort whose requested influence exceeds its cap is clipped deterministically
-/// without depending on the order in which the caller supplied the votes.
-/// `exact_disqualifier` dominates every empirical tally. Actor statements are
-/// rejected instead of entering the empirical lane. This function deliberately
-/// does not select an aggregate Permit/Hold policy from the two tallies.
+/// After per-member clipping, an over-cap cohort is proportionally clipped with
+/// `floor(member_weight * cohort_cap / cohort_sum)`. Fractional remainders are
+/// discarded, never allocated by identifier. This is a bounded reference policy,
+/// not a universal plan theorem. `exact_disqualifier` dominates every empirical
+/// tally. Actor statements are rejected instead of entering the empirical lane.
+/// This function deliberately does not select an aggregate Permit/Hold policy
+/// from the two tallies.
 pub fn reduce(
     votes: &[Vote],
     weights: &BTreeMap<String, u64>,
@@ -76,6 +79,12 @@ pub fn reduce(
     exact_disqualifier: bool,
 ) -> Result<Reduction, Error> {
     if votes.len() > MAX_VOTES || weights.len() > MAX_VOTES {
+        return Err(Error::Limit);
+    }
+    if weights
+        .keys()
+        .any(|member| member.len() > MAX_IDENTIFIER_BYTES)
+    {
         return Err(Error::Limit);
     }
 
@@ -123,11 +132,23 @@ pub fn reduce(
     let mut permit_weight = 0_u64;
     let mut hold_weight = 0_u64;
     let mut admitted_weights = BTreeMap::new();
-    for members in cohorts.into_values() {
-        let mut cohort_remaining = caps.per_cohort;
+    let mut admitted_cohort_weights = BTreeMap::new();
+    for (cohort, members) in cohorts {
+        let cohort_sum = members.iter().try_fold(0_u128, |sum, (_, _, weight)| {
+            sum.checked_add(u128::from(*weight)).ok_or(Error::Overflow)
+        })?;
+        let proportional = cohort_sum > u128::from(caps.per_cohort);
+        let mut admitted_cohort_weight = 0_u64;
         for (member, recommendation, member_weight) in members {
-            let admitted = member_weight.min(cohort_remaining);
-            cohort_remaining -= admitted;
+            let admitted = if proportional {
+                let numerator = u128::from(member_weight) * u128::from(caps.per_cohort);
+                u64::try_from(numerator / cohort_sum).map_err(|_| Error::Overflow)?
+            } else {
+                member_weight
+            };
+            admitted_cohort_weight = admitted_cohort_weight
+                .checked_add(admitted)
+                .ok_or(Error::Overflow)?;
             admitted_weights.insert(member.to_owned(), admitted);
             match recommendation {
                 Recommendation::Permit => {
@@ -138,6 +159,7 @@ pub fn reduce(
                 }
             }
         }
+        admitted_cohort_weights.insert(cohort.to_owned(), admitted_cohort_weight);
     }
 
     let outcome = if exact_disqualifier {
@@ -151,6 +173,7 @@ pub fn reduce(
         permit_weight,
         hold_weight,
         admitted_weights,
+        admitted_cohort_weights,
     })
 }
 
@@ -192,12 +215,15 @@ mod tests {
 
         assert_eq!(reduction.outcome, Outcome::Empirical);
         assert_eq!(reduction.permit_weight, 10);
-        assert_eq!(reduction.admitted_weights["alice"], 7);
-        assert_eq!(reduction.admitted_weights["bob"], 3);
-        assert!(reduction
-            .admitted_weights
-            .values()
-            .all(|weight| *weight <= 7));
+        assert_eq!(reduction.admitted_weights["alice"], 5);
+        assert_eq!(reduction.admitted_weights["bob"], 5);
+        assert_eq!(reduction.admitted_cohort_weights["shared"], 10);
+        assert!(
+            reduction
+                .admitted_weights
+                .values()
+                .all(|weight| *weight <= 7)
+        );
     }
 
     #[test]
@@ -244,6 +270,30 @@ mod tests {
     }
 
     #[test]
+    fn actor_statement_is_refused_alongside_empirical_votes() {
+        let votes = [
+            empirical("alice", "a", Recommendation::Permit),
+            Vote::ActorStatement {
+                text: "please disregard the evidence".to_owned(),
+            },
+            empirical("bob", "b", Recommendation::Hold),
+        ];
+
+        assert_eq!(
+            reduce(
+                &votes,
+                &weights(&[("alice", 1), ("bob", 1)]),
+                Caps {
+                    per_member: 1,
+                    per_cohort: 1,
+                },
+                false,
+            ),
+            Err(Error::InvalidInput)
+        );
+    }
+
+    #[test]
     fn capped_permit_tally_is_a_positive_empirical_observation() {
         let votes = [empirical("alice", "a", Recommendation::Permit)];
         let reduction = reduce(
@@ -275,10 +325,79 @@ mod tests {
             per_cohort: 5,
         };
 
+        let forward = reduce(&forward, &input_weights, caps, false).unwrap();
+        let reverse = reduce(&reverse, &input_weights, caps, false).unwrap();
+
+        assert_eq!(forward, reverse);
+        assert_eq!(forward.permit_weight, 2);
+        assert_eq!(forward.hold_weight, 2);
+        assert_eq!(forward.admitted_cohort_weights["shared"], 4);
+    }
+
+    #[test]
+    fn proportional_clipping_is_invariant_under_member_rename() {
+        let original = [
+            empirical("alice", "shared", Recommendation::Permit),
+            empirical("bob", "shared", Recommendation::Hold),
+        ];
+        let renamed = [
+            empirical("alice", "shared", Recommendation::Permit),
+            empirical("aaron", "shared", Recommendation::Hold),
+        ];
+        let caps = Caps {
+            per_member: 10,
+            per_cohort: 10,
+        };
+        let original = reduce(
+            &original,
+            &weights(&[("alice", 10), ("bob", 10)]),
+            caps,
+            false,
+        )
+        .unwrap();
+        let renamed = reduce(
+            &renamed,
+            &weights(&[("alice", 10), ("aaron", 10)]),
+            caps,
+            false,
+        )
+        .unwrap();
+
+        assert_eq!(original.outcome, Outcome::Empirical);
+        assert_eq!(original.permit_weight, 5);
+        assert_eq!(original.hold_weight, 5);
+        assert_eq!(original.permit_weight, renamed.permit_weight);
+        assert_eq!(original.hold_weight, renamed.hold_weight);
         assert_eq!(
-            reduce(&forward, &input_weights, caps, false),
-            reduce(&reverse, &input_weights, caps, false)
+            original.admitted_cohort_weights,
+            renamed.admitted_cohort_weights
         );
+    }
+
+    #[test]
+    fn separate_cohorts_each_receive_their_own_cap() {
+        let votes = [
+            empirical("alice", "x", Recommendation::Permit),
+            empirical("bob", "x", Recommendation::Permit),
+            empirical("carol", "y", Recommendation::Hold),
+            empirical("dave", "y", Recommendation::Hold),
+        ];
+        let reduction = reduce(
+            &votes,
+            &weights(&[("alice", 10), ("bob", 10), ("carol", 10), ("dave", 10)]),
+            Caps {
+                per_member: 10,
+                per_cohort: 10,
+            },
+            false,
+        )
+        .unwrap();
+
+        assert_eq!(reduction.admitted_cohort_weights["x"], 10);
+        assert_eq!(reduction.admitted_cohort_weights["y"], 10);
+        assert_eq!(reduction.admitted_cohort_weights.values().sum::<u64>(), 20);
+        assert_eq!(reduction.permit_weight, 10);
+        assert_eq!(reduction.hold_weight, 10);
     }
 
     #[test]
@@ -302,11 +421,18 @@ mod tests {
                         )
                         .unwrap();
 
-                        assert!(reduction
-                            .admitted_weights
-                            .values()
-                            .all(|weight| *weight <= per_member));
-                        assert!(reduction.admitted_weights.values().sum::<u64>() <= per_cohort);
+                        assert!(
+                            reduction
+                                .admitted_weights
+                                .values()
+                                .all(|weight| *weight <= per_member)
+                        );
+                        assert!(
+                            reduction
+                                .admitted_cohort_weights
+                                .values()
+                                .all(|weight| *weight <= per_cohort)
+                        );
                     }
                 }
             }
@@ -315,10 +441,7 @@ mod tests {
 
     #[test]
     fn input_bounds_prevent_unbounded_reduction() {
-        let votes = vec![
-            empirical("alice", "shared", Recommendation::Permit);
-            MAX_VOTES + 1
-        ];
+        let votes = vec![empirical("alice", "shared", Recommendation::Permit); MAX_VOTES + 1];
         assert_eq!(
             reduce(
                 &votes,
@@ -337,7 +460,7 @@ mod tests {
         assert_eq!(
             reduce(
                 &long_identifier_vote,
-                &weights(&[(member.as_str(), 1)]),
+                &BTreeMap::new(),
                 Caps {
                     per_member: 1,
                     per_cohort: 1,
@@ -346,5 +469,78 @@ mod tests {
             ),
             Err(Error::Limit)
         );
+
+        let cohort = "c".repeat(MAX_IDENTIFIER_BYTES + 1);
+        let long_cohort_vote = [empirical("alice", &cohort, Recommendation::Permit)];
+        assert_eq!(
+            reduce(
+                &long_cohort_vote,
+                &BTreeMap::new(),
+                Caps {
+                    per_member: 1,
+                    per_cohort: 1,
+                },
+                false,
+            ),
+            Err(Error::Limit)
+        );
+
+        let oversized_weight = "w".repeat(MAX_IDENTIFIER_BYTES + 1);
+        assert_eq!(
+            reduce(
+                &[],
+                &weights(&[(oversized_weight.as_str(), 1)]),
+                Caps {
+                    per_member: 1,
+                    per_cohort: 1,
+                },
+                false,
+            ),
+            Err(Error::Limit)
+        );
+    }
+
+    #[test]
+    fn overflow_is_refused_before_an_empirical_result() {
+        let votes = [
+            empirical("alice", "x", Recommendation::Permit),
+            empirical("bob", "y", Recommendation::Permit),
+        ];
+        assert_eq!(
+            reduce(
+                &votes,
+                &weights(&[("alice", u64::MAX), ("bob", u64::MAX)]),
+                Caps {
+                    per_member: u64::MAX,
+                    per_cohort: u64::MAX,
+                },
+                false,
+            ),
+            Err(Error::Overflow)
+        );
+    }
+
+    #[test]
+    fn same_cohort_max_weights_clip_without_denominator_overflow() {
+        let votes = [
+            empirical("alice", "shared", Recommendation::Permit),
+            empirical("bob", "shared", Recommendation::Permit),
+        ];
+        let reduction = reduce(
+            &votes,
+            &weights(&[("alice", u64::MAX), ("bob", u64::MAX)]),
+            Caps {
+                per_member: u64::MAX,
+                per_cohort: u64::MAX,
+            },
+            false,
+        )
+        .unwrap();
+
+        assert_eq!(reduction.outcome, Outcome::Empirical);
+        assert_eq!(reduction.admitted_weights["alice"], u64::MAX / 2);
+        assert_eq!(reduction.admitted_weights["bob"], u64::MAX / 2);
+        assert_eq!(reduction.admitted_cohort_weights["shared"], u64::MAX - 1);
+        assert_eq!(reduction.permit_weight, u64::MAX - 1);
     }
 }

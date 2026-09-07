@@ -4,6 +4,7 @@
 
 pub mod full_input;
 pub mod product_frontier;
+pub mod reducer;
 pub mod round;
 
 use std::collections::{BTreeMap, BTreeSet, VecDeque};

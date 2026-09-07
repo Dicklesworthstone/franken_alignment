@@ -1,0 +1,91 @@
+{
+  "schema_version": "fa.reference_execution/1",
+  "base_commit": "ad7bc36a624db28b25de1c97d666a4c63bfdc34c",
+  "overlay_fingerprint": "0eaa380003ca80c6bfe2bcf2fac67eea43260baf8f6a0c395aaccbecfeb4d4a6",
+  "source_files": {
+    "crates/fa-reference/src/lib.rs": "5863141b665c3bb571c62c63cfed1c3d7177460bfff8043f0aa290fa6c198bb6",
+    "crates/fa-reference/src/reducer.rs": "8418380ae8eb6d54200f4ddbd2aadb39a2446efb589719b5f9ecf70edde57ef4",
+    "xtask/src/main.rs": "a49a171850d8eeb7e3fda576fa4d3abeafc79e0aa76c280b0ae595d84c4dc31a",
+    "xtask/src/registry_checks.rs": "6aef7ca6e739a08e471e9a0f5fa3d38c1b36766ddd7519b81a2d63276e62b535",
+    "xtask/src/registry_negative_tests.rs": "ca328b8c107f1630e4775f422045512b57398ce9e6200768ff56f137adcae10b",
+    "xtask/src/metadata_collection_tests.rs": "a8e23217d8d888a61a65f258f4ec81251a69cb20fdcba702d13870fcba764b8e",
+    "xtask/src/toolchain_identity.rs": "1c402d766a1cd5d98ddfe435cb46e741322549b5242d82e42897e472697d5094",
+    "registry/dependency_policy.json": "45a70cb8a3267f3de126144d6c1bd29484895f2d340036a104da1e9f3a08fe3b",
+    "registry/invariants.json": "769507ab393cfc5bc913d0af4e9781da6ef88077b3ab5586b19ccbf4621e1e8a"
+  },
+  "command_argv": [
+    "rch",
+    "--json",
+    "exec",
+    "--base",
+    "ad7bc36",
+    "--clean-overlay",
+    "--overlay-path",
+    "crates/fa-reference/src/lib.rs",
+    "--overlay-path",
+    "crates/fa-reference/src/reducer.rs",
+    "--overlay-path",
+    "xtask/src/main.rs",
+    "--overlay-path",
+    "xtask/src/registry_checks.rs",
+    "--overlay-path",
+    "xtask/src/registry_negative_tests.rs",
+    "--overlay-path",
+    "xtask/src/metadata_collection_tests.rs",
+    "--overlay-path",
+    "xtask/src/toolchain_identity.rs",
+    "--overlay-path",
+    "registry/dependency_policy.json",
+    "--overlay-path",
+    "registry/invariants.json",
+    "--",
+    "cargo",
+    "+nightly-2026-09-07",
+    "run",
+    "--locked",
+    "-p",
+    "xtask",
+    "--",
+    "check"
+  ],
+  "required_environment": {
+    "RCH_REQUIRE_REMOTE": "1"
+  },
+  "format_command": "rustup run nightly-2026-08-31 rustfmt --edition 2024 crates/fa-reference/src/lib.rs xtask/src/main.rs",
+  "toolchain": "nightly-2026-09-07",
+  "rustc_commit": "5a2be9f5f075d31e3ca5526b5b029881ce441253",
+  "worker": "hz4",
+  "execution_host": "x86_64-unknown-linux-gnu",
+  "result": "pass",
+  "tests": {
+    "reference_unit": 56,
+    "reference_integration": 16,
+    "xtask_unit": 102,
+    "doctest_positive": 1,
+    "doctest_compile_fail": 1,
+    "failed": 0
+  },
+  "qualified_log": "2026-09-07-epoch3-attempt3.log",
+  "prior_attempts": [
+    {
+      "log": "2026-09-07-epoch3-attempt1.log",
+      "result": "failed_clippy",
+      "fix": "Remove redundant Option dereferences and unused ID-set binding; use guarded match. No lint suppression."
+    },
+    {
+      "log": "2026-09-07-epoch3-attempt2.log",
+      "result": "failed_real_metadata_manifestless_directory_test",
+      "fix": "Bind actual Cargo metadata invocation to the intended root Cargo.toml with --manifest-path, preventing ancestor-workspace discovery. Test unchanged."
+    }
+  ],
+  "source_hashes_rechecked_after_run": true,
+  "no_claim": [
+    "production congress, credibility, helper selection or authority",
+    "general external dependency admission or complete FA-053/FA-054",
+    "complete founding-concordance checker or zero-Unknown mapping",
+    "source_snapshot modules under implementation",
+    "Apple compilation or runtime for this revision",
+    "cryptographic authentication of compiler or hash tools",
+    "release or deployment"
+  ]
+}
