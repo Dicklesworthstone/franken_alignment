@@ -314,7 +314,7 @@ Provisional performance targets from [`registry/slo.json`](./registry/slo.json) 
 
 Honest engineering boundaries:
 
-- **Gated Staged Roadmap (G0 $\to$ G6).** Design revision 0.2 provides the formal architecture, machine-readable registries, and safe-Rust reference workspace. The production broker, native foundation adapters, and learned compression models land sequentially across roadmap gates G1 through G5.
+- **Gated Staged Roadmap (G0 $\to$ G6).** The project establishes the formal architecture, machine-readable registries, and safe-Rust reference workspace. The production broker, native foundation adapters, and learned compression models land sequentially across roadmap gates G1 through G5.
 - **Reference Oracle vs. Production Scale.** The reference `Graph` and `Snapshot` models in `fa-reference` are bounded models designed for property testing and contract verification; they do not replace the scalable Asupersync ATP engine or FrankenGraphDB storage layer.
 - **Graph Completeness Assumption.** Authority graph cuts prove that no path exists *in the supplied model*. A model that omits an out-of-band egress channel cannot prevent leaks across that unmodeled channel; the capability manifest must explicitly state residual channels.
 - **Conservative Decision Bounds.** Linear probe margin certification requests refinement whenever $|w^\top \hat{x} - T| \le \|w\|_* \cdot \varepsilon$. Highly lossy compression will produce frequent refinement fallbacks rather than risking incorrect permissions.
@@ -324,7 +324,7 @@ Honest engineering boundaries:
 ## FAQ
 
 **Is this production-ready today?**  
-The README describes the target state of the architecture (see [A note on tense](#a-note-on-tense-read-this-first)). Revision 0.2 establishes the verified specifications, registries, and dependency-free safe-Rust reference implementation. Production adapters and brokers land across Gates G1–G6.
+The README describes the target state of the architecture (see [A note on tense](#a-note-on-tense-read-this-first)). The project provides the verified specifications, formal registries, and dependency-free safe-Rust reference implementation. Production adapters and brokers land across Gates G1–G6.
 
 **Why a closed dependency universe in pure safe Rust?**  
 Because you cannot seed-replay, formally verify, or safely isolate an alignment broker that depends on an opaque C++ runtime, unpinned Python packages, or multi-threaded background workers. Safe Rust guarantees that memory safety is structural, while Asupersync provides deterministic concurrency.
