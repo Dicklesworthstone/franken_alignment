@@ -35,7 +35,6 @@ Name the affected invariant, supply a minimal counterexample or measured problem
 
 The design can change radically while its honesty remains stable: no evidence becomes stronger merely because a document was edited.
 
-
 ## Revision 0.2 constitutional decisions
 
 1. Pure Rust and a transitive closed universe supersede any permissive prototype/runtime implication in the first draft.

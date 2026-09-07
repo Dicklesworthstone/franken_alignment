@@ -2260,8 +2260,8 @@
         "FA-INV-003"
       ],
       "acceptance": [
-        "Reducer emits exactly one registered Consequence (Continue, HoldEffect, NarrowAuthority, SuspendRun, ResetToCheckpoint, TrainingSignal, DownweightReporter) recorded in the decision closure with round, evidence root and reducer generation.",
-        "Lattice ordering enforced; exact disqualifier yields at least HoldEffect; ResetToCheckpoint requires NarrowAuthority; TrainingSignal never touches live policy or weights.",
+        "Reducer emits exactly one primary Consequence (Continue, HoldEffect, Deny, NarrowAuthority, SuspendRun, ResetToCheckpoint) plus zero or more annotations (TrainingSignal, DownweightReporter) recorded in the decision closure with round, evidence root and reducer generation.",
+        "Chain ordering enforced; exact disqualifier yields Deny for the attempt; ResetToCheckpoint requires NarrowAuthority; TrainingSignal never touches live policy or weights.",
         "Negative tests: an empirical majority attempting to select Continue over an exact disqualifier; a consequence applied without a frozen round; DownweightReporter applied to a dissenter whose hold was later confirmed.",
         "Produce executed local evidence; source or prose alone does not close this packet."
       ],
@@ -2900,7 +2900,7 @@
       ],
       "acceptance": [
         "Versioned receipt schema (frozen effect digest, policy epoch, evidence-view closure digests, round/consequence, autonomy grade, passport, coverage, domain, control sequence, signatures, claim class, profile reference).",
-        "`fa verify` sharing no code with the broker; reports verified vs unverifiable properties separately; redaction reported.",
+        "`fa verify` sharing no decision, policy or authority code with the broker (fa-types/fa-formats only); reports verified vs unverifiable properties separately; redaction reported.",
         "Negative: forged receipt, altered effect byte, missing profile reference, receipt for unadmitted effect all rejected.",
         "Produce executed local evidence; source or prose alone does not close this packet."
       ],

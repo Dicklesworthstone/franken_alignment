@@ -9,7 +9,7 @@ The architecture originates in two essays by Jeffrey Emanuel, and most of the li
 | Date | Work | Relationship |
 |---|---|---|
 | October 18, 2018 and July 15, 2021 | Confidence sequences (Howard et al.); conformal prediction (Angelopoulos and Bates) | Statistical methods the plan uses; not proposals of this architecture |
-| December 12, 2023 | AI Control (Greenblatt et al.) | Precedes the essays; studies trusted monitoring and trusted editing of an intentionally subversive model in a coding setting |
+| December 12, 2023 | AI Control (Greenblatt et al.) | Precedes the essays; studies trusted editing and untrusted monitoring of an intentionally subversive model in a coding setting |
 | February 5, 2024 | KIVI (Liu et al.) | Precedes the essays; a KV-quantization baseline for the sidecar tournament, not a monitoring or replay proposal |
 | June 17, 2024 | Refusal is mediated by a single direction (Arditi et al.) | Cited by the alignment essay three days later as evidence that internal guardrails are brittle |
 | **June 20, 2024** | **Some Thoughts on AI Alignment: Using AI to Control AI (Emanuel)** | **Founding essay.** External control by a congress of narrower, independent, rotating helpers watching outputs and intermediate activations; commit–reveal voting; no self-defense channel; honeypot elicitation of activation signatures; surprise as a masking detector; stop-the-line economics and risk-theater governance |
@@ -19,7 +19,7 @@ The architecture originates in two essays by Jeffrey Emanuel, and most of the li
 | October 29, 2025 | Signs of introspection in LLMs (Anthropic) | Later evidence on the introspective ability the introspection essay proposed to instrument directly |
 | May 7, 2026 | Natural-language activation autoencoders (Transformer Circuits) | Later interpretable-latent work; a baseline for the sidecar tournament |
 | May 14, 2026 | Ensemble monitoring: diverse signals outweigh compute (Koran et al.) | Later evidence for the essay's architecture-diverse congress; the plan still measures joint failure rather than assuming it |
-| July 8, 2026 | Multi-agent control: distributed attacks (Makins et al.) | Later evidence for the fleet-level composition problem the plan addresses in §15 |
+| submitted July 8, 2026 | Multi-agent control: distributed attacks (Makins et al.) | Later evidence for the fleet-level composition problem the plan addresses in §15 |
 
 The plan does not claim that the essays anticipated every component technique. It claims them as the origin of the architecture and records the chronology so that neither the essays nor the later papers are miscredited.
 

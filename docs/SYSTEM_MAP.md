@@ -29,7 +29,7 @@ Read it bottom-up to build the system and top-down to understand a situation. Th
 ## The epistemic type
 
 ```
-Knowledge<T> = Known   { value: T, basis: { claim_class, origin, complete_for_contract, semantically_valid,
+Knowledge<T> = Known   { value: T, basis: { claim_class, authentic_origin, complete_for_contract, semantically_valid,
                                             available_for_replay, generation, control_seq } }
              | Pending { frontier, expected_cost }
              | Unknown { reason }                       // not observed, or lower layer unverified; never permission
@@ -45,7 +45,7 @@ Knowledge<T> = Known   { value: T, basis: { claim_class, origin, complete_for_co
 | L0–L2 | `get`, `related`, `capabilities`, `when` | | `invalidate` |
 | L3 | `explain`, `cost` | `convene --branch` | `convene` |
 | L4–L5 | `situation`, `why-held`, `next`, `tail` | `propose --branch`, `precheck` | `propose`, `hold`, `narrow`, `suspend`, `reset`, `fence`, `resolve` |
-| L6 | `explain`, `verify` | | `annotate`, `handoff` |
+| L6 | `explain`, `verify` | `annotate --branch`, `handoff --branch` | `annotate`, `handoff` |
 | L7 | `replay-plan` | `branch`, `intervene`, `replay`, `rehearse` | none (no production authority) |
 | L8 | `doctor`, `ledger`, `findings` | `policy-replay` | `promote`, `rotate`, `preregister` |
 

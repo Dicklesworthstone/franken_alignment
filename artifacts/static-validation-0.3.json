@@ -18,11 +18,11 @@
     "verbs_used_in_docs": 25,
     "reference_symbol_links": 8,
     "rust_test_functions": 20,
-    "local_markdown_links": 132,
+    "local_markdown_links": 125,
     "plan_subsections": 171,
     "sources": 33,
     "bead_epics": 43,
-    "bead_tasks": 177
+    "bead_tasks": 186
   },
   "checks": [
     "json parse",

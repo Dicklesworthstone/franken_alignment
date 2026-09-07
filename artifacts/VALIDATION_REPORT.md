@@ -28,4 +28,4 @@ Rust execution is no longer "not run": the 20 reference tests passed on one oper
 
 `SHA256SUMS` was regenerated over the tracked files of the revision 0.3 tree (excluding itself and the beads database sidecars). It remains a packaging-consistency digest list, not a signature.
 
-The agent-legibility batch added checks that the system map's layers reference existing plan sections, invariants, packets and registered verbs, that every `fa <verb>` and address kind used in the README, plan, system map and agent guide is registered in `registry/vocabulary.json` and not retired, and that no bead body uses a retired verb.
+The agent-legibility batch added checks that the system map's layers reference existing plan sections, invariants, packets and registered verbs, that every `fa <verb>` invocation and address kind used in the README, plan, system map and agent guide is registered in `registry/vocabulary.json` and not retired, and that no bead body uses a retired verb.

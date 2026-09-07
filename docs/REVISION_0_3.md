@@ -8,7 +8,7 @@ Revision 0.3 fixes the center of gravity without discarding the engineering.
 
 ## What changed
 
-1. **A normative concordance.** [`docs/FOUNDING_IDEAS.md`](FOUNDING_IDEAS.md) and [`registry/founding_concordance.json`](../registry/founding_concordance.json) map every paragraph of both essays to the mechanism, invariant, hypothesis and packet that carries it, list the syntheses (six in the first batch, nine after the second) where each essay repairs the other's weakest point, and record every place the plan deliberately adds a contract rather than importing an idea literally. Packet FA-103 keeps the concordance complete; a semantic change that leaves it stale is incomplete.
+1. **A normative concordance.** [`docs/FOUNDING_IDEAS.md`](FOUNDING_IDEAS.md) and [`registry/founding_concordance.json`](../registry/founding_concordance.json) map every paragraph of the alignment essay and every section of the introspection essay to the mechanism, invariant, hypothesis and packet that carries it, list the syntheses (six in the first batch, nine after the second) where each essay repairs the other's weakest point, and record every place the plan deliberately adds a contract rather than importing an idea literally. Packet FA-103 keeps the concordance complete; a semantic change that leaves it stale is incomplete.
 
 2. **Two founding commitments above the eight bets.** Plan §3 now opens with F1 (control is external and one-directional) and F2 (introspection is economical, versioned and replayable). Every bet names its founding root or declares itself an engineering addition. The README's bet table matches the plan.
 
@@ -36,7 +36,7 @@ Revision 0.3 fixes the center of gravity without discarding the engineering.
 
 ## The second batch: verifiable by outsiders, resistant to its own decay
 
-After the founding concordance was in place, a second pass asked what would make the system matter outside its own deployment and keep mattering after the first year. Eleven plan subsections, four invariants (FA-INV-035 through FA-INV-038), three hypotheses (H19 through H21) and fifteen packets (FA-117 through FA-131) answer that:
+After the founding concordance was in place, a second pass asked what would make the system matter outside its own deployment and keep mattering after the first year. Fifteen plan subsections, four invariants (FA-INV-035 through FA-INV-038), three hypotheses (H19 through H21) and fifteen packets (FA-117 through FA-131) answer that:
 
 - **Control receipts and assurance profiles** (§17.9, §17.10): proof-carrying effects that a registry, insurer, regulator or another lab can verify with a verifier sharing no code with the broker; the essay's argument that governments may compel serious control spending now has an object to inspect.
 - **Model passports and identity liveness** (§7.10): the alignment essay's concept anchors over the introspection essay's tapped activations become a fingerprint for the guarded model, so weight substitution, adapter injection or fine-tuning is an identity event rather than an unexamined assumption.

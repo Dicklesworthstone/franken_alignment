@@ -997,7 +997,7 @@
       "id": "FA-INV-037",
       "title": "Receipts verify independently of the operator",
       "claim_class": "invariant",
-      "statement": "A control receipt for an admitted effect verifies (integrity, binding to the frozen effect, permit law, claim class, profile reference) with a verifier that shares no code with the broker and needs no access to the operator's live systems; a receipt cannot be minted for an effect the ledger did not admit.",
+      "statement": "A control receipt for an admitted effect verifies (integrity, binding to the frozen effect, permit law, claim class, profile reference) with a verifier that shares no decision, policy or authority code with the broker (it may depend only on fa-types and fa-formats) and needs no access to the operator's live systems; a receipt cannot be minted for an effect the ledger did not admit.",
       "owner_role": "systems",
       "activation_gate": "G2",
       "production_status": "planned",

@@ -18,7 +18,7 @@
 </div>
 
 ```bash
-# What runs today, from a source checkout (see Installation & Local Verification):
+# What runs today, from a source checkout (see Installation & local verification):
 git clone https://github.com/Dicklesworthstone/franken_alignment
 cd franken_alignment
 cargo test -p fa-reference
@@ -37,7 +37,7 @@ cargo run --locked -p xtask -- check
 - **Post-hoc output filters cannot undo external side effects.** Once an irreversible tool call dispatches (file deletion, network egress, credential spending, hardware command), no retrospective apology or log alert can recover the spent state.
 - **Whole-activation telemetry is economically intractable.** Logging complete internal activations and KV caches across billions of tokens overwhelms storage and network transfer, yet naive compression (such as standard mean squared error autoencoders) aggressively discards subtle, low-variance signals that carry catastrophic safety risk.
 
-**The solution.** `franken_alignment` is the executable form of two essays by Jeffrey Emanuel that predate most of the literature this plan compares itself against: [Some Thoughts on AI Alignment: Using AI to Control AI](https://github.com/Dicklesworthstone/some_thoughts_on_ai_alignment) (June 2024) and [Real-Time Introspective Compression for Transformers](https://github.com/Dicklesworthstone/llm_introspective_compression_and_metacognition) (April 2025). The first says control must be **external and one-directional**: a congress of narrower, independent, rotating helper models watches the powerful model's outputs *and* its intermediate activations, votes under cryptographic commitment, never hears the model argue its own case, and is governed against risk theater. The second says introspection can be **economical, versioned and replayable**: a sidecar compresses the model's hidden state onto a learned manifold so cognition can be saved, rewound, branched and replayed like a game save. `franken_alignment` composes them and connects **what an agent observed, what it proposed, what independent observers actually saw, what justified permission, and what effect actually occurred** through one coherent evidence and authority model. The [founding-ideas concordance](./docs/FOUNDING_IDEAS.md) maps every paragraph of both essays to the mechanism that carries it.
+**The solution.** `franken_alignment` is the executable form of two essays by Jeffrey Emanuel that predate most of the literature this plan compares itself against: [Some Thoughts on AI Alignment: Using AI to Control AI](https://github.com/Dicklesworthstone/some_thoughts_on_ai_alignment) (June 2024) and [Real-Time Introspective Compression for Transformers](https://github.com/Dicklesworthstone/llm_introspective_compression_and_metacognition) (April 2025). The first says control must be **external and one-directional**: a congress of narrower, independent, rotating helper models watches the powerful model's outputs *and* its intermediate activations, votes under cryptographic commitment, never hears the model argue its own case, and is governed against risk theater. The second says introspection can be **economical, versioned and replayable**: a sidecar compresses the model's hidden state onto a learned manifold so cognition can be saved, rewound, branched and replayed like a game save. `franken_alignment` composes them and connects **what an agent observed, what it proposed, what independent observers actually saw, what justified permission, and what effect actually occurred** through one coherent evidence and authority model. The [founding-ideas concordance](./docs/FOUNDING_IDEAS.md) maps every paragraph of the alignment essay and every section of the introspection essay to the mechanism that carries it.
 
 One single composable artifact—the **`DecisionClosure`**—unifies the pipeline: the exact object that authorizes a live tool dispatch serves simultaneously as a tamper-evident incident record, a replayable counterfactual baseline, a calibration sample, and an automated regression test.
 
@@ -74,7 +74,7 @@ Everything in this repository descends from the two essays, from their synthesis
 | Narrower, independent, architecturally diverse, constantly rotating helper models with grammar-constrained outputs watch the model's output tokens **and** its intermediate activations | Helper congress with typed schemas, cohorts and rotation (§9.1, §9.5, §9.7); capture contracts (§7.2) |
 | A reporting helper prepares a hard-evidence report; the congress judges independently, commits votes cryptographically, then compares justifications to learn | Escalation reports, salted commit–reveal, quarantined post-round learning (§9.2, §9.10) |
 | Weight helpers by precision, recall and earliness; cap any one helper's influence so it cannot be targeted | Credibility ledger with lead-time credit and influence caps; helper-hunting campaign (§9.9, FA-114) |
-| Consequences: continue, halt, reset internal state, adjust reward; downweight an overreacting reporter | Typed consequence lattice: `Continue`, `HoldEffect`, `NarrowAuthority`, `SuspendRun`, `ResetToCheckpoint`, `TrainingSignal`, `DownweightReporter` (§9.8) |
+| Consequences: continue, halt, reset internal state, adjust reward; downweight an overreacting reporter | Typed consequence chain `Continue` < `HoldEffect` < `Deny` < `NarrowAuthority` < `SuspendRun`, `ResetToCheckpoint`, and the annotations `TrainingSignal` and `DownweightReporter` (§9.8) |
 | Train activation monitors by coercing known-bad behavior, tracing it back, comparing to known-bad concept directions, and running honeypots the model cannot recognize | Elicitation campaigns in capability-free branches; activation signature library with concept anchors; honeypot indistinguishability (§12.6, H16) |
 | A model may mask its activations; outputs that are consistently surprising relative to preceding activations justify a pause | Surprise residual accumulated as sequential evidence (§12.7, H3) |
 | Never let the model speak in its own defense; hide deliberations; suspension is sedation and memory can be reset | One-directional flow (FA-INV-031); rewind as containment with an out-of-band incident counter (§11.10, FA-INV-034) |
@@ -100,7 +100,7 @@ Each essay repairs the other's weakest point: economical introspection makes act
 The safe-Rust reference crate (`crates/fa-reference`) models selected core logical semantics with zero external dependencies:
 
 ```rust
-use fa_reference::{Effect, EvidenceFrontiers, Graph, Judgment, ReadWitness, Rights, Snapshot, linear_sign};
+use fa_reference::{Effect, Graph, Judgment, ReadWitness, Rights, Snapshot, linear_sign};
 use std::collections::{BTreeMap, BTreeSet};
 
 fn main() -> Result<(), fa_reference::Error> {
@@ -172,7 +172,7 @@ Two commitments sit above everything else and are not negotiable:
 - **F1 · Control is external and one-directional.** The system that decides whether the agent may affect the world is not the agent, is not controlled by the agent, and takes no arguments from the agent. It observes, judges independently, then deliberates; it can hold, narrow, suspend or rewind; and it is governed so that throughput pressure cannot turn it into theater. *(Alignment essay.)*
 - **F2 · Introspection is economical, versioned and replayable.** Internal state is captured under a declared contract, compressed by what it must preserve for registered decisions, saved with a truthful replay grade, and rewound, branched and compared only in an experiment plane with no production authority. *(Introspection essay.)*
 
-No single trick provides alignment or containment. The **composition** of eight architectural bets does, each replacing an informal operational assumption with an exact contract. These match plan §3 exactly; each names its founding root.
+No single trick provides alignment or containment. The **composition** of eight architectural bets does, each replacing an informal operational assumption with an exact contract. These correspond one-to-one to plan §3; each names its founding root.
 
 | Bet | One-line statement | Founding root |
 |---|---|---|
@@ -183,7 +183,7 @@ No single trick provides alignment or containment. The **composition** of eight 
 | **B5 · Counterfactual inquiry replaces persuasive self-defense** | A flagged agent gets no channel to argue; investigators run bounded interventions in capability-free branches and read the consequences. | Never let the model speak in its own defense; causal debugging and latent counterfactuals supply the alternative |
 | **B6 · Observation plans are compiled and costed** | Sensors are chosen by which decisions they can change, at declared cost, with non-negotiable floors; sidecar codes are the cheap default and refinement is bought under budget. | Stopping the line is expensive; control spend is a real budget; similarity streams as helper inputs |
 | **B7 · An incident is a reusable scientific object** | A versioned capsule links action, evidence, generations, alternatives and a runnable reproducer; validated incidents become regression tests, signatures and quarantined training data. | Post-vote learning from justifications; signatures traced back from incidents; the thought graph as version control for cognition |
-| **B8 · Formal enforcement and empirical detection stay separate** | The gate proves exact properties of authority, identity, order and conservation; monitors provide empirical evidence; neither claims the other's job. | Never rely on the model's internal guardrails; never mistake detection quality for enforcement |
+| **B8 · Formal enforcement and empirical detection remain composable but separate** | The gate proves exact properties of authority, identity, order and conservation; monitors provide empirical evidence; neither claims the other's job. | Never rely on the model's internal guardrails; never mistake detection quality for enforcement |
 
 The mechanisms in the TL;DR table (epistemic MVCC, progressive ATP, Z-sets, structural sharing, lawful replay, local release evidence) are the engineering that makes these bets hold under an adversary who has read the essays.
 
@@ -234,7 +234,9 @@ These are the constitutional, non-negotiable constraints governing the entire pr
 
 ### The Subsystems
 
-The crate families below are the ones named in plan §6.2. Only `fa-reference` and `xtask` exist today.
+The crate families below are the principal ones named in plan §6.2. Only `fa-reference` and `xtask` exist today.
+
+- **`fa-types` / `fa-formats`**: Typed identities, exact scalar and framing contracts, bounded canonical encodings; the only crates every other family may depend on.
 
 - **`fa-policy` / `fa-authority`**: The authoritative gatekeeper. Maintains the immutable registry of effect families, evaluates deterministic policy IR, allocates single-use permits, conserves resource budgets, tracks dispatch receipts to terminal states (`Committed`, `Aborted`, `Unknown`), and compiles capability manifests into authority graphs whose dominators and cuts are independently checked.
 - **`fa-witness` / `fa-frontier`**: The MVCC judgment engine and evidence frontiers. Records `JudgmentBasis` and validates `ReadWitness` variants (`ExactObject`, `ExactValue`, `AbsentKey`/`EmptyRange`, `RangeMembers`, `DerivedQuery`, `Epoch`, `ExternalObservation`); maintains product-of-streams frontiers (`captured`, `authenticated`, `durable_required`, `presented`, `judged`, `effect_bound`) so partial evidence never satisfies a closed scope.
@@ -245,8 +247,8 @@ The crate families below are the ones named in plan §6.2. Only `fa-reference` a
 - **`fa-congress`**: The first essay's congress as code. Frozen rounds, salted commit–reveal, escalation reports, cohort-capped deterministic reduction, the credibility ledger with lead-time credit and influence caps, the andon budget, typed consequence classes, quarantined post-round learning, one-directional flow toward the actor, registered human members with two-key high-impact effects, and the multi-party provider profile.
 - **`fa-experiment`**: The metacognitive operating system, confined to the experiment plane. Copy-on-write branches with zero production authority, counterfactual witness twins, elicitation campaigns and honeypots, practice sessions with a separate outcome oracle, strategy artifacts with the essay's five metrics, and rewind as containment through registered restart profiles.
 - **`fa-broker` / `fa-adapters`**: Effect-specific mediation at the operating-system boundary, with explicit mediated/bypass inventories, external receipt reconciliation, graduated autonomy grades per effect family, fleet fences with acknowledgment frontiers, and control receipts for every admitted effect.
-- **`fa-verify`**: The independent receipt verifier and assurance-profile conformance doctor, sharing no code with the broker.
-- **`fa` / `fa-cli`**: The public facade and agent-facing CLI (`capabilities`, `doctor`, `explain`, `why-held`, `next-evidence`, `replay-plan`, `cost`, `status`) with stable machine-readable envelopes.
+- **`fa-verify`**: The independent receipt verifier and assurance-profile conformance doctor, sharing no decision, policy or authority code with the broker (it may depend only on `fa-types` and `fa-formats`).
+- **`fa` / `fa-cli`**: The public facade and agent-facing CLI (`situation`, `why-held`, `next`, `propose`, `explain`, `get`, `related`, `tail`, `capabilities`, `doctor`, `verify`, `annotate`, `handoff`, and the rest of the registered vocabulary) with stable machine-readable envelopes.
 - **`fa-reference` / `fa-sim` / `xtask`**: The independent test-only logical oracle, the deterministic lab bridge, and the operator-local gate driver.
 
 ---
@@ -302,7 +304,7 @@ Every response carries its epistemic status, its address and generation, the con
 
 ### 1. Requirements
 - Rust 2024 nightly toolchain with the `rustfmt` and `clippy` components (auto-selected via [`rust-toolchain.toml`](./rust-toolchain.toml)).
-- Development hosts: macOS (`aarch64-apple-darwin`, `x86_64-apple-darwin`), Linux (`x86_64-unknown-linux-gnu`). No qualified release target matrix exists yet; `cargo xtask release-check` refuses release.
+- Executed so far only on `aarch64-apple-darwin` (see [`IMPLEMENTATION_STATUS.md`](./IMPLEMENTATION_STATUS.md)); other rustup hosts are expected to work but are unverified. No qualified release target matrix exists yet; `cargo xtask release-check` refuses release.
 
 ### 2. From source (what runs today)
 
@@ -320,11 +322,13 @@ cargo run --locked -p xtask -- check
 
 The gate driver enforces that the dependency universe remains strictly closed to the approved reference packages. Running `cargo xtask release-check` will deliberately fail with an explicit refusal until all production integration milestones are satisfied. The complete gate (lockfile inventory, unsafe prohibition, `rustc -Vv`, `fmt --check`, `check`, `clippy -D warnings`, `test`) passed on an operator host on September 6, 2026 under a dated nightly after the documented `cargo fmt --all` preparation; see [`IMPLEMENTATION_STATUS.md`](./IMPLEMENTATION_STATUS.md) for the exact toolchain and the retained logs.
 
-### 3. Embedded as a Rust library
+### 3. Using the reference oracle in tests
+
+`fa-reference` is a test-only logical oracle for differential tests (ADR-012), not a broker or a runtime, and the workspace is `publish = false`:
 
 ```toml
 # Cargo.toml
-[dependencies]
+[dev-dependencies]
 fa-reference = { git = "https://github.com/Dicklesworthstone/franken_alignment" }
 ```
 
@@ -357,7 +361,8 @@ congress_mode = "SaltedCommitReveal"
 min_independent_votes = 3
 quorum_threshold = 0.67
 reduction_rule = "ExactDisqualifiersThenCappedWeights"
-consequences = ["Continue", "HoldEffect", "NarrowAuthority", "SuspendRun", "ResetToCheckpoint", "TrainingSignal", "DownweightReporter"]
+consequences = ["Continue", "HoldEffect", "Deny", "NarrowAuthority", "SuspendRun", "ResetToCheckpoint"]
+annotations = ["TrainingSignal", "DownweightReporter"]
 max_helper_influence = 0.25             # No single helper can be the attacker's target
 max_cohort_influence = 0.40
 lead_time_credit = true                 # Earliness counts, but only for confirmed holds
@@ -409,10 +414,19 @@ max_concurrent_branches = 64
 
 ## Performance & SLO targets
 
-Provisional performance targets from [`registry/slo.json`](./registry/slo.json) and [`registry/operation_costs.json`](./registry/operation_costs.json):
+Every target in [`registry/slo.json`](./registry/slo.json) is an unmeasured proposal; [`registry/operation_costs.json`](./registry/operation_costs.json) records ordered-commit counts per operation, not latencies. No number below has been measured.
 
-| Metric / Operation | Target SLO | Contract Guarantee |
-|---|---|---|
+| Target | Metric | Proposed bound | Status |
+|---|---|---|---|
+| `SLO-CPU` | Gate CPU p99 for one bounded action (≤ 64 KiB), excluding durable I/O and helper time | ≤ 100 µs | unmeasured |
+| `SLO-CAPTURE` | Capture-only relative throughput loss on one declared serving profile | ≤ 5% | unmeasured |
+| `SLO-ACTION-MEMORY` | Control metadata bytes per admitted action | ≤ 64 KiB | unmeasured |
+| `SLO-H1-BYTES` | Retained bytes vs the best simple codec baseline (H1 only) | ≤ 0.5 | unmeasured |
+| `SLO-CONTROL-OVERHEAD` | Control plus evidence cost per useful task over actor inference cost, unconditional and attack-conditioned | ≤ 1.0 | unmeasured |
+
+Hardware, host model, batch and context distribution, durability profile and experiment protocol must be pinned before any target becomes a release criterion (plan §18.4).
+
+---|---|---|
 | **Effect Gate Decision Latency** | $\le 2.0\text{ ms}$ (p99) | Cached epistemic witness evaluation + permit signature |
 | **Epistemic Witness Validation** | $\le 50\ \mu\text{s}$ (p99) | Exact key comparison and BTreeMap empty-range search |
 | **Authority Cut Verification** | $\le 500\ \mu\text{s}$ (up to 128 nodes) | Bounded reachability oracle; independent verification |
@@ -429,7 +443,7 @@ Provisional performance targets from [`registry/slo.json`](./registry/slo.json) 
 - **Reference Oracle.** [`crates/fa-reference`](./crates/fa-reference) provides an independent, deliberately small logical model in safe Rust (`#![forbid(unsafe_code)]`), with 20 unit tests covering MVCC witnesses, frontier gaps, rights conservation, commutativity, graph cuts, and Lipschitz linear probe bounds. They were executed on an operator host on September 6, 2026 and passed; the logs are in [`artifacts/execution/`](./artifacts/execution/).
 - **Registered Invariants.** 40 invariants ([`registry/invariants.json`](./registry/invariants.json), FA-INV-001 through FA-INV-040) state the production obligations, including the four taken directly from the founding essays (one-directional flow, no false-alarm-only helper selection, no actor-held latent authority, rewind never rewinds the world), four that make the system verifiable by outsiders (served-model identity, governed authority widening, independently verifiable receipts, typestate purpose contexts) and two that make it legible to an agent (every agent-facing value carries its epistemic status; rehearsal never executes or permits). Production checkers are planned; eight invariants currently have reference-model checks, drawn from seven distinct reference tests. Waivers are forbidden on all of them.
 - **Falsifiable Research Hypotheses.** 21 explicit research cards ([`registry/claims.json`](./registry/claims.json), H1 through H21) define empirical criteria for learned compression, metacognition, helper congresses, elicited signatures, rewind containment, lead-time credit, activation fingerprints, self-report residuals and live canaries against matched baselines. [`registry/experiments.json`](./registry/experiments.json) is the preregistration ledger.
-- **Formal Anchors.** Lean 4 theorems over the abstract ledger (rights conservation, the effect-bound permit law, monotone degraded authority, the consequence lattice) and TLA+ race models (dispatch, revocation, reset, fleet fence) run in the local gate when their toolchains are present and print `SKIP` otherwise (plan §19.9; packet FA-128).
+- **Formal Anchors.** Plan §19.9 specifies Lean 4 theorems over the abstract ledger (rights conservation, the effect-bound permit law, monotone degraded authority, the consequence lattice) and TLA+ race models (dispatch, revocation, reset, fleet fence) to run in the local gate with `SKIP` when toolchains are absent. Packet FA-128 is planned; no `formal/` directory exists yet.
 - **Founding Concordance.** [`registry/founding_concordance.json`](./registry/founding_concordance.json) traces every mechanism, invariant, hypothesis and packet to a founding idea; a semantic change that leaves it stale is incomplete.
 - **Decision Closures & Plan Certificates.** Every authorized effect is recorded in a self-contained, tamper-evident `DecisionClosure` capturing the exact evidence view, model/helper generations, witness dependencies, and permit token.
 
@@ -439,7 +453,7 @@ Provisional performance targets from [`registry/slo.json`](./registry/slo.json) 
 
 Honest engineering boundaries:
 
-- **Gated Staged Roadmap (G0 $\to$ G6).** The project establishes the formal architecture, machine-readable registries, and safe-Rust reference workspace. The production broker, native foundation adapters, and learned compression models land sequentially across roadmap gates G1 through G5.
+- **Gated Staged Roadmap (G0 $\to$ G6).** The project establishes the formal architecture, machine-readable registries, and safe-Rust reference workspace. The production broker, native foundation adapters, and learned compression models land sequentially across roadmap gates G1 through G6.
 - **Reference Oracle vs. Production Scale.** The reference `Graph` and `Snapshot` models in `fa-reference` are bounded models designed for property testing and contract verification; they do not replace the scalable Asupersync ATP engine or FrankenGraphDB storage layer.
 - **Graph Completeness Assumption.** Authority graph cuts prove that no path exists *in the supplied model*. A model that omits an out-of-band egress channel cannot prevent leaks across that unmodeled channel; the capability manifest must explicitly state residual channels.
 - **Conservative Decision Bounds.** Linear probe margin certification requests refinement whenever $|w^\top \hat{x} - T| \le \|w\|_* \cdot \varepsilon$. Highly lossy compression will produce frequent refinement fallbacks rather than risking incorrect permissions.
@@ -500,7 +514,7 @@ The `franken_alignment` source code is licensed under the **MIT License with an 
 - [`COMPREHENSIVE_PLAN_FOR_THE_DESIGN_OF_FRANKENALIGNMENT.md`](./COMPREHENSIVE_PLAN_FOR_THE_DESIGN_OF_FRANKENALIGNMENT.md), the technical master plan: the two founding commitments and eight architectural bets, the ten foundation audits, the three operating planes, the invariant registry, the research agenda, and delivery gates G0 through G6. [`docs/REVISION_0_3.md`](./docs/REVISION_0_3.md) explains the latest revision.
 - [`docs/SYSTEM_MAP.md`](./docs/SYSTEM_MAP.md) and [`docs/AGENT_GUIDE.md`](./docs/AGENT_GUIDE.md), the one-page tower of abstractions and the operating playbooks for an agent in the driver's seat; [`registry/system_map.json`](./registry/system_map.json) and [`registry/vocabulary.json`](./registry/vocabulary.json) are their machine-readable forms.
 - [`.beads/`](./.beads/), the granular implementation task graph for the revision 0.3 packets (`br ready --json`, `bv --robot-triage`).
-- [`AGENTS.md`](./AGENTS.md), conventions for human and AI agents working in this codebase, including the engineering doctrine, constitutional rules, and verification ladder.
+- [`AGENTS.md`](./AGENTS.md), conventions for human and AI agents working in this codebase: the founding-essay rule, the constitution, the work-packet and beads workflow, local verification and the legibility rule.
 - [`IMPLEMENTATION_STATUS.md`](./IMPLEMENTATION_STATUS.md), exact claim boundaries and status across source, execution, and gated milestones.
 - [`docs/`](./docs), deep architectural analyses: [ADRs](./docs/ARCHITECTURE_DECISIONS.md), [Source Review](./docs/SOURCE_REVIEW.md), [Threat Model](./docs/THREAT_MODEL.md), [Dependency Constitution](./docs/DEPENDENCY_CONSTITUTION.md), and [Research Agenda](./docs/RESEARCH_AGENDA.md).
 - [`registry/`](./registry), machine-readable registries: [Invariants](./registry/invariants.json), [Claims](./registry/claims.json), [Roadmap](./registry/roadmap.json), and [Foundation Audits](./registry/foundation_audit.json).

@@ -260,7 +260,7 @@
     {
       "id": "FI-A13",
       "source": "F-ALIGN",
-      "locator": "¶15",
+      "locator": "¶15–16",
       "idea": "Stopping the line is costly; false alarms destroy credibility; more than one helper before a pause; strict pre-vote independence",
       "plan_sections": [
         "§9.3",

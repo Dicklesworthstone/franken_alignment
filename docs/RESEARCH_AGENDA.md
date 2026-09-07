@@ -128,7 +128,7 @@ The joint campaign crosses H9/H10/H12 with codec/helper baselines. Their savings
 
 ## Revision 0.3 founding-essay experiments
 
-These four cards make the essays' most direct proposals falsifiable. All are unexecuted.
+These cards (H15 through H18 from the first revision 0.3 batch, H19 through H21 from the second) make the essays' most direct proposals falsifiable. All are unexecuted.
 
 ## H15 — The manifold premise holds where it matters
 

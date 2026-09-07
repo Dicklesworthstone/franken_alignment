@@ -384,7 +384,7 @@
     ],
     "basis_fields": [
       "claim_class",
-      "origin",
+      "authentic_origin",
       "complete_for_contract",
       "semantically_valid",
       "available_for_replay",
