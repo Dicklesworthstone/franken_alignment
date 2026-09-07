@@ -396,6 +396,39 @@ mod tests {
     }
 
     #[test]
+    fn the_domain_separator_is_part_of_the_preimage() {
+        let mut framed = Vec::new();
+        frame(&mut framed, COMMITMENT_DOMAIN);
+        frame(&mut framed, &1_u64.to_be_bytes());
+        frame(&mut framed, b"alice");
+        frame(&mut framed, b"evidence-root-a");
+        frame(&mut framed, &[Verdict::Allow.canonical_tag()]);
+        frame(&mut framed, b"salt-a");
+
+        // Positive: the commitment is exactly this preimage, domain tag first,
+        // every field length-framed in this order. Reordering a field, dropping
+        // a length prefix or moving the tag fails here.
+        assert_eq!(
+            commitment(1, "alice", b"evidence-root-a", Verdict::Allow, b"salt-a").unwrap(),
+            fnv1a64(&framed)
+        );
+
+        // Causal negative: the same fields without the domain tag hash to a
+        // different value, so a commitment minted for this context cannot be
+        // reused by another that frames its own tag. Every other assertion in
+        // this module compares two commitments, and the tag is a shared
+        // constant prefix, so deleting it from the preimage would leave all of
+        // them green. This is the only assertion that catches it.
+        let mut unseparated = Vec::new();
+        frame(&mut unseparated, &1_u64.to_be_bytes());
+        frame(&mut unseparated, b"alice");
+        frame(&mut unseparated, b"evidence-root-a");
+        frame(&mut unseparated, &[Verdict::Allow.canonical_tag()]);
+        frame(&mut unseparated, b"salt-a");
+        assert_ne!(fnv1a64(&framed), fnv1a64(&unseparated));
+    }
+
+    #[test]
     fn maximum_member_and_field_bounds_are_exact_and_reject_without_mutation() {
         let exact_root = vec![b'r'; MAX_FIELD_LEN];
         assert!(Round::new(1, &exact_root).is_ok());
