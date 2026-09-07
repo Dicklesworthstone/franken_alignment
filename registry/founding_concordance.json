@@ -26,7 +26,10 @@
         "§0",
         "§3 F1",
         "§4.1",
-        "§23"
+        "§4",
+        "§23",
+        "§3#B8. Formal enforcement and empirical detection remain composable but separate",
+        "§20#H19. Activation fingerprints detect model substitution without false alarms on benign drift"
       ],
       "invariants": [
         "FA-INV-001",
@@ -48,7 +51,12 @@
       "plan_sections": [
         "§8.2",
         "§8.6",
-        "§9.8"
+        "§9.8",
+        "§4.2",
+        "§4.3",
+        "§3#B3. Observe authority topology, not just individual agents",
+        "§20#H6. Fleet provenance defeats fragmentation at acceptable cost",
+        "§20#H11. Authority topology supports economical observation"
       ],
       "invariants": [
         "FA-INV-003",
@@ -84,7 +92,8 @@
       "plan_sections": [
         "§4.4",
         "§8.7",
-        "§17.1"
+        "§17.1",
+        "§8.8"
       ],
       "invariants": [
         "FA-INV-018"
@@ -104,7 +113,8 @@
         "§7.2",
         "§10",
         "§10.15",
-        "§17.5"
+        "§17.5",
+        "§7.4"
       ],
       "invariants": [
         "FA-INV-014",
@@ -126,7 +136,11 @@
       "idea": "Reporting helper proposes a pause and supplies a hard-evidence report to a convened congress",
       "plan_sections": [
         "§9.2",
-        "§9.10"
+        "§9.10",
+        "§7.3",
+        "§9",
+        "§3#B1. Evidence and authority share a transaction boundary",
+        "§20#H14. Presentation commitments improve reproducibility and adjudication"
       ],
       "invariants": [
         "FA-INV-010",
@@ -145,7 +159,9 @@
       "idea": "Independently trained, architecturally diverse, constantly rotating helpers",
       "plan_sections": [
         "§9.5",
-        "§9.7"
+        "§9.7",
+        "§9.4",
+        "§20#H4. Cohort-aware congresses improve joint robustness at matched cost"
       ],
       "invariants": [
         "FA-INV-017"
@@ -163,7 +179,8 @@
       "locator": "¶9",
       "idea": "Weight votes by precision, recall and earliness; cap any single helper's influence",
       "plan_sections": [
-        "§9.9"
+        "§9.9",
+        "§20#H18. Lead-time credit improves containment without trigger-happy helpers"
       ],
       "invariants": [
         "FA-INV-032"
@@ -182,7 +199,8 @@
       "locator": "¶10",
       "idea": "Consequences: continue, halt, reset internal state, change reward; downweight an overreacting reporter",
       "plan_sections": [
-        "§9.8"
+        "§9.8",
+        "§20#H17. Rewind reduces repetition without a detectable seam"
       ],
       "invariants": [
         "FA-INV-012",
@@ -202,7 +220,8 @@
       "locator": "¶12",
       "idea": "Train activation monitors by coercing known-bad outputs and tracing back; compare to known-bad concept directions",
       "plan_sections": [
-        "§12.6"
+        "§12.6",
+        "§20#H16. Elicited signatures transfer and honeypots stay hidden"
       ],
       "invariants": [
         "FA-INV-017",
@@ -223,7 +242,8 @@
       "idea": "Honeypot scenarios the model cannot recognize; similarity-to-known-bad streams as helper inputs",
       "plan_sections": [
         "§12.6",
-        "§11.3"
+        "§11.3",
+        "§20#H21. Live canary escape rates predict real incidents better than offline campaigns"
       ],
       "invariants": [
         "FA-INV-009",
@@ -243,7 +263,9 @@
       "locator": "¶14",
       "idea": "Masking risk; model activation-to-output mapping; consistently surprising outputs justify a pause",
       "plan_sections": [
-        "§12.7"
+        "§12.7",
+        "§20#H3. Activation–behavior residuals add information beyond transcript monitors",
+        "§20#H20. Self-report residuals add information beyond surprise residuals"
       ],
       "invariants": [
         "FA-INV-014",
@@ -266,7 +288,11 @@
         "§9.3",
         "§9.9",
         "§13.6",
-        "§14.2"
+        "§14.2",
+        "§3#B4. Independent judgment before shared deliberation",
+        "§3#B6. Observation plans are compiled and costed",
+        "§20#H7. Observation planning outperforms fixed cascades",
+        "§20#H9. Epistemic MVCC can reduce review cost without stale decisions"
       ],
       "invariants": [
         "FA-INV-004",
@@ -287,7 +313,8 @@
       "idea": "Post-vote sharing of votes and justifications; cryptographic commitment before reveal",
       "plan_sections": [
         "§9.2",
-        "§9.10"
+        "§9.10",
+        "§3#B7. An incident is a reusable scientific object"
       ],
       "invariants": [
         "FA-INV-010",
@@ -329,7 +356,9 @@
       "plan_sections": [
         "§9.3",
         "§3 B5",
-        "§11.10"
+        "§11.10",
+        "§2.3",
+        "§3#B5. Counterfactual inquiry replaces persuasive self-defense"
       ],
       "invariants": [
         "FA-INV-031",
@@ -351,7 +380,9 @@
       "plan_sections": [
         "§0",
         "§18.1",
-        "§18.4"
+        "§18.4",
+        "§8.9",
+        "§20#H12. Incremental evidence algebra scales fleet oversight"
       ],
       "invariants": [],
       "hypotheses": [
@@ -371,7 +402,8 @@
       "plan_sections": [
         "§9.6",
         "§22.3",
-        "§22.4"
+        "§22.4",
+        "§2.6"
       ],
       "invariants": [
         "FA-INV-032",
@@ -407,7 +439,8 @@
       "locator": "Theoretical Insight",
       "idea": "Activations occupy a low-dimensional structured manifold",
       "plan_sections": [
-        "§10.14"
+        "§10.14",
+        "§20#H15. The manifold premise holds where it matters"
       ],
       "invariants": [],
       "hypotheses": [
@@ -447,7 +480,10 @@
         "§10.3",
         "§10.6",
         "§10.9",
-        "§10.15"
+        "§10.15",
+        "§3#B2. Compress what can change the decision",
+        "§20#H1. Decision-preserving compression is more useful than MSE compression",
+        "§20#H2. Progressive refinement can reduce average cost without hiding tail risk"
       ],
       "invariants": [
         "FA-INV-017"
@@ -574,7 +610,8 @@
       "idea": "Trace drift back; compare faulty and corrected paths; latent diffs",
       "plan_sections": [
         "§12.2",
-        "§12.3"
+        "§12.3",
+        "§20#H5. Causal witness twins improve investigation decisions"
       ],
       "invariants": [],
       "hypotheses": [
@@ -610,7 +647,8 @@
       "idea": "Checkpoint long agent loops cheaply",
       "plan_sections": [
         "§11.7",
-        "§16.7"
+        "§16.7",
+        "§20#H10. Progressive receiver-conditioned evidence transfer beats independent objects"
       ],
       "invariants": [
         "FA-INV-015"
@@ -648,7 +686,8 @@
       "locator": "Future Directions; Addendum",
       "idea": "Rewindable reasoning graph: version control for cognition",
       "plan_sections": [
-        "§11.4"
+        "§11.4",
+        "§20#H13. Lawful trace quotient improves experimentation economics"
       ],
       "invariants": [
         "FA-INV-009"
@@ -666,7 +705,8 @@
       "locator": "Addendum",
       "idea": "Self-coaching loops, controller proposals, curriculum, transformers that practice",
       "plan_sections": [
-        "§11.5"
+        "§11.5",
+        "§20#H8. Strategy artifacts transfer without silent regressions"
       ],
       "invariants": [
         "FA-INV-012",
@@ -686,7 +726,8 @@
       "idea": "Strategy distillation with five evaluation metrics",
       "plan_sections": [
         "§11.5",
-        "§11.9"
+        "§11.9",
+        "§7.1"
       ],
       "invariants": [
         "FA-INV-017",
@@ -996,7 +1037,8 @@
       ],
       "plan_sections": [
         "§7.6",
-        "§7.7"
+        "§7.7",
+        "§7.9"
       ]
     },
     {
@@ -1067,7 +1109,8 @@
         "FI-A18"
       ],
       "plan_sections": [
-        "§22.6"
+        "§22.6",
+        "§2.5"
       ]
     },
     {
@@ -1077,7 +1120,8 @@
         "FI-I10"
       ],
       "plan_sections": [
-        "§6.6"
+        "§6.6",
+        "§6.3"
       ]
     },
     {
@@ -1147,7 +1191,8 @@
         "FI-A18"
       ],
       "plan_sections": [
-        "§20"
+        "§20",
+        "§20#Preregistration ledger"
       ]
     },
     {

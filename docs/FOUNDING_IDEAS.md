@@ -138,6 +138,10 @@ These are not disagreements with the essays. They are the places where an advers
 
 ## How to keep this document true
 
-1. When a plan section, invariant, hypothesis or packet is added or renamed, update the matching row here and in `registry/founding_concordance.json` in the same change.
-2. When an idea from either essay has no mechanism, add one or record in this table why it is deferred; silence is not permitted.
-3. When an experiment falsifies a founding hypothesis, record the negative result here as well; the essays proposed experiments, and a clean negative honors them more than a vague success.
+The concordance is a checked contract, not a narrative index.
+
+1. Valid roots are exactly `FI-A\d\d`, `FI-I\d\d`, and `FS-\d\d`. Every such root must exist, and every `FI-*` row must name at least one plan section.
+2. Cover every plan `##`/`###` heading from section 2 onward, every `FA-INV-*`, every `H\d+`, and every `FA-\d\d\d`. Hypothesis-object coverage (for example, `H1`) is separate from its heading key (`§20#H1. …`). Ignore headings in fenced code. A numbered heading, with an optional terminal period, canonicalizes to `§N` or `§N.M`: both `9.8 Consequence classes` and `§9.8 Consequence classes` mean `§9.8`. An unnumbered `###` canonicalizes to `§<nearest preceding numbered section>#<exact heading text>`, after trimming surrounding whitespace and collapsing internal whitespace; case and punctuation remain significant. Duplicate canonical keys fail.
+3. Coverage is a direct typed reference from a founding idea, synthesis, or engineering addition. An engineering addition must also name the founding root(s) it serves. An invariant's explicit root may guide a new mapping, but it is not an automatic packet bridge: materialize and justify the packet mapping. Dependencies, parent headings, siblings, status, and prose are never coverage.
+4. Constitutional section §2, operator-local-release §22.6, and appendix §25 are required coverage, not omissions or blanket exemptions. An engineering addition may cover them, but a directly served founding idea or synthesis remains correctly typed. Every unknown or malformed reference fails the check.
+5. Add or rename a covered object and its concordance mapping in the same change. Record a falsified founding hypothesis as a negative result; silence is not permitted.

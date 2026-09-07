@@ -304,7 +304,7 @@ Every response carries its epistemic status, its address and generation, the con
 
 ### 1. Requirements
 - Rust 2024 nightly toolchain with the `rustfmt` and `clippy` components (auto-selected via [`rust-toolchain.toml`](./rust-toolchain.toml)).
-- Executed so far only on `aarch64-apple-darwin` (see [`IMPLEMENTATION_STATUS.md`](./IMPLEMENTATION_STATUS.md)); other rustup hosts are expected to work but are unverified. No qualified release target matrix exists yet; `cargo xtask release-check` refuses release.
+- Reference gates have executed on `aarch64-apple-darwin` (September 6) and remote `x86_64-unknown-linux-gnu` (September 7); exact source and toolchain evidence is in [`IMPLEMENTATION_STATUS.md`](./IMPLEMENTATION_STATUS.md). No qualified release target matrix exists yet; `cargo xtask release-check` refuses release.
 
 ### 2. From source (what runs today)
 
@@ -312,7 +312,7 @@ Every response carries its epistemic status, its address and generation, the con
 git clone https://github.com/Dicklesworthstone/franken_alignment
 cd franken_alignment
 
-# Run the 20 pure safe-Rust reference unit tests:
+# Run the pure safe-Rust reference unit tests:
 cargo test -p fa-reference
 
 # Run the comprehensive xtask gate driver:
@@ -440,7 +440,7 @@ Hardware, host model, batch and context distribution, durability profile and exp
 ## Determinism, verification & governance
 
 - **Simulation-First & Lab Runtime.** The entire system runs under Asupersync's deterministic simulation runtime (`lab`): virtual time, seed-replayable execution, and DPOR schedule exploration. Every race or concurrency bug produces a deterministic replay seed.
-- **Reference Oracle.** [`crates/fa-reference`](./crates/fa-reference) provides an independent, deliberately small logical model in safe Rust (`#![forbid(unsafe_code)]`), with 20 unit tests covering MVCC witnesses, frontier gaps, rights conservation, commutativity, graph cuts, and Lipschitz linear probe bounds. They were executed on an operator host on September 6, 2026 and passed; the logs are in [`artifacts/execution/`](./artifacts/execution/).
+- **Reference Oracle.** [`crates/fa-reference`](./crates/fa-reference) provides an independent, deliberately small logical model in safe Rust (`#![forbid(unsafe_code)]`), with 34 qualified unit tests covering MVCC witnesses, frontier gaps, rights conservation, commutativity, graph cuts, linear probe bounds, non-cryptographic commit–reveal binding and reset conservation. The complete gate passed remotely on September 7, 2026 under `nightly-2026-09-07`; the logs are in [`artifacts/execution/`](./artifacts/execution/).
 - **Registered Invariants.** 40 invariants ([`registry/invariants.json`](./registry/invariants.json), FA-INV-001 through FA-INV-040) state the production obligations, including the four taken directly from the founding essays (one-directional flow, no false-alarm-only helper selection, no actor-held latent authority, rewind never rewinds the world), four that make the system verifiable by outsiders (served-model identity, governed authority widening, independently verifiable receipts, typestate purpose contexts) and two that make it legible to an agent (every agent-facing value carries its epistemic status; rehearsal never executes or permits). Production checkers are planned; eight invariants currently have reference-model checks, drawn from seven distinct reference tests. Waivers are forbidden on all of them.
 - **Falsifiable Research Hypotheses.** 21 explicit research cards ([`registry/claims.json`](./registry/claims.json), H1 through H21) define empirical criteria for learned compression, metacognition, helper congresses, elicited signatures, rewind containment, lead-time credit, activation fingerprints, self-report residuals and live canaries against matched baselines. [`registry/experiments.json`](./registry/experiments.json) is the preregistration ledger.
 - **Formal Anchors.** Plan §19.9 specifies Lean 4 theorems over the abstract ledger (rights conservation, the effect-bound permit law, monotone degraded authority, the consequence lattice) and TLA+ race models (dispatch, revocation, reset, fleet fence) to run in the local gate with `SKIP` when toolchains are absent. Packet FA-128 is planned; no `formal/` directory exists yet.
