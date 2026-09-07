@@ -72,5 +72,13 @@
     "Current xtask checks registry core and source identity; full concordance coverage checker is not implemented in this batch. Coverage counts above are source/static audit findings, not output of that future checker.",
     "This batch admits no external package and activates no production mechanism.",
     "Linux execution and both target metadata inventories do not establish Apple execution."
+  ],
+  "corrections": [
+    {
+      "recorded_at_utc": "2026-09-07T22:58:51Z",
+      "claim": "manual_coverage_audit.dangling was reported as zero",
+      "finding": "Four shorthand section references were normalized by the manual audit rather than checked as literal canonical keys. The owned checker source review identified them; root reopened 9sk.1 and corrected the references before qualification.",
+      "execution_scope": "The retained 217-test result remains valid for the exact epoch6 source. That batch did not implement the full concordance checker, as the original receipt states."
+    }
   ]
 }

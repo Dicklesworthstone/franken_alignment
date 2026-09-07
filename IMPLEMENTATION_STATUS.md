@@ -1,8 +1,17 @@
 # Implementation status · design revision 0.3
 
+## Seventh qualified batch: owned concordance and admission discrimination
+
+The complete isolated RCH gate passed on `hz4` under `nightly-2026-09-07`: **56 reference unit tests, 16 integration tests, 174 xtask tests and 2 doctests; 248 passed, zero failed**. [The receipt](artifacts/execution/2026-09-07-epoch7-receipt.json) binds the 40-file overlay and 67 verified source/build inputs. [The passing log](artifacts/execution/2026-09-07-epoch7-attempt4.log) contains the actual concordance report: zero missing/dangling findings for 231 headings, 40 invariants, 21 hypotheses and 143 packets. The four canonical-reference corrections from the sixth batch are now checked by execution.
+
+The admission compiler compares full source/name/version identities and exact target, feature and dependency-edge scopes. Real Cargo observations feed the same evaluator as the unit twins. The prior three failures are retained: test compilation, Clippy, then three unchanged regressions that caught a real source/path bypass missed by source review. Root restored external-first/path checks and made every evaluator refusal visible; no negative test was weakened. Both required target inventories and actual child-process failure paths executed. No external package is admitted, FA-053/054 remain incomplete, and this is no production qualification.
+
+The five founding-source immutable blob identities were independently revalidated; [the scoped result](artifacts/execution/2026-09-07-founding-source-results.tsv) does not promote donor/runtime evidence. DSR wiring and an injected-defect full-gate experiment remain outstanding.
+
+
 ## Sixth qualified batch: explicit founding concordance
 
-The sixth isolated RCH gate passed all **217 tests** on `ovh-a` with the reviewed concordance and its source-manifest binding. [The receipt](artifacts/execution/2026-09-07-epoch6-receipt.json) retains the exact six-file overlay and separates execution from the independent source audit: 231 required heading keys, 40 invariants, 21 hypotheses and 143 packets have direct typed mappings. The 67 engineering additions remain labeled additions serving the founding ideas. The full owned concordance checker is the next task; these coverage counts are not yet its output.
+The sixth isolated RCH gate passed all **217 tests** on `ovh-a` with the reviewed concordance and its source-manifest binding. [The receipt](artifacts/execution/2026-09-07-epoch6-receipt.json) retains the exact six-file overlay and separates execution from the independent source audit: 231 required heading keys, 40 invariants, 21 hypotheses and 143 packets have direct typed mappings. The 67 engineering additions remain labeled additions serving the founding ideas. The full owned concordance checker is the next task; these coverage counts are not yet its output. **Correction at 22:58 UTC:** the manual audit normalized four shorthand section references, so its zero-unknown claim was too broad under the canonical-key contract. The rules bead was reopened and those references corrected; the owned checker must execute before reclosure.
 
 ## Fifth qualified batch: closed initial admission contract
 
@@ -44,8 +53,8 @@ The round uses a deliberately non-cryptographic FNV comparison and proves no cry
 | Founding essays | Both read in full again for revision 0.3; head commits recorded in `registry/sources.json` | Complete premise; no missing post |
 | Ten donor/build project deep dives | Targeted code/manifest/plan review at fixed refs (revision 0.2) | Exact files/scopes recorded; not full repository audits or builds |
 | Pure-Rust reference workspace | Source present, zero external packages, formatted with `cargo fmt --all` on 2026-09-06 | Selected logical semantics only; not a broker |
-| Rust test functions | **56 unit + 16 integration reference tests, 143 xtask tests and 2 doctests passed remotely on 2026-09-07**; earlier runs remain dated below | Exact frozen batch above; not production evidence or credit for other work in progress |
-| Rust local gate driver | **Complete reference gate PASS remotely on 2026-09-07** under `nightly-2026-09-07`; earlier local 2026-09-06 gate retained below | Initial inventory and registry-core checks execute; general admission and full concordance validation remain incomplete; new source requires a new run |
+| Rust test functions | **56 unit + 16 integration reference tests, 174 xtask tests and 2 doctests passed remotely on 2026-09-07**; earlier runs remain dated below | Exact frozen batch above; not production evidence or credit for other work in progress |
+| Rust local gate driver | **Complete reference gate PASS remotely on 2026-09-07** under `nightly-2026-09-07`; earlier local 2026-09-06 gate retained below | Initial inventory, registry-core and full concordance checks execute; external admission remains incomplete; new source requires a new run |
 | Production release gate | Explicitly refuses release | No qualified broker/toolchain/target/signing closure |
 | Machine-readable registries | 40 invariants, 21 hypotheses, 143 packets, 5 SLO targets, founding concordance (38 ideas, 9 syntheses, 67 engineering additions), preregistration ledger with no preregistered protocol yet, system map (9 layers) and vocabulary (26 nouns, 35 verbs, 12 reason codes) | Static structural checks are not proofs of their claims |
 | Beads task graph | `.beads/` initialized 2026-09-06; the 2026-09-07 campaign is implementing reference extensions and missing prerequisites | Completion requires exact acceptance and new execution evidence; the original graph omits many foundational roadmap packets |

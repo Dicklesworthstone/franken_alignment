@@ -1,0 +1,25 @@
+{
+  "founding_ideas": [
+    {
+      "id": "FI-A10",
+      "source": "F-ALIGN",
+      "locator": "fixture",
+      "idea": "A valid root keeps coverage separate from the bad reference.",
+      "plan_sections": ["§2", "§2.1", "§9", "§9.8", "§9#Signals — α/β!"],
+      "invariants": ["FA-INV-001"],
+      "hypotheses": ["H1"],
+      "packets": ["FA-001"]
+    }
+  ],
+  "syntheses": [],
+  "engineering_additions": [
+    {
+      "mechanism": "Malformed parent reference.",
+      "serves": ["FA-ROOT"],
+      "plan_sections": [],
+      "invariants": [],
+      "hypotheses": [],
+      "packets": []
+    }
+  ]
+}

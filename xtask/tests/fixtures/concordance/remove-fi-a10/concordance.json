@@ -1,0 +1,17 @@
+{
+  "founding_ideas": [],
+  "syntheses": [
+    {
+      "id": "FS-01",
+      "combines": [
+        "FI-A10"
+      ],
+      "synthesis": "The removed founding root must not be silently accepted.",
+      "plan_sections": [],
+      "invariants": [],
+      "hypotheses": [],
+      "packets": []
+    }
+  ],
+  "engineering_additions": []
+}

@@ -25,7 +25,6 @@
       "plan_sections": [
         "§0",
         "§3",
-        "§3 F1",
         "§4.1",
         "§4",
         "§23",
@@ -386,10 +385,9 @@
       "plan_sections": [
         "§12",
         "§9.3",
-        "§3 B5",
+        "§3#B5. Counterfactual inquiry replaces persuasive self-defense",
         "§11.10",
-        "§2.3",
-        "§3#B5. Counterfactual inquiry replaces persuasive self-defense"
+        "§2.3"
       ],
       "invariants": [
         "FA-INV-031",
@@ -675,7 +673,7 @@
       "idea": "Edit or interpolate z_t for counterfactuals",
       "plan_sections": [
         "§12.2",
-        "§3 B5"
+        "§3#B5. Counterfactual inquiry replaces persuasive self-defense"
       ],
       "invariants": [
         "FA-INV-033"
@@ -958,7 +956,7 @@
       "plan_sections": [
         "§1.4",
         "§10.2",
-        "§3 B2"
+        "§3#B2. Compress what can change the decision"
       ],
       "packets": [
         "FA-029"

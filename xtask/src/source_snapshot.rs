@@ -43,13 +43,14 @@ pub const SCAN_ROOTS: [&str; 4] = [
 ];
 
 /// Individually named build inputs outside the scan roots.
-pub const EXPLICIT_FILES: [&str; 6] = [
+pub const EXPLICIT_FILES: [&str; 7] = [
     "crates/fa-reference/Cargo.toml",
     "xtask/Cargo.toml",
     "Cargo.toml",
     "Cargo.lock",
     "rust-toolchain.toml",
     "LICENSE",
+    "COMPREHENSIVE_PLAN_FOR_THE_DESIGN_OF_FRANKENALIGNMENT.md",
 ];
 
 /// Registry files embedded into the crate at compile time by `include_bytes!`.
@@ -174,10 +175,17 @@ impl Finding {
 
 /// A reviewed path-to-digest manifest.
 ///
-/// Opaque: verification is the only consumer, so it exposes no accessors.
+/// A digest can be named in an input receipt only after verifying this manifest
+/// against the source tree. The accessor itself establishes no byte identity.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Manifest {
     entries: BTreeMap<String, String>,
+}
+
+impl Manifest {
+    pub fn digest(&self, relative: &str) -> Option<&str> {
+        self.entries.get(relative).map(String::as_str)
+    }
 }
 
 /// One operator hashing tool. Private: callers never choose or inspect it.

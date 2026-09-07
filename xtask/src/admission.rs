@@ -135,6 +135,8 @@ pub struct LocalRow {
     pub version: String,
     /// Expected workspace-relative manifest path.
     pub manifest_path: String,
+    /// Target triples this row admits. A triple absent here is not admitted.
+    pub targets: BTreeSet<String>,
     /// Who owns this admission decision.
     ///
     /// Required by the admission procedure in
@@ -602,6 +604,28 @@ pub fn parse_policy(bytes: &[u8]) -> Result<Policy, String> {
             ));
         }
 
+        // Target scope is required data, not decoration: a row that names no
+        // target admits nothing, and must not read as admitting everywhere.
+        let mut row_targets: BTreeSet<String> = BTreeSet::new();
+        match req_field(row, "targets", Phase::Policy, &path, &mut findings)
+            .and_then(|value| req_array(value, Phase::Policy, &path, &mut findings))
+        {
+            None => {}
+            Some([]) => findings.push(Finding::new(
+                Phase::Policy,
+                "row_admits_no_target",
+                path.clone(),
+                "`targets` is empty; a row that names no target admits nothing",
+            )),
+            Some(items) => {
+                for item in items {
+                    if let Some(text) = req_str(item, Phase::Policy, &path, &mut findings) {
+                        row_targets.insert(text.to_string());
+                    }
+                }
+            }
+        }
+
         if let (Some(name), Some(version), Some(manifest), Some(owner), Some(_)) =
             (name, version, manifest, owner, decision)
         {
@@ -617,6 +641,7 @@ pub fn parse_policy(bytes: &[u8]) -> Result<Policy, String> {
                 name: name.to_string(),
                 version: version.to_string(),
                 manifest_path: manifest.to_string(),
+                targets: row_targets,
                 owner: owner.to_string(),
             });
         }
@@ -794,8 +819,586 @@ fn relative_manifest(manifest_path: &str, workspace_root: &str) -> Result<String
 // Check
 // ---------------------------------------------------------------------------
 
+// ---------------------------------------------------------------------------
+// The admission evaluator.
+//
+// This is a general, pure decision procedure over reviewed rows and observed
+// packages. It has no knowledge that this repository's inventory happens to be
+// closed, and no knowledge that external packages are currently forbidden:
+// those are properties of the policy wrapper (`parse_policy`), which sits
+// outside and admits no external row. Keeping the two apart is what lets the
+// algorithm be exercised on both sides of a decision without anything being
+// admitted here.
+// ---------------------------------------------------------------------------
+
+/// Where a package's bytes come from. Compared verbatim, never parsed.
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
+pub enum SourceId {
+    /// Cargo's JSON null: a path package, identified by its workspace-relative
+    /// manifest location.
+    WorkspacePath { manifest_path: String },
+    /// Any non-null `source` string, retained exactly as Cargo emitted it.
+    Exact(String),
+}
+
+/// Exact package identity.
+///
+/// No component is a key on its own. Every crates.io package shares the one
+/// registry index URL, and a single git repository can contain several packages
+/// and several versions, so a source alone identifies nothing. A name alone is
+/// the `ft-api` / `frankentorch-api` confusion the constitution names.
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
+pub struct PackageId {
+    /// Where the bytes come from.
+    pub source: SourceId,
+    /// Package name as Cargo reports it.
+    pub name: String,
+    /// Exact version.
+    pub version: String,
+}
+
+/// Cargo's dependency kinds. A null `kind` is `Normal`.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
+pub enum DepKind {
+    /// An ordinary dependency; Cargo spells this as null.
+    Normal,
+    /// A build-dependency.
+    Build,
+    /// A dev-dependency.
+    Dev,
+}
+
+impl DepKind {
+    /// Stable lowercase name used in reports.
+    #[must_use]
+    pub fn as_str(self) -> &'static str {
+        match self {
+            DepKind::Normal => "normal",
+            DepKind::Build => "build",
+            DepKind::Dev => "dev",
+        }
+    }
+}
+
+/// One dependency edge, naming its exact destination package.
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
+pub struct EdgeId {
+    /// The destination package's full identity, never a bare name or source.
+    pub to: PackageId,
+    /// Which kind of dependency this edge is.
+    pub kind: DepKind,
+}
+
+/// What one reviewed row permits on one target triple.
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+pub struct TargetScope {
+    /// Exactly the features that may be activated.
+    pub features: BTreeSet<String>,
+    /// Exactly the edges that may be present.
+    pub edges: BTreeSet<EdgeId>,
+}
+
+/// One reviewed admission row.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct ReviewedRow {
+    /// The package this row admits.
+    pub id: PackageId,
+    /// Per-target scope. A target absent from this map is **not** admitted:
+    /// absence is never scope.
+    pub scopes: BTreeMap<String, TargetScope>,
+}
+
+/// The reviewed set the evaluator decides against.
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+pub struct AdmissionSet {
+    rows: BTreeMap<PackageId, ReviewedRow>,
+}
+
+/// Why a reviewed set could not be constructed.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum AdmissionSetError {
+    /// Two rows carried the same full identity.
+    DuplicateIdentity(PackageId),
+}
+
+impl AdmissionSet {
+    /// Build a reviewed set, refusing a duplicate full identity.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`AdmissionSetError::DuplicateIdentity`] rather than silently
+    /// keeping one of two rows that claim the same package: a set that quietly
+    /// dropped a row would admit under a scope nobody reviewed.
+    pub fn new(rows: Vec<ReviewedRow>) -> Result<AdmissionSet, AdmissionSetError> {
+        let mut map: BTreeMap<PackageId, ReviewedRow> = BTreeMap::new();
+        for row in rows {
+            if map.contains_key(&row.id) {
+                return Err(AdmissionSetError::DuplicateIdentity(row.id));
+            }
+            map.insert(row.id.clone(), row);
+        }
+        Ok(AdmissionSet { rows: map })
+    }
+}
+
+/// One resolved package as observed on one target.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct ObservedPackage {
+    /// The package's full identity.
+    pub id: PackageId,
+    /// Features activated on this target.
+    pub features: BTreeSet<String>,
+    /// Edges present on this target.
+    pub edges: BTreeSet<EdgeId>,
+}
+
+/// One way an observation departed from the reviewed set.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum Violation {
+    /// No reviewed row carries this exact identity.
+    NoReviewedRow { id: PackageId },
+    /// A row exists, but says nothing about this target.
+    TargetNotAdmitted {
+        /// The observed package.
+        id: PackageId,
+        /// The targets the row does admit, sorted.
+        admitted: Vec<String>,
+    },
+    /// An edge is present that this target's scope does not permit.
+    EdgeNotAdmitted {
+        /// The target evaluated.
+        target: String,
+        /// The offending edge.
+        edge: EdgeId,
+    },
+    /// The scope requires an edge that is absent.
+    EdgeMissing {
+        /// The target evaluated.
+        target: String,
+        /// The absent edge.
+        edge: EdgeId,
+    },
+    /// An admitted edge points at a package with no reviewed row on this
+    /// target, so the edge is admitted into somewhere nobody reviewed.
+    EdgeDestinationNotReviewed {
+        /// The target evaluated.
+        target: String,
+        /// The dangling edge.
+        edge: EdgeId,
+    },
+    /// The activated feature set is not exactly the reviewed set.
+    FeatureSetMismatch {
+        /// Reviewed features, sorted.
+        expected: Vec<String>,
+        /// Observed features, sorted.
+        observed: Vec<String>,
+    },
+}
+
+/// Project a parsed `cargo metadata` document into per-package observations.
+///
+/// This is the production projection: `check` uses exactly this function, so a
+/// test that feeds real Cargo-shaped JSON exercises the same code the gate
+/// runs. Features come from `resolve.nodes[].features`; edges come from
+/// `resolve.nodes[].deps[]`, each resolved through `deps[].pkg` to the
+/// destination's exact `(source, name, version)`.
+///
+/// Nothing degrades to an empty observation. A package with no resolve node, a
+/// dependency with no `pkg`, and a `pkg` that names no package are each a
+/// finding and cause that package to be **omitted** from the result rather than
+/// observed as empty, so an unverifiable package can never be evaluated as if
+/// it were clean.
+///
+/// Causal diagnostics for malformed dependency kinds are emitted separately by
+/// the caller's structural pass; this function does not swallow them.
+#[must_use]
+pub fn project_observed_packages(
+    document: &Json,
+    findings: &mut Vec<Finding>,
+) -> Vec<ObservedPackage> {
+    let mut observations = Vec::new();
+    // These two early exits are the public API's own boundary. `check` happens
+    // to diagnose a malformed document separately, but a direct caller of this
+    // function must never receive an empty result with no reason: an empty vec
+    // with no finding would read as "nothing to observe" rather than "the
+    // document could not be read".
+    let Some(root) = req_object(document, Phase::Metadata, "$", findings) else {
+        return observations;
+    };
+    let workspace_root = root.get("workspace_root").and_then(Json::as_str);
+    let Some(packages) = req_field(root, "packages", Phase::Inventory, "$", findings)
+        .and_then(|value| req_array(value, Phase::Inventory, "$.packages", findings))
+    else {
+        return observations;
+    };
+    if packages.is_empty() {
+        findings.push(Finding::new(
+            Phase::Inventory,
+            "empty_package_inventory",
+            "$.packages",
+            "an empty package inventory cannot establish the required workspace observation",
+        ));
+        return observations;
+    }
+
+    // metadata id -> exact identity, so an edge can name its destination.
+    let mut identities: BTreeMap<String, PackageId> = BTreeMap::new();
+    for (index, package) in packages.iter().enumerate() {
+        let (Some(id), Some(name), Some(version)) = (
+            package.get("id").and_then(Json::as_str),
+            package.get("name").and_then(Json::as_str),
+            package.get("version").and_then(Json::as_str),
+        ) else {
+            findings.push(Finding::new(
+                Phase::Source,
+                "package_identity_unreadable",
+                format!("$.packages[{index}]"),
+                "package id, name and version must all be readable strings",
+            ));
+            continue;
+        };
+        let source = match package.get("source") {
+            Some(value) if value.is_null() => {
+                // A path package's identity includes where it lives, so an
+                // unreadable manifest path yields no identity at all rather
+                // than an empty one that could never match a reviewed row for
+                // the wrong reason.
+                let Some(manifest) = package.get("manifest_path").and_then(Json::as_str) else {
+                    findings.push(Finding::new(
+                        Phase::Source,
+                        "manifest_path_unreadable",
+                        id.to_string(),
+                        format!(
+                            "path package `{name} {version}` has no readable `manifest_path`, so \
+                             it has no identity and is not observed"
+                        ),
+                    ));
+                    continue;
+                };
+                let Some(relative) =
+                    workspace_root.and_then(|root| relative_manifest(manifest, root).ok())
+                else {
+                    findings.push(Finding::new(
+                        Phase::Source,
+                        "manifest_path_unreadable",
+                        id.to_string(),
+                        format!(
+                            "path package `{name} {version}` has manifest `{manifest}`, which is \
+                             not resolvable inside the workspace root, so it has no identity"
+                        ),
+                    ));
+                    continue;
+                };
+                SourceId::WorkspacePath {
+                    manifest_path: relative,
+                }
+            }
+            Some(value) => match value.as_str() {
+                Some(text) => SourceId::Exact(text.to_string()),
+                None => {
+                    findings.push(Finding::new(
+                        Phase::Source,
+                        "package_source_unreadable",
+                        format!("$.packages[{index}].source"),
+                        "source must be an explicit null or a string",
+                    ));
+                    continue;
+                }
+            },
+            None => {
+                findings.push(missing(
+                    Phase::Source,
+                    &format!("$.packages[{index}]"),
+                    "source",
+                ));
+                continue;
+            }
+        };
+        identities.insert(
+            id.to_string(),
+            PackageId {
+                source,
+                name: name.to_string(),
+                version: version.to_string(),
+            },
+        );
+    }
+
+    // Resolve nodes, by metadata id. A node whose `features` or `deps` cannot
+    // be read exactly is marked unfaithful rather than defaulted to empty: an
+    // absent or malformed array is unknown, and unknown is not "none".
+    let mut nodes: BTreeMap<String, NodeObservation> = BTreeMap::new();
+    if let Some(resolve) = root.get("resolve").filter(|value| !value.is_null())
+        && let Some(list) = resolve.get("nodes").and_then(Json::as_array)
+    {
+        for (index, node) in list.iter().enumerate() {
+            let node_path = format!("$.resolve.nodes[{index}]");
+            let Some(node) = req_object(node, Phase::Graph, &node_path, findings) else {
+                continue;
+            };
+            let Some(id) = node.get("id").and_then(Json::as_str) else {
+                continue;
+            };
+            let mut faithful = true;
+            let mut features = BTreeSet::new();
+            match req_field(node, "features", Phase::Features, &node_path, findings).and_then(
+                |value| {
+                    req_array(
+                        value,
+                        Phase::Features,
+                        &format!("{node_path}.features"),
+                        findings,
+                    )
+                },
+            ) {
+                None => faithful = false,
+                Some(items) => {
+                    for (item_index, item) in items.iter().enumerate() {
+                        match req_str(
+                            item,
+                            Phase::Features,
+                            &format!("{node_path}.features[{item_index}]"),
+                            findings,
+                        ) {
+                            Some(text) => {
+                                features.insert(text.to_string());
+                            }
+                            // A malformed feature entry is never skipped: it
+                            // would silently shrink the activated set.
+                            None => faithful = false,
+                        }
+                    }
+                }
+            }
+            let mut deps = Vec::new();
+            match req_field(node, "deps", Phase::Graph, &node_path, findings).and_then(|value| {
+                req_array(value, Phase::Graph, &format!("{node_path}.deps"), findings)
+            }) {
+                None => faithful = false,
+                Some(list) => {
+                    for (dep_index, dep) in list.iter().enumerate() {
+                        deps.push(record_dep_edge(
+                            dep,
+                            &format!("{node_path}.deps[{dep_index}]"),
+                        ));
+                    }
+                }
+            }
+            nodes.insert(
+                id.to_string(),
+                NodeObservation {
+                    features,
+                    deps,
+                    faithful,
+                },
+            );
+        }
+    }
+
+    for (metadata_id, id) in &identities {
+        let Some(NodeObservation {
+            features,
+            deps,
+            faithful: node_faithful,
+        }) = nodes.get(metadata_id)
+        else {
+            findings.push(Finding::new(
+                Phase::Graph,
+                "package_missing_from_resolve",
+                metadata_id.clone(),
+                format!(
+                    "package `{} {}` has no resolve node, so its activated features and edges are \
+                     unknown; unknown is not an empty observation and it is not evaluated",
+                    id.name, id.version
+                ),
+            ));
+            continue;
+        };
+        let mut edges = BTreeSet::new();
+        // An unreadable `features` or `deps` array already produced its own
+        // finding above; carry that forward so the package is omitted rather
+        // than observed with a set nobody could read.
+        let mut faithful = *node_faithful;
+        for dep in deps {
+            let Some(destination) = dep
+                .dest_metadata_id
+                .as_ref()
+                .and_then(|pkg| identities.get(pkg))
+            else {
+                findings.push(Finding::new(
+                    Phase::Graph,
+                    "edge_destination_unresolved",
+                    dep.path.clone(),
+                    format!(
+                        "dependency edge from `{} {}` names `{}`, which matches no package in \
+                         $.packages; the edge cannot be given a destination identity",
+                        id.name,
+                        id.version,
+                        dep.dest_metadata_id.as_deref().unwrap_or("<no pkg field>")
+                    ),
+                ));
+                faithful = false;
+                continue;
+            };
+            if dep.kinds.is_empty() {
+                // Every kind on this edge was missing or malformed. The causal
+                // marker is already reported; the edge has no representable
+                // identity, so the observation cannot be complete.
+                faithful = false;
+                findings.push(Finding::new(
+                    Phase::Metadata,
+                    "dependency_kind_unreadable",
+                    dep.path.clone(),
+                    "no readable dependency kind; the package cannot be projected faithfully",
+                ));
+                continue;
+            }
+            for kind in &dep.kinds {
+                edges.insert(EdgeId {
+                    to: destination.clone(),
+                    kind: *kind,
+                });
+            }
+        }
+        if !faithful {
+            continue;
+        }
+        observations.push(ObservedPackage {
+            id: id.clone(),
+            features: features.clone(),
+            edges,
+        });
+    }
+    observations
+}
+
+/// Decide whether `observed` is admitted on `target` under `set`.
+///
+/// Pure: no I/O, no JSON, no policy, no notion of a closed inventory. An empty
+/// result means admitted. Ordering is deterministic because every collection is
+/// a `BTreeSet` or `BTreeMap`.
+#[must_use]
+pub fn evaluate(set: &AdmissionSet, target: &str, observed: &ObservedPackage) -> Vec<Violation> {
+    let Some(row) = set.rows.get(&observed.id) else {
+        return vec![Violation::NoReviewedRow {
+            id: observed.id.clone(),
+        }];
+    };
+    let Some(scope) = row.scopes.get(target) else {
+        return vec![Violation::TargetNotAdmitted {
+            id: observed.id.clone(),
+            admitted: row.scopes.keys().cloned().collect(),
+        }];
+    };
+
+    let mut violations = Vec::new();
+    if scope.features != observed.features {
+        violations.push(Violation::FeatureSetMismatch {
+            expected: scope.features.iter().cloned().collect(),
+            observed: observed.features.iter().cloned().collect(),
+        });
+    }
+    for edge in observed.edges.difference(&scope.edges) {
+        violations.push(Violation::EdgeNotAdmitted {
+            target: target.to_string(),
+            edge: edge.clone(),
+        });
+    }
+    for edge in scope.edges.difference(&observed.edges) {
+        violations.push(Violation::EdgeMissing {
+            target: target.to_string(),
+            edge: edge.clone(),
+        });
+    }
+    // An admitted edge must land on a reviewed row that is itself scoped to
+    // this target. Without this, a scope could admit an edge into a package
+    // nobody reviewed and the graph would still report clean.
+    for edge in observed.edges.intersection(&scope.edges) {
+        let reviewed_destination = set
+            .rows
+            .get(&edge.to)
+            .is_some_and(|destination| destination.scopes.contains_key(target));
+        if !reviewed_destination {
+            violations.push(Violation::EdgeDestinationNotReviewed {
+                target: target.to_string(),
+                edge: edge.clone(),
+            });
+        }
+    }
+    violations
+}
+
+/// A resolve node as the structural pass reads it.
+///
+/// Edges are not carried here: the projector re-reads them into
+/// [`NodeObservation`], which is the form the evaluator consumes.
 struct Node {
     features: Vec<String>,
+}
+
+/// One resolve node, with whether it could be read exactly.
+struct NodeObservation {
+    /// Activated features, complete only when `faithful`.
+    features: BTreeSet<String>,
+    /// Declared edges, complete only when `faithful`.
+    deps: Vec<DepRecord>,
+    /// `false` when `features` or `deps` was absent, not an array, or held an
+    /// entry of the wrong type. The sets above are then incomplete and the
+    /// package must not be observed from them.
+    faithful: bool,
+}
+
+/// One `resolve.nodes[].deps[]` entry, reduced to what identity needs.
+///
+/// The causal diagnostic for this edge is emitted separately by
+/// [`report_dep_edge`]; this record exists so the same edge can also be given
+/// an exact destination identity and flow through the evaluator.
+struct DepRecord {
+    /// `deps[].pkg`: the destination's opaque metadata id.
+    dest_metadata_id: Option<String>,
+    /// Readable dependency kinds. An unreadable entry contributes none.
+    kinds: BTreeSet<DepKind>,
+    /// JSON path, for findings.
+    path: String,
+}
+
+/// Extract the identity half of a dependency edge.
+///
+/// Deliberately silent: every refusal for this edge is already produced by
+/// [`report_dep_edge`], which keeps the missing/malformed markers and the
+/// Build/Target/Features/Metadata precedence.
+fn record_dep_edge(dep: &Json, path: &str) -> DepRecord {
+    let mut kinds = BTreeSet::new();
+    if let Some(entries) = dep.get("dep_kinds").and_then(Json::as_array) {
+        for entry in entries {
+            let Some(entry) = entry.as_object() else {
+                continue;
+            };
+            match entry.get("kind") {
+                // Cargo spells a normal dependency as an explicit null.
+                Some(value) if value.is_null() => {
+                    kinds.insert(DepKind::Normal);
+                }
+                Some(value) => match value.as_str() {
+                    Some("build") => {
+                        kinds.insert(DepKind::Build);
+                    }
+                    Some("dev") => {
+                        kinds.insert(DepKind::Dev);
+                    }
+                    // An unknown or malformed kind has no representable
+                    // identity; it stays refused by `report_dep_edge`.
+                    _ => {}
+                },
+                None => {}
+            }
+        }
+    }
+    DepRecord {
+        dest_metadata_id: dep.get("pkg").and_then(Json::as_str).map(str::to_string),
+        kinds,
+        path: path.to_string(),
+    }
 }
 
 /// Run the admission check over `cargo metadata` output for one declared target.
@@ -857,6 +1460,67 @@ pub fn check(metadata_bytes: &[u8], policy: &Policy, target: &str) -> Result<Rep
             notes,
         });
     };
+
+    // Project the reviewed rows into the evaluator's general form. Only local
+    // rows exist, because `parse_policy` refuses every external row; the
+    // evaluator itself imposes no such restriction.
+    //
+    // Per-target feature sets stay with the frozen profile rather than being
+    // duplicated into the scope, so there remains one source of truth for them.
+    let mut reviewed_rows = Vec::with_capacity(policy.local.len());
+    for row in &policy.local {
+        // Real per-target scope. The frozen profile must actually declare a
+        // feature set for this package on this triple: `parse_policy` enforces
+        // that for a loaded policy, but a `Policy` built by hand must not be
+        // able to default an absent scope to "no features", which would admit
+        // under a scope nobody reviewed.
+        let mut scopes = BTreeMap::new();
+        for triple in &row.targets {
+            let Some(profile) = policy.profiles.iter().find(|p| &p.target == triple) else {
+                return Err(format!(
+                    "dependency policy admits `{} {}` on `{triple}` but freezes no target profile \
+                     for that triple; an absent profile is not an empty scope",
+                    row.name, row.version
+                ));
+            };
+            let Some(features) = profile.expected_features.get(&row.name) else {
+                return Err(format!(
+                    "target profile `{triple}` freezes no feature set for admitted package `{}`; \
+                     an absent scope must refuse, never default to none",
+                    row.name
+                ));
+            };
+            scopes.insert(
+                triple.clone(),
+                TargetScope {
+                    features: features.iter().cloned().collect(),
+                    // The policy admits no edges today: the schema refuses
+                    // every external row and the workspace has no
+                    // intra-workspace dependency. This is the real admitted
+                    // set, not a placeholder.
+                    edges: BTreeSet::new(),
+                },
+            );
+        }
+        reviewed_rows.push(ReviewedRow {
+            id: PackageId {
+                source: SourceId::WorkspacePath {
+                    manifest_path: row.manifest_path.clone(),
+                },
+                name: row.name.clone(),
+                version: row.version.clone(),
+            },
+            scopes,
+        });
+    }
+    let reviewed =
+        AdmissionSet::new(reviewed_rows).map_err(|AdmissionSetError::DuplicateIdentity(id)| {
+            format!(
+                "dependency policy admits `{} {}` from the same source twice; a duplicate \
+                 identity would let one row silently replace another",
+                id.name, id.version
+            )
+        })?;
 
     let Some(root) = req_object(&document, Phase::Metadata, "$", &mut findings) else {
         return Ok(Report {
@@ -1214,8 +1878,10 @@ pub fn check(metadata_bytes: &[u8], policy: &Policy, target: &str) -> Result<Rep
             Vec::new()
         };
 
-        match profile.expected_features.get(name) {
-            None => findings.push(Finding::new(
+        // The frozen profile must be explicit about every package it covers.
+        // Feature comparison itself is the evaluator's, below.
+        if !profile.expected_features.contains_key(name) {
+            findings.push(Finding::new(
                 Phase::Target,
                 "package_absent_from_profile",
                 path.clone(),
@@ -1223,21 +1889,7 @@ pub fn check(metadata_bytes: &[u8], policy: &Policy, target: &str) -> Result<Rep
                     "target profile `{target}` freezes no feature set for `{name}`; a profile \
                      that omits a package is silent on it, never implicitly covering it"
                 ),
-            )),
-            Some(expected) if resolve_usable && *expected != activated => {
-                findings.push(Finding::new(
-                    Phase::Features,
-                    "feature_set_mismatch",
-                    path.clone(),
-                    format!(
-                        "target `{target}` freezes features [{}] for `{name}`, metadata activates \
-                         [{}]",
-                        expected.join(", "),
-                        activated.join(", ")
-                    ),
-                ));
-            }
-            Some(_) => {}
+            ));
         }
 
         inventory.push(PackageFacts {
@@ -1251,6 +1903,91 @@ pub fn check(metadata_bytes: &[u8], policy: &Policy, target: &str) -> Result<Rep
             links,
             activated_features: activated,
         });
+    }
+
+    // -- Admission, decided by the shared evaluator --------------------------
+    //
+    // Runs only now, once every package identity and the resolve graph are
+    // available, over observations carrying the real activated features and
+    // every real dependency edge resolved to its exact destination identity.
+    // A package the projection could not observe faithfully is absent here and
+    // already carries its own refusal, so nothing is evaluated as empty.
+    for observed in project_observed_packages(&document, &mut findings) {
+        let location = format!("{} {}", observed.id.name, observed.id.version);
+        for violation in evaluate(&reviewed, target, &observed) {
+            match violation {
+                // Keep every evaluator refusal. Package-level diagnostics are
+                // more specific, but can never substitute for this decision.
+                Violation::NoReviewedRow { id } => findings.push(Finding::new(
+                    Phase::Source,
+                    "identity_not_reviewed",
+                    location.clone(),
+                    format!(
+                        "no reviewed row for exact source {:?}, name `{}`, version `{}`",
+                        id.source, id.name, id.version
+                    ),
+                )),
+                Violation::TargetNotAdmitted { admitted, .. } => findings.push(Finding::new(
+                    Phase::Target,
+                    "package_not_admitted_for_target",
+                    location.clone(),
+                    format!(
+                        "`{location}` is reviewed, but its row admits only [{}]; this collection \
+                         is for `{target}`",
+                        admitted.join(", ")
+                    ),
+                )),
+                Violation::FeatureSetMismatch { expected, observed } => {
+                    findings.push(Finding::new(
+                        Phase::Features,
+                        "feature_set_mismatch",
+                        location.clone(),
+                        format!(
+                            "target `{target}` freezes features [{}] for `{location}`, metadata \
+                             activates [{}]",
+                            expected.join(", "),
+                            observed.join(", ")
+                        ),
+                    ));
+                }
+                Violation::EdgeNotAdmitted { target, edge } => findings.push(Finding::new(
+                    Phase::Target,
+                    "edge_outside_target_scope",
+                    location.clone(),
+                    format!(
+                        "edge to `{} {}` as a `{}` dependency is not in the reviewed scope for \
+                         `{target}`",
+                        edge.to.name,
+                        edge.to.version,
+                        edge.kind.as_str()
+                    ),
+                )),
+                Violation::EdgeMissing { target, edge } => findings.push(Finding::new(
+                    Phase::Graph,
+                    "admitted_edge_absent",
+                    location.clone(),
+                    format!(
+                        "the reviewed scope for `{target}` requires an edge to `{} {}` as a `{}` \
+                         dependency, and it is absent",
+                        edge.to.name,
+                        edge.to.version,
+                        edge.kind.as_str()
+                    ),
+                )),
+                Violation::EdgeDestinationNotReviewed { target, edge } => {
+                    findings.push(Finding::new(
+                        Phase::Graph,
+                        "edge_destination_not_reviewed",
+                        location.clone(),
+                        format!(
+                            "an admitted edge points at `{} {}`, which has no reviewed row scoped \
+                             to `{target}`",
+                            edge.to.name, edge.to.version
+                        ),
+                    ));
+                }
+            }
+        }
     }
 
     // -- Phase Graph: exact bijection packages <-> resolve.nodes <-> members --
@@ -2107,6 +2844,385 @@ mod tests {
             finding.detail.contains("targets [none]"),
             "an edge with no target must say so explicitly: {}",
             finding.detail
+        );
+    }
+
+    // ---- evaluator compiler tests -------------------------------------------
+    //
+    // These exercise the production algorithm over hypothetical reviewed rows.
+    // They are compiler tests: nothing here admits a package, no row reaches
+    // `registry/`, and none of this is donor or runtime evidence.
+
+    const REGISTRY: &str = "registry+https://github.com/rust-lang/crates.io-index";
+    const OWNED_GIT: &str = "git+https://github.com/Dicklesworthstone/frankentorch?rev=abc#abc";
+
+    fn pkg(source: &str, name: &str, version: &str) -> PackageId {
+        PackageId {
+            source: SourceId::Exact(source.to_string()),
+            name: name.to_string(),
+            version: version.to_string(),
+        }
+    }
+
+    fn row(id: PackageId, scopes: Vec<(&str, TargetScope)>) -> ReviewedRow {
+        ReviewedRow {
+            id,
+            scopes: scopes
+                .into_iter()
+                .map(|(target, scope)| (target.to_string(), scope))
+                .collect(),
+        }
+    }
+
+    fn observed(id: PackageId, edges: Vec<EdgeId>) -> ObservedPackage {
+        ObservedPackage {
+            id,
+            features: BTreeSet::new(),
+            edges: edges.into_iter().collect(),
+        }
+    }
+
+    /// The real captured graph with one feature and one build edge injected.
+    fn injected_metadata() -> String {
+        mutate(
+            FILTERED_METADATA,
+            "\"dependencies\":[],\"deps\":[],\"features\":[]}",
+            "\"dependencies\":[],\"deps\":[{\"name\":\"xtask\",\
+             \"pkg\":\"path+file:///Users/jemanuel/projects/franken_alignment/xtask#0.2.0\",\
+             \"dep_kinds\":[{\"kind\":\"build\",\"target\":null}]}],\
+             \"features\":[\"native-zstd\"]}",
+        )
+    }
+
+    #[test]
+    fn projection_carries_real_features_and_edges_from_cargo_shaped_input() {
+        // This is the regression that a hard-coded empty observation fails.
+        // Both the feature and the edge are injected into the real captured
+        // metadata, and the production projection must carry both.
+        let document = parse(injected_metadata().as_bytes(), Limits::default()).expect("parses");
+        let mut findings = Vec::new();
+        let observed = project_observed_packages(&document, &mut findings);
+
+        let fa = observed
+            .iter()
+            .find(|package| package.id.name == "fa-reference")
+            .expect("fa-reference must be observed");
+        assert!(
+            fa.features.contains("native-zstd"),
+            "projection must carry the real activated features, got {:?}",
+            fa.features
+        );
+        assert_eq!(
+            fa.edges.len(),
+            1,
+            "projection must carry the real dependency edges, got {:?}",
+            fa.edges
+        );
+        let edge = fa.edges.iter().next().expect("one edge");
+        assert_eq!(edge.kind, DepKind::Build, "the real dep kind is preserved");
+        assert_eq!(edge.to.name, "xtask");
+        assert_eq!(edge.to.version, "0.2.0");
+        assert!(
+            matches!(edge.to.source, SourceId::WorkspacePath { .. }),
+            "the edge names its exact destination package, not a bare name"
+        );
+    }
+
+    #[test]
+    fn injected_edge_and_feature_reach_the_live_evaluator() {
+        // The same injected graph, through the whole gate: the evaluator, not
+        // a bespoke branch, is what refuses them.
+        let report = check_filtered(&injected_metadata());
+        assert_refused(&report, Phase::Target, "edge_outside_target_scope");
+        assert_refused(&report, Phase::Features, "feature_set_mismatch");
+    }
+
+    fn project(metadata: &str) -> (Vec<ObservedPackage>, Vec<Finding>) {
+        let document = parse(metadata.as_bytes(), Limits::default()).expect("parses");
+        let mut findings = Vec::new();
+        let observed = project_observed_packages(&document, &mut findings);
+        (observed, findings)
+    }
+
+    fn observes_fa_reference(observed: &[ObservedPackage]) -> bool {
+        observed.iter().any(|p| p.id.name == "fa-reference")
+    }
+
+    #[test]
+    fn the_projector_never_returns_an_unexplained_empty_result() {
+        // A direct caller of the public projector must be able to tell
+        // "nothing to observe" from "the document could not be read". `check`
+        // diagnoses these separately, but the public API stands on its own.
+        for document in [
+            "[]",                  // root is not an object
+            "{\"version\":1}",     // no `packages` at all
+            "{\"packages\":{}}",   // `packages` is not an array
+            "{\"packages\":[]}",   // required inventory cannot be empty
+            "{\"packages\":[{}]}", // unreadable identity cannot silently disappear
+            "{\"packages\":[{\"id\":\"x\",\"name\":\"x\",\"version\":\"1\",\"source\":42}]}",
+            "{\"packages\":[{\"id\":\"x\",\"name\":\"x\",\"version\":\"1\"}]}",
+        ] {
+            let parsed = parse(document.as_bytes(), Limits::default()).expect("parses");
+            let mut findings = Vec::new();
+            let observed = project_observed_packages(&parsed, &mut findings);
+            assert!(observed.is_empty(), "{document}");
+            assert!(
+                !findings.is_empty(),
+                "an empty projection must carry its reason: {document}"
+            );
+        }
+    }
+
+    #[test]
+    fn a_malformed_feature_entry_is_refused_not_silently_dropped() {
+        // Filtering this out would silently shrink the activated set, which is
+        // exactly how an injected feature could pass unnoticed.
+        let mutated = mutate(FILTERED_METADATA, "\"features\":[]}", "\"features\":[42]}");
+        let (observed, findings) = project(&mutated);
+        assert!(
+            findings
+                .iter()
+                .any(|f| f.phase == Phase::Features && f.code == "expected_string"),
+            "a non-string feature must be reported: {findings:?}"
+        );
+        assert!(
+            !observes_fa_reference(&observed),
+            "a package whose feature set could not be read exactly must not be observed"
+        );
+    }
+
+    #[test]
+    fn an_absent_features_array_is_unknown_not_empty() {
+        let mutated = mutate(
+            FILTERED_METADATA,
+            "\"dependencies\":[],\"deps\":[],\"features\":[]}",
+            "\"dependencies\":[],\"deps\":[]}",
+        );
+        let (observed, findings) = project(&mutated);
+        assert!(
+            findings
+                .iter()
+                .any(|f| f.phase == Phase::Features && f.code == "missing_field"),
+            "an absent features array must be reported: {findings:?}"
+        );
+        assert!(!observes_fa_reference(&observed));
+    }
+
+    #[test]
+    fn an_absent_deps_array_is_unknown_not_no_edges() {
+        let mutated = mutate(
+            FILTERED_METADATA,
+            "\"dependencies\":[],\"deps\":[],\"features\":[]}",
+            "\"dependencies\":[],\"features\":[]}",
+        );
+        let (observed, findings) = project(&mutated);
+        assert!(
+            findings
+                .iter()
+                .any(|f| f.phase == Phase::Graph && f.code == "missing_field"),
+            "an absent deps array must be reported: {findings:?}"
+        );
+        assert!(
+            !observes_fa_reference(&observed),
+            "unknown edges must never be observed as no edges"
+        );
+    }
+
+    #[test]
+    fn a_hand_built_policy_with_an_absent_scope_refuses() {
+        // `parse_policy` guarantees a profile entry for every admitted row, but
+        // a `Policy` assembled in code must not be able to default an absent
+        // scope to "no features".
+        let mut incomplete_policy = policy();
+        incomplete_policy.profiles[0]
+            .expected_features
+            .remove("fa-reference");
+        let error = check(FILTERED_METADATA.as_bytes(), &incomplete_policy, TARGET)
+            .expect_err("an absent reviewed scope must refuse");
+        assert!(
+            error.contains("freezes no feature set"),
+            "the refusal must name the absent scope: {error}"
+        );
+
+        let mut orphan = policy();
+        orphan.local[0]
+            .targets
+            .insert("riscv64gc-unknown-linux-gnu".to_string());
+        let error = check(FILTERED_METADATA.as_bytes(), &orphan, TARGET)
+            .expect_err("a target with no frozen profile must refuse");
+        assert!(error.contains("freezes no target profile"), "{error}");
+    }
+
+    #[test]
+    fn an_unresolvable_edge_destination_is_refused_not_observed_empty() {
+        let mutated = mutate(
+            FILTERED_METADATA,
+            "\"dependencies\":[],\"deps\":[],\"features\":[]}",
+            "\"dependencies\":[],\"deps\":[{\"name\":\"ghost\",\
+             \"pkg\":\"path+file:///nowhere/ghost#9.9.9\",\
+             \"dep_kinds\":[{\"kind\":null,\"target\":null}]}],\"features\":[]}",
+        );
+        let document = parse(mutated.as_bytes(), Limits::default()).expect("parses");
+        let mut findings = Vec::new();
+        let observed = project_observed_packages(&document, &mut findings);
+        assert!(
+            findings
+                .iter()
+                .any(|finding| finding.code == "edge_destination_unresolved"),
+            "an edge naming no known package must be refused: {findings:?}"
+        );
+        assert!(
+            !observed.iter().any(|p| p.id.name == "fa-reference"),
+            "a package whose edges could not be resolved must not be observed at all"
+        );
+    }
+
+    #[test]
+    fn source_alone_is_not_an_identity() {
+        // Every crates.io package shares one index URL, so two distinct
+        // packages under it must coexist in one set.
+        let set = AdmissionSet::new(vec![
+            row(
+                pkg(REGISTRY, "alpha", "1.0.0"),
+                vec![("A", TargetScope::default())],
+            ),
+            row(
+                pkg(REGISTRY, "beta", "1.0.0"),
+                vec![("A", TargetScope::default())],
+            ),
+            row(
+                pkg(REGISTRY, "alpha", "2.0.0"),
+                vec![("A", TargetScope::default())],
+            ),
+        ])
+        .expect("distinct identities under one source must coexist");
+        for (name, version) in [("alpha", "1.0.0"), ("beta", "1.0.0"), ("alpha", "2.0.0")] {
+            assert_eq!(
+                evaluate(&set, "A", &observed(pkg(REGISTRY, name, version), vec![])),
+                vec![]
+            );
+        }
+    }
+
+    #[test]
+    fn duplicate_full_identity_is_refused_not_overwritten() {
+        let error = AdmissionSet::new(vec![
+            row(
+                pkg(REGISTRY, "alpha", "1.0.0"),
+                vec![("A", TargetScope::default())],
+            ),
+            row(
+                pkg(REGISTRY, "alpha", "1.0.0"),
+                vec![("B", TargetScope::default())],
+            ),
+        ])
+        .expect_err("a duplicate identity must not silently replace a row");
+        assert_eq!(
+            error,
+            AdmissionSetError::DuplicateIdentity(pkg(REGISTRY, "alpha", "1.0.0"))
+        );
+    }
+
+    #[test]
+    fn registry_impostor_is_refused_with_name_and_version_held_equal() {
+        // Only `source` differs. Name and version are identical, so the
+        // refusal is causal on origin and cannot be a name check.
+        let reviewed_id = pkg(OWNED_GIT, "frankentorch-api", "0.1.0");
+        let impostor = pkg(REGISTRY, "frankentorch-api", "0.1.0");
+        assert_eq!(reviewed_id.name, impostor.name);
+        assert_eq!(reviewed_id.version, impostor.version);
+
+        let set = AdmissionSet::new(vec![row(
+            reviewed_id.clone(),
+            vec![("A", TargetScope::default())],
+        )])
+        .expect("set");
+        assert_eq!(evaluate(&set, "A", &observed(reviewed_id, vec![])), vec![]);
+        assert_eq!(
+            evaluate(&set, "A", &observed(impostor.clone(), vec![])),
+            vec![Violation::NoReviewedRow { id: impostor }]
+        );
+    }
+
+    #[test]
+    fn identical_edge_discriminates_between_admitted_and_unadmitted_target() {
+        let host = pkg(OWNED_GIT, "host", "1.0.0");
+        let dest = pkg(OWNED_GIT, "dest", "1.0.0");
+        let edge = EdgeId {
+            to: dest.clone(),
+            kind: DepKind::Normal,
+        };
+        let scope_with = TargetScope {
+            features: BTreeSet::new(),
+            edges: [edge.clone()].into_iter().collect(),
+        };
+        // The destination is reviewed on both targets, so the only difference
+        // between the two evaluations is whether the edge is in scope.
+        let set = AdmissionSet::new(vec![
+            row(
+                host.clone(),
+                vec![("A", scope_with), ("B", TargetScope::default())],
+            ),
+            row(
+                dest,
+                vec![("A", TargetScope::default()), ("B", TargetScope::default())],
+            ),
+        ])
+        .expect("set");
+
+        let seen = observed(host, vec![edge.clone()]);
+        assert_eq!(evaluate(&set, "A", &seen), vec![], "admitted on A");
+        assert_eq!(
+            evaluate(&set, "B", &seen),
+            vec![Violation::EdgeNotAdmitted {
+                target: "B".to_string(),
+                edge
+            }],
+            "the identical edge is refused on B"
+        );
+    }
+
+    #[test]
+    fn an_admitted_edge_into_an_unreviewed_destination_does_not_pass() {
+        let host = pkg(OWNED_GIT, "host", "1.0.0");
+        let dangling = pkg(REGISTRY, "ghost", "9.9.9");
+        let edge = EdgeId {
+            to: dangling,
+            kind: DepKind::Build,
+        };
+        let set = AdmissionSet::new(vec![row(
+            host.clone(),
+            vec![(
+                "A",
+                TargetScope {
+                    features: BTreeSet::new(),
+                    edges: [edge.clone()].into_iter().collect(),
+                },
+            )],
+        )])
+        .expect("set");
+        assert_eq!(
+            evaluate(&set, "A", &observed(host, vec![edge.clone()])),
+            vec![Violation::EdgeDestinationNotReviewed {
+                target: "A".to_string(),
+                edge
+            }]
+        );
+    }
+
+    #[test]
+    fn a_target_absent_from_the_row_is_not_admitted() {
+        let id = pkg(OWNED_GIT, "host", "1.0.0");
+        let set = AdmissionSet::new(vec![row(id.clone(), vec![("A", TargetScope::default())])])
+            .expect("set");
+        assert_eq!(evaluate(&set, "A", &observed(id.clone(), vec![])), vec![]);
+        assert_eq!(
+            evaluate(&set, "B", &observed(id.clone(), vec![])),
+            vec![Violation::TargetNotAdmitted {
+                id,
+                admitted: vec!["A".to_string()]
+            }],
+            "absence is never scope"
         );
     }
 

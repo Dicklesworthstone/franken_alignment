@@ -4,7 +4,12 @@
 mod admission;
 mod admission_contract;
 #[cfg(test)]
+mod admission_evaluator_tests;
+#[cfg(test)]
 mod admission_negative_tests;
+mod concordance;
+#[cfg(test)]
+mod concordance_tests;
 mod json;
 #[cfg(test)]
 mod json_tests;
@@ -150,6 +155,17 @@ fn check_metadata_paths(root: &Path, bytes: &[u8]) -> Result<(), String> {
 }
 
 fn collect_metadata(root: &Path, target: &str) -> Result<Vec<u8>, String> {
+    collect_metadata_using(root, target, std::ffi::OsStr::new("cargo"))
+}
+
+// The program argument is operator/test infrastructure, never policy input.
+// Keeping process creation here lets the absence test exercise the same path
+// as the required live Cargo collection without altering global PATH.
+fn collect_metadata_using(
+    root: &Path,
+    target: &str,
+    program: &std::ffi::OsStr,
+) -> Result<Vec<u8>, String> {
     let arguments = [
         "metadata",
         "--format-version",
@@ -161,21 +177,24 @@ fn collect_metadata(root: &Path, target: &str) -> Result<Vec<u8>, String> {
     ];
     let manifest = root.join("Cargo.toml");
     println!(
-        "EXECUTE cargo {} --manifest-path {}",
+        "EXECUTE {} {} --manifest-path {}",
+        program.to_string_lossy(),
         arguments.join(" "),
         manifest.display()
     );
-    let output = Command::new("cargo")
+    let output = Command::new(program)
         .args(arguments)
         .arg("--manifest-path")
         .arg(&manifest)
         .current_dir(root)
         .stderr(Stdio::inherit())
         .output()
-        .map_err(|error| format!("Cannot collect metadata for {target}: {error}"))?;
+        .map_err(|error| {
+            format!("Cannot collect metadata for {target}: Unknown (spawn {program:?}: {error})")
+        })?;
     if !output.status.success() {
         return Err(format!(
-            "Metadata collection for {target} failed: {}",
+            "Metadata collection for {target} failed: Unknown (exit {})",
             output.status
         ));
     }
@@ -266,7 +285,7 @@ fn check_registries(root: &Path) -> Result<(), String> {
     Ok(())
 }
 
-fn check_source_snapshot(root: &Path) -> Result<(), String> {
+fn check_source_snapshot(root: &Path) -> Result<source_snapshot::Manifest, String> {
     let policy_bytes = fs::read(root.join("registry/dependency_policy.json"))
         .map_err(|error| format!("Cannot read admission contract: {error}"))?;
     let policy = json::parse(&policy_bytes, json::Limits::default())
@@ -289,6 +308,59 @@ fn check_source_snapshot(root: &Path) -> Result<(), String> {
     if !report.is_verified() {
         return Err("Reviewed source snapshot refused current source/build input bytes".into());
     }
+    Ok(manifest)
+}
+
+const PLAN_INPUT: &str = "COMPREHENSIVE_PLAN_FOR_THE_DESIGN_OF_FRANKENALIGNMENT.md";
+const CONCORDANCE_INPUT_LIMIT: usize = 4 * 1024 * 1024;
+
+fn read_concordance_input(
+    root: &Path,
+    manifest: &source_snapshot::Manifest,
+    relative: &str,
+) -> Result<Vec<u8>, String> {
+    let digest = manifest
+        .digest(relative)
+        .ok_or_else(|| format!("Concordance input is outside the verified snapshot: {relative}"))?;
+    let mut bytes = Vec::new();
+    fs::File::open(root.join(relative))
+        .map_err(|error| format!("Cannot open concordance input {relative}: {error}"))?
+        .take(CONCORDANCE_INPUT_LIMIT as u64 + 1)
+        .read_to_end(&mut bytes)
+        .map_err(|error| format!("Cannot read concordance input {relative}: {error}"))?;
+    if bytes.len() > CONCORDANCE_INPUT_LIMIT {
+        return Err(format!("Concordance input exceeds byte limit: {relative}"));
+    }
+    println!(
+        "CONCORDANCE input={relative} bytes={} sha256={digest}; verified source manifest, outer freeze required",
+        bytes.len()
+    );
+    Ok(bytes)
+}
+
+fn check_concordance(root: &Path, manifest: &source_snapshot::Manifest) -> Result<(), String> {
+    let load_json = |relative: &str| -> Result<json::Json, String> {
+        let bytes = read_concordance_input(root, manifest, relative)?;
+        json::parse(&bytes, json::Limits::default())
+            .map_err(|error| format!("Invalid concordance input {relative}: {error}"))
+    };
+    let concordance = load_json("registry/founding_concordance.json")?;
+    let invariants = load_json("registry/invariants.json")?;
+    let claims = load_json("registry/claims.json")?;
+    let roadmap = load_json("registry/roadmap.json")?;
+    let plan_bytes = read_concordance_input(root, manifest, PLAN_INPUT)?;
+    let plan = std::str::from_utf8(&plan_bytes)
+        .map_err(|error| format!("Invalid UTF-8 in {PLAN_INPUT}: {error}"))?;
+    let report = concordance::check(&concordance, &invariants, &claims, &roadmap, plan);
+    // The operator retains this exact JSON under the artifact's concordance key
+    // after execution. The gate never writes logs into its frozen source root.
+    println!("CONCORDANCE_JSON {}", report.render_json());
+    if !report.is_clean() {
+        return Err("Concordance coverage refused; exact findings are in CONCORDANCE_JSON".into());
+    }
+    println!(
+        "PASS concordance: direct typed coverage and reference validity; not implementation or invariant proof"
+    );
     Ok(())
 }
 
@@ -303,9 +375,10 @@ fn execute() -> Result<(), String> {
             check_lock(&root)?;
             check_source(&root)?;
             check_toolchain(&root)?;
-            check_source_snapshot(&root)?;
+            let manifest = check_source_snapshot(&root)?;
             check_admission(&root)?;
             check_registries(&root)?;
+            check_concordance(&root, &manifest)?;
             run(&root, "cargo", &["fmt", "--all", "--check"])?;
             run(&root, "cargo", &["check", "--workspace", "--all-targets", "--frozen"])?;
             run(&root, "cargo", &["clippy", "--workspace", "--all-targets", "--frozen", "--", "-D", "warnings"])?;
@@ -320,10 +393,14 @@ fn execute() -> Result<(), String> {
             println!("INVENTORY ONLY: compilation, tests, source freezing and release verification were not performed by this command");
             Ok(())
         }
+        [command] if command == "concordance-check" => {
+            let manifest = check_source_snapshot(&root)?;
+            check_concordance(&root, &manifest)
+        }
         [command] if command == "release-check" => {
             Err("Release blocked: no qualified production broker, frozen release toolchain, foundation closure, target matrix or signed proof closure exists in design draft 0.2.".into())
         }
-        _ => Err("Usage: cargo xtask check | inventory | release-check".into()),
+        _ => Err("Usage: cargo xtask check | concordance-check | inventory | release-check".into()),
     }
 }
 

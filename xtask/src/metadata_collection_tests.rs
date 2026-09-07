@@ -11,7 +11,7 @@ use std::io;
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicU64, Ordering};
 
-use super::{collect_metadata, json};
+use super::{collect_metadata, collect_metadata_using, json};
 
 const COLLECTION_TARGET: &str = "aarch64-apple-darwin";
 
@@ -106,6 +106,10 @@ fn real_cargo_metadata_refuses_manifestless_current_directory_without_empty_succ
         error.starts_with("Metadata collection for aarch64-apple-darwin failed:"),
         "a Cargo nonzero status must remain a collection failure: {error}"
     );
+    assert!(
+        error.contains("Unknown"),
+        "a Cargo nonzero status must remain epistemically Unknown: {error}"
+    );
 }
 
 #[test]
@@ -119,5 +123,43 @@ fn real_cargo_metadata_refuses_missing_root_without_empty_success() {
     assert!(
         error.starts_with("Cannot collect metadata for aarch64-apple-darwin:"),
         "failure to start Cargo in a missing root must remain visible: {error}"
+    );
+    assert!(
+        error.contains("Unknown"),
+        "failure to start Cargo must remain epistemically Unknown: {error}"
+    );
+}
+
+#[test]
+fn absent_metadata_executable_is_unknown_and_refuses_closed_collection() {
+    let directory = TemporaryDirectory::new("absent-executable");
+    let absent_program = directory.path.join("missing-metadata-executable");
+    assert!(
+        !absent_program.exists(),
+        "the real-OS negative requires an executable path that is actually absent"
+    );
+
+    let error = collect_metadata_using(
+        &workspace_root(),
+        COLLECTION_TARGET,
+        absent_program.as_os_str(),
+    )
+    .expect_err("an absent metadata executable must not produce default metadata");
+
+    assert!(
+        error.starts_with("Cannot collect metadata for aarch64-apple-darwin:"),
+        "an absent executable must preserve the collection-failure prefix: {error}"
+    );
+    assert!(
+        error.contains("Unknown"),
+        "an absent executable must fail closed as Unknown, not as empty metadata: {error}"
+    );
+    assert!(
+        error.contains("spawn"),
+        "an absent executable must retain the spawn-absence reason: {error}"
+    );
+    assert!(
+        error.contains(absent_program.to_string_lossy().as_ref()),
+        "the spawn failure must identify the actual absent executable: {error}"
     );
 }

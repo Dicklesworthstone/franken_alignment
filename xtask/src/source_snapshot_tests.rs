@@ -31,6 +31,7 @@ const EMBEDDED_INPUTS: &[&str] = &[
 ];
 
 const SNAPSHOT_PATHS: &[&str] = &[
+    "COMPREHENSIVE_PLAN_FOR_THE_DESIGN_OF_FRANKENALIGNMENT.md",
     "Cargo.lock",
     "Cargo.toml",
     "LICENSE",
@@ -88,6 +89,10 @@ impl Sandbox {
 
     fn write_baseline(&self) {
         for (path, contents) in [
+            (
+                "COMPREHENSIVE_PLAN_FOR_THE_DESIGN_OF_FRANKENALIGNMENT.md",
+                "## 2. Test plan contract\n",
+            ),
             ("Cargo.toml", "[workspace]\nmembers = []\n"),
             ("Cargo.lock", "version = 4\n"),
             (

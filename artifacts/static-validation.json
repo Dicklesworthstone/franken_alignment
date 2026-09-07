@@ -73,5 +73,21 @@
     "rustfmt": null
   },
   "rust_compile_tests": "not_run",
-  "no_production_readiness_claim": true
+  "no_production_readiness_claim": true,
+  "concordance": {
+    "missing": [],
+    "dangling": [],
+    "counts": {
+      "headings": 231,
+      "invariants": 40,
+      "hypotheses": 21,
+      "packets": 143
+    }
+  },
+  "concordance_execution": {
+    "executed_at_utc": "2026-09-07T23:19:22Z",
+    "receipt": "artifacts/execution/2026-09-07-epoch7-receipt.json",
+    "raw_log": "artifacts/execution/2026-09-07-epoch7-attempt4.log",
+    "provenance_boundary": "Only concordance and this execution descriptor are new. Existing checks, tool fields and not_run facts describe revision 0.2 preparation and remain historical."
+  }
 }

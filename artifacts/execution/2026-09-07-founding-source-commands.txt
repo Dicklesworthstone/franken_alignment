@@ -1,0 +1,15 @@
+curl -fS -L -D api/F-ALIGN.headers -o api/F-ALIGN.json 'https://api.github.com/repos/Dicklesworthstone/some_thoughts_on_ai_alignment/contents/README.md?ref=d5da838c7c2e109c4c6c8726cd33fa6b2d89b1d8'
+jq -r '.content' api/F-ALIGN.json | base64 --decode > bytes/F-ALIGN
+git hash-object --stdin < bytes/F-ALIGN
+curl -fS -L -D api/F-ALIGN-FEEDBACK.headers -o api/F-ALIGN-FEEDBACK.json 'https://api.github.com/repos/Dicklesworthstone/some_thoughts_on_ai_alignment/contents/feedback_on_article_from_ai_models.md?ref=d5da838c7c2e109c4c6c8726cd33fa6b2d89b1d8'
+jq -r '.content' api/F-ALIGN-FEEDBACK.json | base64 --decode > bytes/F-ALIGN-FEEDBACK
+git hash-object --stdin < bytes/F-ALIGN-FEEDBACK
+git -C /Users/jemanuel/projects/llm_introspective_compression_and_metacognition rev-parse '9f45bf06a67dcfe1c34d2ff7f7071f813684150f:README.md'
+git -C /Users/jemanuel/projects/llm_introspective_compression_and_metacognition show '9f45bf06a67dcfe1c34d2ff7f7071f813684150f:README.md' > bytes/F-INTROSPECT
+git hash-object --stdin < bytes/F-INTROSPECT
+git -C /Users/jemanuel/projects/llm_introspective_compression_and_metacognition rev-parse '9f45bf06a67dcfe1c34d2ff7f7071f813684150f:CHANGELOG.md'
+git -C /Users/jemanuel/projects/llm_introspective_compression_and_metacognition show '9f45bf06a67dcfe1c34d2ff7f7071f813684150f:CHANGELOG.md' > bytes/F-INTROSPECT-CHANGELOG
+git hash-object --stdin < bytes/F-INTROSPECT-CHANGELOG
+git -C /Users/jemanuel/projects/llm_introspective_compression_and_metacognition rev-parse '9f45bf06a67dcfe1c34d2ff7f7071f813684150f:LICENSE'
+git -C /Users/jemanuel/projects/llm_introspective_compression_and_metacognition show '9f45bf06a67dcfe1c34d2ff7f7071f813684150f:LICENSE' > bytes/F-INTROSPECT-LICENSE
+git hash-object --stdin < bytes/F-INTROSPECT-LICENSE

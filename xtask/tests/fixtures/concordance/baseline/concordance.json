@@ -1,0 +1,51 @@
+{
+  "founding_ideas": [
+    {
+      "id": "FI-A10",
+      "source": "F-ALIGN",
+      "locator": "fixture",
+      "idea": "A minimal direct founding mapping.",
+      "plan_sections": [
+        "§2",
+        "§2.1",
+        "§9",
+        "§9.8",
+        "§9#Signals — α/β!"
+      ],
+      "invariants": [
+        "FA-INV-001"
+      ],
+      "hypotheses": [
+        "H1"
+      ],
+      "packets": [
+        "FA-001"
+      ]
+    }
+  ],
+  "syntheses": [
+    {
+      "id": "FS-01",
+      "combines": [
+        "FI-A10"
+      ],
+      "synthesis": "Keeps the founding root reference independently live.",
+      "plan_sections": [],
+      "invariants": [],
+      "hypotheses": [],
+      "packets": []
+    }
+  ],
+  "engineering_additions": [
+    {
+      "mechanism": "A permitted direct engineering mapping.",
+      "serves": [
+        "FI-A10"
+      ],
+      "plan_sections": [],
+      "invariants": [],
+      "hypotheses": [],
+      "packets": []
+    }
+  ]
+}

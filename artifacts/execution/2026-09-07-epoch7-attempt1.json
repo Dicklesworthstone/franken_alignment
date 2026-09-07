@@ -1,0 +1,1 @@
+{"api_version":"1.0","command":"cargo +nightly-2026-09-07 run --locked -p xtask -- check","outcome":"completed","location":"remote","worker_id":"hz4","remote_exit_code":1,"duration_ms":35393,"timing":{"classify":null,"select":null,"sync_up":5913,"exec":5162,"sync_down":null,"cleanup":null,"total":null},"result_dirs":[]}

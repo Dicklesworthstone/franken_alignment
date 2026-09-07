@@ -1263,7 +1263,7 @@
       "id": "FA-052",
       "gate": "G0",
       "title": "Maintain source provenance and resolve missing context",
-      "status": "drafted",
+      "status": "source_provenance_revalidated_2026_09_07",
       "depends_on": [],
       "invariants": [
         "FA-INV-019"
@@ -1274,7 +1274,10 @@
       ],
       "owner_role": "systems",
       "estimated_scope": "One independently reviewable work packet; split before implementation if multiple semantics change.",
-      "result_artifacts": []
+      "result_artifacts": [
+        "artifacts/execution/2026-09-07-founding-source-results.tsv",
+        "artifacts/execution/2026-09-07-founding-source-commands.txt"
+      ]
     },
     {
       "id": "FA-053",
@@ -2244,7 +2247,7 @@
       "id": "FA-103",
       "gate": "G0",
       "title": "Maintain the founding-ideas concordance",
-      "status": "planned",
+      "status": "in_progress",
       "depends_on": [
         "FA-052"
       ],

@@ -90,6 +90,9 @@
                 "name": "fa-reference",
                 "version": "0.2.0",
                 "manifest_path": "crates/fa-reference/Cargo.toml",
+                "targets": [
+                    "aarch64-apple-darwin"
+                ],
                 "direct_reason": "Independent test-only logical oracle (plan section 6.2, 19.2).",
                 "owner": "systems",
                 "decision": "admitted",
@@ -99,6 +102,9 @@
                 "name": "xtask",
                 "version": "0.2.0",
                 "manifest_path": "xtask/Cargo.toml",
+                "targets": [
+                    "aarch64-apple-darwin"
+                ],
                 "direct_reason": "Operator-local gate driver (plan section 6.2, 22.6).",
                 "owner": "systems",
                 "decision": "admitted",

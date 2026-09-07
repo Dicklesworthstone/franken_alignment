@@ -1,0 +1,1 @@
+{"missing":[],"dangling":[{"file":"COMPREHENSIVE_PLAN_FOR_THE_DESIGN_OF_FRANKENALIGNMENT.md","id":"§9.8a","code":"malformed_heading","detail":"numbered headings require decimal components only"},{"file":"registry/founding_concordance.json","id":"§9.8","code":"unknown_reference","detail":"unknown plan section"}],"counts":{"headings":4,"invariants":1,"hypotheses":1,"packets":1}}

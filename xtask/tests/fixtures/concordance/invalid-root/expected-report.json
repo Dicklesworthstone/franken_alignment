@@ -1,0 +1,1 @@
+{"missing":[],"dangling":[{"file":"registry/founding_concordance.json","id":"FA-ROOT","code":"invalid_root","detail":"Malformed parent reference. serves a malformed root"}],"counts":{"headings":5,"invariants":1,"hypotheses":1,"packets":1}}

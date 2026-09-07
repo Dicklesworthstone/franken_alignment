@@ -1,5 +1,9 @@
 # Changelog
 
+## 2026-09-07: owned concordance checker and admission discrimination
+
+The gate now rejects missing or dangling founding mappings and compares real Cargo source, target, feature and edge observations through the shared admission evaluator. The complete isolated RCH run passed 248 tests. Three earlier failures are retained, including a source/path bypass found by unchanged negative tests and repaired before closure. Four shorthand concordance references missed by the preceding manual audit are corrected and checked. External packages and production release remain refused.
+
 ## 2026-09-07: explicit founding-concordance coverage
 
 The normative heading grammar and direct typed mappings now cover all current required headings, invariants, hypotheses and packets. The source audit distinguishes founding ideas from engineering additions; the RCH gate passed 217 tests on the reviewed snapshot. Automated coverage enforcement remains a separate task.
