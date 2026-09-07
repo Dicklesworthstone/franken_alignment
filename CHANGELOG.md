@@ -1,5 +1,9 @@
 # Changelog
 
+## 2026-09-07: reviewed source snapshots
+
+The operator gate now requires exact source/build-input set and SHA-256 equality against a reviewed manifest. It refuses ancestor symlinks, unlisted/missing/changed files, excessive empty-directory traversal and hash-tool errors. The isolated RCH gate verified 39 inputs and passed all 199 tests; the exact receipt and raw log are retained as epoch4 artifacts. The outer source freeze and trusted operator tools remain assumptions; dependency admission and production qualification remain unfinished.
+
 ## 2026-09-07: capped reducer and owned registry gate
 
 Added name-independent capped empirical reduction and an owned registry-core checker, including causal string/comment, module-scope, symlink and identity negatives. The gate now checks the qualified compiler identity and binds real Cargo metadata collection to the intended manifest. The complete isolated RCH run passed 56 reference unit tests, 16 integration tests, 102 xtask tests and 2 doctests. Both preceding failures and the exact passing snapshot are retained in the epoch3 execution artifacts. This is bounded reference and operator-check evidence; full dependency admission, concordance coverage and production control remain unfinished.

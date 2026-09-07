@@ -1,10 +1,16 @@
 # Implementation status · design revision 0.3
 
-## Latest qualified batch: capped reduction and owned registry checks
+## Latest qualified batch: reviewed source snapshots
+
+The fourth isolated RCH gate passed on `hz4` under `nightly-2026-09-07`: **56 reference unit tests, 16 integration tests, 125 xtask tests and 2 doctests; 199 passed, zero failed**. [The receipt](artifacts/execution/2026-09-07-epoch4-receipt.json) identifies the exact base and four overlay files; [the raw log](artifacts/execution/2026-09-07-epoch4-attempt1.log) records verification of all 39 reviewed source/build inputs before the remaining gate commands. The selected snapshot used committed concordance bytes, excluding concurrent concordance work.
+
+The verifier requires exact file-set and SHA-256 equality, includes the six embedded registries, refuses symlink ancestors and leaves, bounds directory traversal, and permits a second hash utility only when the first is absent. Real filesystem and subprocess regressions passed. It relies on trusted operator hash tools and an externally frozen checkout; it does not provide an atomic snapshot or authenticate those tools. Full admission rows, runtime closure and external admission remain unfinished. No bead was closed for this intermediate prerequisite.
+
+## Third qualified batch: capped reduction and owned registry checks
 
 The third isolated batch passed on `hz4` under `nightly-2026-09-07`: **56 reference unit tests, 16 reference integration tests, 102 xtask tests and 2 doctests passed; zero failed**. Qualified source is committed in `84eeca9`; [the receipt](artifacts/execution/2026-09-07-epoch3-receipt.json) identifies the exact base, nine overlay files and passing [remote log](artifacts/execution/2026-09-07-epoch3-attempt3.log). The preceding Clippy failure and real Cargo ancestor-workspace discovery failure are retained. The latter was fixed by explicitly binding metadata collection to the requested `Cargo.toml`; its test was not weakened.
 
-The reference reducer clips empirical weights per member and cohort using name-independent floor-proportional allocation, discards fractional remainders, rejects actor statements and preserves exact disqualifier dominance. It grants no authority and does not implement credibility or helper selection. The owned xtask now checks registry IDs, DAGs, declared links, retained files and scoped Rust test declarations. It rejects lexical lookalikes and escaping symlinks, and checks the actual compiler-reported identity against the qualified Linux commit. Those checks do not authenticate operator binaries or prove the referenced invariants. Full founding-concordance validation, source-snapshot verification and general dependency admission remain separate unfinished work.
+The reference reducer clips empirical weights per member and cohort using name-independent floor-proportional allocation, discards fractional remainders, rejects actor statements and preserves exact disqualifier dominance. It grants no authority and does not implement credibility or helper selection. The owned xtask now checks registry IDs, DAGs, declared links, retained files and scoped Rust test declarations. It rejects lexical lookalikes and escaping symlinks, and checks the actual compiler-reported identity against the qualified Linux commit. Those checks do not authenticate operator binaries or prove the referenced invariants. At that batch, full founding-concordance validation, source-snapshot verification and general dependency admission remained unfinished.
 
 ## Second qualified batch: full-input witnesses, frontiers and initial admission
 
@@ -28,7 +34,7 @@ The round uses a deliberately non-cryptographic FNV comparison and proves no cry
 | Founding essays | Both read in full again for revision 0.3; head commits recorded in `registry/sources.json` | Complete premise; no missing post |
 | Ten donor/build project deep dives | Targeted code/manifest/plan review at fixed refs (revision 0.2) | Exact files/scopes recorded; not full repository audits or builds |
 | Pure-Rust reference workspace | Source present, zero external packages, formatted with `cargo fmt --all` on 2026-09-06 | Selected logical semantics only; not a broker |
-| Rust test functions | **56 unit + 16 integration reference tests, 102 xtask tests and 2 doctests passed remotely on 2026-09-07**; earlier runs remain dated below | Exact frozen batch above; not production evidence or credit for other work in progress |
+| Rust test functions | **56 unit + 16 integration reference tests, 125 xtask tests and 2 doctests passed remotely on 2026-09-07**; earlier runs remain dated below | Exact frozen batch above; not production evidence or credit for other work in progress |
 | Rust local gate driver | **Complete reference gate PASS remotely on 2026-09-07** under `nightly-2026-09-07`; earlier local 2026-09-06 gate retained below | Initial inventory and registry-core checks execute; general admission and full concordance validation remain incomplete; new source requires a new run |
 | Production release gate | Explicitly refuses release | No qualified broker/toolchain/target/signing closure |
 | Machine-readable registries | 40 invariants, 21 hypotheses, 143 packets, 5 SLO targets, founding concordance (38 ideas, 9 syntheses, 25 engineering additions), preregistration ledger with no preregistered protocol yet, system map (9 layers) and vocabulary (26 nouns, 35 verbs, 12 reason codes) | Static structural checks are not proofs of their claims |

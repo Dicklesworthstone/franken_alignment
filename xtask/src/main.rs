@@ -14,11 +14,14 @@ mod metadata_path_tests;
 mod registry_checks;
 #[cfg(test)]
 mod registry_negative_tests;
+mod source_snapshot;
+#[cfg(test)]
+mod source_snapshot_tests;
 mod toolchain_identity;
 
 use std::env;
 use std::fs;
-use std::io::Write;
+use std::io::{Read, Write};
 use std::path::{Path, PathBuf};
 use std::process::{Command, ExitCode, Stdio};
 
@@ -262,6 +265,23 @@ fn check_registries(root: &Path) -> Result<(), String> {
     Ok(())
 }
 
+fn check_source_snapshot(root: &Path) -> Result<(), String> {
+    let limits = source_snapshot::Limits::default();
+    let mut bytes = Vec::new();
+    fs::File::open(root.join("registry/source_snapshot.json"))
+        .map_err(|error| format!("Cannot open reviewed source snapshot: {error}"))?
+        .take(limits.max_manifest_bytes as u64 + 1)
+        .read_to_end(&mut bytes)
+        .map_err(|error| format!("Cannot read reviewed source snapshot: {error}"))?;
+    let manifest = source_snapshot::parse_manifest(&bytes, limits)?;
+    let report = source_snapshot::verify(root, &manifest, limits)?;
+    print!("{}", report.render());
+    if !report.is_verified() {
+        return Err("Reviewed source snapshot refused current source/build input bytes".into());
+    }
+    Ok(())
+}
+
 fn execute() -> Result<(), String> {
     let root = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
         .parent()
@@ -273,6 +293,7 @@ fn execute() -> Result<(), String> {
             check_lock(&root)?;
             check_source(&root)?;
             check_toolchain(&root)?;
+            check_source_snapshot(&root)?;
             check_admission(&root)?;
             check_registries(&root)?;
             run(&root, "cargo", &["fmt", "--all", "--check"])?;

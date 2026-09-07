@@ -1,0 +1,71 @@
+{
+  "schema": "fa.execution_receipt/1",
+  "scope": "initial operator source snapshot verifier",
+  "executed_at_utc": "2026-09-07T21:59:39Z",
+  "base_commit": "5e947702bb68c1852d1237895ebd069d88e58c1e",
+  "overlay_fingerprint": "efbcc39e1371637277a2198c8819b2b968e32c6910fba00c9f8eb938474a989d",
+  "source_sha256": {
+    "xtask/src/main.rs": "f924ba1e9a770708c5eaf59092562e18321091139fdbee898673990c4adc760b",
+    "xtask/src/source_snapshot.rs": "2c39d122c8bef45c32eb516db8133edfd528575c5fa0a2755ad365fbae557ee6",
+    "xtask/src/source_snapshot_tests.rs": "0ddb259f1aa1a9521142a71258334f12752bd26a4aacb546da4e70cb94a40a6f",
+    "registry/source_snapshot.json": "b058adc8566c8862ba46043089e3b57d966391eff983205086328881d8032292"
+  },
+  "snapshot_file_count": 39,
+  "worker": "hz4",
+  "job": "j-30004650170124190",
+  "toolchain": "nightly-2026-09-07",
+  "rustc_commit": "5a2be9f5f075d31e3ca5526b5b029881ce441253",
+  "command": [
+    "rch",
+    "--json",
+    "exec",
+    "--base",
+    "5e947702bb68c1852d1237895ebd069d88e58c1e",
+    "--clean-overlay",
+    "--overlay-path",
+    "xtask/src/main.rs",
+    "--overlay-path",
+    "xtask/src/source_snapshot.rs",
+    "--overlay-path",
+    "xtask/src/source_snapshot_tests.rs",
+    "--overlay-path",
+    "registry/source_snapshot.json",
+    "--",
+    "cargo",
+    "+nightly-2026-09-07",
+    "run",
+    "--locked",
+    "-p",
+    "xtask",
+    "--",
+    "check"
+  ],
+  "result": {
+    "exit_code": 0,
+    "format": "passed",
+    "check": "passed",
+    "clippy": "passed; warnings denied",
+    "tests": {
+      "reference_unit": 56,
+      "reference_integration": 16,
+      "xtask": 125,
+      "doctests": 2,
+      "total_passed": 199,
+      "failed": 0
+    }
+  },
+  "negative_tests": [
+    "changed source digest",
+    "unlisted and missing file",
+    "leaf and ancestor symlink escape, including identical outside bytes",
+    "4097 empty directories exceed global traversal budget",
+    "malformed digest and bounded manifest",
+    "absent versus unexecutable operator and executed refusal"
+  ],
+  "boundaries": [
+    "Only exact selected base plus four overlay paths; live concordance edits excluded.",
+    "Outer operator freeze required: filesystem observations are not atomic against concurrent edits.",
+    "Operator SHA256 binary and compiler output are trusted inputs, not authenticated here.",
+    "No general external admission, production runtime qualification, or release claim."
+  ]
+}
