@@ -1,5 +1,5 @@
 {
-  "schema_version": "fa.invariants/0.2",
+  "schema_version": "fa.invariants/0.3",
   "invariants": [
     {
       "id": "FA-INV-001",
@@ -21,8 +21,18 @@
       "assumptions": [
         "Registered profile and trusted enforcement boundary execute their specified behavior."
       ],
-      "evidence_artifacts": [],
-      "reference_status": "source_present_not_executed"
+      "evidence_artifacts": [
+        "artifacts/execution/2026-09-06-cargo-test.log",
+        "artifacts/execution/2026-09-06-xtask-check.log",
+        "artifacts/execution/2026-09-06-xtask-check-nightly-2026-08-31.log",
+        "artifacts/execution/2026-09-06-xtask-check-nightly-2026-08-31-local.log"
+      ],
+      "reference_status": "executed_locally_2026_09_06_pass",
+      "founding_ideas": [
+        "FI-A01"
+      ],
+      "reference_execution_note": "20/20 reference tests passed on aarch64-apple-darwin under nightly-2026-08-31 (rustc 908501772 2026-08-30) and under the rolling nightly (rustc c54751567 2026-08-22); complete xtask gate passed only under the dated nightly because the host's rolling nightly lacks rustfmt/clippy binaries. One host, one date; not production evidence.",
+      "founding_link_kind": "direct"
     },
     {
       "id": "FA-INV-002",
@@ -44,8 +54,19 @@
       "assumptions": [
         "Registered profile and trusted enforcement boundary execute their specified behavior."
       ],
-      "evidence_artifacts": [],
-      "reference_status": "source_present_not_executed"
+      "evidence_artifacts": [
+        "artifacts/execution/2026-09-06-cargo-test.log",
+        "artifacts/execution/2026-09-06-xtask-check.log",
+        "artifacts/execution/2026-09-06-xtask-check-nightly-2026-08-31.log",
+        "artifacts/execution/2026-09-06-xtask-check-nightly-2026-08-31-local.log"
+      ],
+      "reference_status": "executed_locally_2026_09_06_pass",
+      "reference_execution_note": "20/20 reference tests passed on aarch64-apple-darwin under nightly-2026-08-31 (rustc 908501772 2026-08-30) and under the rolling nightly (rustc c54751567 2026-08-22); complete xtask gate passed only under the dated nightly because the host's rolling nightly lacks rustfmt/clippy binaries. One host, one date; not production evidence.",
+      "founding_ideas": [
+        "FI-A01",
+        "FI-A02"
+      ],
+      "founding_link_kind": "engineering_addition_serving"
     },
     {
       "id": "FA-INV-003",
@@ -67,8 +88,14 @@
       "assumptions": [
         "Registered profile and trusted enforcement boundary execute their specified behavior."
       ],
-      "evidence_artifacts": [],
-      "reference_status": "source_present_not_executed"
+      "evidence_artifacts": [
+        "artifacts/execution/2026-09-06-cargo-test.log",
+        "artifacts/execution/2026-09-06-xtask-check.log",
+        "artifacts/execution/2026-09-06-xtask-check-nightly-2026-08-31.log",
+        "artifacts/execution/2026-09-06-xtask-check-nightly-2026-08-31-local.log"
+      ],
+      "reference_status": "executed_locally_2026_09_06_pass",
+      "reference_execution_note": "20/20 reference tests passed on aarch64-apple-darwin under nightly-2026-08-31 (rustc 908501772 2026-08-30) and under the rolling nightly (rustc c54751567 2026-08-22); complete xtask gate passed only under the dated nightly because the host's rolling nightly lacks rustfmt/clippy binaries. One host, one date; not production evidence."
     },
     {
       "id": "FA-INV-004",
@@ -89,7 +116,12 @@
         "Registered profile and trusted enforcement boundary execute their specified behavior."
       ],
       "evidence_artifacts": [],
-      "reference_status": "not_implemented_in_rust_revision"
+      "reference_status": "not_implemented_in_rust_revision",
+      "founding_ideas": [
+        "FI-A01",
+        "FI-A13"
+      ],
+      "founding_link_kind": "direct"
     },
     {
       "id": "FA-INV-005",
@@ -110,7 +142,12 @@
         "Registered profile and trusted enforcement boundary execute their specified behavior."
       ],
       "evidence_artifacts": [],
-      "reference_status": "not_implemented_in_rust_revision"
+      "reference_status": "not_implemented_in_rust_revision",
+      "founding_ideas": [
+        "FI-A02",
+        "FI-A17"
+      ],
+      "founding_link_kind": "engineering_addition_serving"
     },
     {
       "id": "FA-INV-006",
@@ -132,8 +169,18 @@
       "assumptions": [
         "Registered profile and trusted enforcement boundary execute their specified behavior."
       ],
-      "evidence_artifacts": [],
-      "reference_status": "source_present_not_executed"
+      "evidence_artifacts": [
+        "artifacts/execution/2026-09-06-cargo-test.log",
+        "artifacts/execution/2026-09-06-xtask-check.log",
+        "artifacts/execution/2026-09-06-xtask-check-nightly-2026-08-31.log",
+        "artifacts/execution/2026-09-06-xtask-check-nightly-2026-08-31-local.log"
+      ],
+      "reference_status": "executed_locally_2026_09_06_pass",
+      "reference_execution_note": "20/20 reference tests passed on aarch64-apple-darwin under nightly-2026-08-31 (rustc 908501772 2026-08-30) and under the rolling nightly (rustc c54751567 2026-08-22); complete xtask gate passed only under the dated nightly because the host's rolling nightly lacks rustfmt/clippy binaries. One host, one date; not production evidence.",
+      "founding_ideas": [
+        "FI-A02"
+      ],
+      "founding_link_kind": "engineering_addition_serving"
     },
     {
       "id": "FA-INV-007",
@@ -154,7 +201,12 @@
         "Registered profile and trusted enforcement boundary execute their specified behavior."
       ],
       "evidence_artifacts": [],
-      "reference_status": "not_implemented_in_rust_revision"
+      "reference_status": "not_implemented_in_rust_revision",
+      "founding_ideas": [
+        "FI-A06",
+        "FI-I11"
+      ],
+      "founding_link_kind": "engineering_addition_serving"
     },
     {
       "id": "FA-INV-008",
@@ -175,7 +227,11 @@
         "Registered profile and trusted enforcement boundary execute their specified behavior."
       ],
       "evidence_artifacts": [],
-      "reference_status": "not_implemented_in_rust_revision"
+      "reference_status": "not_implemented_in_rust_revision",
+      "founding_ideas": [
+        "FI-A15"
+      ],
+      "founding_link_kind": "engineering_addition_serving"
     },
     {
       "id": "FA-INV-009",
@@ -196,7 +252,14 @@
         "Registered profile and trusted enforcement boundary execute their specified behavior."
       ],
       "evidence_artifacts": [],
-      "reference_status": "not_implemented_in_rust_revision"
+      "reference_status": "not_implemented_in_rust_revision",
+      "founding_ideas": [
+        "FI-A11",
+        "FI-I09",
+        "FI-I15",
+        "FI-I19"
+      ],
+      "founding_link_kind": "direct"
     },
     {
       "id": "FA-INV-010",
@@ -217,7 +280,12 @@
         "Registered profile and trusted enforcement boundary execute their specified behavior."
       ],
       "evidence_artifacts": [],
-      "reference_status": "not_implemented_in_rust_revision"
+      "reference_status": "not_implemented_in_rust_revision",
+      "founding_ideas": [
+        "FI-A06",
+        "FI-A14"
+      ],
+      "founding_link_kind": "direct"
     },
     {
       "id": "FA-INV-011",
@@ -238,7 +306,13 @@
         "Registered profile and trusted enforcement boundary execute their specified behavior."
       ],
       "evidence_artifacts": [],
-      "reference_status": "not_implemented_in_rust_revision"
+      "reference_status": "not_implemented_in_rust_revision",
+      "founding_ideas": [
+        "FI-I03",
+        "FI-I05",
+        "FI-I07"
+      ],
+      "founding_link_kind": "direct"
     },
     {
       "id": "FA-INV-012",
@@ -259,7 +333,14 @@
         "Registered profile and trusted enforcement boundary execute their specified behavior."
       ],
       "evidence_artifacts": [],
-      "reference_status": "not_implemented_in_rust_revision"
+      "reference_status": "not_implemented_in_rust_revision",
+      "founding_ideas": [
+        "FI-A03",
+        "FI-A09",
+        "FI-I10",
+        "FI-I16"
+      ],
+      "founding_link_kind": "direct"
     },
     {
       "id": "FA-INV-013",
@@ -301,7 +382,13 @@
         "Registered profile and trusted enforcement boundary execute their specified behavior."
       ],
       "evidence_artifacts": [],
-      "reference_status": "not_implemented_in_rust_revision"
+      "reference_status": "not_implemented_in_rust_revision",
+      "founding_ideas": [
+        "FI-A05",
+        "FI-A12",
+        "FI-I01"
+      ],
+      "founding_link_kind": "direct"
     },
     {
       "id": "FA-INV-015",
@@ -343,7 +430,12 @@
         "Registered profile and trusted enforcement boundary execute their specified behavior."
       ],
       "evidence_artifacts": [],
-      "reference_status": "not_implemented_in_rust_revision"
+      "reference_status": "not_implemented_in_rust_revision",
+      "founding_ideas": [
+        "FI-A14",
+        "FI-I03"
+      ],
+      "founding_link_kind": "engineering_addition_serving"
     },
     {
       "id": "FA-INV-017",
@@ -364,7 +456,14 @@
         "Registered profile and trusted enforcement boundary execute their specified behavior."
       ],
       "evidence_artifacts": [],
-      "reference_status": "not_implemented_in_rust_revision"
+      "reference_status": "not_implemented_in_rust_revision",
+      "founding_ideas": [
+        "FI-A07",
+        "FI-A10",
+        "FI-I04",
+        "FI-I17"
+      ],
+      "founding_link_kind": "direct"
     },
     {
       "id": "FA-INV-018",
@@ -406,7 +505,12 @@
         "Registered profile and trusted enforcement boundary execute their specified behavior."
       ],
       "evidence_artifacts": [],
-      "reference_status": "not_implemented_in_rust_revision"
+      "reference_status": "not_implemented_in_rust_revision",
+      "founding_ideas": [
+        "FI-A18",
+        "FI-A14"
+      ],
+      "founding_link_kind": "direct"
     },
     {
       "id": "FA-INV-020",
@@ -442,7 +546,7 @@
       "reference_checks": [
         "crates/fa-reference/src/lib.rs::tests::witness_reuses_unrelated_changes"
       ],
-      "reference_status": "source_present_not_executed",
+      "reference_status": "executed_locally_2026_09_06_pass",
       "reference_scope": "Only the declared small logical case; not production protocol/host correctness.",
       "required_negative_campaigns": [
         "Insert a member into an empty reviewed range."
@@ -450,7 +554,18 @@
       "assumptions": [
         "Exact registered trust/profile and completeness assumptions from the plan."
       ],
-      "evidence_artifacts": []
+      "evidence_artifacts": [
+        "artifacts/execution/2026-09-06-cargo-test.log",
+        "artifacts/execution/2026-09-06-xtask-check.log",
+        "artifacts/execution/2026-09-06-xtask-check-nightly-2026-08-31.log",
+        "artifacts/execution/2026-09-06-xtask-check-nightly-2026-08-31-local.log"
+      ],
+      "reference_execution_note": "20/20 reference tests passed on aarch64-apple-darwin under nightly-2026-08-31 (rustc 908501772 2026-08-30) and under the rolling nightly (rustc c54751567 2026-08-22); complete xtask gate passed only under the dated nightly because the host's rolling nightly lacks rustfmt/clippy binaries. One host, one date; not production evidence.",
+      "founding_ideas": [
+        "FI-A13",
+        "FI-A17"
+      ],
+      "founding_link_kind": "engineering_addition_serving"
     },
     {
       "id": "FA-INV-022",
@@ -465,7 +580,7 @@
       "reference_checks": [
         "crates/fa-reference/src/lib.rs::tests::frontier_does_not_skip_a_gap"
       ],
-      "reference_status": "source_present_not_executed",
+      "reference_status": "executed_locally_2026_09_06_pass",
       "reference_scope": "Only the declared small logical case; not production protocol/host correctness.",
       "required_negative_campaigns": [
         "Receive sequence 3 before sequence 2."
@@ -473,7 +588,18 @@
       "assumptions": [
         "Exact registered trust/profile and completeness assumptions from the plan."
       ],
-      "evidence_artifacts": []
+      "evidence_artifacts": [
+        "artifacts/execution/2026-09-06-cargo-test.log",
+        "artifacts/execution/2026-09-06-xtask-check.log",
+        "artifacts/execution/2026-09-06-xtask-check-nightly-2026-08-31.log",
+        "artifacts/execution/2026-09-06-xtask-check-nightly-2026-08-31-local.log"
+      ],
+      "reference_execution_note": "20/20 reference tests passed on aarch64-apple-darwin under nightly-2026-08-31 (rustc 908501772 2026-08-30) and under the rolling nightly (rustc c54751567 2026-08-22); complete xtask gate passed only under the dated nightly because the host's rolling nightly lacks rustfmt/clippy binaries. One host, one date; not production evidence.",
+      "founding_ideas": [
+        "FI-A05",
+        "FI-I01"
+      ],
+      "founding_link_kind": "engineering_addition_serving"
     },
     {
       "id": "FA-INV-023",
@@ -509,7 +635,7 @@
       "reference_checks": [
         "crates/fa-reference/src/lib.rs::tests::dominator_and_bypass_are_distinguished"
       ],
-      "reference_status": "source_present_not_executed",
+      "reference_status": "executed_locally_2026_09_06_pass",
       "reference_scope": "Only the declared small logical case; not production protocol/host correctness.",
       "required_negative_campaigns": [
         "Add an unmediated bypass edge after certification."
@@ -517,7 +643,17 @@
       "assumptions": [
         "Exact registered trust/profile and completeness assumptions from the plan."
       ],
-      "evidence_artifacts": []
+      "evidence_artifacts": [
+        "artifacts/execution/2026-09-06-cargo-test.log",
+        "artifacts/execution/2026-09-06-xtask-check.log",
+        "artifacts/execution/2026-09-06-xtask-check-nightly-2026-08-31.log",
+        "artifacts/execution/2026-09-06-xtask-check-nightly-2026-08-31-local.log"
+      ],
+      "reference_execution_note": "20/20 reference tests passed on aarch64-apple-darwin under nightly-2026-08-31 (rustc 908501772 2026-08-30) and under the rolling nightly (rustc c54751567 2026-08-22); complete xtask gate passed only under the dated nightly because the host's rolling nightly lacks rustfmt/clippy binaries. One host, one date; not production evidence.",
+      "founding_ideas": [
+        "FI-A02"
+      ],
+      "founding_link_kind": "engineering_addition_serving"
     },
     {
       "id": "FA-INV-025",
@@ -538,7 +674,12 @@
       "assumptions": [
         "Exact registered trust/profile and completeness assumptions from the plan."
       ],
-      "evidence_artifacts": []
+      "evidence_artifacts": [],
+      "founding_ideas": [
+        "FI-A11",
+        "FI-I19"
+      ],
+      "founding_link_kind": "direct"
     },
     {
       "id": "FA-INV-026",
@@ -559,7 +700,12 @@
       "assumptions": [
         "Exact registered trust/profile and completeness assumptions from the plan."
       ],
-      "evidence_artifacts": []
+      "evidence_artifacts": [],
+      "founding_ideas": [
+        "FI-A02",
+        "FI-A17"
+      ],
+      "founding_link_kind": "engineering_addition_serving"
     },
     {
       "id": "FA-INV-027",
@@ -580,7 +726,12 @@
       "assumptions": [
         "Exact registered trust/profile and completeness assumptions from the plan."
       ],
-      "evidence_artifacts": []
+      "evidence_artifacts": [],
+      "founding_ideas": [
+        "FI-I13",
+        "FI-A17"
+      ],
+      "founding_link_kind": "engineering_addition_serving"
     },
     {
       "id": "FA-INV-028",
@@ -595,7 +746,7 @@
       "reference_checks": [
         "crates/fa-reference/src/lib.rs::tests::cross_reads_defeat_disjoint_writes"
       ],
-      "reference_status": "source_present_not_executed",
+      "reference_status": "executed_locally_2026_09_06_pass",
       "reference_scope": "Only the declared small logical case; not production protocol/host correctness.",
       "required_negative_campaigns": [
         "Disjoint writes with cross reads."
@@ -603,7 +754,18 @@
       "assumptions": [
         "Exact registered trust/profile and completeness assumptions from the plan."
       ],
-      "evidence_artifacts": []
+      "evidence_artifacts": [
+        "artifacts/execution/2026-09-06-cargo-test.log",
+        "artifacts/execution/2026-09-06-xtask-check.log",
+        "artifacts/execution/2026-09-06-xtask-check-nightly-2026-08-31.log",
+        "artifacts/execution/2026-09-06-xtask-check-nightly-2026-08-31-local.log"
+      ],
+      "reference_execution_note": "20/20 reference tests passed on aarch64-apple-darwin under nightly-2026-08-31 (rustc 908501772 2026-08-30) and under the rolling nightly (rustc c54751567 2026-08-22); complete xtask gate passed only under the dated nightly because the host's rolling nightly lacks rustfmt/clippy binaries. One host, one date; not production evidence.",
+      "founding_ideas": [
+        "FI-I15",
+        "FI-I13"
+      ],
+      "founding_link_kind": "engineering_addition_serving"
     },
     {
       "id": "FA-INV-029",
@@ -624,7 +786,11 @@
       "assumptions": [
         "Exact registered trust/profile and completeness assumptions from the plan."
       ],
-      "evidence_artifacts": []
+      "evidence_artifacts": [],
+      "founding_ideas": [
+        "FI-A18"
+      ],
+      "founding_link_kind": "engineering_addition_serving"
     },
     {
       "id": "FA-INV-030",
@@ -645,7 +811,243 @@
       "assumptions": [
         "Exact registered trust/profile and completeness assumptions from the plan."
       ],
-      "evidence_artifacts": []
+      "evidence_artifacts": [],
+      "founding_ideas": [
+        "FI-A18"
+      ],
+      "founding_link_kind": "engineering_addition_serving"
+    },
+    {
+      "id": "FA-INV-031",
+      "title": "One-directional control flow",
+      "claim_class": "invariant",
+      "statement": "The actor has no authority-bearing channel to its judges: no defense message can enter a round except as explicitly untrusted evidence under policy, no vote or deliberation is disclosed to the actor, and the actor receives only scoped refusal codes and permitted remedial actions.",
+      "owner_role": "gate",
+      "activation_gate": "G2",
+      "production_status": "planned",
+      "waiver": "forbidden",
+      "production_checker": null,
+      "reference_checks": [],
+      "reference_status": "not_implemented_in_rust_revision",
+      "reference_scope": "Only the declared small logical case; not production protocol/host correctness.",
+      "required_negative_campaigns": [
+        "Attach an actor-authored defense message to a round; it must be typed untrusted evidence or rejected, never a reducer input.",
+        "Attempt to read votes, justifications or membership through the actor's API; must return authorization-filtered denial.",
+        "Measure timing/refusal leakage and record it as declared residual, not as a violation."
+      ],
+      "assumptions": [
+        "Helper hosts and the round transcript are outside the actor's writable surfaces.",
+        "Timing and success/failure outcomes remain declared residual channels."
+      ],
+      "evidence_artifacts": [],
+      "founding_ideas": [
+        "FI-A15",
+        "FI-A16"
+      ],
+      "founding_link_kind": "direct"
+    },
+    {
+      "id": "FA-INV-032",
+      "title": "Helper selection not optimized on false alarms alone",
+      "claim_class": "invariant",
+      "statement": "Promotion, demotion, rotation and weight changes for helpers require attack-conditioned metrics owned by the independent evaluation function; lifetime false-alarm and miss records survive rotation; exhausting the andon budget opens a calibration incident and cannot remove a helper or loosen a review requirement.",
+      "owner_role": "governance",
+      "activation_gate": "G2",
+      "production_status": "planned",
+      "waiver": "forbidden",
+      "production_checker": null,
+      "reference_checks": [],
+      "reference_status": "not_implemented_in_rust_revision",
+      "reference_scope": "Only the declared small logical case; not production protocol/host correctness.",
+      "required_negative_campaigns": [
+        "Propose replacing a helper immediately after it correctly held a real violation; the change must be refused or flagged for independent review.",
+        "Exhaust the declared false-stop budget; the system must open an incident, not lower a threshold.",
+        "Rotate a helper generation and verify its predecessor's failure history remains visible."
+      ],
+      "assumptions": [
+        "An independent evaluation owner exists and controls labels (plan §22.4).",
+        "Credibility ledger entries are durable and lineage-tracked."
+      ],
+      "evidence_artifacts": [],
+      "founding_ideas": [
+        "FI-A08",
+        "FI-A13",
+        "FI-A18"
+      ],
+      "founding_link_kind": "direct"
+    },
+    {
+      "id": "FA-INV-033",
+      "title": "No actor-held latent authority",
+      "claim_class": "invariant",
+      "statement": "No production actor obtains a latent-editing controller, checkpoint restore, branch promotion or reward modification over itself; metacognitive practice, latent intervention and strategy search run only under ExperimentCx, and any promoted result enters production as a new proposal under current authority.",
+      "owner_role": "systems",
+      "activation_gate": "G3",
+      "production_status": "planned",
+      "waiver": "forbidden",
+      "production_checker": null,
+      "reference_checks": [],
+      "reference_status": "not_implemented_in_rust_revision",
+      "reference_scope": "Only the declared small logical case; not production protocol/host correctness.",
+      "required_negative_campaigns": [
+        "Attempt to paste a winning experiment branch into the live process with its permissions intact; must be refused.",
+        "Expose a latent-edit endpoint to the actor's capability manifest; negotiation must return unsupported.",
+        "Attempt to apply a TrainingSignal consequence to live weights or policy; must be refused."
+      ],
+      "assumptions": [
+        "Purpose contexts (plan §6.3) are enforced by the runtime.",
+        "Experiment branches carry zero production rights (FA-INV-009, FA-INV-025)."
+      ],
+      "evidence_artifacts": [],
+      "founding_ideas": [
+        "FI-I10",
+        "FI-I12",
+        "FI-I16"
+      ],
+      "founding_link_kind": "direct"
+    },
+    {
+      "id": "FA-INV-034",
+      "title": "Rewind never rewinds the world",
+      "claim_class": "invariant",
+      "statement": "ResetToCheckpoint restores only actor state under a registered restart profile and narrowed authority; the external effect ledger, spent rights, revocation floors, policy epochs and the out-of-band incident counter are never rewound, and the reset is recorded in the decision closure.",
+      "owner_role": "gate",
+      "activation_gate": "G3",
+      "production_status": "planned",
+      "waiver": "forbidden",
+      "production_checker": null,
+      "reference_checks": [],
+      "reference_status": "not_implemented_in_rust_revision",
+      "reference_scope": "Only the declared small logical case; not production protocol/host correctness.",
+      "required_negative_campaigns": [
+        "Reset after a dispatched effect; spent units and the effect record must be unchanged.",
+        "Reset after a revocation; the old epoch must not become admissible.",
+        "Reset repeatedly on one run; the incident counter must increase and cross its escalation threshold."
+      ],
+      "assumptions": [
+        "A registered restart profile with functional_restart grade or better exists (plan §11.1).",
+        "The control nucleus owns the incident counter outside any actor-visible state."
+      ],
+      "evidence_artifacts": [],
+      "founding_ideas": [
+        "FI-A09",
+        "FI-A16"
+      ],
+      "founding_link_kind": "direct"
+    },
+    {
+      "id": "FA-INV-035",
+      "title": "Served model identity binds evidence",
+      "claim_class": "invariant",
+      "statement": "Evidence, signature matches, checkpoints and helper calibrations are keyed by a verified model passport; a served model whose identity liveness check fails is a different model space, its run is fenced and its evidence marked stale.",
+      "owner_role": "systems",
+      "activation_gate": "G3",
+      "production_status": "planned",
+      "waiver": "forbidden",
+      "production_checker": null,
+      "reference_checks": [],
+      "reference_status": "not_implemented_in_rust_revision",
+      "reference_scope": "Only the declared small logical case; not production protocol/host correctness.",
+      "required_negative_campaigns": [
+        "Swap weights behind the same adapter; evidence must become StaleGeneration and the run fenced.",
+        "Inject an adapter; fingerprint mismatch must be reported as an identity incident.",
+        "Benign drift (temperature, batch) within tolerance must not fence."
+      ],
+      "assumptions": [
+        "The capture boundary observes the actual computation (plan §4.2).",
+        "Anchor tolerance registered per passport."
+      ],
+      "evidence_artifacts": [],
+      "founding_ideas": [
+        "FI-A01",
+        "FI-A10"
+      ],
+      "founding_link_kind": "engineering_addition_serving"
+    },
+    {
+      "id": "FA-INV-036",
+      "title": "Authority never widens without a governed transition",
+      "claim_class": "invariant",
+      "statement": "Actor autonomy grades and effect-family mediation levels change upward only through an authorized governance transition carrying an independent evaluator report and dwell-time proof; every downward change is automatic, ordered against dispatch admission, and never reversed implicitly by restart, model update or time.",
+      "owner_role": "gate",
+      "activation_gate": "G2",
+      "production_status": "planned",
+      "waiver": "forbidden",
+      "production_checker": null,
+      "reference_checks": [],
+      "reference_status": "not_implemented_in_rust_revision",
+      "reference_scope": "Only the declared small logical case; not production protocol/host correctness.",
+      "required_negative_campaigns": [
+        "Promote a grade without an evaluator report; must be refused.",
+        "Restart the control process; grades must not rise.",
+        "Update the model; grade must reset to the registered floor."
+      ],
+      "assumptions": [
+        "Governance separation exists (plan §22.4).",
+        "Passport change is detectable (FA-INV-035)."
+      ],
+      "evidence_artifacts": [],
+      "founding_ideas": [
+        "FI-A02",
+        "FI-A18"
+      ],
+      "founding_link_kind": "engineering_addition_serving"
+    },
+    {
+      "id": "FA-INV-037",
+      "title": "Receipts verify independently of the operator",
+      "claim_class": "invariant",
+      "statement": "A control receipt for an admitted effect verifies (integrity, binding to the frozen effect, permit law, claim class, profile reference) with a verifier that shares no code with the broker and needs no access to the operator's live systems; a receipt cannot be minted for an effect the ledger did not admit.",
+      "owner_role": "systems",
+      "activation_gate": "G2",
+      "production_status": "planned",
+      "waiver": "forbidden",
+      "production_checker": null,
+      "reference_checks": [],
+      "reference_status": "not_implemented_in_rust_revision",
+      "reference_scope": "Only the declared small logical case; not production protocol/host correctness.",
+      "required_negative_campaigns": [
+        "Forge a receipt for an unadmitted effect; verifier must reject.",
+        "Alter one byte of the frozen effect; binding must fail.",
+        "Present a receipt over redacted evidence; verifier must report the redaction, not silently pass."
+      ],
+      "assumptions": [
+        "Operator signing key policy (plan §22.6).",
+        "Receipt schema versioned and frozen."
+      ],
+      "evidence_artifacts": [],
+      "founding_ideas": [
+        "FI-A17",
+        "FI-A06"
+      ],
+      "founding_link_kind": "engineering_addition_serving"
+    },
+    {
+      "id": "FA-INV-038",
+      "title": "Purpose contexts are enforced by types",
+      "claim_class": "invariant",
+      "statement": "No code path can dispatch a production effect from ExperimentCx, JudgeCx or CaptureCx; the broker entry point accepts only PermitCx, no conversion exists, and compile-fail tests in the local gate prove the absence of the forbidden conversions.",
+      "owner_role": "systems",
+      "activation_gate": "G1",
+      "production_status": "planned",
+      "waiver": "forbidden",
+      "production_checker": null,
+      "reference_checks": [],
+      "reference_status": "not_implemented_in_rust_revision",
+      "reference_scope": "Only the declared small logical case; not production protocol/host correctness.",
+      "required_negative_campaigns": [
+        "Compile-fail test: a function converting ExperimentCx to PermitCx must not compile.",
+        "A branch worker attempting dispatch through any public API must be a type error or a runtime DeniedByPolicy in defense-in-depth."
+      ],
+      "assumptions": [
+        "Safe Rust with forbid(unsafe_code); no transmute or FFI escape."
+      ],
+      "evidence_artifacts": [],
+      "founding_ideas": [
+        "FI-A16",
+        "FI-I10"
+      ],
+      "founding_link_kind": "engineering_addition_serving"
     }
   ]
 }

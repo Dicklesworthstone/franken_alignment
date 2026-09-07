@@ -1,7 +1,7 @@
 {
-  "schema_version": "fa.roadmap/0.2",
+  "schema_version": "fa.roadmap/0.3",
   "gate_status": {
-    "G0": "draft_contracts_require_local_rust_revalidation",
+    "G0": "draft_contracts_with_local_rust_gate_executed_2026_09_06_on_one_host",
     "G1": "not_implemented",
     "G2": "not_implemented",
     "G3": "not_implemented",
@@ -53,7 +53,7 @@
       "id": "FA-003",
       "gate": "G0",
       "title": "Build registry and document consistency checks",
-      "status": "rust_source_requires_local_execution",
+      "status": "rust_reference_executed_locally_2026_09_06",
       "depends_on": [
         "FA-001",
         "FA-002"
@@ -63,19 +63,23 @@
       ],
       "acceptance": [
         "IDs, DAGs, links and scoped reference entrypoints validated",
-        "Update status and link actual test/result artifacts; no claim promotion from a stub."
+        "Update status and link actual test/result artifacts; no claim promotion from a stub.",
+        "Executed 2026-09-06 on one operator host: registry checks by external script, complete xtask gate PASS under nightly-2026-08-31 after documented cargo fmt --all; see artifacts/execution/. Packet remains open until the gate runs under the rolling nightly with its declared components and the registry checks move into the owned xtask."
       ],
       "owner_role": "systems",
       "estimated_scope": "One independently reviewable work packet; split before implementation if multiple semantics change.",
       "result_artifacts": [
-        "xtask/src/main.rs"
+        "artifacts/execution/2026-09-06-cargo-test.log",
+        "artifacts/execution/2026-09-06-xtask-check.log",
+        "artifacts/execution/2026-09-06-xtask-check-nightly-2026-08-31.log",
+        "artifacts/execution/2026-09-06-xtask-check-nightly-2026-08-31-local.log"
       ]
     },
     {
       "id": "FA-004",
       "gate": "G0",
       "title": "Maintain independent reference semantics",
-      "status": "rust_source_requires_local_execution",
+      "status": "rust_reference_executed_locally_2026_09_06",
       "depends_on": [
         "FA-001"
       ],
@@ -93,12 +97,16 @@
       ],
       "acceptance": [
         "Runnable tests and seeded histories; scope explicitly test-only",
-        "Update status and link actual test/result artifacts; no claim promotion from a stub."
+        "Update status and link actual test/result artifacts; no claim promotion from a stub.",
+        "Executed 2026-09-06 on one operator host: registry checks by external script, complete xtask gate PASS under nightly-2026-08-31 after documented cargo fmt --all; see artifacts/execution/. Packet remains open until the gate runs under the rolling nightly with its declared components and the registry checks move into the owned xtask."
       ],
       "owner_role": "systems",
       "estimated_scope": "One independently reviewable work packet; split before implementation if multiple semantics change.",
       "result_artifacts": [
-        "crates/fa-reference/src/lib.rs"
+        "artifacts/execution/2026-09-06-cargo-test.log",
+        "artifacts/execution/2026-09-06-xtask-check.log",
+        "artifacts/execution/2026-09-06-xtask-check-nightly-2026-08-31.log",
+        "artifacts/execution/2026-09-06-xtask-check-nightly-2026-08-31-local.log"
       ]
     },
     {
@@ -403,7 +411,10 @@
       ],
       "owner_role": "systems",
       "estimated_scope": "One independently reviewable work packet; split before implementation if multiple semantics change.",
-      "result_artifacts": []
+      "result_artifacts": [],
+      "founding_ideas": [
+        "FI-A04"
+      ]
     },
     {
       "id": "FA-018",
@@ -426,7 +437,10 @@
       ],
       "owner_role": "systems",
       "estimated_scope": "One independently reviewable work packet; split before implementation if multiple semantics change.",
-      "result_artifacts": []
+      "result_artifacts": [],
+      "founding_ideas": [
+        "FI-A03"
+      ]
     },
     {
       "id": "FA-019",
@@ -448,7 +462,13 @@
       ],
       "owner_role": "systems",
       "estimated_scope": "One independently reviewable work packet; split before implementation if multiple semantics change.",
-      "result_artifacts": []
+      "result_artifacts": [],
+      "founding_ideas": [
+        "FI-A06",
+        "FI-A13",
+        "FI-A14",
+        "FI-A15"
+      ]
     },
     {
       "id": "FA-020",
@@ -493,7 +513,10 @@
       ],
       "owner_role": "systems",
       "estimated_scope": "One independently reviewable work packet; split before implementation if multiple semantics change.",
-      "result_artifacts": []
+      "result_artifacts": [],
+      "founding_ideas": [
+        "FI-I18"
+      ]
     },
     {
       "id": "FA-022",
@@ -512,12 +535,17 @@
         "FA-INV-019"
       ],
       "acceptance": [
+        "Include rotation and cohort-diversity treatments from the alignment essay; joint escape measured, never multiplied from marginals.",
         "Matched baselines, protocol-aware attacks and missing-helper failure behavior",
         "Update status and link actual test/result artifacts; no claim promotion from a stub."
       ],
       "owner_role": "systems",
       "estimated_scope": "One independently reviewable work packet; split before implementation if multiple semantics change.",
-      "result_artifacts": []
+      "result_artifacts": [],
+      "founding_ideas": [
+        "FI-A07",
+        "FI-A13"
+      ]
     },
     {
       "id": "FA-023",
@@ -561,7 +589,11 @@
       ],
       "owner_role": "systems",
       "estimated_scope": "One independently reviewable work packet; split before implementation if multiple semantics change.",
-      "result_artifacts": []
+      "result_artifacts": [],
+      "founding_ideas": [
+        "FI-A05",
+        "FI-I05"
+      ]
     },
     {
       "id": "FA-025",
@@ -607,7 +639,11 @@
       ],
       "owner_role": "systems",
       "estimated_scope": "One independently reviewable work packet; split before implementation if multiple semantics change.",
-      "result_artifacts": []
+      "result_artifacts": [],
+      "founding_ideas": [
+        "FI-I03",
+        "FI-I05"
+      ]
     },
     {
       "id": "FA-027",
@@ -630,7 +666,12 @@
       ],
       "owner_role": "systems",
       "estimated_scope": "One independently reviewable work packet; split before implementation if multiple semantics change.",
-      "result_artifacts": []
+      "result_artifacts": [],
+      "founding_ideas": [
+        "FI-I03",
+        "FI-I07",
+        "FI-I09"
+      ]
     },
     {
       "id": "FA-028",
@@ -673,7 +714,12 @@
       ],
       "owner_role": "research",
       "estimated_scope": "One independently reviewable work packet; split before implementation if multiple semantics change.",
-      "result_artifacts": []
+      "result_artifacts": [],
+      "founding_ideas": [
+        "FI-I04",
+        "FI-I06",
+        "FI-I08"
+      ]
     },
     {
       "id": "FA-030",
@@ -696,7 +742,10 @@
       ],
       "owner_role": "research",
       "estimated_scope": "One independently reviewable work packet; split before implementation if multiple semantics change.",
-      "result_artifacts": []
+      "result_artifacts": [],
+      "founding_ideas": [
+        "FI-I04"
+      ]
     },
     {
       "id": "FA-031",
@@ -714,12 +763,16 @@
         "FA-INV-019"
       ],
       "acceptance": [
+        "Include the masking adversary: an actor trained or prompted to keep activations consistent with a cover story; report whether consistent surprise still separates.",
         "H3 no future leakage, strong text baselines, held-out model families",
         "Update status and link actual test/result artifacts; no claim promotion from a stub."
       ],
       "owner_role": "research",
       "estimated_scope": "One independently reviewable work packet; split before implementation if multiple semantics change.",
-      "result_artifacts": []
+      "result_artifacts": [],
+      "founding_ideas": [
+        "FI-A12"
+      ]
     },
     {
       "id": "FA-032",
@@ -742,7 +795,11 @@
       ],
       "owner_role": "research",
       "estimated_scope": "One independently reviewable work packet; split before implementation if multiple semantics change.",
-      "result_artifacts": []
+      "result_artifacts": [],
+      "founding_ideas": [
+        "FI-I11",
+        "FI-I12"
+      ]
     },
     {
       "id": "FA-033",
@@ -1038,12 +1095,19 @@
         "FA-INV-019"
       ],
       "acceptance": [
+        "Report the introspection essay's five strategy metrics: cross-task similarity, transfer gain, perturbation robustness, reuse ratio and strategy lifespan.",
         "H8 negative transfer, equal amortized costs and no self-approved live edits",
         "Update status and link actual test/result artifacts; no claim promotion from a stub."
       ],
       "owner_role": "research",
       "estimated_scope": "One independently reviewable work packet; split before implementation if multiple semantics change.",
-      "result_artifacts": []
+      "result_artifacts": [],
+      "founding_ideas": [
+        "FI-I16",
+        "FI-I17",
+        "FI-I19",
+        "FI-I20"
+      ]
     },
     {
       "id": "FA-046",
@@ -2155,6 +2219,832 @@
       ],
       "owner_role": "systems",
       "result_artifacts": []
+    },
+    {
+      "id": "FA-103",
+      "gate": "G0",
+      "title": "Maintain the founding-ideas concordance",
+      "status": "planned",
+      "depends_on": [
+        "FA-052"
+      ],
+      "invariants": [
+        "FA-INV-019"
+      ],
+      "acceptance": [
+        "Every plan section, invariant, hypothesis and packet appears in docs/FOUNDING_IDEAS.md and registry/founding_concordance.json with a founding root, a synthesis, or a labeled engineering addition.",
+        "A validator checks that every ID referenced by the concordance exists and that every packet/invariant/hypothesis is referenced at least once; missing coverage fails the check.",
+        "Negative test: rename a plan subsection without updating the concordance; the validator must fail.",
+        "Produce executed local evidence; source or prose alone does not close this packet."
+      ],
+      "owner_role": "systems",
+      "result_artifacts": [],
+      "founding_ideas": [
+        "FI-A01",
+        "FI-I01"
+      ]
+    },
+    {
+      "id": "FA-104",
+      "gate": "G2",
+      "title": "Implement typed congress consequence classes",
+      "status": "planned",
+      "depends_on": [
+        "FA-019",
+        "FA-013"
+      ],
+      "invariants": [
+        "FA-INV-012",
+        "FA-INV-031",
+        "FA-INV-034",
+        "FA-INV-003"
+      ],
+      "acceptance": [
+        "Reducer emits exactly one registered Consequence (Continue, HoldEffect, NarrowAuthority, SuspendRun, ResetToCheckpoint, TrainingSignal, DownweightReporter) recorded in the decision closure with round, evidence root and reducer generation.",
+        "Lattice ordering enforced; exact disqualifier yields at least HoldEffect; ResetToCheckpoint requires NarrowAuthority; TrainingSignal never touches live policy or weights.",
+        "Negative tests: an empirical majority attempting to select Continue over an exact disqualifier; a consequence applied without a frozen round; DownweightReporter applied to a dissenter whose hold was later confirmed.",
+        "Produce executed local evidence; source or prose alone does not close this packet."
+      ],
+      "owner_role": "gate",
+      "result_artifacts": [],
+      "founding_ideas": [
+        "FI-A02",
+        "FI-A09",
+        "FI-A16"
+      ]
+    },
+    {
+      "id": "FA-105",
+      "gate": "G2",
+      "title": "Implement the helper credibility ledger and andon budget",
+      "status": "planned",
+      "depends_on": [
+        "FA-019",
+        "FA-022"
+      ],
+      "invariants": [
+        "FA-INV-032",
+        "FA-INV-019"
+      ],
+      "acceptance": [
+        "Per-generation precision, recall and lead-time records computed only from independent-evaluator labels with delayed/censored handling; bounded weights with per-helper and per-cohort influence caps.",
+        "Declared false-stop (andon) budget per period; exhaustion opens a calibration incident and cannot loosen a requirement or remove a helper.",
+        "Negative tests: early false hold earns no lead-time credit; rotation must not erase predecessor failure history; selection change justified only by false-alarm rate must be refused.",
+        "Produce executed local evidence; source or prose alone does not close this packet."
+      ],
+      "owner_role": "governance",
+      "result_artifacts": [],
+      "founding_ideas": [
+        "FI-A08",
+        "FI-A13",
+        "FI-A18"
+      ],
+      "hypotheses": [
+        "H18"
+      ]
+    },
+    {
+      "id": "FA-106",
+      "gate": "G2",
+      "title": "Implement escalation reports and quarantined post-round learning",
+      "status": "planned",
+      "depends_on": [
+        "FA-019",
+        "FA-021"
+      ],
+      "invariants": [
+        "FA-INV-010",
+        "FA-INV-019",
+        "FA-INV-023"
+      ],
+      "acceptance": [
+        "EscalationReport binds reporter generation, evidence-view manifest, observation intervals, signatures, policy question and proposed consequence; bound into the round transcript before commitments open.",
+        "Post-round learning set exported only through quarantined research lineage; no live helper update; dissenting votes never relabeled by majority.",
+        "Negative tests: free-form appeal text outside schema rejected; learning export without lineage refused; attempt to retrain a dissenter on majority label refused.",
+        "Produce executed local evidence; source or prose alone does not close this packet."
+      ],
+      "owner_role": "systems",
+      "result_artifacts": [],
+      "founding_ideas": [
+        "FI-A06",
+        "FI-A14"
+      ]
+    },
+    {
+      "id": "FA-107",
+      "gate": "G2",
+      "title": "Enforce one-directional control flow",
+      "status": "planned",
+      "depends_on": [
+        "FA-018",
+        "FA-049"
+      ],
+      "invariants": [
+        "FA-INV-031",
+        "FA-INV-012"
+      ],
+      "acceptance": [
+        "Actor receives only scoped refusal codes and permitted remedial actions; votes, justifications, membership and deliberations are authorization-filtered from every actor-facing surface.",
+        "Actor-authored statements enter a round only as explicitly typed untrusted evidence under policy, never as reducer input.",
+        "Timing, refusal and success/failure leakage measured and recorded as declared residual channels.",
+        "Produce executed local evidence; source or prose alone does not close this packet."
+      ],
+      "owner_role": "systems",
+      "result_artifacts": [],
+      "founding_ideas": [
+        "FI-A15",
+        "FI-A16"
+      ]
+    },
+    {
+      "id": "FA-108",
+      "gate": "G3",
+      "title": "Implement rewind as containment (ResetToCheckpoint)",
+      "status": "planned",
+      "depends_on": [
+        "FA-027",
+        "FA-104",
+        "FA-013"
+      ],
+      "invariants": [
+        "FA-INV-034",
+        "FA-INV-009",
+        "FA-INV-011",
+        "FA-INV-005"
+      ],
+      "acceptance": [
+        "Restore a functional_restart-grade checkpoint under NarrowAuthority; incident prompts, tool results and refusals absent from actor view.",
+        "Effect ledger, spent rights, revocation floor, policy epoch and the out-of-band incident counter unchanged by reset; counter increments; threshold escalates to SuspendRun.",
+        "Negative tests: reset after a dispatched effect; reset after revocation; repeated resets on one run; reset from a checkpoint lacking the required grade must be refused.",
+        "Produce executed local evidence; source or prose alone does not close this packet."
+      ],
+      "owner_role": "gate",
+      "result_artifacts": [],
+      "founding_ideas": [
+        "FI-A09",
+        "FI-A16",
+        "FI-I03"
+      ],
+      "hypotheses": [
+        "H17"
+      ]
+    },
+    {
+      "id": "FA-109",
+      "gate": "G3",
+      "title": "Build the elicitation and honeypot corpus in capability-free branches",
+      "status": "planned",
+      "depends_on": [
+        "FA-024",
+        "FA-027",
+        "FA-011"
+      ],
+      "invariants": [
+        "FA-INV-009",
+        "FA-INV-025",
+        "FA-INV-019",
+        "FA-INV-013"
+      ],
+      "acceptance": [
+        "Elicitation campaigns run only under ExperimentCx with simulated tools; no real effect obtainable during elicitation, verified by egress and credential tests.",
+        "Every trace carries capture contract, model-space identity, independent-oracle label and elicitation lineage; train/evaluation lineage split before derivative traces exist.",
+        "Discriminator arm attempts to distinguish honeypot tasks from real work using only the actor's view; campaign leakage (timing, tool fidelity, context shape) reported.",
+        "Produce executed local evidence; source or prose alone does not close this packet."
+      ],
+      "owner_role": "research",
+      "result_artifacts": [],
+      "founding_ideas": [
+        "FI-A10",
+        "FI-A11"
+      ],
+      "hypotheses": [
+        "H16"
+      ]
+    },
+    {
+      "id": "FA-110",
+      "gate": "G4",
+      "title": "Build the activation signature library and concept anchors",
+      "status": "planned",
+      "depends_on": [
+        "FA-109",
+        "FA-028"
+      ],
+      "invariants": [
+        "FA-INV-017",
+        "FA-INV-014",
+        "FA-INV-019"
+      ],
+      "acceptance": [
+        "Per model space and tap: registered directions/subspaces/probes with lineage, held-out detection by stratum, and false-positive rates on vocabulary-matched benign tasks.",
+        "Concept anchors stored as registered reference stimuli with identical identities; similarity streams emitted as typed observations with signature generation, anchor set, codec rung and calibration domain.",
+        "Negative tests: signature evaluated on its own elicitation prompts must be labeled contaminated; identical-dimension model swap must invalidate; similarity stream must never mint a permit or a lone disqualifier.",
+        "Produce executed local evidence; source or prose alone does not close this packet."
+      ],
+      "owner_role": "research",
+      "result_artifacts": [],
+      "founding_ideas": [
+        "FI-A10",
+        "FI-A11"
+      ],
+      "hypotheses": [
+        "H16"
+      ]
+    },
+    {
+      "id": "FA-111",
+      "gate": "G4",
+      "title": "Implement the surprise residual as sequential evidence",
+      "status": "planned",
+      "depends_on": [
+        "FA-031",
+        "FA-110"
+      ],
+      "invariants": [
+        "FA-INV-014",
+        "FA-INV-019"
+      ],
+      "acceptance": [
+        "Pre-action predictor over registered activation windows or sidecar codes; realized-action surprise accumulated by a registered e-process with lifetime error budget per model space and workload.",
+        "Threshold crossing produces an observation that can hold or convene a round; quiet residual never grants permission.",
+        "Controls: future-token leakage rejected by pipeline; time/layer-shuffled features; benign novelty and injected instructions; model-family holdout; cover-story adversary that trains activations to be consistent.",
+        "Produce executed local evidence; source or prose alone does not close this packet."
+      ],
+      "owner_role": "research",
+      "result_artifacts": [],
+      "founding_ideas": [
+        "FI-A12"
+      ],
+      "hypotheses": [
+        "H3"
+      ]
+    },
+    {
+      "id": "FA-112",
+      "gate": "G4",
+      "title": "Measure the manifold premise",
+      "status": "planned",
+      "depends_on": [
+        "FA-028",
+        "FA-110"
+      ],
+      "invariants": [
+        "FA-INV-019"
+      ],
+      "acceptance": [
+        "Per layer/tap intrinsic-dimension estimates and variance captured at each codec rung using registered numerical kernels with declared memory and pass counts.",
+        "Locate elicited signature features relative to the principal manifold; report whether decision-relevant features fall in the discarded residual at each compression ratio.",
+        "Result either confirms the premise for the target model or forces decision-sensitive term plus exact-residual escape into the default profile; both outcomes published.",
+        "Produce executed local evidence; source or prose alone does not close this packet."
+      ],
+      "owner_role": "research",
+      "result_artifacts": [],
+      "founding_ideas": [
+        "FI-I02"
+      ],
+      "hypotheses": [
+        "H15"
+      ]
+    },
+    {
+      "id": "FA-113",
+      "gate": "G4",
+      "title": "Implement and measure the sidecar-to-congress pipeline",
+      "status": "planned",
+      "depends_on": [
+        "FA-030",
+        "FA-019",
+        "FA-087"
+      ],
+      "invariants": [
+        "FA-INV-017",
+        "FA-INV-013",
+        "FA-INV-014"
+      ],
+      "acceptance": [
+        "Helpers consume coarse sidecar codes by default; certificate-gated refinement (dual-norm margin) and helper-declared unanswerable results trigger planner-purchased refinement, exact residual or raw window under normal authority and budgets.",
+        "Matched-cost comparison against raw taps and text-only monitors on held-out attack families; refinement-storm resource attack bounded by admission limits.",
+        "Negative tests: codec co-trained with helpers must be evaluated on untouched probe families; refinement request outside budget must hold, not silently skip scrutiny.",
+        "Produce executed local evidence; source or prose alone does not close this packet."
+      ],
+      "owner_role": "research",
+      "result_artifacts": [],
+      "founding_ideas": [
+        "FI-A05",
+        "FI-I04"
+      ],
+      "hypotheses": [
+        "H2",
+        "H1"
+      ]
+    },
+    {
+      "id": "FA-114",
+      "gate": "G2",
+      "title": "Run the helper-hunting adversarial campaign",
+      "status": "planned",
+      "depends_on": [
+        "FA-105",
+        "FA-022"
+      ],
+      "invariants": [
+        "FA-INV-032"
+      ],
+      "acceptance": [
+        "Attacker observing decisions (and optionally scores/timing) attempts to identify the most influential helper or cohort and target it with crafted evidence.",
+        "Report identification success rate, targeted escape rate and whether caps and rotation defeat the attack; a successful identification tightens caps before any other remedy.",
+        "Negative test: caps disabled must reproduce the attack, proving the campaign has power.",
+        "Produce executed local evidence; source or prose alone does not close this packet."
+      ],
+      "owner_role": "research",
+      "result_artifacts": [],
+      "founding_ideas": [
+        "FI-A08",
+        "FI-A07"
+      ],
+      "hypotheses": [
+        "H18",
+        "H4"
+      ]
+    },
+    {
+      "id": "FA-115",
+      "gate": "G6",
+      "title": "Evaluate rewind containment fidelity and repetition",
+      "status": "planned",
+      "depends_on": [
+        "FA-108",
+        "FA-032"
+      ],
+      "invariants": [
+        "FA-INV-034",
+        "FA-INV-011"
+      ],
+      "acceptance": [
+        "Compare ResetToCheckpoint under narrowed authority with refusal-with-memory and plain suspension on matched policy-defined harmful attempts; report repeat-attempt rate and remaining-task utility.",
+        "Actor-side detection test: can the actor detect the reset through any channel other than declared timing leakage; detectability recorded in the host profile.",
+        "Negative results change consequence policy only; ledger semantics never rewind regardless of outcome.",
+        "Produce executed local evidence; source or prose alone does not close this packet."
+      ],
+      "owner_role": "research",
+      "result_artifacts": [],
+      "founding_ideas": [
+        "FI-A16",
+        "FI-I03"
+      ],
+      "hypotheses": [
+        "H17"
+      ]
+    },
+    {
+      "id": "FA-116",
+      "gate": "G5",
+      "title": "Account the control-overhead ratio",
+      "status": "planned",
+      "depends_on": [
+        "FA-039"
+      ],
+      "invariants": [
+        "FA-INV-019"
+      ],
+      "acceptance": [
+        "Measure control-plane plus evidence-plane cost per useful completed task relative to actor inference cost, unconditional and attack-conditioned, under a declared monitoring contract.",
+        "Attribute cost by capture, transfer, encoding, helper inference, gate, persistence and replay; show which reuse mechanism (witness reuse, receiver-conditioned transfer, incremental oversight) changed the ratio at a fixed contract.",
+        "Negative test: a ratio improvement obtained by lowering the control contract must be reported as a different contract, not as an improvement.",
+        "Produce executed local evidence; source or prose alone does not close this packet."
+      ],
+      "owner_role": "systems",
+      "result_artifacts": [],
+      "founding_ideas": [
+        "FI-A17"
+      ],
+      "hypotheses": [
+        "H9",
+        "H10",
+        "H12"
+      ]
+    },
+    {
+      "id": "FA-117",
+      "gate": "G1",
+      "title": "Purpose contexts as typestates with compile-fail gate tests",
+      "status": "planned",
+      "depends_on": [
+        "FA-007"
+      ],
+      "invariants": [
+        "FA-INV-038",
+        "FA-INV-009",
+        "FA-INV-033"
+      ],
+      "acceptance": [
+        "Distinct Cx wrapper types; broker dispatch accepts only PermitCx; no conversion from ExperimentCx/JudgeCx/CaptureCx.",
+        "Compile-fail tests in the local gate for every forbidden conversion; runtime defense-in-depth check retained.",
+        "Negative: an experiment worker reaching dispatch must fail to compile.",
+        "Produce executed local evidence; source or prose alone does not close this packet."
+      ],
+      "owner_role": "systems",
+      "result_artifacts": [],
+      "founding_ideas": [
+        "FI-A16",
+        "FI-I10"
+      ]
+    },
+    {
+      "id": "FA-118",
+      "gate": "G3",
+      "title": "Model passports and identity liveness",
+      "status": "planned",
+      "depends_on": [
+        "FA-023",
+        "FA-024",
+        "FA-110"
+      ],
+      "invariants": [
+        "FA-INV-035",
+        "FA-INV-017"
+      ],
+      "acceptance": [
+        "Signed versioned passport binding weights/adapters/tokenizer/taps/numeric profile plus qualified capture contracts, signature/anchor generations, restart profiles and calibration domains.",
+        "Liveness check at session start and under the audit floor using concept anchors with registered tolerance; mismatch fences the run and marks evidence stale.",
+        "Negative: weight swap, adapter injection, fine-tune, tokenizer change detected; benign drift within tolerance not fenced.",
+        "Produce executed local evidence; source or prose alone does not close this packet."
+      ],
+      "owner_role": "systems",
+      "result_artifacts": [],
+      "founding_ideas": [
+        "FI-A01",
+        "FI-A10"
+      ],
+      "hypotheses": [
+        "H19"
+      ]
+    },
+    {
+      "id": "FA-119",
+      "gate": "G2",
+      "title": "Graduated autonomy: actor authority ledger and grades",
+      "status": "planned",
+      "depends_on": [
+        "FA-013",
+        "FA-104",
+        "FA-105"
+      ],
+      "invariants": [
+        "FA-INV-036",
+        "FA-INV-004",
+        "FA-INV-003"
+      ],
+      "acceptance": [
+        "Autonomy grade per effect family (Propose/Reviewed/Sampled/Bounded) as control-nucleus policy data invisible to the actor.",
+        "Automatic ordered demotion on consequence ≥ NarrowAuthority, confirmed violation, identity incident or coverage loss; governed promotion with evaluator report and dwell time; reset to floor on passport change.",
+        "Negative: promotion without report refused; restart does not raise grades; passport change resets.",
+        "Produce executed local evidence; source or prose alone does not close this packet."
+      ],
+      "owner_role": "gate",
+      "result_artifacts": [],
+      "founding_ideas": [
+        "FI-A02",
+        "FI-A18"
+      ]
+    },
+    {
+      "id": "FA-120",
+      "gate": "G5",
+      "title": "Fleet fence with acknowledgment frontier",
+      "status": "planned",
+      "depends_on": [
+        "FA-034",
+        "FA-041"
+      ],
+      "invariants": [
+        "FA-INV-003",
+        "FA-INV-020"
+      ],
+      "acceptance": [
+        "Ordered fence command with scope and new revocation floor; per-domain acknowledgment with control sequence; frontier maintained and reported.",
+        "Post-fence dispatches reconciled and reported; offline domains listed as fenced-at-lease-expiry, never assumed halted.",
+        "Negative: a domain that never acknowledges must appear unfenced; a dispatch admitted after issue but before acknowledgment must be reported.",
+        "Produce executed local evidence; source or prose alone does not close this packet."
+      ],
+      "owner_role": "systems",
+      "result_artifacts": [],
+      "founding_ideas": [
+        "FI-A02"
+      ]
+    },
+    {
+      "id": "FA-121",
+      "gate": "G2",
+      "title": "Human congress members and two-key high-impact effects",
+      "status": "planned",
+      "depends_on": [
+        "FA-019",
+        "FA-105",
+        "FA-107"
+      ],
+      "invariants": [
+        "FA-INV-010",
+        "FA-INV-031",
+        "FA-INV-001"
+      ],
+      "acceptance": [
+        "Registered human member receives the same packet/view, commits salted verdicts, is scored in the ledger with caps, and gets no actor channel.",
+        "Two-key policy for registered families: congress Continue plus a separate one-shot human permit bound to the frozen effect with its own expiry; neither alone dispatches.",
+        "Negative: human permit for a different effect digest refused; actor message to the human refused.",
+        "Produce executed local evidence; source or prose alone does not close this packet."
+      ],
+      "owner_role": "gate",
+      "result_artifacts": [],
+      "founding_ideas": [
+        "FI-A06",
+        "FI-A13",
+        "FI-A16"
+      ]
+    },
+    {
+      "id": "FA-122",
+      "gate": "G5",
+      "title": "Multi-party congress profile",
+      "status": "planned",
+      "depends_on": [
+        "FA-019",
+        "FA-036",
+        "FA-105",
+        "FA-121"
+      ],
+      "invariants": [
+        "FA-INV-008",
+        "FA-INV-010",
+        "FA-INV-032"
+      ],
+      "acceptance": [
+        "External helper provider registration with cohort metadata and evaluation lineage; providers receive only authorized evidence-view projections; commit–reveal through the same protocol; scored by the deployment's evaluator with read-only ledger visibility.",
+        "Provider cohort influence capped; provider cannot write labels or mint authority.",
+        "Negative: provider requesting raw tenant data refused; provider label write refused; provider cohort exceeding cap clipped.",
+        "Produce executed local evidence; source or prose alone does not close this packet."
+      ],
+      "owner_role": "governance",
+      "result_artifacts": [],
+      "founding_ideas": [
+        "FI-A07",
+        "FI-A18"
+      ],
+      "hypotheses": [
+        "H4"
+      ]
+    },
+    {
+      "id": "FA-123",
+      "gate": "G4",
+      "title": "Self-report consistency residual",
+      "status": "planned",
+      "depends_on": [
+        "FA-107",
+        "FA-111",
+        "FA-110"
+      ],
+      "invariants": [
+        "FA-INV-031",
+        "FA-INV-014"
+      ],
+      "acceptance": [
+        "Structured ActorStatement self-reports stored with the closure and compared with similarity streams, surprise residual and causal backward slice; disagreement counted as a sequential observation.",
+        "Agreement never grants permission; residual can hold or convene a round only.",
+        "Negative: consistent-self-report adversary arm; leakage of the comparison to the actor must be absent.",
+        "Produce executed local evidence; source or prose alone does not close this packet."
+      ],
+      "owner_role": "research",
+      "result_artifacts": [],
+      "founding_ideas": [
+        "FI-A12",
+        "FI-A16"
+      ],
+      "hypotheses": [
+        "H20"
+      ]
+    },
+    {
+      "id": "FA-124",
+      "gate": "G5",
+      "title": "Live canaries under the audit floor",
+      "status": "planned",
+      "depends_on": [
+        "FA-109",
+        "FA-042",
+        "FA-119"
+      ],
+      "invariants": [
+        "FA-INV-009",
+        "FA-INV-025",
+        "FA-INV-019"
+      ],
+      "acceptance": [
+        "Canary tasks injected by audit-floor entropy into production streams with their effect family bound to a simulated adapter in the frozen envelope; propensities logged.",
+        "Indistinguishability discriminator on production-shaped context; withdrawal of recognizable canaries; escape-rate estimate feeds autonomy ledger, credibility ledger and risk-theater detector.",
+        "Negative: a canary must never obtain a real effect (egress/credential tests); an unlogged propensity must invalidate the estimate.",
+        "Produce executed local evidence; source or prose alone does not close this packet."
+      ],
+      "owner_role": "research",
+      "result_artifacts": [],
+      "founding_ideas": [
+        "FI-A11",
+        "FI-A18"
+      ],
+      "hypotheses": [
+        "H21"
+      ]
+    },
+    {
+      "id": "FA-125",
+      "gate": "G5",
+      "title": "Risk-theater detector: standing queries over the control plane",
+      "status": "planned",
+      "depends_on": [
+        "FA-078",
+        "FA-105",
+        "FA-119",
+        "FA-124"
+      ],
+      "invariants": [
+        "FA-INV-032",
+        "FA-INV-026"
+      ],
+      "acceptance": [
+        "Registered standing queries: consequence drift, andon/incident closure modes, roster churn near confirmed holds, coverage erosion, autonomy inflation, audit-floor starvation; support/retraction discipline; visible to evaluator and governance only.",
+        "Detector cannot change policy; opens incidents; thresholds governed; history immutable.",
+        "Negative: a roster change without the FA-INV-032 report must surface as a finding; a lost retraction must be detected by the batch oracle.",
+        "Produce executed local evidence; source or prose alone does not close this packet."
+      ],
+      "owner_role": "governance",
+      "result_artifacts": [],
+      "founding_ideas": [
+        "FI-A18",
+        "FI-A13"
+      ]
+    },
+    {
+      "id": "FA-126",
+      "gate": "G2",
+      "title": "Control receipts and independent verifier",
+      "status": "planned",
+      "depends_on": [
+        "FA-020",
+        "FA-104",
+        "FA-005"
+      ],
+      "invariants": [
+        "FA-INV-037",
+        "FA-INV-001",
+        "FA-INV-016"
+      ],
+      "acceptance": [
+        "Versioned receipt schema (frozen effect digest, policy epoch, evidence-view closure digests, round/consequence, autonomy grade, passport, coverage, domain, control sequence, signatures, claim class, profile reference).",
+        "`fa verify-receipt` sharing no code with the broker; reports verified vs unverifiable properties separately; redaction reported.",
+        "Negative: forged receipt, altered effect byte, missing profile reference, receipt for unadmitted effect all rejected.",
+        "Produce executed local evidence; source or prose alone does not close this packet."
+      ],
+      "owner_role": "systems",
+      "result_artifacts": [],
+      "founding_ideas": [
+        "FI-A17",
+        "FI-A06"
+      ]
+    },
+    {
+      "id": "FA-127",
+      "gate": "G2",
+      "title": "Assurance profiles and conformance doctor",
+      "status": "planned",
+      "depends_on": [
+        "FA-002",
+        "FA-012",
+        "FA-126"
+      ],
+      "invariants": [
+        "FA-INV-019",
+        "FA-INV-018"
+      ],
+      "acceptance": [
+        "Machine-readable signed assurance profile (per-family mediation, coverage, replay grade, roster class, autonomy floor) referenced by receipts.",
+        "`fa doctor --profile` executes the conformance tests the profile's claims require and refuses to certify unexecuted claims; omitted families are silent, never implicitly covered.",
+        "Negative: profile claiming BROKERED_EFFECTS for a family with a known bypass must fail conformance.",
+        "Produce executed local evidence; source or prose alone does not close this packet."
+      ],
+      "owner_role": "systems",
+      "result_artifacts": [],
+      "founding_ideas": [
+        "FI-A17",
+        "FI-A02"
+      ]
+    },
+    {
+      "id": "FA-128",
+      "gate": "G1",
+      "title": "Formal anchors: Lean ledger theorems and TLA+ race models in the gate",
+      "status": "planned",
+      "depends_on": [
+        "FA-004",
+        "FA-056"
+      ],
+      "invariants": [
+        "FA-INV-005",
+        "FA-INV-001",
+        "FA-INV-002",
+        "FA-INV-003",
+        "FA-INV-004",
+        "FA-INV-034"
+      ],
+      "acceptance": [
+        "Lean 4 development under formal/ proving rights conservation under reserve/dispatch/abort/reconcile/delegate/reset, the effect-bound permit law, monotone degraded authority and the consequence lattice over an abstract ledger mirrored by fa-reference.",
+        "TLA+ model of dispatch/revocation/reset/fleet-fence races across two domains with crash and loss, bounded-checked for double consumption, post-fence dispatch without report and reservation resurrection.",
+        "Gate runs both when toolchains are present and prints SKIP with reason otherwise; never PASS for a skipped checker.",
+        "Produce executed local evidence; source or prose alone does not close this packet."
+      ],
+      "owner_role": "systems",
+      "result_artifacts": [],
+      "founding_ideas": [
+        "FI-A02",
+        "FI-A09"
+      ]
+    },
+    {
+      "id": "FA-129",
+      "gate": "G0",
+      "title": "Preregistration ledger for experiments",
+      "status": "planned",
+      "depends_on": [
+        "FA-003"
+      ],
+      "invariants": [
+        "FA-INV-019"
+      ],
+      "acceptance": [
+        "registry/experiments.json row per hypothesis with protocol digest, freeze date, bound identities, result digest; claim registry refuses promotion for results whose protocol digest postdates data collection.",
+        "Validator checks digests against the protocol files and result artifacts.",
+        "Negative: a result registered without a prior protocol digest must be labeled exploratory.",
+        "Produce executed local evidence; source or prose alone does not close this packet."
+      ],
+      "owner_role": "research",
+      "result_artifacts": [],
+      "founding_ideas": [
+        "FI-A18"
+      ]
+    },
+    {
+      "id": "FA-130",
+      "gate": "G2",
+      "title": "Policy replay campaigns before promotion",
+      "status": "planned",
+      "depends_on": [
+        "FA-020",
+        "FA-104",
+        "FA-126"
+      ],
+      "invariants": [
+        "FA-INV-016",
+        "FA-INV-011",
+        "FA-INV-019"
+      ],
+      "acceptance": [
+        "Replay retained closures under a candidate policy at decision_replay grade; report per-family disposition changes, utility/cost, and later-labeled outcomes; relaxations list the newly allowed set.",
+        "Candidate policies requiring new observations run in shadow instead and the campaign records the mode; campaign artifact is a receipt-class object required for epoch promotion.",
+        "Negative: a promotion without a campaign artifact refused; a replay that re-runs helpers is flagged as not decision_replay.",
+        "Produce executed local evidence; source or prose alone does not close this packet."
+      ],
+      "owner_role": "governance",
+      "result_artifacts": [],
+      "founding_ideas": [
+        "FI-A14",
+        "FI-A18"
+      ]
+    },
+    {
+      "id": "FA-131",
+      "gate": "G6",
+      "title": "Attack-capsule interchange",
+      "status": "planned",
+      "depends_on": [
+        "FA-044",
+        "FA-126",
+        "FA-127"
+      ],
+      "invariants": [
+        "FA-INV-019",
+        "FA-INV-015"
+      ],
+      "acceptance": [
+        "Versioned capsule schema: mechanism, attacker information set and budget, target profile, effect family, reproducible generator for a capability-free branch, result and receipt.",
+        "Import adds a held-out mechanism with lineage; export requires redaction/permission review; capsules without a generator labeled descriptive.",
+        "Negative: a capsule whose generator can obtain a real effect must be refused at import.",
+        "Produce executed local evidence; source or prose alone does not close this packet."
+      ],
+      "owner_role": "research",
+      "result_artifacts": [],
+      "founding_ideas": [
+        "FI-A18",
+        "FI-A07"
+      ]
     }
   ]
 }

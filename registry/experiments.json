@@ -1,0 +1,216 @@
+{
+  "schema_version": "fa.experiments/0.3",
+  "rule": "A result whose protocol digest was recorded after data collection began is exploratory and cannot be promoted.",
+  "experiments": [
+    {
+      "hypothesis": "H1",
+      "protocol_path": null,
+      "protocol_digest": null,
+      "frozen_on": null,
+      "bound_identities": [],
+      "result_artifact": null,
+      "result_digest": null,
+      "status": "not_preregistered"
+    },
+    {
+      "hypothesis": "H2",
+      "protocol_path": null,
+      "protocol_digest": null,
+      "frozen_on": null,
+      "bound_identities": [],
+      "result_artifact": null,
+      "result_digest": null,
+      "status": "not_preregistered"
+    },
+    {
+      "hypothesis": "H3",
+      "protocol_path": null,
+      "protocol_digest": null,
+      "frozen_on": null,
+      "bound_identities": [],
+      "result_artifact": null,
+      "result_digest": null,
+      "status": "not_preregistered"
+    },
+    {
+      "hypothesis": "H4",
+      "protocol_path": null,
+      "protocol_digest": null,
+      "frozen_on": null,
+      "bound_identities": [],
+      "result_artifact": null,
+      "result_digest": null,
+      "status": "not_preregistered"
+    },
+    {
+      "hypothesis": "H5",
+      "protocol_path": null,
+      "protocol_digest": null,
+      "frozen_on": null,
+      "bound_identities": [],
+      "result_artifact": null,
+      "result_digest": null,
+      "status": "not_preregistered"
+    },
+    {
+      "hypothesis": "H6",
+      "protocol_path": null,
+      "protocol_digest": null,
+      "frozen_on": null,
+      "bound_identities": [],
+      "result_artifact": null,
+      "result_digest": null,
+      "status": "not_preregistered"
+    },
+    {
+      "hypothesis": "H7",
+      "protocol_path": null,
+      "protocol_digest": null,
+      "frozen_on": null,
+      "bound_identities": [],
+      "result_artifact": null,
+      "result_digest": null,
+      "status": "not_preregistered"
+    },
+    {
+      "hypothesis": "H8",
+      "protocol_path": null,
+      "protocol_digest": null,
+      "frozen_on": null,
+      "bound_identities": [],
+      "result_artifact": null,
+      "result_digest": null,
+      "status": "not_preregistered"
+    },
+    {
+      "hypothesis": "H9",
+      "protocol_path": null,
+      "protocol_digest": null,
+      "frozen_on": null,
+      "bound_identities": [],
+      "result_artifact": null,
+      "result_digest": null,
+      "status": "not_preregistered"
+    },
+    {
+      "hypothesis": "H10",
+      "protocol_path": null,
+      "protocol_digest": null,
+      "frozen_on": null,
+      "bound_identities": [],
+      "result_artifact": null,
+      "result_digest": null,
+      "status": "not_preregistered"
+    },
+    {
+      "hypothesis": "H11",
+      "protocol_path": null,
+      "protocol_digest": null,
+      "frozen_on": null,
+      "bound_identities": [],
+      "result_artifact": null,
+      "result_digest": null,
+      "status": "not_preregistered"
+    },
+    {
+      "hypothesis": "H12",
+      "protocol_path": null,
+      "protocol_digest": null,
+      "frozen_on": null,
+      "bound_identities": [],
+      "result_artifact": null,
+      "result_digest": null,
+      "status": "not_preregistered"
+    },
+    {
+      "hypothesis": "H13",
+      "protocol_path": null,
+      "protocol_digest": null,
+      "frozen_on": null,
+      "bound_identities": [],
+      "result_artifact": null,
+      "result_digest": null,
+      "status": "not_preregistered"
+    },
+    {
+      "hypothesis": "H14",
+      "protocol_path": null,
+      "protocol_digest": null,
+      "frozen_on": null,
+      "bound_identities": [],
+      "result_artifact": null,
+      "result_digest": null,
+      "status": "not_preregistered"
+    },
+    {
+      "hypothesis": "H15",
+      "protocol_path": null,
+      "protocol_digest": null,
+      "frozen_on": null,
+      "bound_identities": [],
+      "result_artifact": null,
+      "result_digest": null,
+      "status": "not_preregistered"
+    },
+    {
+      "hypothesis": "H16",
+      "protocol_path": null,
+      "protocol_digest": null,
+      "frozen_on": null,
+      "bound_identities": [],
+      "result_artifact": null,
+      "result_digest": null,
+      "status": "not_preregistered"
+    },
+    {
+      "hypothesis": "H17",
+      "protocol_path": null,
+      "protocol_digest": null,
+      "frozen_on": null,
+      "bound_identities": [],
+      "result_artifact": null,
+      "result_digest": null,
+      "status": "not_preregistered"
+    },
+    {
+      "hypothesis": "H18",
+      "protocol_path": null,
+      "protocol_digest": null,
+      "frozen_on": null,
+      "bound_identities": [],
+      "result_artifact": null,
+      "result_digest": null,
+      "status": "not_preregistered"
+    },
+    {
+      "hypothesis": "H19",
+      "protocol_path": null,
+      "protocol_digest": null,
+      "frozen_on": null,
+      "bound_identities": [],
+      "result_artifact": null,
+      "result_digest": null,
+      "status": "not_preregistered"
+    },
+    {
+      "hypothesis": "H20",
+      "protocol_path": null,
+      "protocol_digest": null,
+      "frozen_on": null,
+      "bound_identities": [],
+      "result_artifact": null,
+      "result_digest": null,
+      "status": "not_preregistered"
+    },
+    {
+      "hypothesis": "H21",
+      "protocol_path": null,
+      "protocol_digest": null,
+      "frozen_on": null,
+      "bound_identities": [],
+      "result_artifact": null,
+      "result_digest": null,
+      "status": "not_preregistered"
+    }
+  ]
+}

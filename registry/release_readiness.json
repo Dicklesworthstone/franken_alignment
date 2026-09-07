@@ -1,7 +1,7 @@
 {
-  "schema_version": "fa.release_readiness/0.2",
+  "schema_version": "fa.release_readiness/0.3",
   "production_release_enabled": false,
-  "reason": "Design and uncompiled reference source only",
+  "reason": "Design and reference source only; the local quality gate executed on one host on 2026-09-06, but no production broker, frozen toolchain, target matrix or signing closure exists",
   "required_controller": "operator-local DSR or equivalent executed local lane",
   "hosted_actions_required": false,
   "qualified_production_targets": [],
@@ -9,5 +9,15 @@
   "accepted_gate_receipts": [],
   "signing_identity": null,
   "quality_gate": "cargo run --locked -p xtask -- check",
-  "release_gate": "cargo run --locked -p xtask -- release-check"
+  "release_gate": "cargo run --locked -p xtask -- release-check",
+  "local_quality_gate_executions": [
+    {
+      "date": "2026-09-06",
+      "host": "aarch64-apple-darwin (one operator host)",
+      "toolchain": "nightly-2026-08-31 (rustc 908501772 2026-08-30)",
+      "result": "PASS local_reference_gate",
+      "log": "artifacts/execution/2026-09-06-xtask-check-nightly-2026-08-31-local.log",
+      "note": "Quality-gate execution only; not a release receipt, not a frozen campaign, rolling nightly on the host lacked rustfmt/clippy binaries."
+    }
+  ]
 }

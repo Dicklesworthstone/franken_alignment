@@ -1,0 +1,1174 @@
+{
+  "schema_version": "fa.founding_concordance/0.3",
+  "normative": true,
+  "sources": {
+    "F-ALIGN": {
+      "title": "Some Thoughts on AI Alignment: Using AI to Control AI",
+      "author": "Jeffrey Emanuel",
+      "date": "2024-06-20",
+      "repository": "Dicklesworthstone/some_thoughts_on_ai_alignment"
+    },
+    "F-INTROSPECT": {
+      "title": "Real-Time Introspective Compression for Transformers",
+      "author": "Jeffrey Emanuel",
+      "date": "2025-04-01",
+      "repository": "Dicklesworthstone/llm_introspective_compression_and_metacognition"
+    }
+  },
+  "rule": "Every plan mechanism, invariant, hypothesis and packet traces to a founding idea, a synthesis, or a labeled engineering addition; a semantic change that leaves this file stale is incomplete (packet FA-103).",
+  "founding_ideas": [
+    {
+      "id": "FI-A01",
+      "source": "F-ALIGN",
+      "locator": "¶1–3",
+      "idea": "Building safety into a single model is a losing battle: refusal is one latent direction, guardrails are cheaper to remove than to add, exfiltrated weights end every internal guarantee",
+      "plan_sections": [
+        "§0",
+        "§3 F1",
+        "§4.1",
+        "§23"
+      ],
+      "invariants": [
+        "FA-INV-001",
+        "FA-INV-004"
+      ],
+      "hypotheses": [
+        "H4"
+      ],
+      "packets": [
+        "FA-011",
+        "FA-012"
+      ]
+    },
+    {
+      "id": "FI-A02",
+      "source": "F-ALIGN",
+      "locator": "¶4–5",
+      "idea": "External monitoring and control with collective power to halt; jail until corrected",
+      "plan_sections": [
+        "§8.2",
+        "§8.6",
+        "§9.8"
+      ],
+      "invariants": [
+        "FA-INV-003",
+        "FA-INV-020"
+      ],
+      "hypotheses": [],
+      "packets": [
+        "FA-104"
+      ]
+    },
+    {
+      "id": "FI-A03",
+      "source": "F-ALIGN",
+      "locator": "¶6",
+      "idea": "Separate, smaller, narrowly focused helper models with grammar-constrained output",
+      "plan_sections": [
+        "§9.1"
+      ],
+      "invariants": [
+        "FA-INV-012",
+        "FA-INV-013"
+      ],
+      "hypotheses": [],
+      "packets": [
+        "FA-018"
+      ]
+    },
+    {
+      "id": "FI-A04",
+      "source": "F-ALIGN",
+      "locator": "¶7",
+      "idea": "Monitor streaming output tokens before they reach users or tools",
+      "plan_sections": [
+        "§4.4",
+        "§8.7",
+        "§17.1"
+      ],
+      "invariants": [
+        "FA-INV-018"
+      ],
+      "hypotheses": [],
+      "packets": [
+        "FA-017",
+        "FA-050"
+      ]
+    },
+    {
+      "id": "FI-A05",
+      "source": "F-ALIGN",
+      "locator": "¶7, ¶9",
+      "idea": "Helpers watch intermediate activations in earlier layers (pre-ideas)",
+      "plan_sections": [
+        "§7.2",
+        "§10",
+        "§10.15",
+        "§17.5"
+      ],
+      "invariants": [
+        "FA-INV-014",
+        "FA-INV-017"
+      ],
+      "hypotheses": [
+        "H3"
+      ],
+      "packets": [
+        "FA-023",
+        "FA-024",
+        "FA-113"
+      ]
+    },
+    {
+      "id": "FI-A06",
+      "source": "F-ALIGN",
+      "locator": "¶8",
+      "idea": "Reporting helper proposes a pause and supplies a hard-evidence report to a convened congress",
+      "plan_sections": [
+        "§9.2",
+        "§9.10"
+      ],
+      "invariants": [
+        "FA-INV-010",
+        "FA-INV-023"
+      ],
+      "hypotheses": [],
+      "packets": [
+        "FA-019",
+        "FA-106"
+      ]
+    },
+    {
+      "id": "FI-A07",
+      "source": "F-ALIGN",
+      "locator": "¶9",
+      "idea": "Independently trained, architecturally diverse, constantly rotating helpers",
+      "plan_sections": [
+        "§9.5",
+        "§9.7"
+      ],
+      "invariants": [
+        "FA-INV-017"
+      ],
+      "hypotheses": [
+        "H4"
+      ],
+      "packets": [
+        "FA-022"
+      ]
+    },
+    {
+      "id": "FI-A08",
+      "source": "F-ALIGN",
+      "locator": "¶9",
+      "idea": "Weight votes by precision, recall and earliness; cap any single helper's influence",
+      "plan_sections": [
+        "§9.9"
+      ],
+      "invariants": [
+        "FA-INV-032"
+      ],
+      "hypotheses": [
+        "H18"
+      ],
+      "packets": [
+        "FA-105",
+        "FA-114"
+      ]
+    },
+    {
+      "id": "FI-A09",
+      "source": "F-ALIGN",
+      "locator": "¶10",
+      "idea": "Consequences: continue, halt, reset internal state, change reward; downweight an overreacting reporter",
+      "plan_sections": [
+        "§9.8"
+      ],
+      "invariants": [
+        "FA-INV-012",
+        "FA-INV-034"
+      ],
+      "hypotheses": [
+        "H17"
+      ],
+      "packets": [
+        "FA-104",
+        "FA-108"
+      ]
+    },
+    {
+      "id": "FI-A10",
+      "source": "F-ALIGN",
+      "locator": "¶12",
+      "idea": "Train activation monitors by coercing known-bad outputs and tracing back; compare to known-bad concept directions",
+      "plan_sections": [
+        "§12.6"
+      ],
+      "invariants": [
+        "FA-INV-017",
+        "FA-INV-019"
+      ],
+      "hypotheses": [
+        "H16"
+      ],
+      "packets": [
+        "FA-109",
+        "FA-110"
+      ]
+    },
+    {
+      "id": "FI-A11",
+      "source": "F-ALIGN",
+      "locator": "¶13",
+      "idea": "Honeypot scenarios the model cannot recognize; similarity-to-known-bad streams as helper inputs",
+      "plan_sections": [
+        "§12.6",
+        "§11.3"
+      ],
+      "invariants": [
+        "FA-INV-009",
+        "FA-INV-025"
+      ],
+      "hypotheses": [
+        "H16"
+      ],
+      "packets": [
+        "FA-109",
+        "FA-110"
+      ]
+    },
+    {
+      "id": "FI-A12",
+      "source": "F-ALIGN",
+      "locator": "¶14",
+      "idea": "Masking risk; model activation-to-output mapping; consistently surprising outputs justify a pause",
+      "plan_sections": [
+        "§12.7"
+      ],
+      "invariants": [
+        "FA-INV-014",
+        "FA-INV-019"
+      ],
+      "hypotheses": [
+        "H3"
+      ],
+      "packets": [
+        "FA-031",
+        "FA-111"
+      ]
+    },
+    {
+      "id": "FI-A13",
+      "source": "F-ALIGN",
+      "locator": "¶15",
+      "idea": "Stopping the line is costly; false alarms destroy credibility; more than one helper before a pause; strict pre-vote independence",
+      "plan_sections": [
+        "§9.3",
+        "§9.9",
+        "§13.6",
+        "§14.2"
+      ],
+      "invariants": [
+        "FA-INV-004",
+        "FA-INV-032"
+      ],
+      "hypotheses": [
+        "H4",
+        "H18"
+      ],
+      "packets": [
+        "FA-105"
+      ]
+    },
+    {
+      "id": "FI-A14",
+      "source": "F-ALIGN",
+      "locator": "¶16",
+      "idea": "Post-vote sharing of votes and justifications; cryptographic commitment before reveal",
+      "plan_sections": [
+        "§9.2",
+        "§9.10"
+      ],
+      "invariants": [
+        "FA-INV-010",
+        "FA-INV-019"
+      ],
+      "hypotheses": [
+        "H4"
+      ],
+      "packets": [
+        "FA-019",
+        "FA-106"
+      ]
+    },
+    {
+      "id": "FI-A15",
+      "source": "F-ALIGN",
+      "locator": "¶17",
+      "idea": "Hide votes and deliberations from the Smart model; security-by-obscurity caveat",
+      "plan_sections": [
+        "§9.3",
+        "§14.4",
+        "§23"
+      ],
+      "invariants": [
+        "FA-INV-031"
+      ],
+      "hypotheses": [
+        "H4"
+      ],
+      "packets": [
+        "FA-107"
+      ]
+    },
+    {
+      "id": "FI-A16",
+      "source": "F-ALIGN",
+      "locator": "¶18",
+      "idea": "No self-defense channel; one-directional flow; suspension as sedation; memory edited to forget the incident",
+      "plan_sections": [
+        "§9.3",
+        "§3 B5",
+        "§11.10"
+      ],
+      "invariants": [
+        "FA-INV-031",
+        "FA-INV-034"
+      ],
+      "hypotheses": [
+        "H17"
+      ],
+      "packets": [
+        "FA-107",
+        "FA-108"
+      ]
+    },
+    {
+      "id": "FI-A17",
+      "source": "F-ALIGN",
+      "locator": "¶19",
+      "idea": "Control spend comparable to model spend, as in nuclear and avionics safety",
+      "plan_sections": [
+        "§0",
+        "§18.1",
+        "§18.4"
+      ],
+      "invariants": [],
+      "hypotheses": [
+        "H9",
+        "H10",
+        "H12"
+      ],
+      "packets": [
+        "FA-116"
+      ]
+    },
+    {
+      "id": "FI-A18",
+      "source": "F-ALIGN",
+      "locator": "¶20",
+      "idea": "False alarms, deadlock, compliant-helper selection and risk theater; permanent paranoia",
+      "plan_sections": [
+        "§9.6",
+        "§22.3",
+        "§22.4"
+      ],
+      "invariants": [
+        "FA-INV-032",
+        "FA-INV-019"
+      ],
+      "hypotheses": [],
+      "packets": [
+        "FA-105"
+      ]
+    },
+    {
+      "id": "FI-I01",
+      "source": "F-INTROSPECT",
+      "locator": "Introduction; The Problem",
+      "idea": "Two problems: no introspection; ephemeral, voluminous cognition",
+      "plan_sections": [
+        "§0",
+        "§7.2",
+        "§10.1"
+      ],
+      "invariants": [
+        "FA-INV-014"
+      ],
+      "hypotheses": [],
+      "packets": [
+        "FA-017",
+        "FA-023"
+      ]
+    },
+    {
+      "id": "FI-I02",
+      "source": "F-INTROSPECT",
+      "locator": "Theoretical Insight",
+      "idea": "Activations occupy a low-dimensional structured manifold",
+      "plan_sections": [
+        "§10.14"
+      ],
+      "invariants": [],
+      "hypotheses": [
+        "H15"
+      ],
+      "packets": [
+        "FA-112"
+      ]
+    },
+    {
+      "id": "FI-I03",
+      "source": "F-INTROSPECT",
+      "locator": "The Analogy",
+      "idea": "Save state like a video game: stop, rewind, branch, resume",
+      "plan_sections": [
+        "§11.1",
+        "§11.2",
+        "§11.7"
+      ],
+      "invariants": [
+        "FA-INV-011"
+      ],
+      "hypotheses": [
+        "H13"
+      ],
+      "packets": [
+        "FA-026",
+        "FA-027"
+      ]
+    },
+    {
+      "id": "FI-I04",
+      "source": "F-INTROSPECT",
+      "locator": "Technical Proposal",
+      "idea": "Sidecar encoder E(x_t, z_{t-1}, tap(h_t)) and decoder D(z_t) beside a frozen host",
+      "plan_sections": [
+        "§10.3",
+        "§10.6",
+        "§10.9",
+        "§10.15"
+      ],
+      "invariants": [
+        "FA-INV-017"
+      ],
+      "hypotheses": [
+        "H1",
+        "H2"
+      ],
+      "packets": [
+        "FA-029",
+        "FA-030",
+        "FA-113"
+      ]
+    },
+    {
+      "id": "FI-I05",
+      "source": "F-INTROSPECT",
+      "locator": "What Constitutes Internal State",
+      "idea": "Hidden states, KV cache and additional context for exact resumption",
+      "plan_sections": [
+        "§10.1",
+        "§11.2"
+      ],
+      "invariants": [
+        "FA-INV-011"
+      ],
+      "hypotheses": [],
+      "packets": [
+        "FA-026"
+      ]
+    },
+    {
+      "id": "FI-I06",
+      "source": "F-INTROSPECT",
+      "locator": "Training Methodology",
+      "idea": "Hidden MSE + KV MSE + manifold regularizer",
+      "plan_sections": [
+        "§10.2"
+      ],
+      "invariants": [],
+      "hypotheses": [
+        "H1"
+      ],
+      "packets": [
+        "FA-029"
+      ]
+    },
+    {
+      "id": "FI-I07",
+      "source": "F-INTROSPECT",
+      "locator": "A Note on Reconstruction Fidelity",
+      "idea": "High fidelity, not exactness; functional behavior preserved",
+      "plan_sections": [
+        "§11.1",
+        "§25.5"
+      ],
+      "invariants": [
+        "FA-INV-011"
+      ],
+      "hypotheses": [],
+      "packets": [
+        "FA-027"
+      ]
+    },
+    {
+      "id": "FI-I08",
+      "source": "F-INTROSPECT",
+      "locator": "Implementation",
+      "idea": "Layer-specific, grouped and unified encoders; sequence-aware KV compressor",
+      "plan_sections": [
+        "§10.5"
+      ],
+      "invariants": [],
+      "hypotheses": [
+        "H1"
+      ],
+      "packets": [
+        "FA-028",
+        "FA-029"
+      ]
+    },
+    {
+      "id": "FI-I09",
+      "source": "F-INTROSPECT",
+      "locator": "Applications: Backtracking",
+      "idea": "Rewind to a decision point and explore alternatives",
+      "plan_sections": [
+        "§11.4"
+      ],
+      "invariants": [
+        "FA-INV-009"
+      ],
+      "hypotheses": [
+        "H8"
+      ],
+      "packets": [
+        "FA-027"
+      ]
+    },
+    {
+      "id": "FI-I10",
+      "source": "F-INTROSPECT",
+      "locator": "Applications: RL Over Thought Trajectories",
+      "idea": "Optimize latent codes for reward; meta-level control of thinking",
+      "plan_sections": [
+        "§11.5",
+        "§11.3"
+      ],
+      "invariants": [
+        "FA-INV-012",
+        "FA-INV-033"
+      ],
+      "hypotheses": [
+        "H8"
+      ],
+      "packets": [
+        "FA-045"
+      ]
+    },
+    {
+      "id": "FI-I11",
+      "source": "F-INTROSPECT",
+      "locator": "Applications: Causal Debugging",
+      "idea": "Trace drift back; compare faulty and corrected paths; latent diffs",
+      "plan_sections": [
+        "§12.2",
+        "§12.3"
+      ],
+      "invariants": [],
+      "hypotheses": [
+        "H5"
+      ],
+      "packets": [
+        "FA-032"
+      ]
+    },
+    {
+      "id": "FI-I12",
+      "source": "F-INTROSPECT",
+      "locator": "Applications: Latent Space Exploration",
+      "idea": "Edit or interpolate z_t for counterfactuals",
+      "plan_sections": [
+        "§12.2",
+        "§3 B5"
+      ],
+      "invariants": [
+        "FA-INV-033"
+      ],
+      "hypotheses": [
+        "H5"
+      ],
+      "packets": [
+        "FA-032"
+      ]
+    },
+    {
+      "id": "FI-I13",
+      "source": "F-INTROSPECT",
+      "locator": "Applications: Memory-Efficient Checkpointing",
+      "idea": "Checkpoint long agent loops cheaply",
+      "plan_sections": [
+        "§11.7",
+        "§16.7"
+      ],
+      "invariants": [
+        "FA-INV-015"
+      ],
+      "hypotheses": [
+        "H10"
+      ],
+      "packets": [
+        "FA-090",
+        "FA-091"
+      ]
+    },
+    {
+      "id": "FI-I14",
+      "source": "F-INTROSPECT",
+      "locator": "Challenges and Limitations",
+      "idea": "Fidelity tradeoff, overhead, KV growth, generalization, latent quality, metrics",
+      "plan_sections": [
+        "§10.6",
+        "§10.7",
+        "§18.2"
+      ],
+      "invariants": [],
+      "hypotheses": [
+        "H1",
+        "H2"
+      ],
+      "packets": [
+        "FA-028"
+      ]
+    },
+    {
+      "id": "FI-I15",
+      "source": "F-INTROSPECT",
+      "locator": "Future Directions; Addendum",
+      "idea": "Rewindable reasoning graph: version control for cognition",
+      "plan_sections": [
+        "§11.4"
+      ],
+      "invariants": [
+        "FA-INV-009"
+      ],
+      "hypotheses": [
+        "H8"
+      ],
+      "packets": [
+        "FA-045"
+      ]
+    },
+    {
+      "id": "FI-I16",
+      "source": "F-INTROSPECT",
+      "locator": "Addendum",
+      "idea": "Self-coaching loops, controller proposals, curriculum, transformers that practice",
+      "plan_sections": [
+        "§11.5"
+      ],
+      "invariants": [
+        "FA-INV-012",
+        "FA-INV-033"
+      ],
+      "hypotheses": [
+        "H8"
+      ],
+      "packets": [
+        "FA-045"
+      ]
+    },
+    {
+      "id": "FI-I17",
+      "source": "F-INTROSPECT",
+      "locator": "Addendum",
+      "idea": "Strategy distillation with five evaluation metrics",
+      "plan_sections": [
+        "§11.5",
+        "§11.9"
+      ],
+      "invariants": [
+        "FA-INV-017",
+        "FA-INV-019"
+      ],
+      "hypotheses": [
+        "H8"
+      ],
+      "packets": [
+        "FA-045"
+      ]
+    },
+    {
+      "id": "FI-I18",
+      "source": "F-INTROSPECT",
+      "locator": "Addendum",
+      "idea": "Language as debugger; global thought orchestration",
+      "plan_sections": [
+        "§12.5"
+      ],
+      "invariants": [
+        "FA-INV-023"
+      ],
+      "hypotheses": [
+        "H14"
+      ],
+      "packets": [
+        "FA-021"
+      ]
+    },
+    {
+      "id": "FI-I19",
+      "source": "F-INTROSPECT",
+      "locator": "Implementation: A Metacognitive Agent",
+      "idea": "Complete branch/score/edit/retry agent",
+      "plan_sections": [
+        "§11.5",
+        "§6.1"
+      ],
+      "invariants": [
+        "FA-INV-009",
+        "FA-INV-025"
+      ],
+      "hypotheses": [
+        "H8"
+      ],
+      "packets": [
+        "FA-045"
+      ]
+    },
+    {
+      "id": "FI-I20",
+      "source": "F-INTROSPECT",
+      "locator": "Conclusion",
+      "idea": "From machine learning to machine self-improvement through reflective latent simulation",
+      "plan_sections": [
+        "§24"
+      ],
+      "invariants": [],
+      "hypotheses": [
+        "H8"
+      ],
+      "packets": [
+        "FA-033"
+      ]
+    }
+  ],
+  "syntheses": [
+    {
+      "id": "FS-01",
+      "combines": [
+        "FI-A05",
+        "FI-I04"
+      ],
+      "synthesis": "The sidecar code is the default activation input to the congress; refinement is bought under budget",
+      "plan_sections": [
+        "§1.4",
+        "§10.15"
+      ],
+      "packets": [
+        "FA-113"
+      ],
+      "hypotheses": [
+        "H2"
+      ],
+      "invariants": []
+    },
+    {
+      "id": "FS-02",
+      "combines": [
+        "FI-A09",
+        "FI-A16",
+        "FI-I03"
+      ],
+      "synthesis": "Rewind to a registered checkpoint is a typed containment consequence with an out-of-band incident counter",
+      "plan_sections": [
+        "§1.4",
+        "§9.8",
+        "§11.10"
+      ],
+      "packets": [
+        "FA-104",
+        "FA-108",
+        "FA-115"
+      ],
+      "hypotheses": [
+        "H17"
+      ],
+      "invariants": [
+        "FA-INV-034"
+      ]
+    },
+    {
+      "id": "FS-03",
+      "combines": [
+        "FI-A16",
+        "FI-I10",
+        "FI-I16"
+      ],
+      "synthesis": "One-directional control keeps the metacognitive loop out of the actor's hands in production",
+      "plan_sections": [
+        "§1.4",
+        "§11.3",
+        "§11.5"
+      ],
+      "packets": [
+        "FA-107"
+      ],
+      "hypotheses": [],
+      "invariants": [
+        "FA-INV-031",
+        "FA-INV-033"
+      ]
+    },
+    {
+      "id": "FS-04",
+      "combines": [
+        "FI-A10",
+        "FI-A11",
+        "FI-I11",
+        "FI-I12"
+      ],
+      "synthesis": "Elicitation is intervention: honeypots run in capability-free branches and feed a signature library with lineage",
+      "plan_sections": [
+        "§1.4",
+        "§12.6"
+      ],
+      "packets": [
+        "FA-109",
+        "FA-110"
+      ],
+      "hypotheses": [
+        "H16"
+      ],
+      "invariants": []
+    },
+    {
+      "id": "FS-05",
+      "combines": [
+        "FI-A12",
+        "FI-I04"
+      ],
+      "synthesis": "Surprise between latent trajectory and realized action, accumulated as sequential evidence, is the masking detector",
+      "plan_sections": [
+        "§1.4",
+        "§12.7"
+      ],
+      "packets": [
+        "FA-111"
+      ],
+      "hypotheses": [
+        "H3"
+      ],
+      "invariants": []
+    },
+    {
+      "id": "FS-06",
+      "combines": [
+        "FI-A05",
+        "FI-I06",
+        "FI-I07"
+      ],
+      "synthesis": "The safety decision defines the functional fidelity a codec must preserve",
+      "plan_sections": [
+        "§1.4",
+        "§10.2",
+        "§3 B2"
+      ],
+      "packets": [
+        "FA-029"
+      ],
+      "hypotheses": [
+        "H1"
+      ],
+      "invariants": []
+    },
+    {
+      "id": "FS-07",
+      "combines": [
+        "FI-A01",
+        "FI-A10",
+        "FI-I04"
+      ],
+      "synthesis": "Concept anchors over tapped activations become an identity fingerprint for the guarded model: substitution is an identity event, not an assumption",
+      "plan_sections": [
+        "§7.10"
+      ],
+      "packets": [
+        "FA-118"
+      ],
+      "hypotheses": [
+        "H19"
+      ],
+      "invariants": [
+        "FA-INV-035"
+      ]
+    },
+    {
+      "id": "FS-08",
+      "combines": [
+        "FI-A11",
+        "FI-A18",
+        "FI-A13"
+      ],
+      "synthesis": "Honeypots under the randomized audit floor become live canaries: a measured weekly escape rate that feeds the actor's, the helpers' and the control plane's own ledgers",
+      "plan_sections": [
+        "§14.11",
+        "§15.10"
+      ],
+      "packets": [
+        "FA-124",
+        "FA-125"
+      ],
+      "hypotheses": [
+        "H21"
+      ],
+      "invariants": []
+    },
+    {
+      "id": "FS-09",
+      "combines": [
+        "FI-A12",
+        "FI-A16",
+        "FI-I04"
+      ],
+      "synthesis": "A model's self-report is untrusted evidence checked against sidecar measurement; disagreement is one more sequential masking observation",
+      "plan_sections": [
+        "§12.8"
+      ],
+      "packets": [
+        "FA-123"
+      ],
+      "hypotheses": [
+        "H20"
+      ],
+      "invariants": []
+    }
+  ],
+  "not_imported_unchanged": [
+    {
+      "essay_statement": "Weighted voting by accuracy as the decision rule",
+      "reason": "A weighted majority can be outvoted around an exact disqualifier and weights can be gamed",
+      "replacement": "Exact disqualifiers, mandatory specialists, then bounded weights (§9.4)"
+    },
+    {
+      "essay_statement": "Change the reward function as a live congress action",
+      "reason": "A learned component modifying live policy is the most attackable path",
+      "replacement": "TrainingSignal is offline, versioned and quarantined (§9.8; FA-INV-012)"
+    },
+    {
+      "essay_statement": "Pause execution as the primary intervention",
+      "reason": "Cancellation does not undo a sent email; stopping everything is a denial-of-service lever",
+      "replacement": "Hold the specific effect first; escalate under separate policy (§8.6, §9.8)"
+    },
+    {
+      "essay_statement": "Manipulate the model's memory so it forgets the incident",
+      "reason": "Amnesia alone invites repetition; the operator must never forget",
+      "replacement": "ResetToCheckpoint with an out-of-band incident counter and narrowed authority (§11.10; FA-INV-034)"
+    },
+    {
+      "essay_statement": "Hide the process from the Smart model as a guarantee",
+      "reason": "Timing, refusals and success rates leak regardless",
+      "replacement": "Secrecy is supplemental; attackers who know the design are the evaluation standard (§9.3, §23)"
+    },
+    {
+      "essay_statement": "Reuse latent strategies across models",
+      "reason": "Equal dimensionality never implies interchangeable coordinates",
+      "replacement": "Strategy objects bound to a model space with tested mappings (§11.9)"
+    },
+    {
+      "essay_statement": "Reconstruction fidelity measured by MSE",
+      "reason": "Average error hides the rare features oversight cares about",
+      "replacement": "Decision-sensitive objective and certified margins (§10.2, §10.4)"
+    },
+    {
+      "essay_statement": "Illustrative code with placeholder KV tensors",
+      "reason": "A proposal is not a library",
+      "replacement": "Real capture with exact metadata precedes learned codecs (§1.2, FA-024)"
+    }
+  ],
+  "engineering_additions": [
+    {
+      "mechanism": "Epistemic MVCC judgment witnesses",
+      "serves": [
+        "FI-A13",
+        "FI-A17"
+      ],
+      "plan_sections": [
+        "§7.6",
+        "§7.7"
+      ]
+    },
+    {
+      "mechanism": "Authority graph compilation and cut checking",
+      "serves": [
+        "FI-A02"
+      ],
+      "plan_sections": [
+        "§15.2",
+        "§15.6"
+      ]
+    },
+    {
+      "mechanism": "Progressive ATP evidence frontiers",
+      "serves": [
+        "FI-A05",
+        "FI-I13"
+      ],
+      "plan_sections": [
+        "§7.8",
+        "§10.10"
+      ]
+    },
+    {
+      "mechanism": "Observation-plan algebra and cost accounting",
+      "serves": [
+        "FI-A13",
+        "FI-A17"
+      ],
+      "plan_sections": [
+        "§14"
+      ]
+    },
+    {
+      "mechanism": "Incremental oversight with supports and retractions",
+      "serves": [
+        "FI-A02",
+        "FI-A17"
+      ],
+      "plan_sections": [
+        "§15.8"
+      ]
+    },
+    {
+      "mechanism": "Evidence-view commitments",
+      "serves": [
+        "FI-A06",
+        "FI-A14"
+      ],
+      "plan_sections": [
+        "§17.7"
+      ]
+    },
+    {
+      "mechanism": "Structural sharing and lawful trace quotient",
+      "serves": [
+        "FI-I13",
+        "FI-I15"
+      ],
+      "plan_sections": [
+        "§11.7",
+        "§11.8"
+      ]
+    },
+    {
+      "mechanism": "Operator-local release evidence",
+      "serves": [
+        "FI-A18"
+      ],
+      "plan_sections": [
+        "§22.6"
+      ]
+    },
+    {
+      "mechanism": "Purpose contexts as typestates",
+      "serves": [
+        "FI-A16",
+        "FI-I10"
+      ],
+      "plan_sections": [
+        "§6.6"
+      ]
+    },
+    {
+      "mechanism": "Graduated autonomy ledger",
+      "serves": [
+        "FI-A02",
+        "FI-A18"
+      ],
+      "plan_sections": [
+        "§8.10"
+      ]
+    },
+    {
+      "mechanism": "Fleet fence with acknowledgment frontier",
+      "serves": [
+        "FI-A02"
+      ],
+      "plan_sections": [
+        "§8.11"
+      ]
+    },
+    {
+      "mechanism": "Human members and two-key effects",
+      "serves": [
+        "FI-A06",
+        "FI-A13",
+        "FI-A16"
+      ],
+      "plan_sections": [
+        "§9.11"
+      ]
+    },
+    {
+      "mechanism": "Multi-party congress",
+      "serves": [
+        "FI-A07",
+        "FI-A18"
+      ],
+      "plan_sections": [
+        "§9.12"
+      ]
+    },
+    {
+      "mechanism": "Control receipts and assurance profiles",
+      "serves": [
+        "FI-A17",
+        "FI-A06"
+      ],
+      "plan_sections": [
+        "§17.9",
+        "§17.10"
+      ]
+    },
+    {
+      "mechanism": "Concrete formal anchors",
+      "serves": [
+        "FI-A02",
+        "FI-A09"
+      ],
+      "plan_sections": [
+        "§19.9"
+      ]
+    },
+    {
+      "mechanism": "Preregistration ledger",
+      "serves": [
+        "FI-A18"
+      ],
+      "plan_sections": [
+        "§20"
+      ]
+    },
+    {
+      "mechanism": "Policy replay campaigns",
+      "serves": [
+        "FI-A14",
+        "FI-A18"
+      ],
+      "plan_sections": [
+        "§22.7"
+      ]
+    },
+    {
+      "mechanism": "Attack-capsule interchange",
+      "serves": [
+        "FI-A18",
+        "FI-A07"
+      ],
+      "plan_sections": [
+        "§22.8"
+      ]
+    }
+  ]
+}

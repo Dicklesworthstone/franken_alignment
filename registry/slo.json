@@ -1,5 +1,5 @@
 {
-  "schema_version": "fa.slo/0.2",
+  "schema_version": "fa.slo/0.3",
   "all_values_are_unmeasured_proposals": true,
   "targets": [
     {
@@ -29,6 +29,13 @@
       "target_max": 0.5,
       "status": "unmeasured",
       "envelope": "H1 experiment only; matched compute, utility and preregistered per-stratum noninferiority; not a deployment safety guarantee."
+    },
+    {
+      "id": "SLO-CONTROL-OVERHEAD",
+      "metric": "control_and_evidence_cost_per_useful_task_over_actor_inference_cost",
+      "target_max": 1.0,
+      "status": "unmeasured",
+      "envelope": "Ratio of control-plane plus evidence-plane cost to the actor's own inference cost per useful completed task, reported unconditional and attack-conditioned under a declared monitoring contract. The founding essay argues a serious deployment may spend as much on control as on the model; the target is an allocatable budget, not a safety result, and can never be met by lowering the control contract."
     }
   ]
 }

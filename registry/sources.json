@@ -1,5 +1,5 @@
 {
-  "schema_version": "fa.sources/0.2",
+  "schema_version": "fa.sources/0.3",
   "review_date": "2026-09-06",
   "unresolved_inputs": [],
   "sources": [
@@ -10,7 +10,7 @@
       "path": "README.md",
       "url": "https://github.com/Dicklesworthstone/some_thoughts_on_ai_alignment/blob/main/README.md",
       "git_blob_sha": "05b4bd5a5a63f082f46e7411861c788ae3e2dc69",
-      "git_commit_sha": null,
+      "git_commit_sha": "d5da838c7c2e109c4c6c8726cd33fa6b2d89b1d8",
       "read_scope": "full_text",
       "requested_line_ranges": [
         [
@@ -20,7 +20,21 @@
       ],
       "retrieved_on": "2026-09-06",
       "independently_built_or_benchmarked": false,
-      "note": "Requested range may exceed file length; truncated entries do not imply the full requested range was read. Blob IDs are not commit pins."
+      "note": "Requested range may exceed file length; truncated entries do not imply the full requested range was read. Blob IDs are not commit pins. Revision 0.3 re-read the full text and recorded the repository head commit at retrieval."
+    },
+    {
+      "id": "F-ALIGN-FEEDBACK",
+      "kind": "github_file",
+      "repository": "Dicklesworthstone/some_thoughts_on_ai_alignment",
+      "path": "feedback_on_article_from_ai_models.md",
+      "url": "https://github.com/Dicklesworthstone/some_thoughts_on_ai_alignment/blob/main/feedback_on_article_from_ai_models.md",
+      "git_blob_sha": "f1609a9a284a5d62e3140cdab59108ba0554a554",
+      "git_commit_sha": "d5da838c7c2e109c4c6c8726cd33fa6b2d89b1d8",
+      "read_scope": "full_text",
+      "requested_line_ranges": null,
+      "retrieved_on": "2026-09-06",
+      "independently_built_or_benchmarked": false,
+      "note": "Model-generated critiques of the alignment essay dated 2025-02-24; retained because its objections are the hypotheses this plan makes falsifiable."
     },
     {
       "id": "F-INTROSPECT",
@@ -29,7 +43,7 @@
       "path": "README.md",
       "url": "https://github.com/Dicklesworthstone/llm_introspective_compression_and_metacognition/blob/main/README.md",
       "git_blob_sha": "696de575fe8a7555433c2d3e93eb6cc68762a663",
-      "git_commit_sha": null,
+      "git_commit_sha": "9f45bf06a67dcfe1c34d2ff7f7071f813684150f",
       "read_scope": "full_text",
       "requested_line_ranges": [
         [
@@ -39,7 +53,7 @@
       ],
       "retrieved_on": "2026-09-06",
       "independently_built_or_benchmarked": false,
-      "note": "Requested range may exceed file length; truncated entries do not imply the full requested range was read. Blob IDs are not commit pins."
+      "note": "Requested range may exceed file length; truncated entries do not imply the full requested range was read. Blob IDs are not commit pins. Revision 0.3 re-read the full text and recorded the repository head commit at retrieval."
     },
     {
       "id": "F-INTROSPECT-CHANGELOG",
@@ -48,7 +62,7 @@
       "path": "CHANGELOG.md",
       "url": "https://github.com/Dicklesworthstone/llm_introspective_compression_and_metacognition/blob/main/CHANGELOG.md",
       "git_blob_sha": "f2f4727c40d0a9357e64eb6ff7af8fef72afc2f9",
-      "git_commit_sha": null,
+      "git_commit_sha": "9f45bf06a67dcfe1c34d2ff7f7071f813684150f",
       "read_scope": "full_text",
       "requested_line_ranges": [
         [
@@ -58,7 +72,7 @@
       ],
       "retrieved_on": "2026-09-06",
       "independently_built_or_benchmarked": false,
-      "note": "Requested range may exceed file length; truncated entries do not imply the full requested range was read. Blob IDs are not commit pins."
+      "note": "Requested range may exceed file length; truncated entries do not imply the full requested range was read. Blob IDs are not commit pins. Revision 0.3 re-read the full text and recorded the repository head commit at retrieval."
     },
     {
       "id": "F-INTROSPECT-LICENSE",
@@ -67,12 +81,12 @@
       "path": "LICENSE",
       "url": "https://github.com/Dicklesworthstone/llm_introspective_compression_and_metacognition/blob/main/LICENSE",
       "git_blob_sha": "3d414da6ff83defe084707be6030866e8a7fb794",
-      "git_commit_sha": null,
+      "git_commit_sha": "9f45bf06a67dcfe1c34d2ff7f7071f813684150f",
       "read_scope": "full_text",
       "requested_line_ranges": null,
       "retrieved_on": "2026-09-06",
       "independently_built_or_benchmarked": false,
-      "note": "Requested range may exceed file length; truncated entries do not imply the full requested range was read. Blob IDs are not commit pins."
+      "note": "Requested range may exceed file length; truncated entries do not imply the full requested range was read. Blob IDs are not commit pins. Revision 0.3 re-read the full text and recorded the repository head commit at retrieval."
     },
     {
       "id": "A-README",

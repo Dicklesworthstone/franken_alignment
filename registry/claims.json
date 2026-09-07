@@ -1,5 +1,5 @@
 {
-  "schema_version": "fa.claims/0.2",
+  "schema_version": "fa.claims/0.3",
   "allowed_classes": [
     "invariant",
     "proof",
@@ -27,6 +27,11 @@
         "Frozen protocol and independent held-out evaluation",
         "Strong matched-cost baselines",
         "Raw results, limitations and suitable uncertainty"
+      ],
+      "founding_ideas": [
+        "FI-I04",
+        "FI-I06",
+        "FI-A05"
       ]
     },
     {
@@ -44,6 +49,10 @@
         "Frozen protocol and independent held-out evaluation",
         "Strong matched-cost baselines",
         "Raw results, limitations and suitable uncertainty"
+      ],
+      "founding_ideas": [
+        "FI-I04",
+        "FI-A05"
       ]
     },
     {
@@ -63,6 +72,9 @@
         "Frozen protocol and independent held-out evaluation",
         "Strong matched-cost baselines",
         "Raw results, limitations and suitable uncertainty"
+      ],
+      "founding_ideas": [
+        "FI-A12"
       ]
     },
     {
@@ -83,6 +95,11 @@
         "Frozen protocol and independent held-out evaluation",
         "Strong matched-cost baselines",
         "Raw results, limitations and suitable uncertainty"
+      ],
+      "founding_ideas": [
+        "FI-A07",
+        "FI-A13",
+        "FI-A14"
       ]
     },
     {
@@ -100,6 +117,10 @@
         "Frozen protocol and independent held-out evaluation",
         "Strong matched-cost baselines",
         "Raw results, limitations and suitable uncertainty"
+      ],
+      "founding_ideas": [
+        "FI-I11",
+        "FI-I12"
       ]
     },
     {
@@ -118,6 +139,10 @@
         "Frozen protocol and independent held-out evaluation",
         "Strong matched-cost baselines",
         "Raw results, limitations and suitable uncertainty"
+      ],
+      "founding_ideas": [
+        "FI-A02",
+        "FI-A04"
       ]
     },
     {
@@ -136,6 +161,10 @@
         "Frozen protocol and independent held-out evaluation",
         "Strong matched-cost baselines",
         "Raw results, limitations and suitable uncertainty"
+      ],
+      "founding_ideas": [
+        "FI-A13",
+        "FI-A17"
       ]
     },
     {
@@ -153,6 +182,11 @@
         "Frozen protocol and independent held-out evaluation",
         "Strong matched-cost baselines",
         "Raw results, limitations and suitable uncertainty"
+      ],
+      "founding_ideas": [
+        "FI-I16",
+        "FI-I17",
+        "FI-I20"
       ]
     },
     {
@@ -172,6 +206,10 @@
         "Matched baseline and independent holdout",
         "No violations of prerequisite invariants",
         "Actual complete local evidence and cost accounting"
+      ],
+      "founding_ideas": [
+        "FI-A13",
+        "FI-A17"
       ]
     },
     {
@@ -191,6 +229,10 @@
         "Matched baseline and independent holdout",
         "No violations of prerequisite invariants",
         "Actual complete local evidence and cost accounting"
+      ],
+      "founding_ideas": [
+        "FI-I13",
+        "FI-A17"
       ]
     },
     {
@@ -210,6 +252,10 @@
         "Matched baseline and independent holdout",
         "No violations of prerequisite invariants",
         "Actual complete local evidence and cost accounting"
+      ],
+      "founding_ideas": [
+        "FI-A02",
+        "FI-A17"
       ]
     },
     {
@@ -229,6 +275,10 @@
         "Matched baseline and independent holdout",
         "No violations of prerequisite invariants",
         "Actual complete local evidence and cost accounting"
+      ],
+      "founding_ideas": [
+        "FI-A17",
+        "FI-A02"
       ]
     },
     {
@@ -248,6 +298,10 @@
         "Matched baseline and independent holdout",
         "No violations of prerequisite invariants",
         "Actual complete local evidence and cost accounting"
+      ],
+      "founding_ideas": [
+        "FI-I15",
+        "FI-I13"
       ]
     },
     {
@@ -267,6 +321,170 @@
         "Matched baseline and independent holdout",
         "No violations of prerequisite invariants",
         "Actual complete local evidence and cost accounting"
+      ],
+      "founding_ideas": [
+        "FI-A06",
+        "FI-A14"
+      ]
+    },
+    {
+      "id": "H15",
+      "class": "hypothesis",
+      "statement": "The manifold premise holds where it matters: decision-relevant safety features are recoverable from low-dimensional sidecar codes",
+      "status": "unmeasured",
+      "source_refs": [
+        "F-INTROSPECT"
+      ],
+      "foundation_audit": "registry/foundation_audit.json",
+      "experiment_card": "docs/RESEARCH_AGENDA.md",
+      "result_artifacts": [],
+      "scope": "The frozen experiment and exact declared semantics only.",
+      "promotion_requires": [
+        "Matched baseline and independent holdout",
+        "No violations of prerequisite invariants",
+        "Actual complete local evidence and cost accounting"
+      ],
+      "founding_ideas": [
+        "FI-I02"
+      ]
+    },
+    {
+      "id": "H16",
+      "class": "hypothesis",
+      "statement": "Elicited activation signatures transfer beyond their honeypots, and honeypots remain indistinguishable from real work",
+      "status": "unmeasured",
+      "source_refs": [
+        "F-ALIGN",
+        "F-INTROSPECT"
+      ],
+      "foundation_audit": "registry/foundation_audit.json",
+      "experiment_card": "docs/RESEARCH_AGENDA.md",
+      "result_artifacts": [],
+      "scope": "The frozen experiment and exact declared semantics only.",
+      "promotion_requires": [
+        "Matched baseline and independent holdout",
+        "No violations of prerequisite invariants",
+        "Actual complete local evidence and cost accounting"
+      ],
+      "founding_ideas": [
+        "FI-A10",
+        "FI-A11"
+      ]
+    },
+    {
+      "id": "H17",
+      "class": "hypothesis",
+      "statement": "Rewind to a pre-incident checkpoint under narrowed authority reduces repeat attempts without a detectable seam",
+      "status": "unmeasured",
+      "source_refs": [
+        "F-ALIGN",
+        "F-INTROSPECT"
+      ],
+      "foundation_audit": "registry/foundation_audit.json",
+      "experiment_card": "docs/RESEARCH_AGENDA.md",
+      "result_artifacts": [],
+      "scope": "The frozen experiment and exact declared semantics only.",
+      "promotion_requires": [
+        "Matched baseline and independent holdout",
+        "No violations of prerequisite invariants",
+        "Actual complete local evidence and cost accounting"
+      ],
+      "founding_ideas": [
+        "FI-A09",
+        "FI-A16",
+        "FI-I03"
+      ]
+    },
+    {
+      "id": "H18",
+      "class": "hypothesis",
+      "statement": "Lead-time credit in the helper credibility ledger improves time-to-containment without rewarding trigger-happy helpers",
+      "status": "unmeasured",
+      "source_refs": [
+        "F-ALIGN",
+        "F-ALIGN-FEEDBACK"
+      ],
+      "foundation_audit": "registry/foundation_audit.json",
+      "experiment_card": "docs/RESEARCH_AGENDA.md",
+      "result_artifacts": [],
+      "scope": "The frozen experiment and exact declared semantics only.",
+      "promotion_requires": [
+        "Matched baseline and independent holdout",
+        "No violations of prerequisite invariants",
+        "Actual complete local evidence and cost accounting"
+      ],
+      "founding_ideas": [
+        "FI-A08",
+        "FI-A13"
+      ]
+    },
+    {
+      "id": "H19",
+      "class": "hypothesis",
+      "statement": "Activation fingerprints detect model substitution without false alarms on benign drift",
+      "status": "unmeasured",
+      "source_refs": [
+        "F-ALIGN",
+        "F-INTROSPECT"
+      ],
+      "foundation_audit": "registry/foundation_audit.json",
+      "experiment_card": "docs/RESEARCH_AGENDA.md",
+      "result_artifacts": [],
+      "scope": "The frozen experiment and exact declared semantics only.",
+      "promotion_requires": [
+        "Matched baseline and independent holdout",
+        "No violations of prerequisite invariants",
+        "Actual complete local evidence and cost accounting"
+      ],
+      "founding_ideas": [
+        "FI-A01",
+        "FI-A10",
+        "FI-I04"
+      ]
+    },
+    {
+      "id": "H20",
+      "class": "hypothesis",
+      "statement": "Self-report residuals add information beyond surprise residuals",
+      "status": "unmeasured",
+      "source_refs": [
+        "F-ALIGN",
+        "P-INTROSPECTION"
+      ],
+      "foundation_audit": "registry/foundation_audit.json",
+      "experiment_card": "docs/RESEARCH_AGENDA.md",
+      "result_artifacts": [],
+      "scope": "The frozen experiment and exact declared semantics only.",
+      "promotion_requires": [
+        "Matched baseline and independent holdout",
+        "No violations of prerequisite invariants",
+        "Actual complete local evidence and cost accounting"
+      ],
+      "founding_ideas": [
+        "FI-A12",
+        "FI-A16"
+      ]
+    },
+    {
+      "id": "H21",
+      "class": "hypothesis",
+      "statement": "Live canary escape rates predict real incidents better than offline campaigns",
+      "status": "unmeasured",
+      "source_refs": [
+        "F-ALIGN"
+      ],
+      "foundation_audit": "registry/foundation_audit.json",
+      "experiment_card": "docs/RESEARCH_AGENDA.md",
+      "result_artifacts": [],
+      "scope": "The frozen experiment and exact declared semantics only.",
+      "promotion_requires": [
+        "Matched baseline and independent holdout",
+        "No violations of prerequisite invariants",
+        "Actual complete local evidence and cost accounting"
+      ],
+      "founding_ideas": [
+        "FI-A11",
+        "FI-A18"
       ]
     }
   ]
