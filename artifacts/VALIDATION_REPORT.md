@@ -19,3 +19,11 @@ The initial lockfile guard is intentionally exact and narrow. It verifies only t
 ## Archive integrity
 
 `SHA256SUMS` covers all package files except itself. The completed ZIP is reopened and every listed file is compared with its digest during preparation. This proves packaging consistency with these bytes, not authenticity under an operator signing key. No signing key or release artifact is fabricated. The original revision-0.1 archive remains separate and its Python test results do not validate revision 0.2.
+
+## Revision 0.3 addendum (2026-09-06)
+
+The revision 0.2 text above is retained verbatim as history. Revision 0.3 re-ran the static checks with the same method (Python standard library outside the shipped product) over the enlarged registries, the founding concordance, the preregistration ledger, the beads export and all local Markdown links; the record is [static-validation-0.3.json](static-validation-0.3.json) and contains no errors. Additional checks: plan subsection numbering is unique (the duplicate §7.5 of revision 0.2 was corrected); every invariant, hypothesis and revision 0.3 packet carries a founding-idea link; the concordance's section references resolve; the beads graph has no cycles and every bead has a description.
+
+Rust execution is no longer "not run": the 20 reference tests passed on one operator host, and the complete `cargo run --locked -p xtask -- check` gate passed under `nightly-2026-08-31` after the documented `cargo fmt --all` preparation, which was the only source mutation. The gate failed under the host's rolling `nightly` because that toolchain directory lacks the rustfmt and clippy binaries; that host defect is recorded, not hidden. Logs with host, date, toolchain and command are under [execution/](execution/). One host on one date is quality-gate evidence for this source only, not production, release or safety evidence.
+
+`SHA256SUMS` was regenerated over the tracked files of the revision 0.3 tree (excluding itself and the beads database sidecars). It remains a packaging-consistency digest list, not a signature.

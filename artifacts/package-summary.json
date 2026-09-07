@@ -1,13 +1,18 @@
 {
-  "design_version": "0.2",
-  "main_plan_words": 23980,
+  "design_version": "0.3",
+  "main_plan_words": 31764,
   "deep_source_audit_words": 3514,
   "reviewed_foundation_projects": 10,
-  "registered_source_paths": 41,
-  "roadmap_packets": 102,
-  "invariant_obligations": 30,
+  "registered_source_paths": 33,
+  "roadmap_packets": 131,
+  "invariant_obligations": 38,
   "rust_test_functions": 20,
-  "rust_tests_executed": false,
+  "rust_tests_executed": true,
   "external_reference_dependencies": 0,
-  "github_hosted_actions_required": false
+  "github_hosted_actions_required": false,
+  "hypotheses": 21,
+  "rust_tests_execution_note": "20 passed on one operator host 2026-09-06; complete gate PASS under nightly-2026-08-31",
+  "founding_ideas": 38,
+  "bead_epics": 31,
+  "bead_tasks": 135
 }

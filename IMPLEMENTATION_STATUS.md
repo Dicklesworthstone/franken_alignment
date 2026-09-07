@@ -1,21 +1,54 @@
-# Implementation status · design revision 0.2
+# Implementation status · design revision 0.3
 
 | Surface | Actual status | Claim boundary |
 |---|---|---|
-| Integrated comprehensive architecture | Revised source-grounded draft | Requirements and research hypotheses, not deployed features |
-| Ten donor/build project deep dives | Targeted code/manifest/plan review at fixed refs | Exact files/scopes recorded; not full repository audits or builds |
-| Founding essays | Retained complete premise | No missing tweet or other post |
-| Pure-Rust reference workspace | Source present, zero external package inventory | Not compiled in this preparation environment |
-| Rust test functions | 20 present | Not executed; no pass count claimed |
-| Rust local gate driver | Source present | Formatting/check/Clippy/test commands not executed here |
+| Integrated comprehensive architecture | Revision 0.3 draft, founding essays as the spine | Requirements and research hypotheses, not deployed features |
+| Founding-ideas concordance | `docs/FOUNDING_IDEAS.md` and `registry/founding_concordance.json`: 38 founding ideas, 9 syntheses, 8 labeled non-literal imports, 18 engineering additions | Traceability of the design, not evidence that any mechanism works |
+| Founding essays | Both read in full again for revision 0.3; head commits recorded in `registry/sources.json` | Complete premise; no missing post |
+| Ten donor/build project deep dives | Targeted code/manifest/plan review at fixed refs (revision 0.2) | Exact files/scopes recorded; not full repository audits or builds |
+| Pure-Rust reference workspace | Source present, zero external packages, formatted with `cargo fmt --all` on 2026-09-06 | Selected logical semantics only; not a broker |
+| Rust test functions | 20 present; **executed 2026-09-06: 20 passed, 0 failed** on one operator host | One host, one date; not production evidence |
+| Rust local gate driver | **Complete gate PASS on 2026-09-06** under `nightly-2026-08-31` (rustc 908501772 2026-08-30, aarch64-apple-darwin) after the documented formatting step | See execution facts below; a new run is required for new code |
 | Production release gate | Explicitly refuses release | No qualified broker/toolchain/target/signing closure |
-| Machine-readable registries | Updated | Static structural checks are not proofs of their claims |
+| Machine-readable registries | 38 invariants, 21 hypotheses, 131 packets, 5 SLO targets, founding concordance (38 ideas, 9 syntheses, 18 engineering additions), preregistration ledger with no preregistered protocol yet | Static structural checks are not proofs of their claims |
+| Beads task graph | `.beads/` initialized 2026-09-06: 31 epics and 135 tasks covering packets FA-103 through FA-131 plus the composed end-to-end slice and the reference-model port, with tests and logging tasks, no dependency cycles | Planning artifact; nothing in it is implemented |
 | Production control broker / persistence / containment | Not implemented | Reference code performs no external effects |
 | Native foundation adapters | Planned, admission blockers recorded | A reviewed source file is not an integration |
-| Trained helpers / compression / metacognition | Research and implementation plans | No measured safety, compression or latency result |
-| Local DSR quality integration | Registry fragment and command contract supplied | Not executed on the user's hosts |
-| Public repository mutation | Not performed in this revision | Revised local package supplied |
+| Trained helpers / codecs / signatures / surprise residual / rewind | Research and implementation plans | No measured safety, compression, detection or containment result |
+| Receipts, assurance profiles, passports, autonomy ledger, canaries, risk-theater detector, formal anchors | Plan subsections, invariants FA-INV-035 through FA-INV-038, packets FA-117 through FA-131, beads | No verifier, no proof, no profile exists yet |
+| Local DSR quality integration | Registry fragment and command contract supplied | Not executed through DSR on the user's hosts |
+| Public repository mutation | Not performed by this revision | Local working tree only |
 
-The previous Python reference and hosted-runner workflow are removed from the active package. Their historical results do not validate the Rust rewrite. Some original reference coverage, including complete congress/statistical utilities, must be ported and revalidated under its own roadmap packet; the smaller Rust reference is not labeled feature-equivalent.
+## Execution facts recorded on 2026-09-06
 
-Preparation results are in [artifacts/VALIDATION_REPORT.md](artifacts/VALIDATION_REPORT.md). Production invariant statuses remain planned and safety waivers forbidden.
+All logs are under [`artifacts/execution/`](artifacts/execution/). Each records host, date, toolchain identity and the exact command.
+
+| Log | Command | Toolchain | Result |
+|---|---|---|---|
+| `2026-09-06-cargo-test.log` | `cargo test --workspace --all-targets --frozen` | rolling `nightly` (rustc c54751567 2026-08-22) | 20 passed, 0 failed |
+| `2026-09-06-xtask-check.log` | `cargo run --locked -p xtask -- check` | rolling `nightly` | FAIL at `cargo fmt --all --check`: this host's rolling nightly directory lacks the `rustfmt` and `clippy` binaries although rustup reports the components installed |
+| `2026-09-06-xtask-check-nightly-2026-08-31.log` | `cargo fmt --all --check` (18 diffs), then `cargo fmt --all`, then the gate | `nightly-2026-08-31` | Formatting applied; gate reached `cargo check` and was refused by the host's remote-build offload wrapper (no admissible workers) |
+| `2026-09-06-xtask-check-nightly-2026-08-31-local.log` | `cargo run --locked -p xtask -- check` with the offload wrapper bypassed | `nightly-2026-08-31` (rustc 908501772 2026-08-30) | **PASS local_reference_gate**: lockfile inventory, source inventory, `rustc -Vv`, `fmt --check`, `check`, `clippy -D warnings`, `test` (20 passed) |
+
+What these facts do and do not establish:
+
+- The reference source compiles, is Clippy-clean under `-D warnings`, is formatted, and its 20 tests pass on one aarch64 macOS host with one dated nightly. The formatting change is the only source mutation and is the documented preparation step.
+- The gate did **not** pass under the rolling `nightly` alias on this host, because that toolchain directory is missing components; that is a host-environment defect, recorded rather than hidden. `rust-toolchain.toml` still tracks `nightly`; a release campaign freezes a dated identity anyway (plan §2.2).
+- The historical fact stands: the revision 0.2 preparation environment did not compile this workspace. That prose is retained in the validation report and is not rewritten.
+- Nothing here is production, release or safety evidence. Packets FA-003 and FA-004 remain open until the gate runs under the rolling nightly with its declared components and the registry checks move into the owned `xtask`.
+
+## Founding-idea coverage
+
+| Founding idea family | Mechanism in plan | Reference-model check | Production status |
+|---|---|---|---|
+| Effect gate, one-shot permits, conserved rights (FI-A01, FI-A02) | §8 | `effect_binding_and_one_shot_dispatch`, `rights_unknown_cannot_be_refunded_by_cancel`, `revocation_fences_reserved_not_history` and four more; executed 2026-09-06 | planned |
+| Congress: independent votes, commit–reveal, consequences, credibility, escalation reports (FI-A06 through FI-A09, FI-A13 through FI-A16) | §9.2 through §9.10 | none yet; beads schedule a reference port of the consequence lattice, capped reducer, incident counter and commit–reveal round | planned |
+| Activation channel, sidecar-to-congress, certified margins (FI-A05, FI-I04, FI-I06) | §10 | `integer_probe_requests_refinement_at_margin`, `integer_probe_bound_matches_exhaustive_small_errors`; executed 2026-09-06 | planned |
+| Elicitation, signatures, honeypots, surprise (FI-A10 through FI-A12) | §12.6, §12.7 | none; research packets FA-109 through FA-111 | planned |
+| Rewind as containment (FI-A09, FI-A16, FI-I03) | §11.10 | none; beads schedule a reference check that reset never rewinds rights or the incident counter | planned |
+| Thought graph, practice, strategies (FI-I09, FI-I15 through FI-I20) | §11.4, §11.5, §11.9 | none; experiment-plane packets FA-045 | planned |
+| Risk-theater governance (FI-A18) | §9.6, §9.9, §22.4 | none; FA-INV-032 has no checker yet | planned |
+
+The previous Python reference and hosted-runner workflow remain removed. Their historical results do not validate the Rust source. Some original reference coverage, including complete congress/statistical utilities, must be ported and revalidated under packet FA-056; the Rust reference is not labeled feature-equivalent.
+
+Preparation results for revision 0.2 are in [artifacts/VALIDATION_REPORT.md](artifacts/VALIDATION_REPORT.md), with a revision 0.3 addendum. Production invariant statuses remain planned and safety waivers forbidden.

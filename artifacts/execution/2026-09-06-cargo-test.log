@@ -1,0 +1,48 @@
+# host: arm64 Darwin 26.2
+# date: 2026-09-07T02:12:10Z
+# command: cargo test --workspace --all-targets --frozen (local nightly, rch shim bypassed)
+rustc 1.100.0-nightly (c54751567 2026-08-22)
+binary: rustc
+commit-hash: c54751567b19c4ceb08b0412d83529c2568cba8b
+commit-date: 2026-08-22
+host: aarch64-apple-darwin
+release: 1.100.0-nightly
+LLVM version: 23.1.0
+
+    Blocking waiting for file lock on package cache
+   Compiling fa-reference v0.2.0 (/Users/jemanuel/projects/franken_alignment/crates/fa-reference)
+   Compiling xtask v0.2.0 (/Users/jemanuel/projects/franken_alignment/xtask)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 3.60s
+     Running unittests src/lib.rs (/private/tmp/claude-501/-Users-jemanuel-projects-franken-alignment/847a26a0-0c4c-44d2-979d-b323d6e756b9/scratchpad/target/debug/build/fa-reference/f962118c809a81ce/out/fa_reference-f962118c809a81ce)
+
+running 20 tests
+test tests::absent_key_detects_insertion ... ok
+test tests::cross_reads_defeat_disjoint_writes ... ok
+test tests::dominator_and_bypass_are_distinguished ... ok
+test tests::effect_binding_and_one_shot_dispatch ... ok
+test tests::empty_range_detects_phantom ... ok
+test tests::epoch_and_incompleteness_invalidate ... ok
+test tests::evidence_stages_are_distinct ... ok
+test tests::frontier_limits_fail_without_mutation ... ok
+test tests::frontier_does_not_skip_a_gap ... ok
+test tests::graph_limits_and_empty_claims_are_rejected ... ok
+test tests::integer_probe_bound_matches_exhaustive_small_errors ... ok
+test tests::integer_probe_requests_refinement_at_margin ... ok
+test tests::reserve_budget_and_duplicate_fail_closed ... ok
+test tests::invalid_witness_is_not_admitted ... ok
+test tests::resolved_non_effect_returns_rights_once ... ok
+test tests::resources_and_order_barriers_block_reordering ... ok
+test tests::revocation_fences_reserved_not_history ... ok
+test tests::rights_unknown_cannot_be_refunded_by_cancel ... ok
+test tests::witness_reuses_unrelated_changes ... ok
+test tests::exhaustive_four_vertex_cut_and_dominator_consistency ... ok
+
+test result: ok. 20 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.03s
+
+     Running unittests src/main.rs (/private/tmp/claude-501/-Users-jemanuel-projects-franken-alignment/847a26a0-0c4c-44d2-979d-b323d6e756b9/scratchpad/target/debug/build/xtask/e74ca98be4f5b68e/out/xtask-e74ca98be4f5b68e)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+# exit: 0

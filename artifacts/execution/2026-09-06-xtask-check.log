@@ -1,0 +1,21 @@
+# host: arm64 Darwin
+# date: 2026-09-07T02:12:15Z
+# command: cargo run --locked -p xtask -- check (local nightly, rch shim bypassed)
+   Compiling xtask v0.2.0 (/Users/jemanuel/projects/franken_alignment/xtask)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.84s
+     Running `/private/tmp/claude-501/-Users-jemanuel-projects-franken-alignment/847a26a0-0c4c-44d2-979d-b323d6e756b9/scratchpad/target/debug/xtask check`
+PASS reference_lock: exactly fa-reference and xtask; no external packages
+PASS source_inventory: required files and crate-level prohibitions present
+EXECUTE rustc -Vv
+rustc 1.100.0-nightly (c54751567 2026-08-22)
+binary: rustc
+commit-hash: c54751567b19c4ceb08b0412d83529c2568cba8b
+commit-date: 2026-08-22
+host: aarch64-apple-darwin
+release: 1.100.0-nightly
+LLVM version: 23.1.0
+PASS executed_command: rustc -Vv
+EXECUTE cargo fmt --all --check
+error: the 'cargo-fmt' binary, normally provided by the 'rustfmt' component, is not applicable to the 'nightly-aarch64-apple-darwin' toolchain
+FAIL: cargo fmt --all --check failed: exit status: 1
+# exit: 1

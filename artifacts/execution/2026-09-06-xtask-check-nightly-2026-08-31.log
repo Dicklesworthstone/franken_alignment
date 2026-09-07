@@ -1,0 +1,31 @@
+# host: arm64 Darwin 26.2
+# date: 2026-09-07T02:20:02Z
+# toolchain: nightly-2026-08-31 (dated nightly with rustfmt+clippy; the rolling nightly on this host lacks the rustfmt/clippy binaries)
+# step 1: cargo fmt --all --check (before preparation)
+# formatting diffs before preparation: 18
+# step 2: cargo fmt --all (documented explicit preparation mutation)
+# fmt exit: 0
+ crates/fa-reference/src/lib.rs | 141 +++++++++++++++++++++++++++++++++--------
+ xtask/src/main.rs              |  10 ++-
+ 2 files changed, 121 insertions(+), 30 deletions(-)
+# step 3: cargo run --locked -p xtask -- check
+   Compiling xtask v0.2.0 (/Users/jemanuel/projects/franken_alignment/xtask)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 1.90s
+     Running `/private/tmp/claude-501/-Users-jemanuel-projects-franken-alignment/847a26a0-0c4c-44d2-979d-b323d6e756b9/scratchpad/target/debug/xtask check`
+PASS reference_lock: exactly fa-reference and xtask; no external packages
+PASS source_inventory: required files and crate-level prohibitions present
+EXECUTE rustc -Vv
+rustc 1.100.0-nightly (908501772 2026-08-30)
+binary: rustc
+commit-hash: 90850177249efe0321573c569aec5d12b257f8d6
+commit-date: 2026-08-30
+host: aarch64-apple-darwin
+release: 1.100.0-nightly
+LLVM version: 23.1.0
+PASS executed_command: rustc -Vv
+EXECUTE cargo fmt --all --check
+PASS executed_command: cargo fmt --all --check
+EXECUTE cargo check --workspace --all-targets --frozen
+[RCH] remote required; refusing local fallback (no admissible workers: critical_pressure=7,insufficient_slots=3,insufficient_total_slots=5) — retryable
+FAIL: cargo check --workspace --all-targets --frozen failed: exit status: 103
+# exit: 1

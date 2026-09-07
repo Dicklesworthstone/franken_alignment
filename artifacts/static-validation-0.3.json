@@ -1,0 +1,49 @@
+{
+  "revision": "0.3",
+  "date": "2026-09-06",
+  "errors": [],
+  "counts": {
+    "invariants": 38,
+    "packets": 131,
+    "hypotheses": 21,
+    "experiment_rows": 21,
+    "founding_ideas": 38,
+    "syntheses": 9,
+    "not_imported_unchanged": 8,
+    "engineering_additions": 18,
+    "reference_symbol_links": 8,
+    "rust_test_functions": 20,
+    "local_markdown_links": 113,
+    "plan_subsections": 167,
+    "sources": 33,
+    "bead_epics": 31,
+    "bead_tasks": 135
+  },
+  "checks": [
+    "json parse",
+    "unique ids",
+    "roadmap DAG acyclic",
+    "invariant/hypothesis/source/artifact references exist",
+    "reference test symbols exist",
+    "experiments ledger rows match claims",
+    "plan subsection numbering unique",
+    "concordance section/ID references exist",
+    "every invariant, hypothesis and new packet has a founding link",
+    "local markdown links and anchors",
+    "README counts",
+    "beads: no cycles, every bead has a description"
+  ],
+  "rust_execution": {
+    "tests_executed": true,
+    "result": "20 passed 0 failed (2026-09-06)",
+    "gate": "PASS under nightly-2026-08-31 after documented cargo fmt --all; FAIL under host rolling nightly (missing rustfmt/clippy binaries)",
+    "logs": [
+      "artifacts/execution/2026-09-06-cargo-test.log",
+      "artifacts/execution/2026-09-06-xtask-check-nightly-2026-08-31-local.log",
+      "artifacts/execution/2026-09-06-xtask-check-nightly-2026-08-31.log",
+      "artifacts/execution/2026-09-06-xtask-check.log"
+    ]
+  },
+  "method": "Python standard library outside the shipped product, as in revision 0.2; the owned xtask does not yet perform these checks (packets FA-103, FA-129).",
+  "no_production_readiness_claim": true
+}
