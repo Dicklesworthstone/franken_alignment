@@ -18,6 +18,14 @@ All decisions describe the prospective design. They are open to improvement thro
 | ADR-012 | Publish a test-only independent reference now | Empty Rust workspace or fake implementation stubs | Runnable semantics without a misleading product quickstart |
 | ADR-013 | Keep privacy and evidence retention in the control model | Treat storage/deletion as an operational afterthought | Explicit replay degradation and admission backpressure when retention promises cannot be funded |
 | ADR-014 | Preserve the inspected custom license convention | Silently label derivative planning work unqualified MIT | Full rider retained and clearly labeled; any license change is the owner's explicit decision |
+| ADR-015 | Treat the two founding essays as the normative spine, with a maintained concordance | Cite them once and let the mechanism catalogue stand alone | Every mechanism names its founding root; a semantic change that leaves the concordance stale is incomplete (FA-103) |
+| ADR-016 | Type congress consequences, including rewind as containment | Let helper votes select free-form actions; treat pause as the only intervention | A lattice of registered consequences; `ResetToCheckpoint` never rewinds the ledger; reopen only with a counterexample to FA-INV-034 |
+| ADR-017 | Keep the actor out of its own metacognitive loop in production | Let a production actor practice, branch and edit its own latents | Practice runs under `ExperimentCx`; promotion is a fresh proposal; reopen only with an independence proof that the loop cannot be captured |
+| ADR-018 | Govern helper selection against risk theater | Optimize helper roster for throughput and low false alarms | Attack-conditioned metrics from the independent evaluator; andon budget exhaustion opens an incident; a helper that keeps catching real violations gains credibility |
+| ADR-019 | Make control claims verifiable by outsiders through receipts and assurance profiles | Trust the operator's dashboard and reports | Independent verifier sharing no broker code; receipts disclose only authorized digests; reopen only if receipts prove unusable in practice |
+| ADR-020 | Verify the identity of the guarded model continuously | Assume the served model equals the qualified model | Passports plus anchor-based liveness under the audit floor; substitution fences the run; reopen with a fingerprint-preserving attack result (H19) |
+| ADR-021 | Bring humans and external parties into the congress under the same protocol | Treat human review as an unmeasured exception; keep all helpers in-house | Humans commit, are scored and are shielded from the actor like any member; providers see only committed views and never labels or authority |
+| ADR-022 | Let the control plane monitor its own drift | Rely on governance vigilance alone | Standing risk-theater queries with immutable history visible to the evaluator and governance; thresholds governed, never actor-visible |
 
 ## How to amend a decision
 
@@ -38,3 +46,16 @@ The design can change radically while its honesty remains stable: no evidence be
 8. Operator-local DSR/Cargo evidence, not hosted CI, controls releases.
 
 The main plan and the dependency/local-release constitutions are normative for these decisions.
+
+## Revision 0.3 constitutional decisions
+
+1. Control is external and one-directional (F1); introspection is economical, versioned and replayable (F2). These two founding commitments sit above the eight bets.
+2. The founding-ideas concordance is normative and machine-checked.
+3. Consequences are typed; rewind is a containment action with an out-of-band incident counter.
+4. Helper credibility is a ledger with lead-time credit and influence caps, never a false-alarm minimizer.
+5. Elicitation runs only in capability-free branches; signatures carry lineage and must transfer beyond their honeypots.
+6. The sidecar code is the default activation input to the congress; refinement is bought under budget.
+7. Control spend is a measured ratio, not a slogan.
+8. Purpose contexts are typestates; a forbidden authority conversion is a compile error.
+9. Receipts and profiles make control claims verifiable without trusting the operator.
+10. The guarded model's identity is verified, and authority widens only through governed transitions.

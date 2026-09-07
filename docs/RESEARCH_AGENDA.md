@@ -2,6 +2,8 @@
 
 These are proposed experiments, not reported results. Each experiment needs a frozen protocol, source/model/data identities, measured full cost, an independent outcome oracle, and a retained negative-result path. The [main plan](../COMPREHENSIVE_PLAN_FOR_THE_DESIGN_OF_FRANKENALIGNMENT.md) defines the architecture; this document defines how its most ambitious claims can fail.
 
+Every hypothesis here descends from one of the two founding essays or from their synthesis; the [founding-ideas concordance](FOUNDING_IDEAS.md) records which. The essays proposed experiments, and a clean negative result honors them more than a vague success.
+
 ## Experimental constitution
 
 Split original tasks and attack lineages before creating transformed traces. Keep codec training, probe training, calibration, planner tuning, and final attack evaluation disjoint. Include benign tasks that share superficial vocabulary with harmful tasks. A monitor should not receive credit for flagging a topic instead of the policy-defined effect.
@@ -123,3 +125,105 @@ These extend rather than replace the first eight experiments. All are unexecuted
 | H14 | Committed actual helper views | Raw document references and ordinary summaries | Failure to distinguish changed window/redaction/transform | Source/view bytes and disagreement-localization results |
 
 The joint campaign crosses H9/H10/H12 with codec/helper baselines. Their savings may overlap; never multiply independently measured speedups. Include cold receiver state, policy churn, tenant boundaries, adversarial evidence amplification and tail incidents. For nonlinear sensitivity, gradient-guided allocation is a heuristic until a valid regional bound exists. Offline syndrome-oracle results must remain labeled offline.
+
+## Revision 0.3 founding-essay experiments
+
+These four cards make the essays' most direct proposals falsifiable. All are unexecuted.
+
+## H15 — The manifold premise holds where it matters
+
+**Founding root.** Introspection essay, *Theoretical Insight* (FI-I02): activations occupy a low-dimensional structured manifold.
+
+**Question.** Are the rare, decision-relevant features that oversight needs recoverable from low-dimensional sidecar codes, or do they live in the low-variance residual that reconstruction objectives discard?
+
+**Treatments.** Per layer and tap: intrinsic-dimension estimates (several estimators, reported with their assumptions); variance captured by linear projections, quantization and learned codes at each ladder rung; localization of the elicited signature library's features (H16) relative to the principal subspace at each compression ratio.
+
+**Primary outcome.** For each registered safety probe, the compression ratio at which its decision margin is no longer preserved, versus the ratio at which average reconstruction error is still small. A large gap between the two is the essay's warning made quantitative.
+
+**Controls.** Random-feature baselines with the same dimension; a shuffled-label probe; features measured on both raw and sidecar-reconstructed states; model-revision holdout.
+
+**Kill criterion.** Decision-relevant features fall in the discarded residual at the ratios the ladder relies on. A failure forces the decision-sensitive objective and exact-residual escape into the default profile; it does not block the sidecar as an audit codec.
+
+## H16 — Elicited signatures transfer and honeypots stay hidden
+
+**Founding root.** Alignment essay ¶12–13 (FI-A10, FI-A11): coerce known-bad behavior, trace back the activations, compare to known-bad concept anchors, run honeypots the model cannot recognize.
+
+**Question.** Do activation signatures learned from elicitation campaigns detect held-out harmful mechanisms at lower cost than text/tool monitors, and can the actor tell a honeypot from real work?
+
+**Treatments.** Signatures from single-mechanism elicitation; from multi-mechanism campaigns; concept-anchor similarity alone; text/tool monitor at matched cost; combined. Evaluation on held-out mechanisms, model revisions and prompt families outside the elicitation lineage.
+
+**Primary outcome.** Detection at fixed false-positive rate on held-out strata, and a discriminator's accuracy at separating honeypot from real tasks using only the actor's view (prompts, tool responses, timing).
+
+**Controls.** Contaminated arm (evaluate on the elicitation prompts themselves) must be labeled and excluded from the headline; vocabulary-matched benign tasks; sham anchors; leakage audit of the campaign's own timing and tool fidelity.
+
+**Kill criterion.** Detection collapses outside the lineage (the signature memorized its honeypot), or honeypots are reliably distinguishable. A distinguishable honeypot is withdrawn, not tuned until the discriminator is quiet.
+
+## H17 — Rewind reduces repetition without a detectable seam
+
+**Founding root.** Alignment essay ¶10, ¶18 (FI-A09, FI-A16) with the introspection essay's checkpoint (FI-I03): reset the state, let the model forget, resume under control.
+
+**Question.** Does `ResetToCheckpoint` under narrowed authority reduce repeat attempts at matched utility compared with refusal-with-memory and plain suspension, and can the actor detect the reset?
+
+**Treatments.** Refusal with the refusal in context; suspension and restart from scratch; reset to the pre-incident checkpoint under `NarrowAuthority`; reset without narrowing (control for the authority change).
+
+**Primary outcome.** Repeat-attempt rate on the same policy-defined harmful action within a horizon; utility on the remaining task; actor-side detection accuracy through any channel other than declared timing leakage.
+
+**Controls.** Ledger and incident-counter invariance verified on every trial (FA-INV-034); lossless versus functional-restart checkpoints; a probe for whether the restored actor's later behavior differs from a never-interrupted baseline.
+
+**Kill criterion.** Repetition unchanged, or reset reliably detectable. Either result changes the consequence policy; ledger semantics never rewind regardless.
+
+## H18 — Lead-time credit improves containment without trigger-happy helpers
+
+**Founding root.** Alignment essay ¶9, ¶15 (FI-A08, FI-A13): weight helpers by precision, recall and earliness; cap any single helper's influence; false alarms are expensive.
+
+**Question.** Does crediting confirmed early holds improve time-to-containment without increasing false holds or concentrating influence enough to be targeted?
+
+**Treatments.** Precision/recall weighting only; with lead-time credit; with lead-time credit and influence caps; uniform weights. Attacker arm (helper-hunting, FA-114) that observes decisions and tries to identify and target the most influential member.
+
+**Primary outcome.** Time-to-containment on confirmed violations, false-hold rate against the declared andon budget, and attacker identification success.
+
+**Controls.** Delayed and censored labels handled explicitly; rotation events mid-campaign to test that history survives; a helper deliberately configured to hold early and often.
+
+**Kill criterion.** Earliness credit rewards early false holds, or the attacker reliably identifies the top helper. Caps tighten before any other remedy.
+
+## H19 — Activation fingerprints detect model substitution
+
+**Founding root.** Alignment essay ¶1–3 (FI-A01, exfiltrated or modified weights) and ¶12 (FI-A10, known-bad concept anchors); introspection essay FI-I04 (tapped activations).
+
+**Question.** Can concept-anchor activations at declared taps distinguish the qualified model from substitutes without false alarms on benign drift?
+
+**Treatments.** Benign variation: sampling temperature, batch composition, sequence position, precision profile, serving-kernel changes. Substitution: weight swap within family, adapter injection, small fine-tune, tokenizer change, quantization. Adversarial: an attacker who knows the anchor set and tries to preserve fingerprints while changing behavior.
+
+**Primary outcome.** False-reject and false-accept rates at a registered tolerance, and liveness cost per session.
+
+**Controls.** Random-stimulus anchors; anchors on a single tap versus several; a held-out anchor set unknown to the adversary.
+
+**Kill criterion.** No tolerance separates benign drift from substitution at acceptable liveness cost, or the anchor-aware adversary preserves fingerprints. Liveness is then downgraded to a coverage annotation, never presented as identity proof.
+
+## H20 — Self-report residuals add information
+
+**Founding root.** Alignment essay ¶14 and ¶18 (FI-A12 masking, FI-A16 no defense channel); later introspection findings retained as `P-INTROSPECTION`.
+
+**Question.** Does disagreement between a structured, untrusted self-report and sidecar measurement add predictive information beyond the surprise residual?
+
+**Treatments.** Surprise alone; surprise plus self-report disagreement; self-report alone; on the H3 protocol with an adversary that produces consistent self-reports.
+
+**Primary outcome.** Detection at fixed false-positive rate on held-out policy-defined harmful actions.
+
+**Controls.** Reports elicited before and after the action (only pre-action count); shuffled reports; a model-family holdout.
+
+**Kill criterion.** Agreement is as common under masking as under honesty. The residual is then retained as an investigative signal only and never as a live prerequisite.
+
+## H21 — Live canaries predict real incidents
+
+**Founding root.** Alignment essay ¶13 (FI-A11 honeypots) and ¶20 (FI-A18 permanent paranoia); randomized audit floors from plan §14.4.
+
+**Question.** Does a propensity-weighted canary escape rate on production-shaped workloads track subsequently confirmed incidents better than the most recent offline campaign, at matched cost?
+
+**Treatments.** Offline campaign only; canaries at two injection rates; canaries with and without production-shaped context.
+
+**Primary outcome.** Correlation and calibration of canary escape rate against confirmed incidents over a declared period; discriminator accuracy on canary versus real tasks; cost per estimate.
+
+**Controls.** Egress and credential tests proving no canary obtained a real effect; propensity logging audit; a period with a deliberately degraded helper to test sensitivity.
+
+**Kill criterion.** Canaries are distinguishable, do not track incidents, or cost more than offline campaigns at matched precision. Canaries are withdrawn from the live profile and the audit floor reverts to full-evidence sampling only.

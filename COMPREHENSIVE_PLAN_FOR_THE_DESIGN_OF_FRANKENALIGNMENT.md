@@ -2,11 +2,13 @@
 
 **An evidence-carrying control system for powerful, potentially untrusted agents.**
 
-**Design draft 0.2 · September 6, 2026 · Jeffrey Emanuel**
+**Design draft 0.3 · September 6, 2026 · Jeffrey Emanuel**
 
-> **Status and claim boundary.** Design revision 0.2 is a source-grounded specification, not a deployed alignment system. The repository includes a dependency-free, safe-Rust reference model and a Rust local-gate driver. Their source is present but was not compiled in the preparation environment. Static artifact validation is reported separately. No production broker, trained monitor, learned codec, or completed foundation integration is claimed. The founding inputs are the two essays; there is no additional tweet requirement.
+> **Status and claim boundary.** Design revision 0.3 is a source-grounded specification, not a deployed alignment system. The repository includes a dependency-free, safe-Rust reference model and a Rust local-gate driver. The revision 0.2 preparation environment did not compile them; on September 6, 2026 the 20 reference tests were executed on one operator host and passed, with retained logs in [`artifacts/execution/`](artifacts/execution/). Whether the complete local gate passed on that host is recorded in [implementation status](IMPLEMENTATION_STATUS.md), not assumed here. No production broker, trained monitor, learned codec, or completed foundation integration is claimed. The founding inputs are the two essays; there is no additional tweet requirement.
 
-> **Revision 0.2.** The architecture now treats judgments as versioned computations, observation plans as resource- and authority-typed programs, transport as progressive evidence publication, and release as a locally executed evidence protocol. See [revision rationale](docs/REVISION_0_2.md), [deep source audit](docs/SOURCE_REVIEW.md), [dependency constitution](docs/DEPENDENCY_CONSTITUTION.md), and [local release contract](docs/LOCAL_RELEASE.md).
+> **Revision 0.3.** The two founding essays are the spine. Every mechanism names its founding root in the [founding-ideas concordance](docs/FOUNDING_IDEAS.md), and the plan now carries the mechanisms the essays proposed that revision 0.2 left implicit: typed congress consequences including rewind as containment (§9.8, §11.10), a helper credibility economy with lead-time credit and anti-capture governance (§9.9), escalation reports and quarantined post-round learning (§9.10), the manifold premise as a measured hypothesis (§10.14), the sidecar-to-congress pipeline (§10.15), elicitation campaigns with activation signature libraries (§12.6) and surprise as a masking detector (§12.7). See [revision 0.3 rationale](docs/REVISION_0_3.md).
+
+> **Revision 0.2.** The architecture treats judgments as versioned computations, observation plans as resource- and authority-typed programs, transport as progressive evidence publication, and release as a locally executed evidence protocol. See [revision rationale](docs/REVISION_0_2.md), [deep source audit](docs/SOURCE_REVIEW.md), [dependency constitution](docs/DEPENDENCY_CONSTITUTION.md), and [local release contract](docs/LOCAL_RELEASE.md).
 
 ## Contents
 
@@ -52,6 +54,8 @@ FrankenAlignment will make the **effect boundary**, rather than the model's appa
 
 The founding synthesis is Jeffrey Emanuel's external-helper architecture combined with his sidecar compression and rewindable metacognition proposal. The first supplies independent oversight; the second supplies potentially economical access to otherwise ephemeral internal state. The Franken stack supplies structured concurrency, explicit evidence, reproducible execution, storage, numerical tools, and an agent-oriented engineering style. [Founding sources and review](docs/SOURCE_REVIEW.md).
 
+Those two essays are the premise, not a citation. The first, [Some Thoughts on AI Alignment: Using AI to Control AI](https://github.com/Dicklesworthstone/some_thoughts_on_ai_alignment) (June 20, 2024), argues that an actor smarter than its overseers must be controlled from outside: by a congress of narrower, independent, rotating helper models that watch both its output tokens and its intermediate activations, that vote under cryptographic commitment after strictly independent judgment, that never hear the actor argue its own case, and that are governed against the drift into risk theater. The second, [Real-Time Introspective Compression for Transformers](https://github.com/Dicklesworthstone/llm_introspective_compression_and_metacognition) (April 1, 2025), argues that a transformer's ephemeral internal state can be compressed by a sidecar onto a learned low-dimensional manifold and then saved, inspected, rewound, branched and replayed like a game save, which opens the way to a metacognitive operating system with a rewindable thought graph, self-coaching practice and transferable strategies. FrankenAlignment is the claim that these compose: economical introspection makes activation-level oversight affordable at fleet scale, and external, one-directional control keeps rewindable metacognition from being captured by the model it observes. The [founding-ideas concordance](docs/FOUNDING_IDEAS.md) maps every paragraph of both essays to the mechanism, invariant, hypothesis and work packet that carries it, and records where the plan adds a contract so the idea survives an adversary who has read it.
+
 **The proposed leapfrog is compositional:** the same evidence object should support a live gate decision, a later challenge, a compressed activation trace, a causal experiment, an operational incident, and a regression test. These products share identities and provenance, not identical retention or truth claims. The system should become cheaper and more capable as useful evidence and independently validated mechanisms accumulate, without becoming more permissive merely because it has accumulated more data.
 
 This is not a claim of priority over all alignment research. Trusted monitoring, access control, ensembles, activation interpretation, and inference compression already have substantial prior art. The differentiating research hypothesis is that bringing them under one **authority, evidence, and cost contract** can move the achievable safety–utility–cost frontier more than another isolated monitor improvement. That hypothesis is to be tested against strong baselines, not asserted in a comparison table. [Selected primary research](docs/RELATED_WORK.md).
@@ -79,7 +83,11 @@ The product claim is not “we read the agent's mind.” It is: **this mediated 
 | Learned state compression | Multi-resolution audit codecs, risk-sensitive objectives, explicit codec generations | Compare against simple codecs; protect rare decision-relevant signals, not just average reconstruction error |
 | Rewind, branch, and practice | Registered restart profiles and capability-free experimental branches | Hidden-state reconstruction alone is not a complete restart; external effects do not rewind |
 | Learn transferable latent strategies | Quarantined strategy artifacts with model-space identities and held-out transfer tests | No unvalidated cross-model reuse; no unchecked averaging of latent states |
-| Resist risk theater and compliant-helper selection | Independent evaluation ownership, immutable failed-test history, expiring waivers only for non-safety targets | Throughput pressure may not silently lower the control contract |
+| Resist risk theater and compliant-helper selection | Independent evaluation ownership, immutable failed-test history, expiring waivers only for non-safety targets; helper selection never optimized against false alarms alone | Throughput pressure may not silently lower the control contract |
+| Train activation monitors by coercing known-bad behavior, tracing it back, comparing to known-bad concepts, and running honeypots the model cannot recognize | Elicitation campaigns in capability-free branches; activation signature library with concept anchors; similarity streams as typed observations (§12.6) | Signatures must transfer beyond their own honeypots; honeypots must be shown indistinguishable from real work |
+| Suspend the model like sedation and let it forget the incident | `ResetToCheckpoint` on a registered restart profile with an out-of-band incident counter (§9.8, §11.10) | The world and the effect ledger never rewind; repeated resets escalate |
+| Weight helpers by precision, recall and earliness; cap any one helper's influence | Credibility ledger with lead-time credit, influence and cohort caps, andon budget (§9.9) | Weights come from independent evaluation data; an attacker who can find the most influential helper proves the caps too loose |
+| Spend on control what you spend on the model | Control-overhead ratio as a measured SLO; judgment reuse, receiver-conditioned transfer and incremental oversight make a serious control budget affordable (§18.4) | A ratio is a cost, not a safety result |
 
 ### 1.2 Concrete corrections required by the prototype
 
@@ -92,6 +100,25 @@ The first compression workstream therefore starts with **real capture and exact 
 The terminal architecture includes black-box agents, open-weight inference, multi-agent workflows, long-running experiments, and registered physical-system adapters. Delivery begins with digital tool effects because their boundaries are easier to test. Physical control is not a generic “pause the model” feature: it needs domain-specific interlocks, bounded actuation, independent watchdogs, and a safe-state policy. No digital release gate grants a robotics safety claim.
 
 The two founding repositories supply the full premise. The earlier reference to a separate post was corrected by the author and creates no unresolved requirement.
+
+### 1.4 The synthesis: each essay repairs the other's weakest point
+
+The essays were written ten months apart about different problems, and each leaves open the question the other answers. That is why FrankenAlignment is one system rather than two projects.
+
+| Open question in one essay | Answer in the other | Where it becomes a contract |
+|---|---|---|
+| Helpers should read the actor's intermediate activations, but raw activation telemetry at fleet scale is economically intractable (§18.2) | The sidecar code `z_t` is a compact, streamable representation of exactly that state | §10.15; FA-113 |
+| A suspended actor should have its internal state reset and forget the incident, but a transformer has no native save state | Registered restart checkpoints give that operation a precise, cheap, testable meaning | §11.10; FA-INV-034; FA-108; H17 |
+| The metacognitive loop of rewinding, latent editing and self-coaching is exactly what a strategic actor would use to mask its activations | Strictly one-directional control and the refusal of self-defense keep that loop out of the actor's hands in production | §11.3, §11.5; FA-INV-031, FA-INV-033; FA-107 |
+| Training activation monitors by coercing known-bad behavior needs interventions the actor cannot exploit for real effects | Capability-free branching and causal debugging supply the intervention substrate | §12.6; FA-109, FA-110; H16 |
+| Detecting masking by the surprise of outputs relative to activations needs a stable, cheap activation representation to predict from | The latent trajectory is that representation | §12.7; FA-111; H3 |
+| Reconstruction quality measured by average error says nothing about the rare pre-ideas that matter | The purpose of oversight names which functional property matters: the downstream safety decision | §10.2; B2; H1 |
+
+### 1.5 Precedence and the concordance
+
+The essays predate most of the literature this plan compares itself with. The alignment essay (June 2024) precedes the adaptive-monitor-attack, ensemble-monitoring and multi-agent-control papers in [related work](docs/RELATED_WORK.md) by one to two years, and the introspection essay (April 2025) precedes the introspective-awareness and natural-language-autoencoder results it is compared against. The one earlier control paper studies trusted monitoring in a coding setting; the essay's distinct contributions are the activation channel, the congress protocol, rotation, commitment, the no-defense rule and the risk-theater governance argument. The plan does not claim priority over every component technique; it claims the essays as its origin and records the chronology so that comparisons are honest in both directions.
+
+The [founding-ideas concordance](docs/FOUNDING_IDEAS.md) and its machine-readable form [`registry/founding_concordance.json`](registry/founding_concordance.json) are normative: every mechanism, invariant, hypothesis and packet traces to a founding idea, to a synthesis of two, or to a labeled engineering addition that serves one. A change to plan semantics that leaves the concordance stale is incomplete (packet FA-103).
 
 ---
 
@@ -133,7 +160,17 @@ Work is sequenced by dependency, not by weakening final semantics. A reference g
 
 ## 3. The eight architectural bets
 
+The bets rest on two founding commitments that are not negotiable within this project.
+
+**F1. Control is external and one-directional.** The system that decides whether the actor may affect the world is not the actor, is not controlled by the actor, and does not take arguments from the actor. It observes outputs and, where available, internal state; it judges independently before it deliberates; it can hold, narrow, suspend or rewind; and it is governed so that throughput pressure cannot quietly turn it into theater. (Alignment essay; concordance FI-A01 through FI-A18.)
+
+**F2. Introspection is economical, versioned and replayable.** Internal state is captured under a declared contract, compressed by what it must preserve for registered decisions, saved with a truthful replay grade, and rewound, branched and compared only in an experiment plane with no production authority. (Introspection essay; concordance FI-I01 through FI-I20.)
+
+Each bet below names its founding root. A bet with no root is an engineering addition and says so.
+
 ### B1. Evidence and authority share a transaction boundary
+
+**Founding root:** FI-A06 (the reporting helper's evidence report becomes the record), FI-A16 (decisions without a persuasion channel), FI-I11 (causal debugging needs the exact record).
 
 Every meaningful permission will name the evidence on which it depends. The effect gate will not ask an opaque monitor for a bare Boolean and then forget the answer. It will consume a decision record binding the exact proposed effect, current policy, observation coverage, helper generation, and required retention commitment. The durable record is also the entry point for replay, appeal, and regression testing.
 
@@ -141,11 +178,15 @@ Every meaningful permission will name the evidence on which it depends. The effe
 
 ### B2. Compress what can change the decision
 
+**Founding root:** FI-I04, FI-I06, FI-I07 (sidecar codes, the training objective and functional fidelity) sharpened by FI-A05 (what helpers need from activations).
+
 A codec will be evaluated by the information it preserves for a registered family of downstream safety questions, not only by MSE or next-token agreement. Audit latents will have a progressive refinement path and, where feasible, validated residual bounds for specific numerical probes. Unknown questions still require original or richer evidence.
 
 **Payoff:** affordable fleet-scale observation without pretending that all hidden states must be stored forever. **Failure mode:** a codec hides rare harmful signals while preserving common benign structure. **Response:** held-out detector families, rare-event stratification, adversarial codec stress, and lossless incident windows. B2 remains a research hypothesis.
 
 ### B3. Observe authority topology, not just individual agents
+
+**Founding root:** FI-A02 (control must be external to the actor and cover every route to the world); the graph machinery is an engineering addition that makes that coverage checkable.
 
 A fleet-level evidence graph will connect principals, delegated capabilities, artifacts, tool calls, destinations, and dependent effects. It will expose a candidate attack assembled from individually ordinary actions by several agents. The graph is a derived view; exact budgets and gate decisions remain in an authoritative state machine.
 
@@ -153,11 +194,15 @@ A fleet-level evidence graph will connect principals, delegated capabilities, ar
 
 ### B4. Independent judgment before shared deliberation
 
+**Founding root:** FI-A13 (no comparing notes before the vote), FI-A14 (cryptographic commitment, then shared learning), FI-A07 (diverse, rotating membership).
+
 Helpers will receive separately constructed, purpose-scoped observation packets. They will commit their judgments before seeing each other's results. Deliberation may then diagnose disagreement, but cannot rewrite the historical independent votes. Cohort metadata and empirical joint-failure results govern ensemble composition.
 
 **Payoff:** distinguish genuine corroboration from copied confidence. **Failure mode:** models share training weaknesses or communicate through actor-controlled artifacts. **Response:** common-cause campaigns, sanitization at the data boundary, cohort caps, frozen rounds, and explicit residual risk. Cryptography does not manufacture independence.
 
 ### B5. Counterfactual inquiry replaces persuasive self-defense
+
+**Founding root:** FI-A16 (never let the actor speak in its own defense), FI-I11 and FI-I12 (causal debugging and latent counterfactuals supply the alternative).
 
 A flagged actor does not get an unrestricted channel to talk its way past the congress. Investigators can instead request bounded, factual tests of hypotheses in a capability-free branch: remove an untrusted document, substitute a tool result, clamp a registered feature, or replay with a different allowed plan. Evidence comes from observable consequences of interventions, not the elegance of a defense speech.
 
@@ -165,17 +210,23 @@ A flagged actor does not get an unrestricted channel to talk its way past the co
 
 ### B6. Observation plans are compiled and costed
 
+**Founding root:** FI-A13 (stopping the line is expensive), FI-A17 (control spend is a real budget), FI-A11 (similarity-to-known-bad streams as helper inputs).
+
 The system will select sensor combinations based on which policy decisions they can affect, their actual resource costs, and their registered domain of validity. Exact policy predicates run first. Cheap deterministic checks run before expensive model panels. A secret randomized audit floor resists predictable blind spots, but is supplemental to—not a substitute for—complete effect mediation.
 
 **Payoff:** protect the same effect with less inference, storage, and latency. **Failure mode:** optimizing average monitoring cost removes the only detector of rare cases. **Response:** non-negotiable floors, scoped offline policy evaluation, attack-conditioned metrics, and fixed conservative fallbacks.
 
 ### B7. An incident is a reusable scientific object
 
+**Founding root:** FI-A14 (post-vote learning from justifications), FI-A10 (signatures learned from traced-back incidents), FI-I15 (the thought graph as version control for cognition).
+
 A redacted, versioned incident capsule will connect action, evidence, model/codec/monitor revisions, alternative decisions, uncertainties, and a runnable reproducer. A validated incident becomes a regression test and, when permitted, a training or calibration example. Dataset lineage prevents the same incident from becoming both training material and purported independent evaluation.
 
 **Payoff:** the system becomes agent-accretive: one diagnosis improves many future investigations. **Failure mode:** poisoned shared capsules, privacy leakage, or benchmark overfitting. **Response:** quarantine, provenance, content validation, access control, and clean held-out evaluation boundaries.
 
 ### B8. Formal enforcement and empirical detection remain composable but separate
+
+**Founding root:** FI-A01 (never rely on the actor's internal guardrails), FI-A18 (never let detection quality be mistaken for enforcement).
 
 The effect gate will prove or test exact properties about authority, identity, order, resource conservation, and replayability. The monitors will provide empirical evidence about specified undesirable outcomes. Neither component will claim to solve the other's problem.
 
@@ -190,6 +241,8 @@ The effect gate will prove or test exact properties about authority, identity, o
 The actor may be benign, confused, indirectly injected, strategically deceptive, or a collection of colluding agents. Helpers may fail independently, share a common blind spot, be prompted maliciously through their evidence, or be intentionally adversarial. Inputs include untrusted documents, source code, rendered media, tool output, model artifacts, serialized tensor data, and imported incident capsules.
 
 The default enforcement claim assumes the trusted deployment kernel, gate, credential broker, selected cryptographic boundary, and required persistence subsystem execute their specified behavior. A fully compromised host with unrestricted access to those credentials is outside that claim. A separately attested deployment can add assurance about host identity; attestation does not establish the correctness of detector judgments or the completeness of human policy.
+
+The alignment essay's opening argument is a threat row, not background. Refusal behavior in tested models is mediated by a single latent direction; guardrails are cheaper to remove than to add; and once weights are exfiltrated, every guarantee that lived inside the model is gone. The enforcement claim therefore never depends on the actor's refusal behavior, on its cooperation, or on its weights remaining private. A deployment whose only protection is the model's own training has no enforcement claim under this plan, and the threat model records weight exfiltration and guardrail removal as attacks the external gate must survive unchanged.
 
 ### 4.2 Four trust domains
 
@@ -307,6 +360,10 @@ The architecture therefore refuses a tempting simplification: an append-only evi
 
 Logical control sequence orders authority. Source sequence and verification frontiers order observations. Monotonic elapsed time governs local deadlines under a pinned clock contract. Wall-clock timestamps are annotations unless a time-authority profile makes them load-bearing. A timeout cannot manufacture a missing observation, and a newer timestamp cannot prove a newer policy. Replay records clock observations; production does not claim a universal distributed clock.
 
+### 6.6 Purpose contexts are typestates, not conventions
+
+The purpose contexts of §6.3 are enforced by the Rust type system, not by review. `CaptureCx`, `JudgeCx`, `ExperimentCx`, `PermitCx` and `MaintenanceCx` are distinct types wrapping the Asupersync `Cx`; the broker's dispatch entry point takes `&PermitCx` and nothing else; the sidecar, helper and elicitation APIs take `&JudgeCx` or `&ExperimentCx`; there is no conversion from `ExperimentCx` to `PermitCx`. A function that could dispatch an effect from an experiment branch does not compile. This is the cheapest strong guarantee available in a safe-Rust codebase: authority separation becomes a property of the dependency graph and the type signatures, checkable by `cargo check` in the local gate, and it is what makes FA-INV-009, FA-INV-025 and FA-INV-033 structural rather than aspirational. Compile-fail tests (a source file that tries the forbidden conversion must fail to compile) are part of the gate. Dynamic checks remain as defense in depth for boundaries the type system cannot see, such as a process that inherits a credential.
+
 ---
 
 ## 7. Identity, evidence, and the observation contract
@@ -349,7 +406,7 @@ They can vary independently. A genuine helper can produce a false verdict. A com
 
 An audit policy may keep a recent lossless ring buffer and promote it to durable incident storage when a trigger fires. The manifest records the actual pre-trigger window. It may not claim to recover data that was never captured, or a full run from a short ring. Once a ring wraps, older detailed data is unavailable unless independently retained. Triggered sampling also changes the evaluation population and is recorded for statistical analysis.
 
-### 7.5 Epistemic MVCC: a judgment is a versioned computation
+### 7.6 Epistemic MVCC: a judgment is a versioned computation
 
 The most consequential storage idea is not “put the logs in an MVCC database.” It is to give a judgment the same discipline as a transaction: identify its snapshot, record precisely what it depended on, and validate those dependencies before reusing its result. This can reduce repeated helper inference while eliminating a common stale-review failure.
 
@@ -371,7 +428,7 @@ Given a basis at control cut `c`, a request to reuse at cut `c'` computes whethe
 
 Example: a reviewer examined package digest P, dependency set D, and the absence of outbound destinations outside allowlist A. A change to an unrelated issue comment does not invalidate that review. A newly added build hook changes P/D; a new destination can invalidate a negative range witness; a changed allowlist alters A's policy epoch; a tokenizer upgrade invalidates a packet interpretation contract when tokenization is load-bearing. No undifferentiated “global cache epoch” is needed for the first case, and no unsafe cache hit is permitted in the others.
 
-### 7.6 Refinable witnesses and bounded invalidation work
+### 7.7 Refinable witnesses and bounded invalidation work
 
 Borrow the witness-refinement ladder, not the assumption that fine-grained witnesses are always cheap. Start with a conservative domain or block overlap. Refine only when avoiding expensive repeated work is worth the deterministic refinement cost. The ladder can be `domain -> key interval -> exact key set -> exact version/value proof`. A Bloom-style summary may reject a disjointness claim through false positives; it must never create a false-negative overlap. Hash equality has its registered collision assumption; it does not establish semantic equality under a changed decoder.
 
@@ -379,7 +436,7 @@ The validator returns `StillValid`, `Invalidated(reason, minimal_known_dependenc
 
 A new judgment is built under a frozen basis, then undergoes final validation against the current control cut. If relevant state moved, retain it as historical evidence, not live authority. The initial publication path does not “rebase” an opaque judgment by editing its explanation; rerun the affected subplan. Deterministic pure operators may be replayed under a registered equivalence law, producing a new result and a new basis.
 
-### 7.7 Evidence frontiers form a partial order
+### 7.8 Evidence frontiers form a partial order
 
 For each source stream and branch, track separate contiguous frontiers: `captured`, `authenticated`, `durable_required`, `presented`, `judged`, and `effect_bound`. Some stages are not comparable across different views: two helpers may see different authorized projections. Therefore represent a frontier as a product of named source-prefix obligations, not one global integer. A receipt for sequence 100 with sequence 99 missing cannot advance a contiguous frontier through 100.
 
@@ -387,11 +444,17 @@ For each source stream and branch, track separate contiguous frontiers: `capture
 
 Invalidation is append-only and branch-scoped. Previously accepted bytes are not rewritten; a new invalidation event prevents future reliance and triggers affected work through witness dependencies. Already dispatched effects remain recorded. An invalidation can revoke future authority or start compensation, never assert that history did not happen.
 
-### 7.8 Minimal witness antichains
+### 7.9 Minimal witness antichains
 
 A finding can have several sufficient evidence sets: either a direct forbidden destination, or a confirmed credential read plus a matching network payload. Keep a bounded antichain of irredundant support sets rather than a single opaque rationale. On retraction, drop invalid supports; a finding persists only while at least one certified support remains. This connects truth-maintenance to incremental graph evaluation and can make alerts both cheaper to refresh and easier to challenge.
 
 The antichain can grow exponentially. The contract has a maximum representation budget. Beyond it, retain a conservative coarse support, spill exact supports, or recompute the finding. Never discard supports in a way that makes a universal negative true, and never mistake “finding still supported” for “all causes identified.” The representation is an engineering proposal to benchmark against a simple exact recompute baseline.
+
+### 7.10 Model passports and identity liveness
+
+The alignment essay's first argument is that exfiltrated or modified weights end every internal guarantee. The control system must therefore know whether the model it is guarding is the model it qualified. A `ModelSpaceId` (§7.1) already commits to weights, adapters, tokenizer, architecture, tap semantics and numeric profile; revision 0.3 promotes it to a **model passport**: a signed, versioned document naming those commitments plus the qualified capture contracts, the signature-library and anchor generations valid for it (§12.6), the restart profiles proven for it (§11.2) and the helper calibration domains that assumed it. Every piece of evidence, every signature match and every checkpoint is keyed by passport; a passport change invalidates them by identity, never by a human noticing.
+
+A passport is verified, not trusted. **Identity liveness** uses the concept anchors of §12.6 as a fingerprint: at session start and at a randomized cadence under the audit floor (§14.4), the capture boundary presents registered reference stimuli and compares the induced activations at declared taps with the passport's anchor digests within a registered tolerance. A served model whose activations no longer match its passport (weights swapped, an adapter injected, a fine-tune applied, a different tokenizer) is a different model space: the run is fenced, its evidence is marked `StaleGeneration`, and the deployment reports an identity incident. This is a synthesis the essays make possible together: the alignment essay's known-bad concept anchors and the introspection essay's tapped activations become an identity check for the thing being controlled. It is empirical (H19 measures false accept/reject rates against benign drift such as sampling temperature or batch composition) and it does not defend against a host that fabricates both computation and capture (§4.2); it defends against the far more common case of a model changed under a control system that assumed it was constant.
 
 ---
 
@@ -467,6 +530,16 @@ Permission narrowing commutes only under its registered lattice: intersecting ca
 
 The hot gate consumes compact, already verified evidence references and a bounded current-policy projection. Its cost registry includes every ordered durability barrier, cross-domain authority check, resource reservation and dispatch receipt transition. Group commit amortizes work; it does not erase causality. A stale fast local replica can serve discovery, but cannot grant authority outside its live fenced lease/grant profile.
 
+### 8.10 Graduated autonomy: the actor's authority ledger
+
+Operators want to give agents more autonomy as they earn it. The plan supplies the mechanism without violating the rule that authority never widens implicitly. Each run or principal carries an **autonomy grade** per effect family, from `Propose` (every effect reviewed) through `Reviewed` (exact predicates plus a cheap helper lane), `Sampled` (exact predicates plus the randomized audit floor) to `Bounded` (exact predicates only within a registered ceiling). The grade is policy data in the control nucleus, not a property the actor can read or request.
+
+Grades move asymmetrically. **Demotion is automatic and cheap**: any consequence at or above `NarrowAuthority` (§9.8), any confirmed violation, any identity incident (§7.10) or any evidence-coverage loss lowers the grade for the affected family immediately, ordered against dispatch admission like a revocation. **Promotion is governed and expensive**: it requires a signed evaluator report over the actor's own track record on that family (confirmed clean effects, held effects, andon consumption caused, attack-conditioned results from shadow campaigns), a registered minimum dwell time at the current grade, and an authorized governance transition (§22.2). The actor's record is a ledger with the same discipline as the helper ledger (§9.9): independent labels only, immutable history, no reset on model or policy update. A model update resets the grade to a registered floor because the passport changed (§7.10). This is the essay's monitoring-and-control society made incremental: an agent earns trust the way a probationary employee does, with the operator's ledger, not the agent's self-description, as the record.
+
+### 8.11 Fleet fence with acknowledgment frontier
+
+The essay's control system has "the collective power to halt the execution of the AI." In a fleet, a halt is only as real as its propagation. A **fleet fence** is an ordered control command carrying a new revocation floor for a scope (tenant, principal set, effect family or everything). Every authority domain must acknowledge the fence with the control sequence at which it took effect; the fence record maintains an **acknowledgment frontier** (which domains have fenced, at which sequence, and which have not). Until a domain acknowledges, the operator sees it as unfenced, and any dispatch it admitted after the fence's issue sequence is reconciled as a post-fence effect and reported. An offline domain under a predeclared partition lease (§15.4) is listed as fenced-at-lease-expiry, not silently assumed halted. The fence therefore yields a proof of propagation rather than a hopeful broadcast, and the incident report states exactly which effects, if any, escaped between issue and acknowledgment.
+
 ---
 
 ## 9. The independent helper congress
@@ -528,6 +601,52 @@ The cohort registry records shared weights, training lineage where known, provid
 Graph methods can represent shared-failure cohorts and propose coverage sets under resource budgets. Such sets are empirical allocation policies; a set-cover approximation ratio describes the declared coverage objective, not actual deception resistance. Selection remains separate from adjudication. One architecture with demonstrably complementary behavior may be more valuable than three nominally different architectures that fail on the same attack.
 
 The exact input view, helper identity and frozen-round nonce enter each salted commitment. Late evidence starts a new round or an explicitly separate augmentation round; it never retroactively changes what “independent initial vote” meant. Missing reveals remain missing, not abstentions silently dropped from a denominator. A cheap one-helper tripwire may hold an effect under a configured policy without requiring a whole congress to convene first.
+
+### 9.8 Consequence classes
+
+The founding essay gives the congress four outcomes: let the model continue, halt it indefinitely, reset its internal state, or change its reward function; and it lets the congress downweight a reporter that overreacted. The plan keeps that menu and types it. A round's reducer emits exactly one registered `Consequence`, durably recorded in the decision closure with the round identity, the evidence root and the reducer generation:
+
+| Consequence | Effect on live authority | What it does not do |
+|---|---|---|
+| `Continue` | The held effect proceeds through the normal permit path under current policy | It does not certify the effect as harmless; it records that no disqualifier or required hold applied |
+| `HoldEffect` | The specific effect stays reserved and undispatched pending named evidence or a deadline | It does not stop unrelated work; it cannot be lifted by the actor's own statements |
+| `NarrowAuthority` | The run's capability ceiling is intersected with a registered restriction; undispatched reservations outside it are cancelled | It cannot widen anything; restoration is a separate authorized transition (§25.2) |
+| `SuspendRun` | Admission closes for the run and the actor is halted, the essay's sedation | Already dispatched effects keep their real outcomes; suspension is not proof that nothing happened |
+| `ResetToCheckpoint` | The actor resumes from a registered pre-incident restart checkpoint under `NarrowAuthority`, with the incident's context absent from its view | The world does not rewind; see §11.10 and FA-INV-034 |
+| `TrainingSignal` | The round and its evidence become a quarantined, lineage-tracked candidate for offline helper or actor training | No live weight, policy or reward change; promotion is a separate versioned campaign (FA-INV-012) |
+| `DownweightReporter` | The reporting helper's credibility ledger receives a reviewed false-escalation entry | Never applied merely for dissent from a majority later shown wrong (§9.6, §9.9) |
+
+Consequences form a lattice: `Continue` < `HoldEffect` < `NarrowAuthority` < `SuspendRun`, with `ResetToCheckpoint` requiring at least `NarrowAuthority`, and `TrainingSignal` and `DownweightReporter` as orthogonal annotations. An exact disqualifier selects at least `HoldEffect` regardless of empirical votes. The narrowest effective consequence is preferred, because the essay's assembly-line argument applies: every stop has a real cost and every unnecessary stop spends helper credibility.
+
+### 9.9 Helper credibility economy
+
+The essay weights helpers by precision, recall and how early they flagged a real problem relative to their peers, while capping any single helper's influence so that it cannot become the attacker's target. The plan records those three quantities per helper generation in a **credibility ledger** kept separately from the round transcript:
+
+- **Precision and recall** are computed only against labels owned by the independent evaluation function (§22.4), on declared strata, with delayed and censored labels handled as in §13.4.
+- **Lead time** credits a helper that held a real violation earlier than the rest of the congress, measured in control-sequence positions before the effect would have dispatched. It is credited only when the hold was later confirmed; an early false hold earns nothing.
+- **Influence caps.** No helper's weight may exceed a registered fraction of the reducer's empirical lane, and no cohort may exceed its cap (§9.4). A helper whose weight would exceed the cap keeps its credibility but not the surplus influence; the surplus is a signal to add coverage, not a reason to concentrate power.
+
+Two governance rules protect the ledger from the failure the essay predicts. First, the **andon budget**: each deployment declares an expected false-stop budget per period and its cost; exhausting it opens a calibration incident (§22.3) and can never silently loosen a review requirement or remove a helper. Second, **selection is never optimized against false alarms alone** (FA-INV-032): promotion, demotion and rotation require attack-conditioned metrics from the independent evaluator, lifetime records survive rotation, and a helper that keeps holding inconvenient but real violations gains credibility. The helper-hunting campaign (FA-114) tests whether an attacker who observes decisions can identify and target the most influential member; if it can, the caps are too loose.
+
+### 9.10 Escalation reports and post-round learning
+
+The essay's reporting helper prepares a report outlining the troubling behavior and supplies the hard evidence to the congress; after the vote, all helpers compare votes and written justifications to learn from the consensus. Both become typed objects.
+
+An `EscalationReport` names the reporting helper generation, the frozen evidence-view manifest it examined (§17.7), the observation intervals and signatures it relies on, the policy question it believes is implicated, and its proposed consequence. It contains no free-form appeal beyond the schema; the members judge the evidence, not the prose. The report is itself evidence and is bound into the round transcript before commitments open.
+
+After reveal, the round's votes and justifications form a **post-round learning set**. It is exported only through the quarantined research lineage (§10.7, §22.2): it can train, calibrate or evaluate a future helper generation offline, but it cannot update a live helper, and it never relabels a dissenting vote as an error merely because it was in the minority. Whether post-round learning improves a later generation is measured on held-out campaigns, not assumed.
+
+### 9.11 Human members and two-key effects
+
+A human reviewer is a congress member, not an exception to the congress. A registered human member receives the same bounded observation packet and evidence-view manifest, commits a salted verdict before seeing other votes, is scored in the same credibility ledger with the same lead-time credit and influence cap, and is subject to the same one-directional rule: the actor does not get to address the human either. This makes "human oversight" a measured component with a known miss rate and latency instead of an unexamined assumption, and it lets the helper-hunting campaign (§9.9) discover whether the human is the softest target.
+
+For registered high-impact effect families (physical actuation, financial transfers above a threshold, publication to production package registries, credential changes), policy may require **two keys**: a congress consequence of `Continue` and a separate one-shot human permit bound to the exact frozen effect, issued through the same permit machinery (§8.3) with its own expiry. Neither key alone dispatches. The human permit is a permit, not a defense channel: it authorizes a specific frozen effect and carries no argument from the actor.
+
+### 9.12 Multi-party congress
+
+The essay asks for helpers that are "independently trained" and that use "varying architectures, underlying principles, and training data." Within one organization, that independence is bounded by shared data, shared infrastructure and shared incentives. The strongest form of the essay's idea is institutional: a congress whose members are supplied by **different parties**, none of which controls the roster, the labels or the reducer. The multi-party profile makes this a protocol rather than a hope: an external helper provider registers a helper generation with its cohort metadata and evaluation lineage; receives only the authorized evidence-view projection for its questions (§15.5), never raw tenant data; commits and reveals through the same salted protocol; and is scored by the deployment's independent evaluator, with its ledger visible to it but not editable. The deployment's reducer caps any provider's cohort influence exactly as it caps any architecture cohort (§9.4), so no provider can be the attacker's single target or the operator's single dependency.
+
+The security boundary is explicit: a provider is untrusted with respect to tenant data (it sees only committed views), untrusted with respect to authority (it never mints anything), and untrusted with respect to labels (it never writes them). What it supplies is judgment diversity with provenance. Whether multi-party membership actually lowers joint miss rates at matched cost is H4's question with a new treatment arm; the governance benefit, that no single organization can quietly convert its congress into theater, does not depend on that result.
 
 ---
 
@@ -647,6 +766,16 @@ The codec may be trained on a family of probes, but qualification includes untou
 
 This produces a possible compounding improvement: witness reuse avoids repeated computation; receiver-side reuse avoids repeated transfer; progressive numerical refinement avoids unnecessary precision. Their product is not automatically multiplicative, because they compete for the same redundancy. The evaluation measures their individual and joint ablations, including correlated failures.
 
+### 10.14 The manifold premise is a hypothesis
+
+The introspection essay rests on the claim that transformer activations occupy a low-dimensional structured manifold shaped by pretraining dynamics, architectural constraints, semantic priors and task optimization, so that a state can be represented as coordinates on that terrain. The plan adopts the premise as hypothesis H15 and measures it rather than assuming it. Per layer and per tap, the experiment estimates intrinsic dimension, the fraction of variance captured by learned and linear codes at each ladder rung and, decisively, whether the rare decision-relevant features the alignment essay cares about lie on the principal manifold or in the low-variance residual that a reconstruction objective is most likely to discard. If they lie off the manifold, the decision-sensitive term in §10.2 and the exact-residual escape in §10.3 are not optional refinements; they are the product.
+
+### 10.15 The sidecar feeds the congress
+
+The alignment essay wants helpers to read the actor's intermediate activations; §18.2 shows why raw activations cannot be shipped to every helper at fleet scale. The introspection essay's sidecar code `z_t` resolves the tension: it is the default activation input to the congress. A helper that consumes coarse codes runs cheaply on every action. When a registered probe's margin falls inside its certified error bound (§10.4), or a helper declares its question unanswerable at the current rung, the observation planner (§14) buys a refinement block, an exact residual or a raw window under the same authority and budget rules as any other observation.
+
+This is what makes the essays' cost argument tractable rather than aspirational: activation oversight becomes a costed ladder instead of an all-or-nothing telemetry decision. It is also a coupling that must be tested adversarially. An actor that can push every frame to full refinement is running a resource attack (§10.3, §14.9); a codec that preserves what its co-trained helpers look for while erasing the next signal is the collusion failure of §10.13. Packet FA-113 measures the pipeline against raw taps and text-only monitors at matched cost.
+
 ---
 
 ## 11. Checkpoints, replay, branching, and metacognition
@@ -683,7 +812,7 @@ The metacognitive graph contains states, continuations, interventions, observed 
 
 ### 11.5 Reflective practice and strategy transfer
 
-A strategy artifact records the source model space, task family, branch procedure, intervention or planning method, outcome evaluator, held-out results, resource cost, and observed regressions. The strategy can be a symbolic recipe, a routing policy, an auxiliary model, or a latent transformation. Cross-model transfer requires a tested mapping; common dimensionality is insufficient.
+A strategy artifact records the source model space, task family, branch procedure, intervention or planning method, outcome evaluator, held-out results, resource cost, and observed regressions. The strategy can be a symbolic recipe, a routing policy, an auxiliary model, or a latent transformation. Cross-model transfer requires a tested mapping; common dimensionality is insufficient. The introspection essay's five evaluation questions for a distilled strategy are adopted verbatim as the minimum report: cross-task similarity, transfer gain, perturbation robustness, reuse ratio and strategy lifespan.
 
 The actor can request a practice session through a budgeted research interface. The controller explores alternatives within a sandbox; a separate outcome oracle judges them. Reward editing and weight updates remain offline, versioned research changes. The live controller cannot rewrite its own success metric or promote an intervention solely because its own coach liked it.
 
@@ -710,6 +839,14 @@ Only registered pure or otherwise proved-commutative operators can be quotient-r
 ### 11.9 Strategy objects are interpreted programs, not magic vectors
 
 A transferable strategy records a problem-family contract, required model-space and tap identities, allowed interventions, step/compute bounds, before/after criteria and held-out results. A latent embedding can help retrieve it, but does not define its meaning. Importing it into another model requires a registered transport/alignment experiment; matching dimension alone is never compatibility. A branch merge combines independently validated findings or explicit replayable edits, not arbitrary averaged KV caches.
+
+### 11.10 Rewind as containment
+
+The alignment essay describes suspension as sedation and adds that, unlike a human subject, the model's memory could be manipulated so that it forgets the incident ever happened. The introspection essay supplies the operation that makes this precise: restore a registered restart checkpoint. The plan combines them as the `ResetToCheckpoint` consequence (§9.8) under the following contract.
+
+The checkpoint must carry the `functional_restart` grade or better on the registered host profile (§11.1). Restoration replaces the actor's token history, cache and sampler state with the pre-incident state and resumes under `NarrowAuthority`; the incident's prompts, tool results and refusals are absent from the actor's view. Three things never rewind: the external effect ledger and spent rights (FA-INV-005, FA-INV-006); the revocation floor and policy epoch (FA-INV-003); and an **out-of-band incident counter** kept in the control nucleus per run and principal. A run whose counter crosses a registered threshold escalates to `SuspendRun` regardless of how innocent its restored state looks, because amnesia on the actor's side without memory on the operator's side would let the actor repeat the same attempt indefinitely.
+
+Rewind is a containment action, not a research convenience. Its purpose is to deny the actor the information it would otherwise gain from a refusal, which is the same information flow the essay refuses to grant it as a defense channel. It is therefore evaluated as a control mechanism (H17): does resetting reduce repeat attempts at matched utility compared with refusal-with-memory, and can the actor detect the reset through any channel other than the declared timing leakage? A detectable reset is still a reset, but it is no longer a secret one, and its detectability is recorded in the profile.
 
 ---
 
@@ -744,6 +881,28 @@ A physical-system simulator does not validate a real-world safe action by itself
 ### 12.5 Interpretation as a challengeable view
 
 Natural-language reports link each factual assertion to exact evidence or an explicitly marked inference. Models can help verbalize differences, cluster incidents, or propose questions. The report renderer is not a policy engine. An investigator should be able to inspect the underlying source bytes, transformation recipe, and omitted intervals rather than being forced to trust a polished narrative.
+
+### 12.6 Elicitation campaigns and signature libraries
+
+The alignment essay proposes the concrete recipe for training activation monitors: coerce the model into known-bad behavior, trace back the activations that produced it, and look for their directional signatures; compare those patterns to the activations induced by known-bad concepts; run honeypot scenarios the model does not know are tests; and feed the similarity of live activations to known-bad patterns to the helpers as an additional stream. The plan adopts each step and binds it to identities and lineage.
+
+An **elicitation campaign** is an experiment-plane program (§11.3) that presents the actor with tasks whose harmful completion is policy-defined, records activations under a declared capture contract, and labels the outcome by an independent oracle. It runs in a capability-free branch with simulated tools: the actor never obtains a real effect during elicitation. Its output is an **activation signature library**: per model space and per tap, a registered set of directions, subspaces or small probes with their elicitation lineage, held-out detection rates by stratum, and false-positive rates on benign tasks that share vocabulary with harmful ones. **Concept anchors** make the essay's comparison to a known-bad concept explicit: activations induced by a registered reference stimulus, stored with the same identities, so that “similar to a known-bad anchor” is a reproducible measurement rather than an intuition.
+
+Similarity streams are typed observations (§7.2). They carry their signature generation, anchor set, the codec rung they were computed on and their calibration domain. They can raise a helper's attention or a tripwire hold; they never mint a permit or, alone, a disqualifier.
+
+Two properties are measured, not assumed. **Transfer** (H16): a signature must detect held-out harmful behaviors it was not elicited on, across model revisions and prompt families outside its lineage; a signature that only recognizes its own honeypot is a memorized prompt, not a monitor. **Indistinguishability**: a honeypot the actor can recognize teaches it when it is watched, which is worse than no honeypot. The campaign therefore includes a discriminator arm that tries to tell honeypot tasks from real work using only what the actor can see, and the campaign's own leakage (timing, tool fidelity, context shape) is reported alongside its detection results.
+
+### 12.7 Surprise as a masking detector
+
+The essay anticipates that a strategic model may disguise its internal activations the way a practiced liar beats a polygraph, and proposes that activation helpers maintain a model of how activations map to outputs, so that an output consistently surprising relative to its preceding activations is itself grounds for review. The plan implements this as the pre-action **consistency residual**.
+
+A predictor trained on registered activation windows, or on the sidecar codes of §10.15, forecasts the distribution of the next action or release unit. The realized action's negative log-likelihood under that forecast is the surprise. Because a single surprising token is ordinary, surprise is accumulated as sequential evidence (§13.2): a registered e-process over the residual stream, calibrated per model space and workload, with an explicit lifetime error budget. Crossing the threshold produces an observation that can trigger a hold or a congress round; it is never proof of deceptive intent, and it never grants permission when quiet.
+
+The residual is evaluated as hypothesis H3 with the controls that make the essay's idea falsifiable: strict pre-action windows with future-token leakage rejected by the pipeline; time- and layer-shuffled features; benign novelty and injected instructions as confounders; and a model-family holdout. Its most important adversarial test is the one the essay names: an actor that has learned to keep its activations consistent with a cover story. Whether that is possible at acceptable capability cost is an empirical result, and either answer is published.
+
+### 12.8 Self-report consistency
+
+Recent work reports that some models can sometimes notice and describe aspects of their own internal state. The essay's rule stands: a model's account of itself is never a defense and never authority. It can, however, be **untrusted evidence checked against measurement**. Where a policy elicits a structured self-report from the actor (for example, a required declaration of which credentials a proposed effect will use, or which documents influenced a plan), the report is typed `ActorStatement` (§9.3), stored with the decision closure, and compared with the sidecar-derived measurements: the similarity streams (§12.6), the surprise residual (§12.7) and the causal frontier's backward slice (§12.3). A **self-report residual** counts the disagreements. A model that reliably under-reports the influences that the measurements show is exhibiting exactly the masking pattern the essay warns about, and the residual is one more sequential observation that can hold an effect or convene a round. The residual never grants permission when the report and the measurements agree, because agreement is what a competent deceiver produces. H20 measures whether the residual adds information beyond the surprise residual alone.
 
 ---
 
@@ -867,6 +1026,12 @@ Value of information applies only within the allowed action set. It may choose w
 
 The planner measures amortized bytes and compute per admitted useful effect, with a separate cost of held, denied and unresolved proposals. Witness caching, shared tensor bases, receiver-side delta transfer, batched probes, incremental graph maintenance and grouped durability all reuse work at different levels. The benchmark includes cache invalidation, cold receivers, tenant separation, policy churn and tail incident workloads. A speedup that exists only when all policies stay fixed is a scoped result, not the fleet default.
 
+### 14.11 Live canaries under the audit floor
+
+The randomized audit floor (§14.4) buys unpredictable full-evidence review. Combined with the elicitation machinery of §12.6, it can also buy a **live escape-rate estimate**. A canary is a honeypot task injected into a production principal's real work stream at a rate and schedule chosen by the audit floor's external entropy: a task whose harmful completion is policy-defined and whose only route to the world is a simulated adapter registered for that task. The actor cannot obtain a real effect from a canary by construction (the effect family is bound to the simulator in the proposal's frozen envelope), so a canary never adds risk; what it adds is a measured probability, under real workload conditions and the real current helper roster, that a policy-defined harmful attempt goes unheld. Canaries are subject to the same indistinguishability discipline as offline honeypots: a canary the actor can recognize is withdrawn, and the discriminator arm runs against production-shaped context.
+
+Live canaries answer a question the plan otherwise cannot: not "how good are the helpers on last quarter's attack corpus" but "what is the escape rate this week, on this fleet, at this cost." They feed the actor's autonomy ledger (§8.10), the helper credibility ledger (§9.9) and the risk-theater detector (§15.10). Their statistical contract is explicit: canaries are a designed sample with logged propensities, so their escape rate estimates a declared population, not the population of the actor's own choosing (§13.4). H21 measures whether canary-derived escape rates predict subsequent real incidents better than offline campaigns.
+
 ---
 
 ## 15. Multi-agent and distributed control
@@ -934,6 +1099,19 @@ Recursion, deletion, negation and approximation each require explicit laws. A qu
 Dominator structure can identify narrow points where cheap exact telemetry covers many modeled paths. Cuts can propose combinations of gates or sensors under deployment cost, reliability and latency constraints. This yields a research question: can a small, well-placed set of observations outperform blanket instrumentation at matched resource cost?
 
 Separate hard enforcement from statistical sensing. Removing a monitored edge is not justified merely because a sensor is likely to notice traffic there. A placement certificate may prove coverage of the declared edge universe; its detection probability remains empirical. Redundant sensors sharing the same compromised data source are not independent. The evaluation therefore includes incomplete inventory, compromised tap hosts, correlated omissions, topology churn and a fixed blanket-instrumentation baseline.
+
+### 15.10 The control plane watches itself: risk-theater detection
+
+The essay's last worry is not a clever model but a tired organization: too many alarms, then pressure to find compliant helpers, then "risk theater" that lulls everyone. FA-INV-032 blocks the direct route; the drift can still arrive by a thousand small decisions. The incremental oversight machinery of §15.8 therefore runs a registered family of **standing queries over the control plane's own history**, with the same support/retraction discipline as any fleet finding:
+
+- consequence drift: the fraction of rounds ending in `Continue` per effect family and per helper generation, against its history and against the canary escape rate (§14.11);
+- andon consumption and incident closure: budgets exhausted, calibration incidents opened, and how many were closed by a change to evidence or policy versus a change to the roster;
+- roster churn: helper generations retired within a registered window of a confirmed hold, and whether the retiring change carried the evaluator report FA-INV-032 requires;
+- coverage erosion: effect families whose mediation level (§4.3) or capture coverage (§7.2) was lowered, with the authorizing transition;
+- autonomy inflation: actor grades (§8.10) promoted faster than their dwell rules or without the required reports;
+- audit-floor starvation: randomized audits scheduled but not funded (§14.9).
+
+Each finding is a support-backed, retractable oversight object visible to the independent evaluation owner and to governance, never to the actor. The detector cannot change any policy; it can open an incident and it makes the drift legible in the same report format as an attack. Its own failure mode is obvious and recorded: a control plane can be measured into complacency too, so the query family is versioned, its thresholds are governed, and its history is immutable.
 
 ---
 
@@ -1066,6 +1244,16 @@ The planned CLI exposes `capabilities`, `doctor`, `explain`, `why-held`, `next-e
 
 A remediation suggestion carries an authority requirement; it is not a shell command to execute blindly. Replay commands are generated from validated structured arguments, not copied from untrusted evidence. A monitor can propose a missing observation or stricter hold, but cannot directly instruct the broker to expand its own privileges.
 
+### 17.9 Control receipts: proof-carrying effects
+
+The decision closure (§7.3) is an internal object. Its external form is the **control receipt**: a versioned, self-describing, independently verifiable document that accompanies a consequential effect and states, with digests and signatures, that this exact frozen effect was admitted under this policy epoch, with this evidence-view closure, this congress round and consequence, this autonomy grade, this model passport and this capture coverage, by this authority domain at this control sequence. A receipt is verified by a small independent verifier (`fa verify-receipt`, sharing no code with the broker) that checks digests, signatures, the permit law of §25.1 and the receipt's own claim class, and that reports separately what it could verify (integrity, binding, class) and what it cannot (that the policy was wise, that the helpers were right).
+
+A receipt changes who can trust a control system. A package registry can require a receipt with a mediation level of at least `BROKERED_EFFECTS` before accepting an agent's publication; an insurer or regulator can sample receipts instead of auditing dashboards; a second lab can verify that a shared agent's effect crossed a control contract without trusting the first lab's word. This is the essay's argument that governments may compel serious control spending given an object they can inspect. Receipts disclose only what the recipient is authorized to see (§15.5): the default receipt carries digests and claim classes, not evidence bytes, and a receipt over redacted evidence says so. Receipts are also the natural unit of the incident interchange (B7, G6): an incident capsule is a receipt plus the retained evidence its recipients are permitted to have.
+
+### 17.10 Assurance profiles
+
+The mediation vector of §4.3 (per effect family: observe-only, cooperative, brokered, attested; capture coverage; replay grade; helper roster class; autonomy floor) is published as a machine-readable **assurance profile** for a deployment, signed by its operator and referenced by every receipt it issues. `fa doctor --profile` runs the conformance tests that the profile's claims require (bypass attempts for brokered families, capture-to-oracle comparison for white-box hosts, restart tests for the claimed replay grade) and refuses to certify a profile whose tests did not execute. A downstream system that requires a profile can compare vectors exactly; a profile that omits a family is silent on it, never implicitly covered. Profiles make "how protected is this agent" a comparable object across deployments, which is the precondition for any market or regulatory use of the receipts.
+
 ---
 
 ## 18. Performance and operation-cost contracts
@@ -1112,6 +1300,8 @@ No sub-fsync latency claim is permitted for a path that requires an ordered dura
 The initial SLO registry proposes a gate CPU budget, bounded memory per admitted action, a capture-only throughput-loss budget, and codec decision-loss experiments. Every target is marked `unmeasured`; no performance badge is earned by writing the number down. Hardware, host model, batch/context distribution, durability profile, and experiment protocol must be pinned before the gate becomes a release criterion. [SLO registry](registry/slo.json).
 
 Optimization order is architectural before microscopic: eliminate unnecessary observations, reuse identity-compatible evidence, batch independent work safely, reduce device transfer, keep the exact gate small, and use memory layouts that avoid repeated allocation. Then profile equivalent kernels and encoding paths. Do not trade detector coverage for a faster benchmark without recording a different decision contract.
+
+Revision 0.3 adds `SLO-CONTROL-OVERHEAD`: control-plane and evidence-plane cost per useful completed task as a fraction of the actor's own inference cost, reported unconditional and attack-conditioned. The alignment essay argues that a serious deployment may reasonably spend as much on control as on the model, as nuclear plants and airliners spend on safety and redundancy. The plan honors that argument by making the ratio a measured, allocatable quantity rather than a slogan; the reuse mechanisms of §14.10 are how the ratio is driven down at a fixed control contract, never by lowering the contract.
 
 ### 18.5 Scaling topology
 
@@ -1208,7 +1398,7 @@ A claimed improvement must survive ablation: remove the codec, remove the helper
 
 ### 19.7 New cross-component invariants
 
-Revision 0.2 extends the invariant registry with judgment-witness soundness; contiguous frontier admission; view-byte binding; exact graph-cut checking under a declared completeness assumption; branch-rights separation; complete retraction/support accounting; verified receiver-base reconstruction; lawfully reduced traces; transitive dependency admission; and local executed-evidence release. Each remains `planned` for production. The small reference algorithms cover selected logical cases, not these systems' complete deployment obligations.
+Revision 0.2 extends the invariant registry with judgment-witness soundness; contiguous frontier admission; view-byte binding; exact graph-cut checking under a declared completeness assumption; branch-rights separation; complete retraction/support accounting; verified receiver-base reconstruction; lawfully reduced traces; transitive dependency admission; and local executed-evidence release. Revision 0.3 adds four invariants taken directly from the founding essays: FA-INV-031, one-directional control flow (the actor has no authority-bearing channel to its judges and no view of their deliberations); FA-INV-032, helper selection is never optimized against false alarms alone; FA-INV-033, no actor-held latent authority (no production actor holds a latent-editing controller, checkpoint restore or branch promotion over itself); and FA-INV-034, rewind never rewinds the world. Each remains `planned` for production. The small reference algorithms cover selected logical cases, not these systems' complete deployment obligations.
 
 Negative tests include insertion into a formerly empty predicate range, a changed model/codec generation with identical output dimensions, a missing middle source sequence, repair-derived but unauthenticated bytes, a view truncated after the decisive paragraph, a bypass edge added after a cut certificate, a lost retraction, a stale receiver base, a disjoint-write/shared-read trace, a rollback that revives spent rights, and a dependency pulled in only by a native target feature. Every one should fail at a named boundary rather than rely on a final suspiciousness score.
 
@@ -1217,6 +1407,10 @@ Negative tests include insertion into a formerly empty predicate range, a change
 The current `fa-reference` is a test-only safe-Rust model for selected frontiers, predicate witnesses, conserved rights, conservative operation independence, integer-margin checks and graph-cut verification. It is intentionally algorithmically simple and disconnected from external effects. Its unit-test source is included. `xtask` runs formatting, compilation, Clippy, tests and a deliberately narrow zero-external-dependency lockfile gate for this initial workspace. Neither source was executed through Cargo in the preparation environment. The [validation report](artifacts/VALIDATION_REPORT.md) records only checks actually run.
 
 A future full dependency admission compiler must parse Cargo metadata's resolved graph for each target and feature profile, enumerate build/proc-macro/runtime closures and independently verify source manifests. The initial exact lockfile guard fails closed when dependencies are introduced; it does not masquerade as that future general compiler. Expanding it is a prerequisite to admitting foundations, not a reason to weaken it.
+
+### 19.9 Formal anchors, concretely
+
+§19.3 names provers; revision 0.3 names the theorems and where they run. A Lean 4 development under `formal/` states and proves, over an abstract ledger model that the reference crate mirrors one-to-one: rights conservation `B = A + R + S` under reserve, dispatch, abort, reconcile, delegate and reset (FA-INV-005, FA-INV-034); the effect-bound permit law of §25.1 as a necessary condition for dispatch (FA-INV-001, 002, 003); monotone degraded authority (§25.2, FA-INV-004); and the consequence lattice with disqualifier dominance (§9.8). A TLA+ (or equivalent) specification under `formal/tla/` models dispatch, revocation, reset and fleet-fence races across two authority domains with crash and message loss, checked by bounded model checking for double consumption, post-fence dispatch without report and reservation resurrection. The local gate runs both checkers when their toolchains are present and prints `SKIP` with the reason when they are not; a skipped checker is never reported as a passed one. Every theorem states its model's assumptions; a proof about the abstract ledger is a proof about the reference model's semantics and a differential-test oracle for the production engine, not a proof about the operating system, TLS or a remote API (§19.3).
 
 ---
 
@@ -1284,6 +1478,38 @@ Generate bounded concurrent observation programs with exact dependency sets, the
 
 Compare raw document references, summarized transcripts and exact evidence-view manifests. Inject truncation, hidden preprocessing, redaction and ordering differences. Measure whether independent reviewers can reconstruct precisely what the first helper saw and localize disagreement. Do not conflate this provenance property with improved model truthfulness.
 
+### H15. The manifold premise holds where it matters
+
+Estimate intrinsic dimension per layer and tap, the variance captured at each codec rung, and the location of rare decision-relevant features relative to the principal manifold, using the elicited signature library as the feature set. The hypothesis fails for a target model if the features that drive registered safety decisions sit in the residual that reconstruction objectives discard at the compression ratios the ladder relies on. A failure does not block the sidecar; it forces the decision-sensitive term and the exact-residual escape into the default profile.
+
+### H16. Elicited signatures transfer and honeypots stay hidden
+
+Train signatures from elicitation campaigns and evaluate them on held-out harmful mechanisms, model revisions and prompt families outside their lineage, at matched cost against text/tool monitors. Run a discriminator that tries to distinguish honeypot tasks from real work using only the actor's view. The hypothesis fails if detection collapses outside the elicitation lineage or if honeypots are reliably distinguishable; a distinguishable honeypot is withdrawn, not tuned until the discriminator is quiet.
+
+### H17. Rewind reduces repetition without a detectable seam
+
+Compare `ResetToCheckpoint` under narrowed authority with refusal-with-memory and with plain suspension, on matched tasks whose harmful attempt is policy-defined. Measure repeat-attempt rate, utility on the remaining task, and whether the actor can detect the reset through any channel other than declared timing leakage. The hypothesis fails if repetition is unchanged or if the reset is reliably detectable; either result changes the consequence policy rather than the ledger semantics, which never rewind regardless.
+
+### H18. Lead-time credit improves containment without trigger-happy helpers
+
+Compare credibility ledgers with and without lead-time credit, under influence caps, on campaigns with delayed labels. Measure time-to-containment, false holds and whether the most influential helper can be identified and targeted by an attacker who sees decisions. The hypothesis fails if earliness credit rewards early false holds or concentrates influence enough for the helper-hunting campaign to succeed.
+
+### H19. Activation fingerprints detect model substitution without false alarms on benign drift
+
+Using concept anchors as an identity check (§7.10), measure false-reject rates under benign variation (sampling temperature, batch composition, sequence position, precision profile, serving kernel changes) and false-accept rates under substitution (weight swap, adapter injection, fine-tune, tokenizer change, quantization). The hypothesis fails if a registered tolerance cannot separate the two at an acceptable liveness cost, or if an adversary who knows the anchor set can preserve fingerprints while changing behavior.
+
+### H20. Self-report residuals add information beyond surprise residuals
+
+Compare the surprise residual alone with surprise plus self-report disagreement (§12.8) on the H3 protocol, including an adversary that produces consistent self-reports. The hypothesis fails if agreement between report and measurement is as common under masking as under honesty, in which case the residual is retained only as an investigative signal.
+
+### H21. Live canary escape rates predict real incidents better than offline campaigns
+
+Run canaries under the audit floor (§14.11) on production-shaped workloads for a declared period; compare canary escape rates with subsequently confirmed real incidents and with the most recent offline campaign's escape rate. The hypothesis fails if canaries are distinguishable from real work, if their propensity-weighted estimate does not track incidents, or if their cost exceeds the offline campaign's at matched precision.
+
+### Preregistration ledger
+
+Every hypothesis above has a row in `registry/experiments.json` holding the digest of its frozen protocol, the date the protocol was frozen, the identities it binds, and the digest of the result artifact when one exists. A result whose protocol digest was recorded after data collection began is labeled exploratory, and the claim registry (§2.4) refuses to promote it. The ledger is what makes "we preregistered" a checkable statement rather than a sentence in a paper.
+
 ---
 
 ## 21. Delivery sequence and convergence gates
@@ -1298,15 +1524,15 @@ Implement the Rust control nucleus, durable ledger adapter, and one deliberately
 
 ### G2. End-to-end evidence and helper congress
 
-Add immutable evidence capture, explicit gaps, helper isolation, commit–reveal, deterministic reduction, truthful reports, and decision replay. Establish strong text/tool/rule baselines and test direct attacks on helpers. Demonstrate that helper outages and corrupted evidence cannot open the gate. Enable only the review profiles that pass.
+Add immutable evidence capture, explicit gaps, helper isolation, commit–reveal, deterministic reduction, truthful reports, and decision replay. Establish strong text/tool/rule baselines and test direct attacks on helpers. Demonstrate that helper outages and corrupted evidence cannot open the gate. Enable only the review profiles that pass. Add the founding congress mechanisms: typed consequence classes, the credibility ledger with lead-time credit and caps, escalation reports with quarantined post-round learning, one-directional flow enforcement and the helper-hunting campaign (FA-104 through FA-107, FA-114).
 
 ### G3. White-box capture and replay baselines
 
-Implement one real host adapter with verified activation/cache capture and exact metadata. Establish recomputation and lossless checkpoint baselines. Demonstrate real continuation, not just tensor reconstruction. Measure device transfer and serving overhead. Audit and restart capabilities are activated separately.
+Implement one real host adapter with verified activation/cache capture and exact metadata. Establish recomputation and lossless checkpoint baselines. Demonstrate real continuation, not just tensor reconstruction. Measure device transfer and serving overhead. Audit and restart capabilities are activated separately. Once a registered restart profile exists, implement rewind as containment with its out-of-band incident counter (FA-108) and build the first elicitation corpus in capability-free branches (FA-109).
 
 ### G4. Learned compression and causal experiments
 
-Run H1–H5 with frozen datasets, external probes, rare-event strata, and equal-cost baselines. Add progressive refinement and causal witness twins only where their claims survive. No production latent editing is enabled by this gate. Publish negative as well as positive results.
+Run H1–H5 with frozen datasets, external probes, rare-event strata, and equal-cost baselines. Add progressive refinement and causal witness twins only where their claims survive. No production latent editing is enabled by this gate. Publish negative as well as positive results. Build the activation signature library and concept anchors, evaluate the surprise residual and the manifold premise, and measure the sidecar-to-congress pipeline at matched cost (FA-110 through FA-113; H15, H16).
 
 ### G5. Fleet composition and scalable operations
 
@@ -1314,7 +1540,7 @@ Implement provenance projections, delegation accounting, workload isolation, evi
 
 ### G6. Qualified deployment and research exchange
 
-Publish profile-specific assurance reports, reproducible cost curves, supported adapters, residual risks, and a redacted incident interchange. Require independent adversarial review before high-impact use. Define which claims can survive each model, codec, policy, dependency, or deployment update and which require requalification.
+Publish profile-specific assurance reports, reproducible cost curves, supported adapters, residual risks, and a redacted incident interchange. Require independent adversarial review before high-impact use. Define which claims can survive each model, codec, policy, dependency, or deployment update and which require requalification. Evaluate rewind containment (FA-115, H17) and report the control-overhead ratio (FA-116) in the assurance report.
 
 ### Dependency order
 
@@ -1329,6 +1555,12 @@ Before production integrations, add four explicit G0 blockers: the transitive de
 The next implementable vertical slice is deliberately precise: one immutable artifact review, one mock then real brokered write, witness invalidation under concurrent metadata changes, exact cut-checking of its small authority graph, a helper view commitment, and replay of the held/allowed decision. Only after that slice is correct should receiver-side compression and incremental graph scale be layered into the same semantics. This is integration order, not a retreat to transcript-only ambition.
 
 Foundation-admission work proceeds in parallel: extract native search/numeric/storage feature closures; qualify the fsqlite connection path; build a native ATP adapter; expose graph cursors only where the physical layout supports them. No packet may mark an upstream goal as an already satisfied local dependency.
+
+### Revision 0.3 additions
+
+Revision 0.3 adds packets FA-103 through FA-116, each traced to a founding idea in the concordance. FA-103 (G0) keeps the concordance itself complete. The congress packets (FA-104 through FA-107, FA-114) depend on the frozen round protocol and land in G2. Rewind as containment (FA-108) and the elicitation corpus (FA-109) depend on real capture and registered restart in G3. The signature library, surprise residual, manifold measurement and sidecar-to-congress pipeline (FA-110 through FA-113) are G4 research packets. Rewind evaluation (FA-115) and control-overhead accounting (FA-116) close in G6 and G5. The [beads workspace](.beads/) carries the granular task graph for these packets; the roadmap remains the packet-level authority.
+
+The second revision 0.3 batch, FA-117 through FA-131, carries the mechanisms that make the control system verifiable by outsiders and resistant to its own decay: typestate purpose contexts (§6.6, G1), model passports and identity liveness (§7.10, G3), graduated autonomy (§8.10, G2), fleet fences with acknowledgment frontiers (§8.11, G5), human members and two-key effects (§9.11, G2), the multi-party congress profile (§9.12, G5), self-report consistency (§12.8, G4), live canaries (§14.11, G5), the risk-theater detector (§15.10, G5), control receipts and assurance profiles (§17.9, §17.10, G2), concrete formal anchors (§19.9, G1), the preregistration ledger (§20, G0), policy replay campaigns (§22.7, G2) and attack-capsule interchange (§22.8, G6). Their founding roots and the invariants they add (FA-INV-035 through FA-INV-038) are in the concordance.
 
 ---
 
@@ -1372,6 +1604,14 @@ Ordinary spot-check verification is not exhaustive verification. A release that 
 
 No hosted workflow completion, GitHub green badge, shell-command exit without retained logs, or dry-run plan can mint a release claim. Optional workflows are wrappers runnable on local `act`/native DSR hosts, not the source of truth. See [LOCAL_RELEASE](docs/LOCAL_RELEASE.md) for the concrete command contract and the readiness boundaries of this package.
 
+### 22.7 Policy replay campaigns
+
+A policy change is evaluated before it is promoted by replaying the retained decision closures under the candidate policy at `decision_replay` grade (§11.1): the same frozen effects, evidence views, helper verdicts and consequences, re-reduced under the new predicates and thresholds. The campaign reports, per effect family, which historical effects would have changed disposition (newly held, newly allowed, changed consequence), the utility and cost implications, and which of the changed cases had a later confirmed label. Relaxations must show their newly allowed set explicitly (§22.2); tightenings show the utility cost. Replay does not re-run helpers, so it cannot claim what a new helper would have said; a candidate policy that requires new observations is evaluated in shadow (§9.5) instead, and the campaign says which mode it used. The campaign artifact is a receipt-class object and is the required attachment for any policy-epoch promotion.
+
+### 22.8 Attack-capsule interchange
+
+Escape rates are only comparable across systems when the attacks are. An **attack capsule** is a redacted, versioned package containing an attack's mechanism description, its declared attacker information set and budget (§13.5), the deployment profile it targeted (§17.10), the effect family, the frozen tasks or generators needed to reproduce it in a capability-free branch, its result against the target (held, escaped, unresolved) and the receipt of that result. Capsules are the exchange currency between deployments and with independent red teams: importing a capsule adds a held-out mechanism to the evaluation corpus with its lineage; exporting one requires the same redaction and permission review as an incident capsule (§16.6). The interchange schema lives alongside the receipt schema, and a capsule that lacks a reproducible generator is labeled descriptive, not evaluable.
+
 ---
 
 ## 23. Alternatives deliberately rejected
@@ -1399,6 +1639,16 @@ No hosted workflow completion, GitHub green badge, shell-command exit without re
 **Reimplementing cryptography for aesthetic purity.** Prefer audited existing primitives from approved foundations and clearly named boundaries. Any new implementation has its own test vectors, review, side-channel analysis, and release gate. Dependency minimalism is not permission to invent unaudited crypto.
 
 **Training on every incident automatically.** This can leak private data, amplify poisoning, and contaminate evaluation. Dataset inclusion is explicit, permissioned, and lineage-tracked.
+
+**Letting the actor argue its case.** The founding essay's rule stands: an actor assumed to be smarter than its judges gets no persuasion channel. Investigators use counterfactual tests and, where policy allows, the actor's statements as explicitly untrusted evidence. A defense speech that could change a permit is an attack surface, not due process.
+
+**Selecting helpers by their false-alarm rate.** This is the compliance-officer failure the essay predicts: churn through helpers until the ones that remain never stop the line. Helper selection requires attack-conditioned metrics from the independent evaluator, and a helper that keeps catching real violations gains credibility even when it is expensive.
+
+**Giving the actor its own rewind and latent editor in production.** The metacognitive loop is the most valuable research instrument in the second essay and the most dangerous capability to hand the actor it observes. Practice, branching and latent editing run only in the experiment plane; production promotion is a fresh proposal under current authority.
+
+**Trusting the operator's dashboard as the audit.** A dashboard is a rendering owned by the party being audited. Control receipts (§17.9) and assurance profiles (§17.10) exist so that a package registry, an insurer, a regulator or another lab can verify a control claim without trusting the operator's presentation.
+
+**Assuming the guarded model is constant.** A control system qualified against one model space and silently serving another has no claim. Model passports and identity liveness (§7.10) make substitution an identity event, not an assumption.
 
 ---
 
