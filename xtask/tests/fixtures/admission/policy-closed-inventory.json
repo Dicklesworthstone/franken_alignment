@@ -1,0 +1,164 @@
+{
+    "schema_version": "fa.dependencies/0.3",
+    "reference_packages": [
+        "fa-reference",
+        "xtask"
+    ],
+    "external_exceptions": [],
+    "foundation_repositories": [
+        "Dicklesworthstone/asupersync",
+        "Dicklesworthstone/frankensqlite",
+        "Dicklesworthstone/frankenfs",
+        "Dicklesworthstone/frankensearch",
+        "Dicklesworthstone/franken_markdown",
+        "Dicklesworthstone/frankengraphdb",
+        "Dicklesworthstone/franken_networkx",
+        "Dicklesworthstone/franken_numpy",
+        "Dicklesworthstone/frankentorch"
+    ],
+    "product_language": "Rust",
+    "edition": "2024",
+    "unsafe_in_fa": "forbid",
+    "development_toolchain": "nightly",
+    "release_toolchain": "resolved_dated_identity_required",
+    "foundation_admissions": [],
+    "transitive_feature_audits": "pending",
+    "hosted_actions_required": false,
+    "admission": {
+        "schema": "fa.admission/0.1",
+        "packet": "FA-053",
+        "checker_packet": "FA-054",
+        "invariant": "FA-INV-029",
+        "claim_boundary": "Closed initial inventory only. This block states which local path packages may resolve, for which exact target profiles, with which exact feature sets, under whose ownership and decision. It is not a donor audit: no FrankenSuite or Asupersync package is admitted and `foundation_admissions` remains empty.",
+        "packet_completion": {
+            "fa_053_complete": false,
+            "fa_054_complete": false,
+            "reason": "FA-053 and FA-054 are general packets: a freeze of the complete transitive dependency policy, and a general Cargo admission compiler. What exists here qualifies only the closed initial inventory: two local path packages, no external admission path, and one target profile per actually collected metadata. Qualifying the initial inventory does not close either packet, and neither packet may be marked complete on the strength of this block or its checker.",
+            "still_required": [
+                "Per-target source, feature, build-script and runtime/downloaded-artifact inventories for every foundation considered for admission.",
+                "A reachable external admission path with a positive case, which does not exist today.",
+                "A lockfile-derived (package, source, checksum) mapping, which is a precondition of that path rather than an addition to this one.",
+                "A target profile for every target the product claims, each backed by actually collected metadata."
+            ]
+        },
+        "external_admission": {
+            "supported": false,
+            "approved": false,
+            "reason": "Cargo metadata cannot establish a package checksum, what a build script does when executed, or what bytes a loader downloads at run time. Admitting an external package on metadata evidence would be admission on absent evidence. The checker therefore refuses every external package unconditionally, and refuses any policy that carries an external row, so that no boolean or attestation field can stand in for an inspection that has not happened.",
+            "external_rows_must_remain_empty": true,
+            "required_fields_when_implemented": {
+                "note": "This list documents the row shape that a future external admission would have to carry, per docs/DEPENDENCY_CONSTITUTION.md. Documenting the shape admits nothing and approves nothing: there is no code path that reads these fields, and the checker refuses any external row regardless of which of them are present. The list exists so the requirement is recorded, not so a row can be pre-staged.",
+                "identity": [
+                    "name",
+                    "version",
+                    "source",
+                    "revision",
+                    "checksum"
+                ],
+                "scope": [
+                    "target",
+                    "features",
+                    "default_features"
+                ],
+                "closure": [
+                    "build_dependency_closure",
+                    "proc_macro_closure",
+                    "runtime_closure",
+                    "native_link_declarations",
+                    "build_script_effects",
+                    "downloaded_artifacts"
+                ],
+                "governance": [
+                    "direct_reason",
+                    "owner",
+                    "decision",
+                    "decision_date",
+                    "evidence"
+                ]
+            },
+            "unblocked_by": "Full per-target source, feature, build-script and runtime/downloaded-artifact inspection, which FA-053 defers and which no field in this file can substitute for."
+        },
+        "identity_rules": {
+            "local_package_identity": "name + version + manifest_path relative to the metadata document's own workspace_root, compared by path components",
+            "external_package_identity": "name + version + the exact opaque source string, compared verbatim (external is refused regardless)",
+            "never_infer_from_directory_name": true,
+            "path_containment": "manifest_path must be absolute, free of `.` and `..`, and contained in workspace_root by path components. A byte-prefix comparison would accept a sibling directory such as `/workspacextask` under root `/workspace`.",
+            "decision_semantics": "Every row carries an explicit owner and an explicit decision. Only the exact decision value `admitted` admits; any other value, including a pending or provisional one, refuses. A row without an owner or a decision is a policy load error, because an unowned or undecided row is not an admission."
+        },
+        "local_packages": [
+            {
+                "name": "fa-reference",
+                "version": "0.2.0",
+                "manifest_path": "crates/fa-reference/Cargo.toml",
+                "direct_reason": "Independent test-only logical oracle (plan section 6.2, 19.2).",
+                "owner": "systems",
+                "decision": "admitted",
+                "decision_date": "2026-09-07"
+            },
+            {
+                "name": "xtask",
+                "version": "0.2.0",
+                "manifest_path": "xtask/Cargo.toml",
+                "direct_reason": "Operator-local gate driver (plan section 6.2, 22.6).",
+                "owner": "systems",
+                "decision": "admitted",
+                "decision_date": "2026-09-07"
+            }
+        ],
+        "external_rows": [],
+        "target_profiles": [
+            {
+                "target": "aarch64-apple-darwin",
+                "expected_features": {
+                    "fa-reference": [],
+                    "xtask": []
+                },
+                "metadata_collected": true,
+                "evidence": "Gate executed on this target on 2026-09-06 (artifacts/execution/2026-09-06-xtask-check-nightly-2026-08-31-local.log, nightly-2026-08-31, rustc 908501772). The metadata fixture this profile is checked against was collected on this target: its workspace_root is the macOS operator path."
+            }
+        ],
+        "target_profile_rules": {
+            "add_only_with_collected_metadata": "A profile is added only for a target whose metadata has actually been collected on that target. A profile is never written speculatively: an unlisted target is refused with `unknown_target_profile` rather than silently checked against a default.",
+            "known_executed_targets_without_a_profile_yet": [
+                {
+                    "target": "x86_64-unknown-linux-gnu",
+                    "status": "profile_not_yet_added",
+                    "evidence": "Complete reference gate executed remotely on 2026-09-07 on host vmi1227854 under nightly-2026-09-07, rustc 5a2be9f5f075d31e3ca5526b5b029881ce441253 (artifacts/execution/2026-09-07-reference-epoch-1-receipt.json and 2026-09-07-reference-epoch-1-nightly-2026-09-07.log).",
+                    "blocking": "Adding the profile requires cargo metadata actually collected on this target with --filter-platform x86_64-unknown-linux-gnu. The gate execution establishes that the workspace builds and tests there; it does not by itself supply that target's metadata document.",
+                    "owner": "root"
+                }
+            ]
+        },
+        "rules": {
+            "metadata_version": 1,
+            "require_resolve_section": true,
+            "allow_build_scripts": false,
+            "allow_proc_macro": false,
+            "allow_links": false
+        },
+        "rule_semantics": "Each prohibition must be present and explicitly false. The checker refuses a policy that omits one, that sets one to true, or that sets one to a non-boolean. A policy file cannot switch off a constitutional prohibition, and a defaulted value is not an assertion.",
+        "metadata_invocation": {
+            "command": [
+                "cargo",
+                "metadata",
+                "--format-version",
+                "1",
+                "--locked",
+                "--offline",
+                "--filter-platform",
+                "<target>"
+            ],
+            "why_locked_and_offline": "cargo metadata without --locked may rewrite Cargo.lock, which would trip the exact lockfile guard from inside the gate that enforces it. --offline additionally prevents a network fetch during a check.",
+            "why_not_no_deps": "--no-deps omits the resolve section entirely. docs/DEPENDENCY_CONSTITUTION.md forbids treating it as a transitive audit, so metadata whose resolve is null is refused rather than read as an empty passing graph.",
+            "why_filter_platform": "A dependency can be activated only on one target. Without --filter-platform the document is not a per-target graph. Cargo metadata does not record which platform filter produced it, so the target is an explicit input to the checker and the report states that the binding rests on the invocation, not on the document."
+        },
+        "not_established_by_this_checker": [
+            "What a build script would do when executed.",
+            "What bytes a loader or model runtime would download at run time.",
+            "Whether an admitted upstream package contains unsafe code.",
+            "That the metadata was in fact produced with the declared --filter-platform target.",
+            "That any target other than a listed profile is admissible.",
+            "That the toolchain, std or operating system are themselves trustworthy."
+        ]
+    }
+}

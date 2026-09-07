@@ -1,0 +1,7 @@
+{
+  "invariants": {"invariants": [{"id": "FA-INV-001", "founding_ideas": ["FI-A01"], "reference_checks": ["crates/fa-reference/src/lib.rs::tests::not_a_real_test"], "evidence_artifacts": []}]},
+  "roadmap": {"packets": [{"id": "FA-001", "depends_on": [], "invariants": ["FA-INV-001"], "result_artifacts": []}]},
+  "claims": {"claims": [{"id": "H1", "source_refs": ["F-ALIGN"], "founding_ideas": ["FI-A01"], "experiment_card": "README.md", "result_artifacts": []}]},
+  "sources": {"sources": [{"id": "F-ALIGN"}]},
+  "founding": {"founding_ideas": [{"id": "FI-A01", "source": "F-ALIGN"}]}
+}
