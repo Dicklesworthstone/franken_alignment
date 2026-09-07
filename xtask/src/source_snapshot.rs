@@ -776,16 +776,26 @@ pub fn verify_manifest_identity(root: &Path, relative: &str, expected: &str) -> 
     if !is_sha256_hex(expected) {
         return Err("snapshot_binding_digest: expected lowercase SHA-256".into());
     }
+    let actual = operator_file_digest(root, relative)?;
+    if actual != expected {
+        return Err(format!(
+            "snapshot_binding_mismatch: policy expects {expected}, operator computed {actual}"
+        ));
+    }
+    Ok(())
+}
+
+/// Record a contained regular input's digest using the trusted operator tool.
+/// This records bytes under the outer source freeze; it grants no authority and
+/// does not authenticate either the tool or an execution receipt's assertions.
+pub fn operator_file_digest(root: &Path, relative: &str) -> Result<String, String> {
+    check_relative_path(relative, Limits::default())
+        .map_err(|(code, detail)| format!("{code}: {detail}"))?;
     let root = std::fs::canonicalize(root).map_err(|error| error.to_string())?;
     let mut absent = Vec::new();
     for tool in Tool::candidates_for_host() {
         match hash_one(&tool, &root, relative) {
-            Ok(actual) if actual == expected => return Ok(()),
-            Ok(actual) => {
-                return Err(format!(
-                    "snapshot_binding_mismatch: policy expects {expected}, operator computed {actual}"
-                ));
-            }
+            Ok(actual) => return Ok(actual),
             Err(HashError::NotSpawnable(reason)) => absent.push(reason),
             Err(HashError::Refusal(finding)) => {
                 return Err(format!(
@@ -1151,8 +1161,7 @@ mod tests {
 
     #[test]
     fn only_an_absent_operator_tool_allows_fallback() {
-        let root = std::fs::canonicalize(Path::new(env!("CARGO_MANIFEST_DIR")).parent().unwrap())
-            .expect("actual workspace root");
+        let root = crate::workspace_root().expect("actual invocation workspace");
         // A directory exists but cannot execute: this is not an absent tool.
         let unexecutable = Tool::new(root.to_str().unwrap(), &[]);
         assert!(matches!(hash_one(&unexecutable, &root, "Cargo.toml"),
@@ -1175,8 +1184,7 @@ mod tests {
     #[cfg(unix)]
     #[test]
     fn an_executed_operator_refusal_is_preserved() {
-        let root = std::fs::canonicalize(Path::new(env!("CARGO_MANIFEST_DIR")).parent().unwrap())
-            .expect("actual workspace root");
+        let root = crate::workspace_root().expect("actual invocation workspace");
         let refusing_operator = Tool::new("/usr/bin/false", &[]);
         assert!(matches!(hash_one(&refusing_operator, &root, "Cargo.toml"),
             Err(HashError::Refusal(finding)) if finding.code == "hash_tool_failed"));

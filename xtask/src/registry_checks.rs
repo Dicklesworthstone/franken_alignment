@@ -1276,10 +1276,7 @@ mod tests {
         include_str!("../tests/fixtures/registry/missing-evidence-artifact-invariants.json");
 
     fn repository_root() -> PathBuf {
-        PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-            .parent()
-            .expect("xtask has a workspace parent")
-            .to_path_buf()
+        crate::workspace_root().expect("actual invocation workspace")
     }
 
     fn fixture_documents(bytes: &str) -> Documents {

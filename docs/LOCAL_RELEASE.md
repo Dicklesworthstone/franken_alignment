@@ -2,25 +2,26 @@
 
 ## Current status
 
-The project is a design/reference package. There is no production executable to release. Rust source and 20 test functions are present. Compilation, rustfmt, Clippy and tests were **not run** in the revision 0.2 preparation environment; on 2026-09-06 the complete gate passed on one operator host under `nightly-2026-08-31` after the documented `cargo fmt --all` step (logs under `artifacts/execution/`), and failed under that host's rolling `nightly` because its toolchain directory lacks the rustfmt and clippy binaries. `cargo xtask release-check` deliberately returns failure. No fake public key, release target, host credential or GitHub ruleset ID is committed.
+The project is a design/reference package. There is no production executable to release. The latest qualified reference batch passed 56 reference unit tests, 16 integration tests, 196 xtask tests and 2 doctests remotely on 2026-09-07; [epoch8](../artifacts/execution/2026-09-07-epoch8-receipt.json) binds the source and raw logs. Compilation, rustfmt, Clippy and tests were **not run** in the revision 0.2 preparation environment; on 2026-09-06 the complete gate passed on one operator host under `nightly-2026-08-31` after the documented `cargo fmt --all` step (logs under `artifacts/execution/`), and failed under that host's rolling `nightly` because its toolchain directory lacks the rustfmt and clippy binaries. `cargo xtask release-check` deliberately returns failure. No fake public key, release target, host credential or GitHub ruleset ID is committed.
 
 ## Local development commands
 
-From the workspace, on a machine with rustup:
+From a clean, committed workspace, on an operator machine with rustup and configured RCH workers:
 
 ```bash
-rustup update nightly
 rustup show
-rustc -Vv
-cargo fmt --all
-cargo run --locked -p xtask -- check
+# Format and review source before refreshing its reviewed manifest and committing:
+rustup run nightly-2026-08-31 rustfmt --edition 2024 xtask/src/main.rs
+# Run the frozen committed source remotely; local fallback is forbidden:
+RCH_REQUIRE_REMOTE=1 rch exec --base HEAD --clean-overlay --no-overlay -- \
+  cargo +nightly-2026-09-07 run --locked -p xtask -- check
 ```
 
-The formatting command is an explicit preparation mutation because rustfmt was unavailable when this source was generated; it was applied and committed on 2026-09-06 (18 formatting diffs, no semantic change). Review/commit any formatting changes before freezing the release source. The gate itself uses `fmt --check`, `check`, `clippy` and `test`, and never fixes source while claiming it was unchanged. DSR must execute the same gate against a frozen, clean source snapshot. The source inventory command alone does not run tests.
+The formatting command is an explicit preparation mutation because rustfmt was unavailable when this source was generated; it was applied and committed on 2026-09-06 (18 formatting diffs, no semantic change). Review/commit any formatting changes before freezing the release source. The qualified compiler identity is checked before source-snapshot, dependency-admission, registry and concordance validation. Concordance logs each bound input and emits `CONCORDANCE_JSON`; missing/dangling references stop the gate. The gate then uses `fmt --check`, `check`, `clippy` and `test`, and never fixes source while claiming it was unchanged. The owned std-only JSON reader is already qualified, so there is no serde wait or SKIP path. DSR must execute the same gate against a frozen, clean source snapshot. The source inventory command alone does not run tests.
 
 ## Register the local quality gate
 
-The fragment in [release/dsr-quality.fragment.yaml](../release/dsr-quality.fragment.yaml) belongs under the real DSR quality registry, normally `~/.config/dsr/repos.yaml`. Merge it into the existing registry; do not overwrite other projects. It uses the observed `tools`, `checks` and `required_checks` schema. Then:
+The fragment in [release/dsr-quality.fragment.yaml](../release/dsr-quality.fragment.yaml) belongs under the real DSR quality registry, normally `~/.config/dsr/repos.yaml`. Merge it into the existing registry; do not overwrite other projects. It uses the observed `tools`, `checks` and `required_checks` schema. The three required checks reject a dirty checkout, run the dedicated concordance command, and run the complete gate. Both Cargo invocations use the dated qualified nightly through RCH, with local fallback forbidden and no working-tree overlay. Run from the frozen Git toplevel; `--no-overlay` intentionally checks its committed revision. Keep logs outside that source root. Then:
 
 ```bash
 dsr --json quality --tool franken_alignment --work-dir "$PWD"

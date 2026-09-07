@@ -1,0 +1,29 @@
+{
+  "schema": "fa.prose_execution/1",
+  "executed_at_utc": "2026-09-07T23:54:23Z",
+  "base_commit": "7099a15dafd4cddef27a43eb7cd02d815de75f9b",
+  "same_compiled_sources_and_overlay_paths_as": "artifacts/execution/2026-09-07-epoch8-receipt.json",
+  "additional_overlay_paths": [
+    "artifacts/execution/2026-09-07-epoch8-receipt.json"
+  ],
+  "source_sha256_overrides": {
+    "IMPLEMENTATION_STATUS.md": "b77f77255b14ab2443116c49fc0f93c52f9ff30358f69ceb5ccd80616a141c5b",
+    "docs/LOCAL_RELEASE.md": "b6ba49e3d4792216d10ab626476c05972c50e8a817b3a1b6a747dc0a1c6c10fe",
+    "artifacts/execution/2026-09-07-epoch8-receipt.json": "d18993dcace3bd445e9c4b930c3453964d348025f7dc331eeb29aad059425253"
+  },
+  "overlay_fingerprint": "268874fb23fce57db727dfd3ee117f5884118bf317b9674d514a2bcab7c4866b",
+  "command_tail": [
+    "cargo",
+    "+nightly-2026-09-07",
+    "run",
+    "--locked",
+    "-p",
+    "xtask",
+    "--",
+    "prose-check"
+  ],
+  "worker": "hz3",
+  "job": "j-30004650170124236",
+  "exit_code": 0,
+  "boundary": "Post-execution declaration consistency after current counts were updated to the actual epoch8 result. No Rust tests rerun or newly credited by this command."
+}

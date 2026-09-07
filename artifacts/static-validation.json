@@ -89,5 +89,21 @@
     "receipt": "artifacts/execution/2026-09-07-epoch7-receipt.json",
     "raw_log": "artifacts/execution/2026-09-07-epoch7-attempt4.log",
     "provenance_boundary": "Only concordance and this execution descriptor are new. Existing checks, tool fields and not_run facts describe revision 0.2 preparation and remain historical."
+  },
+  "prose": {
+    "findings": [],
+    "counts": {
+      "founding_ideas": 38,
+      "syntheses": 9,
+      "engineering_additions": 67,
+      "invariants": 40,
+      "hypotheses": 21,
+      "packets": 143
+    }
+  },
+  "prose_execution": {
+    "receipt": "artifacts/execution/2026-09-07-epoch8-receipt.json",
+    "raw_log": "artifacts/execution/2026-09-07-epoch8-code-attempt1.log",
+    "scope": "Actual current-declaration check during the full gate, with epoch7 as the named count basis; no authentication claim."
   }
 }

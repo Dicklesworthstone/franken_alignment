@@ -488,18 +488,13 @@ fn lower_sha256(value: &str) -> bool {
 mod tests {
     use std::collections::BTreeMap;
     use std::fs;
-    use std::path::PathBuf;
 
     use crate::json::{Json, Limits, parse};
 
     use super::{SNAPSHOT_PATH, check};
 
     fn policy() -> Json {
-        let manifest_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-        let root = manifest_dir
-            .parent()
-            .expect("xtask has a workspace parent")
-            .to_path_buf();
+        let root = crate::workspace_root().expect("actual invocation workspace");
         let bytes = fs::read(root.join("registry/dependency_policy.json"))
             .expect("read current operator policy at test runtime");
         parse(&bytes, Limits::default()).expect("current policy parses")

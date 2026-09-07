@@ -1,0 +1,12 @@
+{
+  "founding_ideas": [
+    { "id": "FI-A01" },
+    { "id": "FI-I01" }
+  ],
+  "syntheses": [
+    { "id": "FS-01" }
+  ],
+  "engineering_additions": [
+    { "mechanism": "Fixture addition" }
+  ]
+}

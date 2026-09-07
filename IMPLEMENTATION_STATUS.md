@@ -1,5 +1,15 @@
 # Implementation status · design revision 0.3
 
+Current execution evidence: [receipt](artifacts/execution/2026-09-07-epoch8-receipt.json).
+
+## Eighth qualified batch: runtime checkout and current declarations
+
+The complete isolated RCH gate passed on `vmi1227854` under `nightly-2026-09-07`: **56 reference unit tests, 16 integration tests, 196 xtask tests and 2 doctests; 270 passed, zero failed**. [The receipt](artifacts/execution/2026-09-07-epoch8-receipt.json) binds 47 overlay files and 99 verified source/build inputs. [The raw log](artifacts/execution/2026-09-07-epoch8-code-attempt1.log) includes clean concordance and current-prose reports.
+
+The gate now resolves the invocation's actual checkout; a cached binary cannot keep using a removed compile-time archive path. Current declarations are checked against registries and a named retained execution receipt, with bounded real-file reads, canonical receipt paths, symlink refusal and shared Markdown fence semantics. Historical counts remain historical. A receipt's fields are comparison inputs, not proof of execution by themselves.
+
+The planted-concordance experiment stopped on the intended unknown invariant after earlier checks passed. The first DSR integration attempt is retained as failed: its second Cargo invocation exposed the stale archive path that this batch repairs. That first attempt is not DSR qualification. Production remains unimplemented, and mandatory Asupersync dependency/build/runtime admission remains incomplete.
+
 ## Seventh qualified batch: owned concordance and admission discrimination
 
 The complete isolated RCH gate passed on `hz4` under `nightly-2026-09-07`: **56 reference unit tests, 16 integration tests, 174 xtask tests and 2 doctests; 248 passed, zero failed**. [The receipt](artifacts/execution/2026-09-07-epoch7-receipt.json) binds the 40-file overlay and 67 verified source/build inputs. [The passing log](artifacts/execution/2026-09-07-epoch7-attempt4.log) contains the actual concordance report: zero missing/dangling findings for 231 headings, 40 invariants, 21 hypotheses and 143 packets. The four canonical-reference corrections from the sixth batch are now checked by execution.
@@ -48,12 +58,12 @@ The round uses a deliberately non-cryptographic FNV comparison and proves no cry
 | Surface | Actual status | Claim boundary |
 |---|---|---|
 | Integrated comprehensive architecture | Revision 0.3 draft, founding essays as the spine | Requirements and research hypotheses, not deployed features |
-| Founding-ideas concordance | `docs/FOUNDING_IDEAS.md` and `registry/founding_concordance.json`: 38 founding ideas, 9 syntheses, 8 labeled non-literal imports, 25 engineering additions | Traceability of the design, not evidence that any mechanism works |
+| Founding-ideas concordance | `docs/FOUNDING_IDEAS.md` and `registry/founding_concordance.json`: 38 founding ideas, 9 syntheses, 8 labeled non-literal imports, 67 engineering additions | Traceability of the design, not evidence that any mechanism works |
 | Agent-facing surface (tower, Knowledge wrapper, addresses, vocabulary, journal, situation, explain, affordances, rehearsal, annotations, handoffs, precheck) | Plan §6.7, §6.8, §17.2, §17.3, §17.8, §17.11, §17.12; `docs/SYSTEM_MAP.md`, `docs/AGENT_GUIDE.md`; packets FA-132 through FA-143; beads | No command exists; the only executable is the local gate driver |
 | Founding essays | Both read in full again for revision 0.3; head commits recorded in `registry/sources.json` | Complete premise; no missing post |
 | Ten donor/build project deep dives | Targeted code/manifest/plan review at fixed refs (revision 0.2) | Exact files/scopes recorded; not full repository audits or builds |
 | Pure-Rust reference workspace | Source present, zero external packages, formatted with `cargo fmt --all` on 2026-09-06 | Selected logical semantics only; not a broker |
-| Rust test functions | **56 unit + 16 integration reference tests, 174 xtask tests and 2 doctests passed remotely on 2026-09-07**; earlier runs remain dated below | Exact frozen batch above; not production evidence or credit for other work in progress |
+| Rust test functions | **56 unit + 16 integration reference tests, 196 xtask tests and 2 doctests passed remotely on 2026-09-07**; earlier runs remain dated below | Exact frozen batch above; not production evidence or credit for other work in progress |
 | Rust local gate driver | **Complete reference gate PASS remotely on 2026-09-07** under `nightly-2026-09-07`; earlier local 2026-09-06 gate retained below | Initial inventory, registry-core and full concordance checks execute; external admission remains incomplete; new source requires a new run |
 | Production release gate | Explicitly refuses release | No qualified broker/toolchain/target/signing closure |
 | Machine-readable registries | 40 invariants, 21 hypotheses, 143 packets, 5 SLO targets, founding concordance (38 ideas, 9 syntheses, 67 engineering additions), preregistration ledger with no preregistered protocol yet, system map (9 layers) and vocabulary (26 nouns, 35 verbs, 12 reason codes) | Static structural checks are not proofs of their claims |

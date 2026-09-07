@@ -21,8 +21,8 @@
 # What runs today, from a source checkout (see Installation & local verification):
 git clone https://github.com/Dicklesworthstone/franken_alignment
 cd franken_alignment
-cargo test -p fa-reference
-cargo run --locked -p xtask -- check
+RCH_REQUIRE_REMOTE=1 rch exec -- cargo +nightly-2026-09-07 test --locked -p fa-reference
+RCH_REQUIRE_REMOTE=1 rch exec --base HEAD --clean-overlay --no-overlay -- cargo +nightly-2026-09-07 run --locked -p xtask -- check
 ```
 
 > **A note on tense (read this first).** This README is written in the **present tense, as if the entire design in [`COMPREHENSIVE_PLAN_FOR_THE_DESIGN_OF_FRANKENALIGNMENT.md`](./COMPREHENSIVE_PLAN_FOR_THE_DESIGN_OF_FRANKENALIGNMENT.md) is fully realized**: the target state where every performance and safety gate is green and every subsystem is live. This is a deliberate choice. It lets the document describe the *finished* system so it gets **trued-up in place as milestones land** (Gates G0→G6 in [§21 of the plan](./COMPREHENSIVE_PLAN_FOR_THE_DESIGN_OF_FRANKENALIGNMENT.md#21-delivery-sequence-and-convergence-gates)) rather than rewritten from scratch later. Where the plan itself stages something as an open research hypothesis or future gate, the README says so plainly. Everything else below is the spec of the system this repository builds. The accompanying reference crate in [`crates/fa-reference`](./crates/fa-reference) models selected core logical semantics in pure safe Rust; [`IMPLEMENTATION_STATUS.md`](./IMPLEMENTATION_STATUS.md) is the exact statement of what exists and what has executed.
@@ -303,7 +303,7 @@ Every response carries its epistemic status, its address and generation, the con
 ## Installation & local verification
 
 ### 1. Requirements
-- Rust 2024 nightly toolchain with the `rustfmt` and `clippy` components (auto-selected via [`rust-toolchain.toml`](./rust-toolchain.toml)).
+- Rust 2024 nightly toolchain with `rustfmt` and `clippy`; the current operator gate checks the qualified `nightly-2026-09-07` compiler identity. Configured RCH workers are required for the commands below.
 - Reference gates have executed on `aarch64-apple-darwin` (September 6) and remote `x86_64-unknown-linux-gnu` (September 7); exact source and toolchain evidence is in [`IMPLEMENTATION_STATUS.md`](./IMPLEMENTATION_STATUS.md). No qualified release target matrix exists yet; `cargo xtask release-check` refuses release.
 
 ### 2. From source (what runs today)
@@ -313,14 +313,15 @@ git clone https://github.com/Dicklesworthstone/franken_alignment
 cd franken_alignment
 
 # Run the pure safe-Rust reference unit tests:
-cargo test -p fa-reference
+RCH_REQUIRE_REMOTE=1 rch exec -- cargo +nightly-2026-09-07 test --locked -p fa-reference
 
 # Run the comprehensive xtask gate driver:
-# Verifies zero-dependency lockfile, crate-level unsafe prohibitions, format, check, clippy, and tests:
-cargo run --locked -p xtask -- check
+# From a clean, committed checkout: verifies source identity, dependency admission,
+# registry/concordance coverage, formatting, compilation, Clippy and tests:
+RCH_REQUIRE_REMOTE=1 rch exec --base HEAD --clean-overlay --no-overlay -- cargo +nightly-2026-09-07 run --locked -p xtask -- check
 ```
 
-The gate driver enforces that the dependency universe remains strictly closed to the approved reference packages. Running `cargo xtask release-check` will deliberately fail with an explicit refusal until all production integration milestones are satisfied. The complete gate (lockfile inventory, unsafe prohibition, `rustc -Vv`, `fmt --check`, `check`, `clippy -D warnings`, `test`) passed on an operator host on September 6, 2026 under a dated nightly after the documented `cargo fmt --all` preparation; see [`IMPLEMENTATION_STATUS.md`](./IMPLEMENTATION_STATUS.md) for the exact toolchain and the retained logs.
+The gate driver enforces that the dependency universe remains strictly closed to the approved reference packages. Its owned concordance checker fails on missing or dangling mappings and emits a machine-readable report; it is also callable as `cargo +nightly-2026-09-07 run --locked -p xtask -- concordance-check` through RCH. `--no-overlay` checks the committed revision: commit reviewed source and refresh its manifest before using that form. The [DSR fragment](./release/dsr-quality.fragment.yaml) requires both concordance and the complete gate; [local release instructions](./docs/LOCAL_RELEASE.md) describe the source freeze. Running `cargo xtask release-check` will deliberately fail with an explicit refusal until all production integration milestones are satisfied. The complete gate (lockfile inventory, unsafe prohibition, `rustc -Vv`, `fmt --check`, `check`, `clippy -D warnings`, `test`) passed on an operator host on September 6, 2026 under a dated nightly after the documented `cargo fmt --all` preparation; see [`IMPLEMENTATION_STATUS.md`](./IMPLEMENTATION_STATUS.md) for the exact toolchain and the retained logs.
 
 ### 3. Using the reference oracle in tests
 

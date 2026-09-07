@@ -17,6 +17,11 @@ mod json_tests;
 mod metadata_collection_tests;
 #[cfg(test)]
 mod metadata_path_tests;
+mod prose_consistency;
+#[cfg(test)]
+mod prose_consistency_tests;
+#[cfg(test)]
+mod prose_input_tests;
 mod registry_checks;
 #[cfg(test)]
 mod registry_negative_tests;
@@ -24,6 +29,8 @@ mod source_snapshot;
 #[cfg(test)]
 mod source_snapshot_tests;
 mod toolchain_identity;
+#[cfg(test)]
+mod workspace_root_tests;
 
 use std::env;
 use std::fs;
@@ -364,11 +371,135 @@ fn check_concordance(root: &Path, manifest: &source_snapshot::Manifest) -> Resul
     Ok(())
 }
 
+// Resolve the invocation's checkout, never a compile-time temporary archive.
+// Cargo runs xtask tests in the xtask crate; operator commands run at the root.
+// Deliberately do not search arbitrary ancestors for another workspace.
+fn workspace_root_from(start: &Path) -> Result<PathBuf, String> {
+    let start = fs::canonicalize(start).map_err(|error| {
+        format!(
+            "Cannot resolve invocation directory {}: {error}",
+            start.display()
+        )
+    })?;
+    let has_manifests = |candidate: &Path| {
+        candidate.join("Cargo.toml").is_file() && candidate.join("xtask/Cargo.toml").is_file()
+    };
+    if has_manifests(&start) {
+        return Ok(start);
+    }
+    if start.file_name() == Some(std::ffi::OsStr::new("xtask"))
+        && let Some(parent) = start.parent()
+        && has_manifests(parent)
+    {
+        return Ok(parent.to_path_buf());
+    }
+    Err(format!(
+        "Run xtask from the workspace root or its immediate xtask directory; {} is neither",
+        start.display()
+    ))
+}
+
+fn workspace_root() -> Result<PathBuf, String> {
+    workspace_root_from(
+        &env::current_dir()
+            .map_err(|error| format!("Cannot read invocation directory: {error}"))?,
+    )
+}
+
+fn current_execution_receipt(status: &str) -> Result<&str, String> {
+    let mut declarations = concordance::unfenced_markdown_lines(status)
+        .into_iter()
+        .filter(|line| line.starts_with("Current execution evidence:"));
+    let declaration = declarations
+        .next()
+        .ok_or("Missing current execution evidence declaration")?;
+    if declarations.next().is_some() {
+        return Err("Ambiguous current execution evidence declaration".into());
+    }
+    let receipt = declaration
+        .strip_prefix("Current execution evidence: [receipt](")
+        .and_then(|line| line.strip_suffix(")."))
+        .ok_or("Malformed current execution evidence declaration")?;
+    let filename = receipt
+        .strip_prefix("artifacts/execution/")
+        .ok_or("Current execution receipt must be under artifacts/execution")?;
+    if filename.len() > 255
+        || !filename.ends_with("-receipt.json")
+        || !filename
+            .bytes()
+            .all(|byte| byte.is_ascii_alphanumeric() || matches!(byte, b'-' | b'_' | b'.'))
+    {
+        return Err("Current execution receipt must name one canonical receipt file".into());
+    }
+    Ok(receipt)
+}
+
+fn read_prose_input(root: &Path, relative: &str) -> Result<Vec<u8>, String> {
+    const LIMIT: u64 = 4 * 1024 * 1024;
+    let path = root.join(relative);
+    if fs::metadata(&path)
+        .map_err(|error| format!("Cannot inspect {relative}: {error}"))?
+        .len()
+        > LIMIT
+    {
+        return Err(format!("Prose input exceeds {LIMIT} bytes: {relative}"));
+    }
+    let digest = source_snapshot::operator_file_digest(root, relative)?;
+    let mut bytes = Vec::new();
+    fs::File::open(&path)
+        .map_err(|error| format!("Cannot read {relative}: {error}"))?
+        .take(LIMIT + 1)
+        .read_to_end(&mut bytes)
+        .map_err(|error| format!("Cannot read {relative}: {error}"))?;
+    if bytes.len() as u64 > LIMIT {
+        return Err(format!("Prose input grew beyond {LIMIT} bytes: {relative}"));
+    }
+    println!(
+        "PROSE input={relative} bytes={} sha256={digest}; operator digest and outer freeze, not receipt authentication",
+        bytes.len()
+    );
+    Ok(bytes)
+}
+
+fn check_prose(root: &Path) -> Result<(), String> {
+    let text = |relative: &str| -> Result<String, String> {
+        String::from_utf8(read_prose_input(root, relative)?)
+            .map_err(|error| format!("Invalid UTF-8 in {relative}: {error}"))
+    };
+    let document = |relative: &str| -> Result<json::Json, String> {
+        json::parse(&read_prose_input(root, relative)?, json::Limits::default())
+            .map_err(|error| format!("Invalid JSON in {relative}: {error}"))
+    };
+    let readme = text("README.md")?;
+    let status = text("IMPLEMENTATION_STATUS.md")?;
+    let receipt = document(current_execution_receipt(&status)?)?;
+    let concordance = document("registry/founding_concordance.json")?;
+    let invariants = document("registry/invariants.json")?;
+    let claims = document("registry/claims.json")?;
+    let roadmap = document("registry/roadmap.json")?;
+    let plan = text(PLAN_INPUT)?;
+    let report = prose_consistency::check(prose_consistency::Inputs {
+        readme: &readme,
+        status: &status,
+        concordance: &concordance,
+        invariants: &invariants,
+        claims: &claims,
+        roadmap: &roadmap,
+        plan: &plan,
+        receipt: &receipt,
+    });
+    println!("PROSE_JSON {}", report.render_json());
+    if !report.is_clean() {
+        return Err("Current prose consistency refused; exact findings are in PROSE_JSON".into());
+    }
+    println!(
+        "PASS prose_consistency: current declarations match registries and the named retained receipt; not new-source execution proof"
+    );
+    Ok(())
+}
+
 fn execute() -> Result<(), String> {
-    let root = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-        .parent()
-        .ok_or("Missing workspace parent")?
-        .to_path_buf();
+    let root = workspace_root()?;
     let args: Vec<_> = env::args().skip(1).collect();
     match args.as_slice() {
         [command] if command == "check" => {
@@ -379,6 +510,7 @@ fn execute() -> Result<(), String> {
             check_admission(&root)?;
             check_registries(&root)?;
             check_concordance(&root, &manifest)?;
+            check_prose(&root)?;
             run(&root, "cargo", &["fmt", "--all", "--check"])?;
             run(&root, "cargo", &["check", "--workspace", "--all-targets", "--frozen"])?;
             run(&root, "cargo", &["clippy", "--workspace", "--all-targets", "--frozen", "--", "-D", "warnings"])?;
@@ -397,10 +529,14 @@ fn execute() -> Result<(), String> {
             let manifest = check_source_snapshot(&root)?;
             check_concordance(&root, &manifest)
         }
+        [command] if command == "prose-check" => {
+            let _manifest = check_source_snapshot(&root)?;
+            check_prose(&root)
+        }
         [command] if command == "release-check" => {
             Err("Release blocked: no qualified production broker, frozen release toolchain, foundation closure, target matrix or signed proof closure exists in design draft 0.2.".into())
         }
-        _ => Err("Usage: cargo xtask check | concordance-check | inventory | release-check".into()),
+        _ => Err("Usage: cargo xtask check | concordance-check | prose-check | inventory | release-check".into()),
     }
 }
 

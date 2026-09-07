@@ -113,6 +113,40 @@ pub fn check(
     checker.report
 }
 
+/// Reuse the normative heading scanner for other consumers of plan references.
+/// Known keys include introductory headings; coverage requirements are separate.
+pub fn plan_heading_keys(plan: &str) -> Result<BTreeSet<String>, Report> {
+    let mut checker = Checker::default();
+    let targets = checker.plan_targets(plan);
+    checker.report.counts.headings = targets.required.len();
+    checker.finish();
+    if checker.report.is_clean() {
+        Ok(targets.known)
+    } else {
+        Err(checker.report)
+    }
+}
+
+/// Visible Markdown lines using the same fence boundaries as the plan scanner.
+/// Callers enforce their own input-byte bounds before allocating this view.
+pub fn unfenced_markdown_lines(text: &str) -> Vec<&str> {
+    let mut fence = None;
+    let mut visible = Vec::new();
+    for line in text.lines() {
+        let trimmed = line.trim_start();
+        if let Some(open) = fence {
+            if closes_fence(trimmed, open) {
+                fence = None;
+            }
+        } else if let Some(open) = opening_fence(trimmed) {
+            fence = Some(open);
+        } else {
+            visible.push(line);
+        }
+    }
+    visible
+}
+
 #[derive(Default)]
 struct Checker {
     report: Report,

@@ -1,0 +1,17 @@
+{
+  "schema": "fa.execution_receipt/1",
+  "result": {
+    "exit_code": 0,
+    "format": "passed",
+    "check": "passed",
+    "clippy": "passed",
+    "tests": {
+      "reference_unit": 0,
+      "reference_integration": 0,
+      "xtask": 0,
+      "doctests": 0,
+      "total_passed": 0,
+      "failed": 0
+    }
+  }
+}

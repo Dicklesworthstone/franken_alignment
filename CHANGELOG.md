@@ -1,5 +1,9 @@
 # Changelog
 
+## 2026-09-07: runtime checkout resolution and current-count checks
+
+The gate uses the actual invocation checkout and rejects stale or ambiguous current claims while preserving dated history. A real DSR run exposed the removed compile-time archive path; the repair and new receipt/path/fence regressions passed the complete 270-test RCH gate. The dedicated prose check supports post-execution documentation updates without crediting old tests to new source. DSR repeat and production admission remain separate qualification steps.
+
 ## 2026-09-07: owned concordance checker and admission discrimination
 
 The gate now rejects missing or dangling founding mappings and compares real Cargo source, target, feature and edge observations through the shared admission evaluator. The complete isolated RCH run passed 248 tests. Three earlier failures are retained, including a source/path bypass found by unchanged negative tests and repaired before closure. Four shorthand concordance references missed by the preceding manual audit are corrected and checked. External packages and production release remain refused.

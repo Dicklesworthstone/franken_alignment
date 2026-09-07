@@ -8,7 +8,7 @@
 use std::collections::BTreeSet;
 use std::fs;
 use std::io;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 use std::sync::atomic::{AtomicU64, Ordering};
 
 use super::{collect_metadata, collect_metadata_using, json};
@@ -47,10 +47,7 @@ impl Drop for TemporaryDirectory {
 }
 
 fn workspace_root() -> PathBuf {
-    Path::new(env!("CARGO_MANIFEST_DIR"))
-        .parent()
-        .expect("xtask manifest must have a workspace parent")
-        .to_path_buf()
+    crate::workspace_root().expect("actual invocation workspace")
 }
 
 fn package_names(document: &json::Json) -> BTreeSet<String> {

@@ -1,0 +1,23 @@
+[
+  "rch",
+  "--json",
+  "exec",
+  "--base",
+  "7099a15dafd4cddef27a43eb7cd02d815de75f9b",
+  "--clean-overlay",
+  "--overlay-path",
+  "registry/founding_concordance.json",
+  "--overlay-path",
+  "registry/source_snapshot.json",
+  "--overlay-path",
+  "registry/dependency_policy.json",
+  "--",
+  "cargo",
+  "+nightly-2026-09-07",
+  "run",
+  "--locked",
+  "-p",
+  "xtask",
+  "--",
+  "check"
+]

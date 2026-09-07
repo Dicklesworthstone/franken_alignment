@@ -122,10 +122,7 @@ fn copy_file(source: &Path, destination: &Path) {
 }
 
 fn workspace_root() -> PathBuf {
-    Path::new(env!("CARGO_MANIFEST_DIR"))
-        .parent()
-        .expect("xtask has a workspace parent")
-        .to_path_buf()
+    crate::workspace_root().expect("actual invocation workspace")
 }
 
 fn report(

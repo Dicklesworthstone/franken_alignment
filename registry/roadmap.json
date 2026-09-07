@@ -1316,7 +1316,10 @@
         "Produce executed local evidence; source or prose alone does not close this packet."
       ],
       "owner_role": "systems",
-      "result_artifacts": []
+      "result_artifacts": [
+        "artifacts/execution/2026-09-07-epoch7-receipt.json",
+        "artifacts/execution/2026-09-07-epoch7-attempt4.log"
+      ]
     },
     {
       "id": "FA-055",
@@ -2261,7 +2264,10 @@
         "Produce executed local evidence; source or prose alone does not close this packet."
       ],
       "owner_role": "systems",
-      "result_artifacts": [],
+      "result_artifacts": [
+        "artifacts/execution/2026-09-07-epoch7-receipt.json",
+        "artifacts/execution/2026-09-07-epoch7-attempt4.log"
+      ],
       "founding_ideas": [
         "FI-A01",
         "FI-I01"

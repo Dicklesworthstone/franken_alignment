@@ -3,5 +3,7 @@
 tools:
   franken_alignment:
     required_checks:
-      - "cargo run --locked -p xtask -- check"
+      - 'fa_source_status="$(git status --porcelain --untracked-files=all)" && test -z "$fa_source_status"'
+      - "RCH_REQUIRE_REMOTE=1 rch exec --base HEAD --clean-overlay --no-overlay -- cargo +nightly-2026-09-07 run --locked -p xtask -- concordance-check"
+      - "RCH_REQUIRE_REMOTE=1 rch exec --base HEAD --clean-overlay --no-overlay -- cargo +nightly-2026-09-07 run --locked -p xtask -- check"
     checks: []

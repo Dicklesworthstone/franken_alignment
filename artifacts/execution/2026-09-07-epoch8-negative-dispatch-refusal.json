@@ -1,0 +1,1 @@
+{"api_version":"1.0","command":"cargo +nightly-2026-09-07 run --locked -p xtask -- check","outcome":"refused","location":"local","fallback_reason":"remote execution failed; remote retries exhausted"}

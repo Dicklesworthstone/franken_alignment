@@ -1,0 +1,94 @@
+  [2m2026-09-07T23:24:59.220472Z[0m [32m INFO[0m [1;32mrch::hook[0m[32m: [32mSelected worker: hz4 at ubuntu@194.163.156.231 (6 slots remaining after reservation, speed 76.3)[0m
+    [2;3mat[0m rch/src/hook.rs:2645 [2;3mon[0m ThreadId(1)
+
+[*] Job j-30004650170124222 submitted to hz4 (6 slots remaining, speed 76.3)
+  [2m2026-09-07T23:24:59.327464Z[0m [32m INFO[0m [1;32mrch::hook::transfer_orchestration[0m[32m: [32mStarting remote compilation pipeline for franken_alignment_concordance_negative_20260907 (hash: 0c1cd9ac1a03676b)[0m
+    [2;3mat[0m rch/src/hook/transfer_orchestration.rs:510 [2;3mon[0m ThreadId(1)
+
+  [2m2026-09-07T23:24:59.327506Z[0m [32m INFO[0m [1;32mrch::hook::transfer_orchestration[0m[32m: [32mPrepared dependency sync manifest for 1 roots[0m
+    [2;3mat[0m rch/src/hook/transfer_orchestration.rs:532 [2;3mon[0m ThreadId(1)
+
+  [2m2026-09-07T23:25:02.738390Z[0m [32m INFO[0m [1;32mrch::hook::transfer_orchestration[0m[32m: [32mSyncing project to worker hz4...[0m
+    [2;3mat[0m rch/src/hook/transfer_orchestration.rs:661 [2;3mon[0m ThreadId(1)
+
+  [2m2026-09-07T23:25:07.635901Z[0m [32m INFO[0m [1;32mrch::transfer[0m[32m: [32mLinked git worktree detected at /Users/jemanuel/projects/franken_alignment_concordance_negative_20260907 (gitdir: /Users/jemanuel/projects/franken_alignment/.git/worktrees/concordance-negative); excluding dangling '.git' file from upload so the remote build resolves git-free like a normal repo[0m
+    [2;3mat[0m rch/src/transfer.rs:2009 [2;3mon[0m ThreadId(1)
+
+  [2m2026-09-07T23:25:07.636163Z[0m [32m INFO[0m [1;32mrch::transfer[0m[32m: [32mSyncing /Users/jemanuel/projects/franken_alignment_concordance_negative_20260907 -> /data/tmp/rch/franken_alignment_concordance_negative_20260907/0c1cd9ac1a03676b on hz4 (streaming)[0m
+    [2;3mat[0m rch/src/transfer.rs:3549 [2;3mon[0m ThreadId(1)
+
+  [2m2026-09-07T23:25:10.171271Z[0m [32m INFO[0m [1;32mrch::hook::transfer_orchestration[0m[32m: [32mSync complete: 5 files, 3575720 bytes in 6735ms[0m
+    [2;3mat[0m rch/src/hook/transfer_orchestration.rs:958 [2;3mon[0m ThreadId(1)
+
+  [2m2026-09-07T23:25:10.197709Z[0m [32m INFO[0m [1;32mrch::hook::transfer_orchestration[0m[32m: [32mExecuting command remotely: cargo +nightly-2026-09-07 run --locked -p xtask -- check[0m
+    [2;3mat[0m rch/src/hook/transfer_orchestration.rs:1018 [2;3mon[0m ThreadId(1)
+
+  [2m2026-09-07T23:25:10.197858Z[0m [32m INFO[0m [1;32mrch::transfer[0m[32m: [32mRewriting CARGO_TARGET_DIR for remote execution (worker-scoped path): /Volumes/USB_NVME/cargo-target -> /data/tmp/rch/franken_alignment_concordance_negative_20260907/.rch-target-hz4-pool-304d785b5e3a2695dd01d376808d5bca[0m
+    [2;3mat[0m rch/src/transfer.rs:1842 [2;3mon[0m ThreadId(1)
+
+  [2m2026-09-07T23:25:10.197937Z[0m [32m INFO[0m [1;32mrch::transfer[0m[32m: [32mWrapping command with external timeout protection, [1;32mkind[0m[32m: cargo build, [1;32mtimeout_secs[0m[32m: 3600[0m
+    [2;3mat[0m rch/src/transfer.rs:2669 [2;3mon[0m ThreadId(1)
+
+warning: unused field `license-file` in `workspace.package`
+ --> Cargo.toml:9:1
+  |
+9 | license-file = "LICENSE"
+  | ^^^^^^^^^^^^
+  |
+  = note: `cargo::unused_workspace_package_fields` is set to `warn` by default
+help: consider removing the field `workspace.package.license-file`
+warning: workspace (manifest) generated 1 warning
+   Compiling xtask v0.2.0 (/data/tmp/rch/franken_alignment_concordance_negative_20260907/0c1cd9ac1a03676b/xtask)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 1.91s
+     Running `/data/tmp/rch/franken_alignment_concordance_negative_20260907/.rch-target-hz4-pool-304d785b5e3a2695dd01d376808d5bca/debug/xtask check`
+PASS reference_lock: exactly fa-reference and xtask; no external packages
+PASS source_inventory: required files and crate-level prohibitions present
+EXECUTE rustc -Vv
+rustc 1.100.0-nightly (5a2be9f5f 2026-09-06)
+binary: rustc
+commit-hash: 5a2be9f5f075d31e3ca5526b5b029881ce441253
+commit-date: 2026-09-06
+host: x86_64-unknown-linux-gnu
+release: 1.100.0-nightly
+LLVM version: 23.1.1
+PASS qualified_rustc_identity: 5a2be9f5f075d31e3ca5526b5b029881ce441253 on x86_64-unknown-linux-gnu; compiler-reported identity only
+PASS admission_contract: required local source, target, build/runtime review and future external constraints; snapshot identity matched
+SNAPSHOT tool: sha256sum
+SNAPSHOT verified files: 67
+PASS source_snapshot: 67 reviewed files match the manifest byte for byte, and the discovered set equals the manifest set. Digests come from the operator's SHA-256 tool; no cryptography is implemented here. Not a claim about the hashing binary's authenticity, runtime semantics, or package dependencies.
+EXECUTE cargo metadata --format-version 1 --locked --offline --filter-platform aarch64-apple-darwin --manifest-path /data/tmp/rch/franken_alignment_concordance_negative_20260907/0c1cd9ac1a03676b/Cargo.toml
+ADMISSION target profile: aarch64-apple-darwin
+ADMISSION inventory:
+  fa-reference 0.2.0 path+file:///data/tmp/rch/franken_alignment_concordance_negative_20260907/0c1cd9ac1a03676b/crates/fa-reference#0.2.0 at crates/fa-reference/Cargo.toml [workspace local] kinds=bin,lib,test links=none features=none
+  xtask 0.2.0 path+file:///data/tmp/rch/franken_alignment_concordance_negative_20260907/0c1cd9ac1a03676b/xtask#0.2.0 at xtask/Cargo.toml [workspace local] kinds=bin links=none features=none
+ADMISSION note: claim is bound to target profile `aarch64-apple-darwin`; cargo metadata does not record which --filter-platform produced it, so the target binding rests on the caller collecting this document with `--filter-platform aarch64-apple-darwin`, not on the document itself
+ADMISSION note: metadata establishes identity, structure and feature activation only; it does not establish a runtime or downloaded-artifact closure
+PASS admission_closed_inventory[aarch64-apple-darwin]: exact local package set, exact resolve bijection, no external source, build script, proc macro, native link, build or target-scoped dependency, and the frozen feature set. Not a runtime or downloaded-artifact closure claim.
+PASS collected_metadata_paths[aarch64-apple-darwin]: actual workspace, manifests and target source files
+EXECUTE cargo metadata --format-version 1 --locked --offline --filter-platform x86_64-unknown-linux-gnu --manifest-path /data/tmp/rch/franken_alignment_concordance_negative_20260907/0c1cd9ac1a03676b/Cargo.toml
+ADMISSION target profile: x86_64-unknown-linux-gnu
+ADMISSION inventory:
+  fa-reference 0.2.0 path+file:///data/tmp/rch/franken_alignment_concordance_negative_20260907/0c1cd9ac1a03676b/crates/fa-reference#0.2.0 at crates/fa-reference/Cargo.toml [workspace local] kinds=bin,lib,test links=none features=none
+  xtask 0.2.0 path+file:///data/tmp/rch/franken_alignment_concordance_negative_20260907/0c1cd9ac1a03676b/xtask#0.2.0 at xtask/Cargo.toml [workspace local] kinds=bin links=none features=none
+ADMISSION note: claim is bound to target profile `x86_64-unknown-linux-gnu`; cargo metadata does not record which --filter-platform produced it, so the target binding rests on the caller collecting this document with `--filter-platform x86_64-unknown-linux-gnu`, not on the document itself
+ADMISSION note: metadata establishes identity, structure and feature activation only; it does not establish a runtime or downloaded-artifact closure
+PASS admission_closed_inventory[x86_64-unknown-linux-gnu]: exact local package set, exact resolve bijection, no external source, build script, proc macro, native link, build or target-scoped dependency, and the frozen feature set. Not a runtime or downloaded-artifact closure claim.
+PASS collected_metadata_paths[x86_64-unknown-linux-gnu]: actual workspace, manifests and target source files
+PASS registry_core: IDs, roadmap DAG, declared links, retained files and scoped source test declarations; not execution or invariant proof
+CONCORDANCE input=registry/founding_concordance.json bytes=42837 sha256=2ee87d46f4e2a2cde4edea55bbbc71203d7b31bd8421f26fc14291a225e6049c; verified source manifest, outer freeze required
+CONCORDANCE input=registry/invariants.json bytes=56752 sha256=b2f09b25d5633c7686ecf66a8b1998a489211d01c4a0bf179ce23af89b5f3965; verified source manifest, outer freeze required
+CONCORDANCE input=registry/claims.json bytes=15799 sha256=9e729380f01af536b21f116d334977db77e3900e43367c6f19b1522296c61005; verified source manifest, outer freeze required
+CONCORDANCE input=registry/roadmap.json bytes=111996 sha256=8ac0c9d1e33242087ddb9c1fba11879b438a038cc475e246ffc70a88944db2d6; verified source manifest, outer freeze required
+CONCORDANCE input=COMPREHENSIVE_PLAN_FOR_THE_DESIGN_OF_FRANKENALIGNMENT.md bytes=251689 sha256=b08ed463dd8d321a5f1a4a65fb839456345788fcc6cb9b8ff3103c7143d64616; verified source manifest, outer freeze required
+CONCORDANCE_JSON {"missing":[],"dangling":[{"file":"registry/founding_concordance.json","id":"FA-INV-099","code":"unknown_reference","detail":"unknown invariant"}],"counts":{"headings":231,"invariants":40,"hypotheses":21,"packets":143}}
+FAIL: Concordance coverage refused; exact findings are in CONCORDANCE_JSON
+  [2m2026-09-07T23:25:14.375251Z[0m [32m INFO[0m [1;32mrch::hook::transfer_orchestration[0m[32m: [32mRemote command finished: exit=1 in 4176ms[0m
+    [2;3mat[0m rch/src/hook/transfer_orchestration.rs:1150 [2;3mon[0m ThreadId(1)
+
+[W] Worker: hz4 | Job: j-30004650170124222
+[T] Total: 10.9s (sync 6.7s, build 4.2s, artifacts --)
+^ Sync: 3.4 MB in 6.7s (518.5 KB/s)
+[C] Compile: 4.2s
+Artifacts: skipped
+[T] Cache: MISS
+[RCH] remote hz4 failed (exit 1)
