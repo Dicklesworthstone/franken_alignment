@@ -1,5 +1,9 @@
 # Changelog
 
+## 2026-09-07: closed initial admission schema and byte binding
+
+The gate consumes required local source/target/build/runtime-review fields and future external constraints, binds the reviewed source-manifest digest, and prevents silent removal of either required target profile. Dependency refusals now preserve all declared kinds/targets and missing or malformed evidence independently of input order. The isolated RCH gate verified 40 inputs and passed all 217 tests. This qualifies the initial schema leaf; full target/source discrimination, foundation admission and production control remain unfinished.
+
 ## 2026-09-07: reviewed source snapshots
 
 The operator gate now requires exact source/build-input set and SHA-256 equality against a reviewed manifest. It refuses ancestor symlinks, unlisted/missing/changed files, excessive empty-directory traversal and hash-tool errors. The isolated RCH gate verified 39 inputs and passed all 199 tests; the exact receipt and raw log are retained as epoch4 artifacts. The outer source freeze and trusted operator tools remain assumptions; dependency admission and production qualification remain unfinished.

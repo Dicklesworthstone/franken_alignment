@@ -10,7 +10,7 @@ use std::path::{Path, PathBuf};
 use std::process::Command;
 use std::sync::atomic::{AtomicU64, Ordering};
 
-use super::source_snapshot::{Limits, Report, parse_manifest, verify};
+use super::source_snapshot::{Limits, Report, parse_manifest, verify, verify_manifest_identity};
 
 const SCHEMA: &str = "fa.source_snapshot/1";
 
@@ -386,4 +386,46 @@ fn malformed_digest_is_rejected_before_source_tree_can_be_verified() {
         error.contains("malformed_digest"),
         "the malformed digest must retain its causal refusal code: {error}"
     );
+}
+
+#[test]
+fn real_operator_hash_binds_written_snapshot_manifest_bytes() {
+    let sandbox = Sandbox::new();
+    let relative = "registry/source_snapshot.json";
+    sandbox.write_bytes(relative, &sandbox.manifest_bytes());
+    let expected = operator_sha256(&sandbox.root.join(relative));
+
+    assert_eq!(
+        verify_manifest_identity(&sandbox.root, relative, &expected),
+        Ok(())
+    );
+}
+
+#[test]
+fn harmless_whitespace_mutation_of_snapshot_manifest_breaks_binding() {
+    let sandbox = Sandbox::new();
+    let relative = "registry/source_snapshot.json";
+    let mut manifest = sandbox.manifest_bytes();
+    sandbox.write_bytes(relative, &manifest);
+    let expected = operator_sha256(&sandbox.root.join(relative));
+    manifest.extend_from_slice(b"\n \t");
+    sandbox.write_bytes(relative, &manifest);
+
+    let error = verify_manifest_identity(&sandbox.root, relative, &expected)
+        .expect_err("a byte change to the snapshot manifest must break its policy binding");
+    assert!(
+        error.starts_with("snapshot_binding_mismatch:"),
+        "the unchanged expected digest must report the causal binding mismatch: {error}"
+    );
+}
+
+#[test]
+fn malformed_snapshot_binding_digest_is_refused_before_operator_hashing() {
+    let sandbox = Sandbox::new();
+    let relative = "registry/source_snapshot.json";
+    sandbox.write_bytes(relative, &sandbox.manifest_bytes());
+
+    let error = verify_manifest_identity(&sandbox.root, relative, &"A".repeat(64))
+        .expect_err("a noncanonical expected digest must be refused");
+    assert_eq!(error, "snapshot_binding_digest: expected lowercase SHA-256");
 }

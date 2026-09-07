@@ -143,6 +143,12 @@ pub struct LocalRow {
     pub owner: String,
 }
 
+/// How Cargo's `dep_kinds[].kind` spells an ordinary dependency: as JSON null.
+///
+/// Recorded under this name so a normal edge stays visible in the evidence
+/// while still being distinguishable from a build or dev edge.
+const NORMAL_DEP_KIND: &str = "normal";
+
 /// The only decision value that admits.
 ///
 /// Anything else — including a pending or provisional value — refuses. This is
@@ -1374,30 +1380,109 @@ fn report_dep_edge(dep: &Json, path: &str, findings: &mut Vec<Finding>) {
         .and_then(Json::as_str)
         .or_else(|| dep.get("pkg").and_then(Json::as_str))
         .unwrap_or("<unnamed>");
-    let mut phase = Phase::Features;
-    let mut detail =
-        format!("resolved dependency edge on `{name}` is not in the admitted inventory");
-    if let Some(kinds) = dep.get("dep_kinds").and_then(Json::as_array) {
-        for entry in kinds {
-            let kind = entry.get("kind").and_then(Json::as_str);
-            let target = entry.get("target").and_then(Json::as_str);
-            if let Some(target) = target {
-                phase = Phase::Target;
-                detail = format!(
-                    "dependency `{name}` is activated only for target `{target}`; a \
-                     target-scoped activation is still an admission event"
-                );
-            } else if let Some(kind) = kind {
-                phase = Phase::Build;
-                detail = format!("dependency `{name}` is activated as a `{kind}` dependency");
+    // Every declared kind and target is collected before anything is decided,
+    // so the classification cannot depend on which `dep_kinds` entry happens to
+    // come last. Reversing a mixed build/target list previously changed both
+    // the phase and the detail, which made the diagnostic an artifact of
+    // Cargo's emission order rather than of the dependency.
+    // Only an explicit JSON null is Cargo's spelling of a normal dependency.
+    // A missing key and a wrong-typed value are neither normal nor a fact
+    // about the edge, so each is kept as its own marker instead of being
+    // folded into `normal`.
+    let mut real_kinds: BTreeSet<String> = BTreeSet::new();
+    let mut real_targets: BTreeSet<String> = BTreeSet::new();
+    let mut anomalies: BTreeSet<String> = BTreeSet::new();
+    let mut explicit_normal = false;
+
+    if let Some(entries) = dep.get("dep_kinds").and_then(Json::as_array) {
+        for entry in entries {
+            let Some(entry) = entry.as_object() else {
+                anomalies.insert(format!("<entry:malformed:{}>", entry.kind()));
+                continue;
+            };
+            match entry.get("kind") {
+                None => {
+                    anomalies.insert("<kind:missing>".to_string());
+                }
+                Some(value) if value.is_null() => explicit_normal = true,
+                Some(value) => match value.as_str() {
+                    // Cargo spells a normal dependency as null, so any string
+                    // here is a non-normal kind such as `build` or `dev`.
+                    Some(kind) => {
+                        real_kinds.insert(kind.to_string());
+                    }
+                    None => {
+                        anomalies.insert(format!("<kind:malformed:{}>", value.kind()));
+                    }
+                },
+            }
+            match entry.get("target") {
+                None => {
+                    anomalies.insert("<target:missing>".to_string());
+                }
+                Some(value) if value.is_null() => {}
+                Some(value) => match value.as_str() {
+                    Some(target) => {
+                        real_targets.insert(target.to_string());
+                    }
+                    None => {
+                        anomalies.insert(format!("<target:malformed:{}>", value.kind()));
+                    }
+                },
             }
         }
+    } else if dep.get("dep_kinds").is_some() {
+        anomalies.insert("<dep_kinds:malformed>".to_string());
+    } else {
+        anomalies.insert("<dep_kinds:missing>".to_string());
     }
+
+    // Exact precedence, evaluated over the whole set rather than the last
+    // entry seen. Real facts dominate anomalies, because a genuine
+    // target-scoped or build activation is more specific than an unreadable
+    // field; an anomaly only decides the phase when nothing real was declared:
+    //
+    //   1. Target   any real target string is present
+    //   2. Build    else any real kind string is present (Cargo uses null for
+    //               normal, so a string is always non-normal)
+    //   3. Metadata else any missing or malformed marker is present
+    //   4. Features else the edge is an ordinary dependency
+    //
+    // The refusal is unconditional in every case: this chooses how the edge is
+    // described, never whether it is admitted.
+    let phase = if !real_targets.is_empty() {
+        Phase::Target
+    } else if !real_kinds.is_empty() {
+        Phase::Build
+    } else if !anomalies.is_empty() {
+        Phase::Metadata
+    } else {
+        Phase::Features
+    };
+
+    let mut declared_kinds = real_kinds;
+    if explicit_normal {
+        declared_kinds.insert(NORMAL_DEP_KIND.to_string());
+    }
+    let render = |set: &BTreeSet<String>, empty: &str| {
+        if set.is_empty() {
+            empty.to_string()
+        } else {
+            set.iter().cloned().collect::<Vec<_>>().join(", ")
+        }
+    };
+
     findings.push(Finding::new(
         phase,
         "unadmitted_dependency_edge",
         path.to_string(),
-        detail,
+        format!(
+            "resolved dependency edge on `{name}` is not in the admitted inventory; declared \
+             kinds [{}], targets [{}], anomalies [{}]",
+            render(&declared_kinds, "none declared"),
+            render(&real_targets, "none"),
+            render(&anomalies, "none")
+        ),
     ));
 }
 
@@ -1939,6 +2024,153 @@ mod tests {
         );
         let report = check_filtered(&mutated);
         assert_refused(&report, Phase::Build, "unadmitted_dependency_edge");
+    }
+
+    /// The unmutated `deps: []` slot in the first resolve node.
+    const DEPS_ANCHOR: &str = "\"dependencies\":[],\"deps\":[],\"features\":[]}";
+
+    fn edge_finding(report: &Report) -> Finding {
+        report
+            .findings
+            .iter()
+            .find(|finding| finding.code == "unadmitted_dependency_edge")
+            .cloned()
+            .expect("an unadmitted dependency edge must be reported")
+    }
+
+    #[test]
+    fn dependency_edge_classification_is_order_independent() {
+        // Same two dep_kinds entries, emitted in both orders. Before the fix
+        // the last entry won, so reversing them changed both the phase and the
+        // detail: the diagnostic described Cargo's emission order rather than
+        // the dependency.
+        let forward = "\"dependencies\":[],\"deps\":[{\"name\":\"libc\",\
+                       \"pkg\":\"registry+x#libc@0.2.0\",\"dep_kinds\":[\
+                       {\"kind\":\"build\",\"target\":null},\
+                       {\"kind\":null,\"target\":\"cfg(unix)\"}]}],\"features\":[]}";
+        let reversed = "\"dependencies\":[],\"deps\":[{\"name\":\"libc\",\
+                        \"pkg\":\"registry+x#libc@0.2.0\",\"dep_kinds\":[\
+                        {\"kind\":null,\"target\":\"cfg(unix)\"},\
+                        {\"kind\":\"build\",\"target\":null}]}],\"features\":[]}";
+
+        let first = edge_finding(&check_filtered(&mutate(
+            FILTERED_METADATA,
+            DEPS_ANCHOR,
+            forward,
+        )));
+        let second = edge_finding(&check_filtered(&mutate(
+            FILTERED_METADATA,
+            DEPS_ANCHOR,
+            reversed,
+        )));
+
+        assert_eq!(first.phase, second.phase, "phase must not depend on order");
+        assert_eq!(first.code, second.code, "code must not depend on order");
+        assert_eq!(
+            first.detail, second.detail,
+            "detail must not depend on order"
+        );
+
+        // A declared target dominates the whole set, whichever entry is last.
+        assert_eq!(first.phase, Phase::Target);
+        // Neither declared kind is lost from the evidence.
+        assert!(
+            first.detail.contains("build") && first.detail.contains(NORMAL_DEP_KIND),
+            "both declared kinds must survive: {}",
+            first.detail
+        );
+        assert!(
+            first.detail.contains("cfg(unix)"),
+            "the declared target must survive: {}",
+            first.detail
+        );
+    }
+
+    #[test]
+    fn normal_dependency_edge_is_classified_as_features() {
+        // A single ordinary edge: no target, and a null kind, which Cargo uses
+        // for a normal dependency. It is still an unconditional refusal.
+        let normal = "\"dependencies\":[],\"deps\":[{\"name\":\"serde\",\
+                      \"pkg\":\"registry+x#serde@1.0.0\",\"dep_kinds\":[\
+                      {\"kind\":null,\"target\":null}]}],\"features\":[]}";
+        let report = check_filtered(&mutate(FILTERED_METADATA, DEPS_ANCHOR, normal));
+        assert_refused(&report, Phase::Features, "unadmitted_dependency_edge");
+
+        let finding = edge_finding(&report);
+        assert_eq!(finding.phase, Phase::Features);
+        assert!(
+            finding.detail.contains(NORMAL_DEP_KIND),
+            "a null kind must be recorded as `{NORMAL_DEP_KIND}`, not dropped: {}",
+            finding.detail
+        );
+        assert!(
+            finding.detail.contains("targets [none]"),
+            "an edge with no target must say so explicitly: {}",
+            finding.detail
+        );
+    }
+
+    #[test]
+    fn missing_kind_key_is_a_marker_not_normal() {
+        // An absent `kind` is not Cargo's null-means-normal spelling; it is a
+        // document that did not say. It must not be laundered into `normal`.
+        let absent = "\"dependencies\":[],\"deps\":[{\"name\":\"ghost\",\
+                      \"pkg\":\"registry+x#ghost@0.1.0\",\"dep_kinds\":[\
+                      {\"target\":null}]}],\"features\":[]}";
+        let report = check_filtered(&mutate(FILTERED_METADATA, DEPS_ANCHOR, absent));
+        let finding = edge_finding(&report);
+        assert_eq!(
+            finding.phase,
+            Phase::Metadata,
+            "an unreadable kind classifies as metadata, never as a normal edge"
+        );
+        assert!(
+            finding.detail.contains("<kind:missing>"),
+            "the marker must survive: {}",
+            finding.detail
+        );
+        assert!(
+            !finding.detail.contains("kinds [normal]"),
+            "a missing kind must not be reported as normal: {}",
+            finding.detail
+        );
+        assert!(!report.is_admitted());
+    }
+
+    #[test]
+    fn malformed_kind_value_is_a_marker_not_normal() {
+        let malformed = "\"dependencies\":[],\"deps\":[{\"name\":\"ghost\",\
+                         \"pkg\":\"registry+x#ghost@0.1.0\",\"dep_kinds\":[\
+                         {\"kind\":42,\"target\":null}]}],\"features\":[]}";
+        let report = check_filtered(&mutate(FILTERED_METADATA, DEPS_ANCHOR, malformed));
+        let finding = edge_finding(&report);
+        assert_eq!(finding.phase, Phase::Metadata);
+        assert!(
+            finding.detail.contains("<kind:malformed:number>"),
+            "the marker must name the offending type: {}",
+            finding.detail
+        );
+        assert!(!report.is_admitted());
+    }
+
+    #[test]
+    fn a_real_target_dominates_an_anomaly() {
+        // Precedence step 1 beats step 3: one entry is unreadable, another
+        // declares a genuine target. The real fact decides the phase, and the
+        // anomaly is still reported rather than dropped.
+        let mixed = "\"dependencies\":[],\"deps\":[{\"name\":\"ghost\",\
+                     \"pkg\":\"registry+x#ghost@0.1.0\",\"dep_kinds\":[\
+                     {\"target\":null},\
+                     {\"kind\":null,\"target\":\"cfg(unix)\"}]}],\"features\":[]}";
+        let report = check_filtered(&mutate(FILTERED_METADATA, DEPS_ANCHOR, mixed));
+        let finding = edge_finding(&report);
+        assert_eq!(finding.phase, Phase::Target);
+        assert!(finding.detail.contains("cfg(unix)"));
+        assert!(
+            finding.detail.contains("<kind:missing>"),
+            "the anomaly must still be reported: {}",
+            finding.detail
+        );
     }
 
     #[test]

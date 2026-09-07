@@ -47,7 +47,7 @@
       "reason": "Cargo metadata cannot establish a package checksum, what a build script does when executed, or what bytes a loader downloads at run time. Admitting an external package on metadata evidence would be admission on absent evidence. The checker therefore refuses every external package unconditionally, and refuses any policy that carries an external row, so that no boolean or attestation field can stand in for an inspection that has not happened.",
       "external_rows_must_remain_empty": true,
       "required_fields_when_implemented": {
-        "note": "This list documents the row shape that a future external admission would have to carry, per docs/DEPENDENCY_CONSTITUTION.md. Documenting the shape admits nothing and approves nothing: there is no code path that reads these fields, and the checker refuses any external row regardless of which of them are present. The list exists so the requirement is recorded, not so a row can be pre-staged.",
+        "note": "The owned contract checker requires every listed identity, scope, closure and governance field name as future rule data. It does not accept external rows: every external package remains refused regardless of fields, flags or attestations. A complete source/build/runtime review is still required before a future implementation may support external admission.",
         "identity": [
           "name",
           "version",
@@ -93,7 +93,37 @@
         "direct_reason": "Independent test-only logical oracle (plan section 6.2, 19.2).",
         "owner": "systems",
         "decision": "admitted",
-        "decision_date": "2026-09-07"
+        "decision_date": "2026-09-07",
+        "source_snapshot": "initial-reviewed-workspace",
+        "targets": [
+          "aarch64-apple-darwin",
+          "x86_64-unknown-linux-gnu"
+        ],
+        "build_closure": {
+          "dependencies": [],
+          "build_dependencies": [],
+          "build_scripts": [],
+          "proc_macros": [],
+          "native_links": []
+        },
+        "runtime_closure": {
+          "scope": "reviewed_local_rust_source",
+          "direct_network": false,
+          "dynamic_loading": false,
+          "downloaded_artifacts": [],
+          "operator_tools": [],
+          "filesystem": "in_memory_only",
+          "test_filesystem": "in_memory_only",
+          "trust_boundary": [
+            "std",
+            "os",
+            "toolchain"
+          ]
+        },
+        "evidence": [
+          "registry/source_snapshot.json",
+          "docs/DEPENDENCY_CONSTITUTION.md"
+        ]
       },
       {
         "name": "xtask",
@@ -102,7 +132,43 @@
         "direct_reason": "Operator-local gate driver (plan section 6.2, 22.6).",
         "owner": "systems",
         "decision": "admitted",
-        "decision_date": "2026-09-07"
+        "decision_date": "2026-09-07",
+        "source_snapshot": "initial-reviewed-workspace",
+        "targets": [
+          "aarch64-apple-darwin",
+          "x86_64-unknown-linux-gnu"
+        ],
+        "build_closure": {
+          "dependencies": [],
+          "build_dependencies": [],
+          "build_scripts": [],
+          "proc_macros": [],
+          "native_links": []
+        },
+        "runtime_closure": {
+          "scope": "reviewed_local_rust_source",
+          "direct_network": false,
+          "dynamic_loading": false,
+          "downloaded_artifacts": [],
+          "operator_tools": [
+            "cargo",
+            "rustc",
+            "sha256sum",
+            "shasum"
+          ],
+          "filesystem": "read_workspace_and_run_operator_tools",
+          "test_filesystem": "owned_temporary_sandboxes",
+          "trust_boundary": [
+            "std",
+            "os",
+            "toolchain",
+            "operator_tools"
+          ]
+        },
+        "evidence": [
+          "registry/source_snapshot.json",
+          "docs/DEPENDENCY_CONSTITUTION.md"
+        ]
       }
     ],
     "external_rows": [],
@@ -161,7 +227,16 @@
       "That the metadata was in fact produced with the declared --filter-platform target.",
       "That any target other than a listed profile is admissible.",
       "That the toolchain, std or operating system are themselves trustworthy."
-    ]
+    ],
+    "source_snapshot": {
+      "id": "initial-reviewed-workspace",
+      "schema": "fa.source_snapshot/1",
+      "manifest_path": "registry/source_snapshot.json",
+      "sha256": "0cebc9dcefd149c0768033be22a3f230581fae7b46120e504106f4ade7943e6e",
+      "source_url": "https://github.com/Dicklesworthstone/franken_alignment.git",
+      "identity_scope": "reviewed_snapshot_bytes"
+    },
+    "local_closure_boundary": "Source review describes the enumerated local Rust code; actual snapshot bytes must match before admission. Build edges and target feature sets are independently checked against newly collected Cargo metadata. Operator binaries, std, toolchain and OS are explicit trust boundaries; this is not runtime attestation or foundation admission."
   },
   "operator_qualification": {
     "scope": "initial_reference_gate",

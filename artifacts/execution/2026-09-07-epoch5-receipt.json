@@ -1,0 +1,106 @@
+{
+  "schema": "fa.execution_receipt/1",
+  "scope": "FA053 closed initial admission row schema and source binding; no foundation admission",
+  "executed_at_utc": "2026-09-07T22:28:44Z",
+  "base_commit": "a162e704ac0abd3772221328ddd24c58a5ccdf3c",
+  "overlay_fingerprint": "08f73c48d704067acd7e09db0a839f16ef4f0e28c1e785535ff0cf5cd2c54de4",
+  "source_sha256": {
+    "xtask/src/main.rs": "459dfc4cc474b39df5f709c9dca77bf7006b81a74ab11355972305f95ab0144f",
+    "xtask/src/admission.rs": "61588bbe6629281aab211bdc78a865a2dffee6427c081380c6408ced8c4ecd18",
+    "xtask/src/admission_contract.rs": "a4d483d467286e8f1ff616072f8770532e99db8de7d324ee7021f590dbd8d847",
+    "xtask/src/source_snapshot.rs": "f7089fb30e9da93971f3c0f1d5b4cb37bee329c6082accd5b98771b0da0ea2ee",
+    "xtask/src/source_snapshot_tests.rs": "37c5453ccd0e395d2a088e7e0dab23a98452789b633926bee2b3b61b4c9b13f9",
+    "registry/dependency_policy.json": "76af3b35dfd2138b4a48737c51fc7d0074129ce602872c083668b202d34f4f7b",
+    "registry/source_snapshot.json": "0cebc9dcefd149c0768033be22a3f230581fae7b46120e504106f4ade7943e6e",
+    "registry/roadmap.json": "cb28ae32d97b6075eb0af1da47bf553ccfe534f51aa05976401eda32ee0d15bd",
+    "docs/DEPENDENCY_CONSTITUTION.md": "1ef0170f82ee2392c3e9224a1573a964cd76b2c76c0c724d0c05ec2d4aaadb61"
+  },
+  "snapshot_file_count": 40,
+  "worker": "ovh-a",
+  "job": "j-30004650170124201",
+  "toolchain": "nightly-2026-09-07",
+  "rustc_commit": "5a2be9f5f075d31e3ca5526b5b029881ce441253",
+  "command": [
+    "rch",
+    "--json",
+    "exec",
+    "--base",
+    "a162e704ac0abd3772221328ddd24c58a5ccdf3c",
+    "--clean-overlay",
+    "--overlay-path",
+    "xtask/src/main.rs",
+    "--overlay-path",
+    "xtask/src/admission.rs",
+    "--overlay-path",
+    "xtask/src/admission_contract.rs",
+    "--overlay-path",
+    "xtask/src/source_snapshot.rs",
+    "--overlay-path",
+    "xtask/src/source_snapshot_tests.rs",
+    "--overlay-path",
+    "registry/dependency_policy.json",
+    "--overlay-path",
+    "registry/source_snapshot.json",
+    "--overlay-path",
+    "registry/roadmap.json",
+    "--overlay-path",
+    "docs/DEPENDENCY_CONSTITUTION.md",
+    "--",
+    "cargo",
+    "+nightly-2026-09-07",
+    "run",
+    "--locked",
+    "-p",
+    "xtask",
+    "--",
+    "check"
+  ],
+  "result": {
+    "exit_code": 0,
+    "format": "passed",
+    "check": "passed",
+    "clippy": "passed; warnings denied",
+    "tests": {
+      "reference_unit": 56,
+      "reference_integration": 16,
+      "xtask": 143,
+      "doctests": 2,
+      "total_passed": 217,
+      "failed": 0
+    }
+  },
+  "executed_inventory": {
+    "targets": [
+      "aarch64-apple-darwin",
+      "x86_64-unknown-linux-gnu"
+    ],
+    "packages": [
+      "fa-reference 0.2.0",
+      "xtask 0.2.0"
+    ],
+    "external_packages": 0,
+    "build_scripts": 0,
+    "proc_macros": 0,
+    "native_links": 0
+  },
+  "negative_tests": [
+    "missing or unsupported policy schema",
+    "missing, blank and malformed local row fields",
+    "wrong source URL and source descriptor types",
+    "joint deletion of target profile and both local row target references",
+    "unknown target with matching row references",
+    "permissive external flags and nonempty external rows",
+    "missing or duplicate future field constraints",
+    "nonempty exception/foundation admissions and falsely completed donor audit",
+    "missing build closure and falsely empty xtask operator tools",
+    "snapshot manifest byte drift despite semantically harmless JSON whitespace",
+    "dependency-kind ordering and missing/malformed kind provenance"
+  ],
+  "boundaries": [
+    "All compilation/test execution was Linux; Apple metadata collection is not Apple execution.",
+    "Exact base plus nine overlay paths; concurrent concordance edits excluded.",
+    "Source content identity is repository URL, exact local package version and reviewed snapshot checksum. Git base/overlay lineage is in this outer receipt; the inner gate does not claim ancestry in an archive without Git history.",
+    "Local source review names explicit std/OS/toolchain/operator-binary trust boundaries; no binary authentication or runtime attestation.",
+    "The schema leaf does not close general FA053/FA054 roadmap packets or the r860 compiler bead; admitted-target versus forbidden-target dependency and source-URL discrimination remain unfinished."
+  ]
+}

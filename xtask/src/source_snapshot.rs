@@ -760,6 +760,39 @@ fn hash_one(tool: &Tool, root: &Path, relative: &str) -> Result<String, HashErro
     Ok(digest.to_string())
 }
 
+/// Bind the manifest's own bytes to the reviewed operator policy. This is
+/// outside the manifest's file set, so there is no self-referential digest.
+pub fn verify_manifest_identity(root: &Path, relative: &str, expected: &str) -> Result<(), String> {
+    check_relative_path(relative, Limits::default())
+        .map_err(|(code, detail)| format!("{code}: {detail}"))?;
+    if !is_sha256_hex(expected) {
+        return Err("snapshot_binding_digest: expected lowercase SHA-256".into());
+    }
+    let root = std::fs::canonicalize(root).map_err(|error| error.to_string())?;
+    let mut absent = Vec::new();
+    for tool in Tool::candidates_for_host() {
+        match hash_one(&tool, &root, relative) {
+            Ok(actual) if actual == expected => return Ok(()),
+            Ok(actual) => {
+                return Err(format!(
+                    "snapshot_binding_mismatch: policy expects {expected}, operator computed {actual}"
+                ));
+            }
+            Err(HashError::NotSpawnable(reason)) => absent.push(reason),
+            Err(HashError::Refusal(finding)) => {
+                return Err(format!(
+                    "snapshot_binding_{}: {}",
+                    finding.code, finding.detail
+                ));
+            }
+        }
+    }
+    Err(format!(
+        "snapshot_binding_tool_absent: {}",
+        absent.join("; ")
+    ))
+}
+
 /// Record the comparison of one computed digest against the manifest.
 fn compare(
     manifest: &Manifest,

@@ -1,6 +1,12 @@
 # Implementation status · design revision 0.3
 
-## Latest qualified batch: reviewed source snapshots
+## Latest qualified batch: closed initial admission contract
+
+The fifth isolated RCH gate passed on `ovh-a` under `nightly-2026-09-07`: **56 reference unit tests, 16 integration tests, 143 xtask tests and 2 doctests; 217 passed, zero failed**. [The receipt](artifacts/execution/2026-09-07-epoch5-receipt.json) binds the nine selected overlay files and [raw execution log](artifacts/execution/2026-09-07-epoch5-attempt1.log). It verified 40 source/build inputs and recollected both required target inventories. Apple metadata collection remains distinct from Linux compilation and execution.
+
+The two local rows now carry checked source identity, version, target coverage, reason, ownership, decision, build closure and scoped runtime review. The policy binds the source-manifest digest; missing requirements, silent target removal, permissive external flags and false closure declarations refuse. Dependency-edge diagnostics preserve declared kinds, targets and malformed evidence independently of input order. The schema leaf is qualified; the general compiler's target/source discrimination remains unfinished, and no external foundation or production feature is admitted. Concurrent concordance edits were excluded from this batch.
+
+## Fourth qualified batch: reviewed source snapshots
 
 The fourth isolated RCH gate passed on `hz4` under `nightly-2026-09-07`: **56 reference unit tests, 16 integration tests, 125 xtask tests and 2 doctests; 199 passed, zero failed**. [The receipt](artifacts/execution/2026-09-07-epoch4-receipt.json) identifies the exact base and four overlay files; [the raw log](artifacts/execution/2026-09-07-epoch4-attempt1.log) records verification of all 39 reviewed source/build inputs before the remaining gate commands. The selected snapshot used committed concordance bytes, excluding concurrent concordance work.
 
@@ -34,7 +40,7 @@ The round uses a deliberately non-cryptographic FNV comparison and proves no cry
 | Founding essays | Both read in full again for revision 0.3; head commits recorded in `registry/sources.json` | Complete premise; no missing post |
 | Ten donor/build project deep dives | Targeted code/manifest/plan review at fixed refs (revision 0.2) | Exact files/scopes recorded; not full repository audits or builds |
 | Pure-Rust reference workspace | Source present, zero external packages, formatted with `cargo fmt --all` on 2026-09-06 | Selected logical semantics only; not a broker |
-| Rust test functions | **56 unit + 16 integration reference tests, 125 xtask tests and 2 doctests passed remotely on 2026-09-07**; earlier runs remain dated below | Exact frozen batch above; not production evidence or credit for other work in progress |
+| Rust test functions | **56 unit + 16 integration reference tests, 143 xtask tests and 2 doctests passed remotely on 2026-09-07**; earlier runs remain dated below | Exact frozen batch above; not production evidence or credit for other work in progress |
 | Rust local gate driver | **Complete reference gate PASS remotely on 2026-09-07** under `nightly-2026-09-07`; earlier local 2026-09-06 gate retained below | Initial inventory and registry-core checks execute; general admission and full concordance validation remain incomplete; new source requires a new run |
 | Production release gate | Explicitly refuses release | No qualified broker/toolchain/target/signing closure |
 | Machine-readable registries | 40 invariants, 21 hypotheses, 143 packets, 5 SLO targets, founding concordance (38 ideas, 9 syntheses, 25 engineering additions), preregistration ledger with no preregistered protocol yet, system map (9 layers) and vocabulary (26 nouns, 35 verbs, 12 reason codes) | Static structural checks are not proofs of their claims |

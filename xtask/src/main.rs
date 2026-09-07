@@ -2,6 +2,7 @@
 #![forbid(unsafe_code)]
 
 mod admission;
+mod admission_contract;
 #[cfg(test)]
 mod admission_negative_tests;
 mod json;
@@ -266,9 +267,18 @@ fn check_registries(root: &Path) -> Result<(), String> {
 }
 
 fn check_source_snapshot(root: &Path) -> Result<(), String> {
+    let policy_bytes = fs::read(root.join("registry/dependency_policy.json"))
+        .map_err(|error| format!("Cannot read admission contract: {error}"))?;
+    let policy = json::parse(&policy_bytes, json::Limits::default())
+        .map_err(|error| format!("Invalid admission contract: {error}"))?;
+    let binding = admission_contract::check(&policy)?;
+    source_snapshot::verify_manifest_identity(root, &binding.manifest_path, &binding.sha256)?;
+    println!(
+        "PASS admission_contract: required local source, target, build/runtime review and future external constraints; snapshot identity matched"
+    );
     let limits = source_snapshot::Limits::default();
     let mut bytes = Vec::new();
-    fs::File::open(root.join("registry/source_snapshot.json"))
+    fs::File::open(root.join(&binding.manifest_path))
         .map_err(|error| format!("Cannot open reviewed source snapshot: {error}"))?
         .take(limits.max_manifest_bytes as u64 + 1)
         .read_to_end(&mut bytes)
