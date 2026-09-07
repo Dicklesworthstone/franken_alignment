@@ -44,3 +44,6 @@ ENV/
 
 # Tooling and local execution state
 .ee/
+
+# bv (beads viewer) local config and caches
+.bv/
