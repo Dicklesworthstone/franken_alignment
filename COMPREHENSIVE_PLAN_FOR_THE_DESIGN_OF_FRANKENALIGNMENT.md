@@ -4,12 +4,6 @@
 
 **Design draft 0.3 · September 6, 2026 · Jeffrey Emanuel**
 
-> **Status and claim boundary.** Design revision 0.3 is a source-grounded specification, not a deployed alignment system. The repository includes a dependency-free, safe-Rust reference model and a Rust local-gate driver. The revision 0.2 preparation environment did not compile them; on September 6, 2026 the 20 reference tests were executed on one operator host and passed, with retained logs in [`artifacts/execution/`](artifacts/execution/). The complete local gate also passed on that host under a dated nightly (`nightly-2026-08-31`) after the documented `cargo fmt --all` preparation; the host's rolling nightly lacked the rustfmt and clippy binaries, and [implementation status](IMPLEMENTATION_STATUS.md) records both facts. No production broker, trained monitor, learned codec, or completed foundation integration is claimed. The founding inputs are the two essays; there is no additional tweet requirement.
-
-> **Revision 0.3.** The two founding essays are the spine. Every mechanism names its founding root in the [founding-ideas concordance](docs/FOUNDING_IDEAS.md), and the plan now carries the mechanisms the essays proposed that revision 0.2 left implicit: typed congress consequences including rewind as containment (§9.8, §11.10), a helper credibility economy with lead-time credit and anti-capture governance (§9.9), escalation reports and quarantined post-round learning (§9.10), the manifold premise as a measured hypothesis (§10.14), the sidecar-to-congress pipeline (§10.15), elicitation campaigns with activation signature libraries (§12.6) and surprise as a masking detector (§12.7). See [revision 0.3 rationale](docs/REVISION_0_3.md).
-
-> **Revision 0.2.** The architecture treats judgments as versioned computations, observation plans as resource- and authority-typed programs, transport as progressive evidence publication, and release as a locally executed evidence protocol. See [revision rationale](docs/REVISION_0_2.md), [deep source audit](docs/SOURCE_REVIEW.md), [dependency constitution](docs/DEPENDENCY_CONSTITUTION.md), and [local release contract](docs/LOCAL_RELEASE.md).
-
 ## Contents
 
 0. [The thesis](#0-the-thesis)
