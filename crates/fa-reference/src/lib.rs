@@ -219,7 +219,10 @@ impl Rights {
     }
 
     pub fn state(&self, id: u64) -> Result<State, Error> {
-        self.reservations.get(&id).map(|r| r.state).ok_or(Error::Missing)
+        self.reservations
+            .get(&id)
+            .map(|r| r.state)
+            .ok_or(Error::Missing)
     }
 
     pub fn revoke_epoch(&mut self) -> Result<(), Error> {
@@ -279,7 +282,10 @@ impl Rights {
         if reservation.state != State::Reserved {
             return Err(Error::WrongState);
         }
-        self.available = self.available.checked_add(reservation.effect.units).ok_or(Error::Overflow)?;
+        self.available = self
+            .available
+            .checked_add(reservation.effect.units)
+            .ok_or(Error::Overflow)?;
         reservation.state = State::Aborted;
         Ok(())
     }
@@ -291,21 +297,35 @@ impl Rights {
             return Err(Error::WrongState);
         }
         if occurred {
-            self.spent = self.spent.checked_add(reservation.effect.units).ok_or(Error::Overflow)?;
+            self.spent = self
+                .spent
+                .checked_add(reservation.effect.units)
+                .ok_or(Error::Overflow)?;
             reservation.state = State::Committed;
         } else {
-            self.available = self.available.checked_add(reservation.effect.units).ok_or(Error::Overflow)?;
+            self.available = self
+                .available
+                .checked_add(reservation.effect.units)
+                .ok_or(Error::Overflow)?;
             reservation.state = State::Aborted;
         }
         Ok(())
     }
 
     pub fn conserved(&self) -> bool {
-        let held = self.reservations.values().filter(|r| {
-            matches!(r.state, State::Reserved | State::Dispatched | State::Unknown)
-        }).try_fold(0_u64, |n, r| n.checked_add(r.effect.units));
+        let held = self
+            .reservations
+            .values()
+            .filter(|r| {
+                matches!(
+                    r.state,
+                    State::Reserved | State::Dispatched | State::Unknown
+                )
+            })
+            .try_fold(0_u64, |n, r| n.checked_add(r.effect.units));
         held.and_then(|n| n.checked_add(self.available))
-            .and_then(|n| n.checked_add(self.spent)) == Some(self.total)
+            .and_then(|n| n.checked_add(self.spent))
+            == Some(self.total)
     }
 }
 
@@ -337,7 +357,9 @@ impl Graph {
         if nodes == 0 || nodes > 128 || edges.len() > 16_384 {
             return Err(Error::Limit);
         }
-        let mut graph = Self { edges: vec![Vec::new(); nodes] };
+        let mut graph = Self {
+            edges: vec![Vec::new(); nodes],
+        };
         for &(from, to) in edges {
             if from >= nodes || to >= nodes {
                 return Err(Error::InvalidInput);
@@ -357,7 +379,10 @@ impl Graph {
         blocked: &BTreeSet<usize>,
     ) -> Result<BTreeSet<usize>, Error> {
         if sources.is_empty()
-            || sources.iter().chain(blocked.iter()).any(|&n| n >= self.edges.len())
+            || sources
+                .iter()
+                .chain(blocked.iter())
+                .any(|&n| n >= self.edges.len())
         {
             return Err(Error::InvalidInput);
         }
@@ -392,14 +417,23 @@ impl Graph {
     }
 
     /// None means the sink was already unreachable: do not report vacuous coverage.
-    pub fn dominates(&self, source: usize, candidate: usize, sink: usize) -> Result<Option<bool>, Error> {
+    pub fn dominates(
+        &self,
+        source: usize,
+        candidate: usize,
+        sink: usize,
+    ) -> Result<Option<bool>, Error> {
         if candidate >= self.edges.len() || sink >= self.edges.len() {
             return Err(Error::InvalidInput);
         }
         if !self.reachable(&[source], &BTreeSet::new())?.contains(&sink) {
             return Ok(None);
         }
-        Ok(Some(!self.reachable(&[source], &BTreeSet::from([candidate]))?.contains(&sink)))
+        Ok(Some(
+            !self
+                .reachable(&[source], &BTreeSet::from([candidate]))?
+                .contains(&sink),
+        ))
     }
 }
 
@@ -418,11 +452,17 @@ pub fn linear_sign(
     let mut dot = 0_i128;
     let mut norm = 0_i128;
     for (&w, &x) in weights.iter().zip(reconstruction) {
-        dot = dot.checked_add(i128::from(w) * i128::from(x)).ok_or(Error::Overflow)?;
-        norm = norm.checked_add(i128::from(w).abs()).ok_or(Error::Overflow)?;
+        dot = dot
+            .checked_add(i128::from(w) * i128::from(x))
+            .ok_or(Error::Overflow)?;
+        norm = norm
+            .checked_add(i128::from(w).abs())
+            .ok_or(Error::Overflow)?;
     }
     let margin = dot.checked_sub(threshold).ok_or(Error::Overflow)?;
-    let bound = norm.checked_mul(i128::from(max_coordinate_error)).ok_or(Error::Overflow)?;
+    let bound = norm
+        .checked_mul(i128::from(max_coordinate_error))
+        .ok_or(Error::Overflow)?;
     if margin > bound {
         Ok(Some(true))
     } else if margin < -bound {
@@ -456,9 +496,14 @@ mod tests {
     #[test]
     fn witness_reuses_unrelated_changes() {
         let mut s = snapshot();
-        let j = Judgment::capture(&s, vec![ReadWitness::Exact {
-            key: 1, value: Some(b"artifact".to_vec()),
-        }]).unwrap();
+        let j = Judgment::capture(
+            &s,
+            vec![ReadWitness::Exact {
+                key: 1,
+                value: Some(b"artifact".to_vec()),
+            }],
+        )
+        .unwrap();
         s.values.insert(99, vec![0]);
         assert_eq!(j.valid_at(&s), Ok(true));
         s.values.insert(1, vec![1]);
@@ -468,7 +513,14 @@ mod tests {
     #[test]
     fn absent_key_detects_insertion() {
         let mut s = snapshot();
-        let j = Judgment::capture(&s, vec![ReadWitness::Exact { key: 7, value: None }]).unwrap();
+        let j = Judgment::capture(
+            &s,
+            vec![ReadWitness::Exact {
+                key: 7,
+                value: None,
+            }],
+        )
+        .unwrap();
         s.values.insert(7, vec![]);
         assert_eq!(j.valid_at(&s), Ok(false));
     }
@@ -476,7 +528,8 @@ mod tests {
     #[test]
     fn empty_range_detects_phantom() {
         let mut s = snapshot();
-        let j = Judgment::capture(&s, vec![ReadWitness::EmptyRange { start: 10, end: 20 }]).unwrap();
+        let j =
+            Judgment::capture(&s, vec![ReadWitness::EmptyRange { start: 10, end: 20 }]).unwrap();
         s.values.insert(20, vec![]);
         assert_eq!(j.valid_at(&s), Ok(true));
         s.values.insert(19, vec![]);
@@ -496,8 +549,20 @@ mod tests {
     #[test]
     fn invalid_witness_is_not_admitted() {
         let s = snapshot();
-        assert_eq!(Judgment::capture(&s, vec![ReadWitness::EmptyRange { start: 2, end: 2 }]), Err(Error::InvalidInput));
-        assert_eq!(Judgment::capture(&s, vec![ReadWitness::Exact { key: 1, value: None }]), Err(Error::Binding));
+        assert_eq!(
+            Judgment::capture(&s, vec![ReadWitness::EmptyRange { start: 2, end: 2 }]),
+            Err(Error::InvalidInput)
+        );
+        assert_eq!(
+            Judgment::capture(
+                &s,
+                vec![ReadWitness::Exact {
+                    key: 1,
+                    value: None
+                }]
+            ),
+            Err(Error::Binding)
+        );
     }
 
     #[test]
@@ -600,8 +665,16 @@ mod tests {
 
     #[test]
     fn cross_reads_defeat_disjoint_writes() {
-        let a = Operation { reads: BTreeSet::from([2]), writes: BTreeSet::from([1]), ..Operation::default() };
-        let b = Operation { reads: BTreeSet::from([1]), writes: BTreeSet::from([2]), ..Operation::default() };
+        let a = Operation {
+            reads: BTreeSet::from([2]),
+            writes: BTreeSet::from([1]),
+            ..Operation::default()
+        };
+        let b = Operation {
+            reads: BTreeSet::from([1]),
+            writes: BTreeSet::from([2]),
+            ..Operation::default()
+        };
         assert!(!independent(&a, &b));
     }
 
@@ -633,17 +706,29 @@ mod tests {
         assert_eq!(Graph::new(129, &[]), Err(Error::Limit));
         assert_eq!(Graph::new(2, &[(0, 2)]), Err(Error::InvalidInput));
         let g = Graph::new(2, &[]).unwrap();
-        assert_eq!(g.cut_disconnects(&[0], &[], &BTreeSet::new()), Err(Error::InvalidInput));
+        assert_eq!(
+            g.cut_disconnects(&[0], &[], &BTreeSet::new()),
+            Err(Error::InvalidInput)
+        );
     }
 
     #[test]
     fn exhaustive_four_vertex_cut_and_dominator_consistency() {
-        let pairs: Vec<_> = (0..4).flat_map(|a| (0..4).filter(move |&b| a != b).map(move |b| (a, b))).collect();
+        let pairs: Vec<_> = (0..4)
+            .flat_map(|a| (0..4).filter(move |&b| a != b).map(move |b| (a, b)))
+            .collect();
         for mask in 0..(1_u32 << pairs.len()) {
-            let edges: Vec<_> = pairs.iter().enumerate().filter_map(|(i, &edge)| ((mask & (1 << i)) != 0).then_some(edge)).collect();
+            let edges: Vec<_> = pairs
+                .iter()
+                .enumerate()
+                .filter_map(|(i, &edge)| ((mask & (1 << i)) != 0).then_some(edge))
+                .collect();
             let g = Graph::new(4, &edges).unwrap();
             if let Some(dominates) = g.dominates(0, 1, 3).unwrap() {
-                assert_eq!(dominates, g.cut_disconnects(&[0], &[3], &BTreeSet::from([1])).unwrap());
+                assert_eq!(
+                    dominates,
+                    g.cut_disconnects(&[0], &[3], &BTreeSet::from([1])).unwrap()
+                );
             }
         }
     }

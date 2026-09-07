@@ -21,7 +21,10 @@ version = "0.2.0"
 "#;
 
 fn normalized_lines(text: &str) -> Vec<&str> {
-    text.lines().map(str::trim).filter(|s| !s.is_empty()).collect()
+    text.lines()
+        .map(str::trim)
+        .filter(|s| !s.is_empty())
+        .collect()
 }
 
 fn check_lock(root: &Path) -> Result<(), String> {
@@ -64,7 +67,10 @@ fn run(root: &Path, program: &str, arguments: &[&str]) -> Result<(), String> {
         .status()
         .map_err(|e| format!("Cannot execute {program}: {e}"))?;
     if !status.success() {
-        return Err(format!("{program} {} failed: {status}", arguments.join(" ")));
+        return Err(format!(
+            "{program} {} failed: {status}",
+            arguments.join(" ")
+        ));
     }
     println!("PASS executed_command: {program} {}", arguments.join(" "));
     Ok(())
