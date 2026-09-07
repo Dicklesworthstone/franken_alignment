@@ -1,6 +1,6 @@
 # Working on FrankenAlignment
 
-Read the complete main plan, README, implementation status, the founding-ideas concordance (docs/FOUNDING_IDEAS.md) and relevant source audit before changing semantics. This is a design-first project, not a license to replace hard contracts with easier demos.
+Read the complete main plan, README, implementation status, the founding-ideas concordance (docs/FOUNDING_IDEAS.md), the system map (docs/SYSTEM_MAP.md) and relevant source audit before changing semantics. If you are operating a deployment rather than developing the code, docs/AGENT_GUIDE.md is your entry point. This is a design-first project, not a license to replace hard contracts with easier demos.
 
 ## Founding essays
 
@@ -29,3 +29,7 @@ There is no reliance on GitHub-hosted Actions. DSR invokes required checks on op
 Distinguish exact invariants, scoped proofs, bounded models, statistical evidence, operational targets and research hypotheses. Graph cuts are conditional on complete modeling; local gradients are not global bounds; approximate retrieval cannot prove absence. Benchmark cold cases, policy churn, failures, byte movement and memory, not just steady-state arithmetic.
 
 No new production feature activates without its exact boundary/negative tests and source/format/epoch compatibility. Update the relevant contracts, status and changelog in the same logical change. Preserve the custom license verbatim.
+
+## Legibility
+
+The system is one tower of nine layers (plan §6.7) with one epistemic type, one address scheme, one journal and one verb vocabulary (registry/system_map.json, registry/vocabulary.json). A new object goes in exactly one layer; a new agent-facing value is a Knowledge variant, never a bare scalar; a new command is a registered verb with authority, class, idempotency and cost, and any playbook that names it is updated in the same change. Prose explanations render from predicate trees, never the reverse.

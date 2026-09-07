@@ -8,11 +8,11 @@ Revision 0.3 fixes the center of gravity without discarding the engineering.
 
 ## What changed
 
-1. **A normative concordance.** [`docs/FOUNDING_IDEAS.md`](FOUNDING_IDEAS.md) and [`registry/founding_concordance.json`](../registry/founding_concordance.json) map every paragraph of both essays to the mechanism, invariant, hypothesis and packet that carries it, list the six syntheses where each essay repairs the other's weakest point, and record every place the plan deliberately adds a contract rather than importing an idea literally. Packet FA-103 keeps the concordance complete; a semantic change that leaves it stale is incomplete.
+1. **A normative concordance.** [`docs/FOUNDING_IDEAS.md`](FOUNDING_IDEAS.md) and [`registry/founding_concordance.json`](../registry/founding_concordance.json) map every paragraph of both essays to the mechanism, invariant, hypothesis and packet that carries it, list the syntheses (six in the first batch, nine after the second) where each essay repairs the other's weakest point, and record every place the plan deliberately adds a contract rather than importing an idea literally. Packet FA-103 keeps the concordance complete; a semantic change that leaves it stale is incomplete.
 
 2. **Two founding commitments above the eight bets.** Plan §3 now opens with F1 (control is external and one-directional) and F2 (introspection is economical, versioned and replayable). Every bet names its founding root or declares itself an engineering addition. The README's bet table matches the plan.
 
-3. **The missing mechanisms.** Six new plan subsections carry ideas the essays proposed that 0.2 left implicit:
+3. **The missing mechanisms.** Eight new plan subsections carry ideas the essays proposed that 0.2 left implicit:
    - §9.8 typed consequence classes (`Continue`, `HoldEffect`, `NarrowAuthority`, `SuspendRun`, `ResetToCheckpoint`, `TrainingSignal`, `DownweightReporter`);
    - §9.9 the helper credibility economy with lead-time credit, influence caps, the andon budget and anti-capture selection;
    - §9.10 escalation reports and quarantined post-round learning;
@@ -44,6 +44,10 @@ After the founding concordance was in place, a second pass asked what would make
 - **Graduated autonomy and fleet fences** (§8.10, §8.11): trust that agents earn through the operator's ledger with automatic demotion and governed promotion; halts that carry proof of propagation.
 - **Live canaries, the self-report residual and the risk-theater detector** (§14.11, §12.8, §15.10): a measured weekly escape rate on the real fleet; the model's self-description as untrusted evidence checked against measurement; and standing oversight queries over the control plane's own drift, which is the essay's final warning turned into a monitor.
 - **Typestate purpose contexts, concrete formal anchors, the preregistration ledger, policy replay campaigns and attack-capsule interchange** (§6.6, §19.9, §20, §22.7, §22.8): compile-time authority separation, named theorems checked in the gate, checkable preregistration, replay-before-promotion for policy changes, and an exchange format for attacks.
+
+## The third batch: the driver's seat
+
+A final pass asked what an agent in the driver's seat needs to understand a situation accurately and control it at the least cost. The answer was structural, not cosmetic: the plan now states the system as one tower of nine layers (identity, observation, evidence, judgment, authority, effect, closure, experiment, governance), each answering one question, each depending only downward, with five rules (§6.7, §6.8): one epistemic type at every boundary (`Known`, `Pending`, `Unknown`, `Withheld`, `Stale`, `Absent`; FA-INV-039), one address scheme with one resolver, one journal per authority domain, executable conformance contracts composed by `fa doctor`, and downward dependence only. The agent surface (§17.2, §17.3, §17.8, §17.11, §17.12) is that tower's projection: a small verb vocabulary that replaces the two inconsistent command lists, a situation report ordered by decision relevance, decisions as predicate trees, typed and costed affordances, rehearsal of any mutation in a branch that can never permit (FA-INV-040), annotations and handoffs that accrete understanding across agents without accreting authority, and a policy-disclosure profile with an actor precheck that makes cheap exact refusals public so the actor stops wasting helper budget. `docs/SYSTEM_MAP.md` and `docs/AGENT_GUIDE.md` are the human forms; `registry/system_map.json` and `registry/vocabulary.json` are the checked forms; packets FA-132 through FA-143 build it.
 
 ## What did not change
 

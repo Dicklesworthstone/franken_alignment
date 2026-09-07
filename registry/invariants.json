@@ -941,7 +941,7 @@
       "claim_class": "invariant",
       "statement": "Evidence, signature matches, checkpoints and helper calibrations are keyed by a verified model passport; a served model whose identity liveness check fails is a different model space, its run is fenced and its evidence marked stale.",
       "owner_role": "systems",
-      "activation_gate": "G3",
+      "activation_gate": "G4",
       "production_status": "planned",
       "waiver": "forbidden",
       "production_checker": null,
@@ -1046,6 +1046,66 @@
       "founding_ideas": [
         "FI-A16",
         "FI-I10"
+      ],
+      "founding_link_kind": "engineering_addition_serving"
+    },
+    {
+      "id": "FA-INV-039",
+      "title": "Agent-facing values carry epistemic status",
+      "claim_class": "invariant",
+      "statement": "Every safety-relevant value crossing a layer boundary or reaching an agent-facing surface is a Knowledge variant (Known with basis, Pending, Unknown, Withheld, Stale, Absent); Unknown and Absent are distinct; Unknown never grants permission; no bare safety-relevant scalar or boolean exists above the identity layer.",
+      "owner_role": "systems",
+      "activation_gate": "G1",
+      "production_status": "planned",
+      "waiver": "forbidden",
+      "production_checker": null,
+      "reference_checks": [],
+      "reference_status": "not_implemented_in_rust_revision",
+      "reference_scope": "Only the declared small logical case; not production protocol/host correctness.",
+      "required_negative_campaigns": [
+        "Emit a bare boolean `safe` from a judgment API; must fail to compile or be refused at the serializer.",
+        "Return Absent for a domain whose frontier is open; must be Pending instead.",
+        "Present Unknown to the permit path; must be treated as missing evidence."
+      ],
+      "assumptions": [
+        "Layer boundaries are typed (plan §6.7).",
+        "Serializers for agent surfaces are the only egress."
+      ],
+      "evidence_artifacts": [],
+      "founding_ideas": [
+        "FI-A06",
+        "FI-A13",
+        "FI-I18"
+      ],
+      "founding_link_kind": "engineering_addition_serving"
+    },
+    {
+      "id": "FA-INV-040",
+      "title": "Rehearsal never executes or permits",
+      "claim_class": "invariant",
+      "statement": "A verb invoked with a branch under ExperimentCx returns a RehearsalOutcome labeled rehearsal and never mints a permit, spends production rights, invokes a production adapter or emits a production journal event; precheck evaluates exact predicates only and emits no permit and no journal event.",
+      "owner_role": "gate",
+      "activation_gate": "G2",
+      "production_status": "planned",
+      "waiver": "forbidden",
+      "production_checker": null,
+      "reference_checks": [],
+      "reference_status": "not_implemented_in_rust_revision",
+      "reference_scope": "Only the declared small logical case; not production protocol/host correctness.",
+      "required_negative_campaigns": [
+        "Rehearse a dispatch; assert no permit, no rights movement, no production journal event, no adapter call.",
+        "Attempt to attach a RehearsalOutcome as a permit; must be refused.",
+        "Precheck with a proposal that would pass exact predicates; assert no permit and no round."
+      ],
+      "assumptions": [
+        "Purpose contexts are typestates (FA-INV-038).",
+        "Branches carry zero production rights (FA-INV-009)."
+      ],
+      "evidence_artifacts": [],
+      "founding_ideas": [
+        "FI-I03",
+        "FI-I09",
+        "FI-A13"
       ],
       "founding_link_kind": "engineering_addition_serving"
     }

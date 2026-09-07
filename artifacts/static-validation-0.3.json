@@ -3,21 +3,26 @@
   "date": "2026-09-06",
   "errors": [],
   "counts": {
-    "invariants": 38,
-    "packets": 131,
+    "invariants": 40,
+    "packets": 143,
     "hypotheses": 21,
     "experiment_rows": 21,
     "founding_ideas": 38,
     "syntheses": 9,
     "not_imported_unchanged": 8,
-    "engineering_additions": 18,
+    "engineering_additions": 25,
+    "system_map_layers": 9,
+    "vocabulary_verbs": 35,
+    "vocabulary_nouns": 26,
+    "reason_codes": 12,
+    "verbs_used_in_docs": 25,
     "reference_symbol_links": 8,
     "rust_test_functions": 20,
-    "local_markdown_links": 113,
-    "plan_subsections": 167,
+    "local_markdown_links": 132,
+    "plan_subsections": 171,
     "sources": 33,
-    "bead_epics": 31,
-    "bead_tasks": 135
+    "bead_epics": 43,
+    "bead_tasks": 177
   },
   "checks": [
     "json parse",
@@ -29,6 +34,8 @@
     "plan subsection numbering unique",
     "concordance section/ID references exist",
     "every invariant, hypothesis and new packet has a founding link",
+    "system map layers reference existing sections, invariants, packets and registered verbs",
+    "every verb used in docs is registered and not retired; address kinds registered; reason codes registered",
     "local markdown links and anchors",
     "README counts",
     "beads: no cycles, every bead has a description"
@@ -44,6 +51,6 @@
       "artifacts/execution/2026-09-06-xtask-check.log"
     ]
   },
-  "method": "Python standard library outside the shipped product, as in revision 0.2; the owned xtask does not yet perform these checks (packets FA-103, FA-129).",
+  "method": "Python standard library outside the shipped product, as in revision 0.2; the owned xtask does not yet perform these checks (packets FA-103, FA-129, FA-132).",
   "no_production_readiness_claim": true
 }

@@ -4,7 +4,7 @@
 
 **Design draft 0.3 · September 6, 2026 · Jeffrey Emanuel**
 
-> **Status and claim boundary.** Design revision 0.3 is a source-grounded specification, not a deployed alignment system. The repository includes a dependency-free, safe-Rust reference model and a Rust local-gate driver. The revision 0.2 preparation environment did not compile them; on September 6, 2026 the 20 reference tests were executed on one operator host and passed, with retained logs in [`artifacts/execution/`](artifacts/execution/). Whether the complete local gate passed on that host is recorded in [implementation status](IMPLEMENTATION_STATUS.md), not assumed here. No production broker, trained monitor, learned codec, or completed foundation integration is claimed. The founding inputs are the two essays; there is no additional tweet requirement.
+> **Status and claim boundary.** Design revision 0.3 is a source-grounded specification, not a deployed alignment system. The repository includes a dependency-free, safe-Rust reference model and a Rust local-gate driver. The revision 0.2 preparation environment did not compile them; on September 6, 2026 the 20 reference tests were executed on one operator host and passed, with retained logs in [`artifacts/execution/`](artifacts/execution/). The complete local gate also passed on that host under a dated nightly (`nightly-2026-08-31`) after the documented `cargo fmt --all` preparation; the host's rolling nightly lacked the rustfmt and clippy binaries, and [implementation status](IMPLEMENTATION_STATUS.md) records both facts. No production broker, trained monitor, learned codec, or completed foundation integration is claimed. The founding inputs are the two essays; there is no additional tweet requirement.
 
 > **Revision 0.3.** The two founding essays are the spine. Every mechanism names its founding root in the [founding-ideas concordance](docs/FOUNDING_IDEAS.md), and the plan now carries the mechanisms the essays proposed that revision 0.2 left implicit: typed congress consequences including rewind as containment (§9.8, §11.10), a helper credibility economy with lead-time credit and anti-capture governance (§9.9), escalation reports and quarantined post-round learning (§9.10), the manifold premise as a measured hypothesis (§10.14), the sidecar-to-congress pipeline (§10.15), elicitation campaigns with activation signature libraries (§12.6) and surprise as a masking detector (§12.7). See [revision 0.3 rationale](docs/REVISION_0_3.md).
 
@@ -55,6 +55,8 @@ FrankenAlignment will make the **effect boundary**, rather than the model's appa
 The founding synthesis is Jeffrey Emanuel's external-helper architecture combined with his sidecar compression and rewindable metacognition proposal. The first supplies independent oversight; the second supplies potentially economical access to otherwise ephemeral internal state. The Franken stack supplies structured concurrency, explicit evidence, reproducible execution, storage, numerical tools, and an agent-oriented engineering style. [Founding sources and review](docs/SOURCE_REVIEW.md).
 
 Those two essays are the premise, not a citation. The first, [Some Thoughts on AI Alignment: Using AI to Control AI](https://github.com/Dicklesworthstone/some_thoughts_on_ai_alignment) (June 20, 2024), argues that an actor smarter than its overseers must be controlled from outside: by a congress of narrower, independent, rotating helper models that watch both its output tokens and its intermediate activations, that vote under cryptographic commitment after strictly independent judgment, that never hear the actor argue its own case, and that are governed against the drift into risk theater. The second, [Real-Time Introspective Compression for Transformers](https://github.com/Dicklesworthstone/llm_introspective_compression_and_metacognition) (April 1, 2025), argues that a transformer's ephemeral internal state can be compressed by a sidecar onto a learned low-dimensional manifold and then saved, inspected, rewound, branched and replayed like a game save, which opens the way to a metacognitive operating system with a rewindable thought graph, self-coaching practice and transferable strategies. FrankenAlignment is the claim that these compose: economical introspection makes activation-level oversight affordable at fleet scale, and external, one-directional control keeps rewindable metacognition from being captured by the model it observes. The [founding-ideas concordance](docs/FOUNDING_IDEAS.md) maps every paragraph of both essays to the mechanism, invariant, hypothesis and work packet that carries it, and records where the plan adds a contract so the idea survives an adversary who has read it.
+
+The system is also built to be driven by an agent. An operator, investigator or supervising agent must be able to learn the whole situation from one typed query, see why any effect was held as a tree of predicates rather than a paragraph, know for every value whether it is measured, pending, withheld, stale or absent, rehearse any action in a branch before taking it, and leave typed notes that the next agent finds. §6.7 states the system as one tower of nine layers with one epistemic type, one address scheme, one event journal and one verb vocabulary; §17 is that tower's agent-facing projection. Legibility is not a presentation layer added at the end; it is the shape of the design.
 
 **The proposed leapfrog is compositional:** the same evidence object should support a live gate decision, a later challenge, a compressed activation trace, a causal experiment, an operational incident, and a regression test. These products share identities and provenance, not identical retention or truth claims. The system should become cheaper and more capable as useful evidence and independently validated mechanisms accumulate, without becoming more permissive merely because it has accumulated more data.
 
@@ -336,7 +338,8 @@ All three use common identities and claim classes. Only the control plane owns l
 | `fa-store`, `fa-transfer` | Control backend interface, evidence-object lifecycle, native ATP | formats/frontier/runtime; admitted fsqlite/ATP |
 | `fa-graph`, `fa-retrieve`, `fa-present` | Incremental oversight, discovery, view commitments | witness/formats; admitted fgdb/fnx/search/fmd |
 | `fa-capture`, `fa-numeric`, `fa-codec` | Host-state ABI, safe tensor views/copies, sketches and codec ladder | types/frontier; admitted fnp/ft |
-| `fa-congress`, `fa-experiment` | Frozen independent rounds and capability-free counterfactuals | plan/runtime/witness; no permit mint authority |
+| `fa-congress`, `fa-experiment` | Frozen independent rounds, escalation reports, consequence classes, credibility ledger; capability-free counterfactuals, elicitation, rehearsal | plan/runtime/witness; no permit mint authority |
+| `fa-verify` | Independent receipt verifier and assurance-profile conformance doctor | types/formats only; must not depend on `fa-broker`, `fa-policy` or `fa-authority`, and the gate checks that it does not |
 | `fa-broker`, `fa-adapters` | Effect-specific mediation and external receipt reconciliation | authority/store/runtime; explicit OS boundary |
 | `fa`, `fa-cli` | Public facade and agent-facing CLI | selected admitted feature closure |
 | `fa-reference`, `fa-sim` | Independent logical oracle; lab fault and model bridge | reference: std and its own types; sim: public contracts plus lab |
@@ -363,6 +366,43 @@ Logical control sequence orders authority. Source sequence and verification fron
 ### 6.6 Purpose contexts are typestates, not conventions
 
 The purpose contexts of §6.3 are enforced by the Rust type system, not by review. `CaptureCx`, `JudgeCx`, `ExperimentCx`, `PermitCx` and `MaintenanceCx` are distinct types wrapping the Asupersync `Cx`; the broker's dispatch entry point takes `&PermitCx` and nothing else; the sidecar, helper and elicitation APIs take `&JudgeCx` or `&ExperimentCx`; there is no conversion from `ExperimentCx` to `PermitCx`. A function that could dispatch an effect from an experiment branch does not compile. This is the cheapest strong guarantee available in a safe-Rust codebase: authority separation becomes a property of the dependency graph and the type signatures, checkable by `cargo check` in the local gate, and it is what makes FA-INV-009, FA-INV-025 and FA-INV-033 structural rather than aspirational. Compile-fail tests (a source file that tries the forbidden conversion must fail to compile) are part of the gate. Dynamic checks remain as defense in depth for boundaries the type system cannot see, such as a process that inherits a credential.
+
+### 6.7 The tower: nine layers, one epistemic type
+
+The three planes of §6.1 say who owns authority. The tower says how an agent should think about the whole system. Every object in FrankenAlignment lives at exactly one of nine layers, each layer depends only on the layers below it, each layer answers exactly one question, and each layer exports its objects upward only through one epistemic wrapper (§17.3). The type distinctions of the constitution (observation, judgment, authority) are the layer boundaries, and the only way an observation becomes authority is by climbing the tower through explicit policy.
+
+```
+L8  GOVERNANCE   helper/actor/andon ledgers, risk-theater detector, promotions,      "is the control system itself still trustworthy?"
+                 assurance profiles, preregistration, policy replay
+L7  EXPERIMENT   branches, counterfactual twins, elicitation, canaries, practice,     "what would have happened otherwise?"
+                 rehearsal
+L6  CLOSURE      decision closures, control receipts, incident and attack capsules,   "why was this allowed or held, verifiably?"
+                 annotations and handoffs
+L5  EFFECT       broker, adapters, dispatch, reconciliation, outcomes, fences        "what actually happened in the world?"
+L4  AUTHORITY    policy epochs, rights, permits, autonomy grades, consequences        "what may happen now?"
+L3  JUDGMENT     probes, helpers, similarity streams, surprise, rounds, reducers,     "what do independent observers conclude, at what cost?"
+                 credibility weights
+L2  EVIDENCE     authenticated objects, view manifests, read witnesses, frontiers,   "what can be relied on, under which assumptions?"
+                 supports and retractions
+L1  OBSERVATION  taps, capture streams, coverage records, sidecar codes,             "what was seen, and what was not?"
+                 tool and environment channels
+L0  IDENTITY     canonical bytes, digests, addresses, model passports, generations,  "what exactly is this thing?"
+                 epochs, the three clocks
+```
+
+Five rules make the tower legible rather than merely layered:
+
+1. **Downward dependence only.** A layer imports types and calls functions only from layers below it. The dependency DAG of §6.2 is the crate-level image of this rule, and `cargo check` enforces it.
+2. **One epistemic type at every boundary.** No layer hands a bare value upward. Every exported value is `Known`, `Pending`, `Unknown`, `Withheld`, `Stale` or `Absent` with its basis (§17.3, FA-INV-039). A bare boolean called `safe` cannot exist above L0.
+3. **One address scheme.** Every object at every layer has an address in one scheme (§17.2) that any layer can resolve, so a receipt at L6 names an observation at L1 and an autonomy grade at L4 with the same syntax, and `fa get` resolves all of them.
+4. **One journal.** Every transition at L4 and L5, every round and consequence at L3, every branch outcome at L7 and every promotion at L8 emits one typed event into one ordered journal per authority domain (§17.8). The situation report, the explain tree, replay at `decision_replay` grade and the risk-theater detector are all folds over that journal; there is no second source of truth to reconcile.
+5. **Executable contracts between layers.** Each boundary has a conformance suite that the layer above runs against the layer below; `fa doctor` composes them bottom-up (§6.8). An agent trusts a layer because its contract executed, not because its name sounds trustworthy.
+
+The nine questions are the nine things an agent driving the system needs to know, in the order it needs them: what is this, what was seen, what can I rely on, what do the observers say, what may happen, what happened, why, what if, and is the machinery itself still honest. The agent-facing surface of §17 is nothing more than these questions made into verbs.
+
+### 6.8 Legibility contracts between layers
+
+A boundary between two layers is a **contract**, published in `registry/system_map.json`: the types crossing it, the invariants that hold across it, the verbs that read or mutate across it, and the conformance suite that tests it. `fa doctor` runs the suites bottom-up and reports each layer as a `Knowledge`-wrapped status; when a lower layer's suite fails or did not execute, every layer above it is reported `Unknown{reason: LowerLayerUnverified}`, never green. The system map is a machine-readable object precisely so that an agent landing cold can navigate the design as a graph (layer → section → type → verb → invariant → packet → bead) rather than reading this document top to bottom; packet FA-132 keeps it complete and checked, the way FA-103 keeps the founding concordance complete.
 
 ---
 
@@ -672,8 +712,8 @@ A practical objective is a constrained rate–distortion–decision tradeoff:
 
 $$\min_{E,D}\quad R(Z)+\lambda_h D_h(X,D(Z))
 +\lambda_k D_{KV}(X,D(Z))
-+\lambda_f D_{\mathrm{functional}}
-+\lambda_d\sup_{q\in\mathcal Q_{\mathrm{train}}}D_q,$$
++\lambda_f D_{\mathrm{functional}
++\lambda_d\sup_{q\in\mathcal Q_{\mathrm{train}}D_q,$$
 
 subject to per-stratum missed-detection, continuation, memory, and latency budgets. $R$ is measured encoded bits including metadata and residuals, not the dimension of an uncompressed float latent. $D_q$ compares decisions or losses of registered probes. The training supremum is over the actual finite family; an adversarial training procedure does not certify a supremum over all possible safety questions.
 
@@ -944,7 +984,7 @@ An adaptive monitoring policy observes expensive evidence preferentially on susp
 
 For $n$ independent Bernoulli trials from a specified distribution with zero observed failures, a one-sided confidence bound is
 
-$$p_{\mathrm{upper}}=1-\alpha^{1/n}.$$
+$$p_{\mathrm{upper}=1-\alpha^{1/n}.$$
 
 At 95% confidence this is approximately $3/n$ for large $n$. A report with 100 clean trials does not establish a one-in-a-million failure rate. Repeated near-duplicate attacks, adaptive attacker search, model tuning on the test set, and correlated fleet runs violate the simple interpretation unless accounted for.
 
@@ -1187,22 +1227,46 @@ A white-box serving integration adds capture contracts, model-space identity, op
 
 ### 17.2 Proposed public interfaces
 
-The intended Rust facade exposes typed operations for discovering capabilities, registering a run, preparing an action, inspecting a decision, dispatching through an adapter, resolving an outcome, requesting a replay, and narrowing a run's authority. Wire and SDK APIs share the same semantics and stable reason codes.
-
-These operations are a **proposed API contract**, not commands that exist in this repository today. The included Rust local-gate source provides this interface; it has not been compiled in the preparation environment:
+The agent-facing surface (Rust facade, wire API and CLI share one semantics and one set of reason codes) is a projection of the tower in §6.7: one address scheme, one vocabulary of nouns and verbs, one response envelope. It is a **proposed API contract**, not a set of commands that exist in this repository today; the only executable is the local gate driver:
 
 ```bash
 cargo fmt --all
 cargo run --locked -p xtask -- check
 ```
 
-The future CLI should offer `capabilities`, `doctor`, `explain-decision`, `status`, `replay-plan`, `verify-bundle`, and `policy-diff` in human and structured modes. It must never print a reassuring success message for an unsupported backend. Read-only discovery comes before mutation, and all mutation requests have explicit identity, expected predecessor/epoch, and idempotency semantics.
+**Addresses.** Every object at every layer has an address `fa://<tenant>/<kind>/<id>[@<generation>]`, where `kind` is one of the registered nouns: `run`, `attempt`, `effect`, `permit`, `closure`, `receipt`, `round`, `consequence`, `helper`, `evidence`, `view`, `witness`, `frontier`, `observation`, `passport`, `policy`, `profile`, `grade`, `fence`, `branch`, `checkpoint`, `incident`, `finding`, `ledger`, `annotation`, `handoff`. Display names are aliases; addresses are the join keys across all three planes, and every log line, report, error and receipt uses them. One resolver, `fa get <address>`, returns any object with its epistemic status (§17.3); `fa related <address>` returns its typed edges (closure DAG, provenance, thought-graph, support sets) so the agent walks the system as a graph.
+
+**Verbs.** The vocabulary is small and stable, organized by the layer it touches. Each verb is registered in `registry/vocabulary.json` with its authority requirement (which purpose context), its class (`read`, `rehearsal` or `mutation`), its idempotency rule, its cost class and its response type.
+
+| Layer | Read | Rehearsal / experiment | Mutation |
+|---|---|---|---|
+| L0–L2 | `get`, `related`, `capabilities`, `when` (exact before/after/concurrent between two addresses under the three clocks) | | `invalidate` (append an invalidation event) |
+| L3 | `explain` (reducer trace), `cost` | `convene --branch` | `convene` (open a round) |
+| L4–L5 | `situation`, `why-held`, `next`, `tail` | `propose --branch`, `precheck` | `propose`, `hold`, `narrow`, `suspend`, `reset`, `fence`, `resolve` |
+| L6 | `explain`, `verify` | | `annotate`, `handoff` |
+| L7 | `replay-plan` | `branch`, `intervene`, `replay`, `rehearse` | (none: L7 has no production authority) |
+| L8 | `doctor`, `ledger`, `findings` | `policy-replay` | `promote`, `rotate`, `preregister` |
+
+Every mutation names its expected predecessor or epoch and an idempotency key; a mutation whose predecessor moved returns `StaleGeneration` with the current predecessor, never a partial application. Every rehearsal verb returns a `RehearsalOutcome` labeled as such and can never mint a permit (§17.8, FA-INV-040). Read verbs never change authority and are safe to retry. No verb prints a reassuring success for an unsupported backend: the response is `CapabilityUnsupported` with the capability's address. The old separate command lists (`explain-decision`, `verify-bundle`, `policy-diff`, `next-evidence`) are retired in favor of this single vocabulary; `verify` covers receipts, bundles and profiles, `policy-replay` covers policy diffs, `next` covers next evidence.
 
 ### 17.3 Agent-intuitive outputs
 
-Every response contains `schema_version`, `operation_id`, `status`, stable `reason_code`, observed identity/epoch, required missing capability or evidence, applicable resource limits, and safe next actions. An agent should not need to parse a prose apology to discover that a replay is impossible because a key expired.
+Every response contains `schema_version`, `operation_id`, `status`, stable `reason_code`, the address and generation of what was observed, the control sequence and source frontiers at which it was observed, required missing capability or evidence, applicable resource limits and remaining budgets, realized cost, and safe next actions as typed affordances (§17.8). An agent should not need to parse a prose apology to discover that a replay is impossible because a key expired.
 
-Errors distinguish `DeniedByPolicy`, `MissingRequiredObservation`, `StaleGeneration`, `CapabilityUnsupported`, `BudgetExhausted`, `PermitConsumed`, `DeadlineExpired`, `OutcomeUnknown`, `ReplayClosureUnavailable`, and `IntegrityFailure`. The details themselves are authorization-filtered. Suggested next actions are data, not executable shell fragments copied from untrusted evidence.
+**The epistemic wrapper.** No safety-relevant value reaches an agent as a bare scalar or boolean. Every field is a `Knowledge<T>`:
+
+| Variant | Meaning | What the agent may do |
+|---|---|---|
+| `Known{value, basis}` | Established; `basis` names claim class (§2.4), origin, `complete_for_contract`, `semantically_valid`, `available_for_replay`, generation and control sequence | Act on it within the basis; cite the basis in any claim |
+| `Pending{frontier, expected_cost}` | Not yet closed; the frontier it waits on is named | Wait, or buy the frontier's closure through an affordance |
+| `Unknown{reason}` | Not observed, or lower layer unverified | Treat as missing evidence: never as permission (FA-INV-004) |
+| `Withheld{authority_required}` | Exists but the caller's scope may not see it | Request scope; never infer content from the refusal |
+| `Stale{generation, current}` | Was known under a previous generation | Re-request under the current generation |
+| `Absent{closed_domain, frontier}` | Observed absent over a complete, named domain | Use as negative evidence within that domain only |
+
+`Unknown` and `Absent` are different values; `Withheld` and `Unknown` are different values; `Pending` is neither. The wrapper is what makes "not observed", "not yet closed", "not authorized to disclose" and "observed absent" impossible to confuse, and it is enforced at every layer boundary (§6.7, FA-INV-039).
+
+Errors are the same envelope with `status: error`: `DeniedByPolicy`, `MissingRequiredObservation`, `StaleGeneration`, `CapabilityUnsupported`, `BudgetExhausted`, `PermitConsumed`, `DeadlineExpired`, `OutcomeUnknown`, `ReplayClosureUnavailable`, `IntegrityFailure`, `PurposeMismatch`, `LowerLayerUnverified`. Each carries `retry_safe`, the idempotency key it was processed under, and `would_change_this` (the addresses of the predicates or frontiers whose satisfaction would change the outcome), so an error is itself a plan. Details are authorization-filtered. Suggested next actions are data, not executable shell fragments copied from untrusted evidence.
 
 ### 17.4 Intuition through honest affordances
 
@@ -1240,19 +1304,41 @@ Stable view IDs enable fair counterfactuals and replay. Two helpers whose views 
 
 ### 17.8 Agent-facing affordances as typed actions
 
-The planned CLI exposes `capabilities`, `doctor`, `explain`, `why-held`, `next-evidence`, `invalidate`, `replay-plan`, `cost`, and `status` with stable machine-readable envelopes. These commands are prospective; the current executable is only the local gate driver. Output includes current contract, evidence frontier, known gaps, exact denial/hold reason, safe next operations and their estimated resource bounds. “Not observed,” “not yet closed,” “not authorized to disclose,” and “observed absent” are distinct values.
+This subsection is the driver's seat: what an agent operating FrankenAlignment sees and can do, built from the verbs of §17.2 and the wrapper of §17.3. All of it is prospective; the current executable is only the local gate driver.
+
+**The situation in one query.** `fa situation [--scope run|principal|tenant|fleet] [--since <control_seq>]` returns a `SituationReport`: a fold over the journal, bounded and paginated by address. It lists, each as a `Knowledge`-wrapped item with an address: authority (grades, fences, revocation floors, expiring leases), held effects with their unsatisfied predicates, unknown effects awaiting reconciliation, evidence debt and coverage gaps, helper health and calibration validity, andon budget remaining, incident counters, open risk-theater findings, replay availability and backlog pressure. Items are ordered by **decision relevance**: the planner's estimate of how much each item could change the agent's next action, not by a severity string. The report says at which control sequence it is exact and which frontiers were still open. This replaces the dashboard of §22.1 as the primary surface; a dashboard is a rendering of the same object.
+
+**Why, as a tree.** `fa explain <closure|receipt|round>` returns the decision as a predicate tree, not prose: the dispatch conjunction of §25.1, the policy predicates that applied, the reducer trace with each helper's committed verdict and weight, the consequence and its lattice position, and for each node its `Knowledge` status and the addresses of the evidence it rests on. `fa why-held <attempt>` is the same tree filtered to the unsatisfied nodes, each paired with the affordances that could satisfy it. The tree is navigable by address; a human report is rendered from it, never the other way round.
+
+**Affordances.** Every hold, denial, error and `why-held` response carries typed `Affordance` objects: `{verb, target address, authority_required (purpose context and role), cost_estimate, expected_information_gain, would_change (predicate addresses), rehearsable, idempotency_key}`. Examples: buy a refinement block for probe P; convene a round on question Q; run a counterfactual twin removing document D; request the second key from a registered human; narrow the run's ceiling to family F. `fa next <attempt>` ranks the affordances by information gain per cost within the allowed action set (§14.2); the agent executes one with `fa propose <affordance>`; the planner's decision card (§14.8) is returned with it so the agent sees the alternatives that were not chosen. Value of information never overrides a hard floor: an affordance that would skip a mandatory observation does not exist.
+
+**The journal.** `fa tail [--domain] --since <control_seq>` streams the ordered, typed events of §6.7: proposals, holds, permits, dispatches, outcomes, rounds, consequences, fences, resets, branch outcomes, promotions, findings. Each event carries control sequence, source frontiers, addresses and the realized cost. The situation report and explain tree are folds over this stream, so an agent that tails it can reconstruct both and never needs a second source. Wall-clock time is an annotation on events, never their order (§6.5); `fa when <a> <b>` answers before, after or concurrent exactly.
+
+**Rehearsal.** Every mutation verb accepts `--branch <branch>`; under `ExperimentCx` the same verb with the same arguments returns a `RehearsalOutcome`: what the control nucleus would have decided, the predicate tree it would have produced, the branch's simulated adapter effects, and the cost it would have charged, all labeled `rehearsal: true`. A rehearsal never mints a permit, never spends production rights and never emits a production journal event (FA-INV-040); the typestate of §6.6 makes the wrong outcome a compile error. The agent tries before it acts, and a rehearsal's tree can be attached to a proposal as evidence that the agent understood the consequence.
+
+**Annotations and handoffs.** An investigating agent leaves typed notes: `fa annotate <address> --class hypothesis|observation|inference|conclusion` creates an `Annotation`, a non-authoritative L6 object signed by the annotating principal, carrying its claim class and the addresses it rests on; `fa related` returns it with everything else attached to that address. `fa handoff <run|incident>` emits a compact structured `Handoff`: the situation report, the open affordances, the annotations, the rehearsals tried and their outcomes, and the exact control sequence it is current to, so the next agent or session starts where this one stopped rather than from the journal's beginning. Annotations never enter a reducer or a permit; they are how the system accumulates understanding across agents without accumulating authority.
+
+**Policy disclosure and precheck.** A deployment profile chooses `policy_disclosure: none | exact_predicates | full`. Under `exact_predicates`, the actor may call `fa precheck <proposal>`, which evaluates only the exact deterministic predicates (allowlists, ceilings, budgets, target bindings) with no helper, no permit and no journal event, and returns `DeniedByPolicy` or `PrecheckPassed{review_required}` labeled `precheck: true`. Cheap exact refusals become public so the actor stops spending helper budget on proposals the policy would refuse anyway; empirical review, helper identities and consequences remain private (§9.3, FA-INV-031). Precheck results are witness-cached like any judgment (§7.6). The leakage of exact predicates is a declared profile property, not an accident.
 
 A remediation suggestion carries an authority requirement; it is not a shell command to execute blindly. Replay commands are generated from validated structured arguments, not copied from untrusted evidence. A monitor can propose a missing observation or stricter hold, but cannot directly instruct the broker to expand its own privileges.
 
 ### 17.9 Control receipts: proof-carrying effects
 
-The decision closure (§7.3) is an internal object. Its external form is the **control receipt**: a versioned, self-describing, independently verifiable document that accompanies a consequential effect and states, with digests and signatures, that this exact frozen effect was admitted under this policy epoch, with this evidence-view closure, this congress round and consequence, this autonomy grade, this model passport and this capture coverage, by this authority domain at this control sequence. A receipt is verified by a small independent verifier (`fa verify-receipt`, sharing no code with the broker) that checks digests, signatures, the permit law of §25.1 and the receipt's own claim class, and that reports separately what it could verify (integrity, binding, class) and what it cannot (that the policy was wise, that the helpers were right).
+The decision closure (§7.3) is an internal object. Its external form is the **control receipt**: a versioned, self-describing, independently verifiable document that accompanies a consequential effect and states, with digests and signatures, that this exact frozen effect was admitted under this policy epoch, with this evidence-view closure, this congress round and consequence, this autonomy grade, this model passport and this capture coverage, by this authority domain at this control sequence. A receipt is verified by a small independent verifier (`fa verify`, sharing no code with the broker) that checks digests, signatures, the permit law of §25.1 and the receipt's own claim class, and that reports separately what it could verify (integrity, binding, class) and what it cannot (that the policy was wise, that the helpers were right).
 
 A receipt changes who can trust a control system. A package registry can require a receipt with a mediation level of at least `BROKERED_EFFECTS` before accepting an agent's publication; an insurer or regulator can sample receipts instead of auditing dashboards; a second lab can verify that a shared agent's effect crossed a control contract without trusting the first lab's word. This is the essay's argument that governments may compel serious control spending given an object they can inspect. Receipts disclose only what the recipient is authorized to see (§15.5): the default receipt carries digests and claim classes, not evidence bytes, and a receipt over redacted evidence says so. Receipts are also the natural unit of the incident interchange (B7, G6): an incident capsule is a receipt plus the retained evidence its recipients are permitted to have.
 
 ### 17.10 Assurance profiles
 
 The mediation vector of §4.3 (per effect family: observe-only, cooperative, brokered, attested; capture coverage; replay grade; helper roster class; autonomy floor) is published as a machine-readable **assurance profile** for a deployment, signed by its operator and referenced by every receipt it issues. `fa doctor --profile` runs the conformance tests that the profile's claims require (bypass attempts for brokered families, capture-to-oracle comparison for white-box hosts, restart tests for the claimed replay grade) and refuses to certify a profile whose tests did not execute. A downstream system that requires a profile can compare vectors exactly; a profile that omits a family is silent on it, never implicitly covered. Profiles make "how protected is this agent" a comparable object across deployments, which is the precondition for any market or regulatory use of the receipts.
+
+### 17.11 Playbooks are typed command sequences
+
+The operating procedures an agent needs (onboard a workload, respond to a hold, investigate an incident, promote or rotate a helper, run an experiment, release) are published in [`docs/AGENT_GUIDE.md`](docs/AGENT_GUIDE.md) as sequences of the verbs of §17.2 with their expected response types and the failure branches at each step. A playbook step names the addresses it consumes and produces, so a playbook is checkable against the vocabulary registry and can be rehearsed end to end in a branch. When the vocabulary changes, the playbooks are updated in the same change (packet FA-143); a playbook that names a retired verb fails the system-map check.
+
+### 17.12 What accretes and what does not
+
+The system is agent-accretive in a specific, bounded sense. What accumulates across sessions and agents: journals, closures, receipts, annotations, handoffs, rehearsal outcomes, incident and attack capsules, ledgers, signature libraries, preregistered protocols and their results, and the conformance history of every layer. Each is addressable, typed, claim-classed and discoverable through `fa related`, so the tenth investigator of a run starts with the first nine's typed trail rather than their prose. What never accumulates: authority. No amount of accumulated evidence, annotation or successful rehearsal widens a grade, mints a permit or relaxes a policy; those remain governed transitions (FA-INV-036), and the risk-theater detector (§15.10) watches for accumulation being mistaken for permission.
 
 ---
 
@@ -1268,7 +1354,7 @@ Separate capture, host-device transfer, encoding, helper inference, gate CPU, pe
 
 For $B$ sequences, $L$ recorded residual layers, hidden width $d$, $s$ bytes per element, and $r$ generated tokens per second per sequence, full residual capture produces approximately
 
-$$\dot V_{\mathrm{residual}}=B L d s r.$$
+$$\dot V_{\mathrm{residual}=B L d s r.$$
 
 For a standard attention cache with context length $T$, cache-head count $H_{KV}$, head width $d_h$, and the same element width:
 
@@ -1398,13 +1484,13 @@ A claimed improvement must survive ablation: remove the codec, remove the helper
 
 ### 19.7 New cross-component invariants
 
-Revision 0.2 extends the invariant registry with judgment-witness soundness; contiguous frontier admission; view-byte binding; exact graph-cut checking under a declared completeness assumption; branch-rights separation; complete retraction/support accounting; verified receiver-base reconstruction; lawfully reduced traces; transitive dependency admission; and local executed-evidence release. Revision 0.3 adds four invariants taken directly from the founding essays: FA-INV-031, one-directional control flow (the actor has no authority-bearing channel to its judges and no view of their deliberations); FA-INV-032, helper selection is never optimized against false alarms alone; FA-INV-033, no actor-held latent authority (no production actor holds a latent-editing controller, checkpoint restore or branch promotion over itself); and FA-INV-034, rewind never rewinds the world. Each remains `planned` for production. The small reference algorithms cover selected logical cases, not these systems' complete deployment obligations.
+Revision 0.2 extends the invariant registry with judgment-witness soundness; contiguous frontier admission; view-byte binding; exact graph-cut checking under a declared completeness assumption; branch-rights separation; complete retraction/support accounting; verified receiver-base reconstruction; lawfully reduced traces; transitive dependency admission; and local executed-evidence release. Revision 0.3 adds four invariants taken directly from the founding essays: FA-INV-031, one-directional control flow (the actor has no authority-bearing channel to its judges and no view of their deliberations); FA-INV-032, helper selection is never optimized against false alarms alone; FA-INV-033, no actor-held latent authority (no production actor holds a latent-editing controller, checkpoint restore or branch promotion over itself); and FA-INV-034, rewind never rewinds the world. The agent-legibility pass adds FA-INV-039, every agent-facing value carries its epistemic status (no bare safety-relevant scalar crosses a layer boundary), and FA-INV-040, rehearsal never executes or permits. Each remains `planned` for production. The small reference algorithms cover selected logical cases, not these systems' complete deployment obligations.
 
 Negative tests include insertion into a formerly empty predicate range, a changed model/codec generation with identical output dimensions, a missing middle source sequence, repair-derived but unauthenticated bytes, a view truncated after the decisive paragraph, a bypass edge added after a cut certificate, a lost retraction, a stale receiver base, a disjoint-write/shared-read trace, a rollback that revives spent rights, and a dependency pulled in only by a native target feature. Every one should fail at a named boundary rather than rely on a final suspiciousness score.
 
 ### 19.8 Reference and local-gate status
 
-The current `fa-reference` is a test-only safe-Rust model for selected frontiers, predicate witnesses, conserved rights, conservative operation independence, integer-margin checks and graph-cut verification. It is intentionally algorithmically simple and disconnected from external effects. Its unit-test source is included. `xtask` runs formatting, compilation, Clippy, tests and a deliberately narrow zero-external-dependency lockfile gate for this initial workspace. Neither source was executed through Cargo in the preparation environment. The [validation report](artifacts/VALIDATION_REPORT.md) records only checks actually run.
+The current `fa-reference` is a test-only safe-Rust model for selected frontiers, predicate witnesses, conserved rights, conservative operation independence, integer-margin checks and graph-cut verification. It is intentionally algorithmically simple and disconnected from external effects. Its unit-test source is included. `xtask` runs formatting, compilation, Clippy, tests and a deliberately narrow zero-external-dependency lockfile gate for this initial workspace. Neither source was executed through Cargo in the revision 0.2 preparation environment. On 2026-09-06 both were executed on one operator host: the 20 tests passed and the complete gate passed under a dated nightly after the documented formatting step; [implementation status](IMPLEMENTATION_STATUS.md) records the exact toolchains and the host defect that kept the rolling nightly from running rustfmt and clippy. The [validation report](artifacts/VALIDATION_REPORT.md) records only checks actually run.
 
 A future full dependency admission compiler must parse Cargo metadata's resolved graph for each target and feature profile, enumerate build/proc-macro/runtime closures and independently verify source manifests. The initial exact lockfile guard fails closed when dependencies are introduced; it does not masquerade as that future general compiler. Expanding it is a prerequisite to admitting foundations, not a reason to weaken it.
 
@@ -1560,7 +1646,9 @@ Foundation-admission work proceeds in parallel: extract native search/numeric/st
 
 Revision 0.3 adds packets FA-103 through FA-116, each traced to a founding idea in the concordance. FA-103 (G0) keeps the concordance itself complete. The congress packets (FA-104 through FA-107, FA-114) depend on the frozen round protocol and land in G2. Rewind as containment (FA-108) and the elicitation corpus (FA-109) depend on real capture and registered restart in G3. The signature library, surprise residual, manifold measurement and sidecar-to-congress pipeline (FA-110 through FA-113) are G4 research packets. Rewind evaluation (FA-115) and control-overhead accounting (FA-116) close in G6 and G5. The [beads workspace](.beads/) carries the granular task graph for these packets; the roadmap remains the packet-level authority.
 
-The second revision 0.3 batch, FA-117 through FA-131, carries the mechanisms that make the control system verifiable by outsiders and resistant to its own decay: typestate purpose contexts (§6.6, G1), model passports and identity liveness (§7.10, G3), graduated autonomy (§8.10, G2), fleet fences with acknowledgment frontiers (§8.11, G5), human members and two-key effects (§9.11, G2), the multi-party congress profile (§9.12, G5), self-report consistency (§12.8, G4), live canaries (§14.11, G5), the risk-theater detector (§15.10, G5), control receipts and assurance profiles (§17.9, §17.10, G2), concrete formal anchors (§19.9, G1), the preregistration ledger (§20, G0), policy replay campaigns (§22.7, G2) and attack-capsule interchange (§22.8, G6). Their founding roots and the invariants they add (FA-INV-035 through FA-INV-038) are in the concordance.
+The second revision 0.3 batch, FA-117 through FA-131, carries the mechanisms that make the control system verifiable by outsiders and resistant to its own decay: typestate purpose contexts (§6.6, G1), model passports and identity liveness (§7.10, G4, because liveness needs the concept anchors of the signature library), graduated autonomy (§8.10, G2), fleet fences with acknowledgment frontiers (§8.11, G5), human members and two-key effects (§9.11, G2), the multi-party congress profile (§9.12, G5), self-report consistency (§12.8, G4), live canaries (§14.11, G5), the risk-theater detector (§15.10, G5), control receipts and assurance profiles (§17.9, §17.10, G2), concrete formal anchors (§19.9, G1), the preregistration ledger (§20, G0), policy replay campaigns (§22.7, G2) and attack-capsule interchange (§22.8, G6). Their founding roots and the invariants they add (FA-INV-035 through FA-INV-038) are in the concordance.
+
+The agent-legibility batch, FA-132 through FA-143, builds the tower's agent-facing projection in the order an agent needs it: the system map and vocabulary registries with their checker (FA-132, G0), the epistemic wrapper (FA-133, G1), the address scheme and resolver (FA-134, G1), the typed journal (FA-135, G1), layer conformance suites composed by `fa doctor` (FA-141, G1), then the situation report (FA-136), explain trees and why-held (FA-137), affordances and `fa next`/`fa propose` (FA-138), rehearsal mode (FA-139), annotations and handoffs (FA-140) and policy disclosure with precheck (FA-142) in G2, with the agent guide and playbooks maintained from G0 (FA-143). Invariants FA-INV-039 and FA-INV-040 are theirs.
 
 ---
 
@@ -1568,7 +1656,7 @@ The second revision 0.3 batch, FA-117 through FA-131, carries the mechanisms tha
 
 ### 22.1 The operational state is inspectable
 
-An operator can inspect live authority domains, outstanding reservations, unknown effects, expiring leases, capture gaps, helper health, calibration domains, evidence debt, replay availability, and backlog pressure. Metrics avoid sensitive payloads and high-cardinality secrets. A dashboard reports separate statuses for enforcement health, observation health, statistical validity, and research-feature availability.
+The operational state is one object, the `SituationReport` of §17.8, obtained by `fa situation` and derived by folding the journal. It covers live authority domains, outstanding reservations, unknown effects, expiring leases, fence frontiers, autonomy grades, capture gaps, helper health, calibration domains, andon budgets, incident counters, evidence debt, replay availability, open risk-theater findings and backlog pressure, every item `Knowledge`-wrapped and addressed. Metrics avoid sensitive payloads and high-cardinality secrets. A dashboard is a rendering of the same object with separate statuses for enforcement health, observation health, statistical validity and research-feature availability; it can never show a value the report does not contain, and it can never show green above a layer whose conformance did not execute (§6.8).
 
 ### 22.2 Updates are transactions over meaning
 
@@ -1649,6 +1737,10 @@ Escape rates are only comparable across systems when the attacks are. An **attac
 **Trusting the operator's dashboard as the audit.** A dashboard is a rendering owned by the party being audited. Control receipts (§17.9) and assurance profiles (§17.10) exist so that a package registry, an insurer, a regulator or another lab can verify a control claim without trusting the operator's presentation.
 
 **Assuming the guarded model is constant.** A control system qualified against one model space and silently serving another has no claim. Model passports and identity liveness (§7.10) make substitution an identity event, not an assumption.
+
+**Prose-first explanations and bare scalars.** A paragraph that says an effect was held, or a field called `safe: true`, cannot be navigated, verified or acted on by an agent. Decisions are predicate trees over addressed evidence, and every value carries its epistemic status (§17.3, §17.8). Prose is rendered from the tree for humans, never the reverse.
+
+**Many surfaces, many vocabularies.** A CLI, an API, a dashboard and a log format that each name the same object differently force the agent to reconcile them. One address scheme, one vocabulary, one journal and one wrapper (§6.7) are the design, and the system map registry is checked so they cannot drift apart.
 
 ---
 

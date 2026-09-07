@@ -4,7 +4,7 @@ This is a proposed runbook, not an operational service manual for an already dep
 
 ## Health is a vector
 
-Expose enforcement, authority continuity, observation coverage, helper availability, calibration validity, evidence retention, and replay closure separately. A healthy renderer cannot compensate for a broken gate. A green CPU metric cannot conceal a missing trace interval. Report unsupported capabilities as unsupported, not unhealthy versions of features that do not exist.
+The operational state is the `SituationReport` of plan §17.8, obtained by `fa situation`; every dashboard is a rendering of it. Expose enforcement, authority continuity, observation coverage, helper availability, calibration validity, evidence retention, and replay closure separately. A healthy renderer cannot compensate for a broken gate. A green CPU metric cannot conceal a missing trace interval. Report unsupported capabilities as unsupported, not unhealthy versions of features that do not exist.
 
 ## Failure handling
 

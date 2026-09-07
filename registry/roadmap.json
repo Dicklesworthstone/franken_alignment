@@ -2652,7 +2652,7 @@
     },
     {
       "id": "FA-118",
-      "gate": "G3",
+      "gate": "G4",
       "title": "Model passports and identity liveness",
       "status": "planned",
       "depends_on": [
@@ -2900,7 +2900,7 @@
       ],
       "acceptance": [
         "Versioned receipt schema (frozen effect digest, policy epoch, evidence-view closure digests, round/consequence, autonomy grade, passport, coverage, domain, control sequence, signatures, claim class, profile reference).",
-        "`fa verify-receipt` sharing no code with the broker; reports verified vs unverifiable properties separately; redaction reported.",
+        "`fa verify` sharing no code with the broker; reports verified vs unverifiable properties separately; redaction reported.",
         "Negative: forged receipt, altered effect byte, missing profile reference, receipt for unadmitted effect all rejected.",
         "Produce executed local evidence; source or prose alone does not close this packet."
       ],
@@ -3044,6 +3044,320 @@
       "founding_ideas": [
         "FI-A18",
         "FI-A07"
+      ]
+    },
+    {
+      "id": "FA-132",
+      "gate": "G0",
+      "title": "System map and vocabulary registries with checker",
+      "status": "planned",
+      "depends_on": [
+        "FA-103"
+      ],
+      "invariants": [
+        "FA-INV-019"
+      ],
+      "acceptance": [
+        "registry/system_map.json lists every layer, its boundary contract (types, invariants, verbs, conformance suite), plan sections and packets; registry/vocabulary.json lists every noun, verb (with authority, class, idempotency, cost class, response type), reason code and Knowledge variant.",
+        "Checker verifies every plan section, invariant, packet and bead referenced exists; every verb named in docs/AGENT_GUIDE.md and README exists in the vocabulary; retired verbs are absent.",
+        "Negative: rename a verb without updating the guide; checker fails.",
+        "Produce executed local evidence; source or prose alone does not close this packet."
+      ],
+      "owner_role": "systems",
+      "result_artifacts": [],
+      "founding_ideas": [
+        "FI-A06",
+        "FI-A17"
+      ]
+    },
+    {
+      "id": "FA-133",
+      "gate": "G1",
+      "title": "Knowledge epistemic wrapper on every layer boundary",
+      "status": "planned",
+      "depends_on": [
+        "FA-007"
+      ],
+      "invariants": [
+        "FA-INV-039",
+        "FA-INV-004"
+      ],
+      "acceptance": [
+        "Knowledge<T> type with Known/Pending/Unknown/Withheld/Stale/Absent and basis; serializers for agent surfaces accept only Knowledge-wrapped safety-relevant fields.",
+        "Compile-fail or serializer-refusal tests for bare booleans; Unknown treated as missing evidence in the permit path.",
+        "Negative: Absent over an open frontier refused.",
+        "Produce executed local evidence; source or prose alone does not close this packet."
+      ],
+      "owner_role": "systems",
+      "result_artifacts": [],
+      "founding_ideas": [
+        "FI-A06",
+        "FI-A13"
+      ]
+    },
+    {
+      "id": "FA-134",
+      "gate": "G1",
+      "title": "Address scheme and single resolver",
+      "status": "planned",
+      "depends_on": [
+        "FA-007",
+        "FA-005"
+      ],
+      "invariants": [
+        "FA-INV-017",
+        "FA-INV-008"
+      ],
+      "acceptance": [
+        "fa://<tenant>/<kind>/<id>[@generation] parser/printer with the registered noun set; fa get resolves any kind with Knowledge status; fa related returns typed edges (closure DAG, provenance, thought graph, supports).",
+        "All logs, errors, receipts and reports use addresses; authorization filtering applied at resolution.",
+        "Negative: unknown kind refused; cross-tenant address Withheld without existence leak.",
+        "Produce executed local evidence; source or prose alone does not close this packet."
+      ],
+      "owner_role": "systems",
+      "result_artifacts": [],
+      "founding_ideas": [
+        "FI-A06"
+      ]
+    },
+    {
+      "id": "FA-135",
+      "gate": "G1",
+      "title": "Typed event journal and fa tail",
+      "status": "planned",
+      "depends_on": [
+        "FA-009",
+        "FA-010",
+        "FA-134"
+      ],
+      "invariants": [
+        "FA-INV-016",
+        "FA-INV-011"
+      ],
+      "acceptance": [
+        "One ordered journal per authority domain; every L3–L8 transition emits a typed event with control seq, source frontiers, addresses and realized cost.",
+        "fa tail --since streams events; decision_replay recomputes closures from the journal alone.",
+        "Negative: an event with wall-clock but no control seq refused; a gap is reported, never filled.",
+        "Produce executed local evidence; source or prose alone does not close this packet."
+      ],
+      "owner_role": "systems",
+      "result_artifacts": [],
+      "founding_ideas": [
+        "FI-A02",
+        "FI-A14"
+      ]
+    },
+    {
+      "id": "FA-136",
+      "gate": "G2",
+      "title": "Situation report with decision-relevance ordering",
+      "status": "planned",
+      "depends_on": [
+        "FA-135",
+        "FA-133",
+        "FA-020",
+        "FA-071"
+      ],
+      "invariants": [
+        "FA-INV-039",
+        "FA-INV-004"
+      ],
+      "acceptance": [
+        "SituationReport as a fold over the journal: authority, held/unknown effects, evidence debt, coverage gaps, helper health, andon, incident counters, findings, replay availability; every item addressed and Knowledge-wrapped; exact control seq and open frontiers stated.",
+        "Ordering by planner-estimated decision relevance; bounded and paginated by address.",
+        "Negative: a report presented as exact with an open frontier refused; Withheld items never leak existence.",
+        "Produce executed local evidence; source or prose alone does not close this packet."
+      ],
+      "owner_role": "systems",
+      "result_artifacts": [],
+      "founding_ideas": [
+        "FI-A02",
+        "FI-A18"
+      ]
+    },
+    {
+      "id": "FA-137",
+      "gate": "G2",
+      "title": "Explain trees and why-held",
+      "status": "planned",
+      "depends_on": [
+        "FA-020",
+        "FA-104",
+        "FA-134"
+      ],
+      "invariants": [
+        "FA-INV-007",
+        "FA-INV-016"
+      ],
+      "acceptance": [
+        "fa explain returns the predicate tree (dispatch conjunction, policy predicates, reducer trace with committed verdicts and weights, consequence) with Knowledge status and evidence addresses per node.",
+        "fa why-held filters to unsatisfied nodes paired with affordances; human reports render from the tree.",
+        "Negative: a node without evidence addresses refused; a tree that differs on replay is IntegrityFailure.",
+        "Produce executed local evidence; source or prose alone does not close this packet."
+      ],
+      "owner_role": "systems",
+      "result_artifacts": [],
+      "founding_ideas": [
+        "FI-A06",
+        "FI-I18"
+      ]
+    },
+    {
+      "id": "FA-138",
+      "gate": "G2",
+      "title": "Affordances, fa next and fa propose",
+      "status": "planned",
+      "depends_on": [
+        "FA-137",
+        "FA-071"
+      ],
+      "invariants": [
+        "FA-INV-004",
+        "FA-INV-039"
+      ],
+      "acceptance": [
+        "Affordance objects (verb, target, authority required, cost estimate, expected information gain, would_change, rehearsable, idempotency key) in every hold/deny/error response.",
+        "fa next ranks by information gain per cost within the allowed action set; fa propose executes with the planner's decision card returned.",
+        "Negative: an affordance that would skip a mandatory observation must not be generated; executing an affordance without its authority refused.",
+        "Produce executed local evidence; source or prose alone does not close this packet."
+      ],
+      "owner_role": "systems",
+      "result_artifacts": [],
+      "founding_ideas": [
+        "FI-A13",
+        "FI-A17"
+      ]
+    },
+    {
+      "id": "FA-139",
+      "gate": "G2",
+      "title": "Rehearsal mode for every mutation verb",
+      "status": "planned",
+      "depends_on": [
+        "FA-117",
+        "FA-138",
+        "FA-016"
+      ],
+      "invariants": [
+        "FA-INV-040",
+        "FA-INV-009",
+        "FA-INV-025"
+      ],
+      "acceptance": [
+        "--branch on every mutation verb under ExperimentCx returns RehearsalOutcome (would-be tree, simulated effects, would-be cost) labeled rehearsal.",
+        "No permit, no rights movement, no adapter call, no production journal event; typestate makes the wrong outcome a compile error.",
+        "Negative: RehearsalOutcome attached as a permit refused; rehearsal of a fence must not fence.",
+        "Produce executed local evidence; source or prose alone does not close this packet."
+      ],
+      "owner_role": "gate",
+      "result_artifacts": [],
+      "founding_ideas": [
+        "FI-I03",
+        "FI-I09"
+      ]
+    },
+    {
+      "id": "FA-140",
+      "gate": "G2",
+      "title": "Annotations and handoffs",
+      "status": "planned",
+      "depends_on": [
+        "FA-134",
+        "FA-136",
+        "FA-021"
+      ],
+      "invariants": [
+        "FA-INV-012",
+        "FA-INV-019"
+      ],
+      "acceptance": [
+        "Annotation: non-authoritative L6 object signed by the annotating principal with claim class and supporting addresses; discoverable via fa related; never a reducer or permit input.",
+        "Handoff: situation report, open affordances, annotations, rehearsals and the control seq it is current to.",
+        "Negative: annotation used as reducer input refused; handoff claiming currency beyond its control seq refused.",
+        "Produce executed local evidence; source or prose alone does not close this packet."
+      ],
+      "owner_role": "systems",
+      "result_artifacts": [],
+      "founding_ideas": [
+        "FI-A14",
+        "FI-I15"
+      ]
+    },
+    {
+      "id": "FA-141",
+      "gate": "G1",
+      "title": "Layer conformance suites composed by fa doctor",
+      "status": "planned",
+      "depends_on": [
+        "FA-004",
+        "FA-015"
+      ],
+      "invariants": [
+        "FA-INV-019",
+        "FA-INV-030"
+      ],
+      "acceptance": [
+        "Each layer boundary has an executable conformance suite registered in the system map; fa doctor runs bottom-up and reports each layer Knowledge-wrapped.",
+        "Any layer above a failed or unexecuted suite reports Unknown{LowerLayerUnverified}; SKIP is never PASS.",
+        "Negative: a dashboard rendering green above an unverified layer refused.",
+        "Produce executed local evidence; source or prose alone does not close this packet."
+      ],
+      "owner_role": "systems",
+      "result_artifacts": [],
+      "founding_ideas": [
+        "FI-A18",
+        "FI-A02"
+      ]
+    },
+    {
+      "id": "FA-142",
+      "gate": "G2",
+      "title": "Policy disclosure profile and actor precheck",
+      "status": "planned",
+      "depends_on": [
+        "FA-008",
+        "FA-107",
+        "FA-061"
+      ],
+      "invariants": [
+        "FA-INV-031",
+        "FA-INV-040"
+      ],
+      "acceptance": [
+        "Profile option policy_disclosure none|exact_predicates|full with declared leakage; fa precheck evaluates exact predicates only, no helper, no permit, no journal event, results witness-cached.",
+        "Empirical review, helper identities and consequences remain private under every option.",
+        "Negative: precheck returning a helper identity or a permit refused; leakage table required in the profile.",
+        "Produce executed local evidence; source or prose alone does not close this packet."
+      ],
+      "owner_role": "gate",
+      "result_artifacts": [],
+      "founding_ideas": [
+        "FI-A13",
+        "FI-A15"
+      ]
+    },
+    {
+      "id": "FA-143",
+      "gate": "G0",
+      "title": "Agent guide and playbooks maintained with the vocabulary",
+      "status": "planned",
+      "depends_on": [
+        "FA-132"
+      ],
+      "invariants": [
+        "FA-INV-019"
+      ],
+      "acceptance": [
+        "docs/AGENT_GUIDE.md playbooks name only registered verbs and address kinds; each step lists consumed/produced addresses and failure branches.",
+        "Playbooks can be rehearsed end to end in a branch once FA-139 lands; the system-map checker fails on any retired verb.",
+        "Negative: a playbook step naming a retired verb fails the check.",
+        "Produce executed local evidence; source or prose alone does not close this packet."
+      ],
+      "owner_role": "systems",
+      "result_artifacts": [],
+      "founding_ideas": [
+        "FI-A06",
+        "FI-A17"
       ]
     }
   ]

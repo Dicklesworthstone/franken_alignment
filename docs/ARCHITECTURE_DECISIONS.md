@@ -26,6 +26,8 @@ All decisions describe the prospective design. They are open to improvement thro
 | ADR-020 | Verify the identity of the guarded model continuously | Assume the served model equals the qualified model | Passports plus anchor-based liveness under the audit floor; substitution fences the run; reopen with a fingerprint-preserving attack result (H19) |
 | ADR-021 | Bring humans and external parties into the congress under the same protocol | Treat human review as an unmeasured exception; keep all helpers in-house | Humans commit, are scored and are shielded from the actor like any member; providers see only committed views and never labels or authority |
 | ADR-022 | Let the control plane monitor its own drift | Rely on governance vigilance alone | Standing risk-theater queries with immutable history visible to the evaluator and governance; thresholds governed, never actor-visible |
+| ADR-023 | State the system as one tower with one epistemic type, one address scheme, one journal and one vocabulary | Separate CLI, API, dashboard and log vocabularies; bare booleans in responses | Every agent-facing value is a Knowledge variant (FA-INV-039); the system map is machine-checked so surfaces cannot drift; prose renders from predicate trees |
+| ADR-024 | Make every mutation rehearsable in a branch and every error a plan | Dry-run flags with unspecified semantics; errors as prose | Rehearsal returns a labeled outcome and can never permit (FA-INV-040); errors carry retry safety, idempotency key and what would change them |
 
 ## How to amend a decision
 
@@ -59,3 +61,4 @@ The main plan and the dependency/local-release constitutions are normative for t
 8. Purpose contexts are typestates; a forbidden authority conversion is a compile error.
 9. Receipts and profiles make control claims verifiable without trusting the operator.
 10. The guarded model's identity is verified, and authority widens only through governed transitions.
+11. The system is one tower; every value crossing a boundary carries its epistemic status; every mutation is rehearsable; evidence and notes accrete, authority never does.

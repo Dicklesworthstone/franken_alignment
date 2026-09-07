@@ -1,6 +1,10 @@
 # franken_alignment
 
 <div align="center">
+  <img src="franken_alignment_illustration.webp" alt="franken_alignment - Evidence-carrying control for powerful, potentially untrusted agents">
+</div>
+
+<div align="center">
 
 [![License: MIT + Rider](https://img.shields.io/badge/License-MIT_+_OpenAI/Anthropic_Rider-blue.svg)](./LICENSE)
 [![Rust Edition](https://img.shields.io/badge/Rust-2024_Edition-orange.svg)](https://doc.rust-lang.org/edition-guide/rust-2024/)
@@ -33,7 +37,7 @@ cargo run --locked -p xtask -- check
 - **Post-hoc output filters cannot undo external side effects.** Once an irreversible tool call dispatches (file deletion, network egress, credential spending, hardware command), no retrospective apology or log alert can recover the spent state.
 - **Whole-activation telemetry is economically intractable.** Logging complete internal activations and KV caches across billions of tokens overwhelms storage and network transfer, yet naive compression (such as standard mean squared error autoencoders) aggressively discards subtle, low-variance signals that carry catastrophic safety risk.
 
-**The solution.** `franken_alignment` is the executable form of two essays by Jeffrey Emanuel that predate most of the AI-control literature: [Some Thoughts on AI Alignment: Using AI to Control AI](https://github.com/Dicklesworthstone/some_thoughts_on_ai_alignment) (June 2024) and [Real-Time Introspective Compression for Transformers](https://github.com/Dicklesworthstone/llm_introspective_compression_and_metacognition) (April 2025). The first says control must be **external and one-directional**: a congress of narrower, independent, rotating helper models watches the powerful model's outputs *and* its intermediate activations, votes under cryptographic commitment, never hears the model argue its own case, and is governed against risk theater. The second says introspection can be **economical, versioned and replayable**: a sidecar compresses the model's hidden state onto a learned manifold so cognition can be saved, rewound, branched and replayed like a game save. `franken_alignment` composes them and connects **what an agent observed, what it proposed, what independent observers actually saw, what justified permission, and what effect actually occurred** through one coherent evidence and authority model. The [founding-ideas concordance](./docs/FOUNDING_IDEAS.md) maps every paragraph of both essays to the mechanism that carries it.
+**The solution.** `franken_alignment` is the executable form of two essays by Jeffrey Emanuel that predate most of the literature this plan compares itself against: [Some Thoughts on AI Alignment: Using AI to Control AI](https://github.com/Dicklesworthstone/some_thoughts_on_ai_alignment) (June 2024) and [Real-Time Introspective Compression for Transformers](https://github.com/Dicklesworthstone/llm_introspective_compression_and_metacognition) (April 2025). The first says control must be **external and one-directional**: a congress of narrower, independent, rotating helper models watches the powerful model's outputs *and* its intermediate activations, votes under cryptographic commitment, never hears the model argue its own case, and is governed against risk theater. The second says introspection can be **economical, versioned and replayable**: a sidecar compresses the model's hidden state onto a learned manifold so cognition can be saved, rewound, branched and replayed like a game save. `franken_alignment` composes them and connects **what an agent observed, what it proposed, what independent observers actually saw, what justified permission, and what effect actually occurred** through one coherent evidence and authority model. The [founding-ideas concordance](./docs/FOUNDING_IDEAS.md) maps every paragraph of both essays to the mechanism that carries it.
 
 One single composable artifact—the **`DecisionClosure`**—unifies the pipeline: the exact object that authorizes a live tool dispatch serves simultaneously as a tamper-evident incident record, a replayable counterfactual baseline, a calibration sample, and an automated regression test.
 
@@ -247,6 +251,41 @@ The crate families below are the ones named in plan §6.2. Only `fa-reference` a
 
 ---
 
+## Driving it as an agent
+
+The system is designed to be operated by an agent, and it is stated as one **tower of nine layers** so an agent can hold the whole thing in its head (plan §6.7; [`docs/SYSTEM_MAP.md`](./docs/SYSTEM_MAP.md)). Each layer answers one question, depends only on the layers below, and exports its objects through one epistemic type:
+
+```
+L8 GOVERNANCE   is the control system itself still trustworthy?   ledgers, detector, promotions, profiles
+L7 EXPERIMENT   what would have happened otherwise?                branches, twins, canaries, rehearsal
+L6 CLOSURE      why, verifiably?                                   closures, receipts, capsules, annotations
+L5 EFFECT       what actually happened in the world?               broker, adapters, outcomes, fences
+L4 AUTHORITY    what may happen now?                               epochs, rights, permits, grades, consequences
+L3 JUDGMENT     what do independent observers conclude, at what cost?  probes, helpers, rounds, reducers
+L2 EVIDENCE     what can be relied on, under which assumptions?    view manifests, witnesses, frontiers
+L1 OBSERVATION  what was seen, and what was not?                   taps, coverage, sidecar codes
+L0 IDENTITY     what exactly is this thing?                        digests, addresses, passports, clocks
+```
+
+Five rules make it legible: downward dependence only; one epistemic type at every boundary (`Known`, `Pending`, `Unknown`, `Withheld`, `Stale`, `Absent`, never a bare `safe: true`); one address scheme (`fa://<tenant>/<kind>/<id>`) resolved by one `fa get`; one typed journal per authority domain that the situation report, explain trees and replay are all folds over; and executable conformance contracts between layers that `fa doctor` composes bottom-up, reporting `Unknown{LowerLayerUnverified}` above anything that did not execute.
+
+The agent surface is a projection of the tower ([`docs/AGENT_GUIDE.md`](./docs/AGENT_GUIDE.md), [`registry/vocabulary.json`](./registry/vocabulary.json)):
+
+```bash
+fa situation --scope run --since 41802      # the whole state, ordered by what changes your next decision
+fa why-held fa://acme/attempt/7f3a          # unsatisfied predicates + the affordances that could satisfy them
+fa next fa://acme/attempt/7f3a              # affordances ranked by information gain per cost, floors excluded
+fa propose <affordance> --branch b1         # rehearse: the tree the nucleus would produce; never a permit
+fa propose <affordance>                     # act: decision card, realized cost, new control sequence
+fa explain fa://acme/closure/9c1d           # the decision as a predicate tree over addressed evidence
+fa annotate fa://acme/incident/12 --class hypothesis "..."   # a typed, signed, non-authoritative note
+fa handoff fa://acme/run/44                 # situation + open affordances + notes, current to a control seq
+```
+
+Every response carries its epistemic status, its address and generation, the control sequence it is exact at, remaining budgets, realized cost and typed next actions; every error names what would change it. Evidence, receipts, annotations, rehearsals and handoffs accumulate across agents; authority never does.
+
+---
+
 ## How it compares
 
 | Approach | Pre-execution Gate | Activation Access | Cache Soundness | Multi-Observer Protocol | Authority Formalism | Dependency Profile |
@@ -388,7 +427,7 @@ Provisional performance targets from [`registry/slo.json`](./registry/slo.json) 
 
 - **Simulation-First & Lab Runtime.** The entire system runs under Asupersync's deterministic simulation runtime (`lab`): virtual time, seed-replayable execution, and DPOR schedule exploration. Every race or concurrency bug produces a deterministic replay seed.
 - **Reference Oracle.** [`crates/fa-reference`](./crates/fa-reference) provides an independent, deliberately small logical model in safe Rust (`#![forbid(unsafe_code)]`), with 20 unit tests covering MVCC witnesses, frontier gaps, rights conservation, commutativity, graph cuts, and Lipschitz linear probe bounds. They were executed on an operator host on September 6, 2026 and passed; the logs are in [`artifacts/execution/`](./artifacts/execution/).
-- **Registered Invariants.** 38 invariants ([`registry/invariants.json`](./registry/invariants.json), FA-INV-001 through FA-INV-038) state the production obligations, including the four taken directly from the founding essays (one-directional flow, no false-alarm-only helper selection, no actor-held latent authority, rewind never rewinds the world) and four that make the system verifiable by outsiders (served-model identity, governed authority widening, independently verifiable receipts, typestate purpose contexts). Production checkers are planned; seven invariants currently have reference-model checks. Waivers are forbidden on all of them.
+- **Registered Invariants.** 40 invariants ([`registry/invariants.json`](./registry/invariants.json), FA-INV-001 through FA-INV-040) state the production obligations, including the four taken directly from the founding essays (one-directional flow, no false-alarm-only helper selection, no actor-held latent authority, rewind never rewinds the world), four that make the system verifiable by outsiders (served-model identity, governed authority widening, independently verifiable receipts, typestate purpose contexts) and two that make it legible to an agent (every agent-facing value carries its epistemic status; rehearsal never executes or permits). Production checkers are planned; eight invariants currently have reference-model checks, drawn from seven distinct reference tests. Waivers are forbidden on all of them.
 - **Falsifiable Research Hypotheses.** 21 explicit research cards ([`registry/claims.json`](./registry/claims.json), H1 through H21) define empirical criteria for learned compression, metacognition, helper congresses, elicited signatures, rewind containment, lead-time credit, activation fingerprints, self-report residuals and live canaries against matched baselines. [`registry/experiments.json`](./registry/experiments.json) is the preregistration ledger.
 - **Formal Anchors.** Lean 4 theorems over the abstract ledger (rights conservation, the effect-bound permit law, monotone degraded authority, the consequence lattice) and TLA+ race models (dispatch, revocation, reset, fleet fence) run in the local gate when their toolchains are present and print `SKIP` otherwise (plan §19.9; packet FA-128).
 - **Founding Concordance.** [`registry/founding_concordance.json`](./registry/founding_concordance.json) traces every mechanism, invariant, hypothesis and packet to a founding idea; a semantic change that leaves it stale is incomplete.
@@ -457,8 +496,9 @@ The `franken_alignment` source code is licensed under the **MIT License with an 
 
 ## See also
 
-- [`docs/FOUNDING_IDEAS.md`](./docs/FOUNDING_IDEAS.md), the normative concordance between the two founding essays and every mechanism, invariant, hypothesis and packet, with the six syntheses and the chronology relative to later literature.
+- [`docs/FOUNDING_IDEAS.md`](./docs/FOUNDING_IDEAS.md), the normative concordance between the two founding essays and every mechanism, invariant, hypothesis and packet, with the nine syntheses and the chronology relative to the cited literature.
 - [`COMPREHENSIVE_PLAN_FOR_THE_DESIGN_OF_FRANKENALIGNMENT.md`](./COMPREHENSIVE_PLAN_FOR_THE_DESIGN_OF_FRANKENALIGNMENT.md), the technical master plan: the two founding commitments and eight architectural bets, the ten foundation audits, the three operating planes, the invariant registry, the research agenda, and delivery gates G0 through G6. [`docs/REVISION_0_3.md`](./docs/REVISION_0_3.md) explains the latest revision.
+- [`docs/SYSTEM_MAP.md`](./docs/SYSTEM_MAP.md) and [`docs/AGENT_GUIDE.md`](./docs/AGENT_GUIDE.md), the one-page tower of abstractions and the operating playbooks for an agent in the driver's seat; [`registry/system_map.json`](./registry/system_map.json) and [`registry/vocabulary.json`](./registry/vocabulary.json) are their machine-readable forms.
 - [`.beads/`](./.beads/), the granular implementation task graph for the revision 0.3 packets (`br ready --json`, `bv --robot-triage`).
 - [`AGENTS.md`](./AGENTS.md), conventions for human and AI agents working in this codebase, including the engineering doctrine, constitutional rules, and verification ladder.
 - [`IMPLEMENTATION_STATUS.md`](./IMPLEMENTATION_STATUS.md), exact claim boundaries and status across source, execution, and gated milestones.

@@ -3,21 +3,22 @@
 | Surface | Actual status | Claim boundary |
 |---|---|---|
 | Integrated comprehensive architecture | Revision 0.3 draft, founding essays as the spine | Requirements and research hypotheses, not deployed features |
-| Founding-ideas concordance | `docs/FOUNDING_IDEAS.md` and `registry/founding_concordance.json`: 38 founding ideas, 9 syntheses, 8 labeled non-literal imports, 18 engineering additions | Traceability of the design, not evidence that any mechanism works |
+| Founding-ideas concordance | `docs/FOUNDING_IDEAS.md` and `registry/founding_concordance.json`: 38 founding ideas, 9 syntheses, 8 labeled non-literal imports, 25 engineering additions | Traceability of the design, not evidence that any mechanism works |
+| Agent-facing surface (tower, Knowledge wrapper, addresses, vocabulary, journal, situation, explain, affordances, rehearsal, annotations, handoffs, precheck) | Plan §6.7, §6.8, §17.2, §17.3, §17.8, §17.11, §17.12; `docs/SYSTEM_MAP.md`, `docs/AGENT_GUIDE.md`; packets FA-132 through FA-143; beads | No command exists; the only executable is the local gate driver |
 | Founding essays | Both read in full again for revision 0.3; head commits recorded in `registry/sources.json` | Complete premise; no missing post |
 | Ten donor/build project deep dives | Targeted code/manifest/plan review at fixed refs (revision 0.2) | Exact files/scopes recorded; not full repository audits or builds |
 | Pure-Rust reference workspace | Source present, zero external packages, formatted with `cargo fmt --all` on 2026-09-06 | Selected logical semantics only; not a broker |
 | Rust test functions | 20 present; **executed 2026-09-06: 20 passed, 0 failed** on one operator host | One host, one date; not production evidence |
 | Rust local gate driver | **Complete gate PASS on 2026-09-06** under `nightly-2026-08-31` (rustc 908501772 2026-08-30, aarch64-apple-darwin) after the documented formatting step | See execution facts below; a new run is required for new code |
 | Production release gate | Explicitly refuses release | No qualified broker/toolchain/target/signing closure |
-| Machine-readable registries | 38 invariants, 21 hypotheses, 131 packets, 5 SLO targets, founding concordance (38 ideas, 9 syntheses, 18 engineering additions), preregistration ledger with no preregistered protocol yet | Static structural checks are not proofs of their claims |
-| Beads task graph | `.beads/` initialized 2026-09-06: 31 epics and 135 tasks covering packets FA-103 through FA-131 plus the composed end-to-end slice and the reference-model port, with tests and logging tasks, no dependency cycles | Planning artifact; nothing in it is implemented |
+| Machine-readable registries | 40 invariants, 21 hypotheses, 143 packets, 5 SLO targets, founding concordance (38 ideas, 9 syntheses, 25 engineering additions), preregistration ledger with no preregistered protocol yet, system map (9 layers) and vocabulary (26 nouns, 35 verbs, 12 reason codes) | Static structural checks are not proofs of their claims |
+| Beads task graph | `.beads/` initialized 2026-09-06: epics and tasks covering packets FA-103 through FA-143 plus the composed end-to-end slice and the reference-model port, with tests and logging tasks, no dependency cycles (counts in `artifacts/static-validation-0.3.json`) | Planning artifact; nothing in it is implemented |
 | Production control broker / persistence / containment | Not implemented | Reference code performs no external effects |
 | Native foundation adapters | Planned, admission blockers recorded | A reviewed source file is not an integration |
 | Trained helpers / codecs / signatures / surprise residual / rewind | Research and implementation plans | No measured safety, compression, detection or containment result |
 | Receipts, assurance profiles, passports, autonomy ledger, canaries, risk-theater detector, formal anchors | Plan subsections, invariants FA-INV-035 through FA-INV-038, packets FA-117 through FA-131, beads | No verifier, no proof, no profile exists yet |
 | Local DSR quality integration | Registry fragment and command contract supplied | Not executed through DSR on the user's hosts |
-| Public repository mutation | Not performed by this revision | Local working tree only |
+| Public repository mutation | The operator committed and pushed earlier revision 0.3 batches during the working session; later changes remain in the local working tree until committed | This document does not track remote state |
 
 ## Execution facts recorded on 2026-09-06
 
@@ -41,7 +42,7 @@ What these facts do and do not establish:
 
 | Founding idea family | Mechanism in plan | Reference-model check | Production status |
 |---|---|---|---|
-| Effect gate, one-shot permits, conserved rights (FI-A01, FI-A02) | §8 | `effect_binding_and_one_shot_dispatch`, `rights_unknown_cannot_be_refunded_by_cancel`, `revocation_fences_reserved_not_history` and four more; executed 2026-09-06 | planned |
+| Effect gate, one-shot permits, conserved rights (FI-A01, FI-A02) | §8 | `effect_binding_and_one_shot_dispatch`, `rights_unknown_cannot_be_refunded_by_cancel`, `revocation_fences_reserved_not_history`, `reserve_budget_and_duplicate_fail_closed` and `resolved_non_effect_returns_rights_once`; executed 2026-09-06 | planned |
 | Congress: independent votes, commit–reveal, consequences, credibility, escalation reports (FI-A06 through FI-A09, FI-A13 through FI-A16) | §9.2 through §9.10 | none yet; beads schedule a reference port of the consequence lattice, capped reducer, incident counter and commit–reveal round | planned |
 | Activation channel, sidecar-to-congress, certified margins (FI-A05, FI-I04, FI-I06) | §10 | `integer_probe_requests_refinement_at_margin`, `integer_probe_bound_matches_exhaustive_small_errors`; executed 2026-09-06 | planned |
 | Elicitation, signatures, honeypots, surprise (FI-A10 through FI-A12) | §12.6, §12.7 | none; research packets FA-109 through FA-111 | planned |

@@ -1,0 +1,401 @@
+{
+  "schema_version": "fa.system_map/0.3",
+  "normative_sections": [
+    "§6.7",
+    "§6.8",
+    "§17.2",
+    "§17.3",
+    "§17.8"
+  ],
+  "rules": [
+    "downward dependence only",
+    "one epistemic type at every boundary (FA-INV-039)",
+    "one address scheme",
+    "one journal per authority domain",
+    "executable contracts between layers composed by fa doctor"
+  ],
+  "layers": [
+    {
+      "id": "L8",
+      "name": "Governance",
+      "question": "Is the control system itself still trustworthy?",
+      "plan_sections": [
+        "§8.10",
+        "§9.9",
+        "§15.10",
+        "§17.10",
+        "§20",
+        "§22"
+      ],
+      "boundary_invariants": [
+        "FA-INV-032",
+        "FA-INV-036",
+        "FA-INV-019"
+      ],
+      "objects": [
+        "helper ledger",
+        "actor ledger",
+        "andon budget",
+        "risk-theater finding",
+        "promotion",
+        "assurance profile",
+        "preregistration row",
+        "policy-replay campaign"
+      ],
+      "verbs": [
+        "doctor",
+        "ledger",
+        "findings",
+        "policy-replay",
+        "promote",
+        "rotate",
+        "preregister"
+      ],
+      "packets": [
+        "FA-105",
+        "FA-119",
+        "FA-125",
+        "FA-127",
+        "FA-129",
+        "FA-130"
+      ],
+      "conformance_suite": "planned: L8 boundary suite (FA-141)"
+    },
+    {
+      "id": "L7",
+      "name": "Experiment",
+      "question": "What would have happened otherwise?",
+      "plan_sections": [
+        "§11",
+        "§12",
+        "§14.11"
+      ],
+      "boundary_invariants": [
+        "FA-INV-009",
+        "FA-INV-025",
+        "FA-INV-033",
+        "FA-INV-040"
+      ],
+      "objects": [
+        "branch",
+        "counterfactual witness",
+        "elicitation campaign",
+        "canary",
+        "practice session",
+        "rehearsal outcome"
+      ],
+      "verbs": [
+        "replay-plan",
+        "branch",
+        "intervene",
+        "replay",
+        "rehearse"
+      ],
+      "packets": [
+        "FA-032",
+        "FA-108",
+        "FA-109",
+        "FA-124",
+        "FA-139"
+      ],
+      "conformance_suite": "planned: L7 boundary suite (FA-141)"
+    },
+    {
+      "id": "L6",
+      "name": "Closure",
+      "question": "Why was this allowed or held, verifiably?",
+      "plan_sections": [
+        "§7.3",
+        "§17.9",
+        "§22.8",
+        "§17.8"
+      ],
+      "boundary_invariants": [
+        "FA-INV-007",
+        "FA-INV-016",
+        "FA-INV-037"
+      ],
+      "objects": [
+        "decision closure",
+        "control receipt",
+        "incident capsule",
+        "attack capsule",
+        "annotation",
+        "handoff"
+      ],
+      "verbs": [
+        "explain",
+        "verify",
+        "annotate",
+        "handoff"
+      ],
+      "packets": [
+        "FA-020",
+        "FA-126",
+        "FA-131",
+        "FA-137",
+        "FA-140"
+      ],
+      "conformance_suite": "planned: L6 boundary suite (FA-141)"
+    },
+    {
+      "id": "L5",
+      "name": "Effect",
+      "question": "What actually happened in the world?",
+      "plan_sections": [
+        "§8.3",
+        "§8.4",
+        "§8.11",
+        "§16.4"
+      ],
+      "boundary_invariants": [
+        "FA-INV-006",
+        "FA-INV-018",
+        "FA-INV-020"
+      ],
+      "objects": [
+        "broker",
+        "adapter",
+        "dispatch",
+        "reconciliation",
+        "outcome",
+        "fence"
+      ],
+      "verbs": [
+        "propose",
+        "resolve",
+        "fence",
+        "tail"
+      ],
+      "packets": [
+        "FA-012",
+        "FA-014",
+        "FA-120",
+        "FA-135"
+      ],
+      "conformance_suite": "planned: L5 boundary suite (FA-141)"
+    },
+    {
+      "id": "L4",
+      "name": "Authority",
+      "question": "What may happen now?",
+      "plan_sections": [
+        "§8.1",
+        "§8.2",
+        "§8.5",
+        "§8.10",
+        "§9.8"
+      ],
+      "boundary_invariants": [
+        "FA-INV-001",
+        "FA-INV-002",
+        "FA-INV-003",
+        "FA-INV-004",
+        "FA-INV-005",
+        "FA-INV-034",
+        "FA-INV-038"
+      ],
+      "objects": [
+        "policy epoch",
+        "rights",
+        "permit",
+        "autonomy grade",
+        "consequence",
+        "revocation floor"
+      ],
+      "verbs": [
+        "situation",
+        "why-held",
+        "next",
+        "hold",
+        "narrow",
+        "suspend",
+        "reset",
+        "precheck"
+      ],
+      "packets": [
+        "FA-009",
+        "FA-013",
+        "FA-104",
+        "FA-119",
+        "FA-136",
+        "FA-138",
+        "FA-142"
+      ],
+      "conformance_suite": "planned: L4 boundary suite (FA-141)"
+    },
+    {
+      "id": "L3",
+      "name": "Judgment",
+      "question": "What do independent observers conclude, and at what cost?",
+      "plan_sections": [
+        "§9",
+        "§10.4",
+        "§12.6",
+        "§12.7",
+        "§12.8",
+        "§13"
+      ],
+      "boundary_invariants": [
+        "FA-INV-010",
+        "FA-INV-012",
+        "FA-INV-031"
+      ],
+      "objects": [
+        "probe",
+        "helper",
+        "similarity stream",
+        "surprise residual",
+        "round",
+        "reducer",
+        "credibility weight"
+      ],
+      "verbs": [
+        "explain",
+        "cost",
+        "convene"
+      ],
+      "packets": [
+        "FA-018",
+        "FA-019",
+        "FA-106",
+        "FA-110",
+        "FA-111",
+        "FA-123"
+      ],
+      "conformance_suite": "planned: L3 boundary suite (FA-141)"
+    },
+    {
+      "id": "L2",
+      "name": "Evidence",
+      "question": "What can be relied on, under which assumptions?",
+      "plan_sections": [
+        "§7.3",
+        "§7.4",
+        "§7.6",
+        "§7.7",
+        "§7.8",
+        "§7.9",
+        "§17.7",
+        "§15.8"
+      ],
+      "boundary_invariants": [
+        "FA-INV-014",
+        "FA-INV-021",
+        "FA-INV-022",
+        "FA-INV-023",
+        "FA-INV-026"
+      ],
+      "objects": [
+        "authenticated object",
+        "view manifest",
+        "read witness",
+        "frontier",
+        "support set"
+      ],
+      "verbs": [
+        "get",
+        "related",
+        "invalidate",
+        "when"
+      ],
+      "packets": [
+        "FA-016",
+        "FA-057",
+        "FA-063",
+        "FA-081"
+      ],
+      "conformance_suite": "planned: L2 boundary suite (FA-141)"
+    },
+    {
+      "id": "L1",
+      "name": "Observation",
+      "question": "What was seen, and what was not?",
+      "plan_sections": [
+        "§7.2",
+        "§10",
+        "§18.2"
+      ],
+      "boundary_invariants": [
+        "FA-INV-013",
+        "FA-INV-015"
+      ],
+      "objects": [
+        "tap",
+        "capture stream",
+        "coverage record",
+        "sidecar code",
+        "tool channel"
+      ],
+      "verbs": [
+        "capabilities",
+        "get"
+      ],
+      "packets": [
+        "FA-017",
+        "FA-024",
+        "FA-113"
+      ],
+      "conformance_suite": "planned: L1 boundary suite (FA-141)"
+    },
+    {
+      "id": "L0",
+      "name": "Identity",
+      "question": "What exactly is this thing?",
+      "plan_sections": [
+        "§6.5",
+        "§7.1",
+        "§7.10"
+      ],
+      "boundary_invariants": [
+        "FA-INV-017",
+        "FA-INV-035",
+        "FA-INV-029"
+      ],
+      "objects": [
+        "canonical bytes",
+        "digest",
+        "address",
+        "model passport",
+        "generation",
+        "epoch",
+        "control sequence"
+      ],
+      "verbs": [
+        "get",
+        "when"
+      ],
+      "packets": [
+        "FA-007",
+        "FA-118",
+        "FA-134"
+      ],
+      "conformance_suite": "planned: L0 boundary suite (FA-141)"
+    }
+  ],
+  "epistemic_type": {
+    "variants": [
+      "Known",
+      "Pending",
+      "Unknown",
+      "Withheld",
+      "Stale",
+      "Absent"
+    ],
+    "basis_fields": [
+      "claim_class",
+      "origin",
+      "complete_for_contract",
+      "semantically_valid",
+      "available_for_replay",
+      "generation",
+      "control_seq"
+    ]
+  },
+  "documents": {
+    "human": "docs/SYSTEM_MAP.md",
+    "agent_guide": "docs/AGENT_GUIDE.md",
+    "vocabulary": "registry/vocabulary.json"
+  },
+  "checker_packet": "FA-132"
+}

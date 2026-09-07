@@ -16,7 +16,7 @@ Include the affected revision, threat assumptions, minimal redacted reproduction
 
 The publishing script acts only through the user's locally authenticated GitHub CLI and configured Git identity. It checks for an absent target repository, refuses existing local Git metadata or ancestor worktrees, and never accepts or stores a token. It cannot undo a partially successful remote creation. Inspect the file set before invoking it: publication is a real public disclosure.
 
-Required gates execute on operator machines through Cargo/DSR. No hosted Actions status is authoritative. Release requires a frozen source/toolchain/dependency/target closure and complete retained execution evidence; draft 0.2 is explicitly not release-enabled.
+Required gates execute on operator machines through Cargo/DSR. No hosted Actions status is authoritative. Release requires a frozen source/toolchain/dependency/target closure and complete retained execution evidence; revision 0.3 is explicitly not release-enabled; the single local quality-gate execution of 2026-09-06 is quality evidence, not a release receipt.
 
 ## Privacy
 

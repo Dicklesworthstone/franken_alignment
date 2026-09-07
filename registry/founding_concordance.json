@@ -98,7 +98,7 @@
     {
       "id": "FI-A05",
       "source": "F-ALIGN",
-      "locator": "¶7, ¶9",
+      "locator": "¶7–8, ¶11",
       "idea": "Helpers watch intermediate activations in earlier layers (pre-ideas)",
       "plan_sections": [
         "§7.2",
@@ -1168,6 +1168,86 @@
       ],
       "plan_sections": [
         "§22.8"
+      ]
+    },
+    {
+      "mechanism": "Tower of abstractions and layer conformance",
+      "serves": [
+        "FI-A02",
+        "FI-A06",
+        "FI-A18"
+      ],
+      "plan_sections": [
+        "§6.7",
+        "§6.8"
+      ]
+    },
+    {
+      "mechanism": "Epistemic Knowledge wrapper",
+      "serves": [
+        "FI-A06",
+        "FI-A13"
+      ],
+      "plan_sections": [
+        "§17.3"
+      ]
+    },
+    {
+      "mechanism": "Address scheme, vocabulary and journal",
+      "serves": [
+        "FI-A06",
+        "FI-A14",
+        "FI-A17"
+      ],
+      "plan_sections": [
+        "§17.2",
+        "§17.8"
+      ]
+    },
+    {
+      "mechanism": "Situation report, explain trees and affordances",
+      "serves": [
+        "FI-A02",
+        "FI-A13",
+        "FI-A17",
+        "FI-I18"
+      ],
+      "plan_sections": [
+        "§17.8",
+        "§22.1"
+      ]
+    },
+    {
+      "mechanism": "Rehearsal via branches",
+      "serves": [
+        "FI-I03",
+        "FI-I09"
+      ],
+      "plan_sections": [
+        "§17.8"
+      ]
+    },
+    {
+      "mechanism": "Annotations, handoffs and playbooks",
+      "serves": [
+        "FI-A14",
+        "FI-I15",
+        "FI-A17"
+      ],
+      "plan_sections": [
+        "§17.8",
+        "§17.11",
+        "§17.12"
+      ]
+    },
+    {
+      "mechanism": "Policy disclosure profile and actor precheck",
+      "serves": [
+        "FI-A13",
+        "FI-A15"
+      ],
+      "plan_sections": [
+        "§17.8"
       ]
     }
   ]

@@ -2,6 +2,8 @@
 
 ## Four distinct layers
 
+These are evaluation layers (A through D), distinct from the nine architectural layers L0 through L8 of plan §6.7.
+
 **Layer A: repository integrity.** Parse registries, verify IDs/dependency DAGs, resolve local links and declared reference-test entrypoints, check draft schemas/examples, and run the reference demo. These checks establish internal consistency of the planning artifact only.
 
 **Layer B: reference semantics.** Exercise byte binding, one-use permits, current epochs, integer rights, unknown outcomes, branch isolation, helper-round commitments, and deterministic histories. Seeded histories are falsification tests, not exhaustive exploration or production proofs.

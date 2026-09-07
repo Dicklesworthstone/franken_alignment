@@ -2,7 +2,7 @@
 
 ## Current status
 
-The project is a design/reference package. There is no production executable to release. Rust source and 20 test functions are present, but compilation, rustfmt, Clippy and tests were **not run** in the preparation environment. `cargo xtask release-check` deliberately returns failure. No fake public key, release target, host credential or GitHub ruleset ID is committed.
+The project is a design/reference package. There is no production executable to release. Rust source and 20 test functions are present. Compilation, rustfmt, Clippy and tests were **not run** in the revision 0.2 preparation environment; on 2026-09-06 the complete gate passed on one operator host under `nightly-2026-08-31` after the documented `cargo fmt --all` step (logs under `artifacts/execution/`), and failed under that host's rolling `nightly` because its toolchain directory lacks the rustfmt and clippy binaries. `cargo xtask release-check` deliberately returns failure. No fake public key, release target, host credential or GitHub ruleset ID is committed.
 
 ## Local development commands
 
@@ -16,7 +16,7 @@ cargo fmt --all
 cargo run --locked -p xtask -- check
 ```
 
-The formatting command is an explicit preparation mutation because rustfmt was unavailable when this source was generated. Review/commit any formatting changes before freezing the release source. The gate itself uses `fmt --check`, `check`, `clippy` and `test`, and never fixes source while claiming it was unchanged. DSR must execute the same gate against a frozen, clean source snapshot. The source inventory command alone does not run tests.
+The formatting command is an explicit preparation mutation because rustfmt was unavailable when this source was generated; it was applied and committed on 2026-09-06 (18 formatting diffs, no semantic change). Review/commit any formatting changes before freezing the release source. The gate itself uses `fmt --check`, `check`, `clippy` and `test`, and never fixes source while claiming it was unchanged. DSR must execute the same gate against a frozen, clean source snapshot. The source inventory command alone does not run tests.
 
 ## Register the local quality gate
 
@@ -48,7 +48,7 @@ dsr release franken_alignment <qualified-version> --draft --artifacts <sealed-ou
 dsr release verify franken_alignment <qualified-version>
 ```
 
-These are **future operational forms**, not runnable release instructions for draft 0.2. Do not use a generic hosted-CI fallback path, partial targets, or a broad ordinary checksum spot-check as the release proof. Build resume requires the exact original source/target/output identity; do not assume a similarly named release-resume path has equivalent implementation.
+These are **future operational forms**, not runnable release instructions for revision 0.3. Do not use a generic hosted-CI fallback path, partial targets, or a broad ordinary checksum spot-check as the release proof. Build resume requires the exact original source/target/output identity; do not assume a similarly named release-resume path has equivalent implementation.
 
 ## Proof closure
 

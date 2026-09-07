@@ -1,0 +1,432 @@
+{
+  "schema_version": "fa.vocabulary/0.3",
+  "address_scheme": "fa://<tenant>/<kind>/<id>[@<generation>]",
+  "nouns": [
+    "run",
+    "attempt",
+    "effect",
+    "permit",
+    "closure",
+    "receipt",
+    "round",
+    "consequence",
+    "helper",
+    "evidence",
+    "view",
+    "witness",
+    "frontier",
+    "observation",
+    "passport",
+    "policy",
+    "profile",
+    "grade",
+    "fence",
+    "branch",
+    "checkpoint",
+    "incident",
+    "finding",
+    "ledger",
+    "annotation",
+    "handoff"
+  ],
+  "verbs": [
+    {
+      "verb": "get",
+      "layer": "L0-L2",
+      "class": "read",
+      "authority": "any purpose (authorization-filtered)",
+      "idempotency": "n/a",
+      "cost_class": "cheap",
+      "response": "Knowledge<Object>",
+      "note": ""
+    },
+    {
+      "verb": "related",
+      "layer": "L0-L6",
+      "class": "read",
+      "authority": "any purpose (authorization-filtered)",
+      "idempotency": "n/a",
+      "cost_class": "cheap",
+      "response": "Vec<Edge>",
+      "note": ""
+    },
+    {
+      "verb": "capabilities",
+      "layer": "L1",
+      "class": "read",
+      "authority": "any",
+      "idempotency": "n/a",
+      "cost_class": "cheap",
+      "response": "AssuranceProfile",
+      "note": ""
+    },
+    {
+      "verb": "when",
+      "layer": "L0",
+      "class": "read",
+      "authority": "any",
+      "idempotency": "n/a",
+      "cost_class": "cheap",
+      "response": "Ordering{Before|After|Concurrent}",
+      "note": ""
+    },
+    {
+      "verb": "invalidate",
+      "layer": "L2",
+      "class": "mutation",
+      "authority": "JudgeCx or PermitCx",
+      "idempotency": "expected predecessor + key",
+      "cost_class": "cheap",
+      "response": "InvalidationEvent",
+      "note": "append-only; never rewrites history"
+    },
+    {
+      "verb": "explain",
+      "layer": "L3/L6",
+      "class": "read",
+      "authority": "any (filtered)",
+      "idempotency": "n/a",
+      "cost_class": "cheap",
+      "response": "PredicateTree",
+      "note": ""
+    },
+    {
+      "verb": "cost",
+      "layer": "L3",
+      "class": "read",
+      "authority": "any",
+      "idempotency": "n/a",
+      "cost_class": "cheap",
+      "response": "CostEstimate",
+      "note": ""
+    },
+    {
+      "verb": "convene",
+      "layer": "L3",
+      "class": "mutation",
+      "authority": "PermitCx (policy)",
+      "idempotency": "round id",
+      "cost_class": "expensive",
+      "response": "RoundOpened",
+      "note": "--branch makes it rehearsal"
+    },
+    {
+      "verb": "annotate",
+      "layer": "L6",
+      "class": "mutation",
+      "authority": "JudgeCx or operator role",
+      "idempotency": "key",
+      "cost_class": "cheap",
+      "response": "Annotation",
+      "note": "non-authoritative"
+    },
+    {
+      "verb": "situation",
+      "layer": "L4",
+      "class": "read",
+      "authority": "operator role",
+      "idempotency": "n/a",
+      "cost_class": "moderate",
+      "response": "SituationReport",
+      "note": ""
+    },
+    {
+      "verb": "why-held",
+      "layer": "L4",
+      "class": "read",
+      "authority": "operator role",
+      "idempotency": "n/a",
+      "cost_class": "cheap",
+      "response": "PredicateTree(unsatisfied)+Affordances",
+      "note": ""
+    },
+    {
+      "verb": "next",
+      "layer": "L4",
+      "class": "read",
+      "authority": "operator role",
+      "idempotency": "n/a",
+      "cost_class": "cheap",
+      "response": "Vec<Affordance> ranked",
+      "note": ""
+    },
+    {
+      "verb": "tail",
+      "layer": "L5",
+      "class": "read",
+      "authority": "operator role",
+      "idempotency": "n/a",
+      "cost_class": "streaming",
+      "response": "Stream<Event>",
+      "note": ""
+    },
+    {
+      "verb": "propose",
+      "layer": "L4",
+      "class": "mutation",
+      "authority": "PermitCx via broker",
+      "idempotency": "idempotency key + expected epoch",
+      "cost_class": "varies",
+      "response": "DecisionCard+Outcome",
+      "note": "--branch makes it rehearsal (FA-INV-040)"
+    },
+    {
+      "verb": "precheck",
+      "layer": "L4",
+      "class": "rehearsal",
+      "authority": "actor under exact_predicates disclosure",
+      "idempotency": "cacheable via witnesses",
+      "cost_class": "cheap",
+      "response": "PrecheckResult",
+      "note": "exact predicates only; no permit, no journal event"
+    },
+    {
+      "verb": "hold",
+      "layer": "L4",
+      "class": "mutation",
+      "authority": "PermitCx",
+      "idempotency": "expected predecessor",
+      "cost_class": "cheap",
+      "response": "Consequence",
+      "note": ""
+    },
+    {
+      "verb": "narrow",
+      "layer": "L4",
+      "class": "mutation",
+      "authority": "PermitCx",
+      "idempotency": "expected predecessor",
+      "cost_class": "cheap",
+      "response": "Consequence",
+      "note": ""
+    },
+    {
+      "verb": "suspend",
+      "layer": "L4",
+      "class": "mutation",
+      "authority": "PermitCx",
+      "idempotency": "expected predecessor",
+      "cost_class": "cheap",
+      "response": "Consequence",
+      "note": ""
+    },
+    {
+      "verb": "reset",
+      "layer": "L4",
+      "class": "mutation",
+      "authority": "PermitCx + restart profile",
+      "idempotency": "expected predecessor",
+      "cost_class": "moderate",
+      "response": "ResetEvent",
+      "note": "never rewinds ledger (FA-INV-034)"
+    },
+    {
+      "verb": "fence",
+      "layer": "L5",
+      "class": "mutation",
+      "authority": "PermitCx (governance)",
+      "idempotency": "fence id",
+      "cost_class": "moderate",
+      "response": "FenceRecord",
+      "note": ""
+    },
+    {
+      "verb": "resolve",
+      "layer": "L5",
+      "class": "mutation",
+      "authority": "PermitCx via adapter contract",
+      "idempotency": "attempt id",
+      "cost_class": "varies",
+      "response": "Outcome",
+      "note": ""
+    },
+    {
+      "verb": "verify",
+      "layer": "L6",
+      "class": "read",
+      "authority": "any",
+      "idempotency": "n/a",
+      "cost_class": "cheap",
+      "response": "VerificationReport",
+      "note": "receipts, bundles, profiles; independent verifier"
+    },
+    {
+      "verb": "handoff",
+      "layer": "L6",
+      "class": "mutation",
+      "authority": "operator role",
+      "idempotency": "key",
+      "cost_class": "cheap",
+      "response": "Handoff",
+      "note": ""
+    },
+    {
+      "verb": "replay-plan",
+      "layer": "L7",
+      "class": "read",
+      "authority": "any (filtered)",
+      "idempotency": "n/a",
+      "cost_class": "cheap",
+      "response": "ReplayPlan|Unavailable",
+      "note": ""
+    },
+    {
+      "verb": "branch",
+      "layer": "L7",
+      "class": "rehearsal",
+      "authority": "ExperimentCx",
+      "idempotency": "key",
+      "cost_class": "moderate",
+      "response": "BranchAddress",
+      "note": ""
+    },
+    {
+      "verb": "intervene",
+      "layer": "L7",
+      "class": "rehearsal",
+      "authority": "ExperimentCx",
+      "idempotency": "key",
+      "cost_class": "varies",
+      "response": "InterventionRecord",
+      "note": ""
+    },
+    {
+      "verb": "replay",
+      "layer": "L7",
+      "class": "rehearsal",
+      "authority": "ExperimentCx",
+      "idempotency": "key",
+      "cost_class": "varies",
+      "response": "CounterfactualWitness",
+      "note": ""
+    },
+    {
+      "verb": "rehearse",
+      "layer": "L7",
+      "class": "rehearsal",
+      "authority": "ExperimentCx",
+      "idempotency": "key",
+      "cost_class": "varies",
+      "response": "RehearsalOutcome",
+      "note": "alias for any mutation verb with --branch"
+    },
+    {
+      "verb": "doctor",
+      "layer": "L8",
+      "class": "read",
+      "authority": "operator role",
+      "idempotency": "n/a",
+      "cost_class": "expensive",
+      "response": "Vec<LayerStatus>",
+      "note": "SKIP is never PASS"
+    },
+    {
+      "verb": "ledger",
+      "layer": "L8",
+      "class": "read",
+      "authority": "evaluator/governance role",
+      "idempotency": "n/a",
+      "cost_class": "cheap",
+      "response": "LedgerSummary",
+      "note": ""
+    },
+    {
+      "verb": "findings",
+      "layer": "L8",
+      "class": "read",
+      "authority": "evaluator/governance role",
+      "idempotency": "n/a",
+      "cost_class": "cheap",
+      "response": "Vec<Finding>",
+      "note": ""
+    },
+    {
+      "verb": "policy-replay",
+      "layer": "L8",
+      "class": "rehearsal",
+      "authority": "governance role",
+      "idempotency": "campaign id",
+      "cost_class": "expensive",
+      "response": "PolicyReplayCampaign",
+      "note": ""
+    },
+    {
+      "verb": "promote",
+      "layer": "L8",
+      "class": "mutation",
+      "authority": "governance role + evaluator report",
+      "idempotency": "expected predecessor",
+      "cost_class": "cheap",
+      "response": "GovernanceTransition",
+      "note": "refused without report (FA-INV-032/036)"
+    },
+    {
+      "verb": "rotate",
+      "layer": "L8",
+      "class": "mutation",
+      "authority": "governance role + evaluator report",
+      "idempotency": "expected predecessor",
+      "cost_class": "cheap",
+      "response": "GovernanceTransition",
+      "note": ""
+    },
+    {
+      "verb": "preregister",
+      "layer": "L8",
+      "class": "mutation",
+      "authority": "research role",
+      "idempotency": "protocol digest",
+      "cost_class": "cheap",
+      "response": "ExperimentRow",
+      "note": ""
+    }
+  ],
+  "reason_codes": [
+    "DeniedByPolicy",
+    "MissingRequiredObservation",
+    "StaleGeneration",
+    "CapabilityUnsupported",
+    "BudgetExhausted",
+    "PermitConsumed",
+    "DeadlineExpired",
+    "OutcomeUnknown",
+    "ReplayClosureUnavailable",
+    "IntegrityFailure",
+    "PurposeMismatch",
+    "LowerLayerUnverified"
+  ],
+  "knowledge_variants": [
+    "Known",
+    "Pending",
+    "Unknown",
+    "Withheld",
+    "Stale",
+    "Absent"
+  ],
+  "retired_verbs": [
+    "explain-decision",
+    "verify-bundle",
+    "policy-diff",
+    "next-evidence",
+    "status"
+  ],
+  "envelope_fields": [
+    "schema_version",
+    "operation_id",
+    "status",
+    "reason_code",
+    "address",
+    "generation",
+    "control_seq",
+    "source_frontiers",
+    "missing",
+    "limits",
+    "budgets_remaining",
+    "realized_cost",
+    "affordances",
+    "retry_safe",
+    "idempotency_key",
+    "would_change_this"
+  ],
+  "checker_packet": "FA-132"
+}
