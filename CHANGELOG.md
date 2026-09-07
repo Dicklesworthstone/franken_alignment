@@ -1,5 +1,9 @@
 # Changelog
 
+## 2026-09-07: explicit founding-concordance coverage
+
+The normative heading grammar and direct typed mappings now cover all current required headings, invariants, hypotheses and packets. The source audit distinguishes founding ideas from engineering additions; the RCH gate passed 217 tests on the reviewed snapshot. Automated coverage enforcement remains a separate task.
+
 ## 2026-09-07: closed initial admission schema and byte binding
 
 The gate consumes required local source/target/build/runtime-review fields and future external constraints, binds the reviewed source-manifest digest, and prevents silent removal of either required target profile. Dependency refusals now preserve all declared kinds/targets and missing or malformed evidence independently of input order. The isolated RCH gate verified 40 inputs and passed all 217 tests. This qualifies the initial schema leaf; full target/source discrimination, foundation admission and production control remain unfinished.

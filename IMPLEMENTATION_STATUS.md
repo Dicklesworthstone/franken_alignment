@@ -1,6 +1,10 @@
 # Implementation status · design revision 0.3
 
-## Latest qualified batch: closed initial admission contract
+## Sixth qualified batch: explicit founding concordance
+
+The sixth isolated RCH gate passed all **217 tests** on `ovh-a` with the reviewed concordance and its source-manifest binding. [The receipt](artifacts/execution/2026-09-07-epoch6-receipt.json) retains the exact six-file overlay and separates execution from the independent source audit: 231 required heading keys, 40 invariants, 21 hypotheses and 143 packets have direct typed mappings. The 67 engineering additions remain labeled additions serving the founding ideas. The full owned concordance checker is the next task; these coverage counts are not yet its output.
+
+## Fifth qualified batch: closed initial admission contract
 
 The fifth isolated RCH gate passed on `ovh-a` under `nightly-2026-09-07`: **56 reference unit tests, 16 integration tests, 143 xtask tests and 2 doctests; 217 passed, zero failed**. [The receipt](artifacts/execution/2026-09-07-epoch5-receipt.json) binds the nine selected overlay files and [raw execution log](artifacts/execution/2026-09-07-epoch5-attempt1.log). It verified 40 source/build inputs and recollected both required target inventories. Apple metadata collection remains distinct from Linux compilation and execution.
 
@@ -43,7 +47,7 @@ The round uses a deliberately non-cryptographic FNV comparison and proves no cry
 | Rust test functions | **56 unit + 16 integration reference tests, 143 xtask tests and 2 doctests passed remotely on 2026-09-07**; earlier runs remain dated below | Exact frozen batch above; not production evidence or credit for other work in progress |
 | Rust local gate driver | **Complete reference gate PASS remotely on 2026-09-07** under `nightly-2026-09-07`; earlier local 2026-09-06 gate retained below | Initial inventory and registry-core checks execute; general admission and full concordance validation remain incomplete; new source requires a new run |
 | Production release gate | Explicitly refuses release | No qualified broker/toolchain/target/signing closure |
-| Machine-readable registries | 40 invariants, 21 hypotheses, 143 packets, 5 SLO targets, founding concordance (38 ideas, 9 syntheses, 25 engineering additions), preregistration ledger with no preregistered protocol yet, system map (9 layers) and vocabulary (26 nouns, 35 verbs, 12 reason codes) | Static structural checks are not proofs of their claims |
+| Machine-readable registries | 40 invariants, 21 hypotheses, 143 packets, 5 SLO targets, founding concordance (38 ideas, 9 syntheses, 67 engineering additions), preregistration ledger with no preregistered protocol yet, system map (9 layers) and vocabulary (26 nouns, 35 verbs, 12 reason codes) | Static structural checks are not proofs of their claims |
 | Beads task graph | `.beads/` initialized 2026-09-06; the 2026-09-07 campaign is implementing reference extensions and missing prerequisites | Completion requires exact acceptance and new execution evidence; the original graph omits many foundational roadmap packets |
 | Production control broker / persistence / containment | Not implemented | Reference code performs no external effects |
 | Native foundation adapters | Planned, admission blockers recorded | A reviewed source file is not an integration |

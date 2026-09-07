@@ -24,6 +24,7 @@
       "idea": "Building safety into a single model is a losing battle: refusal is one latent direction, guardrails are cheaper to remove than to add, exfiltrated weights end every internal guarantee",
       "plan_sections": [
         "§0",
+        "§3",
         "§3 F1",
         "§4.1",
         "§4",
@@ -33,12 +34,14 @@
       ],
       "invariants": [
         "FA-INV-001",
-        "FA-INV-004"
+        "FA-INV-004",
+        "FA-INV-029"
       ],
       "hypotheses": [
         "H4"
       ],
       "packets": [
+        "FA-002",
         "FA-011",
         "FA-012"
       ]
@@ -49,9 +52,16 @@
       "locator": "¶4–5",
       "idea": "External monitoring and control with collective power to halt; jail until corrected",
       "plan_sections": [
+        "§15.1",
+        "§15",
+        "§8",
+        "§8.1",
         "§8.2",
+        "§8.3",
         "§8.6",
         "§9.8",
+        "§25.1",
+        "§25.2",
         "§4.2",
         "§4.3",
         "§3#B3. Observe authority topology, not just individual agents",
@@ -60,9 +70,17 @@
       ],
       "invariants": [
         "FA-INV-003",
-        "FA-INV-020"
+        "FA-INV-020",
+        "FA-INV-002",
+        "FA-INV-006",
+        "FA-INV-024",
+        "FA-INV-026",
+        "FA-INV-036"
       ],
-      "hypotheses": [],
+      "hypotheses": [
+        "H6",
+        "H11"
+      ],
       "packets": [
         "FA-104"
       ]
@@ -114,11 +132,13 @@
         "§10",
         "§10.15",
         "§17.5",
-        "§7.4"
+        "§10.4",
+        "§10.13"
       ],
       "invariants": [
         "FA-INV-014",
-        "FA-INV-017"
+        "FA-INV-017",
+        "FA-INV-022"
       ],
       "hypotheses": [
         "H3"
@@ -144,7 +164,13 @@
       ],
       "invariants": [
         "FA-INV-010",
-        "FA-INV-023"
+        "FA-INV-023",
+        "FA-INV-007",
+        "FA-INV-008",
+        "FA-INV-016",
+        "FA-INV-021",
+        "FA-INV-037",
+        "FA-INV-039"
       ],
       "hypotheses": [],
       "packets": [
@@ -161,6 +187,7 @@
         "§9.5",
         "§9.7",
         "§9.4",
+        "§19.5",
         "§20#H4. Cohort-aware congresses improve joint robustness at matched cost"
       ],
       "invariants": [
@@ -289,6 +316,7 @@
         "§9.9",
         "§13.6",
         "§14.2",
+        "§13.1",
         "§3#B4. Independent judgment before shared deliberation",
         "§3#B6. Observation plans are compiled and costed",
         "§20#H7. Observation planning outperforms fixed cascades",
@@ -300,7 +328,8 @@
       ],
       "hypotheses": [
         "H4",
-        "H18"
+        "H18",
+        "H7"
       ],
       "packets": [
         "FA-105"
@@ -314,6 +343,7 @@
       "plan_sections": [
         "§9.2",
         "§9.10",
+        "§25.4",
         "§3#B7. An incident is a reusable scientific object"
       ],
       "invariants": [
@@ -354,6 +384,7 @@
       "locator": "¶18",
       "idea": "No self-defense channel; one-directional flow; suspension as sedation; memory edited to forget the incident",
       "plan_sections": [
+        "§12",
         "§9.3",
         "§3 B5",
         "§11.10",
@@ -362,7 +393,8 @@
       ],
       "invariants": [
         "FA-INV-031",
-        "FA-INV-034"
+        "FA-INV-034",
+        "FA-INV-038"
       ],
       "hypotheses": [
         "H17"
@@ -379,15 +411,19 @@
       "idea": "Control spend comparable to model spend, as in nuclear and avionics safety",
       "plan_sections": [
         "§0",
+        "§8.5",
+        "§18",
         "§18.1",
         "§18.4",
+        "§18.3",
         "§8.9",
         "§20#H12. Incremental evidence algebra scales fleet oversight"
       ],
-      "invariants": [],
+      "invariants": [
+        "FA-INV-005"
+      ],
       "hypotheses": [
         "H9",
-        "H10",
         "H12"
       ],
       "packets": [
@@ -400,14 +436,17 @@
       "locator": "¶20",
       "idea": "False alarms, deadlock, compliant-helper selection and risk theater; permanent paranoia",
       "plan_sections": [
+        "§2.4",
         "§9.6",
         "§22.3",
         "§22.4",
-        "§2.6"
+        "§2.6",
+        "§20#Publish failures as first-class results"
       ],
       "invariants": [
         "FA-INV-032",
-        "FA-INV-019"
+        "FA-INV-019",
+        "FA-INV-030"
       ],
       "hypotheses": [],
       "packets": [
@@ -421,6 +460,7 @@
       "idea": "Two problems: no introspection; ephemeral, voluminous cognition",
       "plan_sections": [
         "§0",
+        "§3",
         "§7.2",
         "§10.1"
       ],
@@ -456,9 +496,11 @@
       "locator": "The Analogy",
       "idea": "Save state like a video game: stop, rewind, branch, resume",
       "plan_sections": [
+        "§11",
         "§11.1",
         "§11.2",
-        "§11.7"
+        "§11.7",
+        "§11.6"
       ],
       "invariants": [
         "FA-INV-011"
@@ -512,7 +554,8 @@
       ],
       "hypotheses": [],
       "packets": [
-        "FA-026"
+        "FA-026",
+        "FA-089"
       ]
     },
     {
@@ -545,6 +588,7 @@
       ],
       "hypotheses": [],
       "packets": [
+        "FA-025",
         "FA-027"
       ]
     },
@@ -574,7 +618,8 @@
         "§11.4"
       ],
       "invariants": [
-        "FA-INV-009"
+        "FA-INV-009",
+        "FA-INV-040"
       ],
       "hypotheses": [
         "H8"
@@ -609,8 +654,10 @@
       "locator": "Applications: Causal Debugging",
       "idea": "Trace drift back; compare faulty and corrected paths; latent diffs",
       "plan_sections": [
+        "§12",
         "§12.2",
         "§12.3",
+        "§12.1",
         "§20#H5. Causal witness twins improve investigation decisions"
       ],
       "invariants": [],
@@ -647,14 +694,11 @@
       "idea": "Checkpoint long agent loops cheaply",
       "plan_sections": [
         "§11.7",
-        "§16.7",
-        "§20#H10. Progressive receiver-conditioned evidence transfer beats independent objects"
+        "§16.7"
       ],
       "invariants": [
-        "FA-INV-015"
-      ],
-      "hypotheses": [
-        "H10"
+        "FA-INV-015",
+        "FA-INV-027"
       ],
       "packets": [
         "FA-090",
@@ -690,7 +734,8 @@
         "§20#H13. Lawful trace quotient improves experimentation economics"
       ],
       "invariants": [
-        "FA-INV-009"
+        "FA-INV-009",
+        "FA-INV-028"
       ],
       "hypotheses": [
         "H8"
@@ -726,8 +771,7 @@
       "idea": "Strategy distillation with five evaluation metrics",
       "plan_sections": [
         "§11.5",
-        "§11.9",
-        "§7.1"
+        "§11.9"
       ],
       "invariants": [
         "FA-INV-017",
@@ -1030,6 +1074,40 @@
   ],
   "engineering_additions": [
     {
+      "mechanism": "Identity, evidence, and observation contract",
+      "serves": [
+        "FI-A06"
+      ],
+      "plan_sections": [
+        "§7"
+      ],
+      "packets": [
+        "FA-016"
+      ]
+    },
+    {
+      "mechanism": "Canonical evidence identities",
+      "serves": [
+        "FI-A06"
+      ],
+      "plan_sections": [
+        "§7.1"
+      ],
+      "packets": [
+        "FA-005",
+        "FA-007"
+      ]
+    },
+    {
+      "mechanism": "Capture-frontier truthfulness",
+      "serves": [
+        "FI-A05"
+      ],
+      "plan_sections": [
+        "§7.5"
+      ]
+    },
+    {
       "mechanism": "Epistemic MVCC judgment witnesses",
       "serves": [
         "FI-A13",
@@ -1039,6 +1117,13 @@
         "§7.6",
         "§7.7",
         "§7.9"
+      ],
+      "packets": [
+        "FA-058",
+        "FA-059",
+        "FA-060",
+        "FA-061",
+        "FA-062"
       ]
     },
     {
@@ -1048,7 +1133,13 @@
       ],
       "plan_sections": [
         "§15.2",
-        "§15.6"
+        "§15.6",
+        "§18.6"
+      ],
+      "packets": [
+        "FA-035",
+        "FA-073",
+        "FA-074"
       ]
     },
     {
@@ -1059,7 +1150,21 @@
       ],
       "plan_sections": [
         "§7.8",
-        "§10.10"
+        "§10.10",
+        "§10.11",
+        "§18.6",
+        "§20#H10. Progressive receiver-conditioned evidence transfer beats independent objects"
+      ],
+      "hypotheses": [
+        "H10"
+      ],
+      "packets": [
+        "FA-063",
+        "FA-064",
+        "FA-065",
+        "FA-066",
+        "FA-067",
+        "FA-094"
       ]
     },
     {
@@ -1069,7 +1174,38 @@
         "FI-A17"
       ],
       "plan_sections": [
-        "§14"
+        "§14",
+        "§14.1",
+        "§14.2",
+        "§14.3",
+        "§14.4",
+        "§14.5",
+        "§14.6",
+        "§14.7",
+        "§14.8",
+        "§14.9",
+        "§14.10"
+      ],
+      "packets": [
+        "FA-039",
+        "FA-042",
+        "FA-068",
+        "FA-069",
+        "FA-070",
+        "FA-071"
+      ]
+    },
+    {
+      "mechanism": "Calibrated sequential/statistical evidence",
+      "serves": [
+        "FI-A13"
+      ],
+      "plan_sections": [
+        "§13",
+        "§13.2",
+        "§13.3",
+        "§13.4",
+        "§13.5"
       ]
     },
     {
@@ -1079,7 +1215,14 @@
         "FI-A17"
       ],
       "plan_sections": [
-        "§15.8"
+        "§15.8",
+        "§18.6"
+      ],
+      "packets": [
+        "FA-076",
+        "FA-077",
+        "FA-078",
+        "FA-079"
       ]
     },
     {
@@ -1090,6 +1233,34 @@
       ],
       "plan_sections": [
         "§17.7"
+      ],
+      "packets": [
+        "FA-057",
+        "FA-081",
+        "FA-082"
+      ]
+    },
+    {
+      "mechanism": "Retention and repair closure",
+      "serves": [
+        "FI-A06"
+      ],
+      "plan_sections": [
+        "§16"
+      ]
+    },
+    {
+      "mechanism": "Agent-facing integration surfaces",
+      "serves": [
+        "FI-A02",
+        "FI-A06",
+        "FI-I18"
+      ],
+      "plan_sections": [
+        "§17"
+      ],
+      "packets": [
+        "FA-049"
       ]
     },
     {
@@ -1100,7 +1271,44 @@
       ],
       "plan_sections": [
         "§11.7",
-        "§11.8"
+        "§11.8",
+        "§16.7",
+        "§18.6"
+      ],
+      "packets": [
+        "FA-092",
+        "FA-093"
+      ]
+    },
+    {
+      "mechanism": "Source-integrated reuse contracts",
+      "serves": [
+        "FI-A18"
+      ],
+      "plan_sections": [
+        "§5",
+        "§5.1",
+        "§5.2",
+        "§5.3"
+      ],
+      "packets": [
+        "FA-052"
+      ]
+    },
+    {
+      "mechanism": "Admitted dependency closure",
+      "serves": [
+        "FI-A01",
+        "FI-A18"
+      ],
+      "plan_sections": [
+        "§2.1"
+      ],
+      "packets": [
+        "FA-053",
+        "FA-054",
+        "FA-084",
+        "FA-086"
       ]
     },
     {
@@ -1109,8 +1317,50 @@
         "FI-A18"
       ],
       "plan_sections": [
+        "§2.2",
         "§22.6",
         "§2.5"
+      ],
+      "packets": [
+        "FA-055",
+        "FA-097",
+        "FA-098",
+        "FA-099"
+      ]
+    },
+    {
+      "mechanism": "Semantic-pipeline authority ownership",
+      "serves": [
+        "FI-A02"
+      ],
+      "plan_sections": [
+        "§6"
+      ],
+      "packets": [
+        "FA-008"
+      ]
+    },
+    {
+      "mechanism": "Ordered authority versus monotone evidence",
+      "serves": [
+        "FI-A02"
+      ],
+      "plan_sections": [
+        "§6.4"
+      ]
+    },
+    {
+      "mechanism": "Registered clock semantics",
+      "serves": [
+        "FI-A02",
+        "FI-A06",
+        "FI-I03"
+      ],
+      "plan_sections": [
+        "§6.5"
+      ],
+      "packets": [
+        "FA-013"
       ]
     },
     {
@@ -1122,6 +1372,9 @@
       "plan_sections": [
         "§6.6",
         "§6.3"
+      ],
+      "packets": [
+        "FA-117"
       ]
     },
     {
@@ -1132,6 +1385,9 @@
       ],
       "plan_sections": [
         "§8.10"
+      ],
+      "packets": [
+        "FA-119"
       ]
     },
     {
@@ -1141,6 +1397,9 @@
       ],
       "plan_sections": [
         "§8.11"
+      ],
+      "packets": [
+        "FA-120"
       ]
     },
     {
@@ -1152,6 +1411,9 @@
       ],
       "plan_sections": [
         "§9.11"
+      ],
+      "packets": [
+        "FA-121"
       ]
     },
     {
@@ -1162,6 +1424,9 @@
       ],
       "plan_sections": [
         "§9.12"
+      ],
+      "packets": [
+        "FA-122"
       ]
     },
     {
@@ -1172,7 +1437,78 @@
       ],
       "plan_sections": [
         "§17.9",
-        "§17.10"
+        "§17.10",
+        "§25.7"
+      ],
+      "packets": [
+        "FA-047",
+        "FA-126",
+        "FA-127"
+      ]
+    },
+    {
+      "mechanism": "Constitutional claim discipline",
+      "serves": [
+        "FI-A18"
+      ],
+      "plan_sections": [
+        "§2"
+      ]
+    },
+    {
+      "mechanism": "Operations governance separation",
+      "serves": [
+        "FI-A18"
+      ],
+      "plan_sections": [
+        "§22"
+      ],
+      "packets": [
+        "FA-046"
+      ]
+    },
+    {
+      "mechanism": "Verification evidence contract",
+      "serves": [
+        "FI-A06"
+      ],
+      "plan_sections": [
+        "§19",
+        "§19.1",
+        "§19.2",
+        "§19.8"
+      ],
+      "packets": [
+        "FA-003",
+        "FA-004",
+        "FA-020",
+        "FA-056",
+        "FA-103"
+      ]
+    },
+    {
+      "mechanism": "Fault-injection boundary trials",
+      "serves": [
+        "FI-A18"
+      ],
+      "plan_sections": [
+        "§19.4"
+      ],
+      "packets": [
+        "FA-015"
+      ]
+    },
+    {
+      "mechanism": "Matched evaluation comparisons",
+      "serves": [
+        "FI-A13"
+      ],
+      "plan_sections": [
+        "§19.6"
+      ],
+      "packets": [
+        "FA-043",
+        "FA-101"
       ]
     },
     {
@@ -1182,7 +1518,98 @@
         "FI-A09"
       ],
       "plan_sections": [
-        "§19.9"
+        "§19.9",
+        "§19.3",
+        "§25",
+        "§25.1",
+        "§25.2",
+        "§25.3",
+        "§25.4"
+      ],
+      "packets": [
+        "FA-128"
+      ]
+    },
+    {
+      "mechanism": "Effect-bound brokered workflow",
+      "serves": [
+        "FI-A02",
+        "FI-A04"
+      ],
+      "plan_sections": [
+        "§8.4",
+        "§21#G1. One real brokered effect",
+        "§25.6"
+      ],
+      "packets": [
+        "FA-001",
+        "FA-009",
+        "FA-051"
+      ]
+    },
+    {
+      "mechanism": "Prerequisite-gated delivery sequencing",
+      "serves": [
+        "FI-A18"
+      ],
+      "plan_sections": [
+        "§21",
+        "§21#G0. Contract convergence",
+        "§21#Dependency order",
+        "§21#Revision 0.2 critical path",
+        "§21#Revision 0.3 additions"
+      ]
+    },
+    {
+      "mechanism": "End-to-end evidence and isolated congress phase",
+      "serves": [
+        "FI-A06",
+        "FI-A13"
+      ],
+      "plan_sections": [
+        "§21#G2. End-to-end evidence and helper congress"
+      ],
+      "packets": [
+        "FA-102"
+      ]
+    },
+    {
+      "mechanism": "White-box capture and replay baselines",
+      "serves": [
+        "FI-A05",
+        "FI-I03"
+      ],
+      "plan_sections": [
+        "§21#G3. White-box capture and replay baselines"
+      ]
+    },
+    {
+      "mechanism": "Falsifiable learned-compression phase",
+      "serves": [
+        "FI-A18",
+        "FI-I07"
+      ],
+      "plan_sections": [
+        "§21#G4. Learned compression and causal experiments"
+      ]
+    },
+    {
+      "mechanism": "Fleet-provenance boundary phase",
+      "serves": [
+        "FI-A02"
+      ],
+      "plan_sections": [
+        "§21#G5. Fleet composition and scalable operations"
+      ]
+    },
+    {
+      "mechanism": "Qualified assurance and control-cost exchange",
+      "serves": [
+        "FI-A06",
+        "FI-A17"
+      ],
+      "plan_sections": [
+        "§21#G6. Qualified deployment and research exchange"
       ]
     },
     {
@@ -1193,6 +1620,9 @@
       "plan_sections": [
         "§20",
         "§20#Preregistration ledger"
+      ],
+      "packets": [
+        "FA-129"
       ]
     },
     {
@@ -1203,6 +1633,31 @@
       ],
       "plan_sections": [
         "§22.7"
+      ],
+      "packets": [
+        "FA-130"
+      ]
+    },
+    {
+      "mechanism": "Semantic-generation update transactions",
+      "serves": [
+        "FI-A18"
+      ],
+      "plan_sections": [
+        "§22.2"
+      ],
+      "packets": [
+        "FA-048",
+        "FA-080"
+      ]
+    },
+    {
+      "mechanism": "Authorized-system use boundary",
+      "serves": [
+        "FI-A02"
+      ],
+      "plan_sections": [
+        "§22.5"
       ]
     },
     {
@@ -1213,6 +1668,10 @@
       ],
       "plan_sections": [
         "§22.8"
+      ],
+      "packets": [
+        "FA-044",
+        "FA-131"
       ]
     },
     {
@@ -1223,8 +1682,14 @@
         "FI-A18"
       ],
       "plan_sections": [
+        "§6.2",
         "§6.7",
-        "§6.8"
+        "§6.8",
+        "§19.7"
+      ],
+      "packets": [
+        "FA-132",
+        "FA-141"
       ]
     },
     {
@@ -1234,7 +1699,11 @@
         "FI-A13"
       ],
       "plan_sections": [
-        "§17.3"
+        "§17.3",
+        "§7.4"
+      ],
+      "packets": [
+        "FA-133"
       ]
     },
     {
@@ -1247,6 +1716,10 @@
       "plan_sections": [
         "§17.2",
         "§17.8"
+      ],
+      "packets": [
+        "FA-134",
+        "FA-135"
       ]
     },
     {
@@ -1259,7 +1732,13 @@
       ],
       "plan_sections": [
         "§17.8",
-        "§22.1"
+        "§22.1",
+        "§17.4"
+      ],
+      "packets": [
+        "FA-136",
+        "FA-137",
+        "FA-138"
       ]
     },
     {
@@ -1269,7 +1748,11 @@
         "FI-I09"
       ],
       "plan_sections": [
+        "§12.4",
         "§17.8"
+      ],
+      "packets": [
+        "FA-139"
       ]
     },
     {
@@ -1283,6 +1766,211 @@
         "§17.8",
         "§17.11",
         "§17.12"
+      ],
+      "packets": [
+        "FA-140",
+        "FA-143"
+      ]
+    },
+    {
+      "mechanism": "Codec-worker containment",
+      "serves": [
+        "FI-A02",
+        "FI-A05"
+      ],
+      "plan_sections": [
+        "§10.8"
+      ],
+      "packets": [
+        "FA-085"
+      ]
+    },
+    {
+      "mechanism": "Numerical probe error bounds",
+      "serves": [
+        "FI-I07"
+      ],
+      "plan_sections": [
+        "§10.12"
+      ],
+      "packets": [
+        "FA-040",
+        "FA-087",
+        "FA-088"
+      ]
+    },
+    {
+      "mechanism": "Distributed authority rights and fencing",
+      "serves": [
+        "FI-A02"
+      ],
+      "plan_sections": [
+        "§15.3",
+        "§15.4"
+      ],
+      "packets": [
+        "FA-034",
+        "FA-041"
+      ]
+    },
+    {
+      "mechanism": "Scoped cross-agent evidence governance",
+      "serves": [
+        "FI-A06"
+      ],
+      "plan_sections": [
+        "§15.5"
+      ]
+    },
+    {
+      "mechanism": "Authority graph projection discipline",
+      "serves": [
+        "FI-A02"
+      ],
+      "plan_sections": [
+        "§15.7"
+      ],
+      "packets": [
+        "FA-072"
+      ]
+    },
+    {
+      "mechanism": "Graph-informed observation placement",
+      "serves": [
+        "FI-A02",
+        "FI-A17"
+      ],
+      "plan_sections": [
+        "§15.9"
+      ],
+      "packets": [
+        "FA-075"
+      ]
+    },
+    {
+      "mechanism": "Control-nucleus and evidence-object separation",
+      "serves": [
+        "FI-A02",
+        "FI-A06"
+      ],
+      "plan_sections": [
+        "§16.1"
+      ],
+      "packets": [
+        "FA-010"
+      ]
+    },
+    {
+      "mechanism": "Logical-versus-physical evidence identity",
+      "serves": [
+        "FI-A06"
+      ],
+      "plan_sections": [
+        "§16.2"
+      ]
+    },
+    {
+      "mechanism": "Profiled evidence erasure recovery",
+      "serves": [
+        "FI-A06"
+      ],
+      "plan_sections": [
+        "§16.3"
+      ],
+      "packets": [
+        "FA-038"
+      ]
+    },
+    {
+      "mechanism": "Publication and recovery closure",
+      "serves": [
+        "FI-A06"
+      ],
+      "plan_sections": [
+        "§16.4"
+      ],
+      "packets": [
+        "FA-006",
+        "FA-100"
+      ]
+    },
+    {
+      "mechanism": "Audit completeness distinction",
+      "serves": [
+        "FI-A06"
+      ],
+      "plan_sections": [
+        "§16.5"
+      ]
+    },
+    {
+      "mechanism": "Purpose-bound privacy and retention",
+      "serves": [
+        "FI-A02",
+        "FI-A06"
+      ],
+      "plan_sections": [
+        "§16.6"
+      ],
+      "packets": [
+        "FA-037"
+      ]
+    },
+    {
+      "mechanism": "Single-owner repair contract",
+      "serves": [
+        "FI-A06",
+        "FI-A17"
+      ],
+      "plan_sections": [
+        "§16.8"
+      ],
+      "packets": [
+        "FA-095"
+      ]
+    },
+    {
+      "mechanism": "Recovery nonresurrection fence",
+      "serves": [
+        "FI-A02"
+      ],
+      "plan_sections": [
+        "§16.9"
+      ],
+      "packets": [
+        "FA-014",
+        "FA-096"
+      ]
+    },
+    {
+      "mechanism": "Discovery-versus-proof-complete retrieval",
+      "serves": [
+        "FI-A06"
+      ],
+      "plan_sections": [
+        "§17.6"
+      ],
+      "packets": [
+        "FA-036",
+        "FA-083"
+      ]
+    },
+    {
+      "mechanism": "Scaling topology boundaries",
+      "serves": [
+        "FI-A17"
+      ],
+      "plan_sections": [
+        "§18.5"
+      ]
+    },
+    {
+      "mechanism": "Preallocation asymptotic budgets",
+      "serves": [
+        "FI-A17"
+      ],
+      "plan_sections": [
+        "§18.7"
       ]
     },
     {
@@ -1293,6 +1981,9 @@
       ],
       "plan_sections": [
         "§17.8"
+      ],
+      "packets": [
+        "FA-142"
       ]
     }
   ]

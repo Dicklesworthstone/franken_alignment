@@ -1,0 +1,76 @@
+{
+  "schema": "fa.execution_receipt/1",
+  "scope": "Founding concordance coverage rules and current explicit mappings; no mechanism implementation claim",
+  "executed_at_utc": "2026-09-07T22:40:59Z",
+  "base_commit": "56c5cfc77b6f0e07f81436488f636fcf8840dda9",
+  "overlay_fingerprint": "f61becaa0c4867d34aec79e276bdfdecd4d1488b01d31c3c3ace8352fdf42e21",
+  "source_sha256": {
+    "docs/FOUNDING_IDEAS.md": "2dc148de067b7fe392f86ab9e3a59987c7007713131095d946be8f9c16d30fbf",
+    "registry/README.md": "6fc4239ecf623e845ad3567c55e2fa2a1602719852c4f1edb4756fd7fb28e5f7",
+    "registry/founding_concordance.json": "07ac4746836742d7ae43518773871f3f5cb702032f7023b963689ac3319ec466",
+    "registry/roadmap.json": "c9168c139113d150d75da0130218985c4c7d1708536e937357e4c72c9479ba91",
+    "registry/source_snapshot.json": "d3f222def461b3ce7941c52ce48f64314b26184e1fe80318c8decf82004477fe",
+    "registry/dependency_policy.json": "0684981e693df8abb90f0eeb952592c00eadb71b362211f3a75a3b6fa630ed2a"
+  },
+  "snapshot_file_count": 40,
+  "worker": "ovh-a",
+  "job": "j-30004650170124206",
+  "toolchain": "nightly-2026-09-07",
+  "command": [
+    "rch",
+    "--json",
+    "exec",
+    "--base",
+    "56c5cfc77b6f0e07f81436488f636fcf8840dda9",
+    "--clean-overlay",
+    "--overlay-path",
+    "docs/FOUNDING_IDEAS.md",
+    "--overlay-path",
+    "registry/README.md",
+    "--overlay-path",
+    "registry/founding_concordance.json",
+    "--overlay-path",
+    "registry/roadmap.json",
+    "--overlay-path",
+    "registry/source_snapshot.json",
+    "--overlay-path",
+    "registry/dependency_policy.json",
+    "--",
+    "cargo",
+    "+nightly-2026-09-07",
+    "run",
+    "--locked",
+    "-p",
+    "xtask",
+    "--",
+    "check"
+  ],
+  "result": {
+    "exit_code": 0,
+    "format": "passed",
+    "check": "passed",
+    "clippy": "passed; warnings denied",
+    "tests": {
+      "reference_unit": 56,
+      "reference_integration": 16,
+      "xtask": 143,
+      "doctests": 2,
+      "total_passed": 217,
+      "failed": 0
+    }
+  },
+  "manual_coverage_audit": {
+    "required_heading_keys": 231,
+    "invariants": 40,
+    "hypotheses": 21,
+    "packets": 143,
+    "missing": 0,
+    "dangling": 0,
+    "method": "Independent source inspections by QuietBeaver and SilentDune plus root semantic review; typed reference arrays, no transitive coverage inference."
+  },
+  "boundaries": [
+    "Current xtask checks registry core and source identity; full concordance coverage checker is not implemented in this batch. Coverage counts above are source/static audit findings, not output of that future checker.",
+    "This batch admits no external package and activates no production mechanism.",
+    "Linux execution and both target metadata inventories do not establish Apple execution."
+  ]
+}
