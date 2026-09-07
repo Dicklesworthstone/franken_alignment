@@ -1,5 +1,9 @@
 # Changelog
 
+## 2026-09-07: full-input and frontier reference models; initial admission checks
+
+Added bounded whole-input witnesses with private validated construction, independent projection/stage frontiers with explicit closing markers, strict JSON parsing and per-target metadata inventory checks in the existing xtask. The complete remote gate passed 44 reference unit tests, 16 integration tests, 69 xtask tests and 2 doctests on nightly-2026-09-07. The preceding Clippy failure is retained in artifacts/execution; epoch2-receipt.json binds the exact passing source. The unchanged lock guard still admits only the two original local packages. This does not complete general dependency admission or any production broker, capture, cryptographic or persistence feature.
+
 ## Reference implementation · 2026-09-07
 
 Added a bounded frozen commit–reveal round in `fa-reference`, with membership fixed before commitments, missing reveals preserved, and invalid or duplicate reveals unable to replace accepted results. Its deterministic FNV comparison makes no cryptographic claim. Added containment-reset rights semantics: only undispatched reservations outside the retained checkpoint set are refunded; spent rights, epochs and dispatched/unknown liabilities remain, and the incident counter increases with overflow checked before mutation.

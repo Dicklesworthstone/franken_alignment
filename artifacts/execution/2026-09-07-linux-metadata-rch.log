@@ -1,0 +1,5 @@
+error: the argument '--job' cannot be used with '--clean-overlay'
+
+Usage: rch exec --job --base <BASE> <COMMAND>...
+
+For more information, try '--help'.

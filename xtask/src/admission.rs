@@ -373,10 +373,8 @@ fn req_string_array(
     let mut out = Vec::with_capacity(items.len());
     for (index, item) in items.iter().enumerate() {
         let item_path = format!("{path}.{key}[{index}]");
-        match req_str(item, phase, &item_path, findings) {
-            Some(text) => out.push(text.to_string()),
-            None => return None,
-        }
+        let text = req_str(item, phase, &item_path, findings)?;
+        out.push(text.to_string());
     }
     Some(out)
 }

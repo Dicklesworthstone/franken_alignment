@@ -279,7 +279,8 @@
         "crates/fa-reference/src/round.rs::tests::valid_reveals_are_recorded_for_the_frozen_members",
         "crates/fa-reference/src/round.rs::tests::invalid_reveal_and_duplicate_commit_do_not_mutate_member_slot",
         "crates/fa-reference/src/round.rs::tests::commit_after_reveals_open_is_rejected",
-        "crates/fa-reference/src/round.rs::tests::maximum_member_and_field_bounds_are_exact_and_reject_without_mutation"
+        "crates/fa-reference/src/round.rs::tests::maximum_member_and_field_bounds_are_exact_and_reject_without_mutation",
+        "crates/fa-reference/src/round.rs::tests::the_domain_separator_is_part_of_the_preimage"
       ],
       "reference_scope": "Bounded in-memory transcript and field-comparison semantics only. FNV is non-cryptographic: no collision resistance, authentication, salt entropy, helper independence, reducer, permit or production-congress claim.",
       "required_negative_campaigns": [
@@ -290,7 +291,9 @@
       ],
       "evidence_artifacts": [
         "artifacts/execution/2026-09-07-reference-epoch-1-final.log",
-        "artifacts/execution/2026-09-07-reference-epoch-1-receipt.json"
+        "artifacts/execution/2026-09-07-reference-epoch-1-receipt.json",
+        "artifacts/execution/2026-09-07-epoch2-attempt2.log",
+        "artifacts/execution/2026-09-07-epoch2-receipt.json"
       ],
       "reference_status": "executed_remotely_2026_09_07_pass",
       "founding_ideas": [
@@ -556,10 +559,14 @@
       "waiver": "forbidden",
       "production_checker": null,
       "reference_checks": [
-        "crates/fa-reference/src/lib.rs::tests::witness_reuses_unrelated_changes"
+        "crates/fa-reference/src/lib.rs::tests::witness_reuses_unrelated_changes",
+        "crates/fa-reference/src/full_input.rs::tests::opaque_witness_binds_the_entire_actual_input_view",
+        "crates/fa-reference/src/full_input.rs::tests::question_profile_and_unmentioned_evidence_changes_invalidate",
+        "crates/fa-reference/src/full_input.rs::tests::transform_and_omission_changes_invalidate",
+        "crates/fa-reference/src/full_input.rs::tests::malformed_partitions_omissions_and_bounds_are_rejected"
       ],
-      "reference_status": "executed_locally_2026_09_06_pass",
-      "reference_scope": "Only the declared small logical case; not production protocol/host correctness.",
+      "reference_status": "executed_remotely_2026_09_07_pass",
+      "reference_scope": "Exact equality over bounded caller-supplied full input bytes, profile, part metadata and omissions; private validated construction. No actual provider interception, authentication or production authority.",
       "required_negative_campaigns": [
         "Insert a member into an empty reviewed range."
       ],
@@ -570,9 +577,11 @@
         "artifacts/execution/2026-09-06-cargo-test.log",
         "artifacts/execution/2026-09-06-xtask-check.log",
         "artifacts/execution/2026-09-06-xtask-check-nightly-2026-08-31.log",
-        "artifacts/execution/2026-09-06-xtask-check-nightly-2026-08-31-local.log"
+        "artifacts/execution/2026-09-06-xtask-check-nightly-2026-08-31-local.log",
+        "artifacts/execution/2026-09-07-epoch2-attempt2.log",
+        "artifacts/execution/2026-09-07-epoch2-receipt.json"
       ],
-      "reference_execution_note": "20/20 reference tests passed on aarch64-apple-darwin under nightly-2026-08-31 (rustc 908501772 2026-08-30) and under the rolling nightly (rustc c54751567 2026-08-22); complete xtask gate passed only under the dated nightly because the host's rolling nightly lacks rustfmt/clippy binaries. One host, one date; not production evidence.",
+      "reference_execution_note": "Qualified current source hashes and test counts are in the 2026-09-07 epoch2 receipt; historical artifacts remain dated and do not validate later source.",
       "founding_ideas": [
         "FI-A13",
         "FI-A17"
@@ -590,10 +599,15 @@
       "waiver": "forbidden",
       "production_checker": null,
       "reference_checks": [
-        "crates/fa-reference/src/lib.rs::tests::frontier_does_not_skip_a_gap"
+        "crates/fa-reference/src/lib.rs::tests::frontier_does_not_skip_a_gap",
+        "crates/fa-reference/src/product_frontier.rs::tests::contiguous_progress_cannot_manufacture_closure",
+        "crates/fa-reference/src/product_frontier.rs::tests::marker_requires_authenticated_prefix_and_its_own_observation",
+        "crates/fa-reference/src/product_frontier.rs::tests::closing_marker_cannot_cross_projection_epoch_or_generation",
+        "crates/fa-reference/src/product_frontier.rs::tests::close_rejects_future_observation_and_terminal_close_rejects_extension",
+        "crates/fa-reference/src/product_frontier.rs::tests::bounds_and_invalid_inputs_fail_without_admitting_a_projection"
       ],
-      "reference_status": "executed_locally_2026_09_06_pass",
-      "reference_scope": "Only the declared small logical case; not production protocol/host correctness.",
+      "reference_status": "executed_remotely_2026_09_07_pass",
+      "reference_scope": "Bounded independent source/branch/projection/epoch stages with explicit caller-trusted terminal marker. Positive contiguity alone cannot create closure; no marker authentication, persistence or production capture.",
       "required_negative_campaigns": [
         "Receive sequence 3 before sequence 2."
       ],
@@ -604,9 +618,11 @@
         "artifacts/execution/2026-09-06-cargo-test.log",
         "artifacts/execution/2026-09-06-xtask-check.log",
         "artifacts/execution/2026-09-06-xtask-check-nightly-2026-08-31.log",
-        "artifacts/execution/2026-09-06-xtask-check-nightly-2026-08-31-local.log"
+        "artifacts/execution/2026-09-06-xtask-check-nightly-2026-08-31-local.log",
+        "artifacts/execution/2026-09-07-epoch2-attempt2.log",
+        "artifacts/execution/2026-09-07-epoch2-receipt.json"
       ],
-      "reference_execution_note": "20/20 reference tests passed on aarch64-apple-darwin under nightly-2026-08-31 (rustc 908501772 2026-08-30) and under the rolling nightly (rustc c54751567 2026-08-22); complete xtask gate passed only under the dated nightly because the host's rolling nightly lacks rustfmt/clippy binaries. One host, one date; not production evidence.",
+      "reference_execution_note": "Qualified current source hashes and test counts are in the 2026-09-07 epoch2 receipt; historical artifacts remain dated and do not validate later source.",
       "founding_ideas": [
         "FI-A05",
         "FI-I01"
@@ -623,16 +639,25 @@
       "production_status": "planned",
       "waiver": "forbidden",
       "production_checker": null,
-      "reference_checks": [],
-      "reference_status": "not_implemented_in_rust_revision",
-      "reference_scope": "Only the declared small logical case; not production protocol/host correctness.",
+      "reference_checks": [
+        "crates/fa-reference/src/full_input.rs::tests::opaque_witness_binds_the_entire_actual_input_view",
+        "crates/fa-reference/src/full_input.rs::tests::question_profile_and_unmentioned_evidence_changes_invalidate",
+        "crates/fa-reference/src/full_input.rs::tests::transform_and_omission_changes_invalidate",
+        "crates/fa-reference/src/full_input.rs::tests::malformed_partitions_omissions_and_bounds_are_rejected"
+      ],
+      "reference_status": "executed_remotely_2026_09_07_pass",
+      "reference_scope": "Exact equality over bounded caller-supplied full input bytes, profile, part metadata and omissions; private validated construction. No actual provider interception, authentication or production authority.",
       "required_negative_campaigns": [
         "Truncate the decisive paragraph after the source file was committed."
       ],
       "assumptions": [
         "Exact registered trust/profile and completeness assumptions from the plan."
       ],
-      "evidence_artifacts": []
+      "evidence_artifacts": [
+        "artifacts/execution/2026-09-07-epoch2-attempt2.log",
+        "artifacts/execution/2026-09-07-epoch2-receipt.json"
+      ],
+      "reference_execution_note": "Qualified current source hashes and test counts are in the 2026-09-07 epoch2 receipt; historical artifacts remain dated and do not validate later source."
     },
     {
       "id": "FA-INV-024",

@@ -1,0 +1,48 @@
+  [2m2026-09-07T20:44:08.547437Z[0m [32m INFO[0m [1;32mrch::hook[0m[32m: [32mSelected worker: hz4 at ubuntu@194.163.156.231 (6 slots remaining after reservation, speed 76.3)[0m
+    [2;3mat[0m rch/src/hook.rs:2645 [2;3mon[0m ThreadId(1)
+
+[*] Job j-30004650170124160 submitted to hz4 (6 slots remaining, speed 76.3)
+  [2m2026-09-07T20:44:08.587406Z[0m [32m INFO[0m [1;32mrch::hook::transfer_orchestration[0m[32m: [32mStarting remote compilation pipeline for franken_alignment (hash: 924df02e9b03b622)[0m
+    [2;3mat[0m rch/src/hook/transfer_orchestration.rs:510 [2;3mon[0m ThreadId(1)
+
+  [2m2026-09-07T20:44:08.587442Z[0m [32m INFO[0m [1;32mrch::hook::transfer_orchestration[0m[32m: [32mPrepared dependency sync manifest for 1 roots[0m
+    [2;3mat[0m rch/src/hook/transfer_orchestration.rs:532 [2;3mon[0m ThreadId(1)
+
+  [2m2026-09-07T20:44:11.300948Z[0m [32m INFO[0m [1;32mrch::hook::transfer_orchestration[0m[32m: [32mSyncing project to worker hz4...[0m
+    [2;3mat[0m rch/src/hook/transfer_orchestration.rs:661 [2;3mon[0m ThreadId(1)
+
+  [2m2026-09-07T20:44:11.301046Z[0m [32m INFO[0m [1;32mrch::transfer[0m[32m: [32mSyncing /Users/jemanuel/projects/franken_alignment -> /Users/jemanuel/projects/franken_alignment on hz4 (streaming)[0m
+    [2;3mat[0m rch/src/transfer.rs:3549 [2;3mon[0m ThreadId(1)
+
+  [2m2026-09-07T20:44:13.168650Z[0m [32m INFO[0m [1;32mrch::hook::transfer_orchestration[0m[32m: [32mSync complete: 116 files, 63029 bytes in 1860ms[0m
+    [2;3mat[0m rch/src/hook/transfer_orchestration.rs:958 [2;3mon[0m ThreadId(1)
+
+  [2m2026-09-07T20:44:13.181633Z[0m [32m INFO[0m [1;32mrch::hook::transfer_orchestration[0m[32m: [32mExecuting command remotely: cargo +nightly-2026-09-07 metadata --format-version 1 --locked --offline --filter-platform x86_64-unknown-linux-gnu[0m
+    [2;3mat[0m rch/src/hook/transfer_orchestration.rs:1018 [2;3mon[0m ThreadId(1)
+
+  [2m2026-09-07T20:44:13.181759Z[0m [32m INFO[0m [1;32mrch::transfer[0m[32m: [32mWrapping command with external timeout protection, [1;32mkind[0m[32m: job, [1;32mtimeout_secs[0m[32m: 3600[0m
+    [2;3mat[0m rch/src/transfer.rs:2669 [2;3mon[0m ThreadId(1)
+
+info: syncing channel updates for nightly-2026-09-07-x86_64-unknown-linux-gnu
+info: latest update on 2026-09-07 for version 1.100.0-nightly (5a2be9f5f 2026-09-06)
+info: downloading 6 components
+warn: the missing active toolchain `nightly-2026-09-07-x86_64-unknown-linux-gnu` has been auto-installed
+warn: this might cause rustup commands to take longer time to finish than expected
+info: you may opt out with `RUSTUP_AUTO_INSTALL=0` or `rustup set auto-install disable`
+{"packages":[{"name":"fa-reference","version":"0.2.0","id":"path+file:///data/projects/franken_alignment/crates/fa-reference#0.2.0","license":null,"license_file":"../../LICENSE","description":null,"source":null,"dependencies":[],"targets":[{"kind":["lib"],"crate_types":["lib"],"name":"fa_reference","src_path":"/data/projects/franken_alignment/crates/fa-reference/src/lib.rs","edition":"2024","doc":true,"doctest":true,"test":true},{"kind":["test"],"crate_types":["bin"],"name":"reference_boundaries","src_path":"/data/projects/franken_alignment/crates/fa-reference/tests/reference_boundaries.rs","edition":"2024","doc":false,"doctest":false,"test":true}],"features":{},"manifest_path":"/data/projects/franken_alignment/crates/fa-reference/Cargo.toml","metadata":null,"publish":[],"authors":[],"categories":[],"keywords":[],"readme":null,"repository":null,"homepage":null,"documentation":null,"edition":"2024","links":null,"default_run":null,"rust_version":null},{"name":"xtask","version":"0.2.0","id":"path+file:///data/projects/franken_alignment/xtask#0.2.0","license":null,"license_file":"../LICENSE","description":null,"source":null,"dependencies":[],"targets":[{"kind":["bin"],"crate_types":["bin"],"name":"xtask","src_path":"/data/projects/franken_alignment/xtask/src/main.rs","edition":"2024","doc":true,"doctest":false,"test":true}],"features":{},"manifest_path":"/data/projects/franken_alignment/xtask/Cargo.toml","metadata":null,"publish":[],"authors":[],"categories":[],"keywords":[],"readme":null,"repository":null,"homepage":null,"documentation":null,"edition":"2024","links":null,"default_run":null,"rust_version":null}],"workspace_members":["path+file:///data/projects/franken_alignment/crates/fa-reference#0.2.0","path+file:///data/projects/franken_alignment/xtask#0.2.0"],"workspace_default_members":["path+file:///data/projects/franken_alignment/crates/fa-reference#0.2.0","path+file:///data/projects/franken_alignment/xtask#0.2.0"],"resolve":{"nodes":[{"id":"path+file:///data/projects/franken_alignment/crates/fa-reference#0.2.0","dependencies":[],"deps":[],"features":[]},{"id":"path+file:///data/projects/franken_alignment/xtask#0.2.0","dependencies":[],"deps":[],"features":[]}],"root":null},"target_directory":"/data/projects/franken_alignment/.rch-target","build_directory":"/data/projects/franken_alignment/.rch-target","version":1,"workspace_root":"/data/projects/franken_alignment","metadata":null}
+  [2m2026-09-07T20:44:27.597973Z[0m [32m INFO[0m [1;32mrch::hook::transfer_orchestration[0m[32m: [32mRemote command finished: exit=0 in 14416ms[0m
+    [2;3mat[0m rch/src/hook/transfer_orchestration.rs:1150 [2;3mon[0m ThreadId(1)
+
+[W] Worker: hz4 | Job: j-30004650170124160
+[T] Total: 16.3s (sync 1.9s, build 14.4s, artifacts --)
+^ Sync: 61.6 KB in 1.9s (33.1 KB/s)
+[C] Compile: 14.4s
+Artifacts: skipped
+[T] Cache: MISS
++------------- [OK] Build Successful --------------+
+| Duration: 14.4s (^ 31% slower vs previous 11.0s) |
+| Worker: hz4                                      |
+| Cache: MISS (warming cache)                      |
+| Time: 2026-09-07 20:44:27                        |
++--------------------------------------------------+
+[RCH] remote hz4 (19.1s)

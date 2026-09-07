@@ -1292,7 +1292,7 @@
       "id": "FA-054",
       "gate": "G0",
       "title": "Implement general Cargo admission compiler",
-      "status": "planned",
+      "status": "in_progress",
       "depends_on": [
         "FA-053"
       ],
@@ -1343,7 +1343,10 @@
         "Produce executed local evidence; source or prose alone does not close this packet."
       ],
       "owner_role": "systems",
-      "result_artifacts": []
+      "result_artifacts": [
+        "artifacts/execution/2026-09-07-epoch2-receipt.json",
+        "artifacts/execution/2026-09-07-epoch2-attempt2.log"
+      ]
     },
     {
       "id": "FA-057",
@@ -1362,7 +1365,10 @@
         "Produce executed local evidence; source or prose alone does not close this packet."
       ],
       "owner_role": "systems",
-      "result_artifacts": []
+      "result_artifacts": [
+        "artifacts/execution/2026-09-07-epoch2-receipt.json",
+        "artifacts/execution/2026-09-07-epoch2-attempt2.log"
+      ]
     },
     {
       "id": "FA-058",
@@ -1472,7 +1478,10 @@
         "Produce executed local evidence; source or prose alone does not close this packet."
       ],
       "owner_role": "systems",
-      "result_artifacts": []
+      "result_artifacts": [
+        "artifacts/execution/2026-09-07-epoch2-receipt.json",
+        "artifacts/execution/2026-09-07-epoch2-attempt2.log"
+      ]
     },
     {
       "id": "FA-064",
