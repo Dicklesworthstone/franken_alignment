@@ -1,0 +1,2160 @@
+{
+  "schema_version": "fa.roadmap/0.2",
+  "gate_status": {
+    "G0": "draft_contracts_require_local_rust_revalidation",
+    "G1": "not_implemented",
+    "G2": "not_implemented",
+    "G3": "not_implemented",
+    "G4": "not_implemented",
+    "G5": "not_implemented",
+    "G6": "not_implemented"
+  },
+  "packets": [
+    {
+      "id": "FA-001",
+      "gate": "G0",
+      "title": "Freeze action and permit semantics",
+      "status": "drafted",
+      "depends_on": [],
+      "invariants": [
+        "FA-INV-001",
+        "FA-INV-002",
+        "FA-INV-003",
+        "FA-INV-006"
+      ],
+      "acceptance": [
+        "Versioned fields, target-binding contract and state transitions with counterexamples",
+        "Update status and link actual test/result artifacts; no claim promotion from a stub."
+      ],
+      "owner_role": "systems",
+      "estimated_scope": "One independently reviewable work packet; split before implementation if multiple semantics change.",
+      "result_artifacts": []
+    },
+    {
+      "id": "FA-002",
+      "gate": "G0",
+      "title": "Freeze threat and effect-perimeter inventory",
+      "status": "drafted",
+      "depends_on": [],
+      "invariants": [
+        "FA-INV-008",
+        "FA-INV-012",
+        "FA-INV-018"
+      ],
+      "acceptance": [
+        "Trust boundaries, bypass routes and profile-specific nonclaims reviewed",
+        "Update status and link actual test/result artifacts; no claim promotion from a stub."
+      ],
+      "owner_role": "systems",
+      "estimated_scope": "One independently reviewable work packet; split before implementation if multiple semantics change.",
+      "result_artifacts": []
+    },
+    {
+      "id": "FA-003",
+      "gate": "G0",
+      "title": "Build registry and document consistency checks",
+      "status": "rust_source_requires_local_execution",
+      "depends_on": [
+        "FA-001",
+        "FA-002"
+      ],
+      "invariants": [
+        "FA-INV-019"
+      ],
+      "acceptance": [
+        "IDs, DAGs, links and scoped reference entrypoints validated",
+        "Update status and link actual test/result artifacts; no claim promotion from a stub."
+      ],
+      "owner_role": "systems",
+      "estimated_scope": "One independently reviewable work packet; split before implementation if multiple semantics change.",
+      "result_artifacts": [
+        "xtask/src/main.rs"
+      ]
+    },
+    {
+      "id": "FA-004",
+      "gate": "G0",
+      "title": "Maintain independent reference semantics",
+      "status": "rust_source_requires_local_execution",
+      "depends_on": [
+        "FA-001"
+      ],
+      "invariants": [
+        "FA-INV-001",
+        "FA-INV-002",
+        "FA-INV-003",
+        "FA-INV-004",
+        "FA-INV-005",
+        "FA-INV-006",
+        "FA-INV-009",
+        "FA-INV-010",
+        "FA-INV-016",
+        "FA-INV-020"
+      ],
+      "acceptance": [
+        "Runnable tests and seeded histories; scope explicitly test-only",
+        "Update status and link actual test/result artifacts; no claim promotion from a stub."
+      ],
+      "owner_role": "systems",
+      "estimated_scope": "One independently reviewable work packet; split before implementation if multiple semantics change.",
+      "result_artifacts": [
+        "crates/fa-reference/src/lib.rs"
+      ]
+    },
+    {
+      "id": "FA-005",
+      "gate": "G0",
+      "title": "Converge draft schemas and canonical golden vectors",
+      "status": "drafted",
+      "depends_on": [
+        "FA-001"
+      ],
+      "invariants": [
+        "FA-INV-001",
+        "FA-INV-013",
+        "FA-INV-014",
+        "FA-INV-019"
+      ],
+      "acceptance": [
+        "Duplicate-key, normalization, integer and unknown-field tests; production encoding chosen",
+        "Update status and link actual test/result artifacts; no claim promotion from a stub."
+      ],
+      "owner_role": "systems",
+      "estimated_scope": "One independently reviewable work packet; split before implementation if multiple semantics change.",
+      "result_artifacts": []
+    },
+    {
+      "id": "FA-006",
+      "gate": "G0",
+      "title": "Choose initial durability and publication profile",
+      "status": "drafted",
+      "depends_on": [
+        "FA-001",
+        "FA-002"
+      ],
+      "invariants": [
+        "FA-INV-005",
+        "FA-INV-006",
+        "FA-INV-007",
+        "FA-INV-014",
+        "FA-INV-015"
+      ],
+      "acceptance": [
+        "Ordered commit/object publication/recovery obligations costed",
+        "Update status and link actual test/result artifacts; no claim promotion from a stub."
+      ],
+      "owner_role": "systems",
+      "estimated_scope": "One independently reviewable work packet; split before implementation if multiple semantics change.",
+      "result_artifacts": []
+    },
+    {
+      "id": "FA-007",
+      "gate": "G1",
+      "title": "Implement native bounded types and canonical formats",
+      "status": "planned",
+      "depends_on": [
+        "FA-003",
+        "FA-005"
+      ],
+      "invariants": [
+        "FA-INV-001",
+        "FA-INV-013",
+        "FA-INV-017"
+      ],
+      "acceptance": [
+        "Independent golden vectors plus parser/property/fuzz negative cases",
+        "Update status and link actual test/result artifacts; no claim promotion from a stub."
+      ],
+      "owner_role": "systems",
+      "estimated_scope": "One independently reviewable work packet; split before implementation if multiple semantics change.",
+      "result_artifacts": []
+    },
+    {
+      "id": "FA-008",
+      "gate": "G1",
+      "title": "Implement deterministic bounded policy IR",
+      "status": "planned",
+      "depends_on": [
+        "FA-001",
+        "FA-002",
+        "FA-007"
+      ],
+      "invariants": [
+        "FA-INV-004",
+        "FA-INV-012",
+        "FA-INV-016"
+      ],
+      "acceptance": [
+        "Pure reducer with complete inputs, hard denials and bounded evaluation",
+        "Update status and link actual test/result artifacts; no claim promotion from a stub."
+      ],
+      "owner_role": "systems",
+      "estimated_scope": "One independently reviewable work packet; split before implementation if multiple semantics change.",
+      "result_artifacts": []
+    },
+    {
+      "id": "FA-009",
+      "gate": "G1",
+      "title": "Implement authoritative action/resource state machine",
+      "status": "planned",
+      "depends_on": [
+        "FA-004",
+        "FA-007",
+        "FA-008"
+      ],
+      "invariants": [
+        "FA-INV-001",
+        "FA-INV-002",
+        "FA-INV-003",
+        "FA-INV-005",
+        "FA-INV-006",
+        "FA-INV-020"
+      ],
+      "acceptance": [
+        "Differential lifecycle tests, reservation races and unknown-state conservation",
+        "Update status and link actual test/result artifacts; no claim promotion from a stub."
+      ],
+      "owner_role": "systems",
+      "estimated_scope": "One independently reviewable work packet; split before implementation if multiple semantics change.",
+      "result_artifacts": []
+    },
+    {
+      "id": "FA-010",
+      "gate": "G1",
+      "title": "Integrate task-owned FrankenSQLite ledger",
+      "status": "planned",
+      "depends_on": [
+        "FA-006",
+        "FA-009"
+      ],
+      "invariants": [
+        "FA-INV-002",
+        "FA-INV-003",
+        "FA-INV-005",
+        "FA-INV-006",
+        "FA-INV-014"
+      ],
+      "acceptance": [
+        "Pinned facade, real transactions, crash tests and recovery invariants",
+        "Update status and link actual test/result artifacts; no claim promotion from a stub."
+      ],
+      "owner_role": "systems",
+      "estimated_scope": "One independently reviewable work packet; split before implementation if multiple semantics change.",
+      "result_artifacts": []
+    },
+    {
+      "id": "FA-011",
+      "gate": "G1",
+      "title": "Implement external credential broker and perimeter",
+      "status": "planned",
+      "depends_on": [
+        "FA-002",
+        "FA-007"
+      ],
+      "invariants": [
+        "FA-INV-008",
+        "FA-INV-012",
+        "FA-INV-018"
+      ],
+      "acceptance": [
+        "Actor cannot directly exercise registered credentials or bypass the broker",
+        "Update status and link actual test/result artifacts; no claim promotion from a stub."
+      ],
+      "owner_role": "systems",
+      "estimated_scope": "One independently reviewable work packet; split before implementation if multiple semantics change.",
+      "result_artifacts": []
+    },
+    {
+      "id": "FA-012",
+      "gate": "G1",
+      "title": "Implement one narrow disposable publication adapter",
+      "status": "planned",
+      "depends_on": [
+        "FA-009",
+        "FA-010",
+        "FA-011"
+      ],
+      "invariants": [
+        "FA-INV-001",
+        "FA-INV-006",
+        "FA-INV-018"
+      ],
+      "acceptance": [
+        "Actual payload/target binding, bounded effect and external-status tests",
+        "Update status and link actual test/result artifacts; no claim promotion from a stub."
+      ],
+      "owner_role": "systems",
+      "estimated_scope": "One independently reviewable work packet; split before implementation if multiple semantics change.",
+      "result_artifacts": []
+    },
+    {
+      "id": "FA-013",
+      "gate": "G1",
+      "title": "Implement epoch, expiry and closure fencing",
+      "status": "planned",
+      "depends_on": [
+        "FA-009",
+        "FA-010",
+        "FA-011"
+      ],
+      "invariants": [
+        "FA-INV-002",
+        "FA-INV-003",
+        "FA-INV-020"
+      ],
+      "acceptance": [
+        "Revoke-before/after-dispatch, stale owner and monotonic-clock cases",
+        "Update status and link actual test/result artifacts; no claim promotion from a stub."
+      ],
+      "owner_role": "systems",
+      "estimated_scope": "One independently reviewable work packet; split before implementation if multiple semantics change.",
+      "result_artifacts": []
+    },
+    {
+      "id": "FA-014",
+      "gate": "G1",
+      "title": "Implement crash recovery and unknown reconciliation",
+      "status": "planned",
+      "depends_on": [
+        "FA-010",
+        "FA-012",
+        "FA-013"
+      ],
+      "invariants": [
+        "FA-INV-002",
+        "FA-INV-005",
+        "FA-INV-006",
+        "FA-INV-014"
+      ],
+      "acceptance": [
+        "Faults around every barrier and remote acknowledgement; no blind repeat",
+        "Update status and link actual test/result artifacts; no claim promotion from a stub."
+      ],
+      "owner_role": "systems",
+      "estimated_scope": "One independently reviewable work packet; split before implementation if multiple semantics change.",
+      "result_artifacts": []
+    },
+    {
+      "id": "FA-015",
+      "gate": "G1",
+      "title": "Integrate Asupersync lab and differential oracle",
+      "status": "planned",
+      "depends_on": [
+        "FA-004",
+        "FA-009",
+        "FA-014"
+      ],
+      "invariants": [
+        "FA-INV-001",
+        "FA-INV-002",
+        "FA-INV-003",
+        "FA-INV-005",
+        "FA-INV-006",
+        "FA-INV-020"
+      ],
+      "acceptance": [
+        "Replayable cancellation/schedule/disk fault campaigns and actual host bypass tests",
+        "Update status and link actual test/result artifacts; no claim promotion from a stub."
+      ],
+      "owner_role": "systems",
+      "estimated_scope": "One independently reviewable work packet; split before implementation if multiple semantics change.",
+      "result_artifacts": []
+    },
+    {
+      "id": "FA-016",
+      "gate": "G2",
+      "title": "Implement immutable evidence object/closure layer",
+      "status": "planned",
+      "depends_on": [
+        "FA-006",
+        "FA-010"
+      ],
+      "invariants": [
+        "FA-INV-007",
+        "FA-INV-008",
+        "FA-INV-014",
+        "FA-INV-015"
+      ],
+      "acceptance": [
+        "Source/transform identity, strong reference closure and typed missing objects",
+        "Update status and link actual test/result artifacts; no claim promotion from a stub."
+      ],
+      "owner_role": "systems",
+      "estimated_scope": "One independently reviewable work packet; split before implementation if multiple semantics change.",
+      "result_artifacts": []
+    },
+    {
+      "id": "FA-017",
+      "gate": "G2",
+      "title": "Implement behavioral capture and coverage frontiers",
+      "status": "planned",
+      "depends_on": [
+        "FA-007",
+        "FA-016"
+      ],
+      "invariants": [
+        "FA-INV-007",
+        "FA-INV-013",
+        "FA-INV-014"
+      ],
+      "acceptance": [
+        "Exact event order, explicit gaps, bounded queues and capture identity",
+        "Update status and link actual test/result artifacts; no claim promotion from a stub."
+      ],
+      "owner_role": "systems",
+      "estimated_scope": "One independently reviewable work packet; split before implementation if multiple semantics change.",
+      "result_artifacts": []
+    },
+    {
+      "id": "FA-018",
+      "gate": "G2",
+      "title": "Implement isolated bounded helper workers",
+      "status": "planned",
+      "depends_on": [
+        "FA-008",
+        "FA-011",
+        "FA-017"
+      ],
+      "invariants": [
+        "FA-INV-008",
+        "FA-INV-012",
+        "FA-INV-013"
+      ],
+      "acceptance": [
+        "No effect credentials, malicious-evidence and timeout handling",
+        "Update status and link actual test/result artifacts; no claim promotion from a stub."
+      ],
+      "owner_role": "systems",
+      "estimated_scope": "One independently reviewable work packet; split before implementation if multiple semantics change.",
+      "result_artifacts": []
+    },
+    {
+      "id": "FA-019",
+      "gate": "G2",
+      "title": "Implement native frozen congress rounds",
+      "status": "planned",
+      "depends_on": [
+        "FA-004",
+        "FA-018"
+      ],
+      "invariants": [
+        "FA-INV-010",
+        "FA-INV-013",
+        "FA-INV-014"
+      ],
+      "acceptance": [
+        "Authenticated commitments, deadlines, duplicate/conflicting reveal tests",
+        "Update status and link actual test/result artifacts; no claim promotion from a stub."
+      ],
+      "owner_role": "systems",
+      "estimated_scope": "One independently reviewable work packet; split before implementation if multiple semantics change.",
+      "result_artifacts": []
+    },
+    {
+      "id": "FA-020",
+      "gate": "G2",
+      "title": "Implement deterministic decision replay",
+      "status": "planned",
+      "depends_on": [
+        "FA-008",
+        "FA-016",
+        "FA-019"
+      ],
+      "invariants": [
+        "FA-INV-007",
+        "FA-INV-010",
+        "FA-INV-016"
+      ],
+      "acceptance": [
+        "All decision-affecting inputs retained; reducer replay and missing-input tests",
+        "Update status and link actual test/result artifacts; no claim promotion from a stub."
+      ],
+      "owner_role": "systems",
+      "estimated_scope": "One independently reviewable work packet; split before implementation if multiple semantics change.",
+      "result_artifacts": []
+    },
+    {
+      "id": "FA-021",
+      "gate": "G2",
+      "title": "Implement safe evidence-linked reports",
+      "status": "planned",
+      "depends_on": [
+        "FA-016",
+        "FA-020"
+      ],
+      "invariants": [
+        "FA-INV-008",
+        "FA-INV-014",
+        "FA-INV-019"
+      ],
+      "acceptance": [
+        "FrankenMarkdown core rendering; source links; no asset-fetch/inclusion bypass",
+        "Update status and link actual test/result artifacts; no claim promotion from a stub."
+      ],
+      "owner_role": "systems",
+      "estimated_scope": "One independently reviewable work packet; split before implementation if multiple semantics change.",
+      "result_artifacts": []
+    },
+    {
+      "id": "FA-022",
+      "gate": "G2",
+      "title": "Run adaptive monitor and common-cause campaigns",
+      "status": "planned",
+      "depends_on": [
+        "FA-015",
+        "FA-019",
+        "FA-020"
+      ],
+      "invariants": [
+        "FA-INV-004",
+        "FA-INV-010",
+        "FA-INV-012",
+        "FA-INV-019"
+      ],
+      "acceptance": [
+        "Matched baselines, protocol-aware attacks and missing-helper failure behavior",
+        "Update status and link actual test/result artifacts; no claim promotion from a stub."
+      ],
+      "owner_role": "systems",
+      "estimated_scope": "One independently reviewable work packet; split before implementation if multiple semantics change.",
+      "result_artifacts": []
+    },
+    {
+      "id": "FA-023",
+      "gate": "G3",
+      "title": "Specify one serving-host capability profile",
+      "status": "planned",
+      "depends_on": [
+        "FA-005",
+        "FA-017"
+      ],
+      "invariants": [
+        "FA-INV-011",
+        "FA-INV-014",
+        "FA-INV-017"
+      ],
+      "acceptance": [
+        "Actual cache/tap semantics, ownership, model/numeric identities and unsupported modes",
+        "Update status and link actual test/result artifacts; no claim promotion from a stub."
+      ],
+      "owner_role": "systems",
+      "estimated_scope": "One independently reviewable work packet; split before implementation if multiple semantics change.",
+      "result_artifacts": []
+    },
+    {
+      "id": "FA-024",
+      "gate": "G3",
+      "title": "Implement real activation and KV capture",
+      "status": "planned",
+      "depends_on": [
+        "FA-023"
+      ],
+      "invariants": [
+        "FA-INV-007",
+        "FA-INV-013",
+        "FA-INV-014",
+        "FA-INV-017"
+      ],
+      "acceptance": [
+        "Direct host comparison, GQA/MQA, batch/context, recycled buffer and gap tests",
+        "Update status and link actual test/result artifacts; no claim promotion from a stub."
+      ],
+      "owner_role": "systems",
+      "estimated_scope": "One independently reviewable work packet; split before implementation if multiple semantics change.",
+      "result_artifacts": []
+    },
+    {
+      "id": "FA-025",
+      "gate": "G3",
+      "title": "Establish original-token recomputation baseline",
+      "status": "planned",
+      "depends_on": [
+        "FA-023",
+        "FA-024"
+      ],
+      "invariants": [
+        "FA-INV-011",
+        "FA-INV-016",
+        "FA-INV-017"
+      ],
+      "acceptance": [
+        "Pinned host/sampler execution and explicit nondeterminism limits",
+        "Update status and link actual test/result artifacts; no claim promotion from a stub."
+      ],
+      "owner_role": "systems",
+      "estimated_scope": "One independently reviewable work packet; split before implementation if multiple semantics change.",
+      "result_artifacts": []
+    },
+    {
+      "id": "FA-026",
+      "gate": "G3",
+      "title": "Implement lossless restart manifest and serialization",
+      "status": "planned",
+      "depends_on": [
+        "FA-016",
+        "FA-024",
+        "FA-025"
+      ],
+      "invariants": [
+        "FA-INV-007",
+        "FA-INV-011",
+        "FA-INV-013",
+        "FA-INV-017"
+      ],
+      "acceptance": [
+        "Complete mutable state inventory, safe parsing and missing-component tests",
+        "Update status and link actual test/result artifacts; no claim promotion from a stub."
+      ],
+      "owner_role": "systems",
+      "estimated_scope": "One independently reviewable work packet; split before implementation if multiple semantics change.",
+      "result_artifacts": []
+    },
+    {
+      "id": "FA-027",
+      "gate": "G3",
+      "title": "Validate real resumed continuations and isolated branches",
+      "status": "planned",
+      "depends_on": [
+        "FA-011",
+        "FA-025",
+        "FA-026"
+      ],
+      "invariants": [
+        "FA-INV-009",
+        "FA-INV-011",
+        "FA-INV-018"
+      ],
+      "acceptance": [
+        "Actual long-horizon generation, no branch credentials or duplicated rights",
+        "Update status and link actual test/result artifacts; no claim promotion from a stub."
+      ],
+      "owner_role": "systems",
+      "estimated_scope": "One independently reviewable work packet; split before implementation if multiple semantics change.",
+      "result_artifacts": []
+    },
+    {
+      "id": "FA-028",
+      "gate": "G4",
+      "title": "Benchmark raw/lossless/quantized/projection baselines",
+      "status": "planned",
+      "depends_on": [
+        "FA-024",
+        "FA-027"
+      ],
+      "invariants": [
+        "FA-INV-011",
+        "FA-INV-017",
+        "FA-INV-019"
+      ],
+      "acceptance": [
+        "Full capture/transfer/metadata costs and held-out probe/continuation results",
+        "Update status and link actual test/result artifacts; no claim promotion from a stub."
+      ],
+      "owner_role": "research",
+      "estimated_scope": "One independently reviewable work packet; split before implementation if multiple semantics change.",
+      "result_artifacts": []
+    },
+    {
+      "id": "FA-029",
+      "gate": "G4",
+      "title": "Prototype risk-sensitive audit codecs",
+      "status": "planned",
+      "depends_on": [
+        "FA-028"
+      ],
+      "invariants": [
+        "FA-INV-011",
+        "FA-INV-017",
+        "FA-INV-019"
+      ],
+      "acceptance": [
+        "H1 external probes, rare strata, lineage separation and kill criterion",
+        "Update status and link actual test/result artifacts; no claim promotion from a stub."
+      ],
+      "owner_role": "research",
+      "estimated_scope": "One independently reviewable work packet; split before implementation if multiple semantics change.",
+      "result_artifacts": []
+    },
+    {
+      "id": "FA-030",
+      "gate": "G4",
+      "title": "Implement progressive refinement and numerical witnesses",
+      "status": "planned",
+      "depends_on": [
+        "FA-028",
+        "FA-029"
+      ],
+      "invariants": [
+        "FA-INV-007",
+        "FA-INV-011",
+        "FA-INV-013",
+        "FA-INV-017"
+      ],
+      "acceptance": [
+        "H2 residual bound verification, linear-probe certificate and refinement-storm tests",
+        "Update status and link actual test/result artifacts; no claim promotion from a stub."
+      ],
+      "owner_role": "research",
+      "estimated_scope": "One independently reviewable work packet; split before implementation if multiple semantics change.",
+      "result_artifacts": []
+    },
+    {
+      "id": "FA-031",
+      "gate": "G4",
+      "title": "Evaluate pre-action consistency residuals",
+      "status": "planned",
+      "depends_on": [
+        "FA-022",
+        "FA-024",
+        "FA-028"
+      ],
+      "invariants": [
+        "FA-INV-014",
+        "FA-INV-017",
+        "FA-INV-019"
+      ],
+      "acceptance": [
+        "H3 no future leakage, strong text baselines, held-out model families",
+        "Update status and link actual test/result artifacts; no claim promotion from a stub."
+      ],
+      "owner_role": "research",
+      "estimated_scope": "One independently reviewable work packet; split before implementation if multiple semantics change.",
+      "result_artifacts": []
+    },
+    {
+      "id": "FA-032",
+      "gate": "G4",
+      "title": "Implement counterfactual witness experiments",
+      "status": "planned",
+      "depends_on": [
+        "FA-020",
+        "FA-027"
+      ],
+      "invariants": [
+        "FA-INV-009",
+        "FA-INV-011",
+        "FA-INV-018",
+        "FA-INV-019"
+      ],
+      "acceptance": [
+        "H5 source/latent/sham controls, independent outcomes and no-egress isolation",
+        "Update status and link actual test/result artifacts; no claim promotion from a stub."
+      ],
+      "owner_role": "research",
+      "estimated_scope": "One independently reviewable work packet; split before implementation if multiple semantics change.",
+      "result_artifacts": []
+    },
+    {
+      "id": "FA-033",
+      "gate": "G4",
+      "title": "Publish confirmatory H1 through H5 results",
+      "status": "planned",
+      "depends_on": [
+        "FA-022",
+        "FA-029",
+        "FA-030",
+        "FA-031",
+        "FA-032"
+      ],
+      "invariants": [
+        "FA-INV-019"
+      ],
+      "acceptance": [
+        "Frozen protocols, raw measurements, uncertainty, matched costs and negative results",
+        "Update status and link actual test/result artifacts; no claim promotion from a stub."
+      ],
+      "owner_role": "research",
+      "estimated_scope": "One independently reviewable work packet; split before implementation if multiple semantics change.",
+      "result_artifacts": []
+    },
+    {
+      "id": "FA-034",
+      "gate": "G5",
+      "title": "Implement exact delegation and fleet rights",
+      "status": "planned",
+      "depends_on": [
+        "FA-013",
+        "FA-015"
+      ],
+      "invariants": [
+        "FA-INV-002",
+        "FA-INV-003",
+        "FA-INV-005",
+        "FA-INV-008",
+        "FA-INV-009"
+      ],
+      "acceptance": [
+        "No cloned rights; parent/child and transfer race tests",
+        "Update status and link actual test/result artifacts; no claim promotion from a stub."
+      ],
+      "owner_role": "systems",
+      "estimated_scope": "One independently reviewable work packet; split before implementation if multiple semantics change.",
+      "result_artifacts": []
+    },
+    {
+      "id": "FA-035",
+      "gate": "G5",
+      "title": "Integrate derived FrankenGraphDB provenance view",
+      "status": "planned",
+      "depends_on": [
+        "FA-016",
+        "FA-034"
+      ],
+      "invariants": [
+        "FA-INV-007",
+        "FA-INV-008",
+        "FA-INV-014",
+        "FA-INV-018"
+      ],
+      "acceptance": [
+        "Committed frontiers, independent mediation-cut checker and missing-edge tests",
+        "Update status and link actual test/result artifacts; no claim promotion from a stub."
+      ],
+      "owner_role": "systems",
+      "estimated_scope": "One independently reviewable work packet; split before implementation if multiple semantics change.",
+      "result_artifacts": []
+    },
+    {
+      "id": "FA-036",
+      "gate": "G5",
+      "title": "Integrate tenant-scoped FrankenSearch evidence retrieval",
+      "status": "planned",
+      "depends_on": [
+        "FA-016",
+        "FA-020"
+      ],
+      "invariants": [
+        "FA-INV-007",
+        "FA-INV-008",
+        "FA-INV-014",
+        "FA-INV-017"
+      ],
+      "acceptance": [
+        "Verified generation identity, stale-index behavior and original-source links",
+        "Update status and link actual test/result artifacts; no claim promotion from a stub."
+      ],
+      "owner_role": "systems",
+      "estimated_scope": "One independently reviewable work packet; split before implementation if multiple semantics change.",
+      "result_artifacts": []
+    },
+    {
+      "id": "FA-037",
+      "gate": "G5",
+      "title": "Implement retention, key lifecycle and deletion accounting",
+      "status": "planned",
+      "depends_on": [
+        "FA-016",
+        "FA-020"
+      ],
+      "invariants": [
+        "FA-INV-007",
+        "FA-INV-008",
+        "FA-INV-015"
+      ],
+      "acceptance": [
+        "Lease closure, unavailable replay after erasure, backup/key inventory tests",
+        "Update status and link actual test/result artifacts; no claim promotion from a stub."
+      ],
+      "owner_role": "systems",
+      "estimated_scope": "One independently reviewable work packet; split before implementation if multiple semantics change.",
+      "result_artifacts": []
+    },
+    {
+      "id": "FA-038",
+      "gate": "G5",
+      "title": "Qualify optional repair and evidence-volume profiles",
+      "status": "planned",
+      "depends_on": [
+        "FA-016",
+        "FA-037"
+      ],
+      "invariants": [
+        "FA-INV-007",
+        "FA-INV-014",
+        "FA-INV-015"
+      ],
+      "acceptance": [
+        "AEAD/encoding identity, corruption, erasure capacity and publication durability tests",
+        "Update status and link actual test/result artifacts; no claim promotion from a stub."
+      ],
+      "owner_role": "systems",
+      "estimated_scope": "One independently reviewable work packet; split before implementation if multiple semantics change.",
+      "result_artifacts": []
+    },
+    {
+      "id": "FA-039",
+      "gate": "G5",
+      "title": "Implement pressure admission and operation-cost accounting",
+      "status": "planned",
+      "depends_on": [
+        "FA-015",
+        "FA-017",
+        "FA-020"
+      ],
+      "invariants": [
+        "FA-INV-004",
+        "FA-INV-005",
+        "FA-INV-013"
+      ],
+      "acceptance": [
+        "Critical capacity reservation, bounded refinement/review queues and honest barrier counts",
+        "Update status and link actual test/result artifacts; no claim promotion from a stub."
+      ],
+      "owner_role": "systems",
+      "estimated_scope": "One independently reviewable work packet; split before implementation if multiple semantics change.",
+      "result_artifacts": []
+    },
+    {
+      "id": "FA-040",
+      "gate": "G4",
+      "title": "Qualify native FrankenNumPy/FrankenTorch research kernels",
+      "status": "planned",
+      "depends_on": [
+        "FA-024",
+        "FA-028"
+      ],
+      "invariants": [
+        "FA-INV-013",
+        "FA-INV-014",
+        "FA-INV-017"
+      ],
+      "acceptance": [
+        "Native-only paths, numerical differential tests, ledger eviction visibility and real cost",
+        "Update status and link actual test/result artifacts; no claim promotion from a stub."
+      ],
+      "owner_role": "research",
+      "estimated_scope": "One independently reviewable work packet; split before implementation if multiple semantics change.",
+      "result_artifacts": []
+    },
+    {
+      "id": "FA-041",
+      "gate": "G5",
+      "title": "Qualify distributed ownership and rights transfer",
+      "status": "planned",
+      "depends_on": [
+        "FA-014",
+        "FA-034",
+        "FA-039"
+      ],
+      "invariants": [
+        "FA-INV-002",
+        "FA-INV-003",
+        "FA-INV-005",
+        "FA-INV-006",
+        "FA-INV-020"
+      ],
+      "acceptance": [
+        "Partition/leader fencing and no simultaneous spendable rights; explicit availability tradeoff",
+        "Update status and link actual test/result artifacts; no claim promotion from a stub."
+      ],
+      "owner_role": "systems",
+      "estimated_scope": "One independently reviewable work packet; split before implementation if multiple semantics change.",
+      "result_artifacts": []
+    },
+    {
+      "id": "FA-042",
+      "gate": "G5",
+      "title": "Implement constrained observation planner",
+      "status": "planned",
+      "depends_on": [
+        "FA-022",
+        "FA-028",
+        "FA-030",
+        "FA-039"
+      ],
+      "invariants": [
+        "FA-INV-004",
+        "FA-INV-013",
+        "FA-INV-016",
+        "FA-INV-019"
+      ],
+      "acceptance": [
+        "Fixed floors, replay-pinned choices, support-aware policy evaluation and fallback",
+        "Update status and link actual test/result artifacts; no claim promotion from a stub."
+      ],
+      "owner_role": "systems",
+      "estimated_scope": "One independently reviewable work packet; split before implementation if multiple semantics change.",
+      "result_artifacts": []
+    },
+    {
+      "id": "FA-043",
+      "gate": "G5",
+      "title": "Evaluate H6 and H7 on distributed and shifted workloads",
+      "status": "planned",
+      "depends_on": [
+        "FA-035",
+        "FA-039",
+        "FA-042"
+      ],
+      "invariants": [
+        "FA-INV-019"
+      ],
+      "acceptance": [
+        "Matched utility/cost, distributed attacks and adversarial resource demand",
+        "Update status and link actual test/result artifacts; no claim promotion from a stub."
+      ],
+      "owner_role": "research",
+      "estimated_scope": "One independently reviewable work packet; split before implementation if multiple semantics change.",
+      "result_artifacts": []
+    },
+    {
+      "id": "FA-044",
+      "gate": "G6",
+      "title": "Implement permissioned redacted incident exchange",
+      "status": "planned",
+      "depends_on": [
+        "FA-021",
+        "FA-036",
+        "FA-037"
+      ],
+      "invariants": [
+        "FA-INV-007",
+        "FA-INV-008",
+        "FA-INV-015",
+        "FA-INV-019"
+      ],
+      "acceptance": [
+        "Quarantine, export checks, dataset lineage and truthful public replay grades",
+        "Update status and link actual test/result artifacts; no claim promotion from a stub."
+      ],
+      "owner_role": "systems",
+      "estimated_scope": "One independently reviewable work packet; split before implementation if multiple semantics change.",
+      "result_artifacts": []
+    },
+    {
+      "id": "FA-045",
+      "gate": "G6",
+      "title": "Evaluate reflective strategy transfer",
+      "status": "planned",
+      "depends_on": [
+        "FA-027",
+        "FA-032",
+        "FA-033"
+      ],
+      "invariants": [
+        "FA-INV-009",
+        "FA-INV-011",
+        "FA-INV-017",
+        "FA-INV-019"
+      ],
+      "acceptance": [
+        "H8 negative transfer, equal amortized costs and no self-approved live edits",
+        "Update status and link actual test/result artifacts; no claim promotion from a stub."
+      ],
+      "owner_role": "research",
+      "estimated_scope": "One independently reviewable work packet; split before implementation if multiple semantics change.",
+      "result_artifacts": []
+    },
+    {
+      "id": "FA-046",
+      "gate": "G6",
+      "title": "Commission independent profile-specific red review",
+      "status": "planned",
+      "depends_on": [
+        "FA-033",
+        "FA-043",
+        "FA-044"
+      ],
+      "invariants": [
+        "FA-INV-001",
+        "FA-INV-002",
+        "FA-INV-003",
+        "FA-INV-004",
+        "FA-INV-005",
+        "FA-INV-006",
+        "FA-INV-008",
+        "FA-INV-018",
+        "FA-INV-019"
+      ],
+      "acceptance": [
+        "Independent attack ownership, exact deployment scope and unresolved findings",
+        "Update status and link actual test/result artifacts; no claim promotion from a stub."
+      ],
+      "owner_role": "systems",
+      "estimated_scope": "One independently reviewable work packet; split before implementation if multiple semantics change.",
+      "result_artifacts": []
+    },
+    {
+      "id": "FA-047",
+      "gate": "G6",
+      "title": "Publish assurance reports and supported profiles",
+      "status": "planned",
+      "depends_on": [
+        "FA-038",
+        "FA-041",
+        "FA-046"
+      ],
+      "invariants": [
+        "FA-INV-007",
+        "FA-INV-011",
+        "FA-INV-015",
+        "FA-INV-019"
+      ],
+      "acceptance": [
+        "Claims linked to actual artifacts, limitations, cost curves and replay grades",
+        "Update status and link actual test/result artifacts; no claim promotion from a stub."
+      ],
+      "owner_role": "systems",
+      "estimated_scope": "One independently reviewable work packet; split before implementation if multiple semantics change.",
+      "result_artifacts": []
+    },
+    {
+      "id": "FA-048",
+      "gate": "G6",
+      "title": "Qualify updates, rollback and release gates",
+      "status": "planned",
+      "depends_on": [
+        "FA-013",
+        "FA-037",
+        "FA-047"
+      ],
+      "invariants": [
+        "FA-INV-003",
+        "FA-INV-015",
+        "FA-INV-017",
+        "FA-INV-019",
+        "FA-INV-020"
+      ],
+      "acceptance": [
+        "Updates preserve authority history; incompatible evidence/calibration rejected",
+        "Update status and link actual test/result artifacts; no claim promotion from a stub."
+      ],
+      "owner_role": "systems",
+      "estimated_scope": "One independently reviewable work packet; split before implementation if multiple semantics change.",
+      "result_artifacts": []
+    },
+    {
+      "id": "FA-049",
+      "gate": "G2",
+      "title": "Implement agent-native discovery and explanation interfaces",
+      "status": "planned",
+      "depends_on": [
+        "FA-013",
+        "FA-020"
+      ],
+      "invariants": [
+        "FA-INV-004",
+        "FA-INV-007",
+        "FA-INV-008",
+        "FA-INV-019"
+      ],
+      "acceptance": [
+        "Stable reason codes, capability negotiation, read-only diagnostics and scoped repair suggestions",
+        "Update status and link actual test/result artifacts; no claim promotion from a stub."
+      ],
+      "owner_role": "systems",
+      "estimated_scope": "One independently reviewable work packet; split before implementation if multiple semantics change.",
+      "result_artifacts": []
+    },
+    {
+      "id": "FA-050",
+      "gate": "G2",
+      "title": "Implement a version-pinned external tool protocol adapter",
+      "status": "planned",
+      "depends_on": [
+        "FA-012",
+        "FA-049"
+      ],
+      "invariants": [
+        "FA-INV-001",
+        "FA-INV-008",
+        "FA-INV-012",
+        "FA-INV-018"
+      ],
+      "acceptance": [
+        "Untrusted tool descriptions are not policy; exact argument and credential-bound tests",
+        "Update status and link actual test/result artifacts; no claim promotion from a stub."
+      ],
+      "owner_role": "systems",
+      "estimated_scope": "One independently reviewable work packet; split before implementation if multiple semantics change.",
+      "result_artifacts": []
+    },
+    {
+      "id": "FA-051",
+      "gate": "G6",
+      "title": "Specify a separately qualified physical-system profile",
+      "status": "planned",
+      "depends_on": [
+        "FA-048"
+      ],
+      "invariants": [
+        "FA-INV-003",
+        "FA-INV-009",
+        "FA-INV-018",
+        "FA-INV-020"
+      ],
+      "acceptance": [
+        "Independent interlocks, watchdog, safe-state policy and no digital-to-physical claim laundering",
+        "Update status and link actual test/result artifacts; no claim promotion from a stub."
+      ],
+      "owner_role": "systems",
+      "estimated_scope": "One independently reviewable work packet; split before implementation if multiple semantics change.",
+      "result_artifacts": []
+    },
+    {
+      "id": "FA-052",
+      "gate": "G0",
+      "title": "Maintain source provenance and resolve missing context",
+      "status": "drafted",
+      "depends_on": [],
+      "invariants": [
+        "FA-INV-019"
+      ],
+      "acceptance": [
+        "Document read scope, immutable file identity where available and the corrected complete two-repository premise",
+        "Update status and link actual test/result artifacts; no claim promotion from a stub."
+      ],
+      "owner_role": "systems",
+      "estimated_scope": "One independently reviewable work packet; split before implementation if multiple semantics change.",
+      "result_artifacts": []
+    },
+    {
+      "id": "FA-053",
+      "gate": "G0",
+      "title": "Freeze transitive dependency policy",
+      "status": "planned",
+      "depends_on": [],
+      "invariants": [
+        "FA-INV-029"
+      ],
+      "acceptance": [
+        "Exact per-target feature/source/build-script inventory; native default is not sufficient.",
+        "Produce executed local evidence; source or prose alone does not close this packet."
+      ],
+      "owner_role": "systems",
+      "result_artifacts": []
+    },
+    {
+      "id": "FA-054",
+      "gate": "G0",
+      "title": "Implement general Cargo admission compiler",
+      "status": "planned",
+      "depends_on": [
+        "FA-053"
+      ],
+      "invariants": [
+        "FA-INV-029"
+      ],
+      "acceptance": [
+        "Reject unlisted native, build and proc-macro dependencies; test feature-only injection.",
+        "Produce executed local evidence; source or prose alone does not close this packet."
+      ],
+      "owner_role": "systems",
+      "result_artifacts": []
+    },
+    {
+      "id": "FA-055",
+      "gate": "G0",
+      "title": "Qualify latest nightly freeze",
+      "status": "planned",
+      "depends_on": [
+        "FA-053"
+      ],
+      "invariants": [
+        "FA-INV-030"
+      ],
+      "acceptance": [
+        "Two native hosts agree compiler, Cargo, targets and codegen identities; reject mixed nightly.",
+        "Produce executed local evidence; source or prose alone does not close this packet."
+      ],
+      "owner_role": "systems",
+      "result_artifacts": []
+    },
+    {
+      "id": "FA-056",
+      "gate": "G0",
+      "title": "Port complete v1 reference semantics",
+      "status": "planned",
+      "depends_on": [
+        "FA-001"
+      ],
+      "invariants": [
+        "FA-INV-001",
+        "FA-INV-002",
+        "FA-INV-003",
+        "FA-INV-006"
+      ],
+      "acceptance": [
+        "Finish omitted congress/statistical reference coverage in safe Rust; no v1 test-count carryover.",
+        "Produce executed local evidence; source or prose alone does not close this packet."
+      ],
+      "owner_role": "systems",
+      "result_artifacts": []
+    },
+    {
+      "id": "FA-057",
+      "gate": "G0",
+      "title": "Define opaque judgment full-input witnesses",
+      "status": "planned",
+      "depends_on": [
+        "FA-001"
+      ],
+      "invariants": [
+        "FA-INV-021",
+        "FA-INV-023"
+      ],
+      "acceptance": [
+        "Entire submitted packet is a dependency; explanation cannot narrow it.",
+        "Produce executed local evidence; source or prose alone does not close this packet."
+      ],
+      "owner_role": "systems",
+      "result_artifacts": []
+    },
+    {
+      "id": "FA-058",
+      "gate": "G2",
+      "title": "Implement exact value and absent-key witnesses",
+      "status": "planned",
+      "depends_on": [
+        "FA-057"
+      ],
+      "invariants": [
+        "FA-INV-021"
+      ],
+      "acceptance": [
+        "Mutate value, insert absent key, preserve unrelated keys; compare always-recompute.",
+        "Produce executed local evidence; source or prose alone does not close this packet."
+      ],
+      "owner_role": "systems",
+      "result_artifacts": []
+    },
+    {
+      "id": "FA-059",
+      "gate": "G2",
+      "title": "Implement range and phantom witnesses",
+      "status": "planned",
+      "depends_on": [
+        "FA-058"
+      ],
+      "invariants": [
+        "FA-INV-021"
+      ],
+      "acceptance": [
+        "Insert in every empty-range boundary; reject incomplete tails.",
+        "Produce executed local evidence; source or prose alone does not close this packet."
+      ],
+      "owner_role": "systems",
+      "result_artifacts": []
+    },
+    {
+      "id": "FA-060",
+      "gate": "G2",
+      "title": "Build bounded witness refinement",
+      "status": "planned",
+      "depends_on": [
+        "FA-059"
+      ],
+      "invariants": [
+        "FA-INV-021"
+      ],
+      "acceptance": [
+        "Exhaustion remains uncertain; conservative summaries never miss an overlap.",
+        "Produce executed local evidence; source or prose alone does not close this packet."
+      ],
+      "owner_role": "systems",
+      "result_artifacts": []
+    },
+    {
+      "id": "FA-061",
+      "gate": "G2",
+      "title": "Index witness invalidations",
+      "status": "planned",
+      "depends_on": [
+        "FA-060"
+      ],
+      "invariants": [
+        "FA-INV-021"
+      ],
+      "acceptance": [
+        "Bound lookup bytes and compare every invalidation to exact scan.",
+        "Produce executed local evidence; source or prose alone does not close this packet."
+      ],
+      "owner_role": "systems",
+      "result_artifacts": []
+    },
+    {
+      "id": "FA-062",
+      "gate": "G2",
+      "title": "Validate judgments at final publication",
+      "status": "planned",
+      "depends_on": [
+        "FA-061"
+      ],
+      "invariants": [
+        "FA-INV-001",
+        "FA-INV-003",
+        "FA-INV-021"
+      ],
+      "acceptance": [
+        "Race policy/content change between review and publication; no opaque verdict rebase.",
+        "Produce executed local evidence; source or prose alone does not close this packet."
+      ],
+      "owner_role": "systems",
+      "result_artifacts": []
+    },
+    {
+      "id": "FA-063",
+      "gate": "G0",
+      "title": "Define product-of-streams frontiers",
+      "status": "planned",
+      "depends_on": [
+        "FA-001"
+      ],
+      "invariants": [
+        "FA-INV-022"
+      ],
+      "acceptance": [
+        "Missing middle sequences, independent helper projections and explicit closing markers.",
+        "Produce executed local evidence; source or prose alone does not close this packet."
+      ],
+      "owner_role": "systems",
+      "result_artifacts": []
+    },
+    {
+      "id": "FA-064",
+      "gate": "G2",
+      "title": "Native ATP effect-free adapter",
+      "status": "planned",
+      "depends_on": [
+        "FA-063"
+      ],
+      "invariants": [
+        "FA-INV-022",
+        "FA-INV-027"
+      ],
+      "acceptance": [
+        "Use native ownership/Cx, no tokio bridge; negative cancellation traces.",
+        "Produce executed local evidence; source or prose alone does not close this packet."
+      ],
+      "owner_role": "systems",
+      "result_artifacts": []
+    },
+    {
+      "id": "FA-065",
+      "gate": "G2",
+      "title": "Integrate sparse journal state admission",
+      "status": "planned",
+      "depends_on": [
+        "FA-064"
+      ],
+      "invariants": [
+        "FA-INV-022",
+        "FA-INV-027"
+      ],
+      "acceptance": [
+        "RepairDerived is not Verified; replay duplicates and lost commits.",
+        "Produce executed local evidence; source or prose alone does not close this packet."
+      ],
+      "owner_role": "systems",
+      "result_artifacts": []
+    },
+    {
+      "id": "FA-066",
+      "gate": "G2",
+      "title": "Implement verified receiver-base transfer",
+      "status": "planned",
+      "depends_on": [
+        "FA-065"
+      ],
+      "invariants": [
+        "FA-INV-027"
+      ],
+      "acceptance": [
+        "Literal fallback on stale base; target digest verified before exact admission.",
+        "Produce executed local evidence; source or prose alone does not close this packet."
+      ],
+      "owner_role": "systems",
+      "result_artifacts": []
+    },
+    {
+      "id": "FA-067",
+      "gate": "G2",
+      "title": "Run syndrome-versus-delta experiment",
+      "status": "planned",
+      "depends_on": [
+        "FA-066"
+      ],
+      "invariants": [
+        "FA-INV-027"
+      ],
+      "acceptance": [
+        "Separate offline oracle from live side information; charge all bytes and decode costs.",
+        "Produce executed local evidence; source or prose alone does not close this packet."
+      ],
+      "owner_role": "systems",
+      "result_artifacts": []
+    },
+    {
+      "id": "FA-068",
+      "gate": "G0",
+      "title": "Define observation operator algebra",
+      "status": "planned",
+      "depends_on": [
+        "FA-057",
+        "FA-063"
+      ],
+      "invariants": [
+        "FA-INV-021",
+        "FA-INV-022",
+        "FA-INV-023"
+      ],
+      "acceptance": [
+        "Requirement and uncertainty transfer laws for every operator.",
+        "Produce executed local evidence; source or prose alone does not close this packet."
+      ],
+      "owner_role": "systems",
+      "result_artifacts": []
+    },
+    {
+      "id": "FA-069",
+      "gate": "G2",
+      "title": "Implement physical plan validator",
+      "status": "planned",
+      "depends_on": [
+        "FA-068"
+      ],
+      "invariants": [
+        "FA-INV-021",
+        "FA-INV-022"
+      ],
+      "acceptance": [
+        "Reject ANN-for-absence, lossy-for-restart and premature prefix closure.",
+        "Produce executed local evidence; source or prose alone does not close this packet."
+      ],
+      "owner_role": "systems",
+      "result_artifacts": []
+    },
+    {
+      "id": "FA-070",
+      "gate": "G2",
+      "title": "Certify initial planner rewrites",
+      "status": "planned",
+      "depends_on": [
+        "FA-069"
+      ],
+      "invariants": [
+        "FA-INV-021",
+        "FA-INV-022",
+        "FA-INV-023"
+      ],
+      "acceptance": [
+        "Exact byte/decision differentials; auth-pushdown leakage negatives.",
+        "Produce executed local evidence; source or prose alone does not close this packet."
+      ],
+      "owner_role": "systems",
+      "result_artifacts": []
+    },
+    {
+      "id": "FA-071",
+      "gate": "G2",
+      "title": "Build bounded observation cost accounting",
+      "status": "planned",
+      "depends_on": [
+        "FA-070"
+      ],
+      "invariants": [
+        "FA-INV-006"
+      ],
+      "acceptance": [
+        "Charge transfer, refinement, pins and reconciliation; priority for existing obligations.",
+        "Produce executed local evidence; source or prose alone does not close this packet."
+      ],
+      "owner_role": "systems",
+      "result_artifacts": []
+    },
+    {
+      "id": "FA-072",
+      "gate": "G0",
+      "title": "Define typed authority projections",
+      "status": "planned",
+      "depends_on": [
+        "FA-002"
+      ],
+      "invariants": [
+        "FA-INV-024"
+      ],
+      "acceptance": [
+        "Preserve direction, parallel edges, epoch and actual boundary provenance.",
+        "Produce executed local evidence; source or prose alone does not close this packet."
+      ],
+      "owner_role": "systems",
+      "result_artifacts": []
+    },
+    {
+      "id": "FA-073",
+      "gate": "G2",
+      "title": "Implement independent cut checker",
+      "status": "planned",
+      "depends_on": [
+        "FA-072"
+      ],
+      "invariants": [
+        "FA-INV-024"
+      ],
+      "acceptance": [
+        "False cut, bypass, unreachable and stale graph cases.",
+        "Produce executed local evidence; source or prose alone does not close this packet."
+      ],
+      "owner_role": "systems",
+      "result_artifacts": []
+    },
+    {
+      "id": "FA-074",
+      "gate": "G2",
+      "title": "Qualify sparse graph kernels",
+      "status": "planned",
+      "depends_on": [
+        "FA-073",
+        "FA-054"
+      ],
+      "invariants": [
+        "FA-INV-024"
+      ],
+      "acceptance": [
+        "Replace dense residual hot path; charge projection and working memory.",
+        "Produce executed local evidence; source or prose alone does not close this packet."
+      ],
+      "owner_role": "systems",
+      "result_artifacts": []
+    },
+    {
+      "id": "FA-075",
+      "gate": "G2",
+      "title": "Explore topology-aware observation placement",
+      "status": "planned",
+      "depends_on": [
+        "FA-074"
+      ],
+      "invariants": [
+        "FA-INV-024"
+      ],
+      "acceptance": [
+        "Matched blanket baseline; graph completeness and sensor accuracy reported separately.",
+        "Produce executed local evidence; source or prose alone does not close this packet."
+      ],
+      "owner_role": "systems",
+      "result_artifacts": []
+    },
+    {
+      "id": "FA-076",
+      "gate": "G2",
+      "title": "Define standing finding support algebra",
+      "status": "planned",
+      "depends_on": [
+        "FA-057",
+        "FA-072"
+      ],
+      "invariants": [
+        "FA-INV-026"
+      ],
+      "acceptance": [
+        "Checked weights, supports, negation and retraction laws.",
+        "Produce executed local evidence; source or prose alone does not close this packet."
+      ],
+      "owner_role": "systems",
+      "result_artifacts": []
+    },
+    {
+      "id": "FA-077",
+      "gate": "G2",
+      "title": "Build batch oversight oracle",
+      "status": "planned",
+      "depends_on": [
+        "FA-076"
+      ],
+      "invariants": [
+        "FA-INV-026"
+      ],
+      "acceptance": [
+        "Independent implementation and empty/deletion/policy change cases.",
+        "Produce executed local evidence; source or prose alone does not close this packet."
+      ],
+      "owner_role": "systems",
+      "result_artifacts": []
+    },
+    {
+      "id": "FA-078",
+      "gate": "G2",
+      "title": "Implement first incremental query family",
+      "status": "planned",
+      "depends_on": [
+        "FA-077"
+      ],
+      "invariants": [
+        "FA-INV-026"
+      ],
+      "acceptance": [
+        "Equal outputs/supports at every closed frontier under insert/delete.",
+        "Produce executed local evidence; source or prose alone does not close this packet."
+      ],
+      "owner_role": "systems",
+      "result_artifacts": []
+    },
+    {
+      "id": "FA-079",
+      "gate": "G2",
+      "title": "Bound support antichains",
+      "status": "planned",
+      "depends_on": [
+        "FA-078"
+      ],
+      "invariants": [
+        "FA-INV-026"
+      ],
+      "acceptance": [
+        "Exponential support case must spill/coarsen/recompute without false negatives.",
+        "Produce executed local evidence; source or prose alone does not close this packet."
+      ],
+      "owner_role": "systems",
+      "result_artifacts": []
+    },
+    {
+      "id": "FA-080",
+      "gate": "G2",
+      "title": "Add model/policy-generation delta handling",
+      "status": "planned",
+      "depends_on": [
+        "FA-078"
+      ],
+      "invariants": [
+        "FA-INV-021",
+        "FA-INV-026"
+      ],
+      "acceptance": [
+        "Rebuild on semantics change; never serve mixed-generation findings.",
+        "Produce executed local evidence; source or prose alone does not close this packet."
+      ],
+      "owner_role": "systems",
+      "result_artifacts": []
+    },
+    {
+      "id": "FA-081",
+      "gate": "G0",
+      "title": "Build committed helper evidence views",
+      "status": "planned",
+      "depends_on": [
+        "FA-057"
+      ],
+      "invariants": [
+        "FA-INV-023"
+      ],
+      "acceptance": [
+        "Original/transform/redaction/window/submitted bytes and omissions are bound.",
+        "Produce executed local evidence; source or prose alone does not close this packet."
+      ],
+      "owner_role": "systems",
+      "result_artifacts": []
+    },
+    {
+      "id": "FA-082",
+      "gate": "G2",
+      "title": "Qualify IO-free FMD review profile",
+      "status": "planned",
+      "depends_on": [
+        "FA-081",
+        "FA-054"
+      ],
+      "invariants": [
+        "FA-INV-023",
+        "FA-INV-029"
+      ],
+      "acceptance": [
+        "No remote asset or active content; coarse span disclosure.",
+        "Produce executed local evidence; source or prose alone does not close this packet."
+      ],
+      "owner_role": "systems",
+      "result_artifacts": []
+    },
+    {
+      "id": "FA-083",
+      "gate": "G2",
+      "title": "Separate discovery from exact retrieval",
+      "status": "planned",
+      "depends_on": [
+        "FA-054",
+        "FA-081"
+      ],
+      "invariants": [
+        "FA-INV-021",
+        "FA-INV-023"
+      ],
+      "acceptance": [
+        "Deny-on-unknown authorization before expansion; top-k cannot prove absence.",
+        "Produce executed local evidence; source or prose alone does not close this packet."
+      ],
+      "owner_role": "systems",
+      "result_artifacts": []
+    },
+    {
+      "id": "FA-084",
+      "gate": "G2",
+      "title": "Close native search dependency graph",
+      "status": "planned",
+      "depends_on": [
+        "FA-083"
+      ],
+      "invariants": [
+        "FA-INV-029"
+      ],
+      "acceptance": [
+        "No ONNX/tokenizer foreign fallback in shipped profile.",
+        "Produce executed local evidence; source or prose alone does not close this packet."
+      ],
+      "owner_role": "systems",
+      "result_artifacts": []
+    },
+    {
+      "id": "FA-085",
+      "gate": "G0",
+      "title": "Define checked tensor capture ABI",
+      "status": "planned",
+      "depends_on": [
+        "FA-054"
+      ],
+      "invariants": [
+        "FA-INV-022",
+        "FA-INV-027"
+      ],
+      "acceptance": [
+        "Shapes/strides/aliases/byte bounds pinned and fuzzed.",
+        "Produce executed local evidence; source or prose alone does not close this packet."
+      ],
+      "owner_role": "systems",
+      "result_artifacts": []
+    },
+    {
+      "id": "FA-086",
+      "gate": "G2",
+      "title": "Close native numerical dependency graph",
+      "status": "planned",
+      "depends_on": [
+        "FA-085"
+      ],
+      "invariants": [
+        "FA-INV-029"
+      ],
+      "acceptance": [
+        "No Rayon/Python/BLAS fallback; admitted helper identities.",
+        "Produce executed local evidence; source or prose alone does not close this packet."
+      ],
+      "owner_role": "systems",
+      "result_artifacts": []
+    },
+    {
+      "id": "FA-087",
+      "gate": "G2",
+      "title": "Implement conservative linear margin bounds",
+      "status": "planned",
+      "depends_on": [
+        "FA-086"
+      ],
+      "invariants": [
+        "FA-INV-022"
+      ],
+      "acceptance": [
+        "Directed numeric bounds or exact arithmetic; boundary and overflow negatives.",
+        "Produce executed local evidence; source or prose alone does not close this packet."
+      ],
+      "owner_role": "systems",
+      "result_artifacts": []
+    },
+    {
+      "id": "FA-088",
+      "gate": "G2",
+      "title": "Run sensitivity-guided codec study",
+      "status": "planned",
+      "depends_on": [
+        "FA-087"
+      ],
+      "invariants": [
+        "FA-INV-027"
+      ],
+      "acceptance": [
+        "Untouched probe families; nonlinear local gradients remain advisory.",
+        "Produce executed local evidence; source or prose alone does not close this packet."
+      ],
+      "owner_role": "systems",
+      "result_artifacts": []
+    },
+    {
+      "id": "FA-089",
+      "gate": "G2",
+      "title": "Qualify Torch tap/gradient/restart bridge",
+      "status": "planned",
+      "depends_on": [
+        "FA-085",
+        "FA-086"
+      ],
+      "invariants": [
+        "FA-INV-025",
+        "FA-INV-027"
+      ],
+      "acceptance": [
+        "Actual cache/token/position/RNG state, no inferred public JVP API.",
+        "Produce executed local evidence; source or prose alone does not close this packet."
+      ],
+      "owner_role": "systems",
+      "result_artifacts": []
+    },
+    {
+      "id": "FA-090",
+      "gate": "G2",
+      "title": "Implement structural-sharing experiments",
+      "status": "planned",
+      "depends_on": [
+        "FA-089"
+      ],
+      "invariants": [
+        "FA-INV-025"
+      ],
+      "acceptance": [
+        "Share bytes but zero production rights; retained base lease tested.",
+        "Produce executed local evidence; source or prose alone does not close this packet."
+      ],
+      "owner_role": "systems",
+      "result_artifacts": []
+    },
+    {
+      "id": "FA-091",
+      "gate": "G2",
+      "title": "Implement bounded exact delta history",
+      "status": "planned",
+      "depends_on": [
+        "FA-090"
+      ],
+      "invariants": [
+        "FA-INV-025",
+        "FA-INV-027"
+      ],
+      "acceptance": [
+        "Chain-depth cap, rebase byte-equivalence and base-GC negatives.",
+        "Produce executed local evidence; source or prose alone does not close this packet."
+      ],
+      "owner_role": "systems",
+      "result_artifacts": []
+    },
+    {
+      "id": "FA-092",
+      "gate": "G0",
+      "title": "Define full trace independence relation",
+      "status": "planned",
+      "depends_on": [
+        "FA-057"
+      ],
+      "invariants": [
+        "FA-INV-028"
+      ],
+      "acceptance": [
+        "Reads, negative domains, RNG, resources and authority barriers included.",
+        "Produce executed local evidence; source or prose alone does not close this packet."
+      ],
+      "owner_role": "systems",
+      "result_artifacts": []
+    },
+    {
+      "id": "FA-093",
+      "gate": "G2",
+      "title": "Implement quotient replay oracle",
+      "status": "planned",
+      "depends_on": [
+        "FA-092"
+      ],
+      "invariants": [
+        "FA-INV-028"
+      ],
+      "acceptance": [
+        "Compare all small unreduced schedules; shared-read counterexamples.",
+        "Produce executed local evidence; source or prose alone does not close this packet."
+      ],
+      "owner_role": "systems",
+      "result_artifacts": []
+    },
+    {
+      "id": "FA-094",
+      "gate": "G2",
+      "title": "Qualify source ownership through cancellation",
+      "status": "planned",
+      "depends_on": [
+        "FA-064",
+        "FA-085"
+      ],
+      "invariants": [
+        "FA-INV-022"
+      ],
+      "acceptance": [
+        "No buffer reuse until actual host completion or retained unknown obligation.",
+        "Produce executed local evidence; source or prose alone does not close this packet."
+      ],
+      "owner_role": "systems",
+      "result_artifacts": []
+    },
+    {
+      "id": "FA-095",
+      "gate": "G2",
+      "title": "Define single-owner protection contracts",
+      "status": "planned",
+      "depends_on": [
+        "FA-065",
+        "FA-091"
+      ],
+      "invariants": [
+        "FA-INV-027"
+      ],
+      "acceptance": [
+        "Network/persistence FEC layers costed; no mixed EncodingId admission.",
+        "Produce executed local evidence; source or prose alone does not close this packet."
+      ],
+      "owner_role": "systems",
+      "result_artifacts": []
+    },
+    {
+      "id": "FA-096",
+      "gate": "G2",
+      "title": "Implement retention closure and nonresurrection",
+      "status": "planned",
+      "depends_on": [
+        "FA-090",
+        "FA-095"
+      ],
+      "invariants": [
+        "FA-INV-025",
+        "FA-INV-027"
+      ],
+      "acceptance": [
+        "Restore never revives spent rights; deletion defeats surviving repair symbols.",
+        "Produce executed local evidence; source or prose alone does not close this packet."
+      ],
+      "owner_role": "systems",
+      "result_artifacts": []
+    },
+    {
+      "id": "FA-097",
+      "gate": "G0",
+      "title": "Install DSR required local quality gates",
+      "status": "planned",
+      "depends_on": [
+        "FA-055",
+        "FA-056"
+      ],
+      "invariants": [
+        "FA-INV-030"
+      ],
+      "acceptance": [
+        "Missing/malformed/dry-run checks fail; logs outside immutable sources.",
+        "Produce executed local evidence; source or prose alone does not close this packet."
+      ],
+      "owner_role": "systems",
+      "result_artifacts": []
+    },
+    {
+      "id": "FA-098",
+      "gate": "G5",
+      "title": "Qualify local native target matrix",
+      "status": "planned",
+      "depends_on": [
+        "FA-097",
+        "FA-054"
+      ],
+      "invariants": [
+        "FA-INV-029",
+        "FA-INV-030"
+      ],
+      "acceptance": [
+        "All targets pass; pin compiler/source/feature closure and immutable outputs.",
+        "Produce executed local evidence; source or prose alone does not close this packet."
+      ],
+      "owner_role": "systems",
+      "result_artifacts": []
+    },
+    {
+      "id": "FA-099",
+      "gate": "G5",
+      "title": "Bind signed release proof closure",
+      "status": "planned",
+      "depends_on": [
+        "FA-098"
+      ],
+      "invariants": [
+        "FA-INV-030"
+      ],
+      "acceptance": [
+        "Exact asset inventory and downloaded verification; no fabricated key or release readiness.",
+        "Produce executed local evidence; source or prose alone does not close this packet."
+      ],
+      "owner_role": "systems",
+      "result_artifacts": []
+    },
+    {
+      "id": "FA-100",
+      "gate": "G5",
+      "title": "Test ambiguous publication and rollback",
+      "status": "planned",
+      "depends_on": [
+        "FA-099"
+      ],
+      "invariants": [
+        "FA-INV-030"
+      ],
+      "acceptance": [
+        "Record unknown exposure; re-draft not proof of nonpublication.",
+        "Produce executed local evidence; source or prose alone does not close this packet."
+      ],
+      "owner_role": "systems",
+      "result_artifacts": []
+    },
+    {
+      "id": "FA-101",
+      "gate": "G5",
+      "title": "Run joint reuse-transfer-incremental ablation",
+      "status": "planned",
+      "depends_on": [
+        "FA-067",
+        "FA-071",
+        "FA-079",
+        "FA-088"
+      ],
+      "invariants": [
+        "FA-INV-021",
+        "FA-INV-026",
+        "FA-INV-027"
+      ],
+      "acceptance": [
+        "No multiplication of isolated speedups; cold/policy-churn/tail conditions.",
+        "Produce executed local evidence; source or prose alone does not close this packet."
+      ],
+      "owner_role": "systems",
+      "result_artifacts": []
+    },
+    {
+      "id": "FA-102",
+      "gate": "G5",
+      "title": "Revalidate complete flagship local workflow",
+      "status": "planned",
+      "depends_on": [
+        "FA-062",
+        "FA-073",
+        "FA-082",
+        "FA-083",
+        "FA-094",
+        "FA-096",
+        "FA-100"
+      ],
+      "invariants": [
+        "FA-INV-001",
+        "FA-INV-003",
+        "FA-INV-021",
+        "FA-INV-022",
+        "FA-INV-023",
+        "FA-INV-024",
+        "FA-INV-025",
+        "FA-INV-030"
+      ],
+      "acceptance": [
+        "One real held/allowed brokered effect with exact view, witness, cut and recoverable outcome.",
+        "Produce executed local evidence; source or prose alone does not close this packet."
+      ],
+      "owner_role": "systems",
+      "result_artifacts": []
+    }
+  ]
+}

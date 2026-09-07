@@ -1,0 +1,100 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://frankenalignment.invalid/schemas/evidence_claim",
+  "title": "Draft EvidenceClaim",
+  "description": "Draft shape only; does not establish runtime authority, authenticity or semantic conformance.",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "const": "fa.claim/0.1"
+    },
+    "claim_id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128,
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:/-]{0,127}$"
+    },
+    "claim_class": {
+      "enum": [
+        "invariant",
+        "proof",
+        "bounded_model",
+        "statistical",
+        "benchmark",
+        "slo",
+        "hypothesis"
+      ]
+    },
+    "status": {
+      "enum": [
+        "proposed",
+        "observed_in_declared_scope"
+      ]
+    },
+    "assertion": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 2048
+    },
+    "scope": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 2048
+    },
+    "assumptions": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 1024
+      },
+      "minItems": 1,
+      "maxItems": 32
+    },
+    "limitations": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 1024
+      },
+      "minItems": 1,
+      "maxItems": 32
+    },
+    "source_refs": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 128,
+        "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:/-]{0,127}$"
+      },
+      "uniqueItems": true,
+      "maxItems": 64
+    },
+    "evidence_refs": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 64,
+        "maxLength": 64,
+        "pattern": "^[0-9a-f]{64}$"
+      },
+      "uniqueItems": true,
+      "maxItems": 64
+    }
+  },
+  "required": [
+    "schema_version",
+    "claim_id",
+    "claim_class",
+    "status",
+    "assertion",
+    "scope",
+    "assumptions",
+    "limitations",
+    "source_refs",
+    "evidence_refs"
+  ]
+}

@@ -1,0 +1,27 @@
+{
+  "schema_version": "fa.dependencies/0.2",
+  "reference_packages": [
+    "fa-reference",
+    "xtask"
+  ],
+  "external_exceptions": [],
+  "foundation_repositories": [
+    "Dicklesworthstone/asupersync",
+    "Dicklesworthstone/frankensqlite",
+    "Dicklesworthstone/frankenfs",
+    "Dicklesworthstone/frankensearch",
+    "Dicklesworthstone/franken_markdown",
+    "Dicklesworthstone/frankengraphdb",
+    "Dicklesworthstone/franken_networkx",
+    "Dicklesworthstone/franken_numpy",
+    "Dicklesworthstone/frankentorch"
+  ],
+  "product_language": "Rust",
+  "edition": "2024",
+  "unsafe_in_fa": "forbid",
+  "development_toolchain": "nightly",
+  "release_toolchain": "resolved_dated_identity_required",
+  "foundation_admissions": [],
+  "transitive_feature_audits": "pending",
+  "hosted_actions_required": false
+}

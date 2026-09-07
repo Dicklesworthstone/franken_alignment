@@ -1,0 +1,13 @@
+{
+  "design_version": "0.2",
+  "main_plan_words": 23980,
+  "deep_source_audit_words": 3514,
+  "reviewed_foundation_projects": 10,
+  "registered_source_paths": 41,
+  "roadmap_packets": 102,
+  "invariant_obligations": 30,
+  "rust_test_functions": 20,
+  "rust_tests_executed": false,
+  "external_reference_dependencies": 0,
+  "github_hosted_actions_required": false
+}

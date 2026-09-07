@@ -1,0 +1,513 @@
+{
+  "schema_version": "fa.sources/0.2",
+  "review_date": "2026-09-06",
+  "unresolved_inputs": [],
+  "sources": [
+    {
+      "id": "F-ALIGN",
+      "kind": "github_file",
+      "repository": "Dicklesworthstone/some_thoughts_on_ai_alignment",
+      "path": "README.md",
+      "url": "https://github.com/Dicklesworthstone/some_thoughts_on_ai_alignment/blob/main/README.md",
+      "git_blob_sha": "05b4bd5a5a63f082f46e7411861c788ae3e2dc69",
+      "git_commit_sha": null,
+      "read_scope": "full_text",
+      "requested_line_ranges": [
+        [
+          1,
+          130
+        ]
+      ],
+      "retrieved_on": "2026-09-06",
+      "independently_built_or_benchmarked": false,
+      "note": "Requested range may exceed file length; truncated entries do not imply the full requested range was read. Blob IDs are not commit pins."
+    },
+    {
+      "id": "F-INTROSPECT",
+      "kind": "github_file",
+      "repository": "Dicklesworthstone/llm_introspective_compression_and_metacognition",
+      "path": "README.md",
+      "url": "https://github.com/Dicklesworthstone/llm_introspective_compression_and_metacognition/blob/main/README.md",
+      "git_blob_sha": "696de575fe8a7555433c2d3e93eb6cc68762a663",
+      "git_commit_sha": null,
+      "read_scope": "full_text",
+      "requested_line_ranges": [
+        [
+          1,
+          1190
+        ]
+      ],
+      "retrieved_on": "2026-09-06",
+      "independently_built_or_benchmarked": false,
+      "note": "Requested range may exceed file length; truncated entries do not imply the full requested range was read. Blob IDs are not commit pins."
+    },
+    {
+      "id": "F-INTROSPECT-CHANGELOG",
+      "kind": "github_file",
+      "repository": "Dicklesworthstone/llm_introspective_compression_and_metacognition",
+      "path": "CHANGELOG.md",
+      "url": "https://github.com/Dicklesworthstone/llm_introspective_compression_and_metacognition/blob/main/CHANGELOG.md",
+      "git_blob_sha": "f2f4727c40d0a9357e64eb6ff7af8fef72afc2f9",
+      "git_commit_sha": null,
+      "read_scope": "full_text",
+      "requested_line_ranges": [
+        [
+          1,
+          210
+        ]
+      ],
+      "retrieved_on": "2026-09-06",
+      "independently_built_or_benchmarked": false,
+      "note": "Requested range may exceed file length; truncated entries do not imply the full requested range was read. Blob IDs are not commit pins."
+    },
+    {
+      "id": "F-INTROSPECT-LICENSE",
+      "kind": "github_file",
+      "repository": "Dicklesworthstone/llm_introspective_compression_and_metacognition",
+      "path": "LICENSE",
+      "url": "https://github.com/Dicklesworthstone/llm_introspective_compression_and_metacognition/blob/main/LICENSE",
+      "git_blob_sha": "3d414da6ff83defe084707be6030866e8a7fb794",
+      "git_commit_sha": null,
+      "read_scope": "full_text",
+      "requested_line_ranges": null,
+      "retrieved_on": "2026-09-06",
+      "independently_built_or_benchmarked": false,
+      "note": "Requested range may exceed file length; truncated entries do not imply the full requested range was read. Blob IDs are not commit pins."
+    },
+    {
+      "id": "A-README",
+      "kind": "github_file",
+      "repository": "Dicklesworthstone/asupersync",
+      "path": "README.md",
+      "url": "https://github.com/Dicklesworthstone/asupersync/blob/main/README.md",
+      "git_blob_sha": null,
+      "git_commit_sha": null,
+      "read_scope": "returned_excerpt_truncated",
+      "requested_line_ranges": [
+        [
+          1,
+          300
+        ]
+      ],
+      "retrieved_on": "2026-09-06",
+      "independently_built_or_benchmarked": false,
+      "note": "Requested range may exceed file length; truncated entries do not imply the full requested range was read. Blob IDs are not commit pins."
+    },
+    {
+      "id": "A-EPROCESS",
+      "kind": "github_file",
+      "repository": "Dicklesworthstone/asupersync",
+      "path": "src/obligation/eprocess.rs",
+      "url": "https://github.com/Dicklesworthstone/asupersync/blob/main/src/obligation/eprocess.rs",
+      "git_blob_sha": "e35ea3d6f748eb99ca89bc5fdeb4c36182be09f3",
+      "git_commit_sha": null,
+      "read_scope": "complete_requested_excerpt",
+      "requested_line_ranges": [
+        [
+          1,
+          315
+        ]
+      ],
+      "retrieved_on": "2026-09-06",
+      "independently_built_or_benchmarked": false,
+      "note": "Requested range may exceed file length; truncated entries do not imply the full requested range was read. Blob IDs are not commit pins."
+    },
+    {
+      "id": "SQL-README",
+      "kind": "github_file",
+      "repository": "Dicklesworthstone/frankensqlite",
+      "path": "README.md",
+      "url": "https://github.com/Dicklesworthstone/frankensqlite/blob/main/README.md",
+      "git_blob_sha": "6b351c7fefcaa0e1d9cbbdb58e00bae31ade5403",
+      "git_commit_sha": null,
+      "read_scope": "complete_requested_excerpt",
+      "requested_line_ranges": [
+        [
+          1,
+          170
+        ]
+      ],
+      "retrieved_on": "2026-09-06",
+      "independently_built_or_benchmarked": false,
+      "note": "Requested range may exceed file length; truncated entries do not imply the full requested range was read. Blob IDs are not commit pins."
+    },
+    {
+      "id": "SQL-CARGO",
+      "kind": "github_file",
+      "repository": "Dicklesworthstone/frankensqlite",
+      "path": "Cargo.toml",
+      "url": "https://github.com/Dicklesworthstone/frankensqlite/blob/main/Cargo.toml",
+      "git_blob_sha": "308e59b723fffead762cf707651f8f7a31ba0193",
+      "git_commit_sha": null,
+      "read_scope": "complete_requested_excerpt",
+      "requested_line_ranges": [
+        [
+          1,
+          150
+        ]
+      ],
+      "retrieved_on": "2026-09-06",
+      "independently_built_or_benchmarked": false,
+      "note": "Requested range may exceed file length; truncated entries do not imply the full requested range was read. Blob IDs are not commit pins."
+    },
+    {
+      "id": "SQL-FACADE",
+      "kind": "github_file",
+      "repository": "Dicklesworthstone/frankensqlite",
+      "path": "crates/fsqlite/src/lib.rs",
+      "url": "https://github.com/Dicklesworthstone/frankensqlite/blob/main/crates/fsqlite/src/lib.rs",
+      "git_blob_sha": "01bc67edd580d574e32a0723f2ddbf6c5e876fe2",
+      "git_commit_sha": null,
+      "read_scope": "complete_requested_excerpt",
+      "requested_line_ranges": [
+        [
+          1,
+          170
+        ]
+      ],
+      "retrieved_on": "2026-09-06",
+      "independently_built_or_benchmarked": false,
+      "note": "Requested range may exceed file length; truncated entries do not imply the full requested range was read. Blob IDs are not commit pins."
+    },
+    {
+      "id": "FS-README",
+      "kind": "github_file",
+      "repository": "Dicklesworthstone/frankenfs",
+      "path": "README.md",
+      "url": "https://github.com/Dicklesworthstone/frankenfs/blob/main/README.md",
+      "git_blob_sha": null,
+      "git_commit_sha": null,
+      "read_scope": "returned_excerpt_truncated",
+      "requested_line_ranges": [
+        [
+          1,
+          190
+        ]
+      ],
+      "retrieved_on": "2026-09-06",
+      "independently_built_or_benchmarked": false,
+      "note": "Requested range may exceed file length; truncated entries do not imply the full requested range was read. Blob IDs are not commit pins."
+    },
+    {
+      "id": "FS-REPAIR",
+      "kind": "github_file",
+      "repository": "Dicklesworthstone/frankenfs",
+      "path": "crates/ffs-repair/src/lib.rs",
+      "url": "https://github.com/Dicklesworthstone/frankenfs/blob/main/crates/ffs-repair/src/lib.rs",
+      "git_blob_sha": "ed662a82132b48cec99c831404c6fec093d3af76",
+      "git_commit_sha": null,
+      "read_scope": "full_text",
+      "requested_line_ranges": [
+        [
+          1,
+          130
+        ]
+      ],
+      "retrieved_on": "2026-09-06",
+      "independently_built_or_benchmarked": false,
+      "note": "Requested range may exceed file length; truncated entries do not imply the full requested range was read. Blob IDs are not commit pins."
+    },
+    {
+      "id": "SEARCH-README",
+      "kind": "github_file",
+      "repository": "Dicklesworthstone/frankensearch",
+      "path": "README.md",
+      "url": "https://github.com/Dicklesworthstone/frankensearch/blob/main/README.md",
+      "git_blob_sha": "def30fd7904c52967ca2e1da2cb743b022207e79",
+      "git_commit_sha": null,
+      "read_scope": "complete_requested_excerpt",
+      "requested_line_ranges": [
+        [
+          1,
+          180
+        ]
+      ],
+      "retrieved_on": "2026-09-06",
+      "independently_built_or_benchmarked": false,
+      "note": "Requested range may exceed file length; truncated entries do not imply the full requested range was read. Blob IDs are not commit pins."
+    },
+    {
+      "id": "SEARCH-CORE",
+      "kind": "github_file",
+      "repository": "Dicklesworthstone/frankensearch",
+      "path": "crates/frankensearch-core/src/lib.rs",
+      "url": "https://github.com/Dicklesworthstone/frankensearch/blob/main/crates/frankensearch-core/src/lib.rs",
+      "git_blob_sha": "2366bed59cb836b2f4750d234c33d419e9b6d533",
+      "git_commit_sha": null,
+      "read_scope": "complete_requested_excerpt",
+      "requested_line_ranges": [
+        [
+          1,
+          150
+        ]
+      ],
+      "retrieved_on": "2026-09-06",
+      "independently_built_or_benchmarked": false,
+      "note": "Requested range may exceed file length; truncated entries do not imply the full requested range was read. Blob IDs are not commit pins."
+    },
+    {
+      "id": "MD-README",
+      "kind": "github_file",
+      "repository": "Dicklesworthstone/franken_markdown",
+      "path": "README.md",
+      "url": "https://github.com/Dicklesworthstone/franken_markdown/blob/main/README.md",
+      "git_blob_sha": "19ca98389b6859a430191872835dae547ed6ef60",
+      "git_commit_sha": null,
+      "read_scope": "complete_requested_excerpt",
+      "requested_line_ranges": [
+        [
+          1,
+          200
+        ]
+      ],
+      "retrieved_on": "2026-09-06",
+      "independently_built_or_benchmarked": false,
+      "note": "Requested range may exceed file length; truncated entries do not imply the full requested range was read. Blob IDs are not commit pins."
+    },
+    {
+      "id": "MD-CORE",
+      "kind": "github_file",
+      "repository": "Dicklesworthstone/franken_markdown",
+      "path": "src/lib.rs",
+      "url": "https://github.com/Dicklesworthstone/franken_markdown/blob/main/src/lib.rs",
+      "git_blob_sha": "920aadf93c6281fe83ed9a7f030dabe10834394f",
+      "git_commit_sha": null,
+      "read_scope": "complete_requested_excerpt",
+      "requested_line_ranges": [
+        [
+          1,
+          150
+        ]
+      ],
+      "retrieved_on": "2026-09-06",
+      "independently_built_or_benchmarked": false,
+      "note": "Requested range may exceed file length; truncated entries do not imply the full requested range was read. Blob IDs are not commit pins."
+    },
+    {
+      "id": "GRAPH-README",
+      "kind": "github_file",
+      "repository": "Dicklesworthstone/frankengraphdb",
+      "path": "README.md",
+      "url": "https://github.com/Dicklesworthstone/frankengraphdb/blob/main/README.md",
+      "git_blob_sha": null,
+      "git_commit_sha": null,
+      "read_scope": "returned_excerpt_truncated",
+      "requested_line_ranges": [
+        [
+          1,
+          200
+        ]
+      ],
+      "retrieved_on": "2026-09-06",
+      "independently_built_or_benchmarked": false,
+      "note": "Requested range may exceed file length; truncated entries do not imply the full requested range was read. Blob IDs are not commit pins."
+    },
+    {
+      "id": "GRAPH-PLAN",
+      "kind": "github_file",
+      "repository": "Dicklesworthstone/frankengraphdb",
+      "path": "COMPREHENSIVE_PLAN_FOR_THE_DESIGN_OF_FRANKENGRAPHDB.md",
+      "url": "https://github.com/Dicklesworthstone/frankengraphdb/blob/main/COMPREHENSIVE_PLAN_FOR_THE_DESIGN_OF_FRANKENGRAPHDB.md",
+      "git_blob_sha": "5ec070017586a766b64f4e65bae5d39cd595f373",
+      "git_commit_sha": null,
+      "read_scope": "targeted_architecture_contract_verification_and_gate_sections",
+      "requested_line_ranges": null,
+      "retrieved_on": "2026-09-06",
+      "independently_built_or_benchmarked": false,
+      "note": "Requested range may exceed file length; truncated entries do not imply the full requested range was read. Blob IDs are not commit pins."
+    },
+    {
+      "id": "NUMPY-README",
+      "kind": "github_file",
+      "repository": "Dicklesworthstone/franken_numpy",
+      "path": "README.md",
+      "url": "https://github.com/Dicklesworthstone/franken_numpy/blob/main/README.md",
+      "git_blob_sha": null,
+      "git_commit_sha": null,
+      "read_scope": "returned_excerpt_truncated",
+      "requested_line_ranges": [
+        [
+          1,
+          220
+        ]
+      ],
+      "retrieved_on": "2026-09-06",
+      "independently_built_or_benchmarked": false,
+      "note": "Requested range may exceed file length; truncated entries do not imply the full requested range was read. Blob IDs are not commit pins."
+    },
+    {
+      "id": "NUMPY-RUNTIME",
+      "kind": "github_file",
+      "repository": "Dicklesworthstone/franken_numpy",
+      "path": "crates/fnp-runtime/src/lib.rs",
+      "url": "https://github.com/Dicklesworthstone/franken_numpy/blob/main/crates/fnp-runtime/src/lib.rs",
+      "git_blob_sha": "5e16364aa844b788e9a1dd316dd810ec6cf64b62",
+      "git_commit_sha": null,
+      "read_scope": "complete_requested_excerpt",
+      "requested_line_ranges": [
+        [
+          1,
+          140
+        ]
+      ],
+      "retrieved_on": "2026-09-06",
+      "independently_built_or_benchmarked": false,
+      "note": "Requested range may exceed file length; truncated entries do not imply the full requested range was read. Blob IDs are not commit pins."
+    },
+    {
+      "id": "TORCH-README",
+      "kind": "github_file",
+      "repository": "Dicklesworthstone/frankentorch",
+      "path": "README.md",
+      "url": "https://github.com/Dicklesworthstone/frankentorch/blob/main/README.md",
+      "git_blob_sha": "b35abd0ae71941271dc96f5055c97a683c4b4e06",
+      "git_commit_sha": null,
+      "read_scope": "full_text",
+      "requested_line_ranges": [
+        [
+          1,
+          190
+        ]
+      ],
+      "retrieved_on": "2026-09-06",
+      "independently_built_or_benchmarked": false,
+      "note": "Requested range may exceed file length; truncated entries do not imply the full requested range was read. Blob IDs are not commit pins."
+    },
+    {
+      "id": "TORCH-RUNTIME",
+      "kind": "github_file",
+      "repository": "Dicklesworthstone/frankentorch",
+      "path": "crates/ft-runtime/src/lib.rs",
+      "url": "https://github.com/Dicklesworthstone/frankentorch/blob/main/crates/ft-runtime/src/lib.rs",
+      "git_blob_sha": "57fcaeb365f5da5cdec5ef73e5f5804b1ae3cf00",
+      "git_commit_sha": null,
+      "read_scope": "complete_requested_excerpt",
+      "requested_line_ranges": [
+        [
+          1,
+          155
+        ]
+      ],
+      "retrieved_on": "2026-09-06",
+      "independently_built_or_benchmarked": false,
+      "note": "Requested range may exceed file length; truncated entries do not imply the full requested range was read. Blob IDs are not commit pins."
+    },
+    {
+      "id": "P-CONTROL",
+      "kind": "primary_research",
+      "title": "AI Control: Improving Safety Despite Intentional Subversion",
+      "url": "https://arxiv.org/abs/2312.06942v5",
+      "published_or_submitted": "2023-12-12",
+      "revision_date": "2024-07-23",
+      "retrieved_on": "2026-09-06",
+      "read_scope": "abstract_and_metadata",
+      "experiments_reproduced": false
+    },
+    {
+      "id": "P-REFUSAL",
+      "kind": "primary_research",
+      "title": "Refusal in Language Models Is Mediated by a Single Direction",
+      "url": "https://arxiv.org/abs/2406.11717v3",
+      "published_or_submitted": "2024-06-17",
+      "revision_date": "2024-10-30",
+      "retrieved_on": "2026-09-06",
+      "read_scope": "abstract_and_metadata",
+      "experiments_reproduced": false
+    },
+    {
+      "id": "P-KIVI",
+      "kind": "primary_research",
+      "title": "KIVI: A Tuning-Free Asymmetric 2bit Quantization for KV Cache",
+      "url": "https://arxiv.org/abs/2402.02750v2",
+      "published_or_submitted": "2024-02-05",
+      "revision_date": "2024-07-25",
+      "retrieved_on": "2026-09-06",
+      "read_scope": "abstract_and_metadata",
+      "experiments_reproduced": false
+    },
+    {
+      "id": "P-ADAPTIVE",
+      "kind": "primary_research",
+      "title": "Adaptive Attacks on Trusted Monitors Subvert AI Control Protocols",
+      "url": "https://arxiv.org/abs/2510.09462v2",
+      "published_or_submitted": "2025-10-10",
+      "revision_date": "2026-03-02",
+      "retrieved_on": "2026-09-06",
+      "read_scope": "abstract_and_metadata",
+      "experiments_reproduced": false
+    },
+    {
+      "id": "P-ENSEMBLE",
+      "kind": "primary_research",
+      "title": "Ensemble Monitoring for AI Control: Diverse Signals Outweigh More Compute",
+      "url": "https://arxiv.org/abs/2605.15377v2",
+      "published_or_submitted": "2026-05-14",
+      "revision_date": "2026-05-18",
+      "retrieved_on": "2026-09-06",
+      "read_scope": "abstract_and_metadata",
+      "experiments_reproduced": false
+    },
+    {
+      "id": "P-MULTI",
+      "kind": "primary_research",
+      "title": "Multi-Agent AI Control: Distributed Attacks Hamper Per-Instance Monitors",
+      "url": "https://arxiv.org/abs/2607.07368v1",
+      "published_or_submitted": "2026-07-08",
+      "revision_date": null,
+      "retrieved_on": "2026-09-06",
+      "read_scope": "abstract_and_metadata",
+      "experiments_reproduced": false
+    },
+    {
+      "id": "P-CS",
+      "kind": "primary_research",
+      "title": "Time-uniform, nonparametric, nonasymptotic confidence sequences",
+      "url": "https://arxiv.org/abs/1810.08240v9",
+      "published_or_submitted": "2018-10-18",
+      "revision_date": "2022-08-06",
+      "retrieved_on": "2026-09-06",
+      "read_scope": "abstract_and_metadata",
+      "experiments_reproduced": false
+    },
+    {
+      "id": "P-CONFORMAL",
+      "kind": "primary_research",
+      "title": "A Gentle Introduction to Conformal Prediction and Distribution-Free Uncertainty Quantification",
+      "url": "https://arxiv.org/abs/2107.07511v6",
+      "published_or_submitted": "2021-07-15",
+      "revision_date": "2022-12-07",
+      "retrieved_on": "2026-09-06",
+      "read_scope": "abstract_and_metadata",
+      "experiments_reproduced": false
+    },
+    {
+      "id": "P-INTROSPECTION",
+      "kind": "primary_research_announcement",
+      "title": "Signs of introspection in large language models",
+      "url": "https://www.anthropic.com/research/introspection",
+      "published_or_submitted": "2025-10-29",
+      "retrieved_on": "2026-09-06",
+      "read_scope": "research_announcement",
+      "experiments_reproduced": false
+    },
+    {
+      "id": "P-NLA",
+      "kind": "primary_research_excerpt",
+      "title": "Natural Language Autoencoders Produce Unsupervised Explanations of LLM Activations",
+      "url": "https://www.transformer-circuits.pub/2026/nla/index.html",
+      "published_or_submitted": "2026-05-07",
+      "retrieved_on": "2026-09-06",
+      "read_scope": "primary_search_excerpt_only_full_fetch_exceeded_size_limit",
+      "experiments_reproduced": false
+    },
+    {
+      "id": "PUB-GH",
+      "kind": "official_documentation",
+      "url": "https://cli.github.com/manual/gh_repo_create",
+      "retrieved_on": "2026-09-06",
+      "read_scope": "command_documentation",
+      "note": "Publish script requires local owner authentication; remote execution was not tested."
+    }
+  ],
+  "revision_0_2_source_inventory": "registry/foundation_audit.json"
+}

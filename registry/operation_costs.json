@@ -1,0 +1,166 @@
+{
+  "schema_version": "fa.costs/0.2",
+  "operations": [
+    {
+      "id": "OP-PREPARE",
+      "operation": "Acknowledge durable preparation",
+      "profile": "strict_single_authority_proposal",
+      "ordered_control_commits": 1,
+      "external_effect_admissions": 0,
+      "additional_object_publication": "Profile- and closure-dependent; must be measured separately.",
+      "status": "proposed_unmeasured",
+      "notes": "Registration acknowledged only after its durability contract."
+    },
+    {
+      "id": "OP-AUTHORIZE",
+      "operation": "Publish authorization and reserve rights",
+      "profile": "strict_single_authority_proposal",
+      "ordered_control_commits": 1,
+      "external_effect_admissions": 0,
+      "additional_object_publication": "Profile- and closure-dependent; must be measured separately.",
+      "status": "proposed_unmeasured",
+      "notes": "Required evidence objects already available under the policy profile."
+    },
+    {
+      "id": "OP-DISPATCH",
+      "operation": "Spend permit and admit dispatch",
+      "profile": "strict_single_authority_proposal",
+      "ordered_control_commits": 1,
+      "external_effect_admissions": 1,
+      "additional_object_publication": "Profile- and closure-dependent; must be measured separately.",
+      "status": "proposed_unmeasured",
+      "notes": "Ordered durable spending before invoking external adapter."
+    },
+    {
+      "id": "OP-RESOLVE",
+      "operation": "Record outcome or unknown",
+      "profile": "strict_single_authority_proposal",
+      "ordered_control_commits": 1,
+      "external_effect_admissions": 0,
+      "additional_object_publication": "Profile- and closure-dependent; must be measured separately.",
+      "status": "proposed_unmeasured",
+      "notes": "Remote outcome trust/idempotency is adapter-specific."
+    },
+    {
+      "id": "OP-REVOKE",
+      "operation": "Advance authority epoch",
+      "profile": "strict_single_authority_proposal",
+      "ordered_control_commits": 1,
+      "external_effect_admissions": 0,
+      "additional_object_publication": "Profile- and closure-dependent; must be measured separately.",
+      "status": "proposed_unmeasured",
+      "notes": "Orders against local dispatch admission, not retroactively against remote effects."
+    },
+    {
+      "id": "OP-READ",
+      "operation": "Read a retained local decision",
+      "profile": "strict_single_authority_proposal",
+      "ordered_control_commits": 0,
+      "external_effect_admissions": 0,
+      "additional_object_publication": "Profile- and closure-dependent; must be measured separately.",
+      "status": "proposed_unmeasured",
+      "notes": "Distributed profiles may add a consistency fence."
+    },
+    {
+      "id": "OP-WITNESS-CHECK",
+      "operation": "Validate a reusable judgment",
+      "profile": "revision_0_2_proposed",
+      "ordered_control_commits": null,
+      "control_ordering_contract": "0 unless publishing a new control decision",
+      "external_effect_admissions": 0,
+      "additional_object_publication": "Explicit per-operation storage profile and full evidence closure required before activation.",
+      "status": "proposed_unmeasured",
+      "notes": "Affected witness lookup/refinement plus complete delta-tail validation; authorizing/dispatching remain separate charged operations."
+    },
+    {
+      "id": "OP-VIEW-SEAL",
+      "operation": "Seal an actual helper view",
+      "profile": "revision_0_2_proposed",
+      "ordered_control_commits": null,
+      "control_ordering_contract": "0 authority commands; evidence-object publication required",
+      "external_effect_admissions": 0,
+      "additional_object_publication": "Explicit per-operation storage profile and full evidence closure required before activation.",
+      "status": "proposed_unmeasured",
+      "notes": "Hash original/transformed/submitted bytes, charge redaction/window work and retention; no universal fsync count until storage profile is frozen."
+    },
+    {
+      "id": "OP-PREFIX-ADMIT",
+      "operation": "Admit a verified contiguous evidence prefix",
+      "profile": "revision_0_2_proposed",
+      "ordered_control_commits": null,
+      "control_ordering_contract": "0 authority commands",
+      "external_effect_admissions": 0,
+      "additional_object_publication": "Explicit per-operation storage profile and full evidence closure required before activation.",
+      "status": "proposed_unmeasured",
+      "notes": "Authenticate gaps/closing markers and journal state; no missing-prefix shortcut; durable receipt cost profile-dependent."
+    },
+    {
+      "id": "OP-RECEIVER-REFINE",
+      "operation": "Transfer exact delta or permitted progressive representation",
+      "profile": "revision_0_2_proposed",
+      "ordered_control_commits": null,
+      "control_ordering_contract": "0 authority commands",
+      "external_effect_admissions": 0,
+      "additional_object_publication": "Explicit per-operation storage profile and full evidence closure required before activation.",
+      "status": "proposed_unmeasured",
+      "notes": "Full envelopes/feedback/auth/base lookup/decoder and memory work; literal fallback included; wire bytes are not just latent length."
+    },
+    {
+      "id": "OP-GRAPH-CUT",
+      "operation": "Compile and independently verify a candidate authority cut",
+      "profile": "revision_0_2_proposed",
+      "ordered_control_commits": null,
+      "control_ordering_contract": "0 for analysis; activating topology/certificate validity uses ordered policy path",
+      "external_effect_admissions": 0,
+      "additional_object_publication": "Explicit per-operation storage profile and full evidence closure required before activation.",
+      "status": "proposed_unmeasured",
+      "notes": "Projection memory and sparse/dense solver storage checked before allocation; independent reachability work also charged."
+    },
+    {
+      "id": "OP-VIEW-DELTA",
+      "operation": "Maintain a registered oversight view",
+      "profile": "revision_0_2_proposed",
+      "ordered_control_commits": null,
+      "control_ordering_contract": "0 additional authority commands for derived maintenance",
+      "external_effect_admissions": 0,
+      "additional_object_publication": "Explicit per-operation storage profile and full evidence closure required before activation.",
+      "status": "proposed_unmeasured",
+      "notes": "Canonical mutation input already paid; support/retractions/spill/rebuild and complete frontier verification are included."
+    },
+    {
+      "id": "OP-EXPERIMENT-FORK",
+      "operation": "Create capability-free structural-sharing experiment",
+      "profile": "revision_0_2_proposed",
+      "ordered_control_commits": null,
+      "control_ordering_contract": "0 production authority grants",
+      "external_effect_admissions": 0,
+      "additional_object_publication": "Explicit per-operation storage profile and full evidence closure required before activation.",
+      "status": "proposed_unmeasured",
+      "notes": "Metadata/key-envelope/pin/storage publication cost nonzero even when copied tensor bytes are zero."
+    },
+    {
+      "id": "OP-TRACE-REDUCE",
+      "operation": "Canonicalize a lawfully independent trace",
+      "profile": "revision_0_2_proposed",
+      "ordered_control_commits": null,
+      "control_ordering_contract": "0 authority commands",
+      "external_effect_admissions": 0,
+      "additional_object_publication": "Explicit per-operation storage profile and full evidence closure required before activation.",
+      "status": "proposed_unmeasured",
+      "notes": "Read/write/domain/resource relation validation plus canonicalization; unsafe unknown relation preserves order."
+    },
+    {
+      "id": "OP-LOCAL-RELEASE",
+      "operation": "Qualify and explicitly publish a production release",
+      "profile": "revision_0_2_proposed",
+      "ordered_control_commits": null,
+      "control_ordering_contract": "Explicit operator campaign; not a broker control-log count",
+      "external_effect_admissions": 1,
+      "additional_object_publication": "Explicit per-operation storage profile and full evidence closure required before activation.",
+      "status": "proposed_unmeasured",
+      "notes": "All native targets/gates, signed closure, exact downloaded asset verification and ambiguous-publication reconciliation; currently blocked."
+    }
+  ],
+  "logical_to_physical_rule": "Each storage profile must explicitly map logical commits to fsync/directory/replication barriers. Group commit amortizes physical work but does not erase causal order.",
+  "normal_fully_acknowledged_path_control_stages": 4
+}

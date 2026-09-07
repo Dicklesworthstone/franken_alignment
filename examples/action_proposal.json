@@ -1,0 +1,17 @@
+{
+  "schema_version": "fa.action/0.1",
+  "action_id": "action:example",
+  "tenant_id": "tenant:example",
+  "run_id": "run:example",
+  "branch": "sandbox",
+  "effect_kind": "publish_artifact",
+  "adapter_id": "adapter:example-only",
+  "target_binding": "registry:disposable",
+  "payload_sha256": "50d858e0985ecc7f60418aaf0cc5ab587f42c2570a884095a9e8ccacd0f6545c",
+  "payload_bytes": 7,
+  "units": 1,
+  "policy_epoch": 1,
+  "required_observations": [
+    "artifact-review"
+  ]
+}

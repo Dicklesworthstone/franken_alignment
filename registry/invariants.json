@@ -1,0 +1,651 @@
+{
+  "schema_version": "fa.invariants/0.2",
+  "invariants": [
+    {
+      "id": "FA-INV-001",
+      "title": "Exact frozen effect binding",
+      "claim_class": "invariant",
+      "statement": "Exact canonical action, target, tenant, run, purpose and limits must match the admitted permit.",
+      "owner_role": "gate",
+      "activation_gate": "G1",
+      "production_status": "planned",
+      "waiver": "forbidden",
+      "production_checker": null,
+      "reference_checks": [
+        "crates/fa-reference/src/lib.rs::tests::effect_binding_and_one_shot_dispatch"
+      ],
+      "reference_scope": "Selected single-process in-memory behavior only; no durable, concurrent, OS, remote or model-accuracy claim.",
+      "required_negative_campaigns": [
+        "Exact frozen effect binding violation must be rejected without widening authority; real boundary tested at activation."
+      ],
+      "assumptions": [
+        "Registered profile and trusted enforcement boundary execute their specified behavior."
+      ],
+      "evidence_artifacts": [],
+      "reference_status": "source_present_not_executed"
+    },
+    {
+      "id": "FA-INV-002",
+      "title": "At-most-once permit consumption",
+      "claim_class": "invariant",
+      "statement": "One permit is spent no more than once in its authority domain.",
+      "owner_role": "gate",
+      "activation_gate": "G1",
+      "production_status": "planned",
+      "waiver": "forbidden",
+      "production_checker": null,
+      "reference_checks": [
+        "crates/fa-reference/src/lib.rs::tests::effect_binding_and_one_shot_dispatch"
+      ],
+      "reference_scope": "Selected single-process in-memory behavior only; no durable, concurrent, OS, remote or model-accuracy claim.",
+      "required_negative_campaigns": [
+        "At-most-once permit consumption violation must be rejected without widening authority; real boundary tested at activation."
+      ],
+      "assumptions": [
+        "Registered profile and trusted enforcement boundary execute their specified behavior."
+      ],
+      "evidence_artifacts": [],
+      "reference_status": "source_present_not_executed"
+    },
+    {
+      "id": "FA-INV-003",
+      "title": "Current authority fence",
+      "claim_class": "invariant",
+      "statement": "Dispatch admission orders against the current policy and revocation epoch.",
+      "owner_role": "gate",
+      "activation_gate": "G1",
+      "production_status": "planned",
+      "waiver": "forbidden",
+      "production_checker": null,
+      "reference_checks": [
+        "crates/fa-reference/src/lib.rs::tests::revocation_fences_reserved_not_history"
+      ],
+      "reference_scope": "Selected single-process in-memory behavior only; no durable, concurrent, OS, remote or model-accuracy claim.",
+      "required_negative_campaigns": [
+        "Current authority fence violation must be rejected without widening authority; real boundary tested at activation."
+      ],
+      "assumptions": [
+        "Registered profile and trusted enforcement boundary execute their specified behavior."
+      ],
+      "evidence_artifacts": [],
+      "reference_status": "source_present_not_executed"
+    },
+    {
+      "id": "FA-INV-004",
+      "title": "No implicit widening on lost evidence",
+      "claim_class": "invariant",
+      "statement": "Missing prerequisites may not silently select more permissive authority.",
+      "owner_role": "policy",
+      "activation_gate": "G1",
+      "production_status": "planned",
+      "waiver": "forbidden",
+      "production_checker": null,
+      "reference_checks": [],
+      "reference_scope": "Selected single-process in-memory behavior only; no durable, concurrent, OS, remote or model-accuracy claim.",
+      "required_negative_campaigns": [
+        "No implicit widening on lost evidence violation must be rejected without widening authority; real boundary tested at activation."
+      ],
+      "assumptions": [
+        "Registered profile and trusted enforcement boundary execute their specified behavior."
+      ],
+      "evidence_artifacts": [],
+      "reference_status": "not_implemented_in_rust_revision"
+    },
+    {
+      "id": "FA-INV-005",
+      "title": "Resource conservation",
+      "claim_class": "invariant",
+      "statement": "Nonnegative available, reserved and spent rights sum to the total; delegation does not duplicate rights.",
+      "owner_role": "ledger",
+      "activation_gate": "G1",
+      "production_status": "planned",
+      "waiver": "forbidden",
+      "production_checker": null,
+      "reference_checks": [],
+      "reference_scope": "Selected single-process in-memory behavior only; no durable, concurrent, OS, remote or model-accuracy claim.",
+      "required_negative_campaigns": [
+        "Resource conservation violation must be rejected without widening authority; real boundary tested at activation."
+      ],
+      "assumptions": [
+        "Registered profile and trusted enforcement boundary execute their specified behavior."
+      ],
+      "evidence_artifacts": [],
+      "reference_status": "not_implemented_in_rust_revision"
+    },
+    {
+      "id": "FA-INV-006",
+      "title": "Conservative unknown outcomes",
+      "claim_class": "invariant",
+      "statement": "Unknown external effects are not silently retried, cancelled or refunded.",
+      "owner_role": "gate",
+      "activation_gate": "G1",
+      "production_status": "planned",
+      "waiver": "forbidden",
+      "production_checker": null,
+      "reference_checks": [
+        "crates/fa-reference/src/lib.rs::tests::rights_unknown_cannot_be_refunded_by_cancel"
+      ],
+      "reference_scope": "Selected single-process in-memory behavior only; no durable, concurrent, OS, remote or model-accuracy claim.",
+      "required_negative_campaigns": [
+        "Conservative unknown outcomes violation must be rejected without widening authority; real boundary tested at activation."
+      ],
+      "assumptions": [
+        "Registered profile and trusted enforcement boundary execute their specified behavior."
+      ],
+      "evidence_artifacts": [],
+      "reference_status": "source_present_not_executed"
+    },
+    {
+      "id": "FA-INV-007",
+      "title": "Decision closure honesty",
+      "claim_class": "invariant",
+      "statement": "Every promised strong reference resolves for its contracted horizon or yields a typed gap.",
+      "owner_role": "evidence",
+      "activation_gate": "G2",
+      "production_status": "planned",
+      "waiver": "forbidden",
+      "production_checker": null,
+      "reference_checks": [],
+      "reference_scope": "No executable coverage of this production obligation yet.",
+      "required_negative_campaigns": [
+        "Decision closure honesty violation must be rejected without widening authority; real boundary tested at activation."
+      ],
+      "assumptions": [
+        "Registered profile and trusted enforcement boundary execute their specified behavior."
+      ],
+      "evidence_artifacts": [],
+      "reference_status": "not_implemented_in_rust_revision"
+    },
+    {
+      "id": "FA-INV-008",
+      "title": "Tenant and purpose isolation",
+      "claim_class": "invariant",
+      "statement": "Every read and write respects tenant, principal and purpose scope.",
+      "owner_role": "security",
+      "activation_gate": "G1",
+      "production_status": "planned",
+      "waiver": "forbidden",
+      "production_checker": null,
+      "reference_checks": [],
+      "reference_scope": "Selected single-process in-memory behavior only; no durable, concurrent, OS, remote or model-accuracy claim.",
+      "required_negative_campaigns": [
+        "Tenant and purpose isolation violation must be rejected without widening authority; real boundary tested at activation."
+      ],
+      "assumptions": [
+        "Registered profile and trusted enforcement boundary execute their specified behavior."
+      ],
+      "evidence_artifacts": [],
+      "reference_status": "not_implemented_in_rust_revision"
+    },
+    {
+      "id": "FA-INV-009",
+      "title": "No branch authority cloning",
+      "claim_class": "invariant",
+      "statement": "Experimental branches do not inherit production effect rights or duplicate budgets.",
+      "owner_role": "replay",
+      "activation_gate": "G3",
+      "production_status": "planned",
+      "waiver": "forbidden",
+      "production_checker": null,
+      "reference_checks": [],
+      "reference_scope": "Selected single-process in-memory behavior only; no durable, concurrent, OS, remote or model-accuracy claim.",
+      "required_negative_campaigns": [
+        "No branch authority cloning violation must be rejected without widening authority; real boundary tested at activation."
+      ],
+      "assumptions": [
+        "Registered profile and trusted enforcement boundary execute their specified behavior."
+      ],
+      "evidence_artifacts": [],
+      "reference_status": "not_implemented_in_rust_revision"
+    },
+    {
+      "id": "FA-INV-010",
+      "title": "Frozen congress commitment binding",
+      "claim_class": "invariant",
+      "statement": "Votes bind frozen round, member, evidence and commitment before reveal.",
+      "owner_role": "monitor",
+      "activation_gate": "G2",
+      "production_status": "planned",
+      "waiver": "forbidden",
+      "production_checker": null,
+      "reference_checks": [],
+      "reference_scope": "Selected single-process in-memory behavior only; no durable, concurrent, OS, remote or model-accuracy claim.",
+      "required_negative_campaigns": [
+        "Frozen congress commitment binding violation must be rejected without widening authority; real boundary tested at activation."
+      ],
+      "assumptions": [
+        "Registered profile and trusted enforcement boundary execute their specified behavior."
+      ],
+      "evidence_artifacts": [],
+      "reference_status": "not_implemented_in_rust_revision"
+    },
+    {
+      "id": "FA-INV-011",
+      "title": "Truthful replay grades",
+      "claim_class": "invariant",
+      "statement": "Unavailable or approximate state is never silently presented as exact restart.",
+      "owner_role": "replay",
+      "activation_gate": "G3",
+      "production_status": "planned",
+      "waiver": "forbidden",
+      "production_checker": null,
+      "reference_checks": [],
+      "reference_scope": "No executable coverage of this production obligation yet.",
+      "required_negative_campaigns": [
+        "Truthful replay grades violation must be rejected without widening authority; real boundary tested at activation."
+      ],
+      "assumptions": [
+        "Registered profile and trusted enforcement boundary execute their specified behavior."
+      ],
+      "evidence_artifacts": [],
+      "reference_status": "not_implemented_in_rust_revision"
+    },
+    {
+      "id": "FA-INV-012",
+      "title": "Model/policy separation",
+      "claim_class": "invariant",
+      "statement": "Learned workers cannot directly mutate authoritative policy or mint capabilities.",
+      "owner_role": "policy",
+      "activation_gate": "G1",
+      "production_status": "planned",
+      "waiver": "forbidden",
+      "production_checker": null,
+      "reference_checks": [],
+      "reference_scope": "No executable coverage of this production obligation yet.",
+      "required_negative_campaigns": [
+        "Model/policy separation violation must be rejected without widening authority; real boundary tested at activation."
+      ],
+      "assumptions": [
+        "Registered profile and trusted enforcement boundary execute their specified behavior."
+      ],
+      "evidence_artifacts": [],
+      "reference_status": "not_implemented_in_rust_revision"
+    },
+    {
+      "id": "FA-INV-013",
+      "title": "Bounded untrusted work",
+      "claim_class": "invariant",
+      "statement": "Declared parser, allocation, review, queue and effect limits hold under hostile input.",
+      "owner_role": "runtime",
+      "activation_gate": "G1",
+      "production_status": "planned",
+      "waiver": "forbidden",
+      "production_checker": null,
+      "reference_checks": [],
+      "reference_scope": "No executable coverage of this production obligation yet.",
+      "required_negative_campaigns": [
+        "Bounded untrusted work violation must be rejected without widening authority; real boundary tested at activation."
+      ],
+      "assumptions": [
+        "Registered profile and trusted enforcement boundary execute their specified behavior."
+      ],
+      "evidence_artifacts": [],
+      "reference_status": "not_implemented_in_rust_revision"
+    },
+    {
+      "id": "FA-INV-014",
+      "title": "Source and transformation binding",
+      "claim_class": "invariant",
+      "statement": "Evidence binds actual source/generation/order/transforms and declared gaps.",
+      "owner_role": "evidence",
+      "activation_gate": "G2",
+      "production_status": "planned",
+      "waiver": "forbidden",
+      "production_checker": null,
+      "reference_checks": [],
+      "reference_scope": "Selected single-process in-memory behavior only; no durable, concurrent, OS, remote or model-accuracy claim.",
+      "required_negative_campaigns": [
+        "Source and transformation binding violation must be rejected without widening authority; real boundary tested at activation."
+      ],
+      "assumptions": [
+        "Registered profile and trusted enforcement boundary execute their specified behavior."
+      ],
+      "evidence_artifacts": [],
+      "reference_status": "not_implemented_in_rust_revision"
+    },
+    {
+      "id": "FA-INV-015",
+      "title": "Retention and deletion honesty",
+      "claim_class": "invariant",
+      "statement": "Available object/key closure agrees with live retention and deletion claims.",
+      "owner_role": "storage",
+      "activation_gate": "G5",
+      "production_status": "planned",
+      "waiver": "forbidden",
+      "production_checker": null,
+      "reference_checks": [],
+      "reference_scope": "No executable coverage of this production obligation yet.",
+      "required_negative_campaigns": [
+        "Retention and deletion honesty violation must be rejected without widening authority; real boundary tested at activation."
+      ],
+      "assumptions": [
+        "Registered profile and trusted enforcement boundary execute their specified behavior."
+      ],
+      "evidence_artifacts": [],
+      "reference_status": "not_implemented_in_rust_revision"
+    },
+    {
+      "id": "FA-INV-016",
+      "title": "Deterministic decision closure",
+      "claim_class": "invariant",
+      "statement": "Equivalent complete decision-affecting inputs yield equivalent canonical decisions under a pinned profile.",
+      "owner_role": "policy",
+      "activation_gate": "G2",
+      "production_status": "planned",
+      "waiver": "forbidden",
+      "production_checker": null,
+      "reference_checks": [],
+      "reference_scope": "Selected single-process in-memory behavior only; no durable, concurrent, OS, remote or model-accuracy claim.",
+      "required_negative_campaigns": [
+        "Deterministic decision closure violation must be rejected without widening authority; real boundary tested at activation."
+      ],
+      "assumptions": [
+        "Registered profile and trusted enforcement boundary execute their specified behavior."
+      ],
+      "evidence_artifacts": [],
+      "reference_status": "not_implemented_in_rust_revision"
+    },
+    {
+      "id": "FA-INV-017",
+      "title": "Model-space identity",
+      "claim_class": "invariant",
+      "statement": "Equal shapes never substitute incompatible model, codec or monitor generations.",
+      "owner_role": "capture",
+      "activation_gate": "G3",
+      "production_status": "planned",
+      "waiver": "forbidden",
+      "production_checker": null,
+      "reference_checks": [],
+      "reference_scope": "Selected single-process in-memory behavior only; no durable, concurrent, OS, remote or model-accuracy claim.",
+      "required_negative_campaigns": [
+        "Model-space identity violation must be rejected without widening authority; real boundary tested at activation."
+      ],
+      "assumptions": [
+        "Registered profile and trusted enforcement boundary execute their specified behavior."
+      ],
+      "evidence_artifacts": [],
+      "reference_status": "not_implemented_in_rust_revision"
+    },
+    {
+      "id": "FA-INV-018",
+      "title": "Enforced effect bounds",
+      "claim_class": "invariant",
+      "statement": "Actual dispatched effects stay within the adapter-enforced admitted bounds.",
+      "owner_role": "adapter",
+      "activation_gate": "G1",
+      "production_status": "planned",
+      "waiver": "forbidden",
+      "production_checker": null,
+      "reference_checks": [],
+      "reference_scope": "No executable coverage of this production obligation yet.",
+      "required_negative_campaigns": [
+        "Enforced effect bounds violation must be rejected without widening authority; real boundary tested at activation."
+      ],
+      "assumptions": [
+        "Registered profile and trusted enforcement boundary execute their specified behavior."
+      ],
+      "evidence_artifacts": [],
+      "reference_status": "not_implemented_in_rust_revision"
+    },
+    {
+      "id": "FA-INV-019",
+      "title": "Claim and lineage discipline",
+      "claim_class": "invariant",
+      "statement": "Claim class, measurement scope and training/evaluation lineage cannot be silently strengthened.",
+      "owner_role": "evaluation",
+      "activation_gate": "G0",
+      "production_status": "planned",
+      "waiver": "forbidden",
+      "production_checker": null,
+      "reference_checks": [],
+      "reference_scope": "No executable coverage of this production obligation yet.",
+      "required_negative_campaigns": [
+        "Claim and lineage discipline violation must be rejected without widening authority; real boundary tested at activation."
+      ],
+      "assumptions": [
+        "Registered profile and trusted enforcement boundary execute their specified behavior."
+      ],
+      "evidence_artifacts": [],
+      "reference_status": "not_implemented_in_rust_revision"
+    },
+    {
+      "id": "FA-INV-020",
+      "title": "Closed-run admission fence",
+      "claim_class": "invariant",
+      "statement": "Run closure rejects new dispatch admission without falsifying prior outcomes.",
+      "owner_role": "gate",
+      "activation_gate": "G1",
+      "production_status": "planned",
+      "waiver": "forbidden",
+      "production_checker": null,
+      "reference_checks": [],
+      "reference_scope": "Selected single-process in-memory behavior only; no durable, concurrent, OS, remote or model-accuracy claim.",
+      "required_negative_campaigns": [
+        "Closed-run admission fence violation must be rejected without widening authority; real boundary tested at activation."
+      ],
+      "assumptions": [
+        "Registered profile and trusted enforcement boundary execute their specified behavior."
+      ],
+      "evidence_artifacts": [],
+      "reference_status": "not_implemented_in_rust_revision"
+    },
+    {
+      "id": "FA-INV-021",
+      "title": "Judgment witness soundness",
+      "claim_class": "invariant",
+      "statement": "Reuse requires unchanged complete declared dependencies and compatible semantics.",
+      "owner_role": "systems",
+      "activation_gate": "G2",
+      "production_status": "planned",
+      "waiver": "forbidden",
+      "production_checker": null,
+      "reference_checks": [
+        "crates/fa-reference/src/lib.rs::tests::witness_reuses_unrelated_changes"
+      ],
+      "reference_status": "source_present_not_executed",
+      "reference_scope": "Only the declared small logical case; not production protocol/host correctness.",
+      "required_negative_campaigns": [
+        "Insert a member into an empty reviewed range."
+      ],
+      "assumptions": [
+        "Exact registered trust/profile and completeness assumptions from the plan."
+      ],
+      "evidence_artifacts": []
+    },
+    {
+      "id": "FA-INV-022",
+      "title": "Contiguous evidence admission",
+      "claim_class": "invariant",
+      "statement": "A missing prefix member cannot be skipped by a later received or judged sequence.",
+      "owner_role": "systems",
+      "activation_gate": "G2",
+      "production_status": "planned",
+      "waiver": "forbidden",
+      "production_checker": null,
+      "reference_checks": [
+        "crates/fa-reference/src/lib.rs::tests::frontier_does_not_skip_a_gap"
+      ],
+      "reference_status": "source_present_not_executed",
+      "reference_scope": "Only the declared small logical case; not production protocol/host correctness.",
+      "required_negative_campaigns": [
+        "Receive sequence 3 before sequence 2."
+      ],
+      "assumptions": [
+        "Exact registered trust/profile and completeness assumptions from the plan."
+      ],
+      "evidence_artifacts": []
+    },
+    {
+      "id": "FA-INV-023",
+      "title": "Exact evidence view binding",
+      "claim_class": "invariant",
+      "statement": "A judgment binds the actual authorized transformed bytes and omissions shown to the helper.",
+      "owner_role": "systems",
+      "activation_gate": "G2",
+      "production_status": "planned",
+      "waiver": "forbidden",
+      "production_checker": null,
+      "reference_checks": [],
+      "reference_status": "not_implemented_in_rust_revision",
+      "reference_scope": "Only the declared small logical case; not production protocol/host correctness.",
+      "required_negative_campaigns": [
+        "Truncate the decisive paragraph after the source file was committed."
+      ],
+      "assumptions": [
+        "Exact registered trust/profile and completeness assumptions from the plan."
+      ],
+      "evidence_artifacts": []
+    },
+    {
+      "id": "FA-INV-024",
+      "title": "Scoped authority cut validity",
+      "claim_class": "invariant",
+      "statement": "A cut claim names a complete declared graph/profile and is independently checked for disconnection.",
+      "owner_role": "systems",
+      "activation_gate": "G2",
+      "production_status": "planned",
+      "waiver": "forbidden",
+      "production_checker": null,
+      "reference_checks": [
+        "crates/fa-reference/src/lib.rs::tests::dominator_and_bypass_are_distinguished"
+      ],
+      "reference_status": "source_present_not_executed",
+      "reference_scope": "Only the declared small logical case; not production protocol/host correctness.",
+      "required_negative_campaigns": [
+        "Add an unmediated bypass edge after certification."
+      ],
+      "assumptions": [
+        "Exact registered trust/profile and completeness assumptions from the plan."
+      ],
+      "evidence_artifacts": []
+    },
+    {
+      "id": "FA-INV-025",
+      "title": "Branch rights separation",
+      "claim_class": "invariant",
+      "statement": "Snapshot/byte sharing does not copy live permits or revive consumed reservations.",
+      "owner_role": "systems",
+      "activation_gate": "G2",
+      "production_status": "planned",
+      "waiver": "forbidden",
+      "production_checker": null,
+      "reference_checks": [],
+      "reference_status": "not_implemented_in_rust_revision",
+      "reference_scope": "Only the declared small logical case; not production protocol/host correctness.",
+      "required_negative_campaigns": [
+        "Restore an experiment from a pre-dispatch checkpoint."
+      ],
+      "assumptions": [
+        "Exact registered trust/profile and completeness assumptions from the plan."
+      ],
+      "evidence_artifacts": []
+    },
+    {
+      "id": "FA-INV-026",
+      "title": "Incremental support completeness",
+      "claim_class": "invariant",
+      "statement": "At each complete frontier registered derivatives equal batch semantics including retractions.",
+      "owner_role": "systems",
+      "activation_gate": "G2",
+      "production_status": "planned",
+      "waiver": "forbidden",
+      "production_checker": null,
+      "reference_checks": [],
+      "reference_status": "not_implemented_in_rust_revision",
+      "reference_scope": "Only the declared small logical case; not production protocol/host correctness.",
+      "required_negative_campaigns": [
+        "Lose the only support retraction for a standing finding."
+      ],
+      "assumptions": [
+        "Exact registered trust/profile and completeness assumptions from the plan."
+      ],
+      "evidence_artifacts": []
+    },
+    {
+      "id": "FA-INV-027",
+      "title": "Verified receiver bases",
+      "claim_class": "invariant",
+      "statement": "Exact reconstruction uses only its authenticated matching base/encoding and verifies the target.",
+      "owner_role": "systems",
+      "activation_gate": "G2",
+      "production_status": "planned",
+      "waiver": "forbidden",
+      "production_checker": null,
+      "reference_checks": [],
+      "reference_status": "not_implemented_in_rust_revision",
+      "reference_scope": "Only the declared small logical case; not production protocol/host correctness.",
+      "required_negative_campaigns": [
+        "Use a same-shaped but wrong-generation receiver base."
+      ],
+      "assumptions": [
+        "Exact registered trust/profile and completeness assumptions from the plan."
+      ],
+      "evidence_artifacts": []
+    },
+    {
+      "id": "FA-INV-028",
+      "title": "Lawful trace quotient",
+      "claim_class": "invariant",
+      "statement": "Only operations with sound declared semantic independence can be reordered.",
+      "owner_role": "systems",
+      "activation_gate": "G2",
+      "production_status": "planned",
+      "waiver": "forbidden",
+      "production_checker": null,
+      "reference_checks": [
+        "crates/fa-reference/src/lib.rs::tests::cross_reads_defeat_disjoint_writes"
+      ],
+      "reference_status": "source_present_not_executed",
+      "reference_scope": "Only the declared small logical case; not production protocol/host correctness.",
+      "required_negative_campaigns": [
+        "Disjoint writes with cross reads."
+      ],
+      "assumptions": [
+        "Exact registered trust/profile and completeness assumptions from the plan."
+      ],
+      "evidence_artifacts": []
+    },
+    {
+      "id": "FA-INV-029",
+      "title": "Closed dependency admission",
+      "claim_class": "invariant",
+      "statement": "Every activated build/runtime dependency is admitted under the exact target-feature-source profile.",
+      "owner_role": "systems",
+      "activation_gate": "G0",
+      "production_status": "planned",
+      "waiver": "forbidden",
+      "production_checker": null,
+      "reference_checks": [],
+      "reference_status": "not_implemented_in_rust_revision",
+      "reference_scope": "Only the declared small logical case; not production protocol/host correctness.",
+      "required_negative_campaigns": [
+        "Activate a foreign backend only on one native target."
+      ],
+      "assumptions": [
+        "Exact registered trust/profile and completeness assumptions from the plan."
+      ],
+      "evidence_artifacts": []
+    },
+    {
+      "id": "FA-INV-030",
+      "title": "Executed local release evidence",
+      "claim_class": "invariant",
+      "statement": "A release requires actual local gates and complete source/toolchain/target/artifact evidence.",
+      "owner_role": "systems",
+      "activation_gate": "G0",
+      "production_status": "planned",
+      "waiver": "forbidden",
+      "production_checker": null,
+      "reference_checks": [],
+      "reference_status": "not_implemented_in_rust_revision",
+      "reference_scope": "Only the declared small logical case; not production protocol/host correctness.",
+      "required_negative_campaigns": [
+        "Attempt release with a dry-run or missing-target receipt."
+      ],
+      "assumptions": [
+        "Exact registered trust/profile and completeness assumptions from the plan."
+      ],
+      "evidence_artifacts": []
+    }
+  ]
+}

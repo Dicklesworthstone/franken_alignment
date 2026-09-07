@@ -1,0 +1,34 @@
+{
+  "schema_version": "fa.slo/0.2",
+  "all_values_are_unmeasured_proposals": true,
+  "targets": [
+    {
+      "id": "SLO-CPU",
+      "metric": "gate_cpu_p99_microseconds",
+      "target_max": 100,
+      "status": "unmeasured",
+      "envelope": "One bounded action <= 64 KiB; excludes durable I/O/helper time; hardware and load must be pinned before activation."
+    },
+    {
+      "id": "SLO-CAPTURE",
+      "metric": "capture_only_relative_throughput_loss",
+      "target_max": 0.05,
+      "status": "unmeasured",
+      "envelope": "One declared serving model/batch/context/tap profile; includes capture and transfer, not helper inference."
+    },
+    {
+      "id": "SLO-ACTION-MEMORY",
+      "metric": "control_metadata_bytes_per_admitted_action",
+      "target_max": 65536,
+      "status": "unmeasured",
+      "envelope": "Excludes explicitly referenced payload/trace objects; all queues separately bounded."
+    },
+    {
+      "id": "SLO-H1-BYTES",
+      "metric": "retained_byte_ratio_vs_best_simple_baseline",
+      "target_max": 0.5,
+      "status": "unmeasured",
+      "envelope": "H1 experiment only; matched compute, utility and preregistered per-stratum noninferiority; not a deployment safety guarantee."
+    }
+  ]
+}

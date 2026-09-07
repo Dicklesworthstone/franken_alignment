@@ -1,0 +1,273 @@
+{
+  "schema_version": "fa.claims/0.2",
+  "allowed_classes": [
+    "invariant",
+    "proof",
+    "bounded_model",
+    "statistical",
+    "benchmark",
+    "slo",
+    "hypothesis"
+  ],
+  "claims": [
+    {
+      "id": "H1",
+      "class": "hypothesis",
+      "statement": "Risk-sensitive compression improves the matched-cost decision frontier",
+      "status": "unmeasured",
+      "source_refs": [
+        "F-INTROSPECT",
+        "P-KIVI",
+        "P-NLA"
+      ],
+      "experiment_card": "docs/RESEARCH_AGENDA.md",
+      "result_artifacts": [],
+      "scope": "To be specified by a frozen experiment; no general safety or novelty claim.",
+      "promotion_requires": [
+        "Frozen protocol and independent held-out evaluation",
+        "Strong matched-cost baselines",
+        "Raw results, limitations and suitable uncertainty"
+      ]
+    },
+    {
+      "id": "H2",
+      "class": "hypothesis",
+      "statement": "Progressive refinement reduces expected cost without hiding tail errors",
+      "status": "unmeasured",
+      "source_refs": [
+        "F-INTROSPECT"
+      ],
+      "experiment_card": "docs/RESEARCH_AGENDA.md",
+      "result_artifacts": [],
+      "scope": "To be specified by a frozen experiment; no general safety or novelty claim.",
+      "promotion_requires": [
+        "Frozen protocol and independent held-out evaluation",
+        "Strong matched-cost baselines",
+        "Raw results, limitations and suitable uncertainty"
+      ]
+    },
+    {
+      "id": "H3",
+      "class": "hypothesis",
+      "statement": "Activation-behavior residuals add predictive information beyond text/tool baselines",
+      "status": "unmeasured",
+      "source_refs": [
+        "F-ALIGN",
+        "F-INTROSPECT",
+        "P-INTROSPECTION"
+      ],
+      "experiment_card": "docs/RESEARCH_AGENDA.md",
+      "result_artifacts": [],
+      "scope": "To be specified by a frozen experiment; no general safety or novelty claim.",
+      "promotion_requires": [
+        "Frozen protocol and independent held-out evaluation",
+        "Strong matched-cost baselines",
+        "Raw results, limitations and suitable uncertainty"
+      ]
+    },
+    {
+      "id": "H4",
+      "class": "hypothesis",
+      "statement": "Cohort-aware congress improves joint robustness at matched cost",
+      "status": "unmeasured",
+      "source_refs": [
+        "F-ALIGN",
+        "P-CONTROL",
+        "P-ENSEMBLE",
+        "P-ADAPTIVE"
+      ],
+      "experiment_card": "docs/RESEARCH_AGENDA.md",
+      "result_artifacts": [],
+      "scope": "To be specified by a frozen experiment; no general safety or novelty claim.",
+      "promotion_requires": [
+        "Frozen protocol and independent held-out evaluation",
+        "Strong matched-cost baselines",
+        "Raw results, limitations and suitable uncertainty"
+      ]
+    },
+    {
+      "id": "H5",
+      "class": "hypothesis",
+      "statement": "Counterfactual witness twins improve diagnosis and remediation",
+      "status": "unmeasured",
+      "source_refs": [
+        "F-INTROSPECT"
+      ],
+      "experiment_card": "docs/RESEARCH_AGENDA.md",
+      "result_artifacts": [],
+      "scope": "To be specified by a frozen experiment; no general safety or novelty claim.",
+      "promotion_requires": [
+        "Frozen protocol and independent held-out evaluation",
+        "Strong matched-cost baselines",
+        "Raw results, limitations and suitable uncertainty"
+      ]
+    },
+    {
+      "id": "H6",
+      "class": "hypothesis",
+      "statement": "Fleet provenance improves detection of distributed attack composition",
+      "status": "unmeasured",
+      "source_refs": [
+        "P-MULTI",
+        "GRAPH-PLAN"
+      ],
+      "experiment_card": "docs/RESEARCH_AGENDA.md",
+      "result_artifacts": [],
+      "scope": "To be specified by a frozen experiment; no general safety or novelty claim.",
+      "promotion_requires": [
+        "Frozen protocol and independent held-out evaluation",
+        "Strong matched-cost baselines",
+        "Raw results, limitations and suitable uncertainty"
+      ]
+    },
+    {
+      "id": "H7",
+      "class": "hypothesis",
+      "statement": "Constrained observation planning outperforms strong fixed cascades",
+      "status": "unmeasured",
+      "source_refs": [
+        "A-README",
+        "SEARCH-CORE"
+      ],
+      "experiment_card": "docs/RESEARCH_AGENDA.md",
+      "result_artifacts": [],
+      "scope": "To be specified by a frozen experiment; no general safety or novelty claim.",
+      "promotion_requires": [
+        "Frozen protocol and independent held-out evaluation",
+        "Strong matched-cost baselines",
+        "Raw results, limitations and suitable uncertainty"
+      ]
+    },
+    {
+      "id": "H8",
+      "class": "hypothesis",
+      "statement": "Reflective strategies transfer without unaccounted compute or policy regressions",
+      "status": "unmeasured",
+      "source_refs": [
+        "F-INTROSPECT"
+      ],
+      "experiment_card": "docs/RESEARCH_AGENDA.md",
+      "result_artifacts": [],
+      "scope": "To be specified by a frozen experiment; no general safety or novelty claim.",
+      "promotion_requires": [
+        "Frozen protocol and independent held-out evaluation",
+        "Strong matched-cost baselines",
+        "Raw results, limitations and suitable uncertainty"
+      ]
+    },
+    {
+      "id": "H9",
+      "class": "hypothesis",
+      "statement": "Epistemic MVCC reduces review cost without stale decisions",
+      "status": "unmeasured",
+      "source_refs": [
+        "F-ALIGN",
+        "F-INTROSPECT"
+      ],
+      "foundation_audit": "registry/foundation_audit.json",
+      "experiment_card": "docs/RESEARCH_AGENDA.md",
+      "result_artifacts": [],
+      "scope": "The frozen experiment and exact declared semantics only.",
+      "promotion_requires": [
+        "Matched baseline and independent holdout",
+        "No violations of prerequisite invariants",
+        "Actual complete local evidence and cost accounting"
+      ]
+    },
+    {
+      "id": "H10",
+      "class": "hypothesis",
+      "statement": "Receiver-conditioned transfer improves matched-contract byte and latency costs",
+      "status": "unmeasured",
+      "source_refs": [
+        "F-ALIGN",
+        "F-INTROSPECT"
+      ],
+      "foundation_audit": "registry/foundation_audit.json",
+      "experiment_card": "docs/RESEARCH_AGENDA.md",
+      "result_artifacts": [],
+      "scope": "The frozen experiment and exact declared semantics only.",
+      "promotion_requires": [
+        "Matched baseline and independent holdout",
+        "No violations of prerequisite invariants",
+        "Actual complete local evidence and cost accounting"
+      ]
+    },
+    {
+      "id": "H11",
+      "class": "hypothesis",
+      "statement": "Topology-informed observation improves coverage-cost tradeoffs",
+      "status": "unmeasured",
+      "source_refs": [
+        "F-ALIGN",
+        "F-INTROSPECT"
+      ],
+      "foundation_audit": "registry/foundation_audit.json",
+      "experiment_card": "docs/RESEARCH_AGENDA.md",
+      "result_artifacts": [],
+      "scope": "The frozen experiment and exact declared semantics only.",
+      "promotion_requires": [
+        "Matched baseline and independent holdout",
+        "No violations of prerequisite invariants",
+        "Actual complete local evidence and cost accounting"
+      ]
+    },
+    {
+      "id": "H12",
+      "class": "hypothesis",
+      "statement": "Incremental evidence algebra scales exact fleet findings",
+      "status": "unmeasured",
+      "source_refs": [
+        "F-ALIGN",
+        "F-INTROSPECT"
+      ],
+      "foundation_audit": "registry/foundation_audit.json",
+      "experiment_card": "docs/RESEARCH_AGENDA.md",
+      "result_artifacts": [],
+      "scope": "The frozen experiment and exact declared semantics only.",
+      "promotion_requires": [
+        "Matched baseline and independent holdout",
+        "No violations of prerequisite invariants",
+        "Actual complete local evidence and cost accounting"
+      ]
+    },
+    {
+      "id": "H13",
+      "class": "hypothesis",
+      "statement": "Lawful trace quotient reduces replay work without omitted outcomes",
+      "status": "unmeasured",
+      "source_refs": [
+        "F-ALIGN",
+        "F-INTROSPECT"
+      ],
+      "foundation_audit": "registry/foundation_audit.json",
+      "experiment_card": "docs/RESEARCH_AGENDA.md",
+      "result_artifacts": [],
+      "scope": "The frozen experiment and exact declared semantics only.",
+      "promotion_requires": [
+        "Matched baseline and independent holdout",
+        "No violations of prerequisite invariants",
+        "Actual complete local evidence and cost accounting"
+      ]
+    },
+    {
+      "id": "H14",
+      "class": "hypothesis",
+      "statement": "Committed evidence views improve reproducibility and disagreement localization",
+      "status": "unmeasured",
+      "source_refs": [
+        "F-ALIGN",
+        "F-INTROSPECT"
+      ],
+      "foundation_audit": "registry/foundation_audit.json",
+      "experiment_card": "docs/RESEARCH_AGENDA.md",
+      "result_artifacts": [],
+      "scope": "The frozen experiment and exact declared semantics only.",
+      "promotion_requires": [
+        "Matched baseline and independent holdout",
+        "No violations of prerequisite invariants",
+        "Actual complete local evidence and cost accounting"
+      ]
+    }
+  ]
+}

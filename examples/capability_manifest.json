@@ -1,0 +1,15 @@
+{
+  "schema_version": "fa.capabilities/0.1",
+  "adapter_id": "adapter:example-only",
+  "status": "example_only",
+  "mediation_mode": "observe_only",
+  "activation_capture": false,
+  "restart_grades": [
+    "unavailable"
+  ],
+  "effect_families": [],
+  "limitations": [
+    "Illustrative schema instance; no runtime adapter is implemented.",
+    "No prevention or internal-state access is claimed."
+  ]
+}

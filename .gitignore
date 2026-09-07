@@ -1,0 +1,43 @@
+# Rust build artifacts
+/target/
+**/*.rs.bk
+*.bk
+
+# Operating System files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# IDE and editor files
+.idea/
+*.iml
+.vscode/
+*.sublime-project
+*.sublime-workspace
+*.swp
+*.swo
+*~
+
+# Python cache and environments
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+env/
+venv/
+ENV/
+
+# Environment variables and private credentials
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# Distribution and private artifacts
+/dist/
+/private-artifacts/

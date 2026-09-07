@@ -1,0 +1,13 @@
+{
+  "schema_version": "fa.release_readiness/0.2",
+  "production_release_enabled": false,
+  "reason": "Design and uncompiled reference source only",
+  "required_controller": "operator-local DSR or equivalent executed local lane",
+  "hosted_actions_required": false,
+  "qualified_production_targets": [],
+  "frozen_release_toolchain": null,
+  "accepted_gate_receipts": [],
+  "signing_identity": null,
+  "quality_gate": "cargo run --locked -p xtask -- check",
+  "release_gate": "cargo run --locked -p xtask -- release-check"
+}

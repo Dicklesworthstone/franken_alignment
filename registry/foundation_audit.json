@@ -1,0 +1,293 @@
+{
+  "schema_version": "fa.foundation_audit/0.2",
+  "review_date": "2026-09-06",
+  "claim": "Targeted code/manifest review; no foundation builds, benchmarks or whole-repository certification. Requested ranges can exceed returned file length.",
+  "foundations": [
+    {
+      "repository": "Dicklesworthstone/asupersync",
+      "reviewed_commit": "9d5bc0b2d3767275a866feed5c3347bbf4a2de64",
+      "admission_status": "requires_profile_qualification",
+      "built": false,
+      "files": [
+        {
+          "path": "ATP_DOD_CHECKLIST.md",
+          "read_scope": "requested lines 1-240",
+          "url": "https://github.com/Dicklesworthstone/asupersync/blob/9d5bc0b2d3767275a866feed5c3347bbf4a2de64/ATP_DOD_CHECKLIST.md"
+        },
+        {
+          "path": "src/net/atp/object/mod.rs",
+          "read_scope": "requested lines 1-220",
+          "url": "https://github.com/Dicklesworthstone/asupersync/blob/9d5bc0b2d3767275a866feed5c3347bbf4a2de64/src/net/atp/object/mod.rs"
+        },
+        {
+          "path": "src/atp/mod.rs",
+          "read_scope": "requested lines 1-300",
+          "url": "https://github.com/Dicklesworthstone/asupersync/blob/9d5bc0b2d3767275a866feed5c3347bbf4a2de64/src/atp/mod.rs"
+        },
+        {
+          "path": "src/atp/stream_object.rs",
+          "read_scope": "requested lines 1-240",
+          "url": "https://github.com/Dicklesworthstone/asupersync/blob/9d5bc0b2d3767275a866feed5c3347bbf4a2de64/src/atp/stream_object.rs"
+        },
+        {
+          "path": "src/atp/slepian_wolf.rs",
+          "read_scope": "requested lines 1-230",
+          "url": "https://github.com/Dicklesworthstone/asupersync/blob/9d5bc0b2d3767275a866feed5c3347bbf4a2de64/src/atp/slepian_wolf.rs"
+        },
+        {
+          "path": "src/atp/journal/mod.rs",
+          "read_scope": "requested lines 1-220",
+          "url": "https://github.com/Dicklesworthstone/asupersync/blob/9d5bc0b2d3767275a866feed5c3347bbf4a2de64/src/atp/journal/mod.rs"
+        },
+        {
+          "path": "src/atp/journal/chunk_bitmap.rs",
+          "read_scope": "requested lines 1-210",
+          "url": "https://github.com/Dicklesworthstone/asupersync/blob/9d5bc0b2d3767275a866feed5c3347bbf4a2de64/src/atp/journal/chunk_bitmap.rs"
+        },
+        {
+          "path": "src/plan/mod.rs",
+          "read_scope": "requested lines 1-250",
+          "url": "https://github.com/Dicklesworthstone/asupersync/blob/9d5bc0b2d3767275a866feed5c3347bbf4a2de64/src/plan/mod.rs"
+        },
+        {
+          "path": "src/obligation/mod.rs",
+          "read_scope": "requested lines 1-200",
+          "url": "https://github.com/Dicklesworthstone/asupersync/blob/9d5bc0b2d3767275a866feed5c3347bbf4a2de64/src/obligation/mod.rs"
+        },
+        {
+          "path": "src/obligation/calm.rs",
+          "read_scope": "requested lines 1-200",
+          "url": "https://github.com/Dicklesworthstone/asupersync/blob/9d5bc0b2d3767275a866feed5c3347bbf4a2de64/src/obligation/calm.rs"
+        },
+        {
+          "path": "franken_decision/src/lib.rs",
+          "read_scope": "requested lines 1-200",
+          "url": "https://github.com/Dicklesworthstone/asupersync/blob/9d5bc0b2d3767275a866feed5c3347bbf4a2de64/franken_decision/src/lib.rs"
+        }
+      ]
+    },
+    {
+      "repository": "Dicklesworthstone/frankensqlite",
+      "reviewed_commit": "cbb2852c75973811548ac89b0b16943b63453c6e",
+      "admission_status": "requires_profile_qualification",
+      "built": false,
+      "files": [
+        {
+          "path": "crates/fsqlite-mvcc/src/lib.rs",
+          "read_scope": "requested lines 1-250",
+          "url": "https://github.com/Dicklesworthstone/frankensqlite/blob/cbb2852c75973811548ac89b0b16943b63453c6e/crates/fsqlite-mvcc/src/lib.rs"
+        },
+        {
+          "path": "crates/fsqlite-mvcc/src/witness_refinement.rs",
+          "read_scope": "requested lines 1-260",
+          "url": "https://github.com/Dicklesworthstone/frankensqlite/blob/cbb2852c75973811548ac89b0b16943b63453c6e/crates/fsqlite-mvcc/src/witness_refinement.rs"
+        },
+        {
+          "path": "crates/fsqlite-mvcc/src/deterministic_rebase.rs",
+          "read_scope": "requested lines 1-220",
+          "url": "https://github.com/Dicklesworthstone/frankensqlite/blob/cbb2852c75973811548ac89b0b16943b63453c6e/crates/fsqlite-mvcc/src/deterministic_rebase.rs"
+        },
+        {
+          "path": "crates/fsqlite-mvcc/src/history_compression.rs",
+          "read_scope": "requested lines 1-220 and 330-540",
+          "url": "https://github.com/Dicklesworthstone/frankensqlite/blob/cbb2852c75973811548ac89b0b16943b63453c6e/crates/fsqlite-mvcc/src/history_compression.rs"
+        },
+        {
+          "path": "crates/fsqlite-mvcc/src/cell_mvcc_boundary.rs",
+          "read_scope": "requested lines 1-220",
+          "url": "https://github.com/Dicklesworthstone/frankensqlite/blob/cbb2852c75973811548ac89b0b16943b63453c6e/crates/fsqlite-mvcc/src/cell_mvcc_boundary.rs"
+        }
+      ]
+    },
+    {
+      "repository": "Dicklesworthstone/frankenfs",
+      "reviewed_commit": "260833046b1e7bc01a51fb8aa9e8f2d96118a8a2",
+      "admission_status": "requires_profile_qualification",
+      "built": false,
+      "files": [
+        {
+          "path": "crates/ffs-mvcc/src/lib.rs",
+          "read_scope": "requested lines 1-230",
+          "url": "https://github.com/Dicklesworthstone/frankenfs/blob/260833046b1e7bc01a51fb8aa9e8f2d96118a8a2/crates/ffs-mvcc/src/lib.rs"
+        },
+        {
+          "path": "crates/ffs-repair/src/ownership.rs",
+          "read_scope": "requested lines 1-240",
+          "url": "https://github.com/Dicklesworthstone/frankenfs/blob/260833046b1e7bc01a51fb8aa9e8f2d96118a8a2/crates/ffs-repair/src/ownership.rs"
+        },
+        {
+          "path": "crates/ffs-repair/src/lrc.rs",
+          "read_scope": "requested lines 1-220",
+          "url": "https://github.com/Dicklesworthstone/frankenfs/blob/260833046b1e7bc01a51fb8aa9e8f2d96118a8a2/crates/ffs-repair/src/lrc.rs"
+        },
+        {
+          "path": "crates/ffs-block/src/lib.rs",
+          "read_scope": "requested lines 1-230",
+          "url": "https://github.com/Dicklesworthstone/frankenfs/blob/260833046b1e7bc01a51fb8aa9e8f2d96118a8a2/crates/ffs-block/src/lib.rs"
+        },
+        {
+          "path": "crates/ffs-mvcc/src/compression.rs",
+          "read_scope": "requested lines 1-230",
+          "url": "https://github.com/Dicklesworthstone/frankenfs/blob/260833046b1e7bc01a51fb8aa9e8f2d96118a8a2/crates/ffs-mvcc/src/compression.rs"
+        },
+        {
+          "path": "crates/ffs-mvcc/Cargo.toml",
+          "read_scope": "full manifest",
+          "url": "https://github.com/Dicklesworthstone/frankenfs/blob/260833046b1e7bc01a51fb8aa9e8f2d96118a8a2/crates/ffs-mvcc/Cargo.toml"
+        }
+      ]
+    },
+    {
+      "repository": "Dicklesworthstone/frankensearch",
+      "reviewed_commit": "b2f7cc07170de1e5b1d20b82a0d56e428a5bbebb",
+      "admission_status": "requires_profile_qualification",
+      "built": false,
+      "files": [
+        {
+          "path": "crates/frankensearch-core/src/generation.rs",
+          "read_scope": "requested lines 1-230",
+          "url": "https://github.com/Dicklesworthstone/frankensearch/blob/b2f7cc07170de1e5b1d20b82a0d56e428a5bbebb/crates/frankensearch-core/src/generation.rs"
+        },
+        {
+          "path": "crates/frankensearch-core/src/filter.rs",
+          "read_scope": "requested lines 1-250",
+          "url": "https://github.com/Dicklesworthstone/frankensearch/blob/b2f7cc07170de1e5b1d20b82a0d56e428a5bbebb/crates/frankensearch-core/src/filter.rs"
+        },
+        {
+          "path": "crates/frankensearch-core/src/decision_plane.rs",
+          "read_scope": "requested lines 1-220",
+          "url": "https://github.com/Dicklesworthstone/frankensearch/blob/b2f7cc07170de1e5b1d20b82a0d56e428a5bbebb/crates/frankensearch-core/src/decision_plane.rs"
+        },
+        {
+          "path": "Cargo.toml",
+          "read_scope": "requested lines 1-180",
+          "url": "https://github.com/Dicklesworthstone/frankensearch/blob/b2f7cc07170de1e5b1d20b82a0d56e428a5bbebb/Cargo.toml"
+        },
+        {
+          "path": "crates/frankensearch-rerank/Cargo.toml",
+          "read_scope": "full manifest",
+          "url": "https://github.com/Dicklesworthstone/frankensearch/blob/b2f7cc07170de1e5b1d20b82a0d56e428a5bbebb/crates/frankensearch-rerank/Cargo.toml"
+        },
+        {
+          "path": "crates/frankensearch-fusion/src/lib.rs",
+          "read_scope": "requested lines 1-240",
+          "url": "https://github.com/Dicklesworthstone/frankensearch/blob/b2f7cc07170de1e5b1d20b82a0d56e428a5bbebb/crates/frankensearch-fusion/src/lib.rs"
+        }
+      ]
+    },
+    {
+      "repository": "Dicklesworthstone/franken_markdown",
+      "reviewed_commit": "2698ad7d7562468e9c1728be08ce1ea1e9023629",
+      "admission_status": "requires_profile_qualification",
+      "built": false,
+      "files": [
+        {
+          "path": "src/verify.rs",
+          "read_scope": "requested lines 1-260",
+          "url": "https://github.com/Dicklesworthstone/franken_markdown/blob/2698ad7d7562468e9c1728be08ce1ea1e9023629/src/verify.rs"
+        },
+        {
+          "path": "src/span.rs",
+          "read_scope": "requested lines 1-260",
+          "url": "https://github.com/Dicklesworthstone/franken_markdown/blob/2698ad7d7562468e9c1728be08ce1ea1e9023629/src/span.rs"
+        },
+        {
+          "path": "src/diff.rs",
+          "read_scope": "requested lines 1-235",
+          "url": "https://github.com/Dicklesworthstone/franken_markdown/blob/2698ad7d7562468e9c1728be08ce1ea1e9023629/src/diff.rs"
+        }
+      ]
+    },
+    {
+      "repository": "Dicklesworthstone/frankengraphdb",
+      "reviewed_commit": "117dce95cf5f71eac22f95831a8073cf0506105b",
+      "admission_status": "requires_profile_qualification",
+      "built": false,
+      "files": [
+        {
+          "path": "COMPREHENSIVE_PLAN_FOR_THE_DESIGN_OF_FRANKENGRAPHDB.md",
+          "read_scope": "selected contiguous sections: constitution/foundation/data-model/authority/retention plus incremental Z-set and verification/convergence sections; not all 3867 lines",
+          "url": "https://github.com/Dicklesworthstone/frankengraphdb/blob/117dce95cf5f71eac22f95831a8073cf0506105b/COMPREHENSIVE_PLAN_FOR_THE_DESIGN_OF_FRANKENGRAPHDB.md"
+        }
+      ]
+    },
+    {
+      "repository": "Dicklesworthstone/franken_networkx",
+      "reviewed_commit": "823cdd0268e05dce40a1a3d0647076b3136cd568",
+      "admission_status": "requires_profile_qualification",
+      "built": false,
+      "files": [
+        {
+          "path": "crates/fnx-algorithms/src/lib.rs",
+          "read_scope": "opening declarations/GraphView and function bodies immediate_dominators, dominance_frontiers, minimum_cut, compute_minimum_cut_edmonds_karp; not all 85980 lines",
+          "url": "https://github.com/Dicklesworthstone/franken_networkx/blob/823cdd0268e05dce40a1a3d0647076b3136cd568/crates/fnx-algorithms/src/lib.rs"
+        },
+        {
+          "path": "crates/fnx-runtime/src/lib.rs",
+          "read_scope": "requested lines 1-230",
+          "url": "https://github.com/Dicklesworthstone/franken_networkx/blob/823cdd0268e05dce40a1a3d0647076b3136cd568/crates/fnx-runtime/src/lib.rs"
+        }
+      ]
+    },
+    {
+      "repository": "Dicklesworthstone/franken_numpy",
+      "reviewed_commit": "bb4cc2aabac8239a3ed00057b257e627847b8d1a",
+      "admission_status": "requires_profile_qualification",
+      "built": false,
+      "files": [
+        {
+          "path": "crates/fnp-ndarray/src/lib.rs",
+          "read_scope": "requested lines 1-215",
+          "url": "https://github.com/Dicklesworthstone/franken_numpy/blob/bb4cc2aabac8239a3ed00057b257e627847b8d1a/crates/fnp-ndarray/src/lib.rs"
+        },
+        {
+          "path": "crates/fnp-linalg/src/lib.rs",
+          "read_scope": "requested lines 1-240; TSQR names observed, full kernel body not audited",
+          "url": "https://github.com/Dicklesworthstone/franken_numpy/blob/bb4cc2aabac8239a3ed00057b257e627847b8d1a/crates/fnp-linalg/src/lib.rs"
+        },
+        {
+          "path": "crates/fnp-linalg/Cargo.toml",
+          "read_scope": "full manifest",
+          "url": "https://github.com/Dicklesworthstone/franken_numpy/blob/bb4cc2aabac8239a3ed00057b257e627847b8d1a/crates/fnp-linalg/Cargo.toml"
+        }
+      ]
+    },
+    {
+      "repository": "Dicklesworthstone/frankentorch",
+      "reviewed_commit": "d7514b1254a369fc9bf720aaf03dce8c30f7109b",
+      "admission_status": "requires_profile_qualification",
+      "built": false,
+      "files": [
+        {
+          "path": "crates/ft-autograd/src/lib.rs",
+          "read_scope": "opening types and backward method bodies; not all 38862 lines; searches did not establish a public jvp/version_counter API",
+          "url": "https://github.com/Dicklesworthstone/frankentorch/blob/d7514b1254a369fc9bf720aaf03dce8c30f7109b/crates/ft-autograd/src/lib.rs"
+        }
+      ]
+    },
+    {
+      "repository": "Dicklesworthstone/doodlestein_self_releaser",
+      "reviewed_commit": "f3d047d3ee09d17f993782436726beaf2925d4c9",
+      "admission_status": "requires_profile_qualification",
+      "built": false,
+      "files": [
+        {
+          "path": "README.md",
+          "read_scope": "requested lines 1-760",
+          "url": "https://github.com/Dicklesworthstone/doodlestein_self_releaser/blob/f3d047d3ee09d17f993782436726beaf2925d4c9/README.md"
+        },
+        {
+          "path": "dsr",
+          "read_scope": "large script response: inspected build/release/verification control paths; not a line-by-line audit of all commands",
+          "url": "https://github.com/Dicklesworthstone/doodlestein_self_releaser/blob/f3d047d3ee09d17f993782436726beaf2925d4c9/dsr"
+        },
+        {
+          "path": "src/quality_gates.sh",
+          "read_scope": "requested lines 1-215",
+          "url": "https://github.com/Dicklesworthstone/doodlestein_self_releaser/blob/f3d047d3ee09d17f993782436726beaf2925d4c9/src/quality_gates.sh"
+        }
+      ]
+    }
+  ],
+  "identity_scope": "Commit-pinned file URLs. This revision does not claim independently rechecked blob hashes for the entire review inventory."
+}

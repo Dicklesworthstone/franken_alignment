@@ -1,0 +1,7 @@
+# Merge into the existing DSR repos.yaml registry; do not replace it.
+# Quality-only: not a production build/release configuration.
+tools:
+  franken_alignment:
+    required_checks:
+      - "cargo run --locked -p xtask -- check"
+    checks: []

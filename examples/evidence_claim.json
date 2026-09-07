@@ -1,0 +1,19 @@
+{
+  "schema_version": "fa.claim/0.1",
+  "claim_id": "H1",
+  "claim_class": "hypothesis",
+  "status": "proposed",
+  "assertion": "Decision-sensitive compression may improve the matched-cost monitoring frontier.",
+  "scope": "Future frozen H1 experiment, not an established deployment result.",
+  "assumptions": [
+    "Valid real capture and independent held-out evaluation are available."
+  ],
+  "limitations": [
+    "No trained codec or H1 measurement is included in this draft."
+  ],
+  "source_refs": [
+    "F-INTROSPECT",
+    "P-KIVI"
+  ],
+  "evidence_refs": []
+}

@@ -1,0 +1,77 @@
+{
+  "schema_version": "fa.preparation_validation/0.2",
+  "checks": [
+    {
+      "check": "JSON/TOML parse",
+      "status": "passed",
+      "detail": {
+        "json": 16,
+        "toml": 5
+      }
+    },
+    {
+      "check": "Roadmap IDs, invariant references and dependency DAG",
+      "status": "passed",
+      "detail": {
+        "packets": 102,
+        "invariants": 30,
+        "acyclic": true
+      }
+    },
+    {
+      "check": "Reference-symbol and artifact references",
+      "status": "passed",
+      "detail": {
+        "reference_symbol_links": 8,
+        "production_status": "all planned"
+      }
+    },
+    {
+      "check": "Local Markdown paths and heading anchors",
+      "status": "passed",
+      "detail": {
+        "local_links": 74
+      }
+    },
+    {
+      "check": "Source-pin structure and links (not remote re-fetch)",
+      "status": "passed",
+      "detail": {
+        "projects": 10,
+        "source_files": 41
+      }
+    },
+    {
+      "check": "Declared workspace/dependency and execution-surface inventory",
+      "status": "passed",
+      "detail": {
+        "local_packages": 2,
+        "declared_external_dependencies": 0,
+        "python_files": 0,
+        "hosted_workflows": 0,
+        "rust_compilation": "not run"
+      }
+    },
+    {
+      "check": "Draft schema/example conformance",
+      "status": "passed",
+      "detail": {
+        "examples_validated": 3,
+        "validator": "preparation-only Python jsonschema, not shipped"
+      }
+    },
+    {
+      "check": "Optional publishing script shell syntax",
+      "status": "passed",
+      "detail": 0
+    }
+  ],
+  "errors": [],
+  "rust_tools": {
+    "rustc": null,
+    "cargo": null,
+    "rustfmt": null
+  },
+  "rust_compile_tests": "not_run",
+  "no_production_readiness_claim": true
+}
