@@ -41,3 +41,6 @@ ENV/
 # Distribution and private artifacts
 /dist/
 /private-artifacts/
+
+# Tooling and local execution state
+.ee/
