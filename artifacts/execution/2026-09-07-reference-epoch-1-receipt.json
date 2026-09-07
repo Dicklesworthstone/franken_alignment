@@ -1,0 +1,66 @@
+{
+  "schema_version": "fa.reference_execution/1",
+  "base_commit": "e25105615a1a5401cd9333fcce539cd36c1c2c9f",
+  "overlay_fingerprint": "3670433e569554a7cdaad18adb7e22b2d48478ef68917676ea385065b4c7b5e7",
+  "source_files": {
+    "crates/fa-reference/src/lib.rs": "b0ebf2ee06f088361ab64e4a577d950c6b0a12c826e3d9c5bb9f23d0ed2d81a8",
+    "crates/fa-reference/src/round.rs": "08a6c72a0a048934095efb26aa8670b0c21831a4075cadee1c8b784192f05b02"
+  },
+  "command": "RCH_REQUIRE_REMOTE=1 rch --json exec --base e251056 --clean-overlay --overlay-path crates/fa-reference/src/lib.rs --overlay-path crates/fa-reference/src/round.rs -- cargo +nightly-2026-09-07 run --locked -p xtask -- check",
+  "format_command": "rustup run nightly-2026-08-31 rustfmt --edition 2024 crates/fa-reference/src/lib.rs crates/fa-reference/src/round.rs",
+  "worker": "ovh-a",
+  "host": "x86_64-unknown-linux-gnu",
+  "toolchain": "nightly-2026-09-07",
+  "rustc_commit": "5a2be9f5f075d31e3ca5526b5b029881ce441253",
+  "result": "pass",
+  "reference_tests_passed": 34,
+  "reference_tests_failed": 0,
+  "new_round_tests": 8,
+  "new_reset_tests": 6,
+  "prior_attempts": [
+    {
+      "artifact": "2026-09-07-reference-epoch-1-older-nightly.log",
+      "result": "pass",
+      "boundary": "34 tests on older c54751567 nightly; retained but not used as latest qualification"
+    },
+    {
+      "artifact": "2026-09-07-reference-epoch-1-hz4-refused.log",
+      "result": "refused",
+      "reason": "RCH-I002 critical pressure without fresh telemetry; no local fallback"
+    },
+    {
+      "artifact": "2026-09-07-reference-epoch-1-nightly-2026-09-07.log",
+      "result": "pass",
+      "boundary": "34 tests before unequal-unit reset regression refinement; latest final run supersedes source evidence"
+    }
+  ],
+  "no_claim": [
+    "production congress",
+    "cryptographic binding or authentication",
+    "helper honesty or independence",
+    "host restart",
+    "durable incident counter or escalation",
+    "complete FA-056 or FA-108",
+    "unwired xtask admission/parser work",
+    "release or deployment"
+  ],
+  "reviews": {
+    "author_round": "QuietBeaver",
+    "author_reset": "PurpleGorge",
+    "independent_reviewers": [
+      "RedCastle",
+      "QuietMink"
+    ],
+    "review_fixes": [
+      "filter reference depth",
+      "freeze membership before commitments",
+      "committed member missing reveal",
+      "invalid reveal retry and exact duplicate",
+      "dispatched and unknown liabilities preserved",
+      "overflow before mutation",
+      "distinct kept and refunded units to reject inverted refund predicate"
+    ]
+  },
+  "qualified_log": "2026-09-07-reference-epoch-1-final.log",
+  "qualified_rch_json": "2026-09-07-reference-epoch-1-final.json"
+}

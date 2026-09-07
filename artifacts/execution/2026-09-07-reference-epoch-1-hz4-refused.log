@@ -1,0 +1,4 @@
+  [2m2026-09-07T20:25:12.110551Z[0m [33m WARN[0m [1;33mrch::hook::incident[0m[33m: [33mhook incident recorded, [1;33mreason_code[0m[33m: RCH-I002, [1;33mfailure_class[0m[33m: "critical pressure", [1;33mselected_mode[0m[33m: Local, [1;33mlocal_fallback_allowed[0m[33m: false[0m
+    [2;3mat[0m rch/src/hook.rs:1451 [2;3mon[0m ThreadId(1)
+
+[RCH] remote required; refusing local fallback ([RCH-I002] requested worker set [hz4] refused (unavailable); 'hz4' failed admission under critical pressure (critical pressure: disk_critical_without_fresh_telemetry); remediate worker pressure or request another worker) — retryable

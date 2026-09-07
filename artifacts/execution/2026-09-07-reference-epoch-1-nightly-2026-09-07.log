@@ -1,0 +1,174 @@
+  [2m2026-09-07T20:25:57.882067Z[0m [32m INFO[0m [1;32mrch::hook[0m[32m: [32mSelected worker: vmi1227854 at root@109.123.245.77 (4 slots remaining after reservation, speed 71.9)[0m
+    [2;3mat[0m rch/src/hook.rs:2645 [2;3mon[0m ThreadId(1)
+
+[*] Job j-30004650170124155 submitted to vmi1227854 (4 slots remaining, speed 71.9)
+  [2m2026-09-07T20:25:57.932833Z[0m [32m INFO[0m [1;32mrch::hook::transfer_orchestration[0m[32m: [32mStarting remote compilation pipeline for franken_alignment (hash: 7ae389285df5de52)[0m
+    [2;3mat[0m rch/src/hook/transfer_orchestration.rs:510 [2;3mon[0m ThreadId(1)
+
+  [2m2026-09-07T20:25:57.932871Z[0m [32m INFO[0m [1;32mrch::hook::transfer_orchestration[0m[32m: [32mPrepared dependency sync manifest for 1 roots[0m
+    [2;3mat[0m rch/src/hook/transfer_orchestration.rs:532 [2;3mon[0m ThreadId(1)
+
+  [2m2026-09-07T20:25:59.450606Z[0m [32m INFO[0m [1;32mrch::hook::transfer_orchestration[0m[32m: [32mSyncing project to worker vmi1227854...[0m
+    [2;3mat[0m rch/src/hook/transfer_orchestration.rs:661 [2;3mon[0m ThreadId(1)
+
+  [2m2026-09-07T20:26:03.436648Z[0m [32m INFO[0m [1;32mrch::transfer[0m[32m: [32mSyncing /Users/jemanuel/projects/franken_alignment -> /data/tmp/rch/franken_alignment/7ae389285df5de52 on vmi1227854 (streaming)[0m
+    [2;3mat[0m rch/src/transfer.rs:3549 [2;3mon[0m ThreadId(1)
+
+  [2m2026-09-07T20:26:05.082456Z[0m [32m INFO[0m [1;32mrch::hook::transfer_orchestration[0m[32m: [32mSync complete: 6 files, 2463166 bytes in 5463ms[0m
+    [2;3mat[0m rch/src/hook/transfer_orchestration.rs:958 [2;3mon[0m ThreadId(1)
+
+  [2m2026-09-07T20:26:05.094621Z[0m [32m INFO[0m [1;32mrch::hook::transfer_orchestration[0m[32m: [32mExecuting command remotely: cargo +nightly-2026-09-07 run --locked -p xtask -- check[0m
+    [2;3mat[0m rch/src/hook/transfer_orchestration.rs:1018 [2;3mon[0m ThreadId(1)
+
+  [2m2026-09-07T20:26:05.094692Z[0m [32m INFO[0m [1;32mrch::transfer[0m[32m: [32mRewriting CARGO_TARGET_DIR for remote execution (worker-scoped path): /Volumes/USB_NVME/cargo-target -> /data/tmp/rch/franken_alignment/.rch-target-vmi1227854-pool-7426c0154046c0ad0f733de17f13ec93[0m
+    [2;3mat[0m rch/src/transfer.rs:1842 [2;3mon[0m ThreadId(1)
+
+  [2m2026-09-07T20:26:05.094726Z[0m [32m INFO[0m [1;32mrch::transfer[0m[32m: [32mWrapping command with external timeout protection, [1;32mkind[0m[32m: cargo build, [1;32mtimeout_secs[0m[32m: 3600[0m
+    [2;3mat[0m rch/src/transfer.rs:2669 [2;3mon[0m ThreadId(1)
+
+Warning: Permanently added '109.123.245.77' (ED25519) to the list of known hosts.
+info: syncing channel updates for nightly-2026-09-07-x86_64-unknown-linux-gnu
+info: latest update on 2026-09-07 for version 1.100.0-nightly (5a2be9f5f 2026-09-06)
+info: downloading 6 components
+warning: unused field `license-file` in `workspace.package`
+ --> Cargo.toml:9:1
+  |
+9 | license-file = "LICENSE"
+  | ^^^^^^^^^^^^
+  |
+  = note: `cargo::unused_workspace_package_fields` is set to `warn` by default
+help: consider removing the field `workspace.package.license-file`
+warning: workspace (manifest) generated 1 warning
+   Compiling xtask v0.2.0 (/data/tmp/rch/franken_alignment/7ae389285df5de52/xtask)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.35s
+     Running `/data/tmp/rch/franken_alignment/.rch-target-vmi1227854-pool-7426c0154046c0ad0f733de17f13ec93/debug/xtask check`
+PASS reference_lock: exactly fa-reference and xtask; no external packages
+PASS source_inventory: required files and crate-level prohibitions present
+EXECUTE rustc -Vv
+rustc 1.100.0-nightly (5a2be9f5f 2026-09-06)
+binary: rustc
+commit-hash: 5a2be9f5f075d31e3ca5526b5b029881ce441253
+commit-date: 2026-09-06
+host: x86_64-unknown-linux-gnu
+release: 1.100.0-nightly
+LLVM version: 23.1.1
+PASS executed_command: rustc -Vv
+EXECUTE cargo fmt --all --check
+PASS executed_command: cargo fmt --all --check
+EXECUTE cargo check --workspace --all-targets --frozen
+warning: unused field `license-file` in `workspace.package`
+ --> Cargo.toml:9:1
+  |
+9 | license-file = "LICENSE"
+  | ^^^^^^^^^^^^
+  |
+  = note: `cargo::unused_workspace_package_fields` is set to `warn` by default
+help: consider removing the field `workspace.package.license-file`
+warning: workspace (manifest) generated 1 warning
+    Checking xtask v0.2.0 (/data/tmp/rch/franken_alignment/7ae389285df5de52/xtask)
+    Checking fa-reference v0.2.0 (/data/tmp/rch/franken_alignment/7ae389285df5de52/crates/fa-reference)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.26s
+PASS executed_command: cargo check --workspace --all-targets --frozen
+EXECUTE cargo clippy --workspace --all-targets --frozen -- -D warnings
+warning: unused field `license-file` in `workspace.package`
+ --> Cargo.toml:9:1
+  |
+9 | license-file = "LICENSE"
+  | ^^^^^^^^^^^^
+  |
+  = note: `cargo::unused_workspace_package_fields` is set to `warn` by default
+help: consider removing the field `workspace.package.license-file`
+warning: workspace (manifest) generated 1 warning
+    Checking xtask v0.2.0 (/data/tmp/rch/franken_alignment/7ae389285df5de52/xtask)
+    Checking fa-reference v0.2.0 (/data/tmp/rch/franken_alignment/7ae389285df5de52/crates/fa-reference)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.30s
+PASS executed_command: cargo clippy --workspace --all-targets --frozen -- -D warnings
+EXECUTE cargo test --workspace --all-targets --frozen
+warning: unused field `license-file` in `workspace.package`
+ --> Cargo.toml:9:1
+  |
+9 | license-file = "LICENSE"
+  | ^^^^^^^^^^^^
+  |
+  = note: `cargo::unused_workspace_package_fields` is set to `warn` by default
+help: consider removing the field `workspace.package.license-file`
+warning: workspace (manifest) generated 1 warning
+   Compiling fa-reference v0.2.0 (/data/tmp/rch/franken_alignment/7ae389285df5de52/crates/fa-reference)
+   Compiling xtask v0.2.0 (/data/tmp/rch/franken_alignment/7ae389285df5de52/xtask)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.98s
+     Running unittests src/lib.rs (/data/tmp/rch/franken_alignment/.rch-target-vmi1227854-pool-7426c0154046c0ad0f733de17f13ec93/debug/build/fa-reference/805c210a23edaf0a/out/fa_reference-805c210a23edaf0a)
+
+running 34 tests
+test round::tests::commit_after_reveals_open_is_rejected ... ok
+test round::tests::commitment_binds_verdict ... ok
+test round::tests::conflicting_reveal_rejected ... ok
+test round::tests::invalid_reveal_and_duplicate_commit_do_not_mutate_member_slot ... ok
+test round::tests::membership_frozen_after_open ... ok
+test round::tests::missing_reveal_is_missing_not_abstain ... ok
+test round::tests::maximum_member_and_field_bounds_are_exact_and_reject_without_mutation ... ok
+test tests::absent_key_detects_insertion ... ok
+test round::tests::valid_reveals_are_recorded_for_the_frozen_members ... ok
+test tests::cross_reads_defeat_disjoint_writes ... ok
+test tests::dominator_and_bypass_are_distinguished ... ok
+test tests::effect_binding_and_one_shot_dispatch ... ok
+test tests::epoch_and_incompleteness_invalidate ... ok
+test tests::empty_range_detects_phantom ... ok
+test tests::evidence_stages_are_distinct ... ok
+test tests::frontier_does_not_skip_a_gap ... ok
+test tests::frontier_limits_fail_without_mutation ... ok
+test tests::graph_limits_and_empty_claims_are_rejected ... ok
+test tests::integer_probe_bound_matches_exhaustive_small_errors ... ok
+test tests::reset_cannot_refund_unknown ... ok
+test tests::reset_increments_incident_counter ... ok
+test tests::invalid_witness_is_not_admitted ... ok
+test tests::reserve_budget_and_duplicate_fail_closed ... ok
+test tests::reset_overflow_is_before_mutation ... ok
+test tests::reset_keeps_dispatched_liability ... ok
+test tests::reset_keeps_spent_and_epoch ... ok
+test tests::integer_probe_requests_refinement_at_margin ... ok
+test tests::reset_refunds_only_reserved_outside_keep ... ok
+test tests::revocation_fences_reserved_not_history ... ok
+test tests::resolved_non_effect_returns_rights_once ... ok
+test tests::rights_unknown_cannot_be_refunded_by_cancel ... ok
+test tests::resources_and_order_barriers_block_reordering ... ok
+test tests::witness_reuses_unrelated_changes ... ok
+test tests::exhaustive_four_vertex_cut_and_dominator_consistency ... ok
+
+test result: ok. 34 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.03s
+
+     Running unittests src/main.rs (/data/tmp/rch/franken_alignment/.rch-target-vmi1227854-pool-7426c0154046c0ad0f733de17f13ec93/debug/build/xtask/9234c929a0ba3068/out/xtask-9234c929a0ba3068)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+PASS executed_command: cargo test --workspace --all-targets --frozen
+PASS local_reference_gate; not a production-readiness or signed-release claim
+  [2m2026-09-07T20:26:23.999095Z[0m [32m INFO[0m [1;32mrch::hook::transfer_orchestration[0m[32m: [32mRemote command finished: exit=0 in 18904ms[0m
+    [2;3mat[0m rch/src/hook/transfer_orchestration.rs:1150 [2;3mon[0m ThreadId(1)
+
+  [2m2026-09-07T20:26:24.016750Z[0m [32m INFO[0m [1;32mrch::transfer[0m[32m: [32mRetrieving artifacts from /data/tmp/rch/franken_alignment/.rch-target-vmi1227854-pool-7426c0154046c0ad0f733de17f13ec93 on vmi1227854[0m
+    [2;3mat[0m rch/src/transfer.rs:4328 [2;3mon[0m ThreadId(1)
+
+  [2m2026-09-07T20:26:26.490675Z[0m [32m INFO[0m [1;32mrch::transfer[0m[32m: [32mArtifacts retrieved in 2473ms (8 files, 14570 bytes)[0m
+    [2;3mat[0m rch/src/transfer.rs:4383 [2;3mon[0m ThreadId(1)
+
+  [2m2026-09-07T20:26:26.490740Z[0m [32m INFO[0m [1;32mrch::hook::transfer_orchestration[0m[32m: [32mCustom CARGO_TARGET_DIR artifacts retrieved: 8 files, 14570 bytes in 2473ms[0m
+    [2;3mat[0m rch/src/hook/transfer_orchestration.rs:1405 [2;3mon[0m ThreadId(1)
+
+[W] Worker: vmi1227854 | Job: j-30004650170124155
+[T] Total: 26.8s (sync 5.5s, build 18.9s, artifacts 2.5s)
+^ Sync: 2.3 MB in 5.5s (440.3 KB/s)
+[C] Compile: 18.9s
+v Artifacts: 14.2 KB in 2.5s (5.8 KB/s)
+[T] Cache: MISS
++------------- [OK] Build Successful --------------+
+| Duration: 18.9s (^ 301% slower vs previous 4.7s) |
+| Artifacts: 8 files (14.2 KB)                     |
+| Worker: vmi1227854                               |
+| Cache: MISS (warming cache)                      |
+| Time: 2026-09-07 20:26:26                        |
++--------------------------------------------------+
+Warning: Permanently added '109.123.245.77' (ED25519) to the list of known hosts.
+[RCH] remote vmi1227854 (29.9s)
+[RCH] clean-overlay receipt: base=e25105615a1a5401cd9333fcce539cd36c1c2c9f overlay-fingerprint=56c1bf77254841bf6bb17eb8e1b5d0ba7c1ce6da44f8e25fea2914857b44f04b

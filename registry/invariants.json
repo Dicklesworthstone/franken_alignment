@@ -271,16 +271,28 @@
       "production_status": "planned",
       "waiver": "forbidden",
       "production_checker": null,
-      "reference_checks": [],
-      "reference_scope": "Selected single-process in-memory behavior only; no durable, concurrent, OS, remote or model-accuracy claim.",
+      "reference_checks": [
+        "crates/fa-reference/src/round.rs::tests::commitment_binds_verdict",
+        "crates/fa-reference/src/round.rs::tests::conflicting_reveal_rejected",
+        "crates/fa-reference/src/round.rs::tests::missing_reveal_is_missing_not_abstain",
+        "crates/fa-reference/src/round.rs::tests::membership_frozen_after_open",
+        "crates/fa-reference/src/round.rs::tests::valid_reveals_are_recorded_for_the_frozen_members",
+        "crates/fa-reference/src/round.rs::tests::invalid_reveal_and_duplicate_commit_do_not_mutate_member_slot",
+        "crates/fa-reference/src/round.rs::tests::commit_after_reveals_open_is_rejected",
+        "crates/fa-reference/src/round.rs::tests::maximum_member_and_field_bounds_are_exact_and_reject_without_mutation"
+      ],
+      "reference_scope": "Bounded in-memory transcript and field-comparison semantics only. FNV is non-cryptographic: no collision resistance, authentication, salt entropy, helper independence, reducer, permit or production-congress claim.",
       "required_negative_campaigns": [
         "Frozen congress commitment binding violation must be rejected without widening authority; real boundary tested at activation."
       ],
       "assumptions": [
         "Registered profile and trusted enforcement boundary execute their specified behavior."
       ],
-      "evidence_artifacts": [],
-      "reference_status": "not_implemented_in_rust_revision",
+      "evidence_artifacts": [
+        "artifacts/execution/2026-09-07-reference-epoch-1-final.log",
+        "artifacts/execution/2026-09-07-reference-epoch-1-receipt.json"
+      ],
+      "reference_status": "executed_remotely_2026_09_07_pass",
       "founding_ideas": [
         "FI-A06",
         "FI-A14"
@@ -916,9 +928,16 @@
       "production_status": "planned",
       "waiver": "forbidden",
       "production_checker": null,
-      "reference_checks": [],
-      "reference_status": "not_implemented_in_rust_revision",
-      "reference_scope": "Only the declared small logical case; not production protocol/host correctness.",
+      "reference_checks": [
+        "crates/fa-reference/src/lib.rs::tests::reset_keeps_spent_and_epoch",
+        "crates/fa-reference/src/lib.rs::tests::reset_increments_incident_counter",
+        "crates/fa-reference/src/lib.rs::tests::reset_cannot_refund_unknown",
+        "crates/fa-reference/src/lib.rs::tests::reset_refunds_only_reserved_outside_keep",
+        "crates/fa-reference/src/lib.rs::tests::reset_keeps_dispatched_liability",
+        "crates/fa-reference/src/lib.rs::tests::reset_overflow_is_before_mutation"
+      ],
+      "reference_status": "executed_remotely_2026_09_07_pass",
+      "reference_scope": "Bounded in-memory rights arithmetic and monotonic incident count only. No actor restore, persistent counter, escalation threshold, narrowed-authority transition or production-containment claim.",
       "required_negative_campaigns": [
         "Reset after a dispatched effect; spent units and the effect record must be unchanged.",
         "Reset after a revocation; the old epoch must not become admissible.",
@@ -928,7 +947,10 @@
         "A registered restart profile with functional_restart grade or better exists (plan §11.1).",
         "The control nucleus owns the incident counter outside any actor-visible state."
       ],
-      "evidence_artifacts": [],
+      "evidence_artifacts": [
+        "artifacts/execution/2026-09-07-reference-epoch-1-final.log",
+        "artifacts/execution/2026-09-07-reference-epoch-1-receipt.json"
+      ],
       "founding_ideas": [
         "FI-A09",
         "FI-A16"

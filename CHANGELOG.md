@@ -1,5 +1,11 @@
 # Changelog
 
+## Reference implementation · 2026-09-07
+
+Added a bounded frozen commit–reveal round in `fa-reference`, with membership fixed before commitments, missing reveals preserved, and invalid or duplicate reveals unable to replace accepted results. Its deterministic FNV comparison makes no cryptographic claim. Added containment-reset rights semantics: only undispatched reservations outside the retained checkpoint set are refunded; spent rights, epochs and dispatched/unknown liabilities remain, and the incident counter increases with overflow checked before mutation.
+
+The isolated RCH gate passed 34 tests, formatting, compilation and Clippy on `x86_64-unknown-linux-gnu` under `nightly-2026-09-07`. Exact source, commands, the older-nightly pass and worker-pressure refusal are retained in `artifacts/execution/2026-09-07-reference-epoch-1-*`. FA-INV-010/034 now link scoped reference evidence. Production remains unimplemented; complete FA-056 and FA-108 acceptance is not claimed.
+
 ## 0.3 design revision · 2026-09-06
 
 Put the two founding essays back at the center. Added the normative founding-ideas concordance (`docs/FOUNDING_IDEAS.md`, `registry/founding_concordance.json`) mapping 38 essay ideas, 6 syntheses, 8 deliberately non-literal imports and 8 engineering additions (raised to 9 syntheses and 25 engineering additions by the later batches below) to plan sections, invariants, hypotheses and packets; packet FA-103 keeps it complete. Recorded the chronology showing the essays precede most cited literature.

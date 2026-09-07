@@ -2,6 +2,8 @@
 //! persistence, cryptographic claims, calibration, or deployment guarantees.
 #![forbid(unsafe_code)]
 
+pub mod round;
+
 use std::collections::{BTreeMap, BTreeSet, VecDeque};
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -196,6 +198,7 @@ pub struct Rights {
     available: u64,
     spent: u64,
     epoch: u64,
+    incident_count: u64,
     reservations: BTreeMap<u64, Reservation>,
 }
 
@@ -206,6 +209,7 @@ impl Rights {
             available: total,
             spent: 0,
             epoch: 0,
+            incident_count: 0,
             reservations: BTreeMap::new(),
         }
     }
@@ -216,6 +220,10 @@ impl Rights {
 
     pub fn epoch(&self) -> u64 {
         self.epoch
+    }
+
+    pub fn incident_count(&self) -> u64 {
+        self.incident_count
     }
 
     pub fn state(&self, id: u64) -> Result<State, Error> {
@@ -310,6 +318,42 @@ impl Rights {
             reservation.state = State::Aborted;
         }
         Ok(())
+    }
+
+    /// Models the control-ledger portion of containment reset only.
+    ///
+    /// Actor state restoration is outside this reference model. Reserved work
+    /// outside the retained checkpoint set has not dispatched and is therefore
+    /// aborted; dispatched and unknown effects remain historical liabilities.
+    pub fn reset_to_checkpoint(&mut self, keep: &BTreeSet<u64>) -> Result<(), Error> {
+        if !self.conserved() {
+            return Err(Error::WrongState);
+        }
+
+        let refund = self
+            .reservations
+            .iter()
+            .filter(|(id, reservation)| !keep.contains(*id) && reservation.state == State::Reserved)
+            .try_fold(0_u64, |total, (_, reservation)| {
+                total.checked_add(reservation.effect.units)
+            })
+            .ok_or(Error::Overflow)?;
+        let available = self.available.checked_add(refund).ok_or(Error::Overflow)?;
+        let incident_count = self.incident_count.checked_add(1).ok_or(Error::Overflow)?;
+
+        for (id, reservation) in &mut self.reservations {
+            if !keep.contains(id) && reservation.state == State::Reserved {
+                reservation.state = State::Aborted;
+            }
+        }
+        self.available = available;
+        self.incident_count = incident_count;
+
+        if self.conserved() {
+            Ok(())
+        } else {
+            Err(Error::WrongState)
+        }
     }
 
     pub fn conserved(&self) -> bool {
@@ -661,6 +705,109 @@ mod tests {
         assert_eq!(r.available(), 3);
         assert_eq!(r.reconcile(1, false), Err(Error::WrongState));
         assert!(r.conserved());
+    }
+
+    #[test]
+    fn reset_keeps_spent_and_epoch() {
+        let mut r = Rights::new(10);
+        let e = effect();
+        r.reserve(1, e.clone()).unwrap();
+        r.dispatch(1, &e).unwrap();
+        r.reconcile(1, true).unwrap();
+        r.revoke_epoch().unwrap();
+        let spent = r.spent;
+        let epoch = r.epoch();
+        let available = r.available();
+
+        r.reset_to_checkpoint(&BTreeSet::new()).unwrap();
+
+        assert_eq!(r.state(1), Ok(State::Committed));
+        assert_eq!(r.spent, spent);
+        assert_eq!(r.epoch(), epoch);
+        assert_eq!(r.available(), available);
+        assert_eq!(r.incident_count(), 1);
+        assert!(r.conserved());
+    }
+
+    #[test]
+    fn reset_increments_incident_counter() {
+        let mut r = Rights::new(10);
+        r.reset_to_checkpoint(&BTreeSet::new()).unwrap();
+        r.reset_to_checkpoint(&BTreeSet::new()).unwrap();
+        assert_eq!(r.incident_count(), 2);
+        assert!(r.conserved());
+    }
+
+    #[test]
+    fn reset_keeps_dispatched_liability() {
+        let mut r = Rights::new(10);
+        let e = effect();
+        r.reserve(1, e.clone()).unwrap();
+        r.dispatch(1, &e).unwrap();
+        let available = r.available();
+        let spent = r.spent;
+
+        r.reset_to_checkpoint(&BTreeSet::new()).unwrap();
+
+        assert_eq!(r.state(1), Ok(State::Dispatched));
+        assert_eq!(r.available(), available);
+        assert_eq!(r.spent, spent);
+        assert_eq!(r.incident_count(), 1);
+        assert!(r.conserved());
+    }
+
+    #[test]
+    fn reset_cannot_refund_unknown() {
+        let mut r = Rights::new(10);
+        let e = effect();
+        r.reserve(1, e.clone()).unwrap();
+        r.dispatch(1, &e).unwrap();
+        r.mark_unknown(1).unwrap();
+        let available = r.available();
+        let spent = r.spent;
+        let epoch = r.epoch();
+
+        r.reset_to_checkpoint(&BTreeSet::new()).unwrap();
+
+        assert_eq!(r.state(1), Ok(State::Unknown));
+        assert_eq!(r.available(), available);
+        assert_eq!(r.spent, spent);
+        assert_eq!(r.epoch(), epoch);
+        assert_eq!(r.incident_count(), 1);
+        assert!(r.conserved());
+    }
+
+    #[test]
+    fn reset_refunds_only_reserved_outside_keep() {
+        let mut r = Rights::new(10);
+        let kept = effect();
+        let mut refunded = effect();
+        refunded.resolved_target = "object:8".into();
+        refunded.units = 5;
+        r.reserve(1, kept).unwrap();
+        r.reserve(2, refunded).unwrap();
+
+        r.reset_to_checkpoint(&BTreeSet::from([1])).unwrap();
+
+        assert_eq!(r.state(1), Ok(State::Reserved));
+        assert_eq!(r.state(2), Ok(State::Aborted));
+        assert_eq!(r.available(), 7);
+        assert_eq!(r.incident_count(), 1);
+        assert!(r.conserved());
+    }
+
+    #[test]
+    fn reset_overflow_is_before_mutation() {
+        let mut r = Rights::new(10);
+        r.reserve(1, effect()).unwrap();
+        r.incident_count = u64::MAX;
+        let before = r.clone();
+
+        assert_eq!(
+            r.reset_to_checkpoint(&BTreeSet::new()),
+            Err(Error::Overflow)
+        );
+        assert_eq!(r, before);
     }
 
     #[test]

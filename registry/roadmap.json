@@ -1276,7 +1276,7 @@
       "id": "FA-053",
       "gate": "G0",
       "title": "Freeze transitive dependency policy",
-      "status": "planned",
+      "status": "in_progress",
       "depends_on": [],
       "invariants": [
         "FA-INV-029"
@@ -1328,7 +1328,7 @@
       "id": "FA-056",
       "gate": "G0",
       "title": "Port complete v1 reference semantics",
-      "status": "planned",
+      "status": "in_progress",
       "depends_on": [
         "FA-001"
       ],
@@ -1349,7 +1349,7 @@
       "id": "FA-057",
       "gate": "G0",
       "title": "Define opaque judgment full-input witnesses",
-      "status": "planned",
+      "status": "in_progress",
       "depends_on": [
         "FA-001"
       ],
@@ -1460,7 +1460,7 @@
       "id": "FA-063",
       "gate": "G0",
       "title": "Define product-of-streams frontiers",
-      "status": "planned",
+      "status": "in_progress",
       "depends_on": [
         "FA-001"
       ],

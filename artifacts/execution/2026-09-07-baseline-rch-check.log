@@ -1,0 +1,166 @@
+[RCH] CARGO_TARGET_DIR forwarding detected from environment
+[RCH] Cargo target sync active; forcing worker CARGO_TARGET_DIR to an isolated remote target and syncing back to /Volumes/USB_NVME/cargo-target
+  [2m2026-09-07T20:00:49.759258Z[0m [32m INFO[0m [1;32mrch::hook[0m[32m: [32mSelected worker: hz4 at ubuntu@194.163.156.231 (6 slots remaining after reservation, speed 76.3)[0m
+    [2;3mat[0m rch/src/hook.rs:2645 [2;3mon[0m ThreadId(1)
+
+[RCH] project path normalized: received_input=/Users/jemanuel/projects/franken_alignment
+[RCH] project path normalized: verified_absolute_input=/Users/jemanuel/projects/franken_alignment
+[RCH] project path normalized: canonical_root_resolved=/Users/jemanuel/projects
+[RCH] project path normalized: canonical_input_resolved=/Users/jemanuel/projects/franken_alignment
+[RCH] project path normalized: verified_within_root=/Users/jemanuel/projects/franken_alignment root=/Users/jemanuel/projects
+[RCH] dependency root /Users/jemanuel/projects/franken_alignment/crates/fa-reference (WorkspaceMember)
+[RCH] dependency root /Users/jemanuel/projects/franken_alignment/xtask (WorkspaceMember)
+  [2m2026-09-07T20:00:50.659260Z[0m [32m INFO[0m [1;32mrch::hook::transfer_orchestration[0m[32m: [32mStarting remote compilation pipeline for franken_alignment (hash: 344e24589df5b96c)[0m
+    [2;3mat[0m rch/src/hook/transfer_orchestration.rs:510 [2;3mon[0m ThreadId(1)
+
+[RCH] dependency sync roots planned: 1
+[RCH] dependency sync root 1/1: /Users/jemanuel/projects/franken_alignment
+[RCH] dependency sync manifest: {"schema_version":"rch.sync_closure_manifest.v2","generated_at_unix_ms":1788811250588,"project_root":"/Users/jemanuel/projects/franken_alignment","entries":[{"order":1,"local_root":"/Users/jemanuel/projects/franken_alignment","remote_root":"/Users/jemanuel/projects/franken_alignment","project_id":"franken_alignment","root_hash":"344e24589df5b96c","is_primary":true,"mode":"full"}]}
+  [2m2026-09-07T20:00:50.661440Z[0m [32m INFO[0m [1;32mrch::hook::transfer_orchestration[0m[32m: [32mPrepared dependency sync manifest for 1 roots[0m
+    [2;3mat[0m rch/src/hook/transfer_orchestration.rs:532 [2;3mon[0m ThreadId(1)
+
+[RCH] sync start (project franken_alignment on hz4)
+[RCH] topology preflight ok on hz4 (/dp -> /Users/jemanuel/projects enforced)
+[RCH] waiting for 1 remote source-authority lock(s) on hz4
+[RCH] acquired remote source-authority locks on hz4
+[RCH] remote target-dir reuse active; pooled dir .rch-target-hz4-pool-7426c0154046c0ad0f733de17f13ec93
+  [2m2026-09-07T20:00:54.532459Z[0m [32m INFO[0m [1;32mrch::hook::transfer_orchestration[0m[32m: [32mSyncing project to worker hz4...[0m
+    [2;3mat[0m rch/src/hook/transfer_orchestration.rs:661 [2;3mon[0m ThreadId(1)
+
+[RCH] exact source sync required; bypassing transfer estimator for /Users/jemanuel/projects/franken_alignment
+[RCH] syncing dependency root /Users/jemanuel/projects/franken_alignment to remote /Users/jemanuel/projects/franken_alignment
+  [2m2026-09-07T20:00:54.532568Z[0m [32m INFO[0m [1;32mrch::transfer[0m[32m: [32mSyncing /Users/jemanuel/projects/franken_alignment -> /Users/jemanuel/projects/franken_alignment on hz4 (streaming)[0m
+    [2;3mat[0m rch/src/transfer.rs:3549 [2;3mon[0m ThreadId(1)
+
+  [2m2026-09-07T20:00:57.330130Z[0m [32m INFO[0m [1;32mrch::hook::transfer_orchestration[0m[32m: [32mSync complete: 91 files, 858692 bytes in 2794ms[0m
+    [2;3mat[0m rch/src/hook/transfer_orchestration.rs:958 [2;3mon[0m ThreadId(1)
+
+[RCH] sync done: 91 files, 858692 bytes in 2794ms
+[RCH] dependency preflight report: {"schema_version":"rch.dependency_preflight.v1","worker":"hz4","verified":true,"reason_code":null,"remediation":null,"evidence":[{"root":"/Users/jemanuel/projects/franken_alignment","manifest":"/Users/jemanuel/projects/franken_alignment/Cargo.toml","required_path":"/Users/jemanuel/projects/franken_alignment/Cargo.toml","required_kind":"manifest","status":"present","reason_code":"RCH-I410","detail":"required manifest present after current sync: /Users/jemanuel/projects/franken_alignment/Cargo.toml","is_primary":true},{"root":"/Users/jemanuel/projects/franken_alignment","manifest":"/Users/jemanuel/projects/franken_alignment/Cargo.toml","required_path":"/Users/jemanuel/projects/franken_alignment/crates/fa-reference/Cargo.toml","required_kind":"source_entrypoint","status":"present","reason_code":"RCH-I410","detail":"required source_entrypoint present after current sync: /Users/jemanuel/projects/franken_alignment/crates/fa-reference/Cargo.toml","is_primary":true},{"root":"/Users/jemanuel/projects/franken_alignment","manifest":"/Users/jemanuel/projects/franken_alignment/Cargo.toml","required_path":"/Users/jemanuel/projects/franken_alignment/crates/fa-reference/src/lib.rs","required_kind":"source_entrypoint","status":"present","reason_code":"RCH-I410","detail":"required source_entrypoint present after current sync: /Users/jemanuel/projects/franken_alignment/crates/fa-reference/src/lib.rs","is_primary":true},{"root":"/Users/jemanuel/projects/franken_alignment","manifest":"/Users/jemanuel/projects/franken_alignment/Cargo.toml","required_path":"/Users/jemanuel/projects/franken_alignment/xtask/Cargo.toml","required_kind":"source_entrypoint","status":"present","reason_code":"RCH-I410","detail":"required source_entrypoint present after current sync: /Users/jemanuel/projects/franken_alignment/xtask/Cargo.toml","is_primary":true},{"root":"/Users/jemanuel/projects/franken_alignment","manifest":"/Users/jemanuel/projects/franken_alignment/Cargo.toml","required_path":"/Users/jemanuel/projects/franken_alignment/xtask/src/main.rs","required_kind":"source_entrypoint","status":"present","reason_code":"RCH-I410","detail":"required source_entrypoint present after current sync: /Users/jemanuel/projects/franken_alignment/xtask/src/main.rs","is_primary":true}]}
+[RCH] remote dependency preflight verified 5 roots on hz4
+  [2m2026-09-07T20:00:59.940153Z[0m [32m INFO[0m [1;32mrch::hook::transfer_orchestration[0m[32m: [32mExecuting command remotely: cargo run --locked -p xtask -- check[0m
+    [2;3mat[0m rch/src/hook/transfer_orchestration.rs:1018 [2;3mon[0m ThreadId(1)
+
+[RCH] exec start: cargo run --locked -p xtask -- check
+  [2m2026-09-07T20:00:59.940193Z[0m [32m INFO[0m [1;32mrch::transfer[0m[32m: [32mRewriting CARGO_TARGET_DIR for remote execution (worker-scoped path): /Volumes/USB_NVME/cargo-target -> /Users/jemanuel/projects/franken_alignment/.rch-target-hz4-pool-7426c0154046c0ad0f733de17f13ec93[0m
+    [2;3mat[0m rch/src/transfer.rs:1842 [2;3mon[0m ThreadId(1)
+
+  [2m2026-09-07T20:00:59.940217Z[0m [32m INFO[0m [1;32mrch::transfer[0m[32m: [32mWrapping command with external timeout protection, [1;32mkind[0m[32m: cargo build, [1;32mtimeout_secs[0m[32m: 3600[0m
+    [2;3mat[0m rch/src/transfer.rs:2669 [2;3mon[0m ThreadId(1)
+
+warning: unused field `license-file` in `workspace.package`
+ --> Cargo.toml:9:1
+  |
+9 | license-file = "LICENSE"
+  | ^^^^^^^^^^^^
+  |
+  = note: `cargo::unused_workspace_package_fields` is set to `warn` by default
+help: consider removing the field `workspace.package.license-file`
+warning: workspace (manifest) generated 1 warning
+   Compiling xtask v0.2.0 (/data/projects/franken_alignment/xtask)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.30s
+     Running `.rch-target-hz4-pool-7426c0154046c0ad0f733de17f13ec93/debug/xtask check`
+PASS reference_lock: exactly fa-reference and xtask; no external packages
+PASS source_inventory: required files and crate-level prohibitions present
+EXECUTE rustc -Vv
+rustc 1.100.0-nightly (5a2be9f5f 2026-09-06)
+binary: rustc
+commit-hash: 5a2be9f5f075d31e3ca5526b5b029881ce441253
+commit-date: 2026-09-06
+host: x86_64-unknown-linux-gnu
+release: 1.100.0-nightly
+LLVM version: 23.1.1
+PASS executed_command: rustc -Vv
+EXECUTE cargo fmt --all --check
+PASS executed_command: cargo fmt --all --check
+EXECUTE cargo check --workspace --all-targets --frozen
+warning: unused field `license-file` in `workspace.package`
+ --> Cargo.toml:9:1
+  |
+9 | license-file = "LICENSE"
+  | ^^^^^^^^^^^^
+  |
+  = note: `cargo::unused_workspace_package_fields` is set to `warn` by default
+help: consider removing the field `workspace.package.license-file`
+warning: workspace (manifest) generated 1 warning
+    Checking xtask v0.2.0 (/data/projects/franken_alignment/xtask)
+    Checking fa-reference v0.2.0 (/data/projects/franken_alignment/crates/fa-reference)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.15s
+PASS executed_command: cargo check --workspace --all-targets --frozen
+EXECUTE cargo clippy --workspace --all-targets --frozen -- -D warnings
+warning: unused field `license-file` in `workspace.package`
+ --> Cargo.toml:9:1
+  |
+9 | license-file = "LICENSE"
+  | ^^^^^^^^^^^^
+  |
+  = note: `cargo::unused_workspace_package_fields` is set to `warn` by default
+help: consider removing the field `workspace.package.license-file`
+warning: workspace (manifest) generated 1 warning
+    Checking xtask v0.2.0 (/data/projects/franken_alignment/xtask)
+    Checking fa-reference v0.2.0 (/data/projects/franken_alignment/crates/fa-reference)
+PASS executed_command: cargo clippy --workspace --all-targets --frozen -- -D warnings
+EXECUTE cargo test --workspace --all-targets --frozen
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.21s
+warning: unused field `license-file` in `workspace.package`
+ --> Cargo.toml:9:1
+  |
+9 | license-file = "LICENSE"
+  | ^^^^^^^^^^^^
+  |
+  = note: `cargo::unused_workspace_package_fields` is set to `warn` by default
+help: consider removing the field `workspace.package.license-file`
+warning: workspace (manifest) generated 1 warning
+   Compiling fa-reference v0.2.0 (/data/projects/franken_alignment/crates/fa-reference)
+   Compiling xtask v0.2.0 (/data/projects/franken_alignment/xtask)
+
+running 20 tests
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.61s
+     Running unittests src/lib.rs (.rch-target-hz4-pool-7426c0154046c0ad0f733de17f13ec93/debug/build/fa-reference/805c210a23edaf0a/out/fa_reference-805c210a23edaf0a)
+test tests::absent_key_detects_insertion ... ok
+test tests::cross_reads_defeat_disjoint_writes ... ok
+test tests::effect_binding_and_one_shot_dispatch ... ok
+test tests::dominator_and_bypass_are_distinguished ... ok
+test tests::empty_range_detects_phantom ... ok
+test tests::epoch_and_incompleteness_invalidate ... ok
+test tests::evidence_stages_are_distinct ... ok
+test tests::frontier_does_not_skip_a_gap ... ok
+test tests::frontier_limits_fail_without_mutation ... ok
+test tests::graph_limits_and_empty_claims_are_rejected ... ok
+test tests::integer_probe_requests_refinement_at_margin ... ok
+test tests::invalid_witness_is_not_admitted ... ok
+test tests::reserve_budget_and_duplicate_fail_closed ... ok
+test tests::integer_probe_bound_matches_exhaustive_small_errors ... ok
+test tests::resolved_non_effect_returns_rights_once ... ok
+test tests::resources_and_order_barriers_block_reordering ... ok
+test tests::revocation_fences_reserved_not_history ... ok
+test tests::witness_reuses_unrelated_changes ... ok
+test tests::rights_unknown_cannot_be_refunded_by_cancel ... ok
+test tests::exhaustive_four_vertex_cut_and_dominator_consistency ... ok
+
+test result: ok. 20 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.03s
+
+     Running unittests src/main.rs (.rch-target-hz4-pool-7426c0154046c0ad0f733de17f13ec93/debug/build/xtask/9234c929a0ba3068/out/xtask-9234c929a0ba3068)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+PASS executed_command: cargo test --workspace --all-targets --frozen
+PASS local_reference_gate; not a production-readiness or signed-release claim
+[RCH] released remote source-authority locks on hz4 after Cargo exit
+  [2m2026-09-07T20:01:02.928059Z[0m [32m INFO[0m [1;32mrch::hook::transfer_orchestration[0m[32m: [32mRemote command finished: exit=0 in 2882ms[0m
+    [2;3mat[0m rch/src/hook/transfer_orchestration.rs:1150 [2;3mon[0m ThreadId(1)
+
+[RCH] exec done: exit=0 in 2882ms
+  [2m2026-09-07T20:01:02.960037Z[0m [32m INFO[0m [1;32mrch::transfer[0m[32m: [32mRetrieving artifacts from /Users/jemanuel/projects/franken_alignment/.rch-target-hz4-pool-7426c0154046c0ad0f733de17f13ec93 on hz4[0m
+    [2;3mat[0m rch/src/transfer.rs:4328 [2;3mon[0m ThreadId(1)
+
+  [2m2026-09-07T20:01:05.459412Z[0m [32m INFO[0m [1;32mrch::transfer[0m[32m: [32mArtifacts retrieved in 2499ms (8 files, 5972 bytes)[0m
+    [2;3mat[0m rch/src/transfer.rs:4383 [2;3mon[0m ThreadId(1)
+
+  [2m2026-09-07T20:01:05.459530Z[0m [32m INFO[0m [1;32mrch::hook::transfer_orchestration[0m[32m: [32mCustom CARGO_TARGET_DIR artifacts retrieved: 8 files, 5972 bytes in 2499ms[0m
+    [2;3mat[0m rch/src/hook/transfer_orchestration.rs:1405 [2;3mon[0m ThreadId(1)
+
+[RCH] custom target dir sync done: /Users/jemanuel/projects/franken_alignment/.rch-target-hz4-pool-7426c0154046c0ad0f733de17f13ec93 -> /Volumes/USB_NVME/cargo-target (8 files, 5972 bytes in 2499ms)
+[RCH] remote hz4 (15.8s)
