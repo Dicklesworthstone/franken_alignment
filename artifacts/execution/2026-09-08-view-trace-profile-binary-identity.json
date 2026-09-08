@@ -1,0 +1,14 @@
+{
+  "evidence_view_costs": {
+    "remote_path": "/data/tmp/rch/franken_alignment_wave5_gate1_20260908/.rch-target-vmi1149989-pool-453796de37ab59ed58e9bcaa38357bd6/release/build/fa-reference/58c0696eb3a7e9da/out/evidence_view_costs-58c0696eb3a7e9da",
+    "sha256": "776a234b9918bb63926565b88032d117068c5e54d1d5f605cf35c830cce9d740",
+    "local_path": "/tmp/fa-campaign-20260908/wave5-profile-binaries/evidence_view_costs",
+    "profile_worker_path": "/tmp/fa-campaign-20260908-wave5-profile/evidence_view_costs"
+  },
+  "trace_relation_costs": {
+    "remote_path": "/data/tmp/rch/franken_alignment_wave5_gate1_20260908/.rch-target-vmi1149989-pool-453796de37ab59ed58e9bcaa38357bd6/release/build/fa-reference/9edd88ba89c4dc56/out/trace_relation_costs-9edd88ba89c4dc56",
+    "sha256": "bffca6bca3519499d73a32833ff66caae60f847a818de6e799a13ac6cfd298b0",
+    "local_path": "/tmp/fa-campaign-20260908/wave5-profile-binaries/trace_relation_costs",
+    "profile_worker_path": "/tmp/fa-campaign-20260908-wave5-profile/trace_relation_costs"
+  }
+}

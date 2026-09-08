@@ -1845,7 +1845,7 @@
       "id": "FA-081",
       "gate": "G0",
       "title": "Build committed helper evidence views",
-      "status": "planned",
+      "status": "reference_semantics_qualified_2026_09_08",
       "depends_on": [
         "FA-057"
       ],
@@ -1857,7 +1857,9 @@
         "Produce executed local evidence; source or prose alone does not close this packet."
       ],
       "owner_role": "systems",
-      "result_artifacts": []
+      "result_artifacts": [
+        "artifacts/execution/2026-09-08-view-trace-receipt.json"
+      ]
     },
     {
       "id": "FA-082",
@@ -2051,7 +2053,7 @@
       "id": "FA-092",
       "gate": "G0",
       "title": "Define full trace independence relation",
-      "status": "planned",
+      "status": "reference_semantics_qualified_2026_09_08",
       "depends_on": [
         "FA-057"
       ],
@@ -2063,7 +2065,9 @@
         "Produce executed local evidence; source or prose alone does not close this packet."
       ],
       "owner_role": "systems",
-      "result_artifacts": []
+      "result_artifacts": [
+        "artifacts/execution/2026-09-08-view-trace-receipt.json"
+      ]
     },
     {
       "id": "FA-093",

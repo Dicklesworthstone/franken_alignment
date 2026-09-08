@@ -1,0 +1,10 @@
+--- a/crates/fa-reference/src/trace_independence.rs
++++ b/crates/fa-reference/src/trace_independence.rs
+@@ -274,7 +274,6 @@
+         .chain(&left.consuming_resources)
+         .any(|domain| {
+             right.positive_read_domains.contains(domain)
+-                || right.negative_read_domains.contains(domain)
+                 || right.write_domains.contains(domain)
+                 || right.rng_streams.contains(domain)
+                 || right.consuming_resources.contains(domain)

@@ -1,0 +1,48 @@
+{
+  "schema": "fa.final_gate_receipt/1",
+  "date": "2026-09-08",
+  "job": "j-30004650170124405",
+  "scope": "Final reviewed FA081/092 source, documentation, typed invariant references, roadmap and independently closed tracker entries. Prospective FA058/068/002 loader source excluded.",
+  "base_commit": "d7e207dc22768d7a249e4b2a30681a2a104a5666",
+  "result": {
+    "api_version": "1.0",
+    "command": "cargo +nightly-2026-09-08 run --locked -p xtask -- check",
+    "outcome": "completed",
+    "location": "remote",
+    "worker_id": "vmi1149989",
+    "remote_exit_code": 0,
+    "duration_ms": 30619,
+    "timing": {
+      "classify": null,
+      "select": null,
+      "sync_up": 5972,
+      "exec": 16974,
+      "sync_down": 2916,
+      "cleanup": null,
+      "total": null
+    },
+    "result_dirs": []
+  },
+  "test_counts": {
+    "reference_unit": 95,
+    "integration": 101,
+    "xtask": 242,
+    "doctests": 8,
+    "total": 446,
+    "failed": 0,
+    "ignored": 0,
+    "filtered": 0
+  },
+  "failed_final_attempt": {
+    "job": "j-30004650170124404",
+    "reason": "Root used unsupported top-level integration symbols in invariant reference_checks; gate requires actual path::tests::name source declarations. Replaced references with relevant already-executed inline tests; public regressions remain executed and in receipt. Root also corrected stale README current counts/source receipt. No validator or assertions weakened."
+  },
+  "artifact_sha256": {
+    "artifacts/execution/2026-09-08-view-trace-final1.log": "ead77503b540366c4f884bad628e09bc0ad7f5bf45d168d6e942ead7b120ed2f",
+    "artifacts/execution/2026-09-08-view-trace-final1.json": "e4c35fe01cf71657bfa01b754f9dab7405d7a1848f17bb264e9b31a3a615ddbc",
+    "artifacts/execution/2026-09-08-view-trace-final1-inputs.json": "d6139858554a2f796e11f9c939b76d372420acb1120ae0841728fdf2a7122017",
+    "artifacts/execution/2026-09-08-view-trace-final2.log": "be2b81b44fb2653dd626e930d6793f1f5e73649c5bfb3882c4a446b8bf4219ad",
+    "artifacts/execution/2026-09-08-view-trace-final2.json": "fed2e18ce890ea3c2d2681ebb8d2618f7546b623cea0a74561eb2ecd85127db1",
+    "artifacts/execution/2026-09-08-view-trace-final2-inputs.json": "8a4084c38d02e598637611928af51abdcdc8166cf75d555299eac84b5d80df22"
+  }
+}

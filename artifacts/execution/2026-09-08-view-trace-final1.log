@@ -1,0 +1,93 @@
+  [2m2026-09-08T07:58:42.660777Z[0m [32m INFO[0m [1;32mrch::hook[0m[32m: [32mSelected worker: vmi1149989 at root@212.90.121.76 (4 slots remaining after reservation, speed 71.9)[0m
+    [2;3mat[0m rch/src/hook.rs:2645 [2;3mon[0m ThreadId(1)
+
+[*] Job j-30004650170124404 submitted to vmi1149989 (4 slots remaining, speed 71.9)
+  [2m2026-09-08T07:58:42.753325Z[0m [32m INFO[0m [1;32mrch::hook::transfer_orchestration[0m[32m: [32mStarting remote compilation pipeline for franken_alignment_wave5_final1_20260908 (hash: 4ee798a1a2583f6e)[0m
+    [2;3mat[0m rch/src/hook/transfer_orchestration.rs:510 [2;3mon[0m ThreadId(1)
+
+  [2m2026-09-08T07:58:42.753372Z[0m [32m INFO[0m [1;32mrch::hook::transfer_orchestration[0m[32m: [32mPrepared dependency sync manifest for 1 roots[0m
+    [2;3mat[0m rch/src/hook/transfer_orchestration.rs:532 [2;3mon[0m ThreadId(1)
+
+  [2m2026-09-08T07:58:44.289578Z[0m [32m INFO[0m [1;32mrch::hook::transfer_orchestration[0m[32m: [32mSyncing project to worker vmi1149989...[0m
+    [2;3mat[0m rch/src/hook/transfer_orchestration.rs:661 [2;3mon[0m ThreadId(1)
+
+  [2m2026-09-08T07:58:49.125852Z[0m [32m INFO[0m [1;32mrch::transfer[0m[32m: [32mLinked git worktree detected at /Users/jemanuel/projects/franken_alignment_wave5_final1_20260908 (gitdir: /Users/jemanuel/projects/franken_alignment/.git/worktrees/franken_alignment_wave5_final1_20260908); excluding dangling '.git' file from upload so the remote build resolves git-free like a normal repo[0m
+    [2;3mat[0m rch/src/transfer.rs:2009 [2;3mon[0m ThreadId(1)
+
+  [2m2026-09-08T07:58:49.126132Z[0m [32m INFO[0m [1;32mrch::transfer[0m[32m: [32mSyncing /Users/jemanuel/projects/franken_alignment_wave5_final1_20260908 -> /data/tmp/rch/franken_alignment_wave5_final1_20260908/4ee798a1a2583f6e on vmi1149989 (streaming)[0m
+    [2;3mat[0m rch/src/transfer.rs:3549 [2;3mon[0m ThreadId(1)
+
+  [2m2026-09-08T07:58:51.165557Z[0m [32m INFO[0m [1;32mrch::hook::transfer_orchestration[0m[32m: [32mSync complete: 90 files, 8015734 bytes in 6323ms[0m
+    [2;3mat[0m rch/src/hook/transfer_orchestration.rs:958 [2;3mon[0m ThreadId(1)
+
+  [2m2026-09-08T07:58:51.239544Z[0m [32m INFO[0m [1;32mrch::hook::transfer_orchestration[0m[32m: [32mExecuting command remotely: cargo +nightly-2026-09-08 run --locked -p xtask -- check[0m
+    [2;3mat[0m rch/src/hook/transfer_orchestration.rs:1018 [2;3mon[0m ThreadId(1)
+
+  [2m2026-09-08T07:58:51.239728Z[0m [32m INFO[0m [1;32mrch::transfer[0m[32m: [32mRewriting CARGO_TARGET_DIR for remote execution (worker-scoped path): /Volumes/USB_NVME/cargo-target -> /data/tmp/rch/franken_alignment_wave5_final1_20260908/.rch-target-vmi1149989-pool-de959eea44372a56d59fc92b5e5ae5e4[0m
+    [2;3mat[0m rch/src/transfer.rs:1842 [2;3mon[0m ThreadId(1)
+
+  [2m2026-09-08T07:58:51.239787Z[0m [32m INFO[0m [1;32mrch::transfer[0m[32m: [32mWrapping command with external timeout protection, [1;32mkind[0m[32m: cargo build, [1;32mtimeout_secs[0m[32m: 3600[0m
+    [2;3mat[0m rch/src/transfer.rs:2669 [2;3mon[0m ThreadId(1)
+
+Warning: Permanently added '212.90.121.76' (ED25519) to the list of known hosts.
+warning: unused field `license-file` in `workspace.package`
+ --> Cargo.toml:9:1
+  |
+9 | license-file = "LICENSE"
+  | ^^^^^^^^^^^^
+  |
+  = note: `cargo::unused_workspace_package_fields` is set to `warn` by default
+help: consider removing the field `workspace.package.license-file`
+warning: workspace (manifest) generated 1 warning
+   Compiling xtask v0.2.0 (/data/tmp/rch/franken_alignment_wave5_final1_20260908/4ee798a1a2583f6e/xtask)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 3.52s
+     Running `/data/tmp/rch/franken_alignment_wave5_final1_20260908/.rch-target-vmi1149989-pool-de959eea44372a56d59fc92b5e5ae5e4/debug/xtask check`
+PASS reference_lock: exactly fa-reference and xtask; no external packages
+PASS source_inventory: required files and crate-level prohibitions present
+EXECUTE rustc -Vv
+rustc 1.100.0-nightly (cea272fa3 2026-09-07)
+binary: rustc
+commit-hash: cea272fa356e94bd2ee2cadf376630aa0683867a
+commit-date: 2026-09-07
+host: x86_64-unknown-linux-gnu
+release: 1.100.0-nightly
+LLVM version: 23.1.1
+PASS qualified_rustc_identity: cea272fa356e94bd2ee2cadf376630aa0683867a on x86_64-unknown-linux-gnu; compiler-reported identity only
+PASS admission_contract: required local source, target, build/runtime review and future external constraints; snapshot identity matched
+SNAPSHOT tool: sha256sum
+SNAPSHOT verified files: 160
+PASS source_snapshot: 160 reviewed files match the manifest byte for byte, and the discovered set equals the manifest set. Digests come from the operator's SHA-256 tool; no cryptography is implemented here. Not a claim about the hashing binary's authenticity, runtime semantics, or package dependencies.
+EXECUTE cargo metadata --format-version 1 --locked --offline --filter-platform aarch64-apple-darwin --manifest-path /data/tmp/rch/franken_alignment_wave5_final1_20260908/4ee798a1a2583f6e/Cargo.toml
+ADMISSION target profile: aarch64-apple-darwin
+ADMISSION inventory:
+  fa-reference 0.2.0 path+file:///data/tmp/rch/franken_alignment_wave5_final1_20260908/4ee798a1a2583f6e/crates/fa-reference#0.2.0 at crates/fa-reference/Cargo.toml [workspace local] kinds=bin,lib,test links=none features=none
+  xtask 0.2.0 path+file:///data/tmp/rch/franken_alignment_wave5_final1_20260908/4ee798a1a2583f6e/xtask#0.2.0 at xtask/Cargo.toml [workspace local] kinds=bin links=none features=none
+ADMISSION note: claim is bound to target profile `aarch64-apple-darwin`; cargo metadata does not record which --filter-platform produced it, so the target binding rests on the caller collecting this document with `--filter-platform aarch64-apple-darwin`, not on the document itself
+ADMISSION note: metadata establishes identity, structure and feature activation only; it does not establish a runtime or downloaded-artifact closure
+PASS admission_closed_inventory[aarch64-apple-darwin]: exact local package set, exact resolve bijection, no external source, build script, proc macro, native link, build or target-scoped dependency, and the frozen feature set. Not a runtime or downloaded-artifact closure claim.
+PASS collected_metadata_paths[aarch64-apple-darwin]: actual workspace, manifests and target source files
+EXECUTE cargo metadata --format-version 1 --locked --offline --filter-platform x86_64-unknown-linux-gnu --manifest-path /data/tmp/rch/franken_alignment_wave5_final1_20260908/4ee798a1a2583f6e/Cargo.toml
+ADMISSION target profile: x86_64-unknown-linux-gnu
+ADMISSION inventory:
+  fa-reference 0.2.0 path+file:///data/tmp/rch/franken_alignment_wave5_final1_20260908/4ee798a1a2583f6e/crates/fa-reference#0.2.0 at crates/fa-reference/Cargo.toml [workspace local] kinds=bin,lib,test links=none features=none
+  xtask 0.2.0 path+file:///data/tmp/rch/franken_alignment_wave5_final1_20260908/4ee798a1a2583f6e/xtask#0.2.0 at xtask/Cargo.toml [workspace local] kinds=bin links=none features=none
+ADMISSION note: claim is bound to target profile `x86_64-unknown-linux-gnu`; cargo metadata does not record which --filter-platform produced it, so the target binding rests on the caller collecting this document with `--filter-platform x86_64-unknown-linux-gnu`, not on the document itself
+ADMISSION note: metadata establishes identity, structure and feature activation only; it does not establish a runtime or downloaded-artifact closure
+PASS admission_closed_inventory[x86_64-unknown-linux-gnu]: exact local package set, exact resolve bijection, no external source, build script, proc macro, native link, build or target-scoped dependency, and the frozen feature set. Not a runtime or downloaded-artifact closure claim.
+PASS collected_metadata_paths[x86_64-unknown-linux-gnu]: actual workspace, manifests and target source files
+REFUSE registry[registry/invariants.json] FA-INV-023 malformed_reference_check $[22].reference_checks: `crates/fa-reference/tests/evidence_view_boundaries.rs::whole_manifest_differences_do_not_replay_as_the_captured_view` must be `path::tests::test_name`
+REFUSE registry[registry/invariants.json] FA-INV-023 malformed_reference_check $[22].reference_checks: `crates/fa-reference/tests/evidence_view_boundaries.rs::contradictory_truncation_flags_refuse_instead_of_creating_a_replay_candidate` must be `path::tests::test_name`
+REFUSE registry[registry/invariants.json] FA-INV-028 malformed_reference_check $[27].reference_checks: `crates/fa-reference/tests/trace_independence_boundaries.rs::shared_domain_mutations_conflict_across_every_dependency_category` must be `path::tests::test_name`
+REFUSE registry[registry/invariants.json] FA-INV-028 malformed_reference_check $[27].reference_checks: `crates/fa-reference/tests/trace_independence_boundaries.rs::bounded_three_operation_schedules_preserve_original_trace_order` must be `path::tests::test_name`
+FAIL: Registry core refused 4 structural findings
+  [2m2026-09-08T07:58:57.174607Z[0m [32m INFO[0m [1;32mrch::hook::transfer_orchestration[0m[32m: [32mRemote command finished: exit=1 in 5934ms[0m
+    [2;3mat[0m rch/src/hook/transfer_orchestration.rs:1150 [2;3mon[0m ThreadId(1)
+
+[W] Worker: vmi1149989 | Job: j-30004650170124404
+[T] Total: 12.3s (sync 6.3s, build 5.9s, artifacts --)
+^ Sync: 7.6 MB in 6.3s (1.2 MB/s)
+[C] Compile: 5.9s
+Artifacts: skipped
+[T] Cache: MISS
+Warning: Permanently added '212.90.121.76' (ED25519) to the list of known hosts.
+[RCH] remote vmi1149989 failed (exit 1)

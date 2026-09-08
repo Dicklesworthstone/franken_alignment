@@ -1,0 +1,67 @@
+  [2m2026-09-08T07:53:37.667675Z[0m [32m INFO[0m [1;32mrch::hook[0m[32m: [32mSelected worker: vmi1227854 at root@109.123.245.77 (4 slots remaining after reservation, speed 71.7)[0m
+    [2;3mat[0m rch/src/hook.rs:2645 [2;3mon[0m ThreadId(1)
+
+[*] Job j-30004650170124402 submitted to vmi1227854 (4 slots remaining, speed 71.7)
+  [2m2026-09-08T07:53:37.803567Z[0m [32m INFO[0m [1;32mrch::hook::transfer_orchestration[0m[32m: [32mStarting remote compilation pipeline for franken_alignment_wave5_gate1_20260908 (hash: 174ea3419ec8cbf0)[0m
+    [2;3mat[0m rch/src/hook/transfer_orchestration.rs:510 [2;3mon[0m ThreadId(1)
+
+  [2m2026-09-08T07:53:37.803601Z[0m [32m INFO[0m [1;32mrch::hook::transfer_orchestration[0m[32m: [32mPrepared dependency sync manifest for 1 roots[0m
+    [2;3mat[0m rch/src/hook/transfer_orchestration.rs:532 [2;3mon[0m ThreadId(1)
+
+  [2m2026-09-08T07:53:39.109724Z[0m [32m INFO[0m [1;32mrch::hook::transfer_orchestration[0m[32m: [32mSyncing project to worker vmi1227854...[0m
+    [2;3mat[0m rch/src/hook/transfer_orchestration.rs:661 [2;3mon[0m ThreadId(1)
+
+  [2m2026-09-08T07:53:39.109916Z[0m [32m INFO[0m [1;32mrch::transfer[0m[32m: [32mLinked git worktree detected at /Users/jemanuel/projects/franken_alignment_wave5_gate1_20260908 (gitdir: /Users/jemanuel/projects/franken_alignment/.git/worktrees/franken_alignment_wave5_gate1_20260908); excluding dangling '.git' file from upload so the remote build resolves git-free like a normal repo[0m
+    [2;3mat[0m rch/src/transfer.rs:2009 [2;3mon[0m ThreadId(1)
+
+  [2m2026-09-08T07:53:39.109947Z[0m [32m INFO[0m [1;32mrch::transfer[0m[32m: [32mSyncing /Users/jemanuel/projects/franken_alignment_wave5_gate1_20260908 -> /Users/jemanuel/projects/franken_alignment_wave5_gate1_20260908 on vmi1227854 (streaming)[0m
+    [2;3mat[0m rch/src/transfer.rs:3549 [2;3mon[0m ThreadId(1)
+
+  [2m2026-09-08T07:53:41.177039Z[0m [32m INFO[0m [1;32mrch::hook::transfer_orchestration[0m[32m: [32mSync complete: 567 files, 21667 bytes in 2049ms[0m
+    [2;3mat[0m rch/src/hook/transfer_orchestration.rs:958 [2;3mon[0m ThreadId(1)
+
+  [2m2026-09-08T07:53:41.247252Z[0m [32m INFO[0m [1;32mrch::hook::transfer_orchestration[0m[32m: [32mExecuting command remotely: heaptrack --record-only -o /tmp/fa-campaign-20260908-wave5-profile/trace_relation_costs-profile /tmp/fa-campaign-20260908-wave5-profile/trace_relation_costs --exact fixed_trace_relation_costs_are_descriptive_and_assert_all_outcomes --nocapture '--test-threads=1'[0m
+    [2;3mat[0m rch/src/hook/transfer_orchestration.rs:1018 [2;3mon[0m ThreadId(1)
+
+  [2m2026-09-08T07:53:41.247346Z[0m [32m INFO[0m [1;32mrch::transfer[0m[32m: [32mWrapping command with external timeout protection, [1;32mkind[0m[32m: job, [1;32mtimeout_secs[0m[32m: 3600[0m
+    [2;3mat[0m rch/src/transfer.rs:2669 [2;3mon[0m ThreadId(1)
+
+Warning: Permanently added '109.123.245.77' (ED25519) to the list of known hosts.
+heaptrack output will be written to "/tmp/fa-campaign-20260908-wave5-profile/trace_relation_costs-profile.zst"
+starting application, this might take some time...
+
+running 1 test
+test fixed_trace_relation_costs_are_descriptive_and_assert_all_outcomes ... case=registered_independent_pair samples=12 evaluated_pairs=1 independent_pairs=1 ordered_pairs=0 logical_operation_count=2 logical_domain_count=3 elapsed_ns_min=1913 elapsed_ns_median=2088 elapsed_ns_max=20711 elapsed_ns_total=46931 timing_scope=fresh_public_api_construction_and_relation_assertion memory_measurement=unavailable_no_heap_claim
+case=closed_negative_domain_write_conflict samples=12 evaluated_pairs=1 independent_pairs=0 ordered_pairs=1 logical_operation_count=2 logical_domain_count=2 elapsed_ns_min=5348 elapsed_ns_median=5513 elapsed_ns_max=51277 elapsed_ns_total=116555 timing_scope=fresh_public_api_construction_and_relation_assertion memory_measurement=unavailable_no_heap_claim
+case=gapped_input_unknown_dependency_refusal samples=12 evaluated_pairs=1 independent_pairs=0 ordered_pairs=1 logical_operation_count=2 logical_domain_count=2 elapsed_ns_min=4247 elapsed_ns_median=4461 elapsed_ns_max=13390 elapsed_ns_total=65088 timing_scope=fresh_public_api_construction_and_relation_assertion memory_measurement=unavailable_no_heap_claim
+NOTE: heaptrack detected DEBUGINFOD_URLS but will disable it to prevent 
+unintended network delays during recording
+If you really want to use DEBUGINFOD, export HEAPTRACK_ENABLE_DEBUGINFOD=1
+case=maximum_sixteen_operation_matrix samples=12 evaluated_pairs=120 independent_pairs=120 ordered_pairs=0 logical_operation_count=16 logical_domain_count=32 elapsed_ns_min=25768 elapsed_ns_median=29064 elapsed_ns_max=63112977 elapsed_ns_total=77983870 timing_scope=fresh_public_api_construction_and_relation_assertion memory_measurement=unavailable_no_heap_claim
+ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 1 filtered out; finished in 0.08s
+
+heaptrack stats:
+	allocations:          	1897
+	leaked allocations:   	4
+	temporary allocations:	65
+Heaptrack finished! Now run the following to investigate the data:
+
+  heaptrack --analyze "/tmp/fa-campaign-20260908-wave5-profile/trace_relation_costs-profile.zst"
+  [2m2026-09-08T07:53:42.800162Z[0m [32m INFO[0m [1;32mrch::hook::transfer_orchestration[0m[32m: [32mRemote command finished: exit=0 in 1552ms[0m
+    [2;3mat[0m rch/src/hook/transfer_orchestration.rs:1150 [2;3mon[0m ThreadId(1)
+
+[W] Worker: vmi1227854 | Job: j-30004650170124402
+[T] Total: 3.6s (sync 2.0s, build 1.6s, artifacts --)
+^ Sync: 21.2 KB in 2.0s (10.3 KB/s)
+[C] Compile: 1.6s
+Artifacts: skipped
+[T] Cache: MISS
++--- [OK] Build Successful ---+
+| Duration: 1.6s              |
+| Worker: vmi1227854          |
+| Cache: MISS (warming cache) |
+| Time: 2026-09-08 07:53:42   |
++-----------------------------+
+[RCH] remote vmi1227854 (5.3s)

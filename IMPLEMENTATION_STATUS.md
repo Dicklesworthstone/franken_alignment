@@ -1,6 +1,20 @@
 # Implementation status · design revision 0.3
 
-Current execution evidence: [receipt](artifacts/execution/2026-09-08-history-format-qualification-receipt.json).
+Current execution evidence: [receipt](artifacts/execution/2026-09-08-view-trace-receipt.json).
+
+## 2026-09-08 UTC: exact declared views and conservative trace independence
+
+The complete frozen RCH gate passed **446 tests: 95 reference unit, 101 integration, 242 xtask and 8 doctests**, with zero failed, ignored or filtered tests, on `vmi1149989` under qualified `nightly-2026-09-08`. [The receipt](artifacts/execution/2026-09-08-view-trace-receipt.json) binds 160 source/build inputs and job `j-30004650170124390`.
+
+FA-081 adds an immutable L2 evidence-view manifest over original identities, authorization projection, transform/redaction, order, source windows and the exact supplied helper input. Every evidence part has one matching binding, the projection is exact, and truncation means a proper subset of the declared source range. Valid alternate manifests test complete equality; separate raw constructor negatives change one representation to expose mismatches. No caller bytes are re-encoded, and this does not authenticate a provider or prove a transform executed.
+
+FA-092 adds an immutable L7 registered trace relation over retained input-derived positive and negative reads, writes, RNG state, consuming resources and authority/ordered/external/unknown barriers. Review found and repaired cross-category collisions in the shared domain namespace: mutation in any category conflicts with every access to that domain. The independent 25-category matrix retains four read-only cases and orders 21 mutation cases. Thirteen operations yield 78 distinct unordered pairs (31 independent, 47 ordered); three small fixtures enumerate six permutations and retain 6, 1 and 3 original-order-compatible schedules. These bounded counts are not general DPOR coverage or executor authorization.
+
+Three planted mutations fail at the intended public assertions after controls: neutralized redaction, omitted RNG mutation and omitted negative-domain conflict. Nine fixed release cases produced 108 timed samples. Separate sole-test fresh processes measured first view construction and first relation evaluation once each; no OS/cache-cold or statistical claim follows. Exact release binaries were copied unchanged to the existing heap profiler: view/trace whole-process allocation calls were 934/1,897, each with a 185-call same-binary zero-test baseline. Inclusive library-frame attribution was 411/180 calls, with zero in either baseline; it is neither per-case allocation nor a complete attribution of inlined work. Raw logs, profiles, failed setup attempts and exact byte identities are retained.
+
+FA-081 and FA-092 were independently closed after source and raw-artifact verification; final documentation and registry changes require their own gate.
+
+The initial prospective 438-test pass preceded the cross-category repair and receives no credit for that fix. The witness and observation-algebra work remains separate and unqualified by this batch. Production capture, authentication, scheduling, effects, persistence and release remain unimplemented.
 
 ## 2026-09-08 UTC: property, first-parse and compiler qualification
 
@@ -135,11 +149,11 @@ The round uses a deliberately non-cryptographic FNV comparison and proves no cry
 | Founding essays | Both read in full again for revision 0.3; head commits recorded in `registry/sources.json` | Complete premise; no missing post |
 | Ten donor/build project deep dives | Targeted code/manifest/plan review at fixed refs (revision 0.2) | Exact files/scopes recorded; not full repository audits or builds |
 | Pure-Rust reference workspace | Source present, zero external packages, formatted with `cargo fmt --all` on 2026-09-06 | Selected logical semantics only; not a broker |
-| Rust test functions | **80 unit + 82 integration reference tests, 242 xtask tests and 8 doctests passed remotely on 2026-09-08 UTC**; earlier runs remain dated below | Exact frozen batch above; not production evidence or credit for other work in progress |
+| Rust test functions | **95 unit + 101 integration reference tests, 242 xtask tests and 8 doctests passed remotely on 2026-09-08 UTC**; earlier runs remain dated below | Exact frozen batch above; not production evidence or credit for other work in progress |
 | Rust local gate driver | **Complete reference gate PASS remotely on 2026-09-08 UTC** under rolling `nightly`, frozen identically as `nightly-2026-09-08`; earlier local 2026-09-06 gate retained below | Initial inventory, registry-core and full concordance checks execute; external admission remains incomplete; new source requires a new run |
 | Production release gate | Explicitly refuses release | No qualified broker/toolchain/target/signing closure |
 | Machine-readable registries | 40 invariants, 21 hypotheses, 143 packets, 5 SLO targets, founding concordance (38 ideas, 9 syntheses, 67 engineering additions), preregistration ledger with no preregistered protocol yet, system map (9 layers) and vocabulary (26 nouns, 35 verbs, 12 reason codes) | Static structural checks are not proofs of their claims |
-| Beads task graph | All 143 roadmap packets have full owners; 336 live beads at this checkpoint: 23 closed, 307 open, 5 in progress and 1 blocked | FA-001, FA-004, FA-005, FA-057 and FA-063 are closed within their reference contracts; FA-002 remains in progress and FA-053 is blocked. Reference, provenance and checker closures do not qualify production. Earlier graph counts describe their dated checkpoints |
+| Beads task graph | All 143 roadmap packets have full owners; 336 live beads at this checkpoint: 25 closed, 307 open, 3 in progress and 1 blocked | FA-001, FA-004, FA-005, FA-057, FA-063, FA-081 and FA-092 are closed within their reference contracts; FA-002 remains in progress and FA-053 is blocked. Reference, provenance and checker closures do not qualify production. Earlier graph counts describe their dated checkpoints |
 | Production control broker / persistence / containment | Not implemented | Reference code performs no external effects |
 | Native foundation adapters | Planned, admission blockers recorded | A reviewed source file is not an integration |
 | Trained helpers / codecs / signatures / surprise residual / rewind | Research and implementation plans | No measured safety, compression, detection or containment result |

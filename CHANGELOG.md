@@ -1,5 +1,11 @@
 # Changelog
 
+## 2026-09-08: evidence views and registered trace independence
+
+- Bind declared original/projection/transform/redaction/window metadata to exact submitted helper inputs, with private validated manifests and independent mismatch tests.
+- Derive conservative trace reads from retained inputs and preserve all mutation/access, RNG, resource, authority, external and unknown ordering barriers; repair shared-domain cross-category collisions.
+- Retain the 446-test remote gate, three causal mutation failures, 108 descriptive release samples, two sole-process first-operation observations and exact-binary heap profiles with zero-test baselines. These are reference-contract results, not production qualification.
+
 ## 2026-09-08: qualify generated format cases and the current nightly
 
 Added deterministic schema properties with independent syntax and canonical-byte checks, plus isolated first-decode measurements for all three manual fixtures. The prospective rolling compiler passed **412 tests** and was frozen to `nightly-2026-09-08`; eight release cost cases passed again. Retained real heap allocation attribution and a harness baseline under the prior compiler, with source identity and overlap boundaries. [Qualification and raw failures](artifacts/execution/2026-09-08-history-format-qualification-receipt.json) distinguish the two compiler campaigns.

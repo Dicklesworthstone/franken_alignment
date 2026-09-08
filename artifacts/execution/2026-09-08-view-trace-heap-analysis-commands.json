@@ -1,0 +1,38 @@
+{
+  "commands": [
+    [
+      "heaptrack_print",
+      "/tmp/fa-campaign-20260908-wave5-profile/evidence_view_costs-profile.zst",
+      "--flamegraph-cost-type",
+      "allocations",
+      "-F",
+      "/tmp/fa-campaign-20260908-wave5-profile/evidence_view_costs-profile.stacks"
+    ],
+    [
+      "heaptrack_print",
+      "/tmp/fa-campaign-20260908-wave5-profile/evidence_view_costs-baseline.zst",
+      "--flamegraph-cost-type",
+      "allocations",
+      "-F",
+      "/tmp/fa-campaign-20260908-wave5-profile/evidence_view_costs-baseline.stacks"
+    ],
+    [
+      "heaptrack_print",
+      "/tmp/fa-campaign-20260908-wave5-profile/trace_relation_costs-profile.zst",
+      "--flamegraph-cost-type",
+      "allocations",
+      "-F",
+      "/tmp/fa-campaign-20260908-wave5-profile/trace_relation_costs-profile.stacks"
+    ],
+    [
+      "heaptrack_print",
+      "/tmp/fa-campaign-20260908-wave5-profile/trace_relation_costs-baseline.zst",
+      "--flamegraph-cost-type",
+      "allocations",
+      "-F",
+      "/tmp/fa-campaign-20260908-wave5-profile/trace_relation_costs-baseline.stacks"
+    ]
+  ],
+  "binary_identity_after": "All two exact hashes unchanged after profiles/baselines.",
+  "analysis_worker": "vmi1227854"
+}

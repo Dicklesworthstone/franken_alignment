@@ -1,0 +1,10 @@
+--- a/crates/fa-reference/src/trace_independence.rs
++++ b/crates/fa-reference/src/trace_independence.rs
+@@ -270,7 +270,6 @@
+ fn mutation_conflicts(left: &ValidatedTraceOperation, right: &ValidatedTraceOperation) -> bool {
+     left.write_domains
+         .iter()
+-        .chain(&left.rng_streams)
+         .chain(&left.consuming_resources)
+         .any(|domain| {
+             right.positive_read_domains.contains(domain)

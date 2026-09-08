@@ -645,10 +645,12 @@
         "crates/fa-reference/src/full_input.rs::tests::opaque_witness_binds_the_entire_actual_input_view",
         "crates/fa-reference/src/full_input.rs::tests::question_profile_and_unmentioned_evidence_changes_invalidate",
         "crates/fa-reference/src/full_input.rs::tests::transform_and_omission_changes_invalidate",
-        "crates/fa-reference/src/full_input.rs::tests::malformed_partitions_omissions_and_bounds_are_rejected"
+        "crates/fa-reference/src/full_input.rs::tests::malformed_partitions_omissions_and_bounds_are_rejected",
+        "crates/fa-reference/src/evidence_view.rs::tests::every_required_manifest_field_causally_invalidates_replay",
+        "crates/fa-reference/src/evidence_view.rs::tests::source_window_coverage_derives_truncated_and_refuses_mismatches"
       ],
-      "reference_status": "executed_remotely_2026_09_07_pass",
-      "reference_scope": "Exact equality over bounded caller-supplied full input bytes, profile, part metadata and omissions; private validated construction. No actual provider interception, authentication or production authority.",
+      "reference_status": "executed_remotely_2026_09_08_pass",
+      "reference_scope": "Bounded caller-declared original/projection/transform/redaction/order/source-window and exact full-input/profile/omission binding, with immutable validated manifests. No provider interception, transform execution, authenticity, helper truth or production authority.",
       "required_negative_campaigns": [
         "Truncate the decisive paragraph after the source file was committed."
       ],
@@ -657,9 +659,10 @@
       ],
       "evidence_artifacts": [
         "artifacts/execution/2026-09-07-epoch2-attempt2.log",
-        "artifacts/execution/2026-09-07-epoch2-receipt.json"
+        "artifacts/execution/2026-09-07-epoch2-receipt.json",
+        "artifacts/execution/2026-09-08-view-trace-receipt.json"
       ],
-      "reference_execution_note": "Qualified current source hashes and test counts are in the 2026-09-07 epoch2 receipt; historical artifacts remain dated and do not validate later source."
+      "reference_execution_note": "The dated view-trace receipt binds the exact 446-test frozen overlay, causal mutations and scoped costs; historical receipts retain their original scope. No production checker or activation."
     },
     {
       "id": "FA-INV-024",
@@ -783,10 +786,12 @@
       "waiver": "forbidden",
       "production_checker": null,
       "reference_checks": [
-        "crates/fa-reference/src/lib.rs::tests::cross_reads_defeat_disjoint_writes"
+        "crates/fa-reference/src/lib.rs::tests::cross_reads_defeat_disjoint_writes",
+        "crates/fa-reference/src/trace_independence.rs::tests::isolated_read_write_and_barrier_conflicts_preserve_order",
+        "crates/fa-reference/src/trace_independence.rs::tests::bounded_pair_evaluation_exhausts_distinct_unordered_pairs"
       ],
-      "reference_status": "executed_locally_2026_09_06_pass",
-      "reference_scope": "Only the declared small logical case; not production protocol/host correctness.",
+      "reference_status": "executed_remotely_2026_09_08_pass",
+      "reference_scope": "Conservative caller-reviewed distinct-operator relation over complete declared positive/negative domains, global mutation/access conflicts, RNG/resources, authority/ordered/external and immutable unknown barriers; exact bounded pair/schedule fixtures. No general DPOR proof or production executor authorization.",
       "required_negative_campaigns": [
         "Disjoint writes with cross reads."
       ],
@@ -797,9 +802,10 @@
         "artifacts/execution/2026-09-06-cargo-test.log",
         "artifacts/execution/2026-09-06-xtask-check.log",
         "artifacts/execution/2026-09-06-xtask-check-nightly-2026-08-31.log",
-        "artifacts/execution/2026-09-06-xtask-check-nightly-2026-08-31-local.log"
+        "artifacts/execution/2026-09-06-xtask-check-nightly-2026-08-31-local.log",
+        "artifacts/execution/2026-09-08-view-trace-receipt.json"
       ],
-      "reference_execution_note": "20/20 reference tests passed on aarch64-apple-darwin under nightly-2026-08-31 (rustc 908501772 2026-08-30) and under the rolling nightly (rustc c54751567 2026-08-22); complete xtask gate passed only under the dated nightly because the host's rolling nightly lacks rustfmt/clippy binaries. One host, one date; not production evidence.",
+      "reference_execution_note": "The dated view-trace receipt binds the exact 446-test frozen overlay, causal mutations and scoped costs; historical receipts retain their original scope. No production checker or activation.",
       "founding_ideas": [
         "FI-I15",
         "FI-I13"
@@ -919,7 +925,7 @@
         "Rotate a helper generation and verify its predecessor's failure history remains visible."
       ],
       "assumptions": [
-        "An independent evaluation owner exists and controls labels (plan §22.4).",
+        "An independent evaluation owner exists and controls labels (plan \u00a722.4).",
         "Credibility ledger entries are durable and lineage-tracked."
       ],
       "evidence_artifacts": [
@@ -952,7 +958,7 @@
         "Attempt to apply a TrainingSignal consequence to live weights or policy; must be refused."
       ],
       "assumptions": [
-        "Purpose contexts (plan §6.3) are enforced by the runtime.",
+        "Purpose contexts (plan \u00a76.3) are enforced by the runtime.",
         "Experiment branches carry zero production rights (FA-INV-009, FA-INV-025)."
       ],
       "evidence_artifacts": [],
@@ -989,7 +995,7 @@
         "Reset repeatedly on one run; the incident counter must increase and cross its escalation threshold."
       ],
       "assumptions": [
-        "A registered restart profile with functional_restart grade or better exists (plan §11.1).",
+        "A registered restart profile with functional_restart grade or better exists (plan \u00a711.1).",
         "The control nucleus owns the incident counter outside any actor-visible state."
       ],
       "evidence_artifacts": [
@@ -1023,7 +1029,7 @@
         "Benign drift (temperature, batch) within tolerance must not fence."
       ],
       "assumptions": [
-        "The capture boundary observes the actual computation (plan §4.2).",
+        "The capture boundary observes the actual computation (plan \u00a74.2).",
         "Anchor tolerance registered per passport."
       ],
       "evidence_artifacts": [],
@@ -1052,7 +1058,7 @@
         "Update the model; grade must reset to the registered floor."
       ],
       "assumptions": [
-        "Governance separation exists (plan §22.4).",
+        "Governance separation exists (plan \u00a722.4).",
         "Passport change is detectable (FA-INV-035)."
       ],
       "evidence_artifacts": [],
@@ -1081,7 +1087,7 @@
         "Present a receipt over redacted evidence; verifier must report the redaction, not silently pass."
       ],
       "assumptions": [
-        "Operator signing key policy (plan §22.6).",
+        "Operator signing key policy (plan \u00a722.6).",
         "Receipt schema versioned and frozen."
       ],
       "evidence_artifacts": [],
@@ -1137,7 +1143,7 @@
         "Present Unknown to the permit path; must be treated as missing evidence."
       ],
       "assumptions": [
-        "Layer boundaries are typed (plan §6.7).",
+        "Layer boundaries are typed (plan \u00a76.7).",
         "Serializers for agent surfaces are the only egress."
       ],
       "evidence_artifacts": [],

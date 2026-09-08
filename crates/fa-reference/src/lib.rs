@@ -4,6 +4,7 @@
 
 pub mod action;
 pub mod canonical_json;
+pub mod evidence_view;
 pub mod full_input;
 pub mod history;
 pub mod perimeter;
@@ -11,6 +12,7 @@ pub mod product_frontier;
 pub mod reducer;
 pub mod round;
 pub mod strict_json;
+pub mod trace_independence;
 
 use std::collections::{BTreeMap, BTreeSet, VecDeque};
 

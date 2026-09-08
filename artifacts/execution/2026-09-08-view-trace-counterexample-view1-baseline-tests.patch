@@ -1,0 +1,15 @@
+--- a/crates/fa-reference/src/evidence_view.rs
++++ b/crates/fa-reference/src/evidence_view.rs
+@@ -239,7 +239,11 @@
+     }
+ 
+     pub fn valid_at(&self, candidate: &EvidenceViewManifest) -> bool {
+-        self.manifest == *candidate
++        let mut normalized = candidate.clone();
++        for (part, captured) in normalized.evidence_parts.iter_mut().zip(&self.manifest.evidence_parts) {
++            part.redaction = captured.redaction;
++        }
++        self.manifest == normalized
+     }
+ 
+     pub fn manifest(&self) -> &EvidenceViewManifest {

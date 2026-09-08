@@ -1,0 +1,23 @@
+{
+  "command": [
+    "rch",
+    "--json",
+    "exec",
+    "--job",
+    "--",
+    "/data/tmp/rch/franken_alignment_wave5_gate1_20260908/.rch-target-vmi1149989-pool-453796de37ab59ed58e9bcaa38357bd6/release/build/fa-reference/9edd88ba89c4dc56/out/trace_relation_costs-9edd88ba89c4dc56",
+    "--exact",
+    "cold_first_evaluation_of_registered_valid_pair",
+    "--nocapture",
+    "--test-threads=1"
+  ],
+  "binary": {
+    "remote_path": "/data/tmp/rch/franken_alignment_wave5_gate1_20260908/.rch-target-vmi1149989-pool-453796de37ab59ed58e9bcaa38357bd6/release/build/fa-reference/9edd88ba89c4dc56/out/trace_relation_costs-9edd88ba89c4dc56",
+    "sha256": "bffca6bca3519499d73a32833ff66caae60f847a818de6e799a13ac6cfd298b0",
+    "local_path": "/tmp/fa-campaign-20260908/wave5-profile-binaries/trace_relation_costs"
+  },
+  "source_inputs": "wave5-gate1-inputs.json",
+  "boundary": "Sole selected test in new release process, no preflight/warmup, no OS/page cache/CPU cold claim.",
+  "working_directory": "/Users/jemanuel/projects/franken_alignment_wave5_gate1_20260908",
+  "prior_attempt": "Attempt1 refused before execution: scratch cwd outside RCH canonical projects root."
+}

@@ -1,0 +1,27 @@
+{
+  "command": [
+    "rch",
+    "--json",
+    "exec",
+    "--job",
+    "--",
+    "heaptrack",
+    "--record-only",
+    "-o",
+    "/tmp/fa-campaign-20260908-wave5-profile/trace_relation_costs-baseline",
+    "/tmp/fa-campaign-20260908-wave5-profile/trace_relation_costs",
+    "--exact",
+    "xixed_trace_relation_costs_are_descriptive_and_assert_all_outcomes",
+    "--nocapture",
+    "--test-threads=1"
+  ],
+  "binary": {
+    "remote_path": "/data/tmp/rch/franken_alignment_wave5_gate1_20260908/.rch-target-vmi1149989-pool-453796de37ab59ed58e9bcaa38357bd6/release/build/fa-reference/9edd88ba89c4dc56/out/trace_relation_costs-9edd88ba89c4dc56",
+    "sha256": "bffca6bca3519499d73a32833ff66caae60f847a818de6e799a13ac6cfd298b0",
+    "local_path": "/tmp/fa-campaign-20260908/wave5-profile-binaries/trace_relation_costs",
+    "profile_worker_path": "/tmp/fa-campaign-20260908-wave5-profile/trace_relation_costs"
+  },
+  "working_directory": "/Users/jemanuel/projects/franken_alignment_wave5_gate1_20260908",
+  "source_inputs": "wave5-gate1-inputs.json",
+  "scope": "Exact transferred new-compiler release binary, whole-process allocation with same-binary same-length-filter zero-test baseline; baseline has no test credit. Instrumented timing not comparable."
+}

@@ -1,0 +1,13 @@
+  [2m2026-09-08T07:52:31.391756Z[0m [33m WARN[0m [1;33mrch::hook::command_parsing[0m[33m: [33mProject path normalization failed for /private/tmp/fa-campaign-20260908: input resolves outside canonical root (input: /private/tmp/fa-campaign-20260908, detail: resolved=/private/tmp/fa-campaign-20260908 root=/Users/jemanuel/projects)[0m
+    [2;3mat[0m rch/src/hook/command_parsing.rs:437 [2;3mon[0m ThreadId(1)
+
+  [2m2026-09-08T07:52:31.647798Z[0m [32m INFO[0m [1;32mrch::hook[0m[32m: [32mSelected worker: vmi1149989 at root@212.90.121.76 (4 slots remaining after reservation, speed 71.9)[0m
+    [2;3mat[0m rch/src/hook.rs:2645 [2;3mon[0m ThreadId(1)
+
+  [2m2026-09-08T07:52:31.712725Z[0m [33m WARN[0m [1;33mrch::hook[0m[33m: [33mRemote execution failed on vmi1149989: Project path normalization failed for /private/tmp/fa-campaign-20260908: input resolves outside canonical root (input: /private/tmp/fa-campaign-20260908, detail: resolved=/private/tmp/fa-campaign-20260908 root=/Users/jemanuel/projects); will retry on another worker if available[0m
+    [2;3mat[0m rch/src/hook.rs:3113 [2;3mon[0m ThreadId(1)
+
+  [2m2026-09-08T07:52:31.713181Z[0m [33m WARN[0m [1;33mrch::hook[0m[33m: [33mRemote build failed on all 1 tried worker(s); refusing local fallback[0m
+    [2;3mat[0m rch/src/hook.rs:3229 [2;3mon[0m ThreadId(1)
+
+[RCH] remote required; refusing local fallback (remote execution failed; remote retries exhausted) — retryable

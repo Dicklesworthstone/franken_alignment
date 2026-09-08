@@ -1,0 +1,220 @@
+{
+  "schema": "fa.execution_receipt/1",
+  "date": "2026-09-08",
+  "result": {
+    "exit_code": 0,
+    "format": "passed",
+    "check": "passed",
+    "clippy": "passed; warnings denied",
+    "tests": {
+      "reference_unit": 95,
+      "reference_integration": 101,
+      "xtask": 242,
+      "doctests": 8,
+      "total_passed": 446,
+      "failed": 0,
+      "ignored": 0,
+      "filtered": 0
+    }
+  },
+  "base_commit": "d7e207dc22768d7a249e4b2a30681a2a104a5666",
+  "source_inputs": "artifacts/execution/2026-09-08-view-trace-gate1-inputs.json",
+  "source_sha256": {
+    "crates/fa-reference/src/lib.rs": "aab4f4159c961c9e156f41aa32bb90899bcaf433f9eb923c017b5200f047c264",
+    "registry/dependency_policy.json": "78d514a55554a82e5ecacd435bc3f1ca8b7b736d2dc2cf7e4679ec8e6608e2c3",
+    "registry/source_snapshot.json": "df139a69c27c08fb1ea0891254f55467ed883013d64ef4b55da17ad201cda250",
+    "crates/fa-reference/src/evidence_view.rs": "6d9f5f6650b82dd5aad929b52ef83c79c5033a12b464daac8f0a0001649c8b26",
+    "crates/fa-reference/src/trace_independence.rs": "6a4a0e8275cd72c1ea0acf185cf08d39ac4b963ae359efa4b6064cd1a305b326",
+    "crates/fa-reference/tests/evidence_view_boundaries.rs": "664929b20d640dbf1d41c336b03eeb479263fd03f9b165f20e8bbf70646332bf",
+    "crates/fa-reference/tests/trace_independence_boundaries.rs": "929d6eed53b4daa68fc85dda326d4bba62998c0228af18d474c7bd2f9cdaedd3",
+    "crates/fa-reference/tests/evidence_view_costs.rs": "a66e72cc7c6d406f8e398829df000a3d9552cfd292d5822e509bebe368a019a9",
+    "crates/fa-reference/tests/trace_relation_costs.rs": "dba5b16f622a1bc9539804e33520b3f0520aee423ceac369b54b47f459a2ef20"
+  },
+  "reviewed_source_files": 160,
+  "full_gate": {
+    "job": "j-30004650170124390",
+    "worker": "vmi1149989",
+    "outcome": "completed",
+    "location": "remote",
+    "exit_code": 0
+  },
+  "compiler": {
+    "toolchain": "nightly-2026-09-08",
+    "rustc_commit": "cea272fa356e94bd2ee2cadf376630aa0683867a",
+    "qualification_receipt": "artifacts/execution/2026-09-08-history-format-qualification-receipt.json"
+  },
+  "scope": {
+    "evidence_view": "L2 exact caller-declared original/projection/transform/redaction/order/window and whole submitted input/profile/omission binding; no provider interception or authentication. Valid alternate views and raw desynchronization negatives are distinct tests.",
+    "trace_relation": "L7 conservative caller-reviewed distinct-operator relation. Shared DomainId is global across positive/negative reads, writes, RNG state and consuming resources; any mutation collides with any same-domain access. Read/read alone can commute. Whole retained input supplies reads and unknown barriers."
+  },
+  "bounded_evaluations": {
+    "category_pairs": 25,
+    "same_domain_read_only_independent": 4,
+    "same_domain_mutation_ordered": 21,
+    "disjoint_pair_checks_both_directions": 50,
+    "thirteen_operations": {
+      "unordered_pairs": 78,
+      "independent": 31,
+      "ordered": 47
+    },
+    "three_operation_fixture_schedule_counts": {
+      "independent": 6,
+      "fully_ordered": 1,
+      "one_ordered_pair": 3
+    },
+    "schedule_scope": "All six permutations of each actual three-operation fixture filtered by original trace position constraints; no general DPOR coverage."
+  },
+  "causal_mutations": [
+    {
+      "kind": "view",
+      "job": "j-30004650170124392",
+      "expected_exit_code": 101,
+      "log": "artifacts/execution/2026-09-08-view-trace-counterexample-view1.log"
+    },
+    {
+      "kind": "trace_rng",
+      "job": "j-30004650170124393",
+      "expected_exit_code": 101,
+      "log": "artifacts/execution/2026-09-08-view-trace-counterexample-trace_rng1.log"
+    },
+    {
+      "kind": "trace_negative",
+      "job": "j-30004650170124394",
+      "expected_exit_code": 101,
+      "log": "artifacts/execution/2026-09-08-view-trace-counterexample-trace_negative1.log"
+    }
+  ],
+  "costs": {
+    "job": "j-30004650170124391",
+    "cases": 9,
+    "samples_per_case": 12,
+    "total_timed_samples": 108,
+    "scope": "Five view construction/reuse/churn/failure/bound cases and four relation/negative/unknown/max16-operation cases. Assertions before emitted records. Setup scopes in each raw line. Declared byte counts are per input and omit fixed metadata; not copied-byte or allocation measurements. Two additional first-operation tests in this combined invocation have no sole-process credit."
+  },
+  "first_operations": {
+    "scope": "Each test alone in one fresh release process, no preflight or warmup. No OS/page-cache/CPU-cold or statistical claim.",
+    "view": {
+      "job": "j-30004650170124398",
+      "samples": 1,
+      "elapsed_ns": 12369
+    },
+    "trace": {
+      "job": "j-30004650170124399",
+      "samples": 1,
+      "elapsed_ns": 6270
+    }
+  },
+  "allocation": {
+    "worker": "vmi1227854",
+    "profiler": "heaptrack 1.5.0",
+    "binary_identity": "artifacts/execution/2026-09-08-view-trace-profile-binary-identity.json",
+    "profiles": {
+      "evidence_view_costs": {
+        "whole_process_allocation_calls": 934,
+        "same_binary_zero_test_baseline_calls": 185,
+        "inclusive_module_stack_calls": 411,
+        "baseline_module_stack_calls": 0,
+        "module_stack_match": "12fa_reference13evidence_view"
+      },
+      "trace_relation_costs": {
+        "whole_process_allocation_calls": 1897,
+        "same_binary_zero_test_baseline_calls": 185,
+        "inclusive_module_stack_calls": 180,
+        "baseline_module_stack_calls": 0,
+        "module_stack_match": "12fa_reference18trace_independence"
+      }
+    },
+    "scope": "Exact new-compiler release binaries copied unchanged from build worker to existing profiler worker. Each full fixed-case test runs once; its same-binary same-length-filter baseline runs zero tests. Stack weights sum to profiler allocation totals. Inclusive module attribution is nonadditive and can miss inlined callers; whole-process deltas include fixture/harness work. No per-case allocation, allocation-bytes, leakage bug, peak-heap or RSS claim. Both hashes unchanged after profiling."
+  },
+  "retained_failures": [
+    {
+      "attempt": "pre1",
+      "reason": "Qualification receipt used an unsupported Clippy enum; corrected receipt, no gate relaxation."
+    },
+    {
+      "attempt": "pre2",
+      "reason": "Two public-test Clippy cloned-reference warnings; corrected source."
+    },
+    {
+      "attempt": "pre3",
+      "reason": "Passed438 before later cross-category relation repair and added tests; not evidence for repaired source."
+    },
+    {
+      "attempt": "cold evidence/trace1",
+      "reason": "RCH refused scratch cwd outside canonical project root before execution; repeated from frozen valid project worktree."
+    }
+  ],
+  "nonclaims": [
+    "No production provider capture, authenticity, helper truth, authority, executor, persistence, release, SLO or general DPOR proof.",
+    "FA058/068 prospective files excluded.",
+    "Repository historical evidence remains dated; this receipt covers only its exact frozen overlay."
+  ],
+  "artifact_sha256": {
+    "artifacts/execution/2026-09-08-view-trace-cold-evidence_view_costs1-inputs.json": "1d37bcd6b9618a2c97a5ea26a9f6a23d4cfa53e492b6f1f3f612a46dfd422d5c",
+    "artifacts/execution/2026-09-08-view-trace-cold-evidence_view_costs1.json": "88cdad9de37d9ec978e4f5865d21384fbedb02415ceec3631aea598c4c684f33",
+    "artifacts/execution/2026-09-08-view-trace-cold-evidence_view_costs1.log": "9d7104ab18709d8625090d3e2ab8d9ff7e2176e1e38a4bad8a926a06c163c9e2",
+    "artifacts/execution/2026-09-08-view-trace-cold-evidence_view_costs2-inputs.json": "1b07f290cd40ac005e7661d2eb937203dba8fddd5038b1778f9072f7e83e2703",
+    "artifacts/execution/2026-09-08-view-trace-cold-evidence_view_costs2.json": "5b223164e86d02eb1afeb74d911c4487a1e75b5c9c2b6f857ab5f27ffca98250",
+    "artifacts/execution/2026-09-08-view-trace-cold-evidence_view_costs2.log": "0538ab798984db15d068377b763271ba4b17455b1cabb7a51956b312de6b3c4a",
+    "artifacts/execution/2026-09-08-view-trace-cold-trace_relation_costs1-inputs.json": "5f09f9d04d9f48edd5575d0901319f1ad631e2ea01646d851e70010855969dd0",
+    "artifacts/execution/2026-09-08-view-trace-cold-trace_relation_costs1.json": "483f56222b88b8bc2da458a70da45cbc669291c92c987e7727087f4b378dbdc8",
+    "artifacts/execution/2026-09-08-view-trace-cold-trace_relation_costs1.log": "516ffe8032cb24cd70ba6a98d1323209125343305c946ba44bfe087d8dd407ca",
+    "artifacts/execution/2026-09-08-view-trace-cold-trace_relation_costs2-inputs.json": "737ea0293b0349e91b1f1096115ef891368f543306746944903e5cdf1ee58192",
+    "artifacts/execution/2026-09-08-view-trace-cold-trace_relation_costs2.json": "574c7567eaf1191128eba7e8687f7319a73bb450b64fea4dead52e2cc4039700",
+    "artifacts/execution/2026-09-08-view-trace-cold-trace_relation_costs2.log": "a66116bfdbbeae1d8925bbef42325fa8c2548c21c6ece97008ccdfded5e4c3db",
+    "artifacts/execution/2026-09-08-view-trace-costs1-inputs.json": "68eec3d89977a10d87bc510b16cf02401a0616100d219866314d4e242eb46fe2",
+    "artifacts/execution/2026-09-08-view-trace-costs1.json": "2638b49e28189cf2d466aa2c3f7145e31bc31871f4a57e8d0fbf2450a484d64b",
+    "artifacts/execution/2026-09-08-view-trace-costs1.log": "b345f2ad006d48cd6d3eccf9119136954c3d8b092546fa4d1e258f2031efb1c7",
+    "artifacts/execution/2026-09-08-view-trace-counterexample-trace_negative1-baseline-tests.patch": "abd1e954b4a50887f0f6317ce2428e3119f24665d1d498414a289be6b0f64283",
+    "artifacts/execution/2026-09-08-view-trace-counterexample-trace_negative1-inputs.json": "b7eb16aea2633621a62eeb9aac7276f0fcc17f30f9150129307b1cbf88025d73",
+    "artifacts/execution/2026-09-08-view-trace-counterexample-trace_negative1.json": "108a838950367ad2eb82411f266a1e9358e2f3dd36f50845e5fec331e5db727d",
+    "artifacts/execution/2026-09-08-view-trace-counterexample-trace_negative1.log": "8e8230d3ebcc1c80de2e47885932a1c390e14d0e9e7b8422c7e088322d30ada3",
+    "artifacts/execution/2026-09-08-view-trace-counterexample-trace_rng1-baseline-tests.patch": "a2efffbdd1bebb5b1c0a1f6b3ec4702978ca28f0883b5bae38b927ddd313cf45",
+    "artifacts/execution/2026-09-08-view-trace-counterexample-trace_rng1-inputs.json": "a044932a1f58d31c5f3f2518892b843f6e4c2df14c9aa124cd25728d72de8bca",
+    "artifacts/execution/2026-09-08-view-trace-counterexample-trace_rng1.json": "6467a39d15e63087cbbda824202441fb3618780a7862cb79e5e2707ab2b67f18",
+    "artifacts/execution/2026-09-08-view-trace-counterexample-trace_rng1.log": "e2a7e42a48703ced32de9d6bd0623bbb400b9fe4224125d4c73f9e40d67d2752",
+    "artifacts/execution/2026-09-08-view-trace-counterexample-view1-baseline-tests.patch": "1df186dc8ee2747569fd60adbae09a5ce287b1593f318b1bc1ae0bf6026c6f20",
+    "artifacts/execution/2026-09-08-view-trace-counterexample-view1-inputs.json": "32b643705a0ef9f38c9c8ec7295b00455f83779e2a19bab9ffbe55474faaabbe",
+    "artifacts/execution/2026-09-08-view-trace-counterexample-view1.json": "209722ba8425d48897230d95ed6349f581fb0b7423ce2a396c4d79c7f705b10c",
+    "artifacts/execution/2026-09-08-view-trace-counterexample-view1.log": "8dec06ce737c58131005c601a2e7295fdacd79965661d8c3bfc2db131a61d571",
+    "artifacts/execution/2026-09-08-view-trace-gate1-inputs.json": "d21f2cdf0c2739ea43d45edd51a927e21a962fa02fadde21f81dcb1b41101f9d",
+    "artifacts/execution/2026-09-08-view-trace-gate1.json": "deaa3bcc1b73c1d280dfd30fd08bdb0302fcf681f909f7941e3463ddcbdce5b6",
+    "artifacts/execution/2026-09-08-view-trace-gate1.log": "5a6ac408a901fd473b3c9709cc10fbe33bce0c203aa8494e0a39877e4621200e",
+    "artifacts/execution/2026-09-08-view-trace-heap-analysis-commands.json": "6b9da33a0ceb85873ddd5fa44da82e2482e58fbee3c1e5003076f9cc7063f2a6",
+    "artifacts/execution/2026-09-08-view-trace-heap-evidence_view_costs-baseline-report.log": "f48e0a8da33052513ae529e912e8a565f4757c085073c54f305b3ec8858708dc",
+    "artifacts/execution/2026-09-08-view-trace-heap-evidence_view_costs-baseline.stacks": "22405dca25fe40d909aad5eb84505ff6526f8208fd7acef580cea3c8f4fa9554",
+    "artifacts/execution/2026-09-08-view-trace-heap-evidence_view_costs-baseline.zst": "5760b351469f8869cfffe65d15e47b13b7b0daef3b51c44cc8d405fbc7078e50",
+    "artifacts/execution/2026-09-08-view-trace-heap-evidence_view_costs-baseline1-inputs.json": "483d780e4a7051f2e0f57c7d34b2f7a556ed7094d48c9c340f11488af97dbe68",
+    "artifacts/execution/2026-09-08-view-trace-heap-evidence_view_costs-baseline1.json": "6eb909c2ed9113c3653ed4822900950803367528672193c427dff151a662fc43",
+    "artifacts/execution/2026-09-08-view-trace-heap-evidence_view_costs-baseline1.log": "c6cab22e1466f1a4d8fe2bb0ac2130b1dd027529dc53ff602b167430333e3442",
+    "artifacts/execution/2026-09-08-view-trace-heap-evidence_view_costs-profile-report.log": "dae810f9a00ff5d8a548406bb6613d3d9e579daa374693d2b70514431bb75299",
+    "artifacts/execution/2026-09-08-view-trace-heap-evidence_view_costs-profile.stacks": "a2424ef87df75271bc607eed1a538538338dfbe3572564677f9670c3579da9b2",
+    "artifacts/execution/2026-09-08-view-trace-heap-evidence_view_costs-profile.zst": "22b17c1512cab16aa98d910d37eb2e6f14fe02b99d3c6bb5ead4fbfbe64e2556",
+    "artifacts/execution/2026-09-08-view-trace-heap-evidence_view_costs-profile1-inputs.json": "bb397ecd01b0ddc5f19127e6a2787a2b026eb68d79070a5d7d57e6ef5839d34b",
+    "artifacts/execution/2026-09-08-view-trace-heap-evidence_view_costs-profile1.json": "076ba1aaac8f4d110ce1addce9917d31e606f290c33d1ff6f82c250438081832",
+    "artifacts/execution/2026-09-08-view-trace-heap-evidence_view_costs-profile1.log": "d7bd4ea61f877ec1efb577104da7c2dc002c7e281434acf145fd52afdbbb01b1",
+    "artifacts/execution/2026-09-08-view-trace-heap-trace_relation_costs-baseline-report.log": "57305c35befdce8b2d6f7ee24e7ed81a853f51b6fcbfd361c7917d198effa561",
+    "artifacts/execution/2026-09-08-view-trace-heap-trace_relation_costs-baseline.stacks": "0342d33c78d040725f6c53cdcf41d0c49be1c51433299e3e4756bfc9d04e98c9",
+    "artifacts/execution/2026-09-08-view-trace-heap-trace_relation_costs-baseline.zst": "0eea15190a1270fae846e7ee8a736ce21dfb82218e09c2a24e9eade9e8523002",
+    "artifacts/execution/2026-09-08-view-trace-heap-trace_relation_costs-baseline1-inputs.json": "7a3d6b2ba7eb558abec480ce2c14a62df521ac167720ee1415e032ff8d67959b",
+    "artifacts/execution/2026-09-08-view-trace-heap-trace_relation_costs-baseline1.json": "4c084fa52a1433d273a8beb0ee170de1404d6f6cdca9354244291d2fb388b813",
+    "artifacts/execution/2026-09-08-view-trace-heap-trace_relation_costs-baseline1.log": "90cd61f18ed2b335b4d27fe9fc55ecef58663d4284cc3e07ca9050c0eac6b839",
+    "artifacts/execution/2026-09-08-view-trace-heap-trace_relation_costs-profile-report.log": "a5c6811b06960cfd80cc28a950ee03027d10d5564c39744426cdd69a8e8da018",
+    "artifacts/execution/2026-09-08-view-trace-heap-trace_relation_costs-profile.stacks": "a37b9cbee0dd2e1a832219886c9c9a2982634a8ac38d7c40d651c28ff335e2ed",
+    "artifacts/execution/2026-09-08-view-trace-heap-trace_relation_costs-profile.zst": "89a9b7091c9d7e8e12f30eff6c44a332227d316903a0e8f3863c6d8173e30baa",
+    "artifacts/execution/2026-09-08-view-trace-heap-trace_relation_costs-profile1-inputs.json": "bbb92e427b0c170d00583118d2d538030885c573f5e9303cd6c150305dceb762",
+    "artifacts/execution/2026-09-08-view-trace-heap-trace_relation_costs-profile1.json": "0eb8082434b335cc75c8bd806f6a028da66e5f96a322fb318068fe095d3a4002",
+    "artifacts/execution/2026-09-08-view-trace-heap-trace_relation_costs-profile1.log": "1fc701c0cf501b85b35a96e1bb4451af1392629a25cda815cfd69480d536df82",
+    "artifacts/execution/2026-09-08-view-trace-pre1-inputs.json": "d41fc4b49528d5e78f5f281605669a0fe7af17b23cfa58c11e566712606c469c",
+    "artifacts/execution/2026-09-08-view-trace-pre1.json": "818a9cb46a4759c10764f4943a6364bba70eea6614ceee8936665fb2257e47b1",
+    "artifacts/execution/2026-09-08-view-trace-pre1.log": "c296364d5a69fecc2dc9f869d5eb1d9cd49cb46bcd21958ce9e1f17a56928439",
+    "artifacts/execution/2026-09-08-view-trace-pre2-inputs.json": "5338bd6473ab359ae9feef57f51f773439a65ff9b6343ef5747e7c780529706b",
+    "artifacts/execution/2026-09-08-view-trace-pre2.json": "3db26295ddda61631cb066e531454c2a6ff5d0510cdef0a2a4671221925dfb1e",
+    "artifacts/execution/2026-09-08-view-trace-pre2.log": "d7b3bb28c4b5b6f9fb712b5fb64edda33946efa811ac1c923c5adf7ef855e5b4",
+    "artifacts/execution/2026-09-08-view-trace-pre3-inputs.json": "39395c79cfa23a15937e87ae1ade00c4a320e5daccd971472fa564fe061e05f7",
+    "artifacts/execution/2026-09-08-view-trace-pre3.json": "3b4bf46e847c20348c23b34a8f2d859fbdcfbd5e5d5029d5293ad5716c4797bd",
+    "artifacts/execution/2026-09-08-view-trace-pre3.log": "a906366c0f543035c89f48e8cfe9424386d94e48158a2380af6e14c6465f2fb4",
+    "artifacts/execution/2026-09-08-view-trace-profile-binary-identity.json": "8a9136558c885ebc9af1ee84b2c317c2565b8ff4ff80f46881cbf7c6565ff225",
+    "artifacts/execution/2026-09-08-view-trace-release-binary-identity.json": "45e667ea0ac1aceb63c4b40df784b9f89599729dd0d6ded6ab6354951f1ac929"
+  }
+}

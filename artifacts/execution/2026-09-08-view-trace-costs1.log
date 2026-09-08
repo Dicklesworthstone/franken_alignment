@@ -1,0 +1,103 @@
+  [2m2026-09-08T07:49:33.600478Z[0m [32m INFO[0m [1;32mrch::hook[0m[32m: [32mSelected worker: vmi1149989 at root@212.90.121.76 (0 slots remaining after reservation, speed 71.9)[0m
+    [2;3mat[0m rch/src/hook.rs:2645 [2;3mon[0m ThreadId(1)
+
+[*] Job j-30004650170124391 submitted to vmi1149989 (0 slots remaining, speed 71.9)
+  [2m2026-09-08T07:49:33.734100Z[0m [32m INFO[0m [1;32mrch::hook::transfer_orchestration[0m[32m: [32mStarting remote compilation pipeline for franken_alignment_wave5_gate1_20260908 (hash: 9afd3bb4d034aa59)[0m
+    [2;3mat[0m rch/src/hook/transfer_orchestration.rs:510 [2;3mon[0m ThreadId(1)
+
+  [2m2026-09-08T07:49:33.734132Z[0m [32m INFO[0m [1;32mrch::hook::transfer_orchestration[0m[32m: [32mPrepared dependency sync manifest for 1 roots[0m
+    [2;3mat[0m rch/src/hook/transfer_orchestration.rs:532 [2;3mon[0m ThreadId(1)
+
+  [2m2026-09-08T07:49:35.172313Z[0m [32m INFO[0m [1;32mrch::hook::transfer_orchestration[0m[32m: [32mSyncing project to worker vmi1149989...[0m
+    [2;3mat[0m rch/src/hook/transfer_orchestration.rs:661 [2;3mon[0m ThreadId(1)
+
+  [2m2026-09-08T07:49:39.951392Z[0m [32m INFO[0m [1;32mrch::transfer[0m[32m: [32mLinked git worktree detected at /Users/jemanuel/projects/franken_alignment_wave5_gate1_20260908 (gitdir: /Users/jemanuel/projects/franken_alignment/.git/worktrees/franken_alignment_wave5_gate1_20260908); excluding dangling '.git' file from upload so the remote build resolves git-free like a normal repo[0m
+    [2;3mat[0m rch/src/transfer.rs:2009 [2;3mon[0m ThreadId(1)
+
+  [2m2026-09-08T07:49:39.951443Z[0m [32m INFO[0m [1;32mrch::transfer[0m[32m: [32mSyncing /Users/jemanuel/projects/franken_alignment_wave5_gate1_20260908 -> /data/tmp/rch/franken_alignment_wave5_gate1_20260908/9afd3bb4d034aa59 on vmi1149989 (streaming)[0m
+    [2;3mat[0m rch/src/transfer.rs:3549 [2;3mon[0m ThreadId(1)
+
+  [2m2026-09-08T07:49:41.805221Z[0m [32m INFO[0m [1;32mrch::hook::transfer_orchestration[0m[32m: [32mSync complete: 15 files, 7926676 bytes in 6226ms[0m
+    [2;3mat[0m rch/src/hook/transfer_orchestration.rs:958 [2;3mon[0m ThreadId(1)
+
+  [2m2026-09-08T07:49:41.845080Z[0m [32m INFO[0m [1;32mrch::hook::transfer_orchestration[0m[32m: [32mExecuting command remotely: cargo +nightly-2026-09-08 test --release --locked -p fa-reference --test evidence_view_costs --test trace_relation_costs -- --nocapture '--test-threads=1'[0m
+    [2;3mat[0m rch/src/hook/transfer_orchestration.rs:1018 [2;3mon[0m ThreadId(1)
+
+  [2m2026-09-08T07:49:41.845205Z[0m [32m INFO[0m [1;32mrch::transfer[0m[32m: [32mRewriting CARGO_TARGET_DIR for remote execution (worker-scoped path): /Volumes/USB_NVME/cargo-target -> /data/tmp/rch/franken_alignment_wave5_gate1_20260908/.rch-target-vmi1149989-pool-453796de37ab59ed58e9bcaa38357bd6[0m
+    [2;3mat[0m rch/src/transfer.rs:1842 [2;3mon[0m ThreadId(1)
+
+  [2m2026-09-08T07:49:41.845259Z[0m [32m INFO[0m [1;32mrch::transfer[0m[32m: [32mWrapping command with external timeout protection, [1;32mkind[0m[32m: cargo test, [1;32mtimeout_secs[0m[32m: 3600[0m
+    [2;3mat[0m rch/src/transfer.rs:2669 [2;3mon[0m ThreadId(1)
+
+Warning: Permanently added '212.90.121.76' (ED25519) to the list of known hosts.
+warning: unused field `license-file` in `workspace.package`
+ --> Cargo.toml:9:1
+  |
+9 | license-file = "LICENSE"
+  | ^^^^^^^^^^^^
+  |
+  = note: `cargo::unused_workspace_package_fields` is set to `warn` by default
+help: consider removing the field `workspace.package.license-file`
+warning: workspace (manifest) generated 1 warning
+   Compiling fa-reference v0.2.0 (/data/tmp/rch/franken_alignment_wave5_gate1_20260908/9afd3bb4d034aa59/crates/fa-reference)
+    Finished `release` profile [optimized] target(s) in 10.03s
+     Running tests/evidence_view_costs.rs (/data/tmp/rch/franken_alignment_wave5_gate1_20260908/.rch-target-vmi1149989-pool-453796de37ab59ed58e9bcaa38357bd6/release/build/fa-reference/58c0696eb3a7e9da/out/evidence_view_costs-58c0696eb3a7e9da)
+
+running 2 tests
+test first_evidence_view_construct_is_selectable_for_fresh_release_measurement ... case=evidence_view_first_construct samples=1 successes=1 refusals=0 observed_errors=0 submitted_bytes=2 profile_bytes=21 logical_input_bytes=23 elapsed_ns=5177 timing_scope=fresh_process_exact_manifest_construction_only_when_sole_selected_test memory_measurement=unavailable_in_memory_profile
+ok
+test fixed_evidence_view_costs_are_descriptive_and_assert_all_outcomes ... case=fresh_construct_capture_reuse samples=12 successes=12 refusals=0 observed_errors=0 submitted_bytes=2 profile_bytes=21 logical_input_bytes=23 elapsed_ns_min=170 elapsed_ns_median=190 elapsed_ns_max=2574 elapsed_ns_total=4878 timing_scope=fresh_manifest_construction_capture_reuse_assertions_drop memory_measurement=unavailable_in_memory_profile
+case=setup_excluded_capture_reuse samples=12 successes=12 refusals=0 observed_errors=0 submitted_bytes=2 profile_bytes=21 logical_input_bytes=23 elapsed_ns_min=60 elapsed_ns_median=70 elapsed_ns_max=280 elapsed_ns_total=1091 timing_scope=setup_excluded_manifest_capture_reuse_assertions_drop memory_measurement=unavailable_in_memory_profile
+case=fresh_policy_churn_invalidates_prior_witness samples=12 successes=12 refusals=0 observed_errors=0 submitted_bytes=2 profile_bytes=21 logical_input_bytes=23 elapsed_ns_min=260 elapsed_ns_median=286 elapsed_ns_max=1141 elapsed_ns_total=4276 timing_scope=fresh_baseline_capture_candidate_construction_validation_assertions_drop memory_measurement=unavailable_in_memory_profile
+case=fresh_malformed_window_refusal samples=12 successes=0 refusals=12 observed_errors=0 submitted_bytes=2 profile_bytes=21 logical_input_bytes=23 elapsed_ns_min=90 elapsed_ns_median=100 elapsed_ns_max=361 elapsed_ns_total=1443 timing_scope=fresh_actual_input_manifest_refusal_assertions_drop memory_measurement=unavailable_in_memory_profile
+case=fresh_max_submitted_bytes_construct_capture_reuse samples=12 successes=12 refusals=0 observed_errors=0 submitted_bytes=65536 profile_bytes=21 logical_input_bytes=65557 elapsed_ns_min=1953 elapsed_ns_median=1973 elapsed_ns_max=42043 elapsed_ns_total=63917 timing_scope=fresh_max_bound_manifest_construction_capture_reuse_assertions_drop memory_measurement=unavailable_in_memory_profile
+ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+
+running 2 tests
+test cold_first_evaluation_of_registered_valid_pair ... FA092_TRACE_RELATION_COLD case=registered_independent_pair samples=1 evaluated_pairs=1 independent_pairs=1 ordered_pairs=0 logical_operation_count=2 logical_domain_count=3 elapsed_ns=6650 proof_scope=fresh_process_exact_release_invocation_only no_claim=os_page_cache_cpu_cold_heap_allocation_or_production_scheduling
+ok
+test fixed_trace_relation_costs_are_descriptive_and_assert_all_outcomes ... case=registered_independent_pair samples=12 evaluated_pairs=1 independent_pairs=1 ordered_pairs=0 logical_operation_count=2 logical_domain_count=3 elapsed_ns_min=210 elapsed_ns_median=240 elapsed_ns_max=3074 elapsed_ns_total=5738 timing_scope=fresh_public_api_construction_and_relation_assertion memory_measurement=unavailable_no_heap_claim
+case=closed_negative_domain_write_conflict samples=12 evaluated_pairs=1 independent_pairs=0 ordered_pairs=1 logical_operation_count=2 logical_domain_count=2 elapsed_ns_min=380 elapsed_ns_median=420 elapsed_ns_max=11006 elapsed_ns_total=16112 timing_scope=fresh_public_api_construction_and_relation_assertion memory_measurement=unavailable_no_heap_claim
+case=gapped_input_unknown_dependency_refusal samples=12 evaluated_pairs=1 independent_pairs=0 ordered_pairs=1 logical_operation_count=2 logical_domain_count=2 elapsed_ns_min=290 elapsed_ns_median=325 elapsed_ns_max=2403 elapsed_ns_total=6059 timing_scope=fresh_public_api_construction_and_relation_assertion memory_measurement=unavailable_no_heap_claim
+case=maximum_sixteen_operation_matrix samples=12 evaluated_pairs=120 independent_pairs=120 ordered_pairs=0 logical_operation_count=16 logical_domain_count=32 elapsed_ns_min=8142 elapsed_ns_median=8628 elapsed_ns_max=24427 elapsed_ns_total=122945 timing_scope=fresh_public_api_construction_and_relation_assertion memory_measurement=unavailable_no_heap_claim
+ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/trace_relation_costs.rs (/data/tmp/rch/franken_alignment_wave5_gate1_20260908/.rch-target-vmi1149989-pool-453796de37ab59ed58e9bcaa38357bd6/release/build/fa-reference/9edd88ba89c4dc56/out/trace_relation_costs-9edd88ba89c4dc56)
+  [2m2026-09-08T07:49:53.349219Z[0m [32m INFO[0m [1;32mrch::hook::transfer_orchestration[0m[32m: [32mRemote command finished: exit=0 in 11503ms[0m
+    [2;3mat[0m rch/src/hook/transfer_orchestration.rs:1150 [2;3mon[0m ThreadId(1)
+
+  [2m2026-09-08T07:49:53.408356Z[0m [32m INFO[0m [1;32mrch::hook::transfer_orchestration[0m[32m: [32mRetrieving build artifacts...[0m
+    [2;3mat[0m rch/src/hook/transfer_orchestration.rs:1238 [2;3mon[0m ThreadId(1)
+
+  [2m2026-09-08T07:49:53.408402Z[0m [32m INFO[0m [1;32mrch::transfer[0m[32m: [32mRetrieving artifacts from /data/tmp/rch/franken_alignment_wave5_gate1_20260908/9afd3bb4d034aa59 on vmi1149989[0m
+    [2;3mat[0m rch/src/transfer.rs:4328 [2;3mon[0m ThreadId(1)
+
+  [2m2026-09-08T07:49:55.218256Z[0m [32m INFO[0m [1;32mrch::transfer[0m[32m: [32mArtifacts retrieved in 1809ms (1 files, 792 bytes)[0m
+    [2;3mat[0m rch/src/transfer.rs:4383 [2;3mon[0m ThreadId(1)
+
+  [2m2026-09-08T07:49:55.218318Z[0m [32m INFO[0m [1;32mrch::hook::transfer_orchestration[0m[32m: [32mArtifacts retrieved: 1 files, 792 bytes in 1809ms[0m
+    [2;3mat[0m rch/src/hook/transfer_orchestration.rs:1270 [2;3mon[0m ThreadId(1)
+
+[W] Worker: vmi1149989 | Job: j-30004650170124391
+[T] Total: 19.5s (sync 6.2s, build 11.5s, artifacts 1.8s)
+^ Sync: 7.6 MB in 6.2s (1.2 MB/s)
+[C] Compile: 11.5s
+v Artifacts: 792 B in 1.8s (438 B/s)
+[T] Cache: MISS
++--------------- * Build Successful ---------------+
+| New personal best! 11.5s (previous: 20.7s)       |
+| Target: release                                  |
+| Duration: 11.5s (v 44% faster vs previous 20.7s) |
+| Artifacts: 1 files (792 B)                       |
+| Worker: vmi1149989                               |
+| Cache: MISS (warming cache)                      |
+| Time: 2026-09-08 07:49:55                        |
++--------------------------------------------------+
+Warning: Permanently added '212.90.121.76' (ED25519) to the list of known hosts.
+[RCH] remote vmi1149989 (23.0s)
+[RCH] clean-overlay receipt: base=d7e207dc22768d7a249e4b2a30681a2a104a5666 overlay-fingerprint=383fcf5fbc10572e79f49233c4ea54d6a1da1ddfc24f0f0f95ac8a6122e2a33c
