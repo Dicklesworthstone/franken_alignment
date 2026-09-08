@@ -3,3 +3,5 @@
 *.json text
 *.py text
 *.sh text
+# Execution logs retain the operator's exact bytes, including carriage returns.
+artifacts/execution/*.log -text
