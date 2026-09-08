@@ -570,7 +570,7 @@
         "crates/fa-reference/src/witness.rs::tests::stale_semantic_domain_and_closure_controls_refuse_reuse"
       ],
       "reference_status": "executed_remotely_2026_09_08_pass",
-      "reference_scope": "Exact equality over bounded caller-supplied full input bytes, profile, part metadata and omissions; private validated construction. No actual provider interception, authentication or production authority. Exact-value bytes/version/query role and absent-key membership reuse additionally bind caller-trusted domain, snapshot, semantics and complete authenticated terminal frontier.",
+      "reference_scope": "Exact equality over bounded caller-supplied full input bytes, profile, part metadata and omissions; private validated construction. No actual provider interception, authentication or production authority. Exact-value bytes/version/query role and absent-key membership reuse additionally bind caller-trusted domain, snapshot, semantics and complete authenticated terminal frontier. Finite half-open empty/member range witnesses additionally retain exact ordered key/version/value membership; both capture and reuse require exact complete closure. Unknown and conservative-summary completeness evidence cannot establish absence.",
       "required_negative_campaigns": [
         "Insert a member into an empty reviewed range."
       ],
@@ -586,9 +586,10 @@
         "artifacts/execution/2026-09-07-epoch2-receipt.json",
         "artifacts/execution/2026-09-08-witness-receipt.json",
         "artifacts/execution/2026-09-08-algebra-inventory-receipt.json",
-        "artifacts/execution/2026-09-08-algebra-inventory-witness-review-receipt.json"
+        "artifacts/execution/2026-09-08-algebra-inventory-witness-review-receipt.json",
+        "artifacts/execution/2026-09-08-range-witness-receipt.json"
       ],
-      "reference_execution_note": "Current witness gate and causal mutations are bound by the 2026-09-08 witness receipt; prior full-input receipts retain their separate dated source scope. Production checker remains planned. The 2026-09-08 algebra-inventory receipt additionally binds executed pure transfer-law composition and its declared input/closure boundary; production checker remains planned.",
+      "reference_execution_note": "Current witness gate and causal mutations are bound by the 2026-09-08 witness receipt; prior full-input receipts retain their separate dated source scope. Production checker remains planned. The 2026-09-08 algebra-inventory receipt additionally binds executed pure transfer-law composition and its declared input/closure boundary; production checker remains planned. The 2026-09-08 range-witness receipt binds the 511-test overlay and two causal phantom/value failures; no approximate-summary algorithm or production activation.",
       "founding_ideas": [
         "FI-A13",
         "FI-A17"

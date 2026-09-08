@@ -1,10 +1,11 @@
-//! Exact-value and absent-key judgment witnesses for the bounded reference model.
+//! Exact-value, absent-key, and exact-range judgment witnesses for the bounded
+//! reference model.
 //!
 //! `AdapterDomainInput` is a caller-supplied assertion about an adapter-authenticated
 //! domain. This module verifies only its identity, epoch, and declared product
 //! frontier; it neither authenticates an adapter nor turns an arbitrary scalar
 //! into authenticated evidence. A missing closure is therefore `Unknown`, not
-//! evidence that a key is absent.
+//! evidence that a key or range is absent.
 
 use std::collections::{BTreeMap, BTreeSet};
 
@@ -18,6 +19,10 @@ use crate::{
 pub const MAX_SNAPSHOT_ENTRIES: usize = 256;
 pub const MAX_VALUE_BYTES: usize = 8 * 1024;
 pub const MAX_WITNESSES: usize = 64;
+/// Bound all entries retained across `RangeMembers` witnesses in one judgment.
+pub const MAX_RANGE_WITNESS_ENTRIES: usize = MAX_SNAPSHOT_ENTRIES;
+/// Bound retained logical member value bytes across `RangeMembers` witnesses.
+pub const MAX_RANGE_WITNESS_VALUE_BYTES: usize = MAX_SNAPSHOT_ENTRIES * MAX_VALUE_BYTES;
 
 /// The role a deterministic query assigned to an exact value dependency.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
@@ -69,6 +74,10 @@ impl DomainProjection {
 pub enum DomainClosure {
     /// The adapter supplied no complete closed-domain observation.
     Unknown,
+    /// The adapter supplied only a conservative range-summary completeness
+    /// observation. It may support a separate potential-overlap check, but can
+    /// never establish exact absence or exact range membership in this model.
+    ConservativeSummary,
     /// The complete-domain claim is tied to this exact caller-supplied marker.
     Closed(TrustedClosingMarker),
 }
@@ -206,8 +215,28 @@ impl WitnessSnapshot {
 /// A requested dependency before capture binds it to an actual snapshot value.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum WitnessRequest {
-    ExactValue { key: u64, role: QueryRole },
-    AbsentKey { key: u64 },
+    ExactValue {
+        key: u64,
+        role: QueryRole,
+    },
+    AbsentKey {
+        key: u64,
+    },
+    /// An exact half-open key interval `[start, end)` that must contain no
+    /// members. `start < end` is required. This bounded profile cannot express
+    /// a range containing `u64::MAX`, because it never computes `end + 1`.
+    EmptyRange {
+        start: u64,
+        end: u64,
+    },
+    /// An exact half-open key interval `[start, end)` whose complete membership
+    /// is retained from the authenticated snapshot. `start < end` is required.
+    /// This bounded profile cannot express a range containing `u64::MAX`,
+    /// because it never computes `end + 1`.
+    RangeMembers {
+        start: u64,
+        end: u64,
+    },
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -222,6 +251,23 @@ enum Witness {
         key: u64,
         marker: TrustedClosingMarker,
     },
+    EmptyRange {
+        start: u64,
+        end: u64,
+        marker: TrustedClosingMarker,
+    },
+    RangeMembers {
+        start: u64,
+        end: u64,
+        members: Vec<SnapshotEntry>,
+        marker: TrustedClosingMarker,
+    },
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
+enum WitnessIdentity {
+    Key(u64),
+    Range { start: u64, end: u64 },
 }
 
 /// A historical result whose declared exact dependencies may be reused only
@@ -233,6 +279,8 @@ pub struct WitnessJudgment {
     semantic_epoch: u64,
     domain: DomainProjection,
     witnesses: Vec<Witness>,
+    range_member_count: usize,
+    range_member_bytes: usize,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -243,15 +291,24 @@ pub enum Invalidation {
     Projection,
     ExactValue,
     AbsentKey,
+    EmptyRange,
+    RangeMembers,
     ClosingFrontier,
 }
 
 /// Bounded deterministic work performed by one reuse validation.
+///
+/// Costs are available only for completed `Reuse` outcomes. A returned `Err`
+/// does not expose work performed before an incomplete frontier, stale
+/// snapshot, or other refusal. These counters are not an effect-charging ledger.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub struct ValidationCost {
     exact_reads: u16,
     absent_reads: u16,
     frontier_checks: u16,
+    range_scans: u16,
+    range_members: u16,
+    range_member_bytes: u32,
 }
 
 impl ValidationCost {
@@ -268,6 +325,26 @@ impl ValidationCost {
     #[must_use]
     pub const fn frontier_checks(self) -> u16 {
         self.frontier_checks
+    }
+
+    /// Exact range predicates scanned during reuse validation.
+    #[must_use]
+    pub const fn range_scans(self) -> u16 {
+        self.range_scans
+    }
+
+    /// Current range members examined during reuse validation.
+    #[must_use]
+    pub const fn range_members(self) -> u16 {
+        self.range_members
+    }
+
+    /// Logical value bytes in current range members examined during reuse
+    /// validation. This is not a claim about physically copied or compared
+    /// bytes, because equality may short-circuit.
+    #[must_use]
+    pub const fn range_member_bytes(self) -> u32 {
+        self.range_member_bytes
     }
 }
 
@@ -300,13 +377,22 @@ impl WitnessJudgment {
         if requests.len() > MAX_WITNESSES {
             return Err(Error::Limit);
         }
-        let mut keys = BTreeSet::new();
+        let mut identities = BTreeSet::new();
         let mut witnesses = Vec::with_capacity(requests.len());
+        let mut range_member_count = 0_usize;
+        let mut range_member_bytes = 0_usize;
         for request in requests {
-            let key = match request {
-                WitnessRequest::ExactValue { key, .. } | WitnessRequest::AbsentKey { key } => key,
+            let identity = match request {
+                WitnessRequest::ExactValue { key, .. } | WitnessRequest::AbsentKey { key } => {
+                    WitnessIdentity::Key(key)
+                }
+                WitnessRequest::EmptyRange { start, end }
+                | WitnessRequest::RangeMembers { start, end } => {
+                    validate_range(start, end)?;
+                    WitnessIdentity::Range { start, end }
+                }
             };
-            if !keys.insert(key) {
+            if !identities.insert(identity) {
                 return Err(Error::Duplicate);
             }
             match request {
@@ -326,6 +412,47 @@ impl WitnessJudgment {
                     let marker = closed_marker(snapshot, frontiers)?;
                     witnesses.push(Witness::AbsentKey { key, marker });
                 }
+                WitnessRequest::EmptyRange { start, end } => {
+                    let marker = closed_marker(snapshot, frontiers)?;
+                    if snapshot.values.range(start..end).next().is_some() {
+                        return Err(Error::Binding);
+                    }
+                    witnesses.push(Witness::EmptyRange { start, end, marker });
+                }
+                WitnessRequest::RangeMembers { start, end } => {
+                    let marker = closed_marker(snapshot, frontiers)?;
+                    let mut member_count = 0_usize;
+                    let mut member_bytes = 0_usize;
+                    for (_, entry) in snapshot.values.range(start..end) {
+                        member_count = member_count.checked_add(1).ok_or(Error::Overflow)?;
+                        member_bytes = member_bytes
+                            .checked_add(entry.value.len())
+                            .ok_or(Error::Overflow)?;
+                    }
+                    range_member_count = range_member_count
+                        .checked_add(member_count)
+                        .ok_or(Error::Overflow)?;
+                    if range_member_count > MAX_RANGE_WITNESS_ENTRIES {
+                        return Err(Error::Limit);
+                    }
+                    range_member_bytes = range_member_bytes
+                        .checked_add(member_bytes)
+                        .ok_or(Error::Overflow)?;
+                    if range_member_bytes > MAX_RANGE_WITNESS_VALUE_BYTES {
+                        return Err(Error::Limit);
+                    }
+                    let members = snapshot
+                        .values
+                        .range(start..end)
+                        .map(|(_, entry)| entry.clone())
+                        .collect();
+                    witnesses.push(Witness::RangeMembers {
+                        start,
+                        end,
+                        members,
+                        marker,
+                    });
+                }
             }
         }
         Ok(Self {
@@ -334,6 +461,8 @@ impl WitnessJudgment {
             semantic_epoch: snapshot.semantic_epoch,
             domain: snapshot.domain_input.domain,
             witnesses,
+            range_member_count,
+            range_member_bytes,
         })
     }
 
@@ -387,6 +516,47 @@ impl WitnessJudgment {
                         return Ok(invalidated(Invalidation::AbsentKey, cost));
                     }
                 }
+                Witness::EmptyRange { start, end, marker } => {
+                    cost.frontier_checks =
+                        cost.frontier_checks.checked_add(1).ok_or(Error::Overflow)?;
+                    let current_marker = closed_marker(snapshot, frontiers)?;
+                    if current_marker != *marker {
+                        return Ok(invalidated(Invalidation::ClosingFrontier, cost));
+                    }
+                    charge_range_scan(&mut cost)?;
+                    if let Some((_, entry)) = snapshot.values.range(*start..*end).next() {
+                        charge_range_member(&mut cost, entry)?;
+                        return Ok(invalidated(Invalidation::EmptyRange, cost));
+                    }
+                }
+                Witness::RangeMembers {
+                    start,
+                    end,
+                    members,
+                    marker,
+                } => {
+                    cost.frontier_checks =
+                        cost.frontier_checks.checked_add(1).ok_or(Error::Overflow)?;
+                    let current_marker = closed_marker(snapshot, frontiers)?;
+                    if current_marker != *marker {
+                        return Ok(invalidated(Invalidation::ClosingFrontier, cost));
+                    }
+                    charge_range_scan(&mut cost)?;
+                    let mut current = snapshot.values.range(*start..*end).map(|(_, entry)| entry);
+                    for expected in members {
+                        let Some(actual) = current.next() else {
+                            return Ok(invalidated(Invalidation::RangeMembers, cost));
+                        };
+                        charge_range_member(&mut cost, actual)?;
+                        if actual != expected {
+                            return Ok(invalidated(Invalidation::RangeMembers, cost));
+                        }
+                    }
+                    if let Some(extra) = current.next() {
+                        charge_range_member(&mut cost, extra)?;
+                        return Ok(invalidated(Invalidation::RangeMembers, cost));
+                    }
+                }
             }
         }
         Ok(Reuse::StillValid { cost })
@@ -403,13 +573,50 @@ impl WitnessJudgment {
                 role,
                 ..
             } if *witness_key == key => Some((*version, *role)),
-            Witness::ExactValue { .. } | Witness::AbsentKey { .. } => None,
+            Witness::ExactValue { .. }
+            | Witness::AbsentKey { .. }
+            | Witness::EmptyRange { .. }
+            | Witness::RangeMembers { .. } => None,
         })
+    }
+
+    /// Number of exact members retained across all `RangeMembers` witnesses.
+    #[must_use]
+    pub const fn range_member_count(&self) -> usize {
+        self.range_member_count
+    }
+
+    /// Retained logical member value bytes across all `RangeMembers` witnesses.
+    #[must_use]
+    pub const fn range_member_bytes(&self) -> usize {
+        self.range_member_bytes
     }
 }
 
 fn invalidated(reason: Invalidation, cost: ValidationCost) -> Reuse {
     Reuse::Invalidated { reason, cost }
+}
+
+fn validate_range(start: u64, end: u64) -> Result<(), Error> {
+    if start >= end {
+        return Err(Error::InvalidInput);
+    }
+    Ok(())
+}
+
+fn charge_range_scan(cost: &mut ValidationCost) -> Result<(), Error> {
+    cost.range_scans = cost.range_scans.checked_add(1).ok_or(Error::Overflow)?;
+    Ok(())
+}
+
+fn charge_range_member(cost: &mut ValidationCost, entry: &SnapshotEntry) -> Result<(), Error> {
+    cost.range_members = cost.range_members.checked_add(1).ok_or(Error::Overflow)?;
+    let bytes = u32::try_from(entry.value.len()).map_err(|_| Error::Overflow)?;
+    cost.range_member_bytes = cost
+        .range_member_bytes
+        .checked_add(bytes)
+        .ok_or(Error::Overflow)?;
+    Ok(())
 }
 
 fn closed_marker(
@@ -529,7 +736,8 @@ mod tests {
                 cost: ValidationCost {
                     exact_reads: 1,
                     absent_reads: 1,
-                    frontier_checks: 1
+                    frontier_checks: 1,
+                    ..ValidationCost::default()
                 }
             })
         );
@@ -543,7 +751,8 @@ mod tests {
                 cost: ValidationCost {
                     exact_reads: 1,
                     absent_reads: 1,
-                    frontier_checks: 1
+                    frontier_checks: 1,
+                    ..ValidationCost::default()
                 }
             })
         );

@@ -1,0 +1,7 @@
+{
+  "range_witness_costs": {
+    "remote_path": "/data/tmp/rch/franken_alignment_wave8_gate1_20260908/.rch-target-vmi1149989-pool-de10d6accc9fb491c8d673423dc0e73b/release/build/fa-reference/f686dff2b91dd15f/out/range_witness_costs-f686dff2b91dd15f",
+    "sha256": "f2e56c72c42db8c87eee5189eac6ffacd53d5847474fb9b234c63f70329a0076",
+    "local_path": "/tmp/fa-campaign-20260908/wave8-profile-binaries/range_witness_costs"
+  }
+}

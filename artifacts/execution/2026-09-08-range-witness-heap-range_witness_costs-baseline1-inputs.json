@@ -1,0 +1,26 @@
+{
+  "command": [
+    "rch",
+    "--json",
+    "exec",
+    "--job",
+    "--",
+    "heaptrack",
+    "--record-only",
+    "-o",
+    "/tmp/fa-campaign-20260908-wave8-profile/range_witness_costs-baseline",
+    "/tmp/fa-campaign-20260908-wave8-profile/range_witness_costs",
+    "--exact",
+    "xixed_descriptive_capture_and_direct_scan_reuse_costs",
+    "--nocapture",
+    "--test-threads=1"
+  ],
+  "binary": {
+    "remote_path": "/data/tmp/rch/franken_alignment_wave8_gate1_20260908/.rch-target-vmi1149989-pool-de10d6accc9fb491c8d673423dc0e73b/release/build/fa-reference/f686dff2b91dd15f/out/range_witness_costs-f686dff2b91dd15f",
+    "sha256": "f2e56c72c42db8c87eee5189eac6ffacd53d5847474fb9b234c63f70329a0076",
+    "local_path": "/tmp/fa-campaign-20260908/wave8-profile-binaries/range_witness_costs"
+  },
+  "source_inputs": "wave8-gate1-inputs.json",
+  "working_directory": "/Users/jemanuel/projects/franken_alignment_wave8_gate1_20260908",
+  "scope": "Nine fixed range-witness cases only. Same-binary same-length unmatched-filter baseline runs zero tests and earns no passing-test credit."
+}

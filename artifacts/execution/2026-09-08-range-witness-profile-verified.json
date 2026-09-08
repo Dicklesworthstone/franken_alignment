@@ -1,0 +1,9 @@
+{
+  "binary_sha256": {
+    "range_witness_costs": "f2e56c72c42db8c87eee5189eac6ffacd53d5847474fb9b234c63f70329a0076"
+  },
+  "unchanged_after": true,
+  "analysis_command_template": "heaptrack_print <raw.zst> --flamegraph-cost-type allocations -F <stacks>",
+  "build_worker": "vmi1149989",
+  "profile_worker": "vmi1227854"
+}

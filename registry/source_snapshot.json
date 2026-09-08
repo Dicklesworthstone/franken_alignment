@@ -18,7 +18,7 @@
     "crates/fa-reference/src/round.rs": "605eb037e39c5fad5886c7caee770fcf582479fb1fca7fa7c451bd23be7ad463",
     "crates/fa-reference/src/strict_json.rs": "6d413a13e0880cb2bcb728fe5913e4857db59ce8995bb900a486f25ef0dcb3f6",
     "crates/fa-reference/src/trace_independence.rs": "6a4a0e8275cd72c1ea0acf185cf08d39ac4b963ae359efa4b6064cd1a305b326",
-    "crates/fa-reference/src/witness.rs": "171f3c20f8fce930cce7169bfa87e7adf3f9f5ac070a885cc68235c7c3f8bf05",
+    "crates/fa-reference/src/witness.rs": "e023df45eba0bfab0d094739dbf1cd4d785505ab08e03cdc1d26f5526361f02d",
     "crates/fa-reference/tests/action_boundaries.rs": "4d4d35ae5f68139764235ebe4ad24ca87293d123c7a56fd3a0228f954b62386e",
     "crates/fa-reference/tests/action_costs.rs": "140eafbf675e94ef5bec150c1ad77638b83416e5ecff5e86533aa81ed48ef660",
     "crates/fa-reference/tests/action_transitions.rs": "bec1fb54b8918756e0ad21d39353fd627e083235d0c2949bb2ce71cda954440a",
@@ -45,8 +45,8 @@
     "crates/fa-reference/tests/witness_limits.rs": "12cd1c52ee639d158aa75186be6b4c8eda43c061a40dc8996e27061451311c56",
     "registry/claims.json": "9e729380f01af536b21f116d334977db77e3900e43367c6f19b1522296c61005",
     "registry/founding_concordance.json": "cf90c49704448eaaab47e447c15033c94dd66c37c895c74c8b7bce2f135c251d",
-    "registry/invariants.json": "56c6323caf6e89b4422eb9b1d0cc15b5c55980d6c49cddf90e5488df1141273f",
-    "registry/roadmap.json": "b15ffe3d91bf792d81815c370ff37d3b6da17afe6d182266df14eeb69c525961",
+    "registry/invariants.json": "77d0d08a59676e77a6ed8acee4d31c8b7349ecd7be1156e4d85ff95791045f99",
+    "registry/roadmap.json": "9aebe3b5c3477dceff3039e084b8c35468ca16924b9197c9636f3a4c43acca8f",
     "registry/sources.json": "c577fdfd39e1b5976e9f1e02db26e88598935d2f1154b40ecfbde45520e35a7a",
     "registry/vocabulary.json": "b5b7cb253333f43ba6bcc6b08268bb91ceab7767b7d7581fa5cec7f41a475615",
     "rust-toolchain.toml": "6ce9e65c5acda74d4b794761093fc1a413b28a1b2c11ab7a899a7da689df2d52",
@@ -172,6 +172,9 @@
     "crates/fa-reference/tests/perimeter_inventory_boundaries.rs": "d2f07bb0c8ea95135d969535c54a043dbcd1a287b52be893e1963e47a64fa819",
     "crates/fa-reference/tests/perimeter_inventory_costs.rs": "7784bfcad91bf8552706d927561791e56595df8ed025ec00bbb66991c0cf15cd",
     "crates/fa-reference/tests/perimeter_inventory_limits.rs": "66080e22d28b39962aba48b6eb9b39111f470d84ba81279f3765928d6437d62d",
-    "crates/fa-reference/tests/observation_algebra_costs.rs": "4cf558b169bc3c66246d0eff8225a639f925d6ddaa8da09258e53f24b898e580"
+    "crates/fa-reference/tests/observation_algebra_costs.rs": "4cf558b169bc3c66246d0eff8225a639f925d6ddaa8da09258e53f24b898e580",
+    "crates/fa-reference/tests/range_witness_boundaries.rs": "85038e5ea857281da86f122d8cf7685f24861dad845b58317ddd53318f518cbe",
+    "crates/fa-reference/tests/range_witness_exhaustive.rs": "8c986f791af5e572536040935e92b8f4eb89c2da8160ac23a447aca43e47d8e0",
+    "crates/fa-reference/tests/range_witness_costs.rs": "f5aa9024c0d0ff0d1a380c3b5cc6e1f3260507d11153d31e81d8c1e053255360"
   }
 }

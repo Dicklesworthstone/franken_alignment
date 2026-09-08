@@ -1,0 +1,11 @@
+--- a/crates/fa-reference/src/witness.rs
++++ b/crates/fa-reference/src/witness.rs
+@@ -524,7 +524,7 @@
+                         return Ok(invalidated(Invalidation::ClosingFrontier, cost));
+                     }
+                     charge_range_scan(&mut cost)?;
+-                    if let Some((_, entry)) = snapshot.values.range(*start..*end).next() {
++                    if let Some((_, entry)) = snapshot.values.range(*start..*end).next().filter(|_| false) {
+                         charge_range_member(&mut cost, entry)?;
+                         return Ok(invalidated(Invalidation::EmptyRange, cost));
+                     }

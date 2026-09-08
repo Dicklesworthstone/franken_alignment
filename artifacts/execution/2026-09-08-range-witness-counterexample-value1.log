@@ -1,0 +1,73 @@
+  [2m2026-09-08T10:02:20.022059Z[0m [32m INFO[0m [1;32mrch::hook[0m[32m: [32mSelected worker: vmi1149989 at root@212.90.121.76 (4 slots remaining after reservation, speed 71.9)[0m
+    [2;3mat[0m rch/src/hook.rs:2645 [2;3mon[0m ThreadId(1)
+
+[*] Job j-30004650170124462 submitted to vmi1149989 (4 slots remaining, speed 71.9)
+  [2m2026-09-08T10:02:20.058244Z[0m [32m INFO[0m [1;32mrch::hook::transfer_orchestration[0m[32m: [32mStarting remote compilation pipeline for franken_alignment_wave8-counterexample-value1_20260908 (hash: ff499f1f9e6ee388)[0m
+    [2;3mat[0m rch/src/hook/transfer_orchestration.rs:510 [2;3mon[0m ThreadId(1)
+
+  [2m2026-09-08T10:02:20.058273Z[0m [32m INFO[0m [1;32mrch::hook::transfer_orchestration[0m[32m: [32mPrepared dependency sync manifest for 1 roots[0m
+    [2;3mat[0m rch/src/hook/transfer_orchestration.rs:532 [2;3mon[0m ThreadId(1)
+
+  [2m2026-09-08T10:02:21.350318Z[0m [32m INFO[0m [1;32mrch::hook::transfer_orchestration[0m[32m: [32mSyncing project to worker vmi1149989...[0m
+    [2;3mat[0m rch/src/hook/transfer_orchestration.rs:661 [2;3mon[0m ThreadId(1)
+
+  [2m2026-09-08T10:02:26.000915Z[0m [32m INFO[0m [1;32mrch::transfer[0m[32m: [32mLinked git worktree detected at /Users/jemanuel/projects/franken_alignment_wave8-counterexample-value1_20260908 (gitdir: /Users/jemanuel/projects/franken_alignment/.git/worktrees/franken_alignment_wave8-counterexample-value1_20260908); excluding dangling '.git' file from upload so the remote build resolves git-free like a normal repo[0m
+    [2;3mat[0m rch/src/transfer.rs:2009 [2;3mon[0m ThreadId(1)
+
+  [2m2026-09-08T10:02:26.001169Z[0m [32m INFO[0m [1;32mrch::transfer[0m[32m: [32mSyncing /Users/jemanuel/projects/franken_alignment_wave8-counterexample-value1_20260908 -> /data/tmp/rch/franken_alignment_wave8-counterexample-value1_20260908/ff499f1f9e6ee388 on vmi1149989 (streaming)[0m
+    [2;3mat[0m rch/src/transfer.rs:3549 [2;3mon[0m ThreadId(1)
+
+  [2m2026-09-08T10:02:27.790018Z[0m [32m INFO[0m [1;32mrch::hook::transfer_orchestration[0m[32m: [32mSync complete: 15 files, 14166068 bytes in 6256ms[0m
+    [2;3mat[0m rch/src/hook/transfer_orchestration.rs:958 [2;3mon[0m ThreadId(1)
+
+  [2m2026-09-08T10:02:27.805863Z[0m [32m INFO[0m [1;32mrch::hook::transfer_orchestration[0m[32m: [32mExecuting command remotely: cargo +nightly-2026-09-08 test --locked -p fa-reference --test range_witness_boundaries exact_membership_uses_direct_scan_and_detects_insert_delete_and_value_version_phantoms -- --exact --nocapture[0m
+    [2;3mat[0m rch/src/hook/transfer_orchestration.rs:1018 [2;3mon[0m ThreadId(1)
+
+  [2m2026-09-08T10:02:27.805920Z[0m [32m INFO[0m [1;32mrch::transfer[0m[32m: [32mRewriting CARGO_TARGET_DIR for remote execution (worker-scoped path): /Volumes/USB_NVME/cargo-target -> /data/tmp/rch/franken_alignment_wave8-counterexample-value1_20260908/.rch-target-vmi1149989-pool-bda74ae259e5ffc2b676e7e9d6f5aad5[0m
+    [2;3mat[0m rch/src/transfer.rs:1842 [2;3mon[0m ThreadId(1)
+
+  [2m2026-09-08T10:02:27.805948Z[0m [32m INFO[0m [1;32mrch::transfer[0m[32m: [32mWrapping command with external timeout protection, [1;32mkind[0m[32m: cargo test, [1;32mtimeout_secs[0m[32m: 3600[0m
+    [2;3mat[0m rch/src/transfer.rs:2669 [2;3mon[0m ThreadId(1)
+
+Warning: Permanently added '212.90.121.76' (ED25519) to the list of known hosts.
+warning: unused field `license-file` in `workspace.package`
+ --> Cargo.toml:9:1
+  |
+9 | license-file = "LICENSE"
+  | ^^^^^^^^^^^^
+  |
+  = note: `cargo::unused_workspace_package_fields` is set to `warn` by default
+help: consider removing the field `workspace.package.license-file`
+warning: workspace (manifest) generated 1 warning
+   Compiling fa-reference v0.2.0 (/data/tmp/rch/franken_alignment_wave8-counterexample-value1_20260908/ff499f1f9e6ee388/crates/fa-reference)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 3.76s
+     Running tests/range_witness_boundaries.rs (/data/tmp/rch/franken_alignment_wave8-counterexample-value1_20260908/.rch-target-vmi1149989-pool-bda74ae259e5ffc2b676e7e9d6f5aad5/debug/build/fa-reference/8b22cb203436516d/out/range_witness_boundaries-8b22cb203436516d)
+
+running 1 test
+test exact_membership_uses_direct_scan_and_detects_insert_delete_and_value_version_phantoms ... FAILED
+
+failures:
+
+failures:
+    exact_membership_uses_direct_scan_and_detects_insert_delete_and_value_version_phantoms
+
+
+thread 'exact_membership_uses_direct_scan_and_detects_insert_delete_and_value_version_phantoms' (2559607) panicked at crates/fa-reference/tests/range_witness_boundaries.rs:195:5:
+assertion failed: matches!(judgment.reuse_at(&snapshot(11, 21, DomainClosure::Closed(marker),
+    store), frontiers,),
+    Ok(Reuse::Invalidated { reason: Invalidation::RangeMembers, .. }))
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 4 filtered out; finished in 0.00s
+
+error: test failed, to rerun pass `-p fa-reference --test range_witness_boundaries`
+  [2m2026-09-08T10:02:33.005234Z[0m [32m INFO[0m [1;32mrch::hook::transfer_orchestration[0m[32m: [32mRemote command finished: exit=101 in 5199ms[0m
+    [2;3mat[0m rch/src/hook/transfer_orchestration.rs:1150 [2;3mon[0m ThreadId(1)
+
+[W] Worker: vmi1149989 | Job: j-30004650170124462
+[T] Total: 11.5s (sync 6.3s, build 5.2s, artifacts --)
+^ Sync: 13.5 MB in 6.3s (2.2 MB/s)
+[C] Compile: 5.2s
+Artifacts: skipped
+[T] Cache: MISS
+Warning: Permanently added '212.90.121.76' (ED25519) to the list of known hosts.
+[RCH] remote vmi1149989 failed (exit 101)

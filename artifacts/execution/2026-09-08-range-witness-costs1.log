@@ -1,0 +1,86 @@
+  [2m2026-09-08T10:00:24.504825Z[0m [32m INFO[0m [1;32mrch::hook[0m[32m: [32mSelected worker: vmi1149989 at root@212.90.121.76 (0 slots remaining after reservation, speed 71.9)[0m
+    [2;3mat[0m rch/src/hook.rs:2645 [2;3mon[0m ThreadId(1)
+
+[*] Job j-30004650170124460 submitted to vmi1149989 (0 slots remaining, speed 71.9)
+  [2m2026-09-08T10:00:24.540477Z[0m [32m INFO[0m [1;32mrch::hook::transfer_orchestration[0m[32m: [32mStarting remote compilation pipeline for franken_alignment_wave8_gate1_20260908 (hash: 5b18171b8e0b50d1)[0m
+    [2;3mat[0m rch/src/hook/transfer_orchestration.rs:510 [2;3mon[0m ThreadId(1)
+
+  [2m2026-09-08T10:00:24.540509Z[0m [32m INFO[0m [1;32mrch::hook::transfer_orchestration[0m[32m: [32mPrepared dependency sync manifest for 1 roots[0m
+    [2;3mat[0m rch/src/hook/transfer_orchestration.rs:532 [2;3mon[0m ThreadId(1)
+
+  [2m2026-09-08T10:00:26.432531Z[0m [32m INFO[0m [1;32mrch::hook::transfer_orchestration[0m[32m: [32mSyncing project to worker vmi1149989...[0m
+    [2;3mat[0m rch/src/hook/transfer_orchestration.rs:661 [2;3mon[0m ThreadId(1)
+
+  [2m2026-09-08T10:00:31.279554Z[0m [32m INFO[0m [1;32mrch::transfer[0m[32m: [32mLinked git worktree detected at /Users/jemanuel/projects/franken_alignment_wave8_gate1_20260908 (gitdir: /Users/jemanuel/projects/franken_alignment/.git/worktrees/franken_alignment_wave8_gate1_20260908); excluding dangling '.git' file from upload so the remote build resolves git-free like a normal repo[0m
+    [2;3mat[0m rch/src/transfer.rs:2009 [2;3mon[0m ThreadId(1)
+
+  [2m2026-09-08T10:00:31.279846Z[0m [32m INFO[0m [1;32mrch::transfer[0m[32m: [32mSyncing /Users/jemanuel/projects/franken_alignment_wave8_gate1_20260908 -> /data/tmp/rch/franken_alignment_wave8_gate1_20260908/5b18171b8e0b50d1 on vmi1149989 (streaming)[0m
+    [2;3mat[0m rch/src/transfer.rs:3549 [2;3mon[0m ThreadId(1)
+
+  [2m2026-09-08T10:00:33.150564Z[0m [32m INFO[0m [1;32mrch::hook::transfer_orchestration[0m[32m: [32mSync complete: 15 files, 14166079 bytes in 6523ms[0m
+    [2;3mat[0m rch/src/hook/transfer_orchestration.rs:958 [2;3mon[0m ThreadId(1)
+
+  [2m2026-09-08T10:00:33.161684Z[0m [32m INFO[0m [1;32mrch::hook::transfer_orchestration[0m[32m: [32mExecuting command remotely: cargo +nightly-2026-09-08 test --release --locked -p fa-reference --test range_witness_costs -- --nocapture '--test-threads=1'[0m
+    [2;3mat[0m rch/src/hook/transfer_orchestration.rs:1018 [2;3mon[0m ThreadId(1)
+
+  [2m2026-09-08T10:00:33.161741Z[0m [32m INFO[0m [1;32mrch::transfer[0m[32m: [32mRewriting CARGO_TARGET_DIR for remote execution (worker-scoped path): /Volumes/USB_NVME/cargo-target -> /data/tmp/rch/franken_alignment_wave8_gate1_20260908/.rch-target-vmi1149989-pool-de10d6accc9fb491c8d673423dc0e73b[0m
+    [2;3mat[0m rch/src/transfer.rs:1842 [2;3mon[0m ThreadId(1)
+
+  [2m2026-09-08T10:00:33.161765Z[0m [32m INFO[0m [1;32mrch::transfer[0m[32m: [32mWrapping command with external timeout protection, [1;32mkind[0m[32m: cargo test, [1;32mtimeout_secs[0m[32m: 3600[0m
+    [2;3mat[0m rch/src/transfer.rs:2669 [2;3mon[0m ThreadId(1)
+
+Warning: Permanently added '212.90.121.76' (ED25519) to the list of known hosts.
+warning: unused field `license-file` in `workspace.package`
+ --> Cargo.toml:9:1
+  |
+9 | license-file = "LICENSE"
+  | ^^^^^^^^^^^^
+  |
+  = note: `cargo::unused_workspace_package_fields` is set to `warn` by default
+help: consider removing the field `workspace.package.license-file`
+warning: workspace (manifest) generated 1 warning
+   Compiling fa-reference v0.2.0 (/data/tmp/rch/franken_alignment_wave8_gate1_20260908/5b18171b8e0b50d1/crates/fa-reference)
+    Finished `release` profile [optimized] target(s) in 11.52s
+     Running tests/range_witness_costs.rs (/data/tmp/rch/franken_alignment_wave8_gate1_20260908/.rch-target-vmi1149989-pool-de10d6accc9fb491c8d673423dc0e73b/release/build/fa-reference/f686dff2b91dd15f/out/range_witness_costs-f686dff2b91dd15f)
+
+running 2 tests
+test fixed_descriptive_capture_and_direct_scan_reuse_costs ... ok
+FA059 descriptive samples: capture=6 stable=6 inserted=6 deleted=6 value=6 unrelated=6 incomplete_refusal=6 max_2MiB_capture=6 direct_recompute=6; elapsed_ns: capture=3624 stable=1853 inserted=450 deleted=373 value=361 unrelated=490 incomplete_refusal=531 max_2MiB_capture=3320426 direct_recompute=2644; scope=timers cover only capture, reuse, or independent BTreeMap recompute and exclude request, fixture, snapshot, and frontier setup; logical_bytes: stable_scanned=6 direct_recomputed=6 max_retained=2097152; not a benchmark or SLO
+FA059 first RangeMembers capture: sample_count=1 elapsed_ns=907909 retained_logical_value_bytes=6; scope=WitnessJudgment::capture only, excludes request, fixture, snapshot, and frontier setup; descriptive only
+test sole_selectable_first_range_members_capture_emits_one_elapsed_ns ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+  [2m2026-09-08T10:00:46.227577Z[0m [32m INFO[0m [1;32mrch::hook::transfer_orchestration[0m[32m: [32mRemote command finished: exit=0 in 13065ms[0m
+    [2;3mat[0m rch/src/hook/transfer_orchestration.rs:1150 [2;3mon[0m ThreadId(1)
+
+  [2m2026-09-08T10:00:46.239663Z[0m [32m INFO[0m [1;32mrch::hook::transfer_orchestration[0m[32m: [32mRetrieving build artifacts...[0m
+    [2;3mat[0m rch/src/hook/transfer_orchestration.rs:1238 [2;3mon[0m ThreadId(1)
+
+  [2m2026-09-08T10:00:46.239693Z[0m [32m INFO[0m [1;32mrch::transfer[0m[32m: [32mRetrieving artifacts from /data/tmp/rch/franken_alignment_wave8_gate1_20260908/5b18171b8e0b50d1 on vmi1149989[0m
+    [2;3mat[0m rch/src/transfer.rs:4328 [2;3mon[0m ThreadId(1)
+
+  [2m2026-09-08T10:00:48.018895Z[0m [32m INFO[0m [1;32mrch::transfer[0m[32m: [32mArtifacts retrieved in 1779ms (1 files, 792 bytes)[0m
+    [2;3mat[0m rch/src/transfer.rs:4383 [2;3mon[0m ThreadId(1)
+
+  [2m2026-09-08T10:00:48.018934Z[0m [32m INFO[0m [1;32mrch::hook::transfer_orchestration[0m[32m: [32mArtifacts retrieved: 1 files, 792 bytes in 1779ms[0m
+    [2;3mat[0m rch/src/hook/transfer_orchestration.rs:1270 [2;3mon[0m ThreadId(1)
+
+[W] Worker: vmi1149989 | Job: j-30004650170124460
+[T] Total: 21.4s (sync 6.5s, build 13.1s, artifacts 1.8s)
+^ Sync: 13.5 MB in 6.5s (2.1 MB/s)
+[C] Compile: 13.1s
+v Artifacts: 792 B in 1.8s (445 B/s)
+[T] Cache: MISS
++--------------- * Build Successful ---------------+
+| New personal best! 13.1s (previous: 18.2s)       |
+| Target: release                                  |
+| Duration: 13.1s (v 28% faster vs previous 18.2s) |
+| Artifacts: 1 files (792 B)                       |
+| Worker: vmi1149989                               |
+| Cache: MISS (warming cache)                      |
+| Time: 2026-09-08 10:00:48                        |
++--------------------------------------------------+
+Warning: Permanently added '212.90.121.76' (ED25519) to the list of known hosts.
+[RCH] remote vmi1149989 (24.7s)
+[RCH] clean-overlay receipt: base=6cd2562a19bef110710b527cb423fd37d1add86d overlay-fingerprint=1717a77d20b1efd8f9254db9e0e7ce89b788602edad6bd5382be659e19240370

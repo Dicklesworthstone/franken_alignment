@@ -1,0 +1,11 @@
+--- a/crates/fa-reference/src/witness.rs
++++ b/crates/fa-reference/src/witness.rs
+@@ -548,7 +548,7 @@
+                             return Ok(invalidated(Invalidation::RangeMembers, cost));
+                         };
+                         charge_range_member(&mut cost, actual)?;
+-                        if actual != expected {
++                        if actual.key != expected.key || actual.version != expected.version {
+                             return Ok(invalidated(Invalidation::RangeMembers, cost));
+                         }
+                     }

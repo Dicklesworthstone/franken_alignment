@@ -1,6 +1,18 @@
 # Implementation status · design revision 0.3
 
-Current execution evidence: [receipt](artifacts/execution/2026-09-08-algebra-inventory-receipt.json).
+Current execution evidence: [receipt](artifacts/execution/2026-09-08-range-witness-receipt.json).
+
+## 2026-09-08 UTC: exact range membership and phantom invalidation
+
+The complete frozen RCH gate passed **511 tests: 105 reference unit, 156 integration, 242 xtask and 8 doctests**, with zero failed, ignored or filtered tests, on `vmi1149989` under qualified `nightly-2026-09-08`. [The receipt](artifacts/execution/2026-09-08-range-witness-receipt.json) binds 175 source/build inputs and job `j-30004650170124459`.
+
+FA-059 adds exact EmptyRange and RangeMembers witnesses over finite half-open intervals `[start, end)`. Ordered scans detect inserted/deleted members, versions and same-version byte changes; unrelated keys remain reusable. Both capture and reuse require the complete caller-trusted authenticated terminal marker. Same-snapshot exact closure controls succeed while unknown, unrecorded-tail and declared conservative-summary completeness evidence refuse. The latter is evidence-kind admission, not an approximate-summary algorithm. This range profile cannot include `u64::MAX`; that limitation is declared and tested without an overflowing successor calculation.
+
+Independent public scans compare empty/member results across bounded intervals, endpoint mutations, closure loss and extreme keys. Retention counts and sums all requested member occurrences before cloning, admitting exactly 256 members and 2 MiB of logical values. Overlapping requests can reach the one-over member refusal. The separate byte guard is redundant under the entry/value bounds and is not claimed independently exercised. Reuse reports logical visited members/bytes, including early mismatch; an `Err` exposes no partial cost or effect accounting.
+
+Two planted defects fail after controls: ignoring an interior empty-range insertion and ignoring same-version member bytes. Nine fixed release cases produced 54 samples across actual capture/reuse, mutations, incomplete closure, maximum retention and independent recomputation. Printed durations sum six samples per case; they are not a distribution. A separate sole-process first capture and an exact-binary heap profile are retained. Whole-process allocation calls were 2,552 versus a 185-call zero-test baseline; inclusive witness-frame calls were 1,683 versus zero. No per-case allocation, allocated-byte, peak-heap, RSS, OS/cache-cold or SLO claim follows.
+
+Independent original-contract review qualified FA-059 at the declared adapter-evidence boundary; final documentation qualification remains separate. No adapter authentication, database integration, physical planner, runtime admission, production cache/dispatch or release is qualified by this batch.
 
 ## 2026-09-08 UTC: observation transfer laws and bounded inventory loading
 
@@ -173,11 +185,11 @@ The round uses a deliberately non-cryptographic FNV comparison and proves no cry
 | Founding essays | Both read in full again for revision 0.3; head commits recorded in `registry/sources.json` | Complete premise; no missing post |
 | Ten donor/build project deep dives | Targeted code/manifest/plan review at fixed refs (revision 0.2) | Exact files/scopes recorded; not full repository audits or builds |
 | Pure-Rust reference workspace | Source present, zero external packages, formatted with `cargo fmt --all` on 2026-09-06 | Selected logical semantics only; not a broker |
-| Rust test functions | **105 unit + 144 integration reference tests, 242 xtask tests and 8 doctests passed remotely on 2026-09-08 UTC**; earlier runs remain dated below | Exact frozen batch above; not production evidence or credit for other work in progress |
+| Rust test functions | **105 unit + 156 integration reference tests, 242 xtask tests and 8 doctests passed remotely on 2026-09-08 UTC**; earlier runs remain dated below | Exact frozen batch above; not production evidence or credit for other work in progress |
 | Rust local gate driver | **Complete reference gate PASS remotely on 2026-09-08 UTC** under rolling `nightly`, frozen identically as `nightly-2026-09-08`; earlier local 2026-09-06 gate retained below | Initial inventory, registry-core and full concordance checks execute; external admission remains incomplete; new source requires a new run |
 | Production release gate | Explicitly refuses release | No qualified broker/toolchain/target/signing closure |
 | Machine-readable registries | 40 invariants, 21 hypotheses, 143 packets, 5 SLO targets, founding concordance (38 ideas, 9 syntheses, 67 engineering additions), preregistration ledger with no preregistered protocol yet, system map (9 layers) and vocabulary (26 nouns, 35 verbs, 12 reason codes) | Static structural checks are not proofs of their claims |
-| Beads task graph | All 143 roadmap packets have full owners; 336 live beads at this checkpoint: 27 closed, 306 open, 2 in progress and 1 blocked | FA-001, FA-004, FA-005, FA-057, FA-058, FA-063, FA-068, FA-081 and FA-092 are closed within their reference contracts; FA-002 remains in progress and FA-053 is blocked. Reference, provenance and checker closures do not qualify production. Earlier graph counts describe their dated checkpoints |
+| Beads task graph | All 143 roadmap packets have full owners; 336 live beads at this checkpoint: 28 closed, 305 open, 2 in progress and 1 blocked | FA-001, FA-004, FA-005, FA-057, FA-058, FA-059, FA-063, FA-068, FA-081 and FA-092 are closed within their reference contracts; FA-002 remains in progress and FA-053 is blocked. Reference, provenance and checker closures do not qualify production. Earlier graph counts describe their dated checkpoints |
 | Production control broker / persistence / containment | Not implemented | Reference code performs no external effects |
 | Native foundation adapters | Planned, admission blockers recorded | A reviewed source file is not an integration |
 | Trained helpers / codecs / signatures / surprise residual / rewind | Research and implementation plans | No measured safety, compression, detection or containment result |

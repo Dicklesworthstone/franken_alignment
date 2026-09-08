@@ -1441,7 +1441,7 @@
       "id": "FA-059",
       "gate": "G2",
       "title": "Implement range and phantom witnesses",
-      "status": "in_progress",
+      "status": "reference_semantics_qualified_2026_09_08",
       "depends_on": [
         "FA-058"
       ],
@@ -1453,7 +1453,13 @@
         "Produce executed local evidence; source or prose alone does not close this packet."
       ],
       "owner_role": "systems",
-      "result_artifacts": []
+      "result_artifacts": [
+        "crates/fa-reference/src/witness.rs",
+        "crates/fa-reference/tests/range_witness_boundaries.rs",
+        "crates/fa-reference/tests/range_witness_exhaustive.rs",
+        "crates/fa-reference/tests/range_witness_costs.rs",
+        "artifacts/execution/2026-09-08-range-witness-receipt.json"
+      ]
     },
     {
       "id": "FA-060",
@@ -1641,7 +1647,7 @@
       "id": "FA-069",
       "gate": "G2",
       "title": "Implement physical plan validator",
-      "status": "planned",
+      "status": "in_progress",
       "depends_on": [
         "FA-068"
       ],

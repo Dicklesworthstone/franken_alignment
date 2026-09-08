@@ -1,5 +1,11 @@
 # Changelog
 
+## 2026-09-08: exact range witnesses
+
+- Add finite half-open empty and exact-member witnesses with authenticated-marker requirements on capture and reuse. Detect membership, version and byte phantoms while preserving unrelated updates.
+- Preflight aggregate retained members/bytes before cloning; report logical scan costs. Refuse conservative-summary completeness evidence without claiming to compute a summary.
+- Retain the 511-test RCH gate, two causal mutation failures, 54 descriptive release samples, sole-process first capture and exact-binary allocation profile. Adapter authenticity, databases and production effects remain outside this reference boundary.
+
 ## 2026-09-08: observation algebra and bounded inventory loading
 
 - Implement all thirteen pure transfer laws with retained origin, uncertainty, exact supplied bytes and cancellation obligations; repair captured-byte loss and idempotent union bounds. No physical decoder, helper or executor is activated.

@@ -1,0 +1,1956 @@
+Warning: Permanently added '109.123.245.77' (ED25519) to the list of known hosts.
+reading file "/tmp/fa-campaign-20260908-wave8-profile/range_witness_costs-profile.zst" - please wait, this might take some time...
+Debuggee command was: /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs --exact fixed_descriptive_capture_and_direct_scan_reuse_costs --nocapture --test-threads=1
+finished reading file, now analyzing data:
+
+MOST CALLS TO ALLOCATION FUNCTIONS
+1598 calls to allocation functions with 2.10M peak consumption from
+_RNvMs4_NtCsbWQsUAIcWcI_12fa_reference7witnessNtB5_15WitnessJudgment7capture
+  in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+1530 calls with 2.09M peak consumption from:
+    _RNvCs11hf3hE7mDA_19range_witness_costss_53fixed_descriptive_capture_and_direct_scan_reuse_costs
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNvYNCNvCs11hf3hE7mDA_19range_witness_costs53fixed_descriptive_capture_and_direct_scan_reuse_costs0INtNtNtCsg3O1AWWDtD0_4core3ops8function6FnOnceuE9call_onceB6_
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RINvCscO0Syu2iFtE_4test28___rust_begin_short_backtraceINtNtCsg3O1AWWDtD0_4core6result6ResultuNtNtCs2mBL6TZy0y2_5alloc6string6StringEFEBQ_EB2_
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNCNvCscO0Syu2iFtE_4test8run_test0B3_
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RINvNtNtCsjr6MQCPf0hc_3std3sys9backtrace28___rust_begin_short_backtraceNCNvCscO0Syu2iFtE_4test8run_tests_0uEB1b_
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNSNvYNCINvNtNtCsjr6MQCPf0hc_3std6thread9lifecycle15spawn_uncheckedNCNvCscO0Syu2iFtE_4test8run_tests_0uEs_0INtNtNtCsg3O1AWWDtD0_4core3ops8function6FnOnceuE9call_once6vtableB17_
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNvNvMs0_NtNtNtCsjr6MQCPf0hc_3std3sys6thread4unixNtB7_6Thread3new12thread_start
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    start_thread
+      at ./nptl/pthread_create.c:454
+      in /usr/lib/x86_64-linux-gnu/libc.so.6
+    __clone3
+      at ../sysdeps/unix/sysv/linux/x86_64/clone3.S:78
+      in /usr/lib/x86_64-linux-gnu/libc.so.6
+6 calls with 0B peak consumption from:
+    _RNvCs11hf3hE7mDA_19range_witness_costss_53fixed_descriptive_capture_and_direct_scan_reuse_costs
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNvYNCNvCs11hf3hE7mDA_19range_witness_costs53fixed_descriptive_capture_and_direct_scan_reuse_costs0INtNtNtCsg3O1AWWDtD0_4core3ops8function6FnOnceuE9call_onceB6_
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RINvCscO0Syu2iFtE_4test28___rust_begin_short_backtraceINtNtCsg3O1AWWDtD0_4core6result6ResultuNtNtCs2mBL6TZy0y2_5alloc6string6StringEFEBQ_EB2_
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNCNvCscO0Syu2iFtE_4test8run_test0B3_
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RINvNtNtCsjr6MQCPf0hc_3std3sys9backtrace28___rust_begin_short_backtraceNCNvCscO0Syu2iFtE_4test8run_tests_0uEB1b_
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNSNvYNCINvNtNtCsjr6MQCPf0hc_3std6thread9lifecycle15spawn_uncheckedNCNvCscO0Syu2iFtE_4test8run_tests_0uEs_0INtNtNtCsg3O1AWWDtD0_4core3ops8function6FnOnceuE9call_once6vtableB17_
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNvNvMs0_NtNtNtCsjr6MQCPf0hc_3std3sys6thread4unixNtB7_6Thread3new12thread_start
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    start_thread
+      at ./nptl/pthread_create.c:454
+      in /usr/lib/x86_64-linux-gnu/libc.so.6
+    __clone3
+      at ../sysdeps/unix/sysv/linux/x86_64/clone3.S:78
+      in /usr/lib/x86_64-linux-gnu/libc.so.6
+6 calls with 0B peak consumption from:
+    _RNvCs11hf3hE7mDA_19range_witness_costss_53fixed_descriptive_capture_and_direct_scan_reuse_costs
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNvYNCNvCs11hf3hE7mDA_19range_witness_costs53fixed_descriptive_capture_and_direct_scan_reuse_costs0INtNtNtCsg3O1AWWDtD0_4core3ops8function6FnOnceuE9call_onceB6_
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RINvCscO0Syu2iFtE_4test28___rust_begin_short_backtraceINtNtCsg3O1AWWDtD0_4core6result6ResultuNtNtCs2mBL6TZy0y2_5alloc6string6StringEFEBQ_EB2_
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNCNvCscO0Syu2iFtE_4test8run_test0B3_
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RINvNtNtCsjr6MQCPf0hc_3std3sys9backtrace28___rust_begin_short_backtraceNCNvCscO0Syu2iFtE_4test8run_tests_0uEB1b_
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNSNvYNCINvNtNtCsjr6MQCPf0hc_3std6thread9lifecycle15spawn_uncheckedNCNvCscO0Syu2iFtE_4test8run_tests_0uEs_0INtNtNtCsg3O1AWWDtD0_4core3ops8function6FnOnceuE9call_once6vtableB17_
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNvNvMs0_NtNtNtCsjr6MQCPf0hc_3std3sys6thread4unixNtB7_6Thread3new12thread_start
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    start_thread
+      at ./nptl/pthread_create.c:454
+      in /usr/lib/x86_64-linux-gnu/libc.so.6
+    __clone3
+      at ../sysdeps/unix/sysv/linux/x86_64/clone3.S:78
+      in /usr/lib/x86_64-linux-gnu/libc.so.6
+6 calls with 0B peak consumption from:
+    _RNvCs11hf3hE7mDA_19range_witness_costss_53fixed_descriptive_capture_and_direct_scan_reuse_costs
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNvYNCNvCs11hf3hE7mDA_19range_witness_costs53fixed_descriptive_capture_and_direct_scan_reuse_costs0INtNtNtCsg3O1AWWDtD0_4core3ops8function6FnOnceuE9call_onceB6_
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RINvCscO0Syu2iFtE_4test28___rust_begin_short_backtraceINtNtCsg3O1AWWDtD0_4core6result6ResultuNtNtCs2mBL6TZy0y2_5alloc6string6StringEFEBQ_EB2_
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNCNvCscO0Syu2iFtE_4test8run_test0B3_
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RINvNtNtCsjr6MQCPf0hc_3std3sys9backtrace28___rust_begin_short_backtraceNCNvCscO0Syu2iFtE_4test8run_tests_0uEB1b_
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNSNvYNCINvNtNtCsjr6MQCPf0hc_3std6thread9lifecycle15spawn_uncheckedNCNvCscO0Syu2iFtE_4test8run_tests_0uEs_0INtNtNtCsg3O1AWWDtD0_4core3ops8function6FnOnceuE9call_once6vtableB17_
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNvNvMs0_NtNtNtCsjr6MQCPf0hc_3std3sys6thread4unixNtB7_6Thread3new12thread_start
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    start_thread
+      at ./nptl/pthread_create.c:454
+      in /usr/lib/x86_64-linux-gnu/libc.so.6
+    __clone3
+      at ../sysdeps/unix/sysv/linux/x86_64/clone3.S:78
+      in /usr/lib/x86_64-linux-gnu/libc.so.6
+6 calls with 88B peak consumption from:
+    _RNvCs11hf3hE7mDA_19range_witness_costss_53fixed_descriptive_capture_and_direct_scan_reuse_costs
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNvYNCNvCs11hf3hE7mDA_19range_witness_costs53fixed_descriptive_capture_and_direct_scan_reuse_costs0INtNtNtCsg3O1AWWDtD0_4core3ops8function6FnOnceuE9call_onceB6_
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RINvCscO0Syu2iFtE_4test28___rust_begin_short_backtraceINtNtCsg3O1AWWDtD0_4core6result6ResultuNtNtCs2mBL6TZy0y2_5alloc6string6StringEFEBQ_EB2_
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNCNvCscO0Syu2iFtE_4test8run_test0B3_
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RINvNtNtCsjr6MQCPf0hc_3std3sys9backtrace28___rust_begin_short_backtraceNCNvCscO0Syu2iFtE_4test8run_tests_0uEB1b_
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNSNvYNCINvNtNtCsjr6MQCPf0hc_3std6thread9lifecycle15spawn_uncheckedNCNvCscO0Syu2iFtE_4test8run_tests_0uEs_0INtNtNtCsg3O1AWWDtD0_4core3ops8function6FnOnceuE9call_once6vtableB17_
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNvNvMs0_NtNtNtCsjr6MQCPf0hc_3std3sys6thread4unixNtB7_6Thread3new12thread_start
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    start_thread
+      at ./nptl/pthread_create.c:454
+      in /usr/lib/x86_64-linux-gnu/libc.so.6
+    __clone3
+      at ../sysdeps/unix/sysv/linux/x86_64/clone3.S:78
+      in /usr/lib/x86_64-linux-gnu/libc.so.6
+  and 44 from 14 other places
+
+341 calls to allocation functions with 2.11M peak consumption from
+_RNvCs11hf3hE7mDA_19range_witness_costss_53fixed_descriptive_capture_and_direct_scan_reuse_costs
+  in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+256 calls with 2.10M peak consumption from:
+    _RNvYNCNvCs11hf3hE7mDA_19range_witness_costs53fixed_descriptive_capture_and_direct_scan_reuse_costs0INtNtNtCsg3O1AWWDtD0_4core3ops8function6FnOnceuE9call_onceB6_
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RINvCscO0Syu2iFtE_4test28___rust_begin_short_backtraceINtNtCsg3O1AWWDtD0_4core6result6ResultuNtNtCs2mBL6TZy0y2_5alloc6string6StringEFEBQ_EB2_
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNCNvCscO0Syu2iFtE_4test8run_test0B3_
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RINvNtNtCsjr6MQCPf0hc_3std3sys9backtrace28___rust_begin_short_backtraceNCNvCscO0Syu2iFtE_4test8run_tests_0uEB1b_
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNSNvYNCINvNtNtCsjr6MQCPf0hc_3std6thread9lifecycle15spawn_uncheckedNCNvCscO0Syu2iFtE_4test8run_tests_0uEs_0INtNtNtCsg3O1AWWDtD0_4core3ops8function6FnOnceuE9call_once6vtableB17_
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNvNvMs0_NtNtNtCsjr6MQCPf0hc_3std3sys6thread4unixNtB7_6Thread3new12thread_start
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    start_thread
+      at ./nptl/pthread_create.c:454
+      in /usr/lib/x86_64-linux-gnu/libc.so.6
+    __clone3
+      at ../sysdeps/unix/sysv/linux/x86_64/clone3.S:78
+      in /usr/lib/x86_64-linux-gnu/libc.so.6
+21 calls with 9.58K peak consumption from:
+    _RNvYNCNvCs11hf3hE7mDA_19range_witness_costs53fixed_descriptive_capture_and_direct_scan_reuse_costs0INtNtNtCsg3O1AWWDtD0_4core3ops8function6FnOnceuE9call_onceB6_
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RINvCscO0Syu2iFtE_4test28___rust_begin_short_backtraceINtNtCsg3O1AWWDtD0_4core6result6ResultuNtNtCs2mBL6TZy0y2_5alloc6string6StringEFEBQ_EB2_
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNCNvCscO0Syu2iFtE_4test8run_test0B3_
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RINvNtNtCsjr6MQCPf0hc_3std3sys9backtrace28___rust_begin_short_backtraceNCNvCscO0Syu2iFtE_4test8run_tests_0uEB1b_
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNSNvYNCINvNtNtCsjr6MQCPf0hc_3std6thread9lifecycle15spawn_uncheckedNCNvCscO0Syu2iFtE_4test8run_tests_0uEs_0INtNtNtCsg3O1AWWDtD0_4core3ops8function6FnOnceuE9call_once6vtableB17_
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNvNvMs0_NtNtNtCsjr6MQCPf0hc_3std3sys6thread4unixNtB7_6Thread3new12thread_start
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    start_thread
+      at ./nptl/pthread_create.c:454
+      in /usr/lib/x86_64-linux-gnu/libc.so.6
+    __clone3
+      at ../sysdeps/unix/sysv/linux/x86_64/clone3.S:78
+      in /usr/lib/x86_64-linux-gnu/libc.so.6
+6 calls with 0B peak consumption from:
+    _RNvYNCNvCs11hf3hE7mDA_19range_witness_costs53fixed_descriptive_capture_and_direct_scan_reuse_costs0INtNtNtCsg3O1AWWDtD0_4core3ops8function6FnOnceuE9call_onceB6_
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RINvCscO0Syu2iFtE_4test28___rust_begin_short_backtraceINtNtCsg3O1AWWDtD0_4core6result6ResultuNtNtCs2mBL6TZy0y2_5alloc6string6StringEFEBQ_EB2_
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNCNvCscO0Syu2iFtE_4test8run_test0B3_
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RINvNtNtCsjr6MQCPf0hc_3std3sys9backtrace28___rust_begin_short_backtraceNCNvCscO0Syu2iFtE_4test8run_tests_0uEB1b_
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNSNvYNCINvNtNtCsjr6MQCPf0hc_3std6thread9lifecycle15spawn_uncheckedNCNvCscO0Syu2iFtE_4test8run_tests_0uEs_0INtNtNtCsg3O1AWWDtD0_4core3ops8function6FnOnceuE9call_once6vtableB17_
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNvNvMs0_NtNtNtCsjr6MQCPf0hc_3std3sys6thread4unixNtB7_6Thread3new12thread_start
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    start_thread
+      at ./nptl/pthread_create.c:454
+      in /usr/lib/x86_64-linux-gnu/libc.so.6
+    __clone3
+      at ../sysdeps/unix/sysv/linux/x86_64/clone3.S:78
+      in /usr/lib/x86_64-linux-gnu/libc.so.6
+6 calls with 0B peak consumption from:
+    _RNvYNCNvCs11hf3hE7mDA_19range_witness_costs53fixed_descriptive_capture_and_direct_scan_reuse_costs0INtNtNtCsg3O1AWWDtD0_4core3ops8function6FnOnceuE9call_onceB6_
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RINvCscO0Syu2iFtE_4test28___rust_begin_short_backtraceINtNtCsg3O1AWWDtD0_4core6result6ResultuNtNtCs2mBL6TZy0y2_5alloc6string6StringEFEBQ_EB2_
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNCNvCscO0Syu2iFtE_4test8run_test0B3_
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RINvNtNtCsjr6MQCPf0hc_3std3sys9backtrace28___rust_begin_short_backtraceNCNvCscO0Syu2iFtE_4test8run_tests_0uEB1b_
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNSNvYNCINvNtNtCsjr6MQCPf0hc_3std6thread9lifecycle15spawn_uncheckedNCNvCscO0Syu2iFtE_4test8run_tests_0uEs_0INtNtNtCsg3O1AWWDtD0_4core3ops8function6FnOnceuE9call_once6vtableB17_
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNvNvMs0_NtNtNtCsjr6MQCPf0hc_3std3sys6thread4unixNtB7_6Thread3new12thread_start
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    start_thread
+      at ./nptl/pthread_create.c:454
+      in /usr/lib/x86_64-linux-gnu/libc.so.6
+    __clone3
+      at ../sysdeps/unix/sysv/linux/x86_64/clone3.S:78
+      in /usr/lib/x86_64-linux-gnu/libc.so.6
+6 calls with 0B peak consumption from:
+    _RNvYNCNvCs11hf3hE7mDA_19range_witness_costs53fixed_descriptive_capture_and_direct_scan_reuse_costs0INtNtNtCsg3O1AWWDtD0_4core3ops8function6FnOnceuE9call_onceB6_
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RINvCscO0Syu2iFtE_4test28___rust_begin_short_backtraceINtNtCsg3O1AWWDtD0_4core6result6ResultuNtNtCs2mBL6TZy0y2_5alloc6string6StringEFEBQ_EB2_
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNCNvCscO0Syu2iFtE_4test8run_test0B3_
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RINvNtNtCsjr6MQCPf0hc_3std3sys9backtrace28___rust_begin_short_backtraceNCNvCscO0Syu2iFtE_4test8run_tests_0uEB1b_
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNSNvYNCINvNtNtCsjr6MQCPf0hc_3std6thread9lifecycle15spawn_uncheckedNCNvCscO0Syu2iFtE_4test8run_tests_0uEs_0INtNtNtCsg3O1AWWDtD0_4core3ops8function6FnOnceuE9call_once6vtableB17_
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNvNvMs0_NtNtNtCsjr6MQCPf0hc_3std3sys6thread4unixNtB7_6Thread3new12thread_start
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    start_thread
+      at ./nptl/pthread_create.c:454
+      in /usr/lib/x86_64-linux-gnu/libc.so.6
+    __clone3
+      at ../sysdeps/unix/sysv/linux/x86_64/clone3.S:78
+      in /usr/lib/x86_64-linux-gnu/libc.so.6
+  and 46 from 30 other places
+
+275 calls to allocation functions with 2.10M peak consumption from
+_RNvXNtNtCsg3O1AWWDtD0_4core4iter8adaptersINtB2_12GenericShuntINtNtB2_3map3MapINtNtNtNtCs2mBL6TZy0y2_5alloc11collections5btree3map4IteryTyINtNtB1m_3vec3VechEEENCNvCs11hf3hE7mDA_19range_witness_costs8snapshot0EINtNtB6_6result6ResultzNtCsbWQsUAIcWcI_12fa_reference5ErrorEENtNtNtB4_6traits8iterator8Iterator4nextB2A_
+  in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+255 calls with 2.09M peak consumption from:
+    _RNvCs11hf3hE7mDA_19range_witness_costs8snapshot
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNvCs11hf3hE7mDA_19range_witness_costss_53fixed_descriptive_capture_and_direct_scan_reuse_costs
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNvYNCNvCs11hf3hE7mDA_19range_witness_costs53fixed_descriptive_capture_and_direct_scan_reuse_costs0INtNtNtCsg3O1AWWDtD0_4core3ops8function6FnOnceuE9call_onceB6_
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RINvCscO0Syu2iFtE_4test28___rust_begin_short_backtraceINtNtCsg3O1AWWDtD0_4core6result6ResultuNtNtCs2mBL6TZy0y2_5alloc6string6StringEFEBQ_EB2_
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNCNvCscO0Syu2iFtE_4test8run_test0B3_
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RINvNtNtCsjr6MQCPf0hc_3std3sys9backtrace28___rust_begin_short_backtraceNCNvCscO0Syu2iFtE_4test8run_tests_0uEB1b_
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNSNvYNCINvNtNtCsjr6MQCPf0hc_3std6thread9lifecycle15spawn_uncheckedNCNvCscO0Syu2iFtE_4test8run_tests_0uEs_0INtNtNtCsg3O1AWWDtD0_4core3ops8function6FnOnceuE9call_once6vtableB17_
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNvNvMs0_NtNtNtCsjr6MQCPf0hc_3std3sys6thread4unixNtB7_6Thread3new12thread_start
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    start_thread
+      at ./nptl/pthread_create.c:454
+      in /usr/lib/x86_64-linux-gnu/libc.so.6
+    __clone3
+      at ../sysdeps/unix/sysv/linux/x86_64/clone3.S:78
+      in /usr/lib/x86_64-linux-gnu/libc.so.6
+3 calls with 14B peak consumption from:
+    _RNvCs11hf3hE7mDA_19range_witness_costs8snapshot
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNvCs11hf3hE7mDA_19range_witness_costss_53fixed_descriptive_capture_and_direct_scan_reuse_costs
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNvYNCNvCs11hf3hE7mDA_19range_witness_costs53fixed_descriptive_capture_and_direct_scan_reuse_costs0INtNtNtCsg3O1AWWDtD0_4core3ops8function6FnOnceuE9call_onceB6_
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RINvCscO0Syu2iFtE_4test28___rust_begin_short_backtraceINtNtCsg3O1AWWDtD0_4core6result6ResultuNtNtCs2mBL6TZy0y2_5alloc6string6StringEFEBQ_EB2_
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNCNvCscO0Syu2iFtE_4test8run_test0B3_
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RINvNtNtCsjr6MQCPf0hc_3std3sys9backtrace28___rust_begin_short_backtraceNCNvCscO0Syu2iFtE_4test8run_tests_0uEB1b_
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNSNvYNCINvNtNtCsjr6MQCPf0hc_3std6thread9lifecycle15spawn_uncheckedNCNvCscO0Syu2iFtE_4test8run_tests_0uEs_0INtNtNtCsg3O1AWWDtD0_4core3ops8function6FnOnceuE9call_once6vtableB17_
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNvNvMs0_NtNtNtCsjr6MQCPf0hc_3std3sys6thread4unixNtB7_6Thread3new12thread_start
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    start_thread
+      at ./nptl/pthread_create.c:454
+      in /usr/lib/x86_64-linux-gnu/libc.so.6
+    __clone3
+      at ../sysdeps/unix/sysv/linux/x86_64/clone3.S:78
+      in /usr/lib/x86_64-linux-gnu/libc.so.6
+2 calls with 10B peak consumption from:
+    _RNvCs11hf3hE7mDA_19range_witness_costs8snapshot
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNvCs11hf3hE7mDA_19range_witness_costss_53fixed_descriptive_capture_and_direct_scan_reuse_costs
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNvYNCNvCs11hf3hE7mDA_19range_witness_costs53fixed_descriptive_capture_and_direct_scan_reuse_costs0INtNtNtCsg3O1AWWDtD0_4core3ops8function6FnOnceuE9call_onceB6_
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RINvCscO0Syu2iFtE_4test28___rust_begin_short_backtraceINtNtCsg3O1AWWDtD0_4core6result6ResultuNtNtCs2mBL6TZy0y2_5alloc6string6StringEFEBQ_EB2_
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNCNvCscO0Syu2iFtE_4test8run_test0B3_
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RINvNtNtCsjr6MQCPf0hc_3std3sys9backtrace28___rust_begin_short_backtraceNCNvCscO0Syu2iFtE_4test8run_tests_0uEB1b_
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNSNvYNCINvNtNtCsjr6MQCPf0hc_3std6thread9lifecycle15spawn_uncheckedNCNvCscO0Syu2iFtE_4test8run_tests_0uEs_0INtNtNtCsg3O1AWWDtD0_4core3ops8function6FnOnceuE9call_once6vtableB17_
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNvNvMs0_NtNtNtCsjr6MQCPf0hc_3std3sys6thread4unixNtB7_6Thread3new12thread_start
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    start_thread
+      at ./nptl/pthread_create.c:454
+      in /usr/lib/x86_64-linux-gnu/libc.so.6
+    __clone3
+      at ../sysdeps/unix/sysv/linux/x86_64/clone3.S:78
+      in /usr/lib/x86_64-linux-gnu/libc.so.6
+2 calls with 10B peak consumption from:
+    _RNvCs11hf3hE7mDA_19range_witness_costs8snapshot
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNvCs11hf3hE7mDA_19range_witness_costss_53fixed_descriptive_capture_and_direct_scan_reuse_costs
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNvYNCNvCs11hf3hE7mDA_19range_witness_costs53fixed_descriptive_capture_and_direct_scan_reuse_costs0INtNtNtCsg3O1AWWDtD0_4core3ops8function6FnOnceuE9call_onceB6_
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RINvCscO0Syu2iFtE_4test28___rust_begin_short_backtraceINtNtCsg3O1AWWDtD0_4core6result6ResultuNtNtCs2mBL6TZy0y2_5alloc6string6StringEFEBQ_EB2_
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNCNvCscO0Syu2iFtE_4test8run_test0B3_
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RINvNtNtCsjr6MQCPf0hc_3std3sys9backtrace28___rust_begin_short_backtraceNCNvCscO0Syu2iFtE_4test8run_tests_0uEB1b_
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNSNvYNCINvNtNtCsjr6MQCPf0hc_3std6thread9lifecycle15spawn_uncheckedNCNvCscO0Syu2iFtE_4test8run_tests_0uEs_0INtNtNtCsg3O1AWWDtD0_4core3ops8function6FnOnceuE9call_once6vtableB17_
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNvNvMs0_NtNtNtCsjr6MQCPf0hc_3std3sys6thread4unixNtB7_6Thread3new12thread_start
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    start_thread
+      at ./nptl/pthread_create.c:454
+      in /usr/lib/x86_64-linux-gnu/libc.so.6
+    __clone3
+      at ../sysdeps/unix/sysv/linux/x86_64/clone3.S:78
+      in /usr/lib/x86_64-linux-gnu/libc.so.6
+2 calls with 18B peak consumption from:
+    _RNvCs11hf3hE7mDA_19range_witness_costs8snapshot
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNvCs11hf3hE7mDA_19range_witness_costss_53fixed_descriptive_capture_and_direct_scan_reuse_costs
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNvYNCNvCs11hf3hE7mDA_19range_witness_costs53fixed_descriptive_capture_and_direct_scan_reuse_costs0INtNtNtCsg3O1AWWDtD0_4core3ops8function6FnOnceuE9call_onceB6_
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RINvCscO0Syu2iFtE_4test28___rust_begin_short_backtraceINtNtCsg3O1AWWDtD0_4core6result6ResultuNtNtCs2mBL6TZy0y2_5alloc6string6StringEFEBQ_EB2_
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNCNvCscO0Syu2iFtE_4test8run_test0B3_
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RINvNtNtCsjr6MQCPf0hc_3std3sys9backtrace28___rust_begin_short_backtraceNCNvCscO0Syu2iFtE_4test8run_tests_0uEB1b_
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNSNvYNCINvNtNtCsjr6MQCPf0hc_3std6thread9lifecycle15spawn_uncheckedNCNvCscO0Syu2iFtE_4test8run_tests_0uEs_0INtNtNtCsg3O1AWWDtD0_4core3ops8function6FnOnceuE9call_once6vtableB17_
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNvNvMs0_NtNtNtCsjr6MQCPf0hc_3std3sys6thread4unixNtB7_6Thread3new12thread_start
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    start_thread
+      at ./nptl/pthread_create.c:454
+      in /usr/lib/x86_64-linux-gnu/libc.so.6
+    __clone3
+      at ../sysdeps/unix/sysv/linux/x86_64/clone3.S:78
+      in /usr/lib/x86_64-linux-gnu/libc.so.6
+  and 11 from 10 other places
+
+57 calls to allocation functions with 0B peak consumption from
+_RNvXsH_Cs8v6Vxq2exiQ_7getoptsNtB5_8OptGroupNtNtCsg3O1AWWDtD0_4core5clone5Clone5clone
+  in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+24 calls with 0B peak consumption from:
+    _RNvMs3_Cs8v6Vxq2exiQ_7getoptsNtB5_8OptGroup13long_to_short
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNvNtCscO0Syu2iFtE_4test3cli10parse_opts
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNvCscO0Syu2iFtE_4test16test_main_static
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RINvNtNtCsjr6MQCPf0hc_3std3sys9backtrace28___rust_begin_short_backtraceFEuuECs11hf3hE7mDA_19range_witness_costs
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNCINvNtCsjr6MQCPf0hc_3std2rt10lang_startuE0Cs11hf3hE7mDA_19range_witness_costs
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNvNtCsjr6MQCPf0hc_3std2rt19lang_start_internal
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    main
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+23 calls with 0B peak consumption from:
+    _RNvMs3_Cs8v6Vxq2exiQ_7getoptsNtB5_8OptGroup13long_to_short
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNvNtCscO0Syu2iFtE_4test3cli10parse_opts
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNvCscO0Syu2iFtE_4test16test_main_static
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RINvNtNtCsjr6MQCPf0hc_3std3sys9backtrace28___rust_begin_short_backtraceFEuuECs11hf3hE7mDA_19range_witness_costs
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNCINvNtCsjr6MQCPf0hc_3std2rt10lang_startuE0Cs11hf3hE7mDA_19range_witness_costs
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNvNtCsjr6MQCPf0hc_3std2rt19lang_start_internal
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    main
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+7 calls with 0B peak consumption from:
+    _RNvMs3_Cs8v6Vxq2exiQ_7getoptsNtB5_8OptGroup13long_to_short
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNvNtCscO0Syu2iFtE_4test3cli10parse_opts
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNvCscO0Syu2iFtE_4test16test_main_static
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RINvNtNtCsjr6MQCPf0hc_3std3sys9backtrace28___rust_begin_short_backtraceFEuuECs11hf3hE7mDA_19range_witness_costs
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNCINvNtCsjr6MQCPf0hc_3std2rt10lang_startuE0Cs11hf3hE7mDA_19range_witness_costs
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNvNtCsjr6MQCPf0hc_3std2rt19lang_start_internal
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    main
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+3 calls with 0B peak consumption from:
+    _RNvMs3_Cs8v6Vxq2exiQ_7getoptsNtB5_8OptGroup13long_to_short
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNvNtCscO0Syu2iFtE_4test3cli10parse_opts
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNvCscO0Syu2iFtE_4test16test_main_static
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RINvNtNtCsjr6MQCPf0hc_3std3sys9backtrace28___rust_begin_short_backtraceFEuuECs11hf3hE7mDA_19range_witness_costs
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNCINvNtCsjr6MQCPf0hc_3std2rt10lang_startuE0Cs11hf3hE7mDA_19range_witness_costs
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNvNtCsjr6MQCPf0hc_3std2rt19lang_start_internal
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    main
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+
+49 calls to allocation functions with 26.69K peak consumption from
+_RNvMs1_NtCsbWQsUAIcWcI_12fa_reference7witnessNtB5_15WitnessSnapshot3new
+  in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+35 calls with 19.04K peak consumption from:
+    _RNvCs11hf3hE7mDA_19range_witness_costs8snapshot
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNvCs11hf3hE7mDA_19range_witness_costss_53fixed_descriptive_capture_and_direct_scan_reuse_costs
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNvYNCNvCs11hf3hE7mDA_19range_witness_costs53fixed_descriptive_capture_and_direct_scan_reuse_costs0INtNtNtCsg3O1AWWDtD0_4core3ops8function6FnOnceuE9call_onceB6_
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RINvCscO0Syu2iFtE_4test28___rust_begin_short_backtraceINtNtCsg3O1AWWDtD0_4core6result6ResultuNtNtCs2mBL6TZy0y2_5alloc6string6StringEFEBQ_EB2_
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNCNvCscO0Syu2iFtE_4test8run_test0B3_
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RINvNtNtCsjr6MQCPf0hc_3std3sys9backtrace28___rust_begin_short_backtraceNCNvCscO0Syu2iFtE_4test8run_tests_0uEB1b_
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNSNvYNCINvNtNtCsjr6MQCPf0hc_3std6thread9lifecycle15spawn_uncheckedNCNvCscO0Syu2iFtE_4test8run_tests_0uEs_0INtNtNtCsg3O1AWWDtD0_4core3ops8function6FnOnceuE9call_once6vtableB17_
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNvNvMs0_NtNtNtCsjr6MQCPf0hc_3std3sys6thread4unixNtB7_6Thread3new12thread_start
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    start_thread
+      at ./nptl/pthread_create.c:454
+      in /usr/lib/x86_64-linux-gnu/libc.so.6
+    __clone3
+      at ../sysdeps/unix/sysv/linux/x86_64/clone3.S:78
+      in /usr/lib/x86_64-linux-gnu/libc.so.6
+4 calls with 2.56K peak consumption from:
+    _RNvCs11hf3hE7mDA_19range_witness_costs8snapshot
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNvCs11hf3hE7mDA_19range_witness_costss_53fixed_descriptive_capture_and_direct_scan_reuse_costs
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNvYNCNvCs11hf3hE7mDA_19range_witness_costs53fixed_descriptive_capture_and_direct_scan_reuse_costs0INtNtNtCsg3O1AWWDtD0_4core3ops8function6FnOnceuE9call_onceB6_
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RINvCscO0Syu2iFtE_4test28___rust_begin_short_backtraceINtNtCsg3O1AWWDtD0_4core6result6ResultuNtNtCs2mBL6TZy0y2_5alloc6string6StringEFEBQ_EB2_
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNCNvCscO0Syu2iFtE_4test8run_test0B3_
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RINvNtNtCsjr6MQCPf0hc_3std3sys9backtrace28___rust_begin_short_backtraceNCNvCscO0Syu2iFtE_4test8run_tests_0uEB1b_
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNSNvYNCINvNtNtCsjr6MQCPf0hc_3std6thread9lifecycle15spawn_uncheckedNCNvCscO0Syu2iFtE_4test8run_tests_0uEs_0INtNtNtCsg3O1AWWDtD0_4core3ops8function6FnOnceuE9call_once6vtableB17_
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNvNvMs0_NtNtNtCsjr6MQCPf0hc_3std3sys6thread4unixNtB7_6Thread3new12thread_start
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    start_thread
+      at ./nptl/pthread_create.c:454
+      in /usr/lib/x86_64-linux-gnu/libc.so.6
+    __clone3
+      at ../sysdeps/unix/sysv/linux/x86_64/clone3.S:78
+      in /usr/lib/x86_64-linux-gnu/libc.so.6
+2 calls with 1.28K peak consumption from:
+    _RNvCs11hf3hE7mDA_19range_witness_costs8snapshot
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNvCs11hf3hE7mDA_19range_witness_costss_53fixed_descriptive_capture_and_direct_scan_reuse_costs
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNvYNCNvCs11hf3hE7mDA_19range_witness_costs53fixed_descriptive_capture_and_direct_scan_reuse_costs0INtNtNtCsg3O1AWWDtD0_4core3ops8function6FnOnceuE9call_onceB6_
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RINvCscO0Syu2iFtE_4test28___rust_begin_short_backtraceINtNtCsg3O1AWWDtD0_4core6result6ResultuNtNtCs2mBL6TZy0y2_5alloc6string6StringEFEBQ_EB2_
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNCNvCscO0Syu2iFtE_4test8run_test0B3_
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RINvNtNtCsjr6MQCPf0hc_3std3sys9backtrace28___rust_begin_short_backtraceNCNvCscO0Syu2iFtE_4test8run_tests_0uEB1b_
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNSNvYNCINvNtNtCsjr6MQCPf0hc_3std6thread9lifecycle15spawn_uncheckedNCNvCscO0Syu2iFtE_4test8run_tests_0uEs_0INtNtNtCsg3O1AWWDtD0_4core3ops8function6FnOnceuE9call_once6vtableB17_
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNvNvMs0_NtNtNtCsjr6MQCPf0hc_3std3sys6thread4unixNtB7_6Thread3new12thread_start
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    start_thread
+      at ./nptl/pthread_create.c:454
+      in /usr/lib/x86_64-linux-gnu/libc.so.6
+    __clone3
+      at ../sysdeps/unix/sysv/linux/x86_64/clone3.S:78
+      in /usr/lib/x86_64-linux-gnu/libc.so.6
+1 calls with 544B peak consumption from:
+    _RNvCs11hf3hE7mDA_19range_witness_costs8snapshot
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNvCs11hf3hE7mDA_19range_witness_costss_53fixed_descriptive_capture_and_direct_scan_reuse_costs
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNvYNCNvCs11hf3hE7mDA_19range_witness_costs53fixed_descriptive_capture_and_direct_scan_reuse_costs0INtNtNtCsg3O1AWWDtD0_4core3ops8function6FnOnceuE9call_onceB6_
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RINvCscO0Syu2iFtE_4test28___rust_begin_short_backtraceINtNtCsg3O1AWWDtD0_4core6result6ResultuNtNtCs2mBL6TZy0y2_5alloc6string6StringEFEBQ_EB2_
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNCNvCscO0Syu2iFtE_4test8run_test0B3_
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RINvNtNtCsjr6MQCPf0hc_3std3sys9backtrace28___rust_begin_short_backtraceNCNvCscO0Syu2iFtE_4test8run_tests_0uEB1b_
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNSNvYNCINvNtNtCsjr6MQCPf0hc_3std6thread9lifecycle15spawn_uncheckedNCNvCscO0Syu2iFtE_4test8run_tests_0uEs_0INtNtNtCsg3O1AWWDtD0_4core3ops8function6FnOnceuE9call_once6vtableB17_
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNvNvMs0_NtNtNtCsjr6MQCPf0hc_3std3sys6thread4unixNtB7_6Thread3new12thread_start
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    start_thread
+      at ./nptl/pthread_create.c:454
+      in /usr/lib/x86_64-linux-gnu/libc.so.6
+    __clone3
+      at ../sysdeps/unix/sysv/linux/x86_64/clone3.S:78
+      in /usr/lib/x86_64-linux-gnu/libc.so.6
+1 calls with 544B peak consumption from:
+    _RNvCs11hf3hE7mDA_19range_witness_costs8snapshot
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNvCs11hf3hE7mDA_19range_witness_costss_53fixed_descriptive_capture_and_direct_scan_reuse_costs
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNvYNCNvCs11hf3hE7mDA_19range_witness_costs53fixed_descriptive_capture_and_direct_scan_reuse_costs0INtNtNtCsg3O1AWWDtD0_4core3ops8function6FnOnceuE9call_onceB6_
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RINvCscO0Syu2iFtE_4test28___rust_begin_short_backtraceINtNtCsg3O1AWWDtD0_4core6result6ResultuNtNtCs2mBL6TZy0y2_5alloc6string6StringEFEBQ_EB2_
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNCNvCscO0Syu2iFtE_4test8run_test0B3_
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RINvNtNtCsjr6MQCPf0hc_3std3sys9backtrace28___rust_begin_short_backtraceNCNvCscO0Syu2iFtE_4test8run_tests_0uEB1b_
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNSNvYNCINvNtNtCsjr6MQCPf0hc_3std6thread9lifecycle15spawn_uncheckedNCNvCscO0Syu2iFtE_4test8run_tests_0uEs_0INtNtNtCsg3O1AWWDtD0_4core3ops8function6FnOnceuE9call_once6vtableB17_
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNvNvMs0_NtNtNtCsjr6MQCPf0hc_3std3sys6thread4unixNtB7_6Thread3new12thread_start
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    start_thread
+      at ./nptl/pthread_create.c:454
+      in /usr/lib/x86_64-linux-gnu/libc.so.6
+    __clone3
+      at ../sysdeps/unix/sysv/linux/x86_64/clone3.S:78
+      in /usr/lib/x86_64-linux-gnu/libc.so.6
+  and 6 from 6 other places
+
+36 calls to allocation functions with 0B peak consumption from
+_RNvMs0_Cs8v6Vxq2exiQ_7getoptsNtB5_7Options7optflag
+  in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+1 calls with 0B peak consumption from:
+    _RNvNtCscO0Syu2iFtE_4test3cli9optgroups
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNvNtCscO0Syu2iFtE_4test3cli10parse_opts
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNvCscO0Syu2iFtE_4test16test_main_static
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RINvNtNtCsjr6MQCPf0hc_3std3sys9backtrace28___rust_begin_short_backtraceFEuuECs11hf3hE7mDA_19range_witness_costs
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNCINvNtCsjr6MQCPf0hc_3std2rt10lang_startuE0Cs11hf3hE7mDA_19range_witness_costs
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNvNtCsjr6MQCPf0hc_3std2rt19lang_start_internal
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    main
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+1 calls with 0B peak consumption from:
+    _RNvNtCscO0Syu2iFtE_4test3cli9optgroups
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNvNtCscO0Syu2iFtE_4test3cli10parse_opts
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNvCscO0Syu2iFtE_4test16test_main_static
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RINvNtNtCsjr6MQCPf0hc_3std3sys9backtrace28___rust_begin_short_backtraceFEuuECs11hf3hE7mDA_19range_witness_costs
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNCINvNtCsjr6MQCPf0hc_3std2rt10lang_startuE0Cs11hf3hE7mDA_19range_witness_costs
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNvNtCsjr6MQCPf0hc_3std2rt19lang_start_internal
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    main
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+1 calls with 0B peak consumption from:
+    _RNvNtCscO0Syu2iFtE_4test3cli9optgroups
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNvNtCscO0Syu2iFtE_4test3cli10parse_opts
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNvCscO0Syu2iFtE_4test16test_main_static
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RINvNtNtCsjr6MQCPf0hc_3std3sys9backtrace28___rust_begin_short_backtraceFEuuECs11hf3hE7mDA_19range_witness_costs
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNCINvNtCsjr6MQCPf0hc_3std2rt10lang_startuE0Cs11hf3hE7mDA_19range_witness_costs
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNvNtCsjr6MQCPf0hc_3std2rt19lang_start_internal
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    main
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+1 calls with 0B peak consumption from:
+    _RNvNtCscO0Syu2iFtE_4test3cli9optgroups
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNvNtCscO0Syu2iFtE_4test3cli10parse_opts
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNvCscO0Syu2iFtE_4test16test_main_static
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RINvNtNtCsjr6MQCPf0hc_3std3sys9backtrace28___rust_begin_short_backtraceFEuuECs11hf3hE7mDA_19range_witness_costs
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNCINvNtCsjr6MQCPf0hc_3std2rt10lang_startuE0Cs11hf3hE7mDA_19range_witness_costs
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNvNtCsjr6MQCPf0hc_3std2rt19lang_start_internal
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    main
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+1 calls with 0B peak consumption from:
+    _RNvNtCscO0Syu2iFtE_4test3cli9optgroups
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNvNtCscO0Syu2iFtE_4test3cli10parse_opts
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNvCscO0Syu2iFtE_4test16test_main_static
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RINvNtNtCsjr6MQCPf0hc_3std3sys9backtrace28___rust_begin_short_backtraceFEuuECs11hf3hE7mDA_19range_witness_costs
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNCINvNtCsjr6MQCPf0hc_3std2rt10lang_startuE0Cs11hf3hE7mDA_19range_witness_costs
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNvNtCsjr6MQCPf0hc_3std2rt19lang_start_internal
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    main
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+  and 31 from 31 other places
+
+36 calls to allocation functions with 10.24K peak consumption from
+_RNvMs5_NtCs2mBL6TZy0y2_5alloc7raw_vecNtB5_11RawVecInner11finish_growCsbWQsUAIcWcI_12fa_reference
+  in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+36 calls with 10.24K peak consumption from:
+    _RINvNvMs2_NtCs2mBL6TZy0y2_5alloc7raw_vecINtB8_11RawVecInnerpE7reserve21do_reserve_and_handleNtNtBa_5alloc6GlobalECsbWQsUAIcWcI_12fa_reference
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNvMs4_NtCsbWQsUAIcWcI_12fa_reference7witnessNtB5_15WitnessJudgment7capture
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNvCs11hf3hE7mDA_19range_witness_costss_53fixed_descriptive_capture_and_direct_scan_reuse_costs
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNvYNCNvCs11hf3hE7mDA_19range_witness_costs53fixed_descriptive_capture_and_direct_scan_reuse_costs0INtNtNtCsg3O1AWWDtD0_4core3ops8function6FnOnceuE9call_onceB6_
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RINvCscO0Syu2iFtE_4test28___rust_begin_short_backtraceINtNtCsg3O1AWWDtD0_4core6result6ResultuNtNtCs2mBL6TZy0y2_5alloc6string6StringEFEBQ_EB2_
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNCNvCscO0Syu2iFtE_4test8run_test0B3_
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RINvNtNtCsjr6MQCPf0hc_3std3sys9backtrace28___rust_begin_short_backtraceNCNvCscO0Syu2iFtE_4test8run_tests_0uEB1b_
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNSNvYNCINvNtNtCsjr6MQCPf0hc_3std6thread9lifecycle15spawn_uncheckedNCNvCscO0Syu2iFtE_4test8run_tests_0uEs_0INtNtNtCsg3O1AWWDtD0_4core3ops8function6FnOnceuE9call_once6vtableB17_
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNvNvMs0_NtNtNtCsjr6MQCPf0hc_3std3sys6thread4unixNtB7_6Thread3new12thread_start
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    start_thread
+      at ./nptl/pthread_create.c:454
+      in /usr/lib/x86_64-linux-gnu/libc.so.6
+    __clone3
+      at ../sysdeps/unix/sysv/linux/x86_64/clone3.S:78
+      in /usr/lib/x86_64-linux-gnu/libc.so.6
+
+24 calls to allocation functions with 0B peak consumption from
+_RNvMs4_Cs8v6Vxq2exiQ_7getoptsNtB5_7Matches8opt_vals
+  in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+1 calls with 0B peak consumption from:
+    _RNvMs4_Cs8v6Vxq2exiQ_7getoptsNtB5_7Matches8opt_strs
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNvNtCscO0Syu2iFtE_4test3cli10parse_opts
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNvCscO0Syu2iFtE_4test16test_main_static
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RINvNtNtCsjr6MQCPf0hc_3std3sys9backtrace28___rust_begin_short_backtraceFEuuECs11hf3hE7mDA_19range_witness_costs
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNCINvNtCsjr6MQCPf0hc_3std2rt10lang_startuE0Cs11hf3hE7mDA_19range_witness_costs
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNvNtCsjr6MQCPf0hc_3std2rt19lang_start_internal
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    main
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+1 calls with 0B peak consumption from:
+    _RNvMs4_Cs8v6Vxq2exiQ_7getoptsNtB5_7Matches11opt_present
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNvNtCscO0Syu2iFtE_4test3cli10parse_opts
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNvCscO0Syu2iFtE_4test16test_main_static
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RINvNtNtCsjr6MQCPf0hc_3std3sys9backtrace28___rust_begin_short_backtraceFEuuECs11hf3hE7mDA_19range_witness_costs
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNCINvNtCsjr6MQCPf0hc_3std2rt10lang_startuE0Cs11hf3hE7mDA_19range_witness_costs
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNvNtCsjr6MQCPf0hc_3std2rt19lang_start_internal
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    main
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+1 calls with 0B peak consumption from:
+    _RNvNtCscO0Syu2iFtE_4test3cli10get_format
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNvNtCscO0Syu2iFtE_4test3cli10parse_opts
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNvCscO0Syu2iFtE_4test16test_main_static
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RINvNtNtCsjr6MQCPf0hc_3std3sys9backtrace28___rust_begin_short_backtraceFEuuECs11hf3hE7mDA_19range_witness_costs
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNCINvNtCsjr6MQCPf0hc_3std2rt10lang_startuE0Cs11hf3hE7mDA_19range_witness_costs
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNvNtCsjr6MQCPf0hc_3std2rt19lang_start_internal
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    main
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+1 calls with 0B peak consumption from:
+    _RNvNtCscO0Syu2iFtE_4test3cli16get_color_config
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNvNtCscO0Syu2iFtE_4test3cli10parse_opts
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNvCscO0Syu2iFtE_4test16test_main_static
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RINvNtNtCsjr6MQCPf0hc_3std3sys9backtrace28___rust_begin_short_backtraceFEuuECs11hf3hE7mDA_19range_witness_costs
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNCINvNtCsjr6MQCPf0hc_3std2rt10lang_startuE0Cs11hf3hE7mDA_19range_witness_costs
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNvNtCsjr6MQCPf0hc_3std2rt19lang_start_internal
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    main
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+1 calls with 0B peak consumption from:
+    _RNvNtCscO0Syu2iFtE_4test3cli16get_test_threads
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNvNtCscO0Syu2iFtE_4test3cli10parse_opts
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNvCscO0Syu2iFtE_4test16test_main_static
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RINvNtNtCsjr6MQCPf0hc_3std3sys9backtrace28___rust_begin_short_backtraceFEuuECs11hf3hE7mDA_19range_witness_costs
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNCINvNtCsjr6MQCPf0hc_3std2rt10lang_startuE0Cs11hf3hE7mDA_19range_witness_costs
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNvNtCsjr6MQCPf0hc_3std2rt19lang_start_internal
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    main
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+  and 19 from 19 other places
+
+18 calls to allocation functions with 0B peak consumption from
+_RNvMs0_Cs8v6Vxq2exiQ_7getoptsNtB5_7Options6optopt
+  in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+1 calls with 0B peak consumption from:
+    _RNvNtCscO0Syu2iFtE_4test3cli9optgroups
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNvNtCscO0Syu2iFtE_4test3cli10parse_opts
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNvCscO0Syu2iFtE_4test16test_main_static
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RINvNtNtCsjr6MQCPf0hc_3std3sys9backtrace28___rust_begin_short_backtraceFEuuECs11hf3hE7mDA_19range_witness_costs
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNCINvNtCsjr6MQCPf0hc_3std2rt10lang_startuE0Cs11hf3hE7mDA_19range_witness_costs
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNvNtCsjr6MQCPf0hc_3std2rt19lang_start_internal
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    main
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+1 calls with 0B peak consumption from:
+    _RNvNtCscO0Syu2iFtE_4test3cli9optgroups
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNvNtCscO0Syu2iFtE_4test3cli10parse_opts
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNvCscO0Syu2iFtE_4test16test_main_static
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RINvNtNtCsjr6MQCPf0hc_3std3sys9backtrace28___rust_begin_short_backtraceFEuuECs11hf3hE7mDA_19range_witness_costs
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNCINvNtCsjr6MQCPf0hc_3std2rt10lang_startuE0Cs11hf3hE7mDA_19range_witness_costs
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNvNtCsjr6MQCPf0hc_3std2rt19lang_start_internal
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    main
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+1 calls with 0B peak consumption from:
+    _RNvNtCscO0Syu2iFtE_4test3cli9optgroups
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNvNtCscO0Syu2iFtE_4test3cli10parse_opts
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNvCscO0Syu2iFtE_4test16test_main_static
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RINvNtNtCsjr6MQCPf0hc_3std3sys9backtrace28___rust_begin_short_backtraceFEuuECs11hf3hE7mDA_19range_witness_costs
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNCINvNtCsjr6MQCPf0hc_3std2rt10lang_startuE0Cs11hf3hE7mDA_19range_witness_costs
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNvNtCsjr6MQCPf0hc_3std2rt19lang_start_internal
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    main
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+1 calls with 0B peak consumption from:
+    _RNvNtCscO0Syu2iFtE_4test3cli9optgroups
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNvNtCscO0Syu2iFtE_4test3cli10parse_opts
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNvCscO0Syu2iFtE_4test16test_main_static
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RINvNtNtCsjr6MQCPf0hc_3std3sys9backtrace28___rust_begin_short_backtraceFEuuECs11hf3hE7mDA_19range_witness_costs
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNCINvNtCsjr6MQCPf0hc_3std2rt10lang_startuE0Cs11hf3hE7mDA_19range_witness_costs
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNvNtCsjr6MQCPf0hc_3std2rt19lang_start_internal
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    main
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+1 calls with 0B peak consumption from:
+    _RNvNtCscO0Syu2iFtE_4test3cli9optgroups
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNvNtCscO0Syu2iFtE_4test3cli10parse_opts
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNvCscO0Syu2iFtE_4test16test_main_static
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RINvNtNtCsjr6MQCPf0hc_3std3sys9backtrace28___rust_begin_short_backtraceFEuuECs11hf3hE7mDA_19range_witness_costs
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNCINvNtCsjr6MQCPf0hc_3std2rt10lang_startuE0Cs11hf3hE7mDA_19range_witness_costs
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNvNtCsjr6MQCPf0hc_3std2rt19lang_start_internal
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    main
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+  and 13 from 13 other places
+
+16 calls to allocation functions with 1.86K peak consumption from
+_RINvNvXs0_NtNtNtCs2mBL6TZy0y2_5alloc11collections5btree3mapINtB8_8BTreeMappppENtNtCsg3O1AWWDtD0_4core5clone5Clone5clone13clone_subtreeyTyINtNtBe_3vec3VechEENtNtBe_5alloc6GlobalECs11hf3hE7mDA_19range_witness_costs
+  in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+3 calls with 13B peak consumption from:
+    _RNvCs11hf3hE7mDA_19range_witness_costss_53fixed_descriptive_capture_and_direct_scan_reuse_costs
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNvYNCNvCs11hf3hE7mDA_19range_witness_costs53fixed_descriptive_capture_and_direct_scan_reuse_costs0INtNtNtCsg3O1AWWDtD0_4core3ops8function6FnOnceuE9call_onceB6_
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RINvCscO0Syu2iFtE_4test28___rust_begin_short_backtraceINtNtCsg3O1AWWDtD0_4core6result6ResultuNtNtCs2mBL6TZy0y2_5alloc6string6StringEFEBQ_EB2_
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNCNvCscO0Syu2iFtE_4test8run_test0B3_
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RINvNtNtCsjr6MQCPf0hc_3std3sys9backtrace28___rust_begin_short_backtraceNCNvCscO0Syu2iFtE_4test8run_tests_0uEB1b_
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNSNvYNCINvNtNtCsjr6MQCPf0hc_3std6thread9lifecycle15spawn_uncheckedNCNvCscO0Syu2iFtE_4test8run_tests_0uEs_0INtNtNtCsg3O1AWWDtD0_4core3ops8function6FnOnceuE9call_once6vtableB17_
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNvNvMs0_NtNtNtCsjr6MQCPf0hc_3std3sys6thread4unixNtB7_6Thread3new12thread_start
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    start_thread
+      at ./nptl/pthread_create.c:454
+      in /usr/lib/x86_64-linux-gnu/libc.so.6
+    __clone3
+      at ../sysdeps/unix/sysv/linux/x86_64/clone3.S:78
+      in /usr/lib/x86_64-linux-gnu/libc.so.6
+3 calls with 10B peak consumption from:
+    _RNvCs11hf3hE7mDA_19range_witness_costss_53fixed_descriptive_capture_and_direct_scan_reuse_costs
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNvYNCNvCs11hf3hE7mDA_19range_witness_costs53fixed_descriptive_capture_and_direct_scan_reuse_costs0INtNtNtCsg3O1AWWDtD0_4core3ops8function6FnOnceuE9call_onceB6_
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RINvCscO0Syu2iFtE_4test28___rust_begin_short_backtraceINtNtCsg3O1AWWDtD0_4core6result6ResultuNtNtCs2mBL6TZy0y2_5alloc6string6StringEFEBQ_EB2_
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNCNvCscO0Syu2iFtE_4test8run_test0B3_
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RINvNtNtCsjr6MQCPf0hc_3std3sys9backtrace28___rust_begin_short_backtraceNCNvCscO0Syu2iFtE_4test8run_tests_0uEB1b_
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNSNvYNCINvNtNtCsjr6MQCPf0hc_3std6thread9lifecycle15spawn_uncheckedNCNvCscO0Syu2iFtE_4test8run_tests_0uEs_0INtNtNtCsg3O1AWWDtD0_4core3ops8function6FnOnceuE9call_once6vtableB17_
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNvNvMs0_NtNtNtCsjr6MQCPf0hc_3std3sys6thread4unixNtB7_6Thread3new12thread_start
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    start_thread
+      at ./nptl/pthread_create.c:454
+      in /usr/lib/x86_64-linux-gnu/libc.so.6
+    __clone3
+      at ../sysdeps/unix/sysv/linux/x86_64/clone3.S:78
+      in /usr/lib/x86_64-linux-gnu/libc.so.6
+3 calls with 10B peak consumption from:
+    _RNvCs11hf3hE7mDA_19range_witness_costss_53fixed_descriptive_capture_and_direct_scan_reuse_costs
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNvYNCNvCs11hf3hE7mDA_19range_witness_costs53fixed_descriptive_capture_and_direct_scan_reuse_costs0INtNtNtCsg3O1AWWDtD0_4core3ops8function6FnOnceuE9call_onceB6_
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RINvCscO0Syu2iFtE_4test28___rust_begin_short_backtraceINtNtCsg3O1AWWDtD0_4core6result6ResultuNtNtCs2mBL6TZy0y2_5alloc6string6StringEFEBQ_EB2_
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNCNvCscO0Syu2iFtE_4test8run_test0B3_
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RINvNtNtCsjr6MQCPf0hc_3std3sys9backtrace28___rust_begin_short_backtraceNCNvCscO0Syu2iFtE_4test8run_tests_0uEB1b_
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNSNvYNCINvNtNtCsjr6MQCPf0hc_3std6thread9lifecycle15spawn_uncheckedNCNvCscO0Syu2iFtE_4test8run_tests_0uEs_0INtNtNtCsg3O1AWWDtD0_4core3ops8function6FnOnceuE9call_once6vtableB17_
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNvNvMs0_NtNtNtCsjr6MQCPf0hc_3std3sys6thread4unixNtB7_6Thread3new12thread_start
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    start_thread
+      at ./nptl/pthread_create.c:454
+      in /usr/lib/x86_64-linux-gnu/libc.so.6
+    __clone3
+      at ../sysdeps/unix/sysv/linux/x86_64/clone3.S:78
+      in /usr/lib/x86_64-linux-gnu/libc.so.6
+3 calls with 6B peak consumption from:
+    _RNvCs11hf3hE7mDA_19range_witness_costss_53fixed_descriptive_capture_and_direct_scan_reuse_costs
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNvYNCNvCs11hf3hE7mDA_19range_witness_costs53fixed_descriptive_capture_and_direct_scan_reuse_costs0INtNtNtCsg3O1AWWDtD0_4core3ops8function6FnOnceuE9call_onceB6_
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RINvCscO0Syu2iFtE_4test28___rust_begin_short_backtraceINtNtCsg3O1AWWDtD0_4core6result6ResultuNtNtCs2mBL6TZy0y2_5alloc6string6StringEFEBQ_EB2_
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNCNvCscO0Syu2iFtE_4test8run_test0B3_
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RINvNtNtCsjr6MQCPf0hc_3std3sys9backtrace28___rust_begin_short_backtraceNCNvCscO0Syu2iFtE_4test8run_tests_0uEB1b_
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNSNvYNCINvNtNtCsjr6MQCPf0hc_3std6thread9lifecycle15spawn_uncheckedNCNvCscO0Syu2iFtE_4test8run_tests_0uEs_0INtNtNtCsg3O1AWWDtD0_4core3ops8function6FnOnceuE9call_once6vtableB17_
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNvNvMs0_NtNtNtCsjr6MQCPf0hc_3std3sys6thread4unixNtB7_6Thread3new12thread_start
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    start_thread
+      at ./nptl/pthread_create.c:454
+      in /usr/lib/x86_64-linux-gnu/libc.so.6
+    __clone3
+      at ../sysdeps/unix/sysv/linux/x86_64/clone3.S:78
+      in /usr/lib/x86_64-linux-gnu/libc.so.6
+1 calls with 456B peak consumption from:
+    _RNvCs11hf3hE7mDA_19range_witness_costss_53fixed_descriptive_capture_and_direct_scan_reuse_costs
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNvYNCNvCs11hf3hE7mDA_19range_witness_costs53fixed_descriptive_capture_and_direct_scan_reuse_costs0INtNtNtCsg3O1AWWDtD0_4core3ops8function6FnOnceuE9call_onceB6_
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RINvCscO0Syu2iFtE_4test28___rust_begin_short_backtraceINtNtCsg3O1AWWDtD0_4core6result6ResultuNtNtCs2mBL6TZy0y2_5alloc6string6StringEFEBQ_EB2_
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNCNvCscO0Syu2iFtE_4test8run_test0B3_
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RINvNtNtCsjr6MQCPf0hc_3std3sys9backtrace28___rust_begin_short_backtraceNCNvCscO0Syu2iFtE_4test8run_tests_0uEB1b_
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNSNvYNCINvNtNtCsjr6MQCPf0hc_3std6thread9lifecycle15spawn_uncheckedNCNvCscO0Syu2iFtE_4test8run_tests_0uEs_0INtNtNtCsg3O1AWWDtD0_4core3ops8function6FnOnceuE9call_once6vtableB17_
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNvNvMs0_NtNtNtCsjr6MQCPf0hc_3std3sys6thread4unixNtB7_6Thread3new12thread_start
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    start_thread
+      at ./nptl/pthread_create.c:454
+      in /usr/lib/x86_64-linux-gnu/libc.so.6
+    __clone3
+      at ../sysdeps/unix/sysv/linux/x86_64/clone3.S:78
+      in /usr/lib/x86_64-linux-gnu/libc.so.6
+  and 3 from 3 other places
+
+
+PEAK MEMORY CONSUMERS
+2.11M peak memory consumed over 341 calls from
+_RNvCs11hf3hE7mDA_19range_witness_costss_53fixed_descriptive_capture_and_direct_scan_reuse_costs
+  in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+2.10M consumed over 256 calls from:
+    _RNvYNCNvCs11hf3hE7mDA_19range_witness_costs53fixed_descriptive_capture_and_direct_scan_reuse_costs0INtNtNtCsg3O1AWWDtD0_4core3ops8function6FnOnceuE9call_onceB6_
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RINvCscO0Syu2iFtE_4test28___rust_begin_short_backtraceINtNtCsg3O1AWWDtD0_4core6result6ResultuNtNtCs2mBL6TZy0y2_5alloc6string6StringEFEBQ_EB2_
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNCNvCscO0Syu2iFtE_4test8run_test0B3_
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RINvNtNtCsjr6MQCPf0hc_3std3sys9backtrace28___rust_begin_short_backtraceNCNvCscO0Syu2iFtE_4test8run_tests_0uEB1b_
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNSNvYNCINvNtNtCsjr6MQCPf0hc_3std6thread9lifecycle15spawn_uncheckedNCNvCscO0Syu2iFtE_4test8run_tests_0uEs_0INtNtNtCsg3O1AWWDtD0_4core3ops8function6FnOnceuE9call_once6vtableB17_
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNvNvMs0_NtNtNtCsjr6MQCPf0hc_3std3sys6thread4unixNtB7_6Thread3new12thread_start
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    start_thread
+      at ./nptl/pthread_create.c:454
+      in /usr/lib/x86_64-linux-gnu/libc.so.6
+    __clone3
+      at ../sysdeps/unix/sysv/linux/x86_64/clone3.S:78
+      in /usr/lib/x86_64-linux-gnu/libc.so.6
+9.58K consumed over 21 calls from:
+    _RNvYNCNvCs11hf3hE7mDA_19range_witness_costs53fixed_descriptive_capture_and_direct_scan_reuse_costs0INtNtNtCsg3O1AWWDtD0_4core3ops8function6FnOnceuE9call_onceB6_
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RINvCscO0Syu2iFtE_4test28___rust_begin_short_backtraceINtNtCsg3O1AWWDtD0_4core6result6ResultuNtNtCs2mBL6TZy0y2_5alloc6string6StringEFEBQ_EB2_
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNCNvCscO0Syu2iFtE_4test8run_test0B3_
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RINvNtNtCsjr6MQCPf0hc_3std3sys9backtrace28___rust_begin_short_backtraceNCNvCscO0Syu2iFtE_4test8run_tests_0uEB1b_
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNSNvYNCINvNtNtCsjr6MQCPf0hc_3std6thread9lifecycle15spawn_uncheckedNCNvCscO0Syu2iFtE_4test8run_tests_0uEs_0INtNtNtCsg3O1AWWDtD0_4core3ops8function6FnOnceuE9call_once6vtableB17_
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNvNvMs0_NtNtNtCsjr6MQCPf0hc_3std3sys6thread4unixNtB7_6Thread3new12thread_start
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    start_thread
+      at ./nptl/pthread_create.c:454
+      in /usr/lib/x86_64-linux-gnu/libc.so.6
+    __clone3
+      at ../sysdeps/unix/sysv/linux/x86_64/clone3.S:78
+      in /usr/lib/x86_64-linux-gnu/libc.so.6
+1.10K consumed over 2 calls from:
+    _RNvYNCNvCs11hf3hE7mDA_19range_witness_costs53fixed_descriptive_capture_and_direct_scan_reuse_costs0INtNtNtCsg3O1AWWDtD0_4core3ops8function6FnOnceuE9call_onceB6_
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RINvCscO0Syu2iFtE_4test28___rust_begin_short_backtraceINtNtCsg3O1AWWDtD0_4core6result6ResultuNtNtCs2mBL6TZy0y2_5alloc6string6StringEFEBQ_EB2_
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNCNvCscO0Syu2iFtE_4test8run_test0B3_
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RINvNtNtCsjr6MQCPf0hc_3std3sys9backtrace28___rust_begin_short_backtraceNCNvCscO0Syu2iFtE_4test8run_tests_0uEB1b_
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNSNvYNCINvNtNtCsjr6MQCPf0hc_3std6thread9lifecycle15spawn_uncheckedNCNvCscO0Syu2iFtE_4test8run_tests_0uEs_0INtNtNtCsg3O1AWWDtD0_4core3ops8function6FnOnceuE9call_once6vtableB17_
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNvNvMs0_NtNtNtCsjr6MQCPf0hc_3std3sys6thread4unixNtB7_6Thread3new12thread_start
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    start_thread
+      at ./nptl/pthread_create.c:454
+      in /usr/lib/x86_64-linux-gnu/libc.so.6
+    __clone3
+      at ../sysdeps/unix/sysv/linux/x86_64/clone3.S:78
+      in /usr/lib/x86_64-linux-gnu/libc.so.6
+552B consumed over 1 calls from:
+    _RNvYNCNvCs11hf3hE7mDA_19range_witness_costs53fixed_descriptive_capture_and_direct_scan_reuse_costs0INtNtNtCsg3O1AWWDtD0_4core3ops8function6FnOnceuE9call_onceB6_
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RINvCscO0Syu2iFtE_4test28___rust_begin_short_backtraceINtNtCsg3O1AWWDtD0_4core6result6ResultuNtNtCs2mBL6TZy0y2_5alloc6string6StringEFEBQ_EB2_
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNCNvCscO0Syu2iFtE_4test8run_test0B3_
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RINvNtNtCsjr6MQCPf0hc_3std3sys9backtrace28___rust_begin_short_backtraceNCNvCscO0Syu2iFtE_4test8run_tests_0uEB1b_
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNSNvYNCINvNtNtCsjr6MQCPf0hc_3std6thread9lifecycle15spawn_uncheckedNCNvCscO0Syu2iFtE_4test8run_tests_0uEs_0INtNtNtCsg3O1AWWDtD0_4core3ops8function6FnOnceuE9call_once6vtableB17_
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNvNvMs0_NtNtNtCsjr6MQCPf0hc_3std3sys6thread4unixNtB7_6Thread3new12thread_start
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    start_thread
+      at ./nptl/pthread_create.c:454
+      in /usr/lib/x86_64-linux-gnu/libc.so.6
+    __clone3
+      at ../sysdeps/unix/sysv/linux/x86_64/clone3.S:78
+      in /usr/lib/x86_64-linux-gnu/libc.so.6
+456B consumed over 1 calls from:
+    _RNvYNCNvCs11hf3hE7mDA_19range_witness_costs53fixed_descriptive_capture_and_direct_scan_reuse_costs0INtNtNtCsg3O1AWWDtD0_4core3ops8function6FnOnceuE9call_onceB6_
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RINvCscO0Syu2iFtE_4test28___rust_begin_short_backtraceINtNtCsg3O1AWWDtD0_4core6result6ResultuNtNtCs2mBL6TZy0y2_5alloc6string6StringEFEBQ_EB2_
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNCNvCscO0Syu2iFtE_4test8run_test0B3_
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RINvNtNtCsjr6MQCPf0hc_3std3sys9backtrace28___rust_begin_short_backtraceNCNvCscO0Syu2iFtE_4test8run_tests_0uEB1b_
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNSNvYNCINvNtNtCsjr6MQCPf0hc_3std6thread9lifecycle15spawn_uncheckedNCNvCscO0Syu2iFtE_4test8run_tests_0uEs_0INtNtNtCsg3O1AWWDtD0_4core3ops8function6FnOnceuE9call_once6vtableB17_
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNvNvMs0_NtNtNtCsjr6MQCPf0hc_3std3sys6thread4unixNtB7_6Thread3new12thread_start
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    start_thread
+      at ./nptl/pthread_create.c:454
+      in /usr/lib/x86_64-linux-gnu/libc.so.6
+    __clone3
+      at ../sysdeps/unix/sysv/linux/x86_64/clone3.S:78
+      in /usr/lib/x86_64-linux-gnu/libc.so.6
+  and 1.19K from 30 other places
+
+2.10M peak memory consumed over 1598 calls from
+_RNvMs4_NtCsbWQsUAIcWcI_12fa_reference7witnessNtB5_15WitnessJudgment7capture
+  in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+2.09M consumed over 1530 calls from:
+    _RNvCs11hf3hE7mDA_19range_witness_costss_53fixed_descriptive_capture_and_direct_scan_reuse_costs
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNvYNCNvCs11hf3hE7mDA_19range_witness_costs53fixed_descriptive_capture_and_direct_scan_reuse_costs0INtNtNtCsg3O1AWWDtD0_4core3ops8function6FnOnceuE9call_onceB6_
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RINvCscO0Syu2iFtE_4test28___rust_begin_short_backtraceINtNtCsg3O1AWWDtD0_4core6result6ResultuNtNtCs2mBL6TZy0y2_5alloc6string6StringEFEBQ_EB2_
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNCNvCscO0Syu2iFtE_4test8run_test0B3_
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RINvNtNtCsjr6MQCPf0hc_3std3sys9backtrace28___rust_begin_short_backtraceNCNvCscO0Syu2iFtE_4test8run_tests_0uEB1b_
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNSNvYNCINvNtNtCsjr6MQCPf0hc_3std6thread9lifecycle15spawn_uncheckedNCNvCscO0Syu2iFtE_4test8run_tests_0uEs_0INtNtNtCsg3O1AWWDtD0_4core3ops8function6FnOnceuE9call_once6vtableB17_
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNvNvMs0_NtNtNtCsjr6MQCPf0hc_3std3sys6thread4unixNtB7_6Thread3new12thread_start
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    start_thread
+      at ./nptl/pthread_create.c:454
+      in /usr/lib/x86_64-linux-gnu/libc.so.6
+    __clone3
+      at ../sysdeps/unix/sysv/linux/x86_64/clone3.S:78
+      in /usr/lib/x86_64-linux-gnu/libc.so.6
+8.19K consumed over 6 calls from:
+    _RNvCs11hf3hE7mDA_19range_witness_costss_53fixed_descriptive_capture_and_direct_scan_reuse_costs
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNvYNCNvCs11hf3hE7mDA_19range_witness_costs53fixed_descriptive_capture_and_direct_scan_reuse_costs0INtNtNtCsg3O1AWWDtD0_4core3ops8function6FnOnceuE9call_onceB6_
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RINvCscO0Syu2iFtE_4test28___rust_begin_short_backtraceINtNtCsg3O1AWWDtD0_4core6result6ResultuNtNtCs2mBL6TZy0y2_5alloc6string6StringEFEBQ_EB2_
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNCNvCscO0Syu2iFtE_4test8run_test0B3_
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RINvNtNtCsjr6MQCPf0hc_3std3sys9backtrace28___rust_begin_short_backtraceNCNvCscO0Syu2iFtE_4test8run_tests_0uEB1b_
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNSNvYNCINvNtNtCsjr6MQCPf0hc_3std6thread9lifecycle15spawn_uncheckedNCNvCscO0Syu2iFtE_4test8run_tests_0uEs_0INtNtNtCsg3O1AWWDtD0_4core3ops8function6FnOnceuE9call_once6vtableB17_
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNvNvMs0_NtNtNtCsjr6MQCPf0hc_3std3sys6thread4unixNtB7_6Thread3new12thread_start
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    start_thread
+      at ./nptl/pthread_create.c:454
+      in /usr/lib/x86_64-linux-gnu/libc.so.6
+    __clone3
+      at ../sysdeps/unix/sysv/linux/x86_64/clone3.S:78
+      in /usr/lib/x86_64-linux-gnu/libc.so.6
+280B consumed over 6 calls from:
+    _RNvCs11hf3hE7mDA_19range_witness_costss_53fixed_descriptive_capture_and_direct_scan_reuse_costs
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNvYNCNvCs11hf3hE7mDA_19range_witness_costs53fixed_descriptive_capture_and_direct_scan_reuse_costs0INtNtNtCsg3O1AWWDtD0_4core3ops8function6FnOnceuE9call_onceB6_
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RINvCscO0Syu2iFtE_4test28___rust_begin_short_backtraceINtNtCsg3O1AWWDtD0_4core6result6ResultuNtNtCs2mBL6TZy0y2_5alloc6string6StringEFEBQ_EB2_
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNCNvCscO0Syu2iFtE_4test8run_test0B3_
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RINvNtNtCsjr6MQCPf0hc_3std3sys9backtrace28___rust_begin_short_backtraceNCNvCscO0Syu2iFtE_4test8run_tests_0uEB1b_
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNSNvYNCINvNtNtCsjr6MQCPf0hc_3std6thread9lifecycle15spawn_uncheckedNCNvCscO0Syu2iFtE_4test8run_tests_0uEs_0INtNtNtCsg3O1AWWDtD0_4core3ops8function6FnOnceuE9call_once6vtableB17_
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNvNvMs0_NtNtNtCsjr6MQCPf0hc_3std3sys6thread4unixNtB7_6Thread3new12thread_start
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    start_thread
+      at ./nptl/pthread_create.c:454
+      in /usr/lib/x86_64-linux-gnu/libc.so.6
+    __clone3
+      at ../sysdeps/unix/sysv/linux/x86_64/clone3.S:78
+      in /usr/lib/x86_64-linux-gnu/libc.so.6
+160B consumed over 1 calls from:
+    _RNvCs11hf3hE7mDA_19range_witness_costss_53fixed_descriptive_capture_and_direct_scan_reuse_costs
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNvYNCNvCs11hf3hE7mDA_19range_witness_costs53fixed_descriptive_capture_and_direct_scan_reuse_costs0INtNtNtCsg3O1AWWDtD0_4core3ops8function6FnOnceuE9call_onceB6_
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RINvCscO0Syu2iFtE_4test28___rust_begin_short_backtraceINtNtCsg3O1AWWDtD0_4core6result6ResultuNtNtCs2mBL6TZy0y2_5alloc6string6StringEFEBQ_EB2_
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNCNvCscO0Syu2iFtE_4test8run_test0B3_
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RINvNtNtCsjr6MQCPf0hc_3std3sys9backtrace28___rust_begin_short_backtraceNCNvCscO0Syu2iFtE_4test8run_tests_0uEB1b_
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNSNvYNCINvNtNtCsjr6MQCPf0hc_3std6thread9lifecycle15spawn_uncheckedNCNvCscO0Syu2iFtE_4test8run_tests_0uEs_0INtNtNtCsg3O1AWWDtD0_4core3ops8function6FnOnceuE9call_once6vtableB17_
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNvNvMs0_NtNtNtCsjr6MQCPf0hc_3std3sys6thread4unixNtB7_6Thread3new12thread_start
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    start_thread
+      at ./nptl/pthread_create.c:454
+      in /usr/lib/x86_64-linux-gnu/libc.so.6
+    __clone3
+      at ../sysdeps/unix/sysv/linux/x86_64/clone3.S:78
+      in /usr/lib/x86_64-linux-gnu/libc.so.6
+88B consumed over 6 calls from:
+    _RNvCs11hf3hE7mDA_19range_witness_costss_53fixed_descriptive_capture_and_direct_scan_reuse_costs
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNvYNCNvCs11hf3hE7mDA_19range_witness_costs53fixed_descriptive_capture_and_direct_scan_reuse_costs0INtNtNtCsg3O1AWWDtD0_4core3ops8function6FnOnceuE9call_onceB6_
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RINvCscO0Syu2iFtE_4test28___rust_begin_short_backtraceINtNtCsg3O1AWWDtD0_4core6result6ResultuNtNtCs2mBL6TZy0y2_5alloc6string6StringEFEBQ_EB2_
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNCNvCscO0Syu2iFtE_4test8run_test0B3_
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RINvNtNtCsjr6MQCPf0hc_3std3sys9backtrace28___rust_begin_short_backtraceNCNvCscO0Syu2iFtE_4test8run_tests_0uEB1b_
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNSNvYNCINvNtNtCsjr6MQCPf0hc_3std6thread9lifecycle15spawn_uncheckedNCNvCscO0Syu2iFtE_4test8run_tests_0uEs_0INtNtNtCsg3O1AWWDtD0_4core3ops8function6FnOnceuE9call_once6vtableB17_
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNvNvMs0_NtNtNtCsjr6MQCPf0hc_3std3sys6thread4unixNtB7_6Thread3new12thread_start
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    start_thread
+      at ./nptl/pthread_create.c:454
+      in /usr/lib/x86_64-linux-gnu/libc.so.6
+    __clone3
+      at ../sysdeps/unix/sysv/linux/x86_64/clone3.S:78
+      in /usr/lib/x86_64-linux-gnu/libc.so.6
+  and 94B from 14 other places
+
+2.10M peak memory consumed over 275 calls from
+_RNvXNtNtCsg3O1AWWDtD0_4core4iter8adaptersINtB2_12GenericShuntINtNtB2_3map3MapINtNtNtNtCs2mBL6TZy0y2_5alloc11collections5btree3map4IteryTyINtNtB1m_3vec3VechEEENCNvCs11hf3hE7mDA_19range_witness_costs8snapshot0EINtNtB6_6result6ResultzNtCsbWQsUAIcWcI_12fa_reference5ErrorEENtNtNtB4_6traits8iterator8Iterator4nextB2A_
+  in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+2.09M consumed over 255 calls from:
+    _RNvCs11hf3hE7mDA_19range_witness_costs8snapshot
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNvCs11hf3hE7mDA_19range_witness_costss_53fixed_descriptive_capture_and_direct_scan_reuse_costs
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNvYNCNvCs11hf3hE7mDA_19range_witness_costs53fixed_descriptive_capture_and_direct_scan_reuse_costs0INtNtNtCsg3O1AWWDtD0_4core3ops8function6FnOnceuE9call_onceB6_
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RINvCscO0Syu2iFtE_4test28___rust_begin_short_backtraceINtNtCsg3O1AWWDtD0_4core6result6ResultuNtNtCs2mBL6TZy0y2_5alloc6string6StringEFEBQ_EB2_
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNCNvCscO0Syu2iFtE_4test8run_test0B3_
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RINvNtNtCsjr6MQCPf0hc_3std3sys9backtrace28___rust_begin_short_backtraceNCNvCscO0Syu2iFtE_4test8run_tests_0uEB1b_
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNSNvYNCINvNtNtCsjr6MQCPf0hc_3std6thread9lifecycle15spawn_uncheckedNCNvCscO0Syu2iFtE_4test8run_tests_0uEs_0INtNtNtCsg3O1AWWDtD0_4core3ops8function6FnOnceuE9call_once6vtableB17_
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNvNvMs0_NtNtNtCsjr6MQCPf0hc_3std3sys6thread4unixNtB7_6Thread3new12thread_start
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    start_thread
+      at ./nptl/pthread_create.c:454
+      in /usr/lib/x86_64-linux-gnu/libc.so.6
+    __clone3
+      at ../sysdeps/unix/sysv/linux/x86_64/clone3.S:78
+      in /usr/lib/x86_64-linux-gnu/libc.so.6
+8.19K consumed over 1 calls from:
+    _RNvCs11hf3hE7mDA_19range_witness_costs8snapshot
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNvCs11hf3hE7mDA_19range_witness_costss_53fixed_descriptive_capture_and_direct_scan_reuse_costs
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNvYNCNvCs11hf3hE7mDA_19range_witness_costs53fixed_descriptive_capture_and_direct_scan_reuse_costs0INtNtNtCsg3O1AWWDtD0_4core3ops8function6FnOnceuE9call_onceB6_
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RINvCscO0Syu2iFtE_4test28___rust_begin_short_backtraceINtNtCsg3O1AWWDtD0_4core6result6ResultuNtNtCs2mBL6TZy0y2_5alloc6string6StringEFEBQ_EB2_
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNCNvCscO0Syu2iFtE_4test8run_test0B3_
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RINvNtNtCsjr6MQCPf0hc_3std3sys9backtrace28___rust_begin_short_backtraceNCNvCscO0Syu2iFtE_4test8run_tests_0uEB1b_
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNSNvYNCINvNtNtCsjr6MQCPf0hc_3std6thread9lifecycle15spawn_uncheckedNCNvCscO0Syu2iFtE_4test8run_tests_0uEs_0INtNtNtCsg3O1AWWDtD0_4core3ops8function6FnOnceuE9call_once6vtableB17_
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNvNvMs0_NtNtNtCsjr6MQCPf0hc_3std3sys6thread4unixNtB7_6Thread3new12thread_start
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    start_thread
+      at ./nptl/pthread_create.c:454
+      in /usr/lib/x86_64-linux-gnu/libc.so.6
+    __clone3
+      at ../sysdeps/unix/sysv/linux/x86_64/clone3.S:78
+      in /usr/lib/x86_64-linux-gnu/libc.so.6
+18B consumed over 2 calls from:
+    _RNvCs11hf3hE7mDA_19range_witness_costs8snapshot
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNvCs11hf3hE7mDA_19range_witness_costss_53fixed_descriptive_capture_and_direct_scan_reuse_costs
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNvYNCNvCs11hf3hE7mDA_19range_witness_costs53fixed_descriptive_capture_and_direct_scan_reuse_costs0INtNtNtCsg3O1AWWDtD0_4core3ops8function6FnOnceuE9call_onceB6_
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RINvCscO0Syu2iFtE_4test28___rust_begin_short_backtraceINtNtCsg3O1AWWDtD0_4core6result6ResultuNtNtCs2mBL6TZy0y2_5alloc6string6StringEFEBQ_EB2_
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNCNvCscO0Syu2iFtE_4test8run_test0B3_
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RINvNtNtCsjr6MQCPf0hc_3std3sys9backtrace28___rust_begin_short_backtraceNCNvCscO0Syu2iFtE_4test8run_tests_0uEB1b_
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNSNvYNCINvNtNtCsjr6MQCPf0hc_3std6thread9lifecycle15spawn_uncheckedNCNvCscO0Syu2iFtE_4test8run_tests_0uEs_0INtNtNtCsg3O1AWWDtD0_4core3ops8function6FnOnceuE9call_once6vtableB17_
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNvNvMs0_NtNtNtCsjr6MQCPf0hc_3std3sys6thread4unixNtB7_6Thread3new12thread_start
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    start_thread
+      at ./nptl/pthread_create.c:454
+      in /usr/lib/x86_64-linux-gnu/libc.so.6
+    __clone3
+      at ../sysdeps/unix/sysv/linux/x86_64/clone3.S:78
+      in /usr/lib/x86_64-linux-gnu/libc.so.6
+14B consumed over 3 calls from:
+    _RNvCs11hf3hE7mDA_19range_witness_costs8snapshot
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNvCs11hf3hE7mDA_19range_witness_costss_53fixed_descriptive_capture_and_direct_scan_reuse_costs
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNvYNCNvCs11hf3hE7mDA_19range_witness_costs53fixed_descriptive_capture_and_direct_scan_reuse_costs0INtNtNtCsg3O1AWWDtD0_4core3ops8function6FnOnceuE9call_onceB6_
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RINvCscO0Syu2iFtE_4test28___rust_begin_short_backtraceINtNtCsg3O1AWWDtD0_4core6result6ResultuNtNtCs2mBL6TZy0y2_5alloc6string6StringEFEBQ_EB2_
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNCNvCscO0Syu2iFtE_4test8run_test0B3_
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RINvNtNtCsjr6MQCPf0hc_3std3sys9backtrace28___rust_begin_short_backtraceNCNvCscO0Syu2iFtE_4test8run_tests_0uEB1b_
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNSNvYNCINvNtNtCsjr6MQCPf0hc_3std6thread9lifecycle15spawn_uncheckedNCNvCscO0Syu2iFtE_4test8run_tests_0uEs_0INtNtNtCsg3O1AWWDtD0_4core3ops8function6FnOnceuE9call_once6vtableB17_
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNvNvMs0_NtNtNtCsjr6MQCPf0hc_3std3sys6thread4unixNtB7_6Thread3new12thread_start
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    start_thread
+      at ./nptl/pthread_create.c:454
+      in /usr/lib/x86_64-linux-gnu/libc.so.6
+    __clone3
+      at ../sysdeps/unix/sysv/linux/x86_64/clone3.S:78
+      in /usr/lib/x86_64-linux-gnu/libc.so.6
+10B consumed over 2 calls from:
+    _RNvCs11hf3hE7mDA_19range_witness_costs8snapshot
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNvCs11hf3hE7mDA_19range_witness_costss_53fixed_descriptive_capture_and_direct_scan_reuse_costs
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNvYNCNvCs11hf3hE7mDA_19range_witness_costs53fixed_descriptive_capture_and_direct_scan_reuse_costs0INtNtNtCsg3O1AWWDtD0_4core3ops8function6FnOnceuE9call_onceB6_
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RINvCscO0Syu2iFtE_4test28___rust_begin_short_backtraceINtNtCsg3O1AWWDtD0_4core6result6ResultuNtNtCs2mBL6TZy0y2_5alloc6string6StringEFEBQ_EB2_
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNCNvCscO0Syu2iFtE_4test8run_test0B3_
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RINvNtNtCsjr6MQCPf0hc_3std3sys9backtrace28___rust_begin_short_backtraceNCNvCscO0Syu2iFtE_4test8run_tests_0uEB1b_
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNSNvYNCINvNtNtCsjr6MQCPf0hc_3std6thread9lifecycle15spawn_uncheckedNCNvCscO0Syu2iFtE_4test8run_tests_0uEs_0INtNtNtCsg3O1AWWDtD0_4core3ops8function6FnOnceuE9call_once6vtableB17_
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNvNvMs0_NtNtNtCsjr6MQCPf0hc_3std3sys6thread4unixNtB7_6Thread3new12thread_start
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    start_thread
+      at ./nptl/pthread_create.c:454
+      in /usr/lib/x86_64-linux-gnu/libc.so.6
+    __clone3
+      at ../sysdeps/unix/sysv/linux/x86_64/clone3.S:78
+      in /usr/lib/x86_64-linux-gnu/libc.so.6
+  and 49B from 10 other places
+
+73.73K peak memory consumed over 1 calls from
+0x7d49aa8bf8f6
+  in /usr/lib/x86_64-linux-gnu/libstdc++.so.6
+73.73K consumed over 1 calls from:
+    call_init
+      at ./elf/dl-init.c:74
+      in /lib64/ld-linux-x86-64.so.2
+    _dl_init::call_init
+      at ./elf/dl-init.c:120
+      in /lib64/ld-linux-x86-64.so.2
+    _dl_init
+      at ./elf/./elf/dl-init.c:121
+    _dl_start_user
+      in /lib64/ld-linux-x86-64.so.2
+
+26.69K peak memory consumed over 49 calls from
+_RNvMs1_NtCsbWQsUAIcWcI_12fa_reference7witnessNtB5_15WitnessSnapshot3new
+  in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+19.04K consumed over 35 calls from:
+    _RNvCs11hf3hE7mDA_19range_witness_costs8snapshot
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNvCs11hf3hE7mDA_19range_witness_costss_53fixed_descriptive_capture_and_direct_scan_reuse_costs
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNvYNCNvCs11hf3hE7mDA_19range_witness_costs53fixed_descriptive_capture_and_direct_scan_reuse_costs0INtNtNtCsg3O1AWWDtD0_4core3ops8function6FnOnceuE9call_onceB6_
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RINvCscO0Syu2iFtE_4test28___rust_begin_short_backtraceINtNtCsg3O1AWWDtD0_4core6result6ResultuNtNtCs2mBL6TZy0y2_5alloc6string6StringEFEBQ_EB2_
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNCNvCscO0Syu2iFtE_4test8run_test0B3_
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RINvNtNtCsjr6MQCPf0hc_3std3sys9backtrace28___rust_begin_short_backtraceNCNvCscO0Syu2iFtE_4test8run_tests_0uEB1b_
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNSNvYNCINvNtNtCsjr6MQCPf0hc_3std6thread9lifecycle15spawn_uncheckedNCNvCscO0Syu2iFtE_4test8run_tests_0uEs_0INtNtNtCsg3O1AWWDtD0_4core3ops8function6FnOnceuE9call_once6vtableB17_
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNvNvMs0_NtNtNtCsjr6MQCPf0hc_3std3sys6thread4unixNtB7_6Thread3new12thread_start
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    start_thread
+      at ./nptl/pthread_create.c:454
+      in /usr/lib/x86_64-linux-gnu/libc.so.6
+    __clone3
+      at ../sysdeps/unix/sysv/linux/x86_64/clone3.S:78
+      in /usr/lib/x86_64-linux-gnu/libc.so.6
+2.56K consumed over 4 calls from:
+    _RNvCs11hf3hE7mDA_19range_witness_costs8snapshot
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNvCs11hf3hE7mDA_19range_witness_costss_53fixed_descriptive_capture_and_direct_scan_reuse_costs
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNvYNCNvCs11hf3hE7mDA_19range_witness_costs53fixed_descriptive_capture_and_direct_scan_reuse_costs0INtNtNtCsg3O1AWWDtD0_4core3ops8function6FnOnceuE9call_onceB6_
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RINvCscO0Syu2iFtE_4test28___rust_begin_short_backtraceINtNtCsg3O1AWWDtD0_4core6result6ResultuNtNtCs2mBL6TZy0y2_5alloc6string6StringEFEBQ_EB2_
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNCNvCscO0Syu2iFtE_4test8run_test0B3_
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RINvNtNtCsjr6MQCPf0hc_3std3sys9backtrace28___rust_begin_short_backtraceNCNvCscO0Syu2iFtE_4test8run_tests_0uEB1b_
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNSNvYNCINvNtNtCsjr6MQCPf0hc_3std6thread9lifecycle15spawn_uncheckedNCNvCscO0Syu2iFtE_4test8run_tests_0uEs_0INtNtNtCsg3O1AWWDtD0_4core3ops8function6FnOnceuE9call_once6vtableB17_
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNvNvMs0_NtNtNtCsjr6MQCPf0hc_3std3sys6thread4unixNtB7_6Thread3new12thread_start
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    start_thread
+      at ./nptl/pthread_create.c:454
+      in /usr/lib/x86_64-linux-gnu/libc.so.6
+    __clone3
+      at ../sysdeps/unix/sysv/linux/x86_64/clone3.S:78
+      in /usr/lib/x86_64-linux-gnu/libc.so.6
+1.28K consumed over 2 calls from:
+    _RNvCs11hf3hE7mDA_19range_witness_costs8snapshot
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNvCs11hf3hE7mDA_19range_witness_costss_53fixed_descriptive_capture_and_direct_scan_reuse_costs
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNvYNCNvCs11hf3hE7mDA_19range_witness_costs53fixed_descriptive_capture_and_direct_scan_reuse_costs0INtNtNtCsg3O1AWWDtD0_4core3ops8function6FnOnceuE9call_onceB6_
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RINvCscO0Syu2iFtE_4test28___rust_begin_short_backtraceINtNtCsg3O1AWWDtD0_4core6result6ResultuNtNtCs2mBL6TZy0y2_5alloc6string6StringEFEBQ_EB2_
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNCNvCscO0Syu2iFtE_4test8run_test0B3_
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RINvNtNtCsjr6MQCPf0hc_3std3sys9backtrace28___rust_begin_short_backtraceNCNvCscO0Syu2iFtE_4test8run_tests_0uEB1b_
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNSNvYNCINvNtNtCsjr6MQCPf0hc_3std6thread9lifecycle15spawn_uncheckedNCNvCscO0Syu2iFtE_4test8run_tests_0uEs_0INtNtNtCsg3O1AWWDtD0_4core3ops8function6FnOnceuE9call_once6vtableB17_
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNvNvMs0_NtNtNtCsjr6MQCPf0hc_3std3sys6thread4unixNtB7_6Thread3new12thread_start
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    start_thread
+      at ./nptl/pthread_create.c:454
+      in /usr/lib/x86_64-linux-gnu/libc.so.6
+    __clone3
+      at ../sysdeps/unix/sysv/linux/x86_64/clone3.S:78
+      in /usr/lib/x86_64-linux-gnu/libc.so.6
+544B consumed over 1 calls from:
+    _RNvCs11hf3hE7mDA_19range_witness_costs8snapshot
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNvCs11hf3hE7mDA_19range_witness_costss_53fixed_descriptive_capture_and_direct_scan_reuse_costs
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNvYNCNvCs11hf3hE7mDA_19range_witness_costs53fixed_descriptive_capture_and_direct_scan_reuse_costs0INtNtNtCsg3O1AWWDtD0_4core3ops8function6FnOnceuE9call_onceB6_
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RINvCscO0Syu2iFtE_4test28___rust_begin_short_backtraceINtNtCsg3O1AWWDtD0_4core6result6ResultuNtNtCs2mBL6TZy0y2_5alloc6string6StringEFEBQ_EB2_
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNCNvCscO0Syu2iFtE_4test8run_test0B3_
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RINvNtNtCsjr6MQCPf0hc_3std3sys9backtrace28___rust_begin_short_backtraceNCNvCscO0Syu2iFtE_4test8run_tests_0uEB1b_
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNSNvYNCINvNtNtCsjr6MQCPf0hc_3std6thread9lifecycle15spawn_uncheckedNCNvCscO0Syu2iFtE_4test8run_tests_0uEs_0INtNtNtCsg3O1AWWDtD0_4core3ops8function6FnOnceuE9call_once6vtableB17_
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNvNvMs0_NtNtNtCsjr6MQCPf0hc_3std3sys6thread4unixNtB7_6Thread3new12thread_start
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    start_thread
+      at ./nptl/pthread_create.c:454
+      in /usr/lib/x86_64-linux-gnu/libc.so.6
+    __clone3
+      at ../sysdeps/unix/sysv/linux/x86_64/clone3.S:78
+      in /usr/lib/x86_64-linux-gnu/libc.so.6
+544B consumed over 1 calls from:
+    _RNvCs11hf3hE7mDA_19range_witness_costs8snapshot
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNvCs11hf3hE7mDA_19range_witness_costss_53fixed_descriptive_capture_and_direct_scan_reuse_costs
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNvYNCNvCs11hf3hE7mDA_19range_witness_costs53fixed_descriptive_capture_and_direct_scan_reuse_costs0INtNtNtCsg3O1AWWDtD0_4core3ops8function6FnOnceuE9call_onceB6_
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RINvCscO0Syu2iFtE_4test28___rust_begin_short_backtraceINtNtCsg3O1AWWDtD0_4core6result6ResultuNtNtCs2mBL6TZy0y2_5alloc6string6StringEFEBQ_EB2_
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNCNvCscO0Syu2iFtE_4test8run_test0B3_
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RINvNtNtCsjr6MQCPf0hc_3std3sys9backtrace28___rust_begin_short_backtraceNCNvCscO0Syu2iFtE_4test8run_tests_0uEB1b_
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNSNvYNCINvNtNtCsjr6MQCPf0hc_3std6thread9lifecycle15spawn_uncheckedNCNvCscO0Syu2iFtE_4test8run_tests_0uEs_0INtNtNtCsg3O1AWWDtD0_4core3ops8function6FnOnceuE9call_once6vtableB17_
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNvNvMs0_NtNtNtCsjr6MQCPf0hc_3std3sys6thread4unixNtB7_6Thread3new12thread_start
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    start_thread
+      at ./nptl/pthread_create.c:454
+      in /usr/lib/x86_64-linux-gnu/libc.so.6
+    __clone3
+      at ../sysdeps/unix/sysv/linux/x86_64/clone3.S:78
+      in /usr/lib/x86_64-linux-gnu/libc.so.6
+  and 2.72K from 6 other places
+
+10.24K peak memory consumed over 36 calls from
+_RNvMs5_NtCs2mBL6TZy0y2_5alloc7raw_vecNtB5_11RawVecInner11finish_growCsbWQsUAIcWcI_12fa_reference
+  in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+10.24K consumed over 36 calls from:
+    _RINvNvMs2_NtCs2mBL6TZy0y2_5alloc7raw_vecINtB8_11RawVecInnerpE7reserve21do_reserve_and_handleNtNtBa_5alloc6GlobalECsbWQsUAIcWcI_12fa_reference
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNvMs4_NtCsbWQsUAIcWcI_12fa_reference7witnessNtB5_15WitnessJudgment7capture
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNvCs11hf3hE7mDA_19range_witness_costss_53fixed_descriptive_capture_and_direct_scan_reuse_costs
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNvYNCNvCs11hf3hE7mDA_19range_witness_costs53fixed_descriptive_capture_and_direct_scan_reuse_costs0INtNtNtCsg3O1AWWDtD0_4core3ops8function6FnOnceuE9call_onceB6_
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RINvCscO0Syu2iFtE_4test28___rust_begin_short_backtraceINtNtCsg3O1AWWDtD0_4core6result6ResultuNtNtCs2mBL6TZy0y2_5alloc6string6StringEFEBQ_EB2_
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNCNvCscO0Syu2iFtE_4test8run_test0B3_
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RINvNtNtCsjr6MQCPf0hc_3std3sys9backtrace28___rust_begin_short_backtraceNCNvCscO0Syu2iFtE_4test8run_tests_0uEB1b_
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNSNvYNCINvNtNtCsjr6MQCPf0hc_3std6thread9lifecycle15spawn_uncheckedNCNvCscO0Syu2iFtE_4test8run_tests_0uEs_0INtNtNtCsg3O1AWWDtD0_4core3ops8function6FnOnceuE9call_once6vtableB17_
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNvNvMs0_NtNtNtCsjr6MQCPf0hc_3std3sys6thread4unixNtB7_6Thread3new12thread_start
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    start_thread
+      at ./nptl/pthread_create.c:454
+      in /usr/lib/x86_64-linux-gnu/libc.so.6
+    __clone3
+      at ../sysdeps/unix/sysv/linux/x86_64/clone3.S:78
+      in /usr/lib/x86_64-linux-gnu/libc.so.6
+
+2.50K peak memory consumed over 2 calls from
+_RNvMsi_NtNtNtCs2mBL6TZy0y2_5alloc11collections5btree3mapINtB5_8BTreeMapNtNtCsbWQsUAIcWcI_12fa_reference16product_frontier13ProjectionKeyNtB19_19ProjectionFrontiersE6insertB1b_
+  in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+1.25K consumed over 1 calls from:
+    _RNvMs0_NtCsbWQsUAIcWcI_12fa_reference16product_frontierNtB5_16ProductFrontiers6accept
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNvCs11hf3hE7mDA_19range_witness_costs15closed_frontier
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNvCs11hf3hE7mDA_19range_witness_costss_53fixed_descriptive_capture_and_direct_scan_reuse_costs
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNvYNCNvCs11hf3hE7mDA_19range_witness_costs53fixed_descriptive_capture_and_direct_scan_reuse_costs0INtNtNtCsg3O1AWWDtD0_4core3ops8function6FnOnceuE9call_onceB6_
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RINvCscO0Syu2iFtE_4test28___rust_begin_short_backtraceINtNtCsg3O1AWWDtD0_4core6result6ResultuNtNtCs2mBL6TZy0y2_5alloc6string6StringEFEBQ_EB2_
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNCNvCscO0Syu2iFtE_4test8run_test0B3_
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RINvNtNtCsjr6MQCPf0hc_3std3sys9backtrace28___rust_begin_short_backtraceNCNvCscO0Syu2iFtE_4test8run_tests_0uEB1b_
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNSNvYNCINvNtNtCsjr6MQCPf0hc_3std6thread9lifecycle15spawn_uncheckedNCNvCscO0Syu2iFtE_4test8run_tests_0uEs_0INtNtNtCsg3O1AWWDtD0_4core3ops8function6FnOnceuE9call_once6vtableB17_
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNvNvMs0_NtNtNtCsjr6MQCPf0hc_3std3sys6thread4unixNtB7_6Thread3new12thread_start
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    start_thread
+      at ./nptl/pthread_create.c:454
+      in /usr/lib/x86_64-linux-gnu/libc.so.6
+    __clone3
+      at ../sysdeps/unix/sysv/linux/x86_64/clone3.S:78
+      in /usr/lib/x86_64-linux-gnu/libc.so.6
+1.25K consumed over 1 calls from:
+    _RNvMs0_NtCsbWQsUAIcWcI_12fa_reference16product_frontierNtB5_16ProductFrontiers6accept
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNvCs11hf3hE7mDA_19range_witness_costss_53fixed_descriptive_capture_and_direct_scan_reuse_costs
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNvYNCNvCs11hf3hE7mDA_19range_witness_costs53fixed_descriptive_capture_and_direct_scan_reuse_costs0INtNtNtCsg3O1AWWDtD0_4core3ops8function6FnOnceuE9call_onceB6_
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RINvCscO0Syu2iFtE_4test28___rust_begin_short_backtraceINtNtCsg3O1AWWDtD0_4core6result6ResultuNtNtCs2mBL6TZy0y2_5alloc6string6StringEFEBQ_EB2_
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNCNvCscO0Syu2iFtE_4test8run_test0B3_
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RINvNtNtCsjr6MQCPf0hc_3std3sys9backtrace28___rust_begin_short_backtraceNCNvCscO0Syu2iFtE_4test8run_tests_0uEB1b_
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNSNvYNCINvNtNtCsjr6MQCPf0hc_3std6thread9lifecycle15spawn_uncheckedNCNvCscO0Syu2iFtE_4test8run_tests_0uEs_0INtNtNtCsg3O1AWWDtD0_4core3ops8function6FnOnceuE9call_once6vtableB17_
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNvNvMs0_NtNtNtCsjr6MQCPf0hc_3std3sys6thread4unixNtB7_6Thread3new12thread_start
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    start_thread
+      at ./nptl/pthread_create.c:454
+      in /usr/lib/x86_64-linux-gnu/libc.so.6
+    __clone3
+      at ../sysdeps/unix/sysv/linux/x86_64/clone3.S:78
+      in /usr/lib/x86_64-linux-gnu/libc.so.6
+
+1.86K peak memory consumed over 16 calls from
+_RINvNvXs0_NtNtNtCs2mBL6TZy0y2_5alloc11collections5btree3mapINtB8_8BTreeMappppENtNtCsg3O1AWWDtD0_4core5clone5Clone5clone13clone_subtreeyTyINtNtBe_3vec3VechEENtNtBe_5alloc6GlobalECs11hf3hE7mDA_19range_witness_costs
+  in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+456B consumed over 1 calls from:
+    _RNvCs11hf3hE7mDA_19range_witness_costss_53fixed_descriptive_capture_and_direct_scan_reuse_costs
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNvYNCNvCs11hf3hE7mDA_19range_witness_costs53fixed_descriptive_capture_and_direct_scan_reuse_costs0INtNtNtCsg3O1AWWDtD0_4core3ops8function6FnOnceuE9call_onceB6_
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RINvCscO0Syu2iFtE_4test28___rust_begin_short_backtraceINtNtCsg3O1AWWDtD0_4core6result6ResultuNtNtCs2mBL6TZy0y2_5alloc6string6StringEFEBQ_EB2_
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNCNvCscO0Syu2iFtE_4test8run_test0B3_
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RINvNtNtCsjr6MQCPf0hc_3std3sys9backtrace28___rust_begin_short_backtraceNCNvCscO0Syu2iFtE_4test8run_tests_0uEB1b_
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNSNvYNCINvNtNtCsjr6MQCPf0hc_3std6thread9lifecycle15spawn_uncheckedNCNvCscO0Syu2iFtE_4test8run_tests_0uEs_0INtNtNtCsg3O1AWWDtD0_4core3ops8function6FnOnceuE9call_once6vtableB17_
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNvNvMs0_NtNtNtCsjr6MQCPf0hc_3std3sys6thread4unixNtB7_6Thread3new12thread_start
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    start_thread
+      at ./nptl/pthread_create.c:454
+      in /usr/lib/x86_64-linux-gnu/libc.so.6
+    __clone3
+      at ../sysdeps/unix/sysv/linux/x86_64/clone3.S:78
+      in /usr/lib/x86_64-linux-gnu/libc.so.6
+456B consumed over 1 calls from:
+    _RNvCs11hf3hE7mDA_19range_witness_costss_53fixed_descriptive_capture_and_direct_scan_reuse_costs
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNvYNCNvCs11hf3hE7mDA_19range_witness_costs53fixed_descriptive_capture_and_direct_scan_reuse_costs0INtNtNtCsg3O1AWWDtD0_4core3ops8function6FnOnceuE9call_onceB6_
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RINvCscO0Syu2iFtE_4test28___rust_begin_short_backtraceINtNtCsg3O1AWWDtD0_4core6result6ResultuNtNtCs2mBL6TZy0y2_5alloc6string6StringEFEBQ_EB2_
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNCNvCscO0Syu2iFtE_4test8run_test0B3_
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RINvNtNtCsjr6MQCPf0hc_3std3sys9backtrace28___rust_begin_short_backtraceNCNvCscO0Syu2iFtE_4test8run_tests_0uEB1b_
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNSNvYNCINvNtNtCsjr6MQCPf0hc_3std6thread9lifecycle15spawn_uncheckedNCNvCscO0Syu2iFtE_4test8run_tests_0uEs_0INtNtNtCsg3O1AWWDtD0_4core3ops8function6FnOnceuE9call_once6vtableB17_
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNvNvMs0_NtNtNtCsjr6MQCPf0hc_3std3sys6thread4unixNtB7_6Thread3new12thread_start
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    start_thread
+      at ./nptl/pthread_create.c:454
+      in /usr/lib/x86_64-linux-gnu/libc.so.6
+    __clone3
+      at ../sysdeps/unix/sysv/linux/x86_64/clone3.S:78
+      in /usr/lib/x86_64-linux-gnu/libc.so.6
+456B consumed over 1 calls from:
+    _RNvCs11hf3hE7mDA_19range_witness_costss_53fixed_descriptive_capture_and_direct_scan_reuse_costs
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNvYNCNvCs11hf3hE7mDA_19range_witness_costs53fixed_descriptive_capture_and_direct_scan_reuse_costs0INtNtNtCsg3O1AWWDtD0_4core3ops8function6FnOnceuE9call_onceB6_
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RINvCscO0Syu2iFtE_4test28___rust_begin_short_backtraceINtNtCsg3O1AWWDtD0_4core6result6ResultuNtNtCs2mBL6TZy0y2_5alloc6string6StringEFEBQ_EB2_
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNCNvCscO0Syu2iFtE_4test8run_test0B3_
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RINvNtNtCsjr6MQCPf0hc_3std3sys9backtrace28___rust_begin_short_backtraceNCNvCscO0Syu2iFtE_4test8run_tests_0uEB1b_
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNSNvYNCINvNtNtCsjr6MQCPf0hc_3std6thread9lifecycle15spawn_uncheckedNCNvCscO0Syu2iFtE_4test8run_tests_0uEs_0INtNtNtCsg3O1AWWDtD0_4core3ops8function6FnOnceuE9call_once6vtableB17_
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNvNvMs0_NtNtNtCsjr6MQCPf0hc_3std3sys6thread4unixNtB7_6Thread3new12thread_start
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    start_thread
+      at ./nptl/pthread_create.c:454
+      in /usr/lib/x86_64-linux-gnu/libc.so.6
+    __clone3
+      at ../sysdeps/unix/sysv/linux/x86_64/clone3.S:78
+      in /usr/lib/x86_64-linux-gnu/libc.so.6
+456B consumed over 1 calls from:
+    _RNvCs11hf3hE7mDA_19range_witness_costss_53fixed_descriptive_capture_and_direct_scan_reuse_costs
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNvYNCNvCs11hf3hE7mDA_19range_witness_costs53fixed_descriptive_capture_and_direct_scan_reuse_costs0INtNtNtCsg3O1AWWDtD0_4core3ops8function6FnOnceuE9call_onceB6_
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RINvCscO0Syu2iFtE_4test28___rust_begin_short_backtraceINtNtCsg3O1AWWDtD0_4core6result6ResultuNtNtCs2mBL6TZy0y2_5alloc6string6StringEFEBQ_EB2_
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNCNvCscO0Syu2iFtE_4test8run_test0B3_
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RINvNtNtCsjr6MQCPf0hc_3std3sys9backtrace28___rust_begin_short_backtraceNCNvCscO0Syu2iFtE_4test8run_tests_0uEB1b_
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNSNvYNCINvNtNtCsjr6MQCPf0hc_3std6thread9lifecycle15spawn_uncheckedNCNvCscO0Syu2iFtE_4test8run_tests_0uEs_0INtNtNtCsg3O1AWWDtD0_4core3ops8function6FnOnceuE9call_once6vtableB17_
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNvNvMs0_NtNtNtCsjr6MQCPf0hc_3std3sys6thread4unixNtB7_6Thread3new12thread_start
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    start_thread
+      at ./nptl/pthread_create.c:454
+      in /usr/lib/x86_64-linux-gnu/libc.so.6
+    __clone3
+      at ../sysdeps/unix/sysv/linux/x86_64/clone3.S:78
+      in /usr/lib/x86_64-linux-gnu/libc.so.6
+13B consumed over 3 calls from:
+    _RNvCs11hf3hE7mDA_19range_witness_costss_53fixed_descriptive_capture_and_direct_scan_reuse_costs
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNvYNCNvCs11hf3hE7mDA_19range_witness_costs53fixed_descriptive_capture_and_direct_scan_reuse_costs0INtNtNtCsg3O1AWWDtD0_4core3ops8function6FnOnceuE9call_onceB6_
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RINvCscO0Syu2iFtE_4test28___rust_begin_short_backtraceINtNtCsg3O1AWWDtD0_4core6result6ResultuNtNtCs2mBL6TZy0y2_5alloc6string6StringEFEBQ_EB2_
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNCNvCscO0Syu2iFtE_4test8run_test0B3_
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RINvNtNtCsjr6MQCPf0hc_3std3sys9backtrace28___rust_begin_short_backtraceNCNvCscO0Syu2iFtE_4test8run_tests_0uEB1b_
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNSNvYNCINvNtNtCsjr6MQCPf0hc_3std6thread9lifecycle15spawn_uncheckedNCNvCscO0Syu2iFtE_4test8run_tests_0uEs_0INtNtNtCsg3O1AWWDtD0_4core3ops8function6FnOnceuE9call_once6vtableB17_
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNvNvMs0_NtNtNtCsjr6MQCPf0hc_3std3sys6thread4unixNtB7_6Thread3new12thread_start
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    start_thread
+      at ./nptl/pthread_create.c:454
+      in /usr/lib/x86_64-linux-gnu/libc.so.6
+    __clone3
+      at ../sysdeps/unix/sysv/linux/x86_64/clone3.S:78
+      in /usr/lib/x86_64-linux-gnu/libc.so.6
+  and 26B from 3 other places
+
+1.10K peak memory consumed over 2 calls from
+_RNvMs_NtCsbWQsUAIcWcI_12fa_reference16product_frontierNtB4_19ProjectionFrontiers3new
+  in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+552B consumed over 1 calls from:
+    _RNvMs0_NtCsbWQsUAIcWcI_12fa_reference16product_frontierNtB5_16ProductFrontiers6accept
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNvCs11hf3hE7mDA_19range_witness_costs15closed_frontier
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNvCs11hf3hE7mDA_19range_witness_costss_53fixed_descriptive_capture_and_direct_scan_reuse_costs
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNvYNCNvCs11hf3hE7mDA_19range_witness_costs53fixed_descriptive_capture_and_direct_scan_reuse_costs0INtNtNtCsg3O1AWWDtD0_4core3ops8function6FnOnceuE9call_onceB6_
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RINvCscO0Syu2iFtE_4test28___rust_begin_short_backtraceINtNtCsg3O1AWWDtD0_4core6result6ResultuNtNtCs2mBL6TZy0y2_5alloc6string6StringEFEBQ_EB2_
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNCNvCscO0Syu2iFtE_4test8run_test0B3_
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RINvNtNtCsjr6MQCPf0hc_3std3sys9backtrace28___rust_begin_short_backtraceNCNvCscO0Syu2iFtE_4test8run_tests_0uEB1b_
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNSNvYNCINvNtNtCsjr6MQCPf0hc_3std6thread9lifecycle15spawn_uncheckedNCNvCscO0Syu2iFtE_4test8run_tests_0uEs_0INtNtNtCsg3O1AWWDtD0_4core3ops8function6FnOnceuE9call_once6vtableB17_
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNvNvMs0_NtNtNtCsjr6MQCPf0hc_3std3sys6thread4unixNtB7_6Thread3new12thread_start
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    start_thread
+      at ./nptl/pthread_create.c:454
+      in /usr/lib/x86_64-linux-gnu/libc.so.6
+    __clone3
+      at ../sysdeps/unix/sysv/linux/x86_64/clone3.S:78
+      in /usr/lib/x86_64-linux-gnu/libc.so.6
+552B consumed over 1 calls from:
+    _RNvMs0_NtCsbWQsUAIcWcI_12fa_reference16product_frontierNtB5_16ProductFrontiers6accept
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNvCs11hf3hE7mDA_19range_witness_costss_53fixed_descriptive_capture_and_direct_scan_reuse_costs
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNvYNCNvCs11hf3hE7mDA_19range_witness_costs53fixed_descriptive_capture_and_direct_scan_reuse_costs0INtNtNtCsg3O1AWWDtD0_4core3ops8function6FnOnceuE9call_onceB6_
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RINvCscO0Syu2iFtE_4test28___rust_begin_short_backtraceINtNtCsg3O1AWWDtD0_4core6result6ResultuNtNtCs2mBL6TZy0y2_5alloc6string6StringEFEBQ_EB2_
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNCNvCscO0Syu2iFtE_4test8run_test0B3_
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RINvNtNtCsjr6MQCPf0hc_3std3sys9backtrace28___rust_begin_short_backtraceNCNvCscO0Syu2iFtE_4test8run_tests_0uEB1b_
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNSNvYNCINvNtNtCsjr6MQCPf0hc_3std6thread9lifecycle15spawn_uncheckedNCNvCscO0Syu2iFtE_4test8run_tests_0uEs_0INtNtNtCsg3O1AWWDtD0_4core3ops8function6FnOnceuE9call_once6vtableB17_
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNvNvMs0_NtNtNtCsjr6MQCPf0hc_3std3sys6thread4unixNtB7_6Thread3new12thread_start
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    start_thread
+      at ./nptl/pthread_create.c:454
+      in /usr/lib/x86_64-linux-gnu/libc.so.6
+    __clone3
+      at ../sysdeps/unix/sysv/linux/x86_64/clone3.S:78
+      in /usr/lib/x86_64-linux-gnu/libc.so.6
+
+1.02K peak memory consumed over 1 calls from
+_RNCINvMs0_NtNtCsjr6MQCPf0hc_3std4sync4onceNtB8_4Once15call_once_forceNCINvMNtBa_9once_lockINtB1b_8OnceLockINtNtBa_14reentrant_lock13ReentrantLockINtNtCsg3O1AWWDtD0_4core4cell7RefCellINtNtNtNtCs2mBL6TZy0y2_5alloc2io8buffered10linewriter10LineWriterNtNtNtBc_2io5stdio9StdoutRawEEEE10initializeNCINvB1a_11get_or_initNCNvB3Z_6stdout0E0zE0E0Bc_.llvm.3668188353032033200
+  in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+1.02K consumed over 1 calls from:
+    _RNvMs0_NtNtNtNtCsjr6MQCPf0hc_3std3sys4sync4once5futexNtB5_4Once4call
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RINvMNtNtCsjr6MQCPf0hc_3std4sync9once_lockINtB3_8OnceLockINtNtB5_14reentrant_lock13ReentrantLockINtNtCsg3O1AWWDtD0_4core4cell7RefCellINtNtNtNtCs2mBL6TZy0y2_5alloc2io8buffered10linewriter10LineWriterNtNtNtB7_2io5stdio9StdoutRawEEEE10initializeNCINvB2_11get_or_initNCNvB3c_6stdout0E0zEB7_.llvm.3668188353032033200
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNvNtCscO0Syu2iFtE_4test7console17run_tests_console
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNvCscO0Syu2iFtE_4test16test_main_static
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RINvNtNtCsjr6MQCPf0hc_3std3sys9backtrace28___rust_begin_short_backtraceFEuuECs11hf3hE7mDA_19range_witness_costs
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNCINvNtCsjr6MQCPf0hc_3std2rt10lang_startuE0Cs11hf3hE7mDA_19range_witness_costs
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNvNtCsjr6MQCPf0hc_3std2rt19lang_start_internal
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    main
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+
+
+MOST TEMPORARY ALLOCATIONS
+17 temporary allocations of 57 allocations in total (29.82%) from
+_RNvXsH_Cs8v6Vxq2exiQ_7getoptsNtB5_8OptGroupNtNtCsg3O1AWWDtD0_4core5clone5Clone5clone
+  in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+17 temporary allocations of 24 allocations in total (70.83%) from:
+    _RNvMs3_Cs8v6Vxq2exiQ_7getoptsNtB5_8OptGroup13long_to_short
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNvNtCscO0Syu2iFtE_4test3cli10parse_opts
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNvCscO0Syu2iFtE_4test16test_main_static
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RINvNtNtCsjr6MQCPf0hc_3std3sys9backtrace28___rust_begin_short_backtraceFEuuECs11hf3hE7mDA_19range_witness_costs
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNCINvNtCsjr6MQCPf0hc_3std2rt10lang_startuE0Cs11hf3hE7mDA_19range_witness_costs
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNvNtCsjr6MQCPf0hc_3std2rt19lang_start_internal
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    main
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+
+17 temporary allocations of 24 allocations in total (70.83%) from
+_RNvMs4_Cs8v6Vxq2exiQ_7getoptsNtB5_7Matches8opt_vals
+  in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+1 temporary allocations of 1 allocations in total (100.00%) from:
+    _RNvNtCscO0Syu2iFtE_4test3cli10parse_opts
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNvCscO0Syu2iFtE_4test16test_main_static
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RINvNtNtCsjr6MQCPf0hc_3std3sys9backtrace28___rust_begin_short_backtraceFEuuECs11hf3hE7mDA_19range_witness_costs
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNCINvNtCsjr6MQCPf0hc_3std2rt10lang_startuE0Cs11hf3hE7mDA_19range_witness_costs
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNvNtCsjr6MQCPf0hc_3std2rt19lang_start_internal
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    main
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+1 temporary allocations of 1 allocations in total (100.00%) from:
+    _RNvMs4_Cs8v6Vxq2exiQ_7getoptsNtB5_7Matches11opt_present
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNvNtCscO0Syu2iFtE_4test3cli10parse_opts
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNvCscO0Syu2iFtE_4test16test_main_static
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RINvNtNtCsjr6MQCPf0hc_3std3sys9backtrace28___rust_begin_short_backtraceFEuuECs11hf3hE7mDA_19range_witness_costs
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNCINvNtCsjr6MQCPf0hc_3std2rt10lang_startuE0Cs11hf3hE7mDA_19range_witness_costs
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNvNtCsjr6MQCPf0hc_3std2rt19lang_start_internal
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    main
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+1 temporary allocations of 1 allocations in total (100.00%) from:
+    _RNvMs4_Cs8v6Vxq2exiQ_7getoptsNtB5_7Matches11opt_present
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNvNtCscO0Syu2iFtE_4test3cli10parse_opts
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNvCscO0Syu2iFtE_4test16test_main_static
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RINvNtNtCsjr6MQCPf0hc_3std3sys9backtrace28___rust_begin_short_backtraceFEuuECs11hf3hE7mDA_19range_witness_costs
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNCINvNtCsjr6MQCPf0hc_3std2rt10lang_startuE0Cs11hf3hE7mDA_19range_witness_costs
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNvNtCsjr6MQCPf0hc_3std2rt19lang_start_internal
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    main
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+1 temporary allocations of 1 allocations in total (100.00%) from:
+    _RNvMs4_Cs8v6Vxq2exiQ_7getoptsNtB5_7Matches11opt_present
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNvNtCscO0Syu2iFtE_4test3cli10parse_opts
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNvCscO0Syu2iFtE_4test16test_main_static
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RINvNtNtCsjr6MQCPf0hc_3std3sys9backtrace28___rust_begin_short_backtraceFEuuECs11hf3hE7mDA_19range_witness_costs
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNCINvNtCsjr6MQCPf0hc_3std2rt10lang_startuE0Cs11hf3hE7mDA_19range_witness_costs
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNvNtCsjr6MQCPf0hc_3std2rt19lang_start_internal
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    main
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+1 temporary allocations of 1 allocations in total (100.00%) from:
+    _RNvMs4_Cs8v6Vxq2exiQ_7getoptsNtB5_7Matches11opt_present
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNvNtCscO0Syu2iFtE_4test3cli10parse_opts
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNvCscO0Syu2iFtE_4test16test_main_static
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RINvNtNtCsjr6MQCPf0hc_3std3sys9backtrace28___rust_begin_short_backtraceFEuuECs11hf3hE7mDA_19range_witness_costs
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNCINvNtCsjr6MQCPf0hc_3std2rt10lang_startuE0Cs11hf3hE7mDA_19range_witness_costs
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNvNtCsjr6MQCPf0hc_3std2rt19lang_start_internal
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    main
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+  and 12B from 19 other places
+
+4 temporary allocations of 4 allocations in total (100.00%) from
+_RNvNvNtCs2mBL6TZy0y2_5alloc3fmt6format12format_inner
+  in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+1 temporary allocations of 1 allocations in total (100.00%) from:
+    _RNvXs_NtNtCscO0Syu2iFtE_4test10formatters6prettyINtB4_15PrettyFormatterNtNtNtCsjr6MQCPf0hc_3std2io5stdio6StdoutENtB6_15OutputFormatter15write_run_startB8_
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNCNvNtCscO0Syu2iFtE_4test7console17run_tests_consoles0_0B5_
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNvNtCscO0Syu2iFtE_4test7console17run_tests_console
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNvCscO0Syu2iFtE_4test16test_main_static
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RINvNtNtCsjr6MQCPf0hc_3std3sys9backtrace28___rust_begin_short_backtraceFEuuECs11hf3hE7mDA_19range_witness_costs
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNCINvNtCsjr6MQCPf0hc_3std2rt10lang_startuE0Cs11hf3hE7mDA_19range_witness_costs
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNvNtCsjr6MQCPf0hc_3std2rt19lang_start_internal
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    main
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+1 temporary allocations of 1 allocations in total (100.00%) from:
+    _RNvMNtNtCscO0Syu2iFtE_4test10formatters6prettyINtB2_15PrettyFormatterNtNtNtCsjr6MQCPf0hc_3std2io5stdio6StdoutE15write_test_nameB6_
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNCNvNtCscO0Syu2iFtE_4test7console17run_tests_consoles0_0B5_
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNvNtCscO0Syu2iFtE_4test7console17run_tests_console
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNvCscO0Syu2iFtE_4test16test_main_static
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RINvNtNtCsjr6MQCPf0hc_3std3sys9backtrace28___rust_begin_short_backtraceFEuuECs11hf3hE7mDA_19range_witness_costs
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNCINvNtCsjr6MQCPf0hc_3std2rt10lang_startuE0Cs11hf3hE7mDA_19range_witness_costs
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNvNtCsjr6MQCPf0hc_3std2rt19lang_start_internal
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    main
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+1 temporary allocations of 1 allocations in total (100.00%) from:
+    _RNvXs_NtNtCscO0Syu2iFtE_4test10formatters6prettyINtB4_15PrettyFormatterNtNtNtCsjr6MQCPf0hc_3std2io5stdio6StdoutENtB6_15OutputFormatter16write_run_finishB8_
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNvNtCscO0Syu2iFtE_4test7console17run_tests_console
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNvCscO0Syu2iFtE_4test16test_main_static
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RINvNtNtCsjr6MQCPf0hc_3std3sys9backtrace28___rust_begin_short_backtraceFEuuECs11hf3hE7mDA_19range_witness_costs
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNCINvNtCsjr6MQCPf0hc_3std2rt10lang_startuE0Cs11hf3hE7mDA_19range_witness_costs
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNvNtCsjr6MQCPf0hc_3std2rt19lang_start_internal
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    main
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+1 temporary allocations of 1 allocations in total (100.00%) from:
+    _RNvXs_NtNtCscO0Syu2iFtE_4test10formatters6prettyINtB4_15PrettyFormatterNtNtNtCsjr6MQCPf0hc_3std2io5stdio6StdoutENtB6_15OutputFormatter16write_run_finishB8_
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNvNtCscO0Syu2iFtE_4test7console17run_tests_console
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNvCscO0Syu2iFtE_4test16test_main_static
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RINvNtNtCsjr6MQCPf0hc_3std3sys9backtrace28___rust_begin_short_backtraceFEuuECs11hf3hE7mDA_19range_witness_costs
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNCINvNtCsjr6MQCPf0hc_3std2rt10lang_startuE0Cs11hf3hE7mDA_19range_witness_costs
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNvNtCsjr6MQCPf0hc_3std2rt19lang_start_internal
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    main
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+
+2 temporary allocations of 3 allocations in total (66.67%) from
+_RNvMs5_NtCs2mBL6TZy0y2_5alloc7raw_vecNtB5_11RawVecInner11finish_growB7_.llvm.15288140286092161802
+  in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+1 temporary allocations of 1 allocations in total (100.00%) from:
+    _RINvNvMs2_NtCs2mBL6TZy0y2_5alloc7raw_vecINtB8_11RawVecInnerpE7reserve21do_reserve_and_handleNtNtBa_5alloc6GlobalEBa_
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNvXsZ_NtCs2mBL6TZy0y2_5alloc6stringNtB5_6StringNtNtCsg3O1AWWDtD0_4core3fmt5Write9write_str
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNvNtCsg3O1AWWDtD0_4core3fmt5write
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNvNvNtCs2mBL6TZy0y2_5alloc3fmt6format12format_inner
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNvMNtNtCscO0Syu2iFtE_4test10formatters6prettyINtB2_15PrettyFormatterNtNtNtCsjr6MQCPf0hc_3std2io5stdio6StdoutE15write_test_nameB6_
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNCNvNtCscO0Syu2iFtE_4test7console17run_tests_consoles0_0B5_
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNvNtCscO0Syu2iFtE_4test7console17run_tests_console
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNvCscO0Syu2iFtE_4test16test_main_static
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RINvNtNtCsjr6MQCPf0hc_3std3sys9backtrace28___rust_begin_short_backtraceFEuuECs11hf3hE7mDA_19range_witness_costs
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNCINvNtCsjr6MQCPf0hc_3std2rt10lang_startuE0Cs11hf3hE7mDA_19range_witness_costs
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNvNtCsjr6MQCPf0hc_3std2rt19lang_start_internal
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    main
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+1 temporary allocations of 1 allocations in total (100.00%) from:
+    _RINvNvMs2_NtCs2mBL6TZy0y2_5alloc7raw_vecINtB8_11RawVecInnerpE7reserve21do_reserve_and_handleNtNtBa_5alloc6GlobalEBa_
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNvXsZ_NtCs2mBL6TZy0y2_5alloc6stringNtB5_6StringNtNtCsg3O1AWWDtD0_4core3fmt5Write9write_str
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNvNtCsg3O1AWWDtD0_4core3fmt5write
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNvNvNtCs2mBL6TZy0y2_5alloc3fmt6format12format_inner
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNvMNtNtCscO0Syu2iFtE_4test10formatters6prettyINtB2_15PrettyFormatterNtNtNtCsjr6MQCPf0hc_3std2io5stdio6StdoutE15write_test_nameB6_
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNCNvNtCscO0Syu2iFtE_4test7console17run_tests_consoles0_0B5_
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNvNtCscO0Syu2iFtE_4test7console17run_tests_console
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNvCscO0Syu2iFtE_4test16test_main_static
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RINvNtNtCsjr6MQCPf0hc_3std3sys9backtrace28___rust_begin_short_backtraceFEuuECs11hf3hE7mDA_19range_witness_costs
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNCINvNtCsjr6MQCPf0hc_3std2rt10lang_startuE0Cs11hf3hE7mDA_19range_witness_costs
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNvNtCsjr6MQCPf0hc_3std2rt19lang_start_internal
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    main
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+
+1 temporary allocations of 1 allocations in total (100.00%) from
+_RINvNtNtNtCsg3O1AWWDtD0_4core5slice4sort6stable14driftsort_mainTyTyINtNtCs2mBL6TZy0y2_5alloc3vec3VechEEENCINvMNtB18_5sliceSBZ_7sort_byNCINvXs1o_NtNtNtB18_11collections5btree3mapINtB2i_8BTreeMapyB11_EINtNtNtNtB8_4iter6traits7collect12FromIteratorBZ_E9from_iterINtNtNtB3i_8adapters3map3MapINtNtNtB8_3ops5range5RangeyENCNvCs11hf3hE7mDA_19range_witness_costss_53fixed_descriptive_capture_and_direct_scan_reuse_costs0EE0E0IB14_BZ_EEB57_
+  in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+1 temporary allocations of 1 allocations in total (100.00%) from:
+    _RNvCs11hf3hE7mDA_19range_witness_costss_53fixed_descriptive_capture_and_direct_scan_reuse_costs
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNvYNCNvCs11hf3hE7mDA_19range_witness_costs53fixed_descriptive_capture_and_direct_scan_reuse_costs0INtNtNtCsg3O1AWWDtD0_4core3ops8function6FnOnceuE9call_onceB6_
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RINvCscO0Syu2iFtE_4test28___rust_begin_short_backtraceINtNtCsg3O1AWWDtD0_4core6result6ResultuNtNtCs2mBL6TZy0y2_5alloc6string6StringEFEBQ_EB2_
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNCNvCscO0Syu2iFtE_4test8run_test0B3_
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RINvNtNtCsjr6MQCPf0hc_3std3sys9backtrace28___rust_begin_short_backtraceNCNvCscO0Syu2iFtE_4test8run_tests_0uEB1b_
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNSNvYNCINvNtNtCsjr6MQCPf0hc_3std6thread9lifecycle15spawn_uncheckedNCNvCscO0Syu2iFtE_4test8run_tests_0uEs_0INtNtNtCsg3O1AWWDtD0_4core3ops8function6FnOnceuE9call_once6vtableB17_
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNvNvMs0_NtNtNtCsjr6MQCPf0hc_3std3sys6thread4unixNtB7_6Thread3new12thread_start
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    start_thread
+      at ./nptl/pthread_create.c:454
+      in /usr/lib/x86_64-linux-gnu/libc.so.6
+    __clone3
+      at ../sysdeps/unix/sysv/linux/x86_64/clone3.S:78
+      in /usr/lib/x86_64-linux-gnu/libc.so.6
+
+1 temporary allocations of 341 allocations in total (0.29%) from
+_RNvCs11hf3hE7mDA_19range_witness_costss_53fixed_descriptive_capture_and_direct_scan_reuse_costs
+  in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+1 temporary allocations of 2 allocations in total (50.00%) from:
+    _RNvYNCNvCs11hf3hE7mDA_19range_witness_costs53fixed_descriptive_capture_and_direct_scan_reuse_costs0INtNtNtCsg3O1AWWDtD0_4core3ops8function6FnOnceuE9call_onceB6_
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RINvCscO0Syu2iFtE_4test28___rust_begin_short_backtraceINtNtCsg3O1AWWDtD0_4core6result6ResultuNtNtCs2mBL6TZy0y2_5alloc6string6StringEFEBQ_EB2_
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNCNvCscO0Syu2iFtE_4test8run_test0B3_
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RINvNtNtCsjr6MQCPf0hc_3std3sys9backtrace28___rust_begin_short_backtraceNCNvCscO0Syu2iFtE_4test8run_tests_0uEB1b_
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNSNvYNCINvNtNtCsjr6MQCPf0hc_3std6thread9lifecycle15spawn_uncheckedNCNvCscO0Syu2iFtE_4test8run_tests_0uEs_0INtNtNtCsg3O1AWWDtD0_4core3ops8function6FnOnceuE9call_once6vtableB17_
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNvNvMs0_NtNtNtCsjr6MQCPf0hc_3std3sys6thread4unixNtB7_6Thread3new12thread_start
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    start_thread
+      at ./nptl/pthread_create.c:454
+      in /usr/lib/x86_64-linux-gnu/libc.so.6
+    __clone3
+      at ../sysdeps/unix/sysv/linux/x86_64/clone3.S:78
+      in /usr/lib/x86_64-linux-gnu/libc.so.6
+  and 0B from 30 other places
+
+1 temporary allocations of 1 allocations in total (100.00%) from
+0x7d49aa8bf8f6
+  in /usr/lib/x86_64-linux-gnu/libstdc++.so.6
+1 temporary allocations of 1 allocations in total (100.00%) from:
+    call_init
+      at ./elf/dl-init.c:74
+      in /lib64/ld-linux-x86-64.so.2
+    _dl_init::call_init
+      at ./elf/dl-init.c:120
+      in /lib64/ld-linux-x86-64.so.2
+    _dl_init
+      at ./elf/./elf/dl-init.c:121
+    _dl_start_user
+      in /lib64/ld-linux-x86-64.so.2
+
+1 temporary allocations of 1 allocations in total (100.00%) from
+__GI___getdelim
+  at ./libio/iogetdelim.c:111
+  in /usr/lib/x86_64-linux-gnu/libc.so.6
+1 temporary allocations of 1 allocations in total (100.00%) from:
+    __pthread_getattr_np
+      at ./nptl/pthread_getattr_np.c:122
+      in /usr/lib/x86_64-linux-gnu/libc.so.6
+    _RNvNtCsjr6MQCPf0hc_3std2rt19lang_start_internal
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    main
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+
+1 temporary allocations of 2 allocations in total (50.00%) from
+_RNvMs4_NtCscO0Syu2iFtE_4test5typesNtB5_8TestDesc11padded_name
+  in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+1 temporary allocations of 1 allocations in total (100.00%) from:
+    _RNvMNtNtCscO0Syu2iFtE_4test10formatters6prettyINtB2_15PrettyFormatterNtNtNtCsjr6MQCPf0hc_3std2io5stdio6StdoutE15write_test_nameB6_
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNCNvNtCscO0Syu2iFtE_4test7console17run_tests_consoles0_0B5_
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNvNtCscO0Syu2iFtE_4test7console17run_tests_console
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNvCscO0Syu2iFtE_4test16test_main_static
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RINvNtNtCsjr6MQCPf0hc_3std3sys9backtrace28___rust_begin_short_backtraceFEuuECs11hf3hE7mDA_19range_witness_costs
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNCINvNtCsjr6MQCPf0hc_3std2rt10lang_startuE0Cs11hf3hE7mDA_19range_witness_costs
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    _RNvNtCsjr6MQCPf0hc_3std2rt19lang_start_internal
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+    main
+      in /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs
+
+
+total runtime: 0.09s.
+calls to allocation functions: 2552 (28674/s)
+temporary memory allocations: 45 (505/s)
+peak heap memory consumption: 6.43M
+peak RSS (including heaptrack overhead): 11.63M
+total memory leaked: 948B

@@ -1,0 +1,133 @@
+{
+  "schema": "fa.execution_receipt/1",
+  "date": "2026-09-08",
+  "base_commit": "6cd2562a19bef110710b527cb423fd37d1add86d",
+  "source_inputs": "artifacts/execution/2026-09-08-range-witness-gate1-inputs.json",
+  "source_sha256": {
+    ".beads/issues.jsonl": "394badf1560590781588557bef9bc6c962bc69b5876fbee297a6fcda5c2acd0a",
+    "crates/fa-reference/src/witness.rs": "e023df45eba0bfab0d094739dbf1cd4d785505ab08e03cdc1d26f5526361f02d",
+    "registry/dependency_policy.json": "cc360ffc446932d401c7dddfae86bc5049b71b0319288e659a77c0ab6c74f59d",
+    "registry/roadmap.json": "0951218461fee97400e88747addedb1bd710c02ea3bc7e973359793c0dec32d4",
+    "registry/source_snapshot.json": "d7e96acf1153fbe759396e079f627350082fbb1f0d046e63c9594322c623d2de",
+    "crates/fa-reference/tests/range_witness_boundaries.rs": "85038e5ea857281da86f122d8cf7685f24861dad845b58317ddd53318f518cbe",
+    "crates/fa-reference/tests/range_witness_exhaustive.rs": "8c986f791af5e572536040935e92b8f4eb89c2da8160ac23a447aca43e47d8e0",
+    "crates/fa-reference/tests/range_witness_costs.rs": "f5aa9024c0d0ff0d1a380c3b5cc6e1f3260507d11153d31e81d8c1e053255360"
+  },
+  "reviewed_source_files": 175,
+  "result": {
+    "format": "passed",
+    "check": "passed",
+    "clippy": "passed; warnings denied",
+    "tests": {
+      "reference_unit": 105,
+      "reference_integration": 156,
+      "xtask": 242,
+      "doctests": 8,
+      "total_passed": 511,
+      "failed": 0,
+      "ignored": 0,
+      "filtered": 0
+    },
+    "exit_code": 0
+  },
+  "full_gate": {
+    "job": "j-30004650170124459",
+    "worker": "vmi1149989",
+    "remote_exit_code": 0
+  },
+  "compiler": {
+    "toolchain": "nightly-2026-09-08",
+    "rustc_commit": "cea272fa356e94bd2ee2cadf376630aa0683867a"
+  },
+  "scope": "FA059 exact finite half-open EmptyRange and RangeMembers witnesses over bounded caller-trusted domain snapshots. Actual ordered scans retain exact key/version/value membership and compare current membership; closure is checked on capture and reuse. Exact Closed marker controls succeed while Unknown, unrecorded tails and declared ConservativeSummary completeness evidence refuse. The summary negative checks evidence-kind admission, not summary computation or soundness. No adapter authentication, database, production cache, authority or effect.",
+  "limits": {
+    "profile": "Finite half-open [start,end), start<end; ranges cannot include u64::MAX. Point witnesses retain their separate maximum-key support.",
+    "snapshot_entries": 256,
+    "value_bytes_per_entry": 8192,
+    "requests": 64,
+    "aggregate_range_members": 256,
+    "aggregate_range_value_bytes": 2097152,
+    "scope": "Count and checked-sum retained range members before cloning. Overlapping requests count each retained occurrence. Entry-cap one-over is independently reachable; the aggregate value-byte guard is redundant under valid entry/value bounds and is not claimed independently exercised. Completed Reuse exposes logical visited member/byte counts; Err exposes no partial cost."
+  },
+  "differential": "Independent public BTreeMap scans recompute exact bounded empty/member predicates, interior/exclusive endpoints, insert/delete/version/same-version byte mutations, unrelated keys, closure loss and finite u64 edges. No helper/model/production-permission count.",
+  "causal_mutations": [
+    {
+      "kind": "empty",
+      "job": "j-30004650170124461",
+      "remote_exit_code": 101,
+      "scope": "Suppress interior empty-range membership on reuse. Unchanged exact closure control passes; first inserted [0,1) member returns StillValid and independent scan assertion fails.",
+      "log": "artifacts/execution/2026-09-08-range-witness-counterexample-empty1.log"
+    },
+    {
+      "kind": "value",
+      "job": "j-30004650170124462",
+      "remote_exit_code": 101,
+      "scope": "Ignore only member value bytes. Unrelated reuse and insert/delete/version invalidation controls pass; same-version changed bytes fail the exact-membership assertion.",
+      "log": "artifacts/execution/2026-09-08-range-witness-counterexample-value1.log"
+    }
+  ],
+  "costs": {
+    "job": "j-30004650170124460",
+    "fixed_cases": 9,
+    "samples_per_case": 6,
+    "total_fixed_timed_samples": 54,
+    "scope": "Actual capture, stable/insert/delete/value/unrelated reuse, incomplete capture refusal, exact2MiB capture and independent exact recomputation. Request/fixture/snapshot/frontier setup and output assertions excluded. Printed durations are per-case sums across6samples, not individual distributions. Combined first-capture test earns no sole-process credit. Logical stable scanned/direct recomputed bytes6 and maximum retained2097152 are not allocation/byte movement."
+  },
+  "first_operation": {
+    "job": "j-30004650170124463",
+    "samples": 1,
+    "elapsed_ns": 3125,
+    "scope": "Sole selected first RangeMembers capture in fresh release process; setup/assertions excluded, no preflight or OS/page-cache/CPU cold claim."
+  },
+  "allocation": {
+    "profile_job": "j-30004650170124464",
+    "baseline_job": "j-30004650170124465",
+    "worker": "vmi1227854",
+    "profiler": "heaptrack1.5.0",
+    "whole_process_allocation_calls": 2552,
+    "same_binary_zero_test_baseline_calls": 185,
+    "inclusive_witness_frame_calls": 1683,
+    "baseline_witness_frame_calls": 0,
+    "binary_identity": "artifacts/execution/2026-09-08-range-witness-profile-binary-identity.json",
+    "scope": "Exact release binary unchanged on both workers; nine fixed cases only. Same-length unmatched-filter baseline selects zero tests and receives no passing-test credit. Whole-process calls include fixtures/harness; inclusive attribution may miss inlining. No per-case allocations, allocated bytes, leak, peak heap or RSS claim."
+  },
+  "nonclaims": [
+    "No summary algorithm, helper inference, actual adapter authentication, database integration, production dispatch, runtime admission or release.",
+    "FA069 isolated physical-plan work excluded.",
+    "No production invariant activation; prior receipts remain dated and do not qualify changed source."
+  ],
+  "artifact_sha256": {
+    "artifacts/execution/2026-09-08-range-witness-gate1-inputs.json": "ae9cca553b866c570042dd96a156f0b7cb2862cfffebd574717c521abb36bb83",
+    "artifacts/execution/2026-09-08-range-witness-gate1.json": "ad96cf202006d7971e2957ab4d7044c7d7d10fb08021080de098b7f4a12fc128",
+    "artifacts/execution/2026-09-08-range-witness-gate1.log": "e6ab724a93929417a5a45fdf027adce476d11f6a68564fdb731c63de79569bcc",
+    "artifacts/execution/2026-09-08-range-witness-costs1-inputs.json": "d070cc639e19fc7d695fd503113aee204e9d5addc9effa7388befacfdaa5eb48",
+    "artifacts/execution/2026-09-08-range-witness-costs1.json": "f55fdf9063e34af14c35a05a9819cb6fdef93e23813ccf0f6d9d47d8b2576c87",
+    "artifacts/execution/2026-09-08-range-witness-costs1.log": "a5ed990b575d0b8eee2359ba7d44b040064113f2bfd86dc831c8f69e750cbbc1",
+    "artifacts/execution/2026-09-08-range-witness-counterexample-empty1-baseline-tests.patch": "2f4b657e32dffe1936da5b298dd9a70a9df41527f7c87a567262eabc2f2329e4",
+    "artifacts/execution/2026-09-08-range-witness-counterexample-empty1-inputs.json": "8125bbd6759dd2044bebd5b7ad131a56123b2e4c7f7fdaccc4b939b8ffae5f76",
+    "artifacts/execution/2026-09-08-range-witness-counterexample-empty1.json": "1917b3573df51f85e75150e6d4c377faa02396fec021c9d07a45068037b203e6",
+    "artifacts/execution/2026-09-08-range-witness-counterexample-empty1.log": "b6a885762b5cba0456b9daeae7a1f369fd3a7ff3831e9af7b530e9e2caf62da0",
+    "artifacts/execution/2026-09-08-range-witness-counterexample-value1-baseline-tests.patch": "e5e56610ed283a67ea2112ae629f03dd344216e866274bdad32e0f9bab90747c",
+    "artifacts/execution/2026-09-08-range-witness-counterexample-value1-inputs.json": "49f4e2d8544a5444ad21f11a48cfa3433a0e6752b8fa77d538c725e44dbf84ef",
+    "artifacts/execution/2026-09-08-range-witness-counterexample-value1.json": "ba21ed21fef7072c5c71df1e765d7ec6a26fbb7315946a748a2aadf46640d16c",
+    "artifacts/execution/2026-09-08-range-witness-counterexample-value1.log": "e47d0362b3e60c2b4a7e11b59b9557dce108033fbdb212549119535287a59ac5",
+    "artifacts/execution/2026-09-08-range-witness-cold-range_witness_costs1-inputs.json": "2be0cbf0eaae95395046fd1d14262094d5cf0e6c52440015b917fccf0464ea01",
+    "artifacts/execution/2026-09-08-range-witness-cold-range_witness_costs1.json": "e799b18d247b4617384ced4ccec8d5819d825b2b50e88b18445fc475e82d78ff",
+    "artifacts/execution/2026-09-08-range-witness-cold-range_witness_costs1.log": "6d7ddb198ec2b8b4513e045c61f71613605bb9f49e5eb6b4227607be3c549c3a",
+    "artifacts/execution/2026-09-08-range-witness-heap-range_witness_costs-baseline1-inputs.json": "6d3e8d66fd24b1ac12675f62a559ad68f44f7ff098d086f19e9ba2698c38b210",
+    "artifacts/execution/2026-09-08-range-witness-heap-range_witness_costs-baseline1-report.txt": "4a645bf4caa756abe758b0373d62ab857a47b145d103061dedb356eb5f8a2248",
+    "artifacts/execution/2026-09-08-range-witness-heap-range_witness_costs-baseline1.json": "0188c8498ca20d96167e13a9bea876fdadcfc46a14b09560fb605c4eebb42147",
+    "artifacts/execution/2026-09-08-range-witness-heap-range_witness_costs-baseline1.log": "3778b6c8de26935a99f5425da4cf7b50b4b65d57155217a33fe0b881af042db9",
+    "artifacts/execution/2026-09-08-range-witness-heap-range_witness_costs-baseline1.stacks": "9f463f4652de1f3edb7a447e540aa67f2f394c32c1c86b4605fd35f47bf1f3cb",
+    "artifacts/execution/2026-09-08-range-witness-heap-range_witness_costs-baseline1.zst": "3cf950c1d30a6a48ee72dfd89b2aaf8c96773abe13ab23eac391f17e59c40fd0",
+    "artifacts/execution/2026-09-08-range-witness-heap-range_witness_costs-profile1-inputs.json": "28df39a6d4d02daf425a1998be38331935bfd2f761c04b9d5e4bb1451044550e",
+    "artifacts/execution/2026-09-08-range-witness-heap-range_witness_costs-profile1-report.txt": "4e8381d0abcdc7b8e43e23b6800882c67934a6338f2be35455a08878419173a7",
+    "artifacts/execution/2026-09-08-range-witness-heap-range_witness_costs-profile1.json": "eb286babf816eb0ec9cf63410fc2c1dc7cbe3a1254ef26bf1f8565d10c34c072",
+    "artifacts/execution/2026-09-08-range-witness-heap-range_witness_costs-profile1.log": "8ddca3a40b5dba905b014cdd59bbcbda0e3018715ce0487f6c5ccc4106a585ca",
+    "artifacts/execution/2026-09-08-range-witness-heap-range_witness_costs-profile1.stacks": "4a51d4ef021847ae6965ba820af115abe4798684c4892d5b91596e05957823a4",
+    "artifacts/execution/2026-09-08-range-witness-heap-range_witness_costs-profile1.zst": "85a11db0eb6e822a9186dcd263bc89ef354602837877d2154388cb313f59aa91",
+    "artifacts/execution/2026-09-08-range-witness-profile-binary-identity.json": "1db492d66c029481508a3351047531b8abddae867c644405d660ba42956a49d3",
+    "artifacts/execution/2026-09-08-range-witness-profile-verified.json": "e3ec4cef7b4f9915f3ec735cae250d2634191cd8855a5fc32711bf9715bcd1c8"
+  },
+  "qualification_note": "First final-documentation gate refused missing result.exit_code in this root-generated receipt. Added the actual successful gate1 exit code, without changing source, test counts or admission logic; failed final1 retained separately."
+}

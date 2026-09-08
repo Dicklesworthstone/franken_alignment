@@ -1,0 +1,64 @@
+  [2m2026-09-08T10:03:45.627713Z[0m [32m INFO[0m [1;32mrch::hook[0m[32m: [32mSelected worker: vmi1227854 at root@109.123.245.77 (4 slots remaining after reservation, speed 71.7)[0m
+    [2;3mat[0m rch/src/hook.rs:2645 [2;3mon[0m ThreadId(1)
+
+[*] Job j-30004650170124464 submitted to vmi1227854 (4 slots remaining, speed 71.7)
+  [2m2026-09-08T10:03:45.662721Z[0m [32m INFO[0m [1;32mrch::hook::transfer_orchestration[0m[32m: [32mStarting remote compilation pipeline for franken_alignment_wave8_gate1_20260908 (hash: 8645e2a1fdc36090)[0m
+    [2;3mat[0m rch/src/hook/transfer_orchestration.rs:510 [2;3mon[0m ThreadId(1)
+
+  [2m2026-09-08T10:03:45.662751Z[0m [32m INFO[0m [1;32mrch::hook::transfer_orchestration[0m[32m: [32mPrepared dependency sync manifest for 1 roots[0m
+    [2;3mat[0m rch/src/hook/transfer_orchestration.rs:532 [2;3mon[0m ThreadId(1)
+
+  [2m2026-09-08T10:03:46.912073Z[0m [32m INFO[0m [1;32mrch::hook::transfer_orchestration[0m[32m: [32mSyncing project to worker vmi1227854...[0m
+    [2;3mat[0m rch/src/hook/transfer_orchestration.rs:661 [2;3mon[0m ThreadId(1)
+
+  [2m2026-09-08T10:03:46.912186Z[0m [32m INFO[0m [1;32mrch::transfer[0m[32m: [32mLinked git worktree detected at /Users/jemanuel/projects/franken_alignment_wave8_gate1_20260908 (gitdir: /Users/jemanuel/projects/franken_alignment/.git/worktrees/franken_alignment_wave8_gate1_20260908); excluding dangling '.git' file from upload so the remote build resolves git-free like a normal repo[0m
+    [2;3mat[0m rch/src/transfer.rs:2009 [2;3mon[0m ThreadId(1)
+
+  [2m2026-09-08T10:03:46.912201Z[0m [32m INFO[0m [1;32mrch::transfer[0m[32m: [32mSyncing /Users/jemanuel/projects/franken_alignment_wave8_gate1_20260908 -> /Users/jemanuel/projects/franken_alignment_wave8_gate1_20260908 on vmi1227854 (streaming)[0m
+    [2;3mat[0m rch/src/transfer.rs:3549 [2;3mon[0m ThreadId(1)
+
+  [2m2026-09-08T10:03:49.257936Z[0m [32m INFO[0m [1;32mrch::hook::transfer_orchestration[0m[32m: [32mSync complete: 824 files, 1635330 bytes in 2325ms[0m
+    [2;3mat[0m rch/src/hook/transfer_orchestration.rs:958 [2;3mon[0m ThreadId(1)
+
+  [2m2026-09-08T10:03:49.273030Z[0m [32m INFO[0m [1;32mrch::hook::transfer_orchestration[0m[32m: [32mExecuting command remotely: heaptrack --record-only -o /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs-profile /tmp/fa-campaign-20260908-wave8-profile/range_witness_costs --exact fixed_descriptive_capture_and_direct_scan_reuse_costs --nocapture '--test-threads=1'[0m
+    [2;3mat[0m rch/src/hook/transfer_orchestration.rs:1018 [2;3mon[0m ThreadId(1)
+
+  [2m2026-09-08T10:03:49.273114Z[0m [32m INFO[0m [1;32mrch::transfer[0m[32m: [32mWrapping command with external timeout protection, [1;32mkind[0m[32m: job, [1;32mtimeout_secs[0m[32m: 3600[0m
+    [2;3mat[0m rch/src/transfer.rs:2669 [2;3mon[0m ThreadId(1)
+
+Warning: Permanently added '109.123.245.77' (ED25519) to the list of known hosts.
+heaptrack output will be written to "/tmp/fa-campaign-20260908-wave8-profile/range_witness_costs-profile.zst"
+starting application, this might take some time...
+
+running 1 test
+NOTE: heaptrack detected DEBUGINFOD_URLS but will disable it to prevent 
+unintended network delays during recording
+If you really want to use DEBUGINFOD, export HEAPTRACK_ENABLE_DEBUGINFOD=1
+test fixed_descriptive_capture_and_direct_scan_reuse_costs ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 1 filtered out; finished in 0.09s
+
+FA059 descriptive samples: capture=6 stable=6 inserted=6 deleted=6 value=6 unrelated=6 incomplete_refusal=6 max_2MiB_capture=6 direct_recompute=6; elapsed_ns: capture=17577 stable=1993 inserted=501 deleted=391 value=370 unrelated=470 incomplete_refusal=4118 max_2MiB_capture=84167262 direct_recompute=9364; scope=timers cover only capture, reuse, or independent BTreeMap recompute and exclude request, fixture, snapshot, and frontier setup; logical_bytes: stable_scanned=6 direct_recomputed=6 max_retained=2097152; not a benchmark or SLO
+heaptrack stats:
+	allocations:          	2552
+	leaked allocations:   	4
+	temporary allocations:	43
+Heaptrack finished! Now run the following to investigate the data:
+
+  heaptrack --analyze "/tmp/fa-campaign-20260908-wave8-profile/range_witness_costs-profile.zst"
+  [2m2026-09-08T10:03:50.691512Z[0m [32m INFO[0m [1;32mrch::hook::transfer_orchestration[0m[32m: [32mRemote command finished: exit=0 in 1418ms[0m
+    [2;3mat[0m rch/src/hook/transfer_orchestration.rs:1150 [2;3mon[0m ThreadId(1)
+
+[W] Worker: vmi1227854 | Job: j-30004650170124464
+[T] Total: 3.7s (sync 2.3s, build 1.4s, artifacts --)
+^ Sync: 1.6 MB in 2.3s (686.9 KB/s)
+[C] Compile: 1.4s
+Artifacts: skipped
+[T] Cache: MISS
++------------ [OK] Build Successful ------------+
+| Duration: 1.4s (^ 6% slower vs previous 1.3s) |
+| Worker: vmi1227854                            |
+| Cache: MISS (warming cache)                   |
+| Time: 2026-09-08 10:03:50                     |
++-----------------------------------------------+
+[RCH] remote vmi1227854 (5.1s)
