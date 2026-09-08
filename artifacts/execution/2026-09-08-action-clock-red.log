@@ -1,0 +1,83 @@
+  [2m2026-09-08T04:50:58.237424Z[0m [32m INFO[0m [1;32mrch::hook[0m[32m: [32mSelected worker: vmi1227854 at root@109.123.245.77 (0 slots remaining after reservation, speed 71.7)[0m
+    [2;3mat[0m rch/src/hook.rs:2645 [2;3mon[0m ThreadId(1)
+
+[*] Job j-30004650170124314 submitted to vmi1227854 (0 slots remaining, speed 71.7)
+  [2m2026-09-08T04:50:59.402600Z[0m [32m INFO[0m [1;32mrch::hook::transfer_orchestration[0m[32m: [32mStarting remote compilation pipeline for franken_alignment_action_clock_red_20260908 (hash: f512875aab228695)[0m
+    [2;3mat[0m rch/src/hook/transfer_orchestration.rs:510 [2;3mon[0m ThreadId(1)
+
+  [2m2026-09-08T04:50:59.402669Z[0m [32m INFO[0m [1;32mrch::hook::transfer_orchestration[0m[32m: [32mPrepared dependency sync manifest for 1 roots[0m
+    [2;3mat[0m rch/src/hook/transfer_orchestration.rs:532 [2;3mon[0m ThreadId(1)
+
+  [2m2026-09-08T04:51:02.454796Z[0m [32m INFO[0m [1;32mrch::hook::transfer_orchestration[0m[32m: [32mSyncing project to worker vmi1227854...[0m
+    [2;3mat[0m rch/src/hook/transfer_orchestration.rs:661 [2;3mon[0m ThreadId(1)
+
+  [2m2026-09-08T04:51:13.620986Z[0m [32m INFO[0m [1;32mrch::transfer[0m[32m: [32mLinked git worktree detected at /Users/jemanuel/projects/franken_alignment_action_clock_red_20260908 (gitdir: /Users/jemanuel/projects/franken_alignment/.git/worktrees/franken_alignment_action_clock_red_20260908); excluding dangling '.git' file from upload so the remote build resolves git-free like a normal repo[0m
+    [2;3mat[0m rch/src/transfer.rs:2009 [2;3mon[0m ThreadId(1)
+
+  [2m2026-09-08T04:51:13.627233Z[0m [32m INFO[0m [1;32mrch::transfer[0m[32m: [32mSyncing /Users/jemanuel/projects/franken_alignment_action_clock_red_20260908 -> /data/tmp/rch/franken_alignment_action_clock_red_20260908/f512875aab228695 on vmi1227854 (streaming)[0m
+    [2;3mat[0m rch/src/transfer.rs:3549 [2;3mon[0m ThreadId(1)
+
+  [2m2026-09-08T04:51:17.283501Z[0m [32m INFO[0m [1;32mrch::hook::transfer_orchestration[0m[32m: [32mSync complete: 8 files, 5487340 bytes in 9102ms[0m
+    [2;3mat[0m rch/src/hook/transfer_orchestration.rs:958 [2;3mon[0m ThreadId(1)
+
+  [2m2026-09-08T04:51:17.325177Z[0m [32m INFO[0m [1;32mrch::hook::transfer_orchestration[0m[32m: [32mExecuting command remotely: cargo +nightly-2026-09-07 test --locked -p fa-reference --test action_boundaries -- --nocapture[0m
+    [2;3mat[0m rch/src/hook/transfer_orchestration.rs:1018 [2;3mon[0m ThreadId(1)
+
+  [2m2026-09-08T04:51:17.325257Z[0m [32m INFO[0m [1;32mrch::transfer[0m[32m: [32mRewriting CARGO_TARGET_DIR for remote execution (worker-scoped path): /Volumes/USB_NVME/cargo-target -> /data/tmp/rch/franken_alignment_action_clock_red_20260908/.rch-target-vmi1227854-pool-ecc4b9bdb006d4d380b33215b2b47c23[0m
+    [2;3mat[0m rch/src/transfer.rs:1842 [2;3mon[0m ThreadId(1)
+
+  [2m2026-09-08T04:51:17.325290Z[0m [32m INFO[0m [1;32mrch::transfer[0m[32m: [32mWrapping command with external timeout protection, [1;32mkind[0m[32m: cargo test, [1;32mtimeout_secs[0m[32m: 3600[0m
+    [2;3mat[0m rch/src/transfer.rs:2669 [2;3mon[0m ThreadId(1)
+
+Warning: Permanently added '109.123.245.77' (ED25519) to the list of known hosts.
+warning: unused field `license-file` in `workspace.package`
+ --> Cargo.toml:9:1
+  |
+9 | license-file = "LICENSE"
+  | ^^^^^^^^^^^^
+  |
+  = note: `cargo::unused_workspace_package_fields` is set to `warn` by default
+help: consider removing the field `workspace.package.license-file`
+warning: workspace (manifest) generated 1 warning
+   Compiling fa-reference v0.2.0 (/data/tmp/rch/franken_alignment_action_clock_red_20260908/f512875aab228695/crates/fa-reference)
+
+running 11 tests
+test attempt_limit_and_lifecycle_ordering_refuse_without_reserving_rights ... ok
+test action_permit_public_path_dispatches_once_and_keeps_rights_conserved ... ok
+test absent_target_and_wrong_scope_refuse_before_any_authority_can_reserve_rights ... ok
+test caller_clock_is_monotonic_and_an_observed_deadline_prevents_effects ... ok
+test authority_requires_an_explicit_clock_observation_before_preparation ... FAILED
+test every_exact_action_binding_component_refuses_a_near_identical_final_view ... ok
+test freeze_refuses_unknown_versions_zero_identities_and_oversized_payloads ... ok
+test declared_judgment_basis_and_current_witnesses_are_both_required_without_spending ... ok
+test issuer_brand_blocks_same_scope_authority_and_capacity_failure_is_atomic ... ok
+test stale_epoch_and_expiry_refuse_dispatch_without_changing_the_reservation ... ok
+test unknown_outcome_stays_charged_until_explicit_trusted_reconciliation ... ok
+
+failures:
+
+failures:
+    authority_requires_an_explicit_clock_observation_before_preparation
+
+test result: FAILED. 10 passed; 1 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 2.81s
+     Running tests/action_boundaries.rs (/data/tmp/rch/franken_alignment_action_clock_red_20260908/.rch-target-vmi1227854-pool-ecc4b9bdb006d4d380b33215b2b47c23/debug/build/fa-reference/c6af027cccaed371/out/action_boundaries-c6af027cccaed371)
+
+thread 'authority_requires_an_explicit_clock_observation_before_preparation' (257846) panicked at crates/fa-reference/tests/action_boundaries.rs:365:5:
+assertion `left == right` failed
+  left: Ok(())
+ right: Err(Incomplete)
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+error: test failed, to rerun pass `-p fa-reference --test action_boundaries`
+  [2m2026-09-08T04:51:22.700729Z[0m [32m INFO[0m [1;32mrch::hook::transfer_orchestration[0m[32m: [32mRemote command finished: exit=101 in 5374ms[0m
+    [2;3mat[0m rch/src/hook/transfer_orchestration.rs:1150 [2;3mon[0m ThreadId(1)
+
+[W] Worker: vmi1227854 | Job: j-30004650170124314
+[T] Total: 14.5s (sync 9.1s, build 5.4s, artifacts --)
+^ Sync: 5.2 MB in 9.1s (588.7 KB/s)
+[C] Compile: 5.4s
+Artifacts: skipped
+[T] Cache: MISS
+Warning: Permanently added '109.123.245.77' (ED25519) to the list of known hosts.
+[RCH] remote vmi1227854 failed (exit 101)

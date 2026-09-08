@@ -1,0 +1,1116 @@
+diff --git a/crates/fa-reference/src/action.rs b/crates/fa-reference/src/action.rs
+new file mode 100644
+index 0000000..9abb4cd
+--- /dev/null
++++ b/crates/fa-reference/src/action.rs
+@@ -0,0 +1,475 @@
++//! FA-001 executable action/permit semantics over the existing reference ledger.
++//!
++//! This is an in-memory oracle, not a broker. Target resolution, clock readings,
++//! snapshot completeness and trusted outcomes are caller-supplied facts. There
++//! is no external effect, durability, signature, canonical wire encoding or
++//! Asupersync purpose-context implementation here. Exact structural equality
++//! binds an action; a process-local issuer brand prevents cross-ledger tokens.
++
++use crate::{Effect, Error, Judgment, ReadWitness, Rights, Snapshot};
++use std::collections::BTreeMap;
++use std::rc::Rc;
++
++pub const VERSION: u32 = 1;
++pub const MAX_PAYLOAD_BYTES: usize = 65_536;
++pub const MAX_ATTEMPTS: usize = 1_024;
++pub const MAX_REQUIRED_WITNESSES: usize = 64;
++pub const MAX_WITNESS_BYTES: usize = 65_536;
++
++/// A caller-observed elapsed-clock tick, never a policy epoch or wall timestamp.
++#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, PartialOrd, Ord)]
++pub struct ElapsedTick(pub u64);
++
++#[derive(Clone, Copy, Debug, PartialEq, Eq)]
++pub enum Purpose {
++    Effect,
++    Experiment,
++}
++
++#[derive(Clone, Copy, Debug, PartialEq, Eq)]
++pub struct Scope {
++    pub tenant: u64,
++    pub principal: u64,
++    pub run: u64,
++    pub branch: u64,
++    pub authority: u64,
++    pub purpose: Purpose,
++}
++
++impl Scope {
++    fn validate(self) -> Result<(), Error> {
++        if [
++            self.tenant,
++            self.principal,
++            self.run,
++            self.branch,
++            self.authority,
++        ]
++        .contains(&0)
++        {
++            Err(Error::InvalidInput)
++        } else {
++            Ok(())
++        }
++    }
++}
++
++/// An already resolved reference identity, not an unchecked pathname or a
++/// claim that a filesystem/network adapter has actually resolved anything.
++#[derive(Clone, Copy, Debug, PartialEq, Eq)]
++pub struct ResolvedTarget {
++    pub adapter: u64,
++    pub object: u64,
++    pub contract_version: u64,
++    /// Existing-resource version precondition; this profile does not model creation.
++    pub expected_version: u64,
++    pub generation: u64,
++}
++
++#[derive(Clone, Debug, PartialEq, Eq)]
++pub struct ActionSpec {
++    pub version: u32,
++    pub scope: Scope,
++    pub target: Option<ResolvedTarget>,
++    pub payload: Vec<u8>,
++    /// Exact declared logical dependencies, not an opaque model input view.
++    pub required_witnesses: Vec<ReadWitness>,
++    pub policy_epoch: u64,
++    pub deadline: ElapsedTick,
++    pub units: u64,
++}
++
++#[derive(Clone, Debug, PartialEq, Eq)]
++pub struct FrozenAction(ActionSpec);
++
++impl FrozenAction {
++    pub fn freeze(spec: ActionSpec) -> Result<Self, Error> {
++        spec.scope.validate()?;
++        let target = spec.target.ok_or(Error::Incomplete)?;
++        if spec.version != VERSION
++            || spec.units == 0
++            || spec.deadline.0 == 0
++            || [
++                target.adapter,
++                target.object,
++                target.contract_version,
++                target.expected_version,
++                target.generation,
++            ]
++            .contains(&0)
++        {
++            return Err(Error::InvalidInput);
++        }
++        if spec.payload.len() > MAX_PAYLOAD_BYTES {
++            return Err(Error::Limit);
++        }
++        if spec.required_witnesses.len() > MAX_REQUIRED_WITNESSES {
++            return Err(Error::Limit);
++        }
++        let mut witness_bytes = 0_usize;
++        for witness in &spec.required_witnesses {
++            match witness {
++                ReadWitness::Exact {
++                    value: Some(value), ..
++                } => {
++                    witness_bytes = witness_bytes.checked_add(value.len()).ok_or(Error::Limit)?;
++                    if witness_bytes > MAX_WITNESS_BYTES {
++                        return Err(Error::Limit);
++                    }
++                }
++                ReadWitness::EmptyRange { start, end } if start >= end => {
++                    return Err(Error::InvalidInput);
++                }
++                _ => {}
++            }
++        }
++        Ok(Self(spec))
++    }
++
++    pub fn spec(&self) -> &ActionSpec {
++        &self.0
++    }
++
++    // The legacy ledger checks this auxiliary representation too. It is NOT
++    // the canonical binding: authorize/dispatch compare the whole frozen action.
++    fn effect(&self) -> Effect {
++        Effect {
++            principal: self.0.scope.principal.to_string(),
++            resolved_target: self
++                .0
++                .target
++                .expect("validated frozen target")
++                .object
++                .to_string(),
++            payload: self.0.payload.clone(),
++            units: self.0.units,
++        }
++    }
++}
++
++#[derive(Clone, Copy, Debug, PartialEq, Eq)]
++pub enum ActionState {
++    Proposed,
++    Prepared,
++    Reviewing,
++    Authorized,
++    Dispatching,
++    Confirmed,
++    Denied,
++    Cancelled,
++    Unknown,
++    ConfirmedNotExecuted,
++    IrrecoverablyUnknown,
++}
++
++#[derive(Clone, Copy, Debug, PartialEq, Eq)]
++pub enum TrustedOutcome {
++    Executed,
++    NotExecuted,
++}
++
++/// Inspection copies contain no permit, issuer brand or mutable ledger handle.
++#[derive(Clone, Debug, PartialEq, Eq)]
++pub struct Inspection {
++    pub available: u64,
++    pub reserved: u64,
++    pub charged: u64,
++    pub epoch: u64,
++    pub elapsed: ElapsedTick,
++    pub stages: BTreeMap<u64, ActionState>,
++}
++
++#[derive(Debug)]
++struct Attempt {
++    action: FrozenAction,
++    stage: ActionState,
++    judgment: Option<Judgment>,
++}
++
++/// Opaque one-use reference token; only its issuing ledger can dispatch it.
++/// Borrowing it twice cannot bypass the ledger's consumed state.
++///
++/// ```compile_fail,E0451
++/// use fa_reference::action::{FrozenAction, Permit};
++/// fn forge(action: FrozenAction) -> Permit {
++///     Permit { issuer: std::rc::Rc::new(()), attempt: 1, action }
++/// }
++/// ```
++///
++/// ```compile_fail,E0599
++/// use fa_reference::action::Permit;
++/// fn copy_rights(permit: Permit) { let _copy = permit.clone(); }
++/// ```
++#[derive(Debug)]
++pub struct Permit {
++    issuer: Rc<()>,
++    attempt: u64,
++    action: FrozenAction,
++}
++
++/// Trusted bootstrap of ONE in-memory reference authority domain. Constructing
++/// another instance never imports its rights or accepts its permits. This API
++/// does not enforce process isolation, confer real credentials or implement Cx.
++///
++/// ```compile_fail,E0599
++/// use fa_reference::action::ReferenceAuthority;
++/// fn branch_rights(authority: ReferenceAuthority) { let _copy = authority.clone(); }
++/// ```
++#[derive(Debug)]
++pub struct ReferenceAuthority {
++    scope: Scope,
++    total: u64,
++    max_attempts: usize,
++    elapsed: ElapsedTick,
++    issuer: Rc<()>,
++    rights: Rights,
++    attempts: BTreeMap<u64, Attempt>,
++}
++
++impl ReferenceAuthority {
++    pub fn new(scope: Scope, total: u64, max_attempts: usize) -> Result<Self, Error> {
++        scope.validate()?;
++        if scope.purpose != Purpose::Effect {
++            return Err(Error::Binding);
++        }
++        if total == 0 || max_attempts == 0 || max_attempts > MAX_ATTEMPTS {
++            return Err(Error::InvalidInput);
++        }
++        Ok(Self {
++            scope,
++            total,
++            max_attempts,
++            elapsed: ElapsedTick(0),
++            issuer: Rc::new(()),
++            rights: Rights::new(total),
++            attempts: BTreeMap::new(),
++        })
++    }
++
++    /// Record a trusted clock observation before a transition. Equality is
++    /// allowed; rollback refuses. Failed transitions never roll this observation
++    /// back. A missing clock update is outside this reference clock contract.
++    pub fn observe_time(&mut self, elapsed: ElapsedTick) -> Result<(), Error> {
++        if elapsed < self.elapsed {
++            return Err(Error::Stale);
++        }
++        self.elapsed = elapsed;
++        Ok(())
++    }
++
++    pub fn propose(&mut self, id: u64, action: FrozenAction) -> Result<(), Error> {
++        if id == 0 {
++            return Err(Error::InvalidInput);
++        }
++        if self.attempts.contains_key(&id) {
++            return Err(Error::Duplicate);
++        }
++        if self.attempts.len() >= self.max_attempts {
++            return Err(Error::Limit);
++        }
++        self.attempts.insert(
++            id,
++            Attempt {
++                action,
++                stage: ActionState::Proposed,
++                judgment: None,
++            },
++        );
++        Ok(())
++    }
++
++    pub fn prepare(&mut self, id: u64) -> Result<(), Error> {
++        let attempt = self.attempt_at(id, ActionState::Proposed)?;
++        self.validate_current(&attempt.action)?;
++        self.attempts.get_mut(&id).expect("checked attempt").stage = ActionState::Prepared;
++        Ok(())
++    }
++
++    pub fn begin_review(&mut self, id: u64) -> Result<(), Error> {
++        self.attempt_at(id, ActionState::Prepared)?;
++        self.attempts.get_mut(&id).expect("checked attempt").stage = ActionState::Reviewing;
++        Ok(())
++    }
++
++    /// Uses the existing exact logical read-witness model, not an opaque helper
++    /// judgment. Snapshot completeness/authenticity remains a trusted input.
++    pub fn authorize(
++        &mut self,
++        id: u64,
++        judgment: &Judgment,
++        snapshot: &Snapshot,
++    ) -> Result<Permit, Error> {
++        let attempt = self.attempt_at(id, ActionState::Reviewing)?;
++        self.validate_current(&attempt.action)?;
++        if judgment.witnesses != attempt.action.spec().required_witnesses {
++            return Err(Error::Binding);
++        }
++        if !judgment.valid_at(snapshot)? {
++            return Err(Error::Binding);
++        }
++        let action = attempt.action.clone();
++        self.rights.reserve(id, action.effect())?;
++        let attempt = self.attempts.get_mut(&id).expect("checked attempt");
++        attempt.judgment = Some(judgment.clone());
++        attempt.stage = ActionState::Authorized;
++        Ok(Permit {
++            issuer: Rc::clone(&self.issuer),
++            attempt: id,
++            action,
++        })
++    }
++
++    /// The final action includes the adapter's freshly supplied resolved target
++    /// and exact bytes. No irreversible external operation happens here.
++    pub fn dispatch(
++        &mut self,
++        permit: &Permit,
++        final_action: &FrozenAction,
++        snapshot: &Snapshot,
++    ) -> Result<(), Error> {
++        if !Rc::ptr_eq(&self.issuer, &permit.issuer) {
++            return Err(Error::Binding);
++        }
++        let attempt = self.attempt_at(permit.attempt, ActionState::Authorized)?;
++        if attempt.action != permit.action || &attempt.action != final_action {
++            return Err(Error::Binding);
++        }
++        self.validate_current(final_action)?;
++        let judgment = attempt.judgment.as_ref().ok_or(Error::Incomplete)?;
++        if !judgment.valid_at(snapshot)? {
++            return Err(Error::Binding);
++        }
++        self.rights
++            .dispatch(permit.attempt, &final_action.effect())?;
++        self.attempts
++            .get_mut(&permit.attempt)
++            .expect("checked attempt")
++            .stage = ActionState::Dispatching;
++        Ok(())
++    }
++
++    pub fn cancel(&mut self, id: u64) -> Result<(), Error> {
++        self.stop_before_dispatch(id, ActionState::Cancelled)
++    }
++
++    pub fn deny(&mut self, id: u64) -> Result<(), Error> {
++        self.stop_before_dispatch(id, ActionState::Denied)
++    }
++
++    pub fn mark_unknown(&mut self, id: u64) -> Result<(), Error> {
++        self.attempt_at(id, ActionState::Dispatching)?;
++        self.rights.mark_unknown(id)?;
++        self.attempts.get_mut(&id).expect("checked attempt").stage = ActionState::Unknown;
++        Ok(())
++    }
++
++    /// Explicit trusted reconciliation is the only post-dispatch refund path.
++    /// NotExecuted is a modeled nonexecution proof, NOT a timeout or cancellation.
++    pub fn record_trusted_outcome(
++        &mut self,
++        id: u64,
++        outcome: TrustedOutcome,
++    ) -> Result<(), Error> {
++        let attempt = self.attempts.get(&id).ok_or(Error::Missing)?;
++        if !matches!(
++            attempt.stage,
++            ActionState::Dispatching | ActionState::Unknown
++        ) {
++            return Err(Error::WrongState);
++        }
++        self.rights
++            .reconcile(id, outcome == TrustedOutcome::Executed)?;
++        self.attempts.get_mut(&id).expect("checked attempt").stage = match outcome {
++            TrustedOutcome::Executed => ActionState::Confirmed,
++            TrustedOutcome::NotExecuted => ActionState::ConfirmedNotExecuted,
++        };
++        Ok(())
++    }
++
++    pub fn mark_irrecoverable(&mut self, id: u64) -> Result<(), Error> {
++        self.attempt_at(id, ActionState::Unknown)?;
++        self.attempts.get_mut(&id).expect("checked attempt").stage =
++            ActionState::IrrecoverablyUnknown;
++        Ok(())
++    }
++
++    pub fn revoke_epoch(&mut self) -> Result<(), Error> {
++        self.rights.revoke_epoch()
++    }
++
++    pub fn inspect(&self) -> Inspection {
++        let reserved = self
++            .attempts
++            .values()
++            .filter(|a| a.stage == ActionState::Authorized)
++            .map(|a| a.action.spec().units)
++            .sum::<u64>();
++        let available = self.rights.available();
++        Inspection {
++            available,
++            reserved,
++            charged: self.total - available - reserved,
++            epoch: self.rights.epoch(),
++            elapsed: self.elapsed,
++            stages: self.attempts.iter().map(|(id, a)| (*id, a.stage)).collect(),
++        }
++    }
++
++    fn validate_current(&self, action: &FrozenAction) -> Result<(), Error> {
++        if action.spec().scope != self.scope || action.spec().scope.purpose != Purpose::Effect {
++            return Err(Error::Binding);
++        }
++        if action.spec().policy_epoch != self.rights.epoch() {
++            return Err(Error::Stale);
++        }
++        // The supported deadline law is strictly now < deadline.
++        if self.elapsed >= action.spec().deadline {
++            return Err(Error::Stale);
++        }
++        Ok(())
++    }
++
++    fn attempt_at(&self, id: u64, stage: ActionState) -> Result<&Attempt, Error> {
++        let attempt = self.attempts.get(&id).ok_or(Error::Missing)?;
++        if attempt.stage != stage {
++            return Err(Error::WrongState);
++        }
++        Ok(attempt)
++    }
++
++    fn stop_before_dispatch(&mut self, id: u64, terminal: ActionState) -> Result<(), Error> {
++        let attempt = self.attempts.get(&id).ok_or(Error::Missing)?;
++        match attempt.stage {
++            ActionState::Authorized => self.rights.abort_before_dispatch(id)?,
++            ActionState::Proposed | ActionState::Prepared | ActionState::Reviewing => {}
++            _ => return Err(Error::WrongState),
++        }
++        self.attempts.get_mut(&id).expect("checked attempt").stage = terminal;
++        Ok(())
++    }
++}
++
++#[cfg(test)]
++mod tests {
++    use super::*;
++
++    #[test]
++    fn exhausted_epoch_refuses_without_restoring_an_old_floor() {
++        let scope = Scope {
++            tenant: 1,
++            principal: 2,
++            run: 3,
++            branch: 4,
++            authority: 5,
++            purpose: Purpose::Effect,
++        };
++        let mut authority = ReferenceAuthority::new(scope, 10, 2).unwrap();
++        // Reach the otherwise impractically distant boundary without changing
++        // the transition under test. The existing Rights owns the epoch.
++        authority.rights.epoch = u64::MAX;
++        let before = authority.inspect();
++        assert_eq!(authority.revoke_epoch(), Err(Error::Overflow));
++        assert_eq!(authority.inspect(), before);
++        assert!(authority.rights.conserved());
++    }
++}
+diff --git a/crates/fa-reference/src/lib.rs b/crates/fa-reference/src/lib.rs
+index c24621e..8201349 100644
+--- a/crates/fa-reference/src/lib.rs
++++ b/crates/fa-reference/src/lib.rs
+@@ -2,6 +2,7 @@
+ //! persistence, cryptographic claims, calibration, or deployment guarantees.
+ #![forbid(unsafe_code)]
+ 
++pub mod action;
+ pub mod full_input;
+ pub mod product_frontier;
+ pub mod reducer;
+diff --git a/crates/fa-reference/tests/action_boundaries.rs b/crates/fa-reference/tests/action_boundaries.rs
+new file mode 100644
+index 0000000..fa2df91
+--- /dev/null
++++ b/crates/fa-reference/tests/action_boundaries.rs
+@@ -0,0 +1,617 @@
++//! Public-boundary tests for FA-001's in-memory action/permit reference model.
++//!
++//! These exercise typed values and lifecycle calls available to an engine
++//! consumer.  They do not claim a broker, cryptographic issuer, durable clock,
++//! remote dispatch, or Asupersync context separation.
++
++use std::collections::BTreeMap;
++
++use fa_reference::action::{
++    ActionSpec, ActionState, ElapsedTick, FrozenAction, MAX_ATTEMPTS, MAX_PAYLOAD_BYTES, Purpose,
++    ReferenceAuthority, ResolvedTarget, Scope, TrustedOutcome, VERSION,
++};
++use fa_reference::{Error, Judgment, ReadWitness, Snapshot};
++
++fn effect_scope() -> Scope {
++    Scope {
++        tenant: 11,
++        principal: 12,
++        run: 13,
++        branch: 14,
++        authority: 15,
++        purpose: Purpose::Effect,
++    }
++}
++
++fn exact_action() -> FrozenAction {
++    FrozenAction::freeze(ActionSpec {
++        version: VERSION,
++        scope: effect_scope(),
++        target: Some(ResolvedTarget {
++            adapter: 21,
++            object: 22,
++            contract_version: 23,
++            expected_version: 24,
++            generation: 25,
++        }),
++        payload: b"the exact payload".to_vec(),
++        required_witnesses: required_witnesses(),
++        policy_epoch: 0,
++        deadline: ElapsedTick(10),
++        units: 3,
++    })
++    .unwrap()
++}
++
++fn required_witnesses() -> Vec<ReadWitness> {
++    vec![ReadWitness::Exact {
++        key: 99,
++        value: Some(b"authorized precondition".to_vec()),
++    }]
++}
++
++fn exact_snapshot() -> Snapshot {
++    Snapshot {
++        semantic_epoch: 7,
++        complete: true,
++        values: BTreeMap::from([(99, b"authorized precondition".to_vec())]),
++    }
++}
++
++fn exact_judgment(snapshot: &Snapshot) -> Judgment {
++    Judgment::capture(snapshot, required_witnesses()).unwrap()
++}
++
++fn authorized_attempt(
++    id: u64,
++    total: u64,
++) -> (
++    ReferenceAuthority,
++    FrozenAction,
++    Snapshot,
++    fa_reference::action::Permit,
++) {
++    let action = exact_action();
++    let snapshot = exact_snapshot();
++    let judgment = exact_judgment(&snapshot);
++    let mut authority = ReferenceAuthority::new(effect_scope(), total, 8).unwrap();
++    authority.observe_time(ElapsedTick(1)).unwrap();
++    authority.propose(id, action.clone()).unwrap();
++    authority.prepare(id).unwrap();
++    authority.begin_review(id).unwrap();
++    let permit = authority.authorize(id, &judgment, &snapshot).unwrap();
++    (authority, action, snapshot, permit)
++}
++
++#[test]
++fn action_permit_public_path_dispatches_once_and_keeps_rights_conserved() {
++    let (mut authority, action, snapshot, permit) = authorized_attempt(1, 7);
++
++    assert_eq!(
++        authority.inspect().stages.get(&1),
++        Some(&ActionState::Authorized)
++    );
++    assert_eq!(authority.inspect().available, 4);
++    assert_eq!(authority.inspect().reserved, 3);
++    assert_eq!(authority.inspect().charged, 0);
++
++    authority.dispatch(&permit, &action, &snapshot).unwrap();
++    assert_eq!(
++        authority.inspect().stages.get(&1),
++        Some(&ActionState::Dispatching)
++    );
++    assert_eq!(authority.inspect().available, 4);
++    assert_eq!(authority.inspect().reserved, 0);
++    assert_eq!(authority.inspect().charged, 3);
++
++    // The same opaque permit can be borrowed again, but authority-side state
++    // makes that second dispatch a causal refusal rather than a second spend.
++    let after_first_dispatch = authority.inspect();
++    assert_eq!(
++        authority.dispatch(&permit, &action, &snapshot),
++        Err(Error::WrongState)
++    );
++    assert_eq!(authority.inspect(), after_first_dispatch);
++
++    authority
++        .record_trusted_outcome(1, TrustedOutcome::Executed)
++        .unwrap();
++    assert_eq!(
++        authority.inspect().stages.get(&1),
++        Some(&ActionState::Confirmed)
++    );
++    assert_eq!(authority.inspect().available, 4);
++    assert_eq!(authority.inspect().charged, 3);
++}
++
++type SpecMutation = (&'static str, fn(&mut ActionSpec));
++
++fn mutate_tenant(spec: &mut ActionSpec) {
++    spec.scope.tenant += 1;
++}
++fn mutate_principal(spec: &mut ActionSpec) {
++    spec.scope.principal += 1;
++}
++fn mutate_run(spec: &mut ActionSpec) {
++    spec.scope.run += 1;
++}
++fn mutate_branch(spec: &mut ActionSpec) {
++    spec.scope.branch += 1;
++}
++fn mutate_authority(spec: &mut ActionSpec) {
++    spec.scope.authority += 1;
++}
++fn mutate_purpose(spec: &mut ActionSpec) {
++    spec.scope.purpose = Purpose::Experiment;
++}
++fn mutate_adapter(spec: &mut ActionSpec) {
++    spec.target.as_mut().unwrap().adapter += 1;
++}
++fn mutate_object(spec: &mut ActionSpec) {
++    spec.target.as_mut().unwrap().object += 1;
++}
++fn mutate_contract_version(spec: &mut ActionSpec) {
++    spec.target.as_mut().unwrap().contract_version += 1;
++}
++fn mutate_expected_version(spec: &mut ActionSpec) {
++    spec.target.as_mut().unwrap().expected_version += 1;
++}
++fn mutate_generation(spec: &mut ActionSpec) {
++    spec.target.as_mut().unwrap().generation += 1;
++}
++fn mutate_payload(spec: &mut ActionSpec) {
++    spec.payload[0] ^= 1;
++}
++fn mutate_required_witness(spec: &mut ActionSpec) {
++    spec.required_witnesses[0] = ReadWitness::Exact {
++        key: 100,
++        value: None,
++    };
++}
++fn mutate_policy_epoch(spec: &mut ActionSpec) {
++    spec.policy_epoch += 1;
++}
++fn mutate_deadline(spec: &mut ActionSpec) {
++    spec.deadline = ElapsedTick(11);
++}
++fn mutate_units(spec: &mut ActionSpec) {
++    spec.units += 1;
++}
++
++#[test]
++fn every_exact_action_binding_component_refuses_a_near_identical_final_view() {
++    let mutations: [SpecMutation; 16] = [
++        ("tenant", mutate_tenant),
++        ("principal", mutate_principal),
++        ("run", mutate_run),
++        ("branch", mutate_branch),
++        ("authority", mutate_authority),
++        ("purpose", mutate_purpose),
++        ("target adapter", mutate_adapter),
++        ("target object", mutate_object),
++        ("adapter contract version", mutate_contract_version),
++        ("resource expected version", mutate_expected_version),
++        ("target generation", mutate_generation),
++        ("payload", mutate_payload),
++        ("required witness", mutate_required_witness),
++        ("policy epoch", mutate_policy_epoch),
++        ("deadline", mutate_deadline),
++        ("units", mutate_units),
++    ];
++
++    for (name, mutate) in mutations {
++        let (mut authority, action, snapshot, permit) = authorized_attempt(1, 7);
++        let mut changed_spec = action.spec().clone();
++        mutate(&mut changed_spec);
++        let changed = FrozenAction::freeze(changed_spec).unwrap();
++        let before = authority.inspect();
++
++        // Each case changes just one component of the final view. It must fail
++        // before dispatch/spend, and the original view must still dispatch.
++        assert_eq!(
++            authority.dispatch(&permit, &changed, &snapshot),
++            Err(Error::Binding),
++            "accepted changed {name}"
++        );
++        assert_eq!(
++            authority.inspect(),
++            before,
++            "mutation changed state: {name}"
++        );
++        authority.dispatch(&permit, &action, &snapshot).unwrap();
++    }
++}
++
++#[test]
++fn freeze_refuses_unknown_versions_zero_identities_and_oversized_payloads() {
++    // Near-identical positive control: the fully versioned, resolved action
++    // freezes successfully before it can enter an authority lifecycle.
++    let valid = exact_action();
++    assert_eq!(valid.spec().version, VERSION);
++
++    let mut wrong_version = valid.spec().clone();
++    wrong_version.version = VERSION + 1;
++    assert_eq!(
++        FrozenAction::freeze(wrong_version),
++        Err(Error::InvalidInput)
++    );
++
++    let zeroes: [SpecMutation; 10] = [
++        ("tenant", |spec: &mut ActionSpec| spec.scope.tenant = 0),
++        ("principal", |spec: &mut ActionSpec| {
++            spec.scope.principal = 0
++        }),
++        ("run", |spec: &mut ActionSpec| spec.scope.run = 0),
++        ("branch", |spec: &mut ActionSpec| spec.scope.branch = 0),
++        ("authority", |spec: &mut ActionSpec| {
++            spec.scope.authority = 0
++        }),
++        ("adapter", |spec: &mut ActionSpec| {
++            spec.target.as_mut().unwrap().adapter = 0
++        }),
++        ("object", |spec: &mut ActionSpec| {
++            spec.target.as_mut().unwrap().object = 0
++        }),
++        ("adapter contract version", |spec: &mut ActionSpec| {
++            spec.target.as_mut().unwrap().contract_version = 0
++        }),
++        ("expected resource version", |spec: &mut ActionSpec| {
++            spec.target.as_mut().unwrap().expected_version = 0
++        }),
++        ("target generation", |spec: &mut ActionSpec| {
++            spec.target.as_mut().unwrap().generation = 0
++        }),
++    ];
++    for (name, zero) in zeroes {
++        let mut malformed = valid.spec().clone();
++        zero(&mut malformed);
++        assert_eq!(
++            FrozenAction::freeze(malformed),
++            Err(Error::InvalidInput),
++            "accepted zero {name}"
++        );
++    }
++
++    let mut oversized_payload = valid.spec().clone();
++    oversized_payload.payload = vec![0; MAX_PAYLOAD_BYTES + 1];
++    assert_eq!(FrozenAction::freeze(oversized_payload), Err(Error::Limit));
++}
++
++#[test]
++fn absent_target_and_wrong_scope_refuse_before_any_authority_can_reserve_rights() {
++    let mut missing_target = exact_action().spec().clone();
++    missing_target.target = None;
++    assert_eq!(
++        FrozenAction::freeze(missing_target),
++        Err(Error::Incomplete),
++        "an unresolved target cannot become an authorizable action"
++    );
++
++    // Near-identical positive control: a resolved target can enter the public
++    // lifecycle and reserve exactly its declared rights.
++    let (authority, _, _, _) = authorized_attempt(1, 7);
++    assert_eq!(authority.inspect().available, 4);
++    assert_eq!(authority.inspect().reserved, 3);
++
++    let wrong_scopes: [(&str, fn(&mut Scope)); 2] = [
++        ("tenant", |scope: &mut Scope| scope.tenant += 1),
++        ("purpose", |scope: &mut Scope| {
++            scope.purpose = Purpose::Experiment
++        }),
++    ];
++    for (name, change_scope) in wrong_scopes {
++        let mut wrong_scope = exact_action().spec().clone();
++        change_scope(&mut wrong_scope.scope);
++        let wrong_scope = FrozenAction::freeze(wrong_scope).unwrap();
++        let mut authority = ReferenceAuthority::new(effect_scope(), 7, 8).unwrap();
++        authority.observe_time(ElapsedTick(1)).unwrap();
++        authority.propose(1, wrong_scope).unwrap();
++        let before_prepare = authority.inspect();
++        assert_eq!(authority.prepare(1), Err(Error::Binding), "accepted {name}");
++        assert_eq!(
++            authority.inspect(),
++            before_prepare,
++            "changed state for {name}"
++        );
++        assert_eq!(
++            authority.inspect().stages.get(&1),
++            Some(&ActionState::Proposed)
++        );
++    }
++}
++
++#[test]
++fn caller_clock_is_monotonic_and_an_observed_deadline_prevents_effects() {
++    let action = exact_action();
++    let snapshot = exact_snapshot();
++    let judgment = exact_judgment(&snapshot);
++    let mut authority = ReferenceAuthority::new(effect_scope(), 7, 8).unwrap();
++
++    authority.observe_time(ElapsedTick(5)).unwrap();
++    let before_rollback = authority.inspect();
++    assert_eq!(authority.observe_time(ElapsedTick(4)), Err(Error::Stale));
++    assert_eq!(authority.inspect(), before_rollback);
++
++    // At the exact deadline `now < deadline` is false: even authorization has
++    // no reservation side effect.
++    authority.observe_time(ElapsedTick(10)).unwrap();
++    authority.propose(1, action).unwrap();
++    let before_prepare = authority.inspect();
++    assert_eq!(authority.prepare(1), Err(Error::Stale));
++    assert_eq!(authority.inspect(), before_prepare);
++    assert_eq!(
++        authority.inspect().stages.get(&1),
++        Some(&ActionState::Proposed)
++    );
++    assert_eq!(authority.inspect().available, 7);
++    assert_eq!(authority.inspect().reserved, 0);
++    assert_eq!(authority.inspect().charged, 0);
++
++    // A valid captured judgment does not override an observed expired deadline.
++    assert!(judgment.valid_at(&snapshot).unwrap());
++}
++
++#[test]
++fn authority_requires_an_explicit_clock_observation_before_preparation() {
++    let action = exact_action();
++    let snapshot = exact_snapshot();
++    let judgment = exact_judgment(&snapshot);
++    let mut authority = ReferenceAuthority::new(effect_scope(), 7, 8).unwrap();
++    authority.propose(1, action.clone()).unwrap();
++
++    // An unobserved clock is unknown, not implicitly elapsed tick zero. This
++    // refusal must leave the proposed action and all rights untouched.
++    let before_clock_observation = authority.inspect();
++    assert_eq!(authority.prepare(1), Err(Error::Incomplete));
++    assert_eq!(authority.inspect(), before_clock_observation);
++    assert_eq!(authority.inspect().stages.get(&1), Some(&ActionState::Proposed));
++    assert_eq!(authority.inspect().available, 7);
++    assert_eq!(authority.inspect().reserved, 0);
++    assert_eq!(authority.inspect().charged, 0);
++
++    // An explicit zero observation is distinct from absent time and admits the
++    // otherwise identical action through its ordinary public lifecycle.
++    authority.observe_time(ElapsedTick(0)).unwrap();
++    authority.prepare(1).unwrap();
++    authority.begin_review(1).unwrap();
++    let permit = authority.authorize(1, &judgment, &snapshot).unwrap();
++    authority.dispatch(&permit, &action, &snapshot).unwrap();
++    assert_eq!(
++        authority.inspect().stages.get(&1),
++        Some(&ActionState::Dispatching)
++    );
++}
++
++#[test]
++fn stale_epoch_and_expiry_refuse_dispatch_without_changing_the_reservation() {
++    let (mut authority, action, snapshot, permit) = authorized_attempt(1, 7);
++    authority.revoke_epoch().unwrap();
++    let after_revocation = authority.inspect();
++    assert_eq!(
++        authority.dispatch(&permit, &action, &snapshot),
++        Err(Error::Stale)
++    );
++    assert_eq!(authority.inspect(), after_revocation);
++    authority.cancel(1).unwrap();
++    assert_eq!(authority.inspect().available, 7);
++    assert_eq!(
++        authority.inspect().stages.get(&1),
++        Some(&ActionState::Cancelled)
++    );
++
++    let (mut authority, action, snapshot, permit) = authorized_attempt(1, 7);
++    authority.observe_time(ElapsedTick(10)).unwrap();
++    let at_deadline = authority.inspect();
++    assert_eq!(
++        authority.dispatch(&permit, &action, &snapshot),
++        Err(Error::Stale)
++    );
++    assert_eq!(authority.inspect(), at_deadline);
++}
++
++#[test]
++fn declared_judgment_basis_and_current_witnesses_are_both_required_without_spending() {
++    let action = exact_action();
++    let snapshot = exact_snapshot();
++    let judgment = exact_judgment(&snapshot);
++    let mut authority = ReferenceAuthority::new(effect_scope(), 7, 8).unwrap();
++    authority.observe_time(ElapsedTick(1)).unwrap();
++    authority.propose(1, action.clone()).unwrap();
++    authority.prepare(1).unwrap();
++    authority.begin_review(1).unwrap();
++
++    let empty_basis = Judgment::capture(&snapshot, Vec::new()).unwrap();
++    let wrong_basis = Judgment::capture(
++        &snapshot,
++        vec![ReadWitness::Exact {
++            key: 100,
++            value: None,
++        }],
++    )
++    .unwrap();
++    let required = required_witnesses();
++    let extra_basis = Judgment::capture(
++        &snapshot,
++        vec![
++            required[0].clone(),
++            ReadWitness::Exact {
++                key: 100,
++                value: None,
++            },
++        ],
++    )
++    .unwrap();
++    for (name, unrelated_judgment) in [
++        ("empty", &empty_basis),
++        ("wrong", &wrong_basis),
++        ("extra", &extra_basis),
++    ] {
++        let before_wrong_basis = authority.inspect();
++        assert!(matches!(
++            authority.authorize(1, unrelated_judgment, &snapshot),
++            Err(Error::Binding)
++        ));
++        assert_eq!(
++            authority.inspect(),
++            before_wrong_basis,
++            "{name} basis changed authority state"
++        );
++        assert_eq!(
++            authority.inspect().stages.get(&1),
++            Some(&ActionState::Reviewing)
++        );
++    }
++
++    let incomplete_snapshot = Snapshot {
++        complete: false,
++        ..snapshot.clone()
++    };
++    let before_missing_evidence = authority.inspect();
++    assert!(matches!(
++        authority.authorize(1, &judgment, &incomplete_snapshot),
++        Err(Error::Incomplete)
++    ));
++    assert_eq!(authority.inspect(), before_missing_evidence);
++    assert_eq!(
++        authority.inspect().stages.get(&1),
++        Some(&ActionState::Reviewing)
++    );
++
++    let permit = authority.authorize(1, &judgment, &snapshot).unwrap();
++    let mut invalidated_snapshot = snapshot.clone();
++    invalidated_snapshot.values.insert(99, b"changed".to_vec());
++    let before_invalidated_dispatch = authority.inspect();
++    assert_eq!(
++        authority.dispatch(&permit, &action, &invalidated_snapshot),
++        Err(Error::Binding)
++    );
++    assert_eq!(authority.inspect(), before_invalidated_dispatch);
++
++    // The original exact witness is the near-identical positive control.
++    authority.dispatch(&permit, &action, &snapshot).unwrap();
++}
++
++#[test]
++fn issuer_brand_blocks_same_scope_authority_and_capacity_failure_is_atomic() {
++    let (mut first, action, snapshot, permit) = authorized_attempt(1, 7);
++    let mut independently_bootstrapped = ReferenceAuthority::new(effect_scope(), 7, 8).unwrap();
++    independently_bootstrapped
++        .observe_time(ElapsedTick(1))
++        .unwrap();
++    let other_before = independently_bootstrapped.inspect();
++    assert_eq!(
++        independently_bootstrapped.dispatch(&permit, &action, &snapshot),
++        Err(Error::Binding)
++    );
++    assert_eq!(independently_bootstrapped.inspect(), other_before);
++    first.dispatch(&permit, &action, &snapshot).unwrap();
++
++    let second_action = FrozenAction::freeze(ActionSpec {
++        units: 2,
++        ..exact_action().spec().clone()
++    })
++    .unwrap();
++    let second_snapshot = exact_snapshot();
++    let second_judgment = exact_judgment(&second_snapshot);
++    let mut capacity = ReferenceAuthority::new(effect_scope(), 4, 8).unwrap();
++    capacity.observe_time(ElapsedTick(1)).unwrap();
++    capacity.propose(1, exact_action()).unwrap();
++    capacity.prepare(1).unwrap();
++    capacity.begin_review(1).unwrap();
++    let _first_permit = capacity
++        .authorize(1, &second_judgment, &second_snapshot)
++        .unwrap();
++
++    capacity.propose(2, second_action).unwrap();
++    capacity.prepare(2).unwrap();
++    capacity.begin_review(2).unwrap();
++    let before_capacity_refusal = capacity.inspect();
++    assert!(matches!(
++        capacity.authorize(2, &second_judgment, &second_snapshot),
++        Err(Error::Limit)
++    ));
++    assert_eq!(capacity.inspect(), before_capacity_refusal);
++    assert_eq!(
++        capacity.inspect().stages.get(&2),
++        Some(&ActionState::Reviewing)
++    );
++}
++
++#[test]
++fn attempt_limit_and_lifecycle_ordering_refuse_without_reserving_rights() {
++    let action = exact_action();
++    let snapshot = exact_snapshot();
++    let judgment = exact_judgment(&snapshot);
++    let mut authority = ReferenceAuthority::new(effect_scope(), 7, 2).unwrap();
++    authority.observe_time(ElapsedTick(1)).unwrap();
++    authority.propose(1, action.clone()).unwrap();
++    authority.propose(2, action.clone()).unwrap();
++    let at_attempt_limit = authority.inspect();
++    assert_eq!(authority.propose(3, action.clone()), Err(Error::Limit));
++    assert_eq!(authority.inspect(), at_attempt_limit);
++    assert_eq!(authority.inspect().stages.len(), 2);
++
++    // Beginning review or authorizing a merely proposed action cannot skip the
++    // preparation transition or reserve rights.
++    assert_eq!(authority.begin_review(1), Err(Error::WrongState));
++    assert!(matches!(
++        authority.authorize(1, &judgment, &snapshot),
++        Err(Error::WrongState)
++    ));
++    assert_eq!(authority.inspect().available, 7);
++    assert_eq!(authority.inspect().reserved, 0);
++
++    // A denial is a valid terminal pre-dispatch path and has no refund to
++    // fabricate because no reservation was made.
++    authority.deny(1).unwrap();
++    assert_eq!(
++        authority.inspect().stages.get(&1),
++        Some(&ActionState::Denied)
++    );
++    assert_eq!(authority.inspect().available, 7);
++    assert_eq!(authority.inspect().charged, 0);
++
++    // `MAX_ATTEMPTS` is the absolute admission ceiling, not an advisory value.
++    assert!(matches!(
++        ReferenceAuthority::new(effect_scope(), 7, MAX_ATTEMPTS + 1),
++        Err(Error::InvalidInput)
++    ));
++}
++
++#[test]
++fn unknown_outcome_stays_charged_until_explicit_trusted_reconciliation() {
++    let (mut authority, action, snapshot, permit) = authorized_attempt(1, 7);
++    authority.dispatch(&permit, &action, &snapshot).unwrap();
++    authority.mark_unknown(1).unwrap();
++    assert_eq!(authority.inspect().charged, 3);
++    assert_eq!(authority.cancel(1), Err(Error::WrongState));
++    assert_eq!(
++        authority.dispatch(&permit, &action, &snapshot),
++        Err(Error::WrongState)
++    );
++    assert_eq!(authority.inspect().charged, 3);
++
++    authority
++        .record_trusted_outcome(1, TrustedOutcome::NotExecuted)
++        .unwrap();
++    assert_eq!(
++        authority.inspect().stages.get(&1),
++        Some(&ActionState::ConfirmedNotExecuted)
++    );
++    assert_eq!(authority.inspect().available, 7);
++    assert_eq!(authority.inspect().charged, 0);
++
++    let (mut authority, action, snapshot, permit) = authorized_attempt(1, 7);
++    authority.dispatch(&permit, &action, &snapshot).unwrap();
++    authority.mark_unknown(1).unwrap();
++    authority.mark_irrecoverable(1).unwrap();
++    assert_eq!(
++        authority.inspect().stages.get(&1),
++        Some(&ActionState::IrrecoverablyUnknown)
++    );
++    assert_eq!(
++        authority.record_trusted_outcome(1, TrustedOutcome::NotExecuted),
++        Err(Error::WrongState)
++    );
++    assert_eq!(authority.inspect().charged, 3);
++}

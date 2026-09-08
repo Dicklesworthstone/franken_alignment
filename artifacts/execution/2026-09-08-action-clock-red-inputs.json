@@ -1,0 +1,40 @@
+{
+  "base_commit": "0f012a0f8d524d1820ab4941a0373b1ff7000336",
+  "paths": [
+    "crates/fa-reference/src/lib.rs",
+    "crates/fa-reference/src/action.rs",
+    "crates/fa-reference/tests/action_boundaries.rs"
+  ],
+  "sha256": {
+    "crates/fa-reference/src/lib.rs": "57bb38aaeb6f1788e00e0c86698a28dc5a53357446c9f095c21036909602ac0a",
+    "crates/fa-reference/src/action.rs": "2e738ecbcd79c7b9ea85a4c45c0bd29e91286f2c4e50efde8240798c4ad38e67",
+    "crates/fa-reference/tests/action_boundaries.rs": "e5a9e0ffdeae83f258edccac8638c7e6a13dc01cf3d9f611b1b1b14b78b4aa86"
+  },
+  "frozen_worktree": "/Users/jemanuel/projects/franken_alignment_action_clock_red_20260908",
+  "command": [
+    "rch",
+    "--json",
+    "exec",
+    "--base",
+    "0f012a0f8d524d1820ab4941a0373b1ff7000336",
+    "--clean-overlay",
+    "--overlay-path",
+    "crates/fa-reference/src/lib.rs",
+    "--overlay-path",
+    "crates/fa-reference/src/action.rs",
+    "--overlay-path",
+    "crates/fa-reference/tests/action_boundaries.rs",
+    "--",
+    "cargo",
+    "+nightly-2026-09-07",
+    "test",
+    "--locked",
+    "-p",
+    "fa-reference",
+    "--test",
+    "action_boundaries",
+    "--",
+    "--nocapture"
+  ],
+  "scope": "Initial unqualified action/permit implementation with independently added missing-clock regression; not a full gate or a regression in previously committed action code."
+}

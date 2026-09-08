@@ -1,6 +1,16 @@
 # Implementation status · design revision 0.3
 
-Current execution evidence: [receipt](artifacts/execution/2026-09-08-fresh-review-receipt.json).
+Current execution evidence: [receipt](artifacts/execution/2026-09-08-action-receipt.json).
+
+## Qualified action/permit reference semantics
+
+The complete frozen RCH gate passed **335 tests: 58 reference unit, 30 integration, 242 xtask and 5 doctests**, with zero failures, ignored tests or filtered tests, on `hz3` under `nightly-2026-09-07`. [The receipt](artifacts/execution/2026-09-08-action-receipt.json) binds job `j-30004650170124324`, 135 reviewed source/build inputs and all four gate attempts. Final documentation and tracker updates are checked separately; the earlier receipts retain their original source boundaries.
+
+FA-001 now freezes exact scope, target versions, payload, declared logical witnesses, policy epoch, deadline and units. Opaque instance-bound permits consume the existing rights ledger once; a permit from another authority refuses even with identical authorized state. A missing clock observation refuses preparation; an explicitly observed tick zero is valid. The initial unqualified implementation reproduced that clock defect with ten passing tests and one failing regression; [the complete original source/test patch](artifacts/execution/2026-09-08-action-clock-red-baseline-tests.patch) and raw run are retained. The final twelve public action tests cover binding changes, witness limits, expiry, revocation, lifecycle, accounting and unknown-effect liability, alongside eighteen existing integration tests.
+
+Qualification retained three failed gate attempts: a test-helper Clippy warning, a worker missing its nightly formatter, and eighteen registry negatives with incomplete sandbox inputs after new roadmap artifact links. The warning and worker setup were repaired; sandboxes now copy the referenced real files, with exact negative assertions unchanged. Full FA-001 remains in progress: this batch supplies reference semantics, not admitted Asupersync purpose contexts, canonical wire compatibility, an authenticated issuer, a broker, a durable ledger or cold/transition cost measurements.
+
+FA-052's existing five-file provenance results were independently reconciled and its missing changelog entry added. It is complete only as source intake. FA-053 is blocked: the pinned Asupersync native source includes an unconditional build script, mandatory unadmitted dependencies and native FFI paths even with default features disabled. No foundation has been admitted and no donor source was changed.
 
 ## Fresh review: corrected reference and operator boundaries
 
@@ -10,7 +20,7 @@ Empty reference domains can now close at sequence zero only with an explicit non
 
 Two full-gate failures remain visible: a late diagnostic edit needed formatting, then an added test's local variable shadowed its helper. Both were repaired without relaxing assertions. The malformed README performance table was corrected and the old package digest/report explicitly labeled historical. Production behavior, full foundation admission, signing and release remain unimplemented; the previous DSR result has not been rerun on these changes.
 
-Eight affected leaves or epics were reopened during review. Independent receipt review supports reclosure of three scoped reference/operator leaves; five checker leaves/epics remain open with existing prerequisite and broader acceptance obligations. The tracker has 336 live beads: 12 closed and 324 open; `br ready` returns five tasks. This review repairs existing reference/operator behavior and claims no production increment.
+At that fresh-review checkpoint, eight affected leaves or epics had been reopened; three scoped reference/operator leaves were reclosed, leaving five checker leaves/epics open. Its 336 live beads comprised 12 closed and 324 open. The later action batch independently reconciled the original checker criteria after FA-052 provenance completion and reclosed those five in dependency order. These are checker and source-intake results, with no production increment.
 
 ## Roadmap admission ordering verified
 
@@ -83,11 +93,11 @@ The round uses a deliberately non-cryptographic FNV comparison and proves no cry
 | Founding essays | Both read in full again for revision 0.3; head commits recorded in `registry/sources.json` | Complete premise; no missing post |
 | Ten donor/build project deep dives | Targeted code/manifest/plan review at fixed refs (revision 0.2) | Exact files/scopes recorded; not full repository audits or builds |
 | Pure-Rust reference workspace | Source present, zero external packages, formatted with `cargo fmt --all` on 2026-09-06 | Selected logical semantics only; not a broker |
-| Rust test functions | **57 unit + 18 integration reference tests, 242 xtask tests and 2 doctests passed remotely on 2026-09-08 UTC**; earlier runs remain dated below | Exact frozen batch above; not production evidence or credit for other work in progress |
+| Rust test functions | **58 unit + 30 integration reference tests, 242 xtask tests and 5 doctests passed remotely on 2026-09-08 UTC**; earlier runs remain dated below | Exact frozen batch above; not production evidence or credit for other work in progress |
 | Rust local gate driver | **Complete reference gate PASS remotely on 2026-09-08 UTC** under `nightly-2026-09-07`; earlier local 2026-09-06 gate retained below | Initial inventory, registry-core and full concordance checks execute; external admission remains incomplete; new source requires a new run |
 | Production release gate | Explicitly refuses release | No qualified broker/toolchain/target/signing closure |
 | Machine-readable registries | 40 invariants, 21 hypotheses, 143 packets, 5 SLO targets, founding concordance (38 ideas, 9 syntheses, 67 engineering additions), preregistration ledger with no preregistered protocol yet, system map (9 layers) and vocabulary (26 nouns, 35 verbs, 12 reason codes) | Static structural checks are not proofs of their claims |
-| Beads task graph | All 143 roadmap packets have full owners; after fresh-review requalification, 336 live beads, 12 closed and 324 open; `br ready` returns five tasks | Added coverage is not implementation. Use `br ready` for assignments; the bridge's prior graph review and six-task count describe its frozen checkpoint, not subsequent tracker changes |
+| Beads task graph | All 143 roadmap packets have full owners; 336 live beads: 18 closed, 316 open, one in progress and one blocked; `br ready` returns three tasks | FA-001 remains in progress; FA-053 is blocked. Provenance and checker closures do not qualify production. Earlier graph counts describe their dated checkpoints |
 | Production control broker / persistence / containment | Not implemented | Reference code performs no external effects |
 | Native foundation adapters | Planned, admission blockers recorded | A reviewed source file is not an integration |
 | Trained helpers / codecs / signatures / surprise residual / rewind | Research and implementation plans | No measured safety, compression, detection or containment result |

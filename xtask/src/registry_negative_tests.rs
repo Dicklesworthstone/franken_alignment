@@ -67,6 +67,14 @@ impl Sandbox {
             &source.join("crates/fa-reference/src"),
             &root.join("crates/fa-reference/src"),
         );
+        copy_tree(
+            &source.join("crates/fa-reference/tests"),
+            &root.join("crates/fa-reference/tests"),
+        );
+        copy_file(
+            &source.join("IMPLEMENTATION_STATUS.md"),
+            &root.join("IMPLEMENTATION_STATUS.md"),
+        );
         Self {
             base,
             root,

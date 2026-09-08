@@ -1,0 +1,1 @@
+{"api_version":"1.0","command":"cargo +nightly-2026-09-07 run --locked -p xtask -- prose-check","outcome":"completed","location":"remote","worker_id":"hz3","remote_exit_code":0,"duration_ms":46997,"timing":{"classify":null,"select":null,"sync_up":7219,"exec":1835,"sync_down":606,"cleanup":null,"total":null},"result_dirs":[]}

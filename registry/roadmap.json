@@ -14,7 +14,7 @@
       "id": "FA-001",
       "gate": "G0",
       "title": "Freeze action and permit semantics",
-      "status": "drafted",
+      "status": "in_progress",
       "depends_on": [],
       "invariants": [
         "FA-INV-001",
@@ -28,7 +28,12 @@
       ],
       "owner_role": "systems",
       "estimated_scope": "One independently reviewable work packet; split before implementation if multiple semantics change.",
-      "result_artifacts": []
+      "result_artifacts": [
+        "crates/fa-reference/src/action.rs",
+        "crates/fa-reference/tests/action_boundaries.rs",
+        "IMPLEMENTATION_STATUS.md",
+        "artifacts/execution/2026-09-08-action-clock-red.log"
+      ]
     },
     {
       "id": "FA-002",
@@ -1264,7 +1269,7 @@
       "id": "FA-052",
       "gate": "G0",
       "title": "Maintain source provenance and resolve missing context",
-      "status": "source_provenance_revalidated_2026_09_07",
+      "status": "complete_provenance_only_2026_09_08",
       "depends_on": [],
       "invariants": [
         "FA-INV-019"
@@ -1284,7 +1289,7 @@
       "id": "FA-053",
       "gate": "G0",
       "title": "Freeze transitive dependency policy",
-      "status": "in_progress",
+      "status": "blocked",
       "depends_on": [],
       "invariants": [
         "FA-INV-029"

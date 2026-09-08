@@ -1,5 +1,13 @@
 # Changelog
 
+## 2026-09-08: exact action/permit reference boundaries
+
+Added versioned immutable action specifications and opaque instance-bound permits over the existing reference rights ledger. Exact scope, target/resource versions, payload, declared witnesses, epoch, deadline and units must match before one-shot dispatch. Missing clock evidence refuses; cancellation cannot refund unknown effects. The original missing-clock counterexample, independent boundary tests and all failed gate attempts are retained with the corrected **335-test** full RCH pass in [the execution receipt](artifacts/execution/2026-09-08-action-receipt.json). Registry test sandboxes now include the real newly referenced result files; assertions and production checks are unchanged. Five repaired checker leaves/epics were reclosed after independent original-acceptance review and provenance prerequisite completion. FA-001 remains in progress; FA-053 remains blocked by the unadmitted pinned runtime closure. No production, canonical wire, cost, DSR rerun or release qualification is claimed.
+
+## 2026-09-08: reconcile completed founding-source provenance
+
+Independent review matched all five [retained 2026-09-07 source results](artifacts/execution/2026-09-07-founding-source-results.tsv) and [commands](artifacts/execution/2026-09-07-founding-source-commands.txt) to the immutable founding-file registry pins and documented read scopes. FA-052 is provenance-only completion: both founding repositories are complete; this does not qualify donor code, runtime closure, foundation admission or a production capability. No successful source read was repeated for this reconciliation.
+
 ## 2026-09-08: fresh-review regression repairs
 
 Fixed explicit empty-domain closure in the reference frontier, duplicate Cargo identity collapse, incomplete dependency observations, hidden Markdown declarations, and ignored or conditionally unavailable named tests. Operator hashing now refuses non-regular inputs before launching the hash tool. Eleven regressions failed on unchanged implementation; the corrected complete RCH gate passed 319 tests. The two intervening formatting/test-compilation failures and exact baseline patch are retained. No assertions were relaxed and no external package or production feature was admitted. Corrected the README table and historical evidence labels; eight affected completion records were reopened and three scoped leaves independently requalified; five remain open under their existing obligations.
