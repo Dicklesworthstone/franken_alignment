@@ -615,3 +615,223 @@ fn c_raw_string_test_lookalike_does_not_satisfy_reference_check() {
         "reference_test_missing",
     );
 }
+
+#[test]
+fn review_regression_ignored_named_test_is_not_an_eligible_reference_check() {
+    assert_clean(&real_report());
+    let sandbox = Sandbox::from_workspace();
+    sandbox.write(
+        "crates/fa-reference/src/ignored_named_test.rs",
+        "mod tests {\n    #[ignore = \"awaiting remote adapter\"]\n    #[test]\n    fn phantom() {}\n}\n",
+    );
+    let invariants =
+        invariants_with_reference("crates/fa-reference/src/ignored_named_test.rs::tests::phantom");
+    assert_only_finding(
+        &report_at(
+            sandbox.root(),
+            &invariants,
+            ROADMAP,
+            CLAIMS,
+            SOURCES,
+            FOUNDING,
+        ),
+        "registry/invariants.json",
+        Some("FA-INV-001"),
+        "reference_test_missing",
+    );
+}
+
+#[test]
+fn review_regression_cfg_disabled_named_test_is_not_an_eligible_reference_check() {
+    assert_clean(&real_report());
+    let sandbox = Sandbox::from_workspace();
+    sandbox.write(
+        "crates/fa-reference/src/cfg_disabled_named_test.rs",
+        "#[cfg(any())]\nmod tests {\n    #[test]\n    fn phantom() {}\n}\n",
+    );
+    let invariants = invariants_with_reference(
+        "crates/fa-reference/src/cfg_disabled_named_test.rs::tests::phantom",
+    );
+    assert_only_finding(
+        &report_at(
+            sandbox.root(),
+            &invariants,
+            ROADMAP,
+            CLAIMS,
+            SOURCES,
+            FOUNDING,
+        ),
+        "registry/invariants.json",
+        Some("FA-INV-001"),
+        "reference_test_missing",
+    );
+}
+
+#[test]
+fn review_regression_cfg_unknown_named_test_is_not_an_eligible_reference_check() {
+    assert_clean(&real_report());
+    let sandbox = Sandbox::from_workspace();
+    sandbox.write(
+        "crates/fa-reference/src/cfg_unknown_named_test.rs",
+        "#[cfg(feature = \"not-a-qualified-test-profile\")]\nmod tests {\n    #[test]\n    fn phantom() {}\n}\n",
+    );
+    let invariants = invariants_with_reference(
+        "crates/fa-reference/src/cfg_unknown_named_test.rs::tests::phantom",
+    );
+    assert_only_finding(
+        &report_at(
+            sandbox.root(),
+            &invariants,
+            ROADMAP,
+            CLAIMS,
+            SOURCES,
+            FOUNDING,
+        ),
+        "registry/invariants.json",
+        Some("FA-INV-001"),
+        "reference_test_missing",
+    );
+}
+
+#[test]
+fn review_regression_cfg_test_named_test_remains_an_eligible_control() {
+    assert_clean(&real_report());
+    let sandbox = Sandbox::from_workspace();
+    sandbox.write(
+        "crates/fa-reference/src/cfg_test_named_test.rs",
+        "#[cfg(test)]\nmod tests {\n    #[test]\n    fn phantom() {}\n}\n",
+    );
+    let invariants =
+        invariants_with_reference("crates/fa-reference/src/cfg_test_named_test.rs::tests::phantom");
+    assert_clean(&report_at(
+        sandbox.root(),
+        &invariants,
+        ROADMAP,
+        CLAIMS,
+        SOURCES,
+        FOUNDING,
+    ));
+}
+
+#[test]
+fn review_regression_cfg_disabled_function_test_is_not_an_eligible_reference_check() {
+    assert_clean(&real_report());
+    let sandbox = Sandbox::from_workspace();
+    sandbox.write(
+        "crates/fa-reference/src/cfg_disabled_function_test.rs",
+        "mod tests {\n    #[cfg(any())]\n    #[test]\n    fn phantom() {}\n}\n",
+    );
+    let invariants = invariants_with_reference(
+        "crates/fa-reference/src/cfg_disabled_function_test.rs::tests::phantom",
+    );
+    assert_only_finding(
+        &report_at(
+            sandbox.root(),
+            &invariants,
+            ROADMAP,
+            CLAIMS,
+            SOURCES,
+            FOUNDING,
+        ),
+        "registry/invariants.json",
+        Some("FA-INV-001"),
+        "reference_test_missing",
+    );
+}
+
+#[test]
+fn review_regression_cfg_attr_test_is_not_an_eligible_reference_check() {
+    assert_clean(&real_report());
+    let sandbox = Sandbox::from_workspace();
+    sandbox.write(
+        "crates/fa-reference/src/cfg_attr_test.rs",
+        "mod tests {\n    #[cfg_attr(test, ignore)]\n    #[test]\n    fn phantom() {}\n}\n",
+    );
+    let invariants =
+        invariants_with_reference("crates/fa-reference/src/cfg_attr_test.rs::tests::phantom");
+    assert_only_finding(
+        &report_at(
+            sandbox.root(),
+            &invariants,
+            ROADMAP,
+            CLAIMS,
+            SOURCES,
+            FOUNDING,
+        ),
+        "registry/invariants.json",
+        Some("FA-INV-001"),
+        "reference_test_missing",
+    );
+}
+
+#[test]
+fn review_regression_crate_inner_cfg_disabled_test_is_not_eligible() {
+    assert_clean(&real_report());
+    let sandbox = Sandbox::from_workspace();
+    sandbox.write(
+        "crates/fa-reference/src/crate_inner_cfg_disabled_test.rs",
+        "#![cfg(any())]\nmod tests {\n    #[test]\n    fn phantom() {}\n}\n",
+    );
+    let invariants = invariants_with_reference(
+        "crates/fa-reference/src/crate_inner_cfg_disabled_test.rs::tests::phantom",
+    );
+    assert_only_finding(
+        &report_at(
+            sandbox.root(),
+            &invariants,
+            ROADMAP,
+            CLAIMS,
+            SOURCES,
+            FOUNDING,
+        ),
+        "registry/invariants.json",
+        Some("FA-INV-001"),
+        "reference_test_missing",
+    );
+}
+
+#[test]
+fn review_regression_public_tests_module_inner_cfg_disabled_test_is_not_eligible() {
+    assert_clean(&real_report());
+    let sandbox = Sandbox::from_workspace();
+    sandbox.write(
+        "crates/fa-reference/src/public_tests_module_inner_cfg_disabled_test.rs",
+        "pub mod tests {\n    #![cfg(any())]\n    #[test]\n    fn phantom() {}\n}\n",
+    );
+    let invariants = invariants_with_reference(
+        "crates/fa-reference/src/public_tests_module_inner_cfg_disabled_test.rs::tests::phantom",
+    );
+    assert_only_finding(
+        &report_at(
+            sandbox.root(),
+            &invariants,
+            ROADMAP,
+            CLAIMS,
+            SOURCES,
+            FOUNDING,
+        ),
+        "registry/invariants.json",
+        Some("FA-INV-001"),
+        "reference_test_missing",
+    );
+}
+
+#[test]
+fn review_regression_cfg_test_function_remains_an_eligible_control() {
+    assert_clean(&real_report());
+    let sandbox = Sandbox::from_workspace();
+    sandbox.write(
+        "crates/fa-reference/src/cfg_test_function.rs",
+        "mod tests {\n    #[cfg(test)]\n    #[test]\n    fn phantom() {}\n}\n",
+    );
+    let invariants =
+        invariants_with_reference("crates/fa-reference/src/cfg_test_function.rs::tests::phantom");
+    assert_clean(&report_at(
+        sandbox.root(),
+        &invariants,
+        ROADMAP,
+        CLAIMS,
+        SOURCES,
+        FOUNDING,
+    ));
+}

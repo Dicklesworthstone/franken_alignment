@@ -844,7 +844,9 @@ fn check_reference_checks(rows: &[Json], root: &Path, findings: &mut Vec<Finding
                     id,
                     "reference_test_missing",
                     format!("{base}.reference_checks"),
-                    format!("`{symbol}` does not resolve to a #[test] function"),
+                    format!(
+                        "`{symbol}` does not resolve to an eligible, non-ignored #[test] function"
+                    ),
                 ));
             }
         }
@@ -853,6 +855,9 @@ fn check_reference_checks(rows: &[Json], root: &Path, findings: &mut Vec<Finding
 
 fn declares_test(source: &str, name: &str) -> bool {
     let tokens = rust_tokens(source);
+    if !attributes_eligible(&inner_attributes_after(&tokens, 0)) {
+        return false;
+    }
     let mut scopes = Vec::new();
     let mut index = 0;
     while index < tokens.len() {
@@ -881,19 +886,59 @@ enum RustToken<'a> {
     Punctuation(char),
 }
 
-fn scope_is_direct_tests(scopes: &[Option<&str>]) -> bool {
-    matches!(scopes, [Some("tests")])
+#[derive(Clone, Copy)]
+struct Scope<'a> {
+    name: Option<&'a str>,
+    eligible: bool,
 }
 
-fn module_opening_at<'a>(tokens: &[RustToken<'a>], brace: usize) -> Option<&'a str> {
-    match (
-        tokens.get(brace.checked_sub(2)?),
-        tokens.get(brace.checked_sub(1)?),
-    ) {
+#[derive(Clone, Copy)]
+enum Attribute {
+    Ignore,
+    CfgTest,
+    CfgOther,
+    CfgAttr,
+    Other,
+}
+
+fn scope_is_direct_tests(scopes: &[Scope<'_>]) -> bool {
+    matches!(
+        scopes,
+        [Scope {
+            name: Some("tests"),
+            eligible: true,
+        }]
+    )
+}
+
+fn module_opening_at<'a>(tokens: &[RustToken<'a>], brace: usize) -> Scope<'a> {
+    let Some(module) = brace.checked_sub(2) else {
+        return Scope {
+            name: None,
+            eligible: false,
+        };
+    };
+    let Some(name_index) = brace.checked_sub(1) else {
+        return Scope {
+            name: None,
+            eligible: false,
+        };
+    };
+    let (name, module) = match (tokens.get(module), tokens.get(name_index)) {
         (Some(RustToken::Word(keyword)), Some(RustToken::Word(name))) if *keyword == "mod" => {
-            Some(*name)
+            (Some(*name), brace - 2)
         }
-        _ => None,
+        _ => {
+            return Scope {
+                name: None,
+                eligible: false,
+            };
+        }
+    };
+    Scope {
+        name,
+        eligible: attributes_eligible(&attributes_before(tokens, module))
+            && attributes_eligible(&inner_attributes_after(tokens, brace + 1)),
     }
 }
 
@@ -909,6 +954,143 @@ fn test_declaration_at(tokens: &[RustToken<'_>], index: usize, name: &str) -> bo
             RustToken::Word(actual_name),
             RustToken::Punctuation('('),
         ]) if *test == "test" && *function == "fn" && *actual_name == name
+    ) && attributes_eligible(&attributes_before(tokens, index))
+}
+
+fn attributes_before(tokens: &[RustToken<'_>], target: usize) -> Vec<Attribute> {
+    let mut end = target;
+    while end > 0
+        && matches!(
+            tokens.get(end - 1),
+            Some(
+                RustToken::Word("pub" | "crate" | "super" | "self" | "in")
+                    | RustToken::Punctuation('(' | ')')
+            )
+        )
+    {
+        end -= 1;
+    }
+    let mut attributes = Vec::new();
+    while let Some((start, _inner, attribute)) = attribute_ending_at(tokens, end) {
+        attributes.push(attribute);
+        end = start;
+    }
+    attributes.reverse();
+    attributes
+}
+
+fn inner_attributes_after(tokens: &[RustToken<'_>], mut index: usize) -> Vec<Attribute> {
+    let mut attributes = Vec::new();
+    while let Some((end, inner, attribute)) = attribute_at(tokens, index) {
+        if !inner {
+            break;
+        }
+        attributes.push(attribute);
+        index = end;
+    }
+    attributes
+}
+
+fn attributes_eligible(attributes: &[Attribute]) -> bool {
+    !attributes.iter().any(|attribute| {
+        matches!(
+            attribute,
+            Attribute::Ignore | Attribute::CfgOther | Attribute::CfgAttr
+        )
+    })
+}
+
+fn attribute_at(tokens: &[RustToken<'_>], index: usize) -> Option<(usize, bool, Attribute)> {
+    if !matches!(tokens.get(index), Some(RustToken::Punctuation('#'))) {
+        return None;
+    }
+    let (inner, bracket) = match tokens.get(index + 1) {
+        Some(RustToken::Punctuation('!')) => (true, index + 2),
+        _ => (false, index + 1),
+    };
+    if !matches!(tokens.get(bracket), Some(RustToken::Punctuation('['))) {
+        return None;
+    }
+    let mut depth = 1_usize;
+    let mut cursor = bracket + 1;
+    while cursor < tokens.len() {
+        match tokens[cursor] {
+            RustToken::Punctuation('[') => depth += 1,
+            RustToken::Punctuation(']') => {
+                depth -= 1;
+                if depth == 0 {
+                    let attribute = classify_attribute(&tokens[bracket + 1..cursor]);
+                    return Some((cursor + 1, inner, attribute));
+                }
+            }
+            _ => {}
+        }
+        cursor += 1;
+    }
+    None
+}
+
+fn attribute_ending_at(tokens: &[RustToken<'_>], end: usize) -> Option<(usize, bool, Attribute)> {
+    if !matches!(
+        tokens.get(end.checked_sub(1)?),
+        Some(RustToken::Punctuation(']'))
+    ) {
+        return None;
+    }
+    let mut depth = 0_usize;
+    let mut opening = None;
+    for index in (0..end).rev() {
+        match tokens[index] {
+            RustToken::Punctuation(']') => depth += 1,
+            RustToken::Punctuation('[') => {
+                depth -= 1;
+                if depth == 0 {
+                    opening = Some(index);
+                    break;
+                }
+            }
+            _ => {}
+        }
+    }
+    let opening = opening?;
+    let (start, inner) = match tokens.get(opening.checked_sub(1)?) {
+        Some(RustToken::Punctuation('#')) => (opening - 1, false),
+        Some(RustToken::Punctuation('!'))
+            if matches!(
+                tokens.get(opening.checked_sub(2)?),
+                Some(RustToken::Punctuation('#'))
+            ) =>
+        {
+            (opening - 2, true)
+        }
+        _ => return None,
+    };
+    Some((
+        start,
+        inner,
+        classify_attribute(&tokens[opening + 1..end - 1]),
+    ))
+}
+
+fn classify_attribute(tokens: &[RustToken<'_>]) -> Attribute {
+    match tokens.first() {
+        Some(RustToken::Word("ignore")) => Attribute::Ignore,
+        Some(RustToken::Word("cfg_attr")) => Attribute::CfgAttr,
+        Some(RustToken::Word("cfg")) if cfg_test_attribute(tokens) => Attribute::CfgTest,
+        Some(RustToken::Word("cfg")) => Attribute::CfgOther,
+        _ => Attribute::Other,
+    }
+}
+
+fn cfg_test_attribute(tokens: &[RustToken<'_>]) -> bool {
+    matches!(
+        tokens,
+        [
+            RustToken::Word("cfg"),
+            RustToken::Punctuation('('),
+            RustToken::Word("test"),
+            RustToken::Punctuation(')'),
+        ]
     )
 }
 

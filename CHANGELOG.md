@@ -1,5 +1,9 @@
 # Changelog
 
+## 2026-09-08: fresh-review regression repairs
+
+Fixed explicit empty-domain closure in the reference frontier, duplicate Cargo identity collapse, incomplete dependency observations, hidden Markdown declarations, and ignored or conditionally unavailable named tests. Operator hashing now refuses non-regular inputs before launching the hash tool. Eleven regressions failed on unchanged implementation; the corrected complete RCH gate passed 319 tests. The two intervening formatting/test-compilation failures and exact baseline patch are retained. No assertions were relaxed and no external package or production feature was admitted. Corrected the README table and historical evidence labels; eight affected completion records were reopened and three scoped leaves independently requalified; five remain open under their existing obligations.
+
 ## 2026-09-08: four-step DSR qualification and six-hour reality check
 
 DSR executed all four required checks on unchanged clean commit `3d8fd5a`, including the 298-test RCH gate. Raw logs and their checked hashes are retained. The reality check records zero production increments and restores full packet ownership and prerequisite links while preserving scoped reference work. The reviewed admission-order change passed a fresh 298-test RCH gate; final system-map and current-prose checks passed on the imported tracker. All 143 packets have full owners, with 319 live beads still open; graph repair is not implementation progress.

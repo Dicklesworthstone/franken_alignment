@@ -1,0 +1,128 @@
+{
+  "schema": "fa.final_input_check/1",
+  "base_commit": "3001c527c0eb59a785f4dc45744656909ddba7b2",
+  "results": [
+    {
+      "verb": "system-map-check",
+      "exit_code": 0,
+      "worker": "hz3",
+      "job": "j-30004650170124303"
+    },
+    {
+      "verb": "prose-check",
+      "exit_code": 0,
+      "worker": "hz3",
+      "job": "j-30004650170124304"
+    }
+  ],
+  "attempts": [
+    {
+      "attempt": 1,
+      "results": [
+        {
+          "verb": "system-map-check",
+          "exit_code": 0,
+          "worker": "hz3",
+          "job": "j-30004650170124299"
+        },
+        {
+          "verb": "prose-check",
+          "exit_code": 1,
+          "worker": "hz3",
+          "job": "j-30004650170124300"
+        }
+      ]
+    },
+    {
+      "attempt": 2,
+      "results": [
+        {
+          "verb": "system-map-check",
+          "exit_code": 0,
+          "worker": "hz3",
+          "job": "j-30004650170124301"
+        },
+        {
+          "verb": "prose-check",
+          "exit_code": 0,
+          "worker": "hz3",
+          "job": "j-30004650170124302"
+        }
+      ]
+    },
+    {
+      "attempt": 3,
+      "results": [
+        {
+          "verb": "system-map-check",
+          "exit_code": 0,
+          "worker": "hz3",
+          "job": "j-30004650170124303"
+        },
+        {
+          "verb": "prose-check",
+          "exit_code": 0,
+          "worker": "hz3",
+          "job": "j-30004650170124304"
+        }
+      ]
+    }
+  ],
+  "source_sha256": {
+    ".beads/issues.jsonl": "b0228d466ec864fbafcd8f314a72f14342bb20ab4f66586b50c06aab1ba3e786",
+    ".gitattributes": "d174c96a874d9dacf2e2a3315282ea4cffb48ded4a58c35ee929482750a18957",
+    "CHANGELOG.md": "212d58271e610a866a369de77919c72dcdcf41c6e63212566b2eb0f82ce95ab7",
+    "IMPLEMENTATION_STATUS.md": "3ea7b2d81648a72c14c744f28cd6dadd3680031976a832285ac9a141d0ee4ced",
+    "README.md": "34d4df30db647323ccf48eb7ee73cdb246537722362f62e44a47bbacc8cf40e8",
+    "artifacts/VALIDATION_REPORT.md": "fb3d997cd08d06b4e56c284e03cab08248bb6fdbe8cbf77397db4b562f3c25f6",
+    "crates/fa-reference/src/product_frontier.rs": "976c98d6d734cd421df651b306a085f3c53cf85166db33c45e8f383cb38dfd06",
+    "crates/fa-reference/tests/reference_boundaries.rs": "9cf95b2af4dc23b08977b45ccc0e0d216ad84f7f46ed05a2d870a11243e1713d",
+    "docs/REALITY_CHECK_AND_BRIDGE_PLAN.md": "e432bf9eb8937c2f8b681129bce07019897cbf8f7a18f9d7ac95f88518452300",
+    "registry/dependency_policy.json": "32d83089b14a4afcf88b95359717cde46eefe2a4787b9a90a45d0bcad38efc37",
+    "registry/source_snapshot.json": "3cf76fa82a577d8f6d29852c6aa49d2489bd88c5f8faeff2992ab80e939257f9",
+    "xtask/src/admission.rs": "92b0288e4c17606dc7e3975bb7a62466f0237180699e61467d3b3e0da4257768",
+    "xtask/src/admission_evaluator_tests.rs": "de268e6bdfecb4eafa5d9380ee751963328d1e03c005984f82d5cfd977cc1c56",
+    "xtask/src/admission_negative_tests.rs": "5a3b0e65da31d4df61dc417564bd6f9e69f110a9f1a866826ed58ad8b2087a84",
+    "xtask/src/concordance.rs": "d2bc8f741a1605a4aee6983354e0d7353d89994d3a49a89029b898b39ef89f4c",
+    "xtask/src/concordance_tests.rs": "7544019c57faee9187ecbd9bb928286f588952f7282e9734cddba0edac5d8e5a",
+    "xtask/src/main.rs": "bb7e657b0d7acfa76408be3e2b1b655870761ae3242cfb24cd5c6b3eda9f004c",
+    "xtask/src/prose_input_tests.rs": "58da4bf4c353f5a9e4e3a9b2f396045b7a816a68f4a5803013d1fa16f36d3107",
+    "xtask/src/registry_checks.rs": "f4f3e04f29105e6ee68a7ff3867611726c206e57c1693b06ba11a6598f700c0a",
+    "xtask/src/registry_negative_tests.rs": "80b82cfa169265d0393fb9b1c2f8d5711c25955a1356576abbc1c0bb06025441",
+    "xtask/src/source_snapshot.rs": "d5f7592ead5edf0cea5f81ef2747e19b4c88be5301a6e62d83627d2ff2920a27",
+    "xtask/src/source_snapshot_tests.rs": "d9c3f895812e9da7e091f2e00ed7fb26b7c55e9edc2727ef1849969e71b62c2a",
+    "xtask/src/system_map.rs": "e2d1bb6647c82add143ccf03bee8f546cf0a6a8857fc657c4670894c4dc70718",
+    "artifacts/execution/2026-09-08-fresh-review-baseline-inputs.json": "69bd76c450065857604017144fd0742d30b2ad16f18d7636a35529ee9c8fcc97",
+    "artifacts/execution/2026-09-08-fresh-review-baseline-tests.patch": "b2695f6d977b61254cbaccfda3bea5acc327a9f8fe76255ce9aa7167ce7ddd04",
+    "artifacts/execution/2026-09-08-fresh-review-baseline.json": "48a2cfa649a24a4755fcc298210c95ebd0eacfbf8023bb4a16b2a12430607213",
+    "artifacts/execution/2026-09-08-fresh-review-baseline.log": "1f5a669c0581318c33f87dcf073022923a516eec0dbb6deb7a7212bed71aa9a2",
+    "artifacts/execution/2026-09-08-fresh-review-fresh-gate-attempt1-inputs.json": "69a2faa1881303b5903812d014214bd17dad4be021ab0f5edb2b2302463332b6",
+    "artifacts/execution/2026-09-08-fresh-review-fresh-gate-attempt1.json": "2556d67a76fe7ecc4620a99010d609809259dbe008c00980951bb0f4cea1a9db",
+    "artifacts/execution/2026-09-08-fresh-review-fresh-gate-attempt1.log": "9b039738e8f2b928955d3d5033b1623e2c258ea3ee77de0e4efae650f78e4959",
+    "artifacts/execution/2026-09-08-fresh-review-fresh-gate-attempt2-inputs.json": "c42d105c938afd8e801bb6ad68cc3b43e6c6ca2dc110d741f1176491c41bb9fe",
+    "artifacts/execution/2026-09-08-fresh-review-fresh-gate-attempt2.json": "02291ff9f264f569e38ef54cc76aa93c5a8e235f723185d510e5deec37973656",
+    "artifacts/execution/2026-09-08-fresh-review-fresh-gate-attempt2.log": "15197bb83d6907083abe0c04a248b79c987aed281680884a9315cb03a1bc8306",
+    "artifacts/execution/2026-09-08-fresh-review-fresh-gate-attempt3-inputs.json": "58919e0a34511d4ee773c1c12b04f9350fd61b92c05445af1a26ff63598f020c",
+    "artifacts/execution/2026-09-08-fresh-review-fresh-gate-attempt3.json": "4fa83d7cefcaf9230ab3a50a4d645b662d4390e64c5ec9a8d850f027ead466b1",
+    "artifacts/execution/2026-09-08-fresh-review-fresh-gate-attempt3.log": "81da830f4e828f58503f586a3387386dc35ef1d5b4dc3a353ad8daa701881bd3",
+    "artifacts/execution/2026-09-08-fresh-review-receipt.json": "e4c95c9284579d65e83d66367230c226f81c1e835433b39ed9ddbc13db023aee"
+  },
+  "artifact_sha256": {
+    "artifacts/execution/2026-09-08-fresh-review-final1-system-map-check.log": "e4b2cac8457cc7919b4e9e2f8ed955b73c41eb6d42f29b9fa0439783f0b28db4",
+    "artifacts/execution/2026-09-08-fresh-review-final1-system-map-check.json": "5901ce491b2e2a843137a6cb1196e5873979b9cfe64c3723751c0029e9e3bea5",
+    "artifacts/execution/2026-09-08-fresh-review-final1-prose-check.log": "5b2374771bf6bc722379cdc0ee047c16ccd5a0b0230c8ae360b43cd9662f3d6d",
+    "artifacts/execution/2026-09-08-fresh-review-final1-prose-check.json": "d838deb45d7a7794c5e32566c38bb5277527f38fa4451a29e725b287b06b2c4f",
+    "artifacts/execution/2026-09-08-fresh-review-final1-inputs.json": "b1a605959dce6c2639d77b629c2cff057afc4662b1cd711ff048e4f345b8cda2",
+    "artifacts/execution/2026-09-08-fresh-review-final2-system-map-check.log": "595c677526dfc7f17dd0391c1a4cbbc0f3fa77b9a096d4bb93bc4c4da764e35a",
+    "artifacts/execution/2026-09-08-fresh-review-final2-system-map-check.json": "d9f63555dd77ebf2bbf612535c0d9ba3ba7c8532d61f29f6c0af6bdb37b3f799",
+    "artifacts/execution/2026-09-08-fresh-review-final2-prose-check.log": "a64949dfb82cbd26ee0f4160e68f1764380da1b441230f06bf93f81891382de4",
+    "artifacts/execution/2026-09-08-fresh-review-final2-prose-check.json": "b936f725286f5a3a415f99e516b11eab20ab47b77256bdf7086186090031b7c2",
+    "artifacts/execution/2026-09-08-fresh-review-final2-inputs.json": "453ef5f7262fe657a2bee90aecaf177234bc96ad53ab756ed1a06ffd5278cc50",
+    "artifacts/execution/2026-09-08-fresh-review-final3-system-map-check.log": "260845b91a2560176f463f1a89c8fb85e3e91cd73a5afc48944e19adb96fe72d",
+    "artifacts/execution/2026-09-08-fresh-review-final3-system-map-check.json": "d7f71e44bb73c804502aa900aec60fd63aa3c9ca188689ad162194539e5daab8",
+    "artifacts/execution/2026-09-08-fresh-review-final3-prose-check.log": "a9c5d5544ac9b7552b8728e8bb1b8d16edf6e9de6b62ecea8afdebd4cd42c0c6",
+    "artifacts/execution/2026-09-08-fresh-review-final3-prose-check.json": "89643d70cc1163edf600334218c2a52b41fec055299b349ba3e26c9bf4a0c813",
+    "artifacts/execution/2026-09-08-fresh-review-final3-inputs.json": "8ab66752658eb262d308d4da80154e2433b0acaf4cecd492453b33992418201f"
+  },
+  "scope": "Final runtime document/tracker inputs and unchanged qualified Rust source. First prose run caught two stale README reference-test counts; second passed after counts were corrected; third passed on the final README with its execution date/receipt link also corrected. System-map and prose checks both report zero findings on the final frozen input. These checks add no test-count, DSR, production or release claim. Final artifact receipts are generated afterward and hash-verified locally; raw unified diff preservation affects artifact attributes only."
+}

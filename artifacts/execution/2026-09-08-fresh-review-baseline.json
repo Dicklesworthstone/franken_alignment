@@ -1,0 +1,1 @@
+{"api_version":"1.0","command":"cargo +nightly-2026-09-07 test --locked --workspace --all-targets --no-fail-fast review_regression_","outcome":"completed","location":"remote","worker_id":"hz3","remote_exit_code":101,"duration_ms":50481,"timing":{"classify":null,"select":null,"sync_up":18014,"exec":5101,"sync_down":null,"cleanup":null,"total":null},"result_dirs":[]}

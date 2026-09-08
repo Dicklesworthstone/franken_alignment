@@ -89,6 +89,80 @@ fn mutate_once(source: &str, from: &str, to: &str) -> String {
 }
 
 #[test]
+fn review_regression_projection_refuses_partially_unreadable_edge_kinds() {
+    let input = r#"{"packages":[
+        {"id":"a","name":"consumer","version":"1","source":"registry+example"},
+        {"id":"b","name":"backend","version":"1","source":"registry+example"}],
+        "resolve":{"nodes":[
+            {"id":"a","features":[],"deps":[{"pkg":"b","dep_kinds":[{"kind":null,"target":null}]}]},
+            {"id":"b","features":[],"deps":[]}]}}"#;
+    let project = |text: &str| {
+        let parsed = parse(text.as_bytes(), JsonLimits::default()).unwrap();
+        let mut findings = Vec::new();
+        let observations = project_observed_packages(&parsed, &mut findings);
+        (observations, findings)
+    };
+    let (permitted, findings) = project(input);
+    assert!(findings.is_empty());
+    assert_eq!(permitted.len(), 2);
+    assert_eq!(
+        permitted
+            .iter()
+            .find(|p| p.id.name == "consumer")
+            .unwrap()
+            .edges
+            .len(),
+        1
+    );
+    let target_scoped = mutate_once(input, "\"target\":null", "\"target\":\"cfg(unix)\"");
+    let (scoped_observations, scoped_findings) = project(&target_scoped);
+    assert!(scoped_findings.is_empty());
+    assert_eq!(scoped_observations, permitted);
+    for invalid in [
+        "42",
+        "null",
+        "{}",
+        "{\"kind\":\"future-kind\",\"target\":null}",
+        "{\"kind\":null}",
+        "{\"kind\":null,\"target\":[]}",
+    ] {
+        let malformed = mutate_once(
+            input,
+            "\"dep_kinds\":[{\"kind\":null,\"target\":null}]",
+            &format!("\"dep_kinds\":[{{\"kind\":null,\"target\":null}},{invalid}]"),
+        );
+        let (observations, findings) = project(&malformed);
+        assert!(
+            findings
+                .iter()
+                .any(|f| f.phase == crate::admission::Phase::Metadata
+                    && f.code == "dependency_kind_unreadable"),
+            "unreadable edge disappeared: {invalid}: {findings:?}"
+        );
+        assert!(observations.iter().all(|p| p.id.name != "consumer"));
+    }
+}
+
+#[test]
+fn review_regression_projection_refuses_duplicate_resolve_identity() {
+    let parsed = parse(CAPTURED_METADATA.as_bytes(), JsonLimits::default()).unwrap();
+    let mut findings = Vec::new();
+    assert_eq!(project_observed_packages(&parsed, &mut findings).len(), 2);
+    assert!(findings.is_empty());
+    let node = "{\"id\":\"path+file:///Users/jemanuel/projects/franken_alignment/xtask#0.2.0\",\"dependencies\":[],\"deps\":[],\"features\":[]}";
+    let malformed = mutate_once(CAPTURED_METADATA, node, &format!("{node},{node}"));
+    let parsed = parse(malformed.as_bytes(), JsonLimits::default()).unwrap();
+    let observed = project_observed_packages(&parsed, &mut findings);
+    assert!(
+        findings.iter().any(
+            |f| f.phase == crate::admission::Phase::Graph && f.code == "duplicate_resolve_node"
+        ),
+        "duplicate node silently overwrote its predecessor: {findings:?}"
+    );
+    assert!(observed.is_empty(), "ambiguous graph must not be projected");
+}
+
+#[test]
 fn same_edge_and_destination_are_admitted_on_a_but_refused_on_b() {
     let consumer = package(exact(REGISTRY), "consumer", "1.0.0");
     let backend = package(exact(REGISTRY), "backend", "1.0.0");

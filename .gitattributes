@@ -5,3 +5,6 @@
 *.sh text
 # Execution logs retain the operator's exact bytes, including carriage returns.
 artifacts/execution/*.log -text -whitespace
+
+# Retained unified diffs preserve their required blank context lines.
+artifacts/execution/*-baseline-tests.patch -text -whitespace

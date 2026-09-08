@@ -179,3 +179,82 @@ fn malformed_and_absent_mapping_roots_are_distinct_refusals() {
     assert_finding(&missing.dangling, "FI-A11", "missing_root");
     assert_frozen_json("missing-root", &missing, MISSING_ROOT_REPORT);
 }
+
+#[test]
+fn review_regression_indented_code_headings_do_not_satisfy_plan_coverage() {
+    for indent in 0..=3 {
+        let plan = BASE_PLAN.replacen(
+            "### 9.8 Consequence classes",
+            &format!("{}### 9.8 Consequence classes", " ".repeat(indent)),
+            1,
+        );
+        let report = report(BASE_CONCORDANCE, &plan);
+        assert!(
+            report.is_clean(),
+            "a CommonMark heading indented {indent} spaces is the permitted control: {report:#?}"
+        );
+    }
+
+    let indented_code = BASE_PLAN.replacen(
+        "### 9.8 Consequence classes",
+        "    ### 9.8 Consequence classes",
+        1,
+    );
+    let indented_report = report(BASE_CONCORDANCE, &indented_code);
+    assert_finding(&indented_report.dangling, "§9.8", "unknown_reference");
+    assert!(
+        !indented_report.is_clean(),
+        "a four-space indented Markdown code line must not supply plan coverage"
+    );
+
+    let tab_indented_code = BASE_PLAN.replacen(
+        "### 9.8 Consequence classes",
+        "\t### 9.8 Consequence classes",
+        1,
+    );
+    let report = report(BASE_CONCORDANCE, &tab_indented_code);
+    assert_finding(&report.dangling, "§9.8", "unknown_reference");
+}
+
+#[test]
+fn review_regression_html_comment_heading_does_not_satisfy_plan_coverage() {
+    let hidden = BASE_PLAN.replacen(
+        "### 9.8 Consequence classes",
+        "<!--\n### 9.8 Consequence classes\n-->",
+        1,
+    );
+    let hidden_report = report(BASE_CONCORDANCE, &hidden);
+    assert_finding(&hidden_report.dangling, "§9.8", "unknown_reference");
+    assert!(
+        !hidden_report.is_clean(),
+        "a heading hidden in an HTML comment must not satisfy plan coverage"
+    );
+
+    assert!(
+        report(BASE_CONCORDANCE, BASE_PLAN).is_clean(),
+        "the paired visible heading remains a permitted control"
+    );
+}
+
+#[test]
+fn review_regression_html_comment_state_does_not_leak_to_visible_plan_headings() {
+    let comment_with_indented_closer = BASE_PLAN.replacen(
+        "### 9.8 Consequence classes",
+        "<!--\n    ### 9.8 Consequence classes\n    -->\n### 9.8 Consequence classes",
+        1,
+    );
+    assert!(
+        report(BASE_CONCORDANCE, &comment_with_indented_closer).is_clean(),
+        "an indented HTML-comment closer must leave the following visible heading eligible"
+    );
+
+    let comment_with_fence_marker = BASE_PLAN.replacen(
+        "### 9.8 Consequence classes",
+        "<!--\n```\n-->\n### 9.8 Consequence classes",
+        1,
+    );
+    assert!(
+        report(BASE_CONCORDANCE, &comment_with_fence_marker).is_clean(),
+        "a fence marker inside an HTML comment must not hide the following visible heading"
+    );
+}

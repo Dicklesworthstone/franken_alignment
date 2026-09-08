@@ -1,5 +1,7 @@
 # Preparation validation · revision 0.2
 
+> **Historical evidence only — clarified 2026-09-08.** This report and `SHA256SUMS` describe earlier preparation snapshots. The digest list does not match the current checkout and must not be used to verify a current archive or release. Newer reference/operator executions have separately bound receipts under [execution/](execution/) and are summarized in [implementation status](../IMPLEMENTATION_STATUS.md). The preparation claims below are preserved as history.
+
 ## Scope
 
 This report records preparation checks on the revised repository files. It does not report Rust compilation, rustfmt, Clippy or unit-test execution. `rustc`, `cargo` and `rustfmt` were not installed in the preparation environment. The 20 Rust test functions are source-present, not passed tests. No foundation was built, no detector was trained, and no production effect boundary or benchmark was exercised.

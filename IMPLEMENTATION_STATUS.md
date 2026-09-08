@@ -1,6 +1,16 @@
 # Implementation status · design revision 0.3
 
-Current execution evidence: [receipt](artifacts/execution/2026-09-08-bridge-gate-receipt.json).
+Current execution evidence: [receipt](artifacts/execution/2026-09-08-fresh-review-receipt.json).
+
+## Fresh review: corrected reference and operator boundaries
+
+The complete frozen RCH gate passed **319 tests: 57 reference unit, 18 integration, 242 xtask and 2 doctests**, with zero failures, ignored tests or filtered tests, on `vmi1227854` under `nightly-2026-09-07`. [The receipt](artifacts/execution/2026-09-08-fresh-review-receipt.json) binds the base, exact overlay, 133 source/build inputs and all retained attempts. The initial regression batch on unchanged `3001c52` implementation reproduced eleven failures with one passing control; [its exact test patch](artifacts/execution/2026-09-08-fresh-review-baseline-tests.patch) is retained separately from later added controls.
+
+Empty reference domains can now close at sequence zero only with an explicit nonzero-generation caller-trusted marker; capacity, scope and post-close checks still apply. The admission gate refuses duplicate package IDs before identity collapse, and observation projection refuses duplicate resolve nodes or partially unreadable dependency kinds/targets. Document scanners exclude indented code and HTML comments while preserving fence boundaries. Named reference checks reject ignored tests and unqualified conditional declarations; this remains bounded source inspection, not proof that a declared test ran. The operator digest rejects non-regular paths before invoking the hash utility; its test covers a regular file and directory, not an executed FIFO hang experiment.
+
+Two full-gate failures remain visible: a late diagnostic edit needed formatting, then an added test's local variable shadowed its helper. Both were repaired without relaxing assertions. The malformed README performance table was corrected and the old package digest/report explicitly labeled historical. Production behavior, full foundation admission, signing and release remain unimplemented; the previous DSR result has not been rerun on these changes.
+
+Eight affected leaves or epics were reopened during review. Independent receipt review supports reclosure of three scoped reference/operator leaves; five checker leaves/epics remain open with existing prerequisite and broader acceptance obligations. The tracker has 336 live beads: 12 closed and 324 open; `br ready` returns five tasks. This review repairs existing reference/operator behavior and claims no production increment.
 
 ## Roadmap admission ordering verified
 
@@ -73,11 +83,11 @@ The round uses a deliberately non-cryptographic FNV comparison and proves no cry
 | Founding essays | Both read in full again for revision 0.3; head commits recorded in `registry/sources.json` | Complete premise; no missing post |
 | Ten donor/build project deep dives | Targeted code/manifest/plan review at fixed refs (revision 0.2) | Exact files/scopes recorded; not full repository audits or builds |
 | Pure-Rust reference workspace | Source present, zero external packages, formatted with `cargo fmt --all` on 2026-09-06 | Selected logical semantics only; not a broker |
-| Rust test functions | **56 unit + 16 integration reference tests, 224 xtask tests and 2 doctests passed remotely on 2026-09-08 UTC**; earlier runs remain dated below | Exact frozen batch above; not production evidence or credit for other work in progress |
+| Rust test functions | **57 unit + 18 integration reference tests, 242 xtask tests and 2 doctests passed remotely on 2026-09-08 UTC**; earlier runs remain dated below | Exact frozen batch above; not production evidence or credit for other work in progress |
 | Rust local gate driver | **Complete reference gate PASS remotely on 2026-09-08 UTC** under `nightly-2026-09-07`; earlier local 2026-09-06 gate retained below | Initial inventory, registry-core and full concordance checks execute; external admission remains incomplete; new source requires a new run |
 | Production release gate | Explicitly refuses release | No qualified broker/toolchain/target/signing closure |
 | Machine-readable registries | 40 invariants, 21 hypotheses, 143 packets, 5 SLO targets, founding concordance (38 ideas, 9 syntheses, 67 engineering additions), preregistration ledger with no preregistered protocol yet, system map (9 layers) and vocabulary (26 nouns, 35 verbs, 12 reason codes) | Static structural checks are not proofs of their claims |
-| Beads task graph | The reality-check bridge gives all 143 roadmap packets full owners; 336 live beads, 17 closed and 319 open; `br ready` returns six tasks | Added coverage is not implementation. Use `br ready` for assignments: this `bv` version also counts a tombstone and three epics as actionable. See [the bridge](docs/REALITY_CHECK_AND_BRIDGE_PLAN.md) and retained graph review |
+| Beads task graph | All 143 roadmap packets have full owners; after fresh-review requalification, 336 live beads, 12 closed and 324 open; `br ready` returns five tasks | Added coverage is not implementation. Use `br ready` for assignments; the bridge's prior graph review and six-task count describe its frozen checkpoint, not subsequent tracker changes |
 | Production control broker / persistence / containment | Not implemented | Reference code performs no external effects |
 | Native foundation adapters | Planned, admission blockers recorded | A reviewed source file is not an integration |
 | Trained helpers / codecs / signatures / surprise residual / rewind | Research and implementation plans | No measured safety, compression, detection or containment result |

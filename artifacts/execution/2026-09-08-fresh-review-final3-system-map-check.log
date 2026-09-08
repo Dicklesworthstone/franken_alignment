@@ -1,0 +1,85 @@
+  [2m2026-09-08T04:11:59.252594Z[0m [32m INFO[0m [1;32mrch::hook[0m[32m: [32mSelected worker: hz3 at ubuntu@194.140.197.98 (4 slots remaining after reservation, speed 75.1)[0m
+    [2;3mat[0m rch/src/hook.rs:2645 [2;3mon[0m ThreadId(1)
+
+[*] Job j-30004650170124303 submitted to hz3 (4 slots remaining, speed 75.1)
+  [2m2026-09-08T04:11:59.476727Z[0m [32m INFO[0m [1;32mrch::hook::transfer_orchestration[0m[32m: [32mStarting remote compilation pipeline for franken_alignment_review_final3_20260908 (hash: 305f9d949a7748a4)[0m
+    [2;3mat[0m rch/src/hook/transfer_orchestration.rs:510 [2;3mon[0m ThreadId(1)
+
+  [2m2026-09-08T04:11:59.476760Z[0m [32m INFO[0m [1;32mrch::hook::transfer_orchestration[0m[32m: [32mPrepared dependency sync manifest for 1 roots[0m
+    [2;3mat[0m rch/src/hook/transfer_orchestration.rs:532 [2;3mon[0m ThreadId(1)
+
+  [2m2026-09-08T04:12:01.062467Z[0m [32m INFO[0m [1;32mrch::hook::transfer_orchestration[0m[32m: [32mSyncing project to worker hz3...[0m
+    [2;3mat[0m rch/src/hook/transfer_orchestration.rs:661 [2;3mon[0m ThreadId(1)
+
+  [2m2026-09-08T04:12:05.218971Z[0m [32m INFO[0m [1;32mrch::transfer[0m[32m: [32mLinked git worktree detected at /Users/jemanuel/projects/franken_alignment_review_final3_20260908 (gitdir: /Users/jemanuel/projects/franken_alignment/.git/worktrees/franken_alignment_review_final3_20260908); excluding dangling '.git' file from upload so the remote build resolves git-free like a normal repo[0m
+    [2;3mat[0m rch/src/transfer.rs:2009 [2;3mon[0m ThreadId(1)
+
+  [2m2026-09-08T04:12:05.219242Z[0m [32m INFO[0m [1;32mrch::transfer[0m[32m: [32mSyncing /Users/jemanuel/projects/franken_alignment_review_final3_20260908 -> /data/tmp/rch/franken_alignment_review_final3_20260908/305f9d949a7748a4 on hz3 (streaming)[0m
+    [2;3mat[0m rch/src/transfer.rs:3549 [2;3mon[0m ThreadId(1)
+
+  [2m2026-09-08T04:12:08.760304Z[0m [32m INFO[0m [1;32mrch::hook::transfer_orchestration[0m[32m: [32mSync complete: 49 files, 5242555 bytes in 5908ms[0m
+    [2;3mat[0m rch/src/hook/transfer_orchestration.rs:958 [2;3mon[0m ThreadId(1)
+
+  [2m2026-09-08T04:12:08.773512Z[0m [32m INFO[0m [1;32mrch::hook::transfer_orchestration[0m[32m: [32mExecuting command remotely: cargo +nightly-2026-09-07 run --locked -p xtask -- system-map-check[0m
+    [2;3mat[0m rch/src/hook/transfer_orchestration.rs:1018 [2;3mon[0m ThreadId(1)
+
+  [2m2026-09-08T04:12:08.773835Z[0m [32m INFO[0m [1;32mrch::transfer[0m[32m: [32mRewriting CARGO_TARGET_DIR for remote execution (worker-scoped path): /Volumes/USB_NVME/cargo-target -> /data/tmp/rch/franken_alignment_review_final3_20260908/.rch-target-hz3-pool-7bd4d97942b992e74e79c408f7cf4229[0m
+    [2;3mat[0m rch/src/transfer.rs:1842 [2;3mon[0m ThreadId(1)
+
+  [2m2026-09-08T04:12:08.773920Z[0m [32m INFO[0m [1;32mrch::transfer[0m[32m: [32mWrapping command with external timeout protection, [1;32mkind[0m[32m: cargo build, [1;32mtimeout_secs[0m[32m: 3600[0m
+    [2;3mat[0m rch/src/transfer.rs:2669 [2;3mon[0m ThreadId(1)
+
+warning: unused field `license-file` in `workspace.package`
+ --> Cargo.toml:9:1
+  |
+9 | license-file = "LICENSE"
+  | ^^^^^^^^^^^^
+  |
+  = note: `cargo::unused_workspace_package_fields` is set to `warn` by default
+help: consider removing the field `workspace.package.license-file`
+warning: workspace (manifest) generated 1 warning
+   Compiling xtask v0.2.0 (/data/tmp/rch/franken_alignment_review_final3_20260908/305f9d949a7748a4/xtask)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 2.98s
+     Running `/data/tmp/rch/franken_alignment_review_final3_20260908/.rch-target-hz3-pool-7bd4d97942b992e74e79c408f7cf4229/debug/xtask system-map-check`
+PASS admission_contract: required local source, target, build/runtime review and future external constraints; snapshot identity matched
+SNAPSHOT tool: sha256sum
+SNAPSHOT verified files: 133
+PASS source_snapshot: 133 reviewed files match the manifest byte for byte, and the discovered set equals the manifest set. Digests come from the operator's SHA-256 tool; no cryptography is implemented here. Not a claim about the hashing binary's authenticity, runtime semantics, or package dependencies.
+SYSTEM_MAP input=registry/system_map.json bytes=8225 sha256=7b62748269fd1fa55a7a8ea2a2cd9274970accfff4e7e97b1983fdf342f29223; operator digest and outer freeze, not receipt authentication
+SYSTEM_MAP input=registry/vocabulary.json bytes=10344 sha256=b5b7cb253333f43ba6bcc6b08268bb91ceab7767b7d7581fa5cec7f41a475615; operator digest and outer freeze, not receipt authentication
+SYSTEM_MAP input=registry/invariants.json bytes=56752 sha256=b2f09b25d5633c7686ecf66a8b1998a489211d01c4a0bf179ce23af89b5f3965; operator digest and outer freeze, not receipt authentication
+SYSTEM_MAP input=registry/roadmap.json bytes=112811 sha256=86a1478ce87175b6bb491272819b77f511440b4be9f6849dc2ae75436f783737; operator digest and outer freeze, not receipt authentication
+SYSTEM_MAP input=README.md bytes=55340 sha256=34d4df30db647323ccf48eb7ee73cdb246537722362f62e44a47bbacc8cf40e8; operator digest and outer freeze, not receipt authentication
+SYSTEM_MAP input=docs/AGENT_GUIDE.md bytes=9645 sha256=cbb54889340d1e239ad17228faa4ad640ce4e684049153d3ff160c44d5144a8f; operator digest and outer freeze, not receipt authentication
+SYSTEM_MAP input=docs/SYSTEM_MAP.md bytes=7188 sha256=52cae2e9d0bfef7f44af75c398e9f9d47aba3591389e6b23553e3d390f422c02; operator digest and outer freeze, not receipt authentication
+SYSTEM_MAP input=.beads/issues.jsonl bytes=1465027 sha256=b0228d466ec864fbafcd8f314a72f14342bb20ab4f66586b50c06aab1ba3e786; operator digest and outer freeze, not receipt authentication
+SYSTEM_MAP input=COMPREHENSIVE_PLAN_FOR_THE_DESIGN_OF_FRANKENALIGNMENT.md bytes=251689 sha256=b08ed463dd8d321a5f1a4a65fb839456345788fcc6cb9b8ff3103c7143d64616; operator digest and outer freeze, not receipt authentication
+SYSTEM_MAP_JSON {"missing":[],"retired_in_use":[],"unregistered_verbs":[],"counts":{"layers":9,"verbs":35,"packets":143,"guide_commands":42,"readme_commands":11}}
+PASS system_map: bounded registry/document consistency and checker-epic bead link; no command or layer-suite execution claim
+  [2m2026-09-08T04:12:13.113153Z[0m [32m INFO[0m [1;32mrch::hook::transfer_orchestration[0m[32m: [32mRemote command finished: exit=0 in 4338ms[0m
+    [2;3mat[0m rch/src/hook/transfer_orchestration.rs:1150 [2;3mon[0m ThreadId(1)
+
+  [2m2026-09-08T04:12:13.156991Z[0m [32m INFO[0m [1;32mrch::transfer[0m[32m: [32mRetrieving artifacts from /data/tmp/rch/franken_alignment_review_final3_20260908/.rch-target-hz3-pool-7bd4d97942b992e74e79c408f7cf4229 on hz3[0m
+    [2;3mat[0m rch/src/transfer.rs:4328 [2;3mon[0m ThreadId(1)
+
+  [2m2026-09-08T04:12:14.518566Z[0m [32m INFO[0m [1;32mrch::transfer[0m[32m: [32mArtifacts retrieved in 1361ms (8 files, 24242 bytes)[0m
+    [2;3mat[0m rch/src/transfer.rs:4383 [2;3mon[0m ThreadId(1)
+
+  [2m2026-09-08T04:12:14.518627Z[0m [32m INFO[0m [1;32mrch::hook::transfer_orchestration[0m[32m: [32mCustom CARGO_TARGET_DIR artifacts retrieved: 8 files, 24242 bytes in 1361ms[0m
+    [2;3mat[0m rch/src/hook/transfer_orchestration.rs:1405 [2;3mon[0m ThreadId(1)
+
+[W] Worker: hz3 | Job: j-30004650170124303
+[T] Total: 11.6s (sync 5.9s, build 4.3s, artifacts 1.4s)
+^ Sync: 5.0 MB in 5.9s (866.6 KB/s)
+[C] Compile: 4.3s
+v Artifacts: 23.7 KB in 1.4s (17.4 KB/s)
+[T] Cache: MISS
++--- [OK] Build Successful ----+
+| Duration: 4.3s               |
+| Artifacts: 8 files (23.7 KB) |
+| Worker: hz3                  |
+| Cache: MISS (warming cache)  |
+| Time: 2026-09-08 04:12:14    |
++------------------------------+
+[RCH] remote hz3 (15.9s)
+[RCH] clean-overlay receipt: base=3001c527c0eb59a785f4dc45744656909ddba7b2 overlay-fingerprint=1a555ab380d6eeeabadd34f32245546756fdb7f7687b0ad97ebc6b1b6b221e06

@@ -600,7 +600,7 @@ fn execute() -> Result<(), String> {
             check_system_map(&root)
         }
         [command] if command == "release-check" => {
-            Err("Release blocked: no qualified production broker, frozen release toolchain, foundation closure, target matrix or signed proof closure exists in design draft 0.2.".into())
+            Err("Release blocked: no qualified production broker, frozen release toolchain, foundation closure, target matrix or signed proof closure exists yet.".into())
         }
         _ => Err("Usage: cargo xtask check | concordance-check | system-map-check | prose-check | inventory | release-check".into()),
     }

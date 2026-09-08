@@ -427,7 +427,10 @@ Every target in [`registry/slo.json`](./registry/slo.json) is an unmeasured prop
 
 Hardware, host model, batch and context distribution, durability profile and experiment protocol must be pinned before any target becomes a release criterion (plan §18.4).
 
----|---|---|
+Additional proposed component targets below are also unmeasured; they are not part of the five registered SLOs above.
+
+| Component target | Proposed bound | Intended mechanism |
+|---|---|---|
 | **Effect Gate Decision Latency** | $\le 2.0\text{ ms}$ (p99) | Cached epistemic witness evaluation + permit signature |
 | **Epistemic Witness Validation** | $\le 50\ \mu\text{s}$ (p99) | Exact key comparison and BTreeMap empty-range search |
 | **Authority Cut Verification** | $\le 500\ \mu\text{s}$ (up to 128 nodes) | Bounded reachability oracle; independent verification |
@@ -441,7 +444,7 @@ Hardware, host model, batch and context distribution, durability profile and exp
 ## Determinism, verification & governance
 
 - **Simulation-First & Lab Runtime.** The entire system runs under Asupersync's deterministic simulation runtime (`lab`): virtual time, seed-replayable execution, and DPOR schedule exploration. Every race or concurrency bug produces a deterministic replay seed.
-- **Reference Oracle.** [`crates/fa-reference`](./crates/fa-reference) provides an independent, deliberately small logical model in safe Rust (`#![forbid(unsafe_code)]`), with 56 qualified unit tests and 16 public-API integration tests covering MVCC witnesses, frontier gaps, rights conservation, commutativity, graph cuts, linear probe bounds, non-cryptographic commit–reveal binding and reset conservation. The complete gate passed remotely on September 7, 2026 under `nightly-2026-09-07`; the logs are in [`artifacts/execution/`](./artifacts/execution/).
+- **Reference Oracle.** [`crates/fa-reference`](./crates/fa-reference) provides an independent, deliberately small logical model in safe Rust (`#![forbid(unsafe_code)]`), with 57 qualified unit tests and 18 public-API integration tests covering MVCC witnesses, frontier gaps, rights conservation, commutativity, graph cuts, linear probe bounds, non-cryptographic commit–reveal binding and reset conservation. The corrected reference/operator gate passed remotely on September 8, 2026 UTC under `nightly-2026-09-07`; [the fresh-review receipt](./artifacts/execution/2026-09-08-fresh-review-receipt.json) binds the exact source and retained logs.
 - **Registered Invariants.** 40 invariants ([`registry/invariants.json`](./registry/invariants.json), FA-INV-001 through FA-INV-040) state the production obligations, including the four taken directly from the founding essays (one-directional flow, no false-alarm-only helper selection, no actor-held latent authority, rewind never rewinds the world), four that make the system verifiable by outsiders (served-model identity, governed authority widening, independently verifiable receipts, typestate purpose contexts) and two that make it legible to an agent (every agent-facing value carries its epistemic status; rehearsal never executes or permits). Production checkers are planned; 13 invariants currently have reference-model checks, drawn from 41 distinct reference tests. Waivers are forbidden on all of them.
 - **Falsifiable Research Hypotheses.** 21 explicit research cards ([`registry/claims.json`](./registry/claims.json), H1 through H21) define empirical criteria for learned compression, metacognition, helper congresses, elicited signatures, rewind containment, lead-time credit, activation fingerprints, self-report residuals and live canaries against matched baselines. [`registry/experiments.json`](./registry/experiments.json) is the preregistration ledger.
 - **Formal Anchors.** Plan §19.9 specifies Lean 4 theorems over the abstract ledger (rights conservation, the effect-bound permit law, monotone degraded authority, the consequence lattice) and TLA+ race models (dispatch, revocation, reset, fleet fence) to run in the local gate with `SKIP` when toolchains are absent. Packet FA-128 is planned; no `formal/` directory exists yet.

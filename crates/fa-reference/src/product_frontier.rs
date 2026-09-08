@@ -33,6 +33,7 @@ pub enum FrontierStage {
 }
 
 /// A trusted observation that its named projection ends at `final_sequence`.
+/// `final_sequence == 0` denotes an explicitly closed empty projection.
 ///
 /// This is caller-supplied reference input.  It carries no cryptographic or
 /// origin proof and must not be mistaken for one.
@@ -174,16 +175,25 @@ impl ProductFrontiers {
 
     /// Records an explicit trusted closing-marker observation.
     ///
-    /// Contiguity through the marker is necessary but not sufficient for a
-    /// closed claim: callers must provide this observation separately.
+    /// Contiguity through a nonempty marker is necessary but not sufficient for
+    /// a closed claim: callers must provide this observation separately. A
+    /// terminal-zero marker records the trusted closure of an empty projection.
     pub fn record_close(&mut self, marker: TrustedClosingMarker) -> Result<(), Error> {
-        if marker.final_sequence == 0 || marker.marker_generation == 0 {
+        if marker.marker_generation == 0 {
             return Err(Error::InvalidInput);
         }
-        let projection = self
-            .projections
-            .get_mut(&marker.key)
-            .ok_or(Error::Missing)?;
+        let Some(projection) = self.projections.get_mut(&marker.key) else {
+            if marker.final_sequence != 0 {
+                return Err(Error::Missing);
+            }
+            if self.projections.len() >= self.max_streams {
+                return Err(Error::Limit);
+            }
+            let mut projection = ProjectionFrontiers::new(self.max_gap)?;
+            projection.close = Some(marker);
+            self.projections.insert(marker.key, projection);
+            return Ok(());
+        };
         if projection.close.is_some() {
             return Err(Error::WrongState);
         }
@@ -203,7 +213,9 @@ impl ProductFrontiers {
 
     /// Returns whether all named positive and optional closing obligations hold.
     pub fn satisfies(&self, requirement: FrontierRequirement) -> Result<bool, Error> {
-        if requirement.through == 0 || requirement.closure == Some(0) {
+        if requirement.closure == Some(0)
+            || (requirement.through == 0 && requirement.closure.is_none())
+        {
             return Err(Error::InvalidInput);
         }
         let Some(projection) = self.projections.get(&requirement.key) else {
@@ -376,6 +388,37 @@ mod tests {
             terminal.record_close(marker(second, 2, 10)),
             Err(Error::WrongState)
         );
+    }
+
+    #[test]
+    fn empty_close_rejects_invalid_generation_prior_progress_and_second_close_without_mutation() {
+        let first = key(1, 1);
+        let mut empty = ProductFrontiers::new(1, 8).unwrap();
+
+        let before_invalid_generation = empty.clone();
+        assert_eq!(
+            empty.record_close(marker(first, 0, 0)),
+            Err(Error::InvalidInput)
+        );
+        assert_eq!(empty, before_invalid_generation);
+
+        empty.record_close(marker(first, 0, 9)).unwrap();
+        let before_second_close = empty.clone();
+        assert_eq!(
+            empty.record_close(marker(first, 0, 10)),
+            Err(Error::WrongState)
+        );
+        assert_eq!(empty, before_second_close);
+
+        let second = key(2, 1);
+        let mut positive = ProductFrontiers::new(1, 8).unwrap();
+        positive.accept(second, FrontierStage::Captured, 1).unwrap();
+        let before_retroactive_empty_close = positive.clone();
+        assert_eq!(
+            positive.record_close(marker(second, 0, 9)),
+            Err(Error::InvalidInput)
+        );
+        assert_eq!(positive, before_retroactive_empty_close);
     }
 
     #[test]

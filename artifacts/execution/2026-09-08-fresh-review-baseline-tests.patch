@@ -1,0 +1,416 @@
+diff --git a/crates/fa-reference/tests/reference_boundaries.rs b/crates/fa-reference/tests/reference_boundaries.rs
+index 59ff1fd..8af91e5 100644
+--- a/crates/fa-reference/tests/reference_boundaries.rs
++++ b/crates/fa-reference/tests/reference_boundaries.rs
+@@ -30,6 +30,9 @@
+ use std::collections::{BTreeMap, BTreeSet};
+ 
+ use fa_reference::round::{MemberOutcome, Round, Verdict, commitment};
++use fa_reference::product_frontier::{
++    FrontierRequirement, FrontierStage, ProductFrontiers, ProjectionKey, TrustedClosingMarker,
++};
+ use fa_reference::{
+     Effect, Error, EvidenceFrontiers, Graph, Judgment, Operation, ReadWitness, Rights, Snapshot,
+     State, independent, linear_sign,
+@@ -687,3 +690,118 @@ fn a_bypass_edge_invalidates_an_earlier_cut_certificate() {
+         Err(Error::InvalidInput)
+     );
+ }
++
++// ---------------------------------------------------------------------------
++// Empty closed product-frontier domains (plan §7.8, FA-INV-022)
++// ---------------------------------------------------------------------------
++
++fn review_regression_empty_projection_key(projection: u64) -> ProjectionKey {
++    ProjectionKey {
++        source: 7,
++        branch: 11,
++        projection,
++        source_epoch: 1,
++    }
++}
++
++fn review_regression_empty_close(
++    key: ProjectionKey,
++    generation: u64,
++) -> TrustedClosingMarker {
++    TrustedClosingMarker {
++        key,
++        final_sequence: 0,
++        marker_generation: generation,
++    }
++}
++
++fn review_regression_empty_closed_requirement(
++    key: ProjectionKey,
++    generation: u64,
++) -> FrontierRequirement {
++    FrontierRequirement {
++        key,
++        stage: FrontierStage::Judged,
++        through: 0,
++        closure: Some(generation),
++    }
++}
++
++/// A closed empty scope is a valid negative-evidence case only after a trusted
++/// terminal observation. It must not require a fabricated positive sequence.
++#[test]
++fn review_regression_empty_terminal_marker_establishes_only_its_exact_closed_scope() {
++    let first = review_regression_empty_projection_key(1);
++    let other = review_regression_empty_projection_key(2);
++    let mut frontiers = ProductFrontiers::new(2, 8).unwrap();
++
++    // Causal negative: no received data alone is not a closed negative claim.
++    assert_eq!(
++        frontiers.satisfies(review_regression_empty_closed_requirement(first, 9)),
++        Ok(false)
++    );
++
++    // Positive: an explicit trusted observation of terminal sequence zero
++    // establishes a closed empty domain without inventing sequence one.
++    assert_eq!(frontiers.record_close(review_regression_empty_close(first, 9)), Ok(()));
++    assert_eq!(
++        frontiers.satisfies(review_regression_empty_closed_requirement(first, 9)),
++        Ok(true)
++    );
++
++    // Causal negatives: a marker generation and projection identity are both
++    // part of the closed-scope obligation, so neither can be borrowed.
++    assert_eq!(
++        frontiers.satisfies(review_regression_empty_closed_requirement(first, 10)),
++        Ok(false)
++    );
++    assert_eq!(
++        frontiers.satisfies(review_regression_empty_closed_requirement(other, 9)),
++        Ok(false)
++    );
++
++    // A terminal-zero close rejects every later source position while retaining
++    // the zero frontier rather than admitting a post-close extension.
++    assert_eq!(
++        frontiers.accept(first, FrontierStage::Captured, 1),
++        Err(Error::WrongState)
++    );
++    assert_eq!(frontiers.frontier(first, FrontierStage::Captured), Ok(0));
++
++    // A zero positive-only requirement remains invalid: zero is meaningful
++    // only when paired with an explicit closing marker.
++    assert_eq!(
++        frontiers.satisfies(FrontierRequirement {
++            key: first,
++            stage: FrontierStage::Judged,
++            through: 0,
++            closure: None,
++        }),
++        Err(Error::InvalidInput)
++    );
++}
++
++/// An empty marker consumes one configured projection slot. A refused second
++/// marker must leave the first closed scope exactly intact.
++#[test]
++fn review_regression_empty_terminal_marker_respects_capacity_without_mutation() {
++    let first = review_regression_empty_projection_key(1);
++    let second = review_regression_empty_projection_key(2);
++    let mut frontiers = ProductFrontiers::new(1, 8).unwrap();
++
++    frontiers.record_close(review_regression_empty_close(first, 9)).unwrap();
++    let before_second_marker = frontiers.clone();
++    assert_eq!(
++        frontiers.record_close(review_regression_empty_close(second, 9)),
++        Err(Error::Limit)
++    );
++    assert_eq!(frontiers, before_second_marker);
++    assert_eq!(
++        frontiers.satisfies(review_regression_empty_closed_requirement(first, 9)),
++        Ok(true)
++    );
++    assert_eq!(
++        frontiers.satisfies(review_regression_empty_closed_requirement(second, 9)),
++        Ok(false)
++    );
++}
+diff --git a/xtask/src/admission_evaluator_tests.rs b/xtask/src/admission_evaluator_tests.rs
+index 3ca11fa..77ae21c 100644
+--- a/xtask/src/admission_evaluator_tests.rs
++++ b/xtask/src/admission_evaluator_tests.rs
+@@ -88,6 +88,50 @@ fn mutate_once(source: &str, from: &str, to: &str) -> String {
+     source.replacen(from, to, 1)
+ }
+ 
++#[test]
++fn review_regression_projection_refuses_partially_unreadable_edge_kinds() {
++    let input = r#"{"packages":[
++        {"id":"a","name":"consumer","version":"1","source":"registry+example"},
++        {"id":"b","name":"backend","version":"1","source":"registry+example"}],
++        "resolve":{"nodes":[
++            {"id":"a","features":[],"deps":[{"pkg":"b","dep_kinds":[{"kind":null,"target":null}]}]},
++            {"id":"b","features":[],"deps":[]}]}}"#;
++    let project = |text: &str| {
++        let parsed = parse(text.as_bytes(), JsonLimits::default()).unwrap();
++        let mut findings = Vec::new();
++        let observations = project_observed_packages(&parsed, &mut findings);
++        (observations, findings)
++    };
++    let (permitted, findings) = project(input);
++    assert!(findings.is_empty());
++    assert_eq!(permitted.len(), 2);
++    assert_eq!(permitted.iter().find(|p| p.id.name == "consumer").unwrap().edges.len(), 1);
++    for invalid in ["42", "null", "{}", "{\"kind\":\"future-kind\",\"target\":null}"] {
++        let malformed = mutate_once(
++            input,
++            "\"dep_kinds\":[{\"kind\":null,\"target\":null}]",
++            &format!("\"dep_kinds\":[{{\"kind\":null,\"target\":null}},{invalid}]"),
++        );
++        let (observations, findings) = project(&malformed);
++        assert!(!findings.is_empty(), "unreadable edge disappeared: {invalid}");
++        assert!(observations.iter().all(|p| p.id.name != "consumer"));
++    }
++}
++
++#[test]
++fn review_regression_projection_refuses_duplicate_resolve_identity() {
++    let parsed = parse(CAPTURED_METADATA.as_bytes(), JsonLimits::default()).unwrap();
++    let mut findings = Vec::new();
++    assert_eq!(project_observed_packages(&parsed, &mut findings).len(), 2);
++    assert!(findings.is_empty());
++    let node = "{\"id\":\"path+file:///Users/jemanuel/projects/franken_alignment/xtask#0.2.0\",\"dependencies\":[],\"deps\":[],\"features\":[]}";
++    let malformed = mutate_once(CAPTURED_METADATA, node, &format!("{node},{node}"));
++    let parsed = parse(malformed.as_bytes(), JsonLimits::default()).unwrap();
++    let observed = project_observed_packages(&parsed, &mut findings);
++    assert!(!findings.is_empty(), "duplicate node silently overwrote its predecessor");
++    assert!(observed.is_empty(), "ambiguous graph must not be projected");
++}
++
+ #[test]
+ fn same_edge_and_destination_are_admitted_on_a_but_refused_on_b() {
+     let consumer = package(exact(REGISTRY), "consumer", "1.0.0");
+diff --git a/xtask/src/admission_negative_tests.rs b/xtask/src/admission_negative_tests.rs
+index 3a71b63..d42aa66 100644
+--- a/xtask/src/admission_negative_tests.rs
++++ b/xtask/src/admission_negative_tests.rs
+@@ -111,6 +111,35 @@ fn duplicate_resolve_node_cannot_overwrite_earlier_evidence() {
+     assert_refusal(&report, Phase::Graph, "duplicate_resolve_node");
+ }
+ 
++#[test]
++fn review_regression_duplicate_package_id_cannot_collapse_two_required_packages() {
++    assert!(check_for_admitted_target(REAL_METADATA).is_admitted());
++    let first = "path+file:///Users/jemanuel/projects/franken_alignment/crates/fa-reference#0.2.0";
++    let second = "path+file:///Users/jemanuel/projects/franken_alignment/xtask#0.2.0";
++    // Keep both distinct package rows but give them one opaque Cargo ID, with
++    // one matching node/member. Set equality alone loses the collision.
++    let metadata = mutate(
++        REAL_METADATA,
++        &format!("\"id\":\"{first}\",\"license\":null"),
++        &format!("\"id\":\"{second}\",\"license\":null"),
++    );
++    let metadata = mutate(
++        &metadata,
++        &format!("{{\"id\":\"{first}\",\"dependencies\":[],\"deps\":[],\"features\":[]}},"),
++        "",
++    );
++    let metadata = mutate(
++        &metadata,
++        &format!("\"workspace_members\":[\"{first}\",\"{second}\"]"),
++        &format!("\"workspace_members\":[\"{second}\"]"),
++    );
++    assert_refusal(
++        &check_for_admitted_target(&metadata),
++        Phase::Graph,
++        "duplicate_package_id",
++    );
++}
++
+ #[test]
+ fn package_id_without_its_resolve_node_is_refused() {
+     let metadata = mutate(
+diff --git a/xtask/src/concordance_tests.rs b/xtask/src/concordance_tests.rs
+index a071336..e2e0b9d 100644
+--- a/xtask/src/concordance_tests.rs
++++ b/xtask/src/concordance_tests.rs
+@@ -179,3 +179,51 @@ fn malformed_and_absent_mapping_roots_are_distinct_refusals() {
+     assert_finding(&missing.dangling, "FI-A11", "missing_root");
+     assert_frozen_json("missing-root", &missing, MISSING_ROOT_REPORT);
+ }
++
++#[test]
++fn review_regression_indented_code_headings_do_not_satisfy_plan_coverage() {
++    for indent in 0..=3 {
++        let plan = BASE_PLAN.replacen(
++            "### 9.8 Consequence classes",
++            &format!("{}### 9.8 Consequence classes", " ".repeat(indent)),
++            1,
++        );
++        let report = report(BASE_CONCORDANCE, &plan);
++        assert!(
++            report.is_clean(),
++            "a CommonMark heading indented {indent} spaces is the permitted control: {report:#?}"
++        );
++    }
++
++    let indented_code = BASE_PLAN.replacen(
++        "### 9.8 Consequence classes",
++        "    ### 9.8 Consequence classes",
++        1,
++    );
++    let report = report(BASE_CONCORDANCE, &indented_code);
++    assert_finding(&report.dangling, "§9.8", "unknown_reference");
++    assert!(
++        !report.is_clean(),
++        "a four-space indented Markdown code line must not supply plan coverage"
++    );
++}
++
++#[test]
++fn review_regression_html_comment_heading_does_not_satisfy_plan_coverage() {
++    let hidden = BASE_PLAN.replacen(
++        "### 9.8 Consequence classes",
++        "<!--\n### 9.8 Consequence classes\n-->",
++        1,
++    );
++    let hidden_report = report(BASE_CONCORDANCE, &hidden);
++    assert_finding(&hidden_report.dangling, "§9.8", "unknown_reference");
++    assert!(
++        !hidden_report.is_clean(),
++        "a heading hidden in an HTML comment must not satisfy plan coverage"
++    );
++
++    assert!(
++        report(BASE_CONCORDANCE, BASE_PLAN).is_clean(),
++        "the paired visible heading remains a permitted control"
++    );
++}
+diff --git a/xtask/src/prose_input_tests.rs b/xtask/src/prose_input_tests.rs
+index f279a70..1c3310d 100644
+--- a/xtask/src/prose_input_tests.rs
++++ b/xtask/src/prose_input_tests.rs
+@@ -116,6 +116,22 @@ fn current_execution_receipt_ignores_fenced_examples_but_accepts_a_literal_decla
+     );
+ }
+ 
++#[test]
++fn review_regression_html_comment_declaration_is_not_current_execution_evidence() {
++    let hidden = "<!--\nCurrent execution evidence: [receipt](artifacts/execution/2026-09-07-reference-epoch-3-receipt.json).\n-->";
++    assert!(
++        current_execution_receipt(hidden).is_err(),
++        "an HTML-comment declaration is not rendered current execution evidence"
++    );
++
++    let visible = "<!-- historical example -->\nCurrent execution evidence: [receipt](artifacts/execution/2026-09-07-reference-epoch-3-receipt.json).";
++    assert_eq!(
++        current_execution_receipt(visible),
++        Ok("artifacts/execution/2026-09-07-reference-epoch-3-receipt.json"),
++        "the paired visible declaration remains the permitted control"
++    );
++}
++
+ #[test]
+ fn read_prose_input_returns_a_real_small_contained_file() {
+     let fixture = TemporaryFixture::new("small");
+diff --git a/xtask/src/registry_negative_tests.rs b/xtask/src/registry_negative_tests.rs
+index 669efdb..8be83a4 100644
+--- a/xtask/src/registry_negative_tests.rs
++++ b/xtask/src/registry_negative_tests.rs
+@@ -615,3 +615,100 @@ fn c_raw_string_test_lookalike_does_not_satisfy_reference_check() {
+         "reference_test_missing",
+     );
+ }
++
++#[test]
++fn review_regression_ignored_named_test_is_not_an_eligible_reference_check() {
++    assert_clean(&real_report());
++    let sandbox = Sandbox::from_workspace();
++    sandbox.write(
++        "crates/fa-reference/src/ignored_named_test.rs",
++        "mod tests {\n    #[ignore]\n    #[test]\n    fn phantom() {}\n}\n",
++    );
++    let invariants =
++        invariants_with_reference("crates/fa-reference/src/ignored_named_test.rs::tests::phantom");
++    assert_only_finding(
++        &report_at(
++            sandbox.root(),
++            &invariants,
++            ROADMAP,
++            CLAIMS,
++            SOURCES,
++            FOUNDING,
++        ),
++        "registry/invariants.json",
++        Some("FA-INV-001"),
++        "reference_test_missing",
++    );
++}
++
++#[test]
++fn review_regression_cfg_disabled_named_test_is_not_an_eligible_reference_check() {
++    assert_clean(&real_report());
++    let sandbox = Sandbox::from_workspace();
++    sandbox.write(
++        "crates/fa-reference/src/cfg_disabled_named_test.rs",
++        "#[cfg(any())]\nmod tests {\n    #[test]\n    fn phantom() {}\n}\n",
++    );
++    let invariants = invariants_with_reference(
++        "crates/fa-reference/src/cfg_disabled_named_test.rs::tests::phantom",
++    );
++    assert_only_finding(
++        &report_at(
++            sandbox.root(),
++            &invariants,
++            ROADMAP,
++            CLAIMS,
++            SOURCES,
++            FOUNDING,
++        ),
++        "registry/invariants.json",
++        Some("FA-INV-001"),
++        "reference_test_missing",
++    );
++}
++
++#[test]
++fn review_regression_cfg_unknown_named_test_is_not_an_eligible_reference_check() {
++    assert_clean(&real_report());
++    let sandbox = Sandbox::from_workspace();
++    sandbox.write(
++        "crates/fa-reference/src/cfg_unknown_named_test.rs",
++        "#[cfg(feature = \"not-a-qualified-test-profile\")]\nmod tests {\n    #[test]\n    fn phantom() {}\n}\n",
++    );
++    let invariants = invariants_with_reference(
++        "crates/fa-reference/src/cfg_unknown_named_test.rs::tests::phantom",
++    );
++    assert_only_finding(
++        &report_at(
++            sandbox.root(),
++            &invariants,
++            ROADMAP,
++            CLAIMS,
++            SOURCES,
++            FOUNDING,
++        ),
++        "registry/invariants.json",
++        Some("FA-INV-001"),
++        "reference_test_missing",
++    );
++}
++
++#[test]
++fn review_regression_cfg_test_named_test_remains_an_eligible_control() {
++    assert_clean(&real_report());
++    let sandbox = Sandbox::from_workspace();
++    sandbox.write(
++        "crates/fa-reference/src/cfg_test_named_test.rs",
++        "#[cfg(test)]\nmod tests {\n    #[test]\n    fn phantom() {}\n}\n",
++    );
++    let invariants =
++        invariants_with_reference("crates/fa-reference/src/cfg_test_named_test.rs::tests::phantom");
++    assert_clean(&report_at(
++        sandbox.root(),
++        &invariants,
++        ROADMAP,
++        CLAIMS,
++        SOURCES,
++        FOUNDING,
++    ));
++}

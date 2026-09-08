@@ -14,6 +14,24 @@ use super::source_snapshot::{Limits, Report, parse_manifest, verify, verify_mani
 
 const SCHEMA: &str = "fa.source_snapshot/1";
 
+#[test]
+fn review_regression_operator_digest_rejects_non_regular_inputs_before_hashing() {
+    let sandbox = Sandbox::new();
+    let relative = "operator-input";
+    let path = sandbox.root.join(relative);
+    sandbox.write(relative, "reviewed regular bytes\n");
+    assert_eq!(
+        super::source_snapshot::operator_file_digest(&sandbox.root, relative),
+        Ok(operator_sha256(&path))
+    );
+    fs::remove_file(&path).expect("replace only owned fixture input");
+    fs::create_dir(&path).expect("create non-regular fixture at identical path");
+    let error = super::source_snapshot::operator_file_digest(&sandbox.root, relative)
+        .expect_err("directories and special files are not hashable operator input");
+    assert!(error.contains("not_regular_file"), "{error}");
+    assert!(!error.contains("hash_tool_failed"), "{error}");
+}
+
 const CLAIMS: &[u8] = include_bytes!("../../registry/claims.json");
 const FOUNDING_CONCORDANCE: &[u8] = include_bytes!("../../registry/founding_concordance.json");
 const INVARIANTS: &[u8] = include_bytes!("../../registry/invariants.json");

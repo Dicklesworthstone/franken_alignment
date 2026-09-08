@@ -681,6 +681,14 @@ fn walk(
 /// Hash one file with `tool`, returning its lowercase hex digest.
 fn hash_one(tool: &Tool, root: &Path, relative: &str) -> Result<String, HashError> {
     let absolute = checked_path(root, relative).map_err(HashError::Refusal)?;
+    if !absolute.is_file() {
+        return Err(HashError::Refusal(Finding::new(
+            Phase::Discovery,
+            "not_regular_file",
+            relative,
+            "operator input must be a regular file before any hashing process starts",
+        )));
+    }
     let mut command = Command::new(&tool.program);
     for argument in &tool.args {
         command.arg(argument);

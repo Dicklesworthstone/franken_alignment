@@ -29,6 +29,9 @@
 
 use std::collections::{BTreeMap, BTreeSet};
 
+use fa_reference::product_frontier::{
+    FrontierRequirement, FrontierStage, ProductFrontiers, ProjectionKey, TrustedClosingMarker,
+};
 use fa_reference::round::{MemberOutcome, Round, Verdict, commitment};
 use fa_reference::{
     Effect, Error, EvidenceFrontiers, Graph, Judgment, Operation, ReadWitness, Rights, Snapshot,
@@ -685,5 +688,122 @@ fn a_bypass_edge_invalidates_an_earlier_cut_certificate() {
     assert_eq!(
         declared.reachable(&[], &BTreeSet::new()),
         Err(Error::InvalidInput)
+    );
+}
+
+// ---------------------------------------------------------------------------
+// Empty closed product-frontier domains (plan §7.8, FA-INV-022)
+// ---------------------------------------------------------------------------
+
+fn review_regression_empty_projection_key(projection: u64) -> ProjectionKey {
+    ProjectionKey {
+        source: 7,
+        branch: 11,
+        projection,
+        source_epoch: 1,
+    }
+}
+
+fn review_regression_empty_close(key: ProjectionKey, generation: u64) -> TrustedClosingMarker {
+    TrustedClosingMarker {
+        key,
+        final_sequence: 0,
+        marker_generation: generation,
+    }
+}
+
+fn review_regression_empty_closed_requirement(
+    key: ProjectionKey,
+    generation: u64,
+) -> FrontierRequirement {
+    FrontierRequirement {
+        key,
+        stage: FrontierStage::Judged,
+        through: 0,
+        closure: Some(generation),
+    }
+}
+
+/// A closed empty scope is a valid negative-evidence case only after a trusted
+/// terminal observation. It must not require a fabricated positive sequence.
+#[test]
+fn review_regression_empty_terminal_marker_establishes_only_its_exact_closed_scope() {
+    let first = review_regression_empty_projection_key(1);
+    let other = review_regression_empty_projection_key(2);
+    let mut frontiers = ProductFrontiers::new(2, 8).unwrap();
+
+    // Causal negative: no received data alone is not a closed negative claim.
+    assert_eq!(
+        frontiers.satisfies(review_regression_empty_closed_requirement(first, 9)),
+        Ok(false)
+    );
+
+    // Positive: an explicit trusted observation of terminal sequence zero
+    // establishes a closed empty domain without inventing sequence one.
+    assert_eq!(
+        frontiers.record_close(review_regression_empty_close(first, 9)),
+        Ok(())
+    );
+    assert_eq!(
+        frontiers.satisfies(review_regression_empty_closed_requirement(first, 9)),
+        Ok(true)
+    );
+
+    // Causal negatives: a marker generation and projection identity are both
+    // part of the closed-scope obligation, so neither can be borrowed.
+    assert_eq!(
+        frontiers.satisfies(review_regression_empty_closed_requirement(first, 10)),
+        Ok(false)
+    );
+    assert_eq!(
+        frontiers.satisfies(review_regression_empty_closed_requirement(other, 9)),
+        Ok(false)
+    );
+
+    // A terminal-zero close rejects every later source position while retaining
+    // the zero frontier rather than admitting a post-close extension.
+    assert_eq!(
+        frontiers.accept(first, FrontierStage::Captured, 1),
+        Err(Error::WrongState)
+    );
+    assert_eq!(frontiers.frontier(first, FrontierStage::Captured), Ok(0));
+
+    // A zero positive-only requirement remains invalid: zero is meaningful
+    // only when paired with an explicit closing marker.
+    assert_eq!(
+        frontiers.satisfies(FrontierRequirement {
+            key: first,
+            stage: FrontierStage::Judged,
+            through: 0,
+            closure: None,
+        }),
+        Err(Error::InvalidInput)
+    );
+}
+
+/// An empty marker consumes one configured projection slot. A refused second
+/// marker must leave the first closed scope exactly intact.
+#[test]
+fn review_regression_empty_terminal_marker_respects_capacity_without_mutation() {
+    let first = review_regression_empty_projection_key(1);
+    let second = review_regression_empty_projection_key(2);
+    let mut frontiers = ProductFrontiers::new(1, 8).unwrap();
+
+    frontiers
+        .record_close(review_regression_empty_close(first, 9))
+        .unwrap();
+    let before_second_marker = frontiers.clone();
+    assert_eq!(
+        frontiers.record_close(review_regression_empty_close(second, 9)),
+        Err(Error::Limit)
+    );
+    assert_eq!(frontiers, before_second_marker);
+    assert_eq!(
+        frontiers.satisfies(review_regression_empty_closed_requirement(first, 9)),
+        Ok(true)
+    );
+    assert_eq!(
+        frontiers.satisfies(review_regression_empty_closed_requirement(second, 9)),
+        Ok(false)
     );
 }

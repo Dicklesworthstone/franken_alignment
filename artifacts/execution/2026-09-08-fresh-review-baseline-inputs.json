@@ -1,0 +1,49 @@
+{
+  "base_commit": "3001c527c0eb59a785f4dc45744656909ddba7b2",
+  "paths": [
+    "crates/fa-reference/tests/reference_boundaries.rs",
+    "xtask/src/admission_negative_tests.rs",
+    "xtask/src/admission_evaluator_tests.rs",
+    "xtask/src/concordance_tests.rs",
+    "xtask/src/prose_input_tests.rs",
+    "xtask/src/registry_negative_tests.rs"
+  ],
+  "sha256": {
+    "crates/fa-reference/tests/reference_boundaries.rs": "e051ddcfb4835652478fa1b1a76397a3f4d5ec7121a5a3579c2d194f372bfd4a",
+    "xtask/src/admission_negative_tests.rs": "5a3b0e65da31d4df61dc417564bd6f9e69f110a9f1a866826ed58ad8b2087a84",
+    "xtask/src/admission_evaluator_tests.rs": "09d3e6f55077c2444926f5c4aa597c4a8c353c2a1b9368d2191d28807c440b9a",
+    "xtask/src/concordance_tests.rs": "e3122fa56e41ef8b5618dcd94977cfb53b245c05138a2795eba6b7b64a82f014",
+    "xtask/src/prose_input_tests.rs": "409ff6bab7ac9be04cd7c5cc40d4f969627a1f35f0aceae4d74c56e61dd0ef58",
+    "xtask/src/registry_negative_tests.rs": "db390f38efd67a9ad1aa6a196a949b8fa1cc36887c559f41cae205f454560618"
+  },
+  "command": [
+    "rch",
+    "--json",
+    "exec",
+    "--base",
+    "3001c527c0eb59a785f4dc45744656909ddba7b2",
+    "--clean-overlay",
+    "--overlay-path",
+    "crates/fa-reference/tests/reference_boundaries.rs",
+    "--overlay-path",
+    "xtask/src/admission_negative_tests.rs",
+    "--overlay-path",
+    "xtask/src/admission_evaluator_tests.rs",
+    "--overlay-path",
+    "xtask/src/concordance_tests.rs",
+    "--overlay-path",
+    "xtask/src/prose_input_tests.rs",
+    "--overlay-path",
+    "xtask/src/registry_negative_tests.rs",
+    "--",
+    "cargo",
+    "+nightly-2026-09-07",
+    "test",
+    "--locked",
+    "--workspace",
+    "--all-targets",
+    "--no-fail-fast",
+    "review_regression_"
+  ],
+  "scope": "New regression tests on unchanged implementation; expected failures, not full-gate qualification."
+}

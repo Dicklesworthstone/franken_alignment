@@ -112,6 +112,35 @@ fn duplicate_resolve_node_cannot_overwrite_earlier_evidence() {
 }
 
 #[test]
+fn review_regression_duplicate_package_id_cannot_collapse_two_required_packages() {
+    assert!(check_for_admitted_target(REAL_METADATA).is_admitted());
+    let first = "path+file:///Users/jemanuel/projects/franken_alignment/crates/fa-reference#0.2.0";
+    let second = "path+file:///Users/jemanuel/projects/franken_alignment/xtask#0.2.0";
+    // Keep both distinct package rows but give them one opaque Cargo ID, with
+    // one matching node/member. Set equality alone loses the collision.
+    let metadata = mutate(
+        REAL_METADATA,
+        &format!("\"id\":\"{first}\",\"license\":null"),
+        &format!("\"id\":\"{second}\",\"license\":null"),
+    );
+    let metadata = mutate(
+        &metadata,
+        &format!("{{\"id\":\"{first}\",\"dependencies\":[],\"deps\":[],\"features\":[]}},"),
+        "",
+    );
+    let metadata = mutate(
+        &metadata,
+        &format!("\"workspace_members\":[\"{first}\",\"{second}\"]"),
+        &format!("\"workspace_members\":[\"{second}\"]"),
+    );
+    assert_refusal(
+        &check_for_admitted_target(&metadata),
+        Phase::Graph,
+        "duplicate_package_id",
+    );
+}
+
+#[test]
 fn package_id_without_its_resolve_node_is_refused() {
     let metadata = mutate(
         REAL_METADATA,

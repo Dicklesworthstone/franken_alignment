@@ -1,0 +1,174 @@
+  [2m2026-09-08T03:38:39.593182Z[0m [32m INFO[0m [1;32mrch::hook[0m[32m: [32mSelected worker: hz3 at ubuntu@194.140.197.98 (4 slots remaining after reservation, speed 75.1)[0m
+    [2;3mat[0m rch/src/hook.rs:2645 [2;3mon[0m ThreadId(1)
+
+[*] Job j-30004650170124288 submitted to hz3 (4 slots remaining, speed 75.1)
+  [2m2026-09-08T03:38:40.789646Z[0m [32m INFO[0m [1;32mrch::hook::transfer_orchestration[0m[32m: [32mStarting remote compilation pipeline for franken_alignment_review_red_20260908 (hash: 0e20b81abb14941c)[0m
+    [2;3mat[0m rch/src/hook/transfer_orchestration.rs:510 [2;3mon[0m ThreadId(1)
+
+  [2m2026-09-08T03:38:40.789679Z[0m [32m INFO[0m [1;32mrch::hook::transfer_orchestration[0m[32m: [32mPrepared dependency sync manifest for 1 roots[0m
+    [2;3mat[0m rch/src/hook/transfer_orchestration.rs:532 [2;3mon[0m ThreadId(1)
+
+  [2m2026-09-08T03:38:43.459367Z[0m [32m INFO[0m [1;32mrch::hook::transfer_orchestration[0m[32m: [32mSyncing project to worker hz3...[0m
+    [2;3mat[0m rch/src/hook/transfer_orchestration.rs:661 [2;3mon[0m ThreadId(1)
+
+  [2m2026-09-08T03:39:03.988909Z[0m [32m INFO[0m [1;32mrch::transfer[0m[32m: [32mLinked git worktree detected at /Users/jemanuel/projects/franken_alignment_review_red_20260908 (gitdir: /Users/jemanuel/projects/franken_alignment/.git/worktrees/franken_alignment_review_red_20260908); excluding dangling '.git' file from upload so the remote build resolves git-free like a normal repo[0m
+    [2;3mat[0m rch/src/transfer.rs:2009 [2;3mon[0m ThreadId(1)
+
+  [2m2026-09-08T03:39:03.994182Z[0m [32m INFO[0m [1;32mrch::transfer[0m[32m: [32mSyncing /Users/jemanuel/projects/franken_alignment_review_red_20260908 -> /data/tmp/rch/franken_alignment_review_red_20260908/0e20b81abb14941c on hz3 (streaming)[0m
+    [2;3mat[0m rch/src/transfer.rs:3549 [2;3mon[0m ThreadId(1)
+
+  [2m2026-09-08T03:39:05.943453Z[0m [32m INFO[0m [1;32mrch::hook::transfer_orchestration[0m[32m: [32mSync complete: 12 files, 5197597 bytes in 18014ms[0m
+    [2;3mat[0m rch/src/hook/transfer_orchestration.rs:958 [2;3mon[0m ThreadId(1)
+
+  [2m2026-09-08T03:39:05.992820Z[0m [32m INFO[0m [1;32mrch::hook::transfer_orchestration[0m[32m: [32mExecuting command remotely: cargo +nightly-2026-09-07 test --locked --workspace --all-targets --no-fail-fast review_regression_[0m
+    [2;3mat[0m rch/src/hook/transfer_orchestration.rs:1018 [2;3mon[0m ThreadId(1)
+
+  [2m2026-09-08T03:39:05.992905Z[0m [32m INFO[0m [1;32mrch::transfer[0m[32m: [32mRewriting CARGO_TARGET_DIR for remote execution (worker-scoped path): /Volumes/USB_NVME/cargo-target -> /data/tmp/rch/franken_alignment_review_red_20260908/.rch-target-hz3-pool-6f0710ba0f756b56cd6f2ac4c62f3a55[0m
+    [2;3mat[0m rch/src/transfer.rs:1842 [2;3mon[0m ThreadId(1)
+
+  [2m2026-09-08T03:39:05.992933Z[0m [32m INFO[0m [1;32mrch::transfer[0m[32m: [32mWrapping command with external timeout protection, [1;32mkind[0m[32m: cargo test, [1;32mtimeout_secs[0m[32m: 3600[0m
+    [2;3mat[0m rch/src/transfer.rs:2669 [2;3mon[0m ThreadId(1)
+
+warning: unused field `license-file` in `workspace.package`
+ --> Cargo.toml:9:1
+  |
+9 | license-file = "LICENSE"
+  | ^^^^^^^^^^^^
+  |
+  = note: `cargo::unused_workspace_package_fields` is set to `warn` by default
+help: consider removing the field `workspace.package.license-file`
+warning: workspace (manifest) generated 1 warning
+   Compiling fa-reference v0.2.0 (/data/tmp/rch/franken_alignment_review_red_20260908/0e20b81abb14941c/crates/fa-reference)
+   Compiling xtask v0.2.0 (/data/tmp/rch/franken_alignment_review_red_20260908/0e20b81abb14941c/xtask)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 56 filtered out; finished in 0.00s
+
+
+running 2 tests
+test review_regression_empty_terminal_marker_establishes_only_its_exact_closed_scope ... FAILED
+test review_regression_empty_terminal_marker_respects_capacity_without_mutation ... FAILED
+
+failures:
+
+---- review_regression_empty_terminal_marker_establishes_only_its_exact_closed_scope stdout ----
+
+thread 'review_regression_empty_terminal_marker_establishes_only_its_exact_closed_scope' (19835) panicked at crates/fa-reference/tests/reference_boundaries.rs:739:5:
+assertion `left == right` failed
+  left: Err(InvalidInput)
+ right: Ok(false)
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+---- review_regression_empty_terminal_marker_respects_capacity_without_mutation stdout ----
+
+thread 'review_regression_empty_terminal_marker_respects_capacity_without_mutation' (19836) panicked at crates/fa-reference/tests/reference_boundaries.rs:792:69:
+called `Result::unwrap()` on an `Err` value: InvalidInput
+
+
+failures:
+    review_regression_empty_terminal_marker_establishes_only_its_exact_closed_scope
+    review_regression_empty_terminal_marker_respects_capacity_without_mutation
+
+test result: FAILED. 0 passed; 2 failed; 0 ignored; 0 measured; 16 filtered out; finished in 0.00s
+
+
+running 10 tests
+test concordance_tests::review_regression_html_comment_heading_does_not_satisfy_plan_coverage ... FAILED
+test admission_evaluator_tests::review_regression_projection_refuses_partially_unreadable_edge_kinds ... FAILED
+test prose_input_tests::review_regression_html_comment_declaration_is_not_current_execution_evidence ... FAILED
+test admission_evaluator_tests::review_regression_projection_refuses_duplicate_resolve_identity ... FAILED
+test concordance_tests::review_regression_indented_code_headings_do_not_satisfy_plan_coverage ... FAILED
+test admission_negative_tests::review_regression_duplicate_package_id_cannot_collapse_two_required_packages ... FAILED
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 3.46s
+     Running unittests src/lib.rs (/data/tmp/rch/franken_alignment_review_red_20260908/.rch-target-hz3-pool-6f0710ba0f756b56cd6f2ac4c62f3a55/debug/build/fa-reference/805c210a23edaf0a/out/fa_reference-805c210a23edaf0a)
+     Running tests/reference_boundaries.rs (/data/tmp/rch/franken_alignment_review_red_20260908/.rch-target-hz3-pool-6f0710ba0f756b56cd6f2ac4c62f3a55/debug/build/fa-reference/798e49afcc947aa4/out/reference_boundaries-798e49afcc947aa4)
+error: test failed, to rerun pass `-p fa-reference --test reference_boundaries`
+     Running unittests src/main.rs (/data/tmp/rch/franken_alignment_review_red_20260908/.rch-target-hz3-pool-6f0710ba0f756b56cd6f2ac4c62f3a55/debug/build/xtask/9234c929a0ba3068/out/xtask-9234c929a0ba3068)
+test registry_negative_tests::review_regression_ignored_named_test_is_not_an_eligible_reference_check ... FAILED
+test registry_negative_tests::review_regression_cfg_test_named_test_remains_an_eligible_control ... ok
+test registry_negative_tests::review_regression_cfg_disabled_named_test_is_not_an_eligible_reference_check ... FAILED
+test registry_negative_tests::review_regression_cfg_unknown_named_test_is_not_an_eligible_reference_check ... FAILED
+
+failures:
+
+---- concordance_tests::review_regression_html_comment_heading_does_not_satisfy_plan_coverage stdout ----
+
+thread 'concordance_tests::review_regression_html_comment_heading_does_not_satisfy_plan_coverage' (19841) panicked at xtask/src/concordance_tests.rs:82:5:
+missing intended finding §9.8/unknown_reference; actual findings: []
+
+---- admission_evaluator_tests::review_regression_projection_refuses_partially_unreadable_edge_kinds stdout ----
+
+thread 'admission_evaluator_tests::review_regression_projection_refuses_partially_unreadable_edge_kinds' (19839) panicked at xtask/src/admission_evaluator_tests.rs:116:9:
+unreadable edge disappeared: 42
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+---- prose_input_tests::review_regression_html_comment_declaration_is_not_current_execution_evidence stdout ----
+
+thread 'prose_input_tests::review_regression_html_comment_declaration_is_not_current_execution_evidence' (19843) panicked at xtask/src/prose_input_tests.rs:122:5:
+an HTML-comment declaration is not rendered current execution evidence
+
+---- admission_evaluator_tests::review_regression_projection_refuses_duplicate_resolve_identity stdout ----
+
+thread 'admission_evaluator_tests::review_regression_projection_refuses_duplicate_resolve_identity' (19838) panicked at xtask/src/admission_evaluator_tests.rs:131:5:
+duplicate node silently overwrote its predecessor
+
+---- concordance_tests::review_regression_indented_code_headings_do_not_satisfy_plan_coverage stdout ----
+
+thread 'concordance_tests::review_regression_indented_code_headings_do_not_satisfy_plan_coverage' (19842) panicked at xtask/src/concordance_tests.rs:82:5:
+missing intended finding §9.8/unknown_reference; actual findings: []
+
+---- admission_negative_tests::review_regression_duplicate_package_id_cannot_collapse_two_required_packages stdout ----
+
+thread 'admission_negative_tests::review_regression_duplicate_package_id_cannot_collapse_two_required_packages' (19840) panicked at xtask/src/admission_negative_tests.rs:32:5:
+expected causal refusal [graph] duplicate_package_id; got []
+
+---- registry_negative_tests::review_regression_ignored_named_test_is_not_an_eligible_reference_check stdout ----
+
+thread 'registry_negative_tests::review_regression_ignored_named_test_is_not_an_eligible_reference_check' (19847) panicked at xtask/src/registry_negative_tests.rs:249:5:
+assertion `left == right` failed: one-field mutation must produce one causal finding: []
+  left: 0
+ right: 1
+
+---- registry_negative_tests::review_regression_cfg_disabled_named_test_is_not_an_eligible_reference_check stdout ----
+
+thread 'registry_negative_tests::review_regression_cfg_disabled_named_test_is_not_an_eligible_reference_check' (19844) panicked at xtask/src/registry_negative_tests.rs:249:5:
+assertion `left == right` failed: one-field mutation must produce one causal finding: []
+  left: 0
+ right: 1
+
+---- registry_negative_tests::review_regression_cfg_unknown_named_test_is_not_an_eligible_reference_check stdout ----
+
+thread 'registry_negative_tests::review_regression_cfg_unknown_named_test_is_not_an_eligible_reference_check' (19846) panicked at xtask/src/registry_negative_tests.rs:249:5:
+assertion `left == right` failed: one-field mutation must produce one causal finding: []
+  left: 0
+ right: 1
+
+
+failures:
+    admission_evaluator_tests::review_regression_projection_refuses_duplicate_resolve_identity
+    admission_evaluator_tests::review_regression_projection_refuses_partially_unreadable_edge_kinds
+    admission_negative_tests::review_regression_duplicate_package_id_cannot_collapse_two_required_packages
+    concordance_tests::review_regression_html_comment_heading_does_not_satisfy_plan_coverage
+    concordance_tests::review_regression_indented_code_headings_do_not_satisfy_plan_coverage
+    prose_input_tests::review_regression_html_comment_declaration_is_not_current_execution_evidence
+    registry_negative_tests::review_regression_cfg_disabled_named_test_is_not_an_eligible_reference_check
+    registry_negative_tests::review_regression_cfg_unknown_named_test_is_not_an_eligible_reference_check
+    registry_negative_tests::review_regression_ignored_named_test_is_not_an_eligible_reference_check
+
+test result: FAILED. 1 passed; 9 failed; 0 ignored; 0 measured; 224 filtered out; finished in 0.11s
+
+error: test failed, to rerun pass `-p xtask --bin xtask`
+error: 2 targets failed:
+    `-p fa-reference --test reference_boundaries`
+    `-p xtask --bin xtask`
+  [2m2026-09-08T03:39:11.094870Z[0m [32m INFO[0m [1;32mrch::hook::transfer_orchestration[0m[32m: [32mRemote command finished: exit=101 in 5101ms[0m
+    [2;3mat[0m rch/src/hook/transfer_orchestration.rs:1150 [2;3mon[0m ThreadId(1)
+
+[W] Worker: hz3 | Job: j-30004650170124288
+[T] Total: 23.1s (sync 18.0s, build 5.1s, artifacts --)
+^ Sync: 5.0 MB in 18.0s (281.8 KB/s)
+[C] Compile: 5.1s
+Artifacts: skipped
+[T] Cache: MISS
+[RCH] remote hz3 failed (exit 101)

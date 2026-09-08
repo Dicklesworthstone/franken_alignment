@@ -117,6 +117,49 @@ fn current_execution_receipt_ignores_fenced_examples_but_accepts_a_literal_decla
 }
 
 #[test]
+fn review_regression_html_comment_declaration_is_not_current_execution_evidence() {
+    let hidden = "<!--\nCurrent execution evidence: [receipt](artifacts/execution/2026-09-07-reference-epoch-3-receipt.json).\n-->";
+    assert!(
+        current_execution_receipt(hidden).is_err(),
+        "an HTML-comment declaration is not rendered current execution evidence"
+    );
+
+    let visible = "<!-- historical example -->\nCurrent execution evidence: [receipt](artifacts/execution/2026-09-07-reference-epoch-3-receipt.json).";
+    assert_eq!(
+        current_execution_receipt(visible),
+        Ok("artifacts/execution/2026-09-07-reference-epoch-3-receipt.json"),
+        "the paired visible declaration remains the permitted control"
+    );
+}
+
+#[test]
+fn review_regression_indented_declaration_inside_fence_is_not_current_evidence() {
+    let indented_code = "    Current execution evidence: [receipt](artifacts/execution/2026-09-07-reference-epoch-3-receipt.json).";
+    assert!(
+        current_execution_receipt(indented_code).is_err(),
+        "an indented code declaration is not current execution evidence"
+    );
+    let tab_indented_code = "\tCurrent execution evidence: [receipt](artifacts/execution/2026-09-07-reference-epoch-3-receipt.json).";
+    assert!(
+        current_execution_receipt(tab_indented_code).is_err(),
+        "a tab-indented code declaration is not current execution evidence"
+    );
+
+    let hidden = "```markdown\n    Current execution evidence: [receipt](artifacts/execution/2026-09-07-reference-epoch-3-receipt.json).\n```";
+    assert!(
+        current_execution_receipt(hidden).is_err(),
+        "an indented declaration inside a fence is not current execution evidence"
+    );
+
+    let visible = "```markdown\n    Current execution evidence: [receipt](artifacts/execution/example-receipt.json).\n```\nCurrent execution evidence: [receipt](artifacts/execution/2026-09-07-reference-epoch-3-receipt.json).";
+    assert_eq!(
+        current_execution_receipt(visible),
+        Ok("artifacts/execution/2026-09-07-reference-epoch-3-receipt.json"),
+        "the paired literal declaration remains the permitted control"
+    );
+}
+
+#[test]
 fn read_prose_input_returns_a_real_small_contained_file() {
     let fixture = TemporaryFixture::new("small");
     fixture.write_root("docs/input.md", b"real bounded prose\n");

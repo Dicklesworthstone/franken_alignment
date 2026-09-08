@@ -130,20 +130,8 @@ pub fn plan_heading_keys(plan: &str) -> Result<BTreeSet<String>, Report> {
 /// Visible Markdown lines using the same fence boundaries as the plan scanner.
 /// Callers enforce their own input-byte bounds before allocating this view.
 pub fn unfenced_markdown_lines(text: &str) -> Vec<&str> {
-    let mut fence = None;
     let mut visible = Vec::new();
-    for line in text.lines() {
-        let trimmed = line.trim_start();
-        if let Some(open) = fence {
-            if closes_fence(trimmed, open) {
-                fence = None;
-            }
-        } else if let Some(open) = opening_fence(trimmed) {
-            fence = Some(open);
-        } else {
-            visible.push(line);
-        }
-    }
+    let _ = scan_visible_markdown_lines(text, usize::MAX, |_, line| visible.push(line));
     visible
 }
 
@@ -241,7 +229,6 @@ impl Checker {
         let mut known = BTreeSet::new();
         let mut required = BTreeSet::new();
         let mut section: Option<(String, u32)> = None;
-        let mut fence = None;
         let bounded = bounded_prefix(plan, MAX_PLAN_BYTES);
         if bounded.len() != plan.len() {
             self.dangling(
@@ -252,99 +239,90 @@ impl Checker {
             );
         }
 
-        for (index, line) in bounded.lines().enumerate() {
-            if index >= MAX_PLAN_LINES {
-                self.dangling(
-                    PLAN_FILE,
-                    "plan",
-                    "input_limit",
-                    format!("plan exceeds {MAX_PLAN_LINES} lines"),
-                );
-                break;
-            }
-            let trimmed = line.trim_start();
-            if let Some(open) = fence {
-                if closes_fence(trimmed, open) {
-                    fence = None;
-                }
-                continue;
-            }
-            if let Some(open) = opening_fence(trimmed) {
-                fence = Some(open);
-                continue;
-            }
-            let (level, title) = if let Some(title) = trimmed.strip_prefix("### ") {
-                (3_u8, title)
-            } else if let Some(title) = trimmed.strip_prefix("## ") {
-                (2_u8, title)
-            } else {
-                continue;
-            };
-            let title = collapse_whitespace(title);
-            if title.is_empty() {
-                self.dangling(
-                    PLAN_FILE,
-                    format!("line {}", index + 1),
-                    "malformed_heading",
-                    "heading text is empty",
-                );
-                continue;
-            }
-            let canonical = match numbered_heading(&title) {
-                NumberedHeading::Numbered { key, major } => {
-                    section = Some((key.clone(), major));
-                    key
-                }
-                NumberedHeading::Malformed(candidate) => {
+        let exceeded_line_limit =
+            scan_visible_markdown_lines(bounded, MAX_PLAN_LINES, |index, line| {
+                let Some(trimmed) = markdown_line(line) else {
+                    return;
+                };
+                let (level, title) = if let Some(title) = trimmed.strip_prefix("### ") {
+                    (3_u8, title)
+                } else if let Some(title) = trimmed.strip_prefix("## ") {
+                    (2_u8, title)
+                } else {
+                    return;
+                };
+                let title = collapse_whitespace(title);
+                if title.is_empty() {
                     self.dangling(
                         PLAN_FILE,
-                        candidate,
+                        format!("line {}", index + 1),
                         "malformed_heading",
-                        "numbered headings require decimal components only",
+                        "heading text is empty",
                     );
-                    continue;
+                    return;
                 }
-                NumberedHeading::Unnumbered => {
-                    let Some((nearest, _major)) = &section else {
-                        if level == 2 {
-                            // The plan's table of contents precedes numbered
-                            // sections and is outside the covered universe.
-                            continue;
-                        }
-                        self.dangling(
-                            PLAN_FILE,
-                            format!("line {}", index + 1),
-                            "malformed_heading",
-                            "unnumbered heading has no preceding numbered section",
-                        );
-                        continue;
-                    };
-                    if level != 3 {
-                        self.dangling(
-                            PLAN_FILE,
-                            format!("line {}", index + 1),
-                            "malformed_heading",
-                            "unnumbered level-two headings are not canonical plan sections",
-                        );
-                        continue;
+                let canonical = match numbered_heading(&title) {
+                    NumberedHeading::Numbered { key, major } => {
+                        section = Some((key.clone(), major));
+                        key
                     }
-                    let key = format!("{nearest}#{title}");
-                    key
+                    NumberedHeading::Malformed(candidate) => {
+                        self.dangling(
+                            PLAN_FILE,
+                            candidate,
+                            "malformed_heading",
+                            "numbered headings require decimal components only",
+                        );
+                        return;
+                    }
+                    NumberedHeading::Unnumbered => {
+                        let Some((nearest, _major)) = &section else {
+                            if level == 2 {
+                                // The plan's table of contents precedes numbered
+                                // sections and is outside the covered universe.
+                                return;
+                            }
+                            self.dangling(
+                                PLAN_FILE,
+                                format!("line {}", index + 1),
+                                "malformed_heading",
+                                "unnumbered heading has no preceding numbered section",
+                            );
+                            return;
+                        };
+                        if level != 3 {
+                            self.dangling(
+                                PLAN_FILE,
+                                format!("line {}", index + 1),
+                                "malformed_heading",
+                                "unnumbered level-two headings are not canonical plan sections",
+                            );
+                            return;
+                        }
+                        format!("{nearest}#{title}")
+                    }
+                };
+                let major = section.as_ref().map_or(0, |(_, major)| *major);
+                if !known.insert(canonical.clone()) {
+                    self.dangling(
+                        PLAN_FILE,
+                        canonical,
+                        "duplicate_key",
+                        "duplicate canonical heading key",
+                    );
+                    return;
                 }
-            };
-            let major = section.as_ref().map_or(0, |(_, major)| *major);
-            if !known.insert(canonical.clone()) {
-                self.dangling(
-                    PLAN_FILE,
-                    canonical,
-                    "duplicate_key",
-                    "duplicate canonical heading key",
-                );
-                continue;
-            }
-            if major >= 2 {
-                required.insert(canonical);
-            }
+                if major >= 2 {
+                    required.insert(canonical);
+                }
+            });
+        if exceeded_line_limit {
+            self.dangling(
+                PLAN_FILE,
+                "plan",
+                "input_limit",
+                format!("plan exceeds {MAX_PLAN_LINES} lines"),
+            );
         }
         PlanTargets { known, required }
     }
@@ -896,6 +874,56 @@ pub(crate) fn opening_fence(line: &str) -> Option<Fence> {
     }
     let run = line.bytes().take_while(|byte| *byte == marker).count();
     (run >= 3).then_some(Fence { marker, run })
+}
+
+/// Markdown structural markers may have at most three leading spaces. Four
+/// spaces, or a tab in the indentation, begin an indented code block and
+/// therefore cannot declare a heading, fence, or other current-document
+/// control line.
+pub(crate) fn markdown_line(line: &str) -> Option<&str> {
+    let indentation = line.bytes().take_while(|byte| *byte == b' ').count();
+    (indentation <= 3 && !line[indentation..].starts_with('\t')).then_some(&line[indentation..])
+}
+
+fn scan_visible_markdown_lines<'a>(
+    text: &'a str,
+    line_limit: usize,
+    mut visit: impl FnMut(usize, &'a str),
+) -> bool {
+    let mut fence = None;
+    let mut html_comment = false;
+    for (index, line) in text.lines().enumerate() {
+        if index >= line_limit {
+            return true;
+        }
+        if let Some(open) = fence {
+            if markdown_line(line).is_some_and(|line| closes_fence(line, open)) {
+                fence = None;
+            }
+            continue;
+        }
+        if html_comment {
+            if line.contains("-->") {
+                html_comment = false;
+            }
+            continue;
+        }
+        let Some(structural) = markdown_line(line) else {
+            continue;
+        };
+        if let Some(open) = opening_fence(structural) {
+            fence = Some(open);
+            continue;
+        }
+        if structural.contains("<!--") {
+            if !structural.contains("-->") {
+                html_comment = true;
+            }
+            continue;
+        }
+        visit(index, line);
+    }
+    false
 }
 
 pub(crate) fn closes_fence(line: &str, opening: Fence) -> bool {

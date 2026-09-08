@@ -1009,8 +1009,9 @@ pub enum Violation {
 /// observed as empty, so an unverifiable package can never be evaluated as if
 /// it were clean.
 ///
-/// Causal diagnostics for malformed dependency kinds are emitted separately by
-/// the caller's structural pass; this function does not swallow them.
+/// Ambiguous package/node IDs and partly unreadable kind lists refuse here,
+/// including for direct callers. The whole checker additionally diagnoses
+/// build and target declarations in its structural pass.
 #[must_use]
 pub fn project_observed_packages(
     document: &Json,
@@ -1043,6 +1044,7 @@ pub fn project_observed_packages(
 
     // metadata id -> exact identity, so an edge can name its destination.
     let mut identities: BTreeMap<String, PackageId> = BTreeMap::new();
+    let mut seen_metadata_ids = BTreeSet::new();
     for (index, package) in packages.iter().enumerate() {
         let (Some(id), Some(name), Some(version)) = (
             package.get("id").and_then(Json::as_str),
@@ -1057,6 +1059,15 @@ pub fn project_observed_packages(
             ));
             continue;
         };
+        if !seen_metadata_ids.insert(id) {
+            findings.push(Finding::new(
+                Phase::Graph,
+                "duplicate_package_id",
+                format!("$.packages[{index}].id"),
+                format!("package id `{id}` is ambiguous; no package graph can be projected"),
+            ));
+            return Vec::new();
+        }
         let source = match package.get("source") {
             Some(value) if value.is_null() => {
                 // A path package's identity includes where it lives, so an
@@ -1136,9 +1147,20 @@ pub fn project_observed_packages(
             let Some(node) = req_object(node, Phase::Graph, &node_path, findings) else {
                 continue;
             };
-            let Some(id) = node.get("id").and_then(Json::as_str) else {
+            let Some(id) = req_field(node, "id", Phase::Graph, &node_path, findings)
+                .and_then(|value| req_str(value, Phase::Graph, &node_path, findings))
+            else {
                 continue;
             };
+            if nodes.contains_key(id) {
+                findings.push(Finding::new(
+                    Phase::Graph,
+                    "duplicate_resolve_node",
+                    node_path,
+                    format!("resolve id `{id}` is ambiguous; no package graph can be projected"),
+                ));
+                return Vec::new();
+            }
             let mut faithful = true;
             let mut features = BTreeSet::new();
             match req_field(node, "features", Phase::Features, &node_path, findings).and_then(
@@ -1240,16 +1262,15 @@ pub fn project_observed_packages(
                 faithful = false;
                 continue;
             };
-            if dep.kinds.is_empty() {
-                // Every kind on this edge was missing or malformed. The causal
-                // marker is already reported; the edge has no representable
-                // identity, so the observation cannot be complete.
+            if !dep.faithful {
+                // Even one unreadable kind makes the whole edge unknown; a
+                // readable sibling must not erase that missing evidence.
                 faithful = false;
                 findings.push(Finding::new(
                     Phase::Metadata,
                     "dependency_kind_unreadable",
                     dep.path.clone(),
-                    "no readable dependency kind; the package cannot be projected faithfully",
+                    "dependency kind list is missing, empty or partly unreadable; the package cannot be projected faithfully",
                 ));
                 continue;
             }
@@ -1358,6 +1379,8 @@ struct DepRecord {
     dest_metadata_id: Option<String>,
     /// Readable dependency kinds. An unreadable entry contributes none.
     kinds: BTreeSet<DepKind>,
+    /// Every kind was readable; a valid sibling never repairs an invalid one.
+    faithful: bool,
     /// JSON path, for findings.
     path: String,
 }
@@ -1369,11 +1392,23 @@ struct DepRecord {
 /// Build/Target/Features/Metadata precedence.
 fn record_dep_edge(dep: &Json, path: &str) -> DepRecord {
     let mut kinds = BTreeSet::new();
-    if let Some(entries) = dep.get("dep_kinds").and_then(Json::as_array) {
+    let entries = dep.get("dep_kinds").and_then(Json::as_array);
+    let mut faithful = entries.is_some_and(|entries| !entries.is_empty());
+    if let Some(entries) = entries {
         for entry in entries {
             let Some(entry) = entry.as_object() else {
+                faithful = false;
                 continue;
             };
+            // Cargo preserves a readable target predicate on a resolved edge;
+            // its truth is bound by the caller's --filter-platform collection.
+            // An absent or wrong-typed predicate is unknown, not unconditional.
+            if !entry
+                .get("target")
+                .is_some_and(|target| target.is_null() || target.as_str().is_some())
+            {
+                faithful = false;
+            }
             match entry.get("kind") {
                 // Cargo spells a normal dependency as an explicit null.
                 Some(value) if value.is_null() => {
@@ -1386,17 +1421,16 @@ fn record_dep_edge(dep: &Json, path: &str) -> DepRecord {
                     Some("dev") => {
                         kinds.insert(DepKind::Dev);
                     }
-                    // An unknown or malformed kind has no representable
-                    // identity; it stays refused by `report_dep_edge`.
-                    _ => {}
+                    _ => faithful = false,
                 },
-                None => {}
+                None => faithful = false,
             }
         }
     }
     DepRecord {
         dest_metadata_id: dep.get("pkg").and_then(Json::as_str).map(str::to_string),
         kinds,
+        faithful,
         path: path.to_string(),
     }
 }
@@ -1753,7 +1787,16 @@ pub fn check(metadata_bytes: &[u8], policy: &Policy, target: &str) -> Result<Rep
             continue;
         };
 
-        package_ids.insert(id.to_string());
+        if !package_ids.insert(id.to_string()) {
+            findings.push(Finding::new(
+                Phase::Graph,
+                "duplicate_package_id",
+                format!("{path}.id"),
+                format!(
+                    "package id `{id}` occurs more than once; set equality cannot prove a bijection"
+                ),
+            ));
+        }
 
         let relative = match workspace_root
             .as_deref()

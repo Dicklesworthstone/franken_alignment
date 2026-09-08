@@ -798,7 +798,11 @@ impl Checker {
         let starts: Vec<_> = visible
             .iter()
             .enumerate()
-            .filter_map(|(index, line)| line.trim_start().starts_with("### 17.3 ").then_some(index))
+            .filter_map(|(index, line)| {
+                concordance::markdown_line(line)
+                    .is_some_and(|line| line.starts_with("### 17.3 "))
+                    .then_some(index)
+            })
             .collect();
         if starts.len() != 1 {
             self.finding(
@@ -815,7 +819,9 @@ impl Checker {
         let start = starts[0] + 1;
         let end = visible[start..]
             .iter()
-            .position(|line| line.trim_start().starts_with("### "))
+            .position(|line| {
+                concordance::markdown_line(line).is_some_and(|line| line.starts_with("### "))
+            })
             .map_or(visible.len(), |offset| start + offset);
         let section = visible[start..end].join("\n");
         let Some(errors) = section.find("Errors are the same envelope") else {
