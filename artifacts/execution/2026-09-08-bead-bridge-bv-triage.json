@@ -1,0 +1,823 @@
+{
+  "generated_at": "2026-09-08T03:04:07Z",
+  "data_hash": "a01e6c4cb20c65fb",
+  "triage": {
+    "meta": {
+      "version": "1.0.0",
+      "generated_at": "2026-09-07T23:04:06.74298-04:00",
+      "phase2_ready": true,
+      "issue_count": 337,
+      "compute_time_ms": 18
+    },
+    "quick_ref": {
+      "open_count": 320,
+      "actionable_count": 10,
+      "blocked_count": 310,
+      "in_progress_count": 0,
+      "top_picks": [
+        {
+          "id": "franken_alignment-fa-001-full-0f9p",
+          "title": "Freeze action and permit semantics (FA-001, full packet)",
+          "score": 0.5438405601598677,
+          "reasons": [
+            "🎯 Completing this unblocks 4 downstream issues (franken_alignment-fa-004-full-qabx, franken_alignment-fa-005-full-9ium, +2 more)",
+            "📊 High centrality in dependency graph (PageRank: 100%)",
+            "⚡ Low effort, high impact - good starting point",
+            "✅ Currently unclaimed - available for work",
+            "🚨 High priority (P0) - prioritize this work"
+          ],
+          "unblocks": 4
+        },
+        {
+          "id": "franken_alignment-fa-007-full-d4ex",
+          "title": "Implement native bounded types and canonical formats (FA-007, full packet)",
+          "score": 0.4513264314662631,
+          "reasons": [
+            "🎯 Completing this unblocks 5 downstream issues (franken_alignment-address-resolver-2fkx.1, franken_alignment-knowledge-wrapper-b0qg, +3 more)",
+            "📊 High centrality in dependency graph (PageRank: 56%)",
+            "✅ Currently unclaimed - available for work",
+            "⏳ Blocked by 3 items - need to clear dependencies",
+            "🚨 High priority (P1) - prioritize this work"
+          ],
+          "unblocks": 5
+        },
+        {
+          "id": "franken_alignment-fa-002-full-ac6j",
+          "title": "Freeze threat and effect-perimeter inventory (FA-002, full packet)",
+          "score": 0.33833355205219606,
+          "reasons": [
+            "🔓 Unblocks 1 item(s): franken_alignment-fa-072-full-h35y",
+            "📊 High centrality in dependency graph (PageRank: 43%)",
+            "⚡ Low effort, high impact - good starting point",
+            "✅ Currently unclaimed - available for work",
+            "🚨 High priority (P0) - prioritize this work"
+          ],
+          "unblocks": 1
+        }
+      ]
+    },
+    "recommendations": [
+      {
+        "id": "franken_alignment-fa-001-full-0f9p",
+        "title": "Freeze action and permit semantics (FA-001, full packet)",
+        "type": "task",
+        "status": "open",
+        "priority": 0,
+        "labels": [
+          "full-packet",
+          "roadmap"
+        ],
+        "score": 0.5438405601598677,
+        "breakdown": {
+          "pagerank": 0.22,
+          "betweenness": 0,
+          "blocker_ratio": 0.08,
+          "staleness": 0.00007320398466435184,
+          "priority_boost": 0.1,
+          "time_to_impact": 0.09625,
+          "urgency": 0.0003127491445917674,
+          "risk": 0.0020000000000000005,
+          "pagerank_norm": 1,
+          "betweenness_norm": 0,
+          "blocker_ratio_norm": 0.6153846153846154,
+          "staleness_norm": 0.0014640796932870368,
+          "priority_boost_norm": 1,
+          "time_to_impact_norm": 0.9624999999999999,
+          "urgency_norm": 0.003127491445917674,
+          "risk_norm": 0.020000000000000004,
+          "time_to_impact_explanation": "Deep in critical path (depth 23), median estimate 60m",
+          "risk_explanation": "Low risk - stable dependency structure",
+          "risk_signals": {
+            "fan_variance": 0,
+            "activity_churn": 0,
+            "cross_repo_risk": 0,
+            "status_risk": 0.1,
+            "composite_risk": 0.020000000000000004,
+            "explanation": "Low risk - stable dependency structure"
+          }
+        },
+        "action": "Quick win - start here for fast progress",
+        "reasons": [
+          "🎯 Completing this unblocks 4 downstream issues (franken_alignment-fa-004-full-qabx, franken_alignment-fa-005-full-9ium, +2 more)",
+          "📊 High centrality in dependency graph (PageRank: 100%)",
+          "⚡ Low effort, high impact - good starting point",
+          "✅ Currently unclaimed - available for work",
+          "🚨 High priority (P0) - prioritize this work"
+        ],
+        "unblocks_ids": [
+          "franken_alignment-fa-004-full-qabx",
+          "franken_alignment-fa-005-full-9ium",
+          "franken_alignment-fa-057-full-if8z",
+          "franken_alignment-fa-063-full-6vhq"
+        ]
+      },
+      {
+        "id": "franken_alignment-fa-007-full-d4ex",
+        "title": "Implement native bounded types and canonical formats (FA-007, full packet)",
+        "type": "task",
+        "status": "open",
+        "priority": 1,
+        "labels": [
+          "full-packet",
+          "roadmap"
+        ],
+        "score": 0.4513264314662631,
+        "breakdown": {
+          "pagerank": 0.12270382578776928,
+          "betweenness": 0,
+          "blocker_ratio": 0.1,
+          "staleness": 0.000045185296759259265,
+          "priority_boost": 0.07500000000000001,
+          "time_to_impact": 0.09625,
+          "urgency": 0.00030632901068721743,
+          "risk": 0.007463235193135126,
+          "pagerank_norm": 0.5577446626716785,
+          "betweenness_norm": 0,
+          "blocker_ratio_norm": 0.7692307692307693,
+          "staleness_norm": 0.0009037059351851852,
+          "priority_boost_norm": 0.75,
+          "time_to_impact_norm": 0.9624999999999999,
+          "urgency_norm": 0.003063290106872174,
+          "risk_norm": 0.07463235193135126,
+          "time_to_impact_explanation": "Deep in critical path (depth 21), median estimate 60m",
+          "risk_explanation": "Low risk - stable dependency structure",
+          "risk_signals": {
+            "fan_variance": 0.18210783977117087,
+            "activity_churn": 0,
+            "cross_repo_risk": 0,
+            "status_risk": 0.1,
+            "composite_risk": 0.07463235193135126,
+            "explanation": "Low risk - stable dependency structure"
+          }
+        },
+        "action": "Work on franken_alignment-fa-003-full-mhk2 first to unblock this",
+        "reasons": [
+          "🎯 Completing this unblocks 5 downstream issues (franken_alignment-address-resolver-2fkx.1, franken_alignment-knowledge-wrapper-b0qg, +3 more)",
+          "📊 High centrality in dependency graph (PageRank: 56%)",
+          "✅ Currently unclaimed - available for work",
+          "⏳ Blocked by 3 items - need to clear dependencies",
+          "🚨 High priority (P1) - prioritize this work"
+        ],
+        "unblocks_ids": [
+          "franken_alignment-address-resolver-2fkx.1",
+          "franken_alignment-knowledge-wrapper-b0qg",
+          "franken_alignment-knowledge-wrapper-b0qg.1",
+          "franken_alignment-typestate-cx-6ga",
+          "franken_alignment-typestate-cx-6ga.1"
+        ],
+        "blocked_by": [
+          "franken_alignment-fa-003-full-mhk2",
+          "franken_alignment-fa-005-full-9ium",
+          "franken_alignment-fa-054-full-7g47"
+        ]
+      },
+      {
+        "id": "franken_alignment-fa-002-full-ac6j",
+        "title": "Freeze threat and effect-perimeter inventory (FA-002, full packet)",
+        "type": "task",
+        "status": "open",
+        "priority": 0,
+        "labels": [
+          "full-packet",
+          "roadmap"
+        ],
+        "score": 0.33833355205219606,
+        "breakdown": {
+          "pagerank": 0.09411023868188963,
+          "betweenness": 0,
+          "blocker_ratio": 0.06999999999999999,
+          "staleness": 0.00007304493051697531,
+          "priority_boost": 0.1,
+          "time_to_impact": 0.09625,
+          "urgency": 0.0003120717431181752,
+          "risk": 0.0020000000000000005,
+          "pagerank_norm": 0.4277738121904074,
+          "betweenness_norm": 0,
+          "blocker_ratio_norm": 0.5384615384615384,
+          "staleness_norm": 0.0014608986103395061,
+          "priority_boost_norm": 1,
+          "time_to_impact_norm": 0.9624999999999999,
+          "urgency_norm": 0.003120717431181752,
+          "risk_norm": 0.020000000000000004,
+          "time_to_impact_explanation": "Deep in critical path (depth 23), median estimate 60m",
+          "risk_explanation": "Low risk - stable dependency structure",
+          "risk_signals": {
+            "fan_variance": 0,
+            "activity_churn": 0,
+            "cross_repo_risk": 0,
+            "status_risk": 0.1,
+            "composite_risk": 0.020000000000000004,
+            "explanation": "Low risk - stable dependency structure"
+          }
+        },
+        "action": "Quick win - start here for fast progress",
+        "reasons": [
+          "🔓 Unblocks 1 item(s): franken_alignment-fa-072-full-h35y",
+          "📊 High centrality in dependency graph (PageRank: 43%)",
+          "⚡ Low effort, high impact - good starting point",
+          "✅ Currently unclaimed - available for work",
+          "🚨 High priority (P0) - prioritize this work"
+        ],
+        "unblocks_ids": [
+          "franken_alignment-fa-072-full-h35y"
+        ]
+      },
+      {
+        "id": "franken_alignment-credibility-ledger-dc0.1",
+        "title": "Define the credibility ledger schema and durable storage contract",
+        "type": "task",
+        "status": "open",
+        "priority": 1,
+        "labels": [
+          "congress",
+          "schema"
+        ],
+        "score": 0.3196614282567652,
+        "breakdown": {
+          "pagerank": 0.048262040253432885,
+          "betweenness": 0,
+          "blocker_ratio": 0.09,
+          "staleness": 0.00002026313474151235,
+          "priority_boost": 0.07500000000000001,
+          "time_to_impact": 0.08925,
+          "urgency": 0.006700311116625036,
+          "risk": 0.018855140147722247,
+          "pagerank_norm": 0.21937291024287675,
+          "betweenness_norm": 0,
+          "blocker_ratio_norm": 0.6923076923076923,
+          "staleness_norm": 0.000405262694830247,
+          "priority_boost_norm": 0.75,
+          "time_to_impact_norm": 0.8925,
+          "urgency_norm": 0.06700311116625035,
+          "risk_norm": 0.18855140147722246,
+          "time_to_impact_explanation": "Deep in critical path (depth 9), median estimate 60m",
+          "risk_explanation": "Low risk - stable dependency structure",
+          "risk_signals": {
+            "fan_variance": 0.16666666666666666,
+            "activity_churn": 0.39517133825740824,
+            "cross_repo_risk": 0,
+            "status_risk": 0.1,
+            "composite_risk": 0.18855140147722246,
+            "explanation": "Low risk - stable dependency structure"
+          }
+        },
+        "action": "Work on franken_alignment-fa-019-full-qfvl first to unblock this",
+        "reasons": [
+          "🎯 Completing this unblocks 3 downstream issues (franken_alignment-credibility-ledger-dc0.2, franken_alignment-credibility-ledger-dc0.4, franken_alignment-credibility-ledger-dc0.5)",
+          "✅ Currently unclaimed - available for work",
+          "⏳ Blocked by 2 items - need to clear dependencies",
+          "🚨 High priority (P1) - prioritize this work"
+        ],
+        "unblocks_ids": [
+          "franken_alignment-credibility-ledger-dc0.2",
+          "franken_alignment-credibility-ledger-dc0.4",
+          "franken_alignment-credibility-ledger-dc0.5"
+        ],
+        "blocked_by": [
+          "franken_alignment-fa-019-full-qfvl",
+          "franken_alignment-fa-022-full-ojoa"
+        ]
+      },
+      {
+        "id": "franken_alignment-fa-053-full-l7wn",
+        "title": "Freeze transitive dependency policy (FA-053, full packet)",
+        "type": "task",
+        "status": "open",
+        "priority": 0,
+        "labels": [
+          "full-packet",
+          "roadmap"
+        ],
+        "score": 0.30223818969292027,
+        "breakdown": {
+          "pagerank": 0.06635651777574758,
+          "betweenness": 0,
+          "blocker_ratio": 0.02,
+          "staleness": 0.00007199363501157409,
+          "priority_boost": 0.1,
+          "time_to_impact": 0.09625,
+          "urgency": 0.00030759411032348365,
+          "risk": 0.0020000000000000005,
+          "pagerank_norm": 0.30162053534430716,
+          "betweenness_norm": 0,
+          "blocker_ratio_norm": 0.15384615384615385,
+          "staleness_norm": 0.0014398727002314815,
+          "priority_boost_norm": 1,
+          "time_to_impact_norm": 0.9624999999999999,
+          "urgency_norm": 0.003075941103234836,
+          "risk_norm": 0.020000000000000004,
+          "time_to_impact_explanation": "Deep in critical path (depth 23), median estimate 60m",
+          "risk_explanation": "Low risk - stable dependency structure",
+          "risk_signals": {
+            "fan_variance": 0,
+            "activity_churn": 0,
+            "cross_repo_risk": 0,
+            "status_risk": 0.1,
+            "composite_risk": 0.020000000000000004,
+            "explanation": "Low risk - stable dependency structure"
+          }
+        },
+        "action": "Start work on this issue",
+        "reasons": [
+          "🔓 Unblocks 2 item(s): franken_alignment-fa-054-full-7g47, franken_alignment-fa-055-full-oa9u",
+          "📊 High centrality in dependency graph (PageRank: 30%)",
+          "✅ Currently unclaimed - available for work",
+          "🚨 High priority (P0) - prioritize this work"
+        ],
+        "unblocks_ids": [
+          "franken_alignment-fa-054-full-7g47",
+          "franken_alignment-fa-055-full-oa9u"
+        ]
+      },
+      {
+        "id": "franken_alignment-fa-054-full-7g47",
+        "title": "Implement general Cargo admission compiler (FA-054, full packet)",
+        "type": "task",
+        "status": "open",
+        "priority": 0,
+        "labels": [
+          "full-packet",
+          "roadmap"
+        ],
+        "score": 0.30043369651461177,
+        "breakdown": {
+          "pagerank": 0.06941336633443648,
+          "betweenness": 0,
+          "blocker_ratio": 0.06999999999999999,
+          "staleness": 0.00007183516826774691,
+          "priority_boost": 0.1,
+          "time_to_impact": 0.09625,
+          "urgency": 0.00030691914056054097,
+          "risk": 0.0020000000000000005,
+          "pagerank_norm": 0.3155153015201658,
+          "betweenness_norm": 0,
+          "blocker_ratio_norm": 0.5384615384615384,
+          "staleness_norm": 0.0014367033653549383,
+          "priority_boost_norm": 1,
+          "time_to_impact_norm": 0.9624999999999999,
+          "urgency_norm": 0.0030691914056054093,
+          "risk_norm": 0.020000000000000004,
+          "time_to_impact_explanation": "Deep in critical path (depth 22), median estimate 60m",
+          "risk_explanation": "Low risk - stable dependency structure",
+          "risk_signals": {
+            "fan_variance": 0,
+            "activity_churn": 0,
+            "cross_repo_risk": 0,
+            "status_risk": 0.1,
+            "composite_risk": 0.020000000000000004,
+            "explanation": "Low risk - stable dependency structure"
+          }
+        },
+        "action": "Work on franken_alignment-fa-053-full-l7wn first to unblock this",
+        "reasons": [
+          "🔓 Unblocks 1 item(s): franken_alignment-fa-085-full-l4s5",
+          "📊 High centrality in dependency graph (PageRank: 32%)",
+          "✅ Currently unclaimed - available for work",
+          "⏳ Blocked by franken_alignment-fa-053-full-l7wn - complete that first",
+          "🚨 High priority (P0) - prioritize this work"
+        ],
+        "unblocks_ids": [
+          "franken_alignment-fa-085-full-l4s5"
+        ],
+        "blocked_by": [
+          "franken_alignment-fa-053-full-l7wn"
+        ]
+      },
+      {
+        "id": "franken_alignment-fa-057-full-if8z",
+        "title": "Define opaque judgment full-input witnesses (FA-057, full packet)",
+        "type": "task",
+        "status": "open",
+        "priority": 1,
+        "labels": [
+          "full-packet",
+          "roadmap"
+        ],
+        "score": 0.2958662380554925,
+        "breakdown": {
+          "pagerank": 0.033777402521119736,
+          "betweenness": 0,
+          "blocker_ratio": 0.05,
+          "staleness": 0.00005789371687885802,
+          "priority_boost": 0.07500000000000001,
+          "time_to_impact": 0.09625,
+          "urgency": 0.00024750133136700606,
+          "risk": 0.0020000000000000005,
+          "pagerank_norm": 0.15353364782327153,
+          "betweenness_norm": 0,
+          "blocker_ratio_norm": 0.38461538461538464,
+          "staleness_norm": 0.0011578743375771604,
+          "priority_boost_norm": 0.75,
+          "time_to_impact_norm": 0.9624999999999999,
+          "urgency_norm": 0.0024750133136700603,
+          "risk_norm": 0.020000000000000004,
+          "time_to_impact_explanation": "Deep in critical path (depth 10), median estimate 60m",
+          "risk_explanation": "Low risk - stable dependency structure",
+          "risk_signals": {
+            "fan_variance": 0,
+            "activity_churn": 0,
+            "cross_repo_risk": 0,
+            "status_risk": 0.1,
+            "composite_risk": 0.020000000000000004,
+            "explanation": "Low risk - stable dependency structure"
+          }
+        },
+        "action": "Work on franken_alignment-fa-001-full-0f9p first to unblock this",
+        "reasons": [
+          "🎯 Completing this unblocks 3 downstream issues (franken_alignment-fa-058-full-vgs8, franken_alignment-fa-081-full-t3n5, franken_alignment-fa-092-full-iokm)",
+          "✅ Currently unclaimed - available for work",
+          "⏳ Blocked by franken_alignment-fa-001-full-0f9p - complete that first",
+          "🚨 High priority (P1) - prioritize this work"
+        ],
+        "unblocks_ids": [
+          "franken_alignment-fa-058-full-vgs8",
+          "franken_alignment-fa-081-full-t3n5",
+          "franken_alignment-fa-092-full-iokm"
+        ],
+        "blocked_by": [
+          "franken_alignment-fa-001-full-0f9p"
+        ]
+      },
+      {
+        "id": "franken_alignment-fa-003-full-mhk2",
+        "title": "Build registry and document consistency checks (FA-003, full packet)",
+        "type": "task",
+        "status": "open",
+        "priority": 1,
+        "labels": [
+          "full-packet",
+          "roadmap"
+        ],
+        "score": 0.2595336688497131,
+        "breakdown": {
+          "pagerank": 0.04480653250502259,
+          "betweenness": 0,
+          "blocker_ratio": 0.030000000000000002,
+          "staleness": 0.00004896455486111111,
+          "priority_boost": 0.07500000000000001,
+          "time_to_impact": 0.09625,
+          "urgency": 0.00031158900225762847,
+          "risk": 0.0030000000000000005,
+          "pagerank_norm": 0.20366605684101177,
+          "betweenness_norm": 0,
+          "blocker_ratio_norm": 0.23076923076923078,
+          "staleness_norm": 0.0009792910972222222,
+          "priority_boost_norm": 0.75,
+          "time_to_impact_norm": 0.9624999999999999,
+          "urgency_norm": 0.0031158900225762842,
+          "risk_norm": 0.030000000000000002,
+          "time_to_impact_explanation": "Deep in critical path (depth 22), median estimate 60m",
+          "risk_explanation": "Low risk - stable dependency structure",
+          "risk_signals": {
+            "fan_variance": 0.03333333333333333,
+            "activity_churn": 0,
+            "cross_repo_risk": 0,
+            "status_risk": 0.1,
+            "composite_risk": 0.030000000000000002,
+            "explanation": "Low risk - stable dependency structure"
+          }
+        },
+        "action": "Work on franken_alignment-fa-001-full-0f9p first to unblock this",
+        "reasons": [
+          "🔓 Unblocks 2 item(s): franken_alignment-preregistration-ledger-cv3, franken_alignment-preregistration-ledger-cv3.1",
+          "✅ Currently unclaimed - available for work",
+          "⏳ Blocked by 2 items - need to clear dependencies",
+          "🚨 High priority (P1) - prioritize this work"
+        ],
+        "unblocks_ids": [
+          "franken_alignment-preregistration-ledger-cv3",
+          "franken_alignment-preregistration-ledger-cv3.1"
+        ],
+        "blocked_by": [
+          "franken_alignment-fa-001-full-0f9p",
+          "franken_alignment-fa-002-full-ac6j"
+        ]
+      },
+      {
+        "id": "franken_alignment-fa-004-full-qabx",
+        "title": "Maintain independent reference semantics (FA-004, full packet)",
+        "type": "task",
+        "status": "open",
+        "priority": 1,
+        "labels": [
+          "full-packet",
+          "roadmap"
+        ],
+        "score": 0.2503830867570599,
+        "breakdown": {
+          "pagerank": 0.06936886362367334,
+          "betweenness": 0,
+          "blocker_ratio": 0.06999999999999999,
+          "staleness": 0.00004902922334104938,
+          "priority_boost": 0.07500000000000001,
+          "time_to_impact": 0.09625,
+          "urgency": 0.0003109655993104921,
+          "risk": 0.0020000000000000005,
+          "pagerank_norm": 0.31531301647124244,
+          "betweenness_norm": 0,
+          "blocker_ratio_norm": 0.5384615384615384,
+          "staleness_norm": 0.0009805844668209875,
+          "priority_boost_norm": 0.75,
+          "time_to_impact_norm": 0.9624999999999999,
+          "urgency_norm": 0.0031096559931049206,
+          "risk_norm": 0.020000000000000004,
+          "time_to_impact_explanation": "Deep in critical path (depth 20), median estimate 60m",
+          "risk_explanation": "Low risk - stable dependency structure",
+          "risk_signals": {
+            "fan_variance": 0,
+            "activity_churn": 0,
+            "cross_repo_risk": 0,
+            "status_risk": 0.1,
+            "composite_risk": 0.020000000000000004,
+            "explanation": "Low risk - stable dependency structure"
+          }
+        },
+        "action": "Work on franken_alignment-fa-001-full-0f9p first to unblock this",
+        "reasons": [
+          "📊 High centrality in dependency graph (PageRank: 32%)",
+          "✅ Currently unclaimed - available for work",
+          "⏳ Blocked by franken_alignment-fa-001-full-0f9p - complete that first",
+          "🚨 High priority (P1) - prioritize this work"
+        ],
+        "blocked_by": [
+          "franken_alignment-fa-001-full-0f9p"
+        ]
+      },
+      {
+        "id": "franken_alignment-fa-019-full-qfvl",
+        "title": "Implement native frozen congress rounds (FA-019, full packet)",
+        "type": "task",
+        "status": "open",
+        "priority": 3,
+        "labels": [
+          "full-packet",
+          "roadmap"
+        ],
+        "score": 0.2395779197817384,
+        "breakdown": {
+          "pagerank": 0.09264341211826112,
+          "betweenness": 0,
+          "blocker_ratio": 0.12000000000000001,
+          "staleness": 0.00006841402710262345,
+          "priority_boost": 0.025,
+          "time_to_impact": 0.09625,
+          "urgency": 0.0002923449714054005,
+          "risk": 0.008,
+          "pagerank_norm": 0.4211064187193687,
+          "betweenness_norm": 0,
+          "blocker_ratio_norm": 0.9230769230769231,
+          "staleness_norm": 0.001368280542052469,
+          "priority_boost_norm": 0.25,
+          "time_to_impact_norm": 0.9624999999999999,
+          "urgency_norm": 0.002923449714054005,
+          "risk_norm": 0.08,
+          "time_to_impact_explanation": "Deep in critical path (depth 12), median estimate 60m",
+          "risk_explanation": "Low risk - stable dependency structure",
+          "risk_signals": {
+            "fan_variance": 0.2,
+            "activity_churn": 0,
+            "cross_repo_risk": 0,
+            "status_risk": 0.1,
+            "composite_risk": 0.08,
+            "explanation": "Low risk - stable dependency structure"
+          }
+        },
+        "action": "Work on franken_alignment-fa-004-full-qabx first to unblock this",
+        "reasons": [
+          "📊 High centrality in dependency graph (PageRank: 42%)",
+          "✅ Currently unclaimed - available for work",
+          "⏳ Blocked by 2 items - need to clear dependencies"
+        ],
+        "blocked_by": [
+          "franken_alignment-fa-004-full-qabx",
+          "franken_alignment-fa-018-full-gzzq"
+        ]
+      }
+    ],
+    "quick_wins": [
+      {
+        "id": "franken_alignment-elicitation-corpus-iql.1",
+        "title": "Define the elicitation campaign specification",
+        "score": 1.1339850002884626,
+        "reason": "Unblocks 2 items, high priority",
+        "unblocks_ids": [
+          "franken_alignment-elicitation-corpus-iql.2",
+          "franken_alignment-elicitation-corpus-iql.4"
+        ]
+      },
+      {
+        "id": "franken_alignment-fa-007-full-d4ex",
+        "title": "Implement native bounded types and canonical formats (FA-007, full packet)",
+        "score": 1.1339850002884626,
+        "reason": "Unblocks 5 items, high priority",
+        "unblocks_ids": [
+          "franken_alignment-address-resolver-2fkx.1",
+          "franken_alignment-knowledge-wrapper-b0qg",
+          "franken_alignment-knowledge-wrapper-b0qg.1",
+          "franken_alignment-typestate-cx-6ga",
+          "franken_alignment-typestate-cx-6ga.1"
+        ]
+      },
+      {
+        "id": "franken_alignment-fa-053-full-l7wn",
+        "title": "Freeze transitive dependency policy (FA-053, full packet)",
+        "score": 1.1339850002884626,
+        "reason": "Unblocks 2 items, high priority",
+        "unblocks_ids": [
+          "franken_alignment-fa-054-full-7g47",
+          "franken_alignment-fa-055-full-oa9u"
+        ]
+      },
+      {
+        "id": "franken_alignment-fa-057-full-if8z",
+        "title": "Define opaque judgment full-input witnesses (FA-057, full packet)",
+        "score": 1.1,
+        "reason": "Unblocks 3 items, high priority",
+        "unblocks_ids": [
+          "franken_alignment-fa-058-full-vgs8",
+          "franken_alignment-fa-081-full-t3n5",
+          "franken_alignment-fa-092-full-iokm"
+        ]
+      },
+      {
+        "id": "franken_alignment-fa-001-full-0f9p",
+        "title": "Freeze action and permit semantics (FA-001, full packet)",
+        "score": 1.028771237954945,
+        "reason": "Unblocks 4 items, high priority",
+        "unblocks_ids": [
+          "franken_alignment-fa-004-full-qabx",
+          "franken_alignment-fa-005-full-9ium",
+          "franken_alignment-fa-057-full-if8z",
+          "franken_alignment-fa-063-full-6vhq"
+        ]
+      }
+    ],
+    "blockers_to_clear": [
+      {
+        "id": "franken_alignment-fa-007-full-d4ex",
+        "title": "Implement native bounded types and canonical formats (FA-007, full packet)",
+        "unblocks_count": 5,
+        "unblocks_ids": [
+          "franken_alignment-address-resolver-2fkx.1",
+          "franken_alignment-knowledge-wrapper-b0qg",
+          "franken_alignment-knowledge-wrapper-b0qg.1",
+          "franken_alignment-typestate-cx-6ga",
+          "franken_alignment-typestate-cx-6ga.1"
+        ],
+        "actionable": false,
+        "blocked_by": [
+          "franken_alignment-fa-003-full-mhk2",
+          "franken_alignment-fa-005-full-9ium",
+          "franken_alignment-fa-054-full-7g47"
+        ]
+      },
+      {
+        "id": "franken_alignment-fa-001-full-0f9p",
+        "title": "Freeze action and permit semantics (FA-001, full packet)",
+        "unblocks_count": 4,
+        "unblocks_ids": [
+          "franken_alignment-fa-004-full-qabx",
+          "franken_alignment-fa-005-full-9ium",
+          "franken_alignment-fa-057-full-if8z",
+          "franken_alignment-fa-063-full-6vhq"
+        ],
+        "actionable": true
+      },
+      {
+        "id": "franken_alignment-credibility-ledger-dc0.1",
+        "title": "Define the credibility ledger schema and durable storage contract",
+        "unblocks_count": 3,
+        "unblocks_ids": [
+          "franken_alignment-credibility-ledger-dc0.2",
+          "franken_alignment-credibility-ledger-dc0.4",
+          "franken_alignment-credibility-ledger-dc0.5"
+        ],
+        "actionable": false,
+        "blocked_by": [
+          "franken_alignment-fa-019-full-qfvl",
+          "franken_alignment-fa-022-full-ojoa"
+        ]
+      },
+      {
+        "id": "franken_alignment-fa-057-full-if8z",
+        "title": "Define opaque judgment full-input witnesses (FA-057, full packet)",
+        "unblocks_count": 3,
+        "unblocks_ids": [
+          "franken_alignment-fa-058-full-vgs8",
+          "franken_alignment-fa-081-full-t3n5",
+          "franken_alignment-fa-092-full-iokm"
+        ],
+        "actionable": false,
+        "blocked_by": [
+          "franken_alignment-fa-001-full-0f9p"
+        ]
+      },
+      {
+        "id": "franken_alignment-fa-003-full-mhk2",
+        "title": "Build registry and document consistency checks (FA-003, full packet)",
+        "unblocks_count": 2,
+        "unblocks_ids": [
+          "franken_alignment-preregistration-ledger-cv3",
+          "franken_alignment-preregistration-ledger-cv3.1"
+        ],
+        "actionable": false,
+        "blocked_by": [
+          "franken_alignment-fa-001-full-0f9p",
+          "franken_alignment-fa-002-full-ac6j"
+        ]
+      }
+    ],
+    "project_health": {
+      "counts": {
+        "total": 337,
+        "open": 320,
+        "closed": 17,
+        "blocked": 310,
+        "actionable": 10,
+        "by_status": {
+          "closed": 17,
+          "open": 319,
+          "tombstone": 1
+        },
+        "by_type": {
+          "epic": 43,
+          "task": 294
+        },
+        "by_priority": {
+          "0": 8,
+          "1": 201,
+          "2": 96,
+          "3": 15,
+          "4": 17
+        }
+      },
+      "graph": {
+        "node_count": 337,
+        "edge_count": 686,
+        "density": 0.00605835806132542,
+        "has_cycles": false,
+        "phase2_ready": true
+      },
+      "velocity": {
+        "closed_last_7_days": 17,
+        "closed_last_30_days": 17,
+        "avg_days_to_close": 0.6237984949434913,
+        "weekly": [
+          {
+            "week_start": "2026-09-07T00:00:00Z",
+            "closed": 17
+          },
+          {
+            "week_start": "2026-08-31T00:00:00Z",
+            "closed": 0
+          },
+          {
+            "week_start": "2026-08-24T00:00:00Z",
+            "closed": 0
+          },
+          {
+            "week_start": "2026-08-17T00:00:00Z",
+            "closed": 0
+          },
+          {
+            "week_start": "2026-08-10T00:00:00Z",
+            "closed": 0
+          },
+          {
+            "week_start": "2026-08-03T00:00:00Z",
+            "closed": 0
+          },
+          {
+            "week_start": "2026-07-27T00:00:00Z",
+            "closed": 0
+          },
+          {
+            "week_start": "2026-07-20T00:00:00Z",
+            "closed": 0
+          }
+        ]
+      }
+    },
+    "commands": {
+      "claim_top": "bd update franken_alignment-fa-001-full-0f9p --status=in_progress",
+      "show_top": "bd show franken_alignment-fa-001-full-0f9p",
+      "list_ready": "bd ready",
+      "list_blocked": "bd blocked",
+      "refresh_triage": "bv --robot-triage"
+    }
+  },
+  "usage_hints": [
+    "jq '.triage.quick_ref.top_picks[:3]' - Top 3 picks for immediate work",
+    "jq '.triage.recommendations[3:10] | map({id,title,score})' - Next candidates after top picks",
+    "jq '.triage.blockers_to_clear | map(.id)' - High-impact blockers to clear",
+    "jq '.triage.recommendations[] | select(.type == \"bug\")' - Bug-focused recommendations",
+    "jq '.triage.quick_ref.top_picks[] | select(.unblocks \u003e 2)' - High-impact picks",
+    "jq '.triage.quick_wins' - Low-effort, high-impact items",
+    "--robot-next - Get only the single top recommendation",
+    "--robot-triage-by-track - Group by execution track for multi-agent coordination",
+    "--robot-triage-by-label - Group by label for area-focused agents",
+    "jq '.triage.recommendations_by_track[].top_pick' - Top pick per track",
+    "jq '.triage.recommendations_by_label[].claim_command' - Claim commands per label",
+    "jq '.feedback.weight_adjustments' - View feedback-adjusted weights (bv-90)"
+  ]
+}

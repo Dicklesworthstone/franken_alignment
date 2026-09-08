@@ -1,5 +1,9 @@
 # Changelog
 
+## 2026-09-08: four-step DSR qualification and six-hour reality check
+
+DSR executed all four required checks on unchanged clean commit `3d8fd5a`, including the 298-test RCH gate. Raw logs and their checked hashes are retained. The reality check records zero production increments and restores full packet ownership and prerequisite links while preserving scoped reference work. The reviewed admission-order change passed a fresh 298-test RCH gate; final system-map and current-prose checks passed on the imported tracker. All 143 packets have full owners, with 319 live beads still open; graph repair is not implementation progress.
+
 ## 2026-09-08: system-map and vocabulary consistency
 
 The owned gate checks layer/verb contracts, document command and Knowledge syntax, typed links and its epic reference. All 298 tests passed through RCH, including 28 new independent controls. Root rejected a fixture-specific workaround before qualification; the preceding Clippy failure remains retained. No production command or layer suite is added.

@@ -1,12 +1,16 @@
 # Implementation status · design revision 0.3
 
-Current execution evidence: [receipt](artifacts/execution/2026-09-08-epoch9-receipt.json).
+Current execution evidence: [receipt](artifacts/execution/2026-09-08-bridge-gate-receipt.json).
+
+## Roadmap admission ordering verified
+
+The reviewed roadmap now makes complete admission an explicit prerequisite of native types (FA-007) and the ATP adapter (FA-064). The source binding was updated only for that reviewed roadmap change. A fresh frozen RCH gate on `hz3`, job `j-30004650170124271`, passed all 298 tests under `nightly-2026-09-07`; [the inputs and raw log](artifacts/execution/2026-09-08-bridge-gate-inputs.json) identify the snapshot. Its tracker input precedes the final dependency import, which is checked separately. No native package was added or admitted.
 
 ## Ninth qualified batch: system-map and vocabulary checks
 
 The complete isolated RCH gate passed **298 tests: 56 reference unit, 16 integration, 224 xtask and 2 doctests**, with zero failures, on `hz3` under `nightly-2026-09-07`. [The receipt](artifacts/execution/2026-09-08-epoch9-receipt.json) binds 133 source/build inputs and the explicit overlay; [the passing log](artifacts/execution/2026-09-08-epoch9-attempt2.log) follows a retained Clippy refusal.
 
-The checker validates nine layers, 35 registered verbs, typed links, exact Knowledge variant sets, bounded command/address syntax and the checker-epic bead link. It distinguishes payload types and domain constructors from explicit Knowledge variants. Its 28 new negative/control tests do not implement a production command or a layer conformance suite. A full-gate injected retired command failed at the intended system-map check after earlier gates passed; the exact input and raw log are retained. The updated four-step DSR integration remains a separate qualification run.
+The checker validates nine layers, 35 registered verbs, typed links, exact Knowledge variant sets, bounded command/address syntax and the checker-epic bead link. It distinguishes payload types and domain constructors from explicit Knowledge variants. Its 28 new negative/control tests do not implement a production command or a layer conformance suite. A full-gate injected retired command failed at the intended system-map check after earlier gates passed; the exact input and raw log are retained. The updated four-step DSR integration subsequently passed on unchanged clean commit `3d8fd5a7cb1bd25ddac1bbb69069ed6d9997039f`, including all 298 tests through RCH; [the integration record](artifacts/execution/2026-09-08-epoch9-gate-integration.json) retains the exact source binding and raw-log hashes. Later tracker and reality-check edits are outside that frozen-source result.
 
 ## Eighth qualified batch: runtime checkout and current declarations
 
@@ -69,16 +73,16 @@ The round uses a deliberately non-cryptographic FNV comparison and proves no cry
 | Founding essays | Both read in full again for revision 0.3; head commits recorded in `registry/sources.json` | Complete premise; no missing post |
 | Ten donor/build project deep dives | Targeted code/manifest/plan review at fixed refs (revision 0.2) | Exact files/scopes recorded; not full repository audits or builds |
 | Pure-Rust reference workspace | Source present, zero external packages, formatted with `cargo fmt --all` on 2026-09-06 | Selected logical semantics only; not a broker |
-| Rust test functions | **56 unit + 16 integration reference tests, 224 xtask tests and 2 doctests passed remotely on 2026-09-07**; earlier runs remain dated below | Exact frozen batch above; not production evidence or credit for other work in progress |
-| Rust local gate driver | **Complete reference gate PASS remotely on 2026-09-07** under `nightly-2026-09-07`; earlier local 2026-09-06 gate retained below | Initial inventory, registry-core and full concordance checks execute; external admission remains incomplete; new source requires a new run |
+| Rust test functions | **56 unit + 16 integration reference tests, 224 xtask tests and 2 doctests passed remotely on 2026-09-08 UTC**; earlier runs remain dated below | Exact frozen batch above; not production evidence or credit for other work in progress |
+| Rust local gate driver | **Complete reference gate PASS remotely on 2026-09-08 UTC** under `nightly-2026-09-07`; earlier local 2026-09-06 gate retained below | Initial inventory, registry-core and full concordance checks execute; external admission remains incomplete; new source requires a new run |
 | Production release gate | Explicitly refuses release | No qualified broker/toolchain/target/signing closure |
 | Machine-readable registries | 40 invariants, 21 hypotheses, 143 packets, 5 SLO targets, founding concordance (38 ideas, 9 syntheses, 67 engineering additions), preregistration ledger with no preregistered protocol yet, system map (9 layers) and vocabulary (26 nouns, 35 verbs, 12 reason codes) | Static structural checks are not proofs of their claims |
-| Beads task graph | `.beads/` initialized 2026-09-06; the 2026-09-07 campaign is implementing reference extensions and missing prerequisites | Completion requires exact acceptance and new execution evidence; the original graph omits many foundational roadmap packets |
+| Beads task graph | The reality-check bridge gives all 143 roadmap packets full owners; 336 live beads, 17 closed and 319 open; `br ready` returns six tasks | Added coverage is not implementation. Use `br ready` for assignments: this `bv` version also counts a tombstone and three epics as actionable. See [the bridge](docs/REALITY_CHECK_AND_BRIDGE_PLAN.md) and retained graph review |
 | Production control broker / persistence / containment | Not implemented | Reference code performs no external effects |
 | Native foundation adapters | Planned, admission blockers recorded | A reviewed source file is not an integration |
 | Trained helpers / codecs / signatures / surprise residual / rewind | Research and implementation plans | No measured safety, compression, detection or containment result |
 | Receipts, assurance profiles, passports, autonomy ledger, canaries, risk-theater detector, formal anchors | Plan subsections, invariants FA-INV-035 through FA-INV-038, packets FA-117 through FA-131, beads | No verifier, no proof, no profile exists yet |
-| Local DSR quality integration | All three required checks executed and passed on unchanged clean revision `2e609245`, 2026-09-08 UTC; Cargo checks ran through RCH | Initial reference gate only; no production build, signing or release profile |
+| Local DSR quality integration | All four required checks executed and passed on unchanged clean revision `3d8fd5a`, 2026-09-08 UTC; Cargo checks ran through RCH | Reference/operator gate only; no production build, signing or release profile |
 | Public repository mutation | The operator committed and pushed earlier revision 0.3 batches during the working session; later changes remain in the local working tree until committed | This document does not track remote state |
 
 ## Execution facts recorded on 2026-09-06

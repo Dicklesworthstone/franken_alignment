@@ -1,0 +1,87 @@
+  [2m2026-09-08T03:11:47.093340Z[0m [32m INFO[0m [1;32mrch::hook[0m[32m: [32mSelected worker: vmi1227854 at root@109.123.245.77 (4 slots remaining after reservation, speed 71.9)[0m
+    [2;3mat[0m rch/src/hook.rs:2645 [2;3mon[0m ThreadId(1)
+
+[*] Job j-30004650170124279 submitted to vmi1227854 (4 slots remaining, speed 71.9)
+  [2m2026-09-08T03:11:47.552148Z[0m [32m INFO[0m [1;32mrch::hook::transfer_orchestration[0m[32m: [32mStarting remote compilation pipeline for franken_alignment_bridge_final_20260908 (hash: cb316ceec77a9ecb)[0m
+    [2;3mat[0m rch/src/hook/transfer_orchestration.rs:510 [2;3mon[0m ThreadId(1)
+
+  [2m2026-09-08T03:11:47.552188Z[0m [32m INFO[0m [1;32mrch::hook::transfer_orchestration[0m[32m: [32mPrepared dependency sync manifest for 1 roots[0m
+    [2;3mat[0m rch/src/hook/transfer_orchestration.rs:532 [2;3mon[0m ThreadId(1)
+
+  [2m2026-09-08T03:11:49.398613Z[0m [32m INFO[0m [1;32mrch::hook::transfer_orchestration[0m[32m: [32mSyncing project to worker vmi1227854...[0m
+    [2;3mat[0m rch/src/hook/transfer_orchestration.rs:661 [2;3mon[0m ThreadId(1)
+
+  [2m2026-09-08T03:11:54.682121Z[0m [32m INFO[0m [1;32mrch::transfer[0m[32m: [32mLinked git worktree detected at /Users/jemanuel/projects/franken_alignment_bridge_final_20260908 (gitdir: /Users/jemanuel/projects/franken_alignment/.git/worktrees/franken_alignment_bridge_final_20260908); excluding dangling '.git' file from upload so the remote build resolves git-free like a normal repo[0m
+    [2;3mat[0m rch/src/transfer.rs:2009 [2;3mon[0m ThreadId(1)
+
+  [2m2026-09-08T03:11:54.682362Z[0m [32m INFO[0m [1;32mrch::transfer[0m[32m: [32mSyncing /Users/jemanuel/projects/franken_alignment_bridge_final_20260908 -> /data/tmp/rch/franken_alignment_bridge_final_20260908/cb316ceec77a9ecb on vmi1227854 (streaming)[0m
+    [2;3mat[0m rch/src/transfer.rs:3549 [2;3mon[0m ThreadId(1)
+
+  [2m2026-09-08T03:11:56.785222Z[0m [32m INFO[0m [1;32mrch::hook::transfer_orchestration[0m[32m: [32mSync complete: 31 files, 4297010 bytes in 6251ms[0m
+    [2;3mat[0m rch/src/hook/transfer_orchestration.rs:958 [2;3mon[0m ThreadId(1)
+
+  [2m2026-09-08T03:11:56.802546Z[0m [32m INFO[0m [1;32mrch::hook::transfer_orchestration[0m[32m: [32mExecuting command remotely: cargo +nightly-2026-09-07 run --locked -p xtask -- system-map-check[0m
+    [2;3mat[0m rch/src/hook/transfer_orchestration.rs:1018 [2;3mon[0m ThreadId(1)
+
+  [2m2026-09-08T03:11:56.802634Z[0m [32m INFO[0m [1;32mrch::transfer[0m[32m: [32mRewriting CARGO_TARGET_DIR for remote execution (worker-scoped path): /Volumes/USB_NVME/cargo-target -> /data/tmp/rch/franken_alignment_bridge_final_20260908/.rch-target-vmi1227854-pool-2add04ba9670d24cd96a8be576dbf7aa[0m
+    [2;3mat[0m rch/src/transfer.rs:1842 [2;3mon[0m ThreadId(1)
+
+  [2m2026-09-08T03:11:56.802665Z[0m [32m INFO[0m [1;32mrch::transfer[0m[32m: [32mWrapping command with external timeout protection, [1;32mkind[0m[32m: cargo build, [1;32mtimeout_secs[0m[32m: 3600[0m
+    [2;3mat[0m rch/src/transfer.rs:2669 [2;3mon[0m ThreadId(1)
+
+Warning: Permanently added '109.123.245.77' (ED25519) to the list of known hosts.
+warning: unused field `license-file` in `workspace.package`
+ --> Cargo.toml:9:1
+  |
+9 | license-file = "LICENSE"
+  | ^^^^^^^^^^^^
+  |
+  = note: `cargo::unused_workspace_package_fields` is set to `warn` by default
+help: consider removing the field `workspace.package.license-file`
+warning: workspace (manifest) generated 1 warning
+   Compiling xtask v0.2.0 (/data/tmp/rch/franken_alignment_bridge_final_20260908/cb316ceec77a9ecb/xtask)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 4.46s
+     Running `/data/tmp/rch/franken_alignment_bridge_final_20260908/.rch-target-vmi1227854-pool-2add04ba9670d24cd96a8be576dbf7aa/debug/xtask system-map-check`
+PASS admission_contract: required local source, target, build/runtime review and future external constraints; snapshot identity matched
+SNAPSHOT tool: sha256sum
+SNAPSHOT verified files: 133
+PASS source_snapshot: 133 reviewed files match the manifest byte for byte, and the discovered set equals the manifest set. Digests come from the operator's SHA-256 tool; no cryptography is implemented here. Not a claim about the hashing binary's authenticity, runtime semantics, or package dependencies.
+SYSTEM_MAP input=registry/system_map.json bytes=8225 sha256=7b62748269fd1fa55a7a8ea2a2cd9274970accfff4e7e97b1983fdf342f29223; operator digest and outer freeze, not receipt authentication
+SYSTEM_MAP input=registry/vocabulary.json bytes=10344 sha256=b5b7cb253333f43ba6bcc6b08268bb91ceab7767b7d7581fa5cec7f41a475615; operator digest and outer freeze, not receipt authentication
+SYSTEM_MAP input=registry/invariants.json bytes=56752 sha256=b2f09b25d5633c7686ecf66a8b1998a489211d01c4a0bf179ce23af89b5f3965; operator digest and outer freeze, not receipt authentication
+SYSTEM_MAP input=registry/roadmap.json bytes=112811 sha256=86a1478ce87175b6bb491272819b77f511440b4be9f6849dc2ae75436f783737; operator digest and outer freeze, not receipt authentication
+SYSTEM_MAP input=README.md bytes=55074 sha256=0e736c8fd63c326f696bfa66deed06a2b8d65051e57af0097f8a1bec84e4f13a; operator digest and outer freeze, not receipt authentication
+SYSTEM_MAP input=docs/AGENT_GUIDE.md bytes=9645 sha256=cbb54889340d1e239ad17228faa4ad640ce4e684049153d3ff160c44d5144a8f; operator digest and outer freeze, not receipt authentication
+SYSTEM_MAP input=docs/SYSTEM_MAP.md bytes=7188 sha256=52cae2e9d0bfef7f44af75c398e9f9d47aba3591389e6b23553e3d390f422c02; operator digest and outer freeze, not receipt authentication
+SYSTEM_MAP input=.beads/issues.jsonl bytes=1458602 sha256=d7c998a0ba4e2d43e8e4e4f4171dcd13efcebd58d8cf62ff40e8864b948ccbc6; operator digest and outer freeze, not receipt authentication
+SYSTEM_MAP input=COMPREHENSIVE_PLAN_FOR_THE_DESIGN_OF_FRANKENALIGNMENT.md bytes=251689 sha256=b08ed463dd8d321a5f1a4a65fb839456345788fcc6cb9b8ff3103c7143d64616; operator digest and outer freeze, not receipt authentication
+SYSTEM_MAP_JSON {"missing":[],"retired_in_use":[],"unregistered_verbs":[],"counts":{"layers":9,"verbs":35,"packets":143,"guide_commands":42,"readme_commands":11}}
+PASS system_map: bounded registry/document consistency and checker-epic bead link; no command or layer-suite execution claim
+  [2m2026-09-08T03:12:03.508595Z[0m [32m INFO[0m [1;32mrch::hook::transfer_orchestration[0m[32m: [32mRemote command finished: exit=0 in 6705ms[0m
+    [2;3mat[0m rch/src/hook/transfer_orchestration.rs:1150 [2;3mon[0m ThreadId(1)
+
+  [2m2026-09-08T03:12:03.521130Z[0m [32m INFO[0m [1;32mrch::transfer[0m[32m: [32mRetrieving artifacts from /data/tmp/rch/franken_alignment_bridge_final_20260908/.rch-target-vmi1227854-pool-2add04ba9670d24cd96a8be576dbf7aa on vmi1227854[0m
+    [2;3mat[0m rch/src/transfer.rs:4328 [2;3mon[0m ThreadId(1)
+
+  [2m2026-09-08T03:12:06.635454Z[0m [32m INFO[0m [1;32mrch::transfer[0m[32m: [32mArtifacts retrieved in 3114ms (8 files, 24122 bytes)[0m
+    [2;3mat[0m rch/src/transfer.rs:4383 [2;3mon[0m ThreadId(1)
+
+  [2m2026-09-08T03:12:06.635502Z[0m [32m INFO[0m [1;32mrch::hook::transfer_orchestration[0m[32m: [32mCustom CARGO_TARGET_DIR artifacts retrieved: 8 files, 24122 bytes in 3114ms[0m
+    [2;3mat[0m rch/src/hook/transfer_orchestration.rs:1405 [2;3mon[0m ThreadId(1)
+
+[W] Worker: vmi1227854 | Job: j-30004650170124279
+[T] Total: 16.1s (sync 6.3s, build 6.7s, artifacts 3.1s)
+^ Sync: 4.1 MB in 6.3s (671.3 KB/s)
+[C] Compile: 6.7s
+v Artifacts: 23.6 KB in 3.1s (7.6 KB/s)
+[T] Cache: MISS
++--- [OK] Build Successful ----+
+| Duration: 6.7s               |
+| Artifacts: 8 files (23.6 KB) |
+| Worker: vmi1227854           |
+| Cache: MISS (warming cache)  |
+| Time: 2026-09-08 03:12:06    |
++------------------------------+
+Warning: Permanently added '109.123.245.77' (ED25519) to the list of known hosts.
+[RCH] remote vmi1227854 (21.4s)
+[RCH] clean-overlay receipt: base=3d8fd5a7cb1bd25ddac1bbb69069ed6d9997039f overlay-fingerprint=0b6df8c92e895a46521916398facd707f663d8f338fef6c4fdb9a1b9f24edbe0

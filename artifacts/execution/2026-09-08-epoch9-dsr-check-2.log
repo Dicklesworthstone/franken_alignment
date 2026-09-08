@@ -1,0 +1,80 @@
+# dsr quality check
+# argv: RCH_REQUIRE_REMOTE=1 rch exec --base HEAD --clean-overlay --no-overlay -- cargo +nightly-2026-09-07 run --locked -p xtask -- concordance-check
+# cwd: /Users/jemanuel/projects/franken_alignment_dsr_positive_20260907
+# env: PATH=/opt/homebrew/bin:/Users/jemanuel/.bun/install/global/node_modules/@openai/codex-darwin-arm64/vendor/aarch64-apple-darwin/codex-path:/Users/jemanuel/.codex/tmp/arg0/codex-arg06YgKoU:/Users/jemanuel/.grok/bin:/Users/jemanuel/.bun/bin:/Users/jemanuel/bin:/opt/homebrew/opt/postgresql@18/bin:/Users/jemanuel/.bun/bin:/Users/jemanuel/.bun/install/global/node_modules/.bin:/opt/homebrew/share/google-cloud-sdk/bin:/Users/jemanuel/.bun/bin:/Users/jemanuel/Library/pnpm:/Users/jemanuel/.local/bin:/opt/homebrew/opt/llvm/bin:/opt/homebrew/bin:/opt/homebrew/sbin:/Users/jemanuel/.local/bin:/Users/jemanuel/.elan/bin:/opt/homebrew/bin:/opt/homebrew/sbin:/usr/local/bin:/System/Cryptexes/App/usr/bin:/usr/bin:/bin:/usr/sbin:/sbin:/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/local/bin:/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/bin:/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/appleinternal/bin:/opt/pmk/env/global/bin:/Library/Apple/usr/bin:/Library/TeX/texbin:/usr/local/go/bin:/Users/jemanuel/.rch/shims:/Users/jemanuel/.local/bin:/Users/jemanuel/.cargo/bin:/Applications/Ghostty.app/Contents/MacOS:/Users/jemanuel/.cargo/bin:/usr/local/go/bin:/Users/jemanuel/go/bin:/Users/jemanuel/bin:/usr/local/go/bin
+# env: DSR_QUALITY_RUN_DIR=/tmp/fa-swarm-20260907/dsr-quality-logs/franken_alignment/20260907T213548-70281
+# env: DSR_REPOS_FILE=/Users/jemanuel/projects/franken_alignment_dsr_positive_20260907/release/dsr-quality.fragment.yaml
+# env: DSR_CURRENT_CMD=quality
+# env: CARGO_TARGET_DIR=/Volumes/USB_NVME/cargo-target
+# env: DSR_CONFIG_DIR=/tmp/fa-swarm-20260907/dsr-config
+# env: DSR_STATE_DIR=/tmp/fa-swarm-20260907/dsr-state
+# env: DSR_CURRENT_HOST=
+# env: DSR_RUN_ID=run-1788831332-70281
+# env: DSR_CURRENT_TOOL=
+# env: DSR_QUALITY_LOG_DIR=/tmp/fa-swarm-20260907/dsr-quality-logs
+# started_ms: 1788831377579
+# ----
+  [2m2026-09-08T01:36:51.643100Z[0m [32m INFO[0m [1;32mrch::hook[0m[32m: [32mSelected worker: vmi1227854 at root@109.123.245.77 (4 slots remaining after reservation, speed 71.9)[0m
+    [2;3mat[0m rch/src/hook.rs:2645 [2;3mon[0m ThreadId(1)
+
+  [2m2026-09-08T01:36:54.099237Z[0m [32m INFO[0m [1;32mrch::hook::transfer_orchestration[0m[32m: [32mStarting remote compilation pipeline for franken_alignment_dsr_positive_20260907 (hash: ae87f8f5fc986b74)[0m
+    [2;3mat[0m rch/src/hook/transfer_orchestration.rs:510 [2;3mon[0m ThreadId(1)
+
+  [2m2026-09-08T01:36:54.099293Z[0m [32m INFO[0m [1;32mrch::hook::transfer_orchestration[0m[32m: [32mPrepared dependency sync manifest for 1 roots[0m
+    [2;3mat[0m rch/src/hook/transfer_orchestration.rs:532 [2;3mon[0m ThreadId(1)
+
+  [2m2026-09-08T01:36:58.374681Z[0m [32m INFO[0m [1;32mrch::hook::transfer_orchestration[0m[32m: [32mSyncing project to worker vmi1227854...[0m
+    [2;3mat[0m rch/src/hook/transfer_orchestration.rs:661 [2;3mon[0m ThreadId(1)
+
+  [2m2026-09-08T01:37:50.666127Z[0m [32m INFO[0m [1;32mrch::hook::transfer_orchestration[0m[32m: [32mSync complete: 0 files, 4167680 bytes in 22131ms[0m
+    [2;3mat[0m rch/src/hook/transfer_orchestration.rs:958 [2;3mon[0m ThreadId(1)
+
+  [2m2026-09-08T01:37:50.747636Z[0m [32m INFO[0m [1;32mrch::hook::transfer_orchestration[0m[32m: [32mExecuting command remotely: cargo +nightly-2026-09-07 run --locked -p xtask -- concordance-check[0m
+    [2;3mat[0m rch/src/hook/transfer_orchestration.rs:1018 [2;3mon[0m ThreadId(1)
+
+  [2m2026-09-08T01:37:50.759181Z[0m [32m INFO[0m [1;32mrch::transfer[0m[32m: [32mRewriting CARGO_TARGET_DIR for remote execution (worker-scoped path): /Volumes/USB_NVME/cargo-target -> /data/tmp/rch/franken_alignment_dsr_positive_20260907/.rch-target-vmi1227854-pool-9c714c83c1c765eab11687f95c2594ab[0m
+    [2;3mat[0m rch/src/transfer.rs:1842 [2;3mon[0m ThreadId(1)
+
+  [2m2026-09-08T01:37:50.782345Z[0m [32m INFO[0m [1;32mrch::transfer[0m[32m: [32mWrapping command with external timeout protection, [1;32mkind[0m[32m: cargo build, [1;32mtimeout_secs[0m[32m: 3600[0m
+    [2;3mat[0m rch/src/transfer.rs:2669 [2;3mon[0m ThreadId(1)
+
+Warning: Permanently added '109.123.245.77' (ED25519) to the list of known hosts.
+warning: unused field `license-file` in `workspace.package`
+ --> Cargo.toml:9:1
+  |
+9 | license-file = "LICENSE"
+  | ^^^^^^^^^^^^
+  |
+  = note: `cargo::unused_workspace_package_fields` is set to `warn` by default
+help: consider removing the field `workspace.package.license-file`
+warning: workspace (manifest) generated 1 warning
+   Compiling xtask v0.2.0 (/data/tmp/rch/franken_alignment_dsr_positive_20260907/ae87f8f5fc986b74/xtask)
+PASS admission_contract: required local source, target, build/runtime review and future external constraints; snapshot identity matched
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 3.74s
+     Running `/data/tmp/rch/franken_alignment_dsr_positive_20260907/.rch-target-vmi1227854-pool-9c714c83c1c765eab11687f95c2594ab/debug/xtask concordance-check`
+SNAPSHOT tool: sha256sum
+SNAPSHOT verified files: 133
+PASS source_snapshot: 133 reviewed files match the manifest byte for byte, and the discovered set equals the manifest set. Digests come from the operator's SHA-256 tool; no cryptography is implemented here. Not a claim about the hashing binary's authenticity, runtime semantics, or package dependencies.
+CONCORDANCE input=registry/founding_concordance.json bytes=42815 sha256=cf90c49704448eaaab47e447c15033c94dd66c37c895c74c8b7bce2f135c251d; verified source manifest, outer freeze required
+CONCORDANCE input=registry/invariants.json bytes=56752 sha256=b2f09b25d5633c7686ecf66a8b1998a489211d01c4a0bf179ce23af89b5f3965; verified source manifest, outer freeze required
+CONCORDANCE input=registry/claims.json bytes=15799 sha256=9e729380f01af536b21f116d334977db77e3900e43367c6f19b1522296c61005; verified source manifest, outer freeze required
+CONCORDANCE input=registry/roadmap.json bytes=112775 sha256=9380c273c1bb2b2d36362bea45118db7d62d60ddc5faa50292da6b91f03585e2; verified source manifest, outer freeze required
+CONCORDANCE input=COMPREHENSIVE_PLAN_FOR_THE_DESIGN_OF_FRANKENALIGNMENT.md bytes=251689 sha256=b08ed463dd8d321a5f1a4a65fb839456345788fcc6cb9b8ff3103c7143d64616; verified source manifest, outer freeze required
+CONCORDANCE_JSON {"missing":[],"dangling":[],"counts":{"headings":231,"invariants":40,"hypotheses":21,"packets":143}}
+PASS concordance: direct typed coverage and reference validity; not implementation or invariant proof
+  [2m2026-09-08T01:37:58.613699Z[0m [32m INFO[0m [1;32mrch::hook::transfer_orchestration[0m[32m: [32mRemote command finished: exit=0 in 7797ms[0m
+    [2;3mat[0m rch/src/hook/transfer_orchestration.rs:1150 [2;3mon[0m ThreadId(1)
+
+  [2m2026-09-08T01:37:58.697422Z[0m [32m INFO[0m [1;32mrch::transfer[0m[32m: [32mRetrieving artifacts from /data/tmp/rch/franken_alignment_dsr_positive_20260907/.rch-target-vmi1227854-pool-9c714c83c1c765eab11687f95c2594ab on vmi1227854[0m
+    [2;3mat[0m rch/src/transfer.rs:4328 [2;3mon[0m ThreadId(1)
+
+  [2m2026-09-08T01:38:14.176077Z[0m [32m INFO[0m [1;32mrch::transfer[0m[32m: [32mArtifacts retrieved in 15478ms (8 files, 24110 bytes)[0m
+    [2;3mat[0m rch/src/transfer.rs:4383 [2;3mon[0m ThreadId(1)
+
+  [2m2026-09-08T01:38:14.231223Z[0m [32m INFO[0m [1;32mrch::hook::transfer_orchestration[0m[32m: [32mCustom CARGO_TARGET_DIR artifacts retrieved: 8 files, 24110 bytes in 15478ms[0m
+    [2;3mat[0m rch/src/hook/transfer_orchestration.rs:1405 [2;3mon[0m ThreadId(1)
+
+Warning: Permanently added '109.123.245.77' (ED25519) to the list of known hosts.
+[RCH] remote vmi1227854 (94.9s)
+[RCH] clean-overlay receipt: base=3d8fd5a7cb1bd25ddac1bbb69069ed6d9997039f overlay-fingerprint=fe0d5151031be8fda7951fe7fe1f42f7ce344018fdb3ed21e6ada866b230b195
+# exit_code: 0

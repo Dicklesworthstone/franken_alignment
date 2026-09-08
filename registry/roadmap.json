@@ -166,7 +166,8 @@
       "status": "planned",
       "depends_on": [
         "FA-003",
-        "FA-005"
+        "FA-005",
+        "FA-054"
       ],
       "invariants": [
         "FA-INV-001",
@@ -1506,7 +1507,8 @@
       "title": "Native ATP effect-free adapter",
       "status": "planned",
       "depends_on": [
-        "FA-063"
+        "FA-063",
+        "FA-054"
       ],
       "invariants": [
         "FA-INV-022",

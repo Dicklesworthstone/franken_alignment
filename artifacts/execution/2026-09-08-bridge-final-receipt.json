@@ -1,0 +1,37 @@
+{
+  "schema": "fa.operator_input_qualification/1",
+  "base_commit": "3d8fd5a7cb1bd25ddac1bbb69069ed6d9997039f",
+  "results": [
+    {
+      "verb": "system-map-check",
+      "worker": "vmi1227854",
+      "exit_code": 0,
+      "location": "remote",
+      "overlay_fingerprint": "0b6df8c92e895a46521916398facd707f663d8f338fef6c4fdb9a1b9f24edbe0"
+    },
+    {
+      "verb": "prose-check",
+      "worker": "vmi1227854",
+      "exit_code": 0,
+      "location": "remote",
+      "overlay_fingerprint": "0b6df8c92e895a46521916398facd707f663d8f338fef6c4fdb9a1b9f24edbe0"
+    }
+  ],
+  "raw_artifact_sha256": {
+    "artifacts/execution/2026-09-08-bridge-final-system-map-check.log": "26d5cd9af901c36085eadb5d071cef95426f1ea6f81e4c2a835b42524753e9c0",
+    "artifacts/execution/2026-09-08-bridge-final-system-map-check.json": "641b967cd5a8e3f34a6ab920ff0127775ed6b863e82be3cc7466d05290033861",
+    "artifacts/execution/2026-09-08-bridge-final-prose-check.log": "db615702ee6439f583fa0fc6928ee197e06aa71d131cb77dbbe9614e70947d36",
+    "artifacts/execution/2026-09-08-bridge-final-prose-check.json": "a8c6cb22d09027fa0acaef500d7e21ac8ef571bbc7c26490c64e9e5ead7a73ba",
+    "artifacts/execution/2026-09-08-bridge-final-inputs.json": "d3f3d79faeb449aea076a49c99edcc13857382465b2eb92611a62700afc5e6d8"
+  },
+  "runtime_input_sha256": {
+    ".beads/issues.jsonl": "d7c998a0ba4e2d43e8e4e4f4171dcd13efcebd58d8cf62ff40e8864b948ccbc6",
+    "registry/roadmap.json": "86a1478ce87175b6bb491272819b77f511440b4be9f6849dc2ae75436f783737",
+    "registry/source_snapshot.json": "820b19e14f60dcb561b72a7a6eac00d627ffc85a4c09016cbfd8f8d21a3da246",
+    "registry/dependency_policy.json": "7e4a3dd65340a7507e9b6f5028950c34928f050dd20b70d1791e73bd3a347093",
+    "IMPLEMENTATION_STATUS.md": "298b9b0403d87a70e97baace0d38dd6894991f9a6d87111e027a8c217d9975a3"
+  },
+  "source_gate": "artifacts/execution/2026-09-08-bridge-gate-receipt.json",
+  "graph_review": "artifacts/execution/2026-09-08-bead-bridge-review.json",
+  "scope": "Final system-map and current-prose operator inputs executed remotely on unchanged frozen input bytes. No tests were credited from these standalone checks; the separately retained source gate executed 298 tests. No production or release qualification."
+}

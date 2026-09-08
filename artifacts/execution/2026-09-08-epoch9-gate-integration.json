@@ -1,0 +1,25 @@
+{
+  "schema_version": "fa.gate_integration/1",
+  "qualified_source_commit": "3d8fd5a7cb1bd25ddac1bbb69069ed6d9997039f",
+  "source_unchanged": true,
+  "dsr_required_checks": 4,
+  "dsr_passed_checks": 4,
+  "tests": {
+    "reference_unit": 56,
+    "reference_integration": 16,
+    "xtask": 224,
+    "doctests": 2,
+    "total": 298
+  },
+  "raw_artifacts_sha256": {
+    "artifacts/execution/2026-09-08-epoch9-dsr.log": "97172362edb54e522e79587d0d8cd6b6c2e4a40e1a97a140ba557445872f3f1b",
+    "artifacts/execution/2026-09-08-epoch9-dsr.json": "d549ba021d8fffe99c36357632b548b3f96122e832596733e390db78866f75c0",
+    "artifacts/execution/2026-09-08-epoch9-dsr-receipt.json": "644364f8156674302be12a1f61d1e1c50c8e6fb34c13dc8bede82569e7617ff3",
+    "artifacts/execution/2026-09-08-epoch9-dsr-check-1.log": "85ea1a286b6e39ba23831052ae0a10f0704805c398eba78fc398e79a705a3e5a",
+    "artifacts/execution/2026-09-08-epoch9-dsr-check-2.log": "7d9ccf0757be8ed3da9d4d037541359e1d19de0ddbbc660ffe19897c887bde0f",
+    "artifacts/execution/2026-09-08-epoch9-dsr-check-3.log": "f942aa60e4161b7bec39254a35f54c5f62b1628d4f448f7e3e2da5c14cc9559f",
+    "artifacts/execution/2026-09-08-epoch9-dsr-check-4.log": "461a04ae6c19eddb5502df7fcf0148e2264b7feb65e1bafc87b5cf9ba10b70d1"
+  },
+  "negative_control": "artifacts/execution/2026-09-08-epoch9-negative.log",
+  "scope": "Four required DSR checks actually executed on the clean named source; all compilation and test execution remote via RCH. Later reality-check and bead-graph edits are outside this frozen source result. No production, dependency admission, multi-target release or publication qualification."
+}

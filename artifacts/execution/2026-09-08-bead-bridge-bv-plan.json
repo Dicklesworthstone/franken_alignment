@@ -1,0 +1,180 @@
+{
+  "generated_at": "2026-09-08T03:04:13Z",
+  "data_hash": "a01e6c4cb20c65fb",
+  "analysis_config": {
+    "ComputeBetweenness": false,
+    "BetweennessTimeout": 500000000,
+    "BetweennessSkipReason": "not computed for --robot-plan",
+    "BetweennessMode": "skip",
+    "BetweennessSampleSize": 0,
+    "BetweennessIsApproximate": false,
+    "ComputePageRank": false,
+    "PageRankTimeout": 500000000,
+    "PageRankSkipReason": "not computed for --robot-plan",
+    "ComputeHITS": false,
+    "HITSTimeout": 500000000,
+    "HITSSkipReason": "not computed for --robot-plan",
+    "ComputeCycles": false,
+    "CyclesTimeout": 500000000,
+    "MaxCyclesToStore": 100,
+    "CyclesSkipReason": "not computed for --robot-plan",
+    "ComputeEigenvector": false,
+    "ComputeCriticalPath": false
+  },
+  "status": {
+    "PageRank": {
+      "state": "skipped"
+    },
+    "Betweenness": {
+      "state": "skipped",
+      "reason": "not computed for --robot-plan"
+    },
+    "Eigenvector": {
+      "state": "skipped"
+    },
+    "HITS": {
+      "state": "skipped",
+      "reason": "not computed for --robot-plan"
+    },
+    "Critical": {
+      "state": "skipped"
+    },
+    "Cycles": {
+      "state": "skipped",
+      "reason": "not computed for --robot-plan"
+    },
+    "KCore": {
+      "state": "computed",
+      "ms": 721083
+    },
+    "Articulation": {
+      "state": "computed"
+    },
+    "Slack": {
+      "state": "computed",
+      "ms": 365916
+    }
+  },
+  "plan": {
+    "tracks": [
+      {
+        "track_id": "track-A",
+        "items": [
+          {
+            "id": "franken_alignment-9o7",
+            "title": "PROBE: delete me",
+            "priority": 4,
+            "status": "tombstone",
+            "unblocks": null
+          }
+        ],
+        "reason": "Single actionable item"
+      },
+      {
+        "track_id": "track-B",
+        "items": [
+          {
+            "id": "franken_alignment-fa-001-full-0f9p",
+            "title": "Freeze action and permit semantics (FA-001, full packet)",
+            "priority": 0,
+            "status": "open",
+            "unblocks": [
+              "franken_alignment-fa-004-full-qabx",
+              "franken_alignment-fa-005-full-9ium",
+              "franken_alignment-fa-057-full-if8z",
+              "franken_alignment-fa-063-full-6vhq"
+            ]
+          },
+          {
+            "id": "franken_alignment-fa-002-full-ac6j",
+            "title": "Freeze threat and effect-perimeter inventory (FA-002, full packet)",
+            "priority": 0,
+            "status": "open",
+            "unblocks": [
+              "franken_alignment-fa-072-full-h35y"
+            ]
+          },
+          {
+            "id": "franken_alignment-fa-053-full-l7wn",
+            "title": "Freeze transitive dependency policy (FA-053, full packet)",
+            "priority": 0,
+            "status": "open",
+            "unblocks": [
+              "franken_alignment-fa-054-full-7g47",
+              "franken_alignment-fa-055-full-oa9u"
+            ]
+          },
+          {
+            "id": "franken_alignment-agent-guide-playbooks-kngs.1",
+            "title": "Machine-checkable playbook step format",
+            "priority": 1,
+            "status": "open",
+            "unblocks": null
+          },
+          {
+            "id": "franken_alignment-e2e-founding-vertical-slice-dmd.1",
+            "title": "Scenario script and structured event log format",
+            "priority": 1,
+            "status": "open",
+            "unblocks": null
+          },
+          {
+            "id": "franken_alignment-fa-052-full-j19t",
+            "title": "Maintain source provenance and resolve missing context (FA-052, full packet)",
+            "priority": 1,
+            "status": "open",
+            "unblocks": null
+          },
+          {
+            "id": "franken_alignment-agent-guide-playbooks-kngs",
+            "title": "Agent guide and playbooks maintained with the vocabulary (FA-143)",
+            "priority": 2,
+            "status": "open",
+            "unblocks": null
+          }
+        ],
+        "reason": "Independent work stream"
+      },
+      {
+        "track_id": "track-C",
+        "items": [
+          {
+            "id": "franken_alignment-e2e-founding-vertical-slice-dmd",
+            "title": "End-to-end vertical slice: founding mechanisms composed, with detailed logging",
+            "priority": 1,
+            "status": "open",
+            "unblocks": null
+          }
+        ],
+        "reason": "Single actionable item"
+      },
+      {
+        "track_id": "track-D",
+        "items": [
+          {
+            "id": "franken_alignment-reference-founding-semantics-0eh",
+            "title": "Port founding congress semantics into the reference model (FA-056 subset)",
+            "priority": 1,
+            "status": "open",
+            "unblocks": null
+          }
+        ],
+        "reason": "Single actionable item"
+      }
+    ],
+    "total_actionable": 10,
+    "total_blocked": 310,
+    "summary": {
+      "highest_impact": "franken_alignment-fa-001-full-0f9p",
+      "impact_reason": "Unblocks multiple tasks",
+      "unblocks_count": 4
+    }
+  },
+  "usage_hints": [
+    "jq '.plan.tracks | length' - Number of parallel execution tracks",
+    "jq '.plan.tracks[0].items | map(.id)' - First track item IDs",
+    "jq '.plan.tracks[].items[] | select(.unblocks | length \u003e 0)' - Items that unblock others",
+    "jq '.plan.summary' - High-level execution summary",
+    "jq '[.plan.tracks[].items[]] | length' - Total items across all tracks"
+  ]
+}

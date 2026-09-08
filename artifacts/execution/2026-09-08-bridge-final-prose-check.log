@@ -1,0 +1,86 @@
+  [2m2026-09-08T03:12:11.384144Z[0m [32m INFO[0m [1;32mrch::hook[0m[32m: [32mSelected worker: vmi1227854 at root@109.123.245.77 (4 slots remaining after reservation, speed 71.9)[0m
+    [2;3mat[0m rch/src/hook.rs:2645 [2;3mon[0m ThreadId(1)
+
+[*] Job j-30004650170124280 submitted to vmi1227854 (4 slots remaining, speed 71.9)
+  [2m2026-09-08T03:12:11.654188Z[0m [32m INFO[0m [1;32mrch::hook::transfer_orchestration[0m[32m: [32mStarting remote compilation pipeline for franken_alignment_bridge_final_20260908 (hash: 87d61a7fe00a1424)[0m
+    [2;3mat[0m rch/src/hook/transfer_orchestration.rs:510 [2;3mon[0m ThreadId(1)
+
+  [2m2026-09-08T03:12:11.654219Z[0m [32m INFO[0m [1;32mrch::hook::transfer_orchestration[0m[32m: [32mPrepared dependency sync manifest for 1 roots[0m
+    [2;3mat[0m rch/src/hook/transfer_orchestration.rs:532 [2;3mon[0m ThreadId(1)
+
+  [2m2026-09-08T03:12:13.231058Z[0m [32m INFO[0m [1;32mrch::hook::transfer_orchestration[0m[32m: [32mSyncing project to worker vmi1227854...[0m
+    [2;3mat[0m rch/src/hook/transfer_orchestration.rs:661 [2;3mon[0m ThreadId(1)
+
+  [2m2026-09-08T03:12:18.706719Z[0m [32m INFO[0m [1;32mrch::transfer[0m[32m: [32mLinked git worktree detected at /Users/jemanuel/projects/franken_alignment_bridge_final_20260908 (gitdir: /Users/jemanuel/projects/franken_alignment/.git/worktrees/franken_alignment_bridge_final_20260908); excluding dangling '.git' file from upload so the remote build resolves git-free like a normal repo[0m
+    [2;3mat[0m rch/src/transfer.rs:2009 [2;3mon[0m ThreadId(1)
+
+  [2m2026-09-08T03:12:18.716331Z[0m [32m INFO[0m [1;32mrch::transfer[0m[32m: [32mSyncing /Users/jemanuel/projects/franken_alignment_bridge_final_20260908 -> /data/tmp/rch/franken_alignment_bridge_final_20260908/87d61a7fe00a1424 on vmi1227854 (streaming)[0m
+    [2;3mat[0m rch/src/transfer.rs:3549 [2;3mon[0m ThreadId(1)
+
+  [2m2026-09-08T03:12:20.817017Z[0m [32m INFO[0m [1;32mrch::hook::transfer_orchestration[0m[32m: [32mSync complete: 31 files, 4297010 bytes in 6750ms[0m
+    [2;3mat[0m rch/src/hook/transfer_orchestration.rs:958 [2;3mon[0m ThreadId(1)
+
+  [2m2026-09-08T03:12:20.831714Z[0m [32m INFO[0m [1;32mrch::hook::transfer_orchestration[0m[32m: [32mExecuting command remotely: cargo +nightly-2026-09-07 run --locked -p xtask -- prose-check[0m
+    [2;3mat[0m rch/src/hook/transfer_orchestration.rs:1018 [2;3mon[0m ThreadId(1)
+
+  [2m2026-09-08T03:12:20.831948Z[0m [32m INFO[0m [1;32mrch::transfer[0m[32m: [32mRewriting CARGO_TARGET_DIR for remote execution (worker-scoped path): /Volumes/USB_NVME/cargo-target -> /data/tmp/rch/franken_alignment_bridge_final_20260908/.rch-target-vmi1227854-pool-2add04ba9670d24cd96a8be576dbf7aa[0m
+    [2;3mat[0m rch/src/transfer.rs:1842 [2;3mon[0m ThreadId(1)
+
+  [2m2026-09-08T03:12:20.831991Z[0m [32m INFO[0m [1;32mrch::transfer[0m[32m: [32mWrapping command with external timeout protection, [1;32mkind[0m[32m: cargo build, [1;32mtimeout_secs[0m[32m: 3600[0m
+    [2;3mat[0m rch/src/transfer.rs:2669 [2;3mon[0m ThreadId(1)
+
+Warning: Permanently added '109.123.245.77' (ED25519) to the list of known hosts.
+warning: unused field `license-file` in `workspace.package`
+ --> Cargo.toml:9:1
+  |
+9 | license-file = "LICENSE"
+  | ^^^^^^^^^^^^
+  |
+  = note: `cargo::unused_workspace_package_fields` is set to `warn` by default
+help: consider removing the field `workspace.package.license-file`
+warning: workspace (manifest) generated 1 warning
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.01s
+     Running `/data/tmp/rch/franken_alignment_bridge_final_20260908/.rch-target-vmi1227854-pool-2add04ba9670d24cd96a8be576dbf7aa/debug/xtask prose-check`
+PASS admission_contract: required local source, target, build/runtime review and future external constraints; snapshot identity matched
+SNAPSHOT tool: sha256sum
+SNAPSHOT verified files: 133
+PASS source_snapshot: 133 reviewed files match the manifest byte for byte, and the discovered set equals the manifest set. Digests come from the operator's SHA-256 tool; no cryptography is implemented here. Not a claim about the hashing binary's authenticity, runtime semantics, or package dependencies.
+PROSE input=README.md bytes=55074 sha256=0e736c8fd63c326f696bfa66deed06a2b8d65051e57af0097f8a1bec84e4f13a; operator digest and outer freeze, not receipt authentication
+PROSE input=IMPLEMENTATION_STATUS.md bytes=21955 sha256=298b9b0403d87a70e97baace0d38dd6894991f9a6d87111e027a8c217d9975a3; operator digest and outer freeze, not receipt authentication
+PROSE input=artifacts/execution/2026-09-08-bridge-gate-receipt.json bytes=4291 sha256=692c272936d4ed22eb4c7dfdf08d871e2cf291cbce8db4d03657601b47249f3a; operator digest and outer freeze, not receipt authentication
+PROSE input=registry/founding_concordance.json bytes=42815 sha256=cf90c49704448eaaab47e447c15033c94dd66c37c895c74c8b7bce2f135c251d; operator digest and outer freeze, not receipt authentication
+PROSE input=registry/invariants.json bytes=56752 sha256=b2f09b25d5633c7686ecf66a8b1998a489211d01c4a0bf179ce23af89b5f3965; operator digest and outer freeze, not receipt authentication
+PROSE input=registry/claims.json bytes=15799 sha256=9e729380f01af536b21f116d334977db77e3900e43367c6f19b1522296c61005; operator digest and outer freeze, not receipt authentication
+PROSE input=registry/roadmap.json bytes=112811 sha256=86a1478ce87175b6bb491272819b77f511440b4be9f6849dc2ae75436f783737; operator digest and outer freeze, not receipt authentication
+PROSE input=COMPREHENSIVE_PLAN_FOR_THE_DESIGN_OF_FRANKENALIGNMENT.md bytes=251689 sha256=b08ed463dd8d321a5f1a4a65fb839456345788fcc6cb9b8ff3103c7143d64616; operator digest and outer freeze, not receipt authentication
+PROSE_JSON {"findings":[],"counts":{"founding_ideas":38,"syntheses":9,"engineering_additions":67,"invariants":40,"hypotheses":21,"packets":143}}
+PASS prose_consistency: current declarations match registries and the named retained receipt; not new-source execution proof
+  [2m2026-09-08T03:12:23.008476Z[0m [32m INFO[0m [1;32mrch::hook::transfer_orchestration[0m[32m: [32mRemote command finished: exit=0 in 2176ms[0m
+    [2;3mat[0m rch/src/hook/transfer_orchestration.rs:1150 [2;3mon[0m ThreadId(1)
+
+  [2m2026-09-08T03:12:23.049951Z[0m [32m INFO[0m [1;32mrch::transfer[0m[32m: [32mRetrieving artifacts from /data/tmp/rch/franken_alignment_bridge_final_20260908/.rch-target-vmi1227854-pool-2add04ba9670d24cd96a8be576dbf7aa on vmi1227854[0m
+    [2;3mat[0m rch/src/transfer.rs:4328 [2;3mon[0m ThreadId(1)
+
+  [2m2026-09-08T03:12:25.029725Z[0m [32m INFO[0m [1;32mrch::transfer[0m[32m: [32mArtifacts retrieved in 1979ms (8 files, 642 bytes)[0m
+    [2;3mat[0m rch/src/transfer.rs:4383 [2;3mon[0m ThreadId(1)
+
+  [2m2026-09-08T03:12:25.030037Z[0m [32m INFO[0m [1;32mrch::hook::transfer_orchestration[0m[32m: [32mCustom CARGO_TARGET_DIR artifacts retrieved: 8 files, 642 bytes in 1979ms[0m
+    [2;3mat[0m rch/src/hook/transfer_orchestration.rs:1405 [2;3mon[0m ThreadId(1)
+
+[W] Worker: vmi1227854 | Job: j-30004650170124280
+[T] Total: 10.9s (sync 6.8s, build 2.2s, artifacts 2.0s)
+^ Sync: 4.1 MB in 6.8s (621.7 KB/s)
+[C] Compile: 2.2s
+v Artifacts: 642 B in 2.0s (324 B/s)
+[T] Cache: MISS
++-------------- * Build Successful --------------+
+| New personal best! 2.2s (previous: 6.7s)       |
+| Duration: 2.2s (v 68% faster vs previous 6.7s) |
+| Artifacts: 8 files (642 B)                     |
+| Worker: vmi1227854                             |
+| Cache: MISS (warming cache)                    |
+| Time: 2026-09-08 03:12:25                      |
++------------------------------------------------+
+Warning: Permanently added '109.123.245.77' (ED25519) to the list of known hosts.
+[RCH] remote vmi1227854 (15.2s)
+[RCH] clean-overlay receipt: base=3d8fd5a7cb1bd25ddac1bbb69069ed6d9997039f overlay-fingerprint=0b6df8c92e895a46521916398facd707f663d8f338fef6c4fdb9a1b9f24edbe0
