@@ -1,0 +1,174 @@
+{
+  "schema": "fa.execution_receipt/1",
+  "date": "2026-09-08",
+  "result": {
+    "exit_code": 0,
+    "format": "passed",
+    "check": "passed",
+    "clippy": "passed; warnings denied",
+    "tests": {
+      "reference_unit": 100,
+      "reference_integration": 108,
+      "xtask": 242,
+      "doctests": 8,
+      "total_passed": 458,
+      "failed": 0,
+      "ignored": 0,
+      "filtered": 0
+    }
+  },
+  "base_commit": "160dfda008ae80ce1281a95a89cc36fa4b79ab33",
+  "source_inputs": "artifacts/execution/2026-09-08-witness-gate4-inputs.json",
+  "source_sha256": {
+    ".beads/issues.jsonl": "9bb98f8070b39c4a058353502529c1f57b56809a6c3a855e0aa74ac9702a7bf3",
+    "crates/fa-reference/src/lib.rs": "e448d95349e4e1139c9695a13691eb623914c659c790debafbf6eaa68bc321db",
+    "registry/dependency_policy.json": "01add2c353406034e59202859c7edcf196656add30a37c46b54f7d08a9695b57",
+    "registry/roadmap.json": "6485756172ef5b265870c8844e27c15eebfc960b69ab96c95175a80b21910830",
+    "registry/source_snapshot.json": "025d20c6fdc9e21237ccebb957a2b6e8717d206bb0fa6ff3a97a8174c6cd5385",
+    "crates/fa-reference/src/witness.rs": "171f3c20f8fce930cce7169bfa87e7adf3f9f5ac070a885cc68235c7c3f8bf05",
+    "crates/fa-reference/tests/witness_boundaries.rs": "729af7f02c808487281e8af29c81e0ac80213a558e84ed7189fa3a786e6d0b9e",
+    "crates/fa-reference/tests/witness_costs.rs": "ccacfd8a8fd65acf76399f5ff588dc09af82a1e26bfbe543698c0fae762d0d69",
+    "crates/fa-reference/tests/witness_limits.rs": "12cd1c52ee639d158aa75186be6b4c8eda43c061a40dc8996e27061451311c56"
+  },
+  "reviewed_source_files": 164,
+  "full_gate": {
+    "job": "j-30004650170124415",
+    "worker": "vmi1149989",
+    "outcome": "completed",
+    "location": "remote",
+    "exit_code": 0
+  },
+  "compiler": {
+    "toolchain": "nightly-2026-09-08",
+    "rustc_commit": "cea272fa356e94bd2ee2cadf376630aa0683867a",
+    "qualification_receipt": "artifacts/execution/2026-09-08-history-format-qualification-receipt.json"
+  },
+  "scope": "L2 bounded exact-value and absent-key witness capture/reuse over caller-asserted trusted adapter domains. Exact bytes, version and query role are retained; absence requires the exact authenticated terminal marker, product frontier and domain identity. Newer unrelated snapshots may reuse; older revision/cut, semantics/domain/projection changes, unknown closure or changed facts invalidate/refuse. No adapter authentication implementation.",
+  "limits": {
+    "snapshot_entries": 256,
+    "bytes_per_value": 8192,
+    "max_snapshot_logical_value_bytes": 2097152,
+    "witness_requests": 64,
+    "public_limit_tests": 2
+  },
+  "differential": "Actual bounded BTreeMap values/membership are independently recomputed for baseline, unrelated change, exact mutation and insertion. Reuse does not call the oracle. No helper, database, permit, cryptographic or production claim.",
+  "causal_mutations": [
+    {
+      "kind": "value",
+      "job": "j-30004650170124410",
+      "expected_exit_code": 101,
+      "log": "artifacts/execution/2026-09-08-witness-counterexample-value1.log",
+      "scope": "Remove only same-version exact-value byte comparison; baseline/unrelated/semantic controls pass before changed-byte public assertion fails."
+    },
+    {
+      "kind": "absence",
+      "job": "j-30004650170124411",
+      "expected_exit_code": 101,
+      "log": "artifacts/execution/2026-09-08-witness-counterexample-absence1.log",
+      "scope": "Remove only absent-key insertion refusal; same-snapshot positive passes before inserted-key public assertion fails."
+    }
+  ],
+  "costs": {
+    "job": "j-30004650170124416",
+    "cases": 6,
+    "samples_per_case": 12,
+    "total_timed_samples": 72,
+    "scope": "Fixed descriptive fresh capture/reuse, unrelated churn, changed value, inserted key, unknown closure and stale snapshot cases. Setup/drop/assertion scopes explicit per line. Logical successfully returned judgment bytes are 0 on unknown-closure capture refusal,8 elsewhere; not copied bytes or fixed metadata. Extra first test in combined run receives no sole-process credit."
+  },
+  "first_operation": {
+    "job": "j-30004650170124417",
+    "samples": 1,
+    "elapsed_ns": 971,
+    "scope": "First witness capture in sole selected test of a fresh release process. Snapshot/frontier/request setup excluded; no preceding capture/warmup; no OS/page-cache/CPU-cold or statistical claim."
+  },
+  "allocation": {
+    "worker": "vmi1227854",
+    "profiler": "heaptrack 1.5.0",
+    "binary_identity": "artifacts/execution/2026-09-08-witness-profile2-binary-identity.json",
+    "profile_job": "j-30004650170124418",
+    "baseline_job": "j-30004650170124419",
+    "whole_process_allocation_calls": 1431,
+    "same_binary_zero_test_baseline_calls": 185,
+    "inclusive_module_stack_calls": 336,
+    "baseline_module_stack_calls": 0,
+    "module_stack_match": "12fa_reference7witness",
+    "scope": "Exact release binary copied unchanged to existing profiler worker. Full six-case test versus same-binary same-length unmatched-filter baseline. Stack weights equal profiler totals. Baseline runs zero tests and earns no test credit; inclusive attribution can miss inlined work, whole-process differences include fixtures/harness. No per-case allocations, allocated bytes, leaks, peak heap or RSS claim; binary hashes unchanged after profiling."
+  },
+  "retained_failures": [
+    {
+      "attempt": "gate1",
+      "reason": "Strict Clippy nested-if warning; collapsed to equivalent let-chain, no gate relaxation."
+    },
+    {
+      "attempt": "costs1/cold1/heap1",
+      "reason": "Earlier harness mislabeled 8 bytes as captured on unknown-closure refusal although no judgment returned. Corrected successful-judgment label and zero count; full gate4,costs2,cold2,heap2 rerun. Old results retained as superseded measurement-label evidence."
+    }
+  ],
+  "nonclaims": [
+    "No production adapter authentication, cache admission, range witness, provider, executor, permission, persistence, release or SLO.",
+    "FA002 inventory and FA068 algebra prospective files excluded.",
+    "Earlier receipts remain dated; no execution credit for later source."
+  ],
+  "artifact_sha256": {
+    "artifacts/execution/2026-09-08-witness-cold1-inputs.json": "ad8f9025fd6066191e6a73d4ca51a3fb2c94afd8db91d084e6bfa54302f4595a",
+    "artifacts/execution/2026-09-08-witness-cold1.json": "34f10f61cd60f4b95a0683155f8376ddcfd761cf8c4b32b83f9b4ba3ab4add1d",
+    "artifacts/execution/2026-09-08-witness-cold1.log": "ed7baf4c82121212d5ad31b9f0ebffd8020d71a9258e70a092f4f18992b11756",
+    "artifacts/execution/2026-09-08-witness-cold2-inputs.json": "054825391749592b75678a8d8625cbfae05652a3dd40276d86761fb6b4bf18d5",
+    "artifacts/execution/2026-09-08-witness-cold2.json": "c7a607754745b699a29e5256f512a0b271ab9c32250976c2554629ced58473fd",
+    "artifacts/execution/2026-09-08-witness-cold2.log": "abea19f82e01164b65730bd686a5e6193227d680c52b234484054d66dd663000",
+    "artifacts/execution/2026-09-08-witness-costs1-inputs.json": "2fe400e98c3b268d2f5f98790573aa54fb93fb79fc1b1006fb92739a109349bf",
+    "artifacts/execution/2026-09-08-witness-costs1.json": "5245984e47d6111069ba2aaea6e49c2ddd7852d9d91fe5ce3b0cf7f0e09f69f6",
+    "artifacts/execution/2026-09-08-witness-costs1.log": "8864acdeddeb02bacd2b986bf9d11df498d3dd44b3b93d6fb6b93a9d7c0b8546",
+    "artifacts/execution/2026-09-08-witness-costs2-inputs.json": "22af6ce6582d58b522e7f93efb329971872d587d10a39510026ab92bea386a12",
+    "artifacts/execution/2026-09-08-witness-costs2.json": "173bb9c32f0ff1ef687f5804f6ce76a0eaa1ac932a25a35e05ddb18407d42937",
+    "artifacts/execution/2026-09-08-witness-costs2.log": "d3be942a3b20b480b8ebc855c6b08335c1160c9e204ec7c258479b97cc4d6bc7",
+    "artifacts/execution/2026-09-08-witness-counterexample-absence1-baseline-tests.patch": "edca7883f38c61d1fa09dfe1fe3231ab5bdbdb9be92d860450a3df653abcd9f3",
+    "artifacts/execution/2026-09-08-witness-counterexample-absence1-inputs.json": "50c3e41d5af96a8a543a3e15b0244e92e5cde32d019afa761731a61a37b7152a",
+    "artifacts/execution/2026-09-08-witness-counterexample-absence1.json": "2dd0fac4a280a904abae70c7edda93e051d339311bac9d333c2528e164d30d9b",
+    "artifacts/execution/2026-09-08-witness-counterexample-absence1.log": "ab560e52718a2f84e02d80a2fde30d767e237d42f10d8b978e77f3a8b9220961",
+    "artifacts/execution/2026-09-08-witness-counterexample-value1-baseline-tests.patch": "fc5656cfb8cf1c79ef1728a77b322b5a3500e6d310a83569d0a7cb8374aaf6d9",
+    "artifacts/execution/2026-09-08-witness-counterexample-value1-inputs.json": "8459c454e3a29d13ad767d213c61766bb4a97c949b6c32b500ce617d3cd1a89a",
+    "artifacts/execution/2026-09-08-witness-counterexample-value1.json": "a8247912b9559216d1f67d14bd4a9fae149174aac70bbe2ada3345100b2bc824",
+    "artifacts/execution/2026-09-08-witness-counterexample-value1.log": "e92ce1e5a2aee7de779d3813f3a821b9c593565240577dfbef714776d283abe6",
+    "artifacts/execution/2026-09-08-witness-gate1-inputs.json": "c6a0afb645eceffb08a9a02b51f00ad5ece0380f74a1ab5ef30323d579051e27",
+    "artifacts/execution/2026-09-08-witness-gate1.json": "e85ba7e4208eb3b7eb91f40300d83ab573e3c489cca3c05fa6f1a176a5f764d5",
+    "artifacts/execution/2026-09-08-witness-gate1.log": "b54e10fb7947a9079e119a83da0944d5c579a1dd015f9d80a06ab5252cc050b1",
+    "artifacts/execution/2026-09-08-witness-gate2-inputs.json": "9348f038db1438522f41069047dc773bf4a7764711be7ba0d7d5691e3db00a22",
+    "artifacts/execution/2026-09-08-witness-gate2.json": "c0da555ae89e909bb610305a6bf4e234de54b6c68fa4d8474ff1b2c4ed1d9c46",
+    "artifacts/execution/2026-09-08-witness-gate2.log": "face11d96a273485dcca4d02546c63c4d9dcb349830995dd1a749768acca49f5",
+    "artifacts/execution/2026-09-08-witness-gate3-inputs.json": "241d3e6b8e4477edb60271a4b37d2cacd00e16c753773cd9ff27370bf30513a3",
+    "artifacts/execution/2026-09-08-witness-gate3.json": "1f6273f2c9cfd424d8441b39289f2a944408c1af0de8bc45f36e4e13606df45a",
+    "artifacts/execution/2026-09-08-witness-gate3.log": "fae82b18645a58683dbaa9f6f5acf29fa2bde51b460868054eb5b3f346fa4d5f",
+    "artifacts/execution/2026-09-08-witness-gate4-inputs.json": "da327777c1adf304ae21d2837a9798e403c0ddb4a1badc2c6117fdf1a00f24de",
+    "artifacts/execution/2026-09-08-witness-gate4.json": "7cd35e8bfb709968baa41202eabf4bbac064f71b3f2b38e2358e838df0a700c1",
+    "artifacts/execution/2026-09-08-witness-gate4.log": "f27e4d6b039088654ebb8d00c8857b2215097613178ae6b2caaee2d06408a59c",
+    "artifacts/execution/2026-09-08-witness-heap-baseline1-inputs.json": "503cfc70cf4e264270cc814991214925c5d4f58c216e7cedc1bf6381c0221b6d",
+    "artifacts/execution/2026-09-08-witness-heap-baseline1-report.txt": "0b50b157cb3d3482960fddf01fbdc5fd467114213be5ab8db4956ec0a8fbefc6",
+    "artifacts/execution/2026-09-08-witness-heap-baseline1.json": "e9827268d49f0803ab0882c79229b736c135dce1767cd992671ea700f585c524",
+    "artifacts/execution/2026-09-08-witness-heap-baseline1.log": "deec153ebe45e797111adad3720d6783c6f8cd1b86c33e03b6f2372397236f4b",
+    "artifacts/execution/2026-09-08-witness-heap-baseline1.stacks": "3787ba5ff9d18c155b4013e6771f5703153fe5e50c6eb013aede935cd7ba89d6",
+    "artifacts/execution/2026-09-08-witness-heap-baseline1.zst": "e342bc88b56edd1d8cfae8f8c5ff1dffc846a722f09768c9bc42ad9e2ed78455",
+    "artifacts/execution/2026-09-08-witness-heap-baseline2-inputs.json": "8590859cbe4af35f00ecbc9b84a95b59821c5e3e9efa0d946dcda64f746f47c6",
+    "artifacts/execution/2026-09-08-witness-heap-baseline2-report.txt": "083e4880656173a0813266700288f344d8467220078dbcb2681661fa209da3d0",
+    "artifacts/execution/2026-09-08-witness-heap-baseline2.json": "dec59dd44bb0637eb8df23008a88ea476d7b47dc86e0227cb8027c13ca51ff2a",
+    "artifacts/execution/2026-09-08-witness-heap-baseline2.log": "92c939f61b5bc701e59ef1b7a4942094f77d63302debb6ae04e17664b0b65464",
+    "artifacts/execution/2026-09-08-witness-heap-baseline2.stacks": "8a67428db91c8761317f95b3d314e350cf004d8cc064647fe148e1f0e0feec7a",
+    "artifacts/execution/2026-09-08-witness-heap-baseline2.zst": "9718cd0b3872f5fac95bd44a3d6209c2b492287b1619e2846019ae06f403e40c",
+    "artifacts/execution/2026-09-08-witness-heap-profile1-inputs.json": "e5709837045c33e91da80733ce79d28460425ba0b710cad69433998bf60e0bd6",
+    "artifacts/execution/2026-09-08-witness-heap-profile1-report.txt": "bc311df47f652ad16eb43997d42424ab5c7c0231889d4fed01258c7edd429a78",
+    "artifacts/execution/2026-09-08-witness-heap-profile1.json": "484efaaa2f3dafded21565bdf04e98a114790177933258965345093569e0c5a9",
+    "artifacts/execution/2026-09-08-witness-heap-profile1.log": "1529040a00706a7fc04f3646149800e7a9836889615eacb29397e89d49fac20e",
+    "artifacts/execution/2026-09-08-witness-heap-profile1.stacks": "a3b0bbd19152358193093a86b6a7fa416593e8be538f3f20beca427cd8d6114c",
+    "artifacts/execution/2026-09-08-witness-heap-profile1.zst": "8aab8ce3df338d25439196e04cbf46022925b07d776ca2b0c6496d20d95c35b5",
+    "artifacts/execution/2026-09-08-witness-heap-profile2-inputs.json": "44c5443bbbb621502182684b692da4e1fb45c1360d6bc6aea34544ec49a9cf00",
+    "artifacts/execution/2026-09-08-witness-heap-profile2-report.txt": "a90fc596ac0100b92e4069cc7a64c59361655899b345d76e29ac0ef6ea82a781",
+    "artifacts/execution/2026-09-08-witness-heap-profile2.json": "9c43fa377fccf8a7af0f9fed35ec27b7e58de06b049dac967a4a6a52e336223a",
+    "artifacts/execution/2026-09-08-witness-heap-profile2.log": "deff2986f05ad90ed2c8dad392e0c0ffea2e442705f3a9c713860a780780e884",
+    "artifacts/execution/2026-09-08-witness-heap-profile2.stacks": "87e740a30cd685210f26b8bc5b4a7a910cdb70ea7932c59811e8631d66bfbe80",
+    "artifacts/execution/2026-09-08-witness-heap-profile2.zst": "a5d1e97ac6a6be7d93cd333f41da144f6a6d8307d602c80c05a84c5be47c5d04",
+    "artifacts/execution/2026-09-08-witness-profile-binary-identity.json": "8d977608f6d69f7f212d4b6bc7079c4b7acc556619b84c4e7d639dddb85fc53c",
+    "artifacts/execution/2026-09-08-witness-profile-verified.json": "f7aafa77b25ce8b33d8792dd1ca0588c2c7f3ee94c846c216e0f65a9c9b70dd7",
+    "artifacts/execution/2026-09-08-witness-profile2-binary-identity.json": "da1807ef7f169401564ee8a343c9d0c5469d9718def4f4f48fda7f5a9fc65c19",
+    "artifacts/execution/2026-09-08-witness-profile2-verified.json": "c90ccc88e97953d504bafcf6c7ce9d6d804b191e0dc0b9c8640155de52d8945b"
+  }
+}

@@ -565,10 +565,12 @@
         "crates/fa-reference/src/full_input.rs::tests::opaque_witness_binds_the_entire_actual_input_view",
         "crates/fa-reference/src/full_input.rs::tests::question_profile_and_unmentioned_evidence_changes_invalidate",
         "crates/fa-reference/src/full_input.rs::tests::transform_and_omission_changes_invalidate",
-        "crates/fa-reference/src/full_input.rs::tests::malformed_partitions_omissions_and_bounds_are_rejected"
+        "crates/fa-reference/src/full_input.rs::tests::malformed_partitions_omissions_and_bounds_are_rejected",
+        "crates/fa-reference/src/witness.rs::tests::exact_value_absence_and_unrelated_change_match_always_recompute",
+        "crates/fa-reference/src/witness.rs::tests::stale_semantic_domain_and_closure_controls_refuse_reuse"
       ],
-      "reference_status": "executed_remotely_2026_09_07_pass",
-      "reference_scope": "Exact equality over bounded caller-supplied full input bytes, profile, part metadata and omissions; private validated construction. No actual provider interception, authentication or production authority.",
+      "reference_status": "executed_remotely_2026_09_08_pass",
+      "reference_scope": "Exact equality over bounded caller-supplied full input bytes, profile, part metadata and omissions; private validated construction. No actual provider interception, authentication or production authority. Exact-value bytes/version/query role and absent-key membership reuse additionally bind caller-trusted domain, snapshot, semantics and complete authenticated terminal frontier.",
       "required_negative_campaigns": [
         "Insert a member into an empty reviewed range."
       ],
@@ -581,9 +583,10 @@
         "artifacts/execution/2026-09-06-xtask-check-nightly-2026-08-31.log",
         "artifacts/execution/2026-09-06-xtask-check-nightly-2026-08-31-local.log",
         "artifacts/execution/2026-09-07-epoch2-attempt2.log",
-        "artifacts/execution/2026-09-07-epoch2-receipt.json"
+        "artifacts/execution/2026-09-07-epoch2-receipt.json",
+        "artifacts/execution/2026-09-08-witness-receipt.json"
       ],
-      "reference_execution_note": "Qualified current source hashes and test counts are in the 2026-09-07 epoch2 receipt; historical artifacts remain dated and do not validate later source.",
+      "reference_execution_note": "Current witness gate and causal mutations are bound by the 2026-09-08 witness receipt; prior full-input receipts retain their separate dated source scope. Production checker remains planned.",
       "founding_ideas": [
         "FI-A13",
         "FI-A17"

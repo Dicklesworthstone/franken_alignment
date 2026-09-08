@@ -1,5 +1,11 @@
 # Changelog
 
+## 2026-09-08: exact-value and absent-key witnesses
+
+- Retain exact bytes, versions and query roles; bind absence to a complete declared authenticated domain and terminal frontier. Preserve reuse for unrelated changes while refusing stale snapshots and unknown closure.
+- Add independent store comparisons, semantic/membership/limit controls and two causal guard-mutation failures. The 458-test RCH gate, 72 descriptive release samples, sole-process first capture and exact-binary allocation profile are retained.
+- Correct the refusal-case captured-byte label and rerun affected evidence. Adapter authenticity and production cache/dispatch remain outside this reference contract.
+
 ## 2026-09-08: evidence views and registered trace independence
 
 - Bind declared original/projection/transform/redaction/window metadata to exact submitted helper inputs, with private validated manifests and independent mismatch tests.

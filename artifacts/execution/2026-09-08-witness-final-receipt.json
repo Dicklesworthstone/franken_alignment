@@ -1,0 +1,39 @@
+{
+  "schema": "fa.execution_receipt/1",
+  "date": "2026-09-08",
+  "result": {
+    "exit_code": 0,
+    "format": "passed",
+    "check": "passed",
+    "clippy": "passed; warnings denied",
+    "tests": {
+      "reference_unit": 100,
+      "reference_integration": 108,
+      "xtask": 242,
+      "doctests": 8,
+      "total_passed": 458,
+      "failed": 0,
+      "ignored": 0,
+      "filtered": 0
+    }
+  },
+  "base_commit": "160dfda008ae80ce1281a95a89cc36fa4b79ab33",
+  "source_inputs": "artifacts/execution/2026-09-08-witness-final2-inputs.json",
+  "full_gate": {
+    "job": "j-30004650170124421",
+    "worker": "vmi1149989",
+    "exit_code": 0,
+    "location": "remote",
+    "outcome": "completed"
+  },
+  "scope": "Complete final docs, invariants, roadmap, independently reviewed FA058 closure and source overlay. Prior receipt binds causal mutants and corrected costs/profile binary. No production authentication or authority. Final2 additionally qualifies raw profiler report exact-byte Git attributes; final1 already passed458. First commit preparation stopped before HEAD/index mutation because automatic text normalization changed report bytes. No normalized artifact was committed.",
+  "independent_review": "Pane110 verified current9 source hashes and all60 raw artifacts against original reference acceptance before closure.",
+  "artifact_sha256": {
+    "artifacts/execution/2026-09-08-witness-final1-inputs.json": "221f01f1343f20033eb1667b9866e200c561e9ded88194e5984c6592ef6c13fe",
+    "artifacts/execution/2026-09-08-witness-final1.json": "5e18d2ec15aa8ce2f4cb8ed8025ff0921af7a464bc4f442dcea1e7671f5aca9c",
+    "artifacts/execution/2026-09-08-witness-final1.log": "822f715141d698a7a3288aa5e994eb5435d7f7c87a0153dac0775db03398c2b5",
+    "artifacts/execution/2026-09-08-witness-final2-inputs.json": "9655551f9d27bcb6a04c0345e16d7f83cac4fb5165475339d8b78bdded90ae40",
+    "artifacts/execution/2026-09-08-witness-final2.json": "576fe19c246c1f8c0242fb04e781a5a8de12ce6395f4d49779d8ecdb5ed1500c",
+    "artifacts/execution/2026-09-08-witness-final2.log": "967edeaea1ddcc41d4cbef6362873205d305c9cef0325ef22e167f2d15bb2f1e"
+  }
+}

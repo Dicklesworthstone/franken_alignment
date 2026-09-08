@@ -8,3 +8,6 @@ artifacts/execution/*.log -text -whitespace
 
 # Retained unified diffs preserve their required blank context lines.
 artifacts/execution/*-baseline-tests.patch -text -whitespace
+
+# Raw profiler reports preserve operator output bytes.
+artifacts/execution/*-report.txt -text -whitespace

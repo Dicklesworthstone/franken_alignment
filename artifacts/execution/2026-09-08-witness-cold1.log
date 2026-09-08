@@ -1,0 +1,53 @@
+  [2m2026-09-08T08:24:42.463418Z[0m [32m INFO[0m [1;32mrch::hook[0m[32m: [32mSelected worker: vmi1149989 at root@212.90.121.76 (4 slots remaining after reservation, speed 71.9)[0m
+    [2;3mat[0m rch/src/hook.rs:2645 [2;3mon[0m ThreadId(1)
+
+[*] Job j-30004650170124412 submitted to vmi1149989 (4 slots remaining, speed 71.9)
+  [2m2026-09-08T08:24:42.520515Z[0m [32m INFO[0m [1;32mrch::hook::transfer_orchestration[0m[32m: [32mStarting remote compilation pipeline for franken_alignment_wave6_gate2_20260908 (hash: 5339f3ee9bc854ee)[0m
+    [2;3mat[0m rch/src/hook/transfer_orchestration.rs:510 [2;3mon[0m ThreadId(1)
+
+  [2m2026-09-08T08:24:42.520606Z[0m [32m INFO[0m [1;32mrch::hook::transfer_orchestration[0m[32m: [32mPrepared dependency sync manifest for 1 roots[0m
+    [2;3mat[0m rch/src/hook/transfer_orchestration.rs:532 [2;3mon[0m ThreadId(1)
+
+  [2m2026-09-08T08:24:43.846945Z[0m [32m INFO[0m [1;32mrch::hook::transfer_orchestration[0m[32m: [32mSyncing project to worker vmi1149989...[0m
+    [2;3mat[0m rch/src/hook/transfer_orchestration.rs:661 [2;3mon[0m ThreadId(1)
+
+  [2m2026-09-08T08:24:43.848120Z[0m [32m INFO[0m [1;32mrch::transfer[0m[32m: [32mLinked git worktree detected at /Users/jemanuel/projects/franken_alignment_wave6_gate2_20260908 (gitdir: /Users/jemanuel/projects/franken_alignment/.git/worktrees/franken_alignment_wave6_gate2_20260908); excluding dangling '.git' file from upload so the remote build resolves git-free like a normal repo[0m
+    [2;3mat[0m rch/src/transfer.rs:2009 [2;3mon[0m ThreadId(1)
+
+  [2m2026-09-08T08:24:43.848382Z[0m [32m INFO[0m [1;32mrch::transfer[0m[32m: [32mSyncing /Users/jemanuel/projects/franken_alignment_wave6_gate2_20260908 -> /Users/jemanuel/projects/franken_alignment_wave6_gate2_20260908 on vmi1149989 (streaming)[0m
+    [2;3mat[0m rch/src/transfer.rs:3549 [2;3mon[0m ThreadId(1)
+
+  [2m2026-09-08T08:24:47.036082Z[0m [32m INFO[0m [1;32mrch::hook::transfer_orchestration[0m[32m: [32mSync complete: 644 files, 1398825 bytes in 3135ms[0m
+    [2;3mat[0m rch/src/hook/transfer_orchestration.rs:958 [2;3mon[0m ThreadId(1)
+
+  [2m2026-09-08T08:24:47.067694Z[0m [32m INFO[0m [1;32mrch::hook::transfer_orchestration[0m[32m: [32mExecuting command remotely: /data/tmp/rch/franken_alignment_wave6_gate2_20260908/.rch-target-vmi1149989-pool-c23ff99ecc2c7ba768d85ae25a0a3144/release/build/fa-reference/97d6f97dab7ab07c/out/witness_costs-97d6f97dab7ab07c --exact first_witness_capture_is_selectable_for_fresh_release_measurement --nocapture '--test-threads=1'[0m
+    [2;3mat[0m rch/src/hook/transfer_orchestration.rs:1018 [2;3mon[0m ThreadId(1)
+
+  [2m2026-09-08T08:24:47.069414Z[0m [32m INFO[0m [1;32mrch::transfer[0m[32m: [32mWrapping command with external timeout protection, [1;32mkind[0m[32m: job, [1;32mtimeout_secs[0m[32m: 3600[0m
+    [2;3mat[0m rch/src/transfer.rs:2669 [2;3mon[0m ThreadId(1)
+
+Warning: Permanently added '212.90.121.76' (ED25519) to the list of known hosts.
+
+running 1 test
+test first_witness_capture_is_selectable_for_fresh_release_measurement ... case=witness_first_capture samples=1 successes=1 invalidations=0 refusals=0 observed_errors=0 requested_logical_value_bytes=8 captured_logical_value_bytes=8 elapsed_ns=1022 timing_scope=fresh_process_exact_capture_setup_excluded_only_when_sole_selected_test memory_measurement=unavailable_in_memory_profile
+ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 1 filtered out; finished in 0.00s
+
+  [2m2026-09-08T08:24:48.862732Z[0m [32m INFO[0m [1;32mrch::hook::transfer_orchestration[0m[32m: [32mRemote command finished: exit=0 in 1791ms[0m
+    [2;3mat[0m rch/src/hook/transfer_orchestration.rs:1150 [2;3mon[0m ThreadId(1)
+
+[W] Worker: vmi1149989 | Job: j-30004650170124412
+[T] Total: 4.9s (sync 3.1s, build 1.8s, artifacts --)
+^ Sync: 1.3 MB in 3.1s (435.7 KB/s)
+[C] Compile: 1.8s
+Artifacts: skipped
+[T] Cache: MISS
++-------------- * Build Successful --------------+
+| New personal best! 1.8s (previous: 9.8s)       |
+| Duration: 1.8s (v 82% faster vs previous 9.8s) |
+| Worker: vmi1149989                             |
+| Cache: MISS (warming cache)                    |
+| Time: 2026-09-08 08:24:48                      |
++------------------------------------------------+
+[RCH] remote vmi1149989 (6.4s)

@@ -1,0 +1,11 @@
+--- a/crates/fa-reference/src/witness.rs
++++ b/crates/fa-reference/src/witness.rs
+@@ -371,7 +371,7 @@
+                     let Some(entry) = snapshot.entry(*key) else {
+                         return Ok(invalidated(Invalidation::ExactValue, cost));
+                     };
+-                    if entry.version != *version || entry.value != *value {
++                    if entry.version != *version {
+                         return Ok(invalidated(Invalidation::ExactValue, cost));
+                     }
+                 }

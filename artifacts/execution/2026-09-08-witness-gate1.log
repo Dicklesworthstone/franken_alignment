@@ -1,0 +1,170 @@
+  [2m2026-09-08T08:09:59.729365Z[0m [32m INFO[0m [1;32mrch::hook[0m[32m: [32mSelected worker: vmi1149989 at root@212.90.121.76 (4 slots remaining after reservation, speed 71.9)[0m
+    [2;3mat[0m rch/src/hook.rs:2645 [2;3mon[0m ThreadId(1)
+
+[*] Job j-30004650170124406 submitted to vmi1149989 (4 slots remaining, speed 71.9)
+  [2m2026-09-08T08:09:59.775588Z[0m [32m INFO[0m [1;32mrch::hook::transfer_orchestration[0m[32m: [32mStarting remote compilation pipeline for franken_alignment_wave6_gate1_20260908 (hash: c72239c2f0affd14)[0m
+    [2;3mat[0m rch/src/hook/transfer_orchestration.rs:510 [2;3mon[0m ThreadId(1)
+
+  [2m2026-09-08T08:09:59.775621Z[0m [32m INFO[0m [1;32mrch::hook::transfer_orchestration[0m[32m: [32mPrepared dependency sync manifest for 1 roots[0m
+    [2;3mat[0m rch/src/hook/transfer_orchestration.rs:532 [2;3mon[0m ThreadId(1)
+
+  [2m2026-09-08T08:10:01.496031Z[0m [32m INFO[0m [1;32mrch::hook::transfer_orchestration[0m[32m: [32mSyncing project to worker vmi1149989...[0m
+    [2;3mat[0m rch/src/hook/transfer_orchestration.rs:661 [2;3mon[0m ThreadId(1)
+
+  [2m2026-09-08T08:10:06.239520Z[0m [32m INFO[0m [1;32mrch::transfer[0m[32m: [32mLinked git worktree detected at /Users/jemanuel/projects/franken_alignment_wave6_gate1_20260908 (gitdir: /Users/jemanuel/projects/franken_alignment/.git/worktrees/franken_alignment_wave6_gate1_20260908); excluding dangling '.git' file from upload so the remote build resolves git-free like a normal repo[0m
+    [2;3mat[0m rch/src/transfer.rs:2009 [2;3mon[0m ThreadId(1)
+
+  [2m2026-09-08T08:10:06.239855Z[0m [32m INFO[0m [1;32mrch::transfer[0m[32m: [32mSyncing /Users/jemanuel/projects/franken_alignment_wave6_gate1_20260908 -> /data/tmp/rch/franken_alignment_wave6_gate1_20260908/c72239c2f0affd14 on vmi1149989 (streaming)[0m
+    [2;3mat[0m rch/src/transfer.rs:3549 [2;3mon[0m ThreadId(1)
+
+  [2m2026-09-08T08:10:07.962782Z[0m [32m INFO[0m [1;32mrch::hook::transfer_orchestration[0m[32m: [32mSync complete: 15 files, 9371737 bytes in 6234ms[0m
+    [2;3mat[0m rch/src/hook/transfer_orchestration.rs:958 [2;3mon[0m ThreadId(1)
+
+  [2m2026-09-08T08:10:07.976994Z[0m [32m INFO[0m [1;32mrch::hook::transfer_orchestration[0m[32m: [32mExecuting command remotely: cargo +nightly-2026-09-08 run --locked -p xtask -- check[0m
+    [2;3mat[0m rch/src/hook/transfer_orchestration.rs:1018 [2;3mon[0m ThreadId(1)
+
+  [2m2026-09-08T08:10:07.977082Z[0m [32m INFO[0m [1;32mrch::transfer[0m[32m: [32mRewriting CARGO_TARGET_DIR for remote execution (worker-scoped path): /Volumes/USB_NVME/cargo-target -> /data/tmp/rch/franken_alignment_wave6_gate1_20260908/.rch-target-vmi1149989-pool-6d2463a08755b120c4ba20e8cd68f67b[0m
+    [2;3mat[0m rch/src/transfer.rs:1842 [2;3mon[0m ThreadId(1)
+
+  [2m2026-09-08T08:10:07.977110Z[0m [32m INFO[0m [1;32mrch::transfer[0m[32m: [32mWrapping command with external timeout protection, [1;32mkind[0m[32m: cargo build, [1;32mtimeout_secs[0m[32m: 3600[0m
+    [2;3mat[0m rch/src/transfer.rs:2669 [2;3mon[0m ThreadId(1)
+
+Warning: Permanently added '212.90.121.76' (ED25519) to the list of known hosts.
+warning: unused field `license-file` in `workspace.package`
+ --> Cargo.toml:9:1
+  |
+9 | license-file = "LICENSE"
+  | ^^^^^^^^^^^^
+  |
+  = note: `cargo::unused_workspace_package_fields` is set to `warn` by default
+help: consider removing the field `workspace.package.license-file`
+warning: workspace (manifest) generated 1 warning
+   Compiling xtask v0.2.0 (/data/tmp/rch/franken_alignment_wave6_gate1_20260908/c72239c2f0affd14/xtask)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 2.91s
+     Running `/data/tmp/rch/franken_alignment_wave6_gate1_20260908/.rch-target-vmi1149989-pool-6d2463a08755b120c4ba20e8cd68f67b/debug/xtask check`
+PASS reference_lock: exactly fa-reference and xtask; no external packages
+PASS source_inventory: required files and crate-level prohibitions present
+EXECUTE rustc -Vv
+rustc 1.100.0-nightly (cea272fa3 2026-09-07)
+binary: rustc
+commit-hash: cea272fa356e94bd2ee2cadf376630aa0683867a
+commit-date: 2026-09-07
+host: x86_64-unknown-linux-gnu
+release: 1.100.0-nightly
+LLVM version: 23.1.1
+PASS qualified_rustc_identity: cea272fa356e94bd2ee2cadf376630aa0683867a on x86_64-unknown-linux-gnu; compiler-reported identity only
+PASS admission_contract: required local source, target, build/runtime review and future external constraints; snapshot identity matched
+SNAPSHOT tool: sha256sum
+SNAPSHOT verified files: 163
+PASS source_snapshot: 163 reviewed files match the manifest byte for byte, and the discovered set equals the manifest set. Digests come from the operator's SHA-256 tool; no cryptography is implemented here. Not a claim about the hashing binary's authenticity, runtime semantics, or package dependencies.
+EXECUTE cargo metadata --format-version 1 --locked --offline --filter-platform aarch64-apple-darwin --manifest-path /data/tmp/rch/franken_alignment_wave6_gate1_20260908/c72239c2f0affd14/Cargo.toml
+ADMISSION target profile: aarch64-apple-darwin
+ADMISSION inventory:
+  fa-reference 0.2.0 path+file:///data/tmp/rch/franken_alignment_wave6_gate1_20260908/c72239c2f0affd14/crates/fa-reference#0.2.0 at crates/fa-reference/Cargo.toml [workspace local] kinds=bin,lib,test links=none features=none
+  xtask 0.2.0 path+file:///data/tmp/rch/franken_alignment_wave6_gate1_20260908/c72239c2f0affd14/xtask#0.2.0 at xtask/Cargo.toml [workspace local] kinds=bin links=none features=none
+ADMISSION note: claim is bound to target profile `aarch64-apple-darwin`; cargo metadata does not record which --filter-platform produced it, so the target binding rests on the caller collecting this document with `--filter-platform aarch64-apple-darwin`, not on the document itself
+ADMISSION note: metadata establishes identity, structure and feature activation only; it does not establish a runtime or downloaded-artifact closure
+PASS admission_closed_inventory[aarch64-apple-darwin]: exact local package set, exact resolve bijection, no external source, build script, proc macro, native link, build or target-scoped dependency, and the frozen feature set. Not a runtime or downloaded-artifact closure claim.
+PASS collected_metadata_paths[aarch64-apple-darwin]: actual workspace, manifests and target source files
+EXECUTE cargo metadata --format-version 1 --locked --offline --filter-platform x86_64-unknown-linux-gnu --manifest-path /data/tmp/rch/franken_alignment_wave6_gate1_20260908/c72239c2f0affd14/Cargo.toml
+ADMISSION target profile: x86_64-unknown-linux-gnu
+ADMISSION inventory:
+  fa-reference 0.2.0 path+file:///data/tmp/rch/franken_alignment_wave6_gate1_20260908/c72239c2f0affd14/crates/fa-reference#0.2.0 at crates/fa-reference/Cargo.toml [workspace local] kinds=bin,lib,test links=none features=none
+  xtask 0.2.0 path+file:///data/tmp/rch/franken_alignment_wave6_gate1_20260908/c72239c2f0affd14/xtask#0.2.0 at xtask/Cargo.toml [workspace local] kinds=bin links=none features=none
+ADMISSION note: claim is bound to target profile `x86_64-unknown-linux-gnu`; cargo metadata does not record which --filter-platform produced it, so the target binding rests on the caller collecting this document with `--filter-platform x86_64-unknown-linux-gnu`, not on the document itself
+ADMISSION note: metadata establishes identity, structure and feature activation only; it does not establish a runtime or downloaded-artifact closure
+PASS admission_closed_inventory[x86_64-unknown-linux-gnu]: exact local package set, exact resolve bijection, no external source, build script, proc macro, native link, build or target-scoped dependency, and the frozen feature set. Not a runtime or downloaded-artifact closure claim.
+PASS collected_metadata_paths[x86_64-unknown-linux-gnu]: actual workspace, manifests and target source files
+PASS registry_core: IDs, roadmap DAG, declared links, retained files and scoped source test declarations; not execution or invariant proof
+CONCORDANCE input=registry/founding_concordance.json bytes=42815 sha256=cf90c49704448eaaab47e447c15033c94dd66c37c895c74c8b7bce2f135c251d; verified source manifest, outer freeze required
+CONCORDANCE input=registry/invariants.json bytes=57587 sha256=d16786445a0777ee8a12141b0185e6ac7f0317039fd83f82bfc64469f3fba65c; verified source manifest, outer freeze required
+CONCORDANCE input=registry/claims.json bytes=15799 sha256=9e729380f01af536b21f116d334977db77e3900e43367c6f19b1522296c61005; verified source manifest, outer freeze required
+CONCORDANCE input=registry/roadmap.json bytes=114395 sha256=6485756172ef5b265870c8844e27c15eebfc960b69ab96c95175a80b21910830; verified source manifest, outer freeze required
+CONCORDANCE input=COMPREHENSIVE_PLAN_FOR_THE_DESIGN_OF_FRANKENALIGNMENT.md bytes=251689 sha256=b08ed463dd8d321a5f1a4a65fb839456345788fcc6cb9b8ff3103c7143d64616; verified source manifest, outer freeze required
+CONCORDANCE_JSON {"missing":[],"dangling":[],"counts":{"headings":231,"invariants":40,"hypotheses":21,"packets":143}}
+PASS concordance: direct typed coverage and reference validity; not implementation or invariant proof
+SYSTEM_MAP input=registry/system_map.json bytes=8225 sha256=7b62748269fd1fa55a7a8ea2a2cd9274970accfff4e7e97b1983fdf342f29223; operator digest and outer freeze, not receipt authentication
+SYSTEM_MAP input=registry/vocabulary.json bytes=10344 sha256=b5b7cb253333f43ba6bcc6b08268bb91ceab7767b7d7581fa5cec7f41a475615; operator digest and outer freeze, not receipt authentication
+SYSTEM_MAP input=registry/invariants.json bytes=57587 sha256=d16786445a0777ee8a12141b0185e6ac7f0317039fd83f82bfc64469f3fba65c; operator digest and outer freeze, not receipt authentication
+SYSTEM_MAP input=registry/roadmap.json bytes=114395 sha256=6485756172ef5b265870c8844e27c15eebfc960b69ab96c95175a80b21910830; operator digest and outer freeze, not receipt authentication
+SYSTEM_MAP input=README.md bytes=56110 sha256=fe54e50184f6e34714d0e81429a3b7a098b38f465a024a3b91b583a9552a4723; operator digest and outer freeze, not receipt authentication
+SYSTEM_MAP input=docs/AGENT_GUIDE.md bytes=9645 sha256=cbb54889340d1e239ad17228faa4ad640ce4e684049153d3ff160c44d5144a8f; operator digest and outer freeze, not receipt authentication
+SYSTEM_MAP input=docs/SYSTEM_MAP.md bytes=7188 sha256=52cae2e9d0bfef7f44af75c398e9f9d47aba3591389e6b23553e3d390f422c02; operator digest and outer freeze, not receipt authentication
+SYSTEM_MAP input=.beads/issues.jsonl bytes=1482487 sha256=9bb98f8070b39c4a058353502529c1f57b56809a6c3a855e0aa74ac9702a7bf3; operator digest and outer freeze, not receipt authentication
+SYSTEM_MAP input=COMPREHENSIVE_PLAN_FOR_THE_DESIGN_OF_FRANKENALIGNMENT.md bytes=251689 sha256=b08ed463dd8d321a5f1a4a65fb839456345788fcc6cb9b8ff3103c7143d64616; operator digest and outer freeze, not receipt authentication
+SYSTEM_MAP_JSON {"missing":[],"retired_in_use":[],"unregistered_verbs":[],"counts":{"layers":9,"verbs":35,"packets":143,"guide_commands":42,"readme_commands":11}}
+PASS system_map: bounded registry/document consistency and checker-epic bead link; no command or layer-suite execution claim
+PROSE input=README.md bytes=56110 sha256=fe54e50184f6e34714d0e81429a3b7a098b38f465a024a3b91b583a9552a4723; operator digest and outer freeze, not receipt authentication
+PROSE input=IMPLEMENTATION_STATUS.md bytes=40512 sha256=dd2b4ba6f7ac6d9519710c0452fa9e733edb26003c253de408b34a77b1db37f9; operator digest and outer freeze, not receipt authentication
+PROSE input=artifacts/execution/2026-09-08-view-trace-receipt.json bytes=16892 sha256=fdc61a327bd745e14b65914bc83e1ae037aec8104a25058dcbdd283b600fc3f2; operator digest and outer freeze, not receipt authentication
+PROSE input=registry/founding_concordance.json bytes=42815 sha256=cf90c49704448eaaab47e447c15033c94dd66c37c895c74c8b7bce2f135c251d; operator digest and outer freeze, not receipt authentication
+PROSE input=registry/invariants.json bytes=57587 sha256=d16786445a0777ee8a12141b0185e6ac7f0317039fd83f82bfc64469f3fba65c; operator digest and outer freeze, not receipt authentication
+PROSE input=registry/claims.json bytes=15799 sha256=9e729380f01af536b21f116d334977db77e3900e43367c6f19b1522296c61005; operator digest and outer freeze, not receipt authentication
+PROSE input=registry/roadmap.json bytes=114395 sha256=6485756172ef5b265870c8844e27c15eebfc960b69ab96c95175a80b21910830; operator digest and outer freeze, not receipt authentication
+PROSE input=COMPREHENSIVE_PLAN_FOR_THE_DESIGN_OF_FRANKENALIGNMENT.md bytes=251689 sha256=b08ed463dd8d321a5f1a4a65fb839456345788fcc6cb9b8ff3103c7143d64616; operator digest and outer freeze, not receipt authentication
+PROSE_JSON {"findings":[],"counts":{"founding_ideas":38,"syntheses":9,"engineering_additions":67,"invariants":40,"hypotheses":21,"packets":143}}
+PASS prose_consistency: current declarations match registries and the named retained receipt; not new-source execution proof
+EXECUTE cargo fmt --all --check
+PASS executed_command: cargo fmt --all --check
+EXECUTE cargo check --workspace --all-targets --frozen
+warning: unused field `license-file` in `workspace.package`
+ --> Cargo.toml:9:1
+  |
+9 | license-file = "LICENSE"
+  | ^^^^^^^^^^^^
+  |
+  = note: `cargo::unused_workspace_package_fields` is set to `warn` by default
+help: consider removing the field `workspace.package.license-file`
+warning: workspace (manifest) generated 1 warning
+    Checking fa-reference v0.2.0 (/data/tmp/rch/franken_alignment_wave6_gate1_20260908/c72239c2f0affd14/crates/fa-reference)
+    Checking xtask v0.2.0 (/data/tmp/rch/franken_alignment_wave6_gate1_20260908/c72239c2f0affd14/xtask)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 1.81s
+PASS executed_command: cargo check --workspace --all-targets --frozen
+EXECUTE cargo clippy --workspace --all-targets --frozen -- -D warnings
+warning: unused field `license-file` in `workspace.package`
+ --> Cargo.toml:9:1
+  |
+9 | license-file = "LICENSE"
+  | ^^^^^^^^^^^^
+  |
+  = note: `cargo::unused_workspace_package_fields` is set to `warn` by default
+help: consider removing the field `workspace.package.license-file`
+warning: workspace (manifest) generated 1 warning
+    Checking fa-reference v0.2.0 (/data/tmp/rch/franken_alignment_wave6_gate1_20260908/c72239c2f0affd14/crates/fa-reference)
+    Checking xtask v0.2.0 (/data/tmp/rch/franken_alignment_wave6_gate1_20260908/c72239c2f0affd14/xtask)
+error: this `if` statement can be collapsed
+   --> crates/fa-reference/src/witness.rs:160:9
+    |
+160 | /         if let DomainClosure::Closed(marker) = domain_input.closure {
+161 | |             if marker.key != domain_input.domain.projection || marker.marker_generation == 0 {
+162 | |                 return Err(Error::Binding);
+163 | |             }
+164 | |         }
+    | |_________^
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/main/index.html#collapsible_if
+    = note: `-D clippy::collapsible-if` implied by `-D warnings`
+    = help: to override `-D warnings` add `#[allow(clippy::collapsible_if)]`
+help: collapse nested if block
+    |
+160 ~         if let DomainClosure::Closed(marker) = domain_input.closure
+161 ~             && (marker.key != domain_input.domain.projection || marker.marker_generation == 0) {
+162 |                 return Err(Error::Binding);
+163 ~             }
+    |
+
+error: could not compile `fa-reference` (lib) due to 1 previous error
+warning: build failed, waiting for other jobs to finish...
+error: could not compile `fa-reference` (lib test) due to 1 previous error
+FAIL: cargo clippy --workspace --all-targets --frozen -- -D warnings failed: exit status: 101
+  [2m2026-09-08T08:10:17.327764Z[0m [32m INFO[0m [1;32mrch::hook::transfer_orchestration[0m[32m: [32mRemote command finished: exit=1 in 9350ms[0m
+    [2;3mat[0m rch/src/hook/transfer_orchestration.rs:1150 [2;3mon[0m ThreadId(1)
+
+[W] Worker: vmi1149989 | Job: j-30004650170124406
+[T] Total: 15.6s (sync 6.2s, build 9.3s, artifacts --)
+^ Sync: 8.9 MB in 6.2s (1.4 MB/s)
+[C] Compile: 9.3s
+Artifacts: skipped
+[T] Cache: MISS
+Warning: Permanently added '212.90.121.76' (ED25519) to the list of known hosts.
+[RCH] remote vmi1149989 failed (exit 1)

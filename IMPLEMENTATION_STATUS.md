@@ -1,6 +1,18 @@
 # Implementation status · design revision 0.3
 
-Current execution evidence: [receipt](artifacts/execution/2026-09-08-view-trace-receipt.json).
+Current execution evidence: [receipt](artifacts/execution/2026-09-08-witness-receipt.json).
+
+## 2026-09-08 UTC: exact-value and absent-key witness reuse
+
+The complete frozen RCH gate passed **458 tests: 100 reference unit, 108 integration, 242 xtask and 8 doctests**, with zero failed, ignored or filtered tests, on `vmi1149989` under qualified `nightly-2026-09-08`. [The receipt](artifacts/execution/2026-09-08-witness-receipt.json) binds 164 source/build inputs and job `j-30004650170124415`.
+
+FA-058 adds private L2 witnesses over exact key/value bytes, versions and query roles, plus absent keys tied to the complete caller-trusted authenticated domain marker and product frontier. Reuse checks snapshot revision/control cut, semantic epoch and domain/projection identity. Unrelated newer changes remain valid; changed bytes, versions or membership invalidate. Older cuts and unknown/incomplete absence closure refuse. Positive exact reads do not require a globally closed domain. The adapter's trust declaration remains an assumption, not implemented authentication or a production cache.
+
+Independent public controls exercise semantic-only invalidation, absent-key insertion, stale snapshots, exact 256-entry/8 KiB-value/64-request limits and their one-over refusals. A bounded store scan independently recomputes observed facts. Two planted guard omissions fail after valid controls: ignoring same-version byte changes and accepting insertion of an absent key. Six fixed release cases produced 72 descriptive samples; a separate fresh process measured its first capture once, excluding setup. No OS/cache-cold, statistical, helper-call or SLO claim follows.
+
+The exact release binary's heap profile records 1,431 whole-process allocation calls versus 185 in its same-binary zero-test baseline; 336 calls have an inclusive witness-library frame, versus zero in the baseline. These are neither per-case allocations nor allocated-byte, peak-heap or RSS measurements. The earlier cost harness incorrectly labeled eight bytes as captured when unknown closure returned no judgment; the label now counts successfully returned judgment bytes (zero for that refusal), and the full gate, release cases, fresh-process observation and profiles were rerun. Raw earlier results and the initial strict-Clippy failure remain retained with those limits.
+
+Observation algebra, range witnesses and complete perimeter/endpoint integration remain separate work. No production permission, provider capture, runtime admission, persistence or release is qualified by this batch.
 
 ## 2026-09-08 UTC: exact declared views and conservative trace independence
 
@@ -149,7 +161,7 @@ The round uses a deliberately non-cryptographic FNV comparison and proves no cry
 | Founding essays | Both read in full again for revision 0.3; head commits recorded in `registry/sources.json` | Complete premise; no missing post |
 | Ten donor/build project deep dives | Targeted code/manifest/plan review at fixed refs (revision 0.2) | Exact files/scopes recorded; not full repository audits or builds |
 | Pure-Rust reference workspace | Source present, zero external packages, formatted with `cargo fmt --all` on 2026-09-06 | Selected logical semantics only; not a broker |
-| Rust test functions | **95 unit + 101 integration reference tests, 242 xtask tests and 8 doctests passed remotely on 2026-09-08 UTC**; earlier runs remain dated below | Exact frozen batch above; not production evidence or credit for other work in progress |
+| Rust test functions | **100 unit + 108 integration reference tests, 242 xtask tests and 8 doctests passed remotely on 2026-09-08 UTC**; earlier runs remain dated below | Exact frozen batch above; not production evidence or credit for other work in progress |
 | Rust local gate driver | **Complete reference gate PASS remotely on 2026-09-08 UTC** under rolling `nightly`, frozen identically as `nightly-2026-09-08`; earlier local 2026-09-06 gate retained below | Initial inventory, registry-core and full concordance checks execute; external admission remains incomplete; new source requires a new run |
 | Production release gate | Explicitly refuses release | No qualified broker/toolchain/target/signing closure |
 | Machine-readable registries | 40 invariants, 21 hypotheses, 143 packets, 5 SLO targets, founding concordance (38 ideas, 9 syntheses, 67 engineering additions), preregistration ledger with no preregistered protocol yet, system map (9 layers) and vocabulary (26 nouns, 35 verbs, 12 reason codes) | Static structural checks are not proofs of their claims |

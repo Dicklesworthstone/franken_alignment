@@ -1,0 +1,13 @@
+--- a/crates/fa-reference/src/witness.rs
++++ b/crates/fa-reference/src/witness.rs
+@@ -383,9 +383,7 @@
+                         return Ok(invalidated(Invalidation::ClosingFrontier, cost));
+                     }
+                     cost.absent_reads = cost.absent_reads.checked_add(1).ok_or(Error::Overflow)?;
+-                    if snapshot.entry(*key).is_some() {
+-                        return Ok(invalidated(Invalidation::AbsentKey, cost));
+-                    }
++                    let _ = snapshot.entry(*key);
+                 }
+             }
+         }

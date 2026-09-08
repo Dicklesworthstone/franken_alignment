@@ -1,0 +1,26 @@
+{
+  "command": [
+    "rch",
+    "--json",
+    "exec",
+    "--job",
+    "--",
+    "heaptrack",
+    "--record-only",
+    "-o",
+    "/tmp/fa-campaign-20260908-wave6-profile2/baseline",
+    "/tmp/fa-campaign-20260908-wave6-profile2/witness_costs",
+    "--exact",
+    "xixed_witness_costs_are_descriptive_and_assert_all_outcomes",
+    "--nocapture",
+    "--test-threads=1"
+  ],
+  "binary": {
+    "remote_path": "/data/tmp/rch/franken_alignment_wave6_gate4_20260908/.rch-target-vmi1149989-pool-e86f6322022b1595d5e47467b4aa5edb/release/build/fa-reference/97d6f97dab7ab07c/out/witness_costs-97d6f97dab7ab07c",
+    "sha256": "0e620a162b923a9458e8161c8337ec4413fe1cfb60cdc78a41d3ea0cdc78d7cf",
+    "local_path": "/tmp/fa-campaign-20260908/wave6-profile2-binaries/witness_costs"
+  },
+  "source_inputs": "wave6-gate4-inputs.json",
+  "working_directory": "/Users/jemanuel/projects/franken_alignment_wave6_gate4_20260908",
+  "scope": "Exact binary fixed-case test; same-length unmatched baseline has zero tests and no passing-test credit."
+}

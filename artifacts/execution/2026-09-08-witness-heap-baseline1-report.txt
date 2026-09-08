@@ -1,0 +1,1137 @@
+Warning: Permanently added '109.123.245.77' (ED25519) to the list of known hosts.
+reading file "/tmp/fa-campaign-20260908-wave6-profile/baseline.zst" - please wait, this might take some time...
+Debuggee command was: /tmp/fa-campaign-20260908-wave6-profile/witness_costs --exact xixed_witness_costs_are_descriptive_and_assert_all_outcomes --nocapture --test-threads=1
+finished reading file, now analyzing data:
+
+MOST CALLS TO ALLOCATION FUNCTIONS
+57 calls to allocation functions with 203B peak consumption from
+_RNvXsH_Cs8v6Vxq2exiQ_7getoptsNtB5_8OptGroupNtNtCsg3O1AWWDtD0_4core5clone5Clone5clone
+  in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+24 calls with 0B peak consumption from:
+    _RNvMs3_Cs8v6Vxq2exiQ_7getoptsNtB5_8OptGroup13long_to_short
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    _RNvNtCscO0Syu2iFtE_4test3cli10parse_opts
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    _RNvCscO0Syu2iFtE_4test16test_main_static
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    _RINvNtNtCsjr6MQCPf0hc_3std3sys9backtrace28___rust_begin_short_backtraceFEuuECskqBgwRljgq3_13witness_costs
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    _RNCINvNtCsjr6MQCPf0hc_3std2rt10lang_startuE0CskqBgwRljgq3_13witness_costs
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    _RNvNtCsjr6MQCPf0hc_3std2rt19lang_start_internal
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    main
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+23 calls with 203B peak consumption from:
+    _RNvMs3_Cs8v6Vxq2exiQ_7getoptsNtB5_8OptGroup13long_to_short
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    _RNvNtCscO0Syu2iFtE_4test3cli10parse_opts
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    _RNvCscO0Syu2iFtE_4test16test_main_static
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    _RINvNtNtCsjr6MQCPf0hc_3std3sys9backtrace28___rust_begin_short_backtraceFEuuECskqBgwRljgq3_13witness_costs
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    _RNCINvNtCsjr6MQCPf0hc_3std2rt10lang_startuE0CskqBgwRljgq3_13witness_costs
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    _RNvNtCsjr6MQCPf0hc_3std2rt19lang_start_internal
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    main
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+7 calls with 0B peak consumption from:
+    _RNvMs3_Cs8v6Vxq2exiQ_7getoptsNtB5_8OptGroup13long_to_short
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    _RNvNtCscO0Syu2iFtE_4test3cli10parse_opts
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    _RNvCscO0Syu2iFtE_4test16test_main_static
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    _RINvNtNtCsjr6MQCPf0hc_3std3sys9backtrace28___rust_begin_short_backtraceFEuuECskqBgwRljgq3_13witness_costs
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    _RNCINvNtCsjr6MQCPf0hc_3std2rt10lang_startuE0CskqBgwRljgq3_13witness_costs
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    _RNvNtCsjr6MQCPf0hc_3std2rt19lang_start_internal
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    main
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+3 calls with 0B peak consumption from:
+    _RNvMs3_Cs8v6Vxq2exiQ_7getoptsNtB5_8OptGroup13long_to_short
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    _RNvNtCscO0Syu2iFtE_4test3cli10parse_opts
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    _RNvCscO0Syu2iFtE_4test16test_main_static
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    _RINvNtNtCsjr6MQCPf0hc_3std3sys9backtrace28___rust_begin_short_backtraceFEuuECskqBgwRljgq3_13witness_costs
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    _RNCINvNtCsjr6MQCPf0hc_3std2rt10lang_startuE0CskqBgwRljgq3_13witness_costs
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    _RNvNtCsjr6MQCPf0hc_3std2rt19lang_start_internal
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    main
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+
+36 calls to allocation functions with 1.71K peak consumption from
+_RNvMs0_Cs8v6Vxq2exiQ_7getoptsNtB5_7Options7optflag
+  in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+1 calls with 40B peak consumption from:
+    _RNvNtCscO0Syu2iFtE_4test3cli9optgroups
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    _RNvNtCscO0Syu2iFtE_4test3cli10parse_opts
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    _RNvCscO0Syu2iFtE_4test16test_main_static
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    _RINvNtNtCsjr6MQCPf0hc_3std3sys9backtrace28___rust_begin_short_backtraceFEuuECskqBgwRljgq3_13witness_costs
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    _RNCINvNtCsjr6MQCPf0hc_3std2rt10lang_startuE0CskqBgwRljgq3_13witness_costs
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    _RNvNtCsjr6MQCPf0hc_3std2rt19lang_start_internal
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    main
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+1 calls with 10B peak consumption from:
+    _RNvNtCscO0Syu2iFtE_4test3cli9optgroups
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    _RNvNtCscO0Syu2iFtE_4test3cli10parse_opts
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    _RNvCscO0Syu2iFtE_4test16test_main_static
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    _RINvNtNtCsjr6MQCPf0hc_3std3sys9backtrace28___rust_begin_short_backtraceFEuuECskqBgwRljgq3_13witness_costs
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    _RNCINvNtCsjr6MQCPf0hc_3std2rt10lang_startuE0CskqBgwRljgq3_13witness_costs
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    _RNvNtCsjr6MQCPf0hc_3std2rt19lang_start_internal
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    main
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+1 calls with 65B peak consumption from:
+    _RNvNtCscO0Syu2iFtE_4test3cli9optgroups
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    _RNvNtCscO0Syu2iFtE_4test3cli10parse_opts
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    _RNvCscO0Syu2iFtE_4test16test_main_static
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    _RINvNtNtCsjr6MQCPf0hc_3std3sys9backtrace28___rust_begin_short_backtraceFEuuECskqBgwRljgq3_13witness_costs
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    _RNCINvNtCsjr6MQCPf0hc_3std2rt10lang_startuE0CskqBgwRljgq3_13witness_costs
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    _RNvNtCsjr6MQCPf0hc_3std2rt19lang_start_internal
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    main
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+1 calls with 1B peak consumption from:
+    _RNvNtCscO0Syu2iFtE_4test3cli9optgroups
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    _RNvNtCscO0Syu2iFtE_4test3cli10parse_opts
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    _RNvCscO0Syu2iFtE_4test16test_main_static
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    _RINvNtNtCsjr6MQCPf0hc_3std3sys9backtrace28___rust_begin_short_backtraceFEuuECskqBgwRljgq3_13witness_costs
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    _RNCINvNtCsjr6MQCPf0hc_3std2rt10lang_startuE0CskqBgwRljgq3_13witness_costs
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    _RNvNtCsjr6MQCPf0hc_3std2rt19lang_start_internal
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    main
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+1 calls with 5B peak consumption from:
+    _RNvNtCscO0Syu2iFtE_4test3cli9optgroups
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    _RNvNtCscO0Syu2iFtE_4test3cli10parse_opts
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    _RNvCscO0Syu2iFtE_4test16test_main_static
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    _RINvNtNtCsjr6MQCPf0hc_3std3sys9backtrace28___rust_begin_short_backtraceFEuuECskqBgwRljgq3_13witness_costs
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    _RNCINvNtCsjr6MQCPf0hc_3std2rt10lang_startuE0CskqBgwRljgq3_13witness_costs
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    _RNvNtCsjr6MQCPf0hc_3std2rt19lang_start_internal
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    main
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+  and 31 from 31 other places
+
+24 calls to allocation functions with 45B peak consumption from
+_RNvMs4_Cs8v6Vxq2exiQ_7getoptsNtB5_7Matches8opt_vals
+  in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+1 calls with 0B peak consumption from:
+    _RNvMs4_Cs8v6Vxq2exiQ_7getoptsNtB5_7Matches8opt_strs
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    _RNvNtCscO0Syu2iFtE_4test3cli10parse_opts
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    _RNvCscO0Syu2iFtE_4test16test_main_static
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    _RINvNtNtCsjr6MQCPf0hc_3std3sys9backtrace28___rust_begin_short_backtraceFEuuECskqBgwRljgq3_13witness_costs
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    _RNCINvNtCsjr6MQCPf0hc_3std2rt10lang_startuE0CskqBgwRljgq3_13witness_costs
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    _RNvNtCsjr6MQCPf0hc_3std2rt19lang_start_internal
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    main
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+1 calls with 0B peak consumption from:
+    _RNvMs4_Cs8v6Vxq2exiQ_7getoptsNtB5_7Matches11opt_present
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    _RNvNtCscO0Syu2iFtE_4test3cli10parse_opts
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    _RNvCscO0Syu2iFtE_4test16test_main_static
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    _RINvNtNtCsjr6MQCPf0hc_3std3sys9backtrace28___rust_begin_short_backtraceFEuuECskqBgwRljgq3_13witness_costs
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    _RNCINvNtCsjr6MQCPf0hc_3std2rt10lang_startuE0CskqBgwRljgq3_13witness_costs
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    _RNvNtCsjr6MQCPf0hc_3std2rt19lang_start_internal
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    main
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+1 calls with 0B peak consumption from:
+    _RNvNtCscO0Syu2iFtE_4test3cli10get_format
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    _RNvNtCscO0Syu2iFtE_4test3cli10parse_opts
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    _RNvCscO0Syu2iFtE_4test16test_main_static
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    _RINvNtNtCsjr6MQCPf0hc_3std3sys9backtrace28___rust_begin_short_backtraceFEuuECskqBgwRljgq3_13witness_costs
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    _RNCINvNtCsjr6MQCPf0hc_3std2rt10lang_startuE0CskqBgwRljgq3_13witness_costs
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    _RNvNtCsjr6MQCPf0hc_3std2rt19lang_start_internal
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    main
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+1 calls with 0B peak consumption from:
+    _RNvNtCscO0Syu2iFtE_4test3cli16get_color_config
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    _RNvNtCscO0Syu2iFtE_4test3cli10parse_opts
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    _RNvCscO0Syu2iFtE_4test16test_main_static
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    _RINvNtNtCsjr6MQCPf0hc_3std3sys9backtrace28___rust_begin_short_backtraceFEuuECskqBgwRljgq3_13witness_costs
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    _RNCINvNtCsjr6MQCPf0hc_3std2rt10lang_startuE0CskqBgwRljgq3_13witness_costs
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    _RNvNtCsjr6MQCPf0hc_3std2rt19lang_start_internal
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    main
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+1 calls with 1B peak consumption from:
+    _RNvNtCscO0Syu2iFtE_4test3cli16get_test_threads
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    _RNvNtCscO0Syu2iFtE_4test3cli10parse_opts
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    _RNvCscO0Syu2iFtE_4test16test_main_static
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    _RINvNtNtCsjr6MQCPf0hc_3std3sys9backtrace28___rust_begin_short_backtraceFEuuECskqBgwRljgq3_13witness_costs
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    _RNCINvNtCsjr6MQCPf0hc_3std2rt10lang_startuE0CskqBgwRljgq3_13witness_costs
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    _RNvNtCsjr6MQCPf0hc_3std2rt19lang_start_internal
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    main
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+  and 19 from 19 other places
+
+18 calls to allocation functions with 799B peak consumption from
+_RNvMs0_Cs8v6Vxq2exiQ_7getoptsNtB5_7Options6optopt
+  in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+1 calls with 6B peak consumption from:
+    _RNvNtCscO0Syu2iFtE_4test3cli9optgroups
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    _RNvNtCscO0Syu2iFtE_4test3cli10parse_opts
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    _RNvCscO0Syu2iFtE_4test16test_main_static
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    _RINvNtNtCsjr6MQCPf0hc_3std3sys9backtrace28___rust_begin_short_backtraceFEuuECskqBgwRljgq3_13witness_costs
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    _RNCINvNtCsjr6MQCPf0hc_3std2rt10lang_startuE0CskqBgwRljgq3_13witness_costs
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    _RNvNtCsjr6MQCPf0hc_3std2rt19lang_start_internal
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    main
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+1 calls with 69B peak consumption from:
+    _RNvNtCscO0Syu2iFtE_4test3cli9optgroups
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    _RNvNtCscO0Syu2iFtE_4test3cli10parse_opts
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    _RNvCscO0Syu2iFtE_4test16test_main_static
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    _RINvNtNtCsjr6MQCPf0hc_3std3sys9backtrace28___rust_begin_short_backtraceFEuuECskqBgwRljgq3_13witness_costs
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    _RNCINvNtCsjr6MQCPf0hc_3std2rt10lang_startuE0CskqBgwRljgq3_13witness_costs
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    _RNvNtCsjr6MQCPf0hc_3std2rt19lang_start_internal
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    main
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+1 calls with 4B peak consumption from:
+    _RNvNtCscO0Syu2iFtE_4test3cli9optgroups
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    _RNvNtCscO0Syu2iFtE_4test3cli10parse_opts
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    _RNvCscO0Syu2iFtE_4test16test_main_static
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    _RINvNtNtCsjr6MQCPf0hc_3std3sys9backtrace28___rust_begin_short_backtraceFEuuECskqBgwRljgq3_13witness_costs
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    _RNCINvNtCsjr6MQCPf0hc_3std2rt10lang_startuE0CskqBgwRljgq3_13witness_costs
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    _RNvNtCsjr6MQCPf0hc_3std2rt19lang_start_internal
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    main
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+1 calls with 12B peak consumption from:
+    _RNvNtCscO0Syu2iFtE_4test3cli9optgroups
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    _RNvNtCscO0Syu2iFtE_4test3cli10parse_opts
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    _RNvCscO0Syu2iFtE_4test16test_main_static
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    _RINvNtNtCsjr6MQCPf0hc_3std3sys9backtrace28___rust_begin_short_backtraceFEuuECskqBgwRljgq3_13witness_costs
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    _RNCINvNtCsjr6MQCPf0hc_3std2rt10lang_startuE0CskqBgwRljgq3_13witness_costs
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    _RNvNtCsjr6MQCPf0hc_3std2rt19lang_start_internal
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    main
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+1 calls with 92B peak consumption from:
+    _RNvNtCscO0Syu2iFtE_4test3cli9optgroups
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    _RNvNtCscO0Syu2iFtE_4test3cli10parse_opts
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    _RNvCscO0Syu2iFtE_4test16test_main_static
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    _RINvNtNtCsjr6MQCPf0hc_3std3sys9backtrace28___rust_begin_short_backtraceFEuuECskqBgwRljgq3_13witness_costs
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    _RNCINvNtCsjr6MQCPf0hc_3std2rt10lang_startuE0CskqBgwRljgq3_13witness_costs
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    _RNvNtCsjr6MQCPf0hc_3std2rt19lang_start_internal
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    main
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+  and 13 from 13 other places
+
+7 calls to allocation functions with 1.92K peak consumption from
+_RNvNtCscO0Syu2iFtE_4test3cli10parse_opts
+  in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+3 calls with 0B peak consumption from:
+    _RNvCscO0Syu2iFtE_4test16test_main_static
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    _RINvNtNtCsjr6MQCPf0hc_3std3sys9backtrace28___rust_begin_short_backtraceFEuuECskqBgwRljgq3_13witness_costs
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    _RNCINvNtCsjr6MQCPf0hc_3std2rt10lang_startuE0CskqBgwRljgq3_13witness_costs
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    _RNvNtCsjr6MQCPf0hc_3std2rt19lang_start_internal
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    main
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+1 calls with 1.34K peak consumption from:
+    _RNvCscO0Syu2iFtE_4test16test_main_static
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    _RINvNtNtCsjr6MQCPf0hc_3std3sys9backtrace28___rust_begin_short_backtraceFEuuECskqBgwRljgq3_13witness_costs
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    _RNCINvNtCsjr6MQCPf0hc_3std2rt10lang_startuE0CskqBgwRljgq3_13witness_costs
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    _RNvNtCsjr6MQCPf0hc_3std2rt19lang_start_internal
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    main
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+1 calls with 576B peak consumption from:
+    _RNvCscO0Syu2iFtE_4test16test_main_static
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    _RINvNtNtCsjr6MQCPf0hc_3std3sys9backtrace28___rust_begin_short_backtraceFEuuECskqBgwRljgq3_13witness_costs
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    _RNCINvNtCsjr6MQCPf0hc_3std2rt10lang_startuE0CskqBgwRljgq3_13witness_costs
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    _RNvNtCsjr6MQCPf0hc_3std2rt19lang_start_internal
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    main
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+1 calls with 0B peak consumption from:
+    _RNvCscO0Syu2iFtE_4test16test_main_static
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    _RINvNtNtCsjr6MQCPf0hc_3std3sys9backtrace28___rust_begin_short_backtraceFEuuECskqBgwRljgq3_13witness_costs
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    _RNCINvNtCsjr6MQCPf0hc_3std2rt10lang_startuE0CskqBgwRljgq3_13witness_costs
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    _RNvNtCsjr6MQCPf0hc_3std2rt19lang_start_internal
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    main
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+1 calls with 1B peak consumption from:
+    _RNvCscO0Syu2iFtE_4test16test_main_static
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    _RINvNtNtCsjr6MQCPf0hc_3std3sys9backtrace28___rust_begin_short_backtraceFEuuECskqBgwRljgq3_13witness_costs
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    _RNCINvNtCsjr6MQCPf0hc_3std2rt10lang_startuE0CskqBgwRljgq3_13witness_costs
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    _RNvNtCsjr6MQCPf0hc_3std2rt19lang_start_internal
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    main
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+
+6 calls to allocation functions with 146B peak consumption from
+_RNvNtCsjr6MQCPf0hc_3std3env7args_os
+  in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+5 calls with 146B peak consumption from:
+    _RNvCscO0Syu2iFtE_4test16test_main_static
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    _RINvNtNtCsjr6MQCPf0hc_3std3sys9backtrace28___rust_begin_short_backtraceFEuuECskqBgwRljgq3_13witness_costs
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    _RNCINvNtCsjr6MQCPf0hc_3std2rt10lang_startuE0CskqBgwRljgq3_13witness_costs
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    _RNvNtCsjr6MQCPf0hc_3std2rt19lang_start_internal
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    main
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+1 calls with 0B peak consumption from:
+    _RNvCscO0Syu2iFtE_4test16test_main_static
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    _RINvNtNtCsjr6MQCPf0hc_3std3sys9backtrace28___rust_begin_short_backtraceFEuuECskqBgwRljgq3_13witness_costs
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    _RNCINvNtCsjr6MQCPf0hc_3std2rt10lang_startuE0CskqBgwRljgq3_13witness_costs
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    _RNvNtCsjr6MQCPf0hc_3std2rt19lang_start_internal
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    main
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+
+4 calls to allocation functions with 3.33K peak consumption from
+_RNvMs5_NtCs2mBL6TZy0y2_5alloc7raw_vecNtB5_11RawVecInner11finish_growCs8v6Vxq2exiQ_7getopts
+  in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+1 calls with 0B peak consumption from:
+    _RNvMs4_NtCs2mBL6TZy0y2_5alloc7raw_vecINtB5_6RawVecNtCs8v6Vxq2exiQ_7getopts8OptGroupE8grow_oneBO_
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    _RNvMs0_Cs8v6Vxq2exiQ_7getoptsNtB5_7Options7optflag
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    _RNvNtCscO0Syu2iFtE_4test3cli9optgroups
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    _RNvNtCscO0Syu2iFtE_4test3cli10parse_opts
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    _RNvCscO0Syu2iFtE_4test16test_main_static
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    _RINvNtNtCsjr6MQCPf0hc_3std3sys9backtrace28___rust_begin_short_backtraceFEuuECskqBgwRljgq3_13witness_costs
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    _RNCINvNtCsjr6MQCPf0hc_3std2rt10lang_startuE0CskqBgwRljgq3_13witness_costs
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    _RNvNtCsjr6MQCPf0hc_3std2rt19lang_start_internal
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    main
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+1 calls with 0B peak consumption from:
+    _RNvMs4_NtCs2mBL6TZy0y2_5alloc7raw_vecINtB5_6RawVecNtCs8v6Vxq2exiQ_7getopts8OptGroupE8grow_oneBO_
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    _RNvMs0_Cs8v6Vxq2exiQ_7getoptsNtB5_7Options7optflag
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    _RNvNtCscO0Syu2iFtE_4test3cli9optgroups
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    _RNvNtCscO0Syu2iFtE_4test3cli10parse_opts
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    _RNvCscO0Syu2iFtE_4test16test_main_static
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    _RINvNtNtCsjr6MQCPf0hc_3std3sys9backtrace28___rust_begin_short_backtraceFEuuECskqBgwRljgq3_13witness_costs
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    _RNCINvNtCsjr6MQCPf0hc_3std2rt10lang_startuE0CskqBgwRljgq3_13witness_costs
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    _RNvNtCsjr6MQCPf0hc_3std2rt19lang_start_internal
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    main
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+1 calls with 0B peak consumption from:
+    _RNvMs4_NtCs2mBL6TZy0y2_5alloc7raw_vecINtB5_6RawVecNtCs8v6Vxq2exiQ_7getopts8OptGroupE8grow_oneBO_
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    _RNvMs0_Cs8v6Vxq2exiQ_7getoptsNtB5_7Options7optflag
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    _RNvNtCscO0Syu2iFtE_4test3cli9optgroups
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    _RNvNtCscO0Syu2iFtE_4test3cli10parse_opts
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    _RNvCscO0Syu2iFtE_4test16test_main_static
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    _RINvNtNtCsjr6MQCPf0hc_3std3sys9backtrace28___rust_begin_short_backtraceFEuuECskqBgwRljgq3_13witness_costs
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    _RNCINvNtCsjr6MQCPf0hc_3std2rt10lang_startuE0CskqBgwRljgq3_13witness_costs
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    _RNvNtCsjr6MQCPf0hc_3std2rt19lang_start_internal
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    main
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+1 calls with 3.33K peak consumption from:
+    _RNvMs4_NtCs2mBL6TZy0y2_5alloc7raw_vecINtB5_6RawVecNtCs8v6Vxq2exiQ_7getopts8OptGroupE8grow_oneBO_
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    _RNvMs0_Cs8v6Vxq2exiQ_7getoptsNtB5_7Options6optopt
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    _RNvNtCscO0Syu2iFtE_4test3cli9optgroups
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    _RNvNtCscO0Syu2iFtE_4test3cli10parse_opts
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    _RNvCscO0Syu2iFtE_4test16test_main_static
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    _RINvNtNtCsjr6MQCPf0hc_3std3sys9backtrace28___rust_begin_short_backtraceFEuuECskqBgwRljgq3_13witness_costs
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    _RNCINvNtCsjr6MQCPf0hc_3std2rt10lang_startuE0CskqBgwRljgq3_13witness_costs
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    _RNvNtCsjr6MQCPf0hc_3std2rt19lang_start_internal
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    main
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+
+4 calls to allocation functions with 59B peak consumption from
+_RNvXNtNtCsg3O1AWWDtD0_4core4iter8adaptersINtB2_12GenericShuntINtNtB2_3map3MapINtNtNtB6_5slice4iter4IterNtNtCs2mBL6TZy0y2_5alloc6string6StringENCINvMs0_Cs8v6Vxq2exiQ_7getoptsNtB2p_7Options5parseRSB1D_Es0_0EINtNtB6_6result6ResultzNtB2p_4FailEENtNtNtB4_6traits8iterator8Iterator4nextCscO0Syu2iFtE_4test
+  in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+3 calls with 59B peak consumption from:
+    _RNvNtCscO0Syu2iFtE_4test3cli10parse_opts
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    _RNvCscO0Syu2iFtE_4test16test_main_static
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    _RINvNtNtCsjr6MQCPf0hc_3std3sys9backtrace28___rust_begin_short_backtraceFEuuECskqBgwRljgq3_13witness_costs
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    _RNCINvNtCsjr6MQCPf0hc_3std2rt10lang_startuE0CskqBgwRljgq3_13witness_costs
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    _RNvNtCsjr6MQCPf0hc_3std2rt19lang_start_internal
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    main
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+1 calls with 0B peak consumption from:
+    _RNvNtCscO0Syu2iFtE_4test3cli10parse_opts
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    _RNvCscO0Syu2iFtE_4test16test_main_static
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    _RINvNtNtCsjr6MQCPf0hc_3std3sys9backtrace28___rust_begin_short_backtraceFEuuECskqBgwRljgq3_13witness_costs
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    _RNCINvNtCsjr6MQCPf0hc_3std2rt10lang_startuE0CskqBgwRljgq3_13witness_costs
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    _RNvNtCsjr6MQCPf0hc_3std2rt19lang_start_internal
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    main
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+
+3 calls to allocation functions with 0B peak consumption from
+_RNvNvNtCs2mBL6TZy0y2_5alloc3fmt6format12format_inner
+  in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+1 calls with 0B peak consumption from:
+    _RNvXs_NtNtCscO0Syu2iFtE_4test10formatters6prettyINtB4_15PrettyFormatterNtNtNtCsjr6MQCPf0hc_3std2io5stdio6StdoutENtB6_15OutputFormatter15write_run_startB8_
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    _RNCNvNtCscO0Syu2iFtE_4test7console17run_tests_consoles0_0B5_
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    _RNvNtCscO0Syu2iFtE_4test7console17run_tests_console
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    _RNvCscO0Syu2iFtE_4test16test_main_static
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    _RINvNtNtCsjr6MQCPf0hc_3std3sys9backtrace28___rust_begin_short_backtraceFEuuECskqBgwRljgq3_13witness_costs
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    _RNCINvNtCsjr6MQCPf0hc_3std2rt10lang_startuE0CskqBgwRljgq3_13witness_costs
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    _RNvNtCsjr6MQCPf0hc_3std2rt19lang_start_internal
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    main
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+1 calls with 0B peak consumption from:
+    _RNvXs_NtNtCscO0Syu2iFtE_4test10formatters6prettyINtB4_15PrettyFormatterNtNtNtCsjr6MQCPf0hc_3std2io5stdio6StdoutENtB6_15OutputFormatter16write_run_finishB8_
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    _RNvNtCscO0Syu2iFtE_4test7console17run_tests_console
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    _RNvCscO0Syu2iFtE_4test16test_main_static
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    _RINvNtNtCsjr6MQCPf0hc_3std3sys9backtrace28___rust_begin_short_backtraceFEuuECskqBgwRljgq3_13witness_costs
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    _RNCINvNtCsjr6MQCPf0hc_3std2rt10lang_startuE0CskqBgwRljgq3_13witness_costs
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    _RNvNtCsjr6MQCPf0hc_3std2rt19lang_start_internal
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    main
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+1 calls with 0B peak consumption from:
+    _RNvXs_NtNtCscO0Syu2iFtE_4test10formatters6prettyINtB4_15PrettyFormatterNtNtNtCsjr6MQCPf0hc_3std2io5stdio6StdoutENtB6_15OutputFormatter16write_run_finishB8_
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    _RNvNtCscO0Syu2iFtE_4test7console17run_tests_console
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    _RNvCscO0Syu2iFtE_4test16test_main_static
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    _RINvNtNtCsjr6MQCPf0hc_3std3sys9backtrace28___rust_begin_short_backtraceFEuuECskqBgwRljgq3_13witness_costs
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    _RNCINvNtCsjr6MQCPf0hc_3std2rt10lang_startuE0CskqBgwRljgq3_13witness_costs
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    _RNvNtCsjr6MQCPf0hc_3std2rt19lang_start_internal
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    main
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+
+3 calls to allocation functions with 86B peak consumption from
+_RNvMs0_Cs8v6Vxq2exiQ_7getoptsNtB5_7Options8optmulti
+  in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+1 calls with 4B peak consumption from:
+    _RNvNtCscO0Syu2iFtE_4test3cli9optgroups
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    _RNvNtCscO0Syu2iFtE_4test3cli10parse_opts
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    _RNvCscO0Syu2iFtE_4test16test_main_static
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    _RINvNtNtCsjr6MQCPf0hc_3std3sys9backtrace28___rust_begin_short_backtraceFEuuECskqBgwRljgq3_13witness_costs
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    _RNCINvNtCsjr6MQCPf0hc_3std2rt10lang_startuE0CskqBgwRljgq3_13witness_costs
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    _RNvNtCsjr6MQCPf0hc_3std2rt19lang_start_internal
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    main
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+1 calls with 6B peak consumption from:
+    _RNvNtCscO0Syu2iFtE_4test3cli9optgroups
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    _RNvNtCscO0Syu2iFtE_4test3cli10parse_opts
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    _RNvCscO0Syu2iFtE_4test16test_main_static
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    _RINvNtNtCsjr6MQCPf0hc_3std3sys9backtrace28___rust_begin_short_backtraceFEuuECskqBgwRljgq3_13witness_costs
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    _RNCINvNtCsjr6MQCPf0hc_3std2rt10lang_startuE0CskqBgwRljgq3_13witness_costs
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    _RNvNtCsjr6MQCPf0hc_3std2rt19lang_start_internal
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    main
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+1 calls with 76B peak consumption from:
+    _RNvNtCscO0Syu2iFtE_4test3cli9optgroups
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    _RNvNtCscO0Syu2iFtE_4test3cli10parse_opts
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    _RNvCscO0Syu2iFtE_4test16test_main_static
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    _RINvNtNtCsjr6MQCPf0hc_3std3sys9backtrace28___rust_begin_short_backtraceFEuuECskqBgwRljgq3_13witness_costs
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    _RNCINvNtCsjr6MQCPf0hc_3std2rt10lang_startuE0CskqBgwRljgq3_13witness_costs
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    _RNvNtCsjr6MQCPf0hc_3std2rt19lang_start_internal
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    main
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+
+
+PEAK MEMORY CONSUMERS
+73.73K peak memory consumed over 1 calls from
+0x728d2bcbf8f6
+  in /usr/lib/x86_64-linux-gnu/libstdc++.so.6
+73.73K consumed over 1 calls from:
+    call_init
+      at ./elf/dl-init.c:74
+      in /lib64/ld-linux-x86-64.so.2
+    _dl_init::call_init
+      at ./elf/dl-init.c:120
+      in /lib64/ld-linux-x86-64.so.2
+    _dl_init
+      at ./elf/./elf/dl-init.c:121
+    _dl_start_user
+      in /lib64/ld-linux-x86-64.so.2
+
+3.33K peak memory consumed over 4 calls from
+_RNvMs5_NtCs2mBL6TZy0y2_5alloc7raw_vecNtB5_11RawVecInner11finish_growCs8v6Vxq2exiQ_7getopts
+  in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+3.33K consumed over 1 calls from:
+    _RNvMs4_NtCs2mBL6TZy0y2_5alloc7raw_vecINtB5_6RawVecNtCs8v6Vxq2exiQ_7getopts8OptGroupE8grow_oneBO_
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    _RNvMs0_Cs8v6Vxq2exiQ_7getoptsNtB5_7Options6optopt
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    _RNvNtCscO0Syu2iFtE_4test3cli9optgroups
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    _RNvNtCscO0Syu2iFtE_4test3cli10parse_opts
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    _RNvCscO0Syu2iFtE_4test16test_main_static
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    _RINvNtNtCsjr6MQCPf0hc_3std3sys9backtrace28___rust_begin_short_backtraceFEuuECskqBgwRljgq3_13witness_costs
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    _RNCINvNtCsjr6MQCPf0hc_3std2rt10lang_startuE0CskqBgwRljgq3_13witness_costs
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    _RNvNtCsjr6MQCPf0hc_3std2rt19lang_start_internal
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    main
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+
+1.92K peak memory consumed over 7 calls from
+_RNvNtCscO0Syu2iFtE_4test3cli10parse_opts
+  in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+1.34K consumed over 1 calls from:
+    _RNvCscO0Syu2iFtE_4test16test_main_static
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    _RINvNtNtCsjr6MQCPf0hc_3std3sys9backtrace28___rust_begin_short_backtraceFEuuECskqBgwRljgq3_13witness_costs
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    _RNCINvNtCsjr6MQCPf0hc_3std2rt10lang_startuE0CskqBgwRljgq3_13witness_costs
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    _RNvNtCsjr6MQCPf0hc_3std2rt19lang_start_internal
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    main
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+576B consumed over 1 calls from:
+    _RNvCscO0Syu2iFtE_4test16test_main_static
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    _RINvNtNtCsjr6MQCPf0hc_3std3sys9backtrace28___rust_begin_short_backtraceFEuuECskqBgwRljgq3_13witness_costs
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    _RNCINvNtCsjr6MQCPf0hc_3std2rt10lang_startuE0CskqBgwRljgq3_13witness_costs
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    _RNvNtCsjr6MQCPf0hc_3std2rt19lang_start_internal
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    main
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+1B consumed over 1 calls from:
+    _RNvCscO0Syu2iFtE_4test16test_main_static
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    _RINvNtNtCsjr6MQCPf0hc_3std3sys9backtrace28___rust_begin_short_backtraceFEuuECskqBgwRljgq3_13witness_costs
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    _RNCINvNtCsjr6MQCPf0hc_3std2rt10lang_startuE0CskqBgwRljgq3_13witness_costs
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    _RNvNtCsjr6MQCPf0hc_3std2rt19lang_start_internal
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    main
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+
+1.71K peak memory consumed over 36 calls from
+_RNvMs0_Cs8v6Vxq2exiQ_7getoptsNtB5_7Options7optflag
+  in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+534B consumed over 1 calls from:
+    _RNvNtCscO0Syu2iFtE_4test3cli9optgroups
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    _RNvNtCscO0Syu2iFtE_4test3cli10parse_opts
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    _RNvCscO0Syu2iFtE_4test16test_main_static
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    _RINvNtNtCsjr6MQCPf0hc_3std3sys9backtrace28___rust_begin_short_backtraceFEuuECskqBgwRljgq3_13witness_costs
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    _RNCINvNtCsjr6MQCPf0hc_3std2rt10lang_startuE0CskqBgwRljgq3_13witness_costs
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    _RNvNtCsjr6MQCPf0hc_3std2rt19lang_start_internal
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    main
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+443B consumed over 1 calls from:
+    _RNvNtCscO0Syu2iFtE_4test3cli9optgroups
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    _RNvNtCscO0Syu2iFtE_4test3cli10parse_opts
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    _RNvCscO0Syu2iFtE_4test16test_main_static
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    _RINvNtNtCsjr6MQCPf0hc_3std3sys9backtrace28___rust_begin_short_backtraceFEuuECskqBgwRljgq3_13witness_costs
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    _RNCINvNtCsjr6MQCPf0hc_3std2rt10lang_startuE0CskqBgwRljgq3_13witness_costs
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    _RNvNtCsjr6MQCPf0hc_3std2rt19lang_start_internal
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    main
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+75B consumed over 1 calls from:
+    _RNvNtCscO0Syu2iFtE_4test3cli9optgroups
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    _RNvNtCscO0Syu2iFtE_4test3cli10parse_opts
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    _RNvCscO0Syu2iFtE_4test16test_main_static
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    _RINvNtNtCsjr6MQCPf0hc_3std3sys9backtrace28___rust_begin_short_backtraceFEuuECskqBgwRljgq3_13witness_costs
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    _RNCINvNtCsjr6MQCPf0hc_3std2rt10lang_startuE0CskqBgwRljgq3_13witness_costs
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    _RNvNtCsjr6MQCPf0hc_3std2rt19lang_start_internal
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    main
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+65B consumed over 1 calls from:
+    _RNvNtCscO0Syu2iFtE_4test3cli9optgroups
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    _RNvNtCscO0Syu2iFtE_4test3cli10parse_opts
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    _RNvCscO0Syu2iFtE_4test16test_main_static
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    _RINvNtNtCsjr6MQCPf0hc_3std3sys9backtrace28___rust_begin_short_backtraceFEuuECskqBgwRljgq3_13witness_costs
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    _RNCINvNtCsjr6MQCPf0hc_3std2rt10lang_startuE0CskqBgwRljgq3_13witness_costs
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    _RNvNtCsjr6MQCPf0hc_3std2rt19lang_start_internal
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    main
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+47B consumed over 1 calls from:
+    _RNvNtCscO0Syu2iFtE_4test3cli9optgroups
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    _RNvNtCscO0Syu2iFtE_4test3cli10parse_opts
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    _RNvCscO0Syu2iFtE_4test16test_main_static
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    _RINvNtNtCsjr6MQCPf0hc_3std3sys9backtrace28___rust_begin_short_backtraceFEuuECskqBgwRljgq3_13witness_costs
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    _RNCINvNtCsjr6MQCPf0hc_3std2rt10lang_startuE0CskqBgwRljgq3_13witness_costs
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    _RNvNtCsjr6MQCPf0hc_3std2rt19lang_start_internal
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    main
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+  and 545B from 31 other places
+
+799B peak memory consumed over 18 calls from
+_RNvMs0_Cs8v6Vxq2exiQ_7getoptsNtB5_7Options6optopt
+  in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+217B consumed over 1 calls from:
+    _RNvNtCscO0Syu2iFtE_4test3cli9optgroups
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    _RNvNtCscO0Syu2iFtE_4test3cli10parse_opts
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    _RNvCscO0Syu2iFtE_4test16test_main_static
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    _RINvNtNtCsjr6MQCPf0hc_3std3sys9backtrace28___rust_begin_short_backtraceFEuuECskqBgwRljgq3_13witness_costs
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    _RNCINvNtCsjr6MQCPf0hc_3std2rt10lang_startuE0CskqBgwRljgq3_13witness_costs
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    _RNvNtCsjr6MQCPf0hc_3std2rt19lang_start_internal
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    main
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+208B consumed over 1 calls from:
+    _RNvNtCscO0Syu2iFtE_4test3cli9optgroups
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    _RNvNtCscO0Syu2iFtE_4test3cli10parse_opts
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    _RNvCscO0Syu2iFtE_4test16test_main_static
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    _RINvNtNtCsjr6MQCPf0hc_3std3sys9backtrace28___rust_begin_short_backtraceFEuuECskqBgwRljgq3_13witness_costs
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    _RNCINvNtCsjr6MQCPf0hc_3std2rt10lang_startuE0CskqBgwRljgq3_13witness_costs
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    _RNvNtCsjr6MQCPf0hc_3std2rt19lang_start_internal
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    main
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+92B consumed over 1 calls from:
+    _RNvNtCscO0Syu2iFtE_4test3cli9optgroups
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    _RNvNtCscO0Syu2iFtE_4test3cli10parse_opts
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    _RNvCscO0Syu2iFtE_4test16test_main_static
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    _RINvNtNtCsjr6MQCPf0hc_3std3sys9backtrace28___rust_begin_short_backtraceFEuuECskqBgwRljgq3_13witness_costs
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    _RNCINvNtCsjr6MQCPf0hc_3std2rt10lang_startuE0CskqBgwRljgq3_13witness_costs
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    _RNvNtCsjr6MQCPf0hc_3std2rt19lang_start_internal
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    main
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+69B consumed over 1 calls from:
+    _RNvNtCscO0Syu2iFtE_4test3cli9optgroups
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    _RNvNtCscO0Syu2iFtE_4test3cli10parse_opts
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    _RNvCscO0Syu2iFtE_4test16test_main_static
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    _RINvNtNtCsjr6MQCPf0hc_3std3sys9backtrace28___rust_begin_short_backtraceFEuuECskqBgwRljgq3_13witness_costs
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    _RNCINvNtCsjr6MQCPf0hc_3std2rt10lang_startuE0CskqBgwRljgq3_13witness_costs
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    _RNvNtCsjr6MQCPf0hc_3std2rt19lang_start_internal
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    main
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+52B consumed over 1 calls from:
+    _RNvNtCscO0Syu2iFtE_4test3cli9optgroups
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    _RNvNtCscO0Syu2iFtE_4test3cli10parse_opts
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    _RNvCscO0Syu2iFtE_4test16test_main_static
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    _RINvNtNtCsjr6MQCPf0hc_3std3sys9backtrace28___rust_begin_short_backtraceFEuuECskqBgwRljgq3_13witness_costs
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    _RNCINvNtCsjr6MQCPf0hc_3std2rt10lang_startuE0CskqBgwRljgq3_13witness_costs
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    _RNvNtCsjr6MQCPf0hc_3std2rt19lang_start_internal
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    main
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+  and 161B from 13 other places
+
+548B peak memory consumed over 2 calls from
+_RNvNtNtNtNtNtCsjr6MQCPf0hc_3std3sys3pal4unix14stack_overflow11thread_info16set_current_info
+  in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+544B consumed over 1 calls from:
+    _RNvNtCsjr6MQCPf0hc_3std2rt19lang_start_internal
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    main
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+4B consumed over 1 calls from:
+    _RNvNtCsjr6MQCPf0hc_3std2rt19lang_start_internal
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    main
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+
+384B peak memory consumed over 3 calls from
+_RNvMs5_NtCs2mBL6TZy0y2_5alloc7raw_vecNtB5_11RawVecInner11finish_growCscO0Syu2iFtE_4test
+  in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+256B consumed over 2 calls from:
+    _RNvMs4_NtCs2mBL6TZy0y2_5alloc7raw_vecINtB5_6RawVecTjNtCs8v6Vxq2exiQ_7getopts6OptvalEE8grow_oneCscO0Syu2iFtE_4test
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    _RNvNtCscO0Syu2iFtE_4test3cli10parse_opts
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    _RNvCscO0Syu2iFtE_4test16test_main_static
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    _RINvNtNtCsjr6MQCPf0hc_3std3sys9backtrace28___rust_begin_short_backtraceFEuuECskqBgwRljgq3_13witness_costs
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    _RNCINvNtCsjr6MQCPf0hc_3std2rt10lang_startuE0CskqBgwRljgq3_13witness_costs
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    _RNvNtCsjr6MQCPf0hc_3std2rt19lang_start_internal
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    main
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+128B consumed over 1 calls from:
+    _RNvMs4_NtCs2mBL6TZy0y2_5alloc7raw_vecINtB5_6RawVecTjNtCs8v6Vxq2exiQ_7getopts6OptvalEE8grow_oneCscO0Syu2iFtE_4test
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    _RNvNtCscO0Syu2iFtE_4test3cli10parse_opts
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    _RNvCscO0Syu2iFtE_4test16test_main_static
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    _RINvNtNtCsjr6MQCPf0hc_3std3sys9backtrace28___rust_begin_short_backtraceFEuuECskqBgwRljgq3_13witness_costs
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    _RNCINvNtCsjr6MQCPf0hc_3std2rt10lang_startuE0CskqBgwRljgq3_13witness_costs
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    _RNvNtCsjr6MQCPf0hc_3std2rt19lang_start_internal
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    main
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+
+304B peak memory consumed over 1 calls from
+_RNvCscO0Syu2iFtE_4test16test_main_static
+  in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+304B consumed over 1 calls from:
+    _RINvNtNtCsjr6MQCPf0hc_3std3sys9backtrace28___rust_begin_short_backtraceFEuuECskqBgwRljgq3_13witness_costs
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    _RNCINvNtCsjr6MQCPf0hc_3std2rt10lang_startuE0CskqBgwRljgq3_13witness_costs
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    _RNvNtCsjr6MQCPf0hc_3std2rt19lang_start_internal
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    main
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+
+203B peak memory consumed over 57 calls from
+_RNvXsH_Cs8v6Vxq2exiQ_7getoptsNtB5_8OptGroupNtNtCsg3O1AWWDtD0_4core5clone5Clone5clone
+  in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+203B consumed over 23 calls from:
+    _RNvMs3_Cs8v6Vxq2exiQ_7getoptsNtB5_8OptGroup13long_to_short
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    _RNvNtCscO0Syu2iFtE_4test3cli10parse_opts
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    _RNvCscO0Syu2iFtE_4test16test_main_static
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    _RINvNtNtCsjr6MQCPf0hc_3std3sys9backtrace28___rust_begin_short_backtraceFEuuECskqBgwRljgq3_13witness_costs
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    _RNCINvNtCsjr6MQCPf0hc_3std2rt10lang_startuE0CskqBgwRljgq3_13witness_costs
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    _RNvNtCsjr6MQCPf0hc_3std2rt19lang_start_internal
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    main
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+
+146B peak memory consumed over 6 calls from
+_RNvNtCsjr6MQCPf0hc_3std3env7args_os
+  in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+146B consumed over 5 calls from:
+    _RNvCscO0Syu2iFtE_4test16test_main_static
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    _RINvNtNtCsjr6MQCPf0hc_3std3sys9backtrace28___rust_begin_short_backtraceFEuuECskqBgwRljgq3_13witness_costs
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    _RNCINvNtCsjr6MQCPf0hc_3std2rt10lang_startuE0CskqBgwRljgq3_13witness_costs
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    _RNvNtCsjr6MQCPf0hc_3std2rt19lang_start_internal
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    main
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+
+
+MOST TEMPORARY ALLOCATIONS
+17 temporary allocations of 57 allocations in total (29.82%) from
+_RNvXsH_Cs8v6Vxq2exiQ_7getoptsNtB5_8OptGroupNtNtCsg3O1AWWDtD0_4core5clone5Clone5clone
+  in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+17 temporary allocations of 24 allocations in total (70.83%) from:
+    _RNvMs3_Cs8v6Vxq2exiQ_7getoptsNtB5_8OptGroup13long_to_short
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    _RNvNtCscO0Syu2iFtE_4test3cli10parse_opts
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    _RNvCscO0Syu2iFtE_4test16test_main_static
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    _RINvNtNtCsjr6MQCPf0hc_3std3sys9backtrace28___rust_begin_short_backtraceFEuuECskqBgwRljgq3_13witness_costs
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    _RNCINvNtCsjr6MQCPf0hc_3std2rt10lang_startuE0CskqBgwRljgq3_13witness_costs
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    _RNvNtCsjr6MQCPf0hc_3std2rt19lang_start_internal
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    main
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+
+17 temporary allocations of 24 allocations in total (70.83%) from
+_RNvMs4_Cs8v6Vxq2exiQ_7getoptsNtB5_7Matches8opt_vals
+  in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+1 temporary allocations of 1 allocations in total (100.00%) from:
+    _RNvNtCscO0Syu2iFtE_4test3cli10parse_opts
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    _RNvCscO0Syu2iFtE_4test16test_main_static
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    _RINvNtNtCsjr6MQCPf0hc_3std3sys9backtrace28___rust_begin_short_backtraceFEuuECskqBgwRljgq3_13witness_costs
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    _RNCINvNtCsjr6MQCPf0hc_3std2rt10lang_startuE0CskqBgwRljgq3_13witness_costs
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    _RNvNtCsjr6MQCPf0hc_3std2rt19lang_start_internal
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    main
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+1 temporary allocations of 1 allocations in total (100.00%) from:
+    _RNvMs4_Cs8v6Vxq2exiQ_7getoptsNtB5_7Matches11opt_present
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    _RNvNtCscO0Syu2iFtE_4test3cli10parse_opts
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    _RNvCscO0Syu2iFtE_4test16test_main_static
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    _RINvNtNtCsjr6MQCPf0hc_3std3sys9backtrace28___rust_begin_short_backtraceFEuuECskqBgwRljgq3_13witness_costs
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    _RNCINvNtCsjr6MQCPf0hc_3std2rt10lang_startuE0CskqBgwRljgq3_13witness_costs
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    _RNvNtCsjr6MQCPf0hc_3std2rt19lang_start_internal
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    main
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+1 temporary allocations of 1 allocations in total (100.00%) from:
+    _RNvMs4_Cs8v6Vxq2exiQ_7getoptsNtB5_7Matches11opt_present
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    _RNvNtCscO0Syu2iFtE_4test3cli10parse_opts
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    _RNvCscO0Syu2iFtE_4test16test_main_static
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    _RINvNtNtCsjr6MQCPf0hc_3std3sys9backtrace28___rust_begin_short_backtraceFEuuECskqBgwRljgq3_13witness_costs
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    _RNCINvNtCsjr6MQCPf0hc_3std2rt10lang_startuE0CskqBgwRljgq3_13witness_costs
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    _RNvNtCsjr6MQCPf0hc_3std2rt19lang_start_internal
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    main
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+1 temporary allocations of 1 allocations in total (100.00%) from:
+    _RNvMs4_Cs8v6Vxq2exiQ_7getoptsNtB5_7Matches11opt_present
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    _RNvNtCscO0Syu2iFtE_4test3cli10parse_opts
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    _RNvCscO0Syu2iFtE_4test16test_main_static
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    _RINvNtNtCsjr6MQCPf0hc_3std3sys9backtrace28___rust_begin_short_backtraceFEuuECskqBgwRljgq3_13witness_costs
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    _RNCINvNtCsjr6MQCPf0hc_3std2rt10lang_startuE0CskqBgwRljgq3_13witness_costs
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    _RNvNtCsjr6MQCPf0hc_3std2rt19lang_start_internal
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    main
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+1 temporary allocations of 1 allocations in total (100.00%) from:
+    _RNvMs4_Cs8v6Vxq2exiQ_7getoptsNtB5_7Matches11opt_present
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    _RNvNtCscO0Syu2iFtE_4test3cli10parse_opts
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    _RNvCscO0Syu2iFtE_4test16test_main_static
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    _RINvNtNtCsjr6MQCPf0hc_3std3sys9backtrace28___rust_begin_short_backtraceFEuuECskqBgwRljgq3_13witness_costs
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    _RNCINvNtCsjr6MQCPf0hc_3std2rt10lang_startuE0CskqBgwRljgq3_13witness_costs
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    _RNvNtCsjr6MQCPf0hc_3std2rt19lang_start_internal
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    main
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+  and 12B from 19 other places
+
+3 temporary allocations of 3 allocations in total (100.00%) from
+_RNvNvNtCs2mBL6TZy0y2_5alloc3fmt6format12format_inner
+  in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+1 temporary allocations of 1 allocations in total (100.00%) from:
+    _RNvXs_NtNtCscO0Syu2iFtE_4test10formatters6prettyINtB4_15PrettyFormatterNtNtNtCsjr6MQCPf0hc_3std2io5stdio6StdoutENtB6_15OutputFormatter15write_run_startB8_
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    _RNCNvNtCscO0Syu2iFtE_4test7console17run_tests_consoles0_0B5_
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    _RNvNtCscO0Syu2iFtE_4test7console17run_tests_console
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    _RNvCscO0Syu2iFtE_4test16test_main_static
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    _RINvNtNtCsjr6MQCPf0hc_3std3sys9backtrace28___rust_begin_short_backtraceFEuuECskqBgwRljgq3_13witness_costs
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    _RNCINvNtCsjr6MQCPf0hc_3std2rt10lang_startuE0CskqBgwRljgq3_13witness_costs
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    _RNvNtCsjr6MQCPf0hc_3std2rt19lang_start_internal
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    main
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+1 temporary allocations of 1 allocations in total (100.00%) from:
+    _RNvXs_NtNtCscO0Syu2iFtE_4test10formatters6prettyINtB4_15PrettyFormatterNtNtNtCsjr6MQCPf0hc_3std2io5stdio6StdoutENtB6_15OutputFormatter16write_run_finishB8_
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    _RNvNtCscO0Syu2iFtE_4test7console17run_tests_console
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    _RNvCscO0Syu2iFtE_4test16test_main_static
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    _RINvNtNtCsjr6MQCPf0hc_3std3sys9backtrace28___rust_begin_short_backtraceFEuuECskqBgwRljgq3_13witness_costs
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    _RNCINvNtCsjr6MQCPf0hc_3std2rt10lang_startuE0CskqBgwRljgq3_13witness_costs
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    _RNvNtCsjr6MQCPf0hc_3std2rt19lang_start_internal
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    main
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+1 temporary allocations of 1 allocations in total (100.00%) from:
+    _RNvXs_NtNtCscO0Syu2iFtE_4test10formatters6prettyINtB4_15PrettyFormatterNtNtNtCsjr6MQCPf0hc_3std2io5stdio6StdoutENtB6_15OutputFormatter16write_run_finishB8_
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    _RNvNtCscO0Syu2iFtE_4test7console17run_tests_console
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    _RNvCscO0Syu2iFtE_4test16test_main_static
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    _RINvNtNtCsjr6MQCPf0hc_3std3sys9backtrace28___rust_begin_short_backtraceFEuuECskqBgwRljgq3_13witness_costs
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    _RNCINvNtCsjr6MQCPf0hc_3std2rt10lang_startuE0CskqBgwRljgq3_13witness_costs
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    _RNvNtCsjr6MQCPf0hc_3std2rt19lang_start_internal
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    main
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+
+1 temporary allocations of 1 allocations in total (100.00%) from
+__GI___getdelim
+  at ./libio/iogetdelim.c:111
+  in /usr/lib/x86_64-linux-gnu/libc.so.6
+1 temporary allocations of 1 allocations in total (100.00%) from:
+    __pthread_getattr_np
+      at ./nptl/pthread_getattr_np.c:122
+      in /usr/lib/x86_64-linux-gnu/libc.so.6
+    _RNvNtCsjr6MQCPf0hc_3std2rt19lang_start_internal
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    main
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+
+1 temporary allocations of 2 allocations in total (50.00%) from
+_RNvNtCscO0Syu2iFtE_4test7console17run_tests_console
+  in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+1 temporary allocations of 1 allocations in total (100.00%) from:
+    _RNvCscO0Syu2iFtE_4test16test_main_static
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    _RINvNtNtCsjr6MQCPf0hc_3std3sys9backtrace28___rust_begin_short_backtraceFEuuECskqBgwRljgq3_13witness_costs
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    _RNCINvNtCsjr6MQCPf0hc_3std2rt10lang_startuE0CskqBgwRljgq3_13witness_costs
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    _RNvNtCsjr6MQCPf0hc_3std2rt19lang_start_internal
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+    main
+      in /tmp/fa-campaign-20260908-wave6-profile/witness_costs
+
+1 temporary allocations of 1 allocations in total (100.00%) from
+0x728d2bcbf8f6
+  in /usr/lib/x86_64-linux-gnu/libstdc++.so.6
+1 temporary allocations of 1 allocations in total (100.00%) from:
+    call_init
+      at ./elf/dl-init.c:74
+      in /lib64/ld-linux-x86-64.so.2
+    _dl_init::call_init
+      at ./elf/dl-init.c:120
+      in /lib64/ld-linux-x86-64.so.2
+    _dl_init
+      at ./elf/./elf/dl-init.c:121
+    _dl_start_user
+      in /lib64/ld-linux-x86-64.so.2
+
+
+total runtime: 0.00s.
+calls to allocation functions: 185 (92500/s)
+temporary memory allocations: 40 (20000/s)
+peak heap memory consumption: 83.67K
+peak RSS (including heaptrack overhead): 5.89M
+total memory leaked: 548B

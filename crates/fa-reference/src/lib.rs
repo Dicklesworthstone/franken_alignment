@@ -13,6 +13,7 @@ pub mod reducer;
 pub mod round;
 pub mod strict_json;
 pub mod trace_independence;
+pub mod witness;
 
 use std::collections::{BTreeMap, BTreeSet, VecDeque};
 

@@ -1,0 +1,7 @@
+{
+  "binary_sha256": "12f2383fc607a9870f9455dff7d573bb6280b5cf69adfc0763036957c47f1baf",
+  "unchanged_after": true,
+  "analysis_command_template": "heaptrack_print <raw.zst> --flamegraph-cost-type allocations -F <stacks>",
+  "build_worker": "vmi1149989",
+  "profile_worker": "vmi1227854"
+}
