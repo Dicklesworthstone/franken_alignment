@@ -46,6 +46,12 @@ pub struct SubmittedPart {
 pub struct InputProfileBinding {
     pub profile_id: u64,
     pub profile_bytes: Vec<u8>,
+    /// Explicit tokenizer semantics epoch; zero is a valid initial epoch.
+    pub tokenizer_epoch: u64,
+    /// Explicit policy semantics epoch; zero is a valid initial epoch.
+    pub policy_epoch: u64,
+    /// Explicit served-model semantics epoch; zero is a valid initial epoch.
+    pub model_epoch: u64,
 }
 
 /// A domain omitted from the helper's actual input view.
@@ -94,6 +100,9 @@ impl Omission {
 ///     InputProfileBinding {
 ///         profile_id: 1,
 ///         profile_bytes: vec![],
+///         tokenizer_epoch: 0,
+///         policy_epoch: 0,
+///         model_epoch: 0,
 ///     },
 ///     vec![SubmittedPart {
 ///         span: ByteSpan { start: 0, end: 1 },
@@ -115,12 +124,24 @@ impl Omission {
 ///     input_profile: InputProfileBinding {
 ///         profile_id: 1,
 ///         profile_bytes: vec![],
+///         tokenizer_epoch: 0,
+///         policy_epoch: 0,
+///         model_epoch: 0,
 ///     },
 ///     ordered_parts: vec![SubmittedPart {
 ///         span: ByteSpan { start: 0, end: 1 },
 ///         kind: PartKind::Question,
 ///     }],
 ///     omissions: vec![],
+/// };
+/// ```
+///
+/// ```compile_fail,E0063
+/// use fa_reference::full_input::InputProfileBinding;
+///
+/// let _ = InputProfileBinding {
+///     profile_id: 1,
+///     profile_bytes: vec![],
 /// };
 /// ```
 ///
@@ -263,6 +284,9 @@ mod tests {
             InputProfileBinding {
                 profile_id: 7,
                 profile_bytes: b"profile-v1".to_vec(),
+                tokenizer_epoch: 0,
+                policy_epoch: 0,
+                model_epoch: 0,
             },
             vec![
                 SubmittedPart {
@@ -322,6 +346,9 @@ mod tests {
         assert_eq!(judgment.witness().actual_input(), &input);
         assert_eq!(input.submitted_bytes(), b"Q|P|I|S|E");
         assert_eq!(input.input_profile().profile_id, 7);
+        assert_eq!(input.input_profile().tokenizer_epoch, 0);
+        assert_eq!(input.input_profile().policy_epoch, 0);
+        assert_eq!(input.input_profile().model_epoch, 0);
         assert_eq!(input.ordered_parts().len(), 9);
         assert!(matches!(input.omissions(), [Omission::Gapped { .. }]));
         assert_eq!(input.part_bytes(0), Ok(&b"Q"[..]));
@@ -351,6 +378,40 @@ mod tests {
         let mut evidence_changed = input;
         evidence_changed.submitted_bytes[8] = b'X';
         assert!(!judgment.valid_at(&evidence_changed));
+    }
+
+    fn input_with_semantic_epochs(
+        tokenizer_epoch: u64,
+        policy_epoch: u64,
+        model_epoch: u64,
+    ) -> ActualHelperInput {
+        ActualHelperInput::new(
+            b"Q".to_vec(),
+            InputProfileBinding {
+                profile_id: 7,
+                profile_bytes: b"profile-v1".to_vec(),
+                tokenizer_epoch,
+                policy_epoch,
+                model_epoch,
+            },
+            vec![SubmittedPart {
+                span: ByteSpan { start: 0, end: 1 },
+                kind: PartKind::Question,
+            }],
+            vec![],
+        )
+        .unwrap()
+    }
+
+    #[test]
+    fn semantic_epoch_triple_is_required_and_causally_invalidates() {
+        let initial = input_with_semantic_epochs(0, 0, 0);
+        let judgment = OpaqueJudgment::capture(&initial, b"epochs were irrelevant");
+
+        assert!(judgment.valid_at(&input_with_semantic_epochs(0, 0, 0)));
+        assert!(!judgment.valid_at(&input_with_semantic_epochs(1, 0, 0)));
+        assert!(!judgment.valid_at(&input_with_semantic_epochs(0, 1, 0)));
+        assert!(!judgment.valid_at(&input_with_semantic_epochs(0, 0, 1)));
     }
 
     #[test]

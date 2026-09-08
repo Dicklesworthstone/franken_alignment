@@ -1,0 +1,13 @@
+--- a/crates/fa-reference/src/full_input.rs
++++ b/crates/fa-reference/src/full_input.rs
+@@ -266,7 +266,9 @@
+     }
+ 
+     pub fn valid_at(&self, actual_input: &ActualHelperInput) -> bool {
+-        self.witness.actual_input == *actual_input
++        let mut changed = actual_input.clone();
++        changed.input_profile.tokenizer_epoch = self.witness.actual_input.input_profile.tokenizer_epoch;
++        self.witness.actual_input == changed
+     }
+ 
+     pub fn witness(&self) -> &OpaqueInputWitness {

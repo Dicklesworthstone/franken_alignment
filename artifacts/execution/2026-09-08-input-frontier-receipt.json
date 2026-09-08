@@ -1,0 +1,76 @@
+{
+  "schema": "fa.execution_receipt/1",
+  "date": "2026-09-08",
+  "result": {
+    "exit_code": 0,
+    "format": "passed",
+    "check": "passed",
+    "clippy": "passed; warnings denied",
+    "tests": {
+      "reference_unit": 68,
+      "reference_integration": 57,
+      "xtask": 242,
+      "doctests": 6,
+      "total_passed": 373,
+      "failed": 0,
+      "ignored": 0,
+      "filtered": 0
+    }
+  },
+  "base_commit": "1ccdd87602c0db69e93f2da41aeb6c0d87bb757d",
+  "source_inputs": "artifacts/execution/2026-09-08-input-frontier-gate2-inputs.json",
+  "source_sha256": {
+    ".beads/issues.jsonl": "ec03d95156510fb28681db81afee2acf3d9f2c95316d5867d107f1f6438bb331",
+    "crates/fa-reference/src/full_input.rs": "f184ec899d03963c730ce67fafaf7d14c2e0bce0dcb9dc95fc6584e8e9f72d45",
+    "crates/fa-reference/src/product_frontier.rs": "a2e73007fb2b4de6ffab031edfcceb57ac39a99126be61b633c624d3937790fd",
+    "registry/dependency_policy.json": "1c446fe31aaa5dc7a2426a41cc6d48d362170dd767e33edd28a16f9f0d0f9869",
+    "registry/source_snapshot.json": "f2e7fc48e7861616f89332bf08ea281b8af47801892143ce70251e8fdd87b4c1",
+    "crates/fa-reference/tests/full_input_boundaries.rs": "c27c27d574dbdd72cabbfa60e631c42f697a1a606b60087edadab4b7b8073459",
+    "crates/fa-reference/tests/frontier_boundaries.rs": "3c4b9b228af31ab4b5ae6379361ae28c42c00804f6aac3e442ab08f1eb1697bc"
+  },
+  "reviewed_source_files": 141,
+  "scope": "FA057 required tokenizer/policy/model epochs and exact public whole-input comparison; FA063 independent projection/stage prefixes and explicit caller-trusted closure. Reference only.",
+  "full_gate": {
+    "job": "j-30004650170124353",
+    "worker": "vmi1227854",
+    "toolchain": "nightly-2026-09-07",
+    "rustc_commit": "5a2be9f5f075d31e3ca5526b5b029881ce441253",
+    "target": "x86_64-unknown-linux-gnu",
+    "exit_code": 0
+  },
+  "causal_counterexample": {
+    "job": "j-30004650170124354",
+    "exit_code": 101,
+    "passed": 0,
+    "failed": 1,
+    "filtered": 3,
+    "mutation": "Ignore only tokenizer_epoch during valid_at; unchanged tests fail at tokenizer-only invalidation after unchanged-input, explanation and byte-change controls.",
+    "limit": "This planted mutation isolates tokenizer binding; policy/model mutations pass on corrected source but were not independently neutralized."
+  },
+  "failed_attempts": [
+    {
+      "attempt": "gate1",
+      "job": "j-30004650170124352",
+      "exit_code": 1,
+      "cause": "Root local dated toolchain lacked rustfmt and shell continued after format failure. Remote gate refused formatting. Formatter installed, source formatted and rebound before gate2."
+    }
+  ],
+  "nonclaims": [
+    "No provider request interception or authenticated input capture.",
+    "No trusted marker origin authentication, production receipt, broker, persistence or external effect.",
+    "No new performance or allocation measurement for these two modules; exact configured bounds are tested, not benchmarked.",
+    "Previous DSR evidence does not validate this changed source."
+  ],
+  "artifact_sha256": {
+    "artifacts/execution/2026-09-08-input-frontier-gate1.log": "12027596902e74d08a3ff20aec8024f71f5a031ba41c081abd9bcbcff03344f0",
+    "artifacts/execution/2026-09-08-input-frontier-gate1.json": "38c7d41766e12917d00410dcdf0418e7b06aa2b19644ef6754d2b4a86d7564d2",
+    "artifacts/execution/2026-09-08-input-frontier-gate1-inputs.json": "b1f42d4e3af1d6e159863766168548c1df3639a28c023a9a4b496abaece699e3",
+    "artifacts/execution/2026-09-08-input-frontier-gate2.log": "c82361a58cb3cd6ceee48339538884b12644481b890ed4e9dbb591529a03049f",
+    "artifacts/execution/2026-09-08-input-frontier-gate2.json": "95a14889bdc831661a7e5e8e2aae4d7eec7f3849fe5b4d9fbd44c2fd8003d252",
+    "artifacts/execution/2026-09-08-input-frontier-gate2-inputs.json": "6e92149561427c4c3bb6a5c8aa5b5da9755977f90a0a9566924d42255db69e86",
+    "artifacts/execution/2026-09-08-input-frontier-counterexample.log": "9216fbd69ada33701e2bc63fb0935ff65e29a956e9b662a462f74732ab432b6d",
+    "artifacts/execution/2026-09-08-input-frontier-counterexample.json": "618d8c854a27b6a6f718b716a41a5b01cc87de0d56cd49fc7b5fac3fd34310b2",
+    "artifacts/execution/2026-09-08-input-frontier-counterexample-inputs.json": "0aac3a9f73efc6c05e5973a314bdc8a9ebfdb92f391d4bfd475c9b38779e1151",
+    "artifacts/execution/2026-09-08-input-frontier-counterexample-baseline-tests.patch": "5964f61012ce310071da60d97dfe56c51436e8bcac12b5248252fe69778d5e88"
+  }
+}

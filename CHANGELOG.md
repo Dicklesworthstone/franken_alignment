@@ -1,5 +1,9 @@
 # Changelog
 
+## 2026-09-08: explicit helper epochs and frontier boundary coverage
+
+Required tokenizer, policy and model epochs now participate in exact whole-input witnesses. Added public tests for every submitted byte, omitted context, metadata and configured bounds, plus nonempty product-frontier closure, isolation and refusal atomicity. Clarified prefix obligations versus whole-stream completion without changing frontier behavior. The complete **373-test** RCH gate and tokenizer-neutralization counterexample are retained in [the receipt](artifacts/execution/2026-09-08-input-frontier-receipt.json), including the initial formatting failure. These are reference contracts, without provider or marker authentication.
+
 ## 2026-09-08: transition coverage, measured reference costs and perimeter declarations
 
 Completed FA-001's executable transition-table and cost coverage: 107 callable state/method cells plus three explicitly unavailable preauthorization dispatch cells, and eleven fixed release cost cases across 102 samples. Added bounded FA-002 declaration/lookup semantics with independent scope, credential, bypass and capacity tests. An unmodelled nonbrokered bypass initially returned a classification; all unmodelled modes now refuse and full route lookup preserves the declared disposition. The causal one-guard regression and **362-test** full RCH pass are retained in [the receipt](artifacts/execution/2026-09-08-semantics-receipt.json), along with every failed gate/command attempt. FA-002's complete inventory and loading contract remain unfinished. These are reference semantics and descriptive costs, with no production or foundation-admission claim.

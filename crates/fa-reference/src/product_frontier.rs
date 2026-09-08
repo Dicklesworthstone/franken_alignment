@@ -46,6 +46,10 @@ pub struct TrustedClosingMarker {
 
 /// A named prefix obligation.  `closure` is required for a negative or other
 /// closed-scope claim and names the exact closing-marker generation required.
+/// It does not require this stage to reach the marker's terminal position:
+/// whole-stream coverage requires `through == marker.final_sequence`. A zero
+/// prefix with a nonzero closure generation alone does not assert an empty
+/// projection; emptiness is declared by `marker.final_sequence == 0`.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct FrontierRequirement {
     pub key: ProjectionKey,

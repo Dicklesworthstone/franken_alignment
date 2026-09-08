@@ -1,6 +1,16 @@
 # Implementation status · design revision 0.3
 
-Current execution evidence: [receipt](artifacts/execution/2026-09-08-semantics-receipt.json).
+Current execution evidence: [receipt](artifacts/execution/2026-09-08-input-frontier-receipt.json).
+
+## Qualified full-input epochs and public frontier boundaries
+
+The complete frozen RCH gate passed **373 tests: 68 reference unit, 57 integration, 242 xtask and 6 doctests**, with zero failures, ignored tests or filtered tests, on `vmi1227854` under `nightly-2026-09-07`. [The receipt](artifacts/execution/2026-09-08-input-frontier-receipt.json) binds job `j-30004650170124353` and 141 reviewed source/build inputs.
+
+FA-057 now requires explicit tokenizer, policy and model epochs in every input profile; zero remains a valid explicitly supplied initial epoch. Public constructor/capture/validation tests bind each epoch, every submitted byte, profile and part identities, omission presence and metadata, and a removed context section with a valid rebuilt partition. Exact configured caps and one-over refusals execute. A separate planted mutation ignoring only the tokenizer epoch failed at the intended public assertion after unchanged-input and byte-change controls passed. It does not independently neutralize the other two epochs.
+
+FA-063 public tests cover nonempty missing-middle sequences, duplicate idempotence, source/branch/projection/epoch isolation, exact closing generations, independent stage completion and atomic post-close refusals. A named prefix plus closure does not assert whole-stream stage coverage; that requires the requested prefix to reach the caller-retained marker's terminal sequence. Zero terminal sequence and zero marker generation are different: the former can declare an empty projection, while the latter refuses.
+
+The first gate stopped on formatting after root's local dated toolchain lacked rustfmt and the shell continued. The formatter was installed, source formatted and identities rebound before the passing run. These are bounded reference results, with no authenticated provider capture, marker-origin authentication, production receipt, persistence or effect. This batch measures no module-specific performance or allocation costs and does not rerun DSR. The first final-documentation gate refused stale current-count rows that root had missed; those rows were corrected while dated earlier results were preserved. An independent verifier reconciled the original FA-057/063 acceptance with the exact source, executed test names, raw results and hashes before closing both reference-definition packets.
 
 ## Qualified transition table and declared perimeter lookup
 
@@ -105,7 +115,7 @@ The round uses a deliberately non-cryptographic FNV comparison and proves no cry
 | Founding essays | Both read in full again for revision 0.3; head commits recorded in `registry/sources.json` | Complete premise; no missing post |
 | Ten donor/build project deep dives | Targeted code/manifest/plan review at fixed refs (revision 0.2) | Exact files/scopes recorded; not full repository audits or builds |
 | Pure-Rust reference workspace | Source present, zero external packages, formatted with `cargo fmt --all` on 2026-09-06 | Selected logical semantics only; not a broker |
-| Rust test functions | **67 unit + 48 integration reference tests, 242 xtask tests and 5 doctests passed remotely on 2026-09-08 UTC**; earlier runs remain dated below | Exact frozen batch above; not production evidence or credit for other work in progress |
+| Rust test functions | **68 unit + 57 integration reference tests, 242 xtask tests and 6 doctests passed remotely on 2026-09-08 UTC**; earlier runs remain dated below | Exact frozen batch above; not production evidence or credit for other work in progress |
 | Rust local gate driver | **Complete reference gate PASS remotely on 2026-09-08 UTC** under `nightly-2026-09-07`; earlier local 2026-09-06 gate retained below | Initial inventory, registry-core and full concordance checks execute; external admission remains incomplete; new source requires a new run |
 | Production release gate | Explicitly refuses release | No qualified broker/toolchain/target/signing closure |
 | Machine-readable registries | 40 invariants, 21 hypotheses, 143 packets, 5 SLO targets, founding concordance (38 ideas, 9 syntheses, 67 engineering additions), preregistration ledger with no preregistered protocol yet, system map (9 layers) and vocabulary (26 nouns, 35 verbs, 12 reason codes) | Static structural checks are not proofs of their claims |
