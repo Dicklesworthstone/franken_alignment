@@ -1,0 +1,53 @@
+  [2m2026-09-08T09:22:11.850540Z[0m [32m INFO[0m [1;32mrch::hook[0m[32m: [32mSelected worker: vmi1149989 at root@212.90.121.76 (4 slots remaining after reservation, speed 71.9)[0m
+    [2;3mat[0m rch/src/hook.rs:2645 [2;3mon[0m ThreadId(1)
+
+[*] Job j-30004650170124442 submitted to vmi1149989 (4 slots remaining, speed 71.9)
+  [2m2026-09-08T09:22:11.886866Z[0m [32m INFO[0m [1;32mrch::hook::transfer_orchestration[0m[32m: [32mStarting remote compilation pipeline for franken_alignment_wave7_gate8_20260908 (hash: 6e48d8f252f4c123)[0m
+    [2;3mat[0m rch/src/hook/transfer_orchestration.rs:510 [2;3mon[0m ThreadId(1)
+
+  [2m2026-09-08T09:22:11.886894Z[0m [32m INFO[0m [1;32mrch::hook::transfer_orchestration[0m[32m: [32mPrepared dependency sync manifest for 1 roots[0m
+    [2;3mat[0m rch/src/hook/transfer_orchestration.rs:532 [2;3mon[0m ThreadId(1)
+
+  [2m2026-09-08T09:22:13.370803Z[0m [32m INFO[0m [1;32mrch::hook::transfer_orchestration[0m[32m: [32mSyncing project to worker vmi1149989...[0m
+    [2;3mat[0m rch/src/hook/transfer_orchestration.rs:661 [2;3mon[0m ThreadId(1)
+
+  [2m2026-09-08T09:22:13.371080Z[0m [32m INFO[0m [1;32mrch::transfer[0m[32m: [32mLinked git worktree detected at /Users/jemanuel/projects/franken_alignment_wave7_gate8_20260908 (gitdir: /Users/jemanuel/projects/franken_alignment/.git/worktrees/franken_alignment_wave7_gate8_20260908); excluding dangling '.git' file from upload so the remote build resolves git-free like a normal repo[0m
+    [2;3mat[0m rch/src/transfer.rs:2009 [2;3mon[0m ThreadId(1)
+
+  [2m2026-09-08T09:22:13.371108Z[0m [32m INFO[0m [1;32mrch::transfer[0m[32m: [32mSyncing /Users/jemanuel/projects/franken_alignment_wave7_gate8_20260908 -> /Users/jemanuel/projects/franken_alignment_wave7_gate8_20260908 on vmi1149989 (streaming)[0m
+    [2;3mat[0m rch/src/transfer.rs:3549 [2;3mon[0m ThreadId(1)
+
+  [2m2026-09-08T09:22:15.612224Z[0m [32m INFO[0m [1;32mrch::hook::transfer_orchestration[0m[32m: [32mSync complete: 721 files, 1497859 bytes in 2219ms[0m
+    [2;3mat[0m rch/src/hook/transfer_orchestration.rs:958 [2;3mon[0m ThreadId(1)
+
+  [2m2026-09-08T09:22:15.623740Z[0m [32m INFO[0m [1;32mrch::hook::transfer_orchestration[0m[32m: [32mExecuting command remotely: /data/tmp/rch/franken_alignment_wave7_gate8_20260908/.rch-target-vmi1149989-pool-e1d4861595f99baab713f640b9294c2d/release/build/fa-reference/914d9b75c0aa30ef/out/observation_algebra_costs-914d9b75c0aa30ef --exact first_tap_is_selectable_for_fresh_process_measurement --nocapture '--test-threads=1'[0m
+    [2;3mat[0m rch/src/hook/transfer_orchestration.rs:1018 [2;3mon[0m ThreadId(1)
+
+  [2m2026-09-08T09:22:15.623827Z[0m [32m INFO[0m [1;32mrch::transfer[0m[32m: [32mWrapping command with external timeout protection, [1;32mkind[0m[32m: job, [1;32mtimeout_secs[0m[32m: 3600[0m
+    [2;3mat[0m rch/src/transfer.rs:2669 [2;3mon[0m ThreadId(1)
+
+Warning: Permanently added '212.90.121.76' (ED25519) to the list of known hosts.
+
+running 1 test
+test first_tap_is_selectable_for_fresh_process_measurement ... FA068_OBSERVATION_ALGEBRA case=first_tap samples=1 successes=1 refusals=0 observed_errors=0 logical_retained_bytes=9 elapsed_ns=1011 timing_scope=fresh_process_exact_release_invocation_only_tap_only_input_context_setup_and_output_assertions_excluded_no_tap_preflight memory_measurement=unavailable_reference_profile no_claim=os_page_cache_cpu_cold_capture_or_runtime_execution
+ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 3 filtered out; finished in 0.00s
+
+  [2m2026-09-08T09:22:17.153857Z[0m [32m INFO[0m [1;32mrch::hook::transfer_orchestration[0m[32m: [32mRemote command finished: exit=0 in 1529ms[0m
+    [2;3mat[0m rch/src/hook/transfer_orchestration.rs:1150 [2;3mon[0m ThreadId(1)
+
+[W] Worker: vmi1149989 | Job: j-30004650170124442
+[T] Total: 3.7s (sync 2.2s, build 1.5s, artifacts --)
+^ Sync: 1.4 MB in 2.2s (659.2 KB/s)
+[C] Compile: 1.5s
+Artifacts: skipped
+[T] Cache: MISS
++-------------- * Build Successful ---------------+
+| New personal best! 1.5s (previous: 14.6s)       |
+| Duration: 1.5s (v 90% faster vs previous 14.6s) |
+| Worker: vmi1149989                              |
+| Cache: MISS (warming cache)                     |
+| Time: 2026-09-08 09:22:17                       |
++-------------------------------------------------+
+[RCH] remote vmi1149989 (5.3s)

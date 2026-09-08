@@ -1,0 +1,25 @@
+{
+  "command": [
+    "rch",
+    "--json",
+    "exec",
+    "--job",
+    "--",
+    "heaptrack",
+    "--record-only",
+    "-o",
+    "/tmp/fa-campaign-20260908-wave7-profile/observation_algebra_costs-profile",
+    "/tmp/fa-campaign-20260908-wave7-profile/observation_algebra_costs",
+    "_",
+    "--nocapture",
+    "--test-threads=1"
+  ],
+  "binary": {
+    "remote_path": "/data/tmp/rch/franken_alignment_wave7_gate8_20260908/.rch-target-vmi1149989-pool-e1d4861595f99baab713f640b9294c2d/release/build/fa-reference/914d9b75c0aa30ef/out/observation_algebra_costs-914d9b75c0aa30ef",
+    "sha256": "e9c4070a390dd5f7fe6c8359001ad22714253488f74e4a796052e9e8fc0931c3",
+    "local_path": "/tmp/fa-campaign-20260908/wave7-profile-binaries/observation_algebra_costs"
+  },
+  "source_inputs": "wave7-gate8-inputs.json",
+  "working_directory": "/Users/jemanuel/projects/franken_alignment_wave7_gate8_20260908",
+  "scope": "Algebra profile runs all four cost tests using common underscore filter; its first-tap row earns no sole-process credit. Inventory profile runs its eight fixed cases. Each same-binary same-length unmatched-filter baseline runs zero tests and earns no passing-test credit."
+}

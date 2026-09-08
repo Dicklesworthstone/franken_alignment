@@ -1,0 +1,72 @@
+  [2m2026-09-08T09:22:27.395581Z[0m [32m INFO[0m [1;32mrch::hook[0m[32m: [32mSelected worker: vmi1227854 at root@109.123.245.77 (4 slots remaining after reservation, speed 71.7)[0m
+    [2;3mat[0m rch/src/hook.rs:2645 [2;3mon[0m ThreadId(1)
+
+[*] Job j-30004650170124444 submitted to vmi1227854 (4 slots remaining, speed 71.7)
+  [2m2026-09-08T09:22:27.434325Z[0m [32m INFO[0m [1;32mrch::hook::transfer_orchestration[0m[32m: [32mStarting remote compilation pipeline for franken_alignment_wave7_gate8_20260908 (hash: 6e48d8f252f4c123)[0m
+    [2;3mat[0m rch/src/hook/transfer_orchestration.rs:510 [2;3mon[0m ThreadId(1)
+
+  [2m2026-09-08T09:22:27.434360Z[0m [32m INFO[0m [1;32mrch::hook::transfer_orchestration[0m[32m: [32mPrepared dependency sync manifest for 1 roots[0m
+    [2;3mat[0m rch/src/hook/transfer_orchestration.rs:532 [2;3mon[0m ThreadId(1)
+
+  [2m2026-09-08T09:22:28.751240Z[0m [32m INFO[0m [1;32mrch::hook::transfer_orchestration[0m[32m: [32mSyncing project to worker vmi1227854...[0m
+    [2;3mat[0m rch/src/hook/transfer_orchestration.rs:661 [2;3mon[0m ThreadId(1)
+
+  [2m2026-09-08T09:22:28.752338Z[0m [32m INFO[0m [1;32mrch::transfer[0m[32m: [32mLinked git worktree detected at /Users/jemanuel/projects/franken_alignment_wave7_gate8_20260908 (gitdir: /Users/jemanuel/projects/franken_alignment/.git/worktrees/franken_alignment_wave7_gate8_20260908); excluding dangling '.git' file from upload so the remote build resolves git-free like a normal repo[0m
+    [2;3mat[0m rch/src/transfer.rs:2009 [2;3mon[0m ThreadId(1)
+
+  [2m2026-09-08T09:22:28.752358Z[0m [32m INFO[0m [1;32mrch::transfer[0m[32m: [32mSyncing /Users/jemanuel/projects/franken_alignment_wave7_gate8_20260908 -> /Users/jemanuel/projects/franken_alignment_wave7_gate8_20260908 on vmi1227854 (streaming)[0m
+    [2;3mat[0m rch/src/transfer.rs:3549 [2;3mon[0m ThreadId(1)
+
+  [2m2026-09-08T09:22:31.113585Z[0m [32m INFO[0m [1;32mrch::hook::transfer_orchestration[0m[32m: [32mSync complete: 721 files, 1497859 bytes in 2344ms[0m
+    [2;3mat[0m rch/src/hook/transfer_orchestration.rs:958 [2;3mon[0m ThreadId(1)
+
+  [2m2026-09-08T09:22:31.128842Z[0m [32m INFO[0m [1;32mrch::hook::transfer_orchestration[0m[32m: [32mExecuting command remotely: heaptrack --record-only -o /tmp/fa-campaign-20260908-wave7-profile/observation_algebra_costs-profile /tmp/fa-campaign-20260908-wave7-profile/observation_algebra_costs _ --nocapture '--test-threads=1'[0m
+    [2;3mat[0m rch/src/hook/transfer_orchestration.rs:1018 [2;3mon[0m ThreadId(1)
+
+  [2m2026-09-08T09:22:31.128912Z[0m [32m INFO[0m [1;32mrch::transfer[0m[32m: [32mWrapping command with external timeout protection, [1;32mkind[0m[32m: job, [1;32mtimeout_secs[0m[32m: 3600[0m
+    [2;3mat[0m rch/src/transfer.rs:2669 [2;3mon[0m ThreadId(1)
+
+Warning: Permanently added '109.123.245.77' (ED25519) to the list of known hosts.
+heaptrack output will be written to "/tmp/fa-campaign-20260908-wave7-profile/observation_algebra_costs-profile.zst"
+starting application, this might take some time...
+
+running 4 tests
+test changed_profile_or_generation_refuses_without_consuming_the_control_transfer ... FA068_OBSERVATION_ALGEBRA case=changed_profile_refusal samples=1 successes=0 refusals=1 observed_errors=1 elapsed_ns=210 timing_scope=authorize_projection_only_same_fixture_valid_control_and_negative_context_setup_and_assertions_excluded memory_measurement=unavailable_reference_profile no_claim=policy_or_runtime_execution
+FA068_OBSERVATION_ALGEBRA case=changed_generation_refusal samples=1 successes=0 refusals=1 observed_errors=1 elapsed_ns=190 timing_scope=decode_only_same_fixture_valid_control_and_negative_law_context_setup_and_assertions_excluded memory_measurement=unavailable_reference_profile no_claim=decoder_or_runtime_execution
+ok
+test first_tap_is_selectable_for_fresh_process_measurement ... FA068_OBSERVATION_ALGEBRA case=first_tap samples=1 successes=1 refusals=0 observed_errors=0 logical_retained_bytes=9 elapsed_ns=4376 timing_scope=fresh_process_exact_release_invocation_only_tap_only_input_context_setup_and_output_assertions_excluded_no_tap_preflight memory_measurement=unavailable_reference_profile no_claim=os_page_cache_cpu_cold_capture_or_runtime_execution
+ok
+test fixed_public_operator_chain_costs_retain_exact_obligations_and_bytes ... FA068_OBSERVATION_ALGEBRA case=tap_projection_prefix_verify_decode_probe_join samples=4 successes=4 refusals=0 observed_errors=0 logical_retained_bytes=70 elapsed_ns_min=18017 elapsed_ns_median=23134 elapsed_ns_max=133110 elapsed_ns_total=197395 timing_scope=public_operator_chain_only_input_frontier_context_law_setup_and_output_assertions_excluded memory_measurement=unavailable_reference_profile no_claim=capture_verification_decode_helper_or_runtime_execution
+ok
+test near_decode_limit_and_failed_closed_scope_keep_exact_outcomes_and_obligations ... FA068_OBSERVATION_ALGEBRA case=near_decoded_byte_limit samples=1 successes=1 refusals=0 observed_errors=0 logical_retained_bytes=65545 elapsed_ns=35494 timing_scope=decode_only_verified_input_encoded_object_law_context_setup_and_output_assertions_excluded memory_measurement=unavailable_reference_profile no_claim=decoder_or_runtime_execution
+FA068_OBSERVATION_ALGEBRA case=unsatisfied_closed_scope samples=1 known=0 pending=1 observed_errors=0 elapsed_ns=8273 timing_scope=await_closed_scope_only_snapshot_frontier_requirement_context_setup_and_output_assertions_excluded memory_measurement=unavailable_reference_profile no_claim=closure_cost_or_runtime_execution
+ok
+
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+NOTE: heaptrack detected DEBUGINFOD_URLS but will disable it to prevent 
+unintended network delays during recording
+If you really want to use DEBUGINFOD, export HEAPTRACK_ENABLE_DEBUGINFOD=1
+heaptrack stats:
+	allocations:          	707
+	leaked allocations:   	4
+	temporary allocations:	164
+Heaptrack finished! Now run the following to investigate the data:
+
+  heaptrack --analyze "/tmp/fa-campaign-20260908-wave7-profile/observation_algebra_costs-profile.zst"
+  [2m2026-09-08T09:22:32.973694Z[0m [32m INFO[0m [1;32mrch::hook::transfer_orchestration[0m[32m: [32mRemote command finished: exit=0 in 1844ms[0m
+    [2;3mat[0m rch/src/hook/transfer_orchestration.rs:1150 [2;3mon[0m ThreadId(1)
+
+[W] Worker: vmi1227854 | Job: j-30004650170124444
+[T] Total: 4.2s (sync 2.3s, build 1.8s, artifacts --)
+^ Sync: 1.4 MB in 2.3s (624.0 KB/s)
+[C] Compile: 1.8s
+Artifacts: skipped
+[T] Cache: MISS
++------------ [OK] Build Successful -------------+
+| Duration: 1.8s (^ 38% slower vs previous 1.3s) |
+| Worker: vmi1227854                             |
+| Cache: MISS (warming cache)                    |
+| Time: 2026-09-08 09:22:32                      |
++------------------------------------------------+
+[RCH] remote vmi1227854 (5.6s)

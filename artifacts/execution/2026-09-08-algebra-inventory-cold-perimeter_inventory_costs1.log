@@ -1,0 +1,53 @@
+  [2m2026-09-08T09:22:17.231202Z[0m [32m INFO[0m [1;32mrch::hook[0m[32m: [32mSelected worker: vmi1149989 at root@212.90.121.76 (4 slots remaining after reservation, speed 71.9)[0m
+    [2;3mat[0m rch/src/hook.rs:2645 [2;3mon[0m ThreadId(1)
+
+[*] Job j-30004650170124443 submitted to vmi1149989 (4 slots remaining, speed 71.9)
+  [2m2026-09-08T09:22:17.274520Z[0m [32m INFO[0m [1;32mrch::hook::transfer_orchestration[0m[32m: [32mStarting remote compilation pipeline for franken_alignment_wave7_gate8_20260908 (hash: 6e48d8f252f4c123)[0m
+    [2;3mat[0m rch/src/hook/transfer_orchestration.rs:510 [2;3mon[0m ThreadId(1)
+
+  [2m2026-09-08T09:22:17.274550Z[0m [32m INFO[0m [1;32mrch::hook::transfer_orchestration[0m[32m: [32mPrepared dependency sync manifest for 1 roots[0m
+    [2;3mat[0m rch/src/hook/transfer_orchestration.rs:532 [2;3mon[0m ThreadId(1)
+
+  [2m2026-09-08T09:22:18.805760Z[0m [32m INFO[0m [1;32mrch::hook::transfer_orchestration[0m[32m: [32mSyncing project to worker vmi1149989...[0m
+    [2;3mat[0m rch/src/hook/transfer_orchestration.rs:661 [2;3mon[0m ThreadId(1)
+
+  [2m2026-09-08T09:22:18.806421Z[0m [32m INFO[0m [1;32mrch::transfer[0m[32m: [32mLinked git worktree detected at /Users/jemanuel/projects/franken_alignment_wave7_gate8_20260908 (gitdir: /Users/jemanuel/projects/franken_alignment/.git/worktrees/franken_alignment_wave7_gate8_20260908); excluding dangling '.git' file from upload so the remote build resolves git-free like a normal repo[0m
+    [2;3mat[0m rch/src/transfer.rs:2009 [2;3mon[0m ThreadId(1)
+
+  [2m2026-09-08T09:22:18.806443Z[0m [32m INFO[0m [1;32mrch::transfer[0m[32m: [32mSyncing /Users/jemanuel/projects/franken_alignment_wave7_gate8_20260908 -> /Users/jemanuel/projects/franken_alignment_wave7_gate8_20260908 on vmi1149989 (streaming)[0m
+    [2;3mat[0m rch/src/transfer.rs:3549 [2;3mon[0m ThreadId(1)
+
+  [2m2026-09-08T09:22:20.669629Z[0m [32m INFO[0m [1;32mrch::hook::transfer_orchestration[0m[32m: [32mSync complete: 721 files, 28662 bytes in 1840ms[0m
+    [2;3mat[0m rch/src/hook/transfer_orchestration.rs:958 [2;3mon[0m ThreadId(1)
+
+  [2m2026-09-08T09:22:20.681170Z[0m [32m INFO[0m [1;32mrch::hook::transfer_orchestration[0m[32m: [32mExecuting command remotely: /data/tmp/rch/franken_alignment_wave7_gate8_20260908/.rch-target-vmi1149989-pool-e1d4861595f99baab713f640b9294c2d/release/build/fa-reference/e8429951886640a5/out/perimeter_inventory_costs-e8429951886640a5 --exact first_regular_file_load_is_selectable_for_fresh_process_measurement --nocapture '--test-threads=1'[0m
+    [2;3mat[0m rch/src/hook/transfer_orchestration.rs:1018 [2;3mon[0m ThreadId(1)
+
+  [2m2026-09-08T09:22:20.681244Z[0m [32m INFO[0m [1;32mrch::transfer[0m[32m: [32mWrapping command with external timeout protection, [1;32mkind[0m[32m: job, [1;32mtimeout_secs[0m[32m: 3600[0m
+    [2;3mat[0m rch/src/transfer.rs:2669 [2;3mon[0m ThreadId(1)
+
+Warning: Permanently added '212.90.121.76' (ED25519) to the list of known hosts.
+
+running 1 test
+test first_regular_file_load_is_selectable_for_fresh_process_measurement ... FA002_PERIMETER_INVENTORY_FILE_LOAD case=first_regular_file_load samples=1 successes=1 refusals=0 observed_errors=0 logical_input_bytes=783 elapsed_ns=981653 timing_scope=fresh_process_exact_release_invocation_only_owned_regular_file_open_bounded_read_strict_parse_inventory_validation_only_lookup_assertions_drop_excluded_no_loader_preflight memory_measurement=unavailable_reference_profile no_claim=os_page_cache_cpu_cold_endpoint_or_broker
+ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 1 filtered out; finished in 0.00s
+
+  [2m2026-09-08T09:22:22.014645Z[0m [32m INFO[0m [1;32mrch::hook::transfer_orchestration[0m[32m: [32mRemote command finished: exit=0 in 1333ms[0m
+    [2;3mat[0m rch/src/hook/transfer_orchestration.rs:1150 [2;3mon[0m ThreadId(1)
+
+[W] Worker: vmi1149989 | Job: j-30004650170124443
+[T] Total: 3.2s (sync 1.8s, build 1.3s, artifacts --)
+^ Sync: 28.0 KB in 1.8s (15.2 KB/s)
+[C] Compile: 1.3s
+Artifacts: skipped
+[T] Cache: MISS
++-------------- * Build Successful --------------+
+| New personal best! 1.3s (previous: 1.5s)       |
+| Duration: 1.3s (v 13% faster vs previous 1.5s) |
+| Worker: vmi1149989                             |
+| Cache: MISS (warming cache)                    |
+| Time: 2026-09-08 09:22:22                      |
++------------------------------------------------+
+[RCH] remote vmi1149989 (4.8s)

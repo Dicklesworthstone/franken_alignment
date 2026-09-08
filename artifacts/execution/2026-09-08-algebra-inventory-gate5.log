@@ -1,0 +1,432 @@
+  [2m2026-09-08T09:06:59.915814Z[0m [32m INFO[0m [1;32mrch::hook[0m[32m: [32mSelected worker: vmi1149989 at root@212.90.121.76 (4 slots remaining after reservation, speed 71.9)[0m
+    [2;3mat[0m rch/src/hook.rs:2645 [2;3mon[0m ThreadId(1)
+
+[*] Job j-30004650170124433 submitted to vmi1149989 (4 slots remaining, speed 71.9)
+  [2m2026-09-08T09:06:59.963739Z[0m [32m INFO[0m [1;32mrch::hook::transfer_orchestration[0m[32m: [32mStarting remote compilation pipeline for franken_alignment_wave7_gate5_20260908 (hash: 09281d30d48e3433)[0m
+    [2;3mat[0m rch/src/hook/transfer_orchestration.rs:510 [2;3mon[0m ThreadId(1)
+
+  [2m2026-09-08T09:06:59.963766Z[0m [32m INFO[0m [1;32mrch::hook::transfer_orchestration[0m[32m: [32mPrepared dependency sync manifest for 1 roots[0m
+    [2;3mat[0m rch/src/hook/transfer_orchestration.rs:532 [2;3mon[0m ThreadId(1)
+
+  [2m2026-09-08T09:07:01.240252Z[0m [32m INFO[0m [1;32mrch::hook::transfer_orchestration[0m[32m: [32mSyncing project to worker vmi1149989...[0m
+    [2;3mat[0m rch/src/hook/transfer_orchestration.rs:661 [2;3mon[0m ThreadId(1)
+
+  [2m2026-09-08T09:07:07.096254Z[0m [32m INFO[0m [1;32mrch::transfer[0m[32m: [32mLinked git worktree detected at /Users/jemanuel/projects/franken_alignment_wave7_gate5_20260908 (gitdir: /Users/jemanuel/projects/franken_alignment/.git/worktrees/franken_alignment_wave7_gate5_20260908); excluding dangling '.git' file from upload so the remote build resolves git-free like a normal repo[0m
+    [2;3mat[0m rch/src/transfer.rs:2009 [2;3mon[0m ThreadId(1)
+
+  [2m2026-09-08T09:07:07.097843Z[0m [32m INFO[0m [1;32mrch::transfer[0m[32m: [32mSyncing /Users/jemanuel/projects/franken_alignment_wave7_gate5_20260908 -> /data/tmp/rch/franken_alignment_wave7_gate5_20260908/09281d30d48e3433 on vmi1149989 (streaming)[0m
+    [2;3mat[0m rch/src/transfer.rs:3549 [2;3mon[0m ThreadId(1)
+
+  [2m2026-09-08T09:07:09.098826Z[0m [32m INFO[0m [1;32mrch::hook::transfer_orchestration[0m[32m: [32mSync complete: 20 files, 10792113 bytes in 7475ms[0m
+    [2;3mat[0m rch/src/hook/transfer_orchestration.rs:958 [2;3mon[0m ThreadId(1)
+
+  [2m2026-09-08T09:07:09.109790Z[0m [32m INFO[0m [1;32mrch::hook::transfer_orchestration[0m[32m: [32mExecuting command remotely: cargo +nightly-2026-09-08 run --locked -p xtask -- check[0m
+    [2;3mat[0m rch/src/hook/transfer_orchestration.rs:1018 [2;3mon[0m ThreadId(1)
+
+  [2m2026-09-08T09:07:09.109843Z[0m [32m INFO[0m [1;32mrch::transfer[0m[32m: [32mRewriting CARGO_TARGET_DIR for remote execution (worker-scoped path): /Volumes/USB_NVME/cargo-target -> /data/tmp/rch/franken_alignment_wave7_gate5_20260908/.rch-target-vmi1149989-pool-7fe969a2932eb75bc67addc8acc2eeec[0m
+    [2;3mat[0m rch/src/transfer.rs:1842 [2;3mon[0m ThreadId(1)
+
+  [2m2026-09-08T09:07:09.109873Z[0m [32m INFO[0m [1;32mrch::transfer[0m[32m: [32mWrapping command with external timeout protection, [1;32mkind[0m[32m: cargo build, [1;32mtimeout_secs[0m[32m: 3600[0m
+    [2;3mat[0m rch/src/transfer.rs:2669 [2;3mon[0m ThreadId(1)
+
+Warning: Permanently added '212.90.121.76' (ED25519) to the list of known hosts.
+warning: unused field `license-file` in `workspace.package`
+ --> Cargo.toml:9:1
+  |
+9 | license-file = "LICENSE"
+  | ^^^^^^^^^^^^
+  |
+  = note: `cargo::unused_workspace_package_fields` is set to `warn` by default
+help: consider removing the field `workspace.package.license-file`
+warning: workspace (manifest) generated 1 warning
+   Compiling xtask v0.2.0 (/data/tmp/rch/franken_alignment_wave7_gate5_20260908/09281d30d48e3433/xtask)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 3.28s
+     Running `/data/tmp/rch/franken_alignment_wave7_gate5_20260908/.rch-target-vmi1149989-pool-7fe969a2932eb75bc67addc8acc2eeec/debug/xtask check`
+PASS reference_lock: exactly fa-reference and xtask; no external packages
+PASS source_inventory: required files and crate-level prohibitions present
+EXECUTE rustc -Vv
+rustc 1.100.0-nightly (cea272fa3 2026-09-07)
+binary: rustc
+commit-hash: cea272fa356e94bd2ee2cadf376630aa0683867a
+commit-date: 2026-09-07
+host: x86_64-unknown-linux-gnu
+release: 1.100.0-nightly
+LLVM version: 23.1.1
+PASS qualified_rustc_identity: cea272fa356e94bd2ee2cadf376630aa0683867a on x86_64-unknown-linux-gnu; compiler-reported identity only
+PASS admission_contract: required local source, target, build/runtime review and future external constraints; snapshot identity matched
+SNAPSHOT tool: sha256sum
+SNAPSHOT verified files: 172
+PASS source_snapshot: 172 reviewed files match the manifest byte for byte, and the discovered set equals the manifest set. Digests come from the operator's SHA-256 tool; no cryptography is implemented here. Not a claim about the hashing binary's authenticity, runtime semantics, or package dependencies.
+EXECUTE cargo metadata --format-version 1 --locked --offline --filter-platform aarch64-apple-darwin --manifest-path /data/tmp/rch/franken_alignment_wave7_gate5_20260908/09281d30d48e3433/Cargo.toml
+ADMISSION target profile: aarch64-apple-darwin
+ADMISSION inventory:
+  fa-reference 0.2.0 path+file:///data/tmp/rch/franken_alignment_wave7_gate5_20260908/09281d30d48e3433/crates/fa-reference#0.2.0 at crates/fa-reference/Cargo.toml [workspace local] kinds=bin,lib,test links=none features=none
+  xtask 0.2.0 path+file:///data/tmp/rch/franken_alignment_wave7_gate5_20260908/09281d30d48e3433/xtask#0.2.0 at xtask/Cargo.toml [workspace local] kinds=bin links=none features=none
+ADMISSION note: claim is bound to target profile `aarch64-apple-darwin`; cargo metadata does not record which --filter-platform produced it, so the target binding rests on the caller collecting this document with `--filter-platform aarch64-apple-darwin`, not on the document itself
+ADMISSION note: metadata establishes identity, structure and feature activation only; it does not establish a runtime or downloaded-artifact closure
+PASS admission_closed_inventory[aarch64-apple-darwin]: exact local package set, exact resolve bijection, no external source, build script, proc macro, native link, build or target-scoped dependency, and the frozen feature set. Not a runtime or downloaded-artifact closure claim.
+PASS collected_metadata_paths[aarch64-apple-darwin]: actual workspace, manifests and target source files
+EXECUTE cargo metadata --format-version 1 --locked --offline --filter-platform x86_64-unknown-linux-gnu --manifest-path /data/tmp/rch/franken_alignment_wave7_gate5_20260908/09281d30d48e3433/Cargo.toml
+ADMISSION target profile: x86_64-unknown-linux-gnu
+ADMISSION inventory:
+  fa-reference 0.2.0 path+file:///data/tmp/rch/franken_alignment_wave7_gate5_20260908/09281d30d48e3433/crates/fa-reference#0.2.0 at crates/fa-reference/Cargo.toml [workspace local] kinds=bin,lib,test links=none features=none
+  xtask 0.2.0 path+file:///data/tmp/rch/franken_alignment_wave7_gate5_20260908/09281d30d48e3433/xtask#0.2.0 at xtask/Cargo.toml [workspace local] kinds=bin links=none features=none
+ADMISSION note: claim is bound to target profile `x86_64-unknown-linux-gnu`; cargo metadata does not record which --filter-platform produced it, so the target binding rests on the caller collecting this document with `--filter-platform x86_64-unknown-linux-gnu`, not on the document itself
+ADMISSION note: metadata establishes identity, structure and feature activation only; it does not establish a runtime or downloaded-artifact closure
+PASS admission_closed_inventory[x86_64-unknown-linux-gnu]: exact local package set, exact resolve bijection, no external source, build script, proc macro, native link, build or target-scoped dependency, and the frozen feature set. Not a runtime or downloaded-artifact closure claim.
+PASS collected_metadata_paths[x86_64-unknown-linux-gnu]: actual workspace, manifests and target source files
+PASS registry_core: IDs, roadmap DAG, declared links, retained files and scoped source test declarations; not execution or invariant proof
+CONCORDANCE input=registry/founding_concordance.json bytes=42815 sha256=cf90c49704448eaaab47e447c15033c94dd66c37c895c74c8b7bce2f135c251d; verified source manifest, outer freeze required
+CONCORDANCE input=registry/invariants.json bytes=58091 sha256=439eb01af497f0254b439029da9203019cd567835502f5ec7a3905aa45763c74; verified source manifest, outer freeze required
+CONCORDANCE input=registry/claims.json bytes=15799 sha256=9e729380f01af536b21f116d334977db77e3900e43367c6f19b1522296c61005; verified source manifest, outer freeze required
+CONCORDANCE input=registry/roadmap.json bytes=114657 sha256=7a1b4dddc70c2083e8cbd7b323e55e4f96d890937adbbde1df318d9635b93e22; verified source manifest, outer freeze required
+CONCORDANCE input=COMPREHENSIVE_PLAN_FOR_THE_DESIGN_OF_FRANKENALIGNMENT.md bytes=251689 sha256=b08ed463dd8d321a5f1a4a65fb839456345788fcc6cb9b8ff3103c7143d64616; verified source manifest, outer freeze required
+CONCORDANCE_JSON {"missing":[],"dangling":[],"counts":{"headings":231,"invariants":40,"hypotheses":21,"packets":143}}
+PASS concordance: direct typed coverage and reference validity; not implementation or invariant proof
+SYSTEM_MAP input=registry/system_map.json bytes=8225 sha256=7b62748269fd1fa55a7a8ea2a2cd9274970accfff4e7e97b1983fdf342f29223; operator digest and outer freeze, not receipt authentication
+SYSTEM_MAP input=registry/vocabulary.json bytes=10344 sha256=b5b7cb253333f43ba6bcc6b08268bb91ceab7767b7d7581fa5cec7f41a475615; operator digest and outer freeze, not receipt authentication
+SYSTEM_MAP input=registry/invariants.json bytes=58091 sha256=439eb01af497f0254b439029da9203019cd567835502f5ec7a3905aa45763c74; operator digest and outer freeze, not receipt authentication
+SYSTEM_MAP input=registry/roadmap.json bytes=114657 sha256=7a1b4dddc70c2083e8cbd7b323e55e4f96d890937adbbde1df318d9635b93e22; operator digest and outer freeze, not receipt authentication
+SYSTEM_MAP input=README.md bytes=56120 sha256=d58895b9ba14b6687871738cc73c365a3849d1ca22689a6c19d7422af3082c2d; operator digest and outer freeze, not receipt authentication
+SYSTEM_MAP input=docs/AGENT_GUIDE.md bytes=9645 sha256=cbb54889340d1e239ad17228faa4ad640ce4e684049153d3ff160c44d5144a8f; operator digest and outer freeze, not receipt authentication
+SYSTEM_MAP input=docs/SYSTEM_MAP.md bytes=7188 sha256=52cae2e9d0bfef7f44af75c398e9f9d47aba3591389e6b23553e3d390f422c02; operator digest and outer freeze, not receipt authentication
+SYSTEM_MAP input=.beads/issues.jsonl bytes=1483046 sha256=8208bd9d4aa2b17daf5c3c78e4c8326888d7516dc2ba9929b5c1ce212f268abf; operator digest and outer freeze, not receipt authentication
+SYSTEM_MAP input=COMPREHENSIVE_PLAN_FOR_THE_DESIGN_OF_FRANKENALIGNMENT.md bytes=251689 sha256=b08ed463dd8d321a5f1a4a65fb839456345788fcc6cb9b8ff3103c7143d64616; operator digest and outer freeze, not receipt authentication
+SYSTEM_MAP_JSON {"missing":[],"retired_in_use":[],"unregistered_verbs":[],"counts":{"layers":9,"verbs":35,"packets":143,"guide_commands":42,"readme_commands":11}}
+PASS system_map: bounded registry/document consistency and checker-epic bead link; no command or layer-suite execution claim
+PROSE input=README.md bytes=56120 sha256=d58895b9ba14b6687871738cc73c365a3849d1ca22689a6c19d7422af3082c2d; operator digest and outer freeze, not receipt authentication
+PROSE input=IMPLEMENTATION_STATUS.md bytes=42980 sha256=af7c53dbe2b1755a00db2a0797821e8a7c361f05b35c99af6e2035cfd1b9785b; operator digest and outer freeze, not receipt authentication
+PROSE input=artifacts/execution/2026-09-08-witness-receipt.json bytes=14203 sha256=7cb39210ac1835742b5e374dcb14230b7041defca2b56afd3ec10bf67b8dbf0e; operator digest and outer freeze, not receipt authentication
+PROSE input=registry/founding_concordance.json bytes=42815 sha256=cf90c49704448eaaab47e447c15033c94dd66c37c895c74c8b7bce2f135c251d; operator digest and outer freeze, not receipt authentication
+PROSE input=registry/invariants.json bytes=58091 sha256=439eb01af497f0254b439029da9203019cd567835502f5ec7a3905aa45763c74; operator digest and outer freeze, not receipt authentication
+PROSE input=registry/claims.json bytes=15799 sha256=9e729380f01af536b21f116d334977db77e3900e43367c6f19b1522296c61005; operator digest and outer freeze, not receipt authentication
+PROSE input=registry/roadmap.json bytes=114657 sha256=7a1b4dddc70c2083e8cbd7b323e55e4f96d890937adbbde1df318d9635b93e22; operator digest and outer freeze, not receipt authentication
+PROSE input=COMPREHENSIVE_PLAN_FOR_THE_DESIGN_OF_FRANKENALIGNMENT.md bytes=251689 sha256=b08ed463dd8d321a5f1a4a65fb839456345788fcc6cb9b8ff3103c7143d64616; operator digest and outer freeze, not receipt authentication
+PROSE_JSON {"findings":[],"counts":{"founding_ideas":38,"syntheses":9,"engineering_additions":67,"invariants":40,"hypotheses":21,"packets":143}}
+PASS prose_consistency: current declarations match registries and the named retained receipt; not new-source execution proof
+EXECUTE cargo fmt --all --check
+PASS executed_command: cargo fmt --all --check
+EXECUTE cargo check --workspace --all-targets --frozen
+warning: unused field `license-file` in `workspace.package`
+ --> Cargo.toml:9:1
+  |
+9 | license-file = "LICENSE"
+  | ^^^^^^^^^^^^
+  |
+  = note: `cargo::unused_workspace_package_fields` is set to `warn` by default
+help: consider removing the field `workspace.package.license-file`
+warning: workspace (manifest) generated 1 warning
+    Checking fa-reference v0.2.0 (/data/tmp/rch/franken_alignment_wave7_gate5_20260908/09281d30d48e3433/crates/fa-reference)
+    Checking xtask v0.2.0 (/data/tmp/rch/franken_alignment_wave7_gate5_20260908/09281d30d48e3433/xtask)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 1.92s
+PASS executed_command: cargo check --workspace --all-targets --frozen
+EXECUTE cargo clippy --workspace --all-targets --frozen -- -D warnings
+warning: unused field `license-file` in `workspace.package`
+ --> Cargo.toml:9:1
+  |
+9 | license-file = "LICENSE"
+  | ^^^^^^^^^^^^
+  |
+  = note: `cargo::unused_workspace_package_fields` is set to `warn` by default
+help: consider removing the field `workspace.package.license-file`
+warning: workspace (manifest) generated 1 warning
+    Checking fa-reference v0.2.0 (/data/tmp/rch/franken_alignment_wave7_gate5_20260908/09281d30d48e3433/crates/fa-reference)
+    Checking xtask v0.2.0 (/data/tmp/rch/franken_alignment_wave7_gate5_20260908/09281d30d48e3433/xtask)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 2.13s
+PASS executed_command: cargo clippy --workspace --all-targets --frozen -- -D warnings
+EXECUTE cargo test --workspace --all-targets --frozen
+warning: unused field `license-file` in `workspace.package`
+ --> Cargo.toml:9:1
+  |
+9 | license-file = "LICENSE"
+  | ^^^^^^^^^^^^
+  |
+  = note: `cargo::unused_workspace_package_fields` is set to `warn` by default
+help: consider removing the field `workspace.package.license-file`
+warning: workspace (manifest) generated 1 warning
+   Compiling fa-reference v0.2.0 (/data/tmp/rch/franken_alignment_wave7_gate5_20260908/09281d30d48e3433/crates/fa-reference)
+   Compiling xtask v0.2.0 (/data/tmp/rch/franken_alignment_wave7_gate5_20260908/09281d30d48e3433/xtask)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 8.56s
+     Running unittests src/lib.rs (/data/tmp/rch/franken_alignment_wave7_gate5_20260908/.rch-target-vmi1149989-pool-7fe969a2932eb75bc67addc8acc2eeec/debug/build/fa-reference/805c210a23edaf0a/out/fa_reference-805c210a23edaf0a)
+
+running 105 tests
+test action::tests::exhausted_epoch_refuses_without_restoring_an_old_floor ... ok
+test canonical_json::tests::schema_permitted_identifier_arrays_may_be_empty ... ok
+test canonical_json::tests::duplicate_unknown_noncanonical_truncated_and_overflow_inputs_refuse_causally ... ok
+test canonical_json::tests::unicode_scalar_length_is_not_raw_byte_length_and_identifier_stays_ascii ... ok
+test canonical_json::tests::all_three_fixed_canonical_vectors_round_trip_without_normalization ... ok
+test evidence_view::tests::coverage_projection_and_window_mismatches_refuse ... ok
+test evidence_view::tests::empty_evidence_and_empty_projection_are_explicitly_valid ... ok
+test full_input::tests::malformed_partitions_omissions_and_bounds_are_rejected ... ok
+test evidence_view::tests::repeated_windows_for_one_original_are_valid_but_projection_is_distinct ... ok
+test evidence_view::tests::every_required_manifest_field_causally_invalidates_replay ... ok
+test evidence_view::tests::source_window_coverage_derives_truncated_and_refuses_mismatches ... ok
+test evidence_view::tests::omission_presence_kind_and_declared_range_are_replay_dependencies ... ok
+test evidence_view::tests::capture_and_replay_bind_exact_input_without_reencoding ... ok
+test full_input::tests::opaque_witness_binds_the_entire_actual_input_view ... ok
+test evidence_view::tests::every_input_profile_component_is_a_replay_dependency ... ok
+test history::tests::cancellation_after_dispatch_is_a_retained_counterexample ... ok
+test full_input::tests::semantic_epoch_triple_is_required_and_causally_invalidates ... ok
+test full_input::tests::transform_and_omission_changes_invalidate ... ok
+test history::tests::expiry_and_invalid_order_are_retained_counterexamples ... ok
+test history::tests::completed_only_means_all_events_were_accepted ... ok
+test history::tests::malformed_typed_histories_and_exact_bounds_refuse_before_replay ... ok
+test history::tests::cancellation_before_dispatch_completes_and_refunds ... ok
+test history::tests::seeded_multilane_success_reuses_reference_authority_lifecycle ... ok
+test history::tests::declared_seed_set_has_multiple_lane_order_preserving_schedules ... ok
+test full_input::tests::question_profile_and_unmentioned_evidence_changes_invalidate ... ok
+test history::tests::snapshot_and_retained_byte_bounds_refuse_before_replay ... ok
+test observation_algebra::tests::decode_rejects_privately_constructed_nonexact_verified_transfer ... ok
+test perimeter::tests::actor_direct_credential_refuses_next_to_broker_credential_control ... ok
+test perimeter::tests::complete_exact_brokered_route_is_classified_without_authority ... ok
+test perimeter::tests::aggregate_record_text_bound_refuses_many_individually_bounded_fields ... ok
+test perimeter::tests::nonbrokered_residuals_remain_visible_and_unmodeled_bypasses_refuse ... ok
+test perimeter::tests::unknown_route_or_scope_refuses_next_to_an_exact_control ... ok
+test perimeter::tests::count_and_text_bounds_refuse_before_retaining_records ... ok
+test perimeter_inventory::tests::directory_or_traversing_path_is_unreadable_without_parsing ... ok
+test perimeter_inventory::tests::loads_complete_metadata_with_exact_classification_lookup ... ok
+test perimeter_inventory::tests::direct_credential_and_route_nonclaim_overflow_refuse ... ok
+test perimeter::tests::missing_threat_classification_refuses_next_to_a_classified_control ... ok
+test product_frontier::tests::close_rejects_future_observation_and_terminal_close_rejects_extension ... ok
+test perimeter::tests::unmodeled_bypass_refuses_next_to_blocked_bypass_control ... ok
+test perimeter::tests::observe_and_cooperative_records_are_not_upgraded_to_brokered ... ok
+test product_frontier::tests::bounds_and_invalid_inputs_fail_without_admitting_a_projection ... ok
+test product_frontier::tests::closing_marker_cannot_cross_projection_epoch_or_generation ... ok
+test reducer::tests::actor_statement_is_refused_alongside_empirical_votes ... ok
+test reducer::tests::caps_bound_influence ... ok
+test product_frontier::tests::empty_close_rejects_invalid_generation_prior_progress_and_second_close_without_mutation ... ok
+test reducer::tests::actor_statement_not_a_reducer_input ... ok
+test reducer::tests::capped_permit_tally_is_a_positive_empirical_observation ... ok
+test product_frontier::tests::marker_requires_authenticated_prefix_and_its_own_observation ... ok
+test product_frontier::tests::contiguous_progress_cannot_manufacture_closure ... ok
+test reducer::tests::same_cohort_max_weights_clip_without_denominator_overflow ... ok
+test reducer::tests::separate_cohorts_each_receive_their_own_cap ... ok
+test reducer::tests::proportional_clipping_is_invariant_under_member_rename ... ok
+test reducer::tests::input_order_cannot_change_the_reduction ... ok
+test reducer::tests::input_bounds_prevent_unbounded_reduction ... ok
+test reducer::tests::overflow_is_refused_before_an_empirical_result ... ok
+test perimeter_inventory::tests::malformed_unknown_and_unmodeled_inputs_refuse_next_to_valid_control ... ok
+test reducer::tests::disqualifier_dominates_weighted_majority ... ok
+test round::tests::commit_after_reveals_open_is_rejected ... ok
+test round::tests::missing_reveal_is_missing_not_abstain ... ok
+test round::tests::the_domain_separator_is_part_of_the_preimage ... ok
+test round::tests::valid_reveals_are_recorded_for_the_frozen_members ... ok
+test reducer::tests::exhaustive_small_caps_never_admit_more_than_a_member_cap ... ok
+test tests::absent_key_detects_insertion ... ok
+test round::tests::conflicting_reveal_rejected ... ok
+test round::tests::commitment_binds_verdict ... ok
+test round::tests::membership_frozen_after_open ... ok
+test round::tests::invalid_reveal_and_duplicate_commit_do_not_mutate_member_slot ... ok
+test tests::cross_reads_defeat_disjoint_writes ... ok
+test tests::effect_binding_and_one_shot_dispatch ... ok
+test tests::dominator_and_bypass_are_distinguished ... ok
+test tests::empty_range_detects_phantom ... ok
+test tests::graph_limits_and_empty_claims_are_rejected ... ok
+test tests::frontier_limits_fail_without_mutation ... ok
+test tests::epoch_and_incompleteness_invalidate ... ok
+test tests::invalid_witness_is_not_admitted ... ok
+test tests::frontier_does_not_skip_a_gap ... ok
+test tests::evidence_stages_are_distinct ... ok
+test tests::reset_keeps_dispatched_liability ... ok
+test tests::reset_increments_incident_counter ... ok
+test tests::integer_probe_bound_matches_exhaustive_small_errors ... ok
+test round::tests::maximum_member_and_field_bounds_are_exact_and_reject_without_mutation ... ok
+test tests::integer_probe_requests_refinement_at_margin ... ok
+test tests::reset_keeps_spent_and_epoch ... ok
+test tests::reset_cannot_refund_unknown ... ok
+test tests::reserve_budget_and_duplicate_fail_closed ... ok
+test tests::rights_unknown_cannot_be_refunded_by_cancel ... ok
+test tests::witness_reuses_unrelated_changes ... ok
+test tests::resources_and_order_barriers_block_reordering ... ok
+test tests::resolved_non_effect_returns_rights_once ... ok
+test tests::revocation_fences_reserved_not_history ... ok
+test tests::reset_refunds_only_reserved_outside_keep ... ok
+test trace_independence::tests::bounded_pair_evaluation_counts_only_distinct_unordered_positions ... ok
+test trace_independence::tests::isolated_read_write_and_barrier_conflicts_preserve_order ... ok
+test trace_independence::tests::malformed_bindings_and_derived_unknown_dependencies_are_rejected_or_preserved ... ok
+test trace_independence::tests::bounded_pair_evaluation_exhausts_distinct_unordered_pairs ... ok
+test tests::exhaustive_four_vertex_cut_and_dominator_consistency ... ok
+test trace_independence::tests::bounds_cover_initial_and_post_union_domain_sizes_and_trace_counts ... ok
+test trace_independence::tests::registered_disjoint_operations_and_shared_read_only_pairs_commute ... ok
+test trace_independence::tests::registered_barriers_individually_preserve_order ... ok
+test witness::tests::bounds_duplicate_keys_and_wrong_marker_projection_refuse ... ok
+test witness::tests::stale_semantic_domain_and_closure_controls_refuse_reuse ... ok
+test tests::reset_overflow_is_before_mutation ... ok
+test witness::tests::exact_value_absence_and_unrelated_change_match_always_recompute ... ok
+test witness::tests::absence_needs_closed_authenticated_frontier_but_exact_read_does_not ... ok
+test witness::tests::changed_value_version_and_inserted_absence_match_always_recompute ... ok
+
+test result: ok. 105 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.08s
+
+
+running 12 tests
+test absent_target_and_wrong_scope_refuse_before_any_authority_can_reserve_rights ... ok
+test action_permit_public_path_dispatches_once_and_keeps_rights_conserved ... ok
+test attempt_limit_and_lifecycle_ordering_refuse_without_reserving_rights ... ok
+test authority_requires_an_explicit_clock_observation_before_preparation ... ok
+test caller_clock_is_monotonic_and_an_observed_deadline_prevents_effects ... ok
+test declared_judgment_basis_and_current_witnesses_are_both_required_without_spending ... ok
+test issuer_brand_blocks_same_scope_authority_and_capacity_failure_is_atomic ... ok
+test stale_epoch_and_expiry_refuse_dispatch_without_changing_the_reservation ... ok
+     Running tests/action_boundaries.rs (/data/tmp/rch/franken_alignment_wave7_gate5_20260908/.rch-target-vmi1149989-pool-7fe969a2932eb75bc67addc8acc2eeec/debug/build/fa-reference/c6af027cccaed371/out/action_boundaries-c6af027cccaed371)
+test freeze_refuses_unknown_versions_zero_identities_and_oversized_payloads ... ok
+test freeze_bounds_declared_witness_count_bytes_and_range_shape ... ok
+test unknown_outcome_stays_charged_until_explicit_trusted_reconciliation ... ok
+test every_exact_action_binding_component_refuses_a_near_identical_final_view ... ok
+
+test result: ok. 12 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+
+running 1 test
+test bounded_public_action_cost_harness ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+
+running 6 tests
+     Running tests/action_costs.rs (/data/tmp/rch/franken_alignment_wave7_gate5_20260908/.rch-target-vmi1149989-pool-7fe969a2932eb75bc67addc8acc2eeec/debug/build/fa-reference/6917f195e0be1f88/out/action_costs-6917f195e0be1f88)
+     Running tests/action_transitions.rs (/data/tmp/rch/franken_alignment_wave7_gate5_20260908/.rch-target-vmi1149989-pool-7fe969a2932eb75bc67addc8acc2eeec/debug/build/fa-reference/f54cba037df4a516/out/action_transitions-f54cba037df4a516)
+test exact_negative_domain_and_semantic_epoch_are_rechecked_at_authorize_and_dispatch ... ok
+test lawful_nominal_transition_chain_is_reachable_with_exact_accounting ... ok
+test missing_duplicate_and_postdispatch_operations_refuse_atomically ... ok
+test public_transition_table_exercises_every_state_method_cell_without_forging_permits ... ok
+test unknown_liability_requires_trusted_nonexecution_or_stays_irrecoverable ... ok
+test lawful_predispatch_cancel_and_deny_paths_preserve_or_release_only_reserved_rights ... ok
+
+test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+
+running 9 tests
+test duplicate_unknown_and_missing_fields_each_refuse_without_reinterpretation ... ok
+test canonical_bytes_refuse_whitespace_reordered_keys_and_nonshortest_escapes ... ok
+test schema_arrays_without_a_minimum_allow_empty_but_required_arrays_still_do_not ... ok
+     Running tests/canonical_json_boundaries.rs (/data/tmp/rch/franken_alignment_wave7_gate5_20260908/.rch-target-vmi1149989-pool-7fe969a2932eb75bc67addc8acc2eeec/debug/build/fa-reference/3574b7c8f4365341/out/canonical_json_boundaries-3574b7c8f4365341)
+test unsigned_decimal_integer_forms_overflow_and_schema_ranges_refuse_causally ... ok
+test literals_remain_unicode_without_normalization_and_text_limits_use_characters ... ok
+test parser_document_depth_item_and_string_bounds_refuse_before_schema_admission ... ok
+test truncated_and_schema_flagged_duplicate_arrays_refuse_while_order_and_unflagged_duplicates_survive ... ok
+test three_fixed_canonical_schema_controls_decode_validate_and_reencode_exactly ... ok
+test maximum_schema_forms_fit_inside_parser_bounds_and_exceeding_schema_counts_refuses ... ok
+
+test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
+
+
+running 3 tests
+test cold_decode_action_v01_manual_fixture ... ok
+     Running tests/canonical_json_cold_costs.rs (/data/tmp/rch/franken_alignment_wave7_gate5_20260908/.rch-target-vmi1149989-pool-7fe969a2932eb75bc67addc8acc2eeec/debug/build/fa-reference/0a4fa593f647bdf3/out/canonical_json_cold_costs-0a4fa593f647bdf3)
+test cold_decode_evidence_v01_manual_fixture ... ok
+test cold_decode_capability_v01_manual_fixture ... ok
+
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+
+running 4 tests
+test action_v01_manual_golden_is_exact_across_public_boundaries ... ok
+test evidence_v01_manual_golden_preserves_literal_unicode_without_normalization ... ok
+test capability_v01_manual_golden_preserves_literal_unicode_and_short_escapes ... ok
+test canonical_and_semantic_golden_mismatches_have_different_observables ... ok
+
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+
+running 3 tests
+test action_schema_deterministic_properties ... ok
+     Running tests/canonical_json_goldens.rs (/data/tmp/rch/franken_alignment_wave7_gate5_20260908/.rch-target-vmi1149989-pool-7fe969a2932eb75bc67addc8acc2eeec/debug/build/fa-reference/2ea42f2349cca6b0/out/canonical_json_goldens-2ea42f2349cca6b0)
+     Running tests/canonical_json_properties.rs (/data/tmp/rch/franken_alignment_wave7_gate5_20260908/.rch-target-vmi1149989-pool-7fe969a2932eb75bc67addc8acc2eeec/debug/build/fa-reference/b13e8b69f453526e/out/canonical_json_properties-b13e8b69f453526e)
+test evidence_claim_schema_deterministic_properties ... ok
+test capability_manifest_schema_deterministic_properties ... ok
+
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.12s
+
+
+running 7 tests
+test every_remaining_profile_component_changes_a_valid_captured_view ... ok
+test unsupported_omission_is_a_valid_but_distinct_replay_candidate ... ok
+test contradictory_truncation_flags_refuse_instead_of_creating_a_replay_candidate ... ok
+test repeated_windows_are_bound_in_submitted_order_with_exact_projection_coverage ... ok
+test captured_view_exposes_exact_complete_bytes_profile_and_omissions ... ok
+test raw_constructor_refuses_desynchronized_provenance_and_duplicate_projection ... ok
+test whole_manifest_differences_do_not_replay_as_the_captured_view ... ok
+
+test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+
+running 2 tests
+test first_evidence_view_construct_is_selectable_for_fresh_release_measurement ... ok
+test fixed_evidence_view_costs_are_descriptive_and_assert_all_outcomes ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+
+running 5 tests
+test a_close_marker_cannot_cross_source_branch_projection_or_epoch ... ok
+test closed_requirement_binds_its_exact_marker_generation_and_stage_prefix ... ok
+test missing_middle_refuses_terminal_marker_and_duplicates_do_not_advance_state ... ok
+test closure_can_cover_a_vacuous_or_short_prefix_without_covering_the_whole_stage ... ok
+test closed_stream_allows_late_lower_stage_completion_but_refuses_stale_and_future_changes ... ok
+
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/evidence_view_boundaries.rs (/data/tmp/rch/franken_alignment_wave7_gate5_20260908/.rch-target-vmi1149989-pool-7fe969a2932eb75bc67addc8acc2eeec/debug/build/fa-reference/0e44f3f2f117e275/out/evidence_view_boundaries-0e44f3f2f117e275)
+     Running tests/evidence_view_costs.rs (/data/tmp/rch/franken_alignment_wave7_gate5_20260908/.rch-target-vmi1149989-pool-7fe969a2932eb75bc67addc8acc2eeec/debug/build/fa-reference/8b722317ff4bb31c/out/evidence_view_costs-8b722317ff4bb31c)
+     Running tests/frontier_boundaries.rs (/data/tmp/rch/franken_alignment_wave7_gate5_20260908/.rch-target-vmi1149989-pool-7fe969a2932eb75bc67addc8acc2eeec/debug/build/fa-reference/f1126746c0806af3/out/frontier_boundaries-f1126746c0806af3)
+
+running 4 tests
+test every_public_full_input_bound_accepts_its_cap_and_refuses_one_over ... ok
+test opaque_judgment_public_boundary_binds_every_submitted_byte_and_epoch ... ok
+test profile_part_transform_and_omission_metadata_are_full_view_dependencies ... ok
+test honestly_repartitioned_omitted_context_still_changes_the_frozen_view ... ok
+
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+
+running 4 tests
+test invalid_lifecycle_and_expiry_are_counterexamples_at_the_exact_scheduled_event ... ok
+test same_seed_multilane_lifecycle_is_deterministic_ordered_and_fully_accounted ... ok
+test revocation_orders_before_future_admission_without_restoring_an_old_floor ... ok
+test unknown_cannot_cancel_but_explicit_trusted_nonexecution_reconciles_it ... ok
+
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+
+running 9 tests
+test cancellation_obligation_union_deduplicates_only_identical_entries ... ok
+test pending_closed_scope_and_unknown_lookup_survive_cancellation ... ok
+test runnable_public_composition_retains_typed_evidence_without_operator_execution ... ok
+test captured_bytes_are_retained_as_exact_witnesses_after_cancellation ... ok
+test top_k_and_lossy_restart_cannot_satisfy_stronger_requirements ... ok
+test homogeneous_derived_probes_deduplicate_one_inherited_frontier_on_join ... FAILED
+test closed_scope_absence_binds_key_domain_cut_marker_and_inherited_obligations ... ok
+     Running tests/full_input_boundaries.rs (/data/tmp/rch/franken_alignment_wave7_gate5_20260908/.rch-target-vmi1149989-pool-7fe969a2932eb75bc67addc8acc2eeec/debug/build/fa-reference/d537a58083654924/out/full_input_boundaries-d537a58083654924)
+     Running tests/history_boundaries.rs (/data/tmp/rch/franken_alignment_wave7_gate5_20260908/.rch-target-vmi1149989-pool-7fe969a2932eb75bc67addc8acc2eeec/debug/build/fa-reference/0201f753cf2a4040/out/history_boundaries-0201f753cf2a4040)
+     Running tests/observation_algebra_boundaries.rs (/data/tmp/rch/franken_alignment_wave7_gate5_20260908/.rch-target-vmi1149989-pool-7fe969a2932eb75bc67addc8acc2eeec/debug/build/fa-reference/c6f743fa9c01314b/out/observation_algebra_boundaries-c6f743fa9c01314b)
+test retained_judgment_and_identity_mismatches_refuse_causally ... ok
+test incompatible_join_and_cancelled_projection_preserve_inherited_obligations ... ok
+
+failures:
+
+---- homogeneous_derived_probes_deduplicate_one_inherited_frontier_on_join stdout ----
+
+thread 'homogeneous_derived_probes_deduplicate_one_inherited_frontier_on_join' (1787537) panicked at crates/fa-reference/tests/observation_algebra_boundaries.rs:456:6:
+called `Result::unwrap()` on an `Err` value: Limit
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+
+failures:
+    homogeneous_derived_probes_deduplicate_one_inherited_frontier_on_join
+
+test result: FAILED. 8 passed; 1 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+error: test failed, to rerun pass `-p fa-reference --test observation_algebra_boundaries`
+FAIL: cargo test --workspace --all-targets --frozen failed: exit status: 101
+  [2m2026-09-08T09:07:28.938810Z[0m [32m INFO[0m [1;32mrch::hook::transfer_orchestration[0m[32m: [32mRemote command finished: exit=1 in 19828ms[0m
+    [2;3mat[0m rch/src/hook/transfer_orchestration.rs:1150 [2;3mon[0m ThreadId(1)
+
+[W] Worker: vmi1149989 | Job: j-30004650170124433
+[T] Total: 27.3s (sync 7.5s, build 19.8s, artifacts --)
+^ Sync: 10.3 MB in 7.5s (1.4 MB/s)
+[C] Compile: 19.8s
+Artifacts: skipped
+[T] Cache: MISS
+Warning: Permanently added '212.90.121.76' (ED25519) to the list of known hosts.
+[RCH] remote vmi1149989 failed (exit 1)

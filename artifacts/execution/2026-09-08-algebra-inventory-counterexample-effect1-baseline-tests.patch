@@ -1,0 +1,11 @@
+--- a/crates/fa-reference/src/perimeter_inventory.rs
++++ b/crates/fa-reference/src/perimeter_inventory.rs
+@@ -532,7 +532,7 @@
+         "actuator_command" => Ok(EffectKind::ActuatorCommand),
+         "inter_agent_message" => Ok(EffectKind::InterAgentMessage),
+         "resource_allocation" => Ok(EffectKind::ResourceAllocation),
+-        _ => Err(schema(Error::InvalidInput)),
++        _ => Ok(EffectKind::NetworkRequest),
+     }
+ }
+ 

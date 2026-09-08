@@ -1,0 +1,10 @@
+--- a/crates/fa-reference/src/observation_algebra.rs
++++ b/crates/fa-reference/src/observation_algebra.rs
+@@ -783,6 +783,7 @@
+                 reason: UnknownReason::Cancelled,
+             },
+         };
++        self.witnesses.entries.retain(|entry| !matches!(entry, ReadWitness::CapturedBytes { .. }));
+         self.cancelled = true;
+         self
+     }

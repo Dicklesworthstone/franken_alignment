@@ -1,0 +1,77 @@
+{
+  "schema": "fa.execution_receipt/1",
+  "date": "2026-09-08",
+  "base_commit": "de668c52dc50c3bc1c5e1c1d3941bfe713ade8a0",
+  "source_inputs": "artifacts/execution/2026-09-08-algebra-inventory-final1-inputs.json",
+  "source_sha256": {
+    "crates/fa-reference/src/witness.rs": "171f3c20f8fce930cce7169bfa87e7adf3f9f5ac070a885cc68235c7c3f8bf05",
+    "crates/fa-reference/src/product_frontier.rs": "a2e73007fb2b4de6ffab031edfcceb57ac39a99126be61b633c624d3937790fd",
+    "crates/fa-reference/tests/witness_costs.rs": "4daf01e513c00621c9548a084dcf4f9b6b1bae35a95768c3bee1e49222bebdba"
+  },
+  "full_gate": {
+    "job": "j-30004650170124452",
+    "worker": "vmi1149989",
+    "remote_exit_code": 0,
+    "tests_passed": 499,
+    "failed": 0,
+    "ignored": 0,
+    "filtered": 0
+  },
+  "repair": "FA058 reopened after independent original-contract review found no separate conservative fact-equivalent invalidation cost case. Same observed facts and genuinely authenticated new closing generation now permit fresh capture/reuse while invalidating only the retained old marker witness. No source semantics or original assertions weakened.",
+  "costs": {
+    "job": "j-30004650170124454",
+    "fixed_cases": 7,
+    "samples_per_case": 12,
+    "counts": {
+      "samples": 84,
+      "true_fact_invalidations": 24,
+      "conservative_fact_equivalent_invalidations": 12,
+      "refusals": 24,
+      "bounded_oracle_stale_reuse_denominator": 60,
+      "asserted_bounded_oracle_stale_reuses": 0
+    },
+    "scope": "One selected retained-judgment candidate in each of five reuse cases; baseline and fresh support controls excluded. Two refusal cases have no comparable selected candidate. Zero stale reuse is inferred from completed exact oracle/verdict assertions, not separately instrumented. Timings include fresh fixtures, controls, assertions and drops. No helper-call, production-permission, statistical or SLO result."
+  },
+  "first_operation": {
+    "job": "j-30004650170124455",
+    "elapsed_ns": 982,
+    "samples": 1,
+    "scope": "Sole selected first capture in fresh release process; setup/assertions excluded; no OS/page-cache/CPU-cold claim."
+  },
+  "allocation": {
+    "profile_job": "j-30004650170124456",
+    "baseline_job": "j-30004650170124457",
+    "worker": "vmi1227854",
+    "whole_process_calls": 1780,
+    "same_binary_zero_test_baseline_calls": 185,
+    "inclusive_witness_frame_calls": 444,
+    "baseline_witness_frame_calls": 0,
+    "binary_identity": "artifacts/execution/2026-09-08-algebra-inventory-witness-review-profile-binary-identity.json",
+    "scope": "Exact release binary unchanged on both workers; seven fixed cases only. Same-length unmatched-filter baseline selects zero tests and earns no passing-test credit. Inclusive attribution can miss inlined work; no per-case allocations, allocated bytes, peak heap or RSS."
+  },
+  "artifact_sha256": {
+    "artifacts/execution/2026-09-08-algebra-inventory-witness-review-cold-witness_costs1-inputs.json": "0fde1e6798af4ce3e8e4f60fd5dad2db3857e97cf547f7bbed1be8950dc7a29d",
+    "artifacts/execution/2026-09-08-algebra-inventory-witness-review-cold-witness_costs1.json": "88c943a18ace97cfa8b21453f55bcd12d975fef85752c19b1655eb0fc36729d8",
+    "artifacts/execution/2026-09-08-algebra-inventory-witness-review-cold-witness_costs1.log": "cbbb546d329f26e40c34ad4bd9d17fb161f1dd9518dee3c36f552cc86dc3108c",
+    "artifacts/execution/2026-09-08-algebra-inventory-witness-review-costs1-inputs.json": "f00c229df4b6552c67b924d7bef098685a38a315f7c7025294b9f8772efd0ad7",
+    "artifacts/execution/2026-09-08-algebra-inventory-witness-review-costs1.json": "c8be1ffa4505081e147dc9e936c190b3f474dbdf13e1520b32ce8e491426243b",
+    "artifacts/execution/2026-09-08-algebra-inventory-witness-review-costs1.log": "81bdc72c2e43ab41b5d09d247aa23aba0ce84257492c273d8edf9d59dbb12b8b",
+    "artifacts/execution/2026-09-08-algebra-inventory-witness-review-heap-witness_costs-baseline1-inputs.json": "453b4173d112d2555bc012b9c57d055fda0c03c6380ff6b20dedb2c5814e4558",
+    "artifacts/execution/2026-09-08-algebra-inventory-witness-review-heap-witness_costs-baseline1-report.txt": "91970988e416b7174decfbabe6d0f86ea21c6cd768daabab3e3112f3677813d6",
+    "artifacts/execution/2026-09-08-algebra-inventory-witness-review-heap-witness_costs-baseline1.json": "c6127a152e6be4ce61fbcf0fb005fe07146834689d1f2f755a7727e8fdf23264",
+    "artifacts/execution/2026-09-08-algebra-inventory-witness-review-heap-witness_costs-baseline1.log": "153c3c1acd8ed4898d3090553aca2fa0074578f03aa345b1f081f5b61d2751df",
+    "artifacts/execution/2026-09-08-algebra-inventory-witness-review-heap-witness_costs-baseline1.stacks": "df23e7fa4caa6659175cda54e627511acdedd95151b50528c41c465cac1f9f2e",
+    "artifacts/execution/2026-09-08-algebra-inventory-witness-review-heap-witness_costs-baseline1.zst": "ff2666b55e8bcee21797163937123b235b916e38fcb7d8e9fb2e9ce52ec4e602",
+    "artifacts/execution/2026-09-08-algebra-inventory-witness-review-heap-witness_costs-profile1-inputs.json": "b8046c0a00d98a0d2e0ef968d83810dd2670608e96e93a7967771341d1ad4e18",
+    "artifacts/execution/2026-09-08-algebra-inventory-witness-review-heap-witness_costs-profile1-report.txt": "849843ecb9d67dbd6fe1ef5b53e3eb2c61a95b60b567daf701b08818ed605bc0",
+    "artifacts/execution/2026-09-08-algebra-inventory-witness-review-heap-witness_costs-profile1.json": "d77573bbe597f9ed87ad516c0b20a8e31f4e6c923b3edc0a274221c83ab59ad9",
+    "artifacts/execution/2026-09-08-algebra-inventory-witness-review-heap-witness_costs-profile1.log": "4bdd7ec2b851e9ef7cba0cec7642f1e221bc9617042296e1029a873c8ee0218d",
+    "artifacts/execution/2026-09-08-algebra-inventory-witness-review-heap-witness_costs-profile1.stacks": "f5f7f7e8ef080a2a0aa3e01bb8ade55855d3a3fc519f4a62a84d4d34815cf04e",
+    "artifacts/execution/2026-09-08-algebra-inventory-witness-review-heap-witness_costs-profile1.zst": "54d65fb79e2fb3c6135db0b1e3d880e3580e5ae7886ec5a3e055279a776a3747",
+    "artifacts/execution/2026-09-08-algebra-inventory-witness-review-profile-binary-identity.json": "5cf60a8cece42c09b0b2bd1375162cfaf311e8302676a8e10db771e8f73def9b",
+    "artifacts/execution/2026-09-08-algebra-inventory-witness-review-profile-verified.json": "3470ae8c086c84577446bac781e881cb5c25bcc67f2fda759d361b18293ec28d",
+    "artifacts/execution/2026-09-08-algebra-inventory-final1-inputs.json": "9f59a5c93c0429b79569f46d6ba224ba35920fc064904df59df8fd5833546b2b",
+    "artifacts/execution/2026-09-08-algebra-inventory-final1.json": "35652a7c11e2015a0eac868652ba7388ea1ee7b1e3669212b81688771f3e11e9",
+    "artifacts/execution/2026-09-08-algebra-inventory-final1.log": "cab0ae8040d551ffa5f366bcb4cb88c4ededd955f55acce12cdf97d3400cb516"
+  }
+}

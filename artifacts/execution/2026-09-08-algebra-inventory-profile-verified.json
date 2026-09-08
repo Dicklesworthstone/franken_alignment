@@ -1,0 +1,10 @@
+{
+  "binary_sha256": {
+    "observation_algebra_costs": "e9c4070a390dd5f7fe6c8359001ad22714253488f74e4a796052e9e8fc0931c3",
+    "perimeter_inventory_costs": "6d8380b5feca6ebd8bf61f6651988fc47759793c07a46627c762d399e045fe7b"
+  },
+  "unchanged_after": true,
+  "analysis_command_template": "heaptrack_print <raw.zst> --flamegraph-cost-type allocations -F <stacks>",
+  "build_worker": "vmi1149989",
+  "profile_worker": "vmi1227854"
+}

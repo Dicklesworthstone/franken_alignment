@@ -1,5 +1,12 @@
 # Changelog
 
+## 2026-09-08: observation algebra and bounded inventory loading
+
+- Implement all thirteen pure transfer laws with retained origin, uncertainty, exact supplied bytes and cancellation obligations; repair captured-byte loss and idempotent union bounds. No physical decoder, helper or executor is activated.
+- Read and validate bounded regular-file perimeter declarations with the complete effect catalogue and credential/trust metadata. FA-002 remains open for actual endpoint mediation.
+- Retain the 499-test RCH gate, three causal mutation failures, 40 fixed descriptive timing samples, two sole-process first operations and exact-binary allocation profiles. Earlier failed attempts remain part of the evidence.
+- Reopen FA-058 after fresh review found missing conservative invalidation measurement; repair the original harness and retain a new 499-test gate, 84 release samples, sole-process capture and exact-binary profile. Zero stale reuse is assertion-derived and scoped to 60 selected oracle comparisons.
+
 ## 2026-09-08: exact-value and absent-key witnesses
 
 - Retain exact bytes, versions and query roles; bind absence to a complete declared authenticated domain and terminal frontier. Preserve reuse for unrelated changes while refusing stale snapshots and unknown closure.

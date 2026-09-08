@@ -1,0 +1,71 @@
+  [2m2026-09-08T09:22:53.552366Z[0m [32m INFO[0m [1;32mrch::hook[0m[32m: [32mSelected worker: vmi1227854 at root@109.123.245.77 (4 slots remaining after reservation, speed 71.7)[0m
+    [2;3mat[0m rch/src/hook.rs:2645 [2;3mon[0m ThreadId(1)
+
+[*] Job j-30004650170124446 submitted to vmi1227854 (4 slots remaining, speed 71.7)
+  [2m2026-09-08T09:22:53.598297Z[0m [32m INFO[0m [1;32mrch::hook::transfer_orchestration[0m[32m: [32mStarting remote compilation pipeline for franken_alignment_wave7_gate8_20260908 (hash: 6e48d8f252f4c123)[0m
+    [2;3mat[0m rch/src/hook/transfer_orchestration.rs:510 [2;3mon[0m ThreadId(1)
+
+  [2m2026-09-08T09:22:53.598332Z[0m [32m INFO[0m [1;32mrch::hook::transfer_orchestration[0m[32m: [32mPrepared dependency sync manifest for 1 roots[0m
+    [2;3mat[0m rch/src/hook/transfer_orchestration.rs:532 [2;3mon[0m ThreadId(1)
+
+  [2m2026-09-08T09:22:54.770692Z[0m [32m INFO[0m [1;32mrch::hook::transfer_orchestration[0m[32m: [32mSyncing project to worker vmi1227854...[0m
+    [2;3mat[0m rch/src/hook/transfer_orchestration.rs:661 [2;3mon[0m ThreadId(1)
+
+  [2m2026-09-08T09:22:54.771015Z[0m [32m INFO[0m [1;32mrch::transfer[0m[32m: [32mLinked git worktree detected at /Users/jemanuel/projects/franken_alignment_wave7_gate8_20260908 (gitdir: /Users/jemanuel/projects/franken_alignment/.git/worktrees/franken_alignment_wave7_gate8_20260908); excluding dangling '.git' file from upload so the remote build resolves git-free like a normal repo[0m
+    [2;3mat[0m rch/src/transfer.rs:2009 [2;3mon[0m ThreadId(1)
+
+  [2m2026-09-08T09:22:54.771034Z[0m [32m INFO[0m [1;32mrch::transfer[0m[32m: [32mSyncing /Users/jemanuel/projects/franken_alignment_wave7_gate8_20260908 -> /Users/jemanuel/projects/franken_alignment_wave7_gate8_20260908 on vmi1227854 (streaming)[0m
+    [2;3mat[0m rch/src/transfer.rs:3549 [2;3mon[0m ThreadId(1)
+
+  [2m2026-09-08T09:22:56.482665Z[0m [32m INFO[0m [1;32mrch::hook::transfer_orchestration[0m[32m: [32mSync complete: 721 files, 28662 bytes in 1693ms[0m
+    [2;3mat[0m rch/src/hook/transfer_orchestration.rs:958 [2;3mon[0m ThreadId(1)
+
+  [2m2026-09-08T09:22:56.495379Z[0m [32m INFO[0m [1;32mrch::hook::transfer_orchestration[0m[32m: [32mExecuting command remotely: heaptrack --record-only -o /tmp/fa-campaign-20260908-wave7-profile/perimeter_inventory_costs-profile /tmp/fa-campaign-20260908-wave7-profile/perimeter_inventory_costs --exact fixed_regular_file_inventory_load_costs_assert_lookup_churn_failures_and_bounds --nocapture '--test-threads=1'[0m
+    [2;3mat[0m rch/src/hook/transfer_orchestration.rs:1018 [2;3mon[0m ThreadId(1)
+
+  [2m2026-09-08T09:22:56.495442Z[0m [32m INFO[0m [1;32mrch::transfer[0m[32m: [32mWrapping command with external timeout protection, [1;32mkind[0m[32m: job, [1;32mtimeout_secs[0m[32m: 3600[0m
+    [2;3mat[0m rch/src/transfer.rs:2669 [2;3mon[0m ThreadId(1)
+
+Warning: Permanently added '109.123.245.77' (ED25519) to the list of known hosts.
+heaptrack output will be written to "/tmp/fa-campaign-20260908-wave7-profile/perimeter_inventory_costs-profile.zst"
+starting application, this might take some time...
+
+running 1 test
+NOTE: heaptrack detected DEBUGINFOD_URLS but will disable it to prevent 
+unintended network delays during recording
+If you really want to use DEBUGINFOD, export HEAPTRACK_ENABLE_DEBUGINFOD=1
+test fixed_regular_file_inventory_load_costs_assert_lookup_churn_failures_and_bounds ... FA002_PERIMETER_INVENTORY_FILE_LOAD case=baseline_brokered_lookup samples=4 successes=4 refusals=0 observed_errors=0 logical_input_bytes=783 elapsed_ns_min=92889 elapsed_ns_median=151873 elapsed_ns_max=183295 elapsed_ns_total=579930 timing_scope=owned_regular_file_open_bounded_read_strict_parse_inventory_validation_only_lookup_assertions_drop_excluded memory_measurement=unavailable_reference_profile no_claim=endpoint_broker_authentication_or_os_cache_cold
+FA002_PERIMETER_INVENTORY_FILE_LOAD case=declared_mediation_profile_churn samples=4 successes=4 refusals=0 observed_errors=0 logical_input_bytes=783 elapsed_ns_min=109064 elapsed_ns_median=127070 elapsed_ns_max=229725 elapsed_ns_total=592929 timing_scope=owned_regular_file_open_bounded_read_strict_parse_inventory_validation_only_lookup_assertions_drop_excluded memory_measurement=unavailable_reference_profile no_claim=endpoint_broker_authentication_or_os_cache_cold
+FA002_PERIMETER_INVENTORY_FILE_LOAD case=malformed_syntax samples=4 successes=0 refusals=4 observed_errors=0 logical_input_bytes=1 elapsed_ns_min=21563 elapsed_ns_median=66810 elapsed_ns_max=92409 elapsed_ns_total=247592 timing_scope=owned_regular_file_open_bounded_read_strict_parse_inventory_validation_only_lookup_assertions_drop_excluded memory_measurement=unavailable_reference_profile no_claim=endpoint_broker_authentication_or_os_cache_cold
+FA002_PERIMETER_INVENTORY_FILE_LOAD case=route_nonclaims_at_cap samples=4 successes=4 refusals=0 observed_errors=0 logical_input_bytes=874 elapsed_ns_min=149223 elapsed_ns_median=220951 elapsed_ns_max=58681535 elapsed_ns_total=59272660 timing_scope=owned_regular_file_open_bounded_read_strict_parse_inventory_validation_only_lookup_assertions_drop_excluded memory_measurement=unavailable_reference_profile no_claim=endpoint_broker_authentication_or_os_cache_cold
+FA002_PERIMETER_INVENTORY_FILE_LOAD case=route_nonclaims_one_over samples=4 successes=0 refusals=4 observed_errors=0 logical_input_bytes=887 elapsed_ns_min=166299 elapsed_ns_median=199223 elapsed_ns_max=247321 elapsed_ns_total=812067 timing_scope=owned_regular_file_open_bounded_read_strict_parse_inventory_validation_only_lookup_assertions_drop_excluded memory_measurement=unavailable_reference_profile no_claim=endpoint_broker_authentication_or_os_cache_cold
+FA002_PERIMETER_INVENTORY_FILE_LOAD case=valid_json_exact_input_byte_cap samples=4 successes=4 refusals=0 observed_errors=0 logical_input_bytes=1048576 elapsed_ns_min=1238836 elapsed_ns_median=1496883 elapsed_ns_max=1812015 elapsed_ns_total=6044617 timing_scope=owned_regular_file_open_bounded_read_strict_parse_inventory_validation_only_lookup_assertions_drop_excluded memory_measurement=unavailable_reference_profile no_claim=endpoint_broker_authentication_or_os_cache_cold
+FA002_PERIMETER_INVENTORY_FILE_LOAD case=same_valid_json_one_byte_over_input_cap samples=4 successes=0 refusals=4 observed_errors=0 logical_input_bytes=1048577 elapsed_ns_min=162412 elapsed_ns_median=192153 elapsed_ns_max=316155 elapsed_ns_total=862873 timing_scope=owned_regular_file_open_bounded_read_strict_parse_inventory_validation_only_lookup_assertions_drop_excluded memory_measurement=unavailable_reference_profile no_claim=endpoint_broker_authentication_or_os_cache_cold
+FA002_PERIMETER_INVENTORY_FILE_LOAD case=input_bytes_one_over samples=4 successes=0 refusals=4 observed_errors=0 logical_input_bytes=1048577 elapsed_ns_min=130907 elapsed_ns_median=208978 elapsed_ns_max=455503 elapsed_ns_total=1004367 timing_scope=owned_regular_file_open_bounded_read_strict_parse_inventory_validation_only_lookup_assertions_drop_excluded memory_measurement=unavailable_reference_profile no_claim=endpoint_broker_authentication_or_os_cache_cold
+ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 1 filtered out; finished in 0.13s
+
+heaptrack stats:
+	allocations:          	3811
+	leaked allocations:   	4
+	temporary allocations:	1145
+Heaptrack finished! Now run the following to investigate the data:
+
+  heaptrack --analyze "/tmp/fa-campaign-20260908-wave7-profile/perimeter_inventory_costs-profile.zst"
+  [2m2026-09-08T09:22:57.967903Z[0m [32m INFO[0m [1;32mrch::hook::transfer_orchestration[0m[32m: [32mRemote command finished: exit=0 in 1472ms[0m
+    [2;3mat[0m rch/src/hook/transfer_orchestration.rs:1150 [2;3mon[0m ThreadId(1)
+
+[W] Worker: vmi1227854 | Job: j-30004650170124446
+[T] Total: 3.2s (sync 1.7s, build 1.5s, artifacts --)
+^ Sync: 28.0 KB in 1.7s (16.5 KB/s)
+[C] Compile: 1.5s
+Artifacts: skipped
+[T] Cache: MISS
++------------ [OK] Build Successful ------------+
+| Duration: 1.5s (^ 2% slower vs previous 1.4s) |
+| Worker: vmi1227854                            |
+| Cache: MISS (warming cache)                   |
+| Time: 2026-09-08 09:22:57                     |
++-----------------------------------------------+
+[RCH] remote vmi1227854 (4.5s)

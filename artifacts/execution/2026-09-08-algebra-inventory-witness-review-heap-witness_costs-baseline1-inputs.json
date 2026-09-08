@@ -1,0 +1,26 @@
+{
+  "command": [
+    "rch",
+    "--json",
+    "exec",
+    "--job",
+    "--",
+    "heaptrack",
+    "--record-only",
+    "-o",
+    "/tmp/fa-campaign-20260908-wave7-witness-review-profile/witness_costs-baseline",
+    "/tmp/fa-campaign-20260908-wave7-witness-review-profile/witness_costs",
+    "--exact",
+    "xixed_witness_costs_are_descriptive_and_assert_all_outcomes",
+    "--nocapture",
+    "--test-threads=1"
+  ],
+  "binary": {
+    "remote_path": "/data/tmp/rch/franken_alignment_wave7_final1_20260908/.rch-target-vmi1149989-pool-eb0e9bb4708c4694fbc95ac65d237c2d/release/build/fa-reference/97d6f97dab7ab07c/out/witness_costs-97d6f97dab7ab07c",
+    "sha256": "659c098105e89a63610f42731fad9c6a14ee23040552d558b2b0eb819a0dd8cd",
+    "local_path": "/tmp/fa-campaign-20260908/wave7-witness-review-profile-binaries/witness_costs"
+  },
+  "source_inputs": "wave7-final1-inputs.json",
+  "working_directory": "/Users/jemanuel/projects/franken_alignment_wave7_final1_20260908",
+  "scope": "Seven fixed witness cases including conservative fact-equivalent invalidation. Same-binary same-length unmatched-filter baseline runs zero tests and earns no passing-test credit."
+}

@@ -1,0 +1,259 @@
+{
+  "schema": "fa.execution_receipt/1",
+  "date": "2026-09-08",
+  "result": {
+    "exit_code": 0,
+    "format": "passed",
+    "check": "passed",
+    "clippy": "passed; warnings denied",
+    "tests": {
+      "reference_unit": 105,
+      "reference_integration": 144,
+      "xtask": 242,
+      "doctests": 8,
+      "total_passed": 499,
+      "failed": 0,
+      "ignored": 0,
+      "filtered": 0
+    }
+  },
+  "base_commit": "de668c52dc50c3bc1c5e1c1d3941bfe713ade8a0",
+  "source_inputs": "artifacts/execution/2026-09-08-algebra-inventory-gate8-inputs.json",
+  "source_sha256": {
+    ".beads/issues.jsonl": "8208bd9d4aa2b17daf5c3c78e4c8326888d7516dc2ba9929b5c1ce212f268abf",
+    "crates/fa-reference/src/lib.rs": "4e057fed1aeb2931324ec36c7beacdcf0a4caf89f5e272d48fa767a24c8723ba",
+    "registry/dependency_policy.json": "4a5fd9e27b55225a931a3c730a423a95ca69316011a2137d7866738905d29b08",
+    "registry/roadmap.json": "7a1b4dddc70c2083e8cbd7b323e55e4f96d890937adbbde1df318d9635b93e22",
+    "registry/source_snapshot.json": "b4091b9db99e6d16869a1acbd3aff02537b5ac4cedb600e975b21164c53679f4",
+    "crates/fa-reference/src/observation_algebra.rs": "8400b18ce3c0267b0441a0f2d8ce9e62579bb61a125e349ba7c59226121bdacd",
+    "crates/fa-reference/src/perimeter_inventory.rs": "f165b725d539dbf23e72b537c9330ba02e6e0c3afaa77fe81e0b4cc88c8e1dd1",
+    "crates/fa-reference/tests/observation_algebra_boundaries.rs": "49ec223f7e9645d664f7a71e88e86cf2c1f8c71ffe303a6dbd39707b2a39c743",
+    "crates/fa-reference/tests/observation_algebra_laws.rs": "6b4a9b2f0afec209fbc33f3dcb4bbd7388844792d160cacb1d2b5414fa9fc20b",
+    "crates/fa-reference/tests/observation_algebra_costs.rs": "4cf558b169bc3c66246d0eff8225a639f925d6ddaa8da09258e53f24b898e580",
+    "crates/fa-reference/tests/perimeter_inventory_boundaries.rs": "d2f07bb0c8ea95135d969535c54a043dbcd1a287b52be893e1963e47a64fa819",
+    "crates/fa-reference/tests/perimeter_inventory_costs.rs": "7784bfcad91bf8552706d927561791e56595df8ed025ec00bbb66991c0cf15cd",
+    "crates/fa-reference/tests/perimeter_inventory_limits.rs": "66080e22d28b39962aba48b6eb9b39111f470d84ba81279f3765928d6437d62d"
+  },
+  "reviewed_source_files": 172,
+  "full_gate": {
+    "job": "j-30004650170124437",
+    "worker": "vmi1149989",
+    "location": "remote",
+    "outcome": "completed",
+    "exit_code": 0
+  },
+  "compiler": {
+    "toolchain": "nightly-2026-09-08",
+    "rustc_commit": "cea272fa356e94bd2ee2cadf376630aa0683867a",
+    "qualification_receipt": "artifacts/execution/2026-09-08-history-format-qualification-receipt.json"
+  },
+  "scope": {
+    "algebra": "Executable pure transfer/admission laws for the thirteen plan14.7 operators over supplied values and declared laws. Shared six-variant Knowledge and seven claim classes; all four scoped proof predicates retained. Existing active Transfer inputs are borrowed on fallible transforms. Proposed context obligations enter a Transfer only on success. Exact captured/encoded/decoded/helper bytes persist as bounded witnesses; cancellation retains them. Identical obligations, privacy labels and frontiers union idempotently; conflicting obligation kinds and excess unique bounds refuse. Exact closed scope, homogeneous join uncertainty and opaque emit calibration/origin binding are enforced. This is IR semantics, not capture, verification, decoding, inference or a physical executor.",
+    "inventory": "L5 bounded declared inventory loader reads actual caller-selected regular files through a 1MiB bounded reader and strict JSON syntax/schema validation. Complete eleven-effect catalogue, profile generations, four trust-domain vocabulary, credential dispositions, paired exact route metadata and residual nonclaims. Unknown fields/effects, unmodeled bypass and family-wide brokered/direct-credential conflicts refuse. Individual128-byte string limit is enforced by strict parser before schema. No endpoint or broker proof; metadata/open replacement race and authenticity remain outside this operator reference boundary."
+  },
+  "causal_mutations": [
+    {
+      "kind": "cancel",
+      "job": "j-30004650170124439",
+      "expected_exit_code": 101,
+      "log": "artifacts/execution/2026-09-08-algebra-inventory-counterexample-cancel1.log",
+      "scope": "Pre-cancel exact supplied-value and captured-witness controls pass; selectively removing CapturedBytes during cancellation fails the post-cancel public witness assertion."
+    },
+    {
+      "kind": "approximate",
+      "job": "j-30004650170124440",
+      "expected_exit_code": 101,
+      "log": "artifacts/execution/2026-09-08-algebra-inventory-counterexample-approximate1.log",
+      "scope": "Same-fixture exact closure and semantic-mismatch controls pass; removing only AwaitClosedScope exactness check fails Approximate admission refusal. Independent exact-lookup defense remains; no end-to-end exact-absence promotion claim."
+    },
+    {
+      "kind": "effect",
+      "job": "j-30004650170124441",
+      "expected_exit_code": 101,
+      "log": "artifacts/execution/2026-09-08-algebra-inventory-counterexample-effect1.log",
+      "scope": "Complete valid inventory control passes; defaulting unknown effect labels to NetworkRequest fails the unknown-effect public assertion."
+    }
+  ],
+  "costs": {
+    "job": "j-30004650170124438",
+    "algebra": {
+      "fixed_timed_cases": 5,
+      "total_fixed_timed_samples": 8,
+      "per_case_samples": {
+        "public_chain": 4,
+        "profile_refusal": 1,
+        "generation_refusal": 1,
+        "near_decode_limit": 1,
+        "unsatisfied_closure": 1
+      },
+      "logical_witness_bytes": {
+        "two_probe_chain": 70,
+        "near_decode_limit": 65545,
+        "first_tap": 9
+      },
+      "scope": "Actual public eight-stage chain, declared profile/generation refusal, large supplied decoded value, and pending closure. Two observed_errors=1 fields count the expected Binding error responses, both asserted, not unexpected test failures. Supplied decoded bytes are not a decoder benchmark."
+    },
+    "inventory": {
+      "fixed_timed_cases": 8,
+      "samples_per_case": 4,
+      "total_fixed_timed_samples": 32,
+      "scope": "Actual regular-file open/read/parse/validation; file creation/sync, lookup/assertions/drop excluded. Declared profile/mode churn, syntax/refusals, nonclaim cap, valid JSON padded to exact1MiB and same bytes+one, separate oversized whitespace. Logical input bytes are not allocated/copied bytes."
+    },
+    "scope": "Forty fixed timed samples total. First-operation tests also ran in the combined invocation and earn no sole-process credit. No distribution, benchmark, SLO, physical decoding, runtime, authentication or endpoint claim."
+  },
+  "first_operations": {
+    "observation_algebra_costs": {
+      "job": "j-30004650170124442",
+      "samples": 1,
+      "elapsed_ns": 1011
+    },
+    "perimeter_inventory_costs": {
+      "job": "j-30004650170124443",
+      "samples": 1,
+      "elapsed_ns": 981653
+    }
+  },
+  "first_operation_scope": "Each exact first test alone in fresh release process; caller setup and output assertions excluded; no preflight/warmup or OS/page-cache/CPU cold claim.",
+  "allocation": {
+    "worker": "vmi1227854",
+    "profiler": "heaptrack 1.5.0",
+    "binary_identity": "artifacts/execution/2026-09-08-algebra-inventory-profile-binary-identity.json",
+    "profiles": {
+      "observation_algebra_costs": {
+        "profile_job": "j-30004650170124444",
+        "baseline_job": "j-30004650170124445",
+        "whole_process_allocation_calls": 707,
+        "same_binary_zero_test_baseline_calls": 180,
+        "inclusive_module_stack_calls": 395,
+        "baseline_module_stack_calls": 0,
+        "module_stack_match": "12fa_reference19observation_algebra"
+      },
+      "perimeter_inventory_costs": {
+        "profile_job": "j-30004650170124446",
+        "baseline_job": "j-30004650170124447",
+        "whole_process_allocation_calls": 3811,
+        "same_binary_zero_test_baseline_calls": 185,
+        "inclusive_module_stack_calls": 3384,
+        "baseline_module_stack_calls": 0,
+        "module_stack_match": "12fa_reference19perimeter_inventory"
+      }
+    },
+    "scope": "Exact release binaries copied unchanged from build worker. Algebra underscore filter selects all four cost tests; its first-tap row earns no sole-process credit. Inventory selects its eight-case test. Same-binary same-length unmatched-filter baselines select zero tests and earn no test credit. Stack weights equal profiler allocation totals; inclusive frame attribution can miss inlined work and includes nested calls. Whole-process differences include harness/fixture work. No per-case allocated bytes, leak, peak-heap or RSS claim. Both binary hashes unchanged on both hosts after profiling."
+  },
+  "retained_failures": [
+    {
+      "attempt": "gate1",
+      "job": "j-30004650170124422",
+      "reason": "Test compile errors: probe variable shadowed function; verifier got VerifiedObject instead of PrefixObservation. Corrected actual typed fixtures."
+    },
+    {
+      "attempt": "gate2",
+      "job": "j-30004650170124427",
+      "reason": "Test mixed two different Transfer<T> types in one array; corrected generic cancellation assertions. Removed one unused test import."
+    },
+    {
+      "attempt": "gate3",
+      "job": "j-30004650170124429",
+      "reason": "Strict Clippy rejected nine-argument private constructor. Replaced with named private struct construction and same checked validation; no lint allowance."
+    },
+    {
+      "attempt": "gate4",
+      "job": "j-30004650170124432",
+      "reason": "Five positive boundary cases used stale decode output generations or helper profile epochs. Corrected fixtures to match actual Basis and preserved mismatch negatives; added exact decode controls."
+    },
+    {
+      "attempt": "gate5",
+      "job": "j-30004650170124433",
+      "reason": "Two-probe join fixture budget allowed8 witnesses but needed16. Retained8-witness Limit control and exact16-witness positive; production caps unchanged."
+    },
+    {
+      "attempt": "gate6",
+      "job": "j-30004650170124434",
+      "reason": "Obligation composition fixtures used Conservative contexts for Exact inputs, including a confounded conflict negative. Changed only those three to Exact; deliberate uncertainty mismatch negative preserved."
+    },
+    {
+      "attempt": "gate7",
+      "job": "j-30004650170124436",
+      "reason": "129-byte text refused with parser StringLimit before schema, while test wrongly expected SchemaLimit. Corrected exact reason, retained128-byte positive; no parser/schema weakening."
+    }
+  ],
+  "nonclaims": [
+    "FA002 remains open for real disposable-endpoint mediation/integration evidence.",
+    "FA068 proves executable pure IR transfer laws only; no physical planner, executor, helper inference, actual decoder, authentication, permit, persistence or release.",
+    "Range-witness work in isolated FA059 checkout is excluded.",
+    "Native foundation admission and existing production invariant checkers remain incomplete."
+  ],
+  "artifact_sha256": {
+    "artifacts/execution/2026-09-08-algebra-inventory-cold-observation_algebra_costs1-inputs.json": "0f7e7496b0e5897b024cd9f4444a39c5e03058c8bfe3129c657ca64a6392db5b",
+    "artifacts/execution/2026-09-08-algebra-inventory-cold-observation_algebra_costs1.json": "5bf09a4acb038e7cecb0bd403f9989e2baf396fa4dde78f31df209ff1adb65f3",
+    "artifacts/execution/2026-09-08-algebra-inventory-cold-observation_algebra_costs1.log": "8bfaab2bebd887223ab414640c6338f507f3863400ed40ce31bfbc52bd11d2d3",
+    "artifacts/execution/2026-09-08-algebra-inventory-cold-perimeter_inventory_costs1-inputs.json": "e550101dab6d2055dfa6b6936d99b84f6384e2f3af2260616c5351369d08f811",
+    "artifacts/execution/2026-09-08-algebra-inventory-cold-perimeter_inventory_costs1.json": "a7a59e733f934baff1bd11d71797fd365d237bff28fb16fdd379735dbdd9834a",
+    "artifacts/execution/2026-09-08-algebra-inventory-cold-perimeter_inventory_costs1.log": "08a283228f09320ca37c8767337e8b2ae7c0ffac7a34479b819216018de8622d",
+    "artifacts/execution/2026-09-08-algebra-inventory-costs1-inputs.json": "2d6bf2b3f9a1e2a8b3a2ad0c362c2c369d11519e6436a39ebe2daae2d38c3762",
+    "artifacts/execution/2026-09-08-algebra-inventory-costs1.json": "3adda2a813e43135340164417578410d333e4a8f5d27703733be2664c3f8b090",
+    "artifacts/execution/2026-09-08-algebra-inventory-costs1.log": "f63aba24e146792e7ecc56b1b4eafdeae73674edb4f3bcf574be2111d1341881",
+    "artifacts/execution/2026-09-08-algebra-inventory-counterexample-approximate1-baseline-tests.patch": "e637e94b1addc1658ae6be002ae1a1203cc2b2d2fd1c704aa810a41f8f0d4653",
+    "artifacts/execution/2026-09-08-algebra-inventory-counterexample-approximate1-inputs.json": "91cd6fcd9c45d61d018e1cb81b201b7547ad9a3d4e351f99a4750003af233b78",
+    "artifacts/execution/2026-09-08-algebra-inventory-counterexample-approximate1.json": "93016d0948e79e98c1e407f59693af7162542d3e580664aa226489f82a0b2361",
+    "artifacts/execution/2026-09-08-algebra-inventory-counterexample-approximate1.log": "3375ee0b78662b46d191c7d25712952ec68fb5c56c1bf8a2f01802a5161dbbb9",
+    "artifacts/execution/2026-09-08-algebra-inventory-counterexample-cancel1-baseline-tests.patch": "27d80872259f6692935e90c379d8d9c21cae007f67afa8f16b33a2a9579263a1",
+    "artifacts/execution/2026-09-08-algebra-inventory-counterexample-cancel1-inputs.json": "08d72c770df262a1eae44435ab613c0b291510208294451d8bed94677d72e488",
+    "artifacts/execution/2026-09-08-algebra-inventory-counterexample-cancel1.json": "85ba53c45d587ba6ac3101f953c5e693d68415f8fc1a133b34fb9b87cd4d6d52",
+    "artifacts/execution/2026-09-08-algebra-inventory-counterexample-cancel1.log": "ac6595a2d6426c746992ec112cf42828639aca43e490262e35fa650a9ccea758",
+    "artifacts/execution/2026-09-08-algebra-inventory-counterexample-effect1-baseline-tests.patch": "1fd0bfe59816b3e936e30bfba3d1f97f37394da095ab17b6891720d3f782fa17",
+    "artifacts/execution/2026-09-08-algebra-inventory-counterexample-effect1-inputs.json": "6f8290d6db913abd192c26f648d5972ffb39cc2be8d7ff0da687afa64977e499",
+    "artifacts/execution/2026-09-08-algebra-inventory-counterexample-effect1.json": "8c4ab07fb5ceeffce76970ef5c879fff9f4cb944adbaebf13ba9a2bf4c40a399",
+    "artifacts/execution/2026-09-08-algebra-inventory-counterexample-effect1.log": "774e00aab1dc2e072ca75973f9032f391df3afe4297d0b94662a80112e4030cc",
+    "artifacts/execution/2026-09-08-algebra-inventory-gate1-inputs.json": "096464502b0273b67d99fde47b5a66e64459d01719c84a2965a6898d30540a68",
+    "artifacts/execution/2026-09-08-algebra-inventory-gate1.json": "e102a36e3da4e5a6d5566ff938ca0b0f68d811810559a56bcb135fba5c4210a9",
+    "artifacts/execution/2026-09-08-algebra-inventory-gate1.log": "cf4d40b47ffb21eff8a546c0ebdecaf63a42c5802f790e05f5689dc40a10412e",
+    "artifacts/execution/2026-09-08-algebra-inventory-gate2-inputs.json": "0e0759cae7a08c6a95591f63d451fb5f16e0a8021cf758a039b472edd4860ccc",
+    "artifacts/execution/2026-09-08-algebra-inventory-gate2.json": "805c21ab3e075ea26fc2ecba5f7f3d7f90c0d815da9a411ebfd6e9c566ccfa19",
+    "artifacts/execution/2026-09-08-algebra-inventory-gate2.log": "64fc132b05e2b4de5b794f8631a67094e07425180aa2bfe4fef55520bde1a5bc",
+    "artifacts/execution/2026-09-08-algebra-inventory-gate3-inputs.json": "d1bae7f6b6fa92d6c1bca0b6ceb6379e3ac0b6ca3e31ddc04c35f008ea2cc24b",
+    "artifacts/execution/2026-09-08-algebra-inventory-gate3.json": "68625b4ac57eb8daa99b1ee1ab79b28a3c2a7696b8f8ff57574818a3713b02b0",
+    "artifacts/execution/2026-09-08-algebra-inventory-gate3.log": "031ceb59db8be8464b0a2f041ba1bd0aa4ee7481647eeb1099ececa6727f9b2a",
+    "artifacts/execution/2026-09-08-algebra-inventory-gate4-inputs.json": "59639eb4a67893b724c0f39da4f93171b69b7657a1b40d1571a68221a65e4e6f",
+    "artifacts/execution/2026-09-08-algebra-inventory-gate4.json": "c4a8b6356cacfd4210f2279d1cf3c55e965c244dfda4fd1ee26d8451d9c25332",
+    "artifacts/execution/2026-09-08-algebra-inventory-gate4.log": "8530cb5e7cd58b83560fde70bf791f9edfa9ebf8a749c1c351e3af0bb23731d8",
+    "artifacts/execution/2026-09-08-algebra-inventory-gate5-inputs.json": "ce100ae81b7c797047406884bcc03b81bd8cd17d5051a1a59307ee9d98670479",
+    "artifacts/execution/2026-09-08-algebra-inventory-gate5.json": "8a7aa00e9856b4dde058d917c3c73779fe813dfc0eb05372fd3d6d7c5cbf9f71",
+    "artifacts/execution/2026-09-08-algebra-inventory-gate5.log": "7f931dc0df42578acf6600b6f8ffe8db421385f318b565f5eef4d033376221e5",
+    "artifacts/execution/2026-09-08-algebra-inventory-gate6-inputs.json": "0d6ae94cd2ae6960ba21b8f8d32c55eae128ce2b813b9e82dbd77f602017210c",
+    "artifacts/execution/2026-09-08-algebra-inventory-gate6.json": "7debef690f6da2153f1c3ad21172c5b72fa48ee6c6bcbde3a871cbc431754d0d",
+    "artifacts/execution/2026-09-08-algebra-inventory-gate6.log": "01b9929509560c3fdaf48c55b143bc63b0c3df10933c5def58271c264b4ea781",
+    "artifacts/execution/2026-09-08-algebra-inventory-gate7-inputs.json": "29438affd578425598b5fb57fd0274eded8331edf648a9a534d275b782b273f8",
+    "artifacts/execution/2026-09-08-algebra-inventory-gate7.json": "7ef88672174d3a376a8b1795913376b5cc94a478895a17dc40a746d54d3b0a69",
+    "artifacts/execution/2026-09-08-algebra-inventory-gate7.log": "971c2d23d46ddaef18d788f4d598b1f75ab18a3f0d67fab6c838d901fec1ac0e",
+    "artifacts/execution/2026-09-08-algebra-inventory-gate8-inputs.json": "2922a17098d0cd56f931fd60e52beba4a4545b6cfd30b4bc197ba029ff07177b",
+    "artifacts/execution/2026-09-08-algebra-inventory-gate8.json": "c660aa2ccd9130bf564a3e6aeed8ae4324df7b2dc1287fdb5d1368be693e59ab",
+    "artifacts/execution/2026-09-08-algebra-inventory-gate8.log": "2f763824fcad549a384534613371125766e8da96e8e32345a1ae5b6a28c848b5",
+    "artifacts/execution/2026-09-08-algebra-inventory-heap-observation_algebra_costs-baseline1-inputs.json": "b35454b45c5e229412e38a32f983fe7c4039aa5f5806a9660c47cc4e7cf446c5",
+    "artifacts/execution/2026-09-08-algebra-inventory-heap-observation_algebra_costs-baseline1-report.txt": "93b6d6ca2f3a16036cf43c3f966c2a6308169784f68ff69614f3a1fc325d0439",
+    "artifacts/execution/2026-09-08-algebra-inventory-heap-observation_algebra_costs-baseline1.json": "16ac5175af61b222544a7ad12af71811a84f8754ef748a748e190cdd740f29cb",
+    "artifacts/execution/2026-09-08-algebra-inventory-heap-observation_algebra_costs-baseline1.log": "d2463229073c41fa567d06bf169a0fd4d46730e602b6a0c8495fc12df77f731d",
+    "artifacts/execution/2026-09-08-algebra-inventory-heap-observation_algebra_costs-baseline1.stacks": "7c6a45203614defc8aa565fc214e0fcca235bb5b7bb0e145bbb0627766f0e791",
+    "artifacts/execution/2026-09-08-algebra-inventory-heap-observation_algebra_costs-baseline1.zst": "9a1a645af5608b3a7de4ca73459556c30b0caba2a5ab768340dd0e3ca20ce390",
+    "artifacts/execution/2026-09-08-algebra-inventory-heap-observation_algebra_costs-profile1-inputs.json": "0c4fda856ba6dec2325166f2f436ef1a92536dfaca2f1a99190c93c5f96f07ff",
+    "artifacts/execution/2026-09-08-algebra-inventory-heap-observation_algebra_costs-profile1-report.txt": "e092689c3993ad4ffd3aab3906b856e50494f0eb4edeb7323a11ddf2150f90e8",
+    "artifacts/execution/2026-09-08-algebra-inventory-heap-observation_algebra_costs-profile1.json": "4944b211a13b0c9d24b5dcf2f24b609a6e637acd6a769b97a0501aa872d9444f",
+    "artifacts/execution/2026-09-08-algebra-inventory-heap-observation_algebra_costs-profile1.log": "1d6f627b94d6534301864e4ca70c6356ec12bef612d0ee5892deb6c19caf89d8",
+    "artifacts/execution/2026-09-08-algebra-inventory-heap-observation_algebra_costs-profile1.stacks": "06adb78e8680ee46928303609dcd547cab3e2dae8ed8bdf0c2b0bcff699a6d36",
+    "artifacts/execution/2026-09-08-algebra-inventory-heap-observation_algebra_costs-profile1.zst": "d6f7cb8cd44dc5b83f5de2494ad21ee00bd56d1a837b330cec15243f284b9fba",
+    "artifacts/execution/2026-09-08-algebra-inventory-heap-perimeter_inventory_costs-baseline1-inputs.json": "96aa372b5ec3f49be2534ca50b0f3e4b5f229e1ac8d391e80e3f661deb8bd1a2",
+    "artifacts/execution/2026-09-08-algebra-inventory-heap-perimeter_inventory_costs-baseline1-report.txt": "b162ce0e31597808311472bb297d3f167eaefb201e7bc0d067682673000e3c0a",
+    "artifacts/execution/2026-09-08-algebra-inventory-heap-perimeter_inventory_costs-baseline1.json": "80bf19a0dbe813f0987e8362ddcf079dcf39776a9490a952a65541ce05109c3f",
+    "artifacts/execution/2026-09-08-algebra-inventory-heap-perimeter_inventory_costs-baseline1.log": "e7c4171a38b2a31cfabf280094de80492d3216280f906ea0b0644ec112570154",
+    "artifacts/execution/2026-09-08-algebra-inventory-heap-perimeter_inventory_costs-baseline1.stacks": "254374fe9fc6b6c03c59e4fdc184c189b3f2dcadff51282a9117622d04cfd619",
+    "artifacts/execution/2026-09-08-algebra-inventory-heap-perimeter_inventory_costs-baseline1.zst": "517d378253addc356ca302d28ce4a9a9602665557527666ecc5bb77c14836cca",
+    "artifacts/execution/2026-09-08-algebra-inventory-heap-perimeter_inventory_costs-profile1-inputs.json": "ee0f3853b90f20d78945323ccf8eba4936b3a507ce10d88b88ec4d8f47bb5c55",
+    "artifacts/execution/2026-09-08-algebra-inventory-heap-perimeter_inventory_costs-profile1-report.txt": "4edfb83a869575f96a6598c207a90260f235cd594614be3dd0e8b99275c5f90f",
+    "artifacts/execution/2026-09-08-algebra-inventory-heap-perimeter_inventory_costs-profile1.json": "c74da9a7cb60bfaf8cf8cafdcf8165871e1c1ac9613813c288ce55b26a8cb5da",
+    "artifacts/execution/2026-09-08-algebra-inventory-heap-perimeter_inventory_costs-profile1.log": "b09d04f47fb4a4ea1d7ea84aab53094c4356c1c9f0ca27b38de0719d3d7c7ba1",
+    "artifacts/execution/2026-09-08-algebra-inventory-heap-perimeter_inventory_costs-profile1.stacks": "eb43b88c5f16faf33ff1b9ddad36cf36a07f403ed2d821ee8d782754a3dffffa",
+    "artifacts/execution/2026-09-08-algebra-inventory-heap-perimeter_inventory_costs-profile1.zst": "820a7392a14f0c26e95954eb7fcaf051634a5783faa5e5f7a68c145700f6b8b0",
+    "artifacts/execution/2026-09-08-algebra-inventory-profile-binary-identity.json": "8ad9a0ce25da804f084b69d4463299361bb93609c8164b97a023069f8489bdf7",
+    "artifacts/execution/2026-09-08-algebra-inventory-profile-verified.json": "12b490ca138e7592b25f98c6e495a18d053f068e1604dae2bee5b82b39a22b03"
+  }
+}

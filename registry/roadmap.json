@@ -58,7 +58,12 @@
       "result_artifacts": [
         "crates/fa-reference/src/perimeter.rs",
         "crates/fa-reference/tests/perimeter_boundaries.rs",
-        "artifacts/execution/2026-09-08-semantics-receipt.json"
+        "artifacts/execution/2026-09-08-semantics-receipt.json",
+        "crates/fa-reference/src/perimeter_inventory.rs",
+        "crates/fa-reference/tests/perimeter_inventory_boundaries.rs",
+        "crates/fa-reference/tests/perimeter_inventory_limits.rs",
+        "crates/fa-reference/tests/perimeter_inventory_costs.rs",
+        "artifacts/execution/2026-09-08-algebra-inventory-receipt.json"
       ]
     },
     {
@@ -1428,14 +1433,15 @@
         "crates/fa-reference/src/witness.rs",
         "crates/fa-reference/tests/witness_boundaries.rs",
         "crates/fa-reference/tests/witness_limits.rs",
-        "artifacts/execution/2026-09-08-witness-receipt.json"
+        "artifacts/execution/2026-09-08-witness-receipt.json",
+        "artifacts/execution/2026-09-08-algebra-inventory-witness-review-receipt.json"
       ]
     },
     {
       "id": "FA-059",
       "gate": "G2",
       "title": "Implement range and phantom witnesses",
-      "status": "planned",
+      "status": "in_progress",
       "depends_on": [
         "FA-058"
       ],
@@ -1607,7 +1613,7 @@
       "id": "FA-068",
       "gate": "G0",
       "title": "Define observation operator algebra",
-      "status": "in_progress",
+      "status": "reference_semantics_qualified_2026_09_08",
       "depends_on": [
         "FA-057",
         "FA-063",
@@ -1623,7 +1629,13 @@
         "Produce executed local evidence; source or prose alone does not close this packet."
       ],
       "owner_role": "systems",
-      "result_artifacts": []
+      "result_artifacts": [
+        "crates/fa-reference/src/observation_algebra.rs",
+        "crates/fa-reference/tests/observation_algebra_boundaries.rs",
+        "crates/fa-reference/tests/observation_algebra_laws.rs",
+        "crates/fa-reference/tests/observation_algebra_costs.rs",
+        "artifacts/execution/2026-09-08-algebra-inventory-receipt.json"
+      ]
     },
     {
       "id": "FA-069",

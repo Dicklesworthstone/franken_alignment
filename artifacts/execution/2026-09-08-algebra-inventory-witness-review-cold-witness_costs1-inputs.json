@@ -1,0 +1,22 @@
+{
+  "command": [
+    "rch",
+    "--json",
+    "exec",
+    "--job",
+    "--",
+    "/data/tmp/rch/franken_alignment_wave7_final1_20260908/.rch-target-vmi1149989-pool-eb0e9bb4708c4694fbc95ac65d237c2d/release/build/fa-reference/97d6f97dab7ab07c/out/witness_costs-97d6f97dab7ab07c",
+    "--exact",
+    "first_witness_capture_is_selectable_for_fresh_release_measurement",
+    "--nocapture",
+    "--test-threads=1"
+  ],
+  "binary": {
+    "remote_path": "/data/tmp/rch/franken_alignment_wave7_final1_20260908/.rch-target-vmi1149989-pool-eb0e9bb4708c4694fbc95ac65d237c2d/release/build/fa-reference/97d6f97dab7ab07c/out/witness_costs-97d6f97dab7ab07c",
+    "sha256": "659c098105e89a63610f42731fad9c6a14ee23040552d558b2b0eb819a0dd8cd",
+    "local_path": "/tmp/fa-campaign-20260908/wave7-witness-review-profile-binaries/witness_costs"
+  },
+  "source_inputs": "wave7-final1-inputs.json",
+  "working_directory": "/Users/jemanuel/projects/franken_alignment_wave7_final1_20260908",
+  "scope": "Sole selected first-operation test in fresh release process; caller setup and output assertions excluded; no preflight, warmup or OS/cache cold claim."
+}

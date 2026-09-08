@@ -1,0 +1,70 @@
+  [2m2026-09-08T09:51:17.807762Z[0m [32m INFO[0m [1;32mrch::hook[0m[32m: [32mSelected worker: vmi1227854 at root@109.123.245.77 (4 slots remaining after reservation, speed 71.7)[0m
+    [2;3mat[0m rch/src/hook.rs:2645 [2;3mon[0m ThreadId(1)
+
+[*] Job j-30004650170124456 submitted to vmi1227854 (4 slots remaining, speed 71.7)
+  [2m2026-09-08T09:51:17.844438Z[0m [32m INFO[0m [1;32mrch::hook::transfer_orchestration[0m[32m: [32mStarting remote compilation pipeline for franken_alignment_wave7_final1_20260908 (hash: 98a1a8a2d90786ca)[0m
+    [2;3mat[0m rch/src/hook/transfer_orchestration.rs:510 [2;3mon[0m ThreadId(1)
+
+  [2m2026-09-08T09:51:17.844468Z[0m [32m INFO[0m [1;32mrch::hook::transfer_orchestration[0m[32m: [32mPrepared dependency sync manifest for 1 roots[0m
+    [2;3mat[0m rch/src/hook/transfer_orchestration.rs:532 [2;3mon[0m ThreadId(1)
+
+  [2m2026-09-08T09:51:18.997043Z[0m [32m INFO[0m [1;32mrch::hook::transfer_orchestration[0m[32m: [32mSyncing project to worker vmi1227854...[0m
+    [2;3mat[0m rch/src/hook/transfer_orchestration.rs:661 [2;3mon[0m ThreadId(1)
+
+  [2m2026-09-08T09:51:18.997490Z[0m [32m INFO[0m [1;32mrch::transfer[0m[32m: [32mLinked git worktree detected at /Users/jemanuel/projects/franken_alignment_wave7_final1_20260908 (gitdir: /Users/jemanuel/projects/franken_alignment/.git/worktrees/franken_alignment_wave7_final1_20260908); excluding dangling '.git' file from upload so the remote build resolves git-free like a normal repo[0m
+    [2;3mat[0m rch/src/transfer.rs:2009 [2;3mon[0m ThreadId(1)
+
+  [2m2026-09-08T09:51:18.997533Z[0m [32m INFO[0m [1;32mrch::transfer[0m[32m: [32mSyncing /Users/jemanuel/projects/franken_alignment_wave7_final1_20260908 -> /Users/jemanuel/projects/franken_alignment_wave7_final1_20260908 on vmi1227854 (streaming)[0m
+    [2;3mat[0m rch/src/transfer.rs:3549 [2;3mon[0m ThreadId(1)
+
+  [2m2026-09-08T09:51:21.330525Z[0m [32m INFO[0m [1;32mrch::hook::transfer_orchestration[0m[32m: [32mSync complete: 793 files, 1592757 bytes in 2308ms[0m
+    [2;3mat[0m rch/src/hook/transfer_orchestration.rs:958 [2;3mon[0m ThreadId(1)
+
+  [2m2026-09-08T09:51:21.340422Z[0m [32m INFO[0m [1;32mrch::hook::transfer_orchestration[0m[32m: [32mExecuting command remotely: heaptrack --record-only -o /tmp/fa-campaign-20260908-wave7-witness-review-profile/witness_costs-profile /tmp/fa-campaign-20260908-wave7-witness-review-profile/witness_costs --exact fixed_witness_costs_are_descriptive_and_assert_all_outcomes --nocapture '--test-threads=1'[0m
+    [2;3mat[0m rch/src/hook/transfer_orchestration.rs:1018 [2;3mon[0m ThreadId(1)
+
+  [2m2026-09-08T09:51:21.340564Z[0m [32m INFO[0m [1;32mrch::transfer[0m[32m: [32mWrapping command with external timeout protection, [1;32mkind[0m[32m: job, [1;32mtimeout_secs[0m[32m: 3600[0m
+    [2;3mat[0m rch/src/transfer.rs:2669 [2;3mon[0m ThreadId(1)
+
+Warning: Permanently added '109.123.245.77' (ED25519) to the list of known hosts.
+heaptrack output will be written to "/tmp/fa-campaign-20260908-wave7-witness-review-profile/witness_costs-profile.zst"
+starting application, this might take some time...
+
+running 1 test
+test fixed_witness_costs_are_descriptive_and_assert_all_outcomes ... case=fresh_exact_and_absent_capture_reuse samples=12 successes=12 true_fact_invalidations=0 conservative_fact_equivalent_invalidations=0 refusals=0 bounded_oracle_stale_reuse_denominator=12 asserted_bounded_oracle_stale_reuses=0 observed_errors=0 requested_logical_value_bytes=8 successful_judgment_logical_value_bytes=8 elapsed_ns_min=2694 elapsed_ns_median=2964 elapsed_ns_max=42353 elapsed_ns_total=108783 timing_scope=fresh_snapshot_frontier_capture_reuse_assertions_drop memory_measurement=unavailable_in_memory_profile
+case=fresh_unrelated_key_churn_remains_valid samples=12 successes=12 true_fact_invalidations=0 conservative_fact_equivalent_invalidations=0 refusals=0 bounded_oracle_stale_reuse_denominator=12 asserted_bounded_oracle_stale_reuses=0 observed_errors=0 requested_logical_value_bytes=8 successful_judgment_logical_value_bytes=8 elapsed_ns_min=3746 elapsed_ns_median=3936 elapsed_ns_max=15584 elapsed_ns_total=61053 timing_scope=fresh_baseline_capture_unrelated_candidate_reuse_assertions_drop memory_measurement=unavailable_in_memory_profile
+case=fresh_changed_exact_value_invalidates samples=12 successes=0 true_fact_invalidations=12 conservative_fact_equivalent_invalidations=0 refusals=0 bounded_oracle_stale_reuse_denominator=12 asserted_bounded_oracle_stale_reuses=0 observed_errors=0 requested_logical_value_bytes=8 successful_judgment_logical_value_bytes=8 elapsed_ns_min=3745 elapsed_ns_median=3870 elapsed_ns_max=17526 elapsed_ns_total=62804 timing_scope=fresh_baseline_capture_control_changed_exact_candidate_reuse_assertions_drop memory_measurement=unavailable_in_memory_profile
+case=fresh_absent_insertion_invalidates samples=12 successes=0 true_fact_invalidations=12 conservative_fact_equivalent_invalidations=0 refusals=0 bounded_oracle_stale_reuse_denominator=12 asserted_bounded_oracle_stale_reuses=0 observed_errors=0 requested_logical_value_bytes=8 successful_judgment_logical_value_bytes=8 elapsed_ns_min=3946 elapsed_ns_median=4041 elapsed_ns_max=15383 elapsed_ns_total=62885 timing_scope=fresh_baseline_capture_control_absent_insertion_candidate_reuse_assertions_drop memory_measurement=unavailable_in_memory_profile
+case=fresh_closing_marker_generation_churn_conservatively_invalidates samples=12 successes=12 true_fact_invalidations=0 conservative_fact_equivalent_invalidations=12 refusals=0 bounded_oracle_stale_reuse_denominator=12 asserted_bounded_oracle_stale_reuses=0 observed_errors=0 requested_logical_value_bytes=8 successful_judgment_logical_value_bytes=8 elapsed_ns_min=5819 elapsed_ns_median=6089 elapsed_ns_max=26771 elapsed_ns_total=96716 timing_scope=fresh_baseline_capture_same_facts_marker_generation_churn_reuse_assertions_drop memory_measurement=unavailable_in_memory_profile
+case=fresh_unknown_closure_refusal samples=12 successes=0 true_fact_invalidations=0 conservative_fact_equivalent_invalidations=0 refusals=12 bounded_oracle_stale_reuse_denominator=0 asserted_bounded_oracle_stale_reuses=0 observed_errors=0 requested_logical_value_bytes=8 successful_judgment_logical_value_bytes=0 elapsed_ns_min=1983 elapsed_ns_median=2078 elapsed_ns_max=8292 elapsed_ns_total=32908 timing_scope=fresh_snapshot_capture_refusal_assertions_drop memory_measurement=unavailable_in_memory_profile
+NOTE: heaptrack detected DEBUGINFOD_URLS but will disable it to prevent 
+unintended network delays during recording
+If you really want to use DEBUGINFOD, export HEAPTRACK_ENABLE_DEBUGINFOD=1
+case=fresh_stale_snapshot_refusal samples=12 successes=0 true_fact_invalidations=0 conservative_fact_equivalent_invalidations=0 refusals=12 bounded_oracle_stale_reuse_denominator=0 asserted_bounded_oracle_stale_reuses=0 observed_errors=0 requested_logical_value_bytes=8 successful_judgment_logical_value_bytes=8 elapsed_ns_min=3566 elapsed_ns_median=4261 elapsed_ns_max=16612604 elapsed_ns_total=16678874 timing_scope=fresh_baseline_capture_stale_candidate_reuse_assertions_drop memory_measurement=unavailable_in_memory_profile
+ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 1 filtered out; finished in 0.02s
+
+heaptrack stats:
+	allocations:          	1780
+	leaked allocations:   	4
+	temporary allocations:	41
+Heaptrack finished! Now run the following to investigate the data:
+
+  heaptrack --analyze "/tmp/fa-campaign-20260908-wave7-witness-review-profile/witness_costs-profile.zst"
+  [2m2026-09-08T09:51:22.725550Z[0m [32m INFO[0m [1;32mrch::hook::transfer_orchestration[0m[32m: [32mRemote command finished: exit=0 in 1384ms[0m
+    [2;3mat[0m rch/src/hook/transfer_orchestration.rs:1150 [2;3mon[0m ThreadId(1)
+
+[W] Worker: vmi1227854 | Job: j-30004650170124456
+[T] Total: 3.7s (sync 2.3s, build 1.4s, artifacts --)
+^ Sync: 1.5 MB in 2.3s (673.9 KB/s)
+[C] Compile: 1.4s
+Artifacts: skipped
+[T] Cache: MISS
++------------ [OK] Build Successful ------------+
+| Duration: 1.4s (^ 8% slower vs previous 1.3s) |
+| Worker: vmi1227854                            |
+| Cache: MISS (warming cache)                   |
+| Time: 2026-09-08 09:51:22                     |
++-----------------------------------------------+
+[RCH] remote vmi1227854 (4.9s)

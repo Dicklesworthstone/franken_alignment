@@ -1,0 +1,10 @@
+--- a/crates/fa-reference/src/observation_algebra.rs
++++ b/crates/fa-reference/src/observation_algebra.rs
+@@ -1761,7 +1761,6 @@
+     context: OperatorContext,
+ ) -> Result<Transfer<ClosedScope>, Error> {
+     require_class(&context, RequirementClass::ClosedScope)?;
+-    require_exact(&context)?;
+     if snapshot.semantic_epoch() != context.requirement.basis.semantic_generation()
+         || snapshot.control_cut() != context.requirement.basis.control_seq()
+         || requirement.stage != FrontierStage::Authenticated
