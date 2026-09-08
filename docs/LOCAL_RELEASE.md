@@ -29,6 +29,8 @@ dsr --json quality --tool franken_alignment --work-dir "$PWD"
 
 `required_checks` are still executed when ordinary checks are skipped. Missing configuration, empty checks and dry runs cannot establish success. DSR's outer receipt captures command logs and source context; it does not turn the reference gate into production-readiness evidence.
 
+On 2026-09-08 UTC, all three required checks passed on clean unchanged revision `2e60924598f5283b8eeab5482087db87f154f106`; both Cargo invocations ran remotely on `hz3`, and the complete gate passed 270 tests. [The integration record](../artifacts/execution/2026-09-08-epoch8-gate-integration.json) retains raw-log SHA-256 values, the DSR source fence and a fresh full-gate injected-defect refusal. The earlier failed DSR run remains retained as the trigger for the runtime-checkout repair. Configuration was supplied through an isolated `DSR_REPOS_FILE`; the global operator registry was not overwritten. New source still requires new execution.
+
 DSR build/release reads a separate per-tool configuration under `~/.config/dsr/repos.d/`. Registering quality checks is not configuring native builds. No production build configuration is supplied here because the accepted binary/target/signing/host profile does not yet exist. This is a deliberate blocked gate, not an example with misleading placeholder secrets.
 
 ## Required production build contract

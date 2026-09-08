@@ -15,7 +15,7 @@
     "registry/claims.json": "9e729380f01af536b21f116d334977db77e3900e43367c6f19b1522296c61005",
     "registry/founding_concordance.json": "cf90c49704448eaaab47e447c15033c94dd66c37c895c74c8b7bce2f135c251d",
     "registry/invariants.json": "b2f09b25d5633c7686ecf66a8b1998a489211d01c4a0bf179ce23af89b5f3965",
-    "registry/roadmap.json": "39c315ce97938d24ea1a9becbcf3834ece3801b164b4019ce2f002d450f3fbdf",
+    "registry/roadmap.json": "810083535441cf1ec53ea48ad6a0d68918a0cb0c0817fba98cdc0bc296752a0f",
     "registry/sources.json": "c577fdfd39e1b5976e9f1e02db26e88598935d2f1154b40ecfbde45520e35a7a",
     "registry/vocabulary.json": "b5b7cb253333f43ba6bcc6b08268bb91ceab7767b7d7581fa5cec7f41a475615",
     "rust-toolchain.toml": "6ce9e65c5acda74d4b794761093fc1a413b28a1b2c11ab7a899a7da689df2d52",

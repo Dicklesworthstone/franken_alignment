@@ -1,5 +1,9 @@
 # Changelog
 
+## 2026-09-08: executed DSR reference gate
+
+All three required DSR checks passed on unchanged clean commit `2e609245`, including 270 tests through RCH. A fresh unknown-invariant injection reached the concordance check and failed with its named reason. The exact positive and negative logs are retained; the concordance epic is qualified. Production admission and release remain unfinished.
+
 ## 2026-09-07: runtime checkout resolution and current-count checks
 
 The gate uses the actual invocation checkout and rejects stale or ambiguous current claims while preserving dated history. A real DSR run exposed the removed compile-time archive path; the repair and new receipt/path/fence regressions passed the complete 270-test RCH gate. The dedicated prose check supports post-execution documentation updates without crediting old tests to new source. DSR repeat and production admission remain separate qualification steps.

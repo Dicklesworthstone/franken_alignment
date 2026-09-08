@@ -1,0 +1,20 @@
+{
+  "schema": "fa.gate_integration/1",
+  "qualified_commit": "2e60924598f5283b8eeab5482087db87f154f106",
+  "dsr": "artifacts/execution/2026-09-08-epoch8-dsr-receipt.json",
+  "retained_check_log_sha256": {
+    "artifacts/execution/2026-09-08-epoch8-dsr-check-1.log": "a5918b31b993fcafa0ef011d4f6670b32566ac63adb9d63ed7ed06dd3802ef1e",
+    "artifacts/execution/2026-09-08-epoch8-dsr-check-2.log": "c0ba42d449c9988bbc030863497c41e5301e7e594809fe6e0d3a42bced17f3e3",
+    "artifacts/execution/2026-09-08-epoch8-dsr-check-3.log": "18451a1af546a02957db93c63dc0760f3c950cc9a5072950f5b2652e4dbc19c1"
+  },
+  "negative": {
+    "base_commit": "2e60924598f5283b8eeab5482087db87f154f106",
+    "worker": "hz3",
+    "job": "j-30004650170124240",
+    "exit_code": 1,
+    "expected_finding": "unknown_reference FA-INV-099",
+    "input_identity": "artifacts/execution/2026-09-08-epoch8-negative-current-inputs.json",
+    "raw_log": "artifacts/execution/2026-09-08-epoch8-negative-current.log"
+  },
+  "boundary": "Initial two-package reference gate only. All three required DSR checks executed on an unchanged clean commit; both Cargo invocations ran remotely. The injected defect reached concordance after prior gates passed. No production release or dependency/runtime admission claim."
+}

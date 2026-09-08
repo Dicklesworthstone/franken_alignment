@@ -1,0 +1,11 @@
+[INFO] Session started
+[quality] Running 3 quality check(s) for franken_alignment
+
+[quality] Running: fa_source_status="$(git status --porcelain --untracked-files=all)" && test -z "$fa_source_status"
+[quality]   ✓ Passed (1337ms)
+[quality] Running: RCH_REQUIRE_REMOTE=1 rch exec --base HEAD --clean-overlay --no-overlay -- cargo +nightly-2026-09-07 run --locked -p xtask -- concordance-check
+[quality]   ✓ Passed (64894ms)
+[quality] Running: RCH_REQUIRE_REMOTE=1 rch exec --base HEAD --clean-overlay --no-overlay -- cargo +nightly-2026-09-07 run --locked -p xtask -- check
+[quality]   ✓ Passed (89502ms)
+
+[quality] Quality gates passed: 3/3 checks (159381ms) — receipt: /tmp/fa-swarm-20260907/dsr-quality-logs/franken_alignment/20260907T200514-25597/receipt.json

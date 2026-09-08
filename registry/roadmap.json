@@ -2250,7 +2250,7 @@
       "id": "FA-103",
       "gate": "G0",
       "title": "Maintain the founding-ideas concordance",
-      "status": "in_progress",
+      "status": "reference_gate_qualified_2026_09_08",
       "depends_on": [
         "FA-052"
       ],
@@ -2266,7 +2266,11 @@
       "owner_role": "systems",
       "result_artifacts": [
         "artifacts/execution/2026-09-07-epoch7-receipt.json",
-        "artifacts/execution/2026-09-07-epoch7-attempt4.log"
+        "artifacts/execution/2026-09-07-epoch7-attempt4.log",
+        "artifacts/execution/2026-09-07-epoch8-receipt.json",
+        "artifacts/execution/2026-09-08-epoch8-gate-integration.json",
+        "artifacts/execution/2026-09-08-epoch8-dsr-receipt.json",
+        "artifacts/execution/2026-09-08-epoch8-negative-current.log"
       ],
       "founding_ideas": [
         "FI-A01",
@@ -3079,7 +3083,7 @@
       "id": "FA-132",
       "gate": "G0",
       "title": "System map and vocabulary registries with checker",
-      "status": "planned",
+      "status": "in_progress",
       "depends_on": [
         "FA-103"
       ],

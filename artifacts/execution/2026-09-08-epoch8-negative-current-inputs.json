@@ -1,0 +1,31 @@
+{
+  "base_commit": "2e60924598f5283b8eeab5482087db87f154f106",
+  "command": [
+    "rch",
+    "--json",
+    "exec",
+    "--base",
+    "2e60924598f5283b8eeab5482087db87f154f106",
+    "--clean-overlay",
+    "--overlay-path",
+    "registry/founding_concordance.json",
+    "--overlay-path",
+    "registry/source_snapshot.json",
+    "--overlay-path",
+    "registry/dependency_policy.json",
+    "--",
+    "cargo",
+    "+nightly-2026-09-07",
+    "run",
+    "--locked",
+    "-p",
+    "xtask",
+    "--",
+    "check"
+  ],
+  "source_sha256": {
+    "registry/founding_concordance.json": "2ee87d46f4e2a2cde4edea55bbbc71203d7b31bd8421f26fc14291a225e6049c",
+    "registry/source_snapshot.json": "38f9ba729c7250ead18d2091b58c1cdf785afd722d2367825764d1b085d22f1e",
+    "registry/dependency_policy.json": "f7cf77824d7874ed201e03708e41df7cc7a3ef56c0600031372561e9ad07e951"
+  }
+}

@@ -8,7 +8,7 @@ The complete isolated RCH gate passed on `vmi1227854` under `nightly-2026-09-07`
 
 The gate now resolves the invocation's actual checkout; a cached binary cannot keep using a removed compile-time archive path. Current declarations are checked against registries and a named retained execution receipt, with bounded real-file reads, canonical receipt paths, symlink refusal and shared Markdown fence semantics. Historical counts remain historical. A receipt's fields are comparison inputs, not proof of execution by themselves.
 
-The planted-concordance experiment stopped on the intended unknown invariant after earlier checks passed. The first DSR integration attempt is retained as failed: its second Cargo invocation exposed the stale archive path that this batch repairs. That first attempt is not DSR qualification. Production remains unimplemented, and mandatory Asupersync dependency/build/runtime admission remains incomplete.
+The planted-concordance experiment stopped on the intended unknown invariant after earlier checks passed. The first DSR integration attempt is retained as failed: its second Cargo invocation exposed the stale archive path that this batch repairs. On 2026-09-08 UTC, the repaired committed revision `2e60924598f5283b8eeab5482087db87f154f106` passed all three required DSR checks, including the complete 270-test gate, with identical clean source identities before and after. A fresh injected-defect run on that same code refused the unknown invariant after source, admission and registry checks passed. [The integration record](artifacts/execution/2026-09-08-epoch8-gate-integration.json) links the exact raw logs and inputs. Production remains unimplemented, and mandatory Asupersync dependency/build/runtime admission remains incomplete.
 
 ## Seventh qualified batch: owned concordance and admission discrimination
 
@@ -72,7 +72,7 @@ The round uses a deliberately non-cryptographic FNV comparison and proves no cry
 | Native foundation adapters | Planned, admission blockers recorded | A reviewed source file is not an integration |
 | Trained helpers / codecs / signatures / surprise residual / rewind | Research and implementation plans | No measured safety, compression, detection or containment result |
 | Receipts, assurance profiles, passports, autonomy ledger, canaries, risk-theater detector, formal anchors | Plan subsections, invariants FA-INV-035 through FA-INV-038, packets FA-117 through FA-131, beads | No verifier, no proof, no profile exists yet |
-| Local DSR quality integration | Registry fragment and command contract supplied | Not executed through DSR on the user's hosts |
+| Local DSR quality integration | All three required checks executed and passed on unchanged clean revision `2e609245`, 2026-09-08 UTC; Cargo checks ran through RCH | Initial reference gate only; no production build, signing or release profile |
 | Public repository mutation | The operator committed and pushed earlier revision 0.3 batches during the working session; later changes remain in the local working tree until committed | This document does not track remote state |
 
 ## Execution facts recorded on 2026-09-06
