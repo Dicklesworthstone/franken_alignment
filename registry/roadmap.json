@@ -14,7 +14,7 @@
       "id": "FA-001",
       "gate": "G0",
       "title": "Freeze action and permit semantics",
-      "status": "in_progress",
+      "status": "reference_semantics_qualified_2026_09_08",
       "depends_on": [],
       "invariants": [
         "FA-INV-001",
@@ -32,14 +32,17 @@
         "crates/fa-reference/src/action.rs",
         "crates/fa-reference/tests/action_boundaries.rs",
         "IMPLEMENTATION_STATUS.md",
-        "artifacts/execution/2026-09-08-action-clock-red.log"
+        "artifacts/execution/2026-09-08-action-clock-red.log",
+        "crates/fa-reference/tests/action_transitions.rs",
+        "crates/fa-reference/tests/action_costs.rs",
+        "artifacts/execution/2026-09-08-semantics-receipt.json"
       ]
     },
     {
       "id": "FA-002",
       "gate": "G0",
       "title": "Freeze threat and effect-perimeter inventory",
-      "status": "drafted",
+      "status": "in_progress",
       "depends_on": [],
       "invariants": [
         "FA-INV-008",
@@ -52,7 +55,11 @@
       ],
       "owner_role": "systems",
       "estimated_scope": "One independently reviewable work packet; split before implementation if multiple semantics change.",
-      "result_artifacts": []
+      "result_artifacts": [
+        "crates/fa-reference/src/perimeter.rs",
+        "crates/fa-reference/tests/perimeter_boundaries.rs",
+        "artifacts/execution/2026-09-08-semantics-receipt.json"
+      ]
     },
     {
       "id": "FA-003",

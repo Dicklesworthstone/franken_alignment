@@ -4,6 +4,7 @@
 
 pub mod action;
 pub mod full_input;
+pub mod perimeter;
 pub mod product_frontier;
 pub mod reducer;
 pub mod round;

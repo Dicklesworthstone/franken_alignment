@@ -1,0 +1,1 @@
+{"api_version":"1.0","command":"cargo +nightly-2026-09-07 run --locked -p xtask -- check","outcome":"transport_error","location":"remote","fallback_reason":"fail_closed_no_local_fallback","worker_id":"hz3","duration_ms":21219}

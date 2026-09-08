@@ -1,0 +1,101 @@
+  [2m2026-09-08T05:42:58.191836Z[0m [32m INFO[0m [1;32mrch::hook[0m[32m: [32mSelected worker: hz3 at ubuntu@194.140.197.98 (6 slots remaining after reservation, speed 75.1)[0m
+    [2;3mat[0m rch/src/hook.rs:2645 [2;3mon[0m ThreadId(1)
+
+[*] Job j-30004650170124339 submitted to hz3 (6 slots remaining, speed 75.1)
+  [2m2026-09-08T05:42:58.266183Z[0m [32m INFO[0m [1;32mrch::hook::transfer_orchestration[0m[32m: [32mStarting remote compilation pipeline for franken_alignment_wave2_gate3_20260908 (hash: 95e939f68ad7072c)[0m
+    [2;3mat[0m rch/src/hook/transfer_orchestration.rs:510 [2;3mon[0m ThreadId(1)
+
+  [2m2026-09-08T05:42:58.266305Z[0m [32m INFO[0m [1;32mrch::hook::transfer_orchestration[0m[32m: [32mPrepared dependency sync manifest for 1 roots[0m
+    [2;3mat[0m rch/src/hook/transfer_orchestration.rs:532 [2;3mon[0m ThreadId(1)
+
+  [2m2026-09-08T05:43:00.055987Z[0m [32m INFO[0m [1;32mrch::hook::transfer_orchestration[0m[32m: [32mSyncing project to worker hz3...[0m
+    [2;3mat[0m rch/src/hook/transfer_orchestration.rs:661 [2;3mon[0m ThreadId(1)
+
+  [2m2026-09-08T05:43:00.057940Z[0m [32m INFO[0m [1;32mrch::transfer[0m[32m: [32mLinked git worktree detected at /Users/jemanuel/projects/franken_alignment_wave2_gate3_20260908 (gitdir: /Users/jemanuel/projects/franken_alignment/.git/worktrees/franken_alignment_wave2_gate3_20260908); excluding dangling '.git' file from upload so the remote build resolves git-free like a normal repo[0m
+    [2;3mat[0m rch/src/transfer.rs:2009 [2;3mon[0m ThreadId(1)
+
+  [2m2026-09-08T05:43:00.058158Z[0m [32m INFO[0m [1;32mrch::transfer[0m[32m: [32mSyncing /Users/jemanuel/projects/franken_alignment_wave2_gate3_20260908 -> /Users/jemanuel/projects/franken_alignment_wave2_gate3_20260908 on hz3 (streaming)[0m
+    [2;3mat[0m rch/src/transfer.rs:3549 [2;3mon[0m ThreadId(1)
+
+  [2m2026-09-08T05:43:09.653463Z[0m [32m INFO[0m [1;32mrch::hook::transfer_orchestration[0m[32m: [32mSync complete: 411 files, 1170501 bytes in 9503ms[0m
+    [2;3mat[0m rch/src/hook/transfer_orchestration.rs:958 [2;3mon[0m ThreadId(1)
+
+  [2m2026-09-08T05:43:09.667367Z[0m [32m INFO[0m [1;32mrch::hook::transfer_orchestration[0m[32m: [32mExecuting command remotely: /usr/bin/time -v cargo +nightly-2026-09-07 test --release --locked -p fa-reference --test action_costs -- --nocapture '--test-threads=1'[0m
+    [2;3mat[0m rch/src/hook/transfer_orchestration.rs:1018 [2;3mon[0m ThreadId(1)
+
+  [2m2026-09-08T05:43:09.668331Z[0m [32m INFO[0m [1;32mrch::transfer[0m[32m: [32mWrapping command with external timeout protection, [1;32mkind[0m[32m: job, [1;32mtimeout_secs[0m[32m: 3600[0m
+    [2;3mat[0m rch/src/transfer.rs:2669 [2;3mon[0m ThreadId(1)
+
+warning: unused field `license-file` in `workspace.package`
+ --> Cargo.toml:9:1
+  |
+9 | license-file = "LICENSE"
+  | ^^^^^^^^^^^^
+  |
+  = note: `cargo::unused_workspace_package_fields` is set to `warn` by default
+help: consider removing the field `workspace.package.license-file`
+warning: workspace (manifest) generated 1 warning
+   Compiling fa-reference v0.2.0 (/data/projects/franken_alignment_wave2_gate3_20260908/crates/fa-reference)
+    Finished `release` profile [optimized] target(s) in 42.45s
+     Running tests/action_costs.rs (.rch-target/release/build/fa-reference/7a3c3e995c13edcb/out/action_costs-7a3c3e995c13edcb)
+
+running 1 test
+test bounded_public_action_cost_harness ... FA001_ACTION_COST_CONTEXT mode=release model=reference_in_memory no_claim=durable_io_asupersync_runtime_broker_or_production_latency
+FA001_ACTION_COST_MEMORY phase=before state=unavailable reason=reference_test_profile_prohibits_filesystem_observation scope=whole_process_not_per_operation_or_allocator
+FA001_ACTION_COST case=cold_construction_small samples=12 expected_successes=24 successes=24 expected_refusals=0 refusals=0 failures=0 payload_bytes_per_action=23 payload_byte_cap=false witness_value_bytes_per_action=29 witness_value_byte_cap=false witnesses_per_action=1 witness_count_cap_coverage=not_measured route_identifiers_per_action=5 logical_unique_input_bytes=624 input_bytes_scope=logical_payload_and_distinct_witness_values timing_scope=whole_case_fixture_construction_transitions_assertions_and_drop elapsed_ns_min=120 elapsed_ns_median=130 elapsed_ns_max=4228 elapsed_ns_total=5671
+FA001_ACTION_COST case=cold_construction_at_cap samples=2 expected_successes=4 successes=4 expected_refusals=0 refusals=0 failures=0 payload_bytes_per_action=65536 payload_byte_cap=true witness_value_bytes_per_action=65536 witness_value_byte_cap=true witnesses_per_action=1 witness_count_cap_coverage=not_measured route_identifiers_per_action=5 logical_unique_input_bytes=262144 input_bytes_scope=logical_payload_and_distinct_witness_values timing_scope=whole_case_fixture_construction_transitions_assertions_and_drop elapsed_ns_min=1763 elapsed_ns_median=44287 elapsed_ns_max=86812 elapsed_ns_total=88575
+FA001_ACTION_COST case=authorize_dispatch_small samples=12 expected_successes=120 successes=120 expected_refusals=0 refusals=0 failures=0 payload_bytes_per_action=23 payload_byte_cap=false witness_value_bytes_per_action=29 witness_value_byte_cap=false witnesses_per_action=1 witness_count_cap_coverage=not_measured route_identifiers_per_action=5 logical_unique_input_bytes=624 input_bytes_scope=logical_payload_and_distinct_witness_values timing_scope=whole_case_fixture_construction_transitions_assertions_and_drop elapsed_ns_min=842 elapsed_ns_median=857 elapsed_ns_max=22061 elapsed_ns_total=32161
+FA001_ACTION_COST case=authorize_dispatch_at_cap samples=2 expected_successes=20 successes=20 expected_refusals=0 refusals=0 failures=0 payload_bytes_per_action=65536 payload_byte_cap=true witness_value_bytes_per_action=65536 witness_value_byte_cap=true witnesses_per_action=1 witness_count_cap_coverage=not_measured route_identifiers_per_action=5 logical_unique_input_bytes=262144 input_bytes_scope=logical_payload_and_distinct_witness_values timing_scope=whole_case_fixture_construction_transitions_assertions_and_drop elapsed_ns_min=357335 elapsed_ns_median=434072 elapsed_ns_max=510810 elapsed_ns_total=868145
+FA001_ACTION_COST case=witness_validation_mismatch samples=12 expected_successes=108 successes=108 expected_refusals=12 refusals=12 failures=0 payload_bytes_per_action=23 payload_byte_cap=false witness_value_bytes_per_action=29 witness_value_byte_cap=false witnesses_per_action=1 witness_count_cap_coverage=not_measured route_identifiers_per_action=5 logical_unique_input_bytes=972 input_bytes_scope=logical_payload_and_distinct_witness_values timing_scope=whole_case_fixture_construction_transitions_assertions_and_drop elapsed_ns_min=1001 elapsed_ns_median=1046 elapsed_ns_max=3807 elapsed_ns_total=15505
+FA001_ACTION_COST case=policy_churn_revocation samples=12 expected_successes=120 successes=120 expected_refusals=12 refusals=12 failures=0 payload_bytes_per_action=23 payload_byte_cap=false witness_value_bytes_per_action=29 witness_value_byte_cap=false witnesses_per_action=1 witness_count_cap_coverage=not_measured route_identifiers_per_action=5 logical_unique_input_bytes=624 input_bytes_scope=logical_payload_and_distinct_witness_values timing_scope=whole_case_fixture_construction_transitions_assertions_and_drop elapsed_ns_min=821 elapsed_ns_median=847 elapsed_ns_max=1623 elapsed_ns_total=10961
+FA001_ACTION_COST case=expiry_failure samples=12 expected_successes=48 successes=48 expected_refusals=12 refusals=12 failures=0 payload_bytes_per_action=23 payload_byte_cap=false witness_value_bytes_per_action=29 witness_value_byte_cap=false witnesses_per_action=1 witness_count_cap_coverage=not_measured route_identifiers_per_action=5 logical_unique_input_bytes=624 input_bytes_scope=logical_payload_and_distinct_witness_values timing_scope=whole_case_fixture_construction_transitions_assertions_and_drop elapsed_ns_min=310 elapsed_ns_median=321 elapsed_ns_max=742 elapsed_ns_total=4277
+FA001_ACTION_COST case=unknown_reconciliation samples=12 expected_successes=132 successes=132 expected_refusals=0 refusals=0 failures=0 payload_bytes_per_action=23 payload_byte_cap=false witness_value_bytes_per_action=29 witness_value_byte_cap=false witnesses_per_action=1 witness_count_cap_coverage=not_measured route_identifiers_per_action=5 logical_unique_input_bytes=624 input_bytes_scope=logical_payload_and_distinct_witness_values timing_scope=whole_case_fixture_construction_transitions_assertions_and_drop elapsed_ns_min=921 elapsed_ns_median=952 elapsed_ns_max=1803 elapsed_ns_total=12273
+FA001_ACTION_COST case=witness_validation_authorize_dispatch_small samples=12 expected_successes=24 successes=24 expected_refusals=0 refusals=0 failures=0 payload_bytes_per_action=23 payload_byte_cap=false witness_value_bytes_per_action=29 witness_value_byte_cap=false witnesses_per_action=1 witness_count_cap_coverage=not_measured route_identifiers_per_action=5 logical_unique_input_bytes=624 input_bytes_scope=logical_payload_and_distinct_witness_values timing_scope=successful_witness_validation_authorize_and_dispatch_only setup_outside_timer=true post_timer_black_box_and_inspection=true elapsed_ns_min=290 elapsed_ns_median=311 elapsed_ns_max=430 elapsed_ns_total=3847
+FA001_ACTION_COST case=witness_validation_authorize_dispatch_at_cap samples=2 expected_successes=4 successes=4 expected_refusals=0 refusals=0 failures=0 payload_bytes_per_action=65536 payload_byte_cap=true witness_value_bytes_per_action=65536 witness_value_byte_cap=true witnesses_per_action=1 witness_count_cap_coverage=not_measured route_identifiers_per_action=5 logical_unique_input_bytes=262144 input_bytes_scope=logical_payload_and_distinct_witness_values timing_scope=successful_witness_validation_authorize_and_dispatch_only setup_outside_timer=true post_timer_black_box_and_inspection=true elapsed_ns_min=162101 elapsed_ns_median=165778 elapsed_ns_max=169455 elapsed_ns_total=331556
+FA001_ACTION_COST case=witness_validation_absent_key_small samples=12 expected_successes=24 successes=24 expected_refusals=0 refusals=0 failures=0 payload_bytes_per_action=23 payload_byte_cap=false witness_value_bytes_per_action=0 witness_value_byte_cap=false witnesses_per_action=1 witness_count_cap_coverage=not_measured route_identifiers_per_action=5 logical_unique_input_bytes=276 input_bytes_scope=logical_payload_and_absent_key timing_scope=successful_absent_key_witness_validation_authorize_and_dispatch_only setup_outside_timer=true post_timer_black_box_and_inspection=true elapsed_ns_min=240 elapsed_ns_median=265 elapsed_ns_max=571 elapsed_ns_total=3446
+FA001_ACTION_COST_MEMORY phase=after state=unavailable reason=reference_test_profile_prohibits_filesystem_observation scope=whole_process_not_per_operation_or_allocator
+ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+	Command being timed: "cargo +nightly-2026-09-07 test --release --locked -p fa-reference --test action_costs -- --nocapture --test-threads=1"
+	User time (seconds): 10.85
+	System time (seconds): 0.64
+	Percent of CPU this job got: 27%
+	Elapsed (wall clock) time (h:mm:ss or m:ss): 0:42.47
+	Average shared text size (kbytes): 0
+	Average unshared data size (kbytes): 0
+	Average stack size (kbytes): 0
+	Average total size (kbytes): 0
+	Maximum resident set size (kbytes): 301932
+	Average resident set size (kbytes): 0
+	Major (requiring I/O) page faults: 99
+	Minor (reclaiming a frame) page faults: 171133
+	Voluntary context switches: 1124
+	Involuntary context switches: 222
+	Swaps: 0
+	File system inputs: 34752
+	File system outputs: 27224
+	Socket messages sent: 0
+	Socket messages received: 0
+	Signals delivered: 0
+	Page size (bytes): 4096
+	Exit status: 0
+  [2m2026-09-08T05:43:57.670739Z[0m [32m INFO[0m [1;32mrch::hook::transfer_orchestration[0m[32m: [32mRemote command finished: exit=0 in 47997ms[0m
+    [2;3mat[0m rch/src/hook/transfer_orchestration.rs:1150 [2;3mon[0m ThreadId(1)
+
+[W] Worker: hz3 | Job: j-30004650170124339
+[T] Total: 57.5s (sync 9.5s, build 48.0s, artifacts --)
+^ Sync: 1.1 MB in 9.5s (120.3 KB/s)
+[C] Compile: 48.0s
+Artifacts: skipped
+[T] Cache: MISS
++-------------- * Build Successful ---------------+
+| New personal best! 48.0s (previous: 49.5s)      |
+| Target: release                                 |
+| Duration: 48.0s (v 3% faster vs previous 49.5s) |
+| Worker: hz3                                     |
+| Cache: MISS (warming cache)                     |
+| Time: 2026-09-08 05:43:57                       |
++-------------------------------------------------+
+[RCH] remote hz3 (59.6s)

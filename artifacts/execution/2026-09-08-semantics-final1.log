@@ -1,0 +1,14 @@
+  [2m2026-09-08T05:56:12.064067Z[0m [32m INFO[0m [1;32mrch::hook[0m[32m: [32mSelected worker: hz3 at ubuntu@194.140.197.98 (6 slots remaining after reservation, speed 75.1)[0m
+    [2;3mat[0m rch/src/hook.rs:2645 [2;3mon[0m ThreadId(1)
+
+[*] Job j-30004650170124344 submitted to hz3 (6 slots remaining, speed 75.1)
+  [2m2026-09-08T05:56:12.103480Z[0m [32m INFO[0m [1;32mrch::hook::transfer_orchestration[0m[32m: [32mStarting remote compilation pipeline for franken_alignment_wave2_final1_20260908 (hash: 7b637fc53c59f047)[0m
+    [2;3mat[0m rch/src/hook/transfer_orchestration.rs:510 [2;3mon[0m ThreadId(1)
+
+  [2m2026-09-08T05:56:12.103508Z[0m [32m INFO[0m [1;32mrch::hook::transfer_orchestration[0m[32m: [32mPrepared dependency sync manifest for 1 roots[0m
+    [2;3mat[0m rch/src/hook/transfer_orchestration.rs:532 [2;3mon[0m ThreadId(1)
+
+  [2m2026-09-08T05:56:32.371298Z[0m [33m WARN[0m [1;33mrch::hook[0m[33m: [33mRemote execution failed on hz3 with SSH timeout; refusing local fallback: SSH command timed out after 20s[0m
+    [2;3mat[0m rch/src/hook.rs:3036 [2;3mon[0m ThreadId(1)
+
+[RCH] remote hz3 failed [RCH-E104] SSH command timed out (no local fallback)

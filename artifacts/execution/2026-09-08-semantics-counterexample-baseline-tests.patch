@@ -1,0 +1,16 @@
+--- a/crates/fa-reference/src/perimeter.rs
++++ b/crates/fa-reference/src/perimeter.rs
+@@ -242,13 +242,6 @@
+             .any(|prior| prior.route == route.route)
+         {
+             return Err(Error::Duplicate);
+-        }
+-        if route.bypass == BypassDisposition::Unmodeled {
+-            return Err(if route.mediation == Mediation::BrokeredEffects {
+-                Error::Binding
+-            } else {
+-                Error::Incomplete
+-            });
+         }
+         if route.mediation == Mediation::BrokeredEffects
+             && route.bypass != BypassDisposition::Blocked

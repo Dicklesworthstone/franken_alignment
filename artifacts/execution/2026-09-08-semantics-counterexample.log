@@ -1,0 +1,71 @@
+  [2m2026-09-08T05:45:15.737005Z[0m [32m INFO[0m [1;32mrch::hook[0m[32m: [32mSelected worker: hz3 at ubuntu@194.140.197.98 (6 slots remaining after reservation, speed 75.1)[0m
+    [2;3mat[0m rch/src/hook.rs:2645 [2;3mon[0m ThreadId(1)
+
+[*] Job j-30004650170124340 submitted to hz3 (6 slots remaining, speed 75.1)
+  [2m2026-09-08T05:45:15.816791Z[0m [32m INFO[0m [1;32mrch::hook::transfer_orchestration[0m[32m: [32mStarting remote compilation pipeline for franken_alignment_wave2_counterexample_20260908 (hash: fe7c847a9667a287)[0m
+    [2;3mat[0m rch/src/hook/transfer_orchestration.rs:510 [2;3mon[0m ThreadId(1)
+
+  [2m2026-09-08T05:45:15.816825Z[0m [32m INFO[0m [1;32mrch::hook::transfer_orchestration[0m[32m: [32mPrepared dependency sync manifest for 1 roots[0m
+    [2;3mat[0m rch/src/hook/transfer_orchestration.rs:532 [2;3mon[0m ThreadId(1)
+
+  [2m2026-09-08T05:45:16.953601Z[0m [32m INFO[0m [1;32mrch::hook::transfer_orchestration[0m[32m: [32mSyncing project to worker hz3...[0m
+    [2;3mat[0m rch/src/hook/transfer_orchestration.rs:661 [2;3mon[0m ThreadId(1)
+
+  [2m2026-09-08T05:45:53.122036Z[0m [32m INFO[0m [1;32mrch::transfer[0m[32m: [32mLinked git worktree detected at /Users/jemanuel/projects/franken_alignment_wave2_counterexample_20260908 (gitdir: /Users/jemanuel/projects/franken_alignment/.git/worktrees/franken_alignment_wave2_counterexample_20260908); excluding dangling '.git' file from upload so the remote build resolves git-free like a normal repo[0m
+    [2;3mat[0m rch/src/transfer.rs:2009 [2;3mon[0m ThreadId(1)
+
+  [2m2026-09-08T05:45:53.122642Z[0m [32m INFO[0m [1;32mrch::transfer[0m[32m: [32mSyncing /Users/jemanuel/projects/franken_alignment_wave2_counterexample_20260908 -> /data/tmp/rch/franken_alignment_wave2_counterexample_20260908/fe7c847a9667a287 on hz3 (streaming)[0m
+    [2;3mat[0m rch/src/transfer.rs:3549 [2;3mon[0m ThreadId(1)
+
+  [2m2026-09-08T05:45:54.060704Z[0m [32m INFO[0m [1;32mrch::hook::transfer_orchestration[0m[32m: [32mSync complete: 15 files, 5822653 bytes in 36195ms[0m
+    [2;3mat[0m rch/src/hook/transfer_orchestration.rs:958 [2;3mon[0m ThreadId(1)
+
+  [2m2026-09-08T05:45:54.152526Z[0m [32m INFO[0m [1;32mrch::hook::transfer_orchestration[0m[32m: [32mExecuting command remotely: cargo +nightly-2026-09-07 test --locked -p fa-reference --test perimeter_boundaries nonbrokered_residual_bypass_is_preserved_but_unmodeled_bypass_refuses -- --exact --nocapture[0m
+    [2;3mat[0m rch/src/hook/transfer_orchestration.rs:1018 [2;3mon[0m ThreadId(1)
+
+  [2m2026-09-08T05:45:54.152617Z[0m [32m INFO[0m [1;32mrch::transfer[0m[32m: [32mRewriting CARGO_TARGET_DIR for remote execution (worker-scoped path): /Volumes/USB_NVME/cargo-target -> /data/tmp/rch/franken_alignment_wave2_counterexample_20260908/.rch-target-hz3-pool-1289f1ed971827411386bdb4953f38c4[0m
+    [2;3mat[0m rch/src/transfer.rs:1842 [2;3mon[0m ThreadId(1)
+
+  [2m2026-09-08T05:45:54.152650Z[0m [32m INFO[0m [1;32mrch::transfer[0m[32m: [32mWrapping command with external timeout protection, [1;32mkind[0m[32m: cargo test, [1;32mtimeout_secs[0m[32m: 3600[0m
+    [2;3mat[0m rch/src/transfer.rs:2669 [2;3mon[0m ThreadId(1)
+
+warning: unused field `license-file` in `workspace.package`
+ --> Cargo.toml:9:1
+  |
+9 | license-file = "LICENSE"
+  | ^^^^^^^^^^^^
+  |
+  = note: `cargo::unused_workspace_package_fields` is set to `warn` by default
+help: consider removing the field `workspace.package.license-file`
+warning: workspace (manifest) generated 1 warning
+   Compiling fa-reference v0.2.0 (/data/tmp/rch/franken_alignment_wave2_counterexample_20260908/fe7c847a9667a287/crates/fa-reference)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 2.79s
+     Running tests/perimeter_boundaries.rs (/data/tmp/rch/franken_alignment_wave2_counterexample_20260908/.rch-target-hz3-pool-1289f1ed971827411386bdb4953f38c4/debug/build/fa-reference/6b1cce7e816ef736/out/perimeter_boundaries-6b1cce7e816ef736)
+
+running 1 test
+test nonbrokered_residual_bypass_is_preserved_but_unmodeled_bypass_refuses ... FAILED
+
+failures:
+
+failures:
+    nonbrokered_residual_bypass_is_preserved_but_unmodeled_bypass_refuses
+
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 10 filtered out; finished in 0.00s
+
+
+thread 'nonbrokered_residual_bypass_is_preserved_but_unmodeled_bypass_refuses' (3274425) panicked at crates/fa-reference/tests/perimeter_boundaries.rs:107:9:
+assertion `left == right` failed: ObserveOnly must not retain an unmodeled bypass
+  left: Ok(PerimeterInventory { records: [EffectFamilyRecord { scope: PerimeterScope { tenant: 41, principal: 42, purpose: 43 }, family: "publication", trust_domains: [Actor, ObservationAndAnalysis, Enforcement, GovernanceAndInvestigation], credentials: [], routes: [RouteRecord { route: "adapter:disposable", threat: Some(DirectCredentialOrEgress), mediation: ObserveOnly, bypass: Unmodeled }], residual_nonclaims: ["No endpoint or enforcement is represented here"] }] })
+ right: Err(Incomplete)
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+error: test failed, to rerun pass `-p fa-reference --test perimeter_boundaries`
+  [2m2026-09-08T05:45:58.668574Z[0m [32m INFO[0m [1;32mrch::hook::transfer_orchestration[0m[32m: [32mRemote command finished: exit=101 in 4513ms[0m
+    [2;3mat[0m rch/src/hook/transfer_orchestration.rs:1150 [2;3mon[0m ThreadId(1)
+
+[W] Worker: hz3 | Job: j-30004650170124340
+[T] Total: 40.7s (sync 36.2s, build 4.5s, artifacts --)
+^ Sync: 5.6 MB in 36.2s (157.1 KB/s)
+[C] Compile: 4.5s
+Artifacts: skipped
+[T] Cache: MISS
+[RCH] remote hz3 failed (exit 101)

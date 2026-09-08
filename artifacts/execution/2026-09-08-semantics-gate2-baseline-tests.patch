@@ -1,0 +1,15 @@
+--- a/crates/fa-reference/tests/action_transitions.rs
++++ b/crates/fa-reference/tests/action_transitions.rs
+@@ -275,10 +275,8 @@
+     };
+     let before_epoch_refusal = authorization_epoch.inspect();
+     assert_eq!(
+-        authorization_epoch
+-            .authorize(1, &judgment, &changed_epoch)
+-            .unwrap_err(),
+-        Error::Binding
++        authorization_epoch.authorize(1, &judgment, &changed_epoch),
++        Err(Error::Binding)
+     );
+     assert_eq!(authorization_epoch.inspect(), before_epoch_refusal);
+     assert_inspection(

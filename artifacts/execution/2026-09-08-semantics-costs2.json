@@ -1,0 +1,17 @@
+{
+  "api_version": "1.0",
+  "timestamp": 1788846151,
+  "command": "rch",
+  "success": false,
+  "error": {
+    "code": "RCH-E504",
+    "category": "internal",
+    "message": "Unexpected internal state",
+    "details": "--base, --overlay-path, and --no-overlay require --clean-overlay",
+    "remediation": [
+      "Restart the daemon",
+      "Clear any lock files",
+      "Report bug if persists"
+    ]
+  }
+}
