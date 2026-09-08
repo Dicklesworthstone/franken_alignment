@@ -1,0 +1,239 @@
+{
+  "schema": "fa.execution_receipt/1",
+  "date": "2026-09-08",
+  "result": {
+    "exit_code": 0,
+    "format": "passed",
+    "check": "passed",
+    "clippy": "passed; warnings denied",
+    "tests": {
+      "reference_unit": 80,
+      "reference_integration": 76,
+      "xtask": 242,
+      "doctests": 8,
+      "total_passed": 406,
+      "failed": 0,
+      "ignored": 0,
+      "filtered": 0
+    }
+  },
+  "base_commit": "378426ed59fe20f273616c351ce19efd8ae21efe",
+  "source_inputs": "artifacts/execution/2026-09-08-history-format-gate2-inputs.json",
+  "source_sha256": {
+    "crates/fa-reference/src/lib.rs": "4a29f5afee0d69960ea01d85101abf704316770ab77002b8dc53e252e21d0bf3",
+    "registry/dependency_policy.json": "01edfb8d0d27221378d7b764750f74e331bdc4879c748b0eb38543b5f3f53bd2",
+    "registry/roadmap.json": "222881a9b079e3ce8357f2fcca0a0be0bef0345dc8033d079bf714508a4ecde3",
+    "registry/source_snapshot.json": "e128ef0b9b5a761d8543c7d0261ee0c6e5918b96c65508dc9e204f3b515bffd8",
+    "schemas/README.md": "de55b3bea4e94123252ca38db616c52512ad0da31526c3065ccb4899bf3d113e",
+    "xtask/src/json.rs": "2784c2c164cd6b4d97d8691bbe451d460f9e60ea25376594a0d0e053c250f752",
+    "crates/fa-reference/src/canonical_json.rs": "c5745e1a585030e132cb45e7a5206c8fc967dfc069f13f9ed7b269cc42b1b073",
+    "crates/fa-reference/src/history.rs": "7217034b4a328121184a73e2bacb65cf217c47a13cb2e8ea05f0d6feb6632a66",
+    "crates/fa-reference/src/strict_json.rs": "6d413a13e0880cb2bcb728fe5913e4857db59ce8995bb900a486f25ef0dcb3f6",
+    "crates/fa-reference/tests/canonical_json_boundaries.rs": "425d57b2de40e1a3ee8bcc35fb9082bdd2b45b6871899d1793fd7bad1a7bc3e2",
+    "crates/fa-reference/tests/canonical_json_goldens.rs": "58c56f7ce8eb53358511d990b764b41b2b276ee1a4e21ca4732db2375edf691e",
+    "crates/fa-reference/tests/history_boundaries.rs": "f1a0e581a18a6c1bd1a737bda7f28895ae84629367dbe3ba3b4da77f96b03233",
+    "crates/fa-reference/tests/profile_costs.rs": "a35583074b8e226144a58554c7230784527096d99aa1c48d9d3d5c42f2f48316",
+    "crates/fa-reference/tests/fixtures/canonical-json-v01/action.json": "f5fb0c6b746e16ad5981ae14de47fb9f937d7f79d55e3bbec3c4266f06cf628c",
+    "crates/fa-reference/tests/fixtures/canonical-json-v01/capability.json": "302691ac58994c3aa26735d0482b6c298e35a84a30b8a5d128a94c584eb0076b",
+    "crates/fa-reference/tests/fixtures/canonical-json-v01/evidence.json": "29c67cdfda73c8d00839198e7b2e4b60f7998800edba6b90ac58ba18f3eb63e3",
+    "crates/fa-reference/tests/strict_json_boundaries.rs": "39a82b43105a216d50cb388965c1d0fe456df3163030153b8cc836cc645fc58c"
+  },
+  "reviewed_source_files": 152,
+  "scope": "FA004 bounded typed seeded reference histories; FA005 exact three retained draft schemas under FA-CJSON/0.1. Syntax parser shared with operator gate; no authority/production effect.",
+  "full_gate": {
+    "job": "j-30004650170124362",
+    "worker": "vmi1227854",
+    "toolchain": "nightly-2026-09-07",
+    "rustc_commit": "5a2be9f5f075d31e3ca5526b5b029881ce441253",
+    "target": "x86_64-unknown-linux-gnu",
+    "exit_code": 0
+  },
+  "costs": {
+    "job": "j-30004650170124363",
+    "exit_code": 0,
+    "cases": [
+      {
+        "case": "fresh_two_lane_lifecycle",
+        "samples": "12",
+        "successes": "12",
+        "refusals": "0",
+        "observed_errors": "0",
+        "elapsed_ns_min": "1101",
+        "elapsed_ns_median": "1257",
+        "elapsed_ns_max": "54841",
+        "elapsed_ns_total": "73900",
+        "logical_input_bytes": "not_applicable",
+        "timing_scope": "construction_replay_assertions_drop",
+        "memory_measurement": "unavailable_in_memory_profile"
+      },
+      {
+        "case": "fresh_unknown_cancel_refusal",
+        "samples": "12",
+        "successes": "0",
+        "refusals": "12",
+        "observed_errors": "0",
+        "elapsed_ns_min": "571",
+        "elapsed_ns_median": "641",
+        "elapsed_ns_max": "4377",
+        "elapsed_ns_total": "11729",
+        "logical_input_bytes": "not_applicable",
+        "timing_scope": "construction_replay_assertions_drop",
+        "memory_measurement": "unavailable_in_memory_profile"
+      },
+      {
+        "case": "exact_128_event_observed_clock_history",
+        "samples": "12",
+        "successes": "12",
+        "refusals": "0",
+        "observed_errors": "0",
+        "elapsed_ns_min": "1052",
+        "elapsed_ns_median": "1086",
+        "elapsed_ns_max": "8263",
+        "elapsed_ns_total": "20321",
+        "logical_input_bytes": "not_applicable",
+        "timing_scope": "construction_replay_assertions_drop",
+        "memory_measurement": "unavailable_in_memory_profile"
+      },
+      {
+        "case": "canonical_action_roundtrip",
+        "samples": "12",
+        "successes": "12",
+        "refusals": "0",
+        "observed_errors": "0",
+        "elapsed_ns_min": "4316",
+        "elapsed_ns_median": "5358",
+        "elapsed_ns_max": "21872",
+        "elapsed_ns_total": "82753",
+        "logical_input_bytes": "372",
+        "timing_scope": "setup_excluded_decode_encode_assertions_drop",
+        "memory_measurement": "unavailable_in_memory_profile"
+      },
+      {
+        "case": "canonical_capability_roundtrip",
+        "samples": "12",
+        "successes": "12",
+        "refusals": "0",
+        "observed_errors": "0",
+        "elapsed_ns_min": "2914",
+        "elapsed_ns_median": "3150",
+        "elapsed_ns_max": "9073",
+        "elapsed_ns_total": "44857",
+        "logical_input_bytes": "294",
+        "timing_scope": "setup_excluded_decode_encode_assertions_drop",
+        "memory_measurement": "unavailable_in_memory_profile"
+      },
+      {
+        "case": "canonical_evidence_roundtrip",
+        "samples": "12",
+        "successes": "12",
+        "refusals": "0",
+        "observed_errors": "0",
+        "elapsed_ns_min": "3786",
+        "elapsed_ns_median": "4386",
+        "elapsed_ns_max": "8603",
+        "elapsed_ns_total": "57617",
+        "logical_input_bytes": "351",
+        "timing_scope": "setup_excluded_decode_encode_assertions_drop",
+        "memory_measurement": "unavailable_in_memory_profile"
+      },
+      {
+        "case": "noncanonical_whitespace_refusal",
+        "samples": "12",
+        "successes": "12",
+        "refusals": "12",
+        "observed_errors": "0",
+        "elapsed_ns_min": "8503",
+        "elapsed_ns_median": "8853",
+        "elapsed_ns_max": "14471",
+        "elapsed_ns_total": "116014",
+        "logical_input_bytes": "745",
+        "timing_scope": "construction_control_roundtrip_negative_decode_assertions_drop",
+        "memory_measurement": "unavailable_in_memory_profile"
+      },
+      {
+        "case": "large_valid_unicode_claim_roundtrip",
+        "samples": "12",
+        "successes": "12",
+        "refusals": "0",
+        "observed_errors": "0",
+        "elapsed_ns_min": "49494",
+        "elapsed_ns_median": "54666",
+        "elapsed_ns_max": "77395",
+        "elapsed_ns_total": "706284",
+        "logical_input_bytes": "8526",
+        "timing_scope": "construction_json_validation_encode_decode_assertions_drop",
+        "memory_measurement": "unavailable_in_memory_profile"
+      }
+    ],
+    "samples": 96,
+    "asserted_successes": 84,
+    "asserted_refusals": 24,
+    "whole_cargo_command_peak_rss_kib": 291596,
+    "memory_boundary": "GNU time includes Cargo/compiler/test children; not isolated model memory, allocation count or per-operation byte movement.",
+    "timing_boundary": "Eight fixed descriptive cases,12 samples each; arithmetic median. Fresh objects or explicitly setup-excluded parsing, not cold OS caches/process startup, a distribution estimate or SLO.",
+    "release_profile": "overflow-checks=true, lto=thin, codegen-units=1"
+  },
+  "causal_counterexamples": [
+    {
+      "kind": "schedule2",
+      "job": "j-30004650170124364",
+      "exit_code": 101,
+      "passed": 0,
+      "failed": 1,
+      "filtered": 79,
+      "expected_assertion": "assertion failed: distinct.len() > 2"
+    },
+    {
+      "kind": "canonical3",
+      "job": "j-30004650170124366",
+      "exit_code": 101,
+      "passed": 0,
+      "failed": 1,
+      "filtered": 3,
+      "expected_assertion": "canonical mismatch must not be silently normalized"
+    }
+  ],
+  "failed_attempts": [
+    {
+      "attempt": "gate1",
+      "job": "j-30004650170124361",
+      "cause": "Expected field-name slice lacked static lifetime needed by typed MissingField diagnostic; compilation refused. Lifetime annotation corrected, checks unchanged."
+    },
+    {
+      "attempt": "schedule mutation preparation1",
+      "job": null,
+      "cause": "Root scratch helper path concatenation TypeError before RCH submission; no execution credit."
+    },
+    {
+      "attempt": "canonical mutation preparation2",
+      "job": null,
+      "cause": "Root scratch helper expected pre-final source spelling; exact mutation guard refused before RCH submission. Matched actual frozen source before retry."
+    }
+  ],
+  "nonclaims": [
+    "No provider/marker authentication, production effect, durable journal or production differential.",
+    "Typed bounded histories have no serialized event-log parser.",
+    "No general JSON Schema engine or production wire activation.",
+    "Shared parser body originated unchanged; this batch then repaired invalid-UTF8 and oversized-input diagnostics while retaining operator negatives.",
+    "No per-operation allocation or byte-movement measurement; no DSR rerun."
+  ],
+  "artifact_sha256": {
+    "artifacts/execution/2026-09-08-history-format-gate1.log": "b1267fb8221da4fc98bc3966ed15a7dd0c109de378501133229fbe4923235b8b",
+    "artifacts/execution/2026-09-08-history-format-gate1.json": "935233ccd0b8a9569c69cc79eca1369af3ffb41d2a9622ed19a2e592e18e00b2",
+    "artifacts/execution/2026-09-08-history-format-gate1-inputs.json": "08c86398e801b23ed6fb3c4d585d7e3abacc8e320d2e4a218d67143b3286e11e",
+    "artifacts/execution/2026-09-08-history-format-gate2.log": "7aaa242adfab6a18cb6e45d664837bc5b7881aea7bf2fc7250a486eb4a2598c0",
+    "artifacts/execution/2026-09-08-history-format-gate2.json": "9765052440b864ee0901094a4bbad1778878e97bc1c8540d4ce6aaa42c2aecab",
+    "artifacts/execution/2026-09-08-history-format-gate2-inputs.json": "a3fd2ea70e373645ccb8954dee87807c03e81a6dad7cd640be6cb18f105e71f4",
+    "artifacts/execution/2026-09-08-history-format-costs1.log": "81a846cacf0ed7d7842262c880c1e61d0c467ea8856e6f152d5d96fe3dd8649a",
+    "artifacts/execution/2026-09-08-history-format-costs1.json": "001e4fa8d047bb33be9f7e03be420f07f0789c5bea3aef08fa8a19ff1cf81798",
+    "artifacts/execution/2026-09-08-history-format-costs1-inputs.json": "cbf175d3eddffd8c1a3aaa5718055ee91886247ac92cb51b08e789b21925a31f",
+    "artifacts/execution/2026-09-08-history-format-counterexample-schedule2.log": "967fa201df9e9e6dda65dc4f2706026670c7470daba0ae3f7e81f57cba2517a7",
+    "artifacts/execution/2026-09-08-history-format-counterexample-schedule2.json": "1737fe2bfe08de43766fad92049ee2771ee6d376e5cc6459c4a9c0e938bd57e7",
+    "artifacts/execution/2026-09-08-history-format-counterexample-schedule2-inputs.json": "41aafbeedda6b02e2caca0e75a10e3fb7a598f36ccc108b291ab4da0c6579e82",
+    "artifacts/execution/2026-09-08-history-format-counterexample-canonical3.log": "640979acbfef19e36e6d57b72e58cdc97df0d24cc9d03ae9e104fd246c96288d",
+    "artifacts/execution/2026-09-08-history-format-counterexample-canonical3.json": "a855b1d6452b50b3f304ad605bc13bcacef096c2a7bbfd82d779d1a50db23085",
+    "artifacts/execution/2026-09-08-history-format-counterexample-canonical3-inputs.json": "5c20bcec16564f39b1a057cb4336f5d1b070adc7410e82d57135e3509885ba3f",
+    "artifacts/execution/2026-09-08-history-format-counterexample-schedule2-baseline-tests.patch": "999adbc31285c29535512a0d8321a78c8248fcf6eb11b4fe5337afef10a5df67",
+    "artifacts/execution/2026-09-08-history-format-counterexample-canonical3-baseline-tests.patch": "eeb54b0050b67d031387c5122f192fd7baae2deddce945d2b5233f35c701bd77"
+  }
+}

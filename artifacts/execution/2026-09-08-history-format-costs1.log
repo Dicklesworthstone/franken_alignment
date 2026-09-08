@@ -1,0 +1,96 @@
+  [2m2026-09-08T06:44:43.056409Z[0m [32m INFO[0m [1;32mrch::hook[0m[32m: [32mSelected worker: vmi1227854 at root@109.123.245.77 (4 slots remaining after reservation, speed 71.7)[0m
+    [2;3mat[0m rch/src/hook.rs:2645 [2;3mon[0m ThreadId(1)
+
+[*] Job j-30004650170124363 submitted to vmi1227854 (4 slots remaining, speed 71.7)
+  [2m2026-09-08T06:44:43.120644Z[0m [32m INFO[0m [1;32mrch::hook::transfer_orchestration[0m[32m: [32mStarting remote compilation pipeline for franken_alignment_wave4_gate2_20260908 (hash: 1e5ca9225ce6adfb)[0m
+    [2;3mat[0m rch/src/hook/transfer_orchestration.rs:510 [2;3mon[0m ThreadId(1)
+
+  [2m2026-09-08T06:44:43.120679Z[0m [32m INFO[0m [1;32mrch::hook::transfer_orchestration[0m[32m: [32mPrepared dependency sync manifest for 1 roots[0m
+    [2;3mat[0m rch/src/hook/transfer_orchestration.rs:532 [2;3mon[0m ThreadId(1)
+
+  [2m2026-09-08T06:44:44.347429Z[0m [32m INFO[0m [1;32mrch::hook::transfer_orchestration[0m[32m: [32mSyncing project to worker vmi1227854...[0m
+    [2;3mat[0m rch/src/hook/transfer_orchestration.rs:661 [2;3mon[0m ThreadId(1)
+
+  [2m2026-09-08T06:44:44.349049Z[0m [32m INFO[0m [1;32mrch::transfer[0m[32m: [32mLinked git worktree detected at /Users/jemanuel/projects/franken_alignment_wave4_gate2_20260908 (gitdir: /Users/jemanuel/projects/franken_alignment/.git/worktrees/franken_alignment_wave4_gate2_20260908); excluding dangling '.git' file from upload so the remote build resolves git-free like a normal repo[0m
+    [2;3mat[0m rch/src/transfer.rs:2009 [2;3mon[0m ThreadId(1)
+
+  [2m2026-09-08T06:44:44.349095Z[0m [32m INFO[0m [1;32mrch::transfer[0m[32m: [32mSyncing /Users/jemanuel/projects/franken_alignment_wave4_gate2_20260908 -> /Users/jemanuel/projects/franken_alignment_wave4_gate2_20260908 on vmi1227854 (streaming)[0m
+    [2;3mat[0m rch/src/transfer.rs:3549 [2;3mon[0m ThreadId(1)
+
+  [2m2026-09-08T06:44:46.649628Z[0m [32m INFO[0m [1;32mrch::hook::transfer_orchestration[0m[32m: [32mSync complete: 475 files, 1222805 bytes in 2283ms[0m
+    [2;3mat[0m rch/src/hook/transfer_orchestration.rs:958 [2;3mon[0m ThreadId(1)
+
+  [2m2026-09-08T06:44:46.718366Z[0m [32m INFO[0m [1;32mrch::hook::transfer_orchestration[0m[32m: [32mExecuting command remotely: /usr/bin/time -v cargo +nightly-2026-09-07 test --release --locked -p fa-reference --test profile_costs -- --nocapture '--test-threads=1'[0m
+    [2;3mat[0m rch/src/hook/transfer_orchestration.rs:1018 [2;3mon[0m ThreadId(1)
+
+  [2m2026-09-08T06:44:46.718462Z[0m [32m INFO[0m [1;32mrch::transfer[0m[32m: [32mWrapping command with external timeout protection, [1;32mkind[0m[32m: job, [1;32mtimeout_secs[0m[32m: 3600[0m
+    [2;3mat[0m rch/src/transfer.rs:2669 [2;3mon[0m ThreadId(1)
+
+Warning: Permanently added '109.123.245.77' (ED25519) to the list of known hosts.
+warning: unused field `license-file` in `workspace.package`
+ --> Cargo.toml:9:1
+  |
+9 | license-file = "LICENSE"
+  | ^^^^^^^^^^^^
+  |
+  = note: `cargo::unused_workspace_package_fields` is set to `warn` by default
+help: consider removing the field `workspace.package.license-file`
+warning: workspace (manifest) generated 1 warning
+   Compiling fa-reference v0.2.0 (/data/projects/franken_alignment_wave4_gate2_20260908/crates/fa-reference)
+    Finished `release` profile [optimized] target(s) in 8.16s
+     Running tests/profile_costs.rs (.rch-target/release/build/fa-reference/e669633187e11169/out/profile_costs-e669633187e11169)
+
+running 1 test
+test fixed_reference_profile_costs_are_descriptive_and_assert_all_outcomes ... case=fresh_two_lane_lifecycle samples=12 successes=12 refusals=0 observed_errors=0 elapsed_ns_min=1101 elapsed_ns_median=1257 elapsed_ns_max=54841 elapsed_ns_total=73900 logical_input_bytes=not_applicable timing_scope=construction_replay_assertions_drop memory_measurement=unavailable_in_memory_profile
+case=fresh_unknown_cancel_refusal samples=12 successes=0 refusals=12 observed_errors=0 elapsed_ns_min=571 elapsed_ns_median=641 elapsed_ns_max=4377 elapsed_ns_total=11729 logical_input_bytes=not_applicable timing_scope=construction_replay_assertions_drop memory_measurement=unavailable_in_memory_profile
+case=exact_128_event_observed_clock_history samples=12 successes=12 refusals=0 observed_errors=0 elapsed_ns_min=1052 elapsed_ns_median=1086 elapsed_ns_max=8263 elapsed_ns_total=20321 logical_input_bytes=not_applicable timing_scope=construction_replay_assertions_drop memory_measurement=unavailable_in_memory_profile
+case=canonical_action_roundtrip samples=12 successes=12 refusals=0 observed_errors=0 elapsed_ns_min=4316 elapsed_ns_median=5358 elapsed_ns_max=21872 elapsed_ns_total=82753 logical_input_bytes=372 timing_scope=setup_excluded_decode_encode_assertions_drop memory_measurement=unavailable_in_memory_profile
+case=canonical_capability_roundtrip samples=12 successes=12 refusals=0 observed_errors=0 elapsed_ns_min=2914 elapsed_ns_median=3150 elapsed_ns_max=9073 elapsed_ns_total=44857 logical_input_bytes=294 timing_scope=setup_excluded_decode_encode_assertions_drop memory_measurement=unavailable_in_memory_profile
+case=canonical_evidence_roundtrip samples=12 successes=12 refusals=0 observed_errors=0 elapsed_ns_min=3786 elapsed_ns_median=4386 elapsed_ns_max=8603 elapsed_ns_total=57617 logical_input_bytes=351 timing_scope=setup_excluded_decode_encode_assertions_drop memory_measurement=unavailable_in_memory_profile
+case=noncanonical_whitespace_refusal samples=12 successes=12 refusals=12 observed_errors=0 elapsed_ns_min=8503 elapsed_ns_median=8853 elapsed_ns_max=14471 elapsed_ns_total=116014 logical_input_bytes=745 timing_scope=construction_control_roundtrip_negative_decode_assertions_drop memory_measurement=unavailable_in_memory_profile
+case=large_valid_unicode_claim_roundtrip samples=12 successes=12 refusals=0 observed_errors=0 elapsed_ns_min=49494 elapsed_ns_median=54666 elapsed_ns_max=77395 elapsed_ns_total=706284 logical_input_bytes=8526 timing_scope=construction_json_validation_encode_decode_assertions_drop memory_measurement=unavailable_in_memory_profile
+ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+	Command being timed: "cargo +nightly-2026-09-07 test --release --locked -p fa-reference --test profile_costs -- --nocapture --test-threads=1"
+	User time (seconds): 14.79
+	System time (seconds): 0.61
+	Percent of CPU this job got: 188%
+	Elapsed (wall clock) time (h:mm:ss or m:ss): 0:08.17
+	Average shared text size (kbytes): 0
+	Average unshared data size (kbytes): 0
+	Average stack size (kbytes): 0
+	Average total size (kbytes): 0
+	Maximum resident set size (kbytes): 291596
+	Average resident set size (kbytes): 0
+	Major (requiring I/O) page faults: 334
+	Minor (reclaiming a frame) page faults: 153732
+	Voluntary context switches: 1081
+	Involuntary context switches: 1181
+	Swaps: 0
+	File system inputs: 55824
+	File system outputs: 29736
+	Socket messages sent: 0
+	Socket messages received: 0
+	Signals delivered: 0
+	Page size (bytes): 4096
+	Exit status: 0
+  [2m2026-09-08T06:44:56.297265Z[0m [32m INFO[0m [1;32mrch::hook::transfer_orchestration[0m[32m: [32mRemote command finished: exit=0 in 9578ms[0m
+    [2;3mat[0m rch/src/hook/transfer_orchestration.rs:1150 [2;3mon[0m ThreadId(1)
+
+[W] Worker: vmi1227854 | Job: j-30004650170124363
+[T] Total: 11.9s (sync 2.3s, build 9.6s, artifacts --)
+^ Sync: 1.2 MB in 2.3s (523.1 KB/s)
+[C] Compile: 9.6s
+Artifacts: skipped
+[T] Cache: MISS
++-------------- * Build Successful ---------------+
+| New personal best! 9.6s (previous: 17.3s)       |
+| Target: release                                 |
+| Duration: 9.6s (v 44% faster vs previous 17.3s) |
+| Worker: vmi1227854                              |
+| Cache: MISS (warming cache)                     |
+| Time: 2026-09-08 06:44:56                       |
++-------------------------------------------------+
+[RCH] remote vmi1227854 (13.3s)

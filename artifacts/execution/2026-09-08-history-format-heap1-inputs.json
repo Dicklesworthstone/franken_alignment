@@ -1,0 +1,23 @@
+{
+  "command": [
+    "rch",
+    "--json",
+    "exec",
+    "--job",
+    "--",
+    "heaptrack",
+    "--record-only",
+    "-o",
+    "/tmp/fa-campaign-20260908-heap/profile",
+    "/Users/jemanuel/projects/franken_alignment_wave4_gate2_20260908/.rch-target/release/build/fa-reference/e669633187e11169/out/profile_costs-e669633187e11169",
+    "--exact",
+    "fixed_reference_profile_costs_are_descriptive_and_assert_all_outcomes",
+    "--nocapture",
+    "--test-threads=1"
+  ],
+  "source_inputs": "wave4-gate2-inputs.json",
+  "binary": "/Users/jemanuel/projects/franken_alignment_wave4_gate2_20260908/.rch-target/release/build/fa-reference/e669633187e11169/out/profile_costs-e669633187e11169",
+  "binary_sha256": "a7e93d1e3954e4c61a01ebb3c9e19d54100c7841ed70862d74ae3433d2fcf350",
+  "heaptrack_version": "1.5.0",
+  "boundary": "Heap allocations for released test process including harness; operator profiler, no production dependency. Instrumented timing is not comparable to uninstrumented costs."
+}

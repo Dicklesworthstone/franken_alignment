@@ -1,0 +1,7 @@
+Warning: Permanently added '212.90.121.76' (ED25519) to the list of known hosts.
+info: syncing channel updates for nightly-2026-09-08-x86_64-unknown-linux-gnu
+info: latest update on 2026-09-08 for version 1.100.0-nightly (cea272fa3 2026-09-07)
+info: downloading 5 components
+
+  nightly-2026-09-08-x86_64-unknown-linux-gnu installed - rustc 1.100.0-nightly (cea272fa3 2026-09-07)
+

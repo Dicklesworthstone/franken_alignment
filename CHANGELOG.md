@@ -1,5 +1,13 @@
 # Changelog
 
+## 2026-09-08: qualify generated format cases and the current nightly
+
+Added deterministic schema properties with independent syntax and canonical-byte checks, plus isolated first-decode measurements for all three manual fixtures. The prospective rolling compiler passed **412 tests** and was frozen to `nightly-2026-09-08`; eight release cost cases passed again. Retained real heap allocation attribution and a harness baseline under the prior compiler, with source identity and overlap boundaries. [Qualification and raw failures](artifacts/execution/2026-09-08-history-format-qualification-receipt.json) distinguish the two compiler campaigns.
+
+## 2026-09-08: bounded seeded replay and canonical draft documents
+
+Added deterministic typed history replay over the existing action oracle, with bounded retained inputs and exact counterexamples. Implemented the three original draft JSON shapes under an explicit canonical byte profile, private validated payloads and independent manual goldens. Reused the strict syntax parser without sharing admission decisions, and repaired its diagnostic coordinates. The complete **406-test** RCH pass, eight release cost cases across 96 samples, the failed compile and two executed planted-regression failures are retained in [the receipt](artifacts/execution/2026-09-08-history-format-receipt.json). These are reference/compatibility results, without production differential, authentication, persistence or effects.
+
 ## 2026-09-08: explicit helper epochs and frontier boundary coverage
 
 Required tokenizer, policy and model epochs now participate in exact whole-input witnesses. Added public tests for every submitted byte, omitted context, metadata and configured bounds, plus nonempty product-frontier closure, isolation and refusal atomicity. Clarified prefix obligations versus whole-stream completion without changing frontier behavior. The complete **373-test** RCH gate and tokenizer-neutralization counterexample are retained in [the receipt](artifacts/execution/2026-09-08-input-frontier-receipt.json), including the initial formatting failure. These are reference contracts, without provider or marker authentication.

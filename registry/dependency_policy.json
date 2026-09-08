@@ -232,7 +232,7 @@
       "id": "initial-reviewed-workspace",
       "schema": "fa.source_snapshot/1",
       "manifest_path": "registry/source_snapshot.json",
-      "sha256": "3bf920239b265b6d2380fd7b7384ab1bc60bcf7250dc73ca74e2be2c051276b2",
+      "sha256": "430b39575a1f2478d9065968ef588407dfe5aefb39337e6d7ac8e5b938061d42",
       "source_url": "https://github.com/Dicklesworthstone/franken_alignment.git",
       "identity_scope": "reviewed_snapshot_bytes"
     },
@@ -241,9 +241,9 @@
   "operator_qualification": {
     "scope": "initial_reference_gate",
     "host": "x86_64-unknown-linux-gnu",
-    "channel": "nightly-2026-09-07",
-    "rustc_commit": "5a2be9f5f075d31e3ca5526b5b029881ce441253",
-    "qualification_receipt": "artifacts/execution/2026-09-07-epoch2-receipt.json",
-    "boundary": "Compiler-reported identity, checked against the prior qualified operator run; not binary authentication, Apple execution, or a complete release toolchain closure."
+    "channel": "nightly-2026-09-08",
+    "rustc_commit": "cea272fa356e94bd2ee2cadf376630aa0683867a",
+    "qualification_receipt": "artifacts/execution/2026-09-08-history-format-qualification-receipt.json",
+    "boundary": "Compiler-reported identity qualified by an actual rolling full gate, then frozen to the identical dated toolchain; not compiler binary authentication, Apple execution or a complete production dependency closure."
   }
 }

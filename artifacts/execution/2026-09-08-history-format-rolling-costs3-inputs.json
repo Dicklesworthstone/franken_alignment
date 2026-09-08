@@ -1,0 +1,27 @@
+{
+  "source_inputs": "wave4-rolling2-inputs.json",
+  "command": [
+    "rch",
+    "--json",
+    "exec",
+    "--job",
+    "--",
+    "/usr/bin/time",
+    "-v",
+    "cargo",
+    "+nightly-2026-09-08",
+    "test",
+    "--release",
+    "--locked",
+    "-p",
+    "fa-reference",
+    "--test",
+    "profile_costs",
+    "--",
+    "--nocapture",
+    "--test-threads=1"
+  ],
+  "boundary": "Fresh prospective compiler release cost qualification, not cross-host speed comparison. 8cases96samples; GNUtime whole Cargo RSS not allocation.",
+  "prior_refusal": "RCH-I006 runtime discovery did not see dated candidate under private RUSTUP_HOME; installed same dated compiler globally alongside existing aliases, no shared alias update.",
+  "retry_reason": "Completed vmi1149989 probe after dated compiler component installation; prior premature retry preserved."
+}

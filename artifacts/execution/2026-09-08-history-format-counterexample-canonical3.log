@@ -1,0 +1,73 @@
+  [2m2026-09-08T06:47:16.878462Z[0m [32m INFO[0m [1;32mrch::hook[0m[32m: [32mSelected worker: vmi1227854 at root@109.123.245.77 (4 slots remaining after reservation, speed 71.7)[0m
+    [2;3mat[0m rch/src/hook.rs:2645 [2;3mon[0m ThreadId(1)
+
+[*] Job j-30004650170124366 submitted to vmi1227854 (4 slots remaining, speed 71.7)
+  [2m2026-09-08T06:47:16.954881Z[0m [32m INFO[0m [1;32mrch::hook::transfer_orchestration[0m[32m: [32mStarting remote compilation pipeline for franken_alignment_wave4-counterexample-canonical3_20260908 (hash: 28383652ef8fbf22)[0m
+    [2;3mat[0m rch/src/hook/transfer_orchestration.rs:510 [2;3mon[0m ThreadId(1)
+
+  [2m2026-09-08T06:47:16.954958Z[0m [32m INFO[0m [1;32mrch::hook::transfer_orchestration[0m[32m: [32mPrepared dependency sync manifest for 1 roots[0m
+    [2;3mat[0m rch/src/hook/transfer_orchestration.rs:532 [2;3mon[0m ThreadId(1)
+
+  [2m2026-09-08T06:47:18.383952Z[0m [32m INFO[0m [1;32mrch::hook::transfer_orchestration[0m[32m: [32mSyncing project to worker vmi1227854...[0m
+    [2;3mat[0m rch/src/hook/transfer_orchestration.rs:661 [2;3mon[0m ThreadId(1)
+
+  [2m2026-09-08T06:47:23.709899Z[0m [32m INFO[0m [1;32mrch::transfer[0m[32m: [32mLinked git worktree detected at /Users/jemanuel/projects/franken_alignment_wave4-counterexample-canonical3_20260908 (gitdir: /Users/jemanuel/projects/franken_alignment/.git/worktrees/franken_alignment_wave4-counterexample-canonical3_20260908); excluding dangling '.git' file from upload so the remote build resolves git-free like a normal repo[0m
+    [2;3mat[0m rch/src/transfer.rs:2009 [2;3mon[0m ThreadId(1)
+
+  [2m2026-09-08T06:47:23.709986Z[0m [32m INFO[0m [1;32mrch::transfer[0m[32m: [32mSyncing /Users/jemanuel/projects/franken_alignment_wave4-counterexample-canonical3_20260908 -> /data/tmp/rch/franken_alignment_wave4-counterexample-canonical3_20260908/28383652ef8fbf22 on vmi1227854 (streaming)[0m
+    [2;3mat[0m rch/src/transfer.rs:3549 [2;3mon[0m ThreadId(1)
+
+  [2m2026-09-08T06:47:25.685109Z[0m [32m INFO[0m [1;32mrch::hook::transfer_orchestration[0m[32m: [32mSync complete: 28 files, 6369134 bytes in 7018ms[0m
+    [2;3mat[0m rch/src/hook/transfer_orchestration.rs:958 [2;3mon[0m ThreadId(1)
+
+  [2m2026-09-08T06:47:25.731395Z[0m [32m INFO[0m [1;32mrch::hook::transfer_orchestration[0m[32m: [32mExecuting command remotely: cargo +nightly-2026-09-07 test --locked -p fa-reference --test canonical_json_goldens canonical_and_semantic_golden_mismatches_have_different_observables -- --exact --nocapture[0m
+    [2;3mat[0m rch/src/hook/transfer_orchestration.rs:1018 [2;3mon[0m ThreadId(1)
+
+  [2m2026-09-08T06:47:25.731472Z[0m [32m INFO[0m [1;32mrch::transfer[0m[32m: [32mRewriting CARGO_TARGET_DIR for remote execution (worker-scoped path): /Volumes/USB_NVME/cargo-target -> /data/tmp/rch/franken_alignment_wave4-counterexample-canonical3_20260908/.rch-target-vmi1227854-pool-8144989cc79a38041bca40f3a984bcee[0m
+    [2;3mat[0m rch/src/transfer.rs:1842 [2;3mon[0m ThreadId(1)
+
+  [2m2026-09-08T06:47:25.731508Z[0m [32m INFO[0m [1;32mrch::transfer[0m[32m: [32mWrapping command with external timeout protection, [1;32mkind[0m[32m: cargo test, [1;32mtimeout_secs[0m[32m: 3600[0m
+    [2;3mat[0m rch/src/transfer.rs:2669 [2;3mon[0m ThreadId(1)
+
+Warning: Permanently added '109.123.245.77' (ED25519) to the list of known hosts.
+warning: unused field `license-file` in `workspace.package`
+ --> Cargo.toml:9:1
+  |
+9 | license-file = "LICENSE"
+  | ^^^^^^^^^^^^
+  |
+  = note: `cargo::unused_workspace_package_fields` is set to `warn` by default
+help: consider removing the field `workspace.package.license-file`
+warning: workspace (manifest) generated 1 warning
+   Compiling fa-reference v0.2.0 (/data/tmp/rch/franken_alignment_wave4-counterexample-canonical3_20260908/28383652ef8fbf22/crates/fa-reference)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 1.95s
+     Running tests/canonical_json_goldens.rs (/data/tmp/rch/franken_alignment_wave4-counterexample-canonical3_20260908/.rch-target-vmi1227854-pool-8144989cc79a38041bca40f3a984bcee/debug/build/fa-reference/2ea42f2349cca6b0/out/canonical_json_goldens-2ea42f2349cca6b0)
+
+running 1 test
+
+thread 'canonical_and_semantic_golden_mismatches_have_different_observables' (2039539) panicked at crates/fa-reference/tests/canonical_json_goldens.rs:105:5:
+assertion `left == right` failed: canonical mismatch must not be silently normalized
+  left: Ok(ActionProposal(ActionProposalV01 { action_id: "action-01", tenant_id: "tenant-01", run_id: "run-01", branch: Sandbox, effect_kind: "publish", adapter_id: "adapter/main", target_binding: "target/v1", payload_sha256: "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef", payload_bytes: 17, units: 3, policy_epoch: 9, required_observations: ["obs-a", "obs-b"] }))
+ right: Err(NonCanonical)
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+test canonical_and_semantic_golden_mismatches_have_different_observables ... FAILED
+
+failures:
+
+failures:
+    canonical_and_semantic_golden_mismatches_have_different_observables
+
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 3 filtered out; finished in 0.00s
+
+error: test failed, to rerun pass `-p fa-reference --test canonical_json_goldens`
+  [2m2026-09-08T06:47:29.074299Z[0m [32m INFO[0m [1;32mrch::hook::transfer_orchestration[0m[32m: [32mRemote command finished: exit=101 in 3342ms[0m
+    [2;3mat[0m rch/src/hook/transfer_orchestration.rs:1150 [2;3mon[0m ThreadId(1)
+
+[W] Worker: vmi1227854 | Job: j-30004650170124366
+[T] Total: 10.4s (sync 7.0s, build 3.3s, artifacts --)
+^ Sync: 6.1 MB in 7.0s (886.3 KB/s)
+[C] Compile: 3.3s
+Artifacts: skipped
+[T] Cache: MISS
+Warning: Permanently added '109.123.245.77' (ED25519) to the list of known hosts.
+[RCH] remote vmi1227854 failed (exit 101)

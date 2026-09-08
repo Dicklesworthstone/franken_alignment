@@ -1,0 +1,41 @@
+{
+  "schema": "fa.final_gate_receipt/1",
+  "date": "2026-09-08",
+  "job": "j-30004650170124389",
+  "scope": "Final reviewed FA004/005 source, qualified compiler policy, updated documentation/roadmap and independently closed tracker entries. Other prospective modules excluded.",
+  "base_commit": "378426ed59fe20f273616c351ce19efd8ae21efe",
+  "result": {
+    "api_version": "1.0",
+    "command": "cargo +nightly-2026-09-08 run --locked -p xtask -- check",
+    "outcome": "completed",
+    "location": "remote",
+    "worker_id": "vmi1149989",
+    "remote_exit_code": 0,
+    "duration_ms": 30832,
+    "timing": {
+      "classify": null,
+      "select": null,
+      "sync_up": 6419,
+      "exec": 16898,
+      "sync_down": 3217,
+      "cleanup": null,
+      "total": null
+    },
+    "result_dirs": []
+  },
+  "test_counts": {
+    "reference_unit": 80,
+    "integration": 82,
+    "xtask": 242,
+    "doctests": 8,
+    "total": 412,
+    "failed": 0,
+    "ignored": 0,
+    "filtered": 0
+  },
+  "artifact_sha256": {
+    "artifacts/execution/2026-09-08-history-format-final1.log": "3250b9a611ab72cc38c060b4eb0ef0d9298e0678b5f16df744e8104f7ae4f92a",
+    "artifacts/execution/2026-09-08-history-format-final1.json": "ef97e6f0441bece8881d087585b1ed576412dcdbe33f0819359eeea4f58eb3b6",
+    "artifacts/execution/2026-09-08-history-format-final1-inputs.json": "1a7c2a259637129e63d9b7b5e6c7f599920f701bdbac2de3a0403c6940b58019"
+  }
+}

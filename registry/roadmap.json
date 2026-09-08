@@ -93,7 +93,7 @@
       "id": "FA-004",
       "gate": "G0",
       "title": "Maintain independent reference semantics",
-      "status": "rust_reference_executed_locally_2026_09_06",
+      "status": "reference_semantics_qualified_2026_09_08",
       "depends_on": [
         "FA-001"
       ],
@@ -122,14 +122,16 @@
         "artifacts/execution/2026-09-06-xtask-check-nightly-2026-08-31.log",
         "artifacts/execution/2026-09-06-xtask-check-nightly-2026-08-31-local.log",
         "artifacts/execution/2026-09-07-epoch3-receipt.json",
-        "artifacts/execution/2026-09-07-epoch3-attempt3.log"
+        "artifacts/execution/2026-09-07-epoch3-attempt3.log",
+        "artifacts/execution/2026-09-08-history-format-receipt.json",
+        "artifacts/execution/2026-09-08-history-format-qualification-receipt.json"
       ]
     },
     {
       "id": "FA-005",
       "gate": "G0",
       "title": "Converge draft schemas and canonical golden vectors",
-      "status": "drafted",
+      "status": "reference_semantics_qualified_2026_09_08",
       "depends_on": [
         "FA-001"
       ],
@@ -145,7 +147,11 @@
       ],
       "owner_role": "systems",
       "estimated_scope": "One independently reviewable work packet; split before implementation if multiple semantics change.",
-      "result_artifacts": []
+      "result_artifacts": [
+        "artifacts/execution/2026-09-08-history-format-receipt.json",
+        "artifacts/execution/2026-09-08-history-format-qualification-receipt.json",
+        "artifacts/execution/2026-09-08-history-format-allocation-receipt.json"
+      ]
     },
     {
       "id": "FA-006",
@@ -1406,7 +1412,7 @@
       "id": "FA-058",
       "gate": "G2",
       "title": "Implement exact value and absent-key witnesses",
-      "status": "planned",
+      "status": "in_progress",
       "depends_on": [
         "FA-057"
       ],
@@ -1596,7 +1602,7 @@
       "id": "FA-068",
       "gate": "G0",
       "title": "Define observation operator algebra",
-      "status": "planned",
+      "status": "in_progress",
       "depends_on": [
         "FA-057",
         "FA-063"

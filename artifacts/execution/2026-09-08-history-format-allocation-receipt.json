@@ -1,0 +1,57 @@
+{
+  "schema": "fa.allocation_receipt/1",
+  "date": "2026-09-08",
+  "source_inputs": "artifacts/execution/2026-09-08-history-format-gate2-inputs.json",
+  "binary_sha256": "a7e93d1e3954e4c61a01ebb3c9e19d54100c7841ed70862d74ae3433d2fcf350",
+  "compiler": "nightly-2026-09-07",
+  "rustc_commit": "5a2be9f5f075d31e3ca5526b5b029881ce441253",
+  "worker": "vmi1227854",
+  "tool": "heaptrack1.5.0",
+  "measured": {
+    "allocation_calls": 8544,
+    "canonical_json_inclusive": 6721,
+    "strict_json_inclusive": 5071,
+    "roundtrip_inclusive": 5352
+  },
+  "harness_baseline": {
+    "allocation_calls": 185,
+    "canonical_json_inclusive": 0,
+    "strict_json_inclusive": 0,
+    "roundtrip_inclusive": 0
+  },
+  "derived": {
+    "whole_process_difference": 8359,
+    "roundtrip_calls_from_source": "5 sites x12 successful samples =60 calls: action/capability/evidence/whitespace positive/large Unicode",
+    "mixed_roundtrip_mean_allocation_calls": 89.2
+  },
+  "unchanged_current_production_and_profile_sha256": {
+    "crates/fa-reference/src/canonical_json.rs": "c5745e1a585030e132cb45e7a5206c8fc967dfc069f13f9ed7b269cc42b1b073",
+    "crates/fa-reference/src/strict_json.rs": "6d413a13e0880cb2bcb728fe5913e4857db59ce8995bb900a486f25ef0dcb3f6",
+    "crates/fa-reference/tests/profile_costs.rs": "a35583074b8e226144a58554c7230784527096d99aa1c48d9d3d5c42f2f48316"
+  },
+  "boundary": [
+    "Both runs use identical released profile_costs binary; baseline exact filter differs in one equal-length character and deliberately runs zero tests. Baseline earns no test credit.",
+    "Only profile_costs.rs is the integration test program; the canonical_json_properties and cold_costs files are separate programs, not compiled into this measured binary.",
+    "5352 inclusive calls are measured stack attribution; 89.2 per roundtrip is a source-count-derived mean over the five fixed input cases, not an instrumented per-case counter.",
+    "Inclusive canonical_json and strict_json counts overlap and must not be added. Whole-process subtraction retains non-format history work and harness differences; it is not a parser cost.",
+    "Instrumented timings and process RSS are not uninstrumented performance or allocation equivalents. These allocation measurements retain the earlier compiler identity and do not certify allocation under the newly qualified compiler."
+  ],
+  "artifact_sha256": {
+    "artifacts/execution/2026-09-08-history-format-heap1-inputs.json": "4d02498c5b3b80f593a622a3285a6520a8d7cb11ff291d6b6c99a81fa6408b44",
+    "artifacts/execution/2026-09-08-history-format-heap1.json": "49fdc0f7a973549fa9746389508be39342fe6c526fdf5fd62b122a1e2aa69745",
+    "artifacts/execution/2026-09-08-history-format-heap1.log": "f60feab30203bf2e74620b1fce0d7812dfdf859906d5ebd585cd4db82b110562",
+    "artifacts/execution/2026-09-08-history-format-heap2-inputs.json": "b9bd735c3f80148fe99374695ff342609f5226b39472923ac51ee3b5cdb81b70",
+    "artifacts/execution/2026-09-08-history-format-heap2.json": "f494f886a6264f2e267799d0975446648a2136872b012a3ad8adca480c22e23a",
+    "artifacts/execution/2026-09-08-history-format-heap2.log": "fa1024a8e212bed1fbc921cc9b18f31f6da1793b951c1581294a10d9fbce8c2d",
+    "artifacts/execution/2026-09-08-history-format-heap2-report.log": "e81b7c12438c51a29f1d7e2e05aa092e8e8e0dce7047cfc1c96bf51913be5bdc",
+    "artifacts/execution/2026-09-08-history-format-heap2-stacks-command.log": "a02dca37aad84739288a4bada0b8169de3ecf5e5e202b624e390de382b6d8c91",
+    "artifacts/execution/2026-09-08-history-format-heap2-profile.zst": "0e60bb22a657b32a640b8234aab9a36a41b740cf438ee5bb37dd6f8ec74f1615",
+    "artifacts/execution/2026-09-08-history-format-heap2-allocations.stacks": "d77d82f7e4482ad550b23b4618a4222193bf4fdf5ca220c831e5bb3e4c66410b",
+    "artifacts/execution/2026-09-08-history-format-heap-baseline-inputs.json": "a0a98e97cb6eabc422ee05cac2374c91a5e5e0989a67881c63e3c9ee589e8bb9",
+    "artifacts/execution/2026-09-08-history-format-heap-baseline.json": "136ab075636fd1f9b7f8c57283c614a3c7221b450bc1c21398ae4d19aa1c4c97",
+    "artifacts/execution/2026-09-08-history-format-heap-baseline.log": "82d0d7472b5a1a6ba0142ff18a46845b069ea0e8dd1954cfe9aace996e1dcf1b",
+    "artifacts/execution/2026-09-08-history-format-heap-baseline-report.log": "3b8409a04055103b90fef342144849d62ec6522f603fb72571a10d28e83cc346",
+    "artifacts/execution/2026-09-08-history-format-heap-baseline.zst": "60340674eeb846cb16bd235853f499dfbf4112e69b73347e6f07d1087fceef4c",
+    "artifacts/execution/2026-09-08-history-format-heap-baseline-allocations.stacks": "78beb39ea85afbcb0312e1539be30fe75eb38f321b7d76be2bdf1e606744b69d"
+  }
+}

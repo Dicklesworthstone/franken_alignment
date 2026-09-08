@@ -1,0 +1,4 @@
+  [2m2026-09-08T07:16:34.371479Z[0m [33m WARN[0m [1;33mrch::hook::incident[0m[33m: [33mhook incident recorded, [1;33mreason_code[0m[33m: RCH-I006, [1;33mfailure_class[0m[33m: "missing runtime/toolchain/Rust target", [1;33mselected_mode[0m[33m: Local, [1;33mlocal_fallback_allowed[0m[33m: false[0m
+    [2;3mat[0m rch/src/hook.rs:1451 [2;3mon[0m ThreadId(1)
+
+[RCH] remote required; refusing local fallback ([RCH-I006] requested worker set [vmi1149989] refused (missing_runtime); 'vmi1149989' lacks the required runtime/toolchain/target; install it or request another worker) — retryable

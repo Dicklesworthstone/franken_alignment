@@ -1,0 +1,1 @@
+{"activation_capture":true,"adapter_id":"adapter/main","effect_families":["publish","read"],"limitations":["café \\\"scoped\\\" \\\\ path"],"mediation_mode":"cooperative_gate","restart_grades":["decision_replay","trace_replay"],"schema_version":"fa.capabilities/0.1","status":"tested_profile"}

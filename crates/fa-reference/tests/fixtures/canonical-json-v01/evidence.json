@@ -1,0 +1,1 @@
+{"assertion":"line\\nseparator ","assumptions":["bounded"],"claim_class":"bounded_model","claim_id":"claim-01","evidence_refs":["abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789"],"limitations":["café scope"],"schema_version":"fa.claim/0.1","scope":"reference-only","source_refs":["source-01"],"status":"observed_in_declared_scope"}

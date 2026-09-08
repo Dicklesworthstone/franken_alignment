@@ -1,0 +1,72 @@
+Warning: Permanently added '109.123.245.77' (ED25519) to the list of known hosts.
+reading file "/tmp/fa-campaign-20260908-heap/baseline.zst" - please wait, this might take some time...
+Debuggee command was: /Users/jemanuel/projects/franken_alignment_wave4_gate2_20260908/.rch-target/release/build/fa-reference/e669633187e11169/out/profile_costs-e669633187e11169 --exact xixed_reference_profile_costs_are_descriptive_and_assert_all_outcomes --nocapture --test-threads=1
+finished reading file, now analyzing data:
+
+MOST CALLS TO ALLOCATION FUNCTIONS
+57 calls to allocation functions with 203B peak consumption from
+_RNvXsH_Cs1wnBOBePEka_7getoptsNtB5_8OptGroupNtNtCshw961UFXsya_4core5clone5Clone5clone
+  in /data/projects/franken_alignment_wave4_gate2_20260908/.rch-target/release/build/fa-reference/e669633187e11169/out/profile_costs-e669633187e11169
+24 calls with 0B peak consumption from:
+    _RNvMs3_Cs1wnBOBePEka_7getoptsNtB5_8OptGroup13long_to_short
+      in /data/projects/franken_alignment_wave4_gate2_20260908/.rch-target/release/build/fa-reference/e669633187e11169/out/profile_costs-e669633187e11169
+    _RNvNtCslSvshESn9jA_4test3cli10parse_opts
+      in /data/projects/franken_alignment_wave4_gate2_20260908/.rch-target/release/build/fa-reference/e669633187e11169/out/profile_costs-e669633187e11169
+    _RNvCslSvshESn9jA_4test16test_main_static
+      in /data/projects/franken_alignment_wave4_gate2_20260908/.rch-target/release/build/fa-reference/e669633187e11169/out/profile_costs-e669633187e11169
+    _RINvNtNtCs88x0hlevqs9_3std3sys9backtrace28___rust_begin_short_backtraceFEuuECsd1K78oRme2b_13profile_costs
+      in /data/projects/franken_alignment_wave4_gate2_20260908/.rch-target/release/build/fa-reference/e669633187e11169/out/profile_costs-e669633187e11169
+    _RNCINvNtCs88x0hlevqs9_3std2rt10lang_startuE0Csd1K78oRme2b_13profile_costs
+      in /data/projects/franken_alignment_wave4_gate2_20260908/.rch-target/release/build/fa-reference/e669633187e11169/out/profile_costs-e669633187e11169
+    _RNvNtCs88x0hlevqs9_3std2rt19lang_start_internal
+      in /data/projects/franken_alignment_wave4_gate2_20260908/.rch-target/release/build/fa-reference/e669633187e11169/out/profile_costs-e669633187e11169
+    main
+      in /data/projects/franken_alignment_wave4_gate2_20260908/.rch-target/release/build/fa-reference/e669633187e11169/out/profile_costs-e669633187e11169
+  and 33 from 3 other places
+
+
+PEAK MEMORY CONSUMERS
+73.73K peak memory consumed over 1 calls from
+0x7739ee8bf8f6
+  in /usr/lib/x86_64-linux-gnu/libstdc++.so.6
+73.73K consumed over 1 calls from:
+    call_init
+      at ./elf/dl-init.c:74
+      in /lib64/ld-linux-x86-64.so.2
+    _dl_init::call_init
+      at ./elf/dl-init.c:120
+      in /lib64/ld-linux-x86-64.so.2
+    _dl_init
+      at ./elf/./elf/dl-init.c:121
+    _dl_start_user
+      in /lib64/ld-linux-x86-64.so.2
+
+
+MOST TEMPORARY ALLOCATIONS
+17 temporary allocations of 57 allocations in total (29.82%) from
+_RNvXsH_Cs1wnBOBePEka_7getoptsNtB5_8OptGroupNtNtCshw961UFXsya_4core5clone5Clone5clone
+  in /data/projects/franken_alignment_wave4_gate2_20260908/.rch-target/release/build/fa-reference/e669633187e11169/out/profile_costs-e669633187e11169
+17 temporary allocations of 24 allocations in total (70.83%) from:
+    _RNvMs3_Cs1wnBOBePEka_7getoptsNtB5_8OptGroup13long_to_short
+      in /data/projects/franken_alignment_wave4_gate2_20260908/.rch-target/release/build/fa-reference/e669633187e11169/out/profile_costs-e669633187e11169
+    _RNvNtCslSvshESn9jA_4test3cli10parse_opts
+      in /data/projects/franken_alignment_wave4_gate2_20260908/.rch-target/release/build/fa-reference/e669633187e11169/out/profile_costs-e669633187e11169
+    _RNvCslSvshESn9jA_4test16test_main_static
+      in /data/projects/franken_alignment_wave4_gate2_20260908/.rch-target/release/build/fa-reference/e669633187e11169/out/profile_costs-e669633187e11169
+    _RINvNtNtCs88x0hlevqs9_3std3sys9backtrace28___rust_begin_short_backtraceFEuuECsd1K78oRme2b_13profile_costs
+      in /data/projects/franken_alignment_wave4_gate2_20260908/.rch-target/release/build/fa-reference/e669633187e11169/out/profile_costs-e669633187e11169
+    _RNCINvNtCs88x0hlevqs9_3std2rt10lang_startuE0Csd1K78oRme2b_13profile_costs
+      in /data/projects/franken_alignment_wave4_gate2_20260908/.rch-target/release/build/fa-reference/e669633187e11169/out/profile_costs-e669633187e11169
+    _RNvNtCs88x0hlevqs9_3std2rt19lang_start_internal
+      in /data/projects/franken_alignment_wave4_gate2_20260908/.rch-target/release/build/fa-reference/e669633187e11169/out/profile_costs-e669633187e11169
+    main
+      in /data/projects/franken_alignment_wave4_gate2_20260908/.rch-target/release/build/fa-reference/e669633187e11169/out/profile_costs-e669633187e11169
+  and 0B from 3 other places
+
+
+total runtime: 0.00s.
+calls to allocation functions: 185 (92500/s)
+temporary memory allocations: 40 (20000/s)
+peak heap memory consumption: 83.65K
+peak RSS (including heaptrack overhead): 5.80M
+total memory leaked: 548B

@@ -1,0 +1,13 @@
+--- a/crates/fa-reference/src/canonical_json.rs
++++ b/crates/fa-reference/src/canonical_json.rs
+@@ -188,9 +188,7 @@
+ pub fn decode_canonical(bytes: &[u8]) -> Result<DraftDocument, CanonicalError> {
+     let value = parse(bytes, limits()).map_err(map_syntax_error)?;
+     let document = validate_json(&value)?;
+-    (encode(&document).as_slice() == bytes)
+-        .then_some(document)
+-        .ok_or(CanonicalError::NonCanonical)
++    Ok(document)
+ }
+ 
+ fn limits() -> Limits {

@@ -1,0 +1,108 @@
+Warning: Permanently added '109.123.245.77' (ED25519) to the list of known hosts.
+reading file "/tmp/fa-campaign-20260908-heap/profile.zst" - please wait, this might take some time...
+Debuggee command was: /Users/jemanuel/projects/franken_alignment_wave4_gate2_20260908/.rch-target/release/build/fa-reference/e669633187e11169/out/profile_costs-e669633187e11169 --exact fixed_reference_profile_costs_are_descriptive_and_assert_all_outcomes --nocapture --test-threads=1
+finished reading file, now analyzing data:
+
+MOST CALLS TO ALLOCATION FUNCTIONS
+4915 calls to allocation functions with 58.18K peak consumption from
+_RNvMs5_NtCsfVXW7bATEob_5alloc7raw_vecNtB5_11RawVecInner11finish_growCsbx1baUgb63R_12fa_reference
+  in /data/projects/franken_alignment_wave4_gate2_20260908/.rch-target/release/build/fa-reference/e669633187e11169/out/profile_costs-e669633187e11169
+372 calls with 0B peak consumption from:
+    _RINvNvMs2_NtCsfVXW7bATEob_5alloc7raw_vecINtB8_11RawVecInnerpE7reserve21do_reserve_and_handleNtNtBa_5alloc6GlobalECsbx1baUgb63R_12fa_reference
+      in /data/projects/franken_alignment_wave4_gate2_20260908/.rch-target/release/build/fa-reference/e669633187e11169/out/profile_costs-e669633187e11169
+    _RNvMs4_NtCsbx1baUgb63R_12fa_reference11strict_jsonNtB5_6Parser12parse_string
+      in /data/projects/franken_alignment_wave4_gate2_20260908/.rch-target/release/build/fa-reference/e669633187e11169/out/profile_costs-e669633187e11169
+    _RNvMs4_NtCsbx1baUgb63R_12fa_reference11strict_jsonNtB5_6Parser12parse_object
+      in /data/projects/franken_alignment_wave4_gate2_20260908/.rch-target/release/build/fa-reference/e669633187e11169/out/profile_costs-e669633187e11169
+    _RNvNtCsbx1baUgb63R_12fa_reference11strict_json5parse
+      in /data/projects/franken_alignment_wave4_gate2_20260908/.rch-target/release/build/fa-reference/e669633187e11169/out/profile_costs-e669633187e11169
+    _RNvNtCsbx1baUgb63R_12fa_reference14canonical_json16decode_canonical
+      in /data/projects/franken_alignment_wave4_gate2_20260908/.rch-target/release/build/fa-reference/e669633187e11169/out/profile_costs-e669633187e11169
+    _RNvCsd1K78oRme2b_13profile_costs9roundtrip
+      in /data/projects/franken_alignment_wave4_gate2_20260908/.rch-target/release/build/fa-reference/e669633187e11169/out/profile_costs-e669633187e11169
+    _RNvCsd1K78oRme2b_13profile_costss_69fixed_reference_profile_costs_are_descriptive_and_assert_all_outcomes
+      in /data/projects/franken_alignment_wave4_gate2_20260908/.rch-target/release/build/fa-reference/e669633187e11169/out/profile_costs-e669633187e11169
+    _RNvYNCNvCsd1K78oRme2b_13profile_costs69fixed_reference_profile_costs_are_descriptive_and_assert_all_outcomes0INtNtNtCshw961UFXsya_4core3ops8function6FnOnceuE9call_onceB6_
+      in /data/projects/franken_alignment_wave4_gate2_20260908/.rch-target/release/build/fa-reference/e669633187e11169/out/profile_costs-e669633187e11169
+    _RINvCslSvshESn9jA_4test28___rust_begin_short_backtraceINtNtCshw961UFXsya_4core6result6ResultuNtNtCsfVXW7bATEob_5alloc6string6StringEFEBQ_EB2_
+      in /data/projects/franken_alignment_wave4_gate2_20260908/.rch-target/release/build/fa-reference/e669633187e11169/out/profile_costs-e669633187e11169
+    _RNCNvCslSvshESn9jA_4test8run_test0B3_
+      in /data/projects/franken_alignment_wave4_gate2_20260908/.rch-target/release/build/fa-reference/e669633187e11169/out/profile_costs-e669633187e11169
+    _RINvNtNtCs88x0hlevqs9_3std3sys9backtrace28___rust_begin_short_backtraceNCNvCslSvshESn9jA_4test8run_tests_0uEB1b_
+      in /data/projects/franken_alignment_wave4_gate2_20260908/.rch-target/release/build/fa-reference/e669633187e11169/out/profile_costs-e669633187e11169
+    _RNSNvYNCINvNtNtCs88x0hlevqs9_3std6thread9lifecycle15spawn_uncheckedNCNvCslSvshESn9jA_4test8run_tests_0uEs_0INtNtNtCshw961UFXsya_4core3ops8function6FnOnceuE9call_once6vtableB17_
+      in /data/projects/franken_alignment_wave4_gate2_20260908/.rch-target/release/build/fa-reference/e669633187e11169/out/profile_costs-e669633187e11169
+    _RNvNvMs0_NtNtNtCs88x0hlevqs9_3std3sys6thread4unixNtB7_6Thread3new12thread_start
+      in /data/projects/franken_alignment_wave4_gate2_20260908/.rch-target/release/build/fa-reference/e669633187e11169/out/profile_costs-e669633187e11169
+    start_thread
+      at ./nptl/pthread_create.c:454
+      in /usr/lib/x86_64-linux-gnu/libc.so.6
+    __clone3
+      at ../sysdeps/unix/sysv/linux/x86_64/clone3.S:78
+      in /usr/lib/x86_64-linux-gnu/libc.so.6
+  and 4543 from 115 other places
+
+
+PEAK MEMORY CONSUMERS
+73.73K peak memory consumed over 1 calls from
+0x7094a52bf8f6
+  in /usr/lib/x86_64-linux-gnu/libstdc++.so.6
+73.73K consumed over 1 calls from:
+    call_init
+      at ./elf/dl-init.c:74
+      in /lib64/ld-linux-x86-64.so.2
+    _dl_init::call_init
+      at ./elf/dl-init.c:120
+      in /lib64/ld-linux-x86-64.so.2
+    _dl_init
+      at ./elf/./elf/dl-init.c:121
+    _dl_start_user
+      in /lib64/ld-linux-x86-64.so.2
+
+
+MOST TEMPORARY ALLOCATIONS
+2694 temporary allocations of 4915 allocations in total (54.81%) from
+_RNvMs5_NtCsfVXW7bATEob_5alloc7raw_vecNtB5_11RawVecInner11finish_growCsbx1baUgb63R_12fa_reference
+  in /data/projects/franken_alignment_wave4_gate2_20260908/.rch-target/release/build/fa-reference/e669633187e11169/out/profile_costs-e669633187e11169
+288 temporary allocations of 372 allocations in total (77.42%) from:
+    _RINvNvMs2_NtCsfVXW7bATEob_5alloc7raw_vecINtB8_11RawVecInnerpE7reserve21do_reserve_and_handleNtNtBa_5alloc6GlobalECsbx1baUgb63R_12fa_reference
+      in /data/projects/franken_alignment_wave4_gate2_20260908/.rch-target/release/build/fa-reference/e669633187e11169/out/profile_costs-e669633187e11169
+    _RNvMs4_NtCsbx1baUgb63R_12fa_reference11strict_jsonNtB5_6Parser12parse_string
+      in /data/projects/franken_alignment_wave4_gate2_20260908/.rch-target/release/build/fa-reference/e669633187e11169/out/profile_costs-e669633187e11169
+    _RNvMs4_NtCsbx1baUgb63R_12fa_reference11strict_jsonNtB5_6Parser12parse_object
+      in /data/projects/franken_alignment_wave4_gate2_20260908/.rch-target/release/build/fa-reference/e669633187e11169/out/profile_costs-e669633187e11169
+    _RNvNtCsbx1baUgb63R_12fa_reference11strict_json5parse
+      in /data/projects/franken_alignment_wave4_gate2_20260908/.rch-target/release/build/fa-reference/e669633187e11169/out/profile_costs-e669633187e11169
+    _RNvNtCsbx1baUgb63R_12fa_reference14canonical_json16decode_canonical
+      in /data/projects/franken_alignment_wave4_gate2_20260908/.rch-target/release/build/fa-reference/e669633187e11169/out/profile_costs-e669633187e11169
+    _RNvCsd1K78oRme2b_13profile_costs9roundtrip
+      in /data/projects/franken_alignment_wave4_gate2_20260908/.rch-target/release/build/fa-reference/e669633187e11169/out/profile_costs-e669633187e11169
+    _RNvCsd1K78oRme2b_13profile_costss_69fixed_reference_profile_costs_are_descriptive_and_assert_all_outcomes
+      in /data/projects/franken_alignment_wave4_gate2_20260908/.rch-target/release/build/fa-reference/e669633187e11169/out/profile_costs-e669633187e11169
+    _RNvYNCNvCsd1K78oRme2b_13profile_costs69fixed_reference_profile_costs_are_descriptive_and_assert_all_outcomes0INtNtNtCshw961UFXsya_4core3ops8function6FnOnceuE9call_onceB6_
+      in /data/projects/franken_alignment_wave4_gate2_20260908/.rch-target/release/build/fa-reference/e669633187e11169/out/profile_costs-e669633187e11169
+    _RINvCslSvshESn9jA_4test28___rust_begin_short_backtraceINtNtCshw961UFXsya_4core6result6ResultuNtNtCsfVXW7bATEob_5alloc6string6StringEFEBQ_EB2_
+      in /data/projects/franken_alignment_wave4_gate2_20260908/.rch-target/release/build/fa-reference/e669633187e11169/out/profile_costs-e669633187e11169
+    _RNCNvCslSvshESn9jA_4test8run_test0B3_
+      in /data/projects/franken_alignment_wave4_gate2_20260908/.rch-target/release/build/fa-reference/e669633187e11169/out/profile_costs-e669633187e11169
+    _RINvNtNtCs88x0hlevqs9_3std3sys9backtrace28___rust_begin_short_backtraceNCNvCslSvshESn9jA_4test8run_tests_0uEB1b_
+      in /data/projects/franken_alignment_wave4_gate2_20260908/.rch-target/release/build/fa-reference/e669633187e11169/out/profile_costs-e669633187e11169
+    _RNSNvYNCINvNtNtCs88x0hlevqs9_3std6thread9lifecycle15spawn_uncheckedNCNvCslSvshESn9jA_4test8run_tests_0uEs_0INtNtNtCshw961UFXsya_4core3ops8function6FnOnceuE9call_once6vtableB17_
+      in /data/projects/franken_alignment_wave4_gate2_20260908/.rch-target/release/build/fa-reference/e669633187e11169/out/profile_costs-e669633187e11169
+    _RNvNvMs0_NtNtNtCs88x0hlevqs9_3std3sys6thread4unixNtB7_6Thread3new12thread_start
+      in /data/projects/franken_alignment_wave4_gate2_20260908/.rch-target/release/build/fa-reference/e669633187e11169/out/profile_costs-e669633187e11169
+    start_thread
+      at ./nptl/pthread_create.c:454
+      in /usr/lib/x86_64-linux-gnu/libc.so.6
+    __clone3
+      at ../sysdeps/unix/sysv/linux/x86_64/clone3.S:78
+      in /usr/lib/x86_64-linux-gnu/libc.so.6
+  and 2.41K from 115 other places
+
+
+total runtime: 0.16s.
+calls to allocation functions: 8544 (54420/s)
+temporary memory allocations: 3046 (19401/s)
+peak heap memory consumption: 145.75K
+peak RSS (including heaptrack overhead): 6.22M
+total memory leaked: 948B

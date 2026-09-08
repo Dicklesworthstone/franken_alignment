@@ -1,0 +1,1 @@
+{"action_id":"action-01","adapter_id":"adapter/main","branch":"sandbox","effect_kind":"publish","payload_bytes":17,"payload_sha256":"0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef","policy_epoch":9,"required_observations":["obs-a","obs-b"],"run_id":"run-01","schema_version":"fa.action/0.1","target_binding":"target/v1","tenant_id":"tenant-01","units":3}
