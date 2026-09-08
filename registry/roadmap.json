@@ -3083,7 +3083,7 @@
       "id": "FA-132",
       "gate": "G0",
       "title": "System map and vocabulary registries with checker",
-      "status": "in_progress",
+      "status": "static_registry_gate_qualified_2026_09_08",
       "depends_on": [
         "FA-103"
       ],
@@ -3097,7 +3097,11 @@
         "Produce executed local evidence; source or prose alone does not close this packet."
       ],
       "owner_role": "systems",
-      "result_artifacts": [],
+      "result_artifacts": [
+        "artifacts/execution/2026-09-08-epoch9-receipt.json",
+        "artifacts/execution/2026-09-08-epoch9-attempt2.log",
+        "artifacts/execution/2026-09-08-epoch9-negative.log"
+      ],
       "founding_ideas": [
         "FI-A06",
         "FI-A17"

@@ -1,0 +1,16 @@
+{
+  "normative_sections": ["§2"],
+  "layers": [
+    {"id":"L0","name":"Layer 0","question":"q","plan_sections":["§2"],"boundary_invariants":["FA-INV-001"],"objects":["object0"],"verbs":["get"],"packets":["FA-999"],"conformance_suite":"planned"},
+    {"id":"L1","name":"Layer 1","question":"q","plan_sections":["§2"],"boundary_invariants":["FA-INV-001"],"objects":["object1"],"verbs":["get"],"packets":["FA-001"],"conformance_suite":"planned"},
+    {"id":"L2","name":"Layer 2","question":"q","plan_sections":["§2"],"boundary_invariants":["FA-INV-001"],"objects":["object2"],"verbs":["get"],"packets":["FA-001"],"conformance_suite":"planned"},
+    {"id":"L3","name":"Layer 3","question":"q","plan_sections":["§2"],"boundary_invariants":["FA-INV-001"],"objects":["object3"],"verbs":["get"],"packets":["FA-001"],"conformance_suite":"planned"},
+    {"id":"L4","name":"Layer 4","question":"q","plan_sections":["§2"],"boundary_invariants":["FA-INV-001"],"objects":["object4"],"verbs":["get"],"packets":["FA-001"],"conformance_suite":"planned"},
+    {"id":"L5","name":"Layer 5","question":"q","plan_sections":["§2"],"boundary_invariants":["FA-INV-001"],"objects":["object5"],"verbs":["get"],"packets":["FA-001"],"conformance_suite":"planned"},
+    {"id":"L6","name":"Layer 6","question":"q","plan_sections":["§2"],"boundary_invariants":["FA-INV-001"],"objects":["object6"],"verbs":["get"],"packets":["FA-001"],"conformance_suite":"planned"},
+    {"id":"L7","name":"Layer 7","question":"q","plan_sections":["§2"],"boundary_invariants":["FA-INV-001"],"objects":["object7"],"verbs":["get"],"packets":["FA-001"],"conformance_suite":"planned"},
+    {"id":"L8","name":"Layer 8","question":"q","plan_sections":["§2"],"boundary_invariants":["FA-INV-001"],"objects":["object8"],"verbs":["get"],"packets":["FA-001"],"conformance_suite":"planned"}
+  ],
+  "epistemic_type":{"variants":["Known","Pending","Unknown","Withheld","Stale","Absent"]},
+  "checker_packet":"FA-132"
+}

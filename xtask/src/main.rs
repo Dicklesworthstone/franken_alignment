@@ -28,6 +28,9 @@ mod registry_negative_tests;
 mod source_snapshot;
 #[cfg(test)]
 mod source_snapshot_tests;
+mod system_map;
+#[cfg(test)]
+mod system_map_tests;
 mod toolchain_identity;
 #[cfg(test)]
 mod workspace_root_tests;
@@ -435,6 +438,15 @@ fn current_execution_receipt(status: &str) -> Result<&str, String> {
 }
 
 fn read_prose_input(root: &Path, relative: &str) -> Result<Vec<u8>, String> {
+    read_operator_input(root, relative, "PROSE", "Prose")
+}
+
+fn read_operator_input(
+    root: &Path,
+    relative: &str,
+    label: &str,
+    kind: &str,
+) -> Result<Vec<u8>, String> {
     const LIMIT: u64 = 4 * 1024 * 1024;
     let path = root.join(relative);
     if fs::metadata(&path)
@@ -442,7 +454,7 @@ fn read_prose_input(root: &Path, relative: &str) -> Result<Vec<u8>, String> {
         .len()
         > LIMIT
     {
-        return Err(format!("Prose input exceeds {LIMIT} bytes: {relative}"));
+        return Err(format!("{kind} input exceeds {LIMIT} bytes: {relative}"));
     }
     let digest = source_snapshot::operator_file_digest(root, relative)?;
     let mut bytes = Vec::new();
@@ -452,10 +464,12 @@ fn read_prose_input(root: &Path, relative: &str) -> Result<Vec<u8>, String> {
         .read_to_end(&mut bytes)
         .map_err(|error| format!("Cannot read {relative}: {error}"))?;
     if bytes.len() as u64 > LIMIT {
-        return Err(format!("Prose input grew beyond {LIMIT} bytes: {relative}"));
+        return Err(format!(
+            "{kind} input grew beyond {LIMIT} bytes: {relative}"
+        ));
     }
     println!(
-        "PROSE input={relative} bytes={} sha256={digest}; operator digest and outer freeze, not receipt authentication",
+        "{label} input={relative} bytes={} sha256={digest}; operator digest and outer freeze, not receipt authentication",
         bytes.len()
     );
     Ok(bytes)
@@ -498,6 +512,53 @@ fn check_prose(root: &Path) -> Result<(), String> {
     Ok(())
 }
 
+fn check_system_map(root: &Path) -> Result<(), String> {
+    let text = |relative: &str| -> Result<String, String> {
+        String::from_utf8(read_operator_input(
+            root,
+            relative,
+            "SYSTEM_MAP",
+            "System-map",
+        )?)
+        .map_err(|error| format!("Invalid UTF-8 in {relative}: {error}"))
+    };
+    let document = |relative: &str| -> Result<json::Json, String> {
+        json::parse(
+            &read_operator_input(root, relative, "SYSTEM_MAP", "System-map")?,
+            json::Limits::default(),
+        )
+        .map_err(|error| format!("Invalid JSON in {relative}: {error}"))
+    };
+    let system_map = document("registry/system_map.json")?;
+    let vocabulary = document("registry/vocabulary.json")?;
+    let invariants = document("registry/invariants.json")?;
+    let roadmap = document("registry/roadmap.json")?;
+    let readme = text("README.md")?;
+    let agent_guide = text("docs/AGENT_GUIDE.md")?;
+    let system_map_doc = text("docs/SYSTEM_MAP.md")?;
+    let beads_issues = text(".beads/issues.jsonl")?;
+    let plan = text(PLAN_INPUT)?;
+    let report = system_map::check(system_map::Inputs {
+        system_map: &system_map,
+        vocabulary: &vocabulary,
+        invariants: &invariants,
+        roadmap: &roadmap,
+        readme: &readme,
+        agent_guide: &agent_guide,
+        system_map_doc: &system_map_doc,
+        beads_issues: &beads_issues,
+        plan: &plan,
+    });
+    println!("SYSTEM_MAP_JSON {}", report.render_json());
+    if !report.is_clean() {
+        return Err("System-map consistency refused; exact findings are in SYSTEM_MAP_JSON".into());
+    }
+    println!(
+        "PASS system_map: bounded registry/document consistency and checker-epic bead link; no command or layer-suite execution claim"
+    );
+    Ok(())
+}
+
 fn execute() -> Result<(), String> {
     let root = workspace_root()?;
     let args: Vec<_> = env::args().skip(1).collect();
@@ -510,6 +571,7 @@ fn execute() -> Result<(), String> {
             check_admission(&root)?;
             check_registries(&root)?;
             check_concordance(&root, &manifest)?;
+            check_system_map(&root)?;
             check_prose(&root)?;
             run(&root, "cargo", &["fmt", "--all", "--check"])?;
             run(&root, "cargo", &["check", "--workspace", "--all-targets", "--frozen"])?;
@@ -533,10 +595,14 @@ fn execute() -> Result<(), String> {
             let _manifest = check_source_snapshot(&root)?;
             check_prose(&root)
         }
+        [command] if command == "system-map-check" => {
+            let _manifest = check_source_snapshot(&root)?;
+            check_system_map(&root)
+        }
         [command] if command == "release-check" => {
             Err("Release blocked: no qualified production broker, frozen release toolchain, foundation closure, target matrix or signed proof closure exists in design draft 0.2.".into())
         }
-        _ => Err("Usage: cargo xtask check | concordance-check | prose-check | inventory | release-check".into()),
+        _ => Err("Usage: cargo xtask check | concordance-check | system-map-check | prose-check | inventory | release-check".into()),
     }
 }
 

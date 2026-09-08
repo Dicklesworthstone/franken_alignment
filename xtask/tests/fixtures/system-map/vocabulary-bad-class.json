@@ -1,0 +1,11 @@
+{
+  "nouns": ["run"],
+  "verbs": [
+    {"verb":"get","layer":"L0-L2","authority":"any","class":"fabrication","idempotency":"n/a","cost_class":"cheap","response":"Knowledge<Object>"},
+    {"verb":"promote","layer":"L3/L6","authority":"governance","class":"mutation","idempotency":"key","cost_class":"cheap","response":"Outcome"},
+    {"verb":"rotate","layer":"L3","authority":"governance","class":"mutation","idempotency":"key","cost_class":"cheap","response":"Outcome"}
+  ],
+  "reason_codes": ["DeniedByPolicy"],
+  "knowledge_variants": ["Known","Pending","Unknown","Withheld","Stale","Absent"],
+  "retired_verbs": ["status"]
+}

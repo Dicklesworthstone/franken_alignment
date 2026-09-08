@@ -1,0 +1,233 @@
+  [2m2026-09-08T01:03:50.931770Z[0m [32m INFO[0m [1;32mrch::hook[0m[32m: [32mSelected worker: hz3 at ubuntu@194.140.197.98 (6 slots remaining after reservation, speed 75.1)[0m
+    [2;3mat[0m rch/src/hook.rs:2645 [2;3mon[0m ThreadId(1)
+
+[*] Job j-30004650170124249 submitted to hz3 (6 slots remaining, speed 75.1)
+  [2m2026-09-08T01:03:54.549948Z[0m [32m INFO[0m [1;32mrch::hook::transfer_orchestration[0m[32m: [32mStarting remote compilation pipeline for franken_alignment (hash: 4d0d8a6c0f59e15e)[0m
+    [2;3mat[0m rch/src/hook/transfer_orchestration.rs:510 [2;3mon[0m ThreadId(1)
+
+  [2m2026-09-08T01:03:54.549979Z[0m [32m INFO[0m [1;32mrch::hook::transfer_orchestration[0m[32m: [32mPrepared dependency sync manifest for 1 roots[0m
+    [2;3mat[0m rch/src/hook/transfer_orchestration.rs:532 [2;3mon[0m ThreadId(1)
+
+  [2m2026-09-08T01:04:01.150865Z[0m [32m INFO[0m [1;32mrch::hook::transfer_orchestration[0m[32m: [32mSyncing project to worker hz3...[0m
+    [2;3mat[0m rch/src/hook/transfer_orchestration.rs:661 [2;3mon[0m ThreadId(1)
+
+  [2m2026-09-08T01:04:54.147728Z[0m [32m INFO[0m [1;32mrch::transfer[0m[32m: [32mSyncing /Users/jemanuel/projects/franken_alignment -> /data/tmp/rch/franken_alignment/4d0d8a6c0f59e15e on hz3 (streaming)[0m
+    [2;3mat[0m rch/src/transfer.rs:3549 [2;3mon[0m ThreadId(1)
+
+  [2m2026-09-08T01:05:01.772417Z[0m [32m INFO[0m [1;32mrch::hook::transfer_orchestration[0m[32m: [32mSync complete: 52 files, 3958923 bytes in 31456ms[0m
+    [2;3mat[0m rch/src/hook/transfer_orchestration.rs:958 [2;3mon[0m ThreadId(1)
+
+  [2m2026-09-08T01:05:02.004065Z[0m [32m INFO[0m [1;32mrch::hook::transfer_orchestration[0m[32m: [32mExecuting command remotely: cargo +nightly-2026-09-07 run --locked -p xtask -- check[0m
+    [2;3mat[0m rch/src/hook/transfer_orchestration.rs:1018 [2;3mon[0m ThreadId(1)
+
+  [2m2026-09-08T01:05:02.018990Z[0m [32m INFO[0m [1;32mrch::transfer[0m[32m: [32mRewriting CARGO_TARGET_DIR for remote execution (worker-scoped path): /Volumes/USB_NVME/cargo-target -> /data/tmp/rch/franken_alignment/.rch-target-hz3-pool-7426c0154046c0ad0f733de17f13ec93[0m
+    [2;3mat[0m rch/src/transfer.rs:1842 [2;3mon[0m ThreadId(1)
+
+  [2m2026-09-08T01:05:02.019137Z[0m [32m INFO[0m [1;32mrch::transfer[0m[32m: [32mWrapping command with external timeout protection, [1;32mkind[0m[32m: cargo build, [1;32mtimeout_secs[0m[32m: 3600[0m
+    [2;3mat[0m rch/src/transfer.rs:2669 [2;3mon[0m ThreadId(1)
+
+warning: unused field `license-file` in `workspace.package`
+ --> Cargo.toml:9:1
+  |
+9 | license-file = "LICENSE"
+  | ^^^^^^^^^^^^
+  |
+  = note: `cargo::unused_workspace_package_fields` is set to `warn` by default
+help: consider removing the field `workspace.package.license-file`
+warning: workspace (manifest) generated 1 warning
+   Compiling xtask v0.2.0 (/data/tmp/rch/franken_alignment/4d0d8a6c0f59e15e/xtask)
+PASS reference_lock: exactly fa-reference and xtask; no external packages
+PASS source_inventory: required files and crate-level prohibitions present
+EXECUTE rustc -Vv
+rustc 1.100.0-nightly (5a2be9f5f 2026-09-06)
+binary: rustc
+commit-hash: 5a2be9f5f075d31e3ca5526b5b029881ce441253
+commit-date: 2026-09-06
+host: x86_64-unknown-linux-gnu
+release: 1.100.0-nightly
+LLVM version: 23.1.1
+PASS qualified_rustc_identity: 5a2be9f5f075d31e3ca5526b5b029881ce441253 on x86_64-unknown-linux-gnu; compiler-reported identity only
+PASS admission_contract: required local source, target, build/runtime review and future external constraints; snapshot identity matched
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 9.64s
+     Running `/data/tmp/rch/franken_alignment/.rch-target-hz3-pool-7426c0154046c0ad0f733de17f13ec93/debug/xtask check`
+SNAPSHOT tool: sha256sum
+SNAPSHOT verified files: 133
+PASS source_snapshot: 133 reviewed files match the manifest byte for byte, and the discovered set equals the manifest set. Digests come from the operator's SHA-256 tool; no cryptography is implemented here. Not a claim about the hashing binary's authenticity, runtime semantics, or package dependencies.
+EXECUTE cargo metadata --format-version 1 --locked --offline --filter-platform aarch64-apple-darwin --manifest-path /data/tmp/rch/franken_alignment/4d0d8a6c0f59e15e/Cargo.toml
+ADMISSION target profile: aarch64-apple-darwin
+ADMISSION inventory:
+  fa-reference 0.2.0 path+file:///data/tmp/rch/franken_alignment/4d0d8a6c0f59e15e/crates/fa-reference#0.2.0 at crates/fa-reference/Cargo.toml [workspace local] kinds=bin,lib,test links=none features=none
+  xtask 0.2.0 path+file:///data/tmp/rch/franken_alignment/4d0d8a6c0f59e15e/xtask#0.2.0 at xtask/Cargo.toml [workspace local] kinds=bin links=none features=none
+ADMISSION note: claim is bound to target profile `aarch64-apple-darwin`; cargo metadata does not record which --filter-platform produced it, so the target binding rests on the caller collecting this document with `--filter-platform aarch64-apple-darwin`, not on the document itself
+ADMISSION note: metadata establishes identity, structure and feature activation only; it does not establish a runtime or downloaded-artifact closure
+PASS admission_closed_inventory[aarch64-apple-darwin]: exact local package set, exact resolve bijection, no external source, build script, proc macro, native link, build or target-scoped dependency, and the frozen feature set. Not a runtime or downloaded-artifact closure claim.
+PASS collected_metadata_paths[aarch64-apple-darwin]: actual workspace, manifests and target source files
+EXECUTE cargo metadata --format-version 1 --locked --offline --filter-platform x86_64-unknown-linux-gnu --manifest-path /data/tmp/rch/franken_alignment/4d0d8a6c0f59e15e/Cargo.toml
+ADMISSION target profile: x86_64-unknown-linux-gnu
+ADMISSION inventory:
+  fa-reference 0.2.0 path+file:///data/tmp/rch/franken_alignment/4d0d8a6c0f59e15e/crates/fa-reference#0.2.0 at crates/fa-reference/Cargo.toml [workspace local] kinds=bin,lib,test links=none features=none
+  xtask 0.2.0 path+file:///data/tmp/rch/franken_alignment/4d0d8a6c0f59e15e/xtask#0.2.0 at xtask/Cargo.toml [workspace local] kinds=bin links=none features=none
+ADMISSION note: claim is bound to target profile `x86_64-unknown-linux-gnu`; cargo metadata does not record which --filter-platform produced it, so the target binding rests on the caller collecting this document with `--filter-platform x86_64-unknown-linux-gnu`, not on the document itself
+ADMISSION note: metadata establishes identity, structure and feature activation only; it does not establish a runtime or downloaded-artifact closure
+PASS admission_closed_inventory[x86_64-unknown-linux-gnu]: exact local package set, exact resolve bijection, no external source, build script, proc macro, native link, build or target-scoped dependency, and the frozen feature set. Not a runtime or downloaded-artifact closure claim.
+PASS collected_metadata_paths[x86_64-unknown-linux-gnu]: actual workspace, manifests and target source files
+PASS registry_core: IDs, roadmap DAG, declared links, retained files and scoped source test declarations; not execution or invariant proof
+CONCORDANCE input=registry/founding_concordance.json bytes=42815 sha256=cf90c49704448eaaab47e447c15033c94dd66c37c895c74c8b7bce2f135c251d; verified source manifest, outer freeze required
+CONCORDANCE input=registry/invariants.json bytes=56752 sha256=b2f09b25d5633c7686ecf66a8b1998a489211d01c4a0bf179ce23af89b5f3965; verified source manifest, outer freeze required
+CONCORDANCE input=registry/claims.json bytes=15799 sha256=9e729380f01af536b21f116d334977db77e3900e43367c6f19b1522296c61005; verified source manifest, outer freeze required
+CONCORDANCE input=registry/roadmap.json bytes=112553 sha256=810083535441cf1ec53ea48ad6a0d68918a0cb0c0817fba98cdc0bc296752a0f; verified source manifest, outer freeze required
+CONCORDANCE input=COMPREHENSIVE_PLAN_FOR_THE_DESIGN_OF_FRANKENALIGNMENT.md bytes=251689 sha256=b08ed463dd8d321a5f1a4a65fb839456345788fcc6cb9b8ff3103c7143d64616; verified source manifest, outer freeze required
+CONCORDANCE_JSON {"missing":[],"dangling":[],"counts":{"headings":231,"invariants":40,"hypotheses":21,"packets":143}}
+PASS concordance: direct typed coverage and reference validity; not implementation or invariant proof
+SYSTEM_MAP input=registry/system_map.json bytes=8225 sha256=7b62748269fd1fa55a7a8ea2a2cd9274970accfff4e7e97b1983fdf342f29223; operator digest and outer freeze, not receipt authentication
+SYSTEM_MAP input=registry/vocabulary.json bytes=10344 sha256=b5b7cb253333f43ba6bcc6b08268bb91ceab7767b7d7581fa5cec7f41a475615; operator digest and outer freeze, not receipt authentication
+SYSTEM_MAP input=registry/invariants.json bytes=56752 sha256=b2f09b25d5633c7686ecf66a8b1998a489211d01c4a0bf179ce23af89b5f3965; operator digest and outer freeze, not receipt authentication
+SYSTEM_MAP input=registry/roadmap.json bytes=112553 sha256=810083535441cf1ec53ea48ad6a0d68918a0cb0c0817fba98cdc0bc296752a0f; operator digest and outer freeze, not receipt authentication
+SYSTEM_MAP input=README.md bytes=55074 sha256=0e736c8fd63c326f696bfa66deed06a2b8d65051e57af0097f8a1bec84e4f13a; operator digest and outer freeze, not receipt authentication
+SYSTEM_MAP input=docs/AGENT_GUIDE.md bytes=9645 sha256=cbb54889340d1e239ad17228faa4ad640ce4e684049153d3ff160c44d5144a8f; operator digest and outer freeze, not receipt authentication
+SYSTEM_MAP input=docs/SYSTEM_MAP.md bytes=7188 sha256=52cae2e9d0bfef7f44af75c398e9f9d47aba3591389e6b23553e3d390f422c02; operator digest and outer freeze, not receipt authentication
+SYSTEM_MAP input=.beads/issues.jsonl bytes=920578 sha256=5f2a70504c609dda90f0d6f0a550ff04e8472a8d2ebd3bbc2a21d6920306f6d6; operator digest and outer freeze, not receipt authentication
+SYSTEM_MAP input=COMPREHENSIVE_PLAN_FOR_THE_DESIGN_OF_FRANKENALIGNMENT.md bytes=251689 sha256=b08ed463dd8d321a5f1a4a65fb839456345788fcc6cb9b8ff3103c7143d64616; operator digest and outer freeze, not receipt authentication
+SYSTEM_MAP_JSON {"missing":[],"retired_in_use":[],"unregistered_verbs":[],"counts":{"layers":9,"verbs":35,"packets":143,"guide_commands":42,"readme_commands":11}}
+PASS system_map: bounded registry/document consistency and checker-epic bead link; no command or layer-suite execution claim
+PROSE input=README.md bytes=55074 sha256=0e736c8fd63c326f696bfa66deed06a2b8d65051e57af0097f8a1bec84e4f13a; operator digest and outer freeze, not receipt authentication
+PROSE input=IMPLEMENTATION_STATUS.md bytes=19904 sha256=58a6e4dc05a4e958a56685b5b50f473fa99124b76b049175ebe1c3fedfca3fca; operator digest and outer freeze, not receipt authentication
+PROSE input=artifacts/execution/2026-09-07-epoch8-receipt.json bytes=12204 sha256=d18993dcace3bd445e9c4b930c3453964d348025f7dc331eeb29aad059425253; operator digest and outer freeze, not receipt authentication
+PROSE input=registry/founding_concordance.json bytes=42815 sha256=cf90c49704448eaaab47e447c15033c94dd66c37c895c74c8b7bce2f135c251d; operator digest and outer freeze, not receipt authentication
+PROSE input=registry/invariants.json bytes=56752 sha256=b2f09b25d5633c7686ecf66a8b1998a489211d01c4a0bf179ce23af89b5f3965; operator digest and outer freeze, not receipt authentication
+PROSE input=registry/claims.json bytes=15799 sha256=9e729380f01af536b21f116d334977db77e3900e43367c6f19b1522296c61005; operator digest and outer freeze, not receipt authentication
+PROSE input=registry/roadmap.json bytes=112553 sha256=810083535441cf1ec53ea48ad6a0d68918a0cb0c0817fba98cdc0bc296752a0f; operator digest and outer freeze, not receipt authentication
+PROSE input=COMPREHENSIVE_PLAN_FOR_THE_DESIGN_OF_FRANKENALIGNMENT.md bytes=251689 sha256=b08ed463dd8d321a5f1a4a65fb839456345788fcc6cb9b8ff3103c7143d64616; operator digest and outer freeze, not receipt authentication
+PROSE_JSON {"findings":[],"counts":{"founding_ideas":38,"syntheses":9,"engineering_additions":67,"invariants":40,"hypotheses":21,"packets":143}}
+PASS prose_consistency: current declarations match registries and the named retained receipt; not new-source execution proof
+EXECUTE cargo fmt --all --check
+PASS executed_command: cargo fmt --all --check
+EXECUTE cargo check --workspace --all-targets --frozen
+warning: unused field `license-file` in `workspace.package`
+ --> Cargo.toml:9:1
+  |
+9 | license-file = "LICENSE"
+  | ^^^^^^^^^^^^
+  |
+  = note: `cargo::unused_workspace_package_fields` is set to `warn` by default
+help: consider removing the field `workspace.package.license-file`
+warning: workspace (manifest) generated 1 warning
+    Checking fa-reference v0.2.0 (/data/tmp/rch/franken_alignment/4d0d8a6c0f59e15e/crates/fa-reference)
+    Checking xtask v0.2.0 (/data/tmp/rch/franken_alignment/4d0d8a6c0f59e15e/xtask)
+PASS executed_command: cargo check --workspace --all-targets --frozen
+EXECUTE cargo clippy --workspace --all-targets --frozen -- -D warnings
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 1.60s
+warning: unused field `license-file` in `workspace.package`
+ --> Cargo.toml:9:1
+  |
+9 | license-file = "LICENSE"
+  | ^^^^^^^^^^^^
+  |
+  = note: `cargo::unused_workspace_package_fields` is set to `warn` by default
+help: consider removing the field `workspace.package.license-file`
+warning: workspace (manifest) generated 1 warning
+    Checking fa-reference v0.2.0 (/data/tmp/rch/franken_alignment/4d0d8a6c0f59e15e/crates/fa-reference)
+    Checking xtask v0.2.0 (/data/tmp/rch/franken_alignment/4d0d8a6c0f59e15e/xtask)
+error: this `if` statement can be collapsed
+   --> xtask/src/system_map.rs:403:13
+    |
+403 | /             if let Some(class) = self.string(row, VOCABULARY_FILE, "class", Some(verb)) {
+404 | |                 if !matches!(class, "read" | "rehearsal" | "mutation") {
+405 | |                     self.finding(
+406 | |                         VOCABULARY_FILE,
+...   |
+412 | |             }
+    | |_____________^
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/main/index.html#collapsible_if
+    = note: `-D clippy::collapsible-if` implied by `-D warnings`
+    = help: to override `-D warnings` add `#[allow(clippy::collapsible_if)]`
+help: collapse nested if block
+    |
+403 ~             if let Some(class) = self.string(row, VOCABULARY_FILE, "class", Some(verb))
+404 ~                 && !matches!(class, "read" | "rehearsal" | "mutation") {
+405 |                     self.finding(
+...
+410 |                     );
+411 ~                 }
+    |
+
+error: this `if` statement can be collapsed
+   --> xtask/src/system_map.rs:413:13
+    |
+413 | /             if let Some(layer) = self.string(row, VOCABULARY_FILE, "layer", Some(verb)) {
+414 | |                 if !valid_layer_descriptor(layer) {
+415 | |                     self.finding(
+416 | |                         VOCABULARY_FILE,
+...   |
+424 | |             }
+    | |_____________^
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/main/index.html#collapsible_if
+help: collapse nested if block
+    |
+413 ~             if let Some(layer) = self.string(row, VOCABULARY_FILE, "layer", Some(verb))
+414 ~                 && !valid_layer_descriptor(layer) {
+415 |                     self.finding(
+...
+422 |                     );
+423 ~                 }
+    |
+
+error: this `if` statement can be collapsed
+   --> xtask/src/system_map.rs:500:9
+    |
+500 | /         if let Some(packet) = checker_packet {
+501 | |             if !roadmap_ids.contains(packet) {
+502 | |                 self.finding(
+503 | |                     SYSTEM_MAP_FILE,
+...   |
+509 | |         }
+    | |_________^
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/main/index.html#collapsible_if
+help: collapse nested if block
+    |
+500 ~         if let Some(packet) = checker_packet
+501 ~             && !roadmap_ids.contains(packet) {
+502 |                 self.finding(
+...
+507 |                 );
+508 ~             }
+    |
+
+error: this `if` statement can be collapsed
+   --> xtask/src/system_map.rs:639:21
+    |
+639 | /                     if field == "objects" {
+640 | |                         if let Some(previous) =
+641 | |                             object_layers.insert(value.to_owned(), id.to_owned())
+...   |
+650 | |                     }
+    | |_____________________^
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/main/index.html#collapsible_if
+help: collapse nested if block
+    |
+639 ~                     if field == "objects"
+640 ~                         && let Some(previous) =
+641 |                             object_layers.insert(value.to_owned(), id.to_owned())
+...
+648 |                             );
+649 ~                         }
+    |
+
+error: could not compile `xtask` (bin "xtask") due to 4 previous errors
+warning: build failed, waiting for other jobs to finish...
+error: could not compile `xtask` (bin "xtask" test) due to 4 previous errors
+FAIL: cargo clippy --workspace --all-targets --frozen -- -D warnings failed: exit status: 101
+  [2m2026-09-08T01:05:20.424344Z[0m [32m INFO[0m [1;32mrch::hook::transfer_orchestration[0m[32m: [32mRemote command finished: exit=1 in 18307ms[0m
+    [2;3mat[0m rch/src/hook/transfer_orchestration.rs:1150 [2;3mon[0m ThreadId(1)
+
+[W] Worker: hz3 | Job: j-30004650170124249
+[T] Total: 49.8s (sync 31.5s, build 18.3s, artifacts --)
+^ Sync: 3.8 MB in 31.5s (122.9 KB/s)
+[C] Compile: 18.3s
+Artifacts: skipped
+[T] Cache: MISS
+[RCH] remote hz3 failed (exit 1)

@@ -1,6 +1,12 @@
 # Implementation status · design revision 0.3
 
-Current execution evidence: [receipt](artifacts/execution/2026-09-07-epoch8-receipt.json).
+Current execution evidence: [receipt](artifacts/execution/2026-09-08-epoch9-receipt.json).
+
+## Ninth qualified batch: system-map and vocabulary checks
+
+The complete isolated RCH gate passed **298 tests: 56 reference unit, 16 integration, 224 xtask and 2 doctests**, with zero failures, on `hz3` under `nightly-2026-09-07`. [The receipt](artifacts/execution/2026-09-08-epoch9-receipt.json) binds 133 source/build inputs and the explicit overlay; [the passing log](artifacts/execution/2026-09-08-epoch9-attempt2.log) follows a retained Clippy refusal.
+
+The checker validates nine layers, 35 registered verbs, typed links, exact Knowledge variant sets, bounded command/address syntax and the checker-epic bead link. It distinguishes payload types and domain constructors from explicit Knowledge variants. Its 28 new negative/control tests do not implement a production command or a layer conformance suite. A full-gate injected retired command failed at the intended system-map check after earlier gates passed; the exact input and raw log are retained. The updated four-step DSR integration remains a separate qualification run.
 
 ## Eighth qualified batch: runtime checkout and current declarations
 
@@ -63,7 +69,7 @@ The round uses a deliberately non-cryptographic FNV comparison and proves no cry
 | Founding essays | Both read in full again for revision 0.3; head commits recorded in `registry/sources.json` | Complete premise; no missing post |
 | Ten donor/build project deep dives | Targeted code/manifest/plan review at fixed refs (revision 0.2) | Exact files/scopes recorded; not full repository audits or builds |
 | Pure-Rust reference workspace | Source present, zero external packages, formatted with `cargo fmt --all` on 2026-09-06 | Selected logical semantics only; not a broker |
-| Rust test functions | **56 unit + 16 integration reference tests, 196 xtask tests and 2 doctests passed remotely on 2026-09-07**; earlier runs remain dated below | Exact frozen batch above; not production evidence or credit for other work in progress |
+| Rust test functions | **56 unit + 16 integration reference tests, 224 xtask tests and 2 doctests passed remotely on 2026-09-07**; earlier runs remain dated below | Exact frozen batch above; not production evidence or credit for other work in progress |
 | Rust local gate driver | **Complete reference gate PASS remotely on 2026-09-07** under `nightly-2026-09-07`; earlier local 2026-09-06 gate retained below | Initial inventory, registry-core and full concordance checks execute; external admission remains incomplete; new source requires a new run |
 | Production release gate | Explicitly refuses release | No qualified broker/toolchain/target/signing closure |
 | Machine-readable registries | 40 invariants, 21 hypotheses, 143 packets, 5 SLO targets, founding concordance (38 ideas, 9 syntheses, 67 engineering additions), preregistration ledger with no preregistered protocol yet, system map (9 layers) and vocabulary (26 nouns, 35 verbs, 12 reason codes) | Static structural checks are not proofs of their claims |

@@ -1,0 +1,1 @@
+Knowledge variants: `Known`, `Fabricated`.

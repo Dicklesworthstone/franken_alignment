@@ -1,5 +1,9 @@
 # Changelog
 
+## 2026-09-08: system-map and vocabulary consistency
+
+The owned gate checks layer/verb contracts, document command and Knowledge syntax, typed links and its epic reference. All 298 tests passed through RCH, including 28 new independent controls. Root rejected a fixture-specific workaround before qualification; the preceding Clippy failure remains retained. No production command or layer suite is added.
+
 ## 2026-09-08: executed DSR reference gate
 
 All three required DSR checks passed on unchanged clean commit `2e609245`, including 270 tests through RCH. A fresh unknown-invariant injection reached the concordance check and failed with its named reason. The exact positive and negative logs are retained; the concordance epic is qualified. Production admission and release remain unfinished.

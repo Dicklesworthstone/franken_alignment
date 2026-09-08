@@ -1,0 +1,514 @@
+  [2m2026-09-08T01:11:03.793665Z[0m [32m INFO[0m [1;32mrch::hook[0m[32m: [32mSelected worker: hz3 at ubuntu@194.140.197.98 (6 slots remaining after reservation, speed 75.1)[0m
+    [2;3mat[0m rch/src/hook.rs:2645 [2;3mon[0m ThreadId(1)
+
+[*] Job j-30004650170124251 submitted to hz3 (6 slots remaining, speed 75.1)
+  [2m2026-09-08T01:11:06.234665Z[0m [32m INFO[0m [1;32mrch::hook::transfer_orchestration[0m[32m: [32mStarting remote compilation pipeline for franken_alignment (hash: f32b18b0ae6cf1ad)[0m
+    [2;3mat[0m rch/src/hook/transfer_orchestration.rs:510 [2;3mon[0m ThreadId(1)
+
+  [2m2026-09-08T01:11:06.312819Z[0m [32m INFO[0m [1;32mrch::hook::transfer_orchestration[0m[32m: [32mPrepared dependency sync manifest for 1 roots[0m
+    [2;3mat[0m rch/src/hook/transfer_orchestration.rs:532 [2;3mon[0m ThreadId(1)
+
+  [2m2026-09-08T01:11:14.197646Z[0m [32m INFO[0m [1;32mrch::hook::transfer_orchestration[0m[32m: [32mSyncing project to worker hz3...[0m
+    [2;3mat[0m rch/src/hook/transfer_orchestration.rs:661 [2;3mon[0m ThreadId(1)
+
+  [2m2026-09-08T01:12:05.356813Z[0m [32m INFO[0m [1;32mrch::transfer[0m[32m: [32mSyncing /Users/jemanuel/projects/franken_alignment -> /data/tmp/rch/franken_alignment/f32b18b0ae6cf1ad on hz3 (streaming)[0m
+    [2;3mat[0m rch/src/transfer.rs:3549 [2;3mon[0m ThreadId(1)
+
+  [2m2026-09-08T01:12:20.952545Z[0m [32m INFO[0m [1;32mrch::hook::transfer_orchestration[0m[32m: [32mSync complete: 52 files, 3958939 bytes in 36344ms[0m
+    [2;3mat[0m rch/src/hook/transfer_orchestration.rs:958 [2;3mon[0m ThreadId(1)
+
+  [2m2026-09-08T01:12:21.627677Z[0m [32m INFO[0m [1;32mrch::hook::transfer_orchestration[0m[32m: [32mExecuting command remotely: cargo +nightly-2026-09-07 run --locked -p xtask -- check[0m
+    [2;3mat[0m rch/src/hook/transfer_orchestration.rs:1018 [2;3mon[0m ThreadId(1)
+
+  [2m2026-09-08T01:12:21.627868Z[0m [32m INFO[0m [1;32mrch::transfer[0m[32m: [32mRewriting CARGO_TARGET_DIR for remote execution (worker-scoped path): /Volumes/USB_NVME/cargo-target -> /data/tmp/rch/franken_alignment/.rch-target-hz3-pool-7426c0154046c0ad0f733de17f13ec93[0m
+    [2;3mat[0m rch/src/transfer.rs:1842 [2;3mon[0m ThreadId(1)
+
+  [2m2026-09-08T01:12:21.627943Z[0m [32m INFO[0m [1;32mrch::transfer[0m[32m: [32mWrapping command with external timeout protection, [1;32mkind[0m[32m: cargo build, [1;32mtimeout_secs[0m[32m: 3600[0m
+    [2;3mat[0m rch/src/transfer.rs:2669 [2;3mon[0m ThreadId(1)
+
+warning: unused field `license-file` in `workspace.package`
+ --> Cargo.toml:9:1
+  |
+9 | license-file = "LICENSE"
+  | ^^^^^^^^^^^^
+  |
+  = note: `cargo::unused_workspace_package_fields` is set to `warn` by default
+help: consider removing the field `workspace.package.license-file`
+warning: workspace (manifest) generated 1 warning
+   Compiling xtask v0.2.0 (/data/tmp/rch/franken_alignment/f32b18b0ae6cf1ad/xtask)
+PASS reference_lock: exactly fa-reference and xtask; no external packages
+PASS source_inventory: required files and crate-level prohibitions present
+EXECUTE rustc -Vv
+rustc 1.100.0-nightly (5a2be9f5f 2026-09-06)
+binary: rustc
+commit-hash: 5a2be9f5f075d31e3ca5526b5b029881ce441253
+commit-date: 2026-09-06
+host: x86_64-unknown-linux-gnu
+release: 1.100.0-nightly
+LLVM version: 23.1.1
+PASS qualified_rustc_identity: 5a2be9f5f075d31e3ca5526b5b029881ce441253 on x86_64-unknown-linux-gnu; compiler-reported identity only
+PASS admission_contract: required local source, target, build/runtime review and future external constraints; snapshot identity matched
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 2.75s
+     Running `/data/tmp/rch/franken_alignment/.rch-target-hz3-pool-7426c0154046c0ad0f733de17f13ec93/debug/xtask check`
+SNAPSHOT tool: sha256sum
+SNAPSHOT verified files: 133
+PASS source_snapshot: 133 reviewed files match the manifest byte for byte, and the discovered set equals the manifest set. Digests come from the operator's SHA-256 tool; no cryptography is implemented here. Not a claim about the hashing binary's authenticity, runtime semantics, or package dependencies.
+EXECUTE cargo metadata --format-version 1 --locked --offline --filter-platform aarch64-apple-darwin --manifest-path /data/tmp/rch/franken_alignment/f32b18b0ae6cf1ad/Cargo.toml
+ADMISSION target profile: aarch64-apple-darwin
+ADMISSION inventory:
+  fa-reference 0.2.0 path+file:///data/tmp/rch/franken_alignment/f32b18b0ae6cf1ad/crates/fa-reference#0.2.0 at crates/fa-reference/Cargo.toml [workspace local] kinds=bin,lib,test links=none features=none
+  xtask 0.2.0 path+file:///data/tmp/rch/franken_alignment/f32b18b0ae6cf1ad/xtask#0.2.0 at xtask/Cargo.toml [workspace local] kinds=bin links=none features=none
+ADMISSION note: claim is bound to target profile `aarch64-apple-darwin`; cargo metadata does not record which --filter-platform produced it, so the target binding rests on the caller collecting this document with `--filter-platform aarch64-apple-darwin`, not on the document itself
+ADMISSION note: metadata establishes identity, structure and feature activation only; it does not establish a runtime or downloaded-artifact closure
+PASS admission_closed_inventory[aarch64-apple-darwin]: exact local package set, exact resolve bijection, no external source, build script, proc macro, native link, build or target-scoped dependency, and the frozen feature set. Not a runtime or downloaded-artifact closure claim.
+PASS collected_metadata_paths[aarch64-apple-darwin]: actual workspace, manifests and target source files
+EXECUTE cargo metadata --format-version 1 --locked --offline --filter-platform x86_64-unknown-linux-gnu --manifest-path /data/tmp/rch/franken_alignment/f32b18b0ae6cf1ad/Cargo.toml
+ADMISSION target profile: x86_64-unknown-linux-gnu
+ADMISSION inventory:
+  fa-reference 0.2.0 path+file:///data/tmp/rch/franken_alignment/f32b18b0ae6cf1ad/crates/fa-reference#0.2.0 at crates/fa-reference/Cargo.toml [workspace local] kinds=bin,lib,test links=none features=none
+  xtask 0.2.0 path+file:///data/tmp/rch/franken_alignment/f32b18b0ae6cf1ad/xtask#0.2.0 at xtask/Cargo.toml [workspace local] kinds=bin links=none features=none
+ADMISSION note: claim is bound to target profile `x86_64-unknown-linux-gnu`; cargo metadata does not record which --filter-platform produced it, so the target binding rests on the caller collecting this document with `--filter-platform x86_64-unknown-linux-gnu`, not on the document itself
+ADMISSION note: metadata establishes identity, structure and feature activation only; it does not establish a runtime or downloaded-artifact closure
+PASS admission_closed_inventory[x86_64-unknown-linux-gnu]: exact local package set, exact resolve bijection, no external source, build script, proc macro, native link, build or target-scoped dependency, and the frozen feature set. Not a runtime or downloaded-artifact closure claim.
+PASS collected_metadata_paths[x86_64-unknown-linux-gnu]: actual workspace, manifests and target source files
+PASS registry_core: IDs, roadmap DAG, declared links, retained files and scoped source test declarations; not execution or invariant proof
+CONCORDANCE input=registry/founding_concordance.json bytes=42815 sha256=cf90c49704448eaaab47e447c15033c94dd66c37c895c74c8b7bce2f135c251d; verified source manifest, outer freeze required
+CONCORDANCE input=registry/invariants.json bytes=56752 sha256=b2f09b25d5633c7686ecf66a8b1998a489211d01c4a0bf179ce23af89b5f3965; verified source manifest, outer freeze required
+CONCORDANCE input=registry/claims.json bytes=15799 sha256=9e729380f01af536b21f116d334977db77e3900e43367c6f19b1522296c61005; verified source manifest, outer freeze required
+CONCORDANCE input=registry/roadmap.json bytes=112553 sha256=810083535441cf1ec53ea48ad6a0d68918a0cb0c0817fba98cdc0bc296752a0f; verified source manifest, outer freeze required
+CONCORDANCE input=COMPREHENSIVE_PLAN_FOR_THE_DESIGN_OF_FRANKENALIGNMENT.md bytes=251689 sha256=b08ed463dd8d321a5f1a4a65fb839456345788fcc6cb9b8ff3103c7143d64616; verified source manifest, outer freeze required
+CONCORDANCE_JSON {"missing":[],"dangling":[],"counts":{"headings":231,"invariants":40,"hypotheses":21,"packets":143}}
+PASS concordance: direct typed coverage and reference validity; not implementation or invariant proof
+SYSTEM_MAP input=registry/system_map.json bytes=8225 sha256=7b62748269fd1fa55a7a8ea2a2cd9274970accfff4e7e97b1983fdf342f29223; operator digest and outer freeze, not receipt authentication
+SYSTEM_MAP input=registry/vocabulary.json bytes=10344 sha256=b5b7cb253333f43ba6bcc6b08268bb91ceab7767b7d7581fa5cec7f41a475615; operator digest and outer freeze, not receipt authentication
+SYSTEM_MAP input=registry/invariants.json bytes=56752 sha256=b2f09b25d5633c7686ecf66a8b1998a489211d01c4a0bf179ce23af89b5f3965; operator digest and outer freeze, not receipt authentication
+SYSTEM_MAP input=registry/roadmap.json bytes=112553 sha256=810083535441cf1ec53ea48ad6a0d68918a0cb0c0817fba98cdc0bc296752a0f; operator digest and outer freeze, not receipt authentication
+SYSTEM_MAP input=README.md bytes=55074 sha256=0e736c8fd63c326f696bfa66deed06a2b8d65051e57af0097f8a1bec84e4f13a; operator digest and outer freeze, not receipt authentication
+SYSTEM_MAP input=docs/AGENT_GUIDE.md bytes=9645 sha256=cbb54889340d1e239ad17228faa4ad640ce4e684049153d3ff160c44d5144a8f; operator digest and outer freeze, not receipt authentication
+SYSTEM_MAP input=docs/SYSTEM_MAP.md bytes=7188 sha256=52cae2e9d0bfef7f44af75c398e9f9d47aba3591389e6b23553e3d390f422c02; operator digest and outer freeze, not receipt authentication
+SYSTEM_MAP input=.beads/issues.jsonl bytes=920578 sha256=5f2a70504c609dda90f0d6f0a550ff04e8472a8d2ebd3bbc2a21d6920306f6d6; operator digest and outer freeze, not receipt authentication
+SYSTEM_MAP input=COMPREHENSIVE_PLAN_FOR_THE_DESIGN_OF_FRANKENALIGNMENT.md bytes=251689 sha256=b08ed463dd8d321a5f1a4a65fb839456345788fcc6cb9b8ff3103c7143d64616; operator digest and outer freeze, not receipt authentication
+SYSTEM_MAP_JSON {"missing":[],"retired_in_use":[],"unregistered_verbs":[],"counts":{"layers":9,"verbs":35,"packets":143,"guide_commands":42,"readme_commands":11}}
+PASS system_map: bounded registry/document consistency and checker-epic bead link; no command or layer-suite execution claim
+PROSE input=README.md bytes=55074 sha256=0e736c8fd63c326f696bfa66deed06a2b8d65051e57af0097f8a1bec84e4f13a; operator digest and outer freeze, not receipt authentication
+PROSE input=IMPLEMENTATION_STATUS.md bytes=19904 sha256=58a6e4dc05a4e958a56685b5b50f473fa99124b76b049175ebe1c3fedfca3fca; operator digest and outer freeze, not receipt authentication
+PROSE input=artifacts/execution/2026-09-07-epoch8-receipt.json bytes=12204 sha256=d18993dcace3bd445e9c4b930c3453964d348025f7dc331eeb29aad059425253; operator digest and outer freeze, not receipt authentication
+PROSE input=registry/founding_concordance.json bytes=42815 sha256=cf90c49704448eaaab47e447c15033c94dd66c37c895c74c8b7bce2f135c251d; operator digest and outer freeze, not receipt authentication
+PROSE input=registry/invariants.json bytes=56752 sha256=b2f09b25d5633c7686ecf66a8b1998a489211d01c4a0bf179ce23af89b5f3965; operator digest and outer freeze, not receipt authentication
+PROSE input=registry/claims.json bytes=15799 sha256=9e729380f01af536b21f116d334977db77e3900e43367c6f19b1522296c61005; operator digest and outer freeze, not receipt authentication
+PROSE input=registry/roadmap.json bytes=112553 sha256=810083535441cf1ec53ea48ad6a0d68918a0cb0c0817fba98cdc0bc296752a0f; operator digest and outer freeze, not receipt authentication
+PROSE input=COMPREHENSIVE_PLAN_FOR_THE_DESIGN_OF_FRANKENALIGNMENT.md bytes=251689 sha256=b08ed463dd8d321a5f1a4a65fb839456345788fcc6cb9b8ff3103c7143d64616; operator digest and outer freeze, not receipt authentication
+PROSE_JSON {"findings":[],"counts":{"founding_ideas":38,"syntheses":9,"engineering_additions":67,"invariants":40,"hypotheses":21,"packets":143}}
+PASS prose_consistency: current declarations match registries and the named retained receipt; not new-source execution proof
+EXECUTE cargo fmt --all --check
+PASS executed_command: cargo fmt --all --check
+EXECUTE cargo check --workspace --all-targets --frozen
+warning: unused field `license-file` in `workspace.package`
+ --> Cargo.toml:9:1
+  |
+9 | license-file = "LICENSE"
+  | ^^^^^^^^^^^^
+  |
+  = note: `cargo::unused_workspace_package_fields` is set to `warn` by default
+help: consider removing the field `workspace.package.license-file`
+warning: workspace (manifest) generated 1 warning
+    Checking xtask v0.2.0 (/data/tmp/rch/franken_alignment/f32b18b0ae6cf1ad/xtask)
+PASS executed_command: cargo check --workspace --all-targets --frozen
+EXECUTE cargo clippy --workspace --all-targets --frozen -- -D warnings
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 1.74s
+warning: unused field `license-file` in `workspace.package`
+ --> Cargo.toml:9:1
+  |
+9 | license-file = "LICENSE"
+  | ^^^^^^^^^^^^
+  |
+  = note: `cargo::unused_workspace_package_fields` is set to `warn` by default
+help: consider removing the field `workspace.package.license-file`
+warning: workspace (manifest) generated 1 warning
+    Checking fa-reference v0.2.0 (/data/tmp/rch/franken_alignment/f32b18b0ae6cf1ad/crates/fa-reference)
+    Checking xtask v0.2.0 (/data/tmp/rch/franken_alignment/f32b18b0ae6cf1ad/xtask)
+PASS executed_command: cargo clippy --workspace --all-targets --frozen -- -D warnings
+EXECUTE cargo test --workspace --all-targets --frozen
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 1.47s
+warning: unused field `license-file` in `workspace.package`
+ --> Cargo.toml:9:1
+  |
+9 | license-file = "LICENSE"
+  | ^^^^^^^^^^^^
+  |
+  = note: `cargo::unused_workspace_package_fields` is set to `warn` by default
+help: consider removing the field `workspace.package.license-file`
+warning: workspace (manifest) generated 1 warning
+   Compiling fa-reference v0.2.0 (/data/tmp/rch/franken_alignment/f32b18b0ae6cf1ad/crates/fa-reference)
+   Compiling xtask v0.2.0 (/data/tmp/rch/franken_alignment/f32b18b0ae6cf1ad/xtask)
+
+running 56 tests
+test full_input::tests::malformed_partitions_omissions_and_bounds_are_rejected ... ok
+test full_input::tests::opaque_witness_binds_the_entire_actual_input_view ... ok
+test full_input::tests::question_profile_and_unmentioned_evidence_changes_invalidate ... ok
+test full_input::tests::transform_and_omission_changes_invalidate ... ok
+test product_frontier::tests::bounds_and_invalid_inputs_fail_without_admitting_a_projection ... ok
+test product_frontier::tests::close_rejects_future_observation_and_terminal_close_rejects_extension ... ok
+test product_frontier::tests::contiguous_progress_cannot_manufacture_closure ... ok
+test product_frontier::tests::closing_marker_cannot_cross_projection_epoch_or_generation ... ok
+test product_frontier::tests::marker_requires_authenticated_prefix_and_its_own_observation ... ok
+test reducer::tests::actor_statement_is_refused_alongside_empirical_votes ... ok
+test reducer::tests::actor_statement_not_a_reducer_input ... ok
+test reducer::tests::capped_permit_tally_is_a_positive_empirical_observation ... ok
+test reducer::tests::caps_bound_influence ... ok
+test reducer::tests::disqualifier_dominates_weighted_majority ... ok
+test reducer::tests::input_bounds_prevent_unbounded_reduction ... ok
+test reducer::tests::input_order_cannot_change_the_reduction ... ok
+test reducer::tests::overflow_is_refused_before_an_empirical_result ... ok
+test reducer::tests::proportional_clipping_is_invariant_under_member_rename ... ok
+test reducer::tests::same_cohort_max_weights_clip_without_denominator_overflow ... ok
+test round::tests::commit_after_reveals_open_is_rejected ... ok
+test round::tests::commitment_binds_verdict ... ok
+test reducer::tests::separate_cohorts_each_receive_their_own_cap ... ok
+test round::tests::invalid_reveal_and_duplicate_commit_do_not_mutate_member_slot ... ok
+test round::tests::conflicting_reveal_rejected ... ok
+test round::tests::membership_frozen_after_open ... ok
+test round::tests::the_domain_separator_is_part_of_the_preimage ... ok
+test round::tests::missing_reveal_is_missing_not_abstain ... ok
+test tests::absent_key_detects_insertion ... ok
+test round::tests::valid_reveals_are_recorded_for_the_frozen_members ... ok
+test tests::cross_reads_defeat_disjoint_writes ... ok
+test tests::dominator_and_bypass_are_distinguished ... ok
+test tests::effect_binding_and_one_shot_dispatch ... ok
+test round::tests::maximum_member_and_field_bounds_are_exact_and_reject_without_mutation ... ok
+test tests::empty_range_detects_phantom ... ok
+test tests::epoch_and_incompleteness_invalidate ... ok
+test tests::evidence_stages_are_distinct ... ok
+test tests::frontier_does_not_skip_a_gap ... ok
+test tests::frontier_limits_fail_without_mutation ... ok
+test tests::graph_limits_and_empty_claims_are_rejected ... ok
+test tests::integer_probe_requests_refinement_at_margin ... ok
+test tests::invalid_witness_is_not_admitted ... ok
+test reducer::tests::exhaustive_small_caps_never_admit_more_than_a_member_cap ... ok
+test tests::reserve_budget_and_duplicate_fail_closed ... ok
+test tests::integer_probe_bound_matches_exhaustive_small_errors ... ok
+test tests::reset_cannot_refund_unknown ... ok
+test tests::reset_increments_incident_counter ... ok
+test tests::reset_keeps_dispatched_liability ... ok
+test tests::reset_keeps_spent_and_epoch ... ok
+test tests::reset_overflow_is_before_mutation ... ok
+test tests::reset_refunds_only_reserved_outside_keep ... ok
+test tests::resolved_non_effect_returns_rights_once ... ok
+test tests::resources_and_order_barriers_block_reordering ... ok
+test tests::revocation_fences_reserved_not_history ... ok
+test tests::rights_unknown_cannot_be_refunded_by_cancel ... ok
+test tests::witness_reuses_unrelated_changes ... ok
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 6.65s
+     Running unittests src/lib.rs (/data/tmp/rch/franken_alignment/.rch-target-hz3-pool-7426c0154046c0ad0f733de17f13ec93/debug/build/fa-reference/805c210a23edaf0a/out/fa_reference-805c210a23edaf0a)
+test tests::exhaustive_four_vertex_cut_and_dominator_consistency ... ok
+
+test result: ok. 56 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.03s
+
+
+running 16 tests
+test a_bypass_edge_invalidates_an_earlier_cut_certificate ... ok
+test a_commitment_cannot_be_replayed_into_another_round_or_member ... ok
+test a_negative_domain_must_be_a_nonempty_half_open_range ... ok
+test a_terminal_reservation_id_can_never_be_reused ... ok
+test a_stage_cannot_be_skipped_and_the_window_fails_closed ... ok
+test a_write_read_conflict_is_detected_in_both_directions ... ok
+test an_unknown_outcome_stays_charged_until_it_is_resolved ... ok
+test commitment_field_framing_prevents_a_boundary_collision ... ok
+test dispatch_binds_every_field_of_the_reserved_effect ... ok
+test prefix_coverage_requires_contiguity_not_membership ... ok
+test probe_arithmetic_fails_closed_on_every_accumulator ... ok
+test probe_boundaries_are_named_explicitly ... ok
+test the_incident_counter_moves_only_on_reset ... ok
+test the_revocation_floor_only_ever_moves_forward ... ok
+test independence_is_symmetric_and_refuses_self_reordering_of_effectful_work ... ok
+test probe_certificates_are_sound_and_the_refusal_band_is_no_wider_than_necessary ... ok
+
+test result: ok. 16 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+
+running 224 tests
+test admission::tests::a_target_absent_from_the_row_is_not_admitted ... ok
+test admission::tests::a_malformed_feature_entry_is_refused_not_silently_dropped ... ok
+test admission::tests::an_admitted_edge_into_an_unreviewed_destination_does_not_pass ... ok
+test admission::tests::an_absent_features_array_is_unknown_not_empty ... ok
+test admission::tests::an_absent_deps_array_is_unknown_not_no_edges ... ok
+test admission::tests::an_unresolvable_edge_destination_is_refused_not_observed_empty ... ok
+test admission::tests::absent_links_field_is_refused ... ok
+test admission::tests::absent_node_deps_is_refused_not_read_as_no_edges ... ok
+test admission::tests::a_real_target_dominates_an_anomaly ... ok
+test admission::tests::absent_resolve_nodes_is_refused ... ok
+test admission::tests::duplicate_full_identity_is_refused_not_overwritten ... ok
+test admission::tests::absent_node_features_is_refused_not_read_as_no_features ... ok
+test admission::tests::absent_target_src_path_is_refused ... ok
+test admission::tests::admitted_row_with_no_package_is_refused ... ok
+test admission::tests::a_hand_built_policy_with_an_absent_scope_refuses ... ok
+test admission::tests::build_script_is_refused_even_though_no_flag_can_reach_it ... ok
+test admission::tests::build_dependency_edge_is_refused_by_build_phase ... ok
+test admission::tests::identical_edge_discriminates_between_admitted_and_unadmitted_target ... ok
+test admission::tests::duplicate_resolve_node_is_refused_not_overwritten ... ok
+test admission::tests::empty_target_kind_is_refused ... ok
+test admission::tests::filtered_metadata_is_admitted_under_the_closed_inventory ... ok
+test admission::tests::feature_only_injection_is_refused_by_features_phase ... ok
+test admission::tests::external_source_is_refused_unconditionally ... ok
+test admission::tests::dependency_edge_classification_is_order_independent ... ok
+test admission::tests::a_pending_decision_does_not_admit ... ok
+test admission::tests::injected_edge_and_feature_reach_the_live_evaluator ... ok
+test admission::tests::policy_carrying_any_external_row_is_a_hard_error ... ok
+test admission::tests::malformed_kind_value_is_a_marker_not_normal ... ok
+test admission::tests::manifest_declared_dependency_is_refused ... ok
+test admission::tests::metadata_version_mismatch_is_refused ... ok
+test admission::tests::manifest_outside_workspace_root_is_refused ... ok
+test admission::tests::missing_kind_key_is_a_marker_not_normal ... ok
+test admission::tests::policy_with_empty_local_packages_is_a_hard_error ... ok
+test admission::tests::moved_manifest_inside_the_workspace_is_refused ... ok
+test admission::tests::name_identity_confusion_is_refused_on_source_not_name ... ok
+test admission::tests::policy_without_admission_block_is_a_hard_error ... ok
+test admission::tests::no_deps_metadata_is_refused_not_treated_as_empty ... ok
+test admission::tests::policy_enabling_build_scripts_is_a_hard_error ... ok
+test admission::tests::non_string_source_is_refused ... ok
+test admission::tests::policy_without_target_profiles_is_a_hard_error ... ok
+test admission::tests::normal_dependency_edge_is_classified_as_features ... ok
+test admission::tests::native_links_is_refused ... ok
+test admission::tests::package_absent_from_resolve_is_refused ... ok
+test admission::tests::policy_omitting_a_prohibition_is_a_hard_error ... ok
+test admission::tests::profile_silent_on_an_admitted_package_is_a_hard_error ... ok
+test admission::tests::policy_with_wrong_schema_is_a_hard_error ... ok
+test admission::tests::registry_impostor_is_refused_with_name_and_version_held_equal ... ok
+test admission::tests::sibling_prefix_is_not_containment ... ok
+test admission::tests::projection_carries_real_features_and_edges_from_cargo_shaped_input ... ok
+test admission::tests::source_alone_is_not_an_identity ... ok
+test admission::tests::positive_inventory_is_exact_and_relative ... ok
+test admission::tests::policy_declaring_an_unsupported_metadata_version_is_a_hard_error ... ok
+test admission::tests::the_projector_never_returns_an_unexplained_empty_result ... ok
+test admission::tests::row_with_an_empty_owner_is_a_hard_error ... ok
+test admission::tests::proc_macro_is_refused ... ok
+test admission::tests::row_without_a_decision_is_a_hard_error ... ok
+test admission::tests::row_without_an_owner_is_a_hard_error ... ok
+test admission::tests::positive_report_states_its_claim_boundary_and_target ... ok
+test admission::tests::target_scoped_dependency_is_refused_by_target_phase ... ok
+test admission::tests::target_src_path_in_a_sibling_of_the_workspace_is_refused ... ok
+test admission::tests::target_src_path_outside_the_workspace_is_refused ... ok
+test admission::tests::unknown_target_profile_is_refused ... ok
+test admission::tests::unlisted_local_package_is_refused ... ok
+test admission::tests::workspace_member_without_package_is_refused ... ok
+test admission_contract::tests::current_runtime_policy_binds_the_reviewed_snapshot ... ok
+test admission_evaluator_tests::admitted_edge_with_no_reviewed_destination_is_refused_as_dangling ... ok
+test admission_evaluator_tests::duplicate_full_identity_is_rejected_instead_of_overwriting_a_reviewed_row ... ok
+test admission_evaluator_tests::feature_only_injected_transitive_edge_is_refused_even_when_features_match ... ok
+test admission_evaluator_tests::packages_sharing_one_registry_source_remain_distinct_full_identities ... ok
+test admission_contract::tests::changed_snapshot_ref_and_missing_target_refuse ... ok
+test admission_evaluator_tests::same_edge_and_destination_are_admitted_on_a_but_refused_on_b ... ok
+test admission_contract::tests::malformed_and_duplicate_future_rule_entries_refuse ... ok
+test admission_evaluator_tests::same_name_and_version_registry_impostor_is_not_the_reviewed_git_package ... ok
+test admission_evaluator_tests::projected_cargo_metadata_reaches_evaluator_with_real_feature_and_dev_edge ... ok
+test admission_evaluator_tests::source_and_name_are_independent_full_identity_components ... ok
+test admission_contract::tests::source_descriptor_url_and_shape_are_causal ... ok
+test admission_contract::tests::target_profiles_are_fixed_even_when_rows_follow_the_mutation ... ok
+test admission_contract::tests::top_level_schema_version_missing_or_unknown_refuse ... ok
+test admission_contract::tests::future_field_build_shape_and_xtask_tools_are_causal ... ok
+test admission_contract::tests::missing_blank_and_wrong_typed_local_fields_refuse ... ok
+test admission_contract::tests::top_level_closed_universe_controls_are_consumed ... ok
+test admission_negative_tests::duplicate_resolve_node_cannot_overwrite_earlier_evidence ... ok
+test admission_negative_tests::empty_target_kind_cannot_exempt_build_checks ... ok
+test admission_negative_tests::external_source_is_unconditionally_refused ... ok
+test admission_contract::tests::permissive_external_flags_and_nonempty_rows_refuse ... ok
+test admission_negative_tests::feature_only_injection_is_compared_against_the_bound_profile ... ok
+test admission_negative_tests::missing_node_deps_is_not_no_dependency_edges ... ok
+test admission_negative_tests::missing_resolve_nodes_is_not_an_empty_graph ... ok
+test admission_negative_tests::package_id_without_its_resolve_node_is_refused ... ok
+test admission_negative_tests::policy_external_row_is_rejected_before_it_can_launder_authority ... ok
+test concordance_tests::duplicate_canonical_heading_key_is_refused_even_when_one_copy_is_covered ... ok
+test concordance_tests::fenced_heading_controls_require_matching_marker_run_and_blank_closure_tail ... ok
+test concordance_tests::malformed_9_8a_does_not_prefix_recover_the_absent_9_8_reference ... ok
+test admission_negative_tests::sibling_path_prefix_is_not_workspace_containment ... ok
+test admission_negative_tests::policy_cannot_enable_or_omit_a_constitutional_prohibition ... ok
+test admission_negative_tests::unknown_target_profile_is_refused_before_metadata_is_claimed ... ok
+test concordance_tests::malformed_and_absent_mapping_roots_are_distinct_refusals ... ok
+test concordance_tests::new_roadmap_packet_is_uncovered_when_the_concordance_is_unchanged ... ok
+test admission_negative_tests::workspace_member_without_a_package_is_refused ... ok
+test concordance_tests::permitted_baseline_covers_numbered_unicode_and_fenced_heading_controls ... ok
+test admission_negative_tests::non_string_source_and_links_cannot_be_filtered_away ... ok
+test concordance_tests::removal_of_fi_a10_exposes_its_unique_coverage_and_dangling_reference ... ok
+test concordance_tests::unknown_invariant_reference_is_a_distinct_causal_refusal ... ok
+test json_tests::depth_and_input_limits_refuse_before_unbounded_work ... ok
+test json_tests::absolute_recursion_ceiling_survives_an_oversized_caller_limit ... ok
+test json_tests::duplicate_key_is_rejected_before_a_value_can_be_overwritten ... ok
+test json_tests::malformed_input_is_rejected_at_its_named_boundary ... ok
+test json_tests::parses_normalized_real_cargo_metadata_without_losing_structure ... ok
+test json_tests::preserves_unicode_and_exact_number_lexemes ... ok
+test json_tests::parses_the_real_vocabulary_registry_and_its_registered_nouns ... ok
+test metadata_collection_tests::absent_metadata_executable_is_unknown_and_refuses_closed_collection ... ok
+test metadata_collection_tests::real_cargo_metadata_refuses_missing_root_without_empty_success ... ok
+test prose_consistency_tests::current_reference_oracle_claim_uses_the_executed_receipt_categories ... ok
+test prose_consistency_tests::fenced_current_section_copy_cannot_satisfy_readme_anchors ... ok
+test prose_consistency_tests::current_status_uses_receipt_categories_and_ignores_dated_tables ... ok
+test prose_consistency_tests::founding_table_requires_exact_current_plan_section_keys ... ok
+test prose_consistency_tests::historical_and_test_count_prose_do_not_claim_executed_evidence ... ok
+test prose_consistency_tests::missing_current_status_row_refuses_without_indexing_an_empty_row_set ... ok
+test prose_consistency_tests::permitted_current_snapshot_and_founding_table_match_the_small_registries ... ok
+test prose_consistency_tests::missing_ambiguous_and_malformed_current_anchors_fail_closed ... ok
+test prose_consistency_tests::shared_concordance_scanner_refusal_is_not_reparsed_locally ... ok
+test prose_consistency_tests::stale_current_invariant_count_is_not_hidden_by_a_valid_table ... ok
+test prose_consistency_tests::receipt_must_be_complete_passing_and_arithmetically_consistent ... ok
+test prose_consistency_tests::suffixed_current_heading_cannot_satisfy_exact_readme_anchors ... ok
+test prose_input_tests::current_execution_receipt_accepts_one_canonical_receipt_pointer ... ok
+test prose_input_tests::current_execution_receipt_ignores_fenced_examples_but_accepts_a_literal_declaration ... ok
+test prose_input_tests::current_execution_receipt_refuses_missing_ambiguous_malformed_and_escaping_pointers ... ok
+test prose_input_tests::read_prose_input_refuses_a_symlinked_ancestor ... ok
+test prose_input_tests::read_prose_input_refuses_a_symlinked_leaf ... ok
+test registry_checks::tests::dependency_cycle_is_refused_as_a_dag_violation ... ok
+test registry_checks::tests::duplicate_roadmap_id_is_refused_as_an_identity_collision ... ok
+test registry_checks::tests::missing_retained_evidence_artifact_is_refused ... ok
+test registry_checks::tests::unknown_roadmap_invariant_is_refused_at_the_link ... ok
+test registry_checks::tests::missing_reference_test_symbol_is_not_a_textual_near_match ... ok
+test source_snapshot::tests::absolute_manifest_path_is_a_hard_error ... ok
+test source_snapshot::tests::an_empty_run_is_not_a_pass ... ok
+test source_snapshot::tests::embedded_compile_inputs_are_required_and_exclude_operator_data ... ok
+test source_snapshot::tests::empty_manifest_is_a_hard_error ... ok
+test source_snapshot::tests::limits_are_clamped_to_hard_ceilings ... ok
+test source_snapshot::tests::malformed_digest_is_a_hard_error ... ok
+test source_snapshot::tests::oversized_manifest_is_a_hard_error ... ok
+test source_snapshot::tests::report_states_its_claim_boundary ... ok
+     Running tests/reference_boundaries.rs (/data/tmp/rch/franken_alignment/.rch-target-hz3-pool-7426c0154046c0ad0f733de17f13ec93/debug/build/fa-reference/798e49afcc947aa4/out/reference_boundaries-798e49afcc947aa4)
+     Running unittests src/main.rs (/data/tmp/rch/franken_alignment/.rch-target-hz3-pool-7426c0154046c0ad0f733de17f13ec93/debug/build/xtask/9234c929a0ba3068/out/xtask-9234c929a0ba3068)
+error: manifest path `/data/tmp/rch/franken_alignment/f32b18b0ae6cf1ad/.rch-tmp/franken_alignment_metadata_collection_tests-manifestless-653636-1/Cargo.toml` does not exist
+test prose_input_tests::read_prose_input_refuses_an_oversized_file ... ok
+test source_snapshot::tests::schema_mismatch_is_a_hard_error ... ok
+test source_snapshot::tests::sha256_hex_shape_is_exact ... ok
+test prose_input_tests::read_prose_input_returns_a_real_small_contained_file ... ok
+test system_map_tests::command_template_is_not_a_registered_command_claim ... ok
+test system_map_tests::concrete_address_kind_must_be_a_registered_noun ... ok
+test system_map_tests::duplicate_live_checker_epic_links_are_refused ... ok
+test system_map_tests::invalid_layer_identifier_cannot_substitute_for_a_required_layer ... ok
+test system_map_tests::literal_fa_verb_is_a_real_unregistered_command_not_a_placeholder ... ok
+test system_map_tests::malformed_bead_lines_are_refused_and_cannot_supply_the_required_live_link ... ok
+test system_map_tests::mismatched_fence_marker_does_not_hide_a_retired_command ... ok
+test system_map_tests::missing_layer_packet_is_an_unknown_roadmap_reference ... ok
+test system_map_tests::knowledge_payload_types_are_not_variants_but_unknown_constructor_is ... ok
+test source_snapshot::tests::an_executed_operator_refusal_is_preserved ... ok
+test system_map_tests::missing_live_checker_epic_link_is_not_broadened_into_general_bead_coverage ... ok
+test system_map_tests::object_may_belong_to_only_one_layer ... ok
+test system_map_tests::ordinary_domain_constructors_do_not_create_knowledge_variants ... ok
+test system_map_tests::permitted_fixture_accepts_cross_layer_access_payload_types_and_live_epic_link ... ok
+test system_map_tests::reason_code_section_cannot_be_empty ... ok
+test source_snapshot::tests::manifest_paths_must_be_relative_bounded_and_single_line ... ok
+test source_snapshot::tests::newline_path_is_rejected_by_the_manifest_parser ... ok
+test metadata_collection_tests::real_cargo_metadata_refuses_manifestless_current_directory_without_empty_success ... ok
+test system_map_tests::exact_plan_reason_codes_must_be_registered ... ok
+test system_map_tests::known_constructor_with_payload_and_domain_constructors_is_not_name_allowlisted ... ok
+test toolchain_identity::tests::commit_must_be_exact_40_hex_and_not_a_placeholder ... ok
+test toolchain_identity::tests::every_required_identity_field_is_required_and_unique ... ok
+test system_map_tests::shorter_fence_run_does_not_hide_a_retired_command ... ok
+test toolchain_identity::tests::host_must_match_the_qualified_execution_host ... ok
+test system_map_tests::registered_verb_without_authority_has_a_missing_contract_finding ... ok
+test system_map_tests::fenced_reason_code_heading_cannot_substitute_for_the_normative_section ... ok
+test system_map_tests::sofa_is_not_an_fa_command_prefix ... ok
+test system_map_tests::labeled_knowledge_variant_list_rejects_an_unknown_member ... ok
+test system_map_tests::tombstoned_packet_links_do_not_make_a_second_live_reference ... ok
+test system_map_tests::unknown_guide_command_is_not_accepted_merely_because_it_looks_like_an_fa_command ... ok
+test system_map_tests::unknown_normative_plan_section_is_not_accepted_by_numeric_prefix ... ok
+test system_map_tests::retired_guide_command_is_refused_at_the_guide_surface ... ok
+test system_map_tests::verb_class_must_be_one_of_the_registered_command_classes ... ok
+test system_map_tests::verb_ownership_layer_must_use_the_registered_range_or_list_grammar ... ok
+test toolchain_identity::tests::malformed_expectations_invalid_utf8_and_oversized_output_refuse ... ok
+test toolchain_identity::tests::retained_qualified_epoch2_header_passes_exactly ... ok
+test toolchain_identity::tests::stable_release_cannot_launder_the_qualified_commit_and_host ... ok
+test workspace_root_tests::runtime_workspace_root_accepts_root_and_immediate_xtask_directory ... ok
+test workspace_root_tests::runtime_workspace_root_refuses_manifestless_and_missing_starts ... ok
+test workspace_root_tests::runtime_workspace_root_never_searches_upward_from_a_sibling_subdirectory ... ok
+test source_snapshot::tests::only_an_absent_operator_tool_allows_fallback ... ok
+test system_map_tests::layer_row_bound_refuses_oversized_map_before_semantic_traversal ... ok
+test registry_negative_tests::current_registry_core_is_clean_before_negative_mutations ... ok
+test registry_checks::tests::reference_source_read_refuses_more_than_the_declared_byte_limit ... ok
+test source_snapshot_tests::malformed_digest_is_rejected_before_source_tree_can_be_verified ... ok
+test source_snapshot_tests::real_operator_hash_binds_written_snapshot_manifest_bytes ... ok
+test source_snapshot_tests::malformed_snapshot_binding_digest_is_refused_before_operator_hashing ... ok
+test registry_negative_tests::duplicate_packet_id_is_rejected_as_duplicate_id ... ok
+test registry_negative_tests::missing_invariant_is_rejected_as_unknown_invariant ... ok
+test registry_negative_tests::punctuation_only_source_id_is_rejected_as_malformed_id ... ok
+test registry_checks::tests::current_owned_registry_inputs_pass_the_core_checks ... ok
+test registry_negative_tests::commented_test_declaration_does_not_satisfy_reference_check ... ok
+test registry_negative_tests::lifetimes_before_a_real_tests_module_do_not_hide_the_registered_test ... ok
+test registry_negative_tests::roadmap_cycle_is_rejected_as_dependency_cycle ... ok
+test registry_negative_tests::artifact_symlink_leaf_escaping_root_is_rejected ... ok
+test source_snapshot_tests::parent_symlink_to_identical_crate_bytes_is_refused_without_verifying_outside_source ... ok
+test registry_negative_tests::top_level_test_does_not_satisfy_a_tests_module_reference ... ok
+test registry_negative_tests::macro_body_test_lookalike_does_not_satisfy_reference_check ... ok
+test registry_negative_tests::c_raw_string_test_lookalike_does_not_satisfy_reference_check ... ok
+test source_snapshot_tests::parent_symlink_to_identical_registry_bytes_refuses_every_embedded_input ... ok
+test source_snapshot_tests::missing_listed_file_is_a_discovery_refusal ... ok
+test registry_negative_tests::missing_reference_test_symbol_is_rejected_as_reference_test_missing ... ok
+test source_snapshot_tests::unlisted_new_rust_source_is_a_discovery_refusal ... ok
+test registry_negative_tests::missing_result_artifact_is_rejected_as_referenced_file_missing ... ok
+test source_snapshot_tests::symlinked_source_escaping_root_is_refused_without_hashing_its_target ... ok
+test registry_negative_tests::missing_dag_node_is_rejected_as_unknown_dependency ... ok
+test registry_negative_tests::reference_source_symlink_leaf_escaping_root_is_rejected ... ok
+test source_snapshot_tests::real_operator_hashes_verify_exact_baseline_source_bytes ... ok
+test registry_negative_tests::raw_string_test_declaration_does_not_satisfy_reference_check ... ok
+test registry_negative_tests::other_module_test_does_not_satisfy_a_tests_module_reference ... ok
+test metadata_path_tests::metadata_paths_accept_real_workspace_manifest_and_target ... ok
+test metadata_path_tests::metadata_paths_refuse_missing_target_file ... ok
+test metadata_path_tests::metadata_paths_refuse_target_symlink_escaping_workspace ... ok
+test source_snapshot_tests::changed_source_bytes_are_a_digest_mismatch ... ok
+test metadata_path_tests::metadata_paths_refuse_metadata_from_different_workspace ... ok
+test source_snapshot_tests::harmless_whitespace_mutation_of_snapshot_manifest_breaks_binding ... ok
+test metadata_collection_tests::real_cargo_metadata_for_current_workspace_parses_to_closed_package_inventory ... ok
+test source_snapshot_tests::more_than_4096_empty_source_directories_hits_the_global_traversal_limit ... ok
+
+test result: ok. 224 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.49s
+
+PASS executed_command: cargo test --workspace --all-targets --frozen
+EXECUTE cargo test --workspace --doc --frozen
+warning: unused field `license-file` in `workspace.package`
+ --> Cargo.toml:9:1
+  |
+9 | license-file = "LICENSE"
+  | ^^^^^^^^^^^^
+  |
+  = note: `cargo::unused_workspace_package_fields` is set to `warn` by default
+help: consider removing the field `workspace.package.license-file`
+warning: workspace (manifest) generated 1 warning
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.01s
+   Doc-tests fa_reference
+
+running 1 test
+test crates/fa-reference/src/full_input.rs - full_input::ActualHelperInput (line 87) ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+
+running 1 test
+test crates/fa-reference/src/full_input.rs - full_input::ActualHelperInput (line 108) - compile fail ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.03s
+
+all doctests ran in 0.23s; merged doctests compilation took 0.19s
+PASS executed_command: cargo test --workspace --doc --frozen
+PASS local_reference_gate; not a production-readiness or signed-release claim
+  [2m2026-09-08T01:12:40.886123Z[0m [32m INFO[0m [1;32mrch::hook::transfer_orchestration[0m[32m: [32mRemote command finished: exit=0 in 19202ms[0m
+    [2;3mat[0m rch/src/hook/transfer_orchestration.rs:1150 [2;3mon[0m ThreadId(1)
+
+  [2m2026-09-08T01:12:41.369868Z[0m [32m INFO[0m [1;32mrch::transfer[0m[32m: [32mRetrieving artifacts from /data/tmp/rch/franken_alignment/.rch-target-hz3-pool-7426c0154046c0ad0f733de17f13ec93 on hz3[0m
+    [2;3mat[0m rch/src/transfer.rs:4328 [2;3mon[0m ThreadId(1)
+
+  [2m2026-09-08T01:12:59.092062Z[0m [32m INFO[0m [1;32mrch::transfer[0m[32m: [32mArtifacts retrieved in 17692ms (9 files, 23468 bytes)[0m
+    [2;3mat[0m rch/src/transfer.rs:4383 [2;3mon[0m ThreadId(1)
+
+  [2m2026-09-08T01:12:59.092461Z[0m [32m INFO[0m [1;32mrch::hook::transfer_orchestration[0m[32m: [32mCustom CARGO_TARGET_DIR artifacts retrieved: 9 files, 23468 bytes in 17692ms[0m
+    [2;3mat[0m rch/src/hook/transfer_orchestration.rs:1405 [2;3mon[0m ThreadId(1)
+
+[W] Worker: hz3 | Job: j-30004650170124251
+[T] Total: 73.2s (sync 36.3s, build 19.2s, artifacts 17.7s)
+^ Sync: 3.8 MB in 36.3s (106.4 KB/s)
+[C] Compile: 19.2s
+v Artifacts: 22.9 KB in 17.7s (1.3 KB/s)
+[T] Cache: MISS
++------------- [OK] Build Successful --------------+
+| Duration: 19.2s (v 51% faster vs previous 39.5s) |
+| Artifacts: 9 files (22.9 KB)                     |
+| Worker: hz3                                      |
+| Cache: MISS (warming cache)                      |
+| Time: 2026-09-08 01:12:59                        |
++--------------------------------------------------+
+[RCH] remote hz3 (121.7s)
+[RCH] clean-overlay receipt: base=9e4d663f2621a7b1b2948d57330b3dce7694cc2b overlay-fingerprint=9dd6e8b33f54f598eb318db392c650af4ca8089ddea2ae6988576e406dcb191e

@@ -884,12 +884,12 @@ fn bounded_prefix(value: &str, limit: usize) -> &str {
 }
 
 #[derive(Clone, Copy)]
-struct Fence {
+pub(crate) struct Fence {
     marker: u8,
     run: usize,
 }
 
-fn opening_fence(line: &str) -> Option<Fence> {
+pub(crate) fn opening_fence(line: &str) -> Option<Fence> {
     let marker = *line.as_bytes().first()?;
     if marker != b'`' && marker != b'~' {
         return None;
@@ -898,7 +898,7 @@ fn opening_fence(line: &str) -> Option<Fence> {
     (run >= 3).then_some(Fence { marker, run })
 }
 
-fn closes_fence(line: &str, opening: Fence) -> bool {
+pub(crate) fn closes_fence(line: &str, opening: Fence) -> bool {
     let bytes = line.as_bytes();
     let run = bytes
         .iter()

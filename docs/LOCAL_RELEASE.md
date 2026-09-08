@@ -2,7 +2,7 @@
 
 ## Current status
 
-The project is a design/reference package. There is no production executable to release. The latest qualified reference batch passed 56 reference unit tests, 16 integration tests, 196 xtask tests and 2 doctests remotely on 2026-09-07; [epoch8](../artifacts/execution/2026-09-07-epoch8-receipt.json) binds the source and raw logs. Compilation, rustfmt, Clippy and tests were **not run** in the revision 0.2 preparation environment; on 2026-09-06 the complete gate passed on one operator host under `nightly-2026-08-31` after the documented `cargo fmt --all` step (logs under `artifacts/execution/`), and failed under that host's rolling `nightly` because its toolchain directory lacks the rustfmt and clippy binaries. `cargo xtask release-check` deliberately returns failure. No fake public key, release target, host credential or GitHub ruleset ID is committed.
+The project is a design/reference package. There is no production executable to release. The latest qualified reference batch passed 56 reference unit tests, 16 integration tests, 224 xtask tests and 2 doctests remotely on 2026-09-08; [epoch9](../artifacts/execution/2026-09-08-epoch9-receipt.json) binds the source and raw logs. Compilation, rustfmt, Clippy and tests were **not run** in the revision 0.2 preparation environment; on 2026-09-06 the complete gate passed on one operator host under `nightly-2026-08-31` after the documented `cargo fmt --all` step (logs under `artifacts/execution/`), and failed under that host's rolling `nightly` because its toolchain directory lacks the rustfmt and clippy binaries. `cargo xtask release-check` deliberately returns failure. No fake public key, release target, host credential or GitHub ruleset ID is committed.
 
 ## Local development commands
 
@@ -21,7 +21,7 @@ The formatting command is an explicit preparation mutation because rustfmt was u
 
 ## Register the local quality gate
 
-The fragment in [release/dsr-quality.fragment.yaml](../release/dsr-quality.fragment.yaml) belongs under the real DSR quality registry, normally `~/.config/dsr/repos.yaml`. Merge it into the existing registry; do not overwrite other projects. It uses the observed `tools`, `checks` and `required_checks` schema. The three required checks reject a dirty checkout, run the dedicated concordance command, and run the complete gate. Both Cargo invocations use the dated qualified nightly through RCH, with local fallback forbidden and no working-tree overlay. Run from the frozen Git toplevel; `--no-overlay` intentionally checks its committed revision. Keep logs outside that source root. Then:
+The fragment in [release/dsr-quality.fragment.yaml](../release/dsr-quality.fragment.yaml) belongs under the real DSR quality registry, normally `~/.config/dsr/repos.yaml`. Merge it into the existing registry; do not overwrite other projects. It uses the observed `tools`, `checks` and `required_checks` schema. The four required checks reject a dirty checkout, run the dedicated concordance and system-map commands, and run the complete gate. All Cargo invocations use the dated qualified nightly through RCH, with local fallback forbidden and no working-tree overlay. Run from the frozen Git toplevel; `--no-overlay` intentionally checks its committed revision. Keep logs outside that source root. Then:
 
 ```bash
 dsr --json quality --tool franken_alignment --work-dir "$PWD"

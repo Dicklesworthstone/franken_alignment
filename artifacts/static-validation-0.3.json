@@ -52,5 +52,23 @@
     ]
   },
   "method": "Python standard library outside the shipped product, as in revision 0.2; the owned xtask does not yet perform these checks (packets FA-103, FA-129, FA-132).",
-  "no_production_readiness_claim": true
+  "no_production_readiness_claim": true,
+  "system_map": {
+    "missing": [],
+    "retired_in_use": [],
+    "unregistered_verbs": [],
+    "counts": {
+      "layers": 9,
+      "verbs": 35,
+      "packets": 143,
+      "guide_commands": 42,
+      "readme_commands": 11
+    }
+  },
+  "system_map_execution": {
+    "executed_at_utc": "2026-09-08T01:12:59Z",
+    "receipt": "artifacts/execution/2026-09-08-epoch9-receipt.json",
+    "negative": "artifacts/execution/2026-09-08-epoch9-negative.log",
+    "scope": "Owned Rust structural check; historical preparation fields above remain historical. No production or suite execution claim."
+  }
 }

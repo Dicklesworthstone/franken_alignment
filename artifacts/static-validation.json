@@ -105,5 +105,21 @@
     "receipt": "artifacts/execution/2026-09-07-epoch8-receipt.json",
     "raw_log": "artifacts/execution/2026-09-07-epoch8-code-attempt1.log",
     "scope": "Actual current-declaration check during the full gate, with epoch7 as the named count basis; no authentication claim."
+  },
+  "system_map": {
+    "missing": [],
+    "retired_in_use": [],
+    "unregistered_verbs": [],
+    "counts": {
+      "layers": 9,
+      "verbs": 35,
+      "packets": 143,
+      "guide_commands": 42,
+      "readme_commands": 11
+    }
+  },
+  "system_map_execution": {
+    "receipt": "artifacts/execution/2026-09-08-epoch9-receipt.json",
+    "scope": "Bounded system-map/vocabulary consistency and general constructor grammar; reference/operator gate only"
   }
 }
