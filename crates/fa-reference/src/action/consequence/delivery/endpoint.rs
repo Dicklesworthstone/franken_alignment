@@ -5,6 +5,8 @@
 //! dispatcher interruption. No disk, network, provider or crash durability is
 //! established. Time inputs share a declared logical clock domain.
 
+mod recovery;
+
 use super::*;
 use crate::action::MAX_PAYLOAD_BYTES;
 
