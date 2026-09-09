@@ -1,23 +1,17 @@
-//! Own the delivery path and its exact empirical-input dependency. There is no
-//! mutable inner broker or raw review/dispatch bypass through this facade.
-//! The provider must supply current views at every positive boundary; this code
-//! does not discover out-of-band context changes or authenticate captured bytes.
+//! Own the delivery path and its exact empirical-input dependency.
+//! Capture and evaluator authenticity remain explicit reference assumptions.
 
 mod session;
+mod reliability;
 pub use session::{ObservedReview, ObservedSession, ReviewWindow};
 
 use super::{CommitteeContract, CommitteeInput};
 use crate::action::consequence::Consequence;
-use crate::action::consequence::delivery::{
-    DeliveryBroker, DispatchEnvelope, EndpointReceipt, EndpointStatus,
-    FenceAcknowledgment, FenceRequest, PublicationEndpoint, StatusQuery,
-};
+use crate::action::consequence::delivery::{DeliveryBroker, DispatchEnvelope, EndpointReceipt, EndpointStatus, FenceAcknowledgment, FenceRequest, PublicationEndpoint, StatusQuery};
 use crate::action::consequence::gate::ControlInspection;
 use crate::action::consequence::gate::containment::{ActorState, CheckpointHandle, ResetReceipt, ResetRequest};
 use crate::action::consequence::gate::containment::session::policy::Policy;
-use crate::action::consequence::gate::containment::session::policy::controller::{
-    ControllerConfig, PolicyChange, PolicyReceipt, Proposal,
-};
+use crate::action::consequence::gate::containment::session::policy::controller::{ControllerConfig, PolicyChange, PolicyReceipt, Proposal};
 use crate::action::{ActionSpec, ElapsedTick, FrozenAction, Permit};
 use crate::{Error, Snapshot};
 use std::collections::{BTreeMap, BTreeSet};
@@ -27,15 +21,8 @@ pub const MAX_OBSERVED_ROUNDS: usize = 512;
 pub const MAX_CAPTURED_INPUT_BYTES: usize = 8 * 1_048_576;
 
 #[derive(Debug)]
-struct InputSlot {
-    action: FrozenAction,
-    revision: u64,
-    current: Option<Rc<CommitteeInput>>,
-    approved: Option<u64>,
-}
+struct InputSlot { action: FrozenAction, revision: u64, current: Option<Rc<CommitteeInput>>, approved: Option<u64> }
 
-/// Compact policy receipt plus the actual immutable input basis for each helper.
-/// This is in-memory reference evidence, not an authenticated wire archive.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct ObservedReceipt {
     pub policy: PolicyReceipt,
@@ -54,24 +41,15 @@ pub struct OversightBroker {
     inputs: BTreeMap<u64, InputSlot>,
     started_rounds: BTreeSet<u64>,
     captured_bytes: usize,
+    credibility: Option<reliability::EvaluationState>,
 }
 
 impl OversightBroker {
-    pub fn new(
-        config: ControllerConfig,
-        endpoint: &mut PublicationEndpoint,
-        contracts: CommitteeContract,
-    ) -> Result<Self, Error> {
-        if !contracts.members().keys().eq(config.congress.members.keys()) {
-            return Err(Error::Binding);
-        }
-        // All new validation precedes DeliveryBroker's one-time endpoint attach.
-        Ok(Self {
-            delivery: DeliveryBroker::new(config, endpoint)?, contracts, issuer: Rc::new(()),
-            inputs: BTreeMap::new(), started_rounds: BTreeSet::new(), captured_bytes: 0,
-        })
+    pub fn new(config: ControllerConfig, endpoint: &mut PublicationEndpoint, contracts: CommitteeContract) -> Result<Self, Error> {
+        if !contracts.members().keys().eq(config.congress.members.keys()) { return Err(Error::Binding); }
+        Ok(Self { delivery: DeliveryBroker::new(config, endpoint)?, contracts, issuer: Rc::new(()),
+            inputs: BTreeMap::new(), started_rounds: BTreeSet::new(), captured_bytes: 0, credibility: None })
     }
-
     pub fn inspect(&self) -> ControlInspection { self.delivery.inspect() }
     pub fn contracts(&self) -> &CommitteeContract { &self.contracts }
     pub fn captured_input_bytes(&self) -> usize { self.captured_bytes }
@@ -79,19 +57,10 @@ impl OversightBroker {
 
     pub fn propose(&mut self, id: u64, spec: ActionSpec, snapshot: &Snapshot) -> Result<Proposal, Error> {
         let proposal = self.delivery.propose(id, spec, snapshot)?;
-        self.inputs.insert(id, InputSlot {
-            action: proposal.action.clone(), revision: 0, current: None, approved: None,
-        });
+        self.inputs.insert(id, InputSlot { action: proposal.action.clone(), revision: 0, current: None, approved: None });
         Ok(proposal)
     }
-
-    pub fn input_revision(&self, id: u64) -> Result<u64, Error> {
-        Ok(self.inputs.get(&id).ok_or(Error::Missing)?.revision)
-    }
-
-    /// Trusted capture update. Structural equality is idempotent, while changed
-    /// bytes OR metadata invalidate empirical approval. Cumulative admission is
-    /// charged, not refunded, since older sessions may retain their own Rc basis.
+    pub fn input_revision(&self, id: u64) -> Result<u64, Error> { Ok(self.inputs.get(&id).ok_or(Error::Missing)?.revision) }
     pub fn record_inputs(&mut self, id: u64, expected: u64, inputs: CommitteeInput) -> Result<u64, Error> {
         let slot = self.inputs.get(&id).ok_or(Error::Missing)?;
         if slot.revision != expected { return Err(Error::Stale); }
@@ -100,113 +69,67 @@ impl OversightBroker {
         let revision = slot.revision.checked_add(1).ok_or(Error::Overflow)?;
         let bytes = self.captured_bytes.checked_add(inputs.logical_bytes()).ok_or(Error::Limit)?;
         if bytes > MAX_CAPTURED_INPUT_BYTES { return Err(Error::Limit); }
-        let current = Rc::new(inputs);
-        let slot = self.inputs.get_mut(&id).expect("retained input slot");
-        slot.current = Some(current);
-        slot.revision = revision;
-        slot.approved = None;
-        self.captured_bytes = bytes;
+        let current = Rc::new(inputs); let slot = self.inputs.get_mut(&id).expect("retained input slot");
+        slot.current = Some(current); slot.revision = revision; slot.approved = None; self.captured_bytes = bytes;
         Ok(revision)
     }
-
-    /// An observed outage invalidates approval even if identical bytes later
-    /// return. No rights are refunded, and post-dispatch reconciliation is intact.
     pub fn inputs_unavailable(&mut self, id: u64, expected: u64) -> Result<u64, Error> {
         let slot = self.inputs.get_mut(&id).ok_or(Error::Missing)?;
         if slot.revision != expected { return Err(Error::Stale); }
         if slot.current.is_none() { return Ok(slot.revision); }
         let revision = slot.revision.checked_add(1).ok_or(Error::Overflow)?;
-        slot.current = None;
-        slot.approved = None;
-        slot.revision = revision;
-        Ok(revision)
+        slot.current = None; slot.approved = None; slot.revision = revision; Ok(revision)
     }
-
-    /// Freeze all views before the first vote, and register the round once.
-    /// Discarding a session does not allow its identity to be reused for another
-    /// input context. The bounded lifetime round quota does not block refunds.
-    pub fn begin_review(
-        &mut self, id: u64, round: u64, root: [u8; 32], window: ReviewWindow,
-        snapshot: &Snapshot,
-    ) -> Result<ObservedSession, Error> {
+    pub fn begin_review(&mut self, id: u64, round: u64, root: [u8; 32], window: ReviewWindow, snapshot: &Snapshot) -> Result<ObservedSession, Error> {
         if self.started_rounds.contains(&round) { return Err(Error::Duplicate); }
         if self.started_rounds.len() >= MAX_OBSERVED_ROUNDS { return Err(Error::Limit); }
         let slot = self.inputs.get(&id).ok_or(Error::Missing)?;
         let inputs = Rc::clone(slot.current.as_ref().ok_or(Error::Incomplete)?);
         let now = self.inspect().ledger.elapsed.ok_or(Error::Incomplete)?;
-        if !(now < window.commit_by && window.commit_by < window.reveal_by
-            && window.reveal_by <= slot.action.spec().deadline)
-        {
-            return Err(Error::InvalidInput);
-        }
+        if !(now < window.commit_by && window.commit_by < window.reveal_by && window.reveal_by <= slot.action.spec().deadline) { return Err(Error::InvalidInput); }
         let session = self.delivery.begin_review(id, round, root, snapshot)?;
-        let observed = ObservedSession::new(
-            session, Rc::clone(&self.issuer), id, slot.revision, inputs, window, now,
-        );
+        let observed = ObservedSession::new(session, Rc::clone(&self.issuer), id, slot.revision, inputs, window, now);
         self.started_rounds.insert(round);
+        if let Some(state) = &mut self.credibility { state.started(round, self.delivery.controller().policy().generation()); }
         Ok(observed)
     }
-
-    pub fn apply_review(
-        &mut self, review: ObservedReview, current: Option<&CommitteeInput>, snapshot: &Snapshot,
-    ) -> Result<ObservedReceipt, Error> {
+    pub fn apply_review(&mut self, review: ObservedReview, current: Option<&CommitteeInput>, snapshot: &Snapshot) -> Result<ObservedReceipt, Error> {
         if !Rc::ptr_eq(&self.issuer, &review.issuer) { return Err(Error::Binding); }
-        if self.inspect().ledger.elapsed.ok_or(Error::Incomplete)? < review.completed_at {
-            return Err(Error::Stale);
-        }
+        if self.inspect().ledger.elapsed.ok_or(Error::Incomplete)? < review.completed_at { return Err(Error::Stale); }
         let slot = self.inputs.get(&review.attempt).ok_or(Error::Missing)?;
         let permitting = review.policy.decision().consequence == Consequence::Continue;
         if permitting {
             let supplied = current.ok_or(Error::Incomplete)?;
-            if slot.revision != review.revision || slot.current.as_deref() != Some(review.inputs.as_ref())
-                || supplied != review.inputs.as_ref()
-            {
-                return Err(Error::Stale);
-            }
+            if slot.revision != review.revision || slot.current.as_deref() != Some(review.inputs.as_ref()) || supplied != review.inputs.as_ref() { return Err(Error::Stale); }
         }
-        // Restriction can use its retained pre-vote basis during an outage.
-        // The owning policy gate still checks issuer, policy and predecessor.
+        // Prepare evidence accounting before mutating the owning authority.
+        let evaluated = self.prepare_evaluation(&review)?;
         let policy = self.delivery.apply_review(review.policy, snapshot)?;
-        let slot = self.inputs.get_mut(&review.attempt).expect("retained input slot");
-        slot.approved = permitting.then_some(review.revision);
-        Ok(ObservedReceipt {
-            policy, input_revision: review.revision, inputs: review.inputs,
-            window: review.window, started_at: review.started_at, completed_at: review.completed_at,
-        })
+        self.inputs.get_mut(&review.attempt).expect("retained input slot").approved = permitting.then_some(review.revision);
+        if let Some((round, prepared)) = evaluated { self.credibility.as_mut().expect("enabled ledger").applied(round, prepared); }
+        Ok(ObservedReceipt { policy, input_revision: review.revision, inputs: review.inputs, window: review.window,
+            started_at: review.started_at, completed_at: review.completed_at })
     }
-
     pub fn authorize(&mut self, id: u64, current: Option<&CommitteeInput>, snapshot: &Snapshot) -> Result<Permit, Error> {
-        self.check_approval(id, current)?;
-        self.delivery.authorize(id, snapshot)
+        self.check_approval(id, current)?; self.delivery.authorize(id, snapshot)
     }
-
-    pub fn dispatch(
-        &mut self, permit: &Permit, action: &FrozenAction,
-        current: Option<&CommitteeInput>, snapshot: &Snapshot,
-    ) -> Result<DispatchEnvelope, Error> {
-        self.check_approval(permit.attempt, current)?;
-        self.delivery.dispatch(permit, action, snapshot)
+    pub fn dispatch(&mut self, permit: &Permit, action: &FrozenAction, current: Option<&CommitteeInput>, snapshot: &Snapshot) -> Result<DispatchEnvelope, Error> {
+        self.check_approval(permit.attempt, current)?; self.delivery.dispatch(permit, action, snapshot)
     }
-
     fn check_approval(&self, id: u64, supplied: Option<&CommitteeInput>) -> Result<(), Error> {
-        let supplied = supplied.ok_or(Error::Incomplete)?;
-        let slot = self.inputs.get(&id).ok_or(Error::Missing)?;
+        let supplied = supplied.ok_or(Error::Incomplete)?; let slot = self.inputs.get(&id).ok_or(Error::Missing)?;
         let current = slot.current.as_deref().ok_or(Error::Incomplete)?;
         if slot.approved != Some(slot.revision) { return Err(Error::Incomplete); }
-        if supplied != current { return Err(Error::Stale); }
-        Ok(())
+        if supplied != current { return Err(Error::Stale); } Ok(())
     }
-
-    // Existing obligations deliberately do not require available helper inputs.
+    // Existing obligations deliberately do not depend on helper/evaluator availability.
     pub fn fence_request(&self) -> FenceRequest { self.delivery.fence_request() }
     pub fn confirm_fence(&mut self, ack: FenceAcknowledgment) -> Result<(), Error> { self.delivery.confirm_fence(ack) }
     pub fn restart_dispatcher(&mut self) -> Result<FenceRequest, Error> { self.delivery.restart_dispatcher() }
     pub fn acknowledgment_lost(&mut self, id: u64) -> Result<(), Error> { self.delivery.acknowledgment_lost(id) }
     pub fn status_query(&self, id: u64) -> Result<StatusQuery, Error> { self.delivery.status_query(id) }
     pub fn pending_reconciliation(&self) -> Result<Vec<StatusQuery>, Error> { self.delivery.pending_reconciliation() }
-    pub fn reconcile_status(&mut self, query: &StatusQuery, status: EndpointStatus) -> Result<EndpointStatus, Error> {
-        self.delivery.reconcile_status(query, status)
-    }
+    pub fn reconcile_status(&mut self, query: &StatusQuery, status: EndpointStatus) -> Result<EndpointStatus, Error> { self.delivery.reconcile_status(query, status) }
     pub fn accept_receipt(&mut self, receipt: EndpointReceipt) -> Result<bool, Error> { self.delivery.accept_receipt(receipt) }
     pub fn resolution(&self, id: u64) -> Result<Option<&EndpointReceipt>, Error> { self.delivery.resolution(id) }
     pub fn cancel(&mut self, id: u64) -> Result<(), Error> { self.delivery.cancel(id) }
@@ -215,20 +138,12 @@ impl OversightBroker {
     pub fn abandon_unknown(&mut self, id: u64) -> Result<(), Error> { self.delivery.abandon_unknown(id) }
     pub fn actor_revision(&self) -> u64 { self.delivery.controller().actor_revision() }
     pub fn incident_count(&self) -> u64 { self.delivery.controller().incident_count() }
-    pub fn capture_checkpoint(&mut self, id: u64, revision: u64) -> Result<CheckpointHandle, Error> {
-        self.delivery.capture_checkpoint(id, revision)
-    }
-    pub fn replace_actor_state(&mut self, revision: u64, actor: ActorState) -> Result<(), Error> {
-        self.delivery.replace_actor_state(revision, actor)
-    }
+    pub fn capture_checkpoint(&mut self, id: u64, revision: u64) -> Result<CheckpointHandle, Error> { self.delivery.capture_checkpoint(id, revision) }
+    pub fn replace_actor_state(&mut self, revision: u64, actor: ActorState) -> Result<(), Error> { self.delivery.replace_actor_state(revision, actor) }
     pub fn reset(&mut self, request: ResetRequest) -> Result<ResetReceipt, Error> {
-        let result = self.delivery.reset(request)?;
-        for slot in self.inputs.values_mut() { slot.approved = None; }
-        Ok(result)
+        let result = self.delivery.reset(request)?; for slot in self.inputs.values_mut() { slot.approved = None; } Ok(result)
     }
     pub fn replace_policy(&mut self, sequence: u64, epoch: u64, next: Policy) -> Result<PolicyChange, Error> {
-        let result = self.delivery.replace_policy(sequence, epoch, next)?;
-        for slot in self.inputs.values_mut() { slot.approved = None; }
-        Ok(result)
+        let result = self.delivery.replace_policy(sequence, epoch, next)?; for slot in self.inputs.values_mut() { slot.approved = None; } Ok(result)
     }
 }
