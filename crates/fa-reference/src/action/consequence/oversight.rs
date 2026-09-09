@@ -4,4 +4,7 @@
 mod packet;
 mod broker;
 pub use packet::{CommitteeContract, CommitteeInput, HelperContract, MAX_COMMITTEE_BYTES, action_frame};
-pub use broker::{ObservedReceipt, ObservedReview, ObservedSession, OversightBroker, ReviewWindow};
+pub use broker::{
+    ObservedReceipt, ObservedReview, ObservedSession, OversightBroker, ReviewWindow,
+    MAX_CAPTURED_INPUT_BYTES, MAX_OBSERVED_ROUNDS,
+};
