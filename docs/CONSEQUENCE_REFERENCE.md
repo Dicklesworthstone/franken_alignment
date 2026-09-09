@@ -1,10 +1,10 @@
-# Congress, consequences and checkpoint containment
+# Congress, exact policies and checkpoint containment
 
 ## Implementation status and verification
 
-Source implemented on September 9, 2026 in the existing std-only `fa-reference` crate. It connects round, empirical reducer, action authority and supplied actor-state checkpoint models. It is not a production congress, inference host, effect broker, durable decision closure or admitted foundation integration.
+Source implemented on September 9, 2026 in the existing std-only `fa-reference` crate. It connects exact policy evaluation, round, empirical reducer, action authority and supplied actor-state checkpoint models. It is not a production congress, inference host, effect broker, durable decision closure or admitted foundation integration.
 
-**Verification is pending for both implementation batches.** No configured RCH runner was available in these sessions. Formatting, compilation, Clippy, unit tests, integration tests and the complete repository gate were not executed. Existing execution receipts in `IMPLEMENTATION_STATUS.md` describe their own frozen source, not these additions. No bead is closed and no executed-reference or production-admission status is promoted here.
+**Verification is pending for all three implementation batches.** No configured RCH runner was available in these sessions. Formatting, compilation, Clippy, unit tests, integration tests and the complete repository gate were not executed. Existing execution receipts in `IMPLEMENTATION_STATUS.md` describe their own frozen source, not these additions. No bead is closed and no executed-reference or production-admission status is promoted here.
 
 ## Feature change log
 
@@ -12,12 +12,23 @@ Source implemented on September 9, 2026 in the existing std-only `fa-reference` 
 |---|---|---|
 | Initial congress integration, through `3e5e6828` | Consequence lattice, capped congress evaluation, hold/deny/narrow/suspend enforcement and post-dispatch containment | Source and regression tests only; execution pending |
 | Containment and bound sessions, starting at `c47f6d0` | Supplied actor-state restoration, monotone revocation, abandoned-continuation cancellation, repeated-incident suspension, immutable action/policy/issuer-bound congress sessions | Source and regression tests only; execution pending |
+| Evidence-backed exact policy control, starting at `398b448` | Bounded policy DAG, automatically captured positive/negative witnesses, enforced proposal/review/authorization/dispatch, immutable policy-evidence reviews, historical policy retention, fenced policy replacement integrated with checkpoint containment | Source and regression tests only; execution pending |
 
 The earlier `action.rs` implementation remains in place. No dependency, runtime, inference backend or cryptographic library was added.
 
 ## Implemented paths
 
 ```text
+PolicyAuthority owns exact Policy + congress policy + ContainmentAuthority
+  -> evaluate action and supplied snapshot; derive every read witness
+  -> known violation: terminal Denied; missing evidence: refuse without mutation
+  -> satisfied: freeze witnessed action, enter Reviewing (not Authorized)
+  -> PolicySession retains policy, evaluation, semantic epoch and bound congress
+  -> immutable PolicyReview
+  -> positive review rechecks current evidence; restrictions remain enforceable
+  -> PolicyReceipt retains its own exact evidence basis and policy version
+  -> normal authorization and dispatch, each with fresh policy/witness checks
+
 ReviewSession captures the actual ledger action, issuer and predecessor
   + frozen controller-supplied policy, evidence root and exact facts
   -> session/member-bound commitments and frozen-roster reveals
@@ -41,6 +52,25 @@ The public source modules are:
 - [`action::consequence::gate`](../crates/fa-reference/src/action/consequence/gate.rs): consequence-aware ownership of the existing action authority and rights ledger.
 - [`gate::containment`](../crates/fa-reference/src/action/consequence/gate/containment.rs): supplied actor-state checkpoint storage, reset and incident escalation.
 - [`gate::containment::session`](../crates/fa-reference/src/action/consequence/gate/containment/session.rs): immutable congress sessions usable with either the standalone gate or the containment controller.
+- [`session::policy`](../crates/fa-reference/src/action/consequence/gate/containment/session/policy.rs) and [`policy::controller`](../crates/fa-reference/src/action/consequence/gate/containment/session/policy/controller.rs): exact predicate evaluation and an owning controller enforcing it across the existing lifecycle.
+
+## Exact policy enforcement
+
+`Policy` is an immutable, generation-tagged, topologically ordered predicate DAG. The last node is the root; forward references, cycles, unreachable decoy nodes, malformed ranges and empty Boolean groups refuse. Supported predicates compare the exact resolved target, payload bytes/length, units, key values, key absence and empty half-open ranges, composed through All/Any/Not. This is a typed Rust policy representation, not a serialized policy language or a complete production policy compiler.
+
+Evaluation produces Satisfied, Violated or Unknown plus an indexed predicate trace and actual read witnesses. It evaluates every node rather than short-circuiting away dependencies. A false exact-value or absence predicate retains what was actually observed, not what the policy wished to observe. A nonempty range retains an actual member as its nonemptiness witness, so Not(EmptyRange) has a usable positive path. Empty ranges use the existing negative-domain witness. Predicate boundaries and half-open endpoints are exact; the interval profile cannot include `u64::MAX` as a member, and never synthesizes an overflowing successor.
+
+The constructor bounds nodes to 128, edges to 512, literal bytes to 64 KiB and state-read leaves to the existing 64-witness action limit. Evaluation counts every retained occurrence before cloning provider values and refuses above the existing 64 KiB witness-byte limit. These are logical retention/work bounds, not allocation or performance measurements. Every supplied snapshot is still a trusted reference input. Incomplete coverage cannot become permission through Not or a satisfied Any arm; the controller requires complete evidence even when the root alone could be determined.
+
+`PolicyAuthority::propose` rejects caller-supplied witness lists. It derives the list and judgment from the owned policy before creating the action. Known violations are terminally denied without allocating a reservation or requiring helper votes. Satisfied proposals remain Reviewing. Neither a fabricated Judgment nor disqualification/contradiction Booleans are accepted by the controller's proposal, review, authorization or dispatch APIs. A later observed exact violation becomes a disqualifier derived by the evaluator, so unanimous empirical approval cannot override it.
+
+Positive review application, authorization and dispatch all re-evaluate the exact policy and validate the original captured witnesses. Changed bytes, inserted absent keys, range phantoms, semantic epochs, revoked policy epochs, expiry and final-action substitution refuse at their respective boundaries. Unrelated state changes remain reusable when the captured dependencies are unchanged. A change in an unselected Boolean arm or in the selected nonempty-range witness may conservatively require a fresh attempt even if the root remains satisfied; no fact-equivalent optimal invalidation claim is made.
+
+Restrictive reviews remain applicable when evidence becomes unavailable: their immutable before-vote evaluation is retained, rather than silently replacing a later violation with the proposal's original passing result. `PolicySession` and `PolicyReview` retain the exact policy, observed witnesses and snapshot semantic epoch alongside the existing authority-bound congress. `PolicyReceipt` attaches that basis to the actual control transition. Historical policies are shared as immutable data, not authority, and remain available after replacement for interpreting earlier traces and proposals. These records are neither durable nor cryptographically authenticated.
+
+Policy replacement is an explicit trusted controller operation with expected control sequence, expected revocation epoch and a strictly newer policy generation. It stages accounting before publication, advances the sequence/epoch and cancels all old undispatched attempts, including held reservations. It never refunds dispatched or unknown effects, widens a previously narrowed target ceiling, or reopens a suspended run. Completed old-policy reviews and old permits fail; new work needs a new epoch, evaluation and congress. Replacement history is bounded to 64 changes. This is reference governance sequencing, not authenticated production administrator access.
+
+The controller owns the existing `ContainmentAuthority` rather than a parallel ledger. Actor checkpoints contain neither policy nor policy history. Reset therefore cannot restore an older policy; after reset, a fresh action is checked against the current policy and new revocation floor. Reconciliation remains available for pre-reset and pre-policy-change effects.
 
 ## Consequence contracts
 
@@ -64,7 +94,7 @@ The congress profile requires substantive answers from every frozen member. Miss
 
 A `BoundCommitment` has a private session/member brand. Even identical raw oracle digests cannot be transplanted between sessions or members. `finish` consumes the mutable round and produces a non-cloneable `BoundReview`; there is no mutable raw-request conversion. Application checks the original authority issuer as well as the gate's predecessor and action checks. A reset invalidates earlier reviews through the shared control sequence and cancellation of the abandoned attempts.
 
-These are process-local reference guarantees, not cryptographic binding. The underlying FNV comparison oracle remains non-cryptographic. Existing raw `Round`, `DecisionInputs` and `ReviewRequest` APIs remain available for trusted logical-model inputs; the new session path does not authenticate arbitrary users or remove those low-level APIs. Controller-supplied policy/fact provenance remains an assumption.
+These are process-local reference guarantees, not cryptographic binding. The underlying FNV comparison oracle remains non-cryptographic. Existing raw `Round`, `DecisionInputs` and `ReviewRequest` APIs remain available for trusted logical-model inputs; neither bound sessions nor the policy controller authenticate arbitrary users or remove those low-level APIs. The enforced policy controller exposes no mutable raw gate, raw review application or caller-supplied judgment path.
 
 ## Checkpoint containment
 
@@ -80,7 +110,9 @@ This models one authority domain. It does not implement durable or principal-wid
 
 ## Regression source
 
-The initial 27 tests remain. The second batch adds 21 test functions: three actor-state/exhaustion tests, nine public reset lifecycle tests and nine public bound-session tests. These counts describe source, not executed or passing results.
+The initial 27 tests remain. The second batch adds 21 test functions: three actor-state/exhaustion tests, nine public reset lifecycle tests and nine public bound-session tests. The third batch adds 25 test functions: nine policy-kernel tests, nine controller tests and seven public-API integration tests. These counts describe source, not executed or passing results.
+
+[Policy public-API tests](../crates/fa-reference/tests/policy_control_path.rs) exercise positive dispatch with generated witnesses, incomplete congress holds, individually varied action/state violations, coverage/semantic/expiry refusals, independently retained later-disqualification evidence, held reservations versus unknown liabilities across policy replacement and reset, a small independent three-valued truth table and exact policy-history capacity. Unit cases additionally cover graph/byte/read limits, unknown Boolean composition, nonempty-range witnesses, action substitution, cross-controller bindings, stale reviews and atomic overflow refusal.
 
 [Reset lifecycle tests](../crates/fa-reference/tests/containment_reset.rs) pair successful restoration and fresh dispatch with forbidden refunds, stale host updates, old permits/reviews, widened ceilings, foreign checkpoint handles, insufficient restart grades and retention-bound violations. They include repeated-incident suspension and continued outcome reconciliation.
 
@@ -90,6 +122,6 @@ The initial [congress-to-dispatch integration tests](../crates/fa-reference/test
 
 ## Founding and roadmap relationship
 
-This is scoped reference progress for FA-104 and FA-108, following plan sections 8.2, 9.2, 9.4, 9.8 and 11.10. The founding connection remains FI-A02 (external control), FI-A09 (consequences) and FI-A16 (one-directional control and containment), combined with the introspection essay's checkpoint/rewind mechanism. It does not replace or close the original production acceptance criteria.
+The consequence and containment work is scoped reference progress for FA-104 and FA-108, following plan sections 8.2, 9.2, 9.4, 9.8 and 11.10. Exact policy enforcement additionally serves the frozen-action/effect-bound permit obligations in sections 8.1, 8.2 and 25.1. The founding connection remains FI-A02 (external control), FI-A06 (evidence supporting control), FI-A09 (consequences) and FI-A16 (one-directional control and containment), combined with the introspection essay's checkpoint/rewind mechanism. This does not replace or close the original production acceptance criteria or a full policy-compiler packet.
 
-Remaining work includes admitted cryptography and authenticated round/action/policy provenance, durable hashed DecisionClosure integration, production purpose contexts and effect adapters, actual qualified inference-host checkpoint capture/restoration, independent-label reporter annotations, offline training-signal export and the required executed negative campaigns. Target ceilings and state profiles here remain finite reference contracts rather than a complete production capability or host abstraction.
+Remaining work includes admitted cryptography and authenticated round/action/policy/snapshot provenance, durable hashed DecisionClosure integration, production purpose contexts and effect adapters, actual qualified inference-host checkpoint capture/restoration, independent-label reporter annotations, offline training-signal export and the required executed negative campaigns. Target ceilings and state profiles here remain finite reference contracts rather than a complete production capability or host abstraction.
