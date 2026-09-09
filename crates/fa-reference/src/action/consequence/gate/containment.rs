@@ -5,14 +5,14 @@
 //! engine, authentication, durable storage or real model restart is claimed.
 //! Checkpoints contain actor state, never permits, reservations or live rights.
 
+pub mod session;
+
 use super::{
     ConsequenceAuthority, ControlInspection, ControlReceipt, MAX_DECISIONS, ReviewBinding,
     ReviewRequest, TargetCeiling, undispatched,
 };
 use crate::action::consequence::Consequence;
-use crate::action::{
-    ActionState, ElapsedTick, FrozenAction, Permit, Scope, TrustedOutcome,
-};
+use crate::action::{ActionState, ElapsedTick, FrozenAction, Permit, Scope, TrustedOutcome};
 use crate::{Error, Judgment, Snapshot};
 use std::collections::{BTreeMap, BTreeSet};
 use std::rc::Rc;
@@ -310,7 +310,10 @@ impl ContainmentAuthority {
         if self.gate.seen_rounds.len() >= MAX_DECISIONS {
             return Err(Error::Limit);
         }
-        let checkpoint = self.checkpoints.get(&request.checkpoint.id).ok_or(Error::Missing)?;
+        let checkpoint = self
+            .checkpoints
+            .get(&request.checkpoint.id)
+            .ok_or(Error::Missing)?;
         if checkpoint.actor.profile != self.actor.profile {
             return Err(Error::Binding);
         }
@@ -371,8 +374,12 @@ impl ContainmentAuthority {
         // No fallible logical operation follows publication of the staged state.
         self.gate.authority.rights = rights;
         for id in cancelled {
-            self.gate.authority.attempts.get_mut(&id).expect("retained attempt").stage =
-                ActionState::Cancelled;
+            self.gate
+                .authority
+                .attempts
+                .get_mut(&id)
+                .expect("retained attempt")
+                .stage = ActionState::Cancelled;
             self.gate.decisions.insert(id, Consequence::Deny);
         }
         self.gate.sequence = sequence;
@@ -526,10 +533,58 @@ mod tests {
         ] {
             assert_eq!(
                 ActorState::new(
-                    profile(), vec![1; tokens], vec![2; cache], vec![3; sampler], tokens as u64
+                    profile(),
+                    vec![1; tokens],
+                    vec![2; cache],
+                    vec![3; sampler],
+                    tokens as u64,
                 ),
                 Err(Error::Limit)
             );
+        }
+    }
+
+    #[test]
+    fn reset_exhaustion_does_not_publish_partial_accounting_or_actor_state() {
+        for exhausted in 0..4 {
+            let scope = Scope {
+                tenant: 1,
+                principal: 2,
+                run: 3,
+                branch: 4,
+                authority: 5,
+                purpose: crate::action::Purpose::Effect,
+            };
+            let actor = ActorState::new(profile(), vec![1], vec![2], vec![3], 1).unwrap();
+            let mut authority = ContainmentAuthority::new(scope, 100, 4, actor, 3).unwrap();
+            let checkpoint = authority.capture_checkpoint(1, 0).unwrap();
+            match exhausted {
+                0 => authority.gate.authority.rights.epoch = u64::MAX,
+                1 => authority.gate.authority.rights.incident_count = u64::MAX,
+                2 => authority.gate.sequence = u64::MAX,
+                _ => authority.actor_revision = u64::MAX,
+            }
+            let before = authority.inspect();
+            let actor = authority.actor().clone();
+            let counter = authority.incident_count();
+            let revision = authority.actor_revision();
+            let request = ResetRequest {
+                checkpoint,
+                expected_control_sequence: before.sequence,
+                expected_actor_revision: revision,
+                binding: ReviewBinding {
+                    round: 1,
+                    evidence_root: [1; 32],
+                    reducer_generation: 1,
+                },
+                retained_targets: TargetCeiling::new(&[]).unwrap(),
+            };
+            assert_eq!(authority.reset(request), Err(Error::Overflow));
+            assert_eq!(authority.inspect(), before);
+            assert_eq!(authority.actor(), &actor);
+            assert_eq!(authority.incident_count(), counter);
+            assert_eq!(authority.actor_revision(), revision);
+            assert!(authority.reset_receipts().is_empty());
         }
     }
 }
