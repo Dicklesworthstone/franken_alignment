@@ -7,6 +7,7 @@
 //! oracle. No authentication, cross-process commitment or helper honesty follows.
 
 pub mod policy;
+pub mod transcript;
 
 use super::ContainmentAuthority;
 use crate::Error;
@@ -19,6 +20,7 @@ use crate::action::consequence::{Consequence, Decision};
 use crate::reducer::{MAX_VOTES, Reduction};
 use crate::round::{Digest, Phase, Round, Verdict, commitment};
 use std::rc::Rc;
+use transcript::{CommitRecord, RevealRecord, RoundTranscript, TRANSCRIPT_VERSION};
 
 /// The controller freezes these facts before independent voting. The action,
 /// issuer and expected predecessor are deliberately not caller-supplied fields.
@@ -55,6 +57,7 @@ pub struct BoundCommitment {
 pub struct ReviewSession {
     context: Rc<Context>,
     round: Round,
+    transcript: RoundTranscript,
 }
 
 impl ReviewSession {
@@ -73,22 +76,25 @@ impl ReviewSession {
         for member in spec.policy.members.keys() {
             round.add_member(member)?;
         }
-        // Reuse the existing policy validator on an all-missing projection.
-        // This is constructor validation, not evaluation of the actual votes.
-        // The real round remains in Commit and receives no derived approval.
+        // Validate the policy without deriving approval from the real round.
         let mut validation = round.clone();
         validation.open_reveals()?;
         evaluate_round(&validation, &spec.policy, spec.exact_disqualifier, spec.contradiction)?;
+        let transcript = RoundTranscript {
+            version: TRANSCRIPT_VERSION,
+            round: spec.round,
+            evidence_root: spec.evidence_root,
+            members: spec.policy.members.keys().cloned().collect(),
+            commits: Vec::new(),
+            reveals: Vec::new(),
+        };
         let context = Context {
             spec,
             action: attempt.action.clone(),
             expected_control_sequence: gate.sequence,
             authority_issuer: Rc::clone(&gate.authority.issuer),
         };
-        Ok(Self {
-            context: Rc::new(context),
-            round,
-        })
+        Ok(Self { context: Rc::new(context), round, transcript })
     }
 
     pub fn begin_containment(
@@ -132,7 +138,12 @@ impl ReviewSession {
         if !Rc::ptr_eq(&self.context, &value.context) || value.member != member {
             return Err(Error::Binding);
         }
-        self.round.commit(member, value.digest)
+        self.round.commit(member, value.digest)?;
+        // Only accepted events are retained. The round bounds one per member.
+        self.transcript.commits.push(CommitRecord {
+            member: member.to_owned(), digest: value.digest,
+        });
+        Ok(())
     }
 
     pub fn open_reveals(&mut self) -> Result<(), Error> {
@@ -140,15 +151,27 @@ impl ReviewSession {
     }
 
     pub fn reveal(&mut self, member: &str, verdict: Verdict, salt: &[u8]) -> Result<(), Error> {
-        self.round.reveal(member, verdict, salt)
+        self.round.reveal(member, verdict, salt)?;
+        // The round checks salt length before allocation and rejects duplicates.
+        self.transcript.reveals.push(RevealRecord {
+            member: member.to_owned(), verdict, salt: salt.to_vec(),
+        });
+        Ok(())
     }
 
     /// Consumes the round: late evidence cannot mutate an already emitted review.
-    /// Missing reveals remain explicit and cannot turn into an implicit quorum.
+    /// Replay reconstructs accepted commitments and reveals before reduction.
     pub fn finish(self) -> Result<BoundReview, Error> {
+        if self.round.phase() != Phase::Reveal {
+            return Err(Error::WrongState);
+        }
+        let replayed = self.transcript.replay()?;
+        if replayed != self.round {
+            return Err(Error::Binding);
+        }
         let spec = &self.context.spec;
         let evaluation = evaluate_round(
-            &self.round, &spec.policy, spec.exact_disqualifier, spec.contradiction,
+            &replayed, &spec.policy, spec.exact_disqualifier, spec.contradiction,
         )?;
         let decision = evaluation.decision();
         let tally = evaluation.tally().clone();
@@ -163,12 +186,8 @@ impl ReviewSession {
             retained,
         );
         Ok(BoundReview {
-            context: self.context,
-            request,
-            decision,
-            tally,
-            missing,
-            abstained,
+            context: self.context, request, decision, tally, missing, abstained,
+            transcript: self.transcript,
         })
     }
 }
@@ -183,6 +202,7 @@ pub struct BoundReview {
     tally: Reduction,
     missing: Vec<String>,
     abstained: Vec<String>,
+    transcript: RoundTranscript,
 }
 
 impl BoundReview {
@@ -208,6 +228,11 @@ impl BoundReview {
 
     pub fn policy(&self) -> &CongressPolicy {
         &self.context.spec.policy
+    }
+
+    /// Investigation data only. A copy carries no session brand or permission.
+    pub fn transcript(&self) -> &RoundTranscript {
+        &self.transcript
     }
 
     pub fn apply(self, gate: &mut ConsequenceAuthority) -> Result<ControlReceipt, Error> {
