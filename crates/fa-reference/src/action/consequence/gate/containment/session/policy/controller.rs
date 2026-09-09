@@ -5,11 +5,14 @@
 //! policy and supplied snapshot. Snapshots, evidence roots, governance calls
 //! and host bytes remain trusted reference inputs, not authenticated providers.
 
+mod review;
+pub use review::{PolicyReceipt, PolicyReview, PolicySession};
+
 use super::{Evaluation, Policy, Truth};
-use super::super::{BoundReview, ReviewSession, SessionSpec};
+use super::super::{ReviewSession, SessionSpec};
 use crate::action::consequence::Consequence;
 use crate::action::consequence::congress::CongressPolicy;
-use crate::action::consequence::gate::{ControlInspection, ControlReceipt, TargetCeiling, undispatched};
+use crate::action::consequence::gate::{ControlInspection, TargetCeiling, undispatched};
 use crate::action::consequence::gate::containment::{
     ActorState, CheckpointHandle, ContainmentAuthority, ResetReceipt, ResetRequest,
 };
@@ -38,13 +41,16 @@ pub struct ControllerConfig {
 pub struct Proposal {
     pub attempt: u64,
     pub action: FrozenAction,
+    pub policy: Rc<Policy>,
     pub evaluation: Evaluation,
+    pub snapshot_semantic_epoch: u64,
     pub state: ActionState,
 }
 
 #[derive(Debug)]
 struct Record {
     judgment: Judgment,
+    policy: Rc<Policy>,
     evaluation: Evaluation,
 }
 
@@ -52,6 +58,8 @@ struct Record {
 pub struct PolicyChange {
     pub previous_generation: u64,
     pub generation: u64,
+    pub previous_policy: Rc<Policy>,
+    pub policy: Rc<Policy>,
     pub sequence: u64,
     pub revocation_floor: u64,
     pub cancelled: Vec<u64>,
@@ -60,14 +68,16 @@ pub struct PolicyChange {
 
 /// Owns the host/controller, not a second ledger. There is no mutable host or
 /// gate accessor, raw review application, or caller-supplied judgment interface.
+/// Shared policy references contain immutable data, never authority.
 #[derive(Debug)]
 pub struct PolicyAuthority {
     host: ContainmentAuthority,
-    policy: Policy,
+    policy: Rc<Policy>,
     congress: CongressPolicy,
     narrowed_targets: TargetCeiling,
     records: BTreeMap<u64, Record>,
     changes: Vec<PolicyChange>,
+    reviews: Vec<PolicyReceipt>,
 }
 
 impl PolicyAuthority {
@@ -78,11 +88,12 @@ impl PolicyAuthority {
                 config.scope, config.total, config.max_attempts, config.actor,
                 config.suspend_at_incident,
             )?,
-            policy: config.policy,
+            policy: Rc::new(config.policy),
             congress: config.congress,
             narrowed_targets: config.narrowed_targets,
             records: BTreeMap::new(),
             changes: Vec::new(),
+            reviews: Vec::new(),
         })
     }
 
@@ -130,8 +141,13 @@ impl PolicyAuthority {
             self.host.gate.prepare(id).expect("prevalidated current action");
             self.host.gate.begin_review(id).expect("fresh prepared action");
         }
-        self.records.insert(id, Record { judgment, evaluation: evaluation.clone() });
-        Ok(Proposal { attempt: id, action, evaluation, state })
+        self.records.insert(id, Record {
+            judgment, policy: Rc::clone(&self.policy), evaluation: evaluation.clone(),
+        });
+        Ok(Proposal {
+            attempt: id, action, policy: Rc::clone(&self.policy), evaluation,
+            snapshot_semantic_epoch: snapshot.semantic_epoch, state,
+        })
     }
 
     /// Fresh exact violations become real disqualifiers, even when the proposal
@@ -143,7 +159,7 @@ impl PolicyAuthority {
         round: u64,
         evidence_root: [u8; 32],
         snapshot: &Snapshot,
-    ) -> Result<ReviewSession, Error> {
+    ) -> Result<PolicySession, Error> {
         let action = &self.host.gate.authority.attempts.get(&id).ok_or(Error::Missing)?.action;
         self.records.get(&id).ok_or(Error::Missing)?;
         let current = self.policy.evaluate(action, snapshot)?;
@@ -154,7 +170,7 @@ impl PolicyAuthority {
         if !exact_disqualifier {
             self.recheck(id, snapshot)?;
         }
-        ReviewSession::begin_containment(&self.host, SessionSpec {
+        let session = ReviewSession::begin_containment(&self.host, SessionSpec {
             attempt: id,
             round,
             evidence_root,
@@ -162,23 +178,38 @@ impl PolicyAuthority {
             exact_disqualifier,
             contradiction: false,
             narrowed_targets: self.narrowed_targets.clone(),
-        })
+        })?;
+        Ok(PolicySession::new(
+            session, Rc::clone(&self.policy), current, snapshot.semantic_epoch,
+        ))
     }
 
     pub fn apply_review(
         &mut self,
-        review: BoundReview,
+        review: PolicyReview,
         snapshot: &Snapshot,
-    ) -> Result<ControlReceipt, Error> {
-        if !Rc::ptr_eq(&review.context.authority_issuer, &self.host.gate.authority.issuer) {
+    ) -> Result<PolicyReceipt, Error> {
+        if !Rc::ptr_eq(&review.review.context.authority_issuer, &self.host.gate.authority.issuer) {
             return Err(Error::Binding);
         }
+        if !Rc::ptr_eq(&review.policy, &self.policy) {
+            return Err(Error::Stale);
+        }
         if review.decision().consequence == Consequence::Continue {
-            self.recheck(review.context.spec.attempt, snapshot)?;
+            self.recheck(review.review.context.spec.attempt, snapshot)?;
         }
         // Missing or changed evidence must not obstruct a restrictive review.
-        // Denial/narrowing/suspension are not permission-bearing transitions.
-        review.apply_to_containment(&mut self.host)
+        // Its frozen evaluation remains the basis; it is not replaced by the
+        // proposal's earlier passing evaluation or the unavailable current one.
+        let receipt = PolicyReceipt {
+            control: review.review.apply_to_containment(&mut self.host)?,
+            policy: review.policy,
+            evaluation: review.evaluation,
+            snapshot_semantic_epoch: review.snapshot_semantic_epoch,
+        };
+        // The underlying gate bounds successful reviews by MAX_DECISIONS.
+        self.reviews.push(receipt.clone());
+        Ok(receipt)
     }
 
     pub fn authorize(&mut self, id: u64, snapshot: &Snapshot) -> Result<Permit, Error> {
@@ -202,6 +233,14 @@ impl PolicyAuthority {
 
     pub fn evaluation(&self, id: u64) -> Result<&Evaluation, Error> {
         Ok(&self.records.get(&id).ok_or(Error::Missing)?.evaluation)
+    }
+
+    pub fn evaluated_policy(&self, id: u64) -> Result<&Policy, Error> {
+        Ok(&self.records.get(&id).ok_or(Error::Missing)?.policy)
+    }
+
+    pub fn review_receipts(&self) -> &[PolicyReceipt] {
+        &self.reviews
     }
 
     pub fn inspect(&self) -> ControlInspection {
@@ -297,9 +336,12 @@ impl PolicyAuthority {
         if !rights.conserved() {
             return Err(Error::WrongState);
         }
+        let next = Rc::new(next);
         let change = PolicyChange {
             previous_generation: self.policy.generation(),
             generation: next.generation(),
+            previous_policy: Rc::clone(&self.policy),
+            policy: Rc::clone(&next),
             sequence,
             revocation_floor: rights.epoch(),
             cancelled,
@@ -322,7 +364,7 @@ impl PolicyAuthority {
 
     fn recheck(&self, id: u64, snapshot: &Snapshot) -> Result<(), Error> {
         let record = self.records.get(&id).ok_or(Error::Missing)?;
-        if record.evaluation.generation() != self.policy.generation() {
+        if !Rc::ptr_eq(&record.policy, &self.policy) {
             return Err(Error::Stale);
         }
         let action = &self.host.gate.authority.attempts.get(&id).ok_or(Error::Missing)?.action;
@@ -420,7 +462,7 @@ mod tests {
         controller
     }
 
-    fn finish(mut session: ReviewSession) -> BoundReview {
+    fn finish(mut session: PolicySession) -> PolicyReview {
         let commitment = session.commitment("helper", Verdict::Allow, b"salt").unwrap();
         session.commit("helper", commitment).unwrap();
         session.open_reveals().unwrap();
@@ -493,9 +535,9 @@ mod tests {
     }
 
     #[test]
-    fn newly_observed_violation_supplies_disqualifier_without_a_boolean_api() {
+    fn newly_observed_violation_supplies_disqualifier_and_retains_its_own_basis() {
         let mut controller = controller();
-        controller.propose(1, spec(0), &snapshot()).unwrap();
+        let proposal = controller.propose(1, spec(0), &snapshot()).unwrap();
         let mut changed = snapshot();
         changed.values.insert(8, vec![1]);
         let session = controller.begin_review(1, 11, [1; 32], &changed).unwrap();
@@ -503,8 +545,20 @@ mod tests {
         assert_eq!(review.decision().consequence, Consequence::Deny);
         let mut unavailable = snapshot();
         unavailable.complete = false;
-        controller.apply_review(review, &unavailable).unwrap();
+        let receipt = controller.apply_review(review, &unavailable).unwrap();
         assert_eq!(controller.inspect().ledger.stages[&1], ActionState::Denied);
+        assert!(proposal.evaluation.certifiable());
+        assert_eq!(receipt.evaluation.result(), Truth::Violated);
+        assert_eq!(receipt.snapshot_semantic_epoch, 3);
+        assert!(receipt.evaluation.witnesses().contains(&crate::ReadWitness::Exact {
+            key: 8, value: Some(vec![1]),
+        }));
+        let before = controller.inspect();
+        controller.replace_policy(before.sequence, before.ledger.epoch, policy(2)).unwrap();
+        assert_eq!(controller.policy().generation(), 2);
+        assert_eq!(controller.evaluated_policy(1).unwrap().generation(), 1);
+        assert_eq!(receipt.policy.generation(), 1);
+        assert_eq!(controller.review_receipts(), &[receipt]);
     }
 
     #[test]
@@ -537,6 +591,8 @@ mod tests {
         assert_eq!(change.cancelled, vec![1]);
         assert_eq!(change.refunded_units, 4);
         assert_eq!(change.revocation_floor, 1);
+        assert_eq!(change.previous_policy.generation(), 1);
+        assert_eq!(change.policy.generation(), 2);
         assert_eq!(controller.inspect().ledger.available, 16);
         assert_eq!(controller.inspect().ledger.charged, 4);
         assert_eq!(controller.inspect().ledger.stages[&2], ActionState::Unknown);
@@ -584,5 +640,17 @@ mod tests {
         assert_eq!(controller.inspect(), before);
         assert_eq!(controller.policy().generation(), 1);
         assert!(controller.policy_changes().is_empty());
+    }
+
+    #[test]
+    fn a_completed_old_policy_review_cannot_survive_policy_rotation() {
+        let mut controller = controller();
+        controller.propose(1, spec(0), &snapshot()).unwrap();
+        let review = finish(controller.begin_review(1, 11, [1; 32], &snapshot()).unwrap());
+        controller.replace_policy(0, 0, policy(2)).unwrap();
+        let before = controller.inspect();
+        assert_eq!(controller.apply_review(review, &snapshot()), Err(Error::Stale));
+        assert_eq!(controller.inspect(), before);
+        assert!(controller.review_receipts().is_empty());
     }
 }
