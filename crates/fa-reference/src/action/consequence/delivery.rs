@@ -1,0 +1,313 @@
+//! Receipt-gated delivery over the existing exact-policy controller.
+//!
+//! This is a bounded, in-memory protocol model. The separately owned endpoint
+//! models atomic keyed publication, status retention and fencing. It is NOT a
+//! network client, durable journal, authenticated provider or production broker.
+//! A dispatched message may be delayed after its caller loses the acknowledgment.
+//! A missing status is consequently never a nonexecution proof or a refund.
+
+mod endpoint;
+pub use endpoint::PublicationEndpoint;
+
+use super::gate::containment::session::policy::Policy;
+use super::gate::containment::session::policy::controller::{
+    ControllerConfig, PolicyAuthority, PolicyChange, PolicyReceipt, PolicyReview, PolicySession,
+    Proposal,
+};
+use super::gate::containment::{ActorState, CheckpointHandle, ResetReceipt, ResetRequest};
+use super::gate::ControlInspection;
+use crate::action::{
+    ActionSpec, ActionState, ElapsedTick, FrozenAction, Permit, ResolvedTarget, Scope, TrustedOutcome,
+};
+use crate::{Error, ReadWitness, Snapshot};
+use std::collections::BTreeMap;
+use std::rc::Rc;
+
+pub const MAX_DELIVERIES: usize = 128;
+/// Counts each retained frozen action once, not allocator or transport copies.
+pub const MAX_DELIVERY_ACTION_BYTES: usize = 2 * 1_024 * 1_024;
+
+/// A copyable message is data about an already consumed permit. Only the broker
+/// constructs it. Re-delivering it to the registered endpoint cannot create a
+/// second publication under the same key. It is not an authorization interface.
+#[derive(Clone, Debug)]
+pub struct DispatchEnvelope {
+    binding: Rc<()>,
+    epoch: u64,
+    attempt: u64,
+    action: FrozenAction,
+    retained_until: ElapsedTick,
+}
+
+impl DispatchEnvelope {
+    pub fn attempt(&self) -> u64 { self.attempt }
+    pub fn action(&self) -> &FrozenAction { &self.action }
+    pub fn retained_until(&self) -> ElapsedTick { self.retained_until }
+}
+
+/// Status queries cannot be converted into dispatch messages. Sealing this key
+/// at the endpoint prevents a delayed dispatch from executing later.
+#[derive(Clone, Debug)]
+pub struct StatusQuery(DispatchEnvelope);
+
+impl StatusQuery {
+    pub fn attempt(&self) -> u64 { self.0.attempt }
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum NonExecutionReason {
+    Sealed,
+    VersionConflict,
+    DeadlineElapsed,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum EndpointOutcome {
+    Executed { resulting_version: u64 },
+    NotExecuted { reason: NonExecutionReason },
+}
+
+/// Opaque terminal evidence minted only by the registered reference endpoint.
+/// Its process-local brand is not a signature or a wire authentication scheme.
+///
+/// ```compile_fail
+/// use fa_reference::action::consequence::delivery::EndpointReceipt;
+/// fn forge() -> EndpointReceipt { EndpointReceipt {} }
+/// ```
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct EndpointReceipt {
+    binding: Rc<()>,
+    attempt: u64,
+    action: FrozenAction,
+    retained_until: ElapsedTick,
+    outcome: EndpointOutcome,
+}
+
+impl EndpointReceipt {
+    pub fn attempt(&self) -> u64 { self.attempt }
+    pub fn action(&self) -> &FrozenAction { &self.action }
+    pub fn outcome(&self) -> EndpointOutcome { self.outcome }
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum EndpointStatus {
+    /// There is no terminal record YET. A delayed message can still arrive.
+    AwaitingResolution,
+    /// The declared retention interval no longer supports a status claim.
+    RetentionExpired,
+    Resolved(EndpointReceipt),
+}
+
+#[derive(Clone, Debug)]
+pub struct FenceRequest {
+    binding: Rc<()>,
+    epoch: u64,
+}
+
+#[derive(Clone, Debug)]
+pub struct FenceAcknowledgment {
+    binding: Rc<()>,
+    epoch: u64,
+}
+
+#[derive(Debug)]
+struct DeliveryRecord {
+    action: FrozenAction,
+    retained_until: ElapsedTick,
+    resolution: Option<EndpointReceipt>,
+}
+
+/// Owns the policy controller. There is no mutable controller accessor, raw
+/// dispatch, raw TrustedOutcome input, or automatic retry with a fresh key.
+/// This profile accounts resource units as an upper bound on payload bytes.
+#[derive(Debug)]
+pub struct DeliveryBroker {
+    controller: PolicyAuthority,
+    binding: Rc<()>,
+    scope: Scope,
+    resource: ResolvedTarget,
+    retention_ticks: u64,
+    max_deliveries: usize,
+    epoch: u64,
+    fenced: bool,
+    records: BTreeMap<u64, DeliveryRecord>,
+    action_bytes: usize,
+}
+
+impl DeliveryBroker {
+    pub fn new(config: ControllerConfig, endpoint: &mut PublicationEndpoint) -> Result<Self, Error> {
+        let scope = config.scope;
+        let controller = PolicyAuthority::new(config)?;
+        endpoint.attach(scope)?;
+        Ok(Self {
+            controller,
+            binding: Rc::clone(&endpoint.binding),
+            scope,
+            resource: endpoint.target(),
+            retention_ticks: endpoint.retention_ticks,
+            max_deliveries: endpoint.max_deliveries,
+            epoch: 0,
+            fenced: false,
+            records: BTreeMap::new(),
+            action_bytes: 0,
+        })
+    }
+
+    /// Inspection and starting a review are read-only; no mutable authority leaks.
+    pub fn controller(&self) -> &PolicyAuthority { &self.controller }
+    pub fn inspect(&self) -> ControlInspection { self.controller.inspect() }
+    pub fn dispatcher_epoch(&self) -> u64 { self.epoch }
+    pub fn fence_confirmed(&self) -> bool { self.fenced }
+
+    pub fn fence_request(&self) -> FenceRequest {
+        FenceRequest { binding: Rc::clone(&self.binding), epoch: self.epoch }
+    }
+
+    pub fn confirm_fence(&mut self, acknowledgment: FenceAcknowledgment) -> Result<(), Error> {
+        if !Rc::ptr_eq(&self.binding, &acknowledgment.binding) {
+            return Err(Error::Binding);
+        }
+        if acknowledgment.epoch != self.epoch {
+            return Err(Error::Stale);
+        }
+        self.fenced = true;
+        Ok(())
+    }
+
+    pub fn observe_time(&mut self, tick: ElapsedTick) -> Result<(), Error> {
+        self.controller.observe_time(tick)
+    }
+
+    pub fn propose(&mut self, id: u64, spec: ActionSpec, snapshot: &Snapshot) -> Result<Proposal, Error> {
+        check_resource(&spec, self.scope, self.resource)?;
+        self.controller.propose(id, spec, snapshot)
+    }
+
+    pub fn begin_review(
+        &self, id: u64, round: u64, root: [u8; 32], snapshot: &Snapshot,
+    ) -> Result<PolicySession, Error> {
+        self.controller.begin_review(id, round, root, snapshot)
+    }
+
+    pub fn apply_review(&mut self, review: PolicyReview, snapshot: &Snapshot) -> Result<PolicyReceipt, Error> {
+        self.controller.apply_review(review, snapshot)
+    }
+
+    pub fn authorize(&mut self, id: u64, snapshot: &Snapshot) -> Result<Permit, Error> {
+        self.controller.authorize(id, snapshot)
+    }
+
+    /// Normal exact-policy dispatch consumes the one-use permit and charges the
+    /// original rights before this method returns any sendable envelope.
+    pub fn dispatch(
+        &mut self, permit: &Permit, action: &FrozenAction, snapshot: &Snapshot,
+    ) -> Result<DispatchEnvelope, Error> {
+        if !self.fenced { return Err(Error::Incomplete); }
+        check_resource(action.spec(), self.scope, self.resource)?;
+        if self.records.contains_key(&permit.attempt) { return Err(Error::Duplicate); }
+        if self.records.len() >= self.max_deliveries { return Err(Error::Limit); }
+        let bytes = self.action_bytes.checked_add(retained_action_bytes(action)?).ok_or(Error::Limit)?;
+        if bytes > MAX_DELIVERY_ACTION_BYTES { return Err(Error::Limit); }
+        let now = self.inspect().ledger.elapsed.ok_or(Error::Incomplete)?;
+        let retained_until = ElapsedTick(now.0.checked_add(self.retention_ticks).ok_or(Error::Overflow)?);
+        let envelope = DispatchEnvelope {
+            binding: Rc::clone(&self.binding), epoch: self.epoch, attempt: permit.attempt,
+            action: action.clone(), retained_until,
+        };
+        let record = DeliveryRecord { action: action.clone(), retained_until, resolution: None };
+        self.controller.dispatch(permit, action, snapshot)?;
+        self.records.insert(permit.attempt, record);
+        self.action_bytes = bytes;
+        Ok(envelope)
+    }
+
+    pub fn acknowledgment_lost(&mut self, attempt: u64) -> Result<(), Error> {
+        self.records.get(&attempt).ok_or(Error::Missing)?;
+        match self.inspect().ledger.stages.get(&attempt).copied().ok_or(Error::Missing)? {
+            ActionState::Dispatching => self.controller.mark_unknown(attempt),
+            ActionState::Unknown => Ok(()),
+            _ => Err(Error::WrongState),
+        }
+    }
+
+    pub fn status_query(&self, attempt: u64) -> Result<StatusQuery, Error> {
+        let record = self.records.get(&attempt).ok_or(Error::Missing)?;
+        Ok(StatusQuery(DispatchEnvelope {
+            binding: Rc::clone(&self.binding), epoch: self.epoch, attempt,
+            action: record.action.clone(), retained_until: record.retained_until,
+        }))
+    }
+
+    /// Only a registered endpoint's terminal receipt reaches the trusted-outcome
+    /// operation. Duplicating an identical receipt is idempotent, not a refund.
+    /// Existing evidence remains valid after retention, expiry, reset or policy
+    /// rotation; those events cannot change a terminal remote outcome.
+    pub fn accept_receipt(&mut self, receipt: EndpointReceipt) -> Result<bool, Error> {
+        if !Rc::ptr_eq(&self.binding, &receipt.binding) { return Err(Error::Binding); }
+        let record = self.records.get(&receipt.attempt).ok_or(Error::Missing)?;
+        if receipt.action != record.action || receipt.retained_until != record.retained_until {
+            return Err(Error::Binding);
+        }
+        if let Some(previous) = &record.resolution {
+            return if previous == &receipt { Ok(false) } else { Err(Error::Binding) };
+        }
+        let outcome = match receipt.outcome {
+            EndpointOutcome::Executed { .. } => TrustedOutcome::Executed,
+            EndpointOutcome::NotExecuted { .. } => TrustedOutcome::NotExecuted,
+        };
+        self.controller.record_trusted_outcome(receipt.attempt, outcome)?;
+        self.records.get_mut(&receipt.attempt).expect("retained delivery").resolution = Some(receipt);
+        Ok(true)
+    }
+
+    pub fn resolution(&self, attempt: u64) -> Result<Option<&EndpointReceipt>, Error> {
+        Ok(self.records.get(&attempt).ok_or(Error::Missing)?.resolution.as_ref())
+    }
+
+    pub fn cancel(&mut self, attempt: u64) -> Result<(), Error> { self.controller.cancel(attempt) }
+    pub fn deny(&mut self, attempt: u64) -> Result<(), Error> { self.controller.deny(attempt) }
+    pub fn revoke_epoch(&mut self) -> Result<(), Error> { self.controller.revoke_epoch() }
+
+    pub fn abandon_unknown(&mut self, attempt: u64) -> Result<(), Error> {
+        self.records.get(&attempt).ok_or(Error::Missing)?;
+        self.controller.mark_irrecoverable(attempt)
+    }
+
+    pub fn replace_policy(&mut self, sequence: u64, epoch: u64, next: Policy) -> Result<PolicyChange, Error> {
+        self.controller.replace_policy(sequence, epoch, next)
+    }
+
+    pub fn capture_checkpoint(&mut self, id: u64, revision: u64) -> Result<CheckpointHandle, Error> {
+        self.controller.capture_checkpoint(id, revision)
+    }
+
+    pub fn replace_actor_state(&mut self, revision: u64, actor: ActorState) -> Result<(), Error> {
+        self.controller.replace_actor_state(revision, actor)
+    }
+
+    pub fn reset(&mut self, request: ResetRequest) -> Result<ResetReceipt, Error> {
+        self.controller.reset(request)
+    }
+}
+
+fn check_resource(spec: &ActionSpec, scope: Scope, resource: ResolvedTarget) -> Result<(), Error> {
+    let target = spec.target.ok_or(Error::Incomplete)?;
+    if spec.scope != scope || target.adapter != resource.adapter || target.object != resource.object
+        || target.contract_version != resource.contract_version || target.generation != resource.generation
+    {
+        return Err(Error::Binding);
+    }
+    let bytes = u64::try_from(spec.payload.len()).map_err(|_| Error::Limit)?;
+    if bytes > spec.units { return Err(Error::Limit); }
+    Ok(())
+}
+
+fn retained_action_bytes(action: &FrozenAction) -> Result<usize, Error> {
+    action.spec().required_witnesses.iter().try_fold(action.spec().payload.len(), |sum, witness| {
+        let bytes = match witness {
+            ReadWitness::Exact { value: Some(value), .. } => value.len(),
+            _ => 0,
+        };
+        sum.checked_add(bytes).ok_or(Error::Limit)
+    })
+}
