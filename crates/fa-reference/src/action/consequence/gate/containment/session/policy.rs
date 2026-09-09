@@ -5,6 +5,8 @@
 //! Unknown evidence never produces a certificate. The trace explains the same
 //! computation that supplies the action's witnesses; it is not a second scorer.
 
+pub mod controller;
+
 use crate::action::{FrozenAction, MAX_REQUIRED_WITNESSES, MAX_WITNESS_BYTES, ResolvedTarget};
 use crate::{Error, ReadWitness, Snapshot};
 
