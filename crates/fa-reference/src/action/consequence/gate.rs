@@ -201,11 +201,15 @@ impl ConsequenceAuthority {
         if attempt.action != request.action || request.action.spec().scope != self.authority.scope {
             return Err(Error::Binding);
         }
-        if !undispatched(attempt.stage) {
-            return Err(Error::WrongState);
-        }
         let before = attempt.stage;
         let decision = decide(request.inputs);
+        let run_level = matches!(
+            decision.consequence,
+            Consequence::NarrowAuthority | Consequence::SuspendRun
+        );
+        if !undispatched(before) && !run_level {
+            return Err(Error::WrongState);
+        }
         if decision.consequence == Consequence::Continue
             && !matches!(before, ActionState::Reviewing | ActionState::Authorized)
         {
@@ -234,8 +238,12 @@ impl ConsequenceAuthority {
                 }
             }
         }
-        if request.inputs.exact_disqualifier || decision.consequence == Consequence::Deny {
+        if undispatched(before)
+            && (request.inputs.exact_disqualifier || decision.consequence == Consequence::Deny)
+        {
             // A stronger run consequence must not erase the exact attempt denial.
+            // Already dispatched effects keep their real disposition, even when
+            // a later exact finding triggers run-level containment.
             stops.insert(request.attempt, ActionState::Denied);
         }
 
@@ -687,6 +695,50 @@ mod tests {
         assert_eq!(gate.inspect().ledger.available, 20);
         assert_eq!(gate.propose(2, action), Err(Error::Binding));
         assert!(!gate.inspect().suspended);
+        conserved(&gate);
+    }
+
+    #[test]
+    fn post_dispatch_findings_can_suspend_without_rewriting_the_effect() {
+        let mut gate = authority();
+        let first = action(1, 4);
+        let second = action(2, 5);
+        let permit = authorize(&mut gate, 1, &first);
+        let _other = authorize(&mut gate, 2, &second);
+        gate.dispatch(&permit, &first, &snapshot()).unwrap();
+        gate.mark_unknown(1).unwrap();
+        let mut review = request(&gate, 1, &first, Restriction::SuspendRun);
+        review.inputs.exact_disqualifier = true;
+        let receipt = gate.apply_review(review).unwrap();
+        assert_eq!(receipt.before, ActionState::Unknown);
+        assert_eq!(receipt.after, ActionState::Unknown);
+        assert_eq!(receipt.stopped, vec![2]);
+        assert_eq!(receipt.refunded_units, 5);
+        assert_eq!(gate.inspect().ledger.charged, 4);
+        assert!(gate.inspect().suspended);
+        gate.record_trusted_outcome(1, TrustedOutcome::Executed).unwrap();
+        assert_eq!(gate.inspect().ledger.stages[&1], ActionState::Confirmed);
+        conserved(&gate);
+    }
+
+    #[test]
+    fn post_dispatch_narrowing_changes_future_authority_not_history() {
+        let mut gate = authority();
+        let first = action(1, 4);
+        let second = action(2, 5);
+        let permit = authorize(&mut gate, 1, &first);
+        let _other = authorize(&mut gate, 2, &second);
+        gate.dispatch(&permit, &first, &snapshot()).unwrap();
+        let mut review = request(&gate, 1, &first, Restriction::NarrowAuthority);
+        review.retained_targets =
+            Some(TargetCeiling::new(&[first.spec().target.unwrap()]).unwrap());
+        let receipt = gate.apply_review(review).unwrap();
+        assert_eq!(receipt.after, ActionState::Dispatching);
+        assert_eq!(receipt.stopped, vec![2]);
+        assert_eq!(receipt.refunded_units, 5);
+        assert_eq!(gate.propose(3, second), Err(Error::Binding));
+        let review = request(&gate, 1, &first, Restriction::Continue);
+        assert_eq!(gate.apply_review(review), Err(Error::WrongState));
         conserved(&gate);
     }
 }
