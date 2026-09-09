@@ -1,6 +1,8 @@
 //! Immutable policy evidence travels with the frozen congress, not beside it.
 //! The retained policy is shared data only; it contains no controller or rights.
 
+pub mod replay;
+
 use crate::action::FrozenAction;
 use crate::action::consequence::Decision;
 use crate::action::consequence::gate::ControlReceipt;
@@ -60,12 +62,16 @@ impl PolicySession {
     }
 
     pub fn finish(self) -> Result<PolicyReview, Error> {
-        Ok(PolicyReview {
+        let completed = PolicyReview {
             review: self.session.finish()?,
             policy: self.policy,
             evaluation: self.evaluation,
             snapshot_semantic_epoch: self.snapshot_semantic_epoch,
-        })
+        };
+        // The ordinary control path consumes only a replay-consistent review.
+        // This is independent recomputation, not authentication of source facts.
+        completed.verify_replay()?;
+        Ok(completed)
     }
 }
 
