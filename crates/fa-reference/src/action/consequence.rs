@@ -6,6 +6,7 @@
 //! No runtime, cryptography, persistence or model restoration is implemented.
 
 pub mod congress;
+pub mod experiment;
 pub mod gate;
 
 use crate::Error;
