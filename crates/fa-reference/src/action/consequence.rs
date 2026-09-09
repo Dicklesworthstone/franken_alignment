@@ -5,6 +5,8 @@
 //! separate operation with a narrowing floor, not a synonym for suspension.
 //! No runtime, cryptography, persistence or model restoration is implemented.
 
+pub mod gate;
+
 use crate::Error;
 
 pub const CONSEQUENCE_ENCODING_V1: u8 = 1;
