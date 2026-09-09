@@ -77,20 +77,19 @@ impl PublicationEndpoint {
         if now >= message.retained_until { return Err(Error::Stale); }
         if let Some(receipt) = self.existing(message)? { return Ok(receipt.clone()); }
         if self.receipts.len() >= self.max_deliveries { return Err(Error::Limit); }
-        if now >= message.action.spec().deadline {
+        if now >= message.request.deadline {
             return Ok(self.record(message, EndpointOutcome::NotExecuted {
                 reason: NonExecutionReason::DeadlineElapsed,
             }));
         }
-        let target = message.action.spec().target.ok_or(Error::Incomplete)?;
-        if target.expected_version != self.resource.expected_version {
+        if message.request.target.expected_version != self.resource.expected_version {
             return Ok(self.record(message, EndpointOutcome::NotExecuted {
                 reason: NonExecutionReason::VersionConflict,
             }));
         }
         let version = self.resource.expected_version.checked_add(1).ok_or(Error::Overflow)?;
         let executions = self.executions.checked_add(1).ok_or(Error::Overflow)?;
-        let payload = message.action.spec().payload.clone();
+        let payload = message.request.payload.clone();
         let receipt = self.record(message, EndpointOutcome::Executed { resulting_version: version });
         self.payload = payload;
         self.resource.expected_version = version;
@@ -123,14 +122,20 @@ impl PublicationEndpoint {
     fn validate(&self, message: &DispatchEnvelope) -> Result<ElapsedTick, Error> {
         if !Rc::ptr_eq(&self.binding, &message.binding) { return Err(Error::Binding); }
         let scope = self.scope.ok_or(Error::Incomplete)?;
-        check_resource(message.action.spec(), scope, self.resource)?;
+        if message.request.scope != scope || !same_resource(message.request.target, self.resource) {
+            return Err(Error::Binding);
+        }
+        let bytes = u64::try_from(message.request.payload.len()).map_err(|_| Error::Limit)?;
+        if bytes > message.request.units || message.request.payload.len() > MAX_PAYLOAD_BYTES {
+            return Err(Error::Limit);
+        }
         self.elapsed.ok_or(Error::Incomplete)
     }
 
     fn existing(&self, message: &DispatchEnvelope) -> Result<Option<&EndpointReceipt>, Error> {
         let receipt = self.receipts.get(&message.attempt);
         if let Some(receipt) = receipt {
-            if receipt.action != message.action || receipt.retained_until != message.retained_until {
+            if receipt.request != message.request || receipt.retained_until != message.retained_until {
                 return Err(Error::Binding);
             }
         }
@@ -140,7 +145,7 @@ impl PublicationEndpoint {
     fn record(&mut self, message: &DispatchEnvelope, outcome: EndpointOutcome) -> EndpointReceipt {
         let receipt = EndpointReceipt {
             binding: Rc::clone(&self.binding), attempt: message.attempt,
-            action: message.action.clone(), retained_until: message.retained_until, outcome,
+            request: message.request.clone(), retained_until: message.retained_until, outcome,
         };
         self.receipts.insert(message.attempt, receipt.clone());
         receipt

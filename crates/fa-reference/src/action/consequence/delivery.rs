@@ -27,6 +27,45 @@ pub const MAX_DELIVERIES: usize = 128;
 /// Counts each retained frozen action once, not allocator or transport copies.
 pub const MAX_DELIVERY_ACTION_BYTES: usize = 2 * 1_024 * 1_024;
 
+/// Exact execution-bearing fields only. Policy witnesses, helper votes and actor
+/// checkpoints never enter the endpoint's request, query or receipt types.
+/// It cannot be constructed or edited independently of the consumed permit.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct PublicationRequest {
+    version: u32,
+    scope: Scope,
+    target: ResolvedTarget,
+    payload: Vec<u8>,
+    policy_epoch: u64,
+    deadline: ElapsedTick,
+    units: u64,
+}
+
+impl PublicationRequest {
+    pub fn scope(&self) -> Scope { self.scope }
+    pub fn target(&self) -> ResolvedTarget { self.target }
+    pub fn payload(&self) -> &[u8] { &self.payload }
+    pub fn policy_epoch(&self) -> u64 { self.policy_epoch }
+    pub fn deadline(&self) -> ElapsedTick { self.deadline }
+    pub fn units(&self) -> u64 { self.units }
+
+    fn from_action(action: &FrozenAction) -> Self {
+        let spec = action.spec();
+        Self {
+            version: spec.version, scope: spec.scope, target: spec.target.expect("frozen target"),
+            payload: spec.payload.clone(), policy_epoch: spec.policy_epoch,
+            deadline: spec.deadline, units: spec.units,
+        }
+    }
+
+    fn matches_action(&self, action: &FrozenAction) -> bool {
+        let spec = action.spec();
+        self.version == spec.version && self.scope == spec.scope && Some(self.target) == spec.target
+            && self.payload == spec.payload && self.policy_epoch == spec.policy_epoch
+            && self.deadline == spec.deadline && self.units == spec.units
+    }
+}
+
 /// A copyable message is data about an already consumed permit. Only the broker
 /// constructs it. Re-delivering it to the registered endpoint cannot create a
 /// second publication under the same key. It is not an authorization interface.
@@ -35,13 +74,13 @@ pub struct DispatchEnvelope {
     binding: Rc<()>,
     epoch: u64,
     attempt: u64,
-    action: FrozenAction,
+    request: PublicationRequest,
     retained_until: ElapsedTick,
 }
 
 impl DispatchEnvelope {
     pub fn attempt(&self) -> u64 { self.attempt }
-    pub fn action(&self) -> &FrozenAction { &self.action }
+    pub fn request(&self) -> &PublicationRequest { &self.request }
     pub fn retained_until(&self) -> ElapsedTick { self.retained_until }
 }
 
@@ -74,20 +113,30 @@ pub enum EndpointOutcome {
 /// use fa_reference::action::consequence::delivery::EndpointReceipt;
 /// fn forge() -> EndpointReceipt { EndpointReceipt {} }
 /// ```
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug)]
 pub struct EndpointReceipt {
     binding: Rc<()>,
     attempt: u64,
-    action: FrozenAction,
+    request: PublicationRequest,
     retained_until: ElapsedTick,
     outcome: EndpointOutcome,
 }
 
 impl EndpointReceipt {
     pub fn attempt(&self) -> u64 { self.attempt }
-    pub fn action(&self) -> &FrozenAction { &self.action }
+    pub fn request(&self) -> &PublicationRequest { &self.request }
     pub fn outcome(&self) -> EndpointOutcome { self.outcome }
 }
+
+impl PartialEq for EndpointReceipt {
+    fn eq(&self, other: &Self) -> bool {
+        Rc::ptr_eq(&self.binding, &other.binding) && self.attempt == other.attempt
+            && self.request == other.request && self.retained_until == other.retained_until
+            && self.outcome == other.outcome
+    }
+}
+
+impl Eq for EndpointReceipt {}
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum EndpointStatus {
@@ -212,7 +261,7 @@ impl DeliveryBroker {
         let retained_until = ElapsedTick(now.0.checked_add(self.retention_ticks).ok_or(Error::Overflow)?);
         let envelope = DispatchEnvelope {
             binding: Rc::clone(&self.binding), epoch: self.epoch, attempt: permit.attempt,
-            action: action.clone(), retained_until,
+            request: PublicationRequest::from_action(action), retained_until,
         };
         let record = DeliveryRecord { action: action.clone(), retained_until, resolution: None };
         self.controller.dispatch(permit, action, snapshot)?;
@@ -234,7 +283,7 @@ impl DeliveryBroker {
         let record = self.records.get(&attempt).ok_or(Error::Missing)?;
         Ok(StatusQuery(DispatchEnvelope {
             binding: Rc::clone(&self.binding), epoch: self.epoch, attempt,
-            action: record.action.clone(), retained_until: record.retained_until,
+            request: PublicationRequest::from_action(&record.action), retained_until: record.retained_until,
         }))
     }
 
@@ -245,7 +294,7 @@ impl DeliveryBroker {
     pub fn accept_receipt(&mut self, receipt: EndpointReceipt) -> Result<bool, Error> {
         if !Rc::ptr_eq(&self.binding, &receipt.binding) { return Err(Error::Binding); }
         let record = self.records.get(&receipt.attempt).ok_or(Error::Missing)?;
-        if receipt.action != record.action || receipt.retained_until != record.retained_until {
+        if !receipt.request.matches_action(&record.action) || receipt.retained_until != record.retained_until {
             return Err(Error::Binding);
         }
         if let Some(previous) = &record.resolution {
@@ -290,13 +339,14 @@ impl DeliveryBroker {
     }
 }
 
+fn same_resource(target: ResolvedTarget, resource: ResolvedTarget) -> bool {
+    target.adapter == resource.adapter && target.object == resource.object
+        && target.contract_version == resource.contract_version && target.generation == resource.generation
+}
+
 fn check_resource(spec: &ActionSpec, scope: Scope, resource: ResolvedTarget) -> Result<(), Error> {
     let target = spec.target.ok_or(Error::Incomplete)?;
-    if spec.scope != scope || target.adapter != resource.adapter || target.object != resource.object
-        || target.contract_version != resource.contract_version || target.generation != resource.generation
-    {
-        return Err(Error::Binding);
-    }
+    if spec.scope != scope || !same_resource(target, resource) { return Err(Error::Binding); }
     let bytes = u64::try_from(spec.payload.len()).map_err(|_| Error::Limit)?;
     if bytes > spec.units { return Err(Error::Limit); }
     Ok(())
