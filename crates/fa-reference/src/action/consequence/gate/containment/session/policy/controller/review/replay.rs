@@ -7,15 +7,18 @@
 //! it does not prove provider truth, completeness, helper honesty, durability,
 //! external execution or full control-ledger accounting. It never emits Permit.
 
+mod wire;
+pub use wire::MAX_ARCHIVE_BYTES;
+
 use super::{PolicyReceipt, PolicyReview, PolicySession};
-use super::super::PolicyAuthority;
+use super::super::{PolicyAuthority, validate_congress};
 use crate::action::{FrozenAction, MAX_REQUIRED_WITNESSES, MAX_WITNESS_BYTES};
 use crate::action::consequence::{Consequence, Decision};
 use crate::action::consequence::congress::{CongressPolicy, evaluate_round};
 use crate::action::consequence::gate::{ControlReceipt, TargetCeiling};
 use crate::action::consequence::gate::containment::session::{SessionSpec, transcript::RoundTranscript};
-use crate::action::consequence::gate::containment::session::policy::{Evaluation, Policy, Truth};
-use crate::reducer::Reduction;
+use crate::action::consequence::gate::containment::session::policy::{Evaluation, MAX_POLICY_NODES, Policy, Truth};
+use crate::reducer::{MAX_IDENTIFIER_BYTES, MAX_VOTES, Reduction};
 use crate::{Error, Judgment, ReadWitness, Snapshot};
 use std::collections::BTreeMap;
 
@@ -76,9 +79,26 @@ impl DecisionArchive {
         if self.version != DECISION_ARCHIVE_VERSION {
             return Err(Error::InvalidInput);
         }
-        // Bound collections before structural comparisons or reconstruction.
+        // Bound public collection shapes before structural comparisons.
+        validate_congress(&self.anchor.congress)?;
+        validate_congress(&expected.congress)?;
         validate_observations(&self.anchor.observations)?;
         validate_observations(&expected.observations)?;
+        validate_observations(self.evaluation.witnesses())?;
+        if self.evaluation.trace().len() > MAX_POLICY_NODES || self.decision.rules.len() > 4
+            || self.tally.admitted_weights.len() > MAX_VOTES
+            || self.tally.admitted_cohort_weights.len() > MAX_VOTES
+            || self.missing.len() > MAX_VOTES || self.abstained.len() > MAX_VOTES
+        {
+            return Err(Error::Limit);
+        }
+        for name in self.tally.admitted_weights.keys()
+            .chain(self.tally.admitted_cohort_weights.keys())
+            .chain(self.missing.iter()).chain(self.abstained.iter())
+        {
+            if name.len() > MAX_IDENTIFIER_BYTES { return Err(Error::Limit); }
+            if name.is_empty() { return Err(Error::InvalidInput); }
+        }
         let round = self.transcript.replay()?;
         if &self.anchor != expected || expected.attempt == 0
             || round.id() != expected.round
@@ -227,7 +247,7 @@ impl PolicyReview {
         }
     }
 
-    pub(super) fn verify_replay(&self) -> Result<(), Error> {
+    pub(crate) fn verify_replay(&self) -> Result<(), Error> {
         let archive = self.replay_archive();
         let replayed = archive.verify(&archive.anchor)?;
         let spec = &self.review.context.spec;
