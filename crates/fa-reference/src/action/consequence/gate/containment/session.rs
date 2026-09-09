@@ -6,6 +6,8 @@
 //! The underlying commitment remains the explicitly non-cryptographic round
 //! oracle. No authentication, cross-process commitment or helper honesty follows.
 
+pub mod policy;
+
 use super::ContainmentAuthority;
 use crate::Error;
 use crate::action::FrozenAction;
