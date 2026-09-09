@@ -5,6 +5,8 @@
 //! The inner authority is never exposed: Continue still requires its normal
 //! witness, epoch, deadline, scope and exact-envelope checks.
 
+pub mod containment;
+
 use super::{Consequence, Decision, DecisionInputs, decide};
 use crate::action::{
     ActionState, ElapsedTick, FrozenAction, Inspection, MAX_ATTEMPTS, Permit, ReferenceAuthority,
@@ -285,7 +287,7 @@ impl ConsequenceAuthority {
 
         self.authority.rights = next_rights;
         for (id, terminal) in stops {
-            self.authority.attempts.get_mut(&id).expect("validated attempt").stage = terminal;
+            self.authority.attempts.get_mut(&id).expect("checked attempt").stage = terminal;
             self.decisions.insert(id, Consequence::Deny);
         }
         self.decisions.insert(request.attempt, decision.consequence);
@@ -650,9 +652,9 @@ mod tests {
         let mut gate = authority();
         let action = action(1, 4);
         begin(&mut gate, 1, &action);
+        let mut invalid = request(&gate, 1, &action, Restriction::Continue);
         let before = gate.inspect();
-        let base = request(&gate, 1, &action, Restriction::Continue);
-        let mut invalid = base.clone();
+        let base = invalid.clone();
         invalid.binding.evidence_root = [0; 32];
         assert_eq!(gate.apply_review(invalid), Err(Error::InvalidInput));
         let mut invalid = base.clone();
