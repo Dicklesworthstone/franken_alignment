@@ -7,6 +7,9 @@
 
 mod review;
 pub use review::{PolicyReceipt, PolicyReview, PolicySession};
+pub use review::replay::{
+    ArchivedPolicyReceipt, DecisionArchive, MAX_ARCHIVE_BYTES, ReplayedDecision, ReviewAnchor,
+};
 
 use super::{Evaluation, Policy, Truth};
 use super::super::{ReviewSession, SessionSpec};
@@ -195,6 +198,7 @@ impl PolicyAuthority {
         if !Rc::ptr_eq(&review.policy, &self.policy) {
             return Err(Error::Stale);
         }
+        review.verify_replay()?;
         if review.decision().consequence == Consequence::Continue {
             self.recheck(review.review.context.spec.attempt, snapshot)?;
         }
