@@ -88,7 +88,7 @@ impl DecisionArchive {
 
 impl ReviewAnchor {
     pub fn to_bytes(&self) -> Result<Vec<u8>, Error> {
-        super::super::super::super::validate_congress(&self.congress)?;
+        super::super::super::validate_congress(&self.congress)?;
         validate_observations(&self.observations)?;
         if !self.complete { return Err(Error::Incomplete); }
         if self.attempt == 0 || self.round == 0 || self.evidence_root == [0; 32] {
