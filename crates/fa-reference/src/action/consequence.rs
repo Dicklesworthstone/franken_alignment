@@ -9,6 +9,7 @@ pub mod congress;
 pub mod delivery;
 pub mod experiment;
 pub mod gate;
+pub mod oversight;
 
 use crate::Error;
 
