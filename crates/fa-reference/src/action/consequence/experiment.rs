@@ -5,6 +5,9 @@
 //! carry old helper approval across changed inputs. Supplied archive provenance
 //! and the separately retained anchor remain the replay verifier's assumptions.
 
+mod search;
+pub use search::{MAX_SEARCH_CANDIDATES, Minimality, RepairSearch, SearchCase, SufficientRepair};
+
 use super::gate::containment::session::policy::controller::replay::{
     DecisionArchive, ReplayedDecision, ReviewAnchor,
 };
@@ -88,6 +91,13 @@ pub struct NodeChange {
     pub counterfactual: Truth,
 }
 
+/// A report cannot enter the permit path.
+///
+/// ```compile_fail,E0308
+/// use fa_reference::action::consequence::experiment::CounterfactualReport;
+/// use fa_reference::action::Permit;
+/// fn cannot_authorize(report: CounterfactualReport) -> Permit { report }
+/// ```
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct CounterfactualReport {
     scope: u64,
