@@ -4,6 +4,7 @@
 mod session;
 mod reliability;
 mod activation;
+mod stream;
 pub mod consistency;
 pub mod human;
 pub use session::{ObservedReview, ObservedSession, ReviewWindow};
