@@ -7,6 +7,7 @@
 //! A missing status is consequently never a nonexecution proof or a refund.
 
 mod endpoint;
+pub mod fleet;
 pub mod stream;
 pub use endpoint::PublicationEndpoint;
 
@@ -186,6 +187,7 @@ pub struct DeliveryBroker {
     action_bytes: usize,
     stream: Option<StreamView>,
     stream_pending: Option<u64>,
+    fleet: Option<fleet::FleetDomain>,
 }
 
 impl DeliveryBroker {
@@ -206,6 +208,7 @@ impl DeliveryBroker {
             action_bytes: 0,
             stream: endpoint.stream_view().cloned(),
             stream_pending: None,
+            fleet: None,
         })
     }
 
@@ -238,10 +241,14 @@ impl DeliveryBroker {
     }
 
     pub fn observe_time(&mut self, tick: ElapsedTick) -> Result<(), Error> {
-        self.controller.observe_time(tick)
+        self.check_fleet_time(tick)?;
+        self.controller.observe_time(tick)?;
+        self.publish_fleet_time(tick);
+        Ok(())
     }
 
     pub fn propose(&mut self, id: u64, spec: ActionSpec, snapshot: &Snapshot) -> Result<Proposal, Error> {
+        self.check_fleet()?;
         check_resource(&spec, self.scope, self.resource)?;
         self.check_stream(&spec)?;
         self.controller.propose(id, spec, snapshot)
@@ -254,10 +261,12 @@ impl DeliveryBroker {
     }
 
     pub fn apply_review(&mut self, review: PolicyReview, snapshot: &Snapshot) -> Result<PolicyReceipt, Error> {
+        if review.decision().consequence == super::Consequence::Continue { self.check_fleet()?; }
         self.controller.apply_review(review, snapshot)
     }
 
     pub fn authorize(&mut self, id: u64, snapshot: &Snapshot) -> Result<Permit, Error> {
+        self.check_fleet()?;
         self.controller.authorize(id, snapshot)
     }
 
@@ -280,10 +289,12 @@ impl DeliveryBroker {
             request: PublicationRequest::from_action(action), retained_until,
         };
         let record = DeliveryRecord { action: action.clone(), retained_until, resolution: None };
+        let fleet_admission = self.prepare_fleet_dispatch(permit.attempt)?;
         self.controller.dispatch(permit, action, snapshot)?;
         self.records.insert(permit.attempt, record);
         self.action_bytes = bytes;
         if self.stream.is_some() { self.stream_pending = Some(permit.attempt); }
+        self.publish_fleet_dispatch(permit.attempt, fleet_admission);
         Ok(envelope)
     }
 

@@ -54,3 +54,54 @@ impl PolicyAuthority {
         Ok(change)
     }
 }
+
+/// Result of the existing authority's exact admission-stop transaction. This
+/// contains no fleet messages, endpoint outcomes, actor restore or new rights.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub(crate) struct AuthorityFence {
+    pub(crate) sequence: u64,
+    pub(crate) previous_epoch: u64,
+    pub(crate) revocation_floor: u64,
+    pub(crate) cancelled: Vec<u64>,
+    pub(crate) refunded_units: u64,
+}
+
+impl PolicyAuthority {
+    pub(crate) fn fence_authority(
+        &mut self, expected_sequence: u64, expected_epoch: u64, minimum_epoch: u64,
+    ) -> Result<AuthorityFence, Error> {
+        let gate = &mut self.host.gate;
+        if gate.sequence != expected_sequence || gate.authority.rights.epoch() != expected_epoch {
+            return Err(Error::Stale);
+        }
+        if minimum_epoch == 0 { return Err(Error::InvalidInput); }
+        let sequence = gate.sequence.checked_add(1).ok_or(Error::Overflow)?;
+        let mut rights = gate.authority.rights.clone();
+        if !rights.conserved() { return Err(Error::WrongState); }
+        let available = rights.available();
+        rights.revoke_epoch()?;
+        rights.epoch = rights.epoch().max(minimum_epoch);
+        let cancelled: Vec<_> = gate.authority.attempts.iter()
+            .filter(|(_, attempt)| undispatched(attempt.stage)).map(|(id, _)| *id).collect();
+        for id in &cancelled {
+            if gate.authority.attempts[id].stage == ActionState::Authorized {
+                rights.abort_before_dispatch(*id)?;
+            }
+        }
+        if !rights.conserved() { return Err(Error::WrongState); }
+        let result = AuthorityFence {
+            sequence, previous_epoch: expected_epoch, revocation_floor: rights.epoch(), cancelled,
+            refunded_units: rights.available().checked_sub(available).ok_or(Error::WrongState)?,
+        };
+        // Preserve every post-dispatch disposition and every external liability.
+        // All Result-producing operations finish before publishing this stop.
+        gate.authority.rights = rights;
+        for id in &result.cancelled {
+            gate.authority.attempts.get_mut(id).expect("validated attempt").stage = ActionState::Cancelled;
+            gate.decisions.remove(id);
+        }
+        gate.sequence = sequence;
+        gate.suspended = true;
+        Ok(result)
+    }
+}
