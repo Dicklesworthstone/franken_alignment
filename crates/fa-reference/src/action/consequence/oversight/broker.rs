@@ -8,6 +8,7 @@ mod stream;
 mod fleet;
 pub mod consistency;
 pub mod human;
+pub mod policy_governance;
 pub use session::{ObservedReview, ObservedSession, ReviewWindow};
 
 use super::{CommitteeContract, CommitteeInput};
@@ -51,6 +52,7 @@ pub struct OversightBroker {
     human: Option<human::HumanGate>,
     activation: Option<activation::ActivationState>,
     consistency: Option<consistency::ConsistencyState>,
+    policy_campaigns: Option<policy_governance::PolicyCampaignGate>,
 }
 
 impl OversightBroker {
@@ -59,7 +61,7 @@ impl OversightBroker {
         let scope = config.scope;
         Ok(Self { delivery: DeliveryBroker::new(config, endpoint)?, scope, contracts, issuer: Rc::new(()),
             inputs: BTreeMap::new(), started_rounds: BTreeSet::new(), captured_bytes: 0, credibility: None,
-            human: None, activation: None, consistency: None })
+            human: None, activation: None, consistency: None, policy_campaigns: None })
     }
     pub fn inspect(&self) -> ControlInspection { self.delivery.inspect() }
     pub fn contracts(&self) -> &CommitteeContract { &self.contracts }
@@ -168,6 +170,7 @@ impl OversightBroker {
         let result = self.delivery.reset(request)?; for slot in self.inputs.values_mut() { slot.approved = None; } Ok(result)
     }
     pub fn replace_policy(&mut self, sequence: u64, epoch: u64, next: Policy) -> Result<PolicyChange, Error> {
+        if self.policy_campaigns.is_some() { return Err(Error::Incomplete); }
         let result = self.delivery.replace_policy(sequence, epoch, next)?; for slot in self.inputs.values_mut() { slot.approved = None; } Ok(result)
     }
 }

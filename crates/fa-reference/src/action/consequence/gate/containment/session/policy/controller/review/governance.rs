@@ -2,6 +2,8 @@
 //! No roster, cohort, threshold, quota, exact policy or target-ceiling change is
 //! expressible through this transition. There is no external raw setter.
 
+mod campaign;
+
 use super::super::{PolicyAuthority, validate_congress};
 use crate::action::ActionState;
 use crate::action::consequence::congress::CongressPolicy;
