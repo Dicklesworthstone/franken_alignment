@@ -4,6 +4,7 @@
 mod session;
 mod reliability;
 mod activation;
+pub mod consistency;
 pub mod human;
 pub use session::{ObservedReview, ObservedSession, ReviewWindow};
 
@@ -14,7 +15,7 @@ use crate::action::consequence::gate::ControlInspection;
 use crate::action::consequence::gate::containment::{ActorState, CheckpointHandle, ResetReceipt, ResetRequest};
 use crate::action::consequence::gate::containment::session::policy::Policy;
 use crate::action::consequence::gate::containment::session::policy::controller::{ControllerConfig, PolicyChange, PolicyReceipt, Proposal};
-use crate::action::{ActionSpec, ElapsedTick, FrozenAction, Permit};
+use crate::action::{ActionSpec, ElapsedTick, FrozenAction, Permit, Scope};
 use crate::{Error, Snapshot};
 use std::collections::{BTreeMap, BTreeSet};
 use std::rc::Rc;
@@ -38,6 +39,7 @@ pub struct ObservedReceipt {
 #[derive(Debug)]
 pub struct OversightBroker {
     delivery: DeliveryBroker,
+    scope: Scope,
     contracts: CommitteeContract,
     issuer: Rc<()>,
     inputs: BTreeMap<u64, InputSlot>,
@@ -46,21 +48,27 @@ pub struct OversightBroker {
     credibility: Option<reliability::EvaluationState>,
     human: Option<human::HumanGate>,
     activation: Option<activation::ActivationState>,
+    consistency: Option<consistency::ConsistencyState>,
 }
 
 impl OversightBroker {
     pub fn new(config: ControllerConfig, endpoint: &mut PublicationEndpoint, contracts: CommitteeContract) -> Result<Self, Error> {
         if !contracts.members().keys().eq(config.congress.members.keys()) { return Err(Error::Binding); }
-        Ok(Self { delivery: DeliveryBroker::new(config, endpoint)?, contracts, issuer: Rc::new(()),
+        let scope = config.scope;
+        Ok(Self { delivery: DeliveryBroker::new(config, endpoint)?, scope, contracts, issuer: Rc::new(()),
             inputs: BTreeMap::new(), started_rounds: BTreeSet::new(), captured_bytes: 0, credibility: None,
-            human: None, activation: None })
+            human: None, activation: None, consistency: None })
     }
     pub fn inspect(&self) -> ControlInspection { self.delivery.inspect() }
     pub fn contracts(&self) -> &CommitteeContract { &self.contracts }
     pub fn captured_input_bytes(&self) -> usize { self.captured_bytes }
     pub fn observe_time(&mut self, tick: ElapsedTick) -> Result<(), Error> { self.delivery.observe_time(tick) }
 
+    /// In a configured consistency lane, an observed valid category consumes its
+    /// pre-action forecast even when subsequent admission fails. Inspect the
+    /// consistency observation after Err; it cannot be rerolled as a new sample.
     pub fn propose(&mut self, id: u64, spec: ActionSpec, snapshot: &Snapshot) -> Result<Proposal, Error> {
+        self.observe_predicted_action(id, &spec)?;
         let proposal = self.delivery.propose(id, spec, snapshot)?;
         self.inputs.insert(id, InputSlot { action: proposal.action.clone(), revision: 0, current: None, approved: None });
         Ok(proposal)
@@ -104,6 +112,7 @@ impl OversightBroker {
         let slot = self.inputs.get(&review.attempt).ok_or(Error::Missing)?;
         let permitting = review.policy.decision().consequence == Consequence::Continue;
         if permitting {
+            self.check_consistency(review.attempt)?;
             self.check_activation(review.attempt)?;
             let supplied = current.ok_or(Error::Incomplete)?;
             if slot.revision != review.revision || slot.current.as_deref() != Some(review.inputs.as_ref()) || supplied != review.inputs.as_ref() { return Err(Error::Stale); }
@@ -126,6 +135,7 @@ impl OversightBroker {
         self.check_approval(permit.attempt, current)?; self.delivery.dispatch(permit, action, snapshot)
     }
     fn check_approval(&self, id: u64, supplied: Option<&CommitteeInput>) -> Result<(), Error> {
+        self.check_consistency(id)?;
         self.check_activation(id)?;
         let supplied = supplied.ok_or(Error::Incomplete)?; let slot = self.inputs.get(&id).ok_or(Error::Missing)?;
         let current = slot.current.as_deref().ok_or(Error::Incomplete)?;

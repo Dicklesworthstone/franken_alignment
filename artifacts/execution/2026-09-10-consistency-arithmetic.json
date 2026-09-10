@@ -1,0 +1,12 @@
+{
+  "scope": "Python limb port against Fraction; NOT Rust execution or calibration evidence",
+  "seed": 410913,
+  "random_paths": 64,
+  "exact_step_checks": 5123,
+  "maximum_steps": 512,
+  "exhaustive_null_histories": 256,
+  "null_crossing_probability": "3365/32768",
+  "declared_alpha": "1/4",
+  "mismatches": 0,
+  "script_sha256": "4c6ac0bbd43903ff7ab83006a169d5e6f1a495405f1ae4231ba58a2e90f49527"
+}

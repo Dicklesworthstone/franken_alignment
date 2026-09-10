@@ -4,6 +4,7 @@
 mod packet;
 mod broker;
 pub mod credibility;
+pub use broker::consistency;
 pub use broker::human;
 pub use packet::{CommitteeContract, CommitteeInput, HelperContract, MAX_COMMITTEE_BYTES, action_frame};
 pub use broker::{
