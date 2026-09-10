@@ -11,6 +11,7 @@ pub mod delivery;
 pub mod experiment;
 pub mod gate;
 pub mod oversight;
+pub mod policy_campaign;
 
 use crate::Error;
 
