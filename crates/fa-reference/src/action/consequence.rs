@@ -5,6 +5,7 @@
 //! separate operation with a narrowing floor, not a synonym for suspension.
 //! No runtime, cryptography, persistence or model restoration is implemented.
 
+pub mod activation;
 pub mod congress;
 pub mod delivery;
 pub mod experiment;
