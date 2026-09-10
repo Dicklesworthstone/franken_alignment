@@ -102,6 +102,14 @@ pub struct HumanStatus {
     pub finished_at: Option<ElapsedTick>,
 }
 
+/// Exactly the outstanding keys withdrawn by one reviewer operation. It is
+/// evidence of local key withdrawal, never a receipt for external nonexecution.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct HumanRevocation {
+    pub at: ElapsedTick,
+    pub requests: Vec<u64>,
+}
+
 #[derive(Debug)]
 struct Entry {
     binding: Rc<Binding>,
@@ -190,6 +198,24 @@ impl HumanReviewer {
         entry.status.finished_at = Some(now);
         Ok(())
     }
+
+    /// Withdraw every currently pending or approved key atomically. Terminal
+    /// outcomes stay terminal. This does not claim to stop an envelope already
+    /// returned by dispatch; seal/reconcile it through the endpoint protocol.
+    pub fn revoke_all(&self, now: ElapsedTick) -> Result<HumanRevocation, Error> {
+        let mut state = self.state.try_borrow_mut().map_err(|_| Error::WrongState)?;
+        state.observe(now)?;
+        let requests: Vec<_> = state.entries.iter().filter_map(|(id, entry)| {
+            matches!(entry.status.disposition, HumanDisposition::Pending | HumanDisposition::Approved)
+                .then_some(*id)
+        }).collect();
+        for id in &requests {
+            let entry = state.entries.get_mut(id).expect("retained outstanding key");
+            entry.status.disposition = HumanDisposition::Revoked;
+            entry.status.finished_at = Some(now);
+        }
+        Ok(HumanRevocation { at: now, requests })
+    }
 }
 
 impl OversightBroker {
@@ -262,6 +288,14 @@ impl OversightBroker {
         state.contexts.insert(context);
         state.retained_bytes = retained;
         Ok(HumanRequest { binding })
+    }
+
+    /// Recover the immutable review basis, not a lost reviewer role or key.
+    pub fn human_request(&self, request: u64) -> Result<HumanRequest, Error> {
+        let gate = self.human.as_ref().ok_or(Error::Incomplete)?;
+        let state = gate.state.try_borrow().map_err(|_| Error::WrongState)?;
+        let entry = state.entries.get(&request).ok_or(Error::Missing)?;
+        Ok(HumanRequest { binding: Rc::clone(&entry.binding) })
     }
 
     pub fn human_status(&self, request: u64) -> Result<HumanStatus, Error> {
