@@ -3,6 +3,7 @@
 
 mod session;
 mod reliability;
+pub mod human;
 pub use session::{ObservedReview, ObservedSession, ReviewWindow};
 
 use super::{CommitteeContract, CommitteeInput};
@@ -42,13 +43,15 @@ pub struct OversightBroker {
     started_rounds: BTreeSet<u64>,
     captured_bytes: usize,
     credibility: Option<reliability::EvaluationState>,
+    human: Option<human::HumanGate>,
 }
 
 impl OversightBroker {
     pub fn new(config: ControllerConfig, endpoint: &mut PublicationEndpoint, contracts: CommitteeContract) -> Result<Self, Error> {
         if !contracts.members().keys().eq(config.congress.members.keys()) { return Err(Error::Binding); }
         Ok(Self { delivery: DeliveryBroker::new(config, endpoint)?, contracts, issuer: Rc::new(()),
-            inputs: BTreeMap::new(), started_rounds: BTreeSet::new(), captured_bytes: 0, credibility: None })
+            inputs: BTreeMap::new(), started_rounds: BTreeSet::new(), captured_bytes: 0, credibility: None,
+            human: None })
     }
     pub fn inspect(&self) -> ControlInspection { self.delivery.inspect() }
     pub fn contracts(&self) -> &CommitteeContract { &self.contracts }
@@ -114,6 +117,9 @@ impl OversightBroker {
         self.check_approval(id, current)?; self.delivery.authorize(id, snapshot)
     }
     pub fn dispatch(&mut self, permit: &Permit, action: &FrozenAction, current: Option<&CommitteeInput>, snapshot: &Snapshot) -> Result<DispatchEnvelope, Error> {
+        // A configured two-key profile has no one-key fallback, even when the
+        // reviewer is unavailable. Reconciliation does not use this entry point.
+        if self.human.is_some() { return Err(Error::Incomplete); }
         self.check_approval(permit.attempt, current)?; self.delivery.dispatch(permit, action, snapshot)
     }
     fn check_approval(&self, id: u64, supplied: Option<&CommitteeInput>) -> Result<(), Error> {
