@@ -5,6 +5,7 @@
 //! This is a process-local source check, NOT transport authentication. Missing
 //! mantissa bits denote an interval; they are never claimed to be observed zeroes.
 
+pub mod consistency;
 pub mod monitor;
 pub mod probe;
 
