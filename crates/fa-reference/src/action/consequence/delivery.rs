@@ -7,6 +7,7 @@
 //! A missing status is consequently never a nonexecution proof or a refund.
 
 mod endpoint;
+pub mod stream;
 pub use endpoint::PublicationEndpoint;
 
 use super::gate::containment::session::policy::Policy;
@@ -22,6 +23,7 @@ use crate::action::{
 use crate::{Error, ReadWitness, Snapshot};
 use std::collections::BTreeMap;
 use std::rc::Rc;
+use stream::StreamView;
 
 pub const MAX_DELIVERIES: usize = 128;
 /// Counts each retained frozen action once, not allocator or transport copies.
@@ -98,6 +100,7 @@ pub enum NonExecutionReason {
     Sealed,
     VersionConflict,
     DeadlineElapsed,
+    StreamRejected,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -181,6 +184,8 @@ pub struct DeliveryBroker {
     fenced: bool,
     records: BTreeMap<u64, DeliveryRecord>,
     action_bytes: usize,
+    stream: Option<StreamView>,
+    stream_pending: Option<u64>,
 }
 
 impl DeliveryBroker {
@@ -199,6 +204,8 @@ impl DeliveryBroker {
             fenced: false,
             records: BTreeMap::new(),
             action_bytes: 0,
+            stream: endpoint.stream_view().cloned(),
+            stream_pending: None,
         })
     }
 
@@ -207,6 +214,13 @@ impl DeliveryBroker {
     pub fn inspect(&self) -> ControlInspection { self.controller.inspect() }
     pub fn dispatcher_epoch(&self) -> u64 { self.epoch }
     pub fn fence_confirmed(&self) -> bool { self.fenced }
+
+    /// Receipt-confirmed prefix and resource version, NOT a fresh remote read.
+    /// When pending is Some, the actual audience may already have seen more.
+    pub fn stream_state(&self) -> Option<(ResolvedTarget, &StreamView)> {
+        self.stream.as_ref().map(|view| (self.resource, view))
+    }
+    pub fn stream_pending(&self) -> Option<u64> { self.stream_pending }
 
     pub fn fence_request(&self) -> FenceRequest {
         FenceRequest { binding: Rc::clone(&self.binding), epoch: self.epoch }
@@ -229,6 +243,7 @@ impl DeliveryBroker {
 
     pub fn propose(&mut self, id: u64, spec: ActionSpec, snapshot: &Snapshot) -> Result<Proposal, Error> {
         check_resource(&spec, self.scope, self.resource)?;
+        self.check_stream(&spec)?;
         self.controller.propose(id, spec, snapshot)
     }
 
@@ -254,6 +269,7 @@ impl DeliveryBroker {
         if !self.fenced { return Err(Error::Incomplete); }
         check_resource(action.spec(), self.scope, self.resource)?;
         if self.records.contains_key(&permit.attempt) { return Err(Error::Duplicate); }
+        self.check_stream(action.spec())?;
         if self.records.len() >= self.max_deliveries { return Err(Error::Limit); }
         let bytes = self.action_bytes.checked_add(retained_action_bytes(action)?).ok_or(Error::Limit)?;
         if bytes > MAX_DELIVERY_ACTION_BYTES { return Err(Error::Limit); }
@@ -267,7 +283,17 @@ impl DeliveryBroker {
         self.controller.dispatch(permit, action, snapshot)?;
         self.records.insert(permit.attempt, record);
         self.action_bytes = bytes;
+        if self.stream.is_some() { self.stream_pending = Some(permit.attempt); }
         Ok(envelope)
+    }
+
+    fn check_stream(&self, spec: &ActionSpec) -> Result<(), Error> {
+        if let Some(stream) = &self.stream {
+            if self.stream_pending.is_some() { return Err(Error::Incomplete); }
+            if spec.target != Some(self.resource) { return Err(Error::Stale); }
+            stream.advance(&spec.payload)?;
+        }
+        Ok(())
     }
 
     pub fn acknowledgment_lost(&mut self, attempt: u64) -> Result<(), Error> {
@@ -289,8 +315,8 @@ impl DeliveryBroker {
 
     /// Only a registered endpoint's terminal receipt reaches the trusted-outcome
     /// operation. Duplicating an identical receipt is idempotent, not a refund.
-    /// Existing evidence remains valid after retention, expiry, reset or policy
-    /// rotation; those events cannot change a terminal remote outcome.
+    /// A stream prefix advances only for executed evidence; missing status,
+    /// cancellation, actor rewind and dispatcher restart cannot advance it.
     pub fn accept_receipt(&mut self, receipt: EndpointReceipt) -> Result<bool, Error> {
         if !Rc::ptr_eq(&self.binding, &receipt.binding) { return Err(Error::Binding); }
         let record = self.records.get(&receipt.attempt).ok_or(Error::Missing)?;
@@ -300,12 +326,31 @@ impl DeliveryBroker {
         if let Some(previous) = &record.resolution {
             return if previous == &receipt { Ok(false) } else { Err(Error::Binding) };
         }
+        let next_stream = if let Some(stream) = &self.stream {
+            if self.stream_pending != Some(receipt.attempt) { return Err(Error::WrongState); }
+            match receipt.outcome {
+                EndpointOutcome::Executed { resulting_version } => {
+                    if resulting_version != self.resource.expected_version.checked_add(1).ok_or(Error::Overflow)? {
+                        return Err(Error::Binding);
+                    }
+                    Some((resulting_version, stream.advance(&record.action.spec().payload)?))
+                }
+                EndpointOutcome::NotExecuted { .. } => None,
+            }
+        } else { None };
         let outcome = match receipt.outcome {
             EndpointOutcome::Executed { .. } => TrustedOutcome::Executed,
             EndpointOutcome::NotExecuted { .. } => TrustedOutcome::NotExecuted,
         };
         self.controller.record_trusted_outcome(receipt.attempt, outcome)?;
         self.records.get_mut(&receipt.attempt).expect("retained delivery").resolution = Some(receipt);
+        if self.stream.is_some() {
+            if let Some((version, next)) = next_stream {
+                self.resource.expected_version = version;
+                self.stream = Some(next);
+            }
+            self.stream_pending = None;
+        }
         Ok(true)
     }
 

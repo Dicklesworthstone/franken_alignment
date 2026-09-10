@@ -1,13 +1,13 @@
 //! A separately owned, atomic reference publication endpoint.
 //!
-//! It owns actual bounded payload/version state in this model, not an always-OK
-//! callback. Both the endpoint and control state are assumed to survive a
-//! dispatcher interruption. No disk, network, provider or crash durability is
-//! established. Time inputs share a declared logical clock domain.
+//! It owns bounded payload/version state, not an always-OK callback. The optional
+//! stream profile only appends complete reviewed messages and seals an explicit
+//! finish. No disk, network, provider or OS-crash durability is established.
 
 mod recovery;
 
 use super::*;
+use super::stream::{StreamProfile, StreamView};
 use crate::action::MAX_PAYLOAD_BYTES;
 
 #[derive(Debug)]
@@ -22,6 +22,7 @@ pub struct PublicationEndpoint {
     elapsed: Option<ElapsedTick>,
     receipts: BTreeMap<u64, EndpointReceipt>,
     executions: u64,
+    stream: Option<StreamView>,
 }
 
 impl PublicationEndpoint {
@@ -39,7 +40,20 @@ impl PublicationEndpoint {
         Ok(Self {
             binding: Rc::new(()), retention_ticks, max_deliveries, resource, payload,
             scope: None, epoch: 0, elapsed: None, receipts: BTreeMap::new(), executions: 0,
+            stream: None,
         })
+    }
+
+    /// Select append-only complete-message semantics before attaching a broker.
+    /// The registered resource contract must identify this mode. No mode-change
+    /// operation exists. Raw tool arguments are not dispatched by this endpoint.
+    pub fn new_stream(
+        resource: ResolvedTarget, profile: StreamProfile, retention_ticks: u64, max_deliveries: usize,
+    ) -> Result<Self, Error> {
+        if profile.max_messages() + 1 > max_deliveries { return Err(Error::Limit); }
+        let mut endpoint = Self::new(resource, Vec::new(), retention_ticks, max_deliveries)?;
+        endpoint.stream = Some(StreamView::empty(profile));
+        Ok(endpoint)
     }
 
     pub(super) fn attach(&mut self, scope: Scope) -> Result<(), Error> {
@@ -51,6 +65,8 @@ impl PublicationEndpoint {
     pub fn target(&self) -> ResolvedTarget { self.resource }
     pub fn payload(&self) -> &[u8] { &self.payload }
     pub fn execution_count(&self) -> u64 { self.executions }
+    /// Actual endpoint-visible messages. A broker's confirmed view can lag it.
+    pub fn stream_view(&self) -> Option<&StreamView> { self.stream.as_ref() }
 
     pub fn observe_time(&mut self, tick: ElapsedTick) -> Result<(), Error> {
         if self.elapsed.is_some_and(|previous| tick < previous) { return Err(Error::Stale); }
@@ -69,8 +85,9 @@ impl PublicationEndpoint {
         Ok(FenceAcknowledgment { binding: Rc::clone(&self.binding), epoch: self.epoch })
     }
 
-    /// Apply one compare-and-publish operation, or replay its terminal receipt.
-    /// A terminal nonexecution record also blocks delayed/duplicated messages.
+    /// One compare-and-publish step, or its retained terminal receipt. In stream
+    /// mode compare the entire actual prefix AND its message boundaries before
+    /// revealing anything. Finishing never deletes a previously visible prefix.
     pub fn deliver(&mut self, message: &DispatchEnvelope) -> Result<EndpointReceipt, Error> {
         let now = self.validate(message)?;
         if message.epoch != self.epoch { return Err(Error::Stale); }
@@ -87,18 +104,30 @@ impl PublicationEndpoint {
                 reason: NonExecutionReason::VersionConflict,
             }));
         }
+        let next_stream = match &self.stream {
+            Some(stream) => match stream.advance(&message.request.payload) {
+                Ok(next) => Some(next),
+                Err(_) => return Ok(self.record(message, EndpointOutcome::NotExecuted {
+                    reason: NonExecutionReason::StreamRejected,
+                })),
+            },
+            None => None,
+        };
         let version = self.resource.expected_version.checked_add(1).ok_or(Error::Overflow)?;
         let executions = self.executions.checked_add(1).ok_or(Error::Overflow)?;
-        let payload = message.request.payload.clone();
+        let payload = match &next_stream {
+            Some(stream) => stream.visible().to_vec(),
+            None => message.request.payload.clone(),
+        };
         let receipt = self.record(message, EndpointOutcome::Executed { resulting_version: version });
         self.payload = payload;
+        self.stream = next_stream;
         self.resource.expected_version = version;
         self.executions = executions;
         Ok(receipt)
     }
 
-    /// A lookup miss is deliberately not a terminal receipt: the request may
-    /// still be queued. Expired status cannot be relabeled as nonexecution.
+    /// A lookup miss is not a terminal receipt: the request may still be queued.
     pub fn status(&self, query: &StatusQuery) -> Result<EndpointStatus, Error> {
         let now = self.validate(&query.0)?;
         if now >= query.0.retained_until { return Ok(EndpointStatus::RetentionExpired); }
@@ -108,9 +137,8 @@ impl PublicationEndpoint {
         })
     }
 
-    /// Atomically establish nonexecution AND prevent execution of every future
-    /// delivery under this exact key. If execution won the race, return its real
-    /// receipt instead. This operation is stronger than querying for absence.
+    /// Establish nonexecution AND prevent every future delivery under this key.
+    /// If execution won, return its real receipt. A chunk seal is not stream EOF.
     pub fn seal_unexecuted(&mut self, query: &StatusQuery) -> Result<EndpointReceipt, Error> {
         let now = self.validate(&query.0)?;
         if query.0.epoch != self.epoch || now >= query.0.retained_until { return Err(Error::Stale); }
