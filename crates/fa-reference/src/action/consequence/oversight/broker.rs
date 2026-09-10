@@ -3,6 +3,7 @@
 
 mod session;
 mod reliability;
+mod activation;
 pub mod human;
 pub use session::{ObservedReview, ObservedSession, ReviewWindow};
 
@@ -44,6 +45,7 @@ pub struct OversightBroker {
     captured_bytes: usize,
     credibility: Option<reliability::EvaluationState>,
     human: Option<human::HumanGate>,
+    activation: Option<activation::ActivationState>,
 }
 
 impl OversightBroker {
@@ -51,7 +53,7 @@ impl OversightBroker {
         if !contracts.members().keys().eq(config.congress.members.keys()) { return Err(Error::Binding); }
         Ok(Self { delivery: DeliveryBroker::new(config, endpoint)?, contracts, issuer: Rc::new(()),
             inputs: BTreeMap::new(), started_rounds: BTreeSet::new(), captured_bytes: 0, credibility: None,
-            human: None })
+            human: None, activation: None })
     }
     pub fn inspect(&self) -> ControlInspection { self.delivery.inspect() }
     pub fn contracts(&self) -> &CommitteeContract { &self.contracts }
@@ -102,6 +104,7 @@ impl OversightBroker {
         let slot = self.inputs.get(&review.attempt).ok_or(Error::Missing)?;
         let permitting = review.policy.decision().consequence == Consequence::Continue;
         if permitting {
+            self.check_activation(review.attempt)?;
             let supplied = current.ok_or(Error::Incomplete)?;
             if slot.revision != review.revision || slot.current.as_deref() != Some(review.inputs.as_ref()) || supplied != review.inputs.as_ref() { return Err(Error::Stale); }
         }
@@ -123,6 +126,7 @@ impl OversightBroker {
         self.check_approval(permit.attempt, current)?; self.delivery.dispatch(permit, action, snapshot)
     }
     fn check_approval(&self, id: u64, supplied: Option<&CommitteeInput>) -> Result<(), Error> {
+        self.check_activation(id)?;
         let supplied = supplied.ok_or(Error::Incomplete)?; let slot = self.inputs.get(&id).ok_or(Error::Missing)?;
         let current = slot.current.as_deref().ok_or(Error::Incomplete)?;
         if slot.approved != Some(slot.revision) { return Err(Error::Incomplete); }

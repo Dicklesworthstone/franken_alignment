@@ -1,0 +1,11 @@
+{
+  "scope": "Python port of proposed arithmetic against Fraction oracle; NOT Rust execution",
+  "script_sha256": "6afef0d018a3214d255ba4365f66a2de53ef112657177439a02b989259686f14",
+  "seed": 731901,
+  "finite_dot_products": 384,
+  "nested_interval_checks": 9216,
+  "extreme_dimensions": 65536,
+  "maximum_sum_bits": 570,
+  "lost_residual_exact_units": 1,
+  "mismatches": 0
+}
