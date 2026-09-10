@@ -5,6 +5,7 @@ mod session;
 mod reliability;
 mod activation;
 mod stream;
+mod fleet;
 pub mod consistency;
 pub mod human;
 pub use session::{ObservedReview, ObservedSession, ReviewWindow};
@@ -113,6 +114,7 @@ impl OversightBroker {
         let slot = self.inputs.get(&review.attempt).ok_or(Error::Missing)?;
         let permitting = review.policy.decision().consequence == Consequence::Continue;
         if permitting {
+            self.delivery.check_fleet()?;
             self.check_consistency(review.attempt)?;
             self.check_activation(review.attempt)?;
             let supplied = current.ok_or(Error::Incomplete)?;
@@ -136,6 +138,7 @@ impl OversightBroker {
         self.check_approval(permit.attempt, current)?; self.delivery.dispatch(permit, action, snapshot)
     }
     fn check_approval(&self, id: u64, supplied: Option<&CommitteeInput>) -> Result<(), Error> {
+        self.delivery.check_fleet()?;
         self.check_consistency(id)?;
         self.check_activation(id)?;
         let supplied = supplied.ok_or(Error::Incomplete)?; let slot = self.inputs.get(&id).ok_or(Error::Missing)?;
