@@ -9,6 +9,7 @@ pub mod actor_wire;
 pub mod actor_transport;
 pub mod helper_workers;
 pub mod helper_client;
+pub mod helper_client_drive;
 mod actor_execution;
 pub use actor_execution::{DispatchKeys, ReconciliationResults};
 pub mod credibility;
