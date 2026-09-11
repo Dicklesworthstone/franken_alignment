@@ -4,6 +4,8 @@
 //! nor clones actor authority. Supplied buffer identities and temporal coherence
 //! remain host assumptions. A failed append never publishes half of a K/V pair.
 
+pub mod restore;
+
 use super::{HostTensor, TensorCapture, TensorContract, TokenSelection};
 use crate::Error;
 use std::collections::BTreeMap;
