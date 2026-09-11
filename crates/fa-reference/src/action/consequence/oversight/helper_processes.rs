@@ -59,8 +59,8 @@ impl HelperProgram {
             .chain(environment.iter().flat_map(|(key, value)| [key.as_os_str(), value.as_os_str()]))
         {
             let bytes = text.as_encoded_bytes();
-            if bytes.contains(&0) { return Err(Error::InvalidInput); }
             if bytes.len() > MAX_PROGRAM_FIELD_BYTES { return Err(Error::Limit); }
+            if bytes.contains(&0) { return Err(Error::InvalidInput); }
             text_bytes = text_bytes.checked_add(bytes.len()).ok_or(Error::Limit)?;
             if text_bytes > MAX_PROGRAM_TEXT_BYTES { return Err(Error::Limit); }
         }

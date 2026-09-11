@@ -3,9 +3,12 @@
 //! This is a synchronous integration owner, not another executor or authority.
 
 mod recovery;
+mod processes;
 pub use recovery::{OfflineDriver, ReconnectFailure};
+pub use processes::{ProcessReviewError, ProcessReviewLaunch};
 
 use super::actor::{ActorPort, ActorSupervisor, IntakeLimits, IntakeResult};
+use super::helper_processes::HelperChildren;
 use super::helper_workers::HelperLimits;
 use super::helper_workers::io::{HelperPool, HelperPump, WorkerIoError};
 use super::human::{HumanPermit, HumanRequest};
@@ -75,6 +78,7 @@ pub struct SupervisedDriver {
     supervisor: ActorSupervisor,
     endpoint: PublicationEndpoint,
     job: Option<Job>,
+    children: Option<HelperChildren>,
 }
 
 impl SupervisedDriver {
@@ -83,7 +87,7 @@ impl SupervisedDriver {
         contracts: CommitteeContract, limits: IntakeLimits,
     ) -> Result<(ActorPort, Self), Error> {
         let (port, supervisor) = ActorSupervisor::new(config, &mut endpoint, contracts, limits)?;
-        Ok((port, Self { supervisor, endpoint, job: None }))
+        Ok((port, Self { supervisor, endpoint, job: None, children: None }))
     }
 
     /// Trusted bootstrap/governance only. These handles must not reach actors.
@@ -120,20 +124,28 @@ impl SupervisedDriver {
         self.supervisor.accept_next(snapshot)
     }
 
+    fn check_review<T>(
+        &mut self, request: u64, inputs: &CommitteeInput, expected_revision: u64,
+        roster: &BTreeMap<String, T>,
+    ) -> Result<u64, Error> {
+        if self.job.is_some() { return Err(Error::WrongState); }
+        processes::ensure_slot(&mut self.children)?;
+        self.supervisor.synchronize()?;
+        let attempt = self.supervisor.attempt(request)?;
+        let broker = self.supervisor.broker();
+        if !matches!(broker.inspect().ledger.stages.get(&attempt), Some(ActionState::Reviewing | ActionState::Authorized)) {
+            return Err(Error::WrongState);
+        }
+        if !broker.contracts().members().keys().eq(roster.keys()) { return Err(Error::Binding); }
+        inputs.validate_for(self.supervisor.action(request)?, broker.contracts())?;
+        if broker.input_revision(attempt)? != expected_revision { return Err(Error::Stale); }
+        Ok(attempt)
+    }
+
     /// Setup errors never send input bytes. If session creation succeeded before
     /// an I/O setup refusal, its round ID stays used in the original broker.
     pub fn start_review(&mut self, launch: ReviewLaunch, snapshot: &Snapshot) -> Result<(), DriverError> {
-        if self.job.is_some() { return Err(Error::WrongState.into()); }
-        self.supervisor.synchronize()?;
-        let attempt = self.supervisor.attempt(launch.request)?;
-        let broker = self.supervisor.broker();
-        if !matches!(broker.inspect().ledger.stages.get(&attempt), Some(ActionState::Reviewing | ActionState::Authorized)) {
-            return Err(Error::WrongState.into());
-        }
-        if !broker.contracts().members().keys().eq(launch.streams.keys()) {
-            return Err(Error::Binding.into());
-        }
-        launch.inputs.validate_for(self.supervisor.action(launch.request)?, broker.contracts())?;
+        let attempt = self.check_review(launch.request, &launch.inputs, launch.expected_input_revision, &launch.streams)?;
         let revision = self.supervisor.broker_mut().record_inputs(
             attempt, launch.expected_input_revision, launch.inputs.clone(),
         )?;
@@ -158,6 +170,7 @@ impl SupervisedDriver {
         self.supervisor.broker_mut().cancel(job.attempt)?;
         self.supervisor.synchronize()?;
         self.job = None;
+        self.reap_helpers();
         Ok(())
     }
 
@@ -183,7 +196,19 @@ impl SupervisedDriver {
     /// is the trusted host's clock, not a helper timestamp. Completed reviews
     /// are applied at a fresh post-I/O tick; dispatch observes a fresh tick after
     /// reservation. Transient pre-dispatch errors keep the original permit.
+    /// Owned process cleanup progresses on both success and error, without waits.
     pub fn step_with_clock<F>(
+        &mut self, mut clock: F, current: Option<&CommitteeInput>,
+        snapshot: &Snapshot, human: Option<&HumanPermit>,
+    ) -> Result<DriverEvent, DriverError>
+    where F: FnMut() -> ElapsedTick {
+        self.reap_helpers();
+        let result = self.step_inner(&mut clock, current, snapshot, human);
+        self.reap_helpers();
+        result
+    }
+
+    fn step_inner<F>(
         &mut self, mut clock: F, current: Option<&CommitteeInput>,
         snapshot: &Snapshot, human: Option<&HumanPermit>,
     ) -> Result<DriverEvent, DriverError>
