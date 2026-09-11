@@ -69,7 +69,7 @@ impl PublicationEndpoint {
     pub fn stream_view(&self) -> Option<&StreamView> { self.stream.as_ref() }
 
     pub fn observe_time(&mut self, tick: ElapsedTick) -> Result<(), Error> {
-        if self.elapsed.is_some_and(|previous| tick < previous) { return Err(Error::Stale); }
+        if self.elapsed.is_some_and(|previous| now_before(tick, previous)) { return Err(Error::Stale); }
         self.elapsed = Some(tick);
         Ok(())
     }
@@ -92,9 +92,13 @@ impl PublicationEndpoint {
         let now = self.validate(message)?;
         if message.epoch != self.epoch { return Err(Error::Stale); }
         if now >= message.retained_until { return Err(Error::Stale); }
+        // A historical execution wins over later expiry; it cannot be refunded.
         if let Some(receipt) = self.existing(message)? { return Ok(receipt.clone()); }
         if self.receipts.len() >= self.max_deliveries { return Err(Error::Limit); }
-        if now >= message.request.deadline {
+        if message.request.approval.is_some_and(|approval| now < approval.issued_at()) {
+            return Err(Error::Stale);
+        }
+        if now >= message.request.execution_deadline() {
             return Ok(self.record(message, EndpointOutcome::NotExecuted {
                 reason: NonExecutionReason::DeadlineElapsed,
             }));
@@ -179,3 +183,5 @@ impl PublicationEndpoint {
         receipt
     }
 }
+
+fn now_before(tick: ElapsedTick, previous: ElapsedTick) -> bool { tick < previous }

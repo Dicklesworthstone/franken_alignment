@@ -7,7 +7,7 @@
 
 use super::{CommitteeInput, OversightBroker};
 use crate::action::consequence::Consequence;
-use crate::action::consequence::delivery::DispatchEnvelope;
+use crate::action::consequence::delivery::{DispatchApproval, DispatchEnvelope};
 use crate::action::{ActionState, ElapsedTick, FrozenAction, Permit};
 use crate::{Error, Snapshot};
 use std::cell::RefCell;
@@ -307,6 +307,7 @@ impl OversightBroker {
     /// Spend the original effect permit AND the separately issued human key in
     /// one model step. Both are borrowed so a rejected dispatch retains usable
     /// keys; successful consumption is irreversible in their respective ledgers.
+    /// The endpoint also enforces this key's expiry before first publication.
     pub fn dispatch_with_human(
         &mut self, permit: &Permit, human: &HumanPermit, action: &FrozenAction,
         current: Option<&CommitteeInput>, snapshot: &Snapshot,
@@ -329,11 +330,13 @@ impl OversightBroker {
         }
         let status = state.entries[&binding.request].status;
         if status.disposition != HumanDisposition::Approved { return Err(Error::WrongState); }
-        if now < status.issued_at.ok_or(Error::Incomplete)? || now >= binding.expires_at { return Err(Error::Stale); }
+        let issued_at = status.issued_at.ok_or(Error::Incomplete)?;
+        if now < issued_at || now >= binding.expires_at { return Err(Error::Stale); }
+        let approval = DispatchApproval::new(binding.request, binding.reviewer, issued_at, binding.expires_at)?;
         state.observe(now)?;
         // No caller callback runs here. Keep the exclusive second-key borrow
         // across the existing issuer/evidence/epoch/fence/one-use dispatch check.
-        let message = self.delivery.dispatch(permit, action, snapshot)?;
+        let message = self.delivery.dispatch_with_approval(permit, action, snapshot, approval)?;
         let entry = state.entries.get_mut(&binding.request).expect("validated retained key");
         entry.status.disposition = HumanDisposition::Consumed;
         entry.status.finished_at = Some(now);

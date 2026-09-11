@@ -41,7 +41,11 @@ impl DeliveryBroker {
         if !Rc::ptr_eq(&self.binding, &query.0.binding) { return Err(Error::Binding); }
         if query.0.epoch != self.epoch { return Err(Error::Stale); }
         let record = self.records.get(&query.0.attempt).ok_or(Error::Missing)?;
-        if !query.0.request.matches_action(&record.action) || record.retained_until != query.0.retained_until { return Err(Error::Binding); }
+        if !query.0.request.matches_action(&record.action) || record.retained_until != query.0.retained_until
+            || query.0.request.approval != record.approval
+        {
+            return Err(Error::Binding);
+        }
         match &status {
             EndpointStatus::Resolved(receipt) => {
                 if receipt.attempt != query.0.attempt { return Err(Error::Binding); }

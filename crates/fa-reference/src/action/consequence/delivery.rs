@@ -6,9 +6,11 @@
 //! A dispatched message may be delayed after its caller loses the acknowledgment.
 //! A missing status is consequently never a nonexecution proof or a refund.
 
+mod approval;
 mod endpoint;
 pub mod fleet;
 pub mod stream;
+pub use approval::DispatchApproval;
 pub use endpoint::PublicationEndpoint;
 
 use super::gate::containment::session::policy::Policy;
@@ -42,6 +44,7 @@ pub struct PublicationRequest {
     policy_epoch: u64,
     deadline: ElapsedTick,
     units: u64,
+    approval: Option<DispatchApproval>,
 }
 
 impl PublicationRequest {
@@ -49,15 +52,22 @@ impl PublicationRequest {
     pub fn target(&self) -> ResolvedTarget { self.target }
     pub fn payload(&self) -> &[u8] { &self.payload }
     pub fn policy_epoch(&self) -> u64 { self.policy_epoch }
+    /// The deadline in the original frozen action, never rewritten after review.
     pub fn deadline(&self) -> ElapsedTick { self.deadline }
     pub fn units(&self) -> u64 { self.units }
+    pub fn approval(&self) -> Option<DispatchApproval> { self.approval }
+
+    /// A second key can shorten, but never extend, the execution window.
+    pub fn execution_deadline(&self) -> ElapsedTick {
+        self.approval.map_or(self.deadline, |approval| self.deadline.min(approval.expires_at()))
+    }
 
     fn from_action(action: &FrozenAction) -> Self {
         let spec = action.spec();
         Self {
             version: spec.version, scope: spec.scope, target: spec.target.expect("frozen target"),
             payload: spec.payload.clone(), policy_epoch: spec.policy_epoch,
-            deadline: spec.deadline, units: spec.units,
+            deadline: spec.deadline, units: spec.units, approval: None,
         }
     }
 
@@ -100,6 +110,7 @@ impl StatusQuery {
 pub enum NonExecutionReason {
     Sealed,
     VersionConflict,
+    /// First execution reached the frozen action or the second key's deadline.
     DeadlineElapsed,
     StreamRejected,
 }
@@ -166,6 +177,7 @@ pub struct FenceAcknowledgment {
 #[derive(Debug)]
 struct DeliveryRecord {
     action: FrozenAction,
+    approval: Option<DispatchApproval>,
     retained_until: ElapsedTick,
     resolution: Option<EndpointReceipt>,
 }
@@ -275,6 +287,22 @@ impl DeliveryBroker {
     pub fn dispatch(
         &mut self, permit: &Permit, action: &FrozenAction, snapshot: &Snapshot,
     ) -> Result<DispatchEnvelope, Error> {
+        self.dispatch_bound(permit, action, snapshot, None)
+    }
+
+    /// Only the validated two-key oversight path supplies this additional bound.
+    /// No public entrypoint accepts caller-asserted approval metadata.
+    pub(crate) fn dispatch_with_approval(
+        &mut self, permit: &Permit, action: &FrozenAction, snapshot: &Snapshot,
+        approval: DispatchApproval,
+    ) -> Result<DispatchEnvelope, Error> {
+        self.dispatch_bound(permit, action, snapshot, Some(approval))
+    }
+
+    fn dispatch_bound(
+        &mut self, permit: &Permit, action: &FrozenAction, snapshot: &Snapshot,
+        approval: Option<DispatchApproval>,
+    ) -> Result<DispatchEnvelope, Error> {
         if !self.fenced { return Err(Error::Incomplete); }
         check_resource(action.spec(), self.scope, self.resource)?;
         if self.records.contains_key(&permit.attempt) { return Err(Error::Duplicate); }
@@ -283,12 +311,14 @@ impl DeliveryBroker {
         let bytes = self.action_bytes.checked_add(retained_action_bytes(action)?).ok_or(Error::Limit)?;
         if bytes > MAX_DELIVERY_ACTION_BYTES { return Err(Error::Limit); }
         let now = self.inspect().ledger.elapsed.ok_or(Error::Incomplete)?;
+        if let Some(approval) = approval { approval.validate_at(now, action.spec().deadline)?; }
         let retained_until = ElapsedTick(now.0.checked_add(self.retention_ticks).ok_or(Error::Overflow)?);
         let envelope = DispatchEnvelope {
             binding: Rc::clone(&self.binding), epoch: self.epoch, attempt: permit.attempt,
-            request: PublicationRequest::from_action(action), retained_until,
+            request: PublicationRequest { approval, ..PublicationRequest::from_action(action) },
+            retained_until,
         };
-        let record = DeliveryRecord { action: action.clone(), retained_until, resolution: None };
+        let record = DeliveryRecord { action: action.clone(), approval, retained_until, resolution: None };
         let fleet_admission = self.prepare_fleet_dispatch(permit.attempt)?;
         self.controller.dispatch(permit, action, snapshot)?;
         self.records.insert(permit.attempt, record);
@@ -320,7 +350,8 @@ impl DeliveryBroker {
         let record = self.records.get(&attempt).ok_or(Error::Missing)?;
         Ok(StatusQuery(DispatchEnvelope {
             binding: Rc::clone(&self.binding), epoch: self.epoch, attempt,
-            request: PublicationRequest::from_action(&record.action), retained_until: record.retained_until,
+            request: PublicationRequest { approval: record.approval, ..PublicationRequest::from_action(&record.action) },
+            retained_until: record.retained_until,
         }))
     }
 
@@ -331,7 +362,9 @@ impl DeliveryBroker {
     pub fn accept_receipt(&mut self, receipt: EndpointReceipt) -> Result<bool, Error> {
         if !Rc::ptr_eq(&self.binding, &receipt.binding) { return Err(Error::Binding); }
         let record = self.records.get(&receipt.attempt).ok_or(Error::Missing)?;
-        if !receipt.request.matches_action(&record.action) || receipt.retained_until != record.retained_until {
+        if !receipt.request.matches_action(&record.action) || receipt.retained_until != record.retained_until
+            || receipt.request.approval != record.approval
+        {
             return Err(Error::Binding);
         }
         if let Some(previous) = &record.resolution {
