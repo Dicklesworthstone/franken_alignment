@@ -30,6 +30,20 @@ The separately retainable descriptor is exactly the same fixed-size header. Impo
 
 **This format is not an integrity or authenticity mechanism.** A matching descriptor detects metadata substitution, not a finite numeric payload edit. An explicit negative-space regression preserves this distinction: a different finite representable value still parses and restores as different data. A caller needing tamper detection must authenticate the bytes under the admitted storage profile. No digest, signature, secure namespace, durable anti-rollback anchor or qualified restart grade is fabricated here.
 
+## Offline file consumer
+
+`crates/fa-reference/examples/kv_image_restore.rs` reads an independently retained descriptor file and its image, validates them, restores both dense CPU buffers, and writes `keys.bin`, `values.bin`, `descriptor.bin` and `layout.txt` into a NEW directory. It builds no controller, permit, helper or inference host. After the mandatory RCH build/qualification, the example's invocation is:
+
+```text
+kv_image_restore <independent-descriptor.bin> <image.bin> <new-output-directory>
+```
+
+The descriptor and image bytes come from `capture.snapshot(revision)`, `image.descriptor().encode()` and `image.encode()`. Their retention and authentication are the operator's responsibility. The resulting buffers have contiguous `[1, token_count, cache_heads, channels]` layouts, retain each tensor's original scalar encoding and byte order, and preserve the original absolute starting position in `layout.txt`. It explicitly reports `scope=cpu_cache_values_only`, `authentication=not_established` and `restart_grade=not_established`.
+
+Input reads are bounded, and descriptor/image parsing and RAM restoration finish before creating any output directory. Malformed input creates no output. Existing output directories and files are never overwritten. On Unix the new directory requests mode 0700 and files 0600. Activations and restored buffers remain potentially sensitive plaintext; these modes are not encryption or an export authorization. A trusted local output-parent directory is assumed, not a hostile shared filesystem.
+
+Filesystem writes are separate from the paired RAM commit. An I/O failure can leave partial files; the tool reports failure and leaves the new directory for inspection. There is no fsync, transactional rename, complete-marker or OS-crash durability claim. A successful exit reports only the completed local file operation. The example has no network, subprocess, model-execution or live authority path.
+
 ## Bounds and verification
 
 The source remains unchanged, including its capture frontier and generation floors. Restoration and images are bounded by the original 4,096-position and 1,048,576-normalized-value limits. Staging retains one offset and up to four bytes per written scalar; `staged_bytes` reports this logical storage, including struct padding but excluding vector capacity and allocator metadata. Destination buffers remain caller-owned. Import temporarily allocates one normalized scalar vector at a time in addition to retained arrays; metadata and caller-held image copies are not included in the value count. No peak-memory or latency measurement is claimed.
@@ -38,6 +52,8 @@ The first increment adds two scalar unit tests and six public byte-write tests. 
 
 The second increment adds one sharing test, eight public image tests and one compile-fail permission-conversion doctest. They cover scalar-byte round trips after dropping the capture, old snapshots surviving new pages and source reuse, independent writable copies, every truncation and header-byte substitution of a selected image, nonfinite late values, explicit finite-tampering limitations, metadata and budget boundaries, empty prefixes, and exact source identities without fabricated capture receipts.
 
-These seventeen Rust test functions and the doctest have not been compiled or executed: Cargo and the required RCH runner are unavailable in this session. No bead or production gate is closed. The changes add no dependencies and do not weaken prior assertions or execution gates.
+The file consumer adds four source tests: a mixed-width dense round trip, empty-layout refusal, actual file read/write and no-overwrite behavior, and malformed-input/no-output plus bounded-read checks. Its filesystem tests create and remove only their own exclusively created temporary directories. They are test source, not a report of executed disk restoration.
+
+These twenty-one Rust test functions and the doctest have not been compiled or executed: Cargo and the required RCH runner are unavailable in this session. No bead or production gate is closed. The changes add no dependencies and do not weaken prior assertions or execution gates. Source review checked each new method against the existing tensor/KV APIs; it is not a compiler or gate receipt.
 
 This is scoped progress toward the data restoration/serialization obligations of FA-026, FA-085 and structural sharing in FA-090, serving FI-I03/FI-I05 and plan 10.6, 11.1, 11.2 and 11.7. It does not waive the native-host, complete mutable-state, durability, compatibility or executed-negative-test obligations of those packets.
