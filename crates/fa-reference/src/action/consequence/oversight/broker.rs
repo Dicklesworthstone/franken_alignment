@@ -6,6 +6,7 @@ mod reliability;
 mod activation;
 mod stream;
 mod fleet;
+mod mediation;
 pub mod consistency;
 pub mod human;
 pub mod policy_governance;
@@ -143,6 +144,7 @@ impl OversightBroker {
         self.check_approval(permit.attempt, current)?; self.delivery.dispatch(permit, action, snapshot)
     }
     fn check_approval(&self, id: u64, supplied: Option<&CommitteeInput>) -> Result<(), Error> {
+        self.delivery.check_mediation()?;
         self.check_identity()?;
         self.delivery.check_fleet()?;
         self.check_consistency(id)?;

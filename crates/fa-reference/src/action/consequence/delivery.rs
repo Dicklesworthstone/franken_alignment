@@ -8,12 +8,14 @@
 
 mod approval;
 mod endpoint;
+mod mediation_gate;
 pub mod fleet;
 pub mod stream;
 pub use approval::DispatchApproval;
 pub use endpoint::PublicationEndpoint;
 #[cfg(unix)]
 pub use endpoint::filesystem::{self, FileEndpointRecovery};
+pub use mediation_gate::TopologyChange;
 
 use super::gate::containment::session::policy::Policy;
 use super::gate::containment::session::policy::controller::{
@@ -22,6 +24,7 @@ use super::gate::containment::session::policy::controller::{
 };
 use super::gate::containment::{ActorState, CheckpointHandle, ResetReceipt, ResetRequest};
 use super::gate::ControlInspection;
+use super::mediation::VerifiedCut;
 use crate::action::{
     ActionSpec, ActionState, ElapsedTick, FrozenAction, Permit, ResolvedTarget, Scope, TrustedOutcome,
 };
@@ -180,6 +183,7 @@ pub struct FenceAcknowledgment {
 struct DeliveryRecord {
     action: FrozenAction,
     approval: Option<DispatchApproval>,
+    mediation: Option<VerifiedCut>,
     retained_until: ElapsedTick,
     resolution: Option<EndpointReceipt>,
 }
@@ -202,6 +206,7 @@ pub struct DeliveryBroker {
     stream: Option<StreamView>,
     stream_pending: Option<u64>,
     fleet: Option<fleet::FleetDomain>,
+    mediation: Option<mediation_gate::MediationState>,
 }
 
 impl DeliveryBroker {
@@ -223,6 +228,7 @@ impl DeliveryBroker {
             stream: endpoint.stream_view().cloned(),
             stream_pending: None,
             fleet: None,
+            mediation: None,
         })
     }
 
@@ -262,6 +268,7 @@ impl DeliveryBroker {
     }
 
     pub fn propose(&mut self, id: u64, spec: ActionSpec, snapshot: &Snapshot) -> Result<Proposal, Error> {
+        self.check_mediation()?;
         self.check_fleet()?;
         check_resource(&spec, self.scope, self.resource)?;
         self.check_stream(&spec)?;
@@ -275,11 +282,15 @@ impl DeliveryBroker {
     }
 
     pub fn apply_review(&mut self, review: PolicyReview, snapshot: &Snapshot) -> Result<PolicyReceipt, Error> {
-        if review.decision().consequence == super::Consequence::Continue { self.check_fleet()?; }
+        if review.decision().consequence == super::Consequence::Continue {
+            self.check_mediation()?;
+            self.check_fleet()?;
+        }
         self.controller.apply_review(review, snapshot)
     }
 
     pub fn authorize(&mut self, id: u64, snapshot: &Snapshot) -> Result<Permit, Error> {
+        self.check_mediation()?;
         self.check_fleet()?;
         self.controller.authorize(id, snapshot)
     }
@@ -305,6 +316,7 @@ impl DeliveryBroker {
         &mut self, permit: &Permit, action: &FrozenAction, snapshot: &Snapshot,
         approval: Option<DispatchApproval>,
     ) -> Result<DispatchEnvelope, Error> {
+        self.check_mediation()?;
         if !self.fenced { return Err(Error::Incomplete); }
         check_resource(action.spec(), self.scope, self.resource)?;
         if self.records.contains_key(&permit.attempt) { return Err(Error::Duplicate); }
@@ -320,7 +332,8 @@ impl DeliveryBroker {
             request: PublicationRequest { approval, ..PublicationRequest::from_action(action) },
             retained_until,
         };
-        let record = DeliveryRecord { action: action.clone(), approval, retained_until, resolution: None };
+        let record = DeliveryRecord { action: action.clone(), approval, mediation: self.mediation_cut().cloned(),
+            retained_until, resolution: None };
         let fleet_admission = self.prepare_fleet_dispatch(permit.attempt)?;
         self.controller.dispatch(permit, action, snapshot)?;
         self.records.insert(permit.attempt, record);
