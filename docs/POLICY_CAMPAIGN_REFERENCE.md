@@ -111,17 +111,28 @@ promoted into a durable or authenticated policy-governance archive.
 ## Verification and change log
 
 This batch adds eight replay-kernel tests, twelve public oversight integration
-tests and one compile-fail type test. They pair successful governed promotion and
-fresh publication with original-setter bypass, hidden denials, new keys/range gaps,
-late changed observations, stale history without a sequence change, newly opened
-rounds, foreign/revoked approvals, actual unknown stream liabilities, preissued
-human keys, actor reset, bounds and lifecycle restrictions.
+tests, two detached-archive integration tests and one compile-fail type test.
+They pair successful governed promotion and fresh publication with original-setter
+bypass, hidden denials, new keys/range gaps, late changed observations, stale
+history without a sequence change, newly opened rounds, foreign/revoked approvals,
+actual unknown stream liabilities, preissued human keys, actor reset, bounds and
+lifecycle restrictions. Archive tests construct actual committed/revealed rounds,
+retain independent anchors and exercise altered tallies, duplicate cases and
+wrong baseline policies; no successful archive is fabricated by a test stub.
 
-They have NOT been compiled or executed in this session. Cargo, rustc and RCH
-are unavailable; no historical receipt is reused and no bead is closed. The
-mandatory Rust/RCH verification gate remains pending.
+Source inspection also found the existing counterfactual module importing
+`controller::replay` while the controller re-exported only individual replay
+types. The controller now re-exports the existing module too. Its one-line change
+preserves the underlying implementation; the detached tests import that public
+path. This is a source-discovered repair, not a reported compiler result.
+
+These 22 Rust test functions and the compile-fail doctest have NOT been compiled
+or executed in this session. Cargo, rustc and RCH are unavailable; no historical
+receipt is reused and no bead is closed. The mandatory Rust/RCH verification
+gate remains pending.
 
 Change sequence: evidence-scoped candidate replay first; then own-history
 extraction and a mandatory, independently held promotion capability consumed by
-the existing oversight controller. No Cargo dependency or second rights ledger
-was added, and no existing test assertion or execution gate was weakened.
+the existing oversight controller; finally the public replay integration repair
+and detached archive consumer regressions. No Cargo dependency or second rights
+ledger was added, and no existing test assertion or execution gate was weakened.

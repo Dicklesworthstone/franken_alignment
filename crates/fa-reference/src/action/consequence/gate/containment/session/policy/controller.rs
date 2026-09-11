@@ -6,7 +6,7 @@
 //! and host bytes remain trusted reference inputs, not authenticated providers.
 
 mod review;
-pub use review::{PolicyReceipt, PolicyReview, PolicySession};
+pub use review::{PolicyReceipt, PolicyReview, PolicySession, replay};
 pub use review::replay::{
     ArchivedPolicyReceipt, DecisionArchive, MAX_ARCHIVE_BYTES, ReplayedDecision, ReviewAnchor,
 };
