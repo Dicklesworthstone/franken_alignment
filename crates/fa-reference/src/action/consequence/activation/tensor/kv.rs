@@ -5,6 +5,7 @@
 //! remain host assumptions. A failed append never publishes half of a K/V pair.
 
 pub mod attention;
+pub mod attention_experiment;
 pub mod experiment;
 pub mod image;
 pub mod restore;

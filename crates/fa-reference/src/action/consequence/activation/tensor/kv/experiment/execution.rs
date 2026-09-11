@@ -156,7 +156,7 @@ impl KvBranch {
         Ok(PreparedKvTwinRestore { reference, candidate })
     }
 
-    fn check_common_base(&self, other: &KvBranch) -> Result<(), Error> {
+    pub(in crate::action::consequence::activation::tensor::kv) fn check_common_base(&self, other: &KvBranch) -> Result<(), Error> {
         if !Rc::ptr_eq(&self.base, &other.base) { return Err(Error::Binding); }
         Ok(())
     }
