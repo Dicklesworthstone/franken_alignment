@@ -4,6 +4,7 @@
 //! nor clones actor authority. Supplied buffer identities and temporal coherence
 //! remain host assumptions. A failed append never publishes half of a K/V pair.
 
+pub mod attention;
 pub mod experiment;
 pub mod image;
 pub mod restore;
