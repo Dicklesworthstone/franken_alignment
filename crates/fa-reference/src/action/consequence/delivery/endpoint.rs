@@ -69,7 +69,7 @@ impl PublicationEndpoint {
     pub fn stream_view(&self) -> Option<&StreamView> { self.stream.as_ref() }
 
     pub fn observe_time(&mut self, tick: ElapsedTick) -> Result<(), Error> {
-        if self.elapsed.is_some_and(|previous| now_before(tick, previous)) { return Err(Error::Stale); }
+        if self.elapsed.is_some_and(|previous| tick < previous) { return Err(Error::Stale); }
         self.elapsed = Some(tick);
         Ok(())
     }
@@ -151,6 +151,21 @@ impl PublicationEndpoint {
         Ok(self.record(&query.0, EndpointOutcome::NotExecuted { reason: NonExecutionReason::Sealed }))
     }
 
+    /// Resolve an expired dispatch even when its message never arrived. Unlike
+    /// a read-only status miss or the broker's elapsed clock, this operation
+    /// atomically checks the real endpoint record AND seals future execution.
+    /// Before expiry it refuses rather than cancelling a still-valid request.
+    /// A prior terminal receipt wins, including a real execution. Retention and
+    /// the current endpoint fence must still cover the query. No key is reissued.
+    pub fn resolve_expired(&mut self, query: &StatusQuery) -> Result<EndpointReceipt, Error> {
+        let now = self.validate(&query.0)?;
+        if query.0.epoch != self.epoch || now >= query.0.retained_until { return Err(Error::Stale); }
+        if let Some(receipt) = self.existing(&query.0)? { return Ok(receipt.clone()); }
+        if now < query.0.request.execution_deadline() { return Err(Error::Incomplete); }
+        if self.receipts.len() >= self.max_deliveries { return Err(Error::Limit); }
+        Ok(self.record(&query.0, EndpointOutcome::NotExecuted { reason: NonExecutionReason::DeadlineElapsed }))
+    }
+
     fn validate(&self, message: &DispatchEnvelope) -> Result<ElapsedTick, Error> {
         if !Rc::ptr_eq(&self.binding, &message.binding) { return Err(Error::Binding); }
         let scope = self.scope.ok_or(Error::Incomplete)?;
@@ -183,5 +198,3 @@ impl PublicationEndpoint {
         receipt
     }
 }
-
-fn now_before(tick: ElapsedTick, previous: ElapsedTick) -> bool { tick < previous }
