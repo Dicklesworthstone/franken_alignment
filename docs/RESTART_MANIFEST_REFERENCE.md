@@ -1,0 +1,15 @@
+# Lossless actor-state restart manifest reference
+
+This increment adds a strict, versioned serialization kernel for the complete mutable state represented by the existing reference `ActorState`: restart-profile identity, original token IDs, opaque cache bytes, opaque sampler bytes, and the exact next token position. It is scoped progress toward FA-026. It does not claim to satisfy FA-026's native-host or executed-gate requirements.
+
+The format begins with the eight-byte `FARSTRT/1` domain, an explicit required-component bitmap, six restart-profile identities, the next position, restart grade, and exact token/cache/sampler lengths. Tokens are stored as big-endian `u32`; cache and sampler payloads remain byte-exact. Reserved header bytes must remain zero. Unknown grades, missing component bits, truncation, trailing bytes, length disagreement, token/position disagreement, one-over resource bounds, and profile substitution refuse.
+
+`decode_for` requires the exact registered `RestartProfile`. Equal lengths cannot substitute another host, model, tokenizer, state-schema, or profile generation. The decoded state passes through the existing `ActorState::new` completeness checks instead of constructing its fields unchecked.
+
+The maximum encoded state is bounded by the existing actor limits: 65,536 tokens, 1 MiB cache, and 4 KiB sampler state. The manifest contains no policy state, permits, reservations, resource rights, revocation floors, congress decisions, external-effect outcomes, or endpoint credentials. Deserialization therefore cannot create production authority.
+
+The serialization kernel currently lives beside containment as `containment/restart_manifest.rs` and is exercised directly by integration tests while the project retains its existing containment module surface unchanged. This avoids weakening or rewriting the mature containment implementation merely to expose a new convenience API before the full restart packet is qualified. A later native-host integration should promote the format through the normal module surface only together with the complete mutable-state inventory and compatibility gate.
+
+The source tests include exact round trips, every truncation of representative state, explicit missing-component failures, all six profile-identity substitutions, declared-length and position corruption, and an exact maximum-size round trip. These tests are **unexecuted source** in this session: Cargo and the required RCH runner are unavailable. No bead, roadmap packet, or production gate is closed by this work.
+
+This manifest is not authenticated or durable. A finite payload edit can be accepted if it remains structurally valid; production storage must authenticate the bytes and provide anti-rollback semantics. Likewise, successfully reconstructing `ActorState` does not prove that a serving backend resumed from it. Native cache installation, RNG/sampler interpretation, attention-mask state, backend synchronization, recomputation equivalence, and long-horizon continuation qualification remain separate obligations.
