@@ -1,8 +1,8 @@
 //! Receipt-gated delivery over the existing exact-policy controller.
 //!
-//! This is a bounded, in-memory protocol model. The separately owned endpoint
-//! models atomic keyed publication, status retention and fencing. It is NOT a
-//! network client, durable journal, authenticated provider or production broker.
+//! The controller is a bounded, in-memory protocol model. Its endpoint supports
+//! memory-only operation and a Unix local-filesystem publication profile. Neither
+//! is an authenticated provider or a durable production authority ledger.
 //! A dispatched message may be delayed after its caller loses the acknowledgment.
 //! A missing status is consequently never a nonexecution proof or a refund.
 
@@ -12,6 +12,8 @@ pub mod fleet;
 pub mod stream;
 pub use approval::DispatchApproval;
 pub use endpoint::PublicationEndpoint;
+#[cfg(unix)]
+pub use endpoint::filesystem::{self, FileEndpointRecovery};
 
 use super::gate::containment::session::policy::Policy;
 use super::gate::containment::session::policy::controller::{
