@@ -3,6 +3,7 @@
 
 mod packet;
 mod broker;
+pub mod actor;
 pub mod credibility;
 pub use broker::consistency;
 pub use broker::human;
