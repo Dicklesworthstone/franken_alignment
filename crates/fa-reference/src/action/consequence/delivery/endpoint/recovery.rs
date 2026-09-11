@@ -63,4 +63,15 @@ impl DeliveryBroker {
     ) -> Result<crate::action::consequence::oversight::credibility::CongressChange, Error> {
         self.controller.replace_congress_weights(sequence, epoch, next)
     }
+
+    /// Reuse the original authority's stop transaction for a latched identity
+    /// incident. Returns sequence, floor, cancelled IDs and exact refund. This
+    /// does NOT fence or settle envelopes already returned to an external caller.
+    pub(crate) fn fence_identity(
+        &mut self, sequence: u64, epoch: u64,
+    ) -> Result<(u64, u64, Vec<u64>, u64), Error> {
+        let minimum = epoch.checked_add(1).ok_or(Error::Overflow)?;
+        let stopped = self.controller.fence_authority(sequence, epoch, minimum)?;
+        Ok((stopped.sequence, stopped.revocation_floor, stopped.cancelled, stopped.refunded_units))
+    }
 }

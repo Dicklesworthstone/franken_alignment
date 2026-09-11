@@ -9,6 +9,7 @@ mod fleet;
 pub mod consistency;
 pub mod human;
 pub mod policy_governance;
+pub mod identity;
 pub use session::{ObservedReview, ObservedSession, ReviewWindow};
 
 use super::{CommitteeContract, CommitteeInput};
@@ -53,6 +54,7 @@ pub struct OversightBroker {
     activation: Option<activation::ActivationState>,
     consistency: Option<consistency::ConsistencyState>,
     policy_campaigns: Option<policy_governance::PolicyCampaignGate>,
+    identity: Option<identity::IdentityGate>,
 }
 
 impl OversightBroker {
@@ -61,7 +63,7 @@ impl OversightBroker {
         let scope = config.scope;
         Ok(Self { delivery: DeliveryBroker::new(config, endpoint)?, scope, contracts, issuer: Rc::new(()),
             inputs: BTreeMap::new(), started_rounds: BTreeSet::new(), captured_bytes: 0, credibility: None,
-            human: None, activation: None, consistency: None, policy_campaigns: None })
+            human: None, activation: None, consistency: None, policy_campaigns: None, identity: None })
     }
     pub fn inspect(&self) -> ControlInspection { self.delivery.inspect() }
     pub fn contracts(&self) -> &CommitteeContract { &self.contracts }
@@ -116,6 +118,7 @@ impl OversightBroker {
         let slot = self.inputs.get(&review.attempt).ok_or(Error::Missing)?;
         let permitting = review.policy.decision().consequence == Consequence::Continue;
         if permitting {
+            self.check_identity()?;
             self.delivery.check_fleet()?;
             self.check_consistency(review.attempt)?;
             self.check_activation(review.attempt)?;
@@ -140,6 +143,7 @@ impl OversightBroker {
         self.check_approval(permit.attempt, current)?; self.delivery.dispatch(permit, action, snapshot)
     }
     fn check_approval(&self, id: u64, supplied: Option<&CommitteeInput>) -> Result<(), Error> {
+        self.check_identity()?;
         self.delivery.check_fleet()?;
         self.check_consistency(id)?;
         self.check_activation(id)?;
