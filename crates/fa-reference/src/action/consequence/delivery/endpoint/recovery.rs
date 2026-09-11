@@ -37,6 +37,43 @@ impl DeliveryBroker {
         Ok(queries)
     }
 
+    /// One bounded sweep of retained in-flight obligations, never a resend.
+    /// Outer errors are preflight failures; per-attempt errors are retained in
+    /// the returned map and do not undo or prevent progress on other attempts.
+    /// Missing live requests and expired retention stay charged and Unknown.
+    /// Expired requests are settled only with an atomic endpoint receipt.
+    /// No proposal, helper review, human key, checkpoint or permit is recreated.
+    /// This synchronous reference sweep is not a transactional remote batch.
+    pub fn reconcile_pending(
+        &mut self, endpoint: &mut PublicationEndpoint,
+    ) -> Result<BTreeMap<u64, Result<EndpointStatus, Error>>, Error> {
+        if !Rc::ptr_eq(&self.binding, &endpoint.binding) { return Err(Error::Binding); }
+        if !self.fenced { return Err(Error::Incomplete); }
+        if self.epoch != endpoint.epoch { return Err(Error::Stale); }
+        endpoint.elapsed.ok_or(Error::Incomplete)?;
+        let queries = self.pending_reconciliation()?;
+        let mut outcomes = BTreeMap::new();
+        for query in queries {
+            let status = endpoint.status(&query).and_then(|status| match status {
+                EndpointStatus::AwaitingResolution => match endpoint.resolve_expired(&query) {
+                    Ok(receipt) => Ok(EndpointStatus::Resolved(receipt)),
+                    Err(Error::Incomplete) => Ok(EndpointStatus::AwaitingResolution),
+                    Err(error) => Err(error),
+                },
+                terminal => Ok(terminal),
+            });
+            let outcome = match status {
+                Ok(status) => self.reconcile_status(&query, status),
+                Err(error) => match self.acknowledgment_lost(query.attempt()) {
+                    Ok(()) => Err(error),
+                    Err(accounting_error) => Err(accounting_error),
+                },
+            };
+            outcomes.insert(query.attempt(), outcome);
+        }
+        Ok(outcomes)
+    }
+
     pub fn reconcile_status(&mut self, query: &StatusQuery, status: EndpointStatus) -> Result<EndpointStatus, Error> {
         if !Rc::ptr_eq(&self.binding, &query.0.binding) { return Err(Error::Binding); }
         if query.0.epoch != self.epoch { return Err(Error::Stale); }

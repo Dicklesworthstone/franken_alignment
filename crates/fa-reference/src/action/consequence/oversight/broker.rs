@@ -159,6 +159,11 @@ impl OversightBroker {
     pub fn acknowledgment_lost(&mut self, id: u64) -> Result<(), Error> { self.delivery.acknowledgment_lost(id) }
     pub fn status_query(&self, id: u64) -> Result<StatusQuery, Error> { self.delivery.status_query(id) }
     pub fn pending_reconciliation(&self) -> Result<Vec<StatusQuery>, Error> { self.delivery.pending_reconciliation() }
+    /// Reconcile retained obligations without rerunning helpers or minting keys.
+    /// Inspect every per-attempt result; successful earlier items are not rolled back.
+    pub fn reconcile_pending(&mut self, endpoint: &mut PublicationEndpoint) -> Result<BTreeMap<u64, Result<EndpointStatus, Error>>, Error> {
+        self.delivery.reconcile_pending(endpoint)
+    }
     pub fn reconcile_status(&mut self, query: &StatusQuery, status: EndpointStatus) -> Result<EndpointStatus, Error> { self.delivery.reconcile_status(query, status) }
     pub fn accept_receipt(&mut self, receipt: EndpointReceipt) -> Result<bool, Error> { self.delivery.accept_receipt(receipt) }
     pub fn resolution(&self, id: u64) -> Result<Option<&EndpointReceipt>, Error> { self.delivery.resolution(id) }

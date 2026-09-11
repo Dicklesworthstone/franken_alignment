@@ -20,10 +20,16 @@ The broker consumes this receipt through its existing receipt/reconciliation pat
 
 This operation also serves the ordinary single-key profile using its original action deadline. It adds no scheduler, automatic retry, network transport, clock authentication or disk durability.
 
+## Bounded recovery sweep
+
+Both `DeliveryBroker` and `OversightBroker` expose `reconcile_pending(&mut PublicationEndpoint)`. The operation preflights the registered endpoint identity, confirmed dispatcher fence, matching endpoint epoch and observed endpoint clock before processing the bounded set of retained in-flight obligations. It retrieves terminal receipts, conditionally seals expired missing requests, and applies only those endpoint-backed outcomes through the existing accounting path. Still-live missing messages and expired retention remain charged and become or remain `Unknown`.
+
+The result is a deterministic map from attempt ID to an individual `Result<EndpointStatus, Error>`. Callers must inspect each result. Per-attempt refusals do not erase already completed progress or prevent later attempts from being processed. Outer errors are preflight failures; this is not an all-or-nothing remote transaction. Successful terminal records drop out of subsequent sweeps. No operation resends an envelope, reruns a helper, requires a retained reviewer role, mints a replacement key, or restores authority from an actor checkpoint.
+
 ## Verification status
 
 Added public controls cover first delivery immediately before, at and after human expiry; unchanged frozen-action bytes; exact receipt metadata; delayed acknowledgment after real execution; missing-status accounting; dispatcher restart and sealing; and the unchanged single-key profile. Constructor controls include zero IDs, empty/reversed windows and `u64::MAX` tick boundaries. A compile-fail example checks private metadata construction.
 
-The expiry-reconciliation controls cover pre-expiry refusal, missing-message resolution at the exact deadline, one-time refunds, delayed copies, retained execution precedence, new-fence recovery, expired retention, and identically numbered foreign endpoint/broker brands.
+The expiry-reconciliation controls cover pre-expiry refusal, missing-message resolution at the exact deadline, one-time refunds, delayed copies, retained execution precedence, new-fence recovery, expired retention, and identically numbered foreign endpoint/broker brands. Sweep controls compose executed, expired and still-live requests in one broker; preserve residual liability across repeated sweeps; require fresh fencing; refuse foreign endpoints; retain expired-retention uncertainty; and reconcile despite unavailable helper inputs and a dropped reviewer role.
 
 These additions have **not been compiled, executed, formatted by rustfmt or qualified through RCH in this editing environment**. It has no Rust toolchain or RCH access. Source review is not execution evidence. Existing dated execution receipts and test counts are unchanged and do not qualify this increment. No dependency, runtime or release admission is changed.
