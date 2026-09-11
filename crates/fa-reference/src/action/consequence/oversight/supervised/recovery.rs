@@ -1,0 +1,101 @@
+//! Endpoint interruption without losing the original supervisor, keys or jobs.
+//! Reconnection is fenced; recovery does not rerun a helper or resend an effect.
+
+use super::{Job, SupervisedDriver};
+use crate::action::consequence::delivery::{EndpointReceipt, PublicationEndpoint};
+use crate::action::consequence::oversight::{ReconciliationResults, actor::ActorSupervisor};
+use crate::action::ElapsedTick;
+use crate::Error;
+use std::fmt;
+
+/// The original controller while its endpoint is absent. This owns, rather than
+/// copies, the outstanding permits and job. It has no driving/dispatch method.
+/// The actor's existing port and its lifetime idempotency domain remain intact.
+///
+/// ```compile_fail,E0599
+/// use fa_reference::action::consequence::oversight::supervised::OfflineDriver;
+/// fn send(mut offline: OfflineDriver) { offline.step(); }
+/// ```
+pub struct OfflineDriver {
+    supervisor: ActorSupervisor,
+    job: Option<Job>,
+}
+
+/// On failure both owners are returned for inspection or a fresh-clock retry.
+/// Progress such as a raised fence or observed clock is never rolled back.
+pub struct ReconnectFailure {
+    pub error: Error,
+    pub offline: OfflineDriver,
+    pub endpoint: PublicationEndpoint,
+}
+
+impl fmt::Debug for ReconnectFailure {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter.debug_struct("ReconnectFailure").field("error", &self.error).finish_non_exhaustive()
+    }
+}
+
+impl SupervisedDriver {
+    /// Transfer, do not clone, the complete driver state. Dropping the returned
+    /// file endpoint releases its existing lock so its retained recovery key can
+    /// reopen it. Detachment alone is NOT an external fence or nonexecution proof.
+    pub fn detach_endpoint(self) -> (OfflineDriver, PublicationEndpoint) {
+        let Self { supervisor, endpoint, job } = self;
+        (OfflineDriver { supervisor, job }, endpoint)
+    }
+
+    /// Existing obligations are processed without helper input or human keys,
+    /// even while another job is being reviewed or awaiting co-signature. Inspect
+    /// each per-attempt result; a partial sweep is not an all-or-nothing operation.
+    pub fn reconcile_pending(&mut self, now: ElapsedTick) -> Result<ReconciliationResults, Error> {
+        self.observe_time(now)?;
+        self.supervisor.reconcile_pending(&mut self.endpoint)
+    }
+
+    pub fn accept_receipt(&mut self, receipt: EndpointReceipt) -> Result<bool, Error> {
+        self.supervisor.accept_receipt(receipt)
+    }
+}
+
+impl OfflineDriver {
+    pub fn supervisor(&self) -> &ActorSupervisor { &self.supervisor }
+
+    /// A real late receipt remains usable while no transport is connected.
+    pub fn accept_receipt(&mut self, receipt: EndpointReceipt) -> Result<bool, Error> {
+        self.supervisor.accept_receipt(receipt)
+    }
+
+    pub fn cancel_active(&mut self) -> Result<(), Error> {
+        let job = self.job.as_ref().ok_or(Error::Missing)?;
+        self.supervisor.broker_mut().cancel(job.attempt)?;
+        self.supervisor.synchronize()?;
+        self.job = None;
+        Ok(())
+    }
+
+    /// The original endpoint brand is checked with the existing fence protocol,
+    /// not equality of numeric resource IDs. Recovered files first need a fresh
+    /// clock confirmation. Consequently a refused foreign candidate can observe
+    /// this clock, but cannot change the original controller's state.
+    ///
+    /// Once identity is established, restart the original dispatcher, publish
+    /// its Unknown projections, and require the new endpoint fence acknowledgment
+    /// before returning a sending driver. This does not settle pending effects.
+    pub fn reconnect(
+        mut self, mut endpoint: PublicationEndpoint, now: ElapsedTick,
+    ) -> Result<SupervisedDriver, ReconnectFailure> {
+        let result = (|| -> Result<(), Error> {
+            endpoint.observe_time(now)?;
+            endpoint.install_fence(self.supervisor.broker().fence_request())?;
+            self.supervisor.broker_mut().observe_time(now)?;
+            let fence = self.supervisor.broker_mut().restart_dispatcher()?;
+            self.supervisor.synchronize()?;
+            let acknowledgment = endpoint.install_fence(fence)?;
+            self.supervisor.broker_mut().confirm_fence(acknowledgment)
+        })();
+        match result {
+            Ok(()) => Ok(SupervisedDriver { supervisor: self.supervisor, endpoint, job: self.job }),
+            Err(error) => Err(ReconnectFailure { error, offline: self, endpoint }),
+        }
+    }
+}

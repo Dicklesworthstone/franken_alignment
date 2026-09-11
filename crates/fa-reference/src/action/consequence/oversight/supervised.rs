@@ -2,6 +2,9 @@
 //! The host supplies actual evidence, connected workers and the elapsed clock.
 //! This is a synchronous integration owner, not another executor or authority.
 
+mod recovery;
+pub use recovery::{OfflineDriver, ReconnectFailure};
+
 use super::actor::{ActorPort, ActorSupervisor, IntakeLimits, IntakeResult};
 use super::helper_workers::HelperLimits;
 use super::helper_workers::io::{HelperPool, HelperPump, WorkerIoError};
