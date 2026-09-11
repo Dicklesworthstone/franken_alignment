@@ -5,6 +5,9 @@
 //! This profile uses round::commitment's non-cryptographic comparison oracle;
 //! it does not authenticate a model, prove independent inference or mint rights.
 
+pub mod io;
+pub mod wire;
+
 use super::{MAX_COMMITTEE_BYTES, ObservedReview, ObservedSession};
 use crate::action::ElapsedTick;
 use crate::evidence_view::EvidenceViewManifest;
