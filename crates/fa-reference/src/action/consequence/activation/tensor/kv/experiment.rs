@@ -4,11 +4,18 @@
 //! never escape as SourceFrame, KvImage, a live capture frontier or a Permit.
 //! Base authenticity and host-buffer ownership remain the caller's obligations.
 
+mod execution;
+pub use execution::{
+    KvExperimentRestoreReceipt, KvProbeComparison, KvTwinRestoreReceipt,
+    PreparedKvExperimentRestore, PreparedKvTwinRestore,
+};
+
 use super::image::{KvImage, KvImageDescriptor};
 use super::restore::encode_exact;
 use super::super::TensorContract;
 use crate::Error;
 use std::collections::BTreeMap;
+use std::fmt;
 use std::rc::Rc;
 
 pub const MAX_KV_BRANCHES: usize = 128;
@@ -80,7 +87,6 @@ pub struct KvBranchBasis {
     pub source: KvImageDescriptor,
 }
 
-#[derive(Debug)]
 struct Base {
     experiment: u64,
     image: KvImage,
@@ -88,7 +94,14 @@ struct Base {
     end: u64,
 }
 
-#[derive(Debug)]
+impl fmt::Debug for Base {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("Base").field("experiment", &self.experiment)
+            .field("descriptor", self.image.descriptor()).field("scope", &self.scope)
+            .finish_non_exhaustive()
+    }
+}
+
 struct Node {
     id: u64,
     kind: KvBranchKind,
@@ -99,6 +112,16 @@ struct Node {
     edits: BTreeMap<KvCell, KvEdit>,
 }
 
+impl fmt::Debug for Node {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        // Do not recursively render two aliases of every ancestor or dump values.
+        f.debug_struct("Node").field("id", &self.id).field("kind", &self.kind)
+            .field("depth", &self.depth).field("parent", &self.parent.as_ref().map(|n| n.id))
+            .field("origin", &self.origin.as_ref().map(|n| n.id))
+            .field("edit_count", &self.edits.len()).finish()
+    }
+}
+
 /// Cloneable evidence only. A surviving handle pins its original values and
 /// all provenance even after the capture and experiment builder are dropped.
 /// There is no conversion into captured observations or live authority.
@@ -107,6 +130,18 @@ struct Node {
 /// use fa_reference::action::consequence::activation::tensor::kv::experiment::KvBranch;
 /// use fa_reference::action::Permit;
 /// fn grant(branch: KvBranch) -> Permit { branch }
+/// ```
+///
+/// ```compile_fail,E0308
+/// use fa_reference::action::consequence::activation::tensor::kv::experiment::KvBranch;
+/// use fa_reference::action::consequence::activation::SourceFrame;
+/// fn relabel(branch: KvBranch) -> SourceFrame { branch }
+/// ```
+///
+/// ```compile_fail,E0308
+/// use fa_reference::action::consequence::activation::tensor::kv::experiment::KvBranch;
+/// use fa_reference::action::consequence::activation::tensor::kv::image::KvImage;
+/// fn relabel(branch: KvBranch) -> KvImage { branch }
 /// ```
 #[derive(Clone, Debug)]
 pub struct KvBranch { base: Rc<Base>, node: Rc<Node> }
@@ -225,8 +260,11 @@ impl KvExperiment {
             encode_exact(edit.replacement_bits, contract.encoding(), contract.byte_order())?;
             if staged.insert(edit.cell, *edit).is_some() { return Err(Error::Duplicate); }
         }
-        Ok(self.publish(id, parent, Rc::clone(&parent.node), KvBranchKind::Intervention,
-            depth, staged, retained))
+        let node = Node {
+            id, kind: KvBranchKind::Intervention, depth,
+            parent: Some(Rc::clone(&parent.node)), origin: Some(Rc::clone(&parent.node)), edits: staged,
+        };
+        Ok(self.publish(node, retained))
     }
 
     /// Rebase exact sparse data onto the same pinned image. The source node is
@@ -239,8 +277,11 @@ impl KvExperiment {
         for edit in staged.values() {
             if source.bits(edit.cell)? != edit.replacement_bits { return Err(Error::Binding); }
         }
-        Ok(self.publish(id, source, Rc::clone(&self.root.node), KvBranchKind::Rebase,
-            1, staged, retained))
+        let node = Node {
+            id, kind: KvBranchKind::Rebase, depth: 1,
+            parent: Some(Rc::clone(&self.root.node)), origin: Some(Rc::clone(&source.node)), edits: staged,
+        };
+        Ok(self.publish(node, retained))
     }
 
     fn check_new_node(&self, id: u64, source: &KvBranch) -> Result<(), Error> {
@@ -274,13 +315,9 @@ impl KvExperiment {
         Ok(retained)
     }
 
-    fn publish(
-        &mut self, id: u64, origin: &KvBranch, parent: Rc<Node>, kind: KvBranchKind,
-        depth: usize, edits: BTreeMap<KvCell, KvEdit>, retained: usize,
-    ) -> KvBranch {
-        let node = Rc::new(Node { id, kind, depth, parent: Some(parent),
-            origin: Some(Rc::clone(&origin.node)), edits });
-        self.nodes.insert(id, Rc::clone(&node));
+    fn publish(&mut self, node: Node, retained: usize) -> KvBranch {
+        let node = Rc::new(node);
+        self.nodes.insert(node.id, Rc::clone(&node));
         self.retained_edits = retained;
         KvBranch { base: Rc::clone(&self.root.base), node }
     }
