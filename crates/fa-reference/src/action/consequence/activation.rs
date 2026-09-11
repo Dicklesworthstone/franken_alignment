@@ -9,6 +9,7 @@ pub mod consistency;
 pub mod identity;
 pub mod monitor;
 pub mod probe;
+pub mod tensor;
 
 use crate::Error;
 use std::rc::Rc;
@@ -198,7 +199,8 @@ impl ProgressiveFrame {
 }
 
 fn width(from: Option<u8>, to: u8) -> Result<u8, Error> {
-    if to > FRACTION_BITS || from.is_some_and(|v| v >= to) { return Err(Error::InvalidInput); }
+    if to > FRACTION_BITS { return Err(Error::InvalidInput); }
+    if from.is_some_and(|v| v >= to) { return Err(Error::InvalidInput); }
     Ok(from.map_or(9 + to, |v| to - v))
 }
 
