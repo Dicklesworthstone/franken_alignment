@@ -4,6 +4,8 @@
 //! No broker, clock, policy, helper, permit, or endpoint is reachable here.
 
 mod codec;
+mod channel;
+pub use channel::{ActorChannel, ChannelLimits, ChannelState, CloseReason, FeedResult, MAX_CHANNEL_EXCHANGES};
 pub use codec::{Command, MAX_FRAME_BYTES, MAX_RESPONSE_BYTES, WireError, WireResponse, decode_command, encode_command};
 
 use super::actor::{ActorOutcome, ActorPort, ActorTicket, Knowledge, MAX_ACTOR_REQUESTS};
