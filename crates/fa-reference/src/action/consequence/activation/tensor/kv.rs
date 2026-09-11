@@ -8,6 +8,7 @@ pub mod attention;
 pub mod attention_experiment;
 pub mod experiment;
 pub mod image;
+pub mod model;
 pub mod restore;
 
 use super::{HostTensor, TensorCapture, TensorContract, TokenSelection};
@@ -106,6 +107,38 @@ pub struct KvCapture {
     generations: BTreeMap<u64, u64>,
 }
 
+/// A fully captured append that has not published a token or frontier yet.
+/// Its exclusive borrow prevents intervening edits. Dropping it leaves logical
+/// state unchanged; vector capacity may have grown during preparation.
+#[derive(Debug)]
+#[must_use = "prepared captures are not published until commit consumes them"]
+pub struct PreparedKvAppend<'a> {
+    capture: &'a mut KvCapture,
+    tokens: Vec<KvToken>,
+    receipt: KvAppendReceipt,
+    normalized_values: usize,
+    source_bytes_read: usize,
+    generations: BTreeMap<u64, u64>,
+}
+
+impl PreparedKvAppend<'_> {
+    pub fn receipt(&self) -> &KvAppendReceipt { &self.receipt }
+
+    /// All validation and allocation were staged by prepare_append. No callback
+    /// or Result-producing operation separates publication of K, V and frontier.
+    pub fn commit(self) -> KvAppendReceipt {
+        self.capture.tokens.extend(self.tokens);
+        self.capture.receipts.push(self.receipt.clone());
+        self.capture.revision = self.receipt.revision;
+        self.capture.next_position = self.receipt.next_position;
+        self.capture.next_sequence = self.receipt.next_sequence;
+        self.capture.normalized_values = self.normalized_values;
+        self.capture.source_bytes_read = self.source_bytes_read;
+        self.capture.generations = self.generations;
+        self.receipt
+    }
+}
+
 impl KvCapture {
     pub fn new(
         contract: KvContract, stream: u64, batch: usize, first_position: u64,
@@ -140,6 +173,14 @@ impl KvCapture {
     }
 
     pub fn append(&mut self, expected_revision: u64, request: KvAppend<'_>) -> Result<KvAppendReceipt, Error> {
+        Ok(self.prepare_append(expected_revision, request)?.commit())
+    }
+
+    /// Stage the original append semantics for atomic composition across layers.
+    /// Host slices are copied now and are not borrowed by the returned plan.
+    pub fn prepare_append(
+        &mut self, expected_revision: u64, request: KvAppend<'_>,
+    ) -> Result<PreparedKvAppend<'_>, Error> {
         if expected_revision != self.revision || request.first_sequence != self.next_sequence { return Err(Error::Stale); }
         if request.token_count == 0 { return Err(Error::InvalidInput); }
         self.contract.keys.validate_tensor(request.keys)?;
@@ -199,19 +240,17 @@ impl KvCapture {
             next_sequence, token_count: request.token_count, source_bytes_read: read_bytes,
             normalized_values: new_values,
         };
-        // Finish fallible reservations before publishing values or frontier.
+        // Stage allocation before any layer publishes. Existing token arrays
+        // are neither cloned nor recopied; only bounded generation metadata is.
+        let mut generations = self.generations.clone();
+        for tensor in [request.keys, request.values] {
+            generations.insert(tensor.identity.object, tensor.identity.generation);
+        }
         self.tokens.try_reserve(request.token_count).map_err(|_| Error::Limit)?;
         self.receipts.try_reserve(1).map_err(|_| Error::Limit)?;
-        self.tokens.extend(captured);
-        self.receipts.push(receipt.clone());
-        self.revision = revision;
-        self.next_position = next_position;
-        self.next_sequence = next_sequence;
-        self.normalized_values = normalized_values;
-        self.source_bytes_read = source_bytes_read;
-        for tensor in [request.keys, request.values] {
-            self.generations.insert(tensor.identity.object, tensor.identity.generation);
-        }
-        Ok(receipt)
+        Ok(PreparedKvAppend {
+            capture: self, tokens: captured, receipt, normalized_values,
+            source_bytes_read, generations,
+        })
     }
 }
