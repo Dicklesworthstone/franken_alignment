@@ -2,9 +2,12 @@
 //!
 //! It owns bounded payload/version state, not an always-OK callback. The optional
 //! stream profile only appends complete reviewed messages and seals an explicit
-//! finish. No disk, network, provider or OS-crash durability is established.
+//! finish. The Unix filesystem profile persists those same transitions; other
+//! instances remain in-memory. Neither profile establishes provider authenticity.
 
 mod recovery;
+#[cfg(unix)]
+pub mod filesystem;
 
 use super::*;
 use super::stream::{StreamProfile, StreamView};
@@ -23,6 +26,8 @@ pub struct PublicationEndpoint {
     receipts: BTreeMap<u64, EndpointReceipt>,
     executions: u64,
     stream: Option<StreamView>,
+    #[cfg(unix)]
+    file_store: Option<filesystem::FileStore>,
 }
 
 impl PublicationEndpoint {
@@ -41,6 +46,8 @@ impl PublicationEndpoint {
             binding: Rc::new(()), retention_ticks, max_deliveries, resource, payload,
             scope: None, epoch: 0, elapsed: None, receipts: BTreeMap::new(), executions: 0,
             stream: None,
+            #[cfg(unix)]
+            file_store: None,
         })
     }
 
@@ -57,6 +64,13 @@ impl PublicationEndpoint {
     }
 
     pub(super) fn attach(&mut self, scope: Scope) -> Result<(), Error> {
+        #[cfg(unix)]
+        if self.file_store.is_some() {
+            return match self.file_transition(filesystem::Operation::Attach(scope))? {
+                filesystem::OperationResult::Unit => Ok(()),
+                _ => unreachable!("attach result"),
+            };
+        }
         if self.scope.is_some() { return Err(Error::Duplicate); }
         self.scope = Some(scope);
         Ok(())
@@ -69,6 +83,13 @@ impl PublicationEndpoint {
     pub fn stream_view(&self) -> Option<&StreamView> { self.stream.as_ref() }
 
     pub fn observe_time(&mut self, tick: ElapsedTick) -> Result<(), Error> {
+        #[cfg(unix)]
+        if self.file_store.is_some() {
+            return match self.file_transition(filesystem::Operation::ObserveTime(tick))? {
+                filesystem::OperationResult::Unit => Ok(()),
+                _ => unreachable!("clock result"),
+            };
+        }
         if self.elapsed.is_some_and(|previous| tick < previous) { return Err(Error::Stale); }
         self.elapsed = Some(tick);
         Ok(())
@@ -77,6 +98,13 @@ impl PublicationEndpoint {
     /// Repeating a fence is idempotent. A delayed old fence never lowers it.
     /// Installing it does not claim that previously accepted effects vanished.
     pub fn install_fence(&mut self, request: FenceRequest) -> Result<FenceAcknowledgment, Error> {
+        #[cfg(unix)]
+        if self.file_store.is_some() {
+            return match self.file_transition(filesystem::Operation::Fence(request))? {
+                filesystem::OperationResult::Fence(acknowledgment) => Ok(acknowledgment),
+                _ => unreachable!("fence result"),
+            };
+        }
         if !Rc::ptr_eq(&self.binding, &request.binding) || self.scope.is_none() {
             return Err(Error::Binding);
         }
@@ -89,6 +117,13 @@ impl PublicationEndpoint {
     /// mode compare the entire actual prefix AND its message boundaries before
     /// revealing anything. Finishing never deletes a previously visible prefix.
     pub fn deliver(&mut self, message: &DispatchEnvelope) -> Result<EndpointReceipt, Error> {
+        #[cfg(unix)]
+        if self.file_store.is_some() {
+            return match self.file_transition(filesystem::Operation::Deliver(message.clone()))? {
+                filesystem::OperationResult::Receipt(receipt) => Ok(receipt),
+                _ => unreachable!("delivery result"),
+            };
+        }
         let now = self.validate(message)?;
         if message.epoch != self.epoch { return Err(Error::Stale); }
         if now >= message.retained_until { return Err(Error::Stale); }
@@ -133,6 +168,8 @@ impl PublicationEndpoint {
 
     /// A lookup miss is not a terminal receipt: the request may still be queued.
     pub fn status(&self, query: &StatusQuery) -> Result<EndpointStatus, Error> {
+        #[cfg(unix)]
+        self.check_file_store()?;
         let now = self.validate(&query.0)?;
         if now >= query.0.retained_until { return Ok(EndpointStatus::RetentionExpired); }
         Ok(match self.existing(&query.0)? {
@@ -144,6 +181,13 @@ impl PublicationEndpoint {
     /// Establish nonexecution AND prevent every future delivery under this key.
     /// If execution won, return its real receipt. A chunk seal is not stream EOF.
     pub fn seal_unexecuted(&mut self, query: &StatusQuery) -> Result<EndpointReceipt, Error> {
+        #[cfg(unix)]
+        if self.file_store.is_some() {
+            return match self.file_transition(filesystem::Operation::Seal(query.clone()))? {
+                filesystem::OperationResult::Receipt(receipt) => Ok(receipt),
+                _ => unreachable!("seal result"),
+            };
+        }
         let now = self.validate(&query.0)?;
         if query.0.epoch != self.epoch || now >= query.0.retained_until { return Err(Error::Stale); }
         if let Some(receipt) = self.existing(&query.0)? { return Ok(receipt.clone()); }
@@ -158,6 +202,13 @@ impl PublicationEndpoint {
     /// A prior terminal receipt wins, including a real execution. Retention and
     /// the current endpoint fence must still cover the query. No key is reissued.
     pub fn resolve_expired(&mut self, query: &StatusQuery) -> Result<EndpointReceipt, Error> {
+        #[cfg(unix)]
+        if self.file_store.is_some() {
+            return match self.file_transition(filesystem::Operation::ResolveExpired(query.clone()))? {
+                filesystem::OperationResult::Receipt(receipt) => Ok(receipt),
+                _ => unreachable!("expiry result"),
+            };
+        }
         let now = self.validate(&query.0)?;
         if query.0.epoch != self.epoch || now >= query.0.retained_until { return Err(Error::Stale); }
         if let Some(receipt) = self.existing(&query.0)? { return Ok(receipt.clone()); }
