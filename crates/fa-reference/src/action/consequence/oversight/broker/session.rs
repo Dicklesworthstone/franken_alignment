@@ -53,6 +53,29 @@ impl ObservedSession {
     pub fn window(&self) -> ReviewWindow { self.window }
     pub fn elapsed(&self) -> ElapsedTick { self.elapsed }
 
+    /// Worker admission requires a fresh independent phase. There is no mixed
+    /// caller-vote/worker fallback or change of frozen input after admission.
+    pub(crate) fn worker_identity(&self) -> Result<(u64, [u8; 32]), Error> {
+        if self.reveal_phase || !self.committed.is_empty() || !self.revealed.is_empty() {
+            return Err(Error::WrongState);
+        }
+        if self.elapsed >= self.window.commit_by { return Err(Error::Stale); }
+        Ok(self.policy.as_ref().ok_or(Error::WrongState)?.reference_identity())
+    }
+
+    /// Only the preassigned worker bridge imports raw reference digests. The
+    /// existing commit operation still enforces the original phase and clock.
+    pub(crate) fn commit_from_worker(
+        &mut self, member: &str, digest: crate::round::Digest, now: ElapsedTick,
+    ) -> Result<(), Error> {
+        self.observe(now)?;
+        if self.reveal_phase { return Err(Error::WrongState); }
+        if now >= self.window.commit_by { return Err(Error::Stale); }
+        let commitment = self.policy.as_ref().ok_or(Error::WrongState)?
+            .import_reference_commitment(member, digest)?;
+        self.commit(member, commitment, now)
+    }
+
     pub fn commitment(&self, member: &str, verdict: Verdict, salt: &[u8]) -> Result<BoundCommitment, Error> {
         if self.reveal_phase { return Err(Error::WrongState); }
         if self.elapsed >= self.window.commit_by { return Err(Error::Stale); }

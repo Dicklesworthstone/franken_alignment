@@ -41,6 +41,16 @@ impl PolicySession {
         completed.verify_replay()?;
         Ok(completed)
     }
+
+    pub(crate) fn reference_identity(&self) -> (u64, [u8; 32]) {
+        self.session.reference_identity()
+    }
+
+    pub(crate) fn import_reference_commitment(
+        &self, member: &str, digest: crate::round::Digest,
+    ) -> Result<BoundCommitment, Error> {
+        self.session.import_reference_commitment(member, digest)
+    }
 }
 
 /// No constructor or conversion back to a mutable review request.

@@ -134,6 +134,23 @@ impl ReviewSession {
         })
     }
 
+    /// Host-internal bridge for a preassigned helper channel. The incoming
+    /// digest is untrusted reference evidence, NOT a signature or permission.
+    /// The original round still verifies its reveal and replays the transcript.
+    pub(crate) fn import_reference_commitment(
+        &self, member: &str, digest: Digest,
+    ) -> Result<BoundCommitment, Error> {
+        if self.round.phase() != Phase::Commit { return Err(Error::WrongState); }
+        self.round.outcome(member)?;
+        Ok(BoundCommitment {
+            context: Rc::clone(&self.context), member: member.to_owned(), digest,
+        })
+    }
+
+    pub(crate) fn reference_identity(&self) -> (u64, [u8; 32]) {
+        (self.context.spec.round, self.context.spec.evidence_root)
+    }
+
     pub fn commit(&mut self, member: &str, value: BoundCommitment) -> Result<(), Error> {
         if !Rc::ptr_eq(&self.context, &value.context) || value.member != member {
             return Err(Error::Binding);
