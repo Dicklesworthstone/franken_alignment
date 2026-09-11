@@ -77,23 +77,71 @@ stream text and charged unknown effects retain their original history.
 numerical observation. It is historical metadata, not a currentness certificate,
 and older DecisionArchive formats do not thereby acquire a tensor proof.
 
+## Paired, incremental KV observation
+
+`tensor::kv::KvCapture` stages keys and values for a selected contiguous window,
+then publishes both and advances the observed prefix together. A malformed value
+after successful key copies cannot publish a partial pair or a partial window.
+Both tensors must agree on batch/token extents, while their physical layout,
+encoding and channel counts are independently registered. Query-head count is
+explicit and never substituted for stored KV-head count. This profile defines
+contiguous groups of query heads per cache head; single-cache-head MQA and grouped
+GQA are supported without materializing duplicated K/V values for each query head.
+Other grouping laws need another declared profile, not an inferred interpretation.
+
+Every append names the expected capture revision, exact next source sequence and
+absolute next token position. Missing middle positions, duplicate appends and
+sequence gaps refuse. Page rollover can supply a new buffer starting at a new
+absolute position, without copying the earlier page. Old captured SourceFrames
+remain immutable even when the original host buffers are recycled. No missing
+position is synthesized as zeros, and an observed prefix never claims coverage
+before its configured start or beyond its actual end.
+
+K/V from one declared buffer object requires one generation, the same base byte
+slice, and disjoint enclosing key/value spans. Interleaved shared-buffer layouts
+outside that certificate refuse. Distinct buffer identities remain supplied
+metadata; this check does not prove that a hostile caller truthfully described
+all storage aliases. Source generations cannot decrease across accepted appends.
+
+The cache retains at most 4,096 positions and 1,048,576 normalized values, subject
+to smaller registered limits. Each append copies only new positions; old value
+arrays are never flattened or recopied into a growing full cache. Vec metadata
+may move on growth. Successful receipt byte counts include both key/value inputs;
+the aggregate source_bytes_read counts successful appends only, not work spent in
+failed calls. Failed-call work is bounded per call, not a lifetime resource ledger.
+Metadata, allocator capacity, temporary conversion vectors and caller copies are
+not included in the normalized-value count; no peak-memory or latency benchmark
+has run. General allocator aborts are not modeled as recoverable transactions.
+
+The cache contains ordinary SourceFrames usable by existing codecs/probes. It is
+not an ActorState, a restored inference backend, a complete restart manifest, a
+permission source or a substitute for the live broker's input/actor/epoch checks.
+No GPU completion fence or simultaneous host K/V capture is established here:
+the caller must provide coherent, ready host slices. This profile does not infer
+masks, paging tables, device ownership, recurrent state, or full model coverage.
+
 ## Verification and change record
 
-Three kernel, six public capture and eight oversight integration tests are source
-only. They cover every binary16 and bfloat16 word, small-domain overlap checks,
-all 24 physical axis orders, padding, recycled storage, exact probe integration,
+Three kernel, six public capture, eight oversight and eight KV tests are source
+only: 25 Rust test functions plus one compile-fail permission-conversion test.
+They cover every binary16 and bfloat16 word, small-domain overlap checks, all 24
+physical axis orders, padding, recycled storage, exact probe integration,
 truncation, selection, nonfinite values, extent overflow and encoding mismatch.
-Oversight cases pair actual reference two-key publication with raw-ingress bypass
-refusal, failed-recapture holds, same-dimension head/channel swaps, buffer-generation
+Oversight cases pair reference two-key publication with raw-ingress bypass refusal,
+failed-recapture holds, same-dimension head/channel swaps, buffer-generation
 rollback, actor advancement, stale human keys, preserved reservations, retained
-disclosure and capacity exhaustion. Existing activation tests remain unchanged.
+disclosure and capacity exhaustion. KV cases include GQA/MQA, different physical
+K/V layouts, partial-pair failure, exact frontier ordering, shared-buffer alias
+checks, storage budgets, source-generation rollback, and page rollover.
 
 Rust compilation, rustfmt, Clippy and tests have NOT run: no configured Rust/RCH
 runner is available. No bead is closed and historical execution receipts do not
 qualify this source. First the checked capture/normalization path landed; then the
-owning oversight ingress and its positive/negative integration cases.
+owning oversight ingress; then paired incremental KV capture. Existing test
+assertions and verification gates were not weakened.
 
 This is bounded reference progress toward FA-085/FA-024 and plan 10.6/10.8,
 serving FI-A05 and FI-I05. Native-host comparison, asynchronous buffer ownership,
-GPU cancellation and real serving-host qualification remain open. No dependency,
-unsafe code, foreign numerical runtime or second rights ledger was added.
+GPU cancellation, qualified model restart and real serving-host qualification
+remain open. No dependency, unsafe code, foreign numerical runtime or second
+rights ledger was added.

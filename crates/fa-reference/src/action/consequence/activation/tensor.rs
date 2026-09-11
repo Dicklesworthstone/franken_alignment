@@ -4,6 +4,8 @@
 //! of physical strides. This CPU byte-slice boundary neither synchronizes a GPU
 //! nor authenticates host metadata. Capturing owns only the selected token.
 
+pub mod kv;
+
 use super::{CaptureProfile, FrameIdentity, MAX_VALUES, SourceFrame};
 use crate::Error;
 
