@@ -6,6 +6,8 @@
 //! This is not authenticated storage, whole-process recovery or distributed HA.
 
 mod codec;
+#[cfg(test)]
+mod tests;
 
 use super::*;
 use std::cell::Cell;
@@ -46,8 +48,10 @@ pub enum StorageStage {
     CreatePending,
     WritePending,
     SyncPending,
+    SyncPublication,
     Publish,
     SyncDirectory,
+    SyncParentDirectory,
     RemovePending,
 }
 
@@ -85,6 +89,7 @@ pub struct FileStorageStatus {
     pub synchronized_revision: u64,
     pub retained_mutations: usize,
     pub encoded_bytes: usize,
+    pub clock_confirmation_required: bool,
     pub failure: Option<StorageFailure>,
 }
 
@@ -108,6 +113,7 @@ struct RecoveryState {
     initial: Vec<u8>,
     limits: FilePublicationLimits,
     visible_revision: Cell<u64>,
+    observed_floor: Cell<Option<ElapsedTick>>,
 }
 
 /// Keep outside the endpoint worker while its ORIGINAL control authority lives.
@@ -135,6 +141,7 @@ pub(super) struct FileStore {
     visible_revision: u64,
     synchronized_revision: u64,
     encoded_bytes: usize,
+    clock_confirmed: bool,
     failure: Option<StorageFailure>,
     #[cfg(test)]
     fail_at: Option<StorageStage>,
@@ -205,16 +212,19 @@ impl PublicationEndpoint {
         let lock = open_lock(&path, true)?;
         let recovery = Rc::new(RecoveryState {
             binding: Rc::clone(&self.binding), directory: path, initial, limits,
-            visible_revision: Cell::new(0),
+            visible_revision: Cell::new(0), observed_floor: Cell::new(None),
         });
         let mut store = FileStore {
             recovery: Rc::clone(&recovery), _lock: lock, directory, events: Vec::new(),
-            visible_revision: 0, synchronized_revision: 0, encoded_bytes: bytes.len(), failure: None,
+            visible_revision: 0, synchronized_revision: 0, encoded_bytes: bytes.len(),
+            clock_confirmed: false, failure: None,
             #[cfg(test)] fail_at: None,
         };
         if let Err(failure) = store.replace_file(&bytes, 0) {
             return Err(FilePublicationError::Io { stage: failure.stage, kind: failure.kind });
         }
+        let parent = recovery.directory.parent().ok_or(Error::Binding)?;
+        open_directory(parent)?.sync_all().map_err(|error| io_error(StorageStage::SyncParentDirectory, error))?;
         self.file_store = Some(store);
         Ok((self, FileEndpointRecovery { state: recovery }))
     }
@@ -242,22 +252,47 @@ impl PublicationEndpoint {
     }
 
     pub(super) fn check_file_store(&self) -> Result<(), Error> {
-        if self.file_store.as_ref().is_some_and(|store| store.failure.is_some()) {
+        if self.file_store.as_ref().is_some_and(|store| store.failure.is_some() || !store.clock_confirmed) {
             return Err(Error::Incomplete);
         }
         Ok(())
     }
 
     pub(super) fn file_transition(&mut self, operation: Operation) -> Result<OperationResult, Error> {
-        self.check_file_store()?;
+        let store = self.file_store.as_ref().ok_or(Error::WrongState)?;
+        if store.failure.is_some() { return Err(Error::Incomplete); }
+        let observed = match &operation {
+            Operation::ObserveTime(tick) => {
+                if store.recovery.observed_floor.get().is_some_and(|floor| *tick < floor) {
+                    return Err(Error::Stale);
+                }
+                Some(*tick)
+            }
+            Operation::Deliver(_) | Operation::Seal(_) | Operation::ResolveExpired(_) => {
+                self.check_file_store()?;
+                None
+            }
+            _ => None,
+        };
         let mut next = self.memory_copy();
         let result = operation.apply(&mut next)?;
-        if self.same_state(&next) { return Ok(result); }
+        if let Some(tick) = observed {
+            let store = self.file_store.as_mut().expect("retained store");
+            // A valid new clock observation cannot be forgotten by reopening
+            // after a failed write or a storage-budget refusal.
+            store.recovery.observed_floor.set(Some(tick));
+            store.clock_confirmed = false;
+        }
+        if self.same_state(&next) {
+            if observed.is_some() { self.file_store.as_mut().expect("retained store").clock_confirmed = true; }
+            return Ok(result);
+        }
         let encoded = codec::encode_operation(&operation)?;
-        let store = self.file_store.as_mut().ok_or(Error::WrongState)?;
+        let store = self.file_store.as_mut().expect("retained store");
         let published = store.append(encoded);
         let visible = published.is_ok()
             || store.failure.as_ref().is_some_and(|failure| failure.publication_visible);
+        if published.is_ok() && observed.is_some() { store.clock_confirmed = true; }
         // A rename can succeed even when the following directory sync fails.
         // Retain the possibly visible effect locally, but return NO receipt.
         if visible { self.install_memory(next); }
@@ -300,6 +335,7 @@ impl FileEndpointRecovery {
 
     /// The controller and this key must survive. Missing, truncated or rolled
     /// back publication files refuse; recovery never bootstraps an empty ledger.
+    /// Observe the CURRENT clock after reopening, before status or delivery.
     pub fn reopen(&self) -> Result<PublicationEndpoint, FilePublicationError> {
         let directory = open_directory(&self.state.directory)?;
         let lock = open_lock(&self.state.directory, false)?;
@@ -313,12 +349,13 @@ impl FileEndpointRecovery {
         // The surviving floor binds the visible history cut. It is not a hash,
         // signature or anti-rollback primitive after loss of the whole process.
         let state_file = regular_file(&self.state.directory.join(STATE), StorageStage::ReadPublication)?;
-        state_file.sync_all().map_err(|error| io_error(StorageStage::SyncPending, error))?;
+        state_file.sync_all().map_err(|error| io_error(StorageStage::SyncPublication, error))?;
         directory.sync_all().map_err(|error| io_error(StorageStage::SyncDirectory, error))?;
         let pending = self.state.directory.join(PENDING);
         match fs::symlink_metadata(&pending) {
             Ok(meta) if meta.is_file() && !meta.file_type().is_symlink() => {
                 fs::remove_file(pending).map_err(|error| io_error(StorageStage::RemovePending, error))?;
+                directory.sync_all().map_err(|error| io_error(StorageStage::SyncDirectory, error))?;
             }
             Ok(_) => return Err(Error::Binding.into()),
             Err(error) if error.kind() == io::ErrorKind::NotFound => {}
@@ -327,7 +364,8 @@ impl FileEndpointRecovery {
         let mut endpoint = decoded.endpoint;
         endpoint.file_store = Some(FileStore {
             recovery: Rc::clone(&self.state), _lock: lock, directory, events: decoded.events,
-            visible_revision: revision, synchronized_revision: revision, encoded_bytes: bytes.len(), failure: None,
+            visible_revision: revision, synchronized_revision: revision, encoded_bytes: bytes.len(),
+            clock_confirmed: false, failure: None,
             #[cfg(test)] fail_at: None,
         });
         Ok(endpoint)
@@ -339,7 +377,7 @@ impl FileStore {
         FileStorageStatus {
             visible_revision: self.visible_revision, synchronized_revision: self.synchronized_revision,
             retained_mutations: self.events.len(), encoded_bytes: self.encoded_bytes,
-            failure: self.failure.clone(),
+            clock_confirmation_required: !self.clock_confirmed, failure: self.failure.clone(),
         }
     }
 
@@ -355,7 +393,10 @@ impl FileStore {
                 Ok(())
             }
             Err(failure) => {
-                if failure.publication_visible { self.encoded_bytes = bytes.len(); }
+                if failure.publication_visible {
+                    self.events.push(event);
+                    self.encoded_bytes = bytes.len();
+                }
                 self.failure = Some(failure);
                 Err(Error::Incomplete)
             }
