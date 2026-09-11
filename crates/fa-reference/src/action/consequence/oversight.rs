@@ -4,6 +4,8 @@
 mod packet;
 mod broker;
 pub mod actor;
+mod actor_execution;
+pub use actor_execution::{DispatchKeys, ReconciliationResults};
 pub mod credibility;
 pub use broker::consistency;
 pub use broker::human;

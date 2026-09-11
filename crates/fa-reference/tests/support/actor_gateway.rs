@@ -25,7 +25,7 @@ pub fn proposal() -> ActorProposal {
     }
 }
 
-pub fn fixture(limits: IntakeLimits) -> (ActorPort, ActorSupervisor, PublicationEndpoint) {
+pub fn attach(endpoint: &mut PublicationEndpoint, limits: IntakeLimits) -> (ActorPort, ActorSupervisor) {
     let target = proposal().target;
     let scope = Scope { tenant: 1, principal: 2, run: 3, branch: 4, authority: 5, purpose: Purpose::Effect };
     let contracts = CommitteeContract::new(BTreeMap::from([("secret-helper".to_owned(), HelperContract::new(
@@ -47,12 +47,17 @@ pub fn fixture(limits: IntakeLimits) -> (ActorPort, ActorSupervisor, Publication
             minimum_members: 1, minimum_cohorts: 1 },
         narrowed_targets: TargetCeiling::new(&[target]).unwrap(),
     };
-    let mut endpoint = PublicationEndpoint::new(target, b"old".to_vec(), 200, 128).unwrap();
-    let (port, mut supervisor) = ActorSupervisor::new(config, &mut endpoint, contracts, limits).unwrap();
+    let (port, mut supervisor) = ActorSupervisor::new(config, endpoint, contracts, limits).unwrap();
     supervisor.broker_mut().observe_time(ElapsedTick(1)).unwrap();
     endpoint.observe_time(ElapsedTick(1)).unwrap();
     let ack = endpoint.install_fence(supervisor.broker().fence_request()).unwrap();
     supervisor.broker_mut().confirm_fence(ack).unwrap();
+    (port, supervisor)
+}
+
+pub fn fixture(limits: IntakeLimits) -> (ActorPort, ActorSupervisor, PublicationEndpoint) {
+    let mut endpoint = PublicationEndpoint::new(proposal().target, b"old".to_vec(), 200, 128).unwrap();
+    let (port, supervisor) = attach(&mut endpoint, limits);
     (port, supervisor, endpoint)
 }
 

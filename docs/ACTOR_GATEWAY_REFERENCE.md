@@ -14,8 +14,18 @@ Neither shared state nor the actor handle's debug representation contains commit
 
 Cancellation is a request, not a nonexecution receipt. Queued requests may be stopped without creating an attempt. Accepted requests are cancelled only through the existing ledger and only before dispatch. Dispatched and unknown effects stay charged and visible as uncertain. A dropped supervisor leaves unfinished observations Unknown and stops new admission, while previously published terminal outcomes remain historical facts.
 
-## Verification boundary
+## Request-to-effect integration
 
-Public tests cover fixed scope, FIFO, exact retries, changed fields, epoch refusal, private diagnostic filtering, genuine congress approval remaining Pending, reservation cancellation, foreign tickets, terminal tombstones, exact/one-over byte capacity, malformed proposals and supervisor loss. A compile-fail example checks that the actor handle cannot become a broker.
+The supervisor's `authorize_request` uses the current broker's congress/input/policy prerequisites and returns the original one-shot permit only to the trusted supervisor. `dispatch_request` takes borrowed `DispatchKeys`, checks the exact request-to-attempt correspondence, uses the retained frozen action, and calls the existing one-key or two-key dispatch path. Identical action bytes on two requests do not make their permits interchangeable. The actor projection is uncertain before a sendable envelope is returned.
+
+`deliver_request` submits that envelope once to the existing memory or filesystem endpoint and applies its receipt through the original ledger. Any endpoint error leaves an unknown effect, not a new attempt, refund or permission to resend. Failed pre-dispatch checks retain the original keys. An actor cancellation observed at that boundary cancels only an undispatched reservation. An already consumed request cannot be sent again through the gateway.
+
+`acknowledgment_lost`, `accept_receipt` and `reconcile_pending` update the same ledger and publish only the corresponding redacted outcomes. Recovery remains possible without helper input, a human-reviewer role or new authorization. The reconciliation map is supervisor-only and contains per-attempt results; it is not copied to the actor. Direct trusted calls through `broker_mut` must be followed by `synchronize` to publish their projection. The convenience execution methods do that themselves.
+
+## Verification boundary and change history
+
+The first increment added the bounded role-separated intake and eight public tests: fixed scope, FIFO, exact retries, changed fields, epoch refusal, private diagnostic filtering, genuine congress approval remaining Pending, reservation cancellation, foreign tickets, terminal tombstones, exact/one-over byte capacity, malformed proposals and supervisor loss. A compile-fail example checks that the actor handle cannot become a broker.
+
+The second increment added request-bound authorization, one-shot delivery and reconciliation with seven additional public tests. They compose actual reference congress and permit operations with endpoint outcomes, reject request/permit aliasing, preserve two-key requirements and expiry, and distinguish pre-dispatch cancellation from uncertain exposure. The Unix test performs real temporary-file publication/read/reopen operations using the existing endpoint profile, loses an acknowledgment, drops helper inputs, establishes a new dispatcher fence, and asserts recovery without a second publication or actor request. It is test source, not a claim that this scenario has executed here.
 
 The Rust sources and tests have not been compiled, executed, rustfmt-formatted or RCH-qualified in this environment; the required tools are absent. No historical receipt qualifies these additions and no production bead is closed. This is safe-Rust API role separation inside one process, not hostile-harness containment, authenticated identities, durable authority or a network/CLI service. Timing, queue capacity and eventual outcome remain declared feedback channels; no empirical leakage claim is made.
