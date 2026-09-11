@@ -68,7 +68,23 @@ pub struct ConnectionStatus {
 
 impl ConnectionStatus {
     pub fn closed(self) -> bool { self.failure.is_some() || matches!(self.channel, ChannelState::Closed(_)) }
+
+    pub fn interest(self) -> DriveInterest {
+        if self.closed() { return DriveInterest::Closed; }
+        match self.channel {
+            ChannelState::Reading if self.buffered_input_bytes > 0 => DriveInterest::LocalWork,
+            ChannelState::Reading => DriveInterest::Readable,
+            ChannelState::ReplyReady if self.pending_output_bytes == 0 => DriveInterest::LocalWork,
+            ChannelState::ReplyReady => DriveInterest::Writable,
+            ChannelState::Closed(_) => DriveInterest::Closed,
+        }
+    }
 }
+
+/// Scheduling action, not an effect-admission result. Buffered requests and an
+/// outstanding local flush must not wait for a new peer-readability event.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum DriveInterest { LocalWork, Readable, Writable, Closed }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct DriveReport { pub progress: DriveProgress, pub status: ConnectionStatus }
@@ -191,5 +207,28 @@ impl UnixActorConnection {
 
     fn fail(&mut self, direction: IoDirection, kind: io::ErrorKind) {
         self.failure = Some(ConnectionFailure { direction, kind });
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use super::super::actor_wire::CloseReason;
+
+    #[test]
+    fn buffered_work_and_flushes_do_not_wait_for_a_new_readability_edge() {
+        let mut status = ConnectionStatus { channel: ChannelState::Reading,
+            buffered_input_bytes: 0, pending_output_bytes: 0, failure: None };
+        assert_eq!(status.interest(), DriveInterest::Readable);
+        status.buffered_input_bytes = 3;
+        assert_eq!(status.interest(), DriveInterest::LocalWork);
+        status.channel = ChannelState::ReplyReady; status.pending_output_bytes = 1;
+        assert_eq!(status.interest(), DriveInterest::Writable);
+        status.pending_output_bytes = 0;
+        assert_eq!(status.interest(), DriveInterest::LocalWork);
+        status.failure = Some(ConnectionFailure { direction: IoDirection::Write, kind: io::ErrorKind::BrokenPipe });
+        assert_eq!(status.interest(), DriveInterest::Closed);
+        status.failure = None; status.channel = ChannelState::Closed(CloseReason::PeerClosed);
+        assert_eq!(status.interest(), DriveInterest::Closed);
     }
 }
