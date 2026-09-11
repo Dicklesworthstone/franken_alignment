@@ -9,6 +9,8 @@ pub mod actor_wire;
 pub mod actor_transport;
 #[cfg(unix)]
 pub mod supervised;
+#[cfg(unix)]
+pub mod helper_processes;
 pub mod helper_workers;
 pub mod helper_client;
 pub mod helper_client_drive;
