@@ -68,7 +68,11 @@ fn each_write_barrier_preserves_visible_outcome_and_requires_recovery() {
         assert_eq!(published.payload, if visible { b"published".to_vec() } else { b"before".to_vec() });
         drop(endpoint);
         let mut recovered = key.reopen().unwrap();
-        assert!(recovered.file_storage_status().unwrap().failure.is_none());
+        let state = recovered.file_storage_status().unwrap();
+        assert!(state.failure.is_none());
+        assert!(state.clock_confirmation_required);
+        assert_eq!(recovered.status(&query), Err(Error::Incomplete));
+        recovered.observe_time(ElapsedTick(1)).unwrap();
         let receipt = recovered.seal_unexecuted(&query).unwrap();
         assert_eq!(receipt.outcome(), if visible { EndpointOutcome::Executed { resulting_version: 2 } }
             else { EndpointOutcome::NotExecuted { reason: NonExecutionReason::Sealed } });
@@ -89,6 +93,7 @@ fn a_real_create_pending_failure_does_not_publish_or_accept_a_partial_file() {
     drop(endpoint);
     let mut recovered = key.reopen().unwrap();
     assert!(!key.directory().join(PENDING).exists());
+    recovered.observe_time(ElapsedTick(1)).unwrap();
     assert_eq!(recovered.status(&query).unwrap(), EndpointStatus::AwaitingResolution);
     let sealed = recovered.seal_unexecuted(&query).unwrap();
     assert_eq!(recovered.deliver(&message).unwrap(), sealed);
@@ -152,12 +157,16 @@ fn mutation_quota_survives_recovery_but_does_not_charge_idempotent_receipts() {
     endpoint.observe_time(ElapsedTick(1)).unwrap();
     assert_eq!(endpoint.deliver(&message).unwrap(), receipt);
     assert_eq!(endpoint.seal_unexecuted(&query).unwrap(), receipt);
-    assert_eq!(endpoint.observe_time(ElapsedTick(2)), Err(Error::Limit));
     assert_eq!(fs::read(key.directory().join(STATE)).unwrap(), before);
     drop(endpoint);
     let mut recovered = key.reopen().unwrap();
-    assert_eq!(recovered.observe_time(ElapsedTick(2)), Err(Error::Limit));
+    recovered.observe_time(ElapsedTick(1)).unwrap();
     assert_eq!(recovered.status(&query).unwrap(), EndpointStatus::Resolved(receipt));
+    assert_eq!(recovered.observe_time(ElapsedTick(2)), Err(Error::Limit));
+    assert!(recovered.file_storage_status().unwrap().clock_confirmation_required);
+    assert_eq!(recovered.status(&query), Err(Error::Incomplete));
+    assert_eq!(recovered.observe_time(ElapsedTick(1)), Err(Error::Stale));
+    assert_eq!(fs::read(key.directory().join(STATE)).unwrap(), before);
 }
 
 #[test]
@@ -171,6 +180,7 @@ fn second_key_expiry_and_terminal_nonexecution_survive_serialization() {
     assert_eq!(receipt.outcome(), EndpointOutcome::NotExecuted { reason: NonExecutionReason::DeadlineElapsed });
     drop(endpoint);
     let mut recovered = key.reopen().unwrap();
+    recovered.observe_time(ElapsedTick(5)).unwrap();
     let recovered_receipt = recovered.deliver(&message).unwrap();
     assert_eq!(recovered_receipt, receipt);
     assert_eq!(recovered_receipt.request().approval(), Some(approval));
@@ -194,4 +204,22 @@ fn existing_paths_and_symlinked_state_refuse_without_overwriting_targets() {
     assert!(key.reopen().is_err());
     assert!(PublicationEndpoint::read_file_publication(key.directory()).is_err());
     assert_eq!(fs::read(original).unwrap(), before);
+}
+
+#[test]
+fn a_failed_clock_write_cannot_be_forgotten_by_reopening_an_older_file() {
+    let (_root, mut endpoint, key) = setup(limits());
+    let mut message = message(&endpoint, 1);
+    message.request.approval = Some(DispatchApproval::new(7, 8, ElapsedTick(1), ElapsedTick(10)).unwrap());
+    endpoint.file_store.as_mut().unwrap().fail_at = Some(StorageStage::WritePending);
+    assert_eq!(endpoint.observe_time(ElapsedTick(20)), Err(Error::Incomplete));
+    assert_eq!(PublicationEndpoint::read_file_publication(key.directory()).unwrap().observed_time, Some(ElapsedTick(1)));
+    drop(endpoint);
+    let mut recovered = key.reopen().unwrap();
+    assert_eq!(recovered.observe_time(ElapsedTick(1)), Err(Error::Stale));
+    assert_eq!(recovered.deliver(&message), Err(Error::Incomplete));
+    recovered.observe_time(ElapsedTick(20)).unwrap();
+    let receipt = recovered.deliver(&message).unwrap();
+    assert_eq!(receipt.outcome(), EndpointOutcome::NotExecuted { reason: NonExecutionReason::DeadlineElapsed });
+    assert_eq!(recovered.execution_count(), 0);
 }
