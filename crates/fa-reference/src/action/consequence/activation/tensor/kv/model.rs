@@ -4,6 +4,14 @@
 //! Host temporal coherence and buffer identities are still trusted inputs. No
 //! model executes here, and no cache image contains an actor's effect authority.
 
+mod archive;
+mod restore;
+pub use archive::{
+    ModelKvDescriptor, MAX_MODEL_DESCRIPTOR_BYTES, MAX_MODEL_IMAGE_BYTES,
+    MODEL_DESCRIPTOR_HEADER_BYTES, MODEL_LAYER_DESCRIPTOR_BYTES,
+};
+pub use restore::{LayerRestore, LayerRestoreReceipt, ModelKvRestoreReceipt, PreparedModelKvRestore};
+
 use super::{KvAppend, KvAppendReceipt, KvBudget, KvCapture, KvContract, MAX_KV_POSITIONS, MAX_KV_VALUES};
 use super::image::KvImage;
 use crate::Error;
@@ -158,7 +166,7 @@ impl ModelKvCapture {
         let next_position = self.next_position.checked_add(count64).ok_or(Error::Overflow)?;
         let next_sequence = self.next_sequence.checked_add(count64).ok_or(Error::Overflow)?;
         let mut generations = self.generations.clone();
-        let mut spans = Vec::new();
+        let mut spans: Vec<super::super::HostTensor<'_>> = Vec::new();
         spans.try_reserve_exact(2 * self.layers.len()).map_err(|_| Error::Limit)?;
         for (id, request) in &requests {
             let first = request.buffer_first_position.checked_add(
@@ -177,7 +185,6 @@ impl ModelKvCapture {
                     return Err(Error::Stale);
                 }
                 for previous in &spans {
-                    let previous: &super::super::HostTensor<'_> = previous;
                     if previous.identity.object == tensor.identity.object {
                         if previous.identity.generation != tensor.identity.generation
                             || !std::ptr::eq(previous.bytes, tensor.bytes)
