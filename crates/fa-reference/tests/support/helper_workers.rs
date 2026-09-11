@@ -29,6 +29,11 @@ pub struct Fixture {
 impl Fixture {
     pub fn new() -> Self {
         let target = ResolvedTarget { adapter: 1, object: 2, contract_version: 1, expected_version: 1, generation: 1 };
+        Self::with_endpoint(PublicationEndpoint::new(target, b"old".to_vec(), 200, 16).unwrap())
+    }
+
+    pub fn with_endpoint(mut endpoint: PublicationEndpoint) -> Self {
+        let target = endpoint.target();
         let scope = Scope { tenant: 1, principal: 2, run: 3, branch: 4, authority: 5, purpose: Purpose::Effect };
         let mut members = BTreeMap::new();
         let mut contracts = BTreeMap::new();
@@ -52,7 +57,6 @@ impl Fixture {
                 narrow_at: 3, suspend_at: 4, minimum_members: 2, minimum_cohorts: 2 },
             narrowed_targets: TargetCeiling::new(&[target]).unwrap(),
         };
-        let mut endpoint = PublicationEndpoint::new(target, b"old".to_vec(), 200, 16).unwrap();
         let mut broker = OversightBroker::new(config, &mut endpoint, contracts.clone()).unwrap();
         broker.observe_time(ElapsedTick(1)).unwrap();
         endpoint.observe_time(ElapsedTick(1)).unwrap();

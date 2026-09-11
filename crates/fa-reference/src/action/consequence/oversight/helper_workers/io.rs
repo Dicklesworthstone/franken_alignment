@@ -2,6 +2,11 @@
 //! A caller using blocking Read/Write must supply its own bounded I/O contract;
 //! the Unix pool selects nonblocking streams before any request bytes are sent.
 
+#[cfg(unix)]
+mod pool;
+#[cfg(unix)]
+pub use pool::{HelperPool, HelperPump};
+
 use super::{HelperFailure, HelperPhase, HelperPort};
 use super::wire::{
     REVEAL_REQUEST, decode_commitment, decode_reveal, encode_request, reveal_frame_len,
