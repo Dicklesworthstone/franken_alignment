@@ -6,6 +6,7 @@
 //! mantissa bits denote an interval; they are never claimed to be observed zeroes.
 
 pub mod consistency;
+pub mod identity;
 pub mod monitor;
 pub mod probe;
 
