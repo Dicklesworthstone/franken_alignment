@@ -2,7 +2,7 @@
 use super::OversightBroker;
 use crate::action::consequence::delivery::PolicySourceChange;
 use crate::action::consequence::oversight::policy_state::{
-    CapturedSnapshot, PolicyStateWriter, StateCaptureStatus, StateLimits, StateSource,
+    CapturedSnapshot, PolicyStateWriter, StateCaptureStatus, StateFreshness, StateLimits, StateSource,
 };
 use crate::Error;
 
@@ -10,6 +10,12 @@ impl OversightBroker {
     pub fn enable_policy_state(&mut self, source: StateSource, limits: StateLimits) -> Result<PolicyStateWriter, Error> {
         self.delivery.enable_policy_state(source, limits)
     }
+    pub fn enable_fresh_policy_state(
+        &mut self, source: StateSource, limits: StateLimits, freshness: StateFreshness,
+    ) -> Result<PolicyStateWriter, Error> {
+        self.delivery.enable_fresh_policy_state(source, limits, freshness)
+    }
+    pub fn policy_state_freshness(&self) -> Option<StateFreshness> { self.delivery.policy_state_freshness() }
     pub fn policy_state_status(&self) -> Option<StateCaptureStatus> { self.delivery.policy_state_status() }
     pub fn capture_policy_state(&self) -> Result<CapturedSnapshot, Error> { self.delivery.capture_policy_state() }
     pub fn delivery_policy_state(&self, attempt: u64) -> Result<Option<&CapturedSnapshot>, Error> {

@@ -3,7 +3,7 @@ use super::DeliveryBroker;
 use crate::action::ActionState;
 use crate::action::consequence::oversight::policy_state::{
     CapturedSnapshot, PolicyStateCapture, PolicyStateWriter, StateCaptureStatus,
-    StateEvent, StateLimits, StateSource,
+    StateEvent, StateFreshness, StateLimits, StateSource,
 };
 use crate::{Error, Snapshot};
 
@@ -28,18 +28,38 @@ pub struct PolicySourceChange {
 }
 
 impl DeliveryBroker {
-    /// Mandatory once enabled. No actor/helper can retrieve the writer from the
-    /// broker, disable this prerequisite, or pass a snapshot around its checks.
+    /// Mandatory once enabled. The untimed profile makes no freshness claim.
     pub fn enable_policy_state(
         &mut self, source: StateSource, limits: StateLimits,
+    ) -> Result<PolicyStateWriter, Error> {
+        self.enable_policy_state_profile(source, limits, None)
+    }
+
+    /// Trusted bootstrap only. This age bound survives replacement and cannot
+    /// be disabled or widened by a writer, snapshot, reset or policy transition.
+    pub fn enable_fresh_policy_state(
+        &mut self, source: StateSource, limits: StateLimits, freshness: StateFreshness,
+    ) -> Result<PolicyStateWriter, Error> {
+        self.enable_policy_state_profile(source, limits, Some(freshness))
+    }
+
+    fn enable_policy_state_profile(
+        &mut self, source: StateSource, limits: StateLimits, freshness: Option<StateFreshness>,
     ) -> Result<PolicyStateWriter, Error> {
         if self.policy_state.is_some() { return Err(Error::Duplicate); }
         let inspection = self.inspect();
         if !inspection.ledger.stages.is_empty() || inspection.sequence != 0 { return Err(Error::WrongState); }
         if source.scope != self.scope { return Err(Error::Binding); }
-        let (capture, writer) = PolicyStateCapture::new(source, limits)?;
+        let (capture, writer) = match freshness {
+            Some(policy) => PolicyStateCapture::new_with_freshness(source, limits, policy)?,
+            None => PolicyStateCapture::new(source, limits)?,
+        };
         self.policy_state = Some(CapturedStateGate { capture, generations: 1, minimum_semantic_epoch: None });
         Ok(writer)
+    }
+
+    pub fn policy_state_freshness(&self) -> Option<StateFreshness> {
+        self.policy_state.as_ref().and_then(|gate| gate.capture.freshness_policy())
     }
 
     pub fn policy_state_status(&self) -> Option<StateCaptureStatus> {
@@ -48,7 +68,9 @@ impl DeliveryBroker {
 
     pub fn capture_policy_state(&self) -> Result<CapturedSnapshot, Error> {
         let gate = self.policy_state.as_ref().ok_or(Error::Incomplete)?;
-        let cut = gate.capture.capture()?;
+        let cut = if gate.capture.freshness_policy().is_some() {
+            gate.capture.capture_at(self.inspect().ledger.elapsed.ok_or(Error::Incomplete)?)?
+        } else { gate.capture.capture()? };
         if gate.minimum_semantic_epoch.is_some_and(|floor| cut.snapshot().semantic_epoch < floor) {
             return Err(Error::Stale);
         }
@@ -77,7 +99,7 @@ impl DeliveryBroker {
         });
         let minimum_semantic_epoch = gate.minimum_semantic_epoch.max(observed_epoch);
         let floor = inspection.ledger.epoch.checked_add(1).ok_or(Error::Overflow)?;
-        let (capture, writer) = PolicyStateCapture::new(next, limits)?;
+        let (capture, writer) = gate.capture.replacement(next, limits)?;
         let cancelled: Vec<_> = inspection.ledger.stages.iter().filter_map(|(id, stage)| {
             matches!(stage, ActionState::Proposed | ActionState::Prepared | ActionState::Reviewing | ActionState::Authorized)
                 .then_some(*id)

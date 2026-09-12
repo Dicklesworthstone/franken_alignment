@@ -2,6 +2,9 @@
 //! A separately held writer supplies observations; the consumer derives snapshots
 //! only from a complete, explicitly closed prefix. Neither role can issue permits.
 
+mod freshness;
+pub use freshness::{ObservationLease, StateFreshness};
+
 use crate::action::Scope;
 use crate::{Error, Snapshot};
 use std::cell::RefCell;
@@ -62,10 +65,12 @@ pub struct StateFrontier {
 pub struct CapturedSnapshot {
     frontier: StateFrontier,
     snapshot: Rc<Snapshot>,
+    lease: Option<ObservationLease>,
 }
 impl CapturedSnapshot {
     pub fn frontier(&self) -> StateFrontier { self.frontier }
     pub fn snapshot(&self) -> &Snapshot { &self.snapshot }
+    pub fn lease(&self) -> Option<ObservationLease> { self.lease }
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -97,6 +102,7 @@ struct State {
     last_full_snapshot: u64,
     writer_live: bool,
     fault: Option<Error>,
+    freshness: Option<freshness::FreshnessState>,
 }
 
 /// Read-side owner. Cloning a captured value never clones this source or a writer.
@@ -125,7 +131,7 @@ impl PolicyStateCapture {
         let state = Rc::new(RefCell::new(State {
             source, limits, events: BTreeMap::new(), bytes: 0, high: 0, applied: 0,
             current: None, closed: None, marker_floor: 0, full_snapshot_after: None,
-            last_full_snapshot: 0, writer_live: true, fault: None,
+            last_full_snapshot: 0, writer_live: true, fault: None, freshness: None,
         }));
         Ok((Self { state: Rc::clone(&state) }, PolicyStateWriter { state }))
     }
@@ -143,11 +149,12 @@ impl PolicyStateCapture {
         }
     }
 
+    /// Untimed capture is available only in the explicitly untimed profile.
+    /// A leased source must use capture_at with a current consumer-domain clock.
     pub fn capture(&self) -> Result<CapturedSnapshot, Error> {
         let state = self.state.try_borrow().map_err(|_| Error::WrongState)?;
-        if let Some(error) = state.fault { return Err(error); }
-        if !state.writer_live || state.full_snapshot_after.is_some() { return Err(Error::Incomplete); }
-        state.closed.clone().ok_or(Error::Incomplete)
+        if state.freshness.is_some() { return Err(Error::Incomplete); }
+        capture_closed(&state)
     }
 
     /// Compare the whole supplied snapshot, not merely policy-selected keys.
@@ -202,26 +209,11 @@ impl PolicyStateWriter {
         Ok(true)
     }
 
-    /// A trusted adapter explicitly closes its ENTIRE observed prefix. A marker
-    /// cannot hide a pending tail or missing middle, and old markers cannot heal
-    /// observation loss. Closure does not imply an authenticated physical source.
+    /// Untimed closure cannot bypass a configured freshness requirement.
     pub fn close(&self, through: u64, marker_generation: u64) -> Result<StateFrontier, Error> {
         let mut state = self.state.try_borrow_mut().map_err(|_| Error::WrongState)?;
-        if state.fault.is_some() { return Err(Error::WrongState); }
-        if through == 0 || marker_generation == 0 { return Err(Error::InvalidInput); }
-        let frontier = StateFrontier { source: state.source, through, marker_generation };
-        if state.closed.as_ref().is_some_and(|cut| cut.frontier == frontier) { return Ok(frontier); }
-        if marker_generation <= state.marker_floor { return Err(Error::Stale); }
-        if state.applied != through || state.high != through { return Err(Error::Incomplete); }
-        if state.full_snapshot_after.is_some_and(|after| state.last_full_snapshot <= after) {
-            return Err(Error::Incomplete);
-        }
-        let mut snapshot = state.current.clone().ok_or(Error::Incomplete)?;
-        snapshot.complete = true;
-        state.closed = Some(CapturedSnapshot { frontier, snapshot: Rc::new(snapshot) });
-        state.marker_floor = marker_generation;
-        state.full_snapshot_after = None;
-        Ok(frontier)
+        if state.freshness.is_some() { return Err(Error::Incomplete); }
+        close_state(&mut state, through, marker_generation, None)
     }
 
     /// Missing observation is not an empty snapshot. Require a newly observed
@@ -239,6 +231,33 @@ impl Drop for PolicyStateWriter {
         state.writer_live = false;
         state.closed = None;
     }
+}
+
+fn capture_closed(state: &State) -> Result<CapturedSnapshot, Error> {
+    if let Some(error) = state.fault { return Err(error); }
+    if !state.writer_live || state.full_snapshot_after.is_some() { return Err(Error::Incomplete); }
+    state.closed.clone().ok_or(Error::Incomplete)
+}
+
+/// Shared complete-prefix law for timed and untimed observation profiles.
+fn close_state(
+    state: &mut State, through: u64, marker_generation: u64, lease: Option<ObservationLease>,
+) -> Result<StateFrontier, Error> {
+    if state.fault.is_some() { return Err(Error::WrongState); }
+    if through == 0 || marker_generation == 0 { return Err(Error::InvalidInput); }
+    let frontier = StateFrontier { source: state.source, through, marker_generation };
+    if state.closed.as_ref().is_some_and(|cut| cut.frontier == frontier) { return Ok(frontier); }
+    if marker_generation <= state.marker_floor { return Err(Error::Stale); }
+    if state.applied != through || state.high != through { return Err(Error::Incomplete); }
+    if state.full_snapshot_after.is_some_and(|after| state.last_full_snapshot <= after) {
+        return Err(Error::Incomplete);
+    }
+    let mut snapshot = state.current.clone().ok_or(Error::Incomplete)?;
+    snapshot.complete = true;
+    state.closed = Some(CapturedSnapshot { frontier, snapshot: Rc::new(snapshot), lease });
+    state.marker_floor = marker_generation;
+    state.full_snapshot_after = None;
+    Ok(frontier)
 }
 
 impl State {
