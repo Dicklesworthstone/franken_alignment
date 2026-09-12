@@ -2,6 +2,9 @@
 //! No new forward engine or cache is introduced. Checkpoints retain exactly
 //! which original-token positions consumed a draw, for independent recomputation.
 
+pub mod archive;
+mod history;
+
 use super::{Sampler, SamplerSnapshot, SampledToken, SamplingBudget, SamplingPolicy};
 use super::super::{DecoderBudget, DecoderCheckpoint, DecoderModel, DecoderRestoreBudget,
     DecoderRestoreReceipt, DecoderSession, DecoderStep, DecoderWork};
@@ -132,23 +135,8 @@ impl DecoderModel {
         budget: SampleBudget) -> Result<SampledSession, Error>
     {
         checkpoint.check(self, stream)?;
-        self.estimate(0, checkpoint.numerical.tokens().len())?.check(budget.decoder)?;
-        let vocabulary = self.profile().shape().vocabulary;
-        if budget.sampling.vocabulary > super::MAX_DECODER_VOCABULARY
-            || budget.sampling.vocabulary < vocabulary { return Err(Error::Limit); }
-        let mut replay = SampledSession { decoder: self.session(stream)?,
-            sampler: Sampler::from_snapshot(&checkpoint.initial), initial: checkpoint.initial.clone(),
-            sampled_positions: Vec::new() };
-        let mut positions = checkpoint.sampled_positions.iter().copied().peekable();
-        for (position, token) in checkpoint.numerical.tokens().iter().copied().enumerate() {
-            let position64 = position as u64;
-            let decoder = DecoderBudget { scalar_products: self.estimate(position, 1)?.scalar_products()? };
-            if positions.peek() == Some(&position64) {
-                let actual = replay.advance_sampled(position64, SampleBudget { decoder, sampling: budget.sampling })?;
-                if actual.choice.token != token { return Err(Error::Binding); }
-                positions.next();
-            } else { replay.advance_forced(position64, token, decoder)?; }
-        }
+        let replay = self.replay_sampled_history(stream, checkpoint.numerical.tokens(),
+            &checkpoint.initial, &checkpoint.sampled_positions, budget)?;
         let cache = replay.cache_image()?;
         if replay.sampler_state() != checkpoint.sampler
             || replay.sampled_positions.as_slice() != checkpoint.sampled_positions.as_ref()

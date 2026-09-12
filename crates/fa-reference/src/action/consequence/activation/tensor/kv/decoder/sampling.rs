@@ -4,6 +4,7 @@
 //! The PRNG is reproducible, NOT cryptographic and NOT an audit-selection source.
 
 mod session;
+pub use session::archive;
 pub use session::{SampleBudget, SampledCheckpoint, SampledSession, SampledStep, SamplingStart};
 
 use super::MAX_DECODER_VOCABULARY;
