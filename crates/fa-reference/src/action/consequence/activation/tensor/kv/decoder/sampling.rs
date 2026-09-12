@@ -3,6 +3,9 @@
 //! order (lowest token ID breaks numerical ties). Arithmetic is sequential f64.
 //! The PRNG is reproducible, NOT cryptographic and NOT an audit-selection source.
 
+mod session;
+pub use session::{SampleBudget, SampledCheckpoint, SampledSession, SampledStep, SamplingStart};
+
 use super::MAX_DECODER_VOCABULARY;
 use crate::Error;
 use std::fmt;
