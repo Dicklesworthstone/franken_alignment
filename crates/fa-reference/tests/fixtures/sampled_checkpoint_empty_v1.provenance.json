@@ -1,0 +1,17 @@
+{
+  "schema": "fa.synthetic-archive-fixture/1",
+  "bytes": 676,
+  "sha256": "88162c0b015e567ad67a198e1bab6eb6c59b44556655b0ed5776b2f64b72af00",
+  "generator": "Python struct framing plus modular-integer SplitMix64, independent of Rust encoder",
+  "profile": {
+    "ids": [1, 2, 3, 4, 5],
+    "shape": [6, 4, 6, 2, 2, 1, 8]
+  },
+  "decoder_stream": 9,
+  "sampler_stream": 77,
+  "seed": 123,
+  "initial_state_hex": [
+    "b4dc9bd462de412b", "fa023ce9f06fb77c", "dc12d311d371cbe8", "afd2040c909881ff"
+  ],
+  "nonclaim": "Synthetic empty history. Does not validate Rust, inference, trained weights, or authenticity."
+}

@@ -1,6 +1,8 @@
 //! Portable stochastic state is untrusted until the original decoder replays it.
 //! Parsing cannot manufacture a DecoderCheckpoint or restore a saved live cache.
 
+pub mod files;
+
 use super::{SampleBudget, SampledCheckpoint, SampledSession, same_logits};
 use super::super::{SamplerSnapshot, SamplingPolicy, SAMPLER_SNAPSHOT_BYTES};
 use super::super::super::{DecoderModel, DecoderProfile, DecoderWork};
