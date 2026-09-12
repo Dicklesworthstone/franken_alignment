@@ -5,6 +5,7 @@ mod packet;
 mod broker;
 pub mod actor;
 pub mod actor_wire;
+pub mod evidence_source;
 #[cfg(unix)]
 pub mod actor_transport;
 #[cfg(unix)]
