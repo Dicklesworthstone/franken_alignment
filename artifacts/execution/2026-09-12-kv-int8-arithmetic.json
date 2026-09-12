@@ -1,0 +1,25 @@
+{
+  "groups": 2052,
+  "nonzero_values_quantized_to_zero": 124459,
+  "quantized_source_sha256": "320e4d8a860668d28583223f5c5c204cd8c12893a620599248233a3dd7065c3b",
+  "rare_signal_control": {
+    "codes": [
+      127,
+      0
+    ],
+    "quantized_logit": 0.0,
+    "quantized_next_token": 0,
+    "raw_logit": 0.24617820978164673,
+    "raw_next_token": 1,
+    "source_values": [
+      179.60333251953125,
+      0.35354986786842346
+    ]
+  },
+  "rust_compiled": false,
+  "rust_tests_executed": false,
+  "scope": "Synthetic arithmetic invariants and closed-form choice reversal, not Rust, trained-model, or runtime qualification.",
+  "script_sha256": "df3a6d21b3a39c10d32b5f73595268182d3da5b137ffc8d83ce1446da3cf1028",
+  "status": "passed_python_arithmetic_only",
+  "values_checked": 130633
+}

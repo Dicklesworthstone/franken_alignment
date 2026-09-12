@@ -2,9 +2,10 @@
 //! Numerical experiments have no live captures, checkpoint export or authority.
 
 pub mod comparison;
+mod continuation;
+pub mod quantized;
 
-use super::{ComputedLayers, DecoderBudget, DecoderCheckpoint, DecoderHistory, DecoderWork};
-use super::super::attention;
+use super::{DecoderBudget, DecoderCheckpoint, DecoderModel, DecoderWork};
 use super::super::experiment::{
     KvBranch, KvCell, KvEdit, KvEditScope, KvExperiment, KvExperimentLimits, KvSide,
     MAX_KV_EDITS_PER_FORK, MAX_KV_RETAINED_EDITS,
@@ -13,6 +14,7 @@ use crate::Error;
 use std::collections::BTreeMap;
 use std::fmt;
 use std::rc::Rc;
+use continuation::{Continuation, Prefix};
 
 pub const MAX_DECODER_INTERVENTION_EDITS: usize = MAX_KV_RETAINED_EDITS;
 
@@ -89,8 +91,7 @@ impl DecoderIntervention {
     pub fn proposed_edits(&self) -> usize { self.data.proposed_edits }
     pub fn effective_edits(&self) -> usize { self.data.effective_edits }
     pub fn session(&self, arm: DecoderExperimentArm) -> DecoderExperimentSession {
-        DecoderExperimentSession { plan: self.clone(), arm, appended: Vec::new(),
-            tokens: Vec::new(), logits: None, work: DecoderWork::default() }
+        DecoderExperimentSession { plan: self.clone(), arm, state: Continuation::default() }
     }
 }
 
@@ -136,10 +137,7 @@ impl fmt::Debug for DecoderExperimentStep {
 pub struct DecoderExperimentSession {
     plan: DecoderIntervention,
     arm: DecoderExperimentArm,
-    appended: Vec<ComputedLayers>,
-    tokens: Vec<u32>,
-    logits: Option<Rc<[f32]>>,
-    work: DecoderWork,
+    state: Continuation,
 }
 impl fmt::Debug for DecoderExperimentSession {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -150,79 +148,43 @@ impl fmt::Debug for DecoderExperimentSession {
 impl DecoderExperimentSession {
     pub fn plan(&self) -> &DecoderIntervention { &self.plan }
     pub fn arm(&self) -> DecoderExperimentArm { self.arm }
-    pub fn position(&self) -> u64 { (self.plan.source().tokens().len() + self.tokens.len()) as u64 }
+    fn prefix(&self) -> InterventionPrefix<'_> { InterventionPrefix { plan: &self.plan, arm: self.arm } }
+    pub fn position(&self) -> u64 { self.state.position(&self.prefix()) }
     /// Newly consumed original token IDs only; the prefix belongs to source().
-    pub fn continuation_tokens(&self) -> &[u32] { &self.tokens }
-    pub fn work(&self) -> DecoderWork { self.work }
+    pub fn continuation_tokens(&self) -> &[u32] { self.state.tokens() }
+    pub fn work(&self) -> DecoderWork { self.state.work() }
     /// The old checkpoint logits are deliberately NOT installed: editing a KV
     /// prefix does not recompute its previous output. Supply a first token, then
     /// inspect logits or choose a subsequent token from newly computed outputs.
-    pub fn logits(&self) -> Result<&[f32], Error> { self.logits.as_deref().ok_or(Error::Incomplete) }
-    pub fn greedy_token(&self) -> Result<u32, Error> {
-        let logits = self.logits()?;
-        let mut selected = 0;
-        for index in 1..logits.len() {
-            if logits[index] > logits[selected] { selected = index; }
-        }
-        Ok(selected as u32)
-    }
+    pub fn logits(&self) -> Result<&[f32], Error> { self.state.logits() }
+    pub fn greedy_token(&self) -> Result<u32, Error> { self.state.greedy_token() }
     pub fn advance_greedy(&mut self, expected_position: u64, budget: DecoderBudget) -> Result<DecoderExperimentStep, Error> {
         if expected_position != self.position() { return Err(Error::Stale); }
         let token = self.greedy_token()?;
         self.advance(expected_position, token, budget)
     }
     pub fn advance(&mut self, expected_position: u64, token: u32, budget: DecoderBudget) -> Result<DecoderExperimentStep, Error> {
-        if expected_position != self.position() { return Err(Error::Stale); }
-        let model = self.plan.source().model();
-        if token as usize >= model.profile().shape().vocabulary { return Err(Error::InvalidInput); }
-        let work = model.estimate(self.position() as usize, 1)?;
-        work.check(budget)?;
-        let next_work = self.work.add(work)?;
-        let position = self.position();
-        // The shared core's temporary attention-query capture never escapes.
-        // No residual observation is captured and no live cache is appended.
-        let computed = model.forward_token(self, self.plan.source().stream(), position, token, false)?;
-        self.tokens.try_reserve(1).map_err(|_| Error::Limit)?;
-        self.appended.try_reserve(1).map_err(|_| Error::Limit)?;
-        let step = DecoderExperimentStep { experiment: self.plan.id(), arm: self.arm,
-            token, position, logits: Rc::clone(&computed.logits), work };
-        self.appended.push(computed.staged);
-        self.tokens.push(token);
-        self.logits = Some(computed.logits);
-        self.work = next_work;
-        Ok(step)
+        let prefix = InterventionPrefix { plan: &self.plan, arm: self.arm };
+        let step = self.state.advance(&prefix, expected_position, token, budget)?;
+        Ok(DecoderExperimentStep { experiment: self.plan.id(), arm: self.arm, token: step.token,
+            position: step.position, logits: step.logits, work: step.work })
     }
 
     /// Scalar inspection is experimental data, not a live capture or KV image.
-    pub fn bits(&self, layer: u64, cell: KvCell) -> Result<u32, Error> {
-        let profile = self.plan.source().model().profile();
-        let shape = profile.shape();
-        if layer == 0 || layer > shape.layers as u64 || cell.head >= shape.cache_heads
-            || cell.channel >= profile.head_width() { return Err(Error::InvalidInput); }
-        if cell.position >= self.position() { return Err(Error::Missing); }
-        let index = cell.head * profile.head_width() + cell.channel;
-        let prefix = self.plan.source().tokens().len() as u64;
-        if cell.position < prefix {
-            if self.arm == DecoderExperimentArm::Intervention {
-                if let Some(branch) = self.plan.data.branches.get(&layer) { return branch.bits(cell); }
-            }
-            let row = self.plan.source().cache().layer(layer)?.token(cell.position)?;
-            let frame = match cell.side { KvSide::Key => row.key(), KvSide::Value => row.value() };
-            return frame.words.get(index).copied().ok_or(Error::Missing);
-        }
-        let row = self.appended.get((cell.position - prefix) as usize)
-            .and_then(|layers| layers.get(layer as usize - 1)).ok_or(Error::Missing)?;
-        if row.0 != layer { return Err(Error::Binding); }
-        let bytes = match cell.side { KvSide::Key => &row.1, KvSide::Value => &row.2 };
-        let word: [u8; 4] = bytes.get(index * 4..index * 4 + 4).ok_or(Error::Missing)?
-            .try_into().map_err(|_| Error::Binding)?;
-        Ok(u32::from_le_bytes(word))
-    }
+    pub fn bits(&self, layer: u64, cell: KvCell) -> Result<u32, Error> { self.state.bits(&self.prefix(), layer, cell) }
 }
-impl DecoderHistory for DecoderExperimentSession {
-    fn scalar(&self, layer: u64, values: bool, position: u64, head: usize, channel: usize) -> Result<f64, Error> {
-        attention::finite(self.bits(layer, KvCell {
-            side: if values { KvSide::Value } else { KvSide::Key }, position, head, channel,
-        })?)
+struct InterventionPrefix<'a> { plan: &'a DecoderIntervention, arm: DecoderExperimentArm }
+impl Prefix for InterventionPrefix<'_> {
+    fn model(&self) -> &DecoderModel { self.plan.source().model() }
+    fn stream(&self) -> u64 { self.plan.source().stream() }
+    fn len(&self) -> usize { self.plan.source().tokens().len() }
+    fn bits(&self, layer: u64, cell: KvCell) -> Result<u32, Error> {
+        if self.arm == DecoderExperimentArm::Intervention {
+            if let Some(branch) = self.plan.data.branches.get(&layer) { return branch.bits(cell); }
+        }
+        let row = self.plan.source().cache().layer(layer)?.token(cell.position)?;
+        let frame = match cell.side { KvSide::Key => row.key(), KvSide::Value => row.value() };
+        let index = cell.head * self.model().profile().head_width() + cell.channel;
+        frame.words.get(index).copied().ok_or(Error::Missing)
     }
 }

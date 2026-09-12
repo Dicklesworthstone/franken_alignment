@@ -67,3 +67,90 @@ module declaration. Their existing assertions remain intact.
 Rust/RCH compilation, execution, formatting, Clippy and the revision-bound project
 gate remain pending. No Beads packet or production gate is closed. The fixtures
 are numerical controls, not trained-model or safety evidence.
+
+## Actual full-decoder continuation
+
+`DecoderCheckpoint::quantized_experiment` binds the original immutable parameter
+allocation, complete original token prefix, compact image and measured encoder
+report. Its `QuantizedDecoder` does NOT retain the full original KV arrays or old
+logits. The source session/checkpoint may be dropped. Each new continuation shares
+only that immutable compact basis and owns separate full-precision suffix rows.
+This is a frozen-prefix quantization experiment, not an incremental int8 serving
+cache: newly computed suffix rows are deliberately not requantized.
+
+`QuantizedDecoderSession` calls the original private `DecoderModel::forward_token`
+with on-demand dequantization of prefix scalars. A private Continuation owner is
+shared with the existing sparse-intervention session; there is no second forward
+engine, attention evaluator, or competing mutable suffix implementation. The
+existing intervention API, control arm, preflight order and compile-fail boundaries
+are preserved. An admitted numerical failure publishes no partial suffix, tokens,
+logits or successful-work count. Failed CPU work and allocations are not free.
+
+Both modes deliberately lack a next-token choice until an explicit first token
+is computed. The old checkpoint logits describe the unquantized predecessor and
+are not installed as compressed-state results. Later greedy choices use each
+session's own newly computed logits. Experimental steps cannot be converted into
+ordinary DecoderSteps, source captures, exact checkpoints or production sessions.
+The compact wire parser is not an alternate constructor of this source-derived
+decoder experiment: valid unauthenticated imported payloads remain standalone
+approximate numerical data.
+
+## Paired behavioral comparison
+
+`compare_quantized_forced` and `compare_quantized_greedy` preflight the entire
+quantization byte/value allowance, every supplied original token, full context,
+the COMBINED product budget for both full rollouts, and all retained logit vectors
+before reading cache scalars or executing either arm. A budget for one arm cannot
+admit two. Both arms share the same explicit first token. Teacher forcing keeps
+subsequent inputs equal; greedy mode exposes feedback from each arm's own choices.
+Failure returns no partial comparison. Previously returned objects stay unchanged.
+
+Reports retain the baseline checkpoint, compact experiment, codec loss/byte report,
+full logit vectors and original per-step numerical work. They separately identify
+first differing logit words, first differing next-token choice, and first differing
+ACTUALLY CONSUMED token. A last diagnostic choice may be outside the consumed
+horizon, and a teacher-forced run need never consume it. L2/max logit distances are
+rounded descriptive quantities, not probabilities or detection certificates.
+
+The comparison object intentionally pins both baseline and compact state; its
+memory is not the compact-image byte count. Cloning its QuantizedDecoder and
+dropping the comparison releases that baseline retention. Decoder product counts
+retain their original meaning and EXCLUDE dequantization, allocation, square roots,
+report construction and other overhead. No throughput, zero-copy, total-memory,
+trained-model equivalence or safety claim is made by the encoded-size comparison.
+
+## Continuation tests and executed arithmetic cross-check
+
+The second increment adds ten public continuation tests and two compile-fail
+examples. A nontrivial 32-step test compares on-demand compact-prefix continuation
+with an independently constructed explicit sparse edit of EVERY original scalar;
+logits, original IDs, all newly appended KV words and work must agree. A separate
+32-step zero-cache control matches uninterrupted original inference. Imported
+SafeTensors parameters go through the same paired comparison. Other cases cover
+parent loss, sibling isolation, empty/full contexts, stale positions, exact/one-under
+budgets, combined-arm admission and late vocabulary overflow with no partial state.
+The existing sparse-intervention and comparison tests are retained unchanged.
+
+A synthetic uniform-attention example exposes the important negative: a large
+cache coordinate shares a head with a small decision-relevant coordinate. Int8
+erases the latter; full continuation changes the next greedy choice. Increasing
+only that small coordinate supplies the nearby retained-signal control. Forced
+one-step and multi-step greedy tests distinguish the unconsumed diagnostic choice
+from its subsequent consumption. These are algorithmic counterexamples, not
+examples of actual harmfulness or a trained detector's error rate.
+
+`artifacts/execution/2026-09-12-kv-int8-arithmetic.py` was executed independently
+using Python binary32 packing and scalar formulas: 2,052 synthetic groups and
+130,633 values passed the declared arithmetic invariants. A separate closed-form
+uniform-attention calculation yielded original next-token choice 1 versus compact
+choice 0, with logits 0.24617820978164673 versus 0.0 for the deciding coordinate.
+The result JSON binds the script and codec source SHA-256. Random finite bit
+patterns are NOT a workload distribution, and their zeroing count is not a model
+metric. This check validates neither the Rust implementation nor any serving host.
+
+All twenty new Rust test functions and three compile-fail examples remain
+UNCOMPILED and UNEXECUTED. The RCH test command failed before compilation because
+`rch` is absent; no local compiler fallback or verification-gate change was used.
+No Beads packet is closed. Actual performance, independent native continuation
+qualification, wider codec baselines, learned compression and held-out functional
+fidelity campaigns remain outstanding.
