@@ -5,6 +5,7 @@
 //! model executes here, and no cache image contains an actor's effect authority.
 
 mod archive;
+pub mod quantized;
 mod restore;
 pub use archive::{
     ModelKvDescriptor, MAX_MODEL_DESCRIPTOR_BYTES, MAX_MODEL_IMAGE_BYTES,
