@@ -13,6 +13,7 @@ pub mod consistency;
 pub mod human;
 pub mod policy_governance;
 pub mod identity;
+pub mod decoder_gate;
 pub use session::{ObservedReview, ObservedSession, ReviewWindow};
 
 use super::{CommitteeContract, CommitteeInput};
@@ -58,6 +59,7 @@ pub struct OversightBroker {
     consistency: Option<consistency::ConsistencyState>,
     policy_campaigns: Option<policy_governance::PolicyCampaignGate>,
     identity: Option<identity::IdentityGate>,
+    decoder: Option<decoder_gate::DecoderGate>,
 }
 
 impl OversightBroker {
@@ -66,7 +68,7 @@ impl OversightBroker {
         let scope = config.scope;
         Ok(Self { delivery: DeliveryBroker::new(config, endpoint)?, scope, contracts, issuer: Rc::new(()),
             inputs: BTreeMap::new(), started_rounds: BTreeSet::new(), captured_bytes: 0, credibility: None,
-            human: None, activation: None, consistency: None, policy_campaigns: None, identity: None })
+            human: None, activation: None, consistency: None, policy_campaigns: None, identity: None, decoder: None })
     }
     pub fn inspect(&self) -> ControlInspection { self.delivery.inspect() }
     pub fn contracts(&self) -> &CommitteeContract { &self.contracts }
@@ -78,7 +80,9 @@ impl OversightBroker {
     /// consistency observation after Err; it cannot be rerolled as a new sample.
     pub fn propose(&mut self, id: u64, spec: ActionSpec, snapshot: &Snapshot) -> Result<Proposal, Error> {
         self.observe_predicted_action(id, &spec)?;
+        let decoder = self.prepare_decoder()?;
         let proposal = self.delivery.propose(id, spec, snapshot)?;
+        self.publish_decoder(id, decoder);
         self.inputs.insert(id, InputSlot { action: proposal.action.clone(), revision: 0, current: None, approved: None });
         Ok(proposal)
     }
@@ -109,6 +113,7 @@ impl OversightBroker {
         let inputs = Rc::clone(slot.current.as_ref().ok_or(Error::Incomplete)?);
         let now = self.inspect().ledger.elapsed.ok_or(Error::Incomplete)?;
         if !(now < window.commit_by && window.commit_by < window.reveal_by && window.reveal_by <= slot.action.spec().deadline) { return Err(Error::InvalidInput); }
+        self.check_decoder(id)?;
         let session = self.delivery.begin_review(id, round, root, snapshot)?;
         let observed = ObservedSession::new(session, Rc::clone(&self.issuer), id, slot.revision, inputs, window, now);
         self.started_rounds.insert(round);
@@ -125,6 +130,7 @@ impl OversightBroker {
             self.delivery.check_fleet()?;
             self.check_consistency(review.attempt)?;
             self.check_activation(review.attempt)?;
+            self.check_decoder(review.attempt)?;
             let supplied = current.ok_or(Error::Incomplete)?;
             if slot.revision != review.revision || slot.current.as_deref() != Some(review.inputs.as_ref()) || supplied != review.inputs.as_ref() { return Err(Error::Stale); }
         }
@@ -151,6 +157,7 @@ impl OversightBroker {
         self.delivery.check_fleet()?;
         self.check_consistency(id)?;
         self.check_activation(id)?;
+        self.check_decoder(id)?;
         let supplied = supplied.ok_or(Error::Incomplete)?; let slot = self.inputs.get(&id).ok_or(Error::Missing)?;
         let current = slot.current.as_deref().ok_or(Error::Incomplete)?;
         if slot.approved != Some(slot.revision) { return Err(Error::Incomplete); }
