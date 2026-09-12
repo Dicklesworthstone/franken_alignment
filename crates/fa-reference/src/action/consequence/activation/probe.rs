@@ -5,6 +5,8 @@
 //! catastrophic cancellation. At MAX_VALUES the sums need fewer than 576 bits.
 //! This proves only a declared linear threshold decision, not detector accuracy.
 
+pub mod training;
+
 use super::{CaptureProfile, FrameIdentity, MAX_VALUES, ProgressiveFrame};
 use crate::Error;
 use std::cmp::Ordering;
