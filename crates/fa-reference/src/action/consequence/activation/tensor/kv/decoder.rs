@@ -7,6 +7,7 @@
 mod weights;
 mod checkpoint;
 pub mod safetensors;
+pub mod sampling;
 pub use checkpoint::{DecoderCheckpoint, DecoderRestoreBudget, DecoderRestoreReceipt};
 pub use weights::{DecoderIdentity, DecoderLayerWeights, DecoderModel, DecoderProfile, DecoderShape,
     MAX_DECODER_HIDDEN, MAX_DECODER_INTERMEDIATE, MAX_DECODER_PARAMETERS, MAX_DECODER_VOCABULARY};
