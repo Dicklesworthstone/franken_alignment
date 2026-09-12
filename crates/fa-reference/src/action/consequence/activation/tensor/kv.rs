@@ -6,6 +6,7 @@
 
 pub mod attention;
 pub mod attention_experiment;
+pub mod decoder;
 pub mod experiment;
 pub mod image;
 pub mod model;
