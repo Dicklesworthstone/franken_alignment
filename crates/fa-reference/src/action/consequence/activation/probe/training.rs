@@ -3,6 +3,7 @@
 //! structural separation is not authentication or evidence of detector quality.
 
 mod fit;
+pub mod calibration;
 pub use fit::{FitPolicy, FittedProbe, TrainingBudget, TrainingWork, MAX_TRAINING_VISITS};
 
 use super::{CaptureProfile, MAX_VALUES};
