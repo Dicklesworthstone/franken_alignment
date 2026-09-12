@@ -1,0 +1,14 @@
+{
+  "identity": {
+    "tenant": 1,
+    "model": 2,
+    "model_generation": 3,
+    "tokenizer_generation": 4,
+    "profile_generation": 5
+  },
+  "tokens": [
+    1,
+    2,
+    0
+  ]
+}
