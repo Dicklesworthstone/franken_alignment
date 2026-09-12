@@ -1,0 +1,12 @@
+{
+  "producer": "safetensors.torch.save",
+  "safetensors_version": "0.7.0",
+  "torch_version": "2.10.0+cpu",
+  "file_sha256": "bb621b7d620f72cd1152082a0705c76eadb5dfb5b5e327d73a62c560f3669438",
+  "file_bytes": 2848,
+  "header_bytes": 2032,
+  "tensors": 21,
+  "parameters": 308,
+  "round_trip": "all original exact-eighth scalar values and shapes matched",
+  "rust_execution": false
+}
