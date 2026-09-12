@@ -7,6 +7,7 @@ mod activation;
 mod stream;
 mod fleet;
 mod mediation;
+mod state_source;
 pub mod consistency;
 pub mod human;
 pub mod policy_governance;

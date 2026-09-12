@@ -9,6 +9,7 @@
 mod approval;
 mod endpoint;
 mod mediation_gate;
+mod state_gate;
 pub mod fleet;
 pub mod stream;
 pub use approval::DispatchApproval;
@@ -16,6 +17,7 @@ pub use endpoint::PublicationEndpoint;
 #[cfg(unix)]
 pub use endpoint::filesystem::{self, FileEndpointRecovery};
 pub use mediation_gate::TopologyChange;
+pub use state_gate::{PolicySourceChange, MAX_POLICY_STATE_GENERATIONS};
 
 use super::gate::containment::session::policy::Policy;
 use super::gate::containment::session::policy::controller::{
@@ -25,6 +27,7 @@ use super::gate::containment::session::policy::controller::{
 use super::gate::containment::{ActorState, CheckpointHandle, ResetReceipt, ResetRequest};
 use super::gate::ControlInspection;
 use super::mediation::VerifiedCut;
+use super::oversight::policy_state::CapturedSnapshot;
 use crate::action::{
     ActionSpec, ActionState, ElapsedTick, FrozenAction, Permit, ResolvedTarget, Scope, TrustedOutcome,
 };
@@ -184,6 +187,7 @@ struct DeliveryRecord {
     action: FrozenAction,
     approval: Option<DispatchApproval>,
     mediation: Option<VerifiedCut>,
+    policy_state: Option<CapturedSnapshot>,
     retained_until: ElapsedTick,
     resolution: Option<EndpointReceipt>,
 }
@@ -207,6 +211,7 @@ pub struct DeliveryBroker {
     stream_pending: Option<u64>,
     fleet: Option<fleet::FleetDomain>,
     mediation: Option<mediation_gate::MediationState>,
+    policy_state: Option<state_gate::CapturedStateGate>,
 }
 
 impl DeliveryBroker {
@@ -229,6 +234,7 @@ impl DeliveryBroker {
             stream_pending: None,
             fleet: None,
             mediation: None,
+            policy_state: None,
         })
     }
 
@@ -268,6 +274,7 @@ impl DeliveryBroker {
     }
 
     pub fn propose(&mut self, id: u64, spec: ActionSpec, snapshot: &Snapshot) -> Result<Proposal, Error> {
+        let _ = self.check_policy_state(snapshot)?;
         self.check_mediation()?;
         self.check_fleet()?;
         check_resource(&spec, self.scope, self.resource)?;
@@ -278,11 +285,13 @@ impl DeliveryBroker {
     pub fn begin_review(
         &self, id: u64, round: u64, root: [u8; 32], snapshot: &Snapshot,
     ) -> Result<PolicySession, Error> {
+        let _ = self.check_policy_state(snapshot)?;
         self.controller.begin_review(id, round, root, snapshot)
     }
 
     pub fn apply_review(&mut self, review: PolicyReview, snapshot: &Snapshot) -> Result<PolicyReceipt, Error> {
         if review.decision().consequence == super::Consequence::Continue {
+            let _ = self.check_policy_state(snapshot)?;
             self.check_mediation()?;
             self.check_fleet()?;
         }
@@ -290,6 +299,7 @@ impl DeliveryBroker {
     }
 
     pub fn authorize(&mut self, id: u64, snapshot: &Snapshot) -> Result<Permit, Error> {
+        let _ = self.check_policy_state(snapshot)?;
         self.check_mediation()?;
         self.check_fleet()?;
         self.controller.authorize(id, snapshot)
@@ -316,6 +326,7 @@ impl DeliveryBroker {
         &mut self, permit: &Permit, action: &FrozenAction, snapshot: &Snapshot,
         approval: Option<DispatchApproval>,
     ) -> Result<DispatchEnvelope, Error> {
+        let captured_policy_state = self.check_policy_state(snapshot)?;
         self.check_mediation()?;
         if !self.fenced { return Err(Error::Incomplete); }
         check_resource(action.spec(), self.scope, self.resource)?;
@@ -333,7 +344,7 @@ impl DeliveryBroker {
             retained_until,
         };
         let record = DeliveryRecord { action: action.clone(), approval, mediation: self.mediation_cut().cloned(),
-            retained_until, resolution: None };
+            policy_state: captured_policy_state, retained_until, resolution: None };
         let fleet_admission = self.prepare_fleet_dispatch(permit.attempt)?;
         self.controller.dispatch(permit, action, snapshot)?;
         self.records.insert(permit.attempt, record);
