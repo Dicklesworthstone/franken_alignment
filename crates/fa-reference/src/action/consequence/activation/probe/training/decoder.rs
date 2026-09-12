@@ -2,6 +2,9 @@
 //! Reuses the decoder, corpus, optimizer and exact scorer. No serving authority.
 
 mod campaign;
+mod export;
+pub mod plan;
+pub use export::MonitorExport;
 pub use campaign::{CampaignBudget, CampaignWork, DecoderCampaign, LayerCampaign, LayerPolicy};
 
 use super::{CaseLabel, CaseOrigin, ClassCounts, DataSplit, ProbeCorpus, SealedCorpus,
