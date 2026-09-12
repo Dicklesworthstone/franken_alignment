@@ -31,8 +31,12 @@ congress, target, topology, source, deadline and dispatcher checks.
 Owned mode rejects the previous caller-supplied ActorState replacement and
 unpaired checkpoint/reset methods. Read-only externally monitored profiles keep
 their old behavior. The owned run has no mutable accessor, reseed or extraction
-path. Terminal controller suspension stops inference before a draw; endpoint
-receipts, stopping and reconciliation stay available without numerical progress.
+path. The paired operations in HOSTED_DECODER_RESET.md require original-token
+replay, fresh monitoring and the original containment transition; they never
+import old authority or saved quiet approvals. Their supervision integration is
+specified in HOSTED_DECODER_DRIVER_RESET.md.
+Terminal controller suspension stops inference before a draw; endpoint receipts,
+stopping and reconciliation stay available without numerical progress.
 
 The full state is serialized on each successful numerical token. This is a
 bounded CPU reference integration, not a zero-copy implementation, a serving
@@ -41,10 +45,10 @@ clones held by the trusted caller can still execute separately, but cannot satis
 this controller's exact source identity. Parameter and probe authentication and
 trained-detector utility remain outside the reference guarantee.
 
-Seven integration scenarios compare numerical choices and full logits, publish
-through both key modes without manual actor-state updates, exercise holds after
-reservation, stale requests, sampling-budget refusal, stop-before-draw, source
-ownership and bypass refusal. One compile-fail example blocks mutable host access.
-Rust source/tests have not been compiled or executed in this editing environment;
-RCH qualification is pending. No historical execution receipt or bead status was
-promoted. Coordinated numerical checkpoint restoration is a separate increment.
+The initial hosted integration has seven scenarios comparing numerical choices
+and full logits, both publication key modes without manual actor-state updates,
+holds after reservation, stale requests, sampling-budget refusal, stop-before-draw,
+source ownership and bypass refusal. One compile-fail example blocks mutable host
+access. Paired-reset scenarios are documented separately. Rust source/tests have
+not been compiled or executed in this editing environment; RCH qualification is
+pending. No historical execution receipt or bead status was promoted.

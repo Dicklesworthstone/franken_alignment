@@ -1,7 +1,8 @@
-//! Close actor intake without dropping its original ticket/outcome mailbox.
+//! Supervising lifecycle transitions without losing the original actor mailbox.
 
-use super::ActorSupervisor;
+use super::{ActorSupervisor, ActorOutcome, BasisSource, Projection};
 use crate::action::consequence::delivery::{PublicationEndpoint, StopProgress, StopReceipt, StopRequest, StopSweep};
+use crate::action::consequence::oversight::decoder_host::{HostedCheckpointHandle, HostedResetReceipt, HostedResetRequest};
 use crate::Error;
 
 impl ActorSupervisor {
@@ -23,6 +24,35 @@ impl ActorSupervisor {
 
     pub fn progress_stop(&mut self, endpoint: &mut PublicationEndpoint) -> Result<StopSweep, Error> {
         let result = self.broker.progress_stop(endpoint);
+        self.synchronize()?;
+        result
+    }
+
+    pub fn capture_hosted_checkpoint(&mut self, id: u64, expected_actor_revision: u64)
+        -> Result<HostedCheckpointHandle, Error>
+    {
+        self.broker.capture_hosted_checkpoint(id, expected_actor_revision)
+    }
+
+    /// A restoring reset cancels queued work from the abandoned continuation
+    /// without closing fresh intake or evicting its original keys. A suspending
+    /// reset closes intake. Accepted/sent work is projected ONLY from the ledger.
+    /// There is no ActorPort entrypoint or implicit upgrade of expected epochs.
+    pub fn reset_hosted_decoder(&mut self, request: HostedResetRequest) -> Result<HostedResetReceipt, Error> {
+        let mut state = self.mailbox.try_borrow_mut().map_err(|_| Error::WrongState)?;
+        let result = self.broker.reset_hosted_decoder(request);
+        if let Ok(receipt) = &result {
+            if receipt.control.restored {
+                while let Some(id) = state.queued.pop_front() {
+                    state.entries.get_mut(&id).expect("queued actor request retained").project(
+                        Projection::Terminal(ActorOutcome::CancelledBeforeDispatch, BasisSource::Intake),
+                    );
+                }
+            } else {
+                state.close_intake();
+            }
+        }
+        drop(state);
         self.synchronize()?;
         result
     }

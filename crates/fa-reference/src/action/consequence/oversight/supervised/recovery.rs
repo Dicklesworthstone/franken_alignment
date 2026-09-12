@@ -5,6 +5,7 @@ use super::{Job, SupervisedDriver};
 use super::super::helper_processes::{HelperChildren, ProcessStatus};
 use crate::action::consequence::delivery::{EndpointReceipt, PublicationEndpoint};
 use crate::action::consequence::oversight::{ReconciliationResults, actor::ActorSupervisor};
+use crate::action::consequence::oversight::decoder_host::{HostedCheckpointHandle, HostedResetReceipt, HostedResetRequest};
 use crate::action::ElapsedTick;
 use crate::Error;
 use std::collections::BTreeMap;
@@ -84,17 +85,32 @@ impl OfflineDriver {
         self.supervisor.stop_receipt()
     }
 
+    pub fn capture_hosted_checkpoint(&mut self, id: u64, expected_actor_revision: u64)
+        -> Result<HostedCheckpointHandle, Error>
+    {
+        self.supervisor.capture_hosted_checkpoint(id, expected_actor_revision)
+    }
+
+    /// Reset the ORIGINAL numerical/control owner while disconnected. This
+    /// does not establish an endpoint fence or settle a remote effect. Reconnect
+    /// later moves the same checkpoint map, mailbox and outstanding obligations.
+    pub fn reset_hosted_decoder(&mut self, request: HostedResetRequest) -> Result<HostedResetReceipt, Error> {
+        let result = self.supervisor.reset_hosted_decoder(request);
+        if result.is_ok() { self.job = None; }
+        self.reap_helpers();
+        result
+    }
+
     pub fn helper_processes(&self) -> BTreeMap<String, ProcessStatus> {
         self.children.as_ref().map_or_else(BTreeMap::new, HelperChildren::statuses)
     }
     pub fn helpers_reaped(&self) -> bool {
         self.children.as_ref().is_none_or(HelperChildren::all_reaped)
     }
-    /// Also recognize a lower-level stop that preceded endpoint detachment.
-    /// Cleanup cannot wait for a successful clock update or reconnection.
+    /// Stop children belonging to a lower-level reset/cancelled job even when
+    /// reconnection refuses, without discarding the pending driver outcome event.
     pub fn reap_helpers(&mut self) -> BTreeMap<String, ProcessStatus> {
-        if self.supervisor.stop_receipt().is_some() { self.job = None; }
-        super::processes::maintain(&mut self.children, &self.job)
+        super::processes::maintain_owned(&self.supervisor, &mut self.children, &mut self.job)
     }
     pub fn stop_helper_processes(&mut self) -> BTreeMap<String, ProcessStatus> {
         self.children.as_mut().map_or_else(BTreeMap::new, HelperChildren::request_stop_all)

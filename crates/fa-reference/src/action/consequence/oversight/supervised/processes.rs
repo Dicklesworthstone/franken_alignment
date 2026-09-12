@@ -3,8 +3,10 @@
 
 use super::{DriverError, Job, ReviewLaunch, SupervisedDriver};
 use super::super::{CommitteeInput, ReviewWindow};
+use super::super::actor::ActorSupervisor;
 use super::super::helper_processes::{HelperChildren, HelperProgram, ProcessFailure, ProcessStatus, launch_helpers};
 use super::super::helper_workers::{HelperLimits, HelperPhase};
+use crate::action::ActionState;
 use crate::{Error, Snapshot};
 use std::collections::BTreeMap;
 
@@ -65,19 +67,31 @@ impl SupervisedDriver {
     pub fn helpers_reaped(&self) -> bool {
         self.children.as_ref().is_none_or(HelperChildren::all_reaped)
     }
-    /// One bounded cleanup pass. Protocol-terminal children are stopped; other
-    /// children are only observed. After review/cancellation, all are stopped.
-    /// A lower-level terminal stop also releases the job before clock or I/O
-    /// work can fail. The host keeps polling; Drop is only a best effort.
+    /// One bounded cleanup pass. Original terminal/cancelled attempts stop
+    /// their children before fallible clock or I/O work, while preserving the
+    /// driver's pending Stopped event. A terminal stop retains its old behavior.
     pub fn reap_helpers(&mut self) -> BTreeMap<String, ProcessStatus> {
-        if self.supervisor.stop_receipt().is_some() { self.job = None; }
-        maintain(&mut self.children, &self.job)
+        maintain_owned(&self.supervisor, &mut self.children, &mut self.job)
     }
     /// Stop direct children, without manufacturing votes, cancelling an effect,
     /// refunding rights, or changing the existing worker-missing denominator.
     pub fn stop_helper_processes(&mut self) -> BTreeMap<String, ProcessStatus> {
         self.children.as_mut().map_or_else(BTreeMap::new, HelperChildren::request_stop_all)
     }
+}
+
+/// Read the original ledger, not a copied driver phase or a child's exit status.
+/// A lower-level reset must stop children even when the next clock read refuses,
+/// but a successful subsequent step must still emit its existing Stopped event.
+pub(super) fn maintain_owned(
+    supervisor: &ActorSupervisor, children: &mut Option<HelperChildren>, job: &mut Option<Job>,
+) -> BTreeMap<String, ProcessStatus> {
+    if supervisor.stop_receipt().is_some() { *job = None; }
+    let terminal = job.as_ref().is_some_and(|active| {
+        !matches!(supervisor.broker().inspect().ledger.stages.get(&active.attempt),
+            Some(ActionState::Reviewing | ActionState::Authorized))
+    });
+    if terminal { maintain(children, &None) } else { maintain(children, job) }
 }
 
 pub(super) fn maintain(

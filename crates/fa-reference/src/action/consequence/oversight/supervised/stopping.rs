@@ -1,9 +1,10 @@
-//! Terminal shutdown of the integrated driver, not actor reset or cancellation.
+//! Terminal shutdown and paired hosted reset use distinct original transitions.
 
 use super::SupervisedDriver;
 use crate::action::ElapsedTick;
 use crate::action::consequence::delivery::{StopProgress, StopReceipt, StopRequest, StopSweep};
 use crate::action::consequence::oversight::helper_processes::ProcessStatus;
+use crate::action::consequence::oversight::decoder_host::{HostedCheckpointHandle, HostedResetReceipt, HostedResetRequest};
 use crate::Error;
 use std::collections::BTreeMap;
 
@@ -57,6 +58,22 @@ impl SupervisedDriver {
             self.observe_time(now)?;
             self.supervisor.progress_stop(&mut self.endpoint)
         })();
+        self.reap_helpers();
+        result
+    }
+
+    pub fn capture_hosted_checkpoint(&mut self, id: u64, expected_actor_revision: u64)
+        -> Result<HostedCheckpointHandle, Error>
+    {
+        self.supervisor.capture_hosted_checkpoint(id, expected_actor_revision)
+    }
+
+    /// The numerical/authority reset happens first. Only a successful original
+    /// transition releases the active review and retained permit. Cleanup still
+    /// recognizes an already cancelled job if a later projection returns error.
+    pub fn reset_hosted_decoder(&mut self, request: HostedResetRequest) -> Result<HostedResetReceipt, Error> {
+        let result = self.supervisor.reset_hosted_decoder(request);
+        if result.is_ok() { self.job = None; }
         self.reap_helpers();
         result
     }
