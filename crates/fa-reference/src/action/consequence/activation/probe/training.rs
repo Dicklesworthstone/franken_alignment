@@ -4,6 +4,7 @@
 
 mod fit;
 pub mod calibration;
+pub mod decoder;
 pub use fit::{FitPolicy, FittedProbe, TrainingBudget, TrainingWork, MAX_TRAINING_VISITS};
 
 use super::{CaptureProfile, MAX_VALUES};
