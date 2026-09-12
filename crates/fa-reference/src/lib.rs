@@ -1,6 +1,7 @@
 //! Independent, deliberately small logical models. No external effects,
 //! persistence, cryptographic claims, calibration, or deployment guarantees.
 #![forbid(unsafe_code)]
+#![cfg_attr(target_os = "linux", feature(peer_credentials_unix_socket))]
 
 pub mod action;
 pub mod canonical_json;

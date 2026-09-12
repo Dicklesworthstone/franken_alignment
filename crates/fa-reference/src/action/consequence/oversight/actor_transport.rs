@@ -121,7 +121,13 @@ impl UnixActorConnection {
     /// borrowed descriptor; this adapter does not supply another event loop.
     pub fn new(socket: UnixStream, channel: ActorChannel) -> io::Result<Self> {
         socket.set_nonblocking(true)?;
-        Ok(Self { socket, channel, input: [0; SOCKET_BUFFER_BYTES], start: 0, end: 0, failure: None })
+        Ok(Self::from_nonblocking(socket, channel))
+    }
+
+    /// Internal constructor after peer authentication and nonblocking setup.
+    /// No fallible syscall runs after the original actor session is moved here.
+    pub(super) fn from_nonblocking(socket: UnixStream, channel: ActorChannel) -> Self {
+        Self { socket, channel, input: [0; SOCKET_BUFFER_BYTES], start: 0, end: 0, failure: None }
     }
 
     pub fn status(&self) -> ConnectionStatus {

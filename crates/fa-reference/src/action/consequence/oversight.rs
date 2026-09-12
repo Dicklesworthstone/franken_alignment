@@ -8,6 +8,8 @@ pub mod actor_wire;
 pub mod evidence_source;
 #[cfg(unix)]
 pub mod actor_transport;
+#[cfg(target_os = "linux")]
+pub mod actor_peer;
 #[cfg(unix)]
 pub mod supervised;
 #[cfg(unix)]
