@@ -4,6 +4,9 @@
 
 mod recovery;
 mod processes;
+mod evidence;
+pub use evidence::{DriverEvidence, FileDriverStep, FileReviewError, FileReviewLaunch};
+use evidence::EvidenceFeed;
 pub use recovery::{OfflineDriver, ReconnectFailure};
 pub use processes::{ProcessReviewError, ProcessReviewLaunch};
 
@@ -198,19 +201,26 @@ impl SupervisedDriver {
     /// reservation. Transient pre-dispatch errors keep the original permit.
     /// Owned process cleanup progresses on both success and error, without waits.
     pub fn step_with_clock<F>(
-        &mut self, mut clock: F, current: Option<&CommitteeInput>,
+        &mut self, clock: F, current: Option<&CommitteeInput>,
         snapshot: &Snapshot, human: Option<&HumanPermit>,
     ) -> Result<DriverEvent, DriverError>
     where F: FnMut() -> ElapsedTick {
+        self.step_with_feed(clock, EvidenceFeed::Fixed { snapshot, current }, human)
+    }
+
+    fn step_with_feed<F>(
+        &mut self, mut clock: F, mut evidence: EvidenceFeed<'_>, human: Option<&HumanPermit>,
+    ) -> Result<DriverEvent, DriverError>
+    where F: FnMut() -> ElapsedTick {
         self.reap_helpers();
-        let result = self.step_inner(&mut clock, current, snapshot, human);
+        let result = self.step_inner(&mut clock, &mut evidence, human);
         self.reap_helpers();
         result
     }
 
     fn step_inner<F>(
-        &mut self, mut clock: F, current: Option<&CommitteeInput>,
-        snapshot: &Snapshot, human: Option<&HumanPermit>,
+        &mut self, mut clock: F, evidence: &mut EvidenceFeed<'_>,
+        human: Option<&HumanPermit>,
     ) -> Result<DriverEvent, DriverError>
     where F: FnMut() -> ElapsedTick {
         self.observe_time(clock())?;
@@ -228,14 +238,21 @@ impl SupervisedDriver {
             let now = clock();
             self.observe_time(now)?;
             let report = pumped?;
-            let pool = self.job.as_mut().expect("active job").pool.as_mut().expect("review pool");
-            if !pool.ready_to_finish() { return Ok(DriverEvent::Workers { request, report }); }
-            let review = pool.finish(now)?;
+            if !self.job.as_ref().expect("active job").pool.as_ref().expect("review pool").ready_to_finish() {
+                return Ok(DriverEvent::Workers { request, report });
+            }
+            let captured = self.sample_evidence(evidence, request)?;
+            let now = if evidence.dynamic() {
+                let tick = clock(); self.observe_time(tick)?; tick
+            } else { now };
+            let review = self.job.as_mut().expect("active job").pool.as_mut().expect("review pool").finish(now)?;
             // The consumed review must never be applied twice, including when
             // current evidence or governance changed during helper execution.
             let mut completed = self.job.take().expect("active job");
             completed.pool = None;
-            let applied = self.supervisor.broker_mut().apply_review(review, current, snapshot);
+            let applied = self.supervisor.broker_mut().apply_review(
+                review, captured.current.as_deref(), captured.snapshot.as_ref(),
+            );
             self.supervisor.synchronize()?;
             return match applied {
                 Ok(receipt) => {
@@ -248,7 +265,10 @@ impl SupervisedDriver {
                 Err(error) => Ok(DriverEvent::ReviewRejected { request, error }),
             };
         }
-        self.check_ready(current)?;
+        let captured = self.sample_evidence(evidence, request)?;
+        if evidence.dynamic() { self.observe_time(clock())?; }
+        if let Some(error) = captured.failure { return Err(error.into()); }
+        self.check_ready(captured.current.as_deref())?;
         match (self.supervisor.broker().human_review_required(), human.is_some()) {
             (true, false) => return Ok(DriverEvent::AwaitingHuman { request }),
             (false, true) => return Err(Error::Binding.into()),
@@ -256,12 +276,23 @@ impl SupervisedDriver {
         }
         let job = self.job.as_mut().expect("ready job");
         if job.permit.is_none() {
-            job.permit = Some(self.supervisor.authorize_request(request, current, snapshot)?);
+            job.permit = Some(self.supervisor.authorize_request(
+                request, captured.current.as_deref(), captured.snapshot.as_ref(),
+            )?);
         }
+        drop(captured);
         self.observe_time(clock())?;
+        // A successful reservation is NOT permission to reuse a source sampled
+        // before it. Recheck live data again; any failure keeps that reservation.
+        let captured = self.sample_evidence(evidence, request)?;
+        if evidence.dynamic() { self.observe_time(clock())?; }
+        if let Some(error) = captured.failure { return Err(error.into()); }
+        self.check_ready(captured.current.as_deref())?;
         let job = self.job.as_ref().expect("ready job");
         let keys = DispatchKeys { automatic: job.permit.as_ref().expect("reserved original permit"), human };
-        let result = self.supervisor.deliver_request(request, keys, current, snapshot, &mut self.endpoint);
+        let result = self.supervisor.deliver_request(
+            request, keys, captured.current.as_deref(), captured.snapshot.as_ref(), &mut self.endpoint,
+        );
         match result {
             Ok(receipt) => {
                 self.job = None;
