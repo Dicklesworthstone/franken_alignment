@@ -83,3 +83,27 @@ producer; these reader scenarios do not themselves establish a passing run or
 pretrained-model quality. The source/format contracts remain those of the original
 [SafeTensors loader](SAFETENSORS_DECODER_REFERENCE.md) and
 [indexed shard loader](SHARDED_WEIGHT_LOADING_REFERENCE.md).
+
+## Configured entry points and the existing CLI
+
+The original from_llama_files API now sends its validated regular weight-file
+handle through this reader. Config parsing still completes before weight access;
+regular-file/symlink checks and exact CheckpointFileLimits stay in place. Its
+internal I/O allowance adds only the EOF-probe headroom, not another permitted
+file byte. The existing decoder_from_checkpoint example inherits this bounded
+raw-weight path without changing its CLI, tokens or generation policy. The small
+configuration file remains separately bounded at 64 KiB.
+
+read_llama_safetensors and read_llama_shards compose the same LlamaConfig admission
+with explicitly supplied readers and a caller-owned persistent read budget.
+Unsupported architecture/configuration refuses before any weight I/O or shard
+index processing. Sharded receipts keep both the accepted configuration and each
+actual shard's interpretation. These methods do not infer local paths from index
+labels, load a tokenizer, change model capacity or bypass the original constructor.
+
+Four additional configured-reader regression scenarios compare file/memory/
+fragmented imports and receipts, run config-plus-shards through actual File
+handles and checkpoint continuation after source removal, prove unsupported
+configs never touch readers, and preserve exact file limits and truncation error
+classes. These also remain uncompiled/unexecuted. The original concurrent config
+and file regression suites and checkpoint CLI tests are retained unchanged.

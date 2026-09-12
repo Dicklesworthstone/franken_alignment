@@ -2,6 +2,8 @@
 //! This never imports remote code, follows a model name, or guesses an architecture.
 
 use super::{WeightError, WeightLoadReceipt, MAX_WEIGHT_FILE_BYTES, MAX_WEIGHT_HEADER_BYTES};
+use super::reader::{WeightReadBudget, WeightReadError, MAX_WEIGHT_READ_CALLS};
+use super::shards::ShardedWeightLoadReceipt;
 use super::super::{DecoderIdentity, DecoderModel, DecoderProfile, DecoderShape};
 use crate::strict_json::{self, ErrorKind, Json, Limits};
 use crate::Error;
@@ -123,6 +125,8 @@ impl LlamaConfig {
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct PretrainedReceipt { pub configuration: LlamaConfig, pub weights: WeightLoadReceipt }
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct PretrainedShardReceipt { pub configuration: LlamaConfig, pub weights: ShardedWeightLoadReceipt }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct CheckpointFileLimits { pub config_bytes: usize, pub weight_bytes: usize }
@@ -138,8 +142,31 @@ impl DecoderModel {
         load(configuration, weights)
     }
 
+    /// Negotiate the original config before consuming any supplied weight reader.
+    /// The same caller-owned I/O budget survives configuration and read failures.
+    pub fn read_llama_safetensors<R: Read + ?Sized>(
+        identity: DecoderIdentity, context: usize, configuration: &[u8],
+        source: &mut R, budget: &mut WeightReadBudget,
+    ) -> Result<(Self, PretrainedReceipt), CheckpointError> {
+        let configuration = LlamaConfig::decode(identity, context, configuration)?;
+        load_reader(configuration, source, budget)
+    }
+
+    /// Explicit supplied shard readers, never filenames opened from index data.
+    /// Config admission precedes index admission, all headers and scalar reads.
+    pub fn read_llama_shards<R: Read>(
+        identity: DecoderIdentity, context: usize, configuration: &[u8], index: &[u8],
+        sources: &mut BTreeMap<String, R>, budget: &mut WeightReadBudget,
+    ) -> Result<(Self, PretrainedShardReceipt), CheckpointError> {
+        let configuration = LlamaConfig::decode(identity, context, configuration)?;
+        let (model, weights) = Self::read_safetensors_shards(configuration.profile.clone(), index, sources, budget)
+            .map_err(weight_read_failure)?;
+        Ok((model, PretrainedShardReceipt { configuration, weights }))
+    }
+
     /// Two explicit operator-controlled regular files. Config admission completes
     /// BEFORE opening weights; a malformed config cannot provoke a weight read.
+    /// Weights stream through the shared bounded reader, not a full raw copy.
     /// No pickle fallback, inferred filename, download, shard traversal or writes.
     pub fn from_llama_files(
         identity: DecoderIdentity, context: usize, configuration: impl AsRef<Path>,
@@ -151,14 +178,37 @@ impl DecoderModel {
         let bytes = read_file(configuration.as_ref(), limits.config_bytes, CheckpointInput::Configuration)?;
         let configuration = LlamaConfig::decode(identity, context, &bytes)?;
         let model_bound = 8 + MAX_WEIGHT_HEADER_BYTES + configuration.profile.parameter_count() * 4;
-        let weights = read_file(weights.as_ref(), limits.weight_bytes.min(model_bound), CheckpointInput::Weights)?;
-        load(configuration, &weights)
+        let bound = limits.weight_bytes.min(model_bound);
+        let (mut weights, _) = open_file(weights.as_ref(), bound, CheckpointInput::Weights)?;
+        // File-size limits still count format bytes, not the EOF probe's capacity.
+        let mut budget = WeightReadBudget::new(bound + 1, MAX_WEIGHT_READ_CALLS)
+            .map_err(|_| CheckpointError::Limit)?;
+        load_reader(configuration, &mut weights, &mut budget)
     }
 }
 
 fn load(configuration: LlamaConfig, weights: &[u8]) -> Result<(DecoderModel, PretrainedReceipt), CheckpointError> {
     let (model, weights) = DecoderModel::from_safetensors(configuration.profile.clone(), weights).map_err(CheckpointError::Weights)?;
     Ok((model, PretrainedReceipt { configuration, weights }))
+}
+fn load_reader<R: Read + ?Sized>(
+    configuration: LlamaConfig, source: &mut R, budget: &mut WeightReadBudget,
+) -> Result<(DecoderModel, PretrainedReceipt), CheckpointError> {
+    let (model, weights) = DecoderModel::read_safetensors(configuration.profile.clone(), source, budget)
+        .map_err(weight_read_failure)?;
+    Ok((model, PretrainedReceipt { configuration, weights }))
+}
+fn weight_read_failure(error: WeightReadError) -> CheckpointError {
+    match error {
+        WeightReadError::Refused(WeightError::Limit) => CheckpointError::Limit,
+        WeightReadError::Refused(error) => CheckpointError::Weights(error),
+        // Preserve the file API's distinction between malformed/truncated weight
+        // data and an actual OS read failure. No error returns partial parameters.
+        WeightReadError::Io { kind: io::ErrorKind::UnexpectedEof, .. } => CheckpointError::Weights(WeightError::Header),
+        WeightReadError::Io { kind, .. } => CheckpointError::Io {
+            input: CheckpointInput::Weights, stage: FileStage::Read, kind,
+        },
+    }
 }
 fn config_error(field: &str, issue: ConfigIssue) -> CheckpointError {
     CheckpointError::Configuration { field: field.to_owned(), issue }
@@ -219,7 +269,7 @@ fn validate_metadata(key: &str, value: &Json) -> Result<(), CheckpointError> {
     if !valid { return Err(config_error(key, ConfigIssue::Type)); }
     Ok(())
 }
-fn read_file(path: &Path, limit: usize, input: CheckpointInput) -> Result<Vec<u8>, CheckpointError> {
+fn open_file(path: &Path, limit: usize, input: CheckpointInput) -> Result<(File, usize), CheckpointError> {
     let failure = |stage, error: io::Error| CheckpointError::Io { input, stage, kind: error.kind() };
     let before = fs::symlink_metadata(path).map_err(|e| failure(FileStage::Metadata, e))?;
     if !before.is_file() || before.file_type().is_symlink() { return Err(CheckpointError::NotRegular(input)); }
@@ -228,9 +278,14 @@ fn read_file(path: &Path, limit: usize, input: CheckpointInput) -> Result<Vec<u8
     let opened = file.metadata().map_err(|e| failure(FileStage::Metadata, e))?;
     if !opened.is_file() { return Err(CheckpointError::NotRegular(input)); }
     if opened.len() > limit as u64 { return Err(CheckpointError::Limit); }
+    Ok((file, opened.len() as usize))
+}
+fn read_file(path: &Path, limit: usize, input: CheckpointInput) -> Result<Vec<u8>, CheckpointError> {
+    let (file, length) = open_file(path, limit, input)?;
     let mut bytes = Vec::new();
-    bytes.try_reserve_exact(opened.len() as usize).map_err(|_| CheckpointError::Limit)?;
-    file.take(limit as u64 + 1).read_to_end(&mut bytes).map_err(|e| failure(FileStage::Read, e))?;
+    bytes.try_reserve_exact(length).map_err(|_| CheckpointError::Limit)?;
+    file.take(limit as u64 + 1).read_to_end(&mut bytes)
+        .map_err(|error| CheckpointError::Io { input, stage: FileStage::Read, kind: error.kind() })?;
     if bytes.len() > limit { return Err(CheckpointError::Limit); }
     Ok(bytes)
 }
