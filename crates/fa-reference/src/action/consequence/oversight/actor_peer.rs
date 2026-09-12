@@ -4,6 +4,9 @@
 //! code, a human, a remote identity, or the current holder of a transferred FD.
 //! The supervisor and its effect authority never enter this component.
 
+mod listener;
+pub use listener::{AcceptEvent, ListenerSetupFailure, PeerListenerStatus, UnixPeerListener};
+
 use super::actor_transport::{ConnectionStatus, DriveBudget, DriveReport, UnixActorConnection};
 use super::actor_wire::{ActorChannel, ActorWire, ChannelLimits, MAX_CHANNEL_EXCHANGES, MAX_FRAME_BYTES, WireError};
 use crate::Error;
