@@ -10,14 +10,16 @@ mod approval;
 mod endpoint;
 mod mediation_gate;
 mod state_gate;
+mod stopping;
 pub mod fleet;
 pub mod stream;
 pub use approval::DispatchApproval;
 pub use endpoint::PublicationEndpoint;
 #[cfg(unix)]
-pub use endpoint::filesystem::{self, FileEndpointRecovery};
+pub use endpoint::filesystem::{self, FileEndpointRecovery, FilePublicationLimits};
 pub use mediation_gate::TopologyChange;
 pub use state_gate::{PolicySourceChange, MAX_POLICY_STATE_GENERATIONS};
+pub use stopping::{StopProgress, StopReceipt, StopRequest, StopSweep};
 
 use super::gate::containment::session::policy::Policy;
 use super::gate::containment::session::policy::controller::{
@@ -212,6 +214,7 @@ pub struct DeliveryBroker {
     fleet: Option<fleet::FleetDomain>,
     mediation: Option<mediation_gate::MediationState>,
     policy_state: Option<state_gate::CapturedStateGate>,
+    stop: Option<StopReceipt>,
 }
 
 impl DeliveryBroker {
@@ -235,6 +238,7 @@ impl DeliveryBroker {
             fleet: None,
             mediation: None,
             policy_state: None,
+            stop: None,
         })
     }
 
@@ -274,6 +278,7 @@ impl DeliveryBroker {
     }
 
     pub fn propose(&mut self, id: u64, spec: ActionSpec, snapshot: &Snapshot) -> Result<Proposal, Error> {
+        self.check_not_stopping()?;
         let _ = self.check_policy_state(snapshot)?;
         self.check_mediation()?;
         self.check_fleet()?;
@@ -285,12 +290,14 @@ impl DeliveryBroker {
     pub fn begin_review(
         &self, id: u64, round: u64, root: [u8; 32], snapshot: &Snapshot,
     ) -> Result<PolicySession, Error> {
+        self.check_not_stopping()?;
         let _ = self.check_policy_state(snapshot)?;
         self.controller.begin_review(id, round, root, snapshot)
     }
 
     pub fn apply_review(&mut self, review: PolicyReview, snapshot: &Snapshot) -> Result<PolicyReceipt, Error> {
         if review.decision().consequence == super::Consequence::Continue {
+            self.check_not_stopping()?;
             let _ = self.check_policy_state(snapshot)?;
             self.check_mediation()?;
             self.check_fleet()?;
@@ -299,6 +306,7 @@ impl DeliveryBroker {
     }
 
     pub fn authorize(&mut self, id: u64, snapshot: &Snapshot) -> Result<Permit, Error> {
+        self.check_not_stopping()?;
         let _ = self.check_policy_state(snapshot)?;
         self.check_mediation()?;
         self.check_fleet()?;
@@ -326,6 +334,7 @@ impl DeliveryBroker {
         &mut self, permit: &Permit, action: &FrozenAction, snapshot: &Snapshot,
         approval: Option<DispatchApproval>,
     ) -> Result<DispatchEnvelope, Error> {
+        self.check_not_stopping()?;
         let captured_policy_state = self.check_policy_state(snapshot)?;
         self.check_mediation()?;
         if !self.fenced { return Err(Error::Incomplete); }

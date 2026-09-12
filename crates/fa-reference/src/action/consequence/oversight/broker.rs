@@ -8,6 +8,7 @@ mod stream;
 mod fleet;
 mod mediation;
 mod state_source;
+mod stopping;
 pub mod consistency;
 pub mod human;
 pub mod policy_governance;
