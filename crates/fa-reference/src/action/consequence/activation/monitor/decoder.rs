@@ -3,6 +3,7 @@
 
 pub mod config;
 pub mod observation;
+pub mod sampled;
 
 use super::{MonitorOutcome, RefinementBudget, RefinementMonitor, RefinementReport};
 use super::super::tensor::kv::decoder::{
@@ -180,6 +181,15 @@ impl MonitoredDecoder {
     /// A held token may have updated the private KV cache; it is never rolled back
     /// or refunded as if inference had not occurred. No further token can advance.
     pub fn advance(&mut self, expected_position: u64, token: u32, budget: DecoderBudget) -> Result<MonitoredStep, Error> {
+        self.advance_with_commit(expected_position, token, budget, || {})
+    }
+
+    // Private composition seam: the sampled owner commits its already prepared
+    // RNG immediately after numeric success, BEFORE fallible monitor work. No
+    // public callback or alternative review/observation path is introduced.
+    fn advance_with_commit<F: FnOnce()>(
+        &mut self, expected_position: u64, token: u32, budget: DecoderBudget, on_computed: F,
+    ) -> Result<MonitoredStep, Error> {
         self.check_position(expected_position)?;
         if token as usize >= self.profile().shape().vocabulary { return Err(Error::InvalidInput); }
         let products = self.estimate(1)?.scalar_products()?;
@@ -193,7 +203,7 @@ impl MonitoredDecoder {
         // or let a partially reviewed session continue. No unwind catch is added.
         self.status = MonitoringStatus::Failed(Error::Incomplete);
         self.last_review = None;
-        let result = self.execute(expected_position, token, budget, layers);
+        let result = self.execute(expected_position, token, budget, layers, on_computed);
         if let Err(error) = &result {
             self.status = MonitoringStatus::Failed(*error);
             self.observation.fail();
@@ -207,10 +217,11 @@ impl MonitoredDecoder {
         Ok(())
     }
 
-    fn execute(
-        &mut self, position: u64, token: u32, budget: DecoderBudget, mut layers: Vec<LayerReview>,
+    fn execute<F: FnOnce()>(
+        &mut self, position: u64, token: u32, budget: DecoderBudget, mut layers: Vec<LayerReview>, on_computed: F,
     ) -> Result<MonitoredStep, Error> {
         let step = self.session.advance(position, token, budget)?;
+        on_computed();
         // Preflight every actual frame before the first monitor can run.
         if step.position != position || step.token != token || step.layers.len() != self.monitors.len() {
             return Err(Error::Binding);
