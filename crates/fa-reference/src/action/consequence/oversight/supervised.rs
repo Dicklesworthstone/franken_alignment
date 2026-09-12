@@ -5,6 +5,8 @@
 mod recovery;
 mod processes;
 mod evidence;
+mod stopping;
+pub use stopping::DriverStopProgress;
 pub use evidence::{DriverEvidence, FileDriverStep, FileReviewError, FileReviewLaunch};
 use evidence::EvidenceFeed;
 pub use recovery::{OfflineDriver, ReconnectFailure};

@@ -68,6 +68,22 @@ impl SupervisedDriver {
 
 impl OfflineDriver {
     pub fn supervisor(&self) -> &ActorSupervisor { &self.supervisor }
+
+    /// Close the original controller and mailbox while disconnected. This
+    /// requests child cleanup but does not claim to have fenced the endpoint.
+    pub fn request_stop(
+        &mut self, request: crate::action::consequence::delivery::StopRequest,
+    ) -> Result<crate::action::consequence::delivery::StopReceipt, Error> {
+        let result = self.supervisor.request_stop(request);
+        if self.supervisor.stop_receipt().is_some() { self.job = None; }
+        self.reap_helpers();
+        result
+    }
+
+    pub fn stop_receipt(&self) -> Option<&crate::action::consequence::delivery::StopReceipt> {
+        self.supervisor.stop_receipt()
+    }
+
     pub fn helper_processes(&self) -> BTreeMap<String, ProcessStatus> {
         self.children.as_ref().map_or_else(BTreeMap::new, HelperChildren::statuses)
     }

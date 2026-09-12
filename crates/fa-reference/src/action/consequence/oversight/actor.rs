@@ -4,6 +4,8 @@
 //! the supervisor owns the broker. Shared state contains actor-supplied proposals
 //! and their redacted projection, never helper inputs, votes, policy or permits.
 
+mod stopping;
+
 use super::{CommitteeContract, OversightBroker};
 use crate::action::consequence::gate::containment::session::policy::controller::{
     ControllerConfig, Proposal,
@@ -158,9 +160,23 @@ struct Mailbox {
     issuer: Rc<()>,
     limits: IntakeLimits,
     live: bool,
+    accepting: bool,
     payload_bytes: usize,
     entries: BTreeMap<u64, Entry>,
     queued: VecDeque<u64>,
+}
+
+impl Mailbox {
+    /// Queued requests have never acquired ledger attempts or effect permits.
+    /// Preserve their keys and observations while closing only new admission.
+    fn close_intake(&mut self) {
+        self.accepting = false;
+        while let Some(id) = self.queued.pop_front() {
+            self.entries.get_mut(&id).expect("queued actor request retained").project(
+                Projection::Terminal(ActorOutcome::CancelledBeforeDispatch, BasisSource::Intake),
+            );
+        }
+    }
 }
 
 /// Give only this handle to a cooperative actor. Clones share one bounded queue
@@ -192,6 +208,7 @@ impl ActorPort {
             if previous.proposal != *proposal { return Err(ActorError::IdempotencyConflict); }
             return Ok(ActorTicket { issuer: Rc::clone(&state.issuer), request: key });
         }
+        if !state.accepting { return Err(ActorError::Unavailable); }
         let bytes = state.payload_bytes.checked_add(proposal.payload.len()).ok_or(ActorError::Capacity)?;
         if state.entries.len() >= state.limits.requests || bytes > state.limits.payload_bytes {
             return Err(ActorError::Capacity);
@@ -277,7 +294,7 @@ impl ActorSupervisor {
         let scope = config.scope;
         let broker = OversightBroker::new(config, endpoint, contracts)?;
         let mailbox = Rc::new(RefCell::new(Mailbox {
-            issuer: Rc::new(()), limits, live: true, payload_bytes: 0,
+            issuer: Rc::new(()), limits, live: true, accepting: true, payload_bytes: 0,
             entries: BTreeMap::new(), queued: VecDeque::new(),
         }));
         Ok((ActorPort { mailbox: Rc::clone(&mailbox) }, Self {
@@ -301,6 +318,10 @@ impl ActorSupervisor {
     /// is terminal for that key. New evidence requires an explicitly new request.
     pub fn accept_next(&mut self, snapshot: &Snapshot) -> Result<Option<IntakeResult>, Error> {
         let mut state = self.mailbox.try_borrow_mut().map_err(|_| Error::WrongState)?;
+        if self.broker.stop_receipt().is_some() {
+            state.close_intake();
+            return Ok(None);
+        }
         let Some(request) = state.queued.front().copied() else { return Ok(None); };
         let entry = state.entries.get_mut(&request).expect("queued request retained");
         if entry.cancel_requested {
@@ -330,6 +351,7 @@ impl ActorSupervisor {
     /// Cancellation after dispatch never becomes cancellation-before-dispatch.
     pub fn synchronize(&mut self) -> Result<(), Error> {
         let mut state = self.mailbox.try_borrow_mut().map_err(|_| Error::WrongState)?;
+        if self.broker.stop_receipt().is_some() { state.close_intake(); }
         let before = self.broker.inspect();
         for (request, accepted) in &self.accepted {
             let stage = *before.ledger.stages.get(&accepted.attempt).ok_or(Error::Missing)?;
