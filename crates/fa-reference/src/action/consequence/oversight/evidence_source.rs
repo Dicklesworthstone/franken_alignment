@@ -4,6 +4,9 @@
 //! declares the Snapshot domain and publishes immutable versions by atomic rename.
 //! Scope, generation and exact input bytes are checked; authentication is not.
 
+mod policy_stream;
+pub use policy_stream::{PolicyFileSource, PolicyFileStatus};
+
 use super::{CommitteeContract, CommitteeInput, MAX_COMMITTEE_BYTES, action_frame};
 use crate::action::{FrozenAction, Purpose, Scope};
 use crate::evidence_view::{AuthorizationProjection, EvidenceViewManifest};
@@ -302,4 +305,17 @@ fn quote(text: &str) -> String {
         }
     }
     quoted.push('"'); quoted
+}
+
+mod sealed { pub trait Sealed {} }
+
+/// Only the concrete bounded file readers implement this interface. The driver
+/// can use either direct observations or the adapter registered in its live gate
+/// without accepting a third-party implementation that silently returns a cache.
+pub trait EvidenceFile: sealed::Sealed {
+    fn read_evidence(&mut self) -> Result<Rc<EvidenceSnapshot>, EvidenceError>;
+}
+impl sealed::Sealed for FileEvidenceSource {}
+impl EvidenceFile for FileEvidenceSource {
+    fn read_evidence(&mut self) -> Result<Rc<EvidenceSnapshot>, EvidenceError> { self.read() }
 }
