@@ -1,5 +1,7 @@
 //! Crate-private state capture for the owning controller. No effect authority.
 
+pub(crate) mod reset;
+
 use super::MonitoredSampledDecoder;
 use super::super::MonitoringStatus;
 use crate::action::consequence::activation::tensor::kv::model::{

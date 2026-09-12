@@ -37,11 +37,24 @@ pub(super) struct DecoderGate {
     records: BTreeMap<u64, CapturedDecoder>,
 }
 
+impl DecoderGate {
+    /// Private paired-reset preparation, never a public source replacement API.
+    pub(super) fn validate_successor(&self, source: &DecoderObservation) -> Result<(), Error> {
+        if source.profile() != self.source.profile() || source.generation() != self.source.generation()
+            || source.stream() <= self.source.stream() { return Err(Error::Binding); }
+        source.capture()?;
+        Ok(())
+    }
+    /// Only the owning hosted-reset path calls this after the ORIGINAL authority
+    /// reset and its host synchronization. Historical records/costs stay intact.
+    pub(super) fn publish_successor(&mut self, source: DecoderObservation) { self.source = source; }
+}
+
 impl OversightBroker {
     /// Trusted bootstrap only, before any proposal/review/control transition.
     /// Freeze this exact source, model profile and monitor generation. Empty
     /// sources can be installed before input inference, but cannot admit work.
-    /// There is no disable, replacement-source, raw-report or restored-key path.
+    /// There is no public replacement-source, raw-report or restored-key path.
     pub fn enable_decoder_monitoring(
         &mut self, source: DecoderObservation, limits: DecoderBindingLimits,
     ) -> Result<(), Error> {

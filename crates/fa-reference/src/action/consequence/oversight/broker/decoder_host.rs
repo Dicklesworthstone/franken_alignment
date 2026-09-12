@@ -1,6 +1,9 @@
 //! Run the actual monitored sampler inside the original effect-controller owner.
 //! Numerical output is still evidence; the original congress and permits decide effects.
 
+mod checkpoint;
+pub use checkpoint::{HostedCheckpointHandle, HostedRecoveryUsage, HostedResetReceipt, HostedResetRequest};
+
 use super::{OversightBroker, decoder_gate::DecoderBindingLimits};
 use crate::action::consequence::activation::monitor::decoder::{MonitoredStep, MonitoringStatus, MonitoringWork};
 use crate::action::consequence::activation::monitor::decoder::sampled::{MonitoredSampledDecoder, MonitoredSampledStep};
@@ -25,6 +28,7 @@ pub struct HostedDecoderInspection {
 pub(super) struct DecoderHost {
     run: MonitoredSampledDecoder,
     profile: RestartProfile,
+    recovery: checkpoint::RecoveryState,
 }
 
 impl OversightBroker {
@@ -52,17 +56,18 @@ impl OversightBroker {
         // source bootstrap performs all identity/limit checks before mutation.
         self.enable_decoder_monitoring(run.observation(), limits)?;
         self.delivery.replace_actor_state(revision, actor).expect("preflighted owned actor update");
-        self.decoder_host = Some(DecoderHost { run, profile });
+        self.decoder_host = Some(DecoderHost { run, profile, recovery: checkpoint::RecoveryState::new() });
         Ok(())
     }
 
     /// Supervisor-only costs/state, without token IDs, logits, cache or RNG words.
+    /// Numerical work includes completed abandoned runs and checkpoint replays.
     pub fn hosted_decoder(&self) -> Result<HostedDecoderInspection, Error> {
         let host = self.decoder_host.as_ref().ok_or(Error::Incomplete)?;
         let actor = self.delivery.controller().actor();
         Ok(HostedDecoderInspection { actor_revision: self.actor_revision(), position: host.run.position(),
             sampled_draws: host.run.sampled_draws(), status: host.run.status(),
-            monitoring: host.run.monitoring_work(), numerical: host.run.decoder_work(),
+            monitoring: host.run.monitoring_work(), numerical: host.recovery.cumulative(host.run.decoder_work())?,
             cache_bytes: actor.cache().len(), sampler_bytes: actor.sampler().len() })
     }
 
