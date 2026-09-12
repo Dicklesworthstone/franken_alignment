@@ -67,8 +67,10 @@ impl SupervisedDriver {
     }
     /// One bounded cleanup pass. Protocol-terminal children are stopped; other
     /// children are only observed. After review/cancellation, all are stopped.
-    /// The host keeps polling during shutdown; Drop is only a best effort.
+    /// A lower-level terminal stop also releases the job before clock or I/O
+    /// work can fail. The host keeps polling; Drop is only a best effort.
     pub fn reap_helpers(&mut self) -> BTreeMap<String, ProcessStatus> {
+        if self.supervisor.stop_receipt().is_some() { self.job = None; }
         maintain(&mut self.children, &self.job)
     }
     /// Stop direct children, without manufacturing votes, cancelling an effect,

@@ -70,8 +70,15 @@ Driver progress_stop(now) also releases jobs stopped through a lower-level owner
 and synchronizes mailbox closure BEFORE fallible clock or endpoint work. A clock
 refusal cannot keep a stopped review running. Cleanup is polled on success and
 error. DriverStopProgress reports review release and helper reaping separately
-from effect draining; quiesced requires all three. Socket-only tests have no
-owned children and do not prove hostile-process containment.
+from effect draining; quiesced requires all three.
+
+Normal reap_helpers, both connected and offline, independently observes the
+original controller's stop latch and releases its stopped job before maintaining
+children. Consequently ordinary step, receipt handling and a failed reconnect
+cannot keep stopped helpers running merely because a clock or endpoint operation
+refused. No hidden blocking wait, new reaper thread or replacement child is
+introduced. Hosts still poll the retained child owner until actual reaping.
+Stopping child processes alone is never an endpoint acknowledgment or refund.
 
 OfflineDriver::request_stop retains the original stopped controller and mailbox
 while the endpoint is absent. Reconnection moves those same owners back into a
@@ -82,16 +89,23 @@ control authority itself is not reconstructed from disk.
 
 ## Verification and limits
 
-Four new suites contain twenty regression functions: ten in delivery_stop,
-four in actor_stop, two in filesystem_stop and four in supervised_stop. They
-cover both key profiles, delayed execution before acknowledgment, mixed outcomes,
-exact retries, stale predecessors, foreign endpoints, restart fences, retention
-loss, abandoned obligations, source loss, queued/reserved cancellation, late
-receipts, lower-level stop propagation, active-review shutdown, missing human
-keys and offline reservation cleanup. File cases block an actual pending-file
-write, reopen the original endpoint and distinguish executed from unexecuted
-outcomes without a duplicate publication or refund. A compile-fail example
-prevents substituting StopReceipt for EndpointReceipt.
+Five new suites contain twenty-three regression scenarios: ten in delivery_stop,
+four in actor_stop, two in filesystem_stop, four in supervised_stop and three in
+supervised_stop_processes. The fifth suite also contains one test-subprocess
+entry point, not an independent fourth scenario; there are twenty-four new
+Rust test functions in total. They cover both key profiles, delayed execution
+before acknowledgment, mixed outcomes, exact retries, stale predecessors, foreign
+endpoints, restart fences, retention loss, abandoned obligations, source loss,
+queued/reserved cancellation, late receipts, lower-level stop propagation,
+active-review shutdown, missing human keys and offline reservation cleanup.
+
+File cases block an actual pending-file write, reopen the original endpoint and
+distinguish executed from unexecuted outcomes without a duplicate publication or
+refund. Process cases wait for child-published PID readiness before stopping,
+require the same direct-child IDs to be reaped despite stale-clock failure or a
+failed reconnect, and include a working process-review/publication control before
+shutdown. Their fixed fixture verdicts are not model evaluations. A compile-fail
+example prevents substituting StopReceipt for EndpointReceipt.
 
 The existing listener test's root-level FilePublicationLimits import is supported
 by re-exporting the same existing type. No dependency manifests, lockfiles,
@@ -101,5 +115,6 @@ The Rust code and tests have not been compiled or executed in this editing
 environment, and no RCH qualification or production-gate claim is made. Existing
 execution receipts do not validate these increments. This remains a bounded
 reference controller with a local filesystem endpoint option; whole-process
-authority recovery, hostile-process containment and reversing executed external
-effects are not provided. No br-managed task is closed by these increments.
+authority recovery, hostile-process or descendant containment, and reversing
+executed external effects are not provided. No br-managed task is closed by
+these increments.

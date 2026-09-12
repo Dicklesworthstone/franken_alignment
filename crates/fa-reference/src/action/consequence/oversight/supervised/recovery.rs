@@ -90,7 +90,10 @@ impl OfflineDriver {
     pub fn helpers_reaped(&self) -> bool {
         self.children.as_ref().is_none_or(HelperChildren::all_reaped)
     }
+    /// Also recognize a lower-level stop that preceded endpoint detachment.
+    /// Cleanup cannot wait for a successful clock update or reconnection.
     pub fn reap_helpers(&mut self) -> BTreeMap<String, ProcessStatus> {
+        if self.supervisor.stop_receipt().is_some() { self.job = None; }
         super::processes::maintain(&mut self.children, &self.job)
     }
     pub fn stop_helper_processes(&mut self) -> BTreeMap<String, ProcessStatus> {
