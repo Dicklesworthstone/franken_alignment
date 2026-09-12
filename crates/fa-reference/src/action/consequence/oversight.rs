@@ -14,6 +14,7 @@ pub mod helper_processes;
 pub mod helper_workers;
 pub mod helper_client;
 pub mod helper_client_drive;
+pub mod policy_state;
 mod actor_execution;
 pub use actor_execution::{DispatchKeys, ReconciliationResults};
 pub mod credibility;
