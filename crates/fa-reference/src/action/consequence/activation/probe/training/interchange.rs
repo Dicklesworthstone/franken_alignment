@@ -1,6 +1,8 @@
 //! Export only a completely evaluated roster into the existing monitor schema.
 //! Configuration is data, not authenticated qualification or live policy approval.
 
+pub mod files;
+
 use super::decoder::DecoderCampaign;
 use crate::action::consequence::activation::monitor::{RefinementBudget, RefinementMonitor};
 use crate::action::consequence::activation::monitor::decoder::config::MAX_MONITOR_CONFIG_BYTES;
@@ -113,5 +115,22 @@ impl fmt::Write for LimitedJson {
         self.bytes.try_reserve_exact(text.len()).map_err(|_| fmt::Error)?;
         self.bytes.push_str(text);
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    #[test]
+    fn emitted_decimal_numbers_preserve_binary32_boundaries() {
+        for bits in [0_u32, 0x8000_0000, 1, 0x8000_0001, 0x007f_ffff, 0x0080_0000,
+            0x3f80_0001, 0x7f7f_ffff, 0xff7f_ffff] {
+            let value = f32::from_bits(bits);
+            let mut json = LimitedJson { bytes: String::new(), limit: 128 };
+            write!(json, "{value}").unwrap();
+            let parsed = crate::strict_json::parse(json.bytes.as_bytes(), crate::strict_json::Limits::default()).unwrap();
+            let crate::strict_json::Json::Number(number) = parsed else { panic!("not a number") };
+            assert_eq!(number.lexeme().parse::<f32>().unwrap().to_bits(), bits);
+        }
     }
 }

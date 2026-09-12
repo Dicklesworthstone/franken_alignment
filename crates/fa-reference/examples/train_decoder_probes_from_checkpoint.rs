@@ -3,31 +3,18 @@
 #![forbid(unsafe_code)]
 use fa_reference::action::consequence::activation::monitor::decoder::config::MAX_MONITOR_CONFIG_BYTES;
 use fa_reference::action::consequence::activation::probe::training::calibration::ConfusionCounts;
-use fa_reference::action::consequence::activation::probe::training::decoder::{DecoderCampaign, plan::{ProbeRunPlan, MAX_CAMPAIGN_PLAN_BYTES}};
+use fa_reference::action::consequence::activation::probe::training::decoder::{DecoderCampaign, plan::ProbeRunPlan};
+use fa_reference::action::consequence::activation::probe::training::interchange::files::{load_training_inputs, TrainingFileLimits};
 use fa_reference::action::consequence::activation::tensor::kv::decoder::DecoderModel;
-use fa_reference::action::consequence::activation::tensor::kv::decoder::safetensors::pretrained::CheckpointFileLimits;
 use std::ffi::OsString;
-use std::fs::{self, File};
-use std::io::{self, Read, Write};
+#[cfg(test)]
+use std::fs;
+use std::io::{self, Write};
 use std::path::Path;
 use std::process::ExitCode;
 
 const USAGE: &str = "train_decoder_probes_from_checkpoint CONFIG_JSON WEIGHTS_SAFETENSORS CAMPAIGN_JSON NEW_MONITOR_JSON";
 fn invalid(message: impl Into<String>) -> io::Error { io::Error::new(io::ErrorKind::InvalidInput, message.into()) }
-fn read_plan(path: &Path) -> io::Result<Vec<u8>> {
-    let before = fs::symlink_metadata(path)?;
-    if !before.is_file() || before.file_type().is_symlink() || before.len() > MAX_CAMPAIGN_PLAN_BYTES as u64 {
-        return Err(invalid("campaign input must be a bounded regular file"));
-    }
-    let file = File::open(path)?;
-    let opened = file.metadata()?;
-    if !opened.is_file() || opened.len() > MAX_CAMPAIGN_PLAN_BYTES as u64 { return Err(invalid("opened campaign exceeds file limits")); }
-    let mut bytes = Vec::new();
-    bytes.try_reserve_exact(opened.len() as usize).map_err(|_| invalid("campaign allocation refused"))?;
-    file.take(MAX_CAMPAIGN_PLAN_BYTES as u64 + 1).read_to_end(&mut bytes)?;
-    if bytes.len() > MAX_CAMPAIGN_PLAN_BYTES { return Err(invalid("campaign grew past its byte limit")); }
-    Ok(bytes)
-}
 fn counts(value: ConfusionCounts) -> String {
     format!("{{\"benign_alarm\":{},\"benign_quiet\":{},\"benign_boundary\":{},\"violation_alarm\":{},\"violation_quiet\":{},\"violation_boundary\":{}}}",
         value.benign_alarm, value.benign_quiet, value.benign_boundary,
@@ -66,9 +53,7 @@ fn execute(plan: &mut ProbeRunPlan, model: &DecoderModel, destination: &Path,
 }
 fn run(args: &[OsString], output: &mut impl Write) -> Result<bool, Box<dyn std::error::Error>> {
     if args.len() != 4 { return Err(invalid(USAGE).into()); }
-    let mut plan = ProbeRunPlan::from_json(&read_plan(Path::new(&args[2]))?)?;
-    let (model, _) = DecoderModel::from_llama_files(plan.identity(), plan.context(),
-        &args[0], &args[1], CheckpointFileLimits::default())?;
+    let (model, mut plan) = load_training_inputs(&args[0], &args[1], &args[2], TrainingFileLimits::default())?;
     execute(&mut plan, &model, Path::new(&args[3]), output)
 }
 fn main() -> ExitCode {
