@@ -2,6 +2,8 @@
 //! permit. Ambiguity, threshold equality and exhausted capacity remain holds.
 //! Source validation is local here; encoded byte counts are not network timings.
 
+pub mod decoder;
+
 use super::{CaptureProfile, FrameIdentity, ProgressiveFrame, SourceFrame};
 use super::probe::{LinearProbe, ProbeIdentity, ProbeObservation, ProbeOutcome};
 use crate::Error;
@@ -98,6 +100,16 @@ impl RefinementMonitor {
     pub fn dimensions(&self) -> usize { self.dimensions }
 
     pub fn analyze(&self, source: &SourceFrame) -> Result<RefinementReport, Error> {
+        self.analyze_with_budget(source, self.budget)
+    }
+
+    /// Intersect a shared remaining allowance with this monitor's fixed limits.
+    /// A caller cannot enlarge the originally admitted per-frame budget.
+    pub fn analyze_with_budget(&self, source: &SourceFrame, remaining: RefinementBudget) -> Result<RefinementReport, Error> {
+        let budget = RefinementBudget {
+            encoded_bytes: self.budget.encoded_bytes.min(remaining.encoded_bytes),
+            probe_coordinates: self.budget.probe_coordinates.min(remaining.probe_coordinates),
+        };
         if source.identity().profile != self.profile || source.dimensions() != self.dimensions {
             return Err(Error::Binding);
         }
@@ -115,7 +127,7 @@ impl RefinementMonitor {
             let coordinates = self.dimensions.checked_mul(unresolved).ok_or(Error::Overflow)?;
             let total_bytes = report.encoded_bytes.checked_add(length).ok_or(Error::Overflow)?;
             let total_coordinates = report.probe_coordinates.checked_add(coordinates).ok_or(Error::Overflow)?;
-            if total_bytes > self.budget.encoded_bytes || total_coordinates > self.budget.probe_coordinates {
+            if total_bytes > budget.encoded_bytes || total_coordinates > budget.probe_coordinates {
                 report.outcome = MonitorOutcome::BudgetExhausted;
                 return Ok(report);
             }

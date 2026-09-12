@@ -190,6 +190,13 @@ impl DecoderModel {
     }
     pub fn profile(&self) -> &DecoderProfile { &self.data.profile }
     pub fn cache_profile(&self) -> &ModelKvProfile { &self.data.cache }
+
+    /// Actual residual tap contract installed by this model, not a guessed ID.
+    pub fn residual_contract(&self, layer: u64) -> Result<&TensorContract, Error> {
+        let index = layer.checked_sub(1).ok_or(Error::InvalidInput)?;
+        let index = usize::try_from(index).map_err(|_| Error::Missing)?;
+        self.data.layers.get(index).map(|layer| &layer.residual).ok_or(Error::Missing)
+    }
 }
 
 pub(super) fn dense_layout(heads: usize, channels: usize) -> Result<TensorLayout, Error> {
