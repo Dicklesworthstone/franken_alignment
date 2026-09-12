@@ -2,6 +2,7 @@
 //! This is a synchronous numerical boundary, not an OS sandbox or effect gate.
 
 pub mod config;
+pub mod observation;
 
 use super::{MonitorOutcome, RefinementBudget, RefinementMonitor, RefinementReport};
 use super::super::tensor::kv::decoder::{
@@ -114,6 +115,7 @@ pub struct MonitoredDecoder {
     work: MonitoringWork,
     status: MonitoringStatus,
     last_review: Option<Rc<DecoderReview>>,
+    observation: observation::ObservationWriter,
 }
 impl fmt::Debug for MonitoredDecoder {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -140,9 +142,13 @@ impl MonitoredDecoder {
             }
         }
         let session = model.session(stream)?;
+        let observation = observation::ObservationWriter::new(model.profile().clone(), generation, stream);
         Ok(Self { session, monitors, generation, stream, budget,
-            work: MonitoringWork::default(), status: MonitoringStatus::Ready, last_review: None })
+            work: MonitoringWork::default(), status: MonitoringStatus::Ready, last_review: None, observation })
     }
+
+    /// Read-only live evidence for a trusted controller, never a permit.
+    pub fn observation(&self) -> observation::DecoderObservation { self.observation.observe() }
 
     pub fn profile(&self) -> &DecoderProfile { self.session.model().profile() }
     pub fn position(&self) -> u64 { self.session.position() }
@@ -182,12 +188,16 @@ impl MonitoredDecoder {
         }
         let mut layers = Vec::new();
         layers.try_reserve_exact(self.monitors.len()).map_err(|_| Error::Limit)?;
+        self.observation.begin(expected_position)?;
         // Poison first: a caught unwind cannot expose unreviewed decoder logits
         // or let a partially reviewed session continue. No unwind catch is added.
         self.status = MonitoringStatus::Failed(Error::Incomplete);
         self.last_review = None;
         let result = self.execute(expected_position, token, budget, layers);
-        if let Err(error) = &result { self.status = MonitoringStatus::Failed(*error); }
+        if let Err(error) = &result {
+            self.status = MonitoringStatus::Failed(*error);
+            self.observation.fail();
+        }
         result
     }
 
@@ -235,6 +245,7 @@ impl MonitoredDecoder {
         }
         let review = Rc::new(DecoderReview { generation: self.generation, stream: self.stream,
             position, required_layers: self.monitors.len(), outcome, layers });
+        self.observation.publish(token, Rc::clone(&review))?;
         self.last_review = Some(Rc::clone(&review));
         if outcome == MonitorOutcome::NoAlarm && review.unreviewed_layers() == 0 {
             self.status = MonitoringStatus::Ready;
