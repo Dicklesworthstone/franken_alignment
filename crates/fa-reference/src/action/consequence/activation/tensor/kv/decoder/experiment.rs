@@ -1,6 +1,8 @@
 //! Full decoder continuation under scoped edits to a pinned checkpoint's KV.
 //! Numerical experiments have no live captures, checkpoint export or authority.
 
+pub mod comparison;
+
 use super::{ComputedLayers, DecoderBudget, DecoderCheckpoint, DecoderHistory, DecoderWork};
 use super::super::attention;
 use super::super::experiment::{

@@ -75,3 +75,48 @@ The prescribed RCH command was attempted but rch is not installed in the editing
 environment. Rust compilation/tests have NOT run and this source is NOT qualified
 by prior execution receipts. No local compiler fallback, bead closure, trained
 model quality, production authority, causal-necessity or deployment claim is made.
+
+## Paired full-continuation comparisons
+
+compare_forced consumes the same nonempty original-token sequence in both arms.
+compare_greedy consumes one shared explicit first token and then each arm's own
+greedy choices for a fixed positive horizon. The horizon includes the first
+token. Neither mode imports the concurrent sampler's random state or interprets
+EOS/stop strings. The full context window, every supplied token ID, BOTH arms'
+combined product count and total retained vocabulary logits are admitted before
+any inference. A late invalid supplied token therefore refuses before either
+arm can encounter a numerical failure.
+
+DecoderComparisonBudget bounds the full call, not each arm separately. Retained
+logits count both arms and are capped at 1,048,576 f32 coordinates. Complete
+per-step vectors are retained by shared references, alongside absolute positions,
+consumed inputs, greedy next choices, changed logit-word counts, maximum absolute
+delta and L2 delta. Signed-zero word differences remain distinguishable from
+nonzero numerical distance. Combined successful DecoderWork is checked against
+the initial estimate. Raw cache growth remains limited to two bounded suffixes;
+the logit bound is not a claim about total peak memory. Sparse lookup cost,
+comparison arithmetic, failed-attempt work and elapsed time are not product terms.
+
+The complete comparison retains the exact original source and edit specification.
+Its first differing logit vector, first differing consumed input, and first
+differing next choice are separate observations. The final next choice is an
+UNCONSUMED diagnostic, including when it lies at the context boundary. Forced
+inputs need not match either greedy choice. These distinctions prevent a changed
+score from being mislabeled as a changed rollout, or token-feedback effects from
+being mislabeled as effects under identical future inputs. No numerical difference
+is automatically promoted into causal necessity, a helper judgment or permission.
+
+The report is returned only after both full continuations and every comparison
+succeed; a failure returns no partial report or session. Existing source and other
+sessions remain unchanged. Per-call admission is not a cumulative campaign budget,
+and retries are explicit new work.
+
+Eight additional public regressions cover original/control equivalence and exact
+combined budgets, analytical greedy divergence, teacher forcing, unconsumed final
+choices, preflight-before-overflow, full context/retention bounds, early-layer edits
+propagating to later-layer NEW KV, and imported SafeTensors checkpoint integration.
+One unit regression covers comparison arithmetic, signed zero and invalid vectors.
+The small analytic fixtures' sign/divergence, later-layer propagation and expected
+overflow were additionally checked with standalone Python scalar arithmetic; that
+check does not execute or qualify Rust. All 17 new Rust test functions and three
+compile-fail examples remain uncompiled/unexecuted pending RCH access.

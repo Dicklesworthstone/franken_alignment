@@ -4,6 +4,8 @@ use fa_reference::action::consequence::activation::tensor::kv::experiment::{KvCe
 use fa_reference::Error;
 use std::collections::BTreeMap;
 #[path = "support/decoder_fixture.rs"] mod fixture;
+#[path = "support/decoder_observation.rs"] mod observation;
+use observation::words as source_words;
 
 fn budget() -> DecoderBudget { DecoderBudget { scalar_products: MAX_DECODER_PRODUCTS } }
 fn scope(count: usize) -> KvEditScope {
@@ -14,7 +16,7 @@ fn bits(values: &[f32]) -> Vec<u32> { values.iter().map(|value| value.to_bits())
 fn edit(source: &DecoderCheckpoint, layer: u64, cell: KvCell, replacement: f32) -> KvEdit {
     let token = source.cache().layer(layer).unwrap().token(cell.position).unwrap();
     let frame = match cell.side { KvSide::Key => token.key(), KvSide::Value => token.value() };
-    KvEdit { cell, expected_bits: frame.words[cell.head * source.model().profile().head_width() + cell.channel],
+    KvEdit { cell, expected_bits: source_words(frame)[cell.head * source.model().profile().head_width() + cell.channel],
         replacement_bits: replacement.to_bits() }
 }
 fn changes(source: &DecoderCheckpoint, layer: u64, change: KvEdit) -> BTreeMap<u64, DecoderLayerIntervention> {
@@ -26,10 +28,11 @@ fn compare_cache(experiment: &DecoderExperimentSession, original: &DecoderSessio
     for layer in 1..=s.layers as u64 {
         for position in 0..original.position() {
             let token = image.layer(layer).unwrap().token(position).unwrap();
+            let keys = source_words(token.key()); let values = source_words(token.value());
             for head in 0..s.cache_heads {
                 for channel in 0..original.model().profile().head_width() {
                     let index = head * original.model().profile().head_width() + channel;
-                    for (side, expected) in [(KvSide::Key, token.key().words[index]), (KvSide::Value, token.value().words[index])] {
+                    for (side, expected) in [(KvSide::Key, keys[index]), (KvSide::Value, values[index])] {
                         assert_eq!(experiment.bits(layer, KvCell { side, position, head, channel }).unwrap(), expected);
                     }
                 }
@@ -45,7 +48,7 @@ fn unchanged_control_and_treatment_match_original_all_layer_execution_for_32_ste
     let checkpoint = original.checkpoint().unwrap();
     let snapshot = checkpoint.cache().encode().unwrap();
     let no_op = edit(&checkpoint, 2, cell(KvSide::Value, 2, 1),
-        f32::from_bits(checkpoint.cache().layer(2).unwrap().token(2).unwrap().value().words[1]));
+        f32::from_bits(source_words(checkpoint.cache().layer(2).unwrap().token(2).unwrap().value())[1]));
     let plan = checkpoint.intervene(11, changes(&checkpoint, 2, no_op), 1).unwrap();
     assert_eq!(plan.proposed_edits(), 1); assert_eq!(plan.effective_edits(), 0);
     let mut control = plan.session(DecoderExperimentArm::Control);
@@ -100,7 +103,7 @@ fn value_intervention_matches_analytic_uniform_attention_and_changes_actual_logi
     let model = uniform_attention_model();
     let original = model.recompute(9, &[0], budget()).unwrap();
     let source = original.checkpoint().unwrap();
-    let cached = f32::from_bits(source.cache().layer(1).unwrap().token(0).unwrap().value().words[0]);
+    let cached = f32::from_bits(source_words(source.cache().layer(1).unwrap().token(0).unwrap().value())[0]);
     let change = edit(&source, 1, cell(KvSide::Value, 0, 0), -cached);
     let plan = source.intervene(4, changes(&source, 1, change), 1).unwrap();
     let mut control = plan.session(DecoderExperimentArm::Control);
@@ -120,7 +123,7 @@ fn value_intervention_matches_analytic_uniform_attention_and_changes_actual_logi
     assert!(a.logits[0] > 0.0 && b.logits[0] < 0.0);
     assert_eq!(control.bits(1, change.cell).unwrap(), change.expected_bits);
     assert_eq!(treatment.bits(1, change.cell).unwrap(), change.replacement_bits);
-    assert_eq!(source.cache().layer(1).unwrap().token(0).unwrap().value().words[0], change.expected_bits);
+    assert_eq!(source_words(source.cache().layer(1).unwrap().token(0).unwrap().value())[0], change.expected_bits);
     // Later steps read each arm's own newly computed history, not just old edits.
     for position in 2..6 {
         control.advance_greedy(position, budget()).unwrap();
