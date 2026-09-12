@@ -30,8 +30,37 @@ The original vocabulary/context/model caps, inference product admission, per-mon
 
 Existing MonitoredDecoder::advance and advance_greedy use the same private path with a no-op numerical-commit callback; their evidence, review, failure and budget behavior are unchanged. Existing monitor, sampling, archive and controller tests are retained unchanged. The wrapper cannot restore serialized monitor approval or turn a sampled checkpoint into current control evidence.
 
+## Explicit configuration and the existing file consumer
+
+`sampled::config::SamplingConfig` accepts exactly nine fields under `fa.decoder-sampling/1`: schema, id, generation, vocabulary, temperature, top_k, top_p, stream and seed. All are mandatory. IDs and stream must be positive integers; the explicitly supplied u64 seed may be zero. Vocabulary must equal the independently supplied model's. The original SamplingPolicy validates all temperature and top-k/top-p semantics. Unknown fields, duplicate keys, ambiguous types, nonfinite decimals and unsupported schemas refuse. There is no time-derived seed, inferred tokenizer behavior, reset configuration, executable path or authority field.
+
+Configuration is bounded to 4 KiB, depth two, 32 parser items and 64-byte strings. Debug and typed errors omit seed values. This is operator data, not authenticated policy; a config does not prove independent random streams or trained-model sampling parity. `MonitoredSampledDecoder::from_json` validates sampling and the original complete monitor configuration before computing any token. It creates only an empty monitored owner.
+
+`decoder_monitored_from_checkpoint` now accepts an optional eighth positional argument, SAMPLING_JSON. Omitting it retains the original seven-argument greedy invocation. Supplying an invalid or unavailable file fails; it never falls back to greedy. Both modes share one existing-style execution/output loop: validate the complete prefix-plus-continuation context and product budget, review every input, compute/review each generated token, then emit its original ID only on Released. The bounded file reader and the existing configured SafeTensors weight loader are reused.
+
+For example, after compilation in a qualified checkout:
+
+```text
+RCH_REQUIRE_REMOTE=1 rch exec -- cargo run --locked -p fa-reference --example decoder_monitored_from_checkpoint -- \
+  crates/fa-reference/tests/fixtures/decoder_llama_config.json \
+  crates/fa-reference/tests/fixtures/decoder_mixed.safetensors \
+  crates/fa-reference/tests/fixtures/decoder_original_tokens.json \
+  crates/fa-reference/tests/fixtures/decoder_monitor_quiet.json 16 8 1000000 \
+  crates/fa-reference/tests/fixtures/decoder_sampling.json
+```
+
+This command and its synthetic fixtures are not trained inference or a completed runtime test. The output schema and exit statuses remain unchanged: completed execution succeeds, hold exits with 2, and failures exit nonzero. NDJSON never includes RNG words, seeds, next logits or sampled probabilities. A held generated token is omitted even after earlier input lines were successfully emitted. A failed write/flush stops execution and cannot rewind the already-computed token or its draw. The output itself is not an authenticated trace or an effect permit; the numerical CLI does not claim the production publication protocol.
+
+## Existing effect admission consumes the same sampled evidence
+
+The concurrently implemented `OversightBroker::enable_decoder_monitoring` accepts the sampled owner's original DecoderObservation without another source, writer or authorization mechanism. Actual sampled prefixes can therefore support the same exact-policy/congress/automatic-and-human-key publication path. Actor state must still match the exact original token prefix. A quiet numerical result alone cannot publish.
+
+A later sampled hold makes that live observation unavailable and blocks preissued automatic and human keys through the original gate. Refusal preserves the existing reservation; it does not consume a second permit or refund unseen external work. Effects dispatched before the hold remain charged and reconcile through their original endpoint receipts after the numerical owner and helper inputs are gone. This batch adds integration tests over those existing gates; it neither authors a second ledger nor claims ownership of the concurrent decoder-admission implementation.
+
 ## Verification record
 
 First increment adds ten public integration tests, two internal boundary tests and two compile-fail examples. Public scenarios compare 32 stochastic continuation steps against the original SampledSession, including each selected ID, probability/random word, logits and every query/residual coordinate. Mixed forcing verifies the draw positions indirectly against the original sampler. Two-layer synthetic controls pair successful release with first/last-layer alarms, shared-budget exhaustion and final vocabulary overflow. Other cases cover admission limits, missing roster, model/policy vocabulary mismatch, live observer staleness and closure, owner loss, independently generated mixed-precision SafeTensors fixtures, full context and diagnostic privacy. Internal cases distinguish a post-computation monitor error from precomputation draw-counter exhaustion.
 
-These tests describe synthetic numerical/probe fixtures, not trained-model safety or vendor sampling parity. The added Rust has not been compiled, run, formatted with rustfmt, or qualified through Clippy/the RCH project gate in this editing environment. No Beads packet or production gate is closed and historical receipts do not qualify this source. Native runtime scheduling, authenticated model/capture provenance, trained probe qualification, complete OS mediation and whole-controller durability remain separate requirements.
+Second increment adds seven configuration tests, four example-output tests and three original-controller integration tests. Cases include every missing config field, duplicates, every truncation of a complete flat config, maximum seed, exact/one-over byte budgets, no-fallback configuration failure, raw-versus-monitored sampled IDs, a generated-token hold following a quiet prefix, and output failure after a real draw. Controller tests pair successful publication in both key modes with preissued-key holds and executed-versus-unexecuted reconciliation after monitoring and helper loss. The five pre-existing greedy example tests remain intact.
+
+All 26 new Rust test functions and both compile-fail examples remain uncompiled and unexecuted. The required RCH test command was attempted and failed before compilation because `rch` is unavailable; cargo, rustc, rustfmt and br are also absent. No local compilation fallback, assertion weakening, Beads close or gate promotion occurred. Rustfmt, Clippy and the revision-bound repository gate remain pending. These tests describe synthetic numerical/probe fixtures, not trained-model safety or vendor sampling parity. Native runtime scheduling, authenticated model/capture provenance, trained probe qualification, complete OS mediation and whole-controller durability remain separate requirements.

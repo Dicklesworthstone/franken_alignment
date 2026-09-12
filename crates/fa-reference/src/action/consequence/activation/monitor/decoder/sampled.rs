@@ -2,6 +2,8 @@
 //! Random state commits with successful numerical computation, even when review
 //! subsequently holds. Only a completely quiet review exposes the sampled ID.
 
+pub mod config;
+
 use super::{DecoderReview, MonitoredDecoder, MonitoredStep, MonitoringStatus, MonitoringWork, ReviewedStep};
 use super::observation::DecoderObservation;
 use super::super::{RefinementBudget, RefinementMonitor};

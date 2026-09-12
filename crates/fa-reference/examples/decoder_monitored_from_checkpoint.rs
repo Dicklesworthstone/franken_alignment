@@ -1,18 +1,22 @@
 //! Offline original-token inference with compulsory per-layer residual review.
 //! Every generated ID is printed only after its own review. Holds exit with 2.
-use fa_reference::action::consequence::activation::monitor::decoder::{MonitoredDecoder, MonitoredStep, MonitoringStatus};
+use fa_reference::action::consequence::activation::monitor::decoder::{MonitoredDecoder, MonitoredStep, MonitoringStatus, MonitoringWork};
 use fa_reference::action::consequence::activation::monitor::decoder::config::MAX_MONITOR_CONFIG_BYTES;
-use fa_reference::action::consequence::activation::tensor::kv::decoder::{DecoderBudget, DecoderIdentity, DecoderModel, MAX_DECODER_PRODUCTS};
+use fa_reference::action::consequence::activation::monitor::decoder::sampled::MonitoredSampledDecoder;
+use fa_reference::action::consequence::activation::monitor::decoder::sampled::config::MAX_SAMPLING_CONFIG_BYTES;
+use fa_reference::action::consequence::activation::tensor::kv::decoder::{DecoderBudget, DecoderIdentity, DecoderModel, DecoderProfile, DecoderWork, MAX_DECODER_PRODUCTS};
+use fa_reference::action::consequence::activation::tensor::kv::decoder::sampling::{SampleBudget, SamplingBudget};
 use fa_reference::action::consequence::activation::tensor::kv::decoder::safetensors::pretrained::CheckpointFileLimits;
 use fa_reference::action::consequence::activation::tensor::kv::MAX_KV_POSITIONS;
 use fa_reference::strict_json::{self, Limits};
+use fa_reference::Error;
 use std::fs::{self, File};
 use std::io::{self, Read, Write};
 use std::path::Path;
 use std::process::ExitCode;
 
 const MAX_REQUEST_BYTES: usize = 65_536;
-const USAGE: &str = "decoder_monitored_from_checkpoint CONFIG_JSON WEIGHTS_SAFETENSORS TOKEN_REQUEST_JSON MONITOR_JSON CONTEXT NEW_TOKENS PRODUCT_BUDGET";
+const USAGE: &str = "decoder_monitored_from_checkpoint CONFIG_JSON WEIGHTS_SAFETENSORS TOKEN_REQUEST_JSON MONITOR_JSON CONTEXT NEW_TOKENS PRODUCT_BUDGET [SAMPLING_JSON]";
 fn invalid(message: impl Into<String>) -> io::Error { io::Error::new(io::ErrorKind::InvalidInput, message.into()) }
 fn numerical(error: impl std::fmt::Debug) -> io::Error { invalid(format!("numerical refusal: {error:?}")) }
 
@@ -49,8 +53,50 @@ fn read_file(path: &Path, limit: usize) -> io::Result<Vec<u8>> {
     Ok(bytes)
 }
 
+// One output/preflight loop for both modes. This private example adapter exposes
+// no mutable inner decoder and cannot turn a held result into a Released variant.
+trait MonitoredExecution {
+    fn profile(&self) -> &DecoderProfile;
+    fn position(&self) -> u64;
+    fn status(&self) -> MonitoringStatus;
+    fn estimate(&self, tokens: usize) -> Result<DecoderWork, Error>;
+    fn monitoring_work(&self) -> MonitoringWork;
+    fn decoder_work(&self) -> DecoderWork;
+    fn input(&mut self, position: u64, token: u32, budget: DecoderBudget) -> Result<MonitoredStep, Error>;
+    fn generate(&mut self, position: u64, budget: DecoderBudget) -> Result<MonitoredStep, Error>;
+}
+impl MonitoredExecution for MonitoredDecoder {
+    fn profile(&self) -> &DecoderProfile { MonitoredDecoder::profile(self) }
+    fn position(&self) -> u64 { MonitoredDecoder::position(self) }
+    fn status(&self) -> MonitoringStatus { MonitoredDecoder::status(self) }
+    fn estimate(&self, tokens: usize) -> Result<DecoderWork, Error> { MonitoredDecoder::estimate(self, tokens) }
+    fn monitoring_work(&self) -> MonitoringWork { MonitoredDecoder::monitoring_work(self) }
+    fn decoder_work(&self) -> DecoderWork { MonitoredDecoder::decoder_work(self) }
+    fn input(&mut self, position: u64, token: u32, budget: DecoderBudget) -> Result<MonitoredStep, Error> {
+        self.advance(position, token, budget)
+    }
+    fn generate(&mut self, position: u64, budget: DecoderBudget) -> Result<MonitoredStep, Error> {
+        self.advance_greedy(position, budget)
+    }
+}
+impl MonitoredExecution for MonitoredSampledDecoder {
+    fn profile(&self) -> &DecoderProfile { MonitoredSampledDecoder::profile(self) }
+    fn position(&self) -> u64 { MonitoredSampledDecoder::position(self) }
+    fn status(&self) -> MonitoringStatus { MonitoredSampledDecoder::status(self) }
+    fn estimate(&self, tokens: usize) -> Result<DecoderWork, Error> { MonitoredSampledDecoder::estimate(self, tokens) }
+    fn monitoring_work(&self) -> MonitoringWork { MonitoredSampledDecoder::monitoring_work(self) }
+    fn decoder_work(&self) -> DecoderWork { MonitoredSampledDecoder::decoder_work(self) }
+    fn input(&mut self, position: u64, token: u32, budget: DecoderBudget) -> Result<MonitoredStep, Error> {
+        self.advance_forced(position, token, budget)
+    }
+    fn generate(&mut self, position: u64, budget: DecoderBudget) -> Result<MonitoredStep, Error> {
+        let sampling = SamplingBudget { vocabulary: self.profile().shape().vocabulary };
+        self.advance_sampled(position, SampleBudget { decoder: budget, sampling }).map(|step| step.into_monitored())
+    }
+}
+
 fn execute(
-    session: &mut MonitoredDecoder, tokens: &[u32], generated: usize, products: u64, output: &mut impl Write,
+    session: &mut impl MonitoredExecution, tokens: &[u32], generated: usize, products: u64, output: &mut impl Write,
 ) -> io::Result<bool> {
     if session.position() != 0 || session.status() != MonitoringStatus::Ready || tokens.is_empty()
         || products == 0 || products > MAX_DECODER_PRODUCTS
@@ -66,8 +112,8 @@ fn execute(
         let terms = session.estimate(1).map_err(numerical)?.scalar_products().map_err(numerical)?;
         let budget = DecoderBudget { scalar_products: terms };
         let next = match tokens.get(index) {
-            Some(token) => session.advance(position, *token, budget),
-            None => session.advance_greedy(position, budget),
+            Some(token) => session.input(position, *token, budget),
+            None => session.generate(position, budget),
         }.map_err(numerical)?;
         let review = next.review(); let work = session.monitoring_work();
         match &next {
@@ -97,8 +143,8 @@ fn execute(
     output.flush()?; Ok(true)
 }
 fn run() -> Result<bool, Box<dyn std::error::Error>> {
-    let args: Vec<_> = std::env::args_os().skip(1).take(8).collect();
-    if args.len() != 7 { return Err(invalid(USAGE).into()); }
+    let args: Vec<_> = std::env::args_os().skip(1).take(9).collect();
+    if args.len() != 7 && args.len() != 8 { return Err(invalid(USAGE).into()); }
     let number = |index: usize| -> io::Result<u64> {
         let text = args[index].to_str().ok_or_else(|| invalid(USAGE))?;
         if text.is_empty() || text.len() > 20 || !text.bytes().all(|byte| byte.is_ascii_digit()) { return Err(invalid(USAGE)); }
@@ -115,9 +161,18 @@ fn run() -> Result<bool, Box<dyn std::error::Error>> {
         return Err(invalid("prefix plus continuation exceeds context").into());
     }
     let monitor = read_file(Path::new(&args[3]), MAX_MONITOR_CONFIG_BYTES)?;
+    let sampling = args.get(7).map(|path| read_file(Path::new(path), MAX_SAMPLING_CONFIG_BYTES)).transpose()?;
     let (model, _) = DecoderModel::from_llama_files(identity, context, &args[0], &args[1], CheckpointFileLimits::default())?;
-    let mut session = MonitoredDecoder::from_json(model, 1, &monitor)?;
-    Ok(execute(&mut session, &tokens, generated, products, &mut io::stdout().lock())?)
+    match sampling {
+        Some(config) => {
+            let mut session = MonitoredSampledDecoder::from_json(model, 1, &monitor, &config)?;
+            Ok(execute(&mut session, &tokens, generated, products, &mut io::stdout().lock())?)
+        }
+        None => {
+            let mut session = MonitoredDecoder::from_json(model, 1, &monitor)?;
+            Ok(execute(&mut session, &tokens, generated, products, &mut io::stdout().lock())?)
+        }
+    }
 }
 fn main() -> ExitCode {
     match run() {
@@ -196,5 +251,85 @@ mod tests {
         let changed = source.replacen("\"tokens\":", "\"permit\":true,\"tokens\":", 1);
         assert_ne!(changed, source); assert!(request(changed.as_bytes()).is_err());
         assert!(request(br#"{"identity":{},"tokens":[1.0]}"#).is_err());
+    }
+
+    const SAMPLING: &[u8] = include_bytes!("../tests/fixtures/decoder_sampling.json");
+    fn sampled() -> MonitoredSampledDecoder {
+        MonitoredSampledDecoder::from_json(fixture::model(fixture::profile(16)), 1, CONFIG, SAMPLING).unwrap()
+    }
+    #[test]
+    fn sampled_cli_reuses_the_same_output_loop_without_emitting_rng_or_logits() {
+        let mut session = sampled(); let mut output = Vec::new();
+        assert!(execute(&mut session, &[1, 2, 0], 8, MAX_DECODER_PRODUCTS, &mut output).unwrap());
+        let model = fixture::model(fixture::profile(16));
+        let start = fa_reference::action::consequence::activation::monitor::decoder::sampled::config::SamplingConfig::decode(SAMPLING, 6).unwrap().start();
+        let mut raw = model.recompute_sampled(1, &[1, 2, 0], DecoderBudget { scalar_products: MAX_DECODER_PRODUCTS }, start).unwrap();
+        let expected: Vec<_> = (0..8).map(|_| raw.advance_sampled(raw.position(), SampleBudget {
+            decoder: DecoderBudget { scalar_products: MAX_DECODER_PRODUCTS }, sampling: SamplingBudget { vocabulary: 6 },
+        }).unwrap().choice.token as u64).collect();
+        let records = rows(&output);
+        let actual: Vec<_> = records.iter().filter(|row| row.get("kind").and_then(|v| v.as_str()) == Some("generated"))
+            .map(|row| row.get("token_id").unwrap().as_u64().unwrap()).collect();
+        assert_eq!(actual, expected); assert_eq!(session.sampled_draws(), 8);
+        assert_eq!(session.decoder_work(), raw.work()); assert_eq!(records.len(), 12);
+        for row in records {
+            for field in ["random_word", "seed", "logits", "probability", "sampler"] { assert!(row.get(field).is_none()); }
+        }
+    }
+    fn alarm_session(top_k: usize) -> MonitoredSampledDecoder {
+        use fa_reference::action::consequence::activation::monitor::{RefinementBudget, RefinementMonitor};
+        use fa_reference::action::consequence::activation::probe::LinearProbe;
+        use fa_reference::action::consequence::activation::tensor::kv::decoder::DecoderShape;
+        use fa_reference::action::consequence::activation::tensor::kv::decoder::sampling::{SamplingPolicy, SamplingStart};
+        use std::collections::BTreeMap;
+        let p = DecoderProfile::new(fixture::profile(4).identity(), DecoderShape { vocabulary: 2, hidden: 2,
+            intermediate: 2, layers: 1, query_heads: 1, cache_heads: 1, context: 4 }, 1e-5, 10000.0).unwrap();
+        let layers = fixture::zero_layers(&p);
+        let model = DecoderModel::new(p, vec![0.0, 1.0, 1.0, 0.0], layers, vec![1.0; 2], vec![0.0; 4]).unwrap();
+        let budget = RefinementBudget { encoded_bytes: 10000, probe_coordinates: 10000 };
+        let probe = LinearProbe::new(1, 1, model.residual_contract(1).unwrap().profile(), &[1.0, 0.0], 0.0, 0.5).unwrap();
+        let monitors = BTreeMap::from([(1, RefinementMonitor::new(vec![probe], vec![23], budget).unwrap())]);
+        MonitoredSampledDecoder::new(model, 1, 11, monitors, budget, SamplingStart {
+            policy: SamplingPolicy::new(1, 1, 2, 1.0, top_k, 1.0).unwrap(), stream: 99, seed: 0,
+        }).unwrap()
+    }
+    #[test]
+    fn generated_sample_alarm_is_withheld_after_a_successfully_reviewed_prefix() {
+        let mut session = alarm_session(0); let mut output = Vec::new();
+        assert!(!execute(&mut session, &[0], 2, MAX_DECODER_PRODUCTS, &mut output).unwrap());
+        let records = rows(&output); assert_eq!(records.len(), 2);
+        assert_eq!(records[0].get("kind").unwrap().as_str(), Some("input_reviewed"));
+        assert_eq!(records[1].get("kind").unwrap().as_str(), Some("held"));
+        for row in records { assert!(row.get("token_id").is_none()); assert!(row.get("random_word").is_none()); }
+        assert_eq!(session.position(), 2); assert_eq!(session.sampled_draws(), 1);
+        let mut control = alarm_session(1); let mut output = Vec::new();
+        assert!(execute(&mut control, &[0], 2, MAX_DECODER_PRODUCTS, &mut output).unwrap());
+        assert_eq!(control.sampled_draws(), 2);
+        assert_eq!(rows(&output).iter().filter(|row| row.get("kind").and_then(|v| v.as_str()) == Some("generated")).count(), 2);
+    }
+    #[test]
+    fn sampled_run_preflight_never_spends_a_draw_on_an_invalid_late_input() {
+        for (tokens, count, products) in [(vec![0, 99], 1, MAX_DECODER_PRODUCTS), (vec![0], 16, MAX_DECODER_PRODUCTS),
+            (vec![0], 2, 1), (vec![], 2, MAX_DECODER_PRODUCTS)]
+        {
+            let mut session = sampled(); let mut output = Vec::new();
+            assert!(execute(&mut session, &tokens, count, products, &mut output).is_err());
+            assert!(output.is_empty()); assert_eq!(session.position(), 0); assert_eq!(session.sampled_draws(), 0);
+        }
+    }
+    #[test]
+    fn failed_sampled_output_does_not_rewind_the_draw_or_generate_a_replacement() {
+        struct BrokenAfterPrefix { flushed: bool }
+        impl Write for BrokenAfterPrefix {
+            fn write(&mut self, bytes: &[u8]) -> io::Result<usize> {
+                if self.flushed { Err(io::ErrorKind::BrokenPipe.into()) } else { Ok(bytes.len()) }
+            }
+            fn flush(&mut self) -> io::Result<()> { self.flushed = true; Ok(()) }
+        }
+        let mut session = sampled(); let mut sink = BrokenAfterPrefix { flushed: false };
+        assert_eq!(execute(&mut session, &[0], 3, MAX_DECODER_PRODUCTS, &mut sink).unwrap_err().kind(), io::ErrorKind::BrokenPipe);
+        assert_eq!(session.position(), 2); assert_eq!(session.sampled_draws(), 1);
+        assert!(execute(&mut session, &[0], 3, MAX_DECODER_PRODUCTS, &mut Vec::new()).is_err());
+        assert_eq!(session.position(), 2); assert_eq!(session.sampled_draws(), 1);
     }
 }
