@@ -5,6 +5,8 @@
 //! qualification. There is no effect authority, tokenizer, runtime or I/O here.
 
 mod weights;
+mod checkpoint;
+pub use checkpoint::{DecoderCheckpoint, DecoderRestoreBudget, DecoderRestoreReceipt};
 pub use weights::{DecoderIdentity, DecoderLayerWeights, DecoderModel, DecoderProfile, DecoderShape,
     MAX_DECODER_HIDDEN, MAX_DECODER_INTERMEDIATE, MAX_DECODER_PARAMETERS, MAX_DECODER_VOCABULARY};
 
