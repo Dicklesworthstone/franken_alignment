@@ -8,6 +8,7 @@ mod weights;
 mod checkpoint;
 pub mod safetensors;
 pub mod sampling;
+pub mod experiment;
 pub use checkpoint::{DecoderCheckpoint, DecoderRestoreBudget, DecoderRestoreReceipt};
 pub use weights::{DecoderIdentity, DecoderLayerWeights, DecoderModel, DecoderProfile, DecoderShape,
     MAX_DECODER_HIDDEN, MAX_DECODER_INTERMEDIATE, MAX_DECODER_PARAMETERS, MAX_DECODER_VOCABULARY};
@@ -16,7 +17,7 @@ use super::attention::{self, AttentionRows, MAX_ATTENTION_PRODUCTS,
     MAX_ATTENTION_RESOLUTION_STEPS, MAX_ATTENTION_WORKSPACE_BYTES, AttentionBudget};
 use super::image::KvImageDescriptor;
 use super::model::{ModelKvBudget, ModelKvCapture, ModelKvImage};
-use super::{KvAppend, KvCapture};
+use super::{KvAppend, KvContract};
 use super::super::{BufferIdentity, HostTensor, TensorCapture, TensorContract, TokenSelection};
 use crate::Error;
 use std::collections::BTreeMap;
@@ -198,51 +199,9 @@ impl DecoderSession {
         let next_work = self.work.add(work)?;
         let position = self.position();
         let sequence = position.checked_add(1).ok_or(Error::Overflow)?;
-        let selected = TokenSelection { batch: 0, token: 0, first_position: position,
-            stream: self.stream, sequence };
+        let computed = self.model.forward_token(&self.cache, self.stream, position, token, true)?;
+        let ComputedToken { logits, observations, staged } = computed;
         let data = &self.model.data;
-        let h = shape.hidden;
-        let start = token as usize * h;
-        let mut hidden = data.embeddings[start..start + h].to_vec();
-        let mut staged = Vec::new();
-        let mut observations = Vec::new();
-        staged.try_reserve_exact(shape.layers).map_err(|_| Error::Limit)?;
-        observations.try_reserve_exact(shape.layers).map_err(|_| Error::Limit)?;
-        for (index, layer) in data.layers.iter().enumerate() {
-            let id = index as u64 + 1;
-            let w = &layer.weights;
-            let normalized = rms(&hidden, &w.attention_norm, data.profile.epsilon())?;
-            let mut q = matrix(&w.queries, h, &normalized)?;
-            let mut k = matrix(&w.keys, data.profile.cache_width(), &normalized)?;
-            let v = matrix(&w.values, data.profile.cache_width(), &normalized)?;
-            rotary(&mut q, data.profile.head_width(), position, data.profile.theta())?;
-            rotary(&mut k, data.profile.head_width(), position, data.profile.theta())?;
-            let query = capture(layer.attention.queries(), &q, selected)?;
-            let descriptor = KvImageDescriptor {
-                contract: layer.attention.cache().clone(), stream: self.stream, source_batch: 0,
-                first_position: 0, first_sequence: 1, source_revision: sequence,
-                token_count: self.tokens.len() + 1,
-            };
-            let plan = attention::prepare(&layer.attention, &query, &descriptor)?;
-            plan.work(1)?.check(AttentionBudget { scalar_products: MAX_ATTENTION_PRODUCTS,
-                resolution_steps: MAX_ATTENTION_RESOLUTION_STEPS, workspace_bytes: MAX_ATTENTION_WORKSPACE_BYTES })?;
-            let rows = ExtendedRows { previous: self.cache.layer(id)?, position, keys: &k, values: &v };
-            let attention = plan.evaluate(&rows)?;
-            let mixed = attention.output().iter().copied().map(rounded).collect::<Result<Vec<_>, _>>()?;
-            let projected = matrix(&w.attention_output, h, &mixed)?;
-            hidden = residual(&hidden, &projected)?;
-            let normalized = rms(&hidden, &w.feed_forward_norm, data.profile.epsilon())?;
-            let gate = matrix(&w.gate, shape.intermediate, &normalized)?;
-            let up = matrix(&w.up, shape.intermediate, &normalized)?;
-            let activated = swiglu(gate, &up)?;
-            let down = matrix(&w.down, h, &activated)?;
-            hidden = residual(&hidden, &down)?;
-            let residual = capture(&layer.residual, &hidden, selected)?;
-            observations.push(DecoderLayerObservation { layer: id, query, residual });
-            staged.push((id, words(&k), words(&v)));
-        }
-        let normalized = rms(&hidden, &data.final_norm, data.profile.epsilon())?;
-        let logits: Rc<[f32]> = matrix(&data.output, shape.vocabulary, &normalized)?.into();
         let step = DecoderStep { token, position, logits: Rc::clone(&logits), layers: observations, work };
         self.tokens.try_reserve(1).map_err(|_| Error::Limit)?;
         let requests = staged.iter().map(|(id, keys, values)| {
@@ -265,15 +224,98 @@ impl DecoderSession {
     }
 }
 
+// One numerical implementation, with private history readers for original and
+// experimental KV state. Experiments cannot export the internal temporary query
+// capture required by checked attention, or ordinary layer observations.
+type ComputedLayers = Vec<(u64, Vec<u8>, Vec<u8>)>;
+struct ComputedToken {
+    logits: Rc<[f32]>,
+    observations: Vec<DecoderLayerObservation>,
+    staged: ComputedLayers,
+}
+trait DecoderHistory {
+    fn scalar(&self, layer: u64, values: bool, position: u64, head: usize, channel: usize) -> Result<f64, Error>;
+}
+impl DecoderHistory for ModelKvCapture {
+    fn scalar(&self, layer: u64, values: bool, position: u64, head: usize, channel: usize) -> Result<f64, Error> {
+        let cache = self.layer(layer)?;
+        let contract = if values { cache.contract().values() } else { cache.contract().keys() };
+        if head >= contract.heads() || channel >= contract.channels() { return Err(Error::Binding); }
+        let token = cache.token(position)?;
+        let source = if values { token.value().source() } else { token.key().source() };
+        attention::finite(*source.words.get(head * contract.channels() + channel).ok_or(Error::Missing)?)
+    }
+}
+impl DecoderModel {
+    fn forward_token(
+        &self, history: &dyn DecoderHistory, stream: u64, position: u64, token: u32, observe: bool,
+    ) -> Result<ComputedToken, Error> {
+        let shape = self.profile().shape();
+        if position >= shape.context as u64 || token as usize >= shape.vocabulary { return Err(Error::InvalidInput); }
+        let sequence = position.checked_add(1).ok_or(Error::Overflow)?;
+        let selected = TokenSelection { batch: 0, token: 0, first_position: position,
+            stream, sequence };
+        let data = &self.data;
+        let h = shape.hidden;
+        let start = token as usize * h;
+        let mut hidden = data.embeddings[start..start + h].to_vec();
+        let mut staged = Vec::new();
+        let mut observations = Vec::new();
+        staged.try_reserve_exact(shape.layers).map_err(|_| Error::Limit)?;
+        if observe { observations.try_reserve_exact(shape.layers).map_err(|_| Error::Limit)?; }
+        for (index, layer) in data.layers.iter().enumerate() {
+            let id = index as u64 + 1;
+            let w = &layer.weights;
+            let normalized = rms(&hidden, &w.attention_norm, data.profile.epsilon())?;
+            let mut q = matrix(&w.queries, h, &normalized)?;
+            let mut k = matrix(&w.keys, data.profile.cache_width(), &normalized)?;
+            let v = matrix(&w.values, data.profile.cache_width(), &normalized)?;
+            rotary(&mut q, data.profile.head_width(), position, data.profile.theta())?;
+            rotary(&mut k, data.profile.head_width(), position, data.profile.theta())?;
+            let query = capture(layer.attention.queries(), &q, selected)?;
+            let descriptor = KvImageDescriptor {
+                contract: layer.attention.cache().clone(), stream, source_batch: 0,
+                first_position: 0, first_sequence: 1, source_revision: sequence,
+                token_count: position as usize + 1,
+            };
+            let plan = attention::prepare(&layer.attention, &query, &descriptor)?;
+            plan.work(1)?.check(AttentionBudget { scalar_products: MAX_ATTENTION_PRODUCTS,
+                resolution_steps: MAX_ATTENTION_RESOLUTION_STEPS, workspace_bytes: MAX_ATTENTION_WORKSPACE_BYTES })?;
+            let rows = ExtendedRows { previous: history, layer: id, contract: layer.attention.cache(),
+                position, keys: &k, values: &v };
+            let attention = plan.evaluate(&rows)?;
+            let mixed = attention.output().iter().copied().map(rounded).collect::<Result<Vec<_>, _>>()?;
+            let projected = matrix(&w.attention_output, h, &mixed)?;
+            hidden = residual(&hidden, &projected)?;
+            let normalized = rms(&hidden, &w.feed_forward_norm, data.profile.epsilon())?;
+            let gate = matrix(&w.gate, shape.intermediate, &normalized)?;
+            let up = matrix(&w.up, shape.intermediate, &normalized)?;
+            let activated = swiglu(gate, &up)?;
+            let down = matrix(&w.down, h, &activated)?;
+            hidden = residual(&hidden, &down)?;
+            if observe {
+                let residual = capture(&layer.residual, &hidden, selected)?;
+                observations.push(DecoderLayerObservation { layer: id, query, residual });
+            }
+            staged.push((id, words(&k), words(&v)));
+        }
+        let normalized = rms(&hidden, &data.final_norm, data.profile.epsilon())?;
+        let logits: Rc<[f32]> = matrix(&data.output, shape.vocabulary, &normalized)?.into();
+        Ok(ComputedToken { logits, observations, staged })
+    }
+}
+
 struct ExtendedRows<'a> {
-    previous: &'a KvCapture,
+    previous: &'a dyn DecoderHistory,
+    layer: u64,
+    contract: &'a KvContract,
     position: u64,
     keys: &'a [f32],
     values: &'a [f32],
 }
 impl AttentionRows for ExtendedRows<'_> {
     fn scalar(&self, values: bool, position: u64, head: usize, channel: usize) -> Result<f64, Error> {
-        let contract = if values { self.previous.contract().values() } else { self.previous.contract().keys() };
+        let contract = if values { self.contract.values() } else { self.contract.keys() };
         if head >= contract.heads() || channel >= contract.channels() { return Err(Error::Binding); }
         let index = head * contract.channels() + channel;
         if position == self.position {
@@ -281,9 +323,7 @@ impl AttentionRows for ExtendedRows<'_> {
             return row.get(index).map(|value| f64::from(*value)).ok_or(Error::Missing);
         }
         if position > self.position { return Err(Error::Missing); }
-        let token = self.previous.token(position)?;
-        let source = if values { token.value().source() } else { token.key().source() };
-        attention::finite(*source.words.get(index).ok_or(Error::Missing)?)
+        self.previous.scalar(self.layer, values, position, head, channel)
     }
 }
 
