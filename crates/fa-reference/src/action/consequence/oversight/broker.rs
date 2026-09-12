@@ -14,6 +14,7 @@ pub mod human;
 pub mod policy_governance;
 pub mod identity;
 pub mod decoder_gate;
+pub mod decoder_host;
 pub use session::{ObservedReview, ObservedSession, ReviewWindow};
 
 use super::{CommitteeContract, CommitteeInput};
@@ -60,6 +61,7 @@ pub struct OversightBroker {
     policy_campaigns: Option<policy_governance::PolicyCampaignGate>,
     identity: Option<identity::IdentityGate>,
     decoder: Option<decoder_gate::DecoderGate>,
+    decoder_host: Option<decoder_host::DecoderHost>,
 }
 
 impl OversightBroker {
@@ -68,7 +70,7 @@ impl OversightBroker {
         let scope = config.scope;
         Ok(Self { delivery: DeliveryBroker::new(config, endpoint)?, scope, contracts, issuer: Rc::new(()),
             inputs: BTreeMap::new(), started_rounds: BTreeSet::new(), captured_bytes: 0, credibility: None,
-            human: None, activation: None, consistency: None, policy_campaigns: None, identity: None, decoder: None })
+            human: None, activation: None, consistency: None, policy_campaigns: None, identity: None, decoder: None, decoder_host: None })
     }
     pub fn inspect(&self) -> ControlInspection { self.delivery.inspect() }
     pub fn contracts(&self) -> &CommitteeContract { &self.contracts }
@@ -184,9 +186,16 @@ impl OversightBroker {
     pub fn abandon_unknown(&mut self, id: u64) -> Result<(), Error> { self.delivery.abandon_unknown(id) }
     pub fn actor_revision(&self) -> u64 { self.delivery.controller().actor_revision() }
     pub fn incident_count(&self) -> u64 { self.delivery.controller().incident_count() }
-    pub fn capture_checkpoint(&mut self, id: u64, revision: u64) -> Result<CheckpointHandle, Error> { self.delivery.capture_checkpoint(id, revision) }
-    pub fn replace_actor_state(&mut self, revision: u64, actor: ActorState) -> Result<(), Error> { self.delivery.replace_actor_state(revision, actor) }
+    pub fn capture_checkpoint(&mut self, id: u64, revision: u64) -> Result<CheckpointHandle, Error> {
+        if self.decoder_host.is_some() { return Err(Error::WrongState); }
+        self.delivery.capture_checkpoint(id, revision)
+    }
+    pub fn replace_actor_state(&mut self, revision: u64, actor: ActorState) -> Result<(), Error> {
+        if self.decoder_host.is_some() { return Err(Error::WrongState); }
+        self.delivery.replace_actor_state(revision, actor)
+    }
     pub fn reset(&mut self, request: ResetRequest) -> Result<ResetReceipt, Error> {
+        if self.decoder_host.is_some() { return Err(Error::WrongState); }
         let result = self.delivery.reset(request)?; for slot in self.inputs.values_mut() { slot.approved = None; } Ok(result)
     }
     pub fn replace_policy(&mut self, sequence: u64, epoch: u64, next: Policy) -> Result<PolicyChange, Error> {

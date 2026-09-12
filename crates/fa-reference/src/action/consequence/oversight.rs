@@ -25,6 +25,7 @@ pub use broker::consistency;
 pub use broker::human;
 pub use broker::identity;
 pub use broker::decoder_gate as decoder_monitoring;
+pub use broker::decoder_host;
 pub use broker::policy_governance;
 pub use packet::{CommitteeContract, CommitteeInput, HelperContract, MAX_COMMITTEE_BYTES, action_frame};
 pub use broker::{
