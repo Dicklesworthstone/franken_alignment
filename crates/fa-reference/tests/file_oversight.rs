@@ -7,7 +7,7 @@ use fa_reference::action::consequence::delivery::persistent::{JournalError, Reco
 use fa_reference::action::consequence::delivery::persistent::observed::*;
 use fa_reference::action::consequence::delivery::{EndpointOutcome, NonExecutionReason};
 use fa_reference::action::consequence::oversight::human::HumanDisposition;
-use fa_reference::action::{ActionState, ElapsedTick};
+use fa_reference::action::ActionState;
 use fa_reference::round::Verdict;
 use fa_reference::Error;
 
