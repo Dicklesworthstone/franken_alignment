@@ -1,8 +1,10 @@
 //! Concrete file observations on the ORIGINAL durable review/dispatch path.
 //! The sealed reader interface cannot be replaced by a caller's cached snapshot.
 use super::{FileDriverEvent, FileDriverLaunch, FileDriverProcessError, FileHumanPermit,
-    FileHumanRequest, FileSupervisedDriver, JournalError, Phase, admitted, observe, sample, stage};
+    FileHumanRequest, FileOversight, FileSupervisedDriver, JournalError, Phase, admitted, observe, sample, stage};
 use super::super::helpers::FileHelperSetupError;
+use super::super::source::FileSourceError;
+use super::provider::EvidenceProvider;
 use crate::action::consequence::oversight::{CommitteeContract, CommitteeInput};
 use crate::action::consequence::oversight::evidence_source::{EvidenceError, EvidenceFile,
     EvidenceIdentity, EvidenceSnapshot};
@@ -20,6 +22,11 @@ use std::rc::Rc;
 #[derive(Debug)]
 pub struct FileEvidenceReport<T> {
     pub observations: Vec<Result<EvidenceIdentity, EvidenceError>>,
+    /// Native durable source operations, empty for an unconfigured legacy host.
+    /// Includes committed refusals and BOTH a read failure and failed withdrawal.
+    /// A failed preflight can appear here without a file read. An outer journal
+    /// failure supplies no fabricated identity in observations; inspect this field.
+    pub source_updates: Vec<Result<EvidenceIdentity, FileSourceError>>,
     pub result: Result<T, JournalError>,
 }
 
@@ -98,16 +105,17 @@ impl FileSupervisedDriver {
         }
     }
 
-    /// Reopen the concrete file at every original evidence boundary. In guarded
-    /// mode this includes first publication; reconciliation never reads a file.
-    /// File identities/errors are diagnostic and do not override native outcomes.
+    /// Reopen the concrete file at every original evidence boundary. Configured
+    /// sources also persist every observation through the SAME native gate.
+    /// First publication rechecks it; reconciliation never reads or renews it.
     pub fn step_from_file<S, F>(&mut self, source: &mut S, clock: F,
         human: Option<&FileHumanPermit>) -> FileEvidenceReport<FileDriverEvent>
     where S: EvidenceFile + ?Sized, F: FnMut() -> ElapsedTick {
         let mut observations = Vec::with_capacity(2);
-        let result = self.step_with_evidence(clock,
-            |action, contracts| observed(source, action, contracts, &mut observations), human);
-        FileEvidenceReport { observations, result }
+        let mut source_updates = Vec::with_capacity(2);
+        let result = self.step_with_provider(clock,
+            &mut FileProvider { source, observations: &mut observations, updates: &mut source_updates }, human);
+        FileEvidenceReport { observations, source_updates, result }
     }
 
     /// Freeze the original independent human request only after rereading the
@@ -120,6 +128,7 @@ impl FileSupervisedDriver {
     where S: EvidenceFile + ?Sized, F: FnMut() -> ElapsedTick {
         self.reap_helpers();
         let mut observations = Vec::with_capacity(1);
+        let mut source_updates = Vec::with_capacity(1);
         let result = (|| {
             let job = self.job.as_ref().ok_or(Error::Missing)?;
             let mut host = self.supervisor.host_mut()?;
@@ -133,7 +142,7 @@ impl FileSupervisedDriver {
             job.check_ready(&host, job.inputs.as_ref())?;
             observe(&mut host, clock())?;
             let captured = sample(&mut host, job,
-                &mut |action, contracts| observed(source, action, contracts, &mut observations))?;
+                &mut FileProvider { source, observations: &mut observations, updates: &mut source_updates }, &mut clock)?;
             observe(&mut host, clock())?;
             if let Some(error) = captured.failure { return Err(error.into()); }
             job.check_ready(&host, captured.evidence.inputs.as_ref())?;
@@ -142,7 +151,38 @@ impl FileSupervisedDriver {
                 captured.evidence.inputs.as_ref().ok_or(Error::Incomplete)?, expires_at)
         })();
         self.reap_helpers();
-        FileEvidenceReport { observations, result }
+        FileEvidenceReport { observations, source_updates, result }
+    }
+}
+
+struct FileProvider<'a, S: ?Sized> {
+    source: &'a mut S,
+    observations: &'a mut Vec<Result<EvidenceIdentity, EvidenceError>>,
+    updates: &'a mut Vec<Result<EvidenceIdentity, FileSourceError>>,
+}
+impl<S: EvidenceFile + ?Sized> EvidenceProvider for FileProvider<'_, S> {
+    fn capture<F>(&mut self, host: &mut FileOversight, action: &FrozenAction, clock: &mut F)
+        -> Result<Result<DriverEvidence, Error>, JournalError>
+    where F: FnMut() -> ElapsedTick {
+        if !host.file_source_required() {
+            // Legacy file profiles preserve their original callback/clock path.
+            return Ok(observed(self.source, action, &host.profile.committee, self.observations));
+        }
+        let started = clock();
+        let result = host.refresh_file_source(host.revision(), self.source, started);
+        self.updates.push(result.as_ref().map(|capture| capture.identity()).map_err(Clone::clone));
+        match result {
+            Ok(capture) => Ok(record_capture(capture, action, &host.profile.committee, self.observations)),
+            Err(FileSourceError::Refused(error)) => {
+                self.observations.push(Err(EvidenceError::Data(error)));
+                Ok(Err(error))
+            }
+            Err(FileSourceError::Read { error, withdrawal }) => {
+                self.observations.push(Err(error));
+                match withdrawal { Some(error) => Err(error), None => Ok(Err(evidence_error(error))) }
+            }
+            Err(FileSourceError::Journal(error)) => Err(error),
+        }
     }
 }
 
@@ -154,18 +194,26 @@ fn capture<S: EvidenceFile + ?Sized>(source: &mut S, action: &FrozenAction,
     let inputs = capture.inputs_for(action, contracts)?;
     Ok((capture, inputs))
 }
+fn evidence_error(error: EvidenceError) -> Error {
+    match error { EvidenceError::Data(error) => error, EvidenceError::Io(_) => Error::Incomplete }
+}
+fn record_capture(capture: Rc<EvidenceSnapshot>, action: &FrozenAction, contracts: &CommitteeContract,
+    observations: &mut Vec<Result<EvidenceIdentity, EvidenceError>>) -> Result<DriverEvidence, Error>
+{
+    let result = (|| {
+        if !capture.snapshot().complete { return Err(Error::Incomplete); }
+        let inputs = capture.inputs_for(action, contracts)?;
+        Ok(DriverEvidence { snapshot: capture.snapshot().clone(), inputs: Some(inputs) })
+    })();
+    observations.push(result.as_ref().map(|_| capture.identity()).map_err(|error| EvidenceError::Data(*error)));
+    result
+}
 fn observed<S: EvidenceFile + ?Sized>(source: &mut S, action: &FrozenAction,
     contracts: &CommitteeContract, observations: &mut Vec<Result<EvidenceIdentity, EvidenceError>>)
     -> Result<DriverEvidence, Error>
 {
-    match capture(source, action, contracts) {
-        Ok((capture, inputs)) => {
-            observations.push(Ok(capture.identity()));
-            Ok(DriverEvidence { snapshot: capture.snapshot().clone(), inputs: Some(inputs) })
-        }
-        Err(error) => {
-            observations.push(Err(error));
-            Err(match error { EvidenceError::Data(error) => error, EvidenceError::Io(_) => Error::Incomplete })
-        }
+    match source.read_evidence() {
+        Ok(capture) => record_capture(capture, action, contracts, observations),
+        Err(error) => { observations.push(Err(error)); Err(evidence_error(error)) }
     }
 }

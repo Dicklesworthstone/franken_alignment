@@ -7,9 +7,11 @@ mod recovery_capacity;
 pub use recovery_capacity::{CapacityDrain, CapacityStop};
 mod workers;
 mod publication;
+mod provider;
 pub mod evidence;
 pub use workers::{FileDriverProcessError, FileDriverRelease};
 use workers::WorkerSet;
+use provider::EvidenceProvider;
 use crate::action::consequence::oversight::helper_processes::HelperChildren;
 
 use super::{FileHumanPermit, FileHumanRequest, FileOversight};
@@ -196,11 +198,18 @@ impl FileSupervisedDriver {
     /// publication reads once more; settled outcomes and query-only recovery do
     /// not call providers. Clocks are sampled after each provider operation.
     /// No automatic re-review, human approval, source fallback or resend exists.
-    pub fn step_with_evidence<F, P>(&mut self, mut clock: F, mut provider: P,
+    pub fn step_with_evidence<F, P>(&mut self, clock: F, provider: P,
         human: Option<&FileHumanPermit>) -> Result<FileDriverEvent, JournalError>
     where F: FnMut() -> ElapsedTick,
         P: FnMut(&FrozenAction, &CommitteeContract) -> Result<DriverEvidence, Error>,
     {
+        self.step_with_provider(clock, &mut provider::Callback(provider), human)
+    }
+
+    // Both callback and durable-file evidence use this exact state machine.
+    fn step_with_provider<F, P>(&mut self, mut clock: F, provider: &mut P,
+        human: Option<&FileHumanPermit>) -> Result<FileDriverEvent, JournalError>
+    where F: FnMut() -> ElapsedTick, P: EvidenceProvider {
         self.reap_helpers();
         let result = (|| {
             let mut host = self.supervisor.host_mut()?;
@@ -220,7 +229,7 @@ impl FileSupervisedDriver {
                 job.permit = None; job.phase = Phase::Reconcile;
             }
             observe(&mut host, clock())?;
-            step_job(&mut host, job, &mut clock, &mut provider, human)
+            step_job(&mut host, job, &mut clock, provider, human)
         })();
         self.reap_helpers();
         if self.job.as_ref().is_some_and(|job| job.phase == Phase::Closed) { self.job = None; }
@@ -263,13 +272,10 @@ fn observe(host: &mut FileOversight, now: ElapsedTick) -> Result<(), JournalErro
 }
 
 struct Sample { evidence: DriverEvidence, failure: Option<Error> }
-fn sample<P>(host: &mut FileOversight, job: &Job, provider: &mut P) -> Result<Sample, JournalError>
-where P: FnMut(&FrozenAction, &CommitteeContract) -> Result<DriverEvidence, Error> {
-    let result = provider(&job.action, &host.profile.committee).and_then(|evidence| {
-        if !evidence.snapshot.complete { return Err(Error::Incomplete); }
-        evidence.inputs.as_ref().ok_or(Error::Incomplete)?.validate_for(&job.action, &host.profile.committee)?;
-        Ok(evidence)
-    });
+fn sample<P, F>(host: &mut FileOversight, job: &Job, provider: &mut P, clock: &mut F) -> Result<Sample, JournalError>
+where P: EvidenceProvider, F: FnMut() -> ElapsedTick {
+    let result = provider.capture(host, &job.action, clock)?
+        .and_then(|evidence| provider::validate(evidence, &job.action, &host.profile.committee));
     let changed = result.as_ref().map_or(true, |evidence| evidence.inputs.as_ref() != job.inputs.as_ref());
     if changed && host.machine.broker.current_inputs(job.attempt)?.is_some() {
         let expected = host.input_revision(job.attempt)?;
@@ -284,9 +290,7 @@ where P: FnMut(&FrozenAction, &CommitteeContract) -> Result<DriverEvidence, Erro
 
 fn step_job<F, P>(host: &mut FileOversight, job: &mut Job, clock: &mut F,
     provider: &mut P, human: Option<&FileHumanPermit>) -> Result<FileDriverEvent, JournalError>
-where F: FnMut() -> ElapsedTick,
-    P: FnMut(&FrozenAction, &CommitteeContract) -> Result<DriverEvidence, Error>,
-{
+where F: FnMut() -> ElapsedTick, P: EvidenceProvider {
     let request = job.request;
     match job.phase {
         Phase::Review => {
@@ -296,7 +300,7 @@ where F: FnMut() -> ElapsedTick,
                 Err(failure) => { job.close(); return Ok(FileDriverEvent::WorkersFailed { request, failure }); }
             };
             if !pool.ready_to_finish() { return Ok(FileDriverEvent::Workers { request, report }); }
-            let captured = sample(host, job, provider)?;
+            let captured = sample(host, job, provider, clock)?;
             let now = clock();
             observe(host, now)?;
             let pool = job.pool.as_mut().ok_or(Error::Incomplete)?;
@@ -317,7 +321,7 @@ where F: FnMut() -> ElapsedTick,
             }
         }
         Phase::Ready => {
-            let captured = sample(host, job, provider)?;
+            let captured = sample(host, job, provider, clock)?;
             observe(host, clock())?;
             if let Some(error) = captured.failure { return Err(error.into()); }
             job.check_ready(host, captured.evidence.inputs.as_ref())?;
@@ -329,7 +333,7 @@ where F: FnMut() -> ElapsedTick,
             }
             // A successful reservation is not permission to reuse the provider
             // snapshot from before it. Source loss keeps the original reservation.
-            let captured = sample(host, job, provider)?;
+            let captured = sample(host, job, provider, clock)?;
             observe(host, clock())?;
             if let Some(error) = captured.failure { return Err(error.into()); }
             job.check_ready(host, captured.evidence.inputs.as_ref())?;

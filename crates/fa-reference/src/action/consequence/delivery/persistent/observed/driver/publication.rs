@@ -1,15 +1,13 @@
 //! First-publication orchestration over the ORIGINAL durable guard.
 //! Observation failure is input to sealing, not permission to skip the guard.
-use super::{DriverEvidence, FileDriverEvent, FileOversight, Job, JournalError, Phase};
-use crate::action::consequence::oversight::CommitteeContract;
-use crate::action::{ElapsedTick, FrozenAction};
-use crate::{Error, Snapshot};
+use super::{FileDriverEvent, FileOversight, Job, JournalError, Phase};
+use super::provider::{EvidenceProvider, validate};
+use crate::action::ElapsedTick;
+use crate::Snapshot;
 
 pub(super) fn publish_job<F, P>(host: &mut FileOversight, job: &mut Job,
     clock: &mut F, provider: &mut P) -> FileDriverEvent
-where F: FnMut() -> ElapsedTick,
-    P: FnMut(&FrozenAction, &CommitteeContract) -> Result<DriverEvidence, Error>,
-{
+where F: FnMut() -> ElapsedTick, P: EvidenceProvider {
     let request = job.request;
     // Retire the send path BEFORE invoking external provider code. Even a
     // caller-caught unwind may only be followed by original reconciliation.
@@ -26,12 +24,10 @@ where F: FnMut() -> ElapsedTick,
         // checks the same endpoint again, and is the only publication operation.
         let needs_evidence = host.machine.publication_needs_evidence(job.attempt)?;
         let (inputs, snapshot, source_failure) = if needs_evidence {
-            let captured = provider(&job.action, &host.profile.committee).and_then(|evidence| {
-                if !evidence.snapshot.complete { return Err(Error::Incomplete); }
-                evidence.inputs.as_ref().ok_or(Error::Incomplete)?
-                    .validate_for(&job.action, &host.profile.committee)?;
-                Ok(evidence)
-            });
+            // Outer persistence failure is not an observation refusal. No
+            // candidate source or endpoint result can escape that failed owner.
+            let captured = provider.capture(host, &job.action, clock)?
+                .and_then(|evidence| validate(evidence, &job.action, &host.profile.committee));
             match captured {
                 Ok(evidence) => (evidence.inputs, evidence.snapshot, None),
                 Err(error) => (None, Snapshot::default(), Some(error)),
@@ -41,8 +37,8 @@ where F: FnMut() -> ElapsedTick,
             // Never replace original endpoint evidence with a source assertion.
             (None, Snapshot::default(), None)
         };
-        // Do not use sample(): pre-dispatch eligibility withdrawal is not this
-        // operation. Current time and publication/sealing commit together here.
+        // The original publication/sealing operation still samples current time
+        // AFTER file reading and, for configured sources, durable observation.
         let now = clock();
         let revision = host.revision();
         let publication = host.publish_checked(revision, job.attempt, inputs.as_ref(), snapshot, now)?;
