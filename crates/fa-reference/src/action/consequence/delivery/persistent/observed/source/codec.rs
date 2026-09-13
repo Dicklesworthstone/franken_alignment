@@ -1,5 +1,5 @@
 //! Preserve the original evidence-file representation and bounded primitives.
-use super::{FileSourcePolicy, SourceEvent};
+use super::{FileSourcePolicy, FileSourceReplacement, SourceEvent};
 use super::super::super::codec::shared::{Reader, Writer};
 use crate::action::ElapsedTick;
 use crate::action::consequence::oversight::evidence_source::{EvidenceSnapshot, MAX_EVIDENCE_FILE_BYTES};
@@ -29,6 +29,10 @@ pub(in super::super) fn write(w: &mut Writer, event: &SourceEvent) -> Result<(),
             w.blob(&bytes)?;
         }
         SourceEvent::Withdraw => w.u8(2)?,
+        SourceEvent::Replace(request) => {
+            w.u8(3)?; w.u64(request.operation)?; w.u64(request.expected_generation)?;
+            w.u64(request.expected_authority_epoch)?; w.u64(request.next_generation)?;
+        }
     }
     Ok(())
 }
@@ -51,6 +55,8 @@ pub(in super::super) fn read(r: &mut Reader<'_>) -> Result<SourceEvent, Error> {
             SourceEvent::Observe(Rc::new(capture), tick)
         }
         2 => SourceEvent::Withdraw,
+        3 => SourceEvent::Replace(FileSourceReplacement { operation: r.u64()?, expected_generation: r.u64()?,
+            expected_authority_epoch: r.u64()?, next_generation: r.u64()? }),
         _ => return Err(Error::InvalidInput),
     })
 }

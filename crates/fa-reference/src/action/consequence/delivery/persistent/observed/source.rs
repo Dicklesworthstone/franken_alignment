@@ -2,6 +2,8 @@
 //! The file producer's version floor is durable; a saved observation is not live
 //! after recovery. Reads, journals and trusted clocks remain a reference profile.
 mod codec;
+mod replacement;
+pub use replacement::FileSourceReplacement;
 pub(super) use codec::{read, write};
 
 use super::{Event, FileOversight, JournalError, Transition, BaseEvent};
@@ -62,13 +64,15 @@ pub(super) enum SourceEvent {
     Enable(FileSourcePolicy),
     Observe(Rc<EvidenceSnapshot>, ElapsedTick),
     Withdraw,
+    Replace(FileSourceReplacement),
 }
 
 impl FileOversight {
     /// Enable the original leased PolicyStateCapture before any proposal. This
     /// also enables the existing first-publication guard: source loss must not
     /// be bypassed between dispatch and the first externally visible mutation.
-    /// No disable, age-widening, source-switching or quota-reset operation exists.
+    /// No disable, age-widening or source-switching operation exists. Governed
+    /// replacement preserves these limits and the original lifetime generation cap.
     pub fn enable_file_source(&mut self, revision: u64, policy: FileSourcePolicy) -> Result<(), JournalError> {
         self.transact(revision, Event::Source(SourceEvent::Enable(policy)))?;
         Ok(())
@@ -139,9 +143,9 @@ impl FileOversight {
         if !self.source_interrupted { return Ok(()); }
         // Known source loss cannot be forgotten by the next speculative replay.
         // Original withdrawal, clock, cancellation and settlement remain usable.
-        // This allowlist grants no effect, key, helper review or source renewal.
+        // Replacement starts unavailable and cannot grant a key or observation.
         if matches!(event,
-            Event::Source(SourceEvent::Withdraw)
+            Event::Source(SourceEvent::Withdraw | SourceEvent::Replace(_))
             | Event::Core(BaseEvent::Time(_) | BaseEvent::Cancel(_) | BaseEvent::Fence
                 | BaseEvent::Stop(_) | BaseEvent::StopProgress(_) | BaseEvent::ReplacePolicy(_)
                 | BaseEvent::Reconcile(_) | BaseEvent::Seal(_) | BaseEvent::Sweep)
@@ -151,7 +155,7 @@ impl FileOversight {
     }
 
     pub(super) fn source_operation_committed(&mut self, event: &Event) {
-        if matches!(event, Event::Source(SourceEvent::Withdraw) | Event::Core(BaseEvent::Fence)) {
+        if matches!(event, Event::Source(SourceEvent::Withdraw | SourceEvent::Replace(_)) | Event::Core(BaseEvent::Fence)) {
             self.source_interrupted = false;
         }
     }

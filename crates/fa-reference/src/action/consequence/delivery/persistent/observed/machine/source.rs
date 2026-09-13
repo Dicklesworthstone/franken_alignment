@@ -1,8 +1,9 @@
 //! Replay source observations through the original leased capture/writer pair.
 //! These operations never reopen a file during replay and never mint effect rights.
 use super::{Machine, Transition};
-use super::super::source::{FileSourcePolicy, FileSourceStatus, SourceEvent};
+use super::super::source::{FileSourcePolicy, FileSourceReplacement, FileSourceStatus, SourceEvent};
 use crate::action::ElapsedTick;
+use crate::action::consequence::delivery::PolicySourceChange;
 use crate::action::consequence::oversight::CommitteeInput;
 use crate::action::consequence::oversight::evidence_source::EvidenceSnapshot;
 use crate::action::consequence::oversight::policy_state::{PolicyStateWriter, StateEvent, StateFrontier};
@@ -15,6 +16,7 @@ pub(super) struct SourceState {
     latest: Option<Rc<EvidenceSnapshot>>,
     sequence: u64,
     last_refusal: Option<Error>,
+    replacements: Vec<(FileSourceReplacement, PolicySourceChange)>,
 }
 
 impl Machine {
@@ -29,6 +31,12 @@ impl Machine {
         })
     }
 
+    pub(in super::super) fn source_replacement(&self, operation: u64)
+        -> Option<&(FileSourceReplacement, PolicySourceChange)>
+    {
+        self.file_source.as_ref()?.replacements.iter().find(|(request, _)| request.operation == operation)
+    }
+
     pub(super) fn apply_source(&mut self, event: &SourceEvent) -> Result<Transition, Error> {
         match event {
             SourceEvent::Enable(policy) => {
@@ -40,7 +48,7 @@ impl Machine {
                 let writer = self.broker.enable_fresh_policy_state(policy.source, policy.limits, policy.freshness)?;
                 if !self.publication_guard { self.enable_publication_guard()?; }
                 self.file_source = Some(SourceState { policy: *policy, writer, latest: None,
-                    sequence: 0, last_refusal: None });
+                    sequence: 0, last_refusal: None, replacements: Vec::new() });
                 Ok(Transition::Unit)
             }
             SourceEvent::Withdraw => {
@@ -49,7 +57,38 @@ impl Machine {
                 Ok(Transition::Unit)
             }
             SourceEvent::Observe(captured, at) => self.observe_source(captured, *at),
+            SourceEvent::Replace(request) => self.replace_source(*request),
         }
+    }
+
+    fn replace_source(&mut self, request: FileSourceReplacement) -> Result<Transition, Error> {
+        if request.operation == 0 { return Err(Error::InvalidInput); }
+        if let Some((original, _)) = self.source_replacement(request.operation) {
+            return if original == &request { Ok(Transition::Unit) } else { Err(Error::Binding) };
+        }
+        if self.broker.stop_receipt().is_some() { return Err(Error::WrongState); }
+        let source = self.file_source.as_mut().ok_or(Error::WrongState)?;
+        let mut next = source.policy.source;
+        next.generation = request.next_generation;
+        // The original gate bounds the lifetime number of generations. Reserve
+        // our corresponding receipt slot before changing its authority ledger.
+        source.replacements.try_reserve(1).map_err(|_| Error::Limit)?;
+        let (writer, receipt) = self.broker.replace_policy_state(request.expected_generation,
+            request.expected_authority_epoch, next, source.policy.limits)?;
+        source.writer = writer;
+        source.policy.source = next;
+        source.sequence = 0;
+        source.last_refusal = None;
+        source.replacements.push((request, receipt));
+        // Keep latest solely as the producer/semantic/equal-version byte floor.
+        // The replacement capture is empty; there is no saved-input fallback.
+        self.invalidate_source_basis()?;
+        self.sessions.clear();
+        self.automatic.clear();
+        // Retain envelopes for the ORIGINAL guarded publication/status path.
+        // Revocation prevents first execution, but a later terminal receipt is
+        // still authoritative and an unknown dispatch is still charged.
+        Ok(Transition::Unit)
     }
 
     /// Withdrawal affects original full-input eligibility and reviewer keys,
