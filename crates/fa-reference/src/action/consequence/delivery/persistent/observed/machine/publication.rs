@@ -18,6 +18,20 @@ impl Machine {
         Ok(Transition::Unit)
     }
 
+    // Scheduling hint for the durable driver, never authority or a fresh source
+    // assertion. Keep endpoint/envelope handles private to this original machine.
+    pub(in super::super) fn publication_needs_evidence(&self, attempt: u64) -> Result<bool, Error> {
+        if !self.publication_guard { return Err(Error::WrongState); }
+        if !self.clock_ready { return Err(Error::Incomplete); }
+        let now = self.now()?;
+        let query = self.broker.status_query(attempt)?;
+        match self.endpoint.status(&query)? {
+            EndpointStatus::AwaitingResolution => Ok(self.envelopes.get(&attempt)
+                .is_some_and(|envelope| now < envelope.request().execution_deadline())),
+            EndpointStatus::Resolved(_) | EndpointStatus::RetentionExpired => Ok(false),
+        }
+    }
+
     pub(super) fn publish_checked(&mut self, attempt: u64, supplied: Option<&Views>,
         snapshot: &Snapshot, now: ElapsedTick) -> Result<Transition, Error>
     {

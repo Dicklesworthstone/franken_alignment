@@ -4,12 +4,14 @@
 
 mod lifecycle;
 mod workers;
+mod publication;
 pub use workers::{FileDriverProcessError, FileDriverRelease};
 use workers::WorkerSet;
 use crate::action::consequence::oversight::helper_processes::HelperChildren;
 
 use super::{FileHumanPermit, FileHumanRequest, FileOversight};
 use super::helpers::{FileHelperFailure, FileHelperLaunch, FileHelperSetupError};
+use super::publication::CheckedPublication;
 use super::super::{FilePermit, JournalError, Reconciliation};
 use super::super::requests::{FileRequestDisposition, FileRequestStatus};
 use super::super::requests::actor::{FileActorPort, FileActorSupervisor};
@@ -60,6 +62,7 @@ pub enum FileDriverEvent {
     AwaitingHuman { request: u64 },
     Dispatched { request: u64, attempt: u64 },
     Published { request: u64, outcome: EndpointOutcome },
+    PublicationChecked { request: u64, publication: CheckedPublication, source_failure: Option<Error> },
     PublicationUnknown { request: u64, error: JournalError },
     Reconciled { request: u64, outcome: Reconciliation },
     Stopped { request: u64, stage: ActionState },
@@ -186,8 +189,9 @@ impl FileSupervisedDriver {
     }
 
     /// One review pass OR durable dispatch OR publication OR reconciliation.
-    /// Providers are called after review I/O and again after reservation, never
-    /// for existing outcome obligations. Clocks are sampled after each provider.
+    /// Providers run after review I/O and after reservation. A guarded first
+    /// publication reads once more; settled outcomes and query-only recovery do
+    /// not call providers. Clocks are sampled after each provider operation.
     /// No automatic re-review, human approval, source fallback or resend exists.
     pub fn step_with_evidence<F, P>(&mut self, mut clock: F, mut provider: P,
         human: Option<&FileHumanPermit>) -> Result<FileDriverEvent, JournalError>
@@ -333,16 +337,7 @@ where F: FnMut() -> ElapsedTick,
             job.phase = Phase::Publish;
             Ok(FileDriverEvent::Dispatched { request, attempt: job.attempt })
         }
-        Phase::Publish => {
-            // Before the publication call, retire its send path. A failed call
-            // (including caught unwind) must never automatically publish again.
-            job.phase = Phase::Reconcile;
-            let revision = host.revision();
-            match host.publish(revision, job.attempt) {
-                Ok(outcome) => Ok(FileDriverEvent::Published { request, outcome }),
-                Err(error) => Ok(FileDriverEvent::PublicationUnknown { request, error }),
-            }
-        }
+        Phase::Publish => Ok(publication::publish_job(host, job, clock, provider)),
         Phase::Reconcile => {
             let revision = host.revision();
             let outcome = host.reconcile(revision, job.attempt)?;
