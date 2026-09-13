@@ -89,6 +89,12 @@ impl OversightBroker {
         Ok(proposal)
     }
     pub fn input_revision(&self, id: u64) -> Result<u64, Error> { Ok(self.inputs.get(&id).ok_or(Error::Missing)?.revision) }
+    /// The latest RETAINED observation, not a fresh provider capture or approval.
+    /// Trusted persistence consumers compare independently supplied current data
+    /// against this exact original value instead of maintaining a shadow input slot.
+    pub fn current_inputs(&self, id: u64) -> Result<Option<&CommitteeInput>, Error> {
+        Ok(self.inputs.get(&id).ok_or(Error::Missing)?.current.as_deref())
+    }
     pub fn record_inputs(&mut self, id: u64, expected: u64, inputs: CommitteeInput) -> Result<u64, Error> {
         let slot = self.inputs.get(&id).ok_or(Error::Missing)?;
         if slot.revision != expected { return Err(Error::Stale); }

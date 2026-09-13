@@ -1,5 +1,6 @@
 //! Canonical bounded inputs to the ORIGINAL delivery reducers, not saved rights
 //! counters or caller-asserted terminal outcomes. This format is not authenticated.
+pub(super) mod shared;
 use super::*;
 use crate::action::{Purpose, VERSION, MAX_ATTEMPTS, MAX_PAYLOAD_BYTES};
 use crate::action::consequence::gate::containment::RestartGrade;

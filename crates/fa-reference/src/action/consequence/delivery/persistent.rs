@@ -9,6 +9,7 @@ mod codec;
 mod storage;
 mod stopping;
 pub mod requests;
+pub mod observed;
 pub use stopping::FileStopSweep;
 #[cfg(test)]
 mod tests;
