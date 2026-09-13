@@ -3,6 +3,8 @@
 //! This owner coordinates transitions; it is not another ledger or executor.
 
 mod lifecycle;
+mod recovery_capacity;
+pub use recovery_capacity::{CapacityDrain, CapacityStop};
 mod workers;
 mod publication;
 pub mod evidence;

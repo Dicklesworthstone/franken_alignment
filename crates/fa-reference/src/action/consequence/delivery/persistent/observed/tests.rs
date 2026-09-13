@@ -1,6 +1,8 @@
 //! Original broker transitions and real canonical replacements under I/O faults.
 //! These are deterministic barrier scenarios, not hardware power-cut evidence.
 use super::*;
+#[path = "recovery_capacity_faults.rs"]
+mod recovery_capacity_tests;
 #[path = "governance_storage_tests.rs"]
 mod policy_update_storage_tests;
 #[path = "containment/storage_tests.rs"]
