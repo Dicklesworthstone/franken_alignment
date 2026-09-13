@@ -8,6 +8,7 @@ mod journal;
 mod machine;
 mod human;
 mod views;
+pub mod helpers;
 #[cfg(test)]
 mod tests;
 pub use human::{FileHumanPermit, FileHumanRequest, FileHumanReviewer};
@@ -23,7 +24,7 @@ use crate::round::{Digest, Verdict};
 use crate::{Error, Snapshot};
 use journal::Event;
 use machine::{Machine, Transition};
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 use std::fmt;
 use std::io;
 use std::path::Path;
@@ -58,6 +59,9 @@ pub struct FileOversight {
     machine: Machine,
     issuer: Rc<()>,
     fault: Option<JournalFailure>,
+    // A worker round can never switch to manual votes in this live owner.
+    // Recovery discards every native session before returning a new owner.
+    worker_rounds: BTreeSet<u64>,
 }
 impl fmt::Debug for FileOversight {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -92,7 +96,7 @@ impl FileOversight {
     fn owner(profile: FileOversightProfile, store: storage::Store, events: Vec<Event>, machine: Machine) -> (Self, FileHumanReviewer) {
         let issuer = Rc::new(());
         let reviewer = FileHumanReviewer { issuer: Rc::clone(&issuer), reviewer: profile.human.reviewer_id };
-        (Self { profile, store, events, machine, issuer, fault: None }, reviewer)
+        (Self { profile, store, events, machine, issuer, fault: None, worker_rounds: BTreeSet::new() }, reviewer)
     }
 
     /// Historical data only. No live broker, helper session or approval key is
@@ -143,13 +147,16 @@ impl FileOversight {
     /// Trusted worker-channel observation, through the original reference digest
     /// importer. The configured roster is fixed; this does not authenticate a peer.
     pub fn commit_review(&mut self, revision: u64, round: u64, member: &str, digest: Digest) -> Result<(), JournalError> {
+        self.check_manual_round(round)?;
         self.review_input(round, member)?;
         self.transact(revision, Event::Commit(round, member.to_owned(), digest))?; Ok(())
     }
     pub fn open_reveals(&mut self, revision: u64, round: u64) -> Result<(), JournalError> {
+        self.check_manual_round(round)?;
         self.transact(revision, Event::OpenReveals(round))?; Ok(())
     }
     pub fn reveal_review(&mut self, revision: u64, round: u64, member: &str, verdict: Verdict, salt: Vec<u8>) -> Result<(), JournalError> {
+        self.check_manual_round(round)?;
         self.review_input(round, member)?;
         self.transact(revision, Event::Reveal(round, member.to_owned(), verdict, salt))?; Ok(())
     }
@@ -161,6 +168,7 @@ impl FileOversight {
     pub fn finish_review(&mut self, revision: u64, round: u64, current: Option<&CommitteeInput>,
         snapshot: Snapshot) -> Result<Result<ObservedReceipt, Error>, JournalError>
     {
+        self.check_manual_round(round)?;
         let attempt = self.machine.sessions.get(&round).ok_or(Error::Missing)?.0;
         if let Some(input) = current { self.check_action(attempt, input.action())?; }
         let supplied = current.map(|input| input.views().clone());

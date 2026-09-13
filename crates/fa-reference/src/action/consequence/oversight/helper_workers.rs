@@ -7,6 +7,7 @@
 
 pub mod io;
 pub mod wire;
+pub(crate) mod coordinator;
 
 use super::{MAX_COMMITTEE_BYTES, ObservedReview, ObservedSession};
 use crate::action::ElapsedTick;
@@ -16,8 +17,10 @@ use crate::round::{Digest, Verdict, commitment};
 use crate::Error;
 use std::cell::RefCell;
 use std::collections::BTreeMap;
+use std::convert::Infallible;
 use std::fmt;
 use std::rc::Rc;
+use coordinator::{AdvanceError, Coordinator, Session};
 
 pub const MAX_WORKER_SALT_BYTES: usize = 256;
 
@@ -166,10 +169,7 @@ impl Drop for HelperPort {
 /// Clocks, provider identity, process containment and scheduling belong to the host.
 pub struct HelperRound {
     session: ObservedSession,
-    slots: BTreeMap<String, Rc<RefCell<Slot>>>,
-    elapsed: ElapsedTick,
-    revealing: bool,
-    finished: bool,
+    coordinator: Coordinator,
 }
 
 impl HelperRound {
@@ -177,80 +177,20 @@ impl HelperRound {
         if limits.members == 0 || limits.input_bytes == 0 || limits.salt_bytes == 0 { return Err(Error::InvalidInput); }
         if limits.members > MAX_VOTES || limits.input_bytes > MAX_COMMITTEE_BYTES
             || limits.salt_bytes > MAX_WORKER_SALT_BYTES { return Err(Error::Limit); }
-        let (round, evidence_root) = session.worker_identity()?;
-        if session.inputs().views().len() > limits.members { return Err(Error::Limit); }
-        // Validate the entire retained logical closure before cloning any views.
-        // Its existing accounting includes member names, profile and input bytes.
-        if session.inputs().logical_bytes() > limits.input_bytes { return Err(Error::Limit); }
-        let mut slots = BTreeMap::new();
-        let mut ports = BTreeMap::new();
-        for (member, view) in session.inputs().views() {
-            let slot = Rc::new(RefCell::new(Slot {
-                status: HelperStatus { phase: HelperPhase::AwaitCommit, committed: false, revealed: false, failure: None },
-                pending: None,
-            }));
-            ports.insert(member.clone(), HelperPort {
-                request: HelperRequest { round, member: member.clone(), evidence_root, view: view.clone() },
-                slot: Rc::clone(&slot), salt_limit: limits.salt_bytes,
-            });
-            slots.insert(member.clone(), slot);
-        }
-        let elapsed = session.elapsed();
-        Ok((Self { session, slots, elapsed, revealing: false, finished: false }, ports))
+        let (round, root) = session.worker_identity()?;
+        let (coordinator, ports) = Coordinator::new(round, root, session.inputs(), session.window(), session.elapsed(), limits)?;
+        Ok((Self { session, coordinator }, ports))
     }
 
-    pub fn elapsed(&self) -> ElapsedTick { self.elapsed }
+    pub fn elapsed(&self) -> ElapsedTick { self.coordinator.elapsed() }
 
     /// Supervisor-only health information. It is not a vote or permission.
-    pub fn statuses(&self) -> BTreeMap<String, HelperStatus> {
-        self.slots.iter().map(|(member, slot)| (member.clone(), slot.borrow().status)).collect()
-    }
+    pub fn statuses(&self) -> BTreeMap<String, HelperStatus> { self.coordinator.statuses() }
 
     /// At most one queued reply per frozen member is consumed per invocation.
-    /// No helper-supplied time, extra roster member, deadline extension or early
-    /// permissive finish can enter the original congress through this operation.
+    /// The original session still checks each commitment, reveal and cutoff.
     pub fn advance(&mut self, now: ElapsedTick) -> Result<(), Error> {
-        if self.finished { return Err(Error::WrongState); }
-        if now < self.elapsed { return Err(Error::Stale); }
-        self.elapsed = now;
-        let window = self.session.window();
-        for (member, shared) in &self.slots {
-            let mut slot = shared.borrow_mut();
-            if matches!(slot.status.phase, HelperPhase::Complete | HelperPhase::Failed | HelperPhase::Closed) { continue; }
-            if !slot.status.committed && now >= window.commit_by {
-                slot.fail(HelperFailure::CommitDeadline);
-                continue;
-            }
-            if now >= window.reveal_by {
-                slot.fail(HelperFailure::RevealDeadline);
-                continue;
-            }
-            let Some(reply) = slot.pending.take() else { continue; };
-            match reply {
-                Reply::Commit(digest) => match self.session.commit_from_worker(member, digest, now) {
-                    Ok(()) => { slot.status.committed = true; slot.status.phase = HelperPhase::AwaitReveal; }
-                    Err(error) => slot.fail(HelperFailure::Rejected(error)),
-                },
-                Reply::Reveal { verdict, salt } => match self.session.reveal(member, verdict, &salt, now) {
-                    Ok(()) => { slot.status.revealed = true; slot.status.phase = HelperPhase::Complete; }
-                    Err(error) => slot.fail(HelperFailure::Rejected(error)),
-                },
-            }
-        }
-        if !self.revealing {
-            let all_committed = self.slots.values().all(|slot| slot.borrow().status.committed);
-            if all_committed || now >= window.commit_by {
-                self.session.open_reveals(now)?;
-                self.revealing = true;
-                for shared in self.slots.values() {
-                    let mut slot = shared.borrow_mut();
-                    if slot.status.phase == HelperPhase::AwaitReveal {
-                        slot.status.phase = HelperPhase::ReadyReveal;
-                    }
-                }
-            }
-        }
-        Ok(())
+        self.coordinator.advance(&mut NativeSession(&mut self.session), now).map_err(native_error)
     }
 
     /// Returns the original authority-bound review, with missing workers still
@@ -259,23 +199,29 @@ impl HelperRound {
     pub fn finish(&mut self, now: ElapsedTick) -> Result<ObservedReview, Error> {
         self.advance(now)?;
         match self.session.finish(now) {
-            Ok(review) => { self.finished = true; self.close_ports(); Ok(review) }
+            Ok(review) => { self.coordinator.close(); Ok(review) }
             Err(Error::Incomplete) => Err(Error::Incomplete),
-            Err(error) => { self.finished = true; self.close_ports(); Err(error) }
-        }
-    }
-
-    fn close_ports(&self) {
-        for shared in self.slots.values() {
-            let mut slot = shared.borrow_mut();
-            slot.pending = None;
-            if !matches!(slot.status.phase, HelperPhase::Complete | HelperPhase::Failed) {
-                slot.status.phase = HelperPhase::Closed;
-            }
+            Err(error) => { self.coordinator.close(); Err(error) }
         }
     }
 }
 
-impl Drop for HelperRound {
-    fn drop(&mut self) { self.close_ports(); }
+struct NativeSession<'a>(&'a mut ObservedSession);
+impl Session for NativeSession<'_> {
+    type Failure = Infallible;
+    // Preserve the existing memory-only adapter: receipt time is observed by
+    // its ORIGINAL commit/open/reveal methods, not a new authority operation.
+    fn observe(&mut self, _now: ElapsedTick) -> Result<(), Infallible> { Ok(()) }
+    fn commit(&mut self, member: &str, digest: Digest, now: ElapsedTick) -> Result<(), AdvanceError<Infallible>> {
+        self.0.commit_from_worker(member, digest, now).map_err(AdvanceError::Protocol)
+    }
+    fn open(&mut self, now: ElapsedTick) -> Result<(), AdvanceError<Infallible>> {
+        self.0.open_reveals(now).map_err(AdvanceError::Protocol)
+    }
+    fn reveal(&mut self, member: &str, verdict: Verdict, salt: &[u8], now: ElapsedTick) -> Result<(), AdvanceError<Infallible>> {
+        self.0.reveal(member, verdict, salt, now).map_err(AdvanceError::Protocol)
+    }
+}
+fn native_error(error: AdvanceError<Infallible>) -> Error {
+    match error { AdvanceError::Protocol(error) => error, AdvanceError::Backend(impossible) => match impossible {} }
 }
