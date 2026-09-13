@@ -3,6 +3,7 @@
 
 mod campaign;
 mod export;
+mod rollout;
 pub mod plan;
 pub mod trajectory;
 pub use export::MonitorExport;

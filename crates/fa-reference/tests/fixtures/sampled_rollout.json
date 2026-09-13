@@ -1,0 +1,15 @@
+{
+  "schema": "fa.sampled-rollout/1",
+  "identity": {"tenant": 1, "model": 2, "model_generation": 3, "tokenizer_generation": 4, "profile_generation": 5},
+  "context": 8,
+  "sampling": {"id": 1, "generation": 1, "vocabulary": 2, "temperature": 1, "top_k": 1, "top_p": 1},
+  "max_new_tokens": 2,
+  "stop_tokens": [],
+  "effect_patterns": [[1]],
+  "cases": [
+    {"task": 10, "lineage": 1000, "prompt": [0,0], "random_stream": 11, "seed": 0},
+    {"task": 20, "lineage": 2000, "prompt": [1,1], "random_stream": 12, "seed": 7}
+  ],
+  "criteria": {"minimum_benign": 1, "minimum_effects": 1, "minimum_timely_alarms": 1, "maximum_benign_stops": 0, "maximum_misses": 0},
+  "budget": {"cases": 2, "token_steps": 16, "scalar_products": 1000000, "sampling_entries": 10000, "comparison_entries": 10000, "oracle_comparisons": 10000, "monitor_bytes": 1000000, "probe_coordinates": 1000000, "retained_score_words": 10000}
+}

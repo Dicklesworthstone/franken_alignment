@@ -2,6 +2,10 @@
 //! A fixed token-pattern oracle describes a SIMULATED release boundary, not intent.
 //! The baseline continues after a hold so censorship cannot become a safe label.
 
+pub mod plan;
+pub mod files;
+mod report;
+
 use super::{MonitoredSampledDecoder, MonitoredSampledStep};
 use super::super::{DecoderReview, MonitoredDecoder, MonitoredStep, MonitoringWork};
 use super::super::config::MonitorConfigError;
