@@ -1,0 +1,138 @@
+{
+  "version": 1,
+  "clock": "unix_milliseconds",
+  "store": "/operator/publication-store",
+  "evidence_path": "/operator/evidence.json",
+  "scope": {
+    "tenant": 1,
+    "principal": 2,
+    "run": 3,
+    "branch": 4,
+    "authority": 5
+  },
+  "target": {
+    "adapter": 10,
+    "object": 11,
+    "contract_version": 1,
+    "expected_version": 1,
+    "generation": 1
+  },
+  "initial_payload_hex": "696e697469616c",
+  "budget": {
+    "total_units": 4096,
+    "max_attempts": 16,
+    "max_deliveries": 16,
+    "journal_events": 4096,
+    "journal_bytes": 16777216,
+    "suspend_at_incident": 3,
+    "retention_ms": 3600000
+  },
+  "actor": {
+    "grade": "audit_only",
+    "id": 1,
+    "generation": 1,
+    "host_generation": 1,
+    "model_generation": 1,
+    "tokenizer_generation": 1,
+    "state_schema_generation": 1,
+    "tokens": [],
+    "cache_hex": "6f70657261746f722d737570706c696564206175646974206d65746164617461",
+    "sampler_hex": "6e6f206e756d65726963616c207265737461727420636c61696d6564",
+    "next_position": 0
+  },
+  "policy": {
+    "generation": 1,
+    "nodes": [
+      {
+        "op": "exact_value",
+        "key": 7,
+        "value_hex": "6f6b"
+      },
+      {
+        "op": "payload_at_most",
+        "maximum": 512
+      },
+      {
+        "op": "units_at_most",
+        "maximum": 512
+      },
+      {
+        "op": "all",
+        "children": [
+          0,
+          1,
+          2
+        ]
+      }
+    ]
+  },
+  "congress": {
+    "generation": 1,
+    "per_member_cap": 5,
+    "per_cohort_cap": 5,
+    "continue_minimum": 8,
+    "continue_hold_maximum": 0,
+    "narrow_at": 8,
+    "suspend_at": 10,
+    "minimum_members": 2,
+    "minimum_cohorts": 2
+  },
+  "human": {
+    "reviewer_id": 77,
+    "max_validity_ms": 60000,
+    "max_requests": 16
+  },
+  "source": {
+    "id": 51,
+    "capture_generation": 1,
+    "max_age_ms": 120000,
+    "events": 256,
+    "retained_bytes": 1048576,
+    "read_bytes": 1048576
+  },
+  "timing": {
+    "commit_ms": 5000,
+    "reveal_ms": 10000,
+    "runtime_ms": 120000,
+    "poll_ms": 10,
+    "cleanup_ms": 2000
+  },
+  "helpers": {
+    "alpha": {
+      "cohort": "alpha",
+      "weight": 5,
+      "profile": {
+        "id": 1,
+        "bytes_hex": "7265666572656e63652f68656c7065722f616c706861",
+        "tokenizer_epoch": 1,
+        "model_epoch": 1
+      },
+      "projection_id": 1,
+      "question_hex": "53686f756c642074686973206578616374207075626c69636174696f6e2070726f636565643f",
+      "program": {
+        "executable": "/operator/helpers/alpha",
+        "directory": "/operator/helpers",
+        "arguments": [],
+        "environment": {}
+      }
+    },
+    "beta": {
+      "cohort": "beta",
+      "weight": 5,
+      "profile": {
+        "id": 2,
+        "bytes_hex": "7265666572656e63652f68656c7065722f62657461",
+        "tokenizer_epoch": 1,
+        "model_epoch": 2
+      },
+      "projection_id": 2,
+      "question_hex": "53686f756c642074686973206578616374207075626c69636174696f6e2070726f636565643f",
+      "program": {
+        "executable": "/operator/helpers/beta",
+        "directory": "/operator/helpers",
+        "arguments": [],
+        "environment": {}
+      }
+    }
+  }
+}
