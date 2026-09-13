@@ -1,7 +1,7 @@
 //! Bounded newline framing and resumable I/O without owning a task runtime.
 //! A reply must drain and flush before another command can touch the actor port.
 
-use super::{ActorPort, ActorRequestPort, ActorWire, MAX_FRAME_BYTES, MAX_RESPONSE_BYTES, WireError};
+use super::{ActorError, ActorPort, ActorProposal, ActorRequestPort, ActorWire, MAX_FRAME_BYTES, MAX_RESPONSE_BYTES, WireError};
 use std::fmt;
 use std::io::{self, BufRead, Write};
 
@@ -60,10 +60,20 @@ impl<P: ActorRequestPort> ActorChannel<P> {
     /// beyond it remain caller-owned and unprocessed, even in a pipelined read.
     /// No input is accepted while a previous reply is waiting to drain/flush.
     pub fn feed(&mut self, bytes: &[u8]) -> FeedResult {
+        self.feed_with_admission(bytes, |_, _, _| Ok(()))
+    }
+
+    #[cfg(unix)]
+    pub(crate) fn request_port(&self) -> &P { self.wire.request_port() }
+
+    /// Internal handoff at a complete frame only. Original framing and backpressure
+    /// remain in force before any source acquisition can occur.
+    pub(crate) fn feed_with_admission<A>(&mut self, bytes: &[u8], admission: A) -> FeedResult
+    where A: FnOnce(&P, u64, &ActorProposal) -> Result<(), ActorError> {
         if self.state() != ChannelState::Reading { return FeedResult { consumed: 0, state: self.state() }; }
         for (index, &byte) in bytes.iter().enumerate() {
             if byte == b'\n' {
-                self.output = self.wire.exchange(&self.input).encode();
+                self.output = self.wire.exchange_with_admission(&self.input, admission).encode();
                 self.output.push(b'\n');
                 debug_assert!(self.output.len() <= MAX_RESPONSE_BYTES + 1);
                 self.input.clear(); self.written = 0; self.exchanges += 1;

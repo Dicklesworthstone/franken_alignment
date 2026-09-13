@@ -57,6 +57,17 @@ impl<P: ActorRequestPort> ActorWire<P> {
     /// Parse failures disclose no partially decoded request or private diagnostics.
     /// A successful submit/cancel response is an observation, never authorization.
     pub fn exchange(&mut self, document: &[u8]) -> WireResponse {
+        self.exchange_with_admission(document, |_, _, _| Ok(()))
+    }
+
+    #[cfg(unix)]
+    pub(crate) fn request_port(&self) -> &P { &self.port }
+
+    /// Internal host handoff after original parsing and ticket-capacity checks.
+    /// The actor cannot install this hook. It neither grants a permit nor replaces
+    /// the original port's validation, deduplication or outcome projection.
+    pub(crate) fn exchange_with_admission<A>(&mut self, document: &[u8], admission: A) -> WireResponse
+    where A: FnOnce(&P, u64, &ActorProposal) -> Result<(), ActorError> {
         let command = match decode_command(document) {
             Ok(command) => command,
             Err(error) => return WireResponse { request: None, result: Err(error) },
@@ -67,7 +78,7 @@ impl<P: ActorRequestPort> ActorWire<P> {
                 if !self.tickets.contains_key(&request) && self.tickets.len() >= MAX_ACTOR_REQUESTS {
                     Err(WireError::Capacity)
                 } else {
-                    self.port.submit(request, &proposal).map(|ticket| {
+                    admission(&self.port, request, &proposal).and_then(|()| self.port.submit(request, &proposal)).map(|ticket| {
                         let observation = self.port.poll(&ticket);
                         self.tickets.insert(request, ticket);
                         observation

@@ -2,6 +2,8 @@
 //! Only the supervisor owns the host or installs a fresh admission snapshot.
 
 mod host;
+mod source_wire;
+pub use source_wire::{FileActorExchange, FileActorFeed};
 pub use host::FileRequestHost;
 
 use super::{FileRequestDisposition, FileRequestStatus};
