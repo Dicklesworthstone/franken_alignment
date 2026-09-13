@@ -4,7 +4,8 @@
 //! listener, peer authentication, supervisor, executor or credential is created.
 //! All socket I/O is bounded per drive; dropping a connection never cancels work.
 
-use super::actor_wire::{ActorChannel, ActorWire, ChannelState, WireError};
+use super::actor::ActorPort;
+use super::actor_wire::{ActorRequestPort, ActorChannel, ActorWire, ChannelState, WireError};
 use std::fmt;
 use std::io::{self, Read, Write};
 use std::os::fd::{AsFd, BorrowedFd};
@@ -92,41 +93,43 @@ pub struct DriveReport { pub progress: DriveProgress, pub status: ConnectionStat
 /// Give the peer only the opposite socket, never this trusted-side connection.
 /// A successful write acknowledges local socket acceptance, not peer delivery.
 /// Retry uncertainty belongs to the original request key and effect ledger.
+/// The default port remains in-memory. A durable port can perform synchronous
+/// journal I/O during exchange; DriveBudget bounds socket work, not disk latency.
 ///
 /// ```compile_fail,E0599
 /// use fa_reference::action::consequence::oversight::actor_transport::UnixActorConnection;
 /// fn escalate(connection: UnixActorConnection) { let _broker = connection.broker_mut(); }
 /// ```
-pub struct UnixActorConnection {
+pub struct UnixActorConnection<P: ActorRequestPort = ActorPort> {
     socket: UnixStream,
-    channel: ActorChannel,
+    channel: ActorChannel<P>,
     input: [u8; SOCKET_BUFFER_BYTES],
     start: usize,
     end: usize,
     failure: Option<ConnectionFailure>,
 }
 
-impl fmt::Debug for UnixActorConnection {
+impl<P: ActorRequestPort> fmt::Debug for UnixActorConnection<P> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("UnixActorConnection").field("status", &self.status()).finish_non_exhaustive()
     }
 }
 
-impl AsFd for UnixActorConnection {
+impl<P: ActorRequestPort> AsFd for UnixActorConnection<P> {
     fn as_fd(&self) -> BorrowedFd<'_> { self.socket.as_fd() }
 }
 
-impl UnixActorConnection {
+impl<P: ActorRequestPort> UnixActorConnection<P> {
     /// No socket clone or task is spawned. A native scheduler may register the
     /// borrowed descriptor; this adapter does not supply another event loop.
-    pub fn new(socket: UnixStream, channel: ActorChannel) -> io::Result<Self> {
+    pub fn new(socket: UnixStream, channel: ActorChannel<P>) -> io::Result<Self> {
         socket.set_nonblocking(true)?;
         Ok(Self::from_nonblocking(socket, channel))
     }
 
     /// Internal constructor after peer authentication and nonblocking setup.
     /// No fallible syscall runs after the original actor session is moved here.
-    pub(super) fn from_nonblocking(socket: UnixStream, channel: ActorChannel) -> Self {
+    pub(super) fn from_nonblocking(socket: UnixStream, channel: ActorChannel<P>) -> Self {
         Self { socket, channel, input: [0; SOCKET_BUFFER_BYTES], start: 0, end: 0, failure: None }
     }
 
@@ -209,7 +212,7 @@ impl UnixActorConnection {
     /// Explicit operator reconnect: close this socket and retain the SAME actor
     /// ticket/idempotency session. Unfinished input and unsent replies are lost,
     /// not accepted effects. Clients retry the original key and exact proposal.
-    pub fn into_session(self) -> ActorWire { self.channel.into_wire() }
+    pub fn into_session(self) -> ActorWire<P> { self.channel.into_wire() }
 
     fn fail(&mut self, direction: IoDirection, kind: io::ErrorKind) {
         self.failure = Some(ConnectionFailure { direction, kind });

@@ -167,3 +167,7 @@ fn framed_but_illegal_history_cannot_fabricate_a_publication_or_a_sweep_result()
     assert_eq!(replayed.snapshot(parsed.len()).control.ledger.available, 100);
     assert_eq!(replayed.snapshot(parsed.len()).executions, 0);
 }
+
+
+#[path = "requests/storage_tests.rs"]
+mod request_storage;
