@@ -5,6 +5,7 @@
 mod lifecycle;
 mod workers;
 mod publication;
+pub mod evidence;
 pub use workers::{FileDriverProcessError, FileDriverRelease};
 use workers::WorkerSet;
 use crate::action::consequence::oversight::helper_processes::HelperChildren;
