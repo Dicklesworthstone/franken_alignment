@@ -153,6 +153,7 @@ fn write_event(w: &mut Writer, event: &Event) -> Result<(), Error> {
             w.u64(request.expected_authority_epoch)?;
         }
         Event::StopProgress(tick) => { w.u8(12)?; w.u64(tick.0)?; }
+        Event::ReplacePolicy(update) => { w.u8(14)?; w.blob(&governance::codec::encode(update)?)?; }
     }
     Ok(())
 }
@@ -197,6 +198,7 @@ fn read_event(r: &mut Reader<'_>) -> Result<Event, Error> {
         11 => Event::Stop(StopRequest { operation: r.u64()?, expected_control_sequence: r.u64()?,
             expected_authority_epoch: r.u64()? }),
         12 => Event::StopProgress(ElapsedTick(r.u64()?)),
+        14 => Event::ReplacePolicy(governance::codec::decode(r.blob(governance::codec::MAX_UPDATE_BYTES)?)?),
         _ => return Err(Error::InvalidInput),
     })
 }

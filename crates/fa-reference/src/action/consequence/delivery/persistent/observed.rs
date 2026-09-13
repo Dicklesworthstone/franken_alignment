@@ -8,6 +8,7 @@ mod journal;
 mod machine;
 mod human;
 mod views;
+mod governance;
 pub mod helpers;
 pub mod driver;
 pub mod reviewer;

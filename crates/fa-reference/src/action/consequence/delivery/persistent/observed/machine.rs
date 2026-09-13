@@ -11,8 +11,10 @@ use crate::action::{ActionState, ElapsedTick, FrozenAction, Permit, Scope};
 use crate::Error;
 use std::collections::BTreeMap;
 use super::super::requests::RequestBook;
+use super::super::governance::{PolicyUpdates, PolicyUpdateReceipt};
 
 mod requests;
+mod governance;
 mod publication;
 
 pub(super) enum Transition {
@@ -27,6 +29,7 @@ pub(super) enum Transition {
     Swept(BTreeMap<u64, Result<Reconciliation, Error>>),
     Stopped(StopReceipt),
     StopProgressed(FileStopSweep),
+    PolicyUpdated(PolicyUpdateReceipt),
     PublicationChecked(super::publication::CheckedPublication),
 }
 
@@ -36,6 +39,7 @@ pub(super) struct Machine {
     pub(super) sessions: BTreeMap<u64, (u64, ObservedSession)>,
     pub(super) clock_ready: bool,
     pub(super) requests: RequestBook,
+    pub(super) policy_updates: PolicyUpdates,
     pub(super) publication_guard: bool,
     scope: Scope,
     endpoint: PublicationEndpoint,
@@ -56,7 +60,7 @@ impl Machine {
         }, &mut endpoint, p.committee.clone())?;
         let reviewer = broker.enable_human_review(p.human)?;
         broker.confirm_fence(endpoint.install_fence(broker.fence_request())?)?;
-        Ok(Self { requests: RequestBook::default(), scope: d.scope, broker, endpoint, reviewer, actions: BTreeMap::new(), sessions: BTreeMap::new(),
+        Ok(Self { policy_updates: PolicyUpdates::default(), requests: RequestBook::default(), scope: d.scope, broker, endpoint, reviewer, actions: BTreeMap::new(), sessions: BTreeMap::new(),
             automatic: BTreeMap::new(), human_keys: BTreeMap::new(), envelopes: BTreeMap::new(), clock_ready: false,
             publication_guard: false })
     }
@@ -121,7 +125,7 @@ impl Machine {
 
     fn apply_inner(&mut self, event: &Event) -> Result<Transition, Error> {
         let without_current_time = matches!(event,
-            Event::Core(BaseEvent::Time(_) | BaseEvent::Cancel(_) | BaseEvent::Fence | BaseEvent::Stop(_) | BaseEvent::StopProgress(_))
+            Event::Core(BaseEvent::Time(_) | BaseEvent::Cancel(_) | BaseEvent::Fence | BaseEvent::Stop(_) | BaseEvent::StopProgress(_) | BaseEvent::ReplacePolicy(_))
             | Event::InputsUnavailable(..) | Event::Human(_, HumanDecision::Reject | HumanDecision::Revoke) | Event::RevokeHumans
             | Event::PublicationGuard | Event::PublishChecked(..));
         if !without_current_time && !self.clock_ready { return Err(Error::Incomplete); }
@@ -206,6 +210,7 @@ impl Machine {
 
     fn apply_core(&mut self, event: &BaseEvent) -> Result<Transition, Error> {
         match event {
+            BaseEvent::ReplacePolicy(update) => return self.apply_policy_update(update),
             BaseEvent::Time(tick) => self.observe(*tick)?,
             BaseEvent::Propose(id, spec, snapshot) => {
                 let action = self.broker.propose(*id, spec.clone(), snapshot)?.action;

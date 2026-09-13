@@ -37,7 +37,7 @@ fn core_allowed(event: &BaseEvent) -> bool {
     // New events added to the simpler profile are NOT admitted implicitly.
     matches!(event, BaseEvent::Time(_) | BaseEvent::Propose(..) | BaseEvent::Publish(_)
         | BaseEvent::Reconcile(_) | BaseEvent::Seal(_) | BaseEvent::Cancel(_) | BaseEvent::Fence
-        | BaseEvent::Sweep | BaseEvent::Stop(_) | BaseEvent::StopProgress(_) | BaseEvent::SubmitRequest(..))
+        | BaseEvent::Sweep | BaseEvent::Stop(_) | BaseEvent::StopProgress(_) | BaseEvent::SubmitRequest(..) | BaseEvent::ReplacePolicy(_))
 }
 
 fn config(p: &FileOversightProfile) -> Result<Vec<u8>, Error> {

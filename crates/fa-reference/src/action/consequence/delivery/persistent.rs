@@ -8,6 +8,8 @@
 mod codec;
 mod storage;
 mod stopping;
+pub mod governance;
+pub use governance::{PolicyUpdate, PolicyUpdateReceipt};
 pub mod requests;
 pub mod observed;
 pub use stopping::FileStopSweep;
@@ -178,6 +180,7 @@ enum Event {
     Stop(StopRequest),
     StopProgress(ElapsedTick),
     SubmitRequest(u64, ActionSpec, Snapshot),
+    ReplacePolicy(PolicyUpdate),
 }
 enum Transition {
     Unit,
@@ -188,6 +191,7 @@ enum Transition {
     Swept(BTreeMap<u64, Result<Reconciliation, Error>>),
     Stopped(StopReceipt),
     StopProgressed(FileStopSweep),
+    PolicyUpdated(PolicyUpdateReceipt),
 }
 
 struct Machine {
@@ -198,6 +202,7 @@ struct Machine {
     envelopes: BTreeMap<u64, DispatchEnvelope>,
     clock_ready: bool,
     requests: requests::RequestBook,
+    policy_updates: governance::PolicyUpdates,
 }
 impl Machine {
     fn new(profile: &FileDeliveryProfile) -> Result<Self, Error> {
@@ -212,7 +217,8 @@ impl Machine {
         }, &mut endpoint)?;
         broker.confirm_fence(endpoint.install_fence(broker.fence_request())?)?;
         Ok(Self { broker, endpoint, actions: BTreeMap::new(), permits: BTreeMap::new(),
-            envelopes: BTreeMap::new(), clock_ready: false, requests: requests::RequestBook::default() })
+            envelopes: BTreeMap::new(), clock_ready: false, requests: requests::RequestBook::default(),
+            policy_updates: governance::PolicyUpdates::default() })
     }
     fn replay(profile: &FileDeliveryProfile, events: &[Event]) -> Result<Self, Error> {
         let mut machine = Self::new(profile)?;
@@ -229,6 +235,7 @@ impl Machine {
             | Event::Dispatch(..) | Event::Publish(..) | Event::Reconcile(..) | Event::Seal(..) | Event::Sweep | Event::SubmitRequest(..))
             && !self.clock_ready { return Err(Error::Incomplete); }
         match event {
+            Event::ReplacePolicy(update) => return self.apply_policy_update(update),
             Event::SubmitRequest(id, spec, snapshot) => return self.apply_request(*id, spec, snapshot),
             Event::Time(tick) => {
                 self.broker.observe_time(*tick)?;
