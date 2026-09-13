@@ -6,6 +6,7 @@ use fa_reference::action::consequence::activation::probe::training::calibration:
 use fa_reference::action::consequence::activation::probe::training::decoder::{DecoderCampaign, plan::ProbeRunPlan};
 use fa_reference::action::consequence::activation::probe::training::interchange::files::{load_training_inputs, TrainingFileLimits};
 use fa_reference::action::consequence::activation::tensor::kv::decoder::DecoderModel;
+use fa_reference::action::consequence::activation::probe::training::decoder::trajectory::plan::{TrajectoryPlan, read_trajectory_plan};
 use std::ffi::OsString;
 #[cfg(test)]
 use std::fs;
@@ -13,7 +14,7 @@ use std::io::{self, Write};
 use std::path::Path;
 use std::process::ExitCode;
 
-const USAGE: &str = "train_decoder_probes_from_checkpoint CONFIG_JSON WEIGHTS_SAFETENSORS CAMPAIGN_JSON NEW_MONITOR_JSON";
+const USAGE: &str = "train_decoder_probes_from_checkpoint CONFIG_JSON WEIGHTS_SAFETENSORS CAMPAIGN_JSON NEW_MONITOR_JSON [TRAJECTORY_JSON]";
 fn invalid(message: impl Into<String>) -> io::Error { io::Error::new(io::ErrorKind::InvalidInput, message.into()) }
 fn counts(value: ConfusionCounts) -> String {
     format!("{{\"benign_alarm\":{},\"benign_quiet\":{},\"benign_boundary\":{},\"violation_alarm\":{},\"violation_quiet\":{},\"violation_boundary\":{}}}",
@@ -40,24 +41,44 @@ fn report(campaign: &DecoderCampaign, output: &mut impl Write) -> io::Result<()>
 fn execute(plan: &mut ProbeRunPlan, model: &DecoderModel, destination: &Path,
     output: &mut impl Write) -> Result<bool, Box<dyn std::error::Error>>
 {
+    execute_validated(plan, model, destination, None, output)
+}
+fn execute_validated(plan: &mut ProbeRunPlan, model: &DecoderModel, destination: &Path,
+    trajectory: Option<TrajectoryPlan>, output: &mut impl Write) -> Result<bool, Box<dyn std::error::Error>>
+{
+    if let Some(validation) = &trajectory { validation.validate_profile(model.profile())?; }
     let campaign = plan.run(model).map_err(|error| invalid(format!("campaign refusal: {error:?}")))?;
     // Print all operating points and untouched evaluation counts, even when no
     // roster can be exported. A broken report sink prevents new file creation.
     report(&campaign, output)?;
     if !campaign.accepted() { return Ok(false); }
     let settings = plan.settings().for_campaign(&campaign);
+    if let Some(validation) = trajectory {
+        let mut prepared = validation.bind(&campaign, settings.clone())?;
+        let results = prepared.run().map_err(|error| invalid(format!("trajectory refusal: {error:?}")))?;
+        results.write_ndjson(output)?;
+        if !results.accepted() { return Ok(false); }
+        let exercised = results.monitor_json().map_err(|error| invalid(format!("trajectory export: {error:?}")))?;
+        let exported = campaign.monitor_json(&settings, MAX_MONITOR_CONFIG_BYTES)
+            .map_err(|error| invalid(format!("monitor export: {error:?}")))?;
+        if exercised != exported.as_slice() { return Err(invalid("evaluated monitor/configuration mismatch").into()); }
+    }
     let bytes = campaign.save_monitor_new(&settings, MAX_MONITOR_CONFIG_BYTES, destination)?;
     writeln!(output, "{{\"kind\":\"monitor_saved\",\"bytes\":{bytes},\"permission\":\"not_issued\"}}")?;
     output.flush()?;
     Ok(true)
 }
 fn run(args: &[OsString], output: &mut impl Write) -> Result<bool, Box<dyn std::error::Error>> {
-    if args.len() != 4 { return Err(invalid(USAGE).into()); }
+    if args.len() != 4 && args.len() != 5 { return Err(invalid(USAGE).into()); }
+    let trajectory = args.get(4).map(|path| read_trajectory_plan(Path::new(path))).transpose()?;
     let (model, mut plan) = load_training_inputs(&args[0], &args[1], &args[2], TrainingFileLimits::default())?;
-    execute(&mut plan, &model, Path::new(&args[3]), output)
+    match trajectory {
+        Some(validation) => execute_validated(&mut plan, &model, Path::new(&args[3]), Some(validation), output),
+        None => execute(&mut plan, &model, Path::new(&args[3]), output),
+    }
 }
 fn main() -> ExitCode {
-    let args: Vec<_> = std::env::args_os().skip(1).take(5).collect();
+    let args: Vec<_> = std::env::args_os().skip(1).take(6).collect();
     match run(&args, &mut io::stdout().lock()) {
         Ok(true) => ExitCode::SUCCESS,
         Ok(false) => ExitCode::from(2),
@@ -188,4 +209,5 @@ mod tests {
         assert!(run(&args, &mut output).unwrap_err().to_string().contains("Syntax"));
         assert!(output.is_empty()); assert!(!Path::new(&args[3]).exists());
     }
+    include!("../tests/support/decoder_trajectory_cli.rs");
 }

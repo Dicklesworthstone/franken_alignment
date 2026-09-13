@@ -2,6 +2,9 @@
 //! Teacher-forced original histories run without effects. Labels and the first
 //! effect position are operator evidence, not inferred intent or authentication.
 
+pub mod plan;
+mod report;
+
 use super::{DecoderCampaign, MAX_CAPTURE_TOKENS};
 use super::super::{CaseOrigin, MAX_CORPUS_CASES};
 use super::super::interchange::MonitorExportSettings;

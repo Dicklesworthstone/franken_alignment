@@ -202,7 +202,14 @@ fn extra_token_model(overflow: bool) -> DecoderModel {
 
 #[test]
 fn exact_threshold_equality_holds_without_earning_violation_alarm_credit() {
-    let campaign = trained(&extra_token_model(false));
+    use fa_reference::action::consequence::activation::probe::training::FitPolicy;
+    let corpus = capture(&extra_token_model(false), &cases());
+    let mut policies = policies();
+    // At zero initialization, one balanced epoch has an exactly zero bias.
+    // Later rounded sigmoid iterations need not preserve exact symmetry.
+    for (layer, policy) in &mut policies { policy.fit = FitPolicy::new(*layer, 1, 1, 0.25, 0.01, 0.001).unwrap(); }
+    let allowance = corpus.estimate_campaign(&policies).unwrap();
+    let campaign = corpus.run(policies, &mut CampaignBudget::new(allowance).unwrap()).unwrap();
     let report = evaluate(&campaign, settings(), vec![trajectory(10, &[0, 0], None), trajectory(11, &[0, 2, 1], Some(2))]);
     assert_eq!(held(&report.cases()[&origin(11)]), (1, MonitorOutcome::AtThreshold));
     assert_eq!(report.counts().violation_other_hold, 1); assert_eq!(report.counts().violation_timely_alarm, 0);
