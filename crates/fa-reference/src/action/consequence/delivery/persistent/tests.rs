@@ -1,6 +1,8 @@
 //! Fault barriers exercise the real original reducers and real file replacement.
 //! Injected failures are not power cuts or an execution qualification.
 use super::*;
+#[path = "governance/storage_tests.rs"]
+mod policy_update_storage_tests;
 use crate::action::{Purpose, VERSION};
 use crate::action::consequence::congress::MemberPolicy;
 use crate::action::consequence::delivery::NonExecutionReason;

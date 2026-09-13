@@ -1,6 +1,7 @@
 //! Control-plane cleanup and query-only recovery using the same locked owner.
 use super::{FileSupervisedDriver, Job, Phase, admitted, observe, stage};
 use super::super::super::{FileStopSweep, JournalError, Reconciliation};
+use super::super::super::governance::{PolicyUpdate, PolicyUpdateReceipt};
 use super::super::super::requests::FileRequestStatus;
 use crate::action::consequence::delivery::{StopReceipt, StopRequest};
 use crate::action::{ActionState, ElapsedTick};
@@ -100,5 +101,29 @@ impl FileSupervisedDriver {
         if closed { if let Some(job) = &mut self.job { job.close(); } }
         self.reap_helpers();
         if self.job.as_ref().is_some_and(|job| job.phase == Phase::Closed) { self.job = None; }
+    }
+}
+
+impl FileSupervisedDriver {
+    /// Commit trusted governance without asking the actor, helper or human-effect
+    /// reviewer to change policy. Its original owner cancels undispatched work;
+    /// then existing maintenance retires its workers before any later clock/I/O.
+    /// A rejected update leaves a healthy job intact. An exact historical retry
+    /// does not retire a newer job merely because the OLD receipt lists cancelled
+    /// attempts. Original live dispositions, not receipt contents, drive cleanup.
+    ///
+    /// Earlier dispatches retain their publication/reconciliation phases and
+    /// charges. An enabled first-publication guard still revalidates at execution;
+    /// policy updates do not disable it. This method never resends an effect.
+    pub fn replace_policy(&mut self, revision: u64, update: &PolicyUpdate)
+        -> Result<PolicyUpdateReceipt, JournalError>
+    {
+        let result = (|| {
+            let mut host = self.supervisor.host_mut()?;
+            if let Some(job) = &self.job { job.check_owner(&host)?; }
+            host.replace_policy(revision, update)
+        })();
+        self.reap_helpers();
+        result
     }
 }

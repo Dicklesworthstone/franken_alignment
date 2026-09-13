@@ -1,6 +1,8 @@
 //! Original broker transitions and real canonical replacements under I/O faults.
 //! These are deterministic barrier scenarios, not hardware power-cut evidence.
 use super::*;
+#[path = "governance_storage_tests.rs"]
+mod policy_update_storage_tests;
 use super::super::JournalLimits;
 use crate::action::{ActionState, Purpose, ResolvedTarget, Scope, VERSION};
 use crate::action::consequence::congress::{CongressPolicy, MemberPolicy};
