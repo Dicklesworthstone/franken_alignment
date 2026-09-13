@@ -6,6 +6,8 @@ mod recovery;
 mod processes;
 mod evidence;
 mod stopping;
+mod hosted_stop;
+pub use hosted_stop::HostedDriverStep;
 pub use stopping::DriverStopProgress;
 pub use evidence::{DriverEvidence, FileDriverStep, FileReviewError, FileReviewLaunch};
 use evidence::EvidenceFeed;
@@ -58,6 +60,8 @@ pub enum DriverEvent {
     PublicationResolved { request: u64, receipt: EndpointReceipt },
     DeliveryUnknown { request: u64, error: Error },
     Stopped { request: u64, state: ActionState },
+    /// An automatic hosted trip, resolved only through original endpoint evidence.
+    HostedStop { sweep: Box<crate::action::consequence::delivery::StopSweep> },
 }
 
 struct Job {
@@ -214,6 +218,12 @@ impl SupervisedDriver {
         &mut self, mut clock: F, mut evidence: EvidenceFeed<'_>, human: Option<&HumanPermit>,
     ) -> Result<DriverEvent, DriverError>
     where F: FnMut() -> ElapsedTick {
+        // A numerical trip takes precedence over helper/evidence availability.
+        // No extra clock read occurs when this optional policy has not tripped.
+        if let Some(result) = self.service_hosted_stop(&mut clock) {
+            return result.map(|sweep| DriverEvent::HostedStop { sweep: Box::new(sweep) })
+                .map_err(DriverError::Control);
+        }
         self.reap_helpers();
         let result = self.step_inner(&mut clock, &mut evidence, human);
         self.reap_helpers();
