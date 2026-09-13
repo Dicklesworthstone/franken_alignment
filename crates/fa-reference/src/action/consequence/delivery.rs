@@ -13,6 +13,8 @@ mod state_gate;
 mod stopping;
 pub mod fleet;
 pub mod stream;
+#[cfg(unix)]
+pub mod persistent;
 pub use approval::DispatchApproval;
 pub use endpoint::PublicationEndpoint;
 #[cfg(unix)]
