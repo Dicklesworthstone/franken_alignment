@@ -113,10 +113,10 @@ pub(super) fn decode(p: &FileDeliveryProfile, path: &Path, bytes: &[u8]) -> Resu
 fn write_event(w: &mut Writer, event: &Event) -> Result<(), Error> {
     match event {
         Event::Time(tick) => { w.u8(0)?; w.u64(tick.0)?; }
-        Event::Propose(id, action, snapshot) => {
+        Event::Propose(id, action, snapshot) | Event::SubmitRequest(id, action, snapshot) => {
             if !action.required_witnesses.is_empty() || action.version != VERSION
                 || action.payload.len() > MAX_PAYLOAD_BYTES { return Err(Error::InvalidInput); }
-            w.u8(1)?; w.u64(*id)?; w.u32(action.version)?; w.scope(action.scope)?;
+            w.u8(if matches!(event, Event::Propose(..)) { 1 } else { 13 })?; w.u64(*id)?; w.u32(action.version)?; w.scope(action.scope)?;
             w.target(action.target.ok_or(Error::Incomplete)?)?; w.blob(&action.payload)?;
             w.u64(action.policy_epoch)?; w.u64(action.deadline.0)?; w.u64(action.units)?; w.snapshot(snapshot)?;
         }
@@ -156,14 +156,17 @@ fn write_event(w: &mut Writer, event: &Event) -> Result<(), Error> {
     Ok(())
 }
 fn read_event(r: &mut Reader<'_>) -> Result<Event, Error> {
-    Ok(match r.u8()? {
+    let tag = r.u8()?;
+    Ok(match tag {
         0 => Event::Time(ElapsedTick(r.u64()?)),
-        1 => {
+        1 | 13 => {
             let id = r.u64()?; let version = r.u32()?; let scope = r.scope()?; let target = r.target()?;
             let payload = r.blob(MAX_PAYLOAD_BYTES)?.to_vec();
             let spec = ActionSpec { version, scope, target: Some(target), payload, required_witnesses: Vec::new(),
                 policy_epoch: r.u64()?, deadline: ElapsedTick(r.u64()?), units: r.u64()? };
-            Event::Propose(id, spec, r.snapshot()?)
+            let snapshot = r.snapshot()?;
+            if tag == 1 { Event::Propose(id, spec, snapshot) }
+            else { Event::SubmitRequest(id, spec, snapshot) }
         }
         2 => {
             let attempt = r.u64()?; let round = r.u64()?;

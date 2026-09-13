@@ -8,6 +8,7 @@
 mod codec;
 mod storage;
 mod stopping;
+pub mod requests;
 pub use stopping::FileStopSweep;
 #[cfg(test)]
 mod tests;
@@ -175,6 +176,7 @@ enum Event {
     Sweep,
     Stop(StopRequest),
     StopProgress(ElapsedTick),
+    SubmitRequest(u64, ActionSpec, Snapshot),
 }
 enum Transition {
     Unit,
@@ -194,6 +196,7 @@ struct Machine {
     permits: BTreeMap<u64, Permit>,
     envelopes: BTreeMap<u64, DispatchEnvelope>,
     clock_ready: bool,
+    requests: requests::RequestBook,
 }
 impl Machine {
     fn new(profile: &FileDeliveryProfile) -> Result<Self, Error> {
@@ -208,7 +211,7 @@ impl Machine {
         }, &mut endpoint)?;
         broker.confirm_fence(endpoint.install_fence(broker.fence_request())?)?;
         Ok(Self { broker, endpoint, actions: BTreeMap::new(), permits: BTreeMap::new(),
-            envelopes: BTreeMap::new(), clock_ready: false })
+            envelopes: BTreeMap::new(), clock_ready: false, requests: requests::RequestBook::default() })
     }
     fn replay(profile: &FileDeliveryProfile, events: &[Event]) -> Result<Self, Error> {
         let mut machine = Self::new(profile)?;
@@ -216,10 +219,16 @@ impl Machine {
         Ok(machine)
     }
     fn apply(&mut self, event: &Event) -> Result<Transition, Error> {
+        let result = self.apply_inner(event)?;
+        self.refresh_requests()?;
+        Ok(result)
+    }
+    fn apply_inner(&mut self, event: &Event) -> Result<Transition, Error> {
         if matches!(event, Event::Propose(..) | Event::Review(..) | Event::Authorize(..)
-            | Event::Dispatch(..) | Event::Publish(..) | Event::Reconcile(..) | Event::Seal(..) | Event::Sweep)
+            | Event::Dispatch(..) | Event::Publish(..) | Event::Reconcile(..) | Event::Seal(..) | Event::Sweep | Event::SubmitRequest(..))
             && !self.clock_ready { return Err(Error::Incomplete); }
         match event {
+            Event::SubmitRequest(id, spec, snapshot) => return self.apply_request(*id, spec, snapshot),
             Event::Time(tick) => {
                 self.broker.observe_time(*tick)?;
                 self.endpoint.observe_time(*tick)?;
