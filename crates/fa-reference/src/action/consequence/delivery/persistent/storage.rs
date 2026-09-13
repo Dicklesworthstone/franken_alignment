@@ -10,7 +10,12 @@ pub(super) const CANONICAL: &str = "delivery.bin";
 const PENDING: &str = "delivery.pending";
 const LOCK: &str = "delivery.lock";
 
-pub(super) struct Store { root: PathBuf, owner: File }
+pub(super) struct Store {
+    root: PathBuf,
+    owner: File,
+    #[cfg(test)]
+    failure: std::cell::Cell<Option<JournalIo>>,
+}
 fn failed(operation: JournalIo, error: io::Error, replacement_may_be_visible: bool) -> JournalError {
     JournalError::Io(JournalFailure { operation, kind: error.kind(), replacement_may_be_visible })
 }
@@ -53,7 +58,10 @@ impl Store {
     }
     fn locked(root: PathBuf, file: File) -> Result<Self, JournalError> {
         match file.try_lock() {
-            Ok(()) => Ok(Self { root, owner: file }),
+            Ok(()) => Ok(Self { root, owner: file,
+                #[cfg(test)]
+                failure: std::cell::Cell::new(None),
+            }),
             Err(TryLockError::WouldBlock) => Err(JournalError::Busy),
             Err(TryLockError::Error(error)) => Err(failed(JournalIo::Lock, error, false)),
         }
@@ -65,12 +73,34 @@ impl Store {
         let pending = self.root.join(PENDING);
         // Leftover staged bytes block this owner; only verified exclusive reopen
         // may discard them. Neither an I/O error nor a staging file is an outcome.
+        #[cfg(test)]
+        self.at_barrier(JournalIo::Stage, false)?;
         let mut file = io_result(OpenOptions::new().write(true).create_new(true).mode(0o600)
             .open(&pending), JournalIo::Stage, false)?;
+        #[cfg(test)]
+        self.at_barrier(JournalIo::Write, false)?;
         io_result(file.write_all(bytes), JournalIo::Write, false)?;
+        #[cfg(test)]
+        self.at_barrier(JournalIo::FileSync, false)?;
         io_result(file.sync_all(), JournalIo::FileSync, false)?;
+        #[cfg(test)]
+        self.at_barrier(JournalIo::Rename, true)?;
         io_result(fs::rename(&pending, self.root.join(CANONICAL)), JournalIo::Rename, true)?;
+        #[cfg(test)]
+        self.at_barrier(JournalIo::DirectorySync, true)?;
         io_result(File::open(&self.root).and_then(|directory| directory.sync_all()), JournalIo::DirectorySync, true)
+    }
+
+    #[cfg(test)]
+    pub(super) fn fail_once(&self, stage: JournalIo) { self.failure.set(Some(stage)); }
+
+    #[cfg(test)]
+    fn at_barrier(&self, stage: JournalIo, visible: bool) -> Result<(), JournalError> {
+        if self.failure.get() == Some(stage) {
+            self.failure.set(None);
+            return Err(failed(stage, io::ErrorKind::Other.into(), visible));
+        }
+        Ok(())
     }
 
     pub(super) fn confirm_and_cleanup(&self) -> Result<(), JournalError> {

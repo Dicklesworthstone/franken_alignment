@@ -7,6 +7,8 @@
 
 mod codec;
 mod storage;
+#[cfg(test)]
+mod tests;
 
 use super::{DeliveryBroker, DispatchEnvelope, EndpointOutcome, EndpointStatus, PublicationEndpoint};
 use super::super::congress::CongressPolicy;
@@ -166,6 +168,7 @@ enum Event {
     Seal(u64),
     Cancel(u64),
     Fence,
+    Sweep,
 }
 enum Transition {
     Unit,
@@ -173,6 +176,7 @@ enum Transition {
     Reviewed(PolicyReceipt),
     Published(EndpointOutcome),
     Reconciled(Reconciliation),
+    Swept(BTreeMap<u64, Result<Reconciliation, Error>>),
 }
 
 struct Machine {
@@ -205,7 +209,7 @@ impl Machine {
     }
     fn apply(&mut self, event: &Event) -> Result<Transition, Error> {
         if matches!(event, Event::Propose(..) | Event::Review(..) | Event::Authorize(..)
-            | Event::Dispatch(..) | Event::Publish(..) | Event::Reconcile(..) | Event::Seal(..))
+            | Event::Dispatch(..) | Event::Publish(..) | Event::Reconcile(..) | Event::Seal(..) | Event::Sweep)
             && !self.clock_ready { return Err(Error::Incomplete); }
         match event {
             Event::Time(tick) => {
@@ -251,11 +255,7 @@ impl Machine {
                 let query = self.broker.status_query(*id)?;
                 let status = self.endpoint.status(&query)?;
                 let status = self.broker.reconcile_status(&query, status)?;
-                return Ok(Transition::Reconciled(match status {
-                    EndpointStatus::Resolved(receipt) => Reconciliation::Resolved(receipt.outcome()),
-                    EndpointStatus::AwaitingResolution => Reconciliation::AwaitingResolution,
-                    EndpointStatus::RetentionExpired => Reconciliation::RetentionExpired,
-                }));
+                return Ok(Transition::Reconciled(project_status(status)));
             }
             Event::Seal(id) => {
                 let query = self.broker.status_query(*id)?;
@@ -263,6 +263,14 @@ impl Machine {
                 let outcome = receipt.outcome();
                 self.broker.accept_receipt(receipt)?;
                 return Ok(Transition::Reconciled(Reconciliation::Resolved(outcome)));
+            }
+            Event::Sweep => {
+                // The original reconciler visits every outstanding attempt and
+                // preserves each result, including unresolved/expired liabilities.
+                // It may atomically seal expired requests; it NEVER resends them.
+                let results = self.broker.reconcile_pending(&mut self.endpoint)?;
+                return Ok(Transition::Swept(results.into_iter()
+                    .map(|(id, result)| (id, result.map(project_status))).collect()));
             }
             Event::Cancel(id) => { self.broker.cancel(*id)?; self.permits.remove(id); }
             Event::Fence => {
@@ -286,6 +294,14 @@ impl Machine {
         FileDeliverySnapshot { revision: revision as u64, control: self.broker.inspect(),
             dispatcher_epoch: self.broker.dispatcher_epoch(), target: self.endpoint.target(),
             payload: self.endpoint.payload().to_vec(), executions: self.endpoint.execution_count() }
+    }
+}
+
+fn project_status(status: EndpointStatus) -> Reconciliation {
+    match status {
+        EndpointStatus::Resolved(receipt) => Reconciliation::Resolved(receipt.outcome()),
+        EndpointStatus::AwaitingResolution => Reconciliation::AwaitingResolution,
+        EndpointStatus::RetentionExpired => Reconciliation::RetentionExpired,
     }
 }
 
@@ -370,6 +386,17 @@ impl FileDelivery {
     pub fn seal_unexecuted(&mut self, revision: u64, attempt: u64) -> Result<Reconciliation, JournalError> {
         match self.transact(revision, Event::Seal(attempt))? {
             Transition::Reconciled(outcome) => Ok(outcome), _ => unreachable!("sealing transition"),
+        }
+    }
+    /// One durable transition over the original pending-reconciliation sweep.
+    /// Per-attempt failures remain explicit, and successful sibling settlements
+    /// commit together. Storage failure returns NONE of the candidate outcomes.
+    /// This never supplies new evidence, permits, clocks or sendable envelopes.
+    pub fn reconcile_pending(&mut self, revision: u64)
+        -> Result<BTreeMap<u64, Result<Reconciliation, Error>>, JournalError>
+    {
+        match self.transact(revision, Event::Sweep)? {
+            Transition::Swept(outcomes) => Ok(outcomes), _ => unreachable!("sweep transition"),
         }
     }
     pub fn cancel(&mut self, revision: u64, attempt: u64) -> Result<(), JournalError> {

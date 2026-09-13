@@ -146,6 +146,7 @@ fn write_event(w: &mut Writer, event: &Event) -> Result<(), Error> {
         Event::Seal(id) => { w.u8(7)?; w.u64(*id)?; }
         Event::Cancel(id) => { w.u8(8)?; w.u64(*id)?; }
         Event::Fence => w.u8(9)?,
+        Event::Sweep => w.u8(10)?,
     }
     Ok(())
 }
@@ -183,6 +184,7 @@ fn read_event(r: &mut Reader<'_>) -> Result<Event, Error> {
         7 => Event::Seal(r.u64()?),
         8 => Event::Cancel(r.u64()?),
         9 => Event::Fence,
+        10 => Event::Sweep,
         _ => return Err(Error::InvalidInput),
     })
 }
