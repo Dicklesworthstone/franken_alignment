@@ -2,7 +2,7 @@
 //! Records are original transition INPUTS, never asserted decisions or balances.
 use super::{FileOversightProfile, ReviewWindow};
 use super::containment::{FileStateUpdate, FileResetRequest, codec as state_codec};
-use super::super::{codec, Event as BaseEvent};
+use super::super::{codec, recovery_capacity, Event as BaseEvent};
 use super::super::codec::shared::{Reader, Writer};
 use super::views::{self, Views};
 use crate::action::ElapsedTick;
@@ -42,7 +42,7 @@ fn core_allowed(event: &BaseEvent) -> bool {
     // New events added to the simpler profile are NOT admitted implicitly.
     matches!(event, BaseEvent::Time(_) | BaseEvent::Propose(..) | BaseEvent::Publish(_)
         | BaseEvent::Reconcile(_) | BaseEvent::Seal(_) | BaseEvent::Cancel(_) | BaseEvent::Fence
-        | BaseEvent::Sweep | BaseEvent::Stop(_) | BaseEvent::StopProgress(_) | BaseEvent::SubmitRequest(..) | BaseEvent::ReplacePolicy(_))
+        | BaseEvent::Sweep | BaseEvent::Stop(_) | BaseEvent::StopProgress(_) | BaseEvent::SubmitRequest(..) | BaseEvent::ReplacePolicy(_) | BaseEvent::ReserveRecovery(_))
 }
 
 fn config(p: &FileOversightProfile) -> Result<Vec<u8>, Error> {
@@ -72,10 +72,17 @@ fn encode_iter<'a>(p: &FileOversightProfile, path: &Path, count: usize, events: 
     if count > p.delivery.limits.events { return Err(Error::Limit); }
     let mut w = Writer::new(p.delivery.limits.bytes);
     w.raw(DOMAIN)?; w.bootstrap(&p.delivery, path)?; w.blob(&config(p)?)?; w.count(count)?;
-    for event in events {
+    let mut admission = recovery_capacity::Admission::new(p.delivery.limits);
+    for (index, event) in events.enumerate() {
         let mut record = Writer::new(p.delivery.limits.bytes);
         write_event(&mut record, event)?;
         w.blob(&record.finish())?;
+        let class = match event {
+            Event::Core(event) => recovery_capacity::class(event),
+            Event::PublicationGuard => recovery_capacity::Class::Bootstrap,
+            _ => recovery_capacity::Class::Work,
+        };
+        admission.record(class, index + 1, w.encoded_len())?;
     }
     Ok(w.finish())
 }

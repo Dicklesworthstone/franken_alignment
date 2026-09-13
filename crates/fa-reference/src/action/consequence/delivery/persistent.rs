@@ -8,6 +8,8 @@
 mod codec;
 mod storage;
 mod stopping;
+pub mod recovery_capacity;
+pub use recovery_capacity::{RecoveryReserve, JournalCapacity, JournalSpace};
 pub mod governance;
 pub use governance::{PolicyUpdate, PolicyUpdateReceipt};
 pub mod requests;
@@ -181,6 +183,7 @@ enum Event {
     StopProgress(ElapsedTick),
     SubmitRequest(u64, ActionSpec, Snapshot),
     ReplacePolicy(PolicyUpdate),
+    ReserveRecovery(RecoveryReserve),
 }
 enum Transition {
     Unit,
@@ -235,6 +238,9 @@ impl Machine {
             | Event::Dispatch(..) | Event::Publish(..) | Event::Reconcile(..) | Event::Seal(..) | Event::Sweep | Event::SubmitRequest(..))
             && !self.clock_ready { return Err(Error::Incomplete); }
         match event {
+            // Canonical admission validates this marker and every following prefix.
+            // It grants no rights and changes no original authority transition.
+            Event::ReserveRecovery(_) => {}
             Event::ReplacePolicy(update) => return self.apply_policy_update(update),
             Event::SubmitRequest(id, spec, snapshot) => return self.apply_request(*id, spec, snapshot),
             Event::Time(tick) => {

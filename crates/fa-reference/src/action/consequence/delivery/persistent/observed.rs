@@ -8,6 +8,7 @@ mod journal;
 mod machine;
 mod human;
 mod views;
+mod recovery_capacity;
 mod governance;
 pub mod containment;
 pub mod helpers;

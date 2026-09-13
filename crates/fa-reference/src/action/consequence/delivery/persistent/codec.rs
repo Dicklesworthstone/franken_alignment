@@ -81,10 +81,12 @@ fn encode_iter<'a>(p: &FileDeliveryProfile, path: &Path, count: usize,
     if count > p.limits.events || path.as_os_str().as_bytes().len() > MAX_PATH_BYTES { return Err(Error::Limit); }
     let mut w = Writer::new(p.limits.bytes);
     w.raw(DOMAIN)?; w.blob(path.as_os_str().as_bytes())?; w.blob(&profile_bytes(p)?)?; w.count(count)?;
-    for event in events {
+    let mut admission = recovery_capacity::Admission::new(p.limits);
+    for (index, event) in events.enumerate() {
         let mut record = Writer::new(p.limits.bytes);
         write_event(&mut record, event)?;
         w.blob(&record.bytes)?;
+        admission.record(recovery_capacity::class(event), index + 1, w.bytes.len())?;
     }
     Ok(w.bytes)
 }
@@ -113,6 +115,10 @@ pub(super) fn decode(p: &FileDeliveryProfile, path: &Path, bytes: &[u8]) -> Resu
 
 fn write_event(w: &mut Writer, event: &Event) -> Result<(), Error> {
     match event {
+        Event::ReserveRecovery(reserve) => {
+            w.u8(15)?; w.count(reserve.events)?;
+            w.u64(u64::try_from(reserve.bytes).map_err(|_| Error::Limit)?)?;
+        }
         Event::Time(tick) => { w.u8(0)?; w.u64(tick.0)?; }
         Event::Propose(id, action, snapshot) | Event::SubmitRequest(id, action, snapshot) => {
             if !action.required_witnesses.is_empty() || action.version != VERSION
@@ -160,6 +166,10 @@ fn write_event(w: &mut Writer, event: &Event) -> Result<(), Error> {
 fn read_event(r: &mut Reader<'_>) -> Result<Event, Error> {
     let tag = r.u8()?;
     Ok(match tag {
+        15 => Event::ReserveRecovery(RecoveryReserve {
+            events: r.count(MAX_JOURNAL_EVENTS)?,
+            bytes: usize::try_from(r.u64()?).map_err(|_| Error::Limit)?,
+        }),
         0 => Event::Time(ElapsedTick(r.u64()?)),
         1 | 13 => {
             let id = r.u64()?; let version = r.u32()?; let scope = r.scope()?; let target = r.target()?;

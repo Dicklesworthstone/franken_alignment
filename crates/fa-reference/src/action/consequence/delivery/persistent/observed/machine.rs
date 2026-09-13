@@ -138,7 +138,7 @@ impl Machine {
 
     fn apply_inner(&mut self, event: &Event) -> Result<Transition, Error> {
         let without_current_time = matches!(event,
-            Event::Core(BaseEvent::Time(_) | BaseEvent::Cancel(_) | BaseEvent::Fence | BaseEvent::Stop(_) | BaseEvent::StopProgress(_) | BaseEvent::ReplacePolicy(_))
+            Event::Core(BaseEvent::Time(_) | BaseEvent::Cancel(_) | BaseEvent::Fence | BaseEvent::Stop(_) | BaseEvent::StopProgress(_) | BaseEvent::ReserveRecovery(_) | BaseEvent::ReplacePolicy(_))
             | Event::InputsUnavailable(..) | Event::Human(_, HumanDecision::Reject | HumanDecision::Revoke) | Event::RevokeHumans
             | Event::PublicationGuard | Event::PublishChecked(..) | Event::Source(_)
             | Event::ActorState(_) | Event::ActorCheckpoint(..) | Event::ActorReset(..));
@@ -230,6 +230,9 @@ impl Machine {
 
     fn apply_core(&mut self, event: &BaseEvent) -> Result<Transition, Error> {
         match event {
+            // Byte/record reserve admission is checked by the canonical journal.
+            // This marker cannot change the original oversight authority.
+            BaseEvent::ReserveRecovery(_) => {}
             BaseEvent::ReplacePolicy(update) => return self.apply_policy_update(update),
             BaseEvent::Time(tick) => self.observe(*tick)?,
             BaseEvent::Propose(id, spec, snapshot) => {

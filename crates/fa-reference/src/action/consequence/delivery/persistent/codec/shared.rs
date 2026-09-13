@@ -11,6 +11,7 @@ pub(in super::super) struct Writer(InnerWriter);
 impl Writer {
     pub(in super::super) fn new(maximum: usize) -> Self { Self(InnerWriter::new(maximum)) }
     pub(in super::super) fn finish(self) -> Vec<u8> { self.0.bytes }
+    pub(in super::super) fn encoded_len(&self) -> usize { self.0.bytes.len() }
     pub(in super::super) fn raw(&mut self, bytes: &[u8]) -> Result<(), Error> { self.0.raw(bytes) }
     pub(in super::super) fn blob(&mut self, bytes: &[u8]) -> Result<(), Error> { self.0.blob(bytes) }
     pub(in super::super) fn count(&mut self, count: usize) -> Result<(), Error> { self.0.count(count) }
