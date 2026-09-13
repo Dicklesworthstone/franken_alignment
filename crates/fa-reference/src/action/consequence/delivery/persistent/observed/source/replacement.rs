@@ -6,6 +6,9 @@ use super::super::Event;
 use crate::action::consequence::delivery::PolicySourceChange;
 use crate::Error;
 
+#[cfg(test)]
+mod tests;
+
 /// Trusted host request, not an actor command or observation-provider privilege.
 /// Operation IDs are retained across reopen. Exact retries return the original
 /// historical result without replacing again or cancelling newer work.

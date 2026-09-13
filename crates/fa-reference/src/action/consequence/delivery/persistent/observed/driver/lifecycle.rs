@@ -147,4 +147,22 @@ impl FileSupervisedDriver {
         self.reap_helpers();
         result
     }
+
+    /// Recover the registered source through the same durable owner. Maintenance
+    /// uses current ledger dispositions, not a historical replacement receipt,
+    /// so an exact retry cannot terminate a newer helper cohort. Dispatched work
+    /// keeps its guarded publication/reconciliation phase and charged liability.
+    /// This method does not read evidence, sample time or issue an approval.
+    pub fn replace_file_source(&mut self, request: super::super::source::FileSourceReplacement)
+        -> Result<crate::action::consequence::delivery::PolicySourceChange, JournalError>
+    {
+        let result = (|| {
+            let mut host = self.supervisor.host_mut()?;
+            if let Some(job) = &self.job { job.check_owner(&host)?; }
+            let revision = host.revision();
+            host.replace_file_source(revision, request)
+        })();
+        self.reap_helpers();
+        result
+    }
 }
