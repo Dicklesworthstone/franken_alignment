@@ -1,19 +1,18 @@
 //! Concrete file observations on the ORIGINAL durable review/dispatch path.
 //! The sealed reader interface cannot be replaced by a caller's cached snapshot.
-use super::{FileDriverEvent, FileDriverLaunch, FileDriverProcessError, FileHumanPermit,
-    FileHumanRequest, FileOversight, FileSupervisedDriver, JournalError, Phase, admitted, observe, sample, stage};
+mod launch;
+use super::{FileDriverEvent, FileDriverProcessError, FileHumanPermit,
+    FileHumanRequest, FileOversight, FileSupervisedDriver, JournalError, Phase, observe, sample, stage};
 use super::super::helpers::FileHelperSetupError;
 use super::super::source::FileSourceError;
 use super::provider::EvidenceProvider;
-use crate::action::consequence::oversight::{CommitteeContract, CommitteeInput};
+use crate::action::consequence::oversight::CommitteeContract;
 use crate::action::consequence::oversight::evidence_source::{EvidenceError, EvidenceFile,
     EvidenceIdentity, EvidenceSnapshot};
-use crate::action::consequence::oversight::helper_processes::HelperProgram;
 use crate::action::consequence::oversight::supervised::DriverEvidence;
 pub use crate::action::consequence::oversight::supervised::FileReviewLaunch;
 use crate::action::{ActionState, ElapsedTick, FrozenAction};
 use crate::Error;
-use std::os::unix::net::UnixStream;
 use std::rc::Rc;
 
 /// Supervisor-only observations accompany the actual driver result, including
@@ -37,6 +36,9 @@ pub struct FileEvidenceReport<T> {
 pub enum FileSourceReviewError {
     Control(JournalError),
     Source { error: EvidenceError, withdrawal: Option<JournalError> },
+    /// Native observation refusal or failure to persist the source transition.
+    /// A refused observation can already have advanced the durable producer floor.
+    DurableSource(FileSourceError),
     Sockets { observation: EvidenceIdentity, error: FileHelperSetupError },
     Processes { observation: EvidenceIdentity, error: FileDriverProcessError },
 }
@@ -48,63 +50,6 @@ impl From<Error> for FileSourceReviewError {
 }
 
 impl FileSupervisedDriver {
-    /// Use one fresh file capture for the original helper packet and review root.
-    /// Neither actor input nor a retained source.current() value can supply it.
-    /// The original start method samples trusted time AFTER this file read.
-    pub fn start_file_review<S, F>(&mut self, source: &mut S,
-        launch: FileReviewLaunch<UnixStream>, clock: F) -> Result<EvidenceIdentity, FileSourceReviewError>
-    where S: EvidenceFile + ?Sized, F: FnMut() -> ElapsedTick {
-        let (capture, inputs) = self.file_review_inputs(source, &launch)?;
-        let observation = capture.identity();
-        self.start_review(FileDriverLaunch {
-            request: launch.request, round: launch.round, evidence_root: capture.reference_root(),
-            window: launch.window, expected_input_revision: launch.expected_input_revision,
-            inputs, workers: launch.workers, limits: launch.limits,
-        }, capture.snapshot().clone(), clock)
-            .map_err(|error| FileSourceReviewError::Sockets { observation, error })?;
-        Ok(observation)
-    }
-
-    /// Same capture contract, with original executable-helper admission, retained
-    /// partial child ownership and the original fresh post-spawn deadline check.
-    pub fn start_file_process_review<S, F>(&mut self, source: &mut S,
-        launch: FileReviewLaunch<HelperProgram>, clock: F) -> Result<EvidenceIdentity, FileSourceReviewError>
-    where S: EvidenceFile + ?Sized, F: FnMut() -> ElapsedTick {
-        let (capture, inputs) = self.file_review_inputs(source, &launch)?;
-        let observation = capture.identity();
-        self.start_process_review(FileDriverLaunch {
-            request: launch.request, round: launch.round, evidence_root: capture.reference_root(),
-            window: launch.window, expected_input_revision: launch.expected_input_revision,
-            inputs, workers: launch.workers, limits: launch.limits,
-        }, capture.snapshot().clone(), clock)
-            .map_err(|error| FileSourceReviewError::Processes { observation, error })?;
-        Ok(observation)
-    }
-
-    fn file_review_inputs<S, W>(&mut self, source: &mut S, launch: &FileReviewLaunch<W>)
-        -> Result<(Rc<EvidenceSnapshot>, CommitteeInput), FileSourceReviewError>
-    where S: EvidenceFile + ?Sized {
-        if self.job.is_some() { return Err(Error::WrongState.into()); }
-        self.ensure_child_slot()?;
-        let mut host = self.supervisor.host_mut()?;
-        if host.storage_failure().is_some() { return Err(JournalError::Unavailable.into()); }
-        let (attempt, state) = admitted(host.request_status(launch.request)?)?;
-        if state != ActionState::Reviewing { return Err(Error::WrongState.into()); }
-        if host.input_revision(attempt)? != launch.expected_input_revision { return Err(Error::Stale.into()); }
-        if !launch.workers.keys().eq(host.profile.committee.members().keys()) { return Err(Error::Binding.into()); }
-        // Keep the original owner exclusively borrowed across provider I/O.
-        // Reentrant actor/supervisor calls cannot replace the admitted request.
-        let captured = capture(source, host.request_action(launch.request)?, &host.profile.committee);
-        match captured {
-            Ok(captured) => Ok(captured),
-            Err(error) => {
-                let revision = host.revision();
-                let withdrawal = host.inputs_unavailable(revision, attempt, launch.expected_input_revision).err();
-                Err(FileSourceReviewError::Source { error, withdrawal })
-            }
-        }
-    }
-
     /// Reopen the concrete file at every original evidence boundary. Configured
     /// sources also persist every observation through the SAME native gate.
     /// First publication rechecks it; reconciliation never reads or renews it.
@@ -168,8 +113,7 @@ impl<S: EvidenceFile + ?Sized> EvidenceProvider for FileProvider<'_, S> {
             // Legacy file profiles preserve their original callback/clock path.
             return Ok(observed(self.source, action, &host.profile.committee, self.observations));
         }
-        let started = clock();
-        let result = host.refresh_file_source(host.revision(), self.source, started);
+        let result = durable_capture(host, self.source, clock);
         self.updates.push(result.as_ref().map(|capture| capture.identity()).map_err(Clone::clone));
         match result {
             Ok(capture) => Ok(record_capture(capture, action, &host.profile.committee, self.observations)),
@@ -186,13 +130,13 @@ impl<S: EvidenceFile + ?Sized> EvidenceProvider for FileProvider<'_, S> {
     }
 }
 
-fn capture<S: EvidenceFile + ?Sized>(source: &mut S, action: &FrozenAction,
-    contracts: &CommitteeContract) -> Result<(Rc<EvidenceSnapshot>, CommitteeInput), EvidenceError>
-{
-    let capture = source.read_evidence()?;
-    if !capture.snapshot().complete { return Err(Error::Incomplete.into()); }
-    let inputs = capture.inputs_for(action, contracts)?;
-    Ok((capture, inputs))
+// Called only after the concrete host's mandatory-source selection. The same
+// read-start convention applies to launch, human requests and driver steps.
+fn durable_capture<S, F>(host: &mut FileOversight, source: &mut S, clock: &mut F)
+    -> Result<Rc<EvidenceSnapshot>, FileSourceError>
+where S: EvidenceFile + ?Sized, F: FnMut() -> ElapsedTick {
+    let started = clock();
+    host.refresh_file_source(host.revision(), source, started)
 }
 fn evidence_error(error: EvidenceError) -> Error {
     match error { EvidenceError::Data(error) => error, EvidenceError::Io(_) => Error::Incomplete }
