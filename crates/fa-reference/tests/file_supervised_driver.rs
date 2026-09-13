@@ -135,7 +135,7 @@ fn second_read_failure_does_not_refund_or_recreate_the_original_reservation() {
 }
 
 #[test]
-fn expiry_after_reservation_needs_a_new_independent_human_key_not_another_automatic_permit() {
+fn expiry_after_reservation_cannot_refresh_the_human_context_or_resurrect_the_request() {
     let mut rig = Rig::new(); rig.submit(1); rig.reviewed(1);
     let expired = rig.human(1001, 30); let input = rig.inputs.clone();
     let ticks = Cell::new(0);
@@ -145,8 +145,13 @@ fn expiry_after_reservation_needs_a_new_independent_human_key_not_another_automa
     }, |_, _| Ok(DriverEvidence { snapshot: snapshot(), inputs: input.clone() }), Some(&expired)).is_err());
     assert_eq!(rig.driver.supervisor().host().unwrap().inspect().control.ledger.reserved, 16);
     assert_eq!(rig.driver.supervisor().host().unwrap().inspect().executions, 0);
-    let fresh = rig.human(1002, 50);
-    assert!(matches!(rig.step(Some(&fresh)), FileDriverEvent::Dispatched { .. }));
+    assert_eq!(rig.driver.request_human_approval(1002, input.as_ref().unwrap(), ElapsedTick(50), ElapsedTick(30)).unwrap_err(),
+        JournalError::Contract(Error::Duplicate));
+    rig.driver.cancel_active().unwrap();
+    assert_eq!(rig.driver.supervisor().host().unwrap().inspect().control.ledger.available, 100);
+    rig.submit(2); rig.reviewed(2);
+    let fresh = rig.human(1002, 60);
+    assert!(matches!(rig.step(Some(&fresh)), FileDriverEvent::Dispatched { request: 2, .. }));
     assert!(matches!(rig.step(None), FileDriverEvent::Published { outcome: EndpointOutcome::Executed { .. }, .. }));
     assert_eq!(rig.driver.supervisor().host().unwrap().inspect().control.ledger.charged, 16);
     assert_eq!(rig.driver.supervisor().host().unwrap().inspect().control.ledger.reserved, 0);

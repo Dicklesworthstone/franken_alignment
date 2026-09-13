@@ -28,9 +28,12 @@ human key reserves no resources. A supplied key still goes through the original
 issuer/attempt/expiry checks; no driver method approves a human request.
 
 The driver retains the original automatic permit after a pre-dispatch refusal.
-A later explicit independent human key can use that still-valid reservation;
-authorization is not rerun to allocate another one. Source withdrawal or a changed
-control predecessor cannot repair the old approval or silently rebase its permit.
+A valid original independent key can use that still-valid reservation after a
+transient or foreign-key refusal; authorization is not rerun to allocate another
+one. The original human gate forbids a second request for the same reviewed
+context. Expiry cannot be repaired by selecting another key number: fresh work
+requires a new request and review. Source withdrawal or a changed predecessor
+cannot repair the old approval or silently rebase its permit.
 Adverse or refused completed reviews leave no automatic re-review job. The operator
 must explicitly choose any subsequent work; the driver never hunts for an Allow.
 
@@ -62,15 +65,17 @@ The driver checks original request dispositions before fallible clock/provider
 work. Actor cancellation or external fencing cannot leave an abandoned review
 running. An externally dispatched request is reconciled rather than resent.
 Local phase and scheduling hints are supervisor diagnostics, not actor Knowledge
-values, credentials or persisted permissions. An idle step performs no I/O.
+values, credentials or persisted permissions. Idle does not acquire evidence or
+append journal events; retained child cleanup can still poll the operating system.
 
 ## Reference and verification boundary
 
 Eight integration scenarios cover actual actor-wire admission, complete socket
 reviews, mandatory independent approval, staged durable publication, redacted
 acknowledgment, adverse-review termination, restrictive-versus-permissive source
-loss, changes and failures after reservation, expiry followed by a new independent
-key, foreign-key rejection and invalid-roster admission with a positive control.
+loss, changes and failures after reservation, expiry followed by a new
+request and review, foreign-key rejection and invalid-roster admission with a
+positive control.
 The original decoder, helper, human, journal, gateway and endpoint tests are
 unchanged. One compile-fail example prohibits reviewer extraction.
 
@@ -86,3 +91,7 @@ helper jobs are process-local; reopening the original host revokes old permissio
 rather than resuming that job. Peer/helper/human authentication, hostile-process
 containment, anti-rollback storage and durable hosted-decoder migration remain
 separate requirements. No new actor command or automatic deployment is introduced.
+
+The managed-process and query-only recovery extension is documented in
+FILE_SUPERVISED_RECOVERY.md. It reuses these same stages and strengthens child
+ownership without changing the human-context rule or original authority checks.

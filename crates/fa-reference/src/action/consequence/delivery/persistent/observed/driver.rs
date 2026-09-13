@@ -2,8 +2,14 @@
 //! The host supplies observation providers, helper sockets, time and human keys.
 //! This owner coordinates transitions; it is not another ledger or executor.
 
+mod lifecycle;
+mod workers;
+pub use workers::{FileDriverProcessError, FileDriverRelease};
+use workers::WorkerSet;
+use crate::action::consequence::oversight::helper_processes::HelperChildren;
+
 use super::{FileHumanPermit, FileHumanRequest, FileOversight};
-use super::helpers::{FileHelperFailure, FileHelperLaunch, FileHelperPool, FileHelperSetupError};
+use super::helpers::{FileHelperFailure, FileHelperLaunch, FileHelperSetupError};
 use super::super::{FilePermit, JournalError, Reconciliation};
 use super::super::requests::{FileRequestDisposition, FileRequestStatus};
 use super::super::requests::actor::{FileActorPort, FileActorSupervisor};
@@ -17,6 +23,7 @@ use crate::action::{ActionState, ElapsedTick, FrozenAction};
 use crate::{Error, Snapshot};
 use std::collections::BTreeMap;
 use std::fmt;
+use std::rc::Rc;
 use std::os::unix::net::UnixStream;
 
 /// Explicit trusted review of an ALREADY durably submitted request. The actor
@@ -61,23 +68,29 @@ pub enum FileDriverEvent {
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 enum Phase { Review, Ready, Publish, Reconcile, Closed }
 struct Job {
+    issuer: Rc<()>,
     request: u64,
     attempt: u64,
     action: FrozenAction,
-    inputs: CommitteeInput,
+    inputs: Option<CommitteeInput>,
     input_revision: u64,
     control_sequence: Option<u64>,
-    pool: Option<FileHelperPool>,
+    pool: Option<WorkerSet>,
     permit: Option<FilePermit>,
     phase: Phase,
 }
 impl Job {
-    fn close(&mut self) { self.pool = None; self.permit = None; self.phase = Phase::Closed; }
+    fn check_owner(&self, host: &FileOversight) -> Result<(), JournalError> {
+        if !Rc::ptr_eq(&self.issuer, &host.issuer) { return Err(Error::Binding.into()); }
+        Ok(())
+    }
+    fn close(&mut self) { self.permit = None; self.phase = Phase::Closed; }
     fn check_ready(&self, host: &FileOversight, current: Option<&CommitteeInput>) -> Result<(), JournalError> {
+        self.check_owner(host)?;
         if self.phase != Phase::Ready { return Err(Error::WrongState.into()); }
         if self.control_sequence != Some(host.inspect().control.sequence)
             || self.input_revision != host.input_revision(self.attempt)? { return Err(Error::Stale.into()); }
-        if current.ok_or(Error::Incomplete)? != &self.inputs { return Err(Error::Stale.into()); }
+        if current.ok_or(Error::Incomplete)? != self.inputs.as_ref().ok_or(Error::Incomplete)? { return Err(Error::Stale.into()); }
         Ok(())
     }
 }
@@ -91,9 +104,11 @@ impl Job {
 /// use fa_reference::action::consequence::delivery::persistent::observed::driver::FileSupervisedDriver;
 /// fn approve(driver: FileSupervisedDriver) { driver.reviewer(); }
 /// ```
+#[must_use = "drive or release this owner and poll retained helper children"]
 pub struct FileSupervisedDriver {
     supervisor: FileActorSupervisor<FileOversight>,
     job: Option<Job>,
+    retiring: Option<HelperChildren>,
 }
 impl fmt::Debug for FileSupervisedDriver {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -110,7 +125,7 @@ impl FileOversight {
 }
 impl FileSupervisedDriver {
     /// Adopt an existing gateway without changing its port, identity or rights.
-    pub fn new(supervisor: FileActorSupervisor<FileOversight>) -> Self { Self { supervisor, job: None } }
+    pub fn new(supervisor: FileActorSupervisor<FileOversight>) -> Self { Self { supervisor, job: None, retiring: None } }
     pub fn supervisor(&self) -> &FileActorSupervisor<FileOversight> { &self.supervisor }
     /// Trusted integration, including use of a separately held FileHumanReviewer.
     /// Do not pass this role or its mutable host to the actor/helper processes.
@@ -128,7 +143,7 @@ impl FileSupervisedDriver {
         }
     }
     pub fn next_review_deadline(&self) -> Option<ElapsedTick> {
-        self.job.as_ref().and_then(|job| job.pool.as_ref()).and_then(FileHelperPool::next_deadline)
+        self.job.as_ref().and_then(|job| job.pool.as_ref()).and_then(WorkerSet::next_deadline)
     }
 
     /// Current observations and exact action/roster checks precede capture.
@@ -139,25 +154,16 @@ impl FileSupervisedDriver {
         -> Result<(), FileHelperSetupError>
     where F: FnMut() -> ElapsedTick {
         if self.job.is_some() { return Err(Error::WrongState.into()); }
+        self.ensure_child_slot()?;
         let mut host = self.supervisor.host_mut()?;
-        let attempt = admitted(host.request_status(launch.request)?)?.0;
-        if stage(&host, launch.request)? != ActionState::Reviewing { return Err(Error::WrongState.into()); }
-        if host.input_revision(attempt)? != launch.expected_input_revision { return Err(Error::Stale.into()); }
-        let action = host.request_action(launch.request)?.clone();
-        launch.inputs.validate_for(&action, &host.profile.committee)?;
-        if !launch.workers.keys().eq(host.profile.committee.members().keys()) { return Err(Error::Binding.into()); }
-        if !snapshot.complete { return Err(Error::Incomplete.into()); }
-        observe(&mut host, clock())?;
-        let revision = host.revision();
-        let input_revision = host.record_inputs(revision, attempt, launch.expected_input_revision, launch.inputs.clone())?;
-        observe(&mut host, clock())?;
+        let (attempt, action, input_revision) = prepare_review(&mut host, &launch, &snapshot, &mut clock)?;
         let revision = host.revision();
         let pool = host.begin_helper_review(revision, FileHelperLaunch {
             attempt, round: launch.round, evidence_root: launch.evidence_root, window: launch.window,
             expected_input_revision: input_revision, streams: launch.workers, limits: launch.limits,
         }, snapshot)?;
-        self.job = Some(Job { request: launch.request, attempt, action, inputs: launch.inputs,
-            input_revision, control_sequence: None, pool: Some(pool), permit: None, phase: Phase::Review });
+        self.job = Some(Job { issuer: Rc::clone(&host.issuer), request: launch.request, attempt, action, inputs: Some(launch.inputs),
+            input_revision, control_sequence: None, pool: Some(WorkerSet::Sockets(pool)), permit: None, phase: Phase::Review });
         Ok(())
     }
 
@@ -166,12 +172,17 @@ impl FileSupervisedDriver {
     pub fn request_human_approval(&mut self, key: u64, current: &CommitteeInput,
         expires_at: ElapsedTick, now: ElapsedTick) -> Result<FileHumanRequest, JournalError>
     {
-        let job = self.job.as_ref().ok_or(Error::Missing)?;
-        let mut host = self.supervisor.host_mut()?;
-        observe(&mut host, now)?;
-        job.check_ready(&host, Some(current))?;
-        let revision = host.revision();
-        host.request_human_approval(revision, key, job.attempt, current, expires_at)
+        let result = (|| {
+            let job = self.job.as_ref().ok_or(Error::Missing)?;
+            let mut host = self.supervisor.host_mut()?;
+            job.check_owner(&host)?;
+            observe(&mut host, now)?;
+            job.check_ready(&host, Some(current))?;
+            let revision = host.revision();
+            host.request_human_approval(revision, key, job.attempt, current, expires_at)
+        })();
+        self.reap_helpers();
+        result
     }
 
     /// One review pass OR durable dispatch OR publication OR reconciliation.
@@ -183,10 +194,12 @@ impl FileSupervisedDriver {
     where F: FnMut() -> ElapsedTick,
         P: FnMut(&FrozenAction, &CommitteeContract) -> Result<DriverEvidence, Error>,
     {
+        self.reap_helpers();
         let result = (|| {
             let mut host = self.supervisor.host_mut()?;
             if host.storage_failure().is_some() { return Err(JournalError::Unavailable); }
             let Some(job) = &mut self.job else { return Ok(FileDriverEvent::Idle); };
+            job.check_owner(&host)?;
             // Check the original ledger before a fallible clock or provider call.
             // External cancellation/fencing cannot leave a stale review driving.
             let current = stage(&host, job.request)?;
@@ -195,16 +208,34 @@ impl FileSupervisedDriver {
                 job.close();
                 return Ok(FileDriverEvent::Stopped { request, stage: current });
             }
-            if matches!(current, ActionState::Dispatching | ActionState::Unknown)
-                && matches!(job.phase, Phase::Review | Phase::Ready) {
-                job.pool = None; job.permit = None; job.phase = Phase::Reconcile;
+            if current == ActionState::Unknown
+                || (current == ActionState::Dispatching && matches!(job.phase, Phase::Review | Phase::Ready)) {
+                job.permit = None; job.phase = Phase::Reconcile;
             }
             observe(&mut host, clock())?;
             step_job(&mut host, job, &mut clock, &mut provider, human)
         })();
+        self.reap_helpers();
         if self.job.as_ref().is_some_and(|job| job.phase == Phase::Closed) { self.job = None; }
         result
     }
+}
+
+fn prepare_review<W, F>(host: &mut FileOversight, launch: &FileDriverLaunch<W>, snapshot: &Snapshot,
+    clock: &mut F) -> Result<(u64, FrozenAction, u64), JournalError>
+where F: FnMut() -> ElapsedTick {
+    let attempt = admitted(host.request_status(launch.request)?)?.0;
+    if stage(host, launch.request)? != ActionState::Reviewing { return Err(Error::WrongState.into()); }
+    if host.input_revision(attempt)? != launch.expected_input_revision { return Err(Error::Stale.into()); }
+    let action = host.request_action(launch.request)?.clone();
+    launch.inputs.validate_for(&action, &host.profile.committee)?;
+    if !launch.workers.keys().eq(host.profile.committee.members().keys()) { return Err(Error::Binding.into()); }
+    if !snapshot.complete { return Err(Error::Incomplete.into()); }
+    observe(host, clock())?;
+    let revision = host.revision();
+    let input_revision = host.record_inputs(revision, attempt, launch.expected_input_revision, launch.inputs.clone())?;
+    observe(host, clock())?;
+    Ok((attempt, action, input_revision))
 }
 
 fn admitted(status: FileRequestStatus) -> Result<(u64, ActionState), JournalError> {
@@ -232,7 +263,7 @@ where P: FnMut(&FrozenAction, &CommitteeContract) -> Result<DriverEvidence, Erro
         evidence.inputs.as_ref().ok_or(Error::Incomplete)?.validate_for(&job.action, &host.profile.committee)?;
         Ok(evidence)
     });
-    let changed = result.as_ref().map_or(true, |evidence| evidence.inputs.as_ref() != Some(&job.inputs));
+    let changed = result.as_ref().map_or(true, |evidence| evidence.inputs.as_ref() != job.inputs.as_ref());
     if changed && host.machine.broker.current_inputs(job.attempt)?.is_some() {
         let expected = host.input_revision(job.attempt)?;
         let revision = host.revision();
@@ -265,7 +296,6 @@ where F: FnMut() -> ElapsedTick,
             let completed = pool.finish(host, now, captured.evidence.inputs.as_ref(), captured.evidence.snapshot);
             match completed {
                 Ok(Ok(receipt)) => {
-                    job.pool = None;
                     if receipt.policy.control.decision.consequence == Consequence::Continue {
                         job.control_sequence = Some(receipt.policy.control.sequence);
                         job.phase = Phase::Ready;
