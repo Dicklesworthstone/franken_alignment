@@ -2,6 +2,9 @@
 //! Only a separately provisioned reviewer stream may be attached. This module
 //! provides framing and role binding, NOT peer authentication or a new policy.
 pub mod wire;
+pub mod client;
+#[cfg(test)]
+mod faults;
 
 use super::{FileHumanPermit, FileHumanRequest, FileHumanReviewer, FileOversight, JournalError};
 use crate::action::{ActionState, ElapsedTick};
