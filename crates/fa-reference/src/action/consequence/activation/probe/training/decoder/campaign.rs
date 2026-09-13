@@ -1,13 +1,14 @@
 //! One fixed all-layer campaign, using the existing optimizer and exact scorer.
 
-use super::DecoderCorpus;
-use super::super::{DataSplit, FitPolicy, SealedCorpus, TrainingBudget, MAX_TRAINING_VISITS, MAX_CORPUS_COORDINATES};
+use super::{DecoderCorpus, LabelledPrefix};
+use super::super::{CaseOrigin, DataSplit, FitPolicy, SealedCorpus, TrainingBudget, MAX_TRAINING_VISITS, MAX_CORPUS_COORDINATES};
 use super::super::calibration::{CalibrationPolicy, CalibrationRun, EvaluationReport,
     ScoringBudget, ScoringWork, MAX_SCORING_BYTES, MAX_THRESHOLD_COMPARISONS};
 use crate::action::consequence::activation::{HEADER_BYTES, probe::LinearProbe};
-use crate::action::consequence::activation::tensor::kv::decoder::DecoderProfile;
+use crate::action::consequence::activation::tensor::kv::decoder::{DecoderModel, DecoderProfile};
 use crate::Error;
 use std::collections::BTreeMap;
+use std::rc::Rc;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct LayerPolicy { pub fit: FitPolicy, pub calibration: CalibrationPolicy }
@@ -76,6 +77,8 @@ impl LayerCampaign {
 /// ```
 #[derive(Debug)]
 pub struct DecoderCampaign {
+    pub(super) model: DecoderModel,
+    pub(super) sources: Rc<BTreeMap<CaseOrigin, LabelledPrefix>>,
     profile: DecoderProfile,
     layers: BTreeMap<u64, LayerCampaign>,
     admitted: CampaignWork,
@@ -143,7 +146,8 @@ impl DecoderCorpus {
             } else { None };
             layers.insert(*layer, LayerCampaign { calibration, evaluation });
         }
-        Ok(DecoderCampaign { profile: self.profile.clone(), layers, admitted, completed })
+        Ok(DecoderCampaign { model: self.model.clone(), sources: Rc::clone(&self.cases),
+            profile: self.profile.clone(), layers, admitted, completed })
     }
 }
 

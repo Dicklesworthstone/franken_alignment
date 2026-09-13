@@ -4,6 +4,7 @@
 mod campaign;
 mod export;
 pub mod plan;
+pub mod trajectory;
 pub use export::MonitorExport;
 pub use campaign::{CampaignBudget, CampaignWork, DecoderCampaign, LayerCampaign, LayerPolicy};
 
@@ -15,6 +16,7 @@ use crate::action::consequence::activation::tensor::kv::decoder::{
 use crate::Error;
 use std::collections::{BTreeMap, BTreeSet};
 use std::fmt;
+use std::rc::Rc;
 
 pub const MAX_CAPTURE_TOKENS: usize = 262_144;
 
@@ -66,8 +68,9 @@ impl CaptureBudget {
 /// remain available for audit; neither scores nor operator-generated activations
 /// can be supplied instead. The profile declares identity, not weight authenticity.
 pub struct DecoderCorpus {
+    model: DecoderModel,
     profile: DecoderProfile,
-    cases: BTreeMap<CaseOrigin, LabelledPrefix>,
+    cases: Rc<BTreeMap<CaseOrigin, LabelledPrefix>>,
     layers: BTreeMap<u64, SealedCorpus>,
     work: CaptureWork,
 }
@@ -155,7 +158,7 @@ impl DecoderCorpus {
         if products != work.scalar_products { return Err(Error::Binding); }
         let layers = builders.into_iter().map(|(layer, corpus)| Ok((layer, corpus.seal()?)))
             .collect::<Result<BTreeMap<_, _>, Error>>()?;
-        Ok(Self { profile: model.profile().clone(), cases, layers, work })
+        Ok(Self { model: model.clone(), profile: model.profile().clone(), cases: Rc::new(cases), layers, work })
     }
 
     pub fn profile(&self) -> &DecoderProfile { &self.profile }
