@@ -59,3 +59,22 @@ impl FileOversight {
     pub fn retained_requests(&self) -> usize { self.machine.requests.len() }
     pub fn retained_request_bytes(&self) -> usize { self.machine.requests.bytes() }
 }
+
+impl FileOversight {
+    /// Consume this exact locked full-input/two-key host. Its independently
+    /// supplied human-reviewer role stays separate; it is never stored in the
+    /// port, mailbox or wire session. No admission snapshot survives reopening.
+    ///
+    /// ```compile_fail,E0599
+    /// use fa_reference::action::consequence::delivery::persistent::observed::FileOversight;
+    /// use fa_reference::action::consequence::delivery::persistent::requests::actor::FileActorPort;
+    /// fn escape(port: FileActorPort<FileOversight>) { port.host_mut(); }
+    /// ```
+    pub fn into_actor_gateway(self) -> (
+        super::super::super::requests::actor::FileActorPort<Self>,
+        super::super::super::requests::actor::FileActorSupervisor<Self>,
+    ) {
+        let scope = self.profile.delivery.scope;
+        super::super::super::requests::actor::gateway(self, scope)
+    }
+}

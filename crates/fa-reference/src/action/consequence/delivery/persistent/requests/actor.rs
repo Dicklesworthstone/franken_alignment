@@ -1,5 +1,8 @@
-//! Actor-only access to one surviving/reopened FileDelivery identity domain.
+//! Actor-only access to one surviving/reopened durable identity domain.
 //! Only the supervisor owns the host or installs a fresh admission snapshot.
+
+mod host;
+pub use host::FileRequestHost;
 
 use super::{FileRequestDisposition, FileRequestStatus};
 use super::super::{FileDelivery, JournalError, MAX_SNAPSHOT_BYTES, MAX_SNAPSHOT_ENTRIES};
@@ -13,15 +16,17 @@ use std::cell::{Ref, RefCell, RefMut};
 use std::fmt;
 use std::rc::{Rc, Weak};
 
-type OwnerRef = RefCell<Owner>;
-struct Owner { host: FileDelivery, snapshot: Option<Snapshot> }
+type OwnerRef<H> = RefCell<Owner<H>>;
+struct Owner<H> { host: H, snapshot: Option<Snapshot> }
 
 /// Observation/cancellation handle bound to this particular live gateway.
 /// Recovery reacquires it by exact request retry, not by deserializing a permit.
-#[derive(Clone)]
-pub struct FileActorTicket { owner: Weak<OwnerRef>, request: u64 }
-impl FileActorTicket { pub fn request(&self) -> u64 { self.request } }
-impl fmt::Debug for FileActorTicket {
+pub struct FileActorTicket<H: FileRequestHost = FileDelivery> { owner: Weak<OwnerRef<H>>, request: u64 }
+impl<H: FileRequestHost> Clone for FileActorTicket<H> {
+    fn clone(&self) -> Self { Self { owner: self.owner.clone(), request: self.request } }
+}
+impl<H: FileRequestHost> FileActorTicket<H> { pub fn request(&self) -> u64 { self.request } }
+impl<H: FileRequestHost> fmt::Debug for FileActorTicket<H> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("FileActorTicket").field("request", &self.request).finish_non_exhaustive()
     }
@@ -34,16 +39,18 @@ impl fmt::Debug for FileActorTicket {
 /// use fa_reference::action::consequence::delivery::persistent::requests::actor::FileActorPort;
 /// fn escape(port: FileActorPort) { port.host_mut(); }
 /// ```
-#[derive(Clone)]
-pub struct FileActorPort { owner: Weak<OwnerRef>, scope: Scope }
-impl fmt::Debug for FileActorPort {
+pub struct FileActorPort<H: FileRequestHost = FileDelivery> { owner: Weak<OwnerRef<H>>, scope: Scope }
+impl<H: FileRequestHost> Clone for FileActorPort<H> {
+    fn clone(&self) -> Self { Self { owner: self.owner.clone(), scope: self.scope } }
+}
+impl<H: FileRequestHost> fmt::Debug for FileActorPort<H> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result { f.write_str("FileActorPort { .. }") }
 }
 
 /// Trusted owner. It can drive the existing reference congress and the original
 /// publication lifecycle; neither a port nor a wire session receives this role.
-pub struct FileActorSupervisor { owner: Rc<OwnerRef> }
-impl fmt::Debug for FileActorSupervisor {
+pub struct FileActorSupervisor<H: FileRequestHost = FileDelivery> { owner: Rc<OwnerRef<H>> }
+impl<H: FileRequestHost> fmt::Debug for FileActorSupervisor<H> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result { f.write_str("FileActorSupervisor { .. }") }
 }
 impl FileDelivery {
@@ -51,18 +58,24 @@ impl FileDelivery {
     /// completed its original recovery fence. No admission snapshot is restored.
     pub fn into_actor_gateway(self) -> (FileActorPort, FileActorSupervisor) {
         let scope = self.profile.scope;
-        let owner = Rc::new(RefCell::new(Owner { host: self, snapshot: None }));
-        (FileActorPort { owner: Rc::downgrade(&owner), scope }, FileActorSupervisor { owner })
+        gateway(self, scope)
     }
 }
-impl FileActorSupervisor {
-    pub fn host(&self) -> Result<Ref<'_, FileDelivery>, JournalError> {
+/// Only the two independently bootstrapped durable owners call this constructor.
+pub(in crate::action::consequence::delivery::persistent) fn gateway<H: FileRequestHost>(host: H, scope: Scope)
+    -> (FileActorPort<H>, FileActorSupervisor<H>)
+{
+    let owner = Rc::new(RefCell::new(Owner { host, snapshot: None }));
+    (FileActorPort { owner: Rc::downgrade(&owner), scope }, FileActorSupervisor { owner })
+}
+impl<H: FileRequestHost> FileActorSupervisor<H> {
+    pub fn host(&self) -> Result<Ref<'_, H>, JournalError> {
         let owner = self.owner.try_borrow().map_err(|_| JournalError::Unavailable)?;
         Ok(Ref::map(owner, |state| &state.host))
     }
     /// Privileged mutation invalidates an unused admission snapshot. This avoids
     /// reusing one across an arbitrary clock, policy or recovery host operation.
-    pub fn host_mut(&mut self) -> Result<RefMut<'_, FileDelivery>, JournalError> {
+    pub fn host_mut(&mut self) -> Result<RefMut<'_, H>, JournalError> {
         let mut owner = self.owner.try_borrow_mut().map_err(|_| JournalError::Unavailable)?;
         owner.snapshot = None;
         Ok(RefMut::map(owner, |state| &mut state.host))
@@ -87,8 +100,8 @@ impl FileActorSupervisor {
     }
 }
 
-impl FileActorPort {
-    pub fn submit(&self, request: u64, proposal: &ActorProposal) -> Result<FileActorTicket, ActorError> {
+impl<H: FileRequestHost> FileActorPort<H> {
+    pub fn submit(&self, request: u64, proposal: &ActorProposal) -> Result<FileActorTicket<H>, ActorError> {
         if request == 0 { return Err(ActorError::MalformedProposal); }
         if proposal.payload.len() > MAX_PAYLOAD_BYTES || proposal.payload.len() as u64 > proposal.units {
             return Err(ActorError::Capacity);
@@ -108,7 +121,7 @@ impl FileActorPort {
         state.host.submit_request(revision, request, spec, snapshot).map_err(redact)?;
         Ok(FileActorTicket { owner: self.owner.clone(), request })
     }
-    pub fn poll(&self, ticket: &FileActorTicket) -> Knowledge<ActorOutcome> {
+    pub fn poll(&self, ticket: &FileActorTicket<H>) -> Knowledge<ActorOutcome> {
         if !Weak::ptr_eq(&self.owner, &ticket.owner) {
             return Knowledge::Withheld { authority_required: "own_request" };
         }
@@ -118,7 +131,7 @@ impl FileActorPort {
             Ok(status) => projection(status), Err(_) => unavailable(),
         }
     }
-    pub fn cancel(&self, ticket: &FileActorTicket) -> Result<(), ActorError> {
+    pub fn cancel(&self, ticket: &FileActorTicket<H>) -> Result<(), ActorError> {
         if !Weak::ptr_eq(&self.owner, &ticket.owner) { return Err(ActorError::Withheld); }
         let owner = self.owner.upgrade().ok_or(ActorError::Unavailable)?;
         let mut state = owner.try_borrow_mut().map_err(|_| ActorError::Unavailable)?;
@@ -130,9 +143,9 @@ impl FileActorPort {
         result.map_err(redact)
     }
 }
-impl backend::Sealed for FileActorPort {}
-impl ActorRequestPort for FileActorPort {
-    type Ticket = FileActorTicket;
+impl<H: FileRequestHost> backend::Sealed for FileActorPort<H> {}
+impl<H: FileRequestHost> ActorRequestPort for FileActorPort<H> {
+    type Ticket = FileActorTicket<H>;
     fn submit(&self, key: u64, proposal: &ActorProposal) -> Result<Self::Ticket, ActorError> { FileActorPort::submit(self, key, proposal) }
     fn poll(&self, ticket: &Self::Ticket) -> Knowledge<ActorOutcome> { FileActorPort::poll(self, ticket) }
     fn cancel(&self, ticket: &Self::Ticket) -> Result<(), ActorError> { FileActorPort::cancel(self, ticket) }
