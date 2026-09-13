@@ -9,6 +9,7 @@ mod machine;
 mod human;
 mod views;
 pub mod helpers;
+pub mod driver;
 #[cfg(test)]
 mod tests;
 pub use human::{FileHumanPermit, FileHumanRequest, FileHumanReviewer};
