@@ -7,9 +7,12 @@ use crate::action::consequence::gate::TargetCeiling;
 use crate::action::consequence::gate::containment::session::policy::controller::ControllerConfig;
 use crate::action::consequence::oversight::{CommitteeInput, ObservedReceipt, ObservedSession, OversightBroker};
 use crate::action::consequence::oversight::human::{HumanPermit, HumanRequest, HumanReviewer, HumanRevocation};
-use crate::action::{ActionState, ElapsedTick, FrozenAction, Permit};
+use crate::action::{ActionState, ElapsedTick, FrozenAction, Permit, Scope};
 use crate::Error;
 use std::collections::BTreeMap;
+use super::super::requests::RequestBook;
+
+mod requests;
 
 pub(super) enum Transition {
     Unit,
@@ -30,6 +33,8 @@ pub(super) struct Machine {
     pub(super) actions: BTreeMap<u64, FrozenAction>,
     pub(super) sessions: BTreeMap<u64, (u64, ObservedSession)>,
     pub(super) clock_ready: bool,
+    pub(super) requests: RequestBook,
+    scope: Scope,
     endpoint: PublicationEndpoint,
     automatic: BTreeMap<u64, Permit>,
     human_keys: BTreeMap<u64, HumanPermit>,
@@ -48,7 +53,7 @@ impl Machine {
         }, &mut endpoint, p.committee.clone())?;
         let reviewer = broker.enable_human_review(p.human)?;
         broker.confirm_fence(endpoint.install_fence(broker.fence_request())?)?;
-        Ok(Self { broker, endpoint, reviewer, actions: BTreeMap::new(), sessions: BTreeMap::new(),
+        Ok(Self { requests: RequestBook::default(), scope: d.scope, broker, endpoint, reviewer, actions: BTreeMap::new(), sessions: BTreeMap::new(),
             automatic: BTreeMap::new(), human_keys: BTreeMap::new(), envelopes: BTreeMap::new(), clock_ready: false })
     }
     pub(super) fn replay(p: &FileOversightProfile, events: &[Event]) -> Result<Self, Error> {
@@ -105,6 +110,12 @@ impl Machine {
     }
 
     pub(super) fn apply(&mut self, event: &Event) -> Result<Transition, Error> {
+        let result = self.apply_inner(event)?;
+        self.requests.refresh(&self.broker.inspect())?;
+        Ok(result)
+    }
+
+    fn apply_inner(&mut self, event: &Event) -> Result<Transition, Error> {
         let without_current_time = matches!(event,
             Event::Core(BaseEvent::Time(_) | BaseEvent::Cancel(_) | BaseEvent::Fence | BaseEvent::Stop(_) | BaseEvent::StopProgress(_))
             | Event::InputsUnavailable(..) | Event::Human(_, HumanDecision::Reject | HumanDecision::Revoke) | Event::RevokeHumans);
@@ -194,6 +205,7 @@ impl Machine {
                 self.actions.insert(*id, action.clone());
                 return Ok(Transition::Proposed(action));
             }
+            BaseEvent::SubmitRequest(request, spec, snapshot) => return self.apply_request(*request, spec, snapshot),
             BaseEvent::Publish(id) => {
                 let receipt = self.endpoint.deliver(self.envelopes.get(id).ok_or(Error::Missing)?)?;
                 return Ok(Transition::Published(receipt.outcome()));
@@ -232,7 +244,7 @@ impl Machine {
                 }));
             }
             // Only the listed original operations are admitted. Neither old
-            // one-key operations nor newly added gateway events gain authority.
+            // one-key operations nor unlisted future events gain authority.
             _ => return Err(Error::Binding),
         }
         Ok(Transition::Unit)

@@ -4,7 +4,9 @@
 pub mod actor;
 
 use super::{Event, FileDelivery, FrozenAction, JournalError, Machine, Transition};
-use crate::action::{ActionSpec, ActionState};
+use crate::action::{ActionSpec, ActionState, Scope};
+use crate::action::consequence::gate::ControlInspection;
+use crate::action::consequence::gate::containment::session::policy::controller::Proposal;
 use crate::{Error, Snapshot};
 use std::collections::BTreeMap;
 
@@ -37,6 +39,89 @@ pub(super) struct RequestBook {
     bytes: usize,
 }
 
+/// Private preflight data. It cannot admit an effect; only an ORIGINAL broker's
+/// proposal result completes it. Both durable profiles use this same request book.
+pub(super) struct PreparedRequest {
+    request: u64,
+    attempt: u64,
+    spec: ActionSpec,
+    bytes: usize,
+}
+impl PreparedRequest {
+    pub(super) fn attempt(&self) -> u64 { self.attempt }
+}
+impl RequestBook {
+    pub(super) fn len(&self) -> usize { self.records.len() }
+    pub(super) fn bytes(&self) -> usize { self.bytes }
+    pub(super) fn status(&self, request: u64) -> Result<FileRequestStatus, Error> {
+        Ok(self.records.get(&request).ok_or(Error::Missing)?.status)
+    }
+    pub(super) fn retry(&self, request: u64, spec: &ActionSpec) -> Result<Option<FileRequestStatus>, Error> {
+        match self.records.get(&request) {
+            Some(record) if &record.spec == spec => Ok(Some(record.status)),
+            Some(_) => Err(Error::Binding),
+            None => Ok(None),
+        }
+    }
+
+    pub(super) fn prepare(&self, request: u64, spec: &ActionSpec, scope: Scope,
+        inspection: &ControlInspection, stopping: bool) -> Result<PreparedRequest, Error>
+    {
+        if request == 0 { return Err(Error::InvalidInput); }
+        if self.records.contains_key(&request) { return Err(Error::Duplicate); }
+        if inspection.suspended || stopping { return Err(Error::WrongState); }
+        if !spec.required_witnesses.is_empty() { return Err(Error::InvalidInput); }
+        // Structure is not policy approval. Policy refusals are retained by
+        // finish rather than retried under this key with a different snapshot.
+        FrozenAction::freeze(spec.clone())?;
+        if spec.scope != scope { return Err(Error::Binding); }
+        if self.records.len() >= MAX_FILE_REQUESTS { return Err(Error::Limit); }
+        let bytes = self.bytes.checked_add(spec.payload.len()).ok_or(Error::Limit)?;
+        if bytes > MAX_FILE_REQUEST_BYTES { return Err(Error::Limit); }
+        let maximum = inspection.ledger.stages.keys().copied()
+            .chain(self.records.values().map(|row| row.allocated_attempt)).max().unwrap_or(0);
+        let attempt = maximum.checked_add(1).ok_or(Error::Overflow)?;
+        Ok(PreparedRequest { request, attempt, spec: spec.clone(), bytes })
+    }
+
+    /// No policy evaluator or outcome reducer lives here. The original proposal
+    /// result supplies both the frozen action and actual initial ledger stage.
+    pub(super) fn finish(&mut self, prepared: PreparedRequest, result: Result<Proposal, Error>)
+        -> Option<(u64, FrozenAction)>
+    {
+        let PreparedRequest { request, attempt, spec, bytes } = prepared;
+        let (disposition, action) = match result {
+            Ok(proposal) => (FileRequestDisposition::Admitted { attempt, stage: proposal.state },
+                Some((attempt, proposal.action))),
+            Err(error) => (FileRequestDisposition::NotAdmitted(error), None),
+        };
+        let generation = u64::from(!matches!(disposition,
+            FileRequestDisposition::Admitted { stage: ActionState::Proposed | ActionState::Prepared
+                | ActionState::Reviewing | ActionState::Authorized, .. }));
+        self.records.insert(request, RequestRecord { spec, allocated_attempt: attempt,
+            status: FileRequestStatus { request, generation, disposition } });
+        self.bytes = bytes;
+        action
+    }
+
+    /// A projection of original ledger stages, never a second outcome ledger.
+    /// Private review/reservation transitions remain the same visible phase.
+    pub(super) fn refresh(&mut self, inspection: &ControlInspection) -> Result<(), Error> {
+        for record in self.records.values_mut() {
+            if let FileRequestDisposition::Admitted { attempt, stage } = record.status.disposition {
+                let current = *inspection.ledger.stages.get(&attempt).ok_or(Error::Missing)?;
+                if current != stage {
+                    if projection_class(current) != projection_class(stage) {
+                        record.status.generation = record.status.generation.checked_add(1).ok_or(Error::Overflow)?;
+                    }
+                    record.status.disposition = FileRequestDisposition::Admitted { attempt, stage: current };
+                }
+            }
+        }
+        Ok(())
+    }
+}
+
 impl FileDelivery {
     /// Exactly one original admission per key, including a recorded refusal.
     /// Exact retry returns its CURRENT durable disposition before checking the
@@ -47,17 +132,14 @@ impl FileDelivery {
         snapshot: Snapshot) -> Result<FileRequestStatus, JournalError>
     {
         if self.fault.is_some() { return Err(JournalError::Unavailable); }
-        if let Some(record) = self.machine.requests.records.get(&request) {
-            if record.spec != spec { return Err(Error::Binding.into()); }
-            return Ok(record.status);
-        }
+        if let Some(status) = self.machine.requests.retry(request, &spec)? { return Ok(status); }
         self.transact(revision, Event::SubmitRequest(request, spec, snapshot))?;
         self.request_status(request)
     }
 
     pub fn request_status(&self, request: u64) -> Result<FileRequestStatus, JournalError> {
         if self.fault.is_some() { return Err(JournalError::Unavailable); }
-        Ok(self.machine.requests.records.get(&request).ok_or(Error::Missing)?.status)
+        Ok(self.machine.requests.status(request)?)
     }
 
     /// Frozen data for the trusted review/authorization owner. No key or
@@ -85,67 +167,25 @@ impl FileDelivery {
         Ok(())
     }
 
-    pub fn retained_requests(&self) -> usize { self.machine.requests.records.len() }
-    pub fn retained_request_bytes(&self) -> usize { self.machine.requests.bytes }
+    pub fn retained_requests(&self) -> usize { self.machine.requests.len() }
+    pub fn retained_request_bytes(&self) -> usize { self.machine.requests.bytes() }
 }
 
 impl Machine {
     pub(super) fn apply_request(&mut self, request: u64, spec: &ActionSpec,
         snapshot: &Snapshot) -> Result<Transition, Error>
     {
-        if request == 0 { return Err(Error::InvalidInput); }
-        if self.requests.records.contains_key(&request) { return Err(Error::Duplicate); }
-        if self.broker.inspect().suspended || self.broker.stop_receipt().is_some() {
-            return Err(Error::WrongState);
+        let prepared = self.requests.prepare(request, spec, self.broker.scope,
+            &self.broker.inspect(), self.broker.stop_receipt().is_some())?;
+        let result = self.broker.propose(prepared.attempt(), spec.clone(), snapshot);
+        if let Some((attempt, action)) = self.requests.finish(prepared, result) {
+            self.actions.insert(attempt, action);
         }
-        if !spec.required_witnesses.is_empty() { return Err(Error::InvalidInput); }
-        // Validate structure without pretending it is policy approval. A
-        // structurally valid policy refusal is retained below, not re-rollable.
-        FrozenAction::freeze(spec.clone())?;
-        if spec.scope != self.broker.scope { return Err(Error::Binding); }
-        if self.requests.records.len() >= MAX_FILE_REQUESTS { return Err(Error::Limit); }
-        let bytes = self.requests.bytes.checked_add(spec.payload.len()).ok_or(Error::Limit)?;
-        if bytes > MAX_FILE_REQUEST_BYTES { return Err(Error::Limit); }
-        // Actor keys never select ledger IDs. Include refused allocations so
-        // they are not recycled, and avoid operator-created original attempts.
-        let inspection = self.broker.inspect();
-        let maximum = inspection.ledger.stages.keys().copied()
-            .chain(self.requests.records.values().map(|row| row.allocated_attempt)).max().unwrap_or(0);
-        let attempt = maximum.checked_add(1).ok_or(Error::Overflow)?;
-        let disposition = match self.broker.propose(attempt, spec.clone(), snapshot) {
-            Ok(proposal) => {
-                self.actions.insert(attempt, proposal.action);
-                FileRequestDisposition::Admitted { attempt, stage: proposal.state }
-            }
-            Err(error) => FileRequestDisposition::NotAdmitted(error),
-        };
-        let generation = u64::from(!matches!(disposition,
-            FileRequestDisposition::Admitted { stage: ActionState::Proposed | ActionState::Prepared
-                | ActionState::Reviewing | ActionState::Authorized, .. }));
-        self.requests.records.insert(request, RequestRecord { spec: spec.clone(), allocated_attempt: attempt,
-            status: FileRequestStatus { request, generation, disposition } });
-        self.requests.bytes = bytes;
         Ok(Transition::Unit)
     }
 
-    /// Fold each projection from the ORIGINAL ledger after every committed
-    /// transition and during pure replay. No second outcome reducer is used.
     pub(super) fn refresh_requests(&mut self) -> Result<(), Error> {
-        let inspection = self.broker.inspect();
-        for record in self.requests.records.values_mut() {
-            if let FileRequestDisposition::Admitted { attempt, stage } = record.status.disposition {
-                let current = *inspection.ledger.stages.get(&attempt).ok_or(Error::Missing)?;
-                if current != stage {
-                    // Review/authorization changes remain one actor-visible
-                    // Pending phase and disclose no congress activity count.
-                    if projection_class(current) != projection_class(stage) {
-                        record.status.generation = record.status.generation.checked_add(1).ok_or(Error::Overflow)?;
-                    }
-                    record.status.disposition = FileRequestDisposition::Admitted { attempt, stage: current };
-                }
-            }
-        }
-        Ok(())
+        self.requests.refresh(&self.broker.inspect())
     }
 }
 
