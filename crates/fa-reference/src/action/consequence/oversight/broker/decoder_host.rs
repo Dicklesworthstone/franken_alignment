@@ -2,6 +2,8 @@
 //! Numerical output is still evidence; the original congress and permits decide effects.
 
 mod checkpoint;
+mod automatic_stop;
+pub use automatic_stop::{HostedStopCause, HostedStopIncident, HostedStopPolicy};
 pub use checkpoint::{HostedCheckpointHandle, HostedRecoveryUsage, HostedResetReceipt, HostedResetRequest};
 
 use super::{OversightBroker, decoder_gate::DecoderBindingLimits};
@@ -29,6 +31,7 @@ pub(super) struct DecoderHost {
     run: MonitoredSampledDecoder,
     profile: RestartProfile,
     recovery: checkpoint::RecoveryState,
+    automatic_stop: Option<automatic_stop::HostedStopState>,
 }
 
 impl OversightBroker {
@@ -56,7 +59,7 @@ impl OversightBroker {
         // source bootstrap performs all identity/limit checks before mutation.
         self.enable_decoder_monitoring(run.observation(), limits)?;
         self.delivery.replace_actor_state(revision, actor).expect("preflighted owned actor update");
-        self.decoder_host = Some(DecoderHost { run, profile, recovery: checkpoint::RecoveryState::new() });
+        self.decoder_host = Some(DecoderHost { run, profile, recovery: checkpoint::RecoveryState::new(), automatic_stop: None });
         Ok(())
     }
 
@@ -74,15 +77,15 @@ impl OversightBroker {
     pub fn advance_hosted_forced(&mut self, expected_actor_revision: u64, expected_position: u64,
         token: u32, budget: DecoderBudget) -> Result<MonitoredStep, Error>
     {
-        self.advance_hosted(expected_actor_revision, expected_position,
-            |run| run.advance_forced(expected_position, token, budget))
+        self.with_hosted_stop(|owner| owner.advance_hosted(expected_actor_revision, expected_position,
+            |run| run.advance_forced(expected_position, token, budget)))
     }
 
     pub fn advance_hosted_sampled(&mut self, expected_actor_revision: u64, expected_position: u64,
         budget: SampleBudget) -> Result<MonitoredSampledStep, Error>
     {
-        self.advance_hosted(expected_actor_revision, expected_position,
-            |run| run.advance_sampled(expected_position, budget))
+        self.with_hosted_stop(|owner| owner.advance_hosted(expected_actor_revision, expected_position,
+            |run| run.advance_sampled(expected_position, budget)))
     }
 
     // Only the two methods above can supply this callback. No caller code runs

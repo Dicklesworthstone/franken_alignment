@@ -129,6 +129,16 @@ impl OversightBroker {
     /// fn grant(checkpoint: HostedCheckpointHandle) -> Permit { checkpoint }
     /// ```
     pub fn reset_hosted_decoder(&mut self, request: HostedResetRequest) -> Result<HostedResetReceipt, Error> {
+        if self.enforce_hosted_stop()?.is_some() { return Err(Error::WrongState); }
+        let result = self.reset_hosted_inner(request);
+        // Replay failure may have poisoned the original numerical owner. Apply
+        // an installed stop policy before returning that failure. An intentional
+        // incident-driven suspension is not relabelled as a numerical fault.
+        if result.is_err() { self.enforce_hosted_stop()?; }
+        result
+    }
+
+    fn reset_hosted_inner(&mut self, request: HostedResetRequest) -> Result<HostedResetReceipt, Error> {
         let inspection = self.inspect();
         if inspection.suspended || self.stop_receipt().is_some() { return Err(Error::WrongState); }
         if request.expected_control_sequence != inspection.sequence
