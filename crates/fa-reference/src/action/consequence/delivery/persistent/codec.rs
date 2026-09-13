@@ -147,6 +147,11 @@ fn write_event(w: &mut Writer, event: &Event) -> Result<(), Error> {
         Event::Cancel(id) => { w.u8(8)?; w.u64(*id)?; }
         Event::Fence => w.u8(9)?,
         Event::Sweep => w.u8(10)?,
+        Event::Stop(request) => {
+            w.u8(11)?; w.u64(request.operation)?; w.u64(request.expected_control_sequence)?;
+            w.u64(request.expected_authority_epoch)?;
+        }
+        Event::StopProgress(tick) => { w.u8(12)?; w.u64(tick.0)?; }
     }
     Ok(())
 }
@@ -185,6 +190,9 @@ fn read_event(r: &mut Reader<'_>) -> Result<Event, Error> {
         8 => Event::Cancel(r.u64()?),
         9 => Event::Fence,
         10 => Event::Sweep,
+        11 => Event::Stop(StopRequest { operation: r.u64()?, expected_control_sequence: r.u64()?,
+            expected_authority_epoch: r.u64()? }),
+        12 => Event::StopProgress(ElapsedTick(r.u64()?)),
         _ => return Err(Error::InvalidInput),
     })
 }

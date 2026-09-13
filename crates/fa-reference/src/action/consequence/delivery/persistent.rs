@@ -7,10 +7,12 @@
 
 mod codec;
 mod storage;
+mod stopping;
+pub use stopping::FileStopSweep;
 #[cfg(test)]
 mod tests;
 
-use super::{DeliveryBroker, DispatchEnvelope, EndpointOutcome, EndpointStatus, PublicationEndpoint};
+use super::{DeliveryBroker, DispatchEnvelope, EndpointOutcome, EndpointStatus, PublicationEndpoint, StopReceipt, StopRequest};
 use super::super::congress::CongressPolicy;
 use super::super::gate::{ControlInspection, TargetCeiling};
 use super::super::gate::containment::ActorState;
@@ -128,6 +130,8 @@ pub struct FileDeliverySnapshot {
     pub revision: u64,
     pub control: ControlInspection,
     pub dispatcher_epoch: u64,
+    /// Historical local-stop evidence, never an endpoint nonexecution receipt.
+    pub stop: Option<StopReceipt>,
     pub target: ResolvedTarget,
     pub payload: Vec<u8>,
     pub executions: u64,
@@ -169,6 +173,8 @@ enum Event {
     Cancel(u64),
     Fence,
     Sweep,
+    Stop(StopRequest),
+    StopProgress(ElapsedTick),
 }
 enum Transition {
     Unit,
@@ -177,6 +183,8 @@ enum Transition {
     Published(EndpointOutcome),
     Reconciled(Reconciliation),
     Swept(BTreeMap<u64, Result<Reconciliation, Error>>),
+    Stopped(StopReceipt),
+    StopProgressed(FileStopSweep),
 }
 
 struct Machine {
@@ -272,6 +280,8 @@ impl Machine {
                 return Ok(Transition::Swept(results.into_iter()
                     .map(|(id, result)| (id, result.map(project_status))).collect()));
             }
+            Event::Stop(request) => return self.apply_stop(*request),
+            Event::StopProgress(tick) => return self.apply_stop_progress(*tick),
             Event::Cancel(id) => { self.broker.cancel(*id)?; self.permits.remove(id); }
             Event::Fence => {
                 // The original authority keeps spent rights and its suspension.
@@ -292,8 +302,9 @@ impl Machine {
     }
     fn snapshot(&self, revision: usize) -> FileDeliverySnapshot {
         FileDeliverySnapshot { revision: revision as u64, control: self.broker.inspect(),
-            dispatcher_epoch: self.broker.dispatcher_epoch(), target: self.endpoint.target(),
-            payload: self.endpoint.payload().to_vec(), executions: self.endpoint.execution_count() }
+            dispatcher_epoch: self.broker.dispatcher_epoch(), stop: self.broker.stop_receipt().cloned(),
+            target: self.endpoint.target(), payload: self.endpoint.payload().to_vec(),
+            executions: self.endpoint.execution_count() }
     }
 }
 
