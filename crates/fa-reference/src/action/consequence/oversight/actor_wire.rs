@@ -8,9 +8,28 @@ mod channel;
 pub use channel::{ActorChannel, ChannelLimits, ChannelState, CloseReason, FeedResult, MAX_CHANNEL_EXCHANGES};
 pub use codec::{Command, MAX_FRAME_BYTES, MAX_RESPONSE_BYTES, WireError, WireResponse, decode_command, encode_command};
 
-use super::actor::{ActorOutcome, ActorPort, ActorTicket, Knowledge, MAX_ACTOR_REQUESTS};
+use super::actor::{ActorError, ActorOutcome, ActorPort, ActorProposal, ActorTicket, Knowledge, MAX_ACTOR_REQUESTS};
 use std::collections::BTreeMap;
 use std::fmt;
+
+pub(crate) mod backend { pub trait Sealed {} }
+
+/// Actor-only operations supported by the in-memory and durable gateways.
+/// Sealed implementations cannot introduce a clock, permit or authority method.
+/// All wire parsing, redaction and connection-local ticket rules stay shared.
+pub trait ActorRequestPort: backend::Sealed {
+    type Ticket;
+    fn submit(&self, key: u64, proposal: &ActorProposal) -> Result<Self::Ticket, ActorError>;
+    fn poll(&self, ticket: &Self::Ticket) -> Knowledge<ActorOutcome>;
+    fn cancel(&self, ticket: &Self::Ticket) -> Result<(), ActorError>;
+}
+impl backend::Sealed for ActorPort {}
+impl ActorRequestPort for ActorPort {
+    type Ticket = ActorTicket;
+    fn submit(&self, key: u64, proposal: &ActorProposal) -> Result<Self::Ticket, ActorError> { ActorPort::submit(self, key, proposal) }
+    fn poll(&self, ticket: &Self::Ticket) -> Knowledge<ActorOutcome> { ActorPort::poll(self, ticket) }
+    fn cancel(&self, ticket: &Self::Ticket) -> Result<(), ActorError> { ActorPort::cancel(self, ticket) }
+}
 
 /// Retain this value across transport reconnection to retain ticket visibility.
 /// A new session on the same port can recover a ticket by an exact submit retry;
@@ -20,19 +39,19 @@ use std::fmt;
 /// use fa_reference::action::consequence::oversight::actor_wire::ActorWire;
 /// fn escape(wire: ActorWire) { let _broker = wire.broker_mut(); }
 /// ```
-pub struct ActorWire {
-    port: ActorPort,
-    tickets: BTreeMap<u64, ActorTicket>,
+pub struct ActorWire<P: ActorRequestPort = ActorPort> {
+    port: P,
+    tickets: BTreeMap<u64, P::Ticket>,
 }
 
-impl fmt::Debug for ActorWire {
+impl<P: ActorRequestPort> fmt::Debug for ActorWire<P> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("ActorWire").field("tickets", &self.tickets.len()).finish_non_exhaustive()
     }
 }
 
-impl ActorWire {
-    pub fn new(port: ActorPort) -> Self { Self { port, tickets: BTreeMap::new() } }
+impl<P: ActorRequestPort> ActorWire<P> {
+    pub fn new(port: P) -> Self { Self { port, tickets: BTreeMap::new() } }
 
     /// Process exactly one bounded JSON document, with no framing or I/O.
     /// Parse failures disclose no partially decoded request or private diagnostics.

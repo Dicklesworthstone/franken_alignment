@@ -1,7 +1,7 @@
 //! Bounded newline framing and resumable I/O without owning a task runtime.
 //! A reply must drain and flush before another command can touch the actor port.
 
-use super::{ActorWire, MAX_FRAME_BYTES, MAX_RESPONSE_BYTES, WireError};
+use super::{ActorPort, ActorRequestPort, ActorWire, MAX_FRAME_BYTES, MAX_RESPONSE_BYTES, WireError};
 use std::fmt;
 use std::io::{self, BufRead, Write};
 
@@ -22,8 +22,8 @@ pub struct FeedResult { pub consumed: usize, pub state: ChannelState }
 
 /// One input frame and one bounded reply, no unbounded output queue. The host
 /// schedules calls and authenticates the peer. Debug output contains no frames.
-pub struct ActorChannel {
-    wire: ActorWire,
+pub struct ActorChannel<P: ActorRequestPort = ActorPort> {
+    wire: ActorWire<P>,
     input: Vec<u8>,
     output: Vec<u8>,
     written: usize,
@@ -32,15 +32,15 @@ pub struct ActorChannel {
     closed: Option<CloseReason>,
 }
 
-impl fmt::Debug for ActorChannel {
+impl<P: ActorRequestPort> fmt::Debug for ActorChannel<P> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("ActorChannel").field("state", &self.state())
             .field("buffered_input_bytes", &self.input.len()).field("exchanges", &self.exchanges).finish_non_exhaustive()
     }
 }
 
-impl ActorChannel {
-    pub fn new(wire: ActorWire, limits: ChannelLimits) -> Result<Self, WireError> {
+impl<P: ActorRequestPort> ActorChannel<P> {
+    pub fn new(wire: ActorWire<P>, limits: ChannelLimits) -> Result<Self, WireError> {
         if limits.frame_bytes == 0 || limits.exchanges == 0 { return Err(WireError::MalformedRequest); }
         if limits.frame_bytes > MAX_FRAME_BYTES || limits.exchanges > MAX_CHANNEL_EXCHANGES { return Err(WireError::Capacity); }
         Ok(Self { wire, input: Vec::with_capacity(limits.frame_bytes), output: Vec::new(),
@@ -107,7 +107,7 @@ impl ActorChannel {
     /// Recover the role-bound handler after disconnect, discarding only transport
     /// fragments and reply bytes. A new connection must use complete frames and
     /// clients retry the SAME submission key/bytes, not a replacement effect.
-    pub fn into_wire(self) -> ActorWire { self.wire }
+    pub fn into_wire(self) -> ActorWire<P> { self.wire }
 
     /// One buffered read operation, with no hidden blocking loop or overread.
     /// Interrupted/WouldBlock preserve fragments. A terminal I/O error closes

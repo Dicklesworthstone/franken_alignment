@@ -1,6 +1,8 @@
 //! Durable request identity over the original publication authority. Journal
 //! replay recomputes admission, never imports a caller-asserted outcome or permit.
 
+pub mod actor;
+
 use super::{Event, FileDelivery, FrozenAction, JournalError, Machine, Transition};
 use crate::action::{ActionSpec, ActionState};
 use crate::{Error, Snapshot};
