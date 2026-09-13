@@ -31,6 +31,7 @@ pub(super) enum Event {
     Dispatch(u64, u64, u64, Snapshot),
     PublicationGuard,
     PublishChecked(u64, Option<Views>, Snapshot, ElapsedTick),
+    Source(super::source::SourceEvent),
 }
 
 fn core_allowed(event: &BaseEvent) -> bool {
@@ -107,7 +108,8 @@ fn write_event(w: &mut Writer, event: &Event) -> Result<(), Error> {
             w.u8(3)?; w.u64(*id)?; w.u64(*round)?; w.raw(root)?;
             w.u64(window.commit_by.0)?; w.u64(window.reveal_by.0)?; w.snapshot(snapshot)?;
         }
-        Event::Commit(round, member, digest) => { w.u8(4)?; w.u64(*round)?; views::write_name(w, member)?; w.u64(*digest)?; }
+        Event::Commit(round, member, digest) => { w.u8(4)?; w.u64(*round)?; views::write_name(w, member)?; w.u64(*digest)?;
+        }
         Event::OpenReveals(round) => { w.u8(5)?; w.u64(*round)?; }
         Event::Reveal(round, member, verdict, salt) => {
             if salt.len() > MAX_FIELD_LEN { return Err(Error::Limit); }
@@ -138,6 +140,7 @@ fn write_event(w: &mut Writer, event: &Event) -> Result<(), Error> {
             match current { None => w.u8(0)?, Some(views) => { w.u8(1)?; views::write(w, views)?; } }
             w.snapshot(snapshot)?; w.u64(tick.0)?;
         }
+        Event::Source(event) => { w.u8(15)?; super::source::write(w, event)?; }
     }
     Ok(())
 }
@@ -177,6 +180,7 @@ fn read_event(r: &mut Reader<'_>) -> Result<Event, Error> {
             let current = match r.u8()? { 0 => None, 1 => Some(views::read(r)?), _ => return Err(Error::InvalidInput) };
             Event::PublishChecked(id, current, r.snapshot()?, ElapsedTick(r.u64()?))
         }
+        15 => Event::Source(super::source::read(r)?),
         _ => return Err(Error::InvalidInput),
     })
 }

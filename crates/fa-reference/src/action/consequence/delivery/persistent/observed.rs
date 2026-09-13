@@ -13,6 +13,7 @@ pub mod helpers;
 pub mod driver;
 pub mod reviewer;
 pub mod publication;
+pub mod source;
 #[cfg(test)]
 mod tests;
 pub use human::{FileHumanPermit, FileHumanRequest, FileHumanReviewer};
@@ -63,6 +64,7 @@ pub struct FileOversight {
     machine: Machine,
     issuer: Rc<()>,
     fault: Option<JournalFailure>,
+    source_interrupted: bool,
     // A worker round can never switch to manual votes in this live owner.
     // Recovery discards every native session before returning a new owner.
     worker_rounds: BTreeSet<u64>,
@@ -100,7 +102,7 @@ impl FileOversight {
     fn owner(profile: FileOversightProfile, store: storage::Store, events: Vec<Event>, machine: Machine) -> (Self, FileHumanReviewer) {
         let issuer = Rc::new(());
         let reviewer = FileHumanReviewer { issuer: Rc::clone(&issuer), reviewer: profile.human.reviewer_id };
-        (Self { profile, store, events, machine, issuer, fault: None, worker_rounds: BTreeSet::new() }, reviewer)
+        (Self { profile, store, events, machine, issuer, fault: None, source_interrupted: false, worker_rounds: BTreeSet::new() }, reviewer)
     }
 
     /// Historical data only. No live broker, helper session or approval key is
@@ -266,6 +268,7 @@ impl FileOversight {
     fn transact(&mut self, revision: u64, event: Event) -> Result<Transition, JournalError> {
         if self.fault.is_some() { return Err(JournalError::Unavailable); }
         if revision != self.revision() { return Err(Error::Stale.into()); }
+        self.check_source_admission(&event)?;
         if self.events.len() >= self.profile.delivery.limits.events { return Err(Error::Limit.into()); }
         let bytes = journal::encode_appended(&self.profile, self.store.identity(), &self.events, &event)?;
         let mut candidate = Machine::replay(&self.profile, &self.events)?;
@@ -280,6 +283,7 @@ impl FileOversight {
             // returned. Inspection remains the last fully acknowledged cut.
             return Err(error);
         }
+        self.source_operation_committed(&event);
         self.events.push(event);
         self.machine = candidate;
         Ok(result)
