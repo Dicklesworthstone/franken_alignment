@@ -145,7 +145,7 @@ impl FileOversight {
             | Event::Core(BaseEvent::Time(_) | BaseEvent::Cancel(_) | BaseEvent::Fence
                 | BaseEvent::Stop(_) | BaseEvent::StopProgress(_) | BaseEvent::ReplacePolicy(_)
                 | BaseEvent::Reconcile(_) | BaseEvent::Seal(_) | BaseEvent::Sweep)
-            | Event::InputsUnavailable(..) | Event::RevokeHumans
+            | Event::InputsUnavailable(..) | Event::RevokeHumans | Event::ActorReset(..)
             | Event::Human(_, HumanDecision::Reject | HumanDecision::Revoke))
         { Ok(()) } else { Err(Error::Incomplete) }
     }

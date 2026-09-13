@@ -126,4 +126,25 @@ impl FileSupervisedDriver {
         self.reap_helpers();
         result
     }
+
+    /// Restore through the original durable containment operation. Current
+    /// ledger state, not an old retry receipt, decides which workers retire.
+    /// The next driver step retains its original Stopped event. No clock,
+    /// observation provider, helper vote or new human approval is acquired here.
+    /// A sent effect retains its charged outcome/publication obligations.
+    pub fn reset_actor(&mut self, checkpoint: &super::super::containment::FileCheckpoint,
+        request: super::super::containment::FileResetRequest)
+        -> Result<crate::action::consequence::gate::containment::ResetReceipt, JournalError>
+    {
+        let result = (|| {
+            let mut host = self.supervisor.host_mut()?;
+            if let Some(job) = &self.job { job.check_owner(&host)?; }
+            let revision = host.revision();
+            host.reset_actor(revision, checkpoint, request)
+        })();
+        // Also retire owned children after ambiguous storage, while leaving
+        // an ordinary stale-predecessor refusal's healthy review untouched.
+        self.reap_helpers();
+        result
+    }
 }

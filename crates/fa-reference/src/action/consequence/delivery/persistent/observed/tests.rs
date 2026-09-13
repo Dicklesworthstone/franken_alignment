@@ -3,6 +3,8 @@
 use super::*;
 #[path = "governance_storage_tests.rs"]
 mod policy_update_storage_tests;
+#[path = "containment/storage_tests.rs"]
+mod containment_storage_tests;
 use super::super::JournalLimits;
 use crate::action::{ActionState, Purpose, ResolvedTarget, Scope, VERSION};
 use crate::action::consequence::congress::{CongressPolicy, MemberPolicy};
