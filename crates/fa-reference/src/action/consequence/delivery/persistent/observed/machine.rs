@@ -13,6 +13,7 @@ use std::collections::BTreeMap;
 use super::super::requests::RequestBook;
 
 mod requests;
+mod publication;
 
 pub(super) enum Transition {
     Unit,
@@ -26,6 +27,7 @@ pub(super) enum Transition {
     Swept(BTreeMap<u64, Result<Reconciliation, Error>>),
     Stopped(StopReceipt),
     StopProgressed(FileStopSweep),
+    PublicationChecked(super::publication::CheckedPublication),
 }
 
 pub(super) struct Machine {
@@ -34,6 +36,7 @@ pub(super) struct Machine {
     pub(super) sessions: BTreeMap<u64, (u64, ObservedSession)>,
     pub(super) clock_ready: bool,
     pub(super) requests: RequestBook,
+    pub(super) publication_guard: bool,
     scope: Scope,
     endpoint: PublicationEndpoint,
     automatic: BTreeMap<u64, Permit>,
@@ -54,7 +57,8 @@ impl Machine {
         let reviewer = broker.enable_human_review(p.human)?;
         broker.confirm_fence(endpoint.install_fence(broker.fence_request())?)?;
         Ok(Self { requests: RequestBook::default(), scope: d.scope, broker, endpoint, reviewer, actions: BTreeMap::new(), sessions: BTreeMap::new(),
-            automatic: BTreeMap::new(), human_keys: BTreeMap::new(), envelopes: BTreeMap::new(), clock_ready: false })
+            automatic: BTreeMap::new(), human_keys: BTreeMap::new(), envelopes: BTreeMap::new(), clock_ready: false,
+            publication_guard: false })
     }
     pub(super) fn replay(p: &FileOversightProfile, events: &[Event]) -> Result<Self, Error> {
         let mut machine = Self::new(p)?;
@@ -118,9 +122,12 @@ impl Machine {
     fn apply_inner(&mut self, event: &Event) -> Result<Transition, Error> {
         let without_current_time = matches!(event,
             Event::Core(BaseEvent::Time(_) | BaseEvent::Cancel(_) | BaseEvent::Fence | BaseEvent::Stop(_) | BaseEvent::StopProgress(_))
-            | Event::InputsUnavailable(..) | Event::Human(_, HumanDecision::Reject | HumanDecision::Revoke) | Event::RevokeHumans);
+            | Event::InputsUnavailable(..) | Event::Human(_, HumanDecision::Reject | HumanDecision::Revoke) | Event::RevokeHumans
+            | Event::PublicationGuard | Event::PublishChecked(..));
         if !without_current_time && !self.clock_ready { return Err(Error::Incomplete); }
         match event {
+            Event::PublicationGuard => return self.enable_publication_guard(),
+            Event::PublishChecked(id, views, snapshot, tick) => return self.publish_checked(*id, views.as_ref(), snapshot, *tick),
             Event::Core(event) => return self.apply_core(event),
             Event::Inputs(id, revision, views) => {
                 let inputs = self.capture(*id, views)?;
@@ -207,6 +214,7 @@ impl Machine {
             }
             BaseEvent::SubmitRequest(request, spec, snapshot) => return self.apply_request(*request, spec, snapshot),
             BaseEvent::Publish(id) => {
+                if self.publication_guard { return Err(Error::Incomplete); }
                 let receipt = self.endpoint.deliver(self.envelopes.get(id).ok_or(Error::Missing)?)?;
                 return Ok(Transition::Published(receipt.outcome()));
             }

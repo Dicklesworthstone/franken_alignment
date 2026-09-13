@@ -29,6 +29,8 @@ pub(super) enum Event {
     Human(u64, HumanDecision),
     RevokeHumans,
     Dispatch(u64, u64, u64, Snapshot),
+    PublicationGuard,
+    PublishChecked(u64, Option<Views>, Snapshot, ElapsedTick),
 }
 
 fn core_allowed(event: &BaseEvent) -> bool {
@@ -130,6 +132,12 @@ fn write_event(w: &mut Writer, event: &Event) -> Result<(), Error> {
         Event::Dispatch(id, human, revision, snapshot) => {
             w.u8(12)?; w.u64(*id)?; w.u64(*human)?; w.u64(*revision)?; w.snapshot(snapshot)?;
         }
+        Event::PublicationGuard => w.u8(13)?,
+        Event::PublishChecked(id, current, snapshot, tick) => {
+            w.u8(14)?; w.u64(*id)?;
+            match current { None => w.u8(0)?, Some(views) => { w.u8(1)?; views::write(w, views)?; } }
+            w.snapshot(snapshot)?; w.u64(tick.0)?;
+        }
     }
     Ok(())
 }
@@ -163,6 +171,12 @@ fn read_event(r: &mut Reader<'_>) -> Result<Event, Error> {
         }
         11 => Event::RevokeHumans,
         12 => Event::Dispatch(r.u64()?, r.u64()?, r.u64()?, r.snapshot()?),
+        13 => Event::PublicationGuard,
+        14 => {
+            let id = r.u64()?;
+            let current = match r.u8()? { 0 => None, 1 => Some(views::read(r)?), _ => return Err(Error::InvalidInput) };
+            Event::PublishChecked(id, current, r.snapshot()?, ElapsedTick(r.u64()?))
+        }
         _ => return Err(Error::InvalidInput),
     })
 }

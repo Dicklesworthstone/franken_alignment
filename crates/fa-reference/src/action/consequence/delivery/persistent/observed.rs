@@ -11,6 +11,7 @@ mod views;
 pub mod helpers;
 pub mod driver;
 pub mod reviewer;
+pub mod publication;
 #[cfg(test)]
 mod tests;
 pub use human::{FileHumanPermit, FileHumanRequest, FileHumanReviewer};

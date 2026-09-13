@@ -28,4 +28,31 @@ impl OversightBroker {
         for slot in self.inputs.values_mut() { slot.approved = None; }
         Ok(result)
     }
+
+    /// A coupled two-key endpoint rechecks ORIGINAL evidence before its first
+    /// execution. This read-only check cannot issue a key, refresh a review or
+    /// settle an outcome. A historical terminal receipt must be handled first.
+    pub(in crate::action::consequence) fn revalidate_publication(
+        &self, attempt: u64, approval: crate::action::consequence::delivery::DispatchApproval,
+        current: Option<&super::CommitteeInput>, snapshot: &crate::Snapshot,
+    ) -> Result<(), Error> {
+        self.delivery.check_not_stopping()?;
+        if !snapshot.complete { return Err(Error::Incomplete); }
+        let _ = self.delivery.check_policy_state(snapshot)?;
+        self.check_approval(attempt, current)?;
+        let request = self.human_request(approval.request())?;
+        let status = self.human_status(approval.request())?;
+        let slot = self.inputs.get(&attempt).ok_or(Error::Missing)?;
+        if request.attempt() != attempt || request.action() != &slot.action
+            || request.reviewer_id() != approval.reviewer()
+            || status.issued_at != Some(approval.issued_at())
+            || request.expires_at() != approval.expires_at()
+            || status.disposition != super::human::HumanDisposition::Consumed
+        { return Err(Error::Binding); }
+        if request.input_revision() != slot.revision
+            || slot.current.as_deref() != Some(request.inputs())
+            || request.policy_generation() != self.delivery.controller().policy().generation()
+        { return Err(Error::Stale); }
+        self.delivery.controller().recheck_publication(attempt, request.control_sequence(), snapshot)
+    }
 }

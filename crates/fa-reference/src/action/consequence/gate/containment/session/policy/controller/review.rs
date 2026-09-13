@@ -14,6 +14,23 @@ use crate::round::Verdict;
 use crate::Error;
 use std::rc::Rc;
 
+impl super::PolicyAuthority {
+    /// Read-only reuse validation for an already consumed permit at a coupled
+    /// publication boundary. Reuse the ORIGINAL policy, witnesses and authority
+    /// checks; this neither issues another permit nor changes an effect outcome.
+    pub(in crate::action::consequence) fn recheck_publication(
+        &self, attempt: u64, reviewed_sequence: u64, snapshot: &crate::Snapshot,
+    ) -> Result<(), Error> {
+        let inspection = self.inspect();
+        if inspection.suspended { return Err(Error::WrongState); }
+        if inspection.sequence != reviewed_sequence { return Err(Error::Stale); }
+        if !matches!(inspection.ledger.stages.get(&attempt),
+            Some(crate::action::ActionState::Dispatching | crate::action::ActionState::Unknown))
+        { return Err(Error::WrongState); }
+        self.recheck(attempt, snapshot)
+    }
+}
+
 #[derive(Debug)]
 pub struct PolicySession {
     session: ReviewSession,
