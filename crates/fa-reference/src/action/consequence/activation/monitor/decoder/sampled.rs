@@ -3,6 +3,7 @@
 //! subsequently holds. Only a completely quiet review exposes the sampled ID.
 
 pub mod config;
+pub mod evaluation;
 pub(crate) mod host;
 
 use super::{DecoderReview, MonitoredDecoder, MonitoredStep, MonitoringStatus, MonitoringWork, ReviewedStep};
