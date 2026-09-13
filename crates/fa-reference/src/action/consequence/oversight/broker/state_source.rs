@@ -55,4 +55,9 @@ impl OversightBroker {
         { return Err(Error::Stale); }
         self.delivery.controller().recheck_publication(attempt, request.control_sequence(), snapshot)
     }
+
+    /// Original retained actor data for the durable host, not a fresh observation.
+    pub(crate) fn retained_actor_state(&self) -> &crate::action::consequence::gate::containment::ActorState {
+        self.delivery.controller().actor()
+    }
 }

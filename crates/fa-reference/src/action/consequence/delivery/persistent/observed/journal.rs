@@ -1,6 +1,7 @@
 //! A distinct profile of the same bounded canonical publication journal.
 //! Records are original transition INPUTS, never asserted decisions or balances.
 use super::{FileOversightProfile, ReviewWindow};
+use super::containment::{FileStateUpdate, FileResetRequest, codec as state_codec};
 use super::super::{codec, Event as BaseEvent};
 use super::super::codec::shared::{Reader, Writer};
 use super::views::{self, Views};
@@ -29,6 +30,9 @@ pub(super) enum Event {
     Human(u64, HumanDecision),
     RevokeHumans,
     Dispatch(u64, u64, u64, Snapshot),
+    ActorState(FileStateUpdate),
+    ActorCheckpoint(u64, u64, u64),
+    ActorReset(u64, FileResetRequest),
     PublicationGuard,
     PublishChecked(u64, Option<Views>, Snapshot, ElapsedTick),
     Source(super::source::SourceEvent),
@@ -134,6 +138,9 @@ fn write_event(w: &mut Writer, event: &Event) -> Result<(), Error> {
         Event::Dispatch(id, human, revision, snapshot) => {
             w.u8(12)?; w.u64(*id)?; w.u64(*human)?; w.u64(*revision)?; w.snapshot(snapshot)?;
         }
+        Event::ActorState(update) => { w.u8(16)?; state_codec::write_update(w, update)?; }
+        Event::ActorCheckpoint(id, revision, epoch) => { w.u8(17)?; w.u64(*id)?; w.u64(*revision)?; w.u64(*epoch)?; }
+        Event::ActorReset(id, request) => { w.u8(18)?; w.u64(*id)?; state_codec::write_reset(w, request)?; }
         Event::PublicationGuard => w.u8(13)?,
         Event::PublishChecked(id, current, snapshot, tick) => {
             w.u8(14)?; w.u64(*id)?;
@@ -174,6 +181,9 @@ fn read_event(r: &mut Reader<'_>) -> Result<Event, Error> {
         }
         11 => Event::RevokeHumans,
         12 => Event::Dispatch(r.u64()?, r.u64()?, r.u64()?, r.snapshot()?),
+        16 => Event::ActorState(state_codec::read_update(r)?),
+        17 => Event::ActorCheckpoint(r.u64()?, r.u64()?, r.u64()?),
+        18 => Event::ActorReset(r.u64()?, state_codec::read_reset(r)?),
         13 => Event::PublicationGuard,
         14 => {
             let id = r.u64()?;

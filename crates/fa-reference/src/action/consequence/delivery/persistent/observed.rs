@@ -9,6 +9,7 @@ mod machine;
 mod human;
 mod views;
 mod governance;
+pub mod containment;
 pub mod helpers;
 pub mod driver;
 pub mod reviewer;

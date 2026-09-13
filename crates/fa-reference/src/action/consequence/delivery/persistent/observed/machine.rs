@@ -13,6 +13,10 @@ use std::collections::BTreeMap;
 use super::super::requests::RequestBook;
 use super::super::governance::{PolicyUpdates, PolicyUpdateReceipt};
 
+use super::containment::{ContainmentHistory, FileStateReceipt};
+use crate::action::consequence::gate::containment::ResetReceipt;
+
+mod containment;
 mod requests;
 mod governance;
 mod publication;
@@ -20,6 +24,8 @@ mod source;
 
 pub(super) enum Transition {
     Unit,
+    ActorRecorded(FileStateReceipt),
+    ActorReset(ResetReceipt),
     Proposed(FrozenAction),
     Inputs(u64),
     Reviewed(Result<ObservedReceipt, Error>),
@@ -37,6 +43,7 @@ pub(super) enum Transition {
 
 pub(super) struct Machine {
     pub(super) broker: OversightBroker,
+    pub(super) containment: ContainmentHistory,
     pub(super) actions: BTreeMap<u64, FrozenAction>,
     pub(super) sessions: BTreeMap<u64, (u64, ObservedSession)>,
     pub(super) clock_ready: bool,
@@ -63,7 +70,7 @@ impl Machine {
         }, &mut endpoint, p.committee.clone())?;
         let reviewer = broker.enable_human_review(p.human)?;
         broker.confirm_fence(endpoint.install_fence(broker.fence_request())?)?;
-        Ok(Self { policy_updates: PolicyUpdates::default(), requests: RequestBook::default(), scope: d.scope, broker, endpoint, reviewer, actions: BTreeMap::new(), sessions: BTreeMap::new(),
+        Ok(Self { containment: ContainmentHistory::default(), policy_updates: PolicyUpdates::default(), requests: RequestBook::default(), scope: d.scope, broker, endpoint, reviewer, actions: BTreeMap::new(), sessions: BTreeMap::new(),
             automatic: BTreeMap::new(), human_keys: BTreeMap::new(), envelopes: BTreeMap::new(), clock_ready: false,
             publication_guard: false, file_source: None })
     }
@@ -133,9 +140,13 @@ impl Machine {
         let without_current_time = matches!(event,
             Event::Core(BaseEvent::Time(_) | BaseEvent::Cancel(_) | BaseEvent::Fence | BaseEvent::Stop(_) | BaseEvent::StopProgress(_) | BaseEvent::ReplacePolicy(_))
             | Event::InputsUnavailable(..) | Event::Human(_, HumanDecision::Reject | HumanDecision::Revoke) | Event::RevokeHumans
-            | Event::PublicationGuard | Event::PublishChecked(..) | Event::Source(_));
+            | Event::PublicationGuard | Event::PublishChecked(..) | Event::Source(_)
+            | Event::ActorState(_) | Event::ActorCheckpoint(..) | Event::ActorReset(..));
         if !without_current_time && !self.clock_ready { return Err(Error::Incomplete); }
         match event {
+            Event::ActorState(update) => return self.record_actor_state(update),
+            Event::ActorCheckpoint(id, revision, epoch) => return self.capture_actor_checkpoint(*id, *revision, *epoch),
+            Event::ActorReset(id, request) => return self.reset_actor(*id, request),
             Event::Source(event) => return self.apply_source(event),
             Event::PublicationGuard => return self.enable_publication_guard(),
             Event::PublishChecked(id, views, snapshot, tick) => return self.publish_checked(*id, views.as_ref(), snapshot, *tick),
