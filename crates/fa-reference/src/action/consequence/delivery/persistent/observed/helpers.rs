@@ -1,10 +1,13 @@
 //! Actual helper sockets feeding the original durable full-input congress.
 //! Framing, per-member slots and phase coordination are the existing worker
 //! implementation. Only the backing transition changes from RAM to the journal.
+pub mod processes;
+#[cfg(test)]
+mod tests;
 use super::{Event, FileOversight, JournalError, ObservedReceipt, Transition};
-use crate::action::ElapsedTick;
+use crate::action::{ActionState, ElapsedTick};
 use crate::action::consequence::oversight::{CommitteeInput, ReviewWindow};
-use crate::action::consequence::oversight::helper_workers::{HelperLimits, HelperStatus};
+use crate::action::consequence::oversight::helper_workers::{HelperLimits, HelperPort, HelperStatus};
 use crate::action::consequence::oversight::helper_workers::coordinator::{AdvanceError, Coordinator, Session};
 use crate::action::consequence::oversight::helper_workers::io::{HelperConnection, HelperPump, WorkerIoError};
 use crate::round::{Digest, Verdict};
@@ -68,12 +71,26 @@ impl fmt::Debug for FileHelperPool {
     }
 }
 
+fn connect(ports: BTreeMap<String, HelperPort>, mut streams: BTreeMap<String, UnixStream>)
+    -> Result<BTreeMap<String, HelperConnection<UnixStream>>, WorkerIoError>
+{
+    if !ports.keys().eq(streams.keys()) { return Err(WorkerIoError::Protocol(Error::Binding)); }
+    let mut connections = BTreeMap::new();
+    for (member, port) in ports {
+        let stream = streams.remove(&member).ok_or(WorkerIoError::Protocol(Error::Missing))?;
+        stream.set_nonblocking(true).map_err(|error| WorkerIoError::Io(error.kind()))?;
+        let connection = HelperConnection::new(port, stream).map_err(WorkerIoError::Protocol)?;
+        connections.insert(member, connection);
+    }
+    Ok(connections)
+}
+
 impl FileOversight {
     /// Validate the complete roster, input budget, socket setup and request
     /// encoding before beginning the durable round. No request bytes are sent
     /// here. Once begun, only its returned pool can supply protocol events;
     /// dropping it cannot reopen a manual-vote or reduced-roster alternative.
-    pub fn begin_helper_review(&mut self, revision: u64, mut launch: FileHelperLaunch,
+    pub fn begin_helper_review(&mut self, revision: u64, launch: FileHelperLaunch,
         snapshot: Snapshot) -> Result<FileHelperPool, FileHelperSetupError>
     {
         if self.fault.is_some() { return Err(JournalError::Unavailable.into()); }
@@ -87,14 +104,7 @@ impl FileOversight {
         let (coordinator, ports) = Coordinator::new(launch.round, launch.evidence_root, inputs,
             launch.window, now, launch.limits)?;
         let inputs = inputs.clone();
-        let mut connections = BTreeMap::new();
-        for (member, port) in ports {
-            let stream = launch.streams.remove(&member).ok_or(Error::Missing)?;
-            stream.set_nonblocking(true).map_err(|error| FileHelperSetupError::Worker(WorkerIoError::Io(error.kind())))?;
-            let connection = HelperConnection::new(port, stream)
-                .map_err(|error| FileHelperSetupError::Worker(WorkerIoError::Protocol(error)))?;
-            connections.insert(member, connection);
-        }
+        let connections = connect(ports, launch.streams).map_err(FileHelperSetupError::Worker)?;
         self.begin_review(revision, launch.attempt, launch.round, launch.evidence_root, launch.window, snapshot)?;
         self.worker_rounds.insert(launch.round);
         Ok(FileHelperPool { issuer: Rc::clone(&self.issuer), attempt: launch.attempt, round: launch.round,
@@ -215,7 +225,13 @@ impl Session for DurableSession<'_> {
         if !self.host.worker_rounds.contains(&self.round) { return Err(Error::Binding.into()); }
         let (attempt, native) = self.host.machine.sessions.get(&self.round).ok_or(Error::Missing)?;
         if *attempt != self.attempt || native.inputs() != self.inputs { return Err(Error::Binding.into()); }
-        let previous = self.host.inspect().control.ledger.elapsed.ok_or(Error::Incomplete)?;
+        let inspection = self.host.inspect().control;
+        // Withdrawing this action also stops further helper I/O. This checks the
+        // original ledger; it does not invent another admission state machine.
+        if !matches!(inspection.ledger.stages.get(&self.attempt), Some(ActionState::Reviewing | ActionState::Authorized)) {
+            return Err(Error::WrongState.into());
+        }
+        let previous = inspection.ledger.elapsed.ok_or(Error::Incomplete)?;
         if now < previous { return Err(Error::Stale.into()); }
         if now != previous { self.host.observe_time(self.host.revision(), now)?; }
         Ok(())
