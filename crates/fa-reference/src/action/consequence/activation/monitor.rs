@@ -3,6 +3,7 @@
 //! Source validation is local here; encoded byte counts are not network timings.
 
 pub mod decoder;
+pub mod learned;
 
 use super::{CaptureProfile, FrameIdentity, ProgressiveFrame, SourceFrame};
 use super::probe::{LinearProbe, ProbeIdentity, ProbeObservation, ProbeOutcome};

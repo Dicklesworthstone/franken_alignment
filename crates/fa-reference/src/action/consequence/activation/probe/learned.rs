@@ -5,6 +5,8 @@
 //! terms under catastrophic cancellation. A certified sign is not a permission
 //! and says nothing about the probe's empirical ability to identify harm.
 mod evidence;
+mod dependencies;
+pub use dependencies::LearnedProbeDependency;
 pub use evidence::{CheckedKvBudget, CheckedKvReport, CheckedKvResidual, CheckedLearnedKv,
     KvGroup, KvRefinementBudget, KvRefinementReceipt, KvRow, LearnedKvView, ResidualRetention,
     CHECKED_GROUP_BYTES, CHECKED_HEADER_BYTES, MAX_CHECKED_KV_BYTES, MAX_CHECKED_KV_GROUPS,
