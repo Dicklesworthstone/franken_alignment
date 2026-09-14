@@ -6,6 +6,7 @@
 
 mod archive;
 pub mod quantized;
+pub mod learned;
 mod restore;
 pub use archive::{
     ModelKvDescriptor, MAX_MODEL_DESCRIPTOR_BYTES, MAX_MODEL_IMAGE_BYTES,
