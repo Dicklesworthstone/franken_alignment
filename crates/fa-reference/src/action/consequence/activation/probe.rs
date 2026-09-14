@@ -6,6 +6,7 @@
 //! This proves only a declared linear threshold decision, not detector accuracy.
 
 pub mod training;
+pub mod learned;
 
 use super::{CaptureProfile, FrameIdentity, MAX_VALUES, ProgressiveFrame};
 use crate::Error;
