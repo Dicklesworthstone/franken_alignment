@@ -1,8 +1,10 @@
 //! Independent reviewer transport over the ORIGINAL durable two-key gate.
-//! Only a separately provisioned reviewer stream may be attached. This module
-//! provides framing and role binding, NOT peer authentication or a new policy.
+//! Only a separately provisioned reviewer stream may be attached. The optional
+//! Linux peer module checks connection credentials before this unchanged protocol.
 pub mod wire;
 pub mod client;
+#[cfg(target_os = "linux")]
+pub mod peer;
 #[cfg(test)]
 mod faults;
 
