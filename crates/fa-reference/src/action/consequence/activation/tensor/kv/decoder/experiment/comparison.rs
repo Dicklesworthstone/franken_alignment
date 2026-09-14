@@ -139,7 +139,7 @@ impl DecoderIntervention {
     }
 }
 
-fn contrast(left: &[f32], right: &[f32]) -> Result<(usize, f64, f64), Error> {
+pub(super) fn contrast(left: &[f32], right: &[f32]) -> Result<(usize, f64, f64), Error> {
     if left.is_empty() || left.len() != right.len() { return Err(Error::Binding); }
     let mut changed = 0;
     let mut maximum = 0.0_f64;

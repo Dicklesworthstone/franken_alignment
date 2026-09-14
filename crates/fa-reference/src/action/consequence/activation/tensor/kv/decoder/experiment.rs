@@ -4,6 +4,7 @@
 pub mod comparison;
 mod continuation;
 pub mod quantized;
+pub mod learned;
 
 use super::{DecoderBudget, DecoderCheckpoint, DecoderModel, DecoderWork};
 use super::super::experiment::{
@@ -110,7 +111,7 @@ impl fmt::Debug for DecoderExperimentStep {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("DecoderExperimentStep").field("experiment", &self.experiment)
             .field("arm", &self.arm).field("token", &self.token).field("position", &self.position)
-            .field("vocabulary", &self.logits.len()).finish_non_exhaustive()
+            .field("vocabulary", &self.logits.len()).field("work", &self.work).finish_non_exhaustive()
     }
 }
 
