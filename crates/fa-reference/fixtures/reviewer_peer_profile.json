@@ -1,0 +1,12 @@
+{
+  "version": 1,
+  "clock": "unix_milliseconds",
+  "scope": {"tenant": 1, "principal": 2, "run": 3, "branch": 4, "authority": 5},
+  "reviewer_id": 77,
+  "socket_directory": "/run/franken-alignment/reviewers",
+  "supervisor": {"uid": 1000, "gid": 1000, "pid": null},
+  "reviewer": {"uid": 1001, "gid": 1000, "pid": null},
+  "candidate_limit": 32,
+  "runtime_ms": 600000,
+  "poll_ms": 10
+}

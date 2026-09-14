@@ -1,13 +1,14 @@
 //! One explicit request through existing actor, helper, reviewer and delivery APIs.
 //! This is a synchronous executable consumer, not an alternative executor/ledger.
 use super::config::{Config, CLOCK_DOMAIN, debug};
+use super::peers::{Admission, PeerProfile};
 use fa_reference::action::{ActionState, ElapsedTick};
 use fa_reference::action::consequence::delivery::{StopRequest};
 use fa_reference::action::consequence::delivery::persistent::RecoveryReserve;
 use fa_reference::action::consequence::delivery::persistent::observed::{FileHumanPermit, FileHumanReviewer, FileOversight};
 use fa_reference::action::consequence::delivery::persistent::observed::driver::{FileDriverEvent, FileDriverPhase, FileSupervisedDriver};
 use fa_reference::action::consequence::delivery::persistent::observed::driver::evidence::FileReviewLaunch;
-use fa_reference::action::consequence::delivery::persistent::observed::reviewer::{ReviewerConnection, ReviewerPhase, ReviewerProgress};
+use fa_reference::action::consequence::delivery::persistent::observed::reviewer::{ReviewerPhase, ReviewerProgress};
 use fa_reference::action::consequence::delivery::persistent::observed::reviewer::wire::ReviewDecision;
 use fa_reference::action::consequence::delivery::persistent::requests::{FileRequestDisposition};
 use fa_reference::action::consequence::oversight::{ReviewWindow};
@@ -46,11 +47,22 @@ pub struct RunResult {
     pub cleanup_pending: usize,
 }
 
+/// Explicit compatibility path. It assumes the namespace/embedding operator
+/// already isolates the reviewer endpoint; it does not inspect peer credentials.
+pub fn run<F>(config: Config, document: &[u8], resume: bool, time: F) -> Result<RunResult, String>
+where F: FnMut() -> ElapsedTick {
+    run_with_peers(config, document, resume, None, time)
+}
+
 /// resume permits only exact retrieval/reconciliation of a PREEXISTING request.
 /// It never reads the evidence file, launches helpers, obtains a new human key,
-/// recreates an old job, or retries the original effect.
-pub fn run<F>(mut config: Config, document: &[u8], resume: bool, mut time: F) -> Result<RunResult, String>
+/// recreates an old job, or retries the original effect. A peer profile is for
+/// creation only; query-only recovery never pretends it authenticated a new peer.
+pub fn run_with_peers<F>(mut config: Config, document: &[u8], resume: bool,
+    peers: Option<&PeerProfile>, mut time: F) -> Result<RunResult, String>
 where F: FnMut() -> ElapsedTick {
+    if resume && peers.is_some() { return Err("query-only resume does not accept a reviewer peer profile".into()); }
+    if let Some(profile) = peers { profile.check_host(&config)?; }
     let command = decode_command(document).map_err(debug)?;
     let Command::Submit { request, proposal } = command else { return Err("expected an original submit document".into()); };
     let start = time();
@@ -90,7 +102,7 @@ where F: FnMut() -> ElapsedTick {
         return Ok(RunResult { response: submitted, failure: Some("original actor gateway refused submission".into()), cleanup_pending: 0 });
     }
     let work = if resume { resume_existing(&mut driver, request, &mut time) }
-        else { execute(&mut driver, &reviewer, &mut config, request, &deadline, &mut time) };
+        else { execute(&mut driver, &reviewer, &mut config, request, &deadline, peers, &mut time) };
     let failure = match work {
         Ok(()) => None,
         Err(error) => {
@@ -121,7 +133,7 @@ where F: FnMut() -> ElapsedTick {
 }
 
 fn execute<F>(driver: &mut FileSupervisedDriver, reviewer: &FileHumanReviewer, config: &mut Config,
-    request: u64, deadline: &Deadline, time: &mut F) -> Result<(), String>
+    request: u64, deadline: &Deadline, peers: Option<&PeerProfile>, time: &mut F) -> Result<(), String>
 where F: FnMut() -> ElapsedTick {
     let status = driver.supervisor().host().map_err(debug)?.request_status(request).map_err(debug)?;
     let FileRequestDisposition::Admitted { attempt, stage: ActionState::Reviewing } = status.disposition else {
@@ -150,7 +162,7 @@ where F: FnMut() -> ElapsedTick {
             _ => return Err(format!("unexpected original driver review event: {event:?}")),
         }
     }
-    let approval = human_review(driver, reviewer, config, request, deadline, time)?;
+    let approval = human_review(driver, reviewer, config, request, deadline, peers, time)?;
     let Some(approval) = approval else { cancel_unspent(driver, request)?; return Ok(()); };
     loop {
         deadline.check(time())?;
@@ -166,26 +178,33 @@ where F: FnMut() -> ElapsedTick {
 }
 
 fn human_review<F>(driver: &mut FileSupervisedDriver, reviewer: &FileHumanReviewer, config: &mut Config,
-    request: u64, deadline: &Deadline, time: &mut F) -> Result<Option<FileHumanPermit>, String>
+    request: u64, deadline: &Deadline, peers: Option<&PeerProfile>, time: &mut F) -> Result<Option<FileHumanPermit>, String>
 where F: FnMut() -> ElapsedTick {
-    let path = config.socket(request);
-    let socket = BoundSocket::bind(&path)?;
+    let path = peers.map_or_else(|| config.socket(request), |profile| profile.socket(request));
+    let mut admission = Admission::new(peers)?;
+    let socket = BoundSocket::bind(&path, peers)?;
+    if peers.is_none() { eprintln!("Reviewer peer credentials are unchecked: legacy namespace-isolated transport"); }
     eprintln!("Independent reviewer endpoint ready: {path:?}");
     let stream = loop {
         deadline.check(time())?;
         match socket.listener.accept() {
-            Ok((stream, _)) => break stream,
+            Ok((stream, _)) => match admission.admit(stream)? {
+                Some(stream) => break stream,
+                None => pause(config.timing.poll_ms),
+            },
             Err(e) if matches!(e.kind(), io::ErrorKind::WouldBlock | io::ErrorKind::Interrupted) => pause(config.timing.poll_ms),
             Err(e) => return Err(debug(e)),
         }
     };
+    // Peer acceptance precedes source capture, human-request creation and offer
+    // construction. Rejected peers cannot burn or influence the pending request.
     let expires = plus(time(), config.profile.human.max_validity_ticks)?.min(deadline.logical);
     let request = driver.request_human_approval_from_file(&mut config.source, request, expires, &mut *time)
         .result.map_err(debug)?;
     let nonce = nonce()?;
     let mut connection = {
         let host = driver.supervisor().host().map_err(debug)?;
-        ReviewerConnection::from_unix(&host, reviewer, request, stream, nonce).map_err(debug)?
+        stream.into_connection(&host, reviewer, request, nonce)?
     };
     let application = loop {
         deadline.check(time())?;
@@ -268,13 +287,17 @@ fn nonce() -> Result<[u8; 32], String> {
 
 struct BoundSocket { listener: UnixListener, path: PathBuf, device: u64, inode: u64 }
 impl BoundSocket {
-    fn bind(path: &Path) -> Result<Self, String> {
+    fn bind(path: &Path, peers: Option<&PeerProfile>) -> Result<Self, String> {
+        if let Some(profile) = peers { profile.check_directory()?; }
         // bind is exclusive: no existing path, stale socket or symlink is removed
-        // to make a new service start. The original owner protects this directory.
+        // to make a new service start. Retain identity before fallible setup so
+        // cleanup can remove only the socket this invocation actually created.
         let listener = UnixListener::bind(path).map_err(debug)?;
-        listener.set_nonblocking(true).map_err(debug)?;
         let meta = fs::symlink_metadata(path).map_err(debug)?;
-        Ok(Self { listener, path: path.to_owned(), device: meta.dev(), inode: meta.ino() })
+        let socket = Self { listener, path: path.to_owned(), device: meta.dev(), inode: meta.ino() };
+        socket.listener.set_nonblocking(true).map_err(debug)?;
+        if let Some(profile) = peers { profile.secure_socket(path)?; }
+        Ok(socket)
     }
 }
 impl Drop for BoundSocket {

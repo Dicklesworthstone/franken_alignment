@@ -1,5 +1,7 @@
 //! Explicitly synthetic helpers and reviewer choices exercise real process/socket
 //! plumbing. They are not trained-model evaluations or human-authentication tests.
+#[cfg(target_os = "linux")]
+#[path = "peer_tests.rs"] mod peer_tests;
 use super::{config::{self, Config, CLOCK_DOMAIN}, console, workflow};
 use fa_reference::action::{ElapsedTick};
 use fa_reference::action::consequence::delivery::persistent::observed::FileOversight;

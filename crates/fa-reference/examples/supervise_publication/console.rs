@@ -1,6 +1,7 @@
 //! Independent terminal reviewer. Untrusted bytes never become terminal control
 //! sequences, instructions, a default choice, or a returned approval capability.
 use super::config::{Config, CLOCK_DOMAIN, debug};
+use super::peers::PeerProfile;
 use super::workflow::clock;
 use fa_reference::action::consequence::delivery::persistent::observed::reviewer::client::{
     ReviewerClient, ReviewerExpectation, ReviewClientProgress,
@@ -11,17 +12,32 @@ use std::os::unix::net::UnixStream;
 use std::time::{Duration, Instant};
 
 pub fn review(config: &Config, request: u64) -> Result<(), String> {
-    if !io::stdin().is_terminal() || !io::stdout().is_terminal() {
-        return Err("review requires an interactive input and output terminal; no command-line default approval exists".into());
-    }
+    terminal()?;
+    eprintln!("Supervisor peer credentials are unchecked: legacy namespace-isolated transport");
     let stream = UnixStream::connect(config.socket(request)).map_err(debug)?;
     let expected = ReviewerExpectation { reviewer: config.profile.human.reviewer_id,
         scope: config.profile.delivery.scope, clock_domain: CLOCK_DOMAIN };
-    let mut client = ReviewerClient::from_unix(stream, expected).map_err(debug)?;
+    let client = ReviewerClient::from_unix(stream, expected).map_err(debug)?;
+    review_client(client, request, config.timing.runtime_ms, config.timing.poll_ms)
+}
+
+/// Uses ONLY the reviewer audience/peer profile. It never reads the supervisor's
+/// configuration, helper environment, evidence file or protected journal.
+pub fn review_peer(profile: &PeerProfile, request: u64) -> Result<(), String> {
+    terminal()?;
+    let client = profile.connect_client(request)?;
+    review_client(client, request, profile.runtime_ms, profile.poll_ms)
+}
+fn terminal() -> Result<(), String> {
+    if !io::stdin().is_terminal() || !io::stdout().is_terminal() {
+        Err("review requires an interactive input and output terminal; no command-line default approval exists".into())
+    } else { Ok(()) }
+}
+fn review_client(mut client: ReviewerClient<UnixStream>, request: u64, runtime_ms: u64, poll_ms: u64) -> Result<(), String> {
     let start = Instant::now();
     let mut presented = false;
     loop {
-        if start.elapsed() >= Duration::from_millis(config.timing.runtime_ms) {
+        if start.elapsed() >= Duration::from_millis(runtime_ms) {
             return Err(format!("reviewer transport timed out; outcome_unknown={}", client.outcome_unknown()));
         }
         let progress = match client.step() {
@@ -46,7 +62,7 @@ pub fn review(config: &Config, request: u64) -> Result<(), String> {
                     receipt.decision, receipt.revision);
                 return Ok(());
             }
-            _ => std::thread::sleep(Duration::from_millis(config.timing.poll_ms)),
+            _ => std::thread::sleep(Duration::from_millis(poll_ms)),
         }
     }
 }
