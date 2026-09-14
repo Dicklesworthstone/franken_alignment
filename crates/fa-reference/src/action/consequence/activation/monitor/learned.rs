@@ -1,6 +1,7 @@
 //! Adaptive monitoring of SOURCE-CHECKED learned KV, using the original exact
 //! probe evaluator and original XOR-refinement implementation. No fitted MSE,
 //! approximate score, missing residual or exhausted budget can certify quiet.
+pub mod model;
 use super::{MonitorOutcome, RefinementBudget, RefinementMonitor};
 use super::super::{CaptureProfile, FrameIdentity};
 use super::super::probe::{LinearProbe, ProbeIdentity, ProbeOutcome};
