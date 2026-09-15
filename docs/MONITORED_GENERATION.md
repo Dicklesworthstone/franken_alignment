@@ -6,6 +6,8 @@
 
 Construct `GenerationSpec::new(prompt, max_new_tokens, stop_tokens, SamplingStart)` and call `DecoderModel::monitored_generation(stream, evaluation_origin, spec, policy, budget)`. The owned `LearnedGeneration` starts empty. `advance(expected_position)` processes exactly one prompt token or continuation candidate. `run_to_stop()` repeatedly invokes that same method until a stop, hold, or failure. Both routes preserve the same original computation and RNG transitions; the convenience runner has no unaudited prefill shortcut.
 
+For explicit run-wide telemetry limits, use `DecoderModel::monitored_generation_with_telemetry(..., GenerationTelemetryBudget)`. The older entry point uses the bounded default aggregate rather than resetting an unbounded allowance on each token.
+
 `GenerationStatus` distinguishes `Prefilling`, `Generating`, `Finished(TokenLimit)`, `Finished(StopToken(id))`, `Held(outcome)`, and `Failed(error)`. Only active runs can advance. Repeated `run_to_stop` calls on a finished or held run do no work; a failed run continues returning its failure. Stale-position calls refuse without charging or poisoning an otherwise active run.
 
 The prompt, maximum continuation, stop IDs, sampling policy, initial RNG stream/seed, codec, complete K/V probe roster, residual retention, and all budgets are fixed at construction. There is no token override, mutable decoder/sampler accessor, unchecked-prefix adoption, imported-sampler attachment, hold-reset method, or Clone implementation on the execution owner.
@@ -20,15 +22,21 @@ Stop-token matching happens **after** an accepted continuation audit, never befo
 
 `GenerationEvent::accepted()` exposes an original `DecoderStep` only after publication. `sample()` exposes its original `SampledToken` only for an accepted continuation. A held event still exposes its numerical audit and compression report, but not the underlying forced-token decoder event, rejected candidate ID, random word, or pending logits. Custom Debug implementations preserve that distinction. This is API publication discipline, **not secrecy**: deterministic replay state and retained numerical evidence may allow an observer to infer the candidate independently.
 
-## Admission and accounting
+## Numerical and telemetry accounting
 
 `estimate_monitored_generation` validates token IDs, sampler vocabulary/stream, and the full declared context, then prices all prompt tokens plus the maximum continuation and every full-vocabulary sampling scan. `monitored_generation` requires that complete worst-case estimate to fit `GenerationBudget`, even when early EOS seems likely. It also checks the largest single-token decoder cost against the existing frozen per-token inference limit before prefill begins. The total token inventory is bounded by `MAX_GENERATION_TOKENS`; samples are preallocated accordingly.
 
-`GenerationWork` distinguishes monotonically reserved attempted work from `accepted_decoder` work. A failed or held continuation retains its decoder reservation, sampling attempt, and vocabulary-scan reservation, even though its random draw and numerical publication are not committed. Decoder cost is reserved before sampling, so a sampling failure can reserve work that was not actually executed. These are explicit conservative loop-term reservations, not timing, physical resource consumption, or conserved authority. Early stopping charges only attempts that entered the controller, not all unused worst-case positions.
+`GenerationWork` distinguishes monotonically reserved attempted decoder/sampling work from `accepted_decoder` work. A failed or held continuation retains its decoder reservation, sampling attempt, and vocabulary-scan reservation, even though its random draw and numerical publication are not committed. Decoder cost is reserved before sampling, so a sampling failure can reserve work that was not actually executed. These are explicit conservative loop-term reservations, not timing, physical resource consumption, or conserved authority.
 
-Learned compression, source-checking, and monitoring retain their existing fixed **per-token** caps. The new generation budget does not pretend to be an aggregate memory, monitoring-byte, or wall-clock budget. The existing guard audits only one newly computed absolute position at a time; it does not repeatedly snapshot or recompress the accepted prefix. Original attention still reads its autoregressive history. `accepted_cache_image` is an explicit diagnostic export, not part of the generation hot path.
+`GenerationTelemetryBudget` separately conserves learned-compression source values, encoded representation bytes, compression work units, source-check values/bytes/reconstruction products, and monitor bytes/coordinates/products/materialized values/refinements across the entire run. The maximum defaults are each the corresponding bounded per-token universe multiplied by the maximum 4,096-token generation horizon. A custom aggregate may only be smaller.
 
-The owner retains bounded accepted sample metadata and its latest event. Earlier event handles retained by callers keep their own immutable audit evidence alive. Generic allocator aborts are not recoverable Result-level transactions. A caught unexpected unwind leaves the outer execution owner failed, rather than permitting a hidden retry.
+Before each token, the generation owner converts its remaining aggregate into a `LearnedDecoderAllowance`; the lower-level decoder intersects that allowance again with its frozen per-token policy. No later token can reset a refinement, source-check or compression allowance already consumed by an earlier token. A monitor that runs out of remaining coordinates/refinement budget returns its existing `BudgetExhausted` hold. A compression or source-check operation that cannot fit its remaining cap fails and latches the generation without publishing the candidate.
+
+`GenerationTelemetryWork` counts only telemetry operations that returned complete source-checked evidence: actual compression/source-check reports and actual monitor work. If preparation errors after doing some bounded internal work, no trustworthy partial report exists; the generation permanently fails, so the unseen remainder cannot be reused by that owner. This metric is therefore reported completed telemetry, not an assertion of exact physical CPU work on failed operations.
+
+Early stopping spends only telemetry for attempts that actually entered the controller. Repeated polling of terminal states spends nothing. The incremental path still audits only one newly computed absolute position at a time and never repeatedly snapshots or recompresses the accepted prefix. Original autoregressive attention still reads its history and retains its increasing inference costs. `accepted_cache_image` remains an explicit diagnostic export, not part of the hot path.
+
+The owner retains bounded accepted sample metadata and its latest event. Earlier event handles retained by callers keep their own immutable audit evidence alive. Generic allocator aborts are not recoverable Result-level transactions. A caught unexpected unwind leaves the outer execution owner failed rather than permitting a hidden retry.
 
 ## Integration sketch
 
@@ -40,12 +48,14 @@ The original `SampledSession` remains available for ordinary reference inference
 
 This connects actual sampled token publication to numerical learned-probe audits. It does not qualify the probes' empirical ability to detect harmful behavior, authenticate a serving host, classify output text, sandbox external effects, or authorize a tool call. The accepted input token's internal-state audit must not be confused with a proof that all next-token choices are safe. Existing production gates and Beads remain unchanged.
 
-Nine integration test functions cover bitwise parity with ordinary sampled execution; one-position audit coverage; segmentation and terminal idempotence; prompt rejection; compression-erased sampled alarms with RNG/cache rollback; audited EOS and limit precedence; unresolved/threshold/budget holds that cannot masquerade as EOS; complete-run/per-token admission; invalid tokens, context, sampling and training-split bindings; and latched compression/source-check failures with nonrefunded reservations. Two compile-fail examples cover mutable-guard bypass and event-to-permit conversion.
+The original nine integration-test functions cover bitwise parity with ordinary sampled execution; one-position audit coverage; segmentation and terminal idempotence; prompt rejection; compression-erased sampled alarms with RNG/cache rollback; audited EOS and limit precedence; unresolved/threshold/budget holds that cannot masquerade as EOS; complete-run/per-token admission; invalid tokens, context, sampling and training-split bindings; and latched compression/source-check failures with nonrefunded reservations.
 
-The required remote invocation was attempted:
+Five additional telemetry tests cover one refinement shared across positions, a probe-coordinate allowance that cannot reset, source-check bytes that cannot be reused, exact accumulation from returned reports, and aggregate-bound/terminal-polling behavior. Lower-level allowance plumbing also keeps ordinary one-token callers unchanged. Two compile-fail examples continue to cover mutable-guard bypass and event-to-permit conversion.
+
+The required remote invocation for these changes is:
 
 ```text
-RCH_REQUIRE_REMOTE=1 rch exec -- cargo test --locked -p fa-reference --test learned_generation
+RCH_REQUIRE_REMOTE=1 rch exec -- cargo test --locked -p fa-reference --test learned_generation --test learned_generation_telemetry
 ```
 
-It failed before compilation because `rch` is absent (exit 127). Rust compilation, tests, doctests, formatting, and Clippy remain unexecuted. The original sampler source was reconstructed and verified against its exact Git blob before adding the single module declaration; uploaded source/test blobs were also checked against local Git object hashes. Those integrity checks are not a Rust test pass.
+RCH is not available in this tool environment, so the new Rust has not been compiled or executed here. Tests, doctests, formatting, Clippy, and revision-bound qualification remain unverified. No Beads item or production gate is closed by this source construction.
