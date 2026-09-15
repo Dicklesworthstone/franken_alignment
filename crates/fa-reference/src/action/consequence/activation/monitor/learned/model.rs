@@ -56,6 +56,22 @@ impl LearnedModelMonitor {
     /// There is no caller-supplied subset or unknown-layer skip. Empty evidence
     /// is incomplete, not a vacuous NoAlarm. The fitted codec is never retuned.
     pub fn analyze(&self, source: &CheckedLearnedKv) -> Result<LearnedModelReport, Error> {
+        self.analyze_with_budget(source, self.budget.monitoring)
+    }
+
+    /// A higher-level stream owner may conserve one allowance across many
+    /// independently captured rows. It can only tighten this monitor's frozen
+    /// aggregate; rows, taps and every per-row probe budget remain unchanged.
+    pub fn analyze_with_budget(&self, source: &CheckedLearnedKv, remaining: LearnedMonitorBudget)
+        -> Result<LearnedModelReport, Error>
+    {
+        remaining.check()?;
+        self.analyze_inner(source, self.budget.monitoring.intersect(remaining))
+    }
+
+    fn analyze_inner(&self, source: &CheckedLearnedKv, budget: LearnedMonitorBudget)
+        -> Result<LearnedModelReport, Error>
+    {
         if source.image().codec().profile() != self.profile() { return Err(Error::Binding); }
         let first = source.descriptor().layers().values().next().ok_or(Error::Incomplete)?;
         let positions = first.token_count;
@@ -73,7 +89,7 @@ impl LearnedModelMonitor {
             first_position: first.first_position, end_position, planned_rows, quiet_rows: 0,
             rows: Vec::new(), outcome: MonitorOutcome::Unresolved, work: LearnedMonitorWork::default(), blocked_row: None };
         let base = source.report().base_encoded_bytes;
-        if planned_rows > self.budget.rows || base > self.budget.monitoring.encoded_bytes {
+        if planned_rows > self.budget.rows || base > budget.encoded_bytes {
             report.outcome = MonitorOutcome::BudgetExhausted; return Ok(report);
         }
         report.rows.try_reserve_exact(planned_rows).map_err(|_| Error::Limit)?;
@@ -81,7 +97,7 @@ impl LearnedModelMonitor {
         for position in first.first_position..end_position {
             for (tap, monitor) in &self.taps {
                 let row = KvRow { layer: tap.layer, side: tap.side, position };
-                let mut remaining = self.budget.monitoring.remaining(report.work)?;
+                let mut remaining = budget.remaining(report.work)?;
                 // Each row still obeys its original base-inclusive fixed budget.
                 // The aggregate has already paid that same immutable base, so it
                 // can be credited here, but only the private caller computes it.
@@ -92,7 +108,7 @@ impl LearnedModelMonitor {
                     added.encoded_bytes = added.encoded_bytes.checked_sub(base).ok_or(Error::Binding)?;
                 }
                 let next = report.work.add(added)?;
-                if !next.fits(self.budget.monitoring) { return Err(Error::Binding); }
+                if !next.fits(budget) { return Err(Error::Binding); }
                 let result_outcome = result.outcome();
                 report.work = next;
                 report.rows.push(result);

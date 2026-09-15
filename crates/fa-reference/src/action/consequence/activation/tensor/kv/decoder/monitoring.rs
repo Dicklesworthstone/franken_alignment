@@ -5,11 +5,11 @@
 use super::{BufferIdentity, ComputedLayers, DecoderBudget, DecoderModel, DecoderSession,
     DecoderStep, HostTensor, KvAppend, ModelKvBudget, ModelKvCapture, ModelKvImage, MAX_DECODER_PRODUCTS};
 use super::super::model::MAX_MODEL_KV_VALUES;
-use super::super::model::learned::{CompressionReport, GroupKey, LearnedKvCodec,
+use super::super::model::learned::{CompressionBudget, CompressionReport, GroupKey, LearnedKvCodec,
     MAX_COMPRESSION_WORK, MAX_LEARNED_IMAGE_BYTES};
-use crate::action::consequence::activation::monitor::{MonitorOutcome, learned::model::{
-    LearnedAuditPreparationBudget, LearnedModelMonitor, LearnedModelReport}};
-use crate::action::consequence::activation::probe::learned::{CheckedLearnedKv, KvGroup, KvRow,
+use crate::action::consequence::activation::monitor::{MonitorOutcome, learned::{LearnedMonitorBudget,
+    model::{LearnedAuditPreparationBudget, LearnedModelMonitor, LearnedModelReport}}};
+use crate::action::consequence::activation::probe::learned::{CheckedKvBudget, CheckedLearnedKv, KvGroup, KvRow,
     ResidualRetention, MAX_CHECKED_KV_BYTES, MAX_CHECKED_KV_PRODUCTS};
 use crate::Error;
 use std::collections::{BTreeMap, BTreeSet};
@@ -29,6 +29,15 @@ impl LearnedStreamRetention {
             }).collect()),
         }
     }
+}
+
+/// Per-attempt allowance supplied by a higher-level stream owner. Every field is
+/// intersected with the policy's original cap; it can only reduce authority to
+/// spend observation work. No caller can enlarge compression or monitoring.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct LearnedDecoderAllowance {
+    pub preparation: LearnedAuditPreparationBudget,
+    pub monitoring: LearnedMonitorBudget,
 }
 
 /// Frozen codec, complete layer/K/V probe inventory and per-token admission caps.
@@ -62,6 +71,34 @@ impl LearnedDecoderPolicy {
     pub fn monitor(&self) -> &LearnedModelMonitor { &self.monitor }
     pub fn preparation(&self) -> LearnedAuditPreparationBudget { self.preparation }
     pub fn inference(&self) -> DecoderBudget { self.inference }
+    pub fn allowance(&self) -> LearnedDecoderAllowance {
+        LearnedDecoderAllowance { preparation: self.preparation, monitoring: self.monitor.budget().monitoring }
+    }
+
+    fn restrict(&self, allowance: LearnedDecoderAllowance) -> LearnedDecoderAllowance {
+        let fixed = self.allowance();
+        LearnedDecoderAllowance {
+            preparation: LearnedAuditPreparationBudget {
+                compression: CompressionBudget {
+                    source_values: fixed.preparation.compression.source_values.min(allowance.preparation.compression.source_values),
+                    encoded_bytes: fixed.preparation.compression.encoded_bytes.min(allowance.preparation.compression.encoded_bytes),
+                    work_units: fixed.preparation.compression.work_units.min(allowance.preparation.compression.work_units),
+                },
+                source_check: CheckedKvBudget {
+                    source_values: fixed.preparation.source_check.source_values.min(allowance.preparation.source_check.source_values),
+                    encoded_bytes: fixed.preparation.source_check.encoded_bytes.min(allowance.preparation.source_check.encoded_bytes),
+                    reconstruction_products: fixed.preparation.source_check.reconstruction_products.min(allowance.preparation.source_check.reconstruction_products),
+                },
+            },
+            monitoring: LearnedMonitorBudget {
+                encoded_bytes: fixed.monitoring.encoded_bytes.min(allowance.monitoring.encoded_bytes),
+                probe_coordinates: fixed.monitoring.probe_coordinates.min(allowance.monitoring.probe_coordinates),
+                reconstruction_products: fixed.monitoring.reconstruction_products.min(allowance.monitoring.reconstruction_products),
+                materialized_values: fixed.monitoring.materialized_values.min(allowance.monitoring.materialized_values),
+                refinements: fixed.monitoring.refinements.min(allowance.monitoring.refinements),
+            },
+        }
+    }
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -148,13 +185,20 @@ impl LearnedDecoderSession {
     pub fn last_event(&self) -> Option<&LearnedDecoderEvent> { self.last_event.as_deref() }
 
     pub fn advance(&mut self, expected_position: u64, token: u32) -> Result<Rc<LearnedDecoderEvent>, Error> {
+        self.advance_with_allowance(expected_position, token, self.policy.allowance())
+    }
+
+    /// Higher-level stream owners can conserve one budget across many tokens by
+    /// supplying the remaining allowance here. Stale/invalid calls remain free;
+    /// once real computation begins, any failure still latches this owner.
+    pub fn advance_with_allowance(&mut self, expected_position: u64, token: u32,
+        allowance: LearnedDecoderAllowance) -> Result<Rc<LearnedDecoderEvent>, Error>
+    {
         if self.status != LearnedDecoderStatus::Active { return Err(Error::WrongState); }
         if expected_position != self.position() { return Err(Error::Stale); }
         if token as usize >= self.session.model.profile().shape().vocabulary { return Err(Error::InvalidInput); }
-        // Actual execution/preparation failures latch too. Callers cannot skip
-        // the failed token, retry with a larger allowance or relabel old logits.
         self.status = LearnedDecoderStatus::Failed(Error::Incomplete);
-        match self.advance_inner(token) {
+        match self.advance_inner(token, self.policy.restrict(allowance)) {
             Ok(event) => {
                 self.status = if event.step.is_some() { LearnedDecoderStatus::Active }
                     else { LearnedDecoderStatus::Held(event.audit.outcome()) };
@@ -166,7 +210,7 @@ impl LearnedDecoderSession {
         }
     }
 
-    fn advance_inner(&mut self, token: u32) -> Result<LearnedDecoderEvent, Error> {
+    fn advance_inner(&mut self, token: u32, allowance: LearnedDecoderAllowance) -> Result<LearnedDecoderEvent, Error> {
         let position = self.position();
         let work = self.session.model.estimate(self.session.tokens.len(), 1)?;
         work.check(self.policy.inference)?;
@@ -174,10 +218,10 @@ impl LearnedDecoderSession {
         let computed = self.session.model.forward_token(&self.session.cache, self.session.stream, position, token, true)?;
         let source = self.session.model.staged_image(self.session.stream, position, &computed.staged)?;
         let (image, compression) = self.policy.codec.evaluate_held_out(self.evaluation_origin, &source,
-            self.policy.preparation.compression)?;
+            allowance.preparation.compression)?;
         let checked = CheckedLearnedKv::new(image, &source, self.policy.retention.at(position),
-            self.policy.preparation.source_check)?;
-        let audit = self.policy.monitor.analyze(&checked)?;
+            allowance.preparation.source_check)?;
+        let audit = self.policy.monitor.analyze_with_budget(&checked, allowance.monitoring)?;
         // These are the same original computed bytes, never reconstructed KV.
         // The original all-layer publication transaction remains the only commit.
         let step = if audit.complete_quiet() {
