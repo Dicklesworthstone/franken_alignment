@@ -7,12 +7,14 @@
 #![cfg(unix)]
 
 use super::{DispatchEnvelope, EndpointReceipt, EndpointStatus, FenceAcknowledgment, FenceRequest,
-    PublicationEndpoint, StatusQuery};
+    FileEndpointRecovery, PublicationEndpoint, StatusQuery};
+use super::filesystem::FilePublicationError;
 use crate::action::{ElapsedTick, Purpose, ResolvedTarget, Scope};
 use crate::perimeter::{BypassDisposition, Mediation, PerimeterScope, ThreatClass, TrustDomain};
 use crate::perimeter_inventory::{ActorCredentialDisposition, EffectKind, LoadedPerimeterInventory};
 use crate::Error;
 use std::fmt;
+use std::rc::Rc;
 
 pub const DISPOSABLE_FILE_PROFILE: &str = "fa.disposable-file-publication";
 pub const MAX_BROKER_CREDENTIAL_BYTES: usize = 4_096;
@@ -86,6 +88,7 @@ pub struct CredentialBroker {
     scope: Scope,
     credential: BrokerCredential,
     adapter: DisposableFileAdapter,
+    endpoint_binding: Rc<()>,
     credential_exercises: u64,
 }
 impl fmt::Debug for CredentialBroker {
@@ -102,30 +105,13 @@ impl CredentialBroker {
         inventory: LoadedPerimeterInventory, binding: BrokerRouteBinding, scope: Scope,
         credential: BrokerCredential, endpoint: PublicationEndpoint,
     ) -> Result<Self, Error> {
-        if scope.purpose != Purpose::Effect { return Err(Error::Binding); }
-        if [scope.tenant, scope.principal, scope.run, scope.branch, scope.authority].contains(&0) {
-            return Err(Error::InvalidInput);
-        }
-        if endpoint.file_storage_status().is_none() { return Err(Error::Binding); }
-        let perimeter_scope = PerimeterScope {
-            tenant: scope.tenant, principal: scope.principal, purpose: PERIMETER_EFFECT_PURPOSE,
-        };
-        let route = inventory.route_for(perimeter_scope, &binding.family, &binding.route)?;
-        if route.record().mediation != Mediation::BrokeredEffects
-            || route.record().bypass != BypassDisposition::Blocked
-            || route.record().threat != Some(ThreatClass::DirectCredentialOrEgress)
-            || route.metadata().effect() != EffectKind::FileWrite
-            || !matches!(route.metadata().actor_credential(), ActorCredentialDisposition::BrokerMediated)
-            || !route.metadata().trust_path().contains(&TrustDomain::Enforcement)
-            || route.metadata().profile().id() != DISPOSABLE_FILE_PROFILE
-            || route.metadata().profile().generation() != endpoint.target().contract_version
-        {
-            return Err(Error::Binding);
-        }
+        Self::validate_attachment(&inventory, &binding, scope, &endpoint)?;
         let expected_secret = credential.secret.clone();
+        let endpoint_binding = Rc::clone(&endpoint.binding);
         Ok(Self {
             inventory, binding, scope, credential,
-            adapter: DisposableFileAdapter { endpoint, expected_secret }, credential_exercises: 0,
+            adapter: DisposableFileAdapter { endpoint, expected_secret }, endpoint_binding,
+            credential_exercises: 0,
         })
     }
 
@@ -176,8 +162,6 @@ impl CredentialBroker {
         {
             return Err(Error::Binding);
         }
-        // Recheck immutable declared mediation rather than turning attachment into
-        // a new authority bit. The inventory itself remains an operator assumption.
         let route = self.inventory.route_for(PerimeterScope {
             tenant: self.scope.tenant, principal: self.scope.principal,
             purpose: PERIMETER_EFFECT_PURPOSE,
@@ -187,5 +171,132 @@ impl CredentialBroker {
             || !matches!(route.metadata().actor_credential(), ActorCredentialDisposition::BrokerMediated)
         { return Err(Error::Binding); }
         Ok(())
+    }
+
+    fn validate_attachment(inventory: &LoadedPerimeterInventory, binding: &BrokerRouteBinding,
+        scope: Scope, endpoint: &PublicationEndpoint) -> Result<(), Error>
+    {
+        if scope.purpose != Purpose::Effect { return Err(Error::Binding); }
+        if [scope.tenant, scope.principal, scope.run, scope.branch, scope.authority].contains(&0) {
+            return Err(Error::InvalidInput);
+        }
+        if endpoint.file_storage_status().is_none() { return Err(Error::Binding); }
+        let perimeter_scope = PerimeterScope {
+            tenant: scope.tenant, principal: scope.principal, purpose: PERIMETER_EFFECT_PURPOSE,
+        };
+        let route = inventory.route_for(perimeter_scope, &binding.family, &binding.route)?;
+        if route.record().mediation != Mediation::BrokeredEffects
+            || route.record().bypass != BypassDisposition::Blocked
+            || route.record().threat != Some(ThreatClass::DirectCredentialOrEgress)
+            || route.metadata().effect() != EffectKind::FileWrite
+            || !matches!(route.metadata().actor_credential(), ActorCredentialDisposition::BrokerMediated)
+            || !route.metadata().trust_path().contains(&TrustDomain::Enforcement)
+            || route.metadata().profile().id() != DISPOSABLE_FILE_PROFILE
+            || route.metadata().profile().generation() != endpoint.target().contract_version
+        {
+            return Err(Error::Binding);
+        }
+        Ok(())
+    }
+}
+
+/// Owns the original endpoint recovery key together with the broker role. The raw
+/// key and endpoint are never returned to the actor-facing side.
+pub struct RecoverableCredentialBroker {
+    broker: CredentialBroker,
+    recovery: FileEndpointRecovery,
+}
+impl fmt::Debug for RecoverableCredentialBroker {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("RecoverableCredentialBroker").field("broker", &self.broker).finish_non_exhaustive()
+    }
+}
+impl RecoverableCredentialBroker {
+    pub fn new(
+        inventory: LoadedPerimeterInventory, binding: BrokerRouteBinding, scope: Scope,
+        credential: BrokerCredential, endpoint: PublicationEndpoint, recovery: FileEndpointRecovery,
+    ) -> Result<Self, Error> {
+        Ok(Self { broker: CredentialBroker::new(inventory, binding, scope, credential, endpoint)?, recovery })
+    }
+    pub fn broker(&self) -> &CredentialBroker { &self.broker }
+    pub fn broker_mut(&mut self) -> &mut CredentialBroker { &mut self.broker }
+
+    /// Release the endpoint lock while retaining the original credential,
+    /// perimeter binding, process-local endpoint identity and recovery key.
+    pub fn into_offline(self) -> OfflineCredentialBroker {
+        let Self { broker, recovery } = self;
+        let CredentialBroker { inventory, binding, scope, credential, adapter,
+            endpoint_binding, credential_exercises } = broker;
+        let DisposableFileAdapter { endpoint, expected_secret } = adapter;
+        drop(endpoint);
+        OfflineCredentialBroker { inventory, binding, scope, credential, expected_secret,
+            endpoint_binding, credential_exercises, recovery }
+    }
+}
+
+#[derive(Debug)]
+pub enum BrokerReconnectError {
+    Endpoint(FilePublicationError),
+    Contract(Error),
+}
+impl From<FilePublicationError> for BrokerReconnectError {
+    fn from(error: FilePublicationError) -> Self { Self::Endpoint(error) }
+}
+impl From<Error> for BrokerReconnectError {
+    fn from(error: Error) -> Self { Self::Contract(error) }
+}
+
+pub struct BrokerReconnectFailure {
+    pub error: BrokerReconnectError,
+    pub offline: OfflineCredentialBroker,
+}
+impl fmt::Debug for BrokerReconnectFailure {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("BrokerReconnectFailure").field("error", &self.error).finish_non_exhaustive()
+    }
+}
+
+/// Broker state while no endpoint lock is held. It has no deliver/status/seal API
+/// and therefore cannot turn retained credential bytes into an effect by itself.
+pub struct OfflineCredentialBroker {
+    inventory: LoadedPerimeterInventory,
+    binding: BrokerRouteBinding,
+    scope: Scope,
+    credential: BrokerCredential,
+    expected_secret: Vec<u8>,
+    endpoint_binding: Rc<()>,
+    credential_exercises: u64,
+    recovery: FileEndpointRecovery,
+}
+impl fmt::Debug for OfflineCredentialBroker {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("OfflineCredentialBroker").field("scope", &self.scope)
+            .field("binding", &self.binding).field("credential_exercises", &self.credential_exercises)
+            .finish_non_exhaustive()
+    }
+}
+impl OfflineCredentialBroker {
+    /// Reopen only the endpoint paired with this retained recovery key. The
+    /// reopened endpoint must retain the same process-local binding and route
+    /// contract. Current time must still be observed before status or delivery.
+    pub fn reopen(self) -> Result<RecoverableCredentialBroker, BrokerReconnectFailure> {
+        let endpoint = match self.recovery.reopen() {
+            Ok(endpoint) => endpoint,
+            Err(error) => return Err(BrokerReconnectFailure { error: error.into(), offline: self }),
+        };
+        if !Rc::ptr_eq(&self.endpoint_binding, &endpoint.binding) {
+            drop(endpoint);
+            return Err(BrokerReconnectFailure { error: BrokerReconnectError::Contract(Error::Binding), offline: self });
+        }
+        if let Err(error) = CredentialBroker::validate_attachment(&self.inventory, &self.binding, self.scope, &endpoint) {
+            drop(endpoint);
+            return Err(BrokerReconnectFailure { error: error.into(), offline: self });
+        }
+        let OfflineCredentialBroker { inventory, binding, scope, credential, expected_secret,
+            endpoint_binding, credential_exercises, recovery } = self;
+        let broker = CredentialBroker { inventory, binding, scope, credential,
+            adapter: DisposableFileAdapter { endpoint, expected_secret }, endpoint_binding,
+            credential_exercises };
+        Ok(RecoverableCredentialBroker { broker, recovery })
     }
 }
