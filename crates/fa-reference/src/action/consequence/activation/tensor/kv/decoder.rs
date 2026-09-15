@@ -9,6 +9,7 @@ mod checkpoint;
 pub mod safetensors;
 pub mod sampling;
 pub mod experiment;
+pub mod monitoring;
 pub use checkpoint::{DecoderCheckpoint, DecoderRestoreBudget, DecoderRestoreReceipt};
 pub use weights::{DecoderIdentity, DecoderLayerWeights, DecoderModel, DecoderProfile, DecoderShape,
     MAX_DECODER_HIDDEN, MAX_DECODER_INTERMEDIATE, MAX_DECODER_PARAMETERS, MAX_DECODER_VOCABULARY};
@@ -197,9 +198,17 @@ impl DecoderSession {
         let work = self.model.estimate(self.tokens.len(), 1)?;
         work.check(budget)?;
         let next_work = self.work.add(work)?;
+        let computed = self.model.forward_token(&self.cache, self.stream, self.position(), token, true)?;
+        self.publish_computed(token, work, next_work, computed)
+    }
+
+    // Shared by ordinary execution and learned monitoring. Pending data has no
+    // public constructor; both callers use the same original forward_token.
+    fn publish_computed(&mut self, token: u32, work: DecoderWork, next_work: DecoderWork,
+        computed: ComputedToken) -> Result<DecoderStep, Error>
+    {
         let position = self.position();
         let sequence = position.checked_add(1).ok_or(Error::Overflow)?;
-        let computed = self.model.forward_token(&self.cache, self.stream, position, token, true)?;
         let ComputedToken { logits, observations, staged } = computed;
         let data = &self.model.data;
         let step = DecoderStep { token, position, logits: Rc::clone(&logits), layers: observations, work };
