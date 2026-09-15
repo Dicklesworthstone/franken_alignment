@@ -6,6 +6,7 @@ mod broker;
 pub mod actor;
 pub mod actor_wire;
 pub mod evidence_source;
+pub mod sidecar;
 #[cfg(unix)]
 pub mod actor_transport;
 #[cfg(target_os = "linux")]
