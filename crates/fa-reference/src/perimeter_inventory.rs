@@ -238,6 +238,33 @@ impl LoadedPerimeterInventory {
         Ok(LoadedRoute { record, metadata })
     }
 
+    /// Execution-only resolution for the v1 family-wide credential model. A
+    /// brokered route is usable only when exactly one broker credential is
+    /// declared in that family; multiple names are valid inventory data but are
+    /// ambiguous effect authority and therefore refuse here. Future schemas may
+    /// bind a route to a specific credential explicitly rather than guessing.
+    pub fn broker_credential_for_route(
+        &self,
+        scope: PerimeterScope,
+        family: &str,
+        route: &str,
+    ) -> Result<&str, Error> {
+        let loaded = self.route_for(scope, family, route)?;
+        if loaded.record().mediation != Mediation::BrokeredEffects
+            || !matches!(loaded.metadata().actor_credential(), ActorCredentialDisposition::BrokerMediated)
+        {
+            return Err(Error::Binding);
+        }
+        let family_record = self.inventory.records().iter()
+            .find(|record| record.scope == scope && record.family == family)
+            .ok_or(Error::Missing)?;
+        let mut brokers = family_record.credentials.iter()
+            .filter(|credential| credential.holder == CredentialHolder::Broker);
+        let credential = brokers.next().ok_or(Error::Incomplete)?;
+        if brokers.next().is_some() { return Err(Error::Binding); }
+        Ok(&credential.credential)
+    }
+
     /// Count declared families without exposing a metadata-free lookup path.
     #[must_use]
     pub fn family_count(&self) -> usize {
@@ -695,36 +722,33 @@ mod tests {
         .to_vec()
     }
 
+    fn scope() -> PerimeterScope {
+        PerimeterScope { tenant: 1, principal: 2, purpose: 3 }
+    }
+
     #[test]
     fn loads_complete_metadata_with_exact_classification_lookup() {
         let loaded = LoadedPerimeterInventory::from_json_bytes(&valid_json()).unwrap();
-        let route = loaded
-            .route_for(
-                PerimeterScope {
-                    tenant: 1,
-                    principal: 2,
-                    purpose: 3,
-                },
-                "egress",
-                "adapter:disposable",
-            )
-            .unwrap();
+        let route = loaded.route_for(scope(), "egress", "adapter:disposable").unwrap();
         assert_eq!(route.record().mediation, Mediation::BrokeredEffects);
-        assert_eq!(
-            route.record().threat,
-            Some(ThreatClass::DirectCredentialOrEgress)
-        );
+        assert_eq!(route.record().threat, Some(ThreatClass::DirectCredentialOrEgress));
         assert_eq!(route.metadata().effect(), EffectKind::NetworkRequest);
         assert_eq!(route.metadata().profile().id(), "reference-v1");
         assert_eq!(route.metadata().profile().generation(), 1);
-        assert_eq!(
-            route.metadata().trust_path(),
-            &[TrustDomain::Actor, TrustDomain::Enforcement]
+        assert_eq!(route.metadata().trust_path(), &[TrustDomain::Actor, TrustDomain::Enforcement]);
+        assert!(matches!(route.metadata().actor_credential(), ActorCredentialDisposition::BrokerMediated));
+        assert_eq!(loaded.broker_credential_for_route(scope(), "egress", "adapter:disposable").unwrap(), "broker-token");
+    }
+
+    #[test]
+    fn multiple_family_broker_credentials_remain_inventory_data_but_refuse_effect_resolution() {
+        let ambiguous = String::from_utf8(valid_json()).unwrap().replace(
+            "{\"credential\":\"broker-token\",\"holder\":\"broker\"}",
+            "{\"credential\":\"broker-token\",\"holder\":\"broker\"},{\"credential\":\"backup-token\",\"holder\":\"broker\"}",
         );
-        assert!(matches!(
-            route.metadata().actor_credential(),
-            ActorCredentialDisposition::BrokerMediated
-        ));
+        let loaded = LoadedPerimeterInventory::from_json_bytes(ambiguous.as_bytes()).unwrap();
+        assert!(loaded.route_for(scope(), "egress", "adapter:disposable").is_ok());
+        assert_eq!(loaded.broker_credential_for_route(scope(), "egress", "adapter:disposable"), Err(Error::Binding));
     }
 
     #[test]

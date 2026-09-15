@@ -263,8 +263,10 @@ impl CredentialBroker {
         if supplied.adapter != expected.adapter || supplied.object != expected.object
             || supplied.contract_version != expected.contract_version || supplied.generation != expected.generation
         { return Err(Error::Binding); }
-        let route = self.inventory.route_for(PerimeterScope { tenant: self.scope.tenant,
-            principal: self.scope.principal, purpose: PERIMETER_EFFECT_PURPOSE }, &self.binding.family, &self.binding.route)?;
+        let perimeter_scope = PerimeterScope { tenant: self.scope.tenant,
+            principal: self.scope.principal, purpose: PERIMETER_EFFECT_PURPOSE };
+        let route = self.inventory.route_for(perimeter_scope, &self.binding.family, &self.binding.route)?;
+        self.inventory.broker_credential_for_route(perimeter_scope, &self.binding.family, &self.binding.route)?;
         if route.record().mediation != Mediation::BrokeredEffects || route.record().bypass != BypassDisposition::Blocked
             || !matches!(route.metadata().actor_credential(), ActorCredentialDisposition::BrokerMediated)
         { return Err(Error::Binding); }
@@ -277,8 +279,13 @@ impl CredentialBroker {
         if scope.purpose != Purpose::Effect { return Err(Error::Binding); }
         if [scope.tenant, scope.principal, scope.run, scope.branch, scope.authority].contains(&0) { return Err(Error::InvalidInput); }
         if endpoint.file_storage_status().is_none() { return Err(Error::Binding); }
-        let route = inventory.route_for(PerimeterScope { tenant: scope.tenant, principal: scope.principal,
-            purpose: PERIMETER_EFFECT_PURPOSE }, &binding.family, &binding.route)?;
+        let perimeter_scope = PerimeterScope { tenant: scope.tenant, principal: scope.principal,
+            purpose: PERIMETER_EFFECT_PURPOSE };
+        let route = inventory.route_for(perimeter_scope, &binding.family, &binding.route)?;
+        // V1 declares credentials at family scope. Refuse concrete effect
+        // attachment unless that declaration resolves to exactly one broker
+        // credential rather than guessing among multiple provider secrets.
+        inventory.broker_credential_for_route(perimeter_scope, &binding.family, &binding.route)?;
         if route.record().mediation != Mediation::BrokeredEffects || route.record().bypass != BypassDisposition::Blocked
             || route.record().threat != Some(ThreatClass::DirectCredentialOrEgress)
             || route.metadata().effect() != EffectKind::FileWrite
@@ -411,6 +418,31 @@ mod tests {
         assert_eq!(CredentialBroker::new(inventory(), binding(), scope(),
             BrokerCredential::new(b"broker".to_vec()).unwrap(), ProviderCredential::new(b"provider".to_vec()).unwrap(),
             endpoint).unwrap_err(), Error::Binding);
+    }
+
+    #[test]
+    fn ambiguous_family_credentials_refuse_concrete_broker_attachment() {
+        let root = Temp::new();
+        let (mut endpoint, _recovery) = PublicationEndpoint::create_file_publication(&root.0, target(), b"old".to_vec(), 200, 8,
+            super::super::FilePublicationLimits { mutations: 128, bytes: 1_048_576 }).unwrap();
+        endpoint.attach(scope()).unwrap();
+        let ambiguous = String::from_utf8(inventory_json()).unwrap().replace(
+            "{\"credential\":\"token\",\"holder\":\"broker\"}",
+            "{\"credential\":\"token\",\"holder\":\"broker\"},{\"credential\":\"other\",\"holder\":\"broker\"}",
+        );
+        let inventory = LoadedPerimeterInventory::from_json_bytes(ambiguous.as_bytes()).unwrap();
+        assert_eq!(CredentialBroker::new(inventory, binding(), scope(),
+            BrokerCredential::new(b"one".to_vec()).unwrap(), ProviderCredential::new(b"one".to_vec()).unwrap(),
+            endpoint).unwrap_err(), Error::Binding);
+    }
+
+    fn inventory_json() -> Vec<u8> {
+        format!(r#"{{"version":1,"families":[{{"scope":{{"tenant":1,"principal":2,"purpose":1}},
+        "family":"publication","trust_domains":["actor","observation_and_analysis","enforcement","governance_and_investigation"],
+        "credentials":[{{"credential":"token","holder":"broker"}}],"routes":[{{"route":"adapter:disposable-file","effect":"file_write",
+        "profile":{{"id":"{}","generation":1}},"trust_path":["actor","enforcement"],"threat":"direct_credential_or_egress",
+        "actor_credential":{{"kind":"broker_mediated"}},"mediation":"brokered_effects","bypass":"blocked","residual_nonclaims":["reference"]}}],
+        "residual_nonclaims":["reference"]}}]}}"#, DISPOSABLE_FILE_PROFILE).into_bytes()
     }
 
     #[test]
