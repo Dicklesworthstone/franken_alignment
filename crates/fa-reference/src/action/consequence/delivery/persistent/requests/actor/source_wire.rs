@@ -7,6 +7,12 @@ use crate::action::consequence::delivery::persistent::observed::driver::FileSupe
 use crate::action::consequence::delivery::persistent::observed::driver::evidence::FileEvidenceReport;
 use crate::action::consequence::oversight::actor_wire::{ActorChannel, ActorWire, FeedResult, WireResponse};
 use crate::action::consequence::oversight::evidence_source::{EvidenceFile, EvidenceIdentity};
+#[cfg(target_os = "linux")]
+use crate::action::consequence::oversight::actor_peer::PeerSession;
+#[cfg(target_os = "linux")]
+use crate::action::consequence::oversight::actor_transport::{DriveBudget, DriveReport};
+#[cfg(target_os = "linux")]
+use crate::action::consequence::oversight::actor_wire::WireError;
 
 type Port = FileActorPort<FileOversight>;
 
@@ -32,6 +38,31 @@ pub struct FileActorExchange {
 pub struct FileActorFeed {
     pub feed: FeedResult,
     pub intake: Option<FileEvidenceReport<EvidenceIdentity>>,
+}
+
+/// One authenticated socket-drive report. A single bounded drive may complete
+/// multiple Submit frames, so supervisor diagnostics retain one source-intake
+/// report per new request in frame order. Poll/cancel/retry frames add none.
+#[cfg(target_os = "linux")]
+#[derive(Debug)]
+pub struct FileActorPeerDrive {
+    pub drive: DriveReport,
+    pub intakes: Vec<FileEvidenceReport<EvidenceIdentity>>,
+}
+
+#[cfg(target_os = "linux")]
+#[derive(Debug)]
+pub enum FileActorPeerDriveError {
+    Journal(JournalError),
+    Wire(WireError),
+}
+#[cfg(target_os = "linux")]
+impl From<JournalError> for FileActorPeerDriveError {
+    fn from(error: JournalError) -> Self { Self::Journal(error) }
+}
+#[cfg(target_os = "linux")]
+impl From<WireError> for FileActorPeerDriveError {
+    fn from(error: WireError) -> Self { Self::Wire(error) }
 }
 
 impl FileActorSupervisor<FileOversight> {
@@ -93,6 +124,26 @@ impl FileActorSupervisor<FileOversight> {
         });
         Ok(FileActorFeed { feed, intake })
     }
+
+    /// Linux SO_PEERCRED admission happens before this method can read a frame.
+    /// The peer session must own this exact durable port. Only complete NEW Submit
+    /// frames acquire registered source evidence; fragments, poll/cancel and exact
+    /// retries retain the same read-free behavior as the direct source-wire path.
+    #[cfg(target_os = "linux")]
+    pub fn drive_peer_from_file<S, F>(&mut self, session: &mut PeerSession<Port>,
+        source: &mut S, mut clock: F, budget: DriveBudget)
+        -> Result<FileActorPeerDrive, FileActorPeerDriveError>
+    where S: EvidenceFile + ?Sized, F: FnMut() -> ElapsedTick {
+        self.check_source_wire(session.request_port())?;
+        let mut intakes = Vec::new();
+        let drive = session.drive_with_admission(budget, |_, request, _| {
+            let mut intake = None;
+            let result = self.prepare_wire_submission(request, source, &mut clock, &mut intake);
+            if let Some(report) = intake { intakes.push(report); }
+            result
+        })?;
+        Ok(FileActorPeerDrive { drive, intakes })
+    }
 }
 
 impl FileSupervisedDriver {
@@ -107,6 +158,16 @@ impl FileSupervisedDriver {
         bytes: &[u8], source: &mut S, clock: F) -> Result<FileActorFeed, JournalError>
     where S: EvidenceFile + ?Sized, F: FnMut() -> ElapsedTick {
         let result = self.supervisor_mut().feed_actor_from_file(channel, bytes, source, clock);
+        self.reap_helpers();
+        result
+    }
+
+    #[cfg(target_os = "linux")]
+    pub fn drive_peer_from_file<S, F>(&mut self, session: &mut PeerSession<Port>,
+        source: &mut S, clock: F, budget: DriveBudget)
+        -> Result<FileActorPeerDrive, FileActorPeerDriveError>
+    where S: EvidenceFile + ?Sized, F: FnMut() -> ElapsedTick {
+        let result = self.supervisor_mut().drive_peer_from_file(session, source, clock, budget);
         self.reap_helpers();
         result
     }

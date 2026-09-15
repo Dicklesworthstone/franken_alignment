@@ -7,7 +7,7 @@
 mod listener;
 pub use listener::{AcceptEvent, ListenerSetupFailure, PeerListenerStatus, UnixPeerListener};
 
-use super::actor::ActorPort;
+use super::actor::{ActorError, ActorPort, ActorProposal};
 use super::actor_transport::{ConnectionStatus, DriveBudget, DriveReport, UnixActorConnection};
 use super::actor_wire::{ActorChannel, ActorRequestPort, ActorWire, ChannelLimits,
     MAX_CHANNEL_EXCHANGES, MAX_FRAME_BYTES, WireError};
@@ -111,9 +111,9 @@ pub struct PeerSessionStatus {
 /// One original actor session, at most one socket, and a frozen peer policy.
 /// The default remains the in-memory ActorPort; durable FileActorPort backends
 /// use the same kernel credential gate, framing, ticket retention and reconnect
-/// accounting. There is no port getter, policy-widening method, raw connection
-/// getter, effect cancellation, supervisor accessor or permission inferred from
-/// a reply. Reconnects retain original tickets and mailbox limits, not authority.
+/// accounting. There is no public port getter, policy-widening method, raw
+/// connection getter, effect cancellation, supervisor accessor or permission
+/// inferred from a reply. Reconnects retain original tickets, not authority.
 ///
 /// ```compile_fail,E0599
 /// use fa_reference::action::consequence::oversight::actor_peer::PeerSession;
@@ -164,6 +164,13 @@ impl<P: ActorRequestPort> PeerSession<P> {
         self.connection.as_ref().map(AsFd::as_fd)
     }
 
+    /// Crate-private identity check for integrations that own the matching
+    /// supervisor. It exposes neither the port publicly nor any authority method.
+    pub(crate) fn request_port(&self) -> &P {
+        if let Some(wire) = &self.wire { wire.request_port() }
+        else { self.connection.as_ref().expect("peer session owns wire or connection").request_port() }
+    }
+
     /// Inspect real peer credentials BEFORE reading a frame or moving the wire.
     /// Every refusal closes only the supplied candidate. It leaves the original
     /// ticket session, active connection and admission count unchanged.
@@ -178,9 +185,6 @@ impl<P: ActorRequestPort> PeerSession<P> {
         socket.set_nonblocking(true).map_err(|error| PeerRefusal::Io {
             stage: PeerSetupStage::Nonblocking, kind: error.kind(),
         })?;
-        // All recoverable setup checks precede moving the original session.
-        // Limits are immutable and checked at construction. No syscall occurs in
-        // from_nonblocking, and no externally supplied callback can run here.
         let channel = ActorChannel::new(self.wire.take().expect("disconnected session"), self.limits)
             .expect("validated immutable channel limits");
         let connection = UnixActorConnection::from_nonblocking(socket, channel);
@@ -194,6 +198,16 @@ impl<P: ActorRequestPort> PeerSession<P> {
     pub fn drive(&mut self, budget: DriveBudget) -> Result<DriveReport, WireError> {
         if self.revoked { return Err(WireError::Withheld); }
         self.connection.as_mut().ok_or(WireError::Unavailable)?.drive(budget)
+    }
+
+    /// Trusted source-aware integrations reuse the same authenticated socket and
+    /// framing. The callback can run only after attach succeeded and only on a
+    /// complete Submit frame; poll/cancel and fragments never invoke it.
+    pub(crate) fn drive_with_admission<A>(&mut self, budget: DriveBudget, admission: A)
+        -> Result<DriveReport, WireError>
+    where A: FnMut(&P, u64, &ActorProposal) -> Result<(), ActorError> {
+        if self.revoked { return Err(WireError::Withheld); }
+        self.connection.as_mut().ok_or(WireError::Unavailable)?.drive_with_admission(budget, admission)
     }
 
     /// Close only the transport. Already accepted requests stay in the original

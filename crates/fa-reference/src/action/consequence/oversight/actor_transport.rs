@@ -4,7 +4,7 @@
 //! listener, peer authentication, supervisor, executor or credential is created.
 //! All socket I/O is bounded per drive; dropping a connection never cancels work.
 
-use super::actor::ActorPort;
+use super::actor::{ActorError, ActorPort, ActorProposal};
 use super::actor_wire::{ActorRequestPort, ActorChannel, ActorWire, ChannelState, WireError};
 use std::fmt;
 use std::io::{self, Read, Write};
@@ -140,10 +140,23 @@ impl<P: ActorRequestPort> UnixActorConnection<P> {
         }
     }
 
+    #[cfg(target_os = "linux")]
+    pub(crate) fn request_port(&self) -> &P { self.channel.request_port() }
+
     /// Invalid budgets refuse before any work. Later socket failures are returned
     /// WITH completed progress, then latched: another drive never retries intake.
     /// WouldBlock yields immediately; Interrupted consumes the I/O-attempt budget.
     pub fn drive(&mut self, budget: DriveBudget) -> Result<DriveReport, WireError> {
+        self.drive_with_admission(budget, |_, _, _| Ok(()))
+    }
+
+    /// Same socket/flush accounting as drive(), with one crate-private admission
+    /// callback invoked only by complete Submit frames. This lets trusted durable
+    /// hosts acquire source evidence after peer authentication without exposing an
+    /// alternate public wire or bypassing framing/backpressure.
+    pub(crate) fn drive_with_admission<A>(&mut self, budget: DriveBudget, mut admission: A)
+        -> Result<DriveReport, WireError>
+    where A: FnMut(&P, u64, &ActorProposal) -> Result<(), ActorError> {
         budget.validate()?;
         let mut progress = DriveProgress::default();
         while !self.status().closed() {
@@ -151,7 +164,7 @@ impl<P: ActorRequestPort> UnixActorConnection<P> {
                 ChannelState::Reading => {
                     if progress.frames == budget.frames { break; }
                     if self.start != self.end {
-                        let fed = self.channel.feed(&self.input[self.start..self.end]);
+                        let fed = self.channel.feed_with_admission(&self.input[self.start..self.end], &mut admission);
                         self.start += fed.consumed;
                         progress.consumed_bytes += fed.consumed;
                         if fed.state == ChannelState::ReplyReady { progress.frames += 1; }
