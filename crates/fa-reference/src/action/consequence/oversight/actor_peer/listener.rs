@@ -3,8 +3,9 @@
 //! loop, thread, subprocess, alternate codec, or authority ledger is introduced.
 
 use super::{PeerAdmission, PeerRefusal, PeerSession, PeerSessionStatus};
+use crate::action::consequence::oversight::actor::ActorPort;
 use crate::action::consequence::oversight::actor_transport::{DriveBudget, DriveReport};
-use crate::action::consequence::oversight::actor_wire::WireError;
+use crate::action::consequence::oversight::actor_wire::{ActorRequestPort, WireError};
 use std::fmt;
 use std::io;
 use std::os::fd::{AsFd, BorrowedFd};
@@ -28,39 +29,39 @@ pub struct PeerListenerStatus {
 
 /// Setup failure returns BOTH original owners; neither actor tickets nor the
 /// already bound socket are discarded merely because nonblocking setup failed.
-pub struct ListenerSetupFailure {
+pub struct ListenerSetupFailure<P: ActorRequestPort = ActorPort> {
     pub error: io::Error,
     pub listener: UnixListener,
-    pub session: PeerSession,
+    pub session: PeerSession<P>,
 }
 
-impl fmt::Debug for ListenerSetupFailure {
+impl<P: ActorRequestPort> fmt::Debug for ListenerSetupFailure<P> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("ListenerSetupFailure").field("kind", &self.error.kind()).finish_non_exhaustive()
     }
 }
 
 /// Supply a listener bound in an operator-controlled namespace and one fixed
-/// actor session. The peer cannot select another ActorPort or authority scope.
+/// actor session. The peer cannot select another request port or authority scope.
 /// The socket path is not created, unlinked or reused by this component.
 ///
 /// ```compile_fail,E0599
 /// use fa_reference::action::consequence::oversight::actor_peer::UnixPeerListener;
 /// fn escape(listener: UnixPeerListener) { let _ = listener.broker_mut(); }
 /// ```
-pub struct UnixPeerListener {
+pub struct UnixPeerListener<P: ActorRequestPort = ActorPort> {
     listener: Option<UnixListener>,
-    session: PeerSession,
+    session: PeerSession<P>,
 }
 
-impl fmt::Debug for UnixPeerListener {
+impl<P: ActorRequestPort> fmt::Debug for UnixPeerListener<P> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("UnixPeerListener").field("status", &self.status()).finish_non_exhaustive()
     }
 }
 
-impl UnixPeerListener {
-    pub fn new(listener: UnixListener, session: PeerSession) -> Result<Self, ListenerSetupFailure> {
+impl<P: ActorRequestPort> UnixPeerListener<P> {
+    pub fn new(listener: UnixListener, session: PeerSession<P>) -> Result<Self, ListenerSetupFailure<P>> {
         if let Err(error) = listener.set_nonblocking(true) {
             return Err(ListenerSetupFailure { error, listener, session });
         }
@@ -112,5 +113,5 @@ impl UnixPeerListener {
 
     /// Move the SAME credential gate and ticket session to another explicitly
     /// provisioned listener. Revocation and lifetime connection counts survive.
-    pub fn into_session(self) -> PeerSession { self.session }
+    pub fn into_session(self) -> PeerSession<P> { self.session }
 }

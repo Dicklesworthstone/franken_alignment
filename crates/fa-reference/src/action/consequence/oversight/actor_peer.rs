@@ -7,8 +7,10 @@
 mod listener;
 pub use listener::{AcceptEvent, ListenerSetupFailure, PeerListenerStatus, UnixPeerListener};
 
+use super::actor::ActorPort;
 use super::actor_transport::{ConnectionStatus, DriveBudget, DriveReport, UnixActorConnection};
-use super::actor_wire::{ActorChannel, ActorWire, ChannelLimits, MAX_CHANNEL_EXCHANGES, MAX_FRAME_BYTES, WireError};
+use super::actor_wire::{ActorChannel, ActorRequestPort, ActorWire, ChannelLimits,
+    MAX_CHANNEL_EXCHANGES, MAX_FRAME_BYTES, WireError};
 use crate::Error;
 use std::fmt;
 use std::io;
@@ -107,34 +109,36 @@ pub struct PeerSessionStatus {
 }
 
 /// One original actor session, at most one socket, and a frozen peer policy.
-/// There is no ActorPort getter, policy-widening method, raw connection getter,
-/// effect cancellation, supervisor accessor or permission inferred from a reply.
-/// Reconnects retain original tickets and mailbox limits, not fresh authority.
+/// The default remains the in-memory ActorPort; durable FileActorPort backends
+/// use the same kernel credential gate, framing, ticket retention and reconnect
+/// accounting. There is no port getter, policy-widening method, raw connection
+/// getter, effect cancellation, supervisor accessor or permission inferred from
+/// a reply. Reconnects retain original tickets and mailbox limits, not authority.
 ///
 /// ```compile_fail,E0599
 /// use fa_reference::action::consequence::oversight::actor_peer::PeerSession;
 /// fn escape(session: PeerSession) { let _ = session.broker_mut(); }
 /// ```
-pub struct PeerSession {
+pub struct PeerSession<P: ActorRequestPort = ActorPort> {
     policy: PeerPolicy,
     limits: ChannelLimits,
     connection_limit: u64,
     connections: u64,
-    wire: Option<ActorWire>,
-    connection: Option<UnixActorConnection>,
+    wire: Option<ActorWire<P>>,
+    connection: Option<UnixActorConnection<P>>,
     active: Option<PeerAdmission>,
     revoked: bool,
 }
 
-impl fmt::Debug for PeerSession {
+impl<P: ActorRequestPort> fmt::Debug for PeerSession<P> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("PeerSession").field("status", &self.status()).finish_non_exhaustive()
     }
 }
 
-impl PeerSession {
+impl<P: ActorRequestPort> PeerSession<P> {
     pub fn new(
-        policy: PeerPolicy, wire: ActorWire, limits: ChannelLimits, connection_limit: u64,
+        policy: PeerPolicy, wire: ActorWire<P>, limits: ChannelLimits, connection_limit: u64,
     ) -> Result<Self, Error> {
         if limits.frame_bytes == 0 || limits.exchanges == 0 || connection_limit == 0 {
             return Err(Error::InvalidInput);
