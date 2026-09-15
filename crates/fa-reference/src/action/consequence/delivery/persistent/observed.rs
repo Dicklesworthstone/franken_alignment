@@ -15,6 +15,7 @@ pub mod helpers;
 pub mod driver;
 pub mod reviewer;
 pub mod publication;
+pub mod credential;
 pub mod source;
 #[cfg(test)]
 mod tests;

@@ -21,6 +21,7 @@ mod requests;
 mod governance;
 mod publication;
 mod source;
+mod credential;
 
 pub(super) enum Transition {
     Unit,
@@ -50,6 +51,7 @@ pub(super) struct Machine {
     pub(super) requests: RequestBook,
     pub(super) policy_updates: PolicyUpdates,
     pub(super) publication_guard: bool,
+    pub(super) credential_policy: Option<super::credential::FileCredentialPolicy>,
     file_source: Option<source::SourceState>,
     scope: Scope,
     endpoint: PublicationEndpoint,
@@ -72,7 +74,7 @@ impl Machine {
         broker.confirm_fence(endpoint.install_fence(broker.fence_request())?)?;
         Ok(Self { containment: ContainmentHistory::default(), policy_updates: PolicyUpdates::default(), requests: RequestBook::default(), scope: d.scope, broker, endpoint, reviewer, actions: BTreeMap::new(), sessions: BTreeMap::new(),
             automatic: BTreeMap::new(), human_keys: BTreeMap::new(), envelopes: BTreeMap::new(), clock_ready: false,
-            publication_guard: false, file_source: None })
+            publication_guard: false, credential_policy: None, file_source: None })
     }
     pub(super) fn replay(p: &FileOversightProfile, events: &[Event]) -> Result<Self, Error> {
         let mut machine = Self::new(p)?;
@@ -140,7 +142,8 @@ impl Machine {
         let without_current_time = matches!(event,
             Event::Core(BaseEvent::Time(_) | BaseEvent::Cancel(_) | BaseEvent::Fence | BaseEvent::Stop(_) | BaseEvent::StopProgress(_) | BaseEvent::ReserveRecovery(_) | BaseEvent::ReplacePolicy(_))
             | Event::InputsUnavailable(..) | Event::Human(_, HumanDecision::Reject | HumanDecision::Revoke) | Event::RevokeHumans
-            | Event::PublicationGuard | Event::PublishChecked(..) | Event::Source(_)
+            | Event::PublicationGuard | Event::PublishChecked(..) | Event::PublishCredentialed(..)
+            | Event::CredentialGuard(_) | Event::Source(_)
             | Event::ActorState(_) | Event::ActorCheckpoint(..) | Event::ActorReset(..));
         if !without_current_time && !self.clock_ready { return Err(Error::Incomplete); }
         match event {
@@ -148,8 +151,10 @@ impl Machine {
             Event::ActorCheckpoint(id, revision, epoch) => return self.capture_actor_checkpoint(*id, *revision, *epoch),
             Event::ActorReset(id, request) => return self.reset_actor(*id, request),
             Event::Source(event) => return self.apply_source(event),
+            Event::CredentialGuard(policy) => return self.enable_credential_guard(policy),
             Event::PublicationGuard => return self.enable_publication_guard(),
-            Event::PublishChecked(id, views, snapshot, tick) => return self.publish_checked(*id, views.as_ref(), snapshot, *tick),
+            Event::PublishChecked(id, views, snapshot, tick) => return self.publish_checked(*id, views.as_ref(), snapshot, *tick, false),
+            Event::PublishCredentialed(id, views, snapshot, tick) => return self.publish_checked(*id, views.as_ref(), snapshot, *tick, true),
             Event::Core(event) => return self.apply_core(event),
             Event::Inputs(id, revision, views) => {
                 let inputs = self.capture(*id, views)?;

@@ -33,13 +33,15 @@ impl Machine {
     }
 
     pub(super) fn publish_checked(&mut self, attempt: u64, supplied: Option<&Views>,
-        snapshot: &Snapshot, now: ElapsedTick) -> Result<Transition, Error>
+        snapshot: &Snapshot, now: ElapsedTick, credentialed: bool) -> Result<Transition, Error>
     {
         if !self.publication_guard { return Err(Error::WrongState); }
+        if credentialed && self.credential_policy.is_none() { return Err(Error::Binding); }
         self.observe(now)?;
         let query = self.broker.status_query(attempt)?;
         // Historical execution/nonexecution is not invalidated by a later source
-        // failure. Retention loss, however, cannot produce a terminal assertion.
+        // or credential failure. Retention loss, however, cannot produce a
+        // terminal assertion.
         match self.endpoint.status(&query)? {
             EndpointStatus::Resolved(receipt) => return Ok(Transition::PublicationChecked(CheckedPublication {
                 outcome: receipt.outcome(), basis: PublicationBasis::PreviouslyResolved,
@@ -59,8 +61,20 @@ impl Machine {
             .and_then(|views| self.capture(attempt, views))
             .and_then(|current| self.broker.revalidate_publication(attempt, approval, Some(&current), snapshot));
         let (receipt, basis) = match checked {
-            Ok(()) => (self.endpoint.deliver(envelope)?, PublicationBasis::Revalidated),
-            Err(error) => (self.endpoint.seal_unexecuted(&query)?, PublicationBasis::Rejected(error)),
+            Ok(()) => {
+                // A journaled credential policy cannot be bypassed by replaying
+                // the older checked-publication event. Only the host path that
+                // validated a live process-local credential pair emits the new
+                // credentialed event.
+                if self.credential_policy.is_some() && !credentialed { return Err(Error::Incomplete); }
+                (self.endpoint.deliver(envelope)?, PublicationBasis::Revalidated)
+            }
+            Err(error) => {
+                // Restrictive sealing does not need the effect credential. This
+                // preserves the ability to establish nonexecution and reconcile
+                // charged work during a credential outage.
+                (self.endpoint.seal_unexecuted(&query)?, PublicationBasis::Rejected(error))
+            }
         };
         // The candidate is only RAM. Original file replacement makes the chosen
         // endpoint transition visible before its result leaves FileOversight.

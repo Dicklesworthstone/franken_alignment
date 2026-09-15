@@ -36,6 +36,13 @@ impl BrokerCredential {
         check_secret(&secret)?;
         Ok(Self { secret })
     }
+
+    /// Crate-internal equality at a credential boundary without exposing either
+    /// side's bytes. This is ordinary byte equality, not a cryptographic or
+    /// constant-time authentication primitive.
+    pub(crate) fn agrees_with(&self, provider: &ProviderCredential) -> bool {
+        self.secret == provider.secret
+    }
 }
 impl fmt::Debug for BrokerCredential {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result { f.write_str("BrokerCredential { redacted: true }") }
@@ -159,7 +166,7 @@ impl CredentialBroker {
         endpoint: PublicationEndpoint) -> Result<Self, Error>
     {
         Self::validate_attachment(&inventory, &binding, scope, &endpoint)?;
-        if credential.secret != provider.secret { return Err(Error::Binding); }
+        if !credential.agrees_with(&provider) { return Err(Error::Binding); }
         let endpoint_binding = Rc::clone(&endpoint.binding);
         Ok(Self { inventory, binding, scope, credential,
             adapter: DisposableFileAdapter { endpoint, expected_secret: provider.secret }, endpoint_binding,
@@ -205,7 +212,7 @@ impl CredentialBroker {
             };
         }
         if request.operation == 0 { return Err(Error::InvalidInput); }
-        if next.secret != provider.secret { return Err(Error::Binding); }
+        if !next.agrees_with(&provider) { return Err(Error::Binding); }
         if self.credential_revoked { return Err(Error::WrongState); }
         if request.expected_generation != self.credential_generation { return Err(Error::Stale); }
         let expected_next = self.credential_generation.checked_add(1).ok_or(Error::Overflow)?;

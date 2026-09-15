@@ -2,10 +2,12 @@
 //! Records are original transition INPUTS, never asserted decisions or balances.
 use super::{FileOversightProfile, ReviewWindow};
 use super::containment::{FileStateUpdate, FileResetRequest, codec as state_codec};
+use super::credential::FileCredentialPolicy;
 use super::super::{codec, recovery_capacity, Event as BaseEvent};
 use super::super::codec::shared::{Reader, Writer};
 use super::views::{self, Views};
 use crate::action::ElapsedTick;
+use crate::perimeter::MAX_TEXT_BYTES;
 use crate::round::{Digest, Verdict, MAX_FIELD_LEN};
 use crate::{Error, Snapshot};
 use std::path::Path;
@@ -36,6 +38,8 @@ pub(super) enum Event {
     PublicationGuard,
     PublishChecked(u64, Option<Views>, Snapshot, ElapsedTick),
     Source(super::source::SourceEvent),
+    CredentialGuard(FileCredentialPolicy),
+    PublishCredentialed(u64, Option<Views>, Snapshot, ElapsedTick),
 }
 
 fn core_allowed(event: &BaseEvent) -> bool {
@@ -79,7 +83,7 @@ fn encode_iter<'a>(p: &FileOversightProfile, path: &Path, count: usize, events: 
         w.blob(&record.finish())?;
         let class = match event {
             Event::Core(event) => recovery_capacity::class(event),
-            Event::PublicationGuard => recovery_capacity::Class::Bootstrap,
+            Event::PublicationGuard | Event::CredentialGuard(_) => recovery_capacity::Class::Bootstrap,
             _ => recovery_capacity::Class::Work,
         };
         admission.record(class, index + 1, w.encoded_len())?;
@@ -155,6 +159,16 @@ fn write_event(w: &mut Writer, event: &Event) -> Result<(), Error> {
             w.snapshot(snapshot)?; w.u64(tick.0)?;
         }
         Event::Source(event) => { w.u8(15)?; super::source::write(w, event)?; }
+        Event::CredentialGuard(policy) => {
+            policy.check()?;
+            w.u8(19)?; w.blob(policy.family.as_bytes())?; w.blob(policy.route.as_bytes())?;
+            w.blob(policy.credential.as_bytes())?; w.u64(policy.profile_generation)?;
+        }
+        Event::PublishCredentialed(id, current, snapshot, tick) => {
+            w.u8(20)?; w.u64(*id)?;
+            match current { None => w.u8(0)?, Some(views) => { w.u8(1)?; views::write(w, views)?; } }
+            w.snapshot(snapshot)?; w.u64(tick.0)?;
+        }
     }
     Ok(())
 }
@@ -198,6 +212,23 @@ fn read_event(r: &mut Reader<'_>) -> Result<Event, Error> {
             Event::PublishChecked(id, current, r.snapshot()?, ElapsedTick(r.u64()?))
         }
         15 => Event::Source(super::source::read(r)?),
+        19 => {
+            let policy = FileCredentialPolicy { family: read_text(r)?, route: read_text(r)?,
+                credential: read_text(r)?, profile_generation: r.u64()? };
+            policy.check()?;
+            Event::CredentialGuard(policy)
+        }
+        20 => {
+            let id = r.u64()?;
+            let current = match r.u8()? { 0 => None, 1 => Some(views::read(r)?), _ => return Err(Error::InvalidInput) };
+            Event::PublishCredentialed(id, current, r.snapshot()?, ElapsedTick(r.u64()?))
+        }
         _ => return Err(Error::InvalidInput),
     })
+}
+fn read_text(r: &mut Reader<'_>) -> Result<String, Error> {
+    let bytes = r.blob(MAX_TEXT_BYTES)?;
+    let text = std::str::from_utf8(bytes).map_err(|_| Error::InvalidInput)?;
+    if text.is_empty() { return Err(Error::InvalidInput); }
+    Ok(text.to_owned())
 }
