@@ -5,6 +5,9 @@
 
 mod codec;
 mod channel;
+mod response;
+pub mod client;
+pub use response::{ResponseError, decode_response};
 pub use channel::{ActorChannel, ChannelLimits, ChannelState, CloseReason, FeedResult, MAX_CHANNEL_EXCHANGES};
 pub use codec::{Command, MAX_FRAME_BYTES, MAX_RESPONSE_BYTES, WireError, WireResponse, decode_command, encode_command};
 
