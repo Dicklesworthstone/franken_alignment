@@ -113,3 +113,25 @@ fn command_validation_and_abandonment_do_not_manufacture_cancellation() {
     assert_eq!(exchange.phase(), ClientPhase::Receiving); assert!(exchange.response().is_none());
     assert!(exchange.into_stream().is_none()); assert_eq!(budget.work().exchanges, 1);
 }
+
+#[test]
+fn a_caught_io_unwind_cannot_replay_bytes_or_replenish_its_admitted_call() {
+    use std::cell::Cell;
+    use std::rc::Rc;
+    use std::panic::{AssertUnwindSafe, catch_unwind};
+    struct Panicking { writes: Rc<Cell<usize>> }
+    impl Read for Panicking { fn read(&mut self, _: &mut [u8]) -> io::Result<usize> { panic!("unexpected read") } }
+    impl Write for Panicking {
+        fn write(&mut self, bytes: &[u8]) -> io::Result<usize> {
+            self.writes.set(self.writes.get() + bytes.len()); panic!("simulated write accepted bytes then unwound")
+        }
+        fn flush(&mut self) -> io::Result<()> { Ok(()) }
+    }
+    let writes = Rc::new(Cell::new(0)); let mut budget = ClientIoBudget::new(ClientIoLimits::default()).unwrap();
+    let mut exchange = ActorExchange::new(Panicking { writes: Rc::clone(&writes) }, Command::Cancel { request: 1 }, &mut budget).unwrap();
+    assert!(catch_unwind(AssertUnwindSafe(|| exchange.step(&mut budget))).is_err());
+    let count = writes.get(); assert!(count > 0); let work = budget.work(); assert_eq!(work.calls, 1);
+    assert_eq!(exchange.step(&mut budget), Err(ClientError::InterruptedOperation));
+    assert_eq!(budget.work(), work); assert_eq!(writes.get(), count);
+    assert!(exchange.failure().unwrap().request_may_have_reached_peer); assert!(exchange.into_stream().is_none());
+}

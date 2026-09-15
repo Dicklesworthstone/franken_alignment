@@ -1,5 +1,10 @@
 //! Actor-side request I/O over an explicitly provisioned original server domain.
 //! Receipt parsing is not authentication and no response authorizes an effect.
+mod session;
+pub use session::{ActorClient, ActorClientState, ClientSessionLimits};
+#[cfg(unix)]
+pub use session::ClientConnectFailure;
+
 use super::{Command, MAX_RESPONSE_BYTES, WireError, WireResponse, encode_command};
 use super::response::{ResponseError, decode_response};
 use std::fmt;
@@ -12,7 +17,7 @@ pub const MAX_CLIENT_IO_BYTES: u64 = 64 * 1024 * 1024;
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum ClientError {
     Command(WireError), Response(ResponseError), Io(io::ErrorKind),
-    Limit, Busy, Disconnected, TicketUnavailable,
+    Limit, Busy, Disconnected, TicketUnavailable, InterruptedOperation,
 }
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct ClientIoLimits { pub exchanges: u64, pub calls: u64, pub written_bytes: u64, pub read_bytes: u64 }
@@ -81,7 +86,7 @@ impl<S> fmt::Debug for ClientStartFailure<S> {
 /// ```
 pub struct ActorExchange<S> {
     stream: Option<S>, command: Command, output: Vec<u8>, written: usize,
-    input: Vec<u8>, phase: ClientPhase, attempted_write: bool,
+    input: Vec<u8>, phase: ClientPhase, attempted_write: bool, io_active: bool,
     response: Option<WireResponse>, failure: Option<ClientFailure>,
 }
 impl<S> fmt::Debug for ActorExchange<S> {
@@ -104,7 +109,7 @@ impl<S> ActorExchange<S> {
         })();
         match prepared {
             Ok((output, input)) => Ok(Self { stream: Some(stream), command, output, written: 0,
-                input, phase: ClientPhase::Sending, attempted_write: false, response: None, failure: None }),
+                input, phase: ClientPhase::Sending, attempted_write: false, io_active: false, response: None, failure: None }),
             Err(error) => Err(ClientStartFailure { error, stream }),
         }
     }
@@ -131,6 +136,7 @@ impl<S: Read + Write> ActorExchange<S> {
     pub fn step(&mut self, budget: &mut ClientIoBudget) -> Result<ClientProgress, ClientError> {
         if let Some(failure) = self.failure { return Err(failure.error); }
         if self.phase == ClientPhase::Complete { return Ok(ClientProgress::Complete); }
+        if self.io_active { return Err(self.fail(ClientError::InterruptedOperation)); }
         match self.step_inner(budget) { Ok(progress) => Ok(progress), Err(error) => Err(self.fail(error)) }
     }
     fn step_inner(&mut self, budget: &mut ClientIoBudget) -> Result<ClientProgress, ClientError> {
@@ -142,7 +148,10 @@ impl<S: Read + Write> ActorExchange<S> {
                 if offered == 0 { return Err(ClientError::Limit); }
                 budget.call()?; self.attempted_write = true;
                 let stream = self.stream.as_mut().ok_or(ClientError::Disconnected)?;
-                match stream.write(&self.output[self.written..self.written + offered]) {
+                self.io_active = true;
+                let result = stream.write(&self.output[self.written..self.written + offered]);
+                self.io_active = false;
+                match result {
                     Ok(0) => return Err(ClientError::Io(io::ErrorKind::WriteZero)),
                     Ok(count) if count <= offered => { self.written += count; budget.work.written_bytes += count as u64; }
                     Ok(_) => return Err(ClientError::Io(io::ErrorKind::InvalidData)),
@@ -152,7 +161,10 @@ impl<S: Read + Write> ActorExchange<S> {
                 if self.written != self.output.len() { return Ok(ClientProgress::Progress); }
             }
             budget.call()?;
-            match self.stream.as_mut().ok_or(ClientError::Disconnected)?.flush() {
+            self.io_active = true;
+            let result = self.stream.as_mut().ok_or(ClientError::Disconnected)?.flush();
+            self.io_active = false;
+            match result {
                 Ok(()) => { self.output.clear(); self.phase = ClientPhase::Receiving; Ok(ClientProgress::Progress) }
                 Err(error) if transient(&error) => Ok(ClientProgress::Blocked),
                 Err(error) => Err(ClientError::Io(error.kind())),
@@ -163,7 +175,10 @@ impl<S: Read + Write> ActorExchange<S> {
             let offered = (MAX_RESPONSE_BYTES + 1 - self.input.len()).min(allowed);
             if offered == 0 { return Err(ClientError::Limit); }
             budget.call()?;
-            let count = match self.stream.as_mut().ok_or(ClientError::Disconnected)?.read(&mut buffer[..offered]) {
+            self.io_active = true;
+            let result = self.stream.as_mut().ok_or(ClientError::Disconnected)?.read(&mut buffer[..offered]);
+            self.io_active = false;
+            let count = match result {
                 Ok(0) => return Err(ClientError::Io(io::ErrorKind::UnexpectedEof)),
                 Ok(count) if count <= offered => count,
                 Ok(_) => return Err(ClientError::Io(io::ErrorKind::InvalidData)),
