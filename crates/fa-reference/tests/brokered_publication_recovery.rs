@@ -4,7 +4,7 @@
 use fa_reference::action::consequence::congress::{CongressPolicy, MemberPolicy};
 use fa_reference::action::consequence::delivery::{EndpointOutcome, EndpointStatus, FileEndpointRecovery,
     FilePublicationLimits, NonExecutionReason, PublicationEndpoint,
-    credential_broker::{BrokerCredential, BrokerReconnectError, BrokerRouteBinding,
+    credential_broker::{BrokerCredential, BrokerReconnectError, BrokerRouteBinding, ProviderCredential,
         RecoverableCredentialBroker, DISPOSABLE_FILE_PROFILE}};
 use fa_reference::action::consequence::gate::TargetCeiling;
 use fa_reference::action::consequence::gate::containment::{ActorState, RestartGrade, RestartProfile};
@@ -50,6 +50,8 @@ fn inventory() -> LoadedPerimeterInventory {
       "residual_nonclaims":["reference"]}}]}}"#, DISPOSABLE_FILE_PROFILE).as_bytes()).unwrap()
 }
 fn binding() -> BrokerRouteBinding { BrokerRouteBinding { family: "publication".into(), route: "adapter:disposable-file".into() } }
+fn broker_secret() -> BrokerCredential { BrokerCredential::new(b"opaque-secret".to_vec()).unwrap() }
+fn provider_secret() -> ProviderCredential { ProviderCredential::new(b"opaque-secret".to_vec()).unwrap() }
 
 struct Fixture {
     broker: OversightBroker,
@@ -103,7 +105,7 @@ impl Fixture {
         self.broker.dispatch(&permit, &action, Some(&inputs), &snapshot()).unwrap()
     }
     fn take_recoverable(&mut self) -> RecoverableCredentialBroker {
-        RecoverableCredentialBroker::new(inventory(), binding(), scope(), BrokerCredential::new(b"opaque-secret".to_vec()).unwrap(),
+        RecoverableCredentialBroker::new(inventory(), binding(), scope(), broker_secret(), provider_secret(),
             self.endpoint.take().unwrap(), self.recovery.take().unwrap()).unwrap()
     }
 }
@@ -162,7 +164,7 @@ fn mismatched_endpoint_and_recovery_key_cannot_rebind_the_credential() {
     // endpoint binding must still reject it after reopen.
     drop(right_fixture.endpoint.take());
     let guarded = RecoverableCredentialBroker::new(inventory(), binding(), scope(),
-        BrokerCredential::new(b"opaque-secret".to_vec()).unwrap(), endpoint, foreign_key).unwrap();
+        broker_secret(), provider_secret(), endpoint, foreign_key).unwrap();
     let failure = guarded.into_offline().reopen().unwrap_err();
     assert!(matches!(failure.error, BrokerReconnectError::Contract(Error::Binding)));
     assert_eq!(format!("{:?}", failure.offline).contains("opaque-secret"), false);

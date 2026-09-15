@@ -5,7 +5,7 @@
 use fa_reference::action::consequence::delivery::{EndpointOutcome, EndpointStatus, FilePublicationLimits,
     NonExecutionReason, PublicationEndpoint,
     credential_broker::{BrokerCredential, BrokerRouteBinding, CredentialRevocationRequest,
-        RecoverableCredentialBroker, DISPOSABLE_FILE_PROFILE}};
+        ProviderCredential, RecoverableCredentialBroker, DISPOSABLE_FILE_PROFILE}};
 use fa_reference::action::consequence::oversight::actor::{ActorOutcome, IntakeLimits, Knowledge};
 use fa_reference::action::consequence::oversight::DispatchKeys;
 use fa_reference::action::{ElapsedTick, Purpose, Scope};
@@ -53,7 +53,8 @@ impl Rig {
             200, 128, FilePublicationLimits { mutations: 256, bytes: 2 * 1_048_576 }).unwrap();
         let (port, supervisor) = attach(&mut endpoint, IntakeLimits::default());
         let perimeter = RecoverableCredentialBroker::new(inventory(), binding(), effect_scope(),
-            BrokerCredential::new(b"opaque-secret".to_vec()).unwrap(), endpoint, recovery).unwrap();
+            BrokerCredential::new(b"opaque-secret".to_vec()).unwrap(),
+            ProviderCredential::new(b"opaque-secret".to_vec()).unwrap(), endpoint, recovery).unwrap();
         Self { _root: root, port, supervisor, perimeter }
     }
 }

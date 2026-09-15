@@ -4,7 +4,7 @@
 use fa_reference::action::consequence::congress::{CongressPolicy, MemberPolicy};
 use fa_reference::action::consequence::delivery::{EndpointOutcome, EndpointStatus, FilePublicationLimits,
     NonExecutionReason, PublicationEndpoint, credential_broker::{BrokerCredential, BrokerRouteBinding,
-    CredentialBroker, DISPOSABLE_FILE_PROFILE}};
+    CredentialBroker, ProviderCredential, DISPOSABLE_FILE_PROFILE}};
 use fa_reference::action::consequence::gate::TargetCeiling;
 use fa_reference::action::consequence::gate::containment::{ActorState, RestartGrade, RestartProfile};
 use fa_reference::action::consequence::gate::containment::session::policy::{Policy, Predicate};
@@ -72,6 +72,8 @@ fn inventory(profile: &str, effect: &str, mediation: &str, purpose: u64) -> Resu
 fn binding() -> BrokerRouteBinding {
     BrokerRouteBinding { family: "publication".to_owned(), route: "adapter:disposable-file".to_owned() }
 }
+fn broker_secret(bytes: &[u8]) -> BrokerCredential { BrokerCredential::new(bytes.to_vec()).unwrap() }
+fn provider_secret(bytes: &[u8]) -> ProviderCredential { ProviderCredential::new(bytes.to_vec()).unwrap() }
 
 struct Fixture {
     broker: OversightBroker,
@@ -138,7 +140,8 @@ impl Fixture {
 
     fn perimeter(&mut self) -> CredentialBroker {
         CredentialBroker::new(inventory(DISPOSABLE_FILE_PROFILE, "file_write", "brokered_effects", 1).unwrap(),
-            binding(), scope(), BrokerCredential::new(b"opaque-secret".to_vec()).unwrap(), self.endpoint.take().unwrap()).unwrap()
+            binding(), scope(), broker_secret(b"opaque-secret"), provider_secret(b"opaque-secret"),
+            self.endpoint.take().unwrap()).unwrap()
     }
 }
 
@@ -154,6 +157,17 @@ fn brokered_file_route_executes_only_the_original_authorized_envelope() {
     assert_eq!(state.payload, b"visible"); assert_eq!(state.execution_count, 1);
     assert_eq!(perimeter.inspect().credential_exercises, 1);
     assert_eq!(fixture.broker.inspect().ledger.charged, 16);
+}
+
+#[test]
+fn independently_supplied_provider_secret_must_match_before_attachment() {
+    let root = Temp::new(); let mut fixture = Fixture::new(&root);
+    let endpoint = fixture.endpoint.take().unwrap();
+    let result = CredentialBroker::new(inventory(DISPOSABLE_FILE_PROFILE, "file_write", "brokered_effects", 1).unwrap(),
+        binding(), scope(), broker_secret(b"broker-secret"), provider_secret(b"provider-secret"), endpoint);
+    assert_eq!(result.unwrap_err(), Error::Binding);
+    let state = PublicationEndpoint::read_file_publication(fixture.recovery.directory()).unwrap();
+    assert_eq!(state.payload, b"old"); assert_eq!(state.execution_count, 0);
 }
 
 #[test]
@@ -205,7 +219,7 @@ fn nonbrokered_wrong_effect_wrong_profile_and_wrong_scope_all_refuse_attachment(
         let root = Temp::new(); let mut fixture = Fixture::new(&root);
         let endpoint = fixture.endpoint.take().unwrap();
         let result = CredentialBroker::new(inventory(profile_id, effect, mediation, purpose).unwrap(), binding(), scope(),
-            BrokerCredential::new(b"secret".to_vec()).unwrap(), endpoint);
+            broker_secret(b"secret"), provider_secret(b"secret"), endpoint);
         assert!(result.is_err());
     }
 }
@@ -214,19 +228,24 @@ fn nonbrokered_wrong_effect_wrong_profile_and_wrong_scope_all_refuse_attachment(
 fn memory_only_endpoint_and_experiment_scope_are_not_the_disposable_file_profile() {
     let endpoint = PublicationEndpoint::new(target(), b"old".to_vec(), 100, 4).unwrap();
     assert!(CredentialBroker::new(inventory(DISPOSABLE_FILE_PROFILE, "file_write", "brokered_effects", 1).unwrap(),
-        binding(), scope(), BrokerCredential::new(b"secret".to_vec()).unwrap(), endpoint).is_err());
+        binding(), scope(), broker_secret(b"secret"), provider_secret(b"secret"), endpoint).is_err());
 
     let root = Temp::new(); let mut fixture = Fixture::new(&root); let endpoint = fixture.endpoint.take().unwrap();
     let experiment = Scope { purpose: Purpose::Experiment, ..scope() };
     assert_eq!(CredentialBroker::new(inventory(DISPOSABLE_FILE_PROFILE, "file_write", "brokered_effects", 1).unwrap(),
-        binding(), experiment, BrokerCredential::new(b"secret".to_vec()).unwrap(), endpoint).unwrap_err(), Error::Binding);
+        binding(), experiment, broker_secret(b"secret"), provider_secret(b"secret"), endpoint).unwrap_err(), Error::Binding);
 }
 
 #[test]
-fn credential_bytes_are_bounded_and_never_exposed_by_debug_output() {
+fn broker_and_provider_credential_bytes_are_bounded_and_redacted() {
     assert_eq!(BrokerCredential::new(Vec::new()).unwrap_err(), Error::InvalidInput);
-    assert_eq!(BrokerCredential::new(vec![0; fa_reference::action::consequence::delivery::credential_broker::MAX_BROKER_CREDENTIAL_BYTES + 1]).unwrap_err(), Error::Limit);
-    let secret = BrokerCredential::new(b"extremely-sensitive".to_vec()).unwrap();
-    let text = format!("{secret:?}");
-    assert!(!text.contains("sensitive")); assert!(text.contains("redacted"));
+    assert_eq!(ProviderCredential::new(Vec::new()).unwrap_err(), Error::InvalidInput);
+    let too_large = vec![0; fa_reference::action::consequence::delivery::credential_broker::MAX_BROKER_CREDENTIAL_BYTES + 1];
+    assert_eq!(BrokerCredential::new(too_large.clone()).unwrap_err(), Error::Limit);
+    assert_eq!(ProviderCredential::new(too_large).unwrap_err(), Error::Limit);
+    let broker = BrokerCredential::new(b"extremely-sensitive".to_vec()).unwrap();
+    let provider = ProviderCredential::new(b"equally-sensitive".to_vec()).unwrap();
+    let broker_text = format!("{broker:?}"); let provider_text = format!("{provider:?}");
+    assert!(!broker_text.contains("sensitive")); assert!(broker_text.contains("redacted"));
+    assert!(!provider_text.contains("sensitive")); assert!(provider_text.contains("redacted"));
 }

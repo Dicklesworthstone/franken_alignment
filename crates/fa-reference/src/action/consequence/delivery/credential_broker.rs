@@ -28,20 +28,43 @@ pub struct BrokerRouteBinding {
     pub route: String,
 }
 
-/// Trusted bootstrap material. The bytes have no public accessor and this type is
-/// neither Clone nor serializable. The current perimeter schema declares broker
-/// credentials family-wide, so this reference profile does not claim a name-to-
-/// secret authentication mechanism.
+/// Secret material retained only by the enforcement-side broker. The bytes have
+/// no public accessor and this type is neither Clone nor serializable.
 pub struct BrokerCredential { secret: Vec<u8> }
 impl BrokerCredential {
     pub fn new(secret: Vec<u8>) -> Result<Self, Error> {
-        if secret.is_empty() { return Err(Error::InvalidInput); }
-        if secret.len() > MAX_BROKER_CREDENTIAL_BYTES { return Err(Error::Limit); }
+        check_secret(&secret)?;
         Ok(Self { secret })
     }
 }
 impl fmt::Debug for BrokerCredential {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result { f.write_str("BrokerCredential { redacted: true }") }
+}
+
+/// Independently supplied provider-side expected credential. This is deliberately
+/// a distinct capability from BrokerCredential: constructing one from the other
+/// is not exposed. The reference compares these two trusted bootstrap inputs; it
+/// does not claim provider authentication, encrypted storage, or constant-time
+/// cryptographic verification.
+///
+/// ```compile_fail,E0616
+/// use fa_reference::action::consequence::delivery::credential_broker::ProviderCredential;
+/// fn leak(credential: ProviderCredential) -> Vec<u8> { credential.secret }
+/// ```
+pub struct ProviderCredential { secret: Vec<u8> }
+impl ProviderCredential {
+    pub fn new(secret: Vec<u8>) -> Result<Self, Error> {
+        check_secret(&secret)?;
+        Ok(Self { secret })
+    }
+}
+impl fmt::Debug for ProviderCredential {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result { f.write_str("ProviderCredential { redacted: true }") }
+}
+fn check_secret(secret: &[u8]) -> Result<(), Error> {
+    if secret.is_empty() { return Err(Error::InvalidInput); }
+    if secret.len() > MAX_BROKER_CREDENTIAL_BYTES { return Err(Error::Limit); }
+    Ok(())
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -84,6 +107,9 @@ impl StoredCredentialChange {
     }
 }
 
+/// Reference stand-in for an independently configured provider. Its expected
+/// credential is supplied separately from the broker-held credential. The actor
+/// cannot mutate or inspect it.
 struct DisposableFileAdapter { endpoint: PublicationEndpoint, expected_secret: Vec<u8> }
 impl DisposableFileAdapter {
     fn deliver(&mut self, credential: &BrokerCredential, message: &DispatchEnvelope) -> Result<EndpointReceipt, Error> {
@@ -124,14 +150,19 @@ impl fmt::Debug for CredentialBroker {
 }
 
 impl CredentialBroker {
+    /// The broker-held and provider-held credentials are independent bootstrap
+    /// inputs. A mismatch refuses before either owner is retained and before any
+    /// endpoint operation. This removes the old self-fulfilling credential check
+    /// where the provider expectation was cloned from the broker secret itself.
     pub fn new(inventory: LoadedPerimeterInventory, binding: BrokerRouteBinding, scope: Scope,
-        credential: BrokerCredential, endpoint: PublicationEndpoint) -> Result<Self, Error>
+        credential: BrokerCredential, provider: ProviderCredential,
+        endpoint: PublicationEndpoint) -> Result<Self, Error>
     {
         Self::validate_attachment(&inventory, &binding, scope, &endpoint)?;
-        let expected_secret = credential.secret.clone();
+        if credential.secret != provider.secret { return Err(Error::Binding); }
         let endpoint_binding = Rc::clone(&endpoint.binding);
         Ok(Self { inventory, binding, scope, credential,
-            adapter: DisposableFileAdapter { endpoint, expected_secret }, endpoint_binding,
+            adapter: DisposableFileAdapter { endpoint, expected_secret: provider.secret }, endpoint_binding,
             credential_generation: 1, credential_revoked: false,
             credential_changes: BTreeMap::new(), credential_exercises: 0 })
     }
@@ -158,21 +189,23 @@ impl CredentialBroker {
         self.adapter.endpoint.resolve_expired(query)
     }
 
-    /// Rotate provider bootstrap material without changing action authority. Old
-    /// dispatch envelopes retain their original authorization semantics and may
-    /// still be sent by THIS broker using the new credential. Rotation cannot
-    /// reopen a terminally revoked broker.
-    pub fn rotate_credential(&mut self, request: CredentialRotationRequest, next: BrokerCredential)
-        -> Result<CredentialChangeReceipt, Error>
+    /// Rotate provider bootstrap material without changing action authority. The
+    /// next broker and provider capabilities must independently agree before the
+    /// transition mutates either side. Old dispatch envelopes retain their
+    /// original authorization semantics and may still be sent using the newly
+    /// provisioned pair. Rotation cannot reopen a terminally revoked broker.
+    pub fn rotate_credential(&mut self, request: CredentialRotationRequest,
+        next: BrokerCredential, provider: ProviderCredential) -> Result<CredentialChangeReceipt, Error>
     {
         if let Some(stored) = self.credential_changes.get(&request.operation) {
             return match stored {
                 StoredCredentialChange::Rotation { request: original, secret, receipt }
-                    if original == &request && secret == &next.secret => Ok(*receipt),
+                    if original == &request && secret == &next.secret && secret == &provider.secret => Ok(*receipt),
                 _ => Err(Error::Binding),
             };
         }
         if request.operation == 0 { return Err(Error::InvalidInput); }
+        if next.secret != provider.secret { return Err(Error::Binding); }
         if self.credential_revoked { return Err(Error::WrongState); }
         if request.expected_generation != self.credential_generation { return Err(Error::Stale); }
         let expected_next = self.credential_generation.checked_add(1).ok_or(Error::Overflow)?;
@@ -181,7 +214,7 @@ impl CredentialBroker {
         let receipt = CredentialChangeReceipt { operation: request.operation,
             generation: request.next_generation, revoked: false };
         let secret = next.secret.clone();
-        self.adapter.expected_secret = secret.clone();
+        self.adapter.expected_secret = provider.secret;
         self.credential = next;
         self.credential_generation = request.next_generation;
         self.credential_changes.insert(request.operation,
@@ -215,7 +248,8 @@ impl CredentialBroker {
         Ok(self.credential_changes.get(&operation).ok_or(Error::Missing)?.receipt())
     }
 
-    /// The only method that presents the broker-held credential to the adapter.
+    /// The only method that presents the broker-held credential to the separately
+    /// configured provider expectation.
     pub fn deliver(&mut self, message: &DispatchEnvelope) -> Result<EndpointReceipt, Error> {
         if self.credential_revoked { return Err(Error::WrongState); }
         self.check_envelope(message)?;
@@ -265,8 +299,9 @@ impl fmt::Debug for RecoverableCredentialBroker {
 }
 impl RecoverableCredentialBroker {
     pub fn new(inventory: LoadedPerimeterInventory, binding: BrokerRouteBinding, scope: Scope,
-        credential: BrokerCredential, endpoint: PublicationEndpoint, recovery: FileEndpointRecovery) -> Result<Self, Error>
-    { Ok(Self { broker: CredentialBroker::new(inventory, binding, scope, credential, endpoint)?, recovery }) }
+        credential: BrokerCredential, provider: ProviderCredential,
+        endpoint: PublicationEndpoint, recovery: FileEndpointRecovery) -> Result<Self, Error>
+    { Ok(Self { broker: CredentialBroker::new(inventory, binding, scope, credential, provider, endpoint)?, recovery }) }
     pub fn broker(&self) -> &CredentialBroker { &self.broker }
     pub fn broker_mut(&mut self) -> &mut CredentialBroker { &mut self.broker }
     pub fn into_offline(self) -> OfflineCredentialBroker {
@@ -328,7 +363,7 @@ impl OfflineCredentialBroker {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::action::{VERSION};
+    use crate::action::VERSION;
     use crate::perimeter_inventory::LoadedPerimeterInventory;
     use std::path::PathBuf;
     use std::sync::atomic::{AtomicU64, Ordering};
@@ -361,30 +396,57 @@ mod tests {
         let request = super::super::PublicationRequest { version: VERSION, scope: scope(), target: target(), payload: b"new".to_vec(),
             policy_epoch: 0, deadline: ElapsedTick(100), units: 16, approval: None };
         let message = DispatchEnvelope { binding: Rc::clone(&endpoint.binding), epoch: 0, attempt: 1, request, retained_until: ElapsedTick(150) };
-        let broker = RecoverableCredentialBroker::new(inventory(), binding(), scope(), BrokerCredential::new(b"one".to_vec()).unwrap(), endpoint, recovery).unwrap();
+        let broker = RecoverableCredentialBroker::new(inventory(), binding(), scope(),
+            BrokerCredential::new(b"one".to_vec()).unwrap(), ProviderCredential::new(b"one".to_vec()).unwrap(),
+            endpoint, recovery).unwrap();
         (root, broker, message)
+    }
+
+    #[test]
+    fn bootstrap_refuses_broker_provider_secret_mismatch() {
+        let root = Temp::new();
+        let (mut endpoint, _recovery) = PublicationEndpoint::create_file_publication(&root.0, target(), b"old".to_vec(), 200, 8,
+            super::super::FilePublicationLimits { mutations: 128, bytes: 1_048_576 }).unwrap();
+        endpoint.attach(scope()).unwrap();
+        assert_eq!(CredentialBroker::new(inventory(), binding(), scope(),
+            BrokerCredential::new(b"broker".to_vec()).unwrap(), ProviderCredential::new(b"provider".to_vec()).unwrap(),
+            endpoint).unwrap_err(), Error::Binding);
     }
 
     #[test]
     fn rotation_is_idempotent_and_does_not_mint_or_change_dispatch_authority() {
         let (_root, mut broker, message) = fixture();
         let request = CredentialRotationRequest { operation: 1, expected_generation: 1, next_generation: 2 };
-        let receipt = broker.broker_mut().rotate_credential(request, BrokerCredential::new(b"two".to_vec()).unwrap()).unwrap();
+        let receipt = broker.broker_mut().rotate_credential(request,
+            BrokerCredential::new(b"two".to_vec()).unwrap(), ProviderCredential::new(b"two".to_vec()).unwrap()).unwrap();
         assert_eq!(receipt, CredentialChangeReceipt { operation: 1, generation: 2, revoked: false });
-        assert_eq!(broker.broker_mut().rotate_credential(request, BrokerCredential::new(b"two".to_vec()).unwrap()).unwrap(), receipt);
+        assert_eq!(broker.broker_mut().rotate_credential(request,
+            BrokerCredential::new(b"two".to_vec()).unwrap(), ProviderCredential::new(b"two".to_vec()).unwrap()).unwrap(), receipt);
         assert_eq!(broker.broker().inspect().credential_generation, 2);
         assert_eq!(broker.broker_mut().deliver(&message).unwrap().outcome(), super::super::EndpointOutcome::Executed { resulting_version: 2 });
         assert_eq!(broker.broker().inspect().endpoint_executions, 1);
     }
 
     #[test]
+    fn mismatched_rotation_is_atomic_and_cannot_replace_either_live_side() {
+        let (_root, mut broker, message) = fixture();
+        let request = CredentialRotationRequest { operation: 1, expected_generation: 1, next_generation: 2 };
+        assert_eq!(broker.broker_mut().rotate_credential(request,
+            BrokerCredential::new(b"two".to_vec()).unwrap(), ProviderCredential::new(b"wrong".to_vec()).unwrap()).unwrap_err(), Error::Binding);
+        assert_eq!(broker.broker().inspect().credential_generation, 1);
+        assert_eq!(broker.broker_mut().deliver(&message).unwrap().outcome(), super::super::EndpointOutcome::Executed { resulting_version: 2 });
+    }
+
+    #[test]
     fn conflicting_or_stale_rotation_cannot_replace_the_live_secret() {
         let (_root, mut broker, _message) = fixture();
         let request = CredentialRotationRequest { operation: 1, expected_generation: 1, next_generation: 2 };
-        broker.broker_mut().rotate_credential(request, BrokerCredential::new(b"two".to_vec()).unwrap()).unwrap();
-        assert_eq!(broker.broker_mut().rotate_credential(request, BrokerCredential::new(b"different".to_vec()).unwrap()).unwrap_err(), Error::Binding);
+        broker.broker_mut().rotate_credential(request,
+            BrokerCredential::new(b"two".to_vec()).unwrap(), ProviderCredential::new(b"two".to_vec()).unwrap()).unwrap();
+        assert_eq!(broker.broker_mut().rotate_credential(request,
+            BrokerCredential::new(b"different".to_vec()).unwrap(), ProviderCredential::new(b"different".to_vec()).unwrap()).unwrap_err(), Error::Binding);
         assert_eq!(broker.broker_mut().rotate_credential(CredentialRotationRequest { operation: 2, expected_generation: 1, next_generation: 2 },
-            BrokerCredential::new(b"three".to_vec()).unwrap()).unwrap_err(), Error::Stale);
+            BrokerCredential::new(b"three".to_vec()).unwrap(), ProviderCredential::new(b"three".to_vec()).unwrap()).unwrap_err(), Error::Stale);
         assert_eq!(broker.broker().inspect().credential_generation, 2);
     }
 
@@ -404,7 +466,7 @@ mod tests {
     fn rotation_and_terminal_revocation_survive_offline_reopen() {
         let (_root, mut broker, message) = fixture();
         broker.broker_mut().rotate_credential(CredentialRotationRequest { operation: 1, expected_generation: 1, next_generation: 2 },
-            BrokerCredential::new(b"two".to_vec()).unwrap()).unwrap();
+            BrokerCredential::new(b"two".to_vec()).unwrap(), ProviderCredential::new(b"two".to_vec()).unwrap()).unwrap();
         let mut broker = broker.into_offline().reopen().unwrap(); broker.broker_mut().observe_time(ElapsedTick(2)).unwrap();
         assert_eq!(broker.broker().inspect().credential_generation, 2);
         broker.broker_mut().revoke_credential(CredentialRevocationRequest { operation: 2, expected_generation: 2 }).unwrap();
