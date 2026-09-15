@@ -4,6 +4,7 @@ mod launch;
 mod intake;
 use super::{FileDriverEvent, FileDriverProcessError, FileHumanPermit,
     FileHumanRequest, FileOversight, FileSupervisedDriver, JournalError, Phase, observe, sample, stage};
+use super::super::credential::FileCredentialPermit;
 use super::super::helpers::FileHelperSetupError;
 use super::super::source::FileSourceError;
 use super::provider::EvidenceProvider;
@@ -60,7 +61,22 @@ impl FileSupervisedDriver {
         let mut observations = Vec::with_capacity(2);
         let mut source_updates = Vec::with_capacity(2);
         let result = self.step_with_provider(clock,
-            &mut FileProvider { source, observations: &mut observations, updates: &mut source_updates }, human);
+            &mut FileProvider { source, observations: &mut observations, updates: &mut source_updates }, human, None);
+        FileEvidenceReport { observations, source_updates, result }
+    }
+
+    /// Same concrete file/source state machine with the process-local credential
+    /// capability available only at first publication. Earlier source reads,
+    /// review, human approval and dispatch are unchanged.
+    pub fn step_from_file_with_credential<S, F>(&mut self, source: &mut S, clock: F,
+        human: Option<&FileHumanPermit>, credential: &FileCredentialPermit)
+        -> FileEvidenceReport<FileDriverEvent>
+    where S: EvidenceFile + ?Sized, F: FnMut() -> ElapsedTick {
+        let mut observations = Vec::with_capacity(2);
+        let mut source_updates = Vec::with_capacity(2);
+        let result = self.step_with_provider(clock,
+            &mut FileProvider { source, observations: &mut observations, updates: &mut source_updates },
+            human, Some(credential));
         FileEvidenceReport { observations, source_updates, result }
     }
 

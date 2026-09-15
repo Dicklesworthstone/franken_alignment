@@ -15,6 +15,7 @@ use provider::EvidenceProvider;
 use crate::action::consequence::oversight::helper_processes::HelperChildren;
 
 use super::{FileHumanPermit, FileHumanRequest, FileOversight};
+use super::credential::FileCredentialPermit;
 use super::helpers::{FileHelperFailure, FileHelperLaunch, FileHelperSetupError};
 use super::publication::CheckedPublication;
 use super::super::{FilePermit, JournalError, Reconciliation};
@@ -193,22 +194,33 @@ impl FileSupervisedDriver {
         result
     }
 
-    /// One review pass OR durable dispatch OR publication OR reconciliation.
-    /// Providers run after review I/O and after reservation. A guarded first
-    /// publication reads once more; settled outcomes and query-only recovery do
-    /// not call providers. Clocks are sampled after each provider operation.
-    /// No automatic re-review, human approval, source fallback or resend exists.
+    /// Existing callback-driven behavior. A credential-guarded host can still
+    /// review, reserve and dispatch through this method, but a valid first
+    /// publication will refuse unless the explicit credentialed variant is used.
     pub fn step_with_evidence<F, P>(&mut self, clock: F, provider: P,
         human: Option<&FileHumanPermit>) -> Result<FileDriverEvent, JournalError>
     where F: FnMut() -> ElapsedTick,
         P: FnMut(&FrozenAction, &CommitteeContract) -> Result<DriverEvidence, Error>,
     {
-        self.step_with_provider(clock, &mut provider::Callback(provider), human)
+        self.step_with_provider(clock, &mut provider::Callback(provider), human, None)
     }
 
-    // Both callback and durable-file evidence use this exact state machine.
+    /// Same original driver state machine, with one additional process-local
+    /// credential capability consulted ONLY at first publication. Review,
+    /// authorization, human approval and dispatch do not consume or refresh it.
+    pub fn step_with_evidence_and_credential<F, P>(&mut self, clock: F, provider: P,
+        human: Option<&FileHumanPermit>, credential: &FileCredentialPermit)
+        -> Result<FileDriverEvent, JournalError>
+    where F: FnMut() -> ElapsedTick,
+        P: FnMut(&FrozenAction, &CommitteeContract) -> Result<DriverEvidence, Error>,
+    {
+        self.step_with_provider(clock, &mut provider::Callback(provider), human, Some(credential))
+    }
+
+    // Callback and durable-file evidence use this exact state machine.
     fn step_with_provider<F, P>(&mut self, mut clock: F, provider: &mut P,
-        human: Option<&FileHumanPermit>) -> Result<FileDriverEvent, JournalError>
+        human: Option<&FileHumanPermit>, credential: Option<&FileCredentialPermit>)
+        -> Result<FileDriverEvent, JournalError>
     where F: FnMut() -> ElapsedTick, P: EvidenceProvider {
         self.reap_helpers();
         let result = (|| {
@@ -229,7 +241,7 @@ impl FileSupervisedDriver {
                 job.permit = None; job.phase = Phase::Reconcile;
             }
             observe(&mut host, clock())?;
-            step_job(&mut host, job, &mut clock, provider, human)
+            step_job(&mut host, job, &mut clock, provider, human, credential)
         })();
         self.reap_helpers();
         if self.job.as_ref().is_some_and(|job| job.phase == Phase::Closed) { self.job = None; }
@@ -289,7 +301,8 @@ where P: EvidenceProvider, F: FnMut() -> ElapsedTick {
 }
 
 fn step_job<F, P>(host: &mut FileOversight, job: &mut Job, clock: &mut F,
-    provider: &mut P, human: Option<&FileHumanPermit>) -> Result<FileDriverEvent, JournalError>
+    provider: &mut P, human: Option<&FileHumanPermit>, credential: Option<&FileCredentialPermit>)
+    -> Result<FileDriverEvent, JournalError>
 where F: FnMut() -> ElapsedTick, P: EvidenceProvider {
     let request = job.request;
     match job.phase {
@@ -344,7 +357,7 @@ where F: FnMut() -> ElapsedTick, P: EvidenceProvider {
             job.phase = Phase::Publish;
             Ok(FileDriverEvent::Dispatched { request, attempt: job.attempt })
         }
-        Phase::Publish => Ok(publication::publish_job(host, job, clock, provider)),
+        Phase::Publish => Ok(publication::publish_job(host, job, clock, provider, credential)),
         Phase::Reconcile => {
             let revision = host.revision();
             let outcome = host.reconcile(revision, job.attempt)?;

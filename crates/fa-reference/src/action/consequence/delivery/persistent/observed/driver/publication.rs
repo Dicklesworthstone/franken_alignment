@@ -2,17 +2,22 @@
 //! Observation failure is input to sealing, not permission to skip the guard.
 use super::{FileDriverEvent, FileOversight, Job, JournalError, Phase};
 use super::provider::{EvidenceProvider, validate};
+use super::super::credential::FileCredentialPermit;
 use crate::action::ElapsedTick;
-use crate::Snapshot;
+use crate::{Error, Snapshot};
 
 pub(super) fn publish_job<F, P>(host: &mut FileOversight, job: &mut Job,
-    clock: &mut F, provider: &mut P) -> FileDriverEvent
+    clock: &mut F, provider: &mut P, credential: Option<&FileCredentialPermit>) -> FileDriverEvent
 where F: FnMut() -> ElapsedTick, P: EvidenceProvider {
     let request = job.request;
     // Retire the send path BEFORE invoking external provider code. Even a
     // caller-caught unwind may only be followed by original reconciliation.
     job.phase = Phase::Reconcile;
     if !host.publication_guard_required() {
+        // A credential permit is meaningful only for a credential-guarded host.
+        if credential.is_some() {
+            return FileDriverEvent::PublicationUnknown { request, error: Error::WrongState.into() };
+        }
         let revision = host.revision();
         return match host.publish(revision, job.attempt) {
             Ok(outcome) => FileDriverEvent::Published { request, outcome },
@@ -33,15 +38,20 @@ where F: FnMut() -> ElapsedTick, P: EvidenceProvider {
                 Err(error) => (None, Snapshot::default(), Some(error)),
             }
         } else {
-            // Resolved, expired or unsendable obligations need no provider.
-            // Never replace original endpoint evidence with a source assertion.
+            // Resolved, expired or unsendable obligations need no provider or
+            // credential. Never replace original endpoint evidence with a source
+            // assertion or force secret availability for query-only recovery.
             (None, Snapshot::default(), None)
         };
         // The original publication/sealing operation still samples current time
         // AFTER file reading and, for configured sources, durable observation.
         let now = clock();
         let revision = host.revision();
-        let publication = host.publish_checked(revision, job.attempt, inputs.as_ref(), snapshot, now)?;
+        let publication = match credential {
+            Some(credential) => host.publish_checked_with_credential(
+                revision, job.attempt, inputs.as_ref(), snapshot, now, credential),
+            None => host.publish_checked(revision, job.attempt, inputs.as_ref(), snapshot, now),
+        }?;
         Ok::<_, JournalError>((publication, source_failure))
     })();
     match result {
