@@ -3,6 +3,8 @@
 
 use super::{CommitteeInput, actor::ActorSupervisor, human::HumanPermit};
 use crate::action::consequence::delivery::{DispatchEnvelope, EndpointReceipt, EndpointStatus, PublicationEndpoint};
+#[cfg(unix)]
+use crate::action::consequence::delivery::credential_broker::CredentialBroker;
 use crate::action::{ActionState, Permit};
 use crate::{Error, Snapshot};
 use std::collections::BTreeMap;
@@ -107,5 +109,74 @@ impl ActorSupervisor {
         let result = self.broker_mut().reconcile_pending(endpoint);
         self.synchronize()?;
         result
+    }
+}
+
+#[cfg(unix)]
+impl ActorSupervisor {
+    /// Same original dispatch transition as `deliver_request`, but the only
+    /// effect sink is the broker-held credential route. No raw endpoint or secret
+    /// is exposed to the actor supervisor.
+    pub fn deliver_request_brokered(
+        &mut self, request: u64, keys: DispatchKeys<'_>, current: Option<&CommitteeInput>,
+        snapshot: &Snapshot, perimeter: &mut CredentialBroker,
+    ) -> Result<EndpointReceipt, Error> {
+        let message = self.dispatch_request(request, keys, current, snapshot)?;
+        match perimeter.deliver(&message) {
+            Ok(receipt) => {
+                if let Err(error) = self.accept_receipt(receipt.clone()) {
+                    self.acknowledgment_lost(request)?;
+                    return Err(error);
+                }
+                Ok(receipt)
+            }
+            Err(error) => {
+                self.acknowledgment_lost(request)?;
+                Err(error)
+            }
+        }
+    }
+
+    /// Re-establish the ORIGINAL dispatcher fence through the hidden endpoint.
+    /// This issues no action, credential, helper review or human approval.
+    pub fn restart_brokered_dispatcher(&mut self, perimeter: &mut CredentialBroker) -> Result<(), Error> {
+        let request = self.broker_mut().restart_dispatcher()?;
+        self.synchronize()?;
+        let acknowledgment = perimeter.install_fence(request)?;
+        self.broker_mut().confirm_fence(acknowledgment)?;
+        self.synchronize()
+    }
+
+    /// Bounded original-obligation sweep without a raw endpoint. Missing effects
+    /// are resolved only by the hidden endpoint's expiry operation; there is no
+    /// resend and no credential presentation during reconciliation.
+    pub fn reconcile_brokered_pending(
+        &mut self, perimeter: &mut CredentialBroker,
+    ) -> Result<ReconciliationResults, Error> {
+        let queries = self.broker().pending_reconciliation()?;
+        let mut outcomes = BTreeMap::new();
+        for query in queries {
+            let status = perimeter.status(&query).and_then(|status| match status {
+                EndpointStatus::AwaitingResolution => match perimeter.resolve_expired(&query) {
+                    Ok(receipt) => Ok(EndpointStatus::Resolved(receipt)),
+                    Err(Error::Incomplete) => Ok(EndpointStatus::AwaitingResolution),
+                    Err(error) => Err(error),
+                },
+                terminal => Ok(terminal),
+            });
+            let outcome = match status {
+                Ok(status) => self.broker_mut().reconcile_status(&query, status),
+                Err(error) => {
+                    let attempt = query.attempt();
+                    match self.broker_mut().acknowledgment_lost(attempt) {
+                        Ok(()) => Err(error),
+                        Err(accounting) => Err(accounting),
+                    }
+                }
+            };
+            outcomes.insert(query.attempt(), outcome);
+        }
+        self.synchronize()?;
+        Ok(outcomes)
     }
 }
