@@ -15,6 +15,8 @@ pub mod fleet;
 pub mod stream;
 #[cfg(unix)]
 pub mod persistent;
+#[cfg(unix)]
+pub mod credential_broker;
 pub use approval::DispatchApproval;
 pub use endpoint::PublicationEndpoint;
 #[cfg(unix)]
