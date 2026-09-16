@@ -1,0 +1,27 @@
+# Recoverable evidence-source publication
+
+`FileEvidencePublisher` adds the producer half of the registered file-evidence path. It writes the existing `EvidenceSnapshot` interchange format and returns the existing sealed `FileEvidenceSource`, which feeds `FileOversight::refresh_file_source` and the supervised driver's file-source methods. It does not introduce a second effect ledger, replacement reader, model runtime or new dependency.
+
+The API lives at `fa_reference::action::consequence::delivery::persistent::observed::source::publisher`. `create(directory, profile, initial)` owns a new private source directory; `publish(expected_generation, next)` publishes the exact next immutable generation; `reader()` returns a concrete reader that opens the canonical file anew; `open(directory, profile)` recovers an exclusively locked producer. The directory's canonical filename is the existing storage implementation's `delivery.bin`, containing the unchanged JSON evidence format. It is a separate evidence directory, not an effect journal directory.
+
+## Publication and recovery contract
+
+The original storage implementation supplies private-directory creation, a cooperating owner lock, exclusive staging, write and file-sync barriers, atomic rename and directory sync. Data is validated and encoded within the configured byte cap before any new directory or replacement is created. Maximum encoded input is the existing 4 MiB evidence-file limit; the underlying snapshot also retains its original entry, value and aggregate context bounds. Encoding and comparison buffers are bounded by those existing limits; this is not a measured allocator or latency claim.
+
+Publication binds source, complete scope, exact predecessor generation and the next generation, and refuses semantic-epoch rollback. A retry with the original predecessor and identical current snapshot returns `AlreadyCurrent`; changed bytes at the same generation refuse. Before replacement or retry acknowledgment the owner rereads and checks the canonical bytes, so observed out-of-band replacement cannot be overwritten or mistaken for success. I/O or canonical-substitution failure poisons that owner until explicit reopen. The last acknowledged in-memory snapshot remains historical and may differ from the visible file after an ambiguous failure.
+
+Reopen validates the canonical image's format, scope, source and independently supplied minimum generation BEFORE confirming durability or discarding staged leftovers. It never promotes the staging file. Missing, malformed or below-floor canonical data refuse and leave pending data alone. An unacknowledged rename can therefore recover either the old or new complete image; only reading and validating the canonical image determines which. Exactly-once remote publication is not claimed.
+
+Incomplete snapshots are allowed as source observations. The original mandatory consumer withdraws eligibility and retains its producer-generation floor; the publisher does not fill missing data or call an incomplete snapshot complete. A new complete version can restore observation availability, but cannot silently restore an invalidated review or mint a permit.
+
+## Existing effect-path consumer
+
+A paired regression goes through actual source files, the unchanged reader, durable source capture, the original congress commit/reveal, the separately issued human key, and dispatch. With unchanged evidence, guarded publication executes. With a new helper-context generation published after dispatch, refreshing the source invalidates the original review and guarded publication seals the effect instead of rebasing the old judgment. Its resource charge remains until the original reconciliation consumes the endpoint's nonexecution outcome. This is a test scenario in source, not a reported passing execution.
+
+Ten regression functions cover original-reader interoperability, exclusive ownership, exact retries before/after reopen, scope/source/predecessor/semantic mismatches, exact and one-over byte bounds, observed external substitution, all five storage replacement fault barriers, recovery floors, staged-data nonpromotion, generation overflow, the paired two-key effect path, and incomplete-to-complete source recovery. One compile-fail doctest checks that the producer owner cannot be cloned.
+
+## Trust and verification boundary
+
+This is a Unix filesystem reference profile. The operator must protect the source directory and its ancestors from noncooperating writes. The lock is advisory, and checking canonical bytes does not defeat an adversary racing pathname operations. The minimum generation must be retained outside the rollbackable directory to detect a rollback on reopen. The ordinary reader keeps its existing process-local observed floor; the durable FileOversight consumer separately retains its source floor. There is no cryptographic authentication, hardware power-cut qualification, universal filesystem durability or production runtime admission claim.
+
+Plan §§7.2, 7.6–7.8, 8.8 and 16.4; producer integration serves the existing FA-062 publication boundary and FA-INV-004/014. Rust compilation, rustfmt, Clippy, unit tests and doctests remain UNEXECUTED. The required RCH command was attempted in the editing environment and exited 127 because `rch` is absent, before any compilation. No Beads were closed, original tests weakened, historical execution receipts replaced or production gates promoted.

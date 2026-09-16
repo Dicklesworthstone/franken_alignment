@@ -3,6 +3,7 @@
 //! after recovery. Reads, journals and trusted clocks remain a reference profile.
 mod codec;
 mod replacement;
+pub mod publisher;
 #[cfg(test)]
 mod interruption_tests;
 pub use replacement::FileSourceReplacement;
