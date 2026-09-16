@@ -18,6 +18,7 @@ pub mod publication;
 pub mod credential;
 pub mod source;
 pub mod replay;
+pub mod stream;
 #[cfg(test)]
 mod tests;
 pub use human::{FileHumanPermit, FileHumanRequest, FileHumanReviewer};

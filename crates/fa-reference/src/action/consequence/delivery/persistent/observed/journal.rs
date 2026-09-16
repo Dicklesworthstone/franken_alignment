@@ -8,6 +8,7 @@ use super::super::{codec, recovery_capacity, Event as BaseEvent};
 use super::super::codec::shared::{Reader, Writer};
 use super::views::{self, Views};
 use crate::action::ElapsedTick;
+use crate::action::consequence::delivery::stream::StreamProfile;
 use crate::action::consequence::delivery::credential_broker::{
     CredentialRevocationRequest, CredentialRotationRequest,
 };
@@ -47,6 +48,7 @@ pub(super) enum Event {
     CredentialRotate(CredentialRotationRequest),
     CredentialRevoke(CredentialRevocationRequest),
     Campaign(CampaignEvent),
+    StreamBootstrap(StreamProfile),
 }
 
 fn core_allowed(event: &BaseEvent) -> bool {
@@ -86,7 +88,7 @@ fn encode_iter<'a>(p: &FileOversightProfile, path: &Path, count: usize, events: 
         w.blob(&record.finish())?;
         let class = match event {
             Event::Core(event) => recovery_capacity::class(event),
-            Event::PublicationGuard | Event::CredentialGuard(_) | Event::Campaign(CampaignEvent::Enable(..)) => recovery_capacity::Class::Bootstrap,
+            Event::PublicationGuard | Event::CredentialGuard(_) | Event::Campaign(CampaignEvent::Enable(..)) | Event::StreamBootstrap(_) => recovery_capacity::Class::Bootstrap,
             _ => recovery_capacity::Class::Work,
         };
         admission.record(class, index + 1, w.encoded_len())?;
@@ -140,6 +142,7 @@ fn write_event(w: &mut Writer, event: &Event) -> Result<(), Error> {
         Event::CredentialRotate(request) => { w.u8(21)?; w.u64(request.operation)?; w.u64(request.expected_generation)?; w.u64(request.next_generation)?; }
         Event::CredentialRevoke(request) => { w.u8(22)?; w.u64(request.operation)?; w.u64(request.expected_generation)?; }
         Event::Campaign(event) => { w.u8(23)?; super::governance::campaigns::write(w, event)?; }
+        Event::StreamBootstrap(profile) => { w.u8(24)?; super::stream::write_profile(w, *profile)?; }
     }
     Ok(())
 }
@@ -170,6 +173,7 @@ fn read_event(r: &mut Reader<'_>) -> Result<Event, Error> {
         21 => Event::CredentialRotate(CredentialRotationRequest { operation: r.u64()?, expected_generation: r.u64()?, next_generation: r.u64()? }),
         22 => Event::CredentialRevoke(CredentialRevocationRequest { operation: r.u64()?, expected_generation: r.u64()? }),
         23 => Event::Campaign(super::governance::campaigns::read(r)?),
+        24 => Event::StreamBootstrap(super::stream::read_profile(r)?),
         _ => return Err(Error::InvalidInput),
     })
 }

@@ -23,6 +23,7 @@ mod publication;
 mod source;
 mod credential;
 mod campaigns;
+mod stream;
 
 pub(super) enum Transition {
     Unit,
@@ -44,6 +45,8 @@ pub(super) enum Transition {
 }
 
 pub(super) struct Machine {
+    // Available only until the FIRST accepted event; never a live reset path.
+    bootstrap: Option<FileOversightProfile>,
     pub(super) broker: OversightBroker,
     pub(super) containment: ContainmentHistory,
     pub(super) actions: BTreeMap<u64, FrozenAction>,
@@ -69,7 +72,11 @@ impl Machine {
     pub(super) fn new(p: &FileOversightProfile) -> Result<Self, Error> {
         super::super::codec::validate_profile(&p.delivery)?;
         let d = &p.delivery;
-        let mut endpoint = PublicationEndpoint::new(d.target, d.initial_payload.clone(), d.retention_ticks, d.max_deliveries)?;
+        let endpoint = PublicationEndpoint::new(d.target, d.initial_payload.clone(), d.retention_ticks, d.max_deliveries)?;
+        Self::with_endpoint(p, endpoint)
+    }
+    fn with_endpoint(p: &FileOversightProfile, mut endpoint: PublicationEndpoint) -> Result<Self, Error> {
+        let d = &p.delivery;
         let mut broker = OversightBroker::new(ControllerConfig {
             scope: d.scope, total: d.total, max_attempts: d.max_attempts, actor: d.actor.clone(),
             suspend_at_incident: d.suspend_at_incident, policy: d.policy.clone(), congress: d.congress.clone(),
@@ -77,7 +84,7 @@ impl Machine {
         }, &mut endpoint, p.committee.clone())?;
         let reviewer = broker.enable_human_review(p.human)?;
         broker.confirm_fence(endpoint.install_fence(broker.fence_request())?)?;
-        Ok(Self { containment: ContainmentHistory::default(), policy_updates: PolicyUpdates::default(), requests: RequestBook::default(), scope: d.scope, broker, endpoint, reviewer, actions: BTreeMap::new(), sessions: BTreeMap::new(),
+        Ok(Self { bootstrap: Some(p.clone()), containment: ContainmentHistory::default(), policy_updates: PolicyUpdates::default(), requests: RequestBook::default(), scope: d.scope, broker, endpoint, reviewer, actions: BTreeMap::new(), sessions: BTreeMap::new(),
             automatic: BTreeMap::new(), human_keys: BTreeMap::new(), envelopes: BTreeMap::new(), clock_ready: false,
             publication_guard: false, credential_policy: None, credential_generation: 0,
             credential_revoked: false, credential_changes: Vec::new(), campaigns: None, file_source: None })
@@ -140,6 +147,7 @@ impl Machine {
     pub(super) fn apply(&mut self, event: &Event) -> Result<Transition, Error> {
         let result = self.apply_inner(event)?;
         self.requests.refresh(&self.broker.inspect())?;
+        self.bootstrap = None;
         Ok(result)
     }
 
@@ -149,9 +157,11 @@ impl Machine {
             | Event::InputsUnavailable(..) | Event::Human(_, HumanDecision::Reject | HumanDecision::Revoke) | Event::RevokeHumans
             | Event::PublicationGuard | Event::PublishChecked(..) | Event::PublishCredentialed(..)
             | Event::CredentialGuard(_) | Event::CredentialRotate(_) | Event::CredentialRevoke(_) | Event::Campaign(_)
+            | Event::StreamBootstrap(_)
             | Event::Source(_) | Event::ActorState(_) | Event::ActorCheckpoint(..) | Event::ActorReset(..));
         if !without_current_time && !self.clock_ready { return Err(Error::Incomplete); }
         match event {
+            Event::StreamBootstrap(profile) => return self.bootstrap_stream(*profile),
             Event::Campaign(event) => return self.apply_campaign(event),
             Event::ActorState(update) => return self.record_actor_state(update),
             Event::ActorCheckpoint(id, revision, epoch) => return self.capture_actor_checkpoint(*id, *revision, *epoch),
