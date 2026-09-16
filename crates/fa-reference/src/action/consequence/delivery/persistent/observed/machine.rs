@@ -22,6 +22,7 @@ mod governance;
 mod publication;
 mod source;
 mod credential;
+mod campaigns;
 
 pub(super) enum Transition {
     Unit,
@@ -55,6 +56,7 @@ pub(super) struct Machine {
     pub(super) credential_generation: u64,
     pub(super) credential_revoked: bool,
     pub(super) credential_changes: Vec<super::credential::FileCredentialChange>,
+    campaigns: Option<campaigns::CampaignState>,
     file_source: Option<source::SourceState>,
     scope: Scope,
     endpoint: PublicationEndpoint,
@@ -78,7 +80,7 @@ impl Machine {
         Ok(Self { containment: ContainmentHistory::default(), policy_updates: PolicyUpdates::default(), requests: RequestBook::default(), scope: d.scope, broker, endpoint, reviewer, actions: BTreeMap::new(), sessions: BTreeMap::new(),
             automatic: BTreeMap::new(), human_keys: BTreeMap::new(), envelopes: BTreeMap::new(), clock_ready: false,
             publication_guard: false, credential_policy: None, credential_generation: 0,
-            credential_revoked: false, credential_changes: Vec::new(), file_source: None })
+            credential_revoked: false, credential_changes: Vec::new(), campaigns: None, file_source: None })
     }
     pub(super) fn replay(p: &FileOversightProfile, events: &[Event]) -> Result<Self, Error> {
         let mut machine = Self::new(p)?;
@@ -119,6 +121,7 @@ impl Machine {
         self.envelopes.clear();
     }
     fn recover(&mut self) -> Result<(), Error> {
+        self.withdraw_policy_campaigns()?;
         self.withdraw_keys()?;
         self.broker.revoke_epoch()?;
         for (id, stage) in self.broker.inspect().ledger.stages {
@@ -145,10 +148,11 @@ impl Machine {
             Event::Core(BaseEvent::Time(_) | BaseEvent::Cancel(_) | BaseEvent::Fence | BaseEvent::Stop(_) | BaseEvent::StopProgress(_) | BaseEvent::ReserveRecovery(_) | BaseEvent::ReplacePolicy(_))
             | Event::InputsUnavailable(..) | Event::Human(_, HumanDecision::Reject | HumanDecision::Revoke) | Event::RevokeHumans
             | Event::PublicationGuard | Event::PublishChecked(..) | Event::PublishCredentialed(..)
-            | Event::CredentialGuard(_) | Event::CredentialRotate(_) | Event::CredentialRevoke(_)
+            | Event::CredentialGuard(_) | Event::CredentialRotate(_) | Event::CredentialRevoke(_) | Event::Campaign(_)
             | Event::Source(_) | Event::ActorState(_) | Event::ActorCheckpoint(..) | Event::ActorReset(..));
         if !without_current_time && !self.clock_ready { return Err(Error::Incomplete); }
         match event {
+            Event::Campaign(event) => return self.apply_campaign(event),
             Event::ActorState(update) => return self.record_actor_state(update),
             Event::ActorCheckpoint(id, revision, epoch) => return self.capture_actor_checkpoint(*id, *revision, *epoch),
             Event::ActorReset(id, request) => return self.reset_actor(*id, request),
@@ -268,6 +272,7 @@ impl Machine {
             BaseEvent::Fence => self.recover()?,
             BaseEvent::Stop(request) => {
                 let receipt = self.broker.request_stop(*request)?;
+                self.withdraw_policy_campaigns()?;
                 self.withdraw_keys()?;
                 self.clear_sendable();
                 return Ok(Transition::Stopped(receipt));

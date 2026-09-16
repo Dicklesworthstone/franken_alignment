@@ -3,6 +3,7 @@
 use super::{FileOversightProfile, ReviewWindow};
 use super::containment::{FileStateUpdate, FileResetRequest, codec as state_codec};
 use super::credential::FileCredentialPolicy;
+use super::governance::campaigns::CampaignEvent;
 use super::super::{codec, recovery_capacity, Event as BaseEvent};
 use super::super::codec::shared::{Reader, Writer};
 use super::views::{self, Views};
@@ -45,6 +46,7 @@ pub(super) enum Event {
     PublishCredentialed(u64, Option<Views>, Snapshot, ElapsedTick),
     CredentialRotate(CredentialRotationRequest),
     CredentialRevoke(CredentialRevocationRequest),
+    Campaign(CampaignEvent),
 }
 
 fn core_allowed(event: &BaseEvent) -> bool {
@@ -84,7 +86,7 @@ fn encode_iter<'a>(p: &FileOversightProfile, path: &Path, count: usize, events: 
         w.blob(&record.finish())?;
         let class = match event {
             Event::Core(event) => recovery_capacity::class(event),
-            Event::PublicationGuard | Event::CredentialGuard(_) => recovery_capacity::Class::Bootstrap,
+            Event::PublicationGuard | Event::CredentialGuard(_) | Event::Campaign(CampaignEvent::Enable(..)) => recovery_capacity::Class::Bootstrap,
             _ => recovery_capacity::Class::Work,
         };
         admission.record(class, index + 1, w.encoded_len())?;
@@ -137,6 +139,7 @@ fn write_event(w: &mut Writer, event: &Event) -> Result<(), Error> {
         Event::PublishCredentialed(id, current, snapshot, tick) => { w.u8(20)?; w.u64(*id)?; match current { None => w.u8(0)?, Some(views) => { w.u8(1)?; views::write(w, views)?; } } w.snapshot(snapshot)?; w.u64(tick.0)?; }
         Event::CredentialRotate(request) => { w.u8(21)?; w.u64(request.operation)?; w.u64(request.expected_generation)?; w.u64(request.next_generation)?; }
         Event::CredentialRevoke(request) => { w.u8(22)?; w.u64(request.operation)?; w.u64(request.expected_generation)?; }
+        Event::Campaign(event) => { w.u8(23)?; super::governance::campaigns::write(w, event)?; }
     }
     Ok(())
 }
@@ -166,6 +169,7 @@ fn read_event(r: &mut Reader<'_>) -> Result<Event, Error> {
         20 => { let id = r.u64()?; let current = match r.u8()? { 0 => None, 1 => Some(views::read(r)?), _ => return Err(Error::InvalidInput) }; Event::PublishCredentialed(id, current, r.snapshot()?, ElapsedTick(r.u64()?)) }
         21 => Event::CredentialRotate(CredentialRotationRequest { operation: r.u64()?, expected_generation: r.u64()?, next_generation: r.u64()? }),
         22 => Event::CredentialRevoke(CredentialRevocationRequest { operation: r.u64()?, expected_generation: r.u64()? }),
+        23 => Event::Campaign(super::governance::campaigns::read(r)?),
         _ => return Err(Error::InvalidInput),
     })
 }

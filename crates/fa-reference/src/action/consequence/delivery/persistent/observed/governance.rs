@@ -1,4 +1,6 @@
 //! Trusted policy changes, retained in the original full-input/two-key journal.
+pub mod campaigns;
+
 use super::{BaseEvent, Event, FileOversight, JournalError, Transition};
 use super::super::governance::{PolicyUpdate, PolicyUpdateReceipt};
 use crate::action::consequence::gate::containment::session::policy::Policy;
