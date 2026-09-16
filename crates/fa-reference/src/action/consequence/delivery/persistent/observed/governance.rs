@@ -2,6 +2,7 @@
 use super::{BaseEvent, Event, FileOversight, JournalError, Transition};
 use super::super::governance::{PolicyUpdate, PolicyUpdateReceipt};
 use crate::action::consequence::gate::containment::session::policy::Policy;
+use crate::action::consequence::policy_campaign::{PolicyReplayReport, ReplayLimits};
 use crate::Error;
 
 impl FileOversight {
@@ -28,5 +29,34 @@ impl FileOversight {
     pub fn current_policy(&self) -> Result<&Policy, JournalError> {
         if self.fault.is_some() { return Err(JournalError::Unavailable); }
         Ok(self.machine.policy_updates.current(&self.profile.delivery.policy))
+    }
+
+    /// Compare a candidate with ALL retained complete proposal/review cases
+    /// under the current policy, including exact denials. No caller-selected
+    /// archive, fresh source read, helper execution, approval or mutation occurs.
+    /// New observations outside the retained witnesses require shadow evaluation.
+    pub fn replay_candidate_policy(&self, candidate: Policy, limits: ReplayLimits)
+        -> Result<PolicyReplayReport, JournalError>
+    {
+        if self.fault.is_some() { return Err(JournalError::Unavailable); }
+        Ok(self.machine.broker.replay_candidate_policy(candidate, limits)?)
+    }
+
+    /// Read one canonical journal image and reconstruct its original policy
+    /// corpus in RAM. Unlike open(), this acquires no writer, appends no fence,
+    /// performs no cleanup and returns no authority. The accompanying snapshot
+    /// identifies the exact historical cut used; it is not a live-source claim.
+    /// The directory must satisfy the same operator trust contract as read_publication.
+    pub fn read_policy_replay(directory: impl AsRef<std::path::Path>,
+        profile: &super::FileOversightProfile, candidate: Policy, limits: ReplayLimits)
+        -> Result<(super::FileDeliverySnapshot, PolicyReplayReport), JournalError>
+    {
+        super::super::codec::validate_profile(&profile.delivery)?;
+        let identity = super::storage::identity(directory.as_ref())?;
+        let bytes = super::storage::read(&identity.join(super::storage::CANONICAL), profile.delivery.limits.bytes)?;
+        let events = super::journal::decode(profile, &identity, &bytes)?;
+        let machine = super::Machine::replay(profile, &events)?;
+        let report = machine.broker.replay_candidate_policy(candidate, limits)?;
+        Ok((machine.snapshot(events.len()), report))
     }
 }

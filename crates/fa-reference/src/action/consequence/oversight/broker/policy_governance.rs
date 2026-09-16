@@ -203,4 +203,13 @@ impl OversightBroker {
             history: controller.policy_replay_revision(), started_rounds: self.started_rounds.len(),
             actor_revision: self.actor_revision() }
     }
+
+    /// Read-only comparison over this owner's complete retained current-policy
+    /// corpus. This creates no campaign approval and cannot bypass a configured
+    /// promotion gate. Unsupported new observations remain RequiresShadow.
+    pub fn replay_candidate_policy(&self, candidate: Policy, limits: ReplayLimits)
+        -> Result<PolicyReplayReport, Error>
+    {
+        self.delivery.controller().replay_candidate_policy(candidate, limits)
+    }
 }
