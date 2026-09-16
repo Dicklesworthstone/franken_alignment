@@ -215,6 +215,13 @@ impl ProductFrontiers {
         Ok(())
     }
 
+    /// The exact admitted closing observation, not merely prefix coverage.
+    /// This exposes the caller-supplied marker; it adds no origin authentication.
+    #[must_use]
+    pub fn closing_marker(&self, key: ProjectionKey) -> Option<TrustedClosingMarker> {
+        self.projections.get(&key).and_then(|projection| projection.close)
+    }
+
     /// Returns whether all named positive and optional closing obligations hold.
     pub fn satisfies(&self, requirement: FrontierRequirement) -> Result<bool, Error> {
         if requirement.closure == Some(0)

@@ -631,6 +631,11 @@ fn closed_marker(
     if marker.key != snapshot.domain_input.domain.projection {
         return Err(Error::Binding);
     }
+    // A prefix requirement permits a shorter terminal with the same generation.
+    // Exact absence/range evidence instead binds the entire recorded marker.
+    if frontiers.closing_marker(marker.key) != Some(marker) {
+        return Err(Error::Incomplete);
+    }
     let requirement = FrontierRequirement {
         key: marker.key,
         stage: FrontierStage::Authenticated,
