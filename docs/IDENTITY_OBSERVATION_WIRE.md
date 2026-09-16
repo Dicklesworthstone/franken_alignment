@@ -1,0 +1,9 @@
+# Lossless identity observation interchange
+
+`activation::identity::wire` transports the original ModelPassport and supplied activation frames without introducing a new model comparator. Passport bytes preserve every manifest field, registered stimulus token and binary32 interval endpoint. Decoding bounds aggregate tokens and coordinates before allocation and invokes the existing IdentityAnchor and ModelPassport constructors. Sorted anchor identity is canonical; malformed shapes, nonfinite intervals, mismatched model spaces and trailing bytes refuse.
+
+`decode_frame` accepts only the existing full-precision initial SourceFrame encoding (`encode_initial(23)`), reconstructs through SourceFrame::capture and verifies against the original encoder. Progressive and refinement blocks cannot be treated as complete measurements. Signed zero, subnormals and maximum finite binary32 values survive exactly. A decoded SourceFrame is caller-supplied evidence, not a verified host measurement or a signature. Observation manifests deliberately retain wrong or zero identities so the existing observer can record a mismatch; this is distinct from admitting a registered passport.
+
+The native identity comparator is the consumer of decoded registrations and frames. Five source regressions cover a manually assembled passport vector, all truncations, malformed counts and identities, exact aggregate limits, canonical ordering, original full-precision frame compatibility, changed-coordinate detection and mismatching observation manifests.
+
+This serves plan section 7.10 / FA-118. It supplies neither cryptographic passport authentication nor inference, discriminatory-power calibration, a hardware capture boundary, or production qualification. Rust compilation, rustfmt, Clippy and tests were not executed: the required RCH invocation exited 127 because rch is absent. No Beads, original assertions, qualified counts, dependencies or production gates were changed.

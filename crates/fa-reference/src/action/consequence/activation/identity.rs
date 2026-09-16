@@ -4,6 +4,8 @@
 //! This module checks structural identity and actual finite binary32 values;
 //! it does not authenticate a host, verify signatures, or run model inference.
 
+pub mod wire;
+
 use super::{CaptureProfile, FrameIdentity, SourceFrame, MAX_VALUES};
 use crate::Error;
 use std::collections::BTreeMap;
