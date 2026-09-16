@@ -117,6 +117,18 @@ impl FileOversight {
         if self.events.len() >= self.profile.delivery.limits.events { return Err(Error::Limit.into()); }
         self.events.try_reserve(1).map_err(|_| Error::Limit)?;
         let mut candidate = Machine::replay(&self.profile, &self.events)?;
+        // These refusals enter no numerical operation and do not poison the owner.
+        if !self.clock_ready() || !self.decoder_required() || self.machine.decoder_paused() {
+            return Err(Error::Incomplete.into());
+        }
+        // Retire the acknowledged owner BEFORE new computation. A held/failed
+        // result, encoding failure or caught unwind must not silently fall back
+        // to the older quiet prefix. Only the shared acknowledged commit clears
+        // this latch; no disk replacement has been attempted at this point.
+        self.fault = Some(super::super::JournalFailure {
+            operation: super::super::JournalIo::Stage,
+            kind: std::io::ErrorKind::Other, replacement_may_be_visible: false,
+        });
         let (event, result) = candidate.prepare_decoder_step(request)?;
         let event = Event::Decoder(event);
         let bytes = journal::encode_appended(&self.profile, self.store.identity(), &self.events, &event)?;
