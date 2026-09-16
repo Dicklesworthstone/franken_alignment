@@ -86,14 +86,17 @@ impl Machine {
                     .checkpoints.captures[checkpoint].1.clone();
                 let before = self.broker.hosted_recovery_usage()?;
                 let sequence = self.broker.inspect().sequence;
+                let already_stopped = self.broker.stop_receipt().is_some();
                 let result = self.broker.reset_hosted_decoder(HostedResetRequest {
                     checkpoint: handle, expected_control_sequence: control.expected_control_sequence,
                     expected_actor_revision: control.expected_actor_revision,
                     expected_authority_epoch: control.expected_authority_epoch, binding: control.binding,
                     retained_targets: TargetCeiling::new(&control.retained_targets)?, replay_budget: *budget,
                 });
-                if result.is_ok() || before != self.broker.hosted_recovery_usage()?
-                    || sequence != self.broker.inspect().sequence {
+                self.finish_decoder_stop(already_stopped)?;
+                if self.broker.stop_receipt().is_none() && (result.is_ok()
+                    || before != self.broker.hosted_recovery_usage()?
+                    || sequence != self.broker.inspect().sequence) {
                     // A failed admitted replay can poison the original numerical
                     // source. Keep its failure/cost and retire stale review keys.
                     self.withdraw_keys()?;
@@ -159,6 +162,7 @@ impl Machine {
                 }
             },
         }
+        self.write_decoder_stop_witness(&mut w)?;
         Ok(w.finish())
     }
 }

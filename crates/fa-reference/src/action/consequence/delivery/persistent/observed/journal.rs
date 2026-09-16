@@ -92,7 +92,7 @@ fn encode_iter<'a>(p: &FileOversightProfile, path: &Path, count: usize, events: 
         w.blob(&record.finish())?;
         let class = match event {
             Event::Core(event) => recovery_capacity::class(event),
-            Event::Decoder(DecoderEvent::Enable(_)) => recovery_capacity::Class::Bootstrap,
+            Event::Decoder(DecoderEvent::Enable(_) | DecoderEvent::StopPolicy(_)) => recovery_capacity::Class::Bootstrap,
             Event::Identity(IdentityEvent::Enable(..)) => recovery_capacity::Class::Bootstrap,
             Event::PublicationGuard | Event::CredentialGuard(_) | Event::Campaign(CampaignEvent::Enable(..)) | Event::StreamBootstrap(_) => recovery_capacity::Class::Bootstrap,
             _ => recovery_capacity::Class::Work,

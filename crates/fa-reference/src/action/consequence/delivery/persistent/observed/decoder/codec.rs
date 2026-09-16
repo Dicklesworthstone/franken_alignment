@@ -2,11 +2,15 @@
 use super::{DecoderEvent, FileDecoderConfig, StepRequest, MAX_WITNESS_BYTES};
 use super::super::super::codec::shared::{Reader, Writer};
 use crate::Error;
+use crate::action::consequence::oversight::decoder_host::HostedStopPolicy;
 use std::rc::Rc;
 
 pub(in super::super) fn write(w: &mut Writer, event: &DecoderEvent) -> Result<(), Error> {
     match event {
         DecoderEvent::Enable(config) => { w.u8(0)?; config.write(w)?; }
+        DecoderEvent::StopPolicy(policy) => {
+            w.u8(5)?; w.u64(policy.id())?; w.u64(policy.generation())?; w.u64(policy.operation())?;
+        }
         DecoderEvent::Step(request, witness) => {
             if witness.is_empty() { return Err(Error::Incomplete); }
             if witness.len() > MAX_WITNESS_BYTES { return Err(Error::Limit); }
@@ -49,6 +53,7 @@ pub(in super::super) fn read(r: &mut Reader<'_>) -> Result<DecoderEvent, Error> 
             if witness.is_empty() { return Err(Error::Incomplete); }
             DecoderEvent::Checkpoint(request, Rc::from(witness))
         }
+        5 => DecoderEvent::StopPolicy(HostedStopPolicy::new(r.u64()?, r.u64()?, r.u64()?)?),
         _ => return Err(Error::InvalidInput),
     })
 }

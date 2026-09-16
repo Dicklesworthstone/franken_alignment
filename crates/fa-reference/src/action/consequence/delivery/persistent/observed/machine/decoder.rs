@@ -12,6 +12,7 @@ use crate::Error;
 use std::rc::Rc;
 
 mod checkpoint;
+mod stopping;
 use super::super::decoder::checkpoint::CheckpointRequest;
 
 pub(super) struct DecoderState {
@@ -48,6 +49,10 @@ impl Machine {
 
     pub(super) fn apply_decoder(&mut self, event: &DecoderEvent) -> Result<Transition, Error> {
         match event {
+            DecoderEvent::StopPolicy(policy) => {
+                self.enable_decoder_stop_policy(*policy)?;
+                Ok(Transition::Unit)
+            }
             DecoderEvent::Enable(config) => {
                 if self.decoder.is_some() { return Err(Error::Duplicate); }
                 if !self.actions.is_empty() || self.requests.len() != 0 || !self.sessions.is_empty()
@@ -99,13 +104,16 @@ impl Machine {
         if self.decoder.is_none() || self.decoder_paused() || !self.clock_ready { return Err(Error::Incomplete); }
         // Original failures may latch monitoring or follow a committed draw.
         // Store that result rather than rolling back a failed numerical observation.
-        Ok(match request {
+        let already_stopped = self.broker.stop_receipt().is_some();
+        let result = match request {
             StepRequest::Forced { revision, position, token, products } => Transition::DecoderForced(Box::new(
                 self.broker.advance_hosted_forced(revision, position, token, DecoderBudget { scalar_products: products }))),
             StepRequest::Sampled { revision, position, products, vocabulary } => Transition::DecoderSampled(Box::new(
                 self.broker.advance_hosted_sampled(revision, position, SampleBudget {
                     decoder: DecoderBudget { scalar_products: products }, sampling: SamplingBudget { vocabulary } }))),
-        })
+        };
+        self.finish_decoder_stop(already_stopped)?;
+        Ok(result)
     }
     fn decoder_witness(&self, result: &Transition) -> Result<Vec<u8>, Error> {
         let mut w = Writer::new(MAX_WITNESS_BYTES); w.raw(b"FADSTEP\x01")?;
@@ -141,6 +149,7 @@ impl Machine {
             }
             _ => return Err(Error::Binding),
         }
+        self.write_decoder_stop_witness(&mut w)?;
         Ok(w.finish())
     }
 }
