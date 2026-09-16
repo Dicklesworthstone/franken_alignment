@@ -1,5 +1,7 @@
 //! Durable pairing of original authority and monitored numerical checkpoints.
 //! Handles contain no state/rights; reset inputs replay through the native owner.
+pub mod investigation;
+
 use super::{DecoderEvent, FileOversight, JournalError, Machine, Transition, Event, journal};
 use super::super::containment::{FileResetRequest, codec as control_codec};
 use super::super::super::{JournalFailure, JournalIo, codec::shared::{Reader, Writer}};

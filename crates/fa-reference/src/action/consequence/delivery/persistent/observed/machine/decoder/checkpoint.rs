@@ -16,6 +16,14 @@ pub(super) struct CheckpointHistory {
 }
 
 impl Machine {
+    pub(in super::super::super) fn decoder_experiment_source(&self, id: u64)
+        -> Result<&crate::action::consequence::activation::tensor::kv::decoder::DecoderCheckpoint, Error>
+    {
+        let state = self.decoder.as_ref().ok_or(Error::Incomplete)?;
+        let (_, native) = state.checkpoints.captures.get(&id).ok_or(Error::Missing)?;
+        self.broker.hosted_experiment_source(native)
+    }
+
     pub(in super::super::super) fn decoder_checkpoint_info(&self, id: u64) -> Result<FileDecoderCheckpointInfo, Error> {
         let state = self.decoder.as_ref().ok_or(Error::Incomplete)?;
         Ok(state.checkpoints.captures.get(&id).ok_or(Error::Missing)?.0.clone())

@@ -15,6 +15,11 @@ pub(crate) struct NumericalCheckpoint {
     pub logical_bytes: usize,
 }
 impl NumericalCheckpoint {
+    // Trusted investigation reads the original immutable numerical half only.
+    // The paired authority handle and saved sampler never leave this owner.
+    #[cfg(unix)]
+    pub(crate) fn experiment_source(&self) -> &DecoderCheckpoint { &self.numerical }
+
     pub fn products(&self) -> Result<u64, Error> {
         self.numerical.model().estimate(0, self.numerical.tokens().len())?.scalar_products()
     }

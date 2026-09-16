@@ -86,6 +86,17 @@ impl RecoveryState {
 }
 
 impl OversightBroker {
+    // Observation-only integration seam. A stopped/held live actor is deliberately
+    // not resumed, reset or used as the source in place of the saved checkpoint.
+    #[cfg(unix)]
+    pub(crate) fn hosted_experiment_source(&self, checkpoint: &HostedCheckpointHandle)
+        -> Result<&crate::action::consequence::activation::tensor::kv::decoder::DecoderCheckpoint, Error>
+    {
+        let host = self.decoder_host.as_ref().ok_or(Error::Incomplete)?;
+        if !Rc::ptr_eq(&checkpoint.issuer, &host.recovery.issuer) { return Err(Error::Binding); }
+        Ok(host.recovery.checkpoints.get(&checkpoint.id).ok_or(Error::Missing)?.numerical.experiment_source())
+    }
+
     pub fn hosted_recovery_usage(&self) -> Result<HostedRecoveryUsage, Error> {
         Ok(self.decoder_host.as_ref().ok_or(Error::Incomplete)?.recovery.usage)
     }
