@@ -18,8 +18,6 @@ impl Machine {
         Ok(Transition::Unit)
     }
 
-    // Scheduling hint for the durable driver, never authority or a fresh source
-    // assertion. Keep endpoint/envelope handles private to this original machine.
     pub(in super::super) fn publication_needs_evidence(&self, attempt: u64) -> Result<bool, Error> {
         if !self.publication_guard { return Err(Error::WrongState); }
         if !self.clock_ready { return Err(Error::Incomplete); }
@@ -36,12 +34,12 @@ impl Machine {
         snapshot: &Snapshot, now: ElapsedTick, credentialed: bool) -> Result<Transition, Error>
     {
         if !self.publication_guard { return Err(Error::WrongState); }
-        if credentialed && self.credential_policy.is_none() { return Err(Error::Binding); }
+        if credentialed {
+            if self.credential_policy.is_none() { return Err(Error::Binding); }
+            if self.credential_revoked { return Err(Error::WrongState); }
+        }
         self.observe(now)?;
         let query = self.broker.status_query(attempt)?;
-        // Historical execution/nonexecution is not invalidated by a later source
-        // or credential failure. Retention loss, however, cannot produce a
-        // terminal assertion.
         match self.endpoint.status(&query)? {
             EndpointStatus::Resolved(receipt) => return Ok(Transition::PublicationChecked(CheckedPublication {
                 outcome: receipt.outcome(), basis: PublicationBasis::PreviouslyResolved,
@@ -62,23 +60,13 @@ impl Machine {
             .and_then(|current| self.broker.revalidate_publication(attempt, approval, Some(&current), snapshot));
         let (receipt, basis) = match checked {
             Ok(()) => {
-                // A journaled credential policy cannot be bypassed by replaying
-                // the older checked-publication event. Only the host path that
-                // validated a live process-local credential pair emits the new
-                // credentialed event.
                 if self.credential_policy.is_some() && !credentialed { return Err(Error::Incomplete); }
                 (self.endpoint.deliver(envelope)?, PublicationBasis::Revalidated)
             }
             Err(error) => {
-                // Restrictive sealing does not need the effect credential. This
-                // preserves the ability to establish nonexecution and reconcile
-                // charged work during a credential outage.
                 (self.endpoint.seal_unexecuted(&query)?, PublicationBasis::Rejected(error))
             }
         };
-        // The candidate is only RAM. Original file replacement makes the chosen
-        // endpoint transition visible before its result leaves FileOversight.
-        // Broker acknowledgment remains a separate durable transaction.
         Ok(Transition::PublicationChecked(CheckedPublication { outcome: receipt.outcome(), basis }))
     }
 }
