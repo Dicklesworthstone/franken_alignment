@@ -2,6 +2,9 @@
 //! Requirements are independently retained operator data, not authority or a
 //! signature. Every configured gate is matched before cleanup or recovery writes.
 
+mod bootstrap;
+pub use bootstrap::FileCredentialRegistration;
+
 use super::credential::FileCredentialPolicy;
 use super::decoder::{DecoderEvent, FileDecoderConfig};
 use super::governance::campaigns::{CampaignEvent, FilePolicyGovernor};

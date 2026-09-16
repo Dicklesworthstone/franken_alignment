@@ -38,7 +38,7 @@ impl FileCredentialPolicy {
         if self.profile_generation == 0 { return Err(Error::InvalidInput); }
         Ok(())
     }
-    fn resolve(inventory: &LoadedPerimeterInventory, binding: &BrokerRouteBinding,
+    pub(super) fn resolve(inventory: &LoadedPerimeterInventory, binding: &BrokerRouteBinding,
         scope: Scope, target: ResolvedTarget) -> Result<Self, Error>
     {
         if scope.purpose != Purpose::Effect { return Err(Error::Binding); }

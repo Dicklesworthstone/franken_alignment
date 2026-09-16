@@ -117,3 +117,37 @@ fn semantically_invalid_suffix_is_not_ignored_after_a_valid_guard_prefix() {
     assert!(FileOversight::open_guarded(root.store(), profile(), &expected).is_err());
     assert_eq!(std::fs::read(path).unwrap(), malformed);
 }
+
+#[test]
+fn initial_publication_faults_never_leave_a_partially_guarded_canonical_owner() {
+    use super::bootstrap::PreparedGuardedBootstrap;
+    for barrier in BARRIERS {
+        let root = Directory::new(); let declared = guards();
+        let prepared = PreparedGuardedBootstrap::prepare(profile(), &declared, None).unwrap();
+        let store = storage::Store::create(&root.store()).unwrap(); store.fail_once(barrier);
+        let error = prepared.publish(store).unwrap_err();
+        let JournalError::Io(failure) = error else { panic!("expected injected first-image failure"); };
+        assert_eq!(failure.operation, barrier);
+        let path = root.store().join(storage::CANONICAL);
+        if barrier == JournalIo::DirectorySync {
+            // The only visible candidate contains BOTH gates and the original
+            // publication guard, despite the missing creation acknowledgment.
+            let store = storage::Store::open(&root.store()).unwrap();
+            let bytes = store.read(profile().delivery.limits.bytes).unwrap();
+            let events = journal::decode(&profile(), store.identity(), &bytes).unwrap();
+            let machine = Machine::replay(&profile(), &events).unwrap();
+            declared.check(&machine, &events).unwrap();
+            assert!(machine.identity_contract().is_some()); assert!(machine.broker.policy_campaigns_required());
+            drop(store);
+            let expected = FileRecoveryRequirements { guards: declared, effective_policy: profile().delivery.policy,
+                credential_epoch: None, minimum: FileRecoveryFloor { journal_revision: events.len() as u64,
+                    control_sequence: 0, authority_epoch: 0 } };
+            let (host, roles) = FileOversight::open_guarded(root.store(), profile(), &expected).unwrap();
+            assert!(!host.clock_ready()); assert!(roles.identity_observer.is_some() && roles.policy_governor.is_some());
+        } else {
+            assert!(!path.exists());
+            // A pending bootstrap is never promoted just because it parses.
+            assert!(FileOversight::open(root.store(), profile()).is_err());
+        }
+    }
+}
