@@ -2,9 +2,10 @@
 //!
 //! Manifest commitments and reference stimuli are trusted registration inputs.
 //! This module checks structural identity and actual finite binary32 values;
-//! it does not authenticate a host, verify signatures, or run model inference.
+//! the decoder adapter executes stimuli, without authenticating a serving host.
 
 pub mod wire;
+pub mod decoder;
 
 use super::{CaptureProfile, FrameIdentity, SourceFrame, MAX_VALUES};
 use crate::Error;
