@@ -50,7 +50,7 @@ impl fmt::Debug for DecoderIdentityMeasurement {
 }
 
 #[derive(Debug)]
-pub enum IdentityProbeProgress { Advanced, Measured(DecoderIdentityMeasurement), Complete }
+pub enum IdentityProbeProgress { Advanced, Measured(Box<DecoderIdentityMeasurement>), Complete }
 
 /// Shares only immutable parameters. Every anchor starts from its ORIGINAL
 /// tokens and an empty cache, never the actor's active cache or random state.
@@ -167,6 +167,6 @@ impl DecoderIdentityProbe {
         self.work.measurement_bytes += measurement.source.raw_bytes();
         self.session = None;
         self.next += 1;
-        Ok(IdentityProbeProgress::Measured(measurement))
+        Ok(IdentityProbeProgress::Measured(Box::new(measurement)))
     }
 }

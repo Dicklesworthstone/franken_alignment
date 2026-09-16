@@ -1,6 +1,7 @@
 //! Durable model-identity checks using the original broker's measurement gate.
 //! The observer is separately provisioned custody, not authenticated hardware.
 mod codec;
+pub mod decoder;
 pub(super) use codec::{read, write};
 #[cfg(test)]
 mod tests;
