@@ -65,7 +65,7 @@ impl FilePolicyPromotionPermit { pub fn campaign(&self) -> u64 { self.campaign }
 /// fn duplicate(role: FilePolicyGovernor) { let _ = role.clone(); }
 /// ```
 #[derive(Debug)]
-pub struct FilePolicyGovernor { issuer: Rc<()> }
+pub struct FilePolicyGovernor { pub(in super::super) issuer: Rc<()> }
 
 impl FileOversight {
     /// Irreversible opt-in before any proposal or actor request. The native gate

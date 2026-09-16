@@ -21,6 +21,7 @@ pub mod replay;
 pub mod stream;
 pub mod identity;
 pub mod decoder;
+pub mod guarded;
 #[cfg(test)]
 mod tests;
 pub use human::{FileHumanPermit, FileHumanRequest, FileHumanReviewer};

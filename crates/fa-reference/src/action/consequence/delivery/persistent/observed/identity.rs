@@ -52,7 +52,7 @@ pub struct FileIdentityObservation {
 /// fn duplicate(role: FileIdentityObserver) { let _ = role.clone(); }
 /// ```
 #[derive(Debug)]
-pub struct FileIdentityObserver { issuer: Rc<()> }
+pub struct FileIdentityObserver { pub(super) issuer: Rc<()> }
 
 impl FileOversight {
     /// Enable before any proposal/request. No disable or passport replacement
