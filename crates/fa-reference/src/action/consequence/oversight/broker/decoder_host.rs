@@ -7,6 +7,7 @@ pub use automatic_stop::{HostedStopCause, HostedStopIncident, HostedStopPolicy};
 pub use checkpoint::{HostedCheckpointHandle, HostedRecoveryUsage, HostedResetReceipt, HostedResetRequest};
 
 use super::{OversightBroker, decoder_gate::DecoderBindingLimits};
+use crate::action::consequence::activation::identity::{ModelPassport, decoder::DecoderIdentityProbe};
 use crate::action::consequence::activation::monitor::decoder::{MonitoredStep, MonitoringStatus, MonitoringWork};
 use crate::action::consequence::activation::monitor::decoder::sampled::{MonitoredSampledDecoder, MonitoredSampledStep};
 use crate::action::consequence::activation::tensor::kv::decoder::{DecoderBudget, DecoderWork};
@@ -72,6 +73,19 @@ impl OversightBroker {
             sampled_draws: host.run.sampled_draws(), status: host.run.status(),
             monitoring: host.run.monitoring_work(), numerical: host.recovery.cumulative(host.run.decoder_work())?,
             cache_bytes: actor.cache().len(), sampler_bytes: actor.sampler().len() })
+    }
+
+    /// Probe THIS owner's actual immutable parameters, not a caller-selected
+    /// stand-in model. No live tokens, cache, logits, sampler or mutable model
+    /// getter escapes. The returned observation-only run has separate work costs;
+    /// advancing it neither charges the live decoder nor alters its monitor.
+    /// Consumers still bind a current native/durable identity challenge and clock.
+    pub fn hosted_identity_probe(&self, expected_actor_revision: u64, passport: &ModelPassport,
+        measurement_sequence: u64, budget: DecoderBudget) -> Result<DecoderIdentityProbe, Error>
+    {
+        if expected_actor_revision != self.actor_revision() { return Err(Error::Stale); }
+        self.decoder_host.as_ref().ok_or(Error::Incomplete)?.run
+            .identity_probe(passport, measurement_sequence, budget)
     }
 
     pub fn advance_hosted_forced(&mut self, expected_actor_revision: u64, expected_position: u64,

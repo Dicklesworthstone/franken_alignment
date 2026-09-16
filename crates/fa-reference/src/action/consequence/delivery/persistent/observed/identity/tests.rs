@@ -1,4 +1,5 @@
 //! Actual Store fault barriers and original-machine replay; no hardware crash claim.
+#[path = "decoder/storage_tests.rs"] mod decoder_storage_tests;
 use super::*;
 use crate::action::{ActionSpec, Purpose, ResolvedTarget, Scope, VERSION};
 use crate::action::consequence::activation::{CaptureProfile, FrameIdentity};

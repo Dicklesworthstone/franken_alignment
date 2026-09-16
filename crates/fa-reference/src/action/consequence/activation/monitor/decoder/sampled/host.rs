@@ -4,6 +4,8 @@ pub(crate) mod reset;
 
 use super::MonitoredSampledDecoder;
 use super::super::MonitoringStatus;
+use crate::action::consequence::activation::identity::{ModelPassport, decoder::DecoderIdentityProbe};
+use crate::action::consequence::activation::tensor::kv::decoder::DecoderBudget;
 use crate::action::consequence::activation::tensor::kv::model::{
     MODEL_DESCRIPTOR_HEADER_BYTES, MODEL_LAYER_DESCRIPTOR_BYTES,
 };
@@ -17,6 +19,14 @@ pub(crate) struct CapturedState {
 }
 
 impl MonitoredSampledDecoder {
+    /// Share only THIS numerical owner's immutable parameters. The probe gets
+    /// fresh caches, not the actor's cache, tokens, logits, random state or rights.
+    pub(crate) fn identity_probe(&self, passport: &ModelPassport, sequence: u64,
+        budget: DecoderBudget) -> Result<DecoderIdentityProbe, Error>
+    {
+        DecoderIdentityProbe::new(self.monitored.session.model().clone(), passport, sequence, budget)
+    }
+
     /// Bound the existing canonical cache encoding before copying a whole state.
     /// All scalar buffers in the original decoder are normalized binary32.
     pub(crate) fn check_host_state_size(&self, position: u64, cache_limit: usize, sampler_limit: usize) -> Result<(), Error> {
