@@ -1,4 +1,5 @@
 //! Bootstrap and codec controls for the original durable stream owner.
+#[path = "storage_tests.rs"] mod storage_tests;
 use super::*;
 use crate::action::{Purpose, Scope};
 use crate::action::consequence::congress::{CongressPolicy, MemberPolicy};

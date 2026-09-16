@@ -1,5 +1,6 @@
 //! Sealed delegation to the two original durable request owners. This does not
 //! admit third-party backends, callbacks, replacement reducers or reviewer roles.
+mod stream;
 use super::{FileDelivery, FileRequestStatus, ActionSpec, Snapshot, JournalError};
 use super::super::super::JournalFailure;
 use super::super::super::observed::FileOversight;

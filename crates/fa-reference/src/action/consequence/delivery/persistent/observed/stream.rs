@@ -3,9 +3,10 @@
 use super::{BaseEvent, Event, FileHumanReviewer, FileOversight, FileOversightProfile,
     JournalError, Machine, storage};
 use super::super::{FileDeliverySnapshot, codec::shared::{Reader, Writer}};
-use crate::action::{ActionSpec, ElapsedTick, ResolvedTarget};
-use crate::action::consequence::delivery::stream::{StreamProfile, StreamView,
+use crate::action::{ActionSpec, ElapsedTick, ResolvedTarget, VERSION};
+use crate::action::consequence::delivery::stream::{ReleaseFrame, StreamProfile, StreamView,
     MAX_MESSAGE_BYTES, MAX_STREAM_BYTES, MAX_STREAM_MESSAGES};
+use crate::action::consequence::oversight::actor::ActorProposal;
 use crate::Error;
 use std::path::Path;
 
@@ -19,6 +20,19 @@ pub struct FileStreamSnapshot {
     pub confirmed: StreamView,
     pub published: StreamView,
     pub pending: Option<u64>,
+}
+
+/// Actor intent, NOT a full review packet or a publishable frame. None is an
+/// explicit finish request; Some must contain a nonempty complete UTF-8 message.
+/// The supplied target/version and epoch pin the history being continued. The
+/// gateway derives cumulative context privately and retains the ORIGINAL raw
+/// proposal under the existing durable request key, including refused requests.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct FileStreamProposal {
+    pub target: ResolvedTarget,
+    pub expected_policy_epoch: u64,
+    pub deadline: ElapsedTick,
+    pub message: Option<String>,
 }
 
 impl FileOversight {
@@ -99,6 +113,38 @@ impl FileOversight {
         if !self.clock_ready() || self.source_interrupted { return Err(Error::Incomplete.into()); }
         if self.machine.broker.stop_receipt().is_some() { return Err(Error::WrongState.into()); }
         Ok(())
+    }
+
+    // Used only by the existing actor gateway. No public retained-packet getter,
+    // callback, alternate request book or actor-selected provider is introduced.
+    pub(in crate::action::consequence::delivery::persistent) fn stream_actor_proposal(
+        &self, request: u64, intent: &FileStreamProposal,
+    ) -> Result<ActorProposal, JournalError> {
+        if self.fault.is_some() { return Err(JournalError::Unavailable); }
+        let (_, view) = self.machine.broker.stream_state().ok_or(Error::WrongState)?;
+        let spec = if let Some(original) = self.machine.requests.original_spec(request) {
+            // Never rebuild a retry against today's prefix or policy. The raw
+            // request survives even when proposal admission returned no action.
+            let frame = ReleaseFrame::decode(&original.payload).map_err(|_| Error::Binding)?;
+            if original.target != Some(intent.target) || original.policy_epoch != intent.expected_policy_epoch
+                || original.deadline != intent.deadline || frame.message() != intent.message.as_deref()
+                || frame.profile() != view.profile() || original.version != VERSION
+                || original.scope != self.profile.delivery.scope || !original.required_witnesses.is_empty()
+                || original.units != original.payload.len() as u64
+            { return Err(Error::Binding.into()); }
+            original.clone()
+        } else {
+            let spec = match intent.message.as_deref() {
+                Some(message) => self.stream_message_spec(message, intent.deadline),
+                None => self.stream_finish_spec(intent.deadline),
+            }?;
+            if spec.target != Some(intent.target) || spec.policy_epoch != intent.expected_policy_epoch {
+                return Err(Error::Stale.into());
+            }
+            spec
+        };
+        Ok(ActorProposal { target: spec.target.ok_or(Error::Binding)?, payload: spec.payload,
+            expected_policy_epoch: spec.policy_epoch, deadline: spec.deadline, units: spec.units })
     }
 }
 
