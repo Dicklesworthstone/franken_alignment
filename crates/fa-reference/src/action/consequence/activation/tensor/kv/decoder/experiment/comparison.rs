@@ -2,6 +2,7 @@
 //! Both arms consume the same first token; later forcing and feedback are explicit.
 
 pub mod cursor;
+pub mod sampled;
 
 use super::{DecoderExperimentArm, DecoderIntervention};
 use super::super::{DecoderBudget, DecoderWork};
