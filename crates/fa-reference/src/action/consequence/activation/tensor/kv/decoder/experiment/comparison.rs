@@ -1,6 +1,8 @@
 //! Paired full-decoder rollouts with complete admission before either arm runs.
 //! Both arms consume the same first token; later forcing and feedback are explicit.
 
+pub mod cursor;
+
 use super::{DecoderExperimentArm, DecoderIntervention};
 use super::super::{DecoderBudget, DecoderWork};
 use crate::Error;
@@ -86,9 +88,11 @@ impl DecoderIntervention {
         self.compare_continuations(&[first_token], steps, DecoderContinuationPolicy::GreedyAfterFirstToken, budget)
     }
 
-    fn compare_continuations(
-        &self, tokens: &[u32], count: usize, policy: DecoderContinuationPolicy, budget: DecoderComparisonBudget,
-    ) -> Result<DecoderContinuationComparison, Error> {
+    // Shared admission for the eager oracle and cooperative paired cursor.
+    // Both arms and the complete horizon are bounded before either can run.
+    fn comparison_admission(&self, tokens: &[u32], count: usize, budget: DecoderComparisonBudget)
+        -> Result<(DecoderWork, usize), Error>
+    {
         if count == 0 || tokens.is_empty() { return Err(Error::InvalidInput); }
         let model = self.source().model();
         let start = self.source().tokens().len();
@@ -102,6 +106,15 @@ impl DecoderIntervention {
         if tokens.iter().any(|token| *token as usize >= model.profile().shape().vocabulary) {
             return Err(Error::InvalidInput);
         }
+        Ok((expected_work, retained_logit_values))
+    }
+
+    fn compare_continuations(
+        &self, tokens: &[u32], count: usize, policy: DecoderContinuationPolicy, budget: DecoderComparisonBudget,
+    ) -> Result<DecoderContinuationComparison, Error> {
+        let (expected_work, retained_logit_values) = self.comparison_admission(tokens, count, budget)?;
+        let model = self.source().model();
+        let start = self.source().tokens().len();
         let mut steps = Vec::new();
         steps.try_reserve_exact(count).map_err(|_| Error::Limit)?;
         let mut control = self.session(DecoderExperimentArm::Control);
