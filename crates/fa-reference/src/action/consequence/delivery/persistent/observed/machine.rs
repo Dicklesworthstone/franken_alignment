@@ -52,6 +52,9 @@ pub(super) struct Machine {
     pub(super) policy_updates: PolicyUpdates,
     pub(super) publication_guard: bool,
     pub(super) credential_policy: Option<super::credential::FileCredentialPolicy>,
+    pub(super) credential_generation: u64,
+    pub(super) credential_revoked: bool,
+    pub(super) credential_changes: Vec<super::credential::FileCredentialChange>,
     file_source: Option<source::SourceState>,
     scope: Scope,
     endpoint: PublicationEndpoint,
@@ -74,7 +77,8 @@ impl Machine {
         broker.confirm_fence(endpoint.install_fence(broker.fence_request())?)?;
         Ok(Self { containment: ContainmentHistory::default(), policy_updates: PolicyUpdates::default(), requests: RequestBook::default(), scope: d.scope, broker, endpoint, reviewer, actions: BTreeMap::new(), sessions: BTreeMap::new(),
             automatic: BTreeMap::new(), human_keys: BTreeMap::new(), envelopes: BTreeMap::new(), clock_ready: false,
-            publication_guard: false, credential_policy: None, file_source: None })
+            publication_guard: false, credential_policy: None, credential_generation: 0,
+            credential_revoked: false, credential_changes: Vec::new(), file_source: None })
     }
     pub(super) fn replay(p: &FileOversightProfile, events: &[Event]) -> Result<Self, Error> {
         let mut machine = Self::new(p)?;
@@ -104,8 +108,6 @@ impl Machine {
         Ok(current)
     }
     fn withdraw_keys(&mut self) -> Result<HumanRevocation, Error> {
-        // A historical tick is used ONLY to withdraw keys, never grant one or
-        // reopen an execution window. Every human transition used broker time.
         let result = self.reviewer.revoke_all(self.historical_withdrawal_tick())?;
         self.human_keys.clear();
         Ok(result)
@@ -143,8 +145,8 @@ impl Machine {
             Event::Core(BaseEvent::Time(_) | BaseEvent::Cancel(_) | BaseEvent::Fence | BaseEvent::Stop(_) | BaseEvent::StopProgress(_) | BaseEvent::ReserveRecovery(_) | BaseEvent::ReplacePolicy(_))
             | Event::InputsUnavailable(..) | Event::Human(_, HumanDecision::Reject | HumanDecision::Revoke) | Event::RevokeHumans
             | Event::PublicationGuard | Event::PublishChecked(..) | Event::PublishCredentialed(..)
-            | Event::CredentialGuard(_) | Event::Source(_)
-            | Event::ActorState(_) | Event::ActorCheckpoint(..) | Event::ActorReset(..));
+            | Event::CredentialGuard(_) | Event::CredentialRotate(_) | Event::CredentialRevoke(_)
+            | Event::Source(_) | Event::ActorState(_) | Event::ActorCheckpoint(..) | Event::ActorReset(..));
         if !without_current_time && !self.clock_ready { return Err(Error::Incomplete); }
         match event {
             Event::ActorState(update) => return self.record_actor_state(update),
@@ -152,6 +154,8 @@ impl Machine {
             Event::ActorReset(id, request) => return self.reset_actor(*id, request),
             Event::Source(event) => return self.apply_source(event),
             Event::CredentialGuard(policy) => return self.enable_credential_guard(policy),
+            Event::CredentialRotate(request) => return self.rotate_credential(*request),
+            Event::CredentialRevoke(request) => return self.revoke_credential(*request),
             Event::PublicationGuard => return self.enable_publication_guard(),
             Event::PublishChecked(id, views, snapshot, tick) => return self.publish_checked(*id, views.as_ref(), snapshot, *tick, false),
             Event::PublishCredentialed(id, views, snapshot, tick) => return self.publish_checked(*id, views.as_ref(), snapshot, *tick, true),
@@ -161,9 +165,7 @@ impl Machine {
                 self.check_source_inputs(&inputs)?;
                 return Ok(Transition::Inputs(self.broker.record_inputs(*id, *revision, inputs)?));
             }
-            Event::InputsUnavailable(id, revision) => {
-                return Ok(Transition::Inputs(self.broker.inputs_unavailable(*id, *revision)?));
-            }
+            Event::InputsUnavailable(id, revision) => return Ok(Transition::Inputs(self.broker.inputs_unavailable(*id, *revision)?)),
             Event::Begin(id, round, root, window, snapshot) => {
                 let session = self.broker.begin_review(*id, *round, *root, *window, snapshot)?;
                 self.sessions.insert(*round, (*id, session));
@@ -186,9 +188,6 @@ impl Machine {
                 let now = self.now()?;
                 let review = self.sessions.get_mut(round).ok_or(Error::Missing)?.1.finish(now)?;
                 self.sessions.remove(round);
-                // Application refusal is a COMMITTED result. The original round
-                // remains consumed, so stale input cannot be repaired by rerolling
-                // this completed judgment or applying its evidence a second time.
                 return Ok(Transition::Reviewed(self.broker.apply_review(review, current.as_ref(), snapshot)));
             }
             Event::Authorize(id, revision, snapshot) => {
@@ -235,8 +234,6 @@ impl Machine {
 
     fn apply_core(&mut self, event: &BaseEvent) -> Result<Transition, Error> {
         match event {
-            // Byte/record reserve admission is checked by the canonical journal.
-            // This marker cannot change the original oversight authority.
             BaseEvent::ReserveRecovery(_) => {}
             BaseEvent::ReplacePolicy(update) => return self.apply_policy_update(update),
             BaseEvent::Time(tick) => self.observe(*tick)?,
@@ -284,8 +281,6 @@ impl Machine {
                     progress: sweep.progress,
                 }));
             }
-            // Only the listed original operations are admitted. Neither old
-            // one-key operations nor unlisted future events gain authority.
             _ => return Err(Error::Binding),
         }
         Ok(Transition::Unit)
