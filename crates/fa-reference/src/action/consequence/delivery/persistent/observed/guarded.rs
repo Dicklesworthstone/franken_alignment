@@ -16,6 +16,7 @@ use crate::action::consequence::activation::identity::ModelPassport;
 use crate::action::consequence::delivery::stream::StreamProfile;
 use crate::action::consequence::gate::containment::session::policy::Policy;
 use crate::action::consequence::oversight::identity::IdentityPolicy;
+use crate::action::consequence::oversight::decoder_host::HostedStopPolicy;
 use crate::action::consequence::oversight::policy_governance::MAX_POLICY_CAMPAIGNS;
 use crate::action::consequence::policy_campaign::ReplayLimits;
 use crate::Error;
@@ -42,6 +43,8 @@ pub struct FileCampaignRequirement {
 pub struct FileGuardSet {
     pub stream: Option<StreamProfile>,
     pub decoder: Option<FileDecoderConfig>,
+    /// None requires manual-reset mode; Some pins the exact terminal-stop policy.
+    pub decoder_stop: Option<HostedStopPolicy>,
     pub source: Option<FileSourcePolicy>,
     pub identity: Option<FileIdentityRequirement>,
     pub campaigns: Option<FileCampaignRequirement>,
@@ -90,6 +93,7 @@ pub struct FileOversightRoles {
 
 impl FileGuardSet {
     fn validate(&self) -> Result<(), Error> {
+        if self.decoder_stop.is_some() && self.decoder.is_none() { return Err(Error::InvalidInput); }
         if let Some(credential) = &self.credential { credential.check()?; }
         if let Some(campaigns) = self.campaigns {
             campaigns.limits.validate()?;
@@ -108,6 +112,13 @@ impl FileGuardSet {
             _ => None,
         });
         if configured.next() != self.decoder.as_ref() || configured.next().is_some() {
+            return Err(Error::Binding);
+        }
+        let mut stopping = events.iter().filter_map(|event| match event {
+            Event::Decoder(DecoderEvent::StopPolicy(policy)) => Some(*policy),
+            _ => None,
+        });
+        if stopping.next() != self.decoder_stop || stopping.next().is_some() {
             return Err(Error::Binding);
         }
         Ok(())
@@ -132,6 +143,7 @@ impl FileGuardSet {
             || machine.broker.policy_campaigns_required() != self.campaigns.is_some()
             || machine.credential_policy.as_ref() != self.credential.as_ref()
             || machine.decoder_contract() != self.decoder.as_ref()
+            || machine.broker.hosted_stop_policy() != self.decoder_stop
         { return Err(Error::Binding); }
         Ok(())
     }

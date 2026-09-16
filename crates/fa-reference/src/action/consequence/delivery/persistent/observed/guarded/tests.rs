@@ -60,7 +60,7 @@ fn guards() -> FileGuardSet {
     let anchor = IdentityAnchor::new(10, CaptureProfile { tenant: 1, model: 9, model_generation: 1, tap: 4, layout_generation: 1 },
         5, vec![7], &[[-1.0, 1.0]]).unwrap();
     FileGuardSet {
-        stream: None, decoder: None, source: None, credential: None,
+        stream: None, decoder: None, decoder_stop: None, source: None, credential: None,
         identity: Some(FileIdentityRequirement { passport: ModelPassport::new(51, 1, manifest, vec![anchor]).unwrap(),
             policy: IdentityPolicy { observer_id: 99, timeout_ticks: 10, validity_ticks: 20, max_checks: 8 } }),
         campaigns: Some(FileCampaignRequirement { limits: ReplayLimits { cases: 16, input_bytes: 1_048_576 }, max_campaigns: 8 }),
@@ -151,3 +151,5 @@ fn initial_publication_faults_never_leave_a_partially_guarded_canonical_owner() 
         }
     }
 }
+
+#[path = "auto_stop_tests.rs"] mod auto_stop_tests;

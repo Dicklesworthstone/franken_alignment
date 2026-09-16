@@ -63,6 +63,9 @@ impl PreparedGuardedBootstrap {
         if let Some(config) = &guards.decoder {
             events.push(Event::Decoder(DecoderEvent::Enable(Rc::new(config.clone()))));
         }
+        if let Some(policy) = guards.decoder_stop {
+            events.push(Event::Decoder(DecoderEvent::StopPolicy(policy)));
+        }
         // Validate the SAME native transition sequence before creating storage.
         // No profile is silently dropped, reordered after work, or downgraded.
         let machine = Machine::replay(&profile, &events)?;

@@ -170,7 +170,7 @@ fn recovered_roles_cannot_erase_an_unresolved_dispatch_charge() {
 #[test]
 fn an_unguarded_legacy_journal_is_not_silently_upgraded_or_modified() {
     let root = Directory::new(); let (host, _) = ordinary::create(&root);
-    let declared = FileGuardSet { stream: None, decoder: None, source: None, identity: None, campaigns: None, credential: None };
+    let declared = FileGuardSet { stream: None, decoder: None, decoder_stop: None, source: None, identity: None, campaigns: None, credential: None };
     let expected = requirements(&host, declared); drop(host);
     let path = root.store().join("delivery.bin"); let bytes = std::fs::read(&path).unwrap();
     assert!(matches!(FileOversight::open_guarded(root.store(), ordinary::profile(), &expected),

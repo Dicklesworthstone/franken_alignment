@@ -157,7 +157,7 @@ fn creation_cannot_reset_an_existing_owner_or_rewrite_its_guard_contract() {
 #[test]
 fn black_box_guarded_bootstrap_still_requires_both_effect_keys_and_publication_revalidation() {
     let root = Directory::new();
-    let declared = FileGuardSet { stream: None, decoder: None, source: None, identity: None, campaigns: None, credential: None };
+    let declared = FileGuardSet { stream: None, decoder: None, decoder_stop: None, source: None, identity: None, campaigns: None, credential: None };
     let (mut host, roles) = FileOversight::create_guarded(root.store(), ordinary::profile(), &declared, None).unwrap();
     assert!(roles.identity_observer.is_none() && roles.policy_governor.is_none()); assert_eq!(host.revision(), 1);
     host.observe_time(host.revision(), ElapsedTick(1)).unwrap();
@@ -229,3 +229,5 @@ fn recovered_roles_cannot_resume_a_numerically_held_run() {
     assert!(host.decoder_inspection().unwrap().paused);
     assert_eq!(host.inspect().executions, 0);
 }
+
+#[path = "support/guarded_auto_stop.rs"] mod auto_stop;

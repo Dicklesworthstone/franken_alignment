@@ -16,7 +16,7 @@ use fa_reference::perimeter_inventory::LoadedPerimeterInventory;
 
 pub fn guards() -> FileGuardSet {
     FileGuardSet {
-        stream: None, decoder: None, source: None, credential: None,
+        stream: None, decoder: None, decoder_stop: None, source: None, credential: None,
         identity: Some(FileIdentityRequirement { passport: identity::passport(), policy: identity::policy() }),
         campaigns: Some(FileCampaignRequirement {
             limits: ReplayLimits { cases: 32, input_bytes: 1_048_576 }, max_campaigns: 8,
@@ -75,6 +75,7 @@ pub fn create(root: &Directory, guards: &FileGuardSet) -> (FileOversight, FileOv
         assert_eq!(host.enable_credential_guard(host.revision(), &inventory(), &binding()).unwrap(), *expected);
     }
     if let Some(config) = &guards.decoder { host.enable_decoder(host.revision(), config.clone()).unwrap(); }
+    if let Some(policy) = guards.decoder_stop { host.enable_decoder_stop(host.revision(), policy).unwrap(); }
     host.observe_time(host.revision(), ElapsedTick(1)).unwrap();
     (host, FileOversightRoles { human, identity_observer, policy_governor })
 }
