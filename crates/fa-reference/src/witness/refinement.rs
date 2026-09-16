@@ -5,6 +5,8 @@
 //! permission. The existing eager validator remains an independent differential
 //! oracle. Neither API authenticates the caller-supplied adapter observations.
 
+pub mod index;
+
 use super::{
     Error, Invalidation, ProductFrontiers, SnapshotEntry, Witness, WitnessJudgment,
     WitnessSnapshot, closed_marker,
@@ -89,6 +91,8 @@ pub struct WitnessRefinement<'a> {
     stage: Stage<'a>,
     total: RefinementBudget,
     terminal: Option<RefinementOutcome>,
+    // Only the complete-tail index may install this fixed-size candidate mask.
+    candidates: Option<[bool; super::MAX_WITNESSES]>,
 }
 
 impl WitnessJudgment {
@@ -107,6 +111,7 @@ impl WitnessJudgment {
             stage: Stage::Basis,
             total: RefinementBudget::default(),
             terminal: None,
+            candidates: None,
         }
     }
 }
@@ -177,6 +182,10 @@ impl WitnessRefinement<'_> {
         }
     }
 
+    fn needs_exact(&self) -> bool {
+        self.candidates.as_ref().is_none_or(|mask| mask[self.witness])
+    }
+
     fn step(&mut self, bytes: usize) -> Result<(), Error> {
         match self.stage {
             Stage::Basis => {
@@ -206,6 +215,12 @@ impl WitnessRefinement<'_> {
                 }
             }
             Stage::Begin => {
+                if matches!(self.judgment.witnesses[self.witness], Witness::ExactValue { .. })
+                    && !self.needs_exact()
+                {
+                    self.next_witness();
+                    return Ok(());
+                }
                 self.stage = match &self.judgment.witnesses[self.witness] {
                     Witness::ExactValue { .. } => Stage::Exact,
                     _ => Stage::Frontier,
@@ -221,6 +236,9 @@ impl WitnessRefinement<'_> {
                 };
                 if closed_marker(self.snapshot, self.frontiers)? != marker {
                     self.invalidate(Invalidation::ClosingFrontier, false);
+                } else if !self.needs_exact() {
+                    // Even disjoint negative dependencies require current closure.
+                    self.next_witness();
                 } else {
                     match dependency {
                         Witness::AbsentKey { .. } => self.stage = Stage::Absent,
