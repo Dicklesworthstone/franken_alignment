@@ -25,6 +25,7 @@ mod credential;
 mod campaigns;
 mod stream;
 mod identity;
+mod decoder;
 
 pub(super) enum Transition {
     Unit,
@@ -46,6 +47,8 @@ pub(super) enum Transition {
     IdentityBegun(Result<crate::action::consequence::oversight::identity::IdentityChallenge, Error>),
     IdentityObserved(Box<super::identity::FileIdentityObservation>),
     IdentityApplied(Box<crate::action::consequence::oversight::identity::IdentityInstallation>),
+    DecoderForced(Box<Result<crate::action::consequence::activation::monitor::decoder::MonitoredStep, Error>>),
+    DecoderSampled(Box<Result<crate::action::consequence::activation::monitor::decoder::sampled::MonitoredSampledStep, Error>>),
 }
 
 pub(super) struct Machine {
@@ -63,6 +66,7 @@ pub(super) struct Machine {
     pub(super) credential_generation: u64,
     pub(super) credential_revoked: bool,
     pub(super) credential_changes: Vec<super::credential::FileCredentialChange>,
+    decoder: Option<decoder::DecoderState>,
     identity: Option<identity::IdentityState>,
     campaigns: Option<campaigns::CampaignState>,
     file_source: Option<source::SourceState>,
@@ -92,7 +96,7 @@ impl Machine {
         Ok(Self { bootstrap: Some(p.clone()), containment: ContainmentHistory::default(), policy_updates: PolicyUpdates::default(), requests: RequestBook::default(), scope: d.scope, broker, endpoint, reviewer, actions: BTreeMap::new(), sessions: BTreeMap::new(),
             automatic: BTreeMap::new(), human_keys: BTreeMap::new(), envelopes: BTreeMap::new(), clock_ready: false,
             publication_guard: false, credential_policy: None, credential_generation: 0,
-            credential_revoked: false, credential_changes: Vec::new(), identity: None, campaigns: None, file_source: None })
+            credential_revoked: false, credential_changes: Vec::new(), decoder: None, identity: None, campaigns: None, file_source: None })
     }
     pub(super) fn replay(p: &FileOversightProfile, events: &[Event]) -> Result<Self, Error> {
         let mut machine = Self::new(p)?;
@@ -133,6 +137,7 @@ impl Machine {
         self.envelopes.clear();
     }
     fn recover(&mut self) -> Result<(), Error> {
+        self.pause_decoder();
         self.withdraw_identity()?;
         self.withdraw_policy_campaigns()?;
         self.withdraw_keys()?;
@@ -158,15 +163,17 @@ impl Machine {
     }
 
     fn apply_inner(&mut self, event: &Event) -> Result<Transition, Error> {
+        self.check_decoder_admission(event)?;
         let without_current_time = matches!(event,
             Event::Core(BaseEvent::Time(_) | BaseEvent::Cancel(_) | BaseEvent::Fence | BaseEvent::Stop(_) | BaseEvent::StopProgress(_) | BaseEvent::ReserveRecovery(_) | BaseEvent::ReplacePolicy(_))
             | Event::InputsUnavailable(..) | Event::Human(_, HumanDecision::Reject | HumanDecision::Revoke) | Event::RevokeHumans
             | Event::PublicationGuard | Event::PublishChecked(..) | Event::PublishCredentialed(..)
             | Event::CredentialGuard(_) | Event::CredentialRotate(_) | Event::CredentialRevoke(_) | Event::Campaign(_)
-            | Event::StreamBootstrap(_) | Event::Identity(_)
+            | Event::StreamBootstrap(_) | Event::Identity(_) | Event::Decoder(_)
             | Event::Source(_) | Event::ActorState(_) | Event::ActorCheckpoint(..) | Event::ActorReset(..));
         if !without_current_time && !self.clock_ready { return Err(Error::Incomplete); }
         match event {
+            Event::Decoder(event) => return self.apply_decoder(event),
             Event::Identity(event) => return self.apply_identity(event),
             Event::StreamBootstrap(profile) => return self.bootstrap_stream(*profile),
             Event::Campaign(event) => return self.apply_campaign(event),
@@ -289,6 +296,7 @@ impl Machine {
             BaseEvent::Fence => self.recover()?,
             BaseEvent::Stop(request) => {
                 let receipt = self.broker.request_stop(*request)?;
+                self.pause_decoder();
                 self.withdraw_identity()?;
                 self.withdraw_policy_campaigns()?;
                 self.withdraw_keys()?;

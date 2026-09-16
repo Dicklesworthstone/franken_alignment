@@ -1,6 +1,7 @@
 //! Crate-private state capture for the owning controller. No effect authority.
 
 pub(crate) mod reset;
+pub(crate) mod replay;
 
 use super::MonitoredSampledDecoder;
 use super::super::MonitoringStatus;

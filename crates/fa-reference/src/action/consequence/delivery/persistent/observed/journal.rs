@@ -1,10 +1,11 @@
 //! A distinct profile of the same bounded canonical publication journal.
-//! Records are original transition INPUTS, never asserted decisions or balances.
+//! Original transition inputs; numerical witnesses only CHECK recomputed state.
 use super::{FileOversightProfile, ReviewWindow};
 use super::containment::{FileStateUpdate, FileResetRequest, codec as state_codec};
 use super::credential::FileCredentialPolicy;
 use super::governance::campaigns::CampaignEvent;
 use super::identity::IdentityEvent;
+use super::decoder::DecoderEvent;
 use super::super::{codec, recovery_capacity, Event as BaseEvent};
 use super::super::codec::shared::{Reader, Writer};
 use super::views::{self, Views};
@@ -51,6 +52,7 @@ pub(super) enum Event {
     Campaign(CampaignEvent),
     StreamBootstrap(StreamProfile),
     Identity(IdentityEvent),
+    Decoder(DecoderEvent),
 }
 
 fn core_allowed(event: &BaseEvent) -> bool {
@@ -90,6 +92,7 @@ fn encode_iter<'a>(p: &FileOversightProfile, path: &Path, count: usize, events: 
         w.blob(&record.finish())?;
         let class = match event {
             Event::Core(event) => recovery_capacity::class(event),
+            Event::Decoder(DecoderEvent::Enable(_)) => recovery_capacity::Class::Bootstrap,
             Event::Identity(IdentityEvent::Enable(..)) => recovery_capacity::Class::Bootstrap,
             Event::PublicationGuard | Event::CredentialGuard(_) | Event::Campaign(CampaignEvent::Enable(..)) | Event::StreamBootstrap(_) => recovery_capacity::Class::Bootstrap,
             _ => recovery_capacity::Class::Work,
@@ -147,6 +150,7 @@ fn write_event(w: &mut Writer, event: &Event) -> Result<(), Error> {
         Event::Campaign(event) => { w.u8(23)?; super::governance::campaigns::write(w, event)?; }
         Event::StreamBootstrap(profile) => { w.u8(24)?; super::stream::write_profile(w, *profile)?; }
         Event::Identity(event) => { w.u8(25)?; super::identity::write(w, event)?; }
+        Event::Decoder(event) => { w.u8(26)?; super::decoder::write(w, event)?; }
     }
     Ok(())
 }
@@ -179,6 +183,7 @@ fn read_event(r: &mut Reader<'_>) -> Result<Event, Error> {
         23 => Event::Campaign(super::governance::campaigns::read(r)?),
         24 => Event::StreamBootstrap(super::stream::read_profile(r)?),
         25 => Event::Identity(super::identity::read(r)?),
+        26 => Event::Decoder(super::decoder::read(r)?),
         _ => return Err(Error::InvalidInput),
     })
 }

@@ -75,6 +75,12 @@ impl OversightBroker {
             cache_bytes: actor.cache().len(), sampler_bytes: actor.sampler().len() })
     }
 
+    /// Private comparison-only material for the durable owner. Even held state
+    /// is included, but no public decoder/actor port can import or release it.
+    pub(crate) fn hosted_replay_bytes(&self) -> Result<Vec<u8>, Error> {
+        self.decoder_host.as_ref().ok_or(Error::Incomplete)?.run.replay_bytes()
+    }
+
     /// Probe THIS owner's actual immutable parameters, not a caller-selected
     /// stand-in model. No live tokens, cache, logits, sampler or mutable model
     /// getter escapes. The returned observation-only run has separate work costs;

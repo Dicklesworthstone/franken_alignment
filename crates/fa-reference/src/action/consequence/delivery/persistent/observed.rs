@@ -20,6 +20,7 @@ pub mod source;
 pub mod replay;
 pub mod stream;
 pub mod identity;
+pub mod decoder;
 #[cfg(test)]
 mod tests;
 pub use human::{FileHumanPermit, FileHumanRequest, FileHumanReviewer};
@@ -43,7 +44,7 @@ use std::rc::Rc;
 
 /// Independent bootstrap authority. The complete original publication profile,
 /// effective helper contracts and mandatory reviewer policy are bound to disk.
-/// Optional identity checks are journal-bound; decoder/learning profiles remain separate.
+/// Optional identity and numerical profiles are also journal-bound.
 #[derive(Clone, Debug)]
 pub struct FileOversightProfile {
     pub delivery: FileDeliveryProfile,
@@ -279,7 +280,18 @@ impl FileOversight {
         let bytes = journal::encode_appended(&self.profile, self.store.identity(), &self.events, &event)?;
         let mut candidate = Machine::replay(&self.profile, &self.events)?;
         let result = candidate.apply(&event)?;
+        self.persist_candidate(event, bytes, candidate, result)
+    }
+
+    // Both ordinary and numerically prepared events use this SAME storage cut.
+    fn persist_candidate(&mut self, event: Event, bytes: Vec<u8>, candidate: Machine,
+        result: Transition) -> Result<Transition, JournalError>
+    {
         self.events.try_reserve(1).map_err(|_| Error::Limit)?;
+        // Retain conservative unavailability even if replacement unwinds rather
+        // than returns Err. Only a fully acknowledged publication clears it.
+        self.fault = Some(JournalFailure { operation: JournalIo::Stage,
+            kind: io::ErrorKind::Other, replacement_may_be_visible: true });
         if let Err(error) = self.store.replace(&bytes) {
             self.fault = Some(match &error {
                 JournalError::Io(failure) => failure.clone(),
@@ -292,6 +304,7 @@ impl FileOversight {
         self.source_operation_committed(&event);
         self.events.push(event);
         self.machine = candidate;
+        self.fault = None;
         Ok(result)
     }
 }
