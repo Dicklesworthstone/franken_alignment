@@ -2,10 +2,14 @@
 //! Secret bytes never enter the FileOversight journal. Recovery creates a new host
 //! issuer, so every old credential permit becomes unusable after reopen.
 
+#[cfg(test)]
+mod storage_tests;
+
 use super::{Event, FileOversight, JournalError, Transition};
 use crate::action::{Purpose, ResolvedTarget, Scope};
 use crate::action::consequence::delivery::credential_broker::{
-    BrokerCredential, BrokerRouteBinding, ProviderCredential,
+    BrokerCredential, BrokerRouteBinding, CredentialChangeReceipt, CredentialRevocationRequest,
+    CredentialRotationRequest, ProviderCredential,
 };
 use crate::action::consequence::oversight::CommitteeInput;
 use crate::perimeter::{BypassDisposition, Mediation, PerimeterScope, ThreatClass, TrustDomain, MAX_TEXT_BYTES};
@@ -18,8 +22,6 @@ use std::rc::Rc;
 pub const FILE_OVERSIGHT_CREDENTIAL_PROFILE: &str = "fa.file-oversight-publication";
 pub const PERIMETER_EFFECT_PURPOSE: u64 = 1;
 
-/// Persisted contract only: exact declared route and uniquely resolved broker
-/// credential name. It contains no secret, permit or endpoint result.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct FileCredentialPolicy {
     pub family: String,
@@ -36,14 +38,11 @@ impl FileCredentialPolicy {
         if self.profile_generation == 0 { return Err(Error::InvalidInput); }
         Ok(())
     }
-
     fn resolve(inventory: &LoadedPerimeterInventory, binding: &BrokerRouteBinding,
         scope: Scope, target: ResolvedTarget) -> Result<Self, Error>
     {
         if scope.purpose != Purpose::Effect { return Err(Error::Binding); }
-        let perimeter_scope = PerimeterScope {
-            tenant: scope.tenant, principal: scope.principal, purpose: PERIMETER_EFFECT_PURPOSE,
-        };
+        let perimeter_scope = PerimeterScope { tenant: scope.tenant, principal: scope.principal, purpose: PERIMETER_EFFECT_PURPOSE };
         let route = inventory.route_for(perimeter_scope, &binding.family, &binding.route)?;
         let credential = inventory.broker_credential_for_route(perimeter_scope, &binding.family, &binding.route)?;
         if route.record().mediation != Mediation::BrokeredEffects
@@ -60,7 +59,6 @@ impl FileCredentialPolicy {
         policy.check()?;
         Ok(policy)
     }
-
     fn revalidate(&self, inventory: &LoadedPerimeterInventory, binding: &BrokerRouteBinding,
         scope: Scope, target: ResolvedTarget) -> Result<(), Error>
     {
@@ -70,78 +68,111 @@ impl FileCredentialPolicy {
     }
 }
 
-/// Process-local provider capability. It owns BOTH independently supplied secret
-/// roles so publication checks agreement at the effect boundary. It is non-clone,
-/// non-serializable and branded to one live FileOversight owner.
-///
-/// ```compile_fail,E0599
-/// use fa_reference::action::consequence::delivery::persistent::observed::credential::FileCredentialPermit;
-/// fn duplicate(key: FileCredentialPermit) { let _ = key.clone(); }
-/// ```
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct FileCredentialStatus {
+    pub policy: FileCredentialPolicy,
+    pub generation: u64,
+    pub revoked: bool,
+    pub retained_changes: usize,
+}
+
+#[derive(Clone)]
+pub(super) enum FileCredentialChange {
+    Rotation { request: CredentialRotationRequest, receipt: CredentialChangeReceipt },
+    Revocation { request: CredentialRevocationRequest, receipt: CredentialChangeReceipt },
+}
+impl FileCredentialChange {
+    pub(super) fn operation(&self) -> u64 {
+        match self { Self::Rotation { request, .. } => request.operation, Self::Revocation { request, .. } => request.operation }
+    }
+    pub(super) fn retry_rotation(&self, request: CredentialRotationRequest) -> Result<CredentialChangeReceipt, Error> {
+        match self { Self::Rotation { request: original, receipt } if *original == request => Ok(*receipt), _ => Err(Error::Binding) }
+    }
+    pub(super) fn retry_revocation(&self, request: CredentialRevocationRequest) -> Result<CredentialChangeReceipt, Error> {
+        match self { Self::Revocation { request: original, receipt } if *original == request => Ok(*receipt), _ => Err(Error::Binding) }
+    }
+    pub(super) fn receipt(&self) -> CredentialChangeReceipt {
+        match self { Self::Rotation { receipt, .. } | Self::Revocation { receipt, .. } => *receipt }
+    }
+}
+
 pub struct FileCredentialPermit {
     issuer: Rc<()>,
     policy: FileCredentialPolicy,
+    generation: u64,
     broker: BrokerCredential,
     provider: ProviderCredential,
 }
 impl fmt::Debug for FileCredentialPermit {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("FileCredentialPermit").field("policy", &self.policy).finish_non_exhaustive()
+        f.debug_struct("FileCredentialPermit").field("policy", &self.policy)
+            .field("generation", &self.generation).finish_non_exhaustive()
     }
 }
 impl FileCredentialPermit {
     pub fn policy(&self) -> &FileCredentialPolicy { &self.policy }
+    pub fn generation(&self) -> u64 { self.generation }
 }
 
 impl FileOversight {
-    /// Irreversibly enable credential mediation before any proposal. This also
-    /// enables the existing first-publication evidence guard, eliminating the raw
-    /// publication fallback. Only nonsecret route/credential identity is journaled.
     pub fn enable_credential_guard(&mut self, revision: u64,
-        inventory: &LoadedPerimeterInventory, binding: &BrokerRouteBinding)
-        -> Result<FileCredentialPolicy, JournalError>
+        inventory: &LoadedPerimeterInventory, binding: &BrokerRouteBinding) -> Result<FileCredentialPolicy, JournalError>
     {
-        let policy = FileCredentialPolicy::resolve(inventory, binding,
-            self.profile.delivery.scope, self.profile.delivery.target)?;
+        let policy = FileCredentialPolicy::resolve(inventory, binding, self.profile.delivery.scope, self.profile.delivery.target)?;
         match self.transact(revision, Event::CredentialGuard(policy.clone()))? {
-            Transition::Unit => Ok(policy),
-            _ => unreachable!("credential guard transition"),
+            Transition::Unit => Ok(policy), _ => unreachable!("credential guard transition"),
         }
     }
-
-    pub fn credential_policy(&self) -> Option<&FileCredentialPolicy> {
-        self.machine.credential_policy.as_ref()
+    pub fn credential_policy(&self) -> Option<&FileCredentialPolicy> { self.machine.credential_policy.as_ref() }
+    pub fn credential_status(&self) -> Result<Option<FileCredentialStatus>, JournalError> {
+        if self.fault.is_some() { return Err(JournalError::Unavailable); }
+        Ok(self.machine.credential_policy.as_ref().map(|policy| FileCredentialStatus {
+            policy: policy.clone(), generation: self.machine.credential_generation,
+            revoked: self.machine.credential_revoked, retained_changes: self.machine.credential_changes.len(),
+        }))
     }
-
-    /// Rebind secret material to THIS live owner. No journal event or authority
-    /// transition is produced. The independently supplied inventory must still
-    /// resolve to the exact persisted v1 credential contract. Reopen uses a fresh
-    /// issuer, so every pre-recovery permit is rejected even if retained in RAM.
+    pub fn rotate_credential_guard(&mut self, revision: u64, request: CredentialRotationRequest)
+        -> Result<CredentialChangeReceipt, JournalError>
+    {
+        if self.fault.is_some() { return Err(JournalError::Unavailable); }
+        if let Some(change) = self.machine.credential_change(request.operation) { return Ok(change.retry_rotation(request)?); }
+        self.transact(revision, Event::CredentialRotate(request))?;
+        Ok(self.machine.credential_change(request.operation).expect("committed rotation retained").receipt())
+    }
+    pub fn revoke_credential_guard(&mut self, revision: u64, request: CredentialRevocationRequest)
+        -> Result<CredentialChangeReceipt, JournalError>
+    {
+        if self.fault.is_some() { return Err(JournalError::Unavailable); }
+        if let Some(change) = self.machine.credential_change(request.operation) { return Ok(change.retry_revocation(request)?); }
+        self.transact(revision, Event::CredentialRevoke(request))?;
+        Ok(self.machine.credential_change(request.operation).expect("committed revocation retained").receipt())
+    }
+    pub fn credential_change(&self, operation: u64) -> Result<CredentialChangeReceipt, JournalError> {
+        if self.fault.is_some() { return Err(JournalError::Unavailable); }
+        Ok(self.machine.credential_change(operation).ok_or(Error::Missing)?.receipt())
+    }
     pub fn bind_credential_pair(&self, expected_revision: u64,
         inventory: &LoadedPerimeterInventory, binding: &BrokerRouteBinding,
-        broker: BrokerCredential, provider: ProviderCredential)
-        -> Result<FileCredentialPermit, JournalError>
+        broker: BrokerCredential, provider: ProviderCredential) -> Result<FileCredentialPermit, JournalError>
     {
         if self.fault.is_some() { return Err(JournalError::Unavailable); }
         if expected_revision != self.revision() { return Err(Error::Stale.into()); }
         let policy = self.machine.credential_policy.as_ref().ok_or(Error::WrongState)?.clone();
+        if self.machine.credential_revoked { return Err(Error::WrongState.into()); }
         policy.revalidate(inventory, binding, self.profile.delivery.scope, self.profile.delivery.target)?;
         if !broker.agrees_with(&provider) { return Err(Error::Binding.into()); }
-        Ok(FileCredentialPermit { issuer: Rc::clone(&self.issuer), policy, broker, provider })
+        Ok(FileCredentialPermit { issuer: Rc::clone(&self.issuer), policy,
+            generation: self.machine.credential_generation, broker, provider })
     }
-
     fn check_credential_permit(&self, permit: &FileCredentialPermit) -> Result<(), JournalError> {
         if !Rc::ptr_eq(&self.issuer, &permit.issuer) { return Err(Error::Binding.into()); }
         let policy = self.machine.credential_policy.as_ref().ok_or(Error::WrongState)?;
-        if policy != &permit.policy || !permit.broker.agrees_with(&permit.provider) {
-            return Err(Error::Binding.into());
-        }
+        if self.machine.credential_revoked { return Err(Error::WrongState.into()); }
+        if self.machine.credential_generation != permit.generation
+            || policy != &permit.policy || !permit.broker.agrees_with(&permit.provider)
+        { return Err(Error::Binding.into()); }
         Ok(())
     }
-
-    /// Credentialed first publication. A valid permit only proves the live
-    /// provider boundary is present; all original evidence/two-key checks still
-    /// run inside the same durable publication transition.
     pub fn publish_checked_with_credential(&mut self, revision: u64, attempt: u64,
         current: Option<&CommitteeInput>, snapshot: Snapshot, now: ElapsedTick,
         permit: &FileCredentialPermit) -> Result<super::publication::CheckedPublication, JournalError>
@@ -150,8 +181,7 @@ impl FileOversight {
         if let Some(input) = current { self.check_action(attempt, input.action())?; }
         let supplied = current.map(|input| input.views().clone());
         match self.transact(revision, Event::PublishCredentialed(attempt, supplied, snapshot, now))? {
-            Transition::PublicationChecked(result) => Ok(result),
-            _ => unreachable!("credentialed publication transition"),
+            Transition::PublicationChecked(result) => Ok(result), _ => unreachable!("credentialed publication transition"),
         }
     }
 }
