@@ -1,10 +1,13 @@
 //! Counterfactual computation from a durable ORIGINAL paired checkpoint.
 //! No writable owner, approval, actor reset, effect endpoint or RNG is exported.
 
+pub mod sampled;
+
 use super::{FileDecoderCheckpoint, FileDecoderCheckpointInfo, FileOversight, JournalError, Machine};
 use super::super::{DecoderEvent, FileDecoderConfig};
 use super::super::super::{Event, FileOversightProfile, journal, storage};
 use crate::action::{Purpose, Scope};
+use crate::action::consequence::activation::tensor::kv::decoder::DecoderCheckpoint;
 use crate::action::consequence::activation::tensor::kv::decoder::experiment::DecoderLayerIntervention;
 use crate::action::consequence::activation::tensor::kv::decoder::experiment::comparison::{
     DecoderComparisonBudget, DecoderContinuationComparison, DecoderContinuationStep,
@@ -86,13 +89,9 @@ pub struct FileDecoderInvestigation {
     cursor: DecoderComparisonCursor,
 }
 impl FileDecoderInvestigation {
-    fn prepare(directory: &Path, revision: u64, profile: &FileOversightProfile,
-        machine: &Machine, checkpoint: u64, mut request: FileInvestigationRequest) -> Result<Self, Error>
+    fn prepare(origin: FileInvestigationOrigin, source: DecoderCheckpoint,
+        mut request: FileInvestigationRequest) -> Result<Self, Error>
     {
-        let origin = FileInvestigationOrigin { directory: directory.to_owned(), journal_revision: revision,
-            source_scope: profile.delivery.scope, checkpoint: machine.decoder_checkpoint_info(checkpoint)?,
-            configuration: machine.decoder_contract().ok_or(Error::Incomplete)?.clone() };
-        let source = machine.decoder_experiment_source(checkpoint)?;
         // Move unvalidated edits into the original validator. Clone only its
         // successfully bounded specification, never a caller's unbounded map.
         let plan = source.intervene(request.experiment, std::mem::take(&mut request.layers), request.edit_limit)?;
@@ -125,13 +124,22 @@ impl FileOversight {
     pub fn investigate_decoder_checkpoint(&self, checkpoint: &FileDecoderCheckpoint,
         request: FileInvestigationRequest) -> Result<FileDecoderInvestigation, JournalError>
     {
+        let (origin, source) = self.investigation_source(checkpoint)?;
+        Ok(FileDecoderInvestigation::prepare(origin, source, request)?)
+    }
+
+    // Both deterministic and sampled experiments use this SAME handle check and
+    // original numerical half. No caller-supplied checkpoint/model can enter it.
+    fn investigation_source(&self, checkpoint: &FileDecoderCheckpoint)
+        -> Result<(FileInvestigationOrigin, DecoderCheckpoint), JournalError>
+    {
         if self.fault.is_some() { return Err(JournalError::Unavailable); }
         if !Rc::ptr_eq(&self.issuer, &checkpoint.issuer)
             || self.machine.decoder_checkpoint_info(checkpoint.id())? != checkpoint.info {
             return Err(Error::Binding.into());
         }
-        Ok(FileDecoderInvestigation::prepare(self.store.identity(), self.revision(), &self.profile,
-            &self.machine, checkpoint.id(), request)?)
+        Ok(investigation_source(self.store.identity(), self.revision(), &self.profile,
+            &self.machine, checkpoint.id())?)
     }
 
     /// Inspect one full canonical image beside a locked or faulted live owner.
@@ -142,7 +150,15 @@ impl FileOversight {
         expected_decoder: &FileDecoderConfig, checkpoint: u64, request: FileInvestigationRequest)
         -> Result<FileDecoderInvestigation, JournalError>
     {
-        let identity = storage::identity(directory.as_ref())?;
+        let (origin, source) = Self::read_investigation_source(directory.as_ref(), profile, expected_decoder, checkpoint)?;
+        Ok(FileDecoderInvestigation::prepare(origin, source, request)?)
+    }
+
+    fn read_investigation_source(directory: &Path, profile: &FileOversightProfile,
+        expected_decoder: &FileDecoderConfig, checkpoint: u64)
+        -> Result<(FileInvestigationOrigin, DecoderCheckpoint), JournalError>
+    {
+        let identity = storage::identity(directory)?;
         let bytes = storage::read(&identity.join(storage::CANONICAL), profile.delivery.limits.bytes)?;
         let events = journal::decode(profile, &identity, &bytes)?;
         let mut configurations = events.iter().filter_map(|event| match event {
@@ -153,7 +169,15 @@ impl FileOversight {
             return Err(Error::Binding.into());
         }
         let machine = Machine::replay(profile, &events)?;
-        Ok(FileDecoderInvestigation::prepare(&identity, events.len() as u64, profile,
-            &machine, checkpoint, request)?)
+        Ok(investigation_source(&identity, events.len() as u64, profile, &machine, checkpoint)?)
     }
+}
+
+fn investigation_source(directory: &Path, revision: u64, profile: &FileOversightProfile,
+    machine: &Machine, checkpoint: u64) -> Result<(FileInvestigationOrigin, DecoderCheckpoint), Error>
+{
+    let origin = FileInvestigationOrigin { directory: directory.to_owned(), journal_revision: revision,
+        source_scope: profile.delivery.scope, checkpoint: machine.decoder_checkpoint_info(checkpoint)?,
+        configuration: machine.decoder_contract().ok_or(Error::Incomplete)?.clone() };
+    Ok((origin, machine.decoder_experiment_source(checkpoint)?))
 }
