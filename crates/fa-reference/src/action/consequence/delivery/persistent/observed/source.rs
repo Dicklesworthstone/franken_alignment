@@ -98,8 +98,11 @@ impl FileOversight {
 
     pub(super) fn check_source_admission(&self, event: &Event) -> Result<(), Error> {
         if !self.source_interrupted { return Ok(()); }
+        // Independent identity measurement/containment cannot publish effects
+        // or clear this source latch, even when the identity result is Matching.
         if matches!(event,
             Event::Source(SourceEvent::Withdraw | SourceEvent::Replace(_) | SourceEvent::Observe(..))
+            | Event::Identity(_)
             | Event::CredentialRotate(_) | Event::CredentialRevoke(_)
             | Event::Core(BaseEvent::Time(_) | BaseEvent::Cancel(_) | BaseEvent::Fence
                 | BaseEvent::Stop(_) | BaseEvent::StopProgress(_) | BaseEvent::ReplacePolicy(_)

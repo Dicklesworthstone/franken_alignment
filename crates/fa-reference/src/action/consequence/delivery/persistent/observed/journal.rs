@@ -4,6 +4,7 @@ use super::{FileOversightProfile, ReviewWindow};
 use super::containment::{FileStateUpdate, FileResetRequest, codec as state_codec};
 use super::credential::FileCredentialPolicy;
 use super::governance::campaigns::CampaignEvent;
+use super::identity::IdentityEvent;
 use super::super::{codec, recovery_capacity, Event as BaseEvent};
 use super::super::codec::shared::{Reader, Writer};
 use super::views::{self, Views};
@@ -49,6 +50,7 @@ pub(super) enum Event {
     CredentialRevoke(CredentialRevocationRequest),
     Campaign(CampaignEvent),
     StreamBootstrap(StreamProfile),
+    Identity(IdentityEvent),
 }
 
 fn core_allowed(event: &BaseEvent) -> bool {
@@ -88,6 +90,7 @@ fn encode_iter<'a>(p: &FileOversightProfile, path: &Path, count: usize, events: 
         w.blob(&record.finish())?;
         let class = match event {
             Event::Core(event) => recovery_capacity::class(event),
+            Event::Identity(IdentityEvent::Enable(..)) => recovery_capacity::Class::Bootstrap,
             Event::PublicationGuard | Event::CredentialGuard(_) | Event::Campaign(CampaignEvent::Enable(..)) | Event::StreamBootstrap(_) => recovery_capacity::Class::Bootstrap,
             _ => recovery_capacity::Class::Work,
         };
@@ -143,6 +146,7 @@ fn write_event(w: &mut Writer, event: &Event) -> Result<(), Error> {
         Event::CredentialRevoke(request) => { w.u8(22)?; w.u64(request.operation)?; w.u64(request.expected_generation)?; }
         Event::Campaign(event) => { w.u8(23)?; super::governance::campaigns::write(w, event)?; }
         Event::StreamBootstrap(profile) => { w.u8(24)?; super::stream::write_profile(w, *profile)?; }
+        Event::Identity(event) => { w.u8(25)?; super::identity::write(w, event)?; }
     }
     Ok(())
 }
@@ -174,6 +178,7 @@ fn read_event(r: &mut Reader<'_>) -> Result<Event, Error> {
         22 => Event::CredentialRevoke(CredentialRevocationRequest { operation: r.u64()?, expected_generation: r.u64()? }),
         23 => Event::Campaign(super::governance::campaigns::read(r)?),
         24 => Event::StreamBootstrap(super::stream::read_profile(r)?),
+        25 => Event::Identity(super::identity::read(r)?),
         _ => return Err(Error::InvalidInput),
     })
 }

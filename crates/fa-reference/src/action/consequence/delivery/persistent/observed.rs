@@ -19,6 +19,7 @@ pub mod credential;
 pub mod source;
 pub mod replay;
 pub mod stream;
+pub mod identity;
 #[cfg(test)]
 mod tests;
 pub use human::{FileHumanPermit, FileHumanRequest, FileHumanReviewer};
@@ -42,7 +43,7 @@ use std::rc::Rc;
 
 /// Independent bootstrap authority. The complete original publication profile,
 /// effective helper contracts and mandatory reviewer policy are bound to disk.
-/// This profile deliberately does not enable model/identity/learning subprofiles.
+/// Optional identity checks are journal-bound; decoder/learning profiles remain separate.
 #[derive(Clone, Debug)]
 pub struct FileOversightProfile {
     pub delivery: FileDeliveryProfile,
