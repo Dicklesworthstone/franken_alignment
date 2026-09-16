@@ -63,3 +63,6 @@ fn bad_weights_missing_monitor_layers_and_sampling_mismatch_never_build_an_owner
     assert!(FileDecoderConfig::new(profile(), data::weights(), data::monitor(3.0), sampling, 5, DecoderBindingLimits::default()).is_err());
     assert!(FileDecoderConfig::new(profile(), data::weights(), data::monitor(3.0), data::sampling(), 0, DecoderBindingLimits::default()).is_err());
 }
+
+#[path = "checkpoint_inspection/storage_tests.rs"]
+mod checkpoint_storage_tests;

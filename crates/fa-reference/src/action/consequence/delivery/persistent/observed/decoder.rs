@@ -3,6 +3,7 @@
 mod config;
 mod codec;
 pub mod checkpoint;
+pub mod checkpoint_inspection;
 pub use config::FileDecoderConfig;
 pub(super) use codec::{read, write};
 #[cfg(test)]
