@@ -103,6 +103,8 @@ impl FileOversight {
         if matches!(event,
             Event::Source(SourceEvent::Withdraw | SourceEvent::Replace(_) | SourceEvent::Observe(..))
             | Event::Identity(_)
+            | Event::Decoder(super::decoder::DecoderEvent::Checkpoint(
+                super::decoder::checkpoint::CheckpointRequest::Reset { .. }, _))
             | Event::CredentialRotate(_) | Event::CredentialRevoke(_)
             | Event::Core(BaseEvent::Time(_) | BaseEvent::Cancel(_) | BaseEvent::Fence
                 | BaseEvent::Stop(_) | BaseEvent::StopProgress(_) | BaseEvent::ReplacePolicy(_)

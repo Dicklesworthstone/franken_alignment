@@ -2,6 +2,7 @@
 //! Persisted witnesses are compared with recomputation, never imported as state.
 mod config;
 mod codec;
+pub mod checkpoint;
 pub use config::FileDecoderConfig;
 pub(super) use codec::{read, write};
 #[cfg(test)]
@@ -30,6 +31,7 @@ pub(super) enum DecoderEvent {
     Enable(Rc<FileDecoderConfig>),
     Step(StepRequest, Rc<[u8]>),
     Resume { revision: u64, position: u64 },
+    Checkpoint(checkpoint::CheckpointRequest, Rc<[u8]>),
 }
 
 /// The state at the last acknowledged journal cut. A recovered prefix is paused

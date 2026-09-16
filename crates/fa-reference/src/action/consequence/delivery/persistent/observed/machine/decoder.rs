@@ -11,9 +11,13 @@ use crate::action::consequence::activation::tensor::kv::decoder::sampling::{Samp
 use crate::Error;
 use std::rc::Rc;
 
+mod checkpoint;
+use super::super::decoder::checkpoint::CheckpointRequest;
+
 pub(super) struct DecoderState {
     config: Rc<FileDecoderConfig>,
     paused: bool,
+    checkpoints: checkpoint::CheckpointHistory,
 }
 
 impl Machine {
@@ -29,7 +33,8 @@ impl Machine {
     pub(super) fn check_decoder_admission(&self, event: &Event) -> Result<(), Error> {
         if !self.decoder_paused() { return Ok(()); }
         if matches!(event,
-            Event::Decoder(DecoderEvent::Resume { .. })
+            Event::Decoder(DecoderEvent::Resume { .. }
+                | DecoderEvent::Checkpoint(CheckpointRequest::Reset { .. }, _))
             | Event::Core(BaseEvent::Time(_) | BaseEvent::Cancel(_) | BaseEvent::Fence
                 | BaseEvent::Stop(_) | BaseEvent::StopProgress(_) | BaseEvent::Reconcile(_)
                 | BaseEvent::Seal(_) | BaseEvent::Sweep | BaseEvent::ReplacePolicy(_) | BaseEvent::ReserveRecovery(_))
@@ -51,13 +56,21 @@ impl Machine {
                 let run = config.build()?;
                 self.broker.own_sampled_decoder(run, config.limits)?;
                 if !self.publication_guard { self.enable_publication_guard()?; }
-                self.decoder = Some(DecoderState { config: Rc::clone(config), paused: false });
+                self.decoder = Some(DecoderState { config: Rc::clone(config), paused: false,
+                    checkpoints: checkpoint::CheckpointHistory::default() });
                 Ok(Transition::Unit)
             }
             DecoderEvent::Step(request, expected) => {
                 let result = self.execute_decoder_step(*request)?;
                 if self.decoder_witness(&result)?.as_slice() != expected.as_ref() { return Err(Error::Binding); }
                 Ok(result)
+            }
+            DecoderEvent::Checkpoint(request, expected) => {
+                self.execute_decoder_checkpoint(request)?;
+                if self.decoder_checkpoint_witness(request)?.as_slice() != expected.as_ref() {
+                    return Err(Error::Binding);
+                }
+                Ok(Transition::Unit)
             }
             DecoderEvent::Resume { revision, position } => {
                 if !self.clock_ready { return Err(Error::Incomplete); }
