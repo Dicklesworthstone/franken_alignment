@@ -7,6 +7,8 @@
 //! into authenticated evidence. A missing closure is therefore `Unknown`, not
 //! evidence that a key or range is absent.
 
+pub mod refinement;
+
 use std::collections::{BTreeMap, BTreeSet};
 
 use crate::{
