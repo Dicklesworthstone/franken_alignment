@@ -94,6 +94,16 @@ impl PreparedGuardedBootstrap {
         Ok(self)
     }
 
+    /// Install the original topology gate, uncertified, before publishing roles.
+    pub(super) fn mediated(mut self, graph: crate::action::consequence::mediation::AuthorityGraph)
+        -> Result<Self, JournalError>
+    {
+        let event = Event::Mediation(super::super::mediation::MediationEvent::Enable(graph));
+        self.machine.apply(&event)?;
+        self.events.push(event);
+        Ok(self)
+    }
+
     pub(super) fn publish(self, store: storage::Store)
         -> Result<(FileOversight, FileOversightRoles), JournalError>
     {

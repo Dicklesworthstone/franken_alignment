@@ -5,11 +5,13 @@
 pub mod investigation;
 pub mod evaluation;
 pub mod predictive;
+pub mod mediated;
 
 mod bootstrap;
 pub use bootstrap::FileCredentialRegistration;
 
 use super::credential::FileCredentialPolicy;
+use crate::action::consequence::mediation::AuthorityGraph;
 use super::consistency::FileConsistencyConfig;
 use crate::action::consequence::oversight::credibility::EvaluationProtocol;
 use super::decoder::{DecoderEvent, FileDecoderConfig};
@@ -119,6 +121,14 @@ impl FileGuardSet {
     fn check_replay_config(&self, events: &[Event], prediction: Option<&FileConsistencyConfig>)
         -> Result<(), Error>
     {
+        self.check_mediated_replay_config(events, prediction, None)
+    }
+
+    fn check_mediated_replay_config(&self, events: &[Event],
+        prediction: Option<&FileConsistencyConfig>, topology: Option<&AuthorityGraph>)
+        -> Result<(), Error>
+    {
+        mediated::check_topology(events, topology)?;
         predictive::check_prediction(events, prediction)?;
         let mut configured = events.iter().filter_map(|event| match event {
             Event::Decoder(DecoderEvent::Enable(config)) => Some(config.as_ref()),
@@ -151,7 +161,15 @@ impl FileGuardSet {
         evaluation: Option<&EvaluationProtocol>, prediction: Option<&FileConsistencyConfig>)
         -> Result<(), Error>
     {
+        self.check_mediated(machine, events, evaluation, prediction, None)
+    }
+
+    fn check_mediated(&self, machine: &Machine, events: &[Event],
+        evaluation: Option<&EvaluationProtocol>, prediction: Option<&FileConsistencyConfig>,
+        topology: Option<&AuthorityGraph>) -> Result<(), Error>
+    {
         self.validate()?;
+        mediated::check_topology(events, topology)?;
         // The original entry points require absence, never unchecked acceptance
         // of a new evaluator contract. The explicit evaluated profile pins it.
         if machine.credibility_contract() != evaluation
@@ -196,7 +214,15 @@ impl FileRecoveryRequirements {
         events: &[Event], evaluation: Option<&EvaluationProtocol>,
         prediction: Option<&FileConsistencyConfig>) -> Result<(), Error>
     {
-        self.guards.check_predictive(machine, events, evaluation, prediction)?;
+        self.check_mediated(profile, machine, events, evaluation, prediction, None)
+    }
+
+    fn check_mediated(&self, profile: &FileOversightProfile, machine: &Machine,
+        events: &[Event], evaluation: Option<&EvaluationProtocol>,
+        prediction: Option<&FileConsistencyConfig>, topology: Option<&AuthorityGraph>)
+        -> Result<(), Error>
+    {
+        self.guards.check_mediated(machine, events, evaluation, prediction, topology)?;
         if self.guards.credential.is_some() != self.credential_epoch.is_some()
             || self.credential_epoch.is_some_and(|epoch| epoch.generation == 0)
         { return Err(Error::InvalidInput); }
