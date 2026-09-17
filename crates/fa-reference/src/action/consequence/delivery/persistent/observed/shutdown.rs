@@ -3,6 +3,7 @@
 //! Per-file acknowledged cuts are not a distributed simultaneous-stop claim.
 
 mod campaign;
+mod canonical;
 pub use campaign::FileShutdownCampaign;
 
 use super::{FileOversight, FileOversightProfile, FileStopSweep, JournalError, journal};
@@ -100,7 +101,7 @@ impl FileShutdownPlan {
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum FileShutdownSource { AcknowledgedOwner }
+pub enum FileShutdownSource { AcknowledgedOwner, CanonicalImage }
 
 /// The original sweep at its own journal cut, including every refused outcome.
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -128,6 +129,7 @@ pub struct FileShutdownObservation {
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum FileShutdownStep {
     InspectOwner,
+    InspectCanonical,
     Stop(StopRequest),
     Drain { clock_domain: u64, at: ElapsedTick },
     Unavailable,
@@ -192,3 +194,6 @@ impl FileShutdownReport {
             .is_some_and(|stop| stop.receipt.request().operation == self.operation)
     }
 }
+
+#[cfg(test)]
+mod tests;

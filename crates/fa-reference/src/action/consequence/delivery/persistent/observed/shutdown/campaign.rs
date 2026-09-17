@@ -59,6 +59,25 @@ impl FileShutdownCampaign {
         self.complete(index, attempt, result)
     }
 
+    /// The original actor supervisor keeps custody of the owner. Taking its
+    /// mutable borrow withdraws an unused admission snapshot exactly as any
+    /// other privileged supervisor operation does; no actor handle is upgraded.
+    pub fn advance_supervised(&mut self, domain: u64,
+        supervisor: &mut crate::action::consequence::delivery::persistent::requests::actor::FileActorSupervisor<FileOversight>,
+        at: ElapsedTick) -> Result<FileShutdownObservation, JournalError>
+    {
+        // A spent campaign must not invalidate another unused intake snapshot.
+        if !self.plan.domains.iter().any(|entry| entry.id == domain) { return Err(Error::Missing.into()); }
+        if self.attempts.len() >= self.plan.max_attempts { return Err(Error::Limit.into()); }
+        match supervisor.host_mut() {
+            Ok(mut host) => self.advance(domain, &mut host, at),
+            Err(error) => {
+                self.unavailable(domain, error.clone())?;
+                Err(error)
+            }
+        }
+    }
+
     /// Record an actual acquisition/connection failure supplied by the operator.
     /// This API can only WITHDRAW an aggregate success, never assert a stop.
     pub fn unavailable(&mut self, domain: u64, error: JournalError) -> Result<(), JournalError> {
@@ -110,7 +129,7 @@ impl FileShutdownCampaign {
                 last_drain = Some(FileShutdownDrain { journal_revision: host.revision(), sweep });
             }
             FileShutdownStep::InspectOwner => {}
-            FileShutdownStep::Unavailable => return Err(Error::WrongState.into()),
+            FileShutdownStep::Unavailable | FileShutdownStep::InspectCanonical => return Err(Error::WrongState.into()),
         }
         // A successful original write is acknowledged before its result can be
         // reported. Never import or independently derive a native stop receipt.

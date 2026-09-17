@@ -26,6 +26,11 @@ pub fn ready(host: &mut FileOversight, reviewer: &FileHumanReviewer, domain: u64
     attempt: u64, bytes: &[u8]) -> Keys
 {
     let action = host.propose(host.revision(), attempt, spec(host, domain, bytes), snapshot()).unwrap();
+    ready_existing(host, reviewer, attempt, action)
+}
+pub fn ready_existing(host: &mut FileOversight, reviewer: &FileHumanReviewer, attempt: u64,
+    action: fa_reference::action::FrozenAction) -> Keys
+{
     let inputs = inputs(&action, b"unaltered full helper views");
     review_existing(host, attempt, attempt + 100, &inputs);
     let automatic = host.authorize(host.revision(), attempt, &inputs, snapshot()).unwrap();
