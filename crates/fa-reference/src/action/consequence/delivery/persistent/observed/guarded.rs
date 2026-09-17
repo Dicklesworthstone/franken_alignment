@@ -3,11 +3,13 @@
 //! signature. Every configured gate is matched before cleanup or recovery writes.
 
 pub mod investigation;
+pub mod evaluation;
 
 mod bootstrap;
 pub use bootstrap::FileCredentialRegistration;
 
 use super::credential::FileCredentialPolicy;
+use crate::action::consequence::oversight::credibility::EvaluationProtocol;
 use super::decoder::{DecoderEvent, FileDecoderConfig};
 use super::governance::campaigns::{CampaignEvent, FilePolicyGovernor};
 use super::identity::FileIdentityObserver;
@@ -127,7 +129,16 @@ impl FileGuardSet {
     }
 
     fn check(&self, machine: &Machine, events: &[Event]) -> Result<(), Error> {
+        self.check_evaluated(machine, events, None)
+    }
+
+    fn check_evaluated(&self, machine: &Machine, events: &[Event],
+        evaluation: Option<&EvaluationProtocol>) -> Result<(), Error>
+    {
         self.validate()?;
+        // The original entry points require absence, never unchecked acceptance
+        // of a new evaluator contract. The explicit evaluated profile pins it.
+        if machine.credibility_contract() != evaluation { return Err(Error::Binding); }
         if !machine.publication_guard { return Err(Error::Incomplete); }
         // Replay has already checked every transition, including uniqueness and
         // bootstrap order. Reading this original event does not invent a second
@@ -155,7 +166,13 @@ impl FileRecoveryRequirements {
     fn check(&self, profile: &FileOversightProfile, machine: &Machine,
         events: &[Event]) -> Result<(), Error>
     {
-        self.guards.check(machine, events)?;
+        self.check_evaluated(profile, machine, events, None)
+    }
+
+    fn check_evaluated(&self, profile: &FileOversightProfile, machine: &Machine,
+        events: &[Event], evaluation: Option<&EvaluationProtocol>) -> Result<(), Error>
+    {
+        self.guards.check_evaluated(machine, events, evaluation)?;
         if self.guards.credential.is_some() != self.credential_epoch.is_some()
             || self.credential_epoch.is_some_and(|epoch| epoch.generation == 0)
         { return Err(Error::InvalidInput); }

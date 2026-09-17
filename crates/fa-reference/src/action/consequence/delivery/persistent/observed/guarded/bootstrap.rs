@@ -73,6 +73,17 @@ impl PreparedGuardedBootstrap {
         Ok(Self { profile, events, machine })
     }
 
+    /// Append the native evaluation bootstrap BEFORE the sole canonical write.
+    pub(super) fn evaluated(mut self,
+        protocol: crate::action::consequence::oversight::credibility::EvaluationProtocol)
+        -> Result<Self, JournalError>
+    {
+        let event = Event::Credibility(super::super::credibility::CredibilityEvent::Enable(protocol));
+        self.machine.apply(&event)?;
+        self.events.push(event);
+        Ok(self)
+    }
+
     pub(super) fn publish(self, store: storage::Store)
         -> Result<(FileOversight, FileOversightRoles), JournalError>
     {
