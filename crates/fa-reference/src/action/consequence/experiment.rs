@@ -5,6 +5,8 @@
 //! carry old helper approval across changed inputs. Supplied archive provenance
 //! and the separately retained anchor remain the replay verifier's assumptions.
 
+pub mod proposal;
+
 mod search;
 pub use search::{MAX_SEARCH_CANDIDATES, Minimality, RepairSearch, SearchCase, SufficientRepair};
 
@@ -166,50 +168,9 @@ impl PolicyExperiment {
     /// Errors leave it intact. Even an empty/no-op branch is historical data,
     /// and an exact-policy repair still requires a new independent congress.
     pub fn run(&self, edits: &[Intervention]) -> Result<CounterfactualReport, Error> {
-        validate_edit_bounds(edits)?;
-        let mut spec = self.anchor.action.spec().clone();
-        spec.scope.purpose = Purpose::Experiment;
-        spec.required_witnesses.clear();
-        let mut evidence = self.evidence.clone();
-        let mut selected = BTreeSet::new();
-        let mut changed = false;
-        for edit in edits {
-            let slot = match edit {
-                Intervention::Payload(_) => (0_u8, 0),
-                Intervention::Target(_) => (1, 0),
-                Intervention::Units(_) => (2, 0),
-                Intervention::Key { key, .. } => (3, *key),
-            };
-            if !selected.insert(slot) {
-                return Err(Error::Duplicate);
-            }
-            match edit {
-                Intervention::Payload(payload) => {
-                    if !self.scope.payload { return Err(Error::Binding); }
-                    changed |= spec.payload != *payload;
-                    spec.payload = payload.clone();
-                }
-                Intervention::Target(target) => {
-                    if !self.scope.target { return Err(Error::Binding); }
-                    changed |= spec.target != Some(*target);
-                    spec.target = Some(*target);
-                }
-                Intervention::Units(units) => {
-                    if !self.scope.units { return Err(Error::Binding); }
-                    changed |= spec.units != *units;
-                    spec.units = *units;
-                }
-                Intervention::Key { key, expected, replacement } => {
-                    if !self.scope.keys.contains(key) { return Err(Error::Binding); }
-                    let actual = self.evidence.lookup(*key).ok_or(Error::Incomplete)?;
-                    if actual != expected.as_deref() { return Err(Error::Stale); }
-                    changed |= expected != replacement;
-                    evidence.values.insert(*key, replacement.clone());
-                }
-            }
-        }
-        evidence.check_bytes()?;
-        let action = FrozenAction::freeze(spec)?;
+        let (action, evidence, changed) = apply_interventions(
+            &self.anchor.action, &self.evidence, &self.scope, edits,
+        )?;
         let trace = evidence.evaluate(&self.anchor.policy, &action)?;
         let result = *trace.last().ok_or(Error::InvalidInput)?;
         let changes = trace.iter().zip(self.baseline.evaluation().trace())
@@ -242,6 +203,59 @@ impl PolicyExperiment {
             },
         })
     }
+}
+
+// Shared by archived congress experiments and proposal-only diagnosis. Edits
+// never manufacture coverage, inherit witnesses, or retain production purpose.
+fn apply_interventions(
+    baseline: &FrozenAction, original: &EvidenceSlice, scope: &InterventionScope,
+    edits: &[Intervention],
+) -> Result<(FrozenAction, EvidenceSlice, bool), Error> {
+    validate_edit_bounds(edits)?;
+    let mut spec = baseline.spec().clone();
+    spec.scope.purpose = Purpose::Experiment;
+    spec.required_witnesses.clear();
+    let mut evidence = original.clone();
+    let mut selected = BTreeSet::new();
+    let mut changed = false;
+    for edit in edits {
+        let slot = match edit {
+            Intervention::Payload(_) => (0_u8, 0),
+            Intervention::Target(_) => (1, 0),
+            Intervention::Units(_) => (2, 0),
+            Intervention::Key { key, .. } => (3, *key),
+        };
+        if !selected.insert(slot) {
+            return Err(Error::Duplicate);
+        }
+        match edit {
+            Intervention::Payload(payload) => {
+                if !scope.payload { return Err(Error::Binding); }
+                changed |= spec.payload != *payload;
+                spec.payload = payload.clone();
+            }
+            Intervention::Target(target) => {
+                if !scope.target { return Err(Error::Binding); }
+                changed |= spec.target != Some(*target);
+                spec.target = Some(*target);
+            }
+            Intervention::Units(units) => {
+                if !scope.units { return Err(Error::Binding); }
+                changed |= spec.units != *units;
+                spec.units = *units;
+            }
+            Intervention::Key { key, expected, replacement } => {
+                if !scope.keys.contains(key) { return Err(Error::Binding); }
+                let actual = original.lookup(*key).ok_or(Error::Incomplete)?;
+                if actual != expected.as_deref() { return Err(Error::Stale); }
+                changed |= expected != replacement;
+                evidence.values.insert(*key, replacement.clone());
+            }
+        }
+    }
+    evidence.check_bytes()?;
+    let action = FrozenAction::freeze(spec)?;
+    Ok((action, evidence, changed))
 }
 
 fn validate_edit_bounds(edits: &[Intervention]) -> Result<(), Error> {
