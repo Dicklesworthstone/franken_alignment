@@ -124,6 +124,9 @@ impl OversightBroker {
     fn advance_hosted<T>(&mut self, expected_revision: u64, position: u64,
         advance: impl FnOnce(&mut MonitoredSampledDecoder) -> Result<T, Error>) -> Result<T, Error>
     {
+        // An observed consistency incident also stops inference. A failed native
+        // stop is retried before computation, never treated as a quiet source.
+        if self.enforce_consistency_stop()?.is_some() { return Err(Error::WrongState); }
         if self.inspect().suspended { return Err(Error::WrongState); }
         if expected_revision != self.actor_revision() { return Err(Error::Stale); }
         expected_revision.checked_add(1).ok_or(Error::Overflow)?;

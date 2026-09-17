@@ -6,6 +6,8 @@
 
 mod hosted;
 mod event;
+mod stopping;
+pub use stopping::{ConsistencyStopCause, ConsistencyStopIncident, ConsistencyStopPolicy};
 pub use event::ConsistencyEventDomain;
 
 use super::OversightBroker;
@@ -80,6 +82,7 @@ pub(super) struct ConsistencyState {
     jobs: usize,
     last_sequence: u64,
     coverage_lost: bool,
+    automatic_stop: Option<stopping::ConsistencyStopState>,
 }
 
 impl OversightBroker {
@@ -100,7 +103,7 @@ impl OversightBroker {
         { return Err(Error::Binding); }
         let evidence = LikelihoodEvidence::new(config.alpha);
         self.consistency = Some(ConsistencyState { config, hosted_layer: None, event_domain: ConsistencyEventDomain::PayloadPrefix, evidence, pending: None,
-            observations: BTreeMap::new(), jobs: 0, last_sequence: 0, coverage_lost: false });
+            observations: BTreeMap::new(), jobs: 0, last_sequence: 0, coverage_lost: false, automatic_stop: None });
         Ok(())
     }
 
@@ -119,6 +122,12 @@ impl OversightBroker {
     }
 
     fn forecast_action_inner(&mut self, attempt: u64, expected_actor_revision: u64,
+        source: &SourceFrame) -> Result<Prediction, Error>
+    {
+        self.with_consistency_stop(|owner| owner.forecast_action_observed(attempt, expected_actor_revision, source))
+    }
+
+    fn forecast_action_observed(&mut self, attempt: u64, expected_actor_revision: u64,
         source: &SourceFrame) -> Result<Prediction, Error>
     {
         let state = self.consistency.as_ref().ok_or(Error::Incomplete)?;
@@ -164,7 +173,7 @@ impl OversightBroker {
     /// This finite profile requires separately governed recovery, not re-arming.
     pub fn consistency_unavailable(&mut self) -> Result<(), Error> {
         self.consistency.as_mut().ok_or(Error::Incomplete)?.coverage_lost = true;
-        Ok(())
+        self.enforce_consistency_stop().map(|_| ())
     }
 
     pub fn consistency_evidence(&self) -> Result<&LikelihoodEvidence, Error> {
@@ -185,6 +194,10 @@ impl OversightBroker {
     /// refuse the action. This intentional evidence mutation is not rolled back
     /// by a failed proposal. A consumed forecast/attempt is never reused.
     pub(super) fn observe_predicted_action(&mut self, attempt: u64, spec: &ActionSpec) -> Result<(), Error> {
+        self.with_consistency_stop(|owner| owner.observe_predicted_action_inner(attempt, spec))
+    }
+
+    fn observe_predicted_action_inner(&mut self, attempt: u64, spec: &ActionSpec) -> Result<(), Error> {
         let Some(state) = self.consistency.as_ref() else { return Ok(()); };
         if state.observations.contains_key(&attempt) { return Err(Error::Duplicate); }
         if state.coverage_lost || state.evidence.crossed() { return Err(Error::Incomplete); }
