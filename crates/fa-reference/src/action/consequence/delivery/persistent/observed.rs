@@ -25,6 +25,7 @@ pub mod guarded;
 pub mod credibility;
 pub mod consistency;
 pub mod mediation;
+pub mod shutdown;
 #[cfg(test)]
 mod tests;
 pub use human::{FileHumanPermit, FileHumanRequest, FileHumanReviewer};
