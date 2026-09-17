@@ -4,6 +4,8 @@
 //! forecasts, unresolved forecasts and a crossed process cannot grant effects.
 //! Host capture, clock and the registered calibration remain trusted inputs.
 
+mod hosted;
+
 use super::OversightBroker;
 use crate::action::{ActionSpec, ElapsedTick, FrozenAction, MAX_PAYLOAD_BYTES};
 use crate::action::consequence::activation::SourceFrame;
@@ -66,6 +68,7 @@ impl ConsistencyObservation {
 #[derive(Debug)]
 pub(super) struct ConsistencyState {
     config: ConsistencyConfig,
+    hosted_layer: Option<u64>,
     evidence: LikelihoodEvidence,
     pending: Option<PendingForecast>,
     observations: BTreeMap<u64, ConsistencyObservation>,
@@ -91,7 +94,7 @@ impl OversightBroker {
             || config.model.policy_generation() != self.delivery.controller().policy().generation()
         { return Err(Error::Binding); }
         let evidence = LikelihoodEvidence::new(config.alpha);
-        self.consistency = Some(ConsistencyState { config, evidence, pending: None,
+        self.consistency = Some(ConsistencyState { config, hosted_layer: None, evidence, pending: None,
             observations: BTreeMap::new(), jobs: 0, last_sequence: 0, coverage_lost: false });
         Ok(())
     }
@@ -106,6 +109,13 @@ impl OversightBroker {
     pub fn forecast_action(
         &mut self, attempt: u64, expected_actor_revision: u64, source: &SourceFrame,
     ) -> Result<Prediction, Error> {
+        if self.hosted_consistency_layer().is_some() { return Err(Error::Binding); }
+        self.forecast_action_inner(attempt, expected_actor_revision, source)
+    }
+
+    fn forecast_action_inner(&mut self, attempt: u64, expected_actor_revision: u64,
+        source: &SourceFrame) -> Result<Prediction, Error>
+    {
         let state = self.consistency.as_ref().ok_or(Error::Incomplete)?;
         if attempt == 0 { return Err(Error::InvalidInput); }
         if state.observations.contains_key(&attempt) || self.inputs.contains_key(&attempt) {

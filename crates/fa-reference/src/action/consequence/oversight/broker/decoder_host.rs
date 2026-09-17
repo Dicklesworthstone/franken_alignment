@@ -13,6 +13,7 @@ use crate::action::consequence::activation::monitor::decoder::sampled::{Monitore
 use crate::action::consequence::activation::tensor::kv::decoder::{DecoderBudget, DecoderWork};
 use crate::action::consequence::activation::tensor::kv::decoder::sampling::SampleBudget;
 use crate::action::consequence::gate::containment::{ActorState, RestartProfile, MAX_CACHE_BYTES, MAX_SAMPLER_BYTES};
+use crate::action::consequence::activation::{CaptureProfile, SourceFrame};
 use crate::Error;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -36,6 +37,16 @@ pub(super) struct DecoderHost {
 }
 
 impl OversightBroker {
+    pub(super) fn bind_hosted_forecast_source(&mut self, layer: u64, profile: CaptureProfile,
+        dimensions: usize, stream: u64) -> Result<(), Error>
+    {
+        self.decoder_host.as_mut().ok_or(Error::Incomplete)?.run
+            .bind_forecast_residual(layer, profile, dimensions, stream)
+    }
+    pub(super) fn hosted_forecast_source(&self, layer: u64) -> Result<SourceFrame, Error> {
+        self.decoder_host.as_ref().ok_or(Error::Incomplete)?.run.current_forecast_residual(layer)
+    }
+
     /// Consume the only numerical owner at trusted bootstrap. Actor state is
     /// captured through the existing all-layer cache codec and sampler encoding.
     /// This can attach an empty or already fully reviewed prefix, never a held

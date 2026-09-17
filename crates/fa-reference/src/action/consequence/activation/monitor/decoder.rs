@@ -116,6 +116,9 @@ pub struct MonitoredDecoder {
     work: MonitoringWork,
     status: MonitoringStatus,
     last_review: Option<Rc<DecoderReview>>,
+    // Optional single-layer source retention, selected before the first token.
+    // Shares actual immutable capture words; never reconstructs them from a score.
+    forecast_residual: Option<(u64, Option<super::super::SourceFrame>)>,
     observation: observation::ObservationWriter,
 }
 impl fmt::Debug for MonitoredDecoder {
@@ -145,7 +148,7 @@ impl MonitoredDecoder {
         let session = model.session(stream)?;
         let observation = observation::ObservationWriter::new(model.profile().clone(), generation, stream);
         Ok(Self { session, monitors, generation, stream, budget,
-            work: MonitoringWork::default(), status: MonitoringStatus::Ready, last_review: None, observation })
+            work: MonitoringWork::default(), status: MonitoringStatus::Ready, last_review: None, forecast_residual: None, observation })
     }
 
     /// Read-only live evidence for a trusted controller, never a permit.
@@ -203,6 +206,7 @@ impl MonitoredDecoder {
         // or let a partially reviewed session continue. No unwind catch is added.
         self.status = MonitoringStatus::Failed(Error::Incomplete);
         self.last_review = None;
+        if let Some((_, frame)) = &mut self.forecast_residual { *frame = None; }
         let result = self.execute(expected_position, token, budget, layers, on_computed);
         if let Err(error) = &result {
             self.status = MonitoringStatus::Failed(*error);
@@ -259,6 +263,10 @@ impl MonitoredDecoder {
         self.observation.publish(token, Rc::clone(&review))?;
         self.last_review = Some(Rc::clone(&review));
         if outcome == MonitorOutcome::NoAlarm && review.unreviewed_layers() == 0 {
+            if let Some((layer, frame)) = &mut self.forecast_residual {
+                let actual = step.layers.get((*layer - 1) as usize).ok_or(Error::Binding)?;
+                *frame = Some(actual.residual.source().clone());
+            }
             self.status = MonitoringStatus::Ready;
             Ok(MonitoredStep::Released(ReviewedStep { step, review }))
         } else {
