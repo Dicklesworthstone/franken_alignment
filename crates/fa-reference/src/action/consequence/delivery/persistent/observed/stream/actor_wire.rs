@@ -2,6 +2,9 @@
 //! The trusted connection selects this profile; ordinary raw-submit ports keep
 //! their existing semantics. Intent bytes are not an execution-bearing frame.
 mod codec;
+mod source;
+#[cfg(target_os = "linux")]
+pub use source::{FileStreamPeerDrive, FileStreamPeerDriveError};
 pub use codec::{STREAM_INTENT_HEADER_BYTES, encode_stream_proposal};
 
 use super::{FileOversight, FileStreamProposal, JournalError, StreamProfile};
@@ -41,6 +44,12 @@ impl FileOversight {
 impl FileStreamActorPort {
     /// Immutable receiver contract, not current actor or publication state.
     pub fn profile(&self) -> StreamProfile { self.profile }
+
+    // Validate without allocation or source access, before the original trusted
+    // intake hook can refresh a file or clock. Native retry checks still follow.
+    fn validate_proposal(&self, proposal: &ActorProposal) -> Result<(), ActorError> {
+        codec::message(self.profile, proposal).map(|_| ())
+    }
 }
 
 impl backend::Sealed for FileStreamActorPort {}

@@ -35,8 +35,10 @@ pub fn approve(h: &mut FileOversight, human: &FileHumanReviewer, request: u64, a
     let action = h.request_action(request).unwrap().clone();
     let inputs = ordinary::inputs(&action, b"unaltered full stream evidence");
     ordinary::review_existing(h, attempt, attempt + 100, &inputs);
-    let automatic = h.authorize(h.revision(), attempt, &inputs, snapshot()).unwrap();
-    let request = h.request_human_approval(h.revision(), attempt + 1000, attempt, &inputs,
+    let revision = h.revision();
+    let automatic = h.authorize(revision, attempt, &inputs, snapshot()).unwrap();
+    let revision = h.revision();
+    let request = h.request_human_approval(revision, attempt + 1000, attempt, &inputs,
         ElapsedTick(h.inspect().control.ledger.elapsed.unwrap().0 + 30)).unwrap();
     let revision = h.revision(); let human = human.approve(h, revision, &request).unwrap();
     ordinary::Keys { action, inputs, automatic, human, request }

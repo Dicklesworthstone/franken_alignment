@@ -66,12 +66,12 @@ impl From<WireError> for FileActorPeerDriveError {
 }
 
 impl FileActorSupervisor<FileOversight> {
-    fn check_source_wire(&self, port: &Port) -> Result<(), JournalError> {
+    pub(in crate::action::consequence::delivery::persistent) fn check_source_wire(&self, port: &Port) -> Result<(), JournalError> {
         if !Weak::ptr_eq(&port.owner, &Rc::downgrade(&self.owner)) { return Err(Error::Binding.into()); }
         Ok(())
     }
 
-    fn prepare_wire_submission<S, F>(&mut self, request: u64, source: &mut S, clock: &mut F,
+    pub(in crate::action::consequence::delivery::persistent) fn prepare_wire_submission<S, F>(&mut self, request: u64, source: &mut S, clock: &mut F,
         intake: &mut Option<FileEvidenceReport<EvidenceIdentity>>) -> Result<(), ActorError>
     where S: EvidenceFile + ?Sized, F: FnMut() -> ElapsedTick {
         let status = self.host().and_then(|host| host.request_status(request));

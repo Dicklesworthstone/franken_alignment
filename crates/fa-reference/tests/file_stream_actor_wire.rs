@@ -43,7 +43,8 @@ fn two_messages_and_explicit_finish_review_entire_prefix_and_charge_native_frame
             charge += action.spec().units;
             let keys = approve(&mut h, &human, request, attempt);
             ordinary::dispatch(&mut h, &keys);
-            let result = h.publish_checked(h.revision(), attempt, Some(&keys.inputs), snapshot(), ElapsedTick(1)).unwrap();
+            let revision = h.revision();
+            let result = h.publish_checked(revision, attempt, Some(&keys.inputs), snapshot(), ElapsedTick(1)).unwrap();
             assert_eq!(result.outcome, EndpointOutcome::Executed { resulting_version: attempt + 1 });
             // Native receipt confirmation is deliberately a later transition.
             assert_eq!(h.inspect().control.ledger.stages[&attempt], ActionState::Dispatching);
@@ -52,7 +53,8 @@ fn two_messages_and_explicit_finish_review_entire_prefix_and_charge_native_frame
             Ok(Knowledge::Unknown { reason: UnknownReason::OutcomeUnknown }));
         {
             let mut h = supervisor.host_mut().unwrap();
-            assert_eq!(h.reconcile(h.revision(), attempt).unwrap(),
+            let revision = h.revision();
+            assert_eq!(h.reconcile(revision, attempt).unwrap(),
                 Reconciliation::Resolved(EndpointOutcome::Executed { resulting_version: attempt + 1 }));
             assert_eq!(h.inspect().control.ledger.charged, charge);
         }
@@ -141,8 +143,10 @@ fn original_nonblocking_socket_fragments_reconnect_and_eof_do_not_publish_or_fin
     let keys = approve(&mut supervisor.host_mut().unwrap(), &human, 7000, 1);
     {
         let mut h = supervisor.host_mut().unwrap(); ordinary::dispatch(&mut h, &keys);
-        h.publish_checked(h.revision(), 1, Some(&keys.inputs), snapshot(), ElapsedTick(1)).unwrap();
-        h.reconcile(h.revision(), 1).unwrap();
+        let revision = h.revision();
+        h.publish_checked(revision, 1, Some(&keys.inputs), snapshot(), ElapsedTick(1)).unwrap();
+        let revision = h.revision();
+        h.reconcile(revision, 1).unwrap();
     }
     let (mut peer, server) = UnixStream::pair().unwrap(); peer.set_nonblocking(true).unwrap();
     let mut connection = UnixActorConnection::new(server, ActorChannel::new(wire, ChannelLimits::default()).unwrap()).unwrap();
