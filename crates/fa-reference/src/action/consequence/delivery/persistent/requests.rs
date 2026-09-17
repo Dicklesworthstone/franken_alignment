@@ -78,10 +78,16 @@ impl RequestBook {
         if self.records.len() >= MAX_FILE_REQUESTS { return Err(Error::Limit); }
         let bytes = self.bytes.checked_add(spec.payload.len()).ok_or(Error::Limit)?;
         if bytes > MAX_FILE_REQUEST_BYTES { return Err(Error::Limit); }
+        let attempt = self.next_attempt(inspection)?;
+        Ok(PreparedRequest { request, attempt, spec: spec.clone(), bytes })
+    }
+
+    /// The SAME allocation rule can be inspected before a payload exists. This
+    /// does not reserve an ID or admit a request; refused admissions still count.
+    pub(super) fn next_attempt(&self, inspection: &ControlInspection) -> Result<u64, Error> {
         let maximum = inspection.ledger.stages.keys().copied()
             .chain(self.records.values().map(|row| row.allocated_attempt)).max().unwrap_or(0);
-        let attempt = maximum.checked_add(1).ok_or(Error::Overflow)?;
-        Ok(PreparedRequest { request, attempt, spec: spec.clone(), bytes })
+        maximum.checked_add(1).ok_or(Error::Overflow)
     }
 
     /// No policy evaluator or outcome reducer lives here. The original proposal

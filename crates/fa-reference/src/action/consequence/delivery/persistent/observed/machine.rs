@@ -73,6 +73,8 @@ pub(super) struct Machine {
     pub(super) credential_changes: Vec<super::credential::FileCredentialChange>,
     credibility: Option<credibility::CredibilityState>,
     pub(super) consistency: Option<std::rc::Rc<super::consistency::FileConsistencyConfig>>,
+    // External key and its original next-attempt allocation, never effect rights.
+    pub(super) consistency_request: Option<(u64, u64)>,
     decoder: Option<decoder::DecoderState>,
     identity: Option<identity::IdentityState>,
     campaigns: Option<campaigns::CampaignState>,
@@ -103,7 +105,7 @@ impl Machine {
         Ok(Self { bootstrap: Some(p.clone()), containment: ContainmentHistory::default(), policy_updates: PolicyUpdates::default(), requests: RequestBook::default(), scope: d.scope, broker, endpoint, reviewer, actions: BTreeMap::new(), sessions: BTreeMap::new(),
             automatic: BTreeMap::new(), human_keys: BTreeMap::new(), envelopes: BTreeMap::new(), clock_ready: false,
             publication_guard: false, credential_policy: None, credential_generation: 0,
-            credential_revoked: false, credential_changes: Vec::new(), decoder: None, identity: None, campaigns: None, file_source: None, credibility: None, consistency: None })
+            credential_revoked: false, credential_changes: Vec::new(), decoder: None, identity: None, campaigns: None, file_source: None, credibility: None, consistency: None, consistency_request: None })
     }
     pub(super) fn replay(p: &FileOversightProfile, events: &[Event]) -> Result<Self, Error> {
         let mut machine = Self::new(p)?;
@@ -171,6 +173,8 @@ impl Machine {
     }
 
     fn apply_inner(&mut self, event: &Event) -> Result<Transition, Error> {
+        // Semantic replay enforces this too, not only the live preflight.
+        self.check_consistency_route(event)?;
         // Incident evaluation remains available while inference is paused or
         // stopped. Assessments cannot resume it or restore any effect key.
         if !matches!(event, Event::Credibility(super::credibility::CredibilityEvent::Assess(..))

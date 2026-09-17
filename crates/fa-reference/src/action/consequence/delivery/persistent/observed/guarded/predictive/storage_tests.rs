@@ -137,3 +137,5 @@ fn duplicate_or_omitted_prediction_is_rejected_by_preflight_not_accepted_as_a_ne
     assert_eq!(check_prediction(&[], Some(&expected.prediction)), Err(Error::Binding));
     assert_eq!(check_prediction(&[event.clone(), event], Some(&expected.prediction)), Err(Error::Binding));
 }
+
+mod keyed;

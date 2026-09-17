@@ -291,7 +291,7 @@ impl FileOversight {
         let mut candidate = Machine::replay(&self.profile, &self.events)?;
         candidate.preflight_consistency(&event)?;
         if self.action_consistency_required() && matches!(&event,
-            Event::Consistency(consistency::ConsistencyEvent::Forecast(..))
+            Event::Consistency(consistency::ConsistencyEvent::Forecast(..) | consistency::ConsistencyEvent::ForecastRequest(..))
             | Event::Core(BaseEvent::Propose(..) | BaseEvent::SubmitRequest(..))) {
             // Entering prediction/observation cannot unwind back to an older
             // permitting evidence state. Only this commit acknowledgment clears it.

@@ -2,6 +2,7 @@
 //! Prediction agreement never replaces congress, human approval or publication checks.
 mod config;
 mod codec;
+mod requests;
 pub use config::{FileConsistencyConfig, FileConsistencyParameters};
 pub(super) use codec::{read, write};
 
@@ -17,6 +18,7 @@ use std::rc::Rc;
 pub(super) enum ConsistencyEvent {
     Enable(Rc<FileConsistencyConfig>),
     Forecast(u64, u64, SourceFrame),
+    ForecastRequest(u64, u64, SourceFrame),
     Unavailable,
 }
 

@@ -13,10 +13,12 @@ impl Machine {
     {
         let prepared = self.requests.prepare(request, spec, self.scope,
             &self.broker.inspect(), self.broker.stop_receipt().is_some())?;
-        let result = self.broker.propose(prepared.attempt(), spec.clone(), snapshot);
+        let allocated = prepared.attempt();
+        let result = self.broker.propose(allocated, spec.clone(), snapshot);
         if let Some((attempt, action)) = self.requests.finish(prepared, result) {
             self.actions.insert(attempt, action);
         }
+        self.finish_consistency_request(request, allocated)?;
         Ok(Transition::Unit)
     }
 }
