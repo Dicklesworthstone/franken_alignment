@@ -11,6 +11,7 @@ use std::rc::Rc;
 
 pub(super) const MAX_CONFIG_BYTES: usize = MAX_VALUES * 4 + MAX_EVENT_PREFIX_BYTES + 256;
 const DOMAIN: &[u8; 8] = b"FACPRED\x01";
+const HOSTED_DOMAIN: &[u8; 8] = b"FACPRED\x02";
 
 /// Trusted bootstrap inputs, not inferred calibration or an actor-supplied score.
 /// Floating-point coefficients are retained by their exact binary32 words.
@@ -52,6 +53,21 @@ impl FileConsistencyConfig {
         Self::from_bytes(&w.finish())
     }
 
+    /// Fix the actual owned residual as the only forecast source. This is
+    /// configuration data, not a live source switch; Enable binds it before work.
+    /// Version one remains byte-identical for explicitly supplied-frame profiles.
+    pub fn with_hosted_residual(self, layer: u64) -> Result<Self, Error> {
+        if layer == 0 { return Err(Error::InvalidInput); }
+        if self.hosted_residual_layer().is_some() { return Err(Error::Duplicate); }
+        let mut w = Writer::new(MAX_CONFIG_BYTES);
+        w.raw(HOSTED_DOMAIN)?; w.raw(&self.bytes[DOMAIN.len()..])?; w.u64(layer)?;
+        Self::from_bytes(&w.finish())
+    }
+    pub fn hosted_residual_layer(&self) -> Option<u64> {
+        if &self.bytes[..DOMAIN.len()] != HOSTED_DOMAIN { return None; }
+        Some(u64::from_be_bytes(self.bytes[self.bytes.len() - 8..].try_into()
+            .expect("validated hosted configuration suffix")))
+    }
     pub fn encoded(&self) -> &[u8] { &self.bytes }
 
     pub(in super::super) fn from_bytes(bytes: &[u8]) -> Result<Self, Error> {
@@ -64,7 +80,9 @@ impl FileConsistencyConfig {
 }
 fn decode(bytes: &[u8]) -> Result<ConsistencyConfig, Error> {
     let mut r = Reader::new(bytes);
-    if r.take(DOMAIN.len())? != DOMAIN { return Err(Error::Binding); }
+    let domain = r.take(DOMAIN.len())?;
+    let hosted = if domain == DOMAIN { false } else if domain == HOSTED_DOMAIN { true }
+        else { return Err(Error::Binding); };
     let id = r.u64()?; let generation = r.u64()?;
     let profile = CaptureProfile { tenant: r.u64()?, model: r.u64()?, model_generation: r.u64()?,
         tap: r.u64()?, layout_generation: r.u64()? };
@@ -86,7 +104,9 @@ fn decode(bytes: &[u8]) -> Result<ConsistencyConfig, Error> {
     })?;
     let alpha = ErrorBudget::new(r.u64()?, r.u64()?)?;
     let stream = r.u64()?; let max_predictions = r.count(MAX_SAMPLES)?;
-    let max_prediction_age_ticks = r.u64()?; r.end()?;
+    let max_prediction_age_ticks = r.u64()?;
+    if hosted && r.u64()? == 0 { return Err(Error::InvalidInput); }
+    r.end()?;
     if stream == 0 || max_predictions == 0 || max_prediction_age_ticks == 0 { return Err(Error::InvalidInput); }
     Ok(ConsistencyConfig { model, alpha, stream, max_predictions, max_prediction_age_ticks })
 }

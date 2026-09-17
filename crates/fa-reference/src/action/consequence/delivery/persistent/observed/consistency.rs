@@ -3,6 +3,7 @@
 mod config;
 mod codec;
 mod requests;
+mod hosted;
 pub use config::{FileConsistencyConfig, FileConsistencyParameters};
 pub(super) use codec::{read, write};
 
@@ -19,6 +20,8 @@ pub(super) enum ConsistencyEvent {
     Enable(Rc<FileConsistencyConfig>),
     Forecast(u64, u64, SourceFrame),
     ForecastRequest(u64, u64, SourceFrame),
+    ForecastHosted(u64, u64),
+    ForecastHostedRequest(u64, u64),
     Unavailable,
 }
 

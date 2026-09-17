@@ -12,6 +12,12 @@ pub(in super::super) fn write(w: &mut Writer, event: &ConsistencyEvent) -> Resul
         ConsistencyEvent::Forecast(attempt, actor_revision, frame) => {
             w.u8(1)?; w.u64(*attempt)?; w.u64(*actor_revision)?; w.blob(&frame.encode_initial(23)?)?;
         }
+        ConsistencyEvent::ForecastHosted(attempt, revision) => {
+            w.u8(4)?; w.u64(*attempt)?; w.u64(*revision)?;
+        }
+        ConsistencyEvent::ForecastHostedRequest(request, revision) => {
+            w.u8(5)?; w.u64(*request)?; w.u64(*revision)?;
+        }
         ConsistencyEvent::Unavailable => w.u8(2)?,
         ConsistencyEvent::ForecastRequest(request, actor_revision, frame) => {
             w.u8(3)?; w.u64(*request)?; w.u64(*actor_revision)?; w.blob(&frame.encode_initial(23)?)?;
@@ -25,6 +31,8 @@ pub(in super::super) fn read(r: &mut Reader<'_>) -> Result<ConsistencyEvent, Err
         1 => ConsistencyEvent::Forecast(r.u64()?, r.u64()?, wire::decode_frame(r.blob(MAX_BLOCK_BYTES)?)?),
         2 => ConsistencyEvent::Unavailable,
         3 => ConsistencyEvent::ForecastRequest(r.u64()?, r.u64()?, wire::decode_frame(r.blob(MAX_BLOCK_BYTES)?)?),
+        4 => ConsistencyEvent::ForecastHosted(r.u64()?, r.u64()?),
+        5 => ConsistencyEvent::ForecastHostedRequest(r.u64()?, r.u64()?),
         _ => return Err(Error::InvalidInput),
     })
 }

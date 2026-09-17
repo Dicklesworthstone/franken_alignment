@@ -8,11 +8,13 @@ use super::super::super::requests::MAX_FILE_REQUESTS;
 impl Machine {
     pub(in super::super) fn preflight_consistency(&self, event: &Event) -> Result<(), Error> {
         self.check_consistency_route(event)?;
-        if let Event::Consistency(ConsistencyEvent::ForecastRequest(request, ..)) = event {
+        if let Event::Consistency(ConsistencyEvent::ForecastRequest(request, ..)
+            | ConsistencyEvent::ForecastHostedRequest(request, ..)) = event {
             self.preflight_forecast_request(*request)?;
         }
         if self.consistency.is_none() { return Ok(()); }
-        if matches!(event, Event::Consistency(ConsistencyEvent::Forecast(..) | ConsistencyEvent::ForecastRequest(..))
+        if matches!(event, Event::Consistency(ConsistencyEvent::Forecast(..) | ConsistencyEvent::ForecastRequest(..)
+            | ConsistencyEvent::ForecastHosted(..) | ConsistencyEvent::ForecastHostedRequest(..))
             | Event::Core(BaseEvent::Propose(..) | BaseEvent::SubmitRequest(..))) {
             self.check_decoder_admission(event)?;
             if !self.clock_ready { return Err(Error::Incomplete); }
@@ -33,6 +35,9 @@ impl Machine {
                 if !self.actions.is_empty() || self.requests.len() != 0 || !self.sessions.is_empty()
                     || self.broker.stop_receipt().is_some() { return Err(Error::WrongState); }
                 self.broker.enable_action_consistency(config.build()?)?;
+                if let Some(layer) = config.hosted_residual_layer() {
+                    self.broker.require_hosted_action_consistency(layer)?;
+                }
                 if !self.publication_guard { self.enable_publication_guard()?; }
                 self.consistency = Some(config.clone());
                 Ok(Transition::Unit)
@@ -47,6 +52,17 @@ impl Machine {
             ConsistencyEvent::ForecastRequest(request, revision, frame) => {
                 let attempt = self.preflight_forecast_request(*request)?;
                 let result = self.broker.forecast_action(attempt, *revision, frame);
+                if result.is_ok() { self.consistency_request = Some((*request, attempt)); }
+                Ok(Transition::ConsistencyForecast(Box::new(result)))
+            }
+            ConsistencyEvent::ForecastHosted(attempt, revision) => {
+                if !self.clock_ready || self.decoder_paused() { return Err(Error::Incomplete); }
+                if self.broker.stop_receipt().is_some() { return Err(Error::WrongState); }
+                Ok(Transition::ConsistencyForecast(Box::new(self.broker.forecast_hosted_action(*attempt, *revision))))
+            }
+            ConsistencyEvent::ForecastHostedRequest(request, revision) => {
+                let attempt = self.preflight_forecast_request(*request)?;
+                let result = self.broker.forecast_hosted_action(attempt, *revision);
                 if result.is_ok() { self.consistency_request = Some((*request, attempt)); }
                 Ok(Transition::ConsistencyForecast(Box::new(result)))
             }
