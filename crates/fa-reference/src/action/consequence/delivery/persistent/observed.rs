@@ -24,6 +24,7 @@ pub mod decoder;
 pub mod guarded;
 pub mod credibility;
 pub mod consistency;
+pub mod mediation;
 #[cfg(test)]
 mod tests;
 pub use human::{FileHumanPermit, FileHumanRequest, FileHumanReviewer};
@@ -283,8 +284,15 @@ impl FileOversight {
         // Historical labels and explicit prediction coverage loss cannot
         // publish effects or clear an interrupted source acquisition.
         if !matches!(&event, Event::Credibility(credibility::CredibilityEvent::Assess(..))
-            | Event::Consistency(consistency::ConsistencyEvent::Unavailable)) {
+            | Event::Consistency(consistency::ConsistencyEvent::Unavailable) | Event::Mediation(_)) {
             self.check_source_admission(&event)?;
+        }
+        if let Event::Mediation(mediation::MediationEvent::Update(update)) = &event {
+            self.machine.preflight_mediation_update(update)?;
+            // A new topology observation or known capture loss cannot fall back
+            // to the previous certified graph if encoding, capacity or I/O fails.
+            self.fault = Some(JournalFailure { operation: JournalIo::Stage,
+                kind: io::ErrorKind::Other, replacement_may_be_visible: false });
         }
         if self.events.len() >= self.profile.delivery.limits.events { return Err(Error::Limit.into()); }
         let bytes = journal::encode_appended(&self.profile, self.store.identity(), &self.events, &event)?;

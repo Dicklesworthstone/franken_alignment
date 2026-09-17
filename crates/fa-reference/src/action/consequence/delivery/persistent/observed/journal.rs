@@ -8,6 +8,7 @@ use super::identity::IdentityEvent;
 use super::decoder::DecoderEvent;
 use super::credibility::CredibilityEvent;
 use super::consistency::ConsistencyEvent;
+use super::mediation::MediationEvent;
 use super::super::{codec, recovery_capacity, Event as BaseEvent};
 use super::super::codec::shared::{Reader, Writer};
 use super::views::{self, Views};
@@ -57,6 +58,7 @@ pub(super) enum Event {
     Decoder(DecoderEvent),
     Credibility(CredibilityEvent),
     Consistency(ConsistencyEvent),
+    Mediation(MediationEvent),
 }
 
 fn core_allowed(event: &BaseEvent) -> bool {
@@ -99,7 +101,7 @@ fn encode_iter<'a>(p: &FileOversightProfile, path: &Path, count: usize, events: 
             Event::Decoder(DecoderEvent::Enable(_) | DecoderEvent::StopPolicy(_)) => recovery_capacity::Class::Bootstrap,
             Event::Identity(IdentityEvent::Enable(..)) => recovery_capacity::Class::Bootstrap,
             Event::Credibility(CredibilityEvent::Enable(_)) => recovery_capacity::Class::Bootstrap,
-            Event::Consistency(ConsistencyEvent::Enable(_)) => recovery_capacity::Class::Bootstrap,
+            Event::Consistency(ConsistencyEvent::Enable(_)) | Event::Mediation(MediationEvent::Enable(_)) => recovery_capacity::Class::Bootstrap,
             Event::PublicationGuard | Event::CredentialGuard(_) | Event::Campaign(CampaignEvent::Enable(..)) | Event::StreamBootstrap(_) => recovery_capacity::Class::Bootstrap,
             _ => recovery_capacity::Class::Work,
         };
@@ -159,6 +161,7 @@ fn write_event(w: &mut Writer, event: &Event) -> Result<(), Error> {
         Event::Decoder(event) => { w.u8(26)?; super::decoder::write(w, event)?; }
         Event::Credibility(event) => { w.u8(27)?; super::credibility::write(w, event)?; }
         Event::Consistency(event) => { w.u8(28)?; super::consistency::write(w, event)?; }
+        Event::Mediation(event) => { w.u8(29)?; super::mediation::write(w, event)?; }
     }
     Ok(())
 }
@@ -194,6 +197,7 @@ fn read_event(r: &mut Reader<'_>) -> Result<Event, Error> {
         26 => Event::Decoder(super::decoder::read(r)?),
         27 => Event::Credibility(super::credibility::read(r)?),
         28 => Event::Consistency(super::consistency::read(r)?),
+        29 => Event::Mediation(super::mediation::read(r)?),
         _ => return Err(Error::InvalidInput),
     })
 }

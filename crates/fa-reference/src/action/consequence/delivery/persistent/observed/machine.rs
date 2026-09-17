@@ -28,10 +28,12 @@ mod identity;
 mod decoder;
 mod credibility;
 mod consistency;
+mod mediation;
 
 pub(super) enum Transition {
     Unit,
     EvaluationRecorded(bool),
+    MediationChecked(Box<Result<crate::action::consequence::mediation::CutCheck, Error>>),
     ConsistencyForecast(Box<Result<crate::action::consequence::activation::consistency::Prediction, Error>>),
     ConsistencyProposed(Result<FrozenAction, Error>),
     ActorRecorded(FileStateReceipt),
@@ -72,6 +74,7 @@ pub(super) struct Machine {
     pub(super) credential_revoked: bool,
     pub(super) credential_changes: Vec<super::credential::FileCredentialChange>,
     credibility: Option<credibility::CredibilityState>,
+    mediation: Option<mediation::MediationState>,
     pub(super) consistency: Option<std::rc::Rc<super::consistency::FileConsistencyConfig>>,
     // External key and its original next-attempt allocation, never effect rights.
     pub(super) consistency_request: Option<(u64, u64)>,
@@ -105,7 +108,7 @@ impl Machine {
         Ok(Self { bootstrap: Some(p.clone()), containment: ContainmentHistory::default(), policy_updates: PolicyUpdates::default(), requests: RequestBook::default(), scope: d.scope, broker, endpoint, reviewer, actions: BTreeMap::new(), sessions: BTreeMap::new(),
             automatic: BTreeMap::new(), human_keys: BTreeMap::new(), envelopes: BTreeMap::new(), clock_ready: false,
             publication_guard: false, credential_policy: None, credential_generation: 0,
-            credential_revoked: false, credential_changes: Vec::new(), decoder: None, identity: None, campaigns: None, file_source: None, credibility: None, consistency: None, consistency_request: None })
+            credential_revoked: false, credential_changes: Vec::new(), decoder: None, identity: None, campaigns: None, file_source: None, credibility: None, consistency: None, consistency_request: None, mediation: None })
     }
     pub(super) fn replay(p: &FileOversightProfile, events: &[Event]) -> Result<Self, Error> {
         let mut machine = Self::new(p)?;
@@ -146,6 +149,7 @@ impl Machine {
         self.envelopes.clear();
     }
     fn recover(&mut self) -> Result<(), Error> {
+        self.recover_mediation()?;
         self.recover_consistency()?;
         self.pause_decoder();
         self.withdraw_identity()?;
@@ -178,7 +182,7 @@ impl Machine {
         // Incident evaluation remains available while inference is paused or
         // stopped. Assessments cannot resume it or restore any effect key.
         if !matches!(event, Event::Credibility(super::credibility::CredibilityEvent::Assess(..))
-            | Event::Consistency(super::consistency::ConsistencyEvent::Unavailable)) {
+            | Event::Consistency(super::consistency::ConsistencyEvent::Unavailable) | Event::Mediation(_)) {
             self.check_decoder_admission(event)?;
         }
         let without_current_time = matches!(event,
@@ -186,10 +190,11 @@ impl Machine {
             | Event::InputsUnavailable(..) | Event::Human(_, HumanDecision::Reject | HumanDecision::Revoke) | Event::RevokeHumans
             | Event::PublicationGuard | Event::PublishChecked(..) | Event::PublishCredentialed(..)
             | Event::CredentialGuard(_) | Event::CredentialRotate(_) | Event::CredentialRevoke(_) | Event::Campaign(_)
-            | Event::StreamBootstrap(_) | Event::Identity(_) | Event::Decoder(_) | Event::Credibility(_) | Event::Consistency(_)
+            | Event::StreamBootstrap(_) | Event::Identity(_) | Event::Decoder(_) | Event::Credibility(_) | Event::Consistency(_) | Event::Mediation(_)
             | Event::Source(_) | Event::ActorState(_) | Event::ActorCheckpoint(..) | Event::ActorReset(..));
         if !without_current_time && !self.clock_ready { return Err(Error::Incomplete); }
         match event {
+            Event::Mediation(event) => return self.apply_mediation(event),
             Event::Consistency(event) => return self.apply_consistency(event),
             Event::Credibility(event) => return self.apply_credibility(event),
             Event::Decoder(event) => return self.apply_decoder(event),
