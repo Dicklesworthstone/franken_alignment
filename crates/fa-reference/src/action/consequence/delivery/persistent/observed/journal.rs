@@ -6,6 +6,7 @@ use super::credential::FileCredentialPolicy;
 use super::governance::campaigns::CampaignEvent;
 use super::identity::IdentityEvent;
 use super::decoder::DecoderEvent;
+use super::credibility::CredibilityEvent;
 use super::super::{codec, recovery_capacity, Event as BaseEvent};
 use super::super::codec::shared::{Reader, Writer};
 use super::views::{self, Views};
@@ -53,6 +54,7 @@ pub(super) enum Event {
     StreamBootstrap(StreamProfile),
     Identity(IdentityEvent),
     Decoder(DecoderEvent),
+    Credibility(CredibilityEvent),
 }
 
 fn core_allowed(event: &BaseEvent) -> bool {
@@ -94,6 +96,7 @@ fn encode_iter<'a>(p: &FileOversightProfile, path: &Path, count: usize, events: 
             Event::Core(event) => recovery_capacity::class(event),
             Event::Decoder(DecoderEvent::Enable(_) | DecoderEvent::StopPolicy(_)) => recovery_capacity::Class::Bootstrap,
             Event::Identity(IdentityEvent::Enable(..)) => recovery_capacity::Class::Bootstrap,
+            Event::Credibility(CredibilityEvent::Enable(_)) => recovery_capacity::Class::Bootstrap,
             Event::PublicationGuard | Event::CredentialGuard(_) | Event::Campaign(CampaignEvent::Enable(..)) | Event::StreamBootstrap(_) => recovery_capacity::Class::Bootstrap,
             _ => recovery_capacity::Class::Work,
         };
@@ -151,6 +154,7 @@ fn write_event(w: &mut Writer, event: &Event) -> Result<(), Error> {
         Event::StreamBootstrap(profile) => { w.u8(24)?; super::stream::write_profile(w, *profile)?; }
         Event::Identity(event) => { w.u8(25)?; super::identity::write(w, event)?; }
         Event::Decoder(event) => { w.u8(26)?; super::decoder::write(w, event)?; }
+        Event::Credibility(event) => { w.u8(27)?; super::credibility::write(w, event)?; }
     }
     Ok(())
 }
@@ -184,6 +188,7 @@ fn read_event(r: &mut Reader<'_>) -> Result<Event, Error> {
         24 => Event::StreamBootstrap(super::stream::read_profile(r)?),
         25 => Event::Identity(super::identity::read(r)?),
         26 => Event::Decoder(super::decoder::read(r)?),
+        27 => Event::Credibility(super::credibility::read(r)?),
         _ => return Err(Error::InvalidInput),
     })
 }

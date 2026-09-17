@@ -22,6 +22,7 @@ pub mod stream;
 pub mod identity;
 pub mod decoder;
 pub mod guarded;
+pub mod credibility;
 #[cfg(test)]
 mod tests;
 pub use human::{FileHumanPermit, FileHumanRequest, FileHumanReviewer};
@@ -276,7 +277,10 @@ impl FileOversight {
     fn transact(&mut self, revision: u64, event: Event) -> Result<Transition, JournalError> {
         if self.fault.is_some() { return Err(JournalError::Unavailable); }
         if revision != self.revision() { return Err(Error::Stale.into()); }
-        self.check_source_admission(&event)?;
+        // Historical labels cannot publish effects or clear a source latch.
+        if !matches!(&event, Event::Credibility(credibility::CredibilityEvent::Assess(..))) {
+            self.check_source_admission(&event)?;
+        }
         if self.events.len() >= self.profile.delivery.limits.events { return Err(Error::Limit.into()); }
         let bytes = journal::encode_appended(&self.profile, self.store.identity(), &self.events, &event)?;
         let mut candidate = Machine::replay(&self.profile, &self.events)?;

@@ -26,9 +26,11 @@ mod campaigns;
 mod stream;
 mod identity;
 mod decoder;
+mod credibility;
 
 pub(super) enum Transition {
     Unit,
+    EvaluationRecorded(bool),
     ActorRecorded(FileStateReceipt),
     ActorReset(ResetReceipt),
     Proposed(FrozenAction),
@@ -66,6 +68,7 @@ pub(super) struct Machine {
     pub(super) credential_generation: u64,
     pub(super) credential_revoked: bool,
     pub(super) credential_changes: Vec<super::credential::FileCredentialChange>,
+    credibility: Option<credibility::CredibilityState>,
     decoder: Option<decoder::DecoderState>,
     identity: Option<identity::IdentityState>,
     campaigns: Option<campaigns::CampaignState>,
@@ -96,7 +99,7 @@ impl Machine {
         Ok(Self { bootstrap: Some(p.clone()), containment: ContainmentHistory::default(), policy_updates: PolicyUpdates::default(), requests: RequestBook::default(), scope: d.scope, broker, endpoint, reviewer, actions: BTreeMap::new(), sessions: BTreeMap::new(),
             automatic: BTreeMap::new(), human_keys: BTreeMap::new(), envelopes: BTreeMap::new(), clock_ready: false,
             publication_guard: false, credential_policy: None, credential_generation: 0,
-            credential_revoked: false, credential_changes: Vec::new(), decoder: None, identity: None, campaigns: None, file_source: None })
+            credential_revoked: false, credential_changes: Vec::new(), decoder: None, identity: None, campaigns: None, file_source: None, credibility: None })
     }
     pub(super) fn replay(p: &FileOversightProfile, events: &[Event]) -> Result<Self, Error> {
         let mut machine = Self::new(p)?;
@@ -163,16 +166,21 @@ impl Machine {
     }
 
     fn apply_inner(&mut self, event: &Event) -> Result<Transition, Error> {
-        self.check_decoder_admission(event)?;
+        // Incident evaluation remains available while inference is paused or
+        // stopped. Assessments cannot resume it or restore any effect key.
+        if !matches!(event, Event::Credibility(super::credibility::CredibilityEvent::Assess(..))) {
+            self.check_decoder_admission(event)?;
+        }
         let without_current_time = matches!(event,
             Event::Core(BaseEvent::Time(_) | BaseEvent::Cancel(_) | BaseEvent::Fence | BaseEvent::Stop(_) | BaseEvent::StopProgress(_) | BaseEvent::ReserveRecovery(_) | BaseEvent::ReplacePolicy(_))
             | Event::InputsUnavailable(..) | Event::Human(_, HumanDecision::Reject | HumanDecision::Revoke) | Event::RevokeHumans
             | Event::PublicationGuard | Event::PublishChecked(..) | Event::PublishCredentialed(..)
             | Event::CredentialGuard(_) | Event::CredentialRotate(_) | Event::CredentialRevoke(_) | Event::Campaign(_)
-            | Event::StreamBootstrap(_) | Event::Identity(_) | Event::Decoder(_)
+            | Event::StreamBootstrap(_) | Event::Identity(_) | Event::Decoder(_) | Event::Credibility(_)
             | Event::Source(_) | Event::ActorState(_) | Event::ActorCheckpoint(..) | Event::ActorReset(..));
         if !without_current_time && !self.clock_ready { return Err(Error::Incomplete); }
         match event {
+            Event::Credibility(event) => return self.apply_credibility(event),
             Event::Decoder(event) => return self.apply_decoder(event),
             Event::Identity(event) => return self.apply_identity(event),
             Event::StreamBootstrap(profile) => return self.bootstrap_stream(*profile),
