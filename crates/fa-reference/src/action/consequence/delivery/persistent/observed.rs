@@ -23,6 +23,7 @@ pub mod identity;
 pub mod decoder;
 pub mod guarded;
 pub mod credibility;
+pub mod consistency;
 #[cfg(test)]
 mod tests;
 pub use human::{FileHumanPermit, FileHumanRequest, FileHumanReviewer};
@@ -135,7 +136,9 @@ impl FileOversight {
     }
     pub fn propose(&mut self, revision: u64, attempt: u64, action: ActionSpec, snapshot: Snapshot) -> Result<FrozenAction, JournalError> {
         match self.transact(revision, Event::Core(BaseEvent::Propose(attempt, action, snapshot)))? {
-            Transition::Proposed(action) => Ok(action), _ => unreachable!("proposal transition"),
+            Transition::Proposed(action) => Ok(action),
+            Transition::ConsistencyProposed(result) => result.map_err(Into::into),
+            _ => unreachable!("proposal transition"),
         }
     }
     pub fn record_inputs(&mut self, revision: u64, attempt: u64, expected: u64, inputs: CommitteeInput) -> Result<u64, JournalError> {
@@ -277,13 +280,24 @@ impl FileOversight {
     fn transact(&mut self, revision: u64, event: Event) -> Result<Transition, JournalError> {
         if self.fault.is_some() { return Err(JournalError::Unavailable); }
         if revision != self.revision() { return Err(Error::Stale.into()); }
-        // Historical labels cannot publish effects or clear a source latch.
-        if !matches!(&event, Event::Credibility(credibility::CredibilityEvent::Assess(..))) {
+        // Historical labels and explicit prediction coverage loss cannot
+        // publish effects or clear an interrupted source acquisition.
+        if !matches!(&event, Event::Credibility(credibility::CredibilityEvent::Assess(..))
+            | Event::Consistency(consistency::ConsistencyEvent::Unavailable)) {
             self.check_source_admission(&event)?;
         }
         if self.events.len() >= self.profile.delivery.limits.events { return Err(Error::Limit.into()); }
         let bytes = journal::encode_appended(&self.profile, self.store.identity(), &self.events, &event)?;
         let mut candidate = Machine::replay(&self.profile, &self.events)?;
+        candidate.preflight_consistency(&event)?;
+        if self.action_consistency_required() && matches!(&event,
+            Event::Consistency(consistency::ConsistencyEvent::Forecast(..))
+            | Event::Core(BaseEvent::Propose(..) | BaseEvent::SubmitRequest(..))) {
+            // Entering prediction/observation cannot unwind back to an older
+            // permitting evidence state. Only this commit acknowledgment clears it.
+            self.fault = Some(JournalFailure { operation: JournalIo::Stage,
+                kind: io::ErrorKind::Other, replacement_may_be_visible: false });
+        }
         let result = candidate.apply(&event)?;
         self.persist_candidate(event, bytes, candidate, result)
     }

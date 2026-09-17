@@ -27,10 +27,13 @@ mod stream;
 mod identity;
 mod decoder;
 mod credibility;
+mod consistency;
 
 pub(super) enum Transition {
     Unit,
     EvaluationRecorded(bool),
+    ConsistencyForecast(Box<Result<crate::action::consequence::activation::consistency::Prediction, Error>>),
+    ConsistencyProposed(Result<FrozenAction, Error>),
     ActorRecorded(FileStateReceipt),
     ActorReset(ResetReceipt),
     Proposed(FrozenAction),
@@ -69,6 +72,7 @@ pub(super) struct Machine {
     pub(super) credential_revoked: bool,
     pub(super) credential_changes: Vec<super::credential::FileCredentialChange>,
     credibility: Option<credibility::CredibilityState>,
+    pub(super) consistency: Option<std::rc::Rc<super::consistency::FileConsistencyConfig>>,
     decoder: Option<decoder::DecoderState>,
     identity: Option<identity::IdentityState>,
     campaigns: Option<campaigns::CampaignState>,
@@ -99,7 +103,7 @@ impl Machine {
         Ok(Self { bootstrap: Some(p.clone()), containment: ContainmentHistory::default(), policy_updates: PolicyUpdates::default(), requests: RequestBook::default(), scope: d.scope, broker, endpoint, reviewer, actions: BTreeMap::new(), sessions: BTreeMap::new(),
             automatic: BTreeMap::new(), human_keys: BTreeMap::new(), envelopes: BTreeMap::new(), clock_ready: false,
             publication_guard: false, credential_policy: None, credential_generation: 0,
-            credential_revoked: false, credential_changes: Vec::new(), decoder: None, identity: None, campaigns: None, file_source: None, credibility: None })
+            credential_revoked: false, credential_changes: Vec::new(), decoder: None, identity: None, campaigns: None, file_source: None, credibility: None, consistency: None })
     }
     pub(super) fn replay(p: &FileOversightProfile, events: &[Event]) -> Result<Self, Error> {
         let mut machine = Self::new(p)?;
@@ -140,6 +144,7 @@ impl Machine {
         self.envelopes.clear();
     }
     fn recover(&mut self) -> Result<(), Error> {
+        self.recover_consistency()?;
         self.pause_decoder();
         self.withdraw_identity()?;
         self.withdraw_policy_campaigns()?;
@@ -168,7 +173,8 @@ impl Machine {
     fn apply_inner(&mut self, event: &Event) -> Result<Transition, Error> {
         // Incident evaluation remains available while inference is paused or
         // stopped. Assessments cannot resume it or restore any effect key.
-        if !matches!(event, Event::Credibility(super::credibility::CredibilityEvent::Assess(..))) {
+        if !matches!(event, Event::Credibility(super::credibility::CredibilityEvent::Assess(..))
+            | Event::Consistency(super::consistency::ConsistencyEvent::Unavailable)) {
             self.check_decoder_admission(event)?;
         }
         let without_current_time = matches!(event,
@@ -176,10 +182,11 @@ impl Machine {
             | Event::InputsUnavailable(..) | Event::Human(_, HumanDecision::Reject | HumanDecision::Revoke) | Event::RevokeHumans
             | Event::PublicationGuard | Event::PublishChecked(..) | Event::PublishCredentialed(..)
             | Event::CredentialGuard(_) | Event::CredentialRotate(_) | Event::CredentialRevoke(_) | Event::Campaign(_)
-            | Event::StreamBootstrap(_) | Event::Identity(_) | Event::Decoder(_) | Event::Credibility(_)
+            | Event::StreamBootstrap(_) | Event::Identity(_) | Event::Decoder(_) | Event::Credibility(_) | Event::Consistency(_)
             | Event::Source(_) | Event::ActorState(_) | Event::ActorCheckpoint(..) | Event::ActorReset(..));
         if !without_current_time && !self.clock_ready { return Err(Error::Incomplete); }
         match event {
+            Event::Consistency(event) => return self.apply_consistency(event),
             Event::Credibility(event) => return self.apply_credibility(event),
             Event::Decoder(event) => return self.apply_decoder(event),
             Event::Identity(event) => return self.apply_identity(event),
@@ -274,9 +281,12 @@ impl Machine {
             BaseEvent::ReplacePolicy(update) => return self.apply_policy_update(update),
             BaseEvent::Time(tick) => self.observe(*tick)?,
             BaseEvent::Propose(id, spec, snapshot) => {
-                let action = self.broker.propose(*id, spec.clone(), snapshot)?.action;
-                self.actions.insert(*id, action.clone());
-                return Ok(Transition::Proposed(action));
+                let result = self.broker.propose(*id, spec.clone(), snapshot).map(|proposal| proposal.action);
+                if let Ok(action) = &result { self.actions.insert(*id, action.clone()); }
+                // A valid observed category was consumed BEFORE downstream
+                // admission. Its native refusal must not rewind the likelihood.
+                return if self.consistency.is_some() { Ok(Transition::ConsistencyProposed(result)) }
+                    else { result.map(Transition::Proposed) };
             }
             BaseEvent::SubmitRequest(request, spec, snapshot) => return self.apply_request(*request, spec, snapshot),
             BaseEvent::Publish(id) => {
