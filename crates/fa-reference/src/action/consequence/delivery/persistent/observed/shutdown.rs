@@ -4,6 +4,8 @@
 
 mod campaign;
 mod canonical;
+mod plan;
+pub use plan::{FileShutdownMember, MAX_SHUTDOWN_PLAN_BYTES};
 pub use campaign::FileShutdownCampaign;
 
 use super::{FileOversight, FileOversightProfile, FileStopSweep, JournalError, journal};
@@ -19,7 +21,8 @@ pub const MAX_SHUTDOWN_DOMAINS: usize = 64;
 pub const MAX_SHUTDOWN_ATTEMPTS: usize = 512;
 pub const MAX_SHUTDOWN_HEAD_BYTES: usize = 32 * 1024 * 1024;
 
-/// An independently retained registration from a real acknowledged owner.
+/// Operator-retained registration. Native capture records an acknowledged owner;
+/// a restored registration must still be compared with its actual domain.
 /// The exact history prefix binds guards and source identity as well as counters.
 /// Clones share historical bytes; they retain no owner, file lock or live keys.
 #[derive(Clone)]
