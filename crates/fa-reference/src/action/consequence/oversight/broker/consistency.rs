@@ -5,6 +5,8 @@
 //! Host capture, clock and the registered calibration remain trusted inputs.
 
 mod hosted;
+mod event;
+pub use event::ConsistencyEventDomain;
 
 use super::OversightBroker;
 use crate::action::{ActionSpec, ElapsedTick, FrozenAction, MAX_PAYLOAD_BYTES};
@@ -46,6 +48,7 @@ pub struct ConsistencyObservation {
     observed_at: ElapsedTick,
     prediction: Prediction,
     event: bool,
+    event_domain: ConsistencyEventDomain,
     factor: LikelihoodFactor,
     sample: usize,
     crossed: bool,
@@ -55,6 +58,7 @@ impl ConsistencyObservation {
     pub fn attempt(&self) -> u64 { self.attempt }
     pub fn prediction(&self) -> &Prediction { &self.prediction }
     pub fn event(&self) -> bool { self.event }
+    pub fn event_domain(&self) -> ConsistencyEventDomain { self.event_domain }
     pub fn factor(&self) -> LikelihoodFactor { self.factor }
     pub fn sample(&self) -> usize { self.sample }
     pub fn crossed(&self) -> bool { self.crossed }
@@ -69,6 +73,7 @@ impl ConsistencyObservation {
 pub(super) struct ConsistencyState {
     config: ConsistencyConfig,
     hosted_layer: Option<u64>,
+    event_domain: ConsistencyEventDomain,
     evidence: LikelihoodEvidence,
     pending: Option<PendingForecast>,
     observations: BTreeMap<u64, ConsistencyObservation>,
@@ -94,7 +99,7 @@ impl OversightBroker {
             || config.model.policy_generation() != self.delivery.controller().policy().generation()
         { return Err(Error::Binding); }
         let evidence = LikelihoodEvidence::new(config.alpha);
-        self.consistency = Some(ConsistencyState { config, hosted_layer: None, evidence, pending: None,
+        self.consistency = Some(ConsistencyState { config, hosted_layer: None, event_domain: ConsistencyEventDomain::PayloadPrefix, evidence, pending: None,
             observations: BTreeMap::new(), jobs: 0, last_sequence: 0, coverage_lost: false });
         Ok(())
     }
@@ -201,7 +206,16 @@ impl OversightBroker {
         { return Err(Error::Stale); }
         if inspection.suspended { return Err(Error::WrongState); }
         let forecast = pending.prediction.forecast();
-        let event = state.config.model.event(&spec.payload);
+        let event_domain = state.event_domain;
+        let event = match event_domain.classify(&state.config.model, &spec.payload) {
+            Ok(event) => event,
+            Err(error) => {
+                // An uninterpretable release is not a negative observation.
+                // Retain the unanswered forecast and permanently close coverage.
+                self.consistency.as_mut().expect("configured consistency lane").coverage_lost = true;
+                return Err(error);
+            }
+        };
         let state = self.consistency.as_mut().expect("configured consistency lane");
         let factor = match state.evidence.observe(forecast, event) {
             Ok(factor) => factor,
@@ -211,7 +225,7 @@ impl OversightBroker {
         state.observations.insert(attempt, ConsistencyObservation {
             attempt, forecast_actor_revision: pending.actor_revision, observed_actor_revision: actor_revision,
             epoch: pending.epoch, forecast_at: pending.created_at, observed_at: now,
-            prediction: pending.prediction, event, factor, sample: state.evidence.samples(), crossed: state.evidence.crossed(),
+            prediction: pending.prediction, event, event_domain, factor, sample: state.evidence.samples(), crossed: state.evidence.crossed(),
         });
         Ok(())
     }
