@@ -86,7 +86,7 @@ impl FileShutdownCampaign {
         Ok(())
     }
 
-    fn advance_inner(&mut self, index: usize, attempt: usize, host: &mut FileOversight,
+    pub(super) fn advance_inner(&mut self, index: usize, attempt: usize, host: &mut FileOversight,
         at: ElapsedTick) -> Result<(FileShutdownObservation, Rc<[u8]>, usize), JournalError>
     {
         let domain = self.plan.domains[index].clone();

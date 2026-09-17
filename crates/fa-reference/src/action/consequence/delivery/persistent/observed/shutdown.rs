@@ -5,6 +5,7 @@
 mod campaign;
 mod canonical;
 mod plan;
+pub mod coordinator;
 pub use plan::{FileShutdownMember, MAX_SHUTDOWN_PLAN_BYTES};
 pub use campaign::FileShutdownCampaign;
 

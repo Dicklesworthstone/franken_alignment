@@ -16,7 +16,7 @@ impl FileShutdownCampaign {
         self.complete(index, attempt, result)
     }
 
-    fn read_canonical(&self, index: usize)
+    pub(super) fn read_canonical(&self, index: usize)
         -> Result<(FileShutdownObservation, Rc<[u8]>, usize), JournalError>
     {
         let domain = &self.plan.domains[index];
