@@ -84,6 +84,16 @@ impl PreparedGuardedBootstrap {
         Ok(self)
     }
 
+    /// Apply the original predictor gate before the FIRST canonical write.
+    pub(super) fn predictive(mut self, config: super::super::consistency::FileConsistencyConfig)
+        -> Result<Self, JournalError>
+    {
+        let event = Event::Consistency(super::super::consistency::ConsistencyEvent::Enable(Rc::new(config)));
+        self.machine.apply(&event)?;
+        self.events.push(event);
+        Ok(self)
+    }
+
     pub(super) fn publish(self, store: storage::Store)
         -> Result<(FileOversight, FileOversightRoles), JournalError>
     {

@@ -4,11 +4,13 @@
 
 pub mod investigation;
 pub mod evaluation;
+pub mod predictive;
 
 mod bootstrap;
 pub use bootstrap::FileCredentialRegistration;
 
 use super::credential::FileCredentialPolicy;
+use super::consistency::FileConsistencyConfig;
 use crate::action::consequence::oversight::credibility::EvaluationProtocol;
 use super::decoder::{DecoderEvent, FileDecoderConfig};
 use super::governance::campaigns::{CampaignEvent, FilePolicyGovernor};
@@ -111,6 +113,13 @@ impl FileGuardSet {
     // its tokens. This is only a preflight; full semantic replay still validates
     // every enable, step, witness and recovery transition afterwards.
     fn check_decoder_config(&self, events: &[Event]) -> Result<(), Error> {
+        self.check_replay_config(events, None)
+    }
+
+    fn check_replay_config(&self, events: &[Event], prediction: Option<&FileConsistencyConfig>)
+        -> Result<(), Error>
+    {
+        predictive::check_prediction(events, prediction)?;
         let mut configured = events.iter().filter_map(|event| match event {
             Event::Decoder(DecoderEvent::Enable(config)) => Some(config.as_ref()),
             _ => None,
@@ -135,10 +144,18 @@ impl FileGuardSet {
     fn check_evaluated(&self, machine: &Machine, events: &[Event],
         evaluation: Option<&EvaluationProtocol>) -> Result<(), Error>
     {
+        self.check_predictive(machine, events, evaluation, None)
+    }
+
+    fn check_predictive(&self, machine: &Machine, events: &[Event],
+        evaluation: Option<&EvaluationProtocol>, prediction: Option<&FileConsistencyConfig>)
+        -> Result<(), Error>
+    {
         self.validate()?;
         // The original entry points require absence, never unchecked acceptance
         // of a new evaluator contract. The explicit evaluated profile pins it.
-        if machine.credibility_contract() != evaluation { return Err(Error::Binding); }
+        if machine.credibility_contract() != evaluation
+            || machine.consistency.as_deref() != prediction { return Err(Error::Binding); }
         if !machine.publication_guard { return Err(Error::Incomplete); }
         // Replay has already checked every transition, including uniqueness and
         // bootstrap order. Reading this original event does not invent a second
@@ -172,7 +189,14 @@ impl FileRecoveryRequirements {
     fn check_evaluated(&self, profile: &FileOversightProfile, machine: &Machine,
         events: &[Event], evaluation: Option<&EvaluationProtocol>) -> Result<(), Error>
     {
-        self.guards.check_evaluated(machine, events, evaluation)?;
+        self.check_predictive(profile, machine, events, evaluation, None)
+    }
+
+    fn check_predictive(&self, profile: &FileOversightProfile, machine: &Machine,
+        events: &[Event], evaluation: Option<&EvaluationProtocol>,
+        prediction: Option<&FileConsistencyConfig>) -> Result<(), Error>
+    {
+        self.guards.check_predictive(machine, events, evaluation, prediction)?;
         if self.guards.credential.is_some() != self.credential_epoch.is_some()
             || self.credential_epoch.is_some_and(|epoch| epoch.generation == 0)
         { return Err(Error::InvalidInput); }
