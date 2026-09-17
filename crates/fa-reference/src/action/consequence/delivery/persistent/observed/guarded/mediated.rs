@@ -1,5 +1,8 @@
 //! Recover topology-observer custody together with the original guarded owner.
 //! Exact graphs are independent requirements, not assumed live capture or a cut.
+mod inspection;
+pub use inspection::{FileMediatedSnapshot, FileTopologyUpdateRecord};
+
 use super::{FileCredentialRegistration, FileGuardSet, FileOversightRoles, FileRecoveryRequirements};
 use super::bootstrap::PreparedGuardedBootstrap;
 use super::super::{BaseEvent, Event, FileOversight, FileOversightProfile, JournalError, Machine, journal, storage};
@@ -134,3 +137,6 @@ fn checked_image(profile: &FileOversightProfile, identity: &Path, bytes: &[u8],
     }
     Ok((events, machine))
 }
+
+#[cfg(test)]
+mod storage_tests;
