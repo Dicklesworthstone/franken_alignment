@@ -38,6 +38,9 @@ impl Machine {
                 if let Some(layer) = config.hosted_residual_layer() {
                     self.broker.require_hosted_action_consistency(layer)?;
                 }
+                if let Some(profile) = config.stream_message_profile() {
+                    self.broker.require_stream_message_consistency(profile)?;
+                }
                 if !self.publication_guard { self.enable_publication_guard()?; }
                 self.consistency = Some(config.clone());
                 Ok(Transition::Unit)

@@ -7,11 +7,13 @@ use crate::action::consequence::activation::consistency::{
 use crate::action::consequence::activation::probe::LinearProbe;
 use crate::action::consequence::oversight::consistency::ConsistencyConfig;
 use crate::Error;
+use crate::action::consequence::delivery::stream::StreamProfile;
 use std::rc::Rc;
 
 pub(super) const MAX_CONFIG_BYTES: usize = MAX_VALUES * 4 + MAX_EVENT_PREFIX_BYTES + 256;
 const DOMAIN: &[u8; 8] = b"FACPRED\x01";
 const HOSTED_DOMAIN: &[u8; 8] = b"FACPRED\x02";
+const MESSAGE_DOMAIN: &[u8; 8] = b"FACPRED\x03";
 
 /// Trusted bootstrap inputs, not inferred calibration or an actor-supplied score.
 /// Floating-point coefficients are retained by their exact binary32 words.
@@ -59,14 +61,35 @@ impl FileConsistencyConfig {
     pub fn with_hosted_residual(self, layer: u64) -> Result<Self, Error> {
         if layer == 0 { return Err(Error::InvalidInput); }
         if self.hosted_residual_layer().is_some() { return Err(Error::Duplicate); }
+        if self.stream_message_profile().is_some() {
+            let (inner, profile) = message_parts(&self.bytes)?;
+            return Self::from_bytes(inner)?.with_hosted_residual(layer)?.with_stream_messages(profile);
+        }
         let mut w = Writer::new(MAX_CONFIG_BYTES);
         w.raw(HOSTED_DOMAIN)?; w.raw(&self.bytes[DOMAIN.len()..])?; w.u64(layer)?;
         Self::from_bytes(&w.finish())
     }
     pub fn hosted_residual_layer(&self) -> Option<u64> {
-        if &self.bytes[..DOMAIN.len()] != HOSTED_DOMAIN { return None; }
-        Some(u64::from_be_bytes(self.bytes[self.bytes.len() - 8..].try_into()
+        let bytes = if self.bytes.starts_with(MESSAGE_DOMAIN) {
+            message_parts(&self.bytes).expect("validated message configuration").0
+        } else { &self.bytes };
+        if &bytes[..DOMAIN.len()] != HOSTED_DOMAIN { return None; }
+        Some(u64::from_be_bytes(bytes[bytes.len() - 8..].try_into()
             .expect("validated hosted configuration suffix")))
+    }
+    /// Select a distinct message-prefix calibration contract at bootstrap. The
+    /// exact original predictor bytes and stream limits are retained together.
+    /// This config supports either supplied frames or the actual owned residual.
+    pub fn with_stream_messages(self, profile: StreamProfile) -> Result<Self, Error> {
+        if self.stream_message_profile().is_some() { return Err(Error::Duplicate); }
+        let mut w = Writer::new(MAX_CONFIG_BYTES);
+        w.raw(MESSAGE_DOMAIN)?; w.blob(&self.bytes)?;
+        super::super::stream::write_profile(&mut w, profile)?;
+        Self::from_bytes(&w.finish())
+    }
+    pub fn stream_message_profile(&self) -> Option<StreamProfile> {
+        self.bytes.starts_with(MESSAGE_DOMAIN).then(||
+            message_parts(&self.bytes).expect("validated message configuration").1)
     }
     pub fn encoded(&self) -> &[u8] { &self.bytes }
 
@@ -79,6 +102,10 @@ impl FileConsistencyConfig {
     pub(in super::super) fn build(&self) -> Result<ConsistencyConfig, Error> { decode(&self.bytes) }
 }
 fn decode(bytes: &[u8]) -> Result<ConsistencyConfig, Error> {
+    if bytes.starts_with(MESSAGE_DOMAIN) {
+        let (inner, _) = message_parts(bytes)?;
+        return decode(inner);
+    }
     let mut r = Reader::new(bytes);
     let domain = r.take(DOMAIN.len())?;
     let hosted = if domain == DOMAIN { false } else if domain == HOSTED_DOMAIN { true }
@@ -110,3 +137,18 @@ fn decode(bytes: &[u8]) -> Result<ConsistencyConfig, Error> {
     if stream == 0 || max_predictions == 0 || max_prediction_age_ticks == 0 { return Err(Error::InvalidInput); }
     Ok(ConsistencyConfig { model, alpha, stream, max_predictions, max_prediction_age_ticks })
 }
+
+// Version three wraps EXACTLY one original version-one/two configuration, never
+// another wrapper. Bound structure before parsing coefficients or allocating.
+fn message_parts(bytes: &[u8]) -> Result<(&[u8], StreamProfile), Error> {
+    let mut r = Reader::new(bytes);
+    if r.take(8)? != MESSAGE_DOMAIN { return Err(Error::Binding); }
+    let inner = r.blob(MAX_CONFIG_BYTES)?;
+    if !inner.starts_with(DOMAIN) && !inner.starts_with(HOSTED_DOMAIN) { return Err(Error::Binding); }
+    let profile = super::super::stream::read_profile(&mut r)?;
+    r.end()?;
+    Ok((inner, profile))
+}
+
+#[cfg(test)]
+mod message_tests;
