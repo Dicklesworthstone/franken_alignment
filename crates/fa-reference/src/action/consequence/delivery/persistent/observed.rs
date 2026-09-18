@@ -295,6 +295,15 @@ impl FileOversight {
             self.fault = Some(JournalFailure { operation: JournalIo::Stage,
                 kind: io::ErrorKind::Other, replacement_may_be_visible: false });
         }
+        if matches!(&event, Event::Consistency(consistency::ConsistencyEvent::Unavailable)) {
+            if !self.action_consistency_required() { return Err(Error::Incomplete.into()); }
+            // Known capture loss is already evidence. Close the live owner
+            // BEFORE capacity, encoding or replay can fail or unwind; an older
+            // quiet image cannot remain eligible when loss cannot be recorded.
+            // Stale revisions and foreign observer roles have refused above.
+            self.fault = Some(JournalFailure { operation: JournalIo::Stage,
+                kind: io::ErrorKind::Other, replacement_may_be_visible: false });
+        }
         if self.events.len() >= self.profile.delivery.limits.events { return Err(Error::Limit.into()); }
         let bytes = journal::encode_appended(&self.profile, self.store.identity(), &self.events, &event)?;
         let mut candidate = Machine::replay(&self.profile, &self.events)?;
