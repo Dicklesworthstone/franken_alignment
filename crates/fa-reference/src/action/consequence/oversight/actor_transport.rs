@@ -140,7 +140,6 @@ impl<P: ActorRequestPort> UnixActorConnection<P> {
         }
     }
 
-    #[cfg(target_os = "linux")]
     pub(crate) fn request_port(&self) -> &P { self.channel.request_port() }
 
     /// Invalid budgets refuse before any work. Later socket failures are returned

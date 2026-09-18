@@ -144,6 +144,10 @@ impl<P: ActorRequestPort> ActorProcess<P> {
     pub fn drive(&mut self, budget: DriveBudget) -> Result<ActorProcessDrive, WireError> {
         self.drive_with_admission(budget, |_, _, _| Ok(()))
     }
+    pub(crate) fn request_port(&self) -> &P {
+        if let Some(connection) = &self.connection { connection.request_port() }
+        else { self.session.as_ref().expect("closed actor retains session").request_port() }
+    }
     /// Only existing trusted source integrations may install admission work.
     /// An unwind leaves a latched interruption; another call cannot repeat intake.
     pub(crate) fn drive_with_admission<A>(&mut self, budget: DriveBudget, admission: A)

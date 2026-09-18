@@ -3,6 +3,7 @@
 //! their existing semantics. Intent bytes are not an execution-bearing frame.
 mod codec;
 mod source;
+pub mod process;
 #[cfg(target_os = "linux")]
 pub use source::{FileStreamPeerDrive, FileStreamPeerDriveError};
 pub use codec::{STREAM_INTENT_HEADER_BYTES, encode_stream_proposal};
