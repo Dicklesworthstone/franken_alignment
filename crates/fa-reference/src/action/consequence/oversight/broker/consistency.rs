@@ -7,6 +7,8 @@
 mod hosted;
 mod event;
 mod stopping;
+mod deadline;
+pub use deadline::ConsistencyDeadline;
 pub use stopping::{ConsistencyStopCause, ConsistencyStopIncident, ConsistencyStopPolicy};
 pub use event::ConsistencyEventDomain;
 
