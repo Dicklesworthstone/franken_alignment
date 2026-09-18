@@ -15,6 +15,8 @@ pub mod actor_peer;
 pub mod supervised;
 #[cfg(unix)]
 pub mod helper_processes;
+#[cfg(unix)]
+pub mod actor_process;
 pub mod helper_workers;
 pub mod helper_client;
 pub mod helper_client_drive;

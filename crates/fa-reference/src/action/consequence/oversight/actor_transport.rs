@@ -31,7 +31,7 @@ impl Default for DriveBudget {
 }
 
 impl DriveBudget {
-    fn validate(self) -> Result<(), WireError> {
+    pub(crate) fn validate(self) -> Result<(), WireError> {
         if self.read_bytes > MAX_DRIVE_BYTES || self.write_bytes > MAX_DRIVE_BYTES
             || self.frames > MAX_DRIVE_FRAMES || self.io_calls > MAX_DRIVE_IO_CALLS
         { return Err(WireError::Capacity); }

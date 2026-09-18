@@ -71,6 +71,30 @@ impl HelperProgram {
     }
 }
 
+impl HelperProgram {
+    pub(crate) fn preflight(&self) -> Result<(), ProcessFailure> {
+        let metadata = fs::metadata(&self.executable)
+            .map_err(|error| io_failure(ProcessStage::InspectProgram, error))?;
+        if !metadata.is_file() { return Err(ProcessFailure::Refused(Error::Binding)); }
+        let metadata = fs::metadata(&self.directory)
+            .map_err(|error| io_failure(ProcessStage::InspectDirectory, error))?;
+        if !metadata.is_dir() { return Err(ProcessFailure::Refused(Error::Binding)); }
+        Ok(())
+    }
+
+    // Call only after validating the full launch. No fallible setup follows spawn.
+    pub(crate) fn spawn_socket(&self) -> Result<(UnixStream, Child), ProcessFailure> {
+        let (parent, worker) = UnixStream::pair().map_err(|error| io_failure(ProcessStage::SocketPair, error))?;
+        parent.set_nonblocking(true).map_err(|error| io_failure(ProcessStage::SocketSetup, error))?;
+        let input: OwnedFd = worker.into();
+        let child = Command::new(&self.executable).args(&self.arguments)
+            .current_dir(&self.directory).env_clear().envs(&self.environment)
+            .stdin(Stdio::from(input)).stdout(Stdio::from(io::stderr())).stderr(Stdio::inherit())
+            .spawn().map_err(|error| io_failure(ProcessStage::Spawn, error))?;
+        Ok((parent, child))
+    }
+}
+
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum ProcessStage { InspectProgram, InspectDirectory, SocketPair, SocketSetup, Spawn, Reap, Terminate }
 
@@ -102,9 +126,21 @@ pub struct ProcessStatus {
     pub failure: Option<ProcessFailure>,
 }
 
-struct OwnedChild { child: Option<Child>, status: ProcessStatus }
+// Shared process lifecycle only: no helper ballot or actor authority is here.
+pub(crate) struct OwnedChild { child: Option<Child>, status: ProcessStatus }
 impl OwnedChild {
-    fn poll(&mut self) {
+    pub(crate) fn new(child: Child) -> Self {
+        let status = ProcessStatus { pid: child.id(), stop_requested: false,
+            termination_sent: false, exit: None, failure: None };
+        Self { child: Some(child), status }
+    }
+    pub(crate) fn status(&self) -> ProcessStatus { self.status }
+    pub(crate) fn reaped(&self) -> bool { self.child.is_none() }
+    pub(crate) fn request_stop(&mut self) {
+        self.status.stop_requested = true;
+        self.poll();
+    }
+    pub(crate) fn poll(&mut self) {
         let Some(child) = self.child.as_mut() else { return; };
         match child.try_wait() {
             Ok(Some(exit)) => {
@@ -219,12 +255,7 @@ pub fn launch_helpers(
             total = total.checked_add(program.text_bytes).and_then(|sum| sum.checked_add(member.len()))
                 .ok_or((None, ProcessFailure::Refused(Error::Limit)))?;
             if total > MAX_LAUNCH_TEXT_BYTES { return Err((None, ProcessFailure::Refused(Error::Limit))); }
-            let metadata = fs::metadata(&program.executable)
-                .map_err(|error| (Some(member.clone()), io_failure(ProcessStage::InspectProgram, error)))?;
-            if !metadata.is_file() { return Err((Some(member.clone()), ProcessFailure::Refused(Error::Binding))); }
-            let metadata = fs::metadata(&program.directory)
-                .map_err(|error| (Some(member.clone()), io_failure(ProcessStage::InspectDirectory, error)))?;
-            if !metadata.is_dir() { return Err((Some(member.clone()), ProcessFailure::Refused(Error::Binding))); }
+            program.preflight().map_err(|failure| (Some(member.clone()), failure))?;
         }
         Ok(())
     })();
@@ -234,21 +265,10 @@ pub fn launch_helpers(
     let mut children = HelperChildren::empty();
     let mut streams = BTreeMap::new();
     for (member, program) in programs {
-        let spawned = (|| -> Result<(UnixStream, Child), ProcessFailure> {
-            let (parent, worker) = UnixStream::pair().map_err(|error| io_failure(ProcessStage::SocketPair, error))?;
-            parent.set_nonblocking(true).map_err(|error| io_failure(ProcessStage::SocketSetup, error))?;
-            let input: OwnedFd = worker.into();
-            let child = Command::new(&program.executable).args(&program.arguments)
-                .current_dir(&program.directory).env_clear().envs(&program.environment)
-                .stdin(Stdio::from(input)).stdout(Stdio::from(io::stderr())).stderr(Stdio::inherit())
-                .spawn().map_err(|error| io_failure(ProcessStage::Spawn, error))?;
-            Ok((parent, child))
-        })();
+        let spawned = program.spawn_socket();
         match spawned {
             Ok((stream, child)) => {
-                let status = ProcessStatus { pid: child.id(), stop_requested: false,
-                    termination_sent: false, exit: None, failure: None };
-                children.children.insert(member.clone(), OwnedChild { child: Some(child), status });
+                children.children.insert(member.clone(), OwnedChild::new(child));
                 streams.insert(member.clone(), stream);
             }
             Err(failure) => return Err(rejected(Some(member.clone()), failure, children)),
