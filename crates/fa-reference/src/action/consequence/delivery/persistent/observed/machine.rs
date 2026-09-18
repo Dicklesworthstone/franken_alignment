@@ -170,7 +170,18 @@ impl Machine {
     }
 
     pub(super) fn apply(&mut self, event: &Event) -> Result<Transition, Error> {
+        let was_stopped = self.broker.stop_receipt().is_some();
         let result = self.apply_inner(event)?;
+        // A forecast, proposed category or missing capture can install the
+        // ORIGINAL consistency stop even when its returned observation refuses.
+        // Complete the SAME manual-stop cleanup before this event is published.
+        // Decoder events and recovery fences already perform their own cleanup.
+        if !was_stopped && matches!(event, Event::Consistency(_)
+            | Event::Core(BaseEvent::Propose(..) | BaseEvent::SubmitRequest(..))) {
+            if let Some(request) = self.broker.stop_receipt().map(|receipt| receipt.request()) {
+                self.apply_core(&BaseEvent::Stop(request))?;
+            }
+        }
         self.requests.refresh(&self.broker.inspect())?;
         self.bootstrap = None;
         Ok(result)

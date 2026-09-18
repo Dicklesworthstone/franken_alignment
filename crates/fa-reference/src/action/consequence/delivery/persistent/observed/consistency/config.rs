@@ -10,6 +10,8 @@ use crate::Error;
 use crate::action::consequence::delivery::stream::StreamProfile;
 use std::rc::Rc;
 
+mod stopping;
+
 pub(super) const MAX_CONFIG_BYTES: usize = MAX_VALUES * 4 + MAX_EVENT_PREFIX_BYTES + 256;
 const DOMAIN: &[u8; 8] = b"FACPRED\x01";
 const HOSTED_DOMAIN: &[u8; 8] = b"FACPRED\x02";
@@ -61,6 +63,10 @@ impl FileConsistencyConfig {
     pub fn with_hosted_residual(self, layer: u64) -> Result<Self, Error> {
         if layer == 0 { return Err(Error::InvalidInput); }
         if self.hosted_residual_layer().is_some() { return Err(Error::Duplicate); }
+        if let Some(policy) = self.terminal_stop_policy() {
+            let inner = stopping::parts(&self.bytes)?.0;
+            return Self::from_bytes(inner)?.with_hosted_residual(layer)?.with_terminal_stop(policy);
+        }
         if self.stream_message_profile().is_some() {
             let (inner, profile) = message_parts(&self.bytes)?;
             return Self::from_bytes(inner)?.with_hosted_residual(layer)?.with_stream_messages(profile);
@@ -70,9 +76,10 @@ impl FileConsistencyConfig {
         Self::from_bytes(&w.finish())
     }
     pub fn hosted_residual_layer(&self) -> Option<u64> {
-        let bytes = if self.bytes.starts_with(MESSAGE_DOMAIN) {
-            message_parts(&self.bytes).expect("validated message configuration").0
-        } else { &self.bytes };
+        let base = self.without_stop();
+        let bytes = if base.starts_with(MESSAGE_DOMAIN) {
+            message_parts(base).expect("validated message configuration").0
+        } else { base };
         if &bytes[..DOMAIN.len()] != HOSTED_DOMAIN { return None; }
         Some(u64::from_be_bytes(bytes[bytes.len() - 8..].try_into()
             .expect("validated hosted configuration suffix")))
@@ -82,14 +89,19 @@ impl FileConsistencyConfig {
     /// This config supports either supplied frames or the actual owned residual.
     pub fn with_stream_messages(self, profile: StreamProfile) -> Result<Self, Error> {
         if self.stream_message_profile().is_some() { return Err(Error::Duplicate); }
+        if let Some(policy) = self.terminal_stop_policy() {
+            let inner = stopping::parts(&self.bytes)?.0;
+            return Self::from_bytes(inner)?.with_stream_messages(profile)?.with_terminal_stop(policy);
+        }
         let mut w = Writer::new(MAX_CONFIG_BYTES);
         w.raw(MESSAGE_DOMAIN)?; w.blob(&self.bytes)?;
         super::super::stream::write_profile(&mut w, profile)?;
         Self::from_bytes(&w.finish())
     }
     pub fn stream_message_profile(&self) -> Option<StreamProfile> {
-        self.bytes.starts_with(MESSAGE_DOMAIN).then(||
-            message_parts(&self.bytes).expect("validated message configuration").1)
+        let bytes = self.without_stop();
+        bytes.starts_with(MESSAGE_DOMAIN).then(||
+            message_parts(bytes).expect("validated message configuration").1)
     }
     pub fn encoded(&self) -> &[u8] { &self.bytes }
 
@@ -102,6 +114,9 @@ impl FileConsistencyConfig {
     pub(in super::super) fn build(&self) -> Result<ConsistencyConfig, Error> { decode(&self.bytes) }
 }
 fn decode(bytes: &[u8]) -> Result<ConsistencyConfig, Error> {
+    if bytes.starts_with(stopping::DOMAIN) {
+        return decode(stopping::parts(bytes)?.0);
+    }
     if bytes.starts_with(MESSAGE_DOMAIN) {
         let (inner, _) = message_parts(bytes)?;
         return decode(inner);

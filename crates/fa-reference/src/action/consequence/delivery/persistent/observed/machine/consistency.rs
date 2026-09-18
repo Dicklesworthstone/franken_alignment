@@ -41,6 +41,9 @@ impl Machine {
                 if let Some(profile) = config.stream_message_profile() {
                     self.broker.require_stream_message_consistency(profile)?;
                 }
+                if let Some(policy) = config.terminal_stop_policy() {
+                    self.broker.enable_consistency_stop(policy)?;
+                }
                 if !self.publication_guard { self.enable_publication_guard()?; }
                 self.consistency = Some(config.clone());
                 Ok(Transition::Unit)
