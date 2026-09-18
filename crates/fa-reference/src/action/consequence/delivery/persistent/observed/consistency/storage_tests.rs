@@ -163,3 +163,5 @@ fn exact_configuration_vector_and_every_truncation_use_original_constructors() {
         let mut w = super::super::super::codec::shared::Writer::new(10000); write(&mut w, &decoded).unwrap(); assert_eq!(w.finish(), bytes);
     }
 }
+
+mod deadlines;

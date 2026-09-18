@@ -36,6 +36,7 @@ pub(super) enum Transition {
     MediationChecked(Box<Result<crate::action::consequence::mediation::CutCheck, Error>>),
     ConsistencyForecast(Box<Result<crate::action::consequence::activation::consistency::Prediction, Error>>),
     ConsistencyProposed(Result<FrozenAction, Error>),
+    ConsistencyExpired(Result<bool, Error>),
     ActorRecorded(FileStateReceipt),
     ActorReset(ResetReceipt),
     Proposed(FrozenAction),
@@ -193,7 +194,8 @@ impl Machine {
         // Incident evaluation remains available while inference is paused or
         // stopped. Assessments cannot resume it or restore any effect key.
         if !matches!(event, Event::Credibility(super::credibility::CredibilityEvent::Assess(..))
-            | Event::Consistency(super::consistency::ConsistencyEvent::Unavailable) | Event::Mediation(_)) {
+            | Event::Consistency(super::consistency::ConsistencyEvent::Unavailable
+                | super::consistency::ConsistencyEvent::Expire(..)) | Event::Mediation(_)) {
             self.check_decoder_admission(event)?;
         }
         let without_current_time = matches!(event,

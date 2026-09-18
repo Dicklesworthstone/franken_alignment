@@ -4,6 +4,7 @@ mod config;
 mod codec;
 mod requests;
 mod hosted;
+mod deadline;
 pub use config::{FileConsistencyConfig, FileConsistencyParameters};
 pub(super) use codec::{read, write};
 
@@ -23,6 +24,7 @@ pub(super) enum ConsistencyEvent {
     ForecastHosted(u64, u64),
     ForecastHostedRequest(u64, u64),
     Unavailable,
+    Expire(crate::action::consequence::oversight::consistency::ConsistencyDeadline, crate::action::ElapsedTick),
 }
 
 /// Acknowledged supervisor evidence, not an effect permit or proof of calibration.

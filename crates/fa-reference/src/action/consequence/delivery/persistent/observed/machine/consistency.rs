@@ -72,6 +72,17 @@ impl Machine {
                 if result.is_ok() { self.consistency_request = Some((*request, attempt)); }
                 Ok(Transition::ConsistencyForecast(Box::new(result)))
             }
+            ConsistencyEvent::Expire(deadline, at) => {
+                // Early/obsolete input timers cannot change historical time or
+                // censor a different forecast, including during semantic replay.
+                if !self.broker.check_consistency_deadline(*deadline, *at)? {
+                    return Err(Error::Stale);
+                }
+                self.observe(*at)?;
+                // A native stop failure still leaves lost coverage. Commit that
+                // result separately from an unacknowledged storage failure.
+                Ok(Transition::ConsistencyExpired(self.broker.expire_consistency_deadline(*deadline)))
+            }
             ConsistencyEvent::Unavailable => {
                 self.broker.consistency_unavailable()?;
                 Ok(Transition::Unit)
