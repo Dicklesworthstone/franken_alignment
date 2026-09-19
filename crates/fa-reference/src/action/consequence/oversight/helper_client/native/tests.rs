@@ -66,7 +66,7 @@ pub(super) fn decoder(spelling: &[u8], alarm: u8) -> (TextDecoder, NativeHelperP
     let count = vocabulary.len();
     let profile = DecoderProfile::new(DecoderIdentity { tenant: 1, model: 2, model_generation: 3,
         tokenizer_generation: 4, profile_generation: 5 }, DecoderShape { vocabulary: count, hidden: 2,
-        intermediate: 2, layers: 1, query_heads: 1, cache_heads: 1, context: 128 }, 0.00001, 10000.0).unwrap();
+        intermediate: 2, layers: 1, query_heads: 1, cache_heads: 1, context: 1024 }, 0.00001, 10000.0).unwrap();
     let tokenizer = ByteBpe::new(profile.clone(), vocabulary, merges).unwrap();
     let mut embeddings = vec![0.0; count * 2];
     for id in 0..count { embeddings[id * 2] = 1.0; }
@@ -195,7 +195,7 @@ fn full_prompt_admission_refuses_without_truncation_or_a_default_vote() {
         let (decoder, mut policy) = decoder(b"allow", 0);
         if !too_long { policy.tokenization.input_bytes = 1; }
         let mut worker = NativeEvaluator::new(decoder, policy).unwrap();
-        let prompt = if too_long { vec![b'?'; 128] } else { b"??".to_vec() };
+        let prompt = if too_long { vec![b'?'; 1024] } else { b"??".to_vec() };
         assert!(matches!(worker.evaluate(&input(&prompt)), Err(NativeEvaluationError::Admission(_))));
         assert_eq!(worker.position(), 0); assert_eq!(worker.sampled_draws(), 0);
         assert!(worker.report().is_none());

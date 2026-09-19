@@ -2,6 +2,8 @@
 //! The supervisor/worker operator registers the mapping from an input profile to
 //! an exact decoder profile. Equal epoch numbers are not an authentication claim.
 
+pub mod peer;
+
 #[cfg(test)]
 mod tests;
 
