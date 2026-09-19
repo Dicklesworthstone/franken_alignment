@@ -3,6 +3,8 @@
 //! an exact decoder profile. Equal epoch numbers are not an authentication claim.
 
 pub mod peer;
+#[cfg(unix)]
+pub mod process;
 pub mod bootstrap;
 pub mod incremental;
 pub use incremental::{NativeEvaluationProgress, NativeEvaluationWork};
