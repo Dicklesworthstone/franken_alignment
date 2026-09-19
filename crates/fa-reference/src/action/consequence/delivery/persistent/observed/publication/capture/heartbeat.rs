@@ -1,6 +1,7 @@
 //! Concrete producer heartbeat acquisition; never renew from a cached image.
 //! The producer/path and shared elapsed clock remain operator trust boundaries.
 mod bootstrap;
+pub mod feed;
 use super::FileCaptureError;
 use super::super::super::{FileOversight, JournalError, JournalFailure, JournalIo};
 use super::super::witness_gate::freshness::{read_heartbeat, write_heartbeat};

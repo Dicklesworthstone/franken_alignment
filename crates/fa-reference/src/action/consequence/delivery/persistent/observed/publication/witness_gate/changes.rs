@@ -64,7 +64,7 @@ fn read_domain(r: &mut Reader<'_>) -> Result<DomainProjection, Error> {
     Ok(DomainProjection::new(id, epoch, ProjectionKey { source: r.u64()?, branch: r.u64()?,
         projection: r.u64()?, source_epoch: r.u64()? }))
 }
-pub(super) fn write_change(w: &mut Writer, notice: PublicationChange) -> Result<(), Error> {
+pub(in super::super) fn write_change(w: &mut Writer, notice: PublicationChange) -> Result<(), Error> {
     w.u64(notice.source)?; w.u64(notice.sequence)?;
     match notice.change {
         WitnessChange::Key { domain, key } => { w.u8(0)?; write_domain(w, domain)?; w.u64(key)?; }
@@ -74,7 +74,7 @@ pub(super) fn write_change(w: &mut Writer, notice: PublicationChange) -> Result<
     }
     Ok(())
 }
-pub(super) fn read_change(r: &mut Reader<'_>) -> Result<PublicationChange, Error> {
+pub(in super::super) fn read_change(r: &mut Reader<'_>) -> Result<PublicationChange, Error> {
     let source = r.u64()?; let sequence = r.u64()?;
     let change = match r.u8()? {
         0 => WitnessChange::Key { domain: read_domain(r)?, key: r.u64()? },

@@ -1,6 +1,6 @@
 //! Durable FA-062 configuration and observations in the ORIGINAL owner/journal.
 //! No approvals, permits, mutable broker handles or serialized success bits.
-mod changes;
+pub(super) mod changes;
 pub(in super::super) mod freshness;
 use freshness::FreshnessEvent;
 use crate::action::consequence::delivery::publication_gate::changes::{PublicationChange, PublicationChangePolicy};
