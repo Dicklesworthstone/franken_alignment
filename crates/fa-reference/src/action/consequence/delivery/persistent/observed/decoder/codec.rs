@@ -35,6 +35,9 @@ pub(in super::super) fn write(w: &mut Writer, event: &DecoderEvent) -> Result<()
             if witness.len() > MAX_WITNESS_BYTES { return Err(Error::Limit); }
             w.u8(6)?; super::generation::write_command(w, command)?; w.blob(witness)?;
         }
+        DecoderEvent::BeginGeneration(command) => {
+            w.u8(7)?; super::generation::write_command(w, command)?;
+        }
     }
     Ok(())
 }
@@ -65,6 +68,7 @@ pub(in super::super) fn read(r: &mut Reader<'_>) -> Result<DecoderEvent, Error> 
             if witness.is_empty() { return Err(Error::Incomplete); }
             DecoderEvent::Generate(Rc::new(command), Rc::from(witness))
         }
+        7 => DecoderEvent::BeginGeneration(Rc::new(super::generation::read_command(r)?)),
         _ => return Err(Error::InvalidInput),
     })
 }

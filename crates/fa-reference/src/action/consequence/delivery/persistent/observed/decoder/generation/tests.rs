@@ -68,7 +68,7 @@ fn command(host: &FileOversight, id: u64, input: GenerationRequest) -> FileGener
 }
 
 #[test]
-fn durable_request_matches_original_generation_and_commits_one_event_without_an_effect() {
+fn durable_request_matches_original_generation_and_commits_intent_then_result_without_an_effect() {
     let root = Directory::new(); let config = config(3.0); let mut host = owner(&root, &config);
     let input = request(&[0], 2); let c = command(&host, 7, input.clone());
     let before = host.inspect();
@@ -78,7 +78,9 @@ fn durable_request_matches_original_generation_and_commits_one_event_without_an_
     assert_eq!(report.tokens(), expected.tokens()); assert_eq!(report.work(), expected.work());
     assert_eq!(report.finish(), GenerationFinish::TokenLimit);
     assert_eq!(report.reviewed_prompt_tokens(), 1); assert_eq!(report.end_position(), 3);
-    assert_eq!(host.revision(), before.revision + 1);
+    assert_eq!(host.revision(), before.revision + 2);
+    assert!(matches!(&host.events[before.revision as usize], Event::Decoder(DecoderEvent::BeginGeneration(value)) if value.as_ref() == &c));
+    assert!(host.pending_decoder_generation().unwrap().is_none());
     assert_eq!(host.machine.broker.hosted_replay_bytes().unwrap(), control.replay_bytes().unwrap());
     assert_eq!(host.inspect().control, before.control);
     assert_eq!(host.inspect().executions, 0); assert_eq!(host.inspect().payload, b"initial");
@@ -113,12 +115,16 @@ fn exact_id_retry_is_read_only_while_any_changed_command_conflicts() {
 #[test]
 fn generation_codec_roundtrips_and_refuses_every_truncation_and_empty_witness() {
     let command = Rc::new(FileGenerationCommand::new(7, 1, 0, request(&[0, 1], 2)).unwrap());
-    let event = DecoderEvent::Generate(Rc::clone(&command), Rc::from(&b"comparison"[..]));
-    let mut w = Writer::new(1000); write(&mut w, &event).unwrap(); let bytes = w.finish();
-    assert_eq!(bytes[0], 6);
-    let mut r = Reader::new(&bytes); let decoded = read(&mut r).unwrap(); r.end().unwrap();
-    let mut w = Writer::new(1000); write(&mut w, &decoded).unwrap(); assert_eq!(w.finish(), bytes);
-    for end in 0..bytes.len() { assert!(read(&mut Reader::new(&bytes[..end])).is_err()); }
+    for (tag, event) in [
+        (6, DecoderEvent::Generate(Rc::clone(&command), Rc::from(&b"comparison"[..]))),
+        (7, DecoderEvent::BeginGeneration(Rc::clone(&command))),
+    ] {
+        let mut w = Writer::new(1000); write(&mut w, &event).unwrap(); let bytes = w.finish();
+        assert_eq!(bytes[0], tag);
+        let mut r = Reader::new(&bytes); let decoded = read(&mut r).unwrap(); r.end().unwrap();
+        let mut w = Writer::new(1000); write(&mut w, &decoded).unwrap(); assert_eq!(w.finish(), bytes);
+        for end in 0..bytes.len() { assert!(read(&mut Reader::new(&bytes[..end])).is_err()); }
+    }
     let empty = DecoderEvent::Generate(command, Rc::from(&b""[..]));
     assert_eq!(write(&mut Writer::new(1000), &empty), Err(Error::Incomplete));
     assert!(FileGenerationCommand::new(0, 1, 0, request(&[0], 1)).is_err());
@@ -133,7 +139,12 @@ fn altered_early_or_final_comparisons_and_repeated_journal_ids_cannot_replay() {
     host.generate_decoder(host.revision(), c).unwrap();
     let last = host.events.len() - 1;
     let Event::Decoder(DecoderEvent::Generate(command, witness)) = &host.events[last] else { panic!("generation event"); };
-    for offset in [32, witness.len() - 1] {
+    let mut command_bytes = Writer::new(1000);
+    super::super::generation::write_command(&mut command_bytes, command).unwrap();
+    // Skip the seven-byte magic and command. Corrupt first-token evidence, not
+    // merely its request header, then separately corrupt the final comparison.
+    let early = 7 + command_bytes.encoded_len() + 32;
+    for offset in [early, witness.len() - 1] {
         let mut changed = witness.to_vec(); changed[offset] ^= 1;
         let mut events = host.events.clone();
         events[last] = Event::Decoder(DecoderEvent::Generate(Rc::clone(command), changed.into()));
@@ -233,3 +244,6 @@ fn bounded_request_history_cannot_be_refilled_by_retries_or_failed_commands() {
     assert!(matches!(host.generate_decoder(host.revision(), c), Err(JournalError::Contract(Error::Limit))));
     assert_eq!(host.inspect(), before); assert_eq!(host.decoder_inspection().unwrap().numerical, n);
 }
+
+#[path = "intent_tests.rs"]
+mod intent_tests;

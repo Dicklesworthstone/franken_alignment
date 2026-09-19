@@ -1,5 +1,6 @@
-//! One acknowledged journal cut for a complete monitored generation request.
+//! Durable request intent precedes computation; its result is a separate cut.
 //! Request IDs identify historical results, never a live stream or an effect key.
+pub mod inspection;
 use super::{DecoderEvent, FileOversight, JournalError, Machine, Transition, Event, journal};
 use super::super::super::codec::shared::{Reader, Writer};
 use crate::action::consequence::activation::monitor::decoder::sampled::generation::{
@@ -13,8 +14,8 @@ use std::fmt;
 use std::rc::Rc;
 
 pub const MAX_FILE_GENERATIONS: usize = 128;
-/// Conservatively retained requested steps, including stopped/refused requests.
-/// This bounds the history independently of actual output length or journal IO.
+/// Conservatively retained requested steps, including pending/refused requests.
+/// This bounds history independently of output length or physical replay work.
 pub const MAX_FILE_GENERATION_STEPS: usize = 65_536;
 
 #[derive(Clone, PartialEq, Eq)]
@@ -88,24 +89,69 @@ impl fmt::Debug for FileGenerationReceipt {
 }
 
 impl FileOversight {
-    /// Historical lookup only. Recovery may return this receipt while inference
-    /// is paused; the receipt does not resume inference or restore old keys.
-    /// An unacknowledged live owner cannot expose a speculative result.
+    /// Historical lookup, not resume. A pending ID is Incomplete, not Missing;
+    /// an unacknowledged live owner cannot expose a speculative result.
     pub fn decoder_generation(&self, id: u64) -> Result<FileGenerationReceipt, JournalError> {
         if self.fault.is_some() { return Err(JournalError::Unavailable); }
-        self.machine.recorded_decoder_generation(id).cloned().ok_or_else(|| Error::Missing.into())
+        if let Some(receipt) = self.machine.recorded_decoder_generation(id) { return Ok(receipt.clone()); }
+        if self.machine.pending_decoder_generation().is_some_and(|pending| pending.id() == id) {
+            return Err(Error::Incomplete.into());
+        }
+        Err(Error::Missing.into())
     }
 
-    /// Execute through the ORIGINAL bounded driver and per-token hosted methods.
-    /// All outputs are withheld until canonical replacement is acknowledged.
-    /// A matching ID returns the historical receipt without inference or IO,
-    /// even with a stale journal predecessor or a recovery-paused decoder.
-    /// Every command field must match; conflicting IDs cannot reroll or revise
-    /// budgets, prompts, stop IDs, numerical positions or actor predecessors.
+    /// The original frozen INPUT, never an unacknowledged output or hidden draw.
+    /// It survives recovery and cannot be cleared by a checkpoint reset or fence.
+    pub fn pending_decoder_generation(&self) -> Result<Option<FileGenerationCommand>, JournalError> {
+        if self.fault.is_some() { return Err(JournalError::Unavailable); }
+        Ok(self.machine.pending_decoder_generation().cloned())
+    }
+
+    /// Commit request identity, complete inputs and logical history reservation
+    /// BEFORE computation. A matching retry is read-only. At most one intent may
+    /// be outstanding; no other inference, proposal or checkpoint reset can skip
+    /// it. Existing obligations can still be reconciled and the owner can stop.
+    /// No new-request token is computed here. Ordinary durable replay can still
+    /// recompute previous history; a quiet new-request result is not promised.
+    pub fn begin_decoder_generation(&mut self, revision: u64, command: FileGenerationCommand)
+        -> Result<(), JournalError>
+    {
+        if self.fault.is_some() { return Err(JournalError::Unavailable); }
+        command.check()?;
+        if let Some(recorded) = self.machine.recorded_decoder_generation(command.id) {
+            return if recorded.command() == &command { Ok(()) } else { Err(Error::Binding.into()) };
+        }
+        if let Some(pending) = self.machine.pending_decoder_generation() {
+            if pending == &command { return Ok(()); }
+            let error = if pending.id() == command.id { Error::Binding } else { Error::WrongState };
+            return Err(error.into());
+        }
+        if revision != self.revision() { return Err(Error::Stale.into()); }
+        if !self.clock_ready() || !self.decoder_required() || self.machine.decoder_paused() {
+            return Err(Error::Incomplete.into());
+        }
+        self.machine.check_decoder_generation_intent(&command)?;
+        // Both cuts need event slots. Byte/recovery-reserve limits are still
+        // enforced by the original encoder; a later failure preserves the intent.
+        if self.events.len().checked_add(2).ok_or(Error::Overflow)? > self.profile.delivery.limits.events {
+            return Err(Error::Limit.into());
+        }
+        self.transact(revision, Event::Decoder(DecoderEvent::BeginGeneration(Rc::new(command))))?;
+        Ok(())
+    }
+
+    /// Run the ORIGINAL bounded driver only after its exact intent is durable.
+    /// A new invocation makes two acknowledged cuts: intent, then result. All
+    /// output is withheld until the result's canonical replacement is acknowledged.
+    /// Matching completed IDs return history without inference, time checks or IO.
+    /// Conflicting inputs, budgets, stop IDs or predecessors cannot reroll an ID.
     ///
-    /// New commands require a fresh clock, resumed decoder and current journal
-    /// revision. Native failures are recorded; witness/encoding/storage failures
-    /// instead poison the owner, with no successful receipt or quiet fallback.
+    /// An interrupted intent requires explicit fresh-clock recovery and resume,
+    /// then this exact command, or permanent suspension. Physical computation may
+    /// repeat after a crash; no exactly-once CPU claim or work refund is made.
+    /// Native refusals/holds are recorded. Once new-request execution is entered,
+    /// witness/encoding/storage failure leaves this owner unavailable and its
+    /// acknowledged intent unresolved, rather than exposing speculative output.
     pub fn generate_decoder(&mut self, revision: u64, command: FileGenerationCommand)
         -> Result<FileGenerationReceipt, JournalError>
     {
@@ -119,6 +165,7 @@ impl FileOversight {
         if !self.clock_ready() || !self.decoder_required() || self.machine.decoder_paused() {
             return Err(Error::Incomplete.into());
         }
+        self.begin_decoder_generation(revision, command.clone())?;
         self.machine.check_decoder_generation(&command)?;
         let id = command.id;
         let command = Rc::new(command);
@@ -127,8 +174,8 @@ impl FileOversight {
         if self.events.len() >= self.profile.delivery.limits.events { return Err(Error::Limit.into()); }
         self.events.try_reserve(1).map_err(|_| Error::Limit)?;
         let mut candidate = Machine::replay(&self.profile, &self.events)?;
-        // Close the original owner BEFORE computation. A caught unwind, failed
-        // witness or ambiguous write must not reopen its older quiet prefix.
+        // Close the original owner BEFORE computation. A caught unwind or failed
+        // write cannot reopen its quiet prefix or abandon the durable command.
         self.fault = Some(super::super::super::JournalFailure {
             operation: super::super::super::JournalIo::Stage,
             kind: std::io::ErrorKind::Other, replacement_may_be_visible: false,

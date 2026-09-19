@@ -48,6 +48,9 @@ impl Machine {
 
     pub(in super::super::super) fn check_decoder_checkpoint_request(&self, request: &CheckpointRequest) -> Result<(), Error> {
         request.validate()?;
+        // Both live preparation and semantic replay must preserve the exact
+        // interrupted generation. A rewind cannot erase or substitute its input.
+        if self.pending_decoder_generation().is_some() { return Err(Error::Incomplete); }
         if !self.clock_ready { return Err(Error::Incomplete); }
         let state = self.decoder.as_ref().ok_or(Error::Incomplete)?;
         match request {

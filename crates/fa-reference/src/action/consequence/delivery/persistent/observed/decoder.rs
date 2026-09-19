@@ -37,6 +37,7 @@ pub(super) enum DecoderEvent {
     Checkpoint(checkpoint::CheckpointRequest, Rc<[u8]>),
     StopPolicy(crate::action::consequence::oversight::decoder_host::HostedStopPolicy),
     Generate(Rc<generation::FileGenerationCommand>, Rc<[u8]>),
+    BeginGeneration(Rc<generation::FileGenerationCommand>),
 }
 
 /// The state at the last acknowledged journal cut. A recovered prefix is paused
@@ -90,13 +91,14 @@ impl FileOversight {
     /// Recovery re-executes and compares the ENTIRE recorded numerical history.
     /// It does not release its old outputs. Explicit resume requires a fresh clock,
     /// the exact recovered predecessor and an originally Ready numerical owner.
+    /// Resume preserves a pending generation intent and cannot bypass its inputs.
     /// A held/failed run cannot be resumed or rerolled through this operation.
     pub fn resume_decoder(&mut self, revision: u64, actor_revision: u64, position: u64) -> Result<(), JournalError> {
         self.transact(revision, Event::Decoder(DecoderEvent::Resume { revision: actor_revision, position }))?; Ok(())
     }
 
-    /// Pin the exact configuration BEFORE cleanup or recovery writes. Matching
-    /// labels are insufficient: all original parameter/configuration bytes match.
+    /// Pin the exact configuration BEFORE numerical replay, cleanup or recovery
+    /// writes. Matching labels are insufficient: all parameter/config bytes match.
     /// A numerical mismatch during replay refuses, never imports saved approvals.
     pub fn open_with_decoder(directory: impl AsRef<Path>, profile: FileOversightProfile,
         expected: &FileDecoderConfig) -> Result<(Self, FileHumanReviewer), JournalError>
@@ -105,6 +107,11 @@ impl FileOversight {
         let store = storage::Store::open(directory.as_ref())?;
         let bytes = store.read(profile.delivery.limits.bytes)?;
         let events = journal::decode(&profile, store.identity(), &bytes)?;
+        let mut configs = events.iter().filter_map(|event| match event {
+            Event::Decoder(DecoderEvent::Enable(config)) => Some(config.as_ref()),
+            _ => None,
+        });
+        if configs.next() != Some(expected) || configs.next().is_some() { return Err(Error::Binding.into()); }
         let machine = Machine::replay(&profile, &events)?;
         if machine.decoder_contract() != Some(expected) { return Err(Error::Binding.into()); }
         store.confirm_and_cleanup()?;
@@ -116,6 +123,9 @@ impl FileOversight {
     fn transact_decoder(&mut self, revision: u64, request: StepRequest) -> Result<Transition, JournalError> {
         if self.fault.is_some() { return Err(JournalError::Unavailable); }
         if revision != self.revision() { return Err(Error::Stale.into()); }
+        // A frozen whole-request intent cannot be bypassed by the old one-token
+        // API. Refuse before poisoning, replay preparation or new computation.
+        if self.machine.pending_decoder_generation().is_some() { return Err(Error::Incomplete.into()); }
         // The temporary shape is used only for admission, never encoded or stored.
         self.check_source_admission(&Event::Decoder(DecoderEvent::Step(request, Rc::from(&b""[..]))))?;
         if self.events.len() >= self.profile.delivery.limits.events { return Err(Error::Limit.into()); }

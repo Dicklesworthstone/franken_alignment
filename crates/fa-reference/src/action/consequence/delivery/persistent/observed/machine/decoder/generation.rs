@@ -18,11 +18,15 @@ use std::rc::Rc;
 pub(super) struct GenerationHistory {
     records: BTreeMap<u64, FileGenerationReceipt>,
     requested_steps: usize,
+    pending: Option<Rc<FileGenerationCommand>>,
 }
 
 impl Machine {
     pub(in super::super::super) fn recorded_decoder_generation(&self, id: u64) -> Option<&FileGenerationReceipt> {
         self.decoder.as_ref()?.generations.records.get(&id)
+    }
+    pub(in super::super::super) fn pending_decoder_generation(&self) -> Option<&FileGenerationCommand> {
+        self.decoder.as_ref()?.generations.pending.as_deref()
     }
     pub(in super::super::super) fn check_decoder_generation(&self, command: &FileGenerationCommand) -> Result<(), Error> {
         let count = command.check()?;
@@ -30,26 +34,58 @@ impl Machine {
         if state.paused || !self.clock_ready { return Err(Error::Incomplete); }
         let history = &state.generations;
         if history.records.contains_key(&command.id()) { return Err(Error::Duplicate); }
+        if let Some(pending) = &history.pending {
+            return if pending.as_ref() == command { Ok(()) }
+                else { Err(if pending.id() == command.id() { Error::Binding } else { Error::WrongState }) };
+        }
         if history.records.len() >= MAX_FILE_GENERATIONS
             || history.requested_steps.checked_add(count).ok_or(Error::Overflow)? > MAX_FILE_GENERATION_STEPS
         { return Err(Error::Limit); }
         Ok(())
     }
+    pub(in super::super::super) fn check_decoder_generation_intent(&self, command: &FileGenerationCommand) -> Result<(), Error> {
+        self.check_decoder_generation(command)?;
+        if self.pending_decoder_generation().is_some() { return Err(Error::Duplicate); }
+        let actual = self.broker.hosted_decoder()?;
+        if actual.actor_revision != command.actor_revision() || actual.position != command.position() {
+            return Err(Error::Stale);
+        }
+        if actual.status != MonitoringStatus::Ready || self.broker.inspect().suspended {
+            return Err(Error::WrongState);
+        }
+        Ok(())
+    }
+    pub(super) fn apply_decoder_generation_intent(&mut self, command: &Rc<FileGenerationCommand>) -> Result<Transition, Error> {
+        self.check_decoder_generation_intent(command)?;
+        let count = command.check()?;
+        let history = &mut self.decoder.as_mut().ok_or(Error::Incomplete)?.generations;
+        history.requested_steps = history.requested_steps.checked_add(count).ok_or(Error::Overflow)?;
+        history.pending = Some(Rc::clone(command));
+        Ok(Transition::Unit)
+    }
     fn retain_generation(&mut self, receipt: FileGenerationReceipt) -> Result<(), Error> {
         let count = receipt.command().check()?;
         let history = &mut self.decoder.as_mut().ok_or(Error::Incomplete)?.generations;
-        // Admission was before execution; do not recheck paused state after an
-        // actual alarm has deliberately paused the original durable owner.
+        // Do not recheck paused after the actual stop. An intent has ALREADY
+        // reserved its history capacity; completion never charges it twice.
         if history.records.contains_key(&receipt.command().id()) { return Err(Error::Duplicate); }
-        let total = history.requested_steps.checked_add(count).ok_or(Error::Overflow)?;
+        let total = match &history.pending {
+            Some(pending) if pending.as_ref() == receipt.command() => history.requested_steps,
+            Some(_) => return Err(Error::Binding),
+            // Compatibility for existing tag-6 journals produced before intents.
+            // The live preparation path below never creates a new intentless run.
+            None => history.requested_steps.checked_add(count).ok_or(Error::Overflow)?,
+        };
         if history.records.len() >= MAX_FILE_GENERATIONS || total > MAX_FILE_GENERATION_STEPS { return Err(Error::Limit); }
         history.records.insert(receipt.command().id(), receipt);
         history.requested_steps = total;
+        history.pending = None;
         Ok(())
     }
     pub(in super::super::super) fn prepare_decoder_generation(&mut self, command: Rc<FileGenerationCommand>)
         -> Result<DecoderEvent, Error>
     {
+        if self.pending_decoder_generation() != Some(command.as_ref()) { return Err(Error::Binding); }
         let (receipt, witness) = self.execute_decoder_generation(Rc::clone(&command))?;
         self.retain_generation(receipt)?;
         self.requests.refresh(&self.broker.inspect())?;

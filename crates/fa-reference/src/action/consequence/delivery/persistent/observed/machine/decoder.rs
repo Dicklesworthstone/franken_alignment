@@ -31,10 +31,20 @@ impl Machine {
     pub(super) fn pause_decoder(&mut self) { if let Some(state) = &mut self.decoder { state.paused = true; } }
 
     /// Saved numerical state cannot support new permitting work before explicit
-    /// supervisor resume. Restrictive operations and evidence acquisition remain
-    /// available. Recovery has already removed every old sendable envelope.
+    /// supervisor resume. A pending generation also binds the next numerical
+    /// transition: neither one-token inference nor reset can abandon its input.
+    /// Restrictive operations and original obligation reconciliation remain open.
     pub(super) fn check_decoder_admission(&self, event: &Event) -> Result<(), Error> {
-        if !self.decoder_paused() { return Ok(()); }
+        let pending = self.pending_decoder_generation();
+        if !self.decoder_paused() {
+            if pending.is_none() { return Ok(()); }
+            if let Event::Decoder(DecoderEvent::Generate(command, _)) = event {
+                return if pending == Some(command.as_ref()) { Ok(()) } else { Err(Error::Binding) };
+            }
+        }
+        if pending.is_some() && matches!(event, Event::Decoder(DecoderEvent::Checkpoint(..))) {
+            return Err(Error::Incomplete);
+        }
         if matches!(event,
             Event::Decoder(DecoderEvent::Resume { .. }
                 | DecoderEvent::Checkpoint(CheckpointRequest::Reset { .. }, _))
@@ -51,6 +61,7 @@ impl Machine {
 
     pub(super) fn apply_decoder(&mut self, event: &DecoderEvent) -> Result<Transition, Error> {
         match event {
+            DecoderEvent::BeginGeneration(command) => self.apply_decoder_generation_intent(command),
             DecoderEvent::Generate(command, expected) => self.apply_decoder_generation(command, expected),
             DecoderEvent::StopPolicy(policy) => {
                 self.enable_decoder_stop_policy(*policy)?;
@@ -98,12 +109,16 @@ impl Machine {
     pub(in super::super) fn prepare_decoder_step(&mut self, request: StepRequest)
         -> Result<(DecoderEvent, Transition), Error>
     {
+        self.check_decoder_admission(&Event::Decoder(DecoderEvent::Step(request, Rc::from(&b""[..]))))?;
         let result = self.execute_decoder_step(request)?;
         let witness = self.decoder_witness(&result)?;
         self.requests.refresh(&self.broker.inspect())?;
         self.bootstrap = None;
         Ok((DecoderEvent::Step(request, witness.into()), result))
     }
+    // The private generation recorder calls this only from the original driver
+    // completing the frozen intent. Public single-step preparation checks the
+    // common admission gate above and cannot act as a substitute continuation.
     fn execute_decoder_step(&mut self, request: StepRequest) -> Result<Transition, Error> {
         if self.decoder.is_none() || self.decoder_paused() || !self.clock_ready { return Err(Error::Incomplete); }
         // Original failures may latch monitoring or follow a committed draw.
