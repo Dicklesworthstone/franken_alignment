@@ -47,6 +47,16 @@ pub struct CheckedCompletion<'a> {
     pub now: ElapsedTick,
 }
 
+/// A recovered supervisor owner and its newly issued reviewer role, returned
+/// only AFTER the recovery cut is acknowledged. An unresolved or refused map
+/// entry remains a liability; successful startup does not mean all work settled.
+/// Do not hand the privileged reviewer role to an actor.
+pub struct ReconciledPublicationOwner {
+    pub owner: FileOversight,
+    pub reviewer: super::FileHumanReviewer,
+    pub outcomes: super::super::requests::PendingReconciliations,
+}
+
 impl FileOversight {
     /// Install once before any actor/operator proposal, including refused actor
     /// admissions. No disable, post-review upgrade or weaker publication fallback
@@ -130,6 +140,45 @@ impl FileOversight {
         }
     }
 
+    /// Open under the original exclusive store lock and perform Fence, fresh
+    /// Time, and Sweep in ONE replacement before returning an owner or reviewer.
+    /// The caller supplies current time in the independently bound clock domain.
+    /// Saved time is never promoted into a fresh observation.
+    ///
+    /// The original fence withdraws old automatic/human keys and native sessions,
+    /// cancels only undispatched work, and keeps dispatched uncertainty charged.
+    /// The original endpoint alone supplies execution/nonexecution evidence.
+    /// Nothing is resent, and no raw or caller-asserted outcome is admitted.
+    ///
+    /// A stale clock, profile mismatch, capacity error or storage failure returns
+    /// no owner and no reviewer. A possibly visible failed replacement must be
+    /// reopened, not retried through old keys. Per-attempt sweep refusals are
+    /// retained in the returned map rather than silently reported as settled.
+    pub fn open_reconciled_publication(directory: impl AsRef<std::path::Path>,
+        profile: super::FileOversightProfile, observed_tick: ElapsedTick)
+        -> Result<ReconciledPublicationOwner, JournalError>
+    {
+        let (owner, reviewer) = load_publication_recovery(directory.as_ref(), profile)?;
+        finish_publication_recovery(owner, reviewer, observed_tick)
+    }
+
+    /// Advance a running owner's trusted clock and reconcile pending deliveries
+    /// in one acknowledged cut. This remains available during source interruption
+    /// because it can only query/resolve existing liabilities, never dispatch.
+    /// It does not clear the interruption, resume a decoder, or invent a refund.
+    pub fn reconcile_publications_at(&mut self, revision: u64, observed_tick: ElapsedTick)
+        -> Result<super::super::requests::PendingReconciliations, JournalError>
+    {
+        let mut transitions = self.commit_publication_cut(revision, &[
+            Event::Core(super::BaseEvent::Time(observed_tick)),
+            Event::Core(super::BaseEvent::Sweep),
+        ])?;
+        match transitions.pop() {
+            Some(Transition::Swept(outcomes)) => Ok(outcomes),
+            _ => unreachable!("clocked recovery ends with original pending sweep"),
+        }
+    }
+
     /// Private, fixed original-event composition. Never an event import API.
     /// Every prefix retains canonical admission, recovery reserves, live source
     /// admission and original semantic gates. Speculation performs no sink I/O.
@@ -142,6 +191,9 @@ impl FileOversight {
             [Event::Core(super::BaseEvent::Time(start)), Event::Dispatch(dispatch, _, _, _),
                 Event::PublishChecked(publish, _, _, finish), Event::Core(super::BaseEvent::Reconcile(reconcile))]
                 if dispatch == publish && publish == reconcile && start == finish => {}
+            [Event::Core(super::BaseEvent::Fence), Event::Core(super::BaseEvent::Time(_)),
+                Event::Core(super::BaseEvent::Sweep)]
+            | [Event::Core(super::BaseEvent::Time(_)), Event::Core(super::BaseEvent::Sweep)] => {}
             _ => return Err(Error::InvalidInput.into()),
         }
         for event in next { self.check_source_admission(event)?; }
@@ -178,6 +230,35 @@ impl FileOversight {
         self.fault = None;
         Ok(transitions)
     }
+}
+
+// These helpers never expose the reconstructed historical keys to callers.
+// Split only to exercise the real replacement barriers after exclusive loading.
+fn load_publication_recovery(directory: &std::path::Path, profile: super::FileOversightProfile)
+    -> Result<(FileOversight, super::FileHumanReviewer), JournalError>
+{
+    profile.delivery.limits.check()?;
+    let store = super::storage::Store::open(directory)?;
+    let bytes = store.read(profile.delivery.limits.bytes)?;
+    let events = super::journal::decode(&profile, store.identity(), &bytes)?;
+    let machine = super::Machine::replay(&profile, &events)?;
+    store.confirm_and_cleanup()?;
+    Ok(FileOversight::owner(profile, store, events, machine))
+}
+
+fn finish_publication_recovery(mut owner: FileOversight, reviewer: super::FileHumanReviewer,
+    observed_tick: ElapsedTick) -> Result<ReconciledPublicationOwner, JournalError>
+{
+    let mut transitions = owner.commit_publication_cut(owner.revision(), &[
+        Event::Core(super::BaseEvent::Fence),
+        Event::Core(super::BaseEvent::Time(observed_tick)),
+        Event::Core(super::BaseEvent::Sweep),
+    ])?;
+    let outcomes = match transitions.pop() {
+        Some(Transition::Swept(outcomes)) => outcomes,
+        _ => unreachable!("reopened recovery ends with original pending sweep"),
+    };
+    Ok(ReconciledPublicationOwner { owner, reviewer, outcomes })
 }
 
 #[cfg(test)]
@@ -479,5 +560,197 @@ mod completion_tests {
             assert_eq!(recovered.inspect().control.ledger.stages[&1],
                 if replaced { ActionState::Confirmed } else { ActionState::Cancelled });
         }
+    }
+
+    fn dispatch_ready(r: &mut Ready) {
+        r.host.dispatch(r.host.revision(), &r.automatic, &r.human,
+            &r.action, &r.inputs, snapshot()).unwrap();
+    }
+
+    #[test]
+    fn startup_accepts_the_original_execution_receipt_without_reissuing_old_keys() {
+        let root = Directory::new(); let mut r = ready(&root, profile());
+        dispatch_ready(&mut r);
+        let published = r.host.publish_checked(r.host.revision(), 1, Some(&r.inputs),
+            snapshot(), ElapsedTick(2)).unwrap();
+        let revision = r.host.revision();
+        let Ready { host, automatic, human, action, inputs, .. } = r;
+        drop(host);
+        let mut recovered = FileOversight::open_reconciled_publication(root.store(), profile(), ElapsedTick(3)).unwrap();
+        assert!(recovered.owner.clock_ready());
+        assert_eq!(recovered.owner.revision(), revision + 3);
+        assert_eq!(recovered.outcomes[&1], Ok(super::super::Reconciliation::Resolved(published.outcome)));
+        let after = recovered.owner.inspect();
+        assert_eq!(after.executions, 1);
+        assert_eq!(after.payload.as_slice(), b"visible");
+        assert_eq!(after.control.ledger.stages[&1], ActionState::Confirmed);
+        assert_eq!(after.control.ledger.available, 84);
+        assert_eq!(after.control.ledger.reserved, 0);
+        assert_eq!(after.control.ledger.charged, 16);
+        assert_eq!(recovered.owner.complete_checked_publication(recovered.owner.revision(), CheckedCompletion {
+            automatic: &automatic, human: &human, action: &action, current: &inputs,
+            snapshot: snapshot(), now: ElapsedTick(3),
+        }), Err(JournalError::Contract(Error::Binding)));
+        assert_eq!(recovered.owner.inspect(), after);
+        assert_eq!(FileOversight::read_publication(root.store(), &profile()).unwrap(), after);
+    }
+
+    #[test]
+    fn startup_keeps_unknown_dispatch_charged_until_native_nonexecution_evidence() {
+        let root = Directory::new(); let mut r = ready(&root, profile());
+        dispatch_ready(&mut r);
+        drop(r);
+        let mut recovered = FileOversight::open_reconciled_publication(root.store(), profile(), ElapsedTick(2)).unwrap();
+        assert_eq!(recovered.outcomes[&1], Ok(super::super::Reconciliation::AwaitingResolution));
+        let pending = recovered.owner.inspect();
+        assert_eq!(pending.control.ledger.stages[&1], ActionState::Unknown);
+        assert_eq!(pending.control.ledger.available, 84);
+        assert_eq!(pending.control.ledger.charged, 16);
+        assert_eq!(pending.executions, 0);
+        // Past BOTH the original action and human deadlines, still inside the
+        // receipt retention window. Only the endpoint may prove nonexecution.
+        let revision = recovered.owner.revision();
+        let outcomes = recovered.owner.reconcile_publications_at(revision, ElapsedTick(101)).unwrap();
+        assert!(matches!(outcomes[&1], Ok(super::super::Reconciliation::Resolved(
+            EndpointOutcome::NotExecuted { .. }))));
+        assert_eq!(recovered.owner.revision(), revision + 2);
+        let settled = recovered.owner.inspect();
+        assert_eq!(settled.control.ledger.stages[&1], ActionState::ConfirmedNotExecuted);
+        assert_eq!(settled.control.ledger.available, 100);
+        assert_eq!(settled.control.ledger.charged, 0);
+        assert_eq!(settled.executions, 0);
+        assert_eq!(settled.payload.as_slice(), b"initial");
+        // Historical receipt lookup is still permitted, but is not a resend.
+        let historical = recovered.owner.publish_checked(recovered.owner.revision(), 1,
+            None, snapshot(), ElapsedTick(101)).unwrap();
+        assert_eq!(historical.basis, PublicationBasis::PreviouslyResolved);
+        assert_eq!(outcomes[&1], Ok(super::super::Reconciliation::Resolved(historical.outcome)));
+        let after_lookup = recovered.owner.inspect();
+        assert_eq!(after_lookup.executions, settled.executions);
+        assert_eq!(after_lookup.control.ledger, settled.control.ledger);
+        assert_eq!(after_lookup.payload, settled.payload);
+    }
+
+    #[test]
+    fn startup_cancels_only_undispatched_work_and_withdraws_its_human_approval() {
+        let root = Directory::new(); let r = ready(&root, profile());
+        drop(r);
+        let recovered = FileOversight::open_reconciled_publication(root.store(), profile(), ElapsedTick(2)).unwrap();
+        assert!(recovered.outcomes.is_empty());
+        assert!(recovered.owner.clock_ready());
+        let cut = recovered.owner.inspect();
+        assert_eq!(cut.control.ledger.stages[&1], ActionState::Cancelled);
+        assert_eq!(cut.control.ledger.available, 100);
+        assert_eq!(cut.control.ledger.reserved, 0);
+        assert_eq!(cut.control.ledger.charged, 0);
+        assert_eq!(cut.executions, 0);
+        assert_eq!(recovered.owner.human_status(1001).unwrap().disposition, HumanDisposition::Revoked);
+    }
+
+    #[test]
+    fn refused_recovery_clock_or_bootstrap_cannot_commit_a_partial_fence() {
+        let root = Directory::new(); let r = ready(&root, profile());
+        let before = r.host.inspect();
+        drop(r);
+        assert!(matches!(FileOversight::open_reconciled_publication(root.store(), profile(), ElapsedTick(0)),
+            Err(JournalError::Contract(Error::Stale))));
+        assert_eq!(FileOversight::read_publication(root.store(), &profile()).unwrap(), before);
+        for change in 0..2 {
+            let mut wrong = profile();
+            if change == 0 { wrong.delivery.total += 1; } else { wrong.delivery.clock_domain += 1; }
+            assert!(FileOversight::open_reconciled_publication(root.store(), wrong, ElapsedTick(2)).is_err());
+            assert_eq!(FileOversight::read_publication(root.store(), &profile()).unwrap(), before);
+        }
+        let recovered = FileOversight::open_reconciled_publication(root.store(), profile(), ElapsedTick(2)).unwrap();
+        assert!(recovered.owner.clock_ready());
+        assert_eq!(recovered.owner.inspect().control.ledger.stages[&1], ActionState::Cancelled);
+    }
+
+    #[test]
+    fn live_reconciliation_is_atomic_and_does_not_clear_a_source_interruption() {
+        let root = Directory::new(); let mut r = ready(&root, profile());
+        dispatch_ready(&mut r);
+        let published = r.host.publish_checked(r.host.revision(), 1, Some(&r.inputs),
+            snapshot(), ElapsedTick(2)).unwrap();
+        let before = r.host.inspect(); let bytes = r.bytes();
+        assert_eq!(r.host.reconcile_publications_at(r.host.revision() - 1, ElapsedTick(3)),
+            Err(JournalError::Contract(Error::Stale)));
+        assert_eq!(r.host.reconcile_publications_at(r.host.revision(), ElapsedTick(0)),
+            Err(JournalError::Contract(Error::Stale)));
+        assert_eq!(r.host.inspect(), before); assert_eq!(r.bytes(), bytes);
+        r.host.source_interrupted = true;
+        let revision = r.host.revision();
+        let outcomes = r.host.reconcile_publications_at(revision, ElapsedTick(3)).unwrap();
+        assert_eq!(outcomes[&1], Ok(super::super::Reconciliation::Resolved(published.outcome)));
+        assert_eq!(r.host.revision(), revision + 2);
+        assert!(r.host.source_interrupted);
+        assert_eq!(r.host.inspect().executions, 1);
+        assert_eq!(r.host.inspect().control.ledger.stages[&1], ActionState::Confirmed);
+        assert_eq!(r.host.inspect().control.ledger.charged, 16);
+    }
+
+    #[test]
+    fn recovery_needs_capacity_for_the_complete_three_event_cut() {
+        let baseline_root = Directory::new(); let baseline = ready(&baseline_root, profile());
+        let count = usize::try_from(baseline.host.revision()).unwrap();
+        for spare in [2, 3] {
+            let root = Directory::new(); let mut p = profile(); p.delivery.limits.events = count + spare;
+            let r = ready(&root, p.clone()); let before = r.host.inspect(); drop(r);
+            let result = FileOversight::open_reconciled_publication(root.store(), p.clone(), ElapsedTick(2));
+            if spare == 2 {
+                assert!(matches!(result, Err(JournalError::Contract(Error::Limit))));
+                assert_eq!(FileOversight::read_publication(root.store(), &p).unwrap(), before);
+            } else {
+                let recovered = result.unwrap();
+                assert_eq!(recovered.owner.revision(), u64::try_from(count + 3).unwrap());
+                assert!(recovered.owner.clock_ready());
+                assert_eq!(recovered.owner.inspect().control.ledger.available, 100);
+            }
+        }
+    }
+
+    #[test]
+    fn every_startup_storage_barrier_returns_no_owner_and_recovers_actual_complete_cut() {
+        for barrier in [JournalIo::Stage, JournalIo::Write, JournalIo::FileSync,
+            JournalIo::Rename, JournalIo::DirectorySync] {
+            let root = Directory::new(); let mut r = ready(&root, profile());
+            dispatch_ready(&mut r);
+            let before = r.host.inspect(); drop(r);
+            let (mut owner, reviewer) = load_publication_recovery(&root.store(), profile()).unwrap();
+            owner.store.fail_once(barrier);
+            let failure = match finish_publication_recovery(owner, reviewer, ElapsedTick(101)) {
+                Err(JournalError::Io(failure)) => failure,
+                _ => panic!("the selected recovery barrier must return no owner"),
+            };
+            assert_eq!(failure.operation, barrier);
+            assert_eq!(failure.replacement_may_be_visible,
+                matches!(barrier, JournalIo::Rename | JournalIo::DirectorySync));
+            let disk = FileOversight::read_publication(root.store(), &profile()).unwrap();
+            if barrier == JournalIo::DirectorySync {
+                assert_eq!(disk.revision, before.revision + 3);
+                assert_eq!(disk.control.ledger.stages[&1], ActionState::ConfirmedNotExecuted);
+                assert_eq!(disk.control.ledger.available, 100);
+                assert_eq!(disk.control.ledger.charged, 0);
+            } else { assert_eq!(disk, before); }
+            assert_eq!(disk.executions, 0);
+            let recovered = FileOversight::open_reconciled_publication(root.store(), profile(), ElapsedTick(102)).unwrap();
+            assert_eq!(recovered.owner.inspect().control.ledger.stages[&1], ActionState::ConfirmedNotExecuted);
+            assert_eq!(recovered.owner.inspect().control.ledger.available, 100);
+            assert_eq!(recovered.owner.inspect().executions, 0);
+            assert!(recovered.owner.clock_ready());
+        }
+    }
+
+    #[test]
+    fn recovery_retains_expired_retention_as_an_unresolved_charge() {
+        let root = Directory::new(); let mut r = ready(&root, profile());
+        dispatch_ready(&mut r); drop(r);
+        let recovered = FileOversight::open_reconciled_publication(root.store(), profile(), ElapsedTick(1002)).unwrap();
+        assert_eq!(recovered.outcomes[&1], Ok(super::super::Reconciliation::RetentionExpired));
+        let cut = recovered.owner.inspect();
+        assert_eq!(cut.control.ledger.available, 84);
+        assert_eq!(cut.control.ledger.charged, 16);
+        assert_eq!(cut.executions, 0);
+        assert!(matches!(cut.control.ledger.stages[&1], ActionState::Unknown | ActionState::IrrecoverablyUnknown));
     }
 }
