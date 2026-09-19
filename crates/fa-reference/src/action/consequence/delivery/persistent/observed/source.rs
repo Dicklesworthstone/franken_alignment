@@ -97,7 +97,13 @@ impl FileOversight {
     }
 
     pub(super) fn check_source_admission(&self, event: &Event) -> Result<(), Error> {
-        if !self.source_interrupted { return Ok(()); }
+        self.check_source_admission_at(self.source_interrupted, event)
+    }
+
+    // A private canonical candidate uses exactly the same admission law, but
+    // its own acknowledged-prefix interruption state. No public bypass exists.
+    pub(super) fn check_source_admission_at(&self, interrupted: bool, event: &Event) -> Result<(), Error> {
+        if !interrupted { return Ok(()); }
         // Independent identity measurement/containment cannot publish effects
         // or clear this source latch, even when the identity result is Matching.
         if matches!(event,
@@ -118,8 +124,12 @@ impl FileOversight {
         // A committed refusal has already withdrawn the original source and
         // review/key eligibility in Machine::observe_source. Clearing this latch
         // therefore cannot turn that refusal into a permitting snapshot.
-        if matches!(event, Event::Source(SourceEvent::Withdraw | SourceEvent::Replace(_) | SourceEvent::Observe(..)) | Event::Core(BaseEvent::Fence)) {
+        if Self::source_operation_acknowledges(event) {
             self.source_interrupted = false;
         }
+    }
+
+    pub(super) fn source_operation_acknowledges(event: &Event) -> bool {
+        matches!(event, Event::Source(SourceEvent::Withdraw | SourceEvent::Replace(_) | SourceEvent::Observe(..)) | Event::Core(BaseEvent::Fence))
     }
 }

@@ -1,6 +1,6 @@
 //! Feed catch-up inside the SAME private dispatch/publication/accounting cut.
 //! Only the final acknowledgment can expose installed feed reports.
-use super::{CapturedCompletionKeys, CapturedCompletionReport, Completion, SourceCut,
+use super::{CapturedCompletionKeys, CapturedCompletionReport, Completion, SourceCut, CallbackEvidence, CompletionEvidence,
     CommitteeContract, DriverEvidence, ElapsedTick, Error, Event, FileCaptureError,
     FileOversight, FreshnessEvent, FrozenAction, JournalError, PublicationFeedFile,
     PublicationFeedReport, PublicationHeartbeat, PublicationInputFile, WitnessEvent, failure};
@@ -37,7 +37,7 @@ impl FileOversight {
     where F: FnMut() -> ElapsedTick,
         P: FnMut(&FrozenAction, &CommitteeContract) -> Result<DriverEvidence, Error>,
     {
-        let mut completion = Completion { keys, source, clock, provider,
+        let mut completion = Completion { keys, source, clock, provider: CallbackEvidence(provider),
             reads: Vec::with_capacity(2), evidence_failure: None,
             feed: Some(feed), feed_reads: Vec::with_capacity(2), feeds: Vec::with_capacity(2) };
         let result = completion.run(self, revision);
@@ -49,8 +49,7 @@ impl FileOversight {
 }
 
 impl<F, P> Completion<'_, F, P>
-where F: FnMut() -> ElapsedTick,
-    P: FnMut(&FrozenAction, &CommitteeContract) -> Result<DriverEvidence, Error>,
+where F: FnMut() -> ElapsedTick, P: CompletionEvidence,
 {
     pub(super) fn capture_feed(&mut self, host: &mut FileOversight, cut: &mut SourceCut)
         -> Result<Result<(), FileCaptureError>, JournalError>
