@@ -41,6 +41,9 @@ impl Machine {
             if let Event::Decoder(DecoderEvent::Generate(command, _)) = event {
                 return if pending == Some(command.as_ref()) { Ok(()) } else { Err(Error::Binding) };
             }
+            if let Event::Decoder(DecoderEvent::AdvanceGeneration { id, .. }) = event {
+                return if pending.is_some_and(|command| command.id() == *id) { Ok(()) } else { Err(Error::Binding) };
+            }
         }
         if pending.is_some() && matches!(event, Event::Decoder(DecoderEvent::Checkpoint(..))) {
             return Err(Error::Incomplete);
@@ -63,6 +66,7 @@ impl Machine {
         match event {
             DecoderEvent::BeginGeneration(command) => self.apply_decoder_generation_intent(command),
             DecoderEvent::Generate(command, expected) => self.apply_decoder_generation(command, expected),
+            DecoderEvent::AdvanceGeneration { id, revision, witness } => self.apply_decoder_generation_progress(*id, *revision, witness),
             DecoderEvent::StopPolicy(policy) => {
                 self.enable_decoder_stop_policy(*policy)?;
                 Ok(Transition::Unit)
@@ -116,9 +120,8 @@ impl Machine {
         self.bootstrap = None;
         Ok((DecoderEvent::Step(request, witness.into()), result))
     }
-    // The private generation recorder calls this only from the original driver
-    // completing the frozen intent. Public single-step preparation checks the
-    // common admission gate above and cannot act as a substitute continuation.
+    // Only the original generation recorder can step past the pending-intent
+    // gate. Whole-request and incremental paths both call this same operation.
     fn execute_decoder_step(&mut self, request: StepRequest) -> Result<Transition, Error> {
         if self.decoder.is_none() || self.decoder_paused() || !self.clock_ready { return Err(Error::Incomplete); }
         // Original failures may latch monitoring or follow a committed draw.
@@ -141,8 +144,7 @@ impl Machine {
         self.write_decoder_stop_witness(&mut w)?;
         Ok(w.finish())
     }
-    // Shared exact state encoding; the pre-existing single-step byte layout is
-    // unchanged. Generation writes this once after its per-token delta evidence.
+    // Shared exact state encoding; pre-existing byte layouts remain unchanged.
     fn write_decoder_state(&self, w: &mut Writer) -> Result<(), Error> {
         w.blob(&self.broker.hosted_replay_bytes()?)?;
         // Retain the ORIGINAL actor's projection too, including a failed sync.

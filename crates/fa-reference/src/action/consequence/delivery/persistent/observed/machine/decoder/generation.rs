@@ -1,6 +1,7 @@
 //! Record every original step, not just the last quiet review of a generation.
 //! The complete final cache covers all appended K/V: synchronous generation has
 //! no reset path. Do not copy the growing cache into every per-token witness.
+mod progress;
 use super::{Machine, Transition, DecoderEvent, StepRequest, Writer, MAX_WITNESS_BYTES,
     write_decoder_result, error_tag};
 use super::super::super::decoder::generation::{FileGenerationCommand, FileGenerationReceipt,
@@ -19,6 +20,9 @@ pub(super) struct GenerationHistory {
     records: BTreeMap<u64, FileGenerationReceipt>,
     requested_steps: usize,
     pending: Option<Rc<FileGenerationCommand>>,
+    progress: Option<progress::ProgressState>,
+    // One bounded projection per request, not an authority or budget ledger.
+    progress_revisions: BTreeMap<u64, u64>,
 }
 
 impl Machine {
@@ -34,6 +38,11 @@ impl Machine {
         if state.paused || !self.clock_ready { return Err(Error::Incomplete); }
         let history = &state.generations;
         if history.records.contains_key(&command.id()) { return Err(Error::Duplicate); }
+        // Once token progress is acknowledged, the original whole-run input can
+        // no longer be applied from its old numerical predecessor. Continue with
+        // AdvanceGeneration; never turn the expected stale refusal into a way to
+        // close an unfinished prompt or discard its cumulative budget.
+        if history.progress.is_some() { return Err(Error::WrongState); }
         if let Some(pending) = &history.pending {
             return if pending.as_ref() == command { Ok(()) }
                 else { Err(if pending.id() == command.id() { Error::Binding } else { Error::WrongState }) };
@@ -80,6 +89,7 @@ impl Machine {
         history.records.insert(receipt.command().id(), receipt);
         history.requested_steps = total;
         history.pending = None;
+        history.progress = None;
         Ok(())
     }
     pub(in super::super::super) fn prepare_decoder_generation(&mut self, command: Rc<FileGenerationCommand>)

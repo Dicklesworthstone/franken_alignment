@@ -38,6 +38,12 @@ pub(in super::super) fn write(w: &mut Writer, event: &DecoderEvent) -> Result<()
         DecoderEvent::BeginGeneration(command) => {
             w.u8(7)?; super::generation::write_command(w, command)?;
         }
+        DecoderEvent::AdvanceGeneration { id, revision, witness } => {
+            super::progress::check_progress_key(*id, *revision)?;
+            if witness.is_empty() { return Err(Error::Incomplete); }
+            if witness.len() > MAX_WITNESS_BYTES { return Err(Error::Limit); }
+            w.u8(8)?; w.u64(*id)?; w.u64(*revision)?; w.blob(witness)?;
+        }
     }
     Ok(())
 }
@@ -69,6 +75,13 @@ pub(in super::super) fn read(r: &mut Reader<'_>) -> Result<DecoderEvent, Error> 
             DecoderEvent::Generate(Rc::new(command), Rc::from(witness))
         }
         7 => DecoderEvent::BeginGeneration(Rc::new(super::generation::read_command(r)?)),
+        8 => {
+            let id = r.u64()?; let revision = r.u64()?;
+            super::progress::check_progress_key(id, revision)?;
+            let witness = r.blob(MAX_WITNESS_BYTES)?;
+            if witness.is_empty() { return Err(Error::Incomplete); }
+            DecoderEvent::AdvanceGeneration { id, revision, witness: Rc::from(witness) }
+        }
         _ => return Err(Error::InvalidInput),
     })
 }

@@ -5,6 +5,7 @@ mod codec;
 pub mod checkpoint;
 pub mod checkpoint_inspection;
 pub mod generation;
+pub mod progress;
 mod stopping;
 pub use config::FileDecoderConfig;
 pub(super) use codec::{read, write};
@@ -38,6 +39,7 @@ pub(super) enum DecoderEvent {
     StopPolicy(crate::action::consequence::oversight::decoder_host::HostedStopPolicy),
     Generate(Rc<generation::FileGenerationCommand>, Rc<[u8]>),
     BeginGeneration(Rc<generation::FileGenerationCommand>),
+    AdvanceGeneration { id: u64, revision: u64, witness: Rc<[u8]> },
 }
 
 /// The state at the last acknowledged journal cut. A recovered prefix is paused
@@ -91,7 +93,7 @@ impl FileOversight {
     /// Recovery re-executes and compares the ENTIRE recorded numerical history.
     /// It does not release its old outputs. Explicit resume requires a fresh clock,
     /// the exact recovered predecessor and an originally Ready numerical owner.
-    /// Resume preserves a pending generation intent and cannot bypass its inputs.
+    /// Resume preserves pending generation inputs AND their acknowledged progress.
     /// A held/failed run cannot be resumed or rerolled through this operation.
     pub fn resume_decoder(&mut self, revision: u64, actor_revision: u64, position: u64) -> Result<(), JournalError> {
         self.transact(revision, Event::Decoder(DecoderEvent::Resume { revision: actor_revision, position }))?; Ok(())
