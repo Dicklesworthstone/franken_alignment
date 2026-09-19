@@ -9,6 +9,7 @@ mod fleet;
 mod mediation;
 mod state_source;
 mod stopping;
+mod publication;
 pub mod consistency;
 pub mod human;
 pub mod policy_governance;

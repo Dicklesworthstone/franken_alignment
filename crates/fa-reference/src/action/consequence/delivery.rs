@@ -12,6 +12,7 @@ mod mediation_gate;
 mod state_gate;
 mod stopping;
 pub mod fleet;
+pub mod publication_gate;
 pub mod stream;
 #[cfg(unix)]
 pub mod persistent;
@@ -219,6 +220,7 @@ pub struct DeliveryBroker {
     mediation: Option<mediation_gate::MediationState>,
     policy_state: Option<state_gate::CapturedStateGate>,
     stop: Option<StopReceipt>,
+    publication: Option<publication_gate::PublicationGate>,
 }
 
 impl DeliveryBroker {
@@ -243,6 +245,7 @@ impl DeliveryBroker {
             mediation: None,
             policy_state: None,
             stop: None,
+            publication: None,
         })
     }
 
@@ -288,7 +291,10 @@ impl DeliveryBroker {
         self.check_fleet()?;
         check_resource(&spec, self.scope, self.resource)?;
         self.check_stream(&spec)?;
-        self.controller.propose(id, spec, snapshot)
+        self.prepare_publication_proposal(id)?;
+        let proposal = self.controller.propose(id, spec, snapshot)?;
+        self.record_publication_proposal(&proposal);
+        Ok(proposal)
     }
 
     pub fn begin_review(
@@ -314,6 +320,7 @@ impl DeliveryBroker {
         let _ = self.check_policy_state(snapshot)?;
         self.check_mediation()?;
         self.check_fleet()?;
+        self.check_publication(id, None)?;
         self.controller.authorize(id, snapshot)
     }
 
@@ -358,6 +365,7 @@ impl DeliveryBroker {
         };
         let record = DeliveryRecord { action: action.clone(), approval, mediation: self.mediation_cut().cloned(),
             policy_state: captured_policy_state, retained_until, resolution: None };
+        self.check_publication(permit.attempt, Some(action))?;
         let fleet_admission = self.prepare_fleet_dispatch(permit.attempt)?;
         self.controller.dispatch(permit, action, snapshot)?;
         self.records.insert(permit.attempt, record);
