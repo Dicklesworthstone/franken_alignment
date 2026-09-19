@@ -1,5 +1,7 @@
 //! Durable request identity over the original publication authority. Journal
 //! replay recomputes admission, never imports a caller-asserted outcome or permit.
+//! Atomic completion and recovery below consume the same original event format
+//! and journal-as-publication sink. They are not remote-provider transactions.
 
 pub mod actor;
 
@@ -12,6 +14,10 @@ use std::collections::BTreeMap;
 
 pub const MAX_FILE_REQUESTS: usize = 128;
 pub const MAX_FILE_REQUEST_BYTES: usize = 2 * 1024 * 1024;
+
+/// Original per-attempt reconciliation results, including unresolved liabilities
+/// and individual failures. This is supervisor data, not an actor-facing permit.
+pub type PendingReconciliations = BTreeMap<u64, Result<super::Reconciliation, Error>>;
 
 /// Supervisor-only disposition. The actor gateway publishes a restricted
 /// Knowledge projection, not the internal attempt ID or admission diagnostic.
@@ -176,6 +182,32 @@ impl FileDelivery {
     pub fn retained_requests(&self) -> usize { self.machine.requests.len() }
     pub fn retained_request_bytes(&self) -> usize { self.machine.requests.bytes() }
 
+    /// Read the original broker's accepted terminal evidence by durable request
+    /// identity, including after restart. No old process-local permit is needed
+    /// to inspect a receipt, and this cannot create a new dispatch opportunity.
+    /// None means no accepted endpoint receipt: it is NOT a nonexecution proof.
+    /// Refused or pre-dispatch-cancelled requests have no endpoint receipt. A
+    /// faulted owner refuses rather than presenting its old state as current.
+    pub fn request_resolution(
+        &self,
+        request: u64,
+    ) -> Result<Option<super::EndpointOutcome>, JournalError> {
+        let status = self.request_status(request)?;
+        let FileRequestDisposition::Admitted { attempt, stage } = status.disposition else {
+            return Ok(None);
+        };
+        if matches!(stage, ActionState::Proposed | ActionState::Prepared | ActionState::Reviewing
+            | ActionState::Authorized | ActionState::Denied | ActionState::Cancelled)
+        {
+            return Ok(None);
+        }
+        let receipt = self.machine.broker.resolution(attempt)?;
+        if receipt.is_none() && matches!(stage, ActionState::Confirmed | ActionState::ConfirmedNotExecuted) {
+            return Err(Error::Incomplete.into());
+        }
+        Ok(receipt.map(super::super::EndpointReceipt::outcome))
+    }
+
     /// Complete one ALREADY authorized request with one durable replacement.
     ///
     /// The original dispatch, endpoint publication and receipt reconciliation
@@ -219,12 +251,7 @@ impl FileDelivery {
             return Err(Error::Binding.into());
         }
         if matches!(stage, ActionState::Confirmed | ActionState::ConfirmedNotExecuted) {
-            // This is the broker's already accepted receipt, not a fresh status
-            // observation or renewed permission. Never reconcile it a second time.
-            let receipt = self.machine.broker.records.get(&attempt)
-                .and_then(|record| record.resolution.as_ref())
-                .ok_or(Error::Incomplete)?;
-            return Ok(receipt.outcome());
+            return self.request_resolution(request)?.ok_or_else(|| Error::Incomplete.into());
         }
         if stage != ActionState::Authorized {
             return Err(Error::WrongState.into());
@@ -240,8 +267,74 @@ impl FileDelivery {
         }
     }
 
+    /// Recover an exclusive, clock-ready owner and settle outstanding deliveries
+    /// with ONE canonical replacement. This composes the original Fence, Time
+    /// and Sweep transitions; it does not deserialize authority or invent a
+    /// second reconciliation ledger. The returned map retains every original
+    /// per-attempt result, including errors and unresolved charged liabilities.
+    ///
+    /// The caller must supply a fresh trusted observation in profile.clock_domain.
+    /// Saved history is never treated as current time. A stale observation,
+    /// insufficient recovery capacity or an invalid replay refuses before the
+    /// canonical journal changes. No writable owner or candidate outcome escapes
+    /// a failed replacement, including an ambiguous directory-sync failure.
+    ///
+    /// Old keys are fenced, undispatched reservations are cancelled by the
+    /// original rule, and unknown effects are NEVER resent. A charge is refunded
+    /// only by the original endpoint's accepted nonexecution evidence. Successful
+    /// startup is not a claim that every outstanding delivery was resolvable.
+    pub fn open_reconciled(
+        directory: impl AsRef<std::path::Path>,
+        profile: super::FileDeliveryProfile,
+        observed_tick: crate::action::ElapsedTick,
+    ) -> Result<(Self, PendingReconciliations), JournalError> {
+        profile.limits.check()?;
+        let store = super::storage::Store::open(directory.as_ref())?;
+        let bytes = store.read(profile.limits.bytes)?;
+        let events = super::codec::decode(&profile, store.identity(), &bytes)?;
+        let machine = Machine::replay(&profile, &events)?;
+        store.confirm_and_cleanup()?;
+        let mut host = Self {
+            profile,
+            store,
+            events,
+            machine,
+            issuer: std::rc::Rc::new(()),
+            fault: None,
+        };
+        let mut transitions = host.commit_request_events(host.revision(), &[
+            Event::Fence,
+            Event::Time(observed_tick),
+            Event::Sweep,
+        ])?;
+        let outcomes = match transitions.pop() {
+            Some(Transition::Swept(outcomes)) => outcomes,
+            _ => unreachable!("recovery ends with original pending sweep"),
+        };
+        Ok((host, outcomes))
+    }
+
+    /// Atomically advance the trusted elapsed observation and reconcile pending
+    /// deliveries on a running owner. Both old clock and old ledger remain the
+    /// acknowledged state on failure; a possibly newer disk cut poisons the owner.
+    /// Per-attempt failures are returned, not discarded or turned into refunds.
+    pub fn reconcile_pending_at(
+        &mut self,
+        revision: u64,
+        observed_tick: crate::action::ElapsedTick,
+    ) -> Result<PendingReconciliations, JournalError> {
+        let mut transitions = self.commit_request_events(revision, &[
+            Event::Time(observed_tick),
+            Event::Sweep,
+        ])?;
+        match transitions.pop() {
+            Some(Transition::Swept(outcomes)) => Ok(outcomes),
+            _ => unreachable!("clocked reconciliation ends with original sweep"),
+        }
+    }
+
     /// Fixed, internal sequences only: no caller can import arbitrary events,
-    /// saved rights, or a asserted terminal state through this path.
+    /// saved rights, or an asserted terminal state through this path.
     fn commit_request_events(
         &mut self,
         revision: u64,
@@ -334,11 +427,12 @@ fn projection_class(stage: ActionState) -> u8 {
 mod completion_tests {
     use super::*;
     use super::super::{
-        FileDeliveryProfile, FilePermit, JournalIo, JournalLimits, ReferenceBallot, ReferenceReview,
+        FileDeliveryProfile, FilePermit, JournalIo, JournalLimits, Reconciliation,
+        ReferenceBallot, ReferenceReview,
     };
     use crate::action::{ElapsedTick, Purpose, ResolvedTarget, VERSION};
     use crate::action::consequence::congress::{CongressPolicy, MemberPolicy};
-    use crate::action::consequence::delivery::EndpointOutcome;
+    use crate::action::consequence::delivery::{EndpointOutcome, NonExecutionReason};
     use crate::action::consequence::gate::containment::{ActorState, RestartGrade, RestartProfile};
     use crate::action::consequence::gate::containment::session::policy::{Policy, Predicate};
     use crate::reducer::Caps;
@@ -584,5 +678,155 @@ mod completion_tests {
             assert_eq!(recovered.inspect().control.ledger.available, if replaced { 84 } else { 100 });
             assert_eq!(recovered.inspect().control.ledger.reserved, 0);
         }
+    }
+
+    #[test]
+    fn recovered_owner_settles_a_lost_ack_without_republishing() {
+        let root = Directory::new();
+        let p = profile();
+        let (mut host, key, action) = prepared(&root, &p);
+        host.dispatch(host.revision(), &key, &action, snapshot()).unwrap();
+        let outcome = EndpointOutcome::Executed { resulting_version: 2 };
+        assert_eq!(host.publish(host.revision(), key.attempt()), Ok(outcome));
+        assert_eq!(host.request_resolution(700), Ok(None));
+        let revision = host.revision();
+        drop(host);
+        let (mut recovered, results) = FileDelivery::open_reconciled(root.store(), p.clone(), ElapsedTick(2)).unwrap();
+        assert!(recovered.clock_ready());
+        assert_eq!(recovered.revision(), revision + 3);
+        assert_eq!(results[&key.attempt()], Ok(Reconciliation::Resolved(outcome)));
+        assert_eq!(recovered.request_resolution(700), Ok(Some(outcome)));
+        assert_eq!(recovered.inspect().executions, 1);
+        assert_eq!(recovered.inspect().control.ledger.charged, 16);
+        assert_eq!(recovered.inspect().control.ledger.stages[&key.attempt()], ActionState::Confirmed);
+        assert_eq!(FileDelivery::read_publication(root.store(), &p).unwrap(), recovered.inspect());
+        assert_eq!(recovered.commit_request_publication(recovered.revision(), 700, &key, &action, snapshot()),
+            Err(JournalError::Contract(Error::Binding)));
+    }
+
+    #[test]
+    fn unknown_delivery_remains_charged_until_original_endpoint_proves_nonexecution() {
+        let root = Directory::new();
+        let p = profile();
+        let (mut host, key, action) = prepared(&root, &p);
+        host.dispatch(host.revision(), &key, &action, snapshot()).unwrap();
+        drop(host);
+        let (mut recovered, results) = FileDelivery::open_reconciled(root.store(), p.clone(), ElapsedTick(2)).unwrap();
+        assert_eq!(results[&key.attempt()], Ok(Reconciliation::AwaitingResolution));
+        assert_eq!(recovered.request_resolution(700), Ok(None));
+        assert_eq!(recovered.inspect().executions, 0);
+        assert_eq!(recovered.inspect().control.ledger.charged, 16);
+        let results = recovered.reconcile_pending_at(recovered.revision(), ElapsedTick(99)).unwrap();
+        assert_eq!(results[&key.attempt()], Ok(Reconciliation::AwaitingResolution));
+        assert_eq!(recovered.inspect().control.ledger.charged, 16);
+        let outcome = EndpointOutcome::NotExecuted { reason: NonExecutionReason::DeadlineElapsed };
+        let results = recovered.reconcile_pending_at(recovered.revision(), ElapsedTick(100)).unwrap();
+        assert_eq!(results[&key.attempt()], Ok(Reconciliation::Resolved(outcome)));
+        assert_eq!(recovered.request_resolution(700), Ok(Some(outcome)));
+        assert_eq!(recovered.inspect().control.ledger.available, 100);
+        assert_eq!(recovered.inspect().control.ledger.reserved, 0);
+        assert_eq!(recovered.inspect().control.ledger.charged, 0);
+        assert_eq!(recovered.inspect().control.ledger.stages[&key.attempt()], ActionState::ConfirmedNotExecuted);
+        assert_eq!(recovered.inspect().executions, 0);
+        assert_eq!(recovered.inspect().payload, b"initial");
+        assert_eq!(FileDelivery::read_publication(root.store(), &p).unwrap(), recovered.inspect());
+        assert!(recovered.reconcile_pending_at(recovered.revision(), ElapsedTick(100)).unwrap().is_empty());
+        assert_eq!(recovered.inspect().control.ledger.available, 100);
+    }
+
+    #[test]
+    fn stale_recovery_clock_does_not_commit_a_fence_or_refund() {
+        let root = Directory::new();
+        let p = profile();
+        let (host, _key, _action) = prepared(&root, &p);
+        let before = host.inspect();
+        drop(host);
+        assert!(matches!(FileDelivery::open_reconciled(root.store(), p.clone(), ElapsedTick(0)),
+            Err(JournalError::Contract(Error::Stale))));
+        assert_eq!(FileDelivery::read_publication(root.store(), &p).unwrap(), before);
+        let (recovered, results) = FileDelivery::open_reconciled(root.store(), p, ElapsedTick(2)).unwrap();
+        assert!(results.is_empty());
+        assert!(recovered.clock_ready());
+        assert_eq!(recovered.inspect().control.ledger.epoch, before.control.ledger.epoch + 1);
+        assert_eq!(recovered.inspect().control.ledger.available, 100);
+        assert_eq!(recovered.inspect().executions, 0);
+        assert_eq!(recovered.request_resolution(700), Ok(None));
+    }
+
+    #[test]
+    fn recovery_capacity_is_checked_for_the_complete_sequence() {
+        for limit in [6, 7] {
+            let root = Directory::new();
+            let mut p = profile();
+            p.limits.events = limit;
+            let (host, _key, _action) = prepared(&root, &p);
+            let before = host.inspect();
+            drop(host);
+            let result = FileDelivery::open_reconciled(root.store(), p.clone(), ElapsedTick(2));
+            if limit == 6 {
+                assert!(matches!(result, Err(JournalError::Contract(Error::Limit))));
+                assert_eq!(FileDelivery::read_publication(root.store(), &p).unwrap(), before);
+            } else {
+                let (recovered, results) = result.unwrap();
+                assert!(results.is_empty());
+                assert!(recovered.clock_ready());
+                assert_eq!(recovered.revision(), 7);
+                assert_eq!(recovered.inspect().control.ledger.available, 100);
+            }
+        }
+    }
+
+    #[test]
+    fn clocked_reconciliation_faults_expose_neither_candidate_time_nor_receipt() {
+        for barrier in [JournalIo::Stage, JournalIo::Write, JournalIo::FileSync,
+            JournalIo::Rename, JournalIo::DirectorySync]
+        {
+            let root = Directory::new();
+            let p = profile();
+            let (mut host, key, action) = prepared(&root, &p);
+            host.dispatch(host.revision(), &key, &action, snapshot()).unwrap();
+            host.publish(host.revision(), key.attempt()).unwrap();
+            let before = host.inspect();
+            host.store.fail_once(barrier);
+            assert!(matches!(host.reconcile_pending_at(host.revision(), ElapsedTick(2)), Err(JournalError::Io(_))));
+            assert_eq!(host.inspect(), before);
+            assert_eq!(host.request_resolution(700), Err(JournalError::Unavailable));
+            let disk = FileDelivery::read_publication(root.store(), &p).unwrap();
+            let replaced = barrier == JournalIo::DirectorySync;
+            assert_eq!(disk.revision, before.revision + if replaced { 2 } else { 0 });
+            assert_eq!(disk.control.ledger.elapsed, Some(ElapsedTick(if replaced { 2 } else { 1 })));
+            assert_eq!(disk.control.ledger.stages[&key.attempt()],
+                if replaced { ActionState::Confirmed } else { ActionState::Dispatching });
+            assert_eq!(disk.executions, 1);
+            assert_eq!(disk.control.ledger.charged, 16);
+            drop(host);
+            let (recovered, results) = FileDelivery::open_reconciled(root.store(), p, ElapsedTick(3)).unwrap();
+            assert_eq!(results.is_empty(), replaced);
+            assert_eq!(recovered.inspect().executions, 1);
+            assert_eq!(recovered.request_resolution(700),
+                Ok(Some(EndpointOutcome::Executed { resulting_version: 2 })));
+        }
+    }
+
+    #[test]
+    fn version_conflict_returns_real_nonexecution_and_exact_retry_does_not_refund_twice() {
+        let root = Directory::new();
+        let p = profile();
+        let (mut host, first, first_action) = prepared(&root, &p);
+        let (second, second_action) = authorize_request(&mut host, 701);
+        assert_eq!(host.commit_request_publication(host.revision(), 700, &first, &first_action, snapshot()),
+            Ok(EndpointOutcome::Executed { resulting_version: 2 }));
+        let outcome = EndpointOutcome::NotExecuted { reason: NonExecutionReason::VersionConflict };
+        let revision = host.revision();
+        assert_eq!(host.commit_request_publication(revision, 701, &second, &second_action, snapshot()), Ok(outcome));
+        let after = host.inspect();
+        assert_eq!(after.executions, 1);
+        assert_eq!(after.control.ledger.available, 84);
+        assert_eq!(after.control.ledger.reserved, 0);
+        assert_eq!(after.control.ledger.charged, 16);
+        assert_eq!(host.request_resolution(701), Ok(Some(outcome)));
+        assert_eq!(host.commit_request_publication(revision, 701, &second, &second_action, Snapshot::default()), Ok(outcome));
+        assert_eq!(host.inspect(), after);
+        assert_eq!(FileDelivery::read_publication(root.store(), &p).unwrap(), after);
     }
 }
