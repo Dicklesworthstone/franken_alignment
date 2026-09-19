@@ -2,6 +2,8 @@
 //! generation owner. This wrapper owns a fixed tokenizer and cannot swap it
 //! halfway through an existing KV history. Output is observation, not publication.
 
+pub mod incremental;
+
 #[cfg(test)]
 #[path = "text/tests.rs"]
 mod tests;
@@ -153,6 +155,19 @@ impl TextDecoder {
     fn generate_inner(&mut self, expected_position: u64, request: TextGenerationRequest,
         work: &mut TokenizationWork) -> Result<TextGenerationReport, Error>
     {
+        let prepared = self.prepare_text(expected_position, request, work)?;
+        let PreparedText { encoded, prefix_controls, numerical, mut output, capacity } = prepared;
+        let generation = self.decoder.generate(expected_position, numerical)?;
+        let decoded = append_output(&self.tokenizer, &mut output, generation.tokens(), capacity)
+            .map(|()| output);
+        Ok(TextGenerationReport { prompt: encoded, prefix_controls, generation, output: decoded })
+    }
+
+    // One text admission path for borrowed one-shot and owned incremental runs.
+    // The original numerical owner still admits the ENTIRE request before work.
+    fn prepare_text(&self, expected_position: u64, request: TextGenerationRequest,
+        work: &mut TokenizationWork) -> Result<PreparedText, Error>
+    {
         if self.status() != MonitoringStatus::Ready { return Err(Error::WrongState); }
         if self.position() != expected_position { return Err(Error::Stale); }
         if request.max_new_tokens > MAX_GENERATION_TOKENS || request.stop_tokens.len() > MAX_STOP_TOKENS
@@ -184,25 +199,33 @@ impl TextDecoder {
         // Complete output allocation BEFORE the numerical owner can advance.
         let mut output = Vec::new();
         output.try_reserve_exact(capacity).map_err(|_| Error::Limit)?;
-        let generation = self.decoder.generate(expected_position, GenerationRequest {
-            prompt, max_new_tokens: request.max_new_tokens,
-            stop_tokens: request.stop_tokens, budget: request.generation,
-        })?;
-        // No second generation, lookup of unreviewed history or retokenization.
-        // On an unexpected upstream contract error, retain the ORIGINAL report
-        // but return an explicit output error rather than a decoded partial prefix.
-        let decoded = (|| {
-            let mut bytes = 0_usize;
-            for token in generation.tokens() {
-                bytes = bytes.checked_add(self.tokenizer.content_bytes(*token)?.len()).ok_or(Error::Limit)?;
-                if bytes > capacity { return Err(Error::Limit); }
-            }
-            for token in generation.tokens() {
-                output.extend_from_slice(self.tokenizer.content_bytes(*token)?);
-            }
-            Ok(output)
-        })();
-        Ok(TextGenerationReport { prompt: encoded, prefix_controls: request.prefix_controls,
-            generation, output: decoded })
+        Ok(PreparedText {
+            encoded, prefix_controls: request.prefix_controls, output, capacity,
+            numerical: GenerationRequest { prompt, max_new_tokens: request.max_new_tokens,
+                stop_tokens: request.stop_tokens, budget: request.generation },
+        })
     }
+}
+
+struct PreparedText {
+    encoded: TokenizedInput,
+    prefix_controls: Vec<u32>,
+    numerical: GenerationRequest,
+    output: Vec<u8>,
+    capacity: usize,
+}
+
+// Validate the entire new token slice before appending any bytes. Capacity was
+// reserved BEFORE inference, so output retention cannot request more allocation.
+// This only accepts the original cursor's released IDs, not sampled-but-held IDs.
+fn append_output(tokenizer: &ByteBpe, output: &mut Vec<u8>, tokens: &[u32], capacity: usize)
+    -> Result<(), Error>
+{
+    let mut bytes = output.len();
+    for token in tokens {
+        bytes = bytes.checked_add(tokenizer.content_bytes(*token)?.len()).ok_or(Error::Limit)?;
+        if bytes > capacity || bytes > output.capacity() { return Err(Error::Limit); }
+    }
+    for token in tokens { output.extend_from_slice(tokenizer.content_bytes(*token)?); }
+    Ok(())
 }

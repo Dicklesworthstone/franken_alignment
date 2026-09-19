@@ -9,19 +9,19 @@ use crate::action::consequence::activation::tensor::kv::decoder::{
 use crate::action::consequence::activation::tensor::kv::decoder::sampling::{SamplingPolicy, SamplingStart};
 use std::collections::BTreeMap;
 
-fn profile() -> DecoderProfile {
+pub(super) fn profile() -> DecoderProfile {
     DecoderProfile::new(DecoderIdentity { tenant: 1, model: 2, model_generation: 3,
         tokenizer_generation: 4, profile_generation: 5 }, DecoderShape { vocabulary: 260,
         hidden: 2, intermediate: 2, layers: 1, query_heads: 1, cache_heads: 1, context: 32 },
         1e-5, 10000.0).unwrap()
 }
-fn vocabulary() -> Vec<TokenBytes> {
+pub(super) fn vocabulary() -> Vec<TokenBytes> {
     let mut tokens: Vec<_> = (0..=255).map(|byte| TokenBytes::Content(vec![byte])).collect();
     tokens.extend([TokenBytes::Control, TokenBytes::Control,
         TokenBytes::Content(b"ab".to_vec()), TokenBytes::Content("é".as_bytes().to_vec())]);
     tokens
 }
-fn tokenizer() -> ByteBpe {
+pub(super) fn tokenizer() -> ByteBpe {
     ByteBpe::new(profile(), vocabulary(), vec![
         Merge { left: 97, right: 98, result: 258 },
         Merge { left: 0xc3, right: 0xa9, result: 259 },
@@ -31,7 +31,7 @@ fn tokenizer() -> ByteBpe {
 // Actual native decoder, original exact residual probe and original sampler.
 // Zero projection/MLP weights preserve the input embedding at each residual.
 // A selected token's own embedding (not a fabricated review) causes any alarm.
-fn numerical(output_token: u32, alarm: Option<u32>, chain_to_alarm: bool) -> MonitoredSampledDecoder {
+pub(super) fn numerical(output_token: u32, alarm: Option<u32>, chain_to_alarm: bool) -> MonitoredSampledDecoder {
     let p = profile();
     let mut embeddings: Vec<f32> = (0..p.shape().vocabulary).flat_map(|_| [1.0, 0.0]).collect();
     if let Some(token) = alarm { embeddings[token as usize * 2] = 3.0; }
@@ -54,10 +54,10 @@ fn numerical(output_token: u32, alarm: Option<u32>, chain_to_alarm: bool) -> Mon
         policy: SamplingPolicy::new(1, 1, 260, 1.0, 1, 1.0).unwrap(), stream: 9, seed: 42,
     }).unwrap()
 }
-fn run(output: u32, alarm: Option<u32>) -> TextDecoder {
+pub(super) fn run(output: u32, alarm: Option<u32>) -> TextDecoder {
     TextDecoder::new(numerical(output, alarm, false), tokenizer()).unwrap()
 }
-fn request(prompt: &[u8], new: usize) -> TextGenerationRequest {
+pub(super) fn request(prompt: &[u8], new: usize) -> TextGenerationRequest {
     TextGenerationRequest { prompt: prompt.to_vec(), prefix_controls: vec![256],
         max_new_tokens: new, stop_tokens: vec![256, 257], tokenization: TokenizationBudget::default(),
         generation: GenerationBudget { scalar_products: MAX_DECODER_PRODUCTS, sampling_entries: MAX_SAMPLING_ENTRIES },
