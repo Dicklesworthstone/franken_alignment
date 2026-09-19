@@ -3,6 +3,8 @@
 //! an exact decoder profile. Equal epoch numbers are not an authentication claim.
 
 pub mod peer;
+pub mod incremental;
+pub use incremental::{NativeEvaluationProgress, NativeEvaluationWork};
 
 #[cfg(test)]
 mod tests;
@@ -58,10 +60,14 @@ impl From<Error> for NativeEvaluationError {
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum NativeEvaluationStatus {
     AwaitingInput,
+    /// Fully admitted input; the next call may compute one original token.
+    Running,
     /// A caught unwind remains here; it can never rerun inference.
     Evaluating,
     Judged(Verdict),
     Failed(NativeEvaluationError),
+    /// Destroyed unfinished ownership, not a completed judgment or refund.
+    Cancelled,
 }
 
 /// One native decoder and one original wire input. No caller-supplied verdict,
@@ -79,7 +85,7 @@ pub enum NativeEvaluationStatus {
 /// fn elevate(worker: NativeEvaluator) -> Permit { worker }
 /// ```
 pub struct NativeEvaluator {
-    decoder: TextDecoder,
+    execution: incremental::Execution,
     policy: NativeHelperPolicy,
     status: NativeEvaluationStatus,
     input: Option<WorkerInput>,
@@ -88,8 +94,8 @@ pub struct NativeEvaluator {
 impl fmt::Debug for NativeEvaluator {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("NativeEvaluator").field("status", &self.status)
-            .field("position", &self.decoder.position())
-            .field("sampled_draws", &self.decoder.sampled_draws()).finish_non_exhaustive()
+            .field("position", &self.position())
+            .field("sampled_draws", &self.sampled_draws()).finish_non_exhaustive()
     }
 }
 impl NativeEvaluator {
@@ -120,7 +126,7 @@ impl NativeEvaluator {
         let output_bound = policy.max_new_tokens.checked_mul(decoder.tokenizer().max_content_bytes())
             .ok_or(Error::Limit)?;
         if output_bound > policy.max_output_bytes { return Err(Error::Limit); }
-        Ok(Self { decoder, policy, status: NativeEvaluationStatus::AwaitingInput, input: None, report: None })
+        Ok(Self { execution: incremental::Execution::Decoder(Box::new(decoder)), policy, status: NativeEvaluationStatus::AwaitingInput, input: None, report: None })
     }
 
     pub fn policy(&self) -> &NativeHelperPolicy { &self.policy }
@@ -130,41 +136,27 @@ impl NativeEvaluator {
     /// Includes held, truncated, invalid-schema and budget-exhausted generations.
     /// No synthetic report is returned for an admission failure.
     pub fn report(&self) -> Option<&TextGenerationReport> { self.report.as_ref() }
-    pub fn position(&self) -> u64 { self.decoder.position() }
-    pub fn sampled_draws(&self) -> u64 { self.decoder.sampled_draws() }
+    pub fn position(&self) -> u64 { self.work().position }
+    pub fn sampled_draws(&self) -> u64 { self.work().sampled_draws }
 
-    /// Run once over ALL original submitted bytes. Worker framing, round IDs,
-    /// private salts, and peer votes are never appended to the model prompt.
-    /// Only a complete reviewed StopToken finish can yield a categorical verdict.
-    /// A refusal is not turned into Allow, Hold or an invented abstention vote.
+    /// The one-shot convenience API drives the SAME admitted input and original
+    /// token steps as begin/advance. It still attempts only one request and never
+    /// turns missing/held/truncated output into an invented vote.
     pub fn evaluate(&mut self, input: &WorkerInput) -> Result<Verdict, NativeEvaluationError> {
-        if self.status != NativeEvaluationStatus::AwaitingInput {
-            return Err(Error::WrongState.into());
+        self.begin(input)?;
+        loop {
+            let progress = self.advance(self.position())?;
+            if let NativeEvaluationStatus::Judged(verdict) = progress.status { return Ok(verdict); }
         }
-        self.status = NativeEvaluationStatus::Evaluating;
-        self.input = Some(input.clone());
-        let result = self.evaluate_once(input);
-        self.status = match result {
-            Ok(verdict) => NativeEvaluationStatus::Judged(verdict),
-            Err(error) => NativeEvaluationStatus::Failed(error),
-        };
-        result
     }
 
-    fn evaluate_once(&mut self, input: &WorkerInput) -> Result<Verdict, NativeEvaluationError> {
-        let actual = input.actual_input();
-        if actual.input_profile() != &self.policy.input_profile { return Err(Error::Binding.into()); }
-        let report = self.decoder.generate(0, TextGenerationRequest {
-            prompt: actual.submitted_bytes().to_vec(), prefix_controls: Vec::new(),
-            max_new_tokens: self.policy.max_new_tokens, stop_tokens: self.policy.stop_tokens.clone(),
-            tokenization: self.policy.tokenization, generation: self.policy.generation,
-            max_output_bytes: self.policy.max_output_bytes,
-        }).map_err(NativeEvaluationError::Admission)?;
+    fn finish_report(&mut self, report: TextGenerationReport) -> Result<Verdict, NativeEvaluationError> {
         // Retain the actual numerical report BEFORE inspecting its result. Bad
         // output cannot erase consumed draws, computation or an earlier prefix.
         self.report = Some(report);
         let report = self.report.as_ref().expect("retained native generation");
         let numerical = report.generation();
+        let actual = self.input.as_ref().ok_or(Error::Incomplete)?.actual_input();
         if report.prompt().source() != actual.submitted_bytes()
             || !report.prefix_controls().is_empty()
             || numerical.reviewed_prompt_tokens() != numerical.requested_prompt_tokens()
