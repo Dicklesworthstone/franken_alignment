@@ -1,6 +1,7 @@
 //! Persist native topology inputs and consume the original mediation gate.
 //! A declared graph cut is not proof of operating-system containment.
 mod codec;
+pub mod planning;
 pub(super) use codec::{read, write};
 
 use super::{Event, FileOversight, JournalError, Transition};
