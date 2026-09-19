@@ -104,7 +104,7 @@ fn encode_iter<'a>(p: &FileOversightProfile, path: &Path, count: usize, events: 
             Event::Identity(IdentityEvent::Enable(..)) => recovery_capacity::Class::Bootstrap,
             Event::Credibility(CredibilityEvent::Enable(_)) => recovery_capacity::Class::Bootstrap,
             Event::Consistency(ConsistencyEvent::Enable(_)) | Event::Mediation(MediationEvent::Enable(_)) => recovery_capacity::Class::Bootstrap,
-            Event::PublicationWitness(WitnessEvent::Enable(_)) => recovery_capacity::Class::Bootstrap,
+            Event::PublicationWitness(WitnessEvent::Enable(_) | WitnessEvent::ChangeProfile(_)) => recovery_capacity::Class::Bootstrap,
             Event::PublicationGuard | Event::CredentialGuard(_) | Event::Campaign(CampaignEvent::Enable(..)) | Event::StreamBootstrap(_) => recovery_capacity::Class::Bootstrap,
             _ => recovery_capacity::Class::Work,
         };

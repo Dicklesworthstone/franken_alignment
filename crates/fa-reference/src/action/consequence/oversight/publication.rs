@@ -79,6 +79,14 @@ impl PublicationJudgment {
 
     pub fn action(&self) -> &FrozenAction { &self.action }
 
+    /// The original owner derives routes from these immutable requirements.
+    /// Opaque dependencies remain whole-input even beside precise witnesses.
+    pub(crate) fn register_invalidation(&self, attempt: u64,
+        index: &mut crate::witness::refinement::index::routing::InvalidationIndex) -> Result<(), Error>
+    {
+        index.register(attempt, self.structured.as_ref(), self.opaque.is_some())
+    }
+
     /// Recheck from scratch at the supplied final cut. Partial work is not
     /// carried across mutable cuts. The existing FA-060 cursor remains the API
     /// for resumable refinement against one immutable snapshot.

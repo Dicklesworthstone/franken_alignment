@@ -3,6 +3,8 @@ use super::OversightBroker;
 use crate::Error;
 use crate::action::consequence::delivery::publication_gate::{PublicationInputs, PublicationLimits, PublicationSourceStatus};
 use crate::action::consequence::oversight::publication::{PublicationJudgment, PublicationReport};
+use crate::action::consequence::delivery::publication_gate::changes::{PublicationChange, PublicationChangePolicy, PublicationChangeReport, PublicationChangeStatus};
+use std::rc::Rc;
 
 impl OversightBroker {
     /// Mandatory on every subsequent attempt. Ordinary committee, policy,
@@ -45,6 +47,22 @@ impl OversightBroker {
         source: u64, generation: u64, inputs: PublicationInputs) -> Result<u64, Error>
     {
         self.delivery.record_captured_publication_inputs(attempt, revision, source, generation, inputs)
+    }
+
+    pub fn enable_publication_changes(&mut self, policy: PublicationChangePolicy) -> Result<(), Error> {
+        self.delivery.enable_publication_changes(policy)
+    }
+    pub fn publication_change_status(&self) -> Result<PublicationChangeStatus, Error> {
+        self.delivery.publication_change_status()
+    }
+    pub fn publication_change_report(&self) -> Result<Option<Rc<PublicationChangeReport>>, Error> {
+        self.delivery.publication_change_report()
+    }
+    pub fn preflight_publication_change(&self, notice: PublicationChange) -> Result<(), Error> {
+        self.delivery.preflight_publication_change(notice)
+    }
+    pub fn record_publication_change(&mut self, notice: PublicationChange) -> Result<Rc<PublicationChangeReport>, Error> {
+        self.delivery.record_publication_change(notice)
     }
 
     /// The coupled durable publisher invokes the SAME check after dispatch and

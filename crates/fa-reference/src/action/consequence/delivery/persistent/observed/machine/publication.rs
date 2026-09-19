@@ -21,6 +21,14 @@ impl Machine {
 
     pub(super) fn apply_publication_witness(&mut self, event: &WitnessEvent) -> Result<Transition, Error> {
         match event {
+            WitnessEvent::ChangeProfile(policy) => {
+                self.broker.enable_publication_changes(*policy)?;
+                Ok(Transition::Unit)
+            }
+            WitnessEvent::Change(notice) => {
+                self.broker.record_publication_change(*notice)?;
+                Ok(Transition::Unit)
+            }
             WitnessEvent::Enable(limits) => {
                 let control = self.broker.inspect();
                 if !self.actions.is_empty() || self.requests.len() != 0 || !self.sessions.is_empty()

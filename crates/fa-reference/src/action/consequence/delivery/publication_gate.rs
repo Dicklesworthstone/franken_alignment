@@ -6,6 +6,7 @@
 //! persistence claim. Once enabled, no dispatch entry point can skip the lane.
 
 mod source;
+pub mod changes;
 pub use source::PublicationSourceStatus;
 use super::DeliveryBroker;
 use crate::Error;
@@ -65,6 +66,7 @@ struct Slot {
 pub(super) struct PublicationGate {
     limits: PublicationLimits,
     slots: BTreeMap<u64, Slot>,
+    changes: Option<changes::ChangeState>,
 }
 
 impl DeliveryBroker {
@@ -75,7 +77,7 @@ impl DeliveryBroker {
         if limits.bindings == 0 || limits.bindings > MAX_PUBLICATION_BINDINGS { return Err(Error::Limit); }
         let state = self.inspect();
         if !state.ledger.stages.is_empty() || state.sequence != 0 { return Err(Error::WrongState); }
-        self.publication = Some(PublicationGate { limits, slots: BTreeMap::new() });
+        self.publication = Some(PublicationGate { limits, slots: BTreeMap::new(), changes: None });
         Ok(())
     }
 
@@ -90,6 +92,7 @@ impl DeliveryBroker {
         let slot = gate.slots.get_mut(&attempt).ok_or(Error::Missing)?;
         if slot.judgment.is_some() { return Err(Error::Duplicate); }
         if judgment.action() != &slot.action { return Err(Error::Binding); }
+        if let Some(changes) = &mut gate.changes { changes.register(attempt, &judgment)?; }
         slot.judgment = Some(judgment);
         Ok(())
     }
@@ -138,10 +141,11 @@ impl DeliveryBroker {
 
     pub(in crate::action::consequence) fn check_publication(&mut self, attempt: u64, action: Option<&FrozenAction>) -> Result<(), Error> {
         let Some(gate) = &mut self.publication else { return Ok(()); };
+        let coverage = gate.changes.as_ref().is_none_or(changes::ChangeState::complete);
         let slot = gate.slots.get_mut(&attempt).ok_or(Error::Incomplete)?;
         // A source-bound capture cannot bridge authorization, dispatch and first
         // publication. Each boundary requires its own actual acquisition cycle.
-        let fresh = slot.consume_capture();
+        let fresh = slot.consume_capture() && coverage;
         let report = match (&slot.judgment, fresh) {
             (Some(judgment), true) => judgment.validate(
                 action.unwrap_or(&slot.action),

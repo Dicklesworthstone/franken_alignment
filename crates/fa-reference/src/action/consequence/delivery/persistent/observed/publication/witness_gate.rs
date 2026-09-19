@@ -1,5 +1,7 @@
 //! Durable FA-062 configuration and observations in the ORIGINAL owner/journal.
 //! No approvals, permits, mutable broker handles or serialized success bits.
+mod changes;
+use crate::action::consequence::delivery::publication_gate::changes::{PublicationChange, PublicationChangePolicy};
 use super::witnesses::{FilePublicationEvidence, FilePublicationInputs, MAX_PUBLICATION_PACKET_BYTES};
 use super::capture::{FilePublicationCapture, SourceBinding, MAX_CAPTURE_BYTES};
 use super::super::{BaseEvent, Event, FileHumanReviewer, FileOversight, FileOversightProfile,
@@ -20,6 +22,8 @@ pub(in super::super) enum WitnessEvent {
     Inputs(u64, u64, Option<Rc<FilePublicationInputs>>),
     SourceBind(u64, Rc<SourceBinding>),
     Captured(u64, u64, Rc<FilePublicationCapture>),
+    ChangeProfile(PublicationChangePolicy),
+    Change(PublicationChange),
 }
 
 impl FileOversight {
@@ -141,6 +145,8 @@ pub(in super::super) fn write(w: &mut Writer, event: &WitnessEvent) -> Result<()
         WitnessEvent::Captured(id, revision, capture) => {
             w.u8(4)?; w.u64(*id)?; w.u64(*revision)?; w.blob(&capture.to_bytes()?)?;
         }
+        WitnessEvent::ChangeProfile(policy) => { w.u8(5)?; changes::write_policy(w, *policy)?; }
+        WitnessEvent::Change(notice) => { w.u8(6)?; changes::write_change(w, *notice)?; }
     }
     Ok(())
 }
@@ -160,6 +166,8 @@ pub(in super::super) fn read(r: &mut Reader<'_>) -> Result<WitnessEvent, Error> 
         3 => WitnessEvent::SourceBind(r.u64()?, Rc::new(SourceBinding::read(r)?)),
         4 => WitnessEvent::Captured(r.u64()?, r.u64()?,
             Rc::new(FilePublicationCapture::from_bytes(r.blob(MAX_CAPTURE_BYTES)?)?)),
+        5 => WitnessEvent::ChangeProfile(changes::read_policy(r)?),
+        6 => WitnessEvent::Change(changes::read_change(r)?),
         _ => return Err(Error::InvalidInput),
     })
 }
