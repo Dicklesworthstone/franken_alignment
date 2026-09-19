@@ -4,6 +4,8 @@
 //! declarations. This proves no OS containment, credential isolation or source
 //! authenticity. A cut is evidence about this exact graph, never a Permit.
 
+pub mod planning;
+
 use crate::action::{Purpose, ResolvedTarget, Scope};
 use crate::perimeter::{BypassDisposition, EffectFamilyRecord, Mediation, PerimeterInventory};
 use crate::Error;
