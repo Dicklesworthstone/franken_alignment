@@ -46,7 +46,7 @@ impl FileOversight {
         -> Result<PublicationFeedReport, JournalError>
     {
         let before = self.machine.broker.publication_change_status()?.through;
-        self.check_feed_overlap(&batch, before)?;
+        check_feed_overlap(&self.events, &batch, before)?;
         // A packet's retained window is not proof of earlier omitted records.
         let pending = batch.records.iter().filter(|record| batch.after <= before && record.sequence > before);
         let added = pending.clone().count().checked_add(1).ok_or(Error::Overflow)?;
@@ -85,26 +85,29 @@ impl FileOversight {
         Ok(report)
     }
 
-    fn check_feed_overlap(&self, batch: &PublicationFeedBatch, through: u64) -> Result<(), Error> {
-        let bootstrap = self.events.iter().find_map(|event| match event {
-            Event::PublicationWitness(WitnessEvent::ChangeProfile(policy)) => Some(policy.after), _ => None,
-        }).ok_or(Error::Incomplete)?;
-        let mut seen = [false; MAX_FEED_RECORDS];
-        for event in &self.events {
-            let Event::PublicationWitness(WitnessEvent::Change(prior)) = event else { continue; };
-            if prior.source != batch.heartbeat.source || prior.sequence <= batch.after
-                || prior.sequence > batch.heartbeat.through { continue; }
-            let position = usize::try_from(prior.sequence - batch.after - 1).map_err(|_| Error::Limit)?;
-            // Include earlier out-of-order notices too. Same sequence different
-            // contents is not a retry, even if both would conservatively withdraw.
-            if batch.records.get(position) != Some(prior) { return Err(Error::Binding); }
-            seen[position] = true;
-        }
-        for (position, record) in batch.records.iter().enumerate() {
-            if record.sequence > bootstrap && record.sequence <= through && !seen[position] {
-                return Err(Error::Incomplete);
-            }
-        }
-        Ok(())
+}
+
+// Shared by live catch-up and the unexposed atomic completion candidate.
+pub(in crate::action::consequence::delivery::persistent::observed) fn check_feed_overlap(
+    history: &[Event], batch: &PublicationFeedBatch, through: u64) -> Result<(), Error> {
+    let bootstrap = history.iter().find_map(|event| match event {
+        Event::PublicationWitness(WitnessEvent::ChangeProfile(policy)) => Some(policy.after), _ => None,
+    }).ok_or(Error::Incomplete)?;
+    let mut seen = [false; MAX_FEED_RECORDS];
+    for event in history {
+        let Event::PublicationWitness(WitnessEvent::Change(prior)) = event else { continue; };
+        if prior.source != batch.heartbeat.source || prior.sequence <= batch.after
+            || prior.sequence > batch.heartbeat.through { continue; }
+        let position = usize::try_from(prior.sequence - batch.after - 1).map_err(|_| Error::Limit)?;
+        // Include earlier out-of-order notices too. Same sequence different
+        // contents is not a retry, even if both would conservatively withdraw.
+        if batch.records.get(position) != Some(prior) { return Err(Error::Binding); }
+        seen[position] = true;
     }
+    for (position, record) in batch.records.iter().enumerate() {
+        if record.sequence > bootstrap && record.sequence <= through && !seen[position] {
+            return Err(Error::Incomplete);
+        }
+    }
+    Ok(())
 }

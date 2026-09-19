@@ -1,7 +1,7 @@
 //! Bounded, immutable change-window transport for the original publication gate.
 //! A producer-owned file contains BOTH the records and their closed heartbeat.
 //! It is not an authenticated source, a permission or a missing-tail substitute.
-mod ingest;
+pub(in crate::action::consequence::delivery::persistent::observed) mod ingest;
 use super::{FileCaptureError, PublicationHeartbeat};
 use super::super::super::witness_gate::changes::{read_change, write_change};
 use super::super::super::witness_gate::freshness::{read_heartbeat, write_heartbeat};

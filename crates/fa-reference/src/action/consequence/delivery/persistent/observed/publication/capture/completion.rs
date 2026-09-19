@@ -1,6 +1,10 @@
 //! Two independent acquisitions around native dispatch in one effect cut.
 //! Only the ORIGINAL journal-as-publication sink is atomic. The pre-read
 //! withdrawal is durably acknowledged separately; no remote-effect claim.
+pub mod feed;
+use super::heartbeat::feed::{PublicationFeedFile, PublicationFeedReport};
+use crate::action::consequence::delivery::publication_gate::changes::freshness::PublicationHeartbeat;
+use super::super::witness_gate::freshness::FreshnessEvent;
 use super::{FileCaptureError, FileCaptureIdentity, PublicationInputFile};
 use super::super::{CheckedPublication, witness_gate::WitnessEvent};
 use super::super::super::{BaseEvent, Event, FileHumanPermit, FileOversight, FilePermit,
@@ -54,7 +58,7 @@ impl FileOversight {
         P: FnMut(&FrozenAction, &CommitteeContract) -> Result<DriverEvidence, Error>,
     {
         let mut completion = Completion { keys, source, clock, provider,
-            reads: Vec::with_capacity(2), evidence_failure: None };
+            reads: Vec::with_capacity(2), evidence_failure: None, feed: None, feed_reads: Vec::new(), feeds: Vec::new() };
         let result = completion.run(self, revision);
         CapturedCompletionReport { reads: completion.reads,
             evidence_failure: completion.evidence_failure, result }
@@ -64,6 +68,9 @@ impl FileOversight {
 struct Completion<'a, F, P> {
     keys: CapturedCompletionKeys<'a>,
     source: &'a PublicationInputFile,
+    feed: Option<&'a PublicationFeedFile>,
+    feed_reads: Vec<Result<PublicationHeartbeat, FileCaptureError>>,
+    feeds: Vec<PublicationFeedReport>,
     clock: F,
     provider: P,
     reads: Vec<Result<FileCaptureIdentity, FileCaptureError>>,
@@ -114,14 +121,29 @@ where F: FnMut() -> ElapsedTick,
             None if host.credential_policy().is_some() => return Err(Error::Incomplete.into()),
             None => {}
         }
-        // Reserve the maximum event count before starting acquisition. Exact byte
-        // and recovery-reserve admission still runs on EVERY staged prefix below.
-        if host.events.len().checked_add(8).ok_or(Error::Overflow)? > host.profile.delivery.limits.events {
+        // Bound the fixed completion events before I/O. Feed suffix lengths are
+        // known only after reading; every added notice still passes canonical
+        // event/byte and recovery-reserve admission before candidate execution.
+        let fixed = if self.feed.is_some() { 12 } else { 8 };
+        if host.events.len().checked_add(fixed).ok_or(Error::Overflow)? > host.profile.delivery.limits.events {
             return Err(Error::Limit.into());
         }
         let action = host.machine.actions.get(&attempt).ok_or(Error::Missing)?.clone();
-        let expected = host.begin_publication_capture(revision, attempt, self.source.source())?;
+        if let Some(feed) = self.feed {
+            let bound = host.publication_source(attempt)?.ok_or(Error::Incomplete)?;
+            if bound.source != self.source.source() { return Err(Error::Binding.into()); }
+            host.publication_change_freshness()?;
+            if host.publication_change_status()?.source != feed.source() { return Err(Error::Binding.into()); }
+            // Both live feed and witness eligibility are withdrawn before any
+            // external read. Staged catch-up can then change the witness revision.
+            host.publication_changes_unavailable(revision, feed.source())?;
+        }
+        host.begin_publication_capture(host.revision(), attempt, self.source.source())?;
         let mut cut = SourceCut::new(host)?;
+        if self.feed.is_some() {
+            self.capture_feed(host, &mut cut)?.map_err(|error| JournalError::from(error.contract_error()))?;
+        }
+        let expected = cut.machine.broker.publication_input_revision(attempt)?;
         let first = self.sample(&action, &host.profile.committee)?;
         let first_inputs = first.inputs.as_ref().ok_or(Error::Incomplete)?;
         let committee_revision = host.current_reference(attempt, first_inputs)?;
@@ -134,6 +156,14 @@ where F: FnMut() -> ElapsedTick,
         cut.stage(host, Event::PublicationWitness(WitnessEvent::Captured(attempt, expected, Rc::new(captured))))?;
         cut.stage(host, Event::Dispatch(attempt, self.keys.human.request, committee_revision, first.snapshot))?;
 
+        if let Some(feed) = self.feed {
+            cut.stage(host, Event::PublicationWitness(WitnessEvent::Freshness(
+                FreshnessEvent::Unavailable(feed.source()))))?;
+            // An ordinary second read failure leaves the staged feed unavailable.
+            // Continue to the original publication/seal and receipt path; do not
+            // fabricate changed committee evidence or a successful installation.
+            let _read = self.capture_feed(host, &mut cut)?;
+        }
         // This withdrawal is staged after native dispatch, but the canonical owner
         // has ALREADY durably withdrawn before both external reads. A caught panic
         // cannot expose this candidate or leave an old sendable source capture.
@@ -196,6 +226,7 @@ impl SourceCut {
     }
     fn stage(&mut self, host: &FileOversight, event: Event) -> Result<Transition, JournalError> {
         host.check_source_admission(&event)?;
+        self.history.try_reserve(1).map_err(|_| Error::Limit)?;
         self.bytes = journal::encode_appended(&host.profile, host.store.identity(), &self.history, &event)?;
         self.machine.preflight_consistency(&event)?;
         let result = self.machine.apply(&event)?;
