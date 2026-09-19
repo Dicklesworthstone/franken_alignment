@@ -2,6 +2,7 @@
 //! Secret bytes never enter the FileOversight journal. Recovery creates a new host
 //! issuer, so every old credential permit becomes unusable after reopen.
 
+mod completion;
 #[cfg(test)]
 mod storage_tests;
 
