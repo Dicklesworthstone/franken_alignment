@@ -2,6 +2,7 @@
 //! Reuse its review, authorization, two-key dispatch and publish/reconcile phases.
 //! This is an acquisition adapter, not another driver or a permitting fallback.
 pub mod completion;
+pub mod heartbeat;
 use super::{FileEvidenceReport, FileProvider};
 use super::super::{CommitteeContract, DriverEvidence, ElapsedTick, Error,
     FileCredentialPermit, FileDriverEvent, FileHumanPermit, FileOversight,
