@@ -68,10 +68,10 @@ impl FileSupervisedDriver {
         } }
     }
 }
-struct FeedProvider<'a, P> {
-    inner: P,
-    source: &'a PublicationFeedFile,
-    reports: &'a mut Vec<Result<PublicationFeedReport, FileCaptureError>>,
+pub(super) struct FeedProvider<'a, P> {
+    pub(super) inner: P,
+    pub(super) source: &'a PublicationFeedFile,
+    pub(super) reports: &'a mut Vec<Result<PublicationFeedReport, FileCaptureError>>,
 }
 impl<P: EvidenceProvider> EvidenceProvider for FeedProvider<'_, P> {
     fn capture<F>(&mut self, host: &mut FileOversight, action: &FrozenAction, clock: &mut F)
