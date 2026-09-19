@@ -104,13 +104,25 @@ impl Ready {
     fn bytes(&self) -> Vec<u8> { self.host.store.read(self.host.profile.delivery.limits.bytes).unwrap() }
 }
 fn ready(root: &Directory, p: FileOversightProfile) -> Ready {
+    ready_request(root, p, None)
+}
+fn ready_request(root: &Directory, p: FileOversightProfile, request: Option<u64>) -> Ready {
     let (mut host, reviewer) = FileOversight::create(root.store(), p.clone()).unwrap();
     host.observe_time(host.revision(), ElapsedTick(1)).unwrap();
     host.enable_credential_guard(host.revision(), &inventory(), &route()).unwrap();
     let credential = bind(&host);
-    let action = host.propose(host.revision(), 1, ActionSpec { version: VERSION, scope: p.delivery.scope,
+    let spec = ActionSpec { version: VERSION, scope: p.delivery.scope,
         target: Some(host.inspect().target), payload: b"visible".to_vec(), required_witnesses: Vec::new(),
-        policy_epoch: 0, deadline: ElapsedTick(100), units: 16 }, snapshot()).unwrap();
+        policy_epoch: 0, deadline: ElapsedTick(100), units: 16 };
+    let action = match request {
+        Some(request) => {
+            let status = host.submit_request(host.revision(), request, spec, snapshot()).unwrap();
+            assert!(matches!(status.disposition,
+                crate::action::consequence::delivery::persistent::requests::FileRequestDisposition::Admitted { attempt: 1, .. }));
+            host.request_action(request).unwrap().clone()
+        }
+        None => host.propose(host.revision(), 1, spec, snapshot()).unwrap(),
+    };
     let helper = &p.committee.members()["reviewer"];
     let mut bytes = action_frame(&action); let boundary = bytes.len();
     bytes.extend_from_slice(helper.question()); let end = bytes.len();
@@ -296,3 +308,5 @@ fn five_storage_barriers_preserve_old_or_fully_reconciled_cut_and_no_secret() {
         assert_eq!(host.inspect(), after);
     }
 }
+
+mod requests;
