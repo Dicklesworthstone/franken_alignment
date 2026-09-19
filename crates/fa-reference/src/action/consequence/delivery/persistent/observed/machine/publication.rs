@@ -26,9 +26,6 @@ impl Machine {
                 if !self.actions.is_empty() || self.requests.len() != 0 || !self.sessions.is_empty()
                     || control.sequence != 0 || control.suspended || self.broker.stop_receipt().is_some()
                 { return Err(Error::WrongState); }
-                // The original broker validates limits/duplicate configuration
-                // before mutation. No later fallible operation can partially
-                // install only one half of this mandatory profile.
                 self.broker.enable_publication_validation(*limits)?;
                 self.publication_guard = true;
                 Ok(Transition::Unit)
@@ -42,6 +39,23 @@ impl Machine {
             WitnessEvent::Inputs(attempt, revision, inputs) => {
                 let current = inputs.as_ref().map(|inputs| inputs.materialize()).transpose()?;
                 Ok(Transition::Inputs(self.broker.record_publication_inputs(*attempt, *revision, current)?))
+            }
+            WitnessEvent::SourceBind(attempt, binding) => {
+                let action = self.actions.get(attempt).ok_or(Error::Missing)?;
+                binding.check_action(*attempt, action)?;
+                let judgment = binding.evidence.capture_for(action.clone())?;
+                let original = binding.evidence.original().materialize()?;
+                let identity = binding.identity();
+                // Both operations occur on the unexposed transaction candidate.
+                self.broker.bind_publication_judgment(*attempt, judgment)?;
+                self.broker.bind_publication_source(*attempt, identity.source, identity.generation, original)?;
+                Ok(Transition::Unit)
+            }
+            WitnessEvent::Captured(attempt, revision, capture) => {
+                capture.check_action(*attempt, self.actions.get(attempt).ok_or(Error::Missing)?)?;
+                let identity = capture.identity();
+                Ok(Transition::Inputs(self.broker.record_captured_publication_inputs(*attempt, *revision,
+                    identity.source, identity.generation, capture.inputs().materialize()?)?))
             }
         }
     }

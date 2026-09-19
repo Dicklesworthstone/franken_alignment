@@ -1,6 +1,7 @@
 //! Durable FA-062 configuration and observations in the ORIGINAL owner/journal.
 //! No approvals, permits, mutable broker handles or serialized success bits.
 use super::witnesses::{FilePublicationEvidence, FilePublicationInputs, MAX_PUBLICATION_PACKET_BYTES};
+use super::capture::{FilePublicationCapture, SourceBinding, MAX_CAPTURE_BYTES};
 use super::super::{BaseEvent, Event, FileHumanReviewer, FileOversight, FileOversightProfile,
     JournalError, JournalFailure, JournalIo, Machine, Transition, journal, storage};
 use crate::action::consequence::delivery::publication_gate::{PublicationLimits, MAX_PUBLICATION_BINDINGS};
@@ -17,6 +18,8 @@ pub(in super::super) enum WitnessEvent {
     Enable(PublicationLimits),
     Bind(u64, Rc<FilePublicationEvidence>),
     Inputs(u64, u64, Option<Rc<FilePublicationInputs>>),
+    SourceBind(u64, Rc<SourceBinding>),
+    Captured(u64, u64, Rc<FilePublicationCapture>),
 }
 
 impl FileOversight {
@@ -114,6 +117,7 @@ impl FileOversight {
         if self.fault.is_some() { return Err(JournalError::Unavailable); }
         self.events.iter().find_map(|event| match event {
             Event::PublicationWitness(WitnessEvent::Bind(id, evidence)) if *id == attempt => Some(evidence.as_ref()),
+            Event::PublicationWitness(WitnessEvent::SourceBind(id, binding)) if *id == attempt => Some(&binding.evidence),
             _ => None,
         }).ok_or_else(|| Error::Missing.into())
     }
@@ -133,6 +137,10 @@ pub(in super::super) fn write(w: &mut Writer, event: &WitnessEvent) -> Result<()
                 Some(inputs) => { w.u8(1)?; w.blob(&inputs.to_bytes()?)?; }
             }
         }
+        WitnessEvent::SourceBind(id, binding) => { w.u8(3)?; w.u64(*id)?; binding.write(w)?; }
+        WitnessEvent::Captured(id, revision, capture) => {
+            w.u8(4)?; w.u64(*id)?; w.u64(*revision)?; w.blob(&capture.to_bytes()?)?;
+        }
     }
     Ok(())
 }
@@ -149,6 +157,9 @@ pub(in super::super) fn read(r: &mut Reader<'_>) -> Result<WitnessEvent, Error> 
             };
             WitnessEvent::Inputs(id, revision, inputs)
         }
+        3 => WitnessEvent::SourceBind(r.u64()?, Rc::new(SourceBinding::read(r)?)),
+        4 => WitnessEvent::Captured(r.u64()?, r.u64()?,
+            Rc::new(FilePublicationCapture::from_bytes(r.blob(MAX_CAPTURE_BYTES)?)?)),
         _ => return Err(Error::InvalidInput),
     })
 }

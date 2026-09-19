@@ -1,7 +1,7 @@
 //! Configure the original delivery owner's additional final-cut witness lane.
 use super::OversightBroker;
 use crate::Error;
-use crate::action::consequence::delivery::publication_gate::{PublicationInputs, PublicationLimits};
+use crate::action::consequence::delivery::publication_gate::{PublicationInputs, PublicationLimits, PublicationSourceStatus};
 use crate::action::consequence::oversight::publication::{PublicationJudgment, PublicationReport};
 
 impl OversightBroker {
@@ -29,6 +29,22 @@ impl OversightBroker {
     /// Historical diagnostics; these never substitute for dispatch revalidation.
     pub fn publication_validation(&self, attempt: u64) -> Result<Option<PublicationReport>, Error> {
         self.delivery.publication_validation(attempt)
+    }
+
+    pub fn bind_publication_source(&mut self, attempt: u64, source: u64, generation: u64,
+        original: PublicationInputs) -> Result<(), Error>
+    {
+        self.delivery.bind_publication_source(attempt, source, generation, original)
+    }
+
+    pub fn publication_source(&self, attempt: u64) -> Result<Option<PublicationSourceStatus>, Error> {
+        self.delivery.publication_source(attempt)
+    }
+
+    pub fn record_captured_publication_inputs(&mut self, attempt: u64, revision: u64,
+        source: u64, generation: u64, inputs: PublicationInputs) -> Result<u64, Error>
+    {
+        self.delivery.record_captured_publication_inputs(attempt, revision, source, generation, inputs)
     }
 
     /// The coupled durable publisher invokes the SAME check after dispatch and

@@ -5,6 +5,8 @@
 //! (or unavailability) before publication. It makes no wall-clock freshness or
 //! persistence claim. Once enabled, no dispatch entry point can skip the lane.
 
+mod source;
+pub use source::PublicationSourceStatus;
 use super::DeliveryBroker;
 use crate::Error;
 use crate::action::{ActionState, FrozenAction};
@@ -32,7 +34,7 @@ pub struct PublicationLimits {
 
 /// An owned immutable observation, not a report asserting that validation ran.
 /// None in either lane is preserved as missing evidence, never a narrower read.
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct PublicationInputs {
     pub structured: Option<(WitnessSnapshot, ProductFrontiers)>,
     pub opaque: Option<ActualHelperInput>,
@@ -56,6 +58,7 @@ struct Slot {
     // Unavailability must not erase a previously observed monotonic cut.
     floor: Option<(u64, u64, u64)>,
     last: Option<PublicationReport>,
+    source: Option<source::SourceState>,
 }
 
 #[derive(Debug)]
@@ -94,24 +97,14 @@ impl DeliveryBroker {
     /// Replace only the observation, using an exact predecessor. None explicitly
     /// marks all inputs unavailable; it does not remove a retained requirement.
     /// Snapshot/cut/semantic high-water marks survive None and actor resets.
-    /// Failed updates leave both the observation and its revision unchanged.
+    /// Source-bound slots allow only withdrawal here; positive inputs must come
+    /// through record_captured_publication_inputs after that withdrawal.
     pub fn record_publication_inputs(
         &mut self, attempt: u64, expected_revision: u64, inputs: Option<PublicationInputs>,
     ) -> Result<u64, Error> {
         let gate = self.publication.as_mut().ok_or(Error::Incomplete)?;
         let slot = gate.slots.get_mut(&attempt).ok_or(Error::Missing)?;
-        if slot.revision != expected_revision { return Err(Error::Stale); }
-        let revision = slot.revision.checked_add(1).ok_or(Error::Overflow)?;
-        let observed = inputs.as_ref().and_then(|input| input.structured.as_ref()).map(|(snapshot, _)| {
-            (snapshot.revision(), snapshot.control_cut(), snapshot.semantic_epoch())
-        });
-        if let (Some(old), Some(new)) = (slot.floor, observed)
-            && (new.0 < old.0 || new.1 < old.1 || new.2 < old.2)
-        { return Err(Error::Stale); }
-        slot.floor = observed.or(slot.floor);
-        slot.current = inputs;
-        slot.revision = revision;
-        Ok(revision)
+        slot.record_inputs(expected_revision, inputs)
     }
 
     pub fn publication_input_revision(&self, attempt: u64) -> Result<u64, Error> {
@@ -138,7 +131,7 @@ impl DeliveryBroker {
         if let Some(gate) = &mut self.publication {
             gate.slots.insert(proposal.attempt, Slot {
                 action: proposal.action.clone(), judgment: None, revision: 0,
-                current: None, floor: None, last: None,
+                current: None, floor: None, last: None, source: None,
             });
         }
     }
@@ -146,13 +139,16 @@ impl DeliveryBroker {
     pub(in crate::action::consequence) fn check_publication(&mut self, attempt: u64, action: Option<&FrozenAction>) -> Result<(), Error> {
         let Some(gate) = &mut self.publication else { return Ok(()); };
         let slot = gate.slots.get_mut(&attempt).ok_or(Error::Incomplete)?;
-        let report = match &slot.judgment {
-            Some(judgment) => judgment.validate(
+        // A source-bound capture cannot bridge authorization, dispatch and first
+        // publication. Each boundary requires its own actual acquisition cycle.
+        let fresh = slot.consume_capture();
+        let report = match (&slot.judgment, fresh) {
+            (Some(judgment), true) => judgment.validate(
                 action.unwrap_or(&slot.action),
                 slot.current.as_ref().map_or_else(PublicationBasis::default, PublicationInputs::basis),
                 gate.limits.validation,
             ),
-            None => PublicationReport {
+            _ => PublicationReport {
                 outcome: PublicationOutcome::Refused(Error::Incomplete),
                 spent: RefinementBudget::default(),
             },
