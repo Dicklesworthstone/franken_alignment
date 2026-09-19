@@ -5,6 +5,8 @@
 //! judgments to this exact history. The index is advisory: the ordinary budgeted
 //! validator still checks the basis and every negative closing frontier.
 
+pub mod routing;
+
 use super::{Error, ProductFrontiers, Witness, WitnessJudgment, WitnessRefinement, WitnessSnapshot, closed_marker};
 use crate::witness::{MAX_WITNESSES, WitnessRequest};
 use std::collections::{BTreeSet, VecDeque};
