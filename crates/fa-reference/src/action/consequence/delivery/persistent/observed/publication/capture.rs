@@ -2,6 +2,7 @@
 //! A concrete bounded file reader supplies bytes; producer identity and atomic
 //! replacement discipline remain operator assumptions, not authentication.
 mod file;
+pub mod completion;
 pub use file::{FileCaptureError, PublicationInputFile};
 use super::witnesses::{FilePublicationEvidence, FilePublicationInputs, MAX_PUBLICATION_PACKET_BYTES};
 use super::witness_gate::WitnessEvent;

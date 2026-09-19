@@ -164,7 +164,7 @@ impl FileOversight {
         Ok(FileCredentialPermit { issuer: Rc::clone(&self.issuer), policy,
             generation: self.machine.credential_generation, broker, provider })
     }
-    fn check_credential_permit(&self, permit: &FileCredentialPermit) -> Result<(), JournalError> {
+    pub(super) fn check_credential_permit(&self, permit: &FileCredentialPermit) -> Result<(), JournalError> {
         if !Rc::ptr_eq(&self.issuer, &permit.issuer) { return Err(Error::Binding.into()); }
         let policy = self.machine.credential_policy.as_ref().ok_or(Error::WrongState)?;
         if self.machine.credential_revoked { return Err(Error::WrongState.into()); }
