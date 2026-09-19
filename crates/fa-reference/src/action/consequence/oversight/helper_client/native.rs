@@ -3,6 +3,7 @@
 //! an exact decoder profile. Equal epoch numbers are not an authentication claim.
 
 pub mod peer;
+pub mod bootstrap;
 pub mod incremental;
 pub use incremental::{NativeEvaluationProgress, NativeEvaluationWork};
 
@@ -18,7 +19,7 @@ use crate::action::consequence::activation::monitor::decoder::sampled::generatio
     TextDecoder, TextGenerationFailure, TextGenerationReport, TextGenerationRequest,
 };
 use crate::action::consequence::activation::monitor::decoder::sampled::generation::tokenizer::{
-    TokenizationBudget, MAX_DECODE_BYTES, MAX_HEAP_POPS, MAX_INPUT_BYTES, MAX_PAIR_LOOKUPS,
+    ByteBpe, TokenizationBudget, MAX_DECODE_BYTES, MAX_HEAP_POPS, MAX_INPUT_BYTES, MAX_PAIR_LOOKUPS,
 };
 use crate::action::consequence::activation::monitor::decoder::MonitoringStatus;
 use crate::action::consequence::activation::tensor::kv::decoder::{DecoderProfile, MAX_DECODER_PRODUCTS};
@@ -40,6 +41,40 @@ pub struct NativeHelperPolicy {
     pub tokenization: TokenizationBudget,
     pub generation: GenerationBudget,
     pub max_output_bytes: usize,
+}
+
+impl NativeHelperPolicy {
+    // One policy admission for programmatic construction and cold checkpoint
+    // startup. Invalid controls/budgets must not trigger an expensive weight read.
+    fn check_tokenizer(&self, tokenizer: &ByteBpe)
+        -> Result<(), Error>
+    {
+        if !tokenizer.binds(&self.decoder_profile) { return Err(Error::Binding); }
+        if self.input_profile.profile_bytes.len() > MAX_PROFILE_BYTES
+            || self.max_new_tokens > MAX_GENERATION_TOKENS
+            || self.stop_tokens.len() > MAX_STOP_TOKENS
+            || self.tokenization.input_bytes > MAX_INPUT_BYTES
+            || self.tokenization.pair_lookups > MAX_PAIR_LOOKUPS
+            || self.tokenization.heap_pops > MAX_HEAP_POPS
+            || self.generation.scalar_products > MAX_DECODER_PRODUCTS
+            || self.generation.sampling_entries > MAX_SAMPLING_ENTRIES
+            || self.max_output_bytes > MAX_DECODE_BYTES { return Err(Error::Limit); }
+        if self.max_new_tokens == 0 || self.stop_tokens.is_empty() { return Err(Error::InvalidInput); }
+        let mut stops = BTreeSet::new();
+        for token in &self.stop_tokens {
+            // Suppressing an ordinary content token could hide a contradictory
+            // suffix. Only explicitly registered non-text terminals may stop.
+            if !tokenizer.is_control(*token)? { return Err(Error::Binding); }
+            if !stops.insert(*token) { return Err(Error::Duplicate); }
+        }
+        if tokenizer.control_tokens().iter().any(|id| !stops.contains(id)) {
+            return Err(Error::Incomplete);
+        }
+        let output_bound = self.max_new_tokens.checked_mul(tokenizer.max_content_bytes())
+            .ok_or(Error::Limit)?;
+        if output_bound > self.max_output_bytes { return Err(Error::Limit); }
+        Ok(())
+    }
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -103,29 +138,7 @@ impl NativeEvaluator {
         if decoder.profile() != &policy.decoder_profile { return Err(Error::Binding); }
         if decoder.position() != 0 || decoder.sampled_draws() != 0
             || decoder.status() != MonitoringStatus::Ready { return Err(Error::WrongState); }
-        if policy.input_profile.profile_bytes.len() > MAX_PROFILE_BYTES
-            || policy.max_new_tokens > MAX_GENERATION_TOKENS
-            || policy.stop_tokens.len() > MAX_STOP_TOKENS
-            || policy.tokenization.input_bytes > MAX_INPUT_BYTES
-            || policy.tokenization.pair_lookups > MAX_PAIR_LOOKUPS
-            || policy.tokenization.heap_pops > MAX_HEAP_POPS
-            || policy.generation.scalar_products > MAX_DECODER_PRODUCTS
-            || policy.generation.sampling_entries > MAX_SAMPLING_ENTRIES
-            || policy.max_output_bytes > MAX_DECODE_BYTES { return Err(Error::Limit); }
-        if policy.max_new_tokens == 0 || policy.stop_tokens.is_empty() { return Err(Error::InvalidInput); }
-        let mut stops = BTreeSet::new();
-        for token in &policy.stop_tokens {
-            // Suppressing an ordinary content token could hide a contradictory
-            // suffix. Only explicitly registered non-text terminals may stop.
-            if !decoder.tokenizer().is_control(*token)? { return Err(Error::Binding); }
-            if !stops.insert(*token) { return Err(Error::Duplicate); }
-        }
-        if decoder.tokenizer().control_tokens().iter().any(|id| !stops.contains(id)) {
-            return Err(Error::Incomplete);
-        }
-        let output_bound = policy.max_new_tokens.checked_mul(decoder.tokenizer().max_content_bytes())
-            .ok_or(Error::Limit)?;
-        if output_bound > policy.max_output_bytes { return Err(Error::Limit); }
+        policy.check_tokenizer(decoder.tokenizer())?;
         Ok(Self { execution: incremental::Execution::Decoder(Box::new(decoder)), policy, status: NativeEvaluationStatus::AwaitingInput, input: None, report: None })
     }
 
