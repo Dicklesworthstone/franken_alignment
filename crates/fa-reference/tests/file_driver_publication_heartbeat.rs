@@ -222,7 +222,7 @@ fn post_read_clock_unwind_quarantines_the_owner_and_retires_the_drivers_send_pha
 }
 
 #[test]
-fn_original_receipts_and_execution_deadlines_skip_all_new_readers() {
+fn original_receipts_and_execution_deadlines_skip_all_new_readers() {
     for executed in [false, true] {
         let mut live = Live::sent();
         if executed {
@@ -242,7 +242,7 @@ fn_original_receipts_and_execution_deadlines_skip_all_new_readers() {
 }
 
 #[test]
-fn_three_concrete_readers_preserve_the_independent_native_policy_source_lease() {
+fn three_concrete_readers_preserve_the_independent_native_policy_source_lease() {
     let mut rig = Rig::new(); enable(&mut rig);
     let heartbeat_path = rig.root.0.join("heartbeat.bin"); write(&heartbeat_path, &pulse(1, 1).to_bytes().unwrap());
     let heartbeat = PublicationHeartbeatFile::new(&heartbeat_path, FEED).unwrap();

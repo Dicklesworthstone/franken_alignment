@@ -3,6 +3,7 @@
 //! This is an acquisition adapter, not another driver or a permitting fallback.
 pub mod completion;
 pub mod heartbeat;
+pub mod feed;
 use super::{FileEvidenceReport, FileProvider};
 use super::super::{CommitteeContract, DriverEvidence, ElapsedTick, Error,
     FileCredentialPermit, FileDriverEvent, FileHumanPermit, FileOversight,
