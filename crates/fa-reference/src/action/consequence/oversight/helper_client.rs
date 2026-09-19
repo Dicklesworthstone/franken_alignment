@@ -4,6 +4,8 @@
 //! the exact, profile-matched input. Commitment and reveal then share one frozen
 //! result; transport errors cannot ask inference to silently choose another.
 
+pub mod native;
+
 use super::helper_workers::io::WorkerIoError;
 use super::helper_workers::wire::{WorkerInput, REQUEST_HEADER_BYTES, REVEAL_REQUEST,
     decode_request, request_frame_len};
