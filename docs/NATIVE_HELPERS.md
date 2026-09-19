@@ -56,10 +56,12 @@ The salt is never part of the model prompt. The native profile requires at least
 16 salt bytes, checks the supervisor's salt limit before inference, and does not
 claim to generate entropy or upgrade the reference FNV comparison to cryptography.
 
-`step` performs one original bounded I/O operation OR the one bounded synchronous
-model evaluation. `drive` caps state-machine calls and yields on backpressure,
-input readiness, judgment, completion or failure. Counts are not syscall/latency
-bounds. WouldBlock and Interrupted preserve the original offsets and never rerun
+`step` performs one original bounded I/O operation OR at most one native monitored
+token, after admitting the complete request once. `drive` caps state-machine calls
+and yields on EVERY native token, backpressure, input readiness, judgment,
+completion or failure. `NativeClientProgress::Inference` carries counts/status,
+not a partial answer or vote. The client remains NeedsInference until the reviewed
+terminal is accepted. Counts are not syscall/latency bounds. WouldBlock and Interrupted preserve the original offsets and never rerun
 the model. Native judgment means the response is frozen, not that the congress
 has accepted it. No reveal is sent before the original supervising R request.
 `from_unix` selects nonblocking I/O; `AsFd` supports a host-owned readiness loop.
@@ -69,9 +71,14 @@ A failure latch precedes every transport/inference call, including a caught
 unwind after a partial write. Later calls perform no I/O or inference. Cancellation
 is terminal and never sends a substitute vote, erases already sent bytes, refunds
 work or removes the worker from the congress denominator. Drop the owner to close
-its socket; the original supervisor applies absence/deadline rules. Synchronous
-inference is not preempted by this API; its registered numerical budget still
-bounds admitted work, and cancellation is checked between host calls.
+its socket; the original supervisor applies absence/deadline rules. Cancellation
+now destroys the unfinished native owner between tokens and invalidates retained
+live observations without refunding work. Failure cleanup and successful response
+freezing also release native ownership while preserving original reports/counters.
+A caught unwind is still Interrupted; a later failed poll releases the native
+owner but cannot relabel that failure. There is no preemption inside a single
+token or the initial bounded tokenization/admission operation. See
+[Cooperative native helper evaluation](INCREMENTAL_HELPERS.md).
 
 Eleven additional tests cover fragmented I/O, write/flush backpressure, stale and
 truncated frames, failed/held output, salt limits, cancellation, fatal I/O, actual
@@ -81,4 +88,9 @@ through `HelperConnection`, native inference, `HelperRound` and the original
 `OversightBroker`: a completed verdict permits the normal authorization check,
 while a held worker supplies no commitment and remains missing at the deadline.
 The publication endpoint executes nothing in that test; helper judgments are not
-external effects. All 21 new Rust tests remain UNEXECUTED pending RCH verification.
+external effects. These original 21 tests are retained; the congress test also
+covers cancellation during prefill and after a quiet answer before its terminal.
+Twelve incremental evaluator tests and eight cooperative transport tests add
+coverage for interleaving, per-token work, partial-answer withholding, cancellation,
+late input, invalid drive budgets, original Unix framing and caught post-token
+unwind. All 41 Rust tests remain UNEXECUTED pending RCH verification.

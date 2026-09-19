@@ -47,3 +47,28 @@ The required RCH verifier could not start in this environment (`rch: command not
 found`, exit 127). Rust compilation, rustfmt, Clippy and the Rust tests are
 UNEXECUTED. Lexical/whitespace checks do not substitute for the full xtask gate.
 No production qualification, runtime integration or bead closure is claimed.
+
+## Original worker-client integration
+
+`NativeHelperClient::step` now admits once and advances at most one native token
+per inference call. `drive` yields on each `Inference` result even with its maximum
+step allowance, so a short helper can finish while another is still in prefill.
+The caller continues driving clients with `ClientInterest::Inference`; no socket
+readiness is needed to schedule a native token. `evaluations` counts the single
+request attempt, not each token; `evaluation_progress` reports original work.
+
+No transport read/write occurs during an inference step. The original request
+and policy stay fixed, and incoming extra bytes cannot alter a paused prompt.
+The original response slot remains NeedsInference until a reviewed terminal and
+exact complete verdict are accepted. Only then are both original commit/reveal
+frames frozen. Cancellation after a quiet answer but before its terminal sends
+neither a commitment nor an invented abstention. The original supervisor still
+counts the worker as missing and denies authorization when required coverage is
+absent. Already sent commitment bytes are not erased by later cancellation.
+
+Eight additional cooperative transport regressions pair successful native
+completion with per-token cancellation, round-robin progress, partial-word
+withholding, fixed input, invalid drive limits, real Unix disconnection and a
+caught unwind after actual native work. The existing end-to-end congress test
+now covers both prefill and post-answer cancellation as well as its original
+positive and monitor-hold cases. These tests also remain UNEXECUTED.

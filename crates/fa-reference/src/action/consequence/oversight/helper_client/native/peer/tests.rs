@@ -58,6 +58,26 @@ fn counts(shared: &Shared) -> (usize, usize, usize, Vec<u8>) {
     let s = shared.borrow(); (s.reads, s.writes, s.flushes, s.output.clone())
 }
 
+// Drive the now-cooperative evaluator without concealing token-sized work.
+fn judge(worker: &mut NativeHelperClient<Stream>) -> Result<Verdict, NativeClientError> {
+    for _ in 0..2048 {
+        let before = worker.evaluation_progress().work.decoder.tokens;
+        match worker.step()? {
+            NativeClientProgress::Inference(progress) => {
+                assert_eq!(progress.status, NativeEvaluationStatus::Running);
+                assert_eq!(progress.work.decoder.tokens, before + 1);
+                assert!(worker.report().is_none());
+            }
+            NativeClientProgress::Judged(verdict) => {
+                assert_eq!(worker.evaluation_progress().work.decoder.tokens, before + 1);
+                return Ok(verdict);
+            }
+            other => panic!("unexpected protocol progress during native evaluation: {other:?}"),
+        }
+    }
+    panic!("bounded native evaluation did not terminate");
+}
+
 #[test]
 fn fragmented_io_and_transient_flush_preserve_one_native_result_and_reveal_gate() {
     let (mut worker, shared) = make();
@@ -65,7 +85,7 @@ fn fragmented_io_and_transient_flush_preserve_one_native_result_and_reveal_gate(
     assert_eq!(worker.drive(256).unwrap().progress, Ok(NativeClientProgress::Protocol(ClientProgress::Blocked)));
     until(&mut worker, ClientPhase::NeedsInference);
     assert_eq!(worker.evaluations(), 0); assert_eq!(worker.sampled_draws(), 0);
-    assert_eq!(worker.step(), Ok(NativeClientProgress::Judged(Verdict::Allow)));
+    assert_eq!(judge(&mut worker), Ok(Verdict::Allow));
     assert_eq!(worker.evaluations(), 1); assert_eq!(worker.sampled_draws(), 2);
     assert!(shared.borrow().output.is_empty());
     shared.borrow_mut().write_error = Some(io::ErrorKind::WouldBlock);
@@ -110,7 +130,7 @@ fn held_and_invalid_native_output_never_write_even_a_commitment() {
     for (word, alarm) in [(b"allow".as_slice(), 1), (b"allow", 2), (b"allow\n", 0)] {
         let (mut worker, shared) = make_with(frame(b"?", &expected()), evaluator(word, alarm));
         until(&mut worker, ClientPhase::NeedsInference);
-        assert!(matches!(worker.step(), Err(NativeClientError::Inference(_))));
+        assert!(matches!(judge(&mut worker), Err(NativeClientError::Inference(_))));
         assert!(worker.report().is_some()); assert_eq!(worker.evaluations(), 1);
         assert!(shared.borrow().output.is_empty());
         let draws = worker.sampled_draws(); let before = counts(&shared);
@@ -191,7 +211,17 @@ fn bounded_drive_yields_after_input_and_inference_and_invalid_limits_do_no_io() 
     assert_eq!(load.evaluations, 0); assert_eq!(shared.borrow().writes, 0);
     let inferred = worker.drive(256).unwrap();
     assert_eq!(inferred.steps, 1); assert_eq!(inferred.evaluations, 1);
-    assert_eq!(inferred.progress, Ok(NativeClientProgress::Judged(Verdict::Allow)));
+    assert!(matches!(inferred.progress, Ok(NativeClientProgress::Inference(_))));
+    assert_eq!(worker.evaluation_progress().work.decoder.tokens, 1);
+    assert_eq!(worker.sampled_draws(), 0);
+    let partial = worker.drive(256).unwrap();
+    assert_eq!(partial.steps, 1); assert_eq!(partial.evaluations, 0);
+    assert!(matches!(partial.progress, Ok(NativeClientProgress::Inference(_))));
+    assert_eq!(worker.sampled_draws(), 1); assert!(worker.report().is_none());
+    let complete = worker.drive(256).unwrap();
+    assert_eq!(complete.steps, 1); assert_eq!(complete.evaluations, 0);
+    assert_eq!(complete.progress, Ok(NativeClientProgress::Judged(Verdict::Allow)));
+    assert_eq!(worker.sampled_draws(), 2);
     assert_eq!(shared.borrow().writes, 0);
 }
 
@@ -234,7 +264,7 @@ fn unix_peer_answers_the_original_worker_frames_and_withholds_reveal_until_reque
 
 #[cfg(unix)]
 #[test]
-fn native_socket_judgment_reaches_original_congress_and_a_held_worker_stays_missing() {
+fn native_socket_judgment_reaches_original_congress_and_held_or_cancelled_workers_stay_missing() {
     use crate::action::{ActionSpec, ActionState, ElapsedTick, Purpose, ResolvedTarget, Scope, VERSION};
     use crate::action::consequence::congress::{CongressPolicy, MemberPolicy};
     use crate::action::consequence::delivery::PublicationEndpoint;
@@ -253,7 +283,10 @@ fn native_socket_judgment_reaches_original_congress_and_a_held_worker_stays_miss
     use std::collections::BTreeMap;
     use std::os::unix::net::UnixStream;
 
-    for alarm in [0, 1] {
+    // Near-identical native success, monitor hold, prefill cancellation and
+    // cancellation after the quiet answer but BEFORE the terminal review.
+    for mode in 0..4 {
+        let alarm = u8::from(mode == 1);
         let scope = Scope { tenant: 1, principal: 2, run: 3, branch: 4, authority: 5, purpose: Purpose::Effect };
         let target = ResolvedTarget { adapter: 10, object: 11, contract_version: 1, expected_version: 1, generation: 1 };
         let contracts = CommitteeContract::new(BTreeMap::from([("native".to_owned(),
@@ -295,21 +328,40 @@ fn native_socket_judgment_reaches_original_congress_and_a_held_worker_stays_miss
         let (server, worker_socket) = UnixStream::pair().unwrap(); server.set_nonblocking(true).unwrap();
         let mut connection = HelperConnection::new(ports.remove("native").unwrap(), server).unwrap();
         let mut worker = NativeHelperClient::from_unix(worker_socket, evaluator(b"allow", alarm), salt()).unwrap();
-        for _ in 0..256 {
+        // At most one token per original byte, two answer/control steps and
+        // bounded framing overhead. This is a step bound, not elapsed time.
+        for _ in 0..end + 32 {
             connection.step().unwrap();
+            let before = worker.evaluation_progress().work.decoder.tokens;
             let progress = worker.step();
+            let native = worker.evaluation_progress();
+            assert!(native.work.decoder.tokens <= before + 1);
             round.advance(ElapsedTick(1)).unwrap();
+            if matches!(progress, Ok(NativeClientProgress::Inference(_))) {
+                assert!(!round.statuses()["native"].committed);
+                assert!(worker.report().is_none());
+                if (mode == 2 && native.reviewed_prompt_tokens == 1)
+                    || (mode == 3 && native.released_answer_tokens == 1) {
+                    assert!(worker.cancel());
+                    break;
+                }
+            }
             if progress.is_err() || round.statuses()["native"].revealed { break; }
         }
         assert_eq!(worker.evaluations(), 1);
-        if alarm == 0 {
+        if mode == 0 {
             assert!(round.statuses()["native"].revealed);
             let review = round.finish(ElapsedTick(1)).unwrap();
             broker.apply_review(review, Some(&inputs), &snapshot).unwrap();
             assert!(broker.authorize(1, Some(&inputs), &snapshot).is_ok());
             assert_eq!(broker.inspect().ledger.stages[&1], ActionState::Authorized);
         } else {
-            assert!(matches!(worker.failure(), Some(NativeClientError::Inference(_))));
+            if mode == 1 {
+                assert!(matches!(worker.failure(), Some(NativeClientError::Inference(_))));
+            } else {
+                assert_eq!(worker.failure(), Some(NativeClientError::Cancelled));
+                assert_eq!(worker.sampled_draws(), u64::from(mode == 3));
+            }
             assert!(!round.statuses()["native"].committed);
             drop(worker);
             assert!(connection.step().is_err());
@@ -323,3 +375,5 @@ fn native_socket_judgment_reaches_original_congress_and_a_held_worker_stays_miss
         assert_eq!(endpoint.execution_count(), 0);
     }
 }
+
+mod cooperative;

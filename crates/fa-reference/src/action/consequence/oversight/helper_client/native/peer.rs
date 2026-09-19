@@ -4,7 +4,7 @@
 #[cfg(test)]
 mod tests;
 
-use super::{NativeEvaluationError, NativeEvaluationStatus, NativeEvaluator, TextGenerationReport};
+use super::{NativeEvaluationError, NativeEvaluationProgress, NativeEvaluationStatus, NativeEvaluator, TextGenerationReport};
 use super::super::{ClientInterest, ClientPhase, ClientProgress, HelperClient};
 use super::super::super::helper_client_drive::MAX_CLIENT_DRIVE_STEPS;
 use super::super::super::helper_workers::{MAX_WORKER_SALT_BYTES, io::WorkerIoError, wire::WorkerInput};
@@ -33,6 +33,8 @@ impl std::error::Error for NativeClientError {}
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum NativeClientProgress {
     Protocol(ClientProgress),
+    /// At most one native token computed; no partial answer or vote is exposed.
+    Inference(NativeEvaluationProgress),
     /// Native result frozen into BOTH original frames; not yet written/accepted.
     Judged(Verdict),
 }
@@ -40,6 +42,7 @@ pub enum NativeClientProgress {
 pub struct NativeClientDrive {
     /// Original state-machine calls, not syscalls, FLOPs or elapsed-clock ticks.
     pub steps: usize,
+    /// New evaluation attempts, not the number of token steps in this drive.
     pub evaluations: usize,
     pub phase: ClientPhase,
     pub progress: Result<NativeClientProgress, NativeClientError>,
@@ -89,13 +92,23 @@ impl<S: Read + Write> NativeHelperClient<S> {
     pub fn report(&self) -> Option<&TextGenerationReport> { self.evaluator.report() }
     pub fn evaluations(&self) -> usize { self.evaluations }
     pub fn sampled_draws(&self) -> u64 { self.evaluator.sampled_draws() }
+    pub fn evaluation_progress(&self) -> NativeEvaluationProgress { self.evaluator.progress() }
 
-    /// One original I/O step OR the single bounded synchronous native inference.
-    /// Input completion yields NeedsInference without computing in that I/O call.
-    /// The host may schedule/cancel before the next call; there is no executor or
-    /// claim of preemption inside a model operation. Original numeric budgets hold.
+    /// One original I/O step OR at most one native monitored token. Complete
+    /// input decoding yields NeedsInference without computing in that I/O call.
+    /// The first inference step admits the entire request, then advances once.
+    /// Every later token yields Inference until the reviewed terminal result.
+    /// There is no executor or preemption inside a token/encoding operation.
     pub fn step(&mut self) -> Result<NativeClientProgress, NativeClientError> {
-        if let Some(error) = self.failure { return Err(error); }
+        self.step_with(|| {})
+    }
+
+    // Private causal interruption seam; no public transport/inference callback.
+    fn step_with<F: FnOnce()>(&mut self, after_step: F) -> Result<NativeClientProgress, NativeClientError> {
+        if let Some(error) = self.failure {
+            self.release_evaluation();
+            return Err(error);
+        }
         if self.client.phase() == ClientPhase::ReplySent {
             return Ok(NativeClientProgress::Protocol(ClientProgress::ReplySent));
         }
@@ -103,7 +116,9 @@ impl<S: Read + Write> NativeHelperClient<S> {
         // frame nor inference is allowed to restart from an older offset/result.
         self.failure = Some(NativeClientError::Interrupted);
         let result = self.step_once();
+        after_step();
         self.failure = result.as_ref().err().copied();
+        if self.failure.is_some() { self.release_evaluation(); }
         result
     }
     fn step_once(&mut self) -> Result<NativeClientProgress, NativeClientError> {
@@ -114,20 +129,30 @@ impl<S: Read + Write> NativeHelperClient<S> {
         if self.salt.len() > input.salt_limit() {
             return Err(NativeClientError::Protocol(WorkerIoError::Protocol(Error::Limit)));
         }
-        // Evaluator admission and its own latch prevent any second computation.
-        self.evaluations += 1;
-        let verdict = self.evaluator.evaluate(input).map_err(NativeClientError::Inference)?;
+        // Admit once, never once per poll. The original client retains the exact
+        // request while its one-shot response slot remains NeedsInference.
+        if self.evaluator.status() == NativeEvaluationStatus::AwaitingInput {
+            self.evaluations += 1;
+            self.evaluator.begin(input).map_err(NativeClientError::Inference)?;
+        }
+        let progress = self.evaluator.advance(self.evaluator.position()).map_err(NativeClientError::Inference)?;
+        let verdict = match progress.status {
+            NativeEvaluationStatus::Running => return Ok(NativeClientProgress::Inference(progress)),
+            NativeEvaluationStatus::Judged(verdict) => verdict,
+            _ => return Err(NativeClientError::Inference(Error::WrongState.into())),
+        };
         self.client.respond(verdict, &self.salt)
             .map_err(|error| NativeClientError::Protocol(WorkerIoError::Protocol(error)))?;
         // The original client now retains the one reveal frame. Erasing this
         // redundant logical copy is not a zeroization or secure-memory claim.
-        self.salt.clear();
+        self.release_evaluation();
         Ok(NativeClientProgress::Judged(verdict))
     }
 
     /// Bounded caller-driven pumping. Yield on backpressure, input readiness,
-    /// native judgment, reply completion or failure. No hidden wait/retry loop.
-    /// Steps and completed/failed inference attempts remain visible on failure.
+    /// EVERY native token, native judgment, reply completion or failure. Even
+    /// drive(MAX_CLIENT_DRIVE_STEPS) cannot compute a whole prompt without yielding.
+    /// Attempts count once; evaluation_progress retains actual native work.
     pub fn drive(&mut self, max_steps: usize) -> Result<NativeClientDrive, Error> {
         if max_steps == 0 { return Err(Error::InvalidInput); }
         if max_steps > MAX_CLIENT_DRIVE_STEPS { return Err(Error::Limit); }
@@ -137,6 +162,7 @@ impl<S: Read + Write> NativeHelperClient<S> {
                 Some(Ok(NativeClientProgress::Protocol(ClientProgress::ReplySent)))
             } else { None };
         if let Some(progress) = initial {
+            if self.failure.is_some() { self.release_evaluation(); }
             return Ok(NativeClientDrive { steps: 0, evaluations: 0, phase: self.phase(), progress });
         }
         let mut report = NativeClientDrive { steps: 0, evaluations: 0, phase: self.phase(),
@@ -156,10 +182,17 @@ impl<S: Read + Write> NativeHelperClient<S> {
     /// Drop this owner to close its transport; supervisor absence/deadline rules
     /// still decide the round, with the original member in the denominator.
     pub fn cancel(&mut self) -> bool {
+        self.release_evaluation();
         if self.failure.is_some() || self.client.phase() == ClientPhase::ReplySent { return false; }
         self.failure = Some(NativeClientError::Cancelled);
-        self.salt.clear();
         true
+    }
+
+    // Destroy unfinished native ownership; retain its original counters/report.
+    // A caught unwind is still Interrupted, never relabeled as clean cancellation.
+    fn release_evaluation(&mut self) {
+        self.evaluator.cancel();
+        self.salt.clear();
     }
 }
 
