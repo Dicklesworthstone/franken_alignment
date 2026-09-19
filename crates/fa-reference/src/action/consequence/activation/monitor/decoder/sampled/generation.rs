@@ -5,6 +5,7 @@
 
 pub mod incremental;
 pub mod tokenizer;
+pub mod text;
 
 use super::{MonitoredSampledDecoder, MonitoredStep, MonitoringStatus};
 use super::super::DecoderReview;
