@@ -66,3 +66,5 @@ fn bad_weights_missing_monitor_layers_and_sampling_mismatch_never_build_an_owner
 
 #[path = "checkpoint_inspection/storage_tests.rs"]
 mod checkpoint_storage_tests;
+#[path = "generation/tests.rs"]
+mod generation_tests;

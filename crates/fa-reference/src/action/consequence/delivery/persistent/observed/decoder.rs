@@ -4,6 +4,7 @@ mod config;
 mod codec;
 pub mod checkpoint;
 pub mod checkpoint_inspection;
+pub mod generation;
 mod stopping;
 pub use config::FileDecoderConfig;
 pub(super) use codec::{read, write};
@@ -35,6 +36,7 @@ pub(super) enum DecoderEvent {
     Resume { revision: u64, position: u64 },
     Checkpoint(checkpoint::CheckpointRequest, Rc<[u8]>),
     StopPolicy(crate::action::consequence::oversight::decoder_host::HostedStopPolicy),
+    Generate(Rc<generation::FileGenerationCommand>, Rc<[u8]>),
 }
 
 /// The state at the last acknowledged journal cut. A recovered prefix is paused

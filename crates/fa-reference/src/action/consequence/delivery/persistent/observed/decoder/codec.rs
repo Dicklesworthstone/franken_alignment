@@ -30,6 +30,11 @@ pub(in super::super) fn write(w: &mut Writer, event: &DecoderEvent) -> Result<()
             if witness.len() > MAX_WITNESS_BYTES { return Err(Error::Limit); }
             w.u8(4)?; super::checkpoint::write_request(w, request)?; w.blob(witness)?;
         }
+        DecoderEvent::Generate(command, witness) => {
+            if witness.is_empty() { return Err(Error::Incomplete); }
+            if witness.len() > MAX_WITNESS_BYTES { return Err(Error::Limit); }
+            w.u8(6)?; super::generation::write_command(w, command)?; w.blob(witness)?;
+        }
     }
     Ok(())
 }
@@ -54,6 +59,12 @@ pub(in super::super) fn read(r: &mut Reader<'_>) -> Result<DecoderEvent, Error> 
             DecoderEvent::Checkpoint(request, Rc::from(witness))
         }
         5 => DecoderEvent::StopPolicy(HostedStopPolicy::new(r.u64()?, r.u64()?, r.u64()?)?),
+        6 => {
+            let command = super::generation::read_command(r)?;
+            let witness = r.blob(MAX_WITNESS_BYTES)?;
+            if witness.is_empty() { return Err(Error::Incomplete); }
+            DecoderEvent::Generate(Rc::new(command), Rc::from(witness))
+        }
         _ => return Err(Error::InvalidInput),
     })
 }

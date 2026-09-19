@@ -138,9 +138,18 @@ impl OversightBroker {
     /// Further inference invalidates old proposal evidence through the existing
     /// live decoder/actor revision checks. No congress, two-key, policy, delivery
     /// or endpoint check is bypassed and no external publication occurs here.
-    /// No new durable event format or crash-recovery guarantee is introduced.
+    /// This in-memory entry point provides no crash-recovery guarantee.
     pub fn generate_hosted(&mut self, expected_actor_revision: u64, expected_position: u64,
         request: GenerationRequest) -> Result<GenerationReport, Error>
+    {
+        self.prepare_hosted_generation(expected_actor_revision, expected_position, &request)?;
+        generation::drive(self, expected_position, request)
+    }
+
+    // The durable adapter uses the SAME preflight before recording per-token
+    // comparisons through the original driver. No alternate size/cost formula.
+    pub(crate) fn prepare_hosted_generation(&mut self, expected_actor_revision: u64,
+        expected_position: u64, request: &GenerationRequest) -> Result<(), Error>
     {
         if expected_actor_revision != self.actor_revision() { return Err(Error::Stale); }
         // Service already-observed containment before attempting new inference.
@@ -155,8 +164,7 @@ impl OversightBroker {
         let count = u64::try_from(count).map_err(|_| Error::Limit)?;
         expected_actor_revision.checked_add(count).ok_or(Error::Overflow)?;
         let end = expected_position.checked_add(count).ok_or(Error::Overflow)?;
-        host.run.check_host_state_size(end, MAX_CACHE_BYTES, MAX_SAMPLER_BYTES)?;
-        generation::drive(self, expected_position, request)
+        host.run.check_host_state_size(end, MAX_CACHE_BYTES, MAX_SAMPLER_BYTES)
     }
 
     // Only the two single-step methods above can supply this callback. The

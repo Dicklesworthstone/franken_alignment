@@ -12,6 +12,7 @@ use crate::Error;
 use std::rc::Rc;
 
 mod checkpoint;
+mod generation;
 mod stopping;
 use super::super::decoder::checkpoint::CheckpointRequest;
 
@@ -19,6 +20,7 @@ pub(super) struct DecoderState {
     config: Rc<FileDecoderConfig>,
     paused: bool,
     checkpoints: checkpoint::CheckpointHistory,
+    generations: generation::GenerationHistory,
 }
 
 impl Machine {
@@ -49,6 +51,7 @@ impl Machine {
 
     pub(super) fn apply_decoder(&mut self, event: &DecoderEvent) -> Result<Transition, Error> {
         match event {
+            DecoderEvent::Generate(command, expected) => self.apply_decoder_generation(command, expected),
             DecoderEvent::StopPolicy(policy) => {
                 self.enable_decoder_stop_policy(*policy)?;
                 Ok(Transition::Unit)
@@ -62,7 +65,8 @@ impl Machine {
                 self.broker.own_sampled_decoder(run, config.limits)?;
                 if !self.publication_guard { self.enable_publication_guard()?; }
                 self.decoder = Some(DecoderState { config: Rc::clone(config), paused: false,
-                    checkpoints: checkpoint::CheckpointHistory::default() });
+                    checkpoints: checkpoint::CheckpointHistory::default(),
+                    generations: generation::GenerationHistory::default() });
                 Ok(Transition::Unit)
             }
             DecoderEvent::Step(request, expected) => {
@@ -117,6 +121,14 @@ impl Machine {
     }
     fn decoder_witness(&self, result: &Transition) -> Result<Vec<u8>, Error> {
         let mut w = Writer::new(MAX_WITNESS_BYTES); w.raw(b"FADSTEP\x01")?;
+        self.write_decoder_state(&mut w)?;
+        write_decoder_result(&mut w, result)?;
+        self.write_decoder_stop_witness(&mut w)?;
+        Ok(w.finish())
+    }
+    // Shared exact state encoding; the pre-existing single-step byte layout is
+    // unchanged. Generation writes this once after its per-token delta evidence.
+    fn write_decoder_state(&self, w: &mut Writer) -> Result<(), Error> {
         w.blob(&self.broker.hosted_replay_bytes()?)?;
         // Retain the ORIGINAL actor's projection too, including a failed sync.
         // No saved ActorState is installed by replaying this comparison material.
@@ -125,35 +137,37 @@ impl Machine {
         w.count(actor.tokens().len())?;
         for token in actor.tokens() { w.u32(*token)?; }
         w.blob(actor.cache())?; w.blob(actor.sampler())?;
-        match result {
-            Transition::DecoderForced(result) => {
-                w.u8(0)?;
-                match result.as_ref() {
-                    Err(error) => { w.u8(0)?; w.u8(error_tag(*error))?; }
-                    Ok(MonitoredStep::Held(_)) => w.u8(1)?,
-                    Ok(MonitoredStep::Released(step)) => { w.u8(2)?; released(&mut w, step)?; }
-                }
-            }
-            Transition::DecoderSampled(result) => {
-                w.u8(1)?;
-                match result.as_ref() {
-                    Err(error) => { w.u8(0)?; w.u8(error_tag(*error))?; }
-                    Ok(MonitoredSampledStep::Held(_)) => w.u8(1)?,
-                    Ok(MonitoredSampledStep::Released(step)) => {
-                        w.u8(2)?; released(&mut w, step.reviewed())?;
-                        let c = step.choice(); w.u32(c.token)?;
-                        for value in [c.stream, c.draw, c.random_word, c.probability.to_bits()] { w.u64(value)?; }
-                        for value in [c.work.logits_scanned, c.work.exponentials, c.work.retained_candidates, c.work.zero_weights] { w.count(value)?; }
-                    }
-                }
-            }
-            _ => return Err(Error::Binding),
-        }
-        self.write_decoder_stop_witness(&mut w)?;
-        Ok(w.finish())
+        Ok(())
     }
 }
 
+fn write_decoder_result(w: &mut Writer, result: &Transition) -> Result<(), Error> {
+    match result {
+        Transition::DecoderForced(result) => {
+            w.u8(0)?;
+            match result.as_ref() {
+                Err(error) => { w.u8(0)?; w.u8(error_tag(*error))?; }
+                Ok(MonitoredStep::Held(_)) => w.u8(1)?,
+                Ok(MonitoredStep::Released(step)) => { w.u8(2)?; released(w, step)?; }
+            }
+        }
+        Transition::DecoderSampled(result) => {
+            w.u8(1)?;
+            match result.as_ref() {
+                Err(error) => { w.u8(0)?; w.u8(error_tag(*error))?; }
+                Ok(MonitoredSampledStep::Held(_)) => w.u8(1)?,
+                Ok(MonitoredSampledStep::Released(step)) => {
+                    w.u8(2)?; released(w, step.reviewed())?;
+                    let c = step.choice(); w.u32(c.token)?;
+                    for value in [c.stream, c.draw, c.random_word, c.probability.to_bits()] { w.u64(value)?; }
+                    for value in [c.work.logits_scanned, c.work.exponentials, c.work.retained_candidates, c.work.zero_weights] { w.count(value)?; }
+                }
+            }
+        }
+        _ => return Err(Error::Binding),
+    }
+    Ok(())
+}
 fn released(w: &mut Writer, reviewed: &ReviewedStep) -> Result<(), Error> {
     let step = reviewed.step(); w.u32(step.token)?; w.u64(step.position)?;
     w.count(step.layers.len())?;

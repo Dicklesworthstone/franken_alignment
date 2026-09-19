@@ -52,6 +52,14 @@ impl MonitoredSampledDecoder {
     }
 }
 
+/// Reuse the exact original review encoding for each generation step. This is
+/// comparison-only output; there is no decoder for importing a stored verdict.
+pub(crate) fn review_bytes(review: &DecoderReview) -> Result<Vec<u8>, Error> {
+    let mut w = ReplayWriter(Vec::new());
+    w.review(review)?;
+    Ok(w.0)
+}
+
 pub(crate) fn error_tag(error: Error) -> u8 {
     match error {
         Error::InvalidInput => 0, Error::Incomplete => 1, Error::Limit => 2,
