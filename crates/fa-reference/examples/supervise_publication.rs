@@ -10,8 +10,12 @@
 #[path = "supervise_publication/console.rs"] mod console;
 #[cfg(unix)]
 #[path = "supervise_publication/peers.rs"] mod peers;
+#[cfg(unix)]
+#[path = "supervise_publication/publication.rs"] mod publication;
 #[cfg(all(test, unix))]
 #[path = "supervise_publication/tests.rs"] mod tests;
+#[cfg(all(test, unix))]
+#[path = "supervise_publication/publication_tests.rs"] mod publication_tests;
 
 #[cfg(unix)]
 fn main() {
@@ -32,14 +36,15 @@ fn command(mut args: Vec<String>) -> Result<(), String> {
     use fa_reference::action::consequence::oversight::actor_wire::{Command, MAX_FRAME_BYTES, encode_command};
     use std::io::Write;
     use std::path::Path;
-    let usage = "usage: supervise_publication create CONFIG SUBMIT_JSON [--reviewer-profile REVIEWER_JSON]\n       supervise_publication resume CONFIG SUBMIT_JSON\n       supervise_publication review CONFIG REQUEST_ID\n       supervise_publication review-peer REVIEWER_JSON REQUEST_ID\n       supervise_publication proposal CONFIG REQUEST_ID PAYLOAD_FILE TTL_MS\n       supervise_publication inspect CONFIG";
-    let peer_profile = if args.len() == 5 && args[0] == "create" && args[3] == "--reviewer-profile" {
+    let usage = "usage: supervise_publication create CONFIG SUBMIT_JSON [--reviewer-profile REVIEWER_JSON]\n       supervise_publication resume CONFIG SUBMIT_JSON\n       supervise_publication create-checked CONFIG SUBMIT_JSON WITNESS_PROFILE [--reviewer-profile REVIEWER_JSON]\n       supervise_publication resume-checked CONFIG SUBMIT_JSON WITNESS_PROFILE\n       supervise_publication review CONFIG REQUEST_ID\n       supervise_publication review-peer REVIEWER_JSON REQUEST_ID\n       supervise_publication proposal CONFIG REQUEST_ID PAYLOAD_FILE TTL_MS\n       supervise_publication inspect CONFIG";
+    let peer_profile = if (args.len() == 5 && args[0] == "create" && args[3] == "--reviewer-profile")
+        || (args.len() == 6 && args[0] == "create-checked" && args[4] == "--reviewer-profile") {
         let path = args.pop().ok_or(usage)?;
         args.pop();
         Some(PeerProfile::read(Path::new(&path))?)
     } else { None };
     let mode = args.first().map(String::as_str).ok_or(usage)?;
-    let expected = match mode { "create" | "resume" | "review" | "review-peer" => 3, "proposal" => 5, "inspect" => 2, _ => return Err(usage.into()) };
+    let expected = match mode { "create" | "resume" | "review" | "review-peer" => 3, "create-checked" | "resume-checked" => 4, "proposal" => 5, "inspect" => 2, _ => return Err(usage.into()) };
     if args.len() != expected { return Err(usage.into()); }
     // This role-specific path must not parse the private supervisor file merely
     // to display a review. A checked profile failure never retries legacy review.
@@ -53,11 +58,17 @@ fn command(mut args: Vec<String>) -> Result<(), String> {
     // or starting a program. No profile flag silently selects an easier fallback.
     let config = Config::read(Path::new(&args[1]))?;
     match mode {
-        "create" | "resume" => {
+        "create" | "resume" | "create-checked" | "resume-checked" => {
             let document = read_regular(Path::new(&args[2]), MAX_FRAME_BYTES)?;
-            let result = match &peer_profile {
-                Some(profile) => workflow::run_with_peers(config, &document, false, Some(profile), workflow::clock)?,
-                None => workflow::run(config, &document, mode == "resume", workflow::clock)?,
+            let result = if matches!(mode, "create-checked" | "resume-checked") {
+                let publication = publication::PublicationProfile::read(Path::new(&args[3]))?;
+                workflow::run_with_publication(config, &document, mode == "resume-checked",
+                    peer_profile.as_ref(), Some(&publication), workflow::clock)?
+            } else {
+                match &peer_profile {
+                    Some(profile) => workflow::run_with_peers(config, &document, false, Some(profile), workflow::clock)?,
+                    None => workflow::run(config, &document, mode == "resume", workflow::clock)?,
+                }
             };
             let executed = matches!(&result.response.result, Ok(Knowledge::Known { value: ActorOutcome::Executed, .. }));
             let mut stdout = std::io::stdout().lock();

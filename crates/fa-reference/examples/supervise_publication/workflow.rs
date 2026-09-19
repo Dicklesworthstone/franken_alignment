@@ -2,6 +2,7 @@
 //! This is a synchronous executable consumer, not an alternative executor/ledger.
 use super::config::{Config, CLOCK_DOMAIN, debug};
 use super::peers::{Admission, PeerProfile};
+use super::publication::PublicationProfile;
 use fa_reference::action::{ActionState, ElapsedTick};
 use fa_reference::action::consequence::delivery::{StopRequest};
 use fa_reference::action::consequence::delivery::persistent::RecoveryReserve;
@@ -58,8 +59,18 @@ where F: FnMut() -> ElapsedTick {
 /// It never reads the evidence file, launches helpers, obtains a new human key,
 /// recreates an old job, or retries the original effect. A peer profile is for
 /// creation only; query-only recovery never pretends it authenticated a new peer.
-pub fn run_with_peers<F>(mut config: Config, document: &[u8], resume: bool,
-    peers: Option<&PeerProfile>, mut time: F) -> Result<RunResult, String>
+pub fn run_with_peers<F>(config: Config, document: &[u8], resume: bool,
+    peers: Option<&PeerProfile>, time: F) -> Result<RunResult, String>
+where F: FnMut() -> ElapsedTick {
+    run_with_publication(config, document, resume, peers, None, time)
+}
+
+/// Explicit stronger mode over this SAME workflow. The native publication profile
+/// is persisted before any actor proposal and never retried through the legacy
+/// path. Recovery is still receipt-only and reads no original/current evidence.
+pub fn run_with_publication<F>(mut config: Config, document: &[u8], resume: bool,
+    peers: Option<&PeerProfile>, publication: Option<&PublicationProfile>, mut time: F)
+    -> Result<RunResult, String>
 where F: FnMut() -> ElapsedTick {
     if resume && peers.is_some() { return Err("query-only resume does not accept a reviewer peer profile".into()); }
     if let Some(profile) = peers { profile.check_host(&config)?; }
@@ -71,17 +82,26 @@ where F: FnMut() -> ElapsedTick {
     let deadline = Deadline { logical, started: Instant::now(), wall: Duration::from_millis(config.timing.runtime_ms) };
     deadline.check(start)?;
     let (mut host, reviewer) = if resume {
-        let result = FileOversight::open(&config.store, config.profile.clone()).map_err(debug)?;
+        let result = match publication {
+            Some(profile) => FileOversight::open_with_publication_validation(&config.store, config.profile.clone(), profile.limits),
+            None => FileOversight::open(&config.store, config.profile.clone()),
+        }.map_err(debug)?;
         // Opening already performs the original fence. No absent-key fallback
         // is allowed to mint a new request after that recovery.
         result.0.request_status(request).map_err(debug)?;
         result
     } else {
-        let (mut host, reviewer) = FileOversight::create(&config.store, config.profile.clone()).map_err(debug)?;
+        let (mut host, reviewer) = match publication {
+            Some(profile) => FileOversight::create_with_publication_validation(&config.store, config.profile.clone(), profile.limits),
+            None => FileOversight::create(&config.store, config.profile.clone()),
+        }.map_err(debug)?;
         host.enable_recovery_reserve(host.revision(), RecoveryReserve::terminal()).map_err(debug)?;
         host.enable_file_source(host.revision(), config.source_policy).map_err(debug)?;
         (host, reviewer)
     };
+    if host.publication_validation_profile().map_err(debug)? != publication.map(|profile| profile.limits) {
+        return Err("stored witness profile requires its matching explicit checked mode".into());
+    }
     if host.file_source_status().map(|s| s.policy) != Some(config.source_policy)
         || host.journal_capacity().map_err(debug)?.reserve() != Some(RecoveryReserve::terminal())
         || !host.publication_guard_required() || config.profile.delivery.clock_domain != CLOCK_DOMAIN
@@ -102,7 +122,7 @@ where F: FnMut() -> ElapsedTick {
         return Ok(RunResult { response: submitted, failure: Some("original actor gateway refused submission".into()), cleanup_pending: 0 });
     }
     let work = if resume { resume_existing(&mut driver, request, &mut time) }
-        else { execute(&mut driver, &reviewer, &mut config, request, &deadline, peers, &mut time) };
+        else { execute(&mut driver, &reviewer, &mut config, request, &deadline, (peers, publication), &mut time) };
     let failure = match work {
         Ok(()) => None,
         Err(error) => {
@@ -133,12 +153,21 @@ where F: FnMut() -> ElapsedTick {
 }
 
 fn execute<F>(driver: &mut FileSupervisedDriver, reviewer: &FileHumanReviewer, config: &mut Config,
-    request: u64, deadline: &Deadline, peers: Option<&PeerProfile>, time: &mut F) -> Result<(), String>
+    request: u64, deadline: &Deadline, profiles: (Option<&PeerProfile>, Option<&PublicationProfile>),
+    time: &mut F) -> Result<(), String>
 where F: FnMut() -> ElapsedTick {
+    let (peers, publication) = profiles;
     let status = driver.supervisor().host().map_err(debug)?.request_status(request).map_err(debug)?;
     let FileRequestDisposition::Admitted { attempt, stage: ActionState::Reviewing } = status.disposition else {
         return Ok(()); // The ORIGINAL gateway/ledger supplies denied/nonadmitted outcomes.
     };
+    if let Some(profile) = publication {
+        // Freeze the original recipe BEFORE helper launch, not after observing
+        // the answer or by taking the latest producer image as the old basis.
+        let original = profile.original()?;
+        let mut host = driver.supervisor_mut().host_mut().map_err(debug)?;
+        profile.bind(&mut host, attempt, original)?;
+    }
     let now = time(); deadline.check(now)?;
     let window = ReviewWindow { commit_by: plus(now, config.timing.commit_ms)?, reveal_by: plus(now, config.timing.reveal_ms)? };
     if window.reveal_by >= deadline.logical { return Err("insufficient original action lifetime for configured review".into()); }
@@ -166,8 +195,10 @@ where F: FnMut() -> ElapsedTick {
     let Some(approval) = approval else { cancel_unspent(driver, request)?; return Ok(()); };
     loop {
         deadline.check(time())?;
-        let report = driver.step_from_file(&mut config.source, &mut *time, Some(&approval));
-        let event = report.result.map_err(debug)?;
+        let event = match publication {
+            Some(profile) => profile.step(driver, &mut config.source, time, Some(&approval))?,
+            None => driver.step_from_file(&mut config.source, &mut *time, Some(&approval)).result.map_err(debug)?,
+        };
         match event {
             FileDriverEvent::Dispatched { .. } | FileDriverEvent::PublicationChecked { .. } => {}
             FileDriverEvent::PublicationUnknown { error, .. } => return Err(debug(error)),
