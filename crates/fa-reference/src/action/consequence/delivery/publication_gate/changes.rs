@@ -1,6 +1,7 @@
 //! Change-feed invalidation in the ORIGINAL publication owner. Notifications
 //! withdraw current observations; they never replace reviewed requirements or
 //! excuse exact final-cut validation. A known missing tail blocks publication.
+pub mod freshness;
 use super::{DeliveryBroker, PublicationGate, PublicationJudgment, MAX_PUBLICATION_BINDINGS};
 use crate::witness::refinement::index::routing::{InvalidationIndex, RoutingBudget, RoutingLimits, WitnessChange};
 use crate::witness::MAX_WITNESSES;
@@ -57,6 +58,7 @@ pub(super) struct ChangeState {
     status: PublicationChangeStatus,
     index: InvalidationIndex,
     last: Option<Rc<PublicationChangeReport>>,
+    freshness: Option<freshness::FreshnessState>,
 }
 impl ChangeState {
     pub(super) fn complete(&self) -> bool { self.status.complete() }
@@ -79,7 +81,7 @@ impl DeliveryBroker {
         })?;
         gate.changes = Some(ChangeState { policy, status: PublicationChangeStatus {
             source: policy.source, through: policy.after, observed_through: policy.after, unavailable: false,
-        }, index, last: None });
+        }, index, last: None, freshness: None });
         Ok(())
     }
 

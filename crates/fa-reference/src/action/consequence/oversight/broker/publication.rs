@@ -4,6 +4,7 @@ use crate::Error;
 use crate::action::consequence::delivery::publication_gate::{PublicationInputs, PublicationLimits, PublicationSourceStatus};
 use crate::action::consequence::oversight::publication::{PublicationJudgment, PublicationReport};
 use crate::action::consequence::delivery::publication_gate::changes::{PublicationChange, PublicationChangePolicy, PublicationChangeReport, PublicationChangeStatus};
+use crate::action::consequence::delivery::publication_gate::changes::freshness::{PublicationFreshnessPolicy, PublicationFreshnessStatus, PublicationHeartbeat};
 use std::rc::Rc;
 
 impl OversightBroker {
@@ -63,6 +64,19 @@ impl OversightBroker {
     }
     pub fn record_publication_change(&mut self, notice: PublicationChange) -> Result<Rc<PublicationChangeReport>, Error> {
         self.delivery.record_publication_change(notice)
+    }
+
+    pub fn enable_publication_change_freshness(&mut self, policy: PublicationFreshnessPolicy) -> Result<(), Error> {
+        self.delivery.enable_publication_change_freshness(policy)
+    }
+    pub fn publication_change_freshness(&self) -> Result<PublicationFreshnessStatus, Error> {
+        self.delivery.publication_change_freshness()
+    }
+    pub fn publication_changes_unavailable(&mut self, source: u64) -> Result<(), Error> {
+        self.delivery.publication_changes_unavailable(source)
+    }
+    pub fn record_publication_heartbeat(&mut self, heartbeat: PublicationHeartbeat) -> Result<PublicationFreshnessStatus, Error> {
+        self.delivery.record_publication_heartbeat(heartbeat)
     }
 
     /// The coupled durable publisher invokes the SAME check after dispatch and

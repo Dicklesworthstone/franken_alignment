@@ -2,8 +2,8 @@
 //!
 //! This bounded opt-in reference profile consumes host-supplied observations,
 //! not authenticated adapter captures. Hosts must record current observations
-//! (or unavailability) before publication. It makes no wall-clock freshness or
-//! persistence claim. Once enabled, no dispatch entry point can skip the lane.
+//! (or unavailability) before publication. Configured feed freshness uses an
+//! independently named elapsed clock; unconfigured legacy profiles have no lease.
 
 mod source;
 pub mod changes;
@@ -140,14 +140,19 @@ impl DeliveryBroker {
     }
 
     pub(in crate::action::consequence) fn check_publication(&mut self, attempt: u64, action: Option<&FrozenAction>) -> Result<(), Error> {
+        let now = self.inspect().ledger.elapsed;
+        let epoch = self.epoch;
         let Some(gate) = &mut self.publication else { return Ok(()); };
-        let coverage = gate.changes.as_ref().is_none_or(changes::ChangeState::complete);
+        let coverage = gate.changes.as_ref().map_or(Ok(()), |state| state.current(now, epoch));
         let slot = gate.slots.get_mut(&attempt).ok_or(Error::Incomplete)?;
-        // A source-bound capture cannot bridge authorization, dispatch and first
-        // publication. Each boundary requires its own actual acquisition cycle.
-        let fresh = slot.consume_capture() && coverage;
-        let report = match (&slot.judgment, fresh) {
-            (Some(judgment), true) => judgment.validate(
+        // Neither an expired feed lease nor a missing tail permits reuse of a
+        // source capture at a later boundary. Every boundary still consumes it.
+        let fresh = slot.consume_capture();
+        let report = match (coverage, &slot.judgment, fresh) {
+            (Err(error), _, _) => PublicationReport {
+                outcome: PublicationOutcome::Refused(error), spent: RefinementBudget::default(),
+            },
+            (Ok(()), Some(judgment), true) => judgment.validate(
                 action.unwrap_or(&slot.action),
                 slot.current.as_ref().map_or_else(PublicationBasis::default, PublicationInputs::basis),
                 gate.limits.validation,
