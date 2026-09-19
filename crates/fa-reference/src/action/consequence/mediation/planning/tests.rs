@@ -187,7 +187,7 @@ fn oracle_reachable(spec: &GraphSpec, removed: &BTreeSet<u64>) -> BTreeSet<u64> 
 }
 
 #[test]
-fn every_five_vertex_dag_matches_exhaustive_weighted_subsets_and_independent_cut_check() {
+fn every_forward_ordered_five_vertex_dag_matches_exhaustive_weighted_subsets_and_independent_cut_check() {
     let nodes = [(1, NodeKind::Actor), (2, NodeKind::Enforcer), (3, NodeKind::Enforcer),
         (4, NodeKind::Enforcer), (5, NodeKind::Sink)];
     let all_edges: Vec<_> = (1..=5).flat_map(|from| (from + 1..=5).map(move |to| (from, to))).collect();
@@ -221,3 +221,5 @@ fn every_five_vertex_dag_matches_exhaustive_weighted_subsets_and_independent_cut
         }
     }
 }
+
+mod full_graphs;
