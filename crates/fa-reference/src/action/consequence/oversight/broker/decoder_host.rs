@@ -127,11 +127,12 @@ impl OversightBroker {
     /// including consistency checks, actor/cache/sampler synchronization and the
     /// configured automatic-stop policy. There is no raw numerical fast path.
     ///
-    /// The full prospective actor-state size and revision range are preflighted.
-    /// Sampling/product budgets belong to the whole invocation; the monitor's
-    /// cumulative lifetime budget is neither reset nor enlarged. Generation is
-    /// not a transaction: a computed prefix, held token or RNG draw is retained
-    /// when a later step fails. The report explicitly identifies partial work.
+    /// The full prospective actor-state size, revision range and prompt numerical
+    /// budget are preflighted. Sampling/product budgets belong to the whole
+    /// invocation; the monitor's cumulative lifetime budget is neither reset nor
+    /// enlarged. Generation is not a transaction: a computed prefix, held token
+    /// or RNG draw is retained when a later step fails. The report identifies
+    /// partial work; predictable numerical underfunding cannot truncate a prompt.
     ///
     /// Successful output is supervisor-side numerical evidence, NOT a Permit.
     /// Further inference invalidates old proposal evidence through the existing
@@ -205,8 +206,8 @@ impl GenerationOwner for OversightBroker {
         if self.inspect().suspended { return Err(Error::WrongState); }
         Ok(self.decoder_host.as_ref().ok_or(Error::Incomplete)?.run.status())
     }
-    fn generation_estimate(&self) -> Result<DecoderWork, Error> {
-        self.decoder_host.as_ref().ok_or(Error::Incomplete)?.run.estimate(1)
+    fn generation_estimate(&self, tokens: usize) -> Result<DecoderWork, Error> {
+        self.decoder_host.as_ref().ok_or(Error::Incomplete)?.run.estimate(tokens)
     }
     fn generation_forced(&mut self, position: u64, token: u32,
         budget: DecoderBudget) -> Result<MonitoredStep, Error>
@@ -444,5 +445,27 @@ mod generation_tests {
         let before = owner.hosted_decoder().unwrap();
         assert_eq!(owner.generate_hosted(before.actor_revision, before.position, request(&[0], 1)).unwrap_err(), Error::WrongState);
         assert_eq!(owner.hosted_decoder().unwrap(), before);
+    }
+
+    #[test]
+    fn underfunded_complete_prompt_cannot_publish_a_new_partial_actor_basis() {
+        let (mut owner, _) = owner(100.0);
+        let before = owner.hosted_decoder().unwrap();
+        let actor = owner.delivery.controller().actor().clone();
+        let mut input = request(&[0, 1], 1);
+        input.budget.scalar_products = 75;
+        assert_eq!(owner.generate_hosted(before.actor_revision, 0, input).unwrap_err(), Error::Limit);
+        assert_eq!(owner.hosted_decoder().unwrap(), before);
+        assert_eq!(owner.delivery.controller().actor(), &actor);
+        assert!(owner.prepare_decoder().is_err());
+        let mut input = request(&[0, 1], 1);
+        input.budget.scalar_products = 76;
+        let report = owner.generate_hosted(before.actor_revision, 0, input).unwrap();
+        assert_eq!(report.finish(), GenerationFinish::BudgetExhausted);
+        assert_eq!(report.reviewed_prompt_tokens(), 2);
+        assert_eq!(owner.actor_revision(), before.actor_revision + 2);
+        propose(&mut owner, 1);
+        assert_eq!(owner.decoder_evidence(1).unwrap().unwrap().tokens(), &[0, 1]);
+        owner.check_decoder(1).unwrap();
     }
 }
