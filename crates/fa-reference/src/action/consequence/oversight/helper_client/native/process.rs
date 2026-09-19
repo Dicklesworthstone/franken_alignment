@@ -66,6 +66,7 @@ pub struct NativeProcessReport {
     pub steps: usize,
     pub phase: ClientPhase,
     pub evaluations: usize,
+    pub failure: Option<NativeClientError>,
     pub evaluation: NativeEvaluationProgress,
     pub elapsed: Duration,
 }
@@ -126,8 +127,9 @@ where F: FnMut(usize, &NativeHelperClient<UnixStream>) -> Instant {
         }
     };
     let phase = client.phase();
+    let failure = client.failure();
     client.cancel(); // retains first failure, final verdict and native work
-    let report = NativeProcessReport { stop, steps, phase, evaluations: client.evaluations(),
+    let report = NativeProcessReport { stop, steps, phase, failure, evaluations: client.evaluations(),
         evaluation: client.evaluation_progress(), elapsed: budget.started.elapsed() };
     drop(client);
     drop(control);

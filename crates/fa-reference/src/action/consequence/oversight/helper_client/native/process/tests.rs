@@ -3,6 +3,7 @@ use super::super::tests::{evaluator, expected, frame, input};
 use super::super::{NativeEvaluationStatus, NativeEvaluationError};
 use crate::action::consequence::activation::monitor::decoder::sampled::generation::GenerationFinish;
 use crate::round::Verdict;
+use crate::action::consequence::oversight::helper_workers::io::WorkerIoError;
 use std::io::{Read, Write};
 
 fn salt() -> Vec<u8> { b"independently-provisioned-test-salt".to_vec() }
@@ -41,7 +42,9 @@ fn expired_startup_budget_reads_no_request_and_computes_no_token() {
     let report = run_with_clock(child, evaluator(b"allow", 0), salt(), b, |_, _| deadline).unwrap();
     assert_eq!(report.stop, NativeProcessStop::Deadline); assert_eq!(report.steps, 0);
     assert_eq!(report.evaluation.work.decoder.tokens, 0); assert_eq!(report.evaluations, 0);
-    let mut bytes = Vec::new(); let _ = parent.read_to_end(&mut bytes);
+    let mut bytes = Vec::new();
+    let closed = parent.read_to_end(&mut bytes);
+    assert!(closed.is_ok() || matches!(closed, Err(e) if e.kind() == io::ErrorKind::ConnectionReset));
     assert!(bytes.is_empty());
 }
 
@@ -110,8 +113,9 @@ fn real_socket_wait_uses_absolute_timeout_and_does_not_spin_without_a_request() 
     let (_parent, child) = UnixStream::pair().unwrap();
     let report = run_native_worker(child, evaluator(b"allow", 0), salt(),
         NativeProcessBudget::new(20, 4096).unwrap()).unwrap();
-    assert!(matches!(report.stop, NativeProcessStop::Deadline | NativeProcessStop::Client(_)));
-    assert!(report.steps < 4096); assert_eq!(report.evaluations, 0);
+    assert!(matches!(report.stop, NativeProcessStop::Deadline | NativeProcessStop::Client(
+        NativeClientError::Protocol(WorkerIoError::Io(io::ErrorKind::TimedOut)))));
+    assert!(report.steps > 0 && report.steps < 4096); assert_eq!(report.evaluations, 0);
 }
 
 #[test]
@@ -140,4 +144,17 @@ fn invalid_lifetime_and_step_limits_have_no_permissive_defaults() {
         assert_eq!(NativeProcessBudget::new(time, steps).unwrap_err(), error);
     }
     assert!(NativeProcessBudget::new(MAX_PROCESS_MILLIS, MAX_PROCESS_STEPS).is_ok());
+}
+
+#[test]
+fn coincident_deadline_does_not_erase_the_original_inference_failure() {
+    let (_parent, child) = queued(b"?", false);
+    let b = budget(4096); let start = b.started; let deadline = b.deadline;
+    let report = run_with_clock(child, evaluator(b"allow", 1), salt(), b, |_, worker| {
+        if worker.failure().is_some() { deadline } else { start }
+    }).unwrap();
+    assert_eq!(report.stop, NativeProcessStop::Deadline);
+    assert_eq!(report.failure, Some(NativeClientError::Inference(
+        NativeEvaluationError::Incomplete(GenerationFinish::Held))));
+    assert_eq!(report.evaluation.work.sampled_draws, 1);
 }
