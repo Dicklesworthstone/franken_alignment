@@ -3,6 +3,7 @@
 //! replacement discipline remain operator assumptions, not authentication.
 mod file;
 pub mod completion;
+pub mod heartbeat;
 pub use file::{FileCaptureError, PublicationInputFile};
 use super::witnesses::{FilePublicationEvidence, FilePublicationInputs, MAX_PUBLICATION_PACKET_BYTES};
 use super::witness_gate::WitnessEvent;

@@ -1,6 +1,8 @@
 //! Durable FA-062 configuration and observations in the ORIGINAL owner/journal.
 //! No approvals, permits, mutable broker handles or serialized success bits.
 mod changes;
+pub(in super::super) mod freshness;
+use freshness::FreshnessEvent;
 use crate::action::consequence::delivery::publication_gate::changes::{PublicationChange, PublicationChangePolicy};
 use super::witnesses::{FilePublicationEvidence, FilePublicationInputs, MAX_PUBLICATION_PACKET_BYTES};
 use super::capture::{FilePublicationCapture, SourceBinding, MAX_CAPTURE_BYTES};
@@ -24,6 +26,19 @@ pub(in super::super) enum WitnessEvent {
     Captured(u64, u64, Rc<FilePublicationCapture>),
     ChangeProfile(PublicationChangePolicy),
     Change(PublicationChange),
+    Freshness(FreshnessEvent),
+}
+impl WitnessEvent {
+    pub(in super::super) fn bootstrap(&self) -> bool {
+        matches!(self, Self::Enable(_) | Self::ChangeProfile(_) | Self::Freshness(FreshnessEvent::Enable(_)))
+    }
+    /// Replay/canonical encoding binds the new profile to the ORIGINAL journal
+    /// clock, rather than trusting only the live constructor's validation.
+    pub(in super::super) fn check_clock_domain(&self, clock_domain: u64) -> Result<(), Error> {
+        if let Self::Freshness(FreshnessEvent::Enable(policy)) = self
+            && policy.clock_domain != clock_domain { return Err(Error::Binding); }
+        Ok(())
+    }
 }
 
 impl FileOversight {
@@ -147,6 +162,7 @@ pub(in super::super) fn write(w: &mut Writer, event: &WitnessEvent) -> Result<()
         }
         WitnessEvent::ChangeProfile(policy) => { w.u8(5)?; changes::write_policy(w, *policy)?; }
         WitnessEvent::Change(notice) => { w.u8(6)?; changes::write_change(w, *notice)?; }
+        WitnessEvent::Freshness(event) => { w.u8(7)?; freshness::write(w, *event)?; }
     }
     Ok(())
 }
@@ -168,6 +184,7 @@ pub(in super::super) fn read(r: &mut Reader<'_>) -> Result<WitnessEvent, Error> 
             Rc::new(FilePublicationCapture::from_bytes(r.blob(MAX_CAPTURE_BYTES)?)?)),
         5 => WitnessEvent::ChangeProfile(changes::read_policy(r)?),
         6 => WitnessEvent::Change(changes::read_change(r)?),
+        7 => WitnessEvent::Freshness(freshness::read(r)?),
         _ => return Err(Error::InvalidInput),
     })
 }

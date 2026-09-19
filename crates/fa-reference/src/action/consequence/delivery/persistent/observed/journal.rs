@@ -95,6 +95,7 @@ fn encode_iter<'a>(p: &FileOversightProfile, path: &Path, count: usize, events: 
     w.raw(DOMAIN)?; w.bootstrap(&p.delivery, path)?; w.blob(&config(p)?)?; w.count(count)?;
     let mut admission = recovery_capacity::Admission::new(p.delivery.limits);
     for (index, event) in events.enumerate() {
+        if let Event::PublicationWitness(event) = event { event.check_clock_domain(p.delivery.clock_domain)?; }
         let mut record = Writer::new(p.delivery.limits.bytes);
         write_event(&mut record, event)?;
         w.blob(&record.finish())?;
@@ -104,7 +105,7 @@ fn encode_iter<'a>(p: &FileOversightProfile, path: &Path, count: usize, events: 
             Event::Identity(IdentityEvent::Enable(..)) => recovery_capacity::Class::Bootstrap,
             Event::Credibility(CredibilityEvent::Enable(_)) => recovery_capacity::Class::Bootstrap,
             Event::Consistency(ConsistencyEvent::Enable(_)) | Event::Mediation(MediationEvent::Enable(_)) => recovery_capacity::Class::Bootstrap,
-            Event::PublicationWitness(WitnessEvent::Enable(_) | WitnessEvent::ChangeProfile(_)) => recovery_capacity::Class::Bootstrap,
+            Event::PublicationWitness(event) if event.bootstrap() => recovery_capacity::Class::Bootstrap,
             Event::PublicationGuard | Event::CredentialGuard(_) | Event::Campaign(CampaignEvent::Enable(..)) | Event::StreamBootstrap(_) => recovery_capacity::Class::Bootstrap,
             _ => recovery_capacity::Class::Work,
         };

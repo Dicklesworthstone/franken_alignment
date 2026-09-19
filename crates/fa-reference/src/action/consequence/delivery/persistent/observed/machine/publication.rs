@@ -3,6 +3,7 @@
 use super::{Machine, Transition};
 use super::super::publication::{CheckedPublication, PublicationBasis};
 use super::super::publication::witness_gate::WitnessEvent;
+use super::super::publication::witness_gate::freshness::FreshnessEvent;
 use super::super::views::Views;
 use crate::action::ElapsedTick;
 use crate::action::consequence::delivery::EndpointStatus;
@@ -21,6 +22,19 @@ impl Machine {
 
     pub(super) fn apply_publication_witness(&mut self, event: &WitnessEvent) -> Result<Transition, Error> {
         match event {
+            WitnessEvent::Freshness(event) => {
+                match event {
+                    FreshnessEvent::Enable(policy) => self.broker.enable_publication_change_freshness(*policy)?,
+                    FreshnessEvent::Unavailable(source) => self.broker.publication_changes_unavailable(*source)?,
+                    FreshnessEvent::Observed(heartbeat, now) => {
+                        self.observe(*now)?;
+                        // Restrictive observations remain in the original replay;
+                        // a future head never fills its missing change records.
+                        self.broker.record_publication_heartbeat(*heartbeat)?;
+                    }
+                }
+                Ok(Transition::Unit)
+            }
             WitnessEvent::ChangeProfile(policy) => {
                 self.broker.enable_publication_changes(*policy)?;
                 Ok(Transition::Unit)
