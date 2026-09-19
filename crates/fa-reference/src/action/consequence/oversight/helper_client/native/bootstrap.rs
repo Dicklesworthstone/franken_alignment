@@ -2,6 +2,8 @@
 //! are parsed as data, never downloaded, executed or inferred from a model name.
 //! Model, tokenizer and evaluation authenticity remain independent host duties.
 
+pub mod files;
+
 use super::{NativeEvaluator, NativeHelperPolicy, TextDecoder};
 use crate::action::consequence::activation::monitor::decoder::config::MAX_MONITOR_CONFIG_BYTES;
 use crate::action::consequence::activation::monitor::decoder::sampled::MonitoredSampledDecoder;

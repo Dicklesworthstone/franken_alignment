@@ -55,3 +55,46 @@ The required RCH xtask invocation cannot start in the editing environment
 (`rch: command not found`, exit 127). Rust compilation, rustfmt, Clippy and all
 new tests are UNEXECUTED. Lexical and whitespace checks are not Rust execution.
 No roadmap packet or bead is closed by these source changes.
+
+## Explicit local files and an existing worker socket
+
+`NativeEvaluator::from_llama_files` accepts `NativeFileBootstrap`: an independent
+policy and numerical stream ID, five explicit `NativeHelperFiles` paths, and
+`NativeHelperFileLimits`. The files are the original Llama config, FA-BBPE bytes,
+monitor JSON, sampler JSON and one SafeTensors file. It uses the same bootstrap
+preflight and original model loader, then returns the original evaluator/receipt.
+No filename is guessed from a model label or another asset. Use the explicit
+reader-map API for sharded weights; the file API does not follow an index's paths.
+
+The four auxiliary files share a caller-retained `NativeAssetReadBudget`, while
+weights use the original caller-retained `WeightReadBudget`. Both preserve read
+calls and actual bytes across failures and repeated startup attempts. Interrupted
+reads count toward the call ceiling. EOF requires remaining observation capacity;
+one extra byte is examined rather than treating a configured limit as real EOF.
+Read caps include all format data, and limits are checked before allocation/open
+where possible. Metadata and open operations are not counted as read syscalls.
+Failures report the asset and stage rather than returning a partly loaded owner.
+
+Final-component symlinks and nonregular files refuse, and the opened handle is
+checked again. These are ordinary host-file checks, **not** race-free path
+confinement or an atomic multi-file snapshot. The operator must protect parent
+components and keep all files stable. Cross-file authentication and model/tokenizer
+semantic compatibility are still independent obligations. No per-read call limit
+preempts a blocking OS operation or provides a wall-clock startup bound.
+
+On Unix, `NativeHelperClient::from_llama_files` consumes an already provisioned
+connected socket plus an independently supplied salt. Salt-length admission
+precedes all disk work. No socket bytes are read or written during startup; only
+a fully constructed native evaluator enters the existing nonblocking client.
+Failure drops the socket without a vote. Success uses the unchanged cooperative
+step/drive interface: exact full-input inference, one-token yields, strict terminal
+verdicts and the original commitment/reveal framing. There is no new listener,
+network dial, executor, shared authority or external side-effect capability.
+
+Twelve additional authored tests cover actual regular files and exact limits,
+asset-reader budget conservation, missing/mismatched inputs, directories/symlinks,
+malformed monitors, trailing weights, Interrupted/invalid reads, growing input,
+and real provisioned Unix sockets. A checkpoint-loaded native helper answers the
+original commit/reveal frames; a near-identical monitored hold emits no commitment.
+Invalid salts perform no disk reads, and failed startup closes without a response.
+All 24 new Rust tests remain UNEXECUTED pending the required RCH verifier.
