@@ -83,7 +83,7 @@ where F: FnMut() -> ElapsedTick {
     deadline.check(start)?;
     let (mut host, reviewer) = if resume {
         let result = match publication {
-            Some(profile) => FileOversight::open_with_publication_validation(&config.store, config.profile.clone(), profile.limits),
+            Some(profile) => profile.open(&config.store, config.profile.clone()),
             None => FileOversight::open(&config.store, config.profile.clone()),
         }.map_err(debug)?;
         // Opening already performs the original fence. No absent-key fallback
@@ -92,7 +92,7 @@ where F: FnMut() -> ElapsedTick {
         result
     } else {
         let (mut host, reviewer) = match publication {
-            Some(profile) => FileOversight::create_with_publication_validation(&config.store, config.profile.clone(), profile.limits),
+            Some(profile) => profile.create(&config.store, config.profile.clone()),
             None => FileOversight::create(&config.store, config.profile.clone()),
         }.map_err(debug)?;
         host.enable_recovery_reserve(host.revision(), RecoveryReserve::terminal()).map_err(debug)?;

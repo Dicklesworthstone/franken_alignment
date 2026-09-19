@@ -244,3 +244,6 @@ fn checked_resume_is_receipt_only_and_wrong_limits_refuse_before_recovery_fence(
     assert!(workflow::run_with_publication(c, &document, true, None, Some(&wrong), || ElapsedTick(1002)).is_err());
     let c = configured(&root); assert_eq!(FileOversight::read_publication(&c.store, &c.profile).unwrap(), before);
 }
+
+#[path = "publication_feed_tests.rs"]
+mod feed_tests;

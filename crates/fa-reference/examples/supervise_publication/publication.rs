@@ -1,7 +1,11 @@
 //! Explicit original witness requirements for the runnable supervisor. This is
 //! orchestration of the native publication gate, not another validation engine.
+mod feed;
+use feed::FeedProfile;
 use super::config::{debug, read_regular};
-use fa_reference::action::consequence::delivery::persistent::observed::{FileHumanPermit, FileOversight};
+use fa_reference::action::consequence::delivery::persistent::observed::{FileHumanPermit, FileHumanReviewer, FileOversight, FileOversightProfile};
+use fa_reference::action::consequence::delivery::persistent::JournalError;
+use fa_reference::Error;
 use fa_reference::action::consequence::delivery::persistent::observed::driver::{FileDriverEvent, FileSupervisedDriver};
 use fa_reference::action::consequence::delivery::persistent::observed::publication::capture::{FilePublicationCapture, PublicationInputFile};
 use fa_reference::action::consequence::delivery::publication_gate::{PublicationLimits, MAX_PUBLICATION_BINDINGS};
@@ -24,6 +28,7 @@ pub struct PublicationProfile {
     original: PublicationInputFile,
     current: PublicationInputFile,
     requests: Vec<WitnessRequest>,
+    feed: Option<FeedProfile>,
 }
 impl PublicationProfile {
     pub fn read(path: &Path) -> Result<Self, String> {
@@ -33,9 +38,11 @@ impl PublicationProfile {
         let json = strict_json::parse(bytes, Limits { max_bytes: PROFILE_BYTES, max_depth: 5,
             max_items: 2048, max_string_bytes: 4096 }).map_err(debug)?;
         let mut root = Fields::new(json)?;
-        if root.text("schema")? != "fa.supervised-witnesses/1" {
-            return Err("unsupported supervised witness profile".into());
-        }
+        let feed = match root.text("schema")?.as_str() {
+            "fa.supervised-witnesses/1" => None,
+            "fa.supervised-witnesses/2" => Some(FeedProfile::decode(root.take("feed")?)?),
+            _ => return Err("unsupported supervised witness profile".into()),
+        };
         let source = root.number("source")?;
         let original = path(root.text("original")?)?;
         let current = path(root.text("current")?)?;
@@ -84,7 +91,39 @@ impl PublicationProfile {
         }
         root.end()?;
         Ok(Self { limits, original: PublicationInputFile::new(original, source).map_err(debug)?,
-            current: PublicationInputFile::new(current, source).map_err(debug)?, requests })
+            current: PublicationInputFile::new(current, source).map_err(debug)?, requests, feed })
+    }
+
+    /// Pin every selected native gate in the first canonical image. Source-only
+    /// profiles retain their original meaning; version 2 never omits its feed.
+    pub fn create(&self, directory: &Path, profile: FileOversightProfile)
+        -> Result<(FileOversight, FileHumanReviewer), JournalError>
+    {
+        match &self.feed {
+            Some(feed) => FileOversight::create_with_publication_change_freshness(directory,
+                profile, self.limits, feed.changes, feed.freshness),
+            None => FileOversight::create_with_publication_validation(directory, profile, self.limits),
+        }
+    }
+
+    /// All version-2 native policy fields are checked BEFORE the recovery fence.
+    /// No feed/capture file is read. The source-only opener also refuses a stored
+    /// stronger profile (after its native fence), never disabling the stored gate.
+    pub fn open(&self, directory: &Path, profile: FileOversightProfile)
+        -> Result<(FileOversight, FileHumanReviewer), JournalError>
+    {
+        match &self.feed {
+            Some(feed) => FileOversight::open_with_publication_change_freshness(directory,
+                profile, self.limits, feed.changes, feed.freshness),
+            None => {
+                let result = FileOversight::open_with_publication_validation(directory, profile, self.limits)?;
+                match result.0.publication_change_status() {
+                    Err(JournalError::Contract(Error::Incomplete)) => Ok(result),
+                    Ok(_) => Err(Error::Binding.into()),
+                    Err(error) => Err(error),
+                }
+            }
+        }
     }
 
     /// Read once BEFORE launching any helper. Hold the exact original image in
@@ -113,8 +152,12 @@ impl PublicationProfile {
     pub fn step<F>(&self, driver: &mut FileSupervisedDriver, evidence: &mut FileEvidenceSource,
         time: &mut F, human: Option<&FileHumanPermit>) -> Result<FileDriverEvent, String>
     where F: FnMut() -> ElapsedTick {
-        driver.step_from_files_with_publication_source(evidence, &self.current, time, human, None)
-            .evidence.result.map_err(debug)
+        match &self.feed {
+            Some(feed) => driver.step_from_files_with_publication_feed(evidence, &self.current,
+                &feed.reader, time, human, None).publication.evidence.result.map_err(debug),
+            None => driver.step_from_files_with_publication_source(evidence, &self.current, time, human, None)
+                .evidence.result.map_err(debug),
+        }
     }
 }
 

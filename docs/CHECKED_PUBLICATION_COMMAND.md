@@ -91,3 +91,87 @@ missing current sources, and receipt-only recovery with mismatched-profile refus
 Synthetic helper verdicts are explicitly fixtures. The RCH gate is unavailable in
 the editing environment; Rust compilation, formatting, Clippy and these tests are
 UNEXECUTED. Lexical, fixture-JSON and whitespace checks are not execution evidence.
+
+## Required live change feed (version 2)
+
+The same checked commands also accept `fa.supervised-witnesses/2`. This is an
+explicit stronger profile, not an optional missing-file fallback. It requires
+all version-1 fields PLUS this `feed` object:
+
+```json
+{
+  "schema": "fa.supervised-witnesses/2",
+  "source": 91,
+  "original": "/private/review/original-capture.bin",
+  "current": "/private/review/current-capture.bin",
+  "limits": {"bindings": 8, "steps": 10000, "value_bytes": 1048576},
+  "requests": [
+    {"kind": "exact_value", "key": 0, "role": "subject"},
+    {"kind": "absent_key", "key": 1},
+    {"kind": "empty_range", "start": 6, "end": 9},
+    {"kind": "range_members", "start": 2, "end": 6}
+  ],
+  "feed": {
+    "source": 41,
+    "path": "/private/review/feed.bin",
+    "after": 0,
+    "clock": "unix_milliseconds",
+    "max_age_ms": 20,
+    "lookup": {"steps": 10000, "bytes": 1048576}
+  }
+}
+```
+
+The feed source is independent of the witness producer. `after` is the operator's
+original complete sequence cut; it is never inferred from the first file's window.
+The clock is the supervisor's existing Unix-millisecond domain. Positive maximum
+age, exact sequence coverage, producer generation and source identity retain the
+original native semantics. Read time cannot renew a producer's old timestamp.
+A zero lookup allowance remains conservative, never an instruction to ignore
+notifications. Version 2 refuses an absent, null or malformed feed configuration;
+version 1 refuses an unexpected feed field instead of silently ignoring it.
+
+Creation uses `create_with_publication_change_freshness`, so validation, change
+source/cut/lookup and clock/freshness policies occupy the FIRST canonical image.
+No crash between individual enable calls can leave a successfully initialized
+version-2 owner with one of those required gates missing. Native policy-source
+and recovery-reserve bootstrap still precede actor admission as before.
+
+At each authorization, dispatch and first-publication boundary the workflow now
+uses `step_from_files_with_publication_feed`: catch up the concrete immutable feed
+window FIRST, then obtain the current native policy/committee and witness inputs.
+This order retains the current witness revision after indexed invalidation. It
+does not create an atomic snapshot across producers or combine the driver phases
+into one effect transaction. No source is polled to manufacture permission; the
+original gate rechecks the complete requirements after all acquisitions.
+
+The file is the existing `PublicationFeedBatch` binary format, containing its
+contiguous retained changes and producer heartbeat. Gaps do not disappear merely
+because a later heartbeat is current. A missing or expired feed cannot be replaced
+by a valid witness image, a live policy source, two approval keys or an unchanged
+committee answer. Conversely, a fresh feed cannot replace a missing native policy
+source. Both producer obligations remain independently enforced.
+
+Changes after dispatch retain native outcome precedence. An actual phantom in an
+originally absent key/range prevents execution; unrelated changes still permit
+exact revalidation. An ordinary lost final feed read can seal via the original
+endpoint and settle its nonexecution receipt. Conflicting acknowledged history
+quarantines the owner; no receipt is invented and the unresolved charge remains.
+The command's original stop/drain path cannot refund an unknown effect locally.
+
+Version-2 resume pins ALL three native policy tuples before replay cleanup or the
+recovery fence. It reads no producer files, obtains no new keys, and launches no
+helpers. Wrong source, initial cut, lookup budget, freshness or validation limits
+returns no owner and makes no recovery write. Selecting the weaker version-1
+profile against a stored feed-required owner also refuses: that detection follows
+its native fence, so it may advance recovery, but never returns a downgraded owner.
+Path strings are transport choices, not a new authenticated source identity.
+
+Seven additional full-workflow tests cover initial profile atomicity, successful
+catch-up, missing/gapped/expired feeds with a neighboring live control, post-send
+phantoms versus unrelated changes, feed loss versus conflicting history, native
+policy-source loss and producer-free recovery with exact profile pinning. The
+fourteen tests across both slices are authored but UNEXECUTED pending RCH. They
+use real native owners, files, launched helper fixtures and reviewer sockets; the
+fixtures do not establish trained-model accuracy, source authentication, complete
+real-world dependency capture, filesystem isolation or production qualification.
