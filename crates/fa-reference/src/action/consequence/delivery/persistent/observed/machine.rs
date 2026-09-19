@@ -195,18 +195,21 @@ impl Machine {
         // stopped. Assessments cannot resume it or restore any effect key.
         if !matches!(event, Event::Credibility(super::credibility::CredibilityEvent::Assess(..))
             | Event::Consistency(super::consistency::ConsistencyEvent::Unavailable
-                | super::consistency::ConsistencyEvent::Expire(..)) | Event::Mediation(_)) {
+                | super::consistency::ConsistencyEvent::Expire(..)) | Event::Mediation(_)
+            | Event::PublicationWitness(_)) {
             self.check_decoder_admission(event)?;
         }
         let without_current_time = matches!(event,
             Event::Core(BaseEvent::Time(_) | BaseEvent::Cancel(_) | BaseEvent::Fence | BaseEvent::Stop(_) | BaseEvent::StopProgress(_) | BaseEvent::ReserveRecovery(_) | BaseEvent::ReplacePolicy(_))
             | Event::InputsUnavailable(..) | Event::Human(_, HumanDecision::Reject | HumanDecision::Revoke) | Event::RevokeHumans
             | Event::PublicationGuard | Event::PublishChecked(..) | Event::PublishCredentialed(..)
+            | Event::PublicationWitness(_)
             | Event::CredentialGuard(_) | Event::CredentialRotate(_) | Event::CredentialRevoke(_) | Event::Campaign(_)
             | Event::StreamBootstrap(_) | Event::Identity(_) | Event::Decoder(_) | Event::Credibility(_) | Event::Consistency(_) | Event::Mediation(_)
             | Event::Source(_) | Event::ActorState(_) | Event::ActorCheckpoint(..) | Event::ActorReset(..));
         if !without_current_time && !self.clock_ready { return Err(Error::Incomplete); }
         match event {
+            Event::PublicationWitness(event) => return self.apply_publication_witness(event),
             Event::Mediation(event) => return self.apply_mediation(event),
             Event::Consistency(event) => return self.apply_consistency(event),
             Event::Credibility(event) => return self.apply_credibility(event),

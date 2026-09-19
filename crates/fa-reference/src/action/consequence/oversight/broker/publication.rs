@@ -30,4 +30,11 @@ impl OversightBroker {
     pub fn publication_validation(&self, attempt: u64) -> Result<Option<PublicationReport>, Error> {
         self.delivery.publication_validation(attempt)
     }
+
+    /// The coupled durable publisher invokes the SAME check after dispatch and
+    /// immediately before its first external publication. This is not a permit.
+    #[cfg(unix)]
+    pub(crate) fn revalidate_publication_witnesses(&mut self, attempt: u64) -> Result<(), Error> {
+        self.delivery.check_publication(attempt, None)
+    }
 }

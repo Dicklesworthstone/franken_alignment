@@ -143,7 +143,7 @@ impl DeliveryBroker {
         }
     }
 
-    pub(super) fn check_publication(&mut self, attempt: u64, action: Option<&FrozenAction>) -> Result<(), Error> {
+    pub(in crate::action::consequence) fn check_publication(&mut self, attempt: u64, action: Option<&FrozenAction>) -> Result<(), Error> {
         let Some(gate) = &mut self.publication else { return Ok(()); };
         let slot = gate.slots.get_mut(&attempt).ok_or(Error::Incomplete)?;
         let report = match &slot.judgment {

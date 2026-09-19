@@ -2,6 +2,7 @@
 //! This profile is enabled before any proposal and retained in the original
 //! journal. Historical outcomes and original reconciliation always take priority.
 pub mod witnesses;
+pub(super) mod witness_gate;
 use super::{Event, FileOversight, JournalError, Transition};
 use crate::action::ElapsedTick;
 use crate::action::consequence::delivery::EndpointOutcome;

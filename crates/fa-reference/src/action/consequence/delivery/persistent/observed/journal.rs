@@ -9,6 +9,7 @@ use super::decoder::DecoderEvent;
 use super::credibility::CredibilityEvent;
 use super::consistency::ConsistencyEvent;
 use super::mediation::MediationEvent;
+use super::publication::witness_gate::{self, WitnessEvent};
 use super::super::{codec, recovery_capacity, Event as BaseEvent};
 use super::super::codec::shared::{Reader, Writer};
 use super::views::{self, Views};
@@ -59,6 +60,7 @@ pub(super) enum Event {
     Credibility(CredibilityEvent),
     Consistency(ConsistencyEvent),
     Mediation(MediationEvent),
+    PublicationWitness(WitnessEvent),
 }
 
 fn core_allowed(event: &BaseEvent) -> bool {
@@ -102,6 +104,7 @@ fn encode_iter<'a>(p: &FileOversightProfile, path: &Path, count: usize, events: 
             Event::Identity(IdentityEvent::Enable(..)) => recovery_capacity::Class::Bootstrap,
             Event::Credibility(CredibilityEvent::Enable(_)) => recovery_capacity::Class::Bootstrap,
             Event::Consistency(ConsistencyEvent::Enable(_)) | Event::Mediation(MediationEvent::Enable(_)) => recovery_capacity::Class::Bootstrap,
+            Event::PublicationWitness(WitnessEvent::Enable(_)) => recovery_capacity::Class::Bootstrap,
             Event::PublicationGuard | Event::CredentialGuard(_) | Event::Campaign(CampaignEvent::Enable(..)) | Event::StreamBootstrap(_) => recovery_capacity::Class::Bootstrap,
             _ => recovery_capacity::Class::Work,
         };
@@ -162,6 +165,7 @@ fn write_event(w: &mut Writer, event: &Event) -> Result<(), Error> {
         Event::Credibility(event) => { w.u8(27)?; super::credibility::write(w, event)?; }
         Event::Consistency(event) => { w.u8(28)?; super::consistency::write(w, event)?; }
         Event::Mediation(event) => { w.u8(29)?; super::mediation::write(w, event)?; }
+        Event::PublicationWitness(event) => { w.u8(30)?; witness_gate::write(w, event)?; }
     }
     Ok(())
 }
@@ -198,6 +202,7 @@ fn read_event(r: &mut Reader<'_>) -> Result<Event, Error> {
         27 => Event::Credibility(super::credibility::read(r)?),
         28 => Event::Consistency(super::consistency::read(r)?),
         29 => Event::Mediation(super::mediation::read(r)?),
+        30 => Event::PublicationWitness(witness_gate::read(r)?),
         _ => return Err(Error::InvalidInput),
     })
 }
