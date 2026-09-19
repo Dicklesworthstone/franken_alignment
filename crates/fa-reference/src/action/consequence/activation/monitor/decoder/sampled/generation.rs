@@ -4,6 +4,7 @@
 //! numerical failures still retain actual work and never roll back a sampled draw.
 
 pub mod incremental;
+pub mod tokenizer;
 
 use super::{MonitoredSampledDecoder, MonitoredStep, MonitoringStatus};
 use super::super::DecoderReview;
