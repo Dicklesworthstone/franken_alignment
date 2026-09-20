@@ -12,6 +12,8 @@
 #[path = "supervise_publication/peers.rs"] mod peers;
 #[cfg(unix)]
 #[path = "supervise_publication/publication.rs"] mod publication;
+#[cfg(unix)]
+#[path = "supervise_publication/proposal.rs"] mod proposal;
 #[cfg(all(test, unix))]
 #[path = "supervise_publication/tests.rs"] mod tests;
 #[cfg(all(test, unix))]
@@ -30,21 +32,27 @@ fn main() { eprintln!("supervise_publication requires the Unix reference profile
 fn command(mut args: Vec<String>) -> Result<(), String> {
     use config::{Config, debug, read_regular};
     use peers::PeerProfile;
-    use fa_reference::action::{ElapsedTick, MAX_PAYLOAD_BYTES};
+    use fa_reference::action::MAX_PAYLOAD_BYTES;
     use fa_reference::action::consequence::delivery::persistent::observed::FileOversight;
-    use fa_reference::action::consequence::oversight::actor::{ActorProposal, ActorOutcome, Knowledge};
-    use fa_reference::action::consequence::oversight::actor_wire::{Command, MAX_FRAME_BYTES, encode_command};
+    use fa_reference::action::consequence::oversight::actor::{ActorOutcome, Knowledge};
+    use fa_reference::action::consequence::oversight::actor_wire::MAX_FRAME_BYTES;
     use std::io::Write;
     use std::path::Path;
-    let usage = "usage: supervise_publication create CONFIG SUBMIT_JSON [--reviewer-profile REVIEWER_JSON]\n       supervise_publication resume CONFIG SUBMIT_JSON\n       supervise_publication create-checked CONFIG SUBMIT_JSON WITNESS_PROFILE [--reviewer-profile REVIEWER_JSON]\n       supervise_publication resume-checked CONFIG SUBMIT_JSON WITNESS_PROFILE\n       supervise_publication review CONFIG REQUEST_ID\n       supervise_publication review-peer REVIEWER_JSON REQUEST_ID\n       supervise_publication proposal CONFIG REQUEST_ID PAYLOAD_FILE TTL_MS\n       supervise_publication inspect CONFIG";
-    let peer_profile = if (args.len() == 5 && args[0] == "create" && args[3] == "--reviewer-profile")
-        || (args.len() == 6 && args[0] == "create-checked" && args[4] == "--reviewer-profile") {
+    let usage = "usage: supervise_publication create CONFIG SUBMIT_JSON [--reviewer-profile REVIEWER_JSON]\n       supervise_publication submit CONFIG SUBMIT_JSON [--reviewer-profile REVIEWER_JSON]\n       supervise_publication resume CONFIG SUBMIT_JSON\n       supervise_publication create-checked CONFIG SUBMIT_JSON WITNESS_PROFILE [--reviewer-profile REVIEWER_JSON]\n       supervise_publication submit-checked CONFIG SUBMIT_JSON WITNESS_PROFILE [--reviewer-profile REVIEWER_JSON]\n       supervise_publication resume-checked CONFIG SUBMIT_JSON WITNESS_PROFILE\n       supervise_publication review CONFIG REQUEST_ID\n       supervise_publication review-peer REVIEWER_JSON REQUEST_ID\n       supervise_publication proposal CONFIG REQUEST_ID PAYLOAD_FILE TTL_MS\n       supervise_publication proposal-next CONFIG REQUEST_ID PAYLOAD_FILE TTL_MS\n       supervise_publication inspect CONFIG";
+    let peer_profile = if (args.len() == 5 && matches!(args[0].as_str(), "create" | "submit") && args[3] == "--reviewer-profile")
+        || (args.len() == 6 && matches!(args[0].as_str(), "create-checked" | "submit-checked") && args[4] == "--reviewer-profile") {
         let path = args.pop().ok_or(usage)?;
         args.pop();
         Some(PeerProfile::read(Path::new(&path))?)
     } else { None };
     let mode = args.first().map(String::as_str).ok_or(usage)?;
-    let expected = match mode { "create" | "resume" | "review" | "review-peer" => 3, "create-checked" | "resume-checked" => 4, "proposal" => 5, "inspect" => 2, _ => return Err(usage.into()) };
+    let expected = match mode {
+        "create" | "submit" | "resume" | "review" | "review-peer" => 3,
+        "create-checked" | "submit-checked" | "resume-checked" => 4,
+        "proposal" | "proposal-next" => 5,
+        "inspect" => 2,
+        _ => return Err(usage.into()),
+    };
     if args.len() != expected { return Err(usage.into()); }
     // This role-specific path must not parse the private supervisor file merely
     // to display a review. A checked profile failure never retries legacy review.
@@ -58,12 +66,20 @@ fn command(mut args: Vec<String>) -> Result<(), String> {
     // or starting a program. No profile flag silently selects an easier fallback.
     let config = Config::read(Path::new(&args[1]))?;
     match mode {
-        "create" | "resume" | "create-checked" | "resume-checked" => {
+        "create" | "submit" | "resume" | "create-checked" | "submit-checked" | "resume-checked" => {
             let document = read_regular(Path::new(&args[2]), MAX_FRAME_BYTES)?;
-            let result = if matches!(mode, "create-checked" | "resume-checked") {
+            let result = if matches!(mode, "create-checked" | "submit-checked" | "resume-checked") {
                 let publication = publication::PublicationProfile::read(Path::new(&args[3]))?;
-                workflow::run_with_publication(config, &document, mode == "resume-checked",
-                    peer_profile.as_ref(), Some(&publication), workflow::clock)?
+                if mode == "submit-checked" {
+                    workflow::continuation::submit_existing(config, &document,
+                        peer_profile.as_ref(), Some(&publication), workflow::clock)?
+                } else {
+                    workflow::run_with_publication(config, &document, mode == "resume-checked",
+                        peer_profile.as_ref(), Some(&publication), workflow::clock)?
+                }
+            } else if mode == "submit" {
+                workflow::continuation::submit_existing(config, &document,
+                    peer_profile.as_ref(), None, workflow::clock)?
             } else {
                 match &peer_profile {
                     Some(profile) => workflow::run_with_peers(config, &document, false, Some(profile), workflow::clock)?,
@@ -86,16 +102,13 @@ fn command(mut args: Vec<String>) -> Result<(), String> {
             if request == 0 { return Err("request must be nonzero".into()); }
             console::review(&config, request)
         }
-        "proposal" => {
+        "proposal" | "proposal-next" => {
             let request = args[2].parse::<u64>().map_err(debug)?;
             let payload = read_regular(Path::new(&args[3]), MAX_PAYLOAD_BYTES)?;
             let ttl = args[4].parse::<u64>().map_err(debug)?;
-            if ttl == 0 || ttl > config.timing.runtime_ms { return Err("TTL must fit the configured one-shot runtime".into()); }
-            let deadline = workflow::clock().0.checked_add(ttl).ok_or("deadline overflow")?;
-            let proposal = ActorProposal { target: config.profile.delivery.target,
-                units: u64::try_from(payload.len()).map_err(debug)?.max(1), payload,
-                deadline: ElapsedTick(deadline), expected_policy_epoch: 0 };
-            let bytes = encode_command(&Command::Submit { request, proposal }).map_err(debug)?;
+            let basis = if mode == "proposal-next" { proposal::Basis::Existing }
+                else { proposal::Basis::Bootstrap };
+            let bytes = proposal::document(&config, request, payload, ttl, workflow::clock(), basis)?;
             let mut stdout = std::io::stdout().lock();
             stdout.write_all(&bytes).map_err(debug)?; stdout.write_all(b"\n").map_err(debug)?; stdout.flush().map_err(debug)
         }
