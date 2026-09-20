@@ -14,6 +14,8 @@
 #[path = "supervise_publication/publication.rs"] mod publication;
 #[cfg(unix)]
 #[path = "supervise_publication/proposal.rs"] mod proposal;
+#[cfg(unix)]
+#[path = "supervise_publication/recover_stop.rs"] mod recover_stop;
 #[cfg(all(test, unix))]
 #[path = "supervise_publication/tests.rs"] mod tests;
 #[cfg(all(test, unix))]
@@ -38,7 +40,7 @@ fn command(mut args: Vec<String>) -> Result<(), String> {
     use fa_reference::action::consequence::oversight::actor_wire::MAX_FRAME_BYTES;
     use std::io::Write;
     use std::path::Path;
-    let usage = "usage: supervise_publication create CONFIG SUBMIT_JSON [--reviewer-profile REVIEWER_JSON]\n       supervise_publication submit CONFIG SUBMIT_JSON [--reviewer-profile REVIEWER_JSON]\n       supervise_publication resume CONFIG SUBMIT_JSON\n       supervise_publication create-checked CONFIG SUBMIT_JSON WITNESS_PROFILE [--reviewer-profile REVIEWER_JSON]\n       supervise_publication submit-checked CONFIG SUBMIT_JSON WITNESS_PROFILE [--reviewer-profile REVIEWER_JSON]\n       supervise_publication resume-checked CONFIG SUBMIT_JSON WITNESS_PROFILE\n       supervise_publication review CONFIG REQUEST_ID\n       supervise_publication review-peer REVIEWER_JSON REQUEST_ID\n       supervise_publication stop-peer REVIEWER_JSON REQUEST_ID\n       supervise_publication proposal CONFIG REQUEST_ID PAYLOAD_FILE TTL_MS\n       supervise_publication proposal-next CONFIG REQUEST_ID PAYLOAD_FILE TTL_MS\n       supervise_publication inspect CONFIG";
+    let usage = "usage: supervise_publication create CONFIG SUBMIT_JSON [--reviewer-profile REVIEWER_JSON]\n       supervise_publication submit CONFIG SUBMIT_JSON [--reviewer-profile REVIEWER_JSON]\n       supervise_publication resume CONFIG SUBMIT_JSON\n       supervise_publication create-checked CONFIG SUBMIT_JSON WITNESS_PROFILE [--reviewer-profile REVIEWER_JSON]\n       supervise_publication submit-checked CONFIG SUBMIT_JSON WITNESS_PROFILE [--reviewer-profile REVIEWER_JSON]\n       supervise_publication resume-checked CONFIG SUBMIT_JSON WITNESS_PROFILE\n       supervise_publication review CONFIG REQUEST_ID\n       supervise_publication review-peer REVIEWER_JSON REQUEST_ID\n       supervise_publication stop-peer REVIEWER_JSON REQUEST_ID\n       supervise_publication proposal CONFIG REQUEST_ID PAYLOAD_FILE TTL_MS\n       supervise_publication proposal-next CONFIG REQUEST_ID PAYLOAD_FILE TTL_MS\n       supervise_publication recover-stop CONFIG OPERATION\n       supervise_publication inspect CONFIG";
     let peer_profile = if (args.len() == 5 && matches!(args[0].as_str(), "create" | "submit") && args[3] == "--reviewer-profile")
         || (args.len() == 6 && matches!(args[0].as_str(), "create-checked" | "submit-checked") && args[4] == "--reviewer-profile") {
         let path = args.pop().ok_or(usage)?;
@@ -47,7 +49,7 @@ fn command(mut args: Vec<String>) -> Result<(), String> {
     } else { None };
     let mode = args.first().map(String::as_str).ok_or(usage)?;
     let expected = match mode {
-        "create" | "submit" | "resume" | "review" | "review-peer" | "stop-peer" => 3,
+        "create" | "submit" | "resume" | "review" | "review-peer" | "stop-peer" | "recover-stop" => 3,
         "create-checked" | "submit-checked" | "resume-checked" => 4,
         "proposal" | "proposal-next" => 5,
         "inspect" => 2,
@@ -99,6 +101,10 @@ fn command(mut args: Vec<String>) -> Result<(), String> {
             if result.cleanup_pending != 0 { return Err(format!("{} direct helper children lack reaping confirmation", result.cleanup_pending)); }
             if !executed { return Err("the original actor result does not confirm execution; see the JSON response".into()); }
             Ok(())
+        }
+        "recover-stop" => {
+            let operation = args[2].parse::<u64>().map_err(debug)?;
+            recover_stop::run(&config, operation, workflow::clock, &mut std::io::stdout().lock())
         }
         "review" => {
             let request = args[2].parse::<u64>().map_err(debug)?;
