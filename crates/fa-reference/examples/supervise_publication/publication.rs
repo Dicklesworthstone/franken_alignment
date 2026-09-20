@@ -3,6 +3,8 @@
 mod feed;
 #[cfg(test)]
 mod producer_tests;
+#[cfg(test)]
+mod bootstrap_tests;
 use feed::FeedProfile;
 use super::config::{debug, read_regular};
 use fa_reference::action::consequence::delivery::persistent::observed::{FileHumanPermit, FileHumanReviewer, FileOversight, FileOversightProfile};
@@ -181,6 +183,30 @@ impl PublicationProfile {
         }
     }
 
+    /// Runnable preparation includes feed catch-up from the SAME original
+    /// producer image. Obtain a real clock after reading, not a saved journal
+    /// tick. Raw capture profiles keep their original acquisition/clock behavior.
+    pub fn prepare_with_clock<F>(&self, host: &mut FileOversight, attempt: u64, clock: F)
+        -> Result<PreparedPublication<'_>, String>
+    where F: FnMut() -> ElapsedTick {
+        let PublicationSources::Producer { path, profile } = &self.sources else {
+            return self.prepare(host, attempt);
+        };
+        if host.publication_validation_profile().map_err(debug)? != Some(self.limits) {
+            return Err("stored publication limits differ from the explicit profile".into());
+        }
+        let feed = self.feed.as_ref().ok_or("producer preparation requires the configured feed")?;
+        let reader = host.publication_producer_reader(attempt, path, *profile).map_err(debug)?;
+        // Profile parsing fixes the recipe; native binding checks the actual
+        // original image (including mandatory opaque input for an empty recipe),
+        // stages catch-up first, and never installs this image as fresh evidence.
+        host.bind_publication_from_producer(host.revision(), attempt, &reader, &feed.reader,
+            self.requests.clone(), clock).map_err(debug)?.map_err(debug)?;
+        Ok(PreparedPublication { current: CurrentPublication::Producer(reader), feed: Some(feed) })
+    }
+
+    /// Low-level preparation requires an already matching feed cut. Running
+    /// workflows use prepare_with_clock so an advanced producer is caught up.
     /// Capture the original image BEFORE helper launch and bind it through the
     /// actual owner. Producer mode obtains the gateway's complete frozen action;
     /// it never guesses an attempt, rebuilds an action or needs a shadow journal.

@@ -173,7 +173,7 @@ where F: FnMut() -> ElapsedTick {
             // Freeze the original recipe and actual producer image BEFORE any
             // helper answer. The prepared value retains readers, not evidence.
             let mut host = driver.supervisor_mut().host_mut().map_err(debug)?;
-            Some(profile.prepare(&mut host, attempt)?)
+            Some(profile.prepare_with_clock(&mut host, attempt, &mut *time)?)
         }
         None => None,
     };

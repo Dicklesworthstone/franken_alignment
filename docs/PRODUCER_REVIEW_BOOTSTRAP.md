@@ -46,6 +46,33 @@ Eight tests in `tests/producer_initial_binding.rs` cover an advanced producer's
 successful review/publication, no initial-capture freshness credit, post-read
 replacement with unrelated/forbidden controls, read-loss retry, duplicate/foreign/
 active-review refusal, invalid recipes, exact retained-window neighbors, failed
-replacement, caught clock unwind, and empty-recipe whole-input requirements. They are authored, not executed. Rust, Cargo
-and RCH are unavailable in this editing environment; exact-revision remote
+replacement, caught clock unwind, and empty-recipe whole-input requirements.
+They are authored, not executed. Rust, Cargo and RCH are unavailable in this editing environment; exact-revision remote
 compilation, formatting, Clippy and tests remain required. FA-061/062 stay open.
+
+## Runnable supervisor integration
+
+The existing workflow now calls `PublicationProfile::prepare_with_clock` before
+helper launch. Producer-backed profiles pass their matched readers, original recipe
+and actual workflow clock to the native combined binder. The prepared value holds
+only readers; subsequent authorization, dispatch and first publication still
+acquire independently. No new schema or command is needed. New submissions to
+retained stores share this same execute routine. Exact retries and receipt-only
+recovery do not enter preparation and still need no producer or helper access.
+
+Raw version-one/version-two profiles keep their former original-capture behavior
+and do not call the new clock argument. The lower-level `prepare` method remains
+available for those profiles and already-matching cuts; it still refuses an
+advanced unmatched snapshot. There is no fallback from failed coupled preparation
+to that method for a producer-backed running workflow. The newer explicit
+whole-input profile retains its mandatory opaque lane even with an empty recipe.
+
+Four further tests in the example's `publication/bootstrap_tests.rs` cover the
+original startup failure beside its caught-up control, full process/reviewer
+publication with an already-advanced producer, source-free receipt recovery,
+later forbidden/unrelated changes, and failure to renew an expired heartbeat by
+reading it during startup. Existing tests and their assertions are unchanged.
+These are twelve authored Rust tests across the two commits, not executed results:
+the original eleven plus one whole-input compatibility regression added at integration.
+The preliminary withdrawal remains separately durable; failures never acknowledge
+only a permitting half of the original binding/catch-up transaction.
