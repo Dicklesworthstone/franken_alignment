@@ -5,6 +5,7 @@ pub(in crate::action::consequence::delivery::persistent::observed) mod ingest;
 use super::{FileCaptureError, PublicationHeartbeat};
 use super::super::super::witness_gate::changes::{read_change, write_change};
 use super::super::super::witness_gate::freshness::{read_heartbeat, write_heartbeat};
+use super::super::super::witnesses::producer::{PublicationProducerImage, PublicationProducerProfile, MAX_PRODUCER_BYTES};
 use crate::action::consequence::delivery::publication_gate::changes::PublicationChange;
 use crate::action::consequence::delivery::persistent::codec::shared::{Reader, Writer};
 use crate::Error;
@@ -77,17 +78,27 @@ impl PublicationFeedBatch {
 pub struct PublicationFeedFile {
     path: PathBuf,
     source: u64,
+    producer: Option<PublicationProducerProfile>,
 }
 impl PublicationFeedFile {
     pub fn new(path: impl AsRef<Path>, source: u64) -> Result<Self, Error> {
         let path = path.as_ref();
         if source == 0 || path.as_os_str().is_empty() { return Err(Error::InvalidInput); }
         if path.as_os_str().as_bytes().len() > 4_096 { return Err(Error::Limit); }
-        Ok(Self { path: path.to_owned(), source })
+        Ok(Self { path: path.to_owned(), source, producer: None })
+    }
+    /// Extract the bounded feed from a freshly opened coupled producer bundle.
+    /// Explicit selection pins the full profile; legacy readers remain strict.
+    pub fn from_producer(path: impl AsRef<Path>, profile: PublicationProducerProfile) -> Result<Self, Error> {
+        profile.check()?;
+        let mut reader = Self::new(path, profile.feed)?;
+        reader.producer = Some(profile);
+        Ok(reader)
     }
     pub fn source(&self) -> u64 { self.source }
     pub fn read_batch(&self) -> Result<PublicationFeedBatch, FileCaptureError> {
-        let before = regular(&self.path)?;
+        let max_bytes = if self.producer.is_some() { MAX_PRODUCER_BYTES } else { MAX_FEED_BYTES };
+        let before = regular(&self.path, max_bytes)?;
         let file = File::open(&self.path)?;
         let opened = file.metadata()?;
         if !opened.is_file() || super::stamp(&before) != super::stamp(&opened) {
@@ -95,21 +106,28 @@ impl PublicationFeedFile {
         }
         let mut bytes = Vec::new();
         // Reserve the whole bounded read plus its overflow sentinel before I/O.
-        bytes.try_reserve_exact(MAX_FEED_BYTES + 1).map_err(|_| Error::Limit)?;
-        (&file).take(MAX_FEED_BYTES as u64 + 1).read_to_end(&mut bytes)?;
-        if bytes.len() > MAX_FEED_BYTES { return Err(Error::Limit.into()); }
+        bytes.try_reserve_exact(max_bytes + 1).map_err(|_| Error::Limit)?;
+        (&file).take(max_bytes as u64 + 1).read_to_end(&mut bytes)?;
+        if bytes.len() > max_bytes { return Err(Error::Limit.into()); }
         if super::stamp(&opened) != super::stamp(&file.metadata()?)
-            || super::stamp(&opened) != super::stamp(&regular(&self.path)?) {
+            || super::stamp(&opened) != super::stamp(&regular(&self.path, max_bytes)?) {
             return Err(Error::Stale.into());
         }
-        let batch = PublicationFeedBatch::from_bytes(&bytes)?;
+        let batch = match self.producer {
+            None => PublicationFeedBatch::from_bytes(&bytes)?,
+            Some(profile) => {
+                let image = PublicationProducerImage::from_bytes(&bytes)?;
+                if image.profile() != profile { return Err(Error::Binding.into()); }
+                image.batch().clone()
+            }
+        };
         if batch.heartbeat.source != self.source { return Err(Error::Binding.into()); }
         Ok(batch)
     }
 }
-fn regular(path: &Path) -> Result<fs::Metadata, FileCaptureError> {
+fn regular(path: &Path, max_bytes: usize) -> Result<fs::Metadata, FileCaptureError> {
     let metadata = fs::symlink_metadata(path)?;
     if !metadata.is_file() || metadata.file_type().is_symlink() { return Err(Error::Binding.into()); }
-    if metadata.len() > MAX_FEED_BYTES as u64 { return Err(Error::Limit.into()); }
+    if metadata.len() > max_bytes as u64 { return Err(Error::Limit.into()); }
     Ok(metadata)
 }

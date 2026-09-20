@@ -1,6 +1,8 @@
 //! Derive complete change windows from the same immutable images they describe.
 //! This is producer observation state, never an effect ledger or a truth oracle.
 mod codec;
+mod publisher;
+pub use publisher::{FilePublicationProducer, ProducerPublication, ProducerPublicationKind};
 #[cfg(test)]
 mod tests;
 
@@ -108,7 +110,7 @@ impl PublicationProducerImage {
             records.push(PublicationChange { source: self.profile.feed, sequence: through, change });
         }
         let removed = records.len().saturating_sub(MAX_FEED_RECORDS);
-        records.drain(..removed);
+        drop(records.drain(..removed));
         let after = through.checked_sub(records.len() as u64).ok_or(Error::Overflow)?;
         let heartbeat = PublicationHeartbeat { source: self.profile.feed, clock_domain: self.profile.clock_domain,
             generation, through, produced_at: observed_at };
