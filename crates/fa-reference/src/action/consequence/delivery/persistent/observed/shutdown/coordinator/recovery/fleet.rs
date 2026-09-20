@@ -19,6 +19,9 @@ pub enum FileShutdownPassResult {
     Observed(Box<FileShutdownObservation>),
     /// The native refusal was durably recorded by the coordinator.
     Refused(JournalError),
+    /// Canonical-read admission or evidence refused a retained visit. This is a session-only
+    /// read outcome, NOT a newly persisted native refusal or a command retry.
+    EvidenceRefused(JournalError),
     /// Coordinator intent/completion did not acknowledge. The domain may have
     /// changed. Never interpret this error as an endpoint nonexecution receipt.
     Unacknowledged(JournalError),
@@ -94,6 +97,33 @@ impl FileShutdownCoordinator {
     pub fn recover_registered_pass(&mut self, revision: u64, clocks: &[FileShutdownClock])
         -> Result<FileShutdownRecoveryPass, JournalError>
     {
+        self.run_registered_pass(revision, clocks, false)
+    }
+
+    /// Resume the full fixed roster after reopening, without allocating new
+    /// durable visits for its latest retained shutdown intents/observations.
+    /// Every such member is freshly checked by resolve_shutdown_visit; saved
+    /// success alone never counts. Other members use recover_and_drain.
+    ///
+    /// A missing, newer, conflicting or not-yet-stopped image returns a distinct
+    /// EvidenceRefused outcome. It NEVER falls through into a native retry. A
+    /// matching stop can remain undrained; this method does not manufacture drain
+    /// progress or silently replace a saved tick with the supplied current tick.
+    /// Use an explicit new recovery visit to request further native progress.
+    ///
+    /// The same full-roster, clock, attempt and revision checks apply. Admission
+    /// charges new visit slots only to members that require new recovery, one
+    /// completion revision per pending resolution, and zero for exact refreshes.
+    /// Any failed coordinator acknowledgment still stops the whole pass.
+    pub fn resume_registered_pass(&mut self, revision: u64, clocks: &[FileShutdownClock])
+        -> Result<FileShutdownRecoveryPass, JournalError>
+    {
+        self.run_registered_pass(revision, clocks, true)
+    }
+
+    fn run_registered_pass(&mut self, revision: u64, clocks: &[FileShutdownClock], resume: bool)
+        -> Result<FileShutdownRecoveryPass, JournalError>
+    {
         if self.unavailable { return Err(JournalError::Unavailable); }
         if revision != self.revision { return Err(Error::Stale.into()); }
         if clocks.len() > MAX_SHUTDOWN_DOMAINS { return Err(Error::Limit.into()); }
@@ -111,11 +141,30 @@ impl FileShutdownCoordinator {
                 return Err(Error::Binding.into());
             }
         }
-        if self.visits.len().checked_add(count).ok_or(Error::Limit)? > self.campaign.plan.max_attempts
+        let mut resolutions = Vec::new();
+        resolutions.try_reserve_exact(count).map_err(|_| Error::Limit)?;
+        let mut new_visits = 0_usize;
+        let mut growth = 0_u64;
+        for clock in &ordered {
+            // Consider the LAST visit of any kind, not an older convenient
+            // success. A later refusal/inspection must not disappear on resume.
+            let latest = self.visits.iter().enumerate().rev()
+                .find(|(_, visit)| visit.domain == clock.domain);
+            let resolution = latest.filter(|(_, visit)| resume
+                && matches!(visit.kind, ShutdownVisitKind::Advance { .. }
+                    | ShutdownVisitKind::RecoverStopped { .. })
+                && matches!(visit.result, ShutdownVisitResult::Entered
+                    | ShutdownVisitResult::Observed { .. }));
+            let cost = match resolution {
+                Some((_, visit)) => u64::from(matches!(visit.result, ShutdownVisitResult::Entered)),
+                None => { new_visits = new_visits.checked_add(1).ok_or(Error::Limit)?; 2 }
+            };
+            growth = growth.checked_add(cost).ok_or(Error::Overflow)?;
+            resolutions.push(resolution.map(|(index, _)| index));
+        }
+        if self.visits.len().checked_add(new_visits).ok_or(Error::Limit)? > self.campaign.plan.max_attempts
             || self.campaign.attempts.len().checked_add(count).ok_or(Error::Limit)? > self.campaign.plan.max_attempts
         { return Err(Error::Limit.into()); }
-        let growth = u64::try_from(count).map_err(|_| Error::Overflow)?
-            .checked_mul(2).ok_or(Error::Overflow)?;
         self.revision.checked_add(growth).ok_or(Error::Overflow)?;
         let mut members = Vec::new();
         members.try_reserve_exact(count).map_err(|_| Error::Limit)?;
@@ -124,7 +173,18 @@ impl FileShutdownCoordinator {
         }));
         let mut pass = FileShutdownRecoveryPass { operation: self.campaign.plan.operation,
             initial_revision: revision, final_revision: revision, members };
-        for member in &mut pass.members {
+        for (member, resolution) in pass.members.iter_mut().zip(resolutions) {
+            if let Some(visit) = resolution {
+                match self.resolve_shutdown_visit(self.revision(), visit) {
+                    Ok(observation) => member.result = FileShutdownPassResult::Observed(Box::new(observation)),
+                    Err(error) if !self.unavailable => member.result = FileShutdownPassResult::EvidenceRefused(error),
+                    Err(error) => {
+                        member.result = FileShutdownPassResult::Unacknowledged(error);
+                        break;
+                    }
+                }
+                continue;
+            }
             match self.recover_and_drain(self.revision(), member.clock.domain, member.clock.at) {
                 Ok(Ok(observation)) => member.result = FileShutdownPassResult::Observed(Box::new(observation)),
                 Ok(Err(error)) => member.result = FileShutdownPassResult::Refused(error),
@@ -141,3 +201,6 @@ impl FileShutdownCoordinator {
 
 #[cfg(test)]
 mod tests;
+
+#[cfg(test)]
+mod resume_tests;

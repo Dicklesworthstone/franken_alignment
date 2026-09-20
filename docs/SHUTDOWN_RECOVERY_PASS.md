@@ -58,6 +58,35 @@ A coordinator byte-limit failure can still follow a successful domain shutdown;
 it is reported as unacknowledged with remaining members unvisited. No distributed
 atomicity or complete mediation of remote/OS effects is claimed.
 
+## Resuming an interrupted pass without double-charging visits
+
+`resume_registered_pass(revision, clocks)` uses the same fixed-roster driver with
+an explicit evidence-resolution policy. For each domain it selects its LAST visit
+of any kind. A pending or observed `Advance`/`RecoverStopped` visit is rechecked by
+`resolve_shutdown_visit`; all other domains use a new `recover_and_drain` visit.
+It never skips a later refusal to choose an older convenient success.
+
+Admission reserves one in-memory read/attempt per member, but durable visit slots
+only for new recovery. Pending resolutions need one completion revision; exact
+refreshes need no new revision. Thus a three-domain pass interrupted after one
+completion and a second native stop can resolve both and recover the untouched
+third domain with its original three-visit budget. A fully completed pass can be
+freshly confirmed after reopening without any further domain or coordinator write.
+
+Canonical-read admission failures and missing, newer, conflicting or unstopped
+images produce `EvidenceRefused`, a session-only resolution outcome distinct from
+a durably recorded native `Refused`. There is NO fallback from a failed resolution
+to a native command. Other members can progress; a failed coordinator completion
+still stops the pass and leaves the tail `NotVisited`. Matching but undrained stops
+remain undrained. Further native progress requires an explicit new recovery visit,
+not silently replaying the old intent or treating a saved timestamp as current.
+
+Six additional authored regression tests cover mixed completed/pending/unvisited
+members at the visit ceiling, no-write confirmation, unstopped and missing evidence,
+all five completion barriers followed by reopening, whole-roster/clock/attempt
+admission, and selection of the latest visit rather than an older success. These
+Rust tests are unexecuted under the same RCH limitation stated below.
+
 ## Implementation and verification status
 
 Added the driver, exact clock binding, immutable per-pass reports and eight Rust
