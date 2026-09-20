@@ -2,6 +2,7 @@
 //! withdraw current observations; they never replace reviewed requirements or
 //! excuse exact final-cut validation. A known missing tail blocks publication.
 pub mod freshness;
+pub use super::source::deferred::PublicationCaptureOutcome;
 pub use super::source::{PublicationInputCut, PublicationInputCutStatus};
 use super::{DeliveryBroker, PublicationGate, PublicationJudgment, MAX_PUBLICATION_BINDINGS};
 use crate::witness::refinement::index::routing::{InvalidationIndex, RoutingBudget, RoutingLimits, WitnessChange};

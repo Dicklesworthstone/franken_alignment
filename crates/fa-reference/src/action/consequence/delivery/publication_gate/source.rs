@@ -1,6 +1,7 @@
 //! Source-bound, single-comparison observations in the ORIGINAL publication gate.
 //! Producer identity/generation are trusted observations, not authentication.
 mod cut;
+pub(super) mod deferred;
 pub use cut::{PublicationInputCut, PublicationInputCutStatus};
 use super::{DeliveryBroker, PublicationInputs, Slot};
 use crate::action::ActionState;
