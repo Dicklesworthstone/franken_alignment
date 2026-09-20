@@ -1,5 +1,7 @@
 //! One explicit request through existing actor, helper, reviewer and delivery APIs.
 //! This is a synchronous executable consumer, not an alternative executor/ledger.
+pub mod continuation;
+
 use super::config::{Config, CLOCK_DOMAIN, debug};
 use super::peers::{Admission, PeerProfile};
 use super::publication::PublicationProfile;
