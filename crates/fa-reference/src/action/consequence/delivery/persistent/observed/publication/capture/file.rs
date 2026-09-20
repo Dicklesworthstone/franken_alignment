@@ -1,6 +1,7 @@
 //! Read one bounded immutable producer file, never a retained in-memory cache.
 //! The operator owns the directory/producer. Producers replace by atomic rename;
 //! this is not an adversarial filesystem sandbox or a cryptographic identity.
+mod coupled;
 use super::{FilePublicationCapture, MAX_CAPTURE_BYTES};
 use super::super::witnesses::producer::{PublicationProducerImage, PublicationProducerProfile, MAX_PRODUCER_BYTES};
 use crate::action::FrozenAction;
@@ -59,6 +60,20 @@ impl PublicationInputFile {
     /// cycle. A standalone read cannot refresh an owner's eligibility.
     pub fn read_capture(&self) -> Result<FilePublicationCapture, FileCaptureError> {
         let max_bytes = if self.producer.is_some() { MAX_PRODUCER_BYTES } else { MAX_CAPTURE_BYTES };
+        let bytes = self.read_bytes(max_bytes)?;
+        let capture = match &self.producer {
+            None => FilePublicationCapture::from_bytes(&bytes)?,
+            Some((profile, attempt, action)) => {
+                let image = PublicationProducerImage::from_bytes(&bytes)?;
+                if image.profile() != *profile { return Err(Error::Binding.into()); }
+                image.capture(*attempt, action)?
+            }
+        };
+        if capture.identity().source != self.source { return Err(Error::Binding.into()); }
+        Ok(capture)
+    }
+
+    fn read_bytes(&self, max_bytes: usize) -> Result<Vec<u8>, FileCaptureError> {
         let before = regular(&self.path, max_bytes)?;
         let file = File::open(&self.path)?;
         let opened = file.metadata()?;
@@ -73,16 +88,7 @@ impl PublicationInputFile {
         if stamp(&opened) != stamp(&file.metadata()?) || stamp(&opened) != stamp(&regular(&self.path, max_bytes)?) {
             return Err(Error::Stale.into());
         }
-        let capture = match &self.producer {
-            None => FilePublicationCapture::from_bytes(&bytes)?,
-            Some((profile, attempt, action)) => {
-                let image = PublicationProducerImage::from_bytes(&bytes)?;
-                if image.profile() != *profile { return Err(Error::Binding.into()); }
-                image.capture(*attempt, action)?
-            }
-        };
-        if capture.identity().source != self.source { return Err(Error::Binding.into()); }
-        Ok(capture)
+        Ok(bytes)
     }
 }
 fn regular(path: &Path, max_bytes: usize) -> Result<Metadata, FileCaptureError> {

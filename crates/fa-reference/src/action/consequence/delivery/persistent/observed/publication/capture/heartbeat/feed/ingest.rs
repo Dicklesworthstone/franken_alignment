@@ -1,7 +1,8 @@
 //! One acknowledged catch-up cut, using ONLY original notice/heartbeat events.
 use super::{PublicationFeedBatch, PublicationFeedFile, MAX_FEED_RECORDS};
 use super::super::{FileCaptureError, FileOversight, JournalError, JournalFailure, JournalIo};
-use super::super::super::super::super::{Event, Machine, journal};
+use super::super::super::super::super::{Event, Machine, Transition, journal};
+use super::super::super::FilePublicationCapture;
 use super::super::super::super::witness_gate::{WitnessEvent, freshness::FreshnessEvent};
 use crate::action::ElapsedTick;
 use crate::action::consequence::delivery::publication_gate::changes::{PublicationChangeReport, PublicationChangeStatus};
@@ -39,10 +40,11 @@ impl FileOversight {
         self.fault = Some(JournalFailure { operation: JournalIo::Stage,
             kind: io::ErrorKind::Other, replacement_may_be_visible: false });
         let now = clock();
-        self.install_publication_feed(batch, now).map(Ok)
+        self.install_feed_observation(batch, now, None).map(Ok)
     }
 
-    fn install_publication_feed(&mut self, batch: PublicationFeedBatch, now: ElapsedTick)
+    pub(in crate::action::consequence::delivery::persistent::observed) fn install_feed_observation(
+        &mut self, batch: PublicationFeedBatch, now: ElapsedTick, capture: Option<FilePublicationCapture>)
         -> Result<PublicationFeedReport, JournalError>
     {
         let before = self.machine.broker.publication_change_status()?.through;
@@ -50,7 +52,8 @@ impl FileOversight {
         // A packet's retained window is not proof of earlier omitted records.
         let pending = batch.records.iter().filter(|record| batch.after <= before && record.sequence > before);
         let added = pending.clone().count().checked_add(1).ok_or(Error::Overflow)?;
-        let count = self.events.len().checked_add(added).ok_or(Error::Overflow)?;
+        let count = self.events.len().checked_add(added)
+            .and_then(|count| count.checked_add(usize::from(capture.is_some()))).ok_or(Error::Overflow)?;
         if count > self.profile.delivery.limits.events { return Err(Error::Limit.into()); }
         let mut history = Vec::new();
         history.try_reserve_exact(count).map_err(|_| Error::Limit)?;
@@ -59,7 +62,7 @@ impl FileOversight {
         history.push(Event::PublicationWitness(WitnessEvent::Freshness(FreshnessEvent::Observed(batch.heartbeat, now))));
         // The original encoder checks EVERY prefix, including recovery reserves,
         // before candidate execution. No special batch exemption or new wire tag.
-        let bytes = journal::encode(&self.profile, self.store.identity(), &history)?;
+        let mut bytes = journal::encode(&self.profile, self.store.identity(), &history)?;
         let mut candidate = Machine::replay(&self.profile, &self.events)?;
         let mut changes = Vec::new();
         changes.try_reserve_exact(added - 1).map_err(|_| Error::Limit)?;
@@ -68,6 +71,18 @@ impl FileOversight {
             if matches!(event, Event::PublicationWitness(WitnessEvent::Change(_))) {
                 changes.push(candidate.broker.publication_change_report()?.ok_or(Error::Incomplete)?);
             }
+        }
+        if let Some(capture) = capture {
+            let attempt = capture.attempt();
+            // Notifications above may have withdrawn this attempt again. Use
+            // its resulting revision, never a token from before feed catch-up.
+            let expected = candidate.broker.publication_input_revision(attempt)?;
+            let event = Event::PublicationWitness(WitnessEvent::Captured(attempt, expected, Rc::new(capture)));
+            self.check_source_admission(&event)?;
+            bytes = journal::encode_appended(&self.profile, self.store.identity(), &history, &event)?;
+            candidate.preflight_consistency(&event)?;
+            if !matches!(candidate.apply(&event)?, Transition::Inputs(_)) { return Err(Error::Binding.into()); }
+            history.push(event);
         }
         let report = PublicationFeedReport { heartbeat: batch.heartbeat, before, changes,
             status: candidate.broker.publication_change_status()?,

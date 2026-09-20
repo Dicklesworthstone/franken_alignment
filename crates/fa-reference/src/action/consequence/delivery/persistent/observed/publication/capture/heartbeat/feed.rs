@@ -96,6 +96,13 @@ impl PublicationFeedFile {
         Ok(reader)
     }
     pub fn source(&self) -> u64 { self.source }
+    // Pure configuration equality: do not resolve aliases or touch files before
+    // the owner durably withdraws both eligibility lanes.
+    pub(in crate::action::consequence::delivery::persistent::observed) fn pairs_with(
+        &self, path: &Path, profile: PublicationProducerProfile) -> bool
+    {
+        self.path == path && self.producer == Some(profile)
+    }
     pub fn read_batch(&self) -> Result<PublicationFeedBatch, FileCaptureError> {
         let max_bytes = if self.producer.is_some() { MAX_PRODUCER_BYTES } else { MAX_FEED_BYTES };
         let before = regular(&self.path, max_bytes)?;
