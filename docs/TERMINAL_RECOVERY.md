@@ -27,17 +27,44 @@ An ambiguous replacement returns no candidate result and poisons the owner
 until exclusive recovery. Exact stop retries retain the original stop receipt
 but still require a current journal predecessor for this advancing operation.
 
+## Terminal restart recovery
+
+`FileDelivery::open_stopped(directory, profile, request, observed_tick)` opens the
+existing exclusive owner lock, validates the independently supplied profile and
+replays canonical history. It then commits `Stop`, `Fence` and `StopProgress`
+together. The stop request is checked against the original canonical controller,
+not a silently rewritten post-fence state. A recorded exact stop retains its
+original receipt while the subsequent fence advances the current dispatcher.
+
+These three records can consume the explicitly installed terminal reserve even
+when ordinary `open_reconciled` cannot admit its `Time` and `Sweep` records. The
+reserve remains finite and is never replenished by recovery. A fresh clock
+observation is mandatory. A failed precondition or insufficient capacity leaves
+the canonical history unchanged; a failed replacement exposes no owner or sweep.
+
+Successful recovery leaves intake permanently stopped, rejects old process-local
+permits and never resends effects. Executed receipts retain their charge; only
+original endpoint nonexecution evidence releases a sent charge. Retention expiry
+remains unresolved. Pending staging cleanup follows the existing exclusive-open
+contract and is distinct from changing the canonical publication history.
+
 ## Implementation status and change record
 
-Added atomic terminal stop/drain with seven regressions covering permitted
-cancellation, endpoint sealing, lost acknowledgments, stale inputs, ordinary
-capacity exhaustion, retention expiry and five journal replacement failpoints.
+First increment: atomic terminal stop/drain with seven regressions covering
+permitted cancellation, endpoint sealing, lost acknowledgments, stale inputs,
+ordinary capacity exhaustion, retention expiry and five replacement failpoints.
+Second increment: terminal reopen with seven more regressions covering exact
+reserve exhaustion, executed and unexecuted work, old-permit rejection, stopped
+intake, stale inputs, full-sequence preflight, retention loss, ambiguous previous
+stops, exclusive ownership and conflicting stop identity. All fourteen tests
+reuse the original publication fixtures and reducers; none is ignored or weakened.
 The original event format and reducers are unchanged. No dependency was added.
 
 Rust compilation, formatting, Clippy and tests are UNEXECUTED. The required
 `RCH_REQUIRE_REMOTE=1 rch exec -- cargo run --locked -p xtask -- check` attempt
 exited 127 because `rch` is unavailable; Rust and Cargo are also unavailable.
-The retained patch applies to the complete fetched `requests.rs`, verified
-against its Git blob identity, and passes whitespace/application checks.
-Those checks do not constitute a complete-workspace build or runtime evidence.
-No bead is closed and no production feature is activated by this change.
+Both retained patches apply sequentially to the complete fetched `requests.rs`,
+verified against its Git blob identity, and pass whitespace/application checks.
+The resulting modules match the prepared source files byte-for-byte. Those
+checks do not constitute a complete-workspace build or runtime evidence.
+No bead is closed and no production feature is activated by these changes.

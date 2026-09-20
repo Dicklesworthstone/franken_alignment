@@ -47,3 +47,64 @@ impl FileDelivery {
         }
     }
 }
+
+impl FileDelivery {
+    /// Recover an exclusively owned journal directly into a terminal state,
+    /// fencing old permissions and draining obligations in ONE replacement.
+    ///
+    /// Unlike open_reconciled, this terminal-only operation does not require
+    /// ordinary clock/query capacity. Its Stop, Fence and StopProgress records
+    /// can use the existing three-event terminal recovery reserve. It does not
+    /// replenish that finite reserve or reopen intake when recovery succeeds.
+    ///
+    /// Stop precedes Fence intentionally: the caller's StopRequest is checked
+    /// against the independently replayed canonical controller, not against a
+    /// silently rewritten post-fence sequence or epoch. Exact retries of an
+    /// already recorded stop preserve its original receipt. The subsequent Fence
+    /// still advances the current dispatcher generation on every successful
+    /// reopen, including recovery after an ambiguous prior terminal replacement.
+    ///
+    /// The original stop reducer withdraws unsent work, and the original endpoint
+    /// supplies all execution/nonexecution evidence. Missing or expired evidence
+    /// remains an unresolved charged liability. No saved tick is current time,
+    /// no old process-local key is accepted, and no effect is resent.
+    ///
+    /// Rejected preconditions, stale observations and insufficient capacity
+    /// leave the canonical history unchanged. A failed replacement exposes no
+    /// writable owner or candidate sweep. This is exclusively the existing
+    /// journal-as-publication profile, not a remote-provider transaction.
+    pub fn open_stopped(
+        directory: impl AsRef<std::path::Path>,
+        profile: super::super::FileDeliveryProfile,
+        request: StopRequest,
+        observed_tick: ElapsedTick,
+    ) -> Result<(Self, FileStopSweep), JournalError> {
+        profile.limits.check()?;
+        let store = super::super::storage::Store::open(directory.as_ref())?;
+        let bytes = store.read(profile.limits.bytes)?;
+        let events = super::super::codec::decode(&profile, store.identity(), &bytes)?;
+        let machine = super::super::Machine::replay(&profile, &events)?;
+        store.confirm_and_cleanup()?;
+        let mut host = Self {
+            profile,
+            store,
+            events,
+            machine,
+            issuer: std::rc::Rc::new(()),
+            fault: None,
+        };
+        let mut transitions = host.commit_request_events(
+            host.revision(),
+            &[
+                Event::Stop(request),
+                Event::Fence,
+                Event::StopProgress(observed_tick),
+            ],
+        )?;
+        let sweep = match transitions.pop() {
+            Some(Transition::StopProgressed(sweep)) => sweep,
+            _ => unreachable!("terminal recovery ends with original stop progress"),
+        };
+        Ok((host, sweep))
+    }
+}
