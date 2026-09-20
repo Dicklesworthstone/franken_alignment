@@ -168,7 +168,7 @@ where F: FnMut() -> ElapsedTick {
     // launch. Exact retries never enter execute and cannot create this service.
     let mut control = control::Control::new(config, request, peers)?;
     if control.checkpoint(driver, reviewer, deadline, time)? { return Ok(()); }
-    let publication = match publication {
+    let mut publication = match publication {
         Some(profile) => {
             // Freeze the original recipe and actual producer image BEFORE any
             // helper answer. The prepared value retains readers, not evidence.
@@ -207,9 +207,15 @@ where F: FnMut() -> ElapsedTick {
     loop {
         deadline.check(time())?;
         if control.checkpoint(driver, reviewer, deadline, time)? { return Ok(()); }
-        let event = match &publication {
-            Some(profile) => profile.step(driver, &mut config.source, time, Some(&approval))?,
-            None => driver.step_from_file(&mut config.source, &mut *time, Some(&approval)).result.map_err(debug)?,
+        let event = match &mut publication {
+            Some(profile) => profile.step_or_wait(driver, &mut config.source, time, Some(&approval))?,
+            None => Some(driver.step_from_file(&mut config.source, &mut *time, Some(&approval)).result.map_err(debug)?),
+        };
+        let Some(event) = event else {
+            // Retry only acknowledged producer lag. Yield to the SAME deadline
+            // and independent stop checkpoint above before acquiring again.
+            pause(config.timing.poll_ms);
+            continue;
         };
         match event {
             FileDriverEvent::Dispatched { .. } | FileDriverEvent::PublicationChecked { .. } => {}

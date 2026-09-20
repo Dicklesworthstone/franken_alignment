@@ -50,3 +50,37 @@ missing feed records, key expiry/revocation, independent committee/source failur
 post-dispatch strictness, cancellation, and interruption. They have not executed:
 RCH and Rust are unavailable in this editing environment. No build/test result,
 production activation, source-authentication claim or FA-061/062 closure follows.
+
+## Runnable bounded waiting
+
+The existing `create-checked` and `submit-checked` commands accept an explicit
+`fa.supervised-witnesses/4` profile. It has the same original/current capture and
+feed fields as version two plus REQUIRED `max_retries` in 1..=64. It retains the
+nonempty structured recipe and requires a cut-bound original capture. All older
+schemas, whole-input mode and matched producer mode keep their prior behavior;
+an unknown retry field in an older schema is rejected rather than ignored.
+
+The workflow calls `step_or_wait` on its prepared profile. This returns no driver
+event only for the acknowledged waiting diagnostic above. It yields to the SAME
+outer loop, so the original logical/wall deadline and independent stop-control
+checkpoint run before another acquisition. The existing poll interval bounds
+frequency; `max_retries` bounds the number of extra wait decisions for this
+prepared request. A perpetually lagging source therefore produces at most
+`max_retries + 1` deferred steps before the original stop/drain path is invoked.
+Even a frozen logical clock cannot create unlimited retries. No deadline, source
+lease, human approval or budget is refreshed by waiting itself.
+
+This retry count is orchestration state, not an additional authority condition or
+persistent grant. It never resets within the prepared request. Fenced restart
+withdraws the old job and keys rather than restarting a retry allowance for them.
+Receipt-only resume remains source-free. Prepared profiles contain no positive
+observation cache. The low-level `step` method remains strict; existing callers
+only gain waiting by choosing the new profile and its bounded orchestration path.
+
+Six runnable regressions cover schema admission and legacy controls, caught-up
+publication versus changed negative evidence, exact one/two-retry exhaustion,
+missing original cuts, source-free receipt recovery and strict post-dispatch lag.
+One budget unit test checks every admitted limit and its overflow/zero neighbors.
+These seven tests plus nine driver tests are authored but UNEXECUTED. The required
+RCH xtask verifier cannot start because rch is unavailable; no test pass, compiler,
+formatting, Clippy, production activation or Bead-closure claim is made.

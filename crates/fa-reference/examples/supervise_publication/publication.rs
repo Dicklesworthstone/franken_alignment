@@ -1,6 +1,10 @@
 //! Explicit original witness requirements for the runnable supervisor. This is
 //! orchestration of the native publication gate, not another validation engine.
 mod feed;
+mod wait;
+#[cfg(test)]
+mod waiting_tests;
+use wait::{WaitBudget, WaitPolicy};
 #[cfg(test)]
 mod producer_tests;
 #[cfg(test)]
@@ -33,6 +37,7 @@ pub struct PublicationProfile {
     sources: PublicationSources,
     requests: Vec<WitnessRequest>,
     feed: Option<FeedProfile>,
+    wait: Option<WaitPolicy>,
 }
 #[derive(Debug)]
 enum PublicationSources {
@@ -45,6 +50,7 @@ enum PublicationSources {
 pub struct PreparedPublication<'a> {
     current: CurrentPublication<'a>,
     feed: Option<&'a FeedProfile>,
+    wait: Option<WaitBudget>,
 }
 enum CurrentPublication<'a> {
     Capture(&'a PublicationInputFile),
@@ -66,12 +72,15 @@ impl PublicationProfile {
         let mut root = Fields::new(json)?;
         let schema = root.text("schema")?;
         let whole_input = schema == "fa.supervised-whole-input/1";
+        let wait = if schema == "fa.supervised-witnesses/4" {
+            Some(WaitPolicy::new(root.number("max_retries")?)?)
+        } else { None };
         let source = root.number("source")?;
         let (sources, feed) = match schema.as_str() {
-            "fa.supervised-witnesses/1" | "fa.supervised-witnesses/2" => {
+            "fa.supervised-witnesses/1" | "fa.supervised-witnesses/2" | "fa.supervised-witnesses/4" => {
                 let original = PublicationInputFile::new(path(root.text("original")?)?, source).map_err(debug)?;
                 let current = PublicationInputFile::new(path(root.text("current")?)?, source).map_err(debug)?;
-                let feed = if schema == "fa.supervised-witnesses/2" {
+                let feed = if schema != "fa.supervised-witnesses/1" {
                     Some(FeedProfile::decode(root.take("feed")?)?)
                 } else { None };
                 (PublicationSources::Captures { original, current }, feed)
@@ -140,7 +149,7 @@ impl PublicationProfile {
             requests.push(request);
         }
         root.end()?;
-        Ok(Self { limits, sources, requests, feed })
+        Ok(Self { limits, sources, requests, feed, wait })
     }
 
     fn check_scope(&self, profile: &FileOversightProfile) -> Result<(), JournalError> {
@@ -202,7 +211,7 @@ impl PublicationProfile {
         // stages catch-up first, and never installs this image as fresh evidence.
         host.bind_publication_from_producer(host.revision(), attempt, &reader, &feed.reader,
             self.requests.clone(), clock).map_err(debug)?.map_err(debug)?;
-        Ok(PreparedPublication { current: CurrentPublication::Producer(reader), feed: Some(feed) })
+        Ok(PreparedPublication { current: CurrentPublication::Producer(reader), feed: Some(feed), wait: None })
     }
 
     /// Low-level preparation requires an already matching feed cut. Running
@@ -224,6 +233,9 @@ impl PublicationProfile {
                 (original, CurrentPublication::Producer(reader))
             }
         };
+        if self.wait.is_some() && original.input_cut().is_none() {
+            return Err("producer waiting requires an original cut-bound capture".into());
+        }
         if self.requests.is_empty() {
             if original.inputs().opaque().is_none() {
                 return Err("whole-input supervision requires the original opaque input view".into());
@@ -235,7 +247,7 @@ impl PublicationProfile {
         // empty recipe, helper explanation or later capture may narrow its view.
         if original.identity().source != current.reader().source() { return Err("original witness producer mismatch".into()); }
         host.bind_publication_file_source(host.revision(), attempt, original, self.requests.clone()).map_err(debug)?;
-        Ok(PreparedPublication { current, feed: self.feed.as_ref() })
+        Ok(PreparedPublication { current, feed: self.feed.as_ref(), wait: self.wait.map(WaitBudget::new) })
     }
 }
 
