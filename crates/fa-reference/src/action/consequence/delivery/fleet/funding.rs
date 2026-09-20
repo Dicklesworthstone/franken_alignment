@@ -9,7 +9,9 @@
 //! ledger. The pool subtracts it exactly once. No child can reopen admission,
 //! and delayed envelopes remain charged until original endpoint reconciliation.
 
-use super::MAX_FLEET_DOMAINS;
+pub mod shutdown;
+
+use super::{MAX_FLEET_DOMAINS, DomainFenceAcknowledgment, FleetCoordinator, FleetFence};
 use super::super::{
     DeliveryBroker, DispatchEnvelope, EndpointReceipt, PublicationEndpoint, StopReceipt,
     StopRequest, StopSweep,
@@ -48,6 +50,7 @@ pub struct FundingInspection {
     pub authority: u64,
     pub revision: u64,
     pub total: u64,
+    pub admission_closed: bool,
     pub unallocated: u64,
     pub available_in_domains: u64,
     pub reserved: u64,
@@ -89,6 +92,7 @@ pub struct FundingPool {
     unallocated: u64,
     revision: u64,
     max_domains: usize,
+    stop: Option<shutdown::PoolStopRequest>,
     allocations: BTreeMap<u64, Allocation>,
 }
 
@@ -100,10 +104,11 @@ impl FundingPool {
         if max_domains > MAX_FLEET_DOMAINS { return Err(Error::Limit); }
         Ok(Self {
             tenant, authority, total, unallocated: total, revision: 0, max_domains,
-            allocations: BTreeMap::new(),
+            stop: None, allocations: BTreeMap::new(),
         })
     }
 
+    /// Funding/return predecessor only, not a child control sequence or clock.
     pub fn revision(&self) -> u64 { self.revision }
 
     /// A supervisor allocates config.total, not a new independent budget. All
@@ -113,6 +118,7 @@ impl FundingPool {
     pub fn fund_domain(&mut self, expected_revision: u64, config: ControllerConfig,
         endpoint: &mut PublicationEndpoint) -> Result<(), Error>
     {
+        if self.stop.is_some() { return Err(Error::WrongState); }
         if expected_revision != self.revision { return Err(Error::Stale); }
         let scope = config.scope;
         if scope.tenant != self.tenant || scope.authority == self.authority
@@ -132,7 +138,7 @@ impl FundingPool {
     /// A limited borrow, never an independently replaceable inner broker.
     pub fn domain(&mut self, authority: u64) -> Result<FundedDomain<'_>, Error> {
         let allocation = self.allocations.get_mut(&authority).ok_or(Error::Missing)?;
-        Ok(FundedDomain { broker: &mut allocation.broker })
+        Ok(FundedDomain { broker: &mut allocation.broker, admission_closed: self.stop.is_some() })
     }
 
     /// Collect only actual available rights from a PERMANENTLY stopped child.
@@ -188,7 +194,8 @@ impl FundingPool {
         }
         let result = FundingInspection {
             tenant: self.tenant, authority: self.authority, revision: self.revision,
-            total: self.total, unallocated: self.unallocated, available_in_domains,
+            total: self.total, admission_closed: self.stop.is_some(),
+            unallocated: self.unallocated, available_in_domains,
             reserved, charged, allocations,
         };
         if !result.conserved() { return Err(Error::WrongState); }
@@ -206,9 +213,29 @@ impl FundingPool {
 #[derive(Debug)]
 pub struct FundedDomain<'a> {
     broker: &'a mut DeliveryBroker,
+    // Exclusive borrowing prevents a pool stop while this snapshot is borrowed.
+    admission_closed: bool,
 }
 
 impl FundedDomain<'_> {
+    fn check_admission(&self) -> Result<(), Error> {
+        if self.admission_closed { Err(Error::WrongState) } else { Ok(()) }
+    }
+
+    /// Enroll the original funded broker; the fleet never creates extra rights.
+    pub fn join_fleet(&mut self, fleet: &mut FleetCoordinator, domain: u64,
+        expected_revision: u64, lease_until: ElapsedTick) -> Result<(), Error>
+    {
+        self.check_admission()?;
+        self.broker.join_fleet(fleet, domain, expected_revision, lease_until)
+    }
+
+    /// Installation preserves its original scope, predecessor and issuer checks.
+    /// A fleet acknowledgment does not itself make funding returnable.
+    pub fn install_fleet_fence(&mut self, fence: &FleetFence, sequence: u64, epoch: u64)
+        -> Result<DomainFenceAcknowledgment, Error>
+    { self.broker.install_fleet_fence(fence, sequence, epoch) }
+
     /// Original historical ledger; a stopped child's available balance includes
     /// returned tombstones. Use FundingPool::inspect for spendable pool balances.
     pub fn broker(&self) -> &DeliveryBroker { self.broker }
@@ -220,20 +247,25 @@ impl FundedDomain<'_> {
     }
 
     pub fn propose(&mut self, id: u64, action: ActionSpec, snapshot: &Snapshot) -> Result<Proposal, Error> {
+        self.check_admission()?;
         self.broker.propose(id, action, snapshot)
     }
     pub fn begin_review(&self, id: u64, round: u64, root: [u8; 32], snapshot: &Snapshot)
         -> Result<PolicySession, Error>
-    { self.broker.begin_review(id, round, root, snapshot) }
+    { self.check_admission()?; self.broker.begin_review(id, round, root, snapshot) }
     pub fn apply_review(&mut self, review: PolicyReview, snapshot: &Snapshot) -> Result<PolicyReceipt, Error> {
+        if review.decision().consequence == crate::action::consequence::Consequence::Continue {
+            self.check_admission()?;
+        }
         self.broker.apply_review(review, snapshot)
     }
     pub fn authorize(&mut self, id: u64, snapshot: &Snapshot) -> Result<Permit, Error> {
+        self.check_admission()?;
         self.broker.authorize(id, snapshot)
     }
     pub fn dispatch(&mut self, permit: &Permit, action: &FrozenAction, snapshot: &Snapshot)
         -> Result<DispatchEnvelope, Error>
-    { self.broker.dispatch(permit, action, snapshot) }
+    { self.check_admission()?; self.broker.dispatch(permit, action, snapshot) }
     pub fn cancel(&mut self, id: u64) -> Result<(), Error> { self.broker.cancel(id) }
     pub fn acknowledgment_lost(&mut self, id: u64) -> Result<(), Error> { self.broker.acknowledgment_lost(id) }
     pub fn accept_receipt(&mut self, receipt: EndpointReceipt) -> Result<bool, Error> {

@@ -37,12 +37,45 @@ original permanent stop, collect available units, then use `progress_stop` with
 the original endpoint. Collect newly available units after receipt reconciliation.
 No inspection or return receipt is a permit, funding token or restart image.
 
+## Coordinated shutdown and original fleet enforcement
+
+`request_stop_all(PoolStopRequest)` closes the parent before visiting any child.
+A child's stop failure cannot leave proposal, positive review, authorization,
+dispatch, fleet enrollment or new funding open through the limited borrow. The
+parent remains closed with no resume operation. Exact retries preserve the stop
+identity, including after funding-return revisions change; already-stopped
+children retain their own original stop receipts. Stopping itself consumes no
+funding revision, so an exhausted accounting counter cannot keep admission open.
+
+`progress_stop_all(&mut endpoints)` visits every allocated child, not just the
+supplied endpoint keys. It separately reports stop, endpoint and collection
+results. Missing/foreign endpoints and original per-attempt errors remain visible.
+Successful settlement in one domain is never rolled back because another domain
+failed. Unused rights can be collected after a successful local stop despite
+endpoint failure; sent charges still require original terminal evidence. The
+`drained()` observation requires every domain to finish endpoint settlement and
+collection. An executed charge can remain after a successful drain.
+
+`FundedDomain::join_fleet` and `install_fleet_fence` delegate to the original fleet
+implementation. Its issuer, scope, predecessor, shared-clock lease and revocation
+checks remain in the actual delivery broker. A fleet fence acknowledgment or
+lease expiry alone never satisfies the pool's permanent-stop collection rule.
+The original `fleet_observation` remains available through the read-only broker.
+
+The parent revision tracks funding/returns, not child control or endpoint I/O.
+Inspect `admission_closed` separately. A returned sweep is historical telemetry,
+not an imported authority token or a durable recovery image.
+
 ## Verification and limits
 
 Ten authored unit tests exercise shared reservations, atomic admission failures,
 stopped-child reallocation, delayed execution, sealed nonexecution, duplicate
 receipts, retention loss, cross-domain capability substitution and integer limits.
-Two compile-fail examples cover cloning and mutable-inner escape. These Rust tests
+Ten additional tests cover multi-domain stop/drain, missing and foreign endpoints,
+original stop overflow, exact stop retries, accounting-revision exhaustion, empty
+closure, fleet-fence integration, shared-clock lease expiry and positive-review
+refusal after a failed child stop. Two compile-fail
+examples cover cloning and mutable-inner escape. These Rust tests
 are **UNEXECUTED**: `RCH_REQUIRE_REMOTE=1 rch exec -- cargo +nightly-2026-09-08 run
 --locked -p xtask -- check` exited 127 because `rch` is unavailable. Rust, Cargo and
 rustfmt are also unavailable. Static lexical/delimiter and whitespace screens are

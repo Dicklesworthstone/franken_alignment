@@ -279,3 +279,5 @@ fn revision_overflow_cannot_publish_partial_funding_or_a_refund() {
     assert_eq!(pool.collect_returned(u64::MAX, 5), Err(Error::Overflow));
     assert_eq!(pool.inspect().unwrap(), before);
 }
+
+mod shutdown;
