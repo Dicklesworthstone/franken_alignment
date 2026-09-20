@@ -4,6 +4,8 @@
 //! claim additionally needs a caller-supplied trusted closing observation.  The
 //! reference model records that trust boundary; it does not authenticate it.
 
+mod contiguous;
+
 use std::collections::BTreeMap;
 
 use super::{Error, Frontier};

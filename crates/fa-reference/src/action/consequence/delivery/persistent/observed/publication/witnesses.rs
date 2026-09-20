@@ -63,8 +63,8 @@ fn replay_frontiers(close: Option<TrustedClosingMarker>) -> Result<ProductFronti
     let mut frontiers = ProductFrontiers::new(1, 1)?;
     if let Some(marker) = close {
         if marker.final_sequence > MAX_REPLAY_PREFIX { return Err(Error::Limit); }
-        for sequence in 1..=marker.final_sequence {
-            frontiers.accept(marker.key, FrontierStage::Authenticated, sequence)?;
+        if marker.final_sequence != 0 {
+            frontiers.accept_contiguous(marker.key, FrontierStage::Authenticated, 1, marker.final_sequence)?;
         }
         frontiers.record_close(marker)?;
     }
