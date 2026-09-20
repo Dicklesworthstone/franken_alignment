@@ -17,8 +17,8 @@ use crate::product_frontier::{FrontierStage, ProductFrontiers, TrustedClosingMar
 use crate::witness::{AdapterDomainInput, SnapshotEntry, WitnessJudgment, WitnessRequest, WitnessSnapshot, MAX_WITNESSES};
 use crate::Error;
 
-/// This journal profile reconstructs at most one bounded authenticated prefix.
-/// This is a replay-work bound, not a claim that larger live frontiers are invalid.
+/// Legacy FAPWIN01/FAPWEV01 wire ceiling. Longer admitted prefixes use version
+/// two and constant-span reconstruction; native sequence counters remain u64.
 pub const MAX_REPLAY_PREFIX: u64 = 4_096;
 pub const MAX_PUBLICATION_PACKET_BYTES: usize = 3 * 1_048_576;
 
@@ -42,9 +42,6 @@ impl FileWitnessInput {
         keys.sort_unstable();
         let snapshot = WitnessSnapshot::new(revision, control_cut, semantic_epoch, domain, entries)?;
         let admitted_close = frontiers.closing_marker(domain.domain().projection());
-        if admitted_close.is_some_and(|marker| marker.final_sequence > MAX_REPLAY_PREFIX) {
-            return Err(Error::Limit);
-        }
         Ok(Self { snapshot, keys, admitted_close })
     }
 
@@ -55,14 +52,20 @@ impl FileWitnessInput {
     /// witness engine. Missing closure remains missing even with a snapshot's
     /// asserted Closed marker; it must never be inferred from that assertion.
     pub fn witness_frontiers(&self) -> Result<ProductFrontiers, Error> {
-        replay_frontiers(self.admitted_close)
+        replay_compact_frontiers(self.admitted_close)
     }
 }
 
 fn replay_frontiers(close: Option<TrustedClosingMarker>) -> Result<ProductFrontiers, Error> {
+    if close.is_some_and(|marker| marker.final_sequence > MAX_REPLAY_PREFIX) { return Err(Error::Limit); }
+    replay_compact_frontiers(close)
+}
+
+// The archive retains an independently ADMITTED close, not merely the snapshot's
+// asserted marker. Reconstruct just that already closed authenticated projection.
+fn replay_compact_frontiers(close: Option<TrustedClosingMarker>) -> Result<ProductFrontiers, Error> {
     let mut frontiers = ProductFrontiers::new(1, 1)?;
     if let Some(marker) = close {
-        if marker.final_sequence > MAX_REPLAY_PREFIX { return Err(Error::Limit); }
         if marker.final_sequence != 0 {
             frontiers.accept_contiguous(marker.key, FrontierStage::Authenticated, 1, marker.final_sequence)?;
         }
@@ -85,6 +88,11 @@ impl FilePublicationInputs {
     }
     pub fn structured(&self) -> Option<&FileWitnessInput> { self.structured.as_ref() }
     pub fn opaque(&self) -> Option<&ActualHelperInput> { self.opaque.as_ref() }
+
+    fn requires_compact_prefix(&self) -> bool {
+        self.structured.as_ref().and_then(|input| input.admitted_close)
+            .is_some_and(|marker| marker.final_sequence > MAX_REPLAY_PREFIX)
+    }
 
     pub fn materialize(&self) -> Result<PublicationInputs, Error> {
         Ok(PublicationInputs {

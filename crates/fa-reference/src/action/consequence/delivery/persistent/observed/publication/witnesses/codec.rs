@@ -8,22 +8,29 @@ use crate::witness::{DomainClosure, DomainProjection, QueryRole, MAX_SNAPSHOT_EN
 
 const INPUT: &[u8; 8] = b"FAPWIN01";
 const EVIDENCE: &[u8; 8] = b"FAPWEV01";
+const COMPACT_INPUT: &[u8; 8] = b"FAPWIN02";
+const COMPACT_EVIDENCE: &[u8; 8] = b"FAPWEV02";
+
+fn compact_version(r: &mut Reader<'_>, legacy: &[u8; 8], compact: &[u8; 8]) -> Result<bool, Error> {
+    let header = r.take(8)?;
+    if header == legacy { Ok(false) } else if header == compact { Ok(true) } else { Err(Error::Binding) }
+}
 
 pub(super) fn encode_inputs(input: &FilePublicationInputs) -> Result<Vec<u8>, Error> {
     let mut w = Writer::new(MAX_PUBLICATION_PACKET_BYTES);
-    w.raw(INPUT)?; write_inputs(&mut w, input)?; Ok(w.finish())
+    w.raw(if input.requires_compact_prefix() { COMPACT_INPUT } else { INPUT })?; write_inputs(&mut w, input)?; Ok(w.finish())
 }
 pub(super) fn decode_inputs(bytes: &[u8]) -> Result<FilePublicationInputs, Error> {
     if bytes.len() > MAX_PUBLICATION_PACKET_BYTES { return Err(Error::Limit); }
     let mut r = Reader::new(bytes);
-    if r.take(INPUT.len())? != INPUT { return Err(Error::Binding); }
-    let input = read_inputs(&mut r)?; r.end()?;
+    let compact = compact_version(&mut r, INPUT, COMPACT_INPUT)?;
+    let input = read_inputs(&mut r, compact)?; r.end()?;
     if encode_inputs(&input)?.as_slice() != bytes { return Err(Error::Binding); }
     Ok(input)
 }
 pub(super) fn encode_evidence(evidence: &FilePublicationEvidence) -> Result<Vec<u8>, Error> {
     let mut w = Writer::new(MAX_PUBLICATION_PACKET_BYTES);
-    w.raw(EVIDENCE)?; write_inputs(&mut w, &evidence.original)?;
+    w.raw(if evidence.original.requires_compact_prefix() { COMPACT_EVIDENCE } else { EVIDENCE })?; write_inputs(&mut w, &evidence.original)?;
     w.count(evidence.requests.len())?;
     for request in &evidence.requests {
         match request {
@@ -41,8 +48,8 @@ pub(super) fn encode_evidence(evidence: &FilePublicationEvidence) -> Result<Vec<
 pub(super) fn decode_evidence(bytes: &[u8]) -> Result<FilePublicationEvidence, Error> {
     if bytes.len() > MAX_PUBLICATION_PACKET_BYTES { return Err(Error::Limit); }
     let mut r = Reader::new(bytes);
-    if r.take(EVIDENCE.len())? != EVIDENCE { return Err(Error::Binding); }
-    let original = read_inputs(&mut r)?;
+    let compact = compact_version(&mut r, EVIDENCE, COMPACT_EVIDENCE)?;
+    let original = read_inputs(&mut r, compact)?;
     let count = r.count(MAX_WITNESSES)?;
     let mut requests = Vec::with_capacity(count);
     for _ in 0..count {
@@ -109,7 +116,7 @@ fn write_inputs(w: &mut Writer, input: &FilePublicationInputs) -> Result<(), Err
     }
     Ok(())
 }
-fn read_inputs(r: &mut Reader<'_>) -> Result<FilePublicationInputs, Error> {
+fn read_inputs(r: &mut Reader<'_>, compact: bool) -> Result<FilePublicationInputs, Error> {
     let structured = match r.u8()? {
         0 => None,
         1 => {
@@ -123,7 +130,7 @@ fn read_inputs(r: &mut Reader<'_>) -> Result<FilePublicationInputs, Error> {
             let admitted = match r.u8()? {
                 0 => None, 1 => Some(read_marker(r, key)?), _ => return Err(Error::InvalidInput),
             };
-            let frontiers = replay_frontiers(admitted)?;
+            let frontiers = if compact { replay_compact_frontiers(admitted)? } else { replay_frontiers(admitted)? };
             let count = r.count(MAX_SNAPSHOT_ENTRIES)?;
             let mut entries: Vec<SnapshotEntry> = Vec::with_capacity(count);
             for _ in 0..count {
