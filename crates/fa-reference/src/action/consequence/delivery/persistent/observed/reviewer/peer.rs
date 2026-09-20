@@ -1,6 +1,7 @@
 //! Linux connection credentials before ANY reviewer-protocol I/O.
 //! Reuse the original actor peer-policy checker; the credential namespace and
 //! its limitations are identical. An authenticated process is not a human.
+pub mod control;
 use super::{FileHumanRequest, FileHumanReviewer, FileOversight, ReviewerConnection, ReviewerError};
 use super::client::{ReviewerClient, ReviewerExpectation};
 pub use crate::action::consequence::oversight::actor_peer::{PeerCredentials, PeerPolicy};
@@ -69,6 +70,21 @@ impl VerifiedReviewerSocket {
     /// A valid server identity never chooses a default reviewer decision.
     pub fn into_client(self, expected: ReviewerExpectation) -> Result<ReviewerClient<UnixStream>, Error> {
         ReviewerClient::new(self.stream, expected)
+    }
+
+    /// Explicit stop-only service on this SAME authenticated connection. The
+    /// supervisor still supplies its separately held reviewer role and a fresh
+    /// session; no pending human approval request or evidence provider is needed.
+    pub fn into_stop_connection(self, host: &FileOversight, reviewer: &FileHumanReviewer,
+        operation: u64, session: [u8; 32]) -> Result<control::StopControlConnection<UnixStream>, ReviewerError>
+    {
+        control::StopControlConnection::new(host, reviewer, operation, self.stream, session)
+    }
+
+    pub fn into_stop_client(self, expected: ReviewerExpectation, operation: u64)
+        -> Result<control::StopClient<UnixStream>, Error>
+    {
+        control::StopClient::new(self.stream, expected, operation)
     }
 }
 
