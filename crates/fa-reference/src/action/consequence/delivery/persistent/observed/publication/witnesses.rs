@@ -6,6 +6,7 @@
 //! and storage integrity remain host assumptions.
 
 mod codec;
+pub mod producer;
 #[cfg(test)]
 mod tests;
 
