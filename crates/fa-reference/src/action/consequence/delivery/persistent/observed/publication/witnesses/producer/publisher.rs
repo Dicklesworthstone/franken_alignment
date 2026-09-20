@@ -72,6 +72,22 @@ impl FilePublicationProducer {
         Ok(Self { store, image, bytes, fault: None })
     }
 
+    /// Historical, read-only inspection under the independently expected source
+    /// profile and generation floor. This does not acquire the writer lock,
+    /// confirm/clean staging files, refresh a heartbeat or expose an owner.
+    pub fn read_image(directory: impl AsRef<Path>, expected: PublicationProducerProfile,
+        minimum_generation: u64) -> Result<PublicationProducerImage, JournalError>
+    {
+        expected.check()?;
+        if minimum_generation == 0 { return Err(Error::InvalidInput.into()); }
+        let identity = storage::identity(directory.as_ref())?;
+        let bytes = storage::read(&identity.join(storage::CANONICAL), MAX_PRODUCER_BYTES)?;
+        let image = PublicationProducerImage::from_bytes(&bytes)?;
+        if image.profile() != expected { return Err(Error::Binding.into()); }
+        if image.generation() < minimum_generation { return Err(Error::Stale.into()); }
+        Ok(image)
+    }
+
     /// Last acknowledged data. On an ambiguous error the actual file may be newer.
     pub fn image(&self) -> &PublicationProducerImage { &self.image }
     pub fn failure(&self) -> Option<&JournalError> { self.fault.as_ref() }
