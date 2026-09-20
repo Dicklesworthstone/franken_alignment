@@ -6,6 +6,7 @@ mod cut;
 use cut::{read_input_cut, write_input_cut};
 use crate::action::consequence::delivery::publication_gate::changes::PublicationInputCut;
 pub mod completion;
+pub mod deferred;
 pub mod heartbeat;
 pub use file::{FileCaptureError, PublicationInputFile};
 use super::witnesses::{FilePublicationEvidence, FilePublicationInputs, MAX_PUBLICATION_PACKET_BYTES};

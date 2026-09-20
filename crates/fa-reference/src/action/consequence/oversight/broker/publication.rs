@@ -6,7 +6,7 @@ use crate::action::consequence::oversight::publication::{PublicationJudgment, Pu
 use crate::action::consequence::delivery::publication_gate::changes::{PublicationChange, PublicationChangePolicy, PublicationChangeReport, PublicationChangeStatus};
 use crate::action::consequence::delivery::publication_gate::changes::freshness::{PublicationFreshnessPolicy, PublicationFreshnessStatus, PublicationHeartbeat};
 use std::rc::Rc;
-use crate::action::consequence::delivery::publication_gate::changes::{PublicationInputCut, PublicationInputCutStatus};
+use crate::action::consequence::delivery::publication_gate::changes::{PublicationInputCut, PublicationInputCutStatus, PublicationCaptureOutcome};
 
 impl OversightBroker {
     /// Mandatory on every subsequent attempt. Ordinary committee, policy,
@@ -101,5 +101,15 @@ impl OversightBroker {
         source: u64, generation: u64, inputs: PublicationInputs, cut: PublicationInputCut) -> Result<u64, Error>
     {
         self.delivery.record_captured_publication_inputs_at_cut(attempt, revision, source, generation, inputs, cut)
+    }
+}
+
+impl OversightBroker {
+    /// The original pre-dispatch source observation, never another authority.
+    pub fn record_captured_publication_inputs_or_defer(&mut self, attempt: u64, revision: u64,
+        source: u64, generation: u64, inputs: PublicationInputs, cut: PublicationInputCut)
+        -> Result<PublicationCaptureOutcome, Error>
+    {
+        self.delivery.record_captured_publication_inputs_or_defer(attempt, revision, source, generation, inputs, cut)
     }
 }

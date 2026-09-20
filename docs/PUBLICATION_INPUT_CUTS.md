@@ -58,11 +58,14 @@ permitting fallback was added. Once initially bound with a cut, a version-one
 reread, changed feed identity, old cut or same-generation metadata edit cannot
 satisfy the requirement. Initial legacy bindings cannot be upgraded by later data.
 
-A lagging cut fails capture installation under the existing durable policy: after
+A lagging cut fails capture installation under the existing STRICT durable policy: after
 withdrawal, the owner is quarantined until fenced recovery. It is not silently
 retried or acknowledged as successful acquisition. This is deliberately stricter
 than buffering a lagging producer while retaining an authorized live attempt;
-there is no new recoverable-lag transition in this reference profile. Successful
+the strict methods do not perform recoverable deferral. An explicit pre-dispatch
+[deferrable capture operation](PUBLICATION_CAPTURE_DEFERRAL.md) now records a
+monotonic lagging image WITHOUT installing current inputs or creating freshness.
+Its retained generation and cut floors constrain strict reads too. Successful
 read identities are still not installation receipts. Atomic completion exposes no
 committed feed reports on failure and leaves either the withdrawn original cut
 or the whole acknowledged effect/receipt cut, never partial permitting metadata.

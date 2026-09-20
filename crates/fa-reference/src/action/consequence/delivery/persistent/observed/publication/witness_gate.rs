@@ -24,6 +24,7 @@ pub(in super::super) enum WitnessEvent {
     Inputs(u64, u64, Option<Rc<FilePublicationInputs>>),
     SourceBind(u64, Rc<SourceBinding>),
     Captured(u64, u64, Rc<FilePublicationCapture>),
+    CapturedOrDefer(u64, u64, Rc<FilePublicationCapture>),
     ChangeProfile(PublicationChangePolicy),
     Change(PublicationChange),
     Freshness(FreshnessEvent),
@@ -163,6 +164,9 @@ pub(in super::super) fn write(w: &mut Writer, event: &WitnessEvent) -> Result<()
         WitnessEvent::Captured(id, revision, capture) => {
             w.u8(4)?; w.u64(*id)?; w.u64(*revision)?; w.blob(&capture.to_bytes()?)?;
         }
+        WitnessEvent::CapturedOrDefer(id, revision, capture) => {
+            w.u8(9)?; w.u64(*id)?; w.u64(*revision)?; w.blob(&capture.to_bytes()?)?;
+        }
         WitnessEvent::ChangeProfile(policy) => { w.u8(5)?; changes::write_policy(w, *policy)?; }
         WitnessEvent::Change(notice) => { w.u8(6)?; changes::write_change(w, *notice)?; }
         WitnessEvent::Freshness(event) => { w.u8(7)?; freshness::write(w, *event)?; }
@@ -189,6 +193,8 @@ pub(in super::super) fn read(r: &mut Reader<'_>) -> Result<WitnessEvent, Error> 
         6 => WitnessEvent::Change(changes::read_change(r)?),
         7 => WitnessEvent::Freshness(freshness::read(r)?),
         8 => WitnessEvent::SourceBind(r.u64()?, Rc::new(SourceBinding::read_at_cut(r)?)),
+        9 => WitnessEvent::CapturedOrDefer(r.u64()?, r.u64()?,
+            Rc::new(FilePublicationCapture::from_bytes(r.blob(MAX_CAPTURE_BYTES)?)?)),
         _ => return Err(Error::InvalidInput),
     })
 }

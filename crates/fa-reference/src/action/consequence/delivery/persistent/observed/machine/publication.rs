@@ -76,6 +76,17 @@ impl Machine {
                 }
                 Ok(Transition::Unit)
             }
+            WitnessEvent::CapturedOrDefer(attempt, revision, capture) => {
+                capture.check_action(*attempt, self.actions.get(attempt).ok_or(Error::Missing)?)?;
+                let identity = capture.identity();
+                let inputs = capture.inputs().materialize()?;
+                let cut = capture.input_cut().ok_or(Error::Incomplete)?;
+                let observed = self.broker.record_captured_publication_inputs_or_defer(*attempt, *revision,
+                    identity.source, identity.generation, inputs, cut)?;
+                // No serialized success bit is imported. Native replay recomputes
+                // both Installed and Deferred, retaining their exact source floor.
+                Ok(Transition::Inputs(observed.revision()))
+            }
             WitnessEvent::Captured(attempt, revision, capture) => {
                 capture.check_action(*attempt, self.actions.get(attempt).ok_or(Error::Missing)?)?;
                 let identity = capture.identity();
