@@ -63,6 +63,7 @@ impl PublicationProfile {
             max_items: 2048, max_string_bytes: 4096 }).map_err(debug)?;
         let mut root = Fields::new(json)?;
         let schema = root.text("schema")?;
+        let whole_input = schema == "fa.supervised-whole-input/1";
         let source = root.number("source")?;
         let (sources, feed) = match schema.as_str() {
             "fa.supervised-witnesses/1" | "fa.supervised-witnesses/2" => {
@@ -73,7 +74,7 @@ impl PublicationProfile {
                 } else { None };
                 (PublicationSources::Captures { original, current }, feed)
             }
-            "fa.supervised-witnesses/3" => {
+            "fa.supervised-witnesses/3" | "fa.supervised-whole-input/1" => {
                 let mut producer = Fields::new(root.take("producer")?)?;
                 let path = path(producer.text("path")?)?;
                 let mut scope = Fields::new(producer.take("scope")?)?;
@@ -95,7 +96,14 @@ impl PublicationProfile {
         }
         let raw = root.take("requests")?;
         let raw = raw.as_array().ok_or("requests must be an array")?;
-        if raw.is_empty() || raw.len() > MAX_WITNESSES { return Err("a bounded nonempty witness recipe is required".into()); }
+        // Existing schemas stay strict. Only explicit whole-input mode accepts
+        // no structured queries; preparation must then retain an opaque witness.
+        if raw.len() > MAX_WITNESSES || (!whole_input && raw.is_empty()) {
+            return Err("a bounded nonempty witness recipe is required".into());
+        }
+        if whole_input && !raw.is_empty() {
+            return Err("whole-input profiles require an explicit empty requests array".into());
+        }
         let mut requests = Vec::new();
         let mut identities = BTreeSet::new();
         for item in raw {
@@ -140,7 +148,7 @@ impl PublicationProfile {
     }
 
     /// Pin every selected native gate in the first canonical image. Source-only
-    /// profiles retain their original meaning; versions 2 and 3 never omit the feed.
+    /// profiles retain their original meaning; feed-backed modes never omit the feed.
     pub fn create(&self, directory: &Path, profile: FileOversightProfile)
         -> Result<(FileOversight, FileHumanReviewer), JournalError>
     {
@@ -190,9 +198,15 @@ impl PublicationProfile {
                 (original, CurrentPublication::Producer(reader))
             }
         };
-        if original.inputs().structured().is_none() {
+        if self.requests.is_empty() {
+            if original.inputs().opaque().is_none() {
+                return Err("whole-input supervision requires the original opaque input view".into());
+            }
+        } else if original.inputs().structured().is_none() {
             return Err("checked supervision requires the original structured witness image".into());
         }
+        // Bind the COMPLETE original packet, including every present lane. No
+        // empty recipe, helper explanation or later capture may narrow its view.
         if original.identity().source != current.reader().source() { return Err("original witness producer mismatch".into()); }
         host.bind_publication_file_source(host.revision(), attempt, original, self.requests.clone()).map_err(debug)?;
         Ok(PreparedPublication { current, feed: self.feed.as_ref() })

@@ -204,3 +204,6 @@ fn completed_producer_workflow_recovers_without_source_or_helper_access() {
     let c = configured(&root); let disk = FileOversight::read_publication(&c.store, &c.profile).unwrap();
     assert_eq!(disk.executions, 1); assert_eq!(disk.control.ledger.charged, 7);
 }
+
+#[path = "whole_input_tests.rs"]
+mod whole_input_tests;
