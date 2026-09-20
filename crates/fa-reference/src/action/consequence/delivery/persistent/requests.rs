@@ -4,6 +4,7 @@
 //! and journal-as-publication sink. They are not remote-provider transactions.
 
 pub mod actor;
+mod terminal;
 
 use super::{Event, FileDelivery, FrozenAction, JournalError, Machine, Transition};
 use crate::action::{ActionSpec, ActionState, Scope};
@@ -425,6 +426,8 @@ fn projection_class(stage: ActionState) -> u8 {
 
 #[cfg(test)]
 mod completion_tests {
+    mod terminal;
+
     use super::*;
     use super::super::{
         FileDeliveryProfile, FilePermit, JournalIo, JournalLimits, Reconciliation,
