@@ -4,6 +4,7 @@
 pub mod completion;
 pub mod heartbeat;
 pub mod feed;
+pub mod deferred;
 use super::{FileEvidenceReport, FileProvider};
 use super::super::{CommitteeContract, DriverEvidence, ElapsedTick, Error,
     FileCredentialPermit, FileDriverEvent, FileHumanPermit, FileOversight,
