@@ -1,6 +1,7 @@
 //! One explicit request through existing actor, helper, reviewer and delivery APIs.
 //! This is a synchronous executable consumer, not an alternative executor/ledger.
 pub mod continuation;
+pub(crate) mod control;
 
 use super::config::{Config, CLOCK_DOMAIN, debug};
 use super::peers::{Admission, PeerProfile};
@@ -163,6 +164,10 @@ where F: FnMut() -> ElapsedTick {
     let FileRequestDisposition::Admitted { attempt, stage: ActionState::Reviewing } = status.disposition else {
         return Ok(()); // The ORIGINAL gateway/ledger supplies denied/nonadmitted outcomes.
     };
+    // A separate stop-only endpoint is available before original capture or helper
+    // launch. Exact retries never enter execute and cannot create this service.
+    let mut control = control::Control::new(config, request, peers)?;
+    if control.checkpoint(driver, reviewer, deadline, time)? { return Ok(()); }
     let publication = match publication {
         Some(profile) => {
             // Freeze the original recipe and actual producer image BEFORE any
@@ -178,9 +183,11 @@ where F: FnMut() -> ElapsedTick {
     let input_revision = driver.supervisor().host().map_err(debug)?.input_revision(attempt).map_err(debug)?;
     let launch = FileReviewLaunch { request, round: request, window, expected_input_revision: input_revision,
         workers: std::mem::take(&mut config.programs), limits: HelperLimits::default() };
+    if control.checkpoint(driver, reviewer, deadline, time)? { return Ok(()); }
     driver.start_file_process_review(&mut config.source, launch, &mut *time).map_err(debug)?;
     loop {
         deadline.check(time())?;
+        if control.checkpoint(driver, reviewer, deadline, time)? { return Ok(()); }
         let report = driver.step_from_file(&mut config.source, &mut *time, None);
         let event = report.result.map_err(debug)?;
         match event {
@@ -195,10 +202,11 @@ where F: FnMut() -> ElapsedTick {
             _ => return Err(format!("unexpected original driver review event: {event:?}")),
         }
     }
-    let approval = human_review(driver, reviewer, config, request, deadline, peers, time)?;
+    let approval = human_review(driver, reviewer, config, request, deadline, (peers, &mut control), time)?;
     let Some(approval) = approval else { cancel_unspent(driver, request)?; return Ok(()); };
     loop {
         deadline.check(time())?;
+        if control.checkpoint(driver, reviewer, deadline, time)? { return Ok(()); }
         let event = match &publication {
             Some(profile) => profile.step(driver, &mut config.source, time, Some(&approval))?,
             None => driver.step_from_file(&mut config.source, &mut *time, Some(&approval)).result.map_err(debug)?,
@@ -213,8 +221,11 @@ where F: FnMut() -> ElapsedTick {
 }
 
 fn human_review<F>(driver: &mut FileSupervisedDriver, reviewer: &FileHumanReviewer, config: &mut Config,
-    request: u64, deadline: &Deadline, peers: Option<&PeerProfile>, time: &mut F) -> Result<Option<FileHumanPermit>, String>
+    request: u64, deadline: &Deadline, channels: (Option<&PeerProfile>, &mut control::Control),
+    time: &mut F) -> Result<Option<FileHumanPermit>, String>
 where F: FnMut() -> ElapsedTick {
+    let (peers, control) = channels;
+    if control.checkpoint(driver, reviewer, deadline, time)? { return Ok(None); }
     let path = peers.map_or_else(|| config.socket(request), |profile| profile.socket(request));
     let mut admission = Admission::new(peers)?;
     let socket = BoundSocket::bind(&path, peers)?;
@@ -222,6 +233,7 @@ where F: FnMut() -> ElapsedTick {
     eprintln!("Independent reviewer endpoint ready: {path:?}");
     let stream = loop {
         deadline.check(time())?;
+        if control.checkpoint(driver, reviewer, deadline, time)? { return Ok(None); }
         match socket.listener.accept() {
             Ok((stream, _)) => match admission.admit(stream)? {
                 Some(stream) => break stream,
@@ -233,6 +245,7 @@ where F: FnMut() -> ElapsedTick {
     };
     // Peer acceptance precedes source capture, human-request creation and offer
     // construction. Rejected peers cannot burn or influence the pending request.
+    if control.checkpoint(driver, reviewer, deadline, time)? { return Ok(None); }
     let expires = plus(time(), config.profile.human.max_validity_ticks)?.min(deadline.logical);
     let request = driver.request_human_approval_from_file(&mut config.source, request, expires, &mut *time)
         .result.map_err(debug)?;
@@ -243,6 +256,7 @@ where F: FnMut() -> ElapsedTick {
     };
     let application = loop {
         deadline.check(time())?;
+        if control.checkpoint(driver, reviewer, deadline, time)? { return Ok(None); }
         let progress = {
             let mut host = driver.supervisor_mut().host_mut().map_err(debug)?;
             connection.step(&mut host, reviewer, &mut *time).map_err(debug)?
@@ -260,6 +274,7 @@ where F: FnMut() -> ElapsedTick {
     while connection.phase() != ReviewerPhase::Complete
         && drain_started.elapsed() < Duration::from_millis(config.timing.cleanup_ms)
     {
+        if control.checkpoint(driver, reviewer, deadline, time)? { return Ok(None); }
         let result = {
             let mut host = driver.supervisor_mut().host_mut().map_err(debug)?;
             connection.step(&mut host, reviewer, &mut *time)
