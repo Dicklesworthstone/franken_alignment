@@ -1,0 +1,33 @@
+{
+  "schema":"fa.publication-source/1",
+  "expected_generation":0,
+  "observed_at_unix_ms":1000,
+  "structured":{
+    "revision":1,"control_cut":1,"semantic_epoch":20,
+    "domain":{"domain_id":40,"domain_epoch":1,"projection":{"source":40,"branch":4,"projection":7,"source_epoch":1}},
+    "closure":{"kind":"closed","marker":{"key":{"source":40,"branch":4,"projection":7,"source_epoch":1},"final_sequence":1,"marker_generation":1}},
+    "admitted_close":{"key":{"source":40,"branch":4,"projection":7,"source_epoch":1},"final_sequence":1,"marker_generation":1},
+    "entries":[{"key":0,"version":1,"value_hex":"0001ff"}]
+  },
+  "opaque":{
+    "submitted_hex":"517c507c497c537c45",
+    "input_profile":{"profile_id":7,"profile_hex":"01ff","tokenizer_epoch":1,"policy_epoch":2,"model_epoch":3},
+    "parts":[
+      {"start":0,"end":1,"kind":"question"},
+      {"start":1,"end":2,"kind":"delimiter"},
+      {"start":2,"end":3,"kind":"prompt"},
+      {"start":3,"end":4,"kind":"delimiter"},
+      {"start":4,"end":5,"kind":"instruction"},
+      {"start":5,"end":6,"kind":"delimiter"},
+      {"start":6,"end":7,"kind":"tool_schema","schema_id":8},
+      {"start":7,"end":8,"kind":"delimiter"},
+      {"start":8,"end":9,"kind":"evidence","source_id":9,"transform_id":10}
+    ],
+    "omissions":[
+      {"kind":"closed_absent","domain_id":11,"trusted_closure_marker_id":12},
+      {"kind":"gapped","domain_id":13,"first_missing":14},
+      {"kind":"unsupported","domain_id":15},
+      {"kind":"redacted","domain_id":16,"transform_id":17}
+    ]
+  }
+}

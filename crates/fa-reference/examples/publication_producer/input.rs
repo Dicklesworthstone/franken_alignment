@@ -63,7 +63,7 @@ impl Observation {
         let observed_at = ElapsedTick(f.number("observed_at_unix_ms")?);
         let encoded = f.text("inputs_hex")?;
         f.end()?;
-        let bytes = unhex(&encoded)?;
+        let bytes = unhex(&encoded, MAX_PUBLICATION_PACKET_BYTES)?;
         let inputs = FilePublicationInputs::from_bytes(&bytes).map_err(debug)?;
         Ok(Self { expected_generation, observed_at, inputs })
     }
@@ -84,8 +84,8 @@ fn hex(bytes: &[u8]) -> Result<String, String> {
     for &byte in bytes { encoded.push(DIGITS[(byte >> 4) as usize] as char); encoded.push(DIGITS[(byte & 15) as usize] as char); }
     Ok(encoded)
 }
-fn unhex(text: &str) -> Result<Vec<u8>, String> {
-    if text.len() > 2 * MAX_PUBLICATION_PACKET_BYTES || !text.len().is_multiple_of(2) {
+pub(super) fn unhex(text: &str, limit: usize) -> Result<Vec<u8>, String> {
+    if text.len() / 2 > limit || !text.len().is_multiple_of(2) {
         return Err("invalid input packet hex length".into());
     }
     let nibble = |b| match b { b'0'..=b'9' => Ok(b - b'0'), b'a'..=b'f' => Ok(b - b'a' + 10),
@@ -120,21 +120,28 @@ fn stamp(m: &Metadata) -> (u64, u64, u64, i64, i64, i64, i64) {
     (m.dev(), m.ino(), m.len(), m.mtime(), m.mtime_nsec(), m.ctime(), m.ctime_nsec())
 }
 pub(super) fn debug(error: impl std::fmt::Debug) -> String { format!("{error:?}") }
-struct Fields(BTreeMap<String, Json>);
+pub(super) struct Fields(BTreeMap<String, Json>);
 impl Fields {
     fn parse(bytes: &[u8], limit: usize, string_limit: usize) -> Result<Self, String> {
         Self::object(strict_json::parse(bytes, Limits { max_bytes: limit, max_depth: 4,
             max_items: 64, max_string_bytes: string_limit }).map_err(debug)?)
     }
-    fn object(value: Json) -> Result<Self, String> {
+    pub(super) fn object(value: Json) -> Result<Self, String> {
         match value { Json::Object(fields) => Ok(Self(fields)), _ => Err("expected a JSON object".into()) }
     }
-    fn take(&mut self, key: &str) -> Result<Json, String> { self.0.remove(key).ok_or_else(|| format!("missing field {key}")) }
-    fn text(&mut self, key: &str) -> Result<String, String> {
+    pub(super) fn take(&mut self, key: &str) -> Result<Json, String> { self.0.remove(key).ok_or_else(|| format!("missing field {key}")) }
+    pub(super) fn text(&mut self, key: &str) -> Result<String, String> {
         self.take(key)?.as_str().map(str::to_owned).ok_or_else(|| format!("{key} must be text"))
     }
-    fn number(&mut self, key: &str) -> Result<u64, String> {
+    pub(super) fn number(&mut self, key: &str) -> Result<u64, String> {
         self.take(key)?.as_u64().ok_or_else(|| format!("{key} must be an unsigned integer"))
     }
-    fn end(self) -> Result<(), String> { if self.0.is_empty() { Ok(()) } else { Err("unknown producer field".into()) } }
+    pub(super) fn array(&mut self, key: &str, max: usize) -> Result<Vec<Json>, String> {
+        match self.take(key)? {
+            Json::Array(values) if values.len() <= max => Ok(values),
+            Json::Array(_) => Err(format!("{key} exceeds its item limit")),
+            _ => Err(format!("{key} must be an array")),
+        }
+    }
+    pub(super) fn end(self) -> Result<(), String> { if self.0.is_empty() { Ok(()) } else { Err("unknown producer field".into()) } }
 }

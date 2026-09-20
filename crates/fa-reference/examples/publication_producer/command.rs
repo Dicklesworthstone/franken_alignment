@@ -1,6 +1,8 @@
 //! A synchronous consumer of the original producer owner, not a new store.
 #[path = "input.rs"]
 mod input;
+#[path = "source.rs"]
+mod source;
 #[cfg(test)]
 #[path = "tests.rs"]
 mod tests;
@@ -11,11 +13,16 @@ use fa_reference::action::consequence::delivery::persistent::observed::publicati
 use std::io::Write;
 use std::path::Path;
 
-const USAGE: &str = "usage: publication_producer observation EXPECTED_GENERATION OBSERVED_AT_UNIX_MS INPUT_PACKET\n       publication_producer create PROFILE OBSERVATION_JSON\n       publication_producer publish PROFILE OBSERVATION_JSON\n       publication_producer inspect PROFILE";
+const USAGE: &str = "usage: publication_producer observation EXPECTED_GENERATION OBSERVED_AT_UNIX_MS INPUT_PACKET\n       publication_producer create PROFILE OBSERVATION_JSON\n       publication_producer publish PROFILE OBSERVATION_JSON\n       publication_producer inspect PROFILE\n       publication_producer source-observation SOURCE_JSON\n       publication_producer create-source PROFILE SOURCE_JSON\n       publication_producer publish-source PROFILE SOURCE_JSON";
 
 pub(super) fn run(args: &[String], out: &mut impl Write) -> Result<(), String> {
     let mode = args.first().map(String::as_str).ok_or(USAGE)?;
-    let count = match mode { "observation" => 4, "create" | "publish" => 3, "inspect" => 2, _ => return Err(USAGE.into()) };
+    let count = match mode {
+        "observation" => 4,
+        "create" | "publish" | "create-source" | "publish-source" => 3,
+        "inspect" | "source-observation" => 2,
+        _ => return Err(USAGE.into()),
+    };
     if args.len() != count { return Err(USAGE.into()); }
     if mode == "observation" {
         let expected_generation = args[1].parse::<u64>().map_err(debug)?;
@@ -24,6 +31,11 @@ pub(super) fn run(args: &[String], out: &mut impl Write) -> Result<(), String> {
         let bytes = read_regular(Path::new(&args[3]), MAX_PUBLICATION_PACKET_BYTES)?;
         let inputs = FilePublicationInputs::from_bytes(&bytes).map_err(debug)?;
         let observation = Observation { expected_generation, observed_at, inputs };
+        out.write_all(&observation.encode()?).map_err(debug)?;
+        return out.flush().map_err(debug);
+    }
+    if mode == "source-observation" {
+        let observation = source::read(Path::new(&args[1]))?;
         out.write_all(&observation.encode()?).map_err(debug)?;
         return out.flush().map_err(debug);
     }
@@ -40,10 +52,12 @@ pub(super) fn run(args: &[String], out: &mut impl Write) -> Result<(), String> {
     }
     // Decode the whole immutable observation BEFORE opening/cleaning a producer
     // store. It binds original time to exact native bytes, not a mutable file path.
-    let observation = Observation::read(Path::new(&args[2]))?;
+    let observation = if matches!(mode, "create-source" | "publish-source") {
+        source::read(Path::new(&args[2]))?
+    } else { Observation::read(Path::new(&args[2]))? };
     let successor = observation.expected_generation.checked_add(1).ok_or("producer generation overflow")?;
     if profile.minimum_generation > successor { return Err("observation precedes the independent generation floor".into()); }
-    let report = if mode == "create" {
+    let report = if matches!(mode, "create" | "create-source") {
         if observation.expected_generation != 0 || profile.minimum_generation != 1 {
             return Err("creation requires expected generation zero and minimum generation one".into());
         }

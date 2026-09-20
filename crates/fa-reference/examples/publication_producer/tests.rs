@@ -154,3 +154,6 @@ fn profile_rejects_missing_scope_zero_floor_and_unrecognized_fields() {
     }
     assert!(!root.0.join("producer").exists());
 }
+
+#[path = "source_tests.rs"]
+mod source_tests;
