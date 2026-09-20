@@ -1,4 +1,5 @@
 //! Same canonical recovery-space admission as the simpler persistent owner.
+mod terminal;
 use super::{BaseEvent, Event, FileOversight, JournalError};
 use super::super::{JournalCapacity, RecoveryReserve};
 
