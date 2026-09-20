@@ -1,5 +1,7 @@
 //! Source-bound, single-comparison observations in the ORIGINAL publication gate.
 //! Producer identity/generation are trusted observations, not authentication.
+mod cut;
+pub use cut::{PublicationInputCut, PublicationInputCutStatus};
 use super::{DeliveryBroker, PublicationInputs, Slot};
 use crate::action::ActionState;
 use crate::Error;
@@ -17,6 +19,7 @@ pub(super) struct SourceState {
     status: PublicationSourceStatus,
     // Keep exact generation contents through withdrawal, not just a digest.
     last: PublicationInputs,
+    input_cut: Option<PublicationInputCutStatus>,
 }
 
 impl DeliveryBroker {
@@ -41,7 +44,7 @@ impl DeliveryBroker {
         slot.current = None;
         slot.source = Some(SourceState { status: PublicationSourceStatus {
             source, generation, capture_pending: false, fresh: false,
-        }, last: original });
+        }, last: original, input_cut: None });
         Ok(())
     }
 
@@ -58,6 +61,13 @@ impl DeliveryBroker {
     pub fn record_captured_publication_inputs(&mut self, attempt: u64, expected_revision: u64,
         source: u64, generation: u64, inputs: PublicationInputs) -> Result<u64, Error>
     {
+        self.record_capture(attempt, expected_revision, source, generation, inputs, None)
+    }
+
+    fn record_capture(&mut self, attempt: u64, expected_revision: u64, source: u64,
+        generation: u64, inputs: PublicationInputs, input_cut: Option<PublicationInputCut>) -> Result<u64, Error>
+    {
+        let feed = input_cut.map(|_| self.publication_change_status()).transpose()?;
         let gate = self.publication.as_mut().ok_or(Error::Incomplete)?;
         let slot = gate.slots.get_mut(&attempt).ok_or(Error::Missing)?;
         if slot.revision != expected_revision { return Err(Error::Stale); }
@@ -66,12 +76,14 @@ impl DeliveryBroker {
         if retained.status.source != source { return Err(Error::Binding); }
         if generation < retained.status.generation { return Err(Error::Stale); }
         if generation == retained.status.generation && inputs != retained.last { return Err(Error::Binding); }
+        retained.check_input_cut(input_cut, generation, feed)?;
         // All fallible validation/allocation precedes changes to the floor.
         let copy = inputs.clone();
         let revision = slot.replace_inputs(expected_revision, Some(inputs))?;
         let retained = slot.source.as_mut().expect("checked source");
         retained.last = copy;
         retained.status.generation = generation;
+        if let Some(cut) = &mut retained.input_cut { cut.last = input_cut.expect("validated cut"); }
         retained.status.capture_pending = false;
         retained.status.fresh = true;
         Ok(revision)
@@ -120,6 +132,7 @@ impl Slot {
     pub(super) fn consume_capture(&mut self) -> bool {
         let Some(source) = &mut self.source else { return true; };
         source.status.capture_pending = false;
-        std::mem::replace(&mut source.status.fresh, false)
+        let fresh = std::mem::replace(&mut source.status.fresh, false);
+        fresh && source.input_cut.is_none_or(|cut| cut.last.through >= cut.required_through)
     }
 }

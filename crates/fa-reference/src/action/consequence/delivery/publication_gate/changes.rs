@@ -2,6 +2,7 @@
 //! withdraw current observations; they never replace reviewed requirements or
 //! excuse exact final-cut validation. A known missing tail blocks publication.
 pub mod freshness;
+pub use super::source::{PublicationInputCut, PublicationInputCutStatus};
 use super::{DeliveryBroker, PublicationGate, PublicationJudgment, MAX_PUBLICATION_BINDINGS};
 use crate::witness::refinement::index::routing::{InvalidationIndex, RoutingBudget, RoutingLimits, WitnessChange};
 use crate::witness::MAX_WITNESSES;
@@ -153,6 +154,7 @@ impl PublicationGate {
                 // None preserves snapshot and producer high-water marks. It
                 // revokes source freshness, not either authority key or rights.
                 slot.record_inputs(slot.revision, None).expect("preflighted withdrawal revision");
+                slot.require_capture_through(status.observed_through);
                 slot.last = None;
             }
         }
