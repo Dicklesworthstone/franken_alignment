@@ -6,6 +6,7 @@
 //! Issuing a command never installs it at a domain or settles an external effect.
 
 mod domain;
+pub mod funding;
 
 use super::{ActionState, ElapsedTick, EndpointOutcome, Scope};
 use crate::Error;
