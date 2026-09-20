@@ -1,16 +1,19 @@
 //! Explicit original witness requirements for the runnable supervisor. This is
 //! orchestration of the native publication gate, not another validation engine.
 mod feed;
+#[cfg(test)]
+mod producer_tests;
 use feed::FeedProfile;
 use super::config::{debug, read_regular};
 use fa_reference::action::consequence::delivery::persistent::observed::{FileHumanPermit, FileHumanReviewer, FileOversight, FileOversightProfile};
 use fa_reference::action::consequence::delivery::persistent::JournalError;
 use fa_reference::Error;
 use fa_reference::action::consequence::delivery::persistent::observed::driver::{FileDriverEvent, FileSupervisedDriver};
-use fa_reference::action::consequence::delivery::persistent::observed::publication::capture::{FilePublicationCapture, PublicationInputFile};
+use fa_reference::action::consequence::delivery::persistent::observed::publication::capture::PublicationInputFile;
 use fa_reference::action::consequence::delivery::publication_gate::{PublicationLimits, MAX_PUBLICATION_BINDINGS};
 use fa_reference::action::consequence::oversight::evidence_source::FileEvidenceSource;
-use fa_reference::action::ElapsedTick;
+use fa_reference::action::{ElapsedTick, Purpose, Scope};
+use fa_reference::action::consequence::delivery::persistent::observed::publication::witnesses::producer::PublicationProducerProfile;
 use fa_reference::strict_json::{self, Json, Limits};
 use fa_reference::witness::{QueryRole, WitnessRequest, MAX_WITNESSES};
 use fa_reference::witness::refinement::RefinementBudget;
@@ -25,11 +28,32 @@ const PROFILE_BYTES: usize = 65_536;
 #[derive(Debug)]
 pub struct PublicationProfile {
     pub limits: PublicationLimits,
-    original: PublicationInputFile,
-    current: PublicationInputFile,
+    sources: PublicationSources,
     requests: Vec<WitnessRequest>,
     feed: Option<FeedProfile>,
 }
+#[derive(Debug)]
+enum PublicationSources {
+    Captures { original: PublicationInputFile, current: PublicationInputFile },
+    Producer { path: PathBuf, profile: PublicationProducerProfile },
+}
+
+/// Only reader bindings survive preparation, never cached current evidence or
+/// authority. Every driver step reopens the selected native source.
+pub struct PreparedPublication<'a> {
+    current: CurrentPublication<'a>,
+    feed: Option<&'a FeedProfile>,
+}
+enum CurrentPublication<'a> {
+    Capture(&'a PublicationInputFile),
+    Producer(PublicationInputFile),
+}
+impl CurrentPublication<'_> {
+    fn reader(&self) -> &PublicationInputFile {
+        match self { Self::Capture(reader) => reader, Self::Producer(reader) => reader }
+    }
+}
+
 impl PublicationProfile {
     pub fn read(path: &Path) -> Result<Self, String> {
         Self::decode(&read_regular(path, PROFILE_BYTES)?)
@@ -38,14 +62,30 @@ impl PublicationProfile {
         let json = strict_json::parse(bytes, Limits { max_bytes: PROFILE_BYTES, max_depth: 5,
             max_items: 2048, max_string_bytes: 4096 }).map_err(debug)?;
         let mut root = Fields::new(json)?;
-        let feed = match root.text("schema")?.as_str() {
-            "fa.supervised-witnesses/1" => None,
-            "fa.supervised-witnesses/2" => Some(FeedProfile::decode(root.take("feed")?)?),
+        let schema = root.text("schema")?;
+        let source = root.number("source")?;
+        let (sources, feed) = match schema.as_str() {
+            "fa.supervised-witnesses/1" | "fa.supervised-witnesses/2" => {
+                let original = PublicationInputFile::new(path(root.text("original")?)?, source).map_err(debug)?;
+                let current = PublicationInputFile::new(path(root.text("current")?)?, source).map_err(debug)?;
+                let feed = if schema == "fa.supervised-witnesses/2" {
+                    Some(FeedProfile::decode(root.take("feed")?)?)
+                } else { None };
+                (PublicationSources::Captures { original, current }, feed)
+            }
+            "fa.supervised-witnesses/3" => {
+                let mut producer = Fields::new(root.take("producer")?)?;
+                let path = path(producer.text("path")?)?;
+                let mut scope = Fields::new(producer.take("scope")?)?;
+                let scope_value = Scope { tenant: scope.number("tenant")?, principal: scope.number("principal")?,
+                    run: scope.number("run")?, branch: scope.number("branch")?, authority: scope.number("authority")?,
+                    purpose: Purpose::Effect };
+                scope.end()?; producer.end()?;
+                let (feed, profile) = FeedProfile::producer(root.take("feed")?, path.clone(), source, scope_value)?;
+                (PublicationSources::Producer { path, profile }, Some(feed))
+            }
             _ => return Err("unsupported supervised witness profile".into()),
         };
-        let source = root.number("source")?;
-        let original = path(root.text("original")?)?;
-        let current = path(root.text("current")?)?;
         let mut l = Fields::new(root.take("limits")?)?;
         let limits = PublicationLimits { bindings: usize::try_from(l.number("bindings")?).map_err(debug)?,
             validation: RefinementBudget { steps: l.number("steps")?, value_bytes: l.number("value_bytes")? } };
@@ -90,15 +130,21 @@ impl PublicationProfile {
             requests.push(request);
         }
         root.end()?;
-        Ok(Self { limits, original: PublicationInputFile::new(original, source).map_err(debug)?,
-            current: PublicationInputFile::new(current, source).map_err(debug)?, requests, feed })
+        Ok(Self { limits, sources, requests, feed })
+    }
+
+    fn check_scope(&self, profile: &FileOversightProfile) -> Result<(), JournalError> {
+        if let PublicationSources::Producer { profile: producer, .. } = &self.sources
+            && producer.scope != profile.delivery.scope { return Err(Error::Binding.into()); }
+        Ok(())
     }
 
     /// Pin every selected native gate in the first canonical image. Source-only
-    /// profiles retain their original meaning; version 2 never omits its feed.
+    /// profiles retain their original meaning; versions 2 and 3 never omit the feed.
     pub fn create(&self, directory: &Path, profile: FileOversightProfile)
         -> Result<(FileOversight, FileHumanReviewer), JournalError>
     {
+        self.check_scope(&profile)?;
         match &self.feed {
             Some(feed) => FileOversight::create_with_publication_change_freshness(directory,
                 profile, self.limits, feed.changes, feed.freshness),
@@ -106,12 +152,13 @@ impl PublicationProfile {
         }
     }
 
-    /// All version-2 native policy fields are checked BEFORE the recovery fence.
+    /// All feed-backed native policy fields are checked BEFORE the recovery fence.
     /// No feed/capture file is read. The source-only opener also refuses a stored
     /// stronger profile (after its native fence), never disabling the stored gate.
     pub fn open(&self, directory: &Path, profile: FileOversightProfile)
         -> Result<(FileOversight, FileHumanReviewer), JournalError>
     {
+        self.check_scope(&profile)?;
         match &self.feed {
             Some(feed) => FileOversight::open_with_publication_change_freshness(directory,
                 profile, self.limits, feed.changes, feed.freshness),
@@ -126,36 +173,43 @@ impl PublicationProfile {
         }
     }
 
-    /// Read once BEFORE launching any helper. Hold the exact original image in
-    /// this local value until the original host binds the complete frozen action.
-    /// A live file is not a fallback for a missing or incompatible original.
-    pub fn original(&self) -> Result<FilePublicationCapture, String> {
-        let original = self.original.read_capture().map_err(debug)?;
-        if original.inputs().structured().is_none() {
-            return Err("checked supervision requires the original structured witness image".into());
-        }
-        Ok(original)
-    }
-    pub fn bind(&self, host: &mut FileOversight, attempt: u64,
-        original: FilePublicationCapture) -> Result<(), String>
-    {
+    /// Capture the original image BEFORE helper launch and bind it through the
+    /// actual owner. Producer mode obtains the gateway's complete frozen action;
+    /// it never guesses an attempt, rebuilds an action or needs a shadow journal.
+    pub fn prepare(&self, host: &mut FileOversight, attempt: u64) -> Result<PreparedPublication<'_>, String> {
         if host.publication_validation_profile().map_err(debug)? != Some(self.limits) {
             return Err("stored publication limits differ from the explicit profile".into());
         }
-        if original.identity().source != self.current.source() { return Err("original witness producer mismatch".into()); }
-        host.bind_publication_file_source(host.revision(), attempt, original, self.requests.clone()).map_err(debug)
+        let (original, current) = match &self.sources {
+            PublicationSources::Captures { original, current } => {
+                (original.read_capture().map_err(debug)?, CurrentPublication::Capture(current))
+            }
+            PublicationSources::Producer { path, profile } => {
+                let reader = host.publication_producer_reader(attempt, path, *profile).map_err(debug)?;
+                let original = reader.read_capture().map_err(debug)?;
+                (original, CurrentPublication::Producer(reader))
+            }
+        };
+        if original.inputs().structured().is_none() {
+            return Err("checked supervision requires the original structured witness image".into());
+        }
+        if original.identity().source != current.reader().source() { return Err("original witness producer mismatch".into()); }
+        host.bind_publication_file_source(host.revision(), attempt, original, self.requests.clone()).map_err(debug)?;
+        Ok(PreparedPublication { current, feed: self.feed.as_ref() })
     }
+}
 
+impl PreparedPublication<'_> {
     /// The SAME native policy-source reader remains mandatory. Witness bytes are
     /// acquired separately at authorize, dispatch and first publication; neither
     /// a cached result nor human approval can replace a missing current capture.
     pub fn step<F>(&self, driver: &mut FileSupervisedDriver, evidence: &mut FileEvidenceSource,
         time: &mut F, human: Option<&FileHumanPermit>) -> Result<FileDriverEvent, String>
     where F: FnMut() -> ElapsedTick {
-        match &self.feed {
-            Some(feed) => driver.step_from_files_with_publication_feed(evidence, &self.current,
+        match self.feed {
+            Some(feed) => driver.step_from_files_with_publication_feed(evidence, self.current.reader(),
                 &feed.reader, time, human, None).publication.evidence.result.map_err(debug),
-            None => driver.step_from_files_with_publication_source(evidence, &self.current, time, human, None)
+            None => driver.step_from_files_with_publication_source(evidence, self.current.reader(), time, human, None)
                 .evidence.result.map_err(debug),
         }
     }

@@ -163,13 +163,15 @@ where F: FnMut() -> ElapsedTick {
     let FileRequestDisposition::Admitted { attempt, stage: ActionState::Reviewing } = status.disposition else {
         return Ok(()); // The ORIGINAL gateway/ledger supplies denied/nonadmitted outcomes.
     };
-    if let Some(profile) = publication {
-        // Freeze the original recipe BEFORE helper launch, not after observing
-        // the answer or by taking the latest producer image as the old basis.
-        let original = profile.original()?;
-        let mut host = driver.supervisor_mut().host_mut().map_err(debug)?;
-        profile.bind(&mut host, attempt, original)?;
-    }
+    let publication = match publication {
+        Some(profile) => {
+            // Freeze the original recipe and actual producer image BEFORE any
+            // helper answer. The prepared value retains readers, not evidence.
+            let mut host = driver.supervisor_mut().host_mut().map_err(debug)?;
+            Some(profile.prepare(&mut host, attempt)?)
+        }
+        None => None,
+    };
     let now = time(); deadline.check(now)?;
     let window = ReviewWindow { commit_by: plus(now, config.timing.commit_ms)?, reveal_by: plus(now, config.timing.reveal_ms)? };
     if window.reveal_by >= deadline.logical { return Err("insufficient original action lifetime for configured review".into()); }
@@ -197,7 +199,7 @@ where F: FnMut() -> ElapsedTick {
     let Some(approval) = approval else { cancel_unspent(driver, request)?; return Ok(()); };
     loop {
         deadline.check(time())?;
-        let event = match publication {
+        let event = match &publication {
             Some(profile) => profile.step(driver, &mut config.source, time, Some(&approval))?,
             None => driver.step_from_file(&mut config.source, &mut *time, Some(&approval)).result.map_err(debug)?,
         };

@@ -140,5 +140,19 @@ impl FilePublicationProducer {
     }
 }
 
+impl crate::action::consequence::delivery::persistent::observed::FileOversight {
+    /// Bind a producer reader to THIS owner's original frozen action, including
+    /// all witnesses, scope, epochs and target bytes. No caller-created action or
+    /// second journal is needed by actor-wire consumers. This constructs a reader
+    /// only: it neither reads evidence nor grants current publication eligibility.
+    pub fn publication_producer_reader(&self, attempt: u64, path: impl AsRef<Path>,
+        expected: PublicationProducerProfile) -> Result<PublicationInputFile, JournalError>
+    {
+        if self.fault.is_some() { return Err(JournalError::Unavailable); }
+        let action = self.machine.actions.get(&attempt).ok_or(Error::Missing)?;
+        Ok(PublicationInputFile::from_producer(path, expected, attempt, action)?)
+    }
+}
+
 #[cfg(test)]
 mod storage_tests;
