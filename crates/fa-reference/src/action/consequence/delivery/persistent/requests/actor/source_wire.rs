@@ -1,5 +1,7 @@
 //! Source acquisition at the original decoded actor submission boundary.
 //! Parsing, tickets, idempotency and redaction stay in the original wire/port.
+#[cfg(target_os = "linux")]
+pub mod inbox;
 use super::{ActorError, Error, FileActorPort, FileActorSupervisor, JournalError, Rc, Weak};
 use crate::action::ElapsedTick;
 use crate::action::consequence::delivery::persistent::observed::FileOversight;
