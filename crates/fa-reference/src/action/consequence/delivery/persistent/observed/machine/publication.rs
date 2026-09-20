@@ -70,14 +70,23 @@ impl Machine {
                 let identity = binding.identity();
                 // Both operations occur on the unexposed transaction candidate.
                 self.broker.bind_publication_judgment(*attempt, judgment)?;
-                self.broker.bind_publication_source(*attempt, identity.source, identity.generation, original)?;
+                match binding.input_cut() {
+                    Some(cut) => self.broker.bind_publication_source_at_cut(*attempt, identity.source, identity.generation, original, cut)?,
+                    None => self.broker.bind_publication_source(*attempt, identity.source, identity.generation, original)?,
+                }
                 Ok(Transition::Unit)
             }
             WitnessEvent::Captured(attempt, revision, capture) => {
                 capture.check_action(*attempt, self.actions.get(attempt).ok_or(Error::Missing)?)?;
                 let identity = capture.identity();
-                Ok(Transition::Inputs(self.broker.record_captured_publication_inputs(*attempt, *revision,
-                    identity.source, identity.generation, capture.inputs().materialize()?)?))
+                let inputs = capture.inputs().materialize()?;
+                let next = match capture.input_cut() {
+                    Some(cut) => self.broker.record_captured_publication_inputs_at_cut(*attempt, *revision,
+                        identity.source, identity.generation, inputs, cut)?,
+                    None => self.broker.record_captured_publication_inputs(*attempt, *revision,
+                        identity.source, identity.generation, inputs)?,
+                };
+                Ok(Transition::Inputs(next))
             }
         }
     }

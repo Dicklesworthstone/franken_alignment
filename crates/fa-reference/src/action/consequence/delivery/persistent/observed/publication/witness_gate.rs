@@ -156,7 +156,10 @@ pub(in super::super) fn write(w: &mut Writer, event: &WitnessEvent) -> Result<()
                 Some(inputs) => { w.u8(1)?; w.blob(&inputs.to_bytes()?)?; }
             }
         }
-        WitnessEvent::SourceBind(id, binding) => { w.u8(3)?; w.u64(*id)?; binding.write(w)?; }
+        WitnessEvent::SourceBind(id, binding) => {
+            w.u8(if binding.input_cut().is_some() { 8 } else { 3 })?;
+            w.u64(*id)?; binding.write(w)?;
+        }
         WitnessEvent::Captured(id, revision, capture) => {
             w.u8(4)?; w.u64(*id)?; w.u64(*revision)?; w.blob(&capture.to_bytes()?)?;
         }
@@ -185,6 +188,7 @@ pub(in super::super) fn read(r: &mut Reader<'_>) -> Result<WitnessEvent, Error> 
         5 => WitnessEvent::ChangeProfile(changes::read_policy(r)?),
         6 => WitnessEvent::Change(changes::read_change(r)?),
         7 => WitnessEvent::Freshness(freshness::read(r)?),
+        8 => WitnessEvent::SourceBind(r.u64()?, Rc::new(SourceBinding::read_at_cut(r)?)),
         _ => return Err(Error::InvalidInput),
     })
 }

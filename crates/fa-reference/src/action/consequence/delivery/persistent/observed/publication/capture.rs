@@ -2,6 +2,9 @@
 //! A concrete bounded file reader supplies bytes; producer identity and atomic
 //! replacement discipline remain operator assumptions, not authentication.
 mod file;
+mod cut;
+use cut::{read_input_cut, write_input_cut};
+use crate::action::consequence::delivery::publication_gate::changes::PublicationInputCut;
 pub mod completion;
 pub mod heartbeat;
 pub use file::{FileCaptureError, PublicationInputFile};
@@ -19,6 +22,7 @@ use std::rc::Rc;
 
 pub const MAX_CAPTURE_BYTES: usize = 4 * 1_048_576;
 const DOMAIN: &[u8; 8] = b"FAPCAP01";
+const CUT_DOMAIN: &[u8; 8] = b"FAPCAP02";
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct FileCaptureIdentity {
@@ -34,13 +38,14 @@ pub struct FilePublicationCapture {
     identity: FileCaptureIdentity,
     frame: Vec<u8>,
     inputs: FilePublicationInputs,
+    input_cut: Option<PublicationInputCut>,
 }
 impl FilePublicationCapture {
     pub fn new(attempt: u64, identity: FileCaptureIdentity, action: &FrozenAction,
         inputs: FilePublicationInputs) -> Result<Self, Error>
     {
         check_identity(identity)?;
-        let capture = Self { attempt, identity, frame: action_frame(action), inputs };
+        let capture = Self { attempt, identity, frame: action_frame(action), inputs, input_cut: None };
         capture.to_bytes()?;
         Ok(capture)
     }
@@ -50,21 +55,24 @@ impl FilePublicationCapture {
 
     pub fn to_bytes(&self) -> Result<Vec<u8>, Error> {
         let mut w = Writer::new(MAX_CAPTURE_BYTES);
-        w.raw(DOMAIN)?; w.u64(self.attempt)?;
+        w.raw(if self.input_cut.is_some() { CUT_DOMAIN } else { DOMAIN })?; w.u64(self.attempt)?;
         write_identity(&mut w, self.identity)?;
+        if let Some(cut) = self.input_cut { write_input_cut(&mut w, cut)?; }
         w.blob(&self.frame)?; w.blob(&self.inputs.to_bytes()?)?;
         Ok(w.finish())
     }
     pub fn from_bytes(bytes: &[u8]) -> Result<Self, Error> {
         if bytes.len() > MAX_CAPTURE_BYTES { return Err(Error::Limit); }
         let mut r = Reader::new(bytes);
-        if r.take(DOMAIN.len())? != DOMAIN { return Err(Error::Binding); }
+        let domain = r.take(DOMAIN.len())?;
+        let has_cut = if domain == DOMAIN { false } else if domain == CUT_DOMAIN { true } else { return Err(Error::Binding); };
         let attempt = r.u64()?;
         let identity = read_identity(&mut r)?;
+        let input_cut = if has_cut { Some(read_input_cut(&mut r)?) } else { None };
         let frame = r.blob(MAX_CAPTURE_BYTES)?.to_vec();
         let inputs = FilePublicationInputs::from_bytes(r.blob(MAX_PUBLICATION_PACKET_BYTES)?)?;
         r.end()?;
-        let capture = Self { attempt, identity, frame, inputs };
+        let capture = Self { attempt, identity, frame, inputs, input_cut };
         if capture.to_bytes()?.as_slice() != bytes { return Err(Error::Binding); }
         Ok(capture)
     }
@@ -80,11 +88,12 @@ pub(in super::super) struct SourceBinding {
     identity: FileCaptureIdentity,
     frame: Vec<u8>,
     pub(in super::super) evidence: FilePublicationEvidence,
+    input_cut: Option<PublicationInputCut>,
 }
 impl SourceBinding {
     fn new(capture: FilePublicationCapture, requests: Vec<WitnessRequest>) -> Result<Self, Error> {
         Ok(Self { attempt: capture.attempt, identity: capture.identity, frame: capture.frame,
-            evidence: FilePublicationEvidence::new(capture.inputs, requests)? })
+            evidence: FilePublicationEvidence::new(capture.inputs, requests)?, input_cut: capture.input_cut })
     }
     pub(in super::super) fn identity(&self) -> FileCaptureIdentity { self.identity }
     pub(in super::super) fn check_action(&self, attempt: u64, action: &FrozenAction) -> Result<(), Error> {
@@ -92,12 +101,13 @@ impl SourceBinding {
         Ok(())
     }
     pub(in super::super) fn write(&self, w: &mut Writer) -> Result<(), Error> {
+        if let Some(cut) = self.input_cut { write_input_cut(w, cut)?; }
         w.u64(self.attempt)?; write_identity(w, self.identity)?; w.blob(&self.frame)?;
         w.blob(&self.evidence.to_bytes()?)
     }
     pub(in super::super) fn read(r: &mut Reader<'_>) -> Result<Self, Error> {
         Ok(Self { attempt: r.u64()?, identity: read_identity(r)?, frame: r.blob(MAX_CAPTURE_BYTES)?.to_vec(),
-            evidence: FilePublicationEvidence::from_bytes(r.blob(MAX_PUBLICATION_PACKET_BYTES)?)? })
+            evidence: FilePublicationEvidence::from_bytes(r.blob(MAX_PUBLICATION_PACKET_BYTES)?)?, input_cut: None })
     }
 }
 fn check_identity(identity: FileCaptureIdentity) -> Result<(), Error> {

@@ -6,6 +6,7 @@ use crate::action::consequence::oversight::publication::{PublicationJudgment, Pu
 use crate::action::consequence::delivery::publication_gate::changes::{PublicationChange, PublicationChangePolicy, PublicationChangeReport, PublicationChangeStatus};
 use crate::action::consequence::delivery::publication_gate::changes::freshness::{PublicationFreshnessPolicy, PublicationFreshnessStatus, PublicationHeartbeat};
 use std::rc::Rc;
+use crate::action::consequence::delivery::publication_gate::changes::{PublicationInputCut, PublicationInputCutStatus};
 
 impl OversightBroker {
     /// Mandatory on every subsequent attempt. Ordinary committee, policy,
@@ -84,5 +85,21 @@ impl OversightBroker {
     #[cfg(unix)]
     pub(crate) fn revalidate_publication_witnesses(&mut self, attempt: u64) -> Result<(), Error> {
         self.delivery.check_publication(attempt, None)
+    }
+}
+
+impl OversightBroker {
+    pub fn bind_publication_source_at_cut(&mut self, attempt: u64, source: u64, generation: u64,
+        original: PublicationInputs, cut: PublicationInputCut) -> Result<(), Error>
+    {
+        self.delivery.bind_publication_source_at_cut(attempt, source, generation, original, cut)
+    }
+    pub fn publication_input_cut(&self, attempt: u64) -> Result<Option<PublicationInputCutStatus>, Error> {
+        self.delivery.publication_input_cut(attempt)
+    }
+    pub fn record_captured_publication_inputs_at_cut(&mut self, attempt: u64, revision: u64,
+        source: u64, generation: u64, inputs: PublicationInputs, cut: PublicationInputCut) -> Result<u64, Error>
+    {
+        self.delivery.record_captured_publication_inputs_at_cut(attempt, revision, source, generation, inputs, cut)
     }
 }
