@@ -1,6 +1,9 @@
 //! Source-acquired completion for the ORIGINAL supervised request/job owner.
 //! Reuse native worker review and automatic authorization, then the host's
 //! two-read atomic effect/accounting cut. No duplicated effect state machine.
+mod acquisition;
+pub mod files;
+use acquisition::{BorrowedProvider, CompletionDriverEvidence};
 use super::PublicationProvider;
 use super::feed::FeedProvider;
 use super::super::super::super::publication::capture::heartbeat::feed::{PublicationFeedFile, PublicationFeedReport};
@@ -8,7 +11,7 @@ use super::super::super::super::publication::capture::completion::feed::FeedComp
 use super::super::super::{CommitteeContract, DriverEvidence, ElapsedTick, Error,
     FileCredentialPermit, FileHumanPermit, FileSupervisedDriver, FrozenAction,
     JournalError, Phase, observe, sample, stage};
-use super::super::super::provider::Callback;
+use super::super::super::provider::{Callback, EvidenceProvider};
 use super::super::super::super::publication::capture::{FileCaptureError, FileCaptureIdentity, PublicationInputFile};
 use super::super::super::super::publication::capture::completion::{CapturedCompletionKeys, CapturedCompletionReport};
 use crate::action::ActionState;
@@ -53,7 +56,7 @@ impl FileSupervisedDriver {
     where F: FnMut() -> ElapsedTick,
         P: FnMut(&FrozenAction, &CommitteeContract) -> Result<DriverEvidence, Error>,
     {
-        let report = self.complete_source_job(source, None, clock, provider, human, credential);
+        let report = self.complete_source_job(source, None, clock, &mut Callback(provider), human, credential);
         FileSourceCompletionReport { authorization_reads: report.authorization_reads,
             completion: report.completion.completion }
     }
@@ -69,14 +72,13 @@ impl FileSupervisedDriver {
     where F: FnMut() -> ElapsedTick,
         P: FnMut(&FrozenAction, &CommitteeContract) -> Result<DriverEvidence, Error>,
     {
-        self.complete_source_job(source, Some(feed), clock, provider, human, credential)
+        self.complete_source_job(source, Some(feed), clock, &mut Callback(provider), human, credential)
     }
 
     fn complete_source_job<F, P>(&mut self, source: &PublicationInputFile,
-        feed: Option<&PublicationFeedFile>, mut clock: F, mut provider: P,
+        feed: Option<&PublicationFeedFile>, mut clock: F, provider: &mut P,
         human: &FileHumanPermit, credential: Option<&FileCredentialPermit>) -> FileFeedCompletionReport
-    where F: FnMut() -> ElapsedTick,
-        P: FnMut(&FrozenAction, &CommitteeContract) -> Result<DriverEvidence, Error>,
+    where F: FnMut() -> ElapsedTick, P: CompletionDriverEvidence,
     {
         self.reap_helpers();
         let mut authorization_feeds = Vec::with_capacity(usize::from(feed.is_some()));
@@ -103,13 +105,14 @@ impl FileSupervisedDriver {
                 None if host.credential_policy().is_some() => return Err(Error::Incomplete.into()),
                 None => {}
             }
+            provider.preflight(&host)?;
             if let Some(feed) = feed {
                 host.publication_change_freshness()?;
                 if host.publication_change_status()?.source != feed.source() { return Err(Error::Binding.into()); }
             }
             if job.permit.is_none() {
                 let mut capture = PublicationProvider {
-                    inner: Callback(&mut provider), attempt: Some(job.attempt), source,
+                    inner: BorrowedProvider(&mut *provider), attempt: Some(job.attempt), source,
                     reads: &mut authorization_reads,
                 };
                 let captured = match feed {
@@ -135,15 +138,10 @@ impl FileSupervisedDriver {
             let keys = CapturedCompletionKeys {
                 automatic: job.permit.as_ref().ok_or(Error::Incomplete)?, human, credential,
             };
-            let completed = match feed {
-                Some(feed) => {
-                    let report = host.complete_publication_from_feed(revision, keys, source, feed, &mut clock, &mut provider);
-                    feed_reads = report.reads;
-                    committed = report.committed;
-                    report.completion
-                }
-                None => host.complete_publication_from_source(revision, keys, source, &mut clock, &mut provider),
-            };
+            let completed = provider.complete(&mut host, revision, keys, source, feed, &mut clock);
+            feed_reads = completed.reads;
+            committed = completed.committed;
+            let completed = completed.completion;
             reads = completed.reads;
             evidence_failure = completed.evidence_failure;
             if completed.result.is_ok() {
