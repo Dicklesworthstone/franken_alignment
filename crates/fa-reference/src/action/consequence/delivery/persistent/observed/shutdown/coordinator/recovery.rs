@@ -1,6 +1,9 @@
 //! Restart progress without a surviving in-memory domain owner. Coordinator
 //! intent precedes domain I/O; the ORIGINAL registered history remains authority.
 mod resolution;
+pub(super) mod fleet;
+#[cfg(test)]
+mod test_support;
 use super::*;
 use super::super::campaign::observe;
 use super::super::super::{BaseEvent, Event, Machine};

@@ -2,6 +2,8 @@
 //! This journal owns retry/evidence progress, never effect rights or live roles.
 mod codec;
 mod recovery;
+pub use recovery::fleet::{FileShutdownClock, FileShutdownPassMember,
+    FileShutdownPassResult, FileShutdownRecoveryPass};
 #[cfg(test)]
 mod tests;
 
