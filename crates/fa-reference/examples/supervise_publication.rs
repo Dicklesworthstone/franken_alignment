@@ -38,7 +38,7 @@ fn command(mut args: Vec<String>) -> Result<(), String> {
     use fa_reference::action::consequence::oversight::actor_wire::MAX_FRAME_BYTES;
     use std::io::Write;
     use std::path::Path;
-    let usage = "usage: supervise_publication create CONFIG SUBMIT_JSON [--reviewer-profile REVIEWER_JSON]\n       supervise_publication submit CONFIG SUBMIT_JSON [--reviewer-profile REVIEWER_JSON]\n       supervise_publication resume CONFIG SUBMIT_JSON\n       supervise_publication create-checked CONFIG SUBMIT_JSON WITNESS_PROFILE [--reviewer-profile REVIEWER_JSON]\n       supervise_publication submit-checked CONFIG SUBMIT_JSON WITNESS_PROFILE [--reviewer-profile REVIEWER_JSON]\n       supervise_publication resume-checked CONFIG SUBMIT_JSON WITNESS_PROFILE\n       supervise_publication review CONFIG REQUEST_ID\n       supervise_publication review-peer REVIEWER_JSON REQUEST_ID\n       supervise_publication proposal CONFIG REQUEST_ID PAYLOAD_FILE TTL_MS\n       supervise_publication proposal-next CONFIG REQUEST_ID PAYLOAD_FILE TTL_MS\n       supervise_publication inspect CONFIG";
+    let usage = "usage: supervise_publication create CONFIG SUBMIT_JSON [--reviewer-profile REVIEWER_JSON]\n       supervise_publication submit CONFIG SUBMIT_JSON [--reviewer-profile REVIEWER_JSON]\n       supervise_publication resume CONFIG SUBMIT_JSON\n       supervise_publication create-checked CONFIG SUBMIT_JSON WITNESS_PROFILE [--reviewer-profile REVIEWER_JSON]\n       supervise_publication submit-checked CONFIG SUBMIT_JSON WITNESS_PROFILE [--reviewer-profile REVIEWER_JSON]\n       supervise_publication resume-checked CONFIG SUBMIT_JSON WITNESS_PROFILE\n       supervise_publication review CONFIG REQUEST_ID\n       supervise_publication review-peer REVIEWER_JSON REQUEST_ID\n       supervise_publication stop-peer REVIEWER_JSON REQUEST_ID\n       supervise_publication proposal CONFIG REQUEST_ID PAYLOAD_FILE TTL_MS\n       supervise_publication proposal-next CONFIG REQUEST_ID PAYLOAD_FILE TTL_MS\n       supervise_publication inspect CONFIG";
     let peer_profile = if (args.len() == 5 && matches!(args[0].as_str(), "create" | "submit") && args[3] == "--reviewer-profile")
         || (args.len() == 6 && matches!(args[0].as_str(), "create-checked" | "submit-checked") && args[4] == "--reviewer-profile") {
         let path = args.pop().ok_or(usage)?;
@@ -47,7 +47,7 @@ fn command(mut args: Vec<String>) -> Result<(), String> {
     } else { None };
     let mode = args.first().map(String::as_str).ok_or(usage)?;
     let expected = match mode {
-        "create" | "submit" | "resume" | "review" | "review-peer" => 3,
+        "create" | "submit" | "resume" | "review" | "review-peer" | "stop-peer" => 3,
         "create-checked" | "submit-checked" | "resume-checked" => 4,
         "proposal" | "proposal-next" => 5,
         "inspect" => 2,
@@ -55,11 +55,14 @@ fn command(mut args: Vec<String>) -> Result<(), String> {
     };
     if args.len() != expected { return Err(usage.into()); }
     // This role-specific path must not parse the private supervisor file merely
-    // to display a review. A checked profile failure never retries legacy review.
-    if mode == "review-peer" {
+    // to review or stop. A checked profile failure never retries a legacy channel.
+    if matches!(mode, "review-peer" | "stop-peer") {
         let profile = PeerProfile::read(Path::new(&args[1]))?;
         let request = args[2].parse::<u64>().map_err(debug)?;
         if request == 0 { return Err("request must be nonzero".into()); }
+        if mode == "stop-peer" {
+            return peers::stop::request(&profile, request, &mut std::io::stdout().lock());
+        }
         return console::review_peer(&profile, request);
     }
     // Parse the operator file and original actor document before creating a store

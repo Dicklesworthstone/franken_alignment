@@ -62,3 +62,38 @@ Verification remains pending: the editing environment lacks RCH and a Rust
 compiler. Run the example tests and full `xtask check` through the repository's
 required `RCH_REQUIRE_REMOTE=1 rch exec -- ...` path. Source checks are not runtime
 qualification, and this change closes no production Bead.
+
+## Operator command
+
+```text
+supervise_publication stop-peer REVIEWER_JSON REQUEST_ID
+```
+
+Run this from the independently allowed process while the supervisor is running
+with the corresponding `--reviewer-profile`. The command reads only that public
+role-specific profile. It does not load the supervisor Config, read its evidence,
+open its journal, create a helper, or wait for a pending human-review offer. It
+checks supervisor kernel credentials before reading the nonce-bound native offer.
+Invoking `stop-peer` is the explicit restrictive decision; it does not read stdin
+or ask the stopping operator to send an approval protocol message.
+
+The command emits one bounded ASCII JSON result. `acknowledged` is separate from
+`drained`; only `stopped_drained` yields success. `stopped_pending` and
+`stopped_drain_refused` retain the acknowledged stop but require native recovery.
+`unconfirmed` never means proof that the domain remains live or that an effect
+was not performed. On receipt loss or timeout, the result records whether the
+request may have been sent; neither case reconnects, resets identity rules, or
+replays a request. Failure writing stdout also cannot undo native stop.
+
+The command uses the profile's runtime and polling limits once connected. Like
+the host, it does not promise to preempt a blocking OS call. A mismatched audience,
+request ID, server process, or nonce fails instead of selecting another endpoint.
+The live socket disappears when the workflow exits. Subsequent settlement belongs
+to the original recovery/inspection paths, not a new control service or a claim
+that disconnected transport proves success.
+
+Additional tests exercise the actual operator client against a pending human
+decision, queued stop after dispatch versus successful publication, and scripted
+client outcomes for missing/foreign replies, deadlines, partial settlement, and
+failed output. Scripted wire receipts are parser/output tests, not physical stop
+evidence. All new Rust tests remain unexecuted in this editing environment.

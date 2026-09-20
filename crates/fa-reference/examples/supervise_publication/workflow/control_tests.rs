@@ -246,16 +246,20 @@ fn silent_authenticated_controller_uses_the_original_failure_stop_not_a_weaker_l
     profile.runtime_ms = 20;
     let doc = document(&c); let store = c.store.clone(); let bootstrap = c.profile.clone();
     let observer = profile.clone();
+    let (release, held) = std::sync::mpsc::channel();
     let silent = std::thread::spawn(move || {
         wait(&observer.socket(1));
         let _stream = UnixStream::connect(socket_path(&observer, 1)).unwrap();
-        std::thread::sleep(Duration::from_millis(100));
+        held.recv_timeout(Duration::from_secs(10)).unwrap();
     });
     let result = workflow::run_with_peers(c, &doc, false, Some(&profile), || ElapsedTick(1000)).unwrap();
-    silent.join().unwrap();
+    release.send(()).unwrap(); silent.join().unwrap();
     assert!(result.failure.as_ref().unwrap().contains("stop session timed out"), "{:?}", result.failure);
     assert!(!executed(&result)); assert_eq!(result.cleanup_pending, 0);
     let disk = FileOversight::read_publication(&store, &bootstrap).unwrap();
     assert!(disk.stop.is_some()); assert_eq!(disk.executions, 0);
     assert_eq!(disk.control.ledger.charged, 0); assert_eq!(disk.control.ledger.reserved, 0);
 }
+
+#[path = "late_control_tests.rs"]
+mod late_control_tests;

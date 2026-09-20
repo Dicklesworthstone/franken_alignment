@@ -1,5 +1,7 @@
 //! Reviewer-only configuration and Linux credential admission for the runnable
 //! command. Contains no helper executable, environment, source path or ledger key.
+#[path = "stop_peer.rs"]
+pub mod stop;
 use super::config::{Config, CLOCK_DOMAIN, debug, read_regular};
 use fa_reference::action::{Purpose, Scope};
 use fa_reference::action::consequence::delivery::persistent::observed::{FileHumanRequest, FileHumanReviewer, FileOversight};
