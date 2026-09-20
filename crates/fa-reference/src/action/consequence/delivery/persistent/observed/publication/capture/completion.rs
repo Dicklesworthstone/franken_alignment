@@ -1,6 +1,7 @@
 //! Two independent acquisitions around native dispatch in one effect cut.
 //! Only the ORIGINAL journal-as-publication sink is atomic. The pre-read
 //! withdrawal is durably acknowledged separately; no remote-effect claim.
+mod coupled;
 pub mod feed;
 pub mod files;
 mod provider;
@@ -132,6 +133,11 @@ where F: FnMut() -> ElapsedTick, P: CompletionEvidence,
             return Err(Error::Limit.into());
         }
         let action = host.machine.actions.get(&attempt).ok_or(Error::Missing)?.clone();
+        let coupled = self.feed.is_some_and(|feed| self.source.shares_producer(feed));
+        if coupled {
+            self.source.check_producer_binding(self.feed.ok_or(Error::Incomplete)?, attempt, &action)?;
+            if host.publication_input_cut(attempt)?.is_none() { return Err(Error::Incomplete.into()); }
+        }
         if let Some(feed) = self.feed {
             let bound = host.publication_source(attempt)?.ok_or(Error::Incomplete)?;
             if bound.source != self.source.source() { return Err(Error::Binding.into()); }
@@ -143,14 +149,14 @@ where F: FnMut() -> ElapsedTick, P: CompletionEvidence,
         }
         host.begin_publication_capture(host.revision(), attempt, self.source.source())?;
         let mut cut = SourceCut::new(host)?;
-        if self.feed.is_some() {
+        if self.feed.is_some() && !coupled {
             self.capture_feed(host, &mut cut)?.map_err(|error| JournalError::from(error.contract_error()))?;
         }
-        let expected = cut.machine.broker.publication_input_revision(attempt)?;
         let first = self.sample(host, &mut cut, &action)??;
         let first_inputs = first.inputs.as_ref().ok_or(Error::Incomplete)?;
         let committee_revision = cut.current_reference(attempt, first_inputs)?;
-        let captured = self.read().map_err(|error| JournalError::from(error.contract_error()))?;
+        let captured = self.read_for_cut(host, &mut cut)?.map_err(|error| JournalError::from(error.contract_error()))?;
+        let expected = cut.machine.broker.publication_input_revision(attempt)?;
         // An admitted producer observation may carry a new high-water mark. From
         // here, no failure/unwind may revive an older, quieter live observation.
         host.fault = Some(failure(false));
@@ -165,7 +171,7 @@ where F: FnMut() -> ElapsedTick, P: CompletionEvidence,
             // An ordinary second read failure leaves the staged feed unavailable.
             // Continue to the original publication/seal and receipt path; do not
             // fabricate changed committee evidence or a successful installation.
-            let _read = self.capture_feed(host, &mut cut)?;
+            if !coupled { let _read = self.capture_feed(host, &mut cut)?; }
         }
         // This withdrawal is staged after native dispatch, but the canonical owner
         // has ALREADY durably withdrawn before both external reads. A caught panic
@@ -174,7 +180,7 @@ where F: FnMut() -> ElapsedTick, P: CompletionEvidence,
         cut.stage(host, Event::PublicationWitness(WitnessEvent::Inputs(attempt, expected, None)))?;
         let second = self.sample(host, &mut cut, &action)?;
         let (inputs, snapshot) = match second {
-            Ok(evidence) => match self.read() {
+            Ok(evidence) => match self.read_for_cut(host, &mut cut)? {
                 Ok(captured) => {
                     let expected = cut.machine.broker.publication_input_revision(attempt)?;
                     cut.stage(host, Event::PublicationWitness(WitnessEvent::Captured(attempt, expected, Rc::new(captured))))?;

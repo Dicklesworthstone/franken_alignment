@@ -78,13 +78,21 @@ impl FileOversight {
             Ok(pair) => pair,
             Err(error) => return Ok(Err(error)),
         };
+        let identity = capture.identity();
+        let report = self.install_producer_observation(capture, batch, clock)?;
+        Ok(Ok((identity, report)))
+    }
+
+    pub(in crate::action::consequence::delivery::persistent::observed) fn install_producer_observation<F>(
+        &mut self, capture: FilePublicationCapture, batch: PublicationFeedBatch, clock: &mut F)
+        -> Result<PublicationFeedReport, JournalError>
+    where F: FnMut() -> ElapsedTick {
+        if self.fault.is_some() { return Err(JournalError::Unavailable); }
         // From this point no unwind or failed install may resurrect an older
         // permitting generation. Canonical recovery fences all old effect keys.
         self.fault = Some(JournalFailure { operation: JournalIo::Stage,
             kind: std::io::ErrorKind::Other, replacement_may_be_visible: false });
         let now = clock();
-        let identity = capture.identity();
-        let report = self.install_feed_observation(batch, now, Some(capture))?;
-        Ok(Ok((identity, report)))
+        self.install_feed_observation(batch, now, Some(capture))
     }
 }

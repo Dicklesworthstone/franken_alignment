@@ -71,7 +71,7 @@ where F: FnMut() -> ElapsedTick, P: CompletionEvidence,
 }
 
 impl SourceCut {
-    fn stage_feed(&mut self, host: &FileOversight, batch: &PublicationFeedBatch,
+    pub(super) fn stage_feed(&mut self, host: &FileOversight, batch: &PublicationFeedBatch,
         now: ElapsedTick) -> Result<PublicationFeedReport, JournalError>
     {
         let state = self.machine.broker.publication_change_status()?;

@@ -73,10 +73,37 @@ pub(super) struct FeedProvider<'a, P> {
     pub(super) source: &'a PublicationFeedFile,
     pub(super) reports: &'a mut Vec<Result<PublicationFeedReport, FileCaptureError>>,
 }
-impl<P: EvidenceProvider> EvidenceProvider for FeedProvider<'_, P> {
+impl<P: EvidenceProvider> EvidenceProvider for FeedProvider<'_, PublicationProvider<'_, P>> {
     fn capture<F>(&mut self, host: &mut FileOversight, action: &FrozenAction, clock: &mut F)
         -> Result<Result<DriverEvidence, Error>, JournalError>
     where F: FnMut() -> ElapsedTick {
+        if self.inner.source.shares_producer(self.source) {
+            let attempt = self.inner.attempt.ok_or(Error::Missing)?;
+            host.begin_producer_capture(host.revision(), attempt, self.inner.source, self.source)?;
+            // Both lanes were durably withdrawn BEFORE the independent policy
+            // provider. Read the bundle only after that provider finishes; a
+            // concurrent producer update is then one whole pair, not mixed reads.
+            let evidence = match self.inner.inner.capture(host, action, clock)?
+                .and_then(|evidence| super::validate(evidence, action, &host.profile.committee)) {
+                Ok(evidence) => evidence,
+                Err(error) => return Ok(Err(error)),
+            };
+            match self.inner.source.read_coupled(self.source) {
+                Ok((capture, batch)) => {
+                    self.inner.reads.push(Ok(capture.identity()));
+                    let report = host.install_producer_observation(capture, batch, clock)?;
+                    self.reports.push(Ok(report));
+                }
+                Err(error) => {
+                    self.inner.reads.push(Err(error));
+                    self.reports.push(Err(error));
+                    // Bundle loss is not evidence that committee inputs drifted.
+                    // Original effect gates see BOTH unavailable lanes, so the
+                    // same unspent permit can be retried with a fresh acquisition.
+                }
+            }
+            return Ok(Ok(evidence));
+        }
         // Unlike a heartbeat-only refresh, notices can invalidate the active
         // attempt and increment its publication-input revision. Feed catch-up
         // must finish BEFORE PublicationProvider begins that attempt's capture.

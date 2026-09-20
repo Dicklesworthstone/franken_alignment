@@ -41,3 +41,41 @@ read-loss retry with original keys, foreign and raw reader refusal, expiry,
 failed final replacement and caught clock unwind. They are authored, not executed.
 RCH, cargo and rustc are unavailable here; compilation, formatting, Clippy and the
 exact-revision xtask gate remain outstanding. FA-061/062 remain open.
+
+## Existing supervised and completion consumers
+
+The ordinary feed driver and every feed-aware completion variant recognize the
+matched explicit bundle readers. A plain file, different path, or different full
+producer profile retains its original separate-source path; no filesystem alias
+resolution or cached fallback is introduced. Source/action and cut binding are
+checked before the paired path starts external work.
+
+At each paired boundary, withdraw both eligibility lanes, capture the independent
+committee/policy input, then perform ONE full producer-bundle read. Catch up the
+feed and only afterward obtain the witness input revision. Authorization, dispatch
+and first publication each perform a separate acquisition. No positive image is
+retained for the next boundary. A producer replacement during committee capture
+therefore yields one new pair instead of a new snapshot against an old feed.
+
+Atomic completion uses the original SourceCut and retained-overlap checks,
+including its first STAGED feed history when checking the second pair. The same
+original events and fixed-event/recovery bounds apply. Source-only callbacks and
+raw/distinct feed paths keep their old acquisition order and behavior. Concrete
+policy-source observations still anchor their own leases before policy reads;
+the combined witness/feed read neither substitutes for nor renews that lease.
+
+A paired bundle read error is reported in both read lanes (one physical failure),
+not mislabeled as a changed committee packet. Original gates refuse authorization
+or dispatch; a healthy pre-dispatch owner can retain its same unspent permit.
+After dispatch, unavailable evidence follows native sealing and receipt settlement.
+Successful read identities remain visible on installation failure; acknowledged
+feed reports appear only after their canonical replacement. Completion reports
+remain uncommitted until the whole effect/accounting cut succeeds. This does not
+make separate policy and producer files an atomic distributed snapshot.
+
+Eight additional helper-socket integration tests exercise producer updates during
+capture at ordinary and atomic boundaries, exact negative/positive controls,
+original-permit retry, late bundle loss, failed final installation, caught provider
+unwind, and independent native policy-lease renewal. Prior tests remain intact.
+All 16 new Rust tests remain unexecuted pending the required RCH gate. Source
+lexical/whitespace checks are not compilation, formatting or runtime verification.
