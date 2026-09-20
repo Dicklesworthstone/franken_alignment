@@ -61,9 +61,16 @@ impl FileOversight {
         let machine = Machine::replay(&profile, &events)?;
         store.confirm_and_cleanup()?;
         let (mut host, _reviewer) = Self::owner(profile, store, events, machine);
-        let revision = host.revision();
-        let sweep = terminal_transaction(&mut host, revision, request, observed_tick, true)?;
+        let sweep = host.finish_stopped_recovery(request, observed_tick)?;
         Ok((host, sweep))
+    }
+
+    // Shared only inside the original durable owner. Callers must retain the
+    // exclusive Store and never expose the unfenced replay owner or its roles.
+    pub(in super::super) fn finish_stopped_recovery(
+        &mut self, request: StopRequest, observed_tick: ElapsedTick,
+    ) -> Result<FileStopSweep, JournalError> {
+        terminal_transaction(self, self.revision(), request, observed_tick, true)
     }
 }
 

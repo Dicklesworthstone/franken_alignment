@@ -1,6 +1,7 @@
 //! Persist visit intent before driving an ORIGINAL domain owner.
 //! This journal owns retry/evidence progress, never effect rights or live roles.
 mod codec;
+mod recovery;
 #[cfg(test)]
 mod tests;
 
@@ -13,6 +14,8 @@ const MAX_REFUSAL_BYTES: usize = 512;
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum ShutdownVisitKind {
     Advance { at: ElapsedTick },
+    /// Exclusive terminal recovery of an independently registered domain.
+    RecoverStopped { at: ElapsedTick },
     InspectCanonical,
     Unavailable,
 }
@@ -51,8 +54,9 @@ impl FileShutdownCoordinatorReport {
 }
 
 /// Exclusive write-ahead driver. No owner extraction, clone, actor interface,
-/// worker callback or role getter exists. Use the original supplied domain or
-/// actor supervisor for a visit; the coordinator cannot recreate either one.
+/// worker callback or role getter exists. Ordinary visits borrow an existing
+/// domain/supervisor. Explicit terminal recovery exclusively opens only the
+/// registered domain, preserves its history, and returns no owner or live role.
 ///
 /// ```compile_fail,E0599
 /// use fa_reference::action::consequence::delivery::persistent::observed::shutdown::coordinator::FileShutdownCoordinator;
@@ -181,7 +185,8 @@ impl FileShutdownCoordinator {
         if self.visits.len() >= self.campaign.plan.max_attempts { return Err(Error::Limit.into()); }
         self.visits.try_reserve(1).map_err(|_| Error::Limit)?;
         let step = match kind { ShutdownVisitKind::Advance { .. } => FileShutdownStep::InspectOwner,
-            ShutdownVisitKind::InspectCanonical => FileShutdownStep::InspectCanonical,
+            ShutdownVisitKind::InspectCanonical | ShutdownVisitKind::RecoverStopped { .. }
+                => FileShutdownStep::InspectCanonical,
             ShutdownVisitKind::Unavailable => FileShutdownStep::Unavailable };
         let pair = self.campaign.enter(domain, step)?;
         // Poison before encoding/storage/native work. Only completion acknowledgment

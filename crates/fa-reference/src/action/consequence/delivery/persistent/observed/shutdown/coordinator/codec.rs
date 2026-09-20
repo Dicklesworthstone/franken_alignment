@@ -4,6 +4,7 @@ use crate::action::consequence::delivery::persistent::codec::shared::{Reader, Wr
 use std::os::unix::ffi::OsStrExt;
 
 const DOMAIN: &[u8; 8] = b"FASHCOO\x01";
+const RECOVERY_DOMAIN: &[u8; 8] = b"FASHCOO\x02";
 const MAX_PATH_BYTES: usize = 4096;
 
 pub(super) struct Restored {
@@ -17,7 +18,12 @@ pub(super) fn encode(path: &Path, plan: &[u8], max_bytes: usize, revision: u64,
 {
     if path.as_os_str().as_bytes().len() > MAX_PATH_BYTES { return Err(Error::Limit); }
     let mut w = Writer::new(max_bytes);
-    w.raw(DOMAIN)?; w.blob(path.as_os_str().as_bytes())?;
+    // Existing histories retain byte-identical version 1. A recovery intent
+    // explicitly requires version 2; an old reader must refuse the new operation.
+    let domain = if visits.iter().any(|visit| matches!(visit.kind, ShutdownVisitKind::RecoverStopped { .. })) {
+        RECOVERY_DOMAIN
+    } else { DOMAIN };
+    w.raw(domain)?; w.blob(path.as_os_str().as_bytes())?;
     w.count(max_bytes)?; w.blob(plan)?; w.u64(revision)?; w.count(visits.len())?;
     for visit in visits {
         w.u64(visit.domain)?;
@@ -25,6 +31,7 @@ pub(super) fn encode(path: &Path, plan: &[u8], max_bytes: usize, revision: u64,
             ShutdownVisitKind::Advance { at } => { w.u8(0)?; w.u64(at.0)?; }
             ShutdownVisitKind::InspectCanonical => w.u8(1)?,
             ShutdownVisitKind::Unavailable => w.u8(2)?,
+            ShutdownVisitKind::RecoverStopped { at } => { w.u8(3)?; w.u64(at.0)?; }
         }
         match &visit.result {
             ShutdownVisitResult::Entered => w.u8(0)?,
@@ -47,7 +54,12 @@ pub(super) fn decode(path: &Path, plan: &FileShutdownPlan, plan_bytes: &[u8], ma
 {
     if bytes.len() > max_bytes { return Err(Error::Limit); }
     let mut r = Reader::new(bytes);
-    if r.take(DOMAIN.len())? != DOMAIN || r.blob(MAX_PATH_BYTES)? != path.as_os_str().as_bytes()
+    let version = match r.take(DOMAIN.len())? {
+        bytes if bytes == DOMAIN => 1,
+        bytes if bytes == RECOVERY_DOMAIN => 2,
+        _ => return Err(Error::Binding),
+    };
+    if r.blob(MAX_PATH_BYTES)? != path.as_os_str().as_bytes()
         || r.count(MAX_JOURNAL_BYTES)? != max_bytes
         || r.blob(MAX_SHUTDOWN_PLAN_BYTES)? != plan_bytes { return Err(Error::Binding); }
     let revision = r.u64()?;
@@ -62,6 +74,7 @@ pub(super) fn decode(path: &Path, plan: &FileShutdownPlan, plan_bytes: &[u8], ma
             0 => ShutdownVisitKind::Advance { at: ElapsedTick(r.u64()?) },
             1 => ShutdownVisitKind::InspectCanonical,
             2 => ShutdownVisitKind::Unavailable,
+            3 if version == 2 => ShutdownVisitKind::RecoverStopped { at: ElapsedTick(r.u64()?) },
             _ => return Err(Error::InvalidInput),
         };
         let result = match r.u8()? {

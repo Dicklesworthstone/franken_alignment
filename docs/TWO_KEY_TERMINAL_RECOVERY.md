@@ -75,3 +75,9 @@ rustfmt are unavailable. Compilation, formatting, Clippy and Rust tests remain
 **unexecuted**. Local lexical/delimiter and whitespace screens are not substitutes.
 No dependency, production activation, historical gate count or Bead closure is
 changed by this work.
+
+The [shutdown coordinator recovery path](SHUTDOWN_RECOVERY.md) consumes this same
+terminal cut while retaining the original exclusive lock. It binds the newest
+independently acknowledged domain prefix before recovery, persists visit intent
+before domain I/O, and returns only original shutdown observations. A completed
+native stop can be confirmed without spending a second domain recovery tail.
