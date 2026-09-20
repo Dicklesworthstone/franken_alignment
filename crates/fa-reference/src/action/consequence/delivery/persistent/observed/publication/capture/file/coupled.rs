@@ -1,5 +1,7 @@
 //! One physical observation of a coupled producer, then one acknowledged install.
 //! No read cache or caller-supplied positive observation importer is exposed.
+mod binding;
+
 use super::{FileCaptureError, FilePublicationCapture, PublicationInputFile,
     PublicationProducerImage, FrozenAction, MAX_PRODUCER_BYTES};
 use super::super::heartbeat::feed::{PublicationFeedBatch, PublicationFeedFile, PublicationFeedReport};

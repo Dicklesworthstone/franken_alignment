@@ -2,7 +2,7 @@
 use super::{PublicationFeedBatch, PublicationFeedFile, MAX_FEED_RECORDS};
 use super::super::{FileCaptureError, FileOversight, JournalError, JournalFailure, JournalIo};
 use super::super::super::super::super::{Event, Machine, Transition, journal};
-use super::super::super::FilePublicationCapture;
+use super::super::super::{FilePublicationCapture, SourceBinding};
 use super::super::super::super::witness_gate::{WitnessEvent, freshness::FreshnessEvent};
 use crate::action::ElapsedTick;
 use crate::action::consequence::delivery::publication_gate::changes::{PublicationChangeReport, PublicationChangeStatus};
@@ -22,6 +22,13 @@ pub struct PublicationFeedReport {
     pub status: PublicationChangeStatus,
     pub freshness: PublicationFreshnessStatus,
 }
+// Initial requirements and current observations use different ORIGINAL events.
+// This private choice cannot be supplied by an actor or imported from a report.
+enum FeedObservation {
+    Current(FilePublicationCapture),
+    Original(u64, Rc<SourceBinding>),
+}
+
 impl FileOversight {
     /// Commit feed unavailability BEFORE concrete I/O. Decode the entire bounded
     /// window, sample trusted time, validate overlap, and atomically install its
@@ -47,13 +54,26 @@ impl FileOversight {
         &mut self, batch: PublicationFeedBatch, now: ElapsedTick, capture: Option<FilePublicationCapture>)
         -> Result<PublicationFeedReport, JournalError>
     {
+        self.install_feed(batch, now, capture.map(FeedObservation::Current))
+    }
+
+    pub(in crate::action::consequence::delivery::persistent::observed) fn install_feed_binding(
+        &mut self, batch: PublicationFeedBatch, now: ElapsedTick,
+        attempt: u64, binding: Rc<SourceBinding>) -> Result<PublicationFeedReport, JournalError>
+    {
+        self.install_feed(batch, now, Some(FeedObservation::Original(attempt, binding)))
+    }
+
+    fn install_feed(&mut self, batch: PublicationFeedBatch, now: ElapsedTick,
+        observation: Option<FeedObservation>) -> Result<PublicationFeedReport, JournalError>
+    {
         let before = self.machine.broker.publication_change_status()?.through;
         check_feed_overlap(&self.events, &batch, before)?;
         // A packet's retained window is not proof of earlier omitted records.
         let pending = batch.records.iter().filter(|record| batch.after <= before && record.sequence > before);
         let added = pending.clone().count().checked_add(1).ok_or(Error::Overflow)?;
         let count = self.events.len().checked_add(added)
-            .and_then(|count| count.checked_add(usize::from(capture.is_some()))).ok_or(Error::Overflow)?;
+            .and_then(|count| count.checked_add(usize::from(observation.is_some()))).ok_or(Error::Overflow)?;
         if count > self.profile.delivery.limits.events { return Err(Error::Limit.into()); }
         let mut history = Vec::new();
         history.try_reserve_exact(count).map_err(|_| Error::Limit)?;
@@ -72,16 +92,28 @@ impl FileOversight {
                 changes.push(candidate.broker.publication_change_report()?.ok_or(Error::Incomplete)?);
             }
         }
-        if let Some(capture) = capture {
-            let attempt = capture.attempt();
-            // Notifications above may have withdrawn this attempt again. Use
-            // its resulting revision, never a token from before feed catch-up.
-            let expected = candidate.broker.publication_input_revision(attempt)?;
-            let event = Event::PublicationWitness(WitnessEvent::Captured(attempt, expected, Rc::new(capture)));
+        if let Some(observation) = observation {
+            let (event, initial) = match observation {
+                FeedObservation::Current(capture) => {
+                    let attempt = capture.attempt();
+                    // Catch-up may have withdrawn the attempt again. Its NEW
+                    // revision, not the pre-read revision, owns this capture.
+                    let expected = candidate.broker.publication_input_revision(attempt)?;
+                    (Event::PublicationWitness(WitnessEvent::Captured(attempt, expected, Rc::new(capture))), false)
+                }
+                FeedObservation::Original(attempt, binding) => {
+                    // Binding at the caught-up cut does not install a current
+                    // observation, run a helper, or replace an existing recipe.
+                    (Event::PublicationWitness(WitnessEvent::SourceBind(attempt, binding)), true)
+                }
+            };
             self.check_source_admission(&event)?;
             bytes = journal::encode_appended(&self.profile, self.store.identity(), &history, &event)?;
             candidate.preflight_consistency(&event)?;
-            if !matches!(candidate.apply(&event)?, Transition::Inputs(_)) { return Err(Error::Binding.into()); }
+            match (initial, candidate.apply(&event)?) {
+                (true, Transition::Unit) | (false, Transition::Inputs(_)) => {}
+                _ => return Err(Error::Binding.into()),
+            }
             history.push(event);
         }
         let report = PublicationFeedReport { heartbeat: batch.heartbeat, before, changes,
