@@ -82,3 +82,35 @@ exact-revision verification is
 `RCH_REQUIRE_REMOTE=1 rch exec -- cargo run --locked -p xtask -- check`.
 No compilation, formatting, Clippy, runtime-test pass, production qualification,
 source-authentication or FA-061/062 closure is claimed by this increment.
+
+## Whole-input-only snapshot supervision
+
+`fa.supervised-whole-input/2` selects the SAME native history policy and requires
+`"history":"exact_current_snapshot"`. It uses the same producer, feed, scope,
+clock and budget fields as the version-five structured profile, but requires
+`"requests":[]`. Preparation must retain an actual original opaque input. Missing
+opaque data or a structured-only image cannot substitute for that whole view.
+There is no invented key, helper-supplied read subset or cached positive capture.
+The older `fa.supervised-whole-input/1` remains strict and rejects the history field.
+
+The comparison includes submitted bytes, complete input-profile identity/bytes,
+model/tokenizer/policy epochs, ordered parts and omissions under the original
+budget. This mode neither recaptures the original verdict nor treats a changed
+whole view as equivalent because its prose explanation names fewer dependencies.
+All other original lanes that happen to be present remain bound as well.
+
+A currently identical opaque view can pass after intermediate changes have left
+producer retention. This certifies only its present equality under the original
+witness contract, NOT that every intervening event was harmless or recovered.
+Future history-sensitive witnesses must not use this fallback. A changed final
+view still refuses even when committee-source bytes and human approval are
+unchanged. Native sealing, uncertain outcomes and receipt-based accounting retain
+their existing meanings.
+
+Six further authored regressions cover explicit whole-mode admission, complete
+opaque-only original retention, missing opaque input before helper launch,
+end-to-end publication plus source-free resume and exact retry, a six-case late
+retention-loss matrix (quiet/bytes/model/layout/omission/missing), and a zero-budget
+negative paired with the same-input permitting case. Together the two runnable
+increments add fourteen tests. All remain UNEXECUTED pending the exact-revision
+RCH verifier; no runtime pass or qualification follows from source checks.

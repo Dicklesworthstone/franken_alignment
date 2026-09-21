@@ -72,8 +72,8 @@ impl PublicationProfile {
             max_items: 2048, max_string_bytes: 4096 }).map_err(debug)?;
         let mut root = Fields::new(json)?;
         let schema = root.text("schema")?;
-        let whole_input = schema == "fa.supervised-whole-input/1";
-        let snapshot_fallback = schema == "fa.supervised-witnesses/5";
+        let whole_input = matches!(schema.as_str(), "fa.supervised-whole-input/1" | "fa.supervised-whole-input/2");
+        let snapshot_fallback = matches!(schema.as_str(), "fa.supervised-witnesses/5" | "fa.supervised-whole-input/2");
         if snapshot_fallback && root.text("history")? != "exact_current_snapshot" {
             return Err("snapshot profiles require history=exact_current_snapshot".into());
         }
@@ -90,7 +90,8 @@ impl PublicationProfile {
                 } else { None };
                 (PublicationSources::Captures { original, current }, feed)
             }
-            "fa.supervised-witnesses/3" | "fa.supervised-witnesses/5" | "fa.supervised-whole-input/1" => {
+            "fa.supervised-witnesses/3" | "fa.supervised-witnesses/5"
+            | "fa.supervised-whole-input/1" | "fa.supervised-whole-input/2" => {
                 let mut producer = Fields::new(root.take("producer")?)?;
                 let path = path(producer.text("path")?)?;
                 let mut scope = Fields::new(producer.take("scope")?)?;

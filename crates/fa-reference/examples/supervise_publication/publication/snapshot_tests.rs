@@ -215,3 +215,6 @@ fn native_policy_source_loss_still_seals_a_fresh_exact_snapshot_publication() {
     let disk = FileOversight::read_publication(&store, &bootstrap).unwrap();
     assert_eq!(disk.executions, 0); assert_eq!(disk.control.ledger.charged, 0);
 }
+
+#[path = "snapshot_whole_tests.rs"]
+mod whole;
