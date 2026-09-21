@@ -31,7 +31,7 @@ pub(in super::super) enum WitnessEvent {
 }
 impl WitnessEvent {
     pub(in super::super) fn bootstrap(&self) -> bool {
-        matches!(self, Self::Enable(_) | Self::ChangeProfile(_) | Self::Freshness(FreshnessEvent::Enable(_)))
+        matches!(self, Self::Enable(_) | Self::ChangeProfile(_) | Self::Freshness(FreshnessEvent::Enable(_) | FreshnessEvent::SnapshotFallback))
     }
     /// Replay/canonical encoding binds the new profile to the ORIGINAL journal
     /// clock, rather than trusting only the live constructor's validation.

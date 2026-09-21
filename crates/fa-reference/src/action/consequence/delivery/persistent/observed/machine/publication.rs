@@ -25,6 +25,7 @@ impl Machine {
             WitnessEvent::Freshness(event) => {
                 match event {
                     FreshnessEvent::Enable(policy) => self.broker.enable_publication_change_freshness(*policy)?,
+                    FreshnessEvent::SnapshotFallback => self.broker.enable_publication_snapshot_fallback()?,
                     FreshnessEvent::Unavailable(source) => self.broker.publication_changes_unavailable(*source)?,
                     FreshnessEvent::Observed(heartbeat, now) => {
                         self.observe(*now)?;

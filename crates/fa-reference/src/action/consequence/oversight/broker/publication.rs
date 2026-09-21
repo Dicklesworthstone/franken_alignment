@@ -113,3 +113,13 @@ impl OversightBroker {
         self.delivery.record_captured_publication_inputs_or_defer(attempt, revision, source, generation, inputs, cut)
     }
 }
+
+impl OversightBroker {
+    /// Bootstrap-only exact current-state fallback, not missing-history repair.
+    pub fn enable_publication_snapshot_fallback(&mut self) -> Result<(), Error> {
+        self.delivery.enable_publication_snapshot_fallback()
+    }
+    pub fn publication_snapshot_fallback_enabled(&self) -> Result<bool, Error> {
+        self.delivery.publication_snapshot_fallback_enabled()
+    }
+}

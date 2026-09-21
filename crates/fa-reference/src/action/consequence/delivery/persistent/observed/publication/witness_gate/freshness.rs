@@ -9,11 +9,23 @@ use crate::action::consequence::delivery::publication_gate::changes::freshness::
 #[derive(Clone, Copy)]
 pub(in super::super::super) enum FreshnessEvent {
     Enable(PublicationFreshnessPolicy),
+    SnapshotFallback,
     Unavailable(u64),
     Observed(PublicationHeartbeat, ElapsedTick),
 }
 
 impl FileOversight {
+    /// Explicit bootstrap alternative to refusing a retained history gap. All
+    /// current-state witnesses still undergo exact comparison at each boundary.
+    pub fn enable_publication_snapshot_fallback(&mut self, revision: u64) -> Result<(), JournalError> {
+        self.transact(revision, Event::PublicationWitness(WitnessEvent::Freshness(FreshnessEvent::SnapshotFallback)))?;
+        Ok(())
+    }
+    pub fn publication_snapshot_fallback_enabled(&self) -> Result<bool, JournalError> {
+        if self.fault.is_some() { return Err(JournalError::Unavailable); }
+        Ok(self.machine.broker.publication_snapshot_fallback_enabled()?)
+    }
+
     /// The existing durable clock identity must match the producer's named
     /// elapsed domain. Enable before proposals; a new profile cannot widen it.
     pub fn enable_publication_change_freshness(&mut self, revision: u64, policy: PublicationFreshnessPolicy)
@@ -77,6 +89,7 @@ pub(in super::super::super) fn read_heartbeat(r: &mut Reader<'_>) -> Result<Publ
 }
 pub(super) fn write(w: &mut Writer, event: FreshnessEvent) -> Result<(), Error> {
     match event {
+        FreshnessEvent::SnapshotFallback => w.u8(3)?,
         FreshnessEvent::Enable(policy) => { w.u8(0)?; w.u64(policy.clock_domain)?; w.u64(policy.max_age_ticks)?; }
         FreshnessEvent::Unavailable(source) => { w.u8(1)?; w.u64(source)?; }
         FreshnessEvent::Observed(heartbeat, now) => { w.u8(2)?; write_heartbeat(w, heartbeat)?; w.u64(now.0)?; }
@@ -88,6 +101,28 @@ pub(super) fn read(r: &mut Reader<'_>) -> Result<FreshnessEvent, Error> {
         0 => FreshnessEvent::Enable(PublicationFreshnessPolicy { clock_domain: r.u64()?, max_age_ticks: r.u64()? }),
         1 => FreshnessEvent::Unavailable(r.u64()?),
         2 => FreshnessEvent::Observed(read_heartbeat(r)?, ElapsedTick(r.u64()?)),
+        3 => FreshnessEvent::SnapshotFallback,
         _ => return Err(Error::InvalidInput),
     })
+}
+
+#[cfg(test)]
+mod encoding_tests {
+    use super::*;
+
+    #[test]
+    fn snapshot_selection_has_a_distinct_bootstrap_tag_and_strict_framing() {
+        let mut w = Writer::new(1);
+        write(&mut w, FreshnessEvent::SnapshotFallback).unwrap();
+        assert_eq!(w.finish(), vec![3]);
+        assert!(WitnessEvent::Freshness(FreshnessEvent::SnapshotFallback).bootstrap());
+        let mut r = Reader::new(&[3]);
+        assert!(matches!(read(&mut r), Ok(FreshnessEvent::SnapshotFallback)));
+        r.end().unwrap();
+        let mut r = Reader::new(&[3, 0]);
+        assert!(matches!(read(&mut r), Ok(FreshnessEvent::SnapshotFallback)));
+        assert!(r.end().is_err());
+        assert!(read(&mut Reader::new(&[])).is_err());
+        assert!(matches!(read(&mut Reader::new(&[4])), Err(Error::InvalidInput)));
+    }
 }
