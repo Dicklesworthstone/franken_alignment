@@ -362,3 +362,5 @@ fn live_option_is_operator_only_and_creation_refuses_before_side_effects() {
     assert!(!root.0.join("store").exists());
     assert!(!actor_profile.socket.exists());
 }
+
+mod boundaries;

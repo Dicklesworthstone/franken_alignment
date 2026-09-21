@@ -104,6 +104,11 @@ where F: FnMut() -> ElapsedTick {
         host.check_credibility().map_err(debug)?;
     }
     let (port, mut driver) = host.into_supervised_driver();
+    // The operator can stop while the actor is absent or holds an incomplete
+    // frame. Recorded keys stay receipt-only; they open no new control listener.
+    let mut early_control = if recorded { None } else {
+        Some(super::control::Control::new(&config, actor.request, Some(reviewer_profile))?)
+    };
     let session = PeerSession::new(actor.actor, ActorWire::new(port), actor.channels(), actor.connections).map_err(debug)?;
     let mut ingress = Intake { socket, session, selected: actor.request, attempted: 0, maximum: actor.candidates };
     eprintln!("Live actor endpoint ready: {:?}; request={}", actor.socket, actor.request);
@@ -115,6 +120,12 @@ where F: FnMut() -> ElapsedTick {
         }
         loop {
             deadline.check(time())?;
+            if let Some(control) = &mut early_control {
+                // Independent stop wins before source acquisition or actor I/O.
+                if control.checkpoint(&mut driver, &reviewer, &deadline, &mut time)? {
+                    return Ok(());
+                }
+            }
             if recorded {
                 // Do not spend the reply grace before an actor has connected.
                 // Even malformed first frames remain subject to the original
@@ -149,7 +160,8 @@ where F: FnMut() -> ElapsedTick {
                 stage: ActionState::Cancelled | ActionState::Denied | ActionState::Confirmed | ActionState::ConfirmedNotExecuted, .. }))
         };
         execute_serviced(&mut driver, &reviewer, &mut config, actor.request, &active,
-            ExecuteServices { peers: Some(reviewer_profile), publication, ingress: &mut pump }, &mut time)
+            ExecuteServices { peers: Some(reviewer_profile), publication, ingress: &mut pump,
+                stop: early_control.take() }, &mut time)
     })();
     let mut failure = match work {
         Ok(()) => None,

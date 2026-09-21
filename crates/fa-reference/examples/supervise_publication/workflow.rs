@@ -163,7 +163,7 @@ fn execute<F>(driver: &mut FileSupervisedDriver, reviewer: &FileHumanReviewer, c
 where F: FnMut() -> ElapsedTick {
     let mut no_ingress = |_: &mut FileSupervisedDriver| Ok(false);
     execute_serviced(driver, reviewer, config, request, deadline,
-        ExecuteServices { peers: profiles.0, publication: profiles.1, ingress: &mut no_ingress }, time)
+        ExecuteServices { peers: profiles.0, publication: profiles.1, ingress: &mut no_ingress, stop: None }, time)
 }
 
 type Ingress<'a> = dyn FnMut(&mut FileSupervisedDriver) -> Result<bool, String> + 'a;
@@ -171,6 +171,8 @@ struct ExecuteServices<'a> {
     peers: Option<&'a PeerProfile>,
     publication: Option<&'a PublicationProfile>,
     ingress: &'a mut Ingress<'a>,
+    // A live service transfers its original pre-intake listener, not a fresh quota.
+    stop: Option<control::Control>,
 }
 struct LiveControl<'a> {
     stop: control::Control,
@@ -190,14 +192,20 @@ impl LiveControl<'_> {
 fn execute_serviced<F>(driver: &mut FileSupervisedDriver, reviewer: &FileHumanReviewer, config: &mut Config,
     request: u64, deadline: &Deadline, services: ExecuteServices<'_>, time: &mut F) -> Result<(), String>
 where F: FnMut() -> ElapsedTick {
-    let ExecuteServices { peers, publication, ingress } = services;
+    let ExecuteServices { peers, publication, ingress, stop } = services;
     let status = driver.supervisor().host().map_err(debug)?.request_status(request).map_err(debug)?;
     let FileRequestDisposition::Admitted { attempt, stage: ActionState::Reviewing } = status.disposition else {
         return Ok(()); // The ORIGINAL gateway/ledger supplies denied/nonadmitted outcomes.
     };
     // A separate stop-only endpoint is available before original capture or helper
     // launch. Exact retries never enter execute and cannot create this service.
-    let mut control = LiveControl { stop: control::Control::new(config, request, peers)?, ingress };
+    // Keep the same socket identity and admission history across live intake.
+    // Non-service callers still create the original listener at this boundary.
+    let stop = match stop {
+        Some(stop) => stop,
+        None => control::Control::new(config, request, peers)?,
+    };
+    let mut control = LiveControl { stop, ingress };
     if control.checkpoint(driver, reviewer, deadline, time)? { return Ok(()); }
     let mut publication = match publication {
         Some(profile) => {

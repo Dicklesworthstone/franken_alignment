@@ -166,3 +166,36 @@ unchanged. RCH example verification was attempted and exited 127 because `rch`
 is absent; `cargo`, `rustc` and `rustfmt` are absent as well. Compilation, formatting,
 Clippy and Rust tests remain UNEXECUTED. This closes a source integration gap,
 not the FA-105 qualification gate; production evaluator authentication remains open.
+
+## Independent stop before actor admission
+
+A new-request live service now opens the ORIGINAL authenticated stop listener
+before waiting for actor connections or reading frames. This includes the interval
+after an explicit qualification and before any actor proposal. The control role
+can stop an absent actor or one holding an incomplete frame, without reading the
+current evidence file, launching a helper, or obtaining an approving human key.
+The stop remains the original driver's reserved-capacity stop/drain transaction;
+previously executed charges and unknown liabilities still have their real outcomes.
+
+After admission, the service transfers that exact listener into the original
+helper/human/publication workflow. It does not close/rebind the path or reset the
+listener's candidate budget or session outcome at the handoff. Non-service callers
+retain their original listener creation boundary. Recorded-key reconciliation
+still creates no new stop listener and reads no qualification or source file.
+This is cooperative servicing at bounded workflow checkpoints, not preemption of
+a blocked kernel/filesystem operation or a new asynchronous executor.
+
+Four additional regression tests pair no-actor/partial-frame stop with the existing
+positive publication fixture, check the same socket device/inode before intake and
+while waiting for human review, require fresh reactivation after recovery, and
+exercise the actual checked producer after dispatch. Identical whole-input data
+still publishes; a changed model epoch in that input seals nonexecution through
+the original endpoint, without refunding the earlier seed publication. The test
+labels and helper responses are synthetic, not independent model evaluations.
+
+Together the live-service increments author nine regression tests and one helper
+child entrypoint. No existing assertion is weakened. Required RCH example and
+xtask commands were retried and failed to start with exit 127 (`rch` missing).
+Compilation, formatting, Clippy and Rust tests remain UNEXECUTED. Checked source
+hashes and scoped diffs do not qualify runtime behavior, evaluator authenticity,
+bounded stop latency or the FA-105 production gate.
