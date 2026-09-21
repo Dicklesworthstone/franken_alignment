@@ -160,6 +160,12 @@ pub struct CredibilitySnapshot {
 }
 
 impl CredibilitySnapshot {
+    /// The complete frozen manifest, including cases without observations or
+    /// labels. Iteration is by original case ID; it cannot select a scored subset.
+    pub fn case_specs(&self) -> impl ExactSizeIterator<Item = &CaseSpec> {
+        self.records.values().map(|record| &record.spec)
+    }
+
     pub fn label_owner(&self) -> &str {
         &self.label_owner
     }

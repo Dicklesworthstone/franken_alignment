@@ -6,6 +6,7 @@
 //! endpoint. Storage and ballot authenticity remain operator assumptions.
 
 mod codec;
+pub mod credibility;
 mod storage;
 mod stopping;
 pub mod recovery_capacity;
@@ -184,6 +185,8 @@ enum Event {
     SubmitRequest(u64, ActionSpec, Snapshot),
     ReplacePolicy(PolicyUpdate),
     ReserveRecovery(RecoveryReserve),
+    ActivateCredibility(Box<credibility::CredibilityActivation>),
+    WithdrawCredibility(credibility::CredibilityWithdrawalRequest),
 }
 enum Transition {
     Unit,
@@ -195,6 +198,8 @@ enum Transition {
     Stopped(StopReceipt),
     StopProgressed(FileStopSweep),
     PolicyUpdated(PolicyUpdateReceipt),
+    CredibilityActivated(credibility::CredibilityChange),
+    CredibilityWithdrawn(credibility::CredibilityWithdrawal),
 }
 
 struct Machine {
@@ -241,6 +246,8 @@ impl Machine {
             // Canonical admission validates this marker and every following prefix.
             // It grants no rights and changes no original authority transition.
             Event::ReserveRecovery(_) => {}
+            Event::ActivateCredibility(request) => return self.apply_credibility_activation(request),
+            Event::WithdrawCredibility(request) => return self.apply_credibility_withdrawal(request),
             Event::ReplacePolicy(update) => return self.apply_policy_update(update),
             Event::SubmitRequest(id, spec, snapshot) => return self.apply_request(*id, spec, snapshot),
             Event::Time(tick) => {

@@ -1,13 +1,53 @@
-# Independent-label credibility in durable oversight
+# Durable credibility in the original delivery owner
 
-`FileOversight::enable_credibility` freezes the original `EvaluationProtocol` before any proposal or actor request, enables first-publication revalidation, and returns a separately held `FileIndependentEvaluator` only after acknowledgment. `evaluation_ticket` identifies an actual applied original congress. The evaluator's `assess` method binds both the role and ticket to this owner. No supplied vote set, confidence score, case count or qualified Boolean enters the ledger. Journal family 27 retains only protocol, independent assessment and promotion-request inputs; the original broker reconstructs the entire evaluation history. Existing event encodings and native evaluator arithmetic are unchanged.
+FA-105 increment; plan sections 9.9, 8.3 and 16.4; FI-A08/FI-A13/FI-A18.
+The L8 evidence produces L3 weights consumed by the existing L4 authority and
+L5 delivery endpoint. No alternate rights ledger, runtime or actor command exists.
 
-The native ledger accounts both violation and benign origins, groups replicated origins pessimistically, retains missing/abstaining members, and refuses promotion while labels are pending or censored. Started but unapplied rounds remain pending, including stale application refusals and rounds abandoned by recovery. The evaluator may resolve a censored label once without erasing it; final truth and origin cannot be rewritten. Exact current-label retries append nothing. Role separation is process-local custody, not cryptographic identity or proof of institutional independence.
+`FileDelivery::activate_credibility` and `withdraw_credibility` commit the original
+native transitions through the same locked canonical journal as publication.
+The candidate applies the new dispatcher fence to its RAM-only endpoint before
+one canonical replacement publishes the whole state. Old sendable handles are
+discarded; original delivery records and terminal receipts remain queryable.
+Qualification, cancellation refunds and fence acknowledgment are returned only
+after that replacement succeeds. An ambiguous I/O failure latches the owner.
 
-`promote_credibility` uses the original deterministic precision/recall-based weight rule and its unchanged member/cohort caps, roster, thresholds and exact policy. It accepts exact control, authority and evaluation predecessors plus an operation identity, not caller-selected weights. Successful operation retries return the original native receipt without further promotion. Changed inputs under that identity conflict. The canonical replacement also withdraws human keys, automatic approvals, live review sessions, identity eligibility and pending policy campaigns. Already dispatched envelopes, endpoint outcomes and uncertain charges survive for guarded publication and the original reconciliation path. No weight update refunds an unknown effect or confers an effect permit.
+New base-event tags 16 and 17 leave every existing bootstrap and event encoding
+unchanged. The activation payload has domain `FACRED\0\x01`: exact operation and
+predecessor, scope, policy, actor profile, deployment binding, requirements and
+original sealed campaign inputs. No score, admitted weight, receipt, balance or
+freshness deadline is trusted from disk. The decoder replays the original
+`CredibilityLedger` and native activation derives the weights again. Missing
+reports, explicit Missing/Abstain, pending labels and censoring stay distinct.
+Every manifest case is retained, including nonconsecutive and extreme IDs.
 
-Independent assessment remains available while source acquisition is interrupted or numerical execution is recovery-paused/stopped. That narrow historical-data operation cannot clear either latch, resume inference or mint an approval. New promotions require fresh time and refuse stopped/suspended owners. Generic recovery reconstructs labels and promotions but fences old file evaluator roles/tickets just as other process-local roles; no live-role getter is added.
+Decoding bounds each string, collection and case/helper product before retaining
+case data. A request is capped at 4 MiB and 65,536 logical observations; the
+encoder and decoder also enforce the native 64-activation / 65,536-observation
+lifetime bound. One decoded request may exist transiently while checking the
+aggregate bound. This is logical resource accounting, not measured heap usage.
+Credibility changes are ordinary work and cannot spend reserved recovery space.
 
-Six public integration regressions cover real label-qualified weight changes followed by new two-key publication, pending/stale review denominators surviving recovery, censored/final/repeated labels and replicated origins, foreign/old roles, sent-effect accounting across weight change and original endpoint reconciliation, and bootstrap refusals paired with normal congress execution. A unit test uses an independently assembled label vector and every truncation; two compile-fail doctests prohibit evaluator cloning and promotion-to-permit conversion. These are source tests, not reported passing execution.
+Reopening still runs the original authority/dispatcher fence and discards old
+keys before returning an owner. Saved elapsed time is not current. Qualification
+retains its original control-sequence age; old operation retries neither append
+nor reinstall policy, including after withdrawal or a newer activation. Only
+original endpoint receipts settle charged effects. Mere age expiry does not
+retroactively revoke an already dispatched independent envelope; explicit
+activation/withdrawal installs the new endpoint fence. Read-only journal inspection
+never replays an external effect. Protected-directory integrity, independent
+labels and the mapping into the control-sequence domain remain operator trust
+assumptions; this is not rollback-resistant authenticated storage.
 
-This implements the persistent reference-profile connection for the founding credibility and anti-compliant-helper-selection requirements in plan section 9.9. Labels and source authenticity remain independent evaluator/operator assumptions. It establishes no population error bound, trained-model reliability, authenticated helper independence, production runtime admission or release qualification. The required RCH command was attempted but rch is absent (exit 127, before compilation). Rust compilation, rustfmt, Clippy and tests/doctests remain unexecuted. No dependency, original test assertion, Beads status or qualification gate was changed.
+Fourteen tests are authored: ten durable/native compositions and four codec
+boundary tests. They cover real file publication and reopening, before/after
+publication withdrawal, unknown charges, exact retries and conflicts, refresh,
+expiry through real reviews, all five replacement barriers, recovery reservation,
+duplicate imported frames, missing/censored data, forged label fields, all
+truncated activation prefixes and exact/one-over product and string limits.
+Compilation, Rust tests, formatting and Clippy remain UNEXECUTED: the required
+`RCH_REQUIRE_REMOTE=1 rch exec -- cargo run --locked -p xtask -- check` cannot
+start because `rch`, `cargo`, `rustc` and `rustfmt` are absent. Source identity and
+lexical checks are not substitutes. FA-105 remains open. FileOversight integration
+and supervisor command exposure are separate increments; no production activation
+or evaluator-authentication claim follows.

@@ -82,7 +82,9 @@ fn encode_iter<'a>(p: &FileDeliveryProfile, path: &Path, count: usize,
     let mut w = Writer::new(p.limits.bytes);
     w.raw(DOMAIN)?; w.blob(path.as_os_str().as_bytes())?; w.blob(&profile_bytes(p)?)?; w.count(count)?;
     let mut admission = recovery_capacity::Admission::new(p.limits);
+    let mut credibility_budget = credibility::HistoryBudget::default();
     for (index, event) in events.enumerate() {
+        credibility_budget.record(event)?;
         let mut record = Writer::new(p.limits.bytes);
         write_event(&mut record, event)?;
         w.blob(&record.bytes)?;
@@ -103,9 +105,12 @@ pub(super) fn decode(p: &FileDeliveryProfile, path: &Path, bytes: &[u8]) -> Resu
     let count = r.count(p.limits.events)?;
     let mut events = Vec::new();
     events.try_reserve_exact(count).map_err(|_| Error::Limit)?;
+    let mut credibility_budget = credibility::HistoryBudget::default();
     for _ in 0..count {
         let mut record = Reader { bytes: r.blob(p.limits.bytes)?, offset: 0 };
-        events.push(read_event(&mut record)?);
+        let event = read_event(&mut record)?;
+        credibility_budget.record(&event)?;
+        events.push(event);
         record.end()?;
     }
     r.end()?;
@@ -115,6 +120,13 @@ pub(super) fn decode(p: &FileDeliveryProfile, path: &Path, bytes: &[u8]) -> Resu
 
 fn write_event(w: &mut Writer, event: &Event) -> Result<(), Error> {
     match event {
+        Event::ActivateCredibility(request) => {
+            w.u8(16)?; w.blob(&credibility::codec::encode_activation(request)?)?;
+        }
+        Event::WithdrawCredibility(request) => {
+            w.u8(17)?; w.u64(request.operation)?;
+            w.u64(request.expected_control_sequence)?; w.u64(request.expected_epoch)?;
+        }
         Event::ReserveRecovery(reserve) => {
             w.u8(15)?; w.count(reserve.events)?;
             w.u64(u64::try_from(reserve.bytes).map_err(|_| Error::Limit)?)?;
@@ -166,6 +178,11 @@ fn write_event(w: &mut Writer, event: &Event) -> Result<(), Error> {
 fn read_event(r: &mut Reader<'_>) -> Result<Event, Error> {
     let tag = r.u8()?;
     Ok(match tag {
+        16 => Event::ActivateCredibility(Box::new(credibility::codec::decode_activation(
+            r.blob(credibility::codec::MAX_ACTIVATION_BYTES)?)?)),
+        17 => Event::WithdrawCredibility(credibility::CredibilityWithdrawalRequest {
+            operation: r.u64()?, expected_control_sequence: r.u64()?, expected_epoch: r.u64()?,
+        }),
         15 => Event::ReserveRecovery(RecoveryReserve {
             events: r.count(MAX_JOURNAL_EVENTS)?,
             bytes: usize::try_from(r.u64()?).map_err(|_| Error::Limit)?,
