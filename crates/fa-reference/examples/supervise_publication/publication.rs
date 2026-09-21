@@ -38,6 +38,7 @@ pub struct PublicationProfile {
     requests: Vec<WitnessRequest>,
     feed: Option<FeedProfile>,
     wait: Option<WaitPolicy>,
+    snapshot_fallback: bool,
 }
 #[derive(Debug)]
 enum PublicationSources {
@@ -72,6 +73,10 @@ impl PublicationProfile {
         let mut root = Fields::new(json)?;
         let schema = root.text("schema")?;
         let whole_input = schema == "fa.supervised-whole-input/1";
+        let snapshot_fallback = schema == "fa.supervised-witnesses/5";
+        if snapshot_fallback && root.text("history")? != "exact_current_snapshot" {
+            return Err("snapshot profiles require history=exact_current_snapshot".into());
+        }
         let wait = if schema == "fa.supervised-witnesses/4" {
             Some(WaitPolicy::new(root.number("max_retries")?)?)
         } else { None };
@@ -85,7 +90,7 @@ impl PublicationProfile {
                 } else { None };
                 (PublicationSources::Captures { original, current }, feed)
             }
-            "fa.supervised-witnesses/3" | "fa.supervised-whole-input/1" => {
+            "fa.supervised-witnesses/3" | "fa.supervised-witnesses/5" | "fa.supervised-whole-input/1" => {
                 let mut producer = Fields::new(root.take("producer")?)?;
                 let path = path(producer.text("path")?)?;
                 let mut scope = Fields::new(producer.take("scope")?)?;
@@ -149,7 +154,7 @@ impl PublicationProfile {
             requests.push(request);
         }
         root.end()?;
-        Ok(Self { limits, sources, requests, feed, wait })
+        Ok(Self { limits, sources, requests, feed, wait, snapshot_fallback })
     }
 
     fn check_scope(&self, profile: &FileOversightProfile) -> Result<(), JournalError> {
@@ -165,6 +170,8 @@ impl PublicationProfile {
     {
         self.check_scope(&profile)?;
         match &self.feed {
+            Some(feed) if self.snapshot_fallback => FileOversight::create_with_publication_snapshot_fallback(directory,
+                profile, self.limits, feed.changes, feed.freshness),
             Some(feed) => FileOversight::create_with_publication_change_freshness(directory,
                 profile, self.limits, feed.changes, feed.freshness),
             None => FileOversight::create_with_publication_validation(directory, profile, self.limits),
@@ -179,6 +186,8 @@ impl PublicationProfile {
     {
         self.check_scope(&profile)?;
         match &self.feed {
+            Some(feed) if self.snapshot_fallback => FileOversight::open_with_publication_snapshot_fallback(directory,
+                profile, self.limits, feed.changes, feed.freshness),
             Some(feed) => FileOversight::open_with_publication_change_freshness(directory,
                 profile, self.limits, feed.changes, feed.freshness),
             None => {
@@ -192,6 +201,18 @@ impl PublicationProfile {
         }
     }
 
+    // Preparation on an already owned host must not silently use a different
+    // history policy. Refuse before reading, withdrawing, or binding evidence.
+    fn check_preparation(&self, host: &FileOversight) -> Result<(), String> {
+        if host.publication_validation_profile().map_err(debug)? != Some(self.limits) {
+            return Err("stored publication limits differ from the explicit profile".into());
+        }
+        if host.publication_snapshot_fallback_enabled().map_err(debug)? != self.snapshot_fallback {
+            return Err("stored publication history policy differs from the explicit profile".into());
+        }
+        Ok(())
+    }
+
     /// Runnable preparation includes feed catch-up from the SAME original
     /// producer image. Obtain a real clock after reading, not a saved journal
     /// tick. Raw capture profiles keep their original acquisition/clock behavior.
@@ -201,9 +222,7 @@ impl PublicationProfile {
         let PublicationSources::Producer { path, profile } = &self.sources else {
             return self.prepare(host, attempt);
         };
-        if host.publication_validation_profile().map_err(debug)? != Some(self.limits) {
-            return Err("stored publication limits differ from the explicit profile".into());
-        }
+        self.check_preparation(host)?;
         let feed = self.feed.as_ref().ok_or("producer preparation requires the configured feed")?;
         let reader = host.publication_producer_reader(attempt, path, *profile).map_err(debug)?;
         // Profile parsing fixes the recipe; native binding checks the actual
@@ -220,9 +239,7 @@ impl PublicationProfile {
     /// actual owner. Producer mode obtains the gateway's complete frozen action;
     /// it never guesses an attempt, rebuilds an action or needs a shadow journal.
     pub fn prepare(&self, host: &mut FileOversight, attempt: u64) -> Result<PreparedPublication<'_>, String> {
-        if host.publication_validation_profile().map_err(debug)? != Some(self.limits) {
-            return Err("stored publication limits differ from the explicit profile".into());
-        }
+        self.check_preparation(host)?;
         let (original, current) = match &self.sources {
             PublicationSources::Captures { original, current } => {
                 (original.read_capture().map_err(debug)?, CurrentPublication::Capture(current))

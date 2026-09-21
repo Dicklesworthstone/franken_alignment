@@ -207,3 +207,6 @@ fn completed_producer_workflow_recovers_without_source_or_helper_access() {
 
 #[path = "whole_input_tests.rs"]
 mod whole_input_tests;
+
+#[path = "snapshot_tests.rs"]
+mod snapshot_tests;
