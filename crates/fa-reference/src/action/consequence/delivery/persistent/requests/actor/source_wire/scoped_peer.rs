@@ -68,5 +68,7 @@ impl FileSupervisedDriver {
     }
 }
 
+mod sequence;
+
 #[cfg(test)]
 mod tests;

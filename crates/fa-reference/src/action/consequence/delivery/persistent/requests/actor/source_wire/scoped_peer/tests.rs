@@ -163,3 +163,6 @@ fn reconnect_retains_original_ticket_without_new_intake() {
     assert_eq!(f.driver.supervisor().host().unwrap().revision(), revision);
     assert_eq!(f.session.status().connections_admitted, 2);
 }
+
+#[path = "tests/sequences.rs"]
+mod sequences;

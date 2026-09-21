@@ -166,3 +166,37 @@ impl FileSupervisedDriver {
         result
     }
 }
+
+impl FileSupervisedDriver {
+    /// Retire only a terminal ORIGINAL request and its fully reaped direct
+    /// children, without reopening the authority, resetting quotas or cancelling
+    /// any other request. False means retain this driver and poll again; it is
+    /// not permission to start a second cohort. Dispatched/unknown outcomes are
+    /// never terminal here, even when this driver's local phase is Idle.
+    pub fn retire_completed_request(&mut self, request: u64) -> Result<bool, JournalError> {
+        use super::super::super::requests::FileRequestDisposition;
+        {
+            let host = self.supervisor.host()?;
+            if host.storage_failure().is_some() { return Err(JournalError::Unavailable); }
+            if let Some(job) = &self.job {
+                job.check_owner(&host)?;
+                if job.request != request { return Err(Error::Binding.into()); }
+            }
+            let terminal = match host.request_status(request)?.disposition {
+                FileRequestDisposition::NotAdmitted(_) => true,
+                FileRequestDisposition::Admitted { stage, .. } => matches!(stage,
+                    ActionState::Cancelled | ActionState::Denied
+                    | ActionState::Confirmed | ActionState::ConfirmedNotExecuted),
+            };
+            if !terminal { return Err(Error::WrongState.into()); }
+        }
+        if let Some(job) = &mut self.job { job.close(); }
+        self.reap_helpers();
+        if !self.helpers_reaped() { return Ok(false); }
+        // The original owner retains all history and liabilities. Only terminal
+        // local handles and confirmed-reaped child records are discarded.
+        self.ensure_child_slot()?;
+        self.job = None;
+        Ok(true)
+    }
+}
