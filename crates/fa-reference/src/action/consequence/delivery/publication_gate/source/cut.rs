@@ -29,7 +29,8 @@ pub struct PublicationInputCutStatus {
 }
 
 impl DeliveryBroker {
-    /// Bind the original producer image at the current COMPLETE change prefix.
+    /// Bind the original producer image at the complete change prefix, or at
+    /// the observed head under an explicitly enabled exact-snapshot fallback.
     /// This is part of initial source binding, not an upgrade of an existing
     /// binding or a rebase of the reviewed judgment. No observation is made fresh.
     pub fn bind_publication_source_at_cut(&mut self, attempt: u64, source: u64,
@@ -39,8 +40,14 @@ impl DeliveryBroker {
         input_cut.check()?;
         let feed = self.publication_change_status()?;
         if input_cut.source != feed.source { return Err(Error::Binding); }
-        if !feed.complete() || input_cut.through > feed.through { return Err(Error::Incomplete); }
-        if input_cut.through < feed.through { return Err(Error::Stale); }
+        if !feed.complete() {
+            // Explicit snapshot fallback does not alter the missing feed prefix.
+            // New review still binds the exact original image, never a verdict.
+            self.snapshot_cut_available(input_cut)?;
+        } else {
+            if input_cut.through > feed.through { return Err(Error::Incomplete); }
+            if input_cut.through < feed.through { return Err(Error::Stale); }
+        }
         self.bind_publication_source(attempt, source, generation, original)?;
         // The original binder performed all fallible work and installed this slot.
         let retained = self.publication.as_mut().expect("bound gate").slots
@@ -72,6 +79,12 @@ impl SourceState {
     pub(super) fn check_input_cut(&self, supplied: Option<PublicationInputCut>,
         generation: u64, feed: Option<PublicationChangeStatus>) -> Result<(), Error>
     {
+        self.check_input_cut_with_snapshot(supplied, generation, feed, false)
+    }
+
+    pub(super) fn check_input_cut_with_snapshot(&self, supplied: Option<PublicationInputCut>,
+        generation: u64, feed: Option<PublicationChangeStatus>, snapshot_gap: bool) -> Result<(), Error>
+    {
         let (bound, supplied) = match (self.input_cut, supplied) {
             (None, None) => return Ok(()),
             (None, Some(_)) => return Err(Error::Binding),
@@ -83,12 +96,18 @@ impl SourceState {
         if supplied.source != bound.last.source || supplied.source != feed.source { return Err(Error::Binding); }
         if generation == self.status.generation && supplied != bound.last { return Err(Error::Binding); }
         if supplied.through < bound.required_through || supplied.through < bound.last.through { return Err(Error::Stale); }
+        if snapshot_gap && !feed.unavailable && feed.through < feed.observed_through
+            && supplied.through == feed.observed_through { return Ok(()); }
         if !feed.complete() || supplied.through > feed.through { return Err(Error::Incomplete); }
         Ok(())
     }
 }
 
 impl Slot {
+    pub(in super::super) fn captured_input_cut(&self) -> Option<PublicationInputCut> {
+        self.source.as_ref().and_then(|source| source.input_cut.map(|cut| cut.last))
+    }
+
     /// Called only for selected invalidations, including ALL slots during gaps,
     /// repair and conservative routing. It survives None, re-reads and recovery.
     pub(in super::super) fn require_capture_through(&mut self, through: u64) {

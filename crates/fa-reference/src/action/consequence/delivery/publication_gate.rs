@@ -143,8 +143,13 @@ impl DeliveryBroker {
         let now = self.inspect().ledger.elapsed;
         let epoch = self.epoch;
         let Some(gate) = &mut self.publication else { return Ok(()); };
-        let coverage = gate.changes.as_ref().map_or(Ok(()), |state| state.current(now, epoch));
         let slot = gate.slots.get_mut(&attempt).ok_or(Error::Incomplete)?;
+        let coverage = gate.changes.as_ref().map_or(Ok(()), |state| {
+            state.current(now, epoch).or_else(|error| {
+                if error != Error::Incomplete { return Err(error); }
+                state.snapshot_current(now, epoch, slot.captured_input_cut())
+            })
+        });
         // Neither an expired feed lease nor a missing tail permits reuse of a
         // source capture at a later boundary. Every boundary still consumes it.
         let fresh = slot.consume_capture();

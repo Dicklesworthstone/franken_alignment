@@ -69,6 +69,7 @@ impl DeliveryBroker {
         generation: u64, inputs: PublicationInputs, input_cut: Option<PublicationInputCut>) -> Result<u64, Error>
     {
         let feed = input_cut.map(|_| self.publication_change_status()).transpose()?;
+        let snapshot_gap = input_cut.is_some_and(|cut| self.snapshot_cut_available(cut).is_ok());
         let gate = self.publication.as_mut().ok_or(Error::Incomplete)?;
         let slot = gate.slots.get_mut(&attempt).ok_or(Error::Missing)?;
         if slot.revision != expected_revision { return Err(Error::Stale); }
@@ -77,7 +78,8 @@ impl DeliveryBroker {
         if retained.status.source != source { return Err(Error::Binding); }
         if generation < retained.status.generation { return Err(Error::Stale); }
         if generation == retained.status.generation && inputs != retained.last { return Err(Error::Binding); }
-        retained.check_input_cut(input_cut, generation, feed)?;
+        if snapshot_gap { retained.check_input_cut_with_snapshot(input_cut, generation, feed, true)?; }
+        else { retained.check_input_cut(input_cut, generation, feed)?; }
         // All fallible validation/allocation precedes changes to the floor.
         let copy = inputs.clone();
         let revision = slot.replace_inputs(expected_revision, Some(inputs))?;

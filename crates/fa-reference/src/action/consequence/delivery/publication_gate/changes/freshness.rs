@@ -1,6 +1,7 @@
 //! Clock-bounded coverage for the original invalidation feed (FA-061/062).
 //! Heartbeats are producer observations, not signatures or wall-clock truth.
 //! Expiry is anchored to the producer's original tick, NEVER to reread time.
+mod snapshot;
 use super::{ChangeState, DeliveryBroker};
 use crate::action::ElapsedTick;
 use crate::Error;
@@ -48,13 +49,18 @@ pub(super) struct FreshnessState {
     // Once two contents claim the same generation, an old quiet copy cannot
     // rehabilitate that generation. Only a monotonic NEW generation can recover.
     conflicted: bool,
+    snapshot_fallback: bool,
+    // A fresh identity/time observation is distinct from complete feed history.
+    snapshot_epoch: Option<u64>,
 }
 impl FreshnessState {
     fn new(policy: PublicationFreshnessPolicy) -> Self {
-        Self { policy, last: None, acquired_epoch: None, refusal: None, conflicted: false }
+        Self { policy, last: None, acquired_epoch: None, refusal: None, conflicted: false,
+            snapshot_fallback: false, snapshot_epoch: None }
     }
     fn withdraw(&mut self) {
         self.acquired_epoch = None;
+        self.snapshot_epoch = None;
         self.refusal = None;
         // Retain exact producer generation/tick/coverage floors and conflict.
     }
@@ -119,6 +125,9 @@ impl ChangeState {
             Ok(())
         })();
         freshness.refusal = accepted.err();
+        // Never call an incomplete feed complete. Retain only a separate,
+        // epoch-bound observation usable by the opt-in exact-snapshot path.
+        freshness.observe_snapshot_candidate(heartbeat, now, epoch, self.status);
         self.freshness_status(now, epoch)
     }
 }
