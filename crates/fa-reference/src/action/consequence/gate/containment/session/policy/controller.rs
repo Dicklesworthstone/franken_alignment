@@ -5,6 +5,7 @@
 //! policy and supplied snapshot. Snapshots, evidence roots, governance calls
 //! and host bytes remain trusted reference inputs, not authenticated providers.
 
+pub mod credibility;
 mod review;
 pub use review::{PolicyReceipt, PolicyReview, PolicySession, replay};
 pub use review::replay::{
@@ -81,6 +82,8 @@ pub struct PolicyAuthority {
     records: BTreeMap<u64, Record>,
     changes: Vec<PolicyChange>,
     reviews: Vec<PolicyReceipt>,
+    credibility_history: Vec<credibility::ActivationRecord>,
+    credibility_invalidated: bool,
 }
 
 impl PolicyAuthority {
@@ -97,6 +100,8 @@ impl PolicyAuthority {
             records: BTreeMap::new(),
             changes: Vec::new(),
             reviews: Vec::new(),
+            credibility_history: Vec::new(),
+            credibility_invalidated: false,
         })
     }
 
@@ -127,6 +132,9 @@ impl PolicyAuthority {
         let evaluation = self.policy.evaluate(&candidate, snapshot)?;
         if !evaluation.complete || evaluation.trace().iter().any(|step| step.result == Truth::Unknown) {
             return Err(Error::Incomplete);
+        }
+        if evaluation.certifiable() {
+            self.check_credibility()?;
         }
         let mut spec = candidate.spec().clone();
         spec.required_witnesses = evaluation.witnesses().to_vec();
@@ -288,7 +296,12 @@ impl PolicyAuthority {
     }
 
     pub fn replace_actor_state(&mut self, expected: u64, actor: ActorState) -> Result<(), Error> {
-        self.host.replace_actor_state(expected, actor)
+        let previous = self.host.actor().profile();
+        self.host.replace_actor_state(expected, actor)?;
+        if previous != self.host.actor().profile() {
+            self.credibility_invalidated = true;
+        }
+        Ok(())
     }
 
     pub fn capture_checkpoint(&mut self, id: u64, expected: u64) -> Result<CheckpointHandle, Error> {
@@ -299,7 +312,12 @@ impl PolicyAuthority {
     /// Existing reset fences all old attempts; resumed work gets a new policy
     /// evaluation, bound congress round and permit under the new epoch.
     pub fn reset(&mut self, request: ResetRequest) -> Result<ResetReceipt, Error> {
-        self.host.reset(request)
+        let previous = self.host.actor().profile();
+        let receipt = self.host.reset(request)?;
+        if previous != self.host.actor().profile() {
+            self.credibility_invalidated = true;
+        }
+        Ok(receipt)
     }
 
     /// Explicit trusted governance transition. It changes no actor state or
@@ -358,6 +376,7 @@ impl PolicyAuthority {
         }
         gate.sequence = sequence;
         self.policy = next;
+        self.credibility_invalidated = true;
         self.changes.push(change.clone());
         Ok(change)
     }
@@ -367,6 +386,7 @@ impl PolicyAuthority {
     }
 
     fn recheck(&self, id: u64, snapshot: &Snapshot) -> Result<(), Error> {
+        self.check_credibility()?;
         let record = self.records.get(&id).ok_or(Error::Missing)?;
         if !Rc::ptr_eq(&record.policy, &self.policy) {
             return Err(Error::Stale);
