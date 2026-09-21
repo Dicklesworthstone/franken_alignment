@@ -12,6 +12,7 @@ use super::mediation::MediationEvent;
 use super::publication::witness_gate::{self, WitnessEvent};
 use super::super::{codec, recovery_capacity, Event as BaseEvent};
 use super::super::codec::shared::{Reader, Writer};
+use super::super::credibility::HistoryBudget;
 use super::views::{self, Views};
 use crate::action::ElapsedTick;
 use crate::action::consequence::delivery::stream::StreamProfile;
@@ -94,7 +95,9 @@ fn encode_iter<'a>(p: &FileOversightProfile, path: &Path, count: usize, events: 
     let mut w = Writer::new(p.delivery.limits.bytes);
     w.raw(DOMAIN)?; w.bootstrap(&p.delivery, path)?; w.blob(&config(p)?)?; w.count(count)?;
     let mut admission = recovery_capacity::Admission::new(p.delivery.limits);
+    let mut evidence_budget = HistoryBudget::default();
     for (index, event) in events.enumerate() {
+        record_credibility_budget(&mut evidence_budget, event)?;
         if let Event::PublicationWitness(event) = event { event.check_clock_domain(p.delivery.clock_domain)?; }
         let mut record = Writer::new(p.delivery.limits.bytes);
         write_event(&mut record, event)?;
@@ -124,14 +127,27 @@ pub(super) fn decode(p: &FileOversightProfile, path: &Path, bytes: &[u8]) -> Res
     let count = r.count(p.delivery.limits.events)?;
     let mut events = Vec::new();
     events.try_reserve_exact(count).map_err(|_| Error::Limit)?;
+    let mut evidence_budget = HistoryBudget::default();
     for _ in 0..count {
         let mut record = Reader::new(r.blob(p.delivery.limits.bytes)?);
-        events.push(read_event(&mut record)?);
+        let event = read_event(&mut record)?;
+        record_credibility_budget(&mut evidence_budget, &event)?;
+        events.push(event);
         record.end()?;
     }
     r.end()?;
     if encode(p, path, &events)?.as_slice() != bytes { return Err(Error::Binding); }
     Ok(events)
+}
+
+// Bound the complete archive before retaining arbitrarily many individually
+// bounded campaigns. Use the original lifetime allowance, not a second quota.
+fn record_credibility_budget(budget: &mut HistoryBudget, event: &Event) -> Result<(), Error> {
+    match event {
+        Event::Credibility(CredibilityEvent::ActivateHeldOut(request)) => budget.record_activation(request),
+        Event::Core(event) => budget.record(event),
+        _ => Ok(()),
+    }
 }
 
 fn write_event(w: &mut Writer, event: &Event) -> Result<(), Error> {

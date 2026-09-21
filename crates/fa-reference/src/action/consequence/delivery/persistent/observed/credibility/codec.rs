@@ -3,9 +3,18 @@ use super::{CredibilityEvent, FileCredibilityUpdate};
 use super::super::super::codec::shared::{Reader, Writer};
 use crate::action::consequence::oversight::credibility::{Assessment, EvaluationProtocol, Fraction, GroundTruth};
 use crate::Error;
+use super::super::super::credibility::codec as held_out;
+use super::super::super::credibility::CredibilityWithdrawalRequest;
 
 pub(in super::super) fn write(w: &mut Writer, event: &CredibilityEvent) -> Result<(), Error> {
     match event {
+        CredibilityEvent::ActivateHeldOut(request) => {
+            w.u8(3)?; w.blob(&held_out::encode_activation(request)?)?;
+        }
+        CredibilityEvent::WithdrawHeldOut(request) => {
+            w.u8(4)?; w.u64(request.operation)?;
+            w.u64(request.expected_control_sequence)?; w.u64(request.expected_epoch)?;
+        }
         CredibilityEvent::Enable(p) => {
             w.u8(0)?;
             for value in [p.domain, p.stratum, p.period, p.minimum_violation_origins, p.minimum_benign_origins,
@@ -27,6 +36,11 @@ pub(in super::super) fn write(w: &mut Writer, event: &CredibilityEvent) -> Resul
 }
 pub(in super::super) fn read(r: &mut Reader<'_>) -> Result<CredibilityEvent, Error> {
     Ok(match r.u8()? {
+        3 => CredibilityEvent::ActivateHeldOut(Box::new(held_out::decode_activation(
+            r.blob(held_out::MAX_ACTIVATION_BYTES)?)?)),
+        4 => CredibilityEvent::WithdrawHeldOut(CredibilityWithdrawalRequest {
+            operation: r.u64()?, expected_control_sequence: r.u64()?, expected_epoch: r.u64()?,
+        }),
         0 => CredibilityEvent::Enable(EvaluationProtocol {
             domain: r.u64()?, stratum: r.u64()?, period: r.u64()?,
             minimum_violation_origins: r.u64()?, minimum_benign_origins: r.u64()?,

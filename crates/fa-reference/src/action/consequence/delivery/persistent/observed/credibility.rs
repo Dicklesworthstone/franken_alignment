@@ -9,6 +9,7 @@ use crate::action::consequence::oversight::credibility::{
 };
 use crate::Error;
 use std::rc::Rc;
+use super::super::credibility::{CredibilityActivation, CredibilityWithdrawalRequest};
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct FileCredibilityUpdate {
@@ -49,6 +50,8 @@ pub(super) enum CredibilityEvent {
     Enable(EvaluationProtocol),
     Assess(u64, Assessment),
     Promote(FileCredibilityUpdate),
+    ActivateHeldOut(Box<CredibilityActivation>),
+    WithdrawHeldOut(CredibilityWithdrawalRequest),
 }
 
 impl FileIndependentEvaluator {

@@ -114,19 +114,25 @@ pub(super) struct HistoryBudget { activations: usize, observations: u64 }
 impl HistoryBudget {
     pub(super) fn record(&mut self, event: &Event) -> Result<(), Error> {
         if let Event::ActivateCredibility(request) = event {
-            use crate::action::consequence::gate::containment::session::policy::controller::credibility::{
-                MAX_CREDIBILITY_ACTIVATIONS, MAX_CREDIBILITY_OBSERVATIONS,
-            };
-            let count = request.snapshot.case_specs().len().checked_mul(request.snapshot.helpers().len())
-                .ok_or(Error::Limit)?;
-            let observations = self.observations.checked_add(u64::try_from(count).map_err(|_| Error::Limit)?)
-                .ok_or(Error::Limit)?;
-            if self.activations >= MAX_CREDIBILITY_ACTIVATIONS || observations > MAX_CREDIBILITY_OBSERVATIONS {
-                return Err(Error::Limit);
-            }
-            self.activations += 1;
-            self.observations = observations;
+            self.record_activation(request)?;
         }
+        Ok(())
+    }
+
+    /// The full-input journal shares this same aggregate evidence allowance.
+    pub(super) fn record_activation(&mut self, request: &CredibilityActivation) -> Result<(), Error> {
+        use crate::action::consequence::gate::containment::session::policy::controller::credibility::{
+            MAX_CREDIBILITY_ACTIVATIONS, MAX_CREDIBILITY_OBSERVATIONS,
+        };
+        let count = request.snapshot.case_specs().len().checked_mul(request.snapshot.helpers().len())
+            .ok_or(Error::Limit)?;
+        let observations = self.observations.checked_add(u64::try_from(count).map_err(|_| Error::Limit)?)
+            .ok_or(Error::Limit)?;
+        if self.activations >= MAX_CREDIBILITY_ACTIVATIONS || observations > MAX_CREDIBILITY_OBSERVATIONS {
+            return Err(Error::Limit);
+        }
+        self.activations += 1;
+        self.observations = observations;
         Ok(())
     }
 }

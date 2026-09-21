@@ -31,3 +31,45 @@ retries, input substitution, mutually exclusive promotion lanes and expiry.
 The required RCH xtask invocation exited 127 (rch unavailable). cargo, rustc and
 rustfmt are absent; compilation, formatting, Clippy and Rust tests are UNEXECUTED.
 This is source implementation, not FA-105 closure or production qualification.
+
+## Durable full-input activation and recovery
+
+`FileOversight::activate_credibility` and `withdraw_credibility` now journal the
+same original native requests. Activation requires the existing first-publication
+guard, enabled before proposals. The independently supplied committee contract
+must exactly match the immutable journal bootstrap. No raw Core activation or
+one-key dispatch is admitted by the full-input journal.
+
+The existing credibility event has two new subtags (3 and 4); original subtags
+and unrelated journal bytes retain their encoding. Activation reuses the original
+bounded evidence codec: recovery reconstructs observations, labels and the sealed
+ledger rather than accepting saved scores, weights, permits or balances. Both
+encoding and decoding share the original lifetime bounds of 64 activations and
+65,536 case/helper observations, including every retained activation.
+
+The candidate performs native activation/withdrawal, actual reviewer-key
+revocation, original identity/campaign withdrawal, endpoint fence installation,
+and removal of obsolete sendable handles before ONE acknowledged replacement.
+Both automatic and human approval remain necessary, and current whole-input and
+policy checks still run at first publication. Historical outcomes take precedence
+over later evidence loss; only the original endpoint receipt settles a charge.
+
+A valid evidence-loss notification that cannot be recorded closes the live owner,
+including ordinary-capacity refusal. Activation and withdrawal cannot consume the
+reserved terminal-recovery tail. Reopening the full-input owner replays its native
+fence and latches any installed offline qualification as stale: a failed loss
+write may have left the older qualification on disk. Merely advancing time or
+retrying a historical operation cannot clear this latch. Explicit new activation
+must pass the original evidence requirements. Unconfigured profiles and the
+separate bare FileDelivery recovery contract are unchanged.
+
+Ten additional authored tests exercise actual temporary-file publication and
+reopening, all five injected storage barriers, executed versus unresolved charges,
+new approvals surviving historical retries, strict contract/predecessor checks,
+reserved recovery capacity, unchanged two-key/Core boundaries, post-dispatch
+input drift, legacy behavior, wire subtags, and independently assembled one-over
+archive input. These are deterministic scenarios, not hardware crash testing.
+RCH verification was attempted again and exited 127 because rch is unavailable;
+compilation, formatting, Clippy and Rust tests remain UNEXECUTED. No production,
+authenticated-evaluator, statistical calibration or FA-105 completion is claimed.
+Supervisor command-line activation is not implemented by this increment.

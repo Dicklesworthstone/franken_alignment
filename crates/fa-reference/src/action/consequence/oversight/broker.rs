@@ -175,7 +175,13 @@ impl OversightBroker {
     // Existing obligations deliberately do not depend on helper/evaluator availability.
     pub fn fence_request(&self) -> FenceRequest { self.delivery.fence_request() }
     pub fn confirm_fence(&mut self, ack: FenceAcknowledgment) -> Result<(), Error> { self.delivery.confirm_fence(ack) }
-    pub fn restart_dispatcher(&mut self) -> Result<FenceRequest, Error> { self.delivery.restart_dispatcher() }
+    pub fn restart_dispatcher(&mut self) -> Result<FenceRequest, Error> {
+        let fence = self.delivery.restart_dispatcher()?;
+        // A failed evidence-loss write may have left an older qualified archive.
+        // Full-input recovery cannot treat that historical activation as current.
+        self.delivery.invalidate_credibility_for_recovery();
+        Ok(fence)
+    }
     pub fn acknowledgment_lost(&mut self, id: u64) -> Result<(), Error> { self.delivery.acknowledgment_lost(id) }
     pub fn status_query(&self, id: u64) -> Result<StatusQuery, Error> { self.delivery.status_query(id) }
     pub fn pending_reconciliation(&self) -> Result<Vec<StatusQuery>, Error> { self.delivery.pending_reconciliation() }

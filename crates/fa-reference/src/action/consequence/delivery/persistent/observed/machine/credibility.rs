@@ -1,4 +1,6 @@
 //! Forward actual applied review cases and independent labels to the native ledger.
+mod held_out;
+
 use super::{Machine, Transition};
 use super::super::credibility::{CredibilityEvent, FileCredibilityUpdate};
 use crate::action::consequence::oversight::credibility::{
@@ -36,6 +38,8 @@ impl Machine {
     }
     pub(super) fn apply_credibility(&mut self, event: &CredibilityEvent) -> Result<Transition, Error> {
         match event {
+            CredibilityEvent::ActivateHeldOut(request) => return self.activate_held_out(request),
+            CredibilityEvent::WithdrawHeldOut(request) => return self.withdraw_held_out(request),
             CredibilityEvent::Enable(protocol) => {
                 if self.credibility.is_some() { return Err(Error::Duplicate); }
                 if !self.actions.is_empty() || self.requests.len() != 0 || !self.sessions.is_empty()

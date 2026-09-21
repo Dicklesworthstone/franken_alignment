@@ -4,6 +4,12 @@
 use super::super::*;
 
 impl DeliveryBroker {
+    /// Only the full-input recovery path uses this narrowing-only hook. Legacy
+    /// bare delivery replay retains its separately declared recovery semantics.
+    pub(crate) fn invalidate_credibility_for_recovery(&mut self) {
+        self.controller.invalidate_credibility_for_recovery();
+    }
+
     pub fn restart_dispatcher(&mut self) -> Result<FenceRequest, Error> {
         let epoch = self.epoch.checked_add(1).ok_or(Error::Overflow)?;
         let inspection = self.inspect();

@@ -12,6 +12,15 @@ use crate::action::consequence::oversight::credibility::CongressChange;
 use crate::Error;
 
 impl PolicyAuthority {
+    /// Invalidate optional held-out qualification without inventing a user
+    /// withdrawal operation or changing balances. The caller's original recovery
+    /// transaction already fences keys; only a NEW native activation clears this.
+    pub(crate) fn invalidate_credibility_for_recovery(&mut self) {
+        if !self.credibility_history.is_empty() {
+            self.credibility_invalidated = true;
+        }
+    }
+
     pub(crate) fn congress_policy(&self) -> &CongressPolicy { &self.congress }
 
     pub(crate) fn replace_congress_weights(
