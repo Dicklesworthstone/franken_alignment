@@ -394,3 +394,6 @@ fn held_out_subtags_preserve_exact_inputs_and_full_archive_activation_budget() {
     overflow.push(27); overflow.extend_from_slice(&bytes);
     assert!(matches!(journal::decode(&profile(), &root.0, &overflow), Err(Error::Limit)));
 }
+
+#[path = "tests/availability.rs"]
+mod availability;

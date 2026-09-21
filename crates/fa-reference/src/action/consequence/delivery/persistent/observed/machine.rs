@@ -192,8 +192,10 @@ impl Machine {
         // Semantic replay enforces this too, not only the live preflight.
         self.check_consistency_route(event)?;
         // Incident evaluation remains available while inference is paused or
-        // stopped. Assessments cannot resume it or restore any effect key.
-        if !matches!(event, Event::Credibility(super::credibility::CredibilityEvent::Assess(..))
+        // stopped. Assessments and held-out withdrawal cannot resume inference
+        // or restore an effect key; evidence loss must remain durably recordable.
+        if !matches!(event, Event::Credibility(super::credibility::CredibilityEvent::Assess(..)
+            | super::credibility::CredibilityEvent::WithdrawHeldOut(_))
             | Event::Consistency(super::consistency::ConsistencyEvent::Unavailable
                 | super::consistency::ConsistencyEvent::Expire(..)) | Event::Mediation(_)
             | Event::PublicationWitness(_)) {

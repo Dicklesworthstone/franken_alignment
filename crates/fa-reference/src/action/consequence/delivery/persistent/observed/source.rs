@@ -109,6 +109,8 @@ impl FileOversight {
         if matches!(event,
             Event::Source(SourceEvent::Withdraw | SourceEvent::Replace(_) | SourceEvent::Observe(..))
             | Event::Identity(_)
+            // Qualification loss does not acknowledge or repair the source.
+            | Event::Credibility(super::credibility::CredibilityEvent::WithdrawHeldOut(_))
             | Event::Decoder(super::decoder::DecoderEvent::Checkpoint(
                 super::decoder::checkpoint::CheckpointRequest::Reset { .. }, _))
             | Event::CredentialRotate(_) | Event::CredentialRevoke(_)
