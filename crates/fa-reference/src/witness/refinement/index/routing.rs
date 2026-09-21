@@ -2,6 +2,7 @@
 //! an observation; it can never establish validity or install a refinement mask.
 //! The complete-snapshot index in the parent remains the only skipping oracle.
 mod lookup;
+mod subtree;
 #[cfg(test)]
 mod tests;
 
@@ -15,6 +16,17 @@ pub const MAX_ROUTED_DEPENDENCIES: usize = MAX_ROUTED_JUDGMENTS * MAX_WITNESSES;
 pub struct RoutingLimits {
     pub judgments: usize,
     pub dependencies: usize,
+}
+
+/// Lookup semantics include traversal order and logical charging. Durable
+/// consumers must retain this choice: changing exhaustion behavior can change
+/// which observations were withdrawn and their subsequent revision numbers.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum RoutingStrategy {
+    /// Original maximum-end prefix walk, retained for exact historical replay.
+    PrefixV1,
+    /// Balanced interval subtrees with endpoint and already-selected-owner pruning.
+    SubtreeV2,
 }
 
 /// Logical records visited and bytes inspected/output, NOT CPU instructions,
@@ -78,22 +90,30 @@ struct Interval { domain: DomainKey, start: u64, end: u64, slot: usize, prefix_e
 /// Append-only, value-free index of ORIGINAL judgments. Registration derives
 /// dependencies from private captured witnesses, not caller-asserted footprints.
 /// Exact and absent keys share a sorted point index. Empty/membership ranges use
-/// sorted starts with a per-domain maximum-end prefix for overlap pruning.
+/// the selected, immutable traversal strategy. The default remains PrefixV1.
+/// SubtreeV2 adds bounded summaries, not value copies or approximate filters.
 /// Opaque judgments are conservatively notified by every change, regardless of
 /// a more precise structured lane. Cancellation never reopens lifetime capacity.
 #[derive(Debug)]
 pub struct InvalidationIndex {
     limits: RoutingLimits,
+    strategy: RoutingStrategy,
+    subtrees: Vec<subtree::Summary>,
     registrations: Vec<Registration>,
     points: Vec<Point>,
     intervals: Vec<Interval>,
 }
 impl InvalidationIndex {
     pub fn new(limits: RoutingLimits) -> Result<Self, Error> {
+        Self::new_with_strategy(limits, RoutingStrategy::PrefixV1)
+    }
+
+    pub fn new_with_strategy(limits: RoutingLimits, strategy: RoutingStrategy) -> Result<Self, Error> {
         if limits.judgments == 0 || limits.judgments > MAX_ROUTED_JUDGMENTS
             || limits.dependencies > MAX_ROUTED_DEPENDENCIES { return Err(Error::Limit); }
-        Ok(Self { limits, registrations: Vec::new(), points: Vec::new(), intervals: Vec::new() })
+        Ok(Self { limits, strategy, subtrees: Vec::new(), registrations: Vec::new(), points: Vec::new(), intervals: Vec::new() })
     }
+    pub fn strategy(&self) -> RoutingStrategy { self.strategy }
     pub fn registered(&self) -> usize { self.registrations.len() }
     pub fn dependencies(&self) -> usize { self.points.len() + self.intervals.len() }
 
@@ -134,7 +154,12 @@ impl InvalidationIndex {
             interval.prefix_end = prefix;
             previous = Some(interval.domain);
         }
+        let subtrees = match self.strategy {
+            RoutingStrategy::PrefixV1 => Vec::new(),
+            RoutingStrategy::SubtreeV2 => subtree::build(&intervals)?,
+        };
         self.registrations.try_reserve(1).map_err(|_| Error::Limit)?;
+        self.subtrees = subtrees;
         self.points = points;
         self.intervals = intervals;
         self.registrations.push(Registration { id, domain: structured.map(|j| j.domain), opaque });

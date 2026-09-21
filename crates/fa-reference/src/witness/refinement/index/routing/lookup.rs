@@ -4,12 +4,12 @@ use super::*;
 // Charges occur BEFORE inspecting a record. They are architecture-independent.
 const REGISTRATION_BYTES: u64 = 80;
 const POINT_BYTES: u64 = 48;
-const INTERVAL_BYTES: u64 = 64;
+pub(super) const INTERVAL_BYTES: u64 = 64;
 pub(super) struct Meter { left: RoutingBudget, spent: RoutingBudget }
 impl Meter {
     pub(super) fn new(left: RoutingBudget) -> Self { Self { left, spent: RoutingBudget::default() } }
     pub(super) fn spent(&self) -> RoutingBudget { self.spent }
-    fn charge(&mut self, bytes: u64) -> Result<(), Error> {
+    pub(super) fn charge(&mut self, bytes: u64) -> Result<(), Error> {
         if self.left.steps == 0 || self.left.bytes < bytes { return Err(Error::Incomplete); }
         self.left.steps -= 1;
         self.left.bytes -= bytes;
@@ -73,6 +73,9 @@ impl InvalidationIndex {
     fn intervals_in(&self, domain: DomainKey, low: u64, high: Option<u64>,
         affected: &mut [bool; MAX_ROUTED_JUDGMENTS], meter: &mut Meter) -> Result<(), Error>
     {
+        if self.strategy == RoutingStrategy::SubtreeV2 {
+            return subtree::lookup(self, domain, low, high, affected, meter);
+        }
         let (mut lo, mut hi) = (0, self.intervals.len());
         // Upper bound on start: <= key for a point, < end for a half-open range.
         while lo < hi {
