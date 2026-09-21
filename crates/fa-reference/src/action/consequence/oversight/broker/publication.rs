@@ -123,3 +123,13 @@ impl OversightBroker {
         self.delivery.publication_snapshot_fallback_enabled()
     }
 }
+
+impl OversightBroker {
+    /// Bootstrap-only routing version; no authority or comparison-budget change.
+    pub fn enable_publication_subtree_routing(&mut self) -> Result<(), Error> {
+        self.delivery.enable_publication_subtree_routing()
+    }
+    pub fn publication_routing_strategy(&self) -> Result<crate::witness::refinement::index::routing::RoutingStrategy, Error> {
+        self.delivery.publication_routing_strategy()
+    }
+}

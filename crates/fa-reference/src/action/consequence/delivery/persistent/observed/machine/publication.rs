@@ -22,6 +22,10 @@ impl Machine {
 
     pub(super) fn apply_publication_witness(&mut self, event: &WitnessEvent) -> Result<Transition, Error> {
         match event {
+            WitnessEvent::SubtreeRouting => {
+                self.broker.enable_publication_subtree_routing()?;
+                Ok(Transition::Unit)
+            }
             WitnessEvent::Freshness(event) => {
                 match event {
                     FreshnessEvent::Enable(policy) => self.broker.enable_publication_change_freshness(*policy)?,
