@@ -255,6 +255,49 @@ impl DeliveryBroker {
     pub fn dispatcher_epoch(&self) -> u64 { self.epoch }
     pub fn fence_confirmed(&self) -> bool { self.fenced }
 
+    /// Explicit offline credibility activation, with a new dispatcher fence.
+    /// Uses the original authority's evidence, idempotency and rights checks.
+    /// Fresh sends remain blocked until the endpoint acknowledges fence_request.
+    /// Before that acknowledgment, already sent messages may still execute;
+    /// activation itself is never a nonexecution receipt or an unknown refund.
+    pub fn activate_credibility(
+        &mut self,
+        request: super::gate::containment::session::policy::controller::credibility::CredibilityActivation,
+    ) -> Result<super::gate::containment::session::policy::controller::credibility::CredibilityChange, Error> {
+        // A historical retry is handled by the controller's exact request
+        // comparison, even during stopping or after the dispatcher epoch fills.
+        // It must not reinstall an old fence or clear a later qualification loss.
+        if self.controller.credibility_changes().any(|change| change.operation == request.operation) {
+            return self.controller.activate_credibility(request);
+        }
+        self.check_not_stopping()?;
+        // Preflight every broker-side failure before committing the authority
+        // transition. No fallible operation follows the successful activation.
+        let epoch = self.epoch.checked_add(1).ok_or(Error::Overflow)?;
+        let change = self.controller.activate_credibility(request)?;
+        self.epoch = epoch;
+        self.fenced = false;
+        Ok(change)
+    }
+
+    /// Withdraw missing credibility evidence and fence delayed messages without
+    /// fabricating an endpoint outcome. Historical retries neither re-fence nor
+    /// withdraw a later activation. Fresh loss cannot interfere with a stop sweep.
+    pub fn withdraw_credibility(
+        &mut self,
+        request: super::gate::containment::session::policy::controller::credibility::CredibilityWithdrawalRequest,
+    ) -> Result<super::gate::containment::session::policy::controller::credibility::CredibilityWithdrawal, Error> {
+        if self.controller.credibility_withdrawals().any(|entry| entry.request.operation == request.operation) {
+            return self.controller.withdraw_credibility(request);
+        }
+        self.check_not_stopping()?;
+        let epoch = self.epoch.checked_add(1).ok_or(Error::Overflow)?;
+        let receipt = self.controller.withdraw_credibility(request)?;
+        self.epoch = epoch;
+        self.fenced = false;
+        Ok(receipt)
+    }
+
     /// Receipt-confirmed prefix and resource version, NOT a fresh remote read.
     /// When pending is Some, the actual audience may already have seen more.
     pub fn stream_state(&self) -> Option<(ResolvedTarget, &StreamView)> {

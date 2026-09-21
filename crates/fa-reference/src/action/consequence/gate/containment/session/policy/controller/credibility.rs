@@ -79,12 +79,32 @@ pub struct CredibilityChange {
     pub refunded_units: u64,
 }
 
+/// Trusted notification that the admitted credibility evidence is unavailable.
+/// An operation is unique within this authority's withdrawal history.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct CredibilityWithdrawalRequest {
+    pub operation: u64,
+    pub expected_control_sequence: u64,
+    pub expected_epoch: u64,
+}
+
+/// Evidence-loss transition, never proof that a dispatched effect did not occur.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct CredibilityWithdrawal {
+    pub request: CredibilityWithdrawalRequest,
+    pub sequence: u64,
+    pub revocation_floor: u64,
+    pub cancelled: Vec<u64>,
+    pub refunded_units: u64,
+}
+
 #[derive(Debug)]
 pub(super) struct ActivationRecord {
     context: ActivationContext,
     promoted: PromotedCongressPolicy,
     observations: u64,
     receipt: CredibilityChange,
+    withdrawal: Option<CredibilityWithdrawal>,
 }
 
 impl PolicyAuthority {
@@ -222,9 +242,78 @@ impl PolicyAuthority {
         self.congress = next_congress;
         self.credibility_invalidated = false;
         self.credibility_history.push(ActivationRecord {
-            context, promoted, observations, receipt: receipt.clone(),
+            context, promoted, observations, receipt: receipt.clone(), withdrawal: None,
         });
         Ok(receipt)
+    }
+
+    /// Withdraw positive use of the currently admitted evidence. The original
+    /// host keeps its immutable actor-profile contract; observed evidence loss
+    /// does not require accepting a substituted actor or synthesizing new labels.
+    /// At most one withdrawal is retained per activation. An exact historical
+    /// retry returns its receipt without withdrawing a later fresh activation.
+    pub fn withdraw_credibility(
+        &mut self,
+        request: CredibilityWithdrawalRequest,
+    ) -> Result<CredibilityWithdrawal, Error> {
+        if request.operation == 0 {
+            return Err(Error::InvalidInput);
+        }
+        if let Some(previous) = self.credibility_withdrawals()
+            .find(|entry| entry.request.operation == request.operation)
+        {
+            return if previous.request == request {
+                Ok(previous.clone())
+            } else {
+                Err(Error::Binding)
+            };
+        }
+        let gate = &self.host.gate;
+        if gate.sequence != request.expected_control_sequence
+            || gate.authority.rights.epoch() != request.expected_epoch
+        {
+            return Err(Error::Stale);
+        }
+        let active = self.credibility_history.last().ok_or(Error::Incomplete)?;
+        if active.withdrawal.is_some() {
+            return Err(Error::WrongState);
+        }
+        let sequence = gate.sequence.checked_add(1).ok_or(Error::Overflow)?;
+        let mut rights = gate.authority.rights.clone();
+        if !rights.conserved() {
+            return Err(Error::WrongState);
+        }
+        let available = rights.available();
+        rights.revoke_epoch()?;
+        let cancelled: Vec<_> = gate.authority.attempts.iter()
+            .filter(|(_, attempt)| undispatched(attempt.stage))
+            .map(|(id, _)| *id).collect();
+        for id in &cancelled {
+            if gate.authority.attempts[id].stage == ActionState::Authorized {
+                rights.abort_before_dispatch(*id)?;
+            }
+        }
+        if !rights.conserved() {
+            return Err(Error::WrongState);
+        }
+        let receipt = CredibilityWithdrawal {
+            request, sequence, revocation_floor: rights.epoch(), cancelled,
+            refunded_units: rights.available().checked_sub(available).ok_or(Error::WrongState)?,
+        };
+        let gate = &mut self.host.gate;
+        gate.authority.rights = rights;
+        for id in &receipt.cancelled {
+            gate.authority.attempts.get_mut(id).expect("validated attempt").stage = ActionState::Cancelled;
+            gate.decisions.remove(id);
+        }
+        gate.sequence = sequence;
+        self.credibility_invalidated = true;
+        self.credibility_history.last_mut().expect("validated activation").withdrawal = Some(receipt.clone());
+        Ok(receipt)
+    }
+
+    pub fn credibility_withdrawals(&self) -> impl Iterator<Item = &CredibilityWithdrawal> {
+        self.credibility_history.iter().filter_map(|entry| entry.withdrawal.as_ref())
     }
 
     pub fn credibility_changes(&self) -> impl ExactSizeIterator<Item = &CredibilityChange> {

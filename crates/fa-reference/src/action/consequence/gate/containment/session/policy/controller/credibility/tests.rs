@@ -246,7 +246,7 @@ fn expired_evidence_cannot_block_an_exact_policy_denial() {
 }
 
 #[test]
-fn model_profile_loss_sticks_after_restoration_but_token_progress_is_allowed() {
+fn evidence_withdrawal_sticks_while_actor_profile_substitution_still_refuses() {
     let mut controller = ready();
     let request = activation(&controller, 1);
     controller.activate_credibility(request.clone()).unwrap();
@@ -255,7 +255,14 @@ fn model_profile_loss_sticks_after_restoration_but_token_progress_is_allowed() {
     assert!(controller.check_credibility().is_ok());
     let mut changed = profile();
     changed.tokenizer_generation += 1;
-    controller.replace_actor_state(controller.actor_revision(), actor(changed)).unwrap();
+    let before = controller.inspect();
+    assert_eq!(controller.replace_actor_state(controller.actor_revision(), actor(changed)), Err(Error::Binding));
+    assert_eq!(controller.inspect(), before);
+    assert!(controller.check_credibility().is_ok());
+    controller.withdraw_credibility(CredibilityWithdrawalRequest {
+        operation: 1, expected_control_sequence: before.sequence,
+        expected_epoch: before.ledger.epoch,
+    }).unwrap();
     assert_eq!(controller.check_credibility(), Err(Error::Stale));
     controller.replace_actor_state(controller.actor_revision(), actor(profile())).unwrap();
     assert_eq!(controller.check_credibility(), Err(Error::Stale));
@@ -358,4 +365,72 @@ fn suspended_authority_cannot_be_reopened_by_credibility() {
     let before = controller.inspect();
     assert_eq!(controller.activate_credibility(request), Err(Error::WrongState));
     assert_eq!(controller.inspect(), before);
+}
+
+#[test]
+fn withdrawal_refunds_only_pending_work_and_old_retries_cannot_close_fresh_work() {
+    let mut controller = ready();
+    let request = activation(&controller, 1);
+    controller.activate_credibility(request).unwrap();
+    let (pending, permit) = authorize(&mut controller, 10);
+    let (sent, sent_permit) = authorize(&mut controller, 11);
+    controller.dispatch(&sent_permit, &sent, &snapshot()).unwrap();
+    controller.mark_unknown(11).unwrap();
+    let before = controller.inspect();
+    let request = CredibilityWithdrawalRequest {
+        operation: 7, expected_control_sequence: before.sequence, expected_epoch: before.ledger.epoch,
+    };
+    let receipt = controller.withdraw_credibility(request.clone()).unwrap();
+    assert_eq!(receipt.cancelled, vec![10]);
+    assert_eq!(receipt.refunded_units, 5);
+    assert_eq!(receipt.sequence, before.sequence + 1);
+    assert_eq!(controller.inspect().ledger.charged, 5);
+    assert_eq!(controller.inspect().ledger.stages[&11], ActionState::Unknown);
+    assert_eq!(controller.dispatch(&permit, &pending, &snapshot()), Err(Error::Stale));
+    let after = controller.inspect();
+    assert_eq!(controller.withdraw_credibility(request.clone()).unwrap(), receipt);
+    assert_eq!(controller.inspect(), after);
+    let refresh = activation(&controller, 2);
+    controller.activate_credibility(refresh).unwrap();
+    let (fresh, fresh_permit) = authorize(&mut controller, 12);
+    let after = controller.inspect();
+    assert_eq!(controller.withdraw_credibility(request.clone()).unwrap(), receipt);
+    assert_eq!(controller.inspect(), after);
+    let conflict = CredibilityWithdrawalRequest { expected_epoch: after.ledger.epoch, ..request };
+    assert_eq!(controller.withdraw_credibility(conflict), Err(Error::Binding));
+    controller.dispatch(&fresh_permit, &fresh, &snapshot()).unwrap();
+    assert_eq!(controller.inspect().ledger.charged, 10);
+}
+
+#[test]
+fn withdrawal_predecessor_and_absence_refuse_without_mutation() {
+    let mut controller = ready();
+    let request = CredibilityWithdrawalRequest {
+        operation: 1, expected_control_sequence: 2, expected_epoch: 0,
+    };
+    let before = controller.inspect();
+    assert_eq!(controller.withdraw_credibility(request), Err(Error::Incomplete));
+    assert_eq!(controller.inspect(), before);
+    let activation = activation(&controller, 1);
+    controller.activate_credibility(activation).unwrap();
+    let request = CredibilityWithdrawalRequest {
+        operation: 1, expected_control_sequence: 3, expected_epoch: 1,
+    };
+    let before = controller.inspect();
+    for invalid in [
+        CredibilityWithdrawalRequest { operation: 0, ..request.clone() },
+        CredibilityWithdrawalRequest { expected_control_sequence: 4, ..request.clone() },
+        CredibilityWithdrawalRequest { expected_epoch: 2, ..request.clone() },
+    ] {
+        assert!(controller.withdraw_credibility(invalid).is_err());
+        assert_eq!(controller.inspect(), before);
+    }
+    controller.withdraw_credibility(request).unwrap();
+    let after = controller.inspect();
+    let repeated_loss = CredibilityWithdrawalRequest {
+        operation: 2, expected_control_sequence: after.sequence, expected_epoch: after.ledger.epoch,
+    };
+    assert_eq!(controller.withdraw_credibility(repeated_loss), Err(Error::WrongState));
+    assert_eq!(controller.inspect(), after);
+    assert_eq!(controller.credibility_withdrawals().count(), 1);
 }
