@@ -1,7 +1,6 @@
 //! Independent evaluation labels and weight-only promotion in the original journal.
 //! Native credibility accounting remains authoritative; no saved score is imported.
 mod codec;
-pub mod joint;
 pub(super) use codec::{read, write};
 
 use super::{Event, FileOversight, JournalError, Transition};
@@ -49,7 +48,6 @@ pub struct FileIndependentEvaluator { pub(super) issuer: Rc<()> }
 #[derive(Clone)]
 pub(super) enum CredibilityEvent {
     Enable(EvaluationProtocol),
-    EnableJoint(EvaluationProtocol, crate::action::consequence::oversight::joint_credibility::JointPromotionPolicy),
     Assess(u64, Assessment),
     Promote(FileCredibilityUpdate),
     ActivateHeldOut(Box<CredibilityActivation>),

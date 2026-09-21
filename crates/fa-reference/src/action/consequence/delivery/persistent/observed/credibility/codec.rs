@@ -1,5 +1,5 @@
 //! Fixed-size inputs to original evaluation, not serialized scores or approvals.
-use super::{CredibilityEvent, FileCredibilityUpdate, joint};
+use super::{CredibilityEvent, FileCredibilityUpdate};
 use super::super::super::codec::shared::{Reader, Writer};
 use crate::action::consequence::oversight::credibility::{Assessment, EvaluationProtocol, Fraction, GroundTruth};
 use crate::Error;
@@ -15,13 +15,12 @@ pub(in super::super) fn write(w: &mut Writer, event: &CredibilityEvent) -> Resul
             w.u8(4)?; w.u64(request.operation)?;
             w.u64(request.expected_control_sequence)?; w.u64(request.expected_epoch)?;
         }
-        CredibilityEvent::Enable(p) | CredibilityEvent::EnableJoint(p, _) => {
-            w.u8(if matches!(event, CredibilityEvent::EnableJoint(..)) { 5 } else { 0 })?;
+        CredibilityEvent::Enable(p) => {
+            w.u8(0)?;
             for value in [p.domain, p.stratum, p.period, p.minimum_violation_origins, p.minimum_benign_origins,
                 p.precision_floor.numerator, p.precision_floor.denominator, p.recall_floor.numerator,
                 p.recall_floor.denominator, p.false_positive_ceiling.numerator,
                 p.false_positive_ceiling.denominator, p.false_stop_budget] { w.u64(value)?; }
-            if let CredibilityEvent::EnableJoint(_, policy) = event { joint::write_policy(w, *policy)?; }
         }
         CredibilityEvent::Assess(round, a) => {
             w.u8(1)?; w.u64(*round)?; w.u64(a.origin)?; w.raw(&a.evidence_id)?;
@@ -36,25 +35,20 @@ pub(in super::super) fn write(w: &mut Writer, event: &CredibilityEvent) -> Resul
     Ok(())
 }
 pub(in super::super) fn read(r: &mut Reader<'_>) -> Result<CredibilityEvent, Error> {
-    let tag = r.u8()?;
-    Ok(match tag {
+    Ok(match r.u8()? {
         3 => CredibilityEvent::ActivateHeldOut(Box::new(held_out::decode_activation(
             r.blob(held_out::MAX_ACTIVATION_BYTES)?)?)),
         4 => CredibilityEvent::WithdrawHeldOut(CredibilityWithdrawalRequest {
             operation: r.u64()?, expected_control_sequence: r.u64()?, expected_epoch: r.u64()?,
         }),
-        0 | 5 => {
-            let protocol = EvaluationProtocol {
-                domain: r.u64()?, stratum: r.u64()?, period: r.u64()?,
-                minimum_violation_origins: r.u64()?, minimum_benign_origins: r.u64()?,
-                precision_floor: Fraction { numerator: r.u64()?, denominator: r.u64()? },
-                recall_floor: Fraction { numerator: r.u64()?, denominator: r.u64()? },
-                false_positive_ceiling: Fraction { numerator: r.u64()?, denominator: r.u64()? },
-                false_stop_budget: r.u64()?,
-            };
-            if tag == 5 { CredibilityEvent::EnableJoint(protocol, joint::read_policy(r)?) }
-            else { CredibilityEvent::Enable(protocol) }
-        }
+        0 => CredibilityEvent::Enable(EvaluationProtocol {
+            domain: r.u64()?, stratum: r.u64()?, period: r.u64()?,
+            minimum_violation_origins: r.u64()?, minimum_benign_origins: r.u64()?,
+            precision_floor: Fraction { numerator: r.u64()?, denominator: r.u64()? },
+            recall_floor: Fraction { numerator: r.u64()?, denominator: r.u64()? },
+            false_positive_ceiling: Fraction { numerator: r.u64()?, denominator: r.u64()? },
+            false_stop_budget: r.u64()?,
+        }),
         1 => {
             let round = r.u64()?; let origin = r.u64()?;
             let evidence_id = r.take(32)?.try_into().map_err(|_| Error::Incomplete)?;
@@ -88,6 +82,3 @@ mod tests {
         *expected.last_mut().unwrap() = 3; assert!(read(&mut Reader::new(&expected)).is_err());
     }
 }
-
-#[cfg(test)]
-mod joint_tests;

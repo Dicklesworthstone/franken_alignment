@@ -232,6 +232,3 @@ fn failed_actor_output_does_not_retransmit_an_executed_request() {
     assert!(peer.join().unwrap().unwrap_err().contains("native actor response received, output failed"));
     let c=configured(&root);let disk=FileOversight::read_publication(&c.store,&c.profile).unwrap();assert_eq!(disk.executions,1);assert_eq!(disk.control.ledger.charged,7);
 }
-
-#[path = "tests/series.rs"]
-mod sequential;

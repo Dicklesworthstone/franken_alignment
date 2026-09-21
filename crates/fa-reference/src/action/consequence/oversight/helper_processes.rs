@@ -29,8 +29,6 @@ pub const MAX_LAUNCH_TEXT_BYTES: usize = 256 * 1_024;
 /// Trusted executable configuration, not actor or helper input. No shell is
 /// inserted and there is no PATH lookup. An explicitly configured interpreter
 /// remains a host choice. Debug never prints arguments or environment values.
-/// Cloning copies bounded launch configuration, never a child, socket or permit.
-#[derive(Clone)]
 pub struct HelperProgram {
     executable: PathBuf,
     directory: PathBuf,
