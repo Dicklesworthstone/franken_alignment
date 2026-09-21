@@ -62,3 +62,45 @@ Rust compilation, formatting, Clippy and tests are UNEXECUTED in this environmen
 The required RCH xtask invocation cannot start: rch is unavailable (exit 127), and
 cargo/rustc/rustfmt are absent. Source hash checks and lexical/diff screens are not
 substitutes for that gate. No bead or qualification gate is closed.
+
+## Pinned startup, recovery and evaluator custody
+
+The composed guarded owner now supports create_jointly_evaluated_guarded,
+open_jointly_evaluated_guarded and read_joint_credibility. Creation prepares the
+existing guard inventory and combined evaluation bootstrap BEFORE making storage,
+then publishes ONE first canonical image. Only acknowledgment returns the owner
+and its separately held human, evaluator and any configured auxiliary roles.
+No live getter recovers an evaluator from an actor-owned handle or report.
+
+Recovery independently pins the complete evaluation protocol and joint policy,
+including both rate ceilings and logical work budgets. It checks them before
+recorded numerical work, then checks the original guard inventory, effective
+policy, credential epoch and external minimum journal/control/authority floors
+before cleanup or the single original recovery fence. Missing configuration,
+legacy marginal-only configuration, different joint requirements and stale floors
+are refusals, not defaults. The old evaluated opener refuses a joint-only image
+rather than pretending the caller selected its joint policy. Generic native replay
+still preserves whatever guard was explicitly installed; it does not drop it.
+
+The native fence invalidates old approval keys and role brands and requires a new
+clock observation. It does not erase labels, pending/censored cases, consumed
+joint reports or dispatched charges. A newly issued evaluator receives newly
+branded tickets and can resolve a retained censored case through the ORIGINAL
+label transition. It cannot rewrite final ground truth or make unfinished cases
+vanish. Independent floors are lower bounds, not cryptographic protection against
+equal-counter forks, dishonest storage or stale operator-held floors.
+
+Read-only inspection checks the same exact configuration and reconstructs both
+marginal evidence and joint promotion history without issuing roles, changing the
+journal, or requiring the writer lock. It is historical evidence only.
+
+The startup/recovery increment adds six authored Rust tests (fifteen in total).
+They cover one-image creation, read-only inspection beside a locked owner, exact
+configuration/guard/floor mismatches with untouched staging files, refusal to
+substitute marginal and joint openers, independent role and ticket freshness,
+censor resolution followed by real two-key publication, and all five injected
+creation/recovery storage barriers. Source review corrected a new test's private
+import without widening any production visibility. Compilation, formatting,
+Clippy and Rust tests remain UNEXECUTED; the repeated required RCH gate cannot
+start because rch is absent. No evaluator authenticity, detector accuracy,
+production activation or FA-105 completion is claimed.
