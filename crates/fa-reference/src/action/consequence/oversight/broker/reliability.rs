@@ -2,6 +2,8 @@
 //! Started but unapplied rounds remain pending: dropping a poor review cannot
 //! quietly remove it from the current-policy promotion denominator.
 
+mod qualification;
+
 use super::{ObservedReview, OversightBroker};
 use super::super::credibility::{
     Assessment, CredibilityLedger, CredibilityPromotion, CredibilityReport, EvaluationCase,
@@ -43,6 +45,7 @@ impl OversightBroker {
     /// handle; the actor/effect interface receives no equivalent constructor.
     pub fn enable_credibility(&mut self, protocol: EvaluationProtocol) -> Result<IndependentEvaluator, Error> {
         if self.credibility.is_some() { return Err(Error::Duplicate); }
+        if self.delivery.controller().active_credibility().is_some() { return Err(Error::Binding); }
         if !self.inputs.is_empty() || !self.started_rounds.is_empty() { return Err(Error::WrongState); }
         let (ledger, evaluator) = CredibilityLedger::new(protocol, self.contracts.clone())?;
         self.credibility = Some(EvaluationState { ledger, unfinished: BTreeMap::new(),
