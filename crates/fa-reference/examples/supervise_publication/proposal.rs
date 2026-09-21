@@ -4,6 +4,7 @@
 use crate::config::{Config, debug};
 use fa_reference::action::{ElapsedTick, MAX_PAYLOAD_BYTES};
 use fa_reference::action::consequence::delivery::persistent::observed::FileOversight;
+use fa_reference::action::consequence::delivery::persistent::credibility::CredibilityActivation;
 use fa_reference::action::consequence::oversight::actor::ActorProposal;
 use fa_reference::action::consequence::oversight::actor_wire::{Command, encode_command};
 
@@ -25,6 +26,32 @@ pub fn document(
     now: ElapsedTick,
     basis: Basis,
 ) -> Result<Vec<u8>, String> {
+    document_for(config, request, payload, ttl, now, basis, None)
+}
+
+/// Plan the original actor document for an explicit qualification in the next
+/// recovered owner. This reads one historical cut and writes nothing. Matching
+/// predecessors do not prove that the evidence will qualify or reserve an epoch.
+pub fn document_qualified(
+    config: &Config,
+    request: u64,
+    payload: Vec<u8>,
+    ttl: u64,
+    now: ElapsedTick,
+    qualification: &CredibilityActivation,
+) -> Result<Vec<u8>, String> {
+    document_for(config, request, payload, ttl, now, Basis::Existing, Some(qualification))
+}
+
+fn document_for(
+    config: &Config,
+    request: u64,
+    payload: Vec<u8>,
+    ttl: u64,
+    now: ElapsedTick,
+    basis: Basis,
+    qualification: Option<&CredibilityActivation>,
+) -> Result<Vec<u8>, String> {
     if request == 0 {
         return Err("request must be nonzero".into());
     }
@@ -45,6 +72,17 @@ pub fn document(
                 .map_err(debug)?;
             let epoch = state.control.ledger.epoch.checked_add(1)
                 .ok_or("policy epoch exhausted")?;
+            let epoch = if let Some(qualification) = qualification {
+                if qualification.scope != config.profile.delivery.scope
+                    || qualification.expected_control_sequence != state.control.sequence
+                    || qualification.expected_epoch != epoch
+                {
+                    return Err("qualification does not bind the next recovered predecessor".into());
+                }
+                // Recovery and activation are distinct original transitions.
+                // Neither is executed just to print an actor proposal.
+                epoch.checked_add(1).ok_or("post-activation epoch exhausted")?
+            } else { epoch };
             (state.target, epoch)
         }
     };

@@ -18,7 +18,8 @@ pub fn take_option(args: &mut Vec<String>) -> Result<Option<PathBuf>, String> {
     let positional = match args.first().map(String::as_str) {
         Some("submit") => 3,
         Some("submit-checked") => 4,
-        _ => return Err("credibility activation is only supported by submit and submit-checked".into()),
+        Some("proposal-next") => 5,
+        _ => return Err("credibility activation is only supported by submit, submit-checked and proposal-next".into()),
     };
     if index < positional || index + 1 >= args.len() || args[index + 1].is_empty()
         || args[index + 1].starts_with("--")
@@ -67,6 +68,7 @@ mod tests {
             vec!["submit", "config", "proposal", FLAG, "capsule", "--reviewer-profile", "peer"],
             vec!["submit", "config", "proposal", "--reviewer-profile", "peer", FLAG, "capsule"],
             vec!["submit-checked", "config", "proposal", "witness", FLAG, "capsule"],
+            vec!["proposal-next", "config", "2", "payload", "1000", FLAG, "capsule"],
         ] {
             let mut values = args(&values);
             let before = values.clone();

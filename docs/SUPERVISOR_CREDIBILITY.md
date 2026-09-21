@@ -58,6 +58,28 @@ A new empty authority has not established this evaluation sequence domain. The
 implementation does not invent completed control events to bootstrap eligibility.
 Use an existing deployment with a valid independently prepared campaign.
 
+## Read-only qualification-aware proposal planning
+
+The original proposal builder now also accepts the same explicit option:
+
+```text
+supervise_publication proposal-next CONFIG REQUEST_ID PAYLOAD_FILE TTL_MS --credibility-activation EVIDENCE_FILE
+```
+
+This reads the existing canonical journal without opening a writable owner or
+acquiring its lock. It checks that the decoded capsule binds this scope and the
+next recovered sequence/epoch, then uses the original actor encoder with the
+current target/version and the additional activation epoch. It executes neither
+recovery nor activation, reserves nothing, and changes no journal bytes. The
+unchanged builder handles invocations without the option. Invalid request IDs,
+TTLs, payload bounds and arithmetic overflow retain their original refusals.
+
+Supply the resulting document unchanged to `submit` or `submit-checked` with the
+same capsule. The native owner still performs all qualification and authority
+checks: successful planning does not certify sufficient evidence, allocate a
+request ID, promise a future epoch, or bypass a concurrently changed predecessor.
+Evidence and evaluator identities do not enter the actor document or helper view.
+
 ## Retries and failure boundaries
 
 A recorded actor key is always query/reconciliation-only, including an expired
@@ -90,3 +112,13 @@ Clippy and tests remain UNEXECUTED. Scoped diffs, baseline/upload blob hashes an
 lexical checks are not substitutes for execution. No FA-105 closure, calibrated
 reliability or production qualification follows. Live actor-service qualification
 and a production authenticated evaluator remain outside this increment.
+
+The planning/composition increment adds six Rust tests (fifteen total with the
+submission increment). It pairs generated original documents with actual helper,
+reviewer and publication consumers; checks read-only planning while an owner
+holds the store lock; rejects stale/foreign predecessors and arithmetic failures;
+and distinguishes a well-formed document from a qualifying campaign. Checked-mode
+integration pairs an unrelated current-key change with an inserted forbidden key:
+qualification cannot bypass the original negative witness or drop the stored
+witness profile. These tests remain authored, not executed; the repeated RCH
+example/xtask attempts again exited 127. No existing test assertion is weakened.

@@ -218,3 +218,6 @@ fn omitting_the_option_cannot_downgrade_an_already_qualified_store() {
     assert_eq!(after.control.ledger.stages.len(), 2);
     assert!(!config.socket(3).exists());
 }
+
+#[path = "qualified_planning_tests.rs"]
+mod planning;
