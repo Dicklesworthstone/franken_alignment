@@ -66,8 +66,9 @@ impl FileOversight {
     }
 
     /// A valid notification of loss cannot leave the live owner using an older
-    /// qualification when encoding, capacity or replacement fails. Exact invalid
-    /// caller/predecessor/operation requests refuse before poisoning the owner.
+    /// qualification when encoding, capacity or replacement fails or unwinds.
+    /// Exact invalid caller/predecessor/operation requests refuse before arming
+    /// the loss guard; historical retries do not arm it either.
     pub fn withdraw_credibility(&mut self, revision: u64, request: CredibilityWithdrawalRequest)
         -> Result<CredibilityWithdrawal, JournalError>
     {
@@ -90,14 +91,10 @@ impl FileOversight {
             return Err(Error::WrongState.into());
         }
         let operation = request.operation;
-        if let Err(error) = self.transact(revision, Event::Credibility(CredibilityEvent::WithdrawHeldOut(request))) {
-            if self.fault.is_none() {
-                self.fault = Some(JournalFailure { operation: JournalIo::Stage,
-                    kind: std::io::ErrorKind::Other, replacement_may_be_visible: false });
-            }
-            return Err(error);
-        }
-        self.credibility_withdrawal(operation).cloned()
+        record_withdrawal(self, |host| {
+            host.transact(revision, Event::Credibility(CredibilityEvent::WithdrawHeldOut(request)))?;
+            host.credibility_withdrawal(operation).cloned()
+        })
     }
 
     /// Historical acknowledged native transition, not a current permit.
@@ -117,6 +114,40 @@ impl FileOversight {
         if self.fault.is_some() { return Err(JournalError::Unavailable); }
         self.machine.broker.check_credibility().map_err(Into::into)
     }
+}
+
+// Holds the original owner exclusively from accepted loss through receipt
+// acknowledgment. Dropping on Err OR unwinding closes it; no candidate, key,
+// refund or evidence update is applied by the guard itself.
+struct PendingWithdrawal<'a> {
+    host: &'a mut FileOversight,
+    initial_revision: u64,
+    acknowledged: bool,
+}
+impl Drop for PendingWithdrawal<'_> {
+    fn drop(&mut self) {
+        if !self.acknowledged && self.host.fault.is_none() {
+            self.host.fault = Some(JournalFailure { operation: JournalIo::Stage,
+                kind: std::io::ErrorKind::Other,
+                // A panic after the canonical transaction returned must not be
+                // described as a definitely invisible replacement. More precise
+                // storage diagnostics, when present, are always preserved.
+                replacement_may_be_visible: self.host.revision() != self.initial_revision });
+        }
+    }
+}
+
+// Private recording boundary for the fixed transaction above and deterministic
+// interruption tests. No public callback, alternate endpoint or authority path.
+fn record_withdrawal(host: &mut FileOversight,
+    record: impl FnOnce(&mut FileOversight) -> Result<CredibilityWithdrawal, JournalError>)
+    -> Result<CredibilityWithdrawal, JournalError>
+{
+    let initial_revision = host.revision();
+    let mut pending = PendingWithdrawal { host, initial_revision, acknowledged: false };
+    let receipt = record(&mut *pending.host)?;
+    pending.acknowledged = true;
+    Ok(receipt)
 }
 
 #[cfg(test)]
