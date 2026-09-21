@@ -12,6 +12,25 @@ pub use crate::action::consequence::gate::containment::session::policy::controll
 use super::{Event, FileDelivery, JournalError, Machine, Transition};
 use crate::Error;
 
+impl CredibilityActivation {
+    /// Bound for the existing canonical reference evidence encoding. This is
+    /// not an authenticated artifact or a production protocol admission.
+    pub const MAX_ENCODED_BYTES: usize = codec::MAX_ACTIVATION_BYTES;
+
+    /// Export ORIGINAL evidence and the exact governance request. Scores,
+    /// weights, permits and balances are never serialized. No I/O occurs.
+    pub fn encode_reference(&self) -> Result<Vec<u8>, Error> {
+        codec::encode_activation(self)
+    }
+
+    /// Rebuild the existing ledger from bounded, canonical inputs. Decoding
+    /// grants no authority: the owning controller must still validate scope,
+    /// predecessor, profile, freshness, requirements and promotion conflicts.
+    pub fn decode_reference(bytes: &[u8]) -> Result<Self, Error> {
+        codec::decode_activation(bytes)
+    }
+}
+
 impl Machine {
     pub(super) fn apply_credibility_activation(&mut self, request: &CredibilityActivation) -> Result<Transition, Error> {
         // Exact retries are served outside the append path. Duplicate journal

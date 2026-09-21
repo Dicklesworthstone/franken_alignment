@@ -17,6 +17,7 @@ use fa_reference::action::consequence::delivery::persistent::{JournalError, Reco
 use fa_reference::action::consequence::oversight::actor_wire::{
     ActorWire, Command, decode_command, encode_command,
 };
+use std::path::Path;
 use std::time::{Duration, Instant};
 
 #[cfg(test)]
@@ -32,10 +33,29 @@ mod tests;
 /// match disk, and all existing source, helper, human-key and publication guards
 /// remain mandatory. There is no create-on-missing or checked-to-legacy fallback.
 pub fn submit_existing<F>(
+    config: Config,
+    document: &[u8],
+    peers: Option<&PeerProfile>,
+    publication: Option<&PublicationProfile>,
+    time: F,
+) -> Result<RunResult, String>
+where
+    F: FnMut() -> ElapsedTick,
+{
+    submit_with_credibility(config, document, peers, publication, None, time)
+}
+
+/// Optional OFFLINE evidence activation in the SAME recovered owner that will
+/// supervise this new request. Historical actor requests remain query-only:
+/// their retry never opens this evidence file or reapplies any qualification.
+/// A supplied file is mandatory for a new request; no legacy fallback follows
+/// a read, decode, activation, freshness or original proposal-binding refusal.
+pub fn submit_with_credibility<F>(
     mut config: Config,
     document: &[u8],
     peers: Option<&PeerProfile>,
     publication: Option<&PublicationProfile>,
+    credibility: Option<&Path>,
     mut time: F,
 ) -> Result<RunResult, String>
 where
@@ -90,6 +110,10 @@ where
         // No evidence read, helper launch or human offer on an exact retry.
         None
     } else {
+        if let Some(path) = credibility {
+            crate::qualification::activate(&mut host, &config, &proposal, path)?;
+            deadline.check(time())?;
+        }
         let observed = host
             .refresh_file_source(host.revision(), &mut config.source, time())
             .map_err(debug)?;

@@ -282,3 +282,6 @@ fn changed_bootstrap_cannot_refill_the_retained_budget() {
     let after = FileOversight::read_publication(&config.store, &config.profile).unwrap();
     assert_eq!(after, before);
 }
+
+#[path = "qualified_tests.rs"]
+mod qualified;

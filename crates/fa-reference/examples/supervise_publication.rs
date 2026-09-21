@@ -15,6 +15,8 @@
 #[cfg(unix)]
 #[path = "supervise_publication/proposal.rs"] mod proposal;
 #[cfg(unix)]
+#[path = "supervise_publication/qualification.rs"] mod qualification;
+#[cfg(unix)]
 #[path = "supervise_publication/recover_stop.rs"] mod recover_stop;
 #[cfg(all(test, unix))]
 #[path = "supervise_publication/tests.rs"] mod tests;
@@ -40,7 +42,8 @@ fn command(mut args: Vec<String>) -> Result<(), String> {
     use fa_reference::action::consequence::oversight::actor_wire::MAX_FRAME_BYTES;
     use std::io::Write;
     use std::path::Path;
-    let usage = "usage: supervise_publication create CONFIG SUBMIT_JSON [--reviewer-profile REVIEWER_JSON]\n       supervise_publication submit CONFIG SUBMIT_JSON [--reviewer-profile REVIEWER_JSON]\n       supervise_publication resume CONFIG SUBMIT_JSON\n       supervise_publication create-checked CONFIG SUBMIT_JSON WITNESS_PROFILE [--reviewer-profile REVIEWER_JSON]\n       supervise_publication submit-checked CONFIG SUBMIT_JSON WITNESS_PROFILE [--reviewer-profile REVIEWER_JSON]\n       supervise_publication resume-checked CONFIG SUBMIT_JSON WITNESS_PROFILE\n       supervise_publication review CONFIG REQUEST_ID\n       supervise_publication review-peer REVIEWER_JSON REQUEST_ID\n       supervise_publication stop-peer REVIEWER_JSON REQUEST_ID\n       supervise_publication proposal CONFIG REQUEST_ID PAYLOAD_FILE TTL_MS\n       supervise_publication proposal-next CONFIG REQUEST_ID PAYLOAD_FILE TTL_MS\n       supervise_publication recover-stop CONFIG OPERATION\n       supervise_publication inspect CONFIG\n       supervise_publication serve-create CONFIG ACTOR_PROFILE REVIEWER_PROFILE\n       supervise_publication serve-open CONFIG ACTOR_PROFILE REVIEWER_PROFILE\n       supervise_publication serve-create-checked CONFIG ACTOR_PROFILE REVIEWER_PROFILE WITNESS_PROFILE\n       supervise_publication serve-open-checked CONFIG ACTOR_PROFILE REVIEWER_PROFILE WITNESS_PROFILE\n       supervise_publication actor-submit ACTOR_PROFILE SUBMIT_JSON";
+    let usage = "usage: supervise_publication create CONFIG SUBMIT_JSON [--reviewer-profile REVIEWER_JSON]\n       supervise_publication submit CONFIG SUBMIT_JSON [--reviewer-profile REVIEWER_JSON] [--credibility-activation EVIDENCE_FILE]\n       supervise_publication resume CONFIG SUBMIT_JSON\n       supervise_publication create-checked CONFIG SUBMIT_JSON WITNESS_PROFILE [--reviewer-profile REVIEWER_JSON]\n       supervise_publication submit-checked CONFIG SUBMIT_JSON WITNESS_PROFILE [--reviewer-profile REVIEWER_JSON] [--credibility-activation EVIDENCE_FILE]\n       supervise_publication resume-checked CONFIG SUBMIT_JSON WITNESS_PROFILE\n       supervise_publication review CONFIG REQUEST_ID\n       supervise_publication review-peer REVIEWER_JSON REQUEST_ID\n       supervise_publication stop-peer REVIEWER_JSON REQUEST_ID\n       supervise_publication proposal CONFIG REQUEST_ID PAYLOAD_FILE TTL_MS\n       supervise_publication proposal-next CONFIG REQUEST_ID PAYLOAD_FILE TTL_MS\n       supervise_publication recover-stop CONFIG OPERATION\n       supervise_publication inspect CONFIG\n       supervise_publication serve-create CONFIG ACTOR_PROFILE REVIEWER_PROFILE\n       supervise_publication serve-open CONFIG ACTOR_PROFILE REVIEWER_PROFILE\n       supervise_publication serve-create-checked CONFIG ACTOR_PROFILE REVIEWER_PROFILE WITNESS_PROFILE\n       supervise_publication serve-open-checked CONFIG ACTOR_PROFILE REVIEWER_PROFILE WITNESS_PROFILE\n       supervise_publication actor-submit ACTOR_PROFILE SUBMIT_JSON";
+    let credibility = qualification::take_option(&mut args)?;
     if args.first().is_some_and(|mode| matches!(mode.as_str(), "serve-create" | "serve-open"
         | "serve-create-checked" | "serve-open-checked" | "actor-submit")) {
         #[cfg(target_os = "linux")]
@@ -83,15 +86,23 @@ fn command(mut args: Vec<String>) -> Result<(), String> {
             let result = if matches!(mode, "create-checked" | "submit-checked" | "resume-checked") {
                 let publication = publication::PublicationProfile::read(Path::new(&args[3]))?;
                 if mode == "submit-checked" {
-                    workflow::continuation::submit_existing(config, &document,
-                        peer_profile.as_ref(), Some(&publication), workflow::clock)?
+                    match credibility.as_deref() {
+                        Some(path) => workflow::continuation::submit_with_credibility(config, &document,
+                            peer_profile.as_ref(), Some(&publication), Some(path), workflow::clock)?,
+                        None => workflow::continuation::submit_existing(config, &document,
+                            peer_profile.as_ref(), Some(&publication), workflow::clock)?,
+                    }
                 } else {
                     workflow::run_with_publication(config, &document, mode == "resume-checked",
                         peer_profile.as_ref(), Some(&publication), workflow::clock)?
                 }
             } else if mode == "submit" {
-                workflow::continuation::submit_existing(config, &document,
-                    peer_profile.as_ref(), None, workflow::clock)?
+                match credibility.as_deref() {
+                    Some(path) => workflow::continuation::submit_with_credibility(config, &document,
+                        peer_profile.as_ref(), None, Some(path), workflow::clock)?,
+                    None => workflow::continuation::submit_existing(config, &document,
+                        peer_profile.as_ref(), None, workflow::clock)?,
+                }
             } else {
                 match &peer_profile {
                     Some(profile) => workflow::run_with_peers(config, &document, false, Some(profile), workflow::clock)?,
