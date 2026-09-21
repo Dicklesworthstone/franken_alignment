@@ -40,11 +40,16 @@ impl Machine {
         match event {
             CredibilityEvent::ActivateHeldOut(request) => return self.activate_held_out(request),
             CredibilityEvent::WithdrawHeldOut(request) => return self.withdraw_held_out(request),
-            CredibilityEvent::Enable(protocol) => {
+            CredibilityEvent::Enable(protocol) | CredibilityEvent::EnableJoint(protocol, _) => {
                 if self.credibility.is_some() { return Err(Error::Duplicate); }
                 if !self.actions.is_empty() || self.requests.len() != 0 || !self.sessions.is_empty()
                     || self.broker.stop_receipt().is_some() { return Err(Error::WrongState); }
                 let evaluator = self.broker.enable_credibility(protocol.clone())?;
+                if let CredibilityEvent::EnableJoint(_, policy) = event {
+                    // Both requirements become visible in the SAME transaction.
+                    // Every later promotion uses the original native joint gate.
+                    self.broker.enable_joint_credibility(*policy)?;
+                }
                 if !self.publication_guard { self.enable_publication_guard()?; }
                 self.credibility = Some(CredibilityState {
                     protocol: protocol.clone(), evaluator, operations: BTreeMap::new(),
