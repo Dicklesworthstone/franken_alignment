@@ -2,6 +2,8 @@
 //! This is a synchronous executable consumer, not an alternative executor/ledger.
 pub mod continuation;
 pub(crate) mod control;
+#[cfg(target_os = "linux")]
+pub(crate) mod actor_service;
 
 use super::config::{Config, CLOCK_DOMAIN, debug};
 use super::peers::{Admission, PeerProfile};
@@ -159,14 +161,43 @@ fn execute<F>(driver: &mut FileSupervisedDriver, reviewer: &FileHumanReviewer, c
     request: u64, deadline: &Deadline, profiles: (Option<&PeerProfile>, Option<&PublicationProfile>),
     time: &mut F) -> Result<(), String>
 where F: FnMut() -> ElapsedTick {
-    let (peers, publication) = profiles;
+    let mut no_ingress = |_: &mut FileSupervisedDriver| Ok(false);
+    execute_serviced(driver, reviewer, config, request, deadline,
+        ExecuteServices { peers: profiles.0, publication: profiles.1, ingress: &mut no_ingress }, time)
+}
+
+type Ingress<'a> = dyn FnMut(&mut FileSupervisedDriver) -> Result<bool, String> + 'a;
+struct ExecuteServices<'a> {
+    peers: Option<&'a PeerProfile>,
+    publication: Option<&'a PublicationProfile>,
+    ingress: &'a mut Ingress<'a>,
+}
+struct LiveControl<'a> {
+    stop: control::Control,
+    ingress: &'a mut Ingress<'a>,
+}
+impl LiveControl<'_> {
+    fn checkpoint<F>(&mut self, driver: &mut FileSupervisedDriver, reviewer: &FileHumanReviewer,
+        deadline: &Deadline, time: &mut F) -> Result<bool, String>
+    where F: FnMut() -> ElapsedTick {
+        // Independent operator stop takes priority. Actor I/O never receives the
+        // reviewer role and can only use the original restricted request port.
+        if self.stop.checkpoint(driver, reviewer, deadline, time)? { return Ok(true); }
+        (self.ingress)(driver)
+    }
+}
+
+fn execute_serviced<F>(driver: &mut FileSupervisedDriver, reviewer: &FileHumanReviewer, config: &mut Config,
+    request: u64, deadline: &Deadline, services: ExecuteServices<'_>, time: &mut F) -> Result<(), String>
+where F: FnMut() -> ElapsedTick {
+    let ExecuteServices { peers, publication, ingress } = services;
     let status = driver.supervisor().host().map_err(debug)?.request_status(request).map_err(debug)?;
     let FileRequestDisposition::Admitted { attempt, stage: ActionState::Reviewing } = status.disposition else {
         return Ok(()); // The ORIGINAL gateway/ledger supplies denied/nonadmitted outcomes.
     };
     // A separate stop-only endpoint is available before original capture or helper
     // launch. Exact retries never enter execute and cannot create this service.
-    let mut control = control::Control::new(config, request, peers)?;
+    let mut control = LiveControl { stop: control::Control::new(config, request, peers)?, ingress };
     if control.checkpoint(driver, reviewer, deadline, time)? { return Ok(()); }
     let mut publication = match publication {
         Some(profile) => {
@@ -227,7 +258,7 @@ where F: FnMut() -> ElapsedTick {
 }
 
 fn human_review<F>(driver: &mut FileSupervisedDriver, reviewer: &FileHumanReviewer, config: &mut Config,
-    request: u64, deadline: &Deadline, channels: (Option<&PeerProfile>, &mut control::Control),
+    request: u64, deadline: &Deadline, channels: (Option<&PeerProfile>, &mut LiveControl<'_>),
     time: &mut F) -> Result<Option<FileHumanPermit>, String>
 where F: FnMut() -> ElapsedTick {
     let (peers, control) = channels;
