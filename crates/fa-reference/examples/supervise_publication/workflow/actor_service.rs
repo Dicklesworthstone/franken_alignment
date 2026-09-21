@@ -2,6 +2,7 @@
 //! One request per service lifetime; no concurrent congress, new ledger or runtime.
 mod profile;
 mod client;
+mod qualification;
 use profile::Profile;
 use super::{ActionState, ActorWire, BoundSocket, Config, Deadline, Duration, ElapsedTick,
     ExecuteServices, FileOversight, FileRequestDisposition, FileSupervisedDriver, Instant,
@@ -15,12 +16,12 @@ use fa_reference::action::consequence::oversight::actor_transport::DriveBudget;
 use std::path::Path;
 
 type Port = FileActorPort<FileOversight>;
-const USAGE: &str = "serve-create|serve-open CONFIG ACTOR_PROFILE REVIEWER_PROFILE; serve-create-checked|serve-open-checked CONFIG ACTOR_PROFILE REVIEWER_PROFILE WITNESS_PROFILE; actor-submit ACTOR_PROFILE SUBMIT_JSON";
+const USAGE: &str = "serve-create|serve-open CONFIG ACTOR_PROFILE REVIEWER_PROFILE; serve-create-checked|serve-open-checked CONFIG ACTOR_PROFILE REVIEWER_PROFILE WITNESS_PROFILE; actor-submit ACTOR_PROFILE SUBMIT_JSON; serve-open and serve-open-checked also accept --credibility-activation EVIDENCE_FILE";
 
-pub(crate) fn command(args: &[String]) -> Result<(), String> {
+pub(crate) fn command(args: &[String], credibility: Option<&Path>) -> Result<(), String> {
     let mode = args.first().map(String::as_str).ok_or(USAGE)?;
     if mode == "actor-submit" {
-        if args.len() != 3 { return Err(USAGE.into()); }
+        if args.len() != 3 || credibility.is_some() { return Err(USAGE.into()); }
         let profile = Profile::read(Path::new(&args[1]))?;
         return client::submit(&profile, Path::new(&args[2]), &mut std::io::stdout().lock());
     }
@@ -30,16 +31,35 @@ pub(crate) fn command(args: &[String]) -> Result<(), String> {
         _ => return Err(USAGE.into()),
     };
     if args.len() != if checked { 5 } else { 4 } { return Err(USAGE.into()); }
+    if !existing && credibility.is_some() {
+        return Err("live credibility activation requires an existing journal".into());
+    }
     let config = Config::read(Path::new(&args[1]))?;
     let actor = Profile::read(Path::new(&args[2]))?;
     let reviewer = PeerProfile::read(Path::new(&args[3]))?;
     let publication = if checked { Some(PublicationProfile::read(Path::new(&args[4]))?) } else { None };
-    serve(config, &actor, &reviewer, publication.as_ref(), existing, super::clock)
+    match credibility {
+        Some(path) => serve_with_credibility(config, &actor, &reviewer, publication.as_ref(),
+            existing, Some(path), super::clock),
+        None => serve(config, &actor, &reviewer, publication.as_ref(), existing, super::clock),
+    }
 }
 
-fn serve<F>(mut config: Config, actor: &Profile, reviewer_profile: &PeerProfile,
-    publication: Option<&PublicationProfile>, open: bool, mut time: F) -> Result<(), String>
+fn serve<F>(config: Config, actor: &Profile, reviewer_profile: &PeerProfile,
+    publication: Option<&PublicationProfile>, open: bool, time: F) -> Result<(), String>
 where F: FnMut() -> ElapsedTick {
+    serve_with_credibility(config, actor, reviewer_profile, publication, open, None, time)
+}
+
+/// Qualification belongs to this operator-owned lifetime, not an actor frame.
+/// Recorded requests remain observation/reconciliation-only, even with a path.
+fn serve_with_credibility<F>(mut config: Config, actor: &Profile, reviewer_profile: &PeerProfile,
+    publication: Option<&PublicationProfile>, open: bool, credibility: Option<&Path>, mut time: F)
+    -> Result<(), String>
+where F: FnMut() -> ElapsedTick {
+    if !open && credibility.is_some() {
+        return Err("live credibility activation requires an existing journal".into());
+    }
     actor.check_host(&config)?; reviewer_profile.check_host(&config)?;
     if actor.socket == reviewer_profile.socket(actor.request)
         || actor.socket == super::control::socket_path(reviewer_profile, actor.request) {
@@ -73,6 +93,16 @@ where F: FnMut() -> ElapsedTick {
         Err(JournalError::Contract(Error::Missing)) => false,
         Err(error) => return Err(debug(error)),
     };
+    if !recorded {
+        if let Some(path) = credibility {
+            deadline.check(time())?;
+            qualification::activate(&mut host, &config, path)?;
+            deadline.check(time())?;
+        }
+        // Never fall back to unqualified weights after recovery. This check is
+        // read-only, and a never-qualified legacy journal retains its semantics.
+        host.check_credibility().map_err(debug)?;
+    }
     let (port, mut driver) = host.into_supervised_driver();
     let session = PeerSession::new(actor.actor, ActorWire::new(port), actor.channels(), actor.connections).map_err(debug)?;
     let mut ingress = Intake { socket, session, selected: actor.request, attempted: 0, maximum: actor.candidates };
@@ -178,3 +208,5 @@ impl Intake {
 
 #[cfg(test)]
 mod tests;
+#[cfg(test)]
+mod qualified_tests;

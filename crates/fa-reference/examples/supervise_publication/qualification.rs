@@ -17,9 +17,9 @@ pub fn take_option(args: &mut Vec<String>) -> Result<Option<PathBuf>, String> {
     if positions.next().is_some() { return Err("duplicate credibility activation option".into()); }
     let positional = match args.first().map(String::as_str) {
         Some("submit") => 3,
-        Some("submit-checked") => 4,
-        Some("proposal-next") => 5,
-        _ => return Err("credibility activation is only supported by submit, submit-checked and proposal-next".into()),
+        Some("submit-checked" | "serve-open") => 4,
+        Some("proposal-next" | "serve-open-checked") => 5,
+        _ => return Err("credibility activation requires submit, submit-checked, proposal-next, serve-open or serve-open-checked".into()),
     };
     if index < positional || index + 1 >= args.len() || args[index + 1].is_empty()
         || args[index + 1].starts_with("--")

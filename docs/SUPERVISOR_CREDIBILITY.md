@@ -122,3 +122,47 @@ integration pairs an unrelated current-key change with an inserted forbidden key
 qualification cannot bypass the original negative witness or drop the stored
 witness profile. These tests remain authored, not executed; the repeated RCH
 example/xtask attempts again exited 127. No existing test assertion is weakened.
+
+## Live actor-service integration (2026-09-21, unexecuted)
+
+The original Linux live service now accepts the same operator-only option:
+
+```text
+supervise_publication serve-open CONFIG ACTOR_PROFILE REVIEWER_PROFILE --credibility-activation EVIDENCE_FILE
+supervise_publication serve-open-checked CONFIG ACTOR_PROFILE REVIEWER_PROFILE WITNESS_PROFILE --credibility-activation EVIDENCE_FILE
+```
+
+It opens the original owner, checks the complete stored deployment, and consults
+its request ledger for the operator-selected actor key. Only an actually missing
+key takes the qualification path. The same native activation and freshness checks
+run BEFORE consuming actor frames or acquiring current source evidence. The
+capsule path never crosses the actor protocol or becomes part of helper input.
+The original actor and reviewer process-credential checks remain mandatory; this
+does not authenticate the independent evaluator or turn synthetic labels into
+measured model reliability.
+
+The service has no actor proposal to preflight before qualification. Activation
+is therefore a separate explicit operator transition that can commit even if no
+actor connects or its later document is stale or refused. The unchanged actor
+gateway checks that document's target, epoch and complete original bytes; the
+service never repairs it. Use the existing qualification-aware `proposal-next`
+builder, then send its original output with `actor-submit` to the selected live
+request. One fresh recovery plus activation accounts for the same two epoch
+advances as continued submission. Creation and actor/reviewer-only commands reject
+the option before opening a store or reading privileged input.
+
+A recorded key skips the capsule entirely, even for conflicting actor bytes and
+expired documents. It uses only the original observation/reconciliation route.
+New work in a recovered qualified store cannot omit the option to obtain legacy
+weights. Qualification, endpoint fencing, helper review, independent human review,
+checked publication, cancellation and receipt settlement still use the original
+owners. No runtime, dependency, authority accessor or journal format was added.
+
+Five new regression tests plus a synthetic helper-child fixture are authored.
+They exercise successful credential-checked live publication, missing-file exact
+and conflicting retries, foreign/stale/insufficient capsules, unchanged stale
+actor documents, and option/creation role separation. All prior tests remain
+unchanged. RCH example verification was attempted and exited 127 because `rch`
+is absent; `cargo`, `rustc` and `rustfmt` are absent as well. Compilation, formatting,
+Clippy and Rust tests remain UNEXECUTED. This closes a source integration gap,
+not the FA-105 qualification gate; production evaluator authentication remains open.
