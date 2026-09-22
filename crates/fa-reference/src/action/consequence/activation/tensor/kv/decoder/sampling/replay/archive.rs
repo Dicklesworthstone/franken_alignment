@@ -5,6 +5,8 @@
 mod binding;
 mod state;
 mod wire;
+#[cfg(unix)]
+pub mod file;
 
 use super::{CheckpointLimits, GenerationCheckpoint, GenerationReplay, Recipe, ReplayableGeneration,
     ReplayBudget, ReplayReceipt, State, MAX_REPLAY_STATE_BYTES};
