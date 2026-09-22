@@ -3,9 +3,11 @@
 ## Status and capability changelog
 
 2026-09-22: source implementation of
-`FileOversight::cancel_and_resolve_request`, with ten real-file regression tests.
-Tests, compilation, rustfmt and Clippy are UNEXECUTED. The targeted command
-failed before execution (`rch: command not found`, exit 127):
+`FileOversight::cancel_and_resolve_request`, its supervised-driver integration,
+and atomic driver pending reconciliation. Seventeen regression tests are authored:
+ten owner tests and seven real-file/Unix-socket driver tests. Tests, compilation,
+rustfmt and Clippy are UNEXECUTED. Both targeted attempts failed before execution
+(`rch: command not found`, exit 127):
 
 ```
 RCH_REQUIRE_REMOTE=1 rch exec -- cargo test --locked -p fa-reference settlement
@@ -68,3 +70,36 @@ a partial refund; retry through the failed owner must refuse.
 The tests are authored, not passing evidence. They do not establish provider
 identity, wall-clock correctness, general process isolation, disk-space reservation,
 power-loss durability, or atomicity over independent external effect sinks.
+
+## Supervised-driver integration
+
+`FileSupervisedDriver::cancel_and_resolve_request` uses the original locked owner
+without extracting it or acquiring new evidence/approvals. It can settle the
+current job or an older durable request. `cancel_and_resolve_active` supplies the
+current job identity and acknowledged revision; it requires an explicit trusted
+tick. The original weaker `cancel_active` and actor wire methods stay unchanged.
+
+After settlement, original live ledger state and owner health determine cleanup,
+not the returned status of a possibly different historical request. An exact retry
+for an older terminal request cannot close a newer healthy review. Stale, missing
+or retention/capacity-refused work stays in its original phase. A storage-faulted
+owner closes its local drive path without acknowledging cancellation or refund.
+Conflicting owner borrows refuse before touching a healthy worker pool.
+
+The existing cleanup retires sockets and retains direct child ownership for
+nonblocking reaping; it does not detach a cohort or claim Idle means all children
+exited. The original next-cohort admission and explicit release/handoff still
+apply. The new tests use real Unix sockets, not real helper subprocesses, so they
+do not newly qualify subprocess/descendant containment.
+
+`FileSupervisedDriver::reconcile_pending` now invokes the existing atomic clocked
+sweep instead of committing Time before trying Sweep. Both original event slots
+must fit, even when the tick equals the saved one. Per-attempt failures remain in
+the original returned map; endpoint expiry evidence alone can refund a charge.
+The exact/one-under capacity test pairs failure with a successful original
+expiry reconciliation and checks there is no standalone clock prefix on failure.
+
+The seven driver tests additionally cover active socket closure, healthy review
+preservation after refusals, an old terminal retry during a new review, query-only
+reopen settlement, all five replacement barriers, expired-retention liabilities,
+and terminal/faulted paths that must not invoke clock or evidence callbacks.

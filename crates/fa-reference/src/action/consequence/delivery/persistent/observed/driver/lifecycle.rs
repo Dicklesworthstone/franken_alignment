@@ -1,5 +1,6 @@
 //! Control-plane cleanup and query-only recovery using the same locked owner.
-use super::{FileSupervisedDriver, Job, Phase, admitted, observe, stage};
+mod settlement;
+use super::{FileSupervisedDriver, Job, Phase, admitted, stage};
 use super::super::super::{FileStopSweep, JournalError, Reconciliation};
 use super::super::super::governance::{PolicyUpdate, PolicyUpdateReceipt};
 use super::super::super::requests::FileRequestStatus;
@@ -49,15 +50,17 @@ impl FileSupervisedDriver {
     }
 
     /// Existing obligations are independent of the currently active review.
-    /// Return the original per-attempt results only after their durable commit.
+    /// Commit the trusted clock and native sweep in ONE canonical replacement.
+    /// Both original event slots must fit before either advances. A failed sweep
+    /// cannot consume the final slot by leaving behind a separate Time event.
+    /// Per-attempt unresolved results remain explicit; nothing is resent.
     pub fn reconcile_pending(&mut self, now: ElapsedTick)
         -> Result<BTreeMap<u64, Result<Reconciliation, Error>>, JournalError>
     {
         let result = (|| {
             let mut host = self.supervisor.host_mut()?;
-            observe(&mut host, now)?;
             let revision = host.revision();
-            host.reconcile_pending(revision)
+            host.reconcile_publications_at(revision, now)
         })();
         self.reap_helpers();
         result
