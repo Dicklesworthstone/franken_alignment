@@ -2,6 +2,12 @@
 
 ## Status and capability changelog
 
+Follow-on source extension: literal named special controls now connect this importer
+to `NativeEvaluator`'s mandatory control-token termination. See
+[SPECIAL_TOKEN_IMPORT.md](SPECIAL_TOKEN_IMPORT.md) for its strict subset, eleven
+additional unexecuted importer/helper tests, and the native encoding extension.
+The original eighteen tests below remain unqualified historical source coverage.
+
 2026-09-22: unqualified source implementation of `ByteBpe::from_huggingface_json`,
 `ByteBpe::read_huggingface_json` and `TextDecoder::from_huggingface_reader`.
 Eighteen Rust tests are authored but UNEXECUTED: ten importer tests, four bounded
@@ -21,7 +27,8 @@ backend, generic Hugging Face pipeline, trained-model result or production gate.
 
 The importer accepts tokenizer JSON version `1.0` with all nine top-level fields
 present. Truncation, padding, normalization and postprocessing must be null;
-added_tokens must be empty. Both pre_tokenizer and decoder must explicitly be
+added_tokens may be empty or contain the exact literal-special subset described
+in SPECIAL_TOKEN_IMPORT.md. Both pre_tokenizer and decoder must explicitly be
 ByteLevel with add_prefix_space, trim_offsets and use_regex all false.
 
 The model is BPE with all ten fields present. Dropout and unk_token must be null;
@@ -30,11 +37,11 @@ byte_fallback and ignore_merges must be false. Merges may use a homogeneous list
 of legacy `left right` strings or two-string arrays. List order is rank; supplied
 vocabulary values, not spelling order or rank, are the original model token IDs.
 
-Every other transformation, missing behavior flag, unknown field, added-token
-recognizer or malformed graph refuses. Do not remove unsupported settings from
+Every other transformation, missing behavior flag, unknown field, unsupported
+added-token recognizer or malformed graph refuses. Do not remove unsupported settings from
 an export to force admission: that changes the trained tokenization contract.
-Ordinary GPT-2/Llama exports using regex splitting, special-token recognition,
-normalizers or templates are NOT supported by this entry point.
+Ordinary GPT-2/Llama exports requiring regex splitting, unsupported special-token
+rules, normalizers or templates are NOT supported by this entry point.
 
 The external schema and finite byte alphabet were checked against the pinned
 Hugging Face tokenizers v0.22.2 primary sources:
@@ -57,8 +64,9 @@ The caller independently supplies the complete DecoderProfile. JSON has no model
 identity: matching vocabulary cardinality does not authenticate training semantics
 or prove that a tokenizer belongs to given weights. A live TextDecoder already
 owns its immutable tokenizer and cannot swap this import into an existing KV
-history. Native `to_bytes`/`from_bytes` interchange remains unchanged and binds
-the supplied profile in its original header.
+history. Native `to_bytes`/`from_bytes` retains byte-identical version-one archives
+for tokenizers without named controls. Explicit named profiles use version two;
+both versions bind the supplied profile. See NAMED_CONTROL_TOKENIZATION.md.
 
 For admitted UTF-8 inputs, the intended compatibility is token IDs and exact
 content bytes. Native spans partition ORIGINAL bytes, not Hugging Face's Unicode

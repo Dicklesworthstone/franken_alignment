@@ -1,0 +1,4 @@
+Command: RCH_REQUIRE_REMOTE=1 rch exec -- cargo test --locked -p fa-reference hf_special
+bash: line 174: rch: command not found
+Exit code: 127
+No Rust compilation or test execution occurred.

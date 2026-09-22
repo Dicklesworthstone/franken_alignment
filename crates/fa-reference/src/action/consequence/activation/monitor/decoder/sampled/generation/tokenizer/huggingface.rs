@@ -1,13 +1,15 @@
 //! Strict import of the raw ByteLevel BPE subset of tokenizer.json (version 1.0).
 //!
 //! The admitted pipeline has no normalization, regex splitting, prefix insertion,
-//! added tokens, padding, truncation or postprocessing. Everything else refuses;
+//! padding, truncation or postprocessing. Literal non-normalized special tokens
+//! are admitted explicitly; other added-token transformations refuse;
 //! in particular, this is NOT an importer for arbitrary GPT-2/Llama tokenizers.
 //! The vocabulary's reversible ByteLevel alphabet is converted to original bytes,
 //! then the ORIGINAL ByteBpe constructor validates the entire token/merge graph.
 //! Declaring a model profile does not authenticate this file or training semantics.
 
 mod reader;
+mod special;
 
 use super::{ByteBpe, Merge, TokenBytes, MAX_MERGES, MAX_TOKEN_BYTES, MAX_VOCABULARY_BYTES};
 use crate::action::consequence::activation::tensor::kv::decoder::DecoderProfile;
@@ -32,13 +34,17 @@ type Object = BTreeMap<String, Json>;
 impl ByteBpe {
     pub const MAX_HUGGINGFACE_JSON_BYTES: usize = MAX_JSON_BYTES;
 
-    /// Import an explicitly declared, transformation-free ByteLevel BPE pipeline.
+    /// Import raw ByteLevel BPE with optional exact named special controls.
     ///
     /// The complete version-1.0 schema and every behavior flag must be present.
     /// Unknown fields and unsupported behavior refuse rather than selecting native
     /// defaults. Both homogeneous legacy "left right" and pair-array merge lists
     /// are supported. Rank is list order; IDs are the supplied numeric vocabulary
-    /// IDs, NOT byte values, map iteration order or merge ranks.
+    /// IDs, NOT byte values, map iteration order or merge ranks. Added tokens
+    /// must be special=true with single_word/lstrip/rstrip/normalized all false,
+    /// have all seven fields, and occur in increasing ID order. They may reserve
+    /// an exact existing vocabulary entry or extend its dense ID range. No ID is
+    /// inferred or renumbered. Native named recognition is leftmost-longest.
     ///
     /// expected is independently trusted model DATA. The JSON contains no model
     /// identity and cannot establish that this vocabulary was trained with those
@@ -72,7 +78,6 @@ impl ByteBpe {
             require_null(required(root, field)?)?;
         }
         let added = required(root, "added_tokens")?.as_array().ok_or(Error::InvalidInput)?;
-        if !added.is_empty() { return Err(Error::Binding); }
         byte_level(required(root, "pre_tokenizer")?)?;
         byte_level(required(root, "decoder")?)?;
         let model = exact_object(required(root, "model")?, MODEL_FIELDS)?;
@@ -87,10 +92,11 @@ impl ByteBpe {
         }
         let declared = required(model, "vocab")?.as_object().ok_or(Error::InvalidInput)?;
         let count = expected.shape().vocabulary;
-        if declared.len() != count { return Err(Error::Binding); }
+        if declared.len() > count { return Err(Error::Binding); }
         if count < 256 { return Err(Error::Incomplete); }
         let rules = required(model, "merges")?.as_array().ok_or(Error::InvalidInput)?;
         if rules.len() > MAX_MERGES { return Err(Error::Limit); }
+        let names = special::names(added, declared, count)?;
         let alphabet = alphabet_inverse();
         let mut slots = Vec::new();
         slots.try_reserve_exact(count).map_err(|_| Error::Limit)?;
@@ -98,12 +104,27 @@ impl ByteBpe {
         let mut retained = 0_usize;
         for (spelling, id) in declared {
             let id = token_id(id)?;
+            // The BPE model is a dense prefix; added-only controls may extend it.
+            if id as usize >= declared.len() { return Err(Error::Binding); }
             let slot = slots.get_mut(id as usize).ok_or(Error::Binding)?;
             if slot.is_some() { return Err(Error::Duplicate); }
+            if let Some(name) = names.get(&id) {
+                if name.as_slice() != spelling.as_bytes() { return Err(Error::Binding); }
+                *slot = Some(TokenBytes::Control);
+                continue;
+            }
             let decoded = spelling_bytes(spelling, &alphabet)?;
             retained = retained.checked_add(decoded.len()).ok_or(Error::Limit)?;
             if retained > MAX_VOCABULARY_BYTES { return Err(Error::Limit); }
             *slot = Some(TokenBytes::Content(decoded));
+        }
+        for id in names.keys() {
+            let slot = slots.get_mut(*id as usize).ok_or(Error::Binding)?;
+            match slot {
+                None => *slot = Some(TokenBytes::Control),
+                Some(TokenBytes::Control) => {}
+                Some(TokenBytes::Content(_)) => return Err(Error::Binding),
+            }
         }
         let mut vocabulary = Vec::new();
         vocabulary.try_reserve_exact(count).map_err(|_| Error::Limit)?;
@@ -132,7 +153,7 @@ impl ByteBpe {
         }
         // Reuse the original total-byte, singleton, ordering, duplicate-pair and
         // reachability checks. A parsed JSON graph alone never admits a tokenizer.
-        Self::new(expected.clone(), vocabulary, merges)
+        Self::new_with_special_tokens(expected.clone(), vocabulary, merges, names)
     }
 }
 
