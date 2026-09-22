@@ -4,6 +4,8 @@
 //! prompt/sample through LearnedGeneration again; saved cache words, RNG state,
 //! audit outcomes and work counters are comparison material, never installed.
 //! This is the token-recomputation restart baseline, not a cheap KV restart.
+pub mod archive;
+
 use super::monitored::{
     GenerationBudget, GenerationEvent, GenerationSpec, GenerationStatus,
     GenerationTelemetryBudget, GenerationTelemetryWork, GenerationWork, LearnedGeneration,

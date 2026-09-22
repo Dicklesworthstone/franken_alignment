@@ -71,6 +71,7 @@ impl LearnedDecoderPolicy {
     pub fn monitor(&self) -> &LearnedModelMonitor { &self.monitor }
     pub fn preparation(&self) -> LearnedAuditPreparationBudget { self.preparation }
     pub fn inference(&self) -> DecoderBudget { self.inference }
+    pub(crate) fn retention_policy(&self) -> &LearnedStreamRetention { &self.retention }
     pub fn allowance(&self) -> LearnedDecoderAllowance {
         LearnedDecoderAllowance { preparation: self.preparation, monitoring: self.monitor.budget().monitoring }
     }

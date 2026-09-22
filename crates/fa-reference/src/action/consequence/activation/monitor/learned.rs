@@ -135,6 +135,7 @@ impl LearnedRefinementMonitor {
     pub fn profile(&self) -> CaptureProfile { self.roster.profile() }
     pub fn dimensions(&self) -> usize { self.roster.dimensions() }
     pub fn budget(&self) -> LearnedMonitorBudget { self.budget }
+    pub(crate) fn registered_probes(&self) -> &[LinearProbe] { &self.roster.probes }
     pub fn analyze(&self, source: &CheckedLearnedKv, row: KvRow) -> Result<LearnedMonitorReport, Error> {
         self.analyze_with_budget(source, row, self.budget)
     }

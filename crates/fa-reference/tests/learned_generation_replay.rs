@@ -233,3 +233,6 @@ fn a_completed_stop_is_terminal_after_reconstruction() {
     assert_eq!(restored.run_to_stop().unwrap(), receipt.restored_status);
     equivalent(&original, &restored);
 }
+
+#[path = "learned_generation_replay/archive.rs"]
+mod archive;

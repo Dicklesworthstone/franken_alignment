@@ -119,6 +119,10 @@ impl LinearProbe {
     }
 
     pub fn identity(&self) -> ProbeIdentity { self.identity }
+    // Exact archive binding only; no mutable coefficient or score-import API.
+    pub(crate) fn coefficient_bits(&self) -> (&[u32], u32, u32) {
+        (&self.weights, self.bias, self.threshold)
+    }
 
     pub fn evaluate(&self, frame: &ProgressiveFrame) -> Result<ProbeObservation, Error> {
         if frame.identity().profile != self.identity.profile || frame.dimensions() != self.weights.len() {
