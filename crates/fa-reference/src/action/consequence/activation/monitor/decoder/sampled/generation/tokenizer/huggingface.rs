@@ -7,6 +7,8 @@
 //! then the ORIGINAL ByteBpe constructor validates the entire token/merge graph.
 //! Declaring a model profile does not authenticate this file or training semantics.
 
+mod reader;
+
 use super::{ByteBpe, Merge, TokenBytes, MAX_MERGES, MAX_TOKEN_BYTES, MAX_VOCABULARY_BYTES};
 use crate::action::consequence::activation::tensor::kv::decoder::DecoderProfile;
 use crate::strict_json::{self, ErrorKind, Json, Limits};

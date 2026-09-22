@@ -2,8 +2,11 @@
 
 ## Status and capability changelog
 
-2026-09-22: unqualified source implementation of `ByteBpe::from_huggingface_json`.
-Ten Rust tests are authored but UNEXECUTED. The targeted command
+2026-09-22: unqualified source implementation of `ByteBpe::from_huggingface_json`,
+`ByteBpe::read_huggingface_json` and `TextDecoder::from_huggingface_reader`.
+Eighteen Rust tests are authored but UNEXECUTED: ten importer tests, four bounded
+reader tests and four original monitored-generation integration tests. Both
+attempts of the targeted command
 `RCH_REQUIRE_REMOTE=1 rch exec -- cargo test --locked -p fa-reference hf_`
 failed before execution because `rch` is unavailable (exit 127). Rust compilation,
 rustfmt, Clippy and the full repository gate remain unexecuted for this source.
@@ -69,6 +72,28 @@ Vocabulary cardinality and native bounds are checked before retaining indexes;
 merge concatenations are bounded before allocation. Errors expose no partial
 admitted tokenizer or partial prompt, and no inference or external effect occurs.
 
+## Bounded readers and direct monitored text construction
+
+`ByteBpe::read_huggingface_json` accepts an already owned finite `Read` source,
+including a regular file. It reads no more than the caller byte cap plus one
+extra byte for oversize detection. A full JSON prefix is insufficient: actual
+EOF is required, and a subsequent I/O error remains an error. Short reads are
+not EOF; Interrupted retries, while WouldBlock, timeout and other errors
+propagate unchanged. Invalid bounds refuse before any reader call. Parser and
+contract refusals become InvalidData; allocation refusal becomes OutOfMemory.
+Geometric requested buffer growth avoids reallocating on every tiny fragment.
+This is bounded input retention, not a total-heap or wall-clock guarantee; the
+caller still owns source authenticity, permissions and blocking deadlines.
+
+`TextDecoder::from_huggingface_reader` takes the existing sole
+`MonitoredSampledDecoder`, derives the binding from its actual profile, imports
+the tokenizer and calls the ORIGINAL `TextDecoder::new`. Existing cache history,
+consumed draws or non-ready monitoring status refuse before reader I/O. There
+is no decoder accessor, owner cloning, reseeding, monitor bypass or replacement
+of an existing live tokenizer. Construction consumes its supplied owner even on
+refusal and performs no inference. Subsequent generate/into_generation operations
+use the original monitored numerical owner, exact token IDs and budget laws.
+
 ## Authored regression coverage
 
 The fixtures use permuted IDs and manually specified merge ranks. Positive cases
@@ -80,5 +105,18 @@ four over a six-byte alphabet; this is bounded differential coverage, not a proo
 
 Negative twins cover transformation flags, added tokens, vocabulary IDs, unknown
 glyphs, missing singletons, unreachable tokens, forward references, duplicate pairs,
-merge shapes, strict JSON syntax and exact/one-under input bounds. These tests
-have not run, and there is no performance, memory-allocation or deployment claim.
+merge shapes, strict JSON syntax and exact/one-under input bounds. Reader tests
+cover fragmentation, Interrupted, strict EOF, a one-byte oversize probe, malformed
+or trailing data, late I/O failures and a broken reader's false count.
+
+The real-file integration test imports a tokenizer, removes the source path, then
+compares actual original monitored generation against independently written
+prompt IDs, work counters and bytes. Deterministic fixture weights run through
+the original decoder, all-layer capture, residual probe and sampler; they are
+not pretrained-model or helper-authentication evidence. A near-identical alarm
+case must hold its sampled token, consume its draw, expose no held bytes and
+refuse a reroll. Paired tests cover whole-prompt numerical/context refusal, exact
+context admission, and ineligible owners refusing before any input-reader call.
+
+These tests have not run, and there is no performance, memory-allocation,
+trained-tokenizer parity, production permission or deployment qualification.

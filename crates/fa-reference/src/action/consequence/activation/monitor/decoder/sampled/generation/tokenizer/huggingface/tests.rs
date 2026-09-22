@@ -1,3 +1,6 @@
+mod reader;
+mod generation;
+
 use super::*;
 use crate::action::consequence::activation::tensor::kv::decoder::{DecoderIdentity, DecoderShape};
 use crate::action::consequence::activation::monitor::decoder::sampled::generation::tokenizer::TokenizationBudget;
