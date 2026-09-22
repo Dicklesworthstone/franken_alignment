@@ -1,6 +1,8 @@
 //! Terminal-only transactions over the existing journal publication endpoint.
 //! No network or independently visible filesystem effect is replayed here.
 
+mod cancellation;
+
 use super::super::{Event, FileDelivery, FileStopSweep, JournalError, StopRequest, Transition};
 use crate::action::ElapsedTick;
 
