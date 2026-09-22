@@ -170,49 +170,67 @@ impl TextDecoder {
     {
         if self.status() != MonitoringStatus::Ready { return Err(Error::WrongState); }
         if self.position() != expected_position { return Err(Error::Stale); }
-        if request.max_new_tokens > MAX_GENERATION_TOKENS || request.stop_tokens.len() > MAX_STOP_TOKENS
-            || request.prefix_controls.len() > MAX_PREFIX_CONTROLS || request.max_output_bytes > MAX_DECODE_BYTES
-        { return Err(Error::Limit); }
-        for control in &request.prefix_controls {
-            if !self.tokenizer.is_control(*control)? { return Err(Error::Binding); }
-        }
-        let mut stops = BTreeSet::new();
-        for token in &request.stop_tokens {
-            self.tokenizer.is_control(*token)?; // also validate content stop IDs
-            if !stops.insert(*token) { return Err(Error::Duplicate); }
-        }
-        if request.max_new_tokens != 0
-            && self.tokenizer.control_tokens().iter().any(|token| !stops.contains(token))
-        { return Err(Error::Incomplete); }
-        let capacity = request.max_new_tokens.checked_mul(self.tokenizer.max_content_bytes()).ok_or(Error::Limit)?;
-        if capacity > request.max_output_bytes { return Err(Error::Limit); }
-        let encoded = match self.tokenizer.encode(&request.prompt, request.tokenization) {
-            Ok(encoded) => { *work = encoded.work(); encoded }
-            Err(failure) => { *work = failure.work; return Err(failure.error); }
-        };
-        let count = encoded.tokens().len().checked_add(request.prefix_controls.len()).ok_or(Error::Limit)?;
-        if count > MAX_GENERATION_TOKENS { return Err(Error::Limit); }
-        let mut prompt = Vec::new();
-        prompt.try_reserve_exact(count).map_err(|_| Error::Limit)?;
-        prompt.extend_from_slice(&request.prefix_controls);
-        prompt.extend_from_slice(encoded.tokens());
-        // Complete output allocation BEFORE the numerical owner can advance.
-        let mut output = Vec::new();
-        output.try_reserve_exact(capacity).map_err(|_| Error::Limit)?;
-        Ok(PreparedText {
-            encoded, prefix_controls: request.prefix_controls, output, capacity,
-            numerical: GenerationRequest { prompt, max_new_tokens: request.max_new_tokens,
-                stop_tokens: request.stop_tokens, budget: request.generation },
-        })
+        prepare_text_request(&self.tokenizer, request, work)
     }
 }
 
-struct PreparedText {
+// Shared by in-memory and durable text owners. This compiles immutable input
+// data only: numerical readiness/context and authority admission remain owned by
+// each ORIGINAL decoder. No public caller can attach an arbitrary result here.
+pub(crate) fn prepare_text_request(tokenizer: &ByteBpe, request: TextGenerationRequest,
+    work: &mut TokenizationWork) -> Result<PreparedText, Error>
+{
+    if request.max_new_tokens > MAX_GENERATION_TOKENS || request.stop_tokens.len() > MAX_STOP_TOKENS
+        || request.prefix_controls.len() > MAX_PREFIX_CONTROLS || request.max_output_bytes > MAX_DECODE_BYTES
+    { return Err(Error::Limit); }
+    for control in &request.prefix_controls {
+        if !tokenizer.is_control(*control)? { return Err(Error::Binding); }
+    }
+    let mut stops = BTreeSet::new();
+    for token in &request.stop_tokens {
+        tokenizer.is_control(*token)?; // also validate content stop IDs
+        if !stops.insert(*token) { return Err(Error::Duplicate); }
+    }
+    if request.max_new_tokens != 0
+        && tokenizer.control_tokens().iter().any(|token| !stops.contains(token))
+    { return Err(Error::Incomplete); }
+    let capacity = request.max_new_tokens.checked_mul(tokenizer.max_content_bytes()).ok_or(Error::Limit)?;
+    if capacity > request.max_output_bytes { return Err(Error::Limit); }
+    let encoded = match tokenizer.encode(&request.prompt, request.tokenization) {
+        Ok(encoded) => { *work = encoded.work(); encoded }
+        Err(failure) => { *work = failure.work; return Err(failure.error); }
+    };
+    let count = encoded.tokens().len().checked_add(request.prefix_controls.len()).ok_or(Error::Limit)?;
+    if count > MAX_GENERATION_TOKENS { return Err(Error::Limit); }
+    let mut prompt = Vec::new();
+    prompt.try_reserve_exact(count).map_err(|_| Error::Limit)?;
+    prompt.extend_from_slice(&request.prefix_controls);
+    prompt.extend_from_slice(encoded.tokens());
+    // Complete output allocation BEFORE the numerical owner can advance.
+    let mut output = Vec::new();
+    output.try_reserve_exact(capacity).map_err(|_| Error::Limit)?;
+    Ok(PreparedText {
+        encoded, prefix_controls: request.prefix_controls, output, capacity,
+        numerical: GenerationRequest { prompt, max_new_tokens: request.max_new_tokens,
+            stop_tokens: request.stop_tokens, budget: request.generation },
+    })
+}
+
+pub(crate) struct PreparedText {
     encoded: TokenizedInput,
     prefix_controls: Vec<u32>,
-    numerical: GenerationRequest,
+    pub(crate) numerical: GenerationRequest,
     output: Vec<u8>,
     capacity: usize,
+}
+
+impl PreparedText {
+    pub(crate) fn finish(mut self, generation: GenerationReport) -> TextGenerationReport {
+        let output = append_output(self.encoded.tokenizer(), &mut self.output,
+            generation.tokens(), self.capacity).map(|()| self.output);
+        TextGenerationReport { prompt: self.encoded, prefix_controls: self.prefix_controls,
+            generation, output }
+    }
 }
 
 // Validate the entire new token slice before appending any bytes. Capacity was

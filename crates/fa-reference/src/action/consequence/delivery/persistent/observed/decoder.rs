@@ -6,6 +6,7 @@ pub mod checkpoint;
 pub mod checkpoint_inspection;
 pub mod generation;
 pub mod progress;
+pub mod text;
 mod stopping;
 pub use config::FileDecoderConfig;
 pub(super) use codec::{read, write};
@@ -33,6 +34,8 @@ pub(super) enum StepRequest {
 #[derive(Clone)]
 pub(super) enum DecoderEvent {
     Enable(Rc<FileDecoderConfig>),
+    Tokenizer(Rc<[u8]>),
+    TextIntent(Rc<text::FileTextGenerationCommand>),
     Step(StepRequest, Rc<[u8]>),
     Resume { revision: u64, position: u64 },
     Checkpoint(checkpoint::CheckpointRequest, Rc<[u8]>),

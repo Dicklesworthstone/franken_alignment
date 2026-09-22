@@ -7,6 +7,12 @@ use std::rc::Rc;
 
 pub(in super::super) fn write(w: &mut Writer, event: &DecoderEvent) -> Result<(), Error> {
     match event {
+        DecoderEvent::Tokenizer(bytes) => {
+            if bytes.is_empty() { return Err(Error::Incomplete); }
+            if bytes.len() > super::text::MAX_FILE_TOKENIZER_BYTES { return Err(Error::Limit); }
+            w.u8(9)?; w.blob(bytes)?;
+        }
+        DecoderEvent::TextIntent(command) => { w.u8(10)?; super::text::write(w, command)?; }
         DecoderEvent::Enable(config) => { w.u8(0)?; config.write(w)?; }
         DecoderEvent::StopPolicy(policy) => {
             w.u8(5)?; w.u64(policy.id())?; w.u64(policy.generation())?; w.u64(policy.operation())?;
@@ -82,6 +88,12 @@ pub(in super::super) fn read(r: &mut Reader<'_>) -> Result<DecoderEvent, Error> 
             if witness.is_empty() { return Err(Error::Incomplete); }
             DecoderEvent::AdvanceGeneration { id, revision, witness: Rc::from(witness) }
         }
+        9 => {
+            let bytes = r.blob(super::text::MAX_FILE_TOKENIZER_BYTES)?;
+            if bytes.is_empty() { return Err(Error::Incomplete); }
+            DecoderEvent::Tokenizer(Rc::from(bytes))
+        }
+        10 => DecoderEvent::TextIntent(Rc::new(super::text::read(r)?)),
         _ => return Err(Error::InvalidInput),
     })
 }

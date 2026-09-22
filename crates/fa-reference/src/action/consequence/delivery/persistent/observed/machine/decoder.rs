@@ -14,6 +14,7 @@ use std::rc::Rc;
 mod checkpoint;
 mod generation;
 mod stopping;
+mod text;
 use super::super::decoder::checkpoint::CheckpointRequest;
 
 pub(super) struct DecoderState {
@@ -21,6 +22,7 @@ pub(super) struct DecoderState {
     paused: bool,
     checkpoints: checkpoint::CheckpointHistory,
     generations: generation::GenerationHistory,
+    text: text::TextHistory,
 }
 
 impl Machine {
@@ -64,6 +66,8 @@ impl Machine {
 
     pub(super) fn apply_decoder(&mut self, event: &DecoderEvent) -> Result<Transition, Error> {
         match event {
+            DecoderEvent::Tokenizer(bytes) => self.install_decoder_tokenizer(bytes),
+            DecoderEvent::TextIntent(command) => self.apply_decoder_text_intent(command),
             DecoderEvent::BeginGeneration(command) => self.apply_decoder_generation_intent(command),
             DecoderEvent::Generate(command, expected) => self.apply_decoder_generation(command, expected),
             DecoderEvent::AdvanceGeneration { id, revision, witness } => self.apply_decoder_generation_progress(*id, *revision, witness),
@@ -81,7 +85,7 @@ impl Machine {
                 if !self.publication_guard { self.enable_publication_guard()?; }
                 self.decoder = Some(DecoderState { config: Rc::clone(config), paused: false,
                     checkpoints: checkpoint::CheckpointHistory::default(),
-                    generations: generation::GenerationHistory::default() });
+                    generations: generation::GenerationHistory::default(), text: text::TextHistory::default() });
                 Ok(Transition::Unit)
             }
             DecoderEvent::Step(request, expected) => {
