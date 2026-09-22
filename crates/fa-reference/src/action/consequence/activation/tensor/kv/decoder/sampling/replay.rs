@@ -452,4 +452,6 @@ mod tests {
         // or its immutable recipe. The permitted control still reconstructs.
         original.replay(ReplayBudget::default()).unwrap();
     }
+
+    mod archive_binding;
 }

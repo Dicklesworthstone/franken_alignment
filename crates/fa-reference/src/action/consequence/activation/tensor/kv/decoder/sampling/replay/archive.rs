@@ -43,6 +43,16 @@ impl ArchiveLimits {
     }
 }
 
+/// Logical encoded sizes under the same published V1 format and native limits.
+/// Sizing grants no replay or effect authority and does not advance the owner.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct ArchiveLayout {
+    pub encoded_bytes: usize,
+    pub recipe_bytes: usize,
+    pub state_bytes: usize,
+    pub positions: usize,
+}
+
 /// Parsed and recipe-matched EXPECTATIONS, not a trusted captured checkpoint.
 /// No mutable owner or sampled output is exposed until original replay verifies
 /// the whole state. IDs and equality are not file/host authentication.
@@ -70,10 +80,10 @@ impl fmt::Debug for GenerationArchive {
     }
 }
 impl GenerationCheckpoint {
-    /// Includes exact model/codebook/probe parameters and sampling state. Protect
-    /// these sensitive bytes like the original checkpoint; this is not encryption.
-    /// The complete size is admitted before allocating the export buffer.
-    pub fn encode_archive(&self, limits: ArchiveLimits) -> Result<Vec<u8>, Error> {
+    /// Admit the complete published representation without allocating an export
+    /// buffer. This is the same sizing pass used by encode_archive, not another
+    /// encoder or a promise about physical allocation, CPU time or durable storage.
+    pub fn archive_layout(&self, limits: ArchiveLimits) -> Result<ArchiveLayout, Error> {
         limits.check()?;
         let state_bytes = state::size(&self.expected)?;
         if self.positions() > limits.state.positions || state_bytes > limits.state.state_bytes {
@@ -85,8 +95,16 @@ impl GenerationCheckpoint {
         let total = ARCHIVE_HEADER_BYTES.checked_add(recipe_bytes)
             .and_then(|n| n.checked_add(state_bytes)).ok_or(Error::Limit)?;
         if total > limits.bytes { return Err(Error::Limit); }
-        let mut w = Writer::collect(total)?;
-        w.bytes(DOMAIN)?; w.size(recipe_bytes)?; w.size(state_bytes)?;
+        Ok(ArchiveLayout { encoded_bytes: total, recipe_bytes, state_bytes, positions: self.positions() })
+    }
+
+    /// Includes exact model/codebook/probe parameters and sampling state. Protect
+    /// these sensitive bytes like the original checkpoint; this is not encryption.
+    /// The complete size is admitted before allocating the export buffer.
+    pub fn encode_archive(&self, limits: ArchiveLimits) -> Result<Vec<u8>, Error> {
+        let layout = self.archive_layout(limits)?;
+        let mut w = Writer::collect(layout.encoded_bytes)?;
+        w.bytes(DOMAIN)?; w.size(layout.recipe_bytes)?; w.size(layout.state_bytes)?;
         binding::write(&mut w, &self.recipe)?;
         state::write(&mut w, &self.expected)?;
         w.finish()
@@ -120,6 +138,10 @@ impl GenerationArchive {
     pub fn encoded_bytes(&self) -> usize { self.encoded_bytes }
     pub fn recipe_bytes(&self) -> usize { self.recipe_bytes }
     pub fn state_bytes(&self) -> usize { self.expected.logical_bytes }
+    pub fn layout(&self) -> ArchiveLayout {
+        ArchiveLayout { encoded_bytes: self.encoded_bytes, recipe_bytes: self.recipe_bytes,
+            state_bytes: self.state_bytes(), positions: self.positions() }
+    }
 
     /// Delegate to the original verifier. Saved values remain comparisons, not
     /// assignment inputs, and every prompt/sample is learned-audited again.
@@ -131,5 +153,13 @@ impl GenerationArchive {
         let mut replay = self.begin_replay(budget)?;
         replay.advance(self.positions())?;
         replay.finish()
+    }
+}
+
+impl ReplayableGeneration {
+    /// Use this independently constructed owner's immutable recipe for the
+    /// original archive decoder. Reading never changes this owner, even held.
+    pub fn decode_archive(&self, bytes: &[u8], limits: ArchiveLimits) -> Result<GenerationArchive, Error> {
+        GenerationArchive::decode(bytes, self, limits)
     }
 }
