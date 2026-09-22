@@ -12,8 +12,29 @@ use crate::action::consequence::gate::containment::session::policy::controller::
 };
 use crate::action::consequence::oversight::CommitteeContract;
 use crate::Error;
+use crate::action::consequence::gate::containment::session::policy::controller::credibility::joint::{
+    HeldOutJointPolicy, HeldOutJointReport,
+};
 
 impl OversightBroker {
+    /// Select the immutable held-out joint guard before ANY empirical work.
+    /// Owned-round evaluation is mutually exclusive, including before labels.
+    pub fn enable_held_out_joint(&mut self, policy: HeldOutJointPolicy) -> Result<(), Error> {
+        if self.credibility.is_some() { return Err(Error::Binding); }
+        if !self.inputs.is_empty() || !self.started_rounds.is_empty() || self.stop_receipt().is_some() {
+            return Err(Error::WrongState);
+        }
+        self.delivery.enable_held_out_joint(policy)
+    }
+
+    pub fn held_out_joint_policy(&self) -> Option<HeldOutJointPolicy> {
+        self.delivery.controller().held_out_joint_policy()
+    }
+
+    pub fn held_out_joint_report(&self, operation: u64) -> Result<Option<&HeldOutJointReport>, Error> {
+        self.delivery.controller().held_out_joint_report(operation)
+    }
+
     /// Activate the original held-out promotion in ordinary bound review,
     /// authorization and both one-key/two-key dispatch paths. No helper input,
     /// human role, exact policy or approval threshold is replaced by this call.

@@ -1,4 +1,5 @@
 //! Evaluated guarded startup/recovery without a live evaluator-role getter.
+pub mod joint;
 use super::{FileCredentialRegistration, FileGuardSet, FileOversightRoles, FileRecoveryRequirements};
 use super::bootstrap::PreparedGuardedBootstrap;
 use super::super::{BaseEvent, Event, FileDeliverySnapshot, FileOversight, FileOversightProfile,

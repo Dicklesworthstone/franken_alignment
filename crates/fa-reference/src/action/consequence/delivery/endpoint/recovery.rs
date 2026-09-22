@@ -4,6 +4,14 @@
 use super::super::*;
 
 impl DeliveryBroker {
+    /// Trusted bootstrap of the original controller's promotion guard only.
+    /// This does not acknowledge an endpoint fence or issue any effect rights.
+    pub fn enable_held_out_joint(&mut self,
+        policy: crate::action::consequence::gate::containment::session::policy::controller::credibility::joint::HeldOutJointPolicy,
+    ) -> Result<(), Error> {
+        self.controller.enable_held_out_joint(policy)
+    }
+
     /// Only the full-input recovery path uses this narrowing-only hook. Legacy
     /// bare delivery replay retains its separately declared recovery semantics.
     pub(crate) fn invalidate_credibility_for_recovery(&mut self) {

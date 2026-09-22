@@ -281,3 +281,7 @@ fn native_comparison_uses_admitted_capped_weights_not_nominal_scores() {
     host.dispatch(&permit, &action, &state()).unwrap();
     assert_eq!(host.inspect().ledger.charged, 7);
 }
+
+#[cfg(unix)]
+#[path = "held_out_joint/durable.rs"]
+mod durable;

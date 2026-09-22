@@ -84,6 +84,18 @@ impl PreparedGuardedBootstrap {
         Ok(self)
     }
 
+    /// Freeze marginal AND joint evaluation before the first canonical image.
+    pub(super) fn jointly_evaluated(mut self,
+        protocol: crate::action::consequence::oversight::credibility::EvaluationProtocol,
+        policy: crate::action::consequence::oversight::joint_credibility::JointPromotionPolicy)
+        -> Result<Self, JournalError>
+    {
+        let event = Event::Credibility(super::super::credibility::CredibilityEvent::EnableJoint(protocol, policy));
+        self.machine.apply(&event)?;
+        self.events.push(event);
+        Ok(self)
+    }
+
     /// Apply the original predictor gate before the FIRST canonical write.
     pub(super) fn predictive(mut self, config: super::super::consistency::FileConsistencyConfig)
         -> Result<Self, JournalError>

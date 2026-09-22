@@ -60,3 +60,56 @@ Compilation, formatting, Clippy and Rust tests are UNEXECUTED. The required
 RCH xtask attempt cannot start because rch is absent (exit 127); cargo, rustc and
 rustfmt are absent too. Exact baseline/source hash and scoped whitespace checks
 are not substitutes for the Rust gate. No qualification or bead is closed.
+
+## Durable two-key integration and compatibility
+
+The original DeliveryBroker and OversightBroker now expose this bootstrap guard.
+Owned-round evaluation and held-out joint evaluation refuse each other's bootstrap
+in either order, before any labels or effects. The central native setter also
+refuses an alternate weight-installation path after the held-out guard is selected.
+Ordinary held-out activation still derives its candidate and consumes the native
+joint check; there is no second, optionally unguarded activation operation.
+
+FileOversight::enable_held_out_joint records the same policy as bootstrap input.
+create_with_held_out_joint prepares the mandatory first-publication guard and
+original two-key owner, then publishes the joint policy in ONE initial canonical
+image before returning a human role or writable owner. The marker is bootstrap
+work, so the original terminal recovery reserve may still be installed afterward.
+The evidence capsule, activation/withdrawal frames and actor protocol do not change.
+
+open_with_held_out_joint pins every joint-policy field and the ordinary bootstrap
+before native replay, cleanup or the original recovery fence. It does not claim
+independent rollback floors or replace the broader composed guard inventory.
+Other configured guards retain their native replay semantics. Generic opening
+cannot drop this selected guard. The original recovery fence invalidates prior
+held-out qualification and old automatic/human keys while retaining liabilities;
+an old activation/report cannot reopen admission. New activation must still pass
+both original individual requirements and the frozen joint policy.
+
+read_held_out_joint checks the same policy and reconstructs reports from original
+input history without a writer lock, cleanup, role issuance or journal mutation.
+It can inspect beside a locked owner. These are historical reports, never fresh
+evaluator observations or current effect permission. Existing withdrawals and
+receipt-only settlement remain unchanged, including failed-loss recording rules.
+
+The new fixed-size credibility subtag is 6. Subtags 0 through 5 retain their
+original encodings. This increment also restores module, bootstrap and codec
+connections to the PREVIOUSLY implemented owned-round joint gate that the later
+integration commit had disconnected. Its existing source tests and guarded
+creation/recovery implementation are retained, not replaced by the held-out gate.
+
+Eight further tests are authored: five actual filesystem/two-key integration
+cases and three wire/storage-barrier cases. They pair rejected joint promotion
+with working publication, preserve reports and unknown charges through reopening,
+require new qualification and both new keys, preserve newer approvals through
+historical retries, check exact pins before staging cleanup, and retain final
+policy revalidation. Codec vectors include all truncations and invalid fields;
+creation and recovery exercise all five existing injected storage barriers.
+The original joint-evaluation tests are reconnected, not counted as new tests.
+
+The required RCH xtask was attempted again and exited 127: rch is unavailable.
+All eighteen newly authored Rust tests, compilation, formatting and Clippy remain
+UNEXECUTED. Hash and scoped source checks are not execution evidence. No bead,
+production activation, calibrated error-rate or authenticated evaluator claim is
+made. Selection through a new supervisor CLI bootstrap option is not included;
+existing supervisors that open a selected journal retain its native enforcement.
