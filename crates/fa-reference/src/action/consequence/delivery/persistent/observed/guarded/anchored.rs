@@ -5,16 +5,19 @@
 //! guard admission, semantic replay and recovery fence as guarded recovery.
 //! The anchor is sensitive operator data, not a signature, permit or checkpoint.
 
+mod wire;
+pub use wire::{FileHistoryAnchorError, MAX_HISTORY_ANCHOR_BYTES};
+
 use super::{BaseEvent, Event, FileOversight, FileOversightProfile, FileOversightRoles,
     FileRecoveryRequirements, JournalError, Machine, journal, storage};
 use crate::Error;
 use std::fmt;
 use std::path::Path;
 
-/// An acknowledged history prefix retained OUTSIDE the mutable publication
-/// journal. Cloning this data copies no rights or live owner. Its usefulness
-/// depends on independently retaining the latest required anchor: replacing both
-/// journal and anchor with old copies defeats this protection.
+/// An operator's required history prefix retained OUTSIDE the mutable publication
+/// journal. Capture uses an acknowledged owner; read_trusted imports independently
+/// retained data and does not authenticate it. Cloning copies no rights or owner.
+/// Replacing both journal and anchor with old copies defeats this protection.
 ///
 /// Exact prefix comparison accepts genuine append-only successors, not just the
 /// identical current image. It does not authenticate the unanchored suffix or
@@ -63,6 +66,23 @@ impl FileOversight {
         if self.fault.is_some() { return Err(JournalError::Unavailable); }
         let canonical = journal::encode(&self.profile, self.store.identity(), &self.events)?;
         Ok(FileHistoryAnchor { revision: self.events.len(), canonical })
+    }
+
+    /// Advance an independently held anchor only along this healthy owner's
+    /// acknowledged original history. Equal-cut retries are idempotent; an older,
+    /// foreign or divergent owner cannot replace a newer required prefix merely
+    /// because it was opened through another, weaker recovery entry point.
+    ///
+    /// This returns data without writing either journal or custodian storage.
+    /// The custodian must retain the old anchor until the new one is durably
+    /// acknowledged. Passing a stale previous anchor cannot protect intervening
+    /// history which the custodian did not independently retain.
+    pub fn history_anchor_after(&self, previous: &FileHistoryAnchor)
+        -> Result<FileHistoryAnchor, JournalError>
+    {
+        if self.fault.is_some() { return Err(JournalError::Unavailable); }
+        previous.check(&self.profile, self.store.identity(), &self.events)?;
+        self.history_anchor()
     }
 
     /// Require exact anchored history AND the independent current guard set,

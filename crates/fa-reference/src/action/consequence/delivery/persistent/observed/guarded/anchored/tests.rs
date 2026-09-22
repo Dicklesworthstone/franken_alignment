@@ -1,4 +1,6 @@
 //! Real canonical-file recovery tests; fixtures are not authentication evidence.
+mod portable;
+
 use super::*;
 use super::super::{FileGuardSet, FileRecoveryFloor, FileCampaignRequirement};
 use crate::action::{ElapsedTick, Purpose, ResolvedTarget, Scope};
@@ -89,7 +91,7 @@ fn setup(root: &Directory) -> (FileOversight, FileRecoveryRequirements) {
 #[test]
 fn exact_anchor_and_genuine_successors_recover_without_restoring_clock_eligibility() {
     let root = Directory::new();
-    let (mut host, expected) = setup(&root);
+    let (host, expected) = setup(&root);
     let anchor = host.history_anchor().unwrap();
     assert_eq!(anchor.revision(), host.revision());
     assert_eq!(anchor.canonical, std::fs::read(root.canonical()).unwrap());
