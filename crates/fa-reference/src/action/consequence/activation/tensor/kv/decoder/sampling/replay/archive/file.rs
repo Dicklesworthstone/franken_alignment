@@ -3,10 +3,12 @@
 //! original archive is published after a quiet step; interruption cannot reopen
 //! its older quiet prefix. Recovery replays the independently supplied recipe.
 mod storage;
+mod recovery;
+pub use recovery::FileGenerationRecovery;
 #[cfg(test)]
 mod tests;
 
-use super::{ArchiveLimits, GenerationArchive};
+use super::ArchiveLimits;
 use super::super::{ReplayBudget, ReplayReceipt, ReplayableGeneration};
 use super::super::super::monitored::{GenerationEvent, GenerationStatus, LearnedGeneration};
 use super::wire::{Reader, Writer};
@@ -122,15 +124,9 @@ impl FileGeneration {
         limits: ArchiveLimits, budget: ReplayBudget, minimum: GenerationFileFloor)
         -> Result<(Self, ReplayReceipt), GenerationFileError>
     {
-        limits.check()?;
-        let store = storage::Store::open(directory.as_ref())?;
-        let bytes = store.read(file_limit(limits)?)?;
-        let saved = parse(&bytes, store.identity(), limits, minimum)?;
-        let archive = GenerationArchive::decode(saved.archive, intended, limits)?;
-        if archive.positions() as u64 != saved.commit.position { return Err(Error::Binding.into()); }
-        let (run, receipt) = archive.replay(budget)?;
-        store.confirm_and_cleanup()?;
-        Ok((Self { store, run, limits, committed: saved.commit, fault: None }, receipt))
+        let mut recovery = Self::begin_open(directory, intended, limits, budget, minimum)?;
+        recovery.advance(usize::MAX)?;
+        recovery.finish()
     }
 
     /// Historical last acknowledgment remains visible on fault; it is not a

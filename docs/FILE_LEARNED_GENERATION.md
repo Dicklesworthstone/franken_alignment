@@ -83,3 +83,34 @@ The required RCH xtask command was attempted and exited 127 because `rch` is not
 available. Cargo, rustc and rustfmt are absent too. Compilation, Rust tests,
 doctests, formatting and Clippy are UNEXECUTED. Source hashes and non-compiling
 screens are not verification. No packet or production qualification is closed.
+
+## Bounded recovery quanta
+
+`FileGeneration::begin_open` now returns a locked `FileGenerationRecovery` after
+checking the complete canonical frame, recipe and independent floors. The host
+can call `advance(positions)` in bounded token quanta and schedule other work
+between calls. One token and final comparison remain synchronous; this is not
+preemptive I/O or a wall-clock bound. No new runtime or recovery algorithm exists.
+The existing synchronous `open` is a convenience consumer of this SAME path.
+
+The reconstruction retains its original writer lock and exact canonical bytes.
+No candidate, tokens, cache, RNG or writable owner are accessible while pending.
+Even a zero-token prefix requires final verification. `receipt()` reports only
+the original numerical comparison; `finish()` must still compare the canonical
+file with the originally read cut, synchronize storage and clean staging before
+returning an owner. A changed file refuses without cleaning evidence. This exact
+reread supplements, but cannot replace, the cooperating-writer/namespace contract.
+
+Dropping or prematurely finishing reconstruction leaves files and staging
+untouched and releases the lock. A later explicit attempt recomputes from the
+beginning; no partly checked numerical state is saved or treated as authority.
+The original whole-replay budget is checked before computation and is not reset
+per quantum. Replaying is additional work, not an independent new observation.
+
+Five additional authored tests pair segmented recovery with continued original
+numerical execution, retain the lock and staging until success, check cancellation
+and empty-prefix semantics, reject a changed canonical image, and exercise exact
+whole-replay bounds plus each one-less case. Two further compile-fail boundaries
+reject partial-generation access and cloning the recovering owner. All twelve
+new Rust tests and four compile-fail cases remain UNEXECUTED; the required RCH
+attempt again failed to start with exit 127. No qualification gate is closed.

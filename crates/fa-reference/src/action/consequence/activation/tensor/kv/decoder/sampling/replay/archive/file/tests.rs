@@ -226,3 +226,5 @@ fn strict_file_frames_limits_and_directory_binding_are_not_resume_permissions() 
     assert_eq!(host.advance(1, 1).unwrap_err(), GenerationFileError::Contract(Error::Limit));
     assert_eq!(limited.bytes(), before); assert!(host.failure().is_none());
 }
+
+mod recovery;
