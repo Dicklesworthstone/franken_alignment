@@ -2,6 +2,7 @@
 //! Requirements are independently retained operator data, not authority or a
 //! signature. Every configured gate is matched before cleanup or recovery writes.
 
+pub mod anchored;
 pub mod investigation;
 pub mod evaluation;
 pub mod predictive;
