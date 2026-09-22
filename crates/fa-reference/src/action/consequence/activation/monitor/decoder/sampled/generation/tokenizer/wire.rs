@@ -1,6 +1,9 @@
 //! Strict FA-BBPE/1 data interchange. A file cannot choose its model identity,
 //! dimensions or numerical profile: compare the independently supplied header
 //! before allocating its vocabulary. This encoding provides no authentication.
+#[path = "huggingface.rs"]
+mod huggingface;
+
 use super::*;
 
 const DOMAIN: &[u8; 8] = b"FABBPE01";
