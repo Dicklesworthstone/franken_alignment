@@ -1,6 +1,8 @@
 //! Persist the ORIGINAL held-out joint policy, never scores or replay verdicts.
 //! The ordinary activation/withdrawal and publication paths remain authoritative.
 
+pub mod publication;
+
 pub use crate::action::consequence::gate::containment::session::policy::controller::credibility::joint::{
     HeldOutJointBudget, HeldOutJointPolicy, HeldOutJointReport,
 };
