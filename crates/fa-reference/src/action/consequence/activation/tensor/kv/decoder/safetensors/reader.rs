@@ -4,7 +4,7 @@
 
 use super::{DecoderModel, DecoderProfile, TensorDescriptor, TensorIssue, TensorLoad,
     WeightError, WeightLoadReceipt, MAX_WEIGHT_HEADER_BYTES, MAX_WEIGHT_FILE_BYTES,
-    construct, construct_with_output_head, OutputHead, OUTPUT_HEAD,
+    construct_with_output_head, OutputHead, OUTPUT_HEAD,
     decode_scalar, ByteOrder, inventory, inspect_directory_with_output_head, issue};
 use super::shards::{ShardLoad, ShardPlan, ShardedWeightLoadReceipt, MAX_WEIGHT_SET_BYTES};
 use std::collections::BTreeMap;
@@ -120,7 +120,18 @@ impl DecoderModel {
         profile: DecoderProfile, index: &[u8], sources: &mut BTreeMap<String, R>,
         budget: &mut WeightReadBudget,
     ) -> Result<(Self, ShardedWeightLoadReceipt), WeightReadError> {
-        let index_plan = ShardPlan::parse(&profile, index)?;
+        Self::read_safetensors_shards_with_output_head(profile, index, sources, budget, OutputHead::Independent)
+    }
+
+    /// Stream explicitly shared weights under ONE original aggregate budget.
+    /// Index omission is checked once; each physical shard still has an exact,
+    /// mandatory inventory. All directories precede every scalar body, and a
+    /// redundant head is compared across files before any model is returned.
+    pub fn read_safetensors_shards_with_output_head<R: Read>(
+        profile: DecoderProfile, index: &[u8], sources: &mut BTreeMap<String, R>,
+        budget: &mut WeightReadBudget, output_head: OutputHead,
+    ) -> Result<(Self, ShardedWeightLoadReceipt), WeightReadError> {
+        let index_plan = ShardPlan::parse(&profile, index, output_head)?;
         if !index_plan.partitions.keys().eq(sources.keys()) { return Err(WeightError::Inventory.into()); }
         let mut plans = BTreeMap::new(); let mut file_bytes = 0_usize; let mut data_bytes = 0_usize;
         for (name, expected) in &index_plan.partitions {
@@ -145,7 +156,9 @@ impl DecoderModel {
         }
         let receipt = ShardedWeightLoadReceipt { normalized_bytes: profile.parameter_count() * 4,
             profile: profile.clone(), index_bytes: index.len(), file_bytes, data_bytes, shards };
-        let model = construct(profile, |name| parameters.remove(name).ok_or(WeightError::Inventory))?;
+        let stored_head = parameters.contains_key(OUTPUT_HEAD);
+        let model = construct_with_output_head(profile, output_head, stored_head,
+            |name| parameters.remove(name).ok_or(WeightError::Inventory))?;
         Ok((model, receipt))
     }
 }

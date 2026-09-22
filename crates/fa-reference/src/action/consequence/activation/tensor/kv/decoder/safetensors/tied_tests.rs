@@ -1,5 +1,7 @@
 //! Synthetic weights, original inference and actual SafeTensors framing.
 //! These tests compare exact execution, not pretrained quality or authentication.
+mod shards;
+
 use super::*;
 use super::super::{DecoderBudget, DecoderIdentity, DecoderShape, MAX_DECODER_PRODUCTS};
 use super::pretrained::{CheckpointError, CheckpointFileLimits, ConfigIssue, LlamaConfig};

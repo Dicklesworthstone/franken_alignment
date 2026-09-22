@@ -160,6 +160,20 @@ impl DecoderModel {
         load_reader(configuration, source, budget)
     }
 
+    /// Memory-backed shard counterparts to the bounded-reader entry point.
+    /// The admitted config supplies sharing; the index supplies only exact
+    /// physical assignments, not model identity or authority to open paths.
+    pub fn from_llama_shards(
+        identity: DecoderIdentity, context: usize, configuration: &[u8], index: &[u8],
+        sources: &BTreeMap<String, &[u8]>,
+    ) -> Result<(Self, PretrainedShardReceipt), CheckpointError> {
+        let configuration = LlamaConfig::decode(identity, context, configuration)?;
+        let (model, weights) = Self::from_safetensors_shards_with_output_head(
+            configuration.profile.clone(), index, sources, configuration.output_head,
+        ).map_err(CheckpointError::Weights)?;
+        Ok((model, PretrainedShardReceipt { configuration, weights }))
+    }
+
     /// Explicit supplied shard readers, never filenames opened from index data.
     /// Config admission precedes index admission, all headers and scalar reads.
     pub fn read_llama_shards<R: Read>(
@@ -167,11 +181,9 @@ impl DecoderModel {
         sources: &mut BTreeMap<String, R>, budget: &mut WeightReadBudget,
     ) -> Result<(Self, PretrainedShardReceipt), CheckpointError> {
         let configuration = LlamaConfig::decode(identity, context, configuration)?;
-        if configuration.output_head != OutputHead::Independent {
-            return Err(config_error("tie_word_embeddings", ConfigIssue::Unsupported));
-        }
-        let (model, weights) = Self::read_safetensors_shards(configuration.profile.clone(), index, sources, budget)
-            .map_err(weight_read_failure)?;
+        let (model, weights) = Self::read_safetensors_shards_with_output_head(
+            configuration.profile.clone(), index, sources, budget, configuration.output_head,
+        ).map_err(weight_read_failure)?;
         Ok((model, PretrainedShardReceipt { configuration, weights }))
     }
 

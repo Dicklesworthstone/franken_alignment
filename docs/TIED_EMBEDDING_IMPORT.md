@@ -3,9 +3,10 @@
 ## Status and capability changelog
 
 2026-09-22: unqualified source support for explicitly tied Llama input/output
-embeddings in memory, bounded-reader and regular-file imports. Nine new tests
-are authored but UNEXECUTED. The targeted RCH command failed before compilation
-because `rch` is unavailable (exit 127):
+embeddings in memory, bounded-reader, regular-file and sharded imports. Sixteen
+new tests are authored but UNEXECUTED: nine single-file and seven shard tests.
+Both targeted RCH attempts failed before compilation because `rch` is unavailable
+(exit 127):
 
 ```
 RCH_REQUIRE_REMOTE=1 rch exec -- cargo test --locked -p fa-reference tied_
@@ -16,9 +17,9 @@ or pretrained-model qualification and no broader bead closure is claimed.
 
 ## Existing consumer and numerical boundary
 
-The existing FA-025 decoder loader rejects `tie_word_embeddings: true` even
-though the original dense decoder can represent the same computation with two
-identical immutable matrices. Explicitly supporting that representation removes
+Before this change, the FA-025 decoder loader rejected `tie_word_embeddings: true`
+even though the original dense decoder can represent the same computation with
+two identical immutable matrices. Explicitly supporting that representation removes
 an input-compatibility obstruction without adding a numerical engine, dependency,
 training update, model-controlled alias, or effect permission. The original
 monitored decoder, helper evaluator and replay consumers receive the same
@@ -45,9 +46,11 @@ model's expanded parameter/memory ceiling. Physical tensor receipts list exactly
 what was stored; normalized_bytes counts both expanded matrices. The budget
 charges actual bytes/read attempts and is not reset after any refusal.
 
-The configured shard route still explicitly refuses tying in this increment;
-it does not silently execute it as independent weights. Its original untied
-path is unchanged.
+The configured `read_llama_shards` and new `from_llama_shards` memory route now
+honor the same declared mode. Explicit raw `*_shards_with_output_head` APIs share
+the original loader. Old raw shard entry points still select Independent.
+The native helper's existing cold-start single/shard readers already delegate
+to these configured APIs; no alternative helper bootstrap is introduced.
 
 ## Tests and contract migration
 
@@ -60,7 +63,7 @@ reads, shared I/O budgets, strict EOF, late reader failures, invalid configurati
 before I/O, and exact/one-under real-file size bounds followed by source removal.
 Fixtures are synthetic parameter data, not trained-model or serving-host evidence.
 
-Two old blanket tied-config negatives now use still-unsupported attention bias
+Obsolete blanket tied-config negatives now use still-unsupported attention bias
 or malformed tying types. The original no-read assertions and all unrelated
 negatives remain. New positive and contradictory-head tests replace the obsolete
 claim that all explicitly tied configurations must refuse.
@@ -76,3 +79,28 @@ against primary sources; no code or runtime from them is imported:
 That convention does not authenticate supplied weights or prove compatibility
 with uninspected architectures. Existing operator identity, tokenizer, monitor,
 context, execution-profile and authority contracts still apply.
+
+## Shard inventory and original recovery continuation
+
+Only whole-index admission may omit lm_head under explicit sharing. Every entry
+actually present in weight_map must still appear in its assigned physical file.
+Per-file directory validation remains exact even in tied mode: a declared but
+missing head, misplaced copy, unknown tensor or extra source cannot be hidden by
+alias expansion. All shard headers and total_size checks complete before the
+first tensor body is consumed. Only independently supplied memory/readers are
+used; shard labels never cause path opens, URL requests or execution.
+
+A redundant head is compared across files after exact scalar normalization.
+Physical per-shard receipts and aggregate byte/read-call budgets remain intact.
+A failed attempt retains its consumed budget; repositioning source readers does
+not restore it. Each shard must reach real EOF, and malformed bodies, trailing
+bytes or late I/O faults return no partial model.
+
+Seven additional tests pair complete tied imports with missing/misplaced indexed
+heads, absent embeddings, foreign/traversal source labels, an independent-mode
+negative, cross-file signed-zero/value conflicts, exact BF16 normalization,
+aggregate byte bounds, incorrect total_size, truncation/trailing bytes and EOF
+faults. Header-position assertions demonstrate the intended no-body-read boundary.
+The real-file case removes all source files after import, then compares original
+checkpoint/greedy continuation after cache restoration. These assertions have
+not run; they qualify neither storage durability nor another inference backend.

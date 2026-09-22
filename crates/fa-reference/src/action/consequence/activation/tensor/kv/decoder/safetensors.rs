@@ -104,11 +104,6 @@ impl DecoderModel {
     }
 }
 
-fn construct<F>(profile: DecoderProfile, read: F) -> Result<DecoderModel, WeightError>
-where F: FnMut(&str) -> Result<Vec<f32>, WeightError> {
-    construct_with_output_head(profile, OutputHead::Independent, true, read)
-}
-
 // Only a fully validated tensor inventory supplies stored_head. The source of
 // shared weights is fixed; there is no metadata-selected alias or second kernel.
 fn construct_with_output_head<F>(profile: DecoderProfile, output_head: OutputHead,

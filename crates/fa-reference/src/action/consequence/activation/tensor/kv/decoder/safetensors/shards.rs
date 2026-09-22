@@ -2,7 +2,8 @@
 //! Model shape, execution profile and authority never come from the index.
 
 use super::{DecoderModel, DecoderProfile, TensorLoad, WeightError, MAX_WEIGHT_FILE_BYTES,
-    MAX_WEIGHT_TENSORS, construct, describe, inspect_subset, inventory, read_tensor};
+    MAX_WEIGHT_TENSORS, construct_with_output_head, describe, inspect_subset, inventory, read_tensor,
+    OutputHead, OUTPUT_HEAD};
 use crate::strict_json::{self, ErrorKind, Limits};
 use std::collections::BTreeMap;
 
@@ -33,7 +34,9 @@ pub(super) struct ShardPlan {
     pub(super) total_size: Option<usize>,
 }
 impl ShardPlan {
-    pub(super) fn parse(profile: &DecoderProfile, index: &[u8]) -> Result<Self, WeightError> {
+    pub(super) fn parse(profile: &DecoderProfile, index: &[u8], output_head: OutputHead)
+        -> Result<Self, WeightError>
+    {
         let json = strict_json::parse(index, Limits { max_bytes: MAX_WEIGHT_INDEX_BYTES,
             max_depth: 3, max_items: MAX_WEIGHT_TENSORS * 4 + 32, max_string_bytes: 256,
         }).map_err(|error| match error.kind {
@@ -55,7 +58,12 @@ impl ShardPlan {
         };
         if total_size.is_some_and(|size| size > profile.parameter_count() * 4) { return Err(WeightError::Limit); }
         let weights = root["weight_map"].as_object().ok_or(WeightError::Header)?;
-        let expected = inventory(profile);
+        let mut expected = inventory(profile);
+        // Only the complete index may omit the explicitly shared head. A head
+        // declared in the index remains mandatory in its assigned physical file.
+        if output_head == OutputHead::TiedEmbeddings && !weights.contains_key(OUTPUT_HEAD) {
+            expected.remove(OUTPUT_HEAD);
+        }
         if !weights.keys().eq(expected.keys()) { return Err(WeightError::Inventory); }
         let mut partitions: BTreeMap<String, BTreeMap<String, Vec<usize>>> = BTreeMap::new();
         for (name, shape) in expected {
@@ -83,7 +91,18 @@ impl DecoderModel {
     pub fn from_safetensors_shards(
         profile: DecoderProfile, index: &[u8], sources: &BTreeMap<String, &[u8]>,
     ) -> Result<(Self, ShardedWeightLoadReceipt), WeightError> {
-        let plan = ShardPlan::parse(&profile, index)?;
+        Self::from_safetensors_shards_with_output_head(profile, index, sources, OutputHead::Independent)
+    }
+
+    /// Sharing is explicit for the whole checkpoint, not inferred shard-by-shard.
+    /// Every indexed tensor must exist in exactly its assigned shard. A retained
+    /// output copy, including one in another shard, must match the embeddings'
+    /// normalized bits. Actual per-file receipts do not invent a stored alias.
+    pub fn from_safetensors_shards_with_output_head(
+        profile: DecoderProfile, index: &[u8], sources: &BTreeMap<String, &[u8]>,
+        output_head: OutputHead,
+    ) -> Result<(Self, ShardedWeightLoadReceipt), WeightError> {
+        let plan = ShardPlan::parse(&profile, index, output_head)?;
         if !plan.partitions.keys().eq(sources.keys()) { return Err(WeightError::Inventory); }
         let file_bytes = sources.values().try_fold(0_usize, |sum, bytes| sum.checked_add(bytes.len()))
             .ok_or(WeightError::Limit)?;
@@ -103,7 +122,9 @@ impl DecoderModel {
         if plan.total_size.is_some_and(|total| total != data_bytes) { return Err(WeightError::Inventory); }
         let receipt = ShardedWeightLoadReceipt { normalized_bytes: profile.parameter_count() * 4,
             profile: profile.clone(), index_bytes: index.len(), file_bytes, data_bytes, shards };
-        let model = construct(profile, |name| read_tensor(name, &tensors))?;
+        let stored_head = tensors.contains_key(OUTPUT_HEAD);
+        let model = construct_with_output_head(profile, output_head, stored_head,
+            |name| read_tensor(name, &tensors))?;
         Ok((model, receipt))
     }
 }
