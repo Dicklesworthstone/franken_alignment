@@ -2,6 +2,9 @@
 //! orchestration of the native publication gate, not another validation engine.
 mod feed;
 mod wait;
+mod joint;
+#[cfg(test)]
+mod joint_tests;
 #[cfg(test)]
 mod waiting_tests;
 use wait::{WaitBudget, WaitPolicy};
@@ -39,6 +42,7 @@ pub struct PublicationProfile {
     feed: Option<FeedProfile>,
     wait: Option<WaitPolicy>,
     snapshot_fallback: bool,
+    joint: Option<joint::HeldOutJointPolicy>,
 }
 #[derive(Debug)]
 enum PublicationSources {
@@ -68,8 +72,7 @@ impl PublicationProfile {
         Self::decode(&read_regular(path, PROFILE_BYTES)?)
     }
     pub fn decode(bytes: &[u8]) -> Result<Self, String> {
-        let json = strict_json::parse(bytes, Limits { max_bytes: PROFILE_BYTES, max_depth: 5,
-            max_items: 2048, max_string_bytes: 4096 }).map_err(debug)?;
+        let (json, joint) = joint::decode(bytes)?;
         let mut root = Fields::new(json)?;
         let schema = root.text("schema")?;
         let whole_input = matches!(schema.as_str(), "fa.supervised-whole-input/1" | "fa.supervised-whole-input/2");
@@ -155,7 +158,7 @@ impl PublicationProfile {
             requests.push(request);
         }
         root.end()?;
-        Ok(Self { limits, sources, requests, feed, wait, snapshot_fallback })
+        Ok(Self { limits, sources, requests, feed, wait, snapshot_fallback, joint })
     }
 
     fn check_scope(&self, profile: &FileOversightProfile) -> Result<(), JournalError> {
@@ -170,6 +173,9 @@ impl PublicationProfile {
         -> Result<(FileOversight, FileHumanReviewer), JournalError>
     {
         self.check_scope(&profile)?;
+        if let Some(joint) = self.joint_policy() {
+            return FileOversight::create_with_joint_publication(directory, profile, joint);
+        }
         match &self.feed {
             Some(feed) if self.snapshot_fallback => FileOversight::create_with_publication_snapshot_fallback(directory,
                 profile, self.limits, feed.changes, feed.freshness),
@@ -186,6 +192,9 @@ impl PublicationProfile {
         -> Result<(FileOversight, FileHumanReviewer), JournalError>
     {
         self.check_scope(&profile)?;
+        if let Some(joint) = self.joint_policy() {
+            return FileOversight::open_with_joint_publication(directory, profile, joint);
+        }
         match &self.feed {
             Some(feed) if self.snapshot_fallback => FileOversight::open_with_publication_snapshot_fallback(directory,
                 profile, self.limits, feed.changes, feed.freshness),
@@ -205,6 +214,9 @@ impl PublicationProfile {
     // Preparation on an already owned host must not silently use a different
     // history policy. Refuse before reading, withdrawing, or binding evidence.
     fn check_preparation(&self, host: &FileOversight) -> Result<(), String> {
+        if let Some(joint) = self.joint_policy() {
+            host.check_joint_publication_profile(joint).map_err(debug)?;
+        }
         if host.publication_validation_profile().map_err(debug)? != Some(self.limits) {
             return Err("stored publication limits differ from the explicit profile".into());
         }
