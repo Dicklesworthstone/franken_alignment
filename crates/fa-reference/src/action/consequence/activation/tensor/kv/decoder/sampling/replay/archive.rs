@@ -6,6 +6,7 @@ pub mod files;
 
 mod binding;
 mod state;
+pub mod stream;
 mod wire;
 #[cfg(unix)]
 pub mod file;
@@ -106,10 +107,16 @@ impl GenerationCheckpoint {
     pub fn encode_archive(&self, limits: ArchiveLimits) -> Result<Vec<u8>, Error> {
         let layout = self.archive_layout(limits)?;
         let mut w = Writer::collect(layout.encoded_bytes)?;
-        w.bytes(DOMAIN)?; w.size(layout.recipe_bytes)?; w.size(layout.state_bytes)?;
-        binding::write(&mut w, &self.recipe)?;
-        state::write(&mut w, &self.expected)?;
+        self.write_archive_body(&mut w, layout.recipe_bytes, layout.state_bytes)?;
         w.finish()
+    }
+
+    fn write_archive_body(&self, writer: &mut Writer<'_>, recipe_bytes: usize, state_bytes: usize)
+        -> Result<(), Error>
+    {
+        writer.bytes(DOMAIN)?; writer.size(recipe_bytes)?; writer.size(state_bytes)?;
+        binding::write(writer, &self.recipe)?;
+        state::write(writer, &self.expected)
     }
 }
 impl GenerationArchive {

@@ -1,12 +1,20 @@
 //! Bounded exact-byte sinks. Comparing a recipe never constructs one from disk.
 use crate::Error;
 
-enum Output<'a> { Count, Bytes(Vec<u8>), Compare(&'a [u8]) }
+enum Output<'a> {
+    Count,
+    Bytes(Vec<u8>),
+    Compare(&'a [u8]),
+    Sink(&'a mut dyn FnMut(&[u8]) -> Result<(), Error>),
+}
 pub(super) struct Writer<'a> { output: Output<'a>, at: usize, limit: usize }
 impl<'a> Writer<'a> {
     pub(super) fn count(limit: usize) -> Self { Self { output: Output::Count, at: 0, limit } }
     pub(super) fn compare(bytes: &'a [u8]) -> Self {
         Self { output: Output::Compare(bytes), at: 0, limit: bytes.len() }
+    }
+    pub(super) fn sink(sink: &'a mut dyn FnMut(&[u8]) -> Result<(), Error>, limit: usize) -> Self {
+        Self { output: Output::Sink(sink), at: 0, limit }
     }
     pub(super) fn collect(limit: usize) -> Result<Self, Error> {
         let mut bytes = Vec::new(); bytes.try_reserve_exact(limit).map_err(|_| Error::Limit)?;
@@ -25,6 +33,7 @@ impl<'a> Writer<'a> {
             Output::Compare(expected) => {
                 if expected[self.at..end] != *bytes { return Err(Error::Binding); }
             }
+            Output::Sink(sink) => sink(bytes)?,
         }
         self.at = end; Ok(())
     }
@@ -51,8 +60,11 @@ impl<'a> Writer<'a> {
         for value in values { self.u32(value.to_bits())?; }
         Ok(())
     }
+    pub(super) fn complete(&self) -> Result<(), Error> {
+        if self.at == self.limit { Ok(()) } else { Err(Error::Binding) }
+    }
     pub(super) fn finish(self) -> Result<Vec<u8>, Error> {
-        if self.at != self.limit { return Err(Error::Binding); }
+        self.complete()?;
         match self.output { Output::Bytes(bytes) => Ok(bytes), _ => Err(Error::WrongState) }
     }
 }
