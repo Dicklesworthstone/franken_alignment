@@ -61,6 +61,8 @@ impl FileDelivery {
 
 #[cfg(test)]
 mod tests {
+    mod inventory;
+
     use super::*;
     use super::super::super::super::{
         FileDeliveryProfile, FilePermit, JournalIo, JournalLimits, ReferenceBallot, ReferenceReview,

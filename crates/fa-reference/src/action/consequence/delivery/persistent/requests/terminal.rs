@@ -110,3 +110,76 @@ impl FileDelivery {
         Ok((host, sweep))
     }
 }
+
+impl FileDelivery {
+    /// Enumerate retained durable request identities at one acknowledged cut.
+    ///
+    /// This supervisor-only recovery view includes refused admissions and all
+    /// terminal outcomes. It exposes neither payloads nor permits. Rows are in
+    /// ascending request-ID order, NOT dispatch or submission order. Continue
+    /// with the last returned request as `after`; an empty page ends the scan.
+    /// An arbitrary exclusive cursor, including u64::MAX, is valid.
+    ///
+    /// Every page must use the SAME journal revision. A concurrent/intervening
+    /// transition rejects a continuation instead of silently skipping a newly
+    /// inserted lower ID or mixing old and new dispositions. Restart changes
+    /// the revision, so begin a new scan after exclusive reopen. These are
+    /// historical statuses, not fresh clock observations or authority to resend.
+    ///
+    /// Reading consumes no journal/recovery capacity and requires no clock. A
+    /// poisoned owner refuses even if its in-memory cut is still readable.
+    pub fn request_status_page(
+        &self,
+        revision: u64,
+        after: Option<u64>,
+        limit: usize,
+    ) -> Result<Vec<super::FileRequestStatus>, JournalError> {
+        if self.fault.is_some() {
+            return Err(JournalError::Unavailable);
+        }
+        if revision != self.revision() {
+            return Err(crate::Error::Stale.into());
+        }
+        if limit == 0 || limit > super::MAX_FILE_REQUESTS {
+            return Err(crate::Error::Limit.into());
+        }
+        let mut page = Vec::new();
+        page.try_reserve_exact(limit.min(self.machine.requests.len()))
+            .map_err(|_| crate::Error::Limit)?;
+        let start = after.map_or(std::ops::Bound::Unbounded, std::ops::Bound::Excluded);
+        for (_, row) in self.machine.requests.records
+            .range((start, std::ops::Bound::Unbounded)).take(limit)
+        {
+            page.push(row.status);
+        }
+        Ok(page)
+    }
+
+    /// Discover outstanding requests after a supervisor loses its own ID list.
+    ///
+    /// This projects the ORIGINAL request book and ledger at one revision; no
+    /// second durable queue, saved authority or caller-asserted outcome exists.
+    /// Undispatched work and all unknown liabilities remain visible, including
+    /// irrecoverably unknown work. Refused, denied, cancelled and receipt-backed
+    /// terminal work is omitted. Discovery never dispatches, cancels or refunds.
+    /// In particular, an unknown entry is not a retry opportunity.
+    pub fn pending_request_statuses(
+        &self,
+        revision: u64,
+    ) -> Result<Vec<super::FileRequestStatus>, JournalError> {
+        let mut statuses = self.request_status_page(revision, None, super::MAX_FILE_REQUESTS)?;
+        statuses.retain(|status| matches!(status.disposition,
+            super::FileRequestDisposition::Admitted {
+                stage: crate::action::ActionState::Proposed
+                    | crate::action::ActionState::Prepared
+                    | crate::action::ActionState::Reviewing
+                    | crate::action::ActionState::Authorized
+                    | crate::action::ActionState::Dispatching
+                    | crate::action::ActionState::Unknown
+                    | crate::action::ActionState::IrrecoverablyUnknown,
+                ..
+            }
+        ));
+        Ok(statuses)
+    }
+}
