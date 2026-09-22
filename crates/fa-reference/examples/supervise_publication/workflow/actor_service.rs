@@ -17,15 +17,20 @@ use fa_reference::action::consequence::oversight::actor_transport::DriveBudget;
 use std::path::Path;
 
 type Port = FileActorPort<FileOversight>;
-const USAGE: &str = "serve-create|serve-open CONFIG ACTOR_PROFILE REVIEWER_PROFILE; serve-create-checked|serve-open-checked CONFIG ACTOR_PROFILE REVIEWER_PROFILE WITNESS_PROFILE; actor-submit ACTOR_PROFILE SUBMIT_JSON; serve-open and serve-open-checked also accept --credibility-activation EVIDENCE_FILE; all serve modes accept a final --requests 7,8,9 option";
+const USAGE: &str = "serve-create|serve-open CONFIG ACTOR_PROFILE REVIEWER_PROFILE; serve-create-checked|serve-open-checked CONFIG ACTOR_PROFILE REVIEWER_PROFILE WITNESS_PROFILE; actor-submit ACTOR_PROFILE SUBMIT_JSON [SUBMIT_JSON ...]; serve-open and serve-open-checked also accept --credibility-activation EVIDENCE_FILE; all serve modes accept a final --requests 7,8,9 option";
 
 pub(crate) fn command(args: &[String], credibility: Option<&Path>) -> Result<(), String> {
     let (args, requests) = series::take_option(args)?;
     let mode = args.first().map(String::as_str).ok_or(USAGE)?;
     if mode == "actor-submit" {
-        if args.len() != 3 || credibility.is_some() { return Err(USAGE.into()); }
+        if args.len() < 3 || args.len() > client::MAX_SEQUENCE_DOCUMENTS + 2
+            || credibility.is_some() { return Err(USAGE.into()); }
         let profile = Profile::read(Path::new(&args[1]))?;
-        return client::submit(&profile, Path::new(&args[2]), &mut std::io::stdout().lock());
+        if args.len() == 3 {
+            return client::submit(&profile, Path::new(&args[2]), &mut std::io::stdout().lock());
+        }
+        let documents: Vec<_> = args[2..].iter().map(|path| Path::new(path.as_str())).collect();
+        return client::submit_sequence(&profile, &documents, &mut std::io::stdout().lock());
     }
     let (existing, checked) = match mode {
         "serve-create" => (false, false), "serve-open" => (true, false),
