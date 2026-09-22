@@ -49,3 +49,41 @@ source hashes and scoped patch checks are not execution or qualification gates.
 No bead, production restart or detector qualification is closed by this change.
 The synthetic model and freshly fitted test codec establish no model-safety or
 cross-hardware fidelity claim.
+
+## File-to-process recovery
+
+`GenerationCheckpoint::save_archive_new` validates and encodes before creating
+anything, then reuses the original sampled-archive exclusive writer. Existing
+files and symlinks are not overwritten; Unix creation starts mode 0600 subject
+to umask. A write or file-sync failure can leave partial or complete bytes and
+is not reported as success. This is not atomic directory publication or a
+power-cut durability guarantee.
+
+`ReplayableGeneration::read_archive_file` reuses the original bounded
+regular-file reader and the same complete recipe decoder above.
+`begin_replay_file` returns only the original bounded verification cursor;
+`replay_file` exposes a new numerical owner only after complete verification.
+File-shape/recipe errors remain distinct from recomputation failures through
+the existing `ArchiveFileError::Format` and `ArchiveFileError::Replay` variants.
+The cursor retains the read image; changing or removing the path later cannot
+change its expected bytes. No reopening, resend or unguarded restoration occurs.
+
+The shared byte-I/O helpers are restricted to the sampling subtree. Both archive
+callers validate their complete native limits first. The original sampled-file
+APIs, their error variants and their partial-I/O tests remain unchanged. Operators
+must control the file and ancestors and provision immutable inputs; this is not
+a hostile-path race sandbox, authenticated storage or anti-rollback protection.
+
+Three additional behavioral tests cover exclusive creation, unchanged old files,
+Unix permissions, invalid-export zero creation, bounded reads, malformed files,
+symlink rejection, replay mismatch, and snapshot ownership after path removal.
+A fresh-process fixture rebuilds the model, fitted codec and monitors, replays a
+saved sampled prefix, continues it, and exports bytes for comparison with an
+uninterrupted original run. The child fixture itself is not a passing capability
+claim; it is only exercised by the parent test. All additional Rust remains
+UNEXECUTED under the RCH limitation above.
+
+These interchange APIs are separate from the concurrent Unix
+`archive::file::FileGeneration` write-ahead owner. They neither interpret nor
+bypass its interrupted markers, exact directory binding or external floors.
+That owner's implementation and tests are preserved unchanged.

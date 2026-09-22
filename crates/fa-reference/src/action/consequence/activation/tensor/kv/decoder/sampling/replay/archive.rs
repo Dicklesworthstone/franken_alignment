@@ -2,6 +2,8 @@
 //! installs cache, RNG, counters, model weights, probes or weaker resource caps.
 //! The caller supplies the complete intended recipe independently; every byte
 //! of its V1 encoding must match before the original replay can be started.
+pub mod files;
+
 mod binding;
 mod state;
 mod wire;

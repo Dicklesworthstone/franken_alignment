@@ -38,17 +38,7 @@ impl SampledCheckpoint {
         -> Result<usize, ArchiveFileError>
     {
         let bytes = self.encode_archive(limits).map_err(ArchiveFileError::Format)?;
-        let mut options = OpenOptions::new();
-        options.write(true).create_new(true);
-        #[cfg(unix)]
-        {
-            use std::os::unix::fs::OpenOptionsExt;
-            options.mode(0o600);
-        }
-        let mut file = options.open(path.as_ref()).map_err(|e| io_error(ArchiveFileOperation::Create, e))?;
-        write_archive(&mut file, &bytes)?;
-        file.sync_all().map_err(|e| io_error(ArchiveFileOperation::Sync, e))?;
-        Ok(bytes.len())
+        save_bytes_new(path.as_ref(), &bytes)
     }
 }
 
@@ -60,15 +50,7 @@ impl SampledArchive {
         limits: ArchiveLimits) -> Result<Self, ArchiveFileError>
     {
         limits.check().map_err(ArchiveFileError::Format)?;
-        let path = path.as_ref();
-        let before = fs::symlink_metadata(path).map_err(|e| io_error(ArchiveFileOperation::Metadata, e))?;
-        if before.file_type().is_symlink() || !before.is_file() { return Err(ArchiveFileError::NotRegular); }
-        if before.len() > limits.bytes as u64 { return Err(ArchiveFileError::Format(Error::Limit)); }
-        let file = File::open(path).map_err(|e| io_error(ArchiveFileOperation::Open, e))?;
-        let opened = file.metadata().map_err(|e| io_error(ArchiveFileOperation::Metadata, e))?;
-        if !opened.is_file() { return Err(ArchiveFileError::NotRegular); }
-        if opened.len() > limits.bytes as u64 { return Err(ArchiveFileError::Format(Error::Limit)); }
-        let bytes = read_archive(file, limits.bytes)?;
+        let bytes = read_regular_bytes(path.as_ref(), limits.bytes)?;
         Self::decode(&bytes, model, expected, limits).map_err(ArchiveFileError::Format)
     }
 }
@@ -84,6 +66,35 @@ impl DecoderModel {
         let archive = SampledArchive::read_file(path, self, expected, limits)?;
         archive.recompute(self, replay_stream, budget).map_err(ArchiveFileError::Replay)
     }
+}
+
+// Shared only inside the original sampling subtree. Both archive formats
+// validate their complete native limits before reaching these byte operations.
+pub(in crate::action::consequence::activation::tensor::kv::decoder::sampling)
+fn save_bytes_new(path: &Path, bytes: &[u8]) -> Result<usize, ArchiveFileError> {
+    let mut options = OpenOptions::new();
+    options.write(true).create_new(true);
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::OpenOptionsExt;
+        options.mode(0o600);
+    }
+    let mut file = options.open(path).map_err(|e| io_error(ArchiveFileOperation::Create, e))?;
+    write_archive(&mut file, bytes)?;
+    file.sync_all().map_err(|e| io_error(ArchiveFileOperation::Sync, e))?;
+    Ok(bytes.len())
+}
+
+pub(in crate::action::consequence::activation::tensor::kv::decoder::sampling)
+fn read_regular_bytes(path: &Path, limit: usize) -> Result<Vec<u8>, ArchiveFileError> {
+    let before = fs::symlink_metadata(path).map_err(|e| io_error(ArchiveFileOperation::Metadata, e))?;
+    if before.file_type().is_symlink() || !before.is_file() { return Err(ArchiveFileError::NotRegular); }
+    if before.len() > limit as u64 { return Err(ArchiveFileError::Format(Error::Limit)); }
+    let file = File::open(path).map_err(|e| io_error(ArchiveFileOperation::Open, e))?;
+    let opened = file.metadata().map_err(|e| io_error(ArchiveFileOperation::Metadata, e))?;
+    if !opened.is_file() { return Err(ArchiveFileError::NotRegular); }
+    if opened.len() > limit as u64 { return Err(ArchiveFileError::Format(Error::Limit)); }
+    read_archive(file, limit)
 }
 
 fn read_archive<R: Read>(reader: R, limit: usize) -> Result<Vec<u8>, ArchiveFileError> {

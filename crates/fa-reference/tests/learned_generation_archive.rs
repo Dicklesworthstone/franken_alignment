@@ -279,3 +279,6 @@ fn archive_recovery_preserves_stop_tokens_and_cannot_clear_a_later_alarm() {
         }
     }
 }
+
+#[path = "learned_generation_archive/files.rs"]
+mod files;
