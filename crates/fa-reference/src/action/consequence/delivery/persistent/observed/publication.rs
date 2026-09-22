@@ -1,6 +1,7 @@
 //! Fresh evidence at first publication, not another authorization or receipt.
 //! This profile is enabled before any proposal and retained in the original
 //! journal. Historical outcomes and original reconciliation always take priority.
+mod settlement;
 pub mod witnesses;
 pub mod capture;
 pub(super) mod witness_gate;
@@ -193,7 +194,9 @@ impl FileOversight {
                 if dispatch == publish && publish == reconcile && start == finish => {}
             [Event::Core(super::BaseEvent::Fence), Event::Core(super::BaseEvent::Time(_)),
                 Event::Core(super::BaseEvent::Sweep)]
-            | [Event::Core(super::BaseEvent::Time(_)), Event::Core(super::BaseEvent::Sweep)] => {}
+            | [Event::Core(super::BaseEvent::Time(_)), Event::Core(super::BaseEvent::Sweep)]
+            | [Event::Core(super::BaseEvent::Time(_)), Event::Core(super::BaseEvent::Cancel(_))]
+            | [Event::Core(super::BaseEvent::Time(_)), Event::Core(super::BaseEvent::Seal(_))] => {}
             _ => return Err(Error::InvalidInput.into()),
         }
         for event in next { self.check_source_admission(event)?; }
@@ -263,6 +266,7 @@ fn finish_publication_recovery(mut owner: FileOversight, reviewer: super::FileHu
 
 #[cfg(test)]
 mod completion_tests {
+    mod settlement;
     use super::*;
     use super::super::{FileHumanPermit, FileHumanReviewer, FileOversightProfile, FilePermit,
         JournalIo, ReviewWindow};
