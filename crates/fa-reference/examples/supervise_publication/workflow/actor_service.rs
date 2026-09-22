@@ -1,8 +1,9 @@
 //! Bounded live actor intake driving the SAME helper/human/publication workflow.
-//! One request per service lifetime; no concurrent congress, new ledger or runtime.
+//! Single or explicitly scheduled requests; no concurrent congress or new authority.
 mod profile;
 mod client;
 mod qualification;
+mod series;
 use profile::Profile;
 use super::{ActionState, ActorWire, BoundSocket, Config, Deadline, Duration, ElapsedTick,
     ExecuteServices, FileOversight, FileRequestDisposition, FileSupervisedDriver, Instant,
@@ -16,9 +17,10 @@ use fa_reference::action::consequence::oversight::actor_transport::DriveBudget;
 use std::path::Path;
 
 type Port = FileActorPort<FileOversight>;
-const USAGE: &str = "serve-create|serve-open CONFIG ACTOR_PROFILE REVIEWER_PROFILE; serve-create-checked|serve-open-checked CONFIG ACTOR_PROFILE REVIEWER_PROFILE WITNESS_PROFILE; actor-submit ACTOR_PROFILE SUBMIT_JSON; serve-open and serve-open-checked also accept --credibility-activation EVIDENCE_FILE";
+const USAGE: &str = "serve-create|serve-open CONFIG ACTOR_PROFILE REVIEWER_PROFILE; serve-create-checked|serve-open-checked CONFIG ACTOR_PROFILE REVIEWER_PROFILE WITNESS_PROFILE; actor-submit ACTOR_PROFILE SUBMIT_JSON; serve-open and serve-open-checked also accept --credibility-activation EVIDENCE_FILE; all serve modes accept a final --requests 7,8,9 option";
 
 pub(crate) fn command(args: &[String], credibility: Option<&Path>) -> Result<(), String> {
+    let (args, requests) = series::take_option(args)?;
     let mode = args.first().map(String::as_str).ok_or(USAGE)?;
     if mode == "actor-submit" {
         if args.len() != 3 || credibility.is_some() { return Err(USAGE.into()); }
@@ -38,6 +40,10 @@ pub(crate) fn command(args: &[String], credibility: Option<&Path>) -> Result<(),
     let actor = Profile::read(Path::new(&args[2]))?;
     let reviewer = PeerProfile::read(Path::new(&args[3]))?;
     let publication = if checked { Some(PublicationProfile::read(Path::new(&args[4]))?) } else { None };
+    if let Some(requests) = requests {
+        return series::serve(config, &actor, &reviewer, publication.as_ref(),
+            series::Options { requests: &requests, open: existing, credibility }, super::clock);
+    }
     match credibility {
         Some(path) => serve_with_credibility(config, &actor, &reviewer, publication.as_ref(),
             existing, Some(path), super::clock),
@@ -72,22 +78,7 @@ where F: FnMut() -> ElapsedTick {
     // untrusted frame can run before the native owner and all guards are ready.
     let socket = BoundSocket::bind(&actor.socket, None)?;
     actor.secure_socket()?;
-    let (mut host, reviewer) = match (open, publication) {
-        (false, None) => FileOversight::create(&config.store, config.profile.clone()),
-        (false, Some(profile)) => profile.create(&config.store, config.profile.clone()),
-        (true, None) => FileOversight::open(&config.store, config.profile.clone()),
-        (true, Some(profile)) => profile.open(&config.store, config.profile.clone()),
-    }.map_err(debug)?;
-    if !open {
-        host.enable_recovery_reserve(host.revision(), RecoveryReserve::terminal()).map_err(debug)?;
-        host.enable_file_source(host.revision(), config.source_policy).map_err(debug)?;
-    }
-    if host.publication_validation_profile().map_err(debug)? != publication.map(|p| p.limits)
-        || host.file_source_status().map(|s| s.policy) != Some(config.source_policy)
-        || host.journal_capacity().map_err(debug)?.reserve() != Some(RecoveryReserve::terminal())
-        || !host.publication_guard_required() || config.profile.delivery.clock_domain != CLOCK_DOMAIN {
-        return Err("stored deployment does not match the explicit live service profile".into());
-    }
+    let (mut host, reviewer) = prepare_host(&config, publication, open)?;
     let recorded = match host.request_status(actor.request) {
         Ok(_) => true,
         Err(JournalError::Contract(Error::Missing)) => false,
@@ -222,3 +213,26 @@ impl Intake {
 mod tests;
 #[cfg(test)]
 mod qualified_tests;
+
+// One shared bootstrap and deployment check for single and sequential service.
+fn prepare_host(config: &Config, publication: Option<&PublicationProfile>, open: bool)
+    -> Result<(FileOversight, super::FileHumanReviewer), String>
+{
+    let (mut host, reviewer) = match (open, publication) {
+        (false, None) => FileOversight::create(&config.store, config.profile.clone()),
+        (false, Some(profile)) => profile.create(&config.store, config.profile.clone()),
+        (true, None) => FileOversight::open(&config.store, config.profile.clone()),
+        (true, Some(profile)) => profile.open(&config.store, config.profile.clone()),
+    }.map_err(debug)?;
+    if !open {
+        host.enable_recovery_reserve(host.revision(), RecoveryReserve::terminal()).map_err(debug)?;
+        host.enable_file_source(host.revision(), config.source_policy).map_err(debug)?;
+    }
+    if host.publication_validation_profile().map_err(debug)? != publication.map(|p| p.limits)
+        || host.file_source_status().map(|s| s.policy) != Some(config.source_policy)
+        || host.journal_capacity().map_err(debug)?.reserve() != Some(RecoveryReserve::terminal())
+        || !host.publication_guard_required() || config.profile.delivery.clock_domain != CLOCK_DOMAIN {
+        return Err("stored deployment does not match the explicit live service profile".into());
+    }
+    Ok((host, reviewer))
+}
