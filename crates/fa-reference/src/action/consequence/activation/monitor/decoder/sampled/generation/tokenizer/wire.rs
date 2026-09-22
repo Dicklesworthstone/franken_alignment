@@ -1,4 +1,4 @@
-//! Strict FA-BBPE/1 data interchange. A file cannot choose its model identity,
+//! Strict FA-BBPE/1 and named-control FA-BBPE/2 interchange. A file cannot choose its model identity,
 //! dimensions or numerical profile: compare the independently supplied header
 //! before allocating its vocabulary. This encoding provides no authentication.
 #[path = "huggingface.rs"]
@@ -7,9 +7,11 @@ mod huggingface;
 use super::*;
 
 const DOMAIN: &[u8; 8] = b"FABBPE01";
+const NAMED_DOMAIN: &[u8; 8] = b"FABBPE02";
 const HEADER_BYTES: usize = 120;
 pub(super) const MAX_FILE_BYTES: usize = HEADER_BYTES + 5 * MAX_DECODER_VOCABULARY
-    + MAX_VOCABULARY_BYTES + 4 + 12 * MAX_MERGES;
+    + MAX_VOCABULARY_BYTES + 4 + 12 * MAX_MERGES
+    + 4 + 8 * MAX_CONTROL_TOKENS + MAX_SPECIAL_TOKEN_BYTES;
 
 impl ByteBpe {
     pub fn to_bytes(&self) -> Result<Vec<u8>, Error> {
@@ -20,10 +22,19 @@ impl ByteBpe {
                 TokenBytes::Content(bytes) => 5 + bytes.len(),
             }).ok_or(Error::Limit)?;
         }
+        let named = !self.special_tokens().is_empty();
+        if named {
+            count = count.checked_add(4).ok_or(Error::Limit)?;
+            for name in self.special_tokens().values() {
+                count = count.checked_add(8 + name.len()).ok_or(Error::Limit)?;
+            }
+        }
         if count > MAX_FILE_BYTES { return Err(Error::Limit); }
         let mut output = Vec::new();
         output.try_reserve_exact(count).map_err(|_| Error::Limit)?;
-        output.extend_from_slice(&header(self.profile()));
+        let mut encoded_header = header(self.profile());
+        if named { encoded_header[..8].copy_from_slice(NAMED_DOMAIN); }
+        output.extend_from_slice(&encoded_header);
         for token in &self.0.vocabulary {
             match token {
                 TokenBytes::Control => output.push(0),
@@ -40,6 +51,14 @@ impl ByteBpe {
                 output.extend_from_slice(&token.to_be_bytes());
             }
         }
+        if named {
+            output.extend_from_slice(&(self.special_tokens().len() as u32).to_be_bytes());
+            for (id, name) in self.special_tokens() {
+                output.extend_from_slice(&id.to_be_bytes());
+                output.extend_from_slice(&(name.len() as u32).to_be_bytes());
+                output.extend_from_slice(name);
+            }
+        }
         Ok(output)
     }
 
@@ -49,7 +68,15 @@ impl ByteBpe {
     pub fn from_bytes(expected: &DecoderProfile, bytes: &[u8]) -> Result<Self, Error> {
         if bytes.len() > MAX_FILE_BYTES { return Err(Error::Limit); }
         let mut reader = Reader { bytes, at: 0 };
-        if reader.take(HEADER_BYTES)? != header(expected).as_slice() { return Err(Error::Binding); }
+        let supplied = reader.take(HEADER_BYTES)?;
+        let named = match &supplied[..8] {
+            domain if domain == DOMAIN => false,
+            domain if domain == NAMED_DOMAIN => true,
+            _ => return Err(Error::Binding),
+        };
+        let mut expected_header = header(expected);
+        if named { expected_header[..8].copy_from_slice(NAMED_DOMAIN); }
+        if supplied != expected_header.as_slice() { return Err(Error::Binding); }
         let count = expected.shape().vocabulary;
         if count < 256 { return Err(Error::Incomplete); }
         let mut vocabulary = Vec::new();
@@ -75,14 +102,45 @@ impl ByteBpe {
         }
         let count = reader.u32()? as usize;
         if count > MAX_MERGES { return Err(Error::Limit); }
-        // Exact remaining length is checked before reserving merge storage.
-        if reader.bytes.len() - reader.at != count * 12 { return Err(Error::InvalidInput); }
+        // Admit merge storage only when its complete declared bytes are present.
+        // Legacy archives still require exact EOF immediately after the merges.
+        let remaining = reader.bytes.len() - reader.at;
+        if (!named && remaining != count * 12)
+            || (named && remaining < count * 12 + 4)
+        { return Err(Error::InvalidInput); }
         let mut merges = Vec::new();
         merges.try_reserve_exact(count).map_err(|_| Error::Limit)?;
         for _ in 0..count {
             merges.push(Merge { left: reader.u32()?, right: reader.u32()?, result: reader.u32()? });
         }
-        Self::new(expected.clone(), vocabulary, merges)
+        if !named { return Self::new(expected.clone(), vocabulary, merges); }
+        let count = reader.u32()? as usize;
+        // Empty tables have exactly one canonical representation: version one.
+        if count == 0 { return Err(Error::InvalidInput); }
+        if count > MAX_CONTROL_TOKENS { return Err(Error::Limit); }
+        let mut names = BTreeMap::new();
+        let mut previous = None;
+        let mut retained = 0_usize;
+        for _ in 0..count {
+            let id = reader.u32()?;
+            if previous.is_some_and(|value| id <= value) { return Err(Error::Binding); }
+            previous = Some(id);
+            let length = reader.u32()? as usize;
+            if length == 0 { return Err(Error::InvalidInput); }
+            if length > MAX_TOKEN_BYTES { return Err(Error::Limit); }
+            retained = retained.checked_add(length).ok_or(Error::Limit)?;
+            if retained > MAX_SPECIAL_TOKEN_BYTES { return Err(Error::Limit); }
+            if !matches!(vocabulary.get(id as usize), Some(TokenBytes::Control)) {
+                return Err(Error::Binding);
+            }
+            let source = reader.take(length)?;
+            let mut name = Vec::new();
+            name.try_reserve_exact(length).map_err(|_| Error::Limit)?;
+            name.extend_from_slice(source);
+            names.insert(id, name);
+        }
+        if reader.at != bytes.len() { return Err(Error::InvalidInput); }
+        Self::new_with_special_tokens(expected.clone(), vocabulary, merges, names)
     }
 }
 

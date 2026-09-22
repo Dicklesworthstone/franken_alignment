@@ -1,13 +1,16 @@
-//! Exact, model-bound byte BPE for the explicit FA-BBPE/1 profile.
+//! Exact, model-bound byte BPE with explicit optional named controls.
 //!
 //! Input is one byte sequence: no Unicode normalization, regex pretokenization,
-//! chat template, special-token recognition, dropout or unknown-token fallback.
+//! chat template, dropout or unknown-token fallback. Named-control recognition
+//! is enabled only by an explicit immutable registration (FA-BBPE/2).
 //! A caller must independently establish that these are its model's trained
-//! tokenization semantics. This is NOT a Hugging Face tokenizer.json importer.
+//! tokenization semantics. External import accepts only its documented subset.
 //! Original prompt bytes and token boundaries survive encoding; replay uses the
 //! emitted IDs, never a decode/re-tokenize round trip. No authority is created.
 
 mod wire;
+mod special;
+pub use special::MAX_SPECIAL_TOKEN_BYTES;
 #[cfg(test)]
 mod tests;
 
@@ -31,7 +34,7 @@ pub const MAX_HEAP_POPS: usize = 3 * MAX_INPUT_BYTES;
 pub const MAX_DECODE_BYTES: usize = 4 * 1_048_576;
 
 /// The vector index is the ORIGINAL model token ID. Controls have no inferred
-/// text spelling. Ordinary bytes that resemble a control remain ordinary bytes.
+/// text spelling. Only new_with_special_tokens registers literal spellings.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum TokenBytes {
     Content(Vec<u8>),
@@ -60,7 +63,9 @@ impl Default for TokenizationBudget {
     }
 }
 
-/// Logical examinations by THIS encoder, not allocations, FLOPs or wall time.
+/// Logical byte/BPE examinations, not allocations, FLOPs or wall time.
+/// Optional named-control matching is separately bounded by input/name limits;
+/// pair_lookups and heap_pops count only the original BPE pass.
 /// Stale heap entries count. A refusal retains performed work but no partial IDs.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub struct TokenizationWork {
@@ -87,6 +92,7 @@ struct Data {
     singletons: [u32; 256],
     controls: Vec<u32>,
     max_content_bytes: usize,
+    special: special::SpecialTokens,
 }
 
 /// Immutable tokenization DATA bound to an independently supplied model profile.
@@ -196,7 +202,7 @@ impl ByteBpe {
         drop(seen);
         Ok(Self(Rc::new(Data { profile, vocabulary, merges, ranks,
             singletons: singletons.map(|id| id.expect("complete singleton inventory")),
-            controls, max_content_bytes })))
+            controls, max_content_bytes, special: special::SpecialTokens::default() })))
     }
 
     pub fn profile(&self) -> &DecoderProfile { &self.0.profile }
@@ -245,6 +251,7 @@ impl ByteBpe {
                 next: (index + 1 < count).then_some(index + 1), live: true });
         }
         work.input_bytes = count;
+        self.0.special.bind_nodes(source, &mut nodes)?;
         for index in 0..count {
             self.offer(index, &nodes, &mut heap, budget, work)?;
         }
@@ -281,6 +288,7 @@ impl ByteBpe {
     fn offer(&self, left: usize, nodes: &[Node], heap: &mut BinaryHeap<Reverse<Candidate>>,
         budget: TokenizationBudget, work: &mut TokenizationWork) -> Result<(), Error>
     {
+        if !nodes[left].live { return Ok(()); }
         let Some(right) = nodes[left].next else { return Ok(()); };
         if work.pair_lookups == budget.pair_lookups { return Err(Error::Limit); }
         work.pair_lookups += 1;
