@@ -117,6 +117,16 @@ impl JointPublicationProfile {
 }
 
 impl FileOversight {
+    /// Match this live owner's complete selection before acquiring or rebinding
+    /// a source. Success is configuration equality, not current qualification.
+    pub fn check_joint_publication_profile(&self, expected: JointPublicationProfile)
+        -> Result<(), JournalError>
+    {
+        if self.fault.is_some() { return Err(JournalError::Unavailable); }
+        expected.validate(&self.profile)?;
+        expected.check_events(&self.events).map_err(Into::into)
+    }
+
     /// Configure all selected joint/witness/feed gates in ONE canonical image.
     /// A failed or ambiguous replacement returns neither owner nor reviewer.
     /// The initial baseline can still run; qualification constrains promotion,
@@ -166,3 +176,6 @@ impl FileOversight {
 
 #[cfg(test)]
 mod tests;
+
+#[cfg(test)]
+mod supervisor_tests;
