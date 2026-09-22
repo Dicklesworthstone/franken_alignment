@@ -1,7 +1,7 @@
 //! Explicit Llama configuration negotiation and bounded local-file ingestion.
 //! This never imports remote code, follows a model name, or guesses an architecture.
 
-use super::{WeightError, WeightLoadReceipt, MAX_WEIGHT_FILE_BYTES, MAX_WEIGHT_HEADER_BYTES};
+use super::{OutputHead, WeightError, WeightLoadReceipt, MAX_WEIGHT_FILE_BYTES, MAX_WEIGHT_HEADER_BYTES};
 use super::reader::{WeightReadBudget, WeightReadError, MAX_WEIGHT_READ_CALLS};
 use super::shards::ShardedWeightLoadReceipt;
 use super::super::{DecoderIdentity, DecoderModel, DecoderProfile, DecoderShape};
@@ -40,6 +40,7 @@ impl std::error::Error for CheckpointError {}
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct LlamaConfig {
     profile: DecoderProfile,
+    output_head: OutputHead,
     trained_context: usize,
     bytes: usize,
     defaults: BTreeSet<String>,
@@ -47,6 +48,9 @@ pub struct LlamaConfig {
 }
 impl LlamaConfig {
     pub fn profile(&self) -> &DecoderProfile { &self.profile }
+    /// Explicit checkpoint ingestion semantics. The numerical profile remains
+    /// the expanded dense representation used by the original decoder.
+    pub fn output_head(&self) -> OutputHead { self.output_head }
     pub fn trained_context(&self) -> usize { self.trained_context }
     pub fn config_bytes(&self) -> usize { self.bytes }
     pub fn defaulted_fields(&self) -> &BTreeSet<String> { &self.defaults }
@@ -55,7 +59,8 @@ impl LlamaConfig {
     /// Requires core dimensions, model_type and RMS epsilon. Recognized optional
     /// fields use the explicitly pinned Llama defaults and are listed in receipt.
     /// Execution context must be positive and no greater than the trained limit.
-    /// Unsupported scaling/bias/tying/custom code is rejected, never approximated.
+    /// Unsupported scaling/bias/custom code is rejected, never approximated.
+    /// Declared tied embeddings are expanded exactly; absence still means untied.
     pub fn decode(identity: DecoderIdentity, context: usize, bytes: &[u8]) -> Result<Self, CheckpointError> {
         let parsed = strict_json::parse(bytes, Limits {
             max_bytes: MAX_CONFIG_BYTES, max_depth: 5, max_items: 2048, max_string_bytes: 4096,
@@ -80,9 +85,12 @@ impl LlamaConfig {
                 return Err(config_error("architectures", ConfigIssue::Unsupported));
             }
         } else { defaults.insert("architectures".to_owned()); }
-        for key in ["attention_bias", "mlp_bias", "tie_word_embeddings", "is_encoder_decoder", "add_cross_attention"] {
+        for key in ["attention_bias", "mlp_bias", "is_encoder_decoder", "add_cross_attention"] {
             if boolean(root, key, false, &mut defaults)? { return Err(config_error(key, ConfigIssue::Unsupported)); }
         }
+        let output_head = if boolean(root, "tie_word_embeddings", false, &mut defaults)? {
+            OutputHead::TiedEmbeddings
+        } else { OutputHead::Independent };
         match root.get("hidden_act") {
             Some(value) if value.as_str() == Some("silu") => {},
             Some(_) => return Err(config_error("hidden_act", ConfigIssue::Unsupported)),
@@ -119,7 +127,7 @@ impl LlamaConfig {
             Some(value) if usize_value("head_dim", value)? == profile.head_width() => {},
             Some(_) => return Err(config_error("head_dim", ConfigIssue::Unsupported)),
         }
-        Ok(Self { profile, trained_context, bytes: bytes.len(), defaults, ignored })
+        Ok(Self { profile, output_head, trained_context, bytes: bytes.len(), defaults, ignored })
     }
 }
 
@@ -159,6 +167,9 @@ impl DecoderModel {
         sources: &mut BTreeMap<String, R>, budget: &mut WeightReadBudget,
     ) -> Result<(Self, PretrainedShardReceipt), CheckpointError> {
         let configuration = LlamaConfig::decode(identity, context, configuration)?;
+        if configuration.output_head != OutputHead::Independent {
+            return Err(config_error("tie_word_embeddings", ConfigIssue::Unsupported));
+        }
         let (model, weights) = Self::read_safetensors_shards(configuration.profile.clone(), index, sources, budget)
             .map_err(weight_read_failure)?;
         Ok((model, PretrainedShardReceipt { configuration, weights }))
@@ -188,14 +199,17 @@ impl DecoderModel {
 }
 
 fn load(configuration: LlamaConfig, weights: &[u8]) -> Result<(DecoderModel, PretrainedReceipt), CheckpointError> {
-    let (model, weights) = DecoderModel::from_safetensors(configuration.profile.clone(), weights).map_err(CheckpointError::Weights)?;
+    let (model, weights) = DecoderModel::from_safetensors_with_output_head(
+        configuration.profile.clone(), weights, configuration.output_head,
+    ).map_err(CheckpointError::Weights)?;
     Ok((model, PretrainedReceipt { configuration, weights }))
 }
 fn load_reader<R: Read + ?Sized>(
     configuration: LlamaConfig, source: &mut R, budget: &mut WeightReadBudget,
 ) -> Result<(DecoderModel, PretrainedReceipt), CheckpointError> {
-    let (model, weights) = DecoderModel::read_safetensors(configuration.profile.clone(), source, budget)
-        .map_err(weight_read_failure)?;
+    let (model, weights) = DecoderModel::read_safetensors_with_output_head(
+        configuration.profile.clone(), source, budget, configuration.output_head,
+    ).map_err(weight_read_failure)?;
     Ok((model, PretrainedReceipt { configuration, weights }))
 }
 fn weight_read_failure(error: WeightReadError) -> CheckpointError {

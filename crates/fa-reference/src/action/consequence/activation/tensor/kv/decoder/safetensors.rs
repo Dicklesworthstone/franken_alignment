@@ -18,7 +18,16 @@ pub const MAX_WEIGHT_TENSORS: usize = 9 * 128 + 3;
 pub const MAX_WEIGHT_FILE_BYTES: usize = 8 + MAX_WEIGHT_HEADER_BYTES + 4 * MAX_DECODER_PARAMETERS;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum TensorIssue { Descriptor, Shape, Offsets, Encoding, NonFinite }
+pub enum TensorIssue { Descriptor, Shape, Offsets, Encoding, NonFinite, TiedValues }
+
+/// Independently declared output-head semantics, never inferred from a missing
+/// tensor. Tying expands into the SAME immutable dense decoder representation.
+/// This is an ingestion contract, not a training or parameter-sharing runtime.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum OutputHead { Independent, TiedEmbeddings }
+
+const EMBEDDINGS: &str = "model.embed_tokens.weight";
+const OUTPUT_HEAD: &str = "lm_head.weight";
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum WeightError {
@@ -71,22 +80,55 @@ impl DecoderModel {
     pub fn from_safetensors(
         profile: DecoderProfile, bytes: &[u8],
     ) -> Result<(Self, WeightLoadReceipt), WeightError> {
-        let (tensors, header_bytes) = inspect(&profile, bytes)?;
+        Self::from_safetensors_with_output_head(profile, bytes, OutputHead::Independent)
+    }
+
+    /// Explicit sharing permits ONLY an omitted lm_head, never missing embeddings
+    /// or another parameter. If both matrices are stored, their normalized f32
+    /// bits must match exactly (including signed zero); neither wins silently.
+    /// The receipt lists physical tensors/bytes, while normalized_bytes includes
+    /// the expanded head. Raw/default loading remains strictly independent.
+    pub fn from_safetensors_with_output_head(
+        profile: DecoderProfile, bytes: &[u8], output_head: OutputHead,
+    ) -> Result<(Self, WeightLoadReceipt), WeightError> {
+        let (tensors, header_bytes) = inspect_subset_with_output_head(&inventory(&profile), bytes, output_head)?;
         let receipt = WeightLoadReceipt {
             normalized_bytes: profile.parameter_count() * 4,
             profile: profile.clone(), file_bytes: bytes.len(), header_bytes,
             data_bytes: bytes.len() - 8 - header_bytes, tensors: describe(&tensors),
         };
-        let model = construct(profile, |name| read_tensor(name, &tensors))?;
+        let stored_head = tensors.contains_key(OUTPUT_HEAD);
+        let model = construct_with_output_head(profile, output_head, stored_head,
+            |name| read_tensor(name, &tensors))?;
         Ok((model, receipt))
     }
 }
 
-fn construct<F>(profile: DecoderProfile, mut read: F) -> Result<DecoderModel, WeightError>
+fn construct<F>(profile: DecoderProfile, read: F) -> Result<DecoderModel, WeightError>
 where F: FnMut(&str) -> Result<Vec<f32>, WeightError> {
-    let embeddings = read("model.embed_tokens.weight")?;
+    construct_with_output_head(profile, OutputHead::Independent, true, read)
+}
+
+// Only a fully validated tensor inventory supplies stored_head. The source of
+// shared weights is fixed; there is no metadata-selected alias or second kernel.
+fn construct_with_output_head<F>(profile: DecoderProfile, output_head: OutputHead,
+    stored_head: bool, mut read: F) -> Result<DecoderModel, WeightError>
+where F: FnMut(&str) -> Result<Vec<f32>, WeightError> {
+    let embeddings = read(EMBEDDINGS)?;
     let final_norm = read("model.norm.weight")?;
-    let output = read("lm_head.weight")?;
+    let output = if output_head == OutputHead::Independent || stored_head {
+        let output = read(OUTPUT_HEAD)?;
+        if output_head == OutputHead::TiedEmbeddings
+            && (output.len() != embeddings.len() || output.iter().zip(&embeddings)
+                .any(|(left, right)| left.to_bits() != right.to_bits()))
+        { return Err(issue(OUTPUT_HEAD, TensorIssue::TiedValues)); }
+        output
+    } else {
+        let mut output = Vec::new();
+        output.try_reserve_exact(embeddings.len()).map_err(|_| WeightError::Limit)?;
+        output.extend_from_slice(&embeddings);
+        output
+    };
     let mut layers = Vec::new();
     layers.try_reserve_exact(profile.shape().layers).map_err(|_| WeightError::Limit)?;
     for index in 0..profile.shape().layers {
@@ -144,10 +186,12 @@ fn normalized_bytes(expected: &BTreeMap<String, Vec<usize>>) -> Result<usize, We
     })
 }
 
-fn inspect<'a>(profile: &DecoderProfile, bytes: &'a [u8]) -> Result<(BTreeMap<String, Tensor<'a>>, usize), WeightError> {
-    inspect_subset(&inventory(profile), bytes)
-}
 fn inspect_subset<'a>(expected: &BTreeMap<String, Vec<usize>>, bytes: &'a [u8]) -> Result<(BTreeMap<String, Tensor<'a>>, usize), WeightError> {
+    inspect_subset_with_output_head(expected, bytes, OutputHead::Independent)
+}
+fn inspect_subset_with_output_head<'a>(expected: &BTreeMap<String, Vec<usize>>, bytes: &'a [u8],
+    output_head: OutputHead) -> Result<(BTreeMap<String, Tensor<'a>>, usize), WeightError>
+{
     if bytes.len() > MAX_WEIGHT_FILE_BYTES { return Err(WeightError::Limit); }
     let prefix: [u8; 8] = bytes.get(..8).ok_or(WeightError::Header)?
         .try_into().map_err(|_| WeightError::Header)?;
@@ -155,7 +199,7 @@ fn inspect_subset<'a>(expected: &BTreeMap<String, Vec<usize>>, bytes: &'a [u8]) 
     if length > MAX_WEIGHT_HEADER_BYTES { return Err(WeightError::Limit); }
     let end = 8_usize.checked_add(length).ok_or(WeightError::Limit)?;
     let header = bytes.get(8..end).ok_or(WeightError::Header)?;
-    let descriptors = inspect_directory(expected, header)?;
+    let descriptors = inspect_directory_with_output_head(expected, header, output_head)?;
     let data = &bytes[end..];
     if data.len() > normalized_bytes(expected)? { return Err(WeightError::Limit); }
     let mut tensors = BTreeMap::new();
@@ -171,7 +215,9 @@ fn inspect_subset<'a>(expected: &BTreeMap<String, Vec<usize>>, bytes: &'a [u8]) 
 
 /// Same complete descriptor checks for memory, sharded and bounded-reader input.
 /// No pointer into the raw data is needed to reject invalid inventory/coverage.
-fn inspect_directory(expected: &BTreeMap<String, Vec<usize>>, header: &[u8]) -> Result<BTreeMap<String, TensorDescriptor>, WeightError> {
+fn inspect_directory_with_output_head(expected: &BTreeMap<String, Vec<usize>>, header: &[u8],
+    output_head: OutputHead) -> Result<BTreeMap<String, TensorDescriptor>, WeightError>
+{
     if header.first() != Some(&b'{') { return Err(WeightError::Header); }
     let parsed = strict_json::parse(header, Limits {
         max_bytes: MAX_WEIGHT_HEADER_BYTES, max_depth: 4,
@@ -185,13 +231,16 @@ fn inspect_directory(expected: &BTreeMap<String, Vec<usize>>, header: &[u8]) -> 
         let metadata = metadata.as_object().ok_or(WeightError::Header)?;
         if metadata.values().any(|value| value.as_str().is_none()) { return Err(WeightError::Header); }
     }
-    if root.len() != expected.len() + usize::from(root.contains_key("__metadata__"))
-        || expected.keys().any(|name| !root.contains_key(name))
+    let omitted_head = output_head == OutputHead::TiedEmbeddings
+        && expected.contains_key(OUTPUT_HEAD) && !root.contains_key(OUTPUT_HEAD);
+    if root.len() != expected.len() - usize::from(omitted_head) + usize::from(root.contains_key("__metadata__"))
+        || expected.keys().any(|name| !(root.contains_key(name) || (omitted_head && name == OUTPUT_HEAD)))
     { return Err(WeightError::Inventory); }
     let mut tensors = BTreeMap::new();
     let mut intervals = Vec::new();
     intervals.try_reserve_exact(expected.len()).map_err(|_| WeightError::Limit)?;
     for (name, shape) in expected {
+        if omitted_head && name == OUTPUT_HEAD { continue; }
         let object = root[name].as_object().ok_or_else(|| issue(name, TensorIssue::Descriptor))?;
         if object.len() != 3 || ["dtype", "shape", "data_offsets"].iter().any(|key| !object.contains_key(*key)) {
             return Err(issue(name, TensorIssue::Descriptor));
@@ -237,3 +286,6 @@ fn read_tensor(name: &str, tensors: &BTreeMap<String, Tensor<'_>>) -> Result<Vec
     }
     Ok(values)
 }
+
+#[cfg(test)]
+mod tied_tests;

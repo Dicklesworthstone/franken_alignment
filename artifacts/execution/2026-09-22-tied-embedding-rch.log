@@ -1,0 +1,5 @@
+Command: RCH_REQUIRE_REMOTE=1 rch exec -- cargo test --locked -p fa-reference tied_
+Working copy: fetched source/test subset; no full-workspace verification
+bash: line 9: rch: command not found
+
+Exit code: 127

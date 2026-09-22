@@ -62,10 +62,10 @@ fn missing_cache_head_count_uses_declared_mha_default_not_checkpoint_shape_guess
 }
 
 #[test]
-fn unsupported_architectures_bias_tying_and_remote_code_never_fall_back() {
+fn unsupported_architectures_bias_and_remote_code_never_fall_back() {
     for extra in [
         r#", "attention_bias":true"#, r#", "mlp_bias":true"#,
-        r#", "tie_word_embeddings":true"#, r#", "pretraining_tp":2"#, r#", "pretraining_tp":1.0"#,
+        r#", "pretraining_tp":2"#, r#", "pretraining_tp":1.0"#,
         r#", "hidden_act":"relu"#, r#", "head_dim":4"#,
         r#", "attention_dropout":0.1"#, r#", "partial_rotary_factor":0.5"#,
         r#", "architectures":["LlamaForSequenceClassification"]"#,
@@ -150,7 +150,7 @@ fn regular_files_load_and_remain_independent_of_source_lifetime() {
 #[test]
 fn invalid_config_refuses_before_a_missing_weight_file_is_opened() {
     let temp = Temp::new(); let (config, weights) = temp.files(); fs::remove_file(&weights).unwrap();
-    fs::write(&config, configuration(r#", "tie_word_embeddings":true"#)).unwrap();
+    fs::write(&config, configuration(r#", "attention_bias":true"#)).unwrap();
     assert!(matches!(DecoderModel::from_llama_files(fixture::profile(16).identity(),16,&config,&weights,CheckpointFileLimits::default()),
         Err(CheckpointError::Configuration { issue: ConfigIssue::Unsupported, .. })));
     fs::write(&config, configuration("")).unwrap();

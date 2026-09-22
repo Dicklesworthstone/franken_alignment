@@ -4,7 +4,8 @@
 
 use super::{DecoderModel, DecoderProfile, TensorDescriptor, TensorIssue, TensorLoad,
     WeightError, WeightLoadReceipt, MAX_WEIGHT_HEADER_BYTES, MAX_WEIGHT_FILE_BYTES,
-    construct, decode_scalar, ByteOrder, inventory, inspect_directory, issue};
+    construct, construct_with_output_head, OutputHead, OUTPUT_HEAD,
+    decode_scalar, ByteOrder, inventory, inspect_directory_with_output_head, issue};
 use super::shards::{ShardLoad, ShardPlan, ShardedWeightLoadReceipt, MAX_WEIGHT_SET_BYTES};
 use std::collections::BTreeMap;
 use std::fmt;
@@ -88,14 +89,27 @@ impl DecoderModel {
     pub fn read_safetensors<R: Read + ?Sized>(
         profile: DecoderProfile, source: &mut R, budget: &mut WeightReadBudget,
     ) -> Result<(Self, WeightLoadReceipt), WeightReadError> {
-        let plan = read_directory(&inventory(&profile), source, budget, MAX_WEIGHT_FILE_BYTES)?;
+        Self::read_safetensors_with_output_head(profile, source, budget, OutputHead::Independent)
+    }
+
+    /// Same directory, scalar and EOF validation with explicit output sharing.
+    /// A redundant head must agree bit-for-bit after normalization. Missing heads
+    /// never select tying automatically. The cumulative budget is not replenished.
+    pub fn read_safetensors_with_output_head<R: Read + ?Sized>(
+        profile: DecoderProfile, source: &mut R, budget: &mut WeightReadBudget,
+        output_head: OutputHead,
+    ) -> Result<(Self, WeightLoadReceipt), WeightReadError> {
+        let plan = read_directory_with_output_head(&inventory(&profile), source, budget,
+            MAX_WEIGHT_FILE_BYTES, output_head)?;
+        let stored_head = plan.tensors.contains_key(OUTPUT_HEAD);
         budget.require_bytes(plan.data_bytes.checked_add(1).ok_or(WeightError::Limit)?)?;
         let (mut parameters, source_receipt) = read_body(plan, source, budget)?;
         let receipt = WeightLoadReceipt { normalized_bytes: profile.parameter_count() * 4,
             profile: profile.clone(), file_bytes: source_receipt.file_bytes,
             header_bytes: source_receipt.header_bytes, data_bytes: source_receipt.data_bytes,
             tensors: source_receipt.tensors };
-        let model = construct(profile, |name| parameters.remove(name).ok_or(WeightError::Inventory))?;
+        let model = construct_with_output_head(profile, output_head, stored_head,
+            |name| parameters.remove(name).ok_or(WeightError::Inventory))?;
         Ok((model, receipt))
     }
 
@@ -140,6 +154,12 @@ fn read_directory<R: Read + ?Sized>(
     expected: &BTreeMap<String, Vec<usize>>, source: &mut R,
     budget: &mut WeightReadBudget, file_allowance: usize,
 ) -> Result<FilePlan, WeightReadError> {
+    read_directory_with_output_head(expected, source, budget, file_allowance, OutputHead::Independent)
+}
+fn read_directory_with_output_head<R: Read + ?Sized>(
+    expected: &BTreeMap<String, Vec<usize>>, source: &mut R,
+    budget: &mut WeightReadBudget, file_allowance: usize, output_head: OutputHead,
+) -> Result<FilePlan, WeightReadError> {
     if file_allowance < 8 { return Err(WeightError::Limit.into()); }
     let mut prefix = [0; 8];
     read_exact(source, &mut prefix, budget, WeightReadStage::Prefix)?;
@@ -152,7 +172,7 @@ fn read_directory<R: Read + ?Sized>(
     header.try_reserve_exact(header_bytes).map_err(|_| WeightError::Limit)?;
     header.resize(header_bytes, 0);
     read_exact(source, &mut header, budget, WeightReadStage::Header)?;
-    let tensors = inspect_directory(expected, &header)?;
+    let tensors = inspect_directory_with_output_head(expected, &header, output_head)?;
     drop(header);
     let data_bytes = tensors.values().map(|tensor| tensor.end).max().unwrap_or(0);
     let file_bytes = fixed.checked_add(data_bytes).ok_or(WeightError::Limit)?;

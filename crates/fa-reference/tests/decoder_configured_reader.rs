@@ -94,16 +94,16 @@ fn configured_shard_files_continue_the_original_checkpoint_after_source_removal(
 }
 
 #[test]
-fn unsupported_configuration_precedes_index_validation_and_all_weight_io() {
+fn malformed_configuration_precedes_index_validation_and_all_weight_io() {
     let p = decoder::profile(16);
-    let config = String::from_utf8(CONFIG.to_vec()).unwrap().replace("\"tie_word_embeddings\": false", "\"tie_word_embeddings\": true");
+    let config = String::from_utf8(CONFIG.to_vec()).unwrap().replace("\"tie_word_embeddings\": false", "\"tie_word_embeddings\": null");
     assert_ne!(config.as_bytes(), CONFIG);
     let mut allowance = budget();
     assert!(matches!(DecoderModel::read_llama_safetensors(p.identity(), 16, config.as_bytes(), &mut MustNotRead, &mut allowance),
-        Err(CheckpointError::Configuration { issue: ConfigIssue::Unsupported, .. })));
+        Err(CheckpointError::Configuration { issue: ConfigIssue::Type, .. })));
     let mut sources = BTreeMap::from([("../not-opened.safetensors".into(), MustNotRead)]);
     assert!(matches!(DecoderModel::read_llama_shards(p.identity(), 16, config.as_bytes(), b"bad index", &mut sources, &mut allowance),
-        Err(CheckpointError::Configuration { issue: ConfigIssue::Unsupported, .. })));
+        Err(CheckpointError::Configuration { issue: ConfigIssue::Type, .. })));
     assert_eq!(allowance.usage(), WeightReadUsage::default());
 }
 
