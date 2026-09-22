@@ -1,6 +1,7 @@
 //! Byte-exact text requests through the ORIGINAL durable monitored decoder.
 //! Tokenization is input preparation, never an alternative inference/permit path.
 mod codec;
+pub mod progress;
 pub(super) use codec::{read, write};
 #[cfg(test)]
 mod tests;
@@ -207,22 +208,35 @@ impl FileOversight {
         if canonical.len() > MAX_FILE_TOKENIZER_BYTES { return Err(Error::Limit.into()); }
         let store = storage::Store::open(directory.as_ref())?;
         let bytes = store.read(profile.delivery.limits.bytes)?;
-        let events = journal::decode(&profile, store.identity(), &bytes)?;
-        let mut models = events.iter().filter_map(|event| match event {
-            Event::Decoder(DecoderEvent::Enable(config)) => Some(config.as_ref()), _ => None,
-        });
-        let mut tokenizers = events.iter().filter_map(|event| match event {
-            Event::Decoder(DecoderEvent::Tokenizer(bytes)) => Some(bytes.as_ref()), _ => None,
-        });
-        if models.next() != Some(expected) || models.next().is_some()
-            || tokenizers.next() != Some(canonical.as_slice()) || tokenizers.next().is_some()
-        { return Err(Error::Binding.into()); }
-        let machine = Machine::replay(&profile, &events)?;
-        if machine.decoder_contract() != Some(expected)
-            || machine.decoder_tokenizer()?.to_bytes()? != canonical { return Err(Error::Binding.into()); }
+        let (events, machine) = replay_text_history(&profile, expected, &canonical,
+            store.identity(), &bytes)?;
         store.confirm_and_cleanup()?;
         let (mut host, human) = Self::owner(profile, store, events, machine);
         host.transact(host.revision(), Event::Core(BaseEvent::Fence))?;
         Ok((host, human))
     }
+}
+
+// Both the exclusive opener and read-only progress inspector use the same
+// exact configuration pin BEFORE semantic/numerical replay. This never creates
+// an owner, cleans storage, or claims a canonical image was acknowledged.
+fn replay_text_history(profile: &FileOversightProfile, expected: &FileDecoderConfig,
+    tokenizer_bytes: &[u8], identity: &Path, bytes: &[u8])
+    -> Result<(Vec<Event>, Machine), JournalError>
+{
+    let events = journal::decode(profile, identity, bytes)?;
+    let mut models = events.iter().filter_map(|event| match event {
+        Event::Decoder(DecoderEvent::Enable(config)) => Some(config.as_ref()), _ => None,
+    });
+    let mut tokenizers = events.iter().filter_map(|event| match event {
+        Event::Decoder(DecoderEvent::Tokenizer(bytes)) => Some(bytes.as_ref()), _ => None,
+    });
+    if models.next() != Some(expected) || models.next().is_some()
+        || tokenizers.next() != Some(tokenizer_bytes) || tokenizers.next().is_some()
+    { return Err(Error::Binding.into()); }
+    let machine = Machine::replay(profile, &events)?;
+    if machine.decoder_contract() != Some(expected)
+        || machine.decoder_tokenizer()?.to_bytes()?.as_slice() != tokenizer_bytes
+    { return Err(Error::Binding.into()); }
+    Ok((events, machine))
 }

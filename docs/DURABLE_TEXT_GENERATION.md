@@ -2,9 +2,10 @@
 
 ## Status
 
-2026-09-22: unqualified source implementation. Eleven Rust regressions are
-AUTHORED, NOT EXECUTED. The targeted command failed before compilation because
-`rch` is unavailable (exit 127):
+2026-09-22: unqualified source implementation. Twenty Rust regressions are
+AUTHORED, NOT EXECUTED: eleven whole-request cases and nine incremental cases.
+Both targeted attempts failed before compilation because `rch` is unavailable
+(exit 127):
 
 ```
 RCH_REQUIRE_REMOTE=1 rch exec -- cargo test --locked -p fa-reference decoder::text
@@ -85,3 +86,57 @@ Both intent and result writes exercise all five original storage failure barrier
 no speculative output may escape; recovered logical draws follow only the actual
 canonical cut. Codec tests retain existing tags and reject truncated new records.
 These are test assertions awaiting execution, not measured production guarantees.
+
+
+## Resumable bytes and read-only inspection
+
+`advance_decoder_text` acknowledges at most one original monitored token using
+advance_decoder_generation. No second cursor, numeric owner, budget or journal
+event is added. The already retained text command is recompiled and checked
+against its original numerical intent; output capacity is allocated before the
+native advancement. Source, clock, native witness, first-step capacity and
+poisoning rules still apply. A partial cursor cannot return to whole-request
+execution from its old predecessor; after recovery it requires the original
+explicit fresh-clock resume and continues with its retained budget.
+
+`FileTextGenerationProgress` retains the ORIGINAL FileGenerationProgress and
+cumulative bytes. Pending empty output, a native admission refusal, a stop token
+and a held/failed finish remain distinct. A refused numerical result produces
+an error from bytes(), not a successful empty string. An unexpected decode
+failure keeps the acknowledged numerical progress/counters accessible rather
+than discarding committed work. The progress is supervisor evidence, not a
+completed-report fabrication or publication permission.
+
+Old generation revisions return current progress without another token or
+write. `delta_from` extracts only bytes after an explicit request-local byte
+cursor and returns their exact range; retrying after retaining that range's end
+returns an empty suffix. Cursors ahead of a snapshot refuse without arithmetic
+wrap. Byte boundaries inside a Unicode character or merged token are valid;
+utf8() remains strict for the whole prefix. A consumer owns its actual delivery,
+idempotency and durable cursor acknowledgment. No exactly-once external-output
+claim follows from this API, and a generation revision is not a byte offset.
+
+`pending_decoder_text` discovers a pending original text intent. None does not
+rule out a pending bare-ID request; the original pending_decoder_generation API
+retains that distinction. `decoder_text_progress` projects the healthy owner's
+acknowledged cut without inference or source/clock operations.
+
+`read_decoder_text_progress` reads the complete canonical image and uses the
+same private exact model/monitor/sampler/tokenizer pin as open_with_text_decoder
+BEFORE numerical replay. It returns no lock, mutable owner, fresh role, cleanup,
+fence or resume. Its snapshot explicitly describes a canonical image: it may be
+newer than the selected generation, and a visible post-rename image does not
+establish that an earlier failed directory sync was acknowledged. Subsequent
+work still requires exclusive recovery. Model/tokenizer identity and stored
+observations remain independently trusted inputs, not authenticated data.
+
+The nine additional authored regressions exercise whole/incremental cache and
+work parity, stale-response byte cursors, all five request-progress boundaries
+across reopen, actual sampled UTF-8 fragments, merged-token partial cursors,
+monitor holds, stop controls, native budget refusal, source interruption,
+non-text ID exclusion, exact/one-under first-step event slots, all five original
+storage barriers immediately before output acknowledgment, a post-restart exhausted
+sampling allowance, strict configuration
+pins and corrupted native progress witnesses. They use the original real
+SafeTensors/monitor/sampler/journal paths with analytic fixture parameters, not
+pretrained-model or production evidence. All tests remain unexecuted.

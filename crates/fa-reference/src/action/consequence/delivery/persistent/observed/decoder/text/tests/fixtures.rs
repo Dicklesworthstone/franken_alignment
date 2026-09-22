@@ -45,12 +45,25 @@ pub(super) fn tokenizer(reverse: bool) -> ByteBpe {
     ]).unwrap()
 }
 pub(super) fn config(threshold: f32, output_token: u32) -> FileDecoderConfig {
+    configured(threshold, output_token, None)
+}
+pub(super) fn split_utf8_config() -> FileDecoderConfig {
+    configured(3.0, 0xc3, Some(0xa9))
+}
+fn configured(threshold: f32, output_token: u32, next_token: Option<u32>) -> FileDecoderConfig {
     // Actual weights: attention/MLP are zero, so residuals preserve embeddings.
     // A has [2,0]; every other token has [1,0]. Changing only the threshold makes
     // the SAME computed sampled token hold. No caller-supplied verdict is used.
     let mut embeddings: Vec<f32> = (0..259).flat_map(|_| [1.0, 0.0]).collect();
     embeddings[65 * 2] = 2.0;
     let mut head = vec![0.0_f32; 259 * 2]; head[output_token as usize * 2] = 1.0;
+    if let Some(next) = next_token {
+        // The first sampled byte changes the ACTUAL next residual/readout;
+        // the UTF-8 suffix is sampled by the original model, not a test callback.
+        embeddings[output_token as usize * 2] = 0.0;
+        embeddings[output_token as usize * 2 + 1] = 1.0;
+        head[next as usize * 2 + 1] = 1.0;
+    }
     let mut tensors = BTreeMap::from([
         ("model.embed_tokens.weight".to_owned(), (vec![259, 2], embeddings)),
         ("model.norm.weight".to_owned(), (vec![2], vec![1.0; 2])),

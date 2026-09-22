@@ -225,6 +225,15 @@ pub(crate) struct PreparedText {
 }
 
 impl PreparedText {
+    /// Decode only a native released-ID projection into the capacity already
+    /// reserved by original text admission. It cannot create a report or owner.
+    #[cfg(unix)]
+    pub(crate) fn decode_output(mut self, tokens: &[u32]) -> Result<Vec<u8>, Error> {
+        append_output(self.encoded.tokenizer(), &mut self.output, tokens, self.capacity)?;
+        Ok(self.output)
+    }
+
+    #[cfg(unix)]
     pub(crate) fn finish(mut self, generation: GenerationReport) -> TextGenerationReport {
         let output = append_output(self.encoded.tokenizer(), &mut self.output,
             generation.tokens(), self.capacity).map(|()| self.output);

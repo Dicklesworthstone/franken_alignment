@@ -1,6 +1,7 @@
 //! Real journal/decoder integration; source authoring is not execution evidence.
 use super::*;
 mod fixtures;
+mod progress;
 use fixtures::*;
 use crate::action::ElapsedTick;
 use crate::action::consequence::activation::monitor::decoder::MonitoringStatus;
