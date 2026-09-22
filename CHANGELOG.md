@@ -1,5 +1,14 @@
 # Changelog
 
+## Unqualified source addition: learned-generation checkpoint replay
+
+- Add immutable recipe-bound checkpoints and bounded incremental reconstruction
+  through the existing learned decoder, original sampler and complete audits.
+- Preserve spent telemetry and numerical budgets; compare exact state before
+  exposing a reconstructed owner. Retain holds and terminal stop behavior.
+- Author eight Rust tests and four compile-fail cases. RCH/Rust are unavailable;
+  no compilation, execution, qualification or durable-recovery claim is made.
+
 ## 2026-09-08: exact range witnesses
 
 - Add finite half-open empty and exact-member witnesses with authenticated-marker requirements on capture and reuse. Detect membership, version and byte phantoms while preserving unrelated updates.

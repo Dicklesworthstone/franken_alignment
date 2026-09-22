@@ -5,6 +5,7 @@
 
 mod session;
 pub mod monitored;
+pub mod replay;
 pub use session::archive;
 pub use session::{SampleBudget, SampledCheckpoint, SampledSession, SampledStep, SamplingStart};
 

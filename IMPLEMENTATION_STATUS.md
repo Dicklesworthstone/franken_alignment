@@ -1,5 +1,15 @@
 # Implementation status · design revision 0.3
 
+## Unqualified source addition: learned-generation checkpoint replay
+
+The typed checkpoint/reconstruction path in `sampling/replay.rs` reruns the
+original learned generator, preserves sampler and spent aggregate budgets, and
+compares exact cache/logit words before exposing a reconstructed owner. This is
+the in-memory recomputation baseline, not durable/live recovery. Eight Rust
+tests and four compile-fail cases are authored but UNEXECUTED; RCH and Rust
+tools are unavailable. See [the bounded contract](docs/LEARNED_GENERATION_REPLAY.md).
+Historical qualification evidence below does not validate this addition.
+
 Current execution evidence: [receipt](artifacts/execution/2026-09-08-range-witness-receipt.json).
 
 ## 2026-09-08 UTC: exact range membership and phantom invalidation
