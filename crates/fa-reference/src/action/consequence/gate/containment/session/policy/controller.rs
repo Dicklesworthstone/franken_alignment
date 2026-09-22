@@ -84,6 +84,7 @@ pub struct PolicyAuthority {
     reviews: Vec<PolicyReceipt>,
     credibility_history: Vec<credibility::ActivationRecord>,
     credibility_invalidated: bool,
+    held_out_joint: Option<credibility::joint::HeldOutJointPolicy>,
 }
 
 impl PolicyAuthority {
@@ -102,6 +103,7 @@ impl PolicyAuthority {
             reviews: Vec::new(),
             credibility_history: Vec::new(),
             credibility_invalidated: false,
+            held_out_joint: None,
         })
     }
 

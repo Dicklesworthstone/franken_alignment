@@ -5,6 +5,8 @@
 //! authentication, statistical calibration or durable storage. Once installed,
 //! the ordinary positive paths cannot fall back to unqualified weights.
 
+pub mod joint;
+
 use super::{ActionState, Error, PolicyAuthority, Scope, undispatched};
 use crate::action::consequence::congress::{
     CredibilityBinding, CredibilityRequirements, PromotedCongressPolicy,
@@ -105,6 +107,7 @@ pub(super) struct ActivationRecord {
     observations: u64,
     receipt: CredibilityChange,
     withdrawal: Option<CredibilityWithdrawal>,
+    joint: Option<joint::HeldOutJointReport>,
 }
 
 impl PolicyAuthority {
@@ -206,6 +209,15 @@ impl PolicyAuthority {
         next_congress.generation = request.binding.reducer_generation;
         next_congress.members = promoted.admitted_members().clone();
         next_congress.validate()?;
+        // The optional bootstrap guard is consumed by THIS original transition,
+        // not a second caller-selectable promotion path. No candidate report is
+        // imported, and no authority is touched before the comparison succeeds.
+        let joint = self.held_out_joint.map(|policy| {
+            joint::evaluate(policy, &self.congress, &next_congress, promoted.snapshot())
+        }).transpose()?;
+        if joint.as_ref().is_some_and(|report| !report.qualified()) {
+            return Err(Error::Incomplete);
+        }
 
         let mut rights = gate.authority.rights.clone();
         if !rights.conserved() {
@@ -242,7 +254,7 @@ impl PolicyAuthority {
         self.congress = next_congress;
         self.credibility_invalidated = false;
         self.credibility_history.push(ActivationRecord {
-            context, promoted, observations, receipt: receipt.clone(), withdrawal: None,
+            context, promoted, observations, receipt: receipt.clone(), withdrawal: None, joint,
         });
         Ok(receipt)
     }

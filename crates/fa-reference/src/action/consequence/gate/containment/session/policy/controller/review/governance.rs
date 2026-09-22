@@ -26,6 +26,8 @@ impl PolicyAuthority {
     pub(crate) fn replace_congress_weights(
         &mut self, expected_sequence: u64, expected_epoch: u64, next: CongressPolicy,
     ) -> Result<CongressChange, Error> {
+        // No alternate weight-installation lane may bypass the held-out guard.
+        if self.held_out_joint.is_some() { return Err(Error::Incomplete); }
         let gate = &mut self.host.gate;
         if gate.sequence != expected_sequence || gate.authority.rights.epoch() != expected_epoch { return Err(Error::Stale); }
         validate_congress(&next)?;
