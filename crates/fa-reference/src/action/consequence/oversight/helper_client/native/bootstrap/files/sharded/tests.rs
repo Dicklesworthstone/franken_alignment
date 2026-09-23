@@ -1,4 +1,7 @@
 //! Real shard files and ORIGINAL inference, with explicitly synthetic weights.
+#[cfg(unix)]
+mod peer;
+
 use super::*;
 use super::super::{NativeFileStage, MAX_ASSET_READ_BYTES};
 use super::super::super::tests::{Fixture, budget};

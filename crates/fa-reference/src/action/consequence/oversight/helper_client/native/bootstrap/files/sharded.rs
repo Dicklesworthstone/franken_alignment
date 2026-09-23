@@ -1,6 +1,9 @@
 //! Cold startup from explicitly registered shard files into the ORIGINAL helper.
 //! The index chooses labels, never paths. No raw concatenation or second decoder.
 
+#[cfg(unix)]
+pub mod peer;
+
 use super::{NativeAsset, NativeAssetReadBudget, NativeAssetReadUsage, NativeFileBootstrapError,
     NativeHelperFileLimits, NativeHelperPolicy, NativeEvaluator, NativeHelperBootstrap,
     NativeBootstrapError, WeightReadBudget, MAX_ASSET_READ_BYTES, MAX_ASSET_READ_CALLS,

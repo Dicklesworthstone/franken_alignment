@@ -79,6 +79,43 @@ whitespace and exact upstream preimage blob hashes were checked; these are not
 execution evidence. No broader bead or production qualification is closed.
 
 
+## Cooperative peer and dedicated-process entry points
+
+`NativeHelperClient<UnixStream>::from_llama_shard_files` loads the same evaluator
+into the original cooperative protocol client. It validates the provisioned salt
+length and connected socket before disk work, performs no startup inference or
+request/vote I/O, then lets the caller pump the unchanged bounded client. An
+invalid profile, corrupt shard, failed read or invalid socket returns no client
+and closes its owned socket. Original frame limits, single-input admission,
+monitored EOS, failure latches and immutable commit/reveal responses are retained.
+
+`sharded::peer::run_native_worker_from_shard_files` supplies the dedicated-process
+integration. Its caller constructs the original `NativeProcessBudget` before
+loading. The exact same lifetime object is moved into `run_native_worker`, not
+reconstructed after loading. Already expired lifetimes refuse before disk work;
+expiry while loading prevents the first subsequent protocol step through the
+original worker's deadline check. The original step allowance also survives
+startup unchanged. Blocking file reads or individual numerical steps are still
+not preempted, and the supervisor must enforce process/review deadlines.
+
+The returned original process report and original sharded weight receipt describe
+transmission and interpretation, respectively, not congress acceptance, helper
+independence, model authenticity or effect permission. A late write can already
+be visible; shutdown does not manufacture a nonexecution receipt. No runtime
+thread, listener, reconnect or retry service is added. The dedicated entry point
+must not run on an executor thread that is expected to remain cooperative.
+
+Seven additional Unix tests exercise the actual original commit/reveal frames,
+input-sensitive native judgments, held-token withholding and no reroll, salt and
+startup failures, socket closure, an independently threaded test supervisor,
+pre-expired lifetimes, preserved step limits, and rejection of a non-socket file
+descriptor before asset reads. The thread is test-only; production delegates to
+the existing dedicated worker without introducing a second executor. These are
+socket/worker-loop tests, not new subprocess-launch or descendant-isolation
+qualification. The second RCH attempt failed before compilation with the same
+missing-command error (127). All nineteen new Rust tests remain UNEXECUTED.
+
+
 ## Integration with intervening tied-embedding support
 
 Publication rebases these source additions onto `f95ab32fcff0122cdc6bd6fe2d3d412dc8bf6150`,
@@ -93,3 +130,8 @@ original-loader receipt/prefill parity, independent-mode refusal before weight
 I/O, actual aggregate directory limits and conflicting redundant heads. These
 join the twelve saved file regressions; all fourteen remain UNEXECUTED.
 The rebase does not qualify the new sources or the preserved tied-head sources.
+
+The published combined feature includes all nineteen saved regressions plus the
+two tied-head integration cases (twenty-one total); none has executed. The RCH
+retry for the rebased sources also refused before compilation because `rch` is
+unavailable (exit 127). Blob and whitespace checks are not runtime validation.
