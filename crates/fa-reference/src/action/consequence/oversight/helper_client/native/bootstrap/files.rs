@@ -4,7 +4,7 @@
 
 pub mod sharded;
 
-use super::{NativeBootstrapError, NativeEvaluator, NativeHelperBootstrap, NativeHelperPolicy,
+use super::{NativeTokenizerFormat, NativeBootstrapError, NativeEvaluator, NativeHelperBootstrap, NativeHelperPolicy,
     PretrainedReceipt, WeightReadBudget, MAX_MONITOR_CONFIG_BYTES, MAX_SAMPLING_CONFIG_BYTES};
 use crate::action::consequence::activation::tensor::kv::decoder::safetensors::{
     MAX_WEIGHT_FILE_BYTES, MAX_WEIGHT_HEADER_BYTES,
@@ -132,6 +132,19 @@ impl NativeEvaluator {
     pub fn from_llama_files(request: NativeFileBootstrap<'_>, assets: &mut NativeAssetReadBudget,
         weights: &mut WeightReadBudget) -> Result<(Self, PretrainedReceipt), NativeFileBootstrapError>
     {
+        Self::from_llama_files_with_tokenizer_format(
+            request, assets, weights, NativeTokenizerFormat::NativeArchive)
+    }
+
+    /// Explicit parser selection over the SAME bounded regular-file reads. The
+    /// existing per-file and aggregate asset limits still apply to JSON; choosing
+    /// JSON does not enlarge them. All bytes are read through the caller's
+    /// original budget and true EOF checks before tokenizer admission. No file
+    /// extension sniffing, native-to-JSON fallback or converted temp file exists.
+    pub fn from_llama_files_with_tokenizer_format(request: NativeFileBootstrap<'_>,
+        assets: &mut NativeAssetReadBudget, weights: &mut WeightReadBudget,
+        format: NativeTokenizerFormat) -> Result<(Self, PretrainedReceipt), NativeFileBootstrapError>
+    {
         request.limits.check()?;
         if request.stream == 0 { return Err(NativeFileBootstrapError::Contract(Error::InvalidInput)); }
         let NativeHelperFiles { configuration, tokenizer, monitoring, sampling, weights: weight_path } = request.files;
@@ -141,7 +154,7 @@ impl NativeEvaluator {
         let sampling = read_asset(sampling, request.limits.sampling_bytes, NativeAsset::Sampling, assets)?;
         let bootstrap = NativeHelperBootstrap { policy: request.policy, stream: request.stream,
             configuration: &configuration, tokenizer: &tokenizer, monitoring: &monitoring, sampling: &sampling };
-        let tokenizer = bootstrap.preflight().map_err(NativeFileBootstrapError::Bootstrap)?;
+        let tokenizer = bootstrap.preflight(format).map_err(NativeFileBootstrapError::Bootstrap)?;
         let profile = &request.policy.decoder_profile;
         let model_bound = 8 + MAX_WEIGHT_HEADER_BYTES + 4 * profile.parameter_count();
         let bound = request.limits.weight_bytes.min(model_bound);

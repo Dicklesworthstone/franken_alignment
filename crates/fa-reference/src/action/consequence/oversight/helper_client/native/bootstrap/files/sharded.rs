@@ -8,7 +8,7 @@ use super::{NativeAsset, NativeAssetReadBudget, NativeAssetReadUsage, NativeFile
     NativeHelperFileLimits, NativeHelperPolicy, NativeEvaluator, NativeHelperBootstrap,
     NativeBootstrapError, WeightReadBudget, MAX_ASSET_READ_BYTES, MAX_ASSET_READ_CALLS,
     open_regular, read_asset};
-use super::super::PretrainedShardReceipt;
+use super::super::{NativeTokenizerFormat, PretrainedShardReceipt};
 use crate::action::consequence::activation::tensor::kv::decoder::DecoderModel;
 use crate::action::consequence::activation::tensor::kv::decoder::safetensors::pretrained::LlamaConfig;
 use crate::action::consequence::activation::tensor::kv::decoder::safetensors::reader::WeightReadError;
@@ -99,6 +99,19 @@ impl NativeEvaluator {
         assets: &mut NativeAssetReadBudget, weights: &mut WeightReadBudget)
         -> Result<(Self, PretrainedShardReceipt), NativeShardFileBootstrapError>
     {
+        Self::from_llama_shard_files_with_tokenizer_format(
+            request, assets, weights, NativeTokenizerFormat::NativeArchive)
+    }
+
+    /// Select the original native archive or strict raw ByteLevel JSON parser
+    /// before index loading and before ANY weight path is inspected. Preserve
+    /// the complete explicit label map, aggregate limits, shared read budgets,
+    /// configured tied-head checks and mandatory monitor. No parser fallback.
+    pub fn from_llama_shard_files_with_tokenizer_format(request: NativeShardFileBootstrap<'_>,
+        assets: &mut NativeAssetReadBudget, weights: &mut WeightReadBudget,
+        format: NativeTokenizerFormat)
+        -> Result<(Self, PretrainedShardReceipt), NativeShardFileBootstrapError>
+    {
         request.limits.check()?;
         if request.stream == 0 || request.files.shards.is_empty() {
             return Err(NativeFileBootstrapError::Contract(Error::InvalidInput).into());
@@ -115,7 +128,7 @@ impl NativeEvaluator {
         let sampling = read_asset(files.sampling, request.limits.sampling_bytes, NativeAsset::Sampling, assets)?;
         let bootstrap = NativeHelperBootstrap { policy: request.policy, stream: request.stream,
             configuration: &configuration, tokenizer: &tokenizer, monitoring: &monitoring, sampling: &sampling };
-        let tokenizer = bootstrap.preflight().map_err(NativeShardFileBootstrapError::Bootstrap)?;
+        let tokenizer = bootstrap.preflight(format).map_err(NativeShardFileBootstrapError::Bootstrap)?;
         let profile = &request.policy.decoder_profile;
         // Retain the ORIGINAL config receipt and its explicit head-sharing law.
         // Both label preflight and actual directory reads must use that same law.

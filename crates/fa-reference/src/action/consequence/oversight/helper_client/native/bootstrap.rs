@@ -4,6 +4,13 @@
 
 pub mod files;
 
+/// Operator-selected data format, never inferred from a filename or a failed
+/// parser. JSON supports only the existing strict raw ByteLevel BPE contract,
+/// including its explicitly registered literal controls, not arbitrary pipelines.
+/// Selecting a format does not authenticate the tokenizer or its trained model.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum NativeTokenizerFormat { NativeArchive, HuggingFaceRawByteLevel }
+
 use super::{NativeEvaluator, NativeHelperPolicy, TextDecoder};
 use crate::action::consequence::activation::monitor::decoder::config::MAX_MONITOR_CONFIG_BYTES;
 use crate::action::consequence::activation::monitor::decoder::sampled::MonitoredSampledDecoder;
@@ -67,7 +74,20 @@ impl NativeEvaluator {
     pub fn read_llama_checkpoint<R: Read + ?Sized>(
         bootstrap: NativeHelperBootstrap<'_>, source: &mut R, budget: &mut WeightReadBudget,
     ) -> Result<(Self, PretrainedReceipt), NativeBootstrapError> {
-        let tokenizer = bootstrap.preflight()?;
+        Self::read_llama_checkpoint_with_tokenizer_format(
+            bootstrap, source, budget, NativeTokenizerFormat::NativeArchive)
+    }
+
+    /// Select an existing tokenizer parser before any weight I/O. NativeArchive
+    /// preserves the original API; JSON admission uses the same independently
+    /// bound profile, full-input policy and control-only stop checks. A refused
+    /// format is never retried through another parser. All later loading,
+    /// monitoring, sampling and one-request evaluation remain the original path.
+    pub fn read_llama_checkpoint_with_tokenizer_format<R: Read + ?Sized>(
+        bootstrap: NativeHelperBootstrap<'_>, source: &mut R, budget: &mut WeightReadBudget,
+        format: NativeTokenizerFormat,
+    ) -> Result<(Self, PretrainedReceipt), NativeBootstrapError> {
+        let tokenizer = bootstrap.preflight(format)?;
         let profile = &bootstrap.policy.decoder_profile;
         let (model, receipt) = DecoderModel::read_llama_safetensors(profile.identity(),
             profile.shape().context, bootstrap.configuration, source, budget)
@@ -84,7 +104,19 @@ impl NativeEvaluator {
         bootstrap: NativeHelperBootstrap<'_>, index: &[u8], sources: &mut BTreeMap<String, R>,
         budget: &mut WeightReadBudget,
     ) -> Result<(Self, PretrainedShardReceipt), NativeBootstrapError> {
-        let tokenizer = bootstrap.preflight()?;
+        Self::read_llama_checkpoint_shards_with_tokenizer_format(
+            bootstrap, index, sources, budget, NativeTokenizerFormat::NativeArchive)
+    }
+
+    /// The same explicit tokenizer admission for a complete set of supplied
+    /// shard readers. Invalid tokenizer/policy data consumes no weight-reader
+    /// allowance. Tied-head semantics still come from the original Llama config;
+    /// neither the format choice nor the shard index can change that contract.
+    pub fn read_llama_checkpoint_shards_with_tokenizer_format<R: Read>(
+        bootstrap: NativeHelperBootstrap<'_>, index: &[u8], sources: &mut BTreeMap<String, R>,
+        budget: &mut WeightReadBudget, format: NativeTokenizerFormat,
+    ) -> Result<(Self, PretrainedShardReceipt), NativeBootstrapError> {
+        let tokenizer = bootstrap.preflight(format)?;
         let profile = &bootstrap.policy.decoder_profile;
         let (model, receipt) = DecoderModel::read_llama_shards(profile.identity(),
             profile.shape().context, bootstrap.configuration, index, sources, budget)
@@ -95,7 +127,7 @@ impl NativeEvaluator {
 }
 
 impl NativeHelperBootstrap<'_> {
-    fn preflight(&self) -> Result<ByteBpe, NativeBootstrapError> {
+    fn preflight(&self, format: NativeTokenizerFormat) -> Result<ByteBpe, NativeBootstrapError> {
         if self.stream == 0 { return Err(NativeBootstrapError::Contract(Error::InvalidInput)); }
         if self.monitoring.len() > MAX_MONITOR_CONFIG_BYTES
             || self.sampling.len() > MAX_SAMPLING_CONFIG_BYTES
@@ -105,7 +137,11 @@ impl NativeHelperBootstrap<'_> {
         let parsed = LlamaConfig::decode(expected.identity(), expected.shape().context, self.configuration)
             .map_err(NativeBootstrapError::Checkpoint)?;
         if parsed.profile() != expected { return Err(NativeBootstrapError::Contract(Error::Binding)); }
-        let tokenizer = ByteBpe::from_bytes(expected, self.tokenizer).map_err(NativeBootstrapError::Tokenizer)?;
+        let tokenizer = match format {
+            NativeTokenizerFormat::NativeArchive => ByteBpe::from_bytes(expected, self.tokenizer),
+            NativeTokenizerFormat::HuggingFaceRawByteLevel => ByteBpe::from_huggingface_json(
+                expected, self.tokenizer, ByteBpe::MAX_HUGGINGFACE_JSON_BYTES),
+        }.map_err(NativeBootstrapError::Tokenizer)?;
         self.policy.check_tokenizer(&tokenizer).map_err(NativeBootstrapError::Contract)?;
         SamplingConfig::decode(self.sampling, expected.shape().vocabulary)
             .map_err(NativeBootstrapError::Sampling)?;
@@ -127,3 +163,6 @@ impl NativeHelperBootstrap<'_> {
 
 #[cfg(test)]
 mod tests;
+
+#[cfg(test)]
+mod tokenizer_tests;
