@@ -49,6 +49,9 @@ pub enum GenerationFinish {
     BudgetExhausted,
     Held,
     Failed(Error),
+    /// A supervisor withdrew unfinished work at an acknowledged boundary.
+    /// This does not assert complete prompt review or a monitored stop token.
+    Cancelled,
 }
 
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
@@ -100,6 +103,38 @@ impl fmt::Debug for GenerationReport {
             .field("released_tokens", &self.tokens.len())
             .field("finish", &self.finish).field("work", &self.work)
             .finish_non_exhaustive()
+    }
+}
+
+// Only the durable supervisor's cancellation reducer calls this projection.
+// There is no public constructor, cursor import, inference or owner extraction.
+// An unstarted intent may not yet have passed numerical admission; cancellation
+// does not turn it into an admitted/completely reviewed prompt.
+#[cfg(unix)]
+impl GenerationReport {
+    pub(crate) fn cancelled(start: u64, request: &GenerationRequest,
+        progress: Option<&incremental::GenerationProgress>) -> Result<Self, Error>
+    {
+        let mut report = Self { start_position: start, end_position: start,
+            requested_prompt_tokens: request.prompt.len(), reviewed_prompt_tokens: 0,
+            tokens: Vec::new(), finish: GenerationFinish::Cancelled,
+            work: GenerationWork::default(), last_review: None };
+        if let Some(progress) = progress {
+            if progress.finish().is_some() || progress.start_position() != start
+                || progress.requested_prompt_tokens() != request.prompt.len()
+                || progress.reviewed_prompt_tokens() > request.prompt.len()
+                || progress.tokens().len() > request.max_new_tokens
+                || progress.work().admitted_scalar_products > request.budget.scalar_products
+                || progress.work().admitted_sampling_entries > request.budget.sampling_entries
+            { return Err(Error::Binding); }
+            report.tokens.try_reserve_exact(progress.tokens().len()).map_err(|_| Error::Limit)?;
+            report.tokens.extend_from_slice(progress.tokens());
+            report.end_position = progress.position();
+            report.reviewed_prompt_tokens = progress.reviewed_prompt_tokens();
+            report.work = progress.work();
+            report.last_review = progress.last_review().cloned().map(Rc::new);
+        }
+        Ok(report)
     }
 }
 

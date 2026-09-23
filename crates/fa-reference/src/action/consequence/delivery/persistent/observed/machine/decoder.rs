@@ -52,6 +52,7 @@ impl Machine {
         }
         if matches!(event,
             Event::Decoder(DecoderEvent::Resume { .. }
+                | DecoderEvent::CancelGeneration { .. }
                 | DecoderEvent::Checkpoint(CheckpointRequest::Reset { .. }, _))
             | Event::Core(BaseEvent::Time(_) | BaseEvent::Cancel(_) | BaseEvent::Fence
                 | BaseEvent::Stop(_) | BaseEvent::StopProgress(_) | BaseEvent::Reconcile(_)
@@ -66,6 +67,7 @@ impl Machine {
 
     pub(super) fn apply_decoder(&mut self, event: &DecoderEvent) -> Result<Transition, Error> {
         match event {
+            DecoderEvent::CancelGeneration { id, revision } => self.apply_decoder_generation_cancel(*id, *revision),
             DecoderEvent::Tokenizer(bytes) => self.install_decoder_tokenizer(bytes),
             DecoderEvent::TextIntent(command) => self.apply_decoder_text_intent(command),
             DecoderEvent::BeginGeneration(command) => self.apply_decoder_generation_intent(command),

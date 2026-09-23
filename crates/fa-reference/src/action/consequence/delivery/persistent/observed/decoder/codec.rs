@@ -12,6 +12,10 @@ pub(in super::super) fn write(w: &mut Writer, event: &DecoderEvent) -> Result<()
             if bytes.len() > super::text::MAX_FILE_TOKENIZER_BYTES { return Err(Error::Limit); }
             w.u8(9)?; w.blob(bytes)?;
         }
+        DecoderEvent::CancelGeneration { id, revision } => {
+            super::progress::check_progress_key(*id, *revision)?;
+            w.u8(11)?; w.u64(*id)?; w.u64(*revision)?;
+        }
         DecoderEvent::TextIntent(command) => { w.u8(10)?; super::text::write(w, command)?; }
         DecoderEvent::Enable(config) => { w.u8(0)?; config.write(w)?; }
         DecoderEvent::StopPolicy(policy) => {
@@ -94,6 +98,11 @@ pub(in super::super) fn read(r: &mut Reader<'_>) -> Result<DecoderEvent, Error> 
             DecoderEvent::Tokenizer(Rc::from(bytes))
         }
         10 => DecoderEvent::TextIntent(Rc::new(super::text::read(r)?)),
+        11 => {
+            let id = r.u64()?; let revision = r.u64()?;
+            super::progress::check_progress_key(id, revision)?;
+            DecoderEvent::CancelGeneration { id, revision }
+        }
         _ => return Err(Error::InvalidInput),
     })
 }

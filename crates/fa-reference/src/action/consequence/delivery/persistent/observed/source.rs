@@ -111,6 +111,7 @@ impl FileOversight {
             | Event::Identity(_)
             // Qualification loss does not acknowledge or repair the source.
             | Event::Credibility(super::credibility::CredibilityEvent::WithdrawHeldOut(_))
+            | Event::Decoder(super::decoder::DecoderEvent::CancelGeneration { .. })
             | Event::Decoder(super::decoder::DecoderEvent::Checkpoint(
                 super::decoder::checkpoint::CheckpointRequest::Reset { .. }, _))
             | Event::CredentialRotate(_) | Event::CredentialRevoke(_)

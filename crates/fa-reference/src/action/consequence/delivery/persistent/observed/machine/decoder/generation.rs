@@ -214,6 +214,7 @@ fn write_result(w: &mut Writer, result: &Result<GenerationReport, Error>) -> Res
         GenerationFinish::TokenLimit => w.u8(0)?, GenerationFinish::StopToken => w.u8(1)?,
         GenerationFinish::BudgetExhausted => w.u8(2)?, GenerationFinish::Held => w.u8(3)?,
         GenerationFinish::Failed(error) => { w.u8(4)?; w.u8(error_tag(error))?; }
+        GenerationFinish::Cancelled => w.u8(5)?,
     }
     let work = report.work();
     w.u64(work.admitted_scalar_products)?; w.u64(work.admitted_sampling_entries)?; w.count(work.attempted_samples)?;

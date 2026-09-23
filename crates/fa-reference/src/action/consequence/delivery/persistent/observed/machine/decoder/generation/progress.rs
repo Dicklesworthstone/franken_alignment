@@ -1,5 +1,7 @@
 //! One acknowledged cursor transition over the original numerical operation.
 //! The cursor is rebuilt by replay, never loaded from its comparison witness.
+mod cancellation;
+
 use super::{Machine, Transition, DecoderEvent, FileGenerationReceipt,
     RecordingOwner, Writer, MAX_WITNESS_BYTES, write_command, write_result, review_bytes};
 use super::super::super::super::decoder::progress::{FileGenerationProgress, check_progress_key};

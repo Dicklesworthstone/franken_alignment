@@ -8,6 +8,7 @@ pub mod generation;
 pub mod progress;
 pub mod text;
 mod stopping;
+mod cancellation;
 pub use config::FileDecoderConfig;
 pub(super) use codec::{read, write};
 #[cfg(test)]
@@ -43,6 +44,7 @@ pub(super) enum DecoderEvent {
     Generate(Rc<generation::FileGenerationCommand>, Rc<[u8]>),
     BeginGeneration(Rc<generation::FileGenerationCommand>),
     AdvanceGeneration { id: u64, revision: u64, witness: Rc<[u8]> },
+    CancelGeneration { id: u64, revision: u64 },
 }
 
 /// The state at the last acknowledged journal cut. A recovered prefix is paused
