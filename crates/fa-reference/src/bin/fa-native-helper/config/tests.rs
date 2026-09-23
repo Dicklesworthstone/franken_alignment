@@ -62,3 +62,7 @@ fn real_file_limit_requires_eof_and_rejects_directories_and_symlinks() {
     let link = fixture.root.join("alias"); std::os::unix::fs::symlink(&path, &link).unwrap();
     assert!(matches!(read_regular(&link, 100), Err(LaunchError::NotRegular)));
 }
+
+#[path = "../../../../tests/support/native_worker_v2_assets.rs"]
+mod v2_assets;
+mod v2;

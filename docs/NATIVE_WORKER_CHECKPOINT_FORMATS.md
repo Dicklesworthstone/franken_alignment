@@ -66,3 +66,75 @@ Reproduction command:
 ```
 RCH_REQUIRE_REMOTE=1 rch exec -- cargo test --locked -p fa-reference tokenizer_startup_
 ```
+
+## Executable worker manifests
+
+`fa-native-helper` now accepts `fa.native-worker/2`. It is still a private
+one-request child, using the inherited full-duplex Unix socket on stdin, not a
+listener or actor-facing command. A /1 manifest retains exactly its old field
+set, string weight path and native-archive selection. Merely changing the schema
+number is not sufficient to opt into /2.
+
+A /2 manifest has the same complete `input`, `decoder`, `policy`, `stream`,
+`salt_file`, `lifetime`, `startup` and `files` fields, plus the mandatory root
+`tokenizer_format`: either `native-archive` or `huggingface-raw-bytelevel`.
+The four auxiliary file paths stay strings. `files.weights` is now exactly one
+of these tagged objects (fragments, not complete worker manifests):
+
+```json
+{"kind":"single","path":"/operator/checkpoint/weights.safetensors"}
+```
+
+```json
+{"kind":"sharded","index":"/operator/checkpoint/weights.index.json","shards":{"part-0.safetensors":"/operator/assets/first.bin","part-1.safetensors":"/operator/assets/second.bin"}}
+```
+
+Every path must be explicit and absolute. Labels and physical filenames may
+differ. The source map is bounded by the original shard-count and label-size
+ceilings; the original index parser checks the complete inventory and label
+syntax before any weight path opens. Missing, unknown, duplicate, conflicting,
+wrongly typed or unsupported fields refuse. A declared sharded checkpoint never
+falls back to a nearby single file, and no format is inferred from a filename.
+
+The sharded manifest selects the existing index-aware auxiliary-budget
+constructor. `startup.weight_bytes` and `startup.weight_calls` remain ONE shared
+allowance for the complete weight set and failures, not a quota per shard.
+`startup.asset_bytes` and `startup.asset_calls` include the sharded index reads.
+Existing hard file/aggregate limits still apply. No budget is enlarged or reset
+in response to a loading error.
+
+The executable attaches the original socket before reading the manifest. Its
+one original process lifetime starts after bounded manifest parsing and before
+salt, asset and weight loading. Both source branches return the same fresh
+native evaluator to the original worker loop, with that same lifetime and step
+allowance. Startup does not compute a verdict, issue a permit, bypass a probe,
+renew the clock or create a reconnect/retry path. Manifest I/O is bounded by its
+existing read/size limits rather than this later lifetime. Filesystem calls and
+single numerical steps are still not preempted; the parent's cutoff and process
+ownership remain necessary. These APIs are not an OS sandbox or authentication.
+
+## Executable regression status
+
+Six new manifest/loader tests cover all four source/format combinations, /1
+compatibility, closed schemas, path/map bounds, preflight before missing weight
+or index paths, retained read accounting, and the index-aware asset ceiling.
+Five new integration tests launch the actual `fa-native-helper` binary through
+an inherited socket. They exercise all four source/format combinations with
+input-sensitive Allow/Deny judgments, /1 compatibility, named prompt controls,
+commit/reveal framing, held or incomplete answers, declared-source failure,
+format refusal, shared budget failure and the unchanged step allowance. The
+parent has bounded waits and owns kill/reap cleanup on test failures. Child
+stderr is retained and printed, and stdout must contain no protocol bytes.
+These tests do not newly qualify descendant containment or hard real-time bounds.
+
+All nineteen new regressions (eight cold-start, six manifest, five executable),
+compilation, rustfmt, Clippy and the full gate remain UNEXECUTED. The second
+attempt failed before compilation, also `rch: command not found`, exit 127:
+
+```
+RCH_REQUIRE_REMOTE=1 rch exec -- cargo test --locked -p fa-reference worker_v2_
+```
+
+The new executable tests are authored coverage, not a report that a child process
+ran in the implementation environment. No new dependency, authority journal,
+actor verb, deployment permission or production qualification is introduced.

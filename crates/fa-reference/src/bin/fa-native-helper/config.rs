@@ -1,13 +1,15 @@
 //! Strict, bounded operator configuration. This file is never model input.
 //! No path, salt, profile or runtime option is accepted from a helper request.
-use fa_reference::action::consequence::oversight::helper_client::native::{NativeEvaluator, NativeHelperPolicy};
+mod checkpoint;
+use checkpoint::CheckpointFiles;
+use fa_reference::action::consequence::oversight::helper_client::native::NativeHelperPolicy;
 use fa_reference::action::consequence::oversight::helper_client::native::process::{
     NativeProcessBudget, NativeProcessError, NativeProcessReport, inherited_worker_socket, run_native_worker,
 };
 use fa_reference::action::consequence::oversight::helper_client::native::peer::MIN_NATIVE_SALT_BYTES;
-use fa_reference::action::consequence::oversight::helper_client::native::bootstrap::files::{
-    NativeAssetReadBudget, NativeFileBootstrap, NativeFileBootstrapError, NativeHelperFiles, NativeHelperFileLimits,
-};
+use fa_reference::action::consequence::oversight::helper_client::native::bootstrap::NativeTokenizerFormat;
+use fa_reference::action::consequence::oversight::helper_client::native::bootstrap::files::NativeFileBootstrapError;
+use fa_reference::action::consequence::oversight::helper_client::native::bootstrap::files::sharded::NativeShardFileBootstrapError;
 use fa_reference::action::consequence::oversight::helper_workers::MAX_WORKER_SALT_BYTES;
 use fa_reference::action::consequence::activation::tensor::kv::decoder::{DecoderIdentity, DecoderProfile, DecoderShape};
 use fa_reference::action::consequence::activation::tensor::kv::decoder::safetensors::reader::WeightReadBudget;
@@ -36,6 +38,7 @@ pub enum LaunchError {
     Deadline,
     Socket(NativeProcessError),
     Startup(NativeFileBootstrapError),
+    ShardedStartup(NativeShardFileBootstrapError),
 }
 
 impl std::fmt::Display for LaunchError {
@@ -51,13 +54,16 @@ impl std::fmt::Display for LaunchError {
             Self::Deadline => f.write_str("worker lifetime elapsed during startup"),
             Self::Socket(error) => write!(f, "worker socket: {error}"),
             Self::Startup(error) => write!(f, "native startup: {error}"),
+            Self::ShardedStartup(error) => write!(f, "sharded native startup: {error}"),
         }
     }
 }
 
 struct Manifest {
     policy: NativeHelperPolicy,
-    files: [PathBuf; 5],
+    files: [PathBuf; 4],
+    checkpoint: CheckpointFiles,
+    tokenizer_format: NativeTokenizerFormat,
     stream: u64,
     salt_file: PathBuf,
     milliseconds: u64,
@@ -72,9 +78,21 @@ impl Manifest {
         let json = strict_json::parse(bytes, Limits { max_bytes: MAX_MANIFEST_BYTES,
             max_depth: 5, max_items: 4096, max_string_bytes: MAX_PROFILE_BYTES * 2 })
             .map_err(|_| LaunchError::Manifest)?;
-        let r = object(&json, &["schema", "input", "decoder", "policy", "files", "stream",
-            "salt_file", "lifetime", "startup"], "$")?;
-        if r["schema"].as_str() != Some("fa.native-worker/1") { return Err(LaunchError::Field("schema")); }
+        let version_two = match json.get("schema").and_then(Json::as_str) {
+            Some("fa.native-worker/1") => false,
+            Some("fa.native-worker/2") => true,
+            _ => return Err(LaunchError::Field("schema")),
+        };
+        let fields: &[&str] = if version_two {
+            &["schema", "input", "decoder", "policy", "files", "stream",
+                "salt_file", "lifetime", "startup", "tokenizer_format"]
+        } else {
+            &["schema", "input", "decoder", "policy", "files", "stream",
+                "salt_file", "lifetime", "startup"]
+        };
+        let r = object(&json, fields, "$")?;
+        let tokenizer_format = if version_two { checkpoint::tokenizer_format(&r["tokenizer_format"])? }
+            else { NativeTokenizerFormat::NativeArchive };
         let input = object(&r["input"], &["id", "bytes_hex", "model_epoch", "tokenizer_epoch", "policy_epoch"], "input")?;
         let profile = InputProfileBinding { profile_id: u64_field(input, "id")?,
             profile_bytes: hex(&input["bytes_hex"])?, model_epoch: u64_field(input, "model_epoch")?,
@@ -103,21 +121,17 @@ impl Manifest {
         let files = object(&r["files"], &["configuration", "tokenizer", "monitoring", "sampling", "weights"], "files")?;
         let l = object(&r["lifetime"], &["milliseconds", "steps"], "lifetime")?;
         let startup = object(&r["startup"], &["asset_bytes", "asset_calls", "weight_bytes", "weight_calls"], "startup")?;
-        let result = Self { policy, files: [path(&files["configuration"], "configuration")?,
+        let checkpoint = if version_two { CheckpointFiles::parse(&files["weights"])? }
+            else { CheckpointFiles::Single(path(&files["weights"], "weights")?) };
+        let result = Self { policy, checkpoint, tokenizer_format, files: [path(&files["configuration"], "configuration")?,
             path(&files["tokenizer"], "tokenizer")?, path(&files["monitoring"], "monitoring")?,
-            path(&files["sampling"], "sampling")?, path(&files["weights"], "weights")?],
+            path(&files["sampling"], "sampling")?],
             stream: u64_field(r, "stream")?, salt_file: path(&r["salt_file"], "salt_file")?,
             milliseconds: u64_field(l, "milliseconds")?, steps: count(l, "steps")?,
             asset_bytes: count(startup, "asset_bytes")?, asset_calls: count(startup, "asset_calls")?,
             weight_bytes: count(startup, "weight_bytes")?, weight_calls: count(startup, "weight_calls")? };
         if result.stream == 0 { return Err(LaunchError::Field("stream")); }
         Ok(result)
-    }
-    fn bootstrap(&self) -> NativeFileBootstrap<'_> {
-        NativeFileBootstrap { policy: &self.policy, stream: self.stream,
-            files: NativeHelperFiles { configuration: &self.files[0], tokenizer: &self.files[1],
-                monitoring: &self.files[2], sampling: &self.files[3], weights: &self.files[4] },
-            limits: NativeHelperFileLimits::default() }
     }
 }
 
@@ -130,13 +144,14 @@ pub fn run(args: Vec<OsString>) -> Result<NativeProcessReport, LaunchError> {
     let manifest = Manifest::parse(&read_regular(manifest_path, MAX_MANIFEST_BYTES)?)?;
     // This one budget covers salt/assets/weights and protocol; never reset it.
     let lifetime = NativeProcessBudget::new(manifest.milliseconds, manifest.steps).map_err(LaunchError::Contract)?;
-    let mut assets = NativeAssetReadBudget::new(manifest.asset_bytes, manifest.asset_calls).map_err(LaunchError::Contract)?;
+    let mut assets = manifest.asset_budget()?;
     let mut weights = WeightReadBudget::new(manifest.weight_bytes, manifest.weight_calls).map_err(|_| LaunchError::Limit)?;
     let salt = read_regular(&manifest.salt_file, MAX_WORKER_SALT_BYTES)?;
     if salt.len() < MIN_NATIVE_SALT_BYTES { return Err(LaunchError::Limit); }
     if lifetime.expired() { return Err(LaunchError::Deadline); }
-    let (evaluator, _) = NativeEvaluator::from_llama_files(manifest.bootstrap(), &mut assets, &mut weights)
-        .map_err(LaunchError::Startup)?;
+    // The original lifetime was started BEFORE either checkpoint path. Neither
+    // sharding nor JSON parsing constructs a new budget or a second worker loop.
+    let evaluator = manifest.load(&mut assets, &mut weights)?;
     run_native_worker(socket, evaluator, salt, lifetime).map_err(LaunchError::Socket)
 }
 
