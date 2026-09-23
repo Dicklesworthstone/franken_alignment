@@ -302,3 +302,5 @@ fn generated_message_incremental_completion_and_current_cumulative_context_are_p
     assert_eq!(host.stream_snapshot().unwrap().confirmed.messages().collect::<Vec<_>>(), ["A"]);
     assert_eq!(host.inspect().executions, 1); // second proposal did not disclose its bytes
 }
+
+mod recovery;

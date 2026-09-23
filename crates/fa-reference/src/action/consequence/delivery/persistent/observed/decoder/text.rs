@@ -225,6 +225,16 @@ fn replay_text_history(profile: &FileOversightProfile, expected: &FileDecoderCon
     -> Result<(Vec<Event>, Machine), JournalError>
 {
     let events = journal::decode(profile, identity, bytes)?;
+    let machine = replay_text_events(profile, expected, tokenizer_bytes, &events)?;
+    Ok((events, machine))
+}
+
+// Shared exact text preflight/replay after other consumers check their own
+// contract against the SAME decoded image. No storage or owner is supplied.
+pub(in super::super) fn replay_text_events(profile: &FileOversightProfile,
+    expected: &FileDecoderConfig, tokenizer_bytes: &[u8], events: &[Event])
+    -> Result<Machine, JournalError>
+{
     let mut models = events.iter().filter_map(|event| match event {
         Event::Decoder(DecoderEvent::Enable(config)) => Some(config.as_ref()), _ => None,
     });
@@ -234,9 +244,9 @@ fn replay_text_history(profile: &FileOversightProfile, expected: &FileDecoderCon
     if models.next() != Some(expected) || models.next().is_some()
         || tokenizers.next() != Some(tokenizer_bytes) || tokenizers.next().is_some()
     { return Err(Error::Binding.into()); }
-    let machine = Machine::replay(profile, &events)?;
+    let machine = Machine::replay(profile, events)?;
     if machine.decoder_contract() != Some(expected)
         || machine.decoder_tokenizer()?.to_bytes()?.as_slice() != tokenizer_bytes
     { return Err(Error::Binding.into()); }
-    Ok((events, machine))
+    Ok(machine)
 }

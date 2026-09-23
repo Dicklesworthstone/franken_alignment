@@ -1,6 +1,9 @@
 //! Bind a completed ORIGINAL text generation to one durable message proposal.
 //! This is provenance-preserving admission, never automatic publication.
 
+mod recovery;
+pub use recovery::FileTextMessageSnapshot;
+
 use super::{BaseEvent, Event, FileOversight, JournalError, Machine, Reader, Writer};
 use crate::action::{ElapsedTick, ResolvedTarget};
 use crate::action::consequence::activation::monitor::decoder::MonitoringStatus;
@@ -99,6 +102,13 @@ impl Machine {
         request: &FileTextMessageRequest, snapshot: &Snapshot) -> Result<Event, Error>
     {
         request.check()?;
+        // A preexisting ordinary request cannot be recast as a generated one,
+        // even if today's stream builder would now reject its old predecessor.
+        match self.requests.status(request.request) {
+            Ok(_) => return Err(Error::Duplicate),
+            Err(Error::Missing) => {}
+            Err(error) => return Err(error),
+        }
         if !self.clock_ready || self.decoder_paused() { return Err(Error::Incomplete); }
         let command = self.decoder_text_command(request.generation).ok_or(Error::Missing)?;
         let progress = self.decoder_generation_progress(request.generation)?;

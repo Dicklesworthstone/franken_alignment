@@ -83,3 +83,55 @@ hash and whitespace checks are patch-integrity checks, not runtime qualification
 ```
 RCH_REQUIRE_REMOTE=1 rch exec -- cargo test --locked -p fa-reference generated_message_
 ```
+
+## Source-linked recovery inspection
+
+`decoder_text_message_snapshot` reads the acknowledged owner. Its read-only
+counterpart `read_decoder_text_message` reads one entire canonical image beside
+a locked/faulted owner or after restart. Both return `FileTextMessageSnapshot`:
+the source link, the original request disposition, the original numerical/text
+report and the enclosing stream's published and receipt-confirmed prefixes.
+An unacknowledged visible write is not mislabeled acknowledged by the reader.
+
+The reader requires independently supplied stream, full model/monitor/sampler
+configuration and exact tokenizer. It checks the stream contract and uses the
+existing text preflight/replay body before extracting anything. The old text
+reader/opener share that body unchanged, apart from taking an already decoded
+event slice. The new reader decodes once and numerically replays once. It does
+not reread another file for status, import saved output, create roles, acquire
+a writer lock, clean staging, append a fence or submit an action. The source
+request namespace is checked before message derivation; an existing ordinary
+request cannot be relabeled even if its old stream predecessor is now obsolete.
+
+Later inference, cancellation or fences do not erase the earlier source link;
+read-only historical extraction does not require that old source to remain
+live. Missing means no source-linked request in this particular valid image,
+not nonexecution or absence in all history. Writable recovery still uses the
+existing independently constrained anchored/guarded entry points. The reader
+is not an anti-rollback authority or an authentication boundary, and a digest or
+source identity does not imply a model's generated statement is correct.
+
+Nine additional regression functions exercise read-only live/recovered views,
+all five original admission barriers, all five publication barriers, exact
+stream/model/tokenizer pins, invalid suffixes and source-record forgeries,
+independently specified tag-31 bytes and parser limits, later-inference
+invalidation at dispatch and publication, exact/one-under event
+capacity, modeled source interruption, and missing/lost-forecast parity against the
+original ordinary admission route. Anchored recovery preserves original work,
+cancels only undispatched requests and never resends a published-but-unconfirmed
+message. The forecast test checks the original refusal and preservation of coverage state;
+it is not a calibration or future-token-exclusion experiment.
+
+All seventeen authored regression functions, the compile-fail example, Rust
+compilation, rustfmt, Clippy and the full gate remain UNEXECUTED. Every targeted
+implementation attempt failed before compilation because `rch` was not found
+(exit 127). Synthetic weights and the original Store fault seam are not measured
+trained-model, power-loss, recipient-delivery or isolation evidence. No broader
+bead is closed and no production qualification is asserted.
+
+The base was refreshed to `d9ce3e37b793051f825125df848465cc4697c11b` after
+main gained two nonoverlapping batching commits. The source-bound submission
+also has an authored regression for that original batched text API: a batch
+ending after content but before the monitored stop is not a complete message;
+a later terminal batch keeps its original per-token generation revision and
+spent work when the message proposal is recorded. No batching source is replaced.
