@@ -49,7 +49,7 @@ pub struct FileMediatedRoles {
     pub evaluator: Option<FileIndependentEvaluator>,
 }
 impl FileMediatedRoles {
-    fn provision(host: &FileOversight, oversight: FileOversightRoles, predicted: bool, evaluated: bool) -> Self {
+    pub(super) fn provision(host: &FileOversight, oversight: FileOversightRoles, predicted: bool, evaluated: bool) -> Self {
         Self { oversight, topology_observer: FileMediationObserver { issuer: Rc::clone(&host.issuer) },
             consistency_observer: predicted.then(|| FileConsistencyObserver { issuer: Rc::clone(&host.issuer) }),
             evaluator: evaluated.then(|| FileIndependentEvaluator { issuer: Rc::clone(&host.issuer) }) }
@@ -115,7 +115,16 @@ fn checked_image(profile: &FileOversightProfile, identity: &Path, bytes: &[u8],
     expected: &FileMediatedRequirements) -> Result<(Vec<Event>, Machine), JournalError>
 {
     let events = journal::decode(profile, identity, bytes)?;
-    expected.oversight.guards.check_mediated_replay_config(&events,
+    let machine = checked_events(profile, &events, expected)?;
+    Ok((events, machine))
+}
+
+// Shared native validator after a caller-specific, internal history preflight.
+// No public event import or role-provisioning bypass is exposed.
+pub(super) fn checked_events(profile: &FileOversightProfile, events: &[Event],
+    expected: &FileMediatedRequirements) -> Result<Machine, JournalError>
+{
+    expected.oversight.guards.check_mediated_replay_config(events,
         expected.prediction.as_ref(), Some(&expected.topology.initial))?;
     let mut protocols = events.iter().filter_map(|event| match event {
         Event::Credibility(CredibilityEvent::Enable(protocol)) => Some(protocol), _ => None,
@@ -128,14 +137,14 @@ fn checked_image(profile: &FileOversightProfile, identity: &Path, bytes: &[u8],
         Event::Mediation(MediationEvent::Enable(graph)) => Some(graph), _ => None,
     });
     if current != Some(&expected.topology.current) { return Err(Error::Binding.into()); }
-    let machine = Machine::replay(profile, &events)?;
-    expected.oversight.check_mediated(profile, &machine, &events, expected.evaluation.as_ref(),
+    let machine = Machine::replay(profile, events)?;
+    expected.oversight.check_mediated(profile, &machine, events, expected.evaluation.as_ref(),
         expected.prediction.as_ref(), Some(&expected.topology.initial))?;
     let actual = machine.mediation_snapshot(events.len() as u64)?;
     if actual.graph != expected.topology.current || actual.available != expected.topology.available {
         return Err(Error::Binding.into());
     }
-    Ok((events, machine))
+    Ok(machine)
 }
 
 #[cfg(test)]

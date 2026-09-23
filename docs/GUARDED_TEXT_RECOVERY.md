@@ -64,3 +64,62 @@ are not execution evidence and historical receipts do not qualify this source.
 ```
 RCH_REQUIRE_REMOTE=1 rch exec -- cargo test --locked -p fa-reference text_anchor_
 ```
+
+## Evaluated, predictive and mediated recovery
+
+The three additional entry points keep the same mandatory tokenizer/history
+pin while returning the ORIGINAL role bundle for the selected guard profile:
+
+- `open_evaluated_guarded_text_anchored` takes the exact evaluation protocol and
+  returns `FileEvaluatedOversightRoles`, including its independent evaluator.
+- `open_predictive_guarded_text_anchored` takes `FilePredictiveRequirements` and
+  returns its consistency observer and exactly the optional evaluator declared.
+- `open_mediated_guarded_text_anchored` takes `FileMediatedRequirements` and
+  returns the topology observer, all base roles and the exact optional prediction
+  and evaluation roles. It checks both initial/current graphs and pre-fence
+  availability, not merely the original topology generation.
+
+These paths do not approximate the higher profiles with a base guard. The three
+existing validators are shared after an internal event preflight; original
+readers and openers retain the same conditions. The anchored text path decodes
+once and invokes the appropriate original validator for ONE numerical replay,
+then commits ONE original fence. Role provisioning remains confined to the
+private guarded implementation and occurs after acknowledged fencing; there is
+no public event-import callback, owner-role getter or partially returned bundle.
+
+The original recovery effects are intentionally not erased. An unanswered
+forecast remains pending and is marked coverage-lost, retaining its lifetime
+likelihood evidence. Old consistency observers cannot clear or replace that
+record. A topology certificate and graph availability are withdrawn; a fresh
+observer can supply a newer graph and obtain the original cut, but that does
+not resume the paused decoder or authenticate the declared graph. The caller's
+availability requirement describes the actual canonical PRE-fence image. After
+an ambiguous visible fence it must not assert the earlier availability instead.
+
+The evaluated entry point is the existing marginal-evaluation profile, not the
+separately registered joint/held-out evaluation profile. Unexpected additional
+contracts refuse through the original validator; they are not silently dropped.
+Original unanchored APIs remain explicitly unanchored and retain their existing
+scope. No existing requirement struct or journal event encoding was changed.
+
+Eight additional `text_anchor_` regression functions cover completed native text
+with evaluator custody, pending forecast preservation and old/fresh observer
+behavior, all four optional-role combinations under topology control, original
+cut withdrawal and reacquisition, refusal to downgrade to a weaker opener,
+exact graph/evaluation/prediction matching before invalid-suffix execution, all
+five replacement barriers in every new variant, and rollback with zero numeric
+floors. Evaluation reports are retained as native reports, not fabricated labels.
+The pending-forecast test uses the original declared external-capture profile,
+not a claim of measured hosted residuals or calibrated predictor correctness.
+
+Source review also corrected a causal fixture error in the first batch: native
+decoder installation itself enables the publication guard, so that fixture could
+not represent a valid unguarded decoder. The test now checks absent decoder and
+absent tokenizer installations, paired with successful native installation; no
+production admission assertion was weakened or bypassed.
+
+All EIGHTEEN authored tests, Rust compilation, rustfmt, Clippy and the complete
+gate remain UNEXECUTED. A second attempt of the same `text_anchor_` command also
+failed before compilation because `rch` is unavailable (exit 127). Whitespace,
+upstream/postimage Git hashes and exact extraction of the existing validator
+bodies were checked separately. Those checks are not runtime qualification.

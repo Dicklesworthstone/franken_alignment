@@ -201,14 +201,20 @@ fn text_anchor_cannot_be_transplanted_to_an_equivalent_foreign_owner() {
 }
 
 #[test]
-fn text_anchor_requires_the_actual_publication_guard_and_tokenizer_installation() {
+fn text_anchor_requires_actual_decoder_and_tokenizer_installation() {
     let c = config(3.0, 65); let root = Directory::new();
-    // Original fixture deliberately has no publication guard or campaign gate.
-    let host = owner(&root, &c); let anchor = host.history_anchor().unwrap();
+    let (host, _) = FileOversight::create(root.store(), host_profile()).unwrap();
+    let anchor = host.history_anchor().unwrap();
     let mut g = guards(&c); g.campaigns = None;
-    let expected = requirements(&host, g); let original = bytes(&host); drop(host);
-    assert!(matches!(reopen(&root, &expected, &anchor), Err(JournalError::Contract(Error::Incomplete))));
+    let expected = requirements(&host, g.clone()); let original = bytes(&host); drop(host);
+    assert!(matches!(reopen(&root, &expected, &anchor), Err(JournalError::Contract(Error::Binding))));
     assert_eq!(std::fs::read(root.store().join(storage::CANONICAL)).unwrap(), original);
+    // The ORIGINAL decoder installation itself enables publication guarding;
+    // a fixture that enables it cannot represent a valid unguarded decoder.
+    let positive = Directory::new(); let host = owner(&positive, &c);
+    assert!(host.publication_guard_required());
+    let expected = requirements(&host, g); let anchor = host.history_anchor().unwrap(); drop(host);
+    assert!(reopen(&positive, &expected, &anchor).is_ok());
     let root = Directory::new(); let g = guards(&c);
     let (host, _) = FileOversight::create_guarded(root.store(), host_profile(), &g, None).unwrap();
     let expected = requirements(&host, g); let anchor = host.history_anchor().unwrap(); drop(host);
@@ -284,3 +290,5 @@ fn text_anchor_preserves_split_utf8_and_cannot_replenish_an_exhausted_request() 
     assert!(matches!(host.generate_decoder_text(host.revision(), replacement), Err(JournalError::Contract(Error::Binding))));
     assert_eq!(bytes(&host), original);
 }
+
+mod composed;

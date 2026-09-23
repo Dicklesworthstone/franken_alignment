@@ -18,7 +18,7 @@ pub struct FileEvaluatedOversightRoles {
     pub evaluator: FileIndependentEvaluator,
 }
 impl FileEvaluatedOversightRoles {
-    fn provision(host: &FileOversight, oversight: FileOversightRoles) -> Self {
+    pub(super) fn provision(host: &FileOversight, oversight: FileOversightRoles) -> Self {
         Self { oversight, evaluator: FileIndependentEvaluator { issuer: Rc::clone(&host.issuer) } }
     }
 }
@@ -107,12 +107,21 @@ fn checked_image(profile: &FileOversightProfile, identity: &Path, bytes: &[u8],
     expected: &FileRecoveryRequirements, protocol: &EvaluationProtocol) -> Result<(Vec<Event>, Machine), JournalError>
 {
     let events = journal::decode(profile, identity, bytes)?;
-    // Refuse unexpected numerical/evaluation contracts before token execution.
-    expected.guards.check_decoder_config(&events)?;
-    check_protocol(&events, protocol)?;
-    let machine = Machine::replay(profile, &events)?;
-    expected.check_evaluated(profile, &machine, &events, Some(protocol))?;
+    let machine = checked_events(profile, &events, expected, protocol)?;
     Ok((events, machine))
+}
+
+// Shared native validator after a caller-specific, internal history preflight.
+// No public event import or role-provisioning bypass is exposed.
+pub(super) fn checked_events(profile: &FileOversightProfile, events: &[Event],
+    expected: &FileRecoveryRequirements, protocol: &EvaluationProtocol) -> Result<Machine, JournalError>
+{
+    // Refuse unexpected numerical/evaluation contracts before token execution.
+    expected.guards.check_decoder_config(events)?;
+    check_protocol(events, protocol)?;
+    let machine = Machine::replay(profile, events)?;
+    expected.check_evaluated(profile, &machine, events, Some(protocol))?;
+    Ok(machine)
 }
 
 #[cfg(test)]

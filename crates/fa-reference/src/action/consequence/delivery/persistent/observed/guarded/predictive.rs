@@ -29,7 +29,7 @@ pub struct FilePredictiveRoles {
     pub evaluator: Option<FileIndependentEvaluator>,
 }
 impl FilePredictiveRoles {
-    fn provision(host: &FileOversight, oversight: FileOversightRoles, evaluated: bool) -> Self {
+    pub(super) fn provision(host: &FileOversight, oversight: FileOversightRoles, evaluated: bool) -> Self {
         Self { oversight, consistency_observer: FileConsistencyObserver { issuer: Rc::clone(&host.issuer) },
             evaluator: evaluated.then(|| FileIndependentEvaluator { issuer: Rc::clone(&host.issuer) }) }
     }
@@ -115,15 +115,24 @@ fn checked_image(profile: &FileOversightProfile, identity: &Path, bytes: &[u8],
     expected: &FilePredictiveRequirements) -> Result<(Vec<Event>, Machine), JournalError>
 {
     let events = journal::decode(profile, identity, bytes)?;
-    expected.oversight.guards.check_replay_config(&events, Some(&expected.prediction))?;
+    let machine = checked_events(profile, &events, expected)?;
+    Ok((events, machine))
+}
+
+// Shared native validator after a caller-specific, internal history preflight.
+// No public event import or role-provisioning bypass is exposed.
+pub(super) fn checked_events(profile: &FileOversightProfile, events: &[Event],
+    expected: &FilePredictiveRequirements) -> Result<Machine, JournalError>
+{
+    expected.oversight.guards.check_replay_config(events, Some(&expected.prediction))?;
     let mut protocols = events.iter().filter_map(|event| match event {
         Event::Credibility(CredibilityEvent::Enable(protocol)) => Some(protocol), _ => None,
     });
     if protocols.next() != expected.evaluation.as_ref() || protocols.next().is_some() { return Err(Error::Binding.into()); }
-    let machine = Machine::replay(profile, &events)?;
-    expected.oversight.check_predictive(profile, &machine, &events,
+    let machine = Machine::replay(profile, events)?;
+    expected.oversight.check_predictive(profile, &machine, events,
         expected.evaluation.as_ref(), Some(&expected.prediction))?;
-    Ok((events, machine))
+    Ok(machine)
 }
 
 #[cfg(test)]
