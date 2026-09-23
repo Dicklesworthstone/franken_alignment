@@ -131,12 +131,26 @@ impl DecoderModel {
         profile: DecoderProfile, index: &[u8], sources: &mut BTreeMap<String, R>,
         budget: &mut WeightReadBudget, output_head: OutputHead,
     ) -> Result<(Self, ShardedWeightLoadReceipt), WeightReadError> {
+        Self::read_safetensors_shards_bounded(profile, index, sources, budget,
+            MAX_WEIGHT_SET_BYTES, output_head)
+    }
+
+    // The SAME reader, head-sharing contract and scalar decoder, with a narrower
+    // caller-selected total file ceiling enforced against actual directories.
+    // No Take-created EOF and no replenishment of the borrowed read/call budget.
+    pub(crate) fn read_safetensors_shards_bounded<R: Read>(
+        profile: DecoderProfile, index: &[u8], sources: &mut BTreeMap<String, R>,
+        budget: &mut WeightReadBudget, file_limit: usize, output_head: OutputHead,
+    ) -> Result<(Self, ShardedWeightLoadReceipt), WeightReadError> {
+        if file_limit == 0 || file_limit > MAX_WEIGHT_SET_BYTES {
+            return Err(WeightError::Limit.into());
+        }
         let index_plan = ShardPlan::parse(&profile, index, output_head)?;
         if !index_plan.partitions.keys().eq(sources.keys()) { return Err(WeightError::Inventory.into()); }
         let mut plans = BTreeMap::new(); let mut file_bytes = 0_usize; let mut data_bytes = 0_usize;
         for (name, expected) in &index_plan.partitions {
             let source = sources.get_mut(name).ok_or(WeightError::Inventory)?;
-            let plan = read_directory(expected, source, budget, MAX_WEIGHT_SET_BYTES - file_bytes)?;
+            let plan = read_directory(expected, source, budget, file_limit - file_bytes)?;
             file_bytes = file_bytes.checked_add(plan.file_bytes).ok_or(WeightError::Limit)?;
             data_bytes = data_bytes.checked_add(plan.data_bytes).ok_or(WeightError::Limit)?;
             plans.insert(name.clone(), plan);

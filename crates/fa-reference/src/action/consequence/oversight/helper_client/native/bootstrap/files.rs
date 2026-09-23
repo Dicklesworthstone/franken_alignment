@@ -2,6 +2,8 @@
 //! taken from model metadata, an index, a helper request or a generated response.
 //! Operator-owned immutable files/private directories remain a host assumption.
 
+pub mod sharded;
+
 use super::{NativeBootstrapError, NativeEvaluator, NativeHelperBootstrap, NativeHelperPolicy,
     PretrainedReceipt, WeightReadBudget, MAX_MONITOR_CONFIG_BYTES, MAX_SAMPLING_CONFIG_BYTES};
 use crate::action::consequence::activation::tensor::kv::decoder::safetensors::{
@@ -23,7 +25,7 @@ pub const MAX_ASSET_READ_CALLS: usize = 65_536;
 const READ_CHUNK: usize = 4096;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum NativeAsset { Configuration, Tokenizer, Monitoring, Sampling, Weights }
+pub enum NativeAsset { Configuration, Tokenizer, Monitoring, Sampling, Weights, WeightIndex }
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum NativeFileStage { Metadata, Open, Read }
 #[derive(Clone, Debug, PartialEq, Eq)]
