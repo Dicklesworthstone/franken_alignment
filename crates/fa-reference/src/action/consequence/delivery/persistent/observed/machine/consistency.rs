@@ -7,6 +7,10 @@ use super::super::super::requests::MAX_FILE_REQUESTS;
 
 impl Machine {
     pub(in super::super) fn preflight_consistency(&self, event: &Event) -> Result<(), Error> {
+        if let Event::TextMessage(request, snapshot) = event {
+            let original = self.decoder_text_message_event(request, snapshot)?;
+            return self.preflight_consistency(&original);
+        }
         self.check_consistency_route(event)?;
         if let Event::Consistency(ConsistencyEvent::ForecastRequest(request, ..)
             | ConsistencyEvent::ForecastHostedRequest(request, ..)) = event {

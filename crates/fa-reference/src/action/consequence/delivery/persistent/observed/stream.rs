@@ -1,6 +1,7 @@
 //! Durable complete-message disclosure through the ORIGINAL two-key owner.
 //! Stream bootstrap is a first-event contract, never a live endpoint mode change.
 pub mod actor_wire;
+pub mod generated;
 use super::{BaseEvent, Event, FileHumanReviewer, FileOversight, FileOversightProfile,
     JournalError, Machine, storage};
 use super::super::{FileDeliverySnapshot, codec::shared::{Reader, Writer}};

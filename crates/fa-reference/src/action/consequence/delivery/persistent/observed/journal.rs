@@ -6,6 +6,7 @@ use super::credential::FileCredentialPolicy;
 use super::governance::campaigns::CampaignEvent;
 use super::identity::IdentityEvent;
 use super::decoder::DecoderEvent;
+use super::stream::generated;
 use super::credibility::CredibilityEvent;
 use super::consistency::ConsistencyEvent;
 use super::mediation::MediationEvent;
@@ -62,6 +63,7 @@ pub(super) enum Event {
     Consistency(ConsistencyEvent),
     Mediation(MediationEvent),
     PublicationWitness(WitnessEvent),
+    TextMessage(Box<generated::FileTextMessageRequest>, Snapshot),
 }
 
 fn core_allowed(event: &BaseEvent) -> bool {
@@ -184,6 +186,7 @@ fn write_event(w: &mut Writer, event: &Event) -> Result<(), Error> {
         Event::Consistency(event) => { w.u8(28)?; super::consistency::write(w, event)?; }
         Event::Mediation(event) => { w.u8(29)?; super::mediation::write(w, event)?; }
         Event::PublicationWitness(event) => { w.u8(30)?; witness_gate::write(w, event)?; }
+        Event::TextMessage(request, snapshot) => { w.u8(31)?; generated::write_request(w, request)?; w.snapshot(snapshot)?; }
     }
     Ok(())
 }
@@ -221,6 +224,7 @@ fn read_event(r: &mut Reader<'_>) -> Result<Event, Error> {
         28 => Event::Consistency(super::consistency::read(r)?),
         29 => Event::Mediation(super::mediation::read(r)?),
         30 => Event::PublicationWitness(witness_gate::read(r)?),
+        31 => Event::TextMessage(Box::new(generated::read_request(r)?), r.snapshot()?),
         _ => return Err(Error::InvalidInput),
     })
 }

@@ -211,6 +211,7 @@ impl Machine {
             | Event::Source(_) | Event::ActorState(_) | Event::ActorCheckpoint(..) | Event::ActorReset(..));
         if !without_current_time && !self.clock_ready { return Err(Error::Incomplete); }
         match event {
+            Event::TextMessage(request, snapshot) => return self.apply_decoder_text_message(request, snapshot),
             Event::PublicationWitness(event) => return self.apply_publication_witness(event),
             Event::Mediation(event) => return self.apply_mediation(event),
             Event::Consistency(event) => return self.apply_consistency(event),
