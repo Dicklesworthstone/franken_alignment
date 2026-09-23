@@ -168,9 +168,9 @@ fn generation_cancel_retains_full_requested_history_reservations() {
 #[test]
 fn generation_cancel_uses_one_ordinary_event_and_no_hidden_time_prefix() {
     for spare in [0, 1] {
-        let root = Directory::new(); let mut p = host_profile(); p.delivery.limits.events = 6 + spare;
+        let root = Directory::new(); let mut p = host_profile(); p.delivery.limits.events = 5 + spare;
         let mut host = owner_with_profile(&root, &config(3.0, 65), p);
-        assert_eq!(host.revision(), 4);
+        assert_eq!(host.revision(), 3);
         let command = raw(&host, 7, &[98], 3);
         host.begin_decoder_generation(host.revision(), command).unwrap();
         host.observe_time(host.revision(), ElapsedTick(2)).unwrap();
@@ -182,7 +182,7 @@ fn generation_cancel_uses_one_ordinary_event_and_no_hidden_time_prefix() {
             assert!(host.clock_ready()); assert!(host.storage_failure().is_none());
         } else {
             assert_eq!(result.unwrap().finish(), Some(Ok(GenerationFinish::Cancelled)));
-            assert_eq!(host.revision(), 7); assert!(!host.clock_ready());
+            assert_eq!(host.revision(), 6); assert!(!host.clock_ready());
         }
     }
 }
@@ -205,3 +205,5 @@ fn generation_cancel_replays_as_a_transition_not_a_caller_asserted_report() {
     assert_eq!(restored.decoder_generation_progress(7).unwrap().finish(), Some(Ok(GenerationFinish::Cancelled)));
     assert_eq!(restored.broker.hosted_replay_bytes().unwrap(), host.machine.broker.hosted_replay_bytes().unwrap());
 }
+
+mod text;
