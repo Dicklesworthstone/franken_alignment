@@ -272,3 +272,5 @@ fn generation_batch_late_byte_refusal_cannot_publish_a_smaller_prefix() {
     assert!(matches!(host.decoder_generation_progress(7), Err(JournalError::Unavailable)));
     assert_eq!(host.inspect().executions, 0);
 }
+
+mod text;

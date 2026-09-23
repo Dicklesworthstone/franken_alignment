@@ -1,6 +1,7 @@
 //! Resumable byte output over ORIGINAL durable generation progress.
 //! Offsets describe retained evidence, not transport acknowledgment or permission.
 mod cancellation;
+mod batch;
 
 use super::{ByteBpe, FileDecoderConfig, FileOversight, FileOversightProfile,
     FileTextGenerationCommand, JournalError, Machine, PreparedText, MAX_FILE_TOKENIZER_BYTES,

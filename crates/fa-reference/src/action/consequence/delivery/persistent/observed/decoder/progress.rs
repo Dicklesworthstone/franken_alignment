@@ -2,6 +2,7 @@
 //! Recovery replays the cursor and budgets; callers cannot provide either one.
 mod batch;
 pub use batch::MAX_FILE_GENERATION_BATCH_STEPS;
+pub(super) use batch::check_batch_steps;
 use super::{DecoderEvent, FileDecoderConfig, FileDecoderInspection, FileOversight,
     FileOversightProfile, JournalError, Machine, Transition, Event, journal, storage};
 use super::generation::{FileGenerationCommand, FileGenerationReceipt};

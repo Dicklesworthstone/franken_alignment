@@ -99,3 +99,39 @@ model behavior, physical power-loss durability or production deployment safety.
 ```
 RCH_REQUIRE_REMOTE=1 rch exec -- cargo test --locked -p fa-reference generation_batch_
 ```
+
+## Byte-exact text consumers
+
+`advance_decoder_text_batch(journal_revision, id, generation_revision,
+max_steps)` connects the same batch to the existing durable text-progress API.
+It requires an original text intent and checks the same batch bound before
+allocating output. Complete tokenizer/command binding and output-capacity
+preparation precede numerical work. Only after the numerical batch's sole
+acknowledgment are its released IDs decoded into that prepared buffer. A decoder
+admission refusal remains an error, not empty text; a hold is not a natural stop.
+No conversion of bare-ID requests, new tokenizer, second journal write or token
+sink is introduced.
+
+The existing cumulative bytes and `delta_from` cursors remain the delivery
+interface. Retries return current retained bytes; they do not append a suffix
+on behalf of the caller. Batch boundaries may fall inside UTF-8 characters.
+Neither reopening nor cancellation samples an extra token to repair that prefix.
+A supervisor may alternate batches and single steps, cancel at a batch boundary,
+then explicitly resume the same numerical state under a new request as before.
+All existing anchored guarded-text recovery checks and separately held roles
+remain in force; a batch is not a new recovery profile or fresh authority.
+
+Eight additional `generation_batch_` tests cover exact token/byte/delta parity,
+missed-response retries, split UTF-8 across reopen, cancellation between batches,
+holds/stops/refusals, bare-ID and stale/source refusal, every Store barrier with
+multiple output bytes, all anchored-text recovery cuts, and terminal-reserve
+preservation. The reserve test has sufficient HARD capacity for the requested
+batch but insufficient ordinary capacity: it must publish no shorter prefix,
+then preserve enough capacity for the original fence/stop/drain sequence.
+
+All SIXTEEN authored regression functions, Rust compilation, rustfmt, Clippy and
+the full gate remain UNEXECUTED. The second RCH attempt of the same targeted
+command also failed before compilation (`rch: command not found`, exit 127).
+No runtime throughput, hardware crash durability, trained-model fidelity,
+source authentication or production qualification is claimed. The source
+interruption cases use the existing private transient seam, not live capture.
