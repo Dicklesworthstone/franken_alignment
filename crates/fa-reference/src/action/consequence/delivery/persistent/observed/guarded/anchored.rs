@@ -6,6 +6,7 @@
 //! The anchor is sensitive operator data, not a signature, permit or checkpoint.
 
 mod wire;
+mod text;
 pub use wire::{FileHistoryAnchorError, MAX_HISTORY_ANCHOR_BYTES};
 
 use super::{BaseEvent, Event, FileOversight, FileOversightProfile, FileOversightRoles,
