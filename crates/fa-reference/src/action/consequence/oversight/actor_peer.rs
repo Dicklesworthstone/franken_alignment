@@ -5,7 +5,10 @@
 //! The supervisor and its effect authority never enter this component.
 
 mod listener;
-pub use listener::{AcceptEvent, ListenerSetupFailure, PeerListenerStatus, UnixPeerListener};
+pub use listener::{
+    AcceptEvent, ListenerPollBudget, ListenerPollReport, ListenerSetupFailure,
+    PeerListenerStatus, UnixPeerListener,
+};
 
 use super::actor::{ActorError, ActorPort, ActorProposal};
 use super::actor_transport::{ConnectionStatus, DriveBudget, DriveReport, UnixActorConnection};

@@ -27,6 +27,33 @@ pub struct PeerListenerStatus {
     pub session: PeerSessionStatus,
 }
 
+/// One host-scheduled turn. Accept has a separate, explicit allowance: false
+/// means no accept syscall, even when the drive budget permits socket work.
+/// True permits at most one candidate, in addition to the drive's I/O budget.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct ListenerPollBudget {
+    pub accept: bool,
+    pub drive: DriveBudget,
+}
+
+impl Default for ListenerPollBudget {
+    fn default() -> Self {
+        Self { accept: true, drive: DriveBudget::default() }
+    }
+}
+
+/// Supervisor-only results from one accept/drive turn, not effect authority.
+/// Preserve BOTH outcomes: a refused candidate or accept I/O error must neither
+/// starve an already admitted connection nor hide that connection's result.
+/// Conversely, a drive error must not erase a successful connection admission.
+#[derive(Debug)]
+pub struct ListenerPollReport<D = DriveReport, E = WireError> {
+    /// None means acceptance was not scheduled, not an empty listen backlog.
+    pub accept: Option<Result<AcceptEvent, io::ErrorKind>>,
+    /// None means there was no active connection after the accept attempt.
+    pub drive: Option<Result<D, E>>,
+}
+
 /// Setup failure returns BOTH original owners; neither actor tickets nor the
 /// already bound socket are discarded merely because nonblocking setup failed.
 pub struct ListenerSetupFailure<P: ActorRequestPort = ActorPort> {
@@ -99,6 +126,48 @@ impl<P: ActorRequestPort> UnixPeerListener<P> {
 
     pub fn drive(&mut self, budget: DriveBudget) -> Result<DriveReport, WireError> {
         self.session.drive(budget)
+    }
+
+    /// Accept at most one candidate, then service the original active session.
+    /// Invalid budgets refuse before acceptance. Busy or rejected candidates do
+    /// not replace the active connection, its tickets or its pending response.
+    /// An accept error is retained while existing work is still serviced.
+    ///
+    /// Source-backed owners must use their supervisor's source-aware poll, not
+    /// this ordinary port drive. There is no public admission callback.
+    ///
+    /// ```compile_fail,E0624
+    /// use fa_reference::action::consequence::oversight::actor_peer::{
+    ///     ListenerPollBudget, UnixPeerListener,
+    /// };
+    /// fn bypass(listener: &mut UnixPeerListener) {
+    ///     listener.poll_with(ListenerPollBudget::default(), |_, _| Ok::<_, ()>(()));
+    /// }
+    /// ```
+    pub fn poll(&mut self, budget: ListenerPollBudget) -> Result<ListenerPollReport, WireError> {
+        self.poll_with(budget, |session, drive| session.drive(drive))
+    }
+
+    /// Identity inspection is available only to existing trusted integrations.
+    pub(crate) fn request_port(&self) -> &P { self.session.request_port() }
+
+    /// Keep acceptance, peer authentication and ticket ownership in this owner;
+    /// the original source-aware supervisor supplies only its existing drive.
+    pub(crate) fn poll_with<D, E, F>(&mut self, budget: ListenerPollBudget, drive: F)
+        -> Result<ListenerPollReport<D, E>, WireError>
+    where F: FnOnce(&mut PeerSession<P>, DriveBudget) -> Result<D, E> {
+        budget.drive.validate()?;
+        let accept = if budget.accept {
+            Some(self.accept_once().map_err(|error| error.kind()))
+        } else {
+            None
+        };
+        let drive = if self.session.status().active.is_some() {
+            Some(drive(&mut self.session, budget.drive))
+        } else {
+            None
+        };
+        Ok(ListenerPollReport { accept, drive })
     }
 
     /// A later candidate must authenticate again. No effect is cancelled.
