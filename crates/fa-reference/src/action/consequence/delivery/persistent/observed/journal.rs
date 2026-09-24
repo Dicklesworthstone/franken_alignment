@@ -57,6 +57,7 @@ pub(super) enum Event {
     CredentialRevoke(CredentialRevocationRequest),
     Campaign(CampaignEvent),
     StreamBootstrap(StreamProfile),
+    GeneratedStreamBootstrap(StreamProfile),
     Identity(IdentityEvent),
     Decoder(DecoderEvent),
     Credibility(CredibilityEvent),
@@ -112,7 +113,7 @@ fn encode_iter<'a>(p: &FileOversightProfile, path: &Path, count: usize, events: 
                 | CredibilityEvent::EnableHeldOutJoint(_)) => recovery_capacity::Class::Bootstrap,
             Event::Consistency(ConsistencyEvent::Enable(_)) | Event::Mediation(MediationEvent::Enable(_)) => recovery_capacity::Class::Bootstrap,
             Event::PublicationWitness(event) if event.bootstrap() => recovery_capacity::Class::Bootstrap,
-            Event::PublicationGuard | Event::CredentialGuard(_) | Event::Campaign(CampaignEvent::Enable(..)) | Event::StreamBootstrap(_) => recovery_capacity::Class::Bootstrap,
+            Event::PublicationGuard | Event::CredentialGuard(_) | Event::Campaign(CampaignEvent::Enable(..)) | Event::StreamBootstrap(_) | Event::GeneratedStreamBootstrap(_) => recovery_capacity::Class::Bootstrap,
             _ => recovery_capacity::Class::Work,
         };
         admission.record(class, index + 1, w.encoded_len())?;
@@ -180,6 +181,7 @@ fn write_event(w: &mut Writer, event: &Event) -> Result<(), Error> {
         Event::CredentialRevoke(request) => { w.u8(22)?; w.u64(request.operation)?; w.u64(request.expected_generation)?; }
         Event::Campaign(event) => { w.u8(23)?; super::governance::campaigns::write(w, event)?; }
         Event::StreamBootstrap(profile) => { w.u8(24)?; super::stream::write_profile(w, *profile)?; }
+        Event::GeneratedStreamBootstrap(profile) => { w.u8(32)?; super::stream::write_profile(w, *profile)?; }
         Event::Identity(event) => { w.u8(25)?; super::identity::write(w, event)?; }
         Event::Decoder(event) => { w.u8(26)?; super::decoder::write(w, event)?; }
         Event::Credibility(event) => { w.u8(27)?; super::credibility::write(w, event)?; }
@@ -218,6 +220,7 @@ fn read_event(r: &mut Reader<'_>) -> Result<Event, Error> {
         22 => Event::CredentialRevoke(CredentialRevocationRequest { operation: r.u64()?, expected_generation: r.u64()? }),
         23 => Event::Campaign(super::governance::campaigns::read(r)?),
         24 => Event::StreamBootstrap(super::stream::read_profile(r)?),
+        32 => Event::GeneratedStreamBootstrap(super::stream::read_profile(r)?),
         25 => Event::Identity(super::identity::read(r)?),
         26 => Event::Decoder(super::decoder::read(r)?),
         27 => Event::Credibility(super::credibility::read(r)?),

@@ -282,6 +282,9 @@ impl FileOversight {
     fn transact(&mut self, revision: u64, event: Event) -> Result<Transition, JournalError> {
         if self.fault.is_some() { return Err(JournalError::Unavailable); }
         if revision != self.revision() { return Err(Error::Stale.into()); }
+        // Refuse a source-required stream's ordinary message before predictive
+        // observation can poison the owner or consume its pending forecast.
+        self.machine.check_generated_text_origin(&event)?;
         // Historical labels and explicit prediction coverage loss cannot
         // publish effects or clear an interrupted source acquisition.
         if !matches!(&event, Event::Credibility(credibility::CredibilityEvent::Assess(..))

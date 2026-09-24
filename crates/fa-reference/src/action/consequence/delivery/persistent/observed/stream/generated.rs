@@ -2,6 +2,7 @@
 //! This is provenance-preserving admission, never automatic publication.
 
 mod recovery;
+mod required;
 pub use recovery::FileTextMessageSnapshot;
 
 use super::{BaseEvent, Event, FileOversight, JournalError, Machine, Reader, Writer};
@@ -142,16 +143,7 @@ impl Machine {
         Ok(Event::Core(BaseEvent::SubmitRequest(request.request, spec, snapshot.clone())))
     }
 
-    pub(in super::super) fn apply_decoder_text_message(&mut self,
-        request: &FileTextMessageRequest, snapshot: &Snapshot)
-        -> Result<super::super::Transition, Error>
-    {
-        let original = self.decoder_text_message_event(request, snapshot)?;
-        // Re-enter the original event reducer, including complete input/source,
-        // prediction, stop cleanup and request accounting. Only the source event
-        // is journaled; the derived event is not a second canonical transition.
-        self.apply(&original)
-    }
+
 }
 
 pub(in super::super) fn write_request(w: &mut Writer, request: &FileTextMessageRequest)

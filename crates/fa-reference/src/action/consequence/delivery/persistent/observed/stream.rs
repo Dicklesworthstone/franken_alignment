@@ -152,7 +152,8 @@ impl FileOversight {
 
 fn check_contract(events: &[Event], expected: StreamProfile) -> Result<(), Error> {
     match events.first() {
-        Some(Event::StreamBootstrap(actual)) if *actual == expected => Ok(()),
+        Some(Event::StreamBootstrap(actual) | Event::GeneratedStreamBootstrap(actual))
+            if *actual == expected => Ok(()),
         _ => Err(Error::Binding),
     }
 }

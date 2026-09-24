@@ -70,6 +70,7 @@ pub(super) struct Machine {
     pub(super) requests: RequestBook,
     pub(super) policy_updates: PolicyUpdates,
     pub(super) publication_guard: bool,
+    pub(super) generated_text_only: bool,
     pub(super) credential_policy: Option<super::credential::FileCredentialPolicy>,
     pub(super) credential_generation: u64,
     pub(super) credential_revoked: bool,
@@ -108,7 +109,7 @@ impl Machine {
         broker.confirm_fence(endpoint.install_fence(broker.fence_request())?)?;
         Ok(Self { bootstrap: Some(p.clone()), containment: ContainmentHistory::default(), policy_updates: PolicyUpdates::default(), requests: RequestBook::default(), scope: d.scope, broker, endpoint, reviewer, actions: BTreeMap::new(), sessions: BTreeMap::new(),
             automatic: BTreeMap::new(), human_keys: BTreeMap::new(), envelopes: BTreeMap::new(), clock_ready: false,
-            publication_guard: false, credential_policy: None, credential_generation: 0,
+            publication_guard: false, generated_text_only: false, credential_policy: None, credential_generation: 0,
             credential_revoked: false, credential_changes: Vec::new(), decoder: None, identity: None, campaigns: None, file_source: None, credibility: None, consistency: None, consistency_request: None, mediation: None })
     }
     pub(super) fn replay(p: &FileOversightProfile, events: &[Event]) -> Result<Self, Error> {
@@ -171,6 +172,15 @@ impl Machine {
     }
 
     pub(super) fn apply(&mut self, event: &Event) -> Result<Transition, Error> {
+        // Check the canonical source BEFORE expansion. Only a validated native
+        // TextMessage can derive a message submission in the source-required mode.
+        // Then use the SAME original admission, stop cleanup and request refresh.
+        self.check_generated_text_origin(event)?;
+        let derived = match event {
+            Event::TextMessage(request, snapshot) => Some(self.decoder_text_message_event(request, snapshot)?),
+            _ => None,
+        };
+        let event = derived.as_ref().unwrap_or(event);
         let was_stopped = self.broker.stop_receipt().is_some();
         let result = self.apply_inner(event)?;
         // A forecast, proposed category or missing capture can install the
@@ -207,11 +217,12 @@ impl Machine {
             | Event::PublicationGuard | Event::PublishChecked(..) | Event::PublishCredentialed(..)
             | Event::PublicationWitness(_)
             | Event::CredentialGuard(_) | Event::CredentialRotate(_) | Event::CredentialRevoke(_) | Event::Campaign(_)
-            | Event::StreamBootstrap(_) | Event::Identity(_) | Event::Decoder(_) | Event::Credibility(_) | Event::Consistency(_) | Event::Mediation(_)
+            | Event::StreamBootstrap(_) | Event::GeneratedStreamBootstrap(_) | Event::Identity(_) | Event::Decoder(_) | Event::Credibility(_) | Event::Consistency(_) | Event::Mediation(_)
             | Event::Source(_) | Event::ActorState(_) | Event::ActorCheckpoint(..) | Event::ActorReset(..));
         if !without_current_time && !self.clock_ready { return Err(Error::Incomplete); }
         match event {
-            Event::TextMessage(request, snapshot) => return self.apply_decoder_text_message(request, snapshot),
+            // Source-linked inputs are expanded exactly once by apply above.
+            Event::TextMessage(..) => return Err(Error::Binding),
             Event::PublicationWitness(event) => return self.apply_publication_witness(event),
             Event::Mediation(event) => return self.apply_mediation(event),
             Event::Consistency(event) => return self.apply_consistency(event),
@@ -219,6 +230,11 @@ impl Machine {
             Event::Decoder(event) => return self.apply_decoder(event),
             Event::Identity(event) => return self.apply_identity(event),
             Event::StreamBootstrap(profile) => return self.bootstrap_stream(*profile),
+            Event::GeneratedStreamBootstrap(profile) => {
+                self.bootstrap_stream(*profile)?;
+                self.generated_text_only = true;
+                return Ok(Transition::Unit);
+            }
             Event::Campaign(event) => return self.apply_campaign(event),
             Event::ActorState(update) => return self.record_actor_state(update),
             Event::ActorCheckpoint(id, revision, epoch) => return self.capture_actor_checkpoint(*id, *revision, *epoch),
