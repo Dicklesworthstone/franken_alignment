@@ -2,6 +2,8 @@
 //! The source reference is validated before any clock, file read or snapshot use.
 #[cfg(target_os = "linux")]
 mod peer;
+#[cfg(target_os = "linux")]
+mod inbox;
 
 use super::{ActorError, ActorProposal, ElapsedTick, FileGeneratedTextActorPort, FileOversight, decode};
 use super::super::super::{FileActorExchange, FileActorFeed, FileActorSupervisor, JournalError};
