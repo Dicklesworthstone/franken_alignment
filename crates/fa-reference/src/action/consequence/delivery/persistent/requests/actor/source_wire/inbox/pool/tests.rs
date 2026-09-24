@@ -206,3 +206,56 @@ fn pool_setup_limits_return_all_original_owners() {
     let mut peers = failure.peers; peers.pop();
     assert_eq!(FileActorPool::new(peers).unwrap().statuses().count(), MAX_POOL_PEERS);
 }
+
+#[test]
+fn pool_observation_mode_refuses_new_work_but_keeps_recorded_retries_and_cancellation_live() {
+    let mut s = setup(); let (a, mut ca) = connected(s.port.clone()); let (b, mut cb) = connected(s.port.clone());
+    let mut pool = FileActorPool::new(vec![(10, a), (20, b)]).unwrap();
+    send(&mut ca, &document(11));
+    pool.drive(&mut s.driver, &mut s.source, || ElapsedTick(2), intake()).unwrap();
+    assert_eq!(drain(&mut pool, &mut s, &mut ca).result, Ok(Knowledge::Pending { request: 11 }));
+    let bytes = disk(&s); let reads = s.source.status().read_attempts;
+    send(&mut ca, &document(11)); send(&mut cb, &document(21));
+    let report = pool.observe(&mut s.driver, intake()).unwrap();
+    assert!(!report.stopped_on_error());
+    assert!(report.visits.iter().all(|v| v.result.as_ref().unwrap().intakes.is_empty()));
+    assert_eq!(drain(&mut pool, &mut s, &mut ca).result, Ok(Knowledge::Pending { request: 11 }));
+    assert_eq!(drain(&mut pool, &mut s, &mut cb).result, Err(WireError::Withheld));
+    assert_eq!(disk(&s), bytes); assert_eq!(s.source.status().read_attempts, reads);
+    // A later explicitly source-acquiring drive can admit the SAME new ID:
+    // observation-only refusal must not create a durable NotAdmitted record.
+    send(&mut cb, &document(21));
+    pool.drive(&mut s.driver, &mut s.source, || ElapsedTick(3), intake()).unwrap();
+    assert_eq!(drain(&mut pool, &mut s, &mut cb).result, Ok(Knowledge::Pending { request: 21 }));
+    std::fs::remove_file(s.root.source()).unwrap();
+    send(&mut ca, &encode_command(&Command::Cancel { request: 11 }).unwrap());
+    let report = pool.observe(&mut s.driver, intake()).unwrap();
+    assert!(report.visits.iter().all(|v| v.result.as_ref().unwrap().intakes.is_empty()));
+    assert!(matches!(drain(&mut pool, &mut s, &mut ca).result,
+        Ok(Knowledge::Known { value: ActorOutcome::CancelledBeforeDispatch, .. })));
+    assert_eq!(pool.next_request(&s.driver).unwrap().unwrap().status.request, 21);
+    assert_eq!(s.driver.supervisor().host().unwrap().inspect().executions, 0);
+}
+
+#[test]
+fn pool_observation_mode_preserves_exact_retry_binding() {
+    let mut s = setup(); let (a, mut ca) = connected(s.port.clone());
+    let mut pool = FileActorPool::new(vec![(10, a)]).unwrap();
+    send(&mut ca, &document(11));
+    pool.drive(&mut s.driver, &mut s.source, || ElapsedTick(2), intake()).unwrap();
+    drain(&mut pool, &mut s, &mut ca);
+    let bytes = disk(&s); let reads = s.source.status().read_attempts;
+    // Use the original canonical command encoder; only the target payload changes.
+    let action = s.driver.supervisor().host().unwrap().request_action(11).unwrap().clone();
+    let conflicting = encode_command(&Command::Submit { request: 11, proposal: ActorProposal {
+        target: action.spec().target.unwrap(), payload: b"changed".to_vec(), units: 7,
+        deadline: action.spec().deadline, expected_policy_epoch: action.spec().policy_epoch,
+    }}).unwrap();
+    send(&mut ca, &conflicting);
+    pool.observe(&mut s.driver, intake()).unwrap();
+    assert_eq!(drain(&mut pool, &mut s, &mut ca).result, Err(WireError::IdempotencyConflict));
+    assert_eq!(disk(&s), bytes); assert_eq!(s.source.status().read_attempts, reads);
+    send(&mut ca, &document(11));
+    pool.observe(&mut s.driver, intake()).unwrap();
+    assert_eq!(drain(&mut pool, &mut s, &mut ca).result, Ok(Knowledge::Pending { request: 11 }));
+}

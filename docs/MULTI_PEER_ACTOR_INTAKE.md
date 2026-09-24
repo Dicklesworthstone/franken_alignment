@@ -80,3 +80,55 @@ Rust compilation, all nine tests, compile-fail checks, rustfmt, Clippy and the f
 `xtask check` gate are UNEXECUTED. Static source/byte review does not qualify runtime
 behavior. The Beads CLI is unavailable; no bead or execution gate is closed and no
 historical qualification is claimed for this addition.
+
+
+## Generated text and observation-only servicing
+
+`FileActorPool<FileGeneratedTextActorPort>` now uses the SAME scheduler, global
+socket allowance, peer quanta, independent tickets and ready queues. Its source
+preparation calls the original fixed native-intent decoder before registered-file
+acquisition. Only an already computed generation reference or explicit finish
+intent can enter this profile. The pool cannot replace generated message bytes,
+run inference, alter spent sampling work or substitute a smaller intent-envelope
+charge for the original cumulative publication frame.
+
+Both ordinary and generated pools provide `observe(driver, budget)` for an active
+review, approval wait or terminal-reply grace. This operation takes neither a source
+reader nor a clock callback. It services original polls, cancellation and recorded
+submission retries, while withholding NEW submissions before the original port can
+consume a waiting admission slot. The generated profile still runs its fixed intent
+validator first. Recorded conflicts remain subject to exact original binding; a
+known request ID is not permission to rebase it. An observation-only refusal does
+not create a durable NotAdmitted record: a later explicit source-acquiring `drive`
+may admit that same new ID. The operator must choose observation mode during review;
+ordinary `drive` is not silently changed or automatically phase-switched.
+
+This lets a supervisor keep cancellation and response traffic alive without
+refreshing source evidence or admitting another effect while the original congress
+owns its predecessor. `next_request` still refuses during an active driver job and
+leaves its work hints intact. Cancellation runs through the original request and
+control machinery; observation mode is not read-only with respect to those explicit
+cancellation commands. A dispatched or published-but-unreconciled effect remains
+Unknown until the ORIGINAL reconciliation acknowledges its actual outcome.
+
+Two additional ordinary-port regressions check read-free observation, withheld-new
+versus later-admitted controls, exact retry/conflict binding and cancellation after
+source removal. Four generated-port regressions use the unchanged native-generator
+fixture, actual sockets and original source/journal files. They cover malformed
+references versus permitted generated admission, foreign-owner preflight, full-frame
+charging, an active original helper-review job with read-free retry/cancel and
+post-cancellation source repair, and the original two-key publication lifecycle.
+The last requires the separately held human reviewer after the congress result;
+it retains Unknown before reconciliation and exactly one charged visible message
+afterward. The review uses an actual helper socket but does not execute helper
+inference; the publication control supplies explicit reference ballots. Synthetic
+weights and same-process sockets do not qualify a trained model or OS isolation.
+
+There are now FIFTEEN authored regression functions for these two source additions
+(nine initial pool tests, two observation tests, four generated-pool tests), plus
+the authored no-authority compile-fail example. All remain UNEXECUTED. The second
+required targeted RCH attempt also failed before compilation because `rch` is not
+installed (exit 127). Rust compilation, formatting, Clippy and the full gate still
+have no new execution evidence. No historical receipt is reused as qualification;
+no Beads state or production gate is closed. The existing single-peer publication
+CLI, runtime/dependency admission and deployment isolation are not changed here.

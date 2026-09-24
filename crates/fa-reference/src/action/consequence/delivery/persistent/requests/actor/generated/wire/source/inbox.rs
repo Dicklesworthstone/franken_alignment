@@ -1,4 +1,6 @@
 //! Native generated requests on the original bounded, journal-checked inbox.
+mod pool;
+
 use super::{ElapsedTick, EvidenceFile, FileGeneratedTextActorPort, FileSupervisedDriver, JournalError};
 use crate::action::consequence::delivery::persistent::requests::FileRequestStatus;
 use crate::action::consequence::delivery::persistent::requests::actor::FileActorInbox;

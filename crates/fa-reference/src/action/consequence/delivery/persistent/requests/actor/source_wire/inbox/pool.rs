@@ -222,8 +222,32 @@ impl FileActorPool<Port> {
                 supervisor.prepare_wire_submission(request, source, &mut clock, intake)
             })
     }
+    /// Service recorded retries, polls and cancellation without acquiring source
+    /// evidence or sampling a clock. NEW submissions are withheld before the
+    /// original port can consume any waiting admission snapshot. This is useful
+    /// during an active congress or terminal reply grace, not an effect stop.
+    pub fn observe(&mut self, driver: &mut FileSupervisedDriver, budget: PoolBudget)
+        -> Result<PoolDriveReport, FileActorPeerDriveError>
+    {
+        self.drive_prepared(driver, budget,
+            |supervisor, port| supervisor.check_source_wire(port),
+            |supervisor, request, _, _| require_recorded(supervisor, request))
+    }
     pub fn next_request(&mut self, driver: &FileSupervisedDriver) -> Result<Option<PoolReady>, JournalError> {
         self.next_checked(driver, |supervisor, port| supervisor.check_source_wire(port))
+    }
+}
+
+// Existing retries STILL pass the original port's exact binding checks. A
+// lookup is not permission to replace a frozen action or renew its authority.
+pub(in crate::action::consequence::delivery::persistent::requests::actor)
+fn require_recorded(supervisor: &FileActorSupervisor<FileOversight>, request: u64)
+    -> Result<(), ActorError>
+{
+    match supervisor.host().and_then(|host| host.request_status(request)) {
+        Ok(_) => Ok(()),
+        Err(JournalError::Contract(Error::Missing)) => Err(ActorError::Withheld),
+        Err(_) => Err(ActorError::Unavailable),
     }
 }
 
