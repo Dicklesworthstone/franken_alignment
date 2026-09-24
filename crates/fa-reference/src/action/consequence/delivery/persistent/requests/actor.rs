@@ -2,6 +2,8 @@
 //! Only the supervisor owns the host or installs a fresh admission snapshot.
 
 mod host;
+mod generated;
+pub use generated::FileGeneratedTextActorPort;
 mod source_wire;
 #[cfg(target_os = "linux")]
 pub use source_wire::inbox::FileActorInbox;

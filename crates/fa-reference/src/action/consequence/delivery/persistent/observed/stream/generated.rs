@@ -29,7 +29,7 @@ pub struct FileTextMessageRequest {
     pub deadline: ElapsedTick,
 }
 impl FileTextMessageRequest {
-    fn check(&self) -> Result<(), Error> {
+    pub(in crate::action::consequence::delivery::persistent) fn check(&self) -> Result<(), Error> {
         if self.request == 0 || self.generation == 0 { return Err(Error::InvalidInput); }
         if self.generation_revision > MAX_GENERATION_TOKENS as u64 { return Err(Error::Limit); }
         Ok(())
