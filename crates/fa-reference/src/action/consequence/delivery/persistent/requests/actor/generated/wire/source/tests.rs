@@ -221,3 +221,6 @@ fn generated_source_channel_reads_only_after_newline_and_prior_reply_flush() {
     assert!(fed.intake.unwrap().result.is_ok()); assert_eq!(fed.feed.consumed, line.len());
     assert_eq!(s.source.status().read_attempts, reads + 2);
 }
+
+#[cfg(target_os = "linux")]
+mod peer;

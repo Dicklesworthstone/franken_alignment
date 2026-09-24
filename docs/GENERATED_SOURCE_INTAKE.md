@@ -69,3 +69,47 @@ UNEXECUTED. Source/whitespace/hash review is not runtime qualification. This add
 no dependency, journal tag, actor verb, listener or executor, and closes no bead.
 Storage fidelity, file producer authenticity, trusted clocks and deployment
 isolation remain assumptions of the existing reference profile.
+
+## Authenticated Unix peers and restart
+
+On Linux, `drive_generated_peer_from_file` is available on the original supervisor
+and supervised driver for `PeerSession<FileGeneratedTextActorPort>`. It uses the
+original kernel-credential check, frozen peer policy, connection limit, revocation,
+framing, socket budgets and ticket-preserving reconnect. The exact gateway identity
+is checked before socket reads. Source preparation uses the same private adapter
+as JSON/channel intake; no credentials are accepted from a request. The existing
+`FileActorPeerDrive` report retains source diagnostics in completed-frame order.
+Its bounded intake vector is reserved before driving any source transaction.
+
+A disconnected or revoked peer, invalid socket budget, foreign gateway or malformed
+reference cannot consume source evidence. An admitted request with an unsent reply
+survives disconnect. Reconnecting the same session retains its tickets; a fresh
+session must submit the exact original reference to reacquire one. Neither route
+re-observes a recorded request or renews its authority. Source preparation is not
+repeated for a previously recorded policy refusal, even if the file later changes.
+A new request must obtain its own observation. Cancellation/revocation of a socket
+still does not cancel a dispatched effect or refund an unknown outcome.
+
+Five additional `generated_source_peer_` tests use actual Unix socket pairs and
+`PeerCredentials::observe`, including a mismatched UID and a matching positive
+control. They exercise supervised-driver intake, fragmented input and blocked
+replies, actual producer-file changes affecting policy admission, lost replies,
+ticket custody, foreign owners, zero/invalid drive budgets, ingress revocation,
+and exact-history required-source recovery. The recovery case starts a fresh
+FileEvidenceSource with no in-memory version floor: the ORIGINAL durable source
+gate must reject an older producer file. A repaired source can prepare evidence
+but cannot silently resume the paused decoder; explicit resume and new native
+generation retain the original spent sampling work before another proposal.
+
+These tests use same-process socket pairs, not an isolated hostile executable or
+a remote peer. SO_PEERCRED identifies connection-time UID/GID/PID; it does not
+attest code or authenticate a transferred descriptor's current holder. Source
+producer authenticity and clock fidelity remain operator assumptions. Socket
+budgets bound socket work, not synchronous file IO, numerical replay or disk latency.
+
+All THIRTEEN authored regression functions, compilation, rustfmt, Clippy and the
+full gate remain UNEXECUTED. The second targeted RCH attempt failed before
+compilation (`rch: command not found`, exit 127). The command above selects both
+the eight original integration tests and these five peer tests. No new dependency,
+journal encoding, actor verb, listener, runtime or production qualification is
+introduced; existing source and transport implementations are unchanged.

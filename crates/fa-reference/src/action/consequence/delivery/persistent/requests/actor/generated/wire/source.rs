@@ -1,5 +1,8 @@
 //! Fresh registered observations at the original source-only actor boundary.
 //! The source reference is validated before any clock, file read or snapshot use.
+#[cfg(target_os = "linux")]
+mod peer;
+
 use super::{ActorError, ActorProposal, ElapsedTick, FileGeneratedTextActorPort, FileOversight, decode};
 use super::super::super::{FileActorExchange, FileActorFeed, FileActorSupervisor, JournalError};
 use crate::action::consequence::delivery::persistent::observed::driver::FileSupervisedDriver;
