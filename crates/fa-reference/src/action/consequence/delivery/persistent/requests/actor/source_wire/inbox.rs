@@ -1,5 +1,7 @@
 //! Bounded scheduling hints from the original authenticated actor session.
 //! Requests, outcomes and rights remain exclusively in the native journal.
+pub mod pool;
+
 use super::{ActorError, FileActorPeerDrive, FileActorPeerDriveError, FileActorSupervisor,
     FileEvidenceReport, FileOversight, FileSupervisedDriver, Port};
 use crate::action::{ActionState, ElapsedTick};
