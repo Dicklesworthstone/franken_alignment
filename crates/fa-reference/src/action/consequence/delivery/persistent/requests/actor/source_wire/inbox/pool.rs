@@ -112,10 +112,10 @@ impl<P: ActorRequestPort> FileActorPool<P> {
     /// Existing ticket permissions are not revoked: use fresh inboxes for a fresh
     /// endpoint. Pre-existing unrelated work hints refuse construction intact.
     pub fn for_requests(peers: Vec<(u64, FileActorInbox<P>)>) -> Result<Self, PoolSetupFailure<P>> {
-        if peers.iter().any(|(request, inbox)| inbox.ready.iter().any(|id| id != request)) {
-            return Err(PoolSetupFailure { error: Error::Binding, peers });
-        }
         let mut pool = Self::new(peers)?;
+        if pool.peers.iter().any(|(request, inbox)| inbox.ready.iter().any(|id| id != request)) {
+            return Err(PoolSetupFailure { error: Error::Binding, peers: pool.peers });
+        }
         pool.request_bound = true;
         Ok(pool)
     }
@@ -157,13 +157,26 @@ impl<P: ActorRequestPort> FileActorPool<P> {
     // Sealed composition: callers cannot replace identity or source admission.
     pub(in crate::action::consequence::delivery::persistent::requests::actor)
     fn drive_prepared<C, A>(&mut self, driver: &mut FileSupervisedDriver,
-        budget: PoolBudget, check: C, mut prepare: A)
+        budget: PoolBudget, check: C, prepare: A)
+        -> Result<PoolDriveReport, FileActorPeerDriveError>
+    where C: Fn(&FileActorSupervisor<FileOversight>, &P) -> Result<(), JournalError>,
+        A: FnMut(&mut FileActorSupervisor<FileOversight>, u64, &ActorProposal,
+            &mut Option<FileEvidenceReport<EvidenceIdentity>>) -> Result<(), ActorError>,
+    {
+        self.drive_selected(driver, budget, check, prepare, false)
+    }
+
+    // Request-bound services can leave NEW peers unread while the one original
+    // congress is busy. Existing tickets still poll/cancel through the same path.
+    fn drive_selected<C, A>(&mut self, driver: &mut FileSupervisedDriver,
+        budget: PoolBudget, check: C, mut prepare: A, recorded_only: bool)
         -> Result<PoolDriveReport, FileActorPeerDriveError>
     where C: Fn(&FileActorSupervisor<FileOversight>, &P) -> Result<(), JournalError>,
         A: FnMut(&mut FileActorSupervisor<FileOversight>, u64, &ActorProposal,
             &mut Option<FileEvidenceReport<EvidenceIdentity>>) -> Result<(), ActorError>,
     {
         let result = (|| {
+            if recorded_only && !self.request_bound { return Err(JournalError::from(Error::Binding).into()); }
             budget.total.validate()?;
             budget.per_peer.validate()?;
             self.check_all(driver, &check)?;
@@ -177,6 +190,13 @@ impl<P: ActorRequestPort> FileActorPool<P> {
                 if empty(allowance) { break; }
                 let slot = (start + offset) % count;
                 let (peer, inbox) = &mut self.peers[slot];
+                if recorded_only {
+                    match driver.supervisor().host()?.request_status(*peer) {
+                        Ok(_) => {}
+                        Err(JournalError::Contract(Error::Missing)) => continue,
+                        Err(error) => return Err(error.into()),
+                    }
+                }
                 let Some(status) = inbox.status().transport else { continue; };
                 if !runnable(status, allowance) { continue; }
                 // An ineligible visit must not undo the rotation after the last
@@ -253,6 +273,18 @@ impl FileActorPool<Port> {
         self.drive_prepared(driver, budget,
             |supervisor, port| supervisor.check_source_wire(port),
             |supervisor, request, _, _| require_recorded(supervisor, request))
+    }
+    /// Backpressure for a for_requests pool: leave an unrecorded peer's bytes
+    /// unread rather than return a transient refusal while another review owns
+    /// the predecessor. Recorded peers retain polls, cancellation and exact
+    /// retries. No source or clock is acquired. Unrestricted pools refuse this
+    /// operation because a peer name there does not identify its possible work.
+    pub fn observe_registered(&mut self, driver: &mut FileSupervisedDriver, budget: PoolBudget)
+        -> Result<PoolDriveReport, FileActorPeerDriveError>
+    {
+        self.drive_selected(driver, budget,
+            |supervisor, port| supervisor.check_source_wire(port),
+            |supervisor, request, _, _| require_recorded(supervisor, request), true)
     }
     pub fn next_request(&mut self, driver: &FileSupervisedDriver) -> Result<Option<PoolReady>, JournalError> {
         self.next_checked(driver, |supervisor, port| supervisor.check_source_wire(port))

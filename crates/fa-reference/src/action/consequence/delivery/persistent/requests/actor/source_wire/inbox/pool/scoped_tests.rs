@@ -131,3 +131,38 @@ fn scoped_pool_setup_preserves_incompatible_pending_work_and_legacy_behavior() {
     assert_eq!(drain(&mut restored, &mut s, &mut client).result, Ok(Knowledge::Pending { request: 7 }));
     assert_eq!(restored.next_request(&s.driver).unwrap().unwrap().status.request, 7);
 }
+
+#[test]
+fn scoped_pool_defers_unrecorded_peers_without_refusal_or_resend() {
+    let mut s = setup(); let source = std::fs::read(s.root.source()).unwrap();
+    let (a, mut ca) = connected(s.port.clone()); let (b, mut cb) = connected(s.port.clone());
+    let mut pool = FileActorPool::for_requests(vec![(1, a), (2, b)]).unwrap();
+    send(&mut ca, &document(1));
+    pool.drive(&mut s.driver, &mut s.source, || ElapsedTick(2), input()).unwrap();
+    assert_eq!(drain(&mut pool, &mut s, &mut ca).result, Ok(Knowledge::Pending { request: 1 }));
+    assert_eq!(pool.next_request(&s.driver).unwrap().unwrap().status.request, 1);
+    send(&mut cb, &document(2)); // keep this exact frame queued; no resend
+    send(&mut ca, &encode_command(&Command::Cancel { request: 1 }).unwrap());
+    let reads = s.source.status().read_attempts; std::fs::remove_file(s.root.source()).unwrap();
+    let report = pool.observe_registered(&mut s.driver, input()).unwrap();
+    assert!(report.visits.iter().all(|visit| visit.peer == 1));
+    assert!(matches!(drain(&mut pool, &mut s, &mut ca).result,
+        Ok(Knowledge::Known { value: ActorOutcome::CancelledBeforeDispatch, .. })));
+    assert_eq!(cb.read(&mut [0; 1]).unwrap_err().kind(), io::ErrorKind::WouldBlock);
+    assert_eq!(s.source.status().read_attempts, reads);
+    assert!(matches!(s.driver.supervisor().host().unwrap().request_status(2), Err(JournalError::Contract(Error::Missing))));
+    std::fs::write(s.root.source(), source).unwrap();
+    pool.drive(&mut s.driver, &mut s.source, || ElapsedTick(3), input()).unwrap();
+    assert_eq!(drain(&mut pool, &mut s, &mut cb).result, Ok(Knowledge::Pending { request: 2 }));
+    assert_eq!(pool.next_request(&s.driver).unwrap().unwrap().status.request, 2);
+    assert_eq!(s.source.status().read_attempts, reads + 1);
+    let (inbox, mut client) = connected(s.port.clone());
+    let mut unrestricted = FileActorPool::new(vec![(9, inbox)]).unwrap();
+    send(&mut client, &document(3));
+    let before = disk(&s);
+    assert!(matches!(unrestricted.observe_registered(&mut s.driver, input()),
+        Err(FileActorPeerDriveError::Journal(JournalError::Contract(Error::Binding)))));
+    assert_eq!(disk(&s), before);
+    unrestricted.drive(&mut s.driver, &mut s.source, || ElapsedTick(4), input()).unwrap();
+    assert_eq!(drain(&mut unrestricted, &mut s, &mut client).result, Ok(Knowledge::Pending { request: 3 }));
+}

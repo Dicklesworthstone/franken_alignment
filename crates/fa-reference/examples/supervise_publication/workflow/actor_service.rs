@@ -4,6 +4,7 @@ mod profile;
 mod client;
 mod qualification;
 mod series;
+mod multi;
 use profile::Profile;
 use super::{ActionState, ActorWire, BoundSocket, Config, Deadline, Duration, ElapsedTick,
     ExecuteServices, FileOversight, FileRequestDisposition, FileSupervisedDriver, Instant,
@@ -17,9 +18,10 @@ use fa_reference::action::consequence::oversight::actor_transport::DriveBudget;
 use std::path::Path;
 
 type Port = FileActorPort<FileOversight>;
-const USAGE: &str = "serve-create|serve-open CONFIG ACTOR_PROFILE REVIEWER_PROFILE; serve-create-checked|serve-open-checked CONFIG ACTOR_PROFILE REVIEWER_PROFILE WITNESS_PROFILE; actor-submit ACTOR_PROFILE SUBMIT_JSON [SUBMIT_JSON ...]; serve-open and serve-open-checked also accept --credibility-activation EVIDENCE_FILE; all serve modes accept a final --requests 7,8,9 option";
+const USAGE: &str = "serve-create|serve-open CONFIG ACTOR_PROFILE REVIEWER_PROFILE; serve-create-checked|serve-open-checked CONFIG ACTOR_PROFILE REVIEWER_PROFILE WITNESS_PROFILE; actor-submit ACTOR_PROFILE SUBMIT_JSON [SUBMIT_JSON ...]; serve-open and serve-open-checked also accept --credibility-activation EVIDENCE_FILE; all serve modes accept a final --requests 7,8,9 option OR --peers ACTOR_PROFILE [ACTOR_PROFILE ...]";
 
 pub(crate) fn command(args: &[String], credibility: Option<&Path>) -> Result<(), String> {
+    if args.iter().any(|arg| arg == "--peers") { return multi::command(args, credibility); }
     let (args, requests) = series::take_option(args)?;
     let mode = args.first().map(String::as_str).ok_or(USAGE)?;
     if mode == "actor-submit" {

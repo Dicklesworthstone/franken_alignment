@@ -4,6 +4,8 @@ use super::{Config, Deadline, FileHumanReviewer, FileSupervisedDriver, PeerProfi
 use fa_reference::action::ElapsedTick;
 #[cfg(target_os = "linux")]
 use std::path::PathBuf;
+#[cfg(target_os = "linux")]
+use std::{cell::RefCell, rc::Rc};
 
 #[cfg(target_os = "linux")]
 pub(crate) fn socket_path(profile: &PeerProfile, operation: u64) -> PathBuf {
@@ -12,19 +14,28 @@ pub(crate) fn socket_path(profile: &PeerProfile, operation: u64) -> PathBuf {
 
 pub(super) struct Control {
     #[cfg(target_os = "linux")]
-    service: Option<Service>,
+    service: Option<Rc<RefCell<Service>>>,
 }
 impl Control {
     pub(super) fn new(config: &Config, operation: u64, profile: Option<&PeerProfile>) -> Result<Self, String> {
         if let Some(profile) = profile { profile.check_host(config)?; }
         #[cfg(target_os = "linux")]
-        { Ok(Self { service: profile.map(|p| Service::new(config, operation, p)).transpose()? }) }
+        { Ok(Self { service: profile.map(|p| Service::new(config, operation, p)
+            .map(|service| Rc::new(RefCell::new(service)))).transpose()? }) }
         #[cfg(not(target_os = "linux"))]
         {
             let _ = (config, operation);
             if profile.is_some() { return Err("stop control requires Linux peer credentials".into()); }
             Ok(Self {})
         }
+    }
+
+    /// Share only the SAME stop transport with another synchronous workflow.
+    /// Socket ownership, credentials, candidate quota and terminal outcome remain
+    /// one object. No reviewer role, effect permit or new admission budget exists.
+    #[cfg(target_os = "linux")]
+    pub(super) fn share(&self) -> Self {
+        Self { service: self.service.as_ref().map(Rc::clone) }
     }
 
     /// No connection means no journal access or time observation. An admitted
@@ -34,7 +45,10 @@ impl Control {
         reviewer: &FileHumanReviewer, deadline: &Deadline, time: &mut F) -> Result<bool, String>
     where F: FnMut() -> ElapsedTick {
         #[cfg(target_os = "linux")]
-        if let Some(service) = &mut self.service { return service.checkpoint(driver, reviewer, deadline, time); }
+        if let Some(service) = &self.service {
+            let mut service = service.try_borrow_mut().map_err(|_| "stop transport is already being driven")?;
+            return service.checkpoint(driver, reviewer, deadline, time);
+        }
         let _ = (driver, reviewer, deadline, time);
         Ok(false)
     }
