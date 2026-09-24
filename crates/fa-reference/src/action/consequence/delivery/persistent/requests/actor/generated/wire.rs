@@ -5,6 +5,8 @@ use super::{ActorError, ActorOutcome, ElapsedTick, FileActorTicket, FileGenerate
 use crate::action::consequence::oversight::actor::ActorProposal;
 use crate::action::consequence::oversight::actor_wire::{ActorRequestPort, backend};
 
+mod source;
+
 const DOMAIN: &[u8; 8] = b"FAGREF\0\x01";
 
 impl FileGeneratedTextActorPort {
