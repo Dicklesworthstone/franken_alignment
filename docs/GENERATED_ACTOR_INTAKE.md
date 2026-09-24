@@ -84,3 +84,65 @@ RCH_REQUIRE_REMOTE=1 rch exec -- cargo test --locked -p fa-reference generated_a
 Compilation, Rust tests, rustfmt, Clippy and the complete gate are UNEXECUTED.
 Source hash and whitespace checks do not qualify runtime behavior. No dependency,
 actor wire verb, production gate or broader bead is added or closed by this work.
+
+## Original wire and Unix transport integration
+
+The source-only port now implements the existing sealed `ActorRequestPort`.
+`ActorWire`, `ActorChannel` and `UnixActorConnection` consume it without changes
+to their parser, response projection, connection-local ticket inventory, bounded
+framing, backpressure, EOF rules, socket-work budgets or reconnect machinery.
+The operator chooses this port for a mandatory-native stream; no wire bytes can
+change the backend or downgrade it to a caller-text stream. The peer receives
+only the opposite socket, not the trusted connection or its supervisor.
+
+The existing version-one `Submit` carries a fixed 32-byte `FAGREF\0\x01` intent:
+8 domain bytes followed by three big-endian u64 values: request ID, generation
+ID and generation revision. The embedded request must equal the outer command's
+request ID. A nonzero generation names an original text request. Generation zero
+AND revision zero encode explicit finish; no other zero-generation form is valid.
+Exact length, domain, request binding and `units == 32` are checked before gateway
+lookup or snapshot consumption. Truncation, suffix bytes and ordinary text are
+refused. The original strict JSON codec still checks duplicate/unknown fields,
+outer target/deadline structure, decimal identifiers and transport limits.
+
+`FileGeneratedTextActorPort::encode_message` and `encode_finish` construct those
+ordinary `ActorProposal` values for a client without requiring access to a live
+port. They encode intent, not proof that the generation exists or is complete.
+For example, a caller with an independently supplied `FileTextMessageRequest`
+constructs `Command::Submit { request: source.request, proposal:
+FileGeneratedTextActorPort::encode_message(&source)? }`, then calls the original
+`encode_command` and adds its transport newline. Existing `Poll` and `Cancel`
+commands are unchanged; there is no new top-level operation or response variant.
+
+The outer 32-unit value describes only this fixed input representation. It is
+NEVER copied into effect accounting. The original source-linked reducer derives
+the actual complete cumulative message frame and charges its full encoded size.
+Finish similarly uses the original complete-prefix frame and two-key policy.
+Neither the binary marker nor a successful JSON response is a publication permit.
+
+A complete JSON document without its newline is not admitted by the channel.
+A prior response must be written AND flushed before another command can enter.
+Dropping a socket with an unsent reply does not cancel its admitted request. A
+fresh wire session cannot poll that request by guessing its ID, but its exact
+source submission reacquires a ticket without another observation or journal
+write. Dispatched/published-but-unreconciled requests remain `Unknown`; socket
+acceptance never becomes a claim that a remote audience received an effect.
+
+Three further codec tests check independently specified source/finish bytes,
+all truncation offsets, suffixes, conflicting request IDs, noncanonical finish
+forms and full-width generation bounds. Five integration tests exercise original
+JSON refusals, snapshot preservation, ticket reconnection, exact/one-under frame
+limits, flush backpressure, truncated EOF, and actual Unix socket pairs. The
+lost-reply case proceeds through the ORIGINAL reference congress/manual ballot,
+separate human approval, dispatch, publication and reconciliation, comparing
+numerical state and full-frame charge. A separate socket case publishes an
+explicit finish without publishing the retained but unsubmitted model output.
+The tests do not claim authenticated external helpers or remote delivery.
+
+All SIXTEEN `generated_actor_` tests (eight gateway, three codec and five wire/
+socket integration tests), compilation, rustfmt, Clippy and the complete gate
+remain UNEXECUTED. The second targeted RCH command, with the same filter shown
+above, failed before compilation (`rch: command not found`, exit 127). Source
+inspection and blob/whitespace verification are not runtime qualification.
+The new input payload profile adds no dependency, journal tag, actor verb,
+listener, source-acquisition callback, second executor or peer authentication.

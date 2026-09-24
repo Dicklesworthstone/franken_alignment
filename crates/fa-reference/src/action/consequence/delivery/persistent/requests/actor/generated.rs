@@ -1,5 +1,6 @@
 //! Source-only actor intake into the ORIGINAL durable gateway and request book.
 //! The actor names retained generation data; only the supervisor owns inference.
+mod wire;
 use super::{ActorError, ActorOutcome, FileActorPort, FileActorSupervisor, FileActorTicket,
     JournalError, Knowledge, Snapshot, redact};
 use crate::action::{ElapsedTick, ResolvedTarget};

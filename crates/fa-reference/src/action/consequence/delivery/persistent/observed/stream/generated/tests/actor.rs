@@ -267,3 +267,5 @@ fn generated_actor_storage_failures_expose_no_ticket_and_recover_only_the_canoni
         }
     }
 }
+
+mod wire;
