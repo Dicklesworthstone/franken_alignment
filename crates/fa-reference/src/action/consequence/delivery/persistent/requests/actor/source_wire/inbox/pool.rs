@@ -91,6 +91,7 @@ pub struct FileActorPool<P: ActorRequestPort = Port> {
     peers: Vec<(u64, FileActorInbox<P>)>,
     drive_cursor: usize,
     ready_cursor: usize,
+    request_bound: bool,
 }
 impl<P: ActorRequestPort> FileActorPool<P> {
     pub fn new(peers: Vec<(u64, FileActorInbox<P>)>) -> Result<Self, PoolSetupFailure<P>> {
@@ -102,7 +103,21 @@ impl<P: ActorRequestPort> FileActorPool<P> {
             Some(Error::Duplicate)
         } else { None };
         if let Some(error) = error { return Err(PoolSetupFailure { error, peers }); }
-        Ok(Self { peers, drive_cursor: 0, ready_cursor: 0 })
+        Ok(Self { peers, drive_cursor: 0, ready_cursor: 0, request_bound: false })
+    }
+
+    /// Bind every future Submit to the request whose ID is its operator-selected
+    /// peer name. Both source-acquiring and observation-only drives enforce this
+    /// before source work, retries or ticket acquisition. There is no widening API.
+    /// Existing ticket permissions are not revoked: use fresh inboxes for a fresh
+    /// endpoint. Pre-existing unrelated work hints refuse construction intact.
+    pub fn for_requests(peers: Vec<(u64, FileActorInbox<P>)>) -> Result<Self, PoolSetupFailure<P>> {
+        if peers.iter().any(|(request, inbox)| inbox.ready.iter().any(|id| id != request)) {
+            return Err(PoolSetupFailure { error: Error::Binding, peers });
+        }
+        let mut pool = Self::new(peers)?;
+        pool.request_bound = true;
+        Ok(pool)
     }
 
     pub fn statuses(&self) -> impl Iterator<Item = (u64, PeerSessionStatus, usize)> + '_ {
@@ -167,7 +182,13 @@ impl<P: ActorRequestPort> FileActorPool<P> {
                 // An ineligible visit must not undo the rotation after the last
                 // peer that actually spent the shared budget.
                 self.drive_cursor = (slot + 1) % count;
-                let result = inbox.drive_prepared(driver, allowance, &check, &mut prepare);
+                let bound = self.request_bound;
+                let request_key = *peer;
+                let result = inbox.drive_prepared(driver, allowance, &check,
+                    |supervisor, request, proposal, intake| {
+                        if bound && request != request_key { return Err(ActorError::Withheld); }
+                        prepare(supervisor, request, proposal, intake)
+                    });
                 let charge = match &result {
                     Ok(report) => {
                         let p = report.drive.progress;
@@ -277,3 +298,6 @@ fn subtract(a: DriveBudget, b: DriveBudget) -> DriveBudget {
 
 #[cfg(test)]
 mod tests;
+
+#[cfg(test)]
+mod scoped_tests;

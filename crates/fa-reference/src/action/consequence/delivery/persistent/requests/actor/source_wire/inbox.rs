@@ -80,9 +80,11 @@ impl<P: ActorRequestPort> FileActorInbox<P> {
             let mut intakes = Vec::new();
             intakes.try_reserve_exact(budget.frames).map_err(|_| JournalError::from(Error::Limit))?;
             let drive = self.session.drive_with_admission(budget, |_, request, proposal| {
-                seen.push(request);
                 let mut intake = None;
                 let result = prepare(supervisor, request, proposal, &mut intake);
+                // A refused scope/intent cannot create a work hint for some
+                // other recorded request merely by naming its public key.
+                if result.is_ok() { seen.push(request); }
                 if let Some(report) = intake { intakes.push(report); }
                 result
             })?;
