@@ -4,6 +4,7 @@ use super::{BaseEvent, Event, FileOversight, JournalError, Machine};
 use super::super::{FileHumanReviewer, FileOversightProfile, ReleaseFrame, StreamProfile, storage};
 use super::super::super::decoder::{DecoderEvent, FileDecoderConfig, text::MAX_FILE_TOKENIZER_BYTES};
 use crate::action::consequence::activation::monitor::decoder::sampled::generation::tokenizer::ByteBpe;
+use crate::action::consequence::delivery::persistent::RecoveryReserve;
 use crate::Error;
 use std::path::Path;
 use std::rc::Rc;
@@ -32,17 +33,40 @@ impl FileOversight {
         stream: StreamProfile, decoder: FileDecoderConfig, tokenizer: ByteBpe)
         -> Result<(Self, FileHumanReviewer), JournalError>
     {
+        Self::create_generated_stream_bootstrap(directory.as_ref(), profile, stream, decoder, tokenizer, None)
+    }
+
+    /// Install the original logical recovery reserve BEFORE tokenizer work in
+    /// the same first image. The default constructor has no reserve; installing
+    /// one afterward would be too late under the original admission contract.
+    /// No allowance is created by recovery, and physical disk space is not
+    /// reserved. Only the existing Fence/Stop/StopProgress lane can use its tail.
+    pub fn create_generated_text_stream_with_reserve(directory: impl AsRef<Path>,
+        profile: FileOversightProfile, stream: StreamProfile, decoder: FileDecoderConfig,
+        tokenizer: ByteBpe, reserve: RecoveryReserve)
+        -> Result<(Self, FileHumanReviewer), JournalError>
+    {
+        Self::create_generated_stream_bootstrap(directory.as_ref(), profile, stream, decoder, tokenizer, Some(reserve))
+    }
+
+    fn create_generated_stream_bootstrap(directory: &Path, profile: FileOversightProfile,
+        stream: StreamProfile, decoder: FileDecoderConfig, tokenizer: ByteBpe,
+        reserve: Option<RecoveryReserve>) -> Result<(Self, FileHumanReviewer), JournalError>
+    {
         profile.delivery.limits.check()?;
         if !tokenizer.binds(decoder.profile()) { return Err(Error::Binding.into()); }
         let canonical = tokenizer.to_bytes()?;
-        if canonical.len() > MAX_FILE_TOKENIZER_BYTES || profile.delivery.limits.events < 3 {
+        let count = 3 + usize::from(reserve.is_some());
+        if canonical.len() > MAX_FILE_TOKENIZER_BYTES || profile.delivery.limits.events < count {
             return Err(Error::Limit.into());
         }
-        let events = vec![Event::GeneratedStreamBootstrap(stream),
-            Event::Decoder(DecoderEvent::Enable(Rc::new(decoder))),
-            Event::Decoder(DecoderEvent::Tokenizer(canonical.into()))];
+        let mut events = Vec::with_capacity(count);
+        events.push(Event::GeneratedStreamBootstrap(stream));
+        if let Some(reserve) = reserve { events.push(Event::Core(BaseEvent::ReserveRecovery(reserve))); }
+        events.extend([Event::Decoder(DecoderEvent::Enable(Rc::new(decoder))),
+            Event::Decoder(DecoderEvent::Tokenizer(canonical.into()))]);
         let machine = Machine::replay(&profile, &events)?;
-        let store = storage::Store::create(directory.as_ref())?;
+        let store = storage::Store::create(directory)?;
         store.replace(&super::super::super::journal::encode(&profile, store.identity(), &events)?)?;
         Ok(Self::owner(profile, store, events, machine))
     }

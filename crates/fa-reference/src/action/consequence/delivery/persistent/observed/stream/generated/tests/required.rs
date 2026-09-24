@@ -89,6 +89,16 @@ fn generated_message_required_reaches_original_two_key_publication_without_extra
     // original builder includes the confirmed history; it grants no next message.
     let finish = host.stream_finish_spec(ElapsedTick(100)).unwrap();
     let frame = ReleaseFrame::decode(&finish.payload).unwrap(); assert_eq!(frame.message(), None);
+    // A non-message discriminator cannot smuggle a different "already visible"
+    // history. The SAME original stream validator rejects the forged prefix.
+    let empty = crate::action::consequence::delivery::stream::StreamView::empty(stream());
+    let forged = empty.advance(&empty.encode_message("unpublished").unwrap()).unwrap();
+    let mut altered = finish.clone(); altered.payload = forged.encode_finish().unwrap();
+    altered.units = altered.payload.len() as u64;
+    let refused = host.submit_request(host.revision(), 94, altered, snapshot()).unwrap();
+    assert!(matches!(refused.disposition, FileRequestDisposition::NotAdmitted(Error::Binding)));
+    assert_eq!(host.stream_snapshot().unwrap().published.messages().collect::<Vec<_>>(), ["A"]);
+    assert_eq!(host.inspect().executions, 1);
     let status = host.submit_request(host.revision(), 92, finish.clone(), snapshot()).unwrap();
     assert!(matches!(status.disposition, FileRequestDisposition::Admitted { .. }));
     assert_eq!(host.request_action(92).unwrap().spec(), &finish);

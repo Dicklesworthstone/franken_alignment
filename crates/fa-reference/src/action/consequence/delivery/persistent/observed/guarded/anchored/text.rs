@@ -2,6 +2,7 @@
 //! Only the original machine replays tokens and only its fence renews ownership.
 
 mod composed;
+mod required;
 
 use super::{BaseEvent, Event, FileHistoryAnchor, FileOversight, FileOversightProfile,
     FileOversightRoles, FileRecoveryRequirements, JournalError, Machine, journal, storage};
