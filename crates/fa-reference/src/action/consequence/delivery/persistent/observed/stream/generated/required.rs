@@ -71,12 +71,77 @@ impl FileOversight {
         Ok(Self::owner(profile, store, events, machine))
     }
 
+    /// Recover an originally native-text-only stream with NO recovery reserve.
+    /// Pin the stream, model/monitor/sampler and tokenizer from the SAME locked
+    /// canonical image before numerical replay, cleanup, role creation or fence.
+    /// An ordinary caller-text stream is not an acceptable substitute, even when
+    /// its current decoder, tokenizer and output bytes happen to match.
+    ///
+    /// Recovery uses the original full numerical replay and authority fence. It
+    /// preserves acknowledged work, RNG draws, text intents and message history;
+    /// it returns a paused decoder, not fresh time, evidence or old sendable keys.
+    /// Resume and publication still require their original separate admissions.
+    /// Optional anchored/guarded-role deployments must use their composed opener;
+    /// this local bootstrap pin is not an independent anti-rollback guarantee.
+    pub fn open_generated_text_stream(directory: impl AsRef<Path>, profile: FileOversightProfile,
+        stream: StreamProfile, decoder: &FileDecoderConfig, tokenizer: &ByteBpe)
+        -> Result<(Self, FileHumanReviewer), JournalError>
+    {
+        Self::open_generated_stream_bootstrap(directory.as_ref(), profile, stream, decoder, tokenizer, None)
+    }
+
+    /// Recover with exactly the independently supplied logical reserve. Presence
+    /// and absence are distinct contracts; recovery never installs, enlarges or
+    /// removes a reserve to make an otherwise incompatible image writable.
+    pub fn open_generated_text_stream_with_reserve(directory: impl AsRef<Path>,
+        profile: FileOversightProfile, stream: StreamProfile, decoder: &FileDecoderConfig,
+        tokenizer: &ByteBpe, reserve: RecoveryReserve)
+        -> Result<(Self, FileHumanReviewer), JournalError>
+    {
+        Self::open_generated_stream_bootstrap(directory.as_ref(), profile, stream, decoder, tokenizer, Some(reserve))
+    }
+
+    fn open_generated_stream_bootstrap(directory: &Path, profile: FileOversightProfile,
+        stream: StreamProfile, decoder: &FileDecoderConfig, tokenizer: &ByteBpe,
+        reserve: Option<RecoveryReserve>) -> Result<(Self, FileHumanReviewer), JournalError>
+    {
+        profile.delivery.limits.check()?;
+        if !tokenizer.binds(decoder.profile()) { return Err(Error::Binding.into()); }
+        let canonical = tokenizer.to_bytes()?;
+        if canonical.len() > MAX_FILE_TOKENIZER_BYTES { return Err(Error::Limit.into()); }
+        let store = storage::Store::open(directory)?;
+        let bytes = store.read(profile.delivery.limits.bytes)?;
+        let events = super::super::super::journal::decode(&profile, store.identity(), &bytes)?;
+        check_generated_contract(&events, stream, reserve.as_ref())?;
+        let machine = super::super::super::decoder::text::replay_text_events(
+            &profile, decoder, &canonical, &events)?;
+        if !machine.generated_text_only { return Err(Error::Binding.into()); }
+        store.confirm_and_cleanup()?;
+        let (mut host, reviewer) = Self::owner(profile, store, events, machine);
+        host.transact(host.revision(), Event::Core(BaseEvent::Fence))?;
+        Ok((host, reviewer))
+    }
+
     /// Mode at the acknowledged cut, not an independent assurance certificate.
     /// A faulted owner cannot report its old mode as the current writable state.
     pub fn generated_text_stream_required(&self) -> Result<bool, JournalError> {
         if self.fault.is_some() { return Err(JournalError::Unavailable); }
         Ok(self.machine.generated_text_only)
     }
+}
+
+fn check_generated_contract(events: &[Event], stream: StreamProfile,
+    reserve: Option<&RecoveryReserve>) -> Result<(), Error>
+{
+    if !matches!(events.first(), Some(Event::GeneratedStreamBootstrap(actual)) if *actual == stream) {
+        return Err(Error::Binding);
+    }
+    let mut reserves = events.iter().filter_map(|event| match event {
+        Event::Core(BaseEvent::ReserveRecovery(actual)) => Some(actual),
+        _ => None,
+    });
+    if reserves.next() != reserve || reserves.next().is_some() { return Err(Error::Binding); }
+    Ok(())
 }
 
 impl Machine {
@@ -98,3 +163,6 @@ impl Machine {
         Ok(())
     }
 }
+
+#[cfg(test)]
+mod tests;
