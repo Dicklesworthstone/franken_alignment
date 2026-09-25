@@ -4,7 +4,9 @@
 
 The Linux `supervise_publication` executable now accepts an explicit
 `--native-text RECIPE` option on `serve-create` and explicit `serve-open`
-recovery. Creation establishes the ORIGINAL
+recovery. The `serve-create-checked` and `serve-open-checked` forms additionally
+require a witness profile; see [checked native publication](NATIVE_CHECKED_PUBLICATION.md).
+Creation establishes the ORIGINAL
 native-text-only durable stream, loads a bounded Llama/SafeTensors model and
 native FA-BBPE tokenizer, runs compulsory activation monitoring on every prompt
 and sampled token, and connects its completed generation to the original actor,
@@ -156,8 +158,9 @@ RCH_REQUIRE_REMOTE=1 rch exec -- cargo test --locked -p fa-reference \
 ```
 
 Current scope is one native stream/request per service, either creation or the
-explicit recovery above. Checked-witness/multi-peer combinations and implicit
-numerical resume remain unsupported. The native stream's existing full-input, two-key and fresh-publication
+explicit recovery above, including the explicit checked-witness forms. Multi-peer,
+joint-held-out and implicit numerical-resume combinations remain unsupported.
+The native stream's existing full-input, two-key and fresh-publication
 checks remain mandatory even without the optional structured-witness extension.
 The protected sink remains the original journal-as-publication reference sink;
 no model-serving, package-registry, network-delivery or OS-isolation qualification
@@ -181,3 +184,18 @@ These seven tests and the five exact-bootstrap recovery tests are **UNEXECUTED**
 A fresh required RCH gate attempt again failed before compilation (`rch` missing,
 exit 127). No Rust compilation, rustfmt, Clippy or test pass is claimed. No Beads
 closure or production qualification follows from source or whitespace review.
+
+### Checked-native integration — 2026-09-25
+
+The checked forms install native and witness contracts atomically and pass the
+selected capture/producer profile into the original preparation, helper review,
+human approval and publication driver. Missing or changed evidence cannot
+fallback to the unchecked route. Checked receipt recovery remains source-free.
+Five new service regression functions exercise producer-backed creation and
+interrupted continuation, both human decisions, late phantom/disjoint changes
+under both history policies, expired receipts with source files removed, missing
+producers and strict scope/argument preflight. Six library tests cover the
+bootstrap/recovery composition. All eleven remain **UNEXECUTED**: RCH is absent,
+and fresh gate/test invocations stopped before compilation with exit 127. The
+earlier test bodies are unchanged; their missing-witness-profile checked forms
+remain invalid and are not implicit requests for an unchecked mode.

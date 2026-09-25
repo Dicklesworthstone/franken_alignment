@@ -19,19 +19,29 @@ use fa_reference::action::consequence::oversight::actor_wire::{Command, encode_c
 use std::io::Write;
 use recipe::Inputs;
 
-const USAGE: &str = "serve-create|serve-open CONFIG ACTOR_PROFILE REVIEWER_PROFILE --native-text RECIPE";
+const USAGE: &str = "serve-create|serve-open CONFIG ACTOR_PROFILE REVIEWER_PROFILE --native-text RECIPE; serve-create-checked|serve-open-checked CONFIG ACTOR_PROFILE REVIEWER_PROFILE WITNESS_PROFILE --native-text RECIPE";
 
 pub(super) fn command(args: &[String], credibility: Option<&Path>) -> Result<(), String> {
-    if args.len() != 6 || !matches!(args[0].as_str(), "serve-create" | "serve-open") || args[4] != "--native-text" || credibility.is_some() {
+    let (open, checked) = match args.first().map(String::as_str) {
+        Some("serve-create") => (false, false), Some("serve-open") => (true, false),
+        Some("serve-create-checked") => (false, true), Some("serve-open-checked") => (true, true),
+        _ => return Err(USAGE.into()),
+    };
+    let option = if checked { 5 } else { 4 };
+    if args.len() != option + 2 || args[option] != "--native-text" || credibility.is_some() {
         return Err(USAGE.into());
     }
     let config = Config::read(Path::new(&args[1]))?;
     let actor = Profile::read(Path::new(&args[2]))?;
     let reviewer = PeerProfile::read(Path::new(&args[3]))?;
     check_profiles(&config, &actor, &reviewer)?;
-    let inputs = recipe::load(Path::new(&args[5]), config.profile.delivery.scope.tenant,
+    let publication = if checked { Some(PublicationProfile::read(Path::new(&args[4]))?) } else { None };
+    let inputs = recipe::load(Path::new(&args[option + 1]), config.profile.delivery.scope.tenant,
         config.profile.delivery.limits.bytes)?;
-    if args[0] == "serve-open" {
+    if let Some(publication) = &publication {
+        serve_selected(config, &actor, &reviewer, inputs, (open, Some(publication)),
+            super::super::clock, &mut std::io::stdout().lock())
+    } else if open {
         serve_mode(config, &actor, &reviewer, inputs, true, super::super::clock, &mut std::io::stdout().lock())
     } else {
         serve(config, &actor, &reviewer, inputs, super::super::clock, &mut std::io::stdout().lock())
@@ -57,10 +67,22 @@ where F: FnMut() -> ElapsedTick {
     serve_mode(config, actor, reviewer_profile, inputs, false, time, output)
 }
 
-fn serve_mode<F>(mut config: Config, actor: &Profile, reviewer_profile: &PeerProfile,
-    inputs: Inputs, open: bool, mut time: F, output: &mut impl Write) -> Result<(), String>
+fn serve_mode<F>(config: Config, actor: &Profile, reviewer_profile: &PeerProfile,
+    inputs: Inputs, open: bool, time: F, output: &mut impl Write) -> Result<(), String>
 where F: FnMut() -> ElapsedTick {
+    serve_selected(config, actor, reviewer_profile, inputs, (open, None), time, output)
+}
+
+fn serve_selected<F>(mut config: Config, actor: &Profile, reviewer_profile: &PeerProfile,
+    inputs: Inputs, deployment: (bool, Option<&PublicationProfile>), mut time: F,
+    output: &mut impl Write) -> Result<(), String>
+where F: FnMut() -> ElapsedTick {
+    let (open, publication) = deployment;
     check_profiles(&config, actor, reviewer_profile)?;
+    // Convert every selected policy before creating a listener or store. Producer
+    // scope and unsupported joint-role combinations cannot silently downgrade.
+    let selected = publication.map(|profile| profile.generated_profile(&config.profile,
+        inputs.stream, Some(RecoveryReserve::terminal()))).transpose().map_err(debug)?;
     if inputs.decoder.profile().identity().tenant != config.profile.delivery.scope.tenant {
         return Err("native model tenant mismatch".into());
     }
@@ -70,18 +92,21 @@ where F: FnMut() -> ElapsedTick {
     // Exclusive listener ownership precedes the durable owner. No stale path is removed.
     let socket = BoundSocket::bind(&actor.socket, None)?;
     actor.secure_socket()?;
-    let (mut host, reviewer) = if open {
-        FileOversight::open_generated_text_stream_with_reserve(&config.store, config.profile.clone(),
-            inputs.stream, &inputs.decoder, &inputs.tokenizer, RecoveryReserve::terminal())
-    } else {
-        FileOversight::create_generated_text_stream_with_reserve(&config.store, config.profile.clone(),
-            inputs.stream, inputs.decoder.clone(), inputs.tokenizer.clone(), RecoveryReserve::terminal())
+    let (mut host, reviewer) = match (open, selected) {
+        (true, Some(selected)) => FileOversight::open_generated_text_stream_checked(&config.store,
+            config.profile.clone(), &inputs.decoder, &inputs.tokenizer, selected),
+        (false, Some(selected)) => FileOversight::create_generated_text_stream_checked(&config.store,
+            config.profile.clone(), inputs.decoder.clone(), inputs.tokenizer.clone(), selected),
+        (true, None) => FileOversight::open_generated_text_stream_with_reserve(&config.store, config.profile.clone(),
+            inputs.stream, &inputs.decoder, &inputs.tokenizer, RecoveryReserve::terminal()),
+        (false, None) => FileOversight::create_generated_text_stream_with_reserve(&config.store, config.profile.clone(),
+            inputs.stream, inputs.decoder.clone(), inputs.tokenizer.clone(), RecoveryReserve::terminal()),
     }.map_err(debug)?;
     if !open { host.enable_file_source(host.revision(), config.source_policy).map_err(debug)?; }
     if !host.generated_text_stream_required().map_err(debug)? || !host.publication_guard_required()
         || host.file_source_status().map(|status| status.policy) != Some(config.source_policy)
         || host.journal_capacity().map_err(debug)?.reserve() != Some(RecoveryReserve::terminal())
-        || host.publication_validation_profile().map_err(debug)?.is_some() {
+        || host.publication_validation_profile().map_err(debug)? != publication.map(|profile| profile.limits) {
         return Err("native source, reserve and publication contracts must match this service".into());
     }
     let recovered_source = if open { recovery::select(&host, actor.request, &inputs)? } else { None };
@@ -156,7 +181,7 @@ where F: FnMut() -> ElapsedTick {
                 stage: ActionState::Cancelled | ActionState::Denied | ActionState::Confirmed | ActionState::ConfirmedNotExecuted, .. }))
         };
         execute_serviced(&mut driver, &reviewer, &mut config, actor.request, &deadline,
-            ExecuteServices { peers: Some(reviewer_profile), publication: None, ingress: &mut pump,
+            ExecuteServices { peers: Some(reviewer_profile), publication, ingress: &mut pump,
                 stop: control.take() }, &mut time)
     })();
     let mut failure = work.err().map(|error| {

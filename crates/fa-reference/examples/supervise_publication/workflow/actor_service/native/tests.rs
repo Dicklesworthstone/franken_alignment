@@ -10,6 +10,7 @@ use std::os::unix::net::UnixStream;
 use std::sync::mpsc;
 mod fixture;
 mod recovery_tests;
+mod checked_tests;
 use fixture::*;
 
 struct ReferenceOutput { bytes: Vec<u8>, sender: Option<mpsc::Sender<Vec<u8>>> }
