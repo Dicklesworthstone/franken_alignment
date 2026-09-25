@@ -6,6 +6,7 @@ mod qualification;
 mod series;
 mod multi;
 mod generated;
+mod native;
 use profile::Profile;
 use super::{ActionState, ActorWire, BoundSocket, Config, Deadline, Duration, ElapsedTick,
     ExecuteServices, FileOversight, FileRequestDisposition, FileSupervisedDriver, Instant,
@@ -25,6 +26,7 @@ pub(crate) fn command(args: &[String], credibility: Option<&Path>) -> Result<(),
     if args.first().is_some_and(|mode| mode == "create-generated") {
         return generated::command(args, credibility);
     }
+    if args.iter().any(|arg| arg == "--native-text") { return native::command(args, credibility); }
     if args.iter().any(|arg| arg == "--peers") { return multi::command(args, credibility); }
     let (args, requests) = series::take_option(args)?;
     let mode = args.first().map(String::as_str).ok_or(USAGE)?;

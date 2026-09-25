@@ -4,7 +4,7 @@
 mod host;
 mod generated;
 pub use generated::FileGeneratedTextActorPort;
-mod source_wire;
+pub mod source_wire;
 #[cfg(target_os = "linux")]
 pub use source_wire::inbox::FileActorInbox;
 pub use source_wire::{FileActorExchange, FileActorFeed};
