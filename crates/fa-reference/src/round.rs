@@ -15,6 +15,8 @@
 //! coercion resistance, real cryptographic binding, reducers, permits, or
 //! external effects.
 
+pub mod review;
+
 use crate::Error;
 use std::collections::BTreeMap;
 
