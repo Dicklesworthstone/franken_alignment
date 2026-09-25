@@ -1,6 +1,7 @@
 //! Bind a completed ORIGINAL text generation to one durable message proposal.
 //! This is provenance-preserving admission, never automatic publication.
 
+pub mod checked;
 mod recovery;
 mod required;
 pub use recovery::FileTextMessageSnapshot;
