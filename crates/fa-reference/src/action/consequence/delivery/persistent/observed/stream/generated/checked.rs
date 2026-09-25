@@ -1,5 +1,7 @@
 //! Compose native monitored text and final-publication witnesses in ONE image.
 //! These are bootstrap pins, not new evaluators, permissions or saved approvals.
+pub mod joint;
+
 use super::{BaseEvent, Event, FileOversight, JournalError, Machine};
 use super::super::{FileHumanReviewer, FileOversightProfile, StreamProfile};
 use super::super::super::{journal, storage};
