@@ -6,6 +6,7 @@
 //! Asupersync purpose-context implementation here. Exact structural equality
 //! binds an action; a process-local issuer brand prevents cross-ledger tokens.
 
+pub mod congress;
 pub mod consequence;
 
 use crate::{Effect, Error, Judgment, ReadWitness, Rights, Snapshot};

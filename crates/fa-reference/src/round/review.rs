@@ -87,6 +87,10 @@ impl ReviewPolicy {
         self.requirements
     }
 
+    pub(crate) fn members(&self) -> impl ExactSizeIterator<Item = &Member> {
+        self.members.values()
+    }
+
     fn weights(&self) -> BTreeMap<String, u64> {
         self.members
             .iter()

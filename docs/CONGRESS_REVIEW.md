@@ -32,3 +32,52 @@ oracle. This code establishes neither real commitment security nor helper
 independence, calibration, provider authentication, durable authority, external
 effects or production readiness. The exact-status input remains a trusted
 reference assumption, not evidence that an external verifier ran.
+
+## Reviewed action authority
+
+`action::congress::CongressAuthority` is the L4 reference consumer of this L3
+review. Its trusted constructor freezes a policy and privately owns the
+existing `ReferenceAuthority`; no mutable inner authority or raw `Permit`
+escapes. It exposes the existing proposal, preparation, review, authorization,
+dispatch and reconciliation lifecycle. It accepts neither a caller-supplied
+`Reduction` nor a replacement transcript.
+
+Before accepting commitments, `propose` binds the attempt, every frozen action
+field (including scope, resolved target, payload, witnesses, policy epoch,
+deadline and units), snapshot semantic epoch, complete registered voting
+policy and exact declared helper input. Fields are length-framed and retained
+as bytes, not summarized by FNV. The whole challenge must fit the enclosing
+round's **4096-byte** bound, including framing. This is narrower than the raw
+action payload bound. Overflow refuses before inserting an attempt; it never
+truncates dependencies. The challenge is a reference preimage, not a new wire
+format or production evidence commitment.
+
+Authorization consults the owned complete review and original captured logical
+judgment, then reserves through the existing authority. Dispatch rechecks the
+binding, snapshot completeness, semantic epoch, exact witnesses and fresh
+caller-supplied exact-validator status before the original one-use transition.
+A stale epoch or elapsed deadline still refuses. Failed checks do not refund a
+reservation. Dispatched or unknown effects retain their original liability;
+only an explicit trusted nonexecution outcome permits post-dispatch refund.
+The wrapper does not turn a caller's cancellation into nonexecution evidence.
+
+Twelve public integration tests in
+`crates/fa-reference/tests/congress_authority.rs` cover a complete positive
+lifecycle, missing and nonaffirmative votes, exact disqualification, evidence
+changes before and after authorization, expiry/revocation, permit isolation,
+budget contention, unknown reconciliation, a policy substitution, and exact
+challenge capacity with a one-over refusal. Three compile-fail cases document
+non-clonable authority/permits and refusal to wrap a raw permit externally.
+Together with the seven review tests, these are **19 authored runtime tests
+and 3 authored compile-fail cases, all UNEXECUTED**. The required command
+`RCH_REQUIRE_REMOTE=1 rch exec -- cargo run --locked -p xtask -- check` was
+attempted and stopped before compilation because `rch` was absent (exit 127).
+No compiler, rustfmt, Clippy or runtime pass is claimed; no historical receipt
+qualifies these changes and no roadmap or bead is closed.
+
+Trusted bootstrap, clock readings, snapshot authenticity, actual helper input
+capture, exact-validator results and remote-outcome facts remain assumptions.
+Review commitments still use the enclosing reference-only comparison oracle.
+No helper process authentication, durable journal, credential broker, external
+publication, production runtime admission or production safety claim follows.
+No agent-facing verb, wire format or dependency is introduced.
