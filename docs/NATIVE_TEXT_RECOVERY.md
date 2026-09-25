@@ -53,7 +53,11 @@ is explicitly checked not to imply publication.
 
 The existing wire and journal encodings, numerical reducers, authority reducers,
 dependencies, production activation rules and prior test bodies are unchanged.
-This library addition does not yet add a native `serve-open` CLI route.
+The [native publication service](NATIVE_TEXT_PUBLICATION_SERVICE.md) now consumes
+this opener in explicit `serve-open --native-text` recovery. It keeps unsubmitted
+continuation separate from exact recorded-request receipt recovery, without
+replacing the numerical or authority reducers. Its seven additional regression
+functions are also unexecuted.
 
 **UNEXECUTED:** the required fresh command
 `RCH_REQUIRE_REMOTE=1 rch exec -- cargo run --locked -p xtask -- check` failed

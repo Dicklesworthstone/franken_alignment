@@ -1,6 +1,7 @@
 //! Native monitored generation feeding the ORIGINAL source-only publication gate.
 //! Stdout carries a submission reference, NEVER unapproved generated text.
 mod recipe;
+mod recovery;
 #[cfg(test)]
 mod tests;
 
@@ -18,10 +19,10 @@ use fa_reference::action::consequence::oversight::actor_wire::{Command, encode_c
 use std::io::Write;
 use recipe::Inputs;
 
-const USAGE: &str = "serve-create CONFIG ACTOR_PROFILE REVIEWER_PROFILE --native-text RECIPE";
+const USAGE: &str = "serve-create|serve-open CONFIG ACTOR_PROFILE REVIEWER_PROFILE --native-text RECIPE";
 
 pub(super) fn command(args: &[String], credibility: Option<&Path>) -> Result<(), String> {
-    if args.len() != 6 || args[0] != "serve-create" || args[4] != "--native-text" || credibility.is_some() {
+    if args.len() != 6 || !matches!(args[0].as_str(), "serve-create" | "serve-open") || args[4] != "--native-text" || credibility.is_some() {
         return Err(USAGE.into());
     }
     let config = Config::read(Path::new(&args[1]))?;
@@ -30,7 +31,11 @@ pub(super) fn command(args: &[String], credibility: Option<&Path>) -> Result<(),
     check_profiles(&config, &actor, &reviewer)?;
     let inputs = recipe::load(Path::new(&args[5]), config.profile.delivery.scope.tenant,
         config.profile.delivery.limits.bytes)?;
-    serve(config, &actor, &reviewer, inputs, super::super::clock, &mut std::io::stdout().lock())
+    if args[0] == "serve-open" {
+        serve_mode(config, &actor, &reviewer, inputs, true, super::super::clock, &mut std::io::stdout().lock())
+    } else {
+        serve(config, &actor, &reviewer, inputs, super::super::clock, &mut std::io::stdout().lock())
+    }
 }
 
 fn check_profiles(config: &Config, actor: &Profile, reviewer: &PeerProfile) -> Result<(), String> {
@@ -46,8 +51,14 @@ fn check_profiles(config: &Config, actor: &Profile, reviewer: &PeerProfile) -> R
     Ok(())
 }
 
-fn serve<F>(mut config: Config, actor: &Profile, reviewer_profile: &PeerProfile,
-    inputs: Inputs, mut time: F, output: &mut impl Write) -> Result<(), String>
+fn serve<F>(config: Config, actor: &Profile, reviewer_profile: &PeerProfile,
+    inputs: Inputs, time: F, output: &mut impl Write) -> Result<(), String>
+where F: FnMut() -> ElapsedTick {
+    serve_mode(config, actor, reviewer_profile, inputs, false, time, output)
+}
+
+fn serve_mode<F>(mut config: Config, actor: &Profile, reviewer_profile: &PeerProfile,
+    inputs: Inputs, open: bool, mut time: F, output: &mut impl Write) -> Result<(), String>
 where F: FnMut() -> ElapsedTick {
     check_profiles(&config, actor, reviewer_profile)?;
     if inputs.decoder.profile().identity().tenant != config.profile.delivery.scope.tenant {
@@ -59,26 +70,47 @@ where F: FnMut() -> ElapsedTick {
     // Exclusive listener ownership precedes the durable owner. No stale path is removed.
     let socket = BoundSocket::bind(&actor.socket, None)?;
     actor.secure_socket()?;
-    let (mut host, reviewer) = FileOversight::create_generated_text_stream_with_reserve(
-        &config.store, config.profile.clone(), inputs.stream, inputs.decoder.clone(), inputs.tokenizer.clone(),
-        RecoveryReserve::terminal()).map_err(debug)?;
-    host.enable_file_source(host.revision(), config.source_policy).map_err(debug)?;
-    if !host.generated_text_stream_required().map_err(debug)? || !host.publication_guard_required() {
-        return Err("native source and publication guards are mandatory".into());
+    let (mut host, reviewer) = if open {
+        FileOversight::open_generated_text_stream_with_reserve(&config.store, config.profile.clone(),
+            inputs.stream, &inputs.decoder, &inputs.tokenizer, RecoveryReserve::terminal())
+    } else {
+        FileOversight::create_generated_text_stream_with_reserve(&config.store, config.profile.clone(),
+            inputs.stream, inputs.decoder.clone(), inputs.tokenizer.clone(), RecoveryReserve::terminal())
+    }.map_err(debug)?;
+    if !open { host.enable_file_source(host.revision(), config.source_policy).map_err(debug)?; }
+    if !host.generated_text_stream_required().map_err(debug)? || !host.publication_guard_required()
+        || host.file_source_status().map(|status| status.policy) != Some(config.source_policy)
+        || host.journal_capacity().map_err(debug)?.reserve() != Some(RecoveryReserve::terminal())
+        || host.publication_validation_profile().map_err(debug)?.is_some() {
+        return Err("native source, reserve and publication contracts must match this service".into());
     }
+    let recovered_source = if open { recovery::select(&host, actor.request, &inputs)? } else { None };
+    let recorded = recovered_source.is_some();
+    if !recorded { host.check_credibility().map_err(debug)?; }
     let (port, supervisor) = host.into_generated_text_actor_gateway().map_err(debug)?;
     let mut driver = FileSupervisedDriver::new(supervisor);
     let inbox = FileActorInbox::new(actor.actor, ActorWire::new(port), actor.channels(), actor.connections).map_err(debug)?;
     let pool = FileActorPool::for_requests(vec![(actor.request, inbox)]).map_err(debug)?;
     let mut ingress = Intake { socket, pool, profile: actor.clone(), attempted: 0 };
-    let mut control = Some(Control::new(&config, actor.request, Some(reviewer_profile))?);
+    // Historical requests create no control/review listeners and never resume
+    // numerical work. Their original source document is retained byte-for-byte.
+    let mut control = if recorded { None } else {
+        Some(Control::new(&config, actor.request, Some(reviewer_profile))?)
+    };
     let work = (|| {
-        if !generate(&mut driver, &mut config, &inputs,
-            (control.as_mut().expect("initial stop owner"), &reviewer, &deadline), &mut time)? {
-            return Ok(());
-        }
-        // Only an acknowledged complete generation can acquire a source reference.
-        let source = {
+        let source = if let Some(source) = recovered_source {
+            resume_existing(&mut driver, actor.request, &mut time)?;
+            source
+        } else {
+            let controls = (control.as_mut().expect("initial stop owner"), &reviewer, &deadline);
+            let completed = if open {
+                recovery::resume(&mut driver, &mut config, &inputs, controls, &mut time)?
+            } else {
+                generate(&mut driver, &mut config, &inputs, controls, &mut time)?
+            };
+            if !completed { return Ok(()); }
+            // Only a first, unsubmitted complete generation gets a NEW proposal.
+            // An existing request above keeps its target, epoch and deadline.
             let host = driver.supervisor().host().map_err(debug)?;
             let progress = host.decoder_generation_progress(inputs.generation).map_err(debug)?;
             let text = host.decoder_text_generation(inputs.generation).map_err(debug)?;
@@ -94,6 +126,16 @@ where F: FnMut() -> ElapsedTick {
             proposal: FileGeneratedTextActorPort::encode_message(&source).map_err(debug)? }).map_err(debug)?;
         output.write_all(&document).and_then(|()| output.write_all(b"\n"))
             .and_then(|()| output.flush()).map_err(|error| format!("source reference output failed: {error}; no actor request sent"))?;
+        if recorded {
+            // Do not consume reply grace before an authenticated actor command.
+            // Even an expired old Submit is handled by the original retry path;
+            // no fresh evidence, helpers, human approval or publication occurs.
+            loop {
+                deadline.check(time())?;
+                if ingress.observe_count(&mut driver)? != 0 { return Ok(()); }
+                pause(actor.poll_ms);
+            }
+        }
         loop {
             deadline.check(time())?;
             if control.as_mut().expect("retained stop owner").checkpoint(&mut driver, &reviewer, &deadline, &mut time)? {
@@ -117,8 +159,13 @@ where F: FnMut() -> ElapsedTick {
             ExecuteServices { peers: Some(reviewer_profile), publication: None, ingress: &mut pump,
                 stop: control.take() }, &mut time)
     })();
-    let mut failure = work.err().map(|error| match stop(&mut driver, actor.request, &mut time) {
-        Ok(()) => error, Err(stopping) => format!("{error}; stop/drain: {stopping}"),
+    let mut failure = work.err().map(|error| {
+        // A broken receipt connection must not stop unrelated later work in the
+        // recovered journal. New-work failures retain the original stop/drain.
+        if recorded { return error; }
+        match stop(&mut driver, actor.request, &mut time) {
+            Ok(()) => error, Err(stopping) => format!("{error}; stop/drain: {stopping}"),
+        }
     });
     let grace = Instant::now();
     while grace.elapsed() < Duration::from_millis(actor.reply_ms) {
@@ -154,6 +201,14 @@ where F: FnMut() -> ElapsedTick {
         let revision = host.revision();
         host.begin_decoder_text(revision, command).map_err(debug)?;
     }
+    advance_pending(driver, config, inputs, (control, reviewer, deadline), time)
+}
+
+// Creation and explicit recovery share the SAME one-token/control/source loop.
+fn advance_pending<F>(driver: &mut FileSupervisedDriver, config: &mut Config, inputs: &Inputs,
+    controls: (&mut Control, &FileHumanReviewer, &Deadline), time: &mut F) -> Result<bool, String>
+where F: FnMut() -> ElapsedTick {
+    let (control, reviewer, deadline) = controls;
     loop {
         deadline.check(time())?;
         if control.checkpoint(driver, reviewer, deadline, time)? { return Ok(false); }
@@ -231,8 +286,16 @@ impl Intake {
         check_report(self.pool.drive(driver, &mut config.source, time, pool_budget()).map_err(debug)?)
     }
     fn observe(&mut self, driver: &mut FileSupervisedDriver) -> Result<(), String> {
+        self.observe_count(driver).map(|_| ())
+    }
+    fn observe_count(&mut self, driver: &mut FileSupervisedDriver) -> Result<usize, String> {
         self.accept()?;
-        check_report(self.pool.observe(driver, pool_budget()).map_err(debug)?)
+        let budget = pool_budget();
+        let report = self.pool.observe(driver, budget).map_err(debug)?;
+        let frames = budget.total.frames.checked_sub(report.remaining.frames)
+            .ok_or("actor observation exceeded its issued frame allowance")?;
+        check_report(report)?;
+        Ok(frames)
     }
 }
 fn pool_budget() -> PoolBudget {

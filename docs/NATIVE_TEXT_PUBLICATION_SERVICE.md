@@ -3,7 +3,8 @@
 ## Capability and contract
 
 The Linux `supervise_publication` executable now accepts an explicit
-`--native-text RECIPE` option on `serve-create`. It creates the ORIGINAL
+`--native-text RECIPE` option on `serve-create` and explicit `serve-open`
+recovery. Creation establishes the ORIGINAL
 native-text-only durable stream, loads a bounded Llama/SafeTensors model and
 native FA-BBPE tokenizer, runs compulsory activation monitoring on every prompt
 and sampled token, and connects its completed generation to the original actor,
@@ -46,8 +47,51 @@ scope, clock, directory, credentials and finite resource checks. Stop uses the
 existing `stop-peer REVIEWER_PROFILE REQUEST_ID` command. No default approval,
 output substitution, implicit stream finish, credential override or legacy
 publication fallback is introduced. The request deadline is fixed to the service
-lifetime and is never renewed after generation. Source-reference output failure
-stops the workflow; it does not send or retry the actor request.
+lifetime for a first proposal. A recorded request's deadline is never renewed.
+Source-reference output failure stops new-work workflows; it does not send or
+retry the actor request. Receipt-only recovery does not issue Stop on output
+failure, because doing so could affect unrelated later work.
+
+## Explicit recovery
+
+```sh
+supervise_publication serve-open CONFIG ACTOR_PROFILE REVIEWER_PROFILE \
+  --native-text RECIPE > recovered-submit.json
+```
+
+Keep the original recipe, model/tokenizer files and registered profile. Recovery
+uses the [exact native bootstrap opener](NATIVE_TEXT_RECOVERY.md), verifies the
+stored source policy and reserve, and compares every original text-request field,
+including prompt bytes and all budgets. It never falls back to create, introduces
+a new generation ID, replaces a prompt, replenishes work or changes the sampler.
+A journal without the original text intent refuses rather than starting over.
+Original stale socket paths are not deleted automatically.
+
+For a pending generation, the explicit open command obtains fresh source and time,
+services independent stop, and invokes the original resume on the reconstructed
+predecessor. It then shares creation's one-token/control/source loop. A completed
+but unsubmitted generation must have its original Control stop and still match
+the current numerical position/revision. Another outstanding generation, even
+before its first token, cannot be skipped. Held, cancelled, failed and TokenLimit
+results are not restart candidates. Completion still only emits an unapproved
+source reference; authenticated actor submission, helpers and independent human
+approval remain mandatory before any first publication.
+
+For an already-recorded source-linked actor request, recovery instead emits the
+EXACT original Submit document, including its old target, policy epoch and
+deadline, and performs only original outcome reconciliation and actor observation.
+It does not refresh evidence, resume inference, launch helpers, open a review/stop
+listener, request a new human key or retry publication. An expired original
+request can therefore retrieve its retained outcome without becoming a new effect.
+The new service lifetime bounds receipt delivery, not the old permit. A failed
+receipt output neither resends the effect nor issues a new Stop consequence.
+
+A first submission after interrupted, unsubmitted generation uses a new explicit
+service lifetime, but this grants no authority and renews no recorded request or
+permit. An unsubmitted reference emitted by an earlier process remains unapproved;
+the first accepted actor request fixes the durable source identity. Recovery is
+not an authenticated latest-head or anti-rollback guarantee. Existing anchored
+and guarded-role deployments still require their separately composed contracts.
 
 ## Recipe
 
@@ -86,6 +130,8 @@ Full prompt plus requested continuation must fit the original context.
 
 ## Source and execution status
 
+### Creation baseline
+
 Five regression functions are authored, with actual native numerical computation,
 source/journal files, actor/reviewer sockets and existing synthetic helper child
 processes. They cover paired human approval/rejection, held generation, a quiet
@@ -109,12 +155,29 @@ RCH_REQUIRE_REMOTE=1 rch exec -- cargo test --locked -p fa-reference \
   --example supervise_publication native_
 ```
 
-Current scope is one new native stream/request per service. Native `serve-open`,
-checked-witness/multi-peer combinations and implicit numerical resume are not
-accepted. The native stream's existing full-input, two-key and fresh-publication
+Current scope is one native stream/request per service, either creation or the
+explicit recovery above. Checked-witness/multi-peer combinations and implicit
+numerical resume remain unsupported. The native stream's existing full-input, two-key and fresh-publication
 checks remain mandatory even without the optional structured-witness extension.
 The protected sink remains the original journal-as-publication reference sink;
 no model-serving, package-registry, network-delivery or OS-isolation qualification
 is claimed. File/clock authenticity and arithmetic-platform compatibility remain
 operator assumptions. All original model, wire, journal and authority formats
-and every existing test body are unchanged.
+remain unchanged.
+
+### Recovery change record — 2026-09-25
+
+Seven additional regression functions exercise actual original computation and
+canonical files, partial and completed-but-unsubmitted continuation with both
+human outcomes, exact recipe mismatches, missing intent, held/limited work, source
+loss, expired published-request retries without helper programs or evidence,
+broken receipt output, and preservation of a later zero-token intent. They use
+the existing synthetic model and same-process credential/helper fixtures, not a
+trained detector or hostile-process isolation test. The existing unsupported-mode
+test now rejects `serve-open-checked` instead of newly supported `serve-open`;
+its other cases and the four creation regression functions are unchanged.
+
+These seven tests and the five exact-bootstrap recovery tests are **UNEXECUTED**.
+A fresh required RCH gate attempt again failed before compilation (`rch` missing,
+exit 127). No Rust compilation, rustfmt, Clippy or test pass is claimed. No Beads
+closure or production qualification follows from source or whitespace review.

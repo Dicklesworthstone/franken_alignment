@@ -9,6 +9,7 @@ use fa_reference::action::consequence::oversight::actor_wire::client::{ActorExch
 use std::os::unix::net::UnixStream;
 use std::sync::mpsc;
 mod fixture;
+mod recovery_tests;
 use fixture::*;
 
 struct ReferenceOutput { bytes: Vec<u8>, sender: Option<mpsc::Sender<Vec<u8>>> }
@@ -175,7 +176,7 @@ fn native_recipe_uses_exact_aggregate_bound_and_rejects_bad_semantics_before_sto
 
 #[test]
 fn native_command_refuses_unsupported_modes_and_profile_collisions_without_effects() {
-    for mode in ["actor-submit", "serve-open", "serve-create-checked"] {
+    for mode in ["actor-submit", "serve-open-checked", "serve-create-checked"] {
         let args = [mode, "absent", "absent", "absent", "--native-text", "absent"].map(str::to_owned);
         assert_eq!(command(&args, None).unwrap_err(), USAGE);
     }
