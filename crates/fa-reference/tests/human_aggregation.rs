@@ -147,13 +147,15 @@ fn grouped_keys_use_original_dispatch_checks_and_cannot_be_swapped_or_reused() {
     assert_eq!(f.broker.human_status(r1.id()).unwrap().disposition, HumanDisposition::Consumed);
     assert!(f.broker.dispatch_with_human(&p1, &keys[&r1.id()], &first.action,
         Some(&first.inputs), &snapshot()).is_err());
-    let reserved = f.broker.inspect().ledger.reserved;
-    assert_eq!(reserved, 20);
+    // The dispatched obligation is conservatively charged, while the second
+    // undispatched automatic permit still reserves its own ten units.
+    let before = f.broker.inspect().ledger;
+    assert_eq!((before.available, before.reserved, before.charged), (80, 10, 10));
     assert_eq!(f.work.revoke(&work, ElapsedTick(1)).unwrap().requests, vec![r2.id()]);
     assert_eq!(f.broker.human_status(r1.id()).unwrap().disposition, HumanDisposition::Consumed);
     assert!(matches!(f.broker.dispatch_with_human(&p2, &keys[&r2.id()], &second.action,
         Some(&second.inputs), &snapshot()), Err(Error::WrongState)));
-    assert_eq!(f.broker.inspect().ledger.reserved, reserved);
+    assert_eq!(f.broker.inspect().ledger, before);
     assert_eq!(f.broker.inspect().ledger.stages[&first.id], ActionState::Dispatching);
 }
 
@@ -176,17 +178,17 @@ fn late_arrivals_never_inherit_a_presented_or_approved_member_set() {
 }
 
 #[test]
-fn different_payloads_and_private_witnesses_do_not_share_review_work() {
+fn distinct_payloads_stay_separate_and_actor_witness_injection_is_rejected() {
     let mut f = Fixture::new(budget());
     let first = f.prepare(1, spec());
     let changed = f.prepare(2, ActionSpec { payload: b"other-effect".to_vec(), ..spec() });
-    let witnessed = f.prepare(3, ActionSpec {
+    // PolicyAuthority derives witnesses itself; an actor cannot supply its own.
+    assert!(matches!(f.broker.propose(3, ActionSpec {
         required_witnesses: vec![ReadWitness::Exact { key: 7, value: Some(b"ok".to_vec()) }], ..spec()
-    });
+    }, &snapshot()), Err(Error::InvalidInput)));
     let r1 = f.request(&first);
     let r2 = f.request(&changed);
-    let r3 = f.request(&witnessed);
-    for id in [r1.id(), r2.id(), r3.id()] {
+    for id in [r1.id(), r2.id()] {
         let work = f.work.next_work(ElapsedTick(1)).unwrap().unwrap();
         assert_eq!(work.requests().iter().map(HumanRequest::id).collect::<Vec<_>>(), vec![id]);
         assert_eq!(work.total_units(), 10);
@@ -273,6 +275,7 @@ fn foreign_work_with_identical_ids_and_evidence_cannot_issue_any_keys() {
     assert!(matches!(owner.work.approve(&foreign_work, ElapsedTick(1)), Err(Error::Binding)));
     assert_eq!(owner.work.reject(&foreign_work, ElapsedTick(1)), Err(Error::Binding));
     assert_eq!(owner.work.revoke(&foreign_work, ElapsedTick(1)), Err(Error::Binding));
+    assert_eq!(owner.work.statuses(&foreign_work), Err(Error::Binding));
     assert_eq!(owner.work.statuses(&own_work).unwrap()[0].disposition, HumanDisposition::Pending);
 }
 
@@ -344,4 +347,139 @@ fn work_budget_validation_rejects_unbounded_and_zero_profiles() {
     }
     assert_eq!(HumanWorkBudget { max_work_items: MAX_HUMAN_REQUESTS + 1, ..budget() }.validate(), Err(Error::Limit));
     assert_eq!(HumanWorkBudget { max_members_per_work: MAX_HUMAN_REQUESTS + 1, ..budget() }.validate(), Err(Error::Limit));
+}
+
+#[test]
+fn different_expiries_do_not_broaden_the_shorter_approval_window() {
+    let mut f = Fixture::new(budget());
+    let first = f.prepare(1, spec());
+    let second = f.prepare(2, spec());
+    let r1 = f.broker.request_human_approval(1001, first.id, Some(&first.inputs), ElapsedTick(80)).unwrap();
+    let r2 = f.request(&second);
+    let work = f.work.next_work(ElapsedTick(1)).unwrap().unwrap();
+    assert_eq!(work.requests().iter().map(HumanRequest::id).collect::<Vec<_>>(), vec![r1.id()]);
+    let next = f.work.next_work(ElapsedTick(1)).unwrap().unwrap();
+    assert_eq!(next.requests().iter().map(HumanRequest::id).collect::<Vec<_>>(), vec![r2.id()]);
+    assert!(matches!(f.work.approve(&work, ElapsedTick(80)), Err(Error::Stale)));
+    assert_eq!(f.work.approve(&next, ElapsedTick(80)).unwrap().len(), 1);
+}
+
+#[test]
+fn later_control_transitions_do_not_merge_or_resurrect_older_requests() {
+    let mut f = Fixture::new(budget());
+    let first = f.prepare(1, spec());
+    let r1 = f.request(&first);
+    let second = f.prepare(2, spec());
+    let r2 = f.request(&second);
+    assert_ne!(r1.control_sequence(), r2.control_sequence());
+    let older = f.work.next_work(ElapsedTick(1)).unwrap().unwrap();
+    assert_eq!(older.requests().iter().map(HumanRequest::id).collect::<Vec<_>>(), vec![r1.id()]);
+    let newer = f.work.next_work(ElapsedTick(1)).unwrap().unwrap();
+    assert_eq!(newer.requests().iter().map(HumanRequest::id).collect::<Vec<_>>(), vec![r2.id()]);
+    let keys = f.work.approve(&older, ElapsedTick(1)).unwrap();
+    let permit = f.broker.authorize(first.id, Some(&first.inputs), &snapshot()).unwrap();
+    assert!(matches!(f.broker.dispatch_with_human(&permit, &keys[&r1.id()], &first.action,
+        Some(&first.inputs), &snapshot()), Err(Error::Stale)));
+    assert_eq!(f.broker.human_status(r1.id()).unwrap().disposition, HumanDisposition::Approved);
+}
+
+#[test]
+fn rejected_bulk_decision_cannot_change_previously_approved_members() {
+    let mut f = Fixture::new(budget());
+    let first = f.prepare(1, spec());
+    let second = f.prepare(2, spec());
+    f.request(&first);
+    f.request(&second);
+    let work = f.work.next_work(ElapsedTick(1)).unwrap().unwrap();
+    let _keys = f.work.approve(&work, ElapsedTick(1)).unwrap();
+    let before = f.work.statuses(&work).unwrap();
+    assert_eq!(f.work.reject(&work, ElapsedTick(1)), Err(Error::WrongState));
+    assert_eq!(f.work.statuses(&work).unwrap(), before);
+}
+
+#[test]
+fn foreign_automatic_permit_does_not_spend_the_correct_human_key() {
+    let mut owner = Fixture::new(budget());
+    let mut foreign = Fixture::new(budget());
+    let own = owner.prepare(1, spec());
+    let other = foreign.prepare(1, spec());
+    let request = owner.request(&own);
+    let own_permit = owner.broker.authorize(own.id, Some(&own.inputs), &snapshot()).unwrap();
+    let foreign_permit = foreign.broker.authorize(other.id, Some(&other.inputs), &snapshot()).unwrap();
+    let work = owner.work.next_work(ElapsedTick(1)).unwrap().unwrap();
+    let keys = owner.work.approve(&work, ElapsedTick(1)).unwrap();
+    let before = owner.broker.inspect().ledger;
+    assert!(matches!(owner.broker.dispatch_with_human(&foreign_permit, &keys[&request.id()], &own.action,
+        Some(&own.inputs), &snapshot()), Err(Error::Binding)));
+    assert_eq!(owner.broker.human_status(request.id()).unwrap().disposition, HumanDisposition::Approved);
+    assert_eq!(owner.broker.inspect().ledger, before);
+    owner.broker.dispatch_with_human(&own_permit, &keys[&request.id()], &own.action, Some(&own.inputs), &snapshot()).unwrap();
+}
+
+#[test]
+fn a_modified_effect_cannot_use_a_key_from_an_equivalent_work_item() {
+    let mut f = Fixture::new(budget());
+    let first = f.prepare(1, spec());
+    let request = f.request(&first);
+    let permit = f.broker.authorize(first.id, Some(&first.inputs), &snapshot()).unwrap();
+    let work = f.work.next_work(ElapsedTick(1)).unwrap().unwrap();
+    let keys = f.work.approve(&work, ElapsedTick(1)).unwrap();
+    let mut spec = first.action.spec().clone();
+    spec.payload.push(b'!');
+    let changed = FrozenAction::freeze(spec).unwrap();
+    assert!(matches!(f.broker.dispatch_with_human(&permit, &keys[&request.id()], &changed,
+        Some(&first.inputs), &snapshot()), Err(Error::Binding)));
+    assert_eq!(f.broker.human_status(request.id()).unwrap().disposition, HumanDisposition::Approved);
+}
+
+#[test]
+fn duplicate_attempt_contexts_cannot_inflate_the_work_membership() {
+    let mut f = Fixture::new(budget());
+    let first = f.prepare(1, spec());
+    let request = f.request(&first);
+    assert!(matches!(f.broker.request_human_approval(2001, first.id, Some(&first.inputs), ElapsedTick(90)), Err(Error::Duplicate)));
+    assert!(matches!(f.broker.request_human_approval(request.id(), first.id, Some(&first.inputs), ElapsedTick(90)), Err(Error::Duplicate)));
+    let work = f.work.next_work(ElapsedTick(1)).unwrap().unwrap();
+    assert_eq!(work.requests().len(), 1);
+    assert_eq!(f.work.usage(), HumanWorkUsage { work_items: 1, requests: 1, total_units: 10 });
+}
+
+#[test]
+fn emergency_revocation_covers_unpresented_and_approved_work_but_not_consumed_effects() {
+    let mut f = Fixture::new(HumanWorkBudget { max_members_per_work: 2, ..budget() });
+    let first = f.prepare(1, spec());
+    let second = f.prepare(2, spec());
+    let third = f.prepare(3, spec());
+    let r1 = f.request(&first);
+    let r2 = f.request(&second);
+    let r3 = f.request(&third);
+    let p1 = f.broker.authorize(first.id, Some(&first.inputs), &snapshot()).unwrap();
+    let _p2 = f.broker.authorize(second.id, Some(&second.inputs), &snapshot()).unwrap();
+    let _p3 = f.broker.authorize(third.id, Some(&third.inputs), &snapshot()).unwrap();
+    let work = f.work.next_work(ElapsedTick(1)).unwrap().unwrap();
+    let keys = f.work.approve(&work, ElapsedTick(1)).unwrap();
+    f.broker.dispatch_with_human(&p1, &keys[&r1.id()], &first.action, Some(&first.inputs), &snapshot()).unwrap();
+    let before = f.broker.inspect().ledger;
+    assert_eq!((before.available, before.reserved, before.charged), (70, 20, 10));
+    assert_eq!(f.work.revoke_all(ElapsedTick(1)).unwrap().requests, vec![r2.id(), r3.id()]);
+    assert_eq!(f.broker.human_status(r1.id()).unwrap().disposition, HumanDisposition::Consumed);
+    assert_eq!(f.broker.inspect().ledger, before);
+    assert!(f.work.revoke_all(ElapsedTick(1)).unwrap().requests.is_empty());
+}
+
+#[test]
+fn cancellation_and_denial_after_human_approval_still_block_dispatch() {
+    for deny in [false, true] {
+        let mut f = Fixture::new(budget());
+        let first = f.prepare(1, spec());
+        let request = f.request(&first);
+        let permit = f.broker.authorize(first.id, Some(&first.inputs), &snapshot()).unwrap();
+        let work = f.work.next_work(ElapsedTick(1)).unwrap().unwrap();
+        let keys = f.work.approve(&work, ElapsedTick(1)).unwrap();
+        if deny { f.broker.deny(first.id).unwrap(); }
+        else { f.broker.cancel(first.id).unwrap(); }
+        assert!(f.broker.dispatch_with_human(&permit, &keys[&request.id()], &first.action,
+            Some(&first.inputs), &snapshot()).is_err());
+        assert_eq!(f.broker.human_status(request.id()).unwrap().disposition, HumanDisposition::Approved);
+    }
 }
