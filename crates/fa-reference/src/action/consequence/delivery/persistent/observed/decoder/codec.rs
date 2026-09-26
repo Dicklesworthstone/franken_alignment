@@ -2,6 +2,7 @@
 use super::{DecoderEvent, FileDecoderConfig, StepRequest, MAX_WITNESS_BYTES};
 use super::super::super::codec::shared::{Reader, Writer};
 use crate::Error;
+use crate::action::consequence::activation::tensor::kv::decoder::safetensors::OutputHead;
 use crate::action::consequence::oversight::decoder_host::HostedStopPolicy;
 use std::rc::Rc;
 
@@ -17,7 +18,15 @@ pub(in super::super) fn write(w: &mut Writer, event: &DecoderEvent) -> Result<()
             w.u8(11)?; w.u64(*id)?; w.u64(*revision)?;
         }
         DecoderEvent::TextIntent(command) => { w.u8(10)?; super::text::write(w, command)?; }
-        DecoderEvent::Enable(config) => { w.u8(0)?; config.write(w)?; }
+        DecoderEvent::Enable(config) => {
+            // Tag 0 is permanently independent. Tag 12 binds tied semantics;
+            // older readers reject it instead of misinterpreting its weights.
+            w.u8(match config.output_head() {
+                OutputHead::Independent => 0,
+                OutputHead::TiedEmbeddings => 12,
+            })?;
+            config.write(w)?;
+        }
         DecoderEvent::StopPolicy(policy) => {
             w.u8(5)?; w.u64(policy.id())?; w.u64(policy.generation())?; w.u64(policy.operation())?;
         }
@@ -61,6 +70,8 @@ pub(in super::super) fn read(r: &mut Reader<'_>) -> Result<DecoderEvent, Error> 
     let tag = r.u8()?;
     Ok(match tag {
         0 => DecoderEvent::Enable(Rc::new(FileDecoderConfig::read(r)?)),
+        12 => DecoderEvent::Enable(Rc::new(FileDecoderConfig::read_with_output_head(r,
+            OutputHead::TiedEmbeddings)?)),
         1 | 2 => {
             let revision = r.u64()?; let position = r.u64()?;
             let request = if tag == 1 {

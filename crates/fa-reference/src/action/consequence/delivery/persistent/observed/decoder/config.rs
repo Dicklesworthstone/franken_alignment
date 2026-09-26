@@ -5,7 +5,7 @@ use crate::action::consequence::activation::monitor::decoder::config::{MonitorCo
 use crate::action::consequence::activation::monitor::decoder::sampled::{MonitoredSampledDecoder,
     config::{SamplingConfigError, MAX_SAMPLING_CONFIG_BYTES}};
 use crate::action::consequence::activation::tensor::kv::decoder::{DecoderIdentity, DecoderModel, DecoderProfile, DecoderShape};
-use crate::action::consequence::activation::tensor::kv::decoder::safetensors::{WeightError, MAX_WEIGHT_FILE_BYTES};
+use crate::action::consequence::activation::tensor::kv::decoder::safetensors::{OutputHead, WeightError, MAX_WEIGHT_FILE_BYTES};
 use crate::action::consequence::oversight::decoder_monitoring::{DecoderBindingLimits,
     MAX_BOUND_DECODER_TOKENS, MAX_BOUND_DECODER_SCORE_WORDS};
 use crate::Error;
@@ -17,6 +17,7 @@ use std::rc::Rc;
 #[derive(Clone, PartialEq, Eq)]
 pub struct FileDecoderConfig {
     profile: DecoderProfile,
+    output_head: OutputHead,
     weights: Rc<[u8]>,
     monitor: Rc<[u8]>,
     sampling: Rc<[u8]>,
@@ -26,14 +27,30 @@ pub struct FileDecoderConfig {
 impl fmt::Debug for FileDecoderConfig {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("FileDecoderConfig").field("profile", &self.profile)
-            .field("stream", &self.stream).field("input_bytes", &self.input_bytes()).finish_non_exhaustive()
+            .field("output_head", &self.output_head).field("stream", &self.stream).field("input_bytes", &self.input_bytes()).finish_non_exhaustive()
     }
 }
 impl FileDecoderConfig {
+    /// Legacy and default loading always require an independent lm_head.
+    /// A missing head never implicitly selects shared embeddings.
     pub fn new(profile: DecoderProfile, weights: Vec<u8>, monitor: Vec<u8>,
         sampling: Vec<u8>, stream: u64, limits: DecoderBindingLimits) -> Result<Self, Error>
     {
-        let config = Self { profile, weights: weights.into(), monitor: monitor.into(),
+        Self::new_with_output_head(profile, weights, monitor, sampling, stream, limits,
+            OutputHead::Independent)
+    }
+
+    /// Freeze explicit output-head semantics with the original raw model bytes.
+    /// TiedEmbeddings accepts an omitted head; a physically present head must
+    /// have exactly the embedding matrix's normalized f32 bits. Validation and
+    /// numerical execution remain in the original SafeTensors/decoder owners.
+    /// Mode participates in exact recovery equality even when both modes would
+    /// produce identical numbers from an archive containing equal matrices.
+    pub fn new_with_output_head(profile: DecoderProfile, weights: Vec<u8>, monitor: Vec<u8>,
+        sampling: Vec<u8>, stream: u64, limits: DecoderBindingLimits, output_head: OutputHead)
+        -> Result<Self, Error>
+    {
+        let config = Self { profile, output_head, weights: weights.into(), monitor: monitor.into(),
             sampling: sampling.into(), stream, limits };
         config.check_bounds()?;
         // Validate the actual native constructors before handing out configuration.
@@ -42,6 +59,7 @@ impl FileDecoderConfig {
         Ok(config)
     }
     pub fn profile(&self) -> &DecoderProfile { &self.profile }
+    pub fn output_head(&self) -> OutputHead { self.output_head }
     pub fn stream(&self) -> u64 { self.stream }
     pub fn input_bytes(&self) -> usize { self.weights.len() + self.monitor.len() + self.sampling.len() }
     fn check_bounds(&self) -> Result<(), Error> {
@@ -54,7 +72,8 @@ impl FileDecoderConfig {
     }
     pub(in super::super) fn build(&self) -> Result<MonitoredSampledDecoder, Error> {
         self.check_bounds()?;
-        let (model, _) = DecoderModel::from_safetensors(self.profile.clone(), &self.weights)
+        let (model, _) = DecoderModel::from_safetensors_with_output_head(
+            self.profile.clone(), &self.weights, self.output_head)
             .map_err(|e| match e { WeightError::Limit => Error::Limit, WeightError::Model(e) => e, _ => Error::InvalidInput })?;
         MonitoredSampledDecoder::from_json(model, self.stream, &self.monitor, &self.sampling)
             .map_err(|e| match e {
@@ -73,6 +92,11 @@ impl FileDecoderConfig {
         w.blob(&self.weights)?; w.blob(&self.monitor)?; w.blob(&self.sampling)
     }
     pub(super) fn read(r: &mut Reader<'_>) -> Result<Self, Error> {
+        Self::read_with_output_head(r, OutputHead::Independent)
+    }
+    // Only the decoder event discriminator selects this mode. The legacy body
+    // and tag 0 keep their exact meaning; bytes never infer a missing head.
+    pub(super) fn read_with_output_head(r: &mut Reader<'_>, output_head: OutputHead) -> Result<Self, Error> {
         let identity = DecoderIdentity { tenant: r.u64()?, model: r.u64()?, model_generation: r.u64()?,
             tokenizer_generation: r.u64()?, profile_generation: r.u64()? };
         let epsilon = f64::from_bits(r.u64()?); let theta = f64::from_bits(r.u64()?); let stream = r.u64()?;
@@ -80,7 +104,7 @@ impl FileDecoderConfig {
             layers: r.count(128)?, query_heads: r.count(2_048)?, cache_heads: r.count(2_048)?, context: r.count(1_048_576)? };
         let profile = DecoderProfile::new(identity, shape, epsilon, theta)?;
         let limits = DecoderBindingLimits { token_ids: r.count(MAX_BOUND_DECODER_TOKENS)?, score_words: r.count(MAX_BOUND_DECODER_SCORE_WORDS)? };
-        let config = Self { profile, limits, stream, weights: Rc::from(r.blob(MAX_WEIGHT_FILE_BYTES)?),
+        let config = Self { profile, output_head, limits, stream, weights: Rc::from(r.blob(MAX_WEIGHT_FILE_BYTES)?),
             monitor: Rc::from(r.blob(MAX_MONITOR_CONFIG_BYTES)?), sampling: Rc::from(r.blob(MAX_SAMPLING_CONFIG_BYTES)?) };
         config.check_bounds()?;
         // Semantic replay calls the same native build; decoding does not retain a
@@ -88,3 +112,6 @@ impl FileDecoderConfig {
         Ok(config)
     }
 }
+
+#[cfg(test)]
+mod tests;
