@@ -7,6 +7,7 @@ pub mod actor;
 pub mod actor_wire;
 pub mod evidence_source;
 pub mod sidecar;
+pub mod learned_source;
 #[cfg(unix)]
 pub mod actor_transport;
 #[cfg(target_os = "linux")]
