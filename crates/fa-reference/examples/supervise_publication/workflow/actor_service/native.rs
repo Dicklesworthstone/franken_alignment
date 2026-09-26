@@ -3,6 +3,7 @@
 mod recipe;
 mod recovery;
 mod qualification;
+mod continuation;
 #[cfg(test)]
 mod tests;
 
@@ -20,9 +21,10 @@ use fa_reference::action::consequence::oversight::actor_wire::{Command, encode_c
 use std::io::Write;
 use recipe::Inputs;
 
-const USAGE: &str = "serve-create|serve-open CONFIG ACTOR_PROFILE REVIEWER_PROFILE --native-text RECIPE; serve-create-checked|serve-open-checked CONFIG ACTOR_PROFILE REVIEWER_PROFILE WITNESS_PROFILE --native-text RECIPE";
+const USAGE: &str = "serve-create|serve-open CONFIG ACTOR_PROFILE REVIEWER_PROFILE --native-text RECIPE; serve-create-checked|serve-open-checked CONFIG ACTOR_PROFILE REVIEWER_PROFILE WITNESS_PROFILE --native-text RECIPE; native open also accepts a final --after-message PREVIOUS_REQUEST";
 
 pub(super) fn command(args: &[String], credibility: Option<&Path>) -> Result<(), String> {
+    let (args, after) = continuation::take_option(args)?;
     let (open, checked) = match args.first().map(String::as_str) {
         Some("serve-create") => (false, false), Some("serve-open") => (true, false),
         Some("serve-create-checked") => (false, true), Some("serve-open-checked") => (true, true),
@@ -39,7 +41,10 @@ pub(super) fn command(args: &[String], credibility: Option<&Path>) -> Result<(),
     let publication = if checked { Some(PublicationProfile::read(Path::new(&args[4]))?) } else { None };
     let inputs = recipe::load(Path::new(&args[option + 1]), config.profile.delivery.scope.tenant,
         config.profile.delivery.limits.bytes)?;
-    if credibility.is_some() {
+    if after.is_some() {
+        serve_continued(config, &actor, &reviewer, inputs, (open, publication.as_ref(), credibility, after),
+            super::super::clock, &mut std::io::stdout().lock())
+    } else if credibility.is_some() {
         serve_qualified(config, &actor, &reviewer, inputs, (open, publication.as_ref(), credibility),
             super::super::clock, &mut std::io::stdout().lock())
     } else if let Some(publication) = &publication {
@@ -84,11 +89,22 @@ where F: FnMut() -> ElapsedTick {
     serve_qualified(config, actor, reviewer_profile, inputs, (deployment.0, deployment.1, None), time, output)
 }
 
-fn serve_qualified<F>(mut config: Config, actor: &Profile, reviewer_profile: &PeerProfile,
-    inputs: Inputs, deployment: (bool, Option<&PublicationProfile>, Option<&Path>), mut time: F,
+fn serve_qualified<F>(config: Config, actor: &Profile, reviewer_profile: &PeerProfile,
+    inputs: Inputs, deployment: (bool, Option<&PublicationProfile>, Option<&Path>), time: F,
     output: &mut impl Write) -> Result<(), String>
 where F: FnMut() -> ElapsedTick {
-    let (open, publication, credibility) = deployment;
+    serve_continued(config, actor, reviewer_profile, inputs,
+        (deployment.0, deployment.1, deployment.2, None), time, output)
+}
+
+fn serve_continued<F>(mut config: Config, actor: &Profile, reviewer_profile: &PeerProfile,
+    inputs: Inputs, deployment: (bool, Option<&PublicationProfile>, Option<&Path>, Option<u64>), mut time: F,
+    output: &mut impl Write) -> Result<(), String>
+where F: FnMut() -> ElapsedTick {
+    let (open, publication, credibility, after) = deployment;
+    if after.is_some() && (!open || after == Some(actor.request)) {
+        return Err("native continuation requires an existing stream and a new actor request ID".into());
+    }
     check_profiles(&config, actor, reviewer_profile)?;
     // Retain the entire selection, including a joint qualification policy. The
     // original constructors pin it atomically; it is never installed at recovery.
@@ -118,7 +134,12 @@ where F: FnMut() -> ElapsedTick {
         || host.publication_validation_profile().map_err(debug)? != publication.map(|profile| profile.limits) {
         return Err("native source, reserve and publication contracts must match this service".into());
     }
-    let recovered_source = if open { recovery::select(&host, actor.request, &inputs)? } else { None };
+    // New initiation is opt-in. Ordinary open still rejects a missing intent;
+    // duplicate IDs must use the existing exact recovery/receipt path instead.
+    let next = after.map(|after| continuation::prepare(&host, actor.request, &inputs, after)).transpose()?;
+    let recovered_source = if open && after.is_none() {
+        recovery::select(&host, actor.request, &inputs)?
+    } else { None };
     let recorded = recovered_source.is_some();
     if !recorded && credibility.is_none() { host.check_credibility().map_err(debug)?; }
     let (port, supervisor) = host.into_generated_text_actor_gateway().map_err(debug)?;
@@ -143,7 +164,9 @@ where F: FnMut() -> ElapsedTick {
                 return Ok(());
             }
             let controls = (control.as_mut().expect("initial stop owner"), &reviewer, &deadline);
-            let completed = if open {
+            let completed = if let Some(prepared) = next {
+                continuation::start(&mut driver, &mut config, &inputs, prepared, controls, &mut time)?
+            } else if open {
                 recovery::resume(&mut driver, &mut config, &inputs, controls, &mut time)?
             } else {
                 generate(&mut driver, &mut config, &inputs, controls, &mut time)?
