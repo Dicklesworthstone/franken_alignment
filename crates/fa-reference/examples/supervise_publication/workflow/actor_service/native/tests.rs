@@ -11,6 +11,7 @@ use std::sync::mpsc;
 mod fixture;
 mod recovery_tests;
 mod checked_tests;
+mod sharded_tests;
 use fixture::*;
 
 struct ReferenceOutput { bytes: Vec<u8>, sender: Option<mpsc::Sender<Vec<u8>>> }

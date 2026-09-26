@@ -10,7 +10,7 @@ use fa_reference::action::consequence::activation::monitor::decoder::sampled::ge
 };
 use fa_reference::action::consequence::activation::tensor::kv::decoder::{DecoderIdentity, MAX_DECODER_PRODUCTS};
 use fa_reference::action::consequence::activation::tensor::kv::decoder::safetensors::{
-    MAX_WEIGHT_FILE_BYTES, pretrained::{LlamaConfig, MAX_CONFIG_BYTES},
+    pretrained::{LlamaConfig, MAX_CONFIG_BYTES},
 };
 use fa_reference::action::consequence::delivery::persistent::observed::decoder::{
     FileDecoderConfig, text::{FileTextGenerationCommand, MAX_FILE_TOKENIZER_BYTES},
@@ -20,6 +20,8 @@ use fa_reference::action::consequence::oversight::decoder_monitoring::DecoderBin
 use fa_reference::strict_json::{self, Json, Limits};
 use std::collections::BTreeMap;
 use std::path::PathBuf;
+mod weights;
+use weights::WeightFiles;
 
 const MAX_RECIPE_BYTES: usize = 16_384;
 
@@ -37,7 +39,11 @@ pub(super) fn load(path: &Path, tenant: u64, byte_limit: usize) -> Result<Inputs
     let mut f = Fields::new(strict_json::parse(&bytes, Limits {
         max_bytes: MAX_RECIPE_BYTES, max_depth: 4, max_items: 1024, max_string_bytes: 4096,
     }).map_err(debug)?)?;
-    if f.text("schema")? != "fa.native-text-service/1" { return Err("unsupported native service recipe".into()); }
+    let sharded = match f.text("schema")?.as_str() {
+        "fa.native-text-service/1" => false,
+        "fa.native-text-service/2" => true,
+        _ => return Err("unsupported native service recipe".into()),
+    };
     let mut ids = Fields::new(f.take("identity")?)?;
     let identity = DecoderIdentity { tenant: ids.number("tenant")?, model: ids.number("model")?,
         model_generation: ids.number("model_generation")?, tokenizer_generation: ids.number("tokenizer_generation")?,
@@ -61,7 +67,9 @@ pub(super) fn load(path: &Path, tenant: u64, byte_limit: usize) -> Result<Inputs
     let max_output_bytes = f.count("max_output_bytes")?;
     let products = f.number("scalar_products")?;
     let sampling = f.number("sampling_entries")?;
-    let names = ["model_config", "weights", "monitor", "sampling", "tokenizer", "prompt"];
+    let base = path.parent().ok_or("recipe has no parent directory")?;
+    let weights = WeightFiles::parse(f.take("weights")?, base, sharded)?;
+    let names = ["model_config", "monitor", "sampling", "tokenizer", "prompt"];
     let paths: Vec<_> = names.iter().map(|name| f.text(name)).collect::<Result<_, _>>()?;
     f.end()?; // Full schema admission BEFORE opening any referred file.
     if generation == 0 || cache_stream == 0 || max_new_tokens == 0
@@ -70,26 +78,25 @@ pub(super) fn load(path: &Path, tenant: u64, byte_limit: usize) -> Result<Inputs
         || products > MAX_DECODER_PRODUCTS || sampling > MAX_SAMPLING_ENTRIES {
         return Err("native generation bounds are invalid".into());
     }
-    let base = path.parent().ok_or("recipe has no parent directory")?;
     let mut remaining = byte_limit.checked_sub(bytes.len()).ok_or("recipe exceeds input allowance")?;
-    let mut read = |index: usize, limit: usize| -> Result<Vec<u8>, String> {
+    let read = |index: usize, limit: usize, remaining: &mut usize| -> Result<Vec<u8>, String> {
         let name = &paths[index];
         if name.is_empty() || name.as_bytes().contains(&0) { return Err("invalid native input path".into()); }
         let path = PathBuf::from(name);
         let path = if path.is_absolute() { path } else { base.join(path) };
-        let bytes = read_regular(&path, limit.min(remaining))?;
-        remaining = remaining.checked_sub(bytes.len()).ok_or("native input allowance exhausted")?;
+        let bytes = read_regular(&path, limit.min(*remaining))?;
+        *remaining = remaining.checked_sub(bytes.len()).ok_or("native input allowance exhausted")?;
         Ok(bytes)
     };
-    let model = LlamaConfig::decode(identity, context, &read(0, MAX_CONFIG_BYTES)?).map_err(debug)?;
+    let model = LlamaConfig::decode(identity, context, &read(0, MAX_CONFIG_BYTES, &mut remaining)?).map_err(debug)?;
     // Preserve the model's explicit declaration through durable replay. Missing
     // matrices never choose the mode, and contradictory stored heads refuse.
     let profile = model.profile().clone();
-    let weights = read(1, MAX_WEIGHT_FILE_BYTES)?;
-    let monitor = read(2, MAX_MONITOR_CONFIG_BYTES)?;
-    let sampling_config = read(3, MAX_SAMPLING_CONFIG_BYTES)?;
-    let tokenizer = ByteBpe::from_bytes(&profile, &read(4, MAX_FILE_TOKENIZER_BYTES)?).map_err(debug)?;
-    let prompt = read(5, MAX_INPUT_BYTES)?;
+    let weights = weights.read(&profile, model.output_head(), &mut remaining)?;
+    let monitor = read(1, MAX_MONITOR_CONFIG_BYTES, &mut remaining)?;
+    let sampling_config = read(2, MAX_SAMPLING_CONFIG_BYTES, &mut remaining)?;
+    let tokenizer = ByteBpe::from_bytes(&profile, &read(3, MAX_FILE_TOKENIZER_BYTES, &mut remaining)?).map_err(debug)?;
+    let prompt = read(4, MAX_INPUT_BYTES, &mut remaining)?;
     for token in prefix_controls.iter().chain(&stop_tokens) {
         if !tokenizer.is_control(*token).map_err(debug)? {
             return Err("prefix and stop IDs must be registered Control tokens".into());
@@ -108,8 +115,8 @@ pub(super) fn load(path: &Path, tenant: u64, byte_limit: usize) -> Result<Inputs
     let request = TextGenerationRequest { prompt, prefix_controls, max_new_tokens, stop_tokens,
         tokenization, generation: GenerationBudget { scalar_products: products, sampling_entries: sampling }, max_output_bytes };
     FileTextGenerationCommand::new(generation, 0, 0, request.clone()).map_err(debug)?;
-    let decoder = FileDecoderConfig::new_with_output_head(profile, weights, monitor, sampling_config, cache_stream,
-        DecoderBindingLimits::default(), model.output_head()).map_err(debug)?;
+    let decoder = weights.configure(profile, monitor, sampling_config, cache_stream,
+        DecoderBindingLimits::default(), model.output_head())?;
     Ok(Inputs { decoder, tokenizer, stream, generation, request })
 }
 

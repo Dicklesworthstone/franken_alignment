@@ -23,6 +23,9 @@ serving the plan's registered restart and host-input contracts (§§11.2, 17.1).
 It does not change plan semantics, grant actor file access, create a new runtime,
 or increase the model's existing dimensional or parameter limits.
 
+The authenticated native service consumes this configuration through an explicit
+version-2 recipe; see [native sharded publication](NATIVE_SHARDED_PUBLICATION.md).
+
 ## Bounds and compatibility
 
 The index is bounded by `MAX_WEIGHT_INDEX_BYTES`; the set is bounded by
