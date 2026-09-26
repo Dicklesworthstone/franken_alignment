@@ -2,6 +2,8 @@
 //! A private pending computation is audited before committing any cache layer,
 //! token history, logits or original layer observations. Quiet remains numerical
 //! evidence about frozen probes, not a harmfulness or external-effect permit.
+pub mod restart;
+
 use super::{BufferIdentity, ComputedLayers, DecoderBudget, DecoderModel, DecoderSession,
     DecoderStep, HostTensor, KvAppend, ModelKvBudget, ModelKvCapture, ModelKvImage, MAX_DECODER_PRODUCTS};
 use super::super::model::MAX_MODEL_KV_VALUES;
@@ -128,9 +130,10 @@ impl LearnedDecoderEvent {
     pub fn step(&self) -> Option<&DecoderStep> { self.step.as_ref() }
 }
 
-/// Owns an initially empty original session. It cannot adopt an unaudited prefix,
-/// expose a mutable decoder, or resume past a latched hold. Not Clone: old event
-/// snapshots share observations but cannot fork or reset this execution path.
+/// Owns an original session. Ordinary construction starts empty; explicit KV
+/// restart requires a typed prefix and fresh complete learned audit. It cannot
+/// adopt an unaudited prefix, expose a mutable decoder, or resume past a latched
+/// hold. Old events cannot reset this owner or construct a new executable one.
 #[derive(Debug)]
 pub struct LearnedDecoderSession {
     session: DecoderSession,
