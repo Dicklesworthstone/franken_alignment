@@ -48,3 +48,49 @@ conversion of numerical evidence to permits. These tests have NOT executed.
 The required RCH compiler/test gate is unavailable in this environment; no
 runtime qualification, bead closure, production capability or detector accuracy
 claim follows from source construction and review.
+
+## Integration with the existing effect gate
+
+`OversightBroker::enable_learned_decoder_monitoring` attaches the typed source
+only at trusted bootstrap. The existing decoder gate holds either its original
+residual source or this learned source, never a caller-supplied quiet boolean.
+No broker/controller/congress or endpoint reducer is replaced. The SAME gate
+hooks check source evidence when proposing, starting a review, applying a
+permitting review, authorizing, requesting human approval and dispatching.
+
+Admission additionally binds the entire accepted prefix to the existing actor
+copy, actor revision, model/tokenizer generations and authority epoch. Actor
+state synchronization is still a trusted supervisor obligation; this adapter
+does not attest that the actor's opaque cache bytes match the learned engine.
+It does not export the learned cache or install an executable owner in the
+separate residual-hosted decoder. The gate's hosted residual-reset seam refuses
+a learned source; public replacement and mixed-source fallback remain absent.
+
+`LearnedDecoderBindingLimits` conserves the original cumulative token/score
+budgets plus checked-source encoded bytes. Retaining the same evidence for a
+second proposal is charged again. Rejected proposals do not insert records;
+cancelling an admitted attempt does not refund retained evidence costs.
+Historical learned evidence has a separate typed accessor, including a
+post-dispatch accessor that first requires the original delivery record.
+The residual accessor never mislabels a learned audit as a residual review.
+
+Quiet numerical evidence cannot replace congress approval, independent human
+keys, current helper inputs, exact witnesses, deadlines, epochs or fences.
+A nonpermitting congress decision may still apply after source loss. Source
+loss before dispatch blocks dispatch but does not silently free its reservation.
+Loss after dispatch cannot rewind the world or invalidate an already-issued
+endpoint envelope; its outcome must be reconciled normally. Reconciliation and
+receipt acceptance remain independent of a live source, preserving the original
+unknown-effect accounting instead of treating missing evidence as nonexecution.
+
+Nine added integration functions cover successful learned-source publication
+through the original congress and one-use permit, advancement/alarm/drop at
+four permitting stages, empty/mismatched actor state, current-prefix proposals,
+three cumulative cost boundaries, mandatory two-key dispatch after source loss,
+post-dispatch reconciliation, policy epochs, restrictive review application and
+unchanged residual-source publication. Helpers supply synthetic reference votes;
+these tests make no claim of cryptographic authentication or evaluator quality.
+Together with the source controls, fifteen integration functions and two
+compile-fail examples are authored but unexecuted. Persisted learned-source
+recovery, automatic learned-host containment and CLI wiring are not implemented
+by this change. No earlier numerical or authority test has been weakened.
