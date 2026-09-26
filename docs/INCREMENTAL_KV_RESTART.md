@@ -70,6 +70,34 @@ cache, and each audit pays codebook/metadata costs again. No constant-time,
 peak-RSS, global experiment escrow, wall-clock cancellation or measured speedup
 is promised. Pausing is only between bounded calls, not interruption within one.
 
+## Complete sampled-generation continuation
+
+`GenerationKvCheckpoint::begin_incremental_restart` uses this same ordered
+verifier for the complete original `LearnedGeneration`. No generation, sampler
+or pending output becomes accessible while a prefix is partially audited. The
+full continuation sample capacity is reserved before verification starts. On
+success both all-at-once and incremental restart use one private composition
+seam, retaining exact RNG state, sample history, prompt position, stop rules,
+horizon, numerical estimate and all original spent numerical/telemetry budgets.
+No RNG word is drawn by audit or restoration. Old events are not republished.
+
+Verification can pause while the original generation continues independently;
+the sealed checkpoint does not change. A completed EOS/token-limit checkpoint
+stays terminal, and a later hold on the source owner is not cleared. Fresh audit
+cost is reported separately from historical generation spend. In particular,
+restoring a generation whose lifetime source-check allowance is exhausted does
+not authorize another token, even after successful separately paid re-auditing.
+Repeated restarts preserve the same original generation ceilings and draw count.
+
+Six additional integration test functions compare exact RNG words, probability
+bits, logits, cache words and cumulative accounting across all empty/prompt/
+sampled/terminal cuts. They also cover repeated restarts, a source advancing while
+verification pauses, exhausted lifetime telemetry with uncommitted failed draws,
+EOS, later held sources and failed/partial verification. An additional compile-
+fail example rejects mutable generation access. The first six tests and the
+previous all-at-once tests remain unchanged. All twelve new integration tests
+and both new compile-fail examples remain unexecuted pending the RCH gate.
+
 ## Verification status
 
 Six new integration test functions use the actual nonzero-attention decoder,

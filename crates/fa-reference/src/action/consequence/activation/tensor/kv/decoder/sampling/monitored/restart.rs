@@ -3,6 +3,8 @@
 //! Typed checkpoints retain the original spec, RNG, policy and SPENT lifetime
 //! budgets. Restart needs a fresh complete prefix audit, but neither replays
 //! prompt/sample inference nor refills any remaining continuation allowance.
+pub mod incremental;
+
 use super::{GenerationBudget, GenerationEstimate, GenerationSpec, GenerationStatus,
     GenerationStop, GenerationTelemetryBudget, GenerationTelemetryWork, GenerationWork,
     LearnedGeneration, MAX_GENERATION_TOKENS};
@@ -111,6 +113,21 @@ impl GenerationKvCheckpoint {
         let restart = self.guard.begin_restart(resumed_stream, budget)?;
         Ok(GenerationKvRestart { checkpoint: self.clone(), restart, samples })
     }
+
+    // Shared only by the two sealed, freshly verified restart paths. Neither
+    // imported state nor a caller-provided guard can reach this composition seam.
+    fn resume(self, guard: super::super::super::monitoring::LearnedDecoderSession,
+        samples: Vec<SampledToken>) -> LearnedGeneration
+    {
+        // This is a typed original checkpoint, NOT the archive's untrusted State.
+        // Fresh learned evidence gated the guard above; only immutable original
+        // generation metadata is transferred. No old last_event is republished.
+        LearnedGeneration { model: self.model, guard,
+            sampler: Sampler::from_snapshot(&self.sampler), spec: self.spec,
+            budget: self.budget, telemetry_budget: self.telemetry_budget,
+            estimate: self.estimate, status: self.status, work: self.work,
+            telemetry_work: self.telemetry_work, samples, last_event: None }
+    }
 }
 
 /// No sampler/guard/output is available before complete fresh verification and
@@ -140,14 +157,7 @@ impl GenerationKvRestart {
         let receipt = GenerationKvRestartReceipt { kv, historical_work: checkpoint.work,
             historical_telemetry: checkpoint.telemetry_work, status: checkpoint.status,
             sampler_draws: checkpoint.sampler.draws() };
-        // This is a typed original checkpoint, NOT the archive's untrusted State.
-        // Fresh learned evidence gated the guard above; only immutable original
-        // generation metadata is transferred. No old last_event is republished.
-        let generation = LearnedGeneration { model: checkpoint.model, guard,
-            sampler: Sampler::from_snapshot(&checkpoint.sampler), spec: checkpoint.spec,
-            budget: checkpoint.budget, telemetry_budget: checkpoint.telemetry_budget,
-            estimate: checkpoint.estimate, status: checkpoint.status, work: checkpoint.work,
-            telemetry_work: checkpoint.telemetry_work, samples, last_event: None };
+        let generation = checkpoint.resume(guard, samples);
         Ok((generation, receipt))
     }
 }
