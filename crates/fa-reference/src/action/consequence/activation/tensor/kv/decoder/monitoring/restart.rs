@@ -3,6 +3,8 @@
 //! A fresh COMPLETE audit of the retained original cache must finish quietly
 //! before the original all-layer restorer can release a new monitored session.
 //! No imported image, saved verdict, candidate policy or external effect enters.
+pub mod incremental;
+
 use super::{LearnedDecoderAllowance, LearnedDecoderPolicy, LearnedDecoderSession,
     LearnedDecoderStatus, LearnedStreamRetention, CompressionReport, CheckedLearnedKv,
     KvGroup, KvRow, ResidualRetention, ModelKvImage, MAX_MODEL_KV_VALUES};
