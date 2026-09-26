@@ -1,6 +1,8 @@
 //! Finite original-token generation through the existing learned decoder guard.
 //! Prompt IDs are fixed; continuation choices use the original sampler. Only a
 //! completely quiet audit publishes a chosen token and commits its random draw.
+pub mod restart;
+
 use super::{PreparedSample, SampledToken, Sampler, SamplerSnapshot, SamplingBudget, SamplingStart};
 use super::super::{DecoderBudget, DecoderModel, DecoderStep, DecoderWork, MAX_DECODER_PRODUCTS};
 use super::super::monitoring::{LearnedDecoderAllowance, LearnedDecoderEvent, LearnedDecoderPolicy, LearnedDecoderSession};

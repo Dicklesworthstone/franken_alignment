@@ -259,3 +259,221 @@ fn none_all_and_structural_head_retention_keep_their_original_policy() {
         same_cache(&original.accepted_cache_image().unwrap(), &resumed.accepted_cache_image().unwrap());
     }
 }
+
+mod sampled {
+    use super::*;
+    use fa_reference::action::consequence::activation::tensor::kv::decoder::sampling::{
+        SamplingPolicy, SamplingStart, SampledToken,
+        monitored::{GenerationBudget, GenerationSpec, GenerationStatus, GenerationStop,
+            GenerationTelemetryBudget, LearnedGeneration},
+    };
+
+    fn generation(model: &DecoderModel, policy: LearnedDecoderPolicy, prompt: Vec<u32>, top_k: usize,
+        stop: bool, telemetry: GenerationTelemetryBudget) -> LearnedGeneration
+    {
+        let spec = GenerationSpec::new(prompt, 4, if stop { BTreeSet::from([2]) } else { BTreeSet::new() },
+            SamplingStart { policy: SamplingPolicy::new(1, 1, 3, 0.8, top_k, 1.0).unwrap(),
+                stream: 71, seed: 173 }).unwrap();
+        // Exact original whole-run numerical allowance, not a default slack cap.
+        let estimate = model.estimate_monitored_generation(&spec).unwrap();
+        let budget = GenerationBudget { decoder_products: estimate.decoder.scalar_products().unwrap(),
+            vocabulary_scores: estimate.vocabulary_scores };
+        model.monitored_generation_with_telemetry(21, 201, spec, policy, budget, telemetry).unwrap()
+    }
+    fn sample_eq(left: &SampledToken, right: &SampledToken) {
+        assert_eq!(left.token, right.token);
+        assert_eq!(left.stream, right.stream);
+        assert_eq!(left.draw, right.draw);
+        assert_eq!(left.random_word, right.random_word);
+        assert_eq!(left.probability.to_bits(), right.probability.to_bits());
+        assert_eq!(left.work, right.work);
+    }
+    fn same_generation(left: &LearnedGeneration, right: &LearnedGeneration) {
+        assert_eq!(left.status(), right.status());
+        assert_eq!(left.position(), right.position());
+        assert_eq!(left.accepted_tokens(), right.accepted_tokens());
+        assert_eq!(left.sampler_state(), right.sampler_state());
+        assert_eq!(left.work(), right.work());
+        assert_eq!(left.telemetry_work(), right.telemetry_work());
+        assert_eq!(left.budget(), right.budget());
+        assert_eq!(left.telemetry_budget(), right.telemetry_budget());
+        assert_eq!(left.samples().len(), right.samples().len());
+        for (a, b) in left.samples().iter().zip(right.samples()) { sample_eq(a, b); }
+        match (left.accepted_logits(), right.accepted_logits()) {
+            (Ok(a), Ok(b)) => assert_eq!(logits(a), logits(b)),
+            (Err(a), Err(b)) => assert_eq!(a, b),
+            _ => panic!("only one generation has accepted logits"),
+        }
+        same_cache(&left.accepted_cache_image().unwrap(), &right.accepted_cache_image().unwrap());
+    }
+
+    #[test]
+    fn every_prompt_sample_and_terminal_cut_continues_with_exact_rng_and_lifetime_spend() {
+        let model = model();
+        let quiet = policy(&model, false, 1, 4096);
+        for cut in 0..=6 {
+            let mut original = generation(&model, quiet.clone(), vec![0, 1], 3, false,
+                GenerationTelemetryBudget::default());
+            for position in 0..cut { original.advance(position).unwrap(); }
+            let saved = original.checkpoint_kv(capture_limit()).unwrap();
+            assert_eq!(saved.position(), cut);
+            assert_eq!(saved.status(), original.status());
+            let before_work = original.work();
+            let before_telemetry = original.telemetry_work();
+            let preparation = saved.begin_restart(22, restart_budget(&quiet)).unwrap();
+            assert!(preparation.is_ready());
+            assert_eq!(preparation.audit().is_some(), cut > 0);
+            let (mut resumed, receipt) = preparation.finish().unwrap();
+            same_generation(&original, &resumed);
+            assert!(resumed.last_event().is_none());
+            assert_eq!(receipt.historical_work(), before_work);
+            assert_eq!(receipt.historical_telemetry(), before_telemetry);
+            assert_eq!(receipt.sampler_draws(), original.sampler_state().draws());
+            assert_eq!(receipt.status(), original.status());
+            assert_eq!(receipt.kv().restoration().position, cut);
+            assert_eq!(receipt.kv().evaluation_origin(), 201);
+            while original.status().is_active() {
+                let position = original.position();
+                let a = original.advance(position).unwrap();
+                let b = resumed.advance(position).unwrap();
+                assert!(a.audit().complete_quiet() && b.audit().complete_quiet());
+                match (a.sample(), b.sample()) {
+                    (Some(a), Some(b)) => sample_eq(a, b),
+                    (None, None) => {}
+                    _ => panic!("only one arm sampled"),
+                }
+                same_generation(&original, &resumed);
+            }
+            assert_eq!(resumed.status(), GenerationStatus::Finished(GenerationStop::TokenLimit));
+            assert_eq!(resumed.work().reserved_decoder_products, resumed.budget().decoder_products);
+            assert_eq!(resumed.work().reserved_vocabulary_scores, resumed.budget().vocabulary_scores);
+            assert_eq!(resumed.advance(resumed.position()).err(), Some(Error::WrongState));
+        }
+    }
+
+    #[test]
+    fn repeated_native_restarts_cannot_reset_draws_or_original_numerical_allowances() {
+        let model = model();
+        let quiet = policy(&model, false, 1, 4096);
+        let mut uninterrupted = generation(&model, quiet.clone(), vec![0, 1], 3, false,
+            GenerationTelemetryBudget::default());
+        let mut current = generation(&model, quiet.clone(), vec![0, 1], 3, false,
+            GenerationTelemetryBudget::default());
+        for position in 0..6 {
+            uninterrupted.advance(position).unwrap();
+            current.advance(position).unwrap();
+            let saved = current.checkpoint_kv(capture_limit()).unwrap();
+            let (next, receipt) = saved.begin_restart(22 + position, restart_budget(&quiet)).unwrap().finish().unwrap();
+            assert_eq!(receipt.historical_work().admitted_tokens, position + 1);
+            same_generation(&uninterrupted, &next);
+            assert_eq!(current.work(), receipt.historical_work());
+            current = next;
+        }
+        assert_eq!(current.sampler_state().draws(), 4);
+        assert_eq!(current.work().admitted_tokens, 6);
+        assert_eq!(current.status(), GenerationStatus::Finished(GenerationStop::TokenLimit));
+    }
+
+    #[test]
+    fn restart_preserves_exhausted_aggregate_telemetry_and_does_not_commit_failed_draws() {
+        let model = model();
+        let quiet = policy(&model, false, 1, 4096);
+        let mut control = generation(&model, quiet.clone(), vec![0], 3, false, GenerationTelemetryBudget::default());
+        control.advance(0).unwrap();
+        let one = control.telemetry_work().source_check_values;
+        assert!(one > 0);
+        assert!(control.advance(1).unwrap().accepted().is_some());
+        let mut limited = generation(&model, quiet.clone(), vec![0], 3, false,
+            GenerationTelemetryBudget { source_check_values: one, ..GenerationTelemetryBudget::default() });
+        limited.advance(0).unwrap();
+        let saved = limited.checkpoint_kv(capture_limit()).unwrap();
+        let (mut resumed, receipt) = saved.begin_restart(22, restart_budget(&quiet)).unwrap().finish().unwrap();
+        assert_eq!(receipt.historical_telemetry().source_check_values, one);
+        assert!(receipt.kv().audit().unwrap().monitoring().complete_quiet());
+        let sampler = limited.sampler_state();
+        assert_eq!(limited.advance(1).err(), Some(Error::Limit));
+        assert_eq!(resumed.advance(1).err(), Some(Error::Limit));
+        same_generation(&limited, &resumed);
+        assert_eq!(resumed.sampler_state(), sampler);
+        assert_eq!(resumed.work().admitted_tokens, 2);
+        assert_eq!(resumed.work().accepted_decoder.tokens, 1);
+        assert_eq!(resumed.telemetry_work().source_check_values, one);
+        assert!(matches!(resumed.checkpoint_kv(capture_limit()), Err(Error::WrongState)));
+        assert_eq!(resumed.advance(1).err(), Some(Error::WrongState));
+    }
+
+    #[test]
+    fn eos_checkpoint_remains_terminal_instead_of_becoming_a_fresh_generation() {
+        let model = model();
+        let quiet = policy(&model, false, 1, 4096);
+        let mut original = generation(&model, quiet.clone(), vec![0], 1, true, GenerationTelemetryBudget::default());
+        assert_eq!(original.run_to_stop(), Ok(GenerationStatus::Finished(GenerationStop::StopToken(2))));
+        let saved = original.checkpoint_kv(capture_limit()).unwrap();
+        let (mut resumed, receipt) = saved.begin_restart(22, restart_budget(&quiet)).unwrap().finish().unwrap();
+        same_generation(&original, &resumed);
+        assert_eq!(receipt.sampler_draws(), 1);
+        assert_eq!(resumed.position(), 2);
+        assert_eq!(resumed.run_to_stop(), Ok(GenerationStatus::Finished(GenerationStop::StopToken(2))));
+        assert_eq!(resumed.advance(2).err(), Some(Error::WrongState));
+        same_generation(&original, &resumed);
+    }
+
+    #[test]
+    fn earlier_checkpoint_does_not_clear_a_later_sampled_hold_or_expose_held_token() {
+        let model = model();
+        let alarm = policy(&model, true, 1, 4096);
+        let mut original = generation(&model, alarm.clone(), vec![0], 1, false, GenerationTelemetryBudget::default());
+        original.advance(0).unwrap();
+        let saved = original.checkpoint_kv(capture_limit()).unwrap();
+        let sampler = original.sampler_state();
+        let event = original.advance(1).unwrap();
+        assert!(matches!(original.status(), GenerationStatus::Held(MonitorOutcome::Alarm)));
+        assert!(event.accepted().is_none() && event.sample().is_none());
+        assert!(matches!(original.checkpoint_kv(capture_limit()), Err(Error::WrongState)));
+        let (mut resumed, _) = saved.begin_restart(22, restart_budget(&alarm)).unwrap().finish().unwrap();
+        let event = resumed.advance(1).unwrap();
+        assert!(event.accepted().is_none() && event.sample().is_none());
+        assert_eq!(resumed.sampler_state(), sampler);
+        same_generation(&original, &resumed);
+        assert_eq!(original.advance(1).err(), Some(Error::WrongState));
+        assert_eq!(resumed.advance(1).err(), Some(Error::WrongState));
+    }
+
+    #[test]
+    fn generation_cannot_escape_a_blocked_full_prefix_preparation() {
+        let model = model();
+        let quiet = policy(&model, false, 1, 4096);
+        let mut original = generation(&model, quiet.clone(), vec![0, 1], 3, false, GenerationTelemetryBudget::default());
+        original.advance(0).unwrap();
+        original.advance(1).unwrap();
+        let saved = original.checkpoint_kv(capture_limit()).unwrap();
+        let work = original.work();
+        let sampler = original.sampler_state();
+        let mut budget = restart_budget(&quiet);
+        budget.audit.monitoring.probe_coordinates = 0;
+        let blocked = saved.begin_restart(22, budget).unwrap();
+        assert!(!blocked.is_ready());
+        assert_eq!(blocked.audit().unwrap().monitoring().planned_rows(), 8);
+        assert!(matches!(blocked.finish(), Err(Error::Incomplete)));
+        let (resumed, _) = saved.begin_restart(23, restart_budget(&quiet)).unwrap().finish().unwrap();
+        same_generation(&original, &resumed);
+        assert_eq!(original.work(), work);
+        assert_eq!(original.sampler_state(), sampler);
+    }
+
+    #[test]
+    fn stale_call_after_restart_cannot_spend_resources_or_skip_a_prompt_position() {
+        let model = model();
+        let quiet = policy(&model, false, 1, 4096);
+        let mut original = generation(&model, quiet.clone(), vec![0, 1], 3, false, GenerationTelemetryBudget::default());
+        original.advance(0).unwrap();
+        assert_eq!(original.status(), GenerationStatus::Prefilling);
+        let saved = original.checkpoint_kv(capture_limit()).unwrap();
+        let (mut resumed, _) = saved.begin_restart(22, restart_budget(&quiet)).unwrap().finish().unwrap();
+        for position in [0, 2] { assert_eq!(resumed.advance(position).err(), Some(Error::Stale)); }
+        same_generation(&original, &resumed);
+        original.run_to_stop().unwrap();
+        resumed.run_to_stop().unwrap();
+        same_generation(&original, &resumed);
+    }
+}

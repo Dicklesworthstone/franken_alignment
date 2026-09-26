@@ -46,6 +46,50 @@ prefix compression, source checking, monitoring, exact writes, recapture and
 metadata copying have real cost. The receipt retains those original audit and
 restore work reports. The original recomputation/archive verifier is unchanged.
 
+## Sampled-generation continuation without budget resets
+
+`sampling::monitored::restart` extends this same path to the complete
+`LearnedGeneration`, not just a forced-token decoder. Its `checkpoint_kv`
+retains the exact original sampler state and sample records, frozen prompt and
+stop IDs, maximum continuation length, generation status, numerical estimate,
+original numerical and aggregate telemetry ceilings, and all historical spend.
+Only active or finished original generations can construct this checkpoint;
+held and failed attempts cannot export their shorter accepted prefix as active.
+The captured token history, prompt prefix, draw counts, phase/stop state and
+numerical accounting are checked together before the typed state is returned.
+
+`GenerationKvCheckpoint::begin_restart` delegates to the freshly audited KV
+preparation above. No generation, random state or pending output escapes when
+that audit is incomplete. A successful `finish` returns a `LearnedGeneration`
+using the ORIGINAL generation advance method, the restored original guard and
+`Sampler::from_snapshot`, never a freshly seeded sampler. All remaining sample
+capacity is reserved before release, preserving the original pre-reserved
+sample append. No prior `last_event` is republished as a new observation.
+
+The cache stream changes to identify derived buffers; the original sampler
+stream, random state and evaluation origin do not change. Each subsequent
+sample therefore uses the next original random draw and the same frozen
+sampling policy. Prefilling stays at its original prompt position. An EOS or
+token-limit checkpoint stays terminal; it does not acquire another continuation.
+Repeated typed restarts retain accumulated numerical and telemetry spend.
+A source already held after an earlier checkpoint remains held, and the
+restarted branch must still pass the same monitor on every new token.
+
+`GenerationKvRestartReceipt` keeps historical generation work distinct from
+fresh full-prefix auditing and KV writes/recapture. Neither historical spend
+nor fresh restart work is erased. Fresh restart auditing has its own bounded
+allowance; it does not enlarge the original generation's remaining source-check,
+refinement, decoder-product or vocabulary-score ceilings. A generation with no
+remaining telemetry can be restored after a separately paid fresh audit but
+still fails its next token under the original conserved allowance. Failed
+attempts cannot commit a random draw or disclose a sampled candidate.
+
+These are sealed in-memory checkpoints, not trusted deserializations. There is
+no conversion from a bare cache, saved audit verdict or unverified archive, and
+no mutable sampler, guard or budget accessor. The existing archive/replay
+verifier still recomputes and compares the original full expected state; this
+API does not give imported saved words a shortcut around that verification.
+
 ## Resource and scope limitations
 
 Snapshot and restore check complete retained cache-value limits. Fresh audit
@@ -65,13 +109,18 @@ current-source and authority path; this API does not implement reset containment
 
 ## Verification status
 
-Eight new integration tests use the ORIGINAL numerical/compression/monitor paths
+Fifteen new integration test functions use the ORIGINAL numerical/compression/monitor paths
 with nonzero attention, including an explicit control showing that history
 actually affects logits. They cover exact continuation against uninterrupted and
 independent recomputation, source/destination lineage, incomplete re-audits, exact
 and one-less cache/source-check limits, full-prefix row coverage, subsequent
 alarms and persistent source holds, empty/stale cases, and all retention modes.
-Two compile-fail examples cover byte import and mutable preparation escape.
+Seven of these tests exercise sampled generation: every empty/prompt/sample/
+terminal checkpoint cut, exact random words and probability bits, repeated
+restarts, exact lifetime numerical allowances, exhausted aggregate telemetry,
+EOS, later held sources, blocked fresh audits and stale calls. The eight
+forced-token tests and their assertions remain unchanged. Four compile-fail
+examples cover byte import and mutable preparation escape at both levels.
 
 Tests are authored, not executed. The required RCH build/test gate cannot start
 in this environment because `rch` is absent (exit 127); `cargo` and `rustc` are
