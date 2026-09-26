@@ -258,3 +258,5 @@ fn a_held_numerical_owner_cannot_export_its_earlier_quiet_prefix_as_fresh_eviden
     assert_eq!(sidecar.source().report().source_values, 8);
     assert_eq!(endpoint.execution_count(), 0);
 }
+
+#[path = "hosted_sidecar/refinement.rs"] mod refinement;

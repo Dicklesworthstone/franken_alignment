@@ -52,3 +52,41 @@ Source addition only. Compilation, formatting, Clippy and all new tests remain
 unexecuted: the required RCH route is unavailable in this environment. A fresh
 revision-bound RCH gate is required. No production, restart, detector or Beads
 qualification follows from source review or historical execution receipts.
+
+## Source-bound adaptive congress rounds
+
+`begin_hosted_sidecar_review` starts the original independent review over the
+handle's exact current input after rechecking its live source. A completed,
+unapplied review can be supplied to `refine_hosted_sidecar`. The review must
+belong to the SAME broker, attempt and input revision; identical bytes from a
+lookalike owner or a different attempt are insufficient. The broker's observed
+time must have reached review completion and the action must not have expired.
+
+The original planner decides whether an abstention requests the next predeclared
+residual. Missing verdicts, absent remaining residuals and exhausted round,
+residual-byte or committee-byte budgets remain distinct nonpermitting outcomes.
+No new numerical inference, sampled draw or source capture is performed by
+refinement. Original checked residuals and their priority/retention stay fixed.
+
+A refined packet is staged on a private planner copy, then recorded by the
+original cumulative input transaction. Only after that succeeds are the handle's
+planner, current packet and input revision updated together. Failed admission
+leaves all three unchanged. Preparation still has bounded allocation/encoding
+cost; it is not a successful recorded-input cost or a global resource refund.
+
+A successful purchase invalidates the old input approval. The prior review
+cannot purchase another residual at the new revision or approve the new bytes.
+A fresh independent round is still required, and installed human approval keys
+remain mandatory. Refinement does not apply the old review, suppress its
+restrictive consequence, or turn a quiet codebook into consent; the caller may
+still apply an original restrictive review through the existing broker.
+
+Eight additional integration tests cover the complete coarse-abstain-refine-
+fresh-review-two-key-publication path, missing members, all three cumulative
+planner budgets, exhausted priority, cross-owner/attempt reviews, source/input
+changes, old Allow reviews, clock/deadline boundaries, and failure of the REAL
+broker input-capacity admission after funded refinement preparation. The capacity
+test spends the original recorder's allowance; it does not edit private counters.
+The first six test bodies are unchanged. One further compile-fail example rejects
+mutable planner access. All fourteen integration tests and three compile-fail
+examples remain unexecuted pending the required fresh RCH gate.
