@@ -1,5 +1,7 @@
 //! Source-level counterfactuals through the ORIGINAL learned generation engine.
 //! Only an exact expected prompt span changes. No arm, capture or permit escapes.
+pub mod campaign;
+
 use super::super::{DecoderModel, MAX_DECODER_PRODUCTS};
 use super::super::monitoring::LearnedDecoderPolicy;
 use super::super::sampling::{SampledToken, monitored::{

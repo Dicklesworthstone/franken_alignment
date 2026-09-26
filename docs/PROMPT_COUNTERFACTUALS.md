@@ -55,3 +55,53 @@ Source addition only: compilation, formatting, Clippy and all new tests remain
 unexecuted. The required RCH gate must run on these exact source changes; prior
 receipts do not qualify them. No causal-safety, statistical, detector, production
 or roadmap/Bead completion claim follows from these authored controls.
+
+## Fixed-seed campaigns and explicit outcome censoring
+
+`PromptIntervention::begin_campaign` freezes an ordered, duplicate-free list of
+at most 64 seeds and one exact continuation-token pattern before starting any
+trial. This is in-memory experiment registration, not a durable governance
+preregistration service. The original intervention, model, policy, sampling
+algorithm/stream and stop rules remain fixed; each named seed replaces only the
+initial seed in BOTH arms. The template seed remains unchanged.
+
+The complete schedule's position, decoder-product, vocabulary-score and outcome-
+query comparison costs must fit `PromptCampaignBudget` before the first trial.
+The original per-arm generation and lifetime telemetry ceilings continue to
+apply to each trial. This profile does not share numerical prefix work: every
+trial executes its two original generators. It retains at most one pair plus
+bounded compact result rows, rather than every trial's caches and logits.
+
+Each `advance` executes at most one paired step or records one refused trial
+admission. Slots cannot be replaced, retried or reordered after results appear.
+All attempted seeds have result rows, including constructor refusal, a partial
+cancelled trial, holds and failed audits. A caught unwind leaves the owner failed
+and the started-but-unrecorded slot explicit. Cancellation preserves already
+recorded rows, records the active trial as interrupted and leaves later seeds
+unstarted. Stale advance/cancel calls change nothing.
+
+The frozen query searches only accepted CONTINUATION IDs, never prompt tokens
+or withheld candidates. A matching prefix is `Present` even when a later step
+holds, because that occurrence was observed. A nonmatch is
+`AbsentWithinCompletedHorizon` only after the arm's declared EOS/token horizon;
+otherwise it is `Censored`, carrying the original stop reason. Admission failures
+and interrupted trials have no fabricated outcomes. The paired 3-by-3 outcome
+table is accompanied by declared, started, recorded, unstarted, admission-failed
+and interrupted counts. No success-only denominator or implicit negative label
+is returned. Original numerical and telemetry work remain in each trial report;
+actual query comparisons are recorded separately from their reservation.
+
+These seeds examine one source/evaluation lineage. Distinct PRNG seeds do not
+establish independent tasks, attack coverage, calibrated confidence intervals,
+causal necessity or a population escape rate. The API cannot prevent a caller
+from running and hiding a separate campaign; it preserves the declared schedule
+within this owner and makes no external publication/authentication claim.
+
+Six more integration tests compare every seed with separately run original
+generators, exercise a real source-induced output change, censored holds and
+failed audits, retained admission failures, all five budget boundaries, duplicate
+seeds, frozen questions and partial cancellation. One unit test checks overlapping
+patterns and exact query comparison counts; two additional compile-fail examples
+reject question mutation and live comparison extraction. All fourteen integration
+tests, the new unit test and four compile-fail examples remain unexecuted pending
+a fresh successful RCH gate; this addition closes no production or Beads gate.
