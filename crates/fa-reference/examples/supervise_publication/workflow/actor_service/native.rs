@@ -2,6 +2,7 @@
 //! Stdout carries a submission reference, NEVER unapproved generated text.
 mod recipe;
 mod recovery;
+mod qualification;
 #[cfg(test)]
 mod tests;
 
@@ -28,7 +29,7 @@ pub(super) fn command(args: &[String], credibility: Option<&Path>) -> Result<(),
         _ => return Err(USAGE.into()),
     };
     let option = if checked { 5 } else { 4 };
-    if args.len() != option + 2 || args[option] != "--native-text" || credibility.is_some() {
+    if args.len() != option + 2 || args[option] != "--native-text" {
         return Err(USAGE.into());
     }
     let config = Config::read(Path::new(&args[1]))?;
@@ -38,7 +39,10 @@ pub(super) fn command(args: &[String], credibility: Option<&Path>) -> Result<(),
     let publication = if checked { Some(PublicationProfile::read(Path::new(&args[4]))?) } else { None };
     let inputs = recipe::load(Path::new(&args[option + 1]), config.profile.delivery.scope.tenant,
         config.profile.delivery.limits.bytes)?;
-    if let Some(publication) = &publication {
+    if credibility.is_some() {
+        serve_qualified(config, &actor, &reviewer, inputs, (open, publication.as_ref(), credibility),
+            super::super::clock, &mut std::io::stdout().lock())
+    } else if let Some(publication) = &publication {
         serve_selected(config, &actor, &reviewer, inputs, (open, Some(publication)),
             super::super::clock, &mut std::io::stdout().lock())
     } else if open {
@@ -73,15 +77,22 @@ where F: FnMut() -> ElapsedTick {
     serve_selected(config, actor, reviewer_profile, inputs, (open, None), time, output)
 }
 
-fn serve_selected<F>(mut config: Config, actor: &Profile, reviewer_profile: &PeerProfile,
-    inputs: Inputs, deployment: (bool, Option<&PublicationProfile>), mut time: F,
+fn serve_selected<F>(config: Config, actor: &Profile, reviewer_profile: &PeerProfile,
+    inputs: Inputs, deployment: (bool, Option<&PublicationProfile>), time: F,
     output: &mut impl Write) -> Result<(), String>
 where F: FnMut() -> ElapsedTick {
-    let (open, publication) = deployment;
+    serve_qualified(config, actor, reviewer_profile, inputs, (deployment.0, deployment.1, None), time, output)
+}
+
+fn serve_qualified<F>(mut config: Config, actor: &Profile, reviewer_profile: &PeerProfile,
+    inputs: Inputs, deployment: (bool, Option<&PublicationProfile>, Option<&Path>), mut time: F,
+    output: &mut impl Write) -> Result<(), String>
+where F: FnMut() -> ElapsedTick {
+    let (open, publication, credibility) = deployment;
     check_profiles(&config, actor, reviewer_profile)?;
-    // Convert every selected policy before creating a listener or store. Producer
-    // scope and unsupported joint-role combinations cannot silently downgrade.
-    let selected = publication.map(|profile| profile.generated_profile(&config.profile,
+    // Retain the entire selection, including a joint qualification policy. The
+    // original constructors pin it atomically; it is never installed at recovery.
+    let selected = publication.map(|profile| profile.native_selection(&config.profile,
         inputs.stream, Some(RecoveryReserve::terminal()))).transpose().map_err(debug)?;
     if inputs.decoder.profile().identity().tenant != config.profile.delivery.scope.tenant {
         return Err("native model tenant mismatch".into());
@@ -93,10 +104,8 @@ where F: FnMut() -> ElapsedTick {
     let socket = BoundSocket::bind(&actor.socket, None)?;
     actor.secure_socket()?;
     let (mut host, reviewer) = match (open, selected) {
-        (true, Some(selected)) => FileOversight::open_generated_text_stream_checked(&config.store,
-            config.profile.clone(), &inputs.decoder, &inputs.tokenizer, selected),
-        (false, Some(selected)) => FileOversight::create_generated_text_stream_checked(&config.store,
-            config.profile.clone(), inputs.decoder.clone(), inputs.tokenizer.clone(), selected),
+        (true, Some(selected)) => selected.open(&config.store, config.profile.clone(), &inputs.decoder, &inputs.tokenizer),
+        (false, Some(selected)) => selected.create(&config.store, config.profile.clone(), inputs.decoder.clone(), inputs.tokenizer.clone()),
         (true, None) => FileOversight::open_generated_text_stream_with_reserve(&config.store, config.profile.clone(),
             inputs.stream, &inputs.decoder, &inputs.tokenizer, RecoveryReserve::terminal()),
         (false, None) => FileOversight::create_generated_text_stream_with_reserve(&config.store, config.profile.clone(),
@@ -111,7 +120,7 @@ where F: FnMut() -> ElapsedTick {
     }
     let recovered_source = if open { recovery::select(&host, actor.request, &inputs)? } else { None };
     let recorded = recovered_source.is_some();
-    if !recorded { host.check_credibility().map_err(debug)?; }
+    if !recorded && credibility.is_none() { host.check_credibility().map_err(debug)?; }
     let (port, supervisor) = host.into_generated_text_actor_gateway().map_err(debug)?;
     let mut driver = FileSupervisedDriver::new(supervisor);
     let inbox = FileActorInbox::new(actor.actor, ActorWire::new(port), actor.channels(), actor.connections).map_err(debug)?;
@@ -124,9 +133,15 @@ where F: FnMut() -> ElapsedTick {
     };
     let work = (|| {
         let source = if let Some(source) = recovered_source {
+            // Even a supplied credibility path is not opened for receipt-only
+            // recovery. The historical effect cannot be retried into new work.
             resume_existing(&mut driver, actor.request, &mut time)?;
             source
         } else {
+            if !qualification::prepare(&mut driver, &config, credibility,
+                (control.as_mut().expect("initial stop owner"), &reviewer, &deadline), &mut time)? {
+                return Ok(());
+            }
             let controls = (control.as_mut().expect("initial stop owner"), &reviewer, &deadline);
             let completed = if open {
                 recovery::resume(&mut driver, &mut config, &inputs, controls, &mut time)?
