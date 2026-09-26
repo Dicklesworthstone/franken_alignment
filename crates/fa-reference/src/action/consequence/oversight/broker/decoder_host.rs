@@ -3,6 +3,7 @@
 
 mod checkpoint;
 mod automatic_stop;
+pub mod sidecar;
 pub use automatic_stop::{HostedStopCause, HostedStopIncident, HostedStopPolicy};
 pub use checkpoint::{HostedCheckpointHandle, HostedRecoveryUsage, HostedResetReceipt, HostedResetRequest};
 

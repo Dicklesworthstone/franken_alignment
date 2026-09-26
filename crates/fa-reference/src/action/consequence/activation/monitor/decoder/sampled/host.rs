@@ -2,6 +2,7 @@
 
 pub(crate) mod reset;
 pub(crate) mod replay;
+mod sidecar;
 
 use super::MonitoredSampledDecoder;
 use super::super::MonitoringStatus;
