@@ -14,7 +14,8 @@ use fa_reference::action::consequence::activation::tensor::kv::{
         sampling::{
             SamplingPolicy, SamplingStart,
             monitored::{GenerationBudget, GenerationSpec, GenerationStatus, GenerationStop, GenerationTelemetryBudget},
-            replay::{CheckpointLimits, ReplayableGeneration, MAX_REPLAY_STATE_BYTES,
+            replay::{CheckpointLimits, ReplayBudget, ReplayStatus, ReplayableGeneration, MAX_REPLAY_STATE_BYTES,
+                archive::ArchiveLimits,
                 comparison::{ComparisonLimits, ComparisonStatus}},
         },
     },
@@ -299,4 +300,202 @@ fn fresh_numerical_allowance_must_cover_both_arms_before_either_starts() {
         assert_eq!(original.generation().position(), 0);
         assert_eq!(original.generation().work().admitted_tokens, 0);
     }
+}
+
+#[test]
+fn a_saved_baseline_releases_a_pair_only_after_complete_original_verification() {
+    let model = model(3);
+    let quiet = policy(&model, false, 1);
+    let mut original = source(&model, quiet.clone(), 3, false);
+    for position in 0..3 { original.advance(position).unwrap(); }
+    let saved = original.checkpoint(CheckpointLimits::default()).unwrap();
+    let spent = original.generation().work();
+    let mut preparation = saved.begin_policy_comparison(quiet,
+        ReplayBudget::default(), ComparisonLimits::default()).unwrap();
+    assert_eq!(preparation.advance(0), Ok(ReplayStatus::Pending { compared: 0, remaining: 3 }));
+    assert!(preparation.receipt().is_none());
+    assert_eq!(preparation.report().reserved_and_accepted_work.admitted_tokens, 0);
+    assert!(!preparation.report().verification_complete);
+    assert_eq!(preparation.advance(1), Ok(ReplayStatus::Pending { compared: 1, remaining: 2 }));
+    assert_eq!(preparation.report().reserved_and_accepted_work.admitted_tokens, 1);
+    assert_eq!(preparation.advance(usize::MAX), Ok(ReplayStatus::Verified));
+    let receipt = *preparation.receipt().unwrap();
+    assert_eq!(receipt.recomputation, spent);
+    assert!(preparation.report().verification_complete);
+    assert_eq!(preparation.advance(0), Ok(ReplayStatus::Verified));
+    assert_eq!(preparation.receipt(), Some(&receipt));
+    let mut pair = preparation.finish().unwrap();
+    assert_eq!(pair.position(), 0);
+    assert!(pair.matched_tokens().is_empty());
+    assert_eq!(pair.baseline_replay(), Some(&receipt));
+    assert_eq!(pair.report().baseline_replay, Some(receipt));
+    assert_eq!(pair.report().lineage.source_position, 3);
+    assert_eq!(pair.report().work.baseline.admitted_tokens, 0);
+    assert_eq!(pair.report().work.candidate.admitted_tokens, 0);
+    assert_eq!(pair.run_to_stop(), Ok(ComparisonStatus::MatchedStop(GenerationStop::TokenLimit)));
+    assert_eq!(pair.report().work.baseline.admitted_tokens, 4);
+    assert_eq!(pair.baseline_replay().unwrap().recomputation.admitted_tokens, 3);
+    assert_eq!(original.generation().work(), spent);
+    assert_eq!(original.generation().position(), 3);
+}
+
+#[test]
+fn incomplete_baseline_cannot_be_finished_or_replaced_by_a_later_policy_choice() {
+    let model = model(3);
+    let quiet = policy(&model, false, 1);
+    let mut original = source(&model, quiet.clone(), 1, false);
+    for position in 0..3 { original.advance(position).unwrap(); }
+    let saved = original.checkpoint(CheckpointLimits::default()).unwrap();
+    let mut preparation = saved.begin_policy_comparison(quiet.clone(),
+        ReplayBudget::default(), ComparisonLimits::default()).unwrap();
+    preparation.advance(1).unwrap();
+    assert!(matches!(preparation.finish(), Err(Error::Incomplete)));
+    let mut advanced = saved.begin_replay(ReplayBudget::default()).unwrap();
+    advanced.advance(1).unwrap();
+    assert!(matches!(advanced.prepare_policy_comparison(quiet.clone(), ComparisonLimits::default()), Err(Error::WrongState)));
+    let mut verified = saved.begin_replay(ReplayBudget::default()).unwrap();
+    verified.advance(usize::MAX).unwrap();
+    assert!(matches!(verified.prepare_policy_comparison(quiet.clone(), ComparisonLimits::default()), Err(Error::WrongState)));
+    let mut valid = saved.begin_policy_comparison(quiet, ReplayBudget::default(), ComparisonLimits::default()).unwrap();
+    valid.advance(usize::MAX).unwrap();
+    assert!(valid.finish().is_ok());
+}
+
+#[test]
+fn decoded_archive_uses_the_same_verification_and_keeps_replay_cost_separate() {
+    let model = model(3);
+    let quiet = policy(&model, false, 1);
+    let mut original = source(&model, quiet.clone(), 3, false);
+    for position in 0..3 { original.advance(position).unwrap(); }
+    let saved = original.checkpoint(CheckpointLimits::default()).unwrap();
+    let bytes = saved.encode_archive(ArchiveLimits::default()).unwrap();
+    let intended = source(&model, quiet.clone(), 3, false);
+    let archive = intended.decode_archive(&bytes, ArchiveLimits::default()).unwrap();
+    let mut preparation = archive.begin_policy_comparison(policy(&model, false, 2),
+        ReplayBudget::default(), ComparisonLimits::default()).unwrap();
+    assert!(preparation.receipt().is_none());
+    preparation.advance(usize::MAX).unwrap();
+    let mut pair = preparation.finish().unwrap();
+    assert_eq!(pair.baseline_replay().unwrap().positions, 3);
+    assert_eq!(pair.baseline_replay().unwrap().recomputation, saved.work());
+    assert_eq!(pair.baseline_replay().unwrap().telemetry_recomputation, saved.telemetry_work());
+    assert_eq!(pair.report().lineage.evaluation_origin, 201);
+    assert_eq!(pair.run_to_stop(), Ok(ComparisonStatus::MatchedStop(GenerationStop::TokenLimit)));
+    assert_eq!(intended.generation().position(), 0);
+    assert_eq!(original.generation().position(), 3);
+    // Archive provenance is not inferred from matching model IDs. Even changing
+    // the seed while preserving those IDs must refuse the existing importer.
+    let mut sampling = intended.generation().spec().sampling().clone();
+    sampling.seed ^= 1;
+    let spec = GenerationSpec::new(vec![0], 3, BTreeSet::new(), sampling).unwrap();
+    let changed = model.replayable_monitored_generation(21, 201, spec, quiet,
+        GenerationBudget::default(), GenerationTelemetryBudget::default()).unwrap();
+    assert!(matches!(changed.decode_archive(&bytes, ArchiveLimits::default()), Err(Error::Binding)));
+}
+
+#[test]
+fn earlier_checkpoint_experiment_never_erases_a_later_source_hold() {
+    let model = model(3);
+    let alarm = policy(&model, true, 1);
+    let mut original = source(&model, alarm, 1, false);
+    original.advance(0).unwrap();
+    let saved = original.checkpoint(CheckpointLimits::default()).unwrap();
+    let held = original.run_to_stop().unwrap();
+    assert!(matches!(held, GenerationStatus::Held(_)));
+    let spent = original.generation().work();
+    let mut preparation = saved.begin_policy_comparison(policy(&model, false, 1),
+        ReplayBudget::default(), ComparisonLimits::default()).unwrap();
+    preparation.advance(1).unwrap();
+    let mut pair = preparation.finish().unwrap();
+    assert_eq!(pair.run_to_stop(), Ok(ComparisonStatus::DecisionDifference { position: 1 }));
+    assert_eq!(pair.matched_tokens(), &[0]);
+    assert_eq!(original.generation().status(), held);
+    assert_eq!(original.generation().work(), spent);
+    assert_eq!(original.advance(1).err(), Some(Error::WrongState));
+}
+
+#[test]
+fn verified_empty_and_terminal_baselines_still_require_original_state_comparison() {
+    let model = model(3);
+    let quiet = policy(&model, false, 1);
+    let mut original = source(&model, quiet.clone(), 1, true);
+    let empty = original.checkpoint(CheckpointLimits::default()).unwrap();
+    let waiting = empty.begin_policy_comparison(quiet.clone(),
+        ReplayBudget::default(), ComparisonLimits::default()).unwrap();
+    assert!(matches!(waiting.finish(), Err(Error::Incomplete)));
+    let mut preparation = empty.begin_policy_comparison(quiet.clone(),
+        ReplayBudget::default(), ComparisonLimits::default()).unwrap();
+    assert_eq!(preparation.advance(0), Ok(ReplayStatus::Verified));
+    let mut pair = preparation.finish().unwrap();
+    assert_eq!(pair.baseline_replay().unwrap().positions, 0);
+    assert_eq!(pair.run_to_stop(), Ok(ComparisonStatus::MatchedStop(GenerationStop::StopToken(2))));
+    original.run_to_stop().unwrap();
+    let terminal = original.checkpoint(CheckpointLimits::default()).unwrap();
+    let mut preparation = terminal.begin_policy_comparison(quiet,
+        ReplayBudget::default(), ComparisonLimits::default()).unwrap();
+    preparation.advance(usize::MAX).unwrap();
+    let mut pair = preparation.finish().unwrap();
+    assert_eq!(pair.baseline_replay().unwrap().restored_status, GenerationStatus::Finished(GenerationStop::StopToken(2)));
+    assert_eq!(pair.run_to_stop(), Ok(ComparisonStatus::MatchedStop(GenerationStop::StopToken(2))));
+    assert_eq!(original.generation().position(), 2);
+}
+
+#[test]
+fn saved_baseline_and_paired_work_both_require_their_own_exact_allowances() {
+    let model = model(3);
+    let quiet = policy(&model, false, 1);
+    let mut original = source(&model, quiet.clone(), 3, false);
+    for position in 0..3 { original.advance(position).unwrap(); }
+    let saved = original.checkpoint(CheckpointLimits::default()).unwrap();
+    let exact = ReplayBudget { positions: 3, state_bytes: saved.state_bytes(),
+        decoder_products: saved.work().reserved_decoder_products,
+        vocabulary_scores: saved.work().reserved_vocabulary_scores };
+    let mut valid = saved.begin_policy_comparison(quiet.clone(), exact, ComparisonLimits::default()).unwrap();
+    valid.advance(usize::MAX).unwrap();
+    assert!(valid.finish().is_ok());
+    for smaller in [ReplayBudget { positions: 2, ..exact },
+        ReplayBudget { state_bytes: exact.state_bytes - 1, ..exact },
+        ReplayBudget { decoder_products: exact.decoder_products - 1, ..exact },
+        ReplayBudget { vocabulary_scores: exact.vocabulary_scores - 1, ..exact }] {
+        assert!(matches!(saved.begin_policy_comparison(quiet.clone(), smaller, ComparisonLimits::default()), Err(Error::Limit)));
+    }
+    assert!(matches!(saved.begin_policy_comparison(quiet, exact,
+        ComparisonLimits { decoder_products: 0, ..ComparisonLimits::default() }), Err(Error::Limit)));
+    assert_eq!(original.generation().position(), 3);
+}
+
+#[test]
+fn verified_replay_and_policy_comparison_do_not_refill_original_telemetry_caps() {
+    let model = model(3);
+    let quiet = policy(&model, false, 1);
+    let mut control = source(&model, quiet.clone(), 1, false);
+    control.advance(0).unwrap();
+    let one_position = control.generation().telemetry_work().source_check_values;
+    assert!(one_position > 0);
+    // Same recipe except a lifetime source-check ceiling that covers precisely
+    // the first position. The unrestricted positive control really continues.
+    control.run_to_stop().unwrap();
+    let mut budget = GenerationTelemetryBudget::default();
+    budget.source_check_values = one_position;
+    let mut limited = model.replayable_monitored_generation(21, 201,
+        control.generation().spec().clone(), quiet.clone(), GenerationBudget::default(), budget).unwrap();
+    limited.advance(0).unwrap();
+    let saved = limited.checkpoint(CheckpointLimits::default()).unwrap();
+    let mut preparation = saved.begin_policy_comparison(quiet,
+        ReplayBudget::default(), ComparisonLimits::default()).unwrap();
+    assert_eq!(preparation.advance(1), Ok(ReplayStatus::Verified));
+    let mut pair = preparation.finish().unwrap();
+    assert_eq!(pair.baseline_replay().unwrap().telemetry_recomputation.source_check_values, one_position);
+    assert!(pair.advance(0).unwrap().accepted().is_some());
+    assert_eq!(pair.advance(1).err(), Some(Error::Limit));
+    assert_eq!(pair.status(), ComparisonStatus::Failed(Error::Limit));
+    let report = pair.report();
+    assert_eq!(report.work.baseline_telemetry.source_check_values, one_position);
+    assert_eq!(report.work.candidate_telemetry.source_check_values, one_position);
+    assert_eq!(report.work.baseline.admitted_tokens, 2);
+    assert_eq!(report.work.candidate.admitted_tokens, 2);
+    assert!(!report.work.all_attempted_telemetry_reported);
+    assert_eq!(pair.matched_tokens(), &[0]);
+    assert_eq!(limited.generation().position(), 1);
+    assert_eq!(limited.advance(1).err(), Some(Error::Limit));
 }

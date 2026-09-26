@@ -6,7 +6,9 @@
 //! A decision difference, missing audit, failure or bound ends the experiment.
 //! This L7 diagnostic has no permit, mutable arm or executable-owner accessor.
 
-use super::{CheckpointLimits, Recipe, ReplayableGeneration, State, MAX_REPLAY_STATE_BYTES, same_sample};
+pub mod verified;
+
+use super::{CheckpointLimits, Recipe, ReplayableGeneration, ReplayReceipt, State, MAX_REPLAY_STATE_BYTES, same_sample};
 use super::super::monitored::{
     GenerationEvent, GenerationStatus, GenerationStop, GenerationTelemetryWork, GenerationWork,
     LearnedGeneration, MAX_GENERATION_SCORES, MAX_GENERATION_TOKENS,
@@ -88,6 +90,9 @@ pub struct ComparisonReport {
     /// Sum of logical bytes in completed paired state comparisons, not physical
     /// byte movement, allocated memory, or a count of independent observations.
     pub state_bytes_compared: u64,
+    /// Extra baseline reconstruction, when this experiment was prepared from a
+    /// verified saved checkpoint or imported archive. Never added to arm spend.
+    pub baseline_replay: Option<ReplayReceipt>,
     pub work: ComparisonWork,
 }
 
@@ -151,6 +156,7 @@ pub struct PolicyComparison {
     matched: usize,
     state_bytes_compared: u64,
     last: Option<Rc<ComparisonStep>>,
+    baseline_replay: Option<ReplayReceipt>,
 }
 impl fmt::Debug for PolicyComparison {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -195,9 +201,10 @@ impl PolicyComparison {
             recipe.stream, recipe.evaluation_origin, recipe.spec.clone(), policy,
             recipe.budget, recipe.telemetry)?;
         Ok(Self { baseline, candidate, lineage, limits, status: ComparisonStatus::Active,
-            attempted: 0, matched: 0, state_bytes_compared: 0, last: None })
+            attempted: 0, matched: 0, state_bytes_compared: 0, last: None, baseline_replay: None })
     }
 
+    pub fn baseline_replay(&self) -> Option<&ReplayReceipt> { self.baseline_replay.as_ref() }
     pub fn status(&self) -> ComparisonStatus { self.status }
     pub fn position(&self) -> u64 { self.attempted as u64 }
     pub fn last_step(&self) -> Option<&ComparisonStep> { self.last.as_deref() }
@@ -212,6 +219,7 @@ impl PolicyComparison {
         ComparisonReport { lineage: self.lineage, status: self.status,
             attempted_positions: self.attempted, matched_positions: self.matched,
             state_bytes_compared: self.state_bytes_compared,
+            baseline_replay: self.baseline_replay,
             work: ComparisonWork {
                 baseline: self.baseline.work(), candidate: self.candidate.work(),
                 baseline_telemetry: self.baseline.telemetry_work(),

@@ -62,15 +62,57 @@ then false. A stale expected position changes neither arm. An error or caught
 unwind latches the pair, so it cannot retry a half-completed position or refill
 allowances. No wall-clock, performance, allocation or statistical claim follows.
 
+## Verified checkpoint and archive baselines
+
+`GenerationCheckpoint::begin_policy_comparison` and
+`GenerationArchive::begin_policy_comparison` create a `ComparisonPreparation`.
+An existing, unadvanced `GenerationReplay` can also be consumed through
+`prepare_policy_comparison`. The candidate policy and BOTH-arm numerical
+allowances are admitted and frozen before baseline verification executes. A
+partially advanced or already verified replay cannot be adopted after seeing
+its numerical results. Neither experimental arm is accessible during preparation.
+
+Preparation delegates every step to the ORIGINAL `GenerationReplay`. It must
+rerun the original model, sampler and learned monitoring policy and compare the
+complete saved expectation, including its original telemetry counters. A
+candidate policy is never substituted into this verification. Imported archives
+still require independent exact recipe matching in the existing decoder; file
+parsing is not sufficient evidence of a valid baseline.
+
+Only successful `finish` returns a `PolicyComparison`. An incomplete or failed
+verifier returns no pair; corrupt cache words, logits, random draws or saved
+telemetry cannot be installed as an accepted baseline. Even an empty checkpoint
+requires the original final state comparison. Original errors and unwind latching
+remain in force. Preparation exposes verification status and reported work,
+not unfinished tokens, cache state or executable generation. A failure can leave
+unreported bounded work, so partial work rows are not complete-cost receipts.
+
+The reconstructed original owner is discarded; only its immutable replay receipt
+is attached to the experiment. The pair then recomputes FROM ZERO. Accordingly,
+this profile costs one baseline verification plus two comparison arms. Up to
+three generation owners coexist during preparation; no constant-time fork,
+direct-KV restart, reduced peak memory or production recovery is claimed.
+`baseline_replay` keeps the extra reconstruction cost distinct from each arm's
+work and preserves the one original evaluation origin. It does not replenish
+source-check/refinement ceilings or mutate a source subsequently held after the
+saved checkpoint. Persisted experiments and automatic policy promotion are not
+implemented by this API.
+
 ## Authored verification
 
-Twelve integration test functions exercise the original numerical engine and
+Nineteen integration test functions and one private unit test exercise the
+original numerical engine and
 fitted codec: stochastic identity with an independent original run; different
 probe costs with identical numerical states; candidate-only and baseline-only
 alarms; two held arms; exact/zero/one-less position, state-byte and fresh paired
 numerical limits; missing candidate audit; stale calls; foreign model policies;
-and actual EOS termination. Two compile-fail examples prohibit executable or
-mutable candidate extraction.
+and actual EOS termination. Saved-baseline cases additionally cover segmented,
+empty, terminal and archive-import verification; blocked partial finish and late
+policy choice; exact reconstruction budgets; held-source preservation; conserved
+original telemetry ceilings; and separate reconstruction accounting. The private
+unit test corrupts four expected-state fields after a valid control and requires
+the original verifier to reject each without releasing a pair. Four compile-fail
+examples prohibit executable/mutable arm access and incomplete-preparation escape.
 
 Compilation, rustfmt, Clippy, all new Rust tests and the required RCH gate are
 UNEXECUTED in this preparation environment. `rch`, `cargo` and `rustc` are

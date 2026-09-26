@@ -454,5 +454,39 @@ mod tests {
         original.replay(ReplayBudget::default()).unwrap();
     }
 
+    #[test]
+    fn policy_comparison_cannot_replace_the_original_checkpoint_verifier() {
+        use comparison::{ComparisonLimits, ComparisonStatus};
+        let saved = checkpoint();
+        let policy = saved.recipe.policy.clone();
+        let mut valid = saved.begin_policy_comparison(policy.clone(),
+            ReplayBudget::default(), ComparisonLimits::default()).unwrap();
+        valid.advance(usize::MAX).unwrap();
+        let mut pair = valid.finish().unwrap();
+        assert_eq!(pair.run_to_stop(), Ok(ComparisonStatus::MatchedStop(GenerationStop::TokenLimit)));
+        for field in 0..4 {
+            let mut changed = saved.clone();
+            let state = Rc::make_mut(&mut changed.expected);
+            match field {
+                0 => state.logits.as_mut().unwrap()[0] ^= 1,
+                1 => *state.cache.last_mut().unwrap() ^= 1,
+                2 => state.telemetry.monitor_encoded_bytes += 1,
+                3 => state.samples[0].random_word ^= 1,
+                _ => unreachable!(),
+            }
+            let mut preparation = changed.begin_policy_comparison(policy.clone(),
+                ReplayBudget::default(), ComparisonLimits::default()).unwrap();
+            assert_eq!(preparation.advance(usize::MAX), Err(Error::Binding), "field {field}");
+            assert_eq!(preparation.status(), ReplayStatus::Failed(Error::Binding));
+            assert!(!preparation.report().verification_complete);
+            assert!(preparation.receipt().is_none());
+            assert!(preparation.report().reserved_and_accepted_work.admitted_tokens > 0);
+            assert_eq!(preparation.advance(0), Err(Error::Binding));
+            assert!(matches!(preparation.finish(), Err(Error::Binding)));
+        }
+        // All mutations are isolated expectations, not repairs to the original.
+        saved.replay(ReplayBudget::default()).unwrap();
+    }
+
     mod archive_binding;
 }
