@@ -5,6 +5,7 @@ pub mod comparison;
 mod continuation;
 pub mod quantized;
 pub mod learned;
+pub mod prompt;
 
 use super::{DecoderBudget, DecoderCheckpoint, DecoderModel, DecoderWork};
 use super::super::experiment::{
