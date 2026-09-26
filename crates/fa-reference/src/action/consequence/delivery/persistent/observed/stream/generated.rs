@@ -2,6 +2,7 @@
 //! This is provenance-preserving admission, never automatic publication.
 
 pub mod checked;
+mod continuation;
 mod recovery;
 mod required;
 pub use recovery::FileTextMessageSnapshot;
