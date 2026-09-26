@@ -12,6 +12,10 @@ use crate::Error;
 use std::fmt;
 use std::rc::Rc;
 
+mod sharded;
+pub use sharded::FileDecoderShardInputs;
+use sharded::ShardSet;
+
 /// Exact immutable bootstrap data. Equality includes all input bytes, not just
 /// supplied model names. This is not a signed manifest or authority to publish.
 #[derive(Clone, PartialEq, Eq)]
@@ -19,6 +23,8 @@ pub struct FileDecoderConfig {
     profile: DecoderProfile,
     output_head: OutputHead,
     weights: Rc<[u8]>,
+    // Single-file bytes are empty in sharded mode; neither layout is inferred.
+    shards: Option<Rc<ShardSet>>,
     monitor: Rc<[u8]>,
     sampling: Rc<[u8]>,
     stream: u64,
@@ -27,7 +33,7 @@ pub struct FileDecoderConfig {
 impl fmt::Debug for FileDecoderConfig {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("FileDecoderConfig").field("profile", &self.profile)
-            .field("output_head", &self.output_head).field("stream", &self.stream).field("input_bytes", &self.input_bytes()).finish_non_exhaustive()
+            .field("output_head", &self.output_head).field("sharded", &self.is_sharded()).field("stream", &self.stream).field("input_bytes", &self.input_bytes()).finish_non_exhaustive()
     }
 }
 impl FileDecoderConfig {
@@ -50,7 +56,7 @@ impl FileDecoderConfig {
         sampling: Vec<u8>, stream: u64, limits: DecoderBindingLimits, output_head: OutputHead)
         -> Result<Self, Error>
     {
-        let config = Self { profile, output_head, weights: weights.into(), monitor: monitor.into(),
+        let config = Self { profile, output_head, weights: weights.into(), shards: None, monitor: monitor.into(),
             sampling: sampling.into(), stream, limits };
         config.check_bounds()?;
         // Validate the actual native constructors before handing out configuration.
@@ -58,11 +64,34 @@ impl FileDecoderConfig {
         config.build()?;
         Ok(config)
     }
+    /// Retain the exact index, literal shard labels and physical bytes as one
+    /// immutable model input. The ORIGINAL sharded parser verifies assignments,
+    /// tensor coverage and tied-head equality; no path is opened or inferred.
+    /// Reconstruction still reruns the original decoder and checks its history.
+    pub fn new_sharded(profile: DecoderProfile, inputs: FileDecoderShardInputs,
+        monitor: Vec<u8>, sampling: Vec<u8>, stream: u64, limits: DecoderBindingLimits,
+        output_head: OutputHead) -> Result<Self, Error>
+    {
+        let shards = ShardSet::new(&profile, output_head, inputs)?;
+        let config = Self { profile, output_head, weights: Rc::from(&b""[..]),
+            shards: Some(Rc::new(shards)), monitor: monitor.into(), sampling: sampling.into(), stream, limits };
+        config.build()?;
+        Ok(config)
+    }
+    /// Storage interpretation only, not model quality, freshness or authority.
+    pub fn is_sharded(&self) -> bool { self.shards.is_some() }
     pub fn profile(&self) -> &DecoderProfile { &self.profile }
     pub fn output_head(&self) -> OutputHead { self.output_head }
     pub fn stream(&self) -> u64 { self.stream }
-    pub fn input_bytes(&self) -> usize { self.weights.len() + self.monitor.len() + self.sampling.len() }
+    pub fn input_bytes(&self) -> usize {
+        self.shards.as_ref().map_or(self.weights.len(), |set| set.input_bytes())
+            + self.monitor.len() + self.sampling.len()
+    }
     fn check_bounds(&self) -> Result<(), Error> {
+        if let Some(set) = &self.shards {
+            if !self.weights.is_empty() { return Err(Error::Binding); }
+            set.check_bounds()?;
+        }
         if self.stream == 0 || self.limits.token_ids == 0 || self.limits.score_words == 0 { return Err(Error::InvalidInput); }
         if self.weights.len() > MAX_WEIGHT_FILE_BYTES || self.monitor.len() > MAX_MONITOR_CONFIG_BYTES
             || self.sampling.len() > MAX_SAMPLING_CONFIG_BYTES
@@ -72,9 +101,11 @@ impl FileDecoderConfig {
     }
     pub(in super::super) fn build(&self) -> Result<MonitoredSampledDecoder, Error> {
         self.check_bounds()?;
-        let (model, _) = DecoderModel::from_safetensors_with_output_head(
-            self.profile.clone(), &self.weights, self.output_head)
-            .map_err(|e| match e { WeightError::Limit => Error::Limit, WeightError::Model(e) => e, _ => Error::InvalidInput })?;
+        let model = match &self.shards {
+            Some(set) => set.build(&self.profile, self.output_head)?,
+            None => DecoderModel::from_safetensors_with_output_head(
+                self.profile.clone(), &self.weights, self.output_head).map_err(weight_error)?.0,
+        };
         MonitoredSampledDecoder::from_json(model, self.stream, &self.monitor, &self.sampling)
             .map_err(|e| match e {
                 SamplingConfigError::Limit | SamplingConfigError::Monitor(MonitorConfigError::Limit) => Error::Limit,
@@ -89,7 +120,11 @@ impl FileDecoderConfig {
             id.profile_generation, self.profile.epsilon().to_bits(), self.profile.theta().to_bits(), self.stream] { w.u64(value)?; }
         for value in [s.vocabulary, s.hidden, s.intermediate, s.layers, s.query_heads,
             s.cache_heads, s.context, self.limits.token_ids, self.limits.score_words] { w.count(value)?; }
-        w.blob(&self.weights)?; w.blob(&self.monitor)?; w.blob(&self.sampling)
+        match &self.shards {
+            Some(set) => set.write(w)?,
+            None => w.blob(&self.weights)?,
+        }
+        w.blob(&self.monitor)?; w.blob(&self.sampling)
     }
     pub(super) fn read(r: &mut Reader<'_>) -> Result<Self, Error> {
         Self::read_with_output_head(r, OutputHead::Independent)
@@ -97,6 +132,12 @@ impl FileDecoderConfig {
     // Only the decoder event discriminator selects this mode. The legacy body
     // and tag 0 keep their exact meaning; bytes never infer a missing head.
     pub(super) fn read_with_output_head(r: &mut Reader<'_>, output_head: OutputHead) -> Result<Self, Error> {
+        Self::read_layout(r, output_head, false)
+    }
+    pub(super) fn read_sharded(r: &mut Reader<'_>, output_head: OutputHead) -> Result<Self, Error> {
+        Self::read_layout(r, output_head, true)
+    }
+    fn read_layout(r: &mut Reader<'_>, output_head: OutputHead, sharded: bool) -> Result<Self, Error> {
         let identity = DecoderIdentity { tenant: r.u64()?, model: r.u64()?, model_generation: r.u64()?,
             tokenizer_generation: r.u64()?, profile_generation: r.u64()? };
         let epsilon = f64::from_bits(r.u64()?); let theta = f64::from_bits(r.u64()?); let stream = r.u64()?;
@@ -104,13 +145,20 @@ impl FileDecoderConfig {
             layers: r.count(128)?, query_heads: r.count(2_048)?, cache_heads: r.count(2_048)?, context: r.count(1_048_576)? };
         let profile = DecoderProfile::new(identity, shape, epsilon, theta)?;
         let limits = DecoderBindingLimits { token_ids: r.count(MAX_BOUND_DECODER_TOKENS)?, score_words: r.count(MAX_BOUND_DECODER_SCORE_WORDS)? };
-        let config = Self { profile, output_head, limits, stream, weights: Rc::from(r.blob(MAX_WEIGHT_FILE_BYTES)?),
+        let (weights, shards) = if sharded {
+            (Rc::from(&b""[..]), Some(Rc::new(ShardSet::read(r, &profile, output_head)?)))
+        } else { (Rc::from(r.blob(MAX_WEIGHT_FILE_BYTES)?), None) };
+        let config = Self { profile, output_head, limits, stream, weights, shards,
             monitor: Rc::from(r.blob(MAX_MONITOR_CONFIG_BYTES)?), sampling: Rc::from(r.blob(MAX_SAMPLING_CONFIG_BYTES)?) };
         config.check_bounds()?;
         // Semantic replay calls the same native build; decoding does not retain a
         // second model or call unchecked constructors to import a running session.
         Ok(config)
     }
+}
+
+fn weight_error(error: WeightError) -> Error {
+    match error { WeightError::Limit => Error::Limit, WeightError::Model(error) => error, _ => Error::InvalidInput }
 }
 
 #[cfg(test)]

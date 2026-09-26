@@ -9,7 +9,7 @@ pub mod progress;
 pub mod text;
 mod stopping;
 mod cancellation;
-pub use config::FileDecoderConfig;
+pub use config::{FileDecoderConfig, FileDecoderShardInputs};
 pub(super) use codec::{read, write};
 #[cfg(test)]
 mod tests;

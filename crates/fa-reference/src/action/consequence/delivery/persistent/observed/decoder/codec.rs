@@ -19,11 +19,13 @@ pub(in super::super) fn write(w: &mut Writer, event: &DecoderEvent) -> Result<()
         }
         DecoderEvent::TextIntent(command) => { w.u8(10)?; super::text::write(w, command)?; }
         DecoderEvent::Enable(config) => {
-            // Tag 0 is permanently independent. Tag 12 binds tied semantics;
-            // older readers reject it instead of misinterpreting its weights.
-            w.u8(match config.output_head() {
-                OutputHead::Independent => 0,
-                OutputHead::TiedEmbeddings => 12,
+            // Existing single-file tags/bodies remain byte-identical. Sharded
+            // sources use distinct tags; old readers refuse, never concatenate.
+            w.u8(match (config.is_sharded(), config.output_head()) {
+                (false, OutputHead::Independent) => 0,
+                (false, OutputHead::TiedEmbeddings) => 12,
+                (true, OutputHead::Independent) => 13,
+                (true, OutputHead::TiedEmbeddings) => 14,
             })?;
             config.write(w)?;
         }
@@ -72,6 +74,8 @@ pub(in super::super) fn read(r: &mut Reader<'_>) -> Result<DecoderEvent, Error> 
         0 => DecoderEvent::Enable(Rc::new(FileDecoderConfig::read(r)?)),
         12 => DecoderEvent::Enable(Rc::new(FileDecoderConfig::read_with_output_head(r,
             OutputHead::TiedEmbeddings)?)),
+        13 | 14 => DecoderEvent::Enable(Rc::new(FileDecoderConfig::read_sharded(r,
+            if tag == 13 { OutputHead::Independent } else { OutputHead::TiedEmbeddings })?)),
         1 | 2 => {
             let revision = r.u64()?; let position = r.u64()?;
             let request = if tag == 1 {
