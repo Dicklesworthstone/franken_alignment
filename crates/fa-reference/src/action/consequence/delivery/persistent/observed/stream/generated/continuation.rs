@@ -1,6 +1,8 @@
 //! Prepare another message on the ORIGINAL native stream and numerical owner.
 //! This is a new-intent precondition, not a new journal format or grant.
 use super::{FileOversight, JournalError, Error, GenerationFinish, MonitoringStatus};
+mod finish;
+
 use crate::action::ActionState;
 use crate::action::consequence::activation::monitor::decoder::sampled::generation::text::TextGenerationRequest;
 use crate::action::consequence::delivery::EndpointOutcome;
@@ -39,44 +41,8 @@ impl FileOversight {
             Err(JournalError::Contract(Error::Missing)) => {},
             Err(error) => return Err(error),
         }
-        if self.pending_decoder_generation()?.is_some() { return Err(Error::Incomplete.into()); }
-        let state = self.stream_snapshot()?;
-        if state.pending.is_some() || state.confirmed != state.published {
-            return Err(Error::Incomplete.into());
-        }
-        if state.confirmed.finished() || state.publication.stop.is_some()
-            || state.publication.control.suspended { return Err(Error::WrongState.into()); }
-        let source = self.decoder_text_message_request(after_request)?;
-        if !matches!(self.request_status(after_request)?.disposition,
-            FileRequestDisposition::Admitted { stage: ActionState::Confirmed, .. }) {
-            return Err(Error::Incomplete.into());
-        }
-        match self.request_resolution(after_request)? {
-            Some(EndpointOutcome::Executed { resulting_version })
-                if resulting_version == state.confirmed_target.expected_version => {},
-            _ => return Err(Error::Stale.into()),
-        }
-        let action = self.request_action(after_request)?;
-        let frame = ReleaseFrame::decode(&action.spec().payload)?;
-        if frame.is_finish() || frame.profile() != state.confirmed.profile()
-            || !frame.prior_messages().iter().copied().chain(frame.message())
-                .eq(state.confirmed.messages())
-            || state.confirmed_target != state.publication.target {
-            return Err(Error::Binding.into());
-        }
-        let previous = self.decoder_text_generation(source.generation)?;
-        let report = previous.result()?.generation();
-        if report.finish() != GenerationFinish::StopToken
-            || self.decoder_generation_progress(source.generation)?.generation_revision() != source.generation_revision {
-            return Err(Error::Binding.into());
-        }
-        let steps = report.end_position().checked_sub(previous.command().position()).ok_or(Error::Binding)?;
-        let revision = previous.command().actor_revision().checked_add(steps).ok_or(Error::Overflow)?;
-        let numerical = self.decoder_inspection()?.numerical;
-        if numerical.status != MonitoringStatus::Ready { return Err(Error::WrongState.into()); }
-        if numerical.position != report.end_position() || numerical.actor_revision != revision {
-            return Err(Error::Stale.into());
-        }
+        let (state, numerical) = confirmed_cut(self, after_request)?;
+        let revision = numerical.actor_revision;
         let profile = state.confirmed.profile();
         if request.max_new_tokens == 0 || request.max_output_bytes == 0 || request.stop_tokens.is_empty() {
             return Err(Error::InvalidInput.into());
@@ -116,6 +82,56 @@ impl FileOversight {
         if expected != command { return Err(Error::Binding.into()); }
         self.begin_decoder_text(revision, command)
     }
+}
+
+// Both another message and explicit closure start at the SAME confirmed native
+// cut. Closure adds no tokens/bytes, so it does not borrow continuation capacity.
+fn confirmed_cut(host: &FileOversight, after_request: u64)
+    -> Result<(crate::action::consequence::delivery::persistent::observed::stream::FileStreamSnapshot,
+        crate::action::consequence::oversight::decoder_host::HostedDecoderInspection), JournalError>
+{
+    if host.fault.is_some() { return Err(JournalError::Unavailable); }
+    if after_request == 0 { return Err(Error::InvalidInput.into()); }
+    if !host.generated_text_stream_required()? { return Err(Error::Binding.into()); }
+    if host.pending_decoder_generation()?.is_some() { return Err(Error::Incomplete.into()); }
+    let state = host.stream_snapshot()?;
+    if state.pending.is_some() || state.confirmed != state.published {
+        return Err(Error::Incomplete.into());
+    }
+    if state.confirmed.finished() || state.publication.stop.is_some()
+        || state.publication.control.suspended { return Err(Error::WrongState.into()); }
+    let source = host.decoder_text_message_request(after_request)?;
+    if !matches!(host.request_status(after_request)?.disposition,
+        FileRequestDisposition::Admitted { stage: ActionState::Confirmed, .. }) {
+        return Err(Error::Incomplete.into());
+    }
+    match host.request_resolution(after_request)? {
+        Some(EndpointOutcome::Executed { resulting_version })
+            if resulting_version == state.confirmed_target.expected_version => {},
+        _ => return Err(Error::Stale.into()),
+    }
+    let action = host.request_action(after_request)?;
+    let frame = ReleaseFrame::decode(&action.spec().payload)?;
+    if frame.is_finish() || frame.profile() != state.confirmed.profile()
+        || !frame.prior_messages().iter().copied().chain(frame.message())
+            .eq(state.confirmed.messages())
+        || state.confirmed_target != state.publication.target {
+        return Err(Error::Binding.into());
+    }
+    let previous = host.decoder_text_generation(source.generation)?;
+    let report = previous.result()?.generation();
+    if report.finish() != GenerationFinish::StopToken
+        || host.decoder_generation_progress(source.generation)?.generation_revision() != source.generation_revision {
+        return Err(Error::Binding.into());
+    }
+    let steps = report.end_position().checked_sub(previous.command().position()).ok_or(Error::Binding)?;
+    let revision = previous.command().actor_revision().checked_add(steps).ok_or(Error::Overflow)?;
+    let numerical = host.decoder_inspection()?.numerical;
+    if numerical.status != MonitoringStatus::Ready { return Err(Error::WrongState.into()); }
+    if numerical.position != report.end_position() || numerical.actor_revision != revision {
+        return Err(Error::Stale.into());
+    }
+    Ok((state, numerical))
 }
 
 #[cfg(test)]
