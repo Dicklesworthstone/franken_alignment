@@ -2,6 +2,7 @@
 //! Expected bytes only reject divergence; they are never loaded into the actor.
 use super::{Machine, Transition};
 use super::super::{Event, BaseEvent, journal::HumanDecision};
+use super::super::credibility::CredibilityEvent;
 use super::super::decoder::{DecoderEvent, FileDecoderConfig, StepRequest, MAX_WITNESS_BYTES};
 use super::super::super::codec::shared::Writer;
 use crate::action::consequence::activation::monitor::decoder::{MonitoredStep, MonitoringStatus, ReviewedStep};
@@ -15,6 +16,8 @@ mod checkpoint;
 mod generation;
 mod stopping;
 mod text;
+#[cfg(test)]
+mod qualification_tests;
 use super::super::decoder::checkpoint::CheckpointRequest;
 
 pub(super) struct DecoderState {
@@ -50,6 +53,12 @@ impl Machine {
         if pending.is_some() && matches!(event, Event::Decoder(DecoderEvent::Checkpoint(..))) {
             return Err(Error::Incomplete);
         }
+        // Requalification and evidence loss use the ORIGINAL governance/fence
+        // reducers. Neither changes the numerical predecessor, clears a pause,
+        // grants a permit nor replaces the pending prompt/RNG/work allowance.
+        // Recovery invalidates old qualification, so explicit reactivation must
+        // be possible before resume. Bootstrap, assessment and promotion are NOT
+        // blanket-admitted through this exception; their existing rules remain.
         if matches!(event,
             Event::Decoder(DecoderEvent::Resume { .. }
                 | DecoderEvent::CancelGeneration { .. }
@@ -60,6 +69,7 @@ impl Machine {
             | Event::InputsUnavailable(..) | Event::RevokeHumans
             | Event::Human(_, HumanDecision::Reject | HumanDecision::Revoke)
             | Event::Source(_) | Event::Identity(_) | Event::Campaign(_)
+            | Event::Credibility(CredibilityEvent::ActivateHeldOut(_) | CredibilityEvent::WithdrawHeldOut(_))
             | Event::CredentialRotate(_) | Event::CredentialRevoke(_)
             | Event::PublishChecked(..) | Event::PublishCredentialed(..)) { Ok(()) }
         else { Err(Error::Incomplete) }
