@@ -4,6 +4,7 @@ mod recipe;
 mod recovery;
 mod qualification;
 mod continuation;
+mod finish;
 #[cfg(test)]
 mod tests;
 
@@ -21,9 +22,10 @@ use fa_reference::action::consequence::oversight::actor_wire::{Command, encode_c
 use std::io::Write;
 use recipe::Inputs;
 
-const USAGE: &str = "serve-create|serve-open CONFIG ACTOR_PROFILE REVIEWER_PROFILE --native-text RECIPE; serve-create-checked|serve-open-checked CONFIG ACTOR_PROFILE REVIEWER_PROFILE WITNESS_PROFILE --native-text RECIPE; native open also accepts a final --after-message PREVIOUS_REQUEST";
+const USAGE: &str = "serve-create|serve-open CONFIG ACTOR_PROFILE REVIEWER_PROFILE --native-text RECIPE; serve-create-checked|serve-open-checked CONFIG ACTOR_PROFILE REVIEWER_PROFILE WITNESS_PROFILE --native-text RECIPE; native open also accepts a final --after-message PREVIOUS_REQUEST OR --finish-after-message PREVIOUS_REQUEST";
 
 pub(super) fn command(args: &[String], credibility: Option<&Path>) -> Result<(), String> {
+    let (args, finishing) = finish::take_option(args)?;
     let (args, after) = continuation::take_option(args)?;
     let (open, checked) = match args.first().map(String::as_str) {
         Some("serve-create") => (false, false), Some("serve-open") => (true, false),
@@ -41,7 +43,10 @@ pub(super) fn command(args: &[String], credibility: Option<&Path>) -> Result<(),
     let publication = if checked { Some(PublicationProfile::read(Path::new(&args[4]))?) } else { None };
     let inputs = recipe::load(Path::new(&args[option + 1]), config.profile.delivery.scope.tenant,
         config.profile.delivery.limits.bytes)?;
-    if after.is_some() {
+    if let Some(previous) = finishing {
+        finish::serve(config, &actor, &reviewer, inputs, (publication.as_ref(), credibility, previous),
+            super::super::clock, &mut std::io::stdout().lock())
+    } else if after.is_some() {
         serve_continued(config, &actor, &reviewer, inputs, (open, publication.as_ref(), credibility, after),
             super::super::clock, &mut std::io::stdout().lock())
     } else if credibility.is_some() {
@@ -97,14 +102,21 @@ where F: FnMut() -> ElapsedTick {
         (deployment.0, deployment.1, deployment.2, None), time, output)
 }
 
-fn serve_continued<F>(mut config: Config, actor: &Profile, reviewer_profile: &PeerProfile,
-    inputs: Inputs, deployment: (bool, Option<&PublicationProfile>, Option<&Path>, Option<u64>), mut time: F,
+fn serve_continued<F>(config: Config, actor: &Profile, reviewer_profile: &PeerProfile,
+    inputs: Inputs, deployment: (bool, Option<&PublicationProfile>, Option<&Path>, Option<u64>), time: F,
     output: &mut impl Write) -> Result<(), String>
 where F: FnMut() -> ElapsedTick {
-    let (open, publication, credibility, after) = deployment;
-    if after.is_some() && (!open || after == Some(actor.request)) {
-        return Err("native continuation requires an existing stream and a new actor request ID".into());
-    }
+    let mode = deployment.3.map_or(finish::Intent::Existing, finish::Intent::Continue);
+    serve_lifecycle(config, actor, reviewer_profile, inputs,
+        (deployment.0, deployment.1, deployment.2, mode), time, output)
+}
+
+fn serve_lifecycle<F>(mut config: Config, actor: &Profile, reviewer_profile: &PeerProfile,
+    inputs: Inputs, deployment: (bool, Option<&PublicationProfile>, Option<&Path>, finish::Intent), mut time: F,
+    output: &mut impl Write) -> Result<(), String>
+where F: FnMut() -> ElapsedTick {
+    let (open, publication, credibility, mode) = deployment;
+    mode.check(open, actor.request)?;
     check_profiles(&config, actor, reviewer_profile)?;
     // Retain the entire selection, including a joint qualification policy. The
     // original constructors pin it atomically; it is never installed at recovery.
@@ -136,11 +148,17 @@ where F: FnMut() -> ElapsedTick {
     }
     // New initiation is opt-in. Ordinary open still rejects a missing intent;
     // duplicate IDs must use the existing exact recovery/receipt path instead.
-    let next = after.map(|after| continuation::prepare(&host, actor.request, &inputs, after)).transpose()?;
-    let recovered_source = if open && after.is_none() {
-        recovery::select(&host, actor.request, &inputs)?
-    } else { None };
-    let recorded = recovered_source.is_some();
+    let next = match mode {
+        finish::Intent::Continue(after) => Some(continuation::prepare(&host, actor.request, &inputs, after)?),
+        _ => None,
+    };
+    let recovered = match mode {
+        finish::Intent::Finish(after) => finish::select(&host, actor.request, &inputs, after, deadline.logical)?,
+        finish::Intent::Existing if open => recovery::select(&host, actor.request, &inputs)?
+            .map(|source| FileGeneratedTextActorPort::encode_message(&source).map_err(debug)).transpose()?,
+        _ => None,
+    };
+    let recorded = recovered.is_some();
     if !recorded && credibility.is_none() { host.check_credibility().map_err(debug)?; }
     let (port, supervisor) = host.into_generated_text_actor_gateway().map_err(debug)?;
     let mut driver = FileSupervisedDriver::new(supervisor);
@@ -153,40 +171,47 @@ where F: FnMut() -> ElapsedTick {
         Some(Control::new(&config, actor.request, Some(reviewer_profile))?)
     };
     let work = (|| {
-        let source = if let Some(source) = recovered_source {
+        let proposal = if let Some(proposal) = recovered {
             // Even a supplied credibility path is not opened for receipt-only
             // recovery. The historical effect cannot be retried into new work.
             resume_existing(&mut driver, actor.request, &mut time)?;
-            source
+            proposal
         } else {
             if !qualification::prepare(&mut driver, &config, credibility,
                 (control.as_mut().expect("initial stop owner"), &reviewer, &deadline), &mut time)? {
                 return Ok(());
             }
-            let controls = (control.as_mut().expect("initial stop owner"), &reviewer, &deadline);
-            let completed = if let Some(prepared) = next {
-                continuation::start(&mut driver, &mut config, &inputs, prepared, controls, &mut time)?
-            } else if open {
-                recovery::resume(&mut driver, &mut config, &inputs, controls, &mut time)?
+            if let finish::Intent::Finish(after) = mode {
+                let controls = (control.as_mut().expect("initial stop owner"), &reviewer, &deadline);
+                let Some(proposal) = finish::prepare(&mut driver, &mut config, actor.request, after,
+                    controls, &mut time)? else { return Ok(()); };
+                proposal
             } else {
-                generate(&mut driver, &mut config, &inputs, controls, &mut time)?
-            };
-            if !completed { return Ok(()); }
-            // Only a first, unsubmitted complete generation gets a NEW proposal.
-            // An existing request above keeps its target, epoch and deadline.
-            let host = driver.supervisor().host().map_err(debug)?;
-            let progress = host.decoder_generation_progress(inputs.generation).map_err(debug)?;
-            let text = host.decoder_text_generation(inputs.generation).map_err(debug)?;
-            let bytes = text.result().map_err(debug)?.bytes().map_err(debug)?;
-            if bytes.is_empty() || std::str::from_utf8(bytes).is_err() {
-                return Err("native result is not a nonempty complete UTF-8 message".into());
+                let controls = (control.as_mut().expect("initial stop owner"), &reviewer, &deadline);
+                let completed = if let Some(prepared) = next {
+                    continuation::start(&mut driver, &mut config, &inputs, prepared, controls, &mut time)?
+                } else if open {
+                    recovery::resume(&mut driver, &mut config, &inputs, controls, &mut time)?
+                } else {
+                    generate(&mut driver, &mut config, &inputs, controls, &mut time)?
+                };
+                if !completed { return Ok(()); }
+                // Only a first, unsubmitted complete generation gets a NEW proposal.
+                // An existing request above keeps its target, epoch and deadline.
+                let host = driver.supervisor().host().map_err(debug)?;
+                let progress = host.decoder_generation_progress(inputs.generation).map_err(debug)?;
+                let text = host.decoder_text_generation(inputs.generation).map_err(debug)?;
+                let bytes = text.result().map_err(debug)?.bytes().map_err(debug)?;
+                if bytes.is_empty() || std::str::from_utf8(bytes).is_err() {
+                    return Err("native result is not a nonempty complete UTF-8 message".into());
+                }
+                let source = FileTextMessageRequest { request: actor.request, generation: inputs.generation,
+                    generation_revision: progress.generation_revision(), target: host.inspect().target,
+                    policy_epoch: host.inspect().control.ledger.epoch, deadline: deadline.logical };
+                FileGeneratedTextActorPort::encode_message(&source).map_err(debug)?
             }
-            FileTextMessageRequest { request: actor.request, generation: inputs.generation,
-                generation_revision: progress.generation_revision(), target: host.inspect().target,
-                policy_epoch: host.inspect().control.ledger.epoch, deadline: deadline.logical }
         };
-        let document = encode_command(&Command::Submit { request: actor.request,
-            proposal: FileGeneratedTextActorPort::encode_message(&source).map_err(debug)? }).map_err(debug)?;
+        let document = encode_command(&Command::Submit { request: actor.request, proposal }).map_err(debug)?;
         output.write_all(&document).and_then(|()| output.write_all(b"\n"))
             .and_then(|()| output.flush()).map_err(|error| format!("source reference output failed: {error}; no actor request sent"))?;
         if recorded {

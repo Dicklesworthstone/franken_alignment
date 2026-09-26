@@ -206,3 +206,25 @@ fn native_finish_faulted_owner_cannot_report_an_old_intent_as_current() {
     assert_eq!(host.decoder_text_finish_request(91, 92), Err(JournalError::Unavailable));
     assert_eq!(host.prepare_decoder_text_finish(91, 93, ElapsedTick(100)), Err(JournalError::Unavailable));
 }
+
+#[test]
+fn native_finish_with_exhausted_context_needs_no_additional_numerical_position() {
+    let root = Directory::new();
+    let selected = StreamProfile::new(9, 1, 8, 64, 256).unwrap();
+    let (mut host, reviewer) = FileOversight::create_generated_text_stream(root.store(),
+        profile(4096), selected, fixtures::decoder(), tokenizer(false)).unwrap();
+    host.observe_time(host.revision(), ElapsedTick(1)).unwrap();
+    for index in 0..4 {
+        generate(&mut host, 7 + index, 91 + index);
+        publish(&mut host, &reviewer, 91 + index, true);
+    }
+    let numerical = host.decoder_inspection().unwrap().numerical;
+    assert_eq!(numerical.position, 16); assert_eq!(numerical.sampled_draws, 8);
+    assert!(host.prepare_decoder_text_continuation(94, 11, request(b"ab", 2)).is_err());
+    assert_eq!(host.stream_snapshot().unwrap().confirmed.message_count(), 4); // four slots remain
+    submit_finish(&mut host, 94, 95); publish(&mut host, &reviewer, 95, true);
+    assert_eq!(host.decoder_inspection().unwrap().numerical, numerical);
+    let state = host.stream_snapshot().unwrap();
+    assert!(state.confirmed.finished()); assert_eq!(state.confirmed.messages().collect::<Vec<_>>(), ["A", "A", "A", "A"]);
+    assert_eq!(state.publication.executions, 5);
+}
