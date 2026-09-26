@@ -5,6 +5,7 @@
 //! audit outcomes and work counters are comparison material, never installed.
 //! This is the token-recomputation restart baseline, not a cheap KV restart.
 pub mod archive;
+pub mod comparison;
 
 use super::monitored::{
     GenerationBudget, GenerationEvent, GenerationSpec, GenerationStatus,
