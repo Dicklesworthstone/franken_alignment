@@ -1,6 +1,7 @@
-//! Genuine tied-head numerical fixture shared by durable and executable tests.
-//! Two-dimensional residuals produce ab -> A -> Control under the real sampler.
-//! This is synthetic computation, not trained model or detector qualification.
+// Plain comments are intentional: executable tests consume this file with include!.
+// Genuine tied-head numerical fixture shared by durable and executable tests.
+// Two-dimensional residuals produce ab -> A -> Control under the real sampler.
+// This is synthetic computation, not trained model or detector qualification.
 pub(super) fn tied_weights(stored_head: bool, conflict: bool) -> Vec<u8> {
     tied_weights_for(259, 257, stored_head, conflict)
 }
