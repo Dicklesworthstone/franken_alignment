@@ -125,9 +125,13 @@ inputs share a logical-byte allowance equal to the configured journal byte cap,
 in addition to the original per-format bounds. This bounds retained input bytes,
 not transient model allocations or complete journal size. Original constructors
 negotiate model/monitor/sampler/tokenizer compatibility; no remote code or model
-name lookup occurs. Tied-head checkpoints are explicitly refused because the
-current durable decoder constructor has independent-head semantics. Raw prompt
-bytes and explicit controls are retained; no chat template or BOS/EOS guess runs.
+name lookup occurs. The model configuration's explicit `tie_word_embeddings`
+declaration now selects the original independent or tied-head loader through
+[the durable head contract](TIED_HEAD_DURABLE_DECODER.md). An omitted head is
+accepted only for declared tying; a physically stored head must match embedding
+bits exactly. Recovery pins this interpretation even for numerically equivalent
+archives. Raw prompt bytes and explicit controls are retained; no chat template
+or BOS/EOS guess runs.
 Full prompt plus requested continuation must fit the original context.
 
 ## Source and execution status
@@ -199,3 +203,26 @@ bootstrap/recovery composition. All eleven remain **UNEXECUTED**: RCH is absent,
 and fresh gate/test invocations stopped before compilation with exit 127. The
 earlier test bodies are unchanged; their missing-witness-profile checked forms
 remain invalid and are not implicit requests for an unchecked mode.
+
+### Tied-head model serving — 2026-09-25
+
+Both native-service recipes and the separate `create-generated` recipe now pass
+the original Llama configuration's output-head declaration into durable model
+construction. No recipe flag guesses or overrides it. The legacy independent
+format remains unchanged; tied models use decoder-event subtag 12 and older
+readers refuse that new tag. All monitor, source, witness, actor and human
+requirements stay in the original workflow.
+
+Four new native-service regression functions use real tied synthetic weights,
+including checked creation and partial/completed generation recovery with both
+human decisions, exact input bounds, contradictory physical heads, receipt-only
+recovery and mode-only substitution, plus held/limited nonpublication. The
+separate generated-recipe consumer adds a numerical test and replaces its old
+blanket-tied-refusal case with paired missing-weights/real-tied-weights checks;
+foreign-tenant preflight remains tested. Its actor port import now uses the
+existing public re-export rather than the private implementation module.
+
+These five added tests, the six durable tests and the adapted recipe test are
+UNEXECUTED. Fresh targeted and full RCH commands failed before compilation
+because `rch` is absent (exit 127). No Rust test, formatting or Clippy pass and
+no production or trained-checkpoint qualification is claimed.

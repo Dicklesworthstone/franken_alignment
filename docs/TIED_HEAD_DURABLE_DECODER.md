@@ -41,11 +41,36 @@ physically present matching and conflicting heads, independent legacy bytes,
 distinct event roundtrips, truncated/trailing/retagged data, mode-only recovery
 substitution without canonical writes, real partial generation versus the
 independent numerical control with conserved work, and monitor holds across
-recovery. The shared synthetic weights actually produce `ab -> A -> Control`
-through the original decoder; no precomputed report supplies that result.
+recovery. The tests run shared synthetic weights through the original decoder
+and assert `ab -> A -> Control`; no precomputed report supplies that result.
 
 The required RCH gate attempt failed before compilation because `rch` is absent
 (exit 127). The new tests, Rust compilation, rustfmt and Clippy are UNEXECUTED.
 Source and whitespace review do not qualify production execution, and previous
-receipts do not validate this change. No Beads item is closed. Native executable
-recipe support is a separate consumer change, not supplied by this library API.
+receipts do not validate this change. No Beads item is closed.
+
+## Native executable consumer
+
+The `--native-text` loader (including checked creation and recovery) and the
+separate `create-generated` loader consume the original Llama configuration's
+`tie_word_embeddings` declaration. Their original schemas, byte caps, tokenizer
+checks, prompt bounds and explicit stop requirements remain unchanged. An
+independent declaration with an omitted head still refuses; declaring tying
+cannot conceal an inconsistent physically stored head. The mode is passed to
+`new_with_output_head`, not inferred from the file inventory.
+
+Four additional service tests cover checked creation and recovery with both
+human decisions, parameter/declaration conflicts, exact aggregate limits,
+expired receipt recovery without live producers/helpers, mode-only substitution,
+and held/limited generation. One additional generated-recipe test drives actual
+loaded tied weights to a monitored stop without publication. Its prior tied
+refusal test now pairs missing-weight refusal with valid tied-file admission,
+while retaining the foreign-tenant check. The shared 259-token fixture retains
+its original weight values; a parameterized form supplies the separate
+257-token generated-recipe fixture. All these tests remain UNEXECUTED; fresh
+RCH attempts again stopped before compilation with exit 127.
+
+No changes are made to numerical execution, helper/human approval, witness
+validation, actor intake, deadline, stop or receipt reducers. Tied journals
+cannot be opened by pre-extension readers; independent journals retain their
+original encoding. See NATIVE_TEXT_PUBLICATION_SERVICE.md for command forms.

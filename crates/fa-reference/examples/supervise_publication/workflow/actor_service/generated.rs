@@ -10,7 +10,7 @@ use fa_reference::action::consequence::delivery::persistent::observed::decoder::
 use fa_reference::action::consequence::delivery::persistent::observed::stream::generated::FileTextMessageRequest;
 use fa_reference::action::consequence::oversight::actor::{ActorOutcome, Knowledge};
 use fa_reference::action::consequence::oversight::actor_wire::{ActorWire, Command, encode_command};
-use fa_reference::action::consequence::delivery::persistent::requests::actor::generated::FileGeneratedTextActorPort;
+use fa_reference::action::consequence::delivery::persistent::requests::actor::FileGeneratedTextActorPort;
 use std::io::Write;
 use std::path::Path;
 

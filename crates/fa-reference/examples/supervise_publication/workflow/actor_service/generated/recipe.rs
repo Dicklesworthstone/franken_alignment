@@ -9,7 +9,7 @@ use fa_reference::action::consequence::activation::monitor::decoder::sampled::ge
 };
 use fa_reference::action::consequence::activation::tensor::kv::decoder::DecoderIdentity;
 use fa_reference::action::consequence::activation::tensor::kv::decoder::safetensors::{
-    OutputHead, MAX_WEIGHT_HEADER_BYTES, MAX_WEIGHT_FILE_BYTES,
+    MAX_WEIGHT_HEADER_BYTES, MAX_WEIGHT_FILE_BYTES,
     pretrained::{LlamaConfig, MAX_CONFIG_BYTES},
 };
 use fa_reference::action::consequence::delivery::persistent::observed::decoder::{
@@ -137,11 +137,8 @@ pub(super) fn load(path: &Path, config: &Config) -> Result<Loaded, String> {
     { return Err("native text requires the configured tenant and an empty initial publication".into()); }
     let configuration = read_regular(&r.paths.configuration, MAX_CONFIG_BYTES)?;
     let negotiated = LlamaConfig::decode(r.identity, r.context, &configuration).map_err(debug)?;
-    // FileDecoderConfig currently registers independent heads only. A tied
-    // checkpoint is not reinterpreted as untied merely because dimensions match.
-    if negotiated.output_head() != OutputHead::Independent {
-        return Err("durable native decoder requires an independent output head".into());
-    }
+    // The negotiated head contract is frozen with the original raw weights.
+    // Omission is permitted only for explicit tying; conflicting heads refuse.
     let profile = negotiated.profile().clone();
     let tokenizer = ByteBpe::from_bytes(&profile,
         &read_regular(&r.paths.tokenizer, MAX_FILE_TOKENIZER_BYTES)?).map_err(debug)?;
@@ -151,8 +148,8 @@ pub(super) fn load(path: &Path, config: &Config) -> Result<Loaded, String> {
     let weights = read_regular(&r.paths.weights, weight_limit)?;
     let monitor = read_regular(&r.paths.monitor, MAX_MONITOR_CONFIG_BYTES)?;
     let sampling = read_regular(&r.paths.sampling, MAX_SAMPLING_CONFIG_BYTES)?;
-    let decoder = FileDecoderConfig::new(profile, weights, monitor, sampling,
-        r.decoder_stream, r.limits).map_err(debug)?;
+    let decoder = FileDecoderConfig::new_with_output_head(profile, weights, monitor, sampling,
+        r.decoder_stream, r.limits, negotiated.output_head()).map_err(debug)?;
     let loaded = Loaded { request: r.request, generation: r.generation, ttl_ms: r.ttl_ms,
         decoder, tokenizer, stream: r.stream, text: r.text };
     loaded.check_host(config)?;

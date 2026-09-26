@@ -2,18 +2,23 @@
 //! Two-dimensional residuals produce ab -> A -> Control under the real sampler.
 //! This is synthetic computation, not trained model or detector qualification.
 pub(super) fn tied_weights(stored_head: bool, conflict: bool) -> Vec<u8> {
-    let mut embeddings: Vec<f32> = (0..259).flat_map(|_| [0.1, 0.0]).collect();
+    tied_weights_for(259, 257, stored_head, conflict)
+}
+
+pub(super) fn tied_weights_for(vocabulary: usize, prompt: usize, stored_head: bool, conflict: bool) -> Vec<u8> {
+    assert!(vocabulary > 256 && prompt < vocabulary && prompt != 65 && prompt != 256);
+    let mut embeddings: Vec<f32> = (0..vocabulary).flat_map(|_| [0.1, 0.0]).collect();
     embeddings[65 * 2] = 2.0; embeddings[65 * 2 + 1] = 1.0;
     embeddings[256 * 2] = 0.0; embeddings[256 * 2 + 1] = 6.0;
-    embeddings[257 * 2] = 1.0;
+    embeddings[prompt * 2] = 1.0;
     let mut tensors = std::collections::BTreeMap::from([
-        ("model.embed_tokens.weight".to_owned(), (vec![259, 2], embeddings.clone())),
+        ("model.embed_tokens.weight".to_owned(), (vec![vocabulary, 2], embeddings.clone())),
         ("model.norm.weight".to_owned(), (vec![2], vec![1.0_f32; 2])),
     ]);
     if stored_head {
         // Numerically equal signed zero is NOT an equal normalized parameter bit.
         if conflict { embeddings[1] = -0.0; }
-        tensors.insert("lm_head.weight".to_owned(), (vec![259, 2], embeddings));
+        tensors.insert("lm_head.weight".to_owned(), (vec![vocabulary, 2], embeddings));
     }
     for suffix in ["input_layernorm.weight", "post_attention_layernorm.weight"] {
         tensors.insert(format!("model.layers.0.{suffix}"), (vec![2], vec![1.0; 2]));

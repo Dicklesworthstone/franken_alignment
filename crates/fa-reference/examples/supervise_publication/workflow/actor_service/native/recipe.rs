@@ -10,7 +10,7 @@ use fa_reference::action::consequence::activation::monitor::decoder::sampled::ge
 };
 use fa_reference::action::consequence::activation::tensor::kv::decoder::{DecoderIdentity, MAX_DECODER_PRODUCTS};
 use fa_reference::action::consequence::activation::tensor::kv::decoder::safetensors::{
-    OutputHead, MAX_WEIGHT_FILE_BYTES, pretrained::{LlamaConfig, MAX_CONFIG_BYTES},
+    MAX_WEIGHT_FILE_BYTES, pretrained::{LlamaConfig, MAX_CONFIG_BYTES},
 };
 use fa_reference::action::consequence::delivery::persistent::observed::decoder::{
     FileDecoderConfig, text::{FileTextGenerationCommand, MAX_FILE_TOKENIZER_BYTES},
@@ -82,11 +82,8 @@ pub(super) fn load(path: &Path, tenant: u64, byte_limit: usize) -> Result<Inputs
         Ok(bytes)
     };
     let model = LlamaConfig::decode(identity, context, &read(0, MAX_CONFIG_BYTES)?).map_err(debug)?;
-    // Durable FileDecoderConfig currently requires a physically independent head.
-    // Never ignore a tied-head declaration or silently choose another constructor.
-    if model.output_head() != OutputHead::Independent {
-        return Err("native durable service requires independent output-head weights".into());
-    }
+    // Preserve the model's explicit declaration through durable replay. Missing
+    // matrices never choose the mode, and contradictory stored heads refuse.
     let profile = model.profile().clone();
     let weights = read(1, MAX_WEIGHT_FILE_BYTES)?;
     let monitor = read(2, MAX_MONITOR_CONFIG_BYTES)?;
@@ -111,8 +108,8 @@ pub(super) fn load(path: &Path, tenant: u64, byte_limit: usize) -> Result<Inputs
     let request = TextGenerationRequest { prompt, prefix_controls, max_new_tokens, stop_tokens,
         tokenization, generation: GenerationBudget { scalar_products: products, sampling_entries: sampling }, max_output_bytes };
     FileTextGenerationCommand::new(generation, 0, 0, request.clone()).map_err(debug)?;
-    let decoder = FileDecoderConfig::new(profile, weights, monitor, sampling_config, cache_stream,
-        DecoderBindingLimits::default()).map_err(debug)?;
+    let decoder = FileDecoderConfig::new_with_output_head(profile, weights, monitor, sampling_config, cache_stream,
+        DecoderBindingLimits::default(), model.output_head()).map_err(debug)?;
     Ok(Inputs { decoder, tokenizer, stream, generation, request })
 }
 
