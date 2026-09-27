@@ -75,17 +75,29 @@ pub(super) fn recover(
     expected: &FileRecoveryRequirements,
     config: &FileLearnedConfig,
 ) -> Result<(FileOversight, FileOversightRoles), JournalError> {
-    check_profile(&expected.guards)?;
-    expected.guards.check_decoder_config(&events)?;
-    bind_history(&mut events, config)?;
-    let machine = Machine::replay(&profile, &events)?;
-    if machine.learned_contract() != Some(config) {
-        return Err(Error::Binding.into());
-    }
-    expected.check(&profile, &machine, &events)?;
+    let machine = reconstruct(&profile, &mut events, expected, config)?;
     store.confirm_and_cleanup()?;
     let (mut host, human) = FileOversight::owner(profile, store, events, machine);
     host.transact(host.revision(), Event::Core(BaseEvent::Fence))?;
     let roles = FileOversightRoles::provision(&host, human);
     Ok((host, roles))
+}
+
+// Shared immutable-history verification. Reads receive only the original
+// snapshot projection; the constructed RAM machine never escapes publicly.
+pub(super) fn reconstruct(
+    profile: &FileOversightProfile,
+    events: &mut [Event],
+    expected: &FileRecoveryRequirements,
+    config: &FileLearnedConfig,
+) -> Result<Machine, JournalError> {
+    check_profile(&expected.guards)?;
+    expected.guards.check_decoder_config(events)?;
+    bind_history(events, config)?;
+    let machine = Machine::replay(profile, events)?;
+    if machine.learned_contract() != Some(config) {
+        return Err(Error::Binding.into());
+    }
+    expected.check(profile, &machine, events)?;
+    Ok(machine)
 }

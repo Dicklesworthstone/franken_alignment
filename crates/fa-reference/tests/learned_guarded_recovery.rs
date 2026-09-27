@@ -377,3 +377,6 @@ fn live_owner_lock_and_existing_directory_do_not_create_a_second_authority() {
     assert!(FileOversight::create_guarded_with_learned_generation(root.store(), profile(), &guards(), None, c).is_err());
     assert_eq!(root.bytes(), bytes); assert_eq!(host.revision(), 4); assert_eq!(host.inspect().executions, 0);
 }
+
+#[path = "learned_guarded_recovery/anchored.rs"]
+mod anchored;

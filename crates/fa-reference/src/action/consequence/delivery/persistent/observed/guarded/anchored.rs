@@ -7,6 +7,7 @@
 
 mod wire;
 mod text;
+mod learned;
 pub use wire::{FileHistoryAnchorError, MAX_HISTORY_ANCHOR_BYTES};
 
 use super::{BaseEvent, Event, FileOversight, FileOversightProfile, FileOversightRoles,
