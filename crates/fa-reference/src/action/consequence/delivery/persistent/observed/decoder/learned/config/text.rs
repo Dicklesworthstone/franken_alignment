@@ -1,5 +1,7 @@
 //! Exact text recipe binding within the original learned-generation journal.
 //! Disk carries comparison bytes, never a tokenizer/model or generated output to install.
+mod stream;
+
 use super::super::{Configuration, DecoderEvent, LearnedEvent, Event, Machine, journal, storage};
 use super::{FileLearnedConfig, LearnedDecoderBindingLimits, LearnedSourceConfig, DecoderModel,
     Writer, DOMAIN, MAX_CONFIG_BYTES};
@@ -16,6 +18,7 @@ use std::path::Path;
 pub(super) struct TextRecipe {
     pub(super) tokenizer: ByteBpe,
     pub(super) source: LearnedTextConfig,
+    pub(super) stream: Option<crate::action::consequence::delivery::stream::StreamProfile>,
 }
 
 impl FileLearnedConfig {
@@ -49,7 +52,7 @@ impl FileLearnedConfig {
             LearnedTextCompletion::StopOrTokenLimit => 1,
         })?;
         config.bytes = w.finish().into();
-        config.text = Some(TextRecipe { tokenizer, source });
+        config.text = Some(TextRecipe { tokenizer, source, stream: None });
         Ok(config)
     }
 

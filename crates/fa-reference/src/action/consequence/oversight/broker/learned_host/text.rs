@@ -89,6 +89,9 @@ impl OversightBroker {
     pub(in super::super) fn check_learned_text_action(&self, attempt: u64) -> Result<(), Error> {
         if !self.learned_text_required() { return Ok(()); }
         let action = &self.inputs.get(&attempt).ok_or(Error::Missing)?.action;
+        if self.learned_text_stream_required() && self.stream_pending() == Some(attempt) {
+            return self.check_dispatched_learned_text_stream_spec(attempt, action.spec());
+        }
         self.check_learned_text_spec(action.spec())
     }
 }

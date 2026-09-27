@@ -77,8 +77,17 @@ impl FileLearnedConfig {
     pub(super) fn bytes(&self) -> &Rc<[u8]> { &self.bytes }
     pub(in super::super::super) fn install(&self, broker: &mut OversightBroker) -> Result<(), Error> {
         match &self.text {
-            Some(text) => broker.own_learned_text_generation(self.model.clone(), text.tokenizer.clone(),
-                text.source.clone(), self.limits),
+            Some(text) => match text.stream {
+                Some(stream) => {
+                    if broker.stream_state().map(|(_, view)| view.profile()) != Some(stream) {
+                        return Err(Error::Binding);
+                    }
+                    broker.own_learned_text_stream(self.model.clone(), text.tokenizer.clone(),
+                        text.source.clone(), self.limits)
+                }
+                None => broker.own_learned_text_generation(self.model.clone(), text.tokenizer.clone(),
+                    text.source.clone(), self.limits),
+            },
             None => broker.own_learned_generation(self.model.clone(), self.source.clone(), self.limits),
         }
     }
