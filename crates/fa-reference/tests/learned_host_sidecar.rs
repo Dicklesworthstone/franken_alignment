@@ -279,3 +279,5 @@ fn foreign_handle_and_expired_source_refuse_without_another_packet_or_numerical_
     assert_eq!(second.hosted_learned_generation().unwrap(), before);
     assert_eq!(second.input_revision(1).unwrap(), 0);
 }
+
+mod refinement;

@@ -1,5 +1,7 @@
 //! The ORIGINAL learned generation's checked KV becomes actual helper input.
 //! No recapture, refit, second compression, inferred vote or replacement source.
+mod refinement;
+
 use super::OversightBroker;
 use crate::action::consequence::activation::probe::learned::{CheckedLearnedKv, KvGroup};
 use crate::action::consequence::oversight::{CommitteeInput, ObservedSession, ReviewWindow,
