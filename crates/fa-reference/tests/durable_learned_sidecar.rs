@@ -275,3 +275,6 @@ fn legacy_optional_recipe_keeps_its_existing_explicit_text_review_behavior() {
     let input = text_input(&action); h.record_inputs(h.revision(), 1, 0, input.clone()).unwrap();
     keys(&mut h, &reviewer, 1, 101, &input);
 }
+
+#[path = "durable_learned_sidecar/refinement.rs"]
+mod refinement;

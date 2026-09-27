@@ -15,6 +15,7 @@ pub(super) struct LearnedState {
     config: Rc<FileLearnedConfig>,
     paused: bool,
     pending: Option<LearnedStepIntent>,
+    sidecar_outcomes: std::collections::BTreeMap<u64, super::super::decoder::learned::sidecar::FileLearnedSidecarOutcome>,
     sidecars: std::collections::BTreeMap<u64, crate::action::consequence::oversight::learned_host::sidecar::LearnedSidecar>,
 }
 
@@ -63,7 +64,7 @@ impl Machine {
                 let config = config.runtime()?;
                 config.install(&mut self.broker)?;
                 if !self.publication_guard { self.enable_publication_guard()?; }
-                self.learned = Some(LearnedState { config, paused: false, pending: None, sidecars: std::collections::BTreeMap::new() });
+                self.learned = Some(LearnedState { config, paused: false, pending: None, sidecar_outcomes: std::collections::BTreeMap::new(), sidecars: std::collections::BTreeMap::new() });
                 Ok(Transition::Unit)
             }
             LearnedEvent::Step { actor_revision, position, witness } => {

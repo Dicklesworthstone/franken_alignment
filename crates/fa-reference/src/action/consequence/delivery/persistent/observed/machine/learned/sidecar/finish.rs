@@ -18,6 +18,7 @@ impl Machine {
         if self.learned_sidecar_finish_witness(*attempt, &result)?.as_slice() != expected.as_ref() {
             return Err(Error::Binding);
         }
+        self.retain_learned_sidecar_outcome(*attempt, *actor_revision, *input_revision, *round, &result)?;
         Ok(Transition::LearnedSidecarFinished(Box::new(result)))
     }
 
@@ -36,6 +37,7 @@ impl Machine {
         let expected = self.learned_sidecar_finish_witness(attempt, &result)?.into();
         self.requests.refresh(&self.broker.inspect())?;
         self.bootstrap = None;
+        self.retain_learned_sidecar_outcome(attempt, actor_revision, input_revision, round, &result)?;
         Ok((SidecarEvent::Finish { attempt, actor_revision, input_revision, round,
             allow_refinement, snapshot, expected }, result))
     }
@@ -68,6 +70,25 @@ impl Machine {
         let current = original.round().input().clone();
         let receipt = self.broker.apply_review(review, Some(&current), snapshot);
         Ok(FileLearnedSidecarFinish::Applied { outcome, receipt, archive })
+    }
+
+    // A projection of the ORIGINAL checked result, never an imported verdict.
+    // The original unique-round and input limits bound the retained population.
+    fn retain_learned_sidecar_outcome(&mut self, attempt: u64, actor_revision: u64,
+        input_revision: u64, round: u64, result: &FileLearnedSidecarFinish) -> Result<(), Error>
+    {
+        let outcomes = &mut self.learned.as_mut().ok_or(Error::Incomplete)?.sidecar_outcomes;
+        if outcomes.contains_key(&round) { return Err(Error::Duplicate); }
+        outcomes.insert(round, super::super::super::super::decoder::learned::sidecar::FileLearnedSidecarOutcome {
+            attempt, actor_revision, input_revision, round, result: result.clone(),
+        });
+        Ok(())
+    }
+
+    pub(in super::super::super::super) fn learned_sidecar_outcome(&self, round: u64)
+        -> Result<&super::super::super::super::decoder::learned::sidecar::FileLearnedSidecarOutcome, Error>
+    {
+        self.learned.as_ref().ok_or(Error::Incomplete)?.sidecar_outcomes.get(&round).ok_or(Error::Missing)
     }
 
     // Comparison bytes only. The original archive and packet are reconstructed

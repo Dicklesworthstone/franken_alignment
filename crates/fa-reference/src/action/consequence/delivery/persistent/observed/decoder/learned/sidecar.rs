@@ -2,6 +2,8 @@
 //! The journal records disclosure choices and comparison bytes, never a source
 //! to trust, a replacement planner, or a vote. Original replay owns all state.
 mod finish;
+mod outcomes;
+pub use outcomes::FileLearnedSidecarOutcome;
 pub use finish::FileLearnedSidecarFinish;
 
 use super::{DecoderEvent, Event, FileOversight, JournalError, LearnedEvent, Machine,
