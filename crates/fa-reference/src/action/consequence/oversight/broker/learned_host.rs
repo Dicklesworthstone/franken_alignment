@@ -1,6 +1,7 @@
 //! Own learned-K/V generation and the exact actor copy at the existing effect gate.
 //! Numerical acceptance synchronizes state, not congress approval or a permit.
 mod stopping;
+pub mod sidecar;
 pub use stopping::{LearnedHostStopCause, LearnedHostStopIncident};
 #[cfg(test)]
 mod tests;
@@ -41,6 +42,7 @@ pub(super) struct LearnedHost {
     profile: RestartProfile,
     fault: Option<Error>,
     automatic_stop: Option<stopping::LearnedStopState>,
+    sidecars: sidecar::LearnedSidecarState,
 }
 
 impl OversightBroker {
@@ -75,7 +77,8 @@ impl OversightBroker {
         // Same profile, predecessor and nonsuspended authority were preflighted.
         // No caller callback or other authority transition intervenes.
         self.delivery.replace_actor_state(revision, actor).expect("preflighted learned bootstrap");
-        self.learned_host = Some(LearnedHost { run, profile, fault: None, automatic_stop: None });
+        self.learned_host = Some(LearnedHost { run, profile, fault: None, automatic_stop: None,
+            sidecars: sidecar::LearnedSidecarState::default() });
         Ok(())
     }
 
