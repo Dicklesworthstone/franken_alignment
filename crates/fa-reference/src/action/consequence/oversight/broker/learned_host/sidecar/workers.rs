@@ -2,6 +2,7 @@
 //! The original HelperRound consumes replies; the original planner buys evidence.
 #[cfg(unix)]
 pub mod transport;
+pub mod probes;
 
 use super::{LearnedSidecar, OversightBroker};
 use crate::action::ElapsedTick;
