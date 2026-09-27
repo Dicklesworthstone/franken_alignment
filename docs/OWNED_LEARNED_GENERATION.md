@@ -40,10 +40,11 @@ EOS/token-limit generations stay terminal but can support review while their
 quiet source remains live. Dropping the broker closes that source. Manual
 suspension blocks further inference without refunding historical work.
 
-This first owned profile does not automatically suspend the authority on a
-learned hold; it closes numerical eligibility and lets the supervisor use the
-existing stop path. No new effect ledger, currentness proof or authority reset
-is created. Durable learned-source recovery and native CLI wiring are separate.
+Without a stop policy, a learned hold closes numerical eligibility and the
+supervisor uses the existing stop path. With the explicitly installed policy
+below, the same original authority stop is serviced automatically. Neither
+mode creates another effect ledger, currentness proof or authority reset.
+Durable learned-source recovery and native CLI wiring remain separate.
 
 ## Costs and verification
 
@@ -63,3 +64,42 @@ or unwind. The compile-fail example rejects mutable generation extraction.
 Tests are authored but unexecuted. The required RCH route is unavailable here
 (exit 127 before compilation); local compilation is not an allowed fallback.
 No source-only checks qualify a detector, restart profile, release or Bead.
+
+## Fixed automatic containment
+
+`enable_learned_host_stop` reuses the original `HostedStopPolicy` and requires
+installation before the owned generator's first token. Its selection cannot
+be replaced or disabled after results appear. Every actual nonquiet learned
+review, admitted failure, or interrupted actor synchronization triggers the
+original `request_stop`, before more inference can run. Stale calls, normal EOS
+and ordinary completion do not fabricate incidents. The first cause retains
+its numerical/telemetry inspection and original stream/evaluation lineage,
+without withheld token IDs, cache words or RNG state. A monitoring-budget hold
+is distinguished from an alarm; failed preparation is an operational failure.
+
+The original stop suspends admission, advances the revocation floor and cancels
+only undispatched reservations. Already-dispatched effects remain charged and
+unknown until original endpoint reconciliation supplies an actual outcome.
+`progress_stop` performs endpoint fencing and settlement separately: a local
+stop receipt is not a nonexecution receipt. Real executed outcomes retain their
+charges; endpoint failure neither refunds them nor resumes inference. Repeated
+supervision returns the same stop receipt rather than another transition. Any
+stop error is retained for retry while the numerical owner remains closed.
+A prior completed manual stop is not relabelled as a new learned incident.
+
+A caught unwind closes shared evidence immediately through the synchronization
+guard; the next scheduled hosted call or explicit `enforce_learned_host_stop`
+services containment before new computation. This is not a crash watchdog or
+an asynchronous OS/process kill. Human-key, helper and endpoint protocols are
+not replaced, and a stored human approval is not falsely called consumed just
+because its original authority basis has been stopped.
+
+Eight additional runtime tests cover quiet original computation, genuine alarms
+at authorized/dispatched/executed cuts, missing versus budget-held audits,
+two-key invalidation, frozen bootstrap, synchronization errors and unwinds,
+endpoint fencing failure/retry, and prior manual suspension. Assertions use
+the actual `Inspection::charged` field; two stale references to nonexistent
+`spent` in the earlier learned-gate tests are corrected without changing their
+expected values. Eighteen new runtime test functions and two compile-fail
+examples are authored, not executed. Both fresh targeted and full RCH attempts
+still stop before compilation; no source-only result qualifies these features.

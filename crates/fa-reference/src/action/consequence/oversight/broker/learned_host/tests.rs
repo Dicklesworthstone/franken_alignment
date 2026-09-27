@@ -1,6 +1,7 @@
 //! Real learned-K/V inference composed with original reference congress/permits.
 //! The memory endpoint and synthetic helper are controls, not deployment proof.
 mod model;
+mod stopping;
 use model::{model, policy};
 use crate::{Error, Snapshot};
 use crate::action::{ActionSpec, ElapsedTick, FrozenAction, Purpose, ResolvedTarget, Scope, VERSION};
@@ -194,7 +195,7 @@ fn exact_owned_prefix_flows_through_original_congress_two_keys_and_one_use_deliv
     assert!(owner.accept_receipt(receipt).unwrap());
     assert_eq!(endpoint.payload(), b"visible");
     assert_eq!(endpoint.execution_count(), 1);
-    assert_eq!(owner.inspect().ledger.spent, 16);
+    assert_eq!(owner.inspect().ledger.charged, 16);
     assert!(owner.dispatch_with_human(&permit, &human, &action, Some(&inputs), &snapshot()).is_err());
 }
 

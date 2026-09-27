@@ -140,7 +140,7 @@ fn real_learned_source_and_original_congress_both_required_for_one_use_publicati
     assert!(owner.accept_receipt(receipt).unwrap());
     assert_eq!(endpoint.payload(), b"visible");
     assert_eq!(endpoint.execution_count(), 1);
-    assert_eq!(owner.inspect().ledger.spent, 16);
+    assert_eq!(owner.inspect().ledger.charged, 16);
     assert!(owner.dispatched_learned_decoder_evidence(1).unwrap().unwrap().audit().complete_quiet());
 }
 
@@ -274,7 +274,7 @@ fn post_dispatch_source_loss_does_not_erase_external_work_or_block_reconciliatio
     let receipt = endpoint.deliver(&message).unwrap();
     assert!(owner.accept_receipt(receipt).unwrap());
     assert_eq!(endpoint.execution_count(), 1);
-    assert_eq!(owner.inspect().ledger.spent, 16);
+    assert_eq!(owner.inspect().ledger.charged, 16);
     endpoint.deliver(&message).unwrap();
     assert_eq!(endpoint.execution_count(), 1);
     assert!(owner.dispatched_learned_decoder_evidence(1).unwrap().is_some());

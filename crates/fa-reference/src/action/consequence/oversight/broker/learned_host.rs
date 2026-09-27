@@ -1,5 +1,7 @@
 //! Own learned-K/V generation and the exact actor copy at the existing effect gate.
 //! Numerical acceptance synchronizes state, not congress approval or a permit.
+mod stopping;
+pub use stopping::{LearnedHostStopCause, LearnedHostStopIncident};
 #[cfg(test)]
 mod tests;
 
@@ -30,7 +32,7 @@ pub struct HostedLearnedInspection {
     pub telemetry: GenerationTelemetryWork,
     pub cache_bytes: usize,
     pub sampler_bytes: usize,
-    pub synchronization_failure: Option<Error>,
+    pub host_failure: Option<Error>,
 }
 
 #[derive(Debug)]
@@ -38,6 +40,7 @@ pub(super) struct LearnedHost {
     run: ObservedLearnedGeneration,
     profile: RestartProfile,
     fault: Option<Error>,
+    automatic_stop: Option<stopping::LearnedStopState>,
 }
 
 impl OversightBroker {
@@ -72,7 +75,7 @@ impl OversightBroker {
         // Same profile, predecessor and nonsuspended authority were preflighted.
         // No caller callback or other authority transition intervenes.
         self.delivery.replace_actor_state(revision, actor).expect("preflighted learned bootstrap");
-        self.learned_host = Some(LearnedHost { run, profile, fault: None });
+        self.learned_host = Some(LearnedHost { run, profile, fault: None, automatic_stop: None });
         Ok(())
     }
 
@@ -86,7 +89,7 @@ impl OversightBroker {
             sampled_draws: host.run.sampled_draws(), status: host.run.status(),
             availability: host.run.observation().availability(), work: host.run.work(),
             telemetry: host.run.telemetry_work(), cache_bytes: actor.cache().len(),
-            sampler_bytes: actor.sampler().len(), synchronization_failure: host.fault })
+            sampler_bytes: actor.sampler().len(), host_failure: host.fault })
     }
 
     /// One original prompt/sample step. No raw numerical, forced-token, reseed or
@@ -94,6 +97,14 @@ impl OversightBroker {
     /// cannot synchronize its withheld candidate or uncommitted random draw.
     /// A sync failure or unwind withdraws the live source and latches this owner.
     pub fn advance_hosted_learned(&mut self, expected_actor_revision: u64, expected_position: u64)
+        -> Result<Rc<GenerationEvent>, Error>
+    {
+        if self.enforce_learned_host_stop()?.is_some() { return Err(Error::WrongState); }
+        let result = self.advance_learned_inner(expected_actor_revision, expected_position);
+        let _ = self.enforce_learned_host_stop()?;
+        result
+    }
+    fn advance_learned_inner(&mut self, expected_actor_revision: u64, expected_position: u64)
         -> Result<Rc<GenerationEvent>, Error>
     {
         if self.enforce_consistency_stop()?.is_some() || self.inspect().suspended { return Err(Error::WrongState); }
