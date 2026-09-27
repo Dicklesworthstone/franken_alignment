@@ -32,6 +32,7 @@ mod consistency;
 mod mediation;
 
 pub(super) enum Transition {
+    LearnedSidecarFinished(Box<super::decoder::learned::sidecar::FileLearnedSidecarFinish>),
     Learned(Result<std::rc::Rc<crate::action::consequence::activation::tensor::kv::decoder::sampling::monitored::GenerationEvent>, Error>),
     Unit,
     EvaluationRecorded(bool),

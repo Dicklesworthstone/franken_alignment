@@ -2,6 +2,7 @@
 //! Framing, per-member slots and phase coordination are the existing worker
 //! implementation. Only the backing transition changes from RAM to the journal.
 pub mod processes;
+pub mod learned;
 #[cfg(test)]
 mod tests;
 use super::{Event, FileOversight, JournalError, ObservedReceipt, Transition};

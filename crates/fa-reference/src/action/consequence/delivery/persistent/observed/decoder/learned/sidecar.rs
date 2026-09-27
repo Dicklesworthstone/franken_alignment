@@ -1,6 +1,9 @@
 //! Durable source-bound helper inputs from the ORIGINAL learned generator.
 //! The journal records disclosure choices and comparison bytes, never a source
 //! to trust, a replacement planner, or a vote. Original replay owns all state.
+mod finish;
+pub use finish::FileLearnedSidecarFinish;
+
 use super::{DecoderEvent, Event, FileOversight, JournalError, LearnedEvent, Machine,
     Reader, Transition, Writer, journal, MAX_WITNESS_BYTES};
 use crate::action::consequence::activation::probe::learned::{KvGroup, KvRow};
@@ -9,7 +12,7 @@ use crate::action::consequence::oversight::{CommitteeInput,
     learned_host::sidecar::{LearnedSidecar, LearnedSidecarRequest},
     sidecar::{SidecarCommitteeRound, SidecarCongressBudget, SidecarIdentity, MAX_SIDECAR_ACCUMULATED_BYTES,
         MAX_SIDECAR_PRIORITY_GROUPS, MAX_SIDECAR_REFINEMENT_ROUNDS}};
-use crate::Error;
+use crate::{Error, Snapshot};
 use std::rc::Rc;
 
 #[derive(Clone)]
@@ -18,6 +21,8 @@ pub(in super::super::super) enum SidecarEvent {
     Prepare { attempt: u64, actor_revision: u64, request: LearnedSidecarRequest },
     Begin { attempt: u64, actor_revision: u64, request: LearnedSidecarRequest,
         expected_payload: Rc<[u8]> },
+    Finish { attempt: u64, actor_revision: u64, input_revision: u64,
+        round: u64, allow_refinement: bool, snapshot: Snapshot, expected: Rc<[u8]> },
 }
 
 /// A retained, acknowledged packet and its original source/input revisions.
@@ -140,6 +145,13 @@ impl FileOversight {
 
 pub(super) fn write(w: &mut Writer, event: &SidecarEvent) -> Result<(), Error> {
     match event {
+        SidecarEvent::Finish { attempt, actor_revision, input_revision, round,
+            allow_refinement, snapshot, expected } => {
+            if expected.is_empty() { return Err(Error::Incomplete); }
+            if expected.len() > MAX_WITNESS_BYTES { return Err(Error::Limit); }
+            w.u8(2)?; w.u64(*attempt)?; w.u64(*actor_revision)?; w.u64(*input_revision)?;
+            w.u64(*round)?; w.u8(u8::from(*allow_refinement))?; w.snapshot(snapshot)?; w.blob(expected)?;
+        }
         SidecarEvent::Prepare { attempt, actor_revision, request } => {
             validate_request(*attempt, request)?;
             w.u8(0)?; w.u64(*attempt)?; w.u64(*actor_revision)?;
@@ -157,6 +169,15 @@ pub(super) fn write(w: &mut Writer, event: &SidecarEvent) -> Result<(), Error> {
 }
 pub(super) fn read(r: &mut Reader<'_>) -> Result<SidecarEvent, Error> {
     match r.u8()? {
+        2 => {
+            let attempt = r.u64()?; let actor_revision = r.u64()?; let input_revision = r.u64()?;
+            let round = r.u64()?;
+            let allow_refinement = match r.u8()? { 0 => false, 1 => true, _ => return Err(Error::InvalidInput) };
+            let snapshot = r.snapshot()?; let expected = r.blob(MAX_WITNESS_BYTES)?;
+            if expected.is_empty() { return Err(Error::Incomplete); }
+            Ok(SidecarEvent::Finish { attempt, actor_revision, input_revision, round,
+                allow_refinement, snapshot, expected: Rc::from(expected) })
+        }
         0 => {
             let attempt = r.u64()?; let actor_revision = r.u64()?;
             let request = read_request(r)?;
@@ -202,10 +223,7 @@ fn write_request(w: &mut Writer, request: &LearnedSidecarRequest) -> Result<(), 
     w.u64(request.identity.transform_id)?;
     w.count(request.budget.rounds)?; w.count(request.budget.residual_bytes)?;
     w.count(request.budget.committee_bytes)?; w.count(request.priority.len())?;
-    for group in &request.priority {
-        w.u64(group.row.layer)?; w.u8(match group.row.side { KvSide::Key => 0, KvSide::Value => 1 })?;
-        w.u64(group.row.position)?; w.count(group.head)?;
-    }
+    for group in &request.priority { write_group(w, *group)?; }
     Ok(())
 }
 fn read_request(r: &mut Reader<'_>) -> Result<LearnedSidecarRequest, Error> {
@@ -223,4 +241,9 @@ fn read_request(r: &mut Reader<'_>) -> Result<LearnedSidecarRequest, Error> {
     let request = LearnedSidecarRequest { identity, priority, budget };
     check_request(&request)?;
     Ok(request)
+}
+
+pub(in super::super::super) fn write_group(w: &mut Writer, group: KvGroup) -> Result<(), Error> {
+    w.u64(group.row.layer)?; w.u8(match group.row.side { KvSide::Key => 0, KvSide::Value => 1 })?;
+    w.u64(group.row.position)?; w.count(group.head)
 }

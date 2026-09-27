@@ -1,5 +1,22 @@
 # Implementation status · design revision 0.3
 
+## Unqualified source addition: computed durable learned congress
+
+The durable sidecar path now drives complete original numerical helper rosters
+through journaled commit/reveal and original refinement. Coefficients, salts,
+round identities and limits freeze before execution. Missing members do not
+purchase residuals; richer input requires a fresh original review. Completed
+round archives and result comparisons survive replay, while publication still
+requires the existing automatic and human keys.
+
+The driver retains completed probe work through source loss, cancellation,
+deadlines and storage failures. Regression sources exercise actual uncertainty
+through residual refinement to both keys and canonical publication, plus causal
+negative controls. Compilation, tests, rustfmt and Clippy are UNEXECUTED: the
+required RCH command cannot launch. See the
+[computed durable sidecar contract](docs/DURABLE_LEARNED_SIDECARS.md#computed-votes-and-durable-refinement).
+No empirical detector quality, process independence or qualification is claimed.
+
 ## Unqualified source addition: current durable learned sidecar plans
 
 The existing durable learned sidecar path now has an opaque current plan handle

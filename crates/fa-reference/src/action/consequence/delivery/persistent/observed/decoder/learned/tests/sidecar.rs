@@ -1,4 +1,5 @@
 //! Original numerical source, packet construction, journal and two-key endpoint.
+mod refinement;
 use super::*;
 use super::super::sidecar::{FileLearnedSidecar, SidecarEvent};
 use crate::action::consequence::oversight::{CommitteeInput, ReviewWindow,

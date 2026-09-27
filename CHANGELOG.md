@@ -1,5 +1,16 @@
 # Changelog
 
+## Unqualified source addition: computed durable learned congress
+
+- Run frozen complete numerical helper rosters through the original coordinator
+  and durable commit/reveal transitions, checking current source before scoring.
+- Persist original review completion and refinement before applying a review;
+  preserve complete archives and require a fresh round for each richer packet.
+- Bound scheduled rounds and evaluations, refuse manual fallback for leased
+  rounds, and retain completed work through cancellation and failures.
+- Add actual uncertainty-to-publication and causal failure regression sources.
+  Required RCH cannot launch; Rust compilation, tests and tooling are UNEXECUTED.
+
 ## Unqualified source addition: current durable learned sidecar plans
 
 - Extend original durable sidecars with opaque current plan handles and a distinct

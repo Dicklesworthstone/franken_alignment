@@ -1,4 +1,6 @@
 //! Reconstruct original source/provenance objects inside each private machine.
+mod finish;
+
 use super::{Machine, Transition};
 use super::super::super::{Event, decoder::{DecoderEvent, learned::{LearnedEvent,
     sidecar::{FileSidecarSnapshot, SidecarEvent, validate_request}}}};
@@ -29,6 +31,7 @@ impl Machine {
 
     pub(super) fn apply_learned_sidecar(&mut self, event: &SidecarEvent) -> Result<Transition, Error> {
         match event {
+            SidecarEvent::Finish { .. } => self.apply_learned_sidecar_finish(event),
             SidecarEvent::Prepare { attempt, actor_revision, request } => {
                 let revision = self.execute_learned_sidecar(*attempt, *actor_revision, request.clone())?;
                 Ok(Transition::Inputs(revision))
