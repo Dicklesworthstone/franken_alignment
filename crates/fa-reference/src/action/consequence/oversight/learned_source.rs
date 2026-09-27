@@ -1,6 +1,7 @@
 //! Live evidence from an ORIGINAL learned-K/V generation, not imported verdicts.
 //! This owner is a prerequisite source for the effect gate, never an authority.
 pub(crate) mod host;
+pub mod text;
 
 use crate::action::consequence::activation::monitor::learned::model::LearnedModelReport;
 use crate::action::consequence::activation::probe::SCORE_WORDS;
@@ -74,7 +75,11 @@ struct Shared {
 /// use fa_reference::action::consequence::oversight::learned_source::ObservedLearnedGeneration;
 /// fn bypass(run: &mut ObservedLearnedGeneration) { run.generation_mut(); }
 /// ```
-pub struct ObservedLearnedGeneration { run: LearnedGeneration, shared: Rc<Shared> }
+pub struct ObservedLearnedGeneration {
+    run: LearnedGeneration,
+    shared: Rc<Shared>,
+    text: Option<text::TextBinding>,
+}
 impl fmt::Debug for ObservedLearnedGeneration {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("ObservedLearnedGeneration").field("position", &self.position())
@@ -97,7 +102,7 @@ impl DecoderModel {
             evaluation_origin: config.evaluation_origin, generation: config.monitor_generation,
             availability: Cell::new(LearnedAvailability::Empty),
             prefix: RefCell::new(Prefix { tokens, audit: None }) });
-        Ok(ObservedLearnedGeneration { run, shared })
+        Ok(ObservedLearnedGeneration { run, shared, text: None })
     }
 }
 impl ObservedLearnedGeneration {
