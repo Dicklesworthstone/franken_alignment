@@ -1,5 +1,15 @@
 # Changelog
 
+## Unqualified source addition: cooperative sidecar probe evaluation
+
+- Split original request admission from one-probe numerical advances while
+  retaining the complete-roster verdict barrier and existing synchronous APIs.
+- Add revision-checked progress and cancellation that releases unfinished
+  source ownership without erasing completed observations, work or reports.
+- Author seven integration tests for parity, early alarms, stale operations,
+  exact input binding and cancellation through the original congress.
+  Compilation, Rust tests, formatting and Clippy remain UNEXECUTED.
+
 ## Unqualified source addition: learned-generation checkpoint replay
 
 - Add immutable recipe-bound checkpoints and bounded incremental reconstruction

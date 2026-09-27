@@ -1,5 +1,21 @@
 # Implementation status · design revision 0.3
 
+## Unqualified source addition: cooperative sidecar probe evaluation
+
+The original numerical sidecar evaluator now admits an input once and exposes
+one registered probe per revision-checked advance. A final verdict still
+requires the complete captured K/V roster, including probes after an early
+alarm. Cancellation releases unfinished source ownership while retaining
+completed disclosed observations, work and terminal reports. Existing
+synchronous entry points consume the same implementation.
+
+Seven additional integration tests cover step parity, full-roster completion,
+stale calls, cancellation and exact request binding. They are authored but
+UNEXECUTED because workspace execution and the required RCH/Rust tools are
+unavailable. See [the bounded contract](docs/SIDECAR_PROBE_HELPERS.md).
+No bead or qualification status is changed; historical receipts do not validate
+this addition.
+
 ## Unqualified source addition: learned-generation checkpoint replay
 
 The typed checkpoint/reconstruction path in `sampling/replay.rs` reruns the

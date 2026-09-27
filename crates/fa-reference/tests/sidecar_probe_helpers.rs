@@ -384,3 +384,213 @@ fn an_original_source_advance_invalidates_even_a_fully_computed_quiet_vote() {
 
 #[path = "sidecar_probe_helpers/peer.rs"]
 mod peer;
+
+#[test]
+fn cooperative_probes_match_synchronous_scores_with_one_computation_per_advance() {
+    let (mut owner, endpoint, _) = owner(); step(&mut owner); step(&mut owner);
+    let (_, mut sidecar) = propose(&mut owner, 1); one_refinement(&mut owner, &mut sidecar);
+    let (_round, port, input) = channel(&mut owner, &sidecar, 102);
+    let original = owner.hosted_learned_generation().unwrap();
+    for mode in 0..5 {
+        let mut synchronous = evaluator(&sidecar, mode, &port);
+        let expected = synchronous.evaluate(&input).unwrap();
+        let mut worker = evaluator(&sidecar, mode, &port);
+        assert_eq!(worker.revision(), 0);
+        assert_eq!(worker.begin(&input), Ok(ProbeHelperStatus::Evaluating));
+        assert_eq!(worker.revision(), 1);
+        assert_eq!(worker.work().evaluated_probes, 0);
+        assert_eq!(worker.work().probe_coordinates, 0);
+        assert_eq!(worker.work().probe_products, 0);
+        assert!(worker.work().refinement_bytes > 0);
+        assert_eq!(worker.work().refinement_bytes, synchronous.work().refinement_bytes);
+        assert!(worker.observations().is_empty()); assert!(worker.report().is_none());
+        let total = worker.reservation().probes;
+        for completed in 1..=total {
+            let before = worker.work();
+            let revision = worker.revision();
+            let status = worker.advance(revision).unwrap();
+            assert_eq!(worker.revision(), revision + 1);
+            assert_eq!(worker.work().evaluated_probes, before.evaluated_probes + 1);
+            assert_eq!(worker.observations().len(), completed);
+            let latest = &worker.observations()[completed - 1];
+            assert_eq!(worker.work().probe_coordinates, before.probe_coordinates + latest.work().coordinates);
+            assert_eq!(worker.work().probe_products, before.probe_products + latest.work().reconstruction_products);
+            assert_eq!(worker.work().refinement_products, before.refinement_products);
+            if completed < total {
+                assert_eq!(status, ProbeHelperStatus::Evaluating); assert!(worker.report().is_none());
+            } else {
+                assert_eq!(status, ProbeHelperStatus::Judged(expected));
+                assert_eq!(worker.report().unwrap().verdict(), expected);
+            }
+        }
+        assert_eq!(worker.work(), synchronous.work());
+        assert_eq!(worker.report().unwrap().selected_groups(), synchronous.report().unwrap().selected_groups());
+        for (actual, expected) in worker.observations().iter().zip(synchronous.observations()) {
+            assert_eq!(actual.frame(), expected.frame()); assert_eq!(actual.row(), expected.row());
+            assert_eq!(actual.probe(), expected.probe()); assert_eq!(actual.interval(), expected.interval());
+            assert_eq!(actual.outcome(), expected.outcome()); assert_eq!(actual.work(), expected.work());
+        }
+        let completed = worker.work(); let revision = worker.revision();
+        assert_eq!(worker.advance(revision), Ok(ProbeHelperStatus::Judged(expected)));
+        assert_eq!(worker.work(), completed); assert_eq!(worker.revision(), revision);
+        assert_eq!(worker.evaluate(&input), Err(Error::WrongState));
+    }
+    assert_eq!(owner.hosted_learned_generation().unwrap(), original);
+    assert_eq!(endpoint.execution_count(), 0);
+}
+
+#[test]
+fn an_early_alarm_does_not_skip_the_remaining_registered_probe_roster() {
+    let (mut owner, endpoint, _) = owner(); step(&mut owner); step(&mut owner);
+    let (_, sidecar) = propose(&mut owner, 1);
+    let (_round, port, input) = channel(&mut owner, &sidecar, 101);
+    let mut roster = probes(sidecar.source(), 1);
+    let row = *roster.keys().next().unwrap();
+    let (frame, heads, channels) = sidecar.source().row_shape(row).unwrap();
+    roster.insert(row, vec![LinearProbe::new(1, 1, frame.profile, &vec![0.0; heads * channels], 2.0, 1.0).unwrap()]);
+    let mut worker = SidecarProbeEvaluator::new(&port, sidecar.round(), sidecar.source().clone(), roster,
+        ProbeHelperBudget::default()).unwrap();
+    worker.begin(&input).unwrap();
+    assert_eq!(worker.advance(worker.revision()), Ok(ProbeHelperStatus::Evaluating));
+    assert_eq!(worker.observations()[0].outcome(), ProbeOutcome::CertifiedAlarm);
+    assert_eq!(worker.work().evaluated_probes, 1); assert!(worker.report().is_none());
+    for completed in 2..=worker.reservation().probes {
+        let status = worker.advance(worker.revision()).unwrap();
+        assert_eq!(worker.work().evaluated_probes, completed);
+        if completed < worker.reservation().probes {
+            assert_eq!(status, ProbeHelperStatus::Evaluating); assert!(worker.report().is_none());
+        } else { assert_eq!(status, ProbeHelperStatus::Judged(Verdict::Hold)); }
+    }
+    assert_eq!(worker.observations().len(), worker.reservation().probes);
+    assert!(worker.observations().iter().any(|value| value.outcome() == ProbeOutcome::NeedsRefinement));
+    assert_eq!(worker.report().unwrap().verdict(), Verdict::Hold);
+    assert_eq!(endpoint.execution_count(), 0);
+}
+
+#[test]
+fn stale_cooperative_revisions_do_not_score_cancel_or_rebind_the_owner() {
+    let (mut owner, _, _) = owner(); step(&mut owner);
+    let (_, sidecar) = propose(&mut owner, 1);
+    let (_round, port, input) = channel(&mut owner, &sidecar, 101);
+    let mut worker = evaluator(&sidecar, 0, &port);
+    assert_eq!(worker.advance(0), Err(Error::WrongState));
+    assert_eq!(worker.work(), ProbeHelperWork::default());
+    assert_eq!(worker.begin(&input), Ok(ProbeHelperStatus::Evaluating));
+    for _ in 0..2 {
+        let revision = worker.revision(); let work = worker.work(); let observations = worker.observations().len();
+        assert_eq!(worker.advance(revision - 1), Err(Error::Stale));
+        assert_eq!(worker.cancel(revision - 1), Err(Error::Stale));
+        assert_eq!(worker.advance(revision + 1), Err(Error::Stale));
+        assert_eq!(worker.cancel(revision + 1), Err(Error::Stale));
+        assert_eq!(worker.begin(&input), Err(Error::WrongState));
+        assert_eq!(worker.revision(), revision); assert_eq!(worker.work(), work);
+        assert_eq!(worker.observations().len(), observations); assert!(worker.report().is_none());
+        assert_eq!(worker.status(), ProbeHelperStatus::Evaluating);
+        assert_eq!(worker.advance(revision), Ok(ProbeHelperStatus::Evaluating));
+    }
+    while worker.status() == ProbeHelperStatus::Evaluating { worker.advance(worker.revision()).unwrap(); }
+    assert_eq!(worker.status(), ProbeHelperStatus::Judged(Verdict::Allow));
+    let work = worker.work();
+    assert_eq!(worker.advance(worker.revision() - 1), Err(Error::Stale));
+    assert_eq!(worker.work(), work);
+}
+
+#[test]
+fn cancellation_before_input_is_terminal_without_a_report_or_any_numerical_work() {
+    let (mut owner, endpoint, _) = owner(); step(&mut owner);
+    let (_, sidecar) = propose(&mut owner, 1);
+    let (mut round, port, input) = channel(&mut owner, &sidecar, 101);
+    let mut worker = evaluator(&sidecar, 0, &port);
+    worker.cancel(0).unwrap();
+    assert_eq!(worker.status(), ProbeHelperStatus::Cancelled); assert_eq!(worker.revision(), 1);
+    assert_eq!(worker.begin(&input), Err(Error::WrongState));
+    assert_eq!(worker.evaluate_port(&port), Err(Error::WrongState));
+    assert_eq!(worker.advance(1), Err(Error::WrongState));
+    worker.cancel(1).unwrap(); assert_eq!(worker.revision(), 1);
+    assert_eq!(worker.work(), ProbeHelperWork::default());
+    assert!(worker.observations().is_empty()); assert!(worker.report().is_none());
+    let review = round.finish(ElapsedTick(30)).unwrap();
+    assert_eq!(review.missing(), &["reviewer".to_owned()]);
+    owner.observe_time(ElapsedTick(30)).unwrap();
+    owner.apply_review(review, Some(sidecar.round().input()), &snapshot()).unwrap();
+    assert!(owner.authorize(1, Some(sidecar.round().input()), &snapshot()).is_err());
+    assert_eq!(endpoint.execution_count(), 0);
+}
+
+#[test]
+fn cancellation_between_probes_preserves_disclosure_and_scores_without_completing_the_vote() {
+    let (mut owner, endpoint, _) = owner(); step(&mut owner); step(&mut owner);
+    let (_, mut sidecar) = propose(&mut owner, 1); one_refinement(&mut owner, &mut sidecar);
+    let (mut round, port, input) = channel(&mut owner, &sidecar, 102);
+    let mut worker = evaluator(&sidecar, 0, &port);
+    worker.begin(&input).unwrap();
+    assert_eq!(worker.advance(worker.revision()), Ok(ProbeHelperStatus::Evaluating));
+    let work = worker.work(); let score = worker.observations()[0].interval().clone();
+    assert!(work.refinement_bytes > 0); assert!(work.materialized_values > 0);
+    assert!(work.refinement_products > 0); assert_eq!(work.evaluated_probes, 1);
+    assert!(work.probe_coordinates > 0); assert!(worker.report().is_none());
+    let revision = worker.revision(); worker.cancel(revision).unwrap();
+    assert_eq!(worker.status(), ProbeHelperStatus::Cancelled); assert_eq!(worker.revision(), revision + 1);
+    assert_eq!(worker.work(), work); assert_eq!(worker.observations().len(), 1);
+    assert_eq!(worker.observations()[0].interval(), &score); assert!(worker.report().is_none());
+    assert_eq!(worker.advance(worker.revision()), Err(Error::WrongState));
+    assert_eq!(worker.begin(&input), Err(Error::WrongState));
+    assert_eq!(worker.evaluate(&input), Err(Error::WrongState));
+    worker.cancel(worker.revision()).unwrap(); assert_eq!(worker.revision(), revision + 1);
+    assert_eq!(worker.work(), work);
+    let review = round.finish(ElapsedTick(30)).unwrap();
+    assert_eq!(review.missing(), &["reviewer".to_owned()]);
+    owner.observe_time(ElapsedTick(30)).unwrap();
+    owner.apply_review(review, Some(sidecar.round().input()), &snapshot()).unwrap();
+    assert!(owner.authorize(1, Some(sidecar.round().input()), &snapshot()).is_err());
+    assert_eq!(endpoint.execution_count(), 0);
+}
+
+#[test]
+fn cancellation_preserves_a_complete_report_and_cannot_erase_the_computed_decision() {
+    let (mut owner, _, _) = owner(); step(&mut owner);
+    let (_, sidecar) = propose(&mut owner, 1);
+    let (_round, port, input) = channel(&mut owner, &sidecar, 101);
+    let mut worker = evaluator(&sidecar, 4, &port);
+    assert_eq!(worker.evaluate(&input), Ok(Verdict::Hold));
+    let work = worker.work(); let revision = worker.revision();
+    worker.cancel(revision).unwrap();
+    assert_eq!(worker.status(), ProbeHelperStatus::Judged(Verdict::Hold));
+    assert_eq!(worker.revision(), revision + 1); assert_eq!(worker.work(), work);
+    assert_eq!(worker.observations().len(), work.evaluated_probes);
+    assert_eq!(worker.report().unwrap().verdict(), Verdict::Hold);
+    assert_eq!(worker.advance(worker.revision()), Ok(ProbeHelperStatus::Judged(Verdict::Hold)));
+    assert_eq!(worker.evaluate(&input), Err(Error::WrongState));
+    worker.cancel(worker.revision()).unwrap(); assert_eq!(worker.revision(), revision + 1);
+    assert_eq!(worker.work(), work);
+}
+
+#[test]
+fn cooperative_input_admission_binds_every_submitted_byte_and_retains_the_first_failure() {
+    let (mut owner, _, _) = owner(); step(&mut owner);
+    let (_, sidecar) = propose(&mut owner, 1);
+    let (_round, port, input) = channel(&mut owner, &sidecar, 101);
+    let bytes = wire::encode_request(&port).unwrap();
+    let profile = wire::REQUEST_HEADER_BYTES + 8 + 32 + 2 + "reviewer".len() + 2;
+    let submitted = profile + 32 + 4 + input.actual_input().input_profile().profile_bytes.len() + 4;
+    assert_eq!(&bytes[submitted..submitted + input.actual_input().submitted_bytes().len()], input.actual_input().submitted_bytes());
+    for index in [0, input.actual_input().submitted_bytes().len() - 1] {
+        let mut changed = bytes.clone(); changed[submitted + index] ^= 1;
+        let changed = wire::decode_request(&changed).unwrap();
+        let mut worker = evaluator(&sidecar, 0, &port);
+        assert_eq!(worker.begin(&changed), Err(Error::Binding));
+        assert_eq!(worker.status(), ProbeHelperStatus::Failed(Error::Binding));
+        assert_eq!(worker.revision(), 1); assert_eq!(worker.work(), ProbeHelperWork::default());
+        assert!(worker.observations().is_empty()); assert!(worker.report().is_none());
+        assert_eq!(worker.begin(&input), Err(Error::WrongState));
+        assert_eq!(worker.advance(1), Err(Error::Binding));
+        worker.cancel(1).unwrap();
+        assert_eq!(worker.status(), ProbeHelperStatus::Failed(Error::Binding));
+        assert_eq!(worker.advance(worker.revision()), Err(Error::Binding));
+        assert_eq!(worker.work(), ProbeHelperWork::default());
+    }
+    let mut control = evaluator(&sidecar, 0, &port);
+    control.begin(&input).unwrap();
+    while control.status() == ProbeHelperStatus::Evaluating { control.advance(control.revision()).unwrap(); }
+    assert_eq!(control.status(), ProbeHelperStatus::Judged(Verdict::Allow));
+}

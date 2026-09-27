@@ -27,6 +27,27 @@ harm probabilities or policy disqualifiers. Refinement requires the original
 planner and a fresh round. Publication still requires current evidence and all
 configured authorization keys.
 
+## Cooperative evaluation
+
+`begin` binds and receives the original request once, reconstructing its disclosed
+residuals within the frozen aggregate allowance. It scores no probes. Each
+`advance(expected_revision)` then computes at most one registered probe using
+the existing receiver and exact accumulator. The roster order is unchanged, and
+even an early alarm must wait for every registered probe before a report exists.
+The synchronous `evaluate` and `evaluate_port` methods consume this same stepper.
+
+`revision` identifies the exact predecessor; stale advances and cancellations
+make no progress and spend no work. A Busy latch is installed before numerical
+calls, so a caught unwind cannot retry the same operation. Individual receiver
+reconstruction and probe calls are bounded but are not internally preempted.
+
+`cancel(expected_revision)` releases unfinished receiver/source ownership.
+Completed disclosed observations and work remain inspectable; cancellation
+does not refund reconstruction or probe work. Active evaluation becomes
+Cancelled, while a completed report or the first failure remains visible.
+Repeated cancellation at the resulting revision is a no-op. Partial observations
+never become a report, helper vote, or authorization.
+
 ## Resource and failure behavior
 
 Admission bounds the complete input, probe count, coefficient coordinates,
@@ -61,13 +82,18 @@ This does not provide a new runtime, process launcher or remote source importer.
 
 ## Verification status
 
-Twenty integration tests and five compile-fail examples are authored. The first
+Twenty-seven integration tests and five compile-fail examples are authored. The first
 twelve cover actual coarse abstention, refinement, alarm and quiet paths,
 two-key publication, stale sources, exact and insufficient budgets, roster
 completeness, request binding and one-shot behavior. Eight transport tests cover
 fragmentation, Interrupted/WouldBlock, original frames, reveal ordering,
 cancellation, invalid requests, partial-write panic and real Unix-socket paths.
-Socket controls run in one process and do not establish process isolation.
+Seven cooperative tests add exact synchronous/stepped parity after disclosure,
+one-probe progress, the complete-roster barrier after an early alarm, stale
+revisions, cancellation before input and between probes, retained completed
+reports and exact submitted-byte binding. Missing helpers continue to hold
+original authorization. Socket controls run in one process and do not establish
+process isolation.
 Existing receiver, numerical, wire, congress and authority algorithms are unchanged.
 
 The required targeted and full RCH commands were attempted again on September
@@ -75,3 +101,8 @@ The required targeted and full RCH commands were attempted again on September
 Cargo, rustc and rustfmt are absent too. Compilation, Rust tests, rustfmt and
 Clippy remain unexecuted. No Bead or qualification gate is closed. Source hash
 and whitespace checks are not runtime verification.
+
+The cooperative additions have source review only. Workspace execution became
+unavailable before their RCH commands could run; the historical checks above do
+not qualify these changes. Their compilation, tests, formatting and Clippy are
+UNEXECUTED.
