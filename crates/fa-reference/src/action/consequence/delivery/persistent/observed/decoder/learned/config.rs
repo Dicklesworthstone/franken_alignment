@@ -2,6 +2,7 @@
 //! The original generation archive codec provides exact recipe binding, not
 //! a deserializer that trusts model weights or monitor verdicts from disk.
 mod text;
+mod sidecar;
 
 use super::super::super::super::codec::shared::Writer;
 use crate::action::consequence::activation::tensor::kv::decoder::DecoderModel;
@@ -40,6 +41,7 @@ pub struct FileLearnedConfig {
     limits: LearnedDecoderBindingLimits,
     bytes: Rc<[u8]>,
     text: Option<text::TextRecipe>,
+    sidecar_required: bool,
 }
 impl fmt::Debug for FileLearnedConfig {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -71,7 +73,7 @@ impl FileLearnedConfig {
         w.u64(source.monitor_generation)?;
         w.count(limits.evidence.token_ids)?; w.count(limits.evidence.score_words)?;
         w.count(limits.encoded_bytes)?; w.blob(&archive)?;
-        Ok(Self { model, source, limits, bytes: w.finish().into(), text: None })
+        Ok(Self { model, source, limits, bytes: w.finish().into(), text: None, sidecar_required: false })
     }
     pub fn encoded_bytes(&self) -> usize { self.bytes.len() }
     pub(super) fn bytes(&self) -> &Rc<[u8]> { &self.bytes }
@@ -89,6 +91,8 @@ impl FileLearnedConfig {
                     text.source.clone(), self.limits),
             },
             None => broker.own_learned_generation(self.model.clone(), self.source.clone(), self.limits),
-        }
+        }?;
+        if self.sidecar_required { broker.enable_learned_sidecar_requirement()?; }
+        Ok(())
     }
 }

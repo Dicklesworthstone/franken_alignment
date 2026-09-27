@@ -1,6 +1,7 @@
 //! Original learned source, actor synchronization, and policy gate in RAM replay.
 //! Expected witnesses only reject divergence; no saved state is ever installed.
 mod witness;
+mod sidecar;
 
 use super::{Machine, Transition};
 use super::super::{BaseEvent, Event};
@@ -14,6 +15,7 @@ pub(super) struct LearnedState {
     config: Rc<FileLearnedConfig>,
     paused: bool,
     pending: Option<LearnedStepIntent>,
+    sidecars: sidecar::Sidecars,
 }
 
 impl Machine {
@@ -46,6 +48,7 @@ impl Machine {
     }
     pub(super) fn apply_learned(&mut self, event: &LearnedEvent) -> Result<Transition, Error> {
         match event {
+            LearnedEvent::Sidecar(event) => self.apply_learned_sidecar(event),
             LearnedEvent::Begin(intent) => {
                 if self.pending_learned_step().is_some() { return Err(Error::Duplicate); }
                 self.check_learned_position(intent.actor_revision, intent.position)?;
@@ -60,7 +63,7 @@ impl Machine {
                 let config = config.runtime()?;
                 config.install(&mut self.broker)?;
                 if !self.publication_guard { self.enable_publication_guard()?; }
-                self.learned = Some(LearnedState { config, paused: false, pending: None });
+                self.learned = Some(LearnedState { config, paused: false, pending: None, sidecars: sidecar::Sidecars::default() });
                 Ok(Transition::Unit)
             }
             LearnedEvent::Step { actor_revision, position, witness } => {

@@ -4,6 +4,7 @@
 //! numerical/authority replay and fence. No learned state or approval is imported.
 mod config;
 mod recovery;
+pub mod sidecar;
 #[cfg(test)]
 mod tests;
 pub use config::FileLearnedConfig;
@@ -23,6 +24,7 @@ use std::rc::Rc;
 #[derive(Clone)]
 pub(in super::super) enum LearnedEvent {
     Enable(Configuration),
+    Sidecar(sidecar::SidecarEvent),
     Begin(LearnedStepIntent),
     Step { actor_revision: u64, position: u64, witness: Rc<[u8]> },
     Resume { actor_revision: u64, position: u64 },
@@ -200,6 +202,7 @@ pub(in super::super) fn bind_history(events: &mut [Event], expected: &FileLearne
 
 pub(in super::super) fn write(w: &mut Writer, event: &LearnedEvent) -> Result<(), Error> {
     match event {
+        LearnedEvent::Sidecar(event) => { w.u8(4)?; sidecar::write(w, event)?; }
         LearnedEvent::Begin(intent) => {
             w.u8(3)?; w.u64(intent.actor_revision)?; w.u64(intent.position)?;
         }
@@ -233,6 +236,7 @@ pub(in super::super) fn read(r: &mut Reader<'_>) -> Result<LearnedEvent, Error> 
         }
         2 => LearnedEvent::Resume { actor_revision: r.u64()?, position: r.u64()? },
         3 => LearnedEvent::Begin(LearnedStepIntent { actor_revision: r.u64()?, position: r.u64()? }),
+        4 => LearnedEvent::Sidecar(sidecar::read(r)?),
         _ => return Err(Error::InvalidInput),
     })
 }
