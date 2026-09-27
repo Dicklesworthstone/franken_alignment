@@ -35,6 +35,14 @@ the original generic owner. Constructors perform tokenization and admission,
 not prompt/sample inference. The full original actor-cache horizon and all
 numerical/telemetry allowances remain enforced by their existing owners.
 
+`begin_open_with_learned_generation` also accepts this exact text configuration.
+Its recovery cursor verifies the same original history in bounded event quanta,
+retains the exclusive lock, and exposes no output or authority before `finish`
+acknowledges the original recovery fence. Cancellation by dropping the cursor
+does not discard a pending stop-token intent or alter the canonical journal.
+See [cooperative learned recovery](DURABLE_LEARNED_GENERATION.md#cooperative-recovery)
+for the progress, failure and synchronous-operation boundaries.
+
 ## Existing write-ahead and publication transitions
 
 Every numerical step still has the original durable intent before computation
@@ -90,7 +98,7 @@ qualified detector, or production release.
 
 ## Authored verification; execution pending
 
-Nine Unix integration tests use original learned inference, actual native
+Eleven Unix integration tests use original learned inference, actual native
 byte-BPE, original journal replacement and original two-key publication. They
 cover every empty/prompt/sample/terminal recovery cut; canonical-tokenizer
 reconstruction and same-ID changed-spelling rejection; prompt/budget/completion
@@ -98,13 +106,16 @@ mismatches; a pending final stop; old keys and successful checked publication;
 executed and unknown outcomes while paused; actual monitoring holds and aggregate
 telemetry failure; finite-horizon/undecodable output; legacy generic recovery; and first-image startup with no synthetic clock or
 token.
+The two cooperative-recovery additions reconstruct in single-event quanta,
+continue the actual original output and publish through both keys, and retain a
+pending final stop until the original numerical step completes.
 The changed-spelling control also runs the original model and observes the
 changed output, rather than merely comparing two configuration labels.
 Tiny weights and reference ballots are synthetic test inputs, not detector or
 independent-human-quality evidence. Existing numerical, authority and journal
 test bodies are unchanged.
 
-All nine new tests are authored, not executed. Compilation, all Rust tests, rustfmt and Clippy remain UNEXECUTED here. The fresh
+All eleven tests are authored, not executed. Compilation, all Rust tests, rustfmt and Clippy remain UNEXECUTED here. The fresh
 targeted test and complete xtask commands were attempted through remote-only
 RCH; both stopped before compilation because `rch` is absent (exit 127). No local
 compilation fallback, gate relaxation, release qualification or Beads closure

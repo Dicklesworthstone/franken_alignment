@@ -1,5 +1,16 @@
 # Changelog
 
+## Unqualified source addition: cooperative durable learned recovery
+
+- Add a locked, revision-checked recovery cursor over original learned journal
+  events, with first-failure retention and cancellation by dropping the cursor.
+- Require complete replay and an unchanged canonical image before the original
+  durable recovery fence releases either role. Reuse the verified machine so
+  finishing does not replay the learned history twice.
+- Add seven unit tests, two text integration tests and two compile-fail cases
+  for actual continuation, pending/unknown work, capacity and storage faults.
+  Rust compilation, tests, formatting and Clippy remain UNEXECUTED.
+
 ## Unqualified source addition: cooperative learned congress execution
 
 - Connect the actual learned congress/refinement driver to request admission

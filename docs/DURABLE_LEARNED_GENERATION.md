@@ -75,6 +75,41 @@ not an agent permit or detector qualification. The independently configured
 `read_publication_with_learned_generation` is a historical RAM-only projection.
 It exposes no writable owner, current evidence handle, old key or helper session.
 
+## Cooperative recovery
+
+`begin_open_with_learned_generation` reads and validates the complete canonical
+journal and independently supplied recipe, then returns `FileLearnedRecovery`.
+It holds the original exclusive storage lock but executes no journal event.
+Only event counts and `FileLearnedRecoveryStatus` are exposed; no reconstructed
+token, writable owner, reviewer or historical key is available during replay.
+
+`advance(expected_events, max_events)` applies at most that many original
+transitions to the same private machine. The predecessor must equal the completed
+event count, and the quantum must be nonzero and within the original journal
+event ceiling. Each event still performs its original validation, numerical work
+and exact witness comparison. A failed or interrupted event permanently prevents
+resuming that candidate; its first error and completed count remain inspectable.
+No numerical or authority allowance is reset between quanta.
+
+`Ready` means that the complete history and learned contract have been verified.
+`finish` must still recheck the exact canonical bytes, perform original storage
+cleanup and durably append the original recovery fence before returning an owner
+and reviewer. The fence applies directly to the verified machine and uses the
+existing candidate-persistence boundary. It does not replay the learned history
+a second time. A private empty machine used by that persistence boundary performs
+no learned inference and is never returned.
+
+Dropping an unfinished recovery releases the lock without changing canonical or
+staged storage. An early `finish` also refuses without cleanup. The successful
+result has the same paused numerics, withdrawn old keys, charged unknown effects
+and explicit clock/resume requirements as synchronous recovery. Existing
+`open_with_learned_generation` now consumes this same recovery implementation.
+
+This is a bounded event cursor toward FA-014 and plan sections 11.1–11.2 and
+16.4–16.9. Initial reading/decoding, one original event, final encoding, the fence
+and storage I/O remain synchronous. No wall-clock deadline, preemption,
+constant-time recovery or hostile-writer exclusion is claimed.
+
 ## Compatibility, limits and nonclaims
 
 The existing outer journal is unchanged. Decoder subtag 15 is the new learned
@@ -87,8 +122,8 @@ use the existing work-capacity class; they bypass no recovery reserve. Intent
 admission leaves an event slot for completion, but does not guarantee the eventual
 witness fits the remaining bytes. A completion-capacity failure stays pending.
 
-This implementation replays the complete history for ordinary transactions,
-following the existing journal owner. It makes no incremental-replay speedup,
+Ordinary mutable transactions still replay the complete history, following the
+existing journal owner. Cooperative recovery makes no measured speedup,
 constant-time checkpoint, latency, RSS or hardware power-loss claim. Models and
 monitor recipes retain their native bounds. Failed telemetry can include work
 for which the original engine returned no complete report; absence is not zero.
@@ -103,7 +138,7 @@ remains a separate live broker feature; this addition does not persist its round
 
 ## Verification status and change record
 
-This addition contains thirteen unit regression functions and one compile-fail
+The original durable-generation addition contains thirteen unit regression functions and one compile-fail
 example. Tests pair successful original generation and two-key publication with
 recovery pauses, interrupted intents, unknown-effect reconciliation, stale source
 publication, exact/one-less event capacity, held/failed computations, differing
@@ -111,9 +146,18 @@ recipes, corrupt expectations and five existing storage fault barriers. They
 use real numerical algorithms and real temporary journal files, with synthetic
 probe parameters and helper ballots rather than trained-detector evidence.
 
+Cooperative recovery adds seven unit tests, two text integration tests and two
+compile-fail boundaries. They exercise single-event reconstruction at every
+numerical cut and actual continued sampling; stale/invalid quanta; lock retention
+and abandonment; a late corrupt witness; changed canonical bytes; pending intent
+and charged unknown dispatch; all five original fence-write failure barriers;
+exact capacity refusal with a successful one-more-event twin; and original
+completed-text publication through both keys. These are authored test sources,
+not executed results.
+
 All new Rust tests, compilation, rustfmt and Clippy are UNEXECUTED in the current
 preparation environment. Required targeted and full RCH commands cannot launch
-because RCH is absent. This is selected-source preparation, not a full checkout.
+because RCH is absent. The current checkout has no available Rust toolchain.
 No historical execution receipt qualifies these changes; no roadmap or Bead is
 closed. The existing release refusal, verification commands, dependency graph,
 license and original numerical/authority algorithms are not weakened.

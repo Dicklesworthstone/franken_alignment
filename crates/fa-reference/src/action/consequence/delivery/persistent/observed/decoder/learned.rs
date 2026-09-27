@@ -3,12 +3,14 @@
 //! Recovery requires an independently supplied exact recipe, then the original
 //! numerical/authority replay and fence. No learned state or approval is imported.
 mod config;
+mod recovery;
 #[cfg(test)]
 mod tests;
 pub use config::FileLearnedConfig;
+pub use recovery::{FileLearnedRecovery, FileLearnedRecoveryProgress, FileLearnedRecoveryStatus};
 
 use super::{DecoderEvent, MAX_WITNESS_BYTES};
-use super::super::{BaseEvent, Event, FileHumanReviewer, FileOversight, FileOversightProfile,
+use super::super::{Event, FileHumanReviewer, FileOversight, FileOversightProfile,
     JournalError, Machine, Transition, journal, storage};
 use super::super::super::{FileDeliverySnapshot, JournalFailure, JournalIo};
 use super::super::super::codec::shared::{Reader, Writer};
@@ -155,21 +157,17 @@ impl FileOversight {
     /// open cannot hydrate this profile. Match before inference, cleanup or fence;
     /// then execute every original step and compare its exact saved witness.
     /// Recovery pauses inference and revokes old effect keys through the SAME
-    /// original fence reducer as every other FileOversight profile.
+    /// original fence reducer as every other FileOversight profile. This is the
+    /// synchronous consumer of the SAME bounded event-by-event recovery path.
     pub fn open_with_learned_generation(directory: impl AsRef<Path>, profile: FileOversightProfile,
         expected: &FileLearnedConfig) -> Result<(Self, FileHumanReviewer), JournalError>
     {
-        profile.delivery.limits.check()?;
-        let store = storage::Store::open(directory.as_ref())?;
-        let bytes = store.read(profile.delivery.limits.bytes)?;
-        let mut events = journal::decode(&profile, store.identity(), &bytes)?;
-        bind_history(&mut events, expected)?;
-        let machine = Machine::replay(&profile, &events)?;
-        if machine.learned_contract() != Some(expected) { return Err(Error::Binding.into()); }
-        store.confirm_and_cleanup()?;
-        let (mut owner, reviewer) = Self::owner(profile, store, events, machine);
-        owner.transact(owner.revision(), Event::Core(BaseEvent::Fence))?;
-        Ok((owner, reviewer))
+        let mut recovery = Self::begin_open_with_learned_generation(directory, profile, expected)?;
+        while recovery.progress().status == FileLearnedRecoveryStatus::Replaying {
+            let completed = recovery.progress().replayed_events;
+            recovery.advance(completed, 1)?;
+        }
+        recovery.finish()
     }
 
     /// Pure historical publication projection. Matching and replay return no

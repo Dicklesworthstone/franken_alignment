@@ -1,5 +1,22 @@
 # Implementation status · design revision 0.3
 
+## Unqualified source addition: cooperative durable learned recovery
+
+`FileOversight::begin_open_with_learned_generation` now holds the original
+exclusive lock while the host advances bounded original journal events. It
+exposes progress only, retains first failures and leaves storage untouched when
+unfinished recovery is abandoned. Completion compares the exact canonical cut
+and persists the original recovery fence before releasing an owner or reviewer.
+The existing synchronous learned open consumes this implementation; finishing
+no longer repeats the entire learned numerical history a second time.
+
+Seven unit tests, two text integration tests and two compile-fail cases are
+authored for continuation, pending work, nonresurrection, cancellation, capacity
+and original storage faults. They are UNEXECUTED: targeted and full checks cannot
+launch because `rch` and Rust tools are absent. See the
+[durable learned contract](docs/DURABLE_LEARNED_GENERATION.md#cooperative-recovery).
+This advances the bounded FA-014 recovery path without a qualification claim.
+
 ## Unqualified source addition: cooperative learned congress execution
 
 The actual `LearnedProbeReview` driver now admits each member once, scores one

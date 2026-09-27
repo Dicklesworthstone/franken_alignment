@@ -1,6 +1,7 @@
 //! Original numerical/control engines and real local journal replacements.
 //! Synthetic coefficients and helper ballots are not a trained-detector claim.
 mod fixture;
+mod recovery;
 use fixture::*;
 use super::*;
 use crate::action::{ActionState, ElapsedTick};

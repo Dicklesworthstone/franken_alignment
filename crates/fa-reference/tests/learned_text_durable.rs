@@ -1,6 +1,8 @@
 //! Original learned numerics, original journal/storage, and reference ballots.
 //! Tiny model weights and helper votes do not qualify a detector or deployment.
 #![cfg(unix)]
+#[path = "learned_text_durable/recovery.rs"]
+mod recovery;
 #[path = "support/learned_text_model.rs"]
 mod fixture;
 use fixture::*;
