@@ -1,5 +1,6 @@
 //! Input-derived replay of an actual fitted codebook, never imported coefficients.
 //! Checkpoints deliberately retain training inputs and repeat fitting work.
+pub mod archive;
 use super::{FitBudget, LearnedKvCodec, LearnedKvPolicy, ModelKvImage, ModelKvProfile};
 use super::fit::MAX_TRAINING_SOURCES;
 use crate::Error;

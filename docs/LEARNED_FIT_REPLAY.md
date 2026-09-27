@@ -49,3 +49,50 @@ because `rch` is absent in this preparation environment (exit 127). Compilation,
 Clippy, rustfmt and runtime tests have not run. Selected-source and patch checks
 are not execution evidence. No roadmap or Beads item is closed, and no production
 feature qualification follows from this source addition.
+
+## Portable archive and actual consumer
+
+`checkpoint.binding()` yields the intended policy, original caps and complete
+training-source descriptors. `checkpoint.encode_archive(byte_limit)` writes a
+new `FAKVFIT/1` input archive. Its complete source directory precedes all scalar
+payloads, and a separate capped opaque witness holds the expected result words.
+The binding is intended to be retained independently; it is not a signature or a
+hash of the source payloads. Archive authenticity still belongs to the operator.
+Changing both the training data and its resulting witness consistently can form
+a different valid fit under the same metadata; no cryptographic guarantee is
+claimed. An unchanged witness rejects a different recomputed result.
+
+`LearnedKvFitArchive::decode(bytes, &binding, byte_limit)` returns an explicitly
+unverified input object, not a fitted codec or the earlier checkpoint type. It
+validates exact format/version, canonical source order, complete expected
+inventory, original caps, descriptor sizes, row/value totals, complete lengths
+and absence of a trailing tail before materializing any source scalars. Original
+ModelKvImage decoding owns all per-layer scalar and descriptor interpretation.
+Only `archive.replay(budget)` runs the actual fitter, compares all output words,
+and returns the newly computed codec and a newly verified checkpoint.
+
+`LearnedKvFitArchive::read(&mut file, &binding, &mut io_budget)` accepts an
+operator-selected reader. It performs no path inference, model download, fitting
+or live effect. One non-cloneable read budget accounts returned bytes and every
+read attempt across failures/retries; interruptions and EOF probes consume calls.
+At least one byte of remaining capacity is needed to attempt the EOF probe, even
+though a successful EOF returns no bytes. I/O errors, missing tails and exhausted
+budgets never expose a partial archive or a usable codec. No production runtime
+or asynchronous executor is introduced.
+
+The full archive cap is derived from the 96 MiB original-image cap, 16 MiB
+comparison cap and at most 64 directory entries. These bound logical retained
+inputs, not transient parser copies or peak memory. This is deliberately a
+recomputation baseline rather than a fast parameter-only model import.
+
+Six additional functions in `tests/learned_fit_archive.rs` cover exact independent
+header bytes and size boundaries; all truncated prefixes and appended tails;
+metadata substitutions; changed result words and independently recomputed changed
+training data; shared reader budgets, interruptions and I/O errors; and a real
+file roundtrip whose refitted codec drives the original learned monitor/sampler.
+The latter compares actual continuation tokens, random state, cache words and
+work against the original fit, and pairs it with a fresh monitor that holds the
+same model. Successful fit replay never substitutes for that new monitor verdict.
+These six functions and the earlier six remain **UNEXECUTED**, as do both
+compile-fail examples. There is no service/CLI or durable effect-journal integration
+in this change, and the earlier codebook-only export still has no import path.
