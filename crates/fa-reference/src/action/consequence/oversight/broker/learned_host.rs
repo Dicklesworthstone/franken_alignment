@@ -44,6 +44,7 @@ pub(super) struct LearnedHost {
     fault: Option<Error>,
     automatic_stop: Option<stopping::LearnedStopState>,
     sidecars: sidecar::LearnedSidecarState,
+    text_stream: Option<text::stream::LearnedTextStreamBasis>,
 }
 
 impl OversightBroker {
@@ -96,7 +97,7 @@ impl OversightBroker {
         // No caller callback or other authority transition intervenes.
         self.delivery.replace_actor_state(revision, actor).expect("preflighted learned bootstrap");
         self.learned_host = Some(LearnedHost { run, profile, fault: None, automatic_stop: None,
-            sidecars: sidecar::LearnedSidecarState::default() });
+            sidecars: sidecar::LearnedSidecarState::default(), text_stream: None });
         Ok(())
     }
 

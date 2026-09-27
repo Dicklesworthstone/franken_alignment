@@ -333,3 +333,6 @@ fn generic_effect_profiles_remain_generic_and_do_not_inherit_a_text_constraint()
     assert_eq!(endpoint.payload(), b"generic effect");
     assert!(owner.hosted_learned_generation().unwrap().status.is_active());
 }
+
+#[path = "learned_text_publication/stream.rs"]
+mod stream;

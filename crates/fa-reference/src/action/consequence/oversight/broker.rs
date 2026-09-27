@@ -85,7 +85,7 @@ impl OversightBroker {
     /// consistency observation after Err; it cannot be rerolled as a new sample.
     pub fn propose(&mut self, id: u64, spec: ActionSpec, snapshot: &Snapshot) -> Result<Proposal, Error> {
         self.observe_predicted_action(id, &spec)?;
-        self.check_learned_text_payload(&spec.payload)?;
+        self.check_learned_text_spec(&spec)?;
         let decoder = self.prepare_decoder()?;
         let proposal = self.delivery.propose(id, spec, snapshot)?;
         self.publish_decoder(id, decoder);

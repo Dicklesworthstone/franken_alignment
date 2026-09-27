@@ -108,3 +108,63 @@ mode. One additional compile-fail example excludes payload from the text-target
 request. Combined coverage is fourteen authored regression functions and three
 compile-fail examples. None has executed; targeted and full RCH attempts still
 stop before compilation. Existing numerical/authority tests were not weakened.
+
+## Opt-in cumulative stream release
+
+`own_learned_text_stream` is the separate bootstrap for framed complete-message
+endpoints. The raw `own_learned_text_generation` entry point still rejects
+framed endpoints. Stream bootstrap fixes the exact receipt-confirmed audience
+view and resolved target before inference, checks the configured maximum output
+against message and stream capacity, and reserves no authority. The actual
+model, byte BPE, source, stop policy, numerical and telemetry ceilings are the
+same original owners as the raw-text path. No other tokenizer is introduced.
+
+This initial stream profile supports ONE generated message and its explicit
+finish, not successive prompts or a new conversation-generation scheduler.
+`propose_learned_text_stream_message` creates the original cumulative stream
+frame only when the complete generated continuation is available. The frame
+retains every earlier message boundary and charges its entire execution-bearing
+length, not just the new text bytes. Neither prompt bytes nor a partially
+accepted or incomplete UTF-8 continuation are released as a smaller message.
+
+`propose_learned_text_stream_finish` becomes available only after an original
+endpoint receipt confirms this generation's exact message. A finish uses the
+original finish encoder and receives a NEW action, congress review, permit and
+human key when required. It computes no model token and draws no RNG. It does
+not append the generated message a second time. Receipt-confirmed completion
+prevents further output; cancelling an undispatched finish is not an end marker.
+
+The generic `propose` entry point and the existing decoder permission hooks
+compare the exact current frame, resolved target/version, scope, policy epoch
+and full-frame charge. A raw payload, altered message, split prefix, substituted
+target or understated byte charge cannot bypass the stronger selected profile.
+Normal caller-declared witnesses remain additional prerequisites, not replaced
+by source evidence. The original witness validator still runs at permission
+and dispatch. The source requirement, mandatory sidecar, independent helper
+rounds and any configured human key remain unchanged for both operations.
+
+Only the original `DeliveryBroker` moves the audience state. The new immutable
+basis is not a second delivery ledger. Simultaneously prepared duplicates share
+the same original target version: one confirmed append invalidates the other's
+message basis. A cancelled or positively established nonexecuted append can be
+proposed again while that basis remains unchanged. A dispatched/unknown append
+blocks BOTH another append and a finish until original reconciliation resolves
+it; lookup absence and timeout never release the charge or imply nonexecution.
+Stopping after dispatch still permits original receipt reconciliation without
+new source eligibility. Already-visible text is never removed by cancellation,
+stop, or a nonexecuted finish.
+
+The captured audience basis retains at most the original bounded StreamView.
+Full-frame construction, exact decoding, comparisons and copying are real
+additional costs, not charged as inference or claimed constant-time. There is
+no new wire format, durable learned-text replay event, native CLI command,
+process sandbox or production qualification in this increment.
+
+Ten added integration test functions exercise full sidecar/worker/two-key
+message-and-finish publication, generic-entry substitutions, concurrent prepared
+duplicates, lost acknowledgments with executed and sealed nonexecuted controls,
+append/finish cancellation and retry, stop and post-stop receipt reconciliation,
+exact bootstrap capacity, multibyte UTF-8 buffering and final witness/expiry
+checks. The prior fourteen source/publication tests are unchanged. All twenty-
+four runtime functions and the original three compile-fail examples are
+AUTHORED, UNEXECUTED pending the required fresh remote-only RCH gate.

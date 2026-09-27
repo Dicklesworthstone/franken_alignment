@@ -1,5 +1,6 @@
 //! Publication payloads derived from THIS original broker-owned text generation.
 //! This opt-in mode narrows generic effect admission; it grants no authority.
+pub mod stream;
 use super::{OversightBroker, LearnedDecoderBindingLimits};
 use crate::action::{ActionSpec, ElapsedTick, ResolvedTarget, VERSION};
 use crate::action::consequence::activation::monitor::decoder::sampled::generation::tokenizer::ByteBpe;
@@ -73,12 +74,13 @@ impl OversightBroker {
 
     // Called before the original proposal ledger/evidence-retention commit.
     // Generic effects outside this explicit text profile retain their semantics.
-    pub(in super::super) fn check_learned_text_payload(&self, payload: &[u8]) -> Result<(), Error> {
+    pub(in super::super) fn check_learned_text_spec(&self, spec: &ActionSpec) -> Result<(), Error> {
         let Some(host) = &self.learned_host else { return Ok(()); };
         if !host.run.text_bound() { return Ok(()); }
         if host.fault.is_some() { return Err(Error::Incomplete); }
+        if host.text_stream.is_some() { return self.check_learned_text_stream_spec(spec); }
         let (original, _, _) = host.run.decode_text_output()?;
-        if original.as_slice() != payload { return Err(Error::Binding); }
+        if original.as_slice() != spec.payload.as_slice() { return Err(Error::Binding); }
         Ok(())
     }
 
@@ -87,6 +89,6 @@ impl OversightBroker {
     pub(in super::super) fn check_learned_text_action(&self, attempt: u64) -> Result<(), Error> {
         if !self.learned_text_required() { return Ok(()); }
         let action = &self.inputs.get(&attempt).ok_or(Error::Missing)?.action;
-        self.check_learned_text_payload(&action.spec().payload)
+        self.check_learned_text_spec(action.spec())
     }
 }
