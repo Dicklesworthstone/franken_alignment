@@ -9,6 +9,7 @@ pub mod predictive;
 pub mod mediated;
 
 mod bootstrap;
+mod learned;
 pub use bootstrap::FileCredentialRegistration;
 
 use super::credential::FileCredentialPolicy;

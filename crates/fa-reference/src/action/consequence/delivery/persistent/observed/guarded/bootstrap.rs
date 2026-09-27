@@ -116,6 +116,18 @@ impl PreparedGuardedBootstrap {
         Ok(self)
     }
 
+    /// Install the original learned recipe before the sole canonical write.
+    pub(super) fn learned(mut self, config: super::super::decoder::learned::FileLearnedConfig)
+        -> Result<Self, JournalError>
+    {
+        use super::super::decoder::learned::{Configuration, LearnedEvent};
+        let event = Event::Decoder(DecoderEvent::Learned(
+            LearnedEvent::Enable(Configuration::new(config))));
+        self.machine.apply(&event)?;
+        self.events.push(event);
+        Ok(self)
+    }
+
     pub(super) fn publish(self, store: storage::Store)
         -> Result<(FileOversight, FileOversightRoles), JournalError>
     {

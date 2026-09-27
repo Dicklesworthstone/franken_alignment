@@ -34,7 +34,7 @@ pub(in super::super) struct Configuration {
     runtime: Option<Rc<FileLearnedConfig>>,
 }
 impl Configuration {
-    fn new(config: FileLearnedConfig) -> Self {
+    pub(in super::super) fn new(config: FileLearnedConfig) -> Self {
         Self { bytes: Rc::clone(config.bytes()), runtime: Some(Rc::new(config)) }
     }
     pub(in super::super) fn runtime(&self) -> Result<Rc<FileLearnedConfig>, Error> {
@@ -186,7 +186,7 @@ impl FileOversight {
     }
 }
 
-fn bind_history(events: &mut [Event], expected: &FileLearnedConfig) -> Result<(), Error> {
+pub(in super::super) fn bind_history(events: &mut [Event], expected: &FileLearnedConfig) -> Result<(), Error> {
     let mut found = false;
     for event in events {
         if let Event::Decoder(DecoderEvent::Learned(LearnedEvent::Enable(config))) = event {
