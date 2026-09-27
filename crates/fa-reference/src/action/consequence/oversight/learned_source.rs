@@ -1,5 +1,7 @@
 //! Live evidence from an ORIGINAL learned-K/V generation, not imported verdicts.
 //! This owner is a prerequisite source for the effect gate, never an authority.
+pub(crate) mod host;
+
 use crate::action::consequence::activation::monitor::learned::model::LearnedModelReport;
 use crate::action::consequence::activation::probe::SCORE_WORDS;
 use crate::action::consequence::activation::tensor::kv::decoder::{DecoderModel, DecoderProfile};
