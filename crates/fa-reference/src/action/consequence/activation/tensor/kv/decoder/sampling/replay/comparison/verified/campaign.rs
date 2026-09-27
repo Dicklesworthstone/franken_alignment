@@ -5,7 +5,7 @@
 //! promote a policy. Failures and bounded/held runs stay in the declared cohort.
 
 use super::{ComparisonPreparation, PreparationReport};
-use super::super::{ComparisonLineage, ComparisonReport, ComparisonStatus};
+use super::super::{ComparisonLineage, ComparisonReport, ComparisonStatus, PolicyComparison};
 use super::super::super::ReplayStatus;
 use super::super::super::super::monitored::{GenerationStatus, GenerationStop, MAX_GENERATION_TOKENS, MAX_GENERATION_SCORES};
 use super::super::super::super::super::MAX_DECODER_PRODUCTS;
@@ -112,6 +112,8 @@ pub enum CaseOutcome {
     Exhausted,
     VerificationFailed(Error),
     ComparisonFailed(Error),
+    /// Work stopped explicitly; neither a quiet result nor an omitted case.
+    Cancelled,
 }
 
 /// Original observations, not caller-authored outcomes. No token, cache, RNG,
@@ -141,6 +143,7 @@ pub struct CampaignSummary {
     pub reserved: CampaignCost,
     pub completed: usize,
     pub pending: usize,
+    /// Unique declared evaluation origins, conservatively grouped across streams.
     pub declared_lineages: usize,
     pub matched_stops: usize,
     pub decision_differences: usize,
@@ -148,6 +151,7 @@ pub struct CampaignSummary {
     pub exhausted: usize,
     pub verification_failures: usize,
     pub comparison_failures: usize,
+    pub cancelled: usize,
 }
 
 /// Owns a frozen roster and only original verified comparison machinery.
@@ -192,10 +196,9 @@ impl ComparisonCampaign {
         if !budget.0.fits(CampaignBudget::default().0) || !reserved.fits(budget.0) {
             return Err(Error::Limit);
         }
-        let declared_lineages = cases.iter().map(|case| {
-            let lineage = case.lineage();
-            (lineage.stream, lineage.evaluation_origin)
-        }).collect::<BTreeSet<_>>().len();
+        // Stream changes do not turn a reused evaluation origin into new evidence.
+        let declared_lineages = cases.iter().map(|case| case.lineage().evaluation_origin)
+            .collect::<BTreeSet<_>>().len();
         let mut reports = Vec::new();
         reports.try_reserve_exact(cases.len()).map_err(|_| Error::Limit)?;
         Ok(Self { ids: cases.iter().map(CampaignCase::id).collect(),
@@ -213,7 +216,7 @@ impl ComparisonCampaign {
         let mut summary = CampaignSummary { status: self.status(), reserved: self.reserved,
             completed: self.reports.len(), pending: self.ids.len() - self.reports.len(),
             declared_lineages: self.declared_lineages, matched_stops: 0, decision_differences: 0,
-            both_held: 0, exhausted: 0, verification_failures: 0, comparison_failures: 0 };
+            both_held: 0, exhausted: 0, verification_failures: 0, comparison_failures: 0, cancelled: 0 };
         for report in &self.reports {
             match report.outcome {
                 CaseOutcome::MatchedStop(_) => summary.matched_stops += 1,
@@ -222,6 +225,7 @@ impl ComparisonCampaign {
                 CaseOutcome::Exhausted => summary.exhausted += 1,
                 CaseOutcome::VerificationFailed(_) => summary.verification_failures += 1,
                 CaseOutcome::ComparisonFailed(_) => summary.comparison_failures += 1,
+                CaseOutcome::Cancelled => summary.cancelled += 1,
             }
         }
         summary
@@ -264,6 +268,12 @@ fn execute(case: CampaignCase) -> CaseReport {
     if let Err(error) = result { return failed(error); }
     let mut pair = match preparation.finish() { Ok(pair) => pair, Err(error) => return failed(error) };
     let _result = pair.run_to_stop(); // Original terminal state, including failures, is retained below.
+    completed_report(id, lineage, prepared, &pair)
+}
+
+fn completed_report(id: u64, lineage: ComparisonLineage, prepared: PreparationReport,
+    pair: &PolicyComparison) -> CaseReport
+{
     let outcome = match pair.status() {
         ComparisonStatus::MatchedStop(stop) => CaseOutcome::MatchedStop(stop),
         ComparisonStatus::BothHeld { position } => CaseOutcome::BothHeld { position },
@@ -278,3 +288,5 @@ fn execute(case: CampaignCase) -> CaseReport {
     };
     CaseReport { id, lineage, preparation: prepared, comparison: Some(pair.report()), outcome }
 }
+
+pub mod stepped;

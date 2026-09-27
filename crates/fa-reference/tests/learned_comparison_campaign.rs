@@ -261,3 +261,6 @@ fn a_later_live_hold_is_neither_cleared_nor_reclassified_by_experiments() {
     assert_eq!(original.generation().work(), spend);
     assert_eq!(original.advance(1).err(), Some(Error::WrongState));
 }
+
+#[path = "learned_comparison_campaign/stepped.rs"]
+mod stepped;
