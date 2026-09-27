@@ -82,6 +82,14 @@ impl OversightBroker {
         Ok(())
     }
 
+    // The journal compares original numbers, not Debug output or imported state.
+    // This immutable crate-only view cannot advance, reset or reseed the owner.
+    pub(crate) fn hosted_learned_original(&self)
+        -> Result<&crate::action::consequence::activation::tensor::kv::decoder::sampling::monitored::LearnedGeneration, Error>
+    {
+        Ok(self.learned_host.as_ref().ok_or(Error::Incomplete)?.run.original_generation())
+    }
+
     pub fn hosted_learned_observation(&self) -> Result<LearnedObservation, Error> {
         Ok(self.learned_host.as_ref().ok_or(Error::Incomplete)?.run.observation())
     }

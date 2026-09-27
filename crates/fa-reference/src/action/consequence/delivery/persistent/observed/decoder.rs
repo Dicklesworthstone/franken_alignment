@@ -5,6 +5,7 @@ mod codec;
 pub mod checkpoint;
 pub mod checkpoint_inspection;
 pub mod generation;
+pub mod learned;
 pub mod progress;
 pub mod text;
 mod stopping;
@@ -34,6 +35,7 @@ pub(super) enum StepRequest {
 }
 #[derive(Clone)]
 pub(super) enum DecoderEvent {
+    Learned(learned::LearnedEvent),
     Enable(Rc<FileDecoderConfig>),
     Tokenizer(Rc<[u8]>),
     TextIntent(Rc<text::FileTextGenerationCommand>),
@@ -63,7 +65,9 @@ impl FileOversight {
     pub fn enable_decoder(&mut self, revision: u64, config: FileDecoderConfig) -> Result<(), JournalError> {
         self.transact(revision, Event::Decoder(DecoderEvent::Enable(Rc::new(config))))?; Ok(())
     }
-    pub fn decoder_required(&self) -> bool { self.machine.decoder_contract().is_some() }
+    pub fn decoder_required(&self) -> bool {
+        self.machine.decoder_contract().is_some() || self.machine.learned_contract().is_some()
+    }
     pub fn decoder_inspection(&self) -> Result<FileDecoderInspection, JournalError> {
         if self.fault.is_some() { return Err(JournalError::Unavailable); }
         Ok(FileDecoderInspection { journal_revision: self.revision(), paused: self.machine.decoder_paused(),

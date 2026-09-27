@@ -32,8 +32,13 @@ impl Machine {
     pub(in super::super) fn decoder_contract(&self) -> Option<&FileDecoderConfig> {
         self.decoder.as_ref().map(|state| state.config.as_ref())
     }
-    pub(in super::super) fn decoder_paused(&self) -> bool { self.decoder.as_ref().is_some_and(|state| state.paused) }
-    pub(super) fn pause_decoder(&mut self) { if let Some(state) = &mut self.decoder { state.paused = true; } }
+    pub(in super::super) fn decoder_paused(&self) -> bool {
+        self.decoder.as_ref().is_some_and(|state| state.paused) || self.learned_paused()
+    }
+    pub(super) fn pause_decoder(&mut self) {
+        if let Some(state) = &mut self.decoder { state.paused = true; }
+        self.pause_learned();
+    }
 
     /// Saved numerical state cannot support new permitting work before explicit
     /// supervisor resume. A pending generation also binds the next numerical
@@ -41,8 +46,20 @@ impl Machine {
     /// Restrictive operations and original obligation reconciliation remain open.
     pub(super) fn check_decoder_admission(&self, event: &Event) -> Result<(), Error> {
         let pending = self.pending_decoder_generation();
+        let learned_pending = self.pending_learned_step();
+        // No final positive publication from a prefix whose next numerical
+        // outcome is unresolved. Status/seal/reconciliation remain available.
+        if learned_pending.is_some() && matches!(event,
+            Event::PublishChecked(..) | Event::PublishCredentialed(..)) { return Err(Error::Incomplete); }
         if !self.decoder_paused() {
-            if pending.is_none() { return Ok(()); }
+            if pending.is_none() && learned_pending.is_none() { return Ok(()); }
+            if let Event::Decoder(DecoderEvent::Learned(
+                super::super::decoder::learned::LearnedEvent::Step { actor_revision, position, .. })) = event
+            {
+                return if learned_pending == Some(super::super::decoder::learned::LearnedStepIntent {
+                    actor_revision: *actor_revision, position: *position,
+                }) { Ok(()) } else { Err(Error::Binding) };
+            }
             if let Event::Decoder(DecoderEvent::Generate(command, _)) = event {
                 return if pending == Some(command.as_ref()) { Ok(()) } else { Err(Error::Binding) };
             }
@@ -60,7 +77,8 @@ impl Machine {
         // be possible before resume. Bootstrap, assessment and promotion are NOT
         // blanket-admitted through this exception; their existing rules remain.
         if matches!(event,
-            Event::Decoder(DecoderEvent::Resume { .. }
+            Event::Decoder(DecoderEvent::Learned(super::super::decoder::learned::LearnedEvent::Resume { .. })
+                | DecoderEvent::Resume { .. }
                 | DecoderEvent::CancelGeneration { .. }
                 | DecoderEvent::Checkpoint(CheckpointRequest::Reset { .. }, _))
             | Event::Core(BaseEvent::Time(_) | BaseEvent::Cancel(_) | BaseEvent::Fence
@@ -77,6 +95,7 @@ impl Machine {
 
     pub(super) fn apply_decoder(&mut self, event: &DecoderEvent) -> Result<Transition, Error> {
         match event {
+            DecoderEvent::Learned(event) => self.apply_learned(event),
             DecoderEvent::CancelGeneration { id, revision } => self.apply_decoder_generation_cancel(*id, *revision),
             DecoderEvent::Tokenizer(bytes) => self.install_decoder_tokenizer(bytes),
             DecoderEvent::TextIntent(command) => self.apply_decoder_text_intent(command),
@@ -88,7 +107,7 @@ impl Machine {
                 Ok(Transition::Unit)
             }
             DecoderEvent::Enable(config) => {
-                if self.decoder.is_some() { return Err(Error::Duplicate); }
+                if self.decoder.is_some() || self.learned.is_some() { return Err(Error::Duplicate); }
                 if !self.actions.is_empty() || self.requests.len() != 0 || !self.sessions.is_empty()
                     || !self.containment.updates.is_empty() || !self.containment.checkpoints.is_empty()
                     || self.broker.stop_receipt().is_some() { return Err(Error::WrongState); }

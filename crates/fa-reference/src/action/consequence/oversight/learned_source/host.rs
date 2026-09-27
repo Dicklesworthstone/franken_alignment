@@ -43,6 +43,14 @@ impl ObservedLearnedGeneration {
     }
     pub(crate) fn sampled_draws(&self) -> u64 { self.run.sampler_state().draws() }
 
+    // Read-only original state for the durable owner's exact comparison witness.
+    // Never returned to an external caller, installed into a run, or made mutable.
+    pub(crate) fn original_generation(&self)
+        -> &crate::action::consequence::activation::tensor::kv::decoder::sampling::monitored::LearnedGeneration
+    {
+        &self.run
+    }
+
     /// The original observation may become Ready before actor serialization.
     /// Keep an unwind guard across the whole private, callback-free composition:
     /// failed synchronization must not leave that numerical observation eligible.

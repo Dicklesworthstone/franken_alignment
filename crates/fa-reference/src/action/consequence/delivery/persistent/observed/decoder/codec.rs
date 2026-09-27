@@ -8,6 +8,7 @@ use std::rc::Rc;
 
 pub(in super::super) fn write(w: &mut Writer, event: &DecoderEvent) -> Result<(), Error> {
     match event {
+        DecoderEvent::Learned(event) => { w.u8(15)?; super::learned::write(w, event)?; }
         DecoderEvent::Tokenizer(bytes) => {
             if bytes.is_empty() { return Err(Error::Incomplete); }
             if bytes.len() > super::text::MAX_FILE_TOKENIZER_BYTES { return Err(Error::Limit); }
@@ -71,6 +72,7 @@ pub(in super::super) fn write(w: &mut Writer, event: &DecoderEvent) -> Result<()
 pub(in super::super) fn read(r: &mut Reader<'_>) -> Result<DecoderEvent, Error> {
     let tag = r.u8()?;
     Ok(match tag {
+        15 => DecoderEvent::Learned(super::learned::read(r)?),
         0 => DecoderEvent::Enable(Rc::new(FileDecoderConfig::read(r)?)),
         12 => DecoderEvent::Enable(Rc::new(FileDecoderConfig::read_with_output_head(r,
             OutputHead::TiedEmbeddings)?)),
