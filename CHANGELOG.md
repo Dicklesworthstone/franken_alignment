@@ -1,5 +1,16 @@
 # Changelog
 
+## Unqualified source addition: current durable learned sidecar plans
+
+- Extend original durable sidecars with opaque current plan handles and a distinct
+  creation record that compares exact generated payloads during original replay.
+- Preserve the existing snapshot API, request-only journal records, independent
+  mandatory recipe and concurrent learned text/stream integration.
+- Return currentness-checked handles only after canonical acknowledgment; preserve
+  storage ambiguity and prevent copied inputs from registering provenance.
+- Add focused positive and negative regression sources. Required RCH cannot
+  launch; compilation, Rust tests, formatting and Clippy remain UNEXECUTED.
+
 ## Unqualified source addition: cooperative durable learned recovery
 
 - Add a locked, revision-checked recovery cursor over original learned journal

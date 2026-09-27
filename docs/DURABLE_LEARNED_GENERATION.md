@@ -113,7 +113,9 @@ constant-time recovery or hostile-writer exclusion is claimed.
 ## Compatibility, limits and nonclaims
 
 The existing outer journal is unchanged. Decoder subtag 15 is the new learned
-family, with enable/step/resume/intent subtags 0/1/2/3. Old decoder tags 0–14 retain
+family, with enable/step/resume/intent subtags 0/1/2/3 and the
+[source-bound sidecar family](DURABLE_LEARNED_SIDECARS.md) at subtag 4.
+Old decoder tags 0–14 retain
 their bytes and meaning; older readers reject the new family. Configuration
 encoding reuses the original archive format. New witnesses are bounded at 32 MiB
 and configuration at 16 MiB, but the original total journal byte/event limits
@@ -133,8 +135,9 @@ The scope is an operator-controlled local journal-as-publication sink, not a
 remote provider transaction, authenticated helper service, anti-rollback store,
 Asupersync integration, qualified restart grade or production release. Numerical
 quiet still requires original committee review, the mandatory human key and
-current-source validation at publication. Learned sidecar worker orchestration
-remains a separate live broker feature; this addition does not persist its rounds.
+current-source validation at publication. The
+[durable learned sidecar extension](DURABLE_LEARNED_SIDECARS.md) connects original
+source-bound helper inputs and their provenance to the same journal owner.
 
 ## Verification status and change record
 

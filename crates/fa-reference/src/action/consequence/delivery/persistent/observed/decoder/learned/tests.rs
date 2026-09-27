@@ -2,6 +2,7 @@
 //! Synthetic coefficients and helper ballots are not a trained-detector claim.
 mod fixture;
 mod recovery;
+mod sidecar;
 use fixture::*;
 use super::*;
 use crate::action::{ActionState, ElapsedTick};

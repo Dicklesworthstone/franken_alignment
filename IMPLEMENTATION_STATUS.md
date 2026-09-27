@@ -1,5 +1,20 @@
 # Implementation status · design revision 0.3
 
+## Unqualified source addition: current durable learned sidecar plans
+
+The existing durable learned sidecar path now has an opaque current plan handle
+and a distinct witnessed creation record. Original replay reconstructs the source,
+planner and provenance marker, then compares exact saved payload expectations.
+Acknowledged handles track the durable owner and reject stale or foreign sources.
+The existing snapshot constructor, historical getter, independent mandatory
+recipe and request-only journal format remain compatible.
+
+Regression sources cover original publication and replay, recipe/payload mismatch,
+copied inputs, source loss and storage barriers. Rust compilation, tests, rustfmt
+and Clippy remain UNEXECUTED because required RCH is unavailable. See the
+[durable sidecar contract](docs/DURABLE_LEARNED_SIDECARS.md). This advances FA-113
+without closing its remaining verification or empirical obligations.
+
 ## Unqualified source addition: cooperative durable learned recovery
 
 `FileOversight::begin_open_with_learned_generation` now holds the original
