@@ -114,3 +114,5 @@ impl ComparisonPreparation {
         Ok(pair)
     }
 }
+
+pub mod campaign;
