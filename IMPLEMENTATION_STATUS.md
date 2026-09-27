@@ -1,5 +1,21 @@
 # Implementation status · design revision 0.3
 
+## Unqualified source addition: cooperative learned congress execution
+
+The actual `LearnedProbeReview` driver now admits each member once, scores one
+original probe per member per poll, and yields after complete judgment before
+queuing its commitment. The original source/deadline checks precede each poll;
+automatic residual refinement still starts a fresh original congress round.
+Cancellation, expiry and source/poll failures retain completed numerical work
+without supplying a partial or substitute vote.
+
+Regression sources exercise interleaved member progress, cancellation and expiry
+between probes, retained disclosure costs and the original successful two-key
+publication path. Compilation, Rust tests, formatting and Clippy remain
+UNEXECUTED: remote-only RCH cannot launch because `rch` is absent. See the
+[computed review contract](docs/COMPUTED_PROBE_REVIEW.md). No historical receipt
+or bead closure qualifies this addition.
+
 ## Unqualified source addition: cooperative original-protocol probe transport
 
 `ProbeHelperClient` now drives the numerical evaluator through admission and

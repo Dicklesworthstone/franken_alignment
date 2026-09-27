@@ -7,7 +7,7 @@ use crate::action::ElapsedTick;
 use crate::action::consequence::activation::probe::LinearProbe;
 use crate::action::consequence::activation::probe::learned::KvRow;
 use crate::action::consequence::oversight::{CommitteeInput, ObservedReview,
-    helper_workers::{HelperPhase, HelperPort, HelperStatus, MAX_WORKER_SALT_BYTES},
+    helper_workers::{HelperPhase, HelperPort, HelperStatus, MAX_WORKER_SALT_BYTES, wire},
     replay::ObservedDecisionArchive,
     sidecar::probe_helper::{ProbeHelperBudget, ProbeHelperStatus, ProbeHelperWork, SidecarProbeEvaluator,
         peer::MIN_PROBE_HELPER_SALT_BYTES}};
@@ -35,7 +35,7 @@ pub struct ProbeReviewLimits {
 }
 
 /// Supervisor inspection, not a new judgment or permission. None means this
-/// evaluator has not run. Evaluating after an unwind means work is incomplete;
+/// evaluator has not run. Busy after an unwind means work is incomplete;
 /// counters represent completed original operations, not all failed work.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub struct ProbeEvaluationRecord {
@@ -50,6 +50,46 @@ struct LocalProbe {
     port: HelperPort,
     evaluator: SidecarProbeEvaluator,
     salt: Vec<u8>,
+}
+impl LocalProbe {
+    fn capture(&self, record: &mut ProbeEvaluationRecord) {
+        // Keep unstarted slots distinguishable from attempted/cancelled work.
+        if record.status.is_some() {
+            record.status = Some(self.evaluator.status());
+            record.work = self.evaluator.work();
+        }
+    }
+
+    fn cancel(&mut self, record: &mut ProbeEvaluationRecord) {
+        let _ = self.evaluator.cancel(self.evaluator.revision());
+        self.capture(record);
+        self.salt.clear();
+    }
+
+    fn evaluate_once(&mut self, record: &mut ProbeEvaluationRecord,
+        evaluations: &mut usize, maximum: usize) -> Result<(), Error>
+    {
+        let status = self.evaluator.status();
+        if status == ProbeHelperStatus::AwaitingInput {
+            if *evaluations >= maximum { return Err(Error::Limit); }
+            // Count an admitted attempt exactly once, before any fallible input
+            // work. Every later probe spends this same frozen reservation.
+            *evaluations += 1;
+        }
+        record.status = Some(ProbeHelperStatus::Busy);
+        let result = match status {
+            ProbeHelperStatus::AwaitingInput => {
+                // Retain the original full local wire binding; no second input
+                // constructor can omit round, root, profile or salt-limit fields.
+                wire::encode_request(&self.port).and_then(|bytes| wire::decode_request(&bytes))
+                    .and_then(|input| self.evaluator.begin(&input))
+            }
+            ProbeHelperStatus::Evaluating => self.evaluator.advance(self.evaluator.revision()),
+            _ => Err(Error::WrongState),
+        };
+        self.capture(record);
+        result.map(|_| ())
+    }
 }
 
 /// One source, fixed coefficients, original planner and original HelperRound.
@@ -91,6 +131,7 @@ impl LearnedProbeReview {
     pub fn take_review(&mut self) -> Result<ObservedReview, Error> { self.run.take_review() }
     pub fn cancel(&mut self, expected_revision: u64) -> Result<(), Error> {
         self.run.cancel(expected_revision)?;
+        release_slots(&mut self.slots, &mut self.records, self.run.current_round().round);
         self.slots.clear();
         Ok(())
     }
@@ -149,8 +190,9 @@ impl OversightBroker {
         Ok(review)
     }
 
-    /// One original poll; at most one evaluation OR reveal per member. Fresh
-    /// refined slots are provisioned but not evaluated in the same invocation.
+    /// One original poll; at most one admission, original probe, commitment OR
+    /// reveal per member. Complete judgment yields before queuing a commitment.
+    /// Fresh refined slots are not evaluated in the same invocation.
     /// The caller's elapsed tick is a trusted observation, not measured wall time.
     pub fn advance_learned_probe_review(&mut self, review: &mut LearnedProbeReview,
         expected_revision: u64, now: ElapsedTick, snapshot: &Snapshot)
@@ -169,20 +211,16 @@ impl OversightBroker {
                 for (member, slot) in &mut slots {
                     let record = records.get_mut(&(round.round, member.clone()))
                         .expect("every provisioned slot has an inspection record");
+                    if record.failure.is_some() { continue; }
                     let result = match slot.port.phase() {
                         HelperPhase::AwaitCommit if now < round.window.commit_by => {
-                            if *evaluations >= maximum { Err(Error::Limit) } else {
-                                *evaluations += 1;
-                                record.status = Some(ProbeHelperStatus::Evaluating);
-                                let result = slot.evaluator.evaluate_port(&slot.port);
-                                record.status = Some(slot.evaluator.status());
-                                record.work = slot.evaluator.work();
-                                result.and_then(|verdict| {
-                                    let digest = slot.port.request().commitment(verdict, &slot.salt)?;
-                                    slot.port.submit_commitment(digest)?;
-                                    record.commitment_queued = true;
-                                    Ok(())
-                                })
+                            match slot.evaluator.status() {
+                                ProbeHelperStatus::Judged(verdict) => {
+                                    slot.port.request().commitment(verdict, &slot.salt)
+                                        .and_then(|digest| slot.port.submit_commitment(digest))
+                                        .map(|()| { record.commitment_queued = true; })
+                                }
+                                _ => slot.evaluate_once(record, evaluations, maximum),
                             }
                         }
                         HelperPhase::ReadyReveal if now < round.window.reveal_by => {
@@ -191,24 +229,39 @@ impl OversightBroker {
                             if result.is_ok() { record.reveal_queued = true; }
                             result
                         }
+                        HelperPhase::AwaitCommit => {
+                            // Stop unfinished numerical ownership at commit expiry.
+                            // The original coordinator records the deadline failure;
+                            // do not relabel it as a worker-supplied disconnection.
+                            slot.cancel(record);
+                            Ok(())
+                        }
                         _ => Ok(()),
                     };
                     if let Err(error) = result {
                         record.failure = Some(error);
+                        slot.cancel(record);
                         slot.port.disconnect();
                     }
                 }
             });
         // slots is stack-owned: original ports close on ordinary errors AND
-        // unwinds. Evaluating records/attempt counts survive interrupted work.
+        // unwinds. Busy records/attempt counts survive interrupted work.
         match update {
-            Err(error) => Err(error),
+            Err(error) => {
+                release_slots(&mut slots, &mut review.records, round.round);
+                Err(error)
+            }
             Ok(LearnedWorkerUpdate::Waiting) => {
                 review.slots = slots;
                 Ok(review.status())
             }
-            Ok(LearnedWorkerUpdate::Stopped) => Ok(review.status()),
+            Ok(LearnedWorkerUpdate::Stopped) => {
+                release_slots(&mut slots, &mut review.records, round.round);
+                Ok(review.status())
+            }
             Ok(LearnedWorkerUpdate::NextRound(ports)) => {
+                release_slots(&mut slots, &mut review.records, round.round);
                 drop(slots);
                 if let Err(error) = review.provision(ports) {
                     review.run.status = LearnedWorkerStatus::Failed(error);
@@ -218,6 +271,16 @@ impl OversightBroker {
                 Ok(review.status())
             }
         }
+    }
+}
+
+fn release_slots(slots: &mut BTreeMap<String, LocalProbe>,
+    records: &mut BTreeMap<(u64, String), ProbeEvaluationRecord>, round: u64)
+{
+    for (member, slot) in slots {
+        let record = records.get_mut(&(round, member.clone()))
+            .expect("every provisioned slot has an inspection record");
+        slot.cancel(record);
     }
 }
 

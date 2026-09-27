@@ -1,5 +1,14 @@
 # Changelog
 
+## Unqualified source addition: cooperative learned congress execution
+
+- Connect the actual learned congress/refinement driver to request admission
+  and one-probe steps for every active member. Yield before queuing commitments.
+- Preserve completed numerical work through cancellation, deadline expiry,
+  source loss and poll exhaustion; incomplete rosters remain missing votes.
+- Add and adapt regressions around partial work while retaining original
+  refinement and two-key publication controls. Rust/RCH checks are UNEXECUTED.
+
 ## Unqualified source addition: cooperative original-protocol probe transport
 
 - Drive request admission and each registered probe as separate host-visible

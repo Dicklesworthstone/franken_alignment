@@ -10,7 +10,7 @@ use fa_reference::action::consequence::gate::containment::{ActorState, RestartGr
 use fa_reference::action::consequence::gate::containment::session::policy::{Policy, Predicate};
 use fa_reference::action::consequence::gate::containment::session::policy::controller::ControllerConfig;
 use fa_reference::action::consequence::oversight::{CommitteeContract, HelperContract, OversightBroker,
-    ReviewWindow, helper_workers::HelperLimits, decoder_monitoring::LearnedDecoderBindingLimits,
+    ReviewWindow, helper_workers::{HelperFailure, HelperLimits}, decoder_monitoring::LearnedDecoderBindingLimits,
     human::{HumanReviewer, HumanReviewPolicy}, learned_source::LearnedSourceConfig,
     learned_host::sidecar::{LearnedSidecar, LearnedSidecarRequest,
         workers::{LearnedWorkerSchedule, LearnedWorkerRound, LearnedWorkerStatus, LearnedWorkerStop,
@@ -126,6 +126,27 @@ fn drive(owner: &mut OversightBroker, run: &mut LearnedProbeReview) -> LearnedWo
     }
     panic!("fixed computed review did not terminate");
 }
+fn poll(owner: &mut OversightBroker, run: &mut LearnedProbeReview, now: u64)
+    -> Result<LearnedWorkerStatus, Error>
+{
+    let revision = run.revision();
+    owner.advance_learned_probe_review(run, revision, ElapsedTick(now), &snapshot())
+}
+fn commit_all(owner: &mut OversightBroker, run: &mut LearnedProbeReview) {
+    for _ in 0..64 {
+        if run.records().values().all(|record| record.commitment_queued) { return; }
+        assert_eq!(poll(owner, run, 1), Ok(LearnedWorkerStatus::Running));
+    }
+    panic!("fixed computed roster did not commit");
+}
+fn uneven_members(sidecar: &LearnedSidecar) -> BTreeMap<String, ProbeReviewMember> {
+    let mut definitions = members(sidecar, 0);
+    for (row, roster) in &mut definitions.get_mut("alpha").unwrap().probes {
+        let (frame, heads, channels) = sidecar.source().row_shape(*row).unwrap();
+        roster.push(LinearProbe::new(2, 1, frame.profile, &vec![0.0; heads * channels], 0.0, 1.0).unwrap());
+    }
+    definitions
+}
 
 #[test]
 fn computed_refinement_completes_original_rounds_then_requires_both_effect_keys() {
@@ -215,10 +236,12 @@ fn stale_foreign_and_cancel_calls_never_repeat_numerical_evaluation() {
     assert_eq!(run.records(), &before); assert_eq!(run.evaluations(), 0);
     assert_eq!(owner.advance_learned_probe_review(&mut run, 0, ElapsedTick(1), &snapshot()), Ok(LearnedWorkerStatus::Running));
     assert_eq!(run.evaluations(), 2);
+    assert!(run.records().values().all(|r| r.work.evaluated_probes == 0 && !r.commitment_queued));
+    commit_all(&mut owner, &mut run);
     assert!(run.records().values().all(|r| r.commitment_queued && !r.reveal_queued));
     assert_eq!(run.cancel(0), Err(Error::Stale));
     let work = run.records().clone(); let reserved = run.reservation();
-    run.cancel(1).unwrap();
+    run.cancel(run.revision()).unwrap();
     assert_eq!(run.status(), LearnedWorkerStatus::Cancelled);
     let revision = run.revision();
     assert_eq!(owner.advance_learned_probe_review(&mut run, revision, ElapsedTick(1), &snapshot()), Err(Error::WrongState));
@@ -233,7 +256,7 @@ fn source_loss_before_scoring_or_before_reveal_stops_the_same_original_review() 
         let (_, sidecar) = propose(&mut owner, 1); let definitions = members(&sidecar, 0);
         let mut run = owner.begin_learned_probe_review(sidecar, schedule(), definitions, limits(), &snapshot()).unwrap();
         if after_scoring {
-            owner.advance_learned_probe_review(&mut run, 0, ElapsedTick(1), &snapshot()).unwrap();
+            commit_all(&mut owner, &mut run);
         }
         let before = run.records().clone(); let evaluations = run.evaluations();
         step(&mut owner);
@@ -272,11 +295,17 @@ fn expired_unstarted_workers_do_no_scoring_and_remain_missing_not_abstaining() {
 fn poll_exhaustion_preserves_computation_but_never_finishes_a_partial_vote() {
     let (mut owner, endpoint, _) = owner(); step(&mut owner);
     let (_, sidecar) = propose(&mut owner, 1); let definitions = members(&sidecar, 0);
-    let mut plan = schedule(); plan.polls = 1;
+    let mut plan = schedule(); plan.polls = 2;
     let mut run = owner.begin_learned_probe_review(sidecar, plan, definitions, limits(), &snapshot()).unwrap();
-    owner.advance_learned_probe_review(&mut run, 0, ElapsedTick(1), &snapshot()).unwrap();
-    let before = run.records().clone();
-    assert_eq!(owner.advance_learned_probe_review(&mut run, 1, ElapsedTick(1), &snapshot()), Err(Error::Limit));
+    poll(&mut owner, &mut run, 1).unwrap();
+    poll(&mut owner, &mut run, 1).unwrap();
+    let mut before = run.records().clone();
+    for record in before.values_mut() {
+        assert_eq!(record.work.evaluated_probes, 1);
+        assert!(!record.commitment_queued);
+        record.status = Some(ProbeHelperStatus::Cancelled);
+    }
+    assert_eq!(poll(&mut owner, &mut run, 1), Err(Error::Limit));
     assert_eq!(run.status(), LearnedWorkerStatus::Failed(Error::Limit));
     assert_eq!(run.records(), &before); assert_eq!(run.evaluations(), 2);
     assert!(run.history().is_empty()); assert!(run.take_review().is_err());
@@ -289,8 +318,8 @@ fn refinement_cannot_refill_a_frozen_evaluation_disclosure_budget() {
     let (_, sidecar) = propose(&mut owner, 1); let definitions = members(&sidecar, 1);
     let mut bound = limits(); bound.per_evaluation.refinement_bytes = 0;
     let mut run = owner.begin_learned_probe_review(sidecar, schedule(), definitions, bound, &snapshot()).unwrap();
-    owner.advance_learned_probe_review(&mut run, 0, ElapsedTick(1), &snapshot()).unwrap();
-    assert_eq!(owner.advance_learned_probe_review(&mut run, 1, ElapsedTick(1), &snapshot()), Err(Error::Limit));
+    commit_all(&mut owner, &mut run);
+    assert_eq!(poll(&mut owner, &mut run, 1), Err(Error::Limit));
     assert_eq!(run.status(), LearnedWorkerStatus::Failed(Error::Limit));
     assert_eq!(run.history().len(), 1); assert_eq!(run.evaluations(), 2);
     assert!(run.records().values().all(|r| r.status == Some(ProbeHelperStatus::Judged(Verdict::Abstain))));
@@ -327,5 +356,155 @@ fn a_finite_round_horizon_preserves_abstentions_instead_of_defaulting_to_allow()
     assert!(review.missing().is_empty());
     owner.apply_review(review, Some(&input), &snapshot()).unwrap();
     assert!(owner.authorize(1, Some(&input), &snapshot()).is_err());
+    assert_eq!(endpoint.execution_count(), 0);
+}
+
+#[test]
+fn every_member_yields_after_admission_and_each_probe_before_commitment() {
+    let (mut owner, endpoint, _) = owner(); step(&mut owner);
+    let (_, sidecar) = propose(&mut owner, 1); let definitions = uneven_members(&sidecar);
+    let mut run = owner.begin_learned_probe_review(sidecar, schedule(), definitions, limits(), &snapshot()).unwrap();
+    assert_eq!(poll(&mut owner, &mut run, 1), Ok(LearnedWorkerStatus::Running));
+    assert_eq!(run.evaluations(), 2);
+    assert!(run.records().values().all(|record| record.status == Some(ProbeHelperStatus::Evaluating)
+        && record.work.evaluated_probes == 0 && !record.commitment_queued));
+    for completed in 1..=8 {
+        assert_eq!(poll(&mut owner, &mut run, 1), Ok(LearnedWorkerStatus::Running));
+        let alpha = run.records()[&(101, "alpha".to_owned())];
+        let beta = run.records()[&(101, "beta".to_owned())];
+        assert_eq!(alpha.work.evaluated_probes, completed);
+        assert_eq!(beta.work.evaluated_probes, completed.min(4));
+        assert!(!alpha.commitment_queued);
+        assert_eq!(beta.commitment_queued, completed >= 5);
+        assert!(!alpha.reveal_queued && !beta.reveal_queued);
+        assert_eq!(run.evaluations(), 2);
+        assert_eq!(alpha.status, Some(if completed == 8 {
+            ProbeHelperStatus::Judged(Verdict::Allow)
+        } else { ProbeHelperStatus::Evaluating }));
+        if completed == 3 {
+            let before = run.records().clone();
+            let revision = run.revision();
+            assert_eq!(owner.advance_learned_probe_review(&mut run, revision - 1,
+                ElapsedTick(1), &snapshot()), Err(Error::Stale));
+            assert_eq!(run.records(), &before);
+            assert_eq!(run.revision(), revision);
+        }
+    }
+    // The last complete numerical judgment still leaves a separate opportunity
+    // to cancel before its first commitment enters the original coordinator.
+    assert_eq!(poll(&mut owner, &mut run, 1), Ok(LearnedWorkerStatus::Running));
+    assert!(run.records().values().all(|record| record.commitment_queued && !record.reveal_queued));
+    assert_eq!(poll(&mut owner, &mut run, 1), Ok(LearnedWorkerStatus::Stopped(LearnedWorkerStop::Decided)));
+    assert!(run.records().values().all(|record| record.reveal_queued && record.failure.is_none()));
+    let review = run.take_review().unwrap();
+    assert!(review.missing().is_empty()); assert!(review.abstained().is_empty());
+    assert_eq!(run.evaluations(), 2); assert_eq!(endpoint.execution_count(), 0);
+}
+
+#[test]
+fn commit_deadline_between_probes_keeps_spent_work_and_the_original_missing_member() {
+    let (mut owner, endpoint, _) = owner(); step(&mut owner);
+    let (_, sidecar) = propose(&mut owner, 1); let definitions = uneven_members(&sidecar);
+    let mut run = owner.begin_learned_probe_review(sidecar, schedule(), definitions, limits(), &snapshot()).unwrap();
+    poll(&mut owner, &mut run, 1).unwrap();
+    for _ in 0..5 { poll(&mut owner, &mut run, 1).unwrap(); }
+    let before = run.records().clone();
+    assert_eq!(before[&(101, "alpha".to_owned())].work.evaluated_probes, 5);
+    assert_eq!(before[&(101, "beta".to_owned())].work.evaluated_probes, 4);
+    assert!(before[&(101, "beta".to_owned())].commitment_queued);
+    assert_eq!(poll(&mut owner, &mut run, 10), Ok(LearnedWorkerStatus::Running));
+    for (key, record) in run.records() { assert_eq!(record.work, before[key].work); }
+    assert_eq!(run.records()[&(101, "alpha".to_owned())].status, Some(ProbeHelperStatus::Cancelled));
+    assert_eq!(run.worker_statuses()["alpha"].failure, Some(HelperFailure::CommitDeadline));
+    assert!(!run.records()[&(101, "alpha".to_owned())].commitment_queued);
+    assert_eq!(poll(&mut owner, &mut run, 11), Ok(LearnedWorkerStatus::Running));
+    assert!(run.records()[&(101, "beta".to_owned())].reveal_queued);
+    assert_eq!(poll(&mut owner, &mut run, 15), Ok(LearnedWorkerStatus::Stopped(LearnedWorkerStop::Missing)));
+    for (key, record) in run.records() { assert_eq!(record.work, before[key].work); }
+    assert_eq!(run.evaluations(), 2); assert_eq!(run.history().len(), 1);
+    let input = run.input().clone(); let review = run.take_review().unwrap();
+    assert_eq!(review.missing(), &["alpha".to_owned()]); assert!(review.abstained().is_empty());
+    owner.apply_review(review, Some(&input), &snapshot()).unwrap();
+    assert!(owner.authorize(1, Some(&input), &snapshot()).is_err());
+    assert_eq!(endpoint.execution_count(), 0);
+}
+
+#[test]
+fn cancellation_between_refined_probes_preserves_both_rounds_and_reconstruction_work() {
+    let (mut owner, endpoint, _) = owner(); step(&mut owner); step(&mut owner);
+    let (_, sidecar) = propose(&mut owner, 1); let definitions = members(&sidecar, 1);
+    let mut run = owner.begin_learned_probe_review(sidecar, schedule(), definitions, limits(), &snapshot()).unwrap();
+    commit_all(&mut owner, &mut run);
+    assert_eq!(poll(&mut owner, &mut run, 1), Ok(LearnedWorkerStatus::Running));
+    assert_eq!(run.history().len(), 1);
+    assert!(run.records().iter().filter(|((round, _), _)| *round == 102)
+        .all(|(_, record)| record.status.is_none()));
+    poll(&mut owner, &mut run, 1).unwrap();
+    assert_eq!(run.evaluations(), 4);
+    for (_, record) in run.records().iter().filter(|((round, _), _)| *round == 102) {
+        assert_eq!(record.work.evaluated_probes, 0);
+        assert_eq!(record.work.refined_groups, 1);
+        assert!(record.work.refinement_bytes > 0 && record.work.refinement_products > 0);
+    }
+    poll(&mut owner, &mut run, 1).unwrap();
+    let mut retained = run.records().clone();
+    for ((round, _), record) in &mut retained {
+        if *round == 102 {
+            assert_eq!(record.work.evaluated_probes, 1);
+            assert!(!record.commitment_queued && !record.reveal_queued);
+            record.status = Some(ProbeHelperStatus::Cancelled);
+        } else {
+            assert_eq!(record.status, Some(ProbeHelperStatus::Judged(Verdict::Abstain)));
+            assert!(record.commitment_queued && record.reveal_queued);
+        }
+    }
+    let reserved = run.reservation();
+    run.cancel(run.revision()).unwrap();
+    assert_eq!(run.records(), &retained); assert_eq!(run.reservation(), reserved);
+    assert_eq!(run.evaluations(), 4); assert_eq!(run.history().len(), 1);
+    assert_eq!(run.status(), LearnedWorkerStatus::Cancelled);
+    assert_eq!(poll(&mut owner, &mut run, 1), Err(Error::WrongState));
+    assert_eq!(run.records(), &retained); assert!(run.take_review().is_err());
+    assert!(owner.authorize(1, Some(run.input()), &snapshot()).is_err());
+    assert_eq!(endpoint.execution_count(), 0);
+}
+
+#[test]
+fn source_loss_between_probes_retires_partial_evaluations_without_a_vote() {
+    let (mut owner, endpoint, _) = owner(); step(&mut owner);
+    let (_, sidecar) = propose(&mut owner, 1); let definitions = members(&sidecar, 0);
+    let mut run = owner.begin_learned_probe_review(sidecar, schedule(), definitions, limits(), &snapshot()).unwrap();
+    poll(&mut owner, &mut run, 1).unwrap(); poll(&mut owner, &mut run, 1).unwrap();
+    let mut retained = run.records().clone();
+    for record in retained.values_mut() {
+        assert_eq!(record.work.evaluated_probes, 1);
+        assert!(!record.commitment_queued && !record.reveal_queued);
+        record.status = Some(ProbeHelperStatus::Cancelled);
+    }
+    step(&mut owner);
+    assert!(poll(&mut owner, &mut run, 1).is_err());
+    assert!(matches!(run.status(), LearnedWorkerStatus::Failed(_)));
+    assert_eq!(run.records(), &retained); assert_eq!(run.evaluations(), 2);
+    assert!(run.history().is_empty()); assert!(run.take_review().is_err());
+    assert_eq!(poll(&mut owner, &mut run, 1), Err(Error::WrongState));
+    assert_eq!(run.records(), &retained); assert_eq!(endpoint.execution_count(), 0);
+}
+
+#[test]
+fn cancellation_after_complete_judgments_preserves_reports_without_queuing_commitments() {
+    let (mut owner, endpoint, _) = owner(); step(&mut owner);
+    let (_, sidecar) = propose(&mut owner, 1); let definitions = members(&sidecar, 0);
+    let mut run = owner.begin_learned_probe_review(sidecar, schedule(), definitions, limits(), &snapshot()).unwrap();
+    poll(&mut owner, &mut run, 1).unwrap();
+    for _ in 0..4 { poll(&mut owner, &mut run, 1).unwrap(); }
+    let retained = run.records().clone();
+    assert!(retained.values().all(|record| record.status == Some(ProbeHelperStatus::Judged(Verdict::Allow))
+        && record.work.evaluated_probes == 4 && !record.commitment_queued && !record.reveal_queued));
+    run.cancel(run.revision()).unwrap();
+    assert_eq!(run.records(), &retained); assert_eq!(run.evaluations(), 2);
+    assert!(run.worker_statuses().values().all(|status| !status.committed && !status.revealed));
+    assert!(run.take_review().is_err()); assert!(run.history().is_empty());
+    assert_eq!(poll(&mut owner, &mut run, 1), Err(Error::WrongState));
+    assert!(owner.authorize(1, Some(run.input()), &snapshot()).is_err());
     assert_eq!(endpoint.execution_count(), 0);
 }
