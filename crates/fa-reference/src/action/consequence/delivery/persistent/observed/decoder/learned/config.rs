@@ -1,6 +1,8 @@
 //! Frozen original inputs for durable learned-generation replay.
 //! The original generation archive codec provides exact recipe binding, not
 //! a deserializer that trusts model weights or monitor verdicts from disk.
+mod text;
+
 use super::super::super::super::codec::shared::Writer;
 use crate::action::consequence::activation::tensor::kv::decoder::DecoderModel;
 use crate::action::consequence::activation::tensor::kv::decoder::sampling::replay::{
@@ -37,6 +39,7 @@ pub struct FileLearnedConfig {
     source: LearnedSourceConfig,
     limits: LearnedDecoderBindingLimits,
     bytes: Rc<[u8]>,
+    text: Option<text::TextRecipe>,
 }
 impl fmt::Debug for FileLearnedConfig {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -68,11 +71,15 @@ impl FileLearnedConfig {
         w.u64(source.monitor_generation)?;
         w.count(limits.evidence.token_ids)?; w.count(limits.evidence.score_words)?;
         w.count(limits.encoded_bytes)?; w.blob(&archive)?;
-        Ok(Self { model, source, limits, bytes: w.finish().into() })
+        Ok(Self { model, source, limits, bytes: w.finish().into(), text: None })
     }
     pub fn encoded_bytes(&self) -> usize { self.bytes.len() }
     pub(super) fn bytes(&self) -> &Rc<[u8]> { &self.bytes }
     pub(in super::super::super) fn install(&self, broker: &mut OversightBroker) -> Result<(), Error> {
-        broker.own_learned_generation(self.model.clone(), self.source.clone(), self.limits)
+        match &self.text {
+            Some(text) => broker.own_learned_text_generation(self.model.clone(), text.tokenizer.clone(),
+                text.source.clone(), self.limits),
+            None => broker.own_learned_generation(self.model.clone(), self.source.clone(), self.limits),
+        }
     }
 }
