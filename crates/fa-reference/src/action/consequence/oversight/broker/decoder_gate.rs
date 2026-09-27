@@ -238,6 +238,7 @@ impl OversightBroker {
 
     pub(super) fn check_decoder(&self, attempt: u64) -> Result<(), Error> {
         self.check_decoder_source(attempt)?;
+        self.check_learned_text_action(attempt)?;
         self.check_required_learned_sidecar(attempt)
     }
 

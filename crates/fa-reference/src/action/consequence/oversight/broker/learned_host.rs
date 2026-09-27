@@ -2,6 +2,7 @@
 //! Numerical acceptance synchronizes state, not congress approval or a permit.
 mod stopping;
 pub mod sidecar;
+pub mod text;
 pub use stopping::{LearnedHostStopCause, LearnedHostStopIncident};
 #[cfg(test)]
 mod tests;
@@ -59,6 +60,12 @@ impl OversightBroker {
     pub fn own_learned_generation(&mut self, model: DecoderModel, config: LearnedSourceConfig,
         limits: LearnedDecoderBindingLimits) -> Result<(), Error>
     {
+        self.check_learned_bootstrap()?;
+        let run = model.observed_learned_generation(config)?;
+        self.install_fresh_learned_host(run, limits)
+    }
+
+    fn check_learned_bootstrap(&self) -> Result<(), Error> {
         if self.decoder.is_some() || self.decoder_host.is_some() || self.learned_host.is_some() {
             return Err(Error::Duplicate);
         }
@@ -69,8 +76,19 @@ impl OversightBroker {
         }
         let revision = self.actor_revision();
         revision.checked_add(1).ok_or(Error::Overflow)?;
-        let profile = actor.profile();
-        let run = model.observed_learned_generation(config)?;
+        Ok(())
+    }
+
+    // Shared trusted bootstrap, not a public adopted-state constructor. Both
+    // callers construct a fresh original source, never import a saved owner.
+    fn install_fresh_learned_host(&mut self, run: ObservedLearnedGeneration,
+        limits: LearnedDecoderBindingLimits) -> Result<(), Error>
+    {
+        self.check_learned_bootstrap()?;
+        if run.position() != 0 || run.work().admitted_tokens != 0
+            || run.observation().availability() != LearnedAvailability::Empty { return Err(Error::WrongState); }
+        let revision = self.actor_revision();
+        let profile = self.delivery.controller().actor().profile();
         run.check_host_horizon()?;
         let actor = run.capture_host_actor(profile)?;
         self.enable_learned_decoder_monitoring(run.observation(), limits)?;
