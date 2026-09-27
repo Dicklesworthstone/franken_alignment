@@ -2,15 +2,21 @@
 //! Parsing and receipt recovery never open a capture, producer or feed file.
 use super::{PublicationProfile, FileOversightProfile, JournalError, Error};
 use fa_reference::action::consequence::delivery::persistent::RecoveryReserve;
+#[cfg(test)]
 use fa_reference::action::consequence::delivery::persistent::observed::{FileOversight, FileHumanReviewer};
+#[cfg(test)]
 use fa_reference::action::consequence::delivery::persistent::observed::decoder::FileDecoderConfig;
 use fa_reference::action::consequence::delivery::persistent::observed::credibility::held_out_joint::HeldOutJointPolicy;
 use fa_reference::action::consequence::delivery::persistent::observed::stream::generated::checked::{
     GeneratedPublicationProfile, GeneratedPublicationFeed,
+    source::{GeneratedSourceProfile, GeneratedSourcePublication},
 };
+#[cfg(test)]
 use fa_reference::action::consequence::activation::monitor::decoder::sampled::generation::tokenizer::ByteBpe;
 use fa_reference::action::consequence::delivery::stream::StreamProfile;
+#[cfg(test)]
 use std::path::Path;
+use fa_reference::action::consequence::delivery::persistent::observed::source::FileSourcePolicy;
 
 // The executable cannot accidentally project a joint selection to its weaker
 // witness-only fields. Both creation and recovery dispatch the complete choice
@@ -19,6 +25,19 @@ pub(crate) struct NativePublicationSelection {
     publication: GeneratedPublicationProfile,
     joint: Option<HeldOutJointPolicy>,
 }
+impl NativePublicationSelection {
+    pub(crate) fn with_source(self, source: FileSourcePolicy) -> GeneratedSourceProfile {
+        let publication = match self.joint {
+            Some(policy) => GeneratedSourcePublication::Joint { publication: self.publication, policy },
+            None => GeneratedSourcePublication::Checked(self.publication),
+        };
+        GeneratedSourceProfile { source, publication }
+    }
+}
+
+// Existing tests can still construct legacy images. Live service startup uses
+// only the source-backed selection, never the old second-write installation.
+#[cfg(test)]
 impl NativePublicationSelection {
     pub(crate) fn create(self, directory: &Path, profile: FileOversightProfile,
         decoder: FileDecoderConfig, tokenizer: ByteBpe)

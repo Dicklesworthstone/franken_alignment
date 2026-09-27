@@ -5,6 +5,7 @@ mod recovery;
 mod qualification;
 mod continuation;
 mod finish;
+mod bootstrap;
 #[cfg(test)]
 mod tests;
 
@@ -118,10 +119,9 @@ where F: FnMut() -> ElapsedTick {
     let (open, publication, credibility, mode) = deployment;
     mode.check(open, actor.request)?;
     check_profiles(&config, actor, reviewer_profile)?;
-    // Retain the entire selection, including a joint qualification policy. The
-    // original constructors pin it atomically; it is never installed at recovery.
-    let selected = publication.map(|profile| profile.native_selection(&config.profile,
-        inputs.stream, Some(RecoveryReserve::terminal()))).transpose().map_err(debug)?;
+    // Source and complete witness/joint policy belong to the same initial image.
+    // Recovery checks this selection before cleaning staging or fencing keys.
+    let selected = bootstrap::selection(&config, &inputs, publication)?;
     if inputs.decoder.profile().identity().tenant != config.profile.delivery.scope.tenant {
         return Err("native model tenant mismatch".into());
     }
@@ -131,15 +131,7 @@ where F: FnMut() -> ElapsedTick {
     // Exclusive listener ownership precedes the durable owner. No stale path is removed.
     let socket = BoundSocket::bind(&actor.socket, None)?;
     actor.secure_socket()?;
-    let (mut host, reviewer) = match (open, selected) {
-        (true, Some(selected)) => selected.open(&config.store, config.profile.clone(), &inputs.decoder, &inputs.tokenizer),
-        (false, Some(selected)) => selected.create(&config.store, config.profile.clone(), inputs.decoder.clone(), inputs.tokenizer.clone()),
-        (true, None) => FileOversight::open_generated_text_stream_with_reserve(&config.store, config.profile.clone(),
-            inputs.stream, &inputs.decoder, &inputs.tokenizer, RecoveryReserve::terminal()),
-        (false, None) => FileOversight::create_generated_text_stream_with_reserve(&config.store, config.profile.clone(),
-            inputs.stream, inputs.decoder.clone(), inputs.tokenizer.clone(), RecoveryReserve::terminal()),
-    }.map_err(debug)?;
-    if !open { host.enable_file_source(host.revision(), config.source_policy).map_err(debug)?; }
+    let (host, reviewer) = bootstrap::prepare(&config, &inputs, selected, open)?;
     if !host.generated_text_stream_required().map_err(debug)? || !host.publication_guard_required()
         || host.file_source_status().map(|status| status.policy) != Some(config.source_policy)
         || host.journal_capacity().map_err(debug)?.reserve() != Some(RecoveryReserve::terminal())

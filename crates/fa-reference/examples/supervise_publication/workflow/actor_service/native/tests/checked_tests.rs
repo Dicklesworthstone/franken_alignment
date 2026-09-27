@@ -197,3 +197,5 @@ fn native_checked_scope_and_command_preflight_cannot_select_a_weaker_mode() {
 }
 
 mod tied_tests;
+
+mod source_bootstrap;

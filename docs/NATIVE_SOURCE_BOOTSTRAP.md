@@ -67,3 +67,41 @@ previous test bodies are unchanged.
 because `rch` is unavailable (exit 127). Compilation, tests, rustfmt and Clippy
 have not run. Source/hash/whitespace checks are not execution evidence; no Bead
 is closed and no production qualification is claimed.
+
+## Native service integration
+
+All native create/open modes now use this source-backed bootstrap, including
+witness/joint selections, credibility reactivation, multi-message continuation,
+explicit finish and recorded-request receipt delivery. No new CLI flag or recipe
+schema is needed. The original CONFIG supplies the required evidence source;
+the existing witness profile supplies its full publication policy.
+
+The service no longer calls `enable_file_source` as a second startup write.
+Source or publication-mode mismatch now refuses before the opener cleans staging
+or fences authority, instead of first recovering an incompatible owner and only
+then rejecting it. This also prevents a plain/witness-only selection from
+fencing a joint-policy store before noticing the omitted requirement.
+
+Compatible older journals and legitimate source-generation replacement continue
+to work. Missing source registration and missing generation intent remain
+explicit refusals, not automatic creation/repair. The original independent-stop,
+source/clock admission, generation, actor intake, helper review, human decision,
+publication and receipt workflows are unchanged after the bootstrap boundary.
+Receipt-only recovery still opens no live evidence, producer or activation file,
+and does not restart inference, run helpers, obtain another key or resend an
+effect. Independently selected source configuration must nevertheless match.
+
+Six additional service regression functions use the existing real file/socket
+fixtures and synthetic helper processes. They cover approval/rejection and exact
+expired receipts under all three modes, invalid initial source configuration,
+source and omitted-joint mismatches preserving canonical and staged bytes,
+legacy partial generations, valid source rotation and missing live capture. The
+original five checked-service test bodies and their fixtures remain unchanged.
+The old private low-level selection create/open helpers are retained under
+`cfg(test)` for legacy-image fixtures; live service uses only the complete
+source-backed selection.
+
+The targeted `native_source_service_` tests and full RCH gate were freshly
+attempted and both stopped before compilation (`rch` missing, exit 127). These
+six tests and the nine library tests remain **UNEXECUTED**, as do Rust compilation,
+rustfmt and Clippy. No Beads closure or deployment qualification follows.
