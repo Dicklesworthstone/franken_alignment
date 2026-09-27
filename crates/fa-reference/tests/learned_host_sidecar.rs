@@ -280,4 +280,5 @@ fn foreign_handle_and_expired_source_refuse_without_another_packet_or_numerical_
     assert_eq!(second.input_revision(1).unwrap(), 0);
 }
 
+#[path = "learned_host_sidecar/refinement.rs"]
 mod refinement;
