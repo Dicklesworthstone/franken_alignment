@@ -2,6 +2,7 @@
 //! Explicitly lossy experimental data, never a live capture or exact checkpoint.
 //! The fitted mean and basis own no training/source scalar arrays.
 mod fit;
+pub mod replay;
 pub use fit::{FitBudget, FitReport, GroupFitReport, TrainingSource, MAX_FIT_WORK};
 
 use super::{ModelKvDescriptor, ModelKvImage, ModelKvProfile, MAX_MODEL_KV_VALUES};
