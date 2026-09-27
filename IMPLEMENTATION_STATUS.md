@@ -1,5 +1,21 @@
 # Implementation status · design revision 0.3
 
+## Unqualified source addition: cooperative original-protocol probe transport
+
+`ProbeHelperClient` now drives the numerical evaluator through admission and
+one-probe steps. Every numerical step yields even with the maximum drive
+allowance. The original commit/reveal pair is frozen only after complete-roster
+judgment; reveal still requires the original coordinator signal. Cancellation
+and failure release unfinished evaluator ownership and preserve completed work
+and reports without manufacturing a vote.
+
+Two added transport regressions exercise cancellation between probes and after
+judgment before any commitment bytes. Existing transport controls now assert
+zero-score admission and one-probe drive boundaries. All nine tests added by
+the cooperative evaluator/transport increments are authored but UNEXECUTED;
+workspace execution and the required RCH/Rust tools are unavailable. See
+[the bounded contract](docs/SIDECAR_PROBE_HELPERS.md). No gate is closed.
+
 ## Unqualified source addition: cooperative sidecar probe evaluation
 
 The original numerical sidecar evaluator now admits an input once and exposes

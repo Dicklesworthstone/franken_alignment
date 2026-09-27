@@ -1,5 +1,15 @@
 # Changelog
 
+## Unqualified source addition: cooperative original-protocol probe transport
+
+- Drive request admission and each registered probe as separate host-visible
+  steps, including when callers supply the maximum drive allowance.
+- Freeze the original commit/reveal pair only after complete judgment. Release
+  unfinished evaluation on cancellation or failure while retaining completed
+  work, reports and the original missing-vote outcome.
+- Strengthen fragmentation and request controls; add two cancellation tests for
+  partially scored and judged-but-unsent work. Rust/RCH checks are UNEXECUTED.
+
 ## Unqualified source addition: cooperative sidecar probe evaluation
 
 - Split original request admission from one-probe numerical advances while

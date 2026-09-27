@@ -67,27 +67,43 @@ probe's empirical detection quality or statistical independence.
 `probe_helper::peer::ProbeHelperClient` owns one evaluator and one original
 HelperClient. Only the computed result can populate its response. Construction
 performs no I/O; the Unix constructor sets a provisioned socket nonblocking.
-Each step runs an original protocol operation or one fully admitted evaluation.
-It yields after input decoding and after judgment, before commitment output.
-The reveal waits for the original coordinator signal. Bounded drive calls yield
-on backpressure, input readiness, judgment and termination.
+Each step runs one original protocol operation, admits the input without scoring,
+or computes one registered probe. Even a maximum-allowance drive yields after
+admission and after every probe; the host can cancel between those operations.
+`evaluation_status` and `evaluation_revision` expose progress without a mutable
+evaluator or caller-selected verdict. `evaluations` counts started requests,
+while `work` reports completed numerical operations.
+
+The original client stays in NeedsInference until the complete roster is Judged.
+Only that computed result freezes the original commitment/reveal pair, and the
+judgment step yields before writing commitment bytes. The reveal still waits for
+the original coordinator signal. Bounded drive also yields on backpressure,
+input readiness and termination. No individual reconstruction or probe call
+has acquired a wall-clock or preemption guarantee.
 
 Partial writes retain the existing protocol offsets. On error or an unwind,
 the connection is dropped rather than restored to an older offset. Cancellation
-also closes it. Already transmitted bytes cannot be withdrawn, and a missing
-reveal remains missing to the congress. Reports preserve completed numerical
-work. Salt-length checks and clearing are not entropy or secure-erasure claims.
+also closes it and cancels unfinished evaluation. First errors remain stable;
+a later call after a caught unwind releases any retained evaluator source.
+Already transmitted bytes cannot be withdrawn, and a missing reveal remains
+missing to the congress. Cancellation after numerical judgment retains its
+report, even when the commitment has not yet been transmitted. Partial work
+never supplies a fallback vote. Salt-length checks and clearing are not entropy
+or secure-erasure claims.
 Generic Read/Write implementations retain the caller's bounded-I/O obligation.
 This does not provide a new runtime, process launcher or remote source importer.
 
 ## Verification status
 
-Twenty-seven integration tests and five compile-fail examples are authored. The first
+Twenty-nine integration tests and five compile-fail examples are authored. The first
 twelve cover actual coarse abstention, refinement, alarm and quiet paths,
 two-key publication, stale sources, exact and insufficient budgets, roster
-completeness, request binding and one-shot behavior. Eight transport tests cover
+completeness, request binding and one-shot behavior. Ten transport tests cover
 fragmentation, Interrupted/WouldBlock, original frames, reveal ordering,
 cancellation, invalid requests, partial-write panic and real Unix-socket paths.
+The fragmentation control asserts zero-score admission and one-probe drive
+boundaries. Additional cancellation controls stop after a disclosed probe and
+after judgment but before commitment output, retaining work and missing votes.
 Seven cooperative tests add exact synchronous/stepped parity after disclosure,
 one-probe progress, the complete-roster barrier after an early alarm, stale
 revisions, cancellation before input and between probes, retained completed

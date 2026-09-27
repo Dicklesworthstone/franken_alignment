@@ -23,7 +23,12 @@ impl fmt::Display for ProbeClientError {
 impl std::error::Error for ProbeClientError {}
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum ProbeClientProgress { Protocol(ClientProgress), Judged(Verdict) }
+pub enum ProbeClientProgress {
+    Protocol(ClientProgress),
+    /// Admission or one probe completed; no complete vote exists yet.
+    Evaluating,
+    Judged(Verdict),
+}
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct ProbeClientDrive {
@@ -85,13 +90,18 @@ impl<S: Read + Write> ProbeHelperClient<S> {
     pub fn evaluations(&self) -> usize { self.evaluations }
     pub fn report(&self) -> Option<&ProbeHelperReport> { self.evaluator.report() }
     pub fn work(&self) -> ProbeHelperWork { self.evaluator.work() }
+    pub fn evaluation_status(&self) -> ProbeHelperStatus { self.evaluator.status() }
+    pub fn evaluation_revision(&self) -> u64 { self.evaluator.revision() }
 
-    /// One original I/O call OR one completely budgeted numerical evaluation.
-    /// Decoding the request yields NeedsInference WITHOUT evaluating in that call.
-    /// Scoring is not preemptive: its existing coordinate/product caps bound work,
-    /// not wall time. Every judgment is yielded before a commitment byte is sent.
+    /// One original I/O call OR source admission OR ONE original numerical probe.
+    /// Admission may reconstruct all disclosed residuals under the frozen bounds.
+    /// Each numerical quantum yields to the host; no partial roster can commit.
+    /// Individual reconstruction/probe calls are synchronous, not preemptive or
+    /// wall-clock bounded. Judgment still yields before commitment bytes are sent.
     pub fn step(&mut self) -> Result<ProbeClientProgress, ProbeClientError> {
-        if let Some(error) = self.failure { self.salt.clear(); return Err(error); }
+        if let Some(error) = self.failure {
+            self.cancel_evaluation(); self.salt.clear(); return Err(error);
+        }
         if self.phase() == ClientPhase::ReplySent {
             return Ok(ProbeClientProgress::Protocol(ClientProgress::ReplySent));
         }
@@ -103,7 +113,9 @@ impl<S: Read + Write> ProbeHelperClient<S> {
         let result = self.step_once(&mut client);
         match result {
             Ok(progress) => { self.client = Some(client); self.failure = None; Ok(progress) }
-            Err(error) => { self.failure = Some(error); self.salt.clear(); Err(error) }
+            Err(error) => {
+                self.failure = Some(error); self.cancel_evaluation(); self.salt.clear(); Err(error)
+            }
         }
     }
     fn step_once(&mut self, client: &mut HelperClient<S>) -> Result<ProbeClientProgress, ProbeClientError> {
@@ -114,24 +126,37 @@ impl<S: Read + Write> ProbeHelperClient<S> {
         if self.salt.len() > input.salt_limit() {
             return Err(ProbeClientError::Protocol(WorkerIoError::Protocol(Error::Limit)));
         }
-        self.evaluations += 1;
-        let verdict = self.evaluator.evaluate(input).map_err(ProbeClientError::Evaluation)?;
-        // Only the computed result reaches the original one-shot response slot.
-        // Original respond freezes BOTH frames and cannot send the reveal early.
-        client.respond(verdict, &self.salt)
-            .map_err(|error| ProbeClientError::Protocol(WorkerIoError::Protocol(error)))?;
-        self.salt.clear();
-        Ok(ProbeClientProgress::Judged(verdict))
+        let status = if self.evaluator.status() == ProbeHelperStatus::AwaitingInput {
+            self.evaluations += 1;
+            self.evaluator.begin(input)
+        } else {
+            self.evaluator.advance(self.evaluator.revision())
+        }.map_err(ProbeClientError::Evaluation)?;
+        if let ProbeHelperStatus::Judged(verdict) = status {
+            // Only the completed result reaches the original one-shot slot.
+            client.respond(verdict, &self.salt)
+                .map_err(|error| ProbeClientError::Protocol(WorkerIoError::Protocol(error)))?;
+            self.salt.clear();
+            Ok(ProbeClientProgress::Judged(verdict))
+        } else {
+            Ok(ProbeClientProgress::Evaluating)
+        }
     }
 
-    /// Stops on backpressure, input readiness, judgment, completion or error.
+    fn cancel_evaluation(&mut self) {
+        let _ = self.evaluator.cancel(self.evaluator.revision());
+    }
+
+    /// Stops on backpressure, input readiness, each numerical quantum, judgment,
+    /// completion or error. An arbitrarily large drive allowance cannot combine
+    /// the complete probe roster into one uninterrupted inference call.
     /// State-machine calls are counted, not syscalls or floating-point operations.
     pub fn drive(&mut self, max_steps: usize) -> Result<ProbeClientDrive, Error> {
         if max_steps == 0 { return Err(Error::InvalidInput); }
         if max_steps > MAX_CLIENT_DRIVE_STEPS { return Err(Error::Limit); }
         let before = self.evaluations;
         if let Some(error) = self.failure {
-            self.salt.clear();
+            self.cancel_evaluation(); self.salt.clear();
             return Ok(ProbeClientDrive { steps: 0, evaluations: 0, phase: self.phase(), progress: Err(error) });
         }
         if self.phase() == ClientPhase::ReplySent {
@@ -153,10 +178,12 @@ impl<S: Read + Write> ProbeHelperClient<S> {
     /// cancellation receipt. Already sent commitment bytes cannot be unsent;
     /// the original coordinator retains missing reveal/deadline obligations.
     pub fn cancel(&mut self) -> bool {
-        if self.failure.is_some() { self.client.take(); self.salt.clear(); return false; }
+        if self.failure.is_some() {
+            self.client.take(); self.cancel_evaluation(); self.salt.clear(); return false;
+        }
         if self.phase() == ClientPhase::ReplySent { return false; }
         self.failure = Some(ProbeClientError::Cancelled);
-        self.client.take(); self.salt.clear();
+        self.client.take(); self.cancel_evaluation(); self.salt.clear();
         true
     }
 }

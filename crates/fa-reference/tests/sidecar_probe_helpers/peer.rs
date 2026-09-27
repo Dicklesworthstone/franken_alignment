@@ -62,10 +62,23 @@ fn fragmented_protocol_computes_once_and_never_reveals_without_original_signal()
     to_phase(&mut client, ClientPhase::NeedsInference);
     assert_eq!(client.evaluations(), 0); assert!(client.report().is_none());
     assert!(state.borrow().output.is_empty());
-    let judged = client.drive(16).unwrap();
-    assert_eq!(judged.steps, 1); assert_eq!(judged.evaluations, 1);
-    assert_eq!(judged.progress, Ok(ProbeClientProgress::Judged(Verdict::Allow)));
-    assert!(state.borrow().output.is_empty());
+    let begun = client.drive(MAX_CLIENT_DRIVE_STEPS).unwrap();
+    assert_eq!(begun.steps, 1); assert_eq!(begun.evaluations, 1);
+    assert_eq!(begun.progress, Ok(ProbeClientProgress::Evaluating));
+    assert_eq!(client.work().evaluated_probes, 0);
+    assert!(client.report().is_none());
+    for completed in 1..=4 {
+        let before_revision = client.evaluation_revision();
+        let progress = client.drive(MAX_CLIENT_DRIVE_STEPS).unwrap();
+        assert_eq!(progress.steps, 1); assert_eq!(progress.evaluations, 0);
+        assert_eq!(client.work().evaluated_probes, completed);
+        assert_eq!(client.evaluation_revision(), before_revision + 1);
+        let expected = if completed == 4 { ProbeClientProgress::Judged(Verdict::Allow) }
+            else { ProbeClientProgress::Evaluating };
+        assert_eq!(progress.progress, Ok(expected));
+        assert_eq!(client.report().is_some(), completed == 4);
+        assert!(state.borrow().output.is_empty());
+    }
     to_phase(&mut client, ClientPhase::AwaitingReveal);
     let commit = input.commitment_frame(Verdict::Allow, &salt).unwrap();
     assert_eq!(state.borrow().output, commit);
@@ -81,6 +94,7 @@ fn fragmented_protocol_computes_once_and_never_reveals_without_original_signal()
     assert_eq!(client.evaluations(), 1); assert_eq!(client.drive(16).unwrap().steps, 0);
     assert_eq!(client.interest(), ClientInterest::Finished);
     assert!(!client.cancel()); assert_eq!(client.phase(), ClientPhase::ReplySent);
+    assert_eq!(client.work(), work); assert_eq!(client.report().unwrap().verdict(), Verdict::Allow);
 }
 
 #[test]
@@ -119,7 +133,9 @@ fn valid_but_unregistered_action_input_never_emits_a_commitment() {
     let (stream, _) = script(bytes, 1024);
     let mut control = ProbeHelperClient::new(stream, evaluator(&second, 0, &port), vec![9; 32]).unwrap();
     to_phase(&mut control, ClientPhase::NeedsInference);
-    assert_eq!(control.step(), Ok(ProbeClientProgress::Judged(Verdict::Allow)));
+    to_phase(&mut control, ClientPhase::SendingCommitment);
+    assert_eq!(control.report().unwrap().verdict(), Verdict::Allow);
+    assert_eq!(control.work().evaluated_probes, 4);
 }
 
 #[test]
@@ -273,4 +289,61 @@ fn disconnect_after_real_commit_remains_missing_at_reveal_deadline() {
     assert!(owner.authorize(1, Some(sidecar.round().input()), &snapshot()).is_err());
     assert_eq!(endpoint.execution_count(), 0);
     assert_eq!(client.step(), Err(ProbeClientError::Cancelled));
+}
+
+#[test]
+fn cancel_between_probe_quanta_retains_disclosed_work_and_the_original_missing_vote() {
+    let (mut owner, endpoint, _) = owner(); step(&mut owner); step(&mut owner);
+    let (_, mut sidecar) = propose(&mut owner, 1);
+    one_refinement(&mut owner, &mut sidecar);
+    let (mut round, port, _) = channel(&mut owner, &sidecar, 102);
+    let (stream, state) = script(wire::encode_request(&port).unwrap(), 1024);
+    let mut client = ProbeHelperClient::new(stream, evaluator(&sidecar, 0, &port), vec![9; 32]).unwrap();
+    to_phase(&mut client, ClientPhase::NeedsInference);
+    assert_eq!(client.drive(MAX_CLIENT_DRIVE_STEPS).unwrap().progress, Ok(ProbeClientProgress::Evaluating));
+    let admitted = client.work();
+    assert_eq!(admitted.evaluated_probes, 0); assert_eq!(admitted.refined_groups, 1);
+    assert!(admitted.refinement_bytes > 0);
+    assert_eq!(client.step(), Ok(ProbeClientProgress::Evaluating));
+    let work = client.work(); assert_eq!(work.evaluated_probes, 1);
+    assert_eq!(work.refinement_bytes, admitted.refinement_bytes);
+    assert!(client.report().is_none()); assert!(state.borrow().output.is_empty());
+    assert!(client.cancel()); assert_eq!(state.borrow().drops, 1);
+    assert_eq!(client.evaluation_status(), ProbeHelperStatus::Cancelled);
+    let revision = client.evaluation_revision();
+    let calls = (state.borrow().reads, state.borrow().writes);
+    assert_eq!(client.step(), Err(ProbeClientError::Cancelled));
+    assert_eq!(client.drive(16).unwrap().steps, 0); assert!(!client.cancel());
+    assert_eq!(client.work(), work); assert_eq!(client.evaluation_revision(), revision);
+    assert_eq!((state.borrow().reads, state.borrow().writes), calls);
+    assert_eq!(client.evaluations(), 1);
+    let review = round.finish(ElapsedTick(30)).unwrap();
+    assert_eq!(review.missing(), &["reviewer".to_owned()]);
+    assert!(review.abstained().is_empty());
+    owner.observe_time(ElapsedTick(30)).unwrap();
+    owner.apply_review(review, Some(sidecar.round().input()), &snapshot()).unwrap();
+    assert!(owner.authorize(1, Some(sidecar.round().input()), &snapshot()).is_err());
+    assert_eq!(endpoint.execution_count(), 0);
+}
+
+#[test]
+fn cancellation_after_numerical_judgment_keeps_the_report_without_transmitting_a_vote() {
+    let (mut owner, endpoint, _) = owner(); step(&mut owner);
+    let (_, sidecar) = propose(&mut owner, 1);
+    let (mut round, port, _) = channel(&mut owner, &sidecar, 101);
+    let (stream, state) = script(wire::encode_request(&port).unwrap(), 1024);
+    let mut client = ProbeHelperClient::new(stream, evaluator(&sidecar, 0, &port), vec![9; 32]).unwrap();
+    to_phase(&mut client, ClientPhase::SendingCommitment);
+    let work = client.work(); assert_eq!(work.evaluated_probes, 4);
+    assert_eq!(client.report().unwrap().verdict(), Verdict::Allow);
+    assert!(state.borrow().output.is_empty());
+    assert!(client.cancel()); assert_eq!(state.borrow().drops, 1);
+    assert_eq!(client.evaluation_status(), ProbeHelperStatus::Judged(Verdict::Allow));
+    assert_eq!(client.work(), work); assert_eq!(client.report().unwrap().verdict(), Verdict::Allow);
+    assert_eq!(client.step(), Err(ProbeClientError::Cancelled));
+    assert!(state.borrow().output.is_empty());
+    let review = round.finish(ElapsedTick(30)).unwrap();
+    assert_eq!(review.missing(), &["reviewer".to_owned()]);
+    assert!(review.abstained().is_empty());
+    assert_eq!(endpoint.execution_count(), 0);
 }
