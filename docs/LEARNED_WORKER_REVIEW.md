@@ -74,3 +74,47 @@ Compilation, rustfmt, Clippy and all new Rust tests remain unexecuted in this
 selected-source environment. The required remote-only RCH gate cannot start
 because rch is absent (exit 127). No historical receipt or source/hash check
 qualifies this code. No Bead, production gate or release is closed.
+
+## Nonblocking socket/process integration
+
+`begin_learned_socket_review` admits a complete supervisor-provisioned Unix
+socket roster for EVERY scheduled round before starting the first review. All
+streams are made nonblocking before any evidence is sent. Callers can use the
+existing `launch_helpers` to obtain those streams, but must retain its separate
+`HelperChildren` owners and explicitly stop/reap them. This adapter never
+spawns, replaces or authenticates a process and creates no executor/thread.
+The bounded future socket inventory is real retained state, not free resources.
+
+`pump_learned_socket_review` uses the same private core transition as port-based
+review. The exact source check and fail-closed guard precede every I/O pass.
+Each original `HelperConnection` performs at most one bounded nonblocking
+read/write step per invocation; the original coordinator then consumes queued
+replies. Interrupted/WouldBlock offsets remain the original I/O engine's state.
+Uncommitted workers get no I/O after commit expiry; no worker gets I/O after
+reveal expiry. Only the currently selected round gets I/O, and moving to richer evidence
+closes its old transports before installing its fresh round's connections.
+A failed or disconnected member stays missing; no replacement socket or vote
+can be provided. The first wire failure per round/member remains inspectable,
+with cumulative attempted connection-step counts rather than invented byte or
+syscall measurements.
+
+Stale/foreign calls have no I/O and preserve usable connections. A genuine
+source failure, exhausted poll allowance or cancellation closes active AND
+unstarted sockets. A caught unwind drops the locally held active connections
+and original round; unused future descriptors remain owned until driver drop.
+Completed original reviews still require original authority application and
+keys. Peer provisioning/authentication, descendant containment, scheduling,
+real elapsed-clock observation and process reaping are supervisor obligations.
+
+Six additional Unix regression functions exercise the original HelperClient
+wire parser over real Unix streams, and a separate-process path uses the
+existing launcher with a synthetic helper entrypoint. Tests check actual packet-
+driven abstention/refinement, distinct fresh connections, two-key publication,
+no bytes sent after source loss, disconnected-worker missingness, inventory
+refusal, expired uncontacted workers receiving no evidence, and cancellation/poll
+exhaustion closing unstarted peers. The test
+entrypoint chooses a deterministic vote from the received residual count; it is
+not a helper-model or detector-quality claim. One compile-fail example denies
+raw port extraction. The seven original worker tests remain unchanged.
+All thirteen regression functions, the separate helper entrypoint and three
+compile-fail examples remain unexecuted pending the required fresh RCH gate.

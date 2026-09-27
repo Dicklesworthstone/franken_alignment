@@ -256,3 +256,7 @@ fn completed_worker_allow_cannot_survive_later_input_replacement_or_source_loss(
         assert_eq!(endpoint.execution_count(), 0);
     }
 }
+
+#[cfg(unix)]
+#[path = "learned_worker_review/transport.rs"]
+mod transport;

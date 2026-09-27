@@ -1,5 +1,8 @@
 //! Bounded independent-worker review of one original learned sidecar.
 //! The original HelperRound consumes replies; the original planner buys evidence.
+#[cfg(unix)]
+pub mod transport;
+
 use super::{LearnedSidecar, OversightBroker};
 use crate::action::ElapsedTick;
 use crate::action::consequence::oversight::{CommitteeInput, ObservedReview, ReviewWindow,
@@ -151,11 +154,27 @@ impl OversightBroker {
         expected_revision: u64, now: ElapsedTick, snapshot: &Snapshot)
         -> Result<LearnedWorkerUpdate, Error>
     {
+        self.advance_learned_workers_with_io(run, expected_revision, now, snapshot, || {})
+    }
+
+    fn check_learned_worker_call(&self, run: &LearnedWorkerReview, expected_revision: u64,
+        now: ElapsedTick) -> Result<(), Error>
+    {
         if !Rc::ptr_eq(&self.issuer, &run.sidecar.issuer) { return Err(Error::Binding); }
         if expected_revision != run.revision { return Err(Error::Stale); }
         if run.status != LearnedWorkerStatus::Running { return Err(Error::WrongState); }
         let elapsed = self.inspect().ledger.elapsed.ok_or(Error::Incomplete)?;
         if now < elapsed || run.active.as_ref().is_some_and(|round| now < round.elapsed()) { return Err(Error::Stale); }
+        Ok(())
+    }
+
+    // Only crate-owned adapters supply this hook. Source validation and the
+    // unwind/port guard precede I/O; callers cannot insert arbitrary callbacks.
+    fn advance_learned_workers_with_io(&mut self, run: &mut LearnedWorkerReview,
+        expected_revision: u64, now: ElapsedTick, snapshot: &Snapshot, before_poll: impl FnOnce())
+        -> Result<LearnedWorkerUpdate, Error>
+    {
+        self.check_learned_worker_call(run, expected_revision, now)?;
         run.revision = run.revision.checked_add(1).ok_or(Error::Overflow)?;
         run.status = LearnedWorkerStatus::Failed(Error::Incomplete);
         if run.polls == run.schedule.polls {
@@ -168,6 +187,7 @@ impl OversightBroker {
         let result = (|| {
             self.observe_time(now)?;
             self.check_learned_sidecar(&run.sidecar)?;
+            before_poll();
             match active.finish(now) {
                 Err(Error::Incomplete) => Ok(None),
                 Err(error) => Err(error),
