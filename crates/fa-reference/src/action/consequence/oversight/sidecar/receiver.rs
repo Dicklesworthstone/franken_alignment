@@ -2,6 +2,8 @@
 //! A trusted local source binding is required; wire bytes cannot certify their
 //! own error bounds. No raw cache, undisclosed residual or permit is exported.
 
+pub mod native;
+
 use super::{SidecarCommitteeRound, encode_payload};
 use crate::action::consequence::activation::FrameIdentity;
 use crate::action::consequence::activation::monitor::learned::MAX_LEARNED_MONITOR_COORDINATES;
