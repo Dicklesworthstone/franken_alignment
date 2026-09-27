@@ -2,6 +2,8 @@
 //! Helpers see coarse checked learned state by default. An explicit abstention may
 //! purchase one predeclared exact residual for a NEW round under the same action.
 //! Missing workers, exhausted budgets and absent residuals never become consent.
+pub mod receiver;
+
 use super::{CommitteeContract, CommitteeInput, ObservedReview, action_frame};
 use crate::Error;
 use crate::action::FrozenAction;
