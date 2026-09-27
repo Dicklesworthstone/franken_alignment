@@ -3,6 +3,8 @@
 //! and the expected source/view are provisioned before an input arrives; neither
 //! a worker request nor a question can replace them. No safety or authority claim.
 
+pub mod peer;
+
 use super::SidecarCommitteeRound;
 use super::receiver::{DisclosedProbe, SidecarReceiveBudget, SidecarReceiver};
 use crate::action::consequence::activation::probe::{LinearProbe, ProbeOutcome};

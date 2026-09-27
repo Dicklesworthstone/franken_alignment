@@ -381,3 +381,6 @@ fn an_original_source_advance_invalidates_even_a_fully_computed_quiet_vote() {
     assert!(owner.authorize(2, Some(current.round().input()), &snapshot()).is_ok());
     assert_eq!(endpoint.execution_count(), 0);
 }
+
+#[path = "sidecar_probe_helpers/peer.rs"]
+mod peer;

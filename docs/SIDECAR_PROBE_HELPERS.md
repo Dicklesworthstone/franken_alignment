@@ -41,13 +41,34 @@ The source binding is independently provisioned in process. Byte equality is
 not cryptographic authentication, and numerical fidelity does not establish a
 probe's empirical detection quality or statistical independence.
 
+## Original-protocol transport
+
+`probe_helper::peer::ProbeHelperClient` owns one evaluator and one original
+HelperClient. Only the computed result can populate its response. Construction
+performs no I/O; the Unix constructor sets a provisioned socket nonblocking.
+Each step runs an original protocol operation or one fully admitted evaluation.
+It yields after input decoding and after judgment, before commitment output.
+The reveal waits for the original coordinator signal. Bounded drive calls yield
+on backpressure, input readiness, judgment and termination.
+
+Partial writes retain the existing protocol offsets. On error or an unwind,
+the connection is dropped rather than restored to an older offset. Cancellation
+also closes it. Already transmitted bytes cannot be withdrawn, and a missing
+reveal remains missing to the congress. Reports preserve completed numerical
+work. Salt-length checks and clearing are not entropy or secure-erasure claims.
+Generic Read/Write implementations retain the caller's bounded-I/O obligation.
+This does not provide a new runtime, process launcher or remote source importer.
+
 ## Verification status
 
-Twelve integration tests and three compile-fail examples are authored. They
-cover actual coarse abstention, refinement, alarm and quiet paths, two-key
-publication, stale sources, exact and insufficient budgets, roster completeness,
-request binding and one-shot behavior. Existing receiver and numerical code
-is unchanged.
+Twenty integration tests and five compile-fail examples are authored. The first
+twelve cover actual coarse abstention, refinement, alarm and quiet paths,
+two-key publication, stale sources, exact and insufficient budgets, roster
+completeness, request binding and one-shot behavior. Eight transport tests cover
+fragmentation, Interrupted/WouldBlock, original frames, reveal ordering,
+cancellation, invalid requests, partial-write panic and real Unix-socket paths.
+Socket controls run in one process and do not establish process isolation.
+Existing receiver, numerical, wire, congress and authority algorithms are unchanged.
 
 The required targeted and full RCH commands were attempted again on September
 27, 2026. Both stopped before compilation with exit 127 because rch is absent.
