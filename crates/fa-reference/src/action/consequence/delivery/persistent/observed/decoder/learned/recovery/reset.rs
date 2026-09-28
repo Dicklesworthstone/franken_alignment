@@ -47,8 +47,17 @@ impl FileLearnedRecovery {
     ///     let _ = recovery.finish();
     /// }
     /// ```
-    pub fn finish_pending_reset(mut self, expected: &FileLearnedResetIntent)
+    pub fn finish_pending_reset(self, expected: &FileLearnedResetIntent)
         -> Result<(FileOversight, FileHumanReviewer), JournalError>
+    {
+        self.prepare_pending_reset(expected)?.finish()
+    }
+
+    // Only the composed guarded owner may recheck its independently held gate
+    // inventory around this SAME private transition. No mutable machine or
+    // unfenced candidate can escape through the public recovery interfaces.
+    pub(in super::super::super::super) fn prepare_pending_reset(mut self,
+        expected: &FileLearnedResetIntent) -> Result<Self, JournalError>
     {
         match self.status {
             FileLearnedRecoveryStatus::Ready => {}
@@ -78,6 +87,6 @@ impl FileLearnedRecovery {
         // The existing finish uses this verified machine, compares the SAME
         // canonical cut again, and persists the sole complete image. Until that
         // barrier succeeds the added event exists only in this private candidate.
-        self.finish()
+        Ok(self)
     }
 }

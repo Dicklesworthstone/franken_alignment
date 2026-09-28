@@ -302,3 +302,5 @@ fn a_changed_canonical_cut_or_corrupt_suffix_is_not_overwritten_by_reset_recover
     assert_eq!(std::fs::read(root.store().join("delivery.bin")).unwrap(), bytes);
     assert_ne!(bytes, canonical);
 }
+
+mod guarded;

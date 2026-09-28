@@ -85,3 +85,42 @@ Both stopped before compilation because `rch` is absent (exit 127). Cargo, rustc
 and rustfmt are absent too. Rust compilation, tests, formatting and Clippy are
 UNEXECUTED. Selected-source hash/whitespace checks are not runtime qualification.
 No Bead, release gate, restart grade, or empirical detector claim is closed.
+
+## Cooperative composed-guard recovery
+
+`begin_open_guarded_with_learned_generation` and its explicitly anchored variant
+`begin_open_guarded_anchored_with_learned_generation` return the sealed
+`guarded::learned_recovery::FileGuardedLearnedRecovery`. They use the same original
+exclusive lock and canonical cut as basic learned recovery, not a second reader
+or writer. The independently supplied numerical recipe and decoder inventory are
+matched before any event executes; the anchored variant also invokes the original
+exact prefix comparison then. No retained anchor is advanced implicitly.
+
+The wrapper freezes the full `FileRecoveryRequirements`, including the guard set,
+effective policy, credential epoch and all history floors. `advance` delegates
+bounded original event replay and verifies those requirements at completion. A
+contract mismatch is a retained Failed state, never Ready and never repairable
+by changing the caller's copy. Incomplete, failed and dropped runs expose no roles
+and leave the canonical/staging files unchanged. Event quanta do not preempt one
+numerical audit, encoding operation or filesystem synchronization.
+
+`finish` publishes the original fence, then provisions the original human,
+identity-observer and policy-governor roles together. `finish_pending_reset` first
+checks the full requirements, stages the SAME exact pending reset used by the
+basic recovery path, checks the requirements again on its resulting candidate,
+and only then publishes completion and fence atomically. There is no public
+base-owner extraction, mutable-machine view, partial role bundle or new authority
+algorithm. All original guard combinations that the base guarded profile excludes
+remain excluded; this is not an evaluated/predictive/mediated-profile downgrade.
+
+Six additional regression functions cover all identity/governor presence
+combinations, cooperative admission and lock custody, anchored reset through
+fresh identity and two-key publication, actual fresh governor use versus an old
+role, frozen requirements, terminal guard/policy/floor mismatches before cleanup,
+valid equal-counter forks, all five original storage barriers and ambiguous
+completion retries, early drop and preserved ordinary quarantine. These tests
+and two added compile-fail boundaries are authored but UNEXECUTED. Together this
+series has fifteen regression functions and three compile-fail examples. Existing
+first-increment regression bodies and original guard/prefix/reset/replay/fence
+algorithms are unchanged. The internal composition views are immutable and stop
+at the containing observed-owner implementation; none is a public escape hatch.

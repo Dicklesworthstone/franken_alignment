@@ -3,6 +3,7 @@
 //! signature. Every configured gate is matched before cleanup or recovery writes.
 
 pub mod anchored;
+pub mod learned_recovery;
 pub mod investigation;
 pub mod evaluation;
 pub mod predictive;

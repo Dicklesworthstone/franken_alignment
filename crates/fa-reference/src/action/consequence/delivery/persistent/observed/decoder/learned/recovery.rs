@@ -155,8 +155,26 @@ impl FileLearnedRecovery {
         Ok((owner, reviewer))
     }
 
+    // Immutable composition views stop at the original observed-owner family.
+    // Framing is available before replay, but the machine only after full
+    // verification. Neither method exposes a publicly executable candidate.
+    pub(in super::super::super) fn guarded_history(&self)
+        -> (&FileOversightProfile, &[Event], &Path)
+    {
+        (&self.profile, &self.events, self.store.identity())
+    }
+
+    pub(in super::super::super) fn verified_guarded_machine(&self) -> Result<&Machine, JournalError> {
+        match self.status {
+            FileLearnedRecoveryStatus::Ready => Ok(&self.machine),
+            FileLearnedRecoveryStatus::Failed(error) => Err(error.into()),
+            FileLearnedRecoveryStatus::Interrupted => Err(JournalError::Unavailable),
+            FileLearnedRecoveryStatus::Replaying => Err(Error::Incomplete.into()),
+        }
+    }
+
     #[cfg(test)]
-    pub(super) fn fail_once(&self, operation: super::JournalIo) {
+    pub(in super::super::super) fn fail_once(&self, operation: super::JournalIo) {
         self.store.fail_once(operation);
     }
 }
