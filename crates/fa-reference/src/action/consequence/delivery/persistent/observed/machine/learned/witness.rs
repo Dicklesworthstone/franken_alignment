@@ -21,16 +21,22 @@ use std::cmp::Ordering;
 impl Machine {
     pub(super) fn learned_witness(&self, result: &Transition) -> Result<Vec<u8>, Error> {
         let Transition::Learned(result) = result else { return Err(Error::Binding); };
-        let run = self.broker.hosted_learned_original()?;
-        let actual = self.broker.hosted_learned_generation()?;
         let mut w = Writer::new(MAX_WITNESS_BYTES);
         w.raw(b"FALSTEP\x01")?;
         match result {
             Ok(_) => w.u8(1)?,
             Err(error) => { w.u8(0)?; w.u8(error_tag(*error))?; }
         }
+        self.write_learned_state(&mut w)?;
+        Ok(w.finish())
+    }
+
+    // Shared comparison-only state; existing token witness bytes are unchanged.
+    pub(super) fn write_learned_state(&self, w: &mut Writer) -> Result<(), Error> {
+        let run = self.broker.hosted_learned_original()?;
+        let actual = self.broker.hosted_learned_generation()?;
         for value in [actual.actor_revision, actual.position, actual.sampled_draws] { w.u64(value)?; }
-        status(&mut w, actual.status)?;
+        status(w, actual.status)?;
         w.u8(match actual.availability {
             LearnedAvailability::Empty => 0, LearnedAvailability::InProgress => 1,
             LearnedAvailability::Ready => 2, LearnedAvailability::Held => 3,
@@ -53,7 +59,7 @@ impl Machine {
         for token in run.accepted_tokens() { w.u32(*token)?; }
         w.blob(&run.sampler_state().encode())?;
         w.count(run.samples().len())?;
-        for sample in run.samples() { write_sample(&mut w, sample)?; }
+        for sample in run.samples() { write_sample(w, sample)?; }
         match run.accepted_logits() {
             Err(error) => { w.u8(0)?; w.u8(error_tag(error))?; }
             Ok(logits) => {
@@ -76,7 +82,7 @@ impl Machine {
         w.blob(actor.cache())?; w.blob(actor.sampler())?;
         match run.last_event() {
             None => w.u8(0)?,
-            Some(event) => { w.u8(1)?; write_event(&mut w, event)?; }
+            Some(event) => { w.u8(1)?; write_event(w, event)?; }
         }
         w.u8(u8::from(self.learned_paused()))?;
         match self.broker.stop_receipt() {
@@ -91,7 +97,7 @@ impl Machine {
                 for id in receipt.cancelled() { w.u64(*id)?; }
             }
         }
-        Ok(w.finish())
+        Ok(())
     }
 }
 fn status(w: &mut Writer, value: GenerationStatus) -> Result<(), Error> {

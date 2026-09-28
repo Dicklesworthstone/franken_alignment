@@ -2,6 +2,7 @@
 //! Expected witnesses only reject divergence; no saved state is ever installed.
 mod witness;
 mod sidecar;
+mod checkpoint;
 
 use super::{Machine, Transition};
 use super::super::{BaseEvent, Event};
@@ -15,6 +16,7 @@ pub(super) struct LearnedState {
     config: Rc<FileLearnedConfig>,
     paused: bool,
     pending: Option<LearnedStepIntent>,
+    checkpoints: checkpoint::CheckpointHistory,
     sidecar_outcomes: std::collections::BTreeMap<u64, super::super::decoder::learned::sidecar::FileLearnedSidecarOutcome>,
     sidecars: std::collections::BTreeMap<u64, crate::action::consequence::oversight::learned_host::sidecar::LearnedSidecar>,
 }
@@ -49,6 +51,7 @@ impl Machine {
     }
     pub(super) fn apply_learned(&mut self, event: &LearnedEvent) -> Result<Transition, Error> {
         match event {
+            LearnedEvent::Checkpoint(event) => self.apply_learned_checkpoint(event),
             LearnedEvent::Sidecar(event) => self.apply_learned_sidecar(event),
             LearnedEvent::Begin(intent) => {
                 if self.pending_learned_step().is_some() { return Err(Error::Duplicate); }
@@ -64,7 +67,7 @@ impl Machine {
                 let config = config.runtime()?;
                 config.install(&mut self.broker)?;
                 if !self.publication_guard { self.enable_publication_guard()?; }
-                self.learned = Some(LearnedState { config, paused: false, pending: None, sidecar_outcomes: std::collections::BTreeMap::new(), sidecars: std::collections::BTreeMap::new() });
+                self.learned = Some(LearnedState { config, paused: false, pending: None, checkpoints: checkpoint::CheckpointHistory::default(), sidecar_outcomes: std::collections::BTreeMap::new(), sidecars: std::collections::BTreeMap::new() });
                 Ok(Transition::Unit)
             }
             LearnedEvent::Step { actor_revision, position, witness } => {
