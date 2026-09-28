@@ -57,9 +57,9 @@ cancellation, exhausted polls, stale/foreign calls and clock unwinding. A real
 partial two-member spawn is paired with a successful two-member control.
 One compile-fail example forbids program replacement.
 
-The existing upstream single-round API, original launcher/reaper/reducers,
-numerical implementation, journal/wire formats, and all upstream test bodies
-are unchanged. This module is not a native CLI, executable attestation,
+The sequence reuses the upstream single-round flow and original launcher,
+reaper and reducers. Numerical implementations, journal/wire formats and all
+upstream test bodies are unchanged; the callback failure repair is below. This module is not a native CLI, executable attestation,
 process sandbox, descendant supervisor, persistent network accounting system
 or global inference escrow. Synthetic ballots are protocol controls, not
 empirical detector measurements. Original synchronous launch/replay/fsync costs
@@ -69,3 +69,30 @@ All new Rust checks remain UNEXECUTED. Fresh targeted and full remote-only RCH
 attempts stop before compilation because `rch` is unavailable (exit 127).
 Selected-source integrity and whitespace checks do not establish compilation,
 runtime correctness or production qualification. No Bead or gate is closed.
+
+## Startup interruption and honest cleanup status
+
+The shared process constructor now catches an unwinding POST-launch clock
+callback while retaining the original child owner outside that unwind boundary.
+`PostLaunchClockPanicked` returns committed round admission and the actual
+children, with termination requested. Sockets close before the error returns;
+no evidence has been sent. The clock is not replaced, a vote is not invented,
+and that consumed round cannot switch to manual input or relaunch. The original
+panic hook still runs. Aborting panics and other startup/storage unwinds are
+not converted into this result.
+
+A sequence records an unresolved startup before entering the successor
+constructor. A structured return clears that uncertainty and supplies either
+an owned live round or the returned partial-child owner. An unreturned
+constructor instead leaves `unresolved_startup()` set and admission `Unknown`.
+`all_reaped()` must then remain false: a missing owner is not a reaping receipt.
+Cleanup polling cannot fabricate a resolution, and `into_children()` returning
+None must not be interpreted as a clean shutdown. Prior acknowledged refinement
+and its costs remain available regardless of this process-local uncertainty.
+
+Three additional regressions use real starts: successful first-round control
+versus a post-launch clock panic; the same panic during successor startup with
+retained children and prior outcome; and an unreturned pre-launch constructor
+that must not claim cleanup. Ten regression functions, one child entrypoint,
+and the compile-fail example are authored in this target. All remain
+UNEXECUTED pending the required remote-only RCH gate.

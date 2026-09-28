@@ -57,6 +57,8 @@ pub struct FileLearnedProcessReview {
     active: Option<FileLearnedProcessRound>,
     // A failed new roster has no socket owner, but can have real started children.
     failed_children: Option<HelperChildren>,
+    // An unwound constructor may have lost its child owner. Absence is NOT reap.
+    unresolved_startup: Option<u64>,
     index: usize,
     revision: u64,
     polls: usize,
@@ -123,7 +125,7 @@ impl FileOversight {
             programs: programs.remove(&first.round).expect("complete program inventory"), limits: schedule.helpers,
         }, snapshot, clock)?;
         let mut owner = FileLearnedProcessReview { issuer: Rc::clone(&self.issuer), schedule, programs,
-            active: Some(active), failed_children: None, index: 0, revision: 0, polls: 0,
+            active: Some(active), failed_children: None, unresolved_startup: None, index: 0, revision: 0, polls: 0,
             admitted_starts, status: LearnedProcessStatus::Running, failure: None, input, records, history };
         let first_id = owner.round();
         owner.records.get_mut(&first_id).expect("fixed slot").admission = Some(HelperRoundAdmission::Committed);
@@ -142,8 +144,11 @@ impl FileLearnedProcessReview {
     pub fn records(&self) -> &BTreeMap<u64, LearnedProcessRecord> { &self.records }
     pub fn history(&self) -> &[FileLearnedSidecarFinish] { &self.history }
     pub fn input(&self) -> &CommitteeInput { &self.input }
+    /// A constructor that did not return cannot establish cleanup. The original
+    /// launcher's Drop may have requested stop, but no reap receipt is available.
+    pub fn unresolved_startup(&self) -> Option<u64> { self.unresolved_startup }
     pub fn all_reaped(&self) -> bool {
-        self.active.as_ref().is_none_or(FileLearnedProcessRound::all_reaped)
+        self.unresolved_startup.is_none() && self.active.as_ref().is_none_or(FileLearnedProcessRound::all_reaped)
             && self.failed_children.as_ref().is_none_or(HelperChildren::all_reaped)
     }
     fn capture(&mut self) {
@@ -252,10 +257,15 @@ impl FileLearnedProcessReview {
         let sidecar = previous.round.sidecar;
         let programs = self.programs.remove(&next.round).ok_or(Error::Missing)?;
         self.index += 1;
+        // Mark uncertainty BEFORE entering code that can spawn or unwind. Clear
+        // it only when that code actually returns an owner or structured error.
+        self.unresolved_startup = Some(next.round);
+        self.records.get_mut(&next.round).expect("fixed slot").admission = Some(HelperRoundAdmission::Unknown);
         let started = host.begin_learned_process_round(host.revision(), sidecar, LearnedProcessLaunch {
             round: next,
             programs, limits: self.schedule.helpers,
         }, snapshot, clock);
+        self.unresolved_startup = None;
         match started {
             Ok(active) => {
                 self.active = Some(active);
@@ -270,6 +280,8 @@ impl FileLearnedProcessReview {
         }
     }
     /// Transfer only the at-most-one outstanding direct-child owner for cleanup.
+    /// None means no recoverable owner, NOT confirmation of reaping: inspect
+    /// unresolved_startup before consuming an owner whose constructor unwound.
     pub fn into_children(mut self) -> Option<HelperChildren> {
         self.stop_children();
         match self.active.take() {

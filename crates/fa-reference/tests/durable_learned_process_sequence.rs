@@ -373,3 +373,108 @@ fn partial_multimember_launch_returns_the_actual_first_child_for_reaping() {
         }
     }
 }
+
+#[test]
+fn post_launch_clock_panic_returns_real_children_and_preserves_consumed_round() {
+    for interrupt in [false, true] {
+        let (root, mut host, _, _, plan) = setup();
+        let mut calls = 0;
+        let outcome = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+            host.begin_learned_process_round(host.revision(), plan, launch(&root.0, "allow"),
+                snapshot(), || {
+                    calls += 1;
+                    if interrupt && calls == 2 { panic!("post-launch clock interruption"); }
+                    ElapsedTick(1)
+                })
+        }));
+        let returned = outcome.expect("post-launch callback must return cleanup ownership");
+        if interrupt {
+            let mut error = returned.unwrap_err();
+            assert_eq!(error.failure, FileProcessFailure::PostLaunchClockPanicked);
+            assert_eq!(error.admission, HelperRoundAdmission::Committed);
+            let children = error.children.as_mut().expect("actual spawned child retained");
+            assert_eq!(children.statuses().len(), 1);
+            assert!(children.statuses()["reviewer"].pid > 0);
+            assert!(children.statuses()["reviewer"].stop_requested);
+            reaped(children);
+            assert!(children.statuses()["reviewer"].exit.is_some());
+            assert!(!root.0.join("observed").exists());
+            assert!(host.learned_sidecar_outcome(101).is_err());
+            assert!(host.commit_review(host.revision(), 101, "reviewer",
+                fa_reference::round::commitment(101, "reviewer", &[9; 32], Verdict::Allow, b"manual").unwrap()).is_err());
+            assert_eq!(host.inspect().control.ledger.stages[&1], ActionState::Reviewing);
+            assert_eq!(host.inspect().executions, 0);
+        } else {
+            let mut round = returned.unwrap();
+            drive(&mut round, &mut host);
+            assert!(matches!(round.finish(&mut host, round.revision(), snapshot()).unwrap(),
+                FileLearnedSidecarFinish::Applied { receipt: Ok(_), .. }));
+            cleanup(&mut round);
+            assert!(root.0.join("observed").exists());
+            assert!(host.learned_sidecar_outcome(101).is_ok());
+        }
+    }
+}
+
+#[test]
+fn successor_post_launch_clock_panic_keeps_child_owner_and_acknowledged_refinement() {
+    let (root, mut host, _, _, plan) = setup();
+    let mut run = begin(&root, &mut host, plan, 4096);
+    to_drain(&mut run, &mut host);
+    cleanup_review(&mut run);
+    let archive = run.history()[0].archive().clone();
+    let numerical = host.learned_generation_inspection().unwrap().numerical;
+    let mut calls = 0;
+    let result = run.advance_with_clock(&mut host, run.revision(), || {
+        calls += 1;
+        // Sequence observation, then pre-launch observation, then this original
+        // constructor's post-launch callback. No evidence I/O has happened yet.
+        if calls == 3 { panic!("successor post-launch interruption"); }
+        ElapsedTick(1)
+    }, snapshot());
+    assert_eq!(result, Err(FileProcessFailure::PostLaunchClockPanicked));
+    assert_eq!(run.status(), LearnedProcessStatus::Failed);
+    assert_eq!(run.unresolved_startup(), None);
+    assert_eq!(run.records()[&102].admission, Some(HelperRoundAdmission::Committed));
+    assert!(run.records()[&102].processes["reviewer"].pid > 0);
+    assert!(run.records()[&102].processes["reviewer"].stop_requested);
+    assert_eq!(run.records()[&102].socket.connection_steps, 0);
+    cleanup_review(&mut run);
+    assert!(run.records()[&102].processes["reviewer"].exit.is_some());
+    assert!(!root.0.join("next/observed").exists());
+    assert_eq!(run.history().len(), 1);
+    assert_eq!(run.history()[0].archive(), &archive);
+    assert_eq!(host.learned_sidecar_outcome(101).unwrap().result.archive(), &archive);
+    assert!(host.learned_sidecar_outcome(102).is_err());
+    assert_eq!(host.learned_generation_inspection().unwrap().numerical, numerical);
+    assert!(host.authorize(host.revision(), 1, run.input(), snapshot()).is_err());
+}
+
+#[test]
+fn an_unreturned_successor_constructor_never_claims_confirmed_process_cleanup() {
+    let (root, mut host, _, _, plan) = setup();
+    let mut run = begin(&root, &mut host, plan, 4096);
+    to_drain(&mut run, &mut host);
+    cleanup_review(&mut run);
+    let archive = run.history()[0].archive().clone();
+    let mut calls = 0;
+    assert!(std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+        let _ = run.advance_with_clock(&mut host, run.revision(), || {
+            calls += 1;
+            // The pre-launch callback still propagates its panic. The sequence
+            // must not infer reaping just because no child owner was returned.
+            if calls == 2 { panic!("constructor did not return"); }
+            ElapsedTick(1)
+        }, snapshot());
+    })).is_err());
+    assert_eq!(run.status(), LearnedProcessStatus::Failed);
+    assert_eq!(run.unresolved_startup(), Some(102));
+    assert_eq!(run.records()[&102].admission, Some(HelperRoundAdmission::Unknown));
+    assert!(!run.all_reaped());
+    run.reap();
+    assert!(!run.all_reaped()); // No new observation manufactured by cleanup polling.
+    assert_eq!(run.history()[0].archive(), &archive);
+    assert!(!root.0.join("next/started").exists());
+    assert!(run.advance(&mut host, run.revision(), ElapsedTick(1), snapshot()).is_err());
+    assert!(run.into_children().is_none()); // Absence of an owner is not a reap receipt.
+}

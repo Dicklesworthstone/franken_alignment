@@ -33,6 +33,8 @@ pub enum HelperRoundAdmission { NotStarted, Committed, Unknown }
 pub enum FileProcessFailure {
     Journal(JournalError),
     Transport(WorkerIoError),
+    /// The post-launch clock callback unwound; children are returned for cleanup.
+    PostLaunchClockPanicked,
     Launch { member: Option<String>, failure: ProcessFailure },
 }
 impl From<JournalError> for FileProcessFailure {
@@ -109,7 +111,19 @@ impl FileOversight {
                 member: error.member, failure: error.failure,
             }, HelperRoundAdmission::Committed, Some(error.children))),
         };
-        let now = clock();
+        // Keep all successfully launched children OUTSIDE the callback's unwind
+        // boundary. A panicking clock is not a timestamp, a vote, or a reason to
+        // lose cleanup ownership after the original Begin has been committed.
+        // Only this callback is caught; aborting panics and launcher/storage
+        // unwinds retain their documented separate failure boundaries.
+        let now = match std::panic::catch_unwind(std::panic::AssertUnwindSafe(&mut clock)) {
+            Ok(now) => now,
+            Err(_) => {
+                drop(streams); // No request bytes were transmitted.
+                return Err(failed(FileProcessFailure::PostLaunchClockPanicked,
+                    HelperRoundAdmission::Committed, Some(children)));
+            }
+        };
         if let Err(error) = self.observe_time(self.revision(), now) {
             return Err(failed(error, HelperRoundAdmission::Committed, Some(children)));
         }
