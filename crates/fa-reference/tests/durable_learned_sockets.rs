@@ -241,3 +241,6 @@ fn incomplete_socket_roster_refuses_before_a_journaled_round() {
         Err(FileHelperSetupError::Journal(JournalError::Contract(Error::Binding)))));
     assert_eq!(h.revision(), before); assert_eq!(peer.read(&mut [0; 1]).unwrap(), 0);
 }
+
+#[path = "durable_learned_sockets/sequence.rs"]
+mod sequence;

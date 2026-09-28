@@ -1,6 +1,8 @@
 //! External helpers reviewing the ORIGINAL learned sidecar through one journal.
 //! Reuse native wire I/O, coordinator, durable commits and witnessed completion.
 //! This module neither interprets helper verdicts nor grants publication keys.
+pub mod sequence;
+
 use super::{DurableSession, FileHelperFailure, FileHelperLaunch, FileHelperPool,
     FileHelperSetupError, FileOversight, HelperPump, JournalError, journal_error};
 use super::super::decoder::learned::sidecar::{FileLearnedSidecar, FileLearnedSidecarFinish};
