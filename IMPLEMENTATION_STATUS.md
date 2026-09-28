@@ -1,5 +1,21 @@
 # Implementation status · design revision 0.3
 
+## Unqualified source addition: paired learned containment reset
+
+The broker now pairs an original learned-generation KV checkpoint with the
+existing authority checkpoint. A fresh complete original audit and exact KV/RNG
+restore precede the original narrowing/reset transition. Abandoned work remains
+charged across repeated rewinds, incident counts and spent effects do not rewind,
+and the resumed source requires a newly accepted token before effect admission.
+Fixed stops remain terminal; cumulative audience-stream owners are excluded.
+
+Eleven regression functions cover actual continuation and renewed two-key
+publication, budget exhaustion, unknown effects, incidents, and causal refusal
+paths. Source review does not qualify the feature: required remote RCH cannot
+launch, so compilation, tests, rustfmt and Clippy are UNEXECUTED. See the
+[paired learned reset contract](docs/HOSTED_LEARNED_RESET.md). Durable reset and
+independent restart/incident-frontier qualification remain outside this increment.
+
 ## Unqualified source addition: computed durable learned congress
 
 The durable sidecar path now drives complete original numerical helper rosters

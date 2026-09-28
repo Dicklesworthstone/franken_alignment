@@ -1,6 +1,7 @@
 //! Own learned-K/V generation and the exact actor copy at the existing effect gate.
 //! Numerical acceptance synchronizes state, not congress approval or a permit.
 mod stopping;
+pub mod checkpoint;
 pub mod sidecar;
 pub mod text;
 pub use stopping::{LearnedHostStopCause, LearnedHostStopIncident};
@@ -32,6 +33,11 @@ pub struct HostedLearnedInspection {
     pub availability: LearnedAvailability,
     pub work: GenerationWork,
     pub telemetry: GenerationTelemetryWork,
+    /// Logical completed/admitted work across all abandoned continuations.
+    /// The active timeline's historical counters above may rewind; these do not.
+    pub cumulative_work: GenerationWork,
+    /// Includes completed fresh restart audits, even when restoration refuses.
+    pub cumulative_telemetry: GenerationTelemetryWork,
     pub cache_bytes: usize,
     pub sampler_bytes: usize,
     pub host_failure: Option<Error>,
@@ -45,6 +51,7 @@ pub(super) struct LearnedHost {
     automatic_stop: Option<stopping::LearnedStopState>,
     sidecars: sidecar::LearnedSidecarState,
     text_stream: Option<text::stream::LearnedTextStreamBasis>,
+    recovery: checkpoint::RecoveryState,
 }
 
 impl OversightBroker {
@@ -52,7 +59,8 @@ impl OversightBroker {
     /// and install its exact liveness handle at the existing effect gate. There
     /// is no adoption of an advanced/restarted experiment or a replacement model.
     /// The full declared actor-cache horizon must fit before changing the broker.
-    /// This neither establishes a restart grade nor enables a containment reset.
+    /// This does not establish the caller's registered restart grade. The paired
+    /// checkpoint API separately checks that grade and the actual numerical state.
     ///
     /// ```compile_fail,E0599
     /// use fa_reference::action::consequence::oversight::OversightBroker;
@@ -97,7 +105,8 @@ impl OversightBroker {
         // No caller callback or other authority transition intervenes.
         self.delivery.replace_actor_state(revision, actor).expect("preflighted learned bootstrap");
         self.learned_host = Some(LearnedHost { run, profile, fault: None, automatic_stop: None,
-            sidecars: sidecar::LearnedSidecarState::default(), text_stream: None });
+            sidecars: sidecar::LearnedSidecarState::default(), text_stream: None,
+            recovery: checkpoint::RecoveryState::new() });
         Ok(())
     }
 
@@ -119,6 +128,8 @@ impl OversightBroker {
             sampled_draws: host.run.sampled_draws(), status: host.run.status(),
             availability: host.run.observation().availability(), work: host.run.work(),
             telemetry: host.run.telemetry_work(), cache_bytes: actor.cache().len(),
+            cumulative_work: host.recovery.cumulative_work(host.run.work())?,
+            cumulative_telemetry: host.recovery.cumulative_telemetry(host.run.telemetry_work())?,
             sampler_bytes: actor.sampler().len(), host_failure: host.fault })
     }
 

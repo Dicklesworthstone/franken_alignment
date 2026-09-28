@@ -1,6 +1,9 @@
 //! Private exact actor synchronization for the broker-owned learned generator.
 //! No public cache importer, mutable generator or authority conversion.
-use super::{LearnedAvailability, ObservedLearnedGeneration, Shared};
+use super::{LearnedAvailability, ObservedLearnedGeneration, Prefix, Shared};
+use crate::action::consequence::activation::tensor::kv::decoder::sampling::monitored::{
+    LearnedGeneration, restart::GenerationKvRestartReceipt,
+};
 use crate::action::consequence::activation::tensor::kv::model::{
     MODEL_DESCRIPTOR_HEADER_BYTES, MODEL_LAYER_DESCRIPTOR_BYTES,
 };
@@ -9,9 +12,57 @@ use crate::action::consequence::gate::containment::{
     ActorState, RestartProfile, MAX_CACHE_BYTES, MAX_SAMPLER_BYTES, MAX_TOKENS,
 };
 use crate::Error;
+use std::cell::{Cell, RefCell};
 use std::rc::Rc;
 
 impl ObservedLearnedGeneration {
+    /// Private adoption after the ORIGINAL typed checkpoint's fresh complete
+    /// audit and exact restorer. The paired broker still owns the authority
+    /// transition. No supplied report or arbitrary advanced run enters here.
+    pub(crate) fn from_host_restart(run: LearnedGeneration, receipt: &GenerationKvRestartReceipt,
+        prior: &Self) -> Result<Self, Error>
+    {
+        let restored = receipt.kv().restoration();
+        let audit = receipt.kv().audit().ok_or(Error::Incomplete)?.monitoring();
+        let count = run.accepted_tokens().len();
+        let rows = count.checked_mul(prior.shared.profile.shape().layers)
+            .and_then(|n| n.checked_mul(2)).ok_or(Error::Limit)?;
+        if count == 0 || restored.position != count as u64 || run.position() != restored.position
+            || restored.resumed_stream <= prior.shared.stream
+            || run.evaluation_origin() != prior.shared.evaluation_origin
+            || receipt.kv().evaluation_origin() != prior.shared.evaluation_origin
+            || restored.source.profile() != run.policy().codec().profile()
+            || run.policy().codec().profile() != prior.run.policy().codec().profile()
+            || run.status() != receipt.status() || run.work() != receipt.historical_work()
+            || run.telemetry_work() != receipt.historical_telemetry()
+            || run.sampler_state().draws() != receipt.sampler_draws()
+            || !audit.complete_quiet() || audit.first_position() != 0
+            || audit.end_position() != restored.position || audit.planned_rows() != rows
+            || audit.source().descriptor() != &restored.source
+            || restored.source.layers().values().any(|layer| {
+                layer.stream == 0 || layer.stream > prior.shared.stream
+                    || layer.first_position != 0 || layer.first_sequence != 1 || layer.token_count != count
+            }) { return Err(Error::Binding); }
+        let image = run.accepted_cache_image()?;
+        if image.descriptor().layers().values().any(|layer| {
+            layer.stream != restored.resumed_stream || layer.first_position != 0
+                || layer.first_sequence != 1 || layer.token_count != count
+        }) { return Err(Error::Binding); }
+        let mut tokens = Vec::new();
+        tokens.try_reserve_exact(run.estimate().audited_positions).map_err(|_| Error::Limit)?;
+        tokens.extend_from_slice(run.accepted_tokens());
+        let shared = Rc::new(Shared { profile: prior.shared.profile.clone(),
+            stream: restored.resumed_stream, evaluation_origin: prior.shared.evaluation_origin,
+            generation: prior.shared.generation, availability: Cell::new(LearnedAvailability::Empty),
+            prefix: RefCell::new(Prefix { tokens, audit: None }) });
+        // The full-prefix restart audit names its ORIGINAL stream and stays in
+        // the receipt. It is not a latest-position observation for the resumed
+        // stream. A NEW original accepted token must produce that evidence.
+        let source = Self { run, shared, text: prior.text.clone() };
+        source.check_host_horizon()?;
+        Ok(source)
+    }
+
     /// Check the complete originally declared horizon before ownership changes.
     /// Original cache values are binary32. This is the exact canonical payload
     /// length, not peak memory: the numerical cache and actor copy both exist.
@@ -56,6 +107,13 @@ impl ObservedLearnedGeneration {
     /// failed synchronization must not leave that numerical observation eligible.
     pub(crate) fn guard_host_sync(&self) -> HostSyncGuard {
         HostSyncGuard { shared: Rc::clone(&self.shared), confirmed: false }
+    }
+
+    /// Withdraw the old source before the first admitted restart work. A failed
+    /// audit, authority refusal, or unwind cannot revive its previous evidence.
+    pub(crate) fn guard_host_restart(&self) -> HostSyncGuard {
+        self.shared.availability.set(LearnedAvailability::InProgress);
+        self.guard_host_sync()
     }
 }
 

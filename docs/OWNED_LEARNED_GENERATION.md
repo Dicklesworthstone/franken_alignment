@@ -46,6 +46,12 @@ below, the same original authority stop is serviced automatically. Neither
 mode creates another effect ledger, currentness proof or authority reset.
 Durable learned-source recovery and native CLI wiring remain separate.
 
+The broker's [paired learned checkpoint/reset path](HOSTED_LEARNED_RESET.md)
+now joins the original numerical restorer to the existing containment authority.
+It preserves spent work and rights, retains terminal stops, and requires fresh
+resumed evidence before another effect. Generic reset remains unavailable in
+owned mode; registered grade and pre-incident selection are separate obligations.
+
 ## Costs and verification
 
 The actor copy serializes the complete accepted cache after each quiet token,

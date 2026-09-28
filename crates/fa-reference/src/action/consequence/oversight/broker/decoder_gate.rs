@@ -7,7 +7,7 @@ use crate::action::consequence::activation::probe::SCORE_WORDS;
 use crate::action::consequence::activation::tensor::kv::decoder::DecoderProfile;
 use crate::action::consequence::activation::tensor::kv::decoder::sampling::monitored::MAX_GENERATION_TOKENS;
 use crate::action::consequence::oversight::learned_source::{
-    LearnedEvidence, LearnedEvidenceLimits, LearnedObservation,
+    LearnedAvailability, LearnedEvidence, LearnedEvidenceLimits, LearnedObservation,
     MAX_LEARNED_EVIDENCE_BYTES, MAX_LEARNED_EVIDENCE_SCORE_WORDS,
 };
 use crate::Error;
@@ -88,6 +88,23 @@ pub(super) struct DecoderGate {
 }
 
 impl DecoderGate {
+    /// A paired learned reset installs a fresh EMPTY source. Its full-prefix
+    /// restart audit retains the old lineage and is never relabeled as evidence
+    /// for the destination. Only a subsequent original step can admit a proposal.
+    pub(super) fn validate_learned_successor(&self, source: &LearnedObservation) -> Result<(), Error> {
+        let Source::Learned(previous) = &self.source else { return Err(Error::Binding); };
+        if source.profile() != previous.profile() || source.generation() != previous.generation()
+            || source.evaluation_origin() != previous.evaluation_origin()
+            || source.stream() <= previous.stream() || source.availability() != LearnedAvailability::Empty {
+            return Err(Error::Binding);
+        }
+        Ok(())
+    }
+    pub(super) fn publish_learned_successor(&mut self, source: LearnedObservation) {
+        assert!(matches!(&self.source, Source::Learned(_)), "validated learned successor");
+        self.source = Source::Learned(source);
+    }
+
     /// Private paired-reset preparation, never a public source replacement API.
     pub(super) fn validate_successor(&self, source: &DecoderObservation) -> Result<(), Error> {
         let Source::Residual(previous) = &self.source else { return Err(Error::Binding); };
@@ -117,7 +134,7 @@ impl OversightBroker {
 
     /// Freeze a live original learned-K/V source at the SAME effect gate. This
     /// does not own the actor or grant any approval. It has no replacement API,
-    /// fallback to residual-only evidence, or private hosted-reset conversion.
+    /// fallback to residual-only evidence, or public replacement-source path.
     pub fn enable_learned_decoder_monitoring(&mut self, source: LearnedObservation,
         limits: LearnedDecoderBindingLimits) -> Result<(), Error>
     {

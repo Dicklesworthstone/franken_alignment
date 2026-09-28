@@ -45,6 +45,7 @@ pub struct LearnedTextConfig {
     pub output: LearnedTextOutputPolicy,
 }
 
+#[derive(Clone)]
 pub(super) struct TextBinding {
     tokenizer: ByteBpe,
     prompt: String,

@@ -1,5 +1,15 @@
 # Changelog
 
+## Unqualified source addition: paired learned containment reset
+
+- Pair original learned KV/sampler checkpoints with the existing authority;
+  require a fresh complete original audit before the original containment reset.
+- Preserve abandoned numerical/telemetry spend, incident escalation, revocation
+  floors and unknown effect charges. Require fresh resumed evidence and keys.
+- Keep fixed automatic stops terminal and exclude cumulative audience streams.
+- Author eleven positive/negative regression functions and a compile-fail case.
+  Remote RCH cannot launch; compilation and Rust tooling remain UNEXECUTED.
+
 ## Unqualified source addition: computed durable learned congress
 
 - Run frozen complete numerical helper rosters through the original coordinator
