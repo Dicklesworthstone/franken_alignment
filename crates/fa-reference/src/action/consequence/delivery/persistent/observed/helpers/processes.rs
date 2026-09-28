@@ -128,6 +128,12 @@ impl FileOversight {
 }
 
 impl FileHelperProcesses {
+    // Transfer the original running pool only to another source-bound helper
+    // adapter. No public pool, socket, ballot or child-replacement path is added.
+    pub(super) fn into_running_parts(self) -> (FileHelperPool, HelperChildren) {
+        (self.pool, self.children)
+    }
+
     pub fn round(&self) -> u64 { self.pool.round() }
     pub fn statuses(&self) -> BTreeMap<String, HelperStatus> { self.pool.statuses() }
     pub fn process_statuses(&self) -> BTreeMap<String, ProcessStatus> { self.children.statuses() }

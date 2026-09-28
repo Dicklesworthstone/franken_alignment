@@ -2,6 +2,7 @@
 //! Reuse native wire I/O, coordinator, durable commits and witnessed completion.
 //! This module neither interprets helper verdicts nor grants publication keys.
 pub mod sequence;
+pub mod processes;
 
 use super::{DurableSession, FileHelperFailure, FileHelperLaunch, FileHelperPool,
     FileHelperSetupError, FileOversight, HelperPump, JournalError, journal_error};
