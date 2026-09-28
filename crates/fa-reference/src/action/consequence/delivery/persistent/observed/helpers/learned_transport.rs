@@ -176,11 +176,28 @@ impl FileLearnedTransportReview {
     pub fn advance(&mut self, host: &mut FileOversight, expected_revision: u64,
         now: ElapsedTick, snapshot: Snapshot) -> Result<FileLearnedTransportStatus, FileHelperSetupError>
     {
+        self.advance_with_clock(host, expected_revision, now, snapshot, || now)
+    }
+
+    /// Bracket every original socket operation with fresh operator clock samples.
+    /// `observed_at` supplies preflight's monotone predecessor; subsequent samples
+    /// include time spent in earlier journal barriers. An arriving reply is only
+    /// admitted at its POST-I/O observation, never backdated to the preflight tick.
+    /// The original coordinator alone enforces commit/reveal deadlines.
+    ///
+    /// The clock is a trusted supervisor input, not a helper-controlled timestamp.
+    /// It has no reference to the owner, sockets, source, coordinator or verdict.
+    /// A panic after admission closes all peers and latches the driver. Calls and
+    /// filesystem barriers remain synchronous, not preemptively time-bounded.
+    pub fn advance_with_clock<F>(&mut self, host: &mut FileOversight, expected_revision: u64,
+        observed_at: ElapsedTick, snapshot: Snapshot, mut clock: F)
+        -> Result<FileLearnedTransportStatus, FileHelperSetupError>
+    where F: FnMut() -> ElapsedTick {
         if !Rc::ptr_eq(&self.issuer, &host.issuer) { return Err(Error::Binding.into()); }
         if expected_revision != self.revision { return Err(Error::Stale.into()); }
         if self.status != FileLearnedTransportStatus::Running { return Err(Error::WrongState.into()); }
         let previous = host.inspect().control.ledger.elapsed.ok_or(Error::Incomplete)?;
-        if now < previous || self.active.as_ref().is_some_and(|active| now < active.coordinator.elapsed()) {
+        if observed_at < previous || self.active.as_ref().is_some_and(|active| observed_at < active.coordinator.elapsed()) {
             return Err(Error::Stale.into());
         }
         self.revision = self.revision.checked_add(1).ok_or(Error::Overflow)?;
@@ -194,11 +211,13 @@ impl FileLearnedTransportReview {
         // unwind. No half-completed call can restore a previous protocol offset.
         let mut pending = std::mem::take(&mut self.pending);
         let mut active = self.active.take().ok_or(Error::WrongState)?;
-        let result = self.poll(host, now, &mut active);
-        if let Err(error) = result {
-            active.coordinator.close(); self.last_statuses = active.coordinator.statuses();
-            self.failure = Some(error.clone().into()); return Err(error.into());
-        }
+        let now = match self.poll(host, observed_at, &mut active, &mut clock) {
+            Ok(now) => now,
+            Err(error) => {
+                active.coordinator.close(); self.last_statuses = active.coordinator.statuses();
+                self.failure = Some(error.clone().into()); return Err(error.into());
+            }
+        };
         self.last_statuses = active.coordinator.statuses();
         let round = self.current_round();
         let ready = now >= round.window.reveal_by || self.last_statuses.values().all(|status| status.revealed);
@@ -231,25 +250,48 @@ impl FileLearnedTransportReview {
             Err(error) => { self.failure = Some(error.clone()); Err(error) }
         }
     }
-    fn poll(&mut self, host: &mut FileOversight, now: ElapsedTick, active: &mut Active) -> Result<(), JournalError> {
+    fn poll<F>(&mut self, host: &mut FileOversight, observed_at: ElapsedTick,
+        active: &mut Active, clock: &mut F) -> Result<ElapsedTick, JournalError>
+    where F: FnMut() -> ElapsedTick {
         host.checked_learned_sidecar(&self.sidecar)?;
         let round = self.current_round();
         let mut session = DurableSession { host, attempt: self.sidecar.attempt(), round: round.round, inputs: &self.input };
-        active.coordinator.advance(&mut session, now).map_err(journal_error)?;
+        let mut last = observed_at;
+        observe(&self.sidecar, &mut active.coordinator, &mut session, clock, &mut last)?;
         for (member, connection) in &mut active.connections {
-            session.host.checked_learned_sidecar(&self.sidecar)?;
-            active.coordinator.advance(&mut session, now).map_err(journal_error)?;
+            // A slow earlier journal write may have crossed a cutoff. Observe
+            // again before sending any next-member request or reveal signal.
+            observe(&self.sidecar, &mut active.coordinator, &mut session, clock, &mut last)?;
             let record = self.records.get_mut(&(round.round, member.clone())).expect("frozen peer record");
             record.attempted_steps += 1;
             let result = connection.step();
             record.returned_steps += 1; record.last = Some(result);
             if let Err(error) = result { record.first_failure.get_or_insert(error); }
-            active.coordinator.advance(&mut session, now).map_err(journal_error)?;
+            // Store actual I/O progress BEFORE clock/commit failure can escape.
+            // A just-queued reply past the cutoff remains missing, not accepted.
+            observe(&self.sidecar, &mut active.coordinator, &mut session, clock, &mut last)?;
         }
-        session.host.checked_learned_sidecar(&self.sidecar)?;
-        Ok(())
+        // Include time spent acknowledging the final member before deciding
+        // whether to finish or construct a subsequent round. No deadline slides.
+        observe(&self.sidecar, &mut active.coordinator, &mut session, clock, &mut last)?;
+        Ok(last)
     }
 }
+fn observe<F>(handle: &FileLearnedSidecar, coordinator: &mut Coordinator,
+    session: &mut DurableSession<'_>, clock: &mut F, previous: &mut ElapsedTick)
+    -> Result<(), JournalError>
+where F: FnMut() -> ElapsedTick {
+    let now = clock();
+    if now < *previous { return Err(Error::Stale.into()); }
+    // Check both sides of the ORIGINAL clock/protocol transition. A changed
+    // source can never buy another wire operation through a clock callback.
+    session.host.checked_learned_sidecar(handle)?;
+    coordinator.advance(session, now).map_err(journal_error)?;
+    *previous = now;
+    session.host.checked_learned_sidecar(handle)?;
+    Ok(())
+}
+
 fn prepare(host: &FileOversight, handle: &FileLearnedSidecar, schedule: &LearnedWorkerSchedule,
     index: usize, pending: &mut LearnedRoundPeers) -> Result<(Active, CommitteeInput), FileHelperSetupError>
 {

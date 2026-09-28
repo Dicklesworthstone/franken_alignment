@@ -1,5 +1,6 @@
 //! Real Unix sockets and original journal/numerical engines. Remote ballots here
 //! are scripted protocol controls, not evidence of learned helper quality.
+mod clocks;
 use super::*;
 use super::super::learned::{FileLearnedProbeReview, FileLearnedProbeStatus};
 use super::super::super::{FileHumanReviewer, FileOversightProfile};

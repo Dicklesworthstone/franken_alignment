@@ -3,7 +3,11 @@
 This adapter connects original Unix helper connections to the existing durable
 learned-sidecar finish/refinement transaction (FA-113; plan 9.2, 10.3, 10.15,
 16.4). It fills the gap between the in-process computed-probe driver and the
-single-round socket pool. It changes neither the original wire protocol nor
+single-round socket pool. Concurrent `FileLearnedSocketRound` remains unchanged;
+this scheduler adds complete future-peer custody, fixed-round admission and
+automatic progression through acknowledged refinements. Both paths use the
+original I/O/coordinator and witnessed finish primitives. It changes neither the
+original wire protocol nor
 numerical, vote, disclosure, authority or journal algorithms.
 
 ## Execution and peer ownership
@@ -42,6 +46,29 @@ The last scheduled round applies without buying an unusable extra refinement.
 An enriched packet exceeding the frozen input ceiling fails, preserving the
 already acknowledged refinement rather than increasing its allowance.
 
+## Receipt-time-aware pumping
+
+`advance_with_clock(host, expected_revision, observed_at, snapshot, clock)` uses
+fresh operator clock samples at poll entry, immediately before and after each
+socket operation, and once before round completion. `observed_at` is the explicit
+preflight observation; subsequent samples cannot move behind it or behind the
+original coordinator. The fixed-tick `advance` calls the SAME path with a constant
+clock. A stale/foreign preflight does not invoke the callback or consume a poll.
+
+A reply received after its cutoff is not backdated to the beginning of a slow
+poll. Its post-I/O observation goes through the original coordinator before the
+reply can be accepted. Time spent acknowledging a prior commitment is sampled
+before a subsequent member gets request bytes or a reveal signal. This remains
+cooperative: no timer preempts a file write, and trusted clock quality and
+scheduling remain host obligations. Every source check and original deadline
+rule still applies. The callback supplies time only, not a verdict or source.
+
+Actual connection progress is recorded before another clock call or journal
+barrier can fail. A backwards post-I/O observation is a terminal error; a clock
+panic during an admitted call keeps the interruption latch and closes stack-owned
+active and future peers. Neither case resends bytes or turns partial protocol
+work into a completed review. Already sent bytes cannot be withdrawn.
+
 ## Failure and authority boundaries
 
 Stale revisions and foreign owners perform no work. Every other admitted call
@@ -67,14 +94,18 @@ operator evidence, not current eligibility or an actor-facing source channel.
 
 ## Authored verification and limits
 
-Ten regression functions use actual local Unix sockets, the existing client,
+Sixteen regression functions use actual local Unix sockets, the existing client,
 original tiny-model generation, learned compression, and real journal replacement.
 The external helper ballots are explicitly scripted protocol controls. They cover
 three rounds of disclosed packets through both publication keys, recovery of
 original outcomes, complete future-roster preflight, expired/missing workers,
 source/input loss before disclosure, stale/foreign/cancelled calls, richer-input
 capacity, alarm/application refusal, all five original storage-failure barriers,
-poll exhaustion and drop. Two compile-fail examples protect peer/vote ownership.
+poll exhaustion and drop. Six additional clock controls cover fixed-path parity,
+pre-disclosure expiry, commit and reveal receipt-time crossings with near-identical
+permitted controls, post-write clock panic, and backwards post-I/O time. First
+increment test bodies are preserved. Two compile-fail examples protect peer/vote
+ownership.
 These are not trained-detector, authenticated-helper or process-isolation evidence.
 
 The targeted and full RCH gates were attempted in the preparation environment;
