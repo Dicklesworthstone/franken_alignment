@@ -3,6 +3,7 @@
 //! a deserializer that trusts model weights or monitor verdicts from disk.
 mod text;
 mod sidecar;
+mod automatic_stop;
 
 use super::super::super::super::codec::shared::Writer;
 use crate::action::consequence::activation::tensor::kv::decoder::DecoderModel;
@@ -15,6 +16,7 @@ use crate::action::consequence::oversight::{OversightBroker, learned_source::{
 }, decoder_monitoring::{
     LearnedDecoderBindingLimits, MAX_BOUND_DECODER_TOKENS, MAX_BOUND_DECODER_SCORE_WORDS,
 }};
+use crate::action::consequence::oversight::decoder_host::HostedStopPolicy;
 use crate::Error;
 use std::fmt;
 use std::rc::Rc;
@@ -42,6 +44,7 @@ pub struct FileLearnedConfig {
     bytes: Rc<[u8]>,
     text: Option<text::TextRecipe>,
     sidecar_required: bool,
+    automatic_stop: Option<HostedStopPolicy>,
 }
 impl fmt::Debug for FileLearnedConfig {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -73,7 +76,7 @@ impl FileLearnedConfig {
         w.u64(source.monitor_generation)?;
         w.count(limits.evidence.token_ids)?; w.count(limits.evidence.score_words)?;
         w.count(limits.encoded_bytes)?; w.blob(&archive)?;
-        Ok(Self { model, source, limits, bytes: w.finish().into(), text: None, sidecar_required: false })
+        Ok(Self { model, source, limits, bytes: w.finish().into(), text: None, sidecar_required: false, automatic_stop: None })
     }
     pub fn encoded_bytes(&self) -> usize { self.bytes.len() }
     pub(super) fn bytes(&self) -> &Rc<[u8]> { &self.bytes }
@@ -93,6 +96,7 @@ impl FileLearnedConfig {
             None => broker.own_learned_generation(self.model.clone(), self.source.clone(), self.limits),
         }?;
         if self.sidecar_required { broker.enable_learned_sidecar_requirement()?; }
+        if let Some(policy) = self.automatic_stop { broker.enable_learned_host_stop(policy)?; }
         Ok(())
     }
 }
