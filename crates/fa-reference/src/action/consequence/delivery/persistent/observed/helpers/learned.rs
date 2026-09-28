@@ -1,6 +1,8 @@
 //! Computed learned-sidecar congress through the original durable protocol.
 //! The fixed roster owns every original helper port. Numerical observations do
 //! not grant either publication key; each accepted protocol phase is journaled.
+pub mod native;
+
 #[cfg(test)]
 mod tests;
 
