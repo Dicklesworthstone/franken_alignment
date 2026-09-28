@@ -1,5 +1,6 @@
 //! Original direct-child lifecycle coupled to a durable learned-source round.
 //! Reuse the executable launcher, source-bound socket owner and witnessed finish.
+pub mod sequence;
 use super::{FileLearnedSocketRound, FileLearnedSidecar, FileLearnedSidecarFinish,
     FileOversight, FileHelperFailure, HelperPump, JournalError, LearnedSocketStatus};
 use super::super::processes::{FileHelperProcessError, FileHelperProcessLaunch,
