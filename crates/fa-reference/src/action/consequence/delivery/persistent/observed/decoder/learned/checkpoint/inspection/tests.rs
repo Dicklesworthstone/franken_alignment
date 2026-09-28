@@ -22,8 +22,11 @@ fn instruction(host: &FileOversight, operation: u64) -> FileResetRequest {
         binding: ReviewBinding { round: operation, reducer_generation: 1, evidence_root: [8; 32] },
         retained_targets: vec![host.inspect().target] }
 }
-fn budget(config: &FileLearnedConfig) -> KvRestartBudget {
-    KvRestartBudget { cache_values: MAX_MODEL_KV_VALUES, audit: config.config().policy.allowance() }
+fn budget() -> KvRestartBudget {
+    // The fixture constructs this original policy; no configuration importer or
+    // nonexistent public mutable/configuration accessor is used.
+    let original = source(&model(), false, 1);
+    KvRestartBudget { cache_values: MAX_MODEL_KV_VALUES, audit: original.policy.allowance() }
 }
 fn bytes(root: &Directory) -> Vec<u8> { std::fs::read(root.store().join(storage::CANONICAL)).unwrap() }
 fn staged(root: &Directory) -> Option<Vec<u8>> {
@@ -43,7 +46,7 @@ fn reads_original_completed_reset_while_writer_lock_and_live_state_are_unchanged
     let (mut host, _) = owner(&root, &config);
     step(&mut host).unwrap(); let checkpoint = capture(&mut host); step(&mut host).unwrap();
     assert!(matches!(read(&root, &config, 900).record(), FileLearnedResetRecord::NotRecorded));
-    let control = instruction(&host, 900); let allowance = budget(&config);
+    let control = instruction(&host, 900); let allowance = budget();
     let expected = host.reset_learned_checkpoint(host.revision(), &checkpoint, control.clone(), allowance).unwrap().unwrap();
     let before = bytes(&root); let n = host.learned_generation_inspection().unwrap();
     let rights = host.inspect(); let usage = host.learned_recovery_usage().unwrap();
@@ -74,7 +77,7 @@ fn pending_read_never_completes_or_interrupts_original_intent_and_later_fence_is
     let (mut host, _) = owner(&root, &config);
     step(&mut host).unwrap(); let checkpoint = capture(&mut host);
     let control = instruction(&host, 900);
-    host.begin_learned_reset(host.revision(), &checkpoint, control.clone(), budget(&config)).unwrap();
+    host.begin_learned_reset(host.revision(), &checkpoint, control.clone(), budget()).unwrap();
     let before = bytes(&root); let usage = host.learned_recovery_usage().unwrap();
     let intent_revision = host.revision();
     let observed = read(&root, &config, 900);
@@ -100,10 +103,11 @@ fn all_completion_storage_faults_are_inspectable_without_cleaning_or_promoting_s
         let (mut host, _) = owner(&root, &config);
         step(&mut host).unwrap(); let checkpoint = capture(&mut host);
         let control = instruction(&host, 900);
-        host.begin_learned_reset(host.revision(), &checkpoint, control, budget(&config)).unwrap();
+        host.begin_learned_reset(host.revision(), &checkpoint, control, budget()).unwrap();
         let intent_revision = host.revision();
         host.store.fail_once(barrier);
-        let JournalError::Io(failure) = host.complete_learned_reset(host.revision(), 900).unwrap_err() else {
+        let error = host.complete_learned_reset(host.revision(), 900).unwrap_err();
+        let JournalError::Io(failure) = error else {
             panic!("expected the selected storage barrier");
         };
         assert_eq!(failure.operation, barrier);
@@ -130,7 +134,7 @@ fn recipe_mismatch_and_corruption_anywhere_refuse_instead_of_returning_an_earlie
     let (mut host, _) = owner(&root, &expected);
     step(&mut host).unwrap(); let checkpoint = capture(&mut host);
     let control = instruction(&host, 900);
-    host.reset_learned_checkpoint(host.revision(), &checkpoint, control, budget(&expected)).unwrap().unwrap();
+    host.reset_learned_checkpoint(host.revision(), &checkpoint, control, budget()).unwrap().unwrap();
     let original = bytes(&root);
     let changed = config(true, 1);
     assert_eq!(FileOversight::read_learned_reset_result(root.store(), &profile(), &changed, 900).err(),
@@ -170,7 +174,7 @@ fn a_full_journal_can_report_completion_without_room_for_another_recovery_fence(
     host.enable_learned_generation(host.revision(), config.clone()).unwrap();
     step(&mut host).unwrap(); let checkpoint = capture(&mut host);
     let control = instruction(&host, 900);
-    host.reset_learned_checkpoint(host.revision(), &checkpoint, control, budget(&config)).unwrap().unwrap();
+    host.reset_learned_checkpoint(host.revision(), &checkpoint, control, budget()).unwrap().unwrap();
     assert_eq!(host.revision(), 7); let before = bytes(&root); drop(host);
     assert!(FileOversight::open_with_learned_generation(root.store(), selected.clone(), &config).is_err());
     let observed = FileOversight::read_learned_reset_result(root.store(), &selected, &config, 900).unwrap();
@@ -184,7 +188,7 @@ fn recorded_native_audit_failure_is_not_converted_into_missing_or_successful_res
     let root = Directory::new(); let config = config(false, 1);
     let (mut host, _) = owner(&root, &config);
     step(&mut host).unwrap(); let checkpoint = capture(&mut host);
-    let control = instruction(&host, 900); let mut allowance = budget(&config);
+    let control = instruction(&host, 900); let mut allowance = budget();
     allowance.audit.monitoring.probe_coordinates = 0;
     let error = host.reset_learned_checkpoint(host.revision(), &checkpoint, control.clone(), allowance).unwrap().unwrap_err();
     let usage = host.learned_recovery_usage().unwrap(); let before = bytes(&root);
@@ -204,7 +208,7 @@ fn reading_reset_history_does_not_reconcile_or_refund_an_outstanding_effect() {
     let revision = host.revision(); let human = reviewer.approve(&mut host, revision, &request).unwrap();
     host.dispatch(host.revision(), &automatic, &human, &action, &inputs, snapshot()).unwrap();
     let control = instruction(&host, 900);
-    let reset = host.reset_learned_checkpoint(host.revision(), &checkpoint, control, budget(&config)).unwrap().unwrap();
+    let reset = host.reset_learned_checkpoint(host.revision(), &checkpoint, control, budget()).unwrap().unwrap();
     assert_eq!(reset.control.refunded_units, 0); assert_eq!(host.inspect().control.ledger.charged, 16);
     let before = bytes(&root); let inspection = host.inspect();
     let observed = read(&root, &config, 900);

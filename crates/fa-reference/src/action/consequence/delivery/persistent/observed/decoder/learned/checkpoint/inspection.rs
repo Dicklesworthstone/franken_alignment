@@ -16,7 +16,7 @@ pub enum FileLearnedResetRecord {
     Pending(PendingLearnedReset),
     Completed {
         intent: FileLearnedResetIntent,
-        result: Result<HostedLearnedResetReceipt, Error>,
+        result: Result<Box<HostedLearnedResetReceipt>, Error>,
     },
 }
 
@@ -69,7 +69,7 @@ impl FileOversight {
             _ => None,
         });
         let record = if let Some(result) = machine.learned_reset_result_optional(operation)? {
-            FileLearnedResetRecord::Completed { intent: intent.ok_or(Error::Binding)?, result }
+            FileLearnedResetRecord::Completed { intent: intent.ok_or(Error::Binding)?, result: result.map(Box::new) }
         } else if let Some(pending) = machine.pending_learned_reset()
             .filter(|pending| pending.intent.control().operation == operation) {
             if intent.as_ref() != Some(&pending.intent) { return Err(Error::Binding.into()); }

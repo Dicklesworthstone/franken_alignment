@@ -2,6 +2,8 @@
 //! Numerical probes constrain each model; the original coordinator and journal
 //! alone accept its commitment/reveal. A model answer is never an effect key.
 
+pub mod sequence;
+
 use super::super::{DurableSession, Event, FileOversight, JournalError, journal_error};
 use super::super::super::decoder::learned::sidecar::{FileLearnedSidecar, FileLearnedSidecarFinish};
 use crate::action::ElapsedTick;
@@ -23,6 +25,9 @@ use std::fmt;
 use std::rc::Rc;
 
 pub const MAX_NATIVE_REVIEW_EVALUATIONS: usize = 256;
+
+// Private admission to a fresh ID or a sequence-owned, previously frozen lease.
+enum NativeRoundAdmission { Fresh(u64), Leased(u64) }
 
 /// Independently constructed original model, frozen queries and secret salt.
 /// Consumed before the original round starts; no replacement or reset accessor.
@@ -162,6 +167,20 @@ impl FileOversight {
         round: LearnedWorkerRound, members: BTreeMap<String, NativeReviewMember>,
         limits: NativeReviewLimits, snapshot: Snapshot) -> Result<FileNativeSidecarReview, JournalError>
     {
+        self.begin_native_sidecar_review_bound(NativeRoundAdmission::Fresh(revision), sidecar, round, members, limits, snapshot)
+    }
+
+    // Only the fixed sequence may consume one of its already admitted leases.
+    // Public single-round callers cannot adopt another driver's reserved ID.
+    fn begin_native_sidecar_review_bound(&mut self, admission: NativeRoundAdmission, sidecar: FileLearnedSidecar,
+        round: LearnedWorkerRound, members: BTreeMap<String, NativeReviewMember>,
+        limits: NativeReviewLimits, snapshot: Snapshot)
+        -> Result<FileNativeSidecarReview, JournalError>
+    {
+        let (revision, preleased) = match admission {
+            NativeRoundAdmission::Fresh(revision) => (revision, false),
+            NativeRoundAdmission::Leased(revision) => (revision, true),
+        };
         if self.fault.is_some() { return Err(JournalError::Unavailable); }
         if revision != self.revision() { return Err(Error::Stale.into()); }
         if limits.polls == 0 { return Err(Error::InvalidInput.into()); }
@@ -175,7 +194,7 @@ impl FileOversight {
                 && round.window.reveal_by <= original.round().input().action().spec().deadline) {
             return Err(Error::InvalidInput.into());
         }
-        if self.worker_rounds.contains(&round.round)
+        if self.worker_rounds.contains(&round.round) != preleased
             || self.events.iter().any(|event| matches!(event, Event::Begin(_, id, ..) if *id == round.round)) {
             return Err(Error::Duplicate.into());
         }
@@ -266,6 +285,15 @@ impl FileNativeSidecarReview {
     pub fn advance(&mut self, host: &mut FileOversight, expected_revision: u64,
         now: ElapsedTick, snapshot: Snapshot) -> Result<NativeReviewStatus, JournalError>
     {
+        self.advance_bound(host, expected_revision, now, snapshot, false)
+    }
+
+    // A single round never buys disclosure. The preprovisioned sequence alone
+    // may request original refinement when its fixed successor is still usable.
+    fn advance_bound(&mut self, host: &mut FileOversight, expected_revision: u64,
+        now: ElapsedTick, snapshot: Snapshot, allow_refinement: bool)
+        -> Result<NativeReviewStatus, JournalError>
+    {
         if !Rc::ptr_eq(&self.issuer, &host.issuer) { return Err(Error::Binding.into()); }
         if expected_revision != self.revision { return Err(Error::Stale.into()); }
         if self.status != NativeReviewStatus::Running { return Err(Error::WrongState.into()); }
@@ -294,7 +322,7 @@ impl FileNativeSidecarReview {
             self.status = NativeReviewStatus::Running; self.failure = None; return Ok(self.status);
         }
         let result = host.finish_learned_sidecar_review_inner(host.revision(), &mut self.sidecar,
-            self.round.round, false, snapshot);
+            self.round.round, allow_refinement, snapshot);
         release(&mut slots, &mut self.records); active.close(); self.statuses = active.statuses();
         match result {
             Ok(outcome) => {

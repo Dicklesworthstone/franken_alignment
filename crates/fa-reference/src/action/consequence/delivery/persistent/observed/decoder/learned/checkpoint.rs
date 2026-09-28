@@ -10,10 +10,10 @@ mod inspection;
 mod reset;
 pub use inspection::{FileLearnedResetRecord, FileLearnedResetSnapshot};
 #[cfg(test)]
-#[path = "../tests/fixture.rs"]
+#[path = "tests/fixture.rs"]
 mod read_fixture;
 #[cfg(test)]
-#[path = "inspection/tests.rs"]
+#[path = "checkpoint/inspection/tests.rs"]
 mod read_tests;
 pub use reset::{FileLearnedResetIntent, PendingLearnedReset};
 pub(in super::super::super) use reset::write_intent;
