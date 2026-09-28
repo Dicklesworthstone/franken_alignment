@@ -3,6 +3,7 @@
 //! implementation. Only the backing transition changes from RAM to the journal.
 pub mod processes;
 pub mod learned;
+pub mod learned_sockets;
 #[cfg(test)]
 mod tests;
 use super::{Event, FileOversight, JournalError, ObservedReceipt, Transition};
