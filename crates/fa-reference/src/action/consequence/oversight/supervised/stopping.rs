@@ -5,6 +5,9 @@ use crate::action::ElapsedTick;
 use crate::action::consequence::delivery::{StopProgress, StopReceipt, StopRequest, StopSweep};
 use crate::action::consequence::oversight::helper_processes::ProcessStatus;
 use crate::action::consequence::oversight::decoder_host::{HostedCheckpointHandle, HostedResetReceipt, HostedResetRequest};
+use crate::action::consequence::oversight::learned_host::checkpoint::{
+    HostedLearnedCheckpointHandle, HostedLearnedResetReceipt, HostedLearnedResetRequest,
+};
 use crate::Error;
 use std::collections::BTreeMap;
 
@@ -73,6 +76,26 @@ impl SupervisedDriver {
     /// recognizes an already cancelled job if a later projection returns error.
     pub fn reset_hosted_decoder(&mut self, request: HostedResetRequest) -> Result<HostedResetReceipt, Error> {
         let result = self.supervisor.reset_hosted_decoder(request);
+        if result.is_ok() { self.job = None; }
+        self.reap_helpers();
+        result
+    }
+
+    pub fn capture_hosted_learned_checkpoint(&mut self, id: u64, expected_actor_revision: u64)
+        -> Result<HostedLearnedCheckpointHandle, Error>
+    {
+        let result = self.supervisor.capture_hosted_learned_checkpoint(id, expected_actor_revision);
+        self.reap_helpers();
+        result
+    }
+
+    /// Only the original learned reset can release this review and its retained
+    /// permit. Failed preflight keeps both. Cleanup recognizes actual cancellation
+    /// or an automatic stop even when a later projection returns an error.
+    pub fn reset_hosted_learned(&mut self, request: HostedLearnedResetRequest)
+        -> Result<HostedLearnedResetReceipt, Error>
+    {
+        let result = self.supervisor.reset_hosted_learned(request);
         if result.is_ok() { self.job = None; }
         self.reap_helpers();
         result

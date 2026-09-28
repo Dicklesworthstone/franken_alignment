@@ -51,6 +51,9 @@ now joins the original numerical restorer to the existing containment authority.
 It preserves spent work and rights, retains terminal stops, and requires fresh
 resumed evidence before another effect. Generic reset remains unavailable in
 owned mode; registered grade and pre-incident selection are separate obligations.
+The [supervised learned lifecycle](HOSTED_LEARNED_SUPERVISION.md) exposes the same
+reset while connected or offline and services learned trips through the existing
+endpoint fence/drain path.
 
 ## Costs and verification
 

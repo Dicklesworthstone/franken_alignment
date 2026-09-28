@@ -1,5 +1,16 @@
 # Changelog
 
+## Unqualified source addition: supervised learned reset and endpoint containment
+
+- Expose paired learned capture/reset through actor supervision and connected
+  and offline drivers while preserving mailbox tickets and original outcomes.
+- Release abandoned reviews and permits after original reset; preserve pending
+  external charges and require the existing endpoint fence on reconnection.
+- Add typed learned advancement and connect learned automatic stops to the
+  existing driver endpoint fence/drain path, including ordinary driver polling.
+- Add original-flow supervision and learned-text reset regression sources.
+  Compilation, tests, rustfmt and Clippy remain UNEXECUTED: remote RCH is absent.
+
 ## Unqualified source addition: paired learned containment reset
 
 - Pair original learned KV/sampler checkpoints with the existing authority;

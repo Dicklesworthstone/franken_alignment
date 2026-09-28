@@ -8,8 +8,10 @@ use crate::action::consequence::activation::monitor::decoder::MonitoredStep;
 use crate::action::consequence::activation::monitor::decoder::sampled::MonitoredSampledStep;
 use crate::action::consequence::activation::tensor::kv::decoder::DecoderBudget;
 use crate::action::consequence::activation::tensor::kv::decoder::sampling::SampleBudget;
+use crate::action::consequence::activation::tensor::kv::decoder::sampling::monitored::GenerationEvent;
 use crate::action::consequence::delivery::StopSweep;
 use crate::Error;
+use std::rc::Rc;
 
 /// Successful numerical inference does not imply an acknowledged endpoint fence.
 /// Inspect all three results. In particular, a Held result can coexist with a
@@ -49,14 +51,35 @@ impl SupervisedDriver {
         ))
     }
 
-    /// Progress a configured trip, including one initiated through broker_mut or
-    /// left poisoned by a caught unwind. None means no automatic incident, not
+    /// One original learned-generation step, including its complete registered
+    /// K/V monitoring. A configured trip is synchronized and then fenced/drained
+    /// through the SAME endpoint path as conventional hosted inference.
+    pub fn advance_hosted_learned<F>(
+        &mut self, expected_actor_revision: u64, expected_position: u64, clock: F,
+    ) -> HostedDriverStep<Rc<GenerationEvent>>
+    where F: FnMut() -> ElapsedTick {
+        self.drive_hosted(clock, |broker| broker.advance_hosted_learned(
+            expected_actor_revision, expected_position,
+        ))
+    }
+
+    /// Progress either original owned numerical profile's configured trip,
+    /// including one initiated through broker_mut or left poisoned by a caught
+    /// unwind. None means no automatic incident, not
     /// an assertion that the decoder or the world is safe. Manual stops keep
     /// their existing separate API. A completed trip remains idempotently visible.
     /// The ordinary step loop also invokes this before helper I/O or evidence.
     pub fn service_hosted_stop<F>(&mut self, mut clock: F) -> Option<Result<StopSweep, Error>>
     where F: FnMut() -> ElapsedTick {
-        match self.supervisor.broker_mut().enforce_hosted_stop() {
+        // Bootstrap makes the two numerical owners mutually exclusive. A missing
+        // conventional incident is not evidence that the learned owner is quiet.
+        // Both original handlers retain their own configured/latched incidents;
+        // this service never constructs one from an asserted driver outcome.
+        let stopped = match self.supervisor.broker_mut().enforce_hosted_stop() {
+            Ok(None) => self.supervisor.broker_mut().enforce_learned_host_stop(),
+            result => result,
+        };
+        match stopped {
             Ok(None) => return None,
             Ok(Some(_)) => {}
             Err(error) => {
@@ -80,7 +103,7 @@ impl SupervisedDriver {
         Some(result)
     }
 
-    // No caller-supplied inference callback is exposed; the two typed methods
+    // No caller-supplied inference callback is exposed; the typed methods
     // above always use the original broker-owned numerical implementation.
     fn drive_hosted<T, F>(
         &mut self, mut clock: F, advance: impl FnOnce(&mut OversightBroker) -> Result<T, Error>,

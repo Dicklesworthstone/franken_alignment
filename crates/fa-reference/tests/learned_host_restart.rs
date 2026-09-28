@@ -21,7 +21,7 @@ use fa_reference::action::consequence::oversight::{
     action_frame, decoder_host::HostedStopPolicy, decoder_monitoring::LearnedDecoderBindingLimits,
     human::{HumanReviewer, HumanReviewPolicy},
     learned_host::{checkpoint::{HostedLearnedCheckpointHandle, HostedLearnedResetRequest},
-        sidecar::{LearnedSidecar, LearnedSidecarRequest}},
+        sidecar::{LearnedSidecar, LearnedSidecarRequest}, text::LearnedTextTarget},
     learned_source::{LearnedAvailability, LearnedEvidenceLimits, LearnedSourceConfig},
     sidecar::{SidecarCongressBudget, SidecarIdentity},
 };
@@ -414,4 +414,91 @@ fn audience_stream_ownership_has_no_checkpoint_reset_escape() {
     assert_eq!(owner.hosted_learned_generation().unwrap(), before); assert_eq!(endpoint.execution_count(), 0);
     while owner.hosted_learned_generation().unwrap().status.is_active() { step(&mut owner).unwrap(); }
     assert_eq!(owner.hosted_learned_text_message(LearnedEvidenceLimits::default()).unwrap().bytes(), b"OK");
+}
+
+#[test]
+fn plain_text_reset_preserves_tokenizer_completion_and_exact_payload_but_requires_both_fresh_keys() {
+    let (mut owner, mut endpoint, human) = empty_owner(true, false);
+    let human = human.unwrap();
+    let model = text_fixture::model(&[b'O' as u32, b'K' as u32, text_fixture::END]);
+    let config = text_fixture::config(&model);
+    owner.own_learned_text_generation(model.clone(), text_fixture::tokenizer(&model), config.clone(),
+        LearnedDecoderBindingLimits::default()).unwrap();
+    step(&mut owner).unwrap(); let checkpoint = capture(&mut owner, 1);
+    while owner.hosted_learned_generation().unwrap().status.is_active() { step(&mut owner).unwrap(); }
+    let original = owner.hosted_learned_text_message(LearnedEvidenceLimits::default()).unwrap();
+    assert_eq!(original.bytes(), b"OK");
+    assert_eq!(original.evidence().tokens()[0], text_fixture::MERGED_PROMPT);
+    let destination = |owner: &OversightBroker| LearnedTextTarget { target: target(),
+        required_witnesses: Vec::new(), policy_epoch: owner.inspect().ledger.epoch,
+        deadline: ElapsedTick(100), units: 16 };
+    let old_action = owner.propose_learned_text(1, destination(&owner), &snapshot()).unwrap().action;
+    let old_input = text_input(&mut owner, 1, &old_action); approve(&mut owner, 1, &old_input);
+    let old_permit = owner.authorize(1, Some(&old_input), &snapshot()).unwrap();
+    let old_request = owner.request_human_approval(10, 1, Some(&old_input), ElapsedTick(80)).unwrap();
+    let old_key = human.approve(&old_request, ElapsedTick(1)).unwrap();
+    let source = owner.hosted_learned_observation().unwrap();
+    let before = owner.hosted_learned_generation().unwrap(); let control = owner.inspect();
+    let reset = owner.reset_hosted_learned(HostedLearnedResetRequest { checkpoint,
+        expected_control_sequence: control.sequence, expected_actor_revision: owner.actor_revision(),
+        expected_authority_epoch: control.ledger.epoch,
+        binding: ReviewBinding { round: 900, reducer_generation: 1, evidence_root: [9; 32] },
+        retained_targets: TargetCeiling::new(&[target()]).unwrap(),
+        restart_budget: KvRestartBudget { cache_values: MAX_MODEL_KV_VALUES, audit: config.policy.allowance() },
+    }).unwrap();
+    assert!(reset.control.restored); assert_eq!(reset.control.refunded_units, 16);
+    assert!(owner.learned_text_required()); assert!(!owner.learned_text_stream_required());
+    assert_eq!(source.availability(), LearnedAvailability::Closed);
+    assert!(source.validate(original.evidence()).is_err());
+    assert_eq!(owner.hosted_learned_text_message(LearnedEvidenceLimits::default()).err(), Some(Error::Incomplete));
+    assert_eq!(owner.propose_learned_text(2, destination(&owner), &snapshot()).err(), Some(Error::Incomplete));
+    while owner.hosted_learned_generation().unwrap().status.is_active() { step(&mut owner).unwrap(); }
+    let fresh = owner.hosted_learned_text_message(LearnedEvidenceLimits::default()).unwrap();
+    assert_eq!(fresh.bytes(), original.bytes()); assert_eq!(fresh.evidence().tokens(), original.evidence().tokens());
+    assert_eq!(fresh.stop(), original.stop()); assert_eq!(fresh.output_tokens(), 2);
+    assert_eq!(fresh.output_policy(), config.output); assert_eq!(fresh.tokenization_work(), original.tokenization_work());
+    assert!(fresh.tokenizer().binds(model.profile()));
+    assert_eq!(fresh.evidence().stream(), 22); assert_eq!(fresh.evidence().audit().first_position(), 3);
+    assert_eq!(fresh.work(), original.work());
+    assert!(owner.hosted_learned_generation().unwrap().cumulative_work.admitted_tokens > before.cumulative_work.admitted_tokens);
+    assert!(owner.dispatch_with_human(&old_permit, &old_key, &old_action, Some(&old_input), &snapshot()).is_err());
+    let mut substituted = spec(&owner); substituted.payload = b"OK ".to_vec();
+    assert_eq!(owner.propose(2, substituted, &snapshot()).err(), Some(Error::Binding));
+    let action = owner.propose_learned_text(2, destination(&owner), &snapshot()).unwrap().action;
+    assert_eq!(action.spec().payload, b"OK");
+    let input = text_input(&mut owner, 2, &action); approve(&mut owner, 2, &input);
+    let permit = owner.authorize(2, Some(&input), &snapshot()).unwrap();
+    assert_eq!(owner.dispatch(&permit, &action, Some(&input), &snapshot()).err(), Some(Error::Incomplete));
+    assert!(owner.dispatch_with_human(&permit, &old_key, &action, Some(&input), &snapshot()).is_err());
+    let human_request = owner.request_human_approval(11, 2, Some(&input), ElapsedTick(80)).unwrap();
+    let key = human.approve(&human_request, ElapsedTick(1)).unwrap();
+    let envelope = owner.dispatch_with_human(&permit, &key, &action, Some(&input), &snapshot()).unwrap();
+    owner.accept_receipt(endpoint.deliver(&envelope).unwrap()).unwrap();
+    assert_eq!(endpoint.payload(), b"OK"); assert_eq!(endpoint.execution_count(), 1);
+    assert_eq!(owner.inspect().ledger.charged, 16);
+}
+
+#[test]
+fn insufficient_original_full_prefix_row_capacity_refuses_before_spending_or_source_withdrawal() {
+    let model = fixture::model(); let config = config(&model, 0, 3);
+    assert_eq!(config.policy.monitor().budget().rows, 4);
+    let (mut owner, endpoint, _) = empty_owner(false, false); attach(&mut owner, &model, config.clone());
+    step(&mut owner).unwrap(); let fitting = capture(&mut owner, 1);
+    let expected = step(&mut owner).unwrap(); let too_wide = capture(&mut owner, 2);
+    let source = owner.hosted_learned_observation().unwrap();
+    let evidence = source.capture(LearnedEvidenceLimits::default()).unwrap();
+    let before = owner.hosted_learned_generation().unwrap(); let control = owner.inspect();
+    let usage = owner.hosted_learned_recovery_usage().unwrap(); let retained = owner.decoder_binding_usage();
+    assert_eq!(owner.reset_hosted_learned(request(&owner, &too_wide, &config, 900)).err(), Some(Error::Limit));
+    assert_eq!(owner.hosted_learned_generation().unwrap(), before); assert_eq!(owner.inspect(), control);
+    assert_eq!(owner.hosted_learned_recovery_usage().unwrap(), usage); assert_eq!(owner.decoder_binding_usage(), retained);
+    assert_eq!(source.availability(), LearnedAvailability::Ready); source.validate(&evidence).unwrap();
+    // The same operation round remains unused; the nearby original checkpoint
+    // fits all four mandatory K/V rows without weakening the fixed monitor.
+    let reset = owner.reset_hosted_learned(request(&owner, &fitting, &config, 900)).unwrap();
+    assert!(reset.control.restored); assert_eq!(reset.position, 1);
+    assert_eq!(owner.hosted_learned_recovery_usage().unwrap().restart_attempts, usage.restart_attempts + 1);
+    same_step(&step(&mut owner).unwrap(), &expected);
+    assert_eq!(owner.hosted_learned_observation().unwrap().availability(), LearnedAvailability::Ready);
+    assert_eq!(endpoint.execution_count(), 0);
 }

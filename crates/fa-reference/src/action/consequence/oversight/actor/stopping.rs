@@ -3,6 +3,9 @@
 use super::{ActorSupervisor, ActorOutcome, BasisSource, Projection};
 use crate::action::consequence::delivery::{PublicationEndpoint, StopProgress, StopReceipt, StopRequest, StopSweep};
 use crate::action::consequence::oversight::decoder_host::{HostedCheckpointHandle, HostedResetReceipt, HostedResetRequest};
+use crate::action::consequence::oversight::learned_host::checkpoint::{
+    HostedLearnedCheckpointHandle, HostedLearnedResetReceipt, HostedLearnedResetRequest,
+};
 use crate::Error;
 
 impl ActorSupervisor {
@@ -53,6 +56,43 @@ impl ActorSupervisor {
             }
         }
         drop(state);
+        self.synchronize()?;
+        result
+    }
+
+    pub fn capture_hosted_learned_checkpoint(&mut self, id: u64, expected_actor_revision: u64)
+        -> Result<HostedLearnedCheckpointHandle, Error>
+    {
+        let result = self.broker.capture_hosted_learned_checkpoint(id, expected_actor_revision);
+        // Capture preflight can discover an existing numerical trip. Publish
+        // only its actual original stop, never a stop inferred from an error.
+        if self.broker.stop_receipt().is_some() { self.synchronize()?; }
+        result
+    }
+
+    /// Keep the same actor mailbox across the original learned numerical/control
+    /// reset. A successful restore retires the abandoned queued continuation;
+    /// invalid preflight leaves it usable. No actor command or epoch rewrite is
+    /// introduced, and dispatched outcomes still come only from the ledger.
+    pub fn reset_hosted_learned(&mut self, request: HostedLearnedResetRequest)
+        -> Result<HostedLearnedResetReceipt, Error>
+    {
+        let mut state = self.mailbox.try_borrow_mut().map_err(|_| Error::WrongState)?;
+        let result = self.broker.reset_hosted_learned(request);
+        if let Ok(receipt) = &result {
+            if receipt.control.restored {
+                while let Some(id) = state.queued.pop_front() {
+                    state.entries.get_mut(&id).expect("queued actor request retained").project(
+                        Projection::Terminal(ActorOutcome::CancelledBeforeDispatch, BasisSource::Intake),
+                    );
+                }
+            } else {
+                state.close_intake();
+            }
+        }
+        drop(state);
+        // An admitted numerical failure can trigger the original automatic stop.
+        // Publish that actual stop even when no reset receipt was produced.
         self.synchronize()?;
         result
     }

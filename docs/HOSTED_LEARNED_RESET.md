@@ -7,6 +7,10 @@ The broker owns both halves. The checkpoint handle exposes neither numerical
 state nor effect authority, and no caller-supplied cache, sampler, model,
 monitor verdict or replacement source is accepted.
 
+The [actor supervisor and connected/offline driver integration](HOSTED_LEARNED_SUPERVISION.md)
+updates queued tickets and active reviews around the same original reset, and
+connects learned automatic stops to actual endpoint containment.
+
 ## Capture and restore the actual original state
 
 Capture requires a nonempty, active, currently quiet original generation, exact
@@ -101,12 +105,14 @@ token must still pass the unchanged original monitor.
 
 ## Verification and remaining scope
 
-Eleven regression functions exercise actual stochastic continuation, fresh
+Thirteen regression functions exercise actual stochastic continuation, fresh
 source/sidecar/two-key publication, repeated vocabulary and telemetry exhaustion,
 abandoned numerical products, already-published unknown effects, incident
 escalation, free stale/foreign refusals, admitted audit failure, fixed automatic
 stop, text-stream exclusion, repeated genuine alarms, and an active checkpoint
-restored from a completed run. A compile-fail example rejects using a checkpoint
+restored from a completed run. They also cover exact plain-text regeneration and
+renewed two-key publication, plus free complete-prefix row-cap refusal with a
+near-identical successful shorter checkpoint. A compile-fail example rejects using a checkpoint
 as a permit. These are authored source tests, not an executed qualification.
 The required remote RCH check cannot launch in this environment; compilation,
 tests, rustfmt and Clippy remain **UNEXECUTED**.

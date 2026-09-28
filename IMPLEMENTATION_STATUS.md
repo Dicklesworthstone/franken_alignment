@@ -1,5 +1,20 @@
 # Implementation status · design revision 0.3
 
+## Unqualified source addition: supervised learned recovery and containment
+
+Actor supervision and connected/offline drivers now invoke the same paired
+learned checkpoint/reset, retain actor tickets, and clean up abandoned reviews
+and permits according to the original ledger. Detached reset preserves unknown
+effect charges and the original fenced reconnection path. Typed learned
+advancement and the ordinary driver loop now service actual learned automatic
+stops through endpoint fencing and reconciliation.
+
+Regression sources use original inference, helper sockets and endpoint recovery,
+with positive publication and causal refusal controls. Required remote RCH is
+unavailable, so compilation, tests, rustfmt and Clippy remain UNEXECUTED. See
+[learned supervision](docs/HOSTED_LEARNED_SUPERVISION.md). This is in-process
+recovery integration, not durable broker restart or deployment qualification.
+
 ## Unqualified source addition: paired learned containment reset
 
 The broker now pairs an original learned-generation KV checkpoint with the

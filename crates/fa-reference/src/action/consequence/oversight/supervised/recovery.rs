@@ -6,6 +6,9 @@ use super::super::helper_processes::{HelperChildren, ProcessStatus};
 use crate::action::consequence::delivery::{EndpointReceipt, PublicationEndpoint};
 use crate::action::consequence::oversight::{ReconciliationResults, actor::ActorSupervisor};
 use crate::action::consequence::oversight::decoder_host::{HostedCheckpointHandle, HostedResetReceipt, HostedResetRequest};
+use crate::action::consequence::oversight::learned_host::checkpoint::{
+    HostedLearnedCheckpointHandle, HostedLearnedResetReceipt, HostedLearnedResetRequest,
+};
 use crate::action::ElapsedTick;
 use crate::Error;
 use std::collections::BTreeMap;
@@ -96,6 +99,26 @@ impl OfflineDriver {
     /// later moves the same checkpoint map, mailbox and outstanding obligations.
     pub fn reset_hosted_decoder(&mut self, request: HostedResetRequest) -> Result<HostedResetReceipt, Error> {
         let result = self.supervisor.reset_hosted_decoder(request);
+        if result.is_ok() { self.job = None; }
+        self.reap_helpers();
+        result
+    }
+
+    pub fn capture_hosted_learned_checkpoint(&mut self, id: u64, expected_actor_revision: u64)
+        -> Result<HostedLearnedCheckpointHandle, Error>
+    {
+        let result = self.supervisor.capture_hosted_learned_checkpoint(id, expected_actor_revision);
+        self.reap_helpers();
+        result
+    }
+
+    /// Reset the same learned source while its endpoint is detached. This moves
+    /// no authority to another owner, introduces no send path and cannot settle
+    /// unknown effects. Reconnection still requires the original endpoint fence.
+    pub fn reset_hosted_learned(&mut self, request: HostedLearnedResetRequest)
+        -> Result<HostedLearnedResetReceipt, Error>
+    {
+        let result = self.supervisor.reset_hosted_learned(request);
         if result.is_ok() { self.job = None; }
         self.reap_helpers();
         result
