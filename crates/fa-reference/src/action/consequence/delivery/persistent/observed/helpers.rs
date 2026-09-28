@@ -4,6 +4,7 @@
 pub mod processes;
 pub mod learned;
 pub mod learned_sockets;
+pub mod learned_transport;
 #[cfg(test)]
 mod tests;
 use super::{Event, FileOversight, JournalError, ObservedReceipt, Transition};
