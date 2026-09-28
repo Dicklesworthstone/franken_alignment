@@ -30,6 +30,7 @@ impl Machine {
     }
     pub(super) fn pause_learned(&mut self) {
         if let Some(state) = &mut self.learned { state.paused = true; }
+        self.interrupt_learned_reset();
     }
     pub(in super::super) fn pending_learned_step(&self) -> Option<LearnedStepIntent> {
         self.learned.as_ref().and_then(|state| state.pending)
@@ -40,6 +41,7 @@ impl Machine {
         self.check_learned_position(revision, position)
     }
     fn check_learned_position(&self, revision: u64, position: u64) -> Result<(), Error> {
+        if self.pending_learned_reset().is_some() { return Err(Error::Incomplete); }
         let state = self.learned.as_ref().ok_or(Error::Incomplete)?;
         if state.paused || !self.clock_ready { return Err(Error::Incomplete); }
         let actual = self.broker.hosted_learned_generation()?;
@@ -76,6 +78,7 @@ impl Machine {
                 Ok(result)
             }
             LearnedEvent::Resume { actor_revision, position } => {
+                if self.pending_learned_reset().is_some() { return Err(Error::Incomplete); }
                 if !self.clock_ready { return Err(Error::Incomplete); }
                 let state = self.learned.as_ref().ok_or(Error::Incomplete)?;
                 if !state.paused { return Err(Error::WrongState); }

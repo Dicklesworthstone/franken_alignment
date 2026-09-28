@@ -100,7 +100,7 @@ impl Machine {
         Ok(())
     }
 }
-fn status(w: &mut Writer, value: GenerationStatus) -> Result<(), Error> {
+pub(super) fn status(w: &mut Writer, value: GenerationStatus) -> Result<(), Error> {
     match value {
         GenerationStatus::Prefilling => w.u8(0),
         GenerationStatus::Generating => w.u8(1),
@@ -186,7 +186,7 @@ fn view(w: &mut Writer, value: &LearnedKvView) -> Result<(), Error> {
     }
     Ok(())
 }
-fn report(w: &mut Writer, value: &LearnedModelReport) -> Result<(), Error> {
+pub(super) fn report(w: &mut Writer, value: &LearnedModelReport) -> Result<(), Error> {
     let source = value.source(); let c = source.report();
     if c.total_encoded_bytes > MAX_WITNESS_BYTES { return Err(Error::Limit); }
     w.blob(&source.encode()?)?;

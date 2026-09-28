@@ -6,6 +6,10 @@ use crate::action::consequence::oversight::learned_host::checkpoint::HostedLearn
 use crate::Error;
 use std::rc::Rc;
 
+mod reset;
+pub use reset::{FileLearnedResetIntent, PendingLearnedReset};
+pub(in super::super::super) use reset::write_intent;
+
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct FileLearnedCheckpointInfo {
     pub checkpoint: u64,
@@ -33,6 +37,8 @@ impl FileLearnedCheckpoint {
 
 #[derive(Clone)]
 pub(in super::super::super) enum CheckpointEvent {
+    BeginReset(Rc<FileLearnedResetIntent>),
+    Reset { operation: u64, witness: Rc<[u8]> },
     Capture { checkpoint: u64, actor_revision: u64, epoch: u64, witness: Rc<[u8]> },
 }
 
@@ -94,6 +100,12 @@ impl FileOversight {
 
 pub(in super::super::super) fn write(w: &mut Writer, event: &CheckpointEvent) -> Result<(), Error> {
     match event {
+        CheckpointEvent::BeginReset(intent) => { w.u8(1)?; reset::write_intent(w, intent)?; }
+        CheckpointEvent::Reset { operation, witness } => {
+            if *operation == 0 { return Err(Error::InvalidInput); }
+            check_witness(witness)?;
+            w.u8(2)?; w.u64(*operation)?; w.blob(witness)?;
+        }
         CheckpointEvent::Capture { checkpoint, actor_revision, epoch, witness } => {
             if *checkpoint == 0 { return Err(Error::InvalidInput); }
             check_witness(witness)?;
@@ -104,6 +116,14 @@ pub(in super::super::super) fn write(w: &mut Writer, event: &CheckpointEvent) ->
 }
 pub(in super::super::super) fn read(r: &mut Reader<'_>) -> Result<CheckpointEvent, Error> {
     match r.u8()? {
+        1 => Ok(CheckpointEvent::BeginReset(Rc::new(reset::read_intent(r)?))),
+        2 => {
+            let operation = r.u64()?;
+            if operation == 0 { return Err(Error::InvalidInput); }
+            let witness = r.blob(MAX_WITNESS_BYTES)?;
+            check_witness(witness)?;
+            Ok(CheckpointEvent::Reset { operation, witness: Rc::from(witness) })
+        }
         0 => {
             let checkpoint = r.u64()?; let actor_revision = r.u64()?; let epoch = r.u64()?;
             if checkpoint == 0 { return Err(Error::InvalidInput); }

@@ -14,8 +14,11 @@ use crate::Error;
 use std::collections::BTreeMap;
 use std::rc::Rc;
 
+mod reset;
+
 #[derive(Default)]
 pub(super) struct CheckpointHistory {
+    resets: reset::ResetHistory,
     captures: BTreeMap<u64, (FileLearnedCheckpointInfo, HostedLearnedCheckpointHandle)>,
 }
 
@@ -30,7 +33,7 @@ impl Machine {
         -> Result<(), Error>
     {
         if id == 0 { return Err(Error::InvalidInput); }
-        if self.pending_learned_step().is_some() { return Err(Error::Incomplete); }
+        if self.pending_learned_step().is_some() || self.pending_learned_reset().is_some() { return Err(Error::Incomplete); }
         let state = self.learned.as_ref().ok_or(Error::Incomplete)?;
         if state.paused || !self.clock_ready { return Err(Error::Incomplete); }
         if state.checkpoints.captures.contains_key(&id) { return Err(Error::Duplicate); }
@@ -55,6 +58,8 @@ impl Machine {
     }
     pub(super) fn apply_learned_checkpoint(&mut self, event: &CheckpointEvent) -> Result<Transition, Error> {
         match event {
+            CheckpointEvent::BeginReset(intent) => self.apply_learned_reset_intent(intent),
+            CheckpointEvent::Reset { operation, witness } => self.apply_learned_reset(*operation, witness),
             CheckpointEvent::Capture { checkpoint, actor_revision, epoch, witness } => {
                 self.execute_learned_capture(*checkpoint, *actor_revision, *epoch)?;
                 if self.learned_capture_witness(*checkpoint)?.as_slice() != witness.as_ref() { return Err(Error::Binding); }

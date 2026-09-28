@@ -184,3 +184,6 @@ fn capture_storage_failure_returns_no_handle_and_reopens_only_the_canonical_pair
         assert_eq!(host.inspect().executions, 0);
     }
 }
+
+#[path = "reset_tests.rs"]
+mod reset;

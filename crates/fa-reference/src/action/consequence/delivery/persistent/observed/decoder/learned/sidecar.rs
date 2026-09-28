@@ -137,7 +137,8 @@ impl FileOversight {
         if !Rc::ptr_eq(&self.issuer, &sidecar.issuer) { return Err(Error::Binding.into()); }
         if self.fault.is_some() { return Err(JournalError::Unavailable); }
         if self.source_interrupted || !self.clock_ready() || self.machine.learned_paused()
-            || self.machine.pending_learned_step().is_some() { return Err(Error::Incomplete.into()); }
+            || self.machine.pending_learned_step().is_some()
+            || self.machine.pending_learned_reset().is_some() { return Err(Error::Incomplete.into()); }
         let original = self.machine.checked_learned_sidecar(sidecar.attempt)?;
         if original.actor_revision() != sidecar.actor_revision
             || original.input_revision() != sidecar.input_revision { return Err(Error::Stale.into()); }
