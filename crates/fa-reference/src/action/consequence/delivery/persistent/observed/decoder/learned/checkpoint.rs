@@ -6,7 +6,15 @@ use crate::action::consequence::oversight::learned_host::checkpoint::HostedLearn
 use crate::Error;
 use std::rc::Rc;
 
+mod inspection;
 mod reset;
+pub use inspection::{FileLearnedResetRecord, FileLearnedResetSnapshot};
+#[cfg(test)]
+#[path = "../tests/fixture.rs"]
+mod read_fixture;
+#[cfg(test)]
+#[path = "inspection/tests.rs"]
+mod read_tests;
 pub use reset::{FileLearnedResetIntent, PendingLearnedReset};
 pub(in super::super::super) use reset::write_intent;
 
