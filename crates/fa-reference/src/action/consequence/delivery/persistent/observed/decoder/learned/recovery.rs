@@ -1,5 +1,7 @@
 //! Cooperative replay of the original learned numerical and authority history.
 //! The existing locked store remains the only externally visible effect sink.
+mod reset;
+
 use super::{FileHumanReviewer, FileLearnedConfig, FileOversight, FileOversightProfile,
     JournalError, Machine, bind_history, journal, storage};
 use super::super::super::{BaseEvent, Event};

@@ -187,3 +187,6 @@ fn capture_storage_failure_returns_no_handle_and_reopens_only_the_canonical_pair
 
 #[path = "reset_tests.rs"]
 mod reset;
+
+#[path = "checkpoint_tests/pending_recovery.rs"]
+mod pending_recovery;
