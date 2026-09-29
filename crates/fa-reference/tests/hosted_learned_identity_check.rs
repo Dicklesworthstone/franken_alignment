@@ -293,3 +293,61 @@ fn reused_measurement_sequence_cannot_refresh_identity_and_matching_does_not_cle
     assert!(host.advance_hosted_learned(held.actor_revision, held.position).is_err());
     assert_eq!(endpoint.execution_count(), 0);
 }
+
+#[test]
+fn receipt_time_after_the_token_prevents_backdated_or_expired_anchor_admission() {
+    for expired in [false, true] {
+        let model = fixture::model(1.0); let passport = fixture::passport(&model);
+        let (mut host, endpoint, observer, _) = owner(model, passport.clone(), false);
+        let req = request(&host, 1, passport.manifest().clone());
+        let mut run = host.begin_hosted_learned_identity_check(observer, req).unwrap();
+        advance(&mut host, &mut run).unwrap();
+        let deadline = run.challenge().deadline();
+        let mut calls = 0;
+        let result = run.advance_with_clock(&mut host, run.revision(), || {
+            calls += 1;
+            if calls == 1 { ElapsedTick(1) } else if expired { deadline } else { ElapsedTick(0) }
+        });
+        assert_eq!(calls, 2); assert_eq!(result.err(), Some(Error::Stale));
+        assert_eq!(run.status(), Status::Failed); assert_eq!(run.work().completed_tokens, 2);
+        assert_eq!(run.measurements().len(), 1); assert!(run.report().observations.is_empty());
+        assert!(run.installation().is_none()); assert_eq!(host.identity_status().unwrap(), IdentityStatus::Missing);
+        assert_eq!(run.report().outcome, if expired { IdentityOutcome::Expired } else { IdentityOutcome::Unavailable });
+        assert_eq!(host.hosted_learned_generation().unwrap().position, 0);
+        assert_eq!(endpoint.execution_count(), 0);
+    }
+}
+
+#[test]
+fn post_token_clock_unwind_keeps_returned_work_without_reentering_or_accepting_the_anchor() {
+    let model = fixture::model(1.0); let passport = fixture::passport(&model);
+    let (mut host, endpoint, observer, _) = owner(model, passport.clone(), false);
+    let req = request(&host, 1, passport.manifest().clone());
+    let mut run = host.begin_hosted_learned_identity_check(observer, req).unwrap();
+    advance(&mut host, &mut run).unwrap();
+    let mut calls = 0;
+    let interrupted = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+        run.advance_with_clock(&mut host, run.revision(), || {
+            calls += 1;
+            assert_ne!(calls, 2, "injected receipt-time clock interruption");
+            ElapsedTick(1)
+        })
+    }));
+    assert!(interrupted.is_err()); assert_eq!(calls, 2);
+    assert_eq!(run.status(), Status::Failed); assert_eq!(run.failure(), Some(Error::Incomplete));
+    assert_eq!(run.work().completed_tokens, 2); assert_eq!(run.measurements().len(), 1);
+    assert!(!run.interrupted(), "the numerical token returned; the subsequent clock did not");
+    assert!(run.report().observations.is_empty()); assert!(run.installation().is_none());
+    let work = run.work();
+    assert_eq!(advance(&mut host, &mut run).err(), Some(Error::WrongState));
+    assert_eq!(run.work(), work);
+    assert_eq!(host.identity_status().unwrap(), IdentityStatus::Pending { check: 1 });
+    // Original explicit loss handling, not a synthetic completion or rewind.
+    host.identity_unavailable(run.challenge().basis()).unwrap();
+    let observer = run.take_observer().unwrap();
+    let req = request(&host, 2, passport.manifest().clone());
+    let mut fresh = host.begin_hosted_learned_identity_check(observer, req).unwrap();
+    measure(&mut host, &mut fresh); advance(&mut host, &mut fresh).unwrap();
+    assert!(matches!(host.identity_status().unwrap(), IdentityStatus::Matching { check: 2, .. }));
+    assert_eq!(run.work(), work); assert_eq!(endpoint.execution_count(), 0);
+}

@@ -26,6 +26,7 @@ pub struct OfflineDriver {
     supervisor: ActorSupervisor,
     job: Option<Job>,
     children: Option<HelperChildren>,
+    identity_restart: Option<u64>,
 }
 
 /// On failure both owners are returned for inspection or a fresh-clock retry.
@@ -47,8 +48,8 @@ impl SupervisedDriver {
     /// file endpoint releases its existing lock so its retained recovery key can
     /// reopen it. Detachment alone is NOT an external fence or nonexecution proof.
     pub fn detach_endpoint(self) -> (OfflineDriver, PublicationEndpoint) {
-        let Self { supervisor, endpoint, job, children } = self;
-        (OfflineDriver { supervisor, job, children }, endpoint)
+        let Self { supervisor, endpoint, job, children, identity_restart } = self;
+        (OfflineDriver { supervisor, job, children, identity_restart }, endpoint)
     }
 
     /// Existing obligations are processed without helper input or human keys,
@@ -177,7 +178,8 @@ impl OfflineDriver {
             self.supervisor.broker_mut().confirm_fence(acknowledgment)
         })();
         match result {
-            Ok(()) => Ok(SupervisedDriver { supervisor: self.supervisor, endpoint, job: self.job, children: self.children }),
+            Ok(()) => Ok(SupervisedDriver { supervisor: self.supervisor, endpoint, job: self.job,
+                children: self.children, identity_restart: self.identity_restart }),
             Err(error) => Err(ReconnectFailure { error, offline: self, endpoint }),
         }
     }

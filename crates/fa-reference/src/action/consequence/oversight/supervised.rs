@@ -7,6 +7,8 @@ mod processes;
 mod evidence;
 mod stopping;
 mod hosted_stop;
+mod identity;
+pub use identity::{HostedIdentityDriverStep, IdentityFenceSweep};
 pub use hosted_stop::HostedDriverStep;
 pub use stopping::DriverStopProgress;
 pub use evidence::{DriverEvidence, FileDriverStep, FileReviewError, FileReviewLaunch};
@@ -62,6 +64,8 @@ pub enum DriverEvent {
     Stopped { request: u64, state: ActionState },
     /// An automatic hosted trip, resolved only through original endpoint evidence.
     HostedStop { sweep: Box<crate::action::consequence::delivery::StopSweep> },
+    /// Confirmed identity revocation, followed by original endpoint observations.
+    IdentityFence { sweep: Box<IdentityFenceSweep> },
 }
 
 struct Job {
@@ -88,6 +92,8 @@ pub struct SupervisedDriver {
     endpoint: PublicationEndpoint,
     job: Option<Job>,
     children: Option<HelperChildren>,
+    // The identity check whose dispatcher restart was admitted, NOT an endpoint acknowledgment.
+    identity_restart: Option<u64>,
 }
 
 impl SupervisedDriver {
@@ -96,7 +102,7 @@ impl SupervisedDriver {
         contracts: CommitteeContract, limits: IntakeLimits,
     ) -> Result<(ActorPort, Self), Error> {
         let (port, supervisor) = ActorSupervisor::new(config, &mut endpoint, contracts, limits)?;
-        Ok((port, Self { supervisor, endpoint, job: None, children: None }))
+        Ok((port, Self { supervisor, endpoint, job: None, children: None, identity_restart: None }))
     }
 
     /// Trusted bootstrap/governance only. These handles must not reach actors.
@@ -129,6 +135,11 @@ impl SupervisedDriver {
     /// A refused intake remains terminal for its original actor key. This does
     /// not poll a provider, invent a snapshot, or reroll a refused proposal.
     pub fn accept_next(&mut self, snapshot: &Snapshot) -> Result<Option<IntakeResult>, Error> {
+        if self.supervisor.synchronize_identity_fence()? {
+            self.job = None;
+            self.reap_helpers();
+            return Ok(None);
+        }
         if self.job.is_some() { return Err(Error::WrongState); }
         self.supervisor.accept_next(snapshot)
     }
@@ -222,6 +233,12 @@ impl SupervisedDriver {
         // No extra clock read occurs when this optional policy has not tripped.
         if let Some(result) = self.service_hosted_stop(&mut clock) {
             return result.map(|sweep| DriverEvent::HostedStop { sweep: Box::new(sweep) })
+                .map_err(DriverError::Control);
+        }
+        // Identity mismatch is distinct from a numerical stop receipt. It must
+        // also reach the endpoint before any more helper I/O or evidence reads.
+        if let Some(result) = self.service_identity_containment(&mut clock) {
+            return result.map(|sweep| DriverEvent::IdentityFence { sweep: Box::new(sweep) })
                 .map_err(DriverError::Control);
         }
         self.reap_helpers();

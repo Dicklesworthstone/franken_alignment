@@ -13,7 +13,10 @@ The original numerical probe computes every anchor from its registered tokens
 and fresh private KV state under a whole-roster product allowance.
 
 Each revision-checked advance performs one original anchor token, or installs
-the completed original comparison. All matching anchors must complete. A real
+the completed original comparison. Physical-clock callers use
+`advance_with_clock`, which samples receipt time after EVERY computed token
+before any resulting anchor can enter the original gate. The existing `advance`
+method supplies a fixed logical tick through that same implementation. All matching anchors must complete. A real
 manifest or anchor mismatch latches in the existing shared gate immediately;
 the next advance applies the original suspension/revocation operation. A complete
 match likewise yields before installation. Neither a measurement nor matching
@@ -46,6 +49,52 @@ expiry, wrong observers, insufficient budgets, repeated measurement sequences,
 and diagnostic matching during a genuine hold. The existing fixtures and tests
 remain unchanged. Tiny fixed intervals and supplied congress ballots are causal
 controls, not discriminatory-strength or independent-evaluation evidence.
+
+## Supervision and the separate endpoint barrier
+
+`SupervisedDriver::advance_hosted_learned_identity` drives the same cursor and
+returns numerical/gate progress, actor synchronization and endpoint containment
+as separate results. The ordinary driver loop also services a real mismatch
+before helper I/O or evidence acquisition. A mismatch that has not yet been
+installed blocks this work but does not invent an authority transition.
+
+Once the original identity installation suspends authority, the supervisor
+closes queued intake and projects accepted requests from the original ledger.
+The driver releases the abandoned review/permit and requests original bounded
+child cleanup. Old actor tickets and exact request retries remain valid handles.
+No numerical StopReceipt is fabricated for an identity incident.
+
+The authority revocation floor and dispatcher epoch are DISTINCT. The original
+identity installation advances only the first. The service explicitly invokes
+the original dispatcher restart once per installed mismatch, before fallible
+clock or endpoint operations. It retains that handoff across endpoint detachment
+and reconnection. Subsequent service calls retry the current endpoint fence and
+reconciliation rather than repeatedly advancing the dispatcher epoch.
+
+Until the endpoint acknowledges the new dispatcher fence, a delayed old envelope
+can still execute. A clock or I/O failure leaves that gap and all charges visible.
+After acknowledgment, old envelopes refuse; the existing endpoint receipt/expiry
+protocol still decides whether an earlier effect executed. A lookup miss remains
+AwaitingResolution and charged until terminal evidence arrives. A successful
+IdentityFenceSweep is not a claim that every effect drained or every child reaped.
+Neither reconciliation nor the ordinary driver's IdentityFence event requires a
+live helper input, human role, repeated identity inference or replacement vote.
+
+An expired or backward post-token timestamp refuses the measurement without
+erasing returned tokens, frames or work. A caught post-token clock unwind leaves
+the cursor failed and retains the frame without admitting it. Original explicit
+identity-unavailable handling, not a synthetic pass, clears its pending check.
+
+Two additional cursor regression functions cover those receipt-time failures and
+unwinds. Three supervision functions use real sockets and the original endpoint
+for fresh two-key publication, unapplied mismatch before first disclosure,
+installed mailbox closure, execution during a failed-fence gap, confirmed
+nonexecution only after original expiry, and repeated service after reconnect.
+Together with the first seven cursor tests this adds twelve authored regression
+functions, not an executed test count. Existing first-increment test bodies and
+numerical/identity/endpoint reducers remain unchanged.
+
+## Verification boundary
 
 Compilation, tests, rustfmt and Clippy are UNEXECUTED: the required remote-only
 RCH launcher is absent. Source and hash checks are not runtime qualification.

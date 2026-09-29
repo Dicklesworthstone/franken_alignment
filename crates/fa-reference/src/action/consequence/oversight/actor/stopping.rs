@@ -9,6 +9,22 @@ use crate::action::consequence::oversight::learned_host::checkpoint::{
 use crate::Error;
 
 impl ActorSupervisor {
+    /// A confirmed ORIGINAL identity fence is terminal even though it is not a
+    /// StopReceipt. Close only queued intake here; accepted/sent outcomes still
+    /// project exclusively from the same ledger. No copied report is accepted.
+    pub(in super::super) fn synchronize_identity_fence(&mut self) -> Result<bool, Error> {
+        use crate::action::consequence::oversight::identity::{IdentityOutcome, IdentityStatus};
+        let IdentityStatus::Mismatch { check } = self.broker.identity_status()? else { return Ok(false); };
+        let installed = self.broker.identity_installation(check)?.ok_or(Error::Incomplete)?;
+        if !matches!(installed.report.outcome, IdentityOutcome::Mismatch(_))
+            || !self.broker.inspect().suspended { return Err(Error::WrongState); }
+        let mut state = self.mailbox.try_borrow_mut().map_err(|_| Error::WrongState)?;
+        state.close_intake();
+        drop(state);
+        self.synchronize()?;
+        Ok(true)
+    }
+
     /// Stop the original control ledger and close queued intake in one local
     /// handoff. Existing tickets stay usable for polling and exact retry. Only
     /// queued or genuinely undispatched work becomes cancelled-before-dispatch.

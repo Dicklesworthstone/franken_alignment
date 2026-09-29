@@ -148,13 +148,23 @@ impl HostedLearnedIdentityCheck {
         Ok(())
     }
 
-    /// One ORIGINAL anchor token, or the original completed-check installation.
-    /// Stale revisions, foreign owners and backward clocks enter no operation.
-    /// Source/control changes terminate this run without adopting a newer basis.
+    /// One logical-tick operation. Physical-clock hosts must use
+    /// advance_with_clock so completed inference cannot backdate its receipt.
     pub fn advance(&mut self, owner: &mut OversightBroker, expected_revision: u64, now: ElapsedTick)
         -> Result<HostedIdentityCheckStatus, Error>
     {
+        self.advance_with_clock(owner, expected_revision, || now)
+    }
+
+    /// One ORIGINAL anchor token, or the original completed-check installation.
+    /// Observe actual receipt time after every numerical token BEFORE recording
+    /// an anchor. A late/backward post-compute clock retains work but supplies no
+    /// observation. Stale/foreign calls do not invoke the clock or enter work.
+    pub fn advance_with_clock<F>(&mut self, owner: &mut OversightBroker, expected_revision: u64,
+        mut clock: F) -> Result<HostedIdentityCheckStatus, Error>
+    where F: FnMut() -> ElapsedTick {
         self.bind(owner, expected_revision)?;
+        let now = clock();
         if now < self.elapsed || owner.inspect().ledger.elapsed.is_some_and(|time| now < time) {
             return Err(Error::Stale);
         }
@@ -177,7 +187,7 @@ impl HostedLearnedIdentityCheck {
                 owner.expire_identity_check(&self.challenge)?;
                 return Err(Error::Stale);
             }
-            self.measure()
+            self.measure(owner, &mut clock)
         })();
         match result {
             Ok(status) => { self.status = status; self.failure = None; Ok(status) }
@@ -190,7 +200,9 @@ impl HostedLearnedIdentityCheck {
             }
         }
     }
-    fn measure(&mut self) -> Result<HostedIdentityCheckStatus, Error> {
+    fn measure<F>(&mut self, owner: &mut OversightBroker, clock: &mut F)
+        -> Result<HostedIdentityCheckStatus, Error>
+    where F: FnMut() -> ElapsedTick {
         // The private numerical owner is stack-owned across computation, so a
         // caught unwind releases it while preserving the cursor's failure latch.
         let mut probe = self.probe.take().ok_or(Error::WrongState)?;
@@ -198,27 +210,40 @@ impl HostedLearnedIdentityCheck {
         let result = probe.advance();
         self.work = probe.work();
         self.interrupted = false;
-        match result? {
-            IdentityProbeProgress::Advanced => {
+        let progress = result?;
+        // Retain actual returned frames even if receipt-time observation fails.
+        // They remain historical measurements, NOT accepted identity observations.
+        let measured = match progress {
+            IdentityProbeProgress::Measured(measurement) => {
+                self.measurements.push(*measurement); true
+            }
+            IdentityProbeProgress::Advanced => false,
+            IdentityProbeProgress::Complete => return Err(Error::Incomplete),
+        };
+        let received = clock();
+        if received < self.elapsed { return Err(Error::Stale); }
+        owner.observe_time(received)?;
+        self.elapsed = received;
+        self.current(owner)?;
+        if received >= self.challenge.deadline() {
+            owner.expire_identity_check(&self.challenge)?;
+            return Err(Error::Stale);
+        }
+        if !measured {
+            self.probe = Some(probe);
+            return Ok(HostedIdentityCheckStatus::Measuring);
+        }
+        let measured = self.measurements.last().expect("just retained original measurement");
+        self.report = self.observer.as_ref().ok_or(Error::Missing)?.observe_anchor(
+            &self.challenge, measured.anchor(), measured.source(), self.elapsed)?;
+        match self.report.outcome {
+            IdentityOutcome::Matched if probe.complete() => Ok(HostedIdentityCheckStatus::ReadyToApply),
+            IdentityOutcome::Mismatch(_) => Ok(HostedIdentityCheckStatus::ReadyToApply),
+            IdentityOutcome::Collecting if !probe.complete() => {
                 self.probe = Some(probe);
                 Ok(HostedIdentityCheckStatus::Measuring)
             }
-            IdentityProbeProgress::Measured(measurement) => {
-                self.measurements.push(*measurement);
-                let measured = self.measurements.last().expect("just retained original measurement");
-                self.report = self.observer.as_ref().ok_or(Error::Missing)?.observe_anchor(
-                    &self.challenge, measured.anchor(), measured.source(), self.elapsed)?;
-                match self.report.outcome {
-                    IdentityOutcome::Matched if probe.complete() => Ok(HostedIdentityCheckStatus::ReadyToApply),
-                    IdentityOutcome::Mismatch(_) => Ok(HostedIdentityCheckStatus::ReadyToApply),
-                    IdentityOutcome::Collecting if !probe.complete() => {
-                        self.probe = Some(probe);
-                        Ok(HostedIdentityCheckStatus::Measuring)
-                    }
-                    _ => Err(Error::Incomplete),
-                }
-            }
-            IdentityProbeProgress::Complete => Err(Error::Incomplete),
+            _ => Err(Error::Incomplete),
         }
     }
     /// Release unfinished inference and invalidate only this original basis.
