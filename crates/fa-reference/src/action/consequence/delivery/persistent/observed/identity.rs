@@ -1,6 +1,8 @@
 //! Durable model-identity checks using the original broker's measurement gate.
 //! The observer is separately provisioned custody, not authenticated hardware.
 mod codec;
+pub(super) mod computed;
+pub use computed::{FileComputedIdentityObservation, FileLearnedIdentityInput};
 pub mod decoder;
 pub(super) use codec::{read, write};
 #[cfg(test)]
@@ -23,6 +25,7 @@ pub(super) enum IdentityEvent {
     Anchor(u64, u64, SourceFrame, ElapsedTick),
     Apply(u64, u64, u64),
     Unavailable(u64),
+    Computed(computed::ComputedIdentityEvent),
 }
 
 /// Original registered stimuli and measurement context, not an approval key.

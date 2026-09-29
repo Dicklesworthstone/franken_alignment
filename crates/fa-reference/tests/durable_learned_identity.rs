@@ -341,3 +341,6 @@ fn caught_clock_unwind_retires_the_owned_probe_without_replaying_a_partial_measu
     assert_eq!(run.step_with_clock(&mut host, observer, || ElapsedTick(1)).err(), Some(Error::WrongState.into()));
     assert!(host.identity_installation(1).unwrap().is_none());
 }
+
+#[path = "durable_learned_identity/computed.rs"]
+mod computed;

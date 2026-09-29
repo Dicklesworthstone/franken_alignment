@@ -1,5 +1,6 @@
 //! Replay measurements through the ORIGINAL identity observer and authority.
 //! No decoded event supplies a match verdict, balance or containment receipt.
+mod computed;
 use super::{Machine, Transition};
 use super::super::identity::{FileIdentityObservation, IdentityEvent};
 use crate::action::consequence::activation::identity::ModelPassport;
@@ -25,6 +26,7 @@ impl Machine {
             return Err(Error::Incomplete);
         }
         match event {
+            IdentityEvent::Computed(event) => self.apply_computed_identity(event),
             IdentityEvent::Enable(passport, policy) => {
                 if self.identity.is_some() { return Err(Error::Duplicate); }
                 if !self.actions.is_empty() || self.requests.len() != 0 || !self.sessions.is_empty()

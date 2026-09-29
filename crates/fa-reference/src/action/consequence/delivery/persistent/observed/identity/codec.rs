@@ -16,6 +16,7 @@ fn policy(policy: IdentityPolicy) -> Result<(), Error> {
 
 pub(in super::super) fn write(w: &mut Writer, event: &IdentityEvent) -> Result<(), Error> {
     match event {
+        IdentityEvent::Computed(event) => { w.u8(6)?; super::computed::write(w, event)?; }
         IdentityEvent::Enable(passport, settings) => {
             policy(*settings)?;
             w.u8(0)?; w.blob(&wire::encode_passport(passport)?)?;
@@ -37,6 +38,7 @@ pub(in super::super) fn write(w: &mut Writer, event: &IdentityEvent) -> Result<(
 
 pub(in super::super) fn read(r: &mut Reader<'_>) -> Result<IdentityEvent, Error> {
     Ok(match r.u8()? {
+        6 => IdentityEvent::Computed(super::computed::read(r)?),
         0 => {
             let passport = Rc::new(wire::decode_passport(r.blob(wire::MAX_PASSPORT_BYTES)?)?);
             let settings = IdentityPolicy { observer_id: r.u64()?, timeout_ticks: r.u64()?,
