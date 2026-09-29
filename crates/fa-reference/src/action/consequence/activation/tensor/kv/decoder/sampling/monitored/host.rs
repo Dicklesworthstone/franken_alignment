@@ -6,6 +6,21 @@ use crate::Error;
 use std::rc::Rc;
 
 impl LearnedGeneration {
+    /// Inspect immutable parameters from THIS original generation. The existing
+    /// identity engine owns fresh anchor sessions, never this live KV or sampler.
+    /// Only the crate's supervised owner can select this source; no model getter
+    /// or untrusted archive-to-probe constructor is introduced here.
+    pub(crate) fn host_identity_probe(
+        &self,
+        passport: &crate::action::consequence::activation::identity::ModelPassport,
+        measurement_sequence: u64,
+        budget: crate::action::consequence::activation::tensor::kv::decoder::DecoderBudget,
+    ) -> Result<crate::action::consequence::activation::identity::decoder::DecoderIdentityProbe, Error> {
+        crate::action::consequence::activation::identity::decoder::DecoderIdentityProbe::new(
+            self.model.clone(), passport, measurement_sequence, budget,
+        )
+    }
+
     /// Only a sealed, freshly audited restart reaches this seam. Restrict every
     /// remaining ceiling before the original authority transition. Repeating a
     /// rewind, including to an older checkpoint, never restores spent allowance.
