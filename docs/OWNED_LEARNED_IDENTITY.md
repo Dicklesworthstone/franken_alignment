@@ -29,6 +29,39 @@ intervals is not authentication and does not establish discrimination against
 all possible model substitutions. Returned anchor frames are sensitive operator
 evidence, not an actor-facing model-input channel.
 
+## Durable challenge integration
+
+`FileIdentityObserver::learned_decoder_probe` constructs the original bounded
+`FileDecoderIdentityProbe` from a begun `FileIdentityChallenge` and the current
+journal owner's original learned model. The challenge supplies the registered
+passport. No argument can select a substitute model, probe, anchor subset or
+cached activation. Construction writes no journal and executes no token.
+
+The observed manifest remains an independent input; expected metadata is not
+silently reported as an observation. The original runner records that manifest
+first and closes on its original mismatch/containment result before inference.
+It then executes one original anchor token per numerical step, re-observes the
+trusted clock after computation, records actual residuals, and separately applies
+the original identity gate only when every mandatory anchor matches.
+
+Every original actor/control/epoch/basis check, whole-roster budget, current
+challenge check, deadline, durability barrier and interruption latch is reused.
+Changed actors and withdrawn identity bases close partial runs before more work.
+Foreign roles cannot take over. An expired or interrupted measurement cannot
+be replayed through this runner as a fresh successful observation.
+
+Recovery provisions fresh roles and challenges rather than resuming old runs.
+A paused learned owner may be measured for requalification, but a matching
+identity cannot itself resume it or recover its old effect keys. Original resume,
+source-bound sidecar preparation, congress, human approval and checked publication
+remain distinct operations. A numerical matcher success is not a publication.
+
+Legacy trusted external-probe/manual observation interfaces are unchanged; this
+is an explicitly selected owned-model path, not a claim that all host ingress is
+authenticated or that every existing caller is forced onto this constructor.
+Historical journal replay uses the existing recorded identity observations, not
+a new numerical identity witness format or a new proof of remote provenance.
+
 ## Verification status
 
 Six integration regressions and one compile-fail boundary are authored. They
@@ -41,6 +74,15 @@ A detached probe remains historical if the live actor advances.
 
 The fixture uses real tiny-model inference with synthetic coefficients and
 registered intervals. It is not trained-detector or passport qualification.
+Ten further real-journal regression functions exercise actual identity through
+sidecar/congress/two-key publication, a same-label changed-parameter mismatch,
+independently observed manifest mismatch, exact setup budgets, source/basis loss,
+foreign custody, receipt-time expiry with a timely control, fresh measurement
+while paused after recovery, failed persistence after anchor inference, and a
+caught post-inference clock unwind. There are sixteen authored regression
+functions and two compile-fail examples across both increments. Original identity
+runner bodies, matching rules and journal formats are unchanged.
+
 Required targeted and full RCH checks cannot launch in this environment because
 `rch` is absent (exit 127); Cargo, rustc and rustfmt are also absent. Rust
 compilation, tests, rustfmt and Clippy are UNEXECUTED. Selected-source hash and
