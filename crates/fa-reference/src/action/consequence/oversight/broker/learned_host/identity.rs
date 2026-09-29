@@ -1,5 +1,9 @@
 //! Actual owned-model stimuli through the original numerical identity engine.
 //! Measurement is observation, never source eligibility or effect authority.
+mod check;
+pub use check::{HostedIdentityCheckRequest, HostedIdentityCheckStatus,
+    HostedIdentityStartFailure, HostedLearnedIdentityCheck};
+
 use super::OversightBroker;
 use crate::action::consequence::activation::identity::{
     ModelPassport, decoder::DecoderIdentityProbe,

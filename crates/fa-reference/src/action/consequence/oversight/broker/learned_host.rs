@@ -1,7 +1,7 @@
 //! Own learned-K/V generation and the exact actor copy at the existing effect gate.
 //! Numerical acceptance synchronizes state, not congress approval or a permit.
 mod stopping;
-mod identity;
+pub mod identity;
 pub mod checkpoint;
 pub mod sidecar;
 pub mod text;
