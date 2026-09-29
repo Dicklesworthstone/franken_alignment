@@ -240,7 +240,10 @@ impl FileSupervisedDriver {
                 || (current == ActionState::Dispatching && matches!(job.phase, Phase::Review | Phase::Ready)) {
                 job.permit = None; job.phase = Phase::Reconcile;
             }
-            observe(&mut host, clock())?;
+            // Query-only recovery owns its clock and reconciliation in ONE
+            // canonical cut. Do not consume a lone Time record before it can
+            // preflight the complete operation, including reserved capacity.
+            if job.phase != Phase::Reconcile { observe(&mut host, clock())?; }
             step_job(&mut host, job, &mut clock, provider, human, credential)
         })();
         self.reap_helpers();
@@ -360,7 +363,7 @@ where F: FnMut() -> ElapsedTick, P: EvidenceProvider {
         Phase::Publish => Ok(publication::publish_job(host, job, clock, provider, credential)),
         Phase::Reconcile => {
             let revision = host.revision();
-            let outcome = host.reconcile(revision, job.attempt)?;
+            let outcome = host.reconcile_attempt_at(revision, job.attempt, clock())?;
             job.close();
             Ok(FileDriverEvent::Reconciled { request, outcome })
         }
