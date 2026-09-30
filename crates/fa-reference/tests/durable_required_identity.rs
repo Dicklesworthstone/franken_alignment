@@ -177,7 +177,10 @@ fn strict_first_image_computes_identity_then_requires_original_congress_and_both
     assert_eq!(observed.observation.measurement.unwrap().outcome, IdentityOutcome::Matched);
     assert_eq!(observed.work.entered_tokens, 4);
     assert_eq!(observed.work.completed_tokens, 4);
-    assert_eq!(host.learned_generation_inspection().unwrap(), numerical);
+    let after = host.learned_generation_inspection().unwrap();
+    assert_eq!(after.numerical, numerical.numerical);
+    assert_eq!((after.paused, after.pending), (numerical.paused, numerical.pending));
+    assert_eq!(after.journal_revision, numerical.journal_revision + 2);
     assert!(host.identity_installation(1).unwrap().is_none());
     assert!(matches!(host.identity_status().unwrap(), IdentityStatus::Missing));
     install(&mut host, &check);
@@ -378,3 +381,6 @@ fn separately_observed_manifest_mismatch_keeps_original_containment_without_anch
     assert_eq!(host.identity_report(1).unwrap().manifest, Some(observed));
     assert!(host.inspect().control.suspended);
 }
+
+#[path = "durable_required_identity/cooperative.rs"]
+mod cooperative;

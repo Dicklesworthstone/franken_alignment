@@ -1,10 +1,10 @@
 //! One original numerical execution path for live preparation and journal replay.
 use super::{FileIdentityObservation, IdentityChallenge, IdentityEvent, IdentityOutcome, Machine, Transition};
 use super::super::super::{Event, identity::computed::{ComputedIdentityEvent,
-    FileComputedIdentityObservation, FileLearnedIdentityInput}, decoder::MAX_WITNESS_BYTES};
+    FileComputedIdentityObservation, FileLearnedIdentityInput, IdentityComputation}, decoder::MAX_WITNESS_BYTES};
 use crate::action::ElapsedTick;
 use crate::action::consequence::activation::identity::decoder::{
-    DecoderIdentityMeasurement, DecoderIdentityProbe, IdentityProbeProgress, IdentityProbeWork};
+    DecoderIdentityMeasurement, DecoderIdentityProbe, IdentityProbeWork};
 use crate::action::consequence::activation::monitor::decoder::sampled::host::replay::error_tag;
 use crate::action::consequence::delivery::persistent::codec::shared::Writer;
 use crate::Error;
@@ -39,13 +39,42 @@ impl Machine {
     }
 
     pub(in super::super::super) fn prepare_computed_identity<F>(&mut self,
-        mut event: ComputedIdentityEvent, clock: F)
+        event: ComputedIdentityEvent, mut clock: F)
         -> Result<(ComputedIdentityEvent, FileComputedIdentityObservation), Error>
     where F: FnMut() -> ElapsedTick {
+        let mut computation = self.start_computed_identity(&event)?;
+        while !computation.ready() { computation.advance()?; }
+        self.finish_prepared_computed_identity(event, computation, clock())
+    }
+
+    /// Private preparation only; no measurement or authority escapes this RAM
+    /// candidate. Both execution routes retain the original complete-roster plan.
+    pub(in super::super::super) fn start_computed_identity(&mut self,
+        event: &ComputedIdentityEvent) -> Result<IdentityComputation, Error>
+    {
+        event.validate()?;
         let shape = Event::Identity(IdentityEvent::Computed(event.clone()));
         self.check_decoder_admission(&shape)?;
         self.check_consistency_route(&shape)?;
-        let (result, witness) = self.execute_computed_identity(&event, clock)?;
+        let (challenge, probe) = self.preflight_computed_identity(event.check, &event.input)?;
+        let mut measured = Vec::new();
+        measured.try_reserve_exact(challenge.passport().anchors().len()).map_err(|_| Error::Limit)?;
+        let observation = observed(self.apply_identity_inner(&IdentityEvent::Manifest(event.check,
+            event.input.observed_manifest.clone(), event.started_at))?)?;
+        let collecting = observation.measurement.as_ref()
+            .is_ok_and(|report| report.outcome == IdentityOutcome::Collecting);
+        let remaining = probe.work().planned_tokens;
+        Ok(IdentityComputation { challenge, probe, measured, observation, collecting,
+            numerical_failure: None, remaining })
+    }
+
+    /// Seal the same original computation without rerunning its tokens. Only the
+    /// caller's existing canonical persistence boundary can publish this result.
+    pub(in super::super::super) fn finish_prepared_computed_identity(&mut self,
+        mut event: ComputedIdentityEvent, computation: IdentityComputation, completed_at: ElapsedTick)
+        -> Result<(ComputedIdentityEvent, FileComputedIdentityObservation), Error>
+    {
+        let (result, witness) = self.finish_computed_identity(&event, computation, completed_at)?;
         event.completed_at = result.completed_at;
         event.witness = witness.into();
         self.requests.refresh(&self.broker.inspect())?;
@@ -56,30 +85,22 @@ impl Machine {
     fn execute_computed_identity<F>(&mut self, event: &ComputedIdentityEvent, mut clock: F)
         -> Result<(FileComputedIdentityObservation, Vec<u8>), Error>
     where F: FnMut() -> ElapsedTick {
-        let (challenge, mut probe) = self.preflight_computed_identity(event.check, &event.input)?;
-        // Reserve before executing the first token. The original passport bounds
-        // the complete number of measurements, not a caller-selected subset.
-        let mut measured = Vec::new();
-        measured.try_reserve_exact(challenge.passport().anchors().len()).map_err(|_| Error::Limit)?;
-        let mut observation = observed(self.apply_identity_inner(&IdentityEvent::Manifest(event.check,
-            event.input.observed_manifest.clone(), event.started_at))?)?;
-        let collecting = observation.measurement.as_ref()
-            .is_ok_and(|report| report.outcome == IdentityOutcome::Collecting);
-        let mut numerical_failure = None;
-        if collecting {
-            for _ in 0..probe.work().planned_tokens {
-                match probe.advance() {
-                    Ok(IdentityProbeProgress::Advanced) => {}
-                    Ok(IdentityProbeProgress::Measured(frame)) => measured.push(*frame),
-                    Ok(IdentityProbeProgress::Complete) => { numerical_failure = Some(Error::Binding); break; }
-                    Err(error) => { numerical_failure = Some(error); break; }
-                }
-            }
-            if numerical_failure.is_none() && !probe.complete() { numerical_failure = Some(Error::Incomplete); }
+        let mut computation = self.start_computed_identity(event)?;
+        while !computation.ready() { computation.advance()?; }
+        self.finish_computed_identity(event, computation, clock())
+    }
+
+    fn finish_computed_identity(&mut self, event: &ComputedIdentityEvent,
+        computation: IdentityComputation, completed_at: ElapsedTick)
+        -> Result<(FileComputedIdentityObservation, Vec<u8>), Error>
+    {
+        if !computation.ready() { return Err(Error::Incomplete); }
+        let IdentityComputation { challenge, probe, measured, mut observation,
+            collecting, numerical_failure, .. } = computation;
+        if event.check != challenge.id() || event.input.measurement_sequence != probe.measurement_sequence() {
+            return Err(Error::Binding);
         }
-        let completed_at = clock();
-        // A backwards or interrupted clock cannot publish the private candidate.
-        // The live wrapper is already poisoned before entering this execution.
+        if completed_at < event.started_at { return Err(Error::Stale); }
         self.observe(completed_at)?;
         if collecting {
             let refusal = if completed_at >= challenge.deadline() { Some(Error::Stale) }

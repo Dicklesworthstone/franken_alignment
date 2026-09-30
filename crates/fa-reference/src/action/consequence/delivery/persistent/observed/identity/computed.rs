@@ -1,4 +1,6 @@
 //! Acknowledged actual-model measurements, recomputed rather than imported on replay.
+mod preparation;
+pub(in super::super) use preparation::IdentityComputation;
 use super::{Event, FileIdentityChallenge, FileIdentityObservation, FileIdentityObserver,
     FileOversight, IdentityEvent, JournalError, Machine, ModelManifest, Transition, journal};
 use super::super::decoder::MAX_WITNESS_BYTES;

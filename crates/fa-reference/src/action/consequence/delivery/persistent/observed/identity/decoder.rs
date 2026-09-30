@@ -1,6 +1,7 @@
 //! Cooperative actual-decoder measurements feeding the ORIGINAL durable gate.
 //! This adapter owns no effect key, alternate verdict reducer or journal format.
 mod learned;
+pub mod transaction;
 
 use super::{FileIdentityChallenge, FileIdentityObservation, FileIdentityObserver, FileOversight, JournalError};
 use crate::action::ElapsedTick;
