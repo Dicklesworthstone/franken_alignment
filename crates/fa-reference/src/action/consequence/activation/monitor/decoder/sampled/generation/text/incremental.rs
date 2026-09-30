@@ -225,8 +225,6 @@ pub struct CancelledTextGeneration {
     prefix_controls: Vec<u32>,
     progress: GenerationProgress,
     output: Vec<u8>,
-    capacity: usize,
-    decoded_tokens: usize,
     interrupted: bool,
     output_failure: Option<Error>,
     decoder_work: DecoderWork,
