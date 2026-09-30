@@ -2,8 +2,9 @@
 //! One pull computes at most one token; no output sink or background task exists.
 //! Cancellation destroys the unfinished owner, never rewinds or returns its keys.
 
-use super::{PreparedText, TextDecoder, TextGenerationFailure, TextGenerationReport,
-    TextGenerationRequest, TextOutputError, TokenizationWork, TokenizedInput, append_output};
+use super::{PreparedText, TextDecoder, TextGenerationAdmission, TextGenerationFailure,
+    TextGenerationReport, TextGenerationRequest, TextOutputError, TokenizationProgress,
+    TokenizedInput, append_output};
 use super::super::{GenerationFinish, GenerationWork};
 use super::super::incremental::{GenerationProgress, GenerationSession};
 use crate::action::consequence::activation::monitor::decoder::MonitoringWork;
@@ -81,9 +82,17 @@ impl TextDecoder {
     pub fn into_generation(self, expected_position: u64, request: TextGenerationRequest)
         -> Result<TextGenerationSession, TextGenerationFailure>
     {
-        let mut work = TokenizationWork::default();
-        let prepared = self.prepare_text(expected_position, request, &mut work)
-            .map_err(|error| TextGenerationFailure { error, tokenization: work })?;
+        let mut admission = self.into_generation_admission(expected_position, request)?;
+        while admission.advance()? != TokenizationProgress::Complete {}
+        admission.finish_incremental()
+    }
+
+    // Only the original admission owner can supply this preparation. All
+    // numerical request admission remains in the existing GenerationSession.
+    fn into_prepared_generation(self, expected_position: u64, prepared: PreparedText)
+        -> Result<TextGenerationSession, TextGenerationFailure>
+    {
+        let work = prepared.encoded.work();
         let PreparedText { encoded, prefix_controls, numerical, output, capacity } = prepared;
         let Self { decoder, tokenizer } = self;
         let numerical = decoder.into_generation(expected_position, numerical)
@@ -91,6 +100,24 @@ impl TextDecoder {
         let progress = numerical.progress();
         Ok(TextGenerationSession { numerical, tokenizer, prompt: encoded, prefix_controls,
             progress, output, capacity, decoded_tokens: 0, interrupted: false, output_failure: None })
+    }
+}
+
+impl TextGenerationAdmission {
+    /// Transfer a COMPLETE prompt into the original token-by-token monitored
+    /// generation session. No re-tokenization, model inference or sampling runs
+    /// during this handoff. Output allocation and original numerical admission
+    /// still must succeed before a session is returned.
+    ///
+    /// Pending tokenization returns Incomplete; a failed tokenizer retains its
+    /// first error and performed work. Both refusals consume the original owner,
+    /// rather than returning a reusable decoder with erased admission history.
+    /// To yield during prompt BPE, call into_generation_admission, advance until
+    /// Complete, then finish_incremental. The existing into_generation remains
+    /// a synchronous-admission convenience over this same path.
+    pub fn finish_incremental(self) -> Result<TextGenerationSession, TextGenerationFailure> {
+        let (expected_position, decoder, prepared) = self.into_prepared()?;
+        decoder.into_prepared_generation(expected_position, prepared)
     }
 }
 
@@ -198,6 +225,8 @@ pub struct CancelledTextGeneration {
     prefix_controls: Vec<u32>,
     progress: GenerationProgress,
     output: Vec<u8>,
+    capacity: usize,
+    decoded_tokens: usize,
     interrupted: bool,
     output_failure: Option<Error>,
     decoder_work: DecoderWork,
@@ -225,3 +254,158 @@ impl fmt::Debug for CancelledTextGeneration {
 
 #[cfg(test)]
 mod tests;
+
+#[cfg(test)]
+mod admission_tests {
+    use super::*;
+    use super::super::tests::{request, run};
+    use crate::action::consequence::activation::monitor::decoder::MonitoringStatus;
+    use crate::action::consequence::activation::monitor::decoder::observation::DecoderAvailability;
+
+    fn prepared(mut admission: TextGenerationAdmission) -> TextGenerationAdmission {
+        let position = admission.position();
+        let draws = admission.sampled_draws();
+        let decoder = admission.decoder_work();
+        let monitoring = admission.monitoring_work();
+        for _ in 0..128 {
+            let progress = admission.advance().unwrap();
+            assert_eq!(admission.position(), position);
+            assert_eq!(admission.sampled_draws(), draws);
+            assert_eq!(admission.decoder_work(), decoder);
+            assert_eq!(admission.monitoring_work(), monitoring);
+            if progress == TokenizationProgress::Complete { return admission; }
+        }
+        panic!("small prompt failed to complete within its bounded step allowance");
+    }
+
+    #[test]
+    fn cooperative_prompt_to_stream_keeps_exact_work_and_original_output() {
+        let mut reference = run(259, None);
+        let expected = reference.generate(0, request(b"ab", 3)).unwrap();
+        let pending = prepared(run(259, None)
+            .into_generation_admission(0, request(b"ab", 3)).unwrap());
+        let tokenization = pending.tokenization_work();
+        let mut session = pending.finish_incremental().unwrap();
+        assert_eq!(session.position(), 0);
+        assert_eq!(session.sampled_draws(), 0);
+        assert_eq!(session.decoder_work().tokens, 0);
+        assert_eq!(session.prompt().work(), tokenization);
+        assert_eq!(session.prompt().tokens(), &[258]);
+        assert_eq!(session.prompt().spans(), &[0..2]);
+        let mut bytes = Vec::new();
+        for position in 0..5 {
+            let before = session.sampled_draws();
+            let chunk = session.advance(position).unwrap();
+            assert!(chunk.tokens().len() <= 1);
+            assert_eq!(chunk.byte_range(), bytes.len()..bytes.len() + chunk.bytes().len());
+            bytes.extend_from_slice(chunk.bytes());
+            assert!(session.sampled_draws() - before <= 1);
+        }
+        assert_eq!(bytes, "ééé".as_bytes());
+        assert_eq!(session.progress().finish(), Some(GenerationFinish::TokenLimit));
+        assert_eq!(session.decoder_work(), reference.decoder_work());
+        assert_eq!(session.monitoring_work(), reference.monitoring_work());
+        assert_eq!(session.sampled_draws(), reference.sampled_draws());
+        let (_, actual) = session.into_parts().unwrap();
+        assert_eq!(actual.bytes(), expected.bytes());
+        assert_eq!(actual.generation().tokens(), expected.generation().tokens());
+        assert_eq!(actual.generation().work(), expected.generation().work());
+        assert_eq!(actual.prompt().work(), tokenization);
+    }
+
+    #[test]
+    fn pending_handoff_refuses_instead_of_finishing_a_partial_prompt() {
+        let owner = run(65, None);
+        let source = owner.observation();
+        let mut pending = owner.into_generation_admission(0, request(b"ab", 2)).unwrap();
+        assert_eq!(pending.advance().unwrap(), TokenizationProgress::Pending);
+        let work = pending.tokenization_work();
+        assert_eq!(pending.decoder_work().tokens, 0);
+        let failure = pending.finish_incremental().unwrap_err();
+        assert_eq!(failure.error, Error::Incomplete);
+        assert_eq!(failure.tokenization, work);
+        assert_eq!(source.availability(), DecoderAvailability::Closed);
+    }
+
+    #[test]
+    fn cancelling_after_handoff_before_prefill_preserves_prompt_work_not_authority() {
+        let owner = run(65, None);
+        let source = owner.observation();
+        let pending = prepared(owner.into_generation_admission(0, request(b"ab", 2)).unwrap());
+        let work = pending.tokenization_work();
+        let session = pending.finish_incremental().unwrap();
+        let cancelled = session.cancel();
+        assert_eq!(source.availability(), DecoderAvailability::Closed);
+        assert_eq!(cancelled.prompt().source(), b"ab");
+        assert_eq!(cancelled.prompt().tokens(), &[258]);
+        assert_eq!(cancelled.prompt().work(), work);
+        assert_eq!(cancelled.decoder_work().tokens, 0);
+        assert_eq!(cancelled.sampled_draws(), 0);
+        assert_eq!(cancelled.progress().reviewed_prompt_tokens(), 0);
+        assert!(cancelled.progress().report().is_none());
+        assert!(cancelled.bytes().is_empty());
+    }
+
+    #[test]
+    fn held_output_stays_withheld_through_cooperative_prompt_and_streaming() {
+        let pending = prepared(run(33, Some(33))
+            .into_generation_admission(0, request(b"ab", 3)).unwrap());
+        let mut session = pending.finish_incremental().unwrap();
+        for position in 0..3 {
+            let chunk = session.advance(position).unwrap();
+            assert!(chunk.bytes().is_empty());
+            assert!(chunk.tokens().is_empty());
+        }
+        assert_eq!(session.progress().finish(), Some(GenerationFinish::Held));
+        assert_eq!(session.sampled_draws(), 1);
+        let (owner, report) = session.into_parts().unwrap();
+        assert_eq!(owner.status(), MonitoringStatus::Held);
+        assert!(report.bytes().unwrap().is_empty());
+        let position = owner.position();
+        assert_eq!(owner.into_generation_admission(position, request(b"ab", 1))
+            .unwrap_err().error, Error::WrongState);
+    }
+
+    #[test]
+    fn sticky_tokenization_failure_cannot_be_handed_to_numerical_generation() {
+        let owner = run(65, None);
+        let source = owner.observation();
+        let mut input = request(b"ab", 2);
+        input.tokenization.heap_pops = 0;
+        let mut pending = owner.into_generation_admission(0, input).unwrap();
+        for _ in 0..3 {
+            assert_eq!(pending.advance().unwrap(), TokenizationProgress::Pending);
+        }
+        let failure = pending.advance().unwrap_err();
+        assert_eq!(failure.error, Error::Limit);
+        assert_eq!(failure.tokenization.pair_lookups, 1);
+        assert_eq!(failure.tokenization.heap_pops, 0);
+        assert_eq!(pending.decoder_work().tokens, 0);
+        assert_eq!(pending.finish_incremental().unwrap_err(), failure);
+        assert_eq!(source.availability(), DecoderAvailability::Closed);
+    }
+
+    #[test]
+    fn stale_pull_after_handoff_does_not_charge_or_skip_the_next_valid_step() {
+        let pending = prepared(run(65, None)
+            .into_generation_admission(0, request(b"ab", 1)).unwrap());
+        let mut session = pending.finish_incremental().unwrap();
+        let work = session.decoder_work();
+        assert_eq!(session.advance(1).unwrap_err(), Error::Stale);
+        assert_eq!(session.decoder_work(), work);
+        assert_eq!(session.sampled_draws(), 0);
+        assert!(!session.interrupted());
+        for position in 0..2 {
+            assert!(session.advance(position).unwrap().bytes().is_empty());
+        }
+        assert_eq!(session.advance(2).unwrap().bytes(), b"A");
+        let work = session.decoder_work();
+        let chunk = session.advance(3).unwrap();
+        assert!(chunk.bytes().is_empty());
+        assert!(chunk.tokens().is_empty());
+        assert_eq!(chunk.finish(), Some(GenerationFinish::TokenLimit));
+        assert_eq!(session.decoder_work(), work);
+        assert_eq!(session.sampled_draws(), 1);
+        assert_eq!(session.into_parts().unwrap().1.bytes().unwrap(), b"A");
+    }
+}
