@@ -5,7 +5,11 @@
 //! judgments to this exact history. The index is advisory: the ordinary budgeted
 //! validator still checks the basis and every negative closing frontier.
 
+mod observation;
 pub mod routing;
+
+pub use observation::{ChangeObservation, ChangeObservationOutcome, ChangeObservationReport};
+use super::RefinementBudget;
 
 use super::{Error, ProductFrontiers, Witness, WitnessJudgment, WitnessRefinement, WitnessSnapshot, closed_marker};
 use crate::witness::{MAX_WITNESSES, WitnessRequest};
@@ -131,29 +135,26 @@ impl<'a> WitnessChangeIndex<'a> {
     /// The control cut may stay equal but cannot regress. Failed admission does
     /// not advance or evict history. The final delta is fully built before any
     /// mutation; peak construction retains at most capacity + 1 bounded deltas.
+    /// Drives the same cooperative update exposed by `begin_observe`; callers
+    /// that must yield between comparisons should use that budgeted API.
     pub fn observe(
         &mut self,
         next: &'a WitnessSnapshot,
         frontiers: &ProductFrontiers,
     ) -> Result<ChangeCost, Error> {
-        let expected = self.current.revision.checked_add(1).ok_or(Error::Overflow)?;
-        if next.revision != expected || next.control_cut < self.current.control_cut {
-            return Err(Error::Stale);
+        let mut pending = self.begin_observe(next, frontiers);
+        loop {
+            let report = pending.advance(RefinementBudget {
+                steps: u64::MAX,
+                value_bytes: u64::MAX,
+            });
+            match report.outcome {
+                ChangeObservationOutcome::Ready => return pending.commit(),
+                ChangeObservationOutcome::Refused(error) => return Err(error),
+                ChangeObservationOutcome::NeedsWork { .. } => {}
+                ChangeObservationOutcome::Cancelled => return Err(Error::WrongState),
+            }
         }
-        if next.semantic_epoch != self.current.semantic_epoch
-            || next.domain_input.domain != self.current.domain_input.domain
-        {
-            return Err(Error::Binding);
-        }
-        closed_marker(next, frontiers)?;
-        let (keys, cost) = changed_keys(self.current, next);
-        if self.deltas.len() == self.capacity {
-            let evicted = self.deltas.pop_front().expect("nonzero full capacity");
-            self.floor = evicted.revision;
-        }
-        self.deltas.push_back(Delta { revision: next.revision, keys });
-        self.current = next;
-        Ok(cost)
     }
 
     /// Select candidates, then use the SAME exact validator. Missing history,
@@ -217,6 +218,7 @@ impl<'a> WitnessChangeIndex<'a> {
     }
 }
 
+#[cfg(test)]
 fn changed_keys(before: &WitnessSnapshot, after: &WitnessSnapshot) -> (BTreeSet<u64>, ChangeCost) {
     let mut keys = BTreeSet::new();
     let mut cost = ChangeCost::default();
