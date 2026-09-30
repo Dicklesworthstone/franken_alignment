@@ -61,7 +61,7 @@ impl Machine {
         // the complete number of measurements, not a caller-selected subset.
         let mut measured = Vec::new();
         measured.try_reserve_exact(challenge.passport().anchors().len()).map_err(|_| Error::Limit)?;
-        let mut observation = observed(self.apply_identity(&IdentityEvent::Manifest(event.check,
+        let mut observation = observed(self.apply_identity_inner(&IdentityEvent::Manifest(event.check,
             event.input.observed_manifest.clone(), event.started_at))?)?;
         let collecting = observation.measurement.as_ref()
             .is_ok_and(|report| report.outcome == IdentityOutcome::Collecting);
@@ -89,7 +89,7 @@ impl Machine {
                 observation = FileIdentityObservation { measurement: Err(error), containment: None };
             } else {
                 for frame in &measured {
-                    observation = observed(self.apply_identity(&IdentityEvent::Anchor(event.check,
+                    observation = observed(self.apply_identity_inner(&IdentityEvent::Anchor(event.check,
                         frame.anchor(), frame.source().clone(), completed_at))?)?;
                     if !observation.measurement.as_ref().is_ok_and(|report|
                         matches!(report.outcome, IdentityOutcome::Collecting | IdentityOutcome::Matched)) { break; }

@@ -67,6 +67,7 @@ impl Machine {
                     || !self.containment.updates.is_empty() || !self.containment.checkpoints.is_empty()
                     || self.broker.stop_receipt().is_some() { return Err(Error::WrongState); }
                 let config = config.runtime()?;
+                if config.requires_computed_identity() { self.check_computed_identity_bootstrap()?; }
                 config.install(&mut self.broker)?;
                 if !self.publication_guard { self.enable_publication_guard()?; }
                 self.learned = Some(LearnedState { config, paused: false, pending: None, checkpoints: checkpoint::CheckpointHistory::default(), sidecar_outcomes: std::collections::BTreeMap::new(), sidecars: std::collections::BTreeMap::new() });

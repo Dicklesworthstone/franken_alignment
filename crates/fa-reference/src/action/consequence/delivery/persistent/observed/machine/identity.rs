@@ -21,7 +21,26 @@ impl Machine {
         self.identity.as_ref().map(|state| (state.passport.as_ref(), state.policy))
     }
 
+    /// The required-computation profile starts with the original identity gate,
+    /// before ANY challenge. An older manual match cannot be grandfathered in.
+    pub(super) fn check_computed_identity_bootstrap(&self) -> Result<(), Error> {
+        let state = self.identity.as_ref().ok_or(Error::Incomplete)?;
+        if !state.challenges.is_empty() { return Err(Error::WrongState); }
+        Ok(())
+    }
+
     pub(super) fn apply_identity(&mut self, event: &IdentityEvent) -> Result<Transition, Error> {
+        if self.learned_contract().is_some_and(|config| config.requires_computed_identity())
+            && matches!(event, IdentityEvent::Manifest(..) | IdentityEvent::Anchor(..)) {
+            return Err(Error::Binding);
+        }
+        self.apply_identity_inner(event)
+    }
+
+    // Private original transition implementation. Only the computed adapter may
+    // supply its actual measurements through this seam in the strict profile.
+    // Journal replay and every public/manual ingress use apply_identity above.
+    fn apply_identity_inner(&mut self, event: &IdentityEvent) -> Result<Transition, Error> {
         if !matches!(event, IdentityEvent::Enable(..) | IdentityEvent::Unavailable(_)) && !self.clock_ready {
             return Err(Error::Incomplete);
         }
