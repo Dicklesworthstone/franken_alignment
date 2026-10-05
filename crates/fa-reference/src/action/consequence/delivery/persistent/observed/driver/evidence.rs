@@ -2,6 +2,7 @@
 //! The sealed reader interface cannot be replaced by a caller's cached snapshot.
 mod launch;
 mod intake;
+mod computed;
 pub mod publication;
 use super::{FileDriverEvent, FileDriverProcessError, FileHumanPermit,
     FileHumanRequest, FileOversight, FileSupervisedDriver, JournalError, Phase, observe, sample, stage};
