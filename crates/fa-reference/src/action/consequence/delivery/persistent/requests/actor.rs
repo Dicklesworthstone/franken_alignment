@@ -3,6 +3,8 @@
 
 mod host;
 mod generated;
+mod learned_text;
+pub use learned_text::{FileLearnedTextActorPort, LearnedTextProposal};
 pub use generated::FileGeneratedTextActorPort;
 pub mod source_wire;
 #[cfg(target_os = "linux")]

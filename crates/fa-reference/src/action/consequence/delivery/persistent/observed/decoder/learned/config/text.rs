@@ -1,6 +1,7 @@
 //! Exact text recipe binding within the original learned-generation journal.
 //! Disk carries comparison bytes, never a tokenizer/model or generated output to install.
 mod stream;
+mod intake;
 
 use super::super::{Configuration, DecoderEvent, LearnedEvent, Event, Machine, journal, storage};
 use super::{FileLearnedConfig, LearnedDecoderBindingLimits, LearnedSourceConfig, DecoderModel,
