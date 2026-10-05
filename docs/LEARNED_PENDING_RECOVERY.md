@@ -23,15 +23,56 @@ future restart attempts or hardware durability. Original canonical prefix byte
 limits, independent recipe matching, numerical algorithms, authority fencing,
 mandatory automatic/human keys and storage-failure poisoning remain unchanged.
 
+## Atomic completion of a recovered pending step
+
+After independently configured learned recovery has durably fenced old effect
+keys, `FileOversight::resume_pending_learned_step_at` accepts the exact journal
+revision, pending actor revision and position, plus a fresh trusted elapsed tick.
+It requires a paused owner and an existing matching intent. It cannot create a
+new intent, abandon one, import numerical state or resume a held/failed run.
+
+The method applies the original Time and Resume transitions, then computes the
+original Step and exact witness. All three original records become visible in
+one canonical replacement, and the returned revision advances by three. The
+original history is reconstructed once rather than once per public operation.
+There is no new wire tag, public event importer, helper vote, approval, external
+send or alternate numerical engine. Storage and numerical work are synchronous;
+no measured speedup, preemption or constant-time recovery is claimed.
+
+Stale or mismatched requests, refused clocks/resumes, source interruption and
+insufficient ordinary event capacity leave the acknowledged state and journal
+unchanged. The original byte encoder checks every prefix before reconstruction;
+a final witness can still exceed the remaining bytes after inference. Once new
+computation starts, a failed witness or storage replacement poisons the owner.
+No partial Time/Resume, candidate token or candidate result is returned. Reopen
+must determine whether the original pending intent or the complete new outcome
+is actually durable. A lost directory-sync acknowledgment does not mean the
+replacement failed to become visible.
+
+An outer journal error is distinct from a durably acknowledged inner numerical
+error. Alarm samples remain withheld, completed costs are retained, old effect
+keys remain withdrawn and unknown-effect charges remain outstanding. The method
+does not refill budgets, reset authority epochs or clear interrupted-source
+latches. It uses the existing terminal reserve and original publication guards.
+
 ## Verification and change record
 
-Four new regression functions pair one-slot refusal with exactly-two-slot
+Four admission regression functions pair one-slot refusal with exactly-two-slot
 original inference, both with and without a terminal reserve. They also exercise
 intervening clock work, retained pending state, unchanged canonical bytes and
-stale/poisoned owners. They use the existing original-model fixture and real
-journal files; synthetic probe parameters are not detector-quality evidence.
+stale/poisoned owners.
 
-The required targeted RCH command was attempted and failed before compilation
-because `rch` is absent (exit 127). Rust compilation, test execution, rustfmt and
-Clippy are UNEXECUTED. No historical receipt qualifies this change. Beads remain
+Eight atomic-recovery regression functions compare the three original public
+operations and their complete encoded records against atomic recovery; continued
+sampling; stale/invalid requests; exact/one-less ordinary capacity; all five
+original storage fault barriers and actual old-or-new reopening; held samples;
+recorded numerical failures; and charged unknown effects with withdrawn keys.
+They use the existing original-model fixture and real journal files; synthetic
+probe parameters are not detector-quality evidence.
+
+Required targeted and full RCH commands were attempted and failed before
+compilation because `rch` is absent (exit 127). Rust compilation, test execution,
+rustfmt and Clippy are UNEXECUTED. The unchanged original learned event codec was
+compared byte-for-byte in the preparation environment; that is not runtime
+qualification. No historical receipt qualifies these changes. Beads remain
 unchanged because their required `br` CLI is unavailable; no gate is promoted.

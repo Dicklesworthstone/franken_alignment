@@ -4,6 +4,7 @@
 //! numerical/authority replay and fence. No learned state or approval is imported.
 mod config;
 mod recovery;
+mod pending;
 pub mod sidecar;
 pub mod checkpoint;
 #[cfg(test)]
@@ -12,6 +13,8 @@ mod checkpoint_tests;
 mod tests;
 #[cfg(test)]
 mod admission_tests;
+#[cfg(test)]
+mod pending_tests;
 pub use config::FileLearnedConfig;
 pub use recovery::{FileLearnedRecovery, FileLearnedRecoveryProgress, FileLearnedRecoveryStatus};
 
