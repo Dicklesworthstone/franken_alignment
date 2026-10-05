@@ -8,6 +8,7 @@ use crate::action::consequence::oversight::actor::{ActorError, ActorOutcome, Kno
 use crate::{Error, Snapshot};
 
 mod stream;
+mod wire;
 pub use stream::{FileLearnedTextStreamActorPort, LearnedTextRelease};
 
 /// Destination and bounds only. The original completed generator supplies the
@@ -20,7 +21,7 @@ pub struct LearnedTextProposal {
     pub units: u64,
 }
 
-/// The same weak actor gateway, without any byte-bearing submission method.
+/// The same weak actor gateway, without an output-bearing submission method.
 /// It cannot keep an abandoned authority lock alive, observe private numerical
 /// state, supply a snapshot, or approve/review/dispatch its own request.
 ///
