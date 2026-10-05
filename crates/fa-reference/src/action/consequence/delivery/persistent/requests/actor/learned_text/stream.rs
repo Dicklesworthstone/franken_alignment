@@ -15,7 +15,7 @@ pub enum LearnedTextRelease { Message, Finish }
 /// fn inject(port: FileLearnedTextStreamActorPort) { port.submit_bytes(b"injected"); }
 /// ```
 #[derive(Clone, Debug)]
-pub struct FileLearnedTextStreamActorPort { port: FileActorPort<FileOversight> }
+pub struct FileLearnedTextStreamActorPort { pub(super) port: FileActorPort<FileOversight> }
 impl FileOversight {
     pub fn into_learned_text_stream_actor_gateway(self)
         -> Result<(FileLearnedTextStreamActorPort, FileActorSupervisor<FileOversight>), JournalError>

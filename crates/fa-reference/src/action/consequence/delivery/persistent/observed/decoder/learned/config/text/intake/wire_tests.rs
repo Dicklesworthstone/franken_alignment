@@ -239,3 +239,6 @@ fn storage_fault_never_returns_a_wire_ticket_or_replays_an_unacknowledged_submis
         assert_eq!(supervisor.host().unwrap().revision(), revision);
     }
 }
+
+#[cfg(unix)]
+mod policy_tests;

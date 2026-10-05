@@ -1,6 +1,8 @@
 //! Source-only learned output on the ORIGINAL bounded actor wire and transports.
 //! These fixed intents are never passed to the publication broker as payloads.
 mod stream;
+#[cfg(unix)]
+mod policy;
 #[cfg(test)]
 mod tests;
 

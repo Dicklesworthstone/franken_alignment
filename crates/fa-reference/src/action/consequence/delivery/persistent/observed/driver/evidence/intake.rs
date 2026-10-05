@@ -74,3 +74,50 @@ impl FileSupervisedDriver {
         report
     }
 }
+
+impl FileActorSupervisor<FileOversight> {
+    /// One fresh POLICY-ONLY observation for the original learned-text intake.
+    /// Use the SAME scope/roster/empty-context parser as native-model and probe
+    /// review. A registered full-context source is refused, never downgraded.
+    /// This is not a durable producer-floor update or a lease-renewal claim.
+    ///
+    /// Withdraw the previous slot before clocks or file I/O and retain exclusive
+    /// host custody across both. Failure or unwinding leaves no older snapshot
+    /// eligible. Clock transactions and ensuing request admission are separate;
+    /// a successful report neither admits a request nor grants either effect key.
+    /// The source-only port rechecks original output and request binding afterward.
+    pub fn prepare_learned_policy_intake<S, F>(&mut self, source: &mut S, mut clock: F)
+        -> FileEvidenceReport<EvidenceIdentity>
+    where S: EvidenceFile + ?Sized, F: FnMut() -> ElapsedTick {
+        let mut observations = Vec::with_capacity(1);
+        let result = (|| {
+            let mut host = self.host_mut()?;
+            if host.storage_failure().is_some() { return Err(JournalError::Unavailable); }
+            let full_context_source = host.file_source_required();
+            if !host.learned_text_required() || full_context_source { return Err(Error::Binding.into()); }
+            if host.inspect().control.suspended || host.inspect().stop.is_some() {
+                return Err(Error::WrongState.into());
+            }
+            if host.source_interrupted || host.machine.pending_learned_reset().is_some() {
+                return Err(Error::Incomplete.into());
+            }
+            // Original completeness, UTF-8, recovery pause and pending-step
+            // checks, not a second definition of publishable model output.
+            host.learned_text_message(
+                crate::action::consequence::oversight::learned_source::LearnedEvidenceLimits::default())?;
+            let scope = host.profile.delivery.scope;
+            let members: Vec<_> = host.profile.committee.members().keys().cloned().collect();
+            observe(&mut host, clock())?;
+            let snapshot = super::super::learned::evidence::policy_snapshot(
+                source, scope, &members, full_context_source, &mut observations)?;
+            observe(&mut host, clock())?;
+            let identity = observations.last().and_then(|value| value.as_ref().ok()).copied()
+                .ok_or(Error::Incomplete)?;
+            let revision = host.revision();
+            drop(host);
+            self.set_snapshot(revision, Some(snapshot))?;
+            Ok(identity)
+        })();
+        FileEvidenceReport { observations, source_updates: Vec::new(), result }
+    }
+}
