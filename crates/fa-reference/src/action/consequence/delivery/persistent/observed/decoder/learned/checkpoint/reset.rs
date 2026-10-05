@@ -66,9 +66,7 @@ impl FileOversight {
         }
         if revision != self.revision() { return Err(Error::Stale.into()); }
         self.machine.check_learned_reset_intent(&intent)?;
-        if self.events.len().checked_add(2).ok_or(Error::Limit)? > self.profile.delivery.limits.events {
-            return Err(Error::Limit.into());
-        }
+        self.check_learned_event_capacity(revision, 2)?;
         self.transact(revision, event(CheckpointEvent::BeginReset(Rc::new(intent))))?;
         Ok(())
     }
@@ -103,7 +101,7 @@ impl FileOversight {
         if revision != self.revision() { return Err(Error::Stale.into()); }
         self.machine.check_pending_learned_reset(operation)?;
         self.check_source_admission(&event(CheckpointEvent::Reset { operation, witness: Rc::from(&b""[..]) }))?;
-        if self.events.len() >= self.profile.delivery.limits.events { return Err(Error::Limit.into()); }
+        self.check_learned_event_capacity(revision, 1)?;
         self.events.try_reserve(1).map_err(|_| Error::Limit)?;
         let mut candidate = Machine::replay(&self.profile, &self.events)?;
         self.fault = Some(JournalFailure { operation: JournalIo::Stage,

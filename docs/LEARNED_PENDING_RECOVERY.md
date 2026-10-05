@@ -18,6 +18,13 @@ this check is not an escrow or a promise of eventual completion. The durable
 intent remains a barrier when completion refuses. No older quiet prefix becomes
 eligible, and the terminal recovery reserve is not enlarged or spent.
 
+The same check applies to paired learned checkpoint reset intents and outcomes.
+A new reset requires two ordinary slots and its completion requires one before
+any new audit or restoration work. Exact retries of an already acknowledged
+reset retain the original historical-result path and need no new slots, even
+at exhausted capacity or with the original stale revision. This does not make
+an interrupted reset resumable or upgrade its frozen authority predecessor.
+
 These checks cover event slots, not future witness bytes, physical disk space,
 future restart attempts or hardware durability. Original canonical prefix byte
 limits, independent recipe matching, numerical algorithms, authority fencing,
@@ -57,10 +64,11 @@ latches. It uses the existing terminal reserve and original publication guards.
 
 ## Verification and change record
 
-Four admission regression functions pair one-slot refusal with exactly-two-slot
-original inference, both with and without a terminal reserve. They also exercise
-intervening clock work, retained pending state, unchanged canonical bytes and
-stale/poisoned owners.
+Six admission regression functions pair one-slot refusal with exactly-two-slot
+original inference or checkpoint reset, both with and without a terminal reserve.
+They also exercise intervening clock work, retained pending state, unchanged
+canonical bytes, stale/poisoned owners and historical reset retries at exhausted
+capacity without repeated audits or incidents.
 
 Eight atomic-recovery regression functions compare the three original public
 operations and their complete encoded records against atomic recovery; continued
@@ -72,7 +80,8 @@ probe parameters are not detector-quality evidence.
 
 Required targeted and full RCH commands were attempted and failed before
 compilation because `rch` is absent (exit 127). Rust compilation, test execution,
-rustfmt and Clippy are UNEXECUTED. The unchanged original learned event codec was
-compared byte-for-byte in the preparation environment; that is not runtime
-qualification. No historical receipt qualifies these changes. Beads remain
-unchanged because their required `br` CLI is unavailable; no gate is promoted.
+rustfmt and Clippy are UNEXECUTED. The unchanged original learned event and reset
+intent codecs were compared byte-for-byte in the preparation environment; that
+is not runtime qualification. No historical receipt qualifies these changes.
+Beads remain unchanged because their required `br` CLI is unavailable; no gate
+is promoted.

@@ -98,3 +98,80 @@ fn stale_and_poisoned_owners_refuse_before_reporting_capacity() {
         Err(JournalError::Unavailable));
     assert_eq!(host.revision(), before.journal_revision);
 }
+
+use crate::action::consequence::activation::tensor::kv::decoder::monitoring::restart::KvRestartBudget;
+use crate::action::consequence::activation::tensor::kv::model::MAX_MODEL_KV_VALUES;
+use crate::action::consequence::delivery::persistent::observed::containment::FileResetRequest;
+use crate::action::consequence::gate::ReviewBinding;
+
+fn reset_owner(root: &Directory, reserve: bool, slots: usize)
+    -> (FileOversight, checkpoint::FileLearnedCheckpoint, FileResetRequest, KvRestartBudget)
+{
+    let mut host = limited_owner(root, reserve, slots + 5);
+    step(&mut host).unwrap();
+    let n = host.learned_generation_inspection().unwrap().numerical;
+    let saved = host.capture_learned_checkpoint(host.revision(), 1, n.actor_revision,
+        host.inspect().control.ledger.epoch).unwrap();
+    step(&mut host).unwrap();
+    let state = host.inspect();
+    let request = FileResetRequest { operation: 900, expected_control_sequence: state.control.sequence,
+        expected_actor_revision: host.actor_snapshot().unwrap().actor_revision,
+        expected_authority_epoch: state.control.ledger.epoch,
+        binding: ReviewBinding { round: 900, reducer_generation: 1, evidence_root: [8; 32] },
+        retained_targets: vec![state.target] };
+    let budget = KvRestartBudget { cache_values: MAX_MODEL_KV_VALUES,
+        audit: host.machine.broker.hosted_learned_original().unwrap().policy().allowance() };
+    assert_eq!(host.journal_capacity().unwrap().ordinary_remaining().events, slots);
+    (host, saved, request, budget)
+}
+
+#[test]
+fn a_lone_ordinary_slot_cannot_admit_a_checkpoint_reset_intent() {
+    for reserve in [false, true] {
+        let root = Directory::new();
+        let (mut host, saved, request, budget) = reset_owner(&root, reserve, 1);
+        let before = host.learned_generation_inspection().unwrap();
+        let usage = host.learned_recovery_usage().unwrap();
+        let actor = host.actor_snapshot().unwrap();
+        let bytes = host.store.read(host.profile.delivery.limits.bytes).unwrap();
+        assert_eq!(host.begin_learned_reset(host.revision(), &saved, request.clone(), budget),
+            Err(JournalError::Contract(Error::Limit)));
+        assert_eq!(host.reset_learned_checkpoint(host.revision(), &saved, request, budget).err(),
+            Some(JournalError::Contract(Error::Limit)));
+        assert!(host.pending_learned_reset().unwrap().is_none());
+        assert_eq!(host.learned_generation_inspection().unwrap(), before);
+        assert_eq!(host.learned_recovery_usage().unwrap(), usage);
+        assert_eq!(host.actor_snapshot().unwrap(), actor);
+        assert_eq!(host.store.read(host.profile.delivery.limits.bytes).unwrap(), bytes);
+        assert!(host.storage_failure().is_none());
+    }
+}
+
+#[test]
+fn exactly_two_slots_restore_the_original_checkpoint_and_historical_retries_need_no_space() {
+    for reserve in [false, true] {
+        let root = Directory::new();
+        let (mut host, saved, request, budget) = reset_owner(&root, reserve, 2);
+        host.begin_learned_reset(host.revision(), &saved, request.clone(), budget).unwrap();
+        assert!(host.pending_learned_reset().unwrap().is_some());
+        let receipt = host.complete_learned_reset(host.revision(), 900).unwrap().unwrap();
+        assert!(receipt.control.restored);
+        assert_eq!(receipt.control.incident_count, 1);
+        assert!(host.pending_learned_reset().unwrap().is_none());
+        assert_eq!(host.learned_generation_inspection().unwrap().numerical.position, saved.info().position);
+        assert_eq!(host.journal_capacity().unwrap().ordinary_remaining().events, 0);
+        assert_eq!(host.journal_capacity().unwrap().remaining().events,
+            if reserve { RecoveryReserve::terminal().events } else { 0 });
+        let before = host.learned_generation_inspection().unwrap();
+        let usage = host.learned_recovery_usage().unwrap();
+        let bytes = host.store.read(host.profile.delivery.limits.bytes).unwrap();
+        host.begin_learned_reset(0, &saved, request.clone(), budget).unwrap();
+        assert_eq!(host.reset_learned_checkpoint(0, &saved, request, budget).unwrap().unwrap().control, receipt.control);
+        assert_eq!(host.complete_learned_reset(0, 900).unwrap().unwrap().control, receipt.control);
+        assert_eq!(host.learned_generation_inspection().unwrap(), before);
+        assert_eq!(host.learned_recovery_usage().unwrap(), usage);
+        assert_eq!(host.store.read(host.profile.delivery.limits.bytes).unwrap(), bytes);
+        assert_eq!(host.inspect().executions, 0);
+        assert_eq!(host.inspect().control.ledger.available, 100);
+    }
+}
