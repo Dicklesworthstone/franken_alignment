@@ -31,3 +31,39 @@ Targeted and full mandatory RCH commands were attempted and failed to launch:
 `rch` is unavailable (exit 127). Compilation, tests, rustfmt and Clippy remain
 unexecuted. Source/preimage hashes and whitespace checks do not qualify runtime
 behavior. No existing test or gate is weakened and no bead is marked complete.
+
+## Original cumulative streams, not actor-authored frames
+
+`into_learned_text_stream_actor_gateway` exposes a separate stream-only actor
+port. Its descriptor is just request identity, `Message` or `Finish`, and a
+deadline. The original `learned_stream_spec` builder derives all output, previous
+message boundaries, destination version, epoch and cumulative-frame charge.
+There is no actor byte, chunk, target, prior-history or cheaper-cost override.
+
+The existing original stream law chooses which release is available: the whole
+completed generated message first, and a separately reviewed finish only after
+its original receipt confirms the append. Dispatch and visible-but-unreconciled
+publication cannot unlock finish. Each release keeps its own original request,
+review, automatic key, independent human key, and confirmation. Historical keys
+match the original frame kind and deadline, not today's source or audience; an
+old message retry cannot become a finish or append the output twice.
+
+Raw and stream ports share private same-borrow intake, preserving one-shot
+snapshots and original refusal/limit behavior. Retained request access uses the
+existing `RequestBook::original_spec`, including refused admissions, rather
+than introducing another identity table or duplicate getter. This is an
+in-process actor surface, not a new wire protocol, registry verb or transport.
+
+Eight additional regression functions exercise frame derivation and full cost,
+kind/deadline conflicts, cancellation and paused recovery, distinct bootstrap
+profiles, all five stream-intake storage barriers, original native helper
+allow/deny controls, and complete generated message then finish publication.
+The native composition runs the existing tokenizer/model/probe evaluators;
+there is no supplied verdict. It checks the original actor ticket, a separate
+human key for finish, immutable historical retries, confirmed versus published
+audience state and query-only recovery of an unknown append without source
+resumption or refund. These source tests do not qualify runtime behavior.
+
+The final targeted/full RCH attempts still cannot launch because `rch` is
+absent (exit 127). Source checks do not replace compilation or execution.
+No source recipe, frame encoding, policy reducer or existing test is weakened.

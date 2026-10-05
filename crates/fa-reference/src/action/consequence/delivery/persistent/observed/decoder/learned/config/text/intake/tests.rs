@@ -180,3 +180,6 @@ fn only_a_learned_text_profile_can_create_this_source_only_port() {
     observe(&mut supervisor, snapshot());
     assert!(matches!(port.poll(&port.submit(71, proposal()).unwrap()), Knowledge::Pending { .. }));
 }
+
+mod stream;
+mod pipeline;

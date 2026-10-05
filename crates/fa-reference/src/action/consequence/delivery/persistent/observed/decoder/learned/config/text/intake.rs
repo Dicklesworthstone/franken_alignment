@@ -1,4 +1,5 @@
 //! Source derivation for the original durable request book, not another ledger.
+mod stream;
 use super::{FileOversight, JournalError, ActionSpec, FrozenAction, VERSION};
 use crate::action::consequence::delivery::persistent::requests::actor::LearnedTextProposal;
 use crate::action::consequence::oversight::learned_source::LearnedEvidenceLimits;
@@ -16,7 +17,7 @@ impl FileOversight {
         if !self.learned_text_required() || self.learned_text_stream_required() {
             return Err(Error::Binding.into());
         }
-        let retained = self.machine.requests.retained_spec(request);
+        let retained = self.machine.requests.original_spec(request);
         let payload = match retained {
             Some(spec) => spec.payload.clone(),
             None => {
