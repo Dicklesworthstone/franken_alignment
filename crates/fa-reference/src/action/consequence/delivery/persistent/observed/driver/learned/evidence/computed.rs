@@ -1,5 +1,5 @@
 //! Original-source driving: policy callbacks/files cannot replace helper input.
-use super::{CurrentLearned, policy_snapshot};
+use super::{CurrentLearned, policy_file_provider};
 use super::super::super::{FileDriverEvent, FileHumanPermit, FileSupervisedDriver,
     FileCredentialPermit, JournalError};
 use super::super::super::evidence::FileEvidenceReport;
@@ -37,8 +37,9 @@ impl FileSupervisedDriver {
     ///
     /// The configured durable full-context file-source profile is intentionally
     /// incompatible. This adapter cannot override its original input-equality
-    /// contract. It uses the sealed reader's live version floor; it introduces no
-    /// durable producer floor, authentication, provider event log or new gate.
+    /// contract. A bootstrapped policy-only source instead uses the original
+    /// durable producer floor and lease, without changing learned helper inputs.
+    /// Legacy unconfigured readers retain only their live reader-version floor.
     /// Current learned source checks and all original effect keys still apply.
     pub fn step_computed_from_policy_file<S, F>(&mut self, source: &mut S, clock: F,
         human: Option<&FileHumanPermit>) -> FileEvidenceReport<FileDriverEvent>
@@ -59,21 +60,10 @@ impl FileSupervisedDriver {
         -> FileEvidenceReport<FileDriverEvent>
     where S: EvidenceFile + ?Sized, F: FnMut() -> ElapsedTick {
         let mut observations = Vec::with_capacity(2);
-        let result = (|| {
-            let (scope, members, full_context_source) = {
-                let host = self.supervisor.host()?;
-                (host.profile.delivery.scope, host.profile.committee.members().keys().cloned().collect::<Vec<_>>(),
-                    host.file_source_required())
-            };
-            let expected = self.job.as_ref().map(|job| (job.attempt, job.input_revision));
-            let snapshot = || policy_snapshot(source, scope, &members, full_context_source, &mut observations);
-            // CurrentLearned resolves before AND after the actual file read;
-            // no filename, returned context or journal observation installs a
-            // learned source. Reconciliation never invokes this closure at all.
-            self.step_computed_with_provider(clock, &mut CurrentLearned { expected, snapshot }, human, credential)
-        })();
-        // There was no durable full-context source refresh. Do not mislabel this
-        // policy read as an acknowledged producer-floor update in the journal.
-        FileEvidenceReport { observations, source_updates: Vec::new(), result }
+        let mut source_updates = Vec::with_capacity(2);
+        let expected = self.job.as_ref().map(|job| (job.attempt, job.input_revision));
+        let result = self.step_computed_with_provider(clock,
+            &mut policy_file_provider(expected, source, &mut observations, &mut source_updates), human, credential);
+        FileEvidenceReport { observations, source_updates, result }
     }
 }

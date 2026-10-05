@@ -2,6 +2,8 @@
 //! Callers supply policy snapshots, never helper-input bytes or a replacement
 //! source. The original driver still owns both keys and final endpoint checks.
 mod computed;
+mod policy_file;
+pub(in super::super) use policy_file::policy_file_provider;
 
 use super::super::{FileSupervisedDriver, FileDriverEvent, FileHumanPermit,
     FileHumanRequest, FileCredentialPermit, FileOversight, FrozenAction,

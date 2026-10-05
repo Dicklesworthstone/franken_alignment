@@ -5,7 +5,7 @@ use super::{FileNativeDriverProgress, FileNativeSupervisedDriver, NativeReviewSt
 use super::super::{FileDriverEvent, FileHumanPermit, FileHumanRequest, FileCredentialPermit,
     JournalError, Phase, observe, sample, stage};
 use super::super::evidence::FileEvidenceReport;
-use super::super::learned::evidence::{current_provider, policy_snapshot};
+use super::super::learned::evidence::{current_provider, policy_file_provider};
 use super::super::provider::EvidenceProvider;
 use crate::action::{ActionState, ElapsedTick};
 use crate::action::consequence::oversight::evidence_source::EvidenceFile;
@@ -40,9 +40,10 @@ impl FileNativeSupervisedDriver {
     }
 
     /// Same original policy-only file contract as the computed-probe driver:
-    /// exact scope and complete roster with EMPTY helper contexts. A live file
-    /// observation is not a durable producer-floor acknowledgment. Source loss
-    /// is checked before reading; query-only settlement never reads the file.
+    /// exact scope and complete roster with EMPTY helper contexts. Bootstrapped
+    /// policy-only sources use their original durable floors and read-start lease;
+    /// legacy sources retain their reader-local guarantees. Current learned
+    /// provenance is checked before reading; query-only settlement never reads.
     pub fn step_from_policy_file<S, F>(&mut self, source: &mut S, clock: F,
         human: Option<&FileHumanPermit>) -> FileEvidenceReport<FileNativeDriverEvent>
     where S: EvidenceFile + ?Sized, F: FnMut() -> ElapsedTick {
@@ -65,6 +66,18 @@ impl FileNativeSupervisedDriver {
         self.driver.request_learned_human_approval(key, expires_at, now)
     }
 
+    /// Refresh policy and freeze the original human request without acquiring
+    /// the independent reviewer. A running/failed congress cannot request a key.
+    pub fn request_human_approval_from_policy_file<S, F>(&mut self, source: &mut S,
+        key: u64, expires_at: ElapsedTick, clock: F) -> FileEvidenceReport<FileHumanRequest>
+    where S: EvidenceFile + ?Sized, F: FnMut() -> ElapsedTick {
+        if self.review.status() == NativeReviewStatus::Running {
+            return FileEvidenceReport { observations: Vec::new(), source_updates: Vec::new(),
+                result: Err(Error::WrongState.into()) };
+        }
+        self.driver.request_learned_human_approval_from_policy_file(source, key, expires_at, clock)
+    }
+
     pub fn next_review_deadline(&self) -> Option<ElapsedTick> {
         if self.review.status() != NativeReviewStatus::Running { return None; }
         let now = self.supervisor().host().ok()?.inspect().control.ledger.elapsed?;
@@ -84,16 +97,11 @@ impl FileNativeSupervisedDriver {
         -> FileEvidenceReport<FileNativeDriverEvent>
     where S: EvidenceFile + ?Sized, F: FnMut() -> ElapsedTick {
         let mut observations = Vec::with_capacity(2);
-        let result = (|| {
-            let (scope, members, full_context_source) = {
-                let host = self.supervisor().host()?;
-                (host.profile.delivery.scope, host.profile.committee.members().keys().cloned().collect::<Vec<_>>(),
-                    host.file_source_required())
-            };
-            let snapshot = || policy_snapshot(source, scope, &members, full_context_source, &mut observations);
-            self.step_current(clock, snapshot, human, credential)
-        })();
-        FileEvidenceReport { observations, source_updates: Vec::new(), result }
+        let mut source_updates = Vec::with_capacity(2);
+        let expected = self.driver.job.as_ref().map(|job| (job.attempt, job.input_revision));
+        let result = self.step_with_provider(clock,
+            &mut policy_file_provider(expected, source, &mut observations, &mut source_updates), human, credential);
+        FileEvidenceReport { observations, source_updates, result }
     }
 
     fn step_with_provider<F, P>(&mut self, mut clock: F, provider: &mut P,

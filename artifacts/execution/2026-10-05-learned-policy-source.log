@@ -1,0 +1,10 @@
+2026-10-05: learned policy-source integration
+Source overlay only; required remote executor did not launch. No local fallback.
+
+$ RCH_REQUIRE_REMOTE=1 rch exec -- cargo test --locked -p fa-reference decoder::learned::config::policy_source
+bash: line 140: rch: command not found
+exit=127
+
+$ RCH_REQUIRE_REMOTE=1 rch exec -- cargo run --locked -p xtask -- check
+bash: line 143: rch: command not found
+exit=127

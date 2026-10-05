@@ -196,3 +196,6 @@ fn source_storage_faults_acknowledge_no_capture_and_recovery_never_revives_a_liv
         assert_eq!(host.inspect().executions, 0); assert_eq!(host.inspect().control.ledger.available, 100);
     }
 }
+
+#[cfg(unix)]
+mod driving;

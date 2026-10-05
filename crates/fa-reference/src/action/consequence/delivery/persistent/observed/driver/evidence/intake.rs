@@ -79,7 +79,9 @@ impl FileActorSupervisor<FileOversight> {
     /// One fresh POLICY-ONLY observation for the original learned-text intake.
     /// Use the SAME scope/roster/empty-context parser as native-model and probe
     /// review. A registered full-context source is refused, never downgraded.
-    /// This is not a durable producer-floor update or a lease-renewal claim.
+    /// A bootstrapped policy-only source uses the ORIGINAL durable intake:
+    /// its version floor and read-start lease must commit before slot installation.
+    /// Unconfigured legacy readers still make no durable-floor or lease claim.
     ///
     /// Withdraw the previous slot before clocks or file I/O and retain exclusive
     /// host custody across both. Failure or unwinding leaves no older snapshot
@@ -89,6 +91,11 @@ impl FileActorSupervisor<FileOversight> {
     pub fn prepare_learned_policy_intake<S, F>(&mut self, source: &mut S, mut clock: F)
         -> FileEvidenceReport<EvidenceIdentity>
     where S: EvidenceFile + ?Sized, F: FnMut() -> ElapsedTick {
+        // This prepares policy only, including explicit recovery/repair. The
+        // coupled actor path checks the original completed generation first;
+        // neither this read nor recovery resumes inference or admits an effect.
+        let durable = self.host().is_ok_and(|host| host.policy_only_file_source_required());
+        if durable { return self.prepare_file_intake(source, clock); }
         let mut observations = Vec::with_capacity(1);
         let result = (|| {
             let mut host = self.host_mut()?;

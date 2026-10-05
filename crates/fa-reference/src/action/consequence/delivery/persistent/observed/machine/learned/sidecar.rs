@@ -20,12 +20,22 @@ impl Machine {
     pub(in super::super::super) fn checked_learned_sidecar(&self, attempt: u64)
         -> Result<&LearnedSidecar, Error>
     {
+        let original = self.checked_learned_sidecar_source(attempt)?;
+        self.check_source_inputs(original.round().input())?;
+        Ok(original)
+    }
+
+    // Acquisition preflight only, never a permitting boundary. An expired
+    // policy lease may be refreshed while ORIGINAL learned provenance remains
+    // current. A changed/withdrawn input still fails the original broker check.
+    pub(in super::super::super) fn checked_learned_sidecar_source(&self, attempt: u64)
+        -> Result<&LearnedSidecar, Error>
+    {
         if !self.clock_ready || self.learned_paused() || self.pending_learned_step().is_some() {
             return Err(Error::Incomplete);
         }
         let original = self.learned.as_ref().ok_or(Error::Incomplete)?.sidecars.get(&attempt).ok_or(Error::Missing)?;
         self.broker.current_learned_sidecar(original)?;
-        self.check_source_inputs(original.round().input())?;
         Ok(original)
     }
 
