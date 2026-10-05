@@ -58,6 +58,8 @@ impl From<JournalError> for FileDriverProcessError {
 pub struct FileDriverRelease {
     pub supervisor: FileActorSupervisor<FileOversight>,
     pub children: Option<HelperChildren>,
+    /// Terminal original computed review, retaining local work and round outcomes.
+    pub learned_review: Option<super::learned::RetainedReview>,
 }
 
 impl FileSupervisedDriver {
@@ -113,6 +115,7 @@ impl FileSupervisedDriver {
     /// Original cancellation, stop, storage failure and terminal review outcomes
     /// retire the whole cohort, but leave the next Stopped/result event intact.
     pub fn reap_helpers(&mut self) -> BTreeMap<String, ProcessStatus> {
+        self.maintain_learned_review();
         let retire = self.job.as_ref().is_some_and(|job| {
             job.phase != Phase::Review || self.supervisor.host().map_or(true, |host| {
                 job.check_owner(&host).is_err() || host.storage_failure().is_some() || host.inspect().stop.is_some()
@@ -146,6 +149,6 @@ impl FileSupervisedDriver {
         if let Some(job) = &mut self.job { job.close(); }
         self.reap_helpers();
         self.job = None;
-        FileDriverRelease { supervisor: self.supervisor, children: self.retiring }
+        FileDriverRelease { supervisor: self.supervisor, children: self.retiring, learned_review: self.learned_review }
     }
 }

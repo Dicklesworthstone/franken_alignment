@@ -3,6 +3,7 @@
 //! This owner coordinates transitions; it is not another ledger or executor.
 
 mod lifecycle;
+pub mod learned;
 mod recovery_capacity;
 pub use recovery_capacity::{CapacityDrain, CapacityStop};
 mod workers;
@@ -118,6 +119,7 @@ pub struct FileSupervisedDriver {
     supervisor: FileActorSupervisor<FileOversight>,
     job: Option<Job>,
     retiring: Option<HelperChildren>,
+    learned_review: Option<learned::RetainedReview>,
 }
 impl fmt::Debug for FileSupervisedDriver {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -134,7 +136,7 @@ impl FileOversight {
 }
 impl FileSupervisedDriver {
     /// Adopt an existing gateway without changing its port, identity or rights.
-    pub fn new(supervisor: FileActorSupervisor<FileOversight>) -> Self { Self { supervisor, job: None, retiring: None } }
+    pub fn new(supervisor: FileActorSupervisor<FileOversight>) -> Self { Self { supervisor, job: None, retiring: None, learned_review: None } }
     pub fn supervisor(&self) -> &FileActorSupervisor<FileOversight> { &self.supervisor }
     /// Trusted integration, including use of a separately held FileHumanReviewer.
     /// Do not pass this role or its mutable host to the actor/helper processes.
@@ -152,7 +154,8 @@ impl FileSupervisedDriver {
         }
     }
     pub fn next_review_deadline(&self) -> Option<ElapsedTick> {
-        self.job.as_ref().and_then(|job| job.pool.as_ref()).and_then(WorkerSet::next_deadline)
+        self.learned_review_deadline().or_else(||
+            self.job.as_ref().and_then(|job| job.pool.as_ref()).and_then(WorkerSet::next_deadline))
     }
 
     /// Current observations and exact action/roster checks precede capture.
@@ -239,6 +242,12 @@ impl FileSupervisedDriver {
             if current == ActionState::Unknown
                 || (current == ActionState::Dispatching && matches!(job.phase, Phase::Review | Phase::Ready)) {
                 job.permit = None; job.phase = Phase::Reconcile;
+            }
+            // A computed review owns its original evaluator and durable finish.
+            // Socket/provider driving cannot substitute votes or another finish.
+            if job.phase == Phase::Review && self.learned_review.as_ref()
+                .is_some_and(|review| review.request == job.request) {
+                return Err(Error::WrongState.into());
             }
             // Query-only recovery owns its clock and reconciliation in ONE
             // canonical cut. Do not consume a lone Time record before it can
