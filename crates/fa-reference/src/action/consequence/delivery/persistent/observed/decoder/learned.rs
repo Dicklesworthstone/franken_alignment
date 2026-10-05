@@ -10,6 +10,8 @@ pub mod checkpoint;
 mod checkpoint_tests;
 #[cfg(test)]
 mod tests;
+#[cfg(test)]
+mod admission_tests;
 pub use config::FileLearnedConfig;
 pub use recovery::{FileLearnedRecovery, FileLearnedRecoveryProgress, FileLearnedRecoveryStatus};
 
@@ -71,6 +73,20 @@ pub struct FileLearnedInspection {
 }
 
 impl FileOversight {
+    // Both the intent and its outcome are ordinary work. The terminal recovery
+    // tail cannot complete either one. Check before replay or numerical work;
+    // this promises record slots, not future witness bytes or disk space.
+    pub(in super::super) fn check_learned_event_capacity(&self, revision: u64, records: usize)
+        -> Result<(), JournalError>
+    {
+        if self.fault.is_some() { return Err(JournalError::Unavailable); }
+        if revision != self.revision() { return Err(Error::Stale.into()); }
+        if records > self.journal_capacity()?.ordinary_remaining().events {
+            return Err(Error::Limit.into());
+        }
+        Ok(())
+    }
+
     /// Install the ORIGINAL owned learned generator and source-dependent effect
     /// gate before any proposals. All usual committee and human keys still apply.
     /// The prompt, sampler, codec, complete probe roster and budgets are frozen.
@@ -95,9 +111,7 @@ impl FileOversight {
     pub fn begin_learned_step(&mut self, revision: u64, actor_revision: u64, position: u64)
         -> Result<(), JournalError>
     {
-        if self.events.len().checked_add(2).ok_or(Error::Limit)? > self.profile.delivery.limits.events {
-            return Err(Error::Limit.into());
-        }
+        self.check_learned_event_capacity(revision, 2)?;
         self.transact(revision, Event::Decoder(DecoderEvent::Learned(
             LearnedEvent::Begin(LearnedStepIntent { actor_revision, position }))))?;
         Ok(())
@@ -132,7 +146,7 @@ impl FileOversight {
             actor_revision, position, witness: Rc::from(&b""[..]),
         }));
         self.check_source_admission(&shape)?;
-        if self.events.len() >= self.profile.delivery.limits.events { return Err(Error::Limit.into()); }
+        self.check_learned_event_capacity(revision, 1)?;
         self.events.try_reserve(1).map_err(|_| Error::Limit)?;
         let mut candidate = Machine::replay(&self.profile, &self.events)?;
         // This is the existing numerical-transaction poison boundary. Nothing
