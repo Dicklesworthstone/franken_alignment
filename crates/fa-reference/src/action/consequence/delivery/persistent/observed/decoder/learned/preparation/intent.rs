@@ -34,7 +34,7 @@ impl FileOversight {
         } })
     }
 
-    fn check_learned_intent_preparation(&self, revision: u64, intent: LearnedStepIntent)
+    pub(super) fn check_learned_intent_preparation(&self, revision: u64, intent: LearnedStepIntent)
         -> Result<(), JournalError>
     {
         self.check_learned_event_capacity(revision, 2)?;
@@ -55,6 +55,17 @@ impl FileLearnedIntentPreparation {
         max_events: usize) -> Result<FileLearnedStepPreparationProgress, JournalError>
     {
         self.replay.advance(host, expected_events, max_events)
+    }
+
+    /// Explicitly adopt the caller-observed live revision and replay a bounded
+    /// appended tail without restarting verified history. The same original
+    /// next-position, source, pause and two-slot laws run before adoption.
+    /// No intent is acknowledged and no new inference runs during catch-up.
+    pub fn catch_up(&mut self, host: &FileOversight, expected_revision: u64,
+        expected_events: usize, max_events: usize)
+        -> Result<FileLearnedStepPreparationProgress, JournalError>
+    {
+        self.replay.catch_up(host, expected_revision, expected_events, max_events)
     }
 
     /// Persist ONLY the original Begin event after complete reconstruction and

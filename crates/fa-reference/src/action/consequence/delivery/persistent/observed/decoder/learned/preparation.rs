@@ -1,6 +1,7 @@
 //! Cooperative reconstruction for one ORIGINAL pending numerical completion.
 //! The live owner remains available; any journal mutation invalidates this cut.
 mod intent;
+mod catch_up;
 pub use intent::FileLearnedIntentPreparation;
 
 #[derive(Clone, Copy, PartialEq, Eq)]
@@ -120,8 +121,8 @@ impl FileLearnedStepPreparation {
     /// witness comparisons. No cached tensor, verdict or serialized candidate
     /// becomes authoritative. One event remains synchronous. Zero/oversized
     /// quanta and stale cursors do no work; the first reducer failure is sticky.
-    /// Any intervening live mutation requires a new preparation, never rebasing
-    /// this candidate onto an unseen tail or applying it over cancellation.
+    /// Any intervening live mutation refuses here. Construct a new preparation
+    /// or explicitly call catch_up to verify the appended tail before finishing.
     pub fn advance(&mut self, host: &FileOversight, expected_events: usize,
         max_events: usize) -> Result<FileLearnedStepPreparationProgress, JournalError>
     {
