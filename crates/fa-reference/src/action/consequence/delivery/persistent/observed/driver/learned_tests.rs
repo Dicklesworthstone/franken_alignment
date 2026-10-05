@@ -252,3 +252,6 @@ fn dispatched_cancellation_stays_query_only_without_repeating_helpers_or_refundi
     assert_eq!(state.executions, 0); assert_eq!(state.control.ledger.available, 84);
     assert_eq!(driver.learned_probe_review().unwrap().review().records(), &records);
 }
+
+#[path = "learned_tests/evidence.rs"]
+mod evidence;

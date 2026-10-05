@@ -54,6 +54,36 @@ bound to that supervisor. A newly constructed driver does not resurrect an old
 review, automatic permit or publication phase. These reports are local evidence,
 not durable total physical-computation escrow or independent helper processes.
 
+## Current-source publication without reconstructed caller packets
+
+`step_with_learned_evidence` uses the existing publication state machine with a
+private concrete evidence adapter. Each authorization, dispatch and first-publication
+capture resolves the actual original learned plan and exact input revision through
+Machine's original currentness check. Policy callbacks can supply only Snapshot,
+not helper bytes, another source, an input revision or a vote. The live owner's
+source-interruption and pending-reset barriers are checked as well as the native
+paused/pending-step/source checks. Missing source refuses before callback entry.
+
+`request_learned_human_approval` obtains the same current input before invoking
+the ordinary separately owned human-review path. The credentialed stepping variant
+passes the existing credential capability only to the original publication gate.
+Taking a terminal numerical report does not transfer, install or disable the
+current evidence gate. Both keys and original final validation remain required.
+
+Snapshot failure is an observation refusal, not a persistence acknowledgment.
+The existing driver withdraws unavailable inputs; a reservation already made
+remains held until original cancellation or resolution. Final-publication source
+loss still reaches the original endpoint nonexecution/unknown protocol instead of
+leaving a retryable send path. Query-only settlement never invokes this provider:
+a fenced reopened owner can reconcile dispatched outcomes with paused numerics,
+without a current sidecar, a fresh helper round or the human reviewer role.
+
+Six additional regression functions cover the current-input publication path,
+source loss before dispatch and after dispatch, snapshot failure after automatic
+reservation, and independently configured recovery of both executed and unknown
+effects without numerical resumption, plus exact request/foreign-owner admission
+with a working numerical control. They remain unexecuted source scenarios.
+
 ## Regression sources and verification
 
 Eight regression functions use the original history-sensitive decoder, fitted
