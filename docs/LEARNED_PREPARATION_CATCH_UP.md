@@ -60,13 +60,19 @@ algorithm, second ledger or new publication path is added. Logical numerical and
 effect accounting is unchanged; discarded physical replay work is not a new
 durable compute charge.
 
-Eight regression functions are authored with the existing original numerical
+Twelve regression functions are authored with the existing original numerical
 fixture. They compare every sampled result/cache/sampler under interleaved clock
 writes, preserve read-only canonical bytes during catch-up, deny early finish,
 check stale/foreign input and changed numerical state, preserve cancellation and
 receipt accounting, exercise both stages at all five storage barriers, enforce
 capacity after intervening writes, and retain original reducer failure on a
-controlled malformed tail. Synthetic parameters do not establish detector quality.
+controlled malformed tail. Integrated cases exercise the original actor ticket,
+real policy files in both stages, expiring capture refresh, source replacement
+and its authority epoch, persisted producer floors, and completion of numerical
+work without erasing an acknowledged policy refusal. A fresh subsequent policy
+observation is the positive control for actual request admission. These tests
+reuse the original text/inference fixture; no source gate or verdict is mocked.
+Synthetic parameters do not establish detector quality.
 
 Required targeted RCH execution and the full xtask gate cannot launch because
 `rch` is absent (exit 127). Compilation, tests, rustfmt and Clippy remain

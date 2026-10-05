@@ -269,3 +269,42 @@ fn malformed_tail_fails_in_original_reducer_without_rolling_back_the_verified_pr
     assert_ne!(disk(&host), bytes, "only the acknowledged positive Time changed storage");
     let mut control = Task::new(&mut host, true); control.ready(&host); control.finish(&mut host).unwrap();
 }
+
+#[test]
+fn original_actor_ticket_cancellation_is_replayed_without_restarting_either_stage() {
+    use crate::action::consequence::oversight::actor::{ActorOutcome, ActorProposal, Knowledge};
+    for completion in [false, true] {
+        let root = Directory::new(); let config = config(false, 1); let (mut host, _) = owner(&root, &config);
+        step(&mut host).unwrap();
+        let target = host.inspect().target; let epoch = host.inspect().control.ledger.epoch;
+        let (port, mut supervisor) = host.into_actor_gateway();
+        let revision = supervisor.host().unwrap().revision();
+        supervisor.set_snapshot(revision, Some(snapshot())).unwrap();
+        let ticket = port.submit(71, &ActorProposal { target, payload: b"visible".to_vec(),
+            expected_policy_epoch: epoch, deadline: ElapsedTick(100), units: 16 }).unwrap();
+        let mut task = { let mut host = supervisor.host_mut().unwrap(); Task::new(&mut host, completion) };
+        task.ready(&supervisor.host().unwrap());
+        assert!(matches!(port.poll(&ticket), Knowledge::Pending { request: 71 }));
+        let cursor = task.progress().replayed_events;
+        port.cancel(&ticket).unwrap();
+        {
+            let host = supervisor.host().unwrap();
+            let state = host.inspect(); let bytes = disk(&host);
+            let progress = task.catch_up(&host, host.revision(), cursor, 1).unwrap();
+            assert_eq!(progress.replayed_events, cursor + 1);
+            assert_eq!(progress.status, FileLearnedStepPreparationStatus::Ready);
+            assert_eq!(disk(&host), bytes); assert_eq!(host.inspect(), state);
+        }
+        assert!(matches!(port.poll(&ticket), Knowledge::Known { value: ActorOutcome::CancelledBeforeDispatch, .. }));
+        {
+            let mut host = supervisor.host_mut().unwrap();
+            task.finish(&mut host).unwrap();
+            if !completion { step(&mut host).unwrap(); }
+            assert_eq!(host.inspect().executions, 0); assert_eq!(host.inspect().control.ledger.available, 100);
+        }
+        assert!(matches!(port.poll(&ticket), Knowledge::Known { value: ActorOutcome::CancelledBeforeDispatch, .. }));
+    }
+}
+
+#[cfg(unix)]
+mod policy;

@@ -22,8 +22,9 @@ A failed reducer is sticky; an unwound reducer leaves Interrupted, never Ready.
 The task holds no host borrow between advances. The same actor gateway can be
 polled, and the supervisor remains able to mutate its original owner. Any live
 journal mutation, including time observation, cancellation, fencing or source
-refresh, invalidates the task's exact predecessor. It must be discarded and
-prepared again, not rebased over an unseen history. Source interruption and
+refresh, makes strict `advance` and `finish` stale. Construct a fresh task or use
+[explicit bounded catch-up](LEARNED_PREPARATION_CATCH_UP.md) to replay an
+acknowledged appended tail; no unseen history can be skipped. Source interruption and
 storage failure are checked even when no revision changed. A new owner after
 recovery cannot adopt the old task, even with the same path or recipe.
 
@@ -77,8 +78,10 @@ the same implementation; synchronous callers still receive synchronous behavior.
 A host loop may poll actor tickets between replay quanta. An intervening actor
 cancellation invalidates either preparation, preserves the original cancellation
 outcome, and does not grant a refund for any unknown dispatch. The caller may
-explicitly construct a fresh task at the new revision. Frequent writer changes
-can repeatedly invalidate preparation: there is no liveness or latency guarantee
+explicitly construct a fresh task or catch up the existing task at the exact
+new live revision while its numerical operation remains admissible. Catch-up
+retains the verified prefix, including original cancellation and source/epoch
+transitions. Frequent writer changes can still outrun replay: there is no liveness or latency guarantee
 under arbitrary journal churn and no automatic retry that hides repeated work.
 
 ## Bounds and nonclaims
@@ -86,9 +89,10 @@ under arbitrary journal churn and no automatic retry that hides repeated work.
 One historical event can contain a complete original inference or review
 operation. Event count is not a wall-clock, instruction, allocation or latency
 bound. Candidate construction, capacity checking, one next numerical operation,
-encoding and storage replacement remain synchronous. Total historical replay
-work is not reduced, and an invalidated task's physical work is not a durable
-compute charge. The original logical budgets and unknown-effect balances do not
+encoding and storage replacement remain synchronous. Splitting a fixed prefix
+into quanta does not reduce its verification work. Explicit catch-up avoids
+repeating that prefix when compatible appends arrive. Discarded physical replay
+work is not a durable compute charge. The original logical budgets and unknown-effect balances do not
 change merely because reconstruction is scheduled in multiple quanta. There is
 no parallel execution or publication-capable background task.
 
