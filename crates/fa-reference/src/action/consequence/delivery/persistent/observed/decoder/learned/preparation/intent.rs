@@ -2,7 +2,7 @@
 //! Distinct finalizers prevent intent preparation from returning numerical output.
 use super::{Error, Event, DecoderEvent, FileOversight, FileLearnedStepPreparation,
     FileLearnedStepPreparationProgress, FileLearnedStepPreparationStatus,
-    JournalError, LearnedEvent, LearnedStepIntent, Machine, Operation, Rc};
+    JournalError, LearnedEvent, LearnedStepIntent, Machine, Operation, Rc, FileLearnedReplayContinuation};
 use super::super::journal;
 
 /// Reconstructed intent admission, not an already admitted numerical operation.
@@ -16,7 +16,7 @@ use super::super::journal;
 /// ```
 #[derive(Debug)]
 #[must_use = "advance and finish intent admission, or drop it without recording an intent"]
-pub struct FileLearnedIntentPreparation { replay: FileLearnedStepPreparation }
+pub struct FileLearnedIntentPreparation { pub(super) replay: FileLearnedStepPreparation }
 
 impl FileOversight {
     /// Check the ORIGINAL next-position and two-ordinary-slot admission rules,
@@ -74,6 +74,15 @@ impl FileLearnedIntentPreparation {
     /// On storage error the owner is poisoned by the same persist_candidate cut;
     /// recovery decides whether the intent became visible. No outcome is implied.
     pub fn finish(self, host: &mut FileOversight) -> Result<(), JournalError> {
+        self.finish_with_continuation(host).map(|_| ())
+    }
+
+    /// Persist the same Begin, retaining the previous live machine for the next
+    /// replay stage. The returned value still precedes Begin and MUST replay it
+    /// before it can prepare completion. No new numerical work runs here.
+    pub fn finish_with_continuation(self, host: &mut FileOversight)
+        -> Result<FileLearnedReplayContinuation, JournalError>
+    {
         let replay = self.replay;
         replay.check_status()?;
         replay.check_owner_cut(host)?;
@@ -86,7 +95,7 @@ impl FileLearnedIntentPreparation {
         let mut candidate = replay.candidate;
         candidate.preflight_consistency(&event)?;
         let result = candidate.apply(&event)?;
-        host.persist_candidate(event, bytes, candidate, result)?;
-        Ok(())
+        let (_, retired) = host.persist_candidate_retaining(event, bytes, candidate, result)?;
+        Ok(FileLearnedReplayContinuation::new(replay.issuer, replay.total, retired))
     }
 }

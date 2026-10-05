@@ -2,6 +2,8 @@
 //! The live owner remains available; any journal mutation invalidates this cut.
 mod intent;
 mod catch_up;
+mod continuation;
+pub use continuation::FileLearnedReplayContinuation;
 pub use intent::FileLearnedIntentPreparation;
 
 #[derive(Clone, Copy, PartialEq, Eq)]
@@ -29,6 +31,8 @@ pub enum FileLearnedStepPreparationStatus {
 pub struct FileLearnedStepPreparationProgress {
     pub journal_revision: u64,
     pub intent: LearnedStepIntent,
+    /// Verified prefix cursor, including events represented by an acknowledged
+    /// continuation. This is not a count of reducer calls made by this task.
     pub replayed_events: usize,
     pub total_events: usize,
     pub status: FileLearnedStepPreparationStatus,
@@ -155,12 +159,30 @@ impl FileLearnedStepPreparation {
     pub fn finish(self, host: &mut FileOversight)
         -> Result<Result<Rc<GenerationEvent>, Error>, JournalError>
     {
+        self.check_finalization(host)?;
+        host.persist_prepared_learned_step(self.revision, self.intent.actor_revision,
+            self.intent.position, self.candidate)
+    }
+
+    /// Same original completion, retaining its former acknowledged predecessor
+    /// for later replay. The result and continuation are returned only AFTER the
+    /// canonical write succeeds. An acknowledged numerical Err remains an Err;
+    /// the continuation cannot bypass that failed/held generation's admission.
+    pub fn finish_with_continuation(self, host: &mut FileOversight)
+        -> Result<(Result<Rc<GenerationEvent>, Error>, FileLearnedReplayContinuation), JournalError>
+    {
+        self.check_finalization(host)?;
+        let (result, retired) = host.persist_prepared_learned_step_retaining(self.revision,
+            self.intent.actor_revision, self.intent.position, self.candidate)?;
+        Ok((result, FileLearnedReplayContinuation::new(self.issuer, self.total, retired)))
+    }
+
+    fn check_finalization(&self, host: &FileOversight) -> Result<(), JournalError> {
         self.check_status()?;
         self.check_owner_cut(host)?;
         if self.status != FileLearnedStepPreparationStatus::Ready { return Err(Error::Incomplete.into()); }
         if self.operation != Operation::Completion { return Err(Error::WrongState.into()); }
-        host.persist_prepared_learned_step(self.revision, self.intent.actor_revision,
-            self.intent.position, self.candidate)
+        Ok(())
     }
 }
 

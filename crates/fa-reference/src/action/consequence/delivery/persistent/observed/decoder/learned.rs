@@ -18,8 +18,10 @@ mod admission_tests;
 mod pending_tests;
 #[cfg(test)]
 mod preparation_tests;
+#[cfg(test)]
+mod continuation_tests;
 pub use config::FileLearnedConfig;
-pub use preparation::{FileLearnedIntentPreparation, FileLearnedStepPreparation, FileLearnedStepPreparationProgress, FileLearnedStepPreparationStatus};
+pub use preparation::{FileLearnedReplayContinuation, FileLearnedIntentPreparation, FileLearnedStepPreparation, FileLearnedStepPreparationProgress, FileLearnedStepPreparationStatus};
 pub use recovery::{FileLearnedRecovery, FileLearnedRecoveryProgress, FileLearnedRecoveryStatus};
 
 use super::{DecoderEvent, MAX_WITNESS_BYTES};
@@ -174,7 +176,17 @@ impl FileOversight {
 
     // Only fully replayed, exact-owner preparations call this private boundary.
     fn persist_prepared_learned_step(&mut self, revision: u64, actor_revision: u64,
-        position: u64, mut candidate: Machine) -> Result<Result<Rc<GenerationEvent>, Error>, JournalError>
+        position: u64, candidate: Machine) -> Result<Result<Rc<GenerationEvent>, Error>, JournalError>
+    {
+        self.persist_prepared_learned_step_retaining(revision, actor_revision, position, candidate)
+            .map(|(result, _)| result)
+    }
+
+    // Preserve the former acknowledged machine only AFTER successful completion.
+    // This shares all numerical, witness, poison and storage behavior above.
+    fn persist_prepared_learned_step_retaining(&mut self, revision: u64, actor_revision: u64,
+        position: u64, mut candidate: Machine)
+        -> Result<(Result<Rc<GenerationEvent>, Error>, Machine), JournalError>
     {
         self.check_learned_completion(revision, actor_revision, position)?;
         self.events.try_reserve(1).map_err(|_| Error::Limit)?;
@@ -185,8 +197,8 @@ impl FileOversight {
         let (event, result) = candidate.prepare_learned_step(actor_revision, position)?;
         let event = Event::Decoder(DecoderEvent::Learned(event));
         let bytes = journal::encode_appended(&self.profile, self.store.identity(), &self.events, &event)?;
-        match self.persist_candidate(event, bytes, candidate, result)? {
-            Transition::Learned(result) => Ok(result),
+        match self.persist_candidate_retaining(event, bytes, candidate, result)? {
+            (Transition::Learned(result), retired) => Ok((result, retired)),
             _ => unreachable!("learned numerical transition"),
         }
     }

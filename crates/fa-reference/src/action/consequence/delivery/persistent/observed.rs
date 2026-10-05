@@ -328,6 +328,15 @@ impl FileOversight {
     fn persist_candidate(&mut self, event: Event, bytes: Vec<u8>, candidate: Machine,
         result: Transition) -> Result<Transition, JournalError>
     {
+        self.persist_candidate_retaining(event, bytes, candidate, result).map(|(result, _)| result)
+    }
+
+    // The SAME acknowledgment cut can hand the former live machine to an
+    // internal replay consumer instead of dropping it. No candidate or retired
+    // state leaves on failure; replacement precedes every ownership transfer.
+    fn persist_candidate_retaining(&mut self, event: Event, bytes: Vec<u8>, candidate: Machine,
+        result: Transition) -> Result<(Transition, Machine), JournalError>
+    {
         self.events.try_reserve(1).map_err(|_| Error::Limit)?;
         // Retain conservative unavailability even if replacement unwinds rather
         // than returns Err. Only a fully acknowledged publication clears it.
@@ -344,8 +353,8 @@ impl FileOversight {
         }
         self.source_operation_committed(&event);
         self.events.push(event);
-        self.machine = candidate;
+        let retired = std::mem::replace(&mut self.machine, candidate);
         self.fault = None;
-        Ok(result)
+        Ok((result, retired))
     }
 }
