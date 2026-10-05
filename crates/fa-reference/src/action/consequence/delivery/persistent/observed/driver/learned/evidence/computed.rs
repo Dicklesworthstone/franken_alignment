@@ -1,9 +1,9 @@
 //! Original-source driving: policy callbacks/files cannot replace helper input.
-use super::CurrentLearned;
+use super::{CurrentLearned, policy_snapshot};
 use super::super::super::{FileDriverEvent, FileHumanPermit, FileSupervisedDriver,
     FileCredentialPermit, JournalError};
 use super::super::super::evidence::FileEvidenceReport;
-use crate::action::consequence::oversight::evidence_source::{EvidenceError, EvidenceFile};
+use crate::action::consequence::oversight::evidence_source::EvidenceFile;
 use crate::action::ElapsedTick;
 use crate::{Error, Snapshot};
 
@@ -66,23 +66,7 @@ impl FileSupervisedDriver {
                     host.file_source_required())
             };
             let expected = self.job.as_ref().map(|job| (job.attempt, job.input_revision));
-            let snapshot = || {
-                if full_context_source { return Err(Error::Binding); }
-                let captured = source.read_evidence();
-                let result = captured.and_then(|captured| {
-                    if captured.identity().scope != scope
-                        || !captured.contexts().keys().eq(members.iter())
-                        || captured.contexts().values().any(|context| !context.is_empty()) {
-                        return Err(EvidenceError::Data(Error::Binding));
-                    }
-                    if !captured.snapshot().complete { return Err(EvidenceError::Data(Error::Incomplete)); }
-                    Ok(captured)
-                });
-                observations.push(result.as_ref().map(|capture| capture.identity()).map_err(|error| *error));
-                result.map(|capture| capture.snapshot().clone()).map_err(|error| match error {
-                    EvidenceError::Data(error) => error, EvidenceError::Io(_) => Error::Incomplete,
-                })
-            };
+            let snapshot = || policy_snapshot(source, scope, &members, full_context_source, &mut observations);
             // CurrentLearned resolves before AND after the actual file read;
             // no filename, returned context or journal observation installs a
             // learned source. Reconciliation never invokes this closure at all.

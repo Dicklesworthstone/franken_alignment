@@ -14,6 +14,9 @@ use crate::{Error, Snapshot};
 use std::fmt;
 use std::rc::Rc;
 
+mod driving;
+pub use driving::FileNativeDriverEvent;
+
 #[cfg(test)]
 mod tests;
 
@@ -176,6 +179,14 @@ impl FileNativeSupervisedDriver {
                     }
                 }) { self.input_revision = input_revision; }
                 result?;
+                if self.review.status() == NativeReviewStatus::Running
+                    && job.input_revision != self.input_revision {
+                    // Keep the next concrete source capture on the ORIGINAL
+                    // acknowledged refined input, even when callers mix manual
+                    // quanta with the complete native loop. This grants no key.
+                    job.inputs = Some(self.review.input().clone());
+                    job.input_revision = self.input_revision;
+                }
                 if self.review.status() == NativeReviewStatus::Finished {
                     // Close BEFORE fallible handoff checks or allocations. Only
                     // this original acknowledged Continue can set Ready again.

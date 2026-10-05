@@ -6,7 +6,8 @@ mod computed;
 use super::super::{FileSupervisedDriver, FileDriverEvent, FileHumanPermit,
     FileHumanRequest, FileCredentialPermit, FileOversight, FrozenAction,
     CommitteeInput, DriverEvidence, JournalError, Phase, provider::EvidenceProvider};
-use crate::action::ElapsedTick;
+use crate::action::{ElapsedTick, Scope};
+use crate::action::consequence::oversight::evidence_source::{EvidenceError, EvidenceFile, EvidenceIdentity};
 use crate::{Error, Snapshot};
 
 impl FileSupervisedDriver {
@@ -91,4 +92,35 @@ fn current_input(host: &FileOversight, attempt: u64, revision: u64,
 {
     check_current(host, attempt, revision, action)?;
     Ok(host.machine.checked_learned_sidecar(attempt)?.round().input().clone())
+}
+
+// Original concrete evidence, shared only inside the supervising driver. This
+// does not open a public provider extension or export a mutable learned source.
+pub(in super::super) fn current_provider<P>(expected: Option<(u64, u64)>, snapshot: P)
+    -> impl EvidenceProvider
+where P: FnMut() -> Result<Snapshot, Error> {
+    CurrentLearned { expected, snapshot }
+}
+
+// The SAME policy-only file admission for probe and native-model congress. All
+// nonempty helper context is refused, never omitted from the actual judged input.
+pub(in super::super) fn policy_snapshot<S: EvidenceFile + ?Sized>(source: &mut S,
+    scope: Scope, members: &[String], full_context_source: bool,
+    observations: &mut Vec<Result<EvidenceIdentity, EvidenceError>>) -> Result<Snapshot, Error>
+{
+    if full_context_source { return Err(Error::Binding); }
+    let captured = source.read_evidence();
+    let result = captured.and_then(|captured| {
+        if captured.identity().scope != scope
+            || !captured.contexts().keys().eq(members.iter())
+            || captured.contexts().values().any(|context| !context.is_empty()) {
+            return Err(EvidenceError::Data(Error::Binding));
+        }
+        if !captured.snapshot().complete { return Err(EvidenceError::Data(Error::Incomplete)); }
+        Ok(captured)
+    });
+    observations.push(result.as_ref().map(|capture| capture.identity()).map_err(|error| *error));
+    result.map(|capture| capture.snapshot().clone()).map_err(|error| match error {
+        EvidenceError::Data(error) => error, EvidenceError::Io(_) => Error::Incomplete,
+    })
 }

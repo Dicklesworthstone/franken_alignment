@@ -81,3 +81,47 @@ session and could not launch: `rch` is absent (exit 127). Rust compilation, test
 execution, rustfmt and Clippy are UNEXECUTED. Selected-preimage patch application,
 whitespace and source inspection do not qualify execution. No historical receipt
 qualifies these new files. Beads are unchanged because `br` is unavailable.
+
+
+## One live native loop, without caller-built helper packets
+
+`FileNativeSupervisedDriver::step` and `step_with_credential` keep the same native
+sequence and publication driver together after review. Each call yields either
+original native review progress or an original driver event. Finishing review
+still yields before either key can be requested or consumed; terminal handoff
+remains available without being required for ordinary publication.
+
+The concrete `CurrentLearned` adapter is reused, not duplicated. It resolves the
+original current source before and after the policy callback. Every acknowledged
+refinement updates the job's input predecessor even when manual and automatic
+quanta are mixed. Neither historical report bytes nor caller policy snapshots
+can install a new source, reset a native evaluator or substitute a helper vote.
+`request_human_approval` requests the existing independent key from current input;
+the separately held reviewer remains the only issuer.
+
+`step_from_policy_file` and its credentialed variant share the exact policy-only
+file admission used by the probe driver: matching scope, complete member roster,
+empty helper contexts and a complete policy snapshot. Nonempty unseen context is
+rejected rather than silently dropped. The incompatible durable full-context
+source profile is not bypassed. Read reports contain actual observations, not
+fabricated journal producer-floor acknowledgments. Once review finishes, both
+captures around reservation and the final publication capture are still owned
+by the original effect driver. Reconciliation needs no source read or live model.
+
+A failed or unwound clock/policy observation during automatic review cancels the
+original native computation and retains its completed work and future reservation.
+It does not invent ledger cancellation or refund an external effect. After review,
+failed capture after reservation retains that original charge until cancellation
+or resolution. The existing first-publication state transition still removes the
+send path before calling out, so a caught publication unwind can only reconcile.
+Manual `advance` retains its existing retryable pre-admission argument errors.
+
+Ten additional regression functions exercise actual native judgment with real
+policy files, mixed manual/refined/current-source progress, both publication keys,
+computed native denial and numerical alarm, actor cancellation before callbacks,
+source loss before I/O and at publication, invalid file contexts/scope/coverage,
+post-reservation loss, all three observation-unwind cuts, interrupted publication
+and independently reopened unknown settlement, and deadline crossing during observation.
+They are source scenarios, not executed evidence. Targeted and full required RCH
+commands again stop before compilation because `rch` is unavailable (exit 127).
+Compilation, tests, rustfmt and Clippy remain UNEXECUTED; no gate or bead is closed.
