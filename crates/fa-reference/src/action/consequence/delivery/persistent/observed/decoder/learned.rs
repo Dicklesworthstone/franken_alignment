@@ -5,6 +5,7 @@
 mod config;
 mod recovery;
 mod pending;
+mod preparation;
 pub mod sidecar;
 pub mod checkpoint;
 #[cfg(test)]
@@ -15,7 +16,10 @@ mod tests;
 mod admission_tests;
 #[cfg(test)]
 mod pending_tests;
+#[cfg(test)]
+mod preparation_tests;
 pub use config::FileLearnedConfig;
+pub use preparation::{FileLearnedStepPreparation, FileLearnedStepPreparationProgress, FileLearnedStepPreparationStatus};
 pub use recovery::{FileLearnedRecovery, FileLearnedRecoveryProgress, FileLearnedRecoveryStatus};
 
 use super::{DecoderEvent, MAX_WITNESS_BYTES};
@@ -142,6 +146,19 @@ impl FileOversight {
     pub fn complete_learned_step(&mut self, revision: u64, actor_revision: u64, position: u64)
         -> Result<Result<Rc<GenerationEvent>, Error>, JournalError>
     {
+        let mut preparation = self.prepare_learned_step_completion(revision, actor_revision, position)?;
+        while preparation.progress().status == FileLearnedStepPreparationStatus::Replaying {
+            let completed = preparation.progress().replayed_events;
+            preparation.advance(self, completed, 1)?;
+        }
+        preparation.finish(self)
+    }
+
+    // Shared by synchronous and cooperative completion, before replay and
+    // again before the next original numerical operation. No candidate bypass.
+    fn check_learned_completion(&self, revision: u64, actor_revision: u64, position: u64)
+        -> Result<(), JournalError>
+    {
         if self.fault.is_some() { return Err(JournalError::Unavailable); }
         if revision != self.revision() { return Err(Error::Stale.into()); }
         self.machine.preflight_learned_step(actor_revision, position)?;
@@ -150,8 +167,15 @@ impl FileOversight {
         }));
         self.check_source_admission(&shape)?;
         self.check_learned_event_capacity(revision, 1)?;
+        Ok(())
+    }
+
+    // Only fully replayed, exact-owner preparations call this private boundary.
+    fn persist_prepared_learned_step(&mut self, revision: u64, actor_revision: u64,
+        position: u64, mut candidate: Machine) -> Result<Result<Rc<GenerationEvent>, Error>, JournalError>
+    {
+        self.check_learned_completion(revision, actor_revision, position)?;
         self.events.try_reserve(1).map_err(|_| Error::Limit)?;
-        let mut candidate = Machine::replay(&self.profile, &self.events)?;
         // This is the existing numerical-transaction poison boundary. Nothing
         // external executes in the private candidate; only the journal is a sink.
         self.fault = Some(JournalFailure { operation: JournalIo::Stage,
