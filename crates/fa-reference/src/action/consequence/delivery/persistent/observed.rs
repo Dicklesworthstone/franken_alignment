@@ -74,6 +74,9 @@ pub struct FileOversight {
     store: storage::Store,
     events: Vec<Event>,
     machine: Machine,
+    // At most one prior acknowledged machine, usable ONLY as a learned replay
+    // continuation. Never persisted, never an alternate live authority owner.
+    learned_replay: Option<decoder::learned::FileLearnedReplayContinuation>,
     issuer: Rc<()>,
     fault: Option<JournalFailure>,
     source_interrupted: bool,
@@ -114,7 +117,7 @@ impl FileOversight {
     fn owner(profile: FileOversightProfile, store: storage::Store, events: Vec<Event>, machine: Machine) -> (Self, FileHumanReviewer) {
         let issuer = Rc::new(());
         let reviewer = FileHumanReviewer { issuer: Rc::clone(&issuer), reviewer: profile.human.reviewer_id };
-        (Self { profile, store, events, machine, issuer, fault: None, source_interrupted: false, worker_rounds: BTreeSet::new() }, reviewer)
+        (Self { profile, store, events, machine, learned_replay: None, issuer, fault: None, source_interrupted: false, worker_rounds: BTreeSet::new() }, reviewer)
     }
 
     /// Historical data only. No live broker, helper session or approval key is

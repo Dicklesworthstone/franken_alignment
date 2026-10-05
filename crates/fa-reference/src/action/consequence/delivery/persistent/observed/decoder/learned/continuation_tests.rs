@@ -113,7 +113,7 @@ fn continuation_must_replay_the_just_acknowledged_event_and_strict_finish_stays_
 fn carried_machine_has_no_store_lock_and_cannot_cross_owner_recovery_or_a_foreign_host() {
     for reopen in [false, true] {
         let root = Directory::new(); let other_root = Directory::new(); let config = config(false, 1);
-        let (mut host, _) = owner(&root, &config); let (_, carry) = pair(&mut host, None);
+        let (mut host, _) = owner(&root, &config); let (first, carry) = pair(&mut host, None); first.unwrap();
         let other = if reopen {
             drop(host);
             FileOversight::open_with_learned_generation(root.store(), profile(), &config).unwrap().0
@@ -133,7 +133,7 @@ fn continuation_rechecks_original_source_pause_position_and_ordinary_capacity() 
         let (mut host, _) = FileOversight::create(root.store(), profile).unwrap();
         host.observe_time(host.revision(), ElapsedTick(1)).unwrap();
         host.enable_learned_generation(host.revision(), config).unwrap();
-        let (_, carry) = pair(&mut host, None);
+        let (first, carry) = pair(&mut host, None); first.unwrap();
         let mut n = host.learned_generation_inspection().unwrap().numerical;
         match defect {
             0 => host.source_interrupted = true,
@@ -186,7 +186,7 @@ fn neither_failed_write_returns_a_continuation_or_candidate_output_and_recovery_
 #[test]
 fn retained_prefix_does_not_hide_a_corrupt_new_numerical_witness() {
     let root = Directory::new(); let config = config(false, 1); let (mut host, _) = owner(&root, &config);
-    let (_, carry) = pair(&mut host, None); let index = carry.verified_events();
+    let (first, carry) = pair(&mut host, None); first.unwrap(); let index = carry.verified_events();
     let original = host.events[index].clone(); let disk = bytes(&host);
     let before = host.learned_generation_inspection().unwrap();
     let Event::Decoder(DecoderEvent::Learned(LearnedEvent::Step { witness, .. })) = &mut host.events[index]
@@ -207,7 +207,7 @@ fn retained_prefix_does_not_hide_a_corrupt_new_numerical_witness() {
 fn carried_replay_preserves_executed_receipts_and_unknown_charges_without_publishing_again() {
     for executed in [false, true] {
         let root = Directory::new(); let config = config(false, 1); let (mut host, reviewer) = owner(&root, &config);
-        let (_, carry) = pair(&mut host, None);
+        let (first, carry) = pair(&mut host, None); first.unwrap();
         let (action, input, automatic, request) = prepared(&mut host);
         let revision = host.revision(); let human = reviewer.approve(&mut host, revision, &request).unwrap();
         host.dispatch(host.revision(), &automatic, &human, &action, &input, snapshot()).unwrap();
@@ -253,3 +253,5 @@ fn actual_monitor_hold_keeps_sample_private_and_cannot_restart_from_a_carried_qu
     assert_eq!(recovered.learned_generation_inspection().unwrap().numerical, n);
     assert_eq!(recovered.inspect().executions, 0);
 }
+
+mod cached;

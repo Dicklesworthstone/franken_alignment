@@ -88,3 +88,40 @@ impl FileLearnedReplayContinuation {
                 else { FileLearnedStepPreparationStatus::Replaying } }
     }
 }
+
+impl FileOversight {
+    /// Release only the process-local historical replay cache. No journal,
+    /// numerical budget, pending intent, observation, epoch or effect changes.
+    /// The next ordinary learned call can reconstruct from the original journal.
+    pub fn clear_learned_replay_cache(&mut self) { self.learned_replay = None; }
+
+    // Preserve stale-revision/fault refusal before consuming a cache. Other
+    // admission failures may discard this optimization but cannot change the
+    // original live state. In particular there is no cold retry after a failed
+    // cached replay that could hide divergent history or repeat failed work.
+    pub(in super::super) fn cached_learned_intent(&mut self, revision: u64,
+        actor_revision: u64, position: u64) -> Result<FileLearnedIntentPreparation, JournalError>
+    {
+        self.check_cached_revision(revision)?;
+        match self.learned_replay.take() {
+            Some(carry) => carry.prepare_intent(self, revision, actor_revision, position),
+            None => self.prepare_learned_step_intent(revision, actor_revision, position),
+        }
+    }
+
+    pub(in super::super) fn cached_learned_completion(&mut self, revision: u64,
+        actor_revision: u64, position: u64) -> Result<FileLearnedStepPreparation, JournalError>
+    {
+        self.check_cached_revision(revision)?;
+        match self.learned_replay.take() {
+            Some(carry) => carry.prepare_completion(self, revision, actor_revision, position),
+            None => self.prepare_learned_step_completion(revision, actor_revision, position),
+        }
+    }
+
+    fn check_cached_revision(&self, revision: u64) -> Result<(), JournalError> {
+        if self.storage_failure().is_some() { return Err(JournalError::Unavailable); }
+        if revision != self.revision() { return Err(Error::Stale.into()); }
+        Ok(())
+    }
+}

@@ -120,12 +120,14 @@ impl FileOversight {
     pub fn begin_learned_step(&mut self, revision: u64, actor_revision: u64, position: u64)
         -> Result<(), JournalError>
     {
-        let mut preparation = self.prepare_learned_step_intent(revision, actor_revision, position)?;
+        let mut preparation = self.cached_learned_intent(revision, actor_revision, position)?;
         while preparation.progress().status == FileLearnedStepPreparationStatus::Replaying {
             let completed = preparation.progress().replayed_events;
             preparation.advance(self, completed, 1)?;
         }
-        preparation.finish(self)
+        let carry = preparation.finish_with_continuation(self)?;
+        self.learned_replay = Some(carry);
+        Ok(())
     }
 
     /// Write-ahead intent plus acknowledged outcome. A matching pending intent
@@ -150,12 +152,14 @@ impl FileOversight {
     pub fn complete_learned_step(&mut self, revision: u64, actor_revision: u64, position: u64)
         -> Result<Result<Rc<GenerationEvent>, Error>, JournalError>
     {
-        let mut preparation = self.prepare_learned_step_completion(revision, actor_revision, position)?;
+        let mut preparation = self.cached_learned_completion(revision, actor_revision, position)?;
         while preparation.progress().status == FileLearnedStepPreparationStatus::Replaying {
             let completed = preparation.progress().replayed_events;
             preparation.advance(self, completed, 1)?;
         }
-        preparation.finish(self)
+        let (result, carry) = preparation.finish_with_continuation(self)?;
+        self.learned_replay = Some(carry);
+        Ok(result)
     }
 
     // Shared by synchronous and cooperative completion, before replay and

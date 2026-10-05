@@ -75,3 +75,47 @@ Targeted RCH tests and the full required xtask gate could not launch because
 `rch` is absent (exit 127). No local compiler fallback was used. Compilation,
 tests, rustfmt and Clippy are unexecuted. Source checks do not qualify runtime
 behavior, and no bead or acceptance gate is closed by this implementation.
+
+## Existing synchronous calls reuse the continuation automatically
+
+`begin_learned_step`, `complete_learned_step` and therefore
+`advance_learned_generation` now use one private continuation slot on the
+original FileOversight. Existing numeric, text and stream callers need no new
+loop, callback, model or recipe. A successful intent installs its retired
+predecessor; successful numerical completion replaces it with the next retired
+predecessor. With consecutive steps and no other writes, each warm stage replays
+one missing original event instead of the whole history. The first cold stage
+still reconstructs the full original journal.
+
+Other acknowledged transactions can extend that cache's tail. A later learned
+call replays them all before finalization; it never applies cached state over
+cancellation, revocation or source replacement. The cache does not advance or
+hold back the live authority. An invalid request may discard the optimization,
+not a pending intent or an effect obligation. Stale journal revisions and known
+storage failures refuse before cache consumption. A replay error is returned
+without automatically retrying a cold path or concealing divergent history.
+
+`clear_learned_replay_cache` drops the additional process-local machine without
+changing the journal, numerical state, source, epoch, pending operation or any
+effect balance. Subsequent calls can reconstruct normally. The cache is never
+serialized, restored, cloned or shared with a recovered owner. Recovery remains
+cold and leaves the original generator paused. Explicit empty-machine
+preparation APIs retain their previous behavior; their retaining finalizers let
+a cooperative caller manage the same optimization explicitly.
+
+This retains at most one additional cached Machine per host, including after
+normal generation completes until cleared or the host is dropped. Unrelated
+transactions and separately requested preparations can still allocate their own
+private candidates; this is not an aggregate memory reservation. Whole-journal
+encoding, file replacement, other transactions' replay and original inference
+remain synchronous. No measured latency, throughput or asymptotic end-to-end
+speedup is claimed without executed workload results.
+
+Eight further regression functions cover the actual synchronous entry points,
+verified one-event warm tails, byte-identical cold records, cache release during
+a pending intent, explicit/cached interleaving, stale competing finalizers, both
+writes at all five fault barriers, acknowledged numerical-budget failure, actor
+cancellation, actual policy-file replacement and preservation of a refused
+producer version. Policy tests pair refusal with a genuinely newer complete
+observation and original successful intake, not a mocked permitting gate.
+These tests, like the first eight, remain unexecuted because RCH is unavailable.
