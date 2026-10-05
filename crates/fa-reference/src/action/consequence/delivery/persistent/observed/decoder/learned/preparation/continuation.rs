@@ -1,11 +1,15 @@
 //! Move a previously acknowledged ORIGINAL machine forward, never restore a
 //! caller-supplied checkpoint or clone an authority. The tail still executes.
+mod control;
+#[cfg(test)]
+mod control_tests;
+
 use super::{Error, FileLearnedIntentPreparation, FileLearnedStepPreparation,
     FileLearnedStepPreparationStatus, FileOversight, JournalError, LearnedStepIntent,
     Machine, Operation, Rc, fmt};
 
-/// Opaque process-local replay custody, created only by an acknowledged learned
-/// finalizer. This is the former live machine MOVED, not a clone, a deserialized
+/// Opaque process-local replay custody from an acknowledged owner transition.
+/// This is the former live machine MOVED, not a clone, a deserialized
 /// snapshot, a fresh observation, or an executable effect owner. It has no store
 /// and exports no old broker, writer, helper session, reviewer, permit or sample.
 /// Its verified prefix belongs to one append-only live owner's journal.

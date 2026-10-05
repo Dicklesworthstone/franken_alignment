@@ -312,7 +312,7 @@ impl FileOversight {
         }
         if self.events.len() >= self.profile.delivery.limits.events { return Err(Error::Limit.into()); }
         let bytes = journal::encode_appended(&self.profile, self.store.identity(), &self.events, &event)?;
-        let mut candidate = Machine::replay(&self.profile, &self.events)?;
+        let (mut candidate, retain_replay) = self.replay_control_candidate()?;
         candidate.preflight_consistency(&event)?;
         if self.action_consistency_required() && matches!(&event,
             Event::Consistency(consistency::ConsistencyEvent::Forecast(..) | consistency::ConsistencyEvent::ForecastRequest(..)
@@ -324,7 +324,7 @@ impl FileOversight {
                 kind: io::ErrorKind::Other, replacement_may_be_visible: false });
         }
         let result = candidate.apply(&event)?;
-        self.persist_candidate(event, bytes, candidate, result)
+        self.persist_control_candidate(event, bytes, candidate, result, retain_replay)
     }
 
     // Both ordinary and numerically prepared events use this SAME storage cut.

@@ -150,7 +150,8 @@ fn original_actor_cancellation_is_replayed_before_cached_numerical_progress() {
     assert!(matches!(port.poll(&ticket), Knowledge::Known { value: ActorOutcome::CancelledBeforeDispatch, .. }));
     {
         let mut host = supervisor.host_mut().unwrap();
-        assert_eq!(prefix(&host), Some(start));
+        assert_eq!(prefix(&host), Some(start + 2));
+        assert_eq!(prefix(&host), Some(host.events.len() - 1));
         let revision = host.revision(); host.observe_time(revision, ElapsedTick(2)).unwrap();
         warm(&mut host).unwrap();
         assert_eq!(host.inspect().control.ledger.available, 100); assert_eq!(host.inspect().executions, 0);

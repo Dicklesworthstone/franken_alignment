@@ -48,7 +48,8 @@ fn cached_completion_retains_replaced_source_generation_epoch_and_durable_produc
         operation: 991, expected_generation: 1, expected_authority_epoch: epoch, next_generation: 2,
     }).unwrap();
     refresh(&mut host, &root, 8, true, 2).unwrap();
-    assert_eq!(super::prefix(&host), Some(prefix));
+    assert_eq!(super::prefix(&host), Some(prefix + 2));
+    assert_eq!(super::prefix(&host), Some(host.events.len() - 1));
     let source = host.file_source_status().unwrap(); let floor = host.inspect().control.ledger.epoch;
     assert!(floor > epoch); assert_eq!(source.policy.source.generation, 2);
     host.complete_learned_step(host.revision(), n.actor_revision, n.position).unwrap().unwrap();
