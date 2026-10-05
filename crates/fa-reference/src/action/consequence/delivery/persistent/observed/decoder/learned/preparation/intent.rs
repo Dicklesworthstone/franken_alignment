@@ -41,7 +41,6 @@ impl FileOversight {
         let event = Event::Decoder(DecoderEvent::Learned(LearnedEvent::Begin(intent)));
         self.machine.check_generated_text_origin(&event)?;
         self.check_source_admission(&event)?;
-        self.machine.check_decoder_admission(&event)?;
         self.machine.preflight_learned_intent(intent)?;
         Ok(())
     }

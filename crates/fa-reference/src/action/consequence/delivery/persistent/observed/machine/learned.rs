@@ -42,6 +42,10 @@ impl Machine {
     }
     // The same original intent law serves live admission and semantic replay.
     pub(in super::super) fn preflight_learned_intent(&self, intent: LearnedStepIntent) -> Result<(), Error> {
+        // Keep the decoder's private admission law inside Machine. In particular,
+        // an existing pending step/reset or recovery pause must refuse before
+        // the new-intent position check, exactly as original apply_inner does.
+        self.check_decoder_admission(&Event::Decoder(DecoderEvent::Learned(LearnedEvent::Begin(intent))))?;
         if self.pending_learned_step().is_some() { return Err(Error::Duplicate); }
         self.check_learned_position(intent.actor_revision, intent.position)
     }

@@ -102,11 +102,12 @@ preserve both already-published and unknown dispatched effects. Two compile-fail
 examples deny sample extraction and task cloning. Synthetic weights are causal
 controls, not detector-effectiveness evidence.
 
-Seven additional regression functions cover fully explicit intent/completion
+Eight additional regression functions cover fully explicit intent/completion
 execution, byte-identical original transaction records, intent abandonment,
 exact versus insufficient ordinary capacity, all five intent-write barriers,
 actor polling/cancellation in both stages, original numerical alarms paired with
-quiet controls, and acknowledged telemetry-budget failure across recovery. The
+quiet controls, acknowledged telemetry-budget failure across recovery, and
+refusal parity with original Begin under pending, paused and stale states. The
 existing tests and original numerical/witness/codec bodies are retained. A third
 compile-fail example rejects intent-to-completion conversion.
 

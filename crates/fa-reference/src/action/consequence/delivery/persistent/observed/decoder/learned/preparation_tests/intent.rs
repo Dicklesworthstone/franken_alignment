@@ -201,3 +201,36 @@ fn acknowledged_numerical_budget_failure_is_not_an_uncommitted_or_refillable_com
     assert!(host.resume_learned_generation(host.revision(), failed.numerical.actor_revision, failed.numerical.position).is_err());
     assert_eq!(host.inspect().executions, 0);
 }
+
+#[test]
+fn intent_admission_preserves_original_decoder_barriers_and_refusal_precedence() {
+    for barrier in 0..6 {
+        let root = Directory::new(); let config = config(false, 1); let (mut host, _) = owner(&root, &config);
+        let n = host.learned_generation_inspection().unwrap().numerical;
+        let mut intent = LearnedStepIntent { actor_revision: n.actor_revision, position: n.position };
+        match barrier {
+            0 | 1 => {
+                host.begin_learned_step(host.revision(), n.actor_revision, n.position).unwrap();
+                if barrier == 1 { intent.actor_revision += 1; }
+            }
+            2 => host.fence(host.revision()).unwrap(),
+            3 => intent.actor_revision += 1,
+            4 => intent.position += 1,
+            _ => host.source_interrupted = true,
+        }
+        let bytes = disk(&host); let before = host.learned_generation_inspection().unwrap();
+        let expected = host.transact(host.revision(), Event::Decoder(DecoderEvent::Learned(LearnedEvent::Begin(intent)))).err();
+        assert!(expected.is_some(), "each controlled violation must actually refuse");
+        let actual = host.prepare_learned_step_intent(host.revision(), intent.actor_revision, intent.position).err();
+        assert_eq!(actual, expected, "cooperative preflight must preserve original refusal for barrier {barrier}");
+        assert_eq!(disk(&host), bytes); assert_eq!(host.learned_generation_inspection().unwrap(), before);
+        assert!(host.storage_failure().is_none());
+    }
+    // A valid, otherwise identical owner still records the original two events
+    // and computes its real next token; the preflight is not blanket refusal.
+    let root = Directory::new(); let config = config(false, 1); let (mut host, _) = owner(&root, &config);
+    let before = host.learned_generation_inspection().unwrap();
+    one(&mut host).unwrap().unwrap();
+    assert_eq!(host.revision(), before.journal_revision + 2);
+    assert_eq!(host.learned_generation_inspection().unwrap().numerical.position, before.numerical.position + 1);
+}
