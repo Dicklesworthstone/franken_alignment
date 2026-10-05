@@ -12,6 +12,7 @@ use std::rc::Rc;
 
 pub(super) struct SourceState {
     policy: FileSourcePolicy,
+    policy_only: bool,
     writer: PolicyStateWriter,
     latest: Option<Rc<EvidenceSnapshot>>,
     sequence: u64,
@@ -20,6 +21,26 @@ pub(super) struct SourceState {
 }
 
 impl Machine {
+    // Called only by the original Enable event or the independently bound
+    // learned bootstrap. No event or live API can change an existing role.
+    pub(super) fn enable_source(&mut self, policy: FileSourcePolicy, policy_only: bool) -> Result<(), Error> {
+        if self.file_source.is_some() { return Err(Error::Duplicate); }
+        if !self.actions.is_empty() || self.requests.len() != 0 || !self.sessions.is_empty()
+            || self.broker.inspect().sequence != 0 || self.broker.stop_receipt().is_some()
+        { return Err(Error::WrongState); }
+        if policy.source.scope != self.scope
+            || (policy_only && !self.broker.learned_sidecar_required()) { return Err(Error::Binding); }
+        let writer = self.broker.enable_fresh_policy_state(policy.source, policy.limits, policy.freshness)?;
+        if !self.publication_guard { self.enable_publication_guard()?; }
+        self.file_source = Some(SourceState { policy, policy_only, writer, latest: None,
+            sequence: 0, last_refusal: None, replacements: Vec::new() });
+        Ok(())
+    }
+
+    pub(in super::super) fn policy_only_file_source(&self) -> bool {
+        self.file_source.as_ref().is_some_and(|source| source.policy_only)
+    }
+
     pub(in super::super) fn file_source_status(&self) -> Option<FileSourceStatus> {
         self.file_source.as_ref().map(|source| FileSourceStatus {
             policy: source.policy,
@@ -40,15 +61,7 @@ impl Machine {
     pub(super) fn apply_source(&mut self, event: &SourceEvent) -> Result<Transition, Error> {
         match event {
             SourceEvent::Enable(policy) => {
-                if self.file_source.is_some() { return Err(Error::Duplicate); }
-                if !self.actions.is_empty() || self.requests.len() != 0 || !self.sessions.is_empty()
-                    || self.broker.inspect().sequence != 0 || self.broker.stop_receipt().is_some()
-                { return Err(Error::WrongState); }
-                if policy.source.scope != self.scope { return Err(Error::Binding); }
-                let writer = self.broker.enable_fresh_policy_state(policy.source, policy.limits, policy.freshness)?;
-                if !self.publication_guard { self.enable_publication_guard()?; }
-                self.file_source = Some(SourceState { policy: *policy, writer, latest: None,
-                    sequence: 0, last_refusal: None, replacements: Vec::new() });
+                self.enable_source(*policy, false)?;
                 Ok(Transition::Unit)
             }
             SourceEvent::Withdraw => {
@@ -131,6 +144,9 @@ impl Machine {
             source.latest = Some(Rc::clone(captured));
             if !captured.snapshot().complete { return Err(Error::Incomplete); }
             if !captured.contexts().keys().eq(self.broker.contracts().members().keys()) { return Err(Error::Binding); }
+            if source.policy_only && captured.contexts().values().any(|context| !context.is_empty()) {
+                return Err(Error::Binding);
+            }
             Ok(())
         })();
         let result: Result<StateFrontier, Error> = (|| {
@@ -159,6 +175,13 @@ impl Machine {
         let Some(source) = &self.file_source else { return Ok(()); };
         let _ = self.broker.capture_policy_state()?;
         let capture = source.latest.as_ref().ok_or(Error::Incomplete)?;
+        if source.policy_only {
+            // The mandatory ORIGINAL learned gate, not file contexts, binds
+            // helper input and its registered provenance at every permitting
+            // boundary. Never synthesize a file-context packet for that gate.
+            if !self.broker.learned_sidecar_required() { return Err(Error::Binding); }
+            return Ok(());
+        }
         let expected = capture.inputs_for(inputs.action(), self.broker.contracts())?;
         if &expected != inputs { return Err(Error::Binding); }
         Ok(())

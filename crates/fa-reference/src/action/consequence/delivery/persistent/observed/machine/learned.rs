@@ -69,6 +69,9 @@ impl Machine {
                 let config = config.runtime()?;
                 if config.requires_computed_identity() { self.check_computed_identity_bootstrap()?; }
                 config.install(&mut self.broker)?;
+                if let Some(policy) = config.required_policy_source() {
+                    self.enable_source(policy, true)?;
+                }
                 if !self.publication_guard { self.enable_publication_guard()?; }
                 self.learned = Some(LearnedState { config, paused: false, pending: None, checkpoints: checkpoint::CheckpointHistory::default(), sidecar_outcomes: std::collections::BTreeMap::new(), sidecars: std::collections::BTreeMap::new() });
                 Ok(Transition::Unit)

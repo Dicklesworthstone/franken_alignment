@@ -5,6 +5,7 @@ mod text;
 mod sidecar;
 mod automatic_stop;
 mod identity;
+mod policy_source;
 
 use super::super::super::super::codec::shared::Writer;
 use crate::action::consequence::activation::tensor::kv::decoder::DecoderModel;
@@ -47,6 +48,7 @@ pub struct FileLearnedConfig {
     sidecar_required: bool,
     automatic_stop: Option<HostedStopPolicy>,
     computed_identity_required: bool,
+    policy_source: Option<super::super::super::source::FileSourcePolicy>,
 }
 impl fmt::Debug for FileLearnedConfig {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -78,7 +80,7 @@ impl FileLearnedConfig {
         w.u64(source.monitor_generation)?;
         w.count(limits.evidence.token_ids)?; w.count(limits.evidence.score_words)?;
         w.count(limits.encoded_bytes)?; w.blob(&archive)?;
-        Ok(Self { model, source, limits, bytes: w.finish().into(), text: None, sidecar_required: false, automatic_stop: None, computed_identity_required: false })
+        Ok(Self { model, source, limits, bytes: w.finish().into(), text: None, sidecar_required: false, automatic_stop: None, computed_identity_required: false, policy_source: None })
     }
     pub fn encoded_bytes(&self) -> usize { self.bytes.len() }
     pub(super) fn bytes(&self) -> &Rc<[u8]> { &self.bytes }
