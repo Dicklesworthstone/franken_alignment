@@ -42,7 +42,7 @@ impl FileSupervisedDriver {
         self.step_computed_with_provider(clock, &mut provider::Callback(provider), human, Some(credential))
     }
 
-    pub(super) fn step_computed_with_provider<F, P>(&mut self, mut clock: F,
+    pub(in super::super) fn step_computed_with_provider<F, P>(&mut self, mut clock: F,
         provider: &mut P, human: Option<&FileHumanPermit>, credential: Option<&FileCredentialPermit>)
         -> Result<FileDriverEvent, JournalError>
     where F: FnMut() -> ElapsedTick, P: EvidenceProvider {
@@ -55,45 +55,62 @@ impl FileSupervisedDriver {
             // source/credential checks and query-only unknown reconciliation.
             return self.step_with_provider(clock, provider, human, credential);
         }
-        let result = (|| {
-            let (revision, now, snapshot) = {
-                let job = self.job.as_ref().ok_or(Error::Missing)?;
-                let saved = self.learned_probe_review().ok_or(Error::Missing)?;
-                let revision = saved.review().revision();
-                let mut host = self.supervisor.host_mut()?;
-                job.check_owner(&host)?;
-                if host.storage_failure().is_some() { return Err(JournalError::Unavailable); }
-                observe(&mut host, clock())?;
-                let captured = sample(&mut host, job, provider, &mut clock)?;
-                if let Some(error) = captured.failure { return Err(error.into()); }
-                if captured.evidence.inputs.is_none() { return Err(Error::Incomplete.into()); }
-                if captured.evidence.inputs.as_ref() != job.inputs.as_ref() { return Err(Error::Stale.into()); }
-                let now = clock();
-                observe(&mut host, now)?;
-                (revision, now, captured.evidence.snapshot)
-            };
-            // No host borrow or substituted session crosses into the original
-            // owner. Its revision, source, deadline, custody, storage and finish
-            // checks remain the authority, including after every refinement.
-            match self.advance_learned_probe_review(revision, now, snapshot)? {
-                FileDriverLearnedEvent::Completed(event) => Ok(event),
-                FileDriverLearnedEvent::Progress { request, .. } => {
-                    let saved = self.learned_probe_review().ok_or(Error::Incomplete)?;
-                    Ok(FileDriverEvent::Workers { request, report: HelperPump {
-                        io: BTreeMap::new(), workers: saved.review().worker_statuses(),
-                    } })
-                }
-            }
-        })();
-        if result.is_err() {
-            // A failed observation cannot leave this automatic loop silently
-            // scoring from a previous input. Original maintenance cancels the
-            // evaluator while retaining its numerical work and leased rounds.
-            if let Some(job) = &mut self.job { job.close(); }
-            self.reap_helpers();
-            if self.job.as_ref().is_some_and(|job| job.phase == Phase::Closed) { self.job = None; }
-        }
+        let mut pending = ComputedObservation { driver: self, acknowledged: false };
+        let result = pending.driver.advance_computed_with_provider(&mut clock, provider);
+        pending.acknowledged = result.is_ok();
         result
+    }
+
+    fn advance_computed_with_provider<F, P>(&mut self, clock: &mut F, provider: &mut P)
+        -> Result<FileDriverEvent, JournalError>
+    where F: FnMut() -> ElapsedTick, P: EvidenceProvider {
+        let (revision, now, snapshot) = {
+            let job = self.job.as_ref().ok_or(Error::Missing)?;
+            let saved = self.learned_probe_review().ok_or(Error::Missing)?;
+            let revision = saved.review().revision();
+            let mut host = self.supervisor.host_mut()?;
+            job.check_owner(&host)?;
+            if host.storage_failure().is_some() { return Err(JournalError::Unavailable); }
+            observe(&mut host, clock())?;
+            let captured = sample(&mut host, job, provider, clock)?;
+            if let Some(error) = captured.failure { return Err(error.into()); }
+            if captured.evidence.inputs.is_none() { return Err(Error::Incomplete.into()); }
+            if captured.evidence.inputs.as_ref() != job.inputs.as_ref() { return Err(Error::Stale.into()); }
+            let now = clock();
+            observe(&mut host, now)?;
+            (revision, now, captured.evidence.snapshot)
+        };
+        // No host borrow or substituted session crosses into the original
+        // owner. Its revision, source, deadline, custody, storage and finish
+        // checks remain the authority, including after every refinement.
+        match self.advance_learned_probe_review(revision, now, snapshot)? {
+            FileDriverLearnedEvent::Completed(event) => Ok(event),
+            FileDriverLearnedEvent::Progress { request, .. } => {
+                let saved = self.learned_probe_review().ok_or(Error::Incomplete)?;
+                Ok(FileDriverEvent::Workers { request, report: HelperPump {
+                    io: BTreeMap::new(), workers: saved.review().worker_statuses(),
+                } })
+            }
+        }
+    }
+}
+
+/// Own the driver across every caller observation. Dropping an unfinished pass
+/// (including caught unwinding) releases original numerical custody, retaining
+/// completed work and historical rounds. This does not refund or cancel an
+/// effect in the ledger; source refresh/storage retain their original latches.
+struct ComputedObservation<'a> {
+    driver: &'a mut FileSupervisedDriver,
+    acknowledged: bool,
+}
+impl Drop for ComputedObservation<'_> {
+    fn drop(&mut self) {
+        if self.acknowledged { return; }
+        if let Some(job) = &mut self.driver.job { job.close(); }
+        self.driver.reap_helpers();
+        if self.driver.job.as_ref().is_some_and(|job| job.phase == Phase::Closed) {
+            self.driver.job = None;
+        }
     }
 }
 

@@ -70,3 +70,48 @@ Required targeted and full remote RCH commands cannot launch in this session:
 Source hashes and unchanged-branch comparisons are not runtime qualification.
 No bead is closed or manually edited without its required `br` CLI. The original
 source/release gates and historical verification records are unchanged.
+
+## Live original input and policy-only files
+
+`step_computed` and `step_computed_with_credential` use the existing private
+CurrentLearned adapter for the complete loop. The host supplies only policy
+snapshots. The adapter resolves the original learned input both before and after
+each observation, including after refinement and after the terminal computation
+report is extracted. No caller packet is needed to continue the same request.
+
+`step_computed_from_policy_file` and its credentialed variant read an actual
+sealed EvidenceFile at each policy boundary. The identity must match the action
+scope, the roster must exactly match the committee, all declared helper contexts
+must be empty, and the policy snapshot must be complete. Nonempty helper content
+refuses: this mode cannot claim that numerical helpers saw file contexts. The
+file's values are separate deterministic-policy observations, not helper input.
+
+This mode cannot replace a configured durable full-context file source. That
+profile still requires its original file-built helper inputs and its original
+durable source refresh. Policy-only reads use the existing reader's process-local
+version/content checks; they do not install a durable producer floor or prove an
+authenticated external world. FileEvidenceReport therefore reports actual reads
+but no invented durable source_updates. Provider identity and file permissions
+remain trusted operator provisioning obligations.
+
+A healthy request reads through original numerical review, before automatic
+reservation, again before dispatch and once at final publication. Unknown-effect
+reconciliation remains query-only even after the policy file disappears or the
+learned owner has been reopened and paused. Changed policy at final publication
+uses the original nonexecution/settlement protocol, never a second effect path.
+
+The running-review observation scope now owns cancellation cleanup across both
+ordinary errors and caught unwinding. Losing a clock or policy callback closes
+local evaluator custody while retaining completed work and acknowledged rounds;
+it does not invent a ledger cancellation, a refund, a durable source withdrawal
+or completion. Numerical/storage failures keep their original separate latches.
+This cleanup covers running computed review, not arbitrary later host callbacks.
+
+Seven more regression functions cover packet-free continuation after report
+extraction; real policy-file refinement and two-key publication with exact read
+counts; missing/incomplete/wrong-scope/context-bearing/changed-version files;
+policy change at the final boundary; native-source loss before any file read;
+clock/policy unwinds before and after refinement; and recovered unknown-effect
+settlement without rereading. Together fourteen new regression functions are
+authored for the combined loop. Compilation, tests, rustfmt and Clippy remain
+UNEXECUTED: the required remote RCH command is unavailable. No gate is promoted.

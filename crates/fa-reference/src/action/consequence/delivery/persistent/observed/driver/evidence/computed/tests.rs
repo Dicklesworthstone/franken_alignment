@@ -254,3 +254,5 @@ fn computed_loop_matches_original_standalone_review_without_adopting_its_receipt
     assert_eq!(run(&h.driver).input(), original.input());
     assert_eq!(h.driver.supervisor().host().unwrap().inspect().executions, 0);
 }
+
+mod current;

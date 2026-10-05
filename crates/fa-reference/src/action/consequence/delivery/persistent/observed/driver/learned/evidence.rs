@@ -1,6 +1,8 @@
 //! Current original learned evidence at every existing publication boundary.
 //! Callers supply policy snapshots, never helper-input bytes or a replacement
 //! source. The original driver still owns both keys and final endpoint checks.
+mod computed;
+
 use super::super::{FileSupervisedDriver, FileDriverEvent, FileHumanPermit,
     FileHumanRequest, FileCredentialPermit, FileOversight, FrozenAction,
     CommitteeInput, DriverEvidence, JournalError, Phase, provider::EvidenceProvider};
