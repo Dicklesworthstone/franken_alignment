@@ -46,8 +46,40 @@ retain the file lock after the live owner is dropped.
 The synchronous `complete_learned_step` consumes this same preparation. It keeps
 its existing return type, event count, original algorithm and storage boundary.
 It remains synchronous by choice; callers needing scheduling points use the
-explicit task. In this increment, new intent admission still uses the original
-synchronous `begin_learned_step` operation.
+explicit task. Synchronous intent admission now consumes the same reconstruction
+machinery through the separately typed intent preparation below.
+
+## New-step intent admission
+
+`prepare_learned_step_intent` produces a `FileLearnedIntentPreparation` before
+any new intent is recorded. It checks the original next-position, pause/reset,
+source, and two-ordinary-event-slot admission laws before reconstruction. The
+same reducer and bounded-event advance power both stages; the distinct public
+types have distinct finalizers. An intent preparation cannot be converted into
+a completion preparation or used to extract a token.
+
+After the intent preparation becomes Ready, its `finish(&mut host)` applies and
+persists only the original Begin event. No new numerical step runs during this
+operation. The caller then creates a completion preparation against the new
+journal revision, advances it to Ready and finishes that separate operation.
+Both histories can be scheduled without a retained mutable host borrow. The two
+canonical acknowledgments and the completion's original witness format are
+unchanged. There is no interval in which new inference ran before its intent
+was acknowledged, and Ready never means a next token or effect was approved.
+
+Dropping an intent preparation before acknowledgment leaves no new pending
+operation. Dropping a completion preparation leaves the acknowledged intent
+pending. A failed intent write may or may not be visible; the live owner stays
+unavailable and the original recovery path determines the canonical result.
+The synchronous begin/advance/complete APIs remain source-compatible and consume
+the same implementation; synchronous callers still receive synchronous behavior.
+
+A host loop may poll actor tickets between replay quanta. An intervening actor
+cancellation invalidates either preparation, preserves the original cancellation
+outcome, and does not grant a refund for any unknown dispatch. The caller may
+explicitly construct a fresh task at the new revision. Frequent writer changes
+can repeatedly invalidate preparation: there is no liveness or latency guarantee
+under arbitrary journal churn and no automatic retry that hides repeated work.
 
 ## Bounds and nonclaims
 
@@ -69,6 +101,14 @@ corrupt original witnesses, all five replacement barriers and recovery; and
 preserve both already-published and unknown dispatched effects. Two compile-fail
 examples deny sample extraction and task cloning. Synthetic weights are causal
 controls, not detector-effectiveness evidence.
+
+Seven additional regression functions cover fully explicit intent/completion
+execution, byte-identical original transaction records, intent abandonment,
+exact versus insufficient ordinary capacity, all five intent-write barriers,
+actor polling/cancellation in both stages, original numerical alarms paired with
+quiet controls, and acknowledged telemetry-budget failure across recovery. The
+existing tests and original numerical/witness/codec bodies are retained. A third
+compile-fail example rejects intent-to-completion conversion.
 
 Mandatory targeted RCH tests and the full xtask gate were attempted but did not
 launch: `rch` is absent (exit 127). Compilation, tests, rustfmt and Clippy are

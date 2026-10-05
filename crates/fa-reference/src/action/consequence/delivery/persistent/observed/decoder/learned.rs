@@ -19,7 +19,7 @@ mod pending_tests;
 #[cfg(test)]
 mod preparation_tests;
 pub use config::FileLearnedConfig;
-pub use preparation::{FileLearnedStepPreparation, FileLearnedStepPreparationProgress, FileLearnedStepPreparationStatus};
+pub use preparation::{FileLearnedIntentPreparation, FileLearnedStepPreparation, FileLearnedStepPreparationProgress, FileLearnedStepPreparationStatus};
 pub use recovery::{FileLearnedRecovery, FileLearnedRecoveryProgress, FileLearnedRecoveryStatus};
 
 use super::{DecoderEvent, MAX_WITNESS_BYTES};
@@ -118,10 +118,12 @@ impl FileOversight {
     pub fn begin_learned_step(&mut self, revision: u64, actor_revision: u64, position: u64)
         -> Result<(), JournalError>
     {
-        self.check_learned_event_capacity(revision, 2)?;
-        self.transact(revision, Event::Decoder(DecoderEvent::Learned(
-            LearnedEvent::Begin(LearnedStepIntent { actor_revision, position }))))?;
-        Ok(())
+        let mut preparation = self.prepare_learned_step_intent(revision, actor_revision, position)?;
+        while preparation.progress().status == FileLearnedStepPreparationStatus::Replaying {
+            let completed = preparation.progress().replayed_events;
+            preparation.advance(self, completed, 1)?;
+        }
+        preparation.finish(self)
     }
 
     /// Write-ahead intent plus acknowledged outcome. A matching pending intent

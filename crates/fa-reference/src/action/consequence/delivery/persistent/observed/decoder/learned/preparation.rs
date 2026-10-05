@@ -1,5 +1,11 @@
 //! Cooperative reconstruction for one ORIGINAL pending numerical completion.
 //! The live owner remains available; any journal mutation invalidates this cut.
+mod intent;
+pub use intent::FileLearnedIntentPreparation;
+
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum Operation { Intent, Completion }
+
 use super::{DecoderEvent, Error, Event, FileOversight, GenerationEvent,
     JournalError, LearnedEvent, LearnedStepIntent, Machine};
 use super::super::super::super::MAX_JOURNAL_EVENTS;
@@ -51,6 +57,7 @@ pub struct FileLearnedStepPreparation {
     replayed: usize,
     status: FileLearnedStepPreparationStatus,
     candidate: Machine,
+    operation: Operation,
 }
 impl fmt::Debug for FileLearnedStepPreparation {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -73,6 +80,7 @@ impl FileOversight {
             total: self.events.len(), replayed: 0,
             status: FileLearnedStepPreparationStatus::Replaying,
             candidate: Machine::new(&self.profile)?,
+            operation: Operation::Completion,
         })
     }
 }
@@ -91,10 +99,12 @@ impl FileLearnedStepPreparation {
         if !Rc::ptr_eq(&self.issuer, &host.issuer) { return Err(Error::Binding.into()); }
         if host.storage_failure().is_some() { return Err(JournalError::Unavailable); }
         if host.revision() != self.revision { return Err(Error::Stale.into()); }
-        host.check_source_admission(&Event::Decoder(DecoderEvent::Learned(LearnedEvent::Step {
-            actor_revision: self.intent.actor_revision, position: self.intent.position,
-            witness: Rc::from(&b""[..]),
-        })))?;
+        let event = match self.operation {
+            Operation::Intent => LearnedEvent::Begin(self.intent),
+            Operation::Completion => LearnedEvent::Step { actor_revision: self.intent.actor_revision,
+                position: self.intent.position, witness: Rc::from(&b""[..]) },
+        };
+        host.check_source_admission(&Event::Decoder(DecoderEvent::Learned(event)))?;
         Ok(())
     }
 
@@ -147,6 +157,7 @@ impl FileLearnedStepPreparation {
         self.check_status()?;
         self.check_owner_cut(host)?;
         if self.status != FileLearnedStepPreparationStatus::Ready { return Err(Error::Incomplete.into()); }
+        if self.operation != Operation::Completion { return Err(Error::WrongState.into()); }
         host.persist_prepared_learned_step(self.revision, self.intent.actor_revision,
             self.intent.position, self.candidate)
     }

@@ -40,6 +40,11 @@ impl Machine {
         if pending != (LearnedStepIntent { actor_revision: revision, position }) { return Err(Error::Binding); }
         self.check_learned_position(revision, position)
     }
+    // The same original intent law serves live admission and semantic replay.
+    pub(in super::super) fn preflight_learned_intent(&self, intent: LearnedStepIntent) -> Result<(), Error> {
+        if self.pending_learned_step().is_some() { return Err(Error::Duplicate); }
+        self.check_learned_position(intent.actor_revision, intent.position)
+    }
     fn check_learned_position(&self, revision: u64, position: u64) -> Result<(), Error> {
         if self.pending_learned_reset().is_some() { return Err(Error::Incomplete); }
         let state = self.learned.as_ref().ok_or(Error::Incomplete)?;
@@ -56,8 +61,7 @@ impl Machine {
             LearnedEvent::Checkpoint(event) => self.apply_learned_checkpoint(event),
             LearnedEvent::Sidecar(event) => self.apply_learned_sidecar(event),
             LearnedEvent::Begin(intent) => {
-                if self.pending_learned_step().is_some() { return Err(Error::Duplicate); }
-                self.check_learned_position(intent.actor_revision, intent.position)?;
+                self.preflight_learned_intent(*intent)?;
                 self.learned.as_mut().expect("checked learned source").pending = Some(*intent);
                 Ok(Transition::Unit)
             }
