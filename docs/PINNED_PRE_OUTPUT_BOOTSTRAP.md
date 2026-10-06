@@ -11,7 +11,7 @@ process, request book, event tag, dependency or recovery state importer is added
 original `FileConsistencyConfig` into the independently supplied learned recipe.
 It requires `with_required_sidecar()` and a predictor with
 `with_pre_output_forecast()`. Raw text and stream-message domains must match.
-The original predictor bytes include coefficients, probability tables, scope and
+The original predictor bytes include coefficients, probability tables, source and
 model labels, event category, lifetime error budget, forecast age and optional
 terminal-stop policy. The original installer still checks actual model, layer,
 dimensions, stream and policy-generation binding before creating storage.
@@ -52,6 +52,15 @@ recipe, reconstructs original evidence, fences authority and pauses generation;
 an unanswered forecast retains original coverage loss rather than receiving a
 new error budget or a replacement observer.
 
+`enable_learned_generation_with_pre_output_forecast(revision, config)` supplies
+the equivalent FIRST numerical installation on an existing original owner after
+any separately governed bootstrap prerequisites. It calls the original Enable
+transaction and returns the observer only after acknowledgment. Original
+preconditions reject prior numerical ownership or incompatible earlier work.
+It cannot reissue a lost observer, replace a recovered predictor, or retroactively
+protect an earlier generic owner's actions. Use atomic creation for a first-image
+requirement; this installation method exists for deliberate staged bootstrap.
+
 ## Authored regression sources
 
 Seven regression functions compare exact wrapper bytes and independent canonical
@@ -62,7 +71,16 @@ They preserve pending-forecast coverage loss and owner-specific observer custody
 on recovery. Original byte tokenization/model fixtures provide permitted controls,
 not measured calibration, detector quality or deployment qualification.
 
+Five additional functions cover acknowledgment-only staged installation and all
+five original storage barriers; both orders of composition with the required
+policy source; native-model allow/deny and predictive-crossing controls; actual
+message publication followed by separately forecast/reviewed stream finish; and
+unknown-dispatch recovery without source reads, generation resumption or refunds.
+The stream negative retains a fresh policy observation while publication is
+visible but not receipt-confirmed, then pairs it with a permitted finish after
+reconciliation. A prior message's human key cannot authorize that finish.
+
 Required targeted and full RCH execution cannot launch here because `rch` is
-absent. Compilation, tests, rustfmt and Clippy remain unexecuted. Source identity
-and patch checks are not runtime evidence. No existing assertion or qualification
-gate is weakened and no bead is closed by this increment.
+absent. Compilation, tests, rustfmt and Clippy remain unexecuted. These twelve
+regression functions are source scenarios, not passing execution results. No
+existing assertion or qualification gate is weakened and no bead is closed.

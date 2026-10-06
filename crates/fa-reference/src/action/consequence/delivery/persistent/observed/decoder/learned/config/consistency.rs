@@ -1,5 +1,5 @@
 //! Pin the ORIGINAL predictor and required timing in the independent recipe.
-//! Recovery compares these bytes before constructing either numerical authority.
+//! Recovery compares these bytes before constructing the configured runtime.
 use super::{FileLearnedConfig, Writer, DOMAIN, MAX_CONFIG_BYTES};
 use crate::action::consequence::delivery::persistent::observed::{FileOversight,
     FileOversightProfile, FileHumanReviewer, JournalError,
@@ -71,7 +71,22 @@ impl FileOversight {
         let observer = FileConsistencyObserver { issuer: Rc::clone(&host.issuer) };
         Ok((host, reviewer, observer))
     }
+
+    /// Install the same pinned recipe in an existing original owner after any
+    /// separately governed bootstrap prerequisites have been installed. This is
+    /// the FIRST numerical installation, not an observer getter or reissuer.
+    /// Original enable admission, source checks and persistence run unchanged.
+    /// Failure returns no observer; a duplicate install cannot recover a lost one.
+    pub fn enable_learned_generation_with_pre_output_forecast(&mut self, revision: u64,
+        config: FileLearnedConfig) -> Result<FileConsistencyObserver, JournalError>
+    {
+        if config.required_pre_output_forecast().is_none() { return Err(Error::Binding.into()); }
+        self.enable_learned_generation(revision, config)?;
+        Ok(FileConsistencyObserver { issuer: Rc::clone(&self.issuer) })
+    }
 }
 
 #[cfg(test)]
 mod tests;
+#[cfg(test)]
+mod lifecycle_tests;
