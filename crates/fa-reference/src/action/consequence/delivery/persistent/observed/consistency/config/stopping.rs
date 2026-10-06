@@ -26,14 +26,14 @@ impl FileConsistencyConfig {
     }
 }
 
-// Version four wraps exactly ONE original v1/v2/v3 configuration. A nested stop
+// Version four wraps one original configuration, optionally temporal. A nested stop
 // wrapper or a stop wrapper inside a message wrapper is never canonical.
 pub(super) fn parts(bytes: &[u8]) -> Result<(&[u8], ConsistencyStopPolicy), Error> {
     let mut reader = Reader::new(bytes);
     if reader.take(8)? != DOMAIN { return Err(Error::Binding); }
     let inner = reader.blob(MAX_CONFIG_BYTES)?;
     if !inner.starts_with(super::DOMAIN) && !inner.starts_with(super::HOSTED_DOMAIN)
-        && !inner.starts_with(super::MESSAGE_DOMAIN) { return Err(Error::Binding); }
+        && !inner.starts_with(super::MESSAGE_DOMAIN) && !inner.starts_with(super::temporal::DOMAIN) { return Err(Error::Binding); }
     let policy = ConsistencyStopPolicy::new(reader.u64()?, reader.u64()?, reader.u64()?)?;
     reader.end()?;
     Ok((inner, policy))

@@ -1,4 +1,5 @@
 //! Use the original predictor, sequential process and proposal authority.
+mod pre_output;
 use super::{Machine, Transition};
 use super::super::consistency::{ConsistencyEvent, FileConsistencySnapshot};
 use super::super::{Event, BaseEvent};
@@ -104,6 +105,7 @@ impl Machine {
     /// Route binding is checked before any action observation and on replay.
     /// No unrelated request or trusted raw proposal may consume a keyed forecast.
     pub(super) fn check_consistency_route(&self, event: &Event) -> Result<(), Error> {
+        self.check_pre_output_route(event)?;
         let Some((request, attempt)) = self.consistency_request else { return Ok(()); };
         match event {
             Event::Core(BaseEvent::Propose(..)) => Err(Error::Binding),

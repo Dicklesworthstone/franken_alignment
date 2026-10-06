@@ -11,6 +11,7 @@ use crate::action::consequence::delivery::stream::StreamProfile;
 use std::rc::Rc;
 
 mod stopping;
+mod temporal;
 
 pub(super) const MAX_CONFIG_BYTES: usize = MAX_VALUES * 4 + MAX_EVENT_PREFIX_BYTES + 256;
 const DOMAIN: &[u8; 8] = b"FACPRED\x01";
@@ -76,7 +77,7 @@ impl FileConsistencyConfig {
         Self::from_bytes(&w.finish())
     }
     pub fn hosted_residual_layer(&self) -> Option<u64> {
-        let base = self.without_stop();
+        let base = self.without_temporal();
         let bytes = if base.starts_with(MESSAGE_DOMAIN) {
             message_parts(base).expect("validated message configuration").0
         } else { base };
@@ -93,13 +94,17 @@ impl FileConsistencyConfig {
             let inner = stopping::parts(&self.bytes)?.0;
             return Self::from_bytes(inner)?.with_stream_messages(profile)?.with_terminal_stop(policy);
         }
+        if self.requires_pre_output_forecast() {
+            let inner = temporal::parts(&self.bytes)?;
+            return Self::from_bytes(inner)?.with_stream_messages(profile)?.with_pre_output_forecast();
+        }
         let mut w = Writer::new(MAX_CONFIG_BYTES);
         w.raw(MESSAGE_DOMAIN)?; w.blob(&self.bytes)?;
         super::super::stream::write_profile(&mut w, profile)?;
         Self::from_bytes(&w.finish())
     }
     pub fn stream_message_profile(&self) -> Option<StreamProfile> {
-        let bytes = self.without_stop();
+        let bytes = self.without_temporal();
         bytes.starts_with(MESSAGE_DOMAIN).then(||
             message_parts(bytes).expect("validated message configuration").1)
     }
@@ -116,6 +121,9 @@ impl FileConsistencyConfig {
 fn decode(bytes: &[u8]) -> Result<ConsistencyConfig, Error> {
     if bytes.starts_with(stopping::DOMAIN) {
         return decode(stopping::parts(bytes)?.0);
+    }
+    if bytes.starts_with(temporal::DOMAIN) {
+        return decode(temporal::parts(bytes)?);
     }
     if bytes.starts_with(MESSAGE_DOMAIN) {
         let (inner, _) = message_parts(bytes)?;

@@ -58,6 +58,7 @@ impl Machine {
         revision.checked_add(1).ok_or(Error::Overflow)?;
         if actual.host_failure.is_some() || !actual.status.is_active() || self.broker.inspect().suspended
             || self.broker.stop_receipt().is_some() { return Err(Error::WrongState); }
+        self.check_pre_output_step()?;
         Ok(())
     }
     pub(super) fn apply_learned(&mut self, event: &LearnedEvent) -> Result<Transition, Error> {
