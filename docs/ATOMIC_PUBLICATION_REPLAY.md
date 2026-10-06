@@ -42,3 +42,16 @@ compilation, rustfmt and Clippy remain unexecuted. No local compiler fallback,
 performance measurement, qualification or bead closure is claimed. Whole-journal
 encoding, each original numerical event and filesystem replacement remain
 synchronous, and the existing additional-machine memory tradeoff remains.
+
+## Policy-file regressions retained from the pending patch
+
+Three additional regression functions use actual operator files and the original
+learned-text configuration. They compare the reused state with independent
+canonical decode/bind/replay, check expiring leases and fresh renewal, preserve
+a newer refused producer version across later transactions and recovery, and
+exercise all five policy-write barriers. A genuinely newer complete observation
+is the positive control for subsequent original request admission. The tests
+preserve the current cold-owner rule after a failed proposal consumes the cache;
+losing the optimization does not lose source history or restore authority.
+Together with the batch cases, seven functions were ported from the pending
+bundle. These are source scenarios only; no execution result is claimed.

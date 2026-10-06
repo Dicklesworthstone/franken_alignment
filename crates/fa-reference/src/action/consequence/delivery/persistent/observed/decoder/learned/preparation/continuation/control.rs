@@ -5,6 +5,8 @@ use crate::action::consequence::delivery::persistent::observed::{Event, Transiti
 
 #[cfg(test)]
 mod batch_tests;
+#[cfg(test)]
+mod policy_tests;
 
 impl FileOversight {
     // Call only AFTER the operation's original live preflights. Evidence-loss
