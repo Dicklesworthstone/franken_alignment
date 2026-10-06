@@ -5,6 +5,7 @@ mod codec;
 mod requests;
 mod hosted;
 mod deadline;
+pub mod pre_output;
 pub use config::{FileConsistencyConfig, FileConsistencyParameters};
 pub(super) use codec::{read, write};
 
