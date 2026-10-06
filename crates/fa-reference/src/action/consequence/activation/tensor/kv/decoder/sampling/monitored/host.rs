@@ -6,6 +6,20 @@ use crate::Error;
 use std::rc::Rc;
 
 impl LearnedGeneration {
+    /// Check the predictor's residual contract against THIS immutable model.
+    /// This exposes neither parameters nor a mutable numerical owner and does
+    /// no inference. The supervising broker separately binds stream and lifetime.
+    pub(crate) fn check_host_forecast_residual(&self, layer: u64,
+        profile: crate::action::consequence::activation::CaptureProfile, dimensions: usize)
+        -> Result<(), Error>
+    {
+        let contract = self.model.residual_contract(layer)?;
+        if contract.profile() != profile || contract.dimensions() != dimensions {
+            return Err(Error::Binding);
+        }
+        Ok(())
+    }
+
     /// Inspect immutable parameters from THIS original generation. The existing
     /// identity engine owns fresh anchor sessions, never this live KV or sampler.
     /// Only the crate's supervised owner can select this source; no model getter
