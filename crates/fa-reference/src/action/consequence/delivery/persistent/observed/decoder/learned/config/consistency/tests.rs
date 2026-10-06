@@ -190,7 +190,7 @@ fn independent_recovery_rejects_downgrade_and_same_label_predictor_substitution_
 fn runtime_less_disk_bytes_and_changed_bootstrap_cannot_supply_a_weaker_predictor() {
     let root = Directory::new(); let exact = pinned();
     let (host, _, _) = FileOversight::create_with_pre_output_forecast(root.store(), profile(), exact.clone()).unwrap();
-    let mut raw = journal::decode(&host.profile, host.store.identity(), &disk(host)).unwrap();
+    let mut raw = journal::decode(&host.profile, host.store.identity(), &disk(&host)).unwrap();
     assert!(Machine::replay(&host.profile, &raw).is_err(), "encoded recipe alone is not a runtime trust root");
     let mut missing = Vec::new();
     assert!(bind_history(&mut missing, &exact).is_err());
@@ -219,3 +219,5 @@ fn terminal_stop_policy_is_pinned_and_original_pair_constructor_cannot_omit_the_
     assert!(host.enable_action_consistency(host.revision(), predictor()).is_err());
     independent(&host, &exact);
 }
+
+mod provisioned;
