@@ -1,4 +1,5 @@
 //! Atomic prediction bootstrap and recovery of separately held observer custody.
+pub mod learned;
 mod stopping;
 pub use stopping::FilePredictiveStopSnapshot;
 use super::{FileCredentialRegistration, FileGuardSet, FileOversightRoles, FileRecoveryRequirements};
