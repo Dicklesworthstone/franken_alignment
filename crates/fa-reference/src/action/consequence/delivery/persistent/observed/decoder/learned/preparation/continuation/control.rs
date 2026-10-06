@@ -3,6 +3,9 @@
 use super::{Error, FileLearnedReplayContinuation, FileOversight, JournalError, Machine, Rc};
 use crate::action::consequence::delivery::persistent::observed::{Event, Transition};
 
+#[cfg(test)]
+mod batch_tests;
+
 impl FileOversight {
     // Call only AFTER the operation's original live preflights. Evidence-loss
     // operations deliberately poison the live owner BEFORE replay; checking its
@@ -36,8 +39,16 @@ impl FileOversight {
         if !retain_replay { return self.persist_candidate(event, bytes, candidate, result); }
         let through = self.events.len();
         let (result, retired) = self.persist_candidate_retaining(event, bytes, candidate, result)?;
+        self.retain_control_replay(through, retired);
+        Ok(result)
+    }
+
+    // Only an acknowledged control transaction or fixed publication cut whose
+    // replay consumed the existing cache may transfer its actual retired owner.
+    // A batch uses its PRE-batch length, never the last event's predecessor.
+    pub(in crate::action::consequence::delivery::persistent::observed)
+    fn retain_control_replay(&mut self, through: usize, retired: Machine) {
         self.learned_replay = Some(FileLearnedReplayContinuation::new(
             Rc::clone(&self.issuer), through, retired));
-        Ok(result)
     }
 }

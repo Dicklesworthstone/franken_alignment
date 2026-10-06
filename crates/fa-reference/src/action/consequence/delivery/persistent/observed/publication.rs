@@ -207,7 +207,7 @@ impl FileOversight {
         history.extend(self.events.iter().cloned());
         let mut transitions = Vec::new();
         transitions.try_reserve_exact(next.len()).map_err(|_| Error::Limit)?;
-        let mut candidate = super::Machine::replay(&self.profile, &self.events)?;
+        let (mut candidate, retain_replay) = self.replay_control_candidate()?;
         let mut bytes = Vec::new();
         for event in next {
             bytes = super::journal::encode_appended(&self.profile, self.store.identity(), &history, event)?;
@@ -228,9 +228,11 @@ impl FileOversight {
             return Err(error);
         }
         for event in next { self.source_operation_committed(event); }
+        let through = self.events.len();
         self.events = history;
-        self.machine = candidate;
+        let retired = std::mem::replace(&mut self.machine, candidate);
         self.fault = None;
+        if retain_replay { self.retain_control_replay(through, retired); }
         Ok(transitions)
     }
 }
