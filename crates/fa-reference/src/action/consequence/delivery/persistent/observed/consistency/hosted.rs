@@ -44,3 +44,5 @@ impl FileOversight {
 mod tests;
 #[cfg(test)]
 mod learned_tests;
+#[cfg(test)]
+mod learned_text_tests;

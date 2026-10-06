@@ -68,6 +68,16 @@ recovery; and inject all five forecast-write storage barriers. Existing sampled
 source and wire/configuration codec tests are unchanged. Synthetic weights and
 probabilities are causal controls, not detector effectiveness or calibration.
 
+Three additional consumer-level functions use the actual ByteBpe/learned-text
+fixture and source-only actor ports. They exercise finished generation rather
+than only an active prefix, compare permitting and threshold-crossing outcomes,
+and preserve one observation on retry and through recovery. The stream case
+checks the original message-prefix classifier against actual generated content,
+not the binary transport header or the cumulative publication frame. Both stream
+and raw-message ports still derive their own output; no actor payload is supplied.
+The expiry case pairs admission just before the original forecast deadline with
+refusal at its boundary, retained coverage loss and no retry-based resampling.
+
 The targeted RCH command cannot launch because `rch` is absent (exit 127).
 Compilation, tests, rustfmt and Clippy are unexecuted. Container execution was
 initially unavailable as well; no missing execution is counted as a passing
