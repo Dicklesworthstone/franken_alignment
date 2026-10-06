@@ -82,7 +82,16 @@ impl Machine {
                     self.enable_source(policy, true)?;
                 }
                 if !self.publication_guard { self.enable_publication_guard()?; }
+                let forecast = config.required_pre_output_forecast().cloned();
                 self.learned = Some(LearnedState { config, paused: false, pending: None, checkpoints: checkpoint::CheckpointHistory::default(), sidecar_outcomes: std::collections::BTreeMap::new(), sidecars: std::collections::BTreeMap::new() });
+                if let Some(forecast) = forecast {
+                    // One independently bound Enable owns BOTH installations.
+                    // Use the original consistency route/reducer only after its
+                    // learned source exists. No separate optional disk record
+                    // can be omitted or replaced to weaken this pinned recipe.
+                    self.apply(&Event::Consistency(super::super::consistency::ConsistencyEvent::Enable(
+                        Rc::new(forecast))))?;
+                }
                 Ok(Transition::Unit)
             }
             LearnedEvent::Step { actor_revision, position, witness } => {
