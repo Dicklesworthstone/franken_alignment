@@ -61,3 +61,17 @@ and bootstrap limits with working controls. They are authored tests, not runs.
 The mandatory targeted and full RCH commands cannot start in this environment
 because rch is absent. Rust compilation, tests, rustfmt and Clippy remain
 unexecuted; no local compiler fallback or qualification/bead closure is claimed.
+
+## Required-mode consumer and failure coverage
+
+Five additional functions use the original native helper models and journal
+storage: permitting versus predictive-crossing and native-denial controls;
+message publication followed by a separately forecast/reviewed stream finish;
+unknown dispatch recovery with no evidence read or generation resume; all five
+forecast/intent/completion write barriers; and prepared completion catch-up on
+both sides of the exact forecast-expiry boundary. Finish forecasts refuse
+before dispatch, after dispatch and after visible but unreconciled publication.
+The old message frame cannot consume the later finish forecast. The message's
+human key cannot authorize finish. No existing assertion is weakened or removed.
+These bring the authored total to fourteen regression functions; all remain
+unexecuted pending RCH and the full mandatory gate on the final revision.

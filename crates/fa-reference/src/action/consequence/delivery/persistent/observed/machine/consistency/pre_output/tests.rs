@@ -176,3 +176,5 @@ fn requirement_cannot_be_installed_after_sampling_or_on_a_nontext_owner() {
     step(&mut positive); forecast(&mut positive, &role, 71); step(&mut positive);
     assert_eq!(positive.learned_generation_inspection().unwrap().numerical.work.sampling_attempts, 1);
 }
+
+mod integration;
