@@ -1,5 +1,6 @@
 //! Recover a pinned predictive learned owner through the original replay/fence.
 //! The full guard inventory and recipe are independent inputs, never disk defaults.
+mod inspection;
 use super::{FilePredictiveRequirements, FilePredictiveRoles};
 use super::super::{FileOversightRoles, anchored::FileHistoryAnchor, learned::check_profile};
 use super::super::super::{Event, FileOversight, FileOversightProfile, JournalError};
@@ -82,11 +83,23 @@ fn begin(directory: &Path, profile: FileOversightProfile, expected: &FilePredict
     config: &FileLearnedConfig, anchor: Option<&FileHistoryAnchor>)
     -> Result<FilePredictiveLearnedRecovery, JournalError>
 {
-    check_profile(&expected.oversight.guards)?;
-    if config.required_pre_output_forecast() != Some(&expected.prediction) { return Err(Error::Binding.into()); }
+    check_configuration(expected, config)?;
     let inner = FileOversight::begin_open_with_learned_generation(directory, profile, config)?;
     let (profile, events, identity) = inner.guarded_history();
     if let Some(anchor) = anchor { anchor.check(profile, identity, events)?; }
+    check_history(events, expected)?;
+    Ok(FilePredictiveLearnedRecovery { inner, expected: expected.clone(), failure: None })
+}
+
+fn check_configuration(expected: &FilePredictiveRequirements, config: &FileLearnedConfig) -> Result<(), Error> {
+    check_profile(&expected.oversight.guards)?;
+    if config.required_pre_output_forecast() != Some(&expected.prediction) { return Err(Error::Binding); }
+    Ok(())
+}
+
+// Used only AFTER binding the independently supplied recipe to the exact bytes.
+// Both the passive reader and locked recovery admit the same original inventory.
+fn check_history(events: &[Event], expected: &FilePredictiveRequirements) -> Result<(), Error> {
     // The independent recipe has already been bound byte-for-byte. Its single
     // learned Enable installs the predictor. The base inventory deliberately
     // requires NO standalone predictor, sampled decoder, stop mode or topology.
@@ -96,9 +109,9 @@ fn begin(directory: &Path, profile: FileOversightProfile, expected: &FilePredict
         Event::Credibility(CredibilityEvent::Enable(protocol)) => Some(protocol), _ => None,
     });
     if protocols.next() != expected.evaluation.as_ref() || protocols.next().is_some() {
-        return Err(Error::Binding.into());
+        return Err(Error::Binding);
     }
-    Ok(FilePredictiveLearnedRecovery { inner, expected: expected.clone(), failure: None })
+    Ok(())
 }
 
 impl FilePredictiveLearnedRecovery {

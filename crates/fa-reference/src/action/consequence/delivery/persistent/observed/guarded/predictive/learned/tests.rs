@@ -232,3 +232,5 @@ fn every_recovery_fence_storage_fault_withholds_all_roles_and_preserves_numerica
         assert!(roles.evaluator.is_none()); independent(&host, &config);
     }
 }
+
+mod lifecycle;

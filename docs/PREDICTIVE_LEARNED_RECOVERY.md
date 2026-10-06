@@ -64,3 +64,27 @@ The required targeted and full RCH commands cannot launch in this environment:
 tests, rustfmt and Clippy are unexecuted; source checks do not substitute for
 these gates. Synthetic models are controls, not calibration or detector-quality
 evidence. No timing guarantee, deployment qualification or bead closure is claimed.
+
+## Historical inspection and consequential recovery
+
+`read_predictive_consistency_with_learned_generation` returns the existing
+`FilePredictiveSnapshot` from one canonical image after the same independent
+recipe/predictor, inventory and full guard/floor checks. It can read beside a
+locked or poisoned owner. It does not clean files, acquire a writer, fence,
+expire a forecast, refresh evidence, resume inference or issue roles. A disk
+image exposed by an ambiguous acknowledgment can legitimately be newer than
+live RAM. The snapshot states what that image reconstructs, not that an endpoint
+receipt arrived or a current source remains eligible. It performs full original
+historical inference and witness validation synchronously.
+
+Five more regression functions cover that locked/faulted read, corrupted
+numerical witnesses in both read and recovery, and actual computed identity
+requalification plus fresh durable policy acquisition after recovery. The
+native-model cases recover both undisclosed and visible-but-unreconciled effects
+through query-only settlement without source callbacks or numerical resumption.
+The stream case completes a receipt-confirmed message, restarts the owner, then
+uses the recovered observer for a NEW finish forecast, fresh native congress and
+a new human key. Old reviewer custody and the old message key cannot authorize
+finish, and no output token is regenerated. Original evidence counts and charges
+remain intact. These bring the authored total to eleven regression functions
+and two compile-fail boundaries; none have executed in this environment.
