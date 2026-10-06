@@ -72,3 +72,24 @@ The targeted and required full RCH gate must execute on the final revision.
 The current environment has no rch or Rust executables; compilation, tests,
 rustfmt and Clippy are unexecuted. No local compiler fallback, passing check,
 performance result or bead closure is claimed. Logs are kept outside source.
+
+## Consumer-level causal scenarios
+
+Three additional regression functions follow the temporal boundary through real
+original consumers. One changes the probability band when the next actual token
+is computed, and verifies that this later residual cannot replace the recorded
+prompt forecast or erase its threshold crossing. The source-only text case pairs
+permitted and crossing registrations, rejects incomplete early intake, and keeps
+one observation on retry and through independently configured recovery.
+
+The stream scenario forecasts the message from the prompt, computes the actual
+text, and passes original native-model congress and independent human approval
+before publication. Its separate finish uses the ordinary pre-action forecast
+on the now-later residual: the existing strictly increasing source-sequence
+rule is unchanged. Finish receives a fresh native review and a different human
+key. The pre-output constructor refuses to label that post-output finish as a
+second pre-output generation. No output is recomputed to obtain another source.
+
+These scenarios are authored source, not executed outcomes. Together the change
+contains twelve regression functions and two compile-fail boundaries. All tests
+and the full gate still require RCH execution against the final revision.

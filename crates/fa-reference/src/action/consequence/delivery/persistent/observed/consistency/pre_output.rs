@@ -152,3 +152,6 @@ impl FilePreOutputForecast {
 
 #[cfg(test)]
 mod tests;
+
+#[cfg(test)]
+mod consumer_tests;
