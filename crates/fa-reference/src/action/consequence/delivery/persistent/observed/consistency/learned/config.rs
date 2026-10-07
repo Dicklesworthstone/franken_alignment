@@ -6,6 +6,7 @@ use crate::action::consequence::oversight::consistency::LearnedConsistencyConfig
 pub(super) const MAX_CONFIG_BYTES: usize = super::super::config::MAX_CONFIG_BYTES + 128;
 const DOMAIN: &[u8; 8] = b"FALCPRD\x01";
 const OWNED_DOMAIN: &[u8; 8] = b"FALCPRD\x02";
+const PRE_OUTPUT_DOMAIN: &[u8; 8] = b"FALCPRD\x03";
 
 /// Numerical/source policy, not calibration evidence or an effect capability.
 /// The original raw configuration bytes and all five per-job/lifetime caps are
@@ -15,6 +16,7 @@ const OWNED_DOMAIN: &[u8; 8] = b"FALCPRD\x02";
 pub struct FileLearnedConsistencyConfig {
     consistency: FileConsistencyConfig,
     owned_generation: bool,
+    pre_output: bool,
     layer: u64,
     side: KvSide,
     per_job: LearnedMonitorBudget,
@@ -39,7 +41,7 @@ impl FileLearnedConsistencyConfig {
         write_side(&mut w, side)?;
         write_budget(&mut w, per_job)?; write_budget(&mut w, lifetime)?;
         write_count(&mut w, max_retained_source_bytes)?;
-        Ok(Self { consistency, owned_generation: false, layer, side, per_job, lifetime,
+        Ok(Self { consistency, owned_generation: false, pre_output: false, layer, side, per_job, lifetime,
             retained_source_bytes: max_retained_source_bytes, bytes: Rc::from(w.finish()) })
     }
     /// Immutable source selection, validated against the actual owned generator
@@ -54,6 +56,22 @@ impl FileLearnedConsistencyConfig {
     }
     pub fn uses_owned_generation(&self) -> bool { self.owned_generation }
 
+    /// Require an acknowledged request-bound prompt forecast before the original
+    /// generator may sample. This is immutable durable configuration, not a
+    /// handle-based calling convention or a raw-residual source substitution.
+    /// Select owned generation first. Actual text/stream/model admission occurs
+    /// at Enable, before any numerical work; legacy source modes stay unchanged.
+    pub fn with_pre_output_forecast(mut self) -> Result<Self, Error> {
+        if !self.owned_generation { return Err(Error::Binding); }
+        if self.pre_output { return Err(Error::Duplicate); }
+        let mut bytes = self.bytes.to_vec();
+        bytes[..PRE_OUTPUT_DOMAIN.len()].copy_from_slice(PRE_OUTPUT_DOMAIN);
+        self.bytes = Rc::from(bytes);
+        self.pre_output = true;
+        Ok(self)
+    }
+    pub fn requires_pre_output_forecast(&self) -> bool { self.pre_output }
+
     pub fn encoded(&self) -> &[u8] { &self.bytes }
     pub fn consistency(&self) -> &FileConsistencyConfig { &self.consistency }
     pub fn lifetime_budget(&self) -> LearnedMonitorBudget { self.lifetime }
@@ -67,13 +85,14 @@ impl FileLearnedConsistencyConfig {
         if bytes.len() > MAX_CONFIG_BYTES { return Err(Error::Limit); }
         let mut r = Reader::new(bytes);
         let domain = r.take(DOMAIN.len())?;
-        if domain != DOMAIN && domain != OWNED_DOMAIN { return Err(Error::Binding); }
+        if domain != DOMAIN && domain != OWNED_DOMAIN && domain != PRE_OUTPUT_DOMAIN { return Err(Error::Binding); }
         let consistency = FileConsistencyConfig::from_bytes(r.blob(super::super::config::MAX_CONFIG_BYTES)?)?;
         let layer = r.u64()?; let side = read_side(&mut r)?;
         let per_job = read_budget(&mut r)?; let lifetime = read_budget(&mut r)?;
         let retained = read_count(&mut r)?; r.end()?;
         let config = Self::new(consistency, layer, side, per_job, lifetime, retained)?;
-        let config = if domain == OWNED_DOMAIN { config.with_owned_generation()? } else { config };
+        let config = if domain != DOMAIN { config.with_owned_generation()? } else { config };
+        let config = if domain == PRE_OUTPUT_DOMAIN { config.with_pre_output_forecast()? } else { config };
         if config.encoded() != bytes { return Err(Error::Binding); }
         Ok(config)
     }

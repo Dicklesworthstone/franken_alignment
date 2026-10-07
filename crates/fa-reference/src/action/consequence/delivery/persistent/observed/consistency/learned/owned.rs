@@ -132,3 +132,7 @@ fn bind_owned_history(events: &mut [Event], generation: &FileLearnedConfig,
 use crate::action::consequence::activation::tensor::kv::decoder::sampling::monitored::GenerationEvent;
 #[cfg(test)]
 mod tests;
+
+#[cfg(test)]
+#[path = "owned/required_tests.rs"]
+mod required_tests;

@@ -77,6 +77,7 @@ impl Machine {
                 }
                 if !self.publication_guard { self.enable_publication_guard()?; }
                 self.consistency = Some(std::rc::Rc::new(config.consistency().clone()));
+                self.learned_consistency = Some(std::rc::Rc::new(config.clone()));
                 Ok(Transition::Unit)
             }
             ConsistencyEvent::ForecastLearned(attempt, revision, row, source) => {
