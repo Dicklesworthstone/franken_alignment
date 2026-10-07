@@ -4,7 +4,11 @@ use super::{ConsistencyConfig, ConsistencyObservation, OversightBroker};
 use crate::action::consequence::activation::FrameIdentity;
 use crate::action::consequence::activation::consistency::{BinaryForecast, Prediction,
     learned::{LearnedForecastModel, LearnedForecastReport, LearnedPrediction}};
-use crate::action::consequence::activation::monitor::learned::LearnedMonitorBudget;
+use crate::action::consequence::activation::monitor::learned::{LearnedMonitorBudget, LearnedMonitorWork};
+use crate::action::consequence::activation::probe::learned::MAX_CHECKED_KV_BYTES;
+use std::collections::BTreeMap;
+mod lifetime;
+use lifetime::{add_work, allowance, scale_budget};
 use crate::action::consequence::activation::probe::learned::{CheckedLearnedKv, KvRow};
 use crate::action::consequence::activation::tensor::kv::experiment::KvSide;
 use crate::Error;
@@ -35,6 +39,12 @@ pub(super) struct LearnedLane {
     model: LearnedForecastModel,
     layer: u64,
     side: KvSide,
+    lifetime: LearnedMonitorBudget,
+    retained_limit: usize,
+    work: LearnedMonitorWork,
+    retained_source_bytes: usize,
+    unreported_work: bool,
+    reports: BTreeMap<u64, LearnedForecastReport>,
 }
 #[derive(Clone, Debug)]
 pub(super) enum ForecastEvidence { Raw(Prediction), Learned(LearnedPrediction) }
@@ -64,11 +74,30 @@ impl OversightBroker {
     pub fn enable_learned_action_consistency(&mut self, config: LearnedConsistencyConfig)
         -> Result<(), Error>
     {
+        // Preserve the existing per-job contract, with a checked finite lifetime
+        // upper bound. Tighter supervisor limits are available at bootstrap below.
+        let lifetime = scale_budget(config.budget, config.consistency.max_predictions)?;
+        let retained_limit = MAX_CHECKED_KV_BYTES.checked_mul(config.consistency.max_predictions)
+            .ok_or(Error::Overflow)?;
+        self.enable_learned_action_consistency_with_limits(config, lifetime, retained_limit)
+    }
+
+    /// Freeze independent lifetime work and retained-source limits atomically.
+    /// Zero allowances are valid refusal policies, not unlimited sentinels.
+    /// Lifetime limits may exceed a per-job cap; each acquisition intersects
+    /// its remainder with the model's original per-job limits before execution.
+    pub fn enable_learned_action_consistency_with_limits(&mut self,
+        config: LearnedConsistencyConfig, lifetime: LearnedMonitorBudget,
+        max_retained_source_bytes: usize) -> Result<(), Error>
+    {
         if config.layer == 0 { return Err(Error::InvalidInput); }
         let model = config.consistency.model.clone().into_learned(config.budget)?;
+        let lane = LearnedLane { model, layer: config.layer, side: config.side,
+            lifetime, retained_limit: max_retained_source_bytes,
+            work: LearnedMonitorWork::default(), retained_source_bytes: 0,
+            unreported_work: false, reports: BTreeMap::new() };
         self.enable_action_consistency(config.consistency)?;
-        self.consistency.as_mut().expect("new consistency lane").learned =
-            Some(LearnedLane { model, layer: config.layer, side: config.side });
+        self.consistency.as_mut().expect("new consistency lane").learned = Some(lane);
         Ok(())
     }
 
@@ -107,16 +136,61 @@ impl OversightBroker {
         }
         let context = self.begin_consistency_forecast(attempt, expected_actor_revision, identity, dimensions)?;
         let state = self.consistency.as_mut().expect("admitted consistency lane");
-        let report = match state.learned.as_ref().expect("frozen learned mode").model.predict(source, row) {
-            Ok(report) => report,
-            Err(error) => { state.coverage_lost = true; return Err(error); }
-        };
-        match report.prediction() {
-            Ok(prediction) => self.finish_consistency_forecast(attempt, expected_actor_revision,
-                context, ForecastEvidence::Learned(prediction.clone())),
-            Err(_) => self.consistency.as_mut().expect("admitted consistency lane").coverage_lost = true,
+        // Close eligibility before numerical work or retained-history allocation.
+        // An error or unwind must not leave the earlier quiet process usable.
+        state.coverage_lost = true;
+        let lane = state.learned.as_mut().expect("frozen learned mode");
+        let retained = lane.retained_source_bytes.checked_add(source.report().total_encoded_bytes)
+            .ok_or(Error::Limit)?;
+        if retained > lane.retained_limit { return Err(Error::Limit); }
+        let remaining = allowance(lane.lifetime, lane.work, lane.model.budget())?;
+        // Charge the complete checked inventory, including unused residuals.
+        // No deduplication or source-sharing discount is assumed. A failed
+        // admitted evaluation keeps this conservative reservation permanently.
+        lane.retained_source_bytes = retained;
+        lane.unreported_work = true;
+        let report = lane.model.predict_with_budget(source, row, remaining)?;
+        let work = add_work(lane.work, report.work());
+        // Preserve completed refusals too, including when later containment
+        // prevents the caller from receiving this report through the return path.
+        lane.reports.insert(attempt, report.clone());
+        lane.work = work?;
+        allowance(lane.lifetime, lane.work, lane.model.budget())?;
+        lane.unreported_work = false;
+        if let Ok(prediction) = report.prediction() {
+            self.finish_consistency_forecast(attempt, expected_actor_revision,
+                context, ForecastEvidence::Learned(prediction.clone()));
+            self.consistency.as_mut().expect("published learned forecast").coverage_lost = false;
         }
         Ok(report)
+    }
+
+    /// Completed numerical acquisition totals, including refused reports.
+    /// Check has_unreported_work before treating these as complete acquisition
+    /// costs. Fitting, capture, source checking and containment are not included.
+    pub fn learned_consistency_work(&self) -> Result<LearnedMonitorWork, Error> {
+        Ok(self.learned_consistency_lane()?.work)
+    }
+
+    /// Conservative charged inventory bytes, not a byte-exact allocator measure.
+    /// Includes all retained residuals and reservations for admitted outer errors.
+    pub fn learned_consistency_retained_source_bytes(&self) -> Result<usize, Error> {
+        Ok(self.learned_consistency_lane()?.retained_source_bytes)
+    }
+
+    /// An admitted evaluation or accounting failure lacked a complete trusted
+    /// receipt. The lane cannot be re-armed to clear this or refresh its budget.
+    pub fn learned_consistency_has_unreported_work(&self) -> Result<bool, Error> {
+        Ok(self.learned_consistency_lane()?.unreported_work)
+    }
+
+    /// Original typed acquisition receipt, whether it certified or refused.
+    pub fn learned_consistency_report(&self, attempt: u64) -> Result<&LearnedForecastReport, Error> {
+        self.learned_consistency_lane()?.reports.get(&attempt).ok_or(Error::Missing)
+    }
+
+    fn learned_consistency_lane(&self) -> Result<&LearnedLane, Error> {
+        self.consistency.as_ref().and_then(|state| state.learned.as_ref()).ok_or(Error::Incomplete)
     }
 
     pub fn learned_consistency_observation(&self, attempt: u64)
@@ -131,3 +205,6 @@ impl OversightBroker {
 
 #[cfg(test)]
 mod tests;
+
+#[cfg(test)]
+mod lifetime_tests;
