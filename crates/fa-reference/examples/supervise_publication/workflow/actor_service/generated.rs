@@ -4,6 +4,8 @@
 mod recipe;
 #[path = "generated/recovery.rs"]
 mod recovery;
+#[path = "generated/finish.rs"]
+mod finish;
 use recipe::Loaded;
 use super::super::{Config, Deadline, Duration, ElapsedTick, ExecuteServices, FileOversight,
     FileSupervisedDriver, Instant, PeerProfile, RecoveryReserve, RunResult, cleanup,
@@ -19,9 +21,10 @@ use fa_reference::action::consequence::delivery::persistent::JournalError;
 use std::io::Write;
 use std::path::Path;
 
-const USAGE: &str = "create-generated CONFIG GENERATION_RECIPE REVIEWER_PROFILE [--after REQUEST_ID | --continue-generation] | create-generated CONFIG GENERATION_RECIPE --resume";
+const USAGE: &str = "create-generated CONFIG GENERATION_RECIPE REVIEWER_PROFILE [--after REQUEST_ID | --continue-generation] | create-generated CONFIG GENERATION_RECIPE --resume | create-generated CONFIG ORIGINAL_RECIPE REVIEWER_PROFILE --finish REQUEST_ID";
 
 pub(super) fn command(args: &[String], credibility: Option<&Path>) -> Result<(), String> {
+    if args.iter().any(|arg| arg == "--finish") { return finish::command(args, credibility); }
     if !matches!(args.len(), 4 | 5 | 6) || args[0] != "create-generated" || credibility.is_some() {
         return Err(USAGE.into());
     }
