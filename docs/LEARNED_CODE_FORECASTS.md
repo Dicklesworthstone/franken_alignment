@@ -70,3 +70,26 @@ Required targeted and full RCH commands cannot launch because `rch` is absent
 (exit 127). Compilation, tests, rustfmt and Clippy are unexecuted. Source/hash
 checks are not runtime qualification. No existing assertion, dependency,
 qualification gate or bead is weakened or marked complete.
+
+## Shared caller allowances without rebuilding the forecast model
+
+`predict_with_budget(source, row, remaining)` delegates to the ORIGINAL
+monitor's componentwise intersection of the frozen model limits and the caller's
+remaining shared allowance. Bigger supplied caps cannot enlarge a registered
+limit; smaller caps stop the next operation with its original partial-work
+report. Default `predict` uses this same path with the frozen allowance.
+
+This is not a second resource ledger. The caller owns and debits its shared
+allowance, including work in refused reports. An outer error has no complete
+work receipt and cannot be accounted as zero. Reusing a checked source does not
+install a pre-refined view or claim free base bytes: each call pays the original
+base and each residual it actually uses. No persistent numerical or statistical
+budget is replenished here.
+
+Five additional regression functions pair shared-budget calls with the original
+monitor and exact predictor. They exercise every frozen and remaining cap,
+repeated-source costs, missing residuals, malformed allowances, and a constant
+exact-equality control that still pays base bytes and coefficient visits. All
+seven first-increment regression functions are unchanged. The total is twelve
+regression functions and two compile-fail examples, still unexecuted because the
+required RCH executor is absent. Live request/durable integration remains separate.

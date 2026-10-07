@@ -94,7 +94,22 @@ impl LearnedForecastModel {
     pub fn predict(&self, source: &CheckedLearnedKv, row: KvRow)
         -> Result<LearnedForecastReport, Error>
     {
-        let monitor = self.monitor.analyze(source, row)?;
+        self.predict_with_budget(source, row, self.budget())
+    }
+
+    /// Consume a caller's remaining shared allowance through the ORIGINAL
+    /// monitor's componentwise intersection. It can tighten, never enlarge,
+    /// this model's frozen limits. Neither prior reports nor repeated use of a
+    /// checked source claim a free base or a free exact refinement. Upstream
+    /// fitting/capture/storage still have their separate cost receipts.
+    ///
+    /// This method does not own or refill the caller's shared budget. Account
+    /// for work on refused reports too; an outer error has no complete receipt
+    /// and must not be interpreted as zero work or retried without accounting.
+    pub fn predict_with_budget(&self, source: &CheckedLearnedKv, row: KvRow,
+        remaining: LearnedMonitorBudget) -> Result<LearnedForecastReport, Error>
+    {
+        let monitor = self.monitor.analyze_with_budget(source, row, remaining)?;
         let prediction = self.certify(&monitor);
         Ok(LearnedForecastReport { monitor, prediction })
     }
@@ -124,3 +139,6 @@ impl LearnedForecastModel {
 
 #[cfg(test)]
 mod tests;
+
+#[cfg(test)]
+mod budget_tests;
