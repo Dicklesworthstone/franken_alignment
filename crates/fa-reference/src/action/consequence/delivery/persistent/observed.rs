@@ -282,7 +282,7 @@ impl FileOversight {
         }
     }
 
-    fn transact(&mut self, revision: u64, event: Event) -> Result<Transition, JournalError> {
+    fn transact(&mut self, revision: u64, mut event: Event) -> Result<Transition, JournalError> {
         if self.fault.is_some() { return Err(JournalError::Unavailable); }
         if revision != self.revision() { return Err(Error::Stale.into()); }
         // Refuse a source-required stream's ordinary message before predictive
@@ -311,12 +311,13 @@ impl FileOversight {
                 kind: io::ErrorKind::Other, replacement_may_be_visible: false });
         }
         if self.events.len() >= self.profile.delivery.limits.events { return Err(Error::Limit.into()); }
-        let bytes = journal::encode_appended(&self.profile, self.store.identity(), &self.events, &event)?;
+        let mut bytes = journal::encode_appended(&self.profile, self.store.identity(), &self.events, &event)?;
         let (mut candidate, retain_replay) = self.replay_control_candidate()?;
         candidate.preflight_consistency(&event)?;
         if self.action_consistency_required() && matches!(&event,
             Event::Consistency(consistency::ConsistencyEvent::Forecast(..) | consistency::ConsistencyEvent::ForecastRequest(..)
-                | consistency::ConsistencyEvent::ForecastHosted(..) | consistency::ConsistencyEvent::ForecastHostedRequest(..))
+                | consistency::ConsistencyEvent::ForecastHosted(..) | consistency::ConsistencyEvent::ForecastHostedRequest(..)
+                | consistency::ConsistencyEvent::ForecastLearned(..) | consistency::ConsistencyEvent::ForecastLearnedRequest(..))
             | Event::Core(BaseEvent::Propose(..) | BaseEvent::SubmitRequest(..)) | Event::TextMessage(..)) {
             // Entering prediction/observation cannot unwind back to an older
             // permitting evidence state. Only this commit acknowledgment clears it.
@@ -324,6 +325,11 @@ impl FileOversight {
                 kind: io::ErrorKind::Other, replacement_may_be_visible: false });
         }
         let result = candidate.apply(&event)?;
+        // Only recomputed learned results become comparison witnesses. Final
+        // framing/capacity failure stays poisoned and exposes no candidate report.
+        if consistency::learned::complete_event(&mut event, &result, &candidate.broker)? {
+            bytes = journal::encode_appended(&self.profile, self.store.identity(), &self.events, &event)?;
+        }
         self.persist_control_candidate(event, bytes, candidate, result, retain_replay)
     }
 

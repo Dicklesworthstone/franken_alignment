@@ -6,6 +6,7 @@ mod requests;
 mod hosted;
 mod deadline;
 pub mod pre_output;
+pub mod learned;
 pub use config::{FileConsistencyConfig, FileConsistencyParameters};
 pub(super) use codec::{read, write};
 
@@ -20,6 +21,9 @@ use std::rc::Rc;
 #[derive(Clone)]
 pub(super) enum ConsistencyEvent {
     Enable(Rc<FileConsistencyConfig>),
+    EnableLearned(learned::Configuration),
+    ForecastLearned(u64, u64, crate::action::consequence::activation::probe::learned::KvRow, learned::Capture),
+    ForecastLearnedRequest(u64, u64, crate::action::consequence::activation::probe::learned::KvRow, learned::Capture),
     Forecast(u64, u64, SourceFrame),
     ForecastRequest(u64, u64, SourceFrame),
     ForecastHosted(u64, u64),

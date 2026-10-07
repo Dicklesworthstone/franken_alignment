@@ -14,12 +14,14 @@ impl Machine {
         }
         self.check_consistency_route(event)?;
         if let Event::Consistency(ConsistencyEvent::ForecastRequest(request, ..)
-            | ConsistencyEvent::ForecastHostedRequest(request, ..)) = event {
+            | ConsistencyEvent::ForecastHostedRequest(request, ..)
+            | ConsistencyEvent::ForecastLearnedRequest(request, ..)) = event {
             self.preflight_forecast_request(*request)?;
         }
         if self.consistency.is_none() { return Ok(()); }
         if matches!(event, Event::Consistency(ConsistencyEvent::Forecast(..) | ConsistencyEvent::ForecastRequest(..)
-            | ConsistencyEvent::ForecastHosted(..) | ConsistencyEvent::ForecastHostedRequest(..))
+            | ConsistencyEvent::ForecastHosted(..) | ConsistencyEvent::ForecastHostedRequest(..)
+            | ConsistencyEvent::ForecastLearned(..) | ConsistencyEvent::ForecastLearnedRequest(..))
             | Event::Core(BaseEvent::Propose(..) | BaseEvent::SubmitRequest(..))) {
             self.check_decoder_admission(event)?;
             if !self.clock_ready { return Err(Error::Incomplete); }
@@ -52,6 +54,40 @@ impl Machine {
                 if !self.publication_guard { self.enable_publication_guard()?; }
                 self.consistency = Some(config.clone());
                 Ok(Transition::Unit)
+            }
+            ConsistencyEvent::EnableLearned(binding) => {
+                let config = binding.runtime()?;
+                if self.consistency.is_some() { return Err(Error::Duplicate); }
+                if !self.actions.is_empty() || self.requests.len() != 0 || !self.sessions.is_empty()
+                    || self.broker.stop_receipt().is_some() { return Err(Error::WrongState); }
+                self.broker.enable_learned_action_consistency_with_limits(config.native()?,
+                    config.lifetime_budget(), config.max_retained_source_bytes())?;
+                if let Some(profile) = config.consistency().stream_message_profile() {
+                    self.broker.require_stream_message_consistency(profile)?;
+                }
+                if let Some(policy) = config.consistency().terminal_stop_policy() {
+                    self.broker.enable_consistency_stop(policy)?;
+                }
+                if !self.publication_guard { self.enable_publication_guard()?; }
+                self.consistency = Some(std::rc::Rc::new(config.consistency().clone()));
+                Ok(Transition::Unit)
+            }
+            ConsistencyEvent::ForecastLearned(attempt, revision, row, source) => {
+                if !self.clock_ready || self.decoder_paused() { return Err(Error::Incomplete); }
+                if self.broker.stop_receipt().is_some() { return Err(Error::WrongState); }
+                let result = self.broker.forecast_learned_action(*attempt, *revision, source.runtime()?, *row);
+                source.verify_outcome(&result, &self.broker)?;
+                Ok(Transition::LearnedConsistencyForecast(Box::new(result)))
+            }
+            ConsistencyEvent::ForecastLearnedRequest(request, revision, row, source) => {
+                let attempt = self.preflight_forecast_request(*request)?;
+                let result = self.broker.forecast_learned_action(attempt, *revision, source.runtime()?, *row);
+                // A completed numerical refusal is Ok(report), NOT a forecast.
+                if result.as_ref().is_ok_and(|report| report.prediction().is_ok()) {
+                    self.consistency_request = Some((*request, attempt));
+                }
+                source.verify_outcome(&result, &self.broker)?;
+                Ok(Transition::LearnedConsistencyForecast(Box::new(result)))
             }
             ConsistencyEvent::Forecast(attempt, revision, frame) => {
                 if !self.clock_ready || self.decoder_paused() { return Err(Error::Incomplete); }

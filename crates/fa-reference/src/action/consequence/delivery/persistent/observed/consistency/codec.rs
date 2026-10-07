@@ -1,5 +1,5 @@
 //! Input records only: no imported prediction, likelihood, decision or permit.
-use super::{ConsistencyEvent, FileConsistencyConfig};
+use super::{ConsistencyEvent, FileConsistencyConfig, learned};
 use super::config::MAX_CONFIG_BYTES;
 use super::super::super::codec::shared::{Reader, Writer};
 use crate::action::consequence::activation::{MAX_BLOCK_BYTES, identity::wire};
@@ -27,6 +27,13 @@ pub(in super::super) fn write(w: &mut Writer, event: &ConsistencyEvent) -> Resul
                 w.u64(value)?;
             }
         }
+        ConsistencyEvent::EnableLearned(config) => { w.u8(7)?; config.write(w)?; }
+        ConsistencyEvent::ForecastLearned(attempt, revision, row, source) => {
+            w.u8(8)?; w.u64(*attempt)?; w.u64(*revision)?; learned::write_row(w, *row)?; source.write(w)?;
+        }
+        ConsistencyEvent::ForecastLearnedRequest(request, revision, row, source) => {
+            w.u8(9)?; w.u64(*request)?; w.u64(*revision)?; learned::write_row(w, *row)?; source.write(w)?;
+        }
         ConsistencyEvent::Unavailable => w.u8(2)?,
         ConsistencyEvent::ForecastRequest(request, actor_revision, frame) => {
             w.u8(3)?; w.u64(*request)?; w.u64(*actor_revision)?; w.blob(&frame.encode_initial(23)?)?;
@@ -46,6 +53,9 @@ pub(in super::super) fn read(r: &mut Reader<'_>) -> Result<ConsistencyEvent, Err
             attempt: r.u64()?, actor_revision: r.u64()?, authority_epoch: r.u64()?,
             source_sequence: r.u64()?, created_at: ElapsedTick(r.u64()?), expires_at: ElapsedTick(r.u64()?),
         }, ElapsedTick(r.u64()?)),
+        7 => ConsistencyEvent::EnableLearned(learned::Configuration::read(r)?),
+        8 => ConsistencyEvent::ForecastLearned(r.u64()?, r.u64()?, learned::read_row(r)?, learned::Capture::read(r)?),
+        9 => ConsistencyEvent::ForecastLearnedRequest(r.u64()?, r.u64()?, learned::read_row(r)?, learned::Capture::read(r)?),
         _ => return Err(Error::InvalidInput),
     })
 }

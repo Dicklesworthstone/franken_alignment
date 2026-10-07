@@ -38,6 +38,7 @@ pub(super) enum Transition {
     EvaluationRecorded(bool),
     MediationChecked(Box<Result<crate::action::consequence::mediation::CutCheck, Error>>),
     ConsistencyForecast(Box<Result<crate::action::consequence::activation::consistency::Prediction, Error>>),
+    LearnedConsistencyForecast(Box<Result<crate::action::consequence::activation::consistency::learned::LearnedForecastReport, Error>>),
     ConsistencyProposed(Result<FrozenAction, Error>),
     ConsistencyExpired(Result<bool, Error>),
     ActorRecorded(FileStateReceipt),
