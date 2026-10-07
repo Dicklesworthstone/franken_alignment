@@ -1,6 +1,10 @@
 //! Bounded, lossless presentation of a native human request, never an approval
 //! capability. The original journal's action primitives and view codec are reused.
 //! This is a plaintext reference protocol for a preauthenticated private channel.
+mod witnesses;
+#[cfg(test)]
+mod tests;
+
 use super::super::{FileHumanRequest, views};
 use super::super::super::codec::shared::{Reader, Writer};
 use crate::action::{ActionSpec, ElapsedTick, FrozenAction, MAX_PAYLOAD_BYTES};
@@ -15,6 +19,7 @@ pub const OFFER_HEADER_BYTES: usize = 16;
 pub const DECISION_BYTES: usize = 73;
 pub const RECEIPT_BYTES: usize = 81;
 const OFFER: &[u8; 8] = b"FAHRVW\0\x01";
+const WITNESSED_OFFER: &[u8; 8] = b"FAHRVW\0\x02";
 const DECISION: &[u8; 8] = b"FAHRDC\0\x01";
 const RECEIPT: &[u8; 8] = b"FAHRRC\0\x01";
 
@@ -75,6 +80,8 @@ impl ReviewPacket {
     pub fn views(&self) -> &BTreeMap<String, EvidenceViewManifest> { &self.views }
 
     /// The offer packet for `request`, validated exactly as the server sends it.
+    /// Includes the original action's private read witnesses: provision only an
+    /// independently authorized human reviewer, never an actor/helper channel.
     pub fn capture(request: &FileHumanRequest, clock_domain: u64, revision: u64,
         disposition: HumanDisposition, session: [u8; 32]) -> Result<Self, Error>
     {
@@ -98,15 +105,17 @@ impl ReviewPacket {
         if !matches!(self.disposition, HumanDisposition::Pending | HumanDisposition::Approved) {
             return Err(Error::WrongState);
         }
-        // Exactly the current durable profile: it admits no private required
-        // witnesses. Never silently omit unsupported fields in a presentation.
-        if !self.action.spec().required_witnesses.is_empty() { return Err(Error::Binding); }
+        // The FrozenAction already enforces witness bounds and range validity.
+        // Policy-derived dependencies are retained exactly, not projected away.
         Ok(())
     }
     pub fn encode(&self) -> Result<Vec<u8>, Error> {
         self.validate()?;
         let mut w = Writer::new(MAX_REVIEW_BYTES);
-        w.raw(OFFER)?; w.u64(0)?;
+        let witnessed = !self.action.spec().required_witnesses.is_empty();
+        // Preserve byte-identical v1 offers for witness-free actions. Older
+        // clients refuse v2 before reading evidence rather than losing fields.
+        w.raw(if witnessed { WITNESSED_OFFER } else { OFFER })?; w.u64(0)?;
         for value in [self.binding.request, self.binding.reviewer, self.binding.attempt,
             self.binding.offer_revision, self.clock_domain, self.control_sequence,
             self.input_revision, self.policy_generation, self.created_at.0, self.expires_at.0] { w.u64(value)?; }
@@ -115,6 +124,7 @@ impl ReviewPacket {
         w.u32(action.version)?; w.scope(action.scope)?;
         w.target(action.target.ok_or(Error::Incomplete)?)?; w.blob(&action.payload)?;
         w.u64(action.policy_epoch)?; w.u64(action.deadline.0)?; w.u64(action.units)?;
+        if witnessed { witnesses::write(&mut w, &action.required_witnesses)?; }
         views::write(&mut w, &self.views)?;
         // The correlation nonce comes AFTER all evidence, never instead of it.
         w.raw(&self.binding.session)?;
@@ -126,6 +136,7 @@ impl ReviewPacket {
     pub fn decode(bytes: &[u8]) -> Result<Self, Error> {
         let length = offer_frame_len(bytes.get(..OFFER_HEADER_BYTES).ok_or(Error::Incomplete)?)?;
         if bytes.len() != length { return Err(Error::InvalidInput); }
+        let witnessed = &bytes[..8] == WITNESSED_OFFER;
         let mut r = Reader::new(&bytes[OFFER_HEADER_BYTES..]);
         let request = r.u64()?; let reviewer = r.u64()?; let attempt = r.u64()?; let offer_revision = r.u64()?;
         let clock_domain = r.u64()?; let control_sequence = r.u64()?; let input_revision = r.u64()?;
@@ -134,8 +145,10 @@ impl ReviewPacket {
             _ => return Err(Error::InvalidInput) };
         let version = r.u32()?; let scope = r.scope()?; let target = Some(r.target()?);
         let payload = r.blob(MAX_PAYLOAD_BYTES)?.to_vec();
+        let policy_epoch = r.u64()?; let deadline = ElapsedTick(r.u64()?); let units = r.u64()?;
+        let required_witnesses = if witnessed { witnesses::read(&mut r)? } else { Vec::new() };
         let action = FrozenAction::freeze(ActionSpec { version, scope, target, payload,
-            required_witnesses: Vec::new(), policy_epoch: r.u64()?, deadline: ElapsedTick(r.u64()?), units: r.u64()? })?;
+            required_witnesses, policy_epoch, deadline, units })?;
         let views = views::read(&mut r)?;
         let session = r.take(32)?.try_into().map_err(|_| Error::Incomplete)?;
         r.end()?;
@@ -143,7 +156,8 @@ impl ReviewPacket {
             clock_domain, control_sequence, input_revision, policy_generation, created_at, expires_at,
             disposition, action, views };
         packet.validate()?;
-        // Original view ordering and metadata validation must remain lossless.
+        // Original witness/view ordering and metadata must remain lossless.
+        // In particular, v2 with an empty witness list is not a v1 alias.
         if packet.encode()?.as_slice() != bytes { return Err(Error::Binding); }
         Ok(packet)
     }
@@ -165,7 +179,9 @@ impl ReviewPacket {
 
 /// Check before allocating the body. The declared length is the COMPLETE frame.
 pub fn offer_frame_len(header: &[u8]) -> Result<usize, Error> {
-    if header.len() != OFFER_HEADER_BYTES || &header[..8] != OFFER { return Err(Error::InvalidInput); }
+    if header.len() != OFFER_HEADER_BYTES
+        || (&header[..8] != OFFER && &header[..8] != WITNESSED_OFFER)
+    { return Err(Error::InvalidInput); }
     let count = u64::from_be_bytes(header[8..16].try_into().map_err(|_| Error::Incomplete)?);
     let count = usize::try_from(count).map_err(|_| Error::Limit)?;
     if count > MAX_REVIEW_BYTES { return Err(Error::Limit); }
