@@ -19,17 +19,21 @@ impl FileConsistencyConfig {
             let inner = super::stopping::parts(&self.bytes)?.0;
             return Self::from_bytes(inner)?.with_pre_output_forecast()?.with_terminal_stop(policy);
         }
+        if let Some(policy) = self.progressive_forecast_policy() {
+            let inner = super::progressive::parts(&self.bytes)?.0;
+            return Self::from_bytes(inner)?.with_pre_output_forecast()?.with_progressive_forecast(policy);
+        }
         let mut writer = Writer::new(MAX_CONFIG_BYTES);
         writer.raw(DOMAIN)?; writer.blob(&self.bytes)?;
         Self::from_bytes(&writer.finish())
     }
 
     pub fn requires_pre_output_forecast(&self) -> bool {
-        self.without_stop().starts_with(DOMAIN)
+        self.without_progressive().starts_with(DOMAIN)
     }
 
     pub(super) fn without_temporal(&self) -> &[u8] {
-        let bytes = self.without_stop();
+        let bytes = self.without_progressive();
         if bytes.starts_with(DOMAIN) { parts(bytes).expect("validated temporal configuration") }
         else { bytes }
     }

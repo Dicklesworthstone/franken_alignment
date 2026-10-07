@@ -12,6 +12,7 @@ use std::rc::Rc;
 
 mod stopping;
 mod temporal;
+mod progressive;
 
 pub(super) const MAX_CONFIG_BYTES: usize = MAX_VALUES * 4 + MAX_EVENT_PREFIX_BYTES + 256;
 const DOMAIN: &[u8; 8] = b"FACPRED\x01";
@@ -68,6 +69,10 @@ impl FileConsistencyConfig {
             let inner = stopping::parts(&self.bytes)?.0;
             return Self::from_bytes(inner)?.with_hosted_residual(layer)?.with_terminal_stop(policy);
         }
+        if let Some(policy) = self.progressive_forecast_policy() {
+            let inner = progressive::parts(&self.bytes)?.0;
+            return Self::from_bytes(inner)?.with_hosted_residual(layer)?.with_progressive_forecast(policy);
+        }
         if self.stream_message_profile().is_some() {
             let (inner, profile) = message_parts(&self.bytes)?;
             return Self::from_bytes(inner)?.with_hosted_residual(layer)?.with_stream_messages(profile);
@@ -93,6 +98,10 @@ impl FileConsistencyConfig {
         if let Some(policy) = self.terminal_stop_policy() {
             let inner = stopping::parts(&self.bytes)?.0;
             return Self::from_bytes(inner)?.with_stream_messages(profile)?.with_terminal_stop(policy);
+        }
+        if let Some(policy) = self.progressive_forecast_policy() {
+            let inner = progressive::parts(&self.bytes)?.0;
+            return Self::from_bytes(inner)?.with_stream_messages(profile)?.with_progressive_forecast(policy);
         }
         if self.requires_pre_output_forecast() {
             let inner = temporal::parts(&self.bytes)?;
@@ -121,6 +130,12 @@ impl FileConsistencyConfig {
 fn decode(bytes: &[u8]) -> Result<ConsistencyConfig, Error> {
     if bytes.starts_with(stopping::DOMAIN) {
         return decode(stopping::parts(bytes)?.0);
+    }
+    if bytes.starts_with(progressive::DOMAIN) {
+        let (inner, policy) = progressive::parts(bytes)?;
+        let mut config = decode(inner)?;
+        config.model = config.model.with_progressive(policy)?;
+        return Ok(config);
     }
     if bytes.starts_with(temporal::DOMAIN) {
         return decode(temporal::parts(bytes)?);

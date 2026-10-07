@@ -53,3 +53,36 @@ All prior tests remain unchanged. These are synthetic numerical controls.
 Required targeted and full RCH execution cannot launch because rch is absent
 (exit 127). Compilation, tests, rustfmt and Clippy are unexecuted; source and
 hash checks are not runtime qualification. No bead or execution gate is closed.
+
+## Durable configuration and the original consumer
+
+`FileConsistencyConfig::with_progressive_forecast(policy)` selects this mode
+before installation. Version 6 contains exact prior predictor bytes and the four
+precision/byte fields. Stop remains outermost; progressive wraps optional timing
+and message semantics. All supported builder orders are canonical. Versions 1
+through 5 retain their prior encodings and exact-precision behavior. Nested,
+reordered, truncated or oversized wrappers cannot silently select weaker limits.
+
+Building this config changes only the original ForecastModel's acquisition
+policy. The original broker still admits one forecast job, runs prediction on
+its original source, freezes one pending request and observes its category once.
+Internal refinement is not another forecast, sampler draw or likelihood sample.
+An admitted limit/precision failure flows into the existing coverage-loss and
+optional stop handling; callers cannot increase precision to retry that job.
+
+The same selected mode works on the original owned prompt residual. Pinned
+pre-output recipes bind its bytes before installation and on recovery. Required
+forecast-before-sampling checks, original generator witnesses, source-only text
+and stream intake, deadlines, review, both keys and publication remain unchanged.
+A stream Message still cannot authorize Finish before receipt confirmation.
+Recovery with changed or absent precision/byte limits refuses before cleanup.
+A matching recovery keeps generation paused and unanswered coverage lost.
+
+Eight additional regression functions cover independent version-6 bytes, all
+24 supported wrapper orders, malformed encodings, actual prompt forecasting and
+generated output versus the exact original, one-shot ticket retries/cancellation,
+precision/byte failure with a permitted equality control, recovery substitution,
+all five forecast-write failure barriers and original stream admission. The
+complete set contains sixteen authored regression functions, none executed.
+Required final targeted and full RCH attempts still fail to launch (rch absent,
+exit 127); this is not a release or runtime/performance qualification.
