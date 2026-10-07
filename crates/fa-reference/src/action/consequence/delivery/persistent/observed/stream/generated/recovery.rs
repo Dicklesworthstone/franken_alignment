@@ -1,4 +1,5 @@
 //! Inspect source, admission and disclosure from ONE original canonical image.
+mod resumption;
 use super::{Event, FileOversight, FileRequestStatus, FileTextMessageRequest, JournalError, Machine};
 use super::super::{FileStreamSnapshot, StreamProfile, check_contract};
 use super::super::super::{FileOversightProfile, journal, storage};
