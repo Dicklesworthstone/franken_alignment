@@ -275,3 +275,5 @@ fn learned_wire_is_canonical_and_cannot_parse_a_missing_outcome_or_imported_runt
     let mut w = Writer::new(100_000); super::super::write(&mut w, &uncompleted).unwrap();
     assert!(super::super::read(&mut Reader::new(&w.finish())).is_err());
 }
+
+mod publication;

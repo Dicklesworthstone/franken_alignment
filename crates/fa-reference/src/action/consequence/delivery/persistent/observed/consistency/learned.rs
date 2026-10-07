@@ -87,6 +87,15 @@ pub struct FileLearnedConsistencySnapshot {
     pub retained_source_bytes: usize,
     pub has_unreported_work: bool,
 }
+/// Publication and learned evidence reconstructed from ONE canonical cut.
+/// Reading this creates no live owner, fresh clock, approval or observer role.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct FileLearnedPublicationSnapshot {
+    pub publication: super::super::super::FileDeliverySnapshot,
+    pub consistency: FileLearnedConsistencySnapshot,
+    pub pending_request: Option<u64>,
+}
+
 impl FileOversight {
     pub fn enable_learned_action_consistency(&mut self, revision: u64,
         config: FileLearnedConsistencyConfig) -> Result<FileConsistencyObserver, JournalError>

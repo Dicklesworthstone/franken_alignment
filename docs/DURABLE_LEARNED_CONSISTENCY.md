@@ -73,6 +73,15 @@ semantic replay without constructing a live owner or modifying storage. It may
 inspect a canonical replacement whose acknowledgment was lost; it does not label
 that historical image as a fresh capture or a live permitting state.
 
+`read_publication_with_learned_action_consistency` returns publication payload,
+execution count, original authority accounting, learned evidence and any pending
+external-request binding from **one** canonical byte image and semantic replay.
+It remains read-only while a failed writer retains its lock. It never performs
+cleanup, issues keys or resends an action. This makes an ambiguous publication
+replacement inspectable without mixing the old live snapshot with newer disk
+evidence. Missing learned inputs refuse the read; there is no unchecked-payload
+fallback. The consistency-only reader delegates to this same path.
+
 ## Costs and explicit limitations
 
 All work and storage ceilings remain finite. Retained checked inventories include
@@ -91,13 +100,16 @@ generation recipe. Those stronger compositions remain separate integration work.
 
 ## Regression coverage and validation status
 
-Eight authored regression functions exercise the actual decoder, learned fitter,
+Ten authored regression functions exercise the actual decoder, learned fitter,
 source checker and original file owner. Scenarios include complete congress/human
 publication, a consumed proposal refusal followed by recovery and lifetime-budget
 exhaustion, pending-forecast recovery, missing residuals and terminal containment,
 external-request routing, all five deterministic Store barriers, input/witness
 substitution, and every truncated configuration/forecast encoding. Existing raw
-regressions and likelihood arithmetic are unchanged.
+regressions and likelihood arithmetic are unchanged. Additional controls inject
+all five Store failures into the original atomic two-key publication completion,
+verify same-cut read-only inspection under the poisoned writer's lock, refuse
+missing evidence, and preserve pending external-request identity without fencing.
 
 The authoring environment has no `rch`, Cargo or Rust compiler. Required RCH
 check/test/fmt/Clippy commands were attempted but stopped before execution with

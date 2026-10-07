@@ -78,13 +78,31 @@ impl FileOversight {
         expected: &FileLearnedConsistencyConfig, sources: &BTreeMap<u64, CheckedLearnedKv>)
         -> Result<FileLearnedConsistencySnapshot, JournalError>
     {
+        Ok(Self::read_publication_with_learned_action_consistency(directory, profile, expected, sources)?.consistency)
+    }
+
+    /// Reconstruct the original publication outcome AND learned evidence from
+    /// the same canonical bytes. Separate reads could observe different cuts.
+    /// This is available while a failed writable owner still holds its lock.
+    /// No cleanup, fence, key issuance, resend or current-time observation occurs.
+    /// Missing evidence refuses rather than falling back to an unchecked payload.
+    pub fn read_publication_with_learned_action_consistency(directory: impl AsRef<Path>,
+        profile: &FileOversightProfile, expected: &FileLearnedConsistencyConfig,
+        sources: &BTreeMap<u64, CheckedLearnedKv>) -> Result<FileLearnedPublicationSnapshot, JournalError>
+    {
         let mut events = read_events(directory.as_ref(), profile)?;
         bind_events(&mut events, expected, sources)?;
         let machine = Machine::replay(profile, &events)?;
-        Ok(FileLearnedConsistencySnapshot { consistency: machine.consistency_snapshot(events.len() as u64)?,
-            work: machine.broker.learned_consistency_work()?,
-            retained_source_bytes: machine.broker.learned_consistency_retained_source_bytes()?,
-            has_unreported_work: machine.broker.learned_consistency_has_unreported_work()? })
+        Ok(FileLearnedPublicationSnapshot {
+            publication: machine.snapshot(events.len()),
+            consistency: FileLearnedConsistencySnapshot {
+                consistency: machine.consistency_snapshot(events.len() as u64)?,
+                work: machine.broker.learned_consistency_work()?,
+                retained_source_bytes: machine.broker.learned_consistency_retained_source_bytes()?,
+                has_unreported_work: machine.broker.learned_consistency_has_unreported_work()?,
+            },
+            pending_request: machine.consistency_request.map(|(request, _)| request),
+        })
     }
 }
 
