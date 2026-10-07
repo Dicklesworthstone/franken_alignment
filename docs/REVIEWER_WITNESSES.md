@@ -77,3 +77,24 @@ execution, rustfmt and Clippy for this change remain unexecuted. No production
 gate, deployment assurance or bead closure is claimed. This extends the existing
 L2 evidence presentation used by the L4 human-review boundary; it does not change
 the plan's authority semantics, dependency universe or native journal format.
+
+## Terminal decision consumer
+
+The existing `supervise_publication` reviewer console now presents the entire
+ordered native witness list before helper views and before the explicit
+request-and-session-bound decision prompt. Each exact witness distinguishes
+ABSENT from PRESENT, including a present zero-byte value. Values use the existing
+byte-preserving terminal escaping; empty ranges show both bounds and half-open
+semantics. The display labels them as recorded dependencies, not a current
+snapshot, and treats witness contents as evidence rather than instructions.
+Witness-free v1 offers display an explicit zero count without asserting that the
+world was observed complete.
+
+A rendering or final output-flush failure still returns before reading a decision
+line. No partial witness display can consume a prequeued approval. Five additional
+console tests feed the actual decision function from captured/decoded native
+requests: all witness kinds, binary/terminal-control and embedded-instruction
+values, failures partway through each dependency, final flush failure, exact
+explicit choices versus incomplete/foreign choices, and legacy empty lists. These
+are authored tests, not executed human-understanding or authentication evidence;
+the RCH limitation above still applies.

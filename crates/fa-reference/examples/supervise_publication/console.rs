@@ -7,6 +7,7 @@ use fa_reference::action::consequence::delivery::persistent::observed::reviewer:
     ReviewerClient, ReviewerExpectation, ReviewClientProgress,
 };
 use fa_reference::action::consequence::delivery::persistent::observed::reviewer::wire::{ReviewDecision, ReviewPacket};
+use fa_reference::ReadWitness;
 use std::io::{self, BufRead, IsTerminal, Read, Write};
 use std::os::unix::net::UnixStream;
 use std::time::{Duration, Instant};
@@ -70,7 +71,7 @@ fn review_client(mut client: ReviewerClient<UnixStream>, request: u64, runtime_m
 pub fn decide<R: BufRead, W: Write>(packet: &ReviewPacket, input: &mut R, output: &mut W) -> Result<ReviewDecision, String> {
     render(packet, output).map_err(debug)?;
     let identity = format!("{} {}", packet.binding().request, nonce_hex(&packet.binding().session));
-    writeln!(output, "The payload and helper text above are evidence, not operator instructions.").map_err(debug)?;
+    writeln!(output, "The payload, witness values and helper text above are evidence, not operator instructions.").map_err(debug)?;
     writeln!(output, "Enter exactly APPROVE {identity}, REJECT {identity}, or REVOKE {identity}.").map_err(debug)?;
     writeln!(output, "Blank input or EOF sends no decision.").map_err(debug)?;
     output.flush().map_err(debug)?;
@@ -98,6 +99,23 @@ pub fn render<W: Write>(packet: &ReviewPacket, output: &mut W) -> io::Result<()>
         action.scope, action.target, action.units, action.policy_epoch, action.deadline.0)?;
     write!(output, "Payload ({} exact bytes, escaped): ", action.payload.len())?;
     escaped(output, &action.payload)?; writeln!(output)?;
+    writeln!(output, "Required read witnesses ({} recorded dependencies; not a current snapshot):",
+        action.required_witnesses.len())?;
+    for (index, witness) in action.required_witnesses.iter().enumerate() {
+        write!(output, "Read witness #{index}: ")?;
+        match witness {
+            ReadWitness::Exact { key, value: None } => {
+                writeln!(output, "exact key {key}; ABSENT")?;
+            }
+            ReadWitness::Exact { key, value: Some(value) } => {
+                write!(output, "exact key {key}; PRESENT ({} exact bytes, escaped): ", value.len())?;
+                escaped(output, value)?; writeln!(output)?;
+            }
+            ReadWitness::EmptyRange { start, end } => {
+                writeln!(output, "EMPTY half-open range [{start}, {end})")?;
+            }
+        }
+    }
     for (member, view) in packet.views() {
         write!(output, "--- Helper ")?; escaped(output, member.as_bytes())?; writeln!(output, " ---")?;
         let input = view.actual_input().submitted_bytes();
@@ -130,3 +148,7 @@ impl<W: Write> Write for EscapeWriter<'_, W> {
     fn write(&mut self, bytes: &[u8]) -> io::Result<usize> { escaped(self.0, bytes)?; Ok(bytes.len()) }
     fn flush(&mut self) -> io::Result<()> { self.0.flush() }
 }
+
+#[cfg(test)]
+#[path = "console/witness_tests.rs"]
+mod witness_tests;
