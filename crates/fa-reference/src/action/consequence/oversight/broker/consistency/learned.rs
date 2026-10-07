@@ -8,6 +8,7 @@ use crate::action::consequence::activation::monitor::learned::{LearnedMonitorBud
 use crate::action::consequence::activation::probe::learned::MAX_CHECKED_KV_BYTES;
 use std::collections::BTreeMap;
 mod lifetime;
+mod owned;
 use lifetime::{add_work, allowance, scale_budget};
 use crate::action::consequence::activation::probe::learned::{CheckedLearnedKv, KvRow};
 use crate::action::consequence::activation::tensor::kv::experiment::KvSide;
@@ -37,6 +38,7 @@ pub type LearnedConsistencyObservation = ConsistencyObservation<LearnedPredictio
 #[derive(Debug)]
 pub(super) struct LearnedLane {
     model: LearnedForecastModel,
+    owned: bool,
     layer: u64,
     side: KvSide,
     lifetime: LearnedMonitorBudget,
@@ -92,7 +94,7 @@ impl OversightBroker {
     {
         if config.layer == 0 { return Err(Error::InvalidInput); }
         let model = config.consistency.model.clone().into_learned(config.budget)?;
-        let lane = LearnedLane { model, layer: config.layer, side: config.side,
+        let lane = LearnedLane { model, owned: false, layer: config.layer, side: config.side,
             lifetime, retained_limit: max_retained_source_bytes,
             work: LearnedMonitorWork::default(), retained_source_bytes: 0,
             unreported_work: false, reports: BTreeMap::new() };
@@ -118,7 +120,9 @@ impl OversightBroker {
     pub fn forecast_learned_action(&mut self, attempt: u64, expected_actor_revision: u64,
         source: &CheckedLearnedKv, row: KvRow) -> Result<LearnedForecastReport, Error>
     {
-        if !self.learned_action_consistency_required() { return Err(Error::Binding); }
+        if !self.learned_action_consistency_required() || self.owned_learned_consistency_required() {
+            return Err(Error::Binding);
+        }
         self.with_consistency_stop(|owner| owner.forecast_learned_observed(attempt, expected_actor_revision, source, row))
     }
 
