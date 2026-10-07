@@ -1,17 +1,25 @@
 //! Explicit original witness requirements for the runnable supervisor. This is
 //! orchestration of the native publication gate, not another validation engine.
+#[path = "publication/native.rs"]
 mod native;
+#[path = "publication/feed.rs"]
 mod feed;
+#[path = "publication/wait.rs"]
 mod wait;
+#[path = "publication/joint.rs"]
 mod joint;
 #[cfg(test)]
+#[path = "publication/joint_tests.rs"]
 mod joint_tests;
 #[cfg(test)]
+#[path = "publication/waiting_tests.rs"]
 mod waiting_tests;
 use wait::{WaitBudget, WaitPolicy};
 #[cfg(test)]
+#[path = "publication/producer_tests.rs"]
 mod producer_tests;
 #[cfg(test)]
+#[path = "publication/bootstrap_tests.rs"]
 mod bootstrap_tests;
 use feed::FeedProfile;
 use super::config::{debug, read_regular};

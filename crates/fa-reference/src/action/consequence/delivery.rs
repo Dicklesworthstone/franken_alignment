@@ -477,7 +477,8 @@ impl DeliveryBroker {
             EndpointOutcome::NotExecuted { .. } => TrustedOutcome::NotExecuted,
         };
         self.controller.record_trusted_outcome(receipt.attempt, outcome)?;
-        self.records.get_mut(&receipt.attempt).expect("retained delivery").resolution = Some(receipt);
+        let attempt = receipt.attempt;
+        self.records.get_mut(&attempt).expect("retained delivery").resolution = Some(receipt);
         if self.stream.is_some() {
             if let Some((version, next)) = next_stream {
                 self.resource.expected_version = version;

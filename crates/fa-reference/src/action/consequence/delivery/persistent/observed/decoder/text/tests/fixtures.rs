@@ -129,6 +129,8 @@ pub(super) fn owner(root: &Directory, configuration: &FileDecoderConfig) -> File
 }
 pub(super) fn request(prompt: &[u8], new: usize) -> TextGenerationRequest {
     use crate::action::consequence::activation::monitor::decoder::sampled::generation::{GenerationBudget, tokenizer::TokenizationBudget};
+    // Not every module that includes these fixtures glob-imports the budget cap.
+    use crate::action::consequence::activation::tensor::kv::decoder::MAX_DECODER_PRODUCTS;
     TextGenerationRequest { prompt: prompt.to_vec(), prefix_controls: vec![256],
         max_new_tokens: new, stop_tokens: vec![256], tokenization: TokenizationBudget::default(),
         generation: GenerationBudget { scalar_products: MAX_DECODER_PRODUCTS, sampling_entries: MAX_SAMPLING_ENTRIES },

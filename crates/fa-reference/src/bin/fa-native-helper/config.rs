@@ -1,5 +1,6 @@
 //! Strict, bounded operator configuration. This file is never model input.
 //! No path, salt, profile or runtime option is accepted from a helper request.
+#[path = "config/checkpoint.rs"]
 mod checkpoint;
 use checkpoint::CheckpointFiles;
 use fa_reference::action::consequence::oversight::helper_client::native::NativeHelperPolicy;
@@ -218,4 +219,5 @@ fn hex(value: &Json) -> Result<Vec<u8>, LaunchError> {
 }
 
 #[cfg(test)]
+#[path = "config/tests.rs"]
 mod tests;

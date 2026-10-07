@@ -1,3 +1,4 @@
+#[path = "tests/native.rs"]
 mod native;
 
 use super::*;

@@ -182,7 +182,7 @@ impl DeliveryBroker {
         Ok(StopSweep { outcomes, progress: self.stop_progress()? })
     }
 
-    pub(super) fn check_not_stopping(&self) -> Result<(), Error> {
+    pub(in crate::action::consequence) fn check_not_stopping(&self) -> Result<(), Error> {
         if self.stop.is_some() { Err(Error::WrongState) } else { Ok(()) }
     }
 }

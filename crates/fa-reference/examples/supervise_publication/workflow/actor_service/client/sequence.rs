@@ -68,4 +68,5 @@ pub(super) fn submit(profile: &Profile, documents: &[&Path], out: &mut impl Writ
 }
 
 #[cfg(test)]
+#[path = "sequence/tests.rs"]
 mod tests;

@@ -1,12 +1,19 @@
 //! Native monitored generation feeding the ORIGINAL source-only publication gate.
 //! Stdout carries a submission reference, NEVER unapproved generated text.
+#[path = "native/recipe.rs"]
 mod recipe;
+#[path = "native/recovery.rs"]
 mod recovery;
+#[path = "native/qualification.rs"]
 mod qualification;
+#[path = "native/continuation.rs"]
 mod continuation;
+#[path = "native/finish.rs"]
 mod finish;
+#[path = "native/bootstrap.rs"]
 mod bootstrap;
 #[cfg(test)]
+#[path = "native/tests.rs"]
 mod tests;
 
 use super::*;

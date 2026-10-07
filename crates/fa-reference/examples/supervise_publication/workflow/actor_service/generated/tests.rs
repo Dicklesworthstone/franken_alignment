@@ -1,4 +1,5 @@
 use super::*;
+#[path = "tests/fixture.rs"]
 pub(super) mod fixture;
 use fixture::*;
 use fa_reference::action::consequence::delivery::persistent::observed::reviewer::client::ReviewClientProgress;

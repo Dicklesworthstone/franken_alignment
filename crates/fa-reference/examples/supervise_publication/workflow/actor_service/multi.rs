@@ -1,4 +1,5 @@
 //! Multi-listener consumer of the ORIGINAL pooled ingress and publication workflow.
+#[path = "multi/ingress.rs"]
 mod ingress;
 use ingress::{Intake, Listeners};
 use super::*;
@@ -208,4 +209,5 @@ where F: FnMut() -> ElapsedTick {
 }
 
 #[cfg(test)]
+#[path = "multi/tests.rs"]
 mod tests;

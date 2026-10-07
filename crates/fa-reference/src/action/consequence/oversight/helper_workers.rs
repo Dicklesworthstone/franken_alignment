@@ -7,7 +7,7 @@
 
 pub mod io;
 pub mod wire;
-pub(crate) mod coordinator;
+pub mod coordinator;
 
 use super::{MAX_COMMITTEE_BYTES, ObservedReview, ObservedSession};
 use crate::action::ElapsedTick;

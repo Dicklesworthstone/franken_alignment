@@ -192,4 +192,5 @@ impl Fields {
 }
 
 #[cfg(test)]
+#[path = "recipe/tests.rs"]
 mod tests;

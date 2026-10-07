@@ -85,7 +85,7 @@ fn archive(
         session.reveal(member, Verdict::Allow, b"reference-salt").unwrap();
     }
     let review = session.finish().unwrap();
-    let archive = review.replay_archive().unwrap();
+    let archive = review.replay_archive();
     (controller, anchor, archive, review)
 }
 

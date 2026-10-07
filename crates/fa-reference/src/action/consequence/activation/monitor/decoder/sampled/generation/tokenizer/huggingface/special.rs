@@ -50,4 +50,5 @@ pub(super) fn names(added: &[Json], model: &Object, count: usize)
 }
 
 #[cfg(test)]
+#[path = "special/tests.rs"]
 mod tests;

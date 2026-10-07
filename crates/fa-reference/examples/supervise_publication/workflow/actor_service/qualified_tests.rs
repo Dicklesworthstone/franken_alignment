@@ -363,4 +363,5 @@ fn live_option_is_operator_only_and_creation_refuses_before_side_effects() {
     assert!(!actor_profile.socket.exists());
 }
 
+#[path = "qualified_tests/boundaries.rs"]
 mod boundaries;

@@ -1,8 +1,11 @@
 //! One explicit request through existing actor, helper, reviewer and delivery APIs.
 //! This is a synchronous executable consumer, not an alternative executor/ledger.
+#[path = "workflow/continuation.rs"]
 pub mod continuation;
+#[path = "workflow/control.rs"]
 pub(crate) mod control;
 #[cfg(target_os = "linux")]
+#[path = "workflow/actor_service.rs"]
 pub(crate) mod actor_service;
 
 use super::config::{Config, CLOCK_DOMAIN, debug};

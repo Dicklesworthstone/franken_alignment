@@ -1,4 +1,6 @@
+#[path = "tests/reader.rs"]
 mod reader;
+#[path = "tests/generation.rs"]
 mod generation;
 
 use super::*;

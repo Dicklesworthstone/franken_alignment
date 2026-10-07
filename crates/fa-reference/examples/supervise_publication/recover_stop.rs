@@ -62,4 +62,5 @@ fn report(recovered: &FileStoppedRecovery, out: &mut impl Write) -> Result<(), S
 }
 
 #[cfg(test)]
+#[path = "recover_stop/tests.rs"]
 mod tests;

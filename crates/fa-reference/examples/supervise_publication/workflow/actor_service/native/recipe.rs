@@ -20,6 +20,7 @@ use fa_reference::action::consequence::oversight::decoder_monitoring::DecoderBin
 use fa_reference::strict_json::{self, Json, Limits};
 use std::collections::BTreeMap;
 use std::path::PathBuf;
+#[path = "recipe/weights.rs"]
 mod weights;
 use weights::WeightFiles;
 

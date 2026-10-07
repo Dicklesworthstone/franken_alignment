@@ -8,9 +8,13 @@ use fa_reference::action::consequence::oversight::actor_wire::{decode_command, W
 use fa_reference::action::consequence::oversight::actor_wire::client::{ActorExchange, ClientIoBudget, ClientIoLimits, ClientProgress};
 use std::os::unix::net::UnixStream;
 use std::sync::mpsc;
+#[path = "tests/fixture.rs"]
 mod fixture;
+#[path = "tests/recovery_tests.rs"]
 mod recovery_tests;
+#[path = "tests/checked_tests.rs"]
 mod checked_tests;
+#[path = "tests/sharded_tests.rs"]
 mod sharded_tests;
 use fixture::*;
 

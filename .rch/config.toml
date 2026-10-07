@@ -1,0 +1,61 @@
+# rch transfer settings for franken_alignment (a project layer REPLACES the
+# user's exclude list).
+#
+# Same excludes as the fleet default, minus `**/*.safetensors`: fa-reference
+# tracks a 2.8 KB include_bytes! fixture (crates/fa-reference/tests/fixtures/
+# decoder_mixed.safetensors). The user-level weight exclude (meant for multi-GB
+# checkpoints in other repos) kept it off workers, so
+# `cargo check --all-targets` failed with "couldn't read" on every rch worker.
+[transfer]
+exclude_patterns = [
+    "target/",
+    "target_*/",
+    "target-*/",
+    ".target-*/",
+    ".target_*/",
+    ".cargo-target/",
+    ".cargo-target-rusticmill/",
+    ".cargo-target-*/",
+    ".git/",
+    ".beads/",
+    ".venv/",
+    ".oracle-venv/",
+    ".ee/",
+    ".ntm/",
+    ".ruff_cache/",
+    ".wrangler/",
+    "*.rlib",
+    "*.rmeta",
+    "node_modules/",
+    ".bun/",
+    ".npm/",
+    ".pnpm-store/",
+    "dist/",
+    "build/",
+    ".next/",
+    ".nuxt/",
+    ".turbo/",
+    ".parcel-cache/",
+    ".doctor/",
+    "*.xcframework/",
+    "docs/truth-pack/snapshots/",
+    "**/*.[wW][aA][vV]",
+    "**/*.[mM]4[aA]",
+    "**/*.[mM][pP]4",
+    "**/*.[nN][eE][mM][oO]",
+    "**/*.[pP][tT]",
+    "**/*.[pP][tT][hH]",
+    "**/*.[cC][kK][pP][tT]",
+    "**/*.[oO][nN][nN][xX]",
+    "**/*.[nN][pP][yY]",
+    "**/*.[nN][pP][zZ]",
+    "**/*.[gG][gG][uU][fF]",
+    "**/*.[gG][gG][mM][lL]",
+    "coverage/",
+    ".nyc_output/",
+    "perf.data",
+    "perf.data.old",
+    "tests/artifacts/",
+    "sample_sqlite_db_files/",
+    "legacy_python_mcp_agent_mail_code/mcp_agent_mail/.venv/",
+]

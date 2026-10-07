@@ -8,7 +8,11 @@
 //! then the ORIGINAL ByteBpe constructor validates the entire token/merge graph.
 //! Declaring a model profile does not authenticate this file or training semantics.
 
+// Loaded through `#[path]` from wire.rs, so child modules resolve beside
+// this file (mod.rs rules); pin them under huggingface/.
+#[path = "huggingface/reader.rs"]
 mod reader;
+#[path = "huggingface/special.rs"]
 mod special;
 
 use super::{ByteBpe, Merge, TokenBytes, MAX_MERGES, MAX_TOKEN_BYTES, MAX_VOCABULARY_BYTES};
@@ -236,4 +240,5 @@ fn merge_pair(value: &Json, legacy: bool) -> Result<(&str, &str), Error> {
 }
 
 #[cfg(test)]
+#[path = "huggingface/tests.rs"]
 mod tests;

@@ -74,7 +74,8 @@ impl ReviewPacket {
     pub fn action(&self) -> &FrozenAction { &self.action }
     pub fn views(&self) -> &BTreeMap<String, EvidenceViewManifest> { &self.views }
 
-    pub(super) fn capture(request: &FileHumanRequest, clock_domain: u64, revision: u64,
+    /// The offer packet for `request`, validated exactly as the server sends it.
+    pub fn capture(request: &FileHumanRequest, clock_domain: u64, revision: u64,
         disposition: HumanDisposition, session: [u8; 32]) -> Result<Self, Error>
     {
         let evidence = request.evidence();

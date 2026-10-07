@@ -96,4 +96,5 @@ where F: FnMut() -> ElapsedTick {
 }
 
 #[cfg(test)]
+#[path = "finish/tests.rs"]
 mod tests;

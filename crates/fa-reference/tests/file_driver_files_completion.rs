@@ -116,6 +116,7 @@ fn real_file_job_renews_native_leases_three_times_and_finishes_without_a_settlem
             FileRequestDisposition::Admitted { attempt: 1, stage: ActionState::Confirmed });
         assert_eq!(host.inspect().control.ledger.charged, 16);
         assert_eq!(FileOversight::read_publication(live.file.rig.root.store(), &profile()).unwrap(), host.inspect());
+        drop(host);
         std::fs::remove_file(&live.file.path).unwrap();
         let reads = live.file.source.status().read_attempts;
         let idle = live.file.rig.driver.step_from_file(&mut live.file.source, || ElapsedTick(6), None);
@@ -243,6 +244,7 @@ fn failed_final_write_and_caught_clock_unwind_retire_the_send_phase() {
         assert!(host.storage_failure().is_some()); assert!(host.file_source_status().unwrap().interrupted);
         assert_eq!(host.inspect().control.ledger.reserved, 16); assert_eq!(host.inspect().executions, 0);
         assert_eq!(FileOversight::read_publication(&store, &profile()).unwrap(), host.inspect());
+        drop(host);
         let retry = live.complete(2);
         assert!(retry.authorization_observations.is_empty()); assert!(retry.completion.observations.is_empty());
         assert_eq!(retry.completion.completion.completion.result, Err(JournalError::Unavailable));

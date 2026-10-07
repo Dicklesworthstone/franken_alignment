@@ -303,4 +303,6 @@ fn a_changed_canonical_cut_or_corrupt_suffix_is_not_overwritten_by_reset_recover
     assert_ne!(bytes, canonical);
 }
 
+// Loaded through `#[path]`, so a bare `mod guarded;` would resolve beside this file.
+#[path = "pending_recovery/guarded.rs"]
 mod guarded;

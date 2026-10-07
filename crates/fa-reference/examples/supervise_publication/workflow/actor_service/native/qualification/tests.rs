@@ -12,6 +12,7 @@ use fa_reference::round::Verdict;
 use std::os::unix::net::UnixStream;
 use std::sync::mpsc;
 #[allow(dead_code)]
+#[path = "tests/fixtures.rs"]
 mod fixtures;
 use fixtures::*;
 

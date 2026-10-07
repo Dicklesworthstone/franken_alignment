@@ -24,7 +24,7 @@ pub(crate) trait Session {
     fn reveal(&mut self, member: &str, verdict: Verdict, salt: &[u8], now: ElapsedTick) -> Result<(), AdvanceError<Self::Failure>>;
 }
 
-pub(crate) struct Coordinator {
+pub struct Coordinator {
     slots: BTreeMap<String, Rc<RefCell<Slot>>>,
     window: ReviewWindow,
     elapsed: ElapsedTick,
@@ -33,7 +33,7 @@ pub(crate) struct Coordinator {
 }
 
 impl Coordinator {
-    pub(crate) fn new(round: u64, evidence_root: [u8; 32], inputs: &CommitteeInput,
+    pub fn new(round: u64, evidence_root: [u8; 32], inputs: &CommitteeInput,
         window: ReviewWindow, elapsed: ElapsedTick, limits: HelperLimits)
         -> Result<(Self, BTreeMap<String, HelperPort>), Error>
     {

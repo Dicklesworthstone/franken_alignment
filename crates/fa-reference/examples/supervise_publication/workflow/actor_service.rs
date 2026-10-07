@@ -1,11 +1,18 @@
 //! Bounded live actor intake driving the SAME helper/human/publication workflow.
 //! Single or explicitly scheduled requests; no concurrent congress or new authority.
+#[path = "actor_service/profile.rs"]
 mod profile;
+#[path = "actor_service/client.rs"]
 mod client;
+#[path = "actor_service/qualification.rs"]
 mod qualification;
+#[path = "actor_service/series.rs"]
 mod series;
+#[path = "actor_service/multi.rs"]
 mod multi;
+#[path = "actor_service/generated.rs"]
 mod generated;
+#[path = "actor_service/native.rs"]
 mod native;
 use profile::Profile;
 use super::{ActionState, ActorWire, BoundSocket, Config, Deadline, Duration, ElapsedTick,
@@ -223,8 +230,10 @@ impl Intake {
 }
 
 #[cfg(test)]
+#[path = "actor_service/tests.rs"]
 mod tests;
 #[cfg(test)]
+#[path = "actor_service/qualified_tests.rs"]
 mod qualified_tests;
 
 // One shared bootstrap and deployment check for single and sequential service.

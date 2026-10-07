@@ -1,5 +1,6 @@
 //! Actor-only executable consumer of the original bounded exchange protocol.
 //! Never reads the supervisor profile, journal, evidence, or reviewer identity.
+#[path = "client/sequence.rs"]
 mod sequence;
 use super::{Profile, Duration, Instant, debug, pause};
 use crate::config::read_regular;

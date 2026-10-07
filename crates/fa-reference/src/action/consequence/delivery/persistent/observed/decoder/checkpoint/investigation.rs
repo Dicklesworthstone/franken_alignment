@@ -179,5 +179,5 @@ fn investigation_source(directory: &Path, revision: u64, profile: &FileOversight
     let origin = FileInvestigationOrigin { directory: directory.to_owned(), journal_revision: revision,
         source_scope: profile.delivery.scope, checkpoint: machine.decoder_checkpoint_info(checkpoint)?,
         configuration: machine.decoder_contract().ok_or(Error::Incomplete)?.clone() };
-    Ok((origin, machine.decoder_experiment_source(checkpoint)?))
+    Ok((origin, machine.decoder_experiment_source(checkpoint)?.clone()))
 }

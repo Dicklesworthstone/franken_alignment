@@ -27,6 +27,7 @@ where F: FnMut() -> ElapsedTick {
 }
 
 #[cfg(test)]
+#[path = "qualification/tests.rs"]
 mod tests;
 
 #[cfg(test)]

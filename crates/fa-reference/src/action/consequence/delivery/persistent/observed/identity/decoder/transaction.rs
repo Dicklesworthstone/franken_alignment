@@ -116,7 +116,8 @@ impl FileComputedIdentityRun {
     }
     fn current(&self, host: &FileOversight) -> Result<(), JournalError> {
         if host.revision() != self.base_revision { return Err(Error::Stale.into()); }
-        host.check_source_admission(&Event::Identity(IdentityEvent::Computed(self.event.clone())))
+        host.check_source_admission(&Event::Identity(IdentityEvent::Computed(self.event.clone())))?;
+        Ok(())
     }
     fn latch(&mut self) -> Result<(), JournalError> {
         self.revision = self.revision.checked_add(1).ok_or(Error::Overflow)?;

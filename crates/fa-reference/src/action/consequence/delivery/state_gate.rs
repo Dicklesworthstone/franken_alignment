@@ -120,7 +120,7 @@ impl DeliveryBroker {
         Ok(self.records.get(&attempt).ok_or(Error::Missing)?.policy_state.as_ref())
     }
 
-    pub(super) fn check_policy_state(&self, supplied: &Snapshot) -> Result<Option<CapturedSnapshot>, Error> {
+    pub(in crate::action::consequence) fn check_policy_state(&self, supplied: &Snapshot) -> Result<Option<CapturedSnapshot>, Error> {
         if self.policy_state.is_none() { return Ok(None); }
         let cut = self.capture_policy_state()?;
         if cut.snapshot() != supplied { return Err(Error::Binding); }
