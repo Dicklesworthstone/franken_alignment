@@ -6,6 +6,9 @@
 //! source checking nor these constructors establish calibration or independence.
 //! A threshold crossing requests containment; a quiet process is not permission.
 
+pub mod progressive;
+use progressive::ProgressiveForecastPolicy;
+
 use super::{CaptureProfile, ProgressiveFrame, SourceFrame};
 use super::probe::{LinearProbe, ProbeObservation, ProbeOutcome};
 use crate::Error;
@@ -131,9 +134,11 @@ pub struct ForecastRegistration {
 }
 
 #[derive(Clone, Debug)]
-pub struct ForecastModel { probe: LinearProbe, registration: ForecastRegistration }
+pub struct ForecastModel { probe: LinearProbe, registration: ForecastRegistration,
+    progressive: Option<ProgressiveForecastPolicy> }
 
-/// Exact observed score, selected probability pair and measured encoded length.
+/// Certified score interval, registered probability pair and total encoded length.
+/// The default is exact; progressive mode may certify a band before full recovery.
 /// Contains no live permits, mutable source, or controller reference.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Prediction {
@@ -160,17 +165,18 @@ impl ForecastModel {
             || registration.event_prefix.is_empty()
         { return Err(Error::InvalidInput); }
         if registration.event_prefix.len() > MAX_EVENT_PREFIX_BYTES { return Err(Error::Limit); }
-        Ok(Self { probe, registration })
+        Ok(Self { probe, registration, progressive: None })
     }
     pub fn profile(&self) -> CaptureProfile { self.probe.identity().profile }
     pub fn dimensions(&self) -> usize { self.probe.identity().dimensions }
     pub fn policy_generation(&self) -> u64 { self.registration.policy_generation }
     pub fn event(&self, payload: &[u8]) -> bool { payload.starts_with(&self.registration.event_prefix) }
 
-    /// Exact-reconstruction baseline, deliberately not a learned predictor or an
-    /// inferred probability from a probe margin. Full bytes and source checking
-    /// are paid before choosing the registered negative/equality/positive band.
+    /// Original exact baseline, or the explicitly frozen progressive policy.
+    /// Neither mode infers a probability from the magnitude of a probe margin.
+    /// Partial precision must certify the same registered band as full recovery.
     pub fn predict(&self, source: &SourceFrame) -> Result<Prediction, Error> {
+        if let Some(policy) = self.progressive { return progressive::predict(self, source, policy); }
         if source.identity().profile != self.profile() || source.dimensions() != self.dimensions() {
             return Err(Error::Binding);
         }
@@ -178,6 +184,10 @@ impl ForecastModel {
         let checked = source.verify_block(&encoded)?;
         let frame = ProgressiveFrame::from_initial(&checked)?;
         let observation = self.probe.evaluate(&frame)?;
+        self.prediction(observation, encoded.len())
+    }
+
+    fn prediction(&self, observation: ProbeObservation, encoded_bytes: usize) -> Result<Prediction, Error> {
         let forecast = match observation.outcome() {
             ProbeOutcome::CertifiedQuiet => self.registration.negative,
             ProbeOutcome::AtThreshold => self.registration.at_threshold,
@@ -186,7 +196,7 @@ impl ForecastModel {
         };
         Ok(Prediction { observation, forecast, domain: self.registration.domain,
             generation: self.registration.generation, policy_generation: self.registration.policy_generation,
-            encoded_bytes: encoded.len() })
+            encoded_bytes })
     }
 }
 
