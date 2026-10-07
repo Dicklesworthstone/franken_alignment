@@ -1,6 +1,6 @@
 //! Receipt recovery for a source-linked native publication, never regeneration.
 use super::{ActorWire, Command, Config, ElapsedTick, FileOversight, FileSupervisedDriver,
-    Loaded, RecoveryReserve, RunResult, cleanup, debug, encode_command};
+    Loaded, RecoveryReserve, RunResult, FileGeneratedTextActorPort, cleanup, debug, encode_command};
 use fa_reference::action::consequence::delivery::persistent::observed::FileHumanReviewer;
 
 /// Pin the SAME immutable generated-stream/model/tokenizer/reserve bootstrap.
@@ -28,7 +28,7 @@ pub(super) fn resume<F>(config: Config, loaded: Loaded, mut time: F)
     -> Result<RunResult, String>
 where F: FnMut() -> ElapsedTick {
     let (host, _reviewer) = open(&config, &loaded)?;
-    let source = host.decoder_text_message_request(loaded.request).map_err(debug)?;
+    let source = host.decoder_text_message_request(loaded.request).map_err(debug)?.clone();
     if source.generation != loaded.generation {
         return Err("recorded native publication belongs to a different generation".into());
     }
@@ -39,9 +39,22 @@ where F: FnMut() -> ElapsedTick {
     // Validate source, result revision and disposition together. This getter
     // interprets acknowledged tokens; it neither computes nor releases new ones.
     host.decoder_text_message_snapshot(loaded.request).map_err(debug)?;
+    let revision = host.revision();
+    let proposal = FileGeneratedTextActorPort::encode_message(&source).map_err(debug)?;
+    let original = encode_command(&Command::Submit { request: loaded.request, proposal }).map_err(debug)?;
     let (port, supervisor) = host.into_generated_text_actor_gateway().map_err(debug)?;
     let mut driver = FileSupervisedDriver::new(supervisor);
     let mut wire = ActorWire::new(port);
+    // A new wire owns no tickets. Restore one using ONLY the prevalidated exact
+    // retained source: the native retry branch returns status before snapshot,
+    // clock, revision or computation admission. This is not an effect resend.
+    let attached = wire.exchange(&original);
+    let current_revision = driver.supervisor().host().map_err(debug)?.revision();
+    if attached.result.is_err() || current_revision != revision {
+        let cleanup_pending = cleanup(driver, config.timing.cleanup_ms, config.timing.poll_ms);
+        return Ok(RunResult { response: attached,
+            failure: Some("original receipt ticket could not be restored read-only".into()), cleanup_pending });
+    }
     // Reuse the original query-only settlement: it supplies no evidence provider,
     // helper roster, reviewer transport, approval or sendable effect envelope.
     let failure = super::super::super::resume_existing(&mut driver, loaded.request, &mut time).err();

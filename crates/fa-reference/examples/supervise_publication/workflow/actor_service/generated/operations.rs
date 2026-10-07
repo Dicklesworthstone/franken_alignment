@@ -144,3 +144,33 @@ fn recovery_option_has_no_review_profile_or_qualification_fallback() {
     let args = ["create-generated", "config", "recipe", "--resume"].map(str::to_owned);
     assert_eq!(command(&args, Some(Path::new("qualification"))).unwrap_err(), USAGE);
 }
+
+#[test]
+fn exact_source_retry_restores_only_a_local_ticket_without_a_journal_transition() {
+    let root = Root::new(); initial(&root, ReviewDecision::Approve);
+    let config = configured(&root); let (host, _) = recovery::open(&config, &loaded(false)).unwrap();
+    let source = host.decoder_text_message_request(1).unwrap().clone();
+    let revision = host.revision();
+    let (port, supervisor) = host.into_generated_text_actor_gateway().unwrap();
+    let driver = FileSupervisedDriver::new(supervisor);
+    let mut refused = ActorWire::new(port.clone());
+    let mut wire = ActorWire::new(port);
+    let poll = encode_command(&Command::Poll { request: 1 }).unwrap();
+    assert!(wire.exchange(&poll).result.is_err()); // A naked numeric ID is not a ticket.
+    let mut wrong = source.clone(); wrong.generation += 1;
+    let wrong = encode_command(&Command::Submit { request: 1,
+        proposal: FileGeneratedTextActorPort::encode_message(&wrong).unwrap() }).unwrap();
+    assert!(refused.exchange(&wrong).result.is_err());
+    assert!(refused.exchange(&poll).result.is_err());
+    let original = encode_command(&Command::Submit { request: 1,
+        proposal: FileGeneratedTextActorPort::encode_message(&source).unwrap() }).unwrap();
+    assert!(wire.exchange(&original).result.is_ok());
+    assert!(matches!(wire.exchange(&poll).result,
+        Ok(Knowledge::Known { value: ActorOutcome::Executed, .. })));
+    assert_eq!(driver.supervisor().host().unwrap().revision(), revision);
+    assert_eq!(driver.supervisor().host().unwrap().decoder_text_message_request(1).unwrap(), &source);
+    assert_eq!(cleanup(driver, config.timing.cleanup_ms, config.timing.poll_ms), 0);
+}
+
+#[path = "operations/continuation.rs"]
+mod continuation;

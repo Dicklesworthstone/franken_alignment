@@ -14,15 +14,27 @@ use fa_reference::action::consequence::delivery::persistent::observed::stream::g
 use fa_reference::action::consequence::oversight::actor::{ActorOutcome, Knowledge};
 use fa_reference::action::consequence::oversight::actor_wire::{ActorWire, Command, encode_command};
 use fa_reference::action::consequence::delivery::persistent::requests::actor::FileGeneratedTextActorPort;
+use fa_reference::Error;
+use fa_reference::action::consequence::delivery::persistent::JournalError;
 use std::io::Write;
 use std::path::Path;
 
-const USAGE: &str = "create-generated CONFIG GENERATION_RECIPE REVIEWER_PROFILE | create-generated CONFIG GENERATION_RECIPE --resume";
+const USAGE: &str = "create-generated CONFIG GENERATION_RECIPE REVIEWER_PROFILE [--after REQUEST_ID] | create-generated CONFIG GENERATION_RECIPE --resume";
 
 pub(super) fn command(args: &[String], credibility: Option<&Path>) -> Result<(), String> {
-    if args.len() != 4 || args[0] != "create-generated" || credibility.is_some() {
+    if !matches!(args.len(), 4 | 6) || args[0] != "create-generated" || credibility.is_some() {
         return Err(USAGE.into());
     }
+    // Closed option admission precedes all configuration/model reads and I/O.
+    let after = if args.len() == 6 {
+        if args[4] != "--after" || args[3].starts_with("--")
+            || args[5].is_empty() || !args[5].bytes().all(|byte| byte.is_ascii_digit()) {
+            return Err(USAGE.into());
+        }
+        let id = args[5].parse::<u64>().map_err(|_| USAGE.to_owned())?;
+        if id == 0 { return Err(USAGE.into()); }
+        Some(id)
+    } else { None };
     let config = Config::read(Path::new(&args[1]))?;
     if args[3] == "--resume" {
         let loaded = recipe::load(Path::new(&args[2]), &config)?;
@@ -33,7 +45,10 @@ pub(super) fn command(args: &[String], credibility: Option<&Path>) -> Result<(),
     let peers = PeerProfile::read(Path::new(&args[3]))?;
     peers.check_host(&config)?;
     let loaded = recipe::load(Path::new(&args[2]), &config)?;
-    let result = create(config, loaded, &peers, clock)?;
+    let result = match after {
+        Some(request) => continue_after(config, loaded, &peers, request, clock)?,
+        None => create(config, loaded, &peers, clock)?,
+    };
     emit(result, &mut std::io::stdout().lock())
 }
 
@@ -54,11 +69,28 @@ fn emit(result: RunResult, output: &mut impl Write) -> Result<(), String> {
     Ok(())
 }
 
-fn create<F>(mut config: Config, loaded: Loaded, peers: &PeerProfile, mut time: F)
+fn create<F>(config: Config, loaded: Loaded, peers: &PeerProfile, time: F)
     -> Result<RunResult, String>
+where F: FnMut() -> ElapsedTick {
+    run(config, loaded, peers, None, time)
+}
+
+fn continue_after<F>(config: Config, loaded: Loaded, peers: &PeerProfile, after: u64, time: F)
+    -> Result<RunResult, String>
+where F: FnMut() -> ElapsedTick {
+    run(config, loaded, peers, Some(after), time)
+}
+
+// Creation and continuation share EVERY token/source/stop/review/publication step.
+// Only the initial owner and native intent differ; there is no second effect path.
+fn run<F>(mut config: Config, loaded: Loaded, peers: &PeerProfile,
+    after: Option<u64>, mut time: F) -> Result<RunResult, String>
 where F: FnMut() -> ElapsedTick {
     peers.check_host(&config)?;
     loaded.check_host(&config)?;
+    if after.is_some_and(|request| request == 0 || request == loaded.request) {
+        return Err("continuation needs a distinct nonzero prior request".into());
+    }
     let start = time();
     let lifetime = loaded.ttl_ms.min(config.timing.runtime_ms);
     let deadline = Deadline { logical: plus(start, lifetime)?, started: Instant::now(),
@@ -67,10 +99,31 @@ where F: FnMut() -> ElapsedTick {
     // Exclusive listener setup precedes store creation. It remains the SAME
     // stop service during inference, helper review and independent approval.
     let mut control = Control::new(&config, loaded.request, Some(peers))?;
-    let (mut host, reviewer) = FileOversight::create_generated_text_stream_with_reserve(
-        &config.store, config.profile.clone(), loaded.stream, loaded.decoder.clone(),
-        loaded.tokenizer.clone(), RecoveryReserve::terminal()).map_err(debug)?;
-    host.enable_file_source(host.revision(), config.source_policy).map_err(debug)?;
+    let (mut host, reviewer) = if after.is_some() {
+        recovery::open(&config, &loaded)?
+    } else {
+        FileOversight::create_generated_text_stream_with_reserve(
+            &config.store, config.profile.clone(), loaded.stream, loaded.decoder.clone(),
+            loaded.tokenizer.clone(), RecoveryReserve::terminal()).map_err(debug)?
+    };
+    let prepared = if let Some(after) = after {
+        // Refuse ALL reused request IDs before spending native work. A failed
+        // earlier attempt is not a fresh ID, and --after never means retry.
+        match host.request_status(loaded.request) {
+            Err(JournalError::Contract(Error::Missing)) => {},
+            Ok(_) => return Err("native request already exists; use --resume for its original receipt".into()),
+            Err(error) => return Err(debug(error)),
+        }
+        host.check_credibility().map_err(debug)?;
+        // Pure original preflight requires the latest receipt-confirmed prefix,
+        // exact current numerical predecessor and enough remaining context/bytes.
+        // It works while recovery is paused, but cannot authorize computation.
+        Some((after, host.prepare_decoder_text_continuation(after, loaded.generation,
+            loaded.text.clone()).map_err(debug)?))
+    } else {
+        host.enable_file_source(host.revision(), config.source_policy).map_err(debug)?;
+        None
+    };
     let (port, supervisor) = host.into_generated_text_actor_gateway().map_err(debug)?;
     let mut driver = FileSupervisedDriver::new(supervisor);
     let mut wire = ActorWire::new(port);
@@ -80,10 +133,20 @@ where F: FnMut() -> ElapsedTick {
         {
             let mut host = driver.supervisor_mut().host_mut().map_err(debug)?;
             let current = host.decoder_inspection().map_err(debug)?.numerical;
-            let command = FileTextGenerationCommand::new(loaded.generation,
-                current.actor_revision, current.position, loaded.text.clone()).map_err(debug)?;
-            let revision = host.revision();
-            host.begin_decoder_text(revision, command).map_err(debug)?;
+            if let Some((after, command)) = prepared {
+                // Fresh evidence and its post-read clock were committed above.
+                // Resume does not reset KV state, sampler, monitoring spend or
+                // generation IDs. Native begin rechecks the entire prepared cut.
+                let revision = host.revision();
+                host.resume_decoder(revision, current.actor_revision, current.position).map_err(debug)?;
+                let revision = host.revision();
+                host.begin_decoder_text_continuation(revision, after, command).map_err(debug)?;
+            } else {
+                let command = FileTextGenerationCommand::new(loaded.generation,
+                    current.actor_revision, current.position, loaded.text.clone()).map_err(debug)?;
+                let revision = host.revision();
+                host.begin_decoder_text(revision, command).map_err(debug)?;
+            }
         }
         let generation_revision = loop {
             deadline.check(time())?;

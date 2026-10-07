@@ -24,16 +24,20 @@ caller-text request or neighboring generation can stand in for that association.
 
 Recovery invokes the SAME query-only reconciliation used by the existing
 publication workflow and polls the SAME restricted generated actor gateway.
-It never constructs a Submit frame, regenerates output, reauthorizes an effect,
-resumes the decoder, or obtains a new human approval. A terminal result needs
-neither a clock observation nor a source lease; unresolved dispatch uses the
+A fresh actor wire has no polling ticket. Its only Submit frame repeats the
+prevalidated EXACT retained source reference to reacquire that process-local
+ticket; the original retry branch only reads recorded status. The command verifies
+that this step did not change the journal revision. It never submits a new effect,
+regenerates output, reauthorizes an effect, resumes the decoder, or obtains a new
+human approval. A terminal result needs neither a clock observation nor a source
+lease; unresolved dispatch uses the
 original settlement semantics. Request absence and identity mismatch are errors,
 not invitations to create a store, generate a token or retry an effect.
 
 The recipe lifetime does not renew an earlier publication deadline: no new
-action is built from it. A rejected/cancelled/pending/unknown result stays such a
-result. The existing stdout emitter returns success only for the original
-Executed outcome, and never prints raw generated text. Output failure cannot
+action is built from it. Rejected or cancelled work is not reauthorized, and an
+unknown result can be resolved only by the original reconciliation evidence.
+The existing stdout emitter returns success only for the original Executed outcome, and never prints raw generated text. Output failure cannot
 change committed work or send another publication. Old human approval is not
 resurrected; the writable owner remains decoder-paused after recovery.
 
@@ -55,12 +59,14 @@ the original actor response.
 ## Changelog and implementation status
 
 Added the native recovery consumer, routed through an explicit --resume form of
-the existing generated command. Six regression functions use actual durable
+the existing generated command. Seven regression functions use actual durable
 native generation/publication and the existing synthetic model/helper fixtures.
 They cover lost stdout with source/helper absence, rejected publication, exact
 recipe mismatches, missing store and wrong monitor, failed response output, and
 closed command-option admission. Assertions include preserved publication count,
 charged rights, native generation revision/sample count and paused recovery.
+The ticket regression pairs an unsuccessful bare Poll and conflicting source with
+a successful exact source retry and unchanged original journal revision.
 
 These are authored tests, not execution evidence. The required command was
 attempted in this environment:
@@ -72,3 +78,52 @@ RCH_REQUIRE_REMOTE=1 rch exec -- cargo run --locked -p xtask -- check
 It could not start: `rch: command not found` (exit 127). Compilation, Rust tests,
 rustfmt and Clippy remain UNEXECUTED. No production gate or bead is closed. There
 is no new dependency, journal format, authority type or alternative effect path.
+
+## Fresh continuation after a confirmed native message
+
+```sh
+supervise_publication create-generated CONFIG NEXT_GENERATION_RECIPE REVIEWER_PROFILE --after PRIOR_REQUEST_ID
+```
+
+`--after` selects an existing native-only stream rather than creating another
+store. The recipe must use a NEW request ID and NEW generation ID, and retain the
+exact model/monitor/sampler/tokenizer/stream bootstrap. Its prompt is additional
+input to the retained numerical context; it is not an inferred chat template,
+reset, replacement conversation or caller-supplied output. The prior request must
+be the latest receipt-confirmed native message, not merely computed, published
+without reconciliation, rejected, cancelled or an older confirmed prefix.
+
+The command uses the original pinned opener and native
+`prepare_decoder_text_continuation`/`begin_decoder_text_continuation` pair. It
+checks request-ID freshness, helper credibility, the full confirmed prefix,
+unchanged numerical predecessor and the ENTIRE requested context/disclosure
+horizon before new computation. Preparation while paused is not authority. A
+fresh mandatory source observation and post-read clock precede the explicit
+original decoder resume and the second native continuation-cut check.
+
+Creation and continuation now share the same implementation for every numerical
+step, independent stop checkpoint, source acquisition, helper congress, human
+review, publication and reconciliation. Lifetime numerical/monitoring work, RNG
+state, previous disclosure and cumulative resource charges remain in the original
+owner. The new effect includes all confirmed message boundaries, receives a fresh
+policy-epoch-bound helper review and requires a fresh human key. Helpers must be
+independently configured for the current post-recovery policy epoch; an old helper
+profile is never silently accepted. Independent stop remains active from listener
+creation through computation and publication, but not as a background watchdog
+inside synchronous numerical recovery.
+
+`--after` is never a retry: an already used request or generation refuses before
+new computation. `--resume` remains the separate receipt-only path, and the two
+options cannot be combined. A failed continuation preserves earlier publication
+charges; missing source cannot spend another token. Current source/qualification
+failure never causes fallback to a different deployment profile. A preflight
+refusal can still follow the original opener's recovery-fence write.
+
+Six additional functional regressions plus an explicit subprocess helper harness
+cover real second-message publication and receipt recovery, fresh-human rejection,
+stale prefixes and used IDs, rejected predecessors, remaining-context exhaustion,
+source loss after reopen and closed option admission. The positive test expects
+two confirmed message boundaries, numerical position advancing from four to eight,
+and the sum of both complete-frame resource charges. The subprocess helper pins
+the expected policy epoch independently rather than copying it from an offer.
+All tests remain authored but UNEXECUTED under the RCH limitation above.
