@@ -8,13 +8,16 @@ mod hosted;
 mod event;
 mod stopping;
 mod deadline;
+mod learned;
+pub use learned::{LearnedConsistencyConfig, LearnedConsistencyObservation};
+use learned::{ForecastEvidence, ForecastRecord, LearnedLane};
 pub use deadline::ConsistencyDeadline;
 pub use stopping::{ConsistencyStopCause, ConsistencyStopIncident, ConsistencyStopPolicy};
 pub use event::ConsistencyEventDomain;
 
 use super::OversightBroker;
 use crate::action::{ActionSpec, ElapsedTick, FrozenAction, MAX_PAYLOAD_BYTES};
-use crate::action::consequence::activation::SourceFrame;
+use crate::action::consequence::activation::{FrameIdentity, SourceFrame};
 use crate::action::consequence::activation::consistency::{
     ErrorBudget, ForecastModel, LikelihoodEvidence, LikelihoodFactor, MAX_SAMPLES, Prediction,
 };
@@ -30,27 +33,30 @@ pub struct ConsistencyConfig {
     pub max_prediction_age_ticks: u64,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug)]
 struct PendingForecast {
     attempt: u64,
     actor_revision: u64,
     epoch: u64,
     created_at: ElapsedTick,
     valid_until: ElapsedTick,
-    prediction: Prediction,
+    prediction: ForecastEvidence,
 }
+
+#[derive(Clone, Copy)]
+struct ForecastContext { epoch: u64, created_at: ElapsedTick, valid_until: ElapsedTick }
 
 /// An observed proposed category, including proposals later refused or denied.
 /// This is NOT a record that the action dispatched or even entered the ledger.
 #[derive(Clone, Debug, PartialEq, Eq)]
-pub struct ConsistencyObservation {
+pub struct ConsistencyObservation<P = Prediction> {
     attempt: u64,
     forecast_actor_revision: u64,
     observed_actor_revision: u64,
     epoch: u64,
     forecast_at: ElapsedTick,
     observed_at: ElapsedTick,
-    prediction: Prediction,
+    prediction: P,
     event: bool,
     event_domain: ConsistencyEventDomain,
     factor: LikelihoodFactor,
@@ -58,9 +64,9 @@ pub struct ConsistencyObservation {
     crossed: bool,
 }
 
-impl ConsistencyObservation {
+impl<P> ConsistencyObservation<P> {
     pub fn attempt(&self) -> u64 { self.attempt }
-    pub fn prediction(&self) -> &Prediction { &self.prediction }
+    pub fn prediction(&self) -> &P { &self.prediction }
     pub fn event(&self) -> bool { self.event }
     pub fn event_domain(&self) -> ConsistencyEventDomain { self.event_domain }
     pub fn factor(&self) -> LikelihoodFactor { self.factor }
@@ -76,11 +82,12 @@ impl ConsistencyObservation {
 #[derive(Debug)]
 pub(super) struct ConsistencyState {
     config: ConsistencyConfig,
+    learned: Option<LearnedLane>,
     hosted_layer: Option<u64>,
     event_domain: ConsistencyEventDomain,
     evidence: LikelihoodEvidence,
     pending: Option<PendingForecast>,
-    observations: BTreeMap<u64, ConsistencyObservation>,
+    observations: BTreeMap<u64, ForecastRecord>,
     jobs: usize,
     last_sequence: u64,
     coverage_lost: bool,
@@ -104,7 +111,7 @@ impl OversightBroker {
             || config.model.policy_generation() != self.delivery.controller().policy().generation()
         { return Err(Error::Binding); }
         let evidence = LikelihoodEvidence::new(config.alpha);
-        self.consistency = Some(ConsistencyState { config, hosted_layer: None, event_domain: ConsistencyEventDomain::PayloadPrefix, evidence, pending: None,
+        self.consistency = Some(ConsistencyState { config, learned: None, hosted_layer: None, event_domain: ConsistencyEventDomain::PayloadPrefix, evidence, pending: None,
             observations: BTreeMap::new(), jobs: 0, last_sequence: 0, coverage_lost: false, automatic_stop: None });
         Ok(())
     }
@@ -126,11 +133,29 @@ impl OversightBroker {
     fn forecast_action_inner(&mut self, attempt: u64, expected_actor_revision: u64,
         source: &SourceFrame) -> Result<Prediction, Error>
     {
+        if self.learned_action_consistency_required() { return Err(Error::Binding); }
         self.with_consistency_stop(|owner| owner.forecast_action_observed(attempt, expected_actor_revision, source))
     }
 
     fn forecast_action_observed(&mut self, attempt: u64, expected_actor_revision: u64,
         source: &SourceFrame) -> Result<Prediction, Error>
+    {
+        let context = self.begin_consistency_forecast(attempt, expected_actor_revision,
+            source.identity(), source.dimensions())?;
+        let state = self.consistency.as_mut().expect("configured consistency lane");
+        let prediction = match state.config.model.predict(source) {
+            Ok(prediction) => prediction,
+            Err(error) => { state.coverage_lost = true; return Err(error); }
+        };
+        self.finish_consistency_forecast(attempt, expected_actor_revision, context,
+            ForecastEvidence::Raw(prediction.clone()));
+        Ok(prediction)
+    }
+
+    // Both source modes use this exact admission and irreversible job/sequence
+    // debit. No learned adapter can replace the clock, epoch or pending attempt.
+    fn begin_consistency_forecast(&mut self, attempt: u64, expected_actor_revision: u64,
+        identity: FrameIdentity, dimensions: usize) -> Result<ForecastContext, Error>
     {
         let state = self.consistency.as_ref().ok_or(Error::Incomplete)?;
         if attempt == 0 { return Err(Error::InvalidInput); }
@@ -145,10 +170,9 @@ impl OversightBroker {
         if self.delivery.controller().policy().generation() != state.config.model.policy_generation() {
             return Err(Error::Stale);
         }
-        let identity = source.identity();
         let actor = self.delivery.controller().actor();
         if identity.profile != state.config.model.profile() || identity.stream != state.config.stream
-            || source.dimensions() != state.config.model.dimensions()
+            || dimensions != state.config.model.dimensions()
             || identity.position.checked_add(1) != Some(actor.next_position())
             || identity.profile.model_generation != actor.profile().model_generation
         { return Err(Error::Binding); }
@@ -161,13 +185,15 @@ impl OversightBroker {
         if state.jobs >= state.config.max_predictions { state.coverage_lost = true; return Err(Error::Limit); }
         state.jobs += 1;
         state.last_sequence = identity.sequence;
-        let prediction = match state.config.model.predict(source) {
-            Ok(prediction) => prediction,
-            Err(error) => { state.coverage_lost = true; return Err(error); }
-        };
-        state.pending = Some(PendingForecast { attempt, actor_revision: expected_actor_revision,
-            epoch: inspection.ledger.epoch, created_at: now, valid_until, prediction: prediction.clone() });
-        Ok(prediction)
+        Ok(ForecastContext { epoch: inspection.ledger.epoch, created_at: now, valid_until })
+    }
+
+    fn finish_consistency_forecast(&mut self, attempt: u64, actor_revision: u64,
+        context: ForecastContext, prediction: ForecastEvidence)
+    {
+        self.consistency.as_mut().expect("admitted consistency forecast").pending =
+            Some(PendingForecast { attempt, actor_revision, epoch: context.epoch,
+                created_at: context.created_at, valid_until: context.valid_until, prediction });
     }
 
     /// Report a real capture gap even when constructing a SourceFrame failed.
@@ -182,7 +208,10 @@ impl OversightBroker {
         Ok(&self.consistency.as_ref().ok_or(Error::Incomplete)?.evidence)
     }
     pub fn consistency_observation(&self, attempt: u64) -> Result<&ConsistencyObservation, Error> {
-        self.consistency.as_ref().ok_or(Error::Incomplete)?.observations.get(&attempt).ok_or(Error::Missing)
+        match self.consistency.as_ref().ok_or(Error::Incomplete)?.observations.get(&attempt).ok_or(Error::Missing)? {
+            ForecastRecord::Raw(observation) => Ok(observation),
+            ForecastRecord::Learned(_) => Err(Error::Binding),
+        }
     }
     pub fn pending_forecast(&self) -> Result<Option<u64>, Error> {
         Ok(self.consistency.as_ref().ok_or(Error::Incomplete)?.pending.as_ref().map(|p| p.attempt))
@@ -217,7 +246,7 @@ impl OversightBroker {
             || spec.policy_epoch != pending.epoch || inspection.ledger.epoch != pending.epoch
             || actor_revision < pending.actor_revision
             || self.delivery.controller().policy().generation() != state.config.model.policy_generation()
-            || self.delivery.controller().actor().next_position() <= pending.prediction.observation().frame().position
+            || self.delivery.controller().actor().next_position() <= pending.prediction.frame().position
         { return Err(Error::Stale); }
         if inspection.suspended { return Err(Error::WrongState); }
         let forecast = pending.prediction.forecast();
@@ -237,11 +266,21 @@ impl OversightBroker {
             Err(error) => { state.coverage_lost = true; return Err(error); }
         };
         let pending = state.pending.take().expect("validated pending forecast");
-        state.observations.insert(attempt, ConsistencyObservation {
-            attempt, forecast_actor_revision: pending.actor_revision, observed_actor_revision: actor_revision,
-            epoch: pending.epoch, forecast_at: pending.created_at, observed_at: now,
-            prediction: pending.prediction, event, event_domain, factor, sample: state.evidence.samples(), crossed: state.evidence.crossed(),
-        });
+        // Only the evidence representation differs. The category, factor,
+        // lifetime sample, pending consumption and all admission above are shared.
+        let observation = match pending.prediction {
+            ForecastEvidence::Raw(prediction) => ForecastRecord::Raw(ConsistencyObservation {
+                attempt, forecast_actor_revision: pending.actor_revision, observed_actor_revision: actor_revision,
+                epoch: pending.epoch, forecast_at: pending.created_at, observed_at: now,
+                prediction, event, event_domain, factor, sample: state.evidence.samples(), crossed: state.evidence.crossed(),
+            }),
+            ForecastEvidence::Learned(prediction) => ForecastRecord::Learned(ConsistencyObservation {
+                attempt, forecast_actor_revision: pending.actor_revision, observed_actor_revision: actor_revision,
+                epoch: pending.epoch, forecast_at: pending.created_at, observed_at: now,
+                prediction, event, event_domain, factor, sample: state.evidence.samples(), crossed: state.evidence.crossed(),
+            }),
+        };
+        state.observations.insert(attempt, observation);
         Ok(())
     }
 
@@ -249,7 +288,7 @@ impl OversightBroker {
         let Some(state) = &self.consistency else { return Ok(()); };
         if state.coverage_lost || state.pending.is_some() || state.evidence.crossed() { return Err(Error::Incomplete); }
         let observation = state.observations.get(&attempt).ok_or(Error::Incomplete)?;
-        if observation.epoch != self.inspect().ledger.epoch || observation.observed_actor_revision != self.actor_revision()
+        if observation.policy_epoch() != self.inspect().ledger.epoch || observation.observed_actor_revision() != self.actor_revision()
             || self.delivery.controller().policy().generation() != state.config.model.policy_generation()
         { return Err(Error::Stale); }
         Ok(())

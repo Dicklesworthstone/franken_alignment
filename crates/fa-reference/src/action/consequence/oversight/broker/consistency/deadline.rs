@@ -25,7 +25,7 @@ impl OversightBroker {
             attempt: pending.attempt,
             actor_revision: pending.actor_revision,
             authority_epoch: pending.epoch,
-            source_sequence: pending.prediction.observation().frame().sequence,
+            source_sequence: pending.prediction.frame().sequence,
             created_at: pending.created_at,
             expires_at: pending.valid_until,
         }))

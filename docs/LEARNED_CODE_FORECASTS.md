@@ -93,3 +93,14 @@ exact-equality control that still pays base bytes and coefficient visits. All
 seven first-increment regression functions are unchanged. The total is twelve
 regression functions and two compile-fail examples, still unexecuted because the
 required RCH executor is absent. Live request/durable integration remains separate.
+
+## Native broker integration
+
+The numerical API above remains standalone. The native `OversightBroker` now
+provides an explicit learned-source mode using its original pending slot,
+attempt chronology, exact lifetime evidence, proposal consumption, deadline and
+stop policy. Typed learned observations pass through the original congress and
+publication gates. See [the broker contract](LEARNED_CODE_BROKER.md) for source
+trust, refusal costs and the authored integration tests. Durable serialization
+and the external-key pre-output driver remain separate; this is not a claim
+that `FileOversight` can replay checked learned-code captures.

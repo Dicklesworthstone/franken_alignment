@@ -13,6 +13,7 @@ impl OversightBroker {
     /// a missing learned frame never falls back to a sampled or supplied frame.
     pub fn require_hosted_action_consistency(&mut self, layer: u64) -> Result<(), Error> {
         let state = self.consistency.as_ref().ok_or(Error::Incomplete)?;
+        if state.learned.is_some() { return Err(Error::Binding); }
         if state.hosted_layer.is_some() { return Err(Error::Duplicate); }
         if state.jobs != 0 || state.pending.is_some() || state.coverage_lost
             || !self.inputs.is_empty() || !self.started_rounds.is_empty()
