@@ -7,6 +7,7 @@
 //! A threshold crossing requests containment; a quiet process is not permission.
 
 pub mod progressive;
+pub mod learned;
 use progressive::ProgressiveForecastPolicy;
 
 use super::{CaptureProfile, ProgressiveFrame, SourceFrame};
@@ -187,13 +188,19 @@ impl ForecastModel {
         self.prediction(observation, encoded.len())
     }
 
+    // Both source representations certify the same registered threshold bands.
+    // The representations and their observation receipts remain distinct types.
+    fn forecast_band(&self, outcome: ProbeOutcome) -> Result<BinaryForecast, Error> {
+        match outcome {
+            ProbeOutcome::CertifiedQuiet => Ok(self.registration.negative),
+            ProbeOutcome::AtThreshold => Ok(self.registration.at_threshold),
+            ProbeOutcome::CertifiedAlarm => Ok(self.registration.positive),
+            ProbeOutcome::NeedsRefinement => Err(Error::Incomplete),
+        }
+    }
+
     fn prediction(&self, observation: ProbeObservation, encoded_bytes: usize) -> Result<Prediction, Error> {
-        let forecast = match observation.outcome() {
-            ProbeOutcome::CertifiedQuiet => self.registration.negative,
-            ProbeOutcome::AtThreshold => self.registration.at_threshold,
-            ProbeOutcome::CertifiedAlarm => self.registration.positive,
-            ProbeOutcome::NeedsRefinement => return Err(Error::Incomplete),
-        };
+        let forecast = self.forecast_band(observation.outcome())?;
         Ok(Prediction { observation, forecast, domain: self.registration.domain,
             generation: self.registration.generation, policy_generation: self.registration.policy_generation,
             encoded_bytes })
