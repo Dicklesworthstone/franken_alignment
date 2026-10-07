@@ -1,14 +1,23 @@
 //! Explicit end-of-stream effects through the ORIGINAL native two-key workflow.
 //! A generation stop, exhausted output budget or process exit is never closure.
 use super::*;
+#[path = "finish/receipt.rs"]
+mod receipt;
+pub(super) use receipt::resume;
 
 pub(super) fn command(args: &[String], credibility: Option<&Path>) -> Result<(), String> {
-    if args.len() != 6 || args[0] != "create-generated" || args[4] != "--finish"
-        || args[3].starts_with("--") || credibility.is_some() {
+    let receipt_only = args.len() == 5 && args[3] == "--resume-finish";
+    let new_finish = args.len() == 6 && args[4] == "--finish" && !args[3].starts_with("--");
+    if (!receipt_only && !new_finish) || args[0] != "create-generated" || credibility.is_some() {
         return Err(USAGE.into());
     }
-    let request = request_id(&args[5])?;
+    let request = request_id(&args[if receipt_only { 4 } else { 5 }])?;
     let config = Config::read(Path::new(&args[1]))?;
+    if receipt_only {
+        let loaded = recipe::load(Path::new(&args[2]), &config)?;
+        let result = resume(config, loaded, request, clock)?;
+        return emit(result, &mut std::io::stdout().lock());
+    }
     let peers = PeerProfile::read(Path::new(&args[3]))?;
     peers.check_host(&config)?;
     // This is the PREVIOUS message's original recipe, not another prompt or a

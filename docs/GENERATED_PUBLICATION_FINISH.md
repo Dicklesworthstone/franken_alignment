@@ -73,3 +73,44 @@ rustfmt and Clippy remain **UNEXECUTED**. Selected-file patch and byte/hash chec
 do not substitute for those gates. No bead, production gate or qualification is
 closed. The existing plan's explicit complete-message and separately reviewed
 finish semantics are unchanged; this is their runnable consumer.
+
+## Receipt recovery after closure or a lost reply
+
+```sh
+supervise_publication create-generated CONFIG ORIGINAL_RECIPE --resume-finish FINISH_REQUEST_ID
+```
+
+This separate receipt-only form accepts no reviewer profile and opens no approval
+or stop listener. The same independently supplied original message recipe and
+native deployment are required. The native `decoder_text_finish_request` selector
+checks the retained finish's entire prefix and target against the named message's
+original execution receipt, including recorded cancellation or admission refusal.
+It returns the original deadline and policy epoch, not new values derived from the
+recipe lifetime or a newer stream state. An unrelated message, missing request or
+conflicting predecessor is not treated as permission to create a new finish.
+
+The exact recorded finish envelope restores a process-local actor-wire polling
+ticket. Its retry must leave the original journal revision unchanged. A changed
+deadline cannot acquire that ticket; a bare numeric Poll cannot bypass custody.
+Only then does the existing query-only reconciliation consumer inspect any
+unresolved dispatch and emit the original restricted response. A terminal receipt
+needs no current source, helper process, human key or clock sample. Unresolved
+work can require fresh time for native settlement, but never a resend. The decoder
+remains paused, and no numerical continuation or new finish preparation occurs.
+
+Exclusive opening still replays bounded numerical history and appends its recovery
+fence; this is not a claim of zero I/O or no recomputation. A later mismatch can
+follow that fence. Storage failures, exhausted capacity and independent deployment
+mismatches refuse rather than enlarging limits or using an unchecked reader.
+Rejected closure remains rejected and leaves prior disclosure charged. A failed
+stdout write cannot repeat closure, alter its canonical image or manufacture a
+successful finish. Current-source files may be absent; original recipe/model files
+are still necessary for exact bootstrap validation.
+
+Six further regression functions cover successful/rejected receipts without live
+source/helper/clock dependencies, original deadline preservation, mismatched
+predecessors and nonfinish IDs, exact local-ticket restoration after expiry,
+failed output with byte-stable storage, missing stores and closed mode parsing.
+Together the two increments add twelve functional regression functions. All are
+UNEXECUTED under the remote-tooling limitation above; no prior test is weakened
+and no production gate or bead is closed.

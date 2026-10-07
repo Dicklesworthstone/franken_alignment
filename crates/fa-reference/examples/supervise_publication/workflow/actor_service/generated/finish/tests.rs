@@ -174,3 +174,6 @@ fn finish_option_is_explicit_and_cannot_mix_with_generation_or_receipt_modes() {
     // Valid syntax reaches file loading, not the create/continue mode fallback.
     assert_ne!(super::super::command(&args, None).unwrap_err(), USAGE);
 }
+
+#[path = "tests/receipts.rs"]
+mod receipts;
