@@ -317,7 +317,8 @@ impl FileOversight {
         if self.action_consistency_required() && matches!(&event,
             Event::Consistency(consistency::ConsistencyEvent::Forecast(..) | consistency::ConsistencyEvent::ForecastRequest(..)
                 | consistency::ConsistencyEvent::ForecastHosted(..) | consistency::ConsistencyEvent::ForecastHostedRequest(..)
-                | consistency::ConsistencyEvent::ForecastLearned(..) | consistency::ConsistencyEvent::ForecastLearnedRequest(..))
+                | consistency::ConsistencyEvent::ForecastLearned(..) | consistency::ConsistencyEvent::ForecastLearnedRequest(..)
+                | consistency::ConsistencyEvent::ForecastOwnedLearned(..) | consistency::ConsistencyEvent::ForecastOwnedLearnedRequest(..))
             | Event::Core(BaseEvent::Propose(..) | BaseEvent::SubmitRequest(..)) | Event::TextMessage(..)) {
             // Entering prediction/observation cannot unwind back to an older
             // permitting evidence state. Only this commit acknowledgment clears it.

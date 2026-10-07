@@ -5,6 +5,7 @@
 mod config;
 mod recovery;
 mod outcome;
+pub(in super::super) mod owned;
 pub(in super::super) use outcome::complete_event;
 pub use config::FileLearnedConsistencyConfig;
 pub use recovery::FileLearnedConsistencyRequirement;
@@ -157,7 +158,9 @@ impl FileConsistencyObserver {
         if host.fault.is_some() { return Err(JournalError::Unavailable); }
         if !Rc::ptr_eq(&self.issuer, &host.issuer) { return Err(Error::Binding.into()); }
         if revision != host.revision() { return Err(Error::Stale.into()); }
-        if !host.learned_action_consistency_required() { return Err(Error::Binding.into()); }
+        if !host.learned_action_consistency_required() || host.owned_learned_action_consistency_required() {
+            return Err(Error::Binding.into());
+        }
         Ok(())
     }
 }

@@ -21,6 +21,8 @@ use std::rc::Rc;
 #[derive(Clone)]
 pub(super) enum ConsistencyEvent {
     Enable(Rc<FileConsistencyConfig>),
+    ForecastOwnedLearned(u64, u64, Option<Rc<[u8]>>),
+    ForecastOwnedLearnedRequest(u64, u64, Option<Rc<[u8]>>),
     EnableLearned(learned::Configuration),
     ForecastLearned(u64, u64, crate::action::consequence::activation::probe::learned::KvRow, learned::Capture),
     ForecastLearnedRequest(u64, u64, crate::action::consequence::activation::probe::learned::KvRow, learned::Capture),

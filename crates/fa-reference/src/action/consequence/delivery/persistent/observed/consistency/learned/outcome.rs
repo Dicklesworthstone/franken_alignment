@@ -9,17 +9,19 @@ pub(super) const MAX_BYTES: usize = 256;
 pub(in super::super::super) fn complete_event(event: &mut Event, transition: &Transition,
     broker: &OversightBroker) -> Result<bool, Error>
 {
-    let capture = match event {
+    let saved = match event {
         Event::Consistency(ConsistencyEvent::ForecastLearned(_, _, _, capture)
-            | ConsistencyEvent::ForecastLearnedRequest(_, _, _, capture)) => capture,
+            | ConsistencyEvent::ForecastLearnedRequest(_, _, _, capture)) => &mut capture.outcome,
+        Event::Consistency(ConsistencyEvent::ForecastOwnedLearned(_, _, saved)
+            | ConsistencyEvent::ForecastOwnedLearnedRequest(_, _, saved)) => saved,
         _ => return Ok(false),
     };
     let Transition::LearnedConsistencyForecast(result) = transition else { return Err(Error::Binding); };
     let bytes = witness(result, broker)?;
-    if capture.outcome.as_ref().is_some_and(|saved| saved.as_ref() != bytes.as_slice()) {
+    if saved.as_ref().is_some_and(|saved| saved.as_ref() != bytes.as_slice()) {
         return Err(Error::Binding);
     }
-    capture.outcome = Some(Rc::from(bytes));
+    *saved = Some(Rc::from(bytes));
     Ok(true)
 }
 

@@ -15,13 +15,15 @@ impl Machine {
         self.check_consistency_route(event)?;
         if let Event::Consistency(ConsistencyEvent::ForecastRequest(request, ..)
             | ConsistencyEvent::ForecastHostedRequest(request, ..)
-            | ConsistencyEvent::ForecastLearnedRequest(request, ..)) = event {
+            | ConsistencyEvent::ForecastLearnedRequest(request, ..)
+            | ConsistencyEvent::ForecastOwnedLearnedRequest(request, ..)) = event {
             self.preflight_forecast_request(*request)?;
         }
         if self.consistency.is_none() { return Ok(()); }
         if matches!(event, Event::Consistency(ConsistencyEvent::Forecast(..) | ConsistencyEvent::ForecastRequest(..)
             | ConsistencyEvent::ForecastHosted(..) | ConsistencyEvent::ForecastHostedRequest(..)
-            | ConsistencyEvent::ForecastLearned(..) | ConsistencyEvent::ForecastLearnedRequest(..))
+            | ConsistencyEvent::ForecastLearned(..) | ConsistencyEvent::ForecastLearnedRequest(..)
+            | ConsistencyEvent::ForecastOwnedLearned(..) | ConsistencyEvent::ForecastOwnedLearnedRequest(..))
             | Event::Core(BaseEvent::Propose(..) | BaseEvent::SubmitRequest(..))) {
             self.check_decoder_admission(event)?;
             if !self.clock_ready { return Err(Error::Incomplete); }
@@ -60,8 +62,13 @@ impl Machine {
                 if self.consistency.is_some() { return Err(Error::Duplicate); }
                 if !self.actions.is_empty() || self.requests.len() != 0 || !self.sessions.is_empty()
                     || self.broker.stop_receipt().is_some() { return Err(Error::WrongState); }
-                self.broker.enable_learned_action_consistency_with_limits(config.native()?,
-                    config.lifetime_budget(), config.max_retained_source_bytes())?;
+                if config.uses_owned_generation() {
+                    self.broker.enable_owned_learned_action_consistency_with_limits(config.native()?,
+                        config.lifetime_budget(), config.max_retained_source_bytes())?;
+                } else {
+                    self.broker.enable_learned_action_consistency_with_limits(config.native()?,
+                        config.lifetime_budget(), config.max_retained_source_bytes())?;
+                }
                 if let Some(profile) = config.consistency().stream_message_profile() {
                     self.broker.require_stream_message_consistency(profile)?;
                 }
@@ -87,6 +94,22 @@ impl Machine {
                     self.consistency_request = Some((*request, attempt));
                 }
                 source.verify_outcome(&result, &self.broker)?;
+                Ok(Transition::LearnedConsistencyForecast(Box::new(result)))
+            }
+            ConsistencyEvent::ForecastOwnedLearned(attempt, revision, saved) => {
+                if !self.clock_ready || self.decoder_paused() { return Err(Error::Incomplete); }
+                if self.broker.stop_receipt().is_some() { return Err(Error::WrongState); }
+                let result = self.broker.forecast_owned_learned_action(*attempt, *revision);
+                super::super::consistency::learned::owned::verify_witness(saved.as_deref(), &result, &self.broker)?;
+                Ok(Transition::LearnedConsistencyForecast(Box::new(result)))
+            }
+            ConsistencyEvent::ForecastOwnedLearnedRequest(request, revision, saved) => {
+                let attempt = self.preflight_forecast_request(*request)?;
+                let result = self.broker.forecast_owned_learned_action(attempt, *revision);
+                if result.as_ref().is_ok_and(|report| report.prediction().is_ok()) {
+                    self.consistency_request = Some((*request, attempt));
+                }
+                super::super::consistency::learned::owned::verify_witness(saved.as_deref(), &result, &self.broker)?;
                 Ok(Transition::LearnedConsistencyForecast(Box::new(result)))
             }
             ConsistencyEvent::Forecast(attempt, revision, frame) => {
@@ -142,6 +165,15 @@ impl Machine {
     /// No unrelated request or trusted raw proposal may consume a keyed forecast.
     pub(super) fn check_consistency_route(&self, event: &Event) -> Result<(), Error> {
         self.check_pre_output_route(event)?;
+        // An owned archive cannot acquire a stand-in capture through any legacy
+        // event. Conversely, owned events cannot relabel a supplied-source lane.
+        let owned = self.broker.owned_learned_consistency_required();
+        if owned && matches!(event, Event::Consistency(ConsistencyEvent::Forecast(..)
+            | ConsistencyEvent::ForecastRequest(..) | ConsistencyEvent::ForecastHosted(..)
+            | ConsistencyEvent::ForecastHostedRequest(..) | ConsistencyEvent::ForecastLearned(..)
+            | ConsistencyEvent::ForecastLearnedRequest(..))) { return Err(Error::Binding); }
+        if !owned && matches!(event, Event::Consistency(ConsistencyEvent::ForecastOwnedLearned(..)
+            | ConsistencyEvent::ForecastOwnedLearnedRequest(..))) { return Err(Error::Binding); }
         let Some((request, attempt)) = self.consistency_request else { return Ok(()); };
         match event {
             Event::Core(BaseEvent::Propose(..)) => Err(Error::Binding),

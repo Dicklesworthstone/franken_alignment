@@ -34,6 +34,14 @@ pub(in super::super) fn write(w: &mut Writer, event: &ConsistencyEvent) -> Resul
         ConsistencyEvent::ForecastLearnedRequest(request, revision, row, source) => {
             w.u8(9)?; w.u64(*request)?; w.u64(*revision)?; learned::write_row(w, *row)?; source.write(w)?;
         }
+        ConsistencyEvent::ForecastOwnedLearned(attempt, revision, witness) => {
+            w.u8(10)?; w.u64(*attempt)?; w.u64(*revision)?;
+            w.blob(witness.as_deref().unwrap_or(&[]))?;
+        }
+        ConsistencyEvent::ForecastOwnedLearnedRequest(request, revision, witness) => {
+            w.u8(11)?; w.u64(*request)?; w.u64(*revision)?;
+            w.blob(witness.as_deref().unwrap_or(&[]))?;
+        }
         ConsistencyEvent::Unavailable => w.u8(2)?,
         ConsistencyEvent::ForecastRequest(request, actor_revision, frame) => {
             w.u8(3)?; w.u64(*request)?; w.u64(*actor_revision)?; w.blob(&frame.encode_initial(23)?)?;
@@ -56,6 +64,8 @@ pub(in super::super) fn read(r: &mut Reader<'_>) -> Result<ConsistencyEvent, Err
         7 => ConsistencyEvent::EnableLearned(learned::Configuration::read(r)?),
         8 => ConsistencyEvent::ForecastLearned(r.u64()?, r.u64()?, learned::read_row(r)?, learned::Capture::read(r)?),
         9 => ConsistencyEvent::ForecastLearnedRequest(r.u64()?, r.u64()?, learned::read_row(r)?, learned::Capture::read(r)?),
+        10 => ConsistencyEvent::ForecastOwnedLearned(r.u64()?, r.u64()?, learned::owned::read_witness(r)?),
+        11 => ConsistencyEvent::ForecastOwnedLearnedRequest(r.u64()?, r.u64()?, learned::owned::read_witness(r)?),
         _ => return Err(Error::InvalidInput),
     })
 }
