@@ -185,3 +185,6 @@ fn continuation_options_reject_ambiguity_before_files_or_clock_and_never_become_
     assert!(continue_after(config, next(), &audience, 2, || panic!("same request must refuse before clock")).is_err());
     assert!(!root.0.join("store").exists());
 }
+
+#[path = "continuation/interrupted.rs"]
+mod interrupted;

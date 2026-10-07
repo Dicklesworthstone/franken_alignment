@@ -19,10 +19,10 @@ use fa_reference::action::consequence::delivery::persistent::JournalError;
 use std::io::Write;
 use std::path::Path;
 
-const USAGE: &str = "create-generated CONFIG GENERATION_RECIPE REVIEWER_PROFILE [--after REQUEST_ID] | create-generated CONFIG GENERATION_RECIPE --resume";
+const USAGE: &str = "create-generated CONFIG GENERATION_RECIPE REVIEWER_PROFILE [--after REQUEST_ID | --continue-generation] | create-generated CONFIG GENERATION_RECIPE --resume";
 
 pub(super) fn command(args: &[String], credibility: Option<&Path>) -> Result<(), String> {
-    if !matches!(args.len(), 4 | 6) || args[0] != "create-generated" || credibility.is_some() {
+    if !matches!(args.len(), 4 | 5 | 6) || args[0] != "create-generated" || credibility.is_some() {
         return Err(USAGE.into());
     }
     // Closed option admission precedes all configuration/model reads and I/O.
@@ -35,6 +35,11 @@ pub(super) fn command(args: &[String], credibility: Option<&Path>) -> Result<(),
         if id == 0 { return Err(USAGE.into()); }
         Some(id)
     } else { None };
+    let recover_generation = args.len() == 5;
+    if recover_generation && (args[4] != "--continue-generation" || args[3].starts_with("--")) {
+        return Err(USAGE.into());
+    }
+    if args[3].starts_with("--") && args[3] != "--resume" { return Err(USAGE.into()); }
     let config = Config::read(Path::new(&args[1]))?;
     if args[3] == "--resume" {
         let loaded = recipe::load(Path::new(&args[2]), &config)?;
@@ -47,6 +52,7 @@ pub(super) fn command(args: &[String], credibility: Option<&Path>) -> Result<(),
     let loaded = recipe::load(Path::new(&args[2]), &config)?;
     let result = match after {
         Some(request) => continue_after(config, loaded, &peers, request, clock)?,
+        None if recover_generation => continue_generation(config, loaded, &peers, clock)?,
         None => create(config, loaded, &peers, clock)?,
     };
     emit(result, &mut std::io::stdout().lock())
@@ -72,23 +78,32 @@ fn emit(result: RunResult, output: &mut impl Write) -> Result<(), String> {
 fn create<F>(config: Config, loaded: Loaded, peers: &PeerProfile, time: F)
     -> Result<RunResult, String>
 where F: FnMut() -> ElapsedTick {
-    run(config, loaded, peers, None, time)
+    run(config, loaded, peers, Start::New, time)
 }
 
 fn continue_after<F>(config: Config, loaded: Loaded, peers: &PeerProfile, after: u64, time: F)
     -> Result<RunResult, String>
 where F: FnMut() -> ElapsedTick {
-    run(config, loaded, peers, Some(after), time)
+    run(config, loaded, peers, Start::After(after), time)
 }
 
-// Creation and continuation share EVERY token/source/stop/review/publication step.
+fn continue_generation<F>(config: Config, loaded: Loaded, peers: &PeerProfile, time: F)
+    -> Result<RunResult, String>
+where F: FnMut() -> ElapsedTick {
+    run(config, loaded, peers, Start::RecoverGeneration, time)
+}
+
+#[derive(Clone, Copy)]
+enum Start { New, After(u64), RecoverGeneration }
+
+// All three modes share EVERY token/source/stop/review/publication step.
 // Only the initial owner and native intent differ; there is no second effect path.
 fn run<F>(mut config: Config, loaded: Loaded, peers: &PeerProfile,
-    after: Option<u64>, mut time: F) -> Result<RunResult, String>
+    origin: Start, mut time: F) -> Result<RunResult, String>
 where F: FnMut() -> ElapsedTick {
     peers.check_host(&config)?;
     loaded.check_host(&config)?;
-    if after.is_some_and(|request| request == 0 || request == loaded.request) {
+    if matches!(origin, Start::After(request) if request == 0 || request == loaded.request) {
         return Err("continuation needs a distinct nonzero prior request".into());
     }
     let start = time();
@@ -99,30 +114,35 @@ where F: FnMut() -> ElapsedTick {
     // Exclusive listener setup precedes store creation. It remains the SAME
     // stop service during inference, helper review and independent approval.
     let mut control = Control::new(&config, loaded.request, Some(peers))?;
-    let (mut host, reviewer) = if after.is_some() {
+    let (mut host, reviewer) = if !matches!(origin, Start::New) {
         recovery::open(&config, &loaded)?
     } else {
         FileOversight::create_generated_text_stream_with_reserve(
             &config.store, config.profile.clone(), loaded.stream, loaded.decoder.clone(),
             loaded.tokenizer.clone(), RecoveryReserve::terminal()).map_err(debug)?
     };
-    let prepared = if let Some(after) = after {
-        // Refuse ALL reused request IDs before spending native work. A failed
-        // earlier attempt is not a fresh ID, and --after never means retry.
-        match host.request_status(loaded.request) {
-            Err(JournalError::Contract(Error::Missing)) => {},
-            Ok(_) => return Err("native request already exists; use --resume for its original receipt".into()),
-            Err(error) => return Err(debug(error)),
+    let prepared = match origin {
+        Start::New => {
+            host.enable_file_source(host.revision(), config.source_policy).map_err(debug)?;
+            None
         }
-        host.check_credibility().map_err(debug)?;
-        // Pure original preflight requires the latest receipt-confirmed prefix,
-        // exact current numerical predecessor and enough remaining context/bytes.
-        // It works while recovery is paused, but cannot authorize computation.
-        Some((after, host.prepare_decoder_text_continuation(after, loaded.generation,
-            loaded.text.clone()).map_err(debug)?))
-    } else {
-        host.enable_file_source(host.revision(), config.source_policy).map_err(debug)?;
-        None
+        Start::After(_) | Start::RecoverGeneration => {
+            // BOTH modes make a first submission, never retry an existing effect.
+            match host.request_status(loaded.request) {
+                Err(JournalError::Contract(Error::Missing)) => {},
+                Ok(_) => return Err("native request already exists; use --resume for its original receipt".into()),
+                Err(error) => return Err(debug(error)),
+            }
+            host.check_credibility().map_err(debug)?;
+            let command = match origin {
+                Start::After(after) => host.prepare_decoder_text_continuation(after,
+                    loaded.generation, loaded.text.clone()).map_err(debug)?,
+                Start::RecoverGeneration => host.prepare_decoder_text_publication_recovery(
+                    loaded.generation, &loaded.text).map_err(debug)?,
+                Start::New => unreachable!("creation has no recovered intent"),
+            };
+            Some(command)
+        }
     };
     let (port, supervisor) = host.into_generated_text_actor_gateway().map_err(debug)?;
     let mut driver = FileSupervisedDriver::new(supervisor);
@@ -133,14 +153,26 @@ where F: FnMut() -> ElapsedTick {
         {
             let mut host = driver.supervisor_mut().host_mut().map_err(debug)?;
             let current = host.decoder_inspection().map_err(debug)?.numerical;
-            if let Some((after, command)) = prepared {
+            if let Some(command) = prepared {
                 // Fresh evidence and its post-read clock were committed above.
-                // Resume does not reset KV state, sampler, monitoring spend or
-                // generation IDs. Native begin rechecks the entire prepared cut.
+                // Resume preserves original KV/RNG, lifetime work and the entire
+                // retained generation budget. It does not begin another intent.
                 let revision = host.revision();
                 host.resume_decoder(revision, current.actor_revision, current.position).map_err(debug)?;
-                let revision = host.revision();
-                host.begin_decoder_text_continuation(revision, after, command).map_err(debug)?;
+                match origin {
+                    Start::After(after) => {
+                        let revision = host.revision();
+                        host.begin_decoder_text_continuation(revision, after, command).map_err(debug)?;
+                    }
+                    Start::RecoverGeneration => {
+                        // Recheck after source/resume, but do NOT recreate the
+                        // command at the later numerical position or renew limits.
+                        let original = host.prepare_decoder_text_publication_recovery(
+                            loaded.generation, &loaded.text).map_err(debug)?;
+                        if original != command { return Err("recovered native intent changed".into()); }
+                    }
+                    Start::New => unreachable!("creation has no recovered intent"),
+                }
             } else {
                 let command = FileTextGenerationCommand::new(loaded.generation,
                     current.actor_revision, current.position, loaded.text.clone()).map_err(debug)?;

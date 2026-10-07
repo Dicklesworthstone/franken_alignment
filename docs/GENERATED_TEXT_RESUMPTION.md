@@ -55,3 +55,52 @@ tests, rustfmt and Clippy remain UNEXECUTED. Source/hash/whitespace inspection
 is not execution evidence. No production gate, deployment assurance or bead is
 closed. This extends the existing L1/L5 recovery consumer without changing native
 journal formats, the dependency universe or the original authority semantics.
+
+## Runnable recovery of an unsubmitted generation
+
+```sh
+supervise_publication create-generated CONFIG GENERATION_RECIPE REVIEWER_PROFILE --continue-generation
+```
+
+This explicit Linux mode opens the original generated stream through the same
+pinned model/monitor/sampler/tokenizer/reserve opener used by receipt recovery.
+It requires a fresh publication request ID and the already recorded generation
+selected by the native preflight above. No missing store or intent is created,
+no budget is enlarged, and a previously submitted generation cannot be selected
+under another unused request ID. A refused preflight can follow the opener's
+original recovery-fence write; refusal does not imply the journal was unchanged.
+
+The same independent stop listener is installed before opening the domain. After
+selection, the original source is freshly read, its post-read clock is recorded,
+and the exact numerical predecessor is explicitly resumed. Selection is rechecked
+at that point; the existing command is not begun again or rebased onto a later
+position. The shared original loop advances from its retained generation revision.
+A naturally completed but unsubmitted Control-stop result takes no further token
+step. The full helper review, independent human approval, automatic authorization,
+checked publication, reconciliation and restricted response emitter remain the
+same consumer as creation and fresh continuation.
+
+Helpers must be independently configured for the post-recovery policy epoch;
+neither old helper expectations nor old human keys are accepted as fresh approval.
+A missing current source stops before another numerical token. A fresh human
+rejection leaves the numerical result as history without publishing it. Errors
+after driver setup use the existing terminal stop/drain and child-cleanup path.
+The synchronous opener still replays bounded original numerical history; the
+listener is not a watchdog inside that replay and this is not an OS process kill.
+
+The three operations remain distinct and cannot be combined: `--resume` observes
+an already submitted effect, `--after REQUEST_ID` starts a NEW generation after a
+confirmed message, and `--continue-generation` continues the original UNSUBMITTED
+intent. A future publication ID/deadline was not part of that intent; the operator
+chooses its first effect admission explicitly. None renews an old effect's rights.
+This mode is for interrupted work, not recovery from an acknowledged terminal stop.
+
+Seven further regression functions use actual native model computation, private
+peer-checked sockets, independently epoch-pinned helper subprocesses and original
+publication. They cover all five unstarted/prompt/sample/complete cuts through
+one publication and receipt recovery; human rejection; wrong/absent intent and
+budget; previously submitted output under a new request; unavailable fresh source;
+held/cancelled/token-limited results; and closed, mutually exclusive CLI options.
+The model and choices are synthetic fixtures, not detector calibration evidence.
+All fourteen new regression functions remain UNEXECUTED under the RCH limitation
+above; no existing assertions, helper expectations or production gates are relaxed.
