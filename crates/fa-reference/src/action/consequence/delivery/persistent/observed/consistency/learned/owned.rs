@@ -136,3 +136,6 @@ mod tests;
 #[cfg(test)]
 #[path = "owned/required_tests.rs"]
 mod required_tests;
+
+#[cfg(test)]
+mod temporal;
