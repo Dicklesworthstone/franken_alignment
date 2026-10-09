@@ -71,3 +71,35 @@ The required targeted RCH test and full gate were attempted but could not launch
 because `rch` is absent (exit 127). Compilation, tests, rustfmt and Clippy remain
 unexecuted. Selected-source hash/patch checks are not a full-checkout build. No
 bead or qualification gate is closed by this implementation.
+
+## Guarded read-only inspection and composed consumers
+
+`read_predictive_guarded_with_owned_learned_consistency` returns
+`FileOwnedPredictiveSnapshot`: the original publication, learned likelihood/work,
+retained inventory, pending request and optional evaluation report from one
+canonical byte image. It uses the same independent configuration, inventory and
+final guard/floor validators. The anchored read variant verifies the original
+externally retained prefix against that image before replay, not another file read.
+
+Inspection works beside a locked or poisoned writer. It neither cleans storage,
+fences, resends, refreshes policy, resumes inference, provisions roles, nor calls a
+historical image fresh. An unacknowledged visible replacement may be newer than
+live RAM; the snapshot reports only the verified image it actually reconstructed.
+A failed independent check returns no partial or unchecked publication projection.
+
+Four additional regressions exercise all five original Store barriers while a
+writer holds its lock; current-policy reacquisition and original computed model
+identity requalification with recovered observer custody; native-reviewed unknown
+dispatch settlement both before and after visible publication; and a receipt-
+confirmed stream append followed by guarded restart and a separately forecast,
+native-reviewed, newly human-approved finish. The old human key fails on finish,
+the old identity/forecast roles fail in the new owner, numerical output is not
+regenerated, and unknown outcomes stay charged. These fixtures execute original
+components when run; synthetic parameters are not evidence of calibration or
+independent model judgment. All eleven new regression functions remain unexecuted.
+
+This is an explicit guarded entry point, not an automatic upgrade of the older
+basic recovery API or a claim to authenticate external requirements. Existing
+raw-predictive, sampled-decoder and supplied-capture paths are left unchanged.
+The mandatory RCH targeted/full commands were attempted again for the final
+source, but cannot launch because `rch` is absent. The execution gate stays open.

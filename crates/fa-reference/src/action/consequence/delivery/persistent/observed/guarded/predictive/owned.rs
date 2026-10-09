@@ -1,5 +1,7 @@
 //! Original guarded recovery with an independently pinned OWNED K/V predictor.
 //! No supplied capture map, imported fidelity bounds or second replay engine.
+mod inspection;
+pub use inspection::FileOwnedPredictiveSnapshot;
 use super::{EvaluationProtocol, FilePredictiveRoles, FileRecoveryRequirements};
 use super::super::{FileOversightRoles, anchored::FileHistoryAnchor, learned::check_profile};
 use super::super::super::{Event, FileOversight, FileOversightProfile, JournalError, Machine};

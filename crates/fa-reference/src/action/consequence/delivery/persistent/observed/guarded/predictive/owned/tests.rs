@@ -275,3 +275,5 @@ fn original_numerical_and_forecast_witness_corruption_are_sticky_replay_failures
         ready(&mut run); assert_eq!(bytes(&root), disk);
     }
 }
+
+mod lifecycle;
