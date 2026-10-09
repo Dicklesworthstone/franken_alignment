@@ -118,7 +118,7 @@ pub(in super::super::super) fn verify_witness(saved: Option<&[u8]>,
     Ok(())
 }
 
-fn bind_owned_history(events: &mut [Event], generation: &FileLearnedConfig,
+pub(in super::super::super) fn bind_owned_history(events: &mut [Event], generation: &FileLearnedConfig,
     predictor: &FileLearnedConsistencyConfig) -> Result<(), Error>
 {
     if !predictor.uses_owned_generation() { return Err(Error::Binding); }

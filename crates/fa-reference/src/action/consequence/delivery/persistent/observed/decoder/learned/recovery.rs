@@ -82,6 +82,22 @@ impl FileOversight {
 }
 
 impl FileLearnedRecovery {
+    // Internal typed composition before the first reducer call. The original
+    // binder compares BOTH independent recipes, rejects supplied captures and
+    // changes only runtime bindings, never canonical event/witness bytes. No
+    // public callback or partially replayed state can install new expectations.
+    pub(in super::super::super) fn bind_owned_prediction(mut self,
+        prediction: &super::super::super::consistency::learned::FileLearnedConsistencyConfig)
+        -> Result<Self, JournalError>
+    {
+        if self.replayed != 0 || self.status != FileLearnedRecoveryStatus::Replaying {
+            return Err(Error::WrongState.into());
+        }
+        super::super::super::consistency::learned::owned::bind_owned_history(
+            &mut self.events, &self.expected, prediction)?;
+        Ok(self)
+    }
+
     pub fn progress(&self) -> FileLearnedRecoveryProgress {
         FileLearnedRecoveryProgress { replayed_events: self.replayed,
             total_events: self.events.len(), status: self.status }
