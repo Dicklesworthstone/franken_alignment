@@ -122,6 +122,18 @@ pub(in super::super::super) fn bind_owned_history(events: &mut [Event], generati
     predictor: &FileLearnedConsistencyConfig) -> Result<(), Error>
 {
     if !predictor.uses_owned_generation() { return Err(Error::Binding); }
+    if let Some(pinned) = generation.required_owned_pre_output_forecast() {
+        if pinned != predictor { return Err(Error::Binding); }
+        // One independently bound learned Enable owns the predictor too. There
+        // must be no standalone substitute, second lane or capture importer.
+        // Do not fabricate/filter events to satisfy the standalone binder.
+        if events.iter().any(|event| matches!(event,
+            Event::Consistency(ConsistencyEvent::Enable(_) | ConsistencyEvent::EnableLearned(_)
+                | ConsistencyEvent::ForecastLearned(..) | ConsistencyEvent::ForecastLearnedRequest(..)))) {
+            return Err(Error::Binding);
+        }
+        return bind_history(events, generation);
+    }
     // Reject all supplied-capture records. There is no archived-source import or
     // alternate hydration route for this mode. Both comparisons precede replay.
     super::recovery::bind_events(events, predictor, &BTreeMap::new())?;

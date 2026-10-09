@@ -83,6 +83,7 @@ impl Machine {
                 }
                 if !self.publication_guard { self.enable_publication_guard()?; }
                 let forecast = config.required_pre_output_forecast().cloned();
+                let owned_forecast = config.required_owned_pre_output_forecast().cloned();
                 self.learned = Some(LearnedState { config, paused: false, pending: None, checkpoints: checkpoint::CheckpointHistory::default(), sidecar_outcomes: std::collections::BTreeMap::new(), sidecars: std::collections::BTreeMap::new() });
                 if let Some(forecast) = forecast {
                     // One independently bound Enable owns BOTH installations.
@@ -91,6 +92,13 @@ impl Machine {
                     // can be omitted or replaced to weaken this pinned recipe.
                     self.apply(&Event::Consistency(super::super::consistency::ConsistencyEvent::Enable(
                         Rc::new(forecast))))?;
+                }
+                if let Some(forecast) = owned_forecast {
+                    // The exact recipe installs the original owned-code gate in
+                    // this SAME transition, before a numerical owner can escape.
+                    // Constructors make raw and owned pins mutually exclusive.
+                    self.apply(&Event::Consistency(super::super::consistency::ConsistencyEvent::EnableLearned(
+                        super::super::consistency::learned::Configuration::new(forecast))))?;
                 }
                 Ok(Transition::Unit)
             }

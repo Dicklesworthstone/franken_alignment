@@ -1,5 +1,6 @@
 //! Pin the ORIGINAL predictor and required timing in the independent recipe.
 //! Recovery compares these bytes before constructing the configured runtime.
+mod owned;
 use super::{FileLearnedConfig, Writer, DOMAIN, MAX_CONFIG_BYTES};
 use crate::action::consequence::delivery::persistent::observed::{FileOversight,
     FileOversightProfile, FileHumanReviewer, JournalError,
@@ -21,7 +22,7 @@ impl FileLearnedConfig {
     pub fn with_required_pre_output_forecast(mut self, forecast: FileConsistencyConfig)
         -> Result<Self, Error>
     {
-        if self.pre_output_forecast.is_some() { return Err(Error::Duplicate); }
+        if self.pre_output_forecast.is_some() || self.owned_pre_output_forecast.is_some() { return Err(Error::Duplicate); }
         if !self.sidecar_required || !self.is_text() || !forecast.requires_pre_output_forecast()
             || self.text_stream_profile() != forecast.stream_message_profile() {
             return Err(Error::Binding);
@@ -48,7 +49,8 @@ impl FileOversight {
     /// this entry point additionally returns the separate observer after success.
     /// No intermediate generic owner or live role-reissue API is exposed.
     ///
-    /// The config selects raw text versus its exact cumulative stream profile.
+    /// The config selects raw text versus its exact cumulative stream profile,
+    /// and either the pinned raw-residual or owned learned-K/V predictor.
     /// No clock, forecast, sampled output, request or effect key is invented.
     /// Keep observer and human reviewer separate from actor/helper custody.
     ///
@@ -60,7 +62,8 @@ impl FileOversight {
         profile: FileOversightProfile, config: FileLearnedConfig)
         -> Result<(Self, FileHumanReviewer, FileConsistencyObserver), JournalError>
     {
-        if config.required_pre_output_forecast().is_none() { return Err(Error::Binding.into()); }
+        if config.required_pre_output_forecast().is_none()
+            && config.required_owned_pre_output_forecast().is_none() { return Err(Error::Binding.into()); }
         let (host, reviewer) = if config.text_stream_profile().is_some() {
             Self::create_with_learned_text_stream(directory, profile, config)?
         } else {
@@ -80,7 +83,8 @@ impl FileOversight {
     pub fn enable_learned_generation_with_pre_output_forecast(&mut self, revision: u64,
         config: FileLearnedConfig) -> Result<FileConsistencyObserver, JournalError>
     {
-        if config.required_pre_output_forecast().is_none() { return Err(Error::Binding.into()); }
+        if config.required_pre_output_forecast().is_none()
+            && config.required_owned_pre_output_forecast().is_none() { return Err(Error::Binding.into()); }
         self.enable_learned_generation(revision, config)?;
         Ok(FileConsistencyObserver { issuer: Rc::clone(&self.issuer) })
     }

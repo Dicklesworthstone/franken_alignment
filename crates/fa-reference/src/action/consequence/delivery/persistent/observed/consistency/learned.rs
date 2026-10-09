@@ -27,7 +27,7 @@ pub(in super::super) struct Configuration {
     runtime: Option<Rc<FileLearnedConsistencyConfig>>,
 }
 impl Configuration {
-    pub(super) fn new(config: FileLearnedConsistencyConfig) -> Self {
+    pub(in super::super) fn new(config: FileLearnedConsistencyConfig) -> Self {
         Self { bytes: Rc::from(config.encoded()), runtime: Some(Rc::new(config)) }
     }
     pub(in super::super) fn runtime(&self) -> Result<&FileLearnedConsistencyConfig, Error> {
