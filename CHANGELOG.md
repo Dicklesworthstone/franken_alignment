@@ -1,5 +1,17 @@
 # Changelog
 
+## 2026-10-10: versioned forecast continuation after learned reset
+
+- Add an independently pinned recipe option for raw and owned pre-output
+  predictors to follow the original learned owner's restored source streams.
+- Require a new accepted source event and advance the original forecast frontier
+  by stream and sequence without refreshing evidence, jobs, work or pending state.
+  Keep legacy recipe bytes and acknowledged forecast refusals unchanged on replay.
+- Six public integration tests pass locally with actual reset, original RNG and
+  sampling receipts, generated-request admission, exact recipe substitution,
+  retained forecast loss, lifetime exhaustion and abandoned-output refusal.
+  This is development validation, not detector or runtime qualification.
+
 ## 2026-10-10: composed learned-reset recovery
 
 - Add sealed cooperative and anchored learned recovery with the complete

@@ -1,5 +1,24 @@
 # Implementation status · design revision 0.3
 
+## 2026-10-10: forecast continuation on original reset successors
+
+New learned text recipes can explicitly select
+`with_forecast_reset_successors` after pinning their required raw-residual or
+owned-K/V predictor. The original broker follows only its own restored learned
+source and retains one lifetime forecast process. A fresh accepted prefill token
+must establish the new source; the original pending/lost-coverage, sampling,
+acquisition-budget and authority restrictions continue to apply. Existing
+recipes retain their original exact-stream behavior and historical refusals.
+
+All six public `forecast_reset_successors` tests passed locally on
+`nightly-2026-09-21`. They exercise actual original numerical execution, both
+forecast source modes, pending-reset recovery, exact sampled-token/RNG receipts,
+generated-request admission, original-history replay and causal refusal cases.
+This requires a checkpoint before prompt completion and does not enable a fresh
+output attempt after sampled work is abandoned. It does not qualify empirical
+forecast calibration, dependencies or deployment. See the
+[reset-successor forecast contract](docs/LEARNED_FORECAST_RESET_SUCCESSORS.md).
+
 ## 2026-10-10: composed learned-reset recovery
 
 Evaluated learned generation now supports cooperative and anchored recovery while

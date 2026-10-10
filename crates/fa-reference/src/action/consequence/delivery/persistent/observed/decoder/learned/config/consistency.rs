@@ -1,6 +1,7 @@
 //! Pin the ORIGINAL predictor and required timing in the independent recipe.
 //! Recovery compares these bytes before constructing the configured runtime.
 mod owned;
+mod reset;
 use super::{FileLearnedConfig, Writer, DOMAIN, MAX_CONFIG_BYTES};
 use crate::action::consequence::delivery::persistent::observed::{FileOversight,
     FileOversightProfile, FileHumanReviewer, JournalError,

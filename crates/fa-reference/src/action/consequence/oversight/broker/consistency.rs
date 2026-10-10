@@ -9,6 +9,7 @@ mod event;
 mod stopping;
 mod deadline;
 mod learned;
+mod reset;
 pub use learned::{LearnedConsistencyConfig, LearnedConsistencyObservation};
 use learned::{ForecastEvidence, ForecastRecord, LearnedLane};
 pub use deadline::ConsistencyDeadline;
@@ -89,6 +90,8 @@ pub(super) struct ConsistencyState {
     pending: Option<PendingForecast>,
     observations: BTreeMap<u64, ForecastRecord>,
     jobs: usize,
+    follow_learned_resets: bool,
+    last_stream: u64,
     last_sequence: u64,
     coverage_lost: bool,
     automatic_stop: Option<stopping::ConsistencyStopState>,
@@ -111,8 +114,9 @@ impl OversightBroker {
             || config.model.policy_generation() != self.delivery.controller().policy().generation()
         { return Err(Error::Binding); }
         let evidence = LikelihoodEvidence::new(config.alpha);
+        let last_stream = config.stream;
         self.consistency = Some(ConsistencyState { config, learned: None, hosted_layer: None, event_domain: ConsistencyEventDomain::PayloadPrefix, evidence, pending: None,
-            observations: BTreeMap::new(), jobs: 0, last_sequence: 0, coverage_lost: false, automatic_stop: None });
+            observations: BTreeMap::new(), jobs: 0, follow_learned_resets: false, last_stream, last_sequence: 0, coverage_lost: false, automatic_stop: None });
         Ok(())
     }
 
@@ -171,12 +175,20 @@ impl OversightBroker {
             return Err(Error::Stale);
         }
         let actor = self.delivery.controller().actor();
-        if identity.profile != state.config.model.profile() || identity.stream != state.config.stream
+        let expected_stream = if state.follow_learned_resets {
+            // The original owner alone publishes audited reset successors.
+            // Source-specific accessors already require its newest accepted
+            // event; no supplied frame can enter this opt-in source mode.
+            self.hosted_learned_observation()?.stream()
+        } else { state.config.stream };
+        if identity.profile != state.config.model.profile() || identity.stream != expected_stream
             || dimensions != state.config.model.dimensions()
             || identity.position.checked_add(1) != Some(actor.next_position())
             || identity.profile.model_generation != actor.profile().model_generation
         { return Err(Error::Binding); }
-        if identity.sequence <= state.last_sequence { return Err(Error::Stale); }
+        if identity.stream < state.last_stream
+            || (identity.stream == state.last_stream && identity.sequence <= state.last_sequence)
+        { return Err(Error::Stale); }
         let now = inspection.ledger.elapsed.ok_or(Error::Incomplete)?;
         let valid_until = ElapsedTick(now.0.checked_add(state.config.max_prediction_age_ticks).ok_or(Error::Overflow)?);
         let state = self.consistency.as_mut().expect("configured consistency lane");
@@ -184,6 +196,7 @@ impl OversightBroker {
         // state usable. Keep this gap outside actor checkpoints and policy state.
         if state.jobs >= state.config.max_predictions { state.coverage_lost = true; return Err(Error::Limit); }
         state.jobs += 1;
+        state.last_stream = identity.stream;
         state.last_sequence = identity.sequence;
         Ok(ForecastContext { epoch: inspection.ledger.epoch, created_at: now, valid_until })
     }

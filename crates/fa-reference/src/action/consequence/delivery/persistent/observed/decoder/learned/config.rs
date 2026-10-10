@@ -52,6 +52,7 @@ pub struct FileLearnedConfig {
     policy_source: Option<super::super::super::source::FileSourcePolicy>,
     pre_output_forecast: Option<super::super::super::consistency::FileConsistencyConfig>,
     owned_pre_output_forecast: Option<super::super::super::consistency::learned::FileLearnedConsistencyConfig>,
+    forecast_reset_successors: bool,
 }
 impl fmt::Debug for FileLearnedConfig {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -83,7 +84,7 @@ impl FileLearnedConfig {
         w.u64(source.monitor_generation)?;
         w.count(limits.evidence.token_ids)?; w.count(limits.evidence.score_words)?;
         w.count(limits.encoded_bytes)?; w.blob(&archive)?;
-        Ok(Self { model, source, limits, bytes: w.finish().into(), text: None, sidecar_required: false, automatic_stop: None, computed_identity_required: false, policy_source: None, pre_output_forecast: None, owned_pre_output_forecast: None })
+        Ok(Self { model, source, limits, bytes: w.finish().into(), text: None, sidecar_required: false, automatic_stop: None, computed_identity_required: false, policy_source: None, pre_output_forecast: None, owned_pre_output_forecast: None, forecast_reset_successors: false })
     }
     pub fn encoded_bytes(&self) -> usize { self.bytes.len() }
     pub(super) fn bytes(&self) -> &Rc<[u8]> { &self.bytes }

@@ -153,6 +153,11 @@ recipes still pin the original source stream and do not automatically accept a
 reset successor. Mediated and joint-evaluation profiles require their own complete
 contracts and cannot use the evaluated-only path as a fallback.
 
+New runs can independently select the
+[versioned forecast reset-successor recipe](LEARNED_FORECAST_RESET_SUCCESSORS.md)
+to continue from a clean checkpoint before prompt completion. This does not
+change the behavior of existing recipes or recover lost forecast coverage.
+
 The added public integration cases execute cooperative replay, exact protocol and
 guard failures, anchored reset, fresh evaluator custody, fresh identity and both
 publication keys. Eight additional unit regressions cover both predictor source
