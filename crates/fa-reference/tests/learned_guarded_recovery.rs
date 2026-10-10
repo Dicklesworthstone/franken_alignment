@@ -130,7 +130,7 @@ fn fresh_identity(host: &mut FileOversight, roles: &FileOversightRoles, id: u64,
         .unwrap().measurement.unwrap();
     let anchor = &expected.passport.anchors()[&10];
     let frame = SourceFrame::capture(FrameIdentity { profile: anchor.profile(), stream: anchor.stream(),
-        sequence: 1, position: 0 }, &[0.0]).unwrap();
+        sequence: id, position: 0 }, &[0.0]).unwrap();
     let revision = host.revision();
     observer.observe_anchor(host, revision, &check, 10, &frame, ElapsedTick(tick)).unwrap().measurement.unwrap();
     host.apply_identity_check(host.revision(), &check, sequence, epoch).unwrap();
@@ -142,8 +142,8 @@ fn spec(host: &FileOversight) -> ActionSpec {
         payload: b"visible".to_vec(), required_witnesses: Vec::new(), policy_epoch: host.inspect().control.ledger.epoch,
         deadline: ElapsedTick(100), units: 16 }
 }
-fn prepared(host: &mut FileOversight, attempt: u64, round: u64)
-    -> (fa_reference::action::FrozenAction, CommitteeInput, FilePermit, FileHumanRequest)
+fn staged(host: &mut FileOversight, attempt: u64)
+    -> (fa_reference::action::FrozenAction, CommitteeInput)
 {
     let action = host.propose(host.revision(), attempt, spec(host), snapshot()).unwrap();
     let contracts = profile().committee; let helper = &contracts.members()["reviewer"];
@@ -157,13 +157,24 @@ fn prepared(host: &mut FileOversight, attempt: u64, round: u64)
         policy_epoch: action.spec().policy_epoch, projected_originals: Vec::new() }, Vec::new()).unwrap();
     let input = CommitteeInput::capture(&action, &contracts, BTreeMap::from([("reviewer".into(), view)])).unwrap();
     host.record_inputs(host.revision(), attempt, 0, input.clone()).unwrap();
+    (action, input)
+}
+fn reviewed(host: &mut FileOversight, attempt: u64, round: u64, input: &CommitteeInput,
+    verdict: Verdict) -> Result<fa_reference::action::consequence::oversight::ObservedReceipt, JournalError>
+{
     host.begin_review(host.revision(), attempt, round, [9; 32], ReviewWindow {
         commit_by: ElapsedTick(10), reveal_by: ElapsedTick(20) }, snapshot()).unwrap();
     let salt = b"independent-fixture-salt";
-    host.commit_review(host.revision(), round, "reviewer", commitment(round, "reviewer", &[9; 32], Verdict::Allow, salt).unwrap()).unwrap();
+    host.commit_review(host.revision(), round, "reviewer", commitment(round, "reviewer", &[9; 32], verdict, salt).unwrap()).unwrap();
     host.open_reveals(host.revision(), round).unwrap();
-    host.reveal_review(host.revision(), round, "reviewer", Verdict::Allow, salt.to_vec()).unwrap();
-    host.finish_review(host.revision(), round, Some(&input), snapshot()).unwrap().unwrap();
+    host.reveal_review(host.revision(), round, "reviewer", verdict, salt.to_vec()).unwrap();
+    host.finish_review(host.revision(), round, Some(input), snapshot())?.map_err(Into::into)
+}
+fn prepared(host: &mut FileOversight, attempt: u64, round: u64)
+    -> (fa_reference::action::FrozenAction, CommitteeInput, FilePermit, FileHumanRequest)
+{
+    let (action, input) = staged(host, attempt);
+    reviewed(host, attempt, round, &input, Verdict::Allow).unwrap();
     let automatic = host.authorize(host.revision(), attempt, &input, snapshot()).unwrap();
     let human = host.request_human_approval(host.revision(), 1000 + attempt, attempt, &input, ElapsedTick(30)).unwrap();
     (action, input, automatic, human)
@@ -213,9 +224,18 @@ fn recovered_roles_enable_fresh_review_but_do_not_revive_old_keys_or_identity() 
     resume(&mut host, 2);
     assert_eq!(host.identity_status().unwrap(), IdentityStatus::Missing);
     assert_eq!(host.learned_generation_inspection().unwrap().numerical, n);
-    assert!(host.propose(host.revision(), 2, spec(&host), snapshot()).is_err());
+    // Proposals stage evidence without granting permission. Missing identity
+    // must block the actual permitting transition and its automatic key.
+    let (action, input) = staged(&mut host, 2);
+    assert_eq!(reviewed(&mut host, 2, 102, &input, Verdict::Allow).err(),
+        Some(JournalError::Contract(Error::Incomplete)));
+    assert!(host.authorize(host.revision(), 2, &input, snapshot()).is_err());
+    assert_eq!(host.inspect().executions, 0);
+    assert_eq!(host.inspect().control.ledger.charged, 0);
     fresh_identity(&mut host, &roles, 2, 2);
-    let (action, input, key, request) = prepared(&mut host, 2, 102);
+    reviewed(&mut host, 2, 103, &input, Verdict::Allow).unwrap();
+    let key = host.authorize(host.revision(), 2, &input, snapshot()).unwrap();
+    let request = host.request_human_approval(host.revision(), 1002, 2, &input, ElapsedTick(30)).unwrap();
     let before = host.revision();
     assert!(old_roles.human.approve(&mut host, before, &request).is_err());
     assert_eq!(host.revision(), before);
@@ -380,3 +400,5 @@ fn live_owner_lock_and_existing_directory_do_not_create_a_second_authority() {
 
 #[path = "learned_guarded_recovery/anchored.rs"]
 mod anchored;
+#[path = "learned_guarded_recovery/evaluated.rs"]
+mod evaluated;

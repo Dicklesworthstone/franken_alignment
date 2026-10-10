@@ -124,3 +124,39 @@ series has fifteen regression functions and three compile-fail examples. Existin
 first-increment regression bodies and original guard/prefix/reset/replay/fence
 algorithms are unchanged. The internal composition views are immutable and stop
 at the containing observed-owner implementation; none is a public escape hatch.
+
+## Evaluated and predictive learned profiles
+
+The evaluated profile now has its own sealed
+`FileEvaluatedLearnedRecovery`, obtained from
+`begin_open_evaluated_guarded_with_learned_generation` or its anchored variant.
+It pins the independent evaluation protocol, complete recovery requirements and
+learned recipe before replay, then checks the full contract before returning
+Ready and around any pending reset. Synchronous
+`open_evaluated_guarded_with_learned_generation` consumes the same cursor.
+The returned roles include the independent evaluator as well as the original
+human, identity and policy roles. Old evaluator tickets and roles cannot be reused.
+
+`FileEvaluatedLearnedRecovery`, `FilePredictiveLearnedRecovery` and
+`FileOwnedPredictiveRecovery` each expose `finish_pending_reset`. All three call
+the original private reset transition only after checking their own requirements,
+check those requirements again on the resulting candidate, and publish completion
+and the recovery fence through the same atomic replacement. Predictive recovery
+retains the exact raw or owned predictor, optional evaluator, source mode, timing
+and lifetime ceilings. An already completed matching reset receives only another
+fence; a changed, premature or already interrupted intent refuses.
+
+This completes reset recovery and returns fresh role custody. It does not supply
+fresh source evidence: the returned generator is paused and its restored source
+is Empty. Pending forecasts retain lost coverage and spent work. Legacy predictor
+recipes still pin the original source stream and do not automatically accept a
+reset successor. Mediated and joint-evaluation profiles require their own complete
+contracts and cannot use the evaluated-only path as a fallback.
+
+The added public integration cases execute cooperative replay, exact protocol and
+guard failures, anchored reset, fresh evaluator custody, fresh identity and both
+publication keys. Eight additional unit regressions cover both predictor source
+modes, retained unanswered forecasts, idempotent completion and all five original
+storage failure barriers. See the current implementation-status entry for the
+scope of local development execution; historical qualification receipts are
+unchanged.

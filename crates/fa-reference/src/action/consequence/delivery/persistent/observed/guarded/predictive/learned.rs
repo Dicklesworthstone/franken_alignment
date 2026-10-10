@@ -6,7 +6,7 @@ use super::super::{FileOversightRoles, anchored::FileHistoryAnchor, learned::che
 use super::super::super::{Event, FileOversight, FileOversightProfile, JournalError};
 use super::super::super::credibility::CredibilityEvent;
 use super::super::super::decoder::learned::{FileLearnedConfig, FileLearnedRecovery,
-    FileLearnedRecoveryProgress, FileLearnedRecoveryStatus};
+    FileLearnedRecoveryProgress, FileLearnedRecoveryStatus, checkpoint::FileLearnedResetIntent};
 use crate::Error;
 use std::fmt;
 use std::path::Path;
@@ -149,14 +149,34 @@ impl FilePredictiveLearnedRecovery {
     /// numerical owner remains paused until explicit admissible requalification
     /// and resume; returning observer custody does not bypass either requirement.
     pub fn finish(self) -> Result<(FileOversight, FilePredictiveRoles), JournalError> {
-        if let Some(error) = self.failure { return Err(error.into()); }
-        let (profile, events, _) = self.inner.guarded_history();
-        self.expected.oversight.check_predictive(profile, self.inner.verified_guarded_machine()?,
-            events, self.expected.evaluation.as_ref(), Some(&self.expected.prediction))?;
+        self.check_ready()?;
         let (host, human) = self.inner.finish()?;
         let oversight = FileOversightRoles::provision(&host, human);
         let roles = FilePredictiveRoles::provision(&host, oversight, self.expected.evaluation.is_some());
         Ok((host, roles))
+    }
+
+    fn check_ready(&self) -> Result<(), JournalError> {
+        if let Some(error) = self.failure { return Err(error.into()); }
+        let (profile, events, _) = self.inner.guarded_history();
+        self.expected.oversight.check_predictive(profile, self.inner.verified_guarded_machine()?,
+            events, self.expected.evaluation.as_ref(), Some(&self.expected.prediction))?;
+        Ok(())
+    }
+
+    /// Complete the exact independently retained pending reset before the
+    /// original recovery fence. Recheck the full predictive/evaluator/guard
+    /// contract before and after the original reset, then publish both events
+    /// together before releasing any role. An already completed matching reset
+    /// takes only the original fence; an interrupted or changed intent refuses.
+    /// Predictor timing, lifetime spend and unanswered-forecast coverage loss
+    /// remain outside the restored checkpoint. Reset is never a fresh forecast.
+    pub fn finish_pending_reset(mut self, intent: &FileLearnedResetIntent)
+        -> Result<(FileOversight, FilePredictiveRoles), JournalError>
+    {
+        self.check_ready()?;
+        self.inner = self.inner.prepare_pending_reset(intent)?;
+        self.finish()
     }
 }
 

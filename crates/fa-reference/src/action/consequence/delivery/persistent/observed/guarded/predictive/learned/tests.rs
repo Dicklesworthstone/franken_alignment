@@ -234,3 +234,4 @@ fn every_recovery_fence_storage_fault_withholds_all_roles_and_preserves_numerica
 }
 
 mod lifecycle;
+mod pending_reset;

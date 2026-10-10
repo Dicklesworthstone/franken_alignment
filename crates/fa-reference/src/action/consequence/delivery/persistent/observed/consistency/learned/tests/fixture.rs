@@ -145,7 +145,7 @@ pub(super) fn review(host: &mut FileOversight, action: &FrozenAction) -> Committ
     host.begin_review(host.revision(), 1, 101, [1; 32], ReviewWindow {
         commit_by: ElapsedTick(5), reveal_by: ElapsedTick(10),
     }, snapshot()).unwrap();
-    let digest = host.machine.sessions[&101].1.commitment("helper", Verdict::Allow, b"salt").unwrap();
+    let digest = crate::round::commitment(101, "helper", &[1; 32], Verdict::Allow, b"salt").unwrap();
     host.commit_review(host.revision(), 101, "helper", digest).unwrap();
     host.open_reveals(host.revision(), 101).unwrap();
     host.reveal_review(host.revision(), 101, "helper", Verdict::Allow, b"salt".to_vec()).unwrap();

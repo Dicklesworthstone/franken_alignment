@@ -1,5 +1,24 @@
 # Implementation status · design revision 0.3
 
+## 2026-10-10: composed learned-reset recovery
+
+Evaluated learned generation now supports cooperative and anchored recovery while
+retaining the independently supplied evaluator protocol, every guard, effective
+policy, credential epoch and external floor. Evaluated recovery and both existing
+predictive learned recovery profiles can finish an acknowledged pending reset
+through the original completion-and-fence transaction. All role bundles remain
+sealed until that replacement acknowledges; old tickets, unknown charges,
+unanswered forecasts and spent numerical work retain their original semantics.
+
+Public integration coverage exercises real numerical replay, exact contract
+rejection, anchored reset, fresh evaluator and identity custody, and two-key
+publication. Eight new unit regressions additionally target predictive lifetime
+retention, exact retries and all five storage barriers. Local validation uses the
+installed dated nightly and does not replace the historical qualified gate;
+the full monolithic unit build encountered shared-environment resource limits.
+No production-runtime admission, bead closure or deployment qualification is
+claimed. See the [composed reset contract](docs/PENDING_LEARNED_RESET_RECOVERY.md#evaluated-and-predictive-learned-profiles).
+
 ## Unqualified source addition: supervised learned recovery and containment
 
 Actor supervision and connected/offline drivers now invoke the same paired

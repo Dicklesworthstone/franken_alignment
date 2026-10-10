@@ -1,5 +1,18 @@
 # Changelog
 
+## 2026-10-10: composed learned-reset recovery
+
+- Add sealed cooperative and anchored learned recovery with the complete
+  independent evaluator and oversight-role contract.
+- Complete pending resets in evaluated, raw-predictive and owned-K/V-predictive
+  profiles through the original atomic reset-completion and recovery fence.
+  Preserve unknown charges, pending forecasts, spent work and old-role revocation.
+- Add public recovery/publication regressions and eight predictor reset/fault
+  regressions. Correct helper commitment setup and test missing identity at the
+  actual Continue/authorization boundary instead of proposal staging.
+- Local development validation is reported separately in implementation status;
+  historical qualification evidence and deployment claims are unchanged.
+
 ## Unqualified source addition: supervised learned reset and endpoint containment
 
 - Expose paired learned capture/reset through actor supervision and connected

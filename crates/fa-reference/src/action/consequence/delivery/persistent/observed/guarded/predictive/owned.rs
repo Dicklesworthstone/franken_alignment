@@ -8,7 +8,7 @@ use super::super::super::{Event, FileOversight, FileOversightProfile, JournalErr
 use super::super::super::consistency::learned::FileLearnedConsistencyConfig;
 use super::super::super::credibility::CredibilityEvent;
 use super::super::super::decoder::learned::{FileLearnedConfig, FileLearnedRecovery,
-    FileLearnedRecoveryProgress, FileLearnedRecoveryStatus};
+    FileLearnedRecoveryProgress, FileLearnedRecoveryStatus, checkpoint::FileLearnedResetIntent};
 use crate::Error;
 use std::fmt;
 use std::path::Path;
@@ -168,13 +168,33 @@ impl FileOwnedPredictiveRecovery {
     /// Unanswered forecasts stay lost coverage; unknown effects remain charged;
     /// resumed generation still requires original requalification and fresh time.
     pub fn finish(self) -> Result<(FileOversight, FilePredictiveRoles), JournalError> {
-        if let Some(error) = self.failure { return Err(error.into()); }
-        let (profile, events, _) = self.inner.guarded_history();
-        check_machine(profile, self.inner.verified_guarded_machine()?, events, &self.expected)?;
+        self.check_ready()?;
         let (host, human) = self.inner.finish()?;
         let oversight = FileOversightRoles::provision(&host, human);
         let roles = FilePredictiveRoles::provision(&host, oversight, self.expected.evaluation.is_some());
         Ok((host, roles))
+    }
+
+    fn check_ready(&self) -> Result<(), JournalError> {
+        if let Some(error) = self.failure { return Err(error.into()); }
+        let (profile, events, _) = self.inner.guarded_history();
+        check_machine(profile, self.inner.verified_guarded_machine()?, events, &self.expected)?;
+        Ok(())
+    }
+
+    /// Complete only the independently selected original pending reset, keeping
+    /// the owned source mode, pre-output timing, numerical/lifetime ceilings and
+    /// optional evaluator fixed. The full contract is checked around the SAME
+    /// private reset before its completion and fence are published atomically.
+    /// No role escapes an unacknowledged write, and an exact completed retry
+    /// cannot reset, audit or count an incident again. Pending forecast loss and
+    /// spent learned work are retained by the original fence, never re-armed.
+    pub fn finish_pending_reset(mut self, intent: &FileLearnedResetIntent)
+        -> Result<(FileOversight, FilePredictiveRoles), JournalError>
+    {
+        self.check_ready()?;
+        self.inner = self.inner.prepare_pending_reset(intent)?;
+        self.finish()
     }
 }
 
