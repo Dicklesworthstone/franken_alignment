@@ -1,5 +1,48 @@
 # Implementation status · design revision 0.3
 
+## 2026-10-10: operator tokenizer JSON through durable generation
+
+`supervise_publication --native-text` and `create-generated` now consume explicitly
+selected Hugging Face raw ByteLevel tokenizer JSON through the existing native
+importer. Native service schemas /3 and /4 cover single and sharded checkpoints;
+generated publication schema /2 adds the same format/path selection. Legacy
+schemas keep their original native-archive paths and exact durable semantics.
+Complete schema admission precedes referred-file I/O, and the tokenizer's
+semantics are checked against the complete model profile before weight/index
+reads. Existing file and aggregate limits, paths, controls and stop IDs remain.
+
+The original canonical tokenizer archive remains the durable binding. Recovery
+rejects changed IDs, merges or control spellings even when the selected prompt
+would tokenize identically. Equivalent JSON whitespace or an explicitly selected
+native archive does not create a different effective tokenizer identity.
+
+All eleven new example tests compiled on `nightly-2026-09-21`; seven passed in
+the final selected run. Five verify strict format/schema/limit compatibility and
+refusal before weight reads. Two exercise the actual recipe loaders and original
+file owners across six single/sharded and approve/reject combinations: compute a
+partial output, reopen the exact acknowledged numerical state and spent work,
+require fresh evidence/resume, finish the original monitored generation, then
+perform original commit/reveal review and independent human approval or rejection.
+They also reject an old reviewer and changed tokenizer without journal mutation,
+and retrieve exact retained receipts with the evidence file removed.
+
+Four complete service tests fail at transport startup in this environment:
+`socket(AF_UNIX, SOCK_STREAM)` is denied with `EPERM`, independently reproduced
+outside the application; one hold test consequently reports the absent store.
+The full service paths and their assertions remain present without skips or a
+production fallback. The successful direct tests do not establish socket-service
+execution. Actual helper process tests in the RoPE increment use the permitted
+inherited socket-pair path and did execute successfully.
+
+Across these three increments, 108 targeted tests and two compile-fail examples
+passed. The four transport failures remain outstanding. A fresh original
+`cargo run --locked -p xtask -- check` passed reference-lock and source-inventory
+checks, then rejected installed compiler `bba531001d4de6d7f49693e0836a2668ca063282`
+against qualified commit `cea272fa356e94bd2ee2cadf376630aa0683867a`. No compiler
+policy was changed, and no full workspace, formatting, Clippy or deployment
+qualification pass is claimed. See
+[operator tokenizer intake](docs/OPERATOR_TOKENIZER_INTAKE.md).
+
 ## 2026-10-10: learned generation with topology-observer custody
 
 The original mediated guard profile now composes with learned numerical startup,

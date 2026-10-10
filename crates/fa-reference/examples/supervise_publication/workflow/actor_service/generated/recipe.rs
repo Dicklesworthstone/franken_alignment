@@ -1,6 +1,7 @@
 //! Operator-owned data loading; no downloaded code, inferred EOS or raw-output override.
 use super::{Config, debug};
 use crate::config::read_regular;
+use super::super::tokenizer::TokenizerInput;
 use fa_reference::action::consequence::activation::monitor::decoder::config::MAX_MONITOR_CONFIG_BYTES;
 use fa_reference::action::consequence::activation::monitor::decoder::sampled::config::MAX_SAMPLING_CONFIG_BYTES;
 use fa_reference::action::consequence::activation::monitor::decoder::sampled::generation::{
@@ -13,7 +14,7 @@ use fa_reference::action::consequence::activation::tensor::kv::decoder::safetens
     pretrained::{LlamaConfig, MAX_CONFIG_BYTES},
 };
 use fa_reference::action::consequence::delivery::persistent::observed::decoder::{
-    FileDecoderConfig, text::{FileTextGenerationCommand, MAX_FILE_TOKENIZER_BYTES},
+    FileDecoderConfig, text::FileTextGenerationCommand,
 };
 use fa_reference::action::consequence::delivery::stream::StreamProfile;
 use fa_reference::action::consequence::oversight::decoder_monitoring::DecoderBindingLimits;
@@ -66,16 +67,18 @@ struct Recipe {
 }
 struct Paths {
     configuration: PathBuf, weights: PathBuf, monitor: PathBuf,
-    sampling: PathBuf, tokenizer: PathBuf, prompt: PathBuf,
+    sampling: PathBuf, tokenizer: TokenizerInput, prompt: PathBuf,
 }
 impl Recipe {
     fn decode(bytes: &[u8]) -> Result<Self, String> {
         let mut root = Fields::new(strict_json::parse(bytes, Limits {
             max_bytes: MAX_RECIPE_BYTES, max_depth: 5, max_items: 1024, max_string_bytes: 4096,
         }).map_err(debug)?)?;
-        if root.text("schema")? != "fa.generated-publication/1" {
-            return Err("unsupported native publication recipe".into());
-        }
+        let explicit_tokenizer = match root.text("schema")?.as_str() {
+            "fa.generated-publication/1" => false,
+            "fa.generated-publication/2" => true,
+            _ => return Err("unsupported native publication recipe".into()),
+        };
         let request = root.number("request")?;
         let generation = root.number("generation")?;
         let ttl_ms = root.number("ttl_ms")?;
@@ -106,7 +109,9 @@ impl Recipe {
         let mut paths = Fields::new(root.take("files")?)?;
         let paths_value = Paths { configuration: paths.path("model_config")?, weights: paths.path("weights")?,
             monitor: paths.path("monitor")?, sampling: paths.path("sampling")?,
-            tokenizer: paths.path("tokenizer")?, prompt: paths.path("prompt")? };
+            tokenizer: TokenizerInput::parse(paths.take("tokenizer")?, explicit_tokenizer)?,
+            prompt: paths.path("prompt")? };
+        normalized_path(paths_value.tokenizer.path(), "tokenizer")?;
         paths.end()?;
         let mut text = Fields::new(root.take("text")?)?;
         let prefix_controls = text.ids("prefix_controls", MAX_PREFIX_CONTROLS)?;
@@ -140,8 +145,8 @@ pub(super) fn load(path: &Path, config: &Config) -> Result<Loaded, String> {
     // The negotiated head contract is frozen with the original raw weights.
     // Omission is permitted only for explicit tying; conflicting heads refuse.
     let profile = negotiated.profile().clone();
-    let tokenizer = ByteBpe::from_bytes(&profile,
-        &read_regular(&r.paths.tokenizer, MAX_FILE_TOKENIZER_BYTES)?).map_err(debug)?;
+    let tokenizer = r.paths.tokenizer.decode(&profile,
+        &read_regular(Path::new(r.paths.tokenizer.path()), r.paths.tokenizer.byte_limit())?)?;
     r.text.prompt = read_regular(&r.paths.prompt, r.text.tokenization.input_bytes.min(MAX_INPUT_BYTES))?;
     let model_bound = 8 + MAX_WEIGHT_HEADER_BYTES + 4 * profile.parameter_count();
     let weight_limit = model_bound.min(MAX_WEIGHT_FILE_BYTES).min(config.profile.delivery.limits.bytes);
@@ -172,12 +177,7 @@ impl Fields {
     }
     fn size(&mut self, name: &str) -> Result<usize, String> { usize::try_from(self.number(name)?).map_err(debug) }
     fn path(&mut self, name: &str) -> Result<PathBuf, String> {
-        let path = PathBuf::from(self.text(name)?);
-        if !path.is_absolute() || path.file_name().is_none()
-            || path.as_os_str().as_encoded_bytes().contains(&0)
-            || path.components().any(|p| !matches!(p, Component::RootDir | Component::Normal(_)))
-        { return Err(format!("{name} must be an absolute normalized file path")); }
-        Ok(path)
+        normalized_path(&self.text(name)?, name)
     }
     fn ids(&mut self, name: &str, limit: usize) -> Result<Vec<u32>, String> {
         let value = self.take(name)?;
@@ -189,6 +189,15 @@ impl Fields {
     fn end(self) -> Result<(), String> {
         if self.0.is_empty() { Ok(()) } else { Err("unknown native recipe field".into()) }
     }
+}
+
+fn normalized_path(value: &str, name: &str) -> Result<PathBuf, String> {
+    let path = PathBuf::from(value);
+    if !path.is_absolute() || path.file_name().is_none()
+        || path.as_os_str().as_encoded_bytes().contains(&0)
+        || path.components().any(|p| !matches!(p, Component::RootDir | Component::Normal(_)))
+    { return Err(format!("{name} must be an absolute normalized file path")); }
+    Ok(path)
 }
 
 #[cfg(test)]

@@ -14,6 +14,8 @@ mod multi;
 mod generated;
 #[path = "actor_service/native.rs"]
 mod native;
+#[path = "actor_service/tokenizer.rs"]
+mod tokenizer;
 use profile::Profile;
 use super::{ActionState, ActorWire, BoundSocket, Config, Deadline, Duration, ElapsedTick,
     ExecuteServices, FileOversight, FileRequestDisposition, FileSupervisedDriver, Instant,

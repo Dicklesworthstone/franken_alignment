@@ -1,6 +1,8 @@
 use super::*;
 #[path = "tests/fixture.rs"]
 pub(super) mod fixture;
+#[path = "tests/tokenizer_tests.rs"]
+mod tokenizer_tests;
 use fixture::*;
 use fa_reference::action::consequence::delivery::persistent::observed::reviewer::client::ReviewClientProgress;
 use fa_reference::action::consequence::delivery::persistent::observed::reviewer::wire::{ReviewDecision, ReviewPacket};

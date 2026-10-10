@@ -1,6 +1,7 @@
 //! Bounded operator input; the original model/tokenizer constructors own semantics.
 use super::*;
 use crate::config::read_regular;
+use super::super::tokenizer::TokenizerInput;
 use fa_reference::action::consequence::activation::monitor::decoder::config::MAX_MONITOR_CONFIG_BYTES;
 use fa_reference::action::consequence::activation::monitor::decoder::sampled::config::MAX_SAMPLING_CONFIG_BYTES;
 use fa_reference::action::consequence::activation::monitor::decoder::sampled::generation::{
@@ -13,7 +14,7 @@ use fa_reference::action::consequence::activation::tensor::kv::decoder::safetens
     pretrained::{LlamaConfig, MAX_CONFIG_BYTES},
 };
 use fa_reference::action::consequence::delivery::persistent::observed::decoder::{
-    FileDecoderConfig, text::{FileTextGenerationCommand, MAX_FILE_TOKENIZER_BYTES},
+    FileDecoderConfig, text::FileTextGenerationCommand,
 };
 use fa_reference::action::consequence::delivery::stream::StreamProfile;
 use fa_reference::action::consequence::oversight::decoder_monitoring::DecoderBindingLimits;
@@ -40,9 +41,11 @@ pub(super) fn load(path: &Path, tenant: u64, byte_limit: usize) -> Result<Inputs
     let mut f = Fields::new(strict_json::parse(&bytes, Limits {
         max_bytes: MAX_RECIPE_BYTES, max_depth: 4, max_items: 1024, max_string_bytes: 4096,
     }).map_err(debug)?)?;
-    let sharded = match f.text("schema")?.as_str() {
-        "fa.native-text-service/1" => false,
-        "fa.native-text-service/2" => true,
+    let (sharded, explicit_tokenizer) = match f.text("schema")?.as_str() {
+        "fa.native-text-service/1" => (false, false),
+        "fa.native-text-service/2" => (true, false),
+        "fa.native-text-service/3" => (false, true),
+        "fa.native-text-service/4" => (true, true),
         _ => return Err("unsupported native service recipe".into()),
     };
     let mut ids = Fields::new(f.take("identity")?)?;
@@ -70,7 +73,8 @@ pub(super) fn load(path: &Path, tenant: u64, byte_limit: usize) -> Result<Inputs
     let sampling = f.number("sampling_entries")?;
     let base = path.parent().ok_or("recipe has no parent directory")?;
     let weights = WeightFiles::parse(f.take("weights")?, base, sharded)?;
-    let names = ["model_config", "monitor", "sampling", "tokenizer", "prompt"];
+    let tokenizer = TokenizerInput::parse(f.take("tokenizer")?, explicit_tokenizer)?;
+    let names = ["model_config", "monitor", "sampling", "prompt"];
     let paths: Vec<_> = names.iter().map(|name| f.text(name)).collect::<Result<_, _>>()?;
     f.end()?; // Full schema admission BEFORE opening any referred file.
     if generation == 0 || cache_stream == 0 || max_new_tokens == 0
@@ -80,8 +84,7 @@ pub(super) fn load(path: &Path, tenant: u64, byte_limit: usize) -> Result<Inputs
         return Err("native generation bounds are invalid".into());
     }
     let mut remaining = byte_limit.checked_sub(bytes.len()).ok_or("recipe exceeds input allowance")?;
-    let read = |index: usize, limit: usize, remaining: &mut usize| -> Result<Vec<u8>, String> {
-        let name = &paths[index];
+    let read = |name: &str, limit: usize, remaining: &mut usize| -> Result<Vec<u8>, String> {
         if name.is_empty() || name.as_bytes().contains(&0) { return Err("invalid native input path".into()); }
         let path = PathBuf::from(name);
         let path = if path.is_absolute() { path } else { base.join(path) };
@@ -89,15 +92,18 @@ pub(super) fn load(path: &Path, tenant: u64, byte_limit: usize) -> Result<Inputs
         *remaining = remaining.checked_sub(bytes.len()).ok_or("native input allowance exhausted")?;
         Ok(bytes)
     };
-    let model = LlamaConfig::decode(identity, context, &read(0, MAX_CONFIG_BYTES, &mut remaining)?).map_err(debug)?;
+    let model = LlamaConfig::decode(identity, context, &read(&paths[0], MAX_CONFIG_BYTES, &mut remaining)?).map_err(debug)?;
     // Preserve the model's explicit declaration through durable replay. Missing
     // matrices never choose the mode, and contradictory stored heads refuse.
     let profile = model.profile().clone();
+    // Admit the selected tokenizer's complete semantics before any weight I/O.
+    // Its native immutable encoding is still the original durable binding.
+    let tokenizer = tokenizer.decode(&profile,
+        &read(tokenizer.path(), tokenizer.byte_limit(), &mut remaining)?)?;
     let weights = weights.read(&profile, model.output_head(), &mut remaining)?;
-    let monitor = read(1, MAX_MONITOR_CONFIG_BYTES, &mut remaining)?;
-    let sampling_config = read(2, MAX_SAMPLING_CONFIG_BYTES, &mut remaining)?;
-    let tokenizer = ByteBpe::from_bytes(&profile, &read(3, MAX_FILE_TOKENIZER_BYTES, &mut remaining)?).map_err(debug)?;
-    let prompt = read(4, MAX_INPUT_BYTES, &mut remaining)?;
+    let monitor = read(&paths[1], MAX_MONITOR_CONFIG_BYTES, &mut remaining)?;
+    let sampling_config = read(&paths[2], MAX_SAMPLING_CONFIG_BYTES, &mut remaining)?;
+    let prompt = read(&paths[3], MAX_INPUT_BYTES, &mut remaining)?;
     for token in prefix_controls.iter().chain(&stop_tokens) {
         if !tokenizer.is_control(*token).map_err(debug)? {
             return Err("prefix and stop IDs must be registered Control tokens".into());

@@ -1,5 +1,10 @@
 # Native text generation through supervised publication
 
+Explicit native-archive and supported Hugging Face tokenizer JSON selection is
+available in recipe versions `/3` and `/4`; see
+[operator tokenizer intake](OPERATOR_TOKENIZER_INTAKE.md). Existing `/1` and `/2`
+recipes retain their native-archive path meaning.
+
 ## Capability and contract
 
 The Linux `supervise_publication` executable now accepts an explicit

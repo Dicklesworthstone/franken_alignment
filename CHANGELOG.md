@@ -1,5 +1,19 @@
 # Changelog
 
+## 2026-10-10: explicit tokenizer JSON in operator publication recipes
+
+- Connect the existing Hugging Face raw ByteLevel tokenizer importer to native
+  single/sharded service recipes and generated publication recipes, with explicit
+  format selection, bounded input reads and no parser fallback.
+- Preserve legacy schemas and canonical tokenizer identity through partial
+  generation recovery, original review, both publication keys and receipt reuse.
+- Compile eleven new tests; pass seven covering admission and original durable
+  execution, including six approve/reject/checkpoint combinations. Four complete
+  service tests remain blocked by this environment's Unix-socket creation denial.
+- Record 108 passing targeted tests and two compile-fail checks across the three
+  increments. The unchanged project gate still rejects the installed compiler
+  identity before formatting, Clippy or workspace qualification.
+
 ## 2026-10-10: mediated learned startup and reset recovery
 
 - Atomically create learned generation, the complete native guard set, original

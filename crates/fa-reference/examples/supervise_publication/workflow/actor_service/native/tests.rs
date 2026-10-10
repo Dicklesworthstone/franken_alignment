@@ -16,6 +16,8 @@ mod recovery_tests;
 mod checked_tests;
 #[path = "tests/sharded_tests.rs"]
 mod sharded_tests;
+#[path = "tests/tokenizer_tests.rs"]
+mod tokenizer_tests;
 use fixture::*;
 
 struct ReferenceOutput { bytes: Vec<u8>, sender: Option<mpsc::Sender<Vec<u8>>> }

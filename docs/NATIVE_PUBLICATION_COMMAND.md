@@ -1,5 +1,10 @@
 # Native generation to controlled publication
 
+Recipe `fa.generated-publication/2` adds explicit native-archive or supported
+Hugging Face tokenizer JSON input under `files.tokenizer`; see
+[operator tokenizer intake](OPERATOR_TOKENIZER_INTAKE.md). Existing `/1` recipes
+retain their original native-archive path meaning.
+
 ## Source addition and implementation status
 
 The Linux reference `supervise_publication` command now has an explicit
