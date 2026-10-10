@@ -3,8 +3,11 @@
 `create-learned-generated` connects explicitly imported model and tokenizer
 assets, a verified learned K/V fit archive, registered probes, native helper
 models, and independent human review to the original durable publication owner.
-It generates one complete message ending in an admitted control stop, runs one
-native sidecar congress, and publishes only through the existing two-key path.
+It generates one complete message ending in an admitted control stop, runs the
+explicitly provisioned native sidecar congress, and publishes only through the
+existing two-key path. Recipe version 1 retains one coarse round. Version 2 can
+purchase retained exact residuals and run fresh reviews under a fixed bounded
+schedule when the original congress records uncertainty.
 
 The native helper models execute **inside the supervising process**, with separate
 original evaluator owners and fixed input contracts. They are not helper OS
@@ -86,7 +89,7 @@ and bounds bytes before accepting the complete file.
 | Input | Required content |
 | --- | --- |
 | `CONFIG` | Existing supervised-publication version-1 configuration: authority, target, policy, congress, helper contracts, human policy, source policy and timing |
-| `LEARNED_RECIPE` | `fa.learned-publication/1`, described below |
+| `LEARNED_RECIPE` | `fa.learned-publication/1` for one coarse round, or explicit `/2` for bounded residual refinement |
 | Primary model configuration and weights | Original admitted Llama configuration and one complete SafeTensors file |
 | Primary tokenizer | Explicit `native_archive` or `huggingface_raw_bytelevel` selection |
 | Prompt and sampling file | Actual UTF-8 prompt bytes and original `fa.decoder-sampling/1` sampling configuration |
@@ -233,6 +236,106 @@ numerical/read budgets. Source refreshes during operation use the existing
 separate source policy. On receipt-only recovery, skipped native assets consume
 no asset allowance.
 
+## Progressive recipe: fa.learned-publication/2
+
+Version 2 keeps all version 1 fields and original numerical contracts. It adds
+exactly two required fields, both closed and bounded:
+
+| Group | Added required field |
+| --- | --- |
+| `sidecar` | `priority`: ordered array of exact residual groups |
+| Every `sidecar.priority` entry | `layer`, `side`, `position`, `head` |
+| `native_review` | `round_ids`: the ordered, fixed native congress round IDs |
+
+`side` is `"key"` or `"value"`. Layer IDs come from the imported original K/V
+profile; positions and heads are zero-based. Groups must be unique and within
+the negotiated model shape. A priority may name at most 256 groups. At actual
+plan creation, **every named residual must already exist in the current checked
+learned source**. Current sidecar capture describes the latest accepted position;
+an earlier retained generation event is not an implicit raw-window source. An
+absent group or unretained residual refuses the plan. There is no raw recapture,
+new actor inference, or automatic alternate group selection.
+
+`round_ids` contains between 1 and 32 unique nonzero IDs. Its order is the review
+order, and its length must equal `sidecar.budget.rounds`. There must be at least
+one priority group per possible refinement, so a three-round schedule needs at
+least two groups. The original owner rejects any round ID already used or leased
+in the journal. Version 1 rejects both new fields and still requires one round.
+
+For example, these are the sidecar and native-review sections for a **two-round
+synthetic fixture**, with the rest of the recipe unchanged and `schema` set to
+`"fa.learned-publication/2"`:
+
+```json
+{
+  "sidecar": {
+    "identity": {"object_id": 1001, "generation": 1, "transform_id": 7},
+    "priority": [{"layer": 1, "side": "key", "position": 3, "head": 0}],
+    "budget": {"rounds": 2, "residual_bytes": 65536, "committee_bytes": 1048576}
+  },
+  "native_review": {
+    "round_ids": [101, 102],
+    "polls": 4096,
+    "probe_coordinates": 10000,
+    "reconstruction_products": 1000000,
+    "evaluations": 4,
+    "scalar_products": 4398046511104,
+    "sampling_entries": 16384
+  }
+}
+```
+
+The example reserves two original native evaluators per round, each with its
+explicit policy allowance. Actual models require their own complete work and
+input bounds. The loader sums every member's original native policy reservation
+and multiplies by the full number of rounds using checked arithmetic. Insufficient
+evaluations, scalar products or sampling entries refuse before durable startup.
+An unstarted, failed or cancelled future round does not refund that reservation.
+
+All windows freeze from one fresh start time. Round 1 uses the existing
+`CONFIG.timing.commit_ms` and `reveal_ms` offsets; each following round uses the
+preceding round's scheduled reveal deadline as its origin. The entire schedule
+must fit strictly within both the recipe TTL and configured runtime before asset
+admission, and within the remaining original action deadline after generation. Windows
+never slide to compensate for slow work, partial disclosure or missing members.
+Receipt-only recovery does not apply this prospective lifetime check.
+
+Before the first native Begin, every future roster receives fresh original
+evaluators, the complete registered probes, and fresh commitment salts. These
+are built from the already admitted immutable model assets. Files are not reread
+and evaluators are not replaced after any answer is known. The same helper input
+profile remains independently provisioned for the actual coarse/refined inputs;
+the command does not infer calibration or statistical independence.
+
+The first round always starts with the original coarse sidecar. If complete
+numerical probes remain uncertain, the original worker abstains without starting
+its native model. An original completed review with explicit abstention may buy
+the next declared residual. Missing workers are not such a request. The purchase
+adds that exact retained block to the existing evidence, charges cumulative
+residual and replicated committee bytes, and records a new input revision. The
+old review cannot authorize the richer input. A fresh original round must run
+all probes and, only after complete quiet, the full native-model judgment.
+
+The final original congress still supplies only the automatic review result;
+independent human approval and current-policy publication checks remain required.
+A completed roster with no abstaining members is terminal; a Deny or Hold in
+that result does not trigger another model attempt. Only explicit abstention
+can request a richer input through the original planner. Unresolved uncertainty,
+unavailable future windows and exhausted
+disclosure or poll allowances remain restrictive. Original cancellation destroys
+remaining numerical owners while retaining spent work, acknowledged refinement,
+round leases and unresolved publication obligations.
+
+**The poll allowance applies to the entire sequence.** Each real quantum still
+records one policy observation for all current members together. The original
+1024-event source-history ceiling is unchanged. The two-round test fixture has a
+909-byte coarse input and at most 57 residual bytes plus 8 bytes of framing. Its
+first uncertain round needs five polls and no native inference; the richer round
+and complete publication are bounded by 1018 source observations without assuming
+any BPE compression. This is a bound for that synthetic fixture, not capacity
+evidence for arbitrary models or inputs. Operators must budget their complete
+prompt, probes, protocol, generation and publication histories.
+
 ## Independent fit binding: fa.learned-fit-binding/1
 
 The fit archive is produced by the original fitting checkpoint interface.
@@ -281,7 +384,8 @@ from each native helper's ordinary decoder-monitor JSON.
 | Every monitoring `budget` | `encoded_bytes`, `probe_coordinates`, `reconstruction_products`, `materialized_values`, `refinements` |
 
 `retention` is explicitly `"all"` or `"none"`. It selects original learned
-residual retention; it does not change this command's one-round disclosure policy.
+residual retention. A version 2 priority must name blocks retained by this policy;
+retention alone never discloses them to helpers or changes version 1 behavior.
 `inference_products` is the original decoder work allowance used by the learned
 policy.
 
@@ -331,19 +435,23 @@ The loader closes the schema and paths for all members before loading their
 models. It checks each tokenizer, monitor, sampler and stop policy with an empty
 original evaluator before durable startup. That preflight computes no helper
 token. At review start, a fresh owned evaluator binds to that member's actual
-original full-input profile. Fixed rosters and work reservations are installed
-before the round begins; a failed member is not replaced after its result is
-known.
+original full-input profile. For version 2, each future round has fresh original
+evaluators from the same explicitly loaded roster. All rosters and whole-sequence
+work reservations are installed before the first round; a failed member is not
+replaced after its result is known.
 
 ## Original transitions and recovery
 
 Creation first admits the external recipe and native inputs. The first original
 store image includes the stream, exact learned generation recipe, mandatory
-sidecar provenance and policy-only source requirement. It then retains the
-original terminal recovery reserve.
+sidecar provenance, policy-only source requirement and original terminal recovery
+reserve. The reserve precedes learned Enable in that single canonical image.
+Guarded recovery pins the exact reserve before replay, cleanup or fencing.
 
 Each generation step acquires current policy through the original source owner
-and observes time before and after acquisition. The original write-ahead
+and observes time before and after acquisition. After the post-read clock, it
+checks the original source frontier and read-start lease; exact expiry refuses
+before numerical work. The original write-ahead
 numerical intent and acknowledged outcome retain tokens, cache state, sampler
 state, telemetry and spent work. Only a complete quiet monitored control stop
 permits source-only message submission.
@@ -399,7 +507,7 @@ receipt parser.
 
 It skips the native roster and all native helper assets, reads no live policy
 evidence, opens no reviewer/stop listener, requests no human key and starts no
-new generation. The outer recipe still has its closed required fields, including
+new generation or refinement. The outer recipe still has its closed required fields, including
 the `native_roster` path, but that path is not opened.
 
 The original retained action supplies the deadline for the exact source-only
@@ -415,13 +523,32 @@ stream-finish, identity-activation, qualification or sharded-model modes.
 
 ## Verification status
 
-The implementation and its integration with the original APIs were independently
-source-reviewed. Tests are authored against external synthetic checkpoint,
-tokenizer, fit, probe and native-model fixtures, with original generation,
-recovery, native congress and human/publication paths. Their assertions are
-implementation evidence to be executed, not recorded outcomes.
+The implementation was independently reviewed and executed with qualified
+`nightly-2026-09-08`. All twenty learned-command example tests compile. Eighteen
+pass: all eleven original direct/admission tests and seven progressive-review
+tests. Two actual Unix-listener tests fail at listener creation with environment
+EPERM: the complete peer publication test and authenticated stop during a
+partially computed refined round. Neither test is skipped, and their transport
+paths have not been replaced by a weaker fallback.
 
-**The new command and its tests were unexecuted at authoring time because the
-execution service was unavailable.** Earlier tokenizer, rotary, decoder or helper
-test passes do not validate this command. No fixture is presented as a passing
-deployment or evidence of trained-model judgment quality.
+The progressive positive executes actual coarse numerical uncertainty, pays for
+one retained exact K residual, invalidates the old input, runs fresh complete
+probes and native model judgment, requires independent human approval, publishes
+once, and reopens the original receipt without another review. Negative controls
+cover one-byte-short residual allowance, complete native Deny leaving the third
+roster unused, total poll exhaustion with retained successor work, changed policy,
+malformed schedules and aggregate work, unretained groups, and insufficient
+future windows. The configured-runtime/TTL admission boundary is checked before
+model loading and again against the live remaining action deadline.
+
+All complete-input, nonzero K/V, native-token, reservation, residual-spending,
+original-outcome and source-history assertions remain. These synthetic fixtures
+establish executable contract behavior; they do not establish pretrained probe
+quality, independent model judgment, OS isolation or a matched-cost research
+result. The command was unexecuted when first authored; this later execution
+found and fixed real atomic-reserve and post-read-freshness omissions.
+
+The original complete project gate passes qualified compiler identity but stops
+at the reviewed source snapshot, which contains stale existing digests and does
+not list numerous existing and new files. Its records and enforcement are
+unchanged; formatting, Clippy and complete workspace qualification remain unmet.

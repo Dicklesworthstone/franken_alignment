@@ -1,5 +1,41 @@
 # Implementation status · design revision 0.3
 
+## 2026-10-10: progressive retained-residual review in the learned operator
+
+`fa.learned-publication/2` connects the original retained-residual planner to the
+publication operator. Operators declare an ordered exact layer/side/position/head
+priority and the complete fixed native round-ID schedule. All future evaluators,
+probes, salts, windows and aggregate native reservations are admitted before the
+first Begin. Both configured runtime and recipe TTL bound the schedule before
+asset intake; remaining lifetime is checked again after generation. Version 1
+retains its one-round coarse-only behavior and existing refusal contract.
+
+The original sequence advances only after an explicit uncertainty/abstention
+result purchases the next retained residual. The purchase charges cumulative
+residual and replicated-input bytes, creates a new input revision and invalidates
+the old review. Fresh original probes and actual full-input native inference
+must complete on that richer input. Terminal applied reviews do not rerun an
+unused roster. One disclosure allowance, one native reservation and one poll
+budget cover the entire sequence, including cancelled or unstarted future work.
+The original two-key and current-policy publication gates remain unchanged.
+
+All twenty learned-command example tests compile under the qualified compiler;
+eighteen pass, including seven new progressive cases and all eleven original
+direct/admission cases. The positive buys a genuinely needed exact residual,
+runs native Allow, publishes only after independent human approval and recovers
+the original receipt once. Negative controls retain work on an underfunded
+residual, native Deny, changed policy, exhausted polls, invalid complete schedules,
+unretained groups and insufficient future deadlines. The unchanged 1024-event
+source ceiling is respected by the complete synthetic positive fixture.
+
+The two actual Unix-listener tests fail with environment EPERM at listener
+creation, including authenticated stop during partial successor inference. They
+remain unskipped; direct cancellation success does not validate that transport.
+The original full gate still refuses the reviewed source snapshot before later
+workspace qualification, as recorded in the preceding increment. No process
+independence, trained detector quality or matched-cost research claim follows.
+See [learned operator publication](docs/LEARNED_OPERATOR_PUBLICATION.md).
+
 ## 2026-10-10: atomic learned startup and post-read source freshness
 
 The learned publication command previously created its learned stream and then

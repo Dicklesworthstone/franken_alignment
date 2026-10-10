@@ -58,7 +58,8 @@ impl NativeRoster {
         Ok(Self { members })
     }
 
-    pub(super) fn check_limits(&self, limits: &fa_reference::action::consequence::delivery::persistent::observed::helpers::learned::native::NativeReviewLimits)
+    pub(super) fn check_limits(&self, limits: &fa_reference::action::consequence::delivery::persistent::observed::helpers::learned::native::NativeReviewLimits,
+        rounds: usize)
         -> Result<(), String>
     {
         let mut products = 0_u64;
@@ -67,7 +68,12 @@ impl NativeRoster {
             products = products.checked_add(model.generation.scalar_products).ok_or("native product reservation overflow")?;
             entries = entries.checked_add(model.generation.sampling_entries).ok_or("native sampler reservation overflow")?;
         }
-        if self.members.len() > limits.native.evaluations || products > limits.native.scalar_products
+        // Every future evaluator is provisioned before the first answer. An
+        // unused or cancelled round cannot refund its admitted reservation.
+        let evaluations = self.members.len().checked_mul(rounds).ok_or("native evaluation reservation overflow")?;
+        products = products.checked_mul(rounds as u64).ok_or("native product reservation overflow")?;
+        entries = entries.checked_mul(rounds as u64).ok_or("native sampler reservation overflow")?;
+        if rounds == 0 || evaluations > limits.native.evaluations || products > limits.native.scalar_products
             || entries > limits.native.sampling_entries {
             return Err("native review allowance cannot admit the complete registered model roster".into());
         }

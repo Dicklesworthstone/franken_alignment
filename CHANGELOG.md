@@ -1,5 +1,16 @@
 # Changelog
 
+## 2026-10-10: progressive native review in learned publication
+
+- Add closed learned-publication schema /2 with exact retained K/V residual
+  priority, fixed round IDs and complete future evaluator/window reservations.
+- Drive original coarse abstention, paid residual refinement, fresh native review
+  and independent human publication through one sealed original sequence. Keep
+  cumulative disclosure/work/poll limits and the version 1 contract unchanged.
+- Pass eighteen of twenty compiled learned-command tests, including seven new
+  progressive cases. The two actual peer-listener tests remain blocked by EPERM.
+  Preserve the original source-history ceiling and complete native-work oracles.
+
 ## 2026-10-10: atomic learned startup and post-read source freshness
 
 - Fix valid learned publication startup failing with WrongState by installing

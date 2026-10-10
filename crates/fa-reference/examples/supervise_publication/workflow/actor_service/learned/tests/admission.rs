@@ -17,7 +17,7 @@ fn learned_command_capture_horizon_and_closed_schema_refuse_before_asset_reads_o
         assert!(!config.store.exists());
     }
     for (old, replacement, expected) in [
-        ("fa.learned-publication/1", "fa.learned-publication/2", "unsupported"),
+        ("fa.learned-publication/1", "fa.learned-publication/3", "unsupported"),
         ("huggingface_raw_bytelevel", "automatic", "tokenizer format"),
         ("\"completion\":\"stop_required\"", "\"completion\":\"token_limit\"", "monitored control stop"),
         ("\"rounds\":1", "\"rounds\":2", "one bounded review round"),

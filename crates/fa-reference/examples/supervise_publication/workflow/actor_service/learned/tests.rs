@@ -7,6 +7,7 @@ use super::*;
 #[path = "tests/direct.rs"] mod direct;
 #[path = "tests/admission.rs"] mod admission;
 #[path = "tests/transport.rs"] mod transport;
+#[path = "tests/refinement.rs"] mod refinement;
 use fixture::{Root, configured, evidence};
 use fa_reference::action::consequence::delivery::persistent::observed::{
     helpers::learned::native::{NativeReviewStatus, NativeMemberRecord, sequence::FileNativeSidecarSequence},

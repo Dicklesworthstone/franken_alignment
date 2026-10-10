@@ -7,7 +7,9 @@ use fa_reference::action::consequence::activation::monitor::{
     decoder::sampled::{config::{SamplingConfig, MAX_SAMPLING_CONFIG_BYTES},
         generation::tokenizer::{TokenizationBudget, MAX_INPUT_BYTES}},
 };
-use fa_reference::action::consequence::activation::probe::{LinearProbe, learned::LearnedProbeWork};
+use fa_reference::action::consequence::activation::probe::{LinearProbe,
+    learned::{KvGroup, KvRow, LearnedProbeWork}};
+use fa_reference::action::consequence::activation::tensor::kv::experiment::KvSide;
 use fa_reference::action::consequence::activation::tensor::kv::decoder::{
     DecoderIdentity, DecoderModel,
     safetensors::{MAX_WEIGHT_HEADER_BYTES, MAX_WEIGHT_FILE_BYTES, pretrained::{LlamaConfig, MAX_CONFIG_BYTES}},
@@ -22,7 +24,8 @@ use fa_reference::action::consequence::delivery::stream::StreamProfile;
 use fa_reference::action::consequence::oversight::{
     decoder_monitoring::{DecoderBindingLimits, LearnedDecoderBindingLimits},
     learned_source::{LearnedEvidenceLimits, text::{LearnedTextConfig, LearnedTextCompletion, LearnedTextOutputPolicy}},
-    sidecar::{SidecarIdentity, SidecarCongressBudget, MAX_SIDECAR_ACCUMULATED_BYTES},
+    sidecar::{SidecarIdentity, SidecarCongressBudget, MAX_SIDECAR_ACCUMULATED_BYTES,
+        MAX_SIDECAR_PRIORITY_GROUPS, MAX_SIDECAR_REFINEMENT_ROUNDS},
 };
 use std::collections::{BTreeMap, BTreeSet};
 use std::path::{Path, PathBuf};
@@ -38,6 +41,8 @@ pub(super) struct Loaded {
     pub evidence: LearnedEvidenceLimits,
     pub sidecar: SidecarIdentity,
     pub disclosure: SidecarCongressBudget,
+    pub priority: Vec<KvGroup>,
+    pub rounds: Vec<u64>,
     pub native_limits: NativeReviewLimits,
     pub probes: BTreeMap<KvTap, Vec<LinearProbe>>,
     pub native: Option<NativeRoster>,
@@ -49,6 +54,7 @@ struct Recipe {
     files: Files, max_new_tokens: usize, max_output_bytes: usize, stop_tokens: BTreeSet<u32>,
     tokenization: TokenizationBudget, budget: GenerationBudget, telemetry: GenerationTelemetryBudget,
     sidecar: SidecarIdentity, disclosure: SidecarCongressBudget, native_limits: NativeReviewLimits,
+    priority: Vec<KvGroup>, rounds: Vec<u64>,
 }
 struct Files {
     configuration: PathBuf, weights: PathBuf, tokenizer: TokenizerInput, sampling: PathBuf,
@@ -61,6 +67,12 @@ pub(super) fn load(file: &Path, config: &Config, require_native: bool) -> Result
         || !config.profile.delivery.initial_payload.is_empty() {
         return Err("learned text requires the configured tenant and an empty initial publication".into());
     }
+    // A v2 schedule is a fixed sequence within ONE original action lifetime.
+    // The live launch checks the remaining lifetime again after generation.
+    if require_native && recipe.rounds.len() > 1 && config.timing.reveal_ms
+        .checked_mul(recipe.rounds.len() as u64).is_none_or(|duration| duration >= recipe.ttl_ms.min(config.timing.runtime_ms)) {
+        return Err("complete learned review schedule must fit the original request lifetime".into());
+    }
     let mut assets = Assets::new(recipe.assets_bytes)?;
     // The independent binding is never obtained from the archive it checks.
     // Closed probe/fit data admission precedes any model weight ingestion.
@@ -68,6 +80,13 @@ pub(super) fn load(file: &Path, config: &Config, require_native: bool) -> Result
     let monitor = MonitorInput::decode(&assets.read(&recipe.files.monitor, MAX_DATA_BYTES)?)?;
     let configuration = assets.read(&recipe.files.configuration, MAX_CONFIG_BYTES)?;
     let negotiated = LlamaConfig::decode(recipe.identity, recipe.context, &configuration).map_err(debug)?;
+    for group in recipe.priority.iter().filter(|_| require_native) {
+        let shape = negotiated.profile().shape();
+        if group.row.layer == 0 || group.row.layer > shape.layers as u64
+            || group.row.position >= shape.context as u64 || group.head >= shape.cache_heads {
+            return Err("learned refinement priority is outside the original model K/V shape".into());
+        }
+    }
     let tokenizer = recipe.files.tokenizer.decode(negotiated.profile(),
         &assets.read(Path::new(recipe.files.tokenizer.path()), recipe.files.tokenizer.byte_limit())?)?;
     let sampling = SamplingConfig::decode(&assets.read(&recipe.files.sampling, MAX_SAMPLING_CONFIG_BYTES)?,
@@ -97,20 +116,23 @@ pub(super) fn load(file: &Path, config: &Config, require_native: bool) -> Result
         .with_required_policy_source(config.source_policy).map_err(debug)?;
     let native = if require_native {
         { let roster = NativeRoster::load(&recipe.files.native, config, &mut assets)?;
-            roster.check_limits(&recipe.native_limits)?; Some(roster) }
+            roster.check_limits(&recipe.native_limits, recipe.rounds.len())?; Some(roster) }
     } else { None };
     Ok(Loaded { request: recipe.request, ttl_ms: recipe.ttl_ms, generation, stream: recipe.publication,
         floor: recipe.floor, evidence: LearnedEvidenceLimits { token_ids: recipe.binding.evidence.token_ids,
             score_words: recipe.binding.evidence.score_words, encoded_bytes: recipe.binding.encoded_bytes },
         sidecar: recipe.sidecar, disclosure: recipe.disclosure, native_limits: recipe.native_limits,
+        priority: recipe.priority, rounds: recipe.rounds,
         probes: monitor.probes, native })
 }
 impl Recipe {
     fn decode(bytes: &[u8]) -> Result<Self, String> {
         let mut root = Fields::parse(bytes, MAX_RECIPE_BYTES)?;
-        if root.text("schema")? != "fa.learned-publication/1" {
-            return Err("unsupported learned publication recipe".into());
-        }
+        let progressive = match root.text("schema")?.as_str() {
+            "fa.learned-publication/1" => false,
+            "fa.learned-publication/2" => true,
+            _ => return Err("unsupported learned publication recipe".into()),
+        };
         let request = root.number("request")?;
         let ttl_ms = root.number("ttl_ms")?;
         let assets_bytes = root.size("asset_bytes")?;
@@ -180,17 +202,41 @@ impl Recipe {
         let mut disclosure = sidecar.object("budget")?;
         let disclosure_value = SidecarCongressBudget { rounds: disclosure.size("rounds")?,
             residual_bytes: disclosure.size("residual_bytes")?, committee_bytes: disclosure.size("committee_bytes")? };
-        disclosure.end()?; sidecar.end()?;
-        // This deliberately bounded command starts one real native round. A
-        // need-more outcome never becomes Allow or retries with a fresh budget.
+        disclosure.end()?;
+        let priority = if progressive { priority(sidecar.array("priority", MAX_SIDECAR_PRIORITY_GROUPS)?)? }
+            else { Vec::new() };
+        sidecar.end()?;
+        // V1 remains exactly one coarse round. V2 names every retained residual
+        // and future round before the first review, under one cumulative budget.
         if sidecar_identity.object_id == 0 || sidecar_identity.generation == 0
-            || sidecar_identity.transform_id == 0 || disclosure_value.rounds != 1
+            || sidecar_identity.transform_id == 0 || disclosure_value.rounds == 0
+            || disclosure_value.rounds > MAX_SIDECAR_REFINEMENT_ROUNDS
+            || (!progressive && disclosure_value.rounds != 1)
             || disclosure_value.residual_bytes == 0 || disclosure_value.committee_bytes == 0
             || disclosure_value.residual_bytes > MAX_SIDECAR_ACCUMULATED_BYTES
             || disclosure_value.committee_bytes > MAX_SIDECAR_ACCUMULATED_BYTES {
-            return Err("learned publication requires nonzero sidecar identity and one bounded review round".into());
+            return Err(if progressive {
+                "learned publication requires nonzero sidecar identity and bounded review rounds"
+            } else {
+                "learned publication requires nonzero sidecar identity and one bounded review round"
+            }.into());
         }
         let mut native = root.object("native_review")?;
+        let rounds = if progressive {
+            let ids = native.array("round_ids", MAX_SIDECAR_REFINEMENT_ROUNDS)?;
+            let mut unique = BTreeSet::new();
+            let mut rounds = Vec::new();
+            for id in ids {
+                let id = id.as_u64().ok_or("native round IDs must be unsigned integers")?;
+                if id == 0 || !unique.insert(id) { return Err("native round IDs must be nonzero and unique".into()); }
+                rounds.push(id);
+            }
+            if rounds.is_empty() || rounds.len() != disclosure_value.rounds
+                || rounds.len() > priority.len() + 1 {
+                return Err("native schedule must match the disclosure round budget and retained priority ladder".into());
+            }
+            rounds
+        } else { vec![request] };
         let native_limits = NativeReviewLimits {
             polls: native.size("polls")?,
             probes: LearnedProbeWork { coordinates: native.size("probe_coordinates")?,
@@ -212,8 +258,28 @@ impl Recipe {
         Ok(Self { request, ttl_ms, assets_bytes, identity, context, stream, evaluation_origin, monitor_generation,
             publication: publication_value, binding: binding_value, floor: floor_value, files: files_value,
             max_new_tokens, max_output_bytes, stop_tokens, tokenization, budget, telemetry,
-            sidecar: sidecar_identity, disclosure: disclosure_value, native_limits })
+            sidecar: sidecar_identity, disclosure: disclosure_value, native_limits, priority, rounds })
     }
+}
+fn priority(groups: Vec<fa_reference::strict_json::Json>) -> Result<Vec<KvGroup>, String> {
+    let mut selected = Vec::new();
+    let mut unique = BTreeSet::new();
+    for group in groups {
+        let mut group = Fields::new(group)?;
+        let layer = group.number("layer")?;
+        let side = match group.text("side")?.as_str() {
+            "key" => KvSide::Key, "value" => KvSide::Value,
+            _ => return Err("refinement side must be key or value".into()),
+        };
+        let row = KvRow { layer, side, position: group.number("position")? };
+        let group_value = KvGroup { row, head: group.size("head")? };
+        group.end()?;
+        if layer == 0 || !unique.insert(group_value) {
+            return Err("refinement priority requires nonzero layers and unique exact groups".into());
+        }
+        selected.push(group_value);
+    }
+    Ok(selected)
 }
 pub(super) fn identity(mut fields: Fields) -> Result<DecoderIdentity, String> {
     let identity = DecoderIdentity { tenant: fields.number("tenant")?, model: fields.number("model")?,

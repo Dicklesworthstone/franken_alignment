@@ -1,4 +1,4 @@
-//! One original native sidecar congress, preserving numerical custody to handoff.
+//! A fixed original native sidecar sequence, preserving numerical custody to handoff.
 use super::{Config, Loaded, Deadline, ElapsedTick, FileSupervisedDriver, FileHumanReviewer,
     debug, plus, refresh};
 use super::super::super::control::Control;
@@ -28,42 +28,51 @@ where F: FnMut() -> ElapsedTick {
     let prepared = (|| {
         let capture = refresh(&mut driver, config, deadline, time)?;
         let now = time(); deadline.check(now)?;
-        let window = ReviewWindow { commit_by: plus(now, config.timing.commit_ms)?,
-            reveal_by: plus(now, config.timing.reveal_ms)? };
-        if window.reveal_by >= deadline.logical { return Err("insufficient learned review lifetime".into()); }
+        let mut previous = now;
+        let mut rounds = Vec::new();
+        for id in &loaded.rounds {
+            let window = ReviewWindow { commit_by: plus(previous, config.timing.commit_ms)?,
+                reveal_by: plus(previous, config.timing.reveal_ms)? };
+            if !(previous < window.commit_by && window.commit_by < window.reveal_by
+                && window.reveal_by < deadline.logical) {
+                return Err("insufficient learned review lifetime for the complete fixed schedule".into());
+            }
+            rounds.push(LearnedWorkerRound { round: *id, evidence_root: capture.reference_root(), window });
+            previous = window.reveal_by;
+        }
         let mut host = driver.supervisor_mut().host_mut().map_err(debug)?;
         let FileRequestDisposition::Admitted { attempt, .. } =
             host.request_status(loaded.request).map_err(debug)?.disposition
             else { return Err("learned request was not admitted by its original gateway".into()); };
         let message = host.learned_text_message(loaded.evidence).map_err(debug)?;
         let rows: BTreeSet<_> = message.evidence().audit().source().groups().map(|group| group.row).collect();
-        // This fixed one-round profile gives helpers the original coarse source.
-        // No residual is promised or retried after a need-more/abstention result.
         let request = LearnedSidecarRequest { identity: loaded.sidecar,
-            priority: Vec::new(), budget: loaded.disclosure };
+            priority: loaded.priority.clone(), budget: loaded.disclosure };
         let current = host.learned_generation_inspection().map_err(debug)?;
         let revision = host.revision();
         let sidecar = host.begin_learned_sidecar_plan(revision, attempt, current.numerical.actor_revision,
             request).map_err(debug)?;
         let input = host.current_learned_sidecar(&sidecar).map_err(debug)?;
         let native = loaded.native.as_ref().ok_or("no independently admitted native model roster")?;
-        let mut members = std::collections::BTreeMap::new();
-        for (name, view) in input.views() {
-            let mut queries = Vec::new();
-            for row in &rows {
-                let tap = KvTap { layer: row.layer, side: row.side };
-                let probes = loaded.probes.get(&tap).ok_or("missing independently registered K/V probes")?;
-                for probe in probes { queries.push(SidecarProbeQuery { row: *row, probe: probe.clone() }); }
+        let mut rosters = std::collections::BTreeMap::new();
+        for round in &rounds {
+            let mut members = std::collections::BTreeMap::new();
+            for (name, view) in input.views() {
+                let mut queries = Vec::new();
+                for row in &rows {
+                    let tap = KvTap { layer: row.layer, side: row.side };
+                    let probes = loaded.probes.get(&tap).ok_or("missing independently registered K/V probes")?;
+                    for probe in probes { queries.push(SidecarProbeQuery { row: *row, probe: probe.clone() }); }
+                }
+                members.insert(name.clone(), NativeReviewMember {
+                    evaluator: native.evaluator(name, view.actual_input().input_profile().clone())?,
+                    queries, salt: super::super::super::nonce()?.to_vec(),
+                });
             }
-            members.insert(name.clone(), NativeReviewMember {
-                evaluator: native.evaluator(name, view.actual_input().input_profile().clone())?,
-                queries, salt: super::super::super::nonce()?.to_vec(),
-            });
+            rosters.insert(round.round, members);
         }
         let launch = FileNativeDriverLaunch { journal_revision: host.revision(), request: loaded.request,
-            sidecar, rounds: vec![LearnedWorkerRound { round: loaded.request,
-                evidence_root: capture.reference_root(), window }],
-            rosters: [(loaded.request, members)].into_iter().collect(), limits: loaded.native_limits };
+            sidecar, rounds, rosters, limits: loaded.native_limits };
         Ok((launch, capture.snapshot().clone(), now))
     })();
     let (launch, snapshot, now) = match prepared {
