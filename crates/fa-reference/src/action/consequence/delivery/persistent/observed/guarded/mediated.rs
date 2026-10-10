@@ -1,6 +1,7 @@
 //! Recover topology-observer custody together with the original guarded owner.
 //! Exact graphs are independent requirements, not assumed live capture or a cut.
 mod inspection;
+pub mod learned;
 pub use inspection::{FileMediatedSnapshot, FileTopologyUpdateRecord};
 
 use super::{FileCredentialRegistration, FileGuardSet, FileOversightRoles, FileRecoveryRequirements};

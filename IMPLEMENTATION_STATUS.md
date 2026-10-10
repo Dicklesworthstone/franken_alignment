@@ -1,5 +1,39 @@
 # Implementation status · design revision 0.3
 
+## 2026-10-10: learned generation with topology-observer custody
+
+The original mediated guard profile now composes with learned numerical startup,
+cooperative recovery, exact retained-history anchors and pending-reset completion.
+Creation checks the exact learned recipe, every declared guard, original graph
+and optional marginal evaluator before its single first image. A recipe-owned
+policy source must match the independent declaration and is installed once.
+
+Recovery retains the original exclusive learned cursor and checks original/current
+graphs, availability, evaluator, policy, credentials and external floors before
+readiness or writes. Completion uses the original reset/fence transaction and
+only then releases separate role custody. The fence withdraws the old topology
+cut, identity eligibility and approvals; publication requires a newer graph and
+inventory, fresh certification, resumed numerical work and both original keys.
+Unknown effects and spent work remain charged. Predictor-pinned and joint
+evaluation profiles are explicitly excluded rather than losing observer custody.
+
+All 41 public tests passed locally on `nightly-2026-09-21`: eight new
+`mediated_learned_recovery` tests and 33 surrounding tests in
+`file_mediated_bootstrap`, `file_mediated_recovery`, `file_mediated_inspection`
+and `learned_guarded_recovery`. They execute real generation, anchored pending
+reset, exact sampled-token retry, retained unknown liability, independent
+evaluations, fresh identity, original congress and two-key publication. Negative
+cases preserve journal/staging bytes under graph, recipe, evaluator, guard,
+floor, reset-intent, equal-counter fork and truncation mismatches. Two old
+bootstrap fixtures were corrected to respect their unchanged 16-byte effect
+budget and the existing pre-clock identity refusal; no production check changed.
+Both new compile-fail examples passed, confirming that the public recovery type
+offers neither early role access nor an escape to the underlying owner.
+
+This completes this bounded learned/mediation composition, not operating-system
+containment or deployment qualification. See
+[mediated learned recovery](docs/MEDIATED_LEARNED_RECOVERY.md).
+
 ## 2026-10-10: static RoPE through numerical execution and helper processes
 
 The original Llama/SafeTensors decoder now admits explicit linear and Llama3

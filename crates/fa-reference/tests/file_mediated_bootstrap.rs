@@ -11,7 +11,7 @@ use fa_reference::action::ElapsedTick;
 use fa_reference::action::consequence::activation::consistency::{BinaryForecast, ErrorBudget, ForecastRegistration};
 use fa_reference::action::consequence::activation::monitor::decoder::MonitoredStep;
 use fa_reference::action::consequence::delivery::EndpointOutcome;
-use fa_reference::action::consequence::delivery::persistent::{PolicyUpdate, Reconciliation};
+use fa_reference::action::consequence::delivery::persistent::{JournalError, PolicyUpdate, Reconciliation};
 use fa_reference::action::consequence::delivery::persistent::observed::{FileOversight, FileOversightProfile};
 use fa_reference::action::consequence::delivery::persistent::observed::consistency::{FileConsistencyConfig, FileConsistencyParameters};
 use fa_reference::action::consequence::delivery::persistent::observed::decoder::FileDecoderConfig;
@@ -25,6 +25,7 @@ use fa_reference::action::consequence::oversight::evidence_source::{EvidenceIden
 use fa_reference::action::consequence::oversight::identity::IdentityStatus;
 use fa_reference::action::consequence::oversight::policy_governance::CampaignDisposition;
 use fa_reference::action::consequence::gate::containment::session::policy::Policy;
+use fa_reference::Error;
 
 fn predictor() -> FileConsistencyConfig {
     FileConsistencyConfig::new(FileConsistencyParameters {
@@ -111,7 +112,8 @@ fn every_guard_survives_one_recovery_then_new_owned_forecast_and_credentialed_st
     let (mut host, fresh) = FileOversight::open_mediated_guarded(root.store(), p.clone(), &expected).unwrap();
     assert_eq!(host.revision(), before.journal.revision + 1);
     assert!(host.decoder_inspection().unwrap().paused); assert!(!host.clock_ready());
-    assert!(!host.mediation_snapshot().unwrap().available); assert_eq!(host.identity_status().unwrap(), IdentityStatus::Missing);
+    assert!(!host.mediation_snapshot().unwrap().available);
+    assert_eq!(host.identity_status(), Err(JournalError::Contract(Error::Incomplete)));
     assert_eq!(host.credibility_report().unwrap(), before.credibility.unwrap());
     assert_eq!(host.action_consistency_snapshot().unwrap().evidence, before.consistency.unwrap().evidence);
     assert_eq!(host.policy_campaign(81).unwrap().observed_disposition(), CampaignDisposition::Revoked);
@@ -121,6 +123,7 @@ fn every_guard_survives_one_recovery_then_new_owned_forecast_and_credentialed_st
     recapture(&mut host, &fresh.topology_observer, 2);
     assert!(host.decoder_inspection().unwrap().paused); assert!(!host.clock_ready());
     host.observe_time(host.revision(), ElapsedTick(2)).unwrap();
+    assert_eq!(host.identity_status().unwrap(), IdentityStatus::Missing);
     let observation = evidence(2); std::fs::write(&source_path, observation.encode()).unwrap();
     host.refresh_file_source(host.revision(), &mut source, ElapsedTick(2)).unwrap();
     let n = host.decoder_inspection().unwrap().numerical;
@@ -174,7 +177,8 @@ fn atomic_startup_refuses_bad_contracts_but_records_uncertified_bypass_graphs_wi
         Ok(CutCheck::Bypass(_))));
     assert!(host.propose(host.revision(), 1, ordinary::spec(&host, b"blocked"), snapshot()).is_err());
     recapture(&mut host, &roles.topology_observer, 2);
-    let keys = ordinary::ready(&mut host, &roles.oversight.human, 1, b"fresh certified publication");
+    // The unchanged ordinary fixture reserves 16 publication-byte units.
+    let keys = ordinary::ready(&mut host, &roles.oversight.human, 1, b"fresh certified");
     ordinary::dispatch(&mut host, &keys);
     let outcome = host.publish_checked(host.revision(), 1, Some(&keys.inputs), snapshot(), ElapsedTick(1)).unwrap();
     assert_eq!(outcome.outcome, EndpointOutcome::Executed { resulting_version: 2 });

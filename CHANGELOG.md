@@ -1,5 +1,16 @@
 # Changelog
 
+## 2026-10-10: mediated learned startup and reset recovery
+
+- Atomically create learned generation, the complete native guard set, original
+  topology and optional marginal evaluator before releasing owner/observer roles.
+- Add sealed cooperative and anchored learned recovery with exact graph and
+  availability requirements. Complete pending resets through the original
+  transaction, retain unknown charges, and require fresh topology and both keys.
+- Pass all 41 public tests across the new learned mediation harness and four
+  surrounding recovery/startup harnesses. Cover actual publication, exact reset
+  retry, bypass refusal, independent custody and no-write contract mismatches.
+
 ## 2026-10-10: static RoPE and independently configured native helpers
 
 - Execute explicit linear and Llama3 frequencies through the original Q/K kernel,

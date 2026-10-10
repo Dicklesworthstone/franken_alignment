@@ -138,6 +138,17 @@ impl PreparedGuardedBootstrap {
         Ok(self)
     }
 
+    /// Check the complete learned/guarded topology inventory before its first
+    /// image exists. Native recipe-owned source installation remains unique.
+    pub(super) fn checked_mediated(self, guards: &FileGuardSet,
+        protocol: Option<&crate::action::consequence::oversight::credibility::EvaluationProtocol>,
+        topology: &crate::action::consequence::mediation::AuthorityGraph)
+        -> Result<Self, JournalError>
+    {
+        guards.check_mediated(&self.machine, &self.events, protocol, None, Some(topology))?;
+        Ok(self)
+    }
+
     pub(super) fn publish(self, store: storage::Store)
         -> Result<(FileOversight, FileOversightRoles), JournalError>
     {
