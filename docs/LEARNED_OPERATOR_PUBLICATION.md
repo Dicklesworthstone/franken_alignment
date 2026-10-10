@@ -336,6 +336,18 @@ any BPE compression. This is a bound for that synthetic fixture, not capacity
 evidence for arbitrary models or inputs. Operators must budget their complete
 prompt, probes, protocol, generation and publication histories.
 
+## Provisioning trained K/V probes
+
+`KvDecoderCampaign::monitor_json` can now produce this command's existing
+`fa.learned-kv-monitor/1` input directly from a complete accepted training,
+calibration and held-out K/V campaign. Every model layer and both sides must
+pass before export. The actual loader tests preserve exact coefficients and all
+runtime budgets, then execute original sampled quiet and hold behavior. See
+[trained K/V monitors](TRAINED_KV_MONITORS.md) for the public API and required
+independent model/codec provisioning. The JSON does not authenticate training
+labels, model/tokenizer identity or lineage, and import alone does not establish
+held-out acceptance.
+
 ## Independent fit binding: fa.learned-fit-binding/1
 
 The fit archive is produced by the original fitting checkpoint interface.
@@ -524,9 +536,9 @@ stream-finish, identity-activation, qualification or sharded-model modes.
 ## Verification status
 
 The implementation was independently reviewed and executed with qualified
-`nightly-2026-09-08`. All twenty learned-command example tests compile. Eighteen
-pass: all eleven original direct/admission tests and seven progressive-review
-tests. Two actual Unix-listener tests fail at listener creation with environment
+`nightly-2026-09-08`. All twenty-three learned-command example tests compile. Twenty-one
+pass: all eleven original direct/admission tests, seven progressive-review tests,
+and three actual trained-monitor export/loader tests. Two actual Unix-listener tests fail at listener creation with environment
 EPERM: the complete peer publication test and authenticated stop during a
 partially computed refined round. Neither test is skipped, and their transport
 paths have not been replaced by a weaker fallback.

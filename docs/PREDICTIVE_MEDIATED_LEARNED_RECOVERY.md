@@ -127,13 +127,16 @@ Its eight authored tests cover:
 | Unknown effects | Dispatched but unpublished work stays charged after recovery; old keys/roles fail; original settlement releases only sealed unexecuted liability. |
 | Topology changes | Clean and bypass graph controls change to the same epoch before forecasting. Both generate the same quiet original output and consume one forecast. The clean cut reaches native Allow and two-key publication; the bypass edge prevents original request admission without relying on old-key revocation. |
 
-**These new tests and the two compile-fail examples have been authored and source
-reviewed, but have not been compiled or executed in the implementation session:
-the executor became unavailable.** Their listed outcomes describe assertions,
-not reported passes. Prior results for the separate original profiles are not
-evidence that this new combined target has run.
+These tests and compile-fail examples were initially authored while the executor
+was unavailable. Subsequent execution on 2026-10-10 with qualified
+nightly-2026-09-08 passes all eight public tests and both sealed-recovery
+compile-fail examples. The actual native helper fixture uses the original
+4096-position context ceiling; no decoder limit was raised. These results include
+both raw and owned reset-to-native-review/two-key-publication paths. The original
+full gate still refuses its reviewed source snapshot before later workspace
+qualification; the targeted execution does not replace that gate.
 
 The fixtures use the existing tiny actual decoder, native helper model,
 neutral probability table and declared graph controls, with their original
-budgets. They establish executable regression intent, not empirical detector
+budgets. They establish executed regression behavior, not empirical detector
 calibration, helper independence or operating-system containment.

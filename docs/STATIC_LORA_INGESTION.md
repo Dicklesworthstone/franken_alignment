@@ -187,10 +187,15 @@ original-helper socketpair commit/reveal with causal verdict changes.
 Matching inputs accompany malformed configuration, stale identity, budget,
 incomplete output and monitoring refusal cases.
 
-These additions were authored and reviewed while the executor was unavailable.
-**The new LoRA tests had not been executed at authoring time.** Their presence is
-not evidence of passing compilation, production model quality or deployment
-qualification; subsequent validation must record the actual command and result.
+These additions were authored and reviewed while the executor was unavailable;
+they had not been executed at authoring time. Subsequent validation on 2026-10-10
+with qualified nightly-2026-09-08 passes all seven `decoder_lora` tests and all
+six `native_worker_lora` tests, including actual helper-process commit/reveal.
+The helper refusal oracles now name the original model-identity and input-profile
+checks at which rejection actually occurs, retaining zero-work and full-input
+assertions. These synthetic execution results do not establish production-model
+quality or deployment qualification. The unchanged full project gate still
+refuses its reviewed source snapshot before later workspace checks.
 
 ## Primary compatibility references
 

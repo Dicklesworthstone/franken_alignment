@@ -1,5 +1,20 @@
 # Changelog
 
+## 2026-10-10: trained K/V campaigns and actual operator monitor export
+
+- Capture original complete-prefix final K/V frames across every model layer,
+  then reuse original fitting, calibration and held-out evaluation with complete
+  populations and persistent aggregate work admission.
+- Export only a fully accepted roster into original learned monitor/policy and
+  unchanged monitor JSON. Preserve failed tap counts, exact coefficients, runtime
+  budgets, immutable model ownership and explicit provisioning limits.
+- Pass twelve public campaign tests, three actual operator-parser/generation
+  tests and the campaign authority compile-fail check, including learned-signal,
+  final-evaluation and last-tap-budget causal negatives.
+- Final targeted validation passes 69 runtime tests and three compile-fail checks.
+  Two real Unix-listener tests remain blocked by EPERM; the unchanged full gate
+  refuses the reviewed source snapshot before later workspace qualification.
+
 ## 2026-10-10: progressive native review in learned publication
 
 - Add closed learned-publication schema /2 with exact retained K/V residual

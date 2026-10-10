@@ -1,5 +1,51 @@
 # Implementation status · design revision 0.3
 
+## 2026-10-10: complete trained K/V probe campaigns and operator export
+
+`probe::training::decoder::kv` now executes a fixed labelled population through
+the original immutable decoder and captures the actual final-token key and value
+SourceFrames for every layer. The new complete K/V corpus reuses the original
+fitter, threshold calibrator and exact held-out evaluator. GQA taps use actual
+cache widths. All three splits retain both labels, with exact-history and declared
+task/lineage reuse refused before capture. The complete capture and fit/scoring
+allowances are charged before work and remain spent on later numerical failure.
+
+A campaign exports only when every mandatory layer/side passes its independent
+final evaluation. Failed taps and their denominators remain in the report; callers
+cannot drop a failed side or supply replacement coefficients. The accepted roster
+constructs the original LearnedModelMonitor/LearnedDecoderPolicy and emits the
+unchanged `fa.learned-kv-monitor/1` input consumed by the learned publication
+operator. Exact finite coefficient bits, selected thresholds and explicit runtime
+budgets survive that real parser/binder. This closes the K/V training-to-operator
+provisioning gap while leaving the original residual-stream trainer intact.
+
+All twelve new public campaign tests and all three actual operator-loader tests
+pass on qualified nightly-2026-09-08. Real two-layer GQA captures train four
+nonconstant probes; benign sampled output reaches an audited stop, while a real
+violating sample is held without exposing its candidate cache/logits/token.
+Zeroing only layer two's V signal blocks the entire export while preserving the
+other three tap results. Changing only final cases preserves fit/calibration and
+records failed final counts. A final-tap resource refusal cannot convert three
+quiet rows into a released token. Whole-cohort charges and refused retries are
+also exercised, including actual arithmetic failures.
+
+The final selected run passes 48 public integration tests across trained K/V,
+numerical LoRA, actual native LoRA helpers, learned stream/reserve recovery and
+predictive/mediated recovery. The learned-command example passes 21 of 23 tests;
+the two original Unix-listener paths still fail with environment EPERM. Three
+compile-fail checks pass: two sealed predictive-recovery custody cases and the
+new campaign-is-not-a-permit case. That is 69 passing runtime tests plus three
+compile-fail checks, with no skipped transport assertions. The original full
+gate still refuses the reviewed source snapshot before later workspace checks;
+these targeted results are not a complete workspace qualification.
+
+The campaign retains its full immutable model and declared case metadata. The
+original codec binds its existing cache profile, which omits tokenizer generation;
+the v1 JSON contains no model, tokenizer or lineage authentication fields. It is
+provisioning data. These synthetic controls demonstrate executable learned-signal
+and guard behavior, not real-world detector quality or an alignment research
+result. See [trained K/V monitors](docs/TRAINED_KV_MONITORS.md).
+
 ## 2026-10-10: progressive retained-residual review in the learned operator
 
 `fa.learned-publication/2` connects the original retained-residual planner to the

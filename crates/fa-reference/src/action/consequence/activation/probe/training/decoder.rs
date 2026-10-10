@@ -6,6 +6,7 @@ mod export;
 mod rollout;
 pub mod plan;
 pub mod trajectory;
+pub mod kv;
 pub use export::MonitorExport;
 pub use campaign::{CampaignBudget, CampaignWork, DecoderCampaign, LayerCampaign, LayerPolicy};
 
