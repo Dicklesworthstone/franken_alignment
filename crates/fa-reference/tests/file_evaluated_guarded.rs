@@ -45,7 +45,7 @@ fn independent_labels_continue_after_one_guarded_recovery_then_native_promotion_
     assert_eq!(host.promote_credibility(host.revision(), &request), Err(JournalError::Contract(Error::Incomplete)));
     host.observe_time(host.revision(), ElapsedTick(2)).unwrap();
     let request = update(&host, 1); host.promote_credibility(host.revision(), &request).unwrap();
-    let keys = ordinary::ready(&mut host, &fresh.oversight.human, 3, b"new review after labeled promotion");
+    let keys = ordinary::ready(&mut host, &fresh.oversight.human, 3, b"after promotion");
     ordinary::dispatch(&mut host, &keys);
     assert_eq!(host.publish_checked(host.revision(), 3, Some(&keys.inputs), snapshot(), ElapsedTick(2)).unwrap().outcome,
         EndpointOutcome::Executed { resulting_version: 2 });

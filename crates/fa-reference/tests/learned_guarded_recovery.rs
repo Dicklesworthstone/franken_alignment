@@ -402,3 +402,5 @@ fn live_owner_lock_and_existing_directory_do_not_create_a_second_authority() {
 mod anchored;
 #[path = "learned_guarded_recovery/evaluated.rs"]
 mod evaluated;
+#[path = "learned_guarded_recovery/evaluated_bootstrap.rs"]
+mod evaluated_bootstrap;

@@ -1,5 +1,38 @@
 # Evaluated guarded startup, recovery and canonical inspection
 
+## Atomic learned startup and recovery
+
+`create_evaluated_guarded_with_learned_generation` installs the exact learned
+recipe, independent evaluation protocol and complete declared guard set in the
+first canonical image. It uses the original private prepared bootstrap and sole
+Store replacement. No intermediate evaluator-only owner is returned for a caller
+to attach the generator later. Invalid protocols and incompatible model/authority
+bindings refuse before storage is created. Role custody becomes available only
+after the complete image acknowledges.
+
+A recipe-owned policy-only source must match the separately declared source guard
+exactly. The original learned Enable installs that source once; the complete
+resulting guard and evaluation contract is checked before Store creation. Missing
+or changed declarations refuse. Predictor-pinned recipes require a predictive
+role profile and cannot silently discard their observer through this constructor.
+Computed-identity requirements, sidecar requirements and all other original recipe
+bindings remain active; startup supplies no current evidence or effect key.
+
+`begin_open_evaluated_guarded_with_learned_generation` and its anchored variant
+recover this complete owner through the original cooperative replay engine.
+`open_evaluated_guarded_with_learned_generation` is its synchronous consumer.
+The sealed cursor also supports the original atomic
+[pending-reset completion](PENDING_LEARNED_RESET_RECOVERY.md#evaluated-and-predictive-learned-profiles).
+
+Local development execution on `nightly-2026-09-21` passed all 24 tests in
+`learned_guarded_recovery`, including four new startup cases. They cover first
+images and all optional role combinations, incompatible configurations, actual
+generation through identity/review/evaluator/both-key publication, and a real
+policy-file refresh under the recipe-owned source. These results do not replace
+the historical qualification receipts or expand their claims.
+
+## Original evaluated profile and historical verification scope
+
 `FileOversight::create_evaluated_guarded` installs the original independent evaluation protocol together with every requested existing guard in the first canonical image. It reuses `PreparedGuardedBootstrap`, the original perimeter resolver, native enable transitions and sole Store replacement. A malformed protocol refuses before storage creation. Only acknowledged publication returns `FileEvaluatedOversightRoles`: the existing separately held human, identity-observer and policy-governor roles alongside the independent evaluator. No current evidence, clock, approval, provider secret or measured model identity is invented by bootstrap.
 
 `open_evaluated_guarded` requires the independently retained `EvaluationProtocol` and the complete original `FileRecoveryRequirements`. It compares exact protocol presence and every field, as well as model/monitor/sampler and numerical-stop configuration, before numerical replay. Full original-machine replay validates all subsequent labels, promotions, controls and suffixes. All remaining guard, effective-policy, credential and external-floor checks precede staging cleanup or a recovery write. A single original recovery fence then returns all roles for separate custody. Labels, censored-label history, unfinished-round denominators, false-stop history and promoted weights remain; old file evaluator roles, tickets and effect approvals do not become usable on the reopened owner.

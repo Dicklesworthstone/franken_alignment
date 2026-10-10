@@ -4,7 +4,7 @@
 #[path = "support/investigation_decoder.rs"] mod numerical;
 #[allow(dead_code)]
 #[path = "support/decoder_inputs.rs"] mod data;
-use fa_reference::action::ElapsedTick;
+use fa_reference::action::{ActionState, ElapsedTick};
 use fa_reference::action::consequence::activation::{SourceFrame, FrameIdentity};
 use fa_reference::action::consequence::activation::consistency::{BinaryForecast, ErrorBudget, ForecastRegistration};
 use fa_reference::action::consequence::activation::monitor::decoder::MonitoredStep;
@@ -26,6 +26,7 @@ use fa_reference::action::consequence::delivery::persistent::observed::publicati
 use fa_reference::action::consequence::oversight::actor::{ActorProposal, ActorOutcome, Knowledge, UnknownReason};
 use fa_reference::action::consequence::oversight::decoder_monitoring::DecoderBindingLimits;
 use fa_reference::action::consequence::oversight::decoder_host::HostedStopPolicy;
+use fa_reference::round::Verdict;
 use fa_reference::Error;
 use ordinary::Directory;
 
@@ -193,7 +194,7 @@ fn clean_recovery_requires_new_role_time_resume_and_new_actual_token_before_seco
 }
 
 #[test]
-fn crossed_owned_evidence_keeps_refused_request_and_seals_without_premature_refund() {
+fn crossed_owned_evidence_keeps_staged_request_and_seals_without_premature_refund() {
     let root = Directory::new(); let (mut h, roles, _) = create(&root, 100.0, false);
     force(&mut h, 0); forecast(&mut h, &roles.consistency_observer, 9000);
     h.submit_request(h.revision(), 9000, ordinary::spec(&h, b"risk first"), ordinary::snapshot()).unwrap();
@@ -201,11 +202,28 @@ fn crossed_owned_evidence_keeps_refused_request_and_seals_without_premature_refu
     force(&mut h, 0); forecast(&mut h, &roles.consistency_observer, 9001);
     let raw = ordinary::spec(&h, b"risk second");
     let status = h.submit_request(h.revision(), 9001, raw.clone(), ordinary::snapshot()).unwrap();
-    assert!(matches!(status.disposition, FileRequestDisposition::NotAdmitted(_)));
+    // Observing this proposal produces the crossing. The original proposal is
+    // retained for review; the consistency hold applies to positive authority.
+    assert_eq!(status.disposition,
+        FileRequestDisposition::Admitted { attempt: 2, stage: ActionState::Reviewing });
     assert_eq!(h.action_consistency_snapshot().unwrap().evidence.first_crossing(), Some(2));
+    assert_eq!(h.action_consistency_snapshot().unwrap().evidence.samples(), 2);
     let revision = h.revision();
     assert_eq!(h.submit_request(0, 9001, raw, Default::default()).unwrap(), status);
     assert_eq!(h.revision(), revision);
+    assert_eq!(h.action_consistency_snapshot().unwrap().evidence.samples(), 2);
+    let action = h.request_action(9001).unwrap().clone();
+    let inputs = ordinary::inputs(&action, b"complete evidence");
+    h.record_inputs(h.revision(), 2, 0, inputs.clone()).unwrap();
+    h.begin_review(h.revision(), 2, 102, ordinary::ROOT, ordinary::window(&h), ordinary::snapshot()).unwrap();
+    ordinary::votes(&mut h, 102, Verdict::Allow);
+    assert_eq!(h.finish_review(h.revision(), 102, Some(&inputs), ordinary::snapshot()),
+        Ok(Err(Error::Incomplete)));
+    assert_eq!(h.authorize(h.revision(), 2, &inputs, ordinary::snapshot()).err(),
+        Some(JournalError::Contract(Error::Incomplete)));
+    assert_eq!(h.request_human_approval(h.revision(), 1002, 2, &inputs, ElapsedTick(30)).err(),
+        Some(JournalError::Contract(Error::Incomplete)));
+    assert_eq!(h.inspect().executions, 0); assert_eq!(h.inspect().control.ledger.charged, 16);
     let sealed = h.publish_checked(h.revision(), 1, Some(&keys.inputs), ordinary::snapshot(), ElapsedTick(1)).unwrap();
     assert!(matches!(sealed.basis, PublicationBasis::Rejected(_)));
     assert_eq!(h.inspect().executions, 0); assert_eq!(h.inspect().control.ledger.charged, 16);

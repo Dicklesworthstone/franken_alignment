@@ -25,7 +25,8 @@ fn measured_forecast_then_congress_and_human_key_reach_guarded_publication() {
     let p = forecast(&mut host, &observer, 1, 1, 1.0);
     assert_eq!(p.forecast().null_numerator(), 49152);
     assert_eq!(host.action_consistency_snapshot().unwrap().pending_attempt, Some(1));
-    let keys = ready(&mut host, &human, 1, b"risk is an operational category, not a label");
+    // The positive action must fit the fixture's original 16-byte effect budget.
+    let keys = ready(&mut host, &human, 1, b"risk category");
     let observation = host.action_consistency_observation(1).unwrap();
     assert!(observation.event()); assert!(!observation.crossed());
     assert_eq!(observation.factor(), LikelihoodFactor { numerator: 16384, denominator: 49152 });

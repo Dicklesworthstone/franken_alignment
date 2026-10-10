@@ -1,5 +1,17 @@
 # Changelog
 
+## 2026-10-10: atomic evaluated learned startup
+
+- Create the learned generator, complete declared guards and independent
+  evaluator in one original canonical bootstrap before exposing any owner.
+- Bind recipe-owned policy sources to the separately declared guard exactly,
+  install each source once and validate the final full contract before storage.
+- Pass all 24 public guarded-recovery/startup tests, including four new startup
+  cases with actual generation, policy-file refresh and both-key publication.
+- Pass all 51 tests in eight surrounding integration harnesses. Keep positive
+  fixtures within their existing effect budgets and test forecast crossings at
+  review/authorization, including exact retry, retained liability and no effects.
+
 ## 2026-10-10: versioned forecast continuation after learned reset
 
 - Add an independently pinned recipe option for raw and owned pre-output

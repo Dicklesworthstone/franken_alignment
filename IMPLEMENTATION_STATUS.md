@@ -1,5 +1,38 @@
 # Implementation status · design revision 0.3
 
+## 2026-10-10: atomic evaluated learned startup
+
+`create_evaluated_guarded_with_learned_generation` now publishes the exact learned
+recipe, independently supplied evaluation protocol and every declared guard in
+one original first image. The prepared owner remains private until canonical
+acknowledgment. Recipe-owned policy-only sources must exactly match the declared
+guard and are installed once, followed by complete native contract validation.
+Predictor-pinned recipes retain their separate required role profile.
+
+All 24 public `learned_guarded_recovery` tests passed locally on
+`nightly-2026-09-21`, including four new first-image cases. Positive cases execute
+real numerical generation, fresh identity, original congress, independent labels,
+both publication keys and a real policy-file refresh. Historical gate receipts
+and production-runtime admission remain unchanged. See
+[evaluated learned startup](docs/EVALUATED_GUARDED_RECOVERY.md#atomic-learned-startup-and-recovery).
+
+The final surrounding regression run passed all 51 tests across
+`action_consistency`, `file_action_consistency`, `file_owned_forecasts`,
+`hosted_action_forecasts`, `file_keyed_forecasts`, `file_consistency_loss`,
+`file_predictive_guarded` and `file_evaluated_guarded`. Together with the 24 above
+and six reset-successor tests below, 81 public integration tests passed. Repairs
+to older positive fixtures retain existing payload budgets and check the actual
+crossing boundary: staging remains observable while positive review, automatic
+permission, human approval and effects remain refused.
+
+The original `xtask check` passed lock and source inventory checks, then refused
+the installed compiler commit `bba531001d4de6d7f49693e0836a2668ca063282`, because
+the qualification policy requires `cea272fa356e94bd2ee2cadf376630aa0683867a`.
+The policy was not changed. The separate workspace/all-targets check and
+monolithic unit-test build were killed with SIGKILL under shared resource
+pressure. The eight new predictor reset/fault unit tests have not executed;
+no complete workspace, formatting, Clippy or qualification pass is claimed.
+
 ## 2026-10-10: forecast continuation on original reset successors
 
 New learned text recipes can explicitly select

@@ -1,5 +1,6 @@
 //! Recover evaluated learned generation without losing independent evaluator custody.
 //! Original numerical replay, reset and the sole completion/fence write stay sealed.
+mod bootstrap;
 use super::{EvaluationProtocol, FileEvaluatedOversightRoles, FileOversightRoles,
     FileRecoveryRequirements, check_protocol};
 use super::super::{anchored::FileHistoryAnchor, learned::check_profile};

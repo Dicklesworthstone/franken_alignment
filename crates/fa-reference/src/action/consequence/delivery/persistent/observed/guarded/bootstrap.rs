@@ -128,6 +128,16 @@ impl PreparedGuardedBootstrap {
         Ok(self)
     }
 
+    /// Compare the complete independently declared guard inventory after native
+    /// recipe-owned installations, while the entire bootstrap remains private.
+    pub(super) fn checked_evaluated(self, guards: &FileGuardSet,
+        protocol: &crate::action::consequence::oversight::credibility::EvaluationProtocol)
+        -> Result<Self, JournalError>
+    {
+        guards.check_evaluated(&self.machine, &self.events, Some(protocol))?;
+        Ok(self)
+    }
+
     pub(super) fn publish(self, store: storage::Store)
         -> Result<(FileOversight, FileOversightRoles), JournalError>
     {
