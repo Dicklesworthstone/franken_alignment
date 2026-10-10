@@ -35,7 +35,7 @@ pub(super) fn evaluator(profile_binding: InputProfileBinding, spelling: &[u8]) -
     let count = vocabulary.len();
     let profile = DecoderProfile::new(DecoderIdentity { tenant: 1, model: 2, model_generation: 3,
         tokenizer_generation: 4, profile_generation: 5 }, DecoderShape { vocabulary: count, hidden: 2,
-        intermediate: 2, layers: 1, query_heads: 1, cache_heads: 1, context: 8192 }, 0.00001, 10000.0).unwrap();
+        intermediate: 2, layers: 1, query_heads: 1, cache_heads: 1, context: 4096 }, 0.00001, 10000.0).unwrap();
     let tokenizer = ByteBpe::new(profile.clone(), vocabulary, merges).unwrap();
     let mut embeddings = vec![0.0; count * 2];
     for id in 0..count { embeddings[id * 2] = 1.0; }

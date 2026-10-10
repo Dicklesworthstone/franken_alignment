@@ -101,9 +101,9 @@ pub(super) fn native(root: &Path, spelling: &[u8]) -> usize {
     let stop = vocabulary.len();
     vocabulary.push(TokenBytes::Control);
     let count = vocabulary.len();
-    let profile = profile(31, count, 8192);
+    let profile = profile(31, count, 4096);
     let tokenizer = ByteBpe::new(profile, vocabulary, merges).unwrap();
-    fs::write(root.join("helper-model.json"), configuration(count, 8192)).unwrap();
+    fs::write(root.join("helper-model.json"), configuration(count, 4096)).unwrap();
     fs::write(root.join("helper-weights.safetensors"), weights(count, response as usize, stop, false)).unwrap();
     fs::write(root.join("helper-tokenizer.bbpe"), tokenizer.to_bytes().unwrap()).unwrap();
     fs::write(root.join("helper-sampling.json"), sampling(count)).unwrap();

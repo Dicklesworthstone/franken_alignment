@@ -5,6 +5,8 @@ use super::{FileOversight, FileOversightProfile, FileOversightRoles, FileRecover
 use super::super::decoder::learned::{FileLearnedConfig, FileLearnedRecovery,
     FileLearnedRecoveryProgress, FileLearnedRecoveryStatus, checkpoint::FileLearnedResetIntent};
 use crate::Error;
+use crate::action::consequence::delivery::persistent::RecoveryReserve;
+use super::{BaseEvent, Event};
 use std::fmt;
 use std::path::Path;
 
@@ -69,6 +71,28 @@ fn begin(directory: &Path, profile: FileOversightProfile, expected: &FileRecover
 }
 
 impl FileGuardedLearnedRecovery {
+    /// Require exactly the independently selected original logical reserve
+    /// from the SAME locked canonical history, before the first replay step.
+    /// Missing or different reserves return no owner and perform no cleanup or
+    /// fence. No reserve is installed or enlarged during recovery. The original
+    /// decoder already verifies its unique pre-work position and both limits;
+    /// finish still verifies the retained canonical cut before writing.
+    pub fn require_recovery_reserve(self, expected: RecoveryReserve) -> Result<Self, JournalError> {
+        let progress = self.inner.progress();
+        if progress.replayed_events != 0 || progress.status != FileLearnedRecoveryStatus::Replaying {
+            return Err(Error::WrongState.into());
+        }
+        let (_, events, _) = self.inner.guarded_history();
+        let mut reserves = events.iter().filter_map(|event| match event {
+            Event::Core(BaseEvent::ReserveRecovery(actual)) => Some(*actual),
+            _ => None,
+        });
+        if reserves.next() != Some(expected) || reserves.next().is_some() {
+            return Err(Error::Binding.into());
+        }
+        Ok(self)
+    }
+
     pub fn progress(&self) -> FileLearnedRecoveryProgress {
         let mut progress = self.inner.progress();
         if let Some(error) = self.failure { progress.status = FileLearnedRecoveryStatus::Failed(error); }

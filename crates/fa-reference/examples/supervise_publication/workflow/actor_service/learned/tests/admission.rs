@@ -132,9 +132,14 @@ fn learned_command_post_read_lease_boundary_blocks_numerics_without_renewing_sav
             ElapsedTick(if calls == 1 { 1000 } else if calls < 5 { 1000 + gap } else { 1000 + 2 * gap })
         });
         assert_eq!(result.is_ok(), gap == 9, "{result:?}");
+        if gap == 10 { assert_eq!(result.err().as_deref(), Some("Contract(Stale)")); }
         let host = driver.supervisor().host().unwrap(); let state = host.learned_generation_inspection().unwrap();
         assert_eq!(state.numerical.position, if gap == 9 { 4 } else { 0 });
         assert_eq!(state.numerical.sampled_draws, if gap == 9 { 2 } else { 0 });
+        if gap == 10 {
+            assert_eq!(state.numerical.work.admitted_tokens, 0);
+            assert!(state.pending.is_none());
+        }
         assert_eq!(host.inspect().executions, 0); assert!(host.inspect().payload.is_empty());
     }
 }

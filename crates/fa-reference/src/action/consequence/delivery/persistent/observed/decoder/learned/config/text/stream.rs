@@ -9,6 +9,7 @@ use crate::action::consequence::delivery::{stream::StreamProfile, persistent::ob
     FileStreamSnapshot, write_profile,
 }};
 use crate::action::consequence::oversight::learned_host::text::stream::Release;
+use crate::action::consequence::delivery::persistent::{Event as BaseEvent, RecoveryReserve};
 use crate::{Error, ReadWitness, Snapshot};
 use std::path::Path;
 
@@ -44,11 +45,31 @@ impl FileOversight {
     pub fn create_with_learned_text_stream(directory: impl AsRef<Path>, profile: FileOversightProfile,
         config: FileLearnedConfig) -> Result<(Self, FileHumanReviewer), JournalError>
     {
+        Self::create_learned_stream_bootstrap(directory.as_ref(), profile, config, None)
+    }
+
+    /// Install the original logical reserve before learned work in the SAME
+    /// first image. The original admission law forbids installing a reserve
+    /// after learned Enable, even before the first sampled token. Only the
+    /// existing Fence/Stop/StopProgress lane can spend the retained tail; this
+    /// does not reserve physical disk space or replenish numerical budgets.
+    pub fn create_with_learned_text_stream_with_reserve(directory: impl AsRef<Path>,
+        profile: FileOversightProfile, config: FileLearnedConfig, reserve: RecoveryReserve)
+        -> Result<(Self, FileHumanReviewer), JournalError>
+    {
+        Self::create_learned_stream_bootstrap(directory.as_ref(), profile, config, Some(reserve))
+    }
+
+    fn create_learned_stream_bootstrap(directory: &Path, profile: FileOversightProfile,
+        config: FileLearnedConfig, reserve: Option<RecoveryReserve>)
+        -> Result<(Self, FileHumanReviewer), JournalError>
+    {
         let stream = config.text_stream_profile().ok_or(Error::Binding)?;
-        let events = vec![Event::StreamBootstrap(stream),
-            Event::Decoder(DecoderEvent::Learned(LearnedEvent::Enable(Configuration::new(config))))];
+        let mut events = vec![Event::StreamBootstrap(stream)];
+        if let Some(reserve) = reserve { events.push(Event::Core(BaseEvent::ReserveRecovery(reserve))); }
+        events.push(Event::Decoder(DecoderEvent::Learned(LearnedEvent::Enable(Configuration::new(config)))));
         let machine = Machine::replay(&profile, &events)?;
-        let store = storage::Store::create(directory.as_ref())?;
+        let store = storage::Store::create(directory)?;
         store.replace(&journal::encode(&profile, store.identity(), &events)?)?;
         Ok(Self::owner(profile, store, events, machine))
     }

@@ -3,8 +3,10 @@
 #![cfg(unix)]
 #[path = "support/learned_text_model.rs"]
 mod fixture;
+#[path = "learned_text_stream_durable/reserve.rs"]
+mod reserve;
 use fixture::{config, model, policy, tokenizer, END, OTHER_CONTROL};
-use fa_reference::{Error, Snapshot};
+use fa_reference::{Error, ReadWitness, Snapshot};
 use fa_reference::action::{ActionState, ElapsedTick, FrozenAction, Purpose, ResolvedTarget, Scope};
 use fa_reference::action::consequence::congress::{CongressPolicy, MemberPolicy};
 use fa_reference::action::consequence::delivery::{EndpointOutcome, stream::StreamProfile, persistent::{
@@ -203,7 +205,9 @@ fn every_prompt_sample_and_stop_cut_recovers_exact_original_output_before_releas
         assert_eq!(actual.bytes(), expected.bytes()); assert_eq!(actual.stop(), expected.stop());
         assert_eq!(actual.work(), expected.work()); assert_eq!(actual.telemetry_work(), expected.telemetry_work());
         assert_eq!(actual.evidence().tokens(), expected.evidence().tokens());
-        let frame = host.stream_message_spec("OK", ElapsedTick(100)).unwrap();
+        let mut frame = host.stream_message_spec("OK", ElapsedTick(100)).unwrap();
+        // Original proposal freezing derives the current policy witness.
+        frame.required_witnesses = vec![ReadWitness::Exact { key: 7, value: Some(b"ok".to_vec()) }];
         assert_eq!(message(&mut host, 1).spec(), &frame);
         assert_eq!(host.inspect().executions, 0);
     }
@@ -344,7 +348,9 @@ fn stale_revisions_and_generic_substitutions_cannot_write_or_bypass_the_stream_b
         assert!(host.propose(before, 1, changed, snapshot()).is_err());
         assert_eq!(host.revision(), before); assert_eq!(root.files(), files);
     }
-    assert_eq!(host.propose(before, 1, valid.clone(), snapshot()).unwrap().spec(), &valid);
+    let mut frozen = valid.clone();
+    frozen.required_witnesses = vec![ReadWitness::Exact { key: 7, value: Some(b"ok".to_vec()) }];
+    assert_eq!(host.propose(before, 1, valid, snapshot()).unwrap().spec(), &frozen);
 }
 
 #[test]

@@ -100,7 +100,8 @@ fn learned_command_pending_generation_recovery_native_congress_and_both_keys() {
         } else {
             let mut host = driver.supervisor_mut().host_mut().unwrap(); let revision = host.revision();
             reviewer.reject(&mut host, revision, &offer).unwrap();
-            host.cancel_request(host.revision(), 1).unwrap();
+            let revision = host.revision();
+            host.cancel_request(revision, 1).unwrap();
         }
         assert_eq!(executed(&mut wire, 1), approve);
         {

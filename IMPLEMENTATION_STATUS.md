@@ -1,5 +1,55 @@
 # Implementation status · design revision 0.3
 
+## 2026-10-10: atomic learned startup and post-read source freshness
+
+The learned publication command previously created its learned stream and then
+attempted to install a terminal reserve. The original journal correctly treats
+learned Enable as work, so every otherwise valid command failed with WrongState.
+`create_with_learned_text_stream_with_reserve` now writes StreamBootstrap,
+ReserveRecovery and the exact learned Enable in one first canonical image.
+The original unreserved constructor keeps its two-event sequence, and late
+reserve installation remains forbidden by the original admission law.
+
+`FileGuardedLearnedRecovery::require_recovery_reserve` pins the independently
+selected reserve from the same exclusively locked canonical history before the
+first replay step. The command applies that requirement before numerical replay,
+cleanup or fencing. Original complete guard checks, independent floors, exact
+recipe matching and the final canonical-cut check remain in force.
+
+The command also now checks the original policy-state capture after acknowledging
+post-read time. Merely advancing the clock did not validate the read-start lease;
+previously the exact-expiry case could begin stale numerical work. The new
+read-only `capture_file_policy_state` delegates the original source frontier and
+half-open freshness check. No learned event replay semantics or freshness limits
+change. The boundary test now requires Stale, zero admitted tokens and no pending
+intent at expiry, while the immediately preceding tick completes normally.
+
+All eleven direct/admission command tests now pass, including actual imported
+native review, original two-key publication, pending-step recovery, retained
+cancellation work and receipt-only reopen. The twelfth test still fails at the
+actual Unix listener bind with EPERM; it remains present and unskipped. The
+nonzero actor fixture uses a constant V training population to avoid an unintended
+ordered-f32 uncertainty envelope; rotating K remains genuinely compressed, and
+all complete-input, native-work and publication assertions remain intact.
+
+All fifteen learned text-stream integration tests pass on qualified
+nightly-2026-09-08, including four new boundary tests: atomic installation with
+zero inference, malformed/unfunded reserve refusal, no-write missing/changed/late
+reserve requirements, and actual learned work exhausting ordinary journal space
+before the original fence, stop and drain consume the terminal tail. Six actual
+native LoRA helper tests also pass after correcting their expected refusal stage.
+Earlier tests in this session passed all seven numerical LoRA cases and all eight
+predictive/mediated learned recovery cases. Native fixtures now respect the
+original 4096-position limit, and stream proposal comparisons include the exact
+policy-derived frozen witness rather than an unfrozen input specification.
+
+The original project gate now passes the qualified compiler-identity check but
+refuses the reviewed source snapshot: numerous existing and new source files
+are unlisted, and recorded digests for existing files are stale. It stops before
+formatting, Clippy and the full workspace test gate. No snapshot record or gate
+was rewritten to manufacture qualification. The direct command tests do not establish the unavailable listener transport.
+See [learned stream recovery reserve](docs/LEARNED_STREAM_RECOVERY_RESERVE.md).
+
 ## 2026-10-10: learned generation through the publication operator
 
 `supervise_publication create-learned-generated` now loads an explicit learned

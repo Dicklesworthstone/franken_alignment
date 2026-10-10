@@ -113,10 +113,12 @@ fn worker_v4_requires_the_adapted_monitor_and_the_exact_registered_input_profile
         .replace("\"profile_generation\":7", "\"profile_generation\":5");
     std::fs::write(path, old).unwrap();
     let stderr = no_vote(&fixture, None);
-    assert!(stderr.contains("Binding"), "{stderr}");
+    assert!(stderr.contains("File(Bootstrap(Sampling(Monitor(ModelIdentity))))"), "{stderr}");
     let mut matching = assets::Fixture::new(false); configure(&mut matching, 1, false, true);
     let stderr = no_vote_frame(&matching, Some(&assets::frame(b"?")));
-    assert!(stderr.contains("Contract(Binding)"), "{stderr}");
+    assert!(stderr.contains("stop: Client(Protocol(Protocol(Binding)))"), "{stderr}");
+    assert!(stderr.contains("evaluations: 0") && stderr.contains("requested_prompt_tokens: 0")
+        && stderr.contains("reviewed_prompt_tokens: 0"), "{stderr}");
     exchange(&matching, b"?", Verdict::Deny);
 }
 

@@ -220,6 +220,10 @@ where F: FnMut() -> ElapsedTick {
     let after = time(); deadline.check(after)?;
     let revision = host.revision();
     host.observe_time(revision, after).map_err(debug)?;
+    // Original read-start freshness must still hold AFTER parsing/persistence.
+    // Clock acknowledgement alone does not validate the policy source's lease.
+    let current = host.capture_file_policy_state().map_err(debug)?;
+    if current.snapshot() != captured.snapshot() { return Err(debug(Error::Binding)); }
     Ok(captured)
 }
 

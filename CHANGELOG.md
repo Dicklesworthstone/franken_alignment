@@ -1,5 +1,24 @@
 # Changelog
 
+## 2026-10-10: atomic learned startup and post-read source freshness
+
+- Fix valid learned publication startup failing with WrongState by installing
+  the terminal reserve before learned Enable in the first canonical image.
+- Pin the exact reserve from the same original locked recovery history before
+  replay, cleanup or fence, retaining all independent guards and recovery floors.
+- Check the original policy lease after read/parse/persistence and post-read
+  clock acknowledgement, refusing expired observations before any token work.
+- Pass all eleven direct/admission learned-command tests with real native review
+  and two-key publication; retain the actual Unix-listener test, which still
+  fails with environment EPERM. Keep nonzero K/V and complete native-work oracles.
+- Pass fifteen learned-stream integration tests, including four new atomic,
+  mismatch, no-write and exhausted-capacity recovery cases; pass six actual
+  native LoRA helper tests under the qualified compiler. Correct fixture context,
+  original refusal-stage, borrow and frozen-witness test expectations.
+- Run the original project gate: qualified compiler identity passes; the reviewed
+  source snapshot refuses unlisted files and stale existing digests before later
+  workspace checks. Preserve the gate and record this qualification limit.
+
 ## 2026-10-10: learned generation in the original publication operator
 
 - Add `create-learned-generated` with explicit primary model/tokenizer/sampling

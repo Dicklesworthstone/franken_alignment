@@ -63,7 +63,8 @@ pub(super) fn peers(root: &Root, config: &Config) -> PeerProfile {
 
 pub(super) fn write(root: &Root, spelling: &[u8]) -> PathBuf {
     let model = models::actor(&root.0);
-    let source = model.recompute(11, &[120, 65], DecoderBudget { scalar_products: 100_000 })
+    // Constant V rows reconstruct exactly; the original rotating K rows remain compressed.
+    let source = model.recompute(11, &[120, 120, 120, 120], DecoderBudget { scalar_products: 100_000 })
         .unwrap().cache_image().unwrap();
     let policy = LearnedKvPolicy::new(1, 1, 1, 8).unwrap();
     let budget = FitBudget { source_values: 64, parameter_values: 64, scratch_values: 16, work_units: 10_000 };
@@ -81,7 +82,7 @@ pub(super) fn write(root: &Root, spelling: &[u8]) -> PathBuf {
     let r = root.0.display();
     let members = ["alpha", "beta"].into_iter().enumerate().map(|(index, name)| {
         let stream = 71 + index;
-        format!(r#""{name}":{{"model":{{"identity":{{"tenant":1,"model":31,"model_generation":1,"tokenizer_generation":1,"profile_generation":1}},"context":8192,"stream":{stream}}},"files":{{"model_config":"{r}/helper-model.json","weights":"{r}/helper-weights.safetensors","monitor":"{r}/helper-monitor.json","sampling":"{r}/helper-sampling.json","tokenizer":{{"format":"native_archive","path":"{r}/helper-tokenizer.bbpe"}}}},"text":{{"max_new_tokens":2,"max_output_bytes":128,"stop_tokens":[{stop}],"tokenization":{{"input_bytes":65536,"pair_lookups":196608,"heap_pops":196608}},"scalar_products":{MAX_DECODER_PRODUCTS},"sampling_entries":4096}}}}"#)
+        format!(r#""{name}":{{"model":{{"identity":{{"tenant":1,"model":31,"model_generation":1,"tokenizer_generation":1,"profile_generation":1}},"context":4096,"stream":{stream}}},"files":{{"model_config":"{r}/helper-model.json","weights":"{r}/helper-weights.safetensors","monitor":"{r}/helper-monitor.json","sampling":"{r}/helper-sampling.json","tokenizer":{{"format":"native_archive","path":"{r}/helper-tokenizer.bbpe"}}}},"text":{{"max_new_tokens":2,"max_output_bytes":128,"stop_tokens":[{stop}],"tokenization":{{"input_bytes":65536,"pair_lookups":196608,"heap_pops":196608}},"scalar_products":{MAX_DECODER_PRODUCTS},"sampling_entries":4096}}}}"#)
     }).collect::<Vec<_>>().join(",");
     fs::write(root.0.join("native-roster.json"),
         format!(r#"{{"schema":"fa.learned-native-roster/1","members":{{{members}}}}}"#)).unwrap();

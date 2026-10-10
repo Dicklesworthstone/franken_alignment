@@ -13,7 +13,7 @@ use super::{Event, FileOversight, JournalError, Transition, BaseEvent};
 use super::journal::HumanDecision;
 use crate::action::ElapsedTick;
 use crate::action::consequence::oversight::evidence_source::{EvidenceError, EvidenceFile, EvidenceIdentity, EvidenceSnapshot};
-use crate::action::consequence::oversight::policy_state::{StateCaptureStatus, StateFreshness, StateLimits, StateSource};
+use crate::action::consequence::oversight::policy_state::{CapturedSnapshot, StateCaptureStatus, StateFreshness, StateLimits, StateSource};
 use crate::Error;
 use std::rc::Rc;
 
@@ -48,6 +48,17 @@ impl FileOversight {
     pub fn file_source_required(&self) -> bool { self.machine.file_source_status().is_some() }
     pub fn file_source_status(&self) -> Option<FileSourceStatus> {
         self.machine.file_source_status().map(|mut status| { status.interrupted = self.source_interrupted; status })
+    }
+    /// Check the original registered policy source at the acknowledged current
+    /// clock, including its read-start lease and complete source frontier. This
+    /// read performs no I/O, clock observation, lease extension or journal write.
+    /// Callers must first observe their post-read time. A returned snapshot is
+    /// historical data, never a permit or an assertion of future eligibility.
+    pub fn capture_file_policy_state(&self) -> Result<CapturedSnapshot, JournalError> {
+        if self.fault.is_some() { return Err(JournalError::Unavailable); }
+        if !self.file_source_required() { return Err(Error::WrongState.into()); }
+        if self.source_interrupted || !self.clock_ready() { return Err(Error::Incomplete.into()); }
+        Ok(self.machine.broker.capture_policy_state()?)
     }
     pub fn withdraw_file_source(&mut self, revision: u64) -> Result<(), JournalError> {
         if revision != self.revision() { return Err(Error::Stale.into()); }

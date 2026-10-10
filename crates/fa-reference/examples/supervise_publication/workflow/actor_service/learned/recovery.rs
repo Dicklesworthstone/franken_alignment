@@ -11,11 +11,11 @@ pub(super) fn create(config: &Config, loaded: &Loaded)
     -> Result<(FileOversight, FileHumanReviewer), String>
 {
     // The FIRST original image includes stream, numerical recipe, mandatory
-    // learned provenance and the exact policy-only source. No unguarded phase.
-    let (mut host, reviewer) = FileOversight::create_with_learned_text_stream(
-        &config.store, config.profile.clone(), loaded.generation.clone()).map_err(debug)?;
-    host.enable_recovery_reserve(host.revision(), RecoveryReserve::terminal()).map_err(debug)?;
-    Ok((host, reviewer))
+    // learned provenance, policy-only source and terminal recovery reserve.
+    // Reserve installation must precede the original learned Enable event.
+    FileOversight::create_with_learned_text_stream_with_reserve(
+        &config.store, config.profile.clone(), loaded.generation.clone(),
+        RecoveryReserve::terminal()).map_err(debug)
 }
 
 pub(super) fn open(config: &Config, loaded: &Loaded)
@@ -28,11 +28,12 @@ pub(super) fn open(config: &Config, loaded: &Loaded)
     };
     // Match complete independently loaded model/codec/probe/text/source bytes,
     // full guard inventory and explicit external floors BEFORE cleanup or fence.
-    let (host, roles) = FileOversight::open_guarded_with_learned_generation(
-        &config.store, config.profile.clone(), &requirements, &loaded.generation).map_err(debug)?;
-    if host.journal_capacity().map_err(debug)?.reserve() != Some(RecoveryReserve::terminal()) {
-        return Err("learned publication requires its original terminal recovery reserve".into());
-    }
+    let mut recovery = FileOversight::begin_open_guarded_with_learned_generation(
+        &config.store, config.profile.clone(), &requirements, &loaded.generation).map_err(debug)?
+        .require_recovery_reserve(RecoveryReserve::terminal()).map_err(debug)?;
+    let progress = recovery.progress();
+    recovery.advance(progress.replayed_events, progress.total_events).map_err(debug)?;
+    let (host, roles) = recovery.finish().map_err(debug)?;
     Ok((host, roles.human))
 }
 
