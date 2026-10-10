@@ -3,6 +3,7 @@
 //! Operator-owned immutable files/private directories remain a host assumption.
 
 pub mod sharded;
+pub mod lora;
 
 use super::{NativeTokenizerFormat, NativeBootstrapError, NativeEvaluator, NativeHelperBootstrap, NativeHelperPolicy,
     PretrainedReceipt, WeightReadBudget, MAX_MONITOR_CONFIG_BYTES, MAX_SAMPLING_CONFIG_BYTES};
@@ -25,7 +26,7 @@ pub const MAX_ASSET_READ_CALLS: usize = 65_536;
 const READ_CHUNK: usize = 4096;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum NativeAsset { Configuration, Tokenizer, Monitoring, Sampling, Weights, WeightIndex }
+pub enum NativeAsset { Configuration, Tokenizer, Monitoring, Sampling, Weights, WeightIndex, AdapterConfiguration, AdapterWeights }
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum NativeFileStage { Metadata, Open, Read }
 #[derive(Clone, Debug, PartialEq, Eq)]

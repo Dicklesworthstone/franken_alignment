@@ -1,5 +1,43 @@
 # Implementation status · design revision 0.3
 
+## 2026-10-10: immutable plain-LoRA model and native-helper ingestion
+
+The original decoder now imports one explicitly supplied, complete plain PEFT
+LoRA adapter into a new immutable dense model. The bounded profile covers
+Q/K/V/O and gate/up/down projections across all layers, including GQA widths,
+through the original F32/F16/BF16 SafeTensors reader. Each merged parameter uses
+ascending-rank f64 products, an f64 base addition and one final finite f32
+rounding. The caller must supply strictly newer model and profile generations;
+tenant, model, tokenizer, numerical shape and static RoPE remain exact. Original
+sessions stay with their original model, and complete learned recipe bindings
+retain every merged parameter, including parameters unused by the prompt.
+
+The public APIs accept byte slices or an authorized bounded reader. Independent
+identity/configuration/work preflight precedes adapter reads. Actual reads stay
+charged on refusal; after scalar and true-EOF admission, the full planned merge
+work is reserved before construction and cannot be refunded by late overflow or
+consumer refusal. The original model ceilings and dependencies are unchanged.
+
+`fa.native-worker/4` and `NativeEvaluator::from_llama_lora_files` consume the
+adapted model through the original monitored evaluator and commit/reveal worker.
+Version 4 requires an explicit base identity and a single base checkpoint; the
+prior three manifest versions retain their contracts. Auxiliary assets share
+one allowance, base/adapter weights share the original counted reader budget,
+and the original worker lifetime includes startup and merge. Tokenizer, monitor
+and evaluation policy must bind to the complete adapted decoder. Input-profile
+epochs remain their independently provisioned namespace.
+
+Thirteen public test functions were authored across `decoder_lora` and
+`native_worker_lora`. They cover independent rank-one/rank-two matrix and query
+oracles, all targets/layers and mixed storage, original inference/replay,
+zero-delta identity refusal, full unused-parameter recipe binding, early no-read
+refusal, retained spending, and actual-helper socketpair commit/reveal with
+causal verdict changes and legacy controls. Fixtures are synthetic. Production
+and tests have been independently source-reviewed, but this increment has not
+been compiled or executed: the local execution service remains unavailable.
+No new passing-test, trained-model-quality or deployment claim is made.
+See [static LoRA ingestion](docs/STATIC_LORA_INGESTION.md).
+
 ## 2026-10-10: required learned forecasts with mediated recovery
 
 The explicit predictive-mediated learned profile now composes a recipe-owned

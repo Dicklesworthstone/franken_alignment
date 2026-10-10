@@ -69,6 +69,7 @@ impl Manifest {
     pub(super) fn load(&self, assets: &mut NativeAssetReadBudget, weights: &mut WeightReadBudget)
         -> Result<NativeEvaluator, LaunchError>
     {
+        if let Some(adapter) = &self.adapter { return self.load_lora(adapter, assets, weights); }
         match &self.checkpoint {
             CheckpointFiles::Single(weight_path) => {
                 let request = NativeFileBootstrap { policy: &self.policy, stream: self.stream,

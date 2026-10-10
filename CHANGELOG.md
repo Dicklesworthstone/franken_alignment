@@ -1,5 +1,19 @@
 # Changelog
 
+## 2026-10-10: immutable plain-LoRA ingestion and original native helpers
+
+- Import a strict complete plain PEFT adapter through the original scalar reader,
+  preserving GQA/static RoPE and constructing a fresh model with newer model and
+  profile generations. Bind complete merged weights into existing learned recipes.
+- Add bounded slice/reader APIs with retained read charges and merge reservations,
+  plus explicit native-helper manifest /4 and file bootstrap. Base and adapter
+  reads share the original allowance; the existing monitored commit/reveal path
+  executes the merged model.
+- Add thirteen public decoder and actual-helper tests with independent numerical
+  oracles, causal verdict controls, replay and negative budget/profile cases.
+  Tests are authored and source-reviewed but uncompiled and unexecuted while the
+  local execution service is unavailable.
+
 ## 2026-10-10: predictive mediated learned startup and recovery
 
 - Compose required recipe-owned raw or owned K/V pre-output forecasts with the

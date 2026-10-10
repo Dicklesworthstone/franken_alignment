@@ -4,6 +4,8 @@
 mod checkpoint;
 #[path = "config/rotary.rs"]
 mod rotary;
+#[path = "config/lora.rs"]
+mod lora;
 use checkpoint::CheckpointFiles;
 use fa_reference::action::consequence::oversight::helper_client::native::NativeHelperPolicy;
 use fa_reference::action::consequence::oversight::helper_client::native::process::{
@@ -12,6 +14,7 @@ use fa_reference::action::consequence::oversight::helper_client::native::process
 use fa_reference::action::consequence::oversight::helper_client::native::peer::MIN_NATIVE_SALT_BYTES;
 use fa_reference::action::consequence::oversight::helper_client::native::bootstrap::NativeTokenizerFormat;
 use fa_reference::action::consequence::oversight::helper_client::native::bootstrap::files::NativeFileBootstrapError;
+use fa_reference::action::consequence::oversight::helper_client::native::bootstrap::files::lora::NativeLoraFileBootstrapError;
 use fa_reference::action::consequence::oversight::helper_client::native::bootstrap::files::sharded::NativeShardFileBootstrapError;
 use fa_reference::action::consequence::oversight::helper_workers::MAX_WORKER_SALT_BYTES;
 use fa_reference::action::consequence::activation::tensor::kv::decoder::{DecoderIdentity, DecoderProfile, DecoderShape};
@@ -42,6 +45,7 @@ pub enum LaunchError {
     Socket(NativeProcessError),
     Startup(NativeFileBootstrapError),
     ShardedStartup(NativeShardFileBootstrapError),
+    LoraStartup(NativeLoraFileBootstrapError),
 }
 
 impl std::fmt::Display for LaunchError {
@@ -58,6 +62,7 @@ impl std::fmt::Display for LaunchError {
             Self::Socket(error) => write!(f, "worker socket: {error}"),
             Self::Startup(error) => write!(f, "native startup: {error}"),
             Self::ShardedStartup(error) => write!(f, "sharded native startup: {error}"),
+            Self::LoraStartup(error) => write!(f, "adapted native startup: {error}"),
         }
     }
 }
@@ -67,6 +72,7 @@ struct Manifest {
     files: [PathBuf; 4],
     checkpoint: CheckpointFiles,
     tokenizer_format: NativeTokenizerFormat,
+    adapter: Option<lora::LoraFiles>,
     stream: u64,
     salt_file: PathBuf,
     milliseconds: u64,
@@ -85,9 +91,13 @@ impl Manifest {
             Some("fa.native-worker/1") => 1,
             Some("fa.native-worker/2") => 2,
             Some("fa.native-worker/3") => 3,
+            Some("fa.native-worker/4") => 4,
             _ => return Err(LaunchError::Field("schema")),
         };
-        let fields: &[&str] = if version >= 2 {
+        let fields: &[&str] = if version == 4 {
+            &["schema", "input", "decoder", "policy", "files", "stream",
+                "salt_file", "lifetime", "startup", "tokenizer_format", "adapter"]
+        } else if version >= 2 {
             &["schema", "input", "decoder", "policy", "files", "stream",
                 "salt_file", "lifetime", "startup", "tokenizer_format"]
         } else {
@@ -101,7 +111,7 @@ impl Manifest {
         let profile = InputProfileBinding { profile_id: u64_field(input, "id")?,
             profile_bytes: hex(&input["bytes_hex"])?, model_epoch: u64_field(input, "model_epoch")?,
             tokenizer_epoch: u64_field(input, "tokenizer_epoch")?, policy_epoch: u64_field(input, "policy_epoch")? };
-        let decoder_fields: &[&str] = if version == 3 {
+        let decoder_fields: &[&str] = if version >= 3 {
             &["identity", "shape", "epsilon", "theta", "rotary"]
         } else { &["identity", "shape", "epsilon", "theta"] };
         let decoder = object(&r["decoder"], decoder_fields, "decoder")?;
@@ -114,10 +124,11 @@ impl Manifest {
             intermediate: count(shape, "intermediate")?, layers: count(shape, "layers")?,
             query_heads: count(shape, "query_heads")?, cache_heads: count(shape, "cache_heads")?, context: count(shape, "context")?,
         }, scalar(&decoder["epsilon"], "epsilon")?, scalar(&decoder["theta"], "theta")?).map_err(LaunchError::Contract)?;
-        let decoder_profile = if version == 3 {
+        let decoder_profile = if version >= 3 {
             decoder_profile.with_rotary_scaling(rotary::parse(&decoder["rotary"])?)
                 .map_err(LaunchError::Contract)?
         } else { decoder_profile };
+        let adapter = if version == 4 { Some(lora::parse(&r["adapter"], &decoder_profile)?) } else { None };
         let p = object(&r["policy"], &["max_new_tokens", "stop_tokens", "max_output_bytes", "tokenization", "generation"], "policy")?;
         let tokens = p["stop_tokens"].as_array().ok_or(LaunchError::Field("stop_tokens"))?;
         if tokens.len() > MAX_STOP_TOKENS { return Err(LaunchError::Limit); }
@@ -134,7 +145,10 @@ impl Manifest {
         let startup = object(&r["startup"], &["asset_bytes", "asset_calls", "weight_bytes", "weight_calls"], "startup")?;
         let checkpoint = if version >= 2 { CheckpointFiles::parse(&files["weights"])? }
             else { CheckpointFiles::Single(path(&files["weights"], "weights")?) };
-        let result = Self { policy, checkpoint, tokenizer_format, files: [path(&files["configuration"], "configuration")?,
+        if version == 4 && !matches!(&checkpoint, CheckpointFiles::Single(_)) {
+            return Err(LaunchError::Field("adapter.single_base"));
+        }
+        let result = Self { policy, checkpoint, tokenizer_format, adapter, files: [path(&files["configuration"], "configuration")?,
             path(&files["tokenizer"], "tokenizer")?, path(&files["monitoring"], "monitoring")?,
             path(&files["sampling"], "sampling")?],
             stream: u64_field(r, "stream")?, salt_file: path(&r["salt_file"], "salt_file")?,

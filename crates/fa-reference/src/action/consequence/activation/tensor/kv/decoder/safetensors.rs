@@ -4,6 +4,7 @@
 
 pub mod shards;
 pub mod pretrained;
+pub mod lora;
 pub mod reader;
 
 use super::{DecoderLayerWeights, DecoderModel, DecoderProfile, MAX_DECODER_PARAMETERS};

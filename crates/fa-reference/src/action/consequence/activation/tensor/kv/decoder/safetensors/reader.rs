@@ -81,6 +81,20 @@ struct FilePlan {
     tensors: BTreeMap<String, TensorDescriptor>,
 }
 
+/// Internal reuse for the finite named LoRA inventory. This is the ORIGINAL
+/// directory/scalar/coverage/EOF reader; callers cannot select another encoding.
+pub(super) fn read_tensor_set<R: Read + ?Sized>(
+    expected: &BTreeMap<String, Vec<usize>>, source: &mut R,
+    budget: &mut WeightReadBudget, maximum: usize,
+) -> Result<(BTreeMap<String, Vec<f32>>, ShardLoad), WeightReadError> {
+    if maximum == 0 || maximum > MAX_WEIGHT_FILE_BYTES
+        || expected.is_empty() || expected.len() > super::MAX_WEIGHT_TENSORS
+    { return Err(WeightError::Limit.into()); }
+    let plan = read_directory(expected, source, budget, maximum)?;
+    budget.require_bytes(plan.data_bytes.checked_add(1).ok_or(WeightError::Limit)?)?;
+    read_body(plan, source, budget)
+}
+
 impl DecoderModel {
     /// Read exactly one complete export from the current reader position to EOF.
     /// No Seek, whole-file raw buffer, path lookup or model-profile inference.
