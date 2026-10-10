@@ -4,7 +4,7 @@ use super::super::super::codec::shared::{Reader, Writer};
 use crate::action::consequence::activation::monitor::decoder::config::{MonitorConfigError, MAX_MONITOR_CONFIG_BYTES};
 use crate::action::consequence::activation::monitor::decoder::sampled::{MonitoredSampledDecoder,
     config::{SamplingConfigError, MAX_SAMPLING_CONFIG_BYTES}};
-use crate::action::consequence::activation::tensor::kv::decoder::{DecoderIdentity, DecoderModel, DecoderProfile, DecoderShape};
+use crate::action::consequence::activation::tensor::kv::decoder::{DecoderIdentity, DecoderModel, DecoderProfile, DecoderShape, RotaryScaling};
 use crate::action::consequence::activation::tensor::kv::decoder::safetensors::{OutputHead, WeightError, MAX_WEIGHT_FILE_BYTES};
 use crate::action::consequence::oversight::decoder_monitoring::{DecoderBindingLimits,
     MAX_BOUND_DECODER_TOKENS, MAX_BOUND_DECODER_SCORE_WORDS};
@@ -15,6 +15,9 @@ use std::rc::Rc;
 mod sharded;
 pub use sharded::FileDecoderShardInputs;
 use sharded::ShardSet;
+// Tenant zero was never a valid profile. It introduces a versioned scaled body
+// while preserving every unscaled independent/tied/sharded event byte.
+const SCALED_PROFILE: &[u8; 8] = b"FAROPC\0\x01";
 
 /// Exact immutable bootstrap data. Equality includes all input bytes, not just
 /// supplied model names. This is not a signed manifest or authority to publish.
@@ -115,6 +118,9 @@ impl FileDecoderConfig {
     }
     pub(super) fn write(&self, w: &mut Writer) -> Result<(), Error> {
         self.check_bounds()?;
+        if let Some(binding) = self.profile.rotary_scaling().binding_bytes() {
+            w.u64(0)?; w.raw(SCALED_PROFILE)?; w.raw(&binding)?;
+        }
         let id = self.profile.identity(); let s = self.profile.shape();
         for value in [id.tenant, id.model, id.model_generation, id.tokenizer_generation,
             id.profile_generation, self.profile.epsilon().to_bits(), self.profile.theta().to_bits(), self.stream] { w.u64(value)?; }
@@ -138,12 +144,18 @@ impl FileDecoderConfig {
         Self::read_layout(r, output_head, true)
     }
     fn read_layout(r: &mut Reader<'_>, output_head: OutputHead, sharded: bool) -> Result<Self, Error> {
-        let identity = DecoderIdentity { tenant: r.u64()?, model: r.u64()?, model_generation: r.u64()?,
+        let first = r.u64()?;
+        let (tenant, scaling) = if first == 0 {
+            if r.take(SCALED_PROFILE.len())? != SCALED_PROFILE { return Err(Error::Binding); }
+            let scaling = RotaryScaling::from_binding_bytes(r.take(40)?)?;
+            (r.u64()?, scaling)
+        } else { (first, RotaryScaling::None) };
+        let identity = DecoderIdentity { tenant, model: r.u64()?, model_generation: r.u64()?,
             tokenizer_generation: r.u64()?, profile_generation: r.u64()? };
         let epsilon = f64::from_bits(r.u64()?); let theta = f64::from_bits(r.u64()?); let stream = r.u64()?;
         let shape = DecoderShape { vocabulary: r.count(65_536)?, hidden: r.count(2_048)?, intermediate: r.count(8_192)?,
             layers: r.count(128)?, query_heads: r.count(2_048)?, cache_heads: r.count(2_048)?, context: r.count(1_048_576)? };
-        let profile = DecoderProfile::new(identity, shape, epsilon, theta)?;
+        let profile = DecoderProfile::new(identity, shape, epsilon, theta)?.with_rotary_scaling(scaling)?;
         let limits = DecoderBindingLimits { token_ids: r.count(MAX_BOUND_DECODER_TOKENS)?, score_words: r.count(MAX_BOUND_DECODER_SCORE_WORDS)? };
         let (weights, shards) = if sharded {
             (Rc::from(&b""[..]), Some(Rc::new(ShardSet::read(r, &profile, output_head)?)))

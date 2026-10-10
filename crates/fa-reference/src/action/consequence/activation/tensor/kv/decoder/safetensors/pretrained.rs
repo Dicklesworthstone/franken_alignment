@@ -4,7 +4,7 @@
 use super::{OutputHead, WeightError, WeightLoadReceipt, MAX_WEIGHT_FILE_BYTES, MAX_WEIGHT_HEADER_BYTES};
 use super::reader::{WeightReadBudget, WeightReadError, MAX_WEIGHT_READ_CALLS};
 use super::shards::ShardedWeightLoadReceipt;
-use super::super::{DecoderIdentity, DecoderModel, DecoderProfile, DecoderShape};
+use super::super::{DecoderIdentity, DecoderModel, DecoderProfile, DecoderShape, RotaryScaling};
 use crate::strict_json::{self, ErrorKind, Json, Limits};
 use crate::Error;
 use std::collections::{BTreeMap, BTreeSet};
@@ -12,6 +12,8 @@ use std::fmt;
 use std::fs::{self, File};
 use std::io::{self, Read};
 use std::path::Path;
+
+mod rotary;
 
 pub const MAX_CONFIG_BYTES: usize = 65_536;
 
@@ -59,7 +61,8 @@ impl LlamaConfig {
     /// Requires core dimensions, model_type and RMS epsilon. Recognized optional
     /// fields use the explicitly pinned Llama defaults and are listed in receipt.
     /// Execution context must be positive and no greater than the trained limit.
-    /// Unsupported scaling/bias/custom code is rejected, never approximated.
+    /// Static linear/Llama3 RoPE is explicit; dynamic scaling, bias and custom
+    /// code are rejected, never approximated or silently mapped to unscaled.
     /// Declared tied embeddings are expanded exactly; absence still means untied.
     pub fn decode(identity: DecoderIdentity, context: usize, bytes: &[u8]) -> Result<Self, CheckpointError> {
         let parsed = strict_json::parse(bytes, Limits {
@@ -106,22 +109,20 @@ impl LlamaConfig {
                 if number(key, value)? != expected { return Err(config_error(key, ConfigIssue::Unsupported)); }
             } else { defaults.insert(key.to_owned()); }
         }
-        if root.get("rope_scaling").is_some_and(|value| !value.is_null()) {
-            return Err(config_error("rope_scaling", ConfigIssue::Unsupported));
-        }
-        let theta = rope_theta(root, &mut defaults)?;
+        let trained_context = integer(root, "max_position_embeddings")?;
+        let (theta, scaling) = rotary::configuration(root, &mut defaults, trained_context)?;
         let query_heads = integer(root, "num_attention_heads")?;
         let cache_heads = match root.get("num_key_value_heads") {
             None | Some(Json::Null) => { defaults.insert("num_key_value_heads".to_owned()); query_heads }
             Some(value) => usize_value("num_key_value_heads", value)?,
         };
-        let trained_context = integer(root, "max_position_embeddings")?;
         if context == 0 || context > trained_context { return Err(config_error("max_position_embeddings", ConfigIssue::Unsupported)); }
         let profile = DecoderProfile::new(identity, DecoderShape {
             vocabulary: integer(root, "vocab_size")?, hidden: integer(root, "hidden_size")?,
             intermediate: integer(root, "intermediate_size")?, layers: integer(root, "num_hidden_layers")?,
             query_heads, cache_heads, context,
-        }, number("rms_norm_eps", required(root, "rms_norm_eps")?)?, theta).map_err(CheckpointError::Profile)?;
+        }, number("rms_norm_eps", required(root, "rms_norm_eps")?)?, theta)
+            .and_then(|profile| profile.with_rotary_scaling(scaling)).map_err(CheckpointError::Profile)?;
         match root.get("head_dim") {
             None | Some(Json::Null) => { defaults.insert("head_dim".to_owned()); }
             Some(value) if usize_value("head_dim", value)? == profile.head_width() => {},
@@ -256,25 +257,6 @@ fn boolean(root: &BTreeMap<String, Json>, key: &str, fallback: bool, defaults: &
         None => { defaults.insert(key.to_owned()); Ok(fallback) }
     }
 }
-fn rope_theta(root: &BTreeMap<String, Json>, defaults: &mut BTreeSet<String>) -> Result<f64, CheckpointError> {
-    let legacy = root.get("rope_theta").map(|value| number("rope_theta", value)).transpose()?;
-    if let Some(value) = root.get("rope_parameters").filter(|value| !value.is_null()) {
-        let object = value.as_object().ok_or_else(|| config_error("rope_parameters", ConfigIssue::Type))?;
-        if object.keys().any(|key| !["rope_type", "rope_theta"].contains(&key.as_str())) {
-            return Err(config_error("rope_parameters", ConfigIssue::Unsupported));
-        }
-        if let Some(kind) = object.get("rope_type") {
-            if kind.as_str() != Some("default") { return Err(config_error("rope_parameters.rope_type", ConfigIssue::Unsupported)); }
-        } else { defaults.insert("rope_parameters.rope_type".to_owned()); }
-        let theta = number("rope_parameters.rope_theta", required(object, "rope_theta")?)?;
-        if legacy.is_some_and(|old| old.to_bits() != theta.to_bits()) {
-            return Err(config_error("rope_theta", ConfigIssue::Unsupported));
-        }
-        return Ok(theta);
-    }
-    Ok(legacy.unwrap_or_else(|| { defaults.insert("rope_theta".to_owned()); 10000.0 }))
-}
-
 const CORE_FIELDS: &[&str] = &[
     "model_type", "architectures", "vocab_size", "hidden_size", "intermediate_size",
     "num_hidden_layers", "num_attention_heads", "num_key_value_heads", "max_position_embeddings",

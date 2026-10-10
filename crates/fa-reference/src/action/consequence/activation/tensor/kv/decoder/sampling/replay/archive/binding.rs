@@ -1,4 +1,5 @@
-//! V1 complete immutable recipe comparison, not a digest or parameter importer.
+//! Complete immutable recipe comparison, not a digest or parameter importer.
+//! Unscaled profiles retain V1; static scaled profiles bind their exact V2 data.
 use super::{Recipe, wire::Writer};
 use crate::action::consequence::activation::{CaptureProfile, monitor::learned::LearnedMonitorBudget};
 use crate::action::consequence::activation::tensor::kv::{
@@ -7,11 +8,13 @@ use crate::action::consequence::activation::tensor::kv::{
 use crate::Error;
 
 pub(super) fn write(w: &mut Writer<'_>, recipe: &Recipe) -> Result<(), Error> {
-    w.bytes(b"FALGRCP\x01")?;
     let model = &recipe.model.data;
     let p = &model.profile; let id = p.identity(); let s = p.shape();
+    let scaling = p.rotary_scaling().binding_bytes();
+    w.bytes(if scaling.is_some() { b"FALGRCP\x02" } else { b"FALGRCP\x01" })?;
     for value in [id.tenant, id.model, id.model_generation, id.tokenizer_generation,
         id.profile_generation, p.epsilon().to_bits(), p.theta().to_bits()] { w.u64(value)?; }
+    if let Some(binding) = scaling { w.bytes(&binding)?; }
     for count in [s.vocabulary, s.hidden, s.intermediate, s.layers, s.query_heads,
         s.cache_heads, s.context, p.parameter_count()] { w.size(count)?; }
     // Original parameters in native execution order, including unused weights

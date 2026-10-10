@@ -1,5 +1,17 @@
 # Changelog
 
+## 2026-10-10: static RoPE and independently configured native helpers
+
+- Execute explicit linear and Llama3 frequencies through the original Q/K kernel,
+  binding all scaling parameters into existing sampled, tokenizer, learned and
+  durable archives while preserving exact unscaled representations and limits.
+- Admit strict matching legacy/modern checkpoint declarations before weight
+  reads. Add `fa.native-worker/3` so actual helpers independently pin the same
+  profile with single/sharded checkpoints and native/JSON tokenizers.
+- Pass 60 public integration tests, including 12 new numerical, archive and
+  actual-process cases plus 48 compatibility checks. Retain monitoring holds,
+  original commit/reveal and spent-work limits without default votes.
+
 ## 2026-10-10: atomic evaluated learned startup
 
 - Create the learned generator, complete declared guards and independent

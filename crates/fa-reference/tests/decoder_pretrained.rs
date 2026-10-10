@@ -41,9 +41,9 @@ fn default_rope_parameter_object_matches_legacy_but_conflicting_sources_refuse()
     assert_eq!(decode(config.as_bytes(), 16).unwrap().profile(), &fixture::profile(16));
     for extra in [
         r#", "rope_theta":20000,"rope_parameters":{"rope_type":"default","rope_theta":10000}"#,
-        r#", "rope_parameters":{"rope_type":"linear","rope_theta":10000}"#,
+        r#", "rope_parameters":{"rope_type":"dynamic","rope_theta":10000,"factor":2}"#,
         r#", "rope_parameters":{"rope_type":"default","rope_theta":10000,"factor":2}"#,
-        r#", "rope_scaling":{"rope_type":"llama3","factor":8}"#,
+        r#", "rope_scaling":{"rope_type":"yarn","factor":8}"#,
     ] {
         assert!(matches!(decode(configuration(extra).as_bytes(), 16), Err(CheckpointError::Configuration { issue: ConfigIssue::Unsupported, .. })));
     }
@@ -66,7 +66,7 @@ fn unsupported_architectures_bias_and_remote_code_never_fall_back() {
     for extra in [
         r#", "attention_bias":true"#, r#", "mlp_bias":true"#,
         r#", "pretraining_tp":2"#, r#", "pretraining_tp":1.0"#,
-        r#", "hidden_act":"relu"#, r#", "head_dim":4"#,
+        r#", "hidden_act":"relu""#, r#", "head_dim":4"#,
         r#", "attention_dropout":0.1"#, r#", "partial_rotary_factor":0.5"#,
         r#", "architectures":["LlamaForSequenceClassification"]"#,
         r#", "auto_map":{"AutoModel":"untrusted.module"}"#,

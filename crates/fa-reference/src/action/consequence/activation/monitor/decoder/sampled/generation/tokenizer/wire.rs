@@ -1,4 +1,6 @@
-//! Strict FA-BBPE/1 and named-control FA-BBPE/2 interchange. A file cannot choose its model identity,
+//! Strict FA-BBPE/1 and named-control FA-BBPE/2 interchange. Static scaled model
+//! profiles use /3 and /4 with an exact numerical extension; legacy bytes stay.
+//! A file cannot choose its model identity,
 //! dimensions or numerical profile: compare the independently supplied header
 //! before allocating its vocabulary. This encoding provides no authentication.
 #[path = "huggingface.rs"]
@@ -8,6 +10,8 @@ use super::*;
 
 const DOMAIN: &[u8; 8] = b"FABBPE01";
 const NAMED_DOMAIN: &[u8; 8] = b"FABBPE02";
+const SCALED_DOMAIN: &[u8; 8] = b"FABBPE03";
+const SCALED_NAMED_DOMAIN: &[u8; 8] = b"FABBPE04";
 const HEADER_BYTES: usize = 120;
 pub(super) const MAX_FILE_BYTES: usize = HEADER_BYTES + 5 * MAX_DECODER_VOCABULARY
     + MAX_VOCABULARY_BYTES + 4 + 12 * MAX_MERGES
@@ -15,7 +19,9 @@ pub(super) const MAX_FILE_BYTES: usize = HEADER_BYTES + 5 * MAX_DECODER_VOCABULA
 
 impl ByteBpe {
     pub fn to_bytes(&self) -> Result<Vec<u8>, Error> {
-        let mut count = HEADER_BYTES + 4 + 12 * self.0.merges.len();
+        let scaling = self.profile().rotary_scaling().binding_bytes();
+        let mut count = HEADER_BYTES + scaling.as_ref().map_or(0, |bytes| bytes.len())
+            + 4 + 12 * self.0.merges.len();
         for token in &self.0.vocabulary {
             count = count.checked_add(match token {
                 TokenBytes::Control => 1,
@@ -33,8 +39,9 @@ impl ByteBpe {
         let mut output = Vec::new();
         output.try_reserve_exact(count).map_err(|_| Error::Limit)?;
         let mut encoded_header = header(self.profile());
-        if named { encoded_header[..8].copy_from_slice(NAMED_DOMAIN); }
+        encoded_header[..8].copy_from_slice(domain(named, scaling.is_some()));
         output.extend_from_slice(&encoded_header);
+        if let Some(binding) = scaling { output.extend_from_slice(&binding); }
         for token in &self.0.vocabulary {
             match token {
                 TokenBytes::Control => output.push(0),
@@ -69,14 +76,21 @@ impl ByteBpe {
         if bytes.len() > MAX_FILE_BYTES { return Err(Error::Limit); }
         let mut reader = Reader { bytes, at: 0 };
         let supplied = reader.take(HEADER_BYTES)?;
-        let named = match &supplied[..8] {
-            domain if domain == DOMAIN => false,
-            domain if domain == NAMED_DOMAIN => true,
+        let (named, scaled) = match &supplied[..8] {
+            domain if domain == DOMAIN => (false, false),
+            domain if domain == NAMED_DOMAIN => (true, false),
+            domain if domain == SCALED_DOMAIN => (false, true),
+            domain if domain == SCALED_NAMED_DOMAIN => (true, true),
             _ => return Err(Error::Binding),
         };
+        let scaling = expected.rotary_scaling().binding_bytes();
+        if scaled != scaling.is_some() { return Err(Error::Binding); }
         let mut expected_header = header(expected);
-        if named { expected_header[..8].copy_from_slice(NAMED_DOMAIN); }
+        expected_header[..8].copy_from_slice(domain(named, scaled));
         if supplied != expected_header.as_slice() { return Err(Error::Binding); }
+        if let Some(binding) = scaling {
+            if reader.take(binding.len())? != binding { return Err(Error::Binding); }
+        }
         let count = expected.shape().vocabulary;
         if count < 256 { return Err(Error::Incomplete); }
         let mut vocabulary = Vec::new();
@@ -141,6 +155,15 @@ impl ByteBpe {
         }
         if reader.at != bytes.len() { return Err(Error::InvalidInput); }
         Self::new_with_special_tokens(expected.clone(), vocabulary, merges, names)
+    }
+}
+
+fn domain(named: bool, scaled: bool) -> &'static [u8; 8] {
+    match (named, scaled) {
+        (false, false) => DOMAIN,
+        (true, false) => NAMED_DOMAIN,
+        (false, true) => SCALED_DOMAIN,
+        (true, true) => SCALED_NAMED_DOMAIN,
     }
 }
 

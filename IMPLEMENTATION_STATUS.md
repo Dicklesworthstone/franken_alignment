@@ -1,5 +1,37 @@
 # Implementation status · design revision 0.3
 
+## 2026-10-10: static RoPE through numerical execution and helper processes
+
+The original Llama/SafeTensors decoder now admits explicit linear and Llama3
+rotary scaling as immutable numerical profile identity. Strict legacy and modern
+checkpoint declarations agree exactly or refuse before weight access. The
+existing half-split Q/K kernel consumes the selected frequencies; every sampled,
+learned, tokenizer and durable decoder binding retains the complete declaration.
+Unscaled profiles keep their original bytes and all resource ceilings remain.
+
+The actual `fa-native-helper` executable accepts `fa.native-worker/3` with a
+required independent `decoder.rotary` declaration. It supports the existing
+single/sharded checkpoint and native/JSON tokenizer selections, checks imported
+profiles before weight/index access, and preserves the original worker lifetime,
+monitoring and commit/reveal protocol. /1 and /2 remain unchanged.
+
+Local validation on `nightly-2026-09-21` passed all 60 tests across
+`decoder_rotary_scaling`, `decoder_pretrained`, `decoder_sampled_archive`,
+`learned_generation_archive`, `file_decoder_oversight`, `native_worker_rotary`,
+`native_worker_v2` and `native_helper_process`. Twelve new tests cover independent
+scalar Q-capture oracles, changed later attention, exact stochastic continuation,
+named controls, recipe/profile substitution, durable publication and the actual
+spawned helper's input-dependent votes. The other 48 exercise compatibility.
+An older ReLU rejection fixture needed its missing JSON quote restored; its
+Unsupported assertion and production admission were not relaxed. An initial
+library build was killed under shared resource pressure; serializing compiler
+frontend/backend work allowed the completed builds and tests above.
+
+This advances the bounded FA-025/FA-026 reference path, not production-sized
+Llama3 admission, dynamic scaling, empirical calibration or deployment
+qualification. The qualified compiler policy and historical gate receipts are
+unchanged. See [static RoPE](docs/STATIC_ROTARY_SCALING.md).
+
 ## 2026-10-10: atomic evaluated learned startup
 
 `create_evaluated_guarded_with_learned_generation` now publishes the exact learned

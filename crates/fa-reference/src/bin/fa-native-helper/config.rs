@@ -2,6 +2,8 @@
 //! No path, salt, profile or runtime option is accepted from a helper request.
 #[path = "config/checkpoint.rs"]
 mod checkpoint;
+#[path = "config/rotary.rs"]
+mod rotary;
 use checkpoint::CheckpointFiles;
 use fa_reference::action::consequence::oversight::helper_client::native::NativeHelperPolicy;
 use fa_reference::action::consequence::oversight::helper_client::native::process::{
@@ -79,12 +81,13 @@ impl Manifest {
         let json = strict_json::parse(bytes, Limits { max_bytes: MAX_MANIFEST_BYTES,
             max_depth: 5, max_items: 4096, max_string_bytes: MAX_PROFILE_BYTES * 2 })
             .map_err(|_| LaunchError::Manifest)?;
-        let version_two = match json.get("schema").and_then(Json::as_str) {
-            Some("fa.native-worker/1") => false,
-            Some("fa.native-worker/2") => true,
+        let version = match json.get("schema").and_then(Json::as_str) {
+            Some("fa.native-worker/1") => 1,
+            Some("fa.native-worker/2") => 2,
+            Some("fa.native-worker/3") => 3,
             _ => return Err(LaunchError::Field("schema")),
         };
-        let fields: &[&str] = if version_two {
+        let fields: &[&str] = if version >= 2 {
             &["schema", "input", "decoder", "policy", "files", "stream",
                 "salt_file", "lifetime", "startup", "tokenizer_format"]
         } else {
@@ -92,13 +95,16 @@ impl Manifest {
                 "salt_file", "lifetime", "startup"]
         };
         let r = object(&json, fields, "$")?;
-        let tokenizer_format = if version_two { checkpoint::tokenizer_format(&r["tokenizer_format"])? }
+        let tokenizer_format = if version >= 2 { checkpoint::tokenizer_format(&r["tokenizer_format"])? }
             else { NativeTokenizerFormat::NativeArchive };
         let input = object(&r["input"], &["id", "bytes_hex", "model_epoch", "tokenizer_epoch", "policy_epoch"], "input")?;
         let profile = InputProfileBinding { profile_id: u64_field(input, "id")?,
             profile_bytes: hex(&input["bytes_hex"])?, model_epoch: u64_field(input, "model_epoch")?,
             tokenizer_epoch: u64_field(input, "tokenizer_epoch")?, policy_epoch: u64_field(input, "policy_epoch")? };
-        let decoder = object(&r["decoder"], &["identity", "shape", "epsilon", "theta"], "decoder")?;
+        let decoder_fields: &[&str] = if version == 3 {
+            &["identity", "shape", "epsilon", "theta", "rotary"]
+        } else { &["identity", "shape", "epsilon", "theta"] };
+        let decoder = object(&r["decoder"], decoder_fields, "decoder")?;
         let id = object(&decoder["identity"], &["tenant", "model", "model_generation", "tokenizer_generation", "profile_generation"], "identity")?;
         let shape = object(&decoder["shape"], &["vocabulary", "hidden", "intermediate", "layers", "query_heads", "cache_heads", "context"], "shape")?;
         let decoder_profile = DecoderProfile::new(DecoderIdentity {
@@ -108,6 +114,10 @@ impl Manifest {
             intermediate: count(shape, "intermediate")?, layers: count(shape, "layers")?,
             query_heads: count(shape, "query_heads")?, cache_heads: count(shape, "cache_heads")?, context: count(shape, "context")?,
         }, scalar(&decoder["epsilon"], "epsilon")?, scalar(&decoder["theta"], "theta")?).map_err(LaunchError::Contract)?;
+        let decoder_profile = if version == 3 {
+            decoder_profile.with_rotary_scaling(rotary::parse(&decoder["rotary"])?)
+                .map_err(LaunchError::Contract)?
+        } else { decoder_profile };
         let p = object(&r["policy"], &["max_new_tokens", "stop_tokens", "max_output_bytes", "tokenization", "generation"], "policy")?;
         let tokens = p["stop_tokens"].as_array().ok_or(LaunchError::Field("stop_tokens"))?;
         if tokens.len() > MAX_STOP_TOKENS { return Err(LaunchError::Limit); }
@@ -122,7 +132,7 @@ impl Manifest {
         let files = object(&r["files"], &["configuration", "tokenizer", "monitoring", "sampling", "weights"], "files")?;
         let l = object(&r["lifetime"], &["milliseconds", "steps"], "lifetime")?;
         let startup = object(&r["startup"], &["asset_bytes", "asset_calls", "weight_bytes", "weight_calls"], "startup")?;
-        let checkpoint = if version_two { CheckpointFiles::parse(&files["weights"])? }
+        let checkpoint = if version >= 2 { CheckpointFiles::parse(&files["weights"])? }
             else { CheckpointFiles::Single(path(&files["weights"], "weights")?) };
         let result = Self { policy, checkpoint, tokenizer_format, files: [path(&files["configuration"], "configuration")?,
             path(&files["tokenizer"], "tokenizer")?, path(&files["monitoring"], "monitoring")?,

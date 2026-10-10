@@ -5,6 +5,7 @@
 //! qualification. There is no effect authority, tokenizer, runtime or I/O here.
 
 mod weights;
+mod rotary;
 mod checkpoint;
 pub mod safetensors;
 pub mod sampling;
@@ -13,6 +14,7 @@ pub mod monitoring;
 pub use checkpoint::{DecoderCheckpoint, DecoderRestoreBudget, DecoderRestoreReceipt};
 pub use weights::{DecoderIdentity, DecoderLayerWeights, DecoderModel, DecoderProfile, DecoderShape,
     MAX_DECODER_HIDDEN, MAX_DECODER_INTERMEDIATE, MAX_DECODER_PARAMETERS, MAX_DECODER_VOCABULARY};
+pub use rotary::{LinearRotaryScaling, Llama3RotaryScaling, RotaryScaling};
 
 use super::attention::{self, AttentionRows, MAX_ATTENTION_PRODUCTS,
     MAX_ATTENTION_RESOLUTION_STEPS, MAX_ATTENTION_WORKSPACE_BYTES, AttentionBudget};
@@ -279,8 +281,8 @@ impl DecoderModel {
             let mut q = matrix(&w.queries, h, &normalized)?;
             let mut k = matrix(&w.keys, data.profile.cache_width(), &normalized)?;
             let v = matrix(&w.values, data.profile.cache_width(), &normalized)?;
-            rotary(&mut q, data.profile.head_width(), position, data.profile.theta())?;
-            rotary(&mut k, data.profile.head_width(), position, data.profile.theta())?;
+            rotary(&mut q, data.profile.head_width(), position, data.profile.theta(), data.profile.rotary_scaling())?;
+            rotary(&mut k, data.profile.head_width(), position, data.profile.theta(), data.profile.rotary_scaling())?;
             let query = capture(layer.attention.queries(), &q, selected)?;
             let descriptor = KvImageDescriptor {
                 contract: layer.attention.cache().clone(), stream, source_batch: 0,

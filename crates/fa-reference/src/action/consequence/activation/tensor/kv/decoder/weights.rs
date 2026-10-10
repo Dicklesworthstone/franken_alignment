@@ -2,6 +2,7 @@
 //! Matrices are row-major [output, input]. Parameters are data, never executable.
 
 use super::super::attention::{AttentionContract, AttentionMask, MAX_ATTENTION_HEADS};
+use super::RotaryScaling;
 use super::super::model::{ModelKvProfile, MAX_MODEL_KV_LAYERS, MAX_MODEL_KV_VALUES};
 use super::super::{KvContract, MAX_KV_POSITIONS, MAX_KV_VALUES};
 use super::super::super::{ByteOrder, ScalarEncoding, TensorContract, TensorLayout};
@@ -37,16 +38,19 @@ pub struct DecoderShape {
     pub context: usize,
 }
 
-/// V1: batch one, full causal prefix, pre-RMSNorm, half-split unscaled RoPE,
+/// Batch one, full causal prefix, pre-RMSNorm, half-split RoPE,
 /// bias-free Q/K/V/O, SwiGLU, residuals, final RMSNorm and untied vocabulary head.
 /// f32 storage; sequential f64 reductions/transcendentals; f32 layer boundaries.
 /// This explicitly does NOT promise another backend's rounding or model format.
+/// Construction defaults to the original unscaled profile. Static scaling is
+/// explicit immutable numerical identity and must survive every archive binding.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct DecoderProfile {
     identity: DecoderIdentity,
     shape: DecoderShape,
     epsilon_bits: u64,
     theta_bits: u64,
+    rotary_scaling: RotaryScaling,
     parameters: usize,
 }
 
@@ -78,12 +82,23 @@ impl DecoderProfile {
             || layer_cache * shape.layers as u64 > MAX_MODEL_KV_VALUES as u64
         { return Err(Error::Limit); }
         Ok(Self { identity, shape, epsilon_bits: epsilon.to_bits(), theta_bits: theta.to_bits(),
-            parameters: parameters as usize })
+            rotary_scaling: RotaryScaling::None, parameters: parameters as usize })
+    }
+    /// Freeze static frequencies before constructing a model or live cache.
+    /// The shape and every existing resource ceiling are unchanged. Even a
+    /// factor-one declaration remains distinct from the legacy None profile.
+    pub fn with_rotary_scaling(mut self, scaling: RotaryScaling) -> Result<Self, Error> {
+        for index in 0..self.head_width() / 2 {
+            scaling.frequency(self.theta().powf(-((2 * index) as f64) / self.head_width() as f64))?;
+        }
+        self.rotary_scaling = scaling;
+        Ok(self)
     }
     pub fn identity(&self) -> DecoderIdentity { self.identity }
     pub fn shape(&self) -> DecoderShape { self.shape }
     pub fn epsilon(&self) -> f64 { f64::from_bits(self.epsilon_bits) }
     pub fn theta(&self) -> f64 { f64::from_bits(self.theta_bits) }
+    pub fn rotary_scaling(&self) -> RotaryScaling { self.rotary_scaling }
     pub fn parameter_count(&self) -> usize { self.parameters }
     pub fn head_width(&self) -> usize { self.shape.hidden / self.shape.query_heads }
     pub fn cache_width(&self) -> usize { self.shape.cache_heads * self.head_width() }
@@ -235,11 +250,14 @@ pub(super) fn rms(input: &[f32], scales: &[f32], epsilon: f64) -> Result<Vec<f32
     Ok(output)
 }
 
-pub(super) fn rotary(values: &mut [f32], width: usize, position: u64, theta: f64) -> Result<(), Error> {
+pub(super) fn rotary(values: &mut [f32], width: usize, position: u64, theta: f64,
+    scaling: RotaryScaling) -> Result<(), Error>
+{
     if width == 0 || !width.is_multiple_of(2) || !values.len().is_multiple_of(width) { return Err(Error::Binding); }
     for row in values.chunks_exact_mut(width) {
         for index in 0..width / 2 {
-            let angle = position as f64 * theta.powf(-((2 * index) as f64) / width as f64);
+            let frequency = scaling.frequency(theta.powf(-((2 * index) as f64) / width as f64))?;
+            let angle = position as f64 * frequency;
             let (sine, cosine) = angle.sin_cos();
             let left = f64::from(row[index]);
             let right = f64::from(row[index + width / 2]);

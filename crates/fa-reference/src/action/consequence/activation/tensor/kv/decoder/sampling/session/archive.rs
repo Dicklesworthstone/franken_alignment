@@ -14,6 +14,7 @@ use crate::Error;
 use std::fmt;
 
 const DOMAIN: &[u8; 8] = b"FASDCP\0\x01";
+const SCALED_DOMAIN: &[u8; 8] = b"FASDCP\0\x02";
 const REQUIRED_COMPONENTS: u32 = 63;
 pub const SAMPLED_ARCHIVE_HEADER_BYTES: usize = 128;
 pub const MAX_SAMPLED_ARCHIVE_BYTES: usize = SAMPLED_ARCHIVE_HEADER_BYTES
@@ -104,8 +105,10 @@ impl SampledCheckpoint {
         }
         let mut bytes = Vec::new();
         bytes.try_reserve_exact(layout.length).map_err(|_| Error::Limit)?;
-        bytes.extend_from_slice(DOMAIN);
+        let scaling = model.profile().rotary_scaling().binding_bytes();
+        bytes.extend_from_slice(if scaling.is_some() { SCALED_DOMAIN } else { DOMAIN });
         bytes.extend_from_slice(&profile_bytes(model.profile()));
+        if let Some(binding) = scaling { bytes.extend_from_slice(&binding); }
         bytes.extend_from_slice(&self.numerical.stream().to_be_bytes());
         for count in [layout.tokens, layout.samples, layout.logits, layout.descriptor] {
             bytes.extend_from_slice(&(count as u32).to_be_bytes());
@@ -137,8 +140,17 @@ impl SampledArchive {
         limits.check()?;
         if bytes.len() > limits.bytes { return Err(Error::Limit); }
         let mut r = Reader { bytes, at: 0 };
-        if r.take(8)? != DOMAIN { return Err(Error::InvalidInput); }
+        let scaled = match r.take(8)? {
+            domain if domain == DOMAIN => false,
+            domain if domain == SCALED_DOMAIN => true,
+            _ => return Err(Error::InvalidInput),
+        };
+        let scaling = model.profile().rotary_scaling().binding_bytes();
+        if scaled != scaling.is_some() { return Err(Error::Binding); }
         if r.take(84)? != profile_bytes(model.profile()).as_slice() { return Err(Error::Binding); }
+        if let Some(binding) = scaling {
+            if r.take(binding.len())? != binding { return Err(Error::Binding); }
+        }
         if expected.vocabulary() != model.profile().shape().vocabulary { return Err(Error::Binding); }
         let stream = r.u64()?;
         if stream == 0 { return Err(Error::InvalidInput); }
@@ -248,7 +260,8 @@ impl Layout {
         let logits = if tokens == 0 { 0 } else { shape.vocabulary };
         let descriptor = MODEL_DESCRIPTOR_HEADER_BYTES + shape.layers * MODEL_LAYER_DESCRIPTOR_BYTES;
         let image = descriptor.checked_add(values.checked_mul(4).ok_or(Error::Overflow)?).ok_or(Error::Overflow)?;
-        let cache_at = SAMPLED_ARCHIVE_HEADER_BYTES + 2 * SAMPLER_SNAPSHOT_BYTES
+        let scaling_bytes = model.profile().rotary_scaling().binding_bytes().map_or(0, |bytes| bytes.len());
+        let cache_at = SAMPLED_ARCHIVE_HEADER_BYTES + scaling_bytes + 2 * SAMPLER_SNAPSHOT_BYTES
             + 4 * tokens + 8 * samples + 4 * logits;
         let length = cache_at.checked_add(image).ok_or(Error::Overflow)?;
         if length > limits.bytes || image > MAX_MODEL_IMAGE_BYTES { return Err(Error::Limit); }

@@ -15,10 +15,12 @@ impl MonitoredSampledDecoder {
     /// exposed as an ordinary released token or accepted from a saved image.
     pub(crate) fn replay_bytes(&self) -> Result<Vec<u8>, Error> {
         let mut w = ReplayWriter(Vec::new());
-        w.raw(b"FANREP\0\x01")?;
         let p = self.profile(); let id = p.identity(); let s = p.shape();
+        let scaling = p.rotary_scaling().binding_bytes();
+        w.raw(if scaling.is_some() { b"FANREP\0\x02" } else { b"FANREP\0\x01" })?;
         for value in [id.tenant, id.model, id.model_generation, id.tokenizer_generation,
             id.profile_generation, p.epsilon().to_bits(), p.theta().to_bits()] { w.u64(value)?; }
+        if let Some(binding) = scaling { w.raw(&binding)?; }
         for value in [s.vocabulary, s.hidden, s.intermediate, s.layers, s.query_heads,
             s.cache_heads, s.context] { w.count(value)?; }
         w.u64(self.monitored.generation)?; w.u64(self.monitored.stream)?;
