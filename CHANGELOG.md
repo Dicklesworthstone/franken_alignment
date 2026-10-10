@@ -1,5 +1,16 @@
 # Changelog
 
+## 2026-10-10: predictive mediated learned startup and recovery
+
+- Compose required recipe-owned raw or owned K/V pre-output forecasts with the
+  complete mediated guard set and optional marginal evaluator in one bootstrap.
+- Add sealed cooperative, anchored and exact pending-reset recovery through the
+  original learned cursor and fence, retaining predictor fingerprints, topology,
+  authority floors, lost coverage, work charges and publication liability.
+- Add a public native-review/publication and recovery harness plus compile-fail
+  custody checks. Tests are authored and source-reviewed but unexecuted because
+  the local execution service is unavailable; no new passing-test claim is made.
+
 ## 2026-10-10: explicit tokenizer JSON in operator publication recipes
 
 - Connect the existing Hugging Face raw ByteLevel tokenizer importer to native

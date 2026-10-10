@@ -1,5 +1,37 @@
 # Implementation status · design revision 0.3
 
+## 2026-10-10: required learned forecasts with mediated recovery
+
+The explicit predictive-mediated learned profile now composes a recipe-owned
+required pre-output predictor, either raw residual or owned learned K/V, with
+the original topology guard and optional marginal evaluator. The independent
+predictor must equal the sole pin in the exact learned recipe. Atomic creation
+installs the complete original guard inventory before the first canonical image;
+the ordinary mediated learned profile keeps its existing predictor exclusions.
+
+Cooperative and anchored recovery retain the original exclusive learned cursor.
+Before numerical replay, the profile checks the original/current graph, exact
+recipe, predictor source mode and evaluator inventory. Before Ready and around
+pending-reset completion, it checks every guard, effective policy, credential
+epoch, external floor, graph availability, raw registration and complete owned
+predictor fingerprint. Reset completion and fencing use the original transaction;
+only acknowledged completion releases separate forecast, topology, evaluator and
+oversight roles. Pending forecast loss, abandoned sampled output, statistical
+evidence, spent work and unknown publication liability are never reset. Fresh
+topology certification and both original publication keys remain required.
+
+The new public harness `mediated_predictive_learned_recovery` supplies positive
+and causal negative cases for both predictor representations, actual native
+review/publication, reset successors and exact retry, anchored fork/truncation
+refusal, changed requirements, retained lost coverage, exhausted work, old-role
+refusal and graph bypasses. Two compile-fail examples specify the sealed recovery
+boundary. These tests have been authored and independently source-reviewed,
+but have not been compiled or executed in this increment: the local execution
+service stopped responding. Earlier passing tests do not validate these changes.
+The original qualified compiler gate, dependencies and numerical/statistical
+contracts are unchanged; no execution or deployment qualification is claimed.
+See [predictive mediated learned recovery](docs/PREDICTIVE_MEDIATED_LEARNED_RECOVERY.md).
+
 ## 2026-10-10: operator tokenizer JSON through durable generation
 
 `supervise_publication --native-text` and `create-generated` now consume explicitly

@@ -149,6 +149,20 @@ impl PreparedGuardedBootstrap {
         Ok(self)
     }
 
+    /// Match the complete recipe-owned predictor and mediation inventory before
+    /// the first image exists, including owned representation and work ceilings.
+    pub(super) fn checked_predictive_mediated(self, guards: &FileGuardSet,
+        protocol: Option<&crate::action::consequence::oversight::credibility::EvaluationProtocol>,
+        prediction: &super::mediated::predictive::FileMediatedPredictor,
+        topology: &crate::action::consequence::mediation::AuthorityGraph)
+        -> Result<Self, JournalError>
+    {
+        prediction.check_machine(&self.machine)?;
+        guards.check_mediated(&self.machine, &self.events, protocol,
+            Some(prediction.consistency()), Some(topology))?;
+        Ok(self)
+    }
+
     pub(super) fn publish(self, store: storage::Store)
         -> Result<(FileOversight, FileOversightRoles), JournalError>
     {
