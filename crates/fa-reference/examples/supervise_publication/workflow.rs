@@ -295,8 +295,12 @@ where F: FnMut() -> ElapsedTick {
     // construction. Rejected peers cannot burn or influence the pending request.
     if control.checkpoint(driver, reviewer, deadline, time)? { return Ok(None); }
     let expires = plus(time(), config.profile.human.max_validity_ticks)?.min(deadline.logical);
-    let request = driver.request_human_approval_from_file(&mut config.source, request, expires, &mut *time)
-        .result.map_err(debug)?;
+    let policy_only = driver.supervisor().host().map_err(debug)?.policy_only_file_source_required();
+    let request = if policy_only {
+        driver.request_learned_human_approval_from_policy_file(&mut config.source, request, expires, &mut *time)
+    } else {
+        driver.request_human_approval_from_file(&mut config.source, request, expires, &mut *time)
+    }.result.map_err(debug)?;
     let nonce = nonce()?;
     let mut connection = {
         let host = driver.supervisor().host().map_err(debug)?;

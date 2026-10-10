@@ -1,5 +1,59 @@
 # Implementation status · design revision 0.3
 
+## 2026-10-10: learned generation through the publication operator
+
+`supervise_publication create-learned-generated` now loads an explicit learned
+publication recipe and drives the original text-stream gateway, native sidecar
+review, independent human approval and durable publication. The command admits
+a real SafeTensors actor, selected tokenizer format, sampling policy and prompt;
+replays an imported fit archive against a separately supplied expected binding;
+and installs explicit probes for every layer and both K/V sides. The exact
+learned recipe requires its original sidecar and policy-only evidence source.
+All recipe-referenced asset admission precedes durable startup, with bounded regular-file reads
+and one aggregate asset allowance.
+
+A complete independently configured native roster supplies actual monitored
+models for the original one-round sidecar sequence. Native inputs come from the original learned sidecar; actor-supplied output,
+file-supplied helper contexts and supplied ballots cannot replace them. The sequence owns
+the original supervised driver until a terminal handoff, and the same peer
+review protocol supplies the human key. Source checks at generation, request,
+review, human-request and publication boundaries preserve current policy.
+Idle protocol phases wait against the original deadline in short intervals;
+active numerical work retains its original poll and compute allowances.
+
+Explicit `--continue-generation` restores the exact original recipe, numerical
+state, pending intent and spent work, then requires fresh source/time admission
+and original resume. It refuses an already recorded publication request.
+`--resume` retrieves or reconciles that original request with its retained
+deadline, rebuilding only the bound primary recipe and reading neither current
+policy evidence nor native helper assets. The authenticated stop endpoint stays
+available across generation/review/publication. During native review it retains
+the admitted connection, cancels numerical ownership, takes the original
+terminal handoff and completes the existing nonce-bound stop protocol.
+
+The first command profile is deliberately one message and one native round.
+It uses in-process original native model owners; model/process independence and
+training lineage are not inferred from this orchestration. Existing decoder,
+fit, journal, source and effect limits remain intact. The shared v1 supervisor
+configuration and the exact native roster remain independently supplied.
+
+Twelve example tests were authored: five direct original-owner flows, six
+admission/recovery cases and one authenticated peer-transport flow. They cover
+an acknowledged partial generation and retained pending step, complete native
+model review, independent human approval/rejection, original publication and
+receipt-only reopen, native denial, cancelled work retention, changed policy,
+exact no-write recipe mismatches, malformed external assets, the 4096/4097
+capture boundary, and read-start lease expiry. A real-clock test preserves
+poll/read/journal counters while waiting for a fixed protocol deadline. Complete
+native-input, numerical-token and per-poll source accounting assertions bound
+the recovered positive fixture below the original 1024-event source limit.
+
+These tests and the complete implementation were source-reviewed, but this
+increment has not been compiled or executed because the local execution service
+remains unavailable. Existing Unix-socket and qualified-toolchain restrictions
+have not been bypassed; earlier passing component tests do not validate this
+command. See [learned operator publication](docs/LEARNED_OPERATOR_PUBLICATION.md).
+
 ## 2026-10-10: immutable plain-LoRA model and native-helper ingestion
 
 The original decoder now imports one explicitly supplied, complete plain PEFT

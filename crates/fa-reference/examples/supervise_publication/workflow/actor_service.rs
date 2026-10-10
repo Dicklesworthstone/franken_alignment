@@ -12,6 +12,8 @@ mod series;
 mod multi;
 #[path = "actor_service/generated.rs"]
 mod generated;
+#[path = "actor_service/learned.rs"]
+mod learned;
 #[path = "actor_service/native.rs"]
 mod native;
 #[path = "actor_service/tokenizer.rs"]
@@ -34,6 +36,9 @@ const USAGE: &str = "serve-create|serve-open CONFIG ACTOR_PROFILE REVIEWER_PROFI
 pub(crate) fn command(args: &[String], credibility: Option<&Path>) -> Result<(), String> {
     if args.first().is_some_and(|mode| mode == "create-generated") {
         return generated::command(args, credibility);
+    }
+    if args.first().is_some_and(|mode| mode == "create-learned-generated") {
+        return learned::command(args, credibility);
     }
     if args.iter().any(|arg| arg == "--native-text") { return native::command(args, credibility); }
     if args.iter().any(|arg| arg == "--peers") { return multi::command(args, credibility); }

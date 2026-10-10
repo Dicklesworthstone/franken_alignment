@@ -1,5 +1,21 @@
 # Changelog
 
+## 2026-10-10: learned generation in the original publication operator
+
+- Add `create-learned-generated` with explicit primary model/tokenizer/sampling
+  inputs, imported fit-archive replay against an independent binding, complete
+  K/V probes and a real native model roster.
+- Drive original generation, policy-only intake, native sidecar commit/reveal,
+  independent peer human review and two-key publication. Preserve native
+  ownership through stop/cancellation and terminal handoff.
+- Add exact pending-generation continuation and receipt-only recovery, including
+  retained numerical work, old-key refusal and original effect reconciliation.
+  Pace idle protocol waits without spending fresh numerical polls.
+- Add twelve tests for real imported-owner flows, admission/recovery boundaries,
+  source changes and actual peer transport. Tests remain uncompiled/unexecuted
+  because the execution service is unavailable; document complete input schemas
+  and the current one-message, one-native-round profile.
+
 ## 2026-10-10: immutable plain-LoRA ingestion and original native helpers
 
 - Import a strict complete plain PEFT adapter through the original scalar reader,

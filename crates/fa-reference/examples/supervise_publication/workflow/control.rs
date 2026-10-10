@@ -38,6 +38,18 @@ impl Control {
         Self { service: self.service.as_ref().map(Rc::clone) }
     }
 
+    /// Accept and retain only an authenticated stop peer. A native learned
+    /// review uses this to cancel its numerical owner and take its ORIGINAL
+    /// terminal handoff before the existing driver applies the stop protocol.
+    /// Rejected candidates do not cancel work or touch the journal/clock.
+    #[cfg(target_os = "linux")]
+    pub(super) fn pending_peer(&mut self) -> Result<bool, String> {
+        match &self.service {
+            Some(service) => service.try_borrow_mut().map_err(|_| "stop transport is already being driven")?.accept_peer(),
+            None => Ok(false),
+        }
+    }
+
     /// No connection means no journal access or time observation. An admitted
     /// control exchange pauses forward work under the original workflow deadline
     /// and a bounded session timeout. It can only stop, never approve an effect.
@@ -74,6 +86,7 @@ struct Service {
     cleanup: Duration,
     poll_ms: u64,
     outcome: Option<Result<bool, String>>,
+    pending: Option<ReviewStream>,
 }
 #[cfg(target_os = "linux")]
 impl Service {
@@ -85,21 +98,30 @@ impl Service {
         eprintln!("Independent stop endpoint ready: {path:?}");
         Ok(Self { socket, admission, operation, runtime: Duration::from_millis(profile.runtime_ms),
             cleanup: Duration::from_millis(config.timing.cleanup_ms), poll_ms: profile.poll_ms,
-            outcome: None })
+            outcome: None, pending: None })
     }
-    fn checkpoint<F>(&mut self, driver: &mut FileSupervisedDriver, reviewer: &FileHumanReviewer,
-        deadline: &Deadline, time: &mut F) -> Result<bool, String>
-    where F: FnMut() -> ElapsedTick {
-        if let Some(result) = &self.outcome { return result.clone(); }
+    fn accept_peer(&mut self) -> Result<bool, String> {
+        if self.outcome.is_some() || self.pending.is_some() { return Ok(true); }
         let stream = match self.socket.listener.accept() {
             Ok((stream, _)) => stream,
             Err(error) if matches!(error.kind(), io::ErrorKind::WouldBlock | io::ErrorKind::Interrupted) => return Ok(false),
             Err(error) => return Err(debug(error)),
         };
-        let verified = match self.admission.admit(stream)? {
-            Some(ReviewStream::Checked(socket)) => socket,
+        self.pending = match self.admission.admit(stream)? {
+            Some(stream @ ReviewStream::Checked(_)) => Some(stream),
             None => return Ok(false),
             Some(ReviewStream::Legacy(_)) => return Err("unchecked stop connection refused".into()),
+        };
+        Ok(true)
+    }
+    fn checkpoint<F>(&mut self, driver: &mut FileSupervisedDriver, reviewer: &FileHumanReviewer,
+        deadline: &Deadline, time: &mut F) -> Result<bool, String>
+    where F: FnMut() -> ElapsedTick {
+        if let Some(result) = &self.outcome { return result.clone(); }
+        if !self.accept_peer()? { return Ok(false); }
+        let verified = match self.pending.take() {
+            Some(ReviewStream::Checked(socket)) => socket,
+            _ => return Err("unchecked stop connection refused".into()),
         };
         // A successful native admission is one-use. Never replace a failed or
         // silent checked connection with a fresh quota or an unchecked socket.
