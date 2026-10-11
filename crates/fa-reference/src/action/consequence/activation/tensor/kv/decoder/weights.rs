@@ -103,6 +103,20 @@ impl DecoderProfile {
     pub fn head_width(&self) -> usize { self.shape.hidden / self.shape.query_heads }
     pub fn cache_width(&self) -> usize { self.shape.cache_heads * self.head_width() }
 
+    /// Original complete cache contracts before parameter loading. This derives
+    /// metadata only; it creates no tensors, captured values or model identity
+    /// evidence. The model constructor uses these same contracts unchanged.
+    pub fn cache_profile(&self) -> Result<ModelKvProfile, Error> {
+        let mut layers = BTreeMap::new();
+        for index in 0..self.shape.layers {
+            let tap = 4 * index as u64;
+            let keys = self.tensor(tap + 2, self.shape.cache_heads, self.head_width())?;
+            let values = self.tensor(tap + 3, self.shape.cache_heads, self.head_width())?;
+            layers.insert(index as u64 + 1, KvContract::new(keys, values, self.shape.query_heads)?);
+        }
+        ModelKvProfile::new(self.identity.model, self.identity.profile_generation, layers)
+    }
+
     pub(super) fn tensor(&self, tap: u64, heads: usize, channels: usize) -> Result<TensorContract, Error> {
         let id = self.identity;
         TensorContract::new(CaptureProfile { tenant: id.tenant, model: id.model,
@@ -184,20 +198,16 @@ impl DecoderModel {
         }
         let mut admitted = Vec::new();
         admitted.try_reserve_exact(shape.layers).map_err(|_| Error::Limit)?;
-        let mut cache_layers = BTreeMap::new();
+        let cache = profile.cache_profile()?;
         for (index, weights) in layers.into_iter().enumerate() {
             let tap = 4 * index as u64;
             let q = profile.tensor(tap + 1, shape.query_heads, profile.head_width())?;
-            let k = profile.tensor(tap + 2, shape.cache_heads, profile.head_width())?;
-            let v = profile.tensor(tap + 3, shape.cache_heads, profile.head_width())?;
-            let cache = KvContract::new(k, v, shape.query_heads)?;
+            let layer_cache = cache.layers().get(&(index as u64 + 1)).ok_or(Error::Binding)?.clone();
             let attention = AttentionContract::new(index as u64 + 1, profile.identity.profile_generation,
-                q, cache.clone(), AttentionMask::FullPrefix, 1.0 / (profile.head_width() as f64).sqrt())?;
+                q, layer_cache, AttentionMask::FullPrefix, 1.0 / (profile.head_width() as f64).sqrt())?;
             let residual = profile.tensor(tap + 4, 1, h)?;
-            cache_layers.insert(index as u64 + 1, cache);
             admitted.push(Layer { weights, attention, residual });
         }
-        let cache = ModelKvProfile::new(profile.identity.model, profile.identity.profile_generation, cache_layers)?;
         let key_layout = dense_layout(shape.cache_heads, profile.head_width())?;
         let value_layout = key_layout.clone();
         Ok(Self { data: Rc::new(ModelData { profile, embeddings, layers: admitted, final_norm,

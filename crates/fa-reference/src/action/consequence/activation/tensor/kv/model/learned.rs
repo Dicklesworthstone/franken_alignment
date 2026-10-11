@@ -3,7 +3,8 @@
 //! The fitted mean and basis own no training/source scalar arrays.
 mod fit;
 pub mod replay;
-pub use fit::{FitBudget, FitReport, GroupFitReport, TrainingSource, MAX_FIT_WORK};
+pub use fit::{FitBudget, FitEstimate, FitReport, GroupFitReport, TrainingSource, MAX_FIT_WORK,
+    MAX_FIT_SCRATCH_VALUES, MAX_LEARNED_GROUPS, MAX_TRAINING_ROWS, MAX_TRAINING_SOURCES};
 
 use super::{ModelKvDescriptor, ModelKvImage, ModelKvProfile, MAX_MODEL_KV_VALUES};
 use super::super::experiment::{KvCell, KvSide};

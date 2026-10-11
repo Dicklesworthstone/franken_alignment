@@ -39,6 +39,9 @@ split or automatic promotion of the resulting monitor.
 
 The command does not take a supplied probe coefficient or selected threshold.
 Those values come only from the accepted original fit/calibration/evaluation.
+The codec can be prepared with the separate
+[`train_learned_kv_codec_from_checkpoint` command](TRAIN_LEARNED_KV_CODEC_COMMAND.md),
+which emits the exact independent binding and original fit archive consumed here.
 The codec is independently prepared; it is not co-trained on this command's
 probe cases. Declared codec source keys must not overlap probe lineages, and
 codec source streams must not overlap probe tasks. The exact original cache

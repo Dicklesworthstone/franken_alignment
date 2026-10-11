@@ -1,5 +1,40 @@
 # Implementation status · design revision 0.3
 
+## 2026-10-11: checkpoint token documents to usable learned codec files
+
+`train_learned_kv_codec_from_checkpoint` fills the missing first asset-producing
+step of the learned operator workflow. It imports actual Llama configuration and
+Safetensors, captures every document in its own empty original decoder cache,
+and drives the original cooperative codec-training owner through its complete
+centered-covariance/Jacobi fit. It saves the unchanged independent
+`fa.learned-fit-binding/1` and original `FAKVFIT/1` archive consumed by both the
+K/V monitor trainer and learned publication operator.
+
+The complete token corpus, original inference and fitting costs, retained image
+size and output reservations are admitted before weight loading. The original
+fit admission now exposes its same arithmetic as a read-only estimate; decoder
+cache contracts can likewise be obtained from the independently negotiated
+profile without allocating model parameters. Actual fitting still validates
+the real complete images. No supplied K/V arrays or learned coefficients replace
+the original capture or fitter.
+
+Exclusive new files preserve completed artifacts and bounded diagnostic reports
+on later failure. Reports retain exact original work, unfinished documents and
+numeric failures. A closed progress sink cancels active capture before further
+numerical work; no retry, refit, overwritten output or refreshed budget occurs.
+Separate file writes are not an atomic multi-file transaction.
+
+All 12 new command tests, ten existing monitor-command tests and 39 original
+codec-training, fit archive/replay, decoder and static-RoPE regressions pass under
+the qualified `nightly-2026-09-08`. They consume the actual newly saved files through
+the existing trainer and operator, with independent sampled quiet/hold oracles,
+per-document empty-cache checks, changed source/witness controls, every original
+work dimension one unit short, numeric failure, cancellation, output races,
+wrong identity/origin and complete decoder profile checks. Synthetic fixtures
+establish executable composition, not corpus authenticity or detector quality.
+Full project qualification remains subject to the unchanged original gate.
+See the [codec training command](docs/TRAIN_LEARNED_KV_CODEC_COMMAND.md).
+
 ## 2026-10-11: checkpoint files to complete evaluated K/V monitors
 
 The new `train_learned_kv_probes_from_checkpoint` command joins actual Llama

@@ -99,6 +99,13 @@ fn run(args: &[OsString], output: &mut impl Write) -> Result<bool, Failure> {
     execute(&mut plan, inputs, Path::new(&args[6]), Path::new(&args[7]), output)
 }
 
+/// Test-only bridge for the independent codec command's actual file pipeline.
+#[cfg(test)]
+#[allow(dead_code)]
+pub(crate) fn run_for_codec_test(args: &[OsString], output: &mut impl Write) -> Result<bool, Failure> {
+    run(args, output)
+}
+
 fn main() -> ExitCode {
     let args: Vec<_> = std::env::args_os().skip(1).take(9).collect();
     match run(&args, &mut io::stdout().lock()) {

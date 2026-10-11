@@ -55,6 +55,64 @@ pub struct FitReport {
     pub groups: BTreeMap<GroupKey, GroupFitReport>,
 }
 
+/// The original fixed-loop admission for a declared complete cache profile.
+/// This reads no source coordinates and establishes no fit or convergence claim.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct FitEstimate {
+    pub rows: usize,
+    pub groups: usize,
+    pub source_values: usize,
+    pub parameter_values: usize,
+    pub scratch_values: usize,
+    pub work_units: u64,
+}
+
+impl LearnedKvPolicy {
+    /// Admit every original fitting dimension before source capture or weight
+    /// loading. The actual fitter delegates to this same unchanged arithmetic.
+    /// Complete source identity, inventory and descriptor checks still belong
+    /// to the original fit admission after real images have been captured.
+    pub fn estimate_fit(self, profile: &ModelKvProfile, rows: usize, budget: FitBudget)
+        -> Result<FitEstimate, Error>
+    {
+        if budget.source_values > MAX_MODEL_KV_VALUES
+            || budget.parameter_values > MAX_LEARNED_PARAMETERS
+            || budget.scratch_values > MAX_FIT_SCRATCH_VALUES
+            || budget.work_units > MAX_FIT_WORK { return Err(Error::Limit); }
+        if rows < 2 { return Err(Error::Incomplete); }
+        if rows > MAX_TRAINING_ROWS { return Err(Error::Limit); }
+        let values = rows.checked_mul(profile.values_per_token()).ok_or(Error::Overflow)?;
+        if values > budget.source_values { return Err(Error::Limit); }
+        let mut group_count = 0_usize;
+        let mut parameters = 0_usize;
+        let mut scratch = 0_usize;
+        let mut work = 0_u64;
+        for layer in profile.layers().values() {
+            for contract in [layer.keys(), layer.values()] {
+                let d = contract.channels();
+                if d > MAX_LEARNED_CHANNELS { return Err(Error::Limit); }
+                if self.rank > d { return Err(Error::Binding); }
+                let heads = contract.heads();
+                group_count = group_count.checked_add(heads).ok_or(Error::Overflow)?;
+                parameters = parameters.checked_add(heads.checked_mul(d * (self.rank + 1)).ok_or(Error::Overflow)?).ok_or(Error::Overflow)?;
+                scratch = scratch.max(2 * d * d + 4 * d);
+                // Conservative fixed loop-cost model. Skipping an already diagonal
+                // pair does not increase the allowance available to another fit.
+                let data = (rows as u64).checked_mul((d * d + 4 * d) as u64).ok_or(Error::Overflow)?;
+                let rotations = (self.sweeps as u64).checked_mul((d * (d - 1) / 2) as u64)
+                    .and_then(|n| n.checked_mul((8 * d + 32) as u64)).ok_or(Error::Overflow)?;
+                let export = (2 * self.rank * self.rank * d + d * d + 4 * d) as u64;
+                let group = data.checked_add(rotations).and_then(|n| n.checked_add(export)).ok_or(Error::Overflow)?;
+                work = work.checked_add(group.checked_mul(heads as u64).ok_or(Error::Overflow)?).ok_or(Error::Overflow)?;
+            }
+        }
+        if group_count > MAX_LEARNED_GROUPS || parameters > budget.parameter_values
+            || scratch > budget.scratch_values || work > budget.work_units { return Err(Error::Limit); }
+        Ok(FitEstimate { rows, groups: group_count, source_values: values,
+            parameter_values: parameters, scratch_values: scratch, work_units: work })
+    }
+}
+
 struct Admission {
     profile: ModelKvProfile,
     sources: BTreeMap<u64, TrainingSource>,
@@ -86,42 +144,16 @@ fn admit(policy: LearnedKvPolicy, training: &BTreeMap<u64, ModelKvImage>, budget
         if !seen.insert((cut.stream, cut.source_batch)) { return Err(Error::Duplicate); }
         sources.insert(*origin, TrainingSource { descriptor });
     }
-    if rows < 2 { return Err(Error::Incomplete); }
-    if rows > MAX_TRAINING_ROWS { return Err(Error::Limit); }
-    let values = rows.checked_mul(profile.values_per_token()).ok_or(Error::Overflow)?;
-    if values > budget.source_values { return Err(Error::Limit); }
-    let mut group_count = 0_usize;
-    let mut parameters = 0_usize;
-    let mut scratch = 0_usize;
-    let mut work = 0_u64;
-    for layer in profile.layers().values() {
-        for contract in [layer.keys(), layer.values()] {
-            let d = contract.channels();
-            if d > MAX_LEARNED_CHANNELS { return Err(Error::Limit); }
-            if policy.rank > d { return Err(Error::Binding); }
-            let heads = contract.heads();
-            group_count = group_count.checked_add(heads).ok_or(Error::Overflow)?;
-            parameters = parameters.checked_add(heads.checked_mul(d * (policy.rank + 1)).ok_or(Error::Overflow)?).ok_or(Error::Overflow)?;
-            scratch = scratch.max(2 * d * d + 4 * d);
-            // Conservative fixed loop-cost model. Skipping an already diagonal
-            // pair does not increase the allowance available to another fit.
-            let data = (rows as u64).checked_mul((d * d + 4 * d) as u64).ok_or(Error::Overflow)?;
-            let rotations = (policy.sweeps as u64).checked_mul((d * (d - 1) / 2) as u64)
-                .and_then(|n| n.checked_mul((8 * d + 32) as u64)).ok_or(Error::Overflow)?;
-            let export = (2 * policy.rank * policy.rank * d + d * d + 4 * d) as u64;
-            let group = data.checked_add(rotations).and_then(|n| n.checked_add(export)).ok_or(Error::Overflow)?;
-            work = work.checked_add(group.checked_mul(heads as u64).ok_or(Error::Overflow)?).ok_or(Error::Overflow)?;
-        }
-    }
-    if group_count > MAX_LEARNED_GROUPS || parameters > budget.parameter_values
-        || scratch > budget.scratch_values || work > budget.work_units { return Err(Error::Limit); }
-    let mut groups = Vec::new(); groups.try_reserve_exact(group_count).map_err(|_| Error::Limit)?;
+    let estimate = policy.estimate_fit(profile, rows, budget)?;
+    let mut groups = Vec::new(); groups.try_reserve_exact(estimate.groups).map_err(|_| Error::Limit)?;
     for (layer_id, layer) in profile.layers() {
         for (side, contract) in [(KvSide::Key, layer.keys()), (KvSide::Value, layer.values())] {
             for head in 0..contract.heads() { groups.push((GroupKey { layer: *layer_id, side, head }, contract.channels())); }
         }
     }
-    Ok(Admission { profile: profile.clone(), sources, groups, rows, values, parameters, scratch, work })
+    Ok(Admission { profile: profile.clone(), sources, groups, rows,
+        values: estimate.source_values, parameters: estimate.parameter_values,
+        scratch: estimate.scratch_values, work: estimate.work_units })
 }
 
 pub(super) fn fit(policy: LearnedKvPolicy, training: &BTreeMap<u64, ModelKvImage>, budget: FitBudget)

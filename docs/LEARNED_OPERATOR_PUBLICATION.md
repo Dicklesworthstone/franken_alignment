@@ -375,7 +375,10 @@ publication approval or automatic policy activation.
 
 ## Independent fit binding: fa.learned-fit-binding/1
 
-The fit archive is produced by the original fitting checkpoint interface.
+The fit archive can be produced directly from checkpoint files and original
+token documents by the [codec training command](TRAIN_LEARNED_KV_CODEC_COMMAND.md),
+using the original fitting checkpoint interface. Its separately saved binding
+and archive are the exact files consumed here and by the K/V monitor trainer.
 Retain `checkpoint.binding()` independently when provisioning the archive and
 serialize its intended values into this JSON schema. The checkpoint's
 `encode_archive(byte_limit)` produces the separate original archive.

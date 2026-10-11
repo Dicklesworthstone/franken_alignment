@@ -29,8 +29,9 @@ RCH_REQUIRE_REMOTE=1 rch exec --base HEAD --clean-overlay --no-overlay -- cargo 
 
 The reference now binds explicit tokenizer, policy and model epochs to the entire helper input and tests independent stream-prefix/closure obligations through public APIs. The [373-test execution receipt](artifacts/execution/2026-09-08-input-frontier-receipt.json) records the bounded result and its authentication and performance limits.
 
-The learned K/V workflow has executable operator entry points: [train a complete
-monitor from checkpoint files](docs/TRAIN_LEARNED_KV_PROBES_COMMAND.md), provision
+The learned K/V workflow has executable operator entry points: [train the codec
+from checkpoint token documents](docs/TRAIN_LEARNED_KV_CODEC_COMMAND.md), [train a
+complete monitor from checkpoint files](docs/TRAIN_LEARNED_KV_PROBES_COMMAND.md), provision
 it with [exact model/tokenizer/codec binding](docs/BOUND_TRAINED_KV_MONITORS.md),
 and use [learned publication](docs/LEARNED_OPERATOR_PUBLICATION.md) with a
 [separately reviewed stream finish](docs/LEARNED_STREAM_FINISH_OPERATOR.md).

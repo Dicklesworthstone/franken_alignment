@@ -1,5 +1,21 @@
 # Changelog
 
+## 2026-10-11: train original learned codec files from checkpoint token documents
+
+- Add the six-path `train_learned_kv_codec_from_checkpoint` command, connecting
+  actual configuration/weights and original token documents to the existing
+  cooperative capture and fitting owner, independent binding JSON and fit archive.
+- Admit complete inference, original fitting, source-retention and output costs
+  before weights; expose the unchanged fitter estimate and decoder cache metadata
+  without creating another numerical implementation.
+- Preserve complete and failed population/work diagnostics, cancel active capture
+  on a closed progress sink, and save exclusively without overwriting, retrying
+  fitting or refunding work after an output failure.
+- Pass all 12 new codec-command tests and ten existing monitor-command tests,
+  including actual command-to-command file consumption and original operator
+  quiet/hold behavior with independent sampled decoder oracles; pass 39 original
+  codec, fit-replay, decoder and static-RoPE regressions.
+
 ## 2026-10-11: train complete K/V monitor artifacts from actual checkpoint files
 
 - Add a closed eight-path offline training command using original configuration,
