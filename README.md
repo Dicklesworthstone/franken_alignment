@@ -42,6 +42,10 @@ The [native worker also yields during input tokenization](docs/COOPERATIVE_NATIV
 under its existing absolute deadline and process-step allowance, before starting
 monitored inference. It preserves the complete original request and spent work.
 
+Native helpers can load a [sharded base checkpoint with a static LoRA
+adapter](docs/SHARDED_LORA_NATIVE_WORKERS.md), preserving the original monitored
+verdict path and one shared read allowance across the base shards and adapter.
+
 Checkpoint workers, monitor training and publication also accept explicitly
 selected [GPT-2 and Llama-3 Unicode-17 pretokenization](docs/UNICODE_PRETOKENIZATION.md).
 They preserve original token IDs and byte spans through the existing BPE engine;

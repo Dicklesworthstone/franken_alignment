@@ -1,5 +1,20 @@
 # Changelog
 
+## 2026-10-11: run native helpers from sharded checkpoints with static LoRA
+
+- Connect the complete registered base-shard set and a saved plain adapter to
+  the original native evaluator. Retain the original shard and merge receipts,
+  independent base/adapted identities, complete tokenizer and monitored verdict.
+- Let the existing `/4` worker manifest use its explicit sharded weights form.
+  All configuration, merge-work and label checks precede weight reads; all
+  handles are admitted before base scalars. One original read allowance spans
+  the base and adapter, with failed reads and merge reservations retained.
+- Pass all nine new public/spawned-worker tests, 15 existing executable worker
+  regressions and 110 native-helper unit tests on qualified nightly-2026-09-08.
+  Real nonzero adapter weights change computed Allow/Deny; later missing or
+  malformed shards, adapter failures, held monitoring and exhausted process
+  allowances emit no commitment. Complete project qualification remains separate.
+
 ## 2026-10-11: bind exact Unicode tokenization across native checkpoint workflows
 
 - Add explicit GPT-2 and Llama-3 Unicode-17 pretokenization to the original

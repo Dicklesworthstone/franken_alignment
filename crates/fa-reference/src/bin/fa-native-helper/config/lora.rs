@@ -9,7 +9,13 @@ use fa_reference::action::consequence::oversight::helper_client::native::NativeE
 use fa_reference::action::consequence::oversight::helper_client::native::bootstrap::files::{
     NativeAssetReadBudget, NativeFileBootstrap, NativeHelperFiles, NativeHelperFileLimits,
 };
-use fa_reference::action::consequence::oversight::helper_client::native::bootstrap::files::lora::NativeLoraFileBootstrap;
+use fa_reference::action::consequence::oversight::helper_client::native::bootstrap::files::lora::{
+    NativeLoraFileBootstrap, NativeLoraShardFileBootstrap,
+};
+use fa_reference::action::consequence::oversight::helper_client::native::bootstrap::files::sharded::{
+    NativeHelperShardFiles, NativeShardFileBootstrap,
+};
+use fa_reference::action::consequence::activation::tensor::kv::decoder::safetensors::shards::MAX_WEIGHT_INDEX_BYTES;
 use std::path::PathBuf;
 
 pub(super) struct LoraFiles {
@@ -41,19 +47,31 @@ impl Manifest {
     pub(super) fn load_lora(&self, adapter: &LoraFiles, assets: &mut NativeAssetReadBudget,
         weights: &mut WeightReadBudget) -> Result<NativeEvaluator, LaunchError>
     {
-        let CheckpointFiles::Single(weight_path) = &self.checkpoint else {
-            return Err(LaunchError::Field("adapter.single_base"));
-        };
         // Constructed inside the one original lifetime, never per helper packet.
         let mut products = LoraMergeBudget::new(adapter.merge_products).map_err(|_| LaunchError::Limit)?;
-        let base = NativeFileBootstrap { policy: &self.policy, stream: self.stream,
-            files: NativeHelperFiles { configuration: &self.files[0], tokenizer: &self.files[1],
-                monitoring: &self.files[2], sampling: &self.files[3], weights: weight_path },
-            limits: NativeHelperFileLimits::default() };
-        NativeEvaluator::from_llama_lora_files(NativeLoraFileBootstrap { base,
-            base_identity: adapter.base_identity, adapter_configuration: &adapter.configuration,
-            adapter_weights: &adapter.weights, adapter_weight_bytes: MAX_LORA_WEIGHT_BYTES },
-            assets, weights, &mut products, self.tokenizer_format)
-            .map(|(evaluator, _)| evaluator).map_err(LaunchError::LoraStartup)
+        match &self.checkpoint {
+            CheckpointFiles::Single(weight_path) => {
+                let base = NativeFileBootstrap { policy: &self.policy, stream: self.stream,
+                    files: NativeHelperFiles { configuration: &self.files[0], tokenizer: &self.files[1],
+                        monitoring: &self.files[2], sampling: &self.files[3], weights: weight_path },
+                    limits: NativeHelperFileLimits::default() };
+                NativeEvaluator::from_llama_lora_files(NativeLoraFileBootstrap { base,
+                    base_identity: adapter.base_identity, adapter_configuration: &adapter.configuration,
+                    adapter_weights: &adapter.weights, adapter_weight_bytes: MAX_LORA_WEIGHT_BYTES },
+                    assets, weights, &mut products, self.tokenizer_format)
+                    .map(|(evaluator, _)| evaluator).map_err(LaunchError::LoraStartup)
+            }
+            CheckpointFiles::Sharded { index, shards } => {
+                let base = NativeShardFileBootstrap { policy: &self.policy, stream: self.stream,
+                    files: NativeHelperShardFiles { configuration: &self.files[0], tokenizer: &self.files[1],
+                        monitoring: &self.files[2], sampling: &self.files[3], index, shards },
+                    limits: NativeHelperFileLimits::default(), index_bytes: MAX_WEIGHT_INDEX_BYTES };
+                NativeEvaluator::from_llama_lora_shard_files(NativeLoraShardFileBootstrap { base,
+                    base_identity: adapter.base_identity, adapter_configuration: &adapter.configuration,
+                    adapter_weights: &adapter.weights, adapter_weight_bytes: MAX_LORA_WEIGHT_BYTES },
+                    assets, weights, &mut products, self.tokenizer_format)
+                    .map(|(evaluator, _)| evaluator).map_err(LaunchError::LoraStartup)
+            }
+        }
     }
 }

@@ -1,5 +1,7 @@
 //! Static one-adapter startup of the original helper, under its original budgets.
-//! The base is one explicit checkpoint; sharding remains a separate existing API.
+//! The base is one explicit checkpoint or the complete registered shard set.
+pub mod sharded;
+pub use sharded::{NativeLoraShardFileBootstrap, NativeLoraShardBootstrapReceipt};
 use super::{NativeAsset, NativeAssetReadBudget, NativeEvaluator, NativeFileBootstrap,
     NativeFileBootstrapError, NativeHelperFiles, NativeHelperBootstrap,
     NativeTokenizerFormat, NativeBootstrapError, PretrainedReceipt, WeightReadBudget,
@@ -32,6 +34,7 @@ pub struct NativeLoraBootstrapReceipt {
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum NativeLoraFileBootstrapError {
     File(NativeFileBootstrapError),
+    Sharded(super::sharded::NativeShardFileBootstrapError),
     Adapter(LoraError),
 }
 impl fmt::Display for NativeLoraFileBootstrapError {
@@ -43,6 +46,9 @@ impl From<NativeFileBootstrapError> for NativeLoraFileBootstrapError {
 }
 impl From<LoraError> for NativeLoraFileBootstrapError {
     fn from(error: LoraError) -> Self { Self::Adapter(error) }
+}
+impl From<super::sharded::NativeShardFileBootstrapError> for NativeLoraFileBootstrapError {
+    fn from(error: super::sharded::NativeShardFileBootstrapError) -> Self { Self::Sharded(error) }
 }
 
 impl NativeEvaluator {

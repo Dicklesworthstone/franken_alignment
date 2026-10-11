@@ -1,5 +1,38 @@
 # Implementation status · design revision 0.3
 
+## 2026-10-11: sharded base checkpoints with static LoRA reach native workers
+
+The actual `fa.native-worker/4` path now accepts its existing explicit sharded
+weights declaration together with the mandatory static adapter. The new
+`NativeEvaluator::from_llama_lora_shard_files` composes the original complete
+index reader and immutable LoRA merger, retaining their actual receipts. No
+unadapted helper, partial model or supplied verdict can escape this startup.
+
+Base/adapted identity, configuration, final tokenizer/policy, adapter shape and
+merge-work checks precede weight reads. The original index checks the complete
+label set before opening any tensor path. Every base handle and adapter handle
+passes file/size admission before the original all-base-header reader starts
+scalar ingestion. All base shards and the adapter consume one supplied weight
+read allowance; the original merge budget remains spent after numerical or
+subsequent monitor failure. Adapter headers retain their original later position
+after loading the base; this is not a cross-file transaction or atomic snapshot.
+
+Qualified `nightly-2026-09-08` passes all nine new regression functions, 15
+existing spawned-worker LoRA/checkpoint/static-RoPE tests and all 110 native
+helper unit tests: 134 selected tests. Rank-one/rank-two, native/raw-HF and
+zero/nonzero adapter pairs reach actual Allow/Deny and commit/reveal. Removing
+the monolithic base prevents an accidental single-file fallback. Tests retain
+causal controls for missing later shards, late malformed directories before
+earlier bodies, exact/one-short bounds, adapter overflow, post-merge monitor
+failure, complete-input mismatch, terminal holds and process-step exhaustion.
+
+The existing single-file path, older schemas, complete input ownership and
+cooperative deadline remain unchanged. No model or resource maximum increases.
+Targeted execution establishes numerical/protocol composition on synthetic
+fixtures, not trained judgment quality, asset authenticity, process isolation
+or complete project qualification. See [sharded native LoRA
+startup](docs/SHARDED_LORA_NATIVE_WORKERS.md).
+
 ## 2026-10-11: exact Unicode tokenization reaches native workers and publication
 
 The original bounded `ByteBpe` now admits explicitly named GPT-2 and Llama-3

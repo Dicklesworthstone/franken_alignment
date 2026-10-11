@@ -38,7 +38,7 @@ fn worker_v4_adapter_changes_actual_independent_commit_reveal_for_rank_one_and_t
 }
 
 #[test]
-fn worker_v4_identity_schema_and_single_base_contract_refuse_before_assets() {
+fn worker_v4_identity_schema_and_closed_checkpoint_contract_refuse_before_assets() {
     for defect in 0..5 {
         let mut fixture = assets::Fixture::new(false); configure(&mut fixture, 1, false, false);
         fixture.manifest = match defect {
@@ -49,7 +49,9 @@ fn worker_v4_identity_schema_and_single_base_contract_refuse_before_assets() {
             3 => {
                 let path = v2_assets::quote(fixture.root.join("weights.safetensors").to_str().unwrap());
                 let original = format!("\"weights\":{{\"kind\":\"single\",\"path\":{path}}}");
-                let replaced = format!("\"weights\":{{\"kind\":\"sharded\",\"index\":{path},\"shards\":{{\"part.safetensors\":{path}}}}}");
+                // Sharded bases are supported; the required exact index field
+                // still cannot be omitted from their closed declaration.
+                let replaced = format!("\"weights\":{{\"kind\":\"sharded\",\"shards\":{{\"part.safetensors\":{path}}}}}");
                 assert!(fixture.manifest.contains(&original)); fixture.manifest.replace(&original, &replaced)
             }
             _ => fixture.manifest.replace("\"merge_products\":4", "\"merge_products\":1073741825"),

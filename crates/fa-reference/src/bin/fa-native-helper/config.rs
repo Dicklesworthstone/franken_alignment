@@ -145,9 +145,6 @@ impl Manifest {
         let startup = object(&r["startup"], &["asset_bytes", "asset_calls", "weight_bytes", "weight_calls"], "startup")?;
         let checkpoint = if version >= 2 { CheckpointFiles::parse(&files["weights"])? }
             else { CheckpointFiles::Single(path(&files["weights"], "weights")?) };
-        if version == 4 && !matches!(&checkpoint, CheckpointFiles::Single(_)) {
-            return Err(LaunchError::Field("adapter.single_base"));
-        }
         let result = Self { policy, checkpoint, tokenizer_format, adapter, files: [path(&files["configuration"], "configuration")?,
             path(&files["tokenizer"], "tokenizer")?, path(&files["monitoring"], "monitoring")?,
             path(&files["sampling"], "sampling")?],

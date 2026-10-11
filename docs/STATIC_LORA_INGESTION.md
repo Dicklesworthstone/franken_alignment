@@ -150,10 +150,12 @@ selection of version 3 and requires this additional root object:
 ```
 
 The root `decoder.identity` declares the adapted model, for example generations
-6 and 7 with the same tenant, model and tokenizer. `files.weights` must be
-`{"kind":"single","path":"/operator/base.safetensors"}`. Sharded version-4
-manifests refuse during manifest parsing before opening assets. Versions 1–3
-retain their previous contracts and do not accept an adapter object.
+6 and 7 with the same tenant, model and tokenizer. `files.weights` selects either
+`{"kind":"single","path":"/operator/base.safetensors"}` or the existing exact
+sharded declaration with an index and complete registered label-to-path map.
+[Sharded base adapter startup](SHARDED_LORA_NATIVE_WORKERS.md) uses the same
+original readers and merger under one shared weight-read allowance. Versions
+1–3 retain their previous contracts and do not accept an adapter object.
 
 The public file consumer is
 `NativeEvaluator::from_llama_lora_files`, with
