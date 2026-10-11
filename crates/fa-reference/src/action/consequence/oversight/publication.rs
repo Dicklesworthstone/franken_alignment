@@ -5,6 +5,9 @@
 //! action. The caller must capture the live adapter/helper inputs at publication;
 //! a historical successful report is never accepted as a permit.
 
+mod refinement;
+pub use refinement::{PublicationProgress, PublicationRefinement};
+
 use crate::action::FrozenAction;
 use crate::full_input::{ActualHelperInput, OpaqueJudgment};
 use crate::product_frontier::ProductFrontiers;
@@ -150,10 +153,14 @@ impl PublicationJudgment {
             }
             spent.steps += minimum.steps;
             spent.value_bytes += minimum.value_bytes;
-            if !judgment.valid_at(actual) {
-                return PublicationReport {
+            match refinement::opaque_equal(judgment, actual) {
+                Ok(true) => {}
+                Ok(false) => return PublicationReport {
                     outcome: PublicationOutcome::Invalidated(PublicationInvalidation::OpaqueInput), spent,
-                };
+                },
+                Err(error) => return PublicationReport {
+                    outcome: PublicationOutcome::Refused(error), spent,
+                },
             }
         }
         PublicationReport { outcome: PublicationOutcome::StillValid, spent }
