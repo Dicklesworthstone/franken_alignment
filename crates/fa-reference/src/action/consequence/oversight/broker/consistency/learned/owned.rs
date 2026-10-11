@@ -82,7 +82,8 @@ impl OversightBroker {
         let run = self.hosted_learned_original()?;
         let event = run.last_event().ok_or(Error::Incomplete)?;
         let step = event.accepted().ok_or(Error::Incomplete)?;
-        if event.status() != state.status || event.position() != step.position
+        if (event.status() != state.status && !self.learned_message_forecast_source()?)
+            || event.position() != step.position
             || step.position.checked_add(1) != Some(state.position)
             || run.position() != state.position || run.accepted_tokens().last() != Some(&step.token)
             || !event.audit().complete_quiet() || event.audit().end_position() != state.position {

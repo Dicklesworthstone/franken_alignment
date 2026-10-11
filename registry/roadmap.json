@@ -2540,7 +2540,7 @@
       "id": "FA-111",
       "gate": "G4",
       "title": "Implement the surprise residual as sequential evidence",
-      "status": "planned",
+      "status": "in_progress",
       "depends_on": [
         "FA-031",
         "FA-110"
@@ -2556,7 +2556,10 @@
         "Produce executed local evidence; source or prose alone does not close this packet."
       ],
       "owner_role": "research",
-      "result_artifacts": [],
+      "result_artifacts": [
+        "docs/FORECAST_TEXT_STREAM_CONTINUATION.md",
+        "crates/fa-reference/tests/learned_text_stream_durable/continuation/forecast_messages.rs"
+      ],
       "founding_ideas": [
         "FI-A12"
       ],
@@ -2782,7 +2785,7 @@
       ],
       "acceptance": [
         "Autonomy grade per effect family (Propose/Reviewed/Sampled/Bounded) as control-nucleus policy data invisible to the actor.",
-        "Automatic ordered demotion on consequence \u2265 NarrowAuthority, confirmed violation, identity incident or coverage loss; governed promotion with evaluator report and dwell time; reset to floor on passport change.",
+        "Automatic ordered demotion on consequence ≥ NarrowAuthority, confirmed violation, identity incident or coverage loss; governed promotion with evaluator report and dwell time; reset to floor on passport change.",
         "Negative: promotion without report refused; restart does not raise grades; passport change resets.",
         "Produce executed local evidence; source or prose alone does not close this packet."
       ],
@@ -2864,7 +2867,7 @@
         "FA-INV-032"
       ],
       "acceptance": [
-        "External helper provider registration with cohort metadata and evaluation lineage; providers receive only authorized evidence-view projections; commit\u2013reveal through the same protocol; scored by the deployment's evaluator with read-only ledger visibility.",
+        "External helper provider registration with cohort metadata and evaluation lineage; providers receive only authorized evidence-view projections; commit–reveal through the same protocol; scored by the deployment's evaluator with read-only ledger visibility.",
         "Provider cohort influence capped; provider cannot write labels or mint authority.",
         "Negative: provider requesting raw tenant data refused; provider label write refused; provider cohort exceeding cap clipped.",
         "Produce executed local evidence; source or prose alone does not close this packet."
@@ -3224,7 +3227,7 @@
         "FA-INV-011"
       ],
       "acceptance": [
-        "One ordered journal per authority domain; every L3\u2013L8 transition emits a typed event with control seq, source frontiers, addresses and realized cost.",
+        "One ordered journal per authority domain; every L3–L8 transition emits a typed event with control seq, source frontiers, addresses and realized cost.",
         "fa tail --since streams events; decision_replay recomputes closures from the journal alone.",
         "Negative: an event with wall-clock but no control seq refused; a gap is reported, never filled.",
         "Produce executed local evidence; source or prose alone does not close this packet."

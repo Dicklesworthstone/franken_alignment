@@ -41,6 +41,7 @@ impl Machine {
                 return if current.after_request() == after_request { Ok(current) } else { Err(Error::Binding) };
             }
         }
+        self.check_pre_output_message_continuation()?;
         match self.requests.status(request) {
             Err(Error::Missing) => {},
             Ok(_) => return Err(Error::Duplicate),

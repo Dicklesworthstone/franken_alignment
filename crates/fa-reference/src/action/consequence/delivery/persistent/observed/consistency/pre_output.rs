@@ -1,8 +1,8 @@
-//! A forecast acknowledged at the prompt boundary, before original sampling.
+//! A forecast acknowledged at an original message boundary, before sampling.
 //! This supervisor-only continuation never admits or publishes an actor request.
 use super::{FileConsistencyObserver, FileOversight, JournalError};
 use crate::action::consequence::activation::consistency::Prediction;
-use crate::action::consequence::activation::tensor::kv::decoder::sampling::monitored::{GenerationEvent, GenerationStatus};
+use crate::action::consequence::activation::tensor::kv::decoder::sampling::monitored::GenerationEvent;
 use crate::action::consequence::oversight::consistency::ConsistencyDeadline;
 use crate::action::consequence::oversight::learned_host::HostedLearnedInspection;
 use crate::Error;
@@ -10,7 +10,8 @@ use std::fmt;
 use std::rc::Rc;
 
 /// A process-local continuation of one durably forecast external request.
-/// Constructed only at the original prompt/output boundary. It holds no Store,
+/// Constructed at the original prompt/output boundary or an explicitly admitted
+/// receipt-bound message continuation. It holds no Store,
 /// generator, source writer, observer role, actor ticket or publication key.
 /// It cannot be cloned, rebound, recovered from data or used with another owner.
 ///
@@ -48,8 +49,9 @@ impl FileConsistencyObserver {
     /// This call admits no new numerical step and consumes no sampling draw.
     ///
     /// The exact prompt-end residual supplies the existing ForecastHostedRequest
-    /// transaction. An earlier prompt, a completed output, even one sampled
-    /// token, or sampled work abandoned by a reset cannot enter this path.
+    /// transaction. An explicitly pinned per-message recipe also accepts the
+    /// preceding stop-token residual at its original continuation intent, before
+    /// any sample of that message. Other later, earlier or abandoned work refuses.
     /// Owned-residual consistency must already be registered at bootstrap.
     ///
     /// Outer Err: no returned continuation. Inner Err: the ORIGINAL forecast
@@ -72,12 +74,7 @@ impl FileConsistencyObserver {
         }
         if inspected.paused || inspected.pending.is_some() || host.source_interrupted
             || host.machine.pending_learned_reset().is_some() { return Err(Error::Incomplete.into()); }
-        let original = host.machine.broker.hosted_learned_original()?;
-        if inspected.numerical.status != GenerationStatus::Generating
-            || position != original.spec().prompt().len() as u64
-            || inspected.numerical.work.sampling_attempts != 0
-            || inspected.numerical.cumulative_work.sampling_attempts != 0
-            || !original.samples().is_empty() { return Err(Error::WrongState.into()); }
+        host.machine.check_pre_output_message_point(request)?;
         let prediction = match self.forecast_hosted_request(host, revision, request, actor_revision)? {
             Ok(prediction) => prediction,
             Err(error) => return Ok(Err(error)),

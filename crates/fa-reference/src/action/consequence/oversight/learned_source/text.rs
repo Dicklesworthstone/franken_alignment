@@ -96,6 +96,20 @@ fn check_tokenizer(tokenizer: &ByteBpe, profile: &DecoderProfile) -> Result<(), 
 }
 
 impl ObservedLearnedGeneration {
+    pub(crate) fn at_host_text_message_start(&self) -> bool {
+        let Some(text) = &self.text else { return false; };
+        let Some(event) = self.run.last_event() else { return false; };
+        let GenerationStatus::Finished(GenerationStop::StopToken(token)) = event.status()
+            else { return false; };
+        text.output_start > 0 && self.run.status() == GenerationStatus::Generating
+            && text.output_start == self.run.generated_tokens().len()
+            && self.run.samples().len() == text.output_start
+            && self.run.spec().stop_tokens().contains(&token)
+            && self.run.generated_tokens().last() == Some(&token)
+            && self.run.spec().prompt().len().checked_add(text.output_start)
+                == usize::try_from(self.run.position()).ok()
+    }
+
     pub(crate) fn check_host_text_continuation(&self) -> Result<(), Error> {
         // Retain complete-output, UTF-8 and control-stop validation. Empty or
         // held output cannot become a successful earlier message by continuing.

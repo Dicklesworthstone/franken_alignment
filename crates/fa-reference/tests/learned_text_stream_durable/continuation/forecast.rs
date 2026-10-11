@@ -6,6 +6,9 @@ use fa_reference::action::consequence::delivery::persistent::observed::consisten
     FileConsistencyConfig, FileConsistencyParameters, learned::FileLearnedConsistencyConfig,
 };
 
+#[path = "forecast_messages.rs"]
+mod messages;
+
 enum Forecast { Residual(FileConsistencyConfig), Learned(FileLearnedConsistencyConfig) }
 impl Forecast {
     fn new(owned: bool) -> Self {

@@ -16,6 +16,7 @@ pub(in super::super) struct LearnedTextStreamBasis {
     target: ResolvedTarget,
     view: StreamView,
     continuation: bool,
+    forecast_messages: bool,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -43,20 +44,36 @@ impl OversightBroker {
         // One append and one explicit finish must both have representable target
         // versions. This does not reserve rights or waive subsequent validation.
         target.expected_version.checked_add(2).ok_or(Error::Overflow)?;
-        let basis = LearnedTextStreamBasis { target, view: view.clone(), continuation: false };
+        let basis = LearnedTextStreamBasis { target, view: view.clone(), continuation: false,
+            forecast_messages: false };
         let source = model.observed_learned_text_generation(tokenizer, config)?;
         self.install_fresh_learned_host(source, limits)?;
         self.learned_host.as_mut().expect("installed learned source").text_stream = Some(basis);
         Ok(())
     }
 
-    pub(crate) fn enable_learned_text_stream_continuation(&mut self) -> Result<(), Error> {
+    pub(crate) fn enable_learned_text_stream_continuation(&mut self, forecast_messages: bool) -> Result<(), Error> {
         let host = self.learned_host.as_mut().ok_or(Error::Incomplete)?;
         if host.run.position() != 0 { return Err(Error::WrongState); }
         let basis = host.text_stream.as_mut().ok_or(Error::Binding)?;
         if basis.continuation { return Err(Error::Duplicate); }
         basis.continuation = true;
+        basis.forecast_messages = forecast_messages;
         Ok(())
+    }
+
+    // Only the explicit per-message forecast recipe can use the preceding
+    // accepted stop audit after its receipt-bound status transition. Preserve
+    // old optional/prompt-only forecast outcomes during semantic replay.
+    pub(crate) fn learned_message_forecast_source(&self) -> Result<bool, Error> {
+        let host = self.learned_host.as_ref().ok_or(Error::Incomplete)?;
+        let Some(basis) = &host.text_stream else { return Ok(false); };
+        if !basis.forecast_messages || !basis.continuation || !host.run.at_host_text_message_start() {
+            return Ok(false);
+        }
+        let (target, view) = self.stream_state().ok_or(Error::Binding)?;
+        Ok(self.stream_pending().is_none() && !view.finished()
+            && target == basis.target && view == &basis.view)
     }
 
     /// Pure admission against the ORIGINAL completed source and confirmed
@@ -89,7 +106,9 @@ impl OversightBroker {
         position: u64) -> Result<(), Error> {
         self.check_learned_text_stream_continuation(actor_revision, position)?;
         let (target, view) = self.stream_state().ok_or(Error::Binding)?;
-        let basis = LearnedTextStreamBasis { target, view: view.clone(), continuation: true };
+        let forecast_messages = self.learned_host.as_ref().and_then(|host| host.text_stream.as_ref())
+            .ok_or(Error::Binding)?.forecast_messages;
+        let basis = LearnedTextStreamBasis { target, view: view.clone(), continuation: true, forecast_messages };
         let host = self.learned_host.as_mut().expect("checked original learned source");
         host.run.continue_host_text_message()?;
         host.text_stream = Some(basis);

@@ -2,8 +2,10 @@
 //! No second forecast state, caller-supplied timing claim or numerical executor.
 use super::{BaseEvent, ConsistencyEvent, Error, Event, Machine};
 use super::super::super::consistency::FileConsistencyConfig;
+use super::super::super::decoder::learned::FileLearnedTextContinuation;
 use crate::action::ElapsedTick;
 use crate::action::consequence::activation::tensor::kv::decoder::sampling::monitored::GenerationStatus;
+use crate::action::consequence::delivery::stream::ReleaseFrame;
 use crate::action::consequence::oversight::learned_host::text::stream::Release;
 use crate::action::consequence::oversight::learned_source::LearnedEvidenceLimits;
 
@@ -27,11 +29,11 @@ impl Machine {
         let Some(config) = self.pre_output_configuration() else { return Ok(()); };
         let owned = self.broker.owned_learned_consistency_required();
         match event {
-            Event::Consistency(ConsistencyEvent::ForecastHostedRequest(..)) if !owned => {
-                self.check_pre_output_forecast_point(config)
+            Event::Consistency(ConsistencyEvent::ForecastHostedRequest(request, ..)) if !owned => {
+                self.check_pre_output_forecast_point(config, *request)
             }
-            Event::Consistency(ConsistencyEvent::ForecastOwnedLearnedRequest(..)) if owned => {
-                self.check_pre_output_forecast_point(config)
+            Event::Consistency(ConsistencyEvent::ForecastOwnedLearnedRequest(request, ..)) if owned => {
+                self.check_pre_output_forecast_point(config, *request)
             }
             Event::Consistency(ConsistencyEvent::Forecast(..) | ConsistencyEvent::ForecastRequest(..)
                 | ConsistencyEvent::ForecastHosted(..) | ConsistencyEvent::ForecastHostedRequest(..)
@@ -44,7 +46,24 @@ impl Machine {
                 if self.consistency_request != Some((*request, forecast.attempt)) { return Err(Error::Binding); }
                 let prompt = self.broker.hosted_learned_original()?.spec().prompt().len() as u64;
                 if config.stream_message_profile().is_some() {
-                    let release = if forecast.source_sequence == prompt { Release::Message } else { Release::Finish };
+                    // A later message also has a post-prompt source sequence.
+                    // The original frame, current receipt cut and forecast cut
+                    // distinguish it from an independently forecast finish.
+                    let release = if ReleaseFrame::decode(&spec.payload)?.is_finish() {
+                        let numerical = self.broker.hosted_learned_generation()?;
+                        if forecast.source_sequence != numerical.position
+                            || forecast.actor_revision != numerical.actor_revision { return Err(Error::Binding); }
+                        Release::Finish
+                    } else {
+                        let boundary = self.pre_output_message_continuation();
+                        let start = boundary.map_or(prompt, |command| command.position());
+                        if forecast.source_sequence != start
+                            || boundary.is_some_and(|command| command.request() != *request
+                                || command.actor_revision() != forecast.actor_revision) {
+                            return Err(Error::Binding);
+                        }
+                        Release::Message
+                    };
                     if self.broker.learned_stream_spec(release, spec.deadline)? != *spec { return Err(Error::Binding); }
                 } else {
                     if forecast.source_sequence != prompt { return Err(Error::Binding); }
@@ -68,7 +87,8 @@ impl Machine {
 
     fn check_pre_output_configuration(&self, config: &FileConsistencyConfig) -> Result<(), Error> {
         let learned = self.learned_contract().ok_or(Error::Binding)?;
-        if learned.allows_text_stream_continuation() || !learned.is_text()
+        if (learned.allows_text_stream_continuation() && !learned.requires_forecast_text_stream_continuation())
+            || !learned.is_text()
             || learned.text_stream_profile() != config.stream_message_profile() {
             return Err(Error::Binding);
         }
@@ -77,14 +97,11 @@ impl Machine {
         Ok(())
     }
 
-    fn check_pre_output_forecast_point(&self, config: &FileConsistencyConfig) -> Result<(), Error> {
+    fn check_pre_output_forecast_point(&self, config: &FileConsistencyConfig, request: u64) -> Result<(), Error> {
         let numerical = self.broker.hosted_learned_generation()?;
-        let original = self.broker.hosted_learned_original()?;
-        if numerical.status == GenerationStatus::Generating
-            && numerical.position == original.spec().prompt().len() as u64
-            && numerical.work.sampling_attempts == 0
-            && numerical.cumulative_work.sampling_attempts == 0
-            && original.samples().is_empty() { return Ok(()); }
+        if numerical.status == GenerationStatus::Generating {
+            return self.check_pre_output_message_point(request);
+        }
         // Only an independently forecast FINISH may use a later source.
         // Existing builder requires receipt-confirmed original output;
         // mere dispatch or visible-but-unreconciled publication refuses.
@@ -95,6 +112,52 @@ impl Machine {
             return Ok(());
         }
         Err(Error::WrongState)
+    }
+
+    fn pre_output_message_continuation(&self) -> Option<FileLearnedTextContinuation> {
+        self.learned_contract().filter(|config| config.requires_forecast_text_stream_continuation())
+            .and_then(|_| self.current_learned_message_continuation())
+    }
+
+    // Shared by the required timing route and the optional raw forecast handle.
+    // Every later message is identified by the ORIGINAL acknowledged continuation
+    // intent. Equality of positions alone cannot replace its request or actor cut.
+    pub(in super::super::super) fn check_pre_output_message_point(&self, request: u64) -> Result<(), Error> {
+        let numerical = self.broker.hosted_learned_generation()?;
+        let original = self.broker.hosted_learned_original()?;
+        if numerical.status != GenerationStatus::Generating { return Err(Error::WrongState); }
+        let prompt = original.spec().prompt().len() as u64;
+        if let Some(command) = self.pre_output_message_continuation() {
+            if command.request() != request { return Err(Error::Binding); }
+            if numerical.position != command.position() || numerical.actor_revision != command.actor_revision() {
+                return Err(Error::WrongState);
+            }
+            let sampled = numerical.position.checked_sub(prompt).ok_or(Error::Binding)?;
+            if numerical.work.sampling_attempts != sampled
+                || numerical.cumulative_work.sampling_attempts != sampled
+                || original.samples().len() as u64 != sampled
+                || !self.broker.learned_message_forecast_source()? { return Err(Error::WrongState); }
+            return Ok(());
+        }
+        if numerical.position != prompt || numerical.work.sampling_attempts != 0
+            || numerical.cumulative_work.sampling_attempts != 0 || !original.samples().is_empty() {
+            return Err(Error::WrongState);
+        }
+        Ok(())
+    }
+
+    // A pending finish forecast cannot be reinterpreted as the next message's
+    // forecast by changing only the generator's status. Refuse before recording
+    // the continuation; consumed likelihood samples and spent work remain intact.
+    pub(in super::super) fn check_pre_output_message_continuation(&self) -> Result<(), Error> {
+        if self.pre_output_configuration().is_none() { return Ok(()); }
+        if self.consistency_request.is_some() || self.broker.pending_forecast()?.is_some() {
+            return Err(Error::Incomplete);
+        }
+        if self.broker.consistency_coverage_lost()? || self.broker.consistency_evidence()?.crossed() {
+            return Err(Error::Incomplete);
+        }
+        Ok(())
     }
 
     // Called by the common learned-position preflight for BOTH Begin and Step,
@@ -117,10 +180,15 @@ impl Machine {
             return Err(Error::Binding);
         }
         let prompt = self.broker.hosted_learned_original()?.spec().prompt().len() as u64;
-        let sampled = numerical.position.checked_sub(prompt).ok_or(Error::Binding)?;
-        if forecast.source_sequence != prompt
-            || numerical.work.sampling_attempts != sampled
-            || forecast.actor_revision.checked_add(sampled) != Some(numerical.actor_revision) {
+        let boundary = self.pre_output_message_continuation();
+        let start = boundary.map_or(prompt, |command| command.position());
+        let total_sampled = numerical.position.checked_sub(prompt).ok_or(Error::Binding)?;
+        let message_sampled = numerical.position.checked_sub(start).ok_or(Error::Binding)?;
+        if forecast.source_sequence != start
+            || numerical.work.sampling_attempts != total_sampled
+            || forecast.actor_revision.checked_add(message_sampled) != Some(numerical.actor_revision)
+            || boundary.is_some_and(|command| command.actor_revision() != forecast.actor_revision
+                || self.consistency_request != Some((command.request(), forecast.attempt))) {
             return Err(Error::Binding);
         }
         let control = self.broker.inspect();

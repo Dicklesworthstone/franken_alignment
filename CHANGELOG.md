@@ -1,5 +1,20 @@
 # Changelog
 
+## 2026-10-11: require per-message forecasts in finite learned continuation
+
+- Add an explicit immutable recipe after a required raw or owned predictor.
+  Bind each fresh forecast to the original continuation request, actor revision
+  and numerical position before additional sampling.
+- Preserve original source provenance, finite numerical budgets and lifetime
+  likelihood evidence across messages. Classify message and finish from the
+  actual release frame; a pending finish forecast blocks continuation.
+- Add seven public integration tests for A/B/finish, wrong or late obligations,
+  source handles, receipt cuts, expiry and fail-closed recovery. Preserve legacy
+  recipe bytes and refusal tests.
+- Record source review only. Required remote compilation and test execution
+  remain blocked by unavailable RCH workers/daemon and the disconnected executor;
+  no qualification or research-packet closure is claimed.
+
 ## 2026-10-11: publish from adapted checkpoint sources and continue finite learned streams
 
 - Add explicit checkpoint-source selection to learned publication recipe `/3`

@@ -1,5 +1,30 @@
 # Implementation status · design revision 0.3
 
+## 2026-10-11: require fresh forecasts across finite learned messages (unqualified source)
+
+The explicit `with_forecast_text_stream_continuation()` library recipe composes
+the original required raw or owned learned predictor with finite continuation.
+Every later message must first record its original receipt-bound request and
+numerical cut, then forecast that exact cut before another sampled token.
+Original source audits, cumulative numerical work, sampler history and lifetime
+sequential evidence remain shared. The actual release frame distinguishes later
+messages from an independently forecast finish; a pending finish obligation
+cannot be converted into a continuation.
+
+Old configuration bytes, prompt-only refusals and executable recipe `/4` retain
+their meaning. This adds no prompt, context extension, token budget, permission,
+predictor provisioning for the executable, or recovery of unanswered forecasts.
+Seven new public integration tests cover both predictor representations, real
+A/B numerical output and separate receipt paths, missing/wrong/late obligations,
+finish substitution, unconfirmed publication, expiry and interrupted recovery.
+Their forecast tables and committee ballots are controlled fixtures.
+
+Qualification is pending. The unchanged remote-only RCH gate failed before
+compilation with no configured workers and no daemon; the workspace executor
+then disconnected. No formatter, compilation, new-test or workspace pass is
+claimed. The scoped bead and FA-111 remain in progress, including the original
+research acceptance. See [the exact contract](docs/FORECAST_TEXT_STREAM_CONTINUATION.md).
+
 ## 2026-10-11: adapted checkpoint publication and receipt-bound finite continuation
 
 Learned publication recipe `/3` and native roster `/2` accept an explicitly

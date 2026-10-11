@@ -54,6 +54,7 @@ pub struct FileLearnedConfig {
     owned_pre_output_forecast: Option<super::super::super::consistency::learned::FileLearnedConsistencyConfig>,
     forecast_reset_successors: bool,
     text_stream_continuation: bool,
+    forecast_text_stream_continuation: bool,
 }
 impl fmt::Debug for FileLearnedConfig {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -85,7 +86,7 @@ impl FileLearnedConfig {
         w.u64(source.monitor_generation)?;
         w.count(limits.evidence.token_ids)?; w.count(limits.evidence.score_words)?;
         w.count(limits.encoded_bytes)?; w.blob(&archive)?;
-        Ok(Self { model, source, limits, bytes: w.finish().into(), text: None, sidecar_required: false, automatic_stop: None, computed_identity_required: false, policy_source: None, pre_output_forecast: None, owned_pre_output_forecast: None, forecast_reset_successors: false, text_stream_continuation: false })
+        Ok(Self { model, source, limits, bytes: w.finish().into(), text: None, sidecar_required: false, automatic_stop: None, computed_identity_required: false, policy_source: None, pre_output_forecast: None, owned_pre_output_forecast: None, forecast_reset_successors: false, text_stream_continuation: false, forecast_text_stream_continuation: false })
     }
     pub fn encoded_bytes(&self) -> usize { self.bytes.len() }
     pub(super) fn bytes(&self) -> &Rc<[u8]> { &self.bytes }
@@ -104,7 +105,9 @@ impl FileLearnedConfig {
             },
             None => broker.own_learned_generation(self.model.clone(), self.source.clone(), self.limits),
         }?;
-        if self.text_stream_continuation { broker.enable_learned_text_stream_continuation()?; }
+        if self.text_stream_continuation {
+            broker.enable_learned_text_stream_continuation(self.forecast_text_stream_continuation)?;
+        }
         if self.sidecar_required { broker.enable_learned_sidecar_requirement()?; }
         if let Some(policy) = self.automatic_stop { broker.enable_learned_host_stop(policy)?; }
         Ok(())

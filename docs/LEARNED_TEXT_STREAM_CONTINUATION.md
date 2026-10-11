@@ -95,12 +95,15 @@ accepted-token history, K/V cache, random-word stream, and all accumulated work.
 Its original `max_new_tokens` and numerical/telemetry ceilings remain unchanged.
 No replacement numerical engine or independently reconstructed output is used.
 
-The existing required pre-output forecast modes currently define a forecast at
-the original prompt boundary. They do not define forecasts at later message
-boundaries. Combining either required forecast mode with finite message
-continuation is therefore refused before startup, in either configuration order
-and through independent forecast installation; the `/4` operator does not select
-those modes.
+The existing `with_text_stream_continuation` option defines no forecasts at later
+message boundaries. Combining it with either required pre-output forecast mode
+therefore remains refused before startup, in either configuration order and
+through independent forecast installation; the `/4` operator does not select
+those modes. The separately selected public API
+[`with_forecast_text_stream_continuation`](FORECAST_TEXT_STREAM_CONTINUATION.md)
+requires an already pinned raw or owned predictor and a fresh forecast at each
+receipt-bound message boundary. Its configuration wrapper is distinct from `/4`
+and from the original finite-continuation bytes; it does not upgrade old stores.
 
 The original learned text binding records the current offset into that same
 generated-token history. Text decoding for the next message starts at this offset;

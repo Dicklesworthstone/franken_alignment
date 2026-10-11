@@ -33,6 +33,34 @@ impl FileLearnedConfig {
 
     pub fn allows_text_stream_continuation(&self) -> bool { self.text_stream_continuation }
 
+    /// Require a new original-source forecast at EVERY receipt-bound message
+    /// boundary of this finite generation. Pin either required predictor first.
+    /// The continuation intent names the next request and exact numerical cut;
+    /// neither sampling nor that request can proceed under an earlier forecast.
+    /// A stream finish still requires its own forecast after its message receipt.
+    ///
+    /// This distinct recipe preserves all legacy bytes and prompt-only refusals.
+    /// It adds no tokens, work, probability budget, source history or authority.
+    pub fn with_forecast_text_stream_continuation(mut self) -> Result<Self, Error> {
+        if self.text_stream_continuation { return Err(Error::Duplicate); }
+        if self.text_stream_profile().is_none() || !self.sidecar_required
+            || (self.pre_output_forecast.is_none() && self.owned_pre_output_forecast.is_none()) {
+            return Err(Error::Binding);
+        }
+        let mut writer = Writer::new(MAX_CONFIG_BYTES);
+        writer.raw(DOMAIN)?; writer.u64(0)?; writer.raw(b"FALMPRD\x01")?;
+        writer.blob(&self.bytes)?;
+        self.bytes = writer.finish().into();
+        self.text_stream_continuation = true;
+        self.forecast_text_stream_continuation = true;
+        Ok(self)
+    }
+
+    /// Immutable timing selection, never a forecast or an effect permission.
+    pub fn requires_forecast_text_stream_continuation(&self) -> bool {
+        self.forecast_text_stream_continuation
+    }
+
     /// Pin the complete original text recipe AND independent stream contract.
     /// The stream domain differs from every legacy numeric/raw-text recipe;
     /// those encodings are unchanged. Configuration does no token inference and
