@@ -1,5 +1,8 @@
 //! A forecast acknowledged at an original message boundary, before sampling.
 //! This supervisor-only continuation never admits or publishes an actor request.
+mod owned;
+pub use owned::{FileOwnedPreOutputForecast, FileOwnedPreOutputStart};
+
 use super::{FileConsistencyObserver, FileOversight, JournalError};
 use crate::action::consequence::activation::consistency::Prediction;
 use crate::action::consequence::activation::tensor::kv::decoder::sampling::monitored::GenerationEvent;
@@ -29,14 +32,14 @@ use std::rc::Rc;
 /// fn publish(run: FilePreOutputForecast) { run.authorize(); }
 /// ```
 #[must_use = "drive the original continuation or retain its unanswered forecast obligation"]
-pub struct FilePreOutputForecast {
+pub struct FilePreOutputForecast<P = Prediction> {
     issuer: Rc<()>,
     request: u64,
     deadline: ConsistencyDeadline,
-    prediction: Prediction,
+    prediction: P,
     numerical: HostedLearnedInspection,
 }
-impl fmt::Debug for FilePreOutputForecast {
+impl<P> fmt::Debug for FilePreOutputForecast<P> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("FilePreOutputForecast").field("request", &self.request)
             .field("position", &self.numerical.position).field("status", &self.numerical.status)
@@ -89,9 +92,9 @@ impl FileConsistencyObserver {
             deadline, prediction, numerical: inspected.numerical }))
     }
 }
-impl FilePreOutputForecast {
+impl<P> FilePreOutputForecast<P> {
     pub fn request(&self) -> u64 { self.request }
-    pub fn prediction(&self) -> &Prediction { &self.prediction }
+    pub fn prediction(&self) -> &P { &self.prediction }
     pub fn deadline(&self) -> ConsistencyDeadline { self.deadline }
     /// Last acknowledged numerical state, not current policy or effect authority.
     pub fn numerical(&self) -> &HostedLearnedInspection { &self.numerical }

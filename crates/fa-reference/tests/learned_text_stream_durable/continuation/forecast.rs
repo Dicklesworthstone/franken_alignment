@@ -8,6 +8,8 @@ use fa_reference::action::consequence::delivery::persistent::observed::consisten
 
 #[path = "forecast_messages.rs"]
 mod messages;
+#[path = "forecast/owned_native.rs"]
+mod owned_native;
 
 enum Forecast { Residual(FileConsistencyConfig), Learned(FileLearnedConsistencyConfig) }
 impl Forecast {
