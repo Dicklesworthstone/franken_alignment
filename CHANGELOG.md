@@ -1,5 +1,21 @@
 # Changelog
 
+## 2026-10-11: explicit learned stream finish and exact receipt recovery
+
+- Add predecessor-bound finish selection to the existing learned publication
+  command, using a fresh native review and separate human approval after the
+  original confirmed message, with no new token generation or message append.
+- Preserve full cumulative frame boundaries and charges, current-policy checks,
+  original source and numerical allowances, finite recovery reserve and exact
+  terminal receipts, including admission refusal without a FrozenAction.
+- Add eight real-owner tests for full-capacity finish, both human decisions,
+  unconfirmed and wrong predecessors, capacity refusal, current policy, cancelled
+  native work, original deadlines and exact no-write recipe mismatch.
+- Pass all eight new finish tests on the qualified nightly. The learned-command
+  selection passes 29 of 31 tests; two existing Unix-listener tests remain
+  blocked at listener creation by environment EPERM. All 15 durable learned
+  text stream integration tests also pass.
+
 ## 2026-10-10: trained K/V campaigns and actual operator monitor export
 
 - Capture original complete-prefix final K/V frames across every model layer,

@@ -45,10 +45,28 @@ where F: FnMut() -> ElapsedTick {
     if frame.profile() != loaded.stream || frame.is_finish() {
         return Err("receipt recovery requires this original learned message request".into());
     }
+    let deadline = action.spec().deadline;
+    resume_original(config, loaded, host, LearnedTextRelease::Message, deadline, &mut time)
+}
+
+pub(super) fn resume_finish<F>(config: Config, loaded: Loaded, after: u64, mut time: F)
+    -> Result<RunResult, String>
+where F: FnMut() -> ElapsedTick {
+    super::finish::check_ids(loaded.request, after)?;
+    let (host, _reviewer) = open(&config, &loaded)?;
+    // The original pre-policy request survives even if admission never created
+    // a FrozenAction. Only the exact predecessor receipt can select this finish.
+    let original = host.learned_text_stream_finish_request(after, loaded.request).map_err(debug)?;
+    resume_original(config, loaded, host, LearnedTextRelease::Finish, original.deadline, &mut time)
+}
+
+fn resume_original<F>(config: Config, loaded: Loaded, host: FileOversight,
+    release: LearnedTextRelease, deadline: ElapsedTick, time: &mut F) -> Result<RunResult, String>
+where F: FnMut() -> ElapsedTick {
     // The ORIGINAL retained action supplies the old deadline. ttl_ms cannot
     // renew it, and neither new text nor today's target/epoch enters the retry.
     let proposal = FileLearnedTextStreamActorPort::encode_release(loaded.request,
-        LearnedTextRelease::Message, action.spec().deadline).map_err(debug)?;
+        release, deadline).map_err(debug)?;
     let document = encode_command(&Command::Submit { request: loaded.request, proposal }).map_err(debug)?;
     let revision = host.revision();
     let (port, supervisor) = host.into_learned_text_stream_actor_gateway().map_err(debug)?;
@@ -59,7 +77,7 @@ where F: FnMut() -> ElapsedTick {
         let cleanup_pending = cleanup(driver, config.timing.cleanup_ms, config.timing.poll_ms);
         return Ok(RunResult { response, cleanup_pending, failure: Some("original learned receipt ticket refused".into()) });
     }
-    let failure = super::super::super::resume_existing(&mut driver, loaded.request, &mut time).err();
+    let failure = super::super::super::resume_existing(&mut driver, loaded.request, time).err();
     let response = wire.exchange(&encode_command(&Command::Poll { request: loaded.request }).map_err(debug)?);
     let cleanup_pending = cleanup(driver, config.timing.cleanup_ms, config.timing.poll_ms);
     Ok(RunResult { response, failure, cleanup_pending })

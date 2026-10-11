@@ -1,6 +1,6 @@
 //! Imported learned K/V generation, original native sidecar review and two keys.
-//! This first command publishes one complete message; all numerical and effect
-//! transitions belong to the existing owners, including restart and cancellation.
+//! One complete message and its separately reviewed explicit stream finish;
+//! all numerical and effect transitions belong to the existing original owners.
 #[path = "learned/fields.rs"] mod fields;
 #[path = "learned/fit.rs"] mod fit;
 #[path = "learned/monitor.rs"] mod monitor;
@@ -8,6 +8,7 @@
 #[path = "learned/recipe.rs"] mod recipe;
 #[path = "learned/recovery.rs"] mod recovery;
 #[path = "learned/review.rs"] mod review;
+#[path = "learned/finish.rs"] mod finish;
 use recipe::Loaded;
 use super::super::{Config, Deadline, Duration, ElapsedTick, FileOversight, FileHumanReviewer,
     FileDriverEvent, FileDriverPhase, FileSupervisedDriver, Instant, PeerProfile,
@@ -29,9 +30,10 @@ use fa_reference::action::consequence::oversight::{
 use fa_reference::Error;
 use std::{io::Write, path::Path, rc::Rc};
 
-const USAGE: &str = "create-learned-generated CONFIG LEARNED_RECIPE REVIEWER_PROFILE [--continue-generation] | create-learned-generated CONFIG LEARNED_RECIPE --resume";
+const USAGE: &str = "create-learned-generated CONFIG LEARNED_RECIPE REVIEWER_PROFILE [--continue-generation | --finish-after-message PREVIOUS_REQUEST] | create-learned-generated CONFIG LEARNED_RECIPE --resume [--finish-after-message PREVIOUS_REQUEST]";
 
 pub(super) fn command(args: &[String], credibility: Option<&Path>) -> Result<(), String> {
+    let (args, finishing) = finish::take_option(args)?;
     if !matches!(args.len(), 4 | 5) || args[0] != "create-learned-generated"
         || credibility.is_some() { return Err(USAGE.into()); }
     let continuing = args.len() == 5;
@@ -43,12 +45,20 @@ pub(super) fn command(args: &[String], credibility: Option<&Path>) -> Result<(),
     let config = Config::read(Path::new(&args[1]))?;
     if args[3] == "--resume" {
         let loaded = recipe::load(Path::new(&args[2]), &config, false)?;
-        return emit(recovery::resume(config, loaded, clock)?, &mut std::io::stdout().lock());
+        let result = match finishing {
+            Some(after) => recovery::resume_finish(config, loaded, after, clock)?,
+            None => recovery::resume(config, loaded, clock)?,
+        };
+        return emit(result, &mut std::io::stdout().lock());
     }
     let peers = PeerProfile::read(Path::new(&args[3]))?;
     peers.check_host(&config)?;
     let loaded = recipe::load(Path::new(&args[2]), &config, true)?;
-    emit(run(config, loaded, &peers, continuing, clock)?, &mut std::io::stdout().lock())
+    let result = match finishing {
+        Some(after) => run_selected(config, loaded, &peers, true, Some(after), clock)?,
+        None => run(config, loaded, &peers, continuing, clock)?,
+    };
+    emit(result, &mut std::io::stdout().lock())
 }
 
 // Only the original restricted actor response reaches stdout. A failed output
@@ -68,10 +78,17 @@ fn emit(result: RunResult, output: &mut impl Write) -> Result<(), String> {
     Ok(())
 }
 
-fn run<F>(mut config: Config, loaded: Loaded, peers: &PeerProfile, continuing: bool, mut time: F)
+fn run<F>(config: Config, loaded: Loaded, peers: &PeerProfile, continuing: bool, time: F)
     -> Result<RunResult, String>
 where F: FnMut() -> ElapsedTick {
+    run_selected(config, loaded, peers, continuing, None, time)
+}
+
+fn run_selected<F>(mut config: Config, loaded: Loaded, peers: &PeerProfile, continuing: bool,
+    finishing: Option<u64>, mut time: F) -> Result<RunResult, String>
+where F: FnMut() -> ElapsedTick {
     peers.check_host(&config)?;
+    if let Some(after) = finishing { finish::check_ids(loaded.request, after)?; }
     let start = time();
     let lifetime = loaded.ttl_ms.min(config.timing.runtime_ms);
     let deadline = Deadline { logical: plus(start, lifetime)?, started: Instant::now(),
@@ -90,14 +107,26 @@ where F: FnMut() -> ElapsedTick {
         }
         host.check_credibility().map_err(debug)?;
     }
+    if let Some(after) = finishing { finish::check_fresh(&host, &loaded, after)?; }
     let (port, supervisor) = host.into_learned_text_stream_actor_gateway().map_err(debug)?;
     let mut driver = FileSupervisedDriver::new(supervisor);
     let mut wire = ActorWire::new(port);
     let prepared = (|| {
-        if !generate(&mut driver, &reviewer, &mut config, &mut control, &deadline, &mut time)? {
-            return Ok(false);
+        let release = if let Some(after) = finishing {
+            if !finish::prepare(&mut driver, &reviewer, &mut config, &loaded, after,
+                &mut control, &deadline, &mut time)? { return Ok(false); }
+            LearnedTextRelease::Finish
+        } else {
+            if !generate(&mut driver, &reviewer, &mut config, &mut control, &deadline, &mut time)? {
+                return Ok(false);
+            }
+            LearnedTextRelease::Message
+        };
+        match release {
+            LearnedTextRelease::Message => submit(&mut driver, &mut wire, &mut config, &loaded, &deadline, &mut time)?,
+            LearnedTextRelease::Finish => submit_release(&mut driver, &mut wire, &mut config, &loaded,
+                release, &deadline, &mut time)?,
         }
-        submit(&mut driver, &mut wire, &mut config, &loaded, &deadline, &mut time)?;
         let status = driver.supervisor().host().map_err(debug)?.request_status(loaded.request).map_err(debug)?;
         Ok(matches!(status.disposition, FileRequestDisposition::Admitted {
             stage: ActionState::Reviewing, .. }))
@@ -198,10 +227,17 @@ fn submit<F>(driver: &mut FileSupervisedDriver,
     wire: &mut ActorWire<FileLearnedTextStreamActorPort>, config: &mut Config, loaded: &Loaded,
     deadline: &Deadline, time: &mut F) -> Result<(), String>
 where F: FnMut() -> ElapsedTick {
+    submit_release(driver, wire, config, loaded, LearnedTextRelease::Message, deadline, time)
+}
+
+fn submit_release<F>(driver: &mut FileSupervisedDriver,
+    wire: &mut ActorWire<FileLearnedTextStreamActorPort>, config: &mut Config, loaded: &Loaded,
+    release: LearnedTextRelease, deadline: &Deadline, time: &mut F) -> Result<(), String>
+where F: FnMut() -> ElapsedTick {
     // A closed source-only envelope: the actor supplies no output bytes, logits,
     // prompt edits, helper inputs, automatic key or human approval.
     let proposal = FileLearnedTextStreamActorPort::encode_release(loaded.request,
-        LearnedTextRelease::Message, deadline.logical).map_err(debug)?;
+        release, deadline.logical).map_err(debug)?;
     let document = encode_command(&Command::Submit { request: loaded.request, proposal }).map_err(debug)?;
     deadline.check(time())?;
     let response = driver.supervisor_mut().exchange_learned_text_stream_actor_from_policy_file(

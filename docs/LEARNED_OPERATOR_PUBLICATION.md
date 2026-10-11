@@ -28,6 +28,8 @@ Use the repository-built `supervise_publication` example on Linux:
 supervise_publication create-learned-generated CONFIG LEARNED_RECIPE REVIEWER_PROFILE
 supervise_publication create-learned-generated CONFIG LEARNED_RECIPE REVIEWER_PROFILE --continue-generation
 supervise_publication create-learned-generated CONFIG LEARNED_RECIPE --resume
+supervise_publication create-learned-generated CONFIG FINISH_RECIPE REVIEWER_PROFILE --finish-after-message PREVIOUS_REQUEST
+supervise_publication create-learned-generated CONFIG FINISH_RECIPE --resume --finish-after-message PREVIOUS_REQUEST
 ```
 
 Fresh creation requires a new authority store. The creation and continuation
@@ -35,6 +37,12 @@ forms require the independently provisioned reviewer profile as their fourth
 argument. They do not accept a credibility activation option or an unchecked
 reviewer mode. The receipt-only form accepts `--resume` in that argument's place
 and contacts no reviewer.
+
+An explicit finish uses an existing store and a new recipe request ID after the
+exact original message's confirmed receipt. It preserves the numerical recipe,
+runs a fresh native review and requires another independent human decision.
+See [learned stream finish](LEARNED_STREAM_FINISH_OPERATOR.md) for predecessor,
+capacity and exact finish-recovery rules.
 
 For example, start the supervisor with actual operator files:
 
@@ -77,7 +85,8 @@ recover the original request rather than submitting a new effect.
 
 The publication is the original protected journal's framed stream payload.
 This command does not copy it to another destination or add a network send.
-It appends one message and does not issue a separate stream-finish action.
+Ordinary creation appends one message. The explicit finish option separately
+reviews and closes that confirmed prefix without generating another message.
 
 ## Files to provision
 
@@ -531,14 +540,16 @@ recovery capacity.
 
 The generic raw `inspect`/resume commands are not substitutes for the explicit
 learned recipe recovery path. This command does not offer next-message,
-stream-finish, identity-activation, qualification or sharded-model modes.
+identity-activation, qualification or sharded-model modes. Explicit stream finish
+has its own predecessor-bound form and receipt lookup described above.
 
 ## Verification status
 
 The implementation was independently reviewed and executed with qualified
-`nightly-2026-09-08`. All twenty-three learned-command example tests compile. Twenty-one
-pass: all eleven original direct/admission tests, seven progressive-review tests,
-and three actual trained-monitor export/loader tests. Two actual Unix-listener tests fail at listener creation with environment
+`nightly-2026-09-08`. All thirty-one learned-command example tests compile.
+Twenty-nine pass: all eleven original direct/admission tests, seven progressive
+review tests, three actual trained-monitor export/loader tests and eight explicit
+finish tests. Two actual Unix-listener tests fail at listener creation with environment
 EPERM: the complete peer publication test and authenticated stop during a
 partially computed refined round. Neither test is skipped, and their transport
 paths have not been replaced by a weaker fallback.
@@ -552,6 +563,11 @@ roster unused, total poll exhaustion with retained successor work, changed polic
 malformed schedules and aggregate work, unretained groups, and insufficient
 future windows. The configured-runtime/TTL admission boundary is checked before
 model loading and again against the live remaining action deadline.
+
+The finish positive reopens a full one-message stream, preserves its complete
+prefix and numerical state, runs another native review and requires independent
+human approval. Refusals retain original capacity, work and deadlines; terminal
+receipt recovery needs no live evidence, helper inputs or current-clock reads.
 
 All complete-input, nonzero K/V, native-token, reservation, residual-spending,
 original-outcome and source-history assertions remain. These synthetic fixtures

@@ -1,5 +1,33 @@
 # Implementation status · design revision 0.3
 
+## 2026-10-11: separately reviewed learned stream finish
+
+The learned publication operator now accepts an explicit
+`--finish-after-message PREVIOUS_REQUEST` with a distinct finish request and
+fresh native review schedule. It reopens the exact original numerical recipe,
+requires the predecessor's accepted Executed receipt and complete confirmed
+stream boundaries, then acquires current policy and resumes the same paused
+owner without computing another token. The finish traverses the original
+source-only gateway, complete learned sidecar, native congress, independent
+human key and current-policy publication gate. It closes a full message stream
+without needing another message slot, while charging the complete finish frame.
+
+Receipt-only finish recovery retrieves the original pre-policy request, including
+an admission-capacity refusal with no FrozenAction. It pins the exact preceding
+message receipt, target version, cumulative boundaries and original deadline;
+changed TTL cannot renew the request. Terminal recovery needs no live evidence,
+helper assets or clock. Original numerical work, sampler state, source history,
+recovery reserve and unknown publication obligations remain with their owners.
+No journal format, permission type or numerical engine changes.
+
+All eight new finish tests pass on qualified `nightly-2026-09-08`, including the
+two actual native reviews, separate human decisions and the full one-message
+capacity case under the unchanged 1024-event source ceiling. The complete
+learned-command selection passes 29 of 31 tests; the two existing real
+Unix-listener tests still fail at listener creation with environment EPERM.
+All 15 durable learned text stream integration tests also pass.
+See [learned stream finish](docs/LEARNED_STREAM_FINISH_OPERATOR.md).
+
 ## 2026-10-10: complete trained K/V probe campaigns and operator export
 
 `probe::training::decoder::kv` now executes a fixed labelled population through
