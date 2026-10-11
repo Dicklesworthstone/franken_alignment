@@ -6,6 +6,8 @@
 //! are caller-reviewed reference-contract input, not proof that the named
 //! operators commute in a production executor.
 
+pub mod quotient;
+
 use std::collections::{BTreeMap, BTreeSet};
 use std::num::NonZeroU64;
 

@@ -1,5 +1,28 @@
 # Implementation status · design revision 0.3
 
+## 2026-10-11: bounded exhaustive quotient replay (unqualified source)
+
+FA-093 now has a public closed logical replay oracle over the original FA-092
+independence relation. It validates declared access coverage, canonicalizes only
+lawful independent swaps and compares every bounded unreduced permutation with
+a cold replay of its representative. The comparison includes original
+consequence decisions and ordered observations as well as final state. Failures
+retain per-occurrence results and the complete population denominator.
+
+Admission bounds all schedules, replay/canonicalization/comparison work and
+modeled retained payload before execution: at most eight occurrences, 40,320
+orders and 32 cells. Reports expose original denominators, representative counts,
+logical work and order-only trace bytes; they make no process-memory, latency,
+production-executor or arbitrary-concurrency claim.
+
+Fourteen public integration tests and one private causal mismatch test are
+authored, including independent permutation/swap controls, cross reads, closed
+absence, resource/RNG mutations, ordering barriers, malformed bindings and every
+budget dimension. None has executed in this session. The unchanged remote-only
+RCH gate could not start compilation, and the workspace executor is unavailable.
+No source-format, compile, test or benchmark qualification is claimed. FA-093
+remains in progress. See [the replay contract](docs/QUOTIENT_REPLAY.md).
+
 ## 2026-10-11: require fresh forecasts across finite learned messages (unqualified source)
 
 The explicit `with_forecast_text_stream_continuation()` library recipe composes

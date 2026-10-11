@@ -1,5 +1,19 @@
 # Changelog
 
+## 2026-10-11: implement bounded exhaustive quotient replay
+
+- Add a public closed logical replay machine bound to original FA-092 registered
+  dependencies and the original consequence decision function.
+- Enumerate every bounded unreduced order and compare complete results with cold
+  representative replay; retain failing orders, decisions and original
+  denominators on mismatch.
+- Preflight factorial schedule count, logical work and retained payload. Expose
+  representative counts and order-trace byte costs without production or
+  process-memory claims.
+- Add fourteen integration tests and one deliberately corrupted-relation
+  mismatch test. Execution and qualification remain pending the prescribed RCH
+  gate; neither source review nor authored expectations close FA-093.
+
 ## 2026-10-11: require per-message forecasts in finite learned continuation
 
 - Add an explicit immutable recipe after a required raw or owned predictor.

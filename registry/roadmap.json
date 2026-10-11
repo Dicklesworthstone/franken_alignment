@@ -2097,7 +2097,7 @@
       "id": "FA-093",
       "gate": "G2",
       "title": "Implement quotient replay oracle",
-      "status": "planned",
+      "status": "in_progress",
       "depends_on": [
         "FA-092"
       ],
@@ -2109,7 +2109,10 @@
         "Produce executed local evidence; source or prose alone does not close this packet."
       ],
       "owner_role": "systems",
-      "result_artifacts": []
+      "result_artifacts": [
+        "docs/QUOTIENT_REPLAY.md",
+        "crates/fa-reference/tests/quotient_replay.rs"
+      ]
     },
     {
       "id": "FA-094",
