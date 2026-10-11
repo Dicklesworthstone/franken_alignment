@@ -1,7 +1,7 @@
 //! Bounded reader admission and fresh-owner text integration. No implicit file
 //! path, network access, execution fallback, or unreviewed numerical output.
 
-use super::{ByteBpe, DecoderProfile, MAX_JSON_BYTES};
+use super::{ByteBpe, DecoderProfile, PreTokenization, MAX_JSON_BYTES};
 use crate::action::consequence::activation::monitor::decoder::MonitoringStatus;
 use crate::action::consequence::activation::monitor::decoder::sampled::MonitoredSampledDecoder;
 use crate::action::consequence::activation::monitor::decoder::sampled::generation::text::TextDecoder;
@@ -21,6 +21,14 @@ impl ByteBpe {
     /// OutOfMemory. Neither partial bytes nor a partial tokenizer escape on error.
     pub fn read_huggingface_json<R: Read + ?Sized>(expected: &DecoderProfile,
         reader: &mut R, max_bytes: usize) -> io::Result<Self>
+    {
+        Self::read_huggingface_json_with_pre_tokenization(expected, reader, max_bytes, PreTokenization::RawBytes)
+    }
+
+    /// The same original counted finite-reader path with independently selected
+    /// Unicode semantics. A short read is not EOF and a failed mode is not retried.
+    pub fn read_huggingface_json_with_pre_tokenization<R: Read + ?Sized>(expected: &DecoderProfile,
+        reader: &mut R, max_bytes: usize, pre_tokenization: PreTokenization) -> io::Result<Self>
     {
         if max_bytes == 0 || max_bytes > MAX_JSON_BYTES {
             return Err(io::Error::new(io::ErrorKind::InvalidInput, "tokenizer JSON byte bound"));
@@ -53,7 +61,7 @@ impl ByteBpe {
             }
             bytes.extend_from_slice(&chunk[..count]);
         }
-        Self::from_huggingface_json(expected, &bytes, max_bytes)
+        Self::from_huggingface_json_with_pre_tokenization(expected, &bytes, max_bytes, pre_tokenization)
             .map_err(|error| io::Error::new(io::ErrorKind::InvalidData,
                 format!("tokenizer JSON admission: {error:?}")))
     }
@@ -73,12 +81,22 @@ impl TextDecoder {
     pub fn from_huggingface_reader<R: Read + ?Sized>(decoder: MonitoredSampledDecoder,
         reader: &mut R, max_bytes: usize) -> io::Result<Self>
     {
+        Self::from_huggingface_reader_with_pre_tokenization(decoder, reader, max_bytes, PreTokenization::RawBytes)
+    }
+
+    /// Import an explicit Unicode profile into the same fresh monitored owner.
+    /// Freshness admission still precedes all reader I/O; the original native
+    /// text constructor, generation, monitoring and stop policy remain owners.
+    pub fn from_huggingface_reader_with_pre_tokenization<R: Read + ?Sized>(decoder: MonitoredSampledDecoder,
+        reader: &mut R, max_bytes: usize, pre_tokenization: PreTokenization) -> io::Result<Self>
+    {
         if decoder.position() != 0 || decoder.sampled_draws() != 0
             || decoder.status() != MonitoringStatus::Ready
         {
             return Err(io::Error::new(io::ErrorKind::InvalidInput, "fresh ready monitored decoder required"));
         }
-        let tokenizer = ByteBpe::read_huggingface_json(decoder.profile(), reader, max_bytes)?;
+        let tokenizer = ByteBpe::read_huggingface_json_with_pre_tokenization(
+            decoder.profile(), reader, max_bytes, pre_tokenization)?;
         Self::new(decoder, tokenizer).map_err(|error| io::Error::new(io::ErrorKind::InvalidData,
             format!("text decoder admission: {error:?}")))
     }

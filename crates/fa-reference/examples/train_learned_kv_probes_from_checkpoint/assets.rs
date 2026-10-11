@@ -1,7 +1,7 @@
 //! Explicit regular-file inputs, original bounded readers, exclusive outputs.
 use super::{Failure, Plan, contract, fit, invalid};
 use fa_reference::action::consequence::activation::{
-    monitor::decoder::sampled::generation::tokenizer::ByteBpe,
+    monitor::decoder::sampled::generation::tokenizer::{ByteBpe, PreTokenization},
     tensor::kv::{decoder::{DecoderModel,
         safetensors::{MAX_WEIGHT_HEADER_BYTES,
             pretrained::{LlamaConfig, MAX_CONFIG_BYTES}, reader::WeightReadBudget}},
@@ -50,13 +50,19 @@ pub(super) fn load(args: &[OsString]) -> Result<(Plan, Inputs), Failure> {
     plan.estimate(negotiated.profile()).map_err(contract)?;
     let maximum = match plan.tokenizer_format {
         NativeTokenizerFormat::NativeArchive => MAX_FILE_TOKENIZER_BYTES,
-        NativeTokenizerFormat::HuggingFaceRawByteLevel => ByteBpe::MAX_HUGGINGFACE_JSON_BYTES,
+        NativeTokenizerFormat::HuggingFaceRawByteLevel
+            | NativeTokenizerFormat::HuggingFaceGpt2Unicode17
+            | NativeTokenizerFormat::HuggingFaceLlama3Unicode17 => ByteBpe::MAX_HUGGINGFACE_JSON_BYTES,
     };
     let tokenizer_bytes = auxiliary(Path::new(&args[2]), maximum)?;
     let tokenizer = match plan.tokenizer_format {
         NativeTokenizerFormat::NativeArchive => ByteBpe::from_bytes(negotiated.profile(), &tokenizer_bytes),
         NativeTokenizerFormat::HuggingFaceRawByteLevel => ByteBpe::from_huggingface_json(
             negotiated.profile(), &tokenizer_bytes, maximum),
+        NativeTokenizerFormat::HuggingFaceGpt2Unicode17 => ByteBpe::from_huggingface_json_with_pre_tokenization(
+            negotiated.profile(), &tokenizer_bytes, maximum, PreTokenization::Gpt2Unicode17),
+        NativeTokenizerFormat::HuggingFaceLlama3Unicode17 => ByteBpe::from_huggingface_json_with_pre_tokenization(
+            negotiated.profile(), &tokenizer_bytes, maximum, PreTokenization::Llama3Unicode17),
     }.map_err(contract)?;
     let auxiliary_bytes = plan.input_limits.auxiliary_bytes - remaining;
     let weight_bound = plan.input_limits.weight_bytes.min(8 + MAX_WEIGHT_HEADER_BYTES + negotiated.profile().parameter_count() * 4);

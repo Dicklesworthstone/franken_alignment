@@ -65,5 +65,7 @@ fn real_file_limit_requires_eof_and_rejects_directories_and_symlinks() {
 
 #[path = "../../../../tests/support/native_worker_v2_assets.rs"]
 mod v2_assets;
+#[path = "../../../../tests/support/unicode_tokenizer_json.rs"]
+mod unicode_json;
 #[path = "tests/v2.rs"]
 mod v2;

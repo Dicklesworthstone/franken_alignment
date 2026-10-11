@@ -42,6 +42,12 @@ The [native worker also yields during input tokenization](docs/COOPERATIVE_NATIV
 under its existing absolute deadline and process-step allowance, before starting
 monitored inference. It preserves the complete original request and spent work.
 
+Checkpoint workers, monitor training and publication also accept explicitly
+selected [GPT-2 and Llama-3 Unicode-17 pretokenization](docs/UNICODE_PRETOKENIZATION.md).
+They preserve original token IDs and byte spans through the existing BPE engine;
+trained artifacts and durable recovery bind the exact grammar and Unicode version.
+These input profiles retain the current bounded decoder architecture and model limits.
+
 ---
 
 ## TL;DR

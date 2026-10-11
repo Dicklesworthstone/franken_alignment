@@ -12,6 +12,8 @@ use std::fs;
 mod original;
 #[path = "fixture.rs"]
 mod fixture;
+#[path = "../../tests/support/unicode_tokenizer_json.rs"]
+mod unicode_json;
 use fixture::{Root, files};
 // Consume the artifact through the ACTUAL publication operator parser. No test
 // decoder of the emitted monitor fields substitutes for the production loader.
@@ -111,6 +113,57 @@ fn explicit_external_tokenizer_json_preserves_the_same_complete_bound_artifact()
     fs::write(&json_args[2], fixture::tokenizer_json()).unwrap();
     assert!(run(&json_args, &mut Vec::new()).unwrap());
     assert_eq!(fs::read(&native_args[7]).unwrap(), fs::read(&json_args[7]).unwrap());
+}
+
+#[test]
+fn unicode_campaign_formats_bind_the_complete_grammar_and_drive_quiet_and_held_candidates() {
+    use fa_reference::action::consequence::activation::monitor::decoder::sampled::generation::tokenizer::{ByteBpe, PreTokenization};
+    for (format, mode) in [("huggingface_gpt2_unicode17", PreTokenization::Gpt2Unicode17),
+        ("huggingface_llama3_unicode17", PreTokenization::Llama3Unicode17)] {
+        let root = Root::new(); let args = files(&root);
+        let json = unicode_json::select(&fixture::tokenizer_json(), mode);
+        fs::write(&args[2], &json).unwrap();
+        replace(&args, "\"tokenizer_format\":\"native_archive\"", "\"tokenizer_format\":\"huggingface_raw_bytelevel\"");
+        // The unchanged raw selection refuses this exact same file before
+        // weights, archive restoration, numerical work or output creation.
+        assert!(run(&args, &mut Vec::new()).is_err());
+        assert!(!Path::new(&args[6]).exists()); assert!(!Path::new(&args[7]).exists());
+        replace(&args, "\"tokenizer_format\":\"huggingface_raw_bytelevel\"", &format!("\"tokenizer_format\":\"{format}\""));
+        assert!(run(&args, &mut Vec::new()).unwrap());
+        let model = original::model(); let codec = original::codec(&model);
+        let tokenizer = ByteBpe::from_huggingface_json_with_pre_tokenization(model.profile(),
+            json.as_bytes(), ByteBpe::MAX_HUGGINGFACE_JSON_BYTES, mode).unwrap();
+        let bytes = fs::read(&args[7]).unwrap();
+        let monitor = operator_monitor::MonitorInput::decode(&bytes).unwrap();
+        assert!(monitor.bind_with_tokenizer(&model, &original::tokenizer(&model), codec.clone()).is_err());
+        let loaded = operator_monitor::MonitorInput::decode(&bytes).unwrap()
+            .bind_with_tokenizer(&model, &tokenizer, codec).unwrap();
+        let archive = tokenizer.to_bytes().unwrap();
+        assert_eq!(&archive[..8], b"FABBPE05");
+        let restored = ByteBpe::from_bytes(model.profile(), &archive).unwrap();
+        assert_eq!(restored.pre_tokenization(), mode);
+        for (seed, candidate) in [(4, 0), (5, 1)] {
+            let spec = original::spec(seed);
+            let mut oracle = model.recompute_sampled(2000, spec.prompt(), original::inference(), spec.sampling().clone()).unwrap();
+            let choice = oracle.advance_sampled(1, SampleBudget { decoder: original::inference(), sampling: SamplingBudget { vocabulary: 260 } }).unwrap();
+            assert_eq!(choice.choice.token, candidate);
+            let mut generation = model.monitored_generation(2000, 2001, spec, loaded.policy.clone(), GenerationBudget::default()).unwrap();
+            assert!(generation.advance(0).unwrap().audit().complete_quiet());
+            let accepted = generation.accepted_cache_image().unwrap().encode().unwrap();
+            let event = generation.advance(1).unwrap();
+            if candidate == 0 {
+                assert_eq!(event.sample(), Some(&choice.choice));
+                assert!(event.audit().complete_quiet());
+                assert!(generation.advance(2).unwrap().audit().complete_quiet());
+                assert_eq!(generation.status(), GenerationStatus::Finished(GenerationStop::StopToken(256)));
+            } else {
+                assert_eq!(event.status(), GenerationStatus::Held(MonitorOutcome::Alarm));
+                assert!(event.sample().is_none()); assert!(event.accepted().is_none());
+                assert_eq!(generation.accepted_cache_image().unwrap().encode().unwrap(), accepted);
+                assert!(generation.generated_tokens().is_empty());
+            }
+        }
+    }
 }
 
 #[test]

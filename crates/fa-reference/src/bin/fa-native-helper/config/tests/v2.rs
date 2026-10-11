@@ -104,3 +104,58 @@ fn worker_v2_only_sharded_manifests_receive_the_index_aware_asset_ceiling() {
     manifest.checkpoint = CheckpointFiles::Single(fixture.root.join("weights.safetensors"));
     assert!(manifest.asset_budget().is_err());
 }
+
+#[test]
+fn worker_v2_unicode_formats_load_single_and_sharded_checkpoints_and_produce_real_verdicts() {
+    use fa_reference::action::consequence::activation::monitor::decoder::sampled::generation::tokenizer::PreTokenization;
+    for (format, expected, mode) in [
+        ("huggingface-gpt2-unicode17", NativeTokenizerFormat::HuggingFaceGpt2Unicode17, PreTokenization::Gpt2Unicode17),
+        ("huggingface-llama3-unicode17", NativeTokenizerFormat::HuggingFaceLlama3Unicode17, PreTokenization::Llama3Unicode17),
+    ] {
+        for sharded in [false, true] {
+            let mut fixture = assets::Fixture::new(false); v2_assets::configure(&mut fixture, sharded, true);
+            let tokenizer = fixture.root.join("tokenizer.bin");
+            let raw = std::fs::read_to_string(&tokenizer).unwrap();
+            std::fs::write(&tokenizer, unicode_json::select(&raw, mode)).unwrap();
+            fixture.manifest = fixture.manifest.replace("huggingface-raw-bytelevel", format);
+            let manifest = Manifest::parse(fixture.manifest.as_bytes()).unwrap();
+            assert_eq!(manifest.tokenizer_format, expected);
+            for (prompt, verdict) in [("é<eos>?", Verdict::Allow), ("é<eos>!", Verdict::Deny)] {
+                let mut weight_work = weight_budget();
+                let mut evaluator = manifest.load(&mut manifest.asset_budget().unwrap(), &mut weight_work).unwrap();
+                assert_eq!(evaluator.status(), NativeEvaluationStatus::AwaitingInput);
+                assert_eq!(evaluator.sampled_draws(), 0);
+                assert_eq!(evaluator.evaluate(&assets::input(prompt.as_bytes())), Ok(verdict));
+                let report = evaluator.report().unwrap();
+                assert_eq!(report.prompt().source(), prompt.as_bytes());
+                assert_eq!(report.prompt().tokens(), &[195, 169, 263, u32::from(*prompt.as_bytes().last().unwrap())]);
+                assert_eq!(report.prompt().spans(), &[0..1, 1..2, 2..7, 7..8]);
+                assert_eq!(evaluator.sampled_draws(), 2);
+                assert!(weight_work.usage().bytes_read > 0);
+            }
+        }
+    }
+}
+
+#[test]
+fn worker_v2_unicode_selection_never_guesses_another_pipeline_before_weight_loading() {
+    use fa_reference::action::consequence::activation::monitor::decoder::sampled::generation::tokenizer::PreTokenization;
+    for sharded in [false, true] {
+        let mut fixture = assets::Fixture::new(false); v2_assets::configure(&mut fixture, sharded, true);
+        let tokenizer = fixture.root.join("tokenizer.bin");
+        let raw = std::fs::read_to_string(&tokenizer).unwrap();
+        std::fs::write(&tokenizer, unicode_json::select(&raw, PreTokenization::Gpt2Unicode17)).unwrap();
+        let wrong = Manifest::parse(fixture.manifest.as_bytes()).unwrap();
+        let mut weights = weight_budget();
+        assert!(wrong.load(&mut wrong.asset_budget().unwrap(), &mut weights).is_err());
+        assert_eq!(weights.usage().read_calls, 0);
+        fixture.manifest = fixture.manifest.replace("huggingface-raw-bytelevel", "huggingface-gpt2-unicode17");
+        let correct = Manifest::parse(fixture.manifest.as_bytes()).unwrap();
+        assert!(correct.load(&mut correct.asset_budget().unwrap(), &mut weights).is_ok());
+        let wrong = Manifest::parse(fixture.manifest.replace("huggingface-gpt2-unicode17", "huggingface-llama3-unicode17").as_bytes()).unwrap();
+        let mut untouched = weight_budget();
+        assert!(wrong.load(&mut wrong.asset_budget().unwrap(), &mut untouched).is_err());
+        assert_eq!(untouched.usage().read_calls, 0);
+        assert!(Manifest::parse(fixture.manifest.replace("huggingface-gpt2-unicode17", "huggingface-gpt2-unicode18").as_bytes()).is_err());
+    }
+}

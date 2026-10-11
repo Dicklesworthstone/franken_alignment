@@ -100,7 +100,7 @@ and bounds bytes before accepting the complete file.
 | `CONFIG` | Existing supervised-publication version-1 configuration: authority, target, policy, congress, helper contracts, human policy, source policy and timing |
 | `LEARNED_RECIPE` | `fa.learned-publication/1` for one coarse round, or explicit `/2` for bounded residual refinement |
 | Primary model configuration and weights | Original admitted Llama configuration and one complete SafeTensors file |
-| Primary tokenizer | Explicit `native_archive` or `huggingface_raw_bytelevel` selection |
+| Primary tokenizer | Explicit `native_archive`, `huggingface_raw_bytelevel`, `huggingface_gpt2_unicode17` or `huggingface_llama3_unicode17` selection |
 | Prompt and sampling file | Actual UTF-8 prompt bytes and original `fa.decoder-sampling/1` sampling configuration |
 | Fit binding and fit archive | Independently retained `fa.learned-fit-binding/1` plus original `FAKVFIT/1` archive |
 | Learned monitor | `FAKVMON2` bound artifact or legacy `fa.learned-kv-monitor/1`, with every original layer and both K/V sides |
@@ -118,8 +118,12 @@ The tokenizer object always has exactly `format` and `path`:
 ```
 
 `native_archive` selects the original ByteBpe archive. The JSON choice retains
-the [existing raw ByteLevel contract](OPERATOR_TOKENIZER_INTAKE.md), including its
-refusals of unsupported normalization, regex splitting and postprocessing.
+the [explicit ByteLevel contracts](OPERATOR_TOKENIZER_INTAKE.md), including the
+original raw mode and two named Unicode-17 grammars. Normalization, arbitrary
+regex, prefix insertion and postprocessing remain unsupported. The complete
+grammar and Unicode version are bound in the native archive and compared during
+monitor loading and durable recovery. Unicode profiles require valid UTF-8;
+they do not convert a binary native-helper sidecar into text.
 There is no format sniffing or fallback. Both primary and native models retain
 all original shape, context, vocabulary, scalar and numerical limits. This first
 command uses single-file weights; it has no sharded-weight or adapter field.

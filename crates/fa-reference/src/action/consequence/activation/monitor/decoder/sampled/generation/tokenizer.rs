@@ -1,8 +1,10 @@
 //! Exact, model-bound byte BPE with explicit optional named controls.
 //!
-//! Input is one byte sequence: no Unicode normalization, regex pretokenization,
-//! chat template, dropout or unknown-token fallback. Named-control recognition
-//! is enabled only by an explicit immutable registration (FA-BBPE/2).
+//! Raw input remains one byte sequence. Explicit Unicode-17 profiles additionally
+//! supply the exact GPT-2 or Llama-3 pretokenization grammar, without a general
+//! regex engine, normalization, prefix insertion, templates or unknown fallback.
+//! Named-control recognition is enabled only by an explicit immutable
+//! registration, retained by its canonical archive.
 //! A caller must independently establish that these are its model's trained
 //! tokenization semantics. External import accepts only its documented subset.
 //! Original prompt bytes and token boundaries survive encoding; replay uses the
@@ -10,7 +12,10 @@
 
 mod wire;
 mod special;
+mod pretokenizer;
+mod unicode17;
 pub use special::MAX_SPECIAL_TOKEN_BYTES;
+pub use pretokenizer::PreTokenization;
 #[cfg(test)]
 mod tests;
 
@@ -34,7 +39,7 @@ pub const MAX_HEAP_POPS: usize = 3 * MAX_INPUT_BYTES;
 pub const MAX_DECODE_BYTES: usize = 4 * 1_048_576;
 
 /// The vector index is the ORIGINAL model token ID. Controls have no inferred
-/// text spelling. Only new_with_special_tokens registers literal spellings.
+/// text spelling. Literal spellings require an explicit named constructor.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum TokenBytes {
     Content(Vec<u8>),
@@ -63,8 +68,9 @@ impl Default for TokenizationBudget {
     }
 }
 
-/// Logical byte/BPE examinations, not allocations, FLOPs or wall time.
-/// Optional named-control matching is separately bounded by input/name limits;
+/// Logical admitted input bytes and BPE examinations, not allocations, FLOPs or wall time.
+/// Optional named-control matching and Unicode segmentation are separately
+/// bounded by input/name limits and fixed-pass, frozen-table scanning;
 /// pair_lookups and heap_pops count only the original BPE pass.
 /// Stale heap entries count. A refusal retains performed work but no partial IDs.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
@@ -93,6 +99,7 @@ struct Data {
     controls: Vec<u32>,
     max_content_bytes: usize,
     special: special::SpecialTokens,
+    pre_tokenization: PreTokenization,
 }
 
 /// Immutable tokenization DATA bound to an independently supplied model profile.
@@ -102,6 +109,7 @@ pub struct ByteBpe(Rc<Data>);
 impl fmt::Debug for ByteBpe {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("ByteBpe").field("profile", self.profile())
+            .field("pre_tokenization", &self.pre_tokenization())
             .field("merges", &self.0.merges.len()).finish_non_exhaustive()
     }
 }
@@ -152,7 +160,8 @@ enum EncodingPhase {
 
 /// Owns one immutable prompt and its original tokenizer through bounded BPE
 /// steps. Admission still copies the bounded prompt, allocates scratch and runs
-/// the linear named-control pass; this is NOT a constant-time admission claim.
+/// the linear named-control and optional Unicode segmentation passes; this is
+/// NOT a constant-time admission claim.
 /// Each advance thereafter offers one initial pair, pops at most one candidate
 /// (including stale candidates), or retains one final token. A successful merge
 /// offers at most its two neighbors. No new buffer capacity is requested while
@@ -344,10 +353,12 @@ impl ByteBpe {
         drop(seen);
         Ok(Self(Rc::new(Data { profile, vocabulary, merges, ranks,
             singletons: singletons.map(|id| id.expect("complete singleton inventory")),
-            controls, max_content_bytes, special: special::SpecialTokens::default() })))
+            controls, max_content_bytes, special: special::SpecialTokens::default(),
+            pre_tokenization: PreTokenization::RawBytes })))
     }
 
     pub fn profile(&self) -> &DecoderProfile { &self.0.profile }
+    pub fn pre_tokenization(&self) -> PreTokenization { self.0.pre_tokenization }
     pub fn control_tokens(&self) -> &[u32] { &self.0.controls }
     pub fn max_content_bytes(&self) -> usize { self.0.max_content_bytes }
     pub fn content_bytes(&self, token: u32) -> Result<&[u8], Error> {
@@ -369,7 +380,7 @@ impl ByteBpe {
     }
 
     /// Admit owned input and scratch, then yield before initial pair lookups.
-    /// Copying and named-control recognition remain a bounded synchronous
+    /// Copying, named-control recognition and Unicode segmentation remain a bounded synchronous
     /// admission pass; the candidate and final-output passes are cooperative.
     pub fn begin_encode(&self, source: &[u8], budget: TokenizationBudget)
         -> Result<TokenizationCursor, TokenizationFailure>
@@ -386,6 +397,13 @@ impl ByteBpe {
             || budget.heap_pops > MAX_HEAP_POPS || source.len() > budget.input_bytes
         { return Err(Error::Limit); }
         let count = source.len();
+        // Unicode profiles consume a complete, bounded UTF-8 input. Invalid bytes
+        // never become replacement characters or a successfully encoded prefix.
+        // RawBytes keeps its existing arbitrary-byte contract and work sequence.
+        let unicode = if self.0.pre_tokenization == PreTokenization::RawBytes { None } else {
+            work.input_bytes = count;
+            Some(std::str::from_utf8(source).map_err(|_| Error::InvalidInput)?)
+        };
         let mut nodes = Vec::new();
         nodes.try_reserve_exact(count).map_err(|_| Error::Limit)?;
         let mut heap = BinaryHeap::new();
@@ -400,10 +418,14 @@ impl ByteBpe {
         for (index, byte) in source.iter().enumerate() {
             nodes.push(Node { token: self.0.singletons[usize::from(*byte)],
                 end: index + 1, previous: index.checked_sub(1),
-                next: (index + 1 < count).then_some(index + 1), live: true });
+                next: (index + 1 < count).then_some(index + 1), live: true,
+                boundary_before: false });
         }
         work.input_bytes = count;
         self.0.special.bind_nodes(source, &mut nodes)?;
+        if let Some(unicode) = unicode {
+            self.0.pre_tokenization.bind_nodes(unicode, &mut nodes, &self.0.vocabulary)?;
+        }
         Ok(TokenizationCursor { tokenizer: self.clone(), source: original,
             nodes, heap, tokens, spans, budget, work: *work,
             phase: EncodingPhase::Offering(0) })
@@ -414,6 +436,7 @@ impl ByteBpe {
     {
         if !nodes[left].live { return Ok(()); }
         let Some(right) = nodes[left].next else { return Ok(()); };
+        if nodes[right].boundary_before { return Ok(()); }
         if work.pair_lookups == budget.pair_lookups { return Err(Error::Limit); }
         work.pair_lookups += 1;
         let left_token = nodes[left].token;
@@ -457,6 +480,7 @@ struct Node {
     previous: Option<usize>,
     next: Option<usize>,
     live: bool,
+    boundary_before: bool,
 }
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
 struct Candidate {

@@ -1,9 +1,10 @@
-//! Strict import of the raw ByteLevel BPE subset of tokenizer.json (version 1.0).
+//! Strict import of explicitly selected ByteLevel BPE subsets of tokenizer.json.
 //!
-//! The admitted pipeline has no normalization, regex splitting, prefix insertion,
-//! padding, truncation or postprocessing. Literal non-normalized special tokens
-//! are admitted explicitly; other added-token transformations refuse;
-//! in particular, this is NOT an importer for arbitrary GPT-2/Llama tokenizers.
+//! The legacy entry point keeps raw-byte semantics. An explicitly selected
+//! Unicode-17 entry point admits exactly the named GPT-2 or Llama-3 grammar.
+//! Neither admits normalization, prefix insertion, padding, truncation or
+//! postprocessing. Literal non-normalized special tokens are admitted explicitly;
+//! other added-token transformations and arbitrary pipelines refuse.
 //! The vocabulary's reversible ByteLevel alphabet is converted to original bytes,
 //! then the ORIGINAL ByteBpe constructor validates the entire token/merge graph.
 //! Declaring a model profile does not authenticate this file or training semantics.
@@ -15,7 +16,7 @@ mod reader;
 #[path = "huggingface/special.rs"]
 mod special;
 
-use super::{ByteBpe, Merge, TokenBytes, MAX_MERGES, MAX_TOKEN_BYTES, MAX_VOCABULARY_BYTES};
+use super::{ByteBpe, Merge, PreTokenization, TokenBytes, MAX_MERGES, MAX_TOKEN_BYTES, MAX_VOCABULARY_BYTES};
 use crate::action::consequence::activation::tensor::kv::decoder::DecoderProfile;
 use crate::strict_json::{self, ErrorKind, Json, Limits};
 use crate::Error;
@@ -62,6 +63,24 @@ impl ByteBpe {
     pub fn from_huggingface_json(expected: &DecoderProfile, bytes: &[u8], max_bytes: usize)
         -> Result<Self, Error>
     {
+        Self::from_huggingface_json_with_pre_tokenization(expected, bytes, max_bytes, PreTokenization::RawBytes)
+    }
+
+    /// Select exact raw, GPT-2/Unicode-17 or Llama-3/Unicode-17 input semantics
+    /// independently of the JSON. No failed parser or unknown regex selects a
+    /// different profile. The original raw entry point remains strict and unchanged.
+    ///
+    /// GPT-2 requires ByteLevel with use_regex=true. Llama-3 requires exactly its
+    /// named Split(Isolated, invert=false) followed by ByteLevel(use_regex=false).
+    /// Both require add_prefix_space=false, no normalizer or postprocessor, and
+    /// the original exact model/added-token contract. The pretokenizer's unused
+    /// trim_offsets flag and decoder's unused flags must still be present booleans.
+    /// Native spans remain a complete original-byte partition; this API does not
+    /// expose upstream character offsets or lossy string decoding.
+    pub fn from_huggingface_json_with_pre_tokenization(expected: &DecoderProfile,
+        bytes: &[u8], max_bytes: usize, pre_tokenization: PreTokenization)
+        -> Result<Self, Error>
+    {
         if max_bytes == 0 || max_bytes > MAX_JSON_BYTES || bytes.len() > max_bytes {
             return Err(Error::Limit);
         }
@@ -82,8 +101,7 @@ impl ByteBpe {
             require_null(required(root, field)?)?;
         }
         let added = required(root, "added_tokens")?.as_array().ok_or(Error::InvalidInput)?;
-        byte_level(required(root, "pre_tokenizer")?)?;
-        byte_level(required(root, "decoder")?)?;
+        pipeline(required(root, "pre_tokenizer")?, required(root, "decoder")?, pre_tokenization)?;
         let model = exact_object(required(root, "model")?, MODEL_FIELDS)?;
         if required(model, "type")?.as_str() != Some("BPE") { return Err(Error::Binding); }
         for field in ["dropout", "unk_token"] { require_null(required(model, field)?)?; }
@@ -157,7 +175,7 @@ impl ByteBpe {
         }
         // Reuse the original total-byte, singleton, ordering, duplicate-pair and
         // reachability checks. A parsed JSON graph alone never admits a tokenizer.
-        Self::new_with_special_tokens(expected.clone(), vocabulary, merges, names)
+        Self::new_with_pre_tokenization(expected.clone(), vocabulary, merges, names, pre_tokenization)
     }
 }
 
@@ -186,6 +204,41 @@ fn byte_level(value: &Json) -> Result<(), Error> {
     for field in ["add_prefix_space", "trim_offsets", "use_regex"] {
         require_false(required(object, field)?)?;
     }
+    Ok(())
+}
+fn pipeline(pre: &Json, decoder: &Json, mode: PreTokenization) -> Result<(), Error> {
+    if mode == PreTokenization::RawBytes {
+        byte_level(pre)?;
+        return byte_level(decoder);
+    }
+    // ByteLevel decoding consults no behavior flags. They are checked as typed
+    // inert data, rather than applied to the native strict-byte output contract.
+    let decoder = exact_object(decoder, BYTE_LEVEL_FIELDS)?;
+    if required(decoder, "type")?.as_str() != Some("ByteLevel") { return Err(Error::Binding); }
+    for field in ["add_prefix_space", "trim_offsets", "use_regex"] {
+        required(decoder, field)?.as_bool().ok_or(Error::InvalidInput)?;
+    }
+    if mode == PreTokenization::Gpt2Unicode17 { return unicode_byte_level(pre, true); }
+    let sequence = exact_object(pre, &["type", "pretokenizers"])?;
+    if required(sequence, "type")?.as_str() != Some("Sequence") { return Err(Error::Binding); }
+    let steps = required(sequence, "pretokenizers")?.as_array().ok_or(Error::InvalidInput)?;
+    if steps.len() != 2 { return Err(Error::Binding); }
+    let split = exact_object(&steps[0], &["type", "pattern", "behavior", "invert"])?;
+    if required(split, "type")?.as_str() != Some("Split")
+        || required(split, "behavior")?.as_str() != Some("Isolated")
+    { return Err(Error::Binding); }
+    require_false(required(split, "invert")?)?;
+    let pattern = exact_object(required(split, "pattern")?, &["Regex"])?;
+    if required(pattern, "Regex")?.as_str() != mode.pattern() { return Err(Error::Binding); }
+    unicode_byte_level(&steps[1], false)
+}
+fn unicode_byte_level(value: &Json, use_regex: bool) -> Result<(), Error> {
+    let object = exact_object(value, BYTE_LEVEL_FIELDS)?;
+    if required(object, "type")?.as_str() != Some("ByteLevel") { return Err(Error::Binding); }
+    require_false(required(object, "add_prefix_space")?)?;
+    required(object, "trim_offsets")?.as_bool().ok_or(Error::InvalidInput)?;
+    let declared = required(object, "use_regex")?.as_bool().ok_or(Error::InvalidInput)?;
+    if declared != use_regex { return Err(Error::Binding); }
     Ok(())
 }
 fn token_id(value: &Json) -> Result<u32, Error> {

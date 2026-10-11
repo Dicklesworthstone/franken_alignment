@@ -1,6 +1,6 @@
 # Explicit native-worker checkpoint formats
 
-## Source status
+## Historical source status
 
 2026-09-23 UTC: source implementation, not execution qualification. Eight
 `tokenizer_startup_` regressions are authored. The targeted RCH command failed
@@ -8,19 +8,26 @@ before compilation (`rch: command not found`, exit 127). Rust tests, compilation
 rustfmt, Clippy and the full gate remain UNEXECUTED. No broader bead is closed;
 previous execution receipts do not qualify these additions.
 
+The record above describes the original 2026-09-23 attempt. Current targeted
+execution for the Unicode extension is recorded at the end of this document;
+it does not erase that failed attempt or qualify the complete workspace.
+
 ## Existing consumer and positive capability
 
-The original `NativeEvaluator` cold-start APIs can now consume the already
-implemented strict raw ByteLevel `tokenizer.json`, including declared literal
-special controls, directly alongside single or sharded Llama/SafeTensors assets.
+The original `NativeEvaluator` cold-start APIs consume explicit ByteLevel
+`tokenizer.json` profiles, including declared literal special controls, directly
+alongside single or sharded Llama/SafeTensors assets. The original raw profile
+and the two named [Unicode-17 profiles](UNICODE_PRETOKENIZATION.md) use the same
+bounded startup and original tokenizer engine.
 Previously startup accepted only a native tokenizer archive even though the
 importer and text evaluator were separately implemented. No conversion program,
 intermediate file, second tokenizer or alternate inference engine is required.
 This is part of the FA-025 original-token/native-helper integration, not a claim
 that a particular trained checkpoint or deployment is qualified.
 
-`NativeTokenizerFormat::{NativeArchive,HuggingFaceRawByteLevel}` is an explicit
-operator selection. The existing four bootstrap entry points retain their
+`NativeTokenizerFormat` explicitly selects `NativeArchive`,
+`HuggingFaceRawByteLevel`, `HuggingFaceGpt2Unicode17` or
+`HuggingFaceLlama3Unicode17`. The existing four bootstrap entry points retain their
 native-archive default and existing request structs. Their new
 `*_with_tokenizer_format` counterparts select the parser and otherwise follow
 exactly the same preflight, file/reader, model, monitor, sampler and evaluator
@@ -28,10 +35,12 @@ path. There is no format sniffing or fallback after a refusal.
 
 The selected parser runs against the independently supplied complete decoder
 profile. Native policy admission still requires a nonempty control-only stop
-set covering every control. Unsupported JSON normalization, regex, templates or
-other transformations remain errors. A syntactically valid document with the
+set covering every control. JSON normalization, arbitrary regex, templates and
+other unsupported transformations remain errors. The two named grammars require
+valid UTF-8, and never insert a prefix space; raw mode retains arbitrary-byte
+input. A syntactically valid document with the
 right vocabulary cardinality is not proof of training semantics or authenticity.
-Both formats preserve original prompt bytes and original model token IDs.
+Every format preserves original prompt bytes and original model token IDs.
 
 For files, the existing 16 MiB tokenizer-asset ceiling, per-file limits, shared
 asset budget and real EOF checks apply unchanged. Selecting JSON does not grant
@@ -77,7 +86,8 @@ number is not sufficient to opt into /2.
 
 A /2 manifest has the same complete `input`, `decoder`, `policy`, `stream`,
 `salt_file`, `lifetime`, `startup` and `files` fields, plus the mandatory root
-`tokenizer_format`: either `native-archive` or `huggingface-raw-bytelevel`.
+`tokenizer_format`: `native-archive`, `huggingface-raw-bytelevel`,
+`huggingface-gpt2-unicode17` or `huggingface-llama3-unicode17`.
 The four auxiliary file paths stay strings. `files.weights` is now exactly one
 of these tagged objects (fragments, not complete worker manifests):
 
@@ -113,7 +123,7 @@ existing read/size limits rather than this later lifetime. Filesystem calls and
 single numerical steps are still not preempted; the parent's cutoff and process
 ownership remain necessary. These APIs are not an OS sandbox or authentication.
 
-## Executable regression status
+## Historical executable regression status
 
 Six new manifest/loader tests cover all four source/format combinations, /1
 compatibility, closed schemas, path/map bounds, preflight before missing weight
@@ -138,3 +148,22 @@ RCH_REQUIRE_REMOTE=1 rch exec -- cargo test --locked -p fa-reference worker_v2_
 The new executable tests are authored coverage, not a report that a child process
 ran in the implementation environment. No new dependency, authority journal,
 actor verb, deployment permission or production qualification is introduced.
+
+## 2026-10-11 executed native and Unicode coverage
+
+Qualified `nightly-2026-09-08` passes all 110 native-helper unit tests, including
+the original cold-start cases, and all 13 executable configuration tests. Two
+new configuration tests exercise both named Unicode grammars through the actual
+single-file and sharded manifest loaders. Identical model parameters and prompt
+bytes produce original Allow/Deny according to the selected grammar's prompt
+IDs. Unknown selectors and mismatched JSON refuse before weight reads, with no
+parser fallback. These tests start the actual configuration/evaluator path;
+they do not newly exercise each Unicode format in a spawned child.
+
+The same session passes all 15 existing spawned-worker checkpoint, LoRA and
+static-RoPE regressions, plus nine cooperative-input integration tests that
+include the actual child process. The final Unicode public suite passes all
+14 tests, including original cooperative/synchronous work and verdict equality.
+The original full project gate remains a separate qualification boundary; see
+`IMPLEMENTATION_STATUS.md`. These synthetic cases establish reference behavior,
+not trained-checkpoint authenticity, detector quality or hard latency bounds.

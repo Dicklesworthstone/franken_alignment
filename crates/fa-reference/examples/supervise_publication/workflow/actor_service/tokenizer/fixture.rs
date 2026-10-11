@@ -1,4 +1,7 @@
 //! Test-only external JSON data; every token ID remains the checkpoint's ID.
+#[path = "../../../../../tests/support/unicode_tokenizer_json.rs"]
+pub(in crate::workflow::actor_service) mod unicode_json;
+
 pub(in crate::workflow::actor_service) fn raw_byte_level_json(merged: bool) -> String {
     // Independent piecewise ByteLevel spelling, not the importer's inverse table.
     let glyph = |byte: u8| char::from_u32(match byte {

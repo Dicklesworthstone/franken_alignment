@@ -175,3 +175,57 @@ fn generated_huggingface_direct_owner_recovers_and_requires_both_keys() {
         direct::receipt(&mut host, &config, &request, approve);
     }
 }
+
+#[test]
+fn generated_unicode_recipes_recover_exact_work_and_bind_the_complete_input_grammar() {
+    use crate::workflow::actor_service::tokenizer::{direct, fixture::unicode_json};
+    use fa_reference::action::consequence::activation::monitor::decoder::sampled::generation::tokenizer::PreTokenization;
+    for (format, mode) in [("huggingface_gpt2_unicode17", PreTokenization::Gpt2Unicode17),
+        ("huggingface_llama3_unicode17", PreTokenization::Llama3Unicode17)] {
+        for approve in [false, true] {
+            let root = Root::new(); let mut config = configured(&root);
+            let path = json_recipe(&root);
+            let raw_recipe = fs::read_to_string(&path).unwrap();
+            let exact_recipe = raw_recipe.replace("huggingface_raw_bytelevel", format);
+            let raw_tokenizer = raw_byte_level_json(false);
+            let exact_tokenizer = unicode_json::select(&raw_tokenizer, mode);
+            fs::write(&path, &exact_recipe).unwrap();
+            fs::write(root.0.join("tokenizer.json"), &exact_tokenizer).unwrap();
+            let loaded = recipe::load(&path, &config).unwrap();
+            assert_eq!(loaded.tokenizer.pre_tokenization(), mode);
+            assert_eq!(&loaded.tokenizer.to_bytes().unwrap()[..8], b"FABBPE05");
+            let (mut host, old_reviewer) = FileOversight::create_generated_text_stream_with_reserve(
+                &config.store, config.profile.clone(), loaded.stream, loaded.decoder.clone(),
+                loaded.tokenizer.clone(), RecoveryReserve::terminal()).unwrap();
+            host.enable_file_source(host.revision(), config.source_policy).unwrap();
+            direct::begin(&mut host, &mut config, loaded.generation, loaded.text.clone());
+            let pending = host.pending_decoder_text().unwrap().unwrap();
+            let numerical = host.decoder_inspection().unwrap().numerical;
+            let work = host.decoder_text_progress(loaded.generation).unwrap().numerical().partial().unwrap().work();
+            drop(host);
+
+            // The same vocabulary, merges, prompt and resulting token IDs cannot
+            // authorize reopening with different complete input semantics.
+            fs::write(&path, &raw_recipe).unwrap();
+            fs::write(root.0.join("tokenizer.json"), &raw_tokenizer).unwrap();
+            let changed = recipe::load(&path, &config).unwrap();
+            assert_eq!(changed.tokenizer.encode(b"x", Default::default()).unwrap().tokens(), &[120]);
+            let disk = fs::read(config.store.join("delivery.bin")).unwrap();
+            assert!(recovery::open(&config, &changed).is_err());
+            assert_eq!(fs::read(config.store.join("delivery.bin")).unwrap(), disk);
+
+            fs::write(&path, &exact_recipe).unwrap();
+            fs::write(root.0.join("tokenizer.json"), &exact_tokenizer).unwrap();
+            let exact = recipe::load(&path, &config).unwrap();
+            let (mut host, reviewer) = recovery::open(&config, &exact).unwrap();
+            assert_eq!(host.pending_decoder_text().unwrap().unwrap(), pending);
+            assert_eq!(host.decoder_inspection().unwrap().numerical, numerical);
+            assert_eq!(host.decoder_text_progress(exact.generation).unwrap().numerical().partial().unwrap().work(), work);
+            let request = direct::complete(&mut host, &mut config, (&reviewer, &old_reviewer),
+                (exact.generation, exact.request), approve);
+            drop(host);
+            let (mut host, _) = recovery::open(&config, &exact).unwrap();
+            direct::receipt(&mut host, &config, &request, approve);
+        }
+    }
+}

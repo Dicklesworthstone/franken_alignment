@@ -1,6 +1,6 @@
 //! Explicit operator input selection; the original native parsers own semantics.
 //! No content sniffing, format fallback, inferred model identity or file access.
-use fa_reference::action::consequence::activation::monitor::decoder::sampled::generation::tokenizer::ByteBpe;
+use fa_reference::action::consequence::activation::monitor::decoder::sampled::generation::tokenizer::{ByteBpe, PreTokenization};
 use fa_reference::action::consequence::activation::tensor::kv::decoder::DecoderProfile;
 use fa_reference::action::consequence::delivery::persistent::observed::decoder::text::MAX_FILE_TOKENIZER_BYTES;
 use fa_reference::action::consequence::oversight::helper_client::native::bootstrap::NativeTokenizerFormat;
@@ -25,6 +25,8 @@ impl TokenizerInput {
             let format = match format.as_str() {
                 Some("native_archive") => NativeTokenizerFormat::NativeArchive,
                 Some("huggingface_raw_bytelevel") => NativeTokenizerFormat::HuggingFaceRawByteLevel,
+                Some("huggingface_gpt2_unicode17") => NativeTokenizerFormat::HuggingFaceGpt2Unicode17,
+                Some("huggingface_llama3_unicode17") => NativeTokenizerFormat::HuggingFaceLlama3Unicode17,
                 _ => return Err("unknown tokenizer format".into()),
             };
             (format, path)
@@ -41,7 +43,9 @@ impl TokenizerInput {
     pub(super) fn byte_limit(&self) -> usize {
         match self.format {
             NativeTokenizerFormat::NativeArchive => MAX_FILE_TOKENIZER_BYTES,
-            NativeTokenizerFormat::HuggingFaceRawByteLevel => ByteBpe::MAX_HUGGINGFACE_JSON_BYTES,
+            NativeTokenizerFormat::HuggingFaceRawByteLevel
+                | NativeTokenizerFormat::HuggingFaceGpt2Unicode17
+                | NativeTokenizerFormat::HuggingFaceLlama3Unicode17 => ByteBpe::MAX_HUGGINGFACE_JSON_BYTES,
         }
     }
 
@@ -50,6 +54,10 @@ impl TokenizerInput {
             NativeTokenizerFormat::NativeArchive => ByteBpe::from_bytes(profile, bytes),
             NativeTokenizerFormat::HuggingFaceRawByteLevel =>
                 ByteBpe::from_huggingface_json(profile, bytes, self.byte_limit()),
+            NativeTokenizerFormat::HuggingFaceGpt2Unicode17 =>
+                ByteBpe::from_huggingface_json_with_pre_tokenization(profile, bytes, self.byte_limit(), PreTokenization::Gpt2Unicode17),
+            NativeTokenizerFormat::HuggingFaceLlama3Unicode17 =>
+                ByteBpe::from_huggingface_json_with_pre_tokenization(profile, bytes, self.byte_limit(), PreTokenization::Llama3Unicode17),
         }.map_err(|error| format!("tokenizer input refused: {error:?}"))
     }
 }

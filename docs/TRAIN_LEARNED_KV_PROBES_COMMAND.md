@@ -32,7 +32,7 @@ split or automatic promotion of the resulting monitor.
 | Input | Required meaning |
 | --- | --- |
 | `CONFIG_JSON` and `WEIGHTS_SAFETENSORS` | The existing supported single-file Llama numerical profile and its actual F32/F16/BF16 weights. Static supported RoPE and explicit tied-head loading retain their original semantics. |
-| `TOKENIZER` | Explicitly selected native byte-BPE archive or supported Hugging Face raw ByteLevel JSON, bound to the complete independently negotiated decoder profile. |
+| `TOKENIZER` | Explicitly selected native byte-BPE archive or supported Hugging Face raw/GPT-2-Unicode-17/Llama-3-Unicode-17 ByteLevel JSON, bound to the complete independently negotiated decoder profile. |
 | `CAMPAIGN_JSON` | Closed `fa.learned-kv-probe-campaign/1` data: identities, complete labelled population, all tap fitting/calibration rules, original resource budgets and output caps. |
 | `CODEC_BINDING_JSON` | The existing `fa.learned-fit-binding/1` schema: exact fit policy, original fit budget and complete independently retained source descriptors. The command uses the same parser as the publication operator. |
 | `CODEC_ARCHIVE` | Original `LearnedKvFitCheckpoint::encode_archive` bytes. Parsing yields no usable codec; the command reruns the original fit and compares its complete result before use. |
@@ -59,7 +59,7 @@ fallback.
 | `id`, `generation` | Original corpus identity and generation. |
 | `identity` | `tenant`, `model`, `model_generation`, `tokenizer_generation`, `profile_generation`. These are declarations, not authentication of a checkpoint. |
 | `context` | Explicit original decoder context, positive and within the configured trained context and unchanged global ceiling. |
-| `tokenizer_format` | `native_archive` or `huggingface_raw_bytelevel`. |
+| `tokenizer_format` | `native_archive`, `huggingface_raw_bytelevel`, `huggingface_gpt2_unicode17` or `huggingface_llama3_unicode17`. |
 | `input_limits` | `auxiliary_bytes`, `weight_bytes`, `weight_read_calls`, `codec_bytes`, `codec_read_calls`. |
 | `output_limits` | `report_bytes`, `monitor_bytes`. |
 | `capture_budget` | `cases`, `original_tokens`, `kv_coordinates`, `scalar_products`. |
@@ -207,10 +207,20 @@ source snapshot, whose file-discovery limit, unlisted files and stale existing
 digests remain unchanged. These targeted results do not establish complete
 workspace qualification; see `IMPLEMENTATION_STATUS.md` for the integrated scope.
 
+The 2026-10-11 Unicode extension passes all eleven command tests on the same
+qualified compiler. Its new test trains through both explicit Unicode formats,
+loads the actual saved bound artifact through the publication operator, and
+executes original sampled quiet/hold with an independent decoder oracle.
+Selecting the raw grammar instead refuses before output creation, and replacing
+only the trained tokenizer grammar refuses at the original complete binding.
+The codec command's 23 passing tests include these same eleven command tests;
+those nested executions are not independent additional regression functions.
+
 Passing these synthetic tests establishes the command's numerical and custody
 composition. It does not establish trained-model accuracy, label authenticity,
 independence of hidden data origins, safe external effects or production
-qualification. The unchanged tokenizer support still excludes regex splitting,
-normalization and arbitrary pretrained pipelines. Binary native helper input and
+qualification. Tokenizer support includes the two explicitly selected
+[Unicode-17 grammars](UNICODE_PRETOKENIZATION.md); normalization, arbitrary regex
+and arbitrary pretrained pipelines remain unsupported. Binary native helper input and
 its complete witness requirements are unchanged. Full pretrained text support
 requires those semantics explicitly; this command does not claim them.

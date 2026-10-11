@@ -1,5 +1,27 @@
 # Changelog
 
+## 2026-10-11: bind exact Unicode tokenization across native checkpoint workflows
+
+- Add explicit GPT-2 and Llama-3 Unicode-17 pretokenization to the original
+  bounded byte-BPE owner, with exact grammar priority, original IDs/spans,
+  named-control isolation and unchanged raw-byte behavior.
+- Freeze official Unicode category, whitespace and simple-fold data with
+  source hashes, the complete Unicode license and an offline development
+  generator. No regex engine or runtime dependency is added.
+- Admit only the exact corresponding Hugging Face pipelines and bind grammar,
+  Unicode version and original extensions in `FABBPE05`. Keep raw archives
+  byte-identical and reuse complete monitor/recovery tokenizer binding.
+- Connect explicit selectors to native single/sharded workers, both training
+  commands and publication. Mismatched pipelines refuse before weight reads;
+  grammar-only substitutions refuse at complete artifact binding or recovery.
+- Pass all 14 Unicode integration tests, 61 tokenizer unit tests, 13 worker
+  configuration tests and actual monitor-training/publication consumer tests.
+  Final combined integration and native-helper selections pass 46 and 110 tests.
+  The learned-publication selection passes 32 tests; two existing listener tests
+  remain blocked by environment EPERM. The unchanged full project gate passes
+  compiler identity, then refuses its reviewed source snapshot before formatting,
+  Clippy and complete workspace qualification.
+
 ## 2026-10-11: yield during native helper tokenization before monitored inference
 
 - Add explicit cooperative evaluator and peer entry points around the original

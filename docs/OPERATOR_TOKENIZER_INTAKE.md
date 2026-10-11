@@ -1,8 +1,9 @@
 # Explicit tokenizer intake for native publication
 
-The `supervise_publication --native-text` and `create-generated` workflows now
-accept an explicitly selected Hugging Face raw ByteLevel BPE `tokenizer.json`.
-Both use the existing `ByteBpe::from_huggingface_json` importer and the original
+The `supervise_publication --native-text`, `create-generated` and learned
+publication workflows accept explicitly selected Hugging Face ByteLevel BPE
+`tokenizer.json` profiles: raw bytes, GPT-2 with Unicode 17, or Llama-3 with
+Unicode 17. They use the original strict tokenizer importer and the original
 native generation, actor submission, helper review, human approval and publication
 paths. This completes operator input wiring for the existing FA-025/FA-107 native
 text composition in plan sections 8.7, 10.6, 11.2 and 17.1.
@@ -38,20 +39,32 @@ same object at `files.tokenizer`, using the existing absolute normalized path:
 }
 ```
 
-The other admitted format is `native_archive`, which invokes the original
-FA-BBPE archive reader. Both object fields are required; unknown fields or formats
+The admitted formats are:
+
+| `format` | Exact input contract |
+| --- | --- |
+| `native_archive` | Original FA-BBPE reader, including a bound Unicode profile in `FABBPE05`. |
+| `huggingface_raw_bytelevel` | Original raw ByteLevel profile with all transformation flags false. |
+| `huggingface_gpt2_unicode17` | ByteLevel with `use_regex=true`, no inserted prefix space, and the fixed GPT-2/Unicode-17 grammar. |
+| `huggingface_llama3_unicode17` | The exact Llama-3 `Split` pattern followed by ByteLevel with `use_regex=false`, using frozen Unicode-17 properties. |
+
+The [Unicode pretokenization contract](UNICODE_PRETOKENIZATION.md) specifies the
+two exact pipelines and frozen character properties. Both object fields are required; unknown fields or formats
 refuse. Legacy versions continue requiring a plain native-archive path string.
 The format is selected from the recipe, with no extension inference, content
 sniffing, conversion fallback or model-name lookup.
 
 ## Input and recovery contract
 
-The admitted JSON behavior remains the original strict raw ByteLevel subset:
-no normalization, regex splitting, prefix insertion, offset trimming, padding,
-truncation or postprocessing. Explicit literal special controls retain their
-exact IDs and recognition behavior. Unsupported added-token transformations
-refuse. This does not expand the importer to arbitrary Hugging Face tokenizer
-pipelines. Prompt bytes, explicit prefix controls and stop IDs retain their
+Raw ByteLevel behavior is unchanged. Unicode profiles first recognize explicit
+literal controls, split ordinary UTF-8 spans according to the selected fixed
+grammar, then restrict the original BPE to those boundaries. They insert no
+prefix, normalize no text, and perform no padding, truncation or postprocessing.
+Literal controls retain exact IDs and spellings; unsupported added-token
+transformations and arbitrary regex pipelines refuse. Unicode profiles require
+valid complete UTF-8; raw profiles continue accepting arbitrary bytes. Native
+offsets remain a complete original-byte partition, irrespective of an upstream
+tokenizer's character-offset conventions. Prompt bytes, prefix controls and stop IDs retain their
 existing checks; successful tokenization supplies no publication permission.
 
 The complete recipe schema and format selection are admitted before referred
@@ -64,8 +77,8 @@ reserve future journal space.
 
 The resulting immutable tokenizer is encoded by the original native archive
 writer and pinned by the original durable bootstrap. Recovery compares the full
-effective tokenizer, including token IDs, merges, special-control spellings and
-model profile. A changed tokenizer refuses before a canonical recovery write,
+effective tokenizer, including token IDs, merges, special-control spellings,
+model profile and complete named grammar/Unicode version. A changed tokenizer refuses before a canonical recovery write,
 even if the particular saved prompt would happen to tokenize identically.
 Equivalent JSON whitespace or an explicitly selected native archive with the
 same complete tokenizer has the same durable semantics. Raw JSON bytes, input
@@ -77,7 +90,7 @@ its old deadline is preserved, and source files, helpers and a new human approva
 are not needed to retrieve an already recorded outcome. Pending generation keeps
 the original acknowledged token, RNG and work history.
 
-## Validation scope
+## Original raw-profile validation scope
 
 Eleven new example regression functions cover real single-file and sharded model
 imports, external tokenizer JSON, actual generation, both human decisions and
@@ -109,3 +122,19 @@ cargo test --locked -p fa-reference --example supervise_publication tokenizer
 ```
 
 The direct owner tests alone are selected with `huggingface_direct_owner`.
+
+## Executed Unicode extension
+
+On 2026-10-11, the new `unicode` selection in `supervise_publication` passes on
+qualified `nightly-2026-09-08`. One direct operator test runs both named grammars
+with both human approve/reject decisions. It pauses after the first sampled
+token, rejects a grammar-only replacement with byte-identical journal
+preservation, reopens the exact original numerical work, and completes the
+original native review and separate human decision. Receipt recovery then
+returns the same recorded outcome. The changed grammar is rejected even though
+this particular saved prompt has identical IDs under both profiles.
+
+This is executed generated-publication coverage. The historical raw-profile
+module and separate socket-transport tests above retain their own validation
+scope. See [the Unicode contract](UNICODE_PRETOKENIZATION.md) for core,
+checkpoint-worker and monitor-training results and the full-gate boundary.

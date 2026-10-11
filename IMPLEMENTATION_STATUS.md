@@ -1,5 +1,60 @@
 # Implementation status · design revision 0.3
 
+## 2026-10-11: exact Unicode tokenization reaches native workers and publication
+
+The original bounded `ByteBpe` now admits explicitly named GPT-2 and Llama-3
+Unicode-17 grammars. A finite scanner freezes boundaries in the original byte
+nodes before the existing ranked merge engine runs. It preserves original IDs,
+complete byte spans, literal named-control isolation, independent BPE budgets
+and cooperative cursor ownership. Old constructors and raw-byte archives retain
+their existing behavior, including arbitrary non-UTF-8 bytes. Unicode requests
+require complete UTF-8 and never normalize input or insert prefix spaces.
+
+Official Unicode 17 category, White_Space and default simple case-fold tables
+are frozen with exact source hashes and the complete Unicode License V3. An
+offline, hash-pinned development generator adds no runtime or build dependency.
+An independent exhaustive comparison validates all 1,114,112 code points and
+every admitted fold mapping. These are explicitly versioned input semantics,
+not an assertion of parity with every upstream regex engine's Unicode version.
+
+Native single/sharded checkpoint startup, `fa-native-helper` manifests, the
+monitor-training command and native publication now select either exact named
+Hugging Face pipeline explicitly. No parser fallback or filename inference is
+added. `FABBPE05` extends the original archive with six fixed interpretation
+bytes; complete trained-monitor and durable-generation bindings already compare
+that same canonical archive. A grammar-only substitution therefore refuses even
+when a particular saved prompt would happen to produce identical token IDs.
+
+Qualified `nightly-2026-09-08` passes 14 Unicode integration tests, all 61
+tokenizer unit tests, all 13 native worker configuration tests, all 11 monitor
+training command tests and all 23 codec command tests (including those same 11
+monitor tests). A new actual publication test runs both grammars with both human
+decisions, pauses after an original sampled token, rejects a changed grammar
+without changing journal bytes, then resumes exact numerical work and records
+the original reviewed outcome. The independent numerical fixture holds weights
+and prompt fixed: raw BPE merges `a1` and computes Allow, while either Unicode
+grammar separates the original IDs and computes Deny. Cooperative admission
+preserves the synchronous verdict and work while yielding before numerical work.
+
+The final integrated public selection passes 46 tests across Unicode input,
+cooperative native preparation, trained-monitor binding and durable learned
+streams; all 110 native-helper unit tests pass on the integrated source. The
+broader learned-publication selection passes 32 of 34 tests. Its two existing
+real Unix-listener tests fail at listener creation with environment EPERM.
+The unchanged original project gate passes compiler identity and then refuses
+the reviewed source snapshot: the 512-file discovery ceiling, unlisted files
+and stale existing digests prevent later workspace qualification. Formatting,
+Clippy and the complete workspace gate are not claimed to pass. Snapshot
+enforcement and its reviewed records remain unchanged.
+
+The initial bounded UTF-8/control/segmentation scans remain synchronous. These
+input grammars do not add a GPT-2 numerical architecture, increase the current
+decoder's model/vocabulary limits, or implement normalization, arbitrary regex,
+chat templates or SentencePiece. Synthetic controls establish executable
+composition and complete binding, not trained detector quality, asset
+authenticity, latency guarantees or complete workspace qualification.
+See [exact Unicode pretokenization](docs/UNICODE_PRETOKENIZATION.md).
+
 ## 2026-10-11: native worker deadlines cover cooperative prompt preparation
 
 The actual `fa-native-helper` process now uses `step_cooperative`: at most 256
