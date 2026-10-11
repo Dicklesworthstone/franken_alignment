@@ -1,5 +1,5 @@
 [workspace]
-members = ["crates/fa-reference", "xtask"]
+members = ["crates/fa-reference", "crates/fa-journal", "xtask"]
 resolver = "3"
 
 [workspace.package]

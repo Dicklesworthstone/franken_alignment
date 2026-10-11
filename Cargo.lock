@@ -3,6 +3,13 @@
 version = 4
 
 [[package]]
+name = "fa-journal"
+version = "0.2.0"
+dependencies = [
+ "fa-reference",
+]
+
+[[package]]
 name = "fa-reference"
 version = "0.2.0"
 
