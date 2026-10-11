@@ -38,6 +38,12 @@ hash, new cryptographic primitive or new dependency replaces it.
 
 ## Actual intake and generation
 
+The [checkpoint K/V training command](TRAIN_LEARNED_KV_PROBES_COMMAND.md) creates
+this artifact from actual checkpoint/tokenizer files, independently fitted codec
+inputs and a complete labelled campaign. Point the publication recipe's
+`files.monitor` to its accepted output; retain the separate diagnostic report
+and original trusted input assets.
+
 `KvMonitorArtifact::decode` checks bounded complete framing and borrows its
 sections. It cannot construct a model, tokenizer, codec or executable policy
 from the saved comparison bytes. `verify` takes those actual objects separately.

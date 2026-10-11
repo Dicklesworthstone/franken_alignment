@@ -129,6 +129,13 @@ the JSON does not prove its labels, model provenance or held-out acceptance.
 Neither the campaign nor a numerical quiet result converts into `Permit` or
 automatically promotes a live policy.
 
+The same accepted campaign can now emit a
+[complete bound monitor artifact](BOUND_TRAINED_KV_MONITORS.md), checked against
+the original model, tokenizer and codec at actual operator intake. The
+[checkpoint training command](TRAIN_LEARNED_KV_PROBES_COMMAND.md) supplies the
+file-based route through this API, saving complete diagnostic results and
+exporting only after every mandatory tap passes its independent final criteria.
+
 ## Acceptance boundaries
 
 `tests/decoder_kv_probe_campaign.rs` exercises original source identities and

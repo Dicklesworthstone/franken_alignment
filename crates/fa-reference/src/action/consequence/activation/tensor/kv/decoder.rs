@@ -76,11 +76,20 @@ impl DecoderModel {
     /// Exact loop-term count for the declared profile and contiguous positions.
     /// Transcendentals, normalization, allocations and byte movement are separate.
     pub fn estimate(&self, first_position: usize, tokens: usize) -> Result<DecoderWork, Error> {
-        let s = self.profile().shape();
+        self.profile().estimate(first_position, tokens)
+    }
+}
+
+impl DecoderProfile {
+    /// The original loop-term admission before parameter files are opened.
+    /// This is the same estimator used by the model, not numerical execution or
+    /// evidence that the independently supplied weights match this declaration.
+    pub fn estimate(&self, first_position: usize, tokens: usize) -> Result<DecoderWork, Error> {
+        let s = self.shape();
         let end = first_position.checked_add(tokens).ok_or(Error::Overflow)?;
         if end > s.context { return Err(Error::Limit); }
         let h = s.hidden as u64;
-        let k = self.profile().cache_width() as u64;
+        let k = self.cache_width() as u64;
         let i = s.intermediate as u64;
         let layers = s.layers as u64;
         let n = tokens as u64;
@@ -97,6 +106,9 @@ impl DecoderModel {
         })
     }
 
+}
+
+impl DecoderModel {
     pub fn session(&self, stream: u64) -> Result<DecoderSession, Error> {
         let shape = self.profile().shape();
         let cache = ModelKvCapture::new(self.data.cache.clone(), stream, 0, 0, 1, ModelKvBudget {

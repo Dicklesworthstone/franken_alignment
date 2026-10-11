@@ -367,6 +367,12 @@ settings even under unchanged numeric identities. It does not authenticate the
 artifact or its training labels. See [bound trained monitors](BOUND_TRAINED_KV_MONITORS.md)
 for the complete binding and size contract.
 
+For actual checkpoint files, the offline
+[`train_learned_kv_probes_from_checkpoint` command](TRAIN_LEARNED_KV_PROBES_COMMAND.md)
+performs complete fitting, calibration and held-out evaluation and saves the
+accepted bound artifact. It retains failed campaign diagnostics and supplies no
+publication approval or automatic policy activation.
+
 ## Independent fit binding: fa.learned-fit-binding/1
 
 The fit archive is produced by the original fitting checkpoint interface.

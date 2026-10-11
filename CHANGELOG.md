@@ -1,5 +1,23 @@
 # Changelog
 
+## 2026-10-11: train complete K/V monitor artifacts from actual checkpoint files
+
+- Add a closed eight-path offline training command using original configuration,
+  streamed weights, explicit tokenizer, independently verified codec fit,
+  complete K/V capture, original fitting/calibration and held-out evaluation.
+- Admit the full population and all work before weight I/O using the original
+  decoder estimator on the negotiated profile. Preserve failed tap denominators,
+  exact diagnostic scores and spent allowances; export `FAKVMON2` only for a
+  completely accepted roster.
+- Save bounded reports and monitor artifacts with exclusive creation and file
+  sync, retaining diagnostics on failure without overwriting or refitting.
+- Pass all ten new file-backed command tests and 91 selected public integration
+  tests, including actual operator-loaded quiet/hold and independent decoder
+  work-count checks. Add command and connected workflow documentation.
+- Final targeted execution passes 133 runtime tests. Two existing Unix-listener
+  tests remain blocked by EPERM; the unchanged full project gate passes compiler
+  identity and refuses its reviewed source snapshot before workspace qualification.
+
 ## 2026-10-11: exact trained monitor assets at the publication operator
 
 - Export accepted complete K/V campaigns as bounded `FAKVMON2` artifacts with

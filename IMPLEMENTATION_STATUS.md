@@ -1,5 +1,44 @@
 # Implementation status · design revision 0.3
 
+## 2026-10-11: checkpoint files to complete evaluated K/V monitors
+
+The new `train_learned_kv_probes_from_checkpoint` command joins actual Llama
+configuration/Safetensors, an explicit tokenizer, fixed labelled token cases
+and independently bound codec fit inputs to the original complete K/V campaign.
+It negotiates the model shape and admits all capture, fitting, calibration,
+final-scoring and report allowances before opening weights. The original decoder
+estimator now also lives on `DecoderProfile`; model execution delegates to that
+same unchanged formula. Original bounded readers, codec refit, corpus, optimizer,
+calibrator and exact scorer retain ownership of every numerical transition.
+
+The command saves the fixed population and policies before numerical work, then
+retains actual capture work, coefficients, exact scores, threshold trials,
+failed/unevaluated final denominators and admitted/completed/remaining budgets.
+A failed mandatory tap blocks the complete monitor export while preserving the
+other results. A completely accepted campaign exports the original `FAKVMON2`
+artifact for the learned operator. Reports and artifacts use distinct exclusive
+new paths; output failures never overwrite an existing file, retry numerical
+work or refund its consumed allowance. Two synced files are not a transaction.
+
+All ten new file-backed command tests pass on qualified `nightly-2026-09-08`.
+They execute original sampled quiet/hold through the actual operator loader and
+include causal final-label, last-value-projection, every-budget-dimension,
+wrong-asset, corrupted-fit-witness, numerical-overflow and output-race controls.
+The final selected public decoder, static RoPE, configured-reader, campaign,
+codec/replay and durable-stream integration suites pass all 91 tests.
+Final targeted execution totals 133 passing runtime tests: those 91, ten training
+command tests and 32 learned-operator tests. Two existing real Unix-listener
+tests fail at listener creation with environment EPERM. The unchanged original
+project gate passes qualified compiler identity, then refuses its reviewed
+source snapshot: the 512-file discovery ceiling, numerous unlisted files and
+stale existing digests prevent later workspace qualification. Formatting, Clippy
+and the complete workspace gate are not claimed to pass; snapshot enforcement
+and its records remain unchanged.
+These synthetic fixtures establish executable composition, not detector quality
+or label authenticity. Complete artifact size remains capped at 16 MiB; regex
+pretokenization and full pretrained/native text semantics remain unfinished.
+See [checkpoint K/V training](docs/TRAIN_LEARNED_KV_PROBES_COMMAND.md).
+
 ## 2026-10-11: complete model and tokenizer binding for trained monitors
 
 Accepted K/V campaigns can now export `FAKVMON2`: the unchanged canonical v1
