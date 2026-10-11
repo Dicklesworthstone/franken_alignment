@@ -149,10 +149,10 @@ impl DecoderModel {
             MAX_WEIGHT_SET_BYTES, output_head)
     }
 
-    // The SAME reader, head-sharing contract and scalar decoder, with a narrower
-    // caller-selected total file ceiling enforced against actual directories.
-    // No Take-created EOF and no replenishment of the borrowed read/call budget.
-    pub(crate) fn read_safetensors_shards_bounded<R: Read>(
+    /// The same reader, head-sharing contract and scalar decoder, with a narrower
+    /// caller-selected total file ceiling enforced against actual directories.
+    /// No Take-created EOF and no replenishment of the borrowed read/call budget.
+    pub fn read_safetensors_shards_bounded<R: Read>(
         profile: DecoderProfile, index: &[u8], sources: &mut BTreeMap<String, R>,
         budget: &mut WeightReadBudget, file_limit: usize, output_head: OutputHead,
     ) -> Result<(Self, ShardedWeightLoadReceipt), WeightReadError> {

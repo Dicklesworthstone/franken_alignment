@@ -1,6 +1,7 @@
 //! Explicit original checkpoint readers and exclusive bounded output files.
 use super::{Failure, Plan, contract, invalid};
 use super::plan::Estimate;
+use super::checkpoint_source::{CheckpointSource, MAX_MANIFEST_BYTES};
 use fa_reference::action::consequence::activation::tensor::kv::decoder::{DecoderModel,
     safetensors::{MAX_WEIGHT_HEADER_BYTES, pretrained::{LlamaConfig, MAX_CONFIG_BYTES},
         reader::WeightReadBudget}};
@@ -10,30 +11,68 @@ use std::io::{self, Read, Write};
 use std::path::{Path, PathBuf};
 
 #[derive(Clone, Copy, Debug)]
-pub(super) struct InputWork { pub auxiliary_bytes: usize, pub weight_bytes: usize, pub weight_read_calls: usize }
+pub(super) struct InputWork {
+    pub auxiliary_bytes: usize,
+    pub weight_bytes: usize,
+    pub weight_read_calls: usize,
+    pub checkpoint_source: bool,
+    pub base_files: usize,
+    pub adapter_parameters: usize,
+    pub updated_parameters: usize,
+    pub merge_products: u64,
+}
 pub(super) struct Inputs { pub model: DecoderModel, pub estimate: Estimate, pub work: InputWork }
 
+#[cfg(test)]
 pub(super) fn load(args: &[OsString]) -> Result<(Plan, Inputs), Failure> {
+    load_with_source(args, false)
+}
+
+pub(super) fn load_with_source(args: &[OsString], source: bool) -> Result<(Plan, Inputs), Failure> {
     let bytes = read_regular(Path::new(&args[2]), super::plan::MAX_PLAN_BYTES).map_err(invalid)?;
     let plan = Plan::decode(&bytes).map_err(invalid)?;
-    let remaining = plan.inputs.auxiliary_bytes.checked_sub(bytes.len())
+    let mut remaining = plan.inputs.auxiliary_bytes.checked_sub(bytes.len())
         .ok_or_else(|| invalid("aggregate auxiliary allowance exhausted by training plan"))?;
-    let configuration = read_regular(Path::new(&args[0]), remaining.min(MAX_CONFIG_BYTES)).map_err(invalid)?;
+    let mut auxiliary = |path: &Path, maximum: usize| -> Result<Vec<u8>, String> {
+        let bytes = read_regular(path, maximum.min(remaining))?;
+        remaining = remaining.checked_sub(bytes.len()).ok_or("aggregate auxiliary allowance exhausted")?;
+        Ok(bytes)
+    };
+    let configuration = auxiliary(Path::new(&args[0]), MAX_CONFIG_BYTES).map_err(invalid)?;
     let negotiated = LlamaConfig::decode(plan.identity, plan.context, &configuration)?;
     // Original inference AND fitting admission, complete source retention and
     // conservative output reservations all precede the first weight-file open.
     let estimate = plan.estimate(negotiated.profile()).map_err(contract)?;
-    let weight_bound = plan.inputs.weight_bytes.min(8 + MAX_WEIGHT_HEADER_BYTES + negotiated.profile().parameter_count() * 4);
-    let mut reader = open_regular(Path::new(&args[1]), weight_bound)?;
-    let mut budget = WeightReadBudget::new(weight_bound + 1, plan.inputs.weight_read_calls)?;
-    let (model, receipt) = DecoderModel::read_llama_safetensors(plan.identity, plan.context,
-        &configuration, &mut reader, &mut budget)?;
-    if model.profile() != negotiated.profile() || receipt.configuration != negotiated
+    let (model, mut work) = if source {
+        let manifest = auxiliary(Path::new(&args[1]), MAX_MANIFEST_BYTES).map_err(invalid)?;
+        let source = CheckpointSource::decode(&manifest).map_err(invalid)?;
+        let prepared = source.prepare(plan.identity, plan.context, &configuration, &mut auxiliary).map_err(invalid)?;
+        if prepared.profile() != negotiated.profile() { return Err(contract(fa_reference::Error::Binding).into()); }
+        let physical = plan.inputs.weight_bytes.min(prepared.weight_bytes_limit());
+        let calls = plan.inputs.weight_read_calls.min(prepared.weight_read_calls_limit());
+        let mut budget = WeightReadBudget::new(physical + 1, calls)?;
+        let loaded = prepared.load(&mut budget, physical)?;
+        let work = loaded.work;
+        (loaded.model, InputWork { auxiliary_bytes: 0, weight_bytes: work.weight_bytes,
+            weight_read_calls: work.weight_read_calls, checkpoint_source: true,
+            base_files: work.base_files, adapter_parameters: work.adapter_parameters,
+            updated_parameters: work.updated_parameters, merge_products: work.merge_products })
+    } else {
+        let weight_bound = plan.inputs.weight_bytes.min(8 + MAX_WEIGHT_HEADER_BYTES + negotiated.profile().parameter_count() * 4);
+        let mut reader = open_regular(Path::new(&args[1]), weight_bound)?;
+        let mut budget = WeightReadBudget::new(weight_bound + 1, plan.inputs.weight_read_calls)?;
+        let (model, receipt) = DecoderModel::read_llama_safetensors(plan.identity, plan.context,
+            &configuration, &mut reader, &mut budget)?;
+        if receipt.configuration != negotiated { return Err(contract(fa_reference::Error::Binding).into()); }
+        (model, InputWork { auxiliary_bytes: 0, weight_bytes: budget.usage().bytes_read,
+            weight_read_calls: budget.usage().read_calls, checkpoint_source: false,
+            base_files: 1, adapter_parameters: 0, updated_parameters: 0, merge_products: 0 })
+    };
+    if model.profile() != negotiated.profile()
         || model.cache_profile() != &negotiated.profile().cache_profile().map_err(contract)? {
         return Err(contract(fa_reference::Error::Binding).into());
     }
-    let work = InputWork { auxiliary_bytes: bytes.len() + configuration.len(),
-        weight_bytes: budget.usage().bytes_read, weight_read_calls: budget.usage().read_calls };
+    work.auxiliary_bytes = plan.inputs.auxiliary_bytes - remaining;
     Ok((plan, Inputs { model, estimate, work }))
 }
 

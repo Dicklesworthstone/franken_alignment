@@ -46,6 +46,11 @@ Native helpers can load a [sharded base checkpoint with a static LoRA
 adapter](docs/SHARDED_LORA_NATIVE_WORKERS.md), preserving the original monitored
 verdict path and one shared read allowance across the base shards and adapter.
 
+Both learned training commands accept [explicit checkpoint source
+manifests](docs/CHECKPOINT_SOURCE_MANIFEST.md) for single or sharded bases with
+optional static LoRA. They train the original codec and complete bound monitor
+from the effective model, with shared input limits and unchanged output formats.
+
 Checkpoint workers, monitor training and publication also accept explicitly
 selected [GPT-2 and Llama-3 Unicode-17 pretokenization](docs/UNICODE_PRETOKENIZATION.md).
 They preserve original token IDs and byte spans through the existing BPE engine;

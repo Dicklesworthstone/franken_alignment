@@ -8,6 +8,8 @@ mod assets;
 mod plan;
 #[path = "train_learned_kv_probes_from_checkpoint/report.rs"]
 mod report;
+#[path = "support/checkpoint_source.rs"]
+mod checkpoint_source;
 // Reuse the learned operator's exact binding schema/parser, not a second codec
 // interchange. Its unused recipe helpers remain private to the included module.
 #[path = "supervise_publication/workflow/actor_service/learned/fields.rs"]
@@ -31,7 +33,7 @@ use std::path::Path;
 use std::process::ExitCode;
 
 type Failure = Box<dyn std::error::Error>;
-const USAGE: &str = "train_learned_kv_probes_from_checkpoint CONFIG_JSON WEIGHTS_SAFETENSORS TOKENIZER CAMPAIGN_JSON CODEC_BINDING_JSON CODEC_ARCHIVE NEW_REPORT_NDJSON NEW_MONITOR_ARTIFACT";
+const USAGE: &str = "train_learned_kv_probes_from_checkpoint [--checkpoint-source] CONFIG_JSON WEIGHTS_SAFETENSORS_OR_EXPLICIT_SOURCE_MANIFEST TOKENIZER CAMPAIGN_JSON CODEC_BINDING_JSON CODEC_ARCHIVE NEW_REPORT_NDJSON NEW_MONITOR_ARTIFACT";
 fn invalid(message: impl Into<String>) -> io::Error { io::Error::new(io::ErrorKind::InvalidInput, message.into()) }
 fn contract(error: Error) -> io::Error { invalid(format!("campaign contract: {error:?}")) }
 
@@ -94,8 +96,11 @@ fn publish_status(output: &mut impl Write, campaign: &KvDecoderCampaign, bytes: 
 }
 
 fn run(args: &[OsString], output: &mut impl Write) -> Result<bool, Failure> {
+    let (args, source) = if args.first().is_some_and(|value| value == "--checkpoint-source") {
+        (&args[1..], true)
+    } else { (args, false) };
     if args.len() != 8 { return Err(invalid(USAGE).into()); }
-    let (mut plan, inputs) = assets::load(args)?;
+    let (mut plan, inputs) = assets::load_with_source(args, source)?;
     execute(&mut plan, inputs, Path::new(&args[6]), Path::new(&args[7]), output)
 }
 
@@ -107,7 +112,7 @@ pub(crate) fn run_for_codec_test(args: &[OsString], output: &mut impl Write) -> 
 }
 
 fn main() -> ExitCode {
-    let args: Vec<_> = std::env::args_os().skip(1).take(9).collect();
+    let args: Vec<_> = std::env::args_os().skip(1).take(10).collect();
     match run(&args, &mut io::stdout().lock()) {
         Ok(true) => ExitCode::SUCCESS,
         Ok(false) => ExitCode::from(2),

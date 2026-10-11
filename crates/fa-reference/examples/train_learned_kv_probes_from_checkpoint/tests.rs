@@ -14,6 +14,8 @@ mod original;
 mod fixture;
 #[path = "../../tests/support/unicode_tokenizer_json.rs"]
 mod unicode_json;
+#[path = "tests/checkpoint_source.rs"]
+mod checkpoint_source_tests;
 use fixture::{Root, files};
 // Consume the artifact through the ACTUAL publication operator parser. No test
 // decoder of the emitted monitor fields substitutes for the production loader.

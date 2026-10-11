@@ -27,6 +27,10 @@ pub(super) fn start(output: &mut impl Write, plan: &Plan, inputs: &Inputs) -> io
     let w = inputs.work;
     writeln!(output, "{{\"kind\":\"input_work\",\"auxiliary_bytes\":{},\"weight_bytes\":{},\"weight_read_calls\":{}}}",
         w.auxiliary_bytes, w.weight_bytes, w.weight_read_calls)?;
+    if w.checkpoint_source {
+        writeln!(output, "{{\"kind\":\"checkpoint_source\",\"schema\":\"fa.checkpoint-weights/1\",\"base_files\":{},\"adapter_parameters\":{},\"updated_parameters\":{},\"merge_products\":{},\"permission\":\"not_issued\"}}",
+            w.base_files, w.adapter_parameters, w.updated_parameters, w.merge_products)?;
+    }
     for document in &plan.documents {
         writeln!(output, "{{\"kind\":\"planned_document\",\"origin\":{},\"stream\":{},\"tokens\":{:?}}}",
             document.origin, document.stream, document.tokens)?;

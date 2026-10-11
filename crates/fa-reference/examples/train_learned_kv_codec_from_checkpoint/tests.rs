@@ -22,6 +22,8 @@ mod probe_fixture;
 mod operator_monitor;
 #[path = "tests/fixture.rs"]
 mod fixture;
+#[path = "tests/checkpoint_source.rs"]
+mod checkpoint_source_tests;
 use fixture::{Root, files, monitor_args, rows, selected, replace, set_number};
 
 fn replay(args: &[OsString]) -> (LearnedKvCodec, LearnedKvFitCheckpoint) {

@@ -25,6 +25,10 @@ pub(super) fn start(output: &mut impl Write, plan: &Plan, inputs: &Inputs) -> io
     let w = inputs.work;
     writeln!(output, "{{\"kind\":\"input_work\",\"auxiliary_bytes\":{},\"weight_bytes\":{},\"weight_read_calls\":{},\"codec_bytes\":{},\"codec_read_calls\":{}}}",
         w.auxiliary_bytes, w.weight_bytes, w.weight_read_calls, w.codec_bytes, w.codec_read_calls)?;
+    if w.checkpoint_source {
+        writeln!(output, "{{\"kind\":\"checkpoint_source\",\"schema\":\"fa.checkpoint-weights/1\",\"base_files\":{},\"adapter_parameters\":{},\"updated_parameters\":{},\"merge_products\":{},\"permission\":\"not_issued\"}}",
+            w.base_files, w.adapter_parameters, w.updated_parameters, w.merge_products)?;
+    }
     capture_work(output, "capture_allowance", plan.remaining_capture())?;
     campaign_work(output, "campaign_allowance", plan.remaining_campaign())?;
     for case in &plan.cases {

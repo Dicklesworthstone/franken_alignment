@@ -1,5 +1,45 @@
 # Implementation status · design revision 0.3
 
+## 2026-10-11: sharded and adapted checkpoints reach both learned training commands
+
+Both executable training examples now accept an optional leading
+`--checkpoint-source` switch. Their existing weights operand then names the
+closed `fa.checkpoint-weights/1` manifest: an explicit single or indexed base
+and an optional saved static LoRA adapter. Their existing positional operands,
+training/campaign schemas, numerical owners and output formats retain their
+meaning. Ordinary file operands are never sniffed or retried as manifests.
+
+One example support module composes the original configuration, shard reader and
+adapter merger. It checks complete index labels, adapter base/final identity,
+shape and merge-work admission before opening tensor paths. All explicit handles
+pass regular-file and aggregate-size admission before base scalars. Base and
+adapter consume one original read-byte/read-call budget conjoined with the
+caller's limits. Manifest, index and adapter configuration consume the same
+existing auxiliary allowance; failures retain original work and return no model.
+No decoder, adapter or resource ceiling is increased.
+
+Actual original codec output files feed the actual probe-training command and
+publication monitor parser. The effective model must match the independently
+negotiated decoder/cache profiles and the complete original trained-monitor
+binding. Reports retain actual source work, including original adapter merge
+reservations without treating partial failure as successful parameter updates.
+
+Qualified `nightly-2026-09-08` passes all 32 codec-example tests, including the
+same 16 probe-example functions. The separately executed probe target also
+passes all 16: 32 distinct regressions, nine new for this source route. Tests
+exercise all single/sharded and absent/nonzero-adapter combinations against
+independently specified effective tensors and original sampled quiet/hold
+oracles. Changing only the last value adapter preserves the other three mandatory
+tap results while refusing monitor export and old binding. Exact/one-short
+caller and manifest byte/read-call limits, auxiliary accounting, merge work,
+pre-tensor metadata refusal and old invocation semantics also pass.
+
+These synthetic controls establish executable composition and complete binding,
+not learned detector quality, input authenticity or deployment qualification.
+The original complete project gate and its reviewed source snapshot remain
+unchanged and separate from targeted execution. See the [checkpoint source
+contract](docs/CHECKPOINT_SOURCE_MANIFEST.md) and both linked command documents.
+
 ## 2026-10-11: sharded base checkpoints with static LoRA reach native workers
 
 The actual `fa.native-worker/4` path now accepts its existing explicit sharded

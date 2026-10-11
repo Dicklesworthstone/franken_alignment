@@ -1,5 +1,20 @@
 # Changelog
 
+## 2026-10-11: train codecs and bound monitors from sharded and adapted checkpoints
+
+- Add explicit `--checkpoint-source` selection to both learned training commands,
+  preserving existing operands, plan schemas and artifact formats. A shared
+  closed manifest admits a single or indexed base and optional static adapter.
+- Reuse the original configuration, index, numerical reader and LoRA merger.
+  Preflight complete corpus work, tokenizer/binding metadata, adapter identity
+  and merge work before tensor access. Conjoin caller/manifest limits across
+  every base and adapter read, and retain original work on failure.
+- Pass all 32 distinct command regression functions, including nine new tests
+  covering every base/adapter combination and actual codec-to-monitor files.
+  Independent effective tensors and sampled quiet/hold oracles verify complete
+  binding; changing only the final value adapter preserves the other three tap
+  evaluations and prevents monitor export. No model or resource ceiling changes.
+
 ## 2026-10-11: run native helpers from sharded checkpoints with static LoRA
 
 - Connect the complete registered base-shard set and a saved plain adapter to

@@ -10,6 +10,8 @@ mod plan;
 mod report;
 #[path = "train_learned_kv_codec_from_checkpoint/binding.rs"]
 mod binding;
+#[path = "support/checkpoint_source.rs"]
+mod checkpoint_source;
 // The same closed JSON fields and unchanged independently retained binding
 // parser used by both existing learned operator consumers.
 #[path = "supervise_publication/workflow/actor_service/learned/fields.rs"]
@@ -35,7 +37,7 @@ use std::path::Path;
 use std::process::ExitCode;
 
 type Failure = Box<dyn std::error::Error>;
-const USAGE: &str = "train_learned_kv_codec_from_checkpoint CONFIG_JSON WEIGHTS_SAFETENSORS TRAINING_JSON NEW_BINDING_JSON NEW_CODEC_ARCHIVE NEW_REPORT_NDJSON";
+const USAGE: &str = "train_learned_kv_codec_from_checkpoint [--checkpoint-source] CONFIG_JSON WEIGHTS_SAFETENSORS_OR_EXPLICIT_SOURCE_MANIFEST TRAINING_JSON NEW_BINDING_JSON NEW_CODEC_ARCHIVE NEW_REPORT_NDJSON";
 fn invalid(message: impl Into<String>) -> io::Error { io::Error::new(io::ErrorKind::InvalidInput, message.into()) }
 fn contract(error: Error) -> io::Error { invalid(format!("codec training contract: {error:?}")) }
 
@@ -135,15 +137,18 @@ fn drive(run: &mut CodecTraining, saved: &mut impl Write, output: &mut impl Writ
 }
 
 fn run(args: &[OsString], output: &mut impl Write) -> Result<(), Failure> {
+    let (args, source) = if args.first().is_some_and(|value| value == "--checkpoint-source") {
+        (&args[1..], true)
+    } else { (args, false) };
     if args.len() != 6 { return Err(invalid(USAGE).into()); }
     let destinations = OutputPaths::new(Path::new(&args[3]), Path::new(&args[4]), Path::new(&args[5]))?;
     destinations.require_absent()?;
-    let (plan, inputs) = assets::load(args)?;
+    let (plan, inputs) = assets::load_with_source(args, source)?;
     execute(&plan, inputs, &destinations, output)
 }
 
 fn main() -> ExitCode {
-    let args: Vec<_> = std::env::args_os().skip(1).take(7).collect();
+    let args: Vec<_> = std::env::args_os().skip(1).take(8).collect();
     match run(&args, &mut io::stdout().lock()) {
         Ok(()) => ExitCode::SUCCESS,
         Err(error) => { eprintln!("{error}"); ExitCode::FAILURE }

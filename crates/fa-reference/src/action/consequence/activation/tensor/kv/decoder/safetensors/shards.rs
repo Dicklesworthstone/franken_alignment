@@ -83,11 +83,11 @@ fn valid_name(name: &str) -> bool {
         && name.bytes().all(|byte| byte.is_ascii_alphanumeric() || matches!(byte, b'.' | b'_' | b'-'))
 }
 
-// The file-based helper uses this ORIGINAL index admission before opening any
-// declared weight path. Only a label comparison escapes, not tensor authority or
-// an index-selected filesystem path. The supplied labels are in BTreeMap order.
-// Output sharing is the independently parsed config setting, never guessed.
-pub(crate) fn check_shard_labels<'a>(profile: &DecoderProfile, index: &[u8],
+/// Run the original complete index admission before opening any declared weight
+/// path. Only a label comparison escapes, not tensor authority or an
+/// index-selected filesystem path. Supply labels in sorted, unique order.
+/// Output sharing is the independently parsed configuration, never guessed.
+pub fn check_shard_labels<'a>(profile: &DecoderProfile, index: &[u8],
     labels: impl Iterator<Item = &'a str>, output_head: OutputHead) -> Result<(), WeightError>
 {
     let plan = ShardPlan::parse(profile, index, output_head)?;

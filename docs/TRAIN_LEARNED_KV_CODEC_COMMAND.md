@@ -7,8 +7,11 @@ independently retainable `fa.learned-fit-binding/1` JSON file and the original
 `FAKVFIT/1` archive. It also saves a bounded diagnostic report containing the
 declared token corpus and actual original capture/fitting work.
 
-The command imports an explicitly supplied Llama configuration and one complete
-SafeTensors weight file. It drives `DecoderModel::begin_codec_training`,
+The original invocation imports an explicitly supplied Llama configuration and
+one complete SafeTensors weight file. An explicit `--checkpoint-source` switch
+also admits a complete indexed shard set, a static saved LoRA adapter, or both
+through the [shared checkpoint source contract](CHECKPOINT_SOURCE_MANIFEST.md).
+It drives `DecoderModel::begin_codec_training`,
 `CodecTraining::advance` and `finish`. Every training document starts in its own
 empty original decoder cache. The owner captures the complete original K/V
 images, runs the existing centered-covariance/Jacobi fitter, and returns its
@@ -34,7 +37,25 @@ cargo run --locked -p fa-reference --example train_learned_kv_codec_from_checkpo
   /operator/new-codec-report.ndjson
 ```
 
-There are exactly six positional arguments. All paths are explicit operator
+There are exactly six positional arguments, with one optional leading switch.
+With `--checkpoint-source`, the second operand names a
+`fa.checkpoint-weights/1` source manifest instead of a weight file:
+
+```sh
+cargo run --locked -p fa-reference --example train_learned_kv_codec_from_checkpoint -- \
+  --checkpoint-source \
+  /operator/model/config.json \
+  /operator/model/checkpoint-source.json \
+  /operator/codec-training.json \
+  /operator/new-codec-binding.json \
+  /operator/new-codec.fakv \
+  /operator/new-codec-report.ndjson
+```
+
+Without that switch the original weight-file interpretation is unchanged. File
+extensions, contents, model names and failed parsers never select another mode.
+The training-plan schema and every existing field retain their meaning.
+All paths are explicit operator
 inputs. Inputs must be complete regular files; observed final-component symlinks
 and nonregular files refuse. Paths and parent directories must remain under
 operator control during the command. Metadata checks do not authenticate an
@@ -149,6 +170,23 @@ profile and actual inference; the existing cache profile does not gain a new
 RoPE identity field implicitly.
 
 `auxiliary_bytes` bounds the sum of training-plan and configuration bytes.
+When a checkpoint source is explicitly selected, that same allowance also pays
+for its manifest, shard index and adapter configuration. The manifest's byte
+and read-call limits are conjoined with the existing `weight_bytes` and
+`weight_read_calls`; every base shard and the adapter share those single
+allowances. Metadata, complete physical tails and the original scalar reader
+retain their existing checks. A new file never receives a fresh quota.
+
+Source preparation validates the exact shard inventory and original LoRA
+configuration/work before any tensor path opens. The plan's identity names the
+effective model. An adapter supplies a separate base identity, with the original
+strict increase in model and numerical-profile generations. The original static
+merger alone constructs the effective model; its manifest-declared product
+allowance is neither inference nor codec-fitting work. Its reservation remains
+spent if merging fails. A source-load error retains its actual reader/merge work
+and produces no training artifact. Capture begins only after the complete
+effective model matches the independently negotiated original profile.
+
 Weights have their original independent byte/read-call allowance, including
 the original reader's complete-tail check. Binding JSON retains the existing
 2 MiB consumer ceiling. Fitting inputs retain their existing 96 MiB logical
@@ -191,6 +229,10 @@ The report records the actual decoder identity, shape, static RoPE parameters,
 input read counts, fixed policy and budgets, every supplied token document,
 preflight reservations, completed and unstarted document work, original fit
 statistics and exact binary64 diagnostic words, and artifact write outcomes.
+For an explicitly selected checkpoint source, a `checkpoint_source` row also
+records admitted base-file count and the original reserved adapter-parameter,
+updated-parameter and merge-product footprint. The report does not embed the
+manifest, base weights or adapter; retain those independently selected inputs.
 It preserves failed or cancelled numerical outcomes separately from completed
 fitting. None of these records supplies a monitor decision, helper vote, human
 key, live decoder owner, effect permit, or authenticated training provenance.
@@ -214,7 +256,23 @@ origin overlap, retain numerical and fitting failures, cancel on a closed
 progress sink, preserve existing/raced outputs, reject incomplete or nonregular
 inputs, and exercise static RoPE with the actual imported model.
 
+Four additional source-selection regressions exercise all four single/sharded
+and absent/nonzero-adapter combinations through actual codec files, the actual
+monitor command and original operator binding with independent sampled
+quiet/hold oracles. They also alter only the final value adapter, underfund
+either manifest or caller byte/read-call limits, underfund the same auxiliary
+and merge allowances, reject metadata before missing tensor paths, and retain
+the original unselected-file behavior. The nonzero rank-two adapter restores an
+independently specified model from a base with half-sized K/V projections; the
+test oracle never merges the adapter itself.
+
+Central execution on qualified `nightly-2026-09-08` passes all 32 tests in the
+codec example, including the same 16 probe-command regression functions. Running
+the probe example separately also passes all 16; those repeated functions are
+not counted as additional independent tests. Nine of the 32 functions exercise
+the new manifest route (four codec and five probe tests).
+
 These are synthetic functional controls. They do not establish detector quality,
-source authenticity, independent labels or deployment qualification. Compilation
-and runtime validation remain pending the central verifier at this authored
-checkpoint; no build or test result is claimed by the implementation worker.
+source authenticity, independent labels or deployment qualification. The original
+complete project gate remains a separate requirement; its reviewed source
+snapshot and enforcement are unchanged.

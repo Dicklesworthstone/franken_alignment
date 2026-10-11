@@ -19,8 +19,8 @@ It does not close their generalization or alignment research obligations.
 Build and run with the repository's qualified toolchain and verification flow:
 
 ```text
-train_learned_kv_probes_from_checkpoint \
-  CONFIG_JSON WEIGHTS_SAFETENSORS TOKENIZER CAMPAIGN_JSON \
+train_learned_kv_probes_from_checkpoint [--checkpoint-source] \
+  CONFIG_JSON WEIGHTS_SAFETENSORS_OR_EXPLICIT_SOURCE_MANIFEST TOKENIZER CAMPAIGN_JSON \
   CODEC_BINDING_JSON CODEC_ARCHIVE NEW_REPORT_NDJSON NEW_MONITOR_ARTIFACT
 ```
 
@@ -29,9 +29,17 @@ new and distinct. The program never replaces, truncates or removes an existing
 output. There is no model-name lookup, download, label inference, automatic data
 split or automatic promotion of the resulting monitor.
 
+The optional leading `--checkpoint-source` switch selects the shared closed
+[`fa.checkpoint-weights/1` manifest](CHECKPOINT_SOURCE_MANIFEST.md) in the second
+operand. It supports one base file or a complete indexed shard set, with an
+optional saved static LoRA adapter. Without the switch that operand always
+retains its original single-Safetensors meaning. No filename, file contents or
+parser failure selects the manifest. The existing campaign schema and remaining
+operands are unchanged; the campaign identity names the final effective model.
+
 | Input | Required meaning |
 | --- | --- |
-| `CONFIG_JSON` and `WEIGHTS_SAFETENSORS` | The existing supported single-file Llama numerical profile and its actual F32/F16/BF16 weights. Static supported RoPE and explicit tied-head loading retain their original semantics. |
+| `CONFIG_JSON` and the weights operand | The supported Llama numerical profile and its actual F32/F16/BF16 weights. The optional switch selects the shared single/sharded/adapter manifest. Supported static RoPE and explicit tied-head loading retain their original semantics. |
 | `TOKENIZER` | Explicitly selected native byte-BPE archive or supported Hugging Face raw/GPT-2-Unicode-17/Llama-3-Unicode-17 ByteLevel JSON, bound to the complete independently negotiated decoder profile. |
 | `CAMPAIGN_JSON` | Closed `fa.learned-kv-probe-campaign/1` data: identities, complete labelled population, all tap fitting/calibration rules, original resource budgets and output caps. |
 | `CODEC_BINDING_JSON` | The existing `fa.learned-fit-binding/1` schema: exact fit policy, original fit budget and complete independently retained source descriptors. The command uses the same parser as the publication operator. |
@@ -119,6 +127,22 @@ auxiliary allowance includes the physical campaign, configuration, tokenizer
 and fit-binding bytes. Each auxiliary file read also has a fixed 65,536-attempt
 ceiling. These are logical I/O and numerical counts, not wall-time deadlines,
 allocator measurements or deployment latency guarantees.
+
+An explicitly selected source manifest, its shard index and adapter configuration
+also consume that same auxiliary allowance. Manifest weight-byte/read-call caps
+are conjoined with the campaign's existing input limits; all base files and the
+adapter share one original reader budget and one aggregate physical byte cap.
+The complete campaign estimates, tokenizer and independent codec descriptor
+inventory bind before source tensor access. The original source preparation
+then validates the shard labels, base/effective generation relationship, adapter
+configuration and merge-product allowance before opening those tensor paths.
+It grants no fallback on a missing or rejected source.
+
+The original static merger constructs the effective model under its separately
+declared finite work reservation, and the original decoder captures that model.
+Reader or merge failures keep their original consumed-work report and create no
+campaign output. A new source manifest cannot enlarge the model, codec,
+portable-monitor, auxiliary or weight-reader maxima.
 
 The new report is opened exclusively after complete input admission and before
 codec refit or probe capture. It first records the fixed population, policies,
@@ -215,6 +239,18 @@ Selecting the raw grammar instead refuses before output creation, and replacing
 only the trained tokenizer grammar refuses at the original complete binding.
 The codec command's 23 passing tests include these same eleven command tests;
 those nested executions are not independent additional regression functions.
+
+Five additional source-manifest regression functions cover all single/sharded
+and absent/nonzero-adapter combinations, complete binding against the original
+independent model, source work reports and the actual operator parser. Changing
+only the final value adapter retains the other three tap evaluations while
+preventing monitor export and invalidating the old bound monitor. Exact and
+one-short manifest/campaign reader limits, aggregate auxiliary inputs, merge
+admission and tokenizer/corpus preflight are exercised, with missing tensor
+paths as causal ordering controls. Central execution of the final source passes
+all 16 probe-command tests on qualified `nightly-2026-09-08`. The codec example
+passes all 32 tests, including these same 16 probe functions; their nested
+executions are not additional independent regression functions.
 
 Passing these synthetic tests establishes the command's numerical and custody
 composition. It does not establish trained-model accuracy, label authenticity,
