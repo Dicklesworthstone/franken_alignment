@@ -1,5 +1,36 @@
 # Implementation status · design revision 0.3
 
+## 2026-10-11: native worker deadlines cover cooperative prompt preparation
+
+The actual `fa-native-helper` process now uses `step_cooperative`: at most 256
+advances of the original tokenizer per peer call, charged to its existing step
+allowance and checked against its original absolute deadline. The evaluator's
+explicit `Admitting` state freezes the complete original `WorkerInput`, including
+binary bytes, ordered parts and omissions. It moves the completed encoding
+through the original text-admission handoff and yields before the first native
+token. No tokenizer, numerical engine, worker protocol or manifest is replaced.
+
+Progress retains original tokenization work and cooperative advance attempts
+separately from unchanged numerical work. Cancellation and caught interruption
+close the original observation source and keep spent work without rerunning the
+input. An expired deadline, exhausted allowance or incomplete monitored answer
+cannot issue a vote. Already sent commitment bytes remain sent after a later
+step limit. Fresh synchronous evaluator/peer entry points and the learned
+sidecar's original source polling sequence retain their existing behavior.
+
+All nine new public tests, 110 native-helper unit tests and 15 executable-worker
+regressions pass on qualified `nightly-2026-09-08`: 134 selected tests, including
+the five new private deadline/interruption tests. An independently framed
+403-byte binary input requires 320 real merges and 83 prompt tokens; changing
+its final byte drives actual Allow/Deny. Exact and one-short input, lookup,
+heap, context and process budgets, expiry mid-BPE and at handoff, terminal holds,
+unwinds, observer closure and retained sent commitments are exercised without
+weakening the original assertions. Initial bounded copies/scans, final admission,
+individual numerical tokens and filesystem operations remain nonpreemptive.
+These results establish bounded reference behavior, not detector quality,
+process independence, latency guarantees or complete project qualification.
+See [cooperative native input](docs/COOPERATIVE_NATIVE_INPUT.md).
+
 ## 2026-10-11: checkpoint token documents to usable learned codec files
 
 `train_learned_kv_codec_from_checkpoint` fills the missing first asset-producing

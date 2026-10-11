@@ -3,6 +3,8 @@
 
 #[cfg(test)]
 mod tests;
+#[cfg(test)]
+mod cooperative_tests;
 
 use super::{NativeEvaluationError, NativeEvaluationProgress, NativeEvaluationStatus, NativeEvaluator, TextGenerationReport};
 use super::super::{ClientInterest, ClientPhase, ClientProgress, HelperClient};
@@ -16,6 +18,10 @@ use std::io::{Read, Write};
 /// Length admission only. Entropy, secrecy and independent provisioning remain
 /// host requirements; the numerical sampler is NEVER used to generate this salt.
 pub const MIN_NATIVE_SALT_BYTES: usize = 16;
+
+// A fixed scheduling quantum, not a new tokenizer budget or configurable cap.
+// Each advance still spends the original cursor's exact pair/heap allowance.
+const TOKENIZATION_STEPS_PER_POLL: usize = 256;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum NativeClientError {
@@ -33,7 +39,8 @@ impl std::error::Error for NativeClientError {}
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum NativeClientProgress {
     Protocol(ClientProgress),
-    /// At most one native token computed; no partial answer or vote is exposed.
+    /// Cooperative prompt admission or at most one native token computed;
+    /// no partial prompt IDs, answer bytes or vote are exposed.
     Inference(NativeEvaluationProgress),
     /// Native result frozen into BOTH original frames; not yet written/accepted.
     Judged(Verdict),
@@ -103,8 +110,27 @@ impl<S: Read + Write> NativeHelperClient<S> {
         self.step_with(|| {})
     }
 
+    /// One original I/O step, at most 256 original tokenizer advances, OR at
+    /// most one original monitored token. The first inference step freezes the
+    /// complete input and starts cooperative admission. A completed admission
+    /// yields Running with zero numerical work, even before the quantum is used.
+    /// Later calls retain the original one-token inference and reveal protocol.
+    ///
+    /// Initial bounded input copies, allocation and control/segmentation scans
+    /// remain synchronous. Switching to step/drive during pending admission
+    /// keeps this bounded quantum; it never replaces or restarts that owner.
+    pub fn step_cooperative(&mut self) -> Result<NativeClientProgress, NativeClientError> {
+        self.step_with_mode(true, || {})
+    }
+
     // Private causal interruption seam; no public transport/inference callback.
     fn step_with<F: FnOnce()>(&mut self, after_step: F) -> Result<NativeClientProgress, NativeClientError> {
+        self.step_with_mode(false, after_step)
+    }
+
+    fn step_with_mode<F: FnOnce()>(&mut self, cooperative: bool, after_step: F)
+        -> Result<NativeClientProgress, NativeClientError>
+    {
         if let Some(error) = self.failure {
             self.release_evaluation();
             return Err(error);
@@ -115,13 +141,13 @@ impl<S: Read + Write> NativeHelperClient<S> {
         // A write may have reached the peer before a caught unwind. Neither its
         // frame nor inference is allowed to restart from an older offset/result.
         self.failure = Some(NativeClientError::Interrupted);
-        let result = self.step_once();
+        let result = self.step_once(cooperative);
         after_step();
         self.failure = result.as_ref().err().copied();
         if self.failure.is_some() { self.release_evaluation(); }
         result
     }
-    fn step_once(&mut self) -> Result<NativeClientProgress, NativeClientError> {
+    fn step_once(&mut self, cooperative: bool) -> Result<NativeClientProgress, NativeClientError> {
         if self.client.phase() != ClientPhase::NeedsInference {
             return self.client.step().map(NativeClientProgress::Protocol).map_err(NativeClientError::Protocol);
         }
@@ -133,7 +159,20 @@ impl<S: Read + Write> NativeHelperClient<S> {
         // request while its one-shot response slot remains NeedsInference.
         if self.evaluator.status() == NativeEvaluationStatus::AwaitingInput {
             self.evaluations += 1;
-            self.evaluator.begin(input).map_err(NativeClientError::Inference)?;
+            let admission = if cooperative { self.evaluator.begin_cooperative(input) }
+                else { self.evaluator.begin(input) };
+            admission.map_err(NativeClientError::Inference)?;
+        }
+        if self.evaluator.status() == NativeEvaluationStatus::Admitting {
+            for _ in 0..TOKENIZATION_STEPS_PER_POLL {
+                let progress = self.evaluator.advance(self.evaluator.position()).map_err(NativeClientError::Inference)?;
+                // Do not spend even one numerical token in the call that moves
+                // a completed encoding into its original generation owner.
+                if progress.status != NativeEvaluationStatus::Admitting {
+                    return Ok(NativeClientProgress::Inference(progress));
+                }
+            }
+            return Ok(NativeClientProgress::Inference(self.evaluator.progress()));
         }
         let progress = self.evaluator.advance(self.evaluator.position()).map_err(NativeClientError::Inference)?;
         let verdict = match progress.status {

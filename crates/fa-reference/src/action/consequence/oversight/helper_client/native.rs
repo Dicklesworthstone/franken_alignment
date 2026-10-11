@@ -97,6 +97,9 @@ impl From<Error> for NativeEvaluationError {
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum NativeEvaluationStatus {
     AwaitingInput,
+    /// Exact input is frozen; complete original prompt admission is pending.
+    /// No numerical token, output prefix or verdict is available in this state.
+    Admitting,
     /// Fully admitted input; the next call may compute one original token.
     Running,
     /// A caught unwind remains here; it can never rerun inference.
@@ -127,6 +130,7 @@ pub struct NativeEvaluator {
     status: NativeEvaluationStatus,
     input: Option<WorkerInput>,
     report: Option<TextGenerationReport>,
+    admission_steps: usize,
 }
 impl fmt::Debug for NativeEvaluator {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -141,7 +145,7 @@ impl NativeEvaluator {
         if decoder.position() != 0 || decoder.sampled_draws() != 0
             || decoder.status() != MonitoringStatus::Ready { return Err(Error::WrongState); }
         policy.check_tokenizer(decoder.tokenizer())?;
-        Ok(Self { execution: incremental::Execution::Decoder(Box::new(decoder)), policy, status: NativeEvaluationStatus::AwaitingInput, input: None, report: None })
+        Ok(Self { execution: incremental::Execution::Decoder(Box::new(decoder)), policy, status: NativeEvaluationStatus::AwaitingInput, input: None, report: None, admission_steps: 0 })
     }
 
     pub fn policy(&self) -> &NativeHelperPolicy { &self.policy }

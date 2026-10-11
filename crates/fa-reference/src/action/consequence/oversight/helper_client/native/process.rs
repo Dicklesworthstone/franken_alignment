@@ -17,7 +17,8 @@ pub const MAX_PROCESS_MILLIS: u64 = 3_600_000;
 
 /// Starts immediately, so checkpoint startup cannot renew the protocol deadline.
 /// Not Clone: consuming a worker consumes this allowance. Counts are client steps,
-/// not syscalls or FLOPs. Token computation and filesystem calls are not preempted.
+/// not syscalls or FLOPs. A tokenizer quantum consumes one step, as does one
+/// numerical token. Token computation and filesystem calls are not preempted.
 #[derive(Debug)]
 pub struct NativeProcessBudget {
     started: Instant,
@@ -83,8 +84,10 @@ pub fn inherited_worker_socket() -> Result<UnixStream, NativeProcessError> {
 
 /// Consume one independently provisioned socket, evaluator, salt and lifetime.
 /// Read/write waits use the REMAINING absolute deadline, not a new per-step lease.
-/// Every native token also checks it before and after computing. A slow token may
-/// finish late but cannot trigger the NEXT commitment/reveal write after expiry.
+/// Every fixed tokenizer quantum and native token also checks it before and
+/// after computing. Completing admission yields before prefill. A slow token or
+/// initial bounded input scan may finish late but cannot trigger the NEXT
+/// numerical step or commitment/reveal write after expiry.
 /// A late write may have become visible; Deadline does not mean no bytes were sent.
 ///
 /// No threads, sleep polling, second executor, reconnect, hidden model reroll or
@@ -116,7 +119,7 @@ where F: FnMut(usize, &NativeHelperClient<UnixStream>) -> Instant {
             break NativeProcessStop::Socket(error.kind());
         }
         steps += 1;
-        let result = client.step();
+        let result = client.step_cooperative();
         // Never acknowledge completion outside the configured interval, including
         // a final syscall whose bytes were accepted before the clock check.
         if budget.remaining(now(steps, &client)).is_none() { break NativeProcessStop::Deadline; }
@@ -138,3 +141,6 @@ where F: FnMut(usize, &NativeHelperClient<UnixStream>) -> Instant {
 
 #[cfg(test)]
 mod tests;
+
+#[cfg(test)]
+mod cooperative_tests;

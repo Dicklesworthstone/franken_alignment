@@ -1,5 +1,20 @@
 # Changelog
 
+## 2026-10-11: yield during native helper tokenization before monitored inference
+
+- Add explicit cooperative evaluator and peer entry points around the original
+  tokenizer/text-admission owners. Preserve exact complete worker input and
+  yield after at most 256 cursor advances, including a zero-inference handoff.
+- Make the actual native worker charge these quanta to its existing process-step
+  budget and check its same absolute deadline before and after each call.
+- Retain original tokenization work on failure/cancellation, preserve caught
+  interruption and sent-commitment state, and keep fresh synchronous entry points
+  and learned sidecar polling unchanged.
+- Pass nine new public tests, all 110 native-helper unit tests and 15 executable
+  checkpoint/LoRA/static-RoPE worker regressions. Deadline expiry during BPE and
+  at handoff prevents the first native token; exact binary input still drives
+  original Allow/Deny and complete commit/reveal.
+
 ## 2026-10-11: train original learned codec files from checkpoint token documents
 
 - Add the six-path `train_learned_kv_codec_from_checkpoint` command, connecting

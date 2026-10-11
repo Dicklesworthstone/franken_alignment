@@ -38,6 +38,10 @@ and use [learned publication](docs/LEARNED_OPERATOR_PUBLICATION.md) with a
 The linked contracts and implementation status distinguish executed reference
 behavior from detector quality and complete project qualification.
 
+The [native worker also yields during input tokenization](docs/COOPERATIVE_NATIVE_INPUT.md)
+under its existing absolute deadline and process-step allowance, before starting
+monitored inference. It preserves the complete original request and spent work.
+
 ---
 
 ## TL;DR
