@@ -6,6 +6,9 @@
 //! is NOT authentication, a signature, or protection against a malicious writer.
 #![forbid(unsafe_code)]
 
+#[cfg(unix)]
+pub mod file;
+
 use fa_reference::{Effect, Rights};
 use std::collections::BTreeSet;
 use std::fmt;
