@@ -3,8 +3,10 @@
 //! optimizer, calibrator and exact scorer. No model, score or authority substitute.
 mod campaign;
 mod export;
+mod artifact;
 pub use campaign::{KvCampaignBudget, KvCampaignWork, KvDecoderCampaign, KvTapCampaign};
 pub use export::{KvMonitorSettings, MAX_KV_MONITOR_JSON_BYTES};
+pub use artifact::{KvMonitorArtifact, MAX_KV_MONITOR_ARTIFACT_BYTES};
 
 use super::{LabelledPrefix, MAX_CAPTURE_TOKENS};
 use super::super::{CaseLabel, CaseOrigin, ClassCounts, DataSplit, ProbeCorpus, SealedCorpus,

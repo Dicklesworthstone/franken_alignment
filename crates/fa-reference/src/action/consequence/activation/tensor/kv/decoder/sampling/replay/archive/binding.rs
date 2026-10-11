@@ -3,26 +3,13 @@
 use super::{Recipe, wire::Writer};
 use crate::action::consequence::activation::{CaptureProfile, monitor::learned::LearnedMonitorBudget};
 use crate::action::consequence::activation::tensor::kv::{
-    decoder::monitoring::LearnedStreamRetention, experiment::KvSide, model::learned::GroupKey,
+    decoder::{DecoderModel, monitoring::{LearnedDecoderPolicy, LearnedStreamRetention}},
+    experiment::KvSide, model::learned::GroupKey,
 };
 use crate::Error;
 
 pub(super) fn write(w: &mut Writer<'_>, recipe: &Recipe) -> Result<(), Error> {
-    let model = &recipe.model.data;
-    let p = &model.profile; let id = p.identity(); let s = p.shape();
-    let scaling = p.rotary_scaling().binding_bytes();
-    w.bytes(if scaling.is_some() { b"FALGRCP\x02" } else { b"FALGRCP\x01" })?;
-    for value in [id.tenant, id.model, id.model_generation, id.tokenizer_generation,
-        id.profile_generation, p.epsilon().to_bits(), p.theta().to_bits()] { w.u64(value)?; }
-    if let Some(binding) = scaling { w.bytes(&binding)?; }
-    for count in [s.vocabulary, s.hidden, s.intermediate, s.layers, s.query_heads,
-        s.cache_heads, s.context, p.parameter_count()] { w.size(count)?; }
-    // Original parameters in native execution order, including unused weights
-    // and signed-zero bits. Equal model IDs or equal prefix logits do not suffice.
-    w.floats(&model.embeddings)?;
-    w.size(model.layers.len())?;
-    for layer in &model.layers { for tensor in layer.weights.tensors() { w.floats(tensor)?; } }
-    w.floats(&model.final_norm)?; w.floats(&model.output)?;
+    write_model(w, &recipe.model)?;
     w.u64(recipe.stream)?; w.u64(recipe.evaluation_origin)?;
     w.words(recipe.spec.prompt())?; w.size(recipe.spec.max_new_tokens())?;
     w.size(recipe.spec.stop_tokens().len())?;
@@ -37,7 +24,32 @@ pub(super) fn write(w: &mut Writer<'_>, recipe: &Recipe) -> Result<(), Error> {
         t.source_check_values, t.source_check_encoded_bytes, t.source_check_reconstruction_products,
         t.monitor_encoded_bytes, t.monitor_probe_coordinates, t.monitor_reconstruction_products,
         t.monitor_materialized_values, t.monitor_refinements] { w.u64(value)?; }
-    let policy = &recipe.policy; let prep = policy.preparation();
+    write_policy(w, &recipe.policy)?;
+    Ok(())
+}
+
+// These are the SAME byte emitters used by generation replay above. The monitor
+// artifact adds its own domain, but never changes historical recipe bytes.
+fn write_model(w: &mut Writer<'_>, model: &DecoderModel) -> Result<(), Error> {
+    let model = &model.data;
+    let p = &model.profile; let id = p.identity(); let s = p.shape();
+    let scaling = p.rotary_scaling().binding_bytes();
+    w.bytes(if scaling.is_some() { b"FALGRCP\x02" } else { b"FALGRCP\x01" })?;
+    for value in [id.tenant, id.model, id.model_generation, id.tokenizer_generation,
+        id.profile_generation, p.epsilon().to_bits(), p.theta().to_bits()] { w.u64(value)?; }
+    if let Some(binding) = scaling { w.bytes(&binding)?; }
+    for count in [s.vocabulary, s.hidden, s.intermediate, s.layers, s.query_heads,
+        s.cache_heads, s.context, p.parameter_count()] { w.size(count)?; }
+    // Original parameters in native execution order, including unused weights
+    // and signed-zero bits. Equal model IDs or equal prefix logits do not suffice.
+    w.floats(&model.embeddings)?;
+    w.size(model.layers.len())?;
+    for layer in &model.layers { for tensor in layer.weights.tensors() { w.floats(tensor)?; } }
+    w.floats(&model.final_norm)?; w.floats(&model.output)?;
+    Ok(())
+}
+fn write_policy(w: &mut Writer<'_>, policy: &LearnedDecoderPolicy) -> Result<(), Error> {
+    let prep = policy.preparation();
     w.u64(policy.inference().scalar_products)?;
     w.size(prep.compression.source_values)?; w.size(prep.compression.encoded_bytes)?;
     w.u64(prep.compression.work_units)?;
@@ -88,6 +100,33 @@ pub(super) fn write(w: &mut Writer<'_>, recipe: &Recipe) -> Result<(), Error> {
     }
     Ok(())
 }
+
+pub(crate) fn encode_monitor_binding(model: &DecoderModel, policy: &LearnedDecoderPolicy,
+    limit: usize) -> Result<Vec<u8>, Error>
+{
+    let mut count = Writer::count(limit);
+    monitor_binding(&mut count, model, policy)?;
+    let mut output = Writer::collect(count.len())?;
+    monitor_binding(&mut output, model, policy)?;
+    output.finish()
+}
+pub(crate) fn verify_monitor_binding(bytes: &[u8], model: &DecoderModel,
+    policy: &LearnedDecoderPolicy) -> Result<(), Error>
+{
+    let mut output = Writer::compare(bytes);
+    monitor_binding(&mut output, model, policy)?;
+    output.complete()
+}
+fn monitor_binding(w: &mut Writer<'_>, model: &DecoderModel, policy: &LearnedDecoderPolicy)
+    -> Result<(), Error>
+{
+    if model.cache_profile() != policy.codec().profile()
+        || model.cache_profile() != policy.monitor().profile() { return Err(Error::Binding); }
+    w.bytes(b"FALKVBN1")?;
+    write_model(w, model)?;
+    write_policy(w, policy)
+}
+
 fn side(w: &mut Writer<'_>, side: KvSide) -> Result<(), Error> {
     w.u64(match side { KvSide::Key => 0, KvSide::Value => 1 })
 }

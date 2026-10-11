@@ -1,5 +1,19 @@
 # Changelog
 
+## 2026-10-11: exact trained monitor assets at the publication operator
+
+- Export accepted complete K/V campaigns as bounded `FAKVMON2` artifacts with
+  exact model weights, tokenizer semantics, codec basis/provenance, probe words
+  and operational caps, using the original replay model/policy writers.
+- Verify canonical embedded JSON and complete independently supplied assets at
+  the actual learned operator before generation. Preserve legacy JSON, original
+  replay encoding and all existing numerical/effect owners.
+- Pass eight public artifact tests, 44 campaign/codec/replay regressions and
+  three actual loader tests with original sampled quiet/hold behavior,
+  unused-weight substitution and inconsistent embedded-policy controls.
+  The learned-command selection passes 32 of 34 tests; the same two existing
+  real Unix-listener tests remain blocked at listener creation by EPERM.
+
 ## 2026-10-11: explicit learned stream finish and exact receipt recovery
 
 - Add predecessor-bound finish selection to the existing learned publication

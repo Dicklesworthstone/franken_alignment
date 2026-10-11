@@ -5,6 +5,7 @@
 pub mod files;
 
 mod binding;
+pub(crate) use binding::{encode_monitor_binding, verify_monitor_binding};
 mod state;
 pub mod stream;
 mod wire;

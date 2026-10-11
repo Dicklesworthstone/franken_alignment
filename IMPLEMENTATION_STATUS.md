@@ -1,5 +1,30 @@
 # Implementation status · design revision 0.3
 
+## 2026-10-11: complete model and tokenizer binding for trained monitors
+
+Accepted K/V campaigns can now export `FAKVMON2`: the unchanged canonical v1
+monitor JSON, the exact original tokenizer archive and complete original
+model/codec/policy comparison bytes. The public verifier checks every parameter,
+including unused weights and signed zeros, complete tokenizer semantics, codec
+basis and fit provenance, all probes and every operational cap. Matching model
+labels or matching logits on the campaign cases cannot hide a substituted asset.
+
+The actual learned operator consumes this artifact with its independently
+imported model, tokenizer and codec before generation or store creation. Its
+original parser and monitor constructors remain the numerical owners. V1 JSON
+retains its existing provisioning behavior and 2 MiB ceiling; the complete
+artifact is bounded at 16 MiB and charged to the existing aggregate asset cap.
+The shared original model/policy writers retain generation replay byte order.
+The artifact compares intended assets; it authenticates neither its provenance
+nor the campaign's labels or acceptance. Oversized full bindings refuse.
+
+All eight new public artifact tests and 44 existing campaign, codec and replay
+regressions pass on qualified `nightly-2026-09-08`. All three new actual operator
+loader tests pass, covering complete binding and real sampled quiet/hold behavior.
+The full learned-command selection passes 32 of 34 tests; the same two existing
+Unix-listener tests remain blocked at listener creation by environment EPERM.
+See [bound trained monitors](docs/BOUND_TRAINED_KV_MONITORS.md).
+
 ## 2026-10-11: separately reviewed learned stream finish
 
 The learned publication operator now accepts an explicit

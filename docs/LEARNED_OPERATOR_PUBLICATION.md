@@ -103,7 +103,7 @@ and bounds bytes before accepting the complete file.
 | Primary tokenizer | Explicit `native_archive` or `huggingface_raw_bytelevel` selection |
 | Prompt and sampling file | Actual UTF-8 prompt bytes and original `fa.decoder-sampling/1` sampling configuration |
 | Fit binding and fit archive | Independently retained `fa.learned-fit-binding/1` plus original `FAKVFIT/1` archive |
-| Learned monitor | `fa.learned-kv-monitor/1`, with every original layer and both K/V sides |
+| Learned monitor | `FAKVMON2` bound artifact or legacy `fa.learned-kv-monitor/1`, with every original layer and both K/V sides |
 | Native roster | `fa.learned-native-roster/1`, with actual imported model/tokenizer/monitor/sampling files for every committee member |
 | `REVIEWER_PROFILE` | Existing peer profile matching the host's reviewer, scope and Unix-millisecond clock |
 | `CONFIG.evidence_path` | Fresh policy-only evidence with the exact complete committee member keys and **empty helper contexts** |
@@ -234,7 +234,8 @@ referenced files. A repeated path read is charged again. Smaller per-file parser
 and model bounds also apply.
 
 The recipe itself has a 64 KiB bound; fit-binding, monitor and native-roster JSON
-each have a 2 MiB bound. Primary weight reading is additionally bounded by the
+each have a 2 MiB bound. A complete `FAKVMON2` monitor artifact has a 16 MiB bound
+within the same aggregate allowance. Primary weight reading is additionally bounded by the
 negotiated model size, the original checkpoint ceiling and the host's journal
 byte limit. Fit archives retain their original archive limit but must also fit
 the remaining aggregate asset allowance.
@@ -356,6 +357,15 @@ runtime budgets, then execute original sampled quiet and hold behavior. See
 independent model/codec provisioning. The JSON does not authenticate training
 labels, model/tokenizer identity or lineage, and import alone does not establish
 held-out acceptance.
+
+`KvDecoderCampaign::monitor_artifact` also exports `FAKVMON2`, which contains
+that same JSON and complete original model, tokenizer and codec/policy comparison
+bytes. Set `files.monitor` to this artifact to require exact matching of the
+independently imported assets before generation or store creation. This detects
+changed unused weights, tokenizer semantics, codec provenance and inconsistent
+settings even under unchanged numeric identities. It does not authenticate the
+artifact or its training labels. See [bound trained monitors](BOUND_TRAINED_KV_MONITORS.md)
+for the complete binding and size contract.
 
 ## Independent fit binding: fa.learned-fit-binding/1
 
@@ -546,10 +556,11 @@ has its own predecessor-bound form and receipt lookup described above.
 ## Verification status
 
 The implementation was independently reviewed and executed with qualified
-`nightly-2026-09-08`. All thirty-one learned-command example tests compile.
-Twenty-nine pass: all eleven original direct/admission tests, seven progressive
-review tests, three actual trained-monitor export/loader tests and eight explicit
-finish tests. Two actual Unix-listener tests fail at listener creation with environment
+`nightly-2026-09-08`. All thirty-four learned-command example tests compile.
+Thirty-two pass: all eleven original direct/admission tests, seven progressive
+review tests, three trained-monitor JSON export/loader tests, three complete
+bound-artifact loader tests and eight explicit finish tests. Two actual
+Unix-listener tests fail at listener creation with environment
 EPERM: the complete peer publication test and authenticated stop during a
 partially computed refined round. Neither test is skipped, and their transport
 paths have not been replaced by a weaker fallback.

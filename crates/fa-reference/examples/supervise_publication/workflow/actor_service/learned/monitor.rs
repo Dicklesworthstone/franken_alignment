@@ -6,7 +6,9 @@ use fa_reference::action::consequence::activation::monitor::learned::{
     LearnedMonitorBudget, LearnedRefinementMonitor,
     model::{KvTap, LearnedAuditBudget, LearnedAuditPreparationBudget, LearnedModelMonitor},
 };
-use fa_reference::action::consequence::activation::probe::{LinearProbe, learned::CheckedKvBudget};
+use fa_reference::action::consequence::activation::probe::{LinearProbe, learned::CheckedKvBudget,
+    training::decoder::kv::{KvMonitorArtifact, MAX_KV_MONITOR_ARTIFACT_BYTES}};
+use fa_reference::action::consequence::activation::monitor::decoder::sampled::generation::tokenizer::ByteBpe;
 use fa_reference::action::consequence::activation::tensor::kv::{
     decoder::{DecoderBudget, DecoderModel, monitoring::{LearnedDecoderPolicy, LearnedStreamRetention}},
     experiment::KvSide, model::learned::{CompressionBudget, LearnedKvCodec},
@@ -16,6 +18,7 @@ use std::collections::BTreeMap;
 struct Probe { id: u64, generation: u64, weights: Vec<f32>, bias: f32, threshold: f32 }
 struct Tap { budget: LearnedMonitorBudget, probes: Vec<Probe> }
 pub(super) struct MonitorInput {
+    artifact: Option<Vec<u8>>,
     taps: BTreeMap<KvTap, Tap>,
     budget: LearnedAuditBudget,
     preparation: LearnedAuditPreparationBudget,
@@ -28,6 +31,18 @@ pub(super) struct BoundMonitor {
 }
 impl MonitorInput {
     pub(super) fn decode(bytes: &[u8]) -> Result<Self, String> {
+        if KvMonitorArtifact::is_encoded(bytes) {
+            let artifact = KvMonitorArtifact::decode(bytes, MAX_KV_MONITOR_ARTIFACT_BYTES).map_err(debug)?;
+            let mut monitor = Self::decode_json(artifact.monitor_json())?;
+            let mut retained = Vec::new();
+            retained.try_reserve_exact(bytes.len()).map_err(debug)?;
+            retained.extend_from_slice(bytes);
+            monitor.artifact = Some(retained);
+            return Ok(monitor);
+        }
+        Self::decode_json(bytes)
+    }
+    fn decode_json(bytes: &[u8]) -> Result<Self, String> {
         let mut root = Fields::parse(bytes, MAX_DATA_BYTES)?;
         if root.text("schema")? != "fa.learned-kv-monitor/1" {
             return Err("unsupported learned K/V monitor schema".into());
@@ -81,13 +96,29 @@ impl MonitorInput {
         }
         root.end()?;
         if taps.is_empty() { return Err("learned monitoring requires a complete K/V tap inventory".into()); }
-        Ok(Self { taps, budget, preparation: LearnedAuditPreparationBudget {
+        Ok(Self { artifact: None, taps, budget, preparation: LearnedAuditPreparationBudget {
             compression: compression_value, source_check: source_value }, inference, retention })
     }
 
     /// Every layer and BOTH K/V sides bind to the imported ORIGINAL model.
     /// No empty, residual-stream, missing-layer or inferred quiet roster enters.
     pub(super) fn bind(self, model: &DecoderModel, codec: LearnedKvCodec) -> Result<BoundMonitor, String> {
+        self.bind_inner(model, None, codec)
+    }
+    pub(super) fn bind_with_tokenizer(self, model: &DecoderModel, tokenizer: &ByteBpe,
+        codec: LearnedKvCodec) -> Result<BoundMonitor, String>
+    {
+        self.bind_inner(model, Some(tokenizer), codec)
+    }
+    fn bind_inner(self, model: &DecoderModel, tokenizer: Option<&ByteBpe>,
+        codec: LearnedKvCodec) -> Result<BoundMonitor, String>
+    {
+        if self.artifact.is_some() && tokenizer.is_none() {
+            return Err("bound learned monitor requires the independently supplied actual tokenizer".into());
+        }
+        if tokenizer.is_some_and(|tokenizer| !tokenizer.binds(model.profile())) {
+            return Err("learned monitor tokenizer does not bind the actual model".into());
+        }
         if codec.profile() != model.cache_profile() { return Err("fit archive does not bind this model's K/V profile".into()); }
         let mut taps = BTreeMap::new();
         let mut registered = BTreeMap::new();
@@ -104,6 +135,11 @@ impl MonitorInput {
         }
         let monitor = LearnedModelMonitor::new(model.cache_profile().clone(), taps, self.budget).map_err(debug)?;
         let policy = LearnedDecoderPolicy::new(codec, monitor, self.retention, self.preparation, self.inference).map_err(debug)?;
+        if let Some(bytes) = self.artifact {
+            KvMonitorArtifact::decode(&bytes, MAX_KV_MONITOR_ARTIFACT_BYTES).map_err(debug)?
+                .verify(model, tokenizer.ok_or("bound learned monitor tokenizer is missing")?, &policy)
+                .map_err(|error| format!("bound learned monitor does not match the independently supplied assets: {error:?}"))?;
+        }
         Ok(BoundMonitor { policy, probes: registered })
     }
 }

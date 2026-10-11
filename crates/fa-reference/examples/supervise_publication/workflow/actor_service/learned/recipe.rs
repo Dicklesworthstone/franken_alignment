@@ -16,6 +16,7 @@ use fa_reference::action::consequence::activation::tensor::kv::decoder::{
     sampling::monitored::{GenerationBudget, GenerationTelemetryBudget, MAX_GENERATION_TOKENS},
 };
 use fa_reference::action::consequence::activation::tensor::kv::model::learned::replay::archive::MAX_FIT_ARCHIVE_BYTES;
+use fa_reference::action::consequence::activation::probe::training::decoder::kv::MAX_KV_MONITOR_ARTIFACT_BYTES;
 use fa_reference::action::consequence::delivery::persistent::observed::{
     decoder::learned::FileLearnedConfig, guarded::FileRecoveryFloor,
     helpers::learned::native::{NativeReviewCost, NativeReviewLimits},
@@ -77,7 +78,7 @@ pub(super) fn load(file: &Path, config: &Config, require_native: bool) -> Result
     // The independent binding is never obtained from the archive it checks.
     // Closed probe/fit data admission precedes any model weight ingestion.
     let binding = fit::binding(&assets.read(&recipe.files.fit_binding, MAX_DATA_BYTES)?)?;
-    let monitor = MonitorInput::decode(&assets.read(&recipe.files.monitor, MAX_DATA_BYTES)?)?;
+    let monitor = MonitorInput::decode(&assets.read(&recipe.files.monitor, MAX_KV_MONITOR_ARTIFACT_BYTES)?)?;
     let configuration = assets.read(&recipe.files.configuration, MAX_CONFIG_BYTES)?;
     let negotiated = LlamaConfig::decode(recipe.identity, recipe.context, &configuration).map_err(debug)?;
     for group in recipe.priority.iter().filter(|_| require_native) {
@@ -105,7 +106,7 @@ pub(super) fn load(file: &Path, config: &Config, require_native: bool) -> Result
         &configuration, &weights).map_err(debug)?;
     let archive = assets.read(&recipe.files.fit_archive, MAX_FIT_ARCHIVE_BYTES)?;
     let codec = fit::replay(&archive, &binding, MAX_FIT_ARCHIVE_BYTES)?;
-    let monitor = monitor.bind(&model, codec)?;
+    let monitor = monitor.bind_with_tokenizer(&model, &tokenizer, codec)?;
     let source = LearnedTextConfig { stream: recipe.stream, evaluation_origin: recipe.evaluation_origin,
         monitor_generation: recipe.monitor_generation, prompt, tokenization: recipe.tokenization,
         max_new_tokens: recipe.max_new_tokens, stop_tokens: recipe.stop_tokens, sampling,

@@ -66,49 +66,63 @@ impl KvDecoderCampaign {
         max_bytes: usize) -> Result<Vec<u8>, Error>
     {
         if max_bytes > MAX_KV_MONITOR_JSON_BYTES { return Err(Error::Limit); }
-        self.policy(codec.clone(), settings)?;
-        let retention = match settings.retention {
-            LearnedStreamRetention::All => "all",
-            LearnedStreamRetention::None => "none",
-            LearnedStreamRetention::Heads(_) => return Err(Error::InvalidInput),
-        };
-        let probes = self.probes()?;
-        let compression = settings.preparation.compression;
-        let checked = settings.preparation.source_check;
-        let mut json = LimitedJson { bytes: String::new(), limit: max_bytes };
-        write!(json, "{{\"schema\":\"fa.learned-kv-monitor/1\",\"retention\":\"{retention}\",\"inference_products\":{},\"preparation\":{{\"compression\":{{\"source_values\":{},\"encoded_bytes\":{},\"work_units\":{}}},\"source_check\":{{\"source_values\":{},\"encoded_bytes\":{},\"reconstruction_products\":{}}}}},\"audit\":{{\"rows\":{},\"budget\":",
-            settings.inference.scalar_products, compression.source_values, compression.encoded_bytes,
-            compression.work_units, checked.source_values, checked.encoded_bytes,
-            checked.reconstruction_products, settings.audit.rows).map_err(|_| Error::Limit)?;
-        monitoring(&mut json, settings.audit.monitoring)?;
-        json.write_str("},\"taps\":[").map_err(|_| Error::Limit)?;
-        for (index, (tap, probe)) in probes.iter().enumerate() {
+        let policy = self.policy(codec.clone(), settings)?;
+        encode_monitor_json(&policy, max_bytes)
+    }
+}
+
+// One canonical emitter for v1 exports and FAKVMON2 policy comparison. The
+// campaign delegates here only after its original whole-roster acceptance.
+pub(super) fn encode_monitor_json(policy: &LearnedDecoderPolicy, max_bytes: usize)
+    -> Result<Vec<u8>, Error>
+{
+    if max_bytes > MAX_KV_MONITOR_JSON_BYTES { return Err(Error::Limit); }
+    let retention = match policy.retention_policy() {
+        LearnedStreamRetention::All => "all",
+        LearnedStreamRetention::None => "none",
+        LearnedStreamRetention::Heads(_) => return Err(Error::InvalidInput),
+    };
+    let monitor = policy.monitor();
+    let compression = policy.preparation().compression;
+    let checked = policy.preparation().source_check;
+    let mut json = LimitedJson { bytes: String::new(), limit: max_bytes };
+    write!(json, "{{\"schema\":\"fa.learned-kv-monitor/1\",\"retention\":\"{retention}\",\"inference_products\":{},\"preparation\":{{\"compression\":{{\"source_values\":{},\"encoded_bytes\":{},\"work_units\":{}}},\"source_check\":{{\"source_values\":{},\"encoded_bytes\":{},\"reconstruction_products\":{}}}}},\"audit\":{{\"rows\":{},\"budget\":",
+        policy.inference().scalar_products, compression.source_values, compression.encoded_bytes,
+        compression.work_units, checked.source_values, checked.encoded_bytes,
+        checked.reconstruction_products, monitor.budget().rows).map_err(|_| Error::Limit)?;
+    monitoring(&mut json, monitor.budget().monitoring)?;
+    json.write_str("},\"taps\":[").map_err(|_| Error::Limit)?;
+    for (index, (tap, row)) in monitor.taps().iter().enumerate() {
+        if index > 0 { json.write_str(",").map_err(|_| Error::Limit)?; }
+        let side = match tap.side { KvSide::Key => "key", KvSide::Value => "value" };
+        write!(json, "{{\"layer\":{},\"side\":\"{side}\",\"budget\":", tap.layer).map_err(|_| Error::Limit)?;
+        monitoring(&mut json, row.budget())?;
+        json.write_str(",\"probes\":[").map_err(|_| Error::Limit)?;
+        for (index, probe) in row.registered_probes().iter().enumerate() {
             if index > 0 { json.write_str(",").map_err(|_| Error::Limit)?; }
-            let side = match tap.side { KvSide::Key => "key", KvSide::Value => "value" };
-            write!(json, "{{\"layer\":{},\"side\":\"{side}\",\"budget\":", tap.layer).map_err(|_| Error::Limit)?;
-            monitoring(&mut json, settings.taps[tap])?;
             let identity = probe.identity();
             let (weights, bias, threshold) = probe.coefficient_bits();
-            write!(json, ",\"probes\":[{{\"id\":{},\"generation\":{},\"weights\":[",
+            write!(json, "{{\"id\":{},\"generation\":{},\"weights\":[",
                 identity.id, identity.generation).map_err(|_| Error::Limit)?;
             for (index, weight) in weights.iter().enumerate() {
                 if index > 0 { json.write_str(",").map_err(|_| Error::Limit)?; }
                 write!(json, "{}", f32::from_bits(*weight)).map_err(|_| Error::Limit)?;
             }
-            write!(json, "],\"bias\":{},\"threshold\":{}}}]}}",
+            write!(json, "],\"bias\":{},\"threshold\":{}}}",
                 f32::from_bits(bias), f32::from_bits(threshold)).map_err(|_| Error::Limit)?;
         }
         json.write_str("]}").map_err(|_| Error::Limit)?;
-        let bytes = json.bytes.into_bytes();
-        // Match the actual unchanged consumer's parser bounds, in addition to
-        // incremental output admission. Original probe constructors ensure all
-        // emitted binary32 values are finite; Display preserves their bits.
-        crate::strict_json::parse(&bytes, crate::strict_json::Limits {
-            max_bytes: MAX_KV_MONITOR_JSON_BYTES, max_depth: 10,
-            max_items: 262_144, max_string_bytes: MAX_KV_MONITOR_JSON_BYTES,
-        }).map_err(|_| Error::Limit)?;
-        Ok(bytes)
     }
+    json.write_str("]}").map_err(|_| Error::Limit)?;
+    let bytes = json.bytes.into_bytes();
+    // Match the actual unchanged consumer's parser bounds, in addition to
+    // incremental output admission. Original probe constructors ensure all
+    // emitted binary32 values are finite; Display preserves their bits.
+    crate::strict_json::parse(&bytes, crate::strict_json::Limits {
+        max_bytes: MAX_KV_MONITOR_JSON_BYTES, max_depth: 10,
+        max_items: 262_144, max_string_bytes: MAX_KV_MONITOR_JSON_BYTES,
+    }).map_err(|_| Error::Limit)?;
+    Ok(bytes)
 }
 
 fn monitoring(json: &mut LimitedJson, budget: LearnedMonitorBudget) -> Result<(), Error> {
