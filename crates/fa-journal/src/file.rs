@@ -4,11 +4,14 @@
 //! file/directory synchronization. This is not a hostile-writer, distributed,
 //! remote-receipt authentication, or exactly-once external-execution boundary.
 
+mod recovery;
+pub use recovery::FileRecovery;
+
 use crate::{Event, Head, Identity, Journal, Limits};
 use fa_reference::Rights;
 use std::fmt;
 use std::fs::{File, OpenOptions, TryLockError};
-use std::io::{self, BufReader, Seek, SeekFrom, Write};
+use std::io::{self, Seek, SeekFrom, Write};
 use std::os::unix::fs::OpenOptionsExt;
 use std::path::Path;
 
@@ -18,6 +21,8 @@ pub enum Error {
     Io(io::Error),
     Busy,
     Poisoned,
+    /// A consumed recovery had not yet verified clean EOF and anchor coverage.
+    RecoveryIncomplete,
 }
 
 impl fmt::Display for Error {
@@ -87,23 +92,11 @@ impl FileJournal {
         minimum: Head,
         limits: Limits,
     ) -> Result<Self, Error> {
-        // Validate limits/context before opening or reading the supplied path.
-        Journal::new(identity, limits)?;
-        let path = path.as_ref();
-        let directory = parent_directory(path)?;
-        let mut file = OpenOptions::new().read(true).write(true).open(path)?;
-        lock(&file)?;
-        let metadata = file.metadata()?;
-        if !metadata.is_file() {
-            return Err(io::Error::new(io::ErrorKind::InvalidInput, "not a regular journal file").into());
+        let mut recovery = Self::begin_open(path, identity, minimum, limits)?;
+        while recovery.progress().status == crate::replay::ReplayStatus::Reading {
+            recovery.advance(crate::replay::ReplayBudget::UNLIMITED)?;
         }
-        if metadata.len() > limits.max_total_bytes {
-            return Err(crate::Error::Limit.into());
-        }
-        let journal = Journal::replay(BufReader::new(&mut file), identity, minimum, limits)?;
-        file.sync_all()?;
-        directory.sync_all()?;
-        Ok(Self { file, journal, poisoned: false })
+        recovery.finish()
     }
 
     /// Persist one checked transition before returning its new recovery anchor.

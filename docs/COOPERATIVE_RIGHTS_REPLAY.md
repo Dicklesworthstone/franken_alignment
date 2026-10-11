@@ -49,3 +49,35 @@ The preparation environment has no RCH or Rust toolchain. Authored Rust and
 compile-fail tests, compilation, rustfmt and Clippy are unexecuted. The required
 remote-only gate must run on the integrated revision; source/hash checks are not
 runtime, crash, performance or production qualification. No bead is closed.
+
+## Locked file recovery and its existing synchronous consumer
+
+FileJournal::begin_open opens the existing file under its original exclusive
+writer lock and returns FileRecovery. The same lock stays held during all polls,
+after Ready, and through final file-plus-parent-directory synchronization.
+Only consuming finish returns the original FileJournal. Incomplete finish,
+failed replay, changed file extent, sync failure or unwind returns no writer.
+Cancellation/drop releases the lock and discards only private reconstructed state;
+it never creates, truncates, rewrites or repairs journal bytes.
+
+The existing FileJournal::open now drives this same recovery implementation to
+completion. Both APIs retain the original identity/limit admission before open,
+regular-file/extent checks, independently supplied minimum, strict suffix replay,
+and sync-before-return. Complete unknown liabilities are retained, not refunded;
+recovered accounting is still not an external dispatch or authenticated receipt.
+No new event or epoch is invented, and append/commit semantics are unchanged.
+
+The file adapter uses an explicitly bounded 8 KiB BufReader. Replay read counters
+charge that interface's delivered bytes and calls, not underlying physical I/O
+or read-ahead. Opening/locking, metadata checks and final synchronization remain
+separate operations. The lock is advisory and assumes cooperating writers in a
+trusted directory; extent rechecking is not malicious-writer authentication.
+
+Seven public file regressions cover tiny polls, unknown suffix recovery and the
+next append, locks through recovery, cancellation at framing boundaries and after
+Ready, premature finish, damaged files, context/anchor and lifetime limits, and
+an extent change after EOF. Three injected-barrier tests cover failure before
+file sync and at directory sync, premature sync prevention, and a sync unwind.
+They retain original bytes and require the lock to release on unsuccessful
+finalization. These ten additional Rust tests and the file compile-fail example
+are authored but unexecuted under the same RCH limitation stated above.
