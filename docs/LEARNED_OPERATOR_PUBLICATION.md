@@ -3,11 +3,14 @@
 `create-learned-generated` connects explicitly imported model and tokenizer
 assets, a verified learned K/V fit archive, registered probes, native helper
 models, and independent human review to the original durable publication owner.
-It generates one complete message ending in an admitted control stop, runs the
-explicitly provisioned native sidecar congress, and publishes only through the
+Each message request generates complete text ending in an admitted control stop,
+runs the explicitly provisioned native sidecar congress, and publishes only through the
 existing two-key path. Recipe version 1 retains one coarse round. Version 2 can
 purchase retained exact residuals and run fresh reviews under a fixed bounded
-schedule when the original congress records uncertainty.
+schedule when the original congress records uncertainty. Version 3 adds explicit
+single/sharded checkpoint sources with optional saved static LoRA adapters.
+Version 4 also permits finite continuation after a confirmed message, using the
+same admitted numerical owner and original remaining allowances.
 
 The native helper models execute **inside the supervising process**, with separate
 original evaluator owners and fixed input contracts. They are not helper OS
@@ -17,8 +20,10 @@ Linux peer-checked socket protocols.
 
 The implementation is
 [`workflow/actor_service/learned.rs`](../crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned.rs).
-The schema parsers are its `learned/recipe.rs`, `fit.rs`, `monitor.rs`,
-`native.rs` and `fields.rs` modules.
+The schema parsers are its `learned/recipe.rs`, `weights.rs`, `fit.rs`, `monitor.rs`,
+`native.rs` and `fields.rs` modules. Checkpoint sources use the shared
+[`support/checkpoint_source.rs`](../crates/fa-reference/examples/support/checkpoint_source.rs)
+loader and the original decoder, indexed reader and static adapter merger.
 
 ## Commands and ordinary operation
 
@@ -28,6 +33,7 @@ Use the repository-built `supervise_publication` example on Linux:
 supervise_publication create-learned-generated CONFIG LEARNED_RECIPE REVIEWER_PROFILE
 supervise_publication create-learned-generated CONFIG LEARNED_RECIPE REVIEWER_PROFILE --continue-generation
 supervise_publication create-learned-generated CONFIG LEARNED_RECIPE --resume
+supervise_publication create-learned-generated CONFIG NEXT_RECIPE REVIEWER_PROFILE --after-message PREVIOUS_REQUEST
 supervise_publication create-learned-generated CONFIG FINISH_RECIPE REVIEWER_PROFILE --finish-after-message PREVIOUS_REQUEST
 supervise_publication create-learned-generated CONFIG FINISH_RECIPE --resume --finish-after-message PREVIOUS_REQUEST
 ```
@@ -43,6 +49,13 @@ exact original message's confirmed receipt. It preserves the numerical recipe,
 runs a fresh native review and requires another independent human decision.
 See [learned stream finish](LEARNED_STREAM_FINISH_OPERATOR.md) for predecessor,
 capacity and exact finish-recovery rules.
+
+For a stream admitted with recipe version 4, `--after-message` continues after
+the latest receipt-confirmed message under a new request ID. It resumes the same
+finite generation and requires fresh native and human review. Existing version
+1–3 histories cannot be upgraded to this mode. See
+[finite learned text stream continuation](LEARNED_TEXT_STREAM_CONTINUATION.md)
+for the complete predecessor, stop-state and remaining-capacity contract.
 
 For example, start the supervisor with actual operator files:
 
@@ -98,13 +111,13 @@ and bounds bytes before accepting the complete file.
 | Input | Required content |
 | --- | --- |
 | `CONFIG` | Existing supervised-publication version-1 configuration: authority, target, policy, congress, helper contracts, human policy, source policy and timing |
-| `LEARNED_RECIPE` | `fa.learned-publication/1` for one coarse round, or explicit `/2` for bounded residual refinement |
-| Primary model configuration and weights | Original admitted Llama configuration and one complete SafeTensors file |
+| `LEARNED_RECIPE` | `fa.learned-publication/1` for one coarse round, `/2` for bounded residual refinement, `/3` for explicit checkpoint sources, or `/4` for finite message continuation |
+| Primary model configuration and weights | Original admitted Llama configuration, plus a complete SafeTensors path or an explicitly selected `fa.checkpoint-weights/1` source |
 | Primary tokenizer | Explicit `native_archive`, `huggingface_raw_bytelevel`, `huggingface_gpt2_unicode17` or `huggingface_llama3_unicode17` selection |
 | Prompt and sampling file | Actual UTF-8 prompt bytes and original `fa.decoder-sampling/1` sampling configuration |
 | Fit binding and fit archive | Independently retained `fa.learned-fit-binding/1` plus original `FAKVFIT/1` archive |
 | Learned monitor | `FAKVMON2` bound artifact or legacy `fa.learned-kv-monitor/1`, with every original layer and both K/V sides |
-| Native roster | `fa.learned-native-roster/1`, with actual imported model/tokenizer/monitor/sampling files for every committee member |
+| Native roster | `fa.learned-native-roster/1` for single weight paths, or `/2` for explicit checkpoint-source selection; actual imported model/tokenizer/monitor/sampling files for every committee member |
 | `REVIEWER_PROFILE` | Existing peer profile matching the host's reviewer, scope and Unix-millisecond clock |
 | `CONFIG.evidence_path` | Fresh policy-only evidence with the exact complete committee member keys and **empty helper contexts** |
 
@@ -125,10 +138,61 @@ grammar and Unicode version are bound in the native archive and compared during
 monitor loading and durable recovery. Unicode profiles require valid UTF-8;
 they do not convert a binary native-helper sidecar into text.
 There is no format sniffing or fallback. Both primary and native models retain
-all original shape, context, vocabulary, scalar and numerical limits. This first
-command uses single-file weights; it has no sharded-weight or adapter field.
-[Static LoRA ingestion](STATIC_LORA_INGESTION.md) is a separate explicit input
-consumer and supplies neither publication key.
+all original shape, context, vocabulary, scalar and numerical limits.
+
+### Explicit checkpoint sources
+
+Primary recipe versions 3 and 4 accept either the existing absolute string path
+in `files.weights`, or this closed selection object:
+
+```json
+{
+  "format": "checkpoint_source",
+  "path": "/operator/primary/checkpoint-source.json"
+}
+```
+
+The path names a separate [checkpoint-source manifest](CHECKPOINT_SOURCE_MANIFEST.md),
+with schema `fa.checkpoint-weights/1`. Its `base` selects a single file or an
+explicit index and complete label-to-file map; `adapter` is `null` or a saved
+static LoRA declaration. The manifest supplies its own bounded `weight_bytes`,
+`weight_read_calls` and, when applicable, `merge_products` allowances. An index
+label is a lookup key; it never discovers a file. Unknown fields, unsupported
+formats, missing mapped files and mismatched index coverage refuse. Neither a
+filename suffix nor a parse failure changes the selected format.
+
+The independently configured `CONFIG.actor.model_generation` and
+`CONFIG.actor.tokenizer_generation` must match the final effective decoder
+identity, including for an `audit_only` actor. Loading a manifest cannot update
+those host pins. A correctly merged model paired with a stale host generation
+refuses before store creation.
+
+Versions 3 and 4 retain the complete progressive version 2 layout, including
+required `sidecar.priority` and `native_review.round_ids`. For one coarse round,
+use an empty priority, one nonzero round ID and `sidecar.budget.rounds: 1`.
+Version 3 otherwise retains the earlier one-message generation behavior;
+version 4's continuation opt-in is described separately above. Primary recipe
+versions 1 and 2 continue to require a single absolute weight path and reject
+the selection object.
+
+Native roster version 2 accepts the same string-or-object choice independently
+for each member's `files.weights`. Its other fields are unchanged. Roster version
+1 continues to require a single absolute weight path. The roster's version
+controls its own weight selection, independently of the primary recipe version.
+
+The primary or native `model.identity` is the independently provisioned **final
+effective identity**. For an adapter, the manifest also supplies its base
+identity: tenant, model and tokenizer generation must match, while final model
+and profile generations must strictly advance. The original adapter constructor
+checks the complete transition and supported tensor targets. With `adapter: null`,
+the base uses the caller's final identity. See
+[static LoRA ingestion](STATIC_LORA_INGESTION.md) for the admitted adapter contract.
+
+The effective model passes through the same learned codec/probe binding,
+tokenizer checks, native evaluator construction and publication owners as a
+single-file import. Provision the codec and any bound monitor for that effective
+model and final profile. Loading an adapter does not retrain a codec, replace its
+independent fit binding, activate a monitor or supply either publication key.
 
 ### Reusing the existing CONFIG
 
@@ -190,7 +254,7 @@ fit inside it. The workflow uses actual Unix-millisecond clock observations
 and a separate monotonic waiting bound.
 
 **`binding.token_ids` must be 1 through 4,096.** The general cumulative library
-binding permits a broader inventory, but this one-message command also uses the
+binding permits a broader inventory, but this command also uses the
 value for one original learned capture. A larger value is rejected at recipe
 admission, before model weights or durable startup. Other evidence and numerical
 bounds remain enforced by their original constructors.
@@ -234,8 +298,10 @@ not enlarge it. Source-history exhaustion remains restrictive.
 `asset_bytes` is a nonzero aggregate allowance no greater than **64 MiB**.
 The same allowance covers the primary model files, tokenizer, sampling, prompt,
 fit binding/archive, learned monitor, native roster and every native member's
-referenced files. A repeated path read is charged again. Smaller per-file parser
-and model bounds also apply.
+referenced files. Source manifests, shard indexes, adapter configurations, all
+base shards and adapter tensors consume that same allowance. A repeated path
+read is charged again, including a source shared by several native members.
+Smaller per-file parser and model bounds also apply.
 
 The recipe itself has a 64 KiB bound; fit-binding, monitor and native-roster JSON
 each have a 2 MiB bound. A complete `FAKVMON2` monitor artifact has a 16 MiB bound
@@ -244,11 +310,29 @@ negotiated model size, the original checkpoint ceiling and the host's journal
 byte limit. Fit archives retain their original archive limit but must also fit
 the remaining aggregate asset allowance.
 
-This allowance counts completed file bytes loaded by this command. It does not
-measure peak memory, guarantee future journal capacity or replace the original
-numerical/read budgets. Source refreshes during operation use the existing
-separate source policy. On receipt-only recovery, skipped native assets consume
-no asset allowance.
+For each explicit source, the physical weight allowance is the smallest of the
+manifest's `weight_bytes`, the caller's original model/weight ceiling and the
+remaining aggregate asset allowance. One original `WeightReadBudget` spans that
+source's entire base and adapter, with the manifest's bounded read-call ceiling;
+it is not replenished between shards or before the adapter. The reader receives
+one extra byte of capacity for its original EOF probe, without increasing the
+accepted physical file-size ceiling. Actual streamed weight bytes are charged
+to `asset_bytes` even when loading fails. Loader errors retain consumed reads
+and any original merge-work reservation; a failure supplies no partial model.
+
+The manifest, adapter configuration, complete identity/merge estimate and exact
+index-label roster are checked before tensor files are opened. Every selected
+base and adapter file then passes regular-file and aggregate-size admission
+before base scalar reads. The original sharded reader validates every base
+header before base scalars; the original adapter reader validates its header
+after base loading. These checks do not form an atomic filesystem snapshot;
+the operator must keep the inputs and parent directories controlled and stable.
+
+The asset allowance measures loaded bytes, including streamed tensor work
+retained on refusal. It does not measure peak memory, guarantee future journal
+capacity or replace numerical/read budgets. Source refreshes during operation
+use the existing separate source policy. On receipt-only recovery, skipped
+native assets consume no asset allowance.
 
 ## Progressive recipe: fa.learned-publication/2
 
@@ -449,14 +533,14 @@ the actual native sidecar query. A quiet probe result admits original numerical
 input to the helper evaluator; it is not the helper's final categorical judgment
 and is not either publication key.
 
-## Native model roster: fa.learned-native-roster/1
+## Native model roster: fa.learned-native-roster/1 or /2
 
 `members` is an object keyed by the exact helper names already registered in
 `CONFIG.helpers`. Its keys must equal the complete committee roster.
 
 | Group | Required fields |
 | --- | --- |
-| Root | `schema: "fa.learned-native-roster/1"`, `members` |
+| Root | `schema: "fa.learned-native-roster/1"` or `"fa.learned-native-roster/2"`, `members` |
 | Each member | `model`, `files`, `text` |
 | Member `model` | `identity`, `context`, `stream` |
 | Member `model.identity` | `tenant`, `model`, `model_generation`, `tokenizer_generation`, `profile_generation` |
@@ -465,6 +549,9 @@ and is not either publication key.
 | Member `text.tokenization` | `input_bytes`, `pair_lookups`, `heap_pops` |
 
 Each tokenizer is the same explicit format/path object described above.
+In version 1, `files.weights` is a single absolute SafeTensors path. In version
+2, it also accepts the explicit checkpoint-source object described above. Both
+forms feed the same complete effective model into the original native evaluator.
 `files.monitor` is the original `fa.decoder-monitor/1` configuration bound to
 that member's own decoder identity. `files.sampling` is its original
 `fa.decoder-sampling/1` configuration. Each member needs nonzero stream and
@@ -479,8 +566,8 @@ The loader closes the schema and paths for all members before loading their
 models. It checks each tokenizer, monitor, sampler and stop policy with an empty
 original evaluator before durable startup. That preflight computes no helper
 token. At review start, a fresh owned evaluator binds to that member's actual
-original full-input profile. For version 2, each future round has fresh original
-evaluators from the same explicitly loaded roster. All rosters and whole-sequence
+original full-input profile. For progressive primary recipes, each future round
+has fresh original evaluators from the same explicitly loaded roster. All rosters and whole-sequence
 work reservations are installed before the first round; a failed member is not
 replaced after its result is known.
 
@@ -527,6 +614,15 @@ cleanup and the original recovery fence. The exact effective model parameters,
 tokenizer, fitted codec, probes, prompt, sampler and numerical limits are bound;
 path spelling or metadata labels do not authenticate their contents.
 
+For checkpoint sources, this comparison binds the complete effective primary
+model after original merging, including its final profile and every parameter.
+An equivalent physical repack from several shards to one file, or an equivalent
+premerged checkpoint, can recover the same generation when all other bound
+inputs remain equal and file admission still succeeds. A changed effective
+parameter refuses recovery before journal mutation even when the numeric
+identity, selected prompt logits and generated message remain unchanged.
+Manifest filenames and shard packaging do not replace that comparison.
+
 Recovery reconstructs original acknowledged operations and pauses generation.
 Continuation acquires fresh policy and time, resumes the same numerical state,
 and completes any retained pending intent through the original path. It does
@@ -562,18 +658,19 @@ admission on an absent key. Repeated recovery consumes the original finite
 recovery capacity.
 
 The generic raw `inspect`/resume commands are not substitutes for the explicit
-learned recipe recovery path. This command does not offer next-message,
-identity-activation, qualification or sharded-model modes. Explicit stream finish
-has its own predecessor-bound form and receipt lookup described above.
+learned recipe recovery path. A new message in an admitted version 4 stream uses
+the separate predecessor-bound `--after-message` form, while explicit stream
+finish has its own form and receipt lookup described above. Neither operation
+is implied by loading a checkpoint source or replaying a recorded receipt.
 
 ## Verification status
 
-The implementation was independently reviewed and executed with qualified
-`nightly-2026-09-08`. All thirty-four learned-command example tests compile.
-Thirty-two pass: all eleven original direct/admission tests, seven progressive
-review tests, three trained-monitor JSON export/loader tests, three complete
-bound-artifact loader tests and eight explicit finish tests. Two actual
-Unix-listener tests fail at listener creation with environment
+The final learned-command selection was independently reviewed and executed
+with qualified `nightly-2026-09-08`. All forty-one learned-command example tests
+compiled. Thirty-nine passed, including all four checkpoint-source tests and
+all three finite-continuation tests alongside the existing direct, admission,
+progressive review, trained-monitor, bound-artifact and explicit finish tests.
+Two actual Unix-listener tests failed at listener creation with environment
 EPERM: the complete peer publication test and authenticated stop during a
 partially computed refined round. Neither test is skipped, and their transport
 paths have not been replaced by a weaker fallback.
@@ -588,6 +685,19 @@ malformed schedules and aggregate work, unretained groups, and insufficient
 future windows. The configured-runtime/TTL admission boundary is checked before
 model loading and again against the live remaining action deadline.
 
+All four checkpoint-source tests pass on qualified `nightly-2026-09-08`. The
+tests in
+[`learned/tests/checkpoint_source.rs`](../crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/tests/checkpoint_source.rs)
+cover independently provisioned nonzero adapted final-generation assets,
+original sampled generation and codec fitting, actual native review, both human
+decisions, numerical and terminal recovery, equal physical repacking, and a
+changed unused effective parameter refused before journal mutation. Additional
+controls in those tests cover old schema behavior, closed selection, exact and
+insufficient byte/read allowances, pre-tensor identity/merge/index refusals and
+missing later helper shards without fallback. Version 4 continuation has its
+own verification record in
+[the continuation contract](LEARNED_TEXT_STREAM_CONTINUATION.md).
+
 The finish positive reopens a full one-message stream, preserves its complete
 prefix and numerical state, runs another native review and requires independent
 human approval. Refusals retain original capacity, work and deadlines; terminal
@@ -600,7 +710,8 @@ quality, independent model judgment, OS isolation or a matched-cost research
 result. The command was unexecuted when first authored; this later execution
 found and fixed real atomic-reserve and post-read-freshness omissions.
 
-The original complete project gate passes qualified compiler identity but stops
-at the reviewed source snapshot, which contains stale existing digests and does
-not list numerous existing and new files. Its records and enforcement are
-unchanged; formatting, Clippy and complete workspace qualification remain unmet.
+The fresh original complete project gate passes qualified compiler identity but
+stops at the reviewed source snapshot: its 512-file discovery ceiling,
+depth-eight limit, stale existing digests and unlisted existing/new files refuse this tree. Its records
+and enforcement are unchanged; formatting, Clippy and complete workspace
+qualification are not reached or claimed to pass.

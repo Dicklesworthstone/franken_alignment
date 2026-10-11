@@ -10,7 +10,9 @@ use super::*;
 #[path = "tests/refinement.rs"] mod refinement;
 #[path = "tests/trained_monitor.rs"] mod trained_monitor;
 #[path = "tests/finish.rs"] mod finish;
+#[path = "tests/continuation.rs"] mod continuation;
 #[path = "tests/bound_monitor.rs"] mod bound_monitor;
+#[path = "tests/checkpoint_source.rs"] mod checkpoint_source;
 use fixture::{Root, configured, evidence};
 use fa_reference::action::consequence::delivery::persistent::observed::{
     helpers::learned::native::{NativeReviewStatus, NativeMemberRecord, sequence::FileNativeSidecarSequence},

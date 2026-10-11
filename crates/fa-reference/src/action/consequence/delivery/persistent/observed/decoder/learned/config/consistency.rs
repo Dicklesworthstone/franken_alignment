@@ -24,7 +24,7 @@ impl FileLearnedConfig {
         -> Result<Self, Error>
     {
         if self.pre_output_forecast.is_some() || self.owned_pre_output_forecast.is_some() { return Err(Error::Duplicate); }
-        if !self.sidecar_required || !self.is_text() || !forecast.requires_pre_output_forecast()
+        if self.text_stream_continuation || !self.sidecar_required || !self.is_text() || !forecast.requires_pre_output_forecast()
             || self.text_stream_profile() != forecast.stream_message_profile() {
             return Err(Error::Binding);
         }

@@ -71,6 +71,11 @@ impl FileOversight {
         if self.source_interrupted || self.machine.pending_learned_reset().is_some() {
             return Err(Error::Incomplete.into());
         }
+        if release == LearnedTextRelease::Message
+            && self.machine.current_learned_message_continuation()
+                .is_some_and(|command| command.request() != request) {
+            return Err(Error::Binding.into());
+        }
         let current = self.learned_generation_inspection()?;
         if !self.clock_ready() || current.paused || current.pending.is_some() {
             return Err(Error::Incomplete.into());

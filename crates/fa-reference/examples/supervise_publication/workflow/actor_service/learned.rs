@@ -1,5 +1,5 @@
 //! Imported learned K/V generation, original native sidecar review and two keys.
-//! One complete message and its separately reviewed explicit stream finish;
+//! Complete messages within one finite generation and explicit stream finish;
 //! all numerical and effect transitions belong to the existing original owners.
 #[path = "learned/fields.rs"] mod fields;
 #[path = "learned/fit.rs"] mod fit;
@@ -9,6 +9,7 @@
 #[path = "learned/recovery.rs"] mod recovery;
 #[path = "learned/review.rs"] mod review;
 #[path = "learned/finish.rs"] mod finish;
+#[path = "learned/continuation.rs"] mod continuation;
 use recipe::Loaded;
 use super::super::{Config, Deadline, Duration, ElapsedTick, FileOversight, FileHumanReviewer,
     FileDriverEvent, FileDriverPhase, FileSupervisedDriver, Instant, PeerProfile,
@@ -30,9 +31,10 @@ use fa_reference::action::consequence::oversight::{
 use fa_reference::Error;
 use std::{io::Write, path::Path, rc::Rc};
 
-const USAGE: &str = "create-learned-generated CONFIG LEARNED_RECIPE REVIEWER_PROFILE [--continue-generation | --finish-after-message PREVIOUS_REQUEST] | create-learned-generated CONFIG LEARNED_RECIPE --resume [--finish-after-message PREVIOUS_REQUEST]";
+const USAGE: &str = "create-learned-generated CONFIG LEARNED_RECIPE REVIEWER_PROFILE [--continue-generation | --after-message PREVIOUS_REQUEST | --finish-after-message PREVIOUS_REQUEST] | create-learned-generated CONFIG LEARNED_RECIPE --resume [--finish-after-message PREVIOUS_REQUEST]";
 
 pub(super) fn command(args: &[String], credibility: Option<&Path>) -> Result<(), String> {
+    let (args, after_message) = continuation::take_option(args)?;
     let (args, finishing) = finish::take_option(args)?;
     if !matches!(args.len(), 4 | 5) || args[0] != "create-learned-generated"
         || credibility.is_some() { return Err(USAGE.into()); }
@@ -54,9 +56,11 @@ pub(super) fn command(args: &[String], credibility: Option<&Path>) -> Result<(),
     let peers = PeerProfile::read(Path::new(&args[3]))?;
     peers.check_host(&config)?;
     let loaded = recipe::load(Path::new(&args[2]), &config, true)?;
-    let result = match finishing {
-        Some(after) => run_selected(config, loaded, &peers, true, Some(after), clock)?,
-        None => run(config, loaded, &peers, continuing, clock)?,
+    let result = match (after_message, finishing) {
+        (Some(after), None) => run_after_message(config, loaded, &peers, after, clock)?,
+        (None, Some(after)) => run_selected(config, loaded, &peers, true, Some(after), clock)?,
+        (None, None) => run(config, loaded, &peers, continuing, clock)?,
+        _ => return Err(USAGE.into()),
     };
     emit(result, &mut std::io::stdout().lock())
 }
@@ -84,11 +88,29 @@ where F: FnMut() -> ElapsedTick {
     run_selected(config, loaded, peers, continuing, None, time)
 }
 
-fn run_selected<F>(mut config: Config, loaded: Loaded, peers: &PeerProfile, continuing: bool,
-    finishing: Option<u64>, mut time: F) -> Result<RunResult, String>
+fn run_selected<F>(config: Config, loaded: Loaded, peers: &PeerProfile, continuing: bool,
+    finishing: Option<u64>, time: F) -> Result<RunResult, String>
+where F: FnMut() -> ElapsedTick {
+    run_selected_message(config, loaded, peers, continuing, finishing, None, time)
+}
+
+fn run_after_message<F>(config: Config, loaded: Loaded, peers: &PeerProfile, after: u64,
+    time: F) -> Result<RunResult, String>
+where F: FnMut() -> ElapsedTick {
+    run_selected_message(config, loaded, peers, true, None, Some(after), time)
+}
+
+fn run_selected_message<F>(mut config: Config, loaded: Loaded, peers: &PeerProfile, continuing: bool,
+    finishing: Option<u64>, after_message: Option<u64>, mut time: F) -> Result<RunResult, String>
 where F: FnMut() -> ElapsedTick {
     peers.check_host(&config)?;
     if let Some(after) = finishing { finish::check_ids(loaded.request, after)?; }
+    if let Some(after) = after_message {
+        continuation::check_ids(loaded.request, after)?;
+        if !loaded.generation.allows_text_stream_continuation() {
+            return Err("learned continuation requires the explicitly admitted finite-message recipe".into());
+        }
+    }
     let start = time();
     let lifetime = loaded.ttl_ms.min(config.timing.runtime_ms);
     let deadline = Deadline { logical: plus(start, lifetime)?, started: Instant::now(),
@@ -108,6 +130,13 @@ where F: FnMut() -> ElapsedTick {
         host.check_credibility().map_err(debug)?;
     }
     if let Some(after) = finishing { finish::check_fresh(&host, &loaded, after)?; }
+    let message_continuation = after_message.map(|after|
+        host.prepare_learned_text_stream_continuation(after, loaded.request).map_err(debug)).transpose()?;
+    if continuing && finishing.is_none() && after_message.is_none()
+        && host.current_learned_text_continuation().map_err(debug)?
+            .is_some_and(|command| command.request() != loaded.request) {
+        return Err("continued learned generation belongs to a different original request".into());
+    }
     let (port, supervisor) = host.into_learned_text_stream_actor_gateway().map_err(debug)?;
     let mut driver = FileSupervisedDriver::new(supervisor);
     let mut wire = ActorWire::new(port);
@@ -117,6 +146,10 @@ where F: FnMut() -> ElapsedTick {
                 &mut control, &deadline, &mut time)? { return Ok(false); }
             LearnedTextRelease::Finish
         } else {
+            if let Some(command) = message_continuation {
+                if !continuation::prepare(&mut driver, &reviewer, &mut config, command,
+                    &mut control, &deadline, &mut time)? { return Ok(false); }
+            }
             if !generate(&mut driver, &reviewer, &mut config, &mut control, &deadline, &mut time)? {
                 return Ok(false);
             }
@@ -242,7 +275,9 @@ where F: FnMut() -> ElapsedTick {
     deadline.check(time())?;
     let response = driver.supervisor_mut().exchange_learned_text_stream_actor_from_policy_file(
         wire, &document, &mut config.source, &mut *time).map_err(debug)?.response;
-    if response.result.is_err() { return Err("original learned source gateway refused publication".into()); }
+    if let Err(error) = response.result {
+        return Err(format!("original learned source gateway refused publication: {error:?}"));
+    }
     Ok(())
 }
 

@@ -17,7 +17,7 @@ fn learned_command_capture_horizon_and_closed_schema_refuse_before_asset_reads_o
         assert!(!config.store.exists());
     }
     for (old, replacement, expected) in [
-        ("fa.learned-publication/1", "fa.learned-publication/3", "unsupported"),
+        ("fa.learned-publication/1", "fa.learned-publication/99", "unsupported"),
         ("huggingface_raw_bytelevel", "automatic", "tokenizer format"),
         ("\"completion\":\"stop_required\"", "\"completion\":\"token_limit\"", "monitored control stop"),
         ("\"rounds\":1", "\"rounds\":2", "one bounded review round"),
@@ -42,7 +42,7 @@ fn learned_command_malformed_fit_probes_and_native_roster_never_create_durable_s
         ("learned-monitor.json", "\"side\":\"value\"", "\"side\":\"key\""),
         ("learned-monitor.json", "\"weights\":[1.0,0.0]", "\"weights\":[]"),
         ("learned-monitor.json", "\"bias\":0.0", "\"bias\":1e999"),
-        ("native-roster.json", "fa.learned-native-roster/1", "fa.learned-native-roster/2"),
+        ("native-roster.json", "fa.learned-native-roster/1", "fa.learned-native-roster/99"),
         ("native-roster.json", "\"max_new_tokens\":2", "\"max_new_tokens\":0"),
         ("helper-monitor.json", "\"weights\":[1.0,0.0]", "\"weights\":[1.0]"),
         ("tokenizer.json", "\"use_regex\":false", "\"use_regex\":true"),

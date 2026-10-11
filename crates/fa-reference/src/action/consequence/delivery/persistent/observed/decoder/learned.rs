@@ -6,6 +6,7 @@ mod config;
 mod recovery;
 mod pending;
 mod preparation;
+mod message;
 pub mod sidecar;
 pub mod checkpoint;
 #[cfg(test)]
@@ -23,6 +24,7 @@ mod continuation_tests;
 pub use config::FileLearnedConfig;
 pub use preparation::{FileLearnedReplayContinuation, FileLearnedIntentPreparation, FileLearnedStepPreparation, FileLearnedStepPreparationProgress, FileLearnedStepPreparationStatus};
 pub use recovery::{FileLearnedRecovery, FileLearnedRecoveryProgress, FileLearnedRecoveryStatus};
+pub use message::FileLearnedTextContinuation;
 
 use super::{DecoderEvent, MAX_WITNESS_BYTES};
 use super::super::{Event, FileHumanReviewer, FileOversight, FileOversightProfile,
@@ -43,6 +45,7 @@ pub(in super::super) enum LearnedEvent {
     Begin(LearnedStepIntent),
     Step { actor_revision: u64, position: u64, witness: Rc<[u8]> },
     Resume { actor_revision: u64, position: u64 },
+    ContinueMessage(FileLearnedTextContinuation),
 }
 
 /// Parsed bytes alone cannot construct the runtime recipe. Binding happens only
@@ -265,6 +268,10 @@ pub(in super::super) fn bind_history(events: &mut [Event], expected: &FileLearne
 
 pub(in super::super) fn write(w: &mut Writer, event: &LearnedEvent) -> Result<(), Error> {
     match event {
+        LearnedEvent::ContinueMessage(command) => {
+            w.u8(6)?; w.u64(command.after_request())?; w.u64(command.request())?;
+            w.u64(command.actor_revision())?; w.u64(command.position())?;
+        }
         LearnedEvent::Checkpoint(event) => { w.u8(5)?; checkpoint::write(w, event)?; }
         LearnedEvent::Sidecar(event) => { w.u8(4)?; sidecar::write(w, event)?; }
         LearnedEvent::Begin(intent) => {
@@ -302,6 +309,13 @@ pub(in super::super) fn read(r: &mut Reader<'_>) -> Result<LearnedEvent, Error> 
         3 => LearnedEvent::Begin(LearnedStepIntent { actor_revision: r.u64()?, position: r.u64()? }),
         4 => LearnedEvent::Sidecar(sidecar::read(r)?),
         5 => LearnedEvent::Checkpoint(checkpoint::read(r)?),
+        6 => {
+            let command = FileLearnedTextContinuation { after_request: r.u64()?, request: r.u64()?,
+                actor_revision: r.u64()?, position: r.u64()? };
+            if command.after_request() == 0 || command.request() == 0
+                || command.after_request() == command.request() { return Err(Error::InvalidInput); }
+            LearnedEvent::ContinueMessage(command)
+        }
         _ => return Err(Error::InvalidInput),
     })
 }

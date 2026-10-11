@@ -1,4 +1,4 @@
-# Explicit checkpoint sources for learned training
+# Explicit checkpoint sources for learned training and publication
 
 The codec and probe training commands can load an explicitly mapped set of
 SafeTensors shards, a saved static LoRA adapter, or both. They use the original
@@ -13,6 +13,20 @@ The existing weights operand becomes the manifest path. All other operands,
 training/campaign schemas and output formats retain their meaning. Without the
 switch, that operand still names a single SafeTensors file. There is no suffix,
 content or parse-failure fallback.
+
+The [learned publication operator](LEARNED_OPERATOR_PUBLICATION.md) selects the
+same manifest through an explicit weights object in recipe versions `/3` or
+`/4`, or in native-roster version `/2`:
+
+```json
+{"format":"checkpoint_source","path":"/operator/model/checkpoint-source.json"}
+```
+
+Its `files.weights` string form continues to name one SafeTensors file. Older
+recipe and roster versions require that string form. `/3` adds the source input;
+`/4` also explicitly admits separately reviewed messages within one original
+finite generation. The source manifest itself never enables continuation or
+changes publication authority.
 
 ## Manifest: `fa.checkpoint-weights/1`
 
@@ -64,7 +78,7 @@ For example, an explicitly mapped base and saved adapter:
 ```
 
 These identities, paths and allowances are illustrative. The caller supplies the
-independently selected final identity in its existing plan. The declared adapter
+independently selected final identity in its existing plan or recipe. The declared adapter
 base must satisfy the original static-LoRA identity transition: the same tenant,
 model and tokenizer generation, with strictly advanced final model and profile
 generations. The shared configuration must negotiate that complete final
@@ -80,9 +94,9 @@ targets and merging semantics are described in
 
 ## Admission, work and failures
 
-The command first performs its existing numerical and corpus admission. Probe
-training also checks its tokenizer and independently retained codec source
-descriptors before tensor access. The manifest, adapter configuration and shard
+The offline training commands first perform their existing numerical and corpus
+admission. Probe training also checks its tokenizer and independently retained
+codec source descriptors before tensor access. The manifest, adapter configuration and shard
 index consume the caller's existing aggregate auxiliary allowance. Adapter
 identity, shape and complete merge-work estimates, and exact index-label
 coverage, are checked before tensor files are opened.
@@ -107,8 +121,20 @@ can bind a resulting monitor. Physically repacking identical tensors does not
 create a different model, while changing effective weights requires retraining
 and a matching complete binding.
 
-For a selected manifest, the report's `checkpoint_source` record retains base
-file count and adapter parameter, updated-parameter and product reservations.
+Publication intake uses the same prepared source and original decoder. Its
+independently configured host actor must pin the final effective model and
+tokenizer generations; a manifest cannot update those host pins. Its
+existing aggregate asset allowance pays for the manifest, index and adapter
+configuration as well as actual base and adapter reads, across the actor and
+every native member. The model-specific and delivery-specific byte ceilings
+still apply. A failed source retains its spent read work and cannot create a
+durable run. Recovery compares the complete effective configuration, including
+model weights, tokenizer, codec and generation policy. Equal physical repacking
+is accepted; an effective parameter change refuses even if a selected prompt
+would happen to produce the same output.
+
+For offline training with a selected manifest, the report's `checkpoint_source`
+record retains base file count and adapter parameter, updated-parameter and product reservations.
 The input summary retains actual weight bytes and read calls. Loader errors
 include the original work consumed before refusal. Adapter parameter and
 updated-parameter counts describe the original merge footprint once work is

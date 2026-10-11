@@ -1,4 +1,4 @@
-//! One completed learned message and an independently reviewed stream finish.
+//! Complete learned messages and an independently reviewed stream finish.
 //! The ORIGINAL receipt-confirmed stream is the only progress ledger. No token
 //! is released early; no loss of acknowledgment is interpreted as nonexecution.
 use super::{ByteBpe, DecoderModel, LearnedDecoderBindingLimits, LearnedTextConfig, OversightBroker};
@@ -9,11 +9,13 @@ use crate::{Error, ReadWitness, Snapshot};
 
 /// Immutable audience basis, not another delivery/approval ledger. Source and
 /// tokenizer remain owned by the original host; only current receipts move the
-/// real audience history. At most one new message belongs to this generation.
+/// real audience history. Explicit continuation advances only this basis and
+/// the original source's message offset after a confirmed complete append.
 #[derive(Debug)]
 pub(in super::super) struct LearnedTextStreamBasis {
     target: ResolvedTarget,
     view: StreamView,
+    continuation: bool,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -41,10 +43,56 @@ impl OversightBroker {
         // One append and one explicit finish must both have representable target
         // versions. This does not reserve rights or waive subsequent validation.
         target.expected_version.checked_add(2).ok_or(Error::Overflow)?;
-        let basis = LearnedTextStreamBasis { target, view: view.clone() };
+        let basis = LearnedTextStreamBasis { target, view: view.clone(), continuation: false };
         let source = model.observed_learned_text_generation(tokenizer, config)?;
         self.install_fresh_learned_host(source, limits)?;
         self.learned_host.as_mut().expect("installed learned source").text_stream = Some(basis);
+        Ok(())
+    }
+
+    pub(crate) fn enable_learned_text_stream_continuation(&mut self) -> Result<(), Error> {
+        let host = self.learned_host.as_mut().ok_or(Error::Incomplete)?;
+        if host.run.position() != 0 { return Err(Error::WrongState); }
+        let basis = host.text_stream.as_mut().ok_or(Error::Binding)?;
+        if basis.continuation { return Err(Error::Duplicate); }
+        basis.continuation = true;
+        Ok(())
+    }
+
+    /// Pure admission against the ORIGINAL completed source and confirmed
+    /// audience. The durable caller separately binds the exact prior request
+    /// and receipt; visibility or equal concatenated text never supplies it.
+    pub(crate) fn check_learned_text_stream_continuation(&self, actor_revision: u64,
+        position: u64) -> Result<(), Error> {
+        let actual = self.hosted_learned_generation()?;
+        if actual.actor_revision != actor_revision || actual.position != position {
+            return Err(Error::Stale);
+        }
+        let host = self.learned_host.as_ref().ok_or(Error::Incomplete)?;
+        let basis = host.text_stream.as_ref().ok_or(Error::Binding)?;
+        if !basis.continuation { return Err(Error::Binding); }
+        if self.learned_stream_release(None)?.0 != Release::Finish { return Err(Error::Incomplete); }
+        host.run.check_host_text_continuation()?;
+        let (target, view) = self.stream_state().ok_or(Error::Binding)?;
+        let output = host.run.text_output_policy().ok_or(Error::Binding)?;
+        let profile = view.profile();
+        if view.message_count() >= profile.max_messages()
+            || output.max_bytes > profile.max_message_bytes()
+            || output.max_bytes > profile.max_stream_bytes().checked_sub(view.visible().len())
+                .ok_or(Error::Binding)? { return Err(Error::Limit); }
+        // Leave room for the next complete message and its explicit close.
+        target.expected_version.checked_add(2).ok_or(Error::Overflow)?;
+        Ok(())
+    }
+
+    pub(crate) fn continue_learned_text_stream(&mut self, actor_revision: u64,
+        position: u64) -> Result<(), Error> {
+        self.check_learned_text_stream_continuation(actor_revision, position)?;
+        let (target, view) = self.stream_state().ok_or(Error::Binding)?;
+        let basis = LearnedTextStreamBasis { target, view: view.clone(), continuation: true };
+        let host = self.learned_host.as_mut().expect("checked original learned source");
+        host.run.continue_host_text_message()?;
+        host.text_stream = Some(basis);
         Ok(())
     }
 

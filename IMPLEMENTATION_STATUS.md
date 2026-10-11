@@ -1,5 +1,66 @@
 # Implementation status · design revision 0.3
 
+## 2026-10-11: adapted checkpoint publication and receipt-bound finite continuation
+
+Learned publication recipe `/3` and native roster `/2` accept an explicitly
+selected `fa.checkpoint-weights/1` manifest. Primary generation and actual native
+reviewers now use the same original single/sharded readers and static LoRA
+merger as the training commands. Complete metadata admission precedes tensors;
+all base and adapter reads share the original byte/read-call allowances and
+consume the operator's remaining aggregate asset allowance, including on failure.
+An ordinary path remains a single weight file, with no schema or filename fallback.
+
+Primary startup compares the final effective model with independently supplied
+actor model/tokenizer generations, including the audit-only restart profile.
+Recovery compares the complete original effective model, tokenizer and learned
+configuration. Equivalent repacking from shards to a single checkpoint retains
+that identity. A changed parameter refuses even if the saved prompt's sampled
+text would be identical. Live native assets are not needed for terminal receipt
+recovery, which does not rerun generation or review.
+
+Recipe `/4` additionally admits finite message continuation. After a confirmed
+Executed message receipt, `--after-message PREVIOUS_REQUEST` can use the remaining
+part of the same originally admitted generation. The durable owner records the
+exact predecessor, successor request and numerical position before more inference.
+It preserves the full accepted-token history, K/V state, sampler draws and spent
+work, advances only the current text offset and confirmed audience basis, and
+requires the successor's own native and human approvals. Source-only, generic
+request and direct proposal admission enforce the same retained request binding.
+An explicit finish adds no inference but remains a separately reviewed effect.
+
+Old configuration bytes and journal tags retain their interpretation. The new
+configuration wrapper and continuation event are explicit. Exact retained retries
+write nothing; semantic recovery revalidates the original receipt boundary.
+Held or failed work, terminal token limits, pending sends, stale predecessors,
+changed configuration and exhausted original allowances cannot create another
+message. Required pre-output forecast modes do not define later message forecasts
+and are refused in both configuration orders and independent installation.
+
+Qualified `nightly-2026-09-08` passes all 24 public durable learned-stream tests,
+including nine new continuation controls, and all 22 selected forecast/reset
+and mediated-recovery compatibility tests. The final learned-operator selection
+passes 39 of 41 tests, including all four new checkpoint-source and three new
+continuation functions. Its two existing Unix-listener tests fail at listener
+creation with environment EPERM; neither is skipped or replaced. The loaded
+continuation positive executes both messages and finish with actual native
+review, paid progressive residuals, fresh human keys, exact numerical recovery
+and receipt charges. All source, sampling and journal ceilings remain intact.
+
+The fresh unchanged `xtask check` passes the exact compiler identity and initial
+source/dependency checks, then refuses the reviewed source snapshot at its
+512-file discovery ceiling, depth-eight limit, unlisted files and stale recorded digests. Its
+enforcement and reviewed records remain unchanged. Formatting, Clippy and the
+complete workspace test gate are not reached or claimed to pass.
+
+This is bounded continuation within one generation. It appends no new prompt,
+creates no new funding, resets no policy-source history and leaves stream
+checkpoint/reset unsupported. The lifetime observation allowance includes all
+native token-level review polls and the final stream closure. Numerical fixtures
+establish contract behavior, not alignment-detector quality or deployment
+qualification. See the [publication contract](docs/LEARNED_OPERATOR_PUBLICATION.md),
+[checkpoint sources](docs/CHECKPOINT_SOURCE_MANIFEST.md) and
+[finite continuation](docs/LEARNED_TEXT_STREAM_CONTINUATION.md).
+
 ## 2026-10-11: sharded and adapted checkpoints reach both learned training commands
 
 Both executable training examples now accept an optional leading

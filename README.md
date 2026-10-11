@@ -46,10 +46,17 @@ Native helpers can load a [sharded base checkpoint with a static LoRA
 adapter](docs/SHARDED_LORA_NATIVE_WORKERS.md), preserving the original monitored
 verdict path and one shared read allowance across the base shards and adapter.
 
-Both learned training commands accept [explicit checkpoint source
-manifests](docs/CHECKPOINT_SOURCE_MANIFEST.md) for single or sharded bases with
-optional static LoRA. They train the original codec and complete bound monitor
-from the effective model, with shared input limits and unchanged output formats.
+Both learned training commands and the learned publication operator accept
+[explicit checkpoint source manifests](docs/CHECKPOINT_SOURCE_MANIFEST.md) for
+single or sharded bases with optional static LoRA. The operator loads both the
+primary model and its native reviewers through the same bounded source contract;
+trained artifacts and recovery bind the complete effective model.
+
+The publication operator also supports [finite message
+continuation](docs/LEARNED_TEXT_STREAM_CONTINUATION.md): after a confirmed message,
+the original generation can use its remaining admitted token and work allowance
+for another separately reviewed message. Each message and the explicit stream
+finish require fresh native review, human approval and an original effect receipt.
 
 Checkpoint workers, monitor training and publication also accept explicitly
 selected [GPT-2 and Llama-3 Unicode-17 pretokenization](docs/UNICODE_PRETOKENIZATION.md).

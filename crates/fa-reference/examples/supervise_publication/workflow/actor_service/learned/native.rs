@@ -1,6 +1,6 @@
 //! Real imported helper models, fixed before durable startup. No supplied votes.
 use super::fields::{Assets, Fields, path, MAX_DATA_BYTES};
-use super::recipe::{identity, tokenization};
+use super::recipe::{identity, tokenization, weights::WeightsInput};
 use super::super::tokenizer::TokenizerInput;
 use crate::config::{Config, debug};
 use fa_reference::action::consequence::activation::monitor::decoder::{
@@ -21,7 +21,7 @@ use std::path::{Path, PathBuf};
 pub(super) struct NativeRoster { members: BTreeMap<String, NativeModel> }
 struct NativeInput {
     identity: fa_reference::action::consequence::activation::tensor::kv::decoder::DecoderIdentity,
-    context: usize, stream: u64, configuration: PathBuf, weights: PathBuf,
+    context: usize, stream: u64, configuration: PathBuf, weights: WeightsInput,
     monitoring: PathBuf, sampling: PathBuf, tokenizer: TokenizerInput,
     max_new_tokens: usize, max_output_bytes: usize, stop_tokens: Vec<u32>,
     tokenization: TokenizationBudget, generation: GenerationBudget,
@@ -34,16 +34,18 @@ struct NativeModel {
 impl NativeRoster {
     pub(super) fn load(file: &Path, config: &Config, assets: &mut Assets) -> Result<Self, String> {
         let mut root = Fields::parse(&assets.read(file, MAX_DATA_BYTES)?, MAX_DATA_BYTES)?;
-        if root.text("schema")? != "fa.learned-native-roster/1" {
-            return Err("unsupported learned native roster".into());
-        }
+        let source_enabled = match root.text("schema")?.as_str() {
+            "fa.learned-native-roster/1" => false,
+            "fa.learned-native-roster/2" => true,
+            _ => return Err("unsupported learned native roster".into()),
+        };
         let members = root.object("members")?.entries();
         root.end()?;
         if !members.keys().eq(config.profile.committee.members().keys()) {
             return Err("native model roster must cover the exact independently configured congress".into());
         }
         // Finish closed schema/path admission for ALL members before model reads.
-        let inputs = members.into_iter().map(|(name, value)| Ok((name, NativeInput::decode(Fields::new(value)?)?)))
+        let inputs = members.into_iter().map(|(name, value)| Ok((name, NativeInput::decode(Fields::new(value)?, source_enabled)?)))
             .collect::<Result<BTreeMap<_, _>, String>>()?;
         let mut members = BTreeMap::new();
         for (name, input) in inputs {
@@ -85,7 +87,7 @@ impl NativeRoster {
     }
 }
 impl NativeInput {
-    fn decode(mut fields: Fields) -> Result<Self, String> {
+    fn decode(mut fields: Fields, source_enabled: bool) -> Result<Self, String> {
         let mut model = fields.object("model")?;
         let identity = identity(model.object("identity")?)?;
         let context = model.size("context")?;
@@ -93,7 +95,7 @@ impl NativeInput {
         model.end()?;
         let mut files = fields.object("files")?;
         let configuration = files.path("model_config")?;
-        let weights = files.path("weights")?;
+        let weights = WeightsInput::parse(files.take("weights")?, source_enabled)?;
         let monitoring = files.path("monitor")?;
         let sampling = files.path("sampling")?;
         let tokenizer = TokenizerInput::parse(files.take("tokenizer")?, true)?;
@@ -122,9 +124,7 @@ impl NativeInput {
         let sampling = assets.read(&self.sampling, MAX_SAMPLING_CONFIG_BYTES)?;
         let bound = (8 + MAX_WEIGHT_HEADER_BYTES + 4 * negotiated.profile().parameter_count())
             .min(MAX_WEIGHT_FILE_BYTES);
-        let weights = assets.read(&self.weights, bound)?;
-        let (model, _) = DecoderModel::from_llama_safetensors(self.identity, self.context,
-            &configuration, &weights).map_err(debug)?;
+        let model = self.weights.load(&configuration, &negotiated, assets, bound)?;
         Ok(NativeModel { model, tokenizer, monitoring, sampling, stream: self.stream,
             max_new_tokens: self.max_new_tokens, max_output_bytes: self.max_output_bytes,
             stop_tokens: self.stop_tokens, tokenization: self.tokenization, generation: self.generation })

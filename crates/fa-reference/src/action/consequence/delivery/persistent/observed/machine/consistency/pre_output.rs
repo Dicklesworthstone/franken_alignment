@@ -68,7 +68,8 @@ impl Machine {
 
     fn check_pre_output_configuration(&self, config: &FileConsistencyConfig) -> Result<(), Error> {
         let learned = self.learned_contract().ok_or(Error::Binding)?;
-        if !learned.is_text() || learned.text_stream_profile() != config.stream_message_profile() {
+        if learned.allows_text_stream_continuation() || !learned.is_text()
+            || learned.text_stream_profile() != config.stream_message_profile() {
             return Err(Error::Binding);
         }
         // Source-specific bootstrap independently checks actual model, tensor,

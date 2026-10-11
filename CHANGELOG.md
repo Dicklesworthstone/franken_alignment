@@ -1,5 +1,29 @@
 # Changelog
 
+## 2026-10-11: publish from adapted checkpoint sources and continue finite learned streams
+
+- Add explicit checkpoint-source selection to learned publication recipe `/3`
+  and native roster `/2`. Primary generation and actual native reviewers can use
+  single or indexed bases with saved static LoRA, sharing their original asset
+  and weight-read allowances. Old schemas retain their existing interpretation.
+- Bind the complete effective primary model, tokenizer and codec at startup and
+  recovery. Equivalent physical repacking can recover the same original state;
+  changing an unused effective parameter still refuses before journal mutation.
+- Add opt-in recipe `/4` and `--after-message PREVIOUS_REQUEST`. Continue the
+  original finite generation only after the latest message has a Confirmed
+  Executed receipt, retaining its cache, accepted tokens, sampler and spent work.
+  Bind the successor request in the original journal before another token runs.
+- Require fresh native and human review for every message and the explicit
+  finish. Preserve the original source-observation allowance across recovery and
+  refuse incompatible required pre-output forecast modes before startup.
+- Pass all 24 public durable-stream tests and 22 forecast/reset/recovery
+  compatibility tests. The final learned-operator selection passes 39 of 41,
+  including all seven new checkpoint-source/continuation tests. Two existing
+  Unix-listener tests fail with environment EPERM and remain unskipped.
+- Re-run the unchanged full project gate: compiler identity passes, then the
+  reviewed source snapshot refuses its discovery ceiling, unlisted files and
+  stale digests before formatting, Clippy or complete workspace qualification.
+
 ## 2026-10-11: train codecs and bound monitors from sharded and adapted checkpoints
 
 - Add explicit `--checkpoint-source` selection to both learned training commands,

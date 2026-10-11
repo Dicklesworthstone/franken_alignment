@@ -18,6 +18,14 @@ impl Assets {
         self.remaining = self.remaining.checked_sub(bytes.len()).ok_or("learned asset limit exceeded")?;
         Ok(bytes)
     }
+    pub(super) fn remaining(&self) -> usize { self.remaining }
+    /// Charge actual streamed tensor reads, including a failed attempt. An
+    /// overrun exhausts the allowance rather than leaving it reusable.
+    pub(super) fn charge(&mut self, bytes: usize) -> Result<(), String> {
+        let before = self.remaining;
+        self.remaining = self.remaining.saturating_sub(bytes);
+        if bytes > before { Err("learned asset limit exceeded".into()) } else { Ok(()) }
+    }
 }
 
 pub(super) struct Fields(BTreeMap<String, Json>);

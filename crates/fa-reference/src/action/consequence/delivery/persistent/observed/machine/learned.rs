@@ -3,6 +3,7 @@
 mod witness;
 mod sidecar;
 mod checkpoint;
+mod message;
 
 use super::{Machine, Transition};
 use super::super::{BaseEvent, Event};
@@ -19,6 +20,7 @@ pub(super) struct LearnedState {
     checkpoints: checkpoint::CheckpointHistory,
     sidecar_outcomes: std::collections::BTreeMap<u64, super::super::decoder::learned::sidecar::FileLearnedSidecarOutcome>,
     sidecars: std::collections::BTreeMap<u64, crate::action::consequence::oversight::learned_host::sidecar::LearnedSidecar>,
+    message_continuation: Option<super::super::decoder::learned::FileLearnedTextContinuation>,
 }
 
 impl Machine {
@@ -63,6 +65,7 @@ impl Machine {
     }
     pub(super) fn apply_learned(&mut self, event: &LearnedEvent) -> Result<Transition, Error> {
         match event {
+            LearnedEvent::ContinueMessage(command) => self.apply_learned_message_continuation(*command),
             LearnedEvent::Checkpoint(event) => self.apply_learned_checkpoint(event),
             LearnedEvent::Sidecar(event) => self.apply_learned_sidecar(event),
             LearnedEvent::Begin(intent) => {
@@ -85,7 +88,7 @@ impl Machine {
                 let forecast = config.required_pre_output_forecast().cloned();
                 let owned_forecast = config.required_owned_pre_output_forecast().cloned();
                 let forecast_reset_successors = config.follows_forecast_reset_successors();
-                self.learned = Some(LearnedState { config, paused: false, pending: None, checkpoints: checkpoint::CheckpointHistory::default(), sidecar_outcomes: std::collections::BTreeMap::new(), sidecars: std::collections::BTreeMap::new() });
+                self.learned = Some(LearnedState { config, paused: false, pending: None, checkpoints: checkpoint::CheckpointHistory::default(), sidecar_outcomes: std::collections::BTreeMap::new(), sidecars: std::collections::BTreeMap::new(), message_continuation: None });
                 if let Some(forecast) = forecast {
                     // One independently bound Enable owns BOTH installations.
                     // Use the original consistency route/reducer only after its

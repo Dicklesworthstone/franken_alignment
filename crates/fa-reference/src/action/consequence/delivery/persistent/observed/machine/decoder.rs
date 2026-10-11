@@ -46,6 +46,7 @@ impl Machine {
     /// Restrictive operations and original obligation reconciliation remain open.
     pub(super) fn check_decoder_admission(&self, event: &Event) -> Result<(), Error> {
         if let Some(result) = self.learned_reset_admission(event) { return result; }
+        self.check_learned_message_request(event)?;
         let pending = self.pending_decoder_generation();
         let learned_pending = self.pending_learned_step();
         // No final positive publication from a prefix whose next numerical

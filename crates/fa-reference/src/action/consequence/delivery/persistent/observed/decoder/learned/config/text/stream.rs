@@ -14,6 +14,25 @@ use crate::{Error, ReadWitness, Snapshot};
 use std::path::Path;
 
 impl FileLearnedConfig {
+    /// Explicitly admit separately reviewed messages within the SAME original
+    /// finite generation. This distinct recipe wrapper pins the interpretation;
+    /// every legacy text/stream recipe remains byte-identical and one-message.
+    /// A successor buys no new tokens, telemetry, RNG state or context. The
+    /// receipt-confirmed stream and the remaining original ceilings still gate it.
+    pub fn with_text_stream_continuation(mut self) -> Result<Self, Error> {
+        if self.text_stream_continuation { return Err(Error::Duplicate); }
+        if self.text_stream_profile().is_none() || self.pre_output_forecast.is_some()
+            || self.owned_pre_output_forecast.is_some() { return Err(Error::Binding); }
+        let mut writer = Writer::new(MAX_CONFIG_BYTES);
+        writer.raw(DOMAIN)?; writer.u64(0)?; writer.raw(b"FALMULT\x01")?;
+        writer.blob(&self.bytes)?;
+        self.bytes = writer.finish().into();
+        self.text_stream_continuation = true;
+        Ok(self)
+    }
+
+    pub fn allows_text_stream_continuation(&self) -> bool { self.text_stream_continuation }
+
     /// Pin the complete original text recipe AND independent stream contract.
     /// The stream domain differs from every legacy numeric/raw-text recipe;
     /// those encodings are unchanged. Configuration does no token inference and

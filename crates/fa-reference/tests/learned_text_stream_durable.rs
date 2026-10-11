@@ -5,6 +5,8 @@
 mod fixture;
 #[path = "learned_text_stream_durable/reserve.rs"]
 mod reserve;
+#[path = "learned_text_stream_durable/continuation.rs"]
+mod continuation;
 use fixture::{config, model, policy, tokenizer, END, OTHER_CONTROL};
 use fa_reference::{Error, ReadWitness, Snapshot};
 use fa_reference::action::{ActionState, ElapsedTick, FrozenAction, Purpose, ResolvedTarget, Scope};

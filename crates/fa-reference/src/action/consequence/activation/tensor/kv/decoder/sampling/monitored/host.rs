@@ -6,6 +6,38 @@ use crate::Error;
 use std::rc::Rc;
 
 impl LearnedGeneration {
+    /// Private continuation of one already admitted finite sampled run. The
+    /// owning stream must first establish its receipt-confirmed message cut.
+    /// No prompt, sampler, token ceiling, numerical or telemetry budget changes.
+    pub(crate) fn check_host_message_continuation(&self) -> Result<(), Error> {
+        let super::GenerationStatus::Finished(super::GenerationStop::StopToken(token)) = self.status
+            else { return Err(Error::WrongState); };
+        if !self.spec.stop_tokens().contains(&token)
+            || self.samples.last().map(|sample| sample.token) != Some(token) {
+            return Err(Error::Binding);
+        }
+        if self.samples.len() >= self.spec.max_new_tokens()
+            || self.work.admitted_tokens >= self.estimate.audited_positions as u64 {
+            return Err(Error::Limit);
+        }
+        let next = self.model.estimate(self.position() as usize, 1)?;
+        let products = self.work.reserved_decoder_products.checked_add(next.scalar_products()?)
+            .ok_or(Error::Overflow)?;
+        let scores = self.work.reserved_vocabulary_scores
+            .checked_add(self.spec.sampling().policy.vocabulary() as u64).ok_or(Error::Overflow)?;
+        if products > self.budget.decoder_products || scores > self.budget.vocabulary_scores {
+            return Err(Error::Limit);
+        }
+        self.telemetry_budget.allowance(self.telemetry_work, self.guard.policy())?;
+        Ok(())
+    }
+
+    pub(crate) fn continue_host_message(&mut self) -> Result<(), Error> {
+        self.check_host_message_continuation()?;
+        self.status = super::GenerationStatus::Generating;
+        Ok(())
+    }
+
     /// Check the predictor's residual contract against THIS immutable model.
     /// This exposes neither parameters nor a mutable numerical owner and does
     /// no inference. The supervising broker separately binds stream and lifetime.

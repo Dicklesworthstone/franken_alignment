@@ -1,4 +1,7 @@
 //! Bounded, independently provisioned learned generation and native review inputs.
+#[path = "weights.rs"]
+pub(super) mod weights;
+use weights::WeightsInput;
 use super::{fields::{Assets, Fields, path, MAX_DATA_BYTES}, fit, monitor::MonitorInput, native::NativeRoster};
 use super::super::tokenizer::TokenizerInput;
 use crate::config::{Config, debug, read_regular};
@@ -11,7 +14,7 @@ use fa_reference::action::consequence::activation::probe::{LinearProbe,
     learned::{KvGroup, KvRow, LearnedProbeWork}};
 use fa_reference::action::consequence::activation::tensor::kv::experiment::KvSide;
 use fa_reference::action::consequence::activation::tensor::kv::decoder::{
-    DecoderIdentity, DecoderModel,
+    DecoderIdentity,
     safetensors::{MAX_WEIGHT_HEADER_BYTES, MAX_WEIGHT_FILE_BYTES, pretrained::{LlamaConfig, MAX_CONFIG_BYTES}},
     sampling::monitored::{GenerationBudget, GenerationTelemetryBudget, MAX_GENERATION_TOKENS},
 };
@@ -55,10 +58,10 @@ struct Recipe {
     files: Files, max_new_tokens: usize, max_output_bytes: usize, stop_tokens: BTreeSet<u32>,
     tokenization: TokenizationBudget, budget: GenerationBudget, telemetry: GenerationTelemetryBudget,
     sidecar: SidecarIdentity, disclosure: SidecarCongressBudget, native_limits: NativeReviewLimits,
-    priority: Vec<KvGroup>, rounds: Vec<u64>,
+    priority: Vec<KvGroup>, rounds: Vec<u64>, continuation: bool,
 }
 struct Files {
-    configuration: PathBuf, weights: PathBuf, tokenizer: TokenizerInput, sampling: PathBuf,
+    configuration: PathBuf, weights: WeightsInput, tokenizer: TokenizerInput, sampling: PathBuf,
     prompt: PathBuf, fit_binding: PathBuf, fit_archive: PathBuf, monitor: PathBuf, native: PathBuf,
 }
 
@@ -101,9 +104,7 @@ pub(super) fn load(file: &Path, config: &Config, require_native: bool) -> Result
     }
     let bound = (8 + MAX_WEIGHT_HEADER_BYTES + 4 * negotiated.profile().parameter_count())
         .min(MAX_WEIGHT_FILE_BYTES).min(config.profile.delivery.limits.bytes);
-    let weights = assets.read(&recipe.files.weights, bound)?;
-    let (model, _) = DecoderModel::from_llama_safetensors(recipe.identity, recipe.context,
-        &configuration, &weights).map_err(debug)?;
+    let model = recipe.files.weights.load(&configuration, &negotiated, &mut assets, bound)?;
     let archive = assets.read(&recipe.files.fit_archive, MAX_FIT_ARCHIVE_BYTES)?;
     let codec = fit::replay(&archive, &binding, MAX_FIT_ARCHIVE_BYTES)?;
     let monitor = monitor.bind_with_tokenizer(&model, &tokenizer, codec)?;
@@ -113,7 +114,11 @@ pub(super) fn load(file: &Path, config: &Config, require_native: bool) -> Result
         policy: monitor.policy, budget: recipe.budget, telemetry: recipe.telemetry,
         output: LearnedTextOutputPolicy { max_bytes: recipe.max_output_bytes, completion: LearnedTextCompletion::StopRequired } };
     let generation = FileLearnedConfig::new_text_stream(model, tokenizer, source, recipe.binding,
-        recipe.publication).map_err(debug)?.with_required_sidecar().map_err(debug)?
+        recipe.publication).map_err(debug)?;
+    let generation = if recipe.continuation {
+        generation.with_text_stream_continuation().map_err(debug)?
+    } else { generation };
+    let generation = generation.with_required_sidecar().map_err(debug)?
         .with_required_policy_source(config.source_policy).map_err(debug)?;
     let native = if require_native {
         { let roster = NativeRoster::load(&recipe.files.native, config, &mut assets)?;
@@ -129,11 +134,14 @@ pub(super) fn load(file: &Path, config: &Config, require_native: bool) -> Result
 impl Recipe {
     fn decode(bytes: &[u8]) -> Result<Self, String> {
         let mut root = Fields::parse(bytes, MAX_RECIPE_BYTES)?;
-        let progressive = match root.text("schema")?.as_str() {
-            "fa.learned-publication/1" => false,
-            "fa.learned-publication/2" => true,
+        let version = match root.text("schema")?.as_str() {
+            "fa.learned-publication/1" => 1,
+            "fa.learned-publication/2" => 2,
+            "fa.learned-publication/3" => 3,
+            "fa.learned-publication/4" => 4,
             _ => return Err("unsupported learned publication recipe".into()),
         };
+        let progressive = version >= 2;
         let request = root.number("request")?;
         let ttl_ms = root.number("ttl_ms")?;
         let assets_bytes = root.size("asset_bytes")?;
@@ -173,7 +181,8 @@ impl Recipe {
             control_sequence: floor.number("control_sequence")?, authority_epoch: floor.number("authority_epoch")? };
         floor.end()?;
         let mut files = root.object("files")?;
-        let files_value = Files { configuration: files.path("model_config")?, weights: files.path("weights")?,
+        let files_value = Files { configuration: files.path("model_config")?,
+            weights: WeightsInput::parse(files.take("weights")?, version >= 3)?,
             tokenizer: TokenizerInput::parse(files.take("tokenizer")?, true)?, sampling: files.path("sampling")?,
             prompt: files.path("prompt")?, fit_binding: files.path("fit_binding")?, fit_archive: files.path("fit_archive")?,
             monitor: files.path("monitor")?, native: files.path("native_roster")? };
@@ -259,7 +268,8 @@ impl Recipe {
         Ok(Self { request, ttl_ms, assets_bytes, identity, context, stream, evaluation_origin, monitor_generation,
             publication: publication_value, binding: binding_value, floor: floor_value, files: files_value,
             max_new_tokens, max_output_bytes, stop_tokens, tokenization, budget, telemetry,
-            sidecar: sidecar_identity, disclosure: disclosure_value, native_limits, priority, rounds })
+            sidecar: sidecar_identity, disclosure: disclosure_value, native_limits, priority, rounds,
+            continuation: version >= 4 })
     }
 }
 fn priority(groups: Vec<fa_reference::strict_json::Json>) -> Result<Vec<KvGroup>, String> {

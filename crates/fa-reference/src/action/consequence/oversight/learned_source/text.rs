@@ -51,6 +51,9 @@ pub(super) struct TextBinding {
     prompt: String,
     tokenization: TokenizationWork,
     output: LearnedTextOutputPolicy,
+    // Offset into the ORIGINAL run's generated token history. It advances only
+    // after the owning stream confirms the prior complete message by receipt.
+    output_start: usize,
 }
 
 impl DecoderModel {
@@ -77,7 +80,7 @@ impl DecoderModel {
         prompt.extend_from_slice(encoded.tokens());
         let spec = GenerationSpec::new(prompt, config.max_new_tokens, config.stop_tokens, config.sampling)?;
         let binding = TextBinding { tokenizer, prompt: config.prompt,
-            tokenization: encoded.work(), output: config.output };
+            tokenization: encoded.work(), output: config.output, output_start: 0 };
         let mut source = self.observed_learned_generation(LearnedSourceConfig {
             stream: config.stream, evaluation_origin: config.evaluation_origin,
             monitor_generation: config.monitor_generation, spec, policy: config.policy,
@@ -93,6 +96,21 @@ fn check_tokenizer(tokenizer: &ByteBpe, profile: &DecoderProfile) -> Result<(), 
 }
 
 impl ObservedLearnedGeneration {
+    pub(crate) fn check_host_text_continuation(&self) -> Result<(), Error> {
+        // Retain complete-output, UTF-8 and control-stop validation. Empty or
+        // held output cannot become a successful earlier message by continuing.
+        self.decode_text_output()?;
+        self.run.check_host_message_continuation()
+    }
+
+    pub(crate) fn continue_host_text_message(&mut self) -> Result<(), Error> {
+        self.check_host_text_continuation()?;
+        let next = self.run.generated_tokens().len();
+        self.run.continue_host_message()?;
+        self.text.as_mut().expect("checked original text binding").output_start = next;
+        Ok(())
+    }
+
     pub fn text_bound(&self) -> bool { self.text.is_some() }
     pub fn text_prompt(&self) -> Option<&str> { self.text.as_ref().map(|text| text.prompt.as_str()) }
     pub fn text_tokenizer(&self) -> Option<&ByteBpe> { self.text.as_ref().map(|text| &text.tokenizer) }
@@ -121,7 +139,8 @@ impl ObservedLearnedGeneration {
         let text = self.text.as_ref().ok_or(Error::Incomplete)?;
         if self.observation().availability() != LearnedAvailability::Ready { return Err(Error::Incomplete); }
         let GenerationStatus::Finished(stop) = self.status() else { return Err(Error::Incomplete); };
-        let continuation = self.run.generated_tokens();
+        let continuation = self.run.generated_tokens().get(text.output_start..)
+            .ok_or(Error::Binding)?;
         let tokens = match stop {
             GenerationStop::StopToken(token) => {
                 if !self.run.spec().stop_tokens().contains(&token) || !text.tokenizer.is_control(token)?
