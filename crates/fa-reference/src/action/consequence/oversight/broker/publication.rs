@@ -133,3 +133,13 @@ impl OversightBroker {
         self.delivery.publication_routing_strategy()
     }
 }
+
+impl OversightBroker {
+    /// Poll the original retained evidence conjunction without copying inputs or
+    /// granting authority. Freshness, both keys and final checks remain separate.
+    pub fn begin_publication_precheck(&self, attempt: u64, expected_revision: u64)
+        -> Result<crate::action::consequence::oversight::publication::PublicationRefinement<'_>, Error>
+    {
+        self.delivery.begin_publication_precheck(attempt, expected_revision)
+    }
+}

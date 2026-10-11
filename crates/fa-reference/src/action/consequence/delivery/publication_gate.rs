@@ -5,6 +5,7 @@
 //! (or unavailability) before publication. Configured feed freshness uses an
 //! independently named elapsed clock; unconfigured legacy profiles have no lease.
 
+mod precheck;
 mod source;
 pub mod changes;
 pub use source::PublicationSourceStatus;

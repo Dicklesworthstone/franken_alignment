@@ -85,3 +85,33 @@ RCH_REQUIRE_REMOTE=1 rch exec -- cargo run --locked -p xtask -- check
 
 Added resumable composite validation and shared complete-view opaque comparison.
 Preserved the original synchronous public report and final-effect behavior.
+
+## Native retained-evidence precheck
+
+DeliveryBroker and OversightBroker expose begin_publication_precheck(attempt,
+expected_revision). It borrows the original slot's judgment and retained inputs,
+not a caller-selected substitute. Missing gates, attempts or reviewed bindings
+refuse; stale input predecessors refuse before comparison. The existing frozen
+PublicationLimits.validation allowance supplies the lifetime ceiling. There is
+no caller parameter that raises that allowance.
+
+This is a read-only evidence comparison. It neither consumes nor refreshes a
+single-boundary source capture, changes an input revision, nor replaces the last
+report recorded by the actual final gate. It can truthfully find retained bytes
+equal even after their source capture was consumed; that is NOT a statement of
+current source freshness or permission. Authorization and dispatch must obtain
+whatever fresh evidence and keys their original profiles require. The source,
+feed, deadline, human and policy paths remain unchanged.
+
+Five new public integration regression functions exercise the original policy,
+committee, human and publication endpoint. They cover a positive publication
+through both original keys, missing keys, six late-evidence mutations with valid
+newer-cut controls, capture consumption at the original boundaries, cancelled
+opaque work, unknown/stale predecessors and fixed-ceiling exhaustion. Refusal
+preserves both unspent keys; a retained precheck cannot refresh an already-used
+source capture. A second compile-fail example prevents mutable owner updates
+while the precheck borrows its cut.
+
+These integration tests are authored but UNEXECUTED. This increment does not add
+a durable precheck command or journal a successful precheck as authorization.
+The original final gates still recompute; no cached permission is introduced.
