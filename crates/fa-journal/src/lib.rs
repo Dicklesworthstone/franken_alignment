@@ -8,6 +8,7 @@
 
 #[cfg(unix)]
 pub mod file;
+pub mod replay;
 
 use fa_reference::{Effect, Rights};
 use std::collections::BTreeSet;
