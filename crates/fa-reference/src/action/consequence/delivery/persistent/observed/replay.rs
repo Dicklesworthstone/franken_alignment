@@ -1,6 +1,9 @@
 //! Read-only extraction of a completed congress from the original durable journal.
 //! No provider, helper, human endpoint, writer, or external effect is invoked.
 
+mod cursor;
+pub use cursor::{FileReviewReplayCursor, FileReviewReplayProgress, FileReviewReplayStatus};
+
 use super::{FileDeliverySnapshot, FileOversight, FileOversightProfile, JournalError,
     journal::{self, Event}, machine::Machine, storage};
 use crate::action::consequence::oversight::{CommitteeInput, ObservedReceipt};
@@ -54,8 +57,7 @@ impl FileOversight {
     /// Reconstruct in RAM; the live broker, keys, source leases and clock do not
     /// change. Unfinished/abandoned rounds report Incomplete, never a fake verdict.
     pub fn review_replay(&self, round: u64) -> Result<FileReviewReplay, JournalError> {
-        if self.fault.is_some() { return Err(JournalError::Unavailable); }
-        extract(&self.profile, &self.events, round, self.inspect())
+        self.begin_review_replay(round)?.complete()
     }
 
     /// Read one canonical image beside a live owner or after a crash. Validate
@@ -65,15 +67,12 @@ impl FileOversight {
     pub fn read_review_replay(directory: impl AsRef<Path>, profile: &FileOversightProfile,
         round: u64) -> Result<FileReviewReplay, JournalError>
     {
-        super::super::codec::validate_profile(&profile.delivery)?;
-        let identity = storage::identity(directory.as_ref())?;
-        let bytes = storage::read(&identity.join(storage::CANONICAL), profile.delivery.limits.bytes)?;
-        let events = journal::decode(profile, &identity, &bytes)?;
-        let at_end = Machine::replay(profile, &events)?.snapshot(events.len());
-        extract(profile, &events, round, at_end)
+        Self::begin_read_review_replay(directory, profile, round)?.complete()
     }
 }
 
+// Retain the previous extraction path as an independent test-only oracle.
+#[cfg(test)]
 fn extract(profile: &FileOversightProfile, events: &[Event], round: u64,
     at_end: FileDeliverySnapshot) -> Result<FileReviewReplay, JournalError>
 {

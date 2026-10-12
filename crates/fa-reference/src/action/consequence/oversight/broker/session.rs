@@ -12,6 +12,7 @@ use crate::action::consequence::gate::containment::session::policy::controller::
 use crate::evidence_view::EvidenceViewManifest;
 use crate::round::Verdict;
 use crate::Error;
+use std::cell::OnceCell;
 use std::collections::BTreeSet;
 use std::rc::Rc;
 
@@ -37,6 +38,9 @@ pub struct ObservedSession {
     commit_times: Vec<ElapsedTick>,
     reveals_opened_at: Option<ElapsedTick>,
     reveal_times: Vec<ElapsedTick>,
+    // Opt-in output of the original finish, used only by sealed historical
+    // replay. Live sessions allocate no archive and consume no captured result.
+    archive_capture: Option<Rc<OnceCell<ObservedDecisionArchive>>>,
 }
 
 impl ObservedSession {
@@ -48,6 +52,7 @@ impl ObservedSession {
             policy: Some(policy), issuer, attempt, revision, inputs, window, started_at,
             elapsed: started_at, reveal_phase: false, committed: BTreeSet::new(), revealed: BTreeSet::new(),
             commit_times: Vec::new(), reveals_opened_at: None, reveal_times: Vec::new(),
+            archive_capture: None,
         }
     }
 
@@ -66,6 +71,19 @@ impl ObservedSession {
             inputs: Rc::clone(&self.inputs), input_revision: self.revision,
             window: self.window, started_at: self.started_at,
         })
+    }
+
+    // No public callback, archive import or new review constructor. The sealed
+    // journal inspector observes this slot only AFTER Machine::apply succeeds,
+    // and cannot publish it until the complete original suffix also verifies.
+    pub(crate) fn retain_replay_archive(&mut self)
+        -> Result<Rc<OnceCell<ObservedDecisionArchive>>, Error>
+    {
+        if self.policy.is_none() { return Err(Error::WrongState); }
+        if self.archive_capture.is_some() { return Err(Error::Duplicate); }
+        let capture = Rc::new(OnceCell::new());
+        self.archive_capture = Some(Rc::clone(&capture));
+        Ok(capture)
     }
 
     /// Worker admission requires a fresh independent phase. There is no mixed
@@ -146,13 +164,17 @@ impl ObservedSession {
             return Err(Error::Incomplete);
         }
         let policy = self.policy.take().ok_or(Error::WrongState)?.finish()?;
-        Ok(ObservedReview {
+        let review = ObservedReview {
             policy, issuer: Rc::clone(&self.issuer), attempt: self.attempt, revision: self.revision,
             inputs: Rc::clone(&self.inputs), window: self.window, started_at: self.started_at,
             completed_at: now, commit_times: std::mem::take(&mut self.commit_times),
             reveals_opened_at: self.reveals_opened_at.expect("finished reveal phase"),
             reveal_times: std::mem::take(&mut self.reveal_times),
-        })
+        };
+        if let Some(capture) = &self.archive_capture {
+            capture.get_or_init(|| review.replay_archive());
+        }
+        Ok(review)
     }
 
     fn observe(&mut self, now: ElapsedTick) -> Result<(), Error> {

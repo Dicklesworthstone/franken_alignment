@@ -117,3 +117,5 @@ fn a_well_encoded_but_semantically_invalid_suffix_is_not_ignored() {
     std::fs::write(root.store().join(storage::CANONICAL), bytes).unwrap();
     assert!(FileOversight::read_review_replay(root.store(), &profile(), 101).is_err());
 }
+
+mod cursor;
