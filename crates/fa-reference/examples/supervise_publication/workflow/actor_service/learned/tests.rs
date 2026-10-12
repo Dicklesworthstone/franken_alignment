@@ -99,3 +99,5 @@ fn response(wire: &mut Wire, request: u64) -> fa_reference::action::consequence:
 fn executed(wire: &mut Wire, request: u64) -> bool {
     matches!(response(wire, request).result, Ok(Knowledge::Known { value: ActorOutcome::Executed, .. }))
 }
+
+#[path = "tests/audit.rs"] mod audit;

@@ -3,6 +3,7 @@
 //! all numerical and effect transitions belong to the existing original owners.
 #[path = "learned/fields.rs"] mod fields;
 #[path = "learned/anchors.rs"] mod anchors;
+#[path = "learned/audit.rs"] mod audit;
 #[path = "learned/fit.rs"] mod fit;
 #[path = "learned/monitor.rs"] mod monitor;
 #[path = "learned/native.rs"] mod native;
@@ -37,9 +38,13 @@ use fa_reference::action::consequence::oversight::{
 use fa_reference::Error;
 use std::{io::Write, path::Path, rc::Rc};
 
-const USAGE: &str = "create-learned-generated CONFIG LEARNED_RECIPE REVIEWER_PROFILE [--continue-generation | --after-message PREVIOUS_REQUEST | --finish-after-message PREVIOUS_REQUEST] [--credibility-activation CAPSULE] [--history-anchor INPUT] [--retain-history-anchor NEW_OUTPUT] | create-learned-generated CONFIG LEARNED_RECIPE --resume [--finish-after-message PREVIOUS_REQUEST] [--history-anchor INPUT] [--retain-history-anchor NEW_OUTPUT] | create-learned-generated CONFIG LEARNED_RECIPE --recover-stop OPERATION [--history-anchor INPUT]";
+const USAGE: &str = "create-learned-generated CONFIG LEARNED_RECIPE REVIEWER_PROFILE [--continue-generation | --after-message PREVIOUS_REQUEST | --finish-after-message PREVIOUS_REQUEST] [--credibility-activation CAPSULE] [--history-anchor INPUT] [--retain-history-anchor NEW_OUTPUT] | create-learned-generated CONFIG LEARNED_RECIPE --resume [--finish-after-message PREVIOUS_REQUEST] [--history-anchor INPUT] [--retain-history-anchor NEW_OUTPUT] | create-learned-generated CONFIG LEARNED_RECIPE --recover-stop OPERATION [--history-anchor INPUT] | create-learned-generated CONFIG LEARNED_RECIPE --audit-review ROUND HISTORY_ANCHOR";
 
 pub(super) fn command(args: &[String], credibility: Option<&Path>) -> Result<(), String> {
+    if args.iter().any(|arg| arg == "--audit-review") {
+        if credibility.is_some() { return Err("historical audit cannot activate credibility".into()); }
+        return audit::command(args, &mut std::io::stdout().lock());
+    }
     let (args, anchors) = anchors::take_options(args)?;
     if args.iter().any(|arg| arg == "--recover-stop") {
         // Explicit offline Stop never enters live continuation, consumes a
