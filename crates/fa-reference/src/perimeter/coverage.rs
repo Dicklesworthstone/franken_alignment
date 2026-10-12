@@ -4,6 +4,8 @@
 //! deployment observations. A result proves a graph property under that exact
 //! declaration; it is neither a permit nor proof of real-world containment.
 
+pub mod synthesis;
+
 use super::PerimeterScope;
 use crate::{Error, Graph};
 use std::collections::{BTreeMap, BTreeSet, VecDeque};
