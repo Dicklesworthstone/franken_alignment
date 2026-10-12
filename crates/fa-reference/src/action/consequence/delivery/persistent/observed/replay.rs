@@ -1,6 +1,7 @@
 //! Read-only extraction of a completed congress from the original durable journal.
 //! No provider, helper, human endpoint, writer, or external effect is invoked.
 
+mod anchored;
 mod cursor;
 mod learned;
 pub use cursor::{FileReviewReplayCursor, FileReviewReplayProgress, FileReviewReplayStatus};

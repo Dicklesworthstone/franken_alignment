@@ -46,7 +46,8 @@ impl FileHistoryAnchor {
     /// Logical retained canonical bytes, not heap allocation or storage overhead.
     pub fn retained_bytes(&self) -> usize { self.canonical.len() }
 
-    pub(super) fn check(&self, profile: &FileOversightProfile, identity: &Path, events: &[Event])
+    // The read-only review auditor shares this exact checker; no public event importer.
+    pub(in super::super) fn check(&self, profile: &FileOversightProfile, identity: &Path, events: &[Event])
         -> Result<(), Error>
     {
         if self.revision > events.len() { return Err(Error::Stale); }

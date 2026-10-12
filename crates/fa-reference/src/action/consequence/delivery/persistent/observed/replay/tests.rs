@@ -119,3 +119,5 @@ fn a_well_encoded_but_semantically_invalid_suffix_is_not_ignored() {
 }
 
 mod cursor;
+
+mod anchored;
