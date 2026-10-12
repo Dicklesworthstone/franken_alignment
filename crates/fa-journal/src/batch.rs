@@ -1,6 +1,9 @@
 //! Bounded grouping of the original canonical records, not a new wire format.
 //! Groups are all-or-nothing in memory, NOT atomic multi-record disk writes.
 
+mod preparation;
+pub use preparation::{BatchPreparation, BatchPreparationError, BatchPreparationReport, BatchPreparationStage};
+
 use crate::{Error, Event, Head, Journal, apply_event, crc32, encode_event};
 
 pub const MAX_BATCH_RECORDS: usize = 1_024;
@@ -43,49 +46,67 @@ impl Journal {
     pub(crate) fn prepare_batch(&self, events: &[Event], limits: BatchLimits)
         -> Result<(Self, Vec<u8>), Error>
     {
-        if events.is_empty() { return Err(Error::InvalidInput); }
+        let mut encoder = Encoder::new(self, events.len(), limits)?;
+        for event in events { encoder.push(event)?; }
+        Ok(encoder.finish())
+    }
+}
+
+// One original batch encoder shared by synchronous and yielding preparation.
+// Only its enclosing sealed cursor exposes it, never an importer of rights.
+struct Encoder {
+    candidate: Journal,
+    bytes: Vec<u8>,
+    limits: BatchLimits,
+}
+impl Encoder {
+    fn new(journal: &Journal, count: usize, limits: BatchLimits) -> Result<Self, Error> {
+        if count == 0 { return Err(Error::InvalidInput); }
         if limits.max_records == 0 || limits.max_records > MAX_BATCH_RECORDS
             || limits.max_encoded_bytes == 0 || limits.max_encoded_bytes > MAX_BATCH_ENCODED_BYTES
-            || events.len() > limits.max_records { return Err(Error::Limit); }
-        let count = u64::try_from(events.len()).map_err(|_| Error::Limit)?;
-        if self.head.sequence.checked_add(count).is_none_or(|end| end > self.limits.max_records) {
+            || count > limits.max_records { return Err(Error::Limit); }
+        let records = u64::try_from(count).map_err(|_| Error::Limit)?;
+        if journal.head.sequence.checked_add(records).is_none_or(|end| end > journal.limits.max_records) {
             return Err(Error::Limit);
         }
         // Every original record has at least 20 framing bytes and one tag.
         // Reject impossible groups before cloning the retained rights history.
-        let minimum = events.len().checked_mul(21).ok_or(Error::Limit)?;
+        let minimum = count.checked_mul(21).ok_or(Error::Limit)?;
         if minimum > limits.max_encoded_bytes
-            || self.encoded_len.checked_add(minimum as u64)
-                .is_none_or(|end| end > self.limits.max_total_bytes) { return Err(Error::Limit); }
-        let mut candidate = self.clone();
-        let mut bytes = Vec::new();
-        for event in events {
-            let capacity = candidate.remaining_for(event);
-            if capacity.records == 0 { return Err(Error::Limit); }
-            let remaining = (limits.max_encoded_bytes - bytes.len()) as u64;
-            let remaining = remaining.min(capacity.bytes);
-            if remaining < 21 { return Err(Error::Limit); }
-            // Restrict the ORIGINAL encoder before copying any payload. The
-            // bounded cast is safe even when the lifetime byte limit is huge.
-            let payload_limit = (remaining - 20).min(u64::from(candidate.limits.max_frame_bytes - 12));
-            let payload = encode_event(event, payload_limit as usize)?;
-            let body_len = 12 + payload.len();
-            let encoded_len = candidate.check_event_growth(event, body_len)?;
-            let sequence = candidate.head.sequence.checked_add(1).ok_or(Error::Limit)?;
-            bytes.try_reserve_exact(body_len + 8).map_err(|_| Error::Limit)?;
-            let start = bytes.len();
-            bytes.extend_from_slice(&(body_len as u32).to_le_bytes());
-            bytes.extend_from_slice(&sequence.to_le_bytes());
-            bytes.extend_from_slice(&candidate.head.checksum.to_le_bytes());
-            bytes.extend_from_slice(&payload);
-            let checksum = crc32(&bytes[start..]);
-            bytes.extend_from_slice(&checksum.to_le_bytes());
-            // A failed reducer (including an unwind) can change only this
-            // private candidate. No original rights are cloned for each record.
-            apply_event(&mut candidate.rights, event)?;
-            candidate.head = Head { sequence, checksum };
-            candidate.encoded_len = encoded_len;
-        }
-        Ok((candidate, bytes))
+            || journal.encoded_len.checked_add(minimum as u64)
+                .is_none_or(|end| end > journal.limits.max_total_bytes) { return Err(Error::Limit); }
+        Ok(Self { candidate: journal.clone(), bytes: Vec::new(), limits })
     }
+
+    fn push(&mut self, event: &Event) -> Result<(), Error> {
+        let Self { candidate, bytes, limits } = self;
+        let capacity = candidate.remaining_for(event);
+        if capacity.records == 0 { return Err(Error::Limit); }
+        let remaining = (limits.max_encoded_bytes - bytes.len()) as u64;
+        let remaining = remaining.min(capacity.bytes);
+        if remaining < 21 { return Err(Error::Limit); }
+        // Restrict the ORIGINAL encoder before copying any payload. The
+        // bounded cast is safe even when the lifetime byte limit is huge.
+        let payload_limit = (remaining - 20).min(u64::from(candidate.limits.max_frame_bytes - 12));
+        let payload = encode_event(event, payload_limit as usize)?;
+        let body_len = 12 + payload.len();
+        let encoded_len = candidate.check_event_growth(event, body_len)?;
+        let sequence = candidate.head.sequence.checked_add(1).ok_or(Error::Limit)?;
+        bytes.try_reserve_exact(body_len + 8).map_err(|_| Error::Limit)?;
+        let start = bytes.len();
+        bytes.extend_from_slice(&(body_len as u32).to_le_bytes());
+        bytes.extend_from_slice(&sequence.to_le_bytes());
+        bytes.extend_from_slice(&candidate.head.checksum.to_le_bytes());
+        bytes.extend_from_slice(&payload);
+        let checksum = crc32(&bytes[start..]);
+        bytes.extend_from_slice(&checksum.to_le_bytes());
+        // A failed reducer (including an unwind) can change only this
+        // private candidate. No original rights are cloned for each record.
+        apply_event(&mut candidate.rights, event)?;
+        candidate.head = Head { sequence, checksum };
+        candidate.encoded_len = encoded_len;
+        Ok(())
+    }
+
+    fn finish(self) -> (Journal, Vec<u8>) { (self.candidate, self.bytes) }
 }
