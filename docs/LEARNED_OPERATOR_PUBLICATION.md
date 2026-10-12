@@ -92,7 +92,7 @@ supervise_publication stop-peer /operator/reviewer.json 7
 ```
 
 The stop endpoint, `SOCKET_DIRECTORY/stop-REQUEST.sock`, is claimed before the
-authority store is created or reopened and remains available during generation,
+authority store is created or reopened and remains available during recovery, generation,
 native review, human review and publication. Existing socket names are not
 deleted to force a bind. Normal cleanup removes only this invocation's socket.
 Provision the socket directory and kernel identities according to
@@ -100,6 +100,15 @@ Provision the socket directory and kernel identities according to
 must have the configured supervisor ownership and no group/other write access.
 The logical reviewer/scope and the connection-time UID/GID, plus PID when selected,
 must match their independent profiles.
+
+Recovery checks the same deadline and stop admission before opening, between
+original journal events and once more before its fence. An authenticated peer
+can interrupt replay without changing the journal or staged files; this returns
+a recovery error and **does not apply or acknowledge a durable Stop**. The
+receipt-only `--resume` forms instead use an elapsed replay budget while retaining
+the original request deadline and terminal no-new-logical-clock behavior. See
+[cooperative recovery](COOPERATIVE_LEARNED_OPERATOR_RECOVERY.md) for the command
+contract, synchronous-operation limits and pending execution qualification.
 
 Stdout contains only the original actor-wire response. A successful command
 requires its original `Known(Executed)` result and completed cleanup. A held,

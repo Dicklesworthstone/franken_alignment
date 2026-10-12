@@ -1,5 +1,30 @@
 # Implementation status · design revision 0.3
 
+## 2026-10-12: enforce deadline and authenticated stop during learned replay (unqualified source)
+
+The actual learned continuation, next-message and finish command now connects
+the original one-event recovery checkpoints to its existing deadline and stop
+transport. Checks occur before guarded open, before every original event and
+at Ready before the single fence. An authenticated pending peer interrupts
+replay without canonical/staged-file changes or role issuance. It does not apply
+or acknowledge a durable Stop: the recovered owner needed for that protocol
+does not yet exist. Rejected peers retain the original admission-quota behavior.
+
+Message and finish receipt recovery instead enforce a single monotonic elapsed
+budget, with no supplied logical-clock calls, live evidence, new forecast or
+renewed request deadline. Exact anchors, guard inventory, reserve, retained
+numerical work and final anchor retention remain on the original owner path.
+One event and initial/final synchronous storage work can exceed a time budget;
+these are cooperative event boundaries, not an interruptible-kernel guarantee.
+
+Seven new regression functions cover cancellation at every boundary, actual Unix
+credential admission, the real command entry and original whole-batch numerical/
+fence parity. Six changed Rust files passed older, unqualified syntax parsing
+only. Target and full-gate RCH dispatches both stopped before compilation because
+the launcher is absent (exit 127); tests remain unexecuted. Scoped work remains in progress;
+the full FA-014 packet and its prerequisites remain open. See
+[the recovery contract](docs/COOPERATIVE_LEARNED_OPERATOR_RECOVERY.md).
+
 ## 2026-10-12: retain and require independent learned operator history (unqualified source)
 
 The existing learned publication command now accepts an independently retained

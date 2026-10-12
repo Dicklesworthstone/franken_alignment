@@ -1,5 +1,20 @@
 # Changelog
 
+## 2026-10-12: service learned recovery deadlines and authenticated stop peers
+
+- Connect the actual continuation, next-message and finish command to its
+  original deadline and stop transport at every replay checkpoint, including
+  before guarded open and before the recovery fence.
+- Interrupt on admitted stop peers without changing canonical/staged history or
+  claiming a durable Stop application or receipt before owner recovery.
+- Bound receipt replay by monotonic elapsed time while retaining its original
+  logical-clock, evidence, forecast and request-deadline contract.
+- Add seven actual-history all-cut, peer-admission, real-caller and independent
+  full-batch replay regressions. Six changed Rust files passed older syntax
+  parsing only; targeted and full-gate RCH dispatches stopped before compilation
+  with the launcher absent (exit 127). No compile/test qualification or full
+  FA-014 acceptance is claimed.
+
 ## 2026-10-12: connect independent history custody to learned operator recovery
 
 - Add explicit private history-anchor input and new-file successor retention to

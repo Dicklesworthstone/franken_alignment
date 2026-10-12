@@ -28,7 +28,7 @@ boundaries, not an interruptible kernel, wall-clock latency bound or resource
 preallocation guarantee. Supervisor checkpoint code must not mutate the source
 store behind the exclusive owner.
 
-## Source and tests
+## Initial checkpoint source and tests
 
 The implementation is in the learned operator's `recovery.rs` and
 `recovery/cooperative.rs`. Seven driver tests cover exact ordering, every cancel
@@ -52,3 +52,57 @@ the forecast-publication integration in FA-111, under plan sections 8, 11 and
 new agent verb, evidence type, runtime dependency or founding-plan semantics is
 introduced. The full packets and their prerequisites remain open. Beads were
 read but not modified because the required `br` command is unavailable.
+
+## Active command deadlines and stop admission · 2026-10-12
+
+The continuation, next-message and finish commands now connect those checkpoints
+to the same deadline and authenticated stop endpoint used by generation and
+publication. The command creates both before guarded recovery. Every checkpoint,
+including the pre-open and final Ready boundaries, first checks the command's
+logical and elapsed-time limits, then polls the existing kernel-credential
+admission service. Recovery does not renew either limit or create another peer
+admission budget. An unauthenticated candidate does not become a stop request;
+the existing finite candidate quota and its refusal behavior remain in force.
+
+An admitted stop peer interrupts replay before its next event or finish. The
+command returns an explicit recovery-interrupted error and drops the exclusive
+cursor. Canonical and staged files remain unchanged. **No durable Stop was
+applied or acknowledged:** recovery has not issued the original owner and human
+role needed by that protocol. The client therefore receives no Stop challenge
+or receipt from this interrupted attempt. A later invocation must independently
+reopen the store; interruption does not revoke a durable history, undo an old
+effect or create a terminal application record.
+
+Message and finish `--resume` use the same checkpoints with a separate elapsed
+budget of `CONFIG.timing.runtime_ms`, beginning immediately before guarded open.
+They do not consult the supplied live logical-clock function during replay,
+persist a new clock observation, read live policy evidence, acquire a forecast,
+or renew the retained request deadline. A completed terminal receipt still
+settles entirely from its original record. These receipt-only commands have no
+reviewer profile and do not create a stop endpoint.
+
+These checks bound continuation at **event boundaries**. Initial file reading,
+decoding and recipe binding, one original numerical replay event, and final
+encoding/synchronization remain synchronous. A single such operation can exceed
+the configured elapsed budget; there is no interruptible-kernel latency claim.
+History-anchor selection, original guards and reserve, the single successful
+fence, and final anchor-retention behavior are unchanged.
+
+The integration's regression sources are `tests/replay.rs`,
+`tests/recovery_control.rs` and `tests/receipt_replay_deadline.rs`. They compare
+the cooperative result with original full-batch replay, inject expiry at every
+checkpoint, and exercise actual Unix peer admission. Positive counterparts
+retain numerical state and the original fence; cancellation counterparts retain
+all canonical and staged bytes and release the writer lock. Seven new regression
+functions are authored and independently source-reviewed. The actual continuation
+entry is tested as well as its helpers; existing terminal message/finish tests
+retain panic-on-live-time callbacks through the changed receipt path.
+
+Six changed Rust files passed older, unqualified rustfmt syntax parsing only;
+the parser output did not rewrite source and is not formatting or type-check
+qualification. Both the learned example target and the full
+`RCH_REQUIRE_REMOTE=1 rch exec -- cargo run --locked -p xtask -- check` dispatch
+stopped before compilation because `rch` is absent (exit 127). The source snapshot
+includes the complete parent tree and this integration; raw attempt logs are
+outside it. No compile/test result is claimed. The scoped bead remains in
+progress; the full FA-014 packet and its prerequisites remain open.

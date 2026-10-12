@@ -373,7 +373,11 @@
         "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/anchors.rs",
         "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/recovery.rs",
         "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/tests/anchors.rs",
-        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/tests/anchored_recovery.rs"
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/tests/anchored_recovery.rs",
+        "docs/COOPERATIVE_LEARNED_OPERATOR_RECOVERY.md",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/tests/replay.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/tests/recovery_control.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/tests/receipt_replay_deadline.rs"
       ]
     },
     {

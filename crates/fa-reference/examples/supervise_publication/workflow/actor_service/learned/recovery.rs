@@ -3,7 +3,7 @@ mod cooperative;
 use cooperative::{Progress, finish_replay};
 use super::{Config, Loaded, FileOversight, FileSupervisedDriver, FileHumanReviewer, ElapsedTick,
     RunResult, ActorWire, Command, FileLearnedTextStreamActorPort, LearnedTextRelease,
-    RecoveryReserve, cleanup, debug, encode_command};
+    RecoveryReserve, Control, Deadline, Duration, Instant, cleanup, debug, encode_command};
 use fa_reference::action::consequence::delivery::persistent::observed::guarded::{
     FileGuardSet, FileRecoveryRequirements,
     predictive::{FilePredictiveRequirements, owned::FileOwnedPredictiveRequirements},
@@ -79,8 +79,45 @@ fn requirements(config: &Config, loaded: &Loaded) -> FileRecoveryRequirements {
 /// numerical recipe. Only the original predictive guard can issue a new role
 /// after the same validated replay, terminal reserve and single recovery fence.
 /// A previously unanswered forecast becomes lost coverage, never a new attempt.
+#[cfg(test)]
 pub(super) fn open_selected(config: &Config, loaded: &Loaded) -> Result<Custody, String> {
     open_selected_with_checkpoints(config, loaded, &mut |_| Ok(()))
+}
+
+/// Recovery shares the active command's original deadline and authenticated
+/// stop transport. No owner exists yet: admission cancels replay, but cannot
+/// apply the durable Stop protocol or acknowledge a Stop receipt.
+pub(super) fn open_selected_live<F>(config: &Config, loaded: &Loaded,
+    control: &mut Control, deadline: &Deadline, time: &mut F) -> Result<Custody, String>
+where F: FnMut() -> ElapsedTick {
+    open_selected_with_checkpoints(config, loaded, &mut |_| {
+        deadline.check(time())?;
+        if control.pending_peer()? {
+            return Err("learned recovery interrupted by authenticated stop peer; no durable Stop applied or acknowledged".into());
+        }
+        Ok(())
+    })
+}
+
+fn open_receipt(config: &Config, loaded: &Loaded) -> Result<Custody, String> {
+    let started = Instant::now();
+    open_receipt_with_elapsed(config, loaded, &mut || started.elapsed())
+}
+
+/// Receipt replay has its own finite wall budget, without consulting a new
+/// logical clock, renewing the retained request deadline or reading evidence.
+/// The elapsed supplier keeps every cancellation cut deterministic in tests;
+/// production always uses the single Instant captured before guarded open.
+pub(super) fn open_receipt_with_elapsed(config: &Config, loaded: &Loaded,
+    elapsed: &mut impl FnMut() -> Duration) -> Result<Custody, String>
+{
+    let wall = Duration::from_millis(config.timing.runtime_ms);
+    open_selected_with_checkpoints(config, loaded, &mut |_| {
+        if elapsed() >= wall {
+            return Err("learned receipt recovery replay deadline reached".into());
+        }
+        Ok(())
+    })
 }
 
 /// Run the SAME guarded owner one original event at a time. None is the
@@ -132,7 +169,7 @@ pub(super) fn open_selected_with_checkpoints(config: &Config, loaded: &Loaded,
 
 pub(super) fn resume<F>(config: Config, loaded: Loaded, mut time: F) -> Result<RunResult, String>
 where F: FnMut() -> ElapsedTick {
-    let (host, _reviewer, _observer) = open_selected(&config, &loaded)?;
+    let (host, _reviewer, _observer) = open_receipt(&config, &loaded)?;
     let action = host.request_action(loaded.request).map_err(debug)?;
     let frame = ReleaseFrame::decode(&action.spec().payload).map_err(debug)?;
     if frame.profile() != loaded.stream || frame.is_finish() {
@@ -146,7 +183,7 @@ pub(super) fn resume_finish<F>(config: Config, loaded: Loaded, after: u64, mut t
     -> Result<RunResult, String>
 where F: FnMut() -> ElapsedTick {
     super::finish::check_ids(loaded.request, after)?;
-    let (host, _reviewer, _observer) = open_selected(&config, &loaded)?;
+    let (host, _reviewer, _observer) = open_receipt(&config, &loaded)?;
     // The original pre-policy request survives even if admission never created
     // a FrozenAction. Only the exact predecessor receipt can select this finish.
     let original = host.learned_text_stream_finish_request(after, loaded.request).map_err(debug)?;

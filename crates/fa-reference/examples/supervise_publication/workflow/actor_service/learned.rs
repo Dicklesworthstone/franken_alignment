@@ -122,10 +122,11 @@ where F: FnMut() -> ElapsedTick {
     let deadline = Deadline { logical: plus(start, lifetime)?, started: Instant::now(),
         wall: Duration::from_millis(lifetime) };
     deadline.check(start)?;
-    // Claim the real authenticated stop endpoint BEFORE store creation. The
-    // same bounded service survives numerical generation, review and dispatch.
+    // Claim the real authenticated stop endpoint BEFORE store creation/open.
+    // The same service and deadline cover replay, generation, review and dispatch.
     let mut control = Control::new(&config, loaded.request, Some(peers))?;
-    let (host, reviewer, observer) = if continuing { recovery::open_selected(&config, &loaded)? }
+    let (host, reviewer, observer) = if continuing {
+        recovery::open_selected_live(&config, &loaded, &mut control, &deadline, &mut time)? }
         else { recovery::create_selected(&config, &loaded)? };
     let mut prediction = observer.map(|observer| prediction::Session::new(loaded.request, observer));
     prediction::check(&host, prediction.as_ref())?;

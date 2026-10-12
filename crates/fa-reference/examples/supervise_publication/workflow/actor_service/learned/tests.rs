@@ -18,6 +18,9 @@ use super::*;
 #[path = "tests/anchors.rs"] mod anchors;
 #[path = "tests/anchored_recovery.rs"] mod anchored_recovery;
 #[path = "tests/recovery_quanta.rs"] mod recovery_quanta;
+#[path = "tests/replay.rs"] mod replay;
+#[path = "tests/recovery_control.rs"] mod recovery_control;
+#[path = "tests/receipt_replay_deadline.rs"] mod receipt_replay_deadline;
 use fixture::{Root, configured, evidence};
 use fa_reference::action::consequence::delivery::persistent::observed::{
     helpers::learned::native::{NativeReviewStatus, NativeMemberRecord, sequence::FileNativeSidecarSequence},
