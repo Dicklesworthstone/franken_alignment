@@ -13,6 +13,8 @@ use super::*;
 #[path = "tests/continuation.rs"] mod continuation;
 #[path = "tests/bound_monitor.rs"] mod bound_monitor;
 #[path = "tests/checkpoint_source.rs"] mod checkpoint_source;
+#[path = "tests/forecast.rs"] mod forecast;
+#[path = "tests/predictive.rs"] mod predictive;
 use fixture::{Root, configured, evidence};
 use fa_reference::action::consequence::delivery::persistent::observed::{
     helpers::learned::native::{NativeReviewStatus, NativeMemberRecord, sequence::FileNativeSidecarSequence},

@@ -10,7 +10,7 @@ use std::path::PathBuf;
 
 #[path = "continuation/native.rs"] mod native;
 
-fn write(root: &Root) -> PathBuf {
+pub(super) fn write(root: &Root) -> PathBuf {
     let path = fixture::write(root, b"allow");
     native::provision(root);
     let recipe = fs::read_to_string(&path).unwrap()
@@ -24,7 +24,7 @@ fn write(root: &Root) -> PathBuf {
     fs::write(&path, recipe).unwrap(); path
 }
 
-fn next(root: &Root, config: &Config, request: u64) -> (PathBuf, Loaded) {
+pub(super) fn next(root: &Root, config: &Config, request: u64) -> (PathBuf, Loaded) {
     let path = root.0.join(format!("request-{request}.json"));
     let original = fs::read_to_string(root.0.join("recipe.json")).unwrap();
     let ids = [request * 10 + 1, request * 10 + 2, request * 10 + 3];
@@ -61,7 +61,7 @@ fn prepared(root: &Root) -> (Config, Loaded, FileHumanReviewer, FileSupervisedDr
     (config, loaded, reviewer, driver, wire, deadline)
 }
 
-fn review_current(config: &mut Config, loaded: &Loaded, reviewer: &FileHumanReviewer,
+pub(super) fn review_current(config: &mut Config, loaded: &Loaded, reviewer: &FileHumanReviewer,
     driver: FileSupervisedDriver, deadline: &Deadline) -> (FileSupervisedDriver, FileNativeSidecarSequence) {
     let mut control = Control::new(config, loaded.request, None).unwrap();
     let reviewed = review::run(driver, config, loaded, reviewer, &mut control,
@@ -100,7 +100,7 @@ fn review_current(config: &mut Config, loaded: &Loaded, reviewer: &FileHumanRevi
     (reviewed.driver, history)
 }
 
-fn approve(driver: &mut FileSupervisedDriver, config: &mut Config,
+pub(super) fn approve(driver: &mut FileSupervisedDriver, config: &mut Config,
     reviewer: &FileHumanReviewer, request: u64) -> FileHumanPermit {
     let offer = driver.request_learned_human_approval_from_policy_file(&mut config.source,
         700 + request, ElapsedTick(50_000), || ElapsedTick(1000)).result.unwrap();
@@ -108,7 +108,7 @@ fn approve(driver: &mut FileSupervisedDriver, config: &mut Config,
     reviewer.approve(&mut host, revision, &offer).unwrap()
 }
 
-fn publish(driver: &mut FileSupervisedDriver, config: &mut Config, human: &FileHumanPermit) {
+pub(super) fn publish(driver: &mut FileSupervisedDriver, config: &mut Config, human: &FileHumanPermit) {
     assert!(matches!(driver.step_computed_from_policy_file(&mut config.source,
         || ElapsedTick(1000), Some(human)).result.unwrap(), FileDriverEvent::Dispatched { .. }));
     assert!(matches!(driver.step_computed_from_policy_file(&mut config.source,

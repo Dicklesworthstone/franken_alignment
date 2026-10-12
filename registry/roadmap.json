@@ -2563,7 +2563,10 @@
         "docs/FORECAST_TEXT_STREAM_CONTINUATION.md",
         "crates/fa-reference/tests/learned_text_stream_durable/continuation/forecast_messages.rs",
         "docs/PREDICTIVE_RECOVERY_RESERVE.md",
-        "crates/fa-reference/tests/learned_text_stream_durable/continuation/forecast_reserve.rs"
+        "crates/fa-reference/tests/learned_text_stream_durable/continuation/forecast_reserve.rs",
+        "docs/LEARNED_OPERATOR_FORECASTS.md",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/tests/forecast.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/tests/predictive.rs"
       ],
       "founding_ideas": [
         "FI-A12"

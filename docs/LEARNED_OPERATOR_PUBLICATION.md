@@ -11,6 +11,10 @@ schedule when the original congress records uncertainty. Version 3 adds explicit
 single/sharded checkpoint sources with optional saved static LoRA adapters.
 Version 4 also permits finite continuation after a confirmed message, using the
 same admitted numerical owner and original remaining allowances.
+Version 5 requires independently provisioned raw-residual or owned-K/V forecasts
+before sampling each message, with a separate forecast for finish. See
+[required operator forecasts](LEARNED_OPERATOR_FORECASTS.md) for the artifact,
+runtime and recovery contract and its pending execution qualification.
 
 The native helper models execute **inside the supervising process**, with separate
 original evaluator owners and fixed input contracts. They are not helper OS
@@ -20,7 +24,7 @@ Linux peer-checked socket protocols.
 
 The implementation is
 [`workflow/actor_service/learned.rs`](../crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned.rs).
-The schema parsers are its `learned/recipe.rs`, `weights.rs`, `fit.rs`, `monitor.rs`,
+The schema parsers are its `learned/recipe.rs`, `weights.rs`, `fit.rs`, `monitor.rs`, `forecast.rs`,
 `native.rs` and `fields.rs` modules. Checkpoint sources use the shared
 [`support/checkpoint_source.rs`](../crates/fa-reference/examples/support/checkpoint_source.rs)
 loader and the original decoder, indexed reader and static adapter merger.
@@ -50,7 +54,7 @@ runs a fresh native review and requires another independent human decision.
 See [learned stream finish](LEARNED_STREAM_FINISH_OPERATOR.md) for predecessor,
 capacity and exact finish-recovery rules.
 
-For a stream admitted with recipe version 4, `--after-message` continues after
+For a stream admitted with recipe version 4 or 5, `--after-message` continues after
 the latest receipt-confirmed message under a new request ID. It resumes the same
 finite generation and requires fresh native and human review. Existing version
 1–3 histories cannot be upgraded to this mode. See
@@ -111,12 +115,13 @@ and bounds bytes before accepting the complete file.
 | Input | Required content |
 | --- | --- |
 | `CONFIG` | Existing supervised-publication version-1 configuration: authority, target, policy, congress, helper contracts, human policy, source policy and timing |
-| `LEARNED_RECIPE` | `fa.learned-publication/1` for one coarse round, `/2` for bounded residual refinement, `/3` for explicit checkpoint sources, or `/4` for finite message continuation |
+| `LEARNED_RECIPE` | `fa.learned-publication/1` for one coarse round, `/2` for bounded residual refinement, `/3` for explicit checkpoint sources, `/4` for finite message continuation, or `/5` for required forecasts across finite messages and finish |
 | Primary model configuration and weights | Original admitted Llama configuration, plus a complete SafeTensors path or an explicitly selected `fa.checkpoint-weights/1` source |
 | Primary tokenizer | Explicit `native_archive`, `huggingface_raw_bytelevel`, `huggingface_gpt2_unicode17` or `huggingface_llama3_unicode17` selection |
 | Prompt and sampling file | Actual UTF-8 prompt bytes and original `fa.decoder-sampling/1` sampling configuration |
 | Fit binding and fit archive | Independently retained `fa.learned-fit-binding/1` plus original `FAKVFIT/1` archive |
 | Learned monitor | `FAKVMON2` bound artifact or legacy `fa.learned-kv-monitor/1`, with every original layer and both K/V sides |
+| Required forecast (recipe `/5`) | Independent closed `fa.learned-forecast/1` artifact selected by `files.forecast`; exact original predictor, model/source/stream contracts and lifetime allowances |
 | Native roster | `fa.learned-native-roster/1` for single weight paths, or `/2` for explicit checkpoint-source selection; actual imported model/tokenizer/monitor/sampling files for every committee member |
 | `REVIEWER_PROFILE` | Existing peer profile matching the host's reviewer, scope and Unix-millisecond clock |
 | `CONFIG.evidence_path` | Fresh policy-only evidence with the exact complete committee member keys and **empty helper contexts** |
@@ -142,7 +147,7 @@ all original shape, context, vocabulary, scalar and numerical limits.
 
 ### Explicit checkpoint sources
 
-Primary recipe versions 3 and 4 accept either the existing absolute string path
+Primary recipe versions 3 through 5 accept either the existing absolute string path
 in `files.weights`, or this closed selection object:
 
 ```json
@@ -167,11 +172,11 @@ identity, including for an `audit_only` actor. Loading a manifest cannot update
 those host pins. A correctly merged model paired with a stale host generation
 refuses before store creation.
 
-Versions 3 and 4 retain the complete progressive version 2 layout, including
+Versions 3 through 5 retain the complete progressive version 2 layout, including
 required `sidecar.priority` and `native_review.round_ids`. For one coarse round,
 use an empty priority, one nonzero round ID and `sidecar.budget.rounds: 1`.
 Version 3 otherwise retains the earlier one-message generation behavior;
-version 4's continuation opt-in is described separately above. Primary recipe
+versions 4 and 5's continuation opt-in is described separately above. Primary recipe
 versions 1 and 2 continue to require a single absolute weight path and reject
 the selection object.
 
@@ -630,6 +635,10 @@ not reset the sampler, replenish numerical work or revive old effect keys.
 Native inputs and the reviewer profile are needed because this route can still
 perform a new review and publication.
 
+Version 5 additionally requires intact forecast coverage. Recovery of an
+unanswered forecast retains its work but loses coverage, so
+`--continue-generation` cannot restart that output attempt.
+
 If that request already exists, this option refuses and directs the operator
 to `--resume`. It cannot replace a denied/cancelled/unknown request or append a
 second message under its key.
@@ -665,8 +674,9 @@ is implied by loading a checkpoint source or replaying a recorded receipt.
 
 ## Verification status
 
-The final learned-command selection was independently reviewed and executed
-with qualified `nightly-2026-09-08`. All forty-one learned-command example tests
+The last executed learned-command selection predates recipe version 5. It was
+independently reviewed and executed with qualified `nightly-2026-09-08`.
+All forty-one learned-command example tests
 compiled. Thirty-nine passed, including all four checkpoint-source tests and
 all three finite-continuation tests alongside the existing direct, admission,
 progressive review, trained-monitor, bound-artifact and explicit finish tests.

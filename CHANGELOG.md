@@ -1,5 +1,22 @@
 # Changelog
 
+## 2026-10-12: require forecasts in the learned publication command
+
+- Add explicit recipe `/5` and a bounded independent `fa.learned-forecast/1`
+  artifact for original raw-residual or owned-K/V prediction. Bind the actual
+  model tap, full identity and both stream contracts before durable startup.
+- Drive first and later message sampling through the original request-bound
+  forecast handles, with fresh deadline/stop/source admission after prediction.
+  Independently forecast finish without inference; retain native and human keys.
+- Select complete predictive guarded recovery and original terminal reserve,
+  preserving pending obligations, numerical work and receipt-only recovery.
+- Add eight loader and seven loaded lifecycle regression functions, including
+  actual native two-message/finish publication, expiry, missing source, owned
+  budget exhaustion and immutable recovery mismatches. They are source-reviewed
+  but unexecuted: RCH is absent and the executor disconnected before this batch's
+  syntax or remote dispatch could start. No qualification or FA-111 research
+  closure is claimed.
+
 ## 2026-10-12: reserve terminal recovery for required predictive streams
 
 - Compose required raw-residual or owned-K/V forecasting with the original

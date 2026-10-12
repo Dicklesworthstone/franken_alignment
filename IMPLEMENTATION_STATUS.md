@@ -1,5 +1,42 @@
 # Implementation status · design revision 0.3
 
+## 2026-10-12: drive required forecasts through learned publication (unqualified source)
+
+The executable's new `fa.learned-publication/5` recipe requires an independently
+supplied `fa.learned-forecast/1` artifact. Closed parsing and original predictor
+validation precede weight intake; the actual imported model then checks full
+decoder identity, selected residual/K/V profile and dimensions, source stream
+and publication stream before durable startup. Exact finite binary32 words and
+the original prediction, owned-work and aggregate asset allowances are retained.
+
+The supervisor holds separate observer custody and drives original raw or owned
+forecast handles at the complete-prompt and receipt-bound successor boundaries.
+Forecast acquisition yields another ordinary deadline, stop and fresh source
+quantum before sampling. Finish uses a separate original forecast with no new
+inference. Every release still requires original native review, fresh human
+approval and confirmed publication. No observer or forecast input enters the
+source-only actor wire.
+
+Selected guarded recovery matches the complete independent predictor/generation,
+guards, policy, external floors and terminal reserve. It preserves unanswered
+forecasts and spent work, refusing renewed generation after lost coverage.
+Original terminal message/finish receipt recovery performs no new forecast,
+inference or review. Earlier recipe meanings and immutable history bytes remain
+unchanged.
+
+Eight loader tests and seven loaded lifecycle tests are authored and independently
+source-reviewed. The positive uses actual original numerical and native reviewer
+owners for two messages and separate finish in both modes. Causal controls cover
+missing custody, expiry or missing policy evidence before the first draw, owned
+forecast budget exhaustion, interrupted forecasts and changed configuration.
+The prescribed remote launcher is absent. After the complete operator source
+was frozen, the workspace executor disconnected before this batch's syntax and
+remote-dispatch attempts could start. No operator parse, Rust compilation,
+new-test or workspace pass is claimed. Reviewed source was recovered from
+retained reads and exact edits for direct GitHub publication. The fixture
+probabilities do not qualify calibration or detection quality, and FA-111
+remains in progress. See [required operator forecasts](docs/LEARNED_OPERATOR_FORECASTS.md).
+
 ## 2026-10-12: preserve terminal recovery capacity for predictive streams (unqualified source)
 
 Predictive learned STREAM startup now accepts an explicit recovery reserve in

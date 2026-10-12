@@ -5,6 +5,8 @@
 #[path = "learned/fit.rs"] mod fit;
 #[path = "learned/monitor.rs"] mod monitor;
 #[path = "learned/native.rs"] mod native;
+#[path = "learned/forecast.rs"] mod forecast;
+#[path = "learned/prediction.rs"] mod prediction;
 #[path = "learned/recipe.rs"] mod recipe;
 #[path = "learned/recovery.rs"] mod recovery;
 #[path = "learned/review.rs"] mod review;
@@ -119,8 +121,10 @@ where F: FnMut() -> ElapsedTick {
     // Claim the real authenticated stop endpoint BEFORE store creation. The
     // same bounded service survives numerical generation, review and dispatch.
     let mut control = Control::new(&config, loaded.request, Some(peers))?;
-    let (host, reviewer) = if continuing { recovery::open(&config, &loaded)? }
-        else { recovery::create(&config, &loaded)? };
+    let (host, reviewer, observer) = if continuing { recovery::open_selected(&config, &loaded)? }
+        else { recovery::create_selected(&config, &loaded)? };
+    let mut prediction = observer.map(|observer| prediction::Session::new(loaded.request, observer));
+    prediction::check(&host, prediction.as_ref())?;
     if continuing {
         match host.request_status(loaded.request) {
             Err(JournalError::Contract(Error::Missing)) => {}
@@ -144,13 +148,18 @@ where F: FnMut() -> ElapsedTick {
         let release = if let Some(after) = finishing {
             if !finish::prepare(&mut driver, &reviewer, &mut config, &loaded, after,
                 &mut control, &deadline, &mut time)? { return Ok(false); }
+            if let Some(prediction) = prediction.as_mut() {
+                let mut host = driver.supervisor_mut().host_mut().map_err(debug)?;
+                prediction.finish_request(&mut host)?;
+            }
             LearnedTextRelease::Finish
         } else {
             if let Some(command) = message_continuation {
                 if !continuation::prepare(&mut driver, &reviewer, &mut config, command,
                     &mut control, &deadline, &mut time)? { return Ok(false); }
             }
-            if !generate(&mut driver, &reviewer, &mut config, &mut control, &deadline, &mut time)? {
+            if !generate_selected(&mut driver, &reviewer, &mut config, &mut control,
+                &deadline, &mut time, prediction.as_mut())? {
                 return Ok(false);
             }
             LearnedTextRelease::Message
@@ -218,9 +227,18 @@ where F: FnMut() -> ElapsedTick {
     Ok(RunResult { response, failure, cleanup_pending })
 }
 
+#[cfg(test)]
 fn generate<F>(driver: &mut FileSupervisedDriver, reviewer: &FileHumanReviewer, config: &mut Config,
     control: &mut Control, deadline: &Deadline, time: &mut F) -> Result<bool, String>
 where F: FnMut() -> ElapsedTick {
+    generate_selected(driver, reviewer, config, control, deadline, time, None)
+}
+
+fn generate_selected<F>(driver: &mut FileSupervisedDriver, reviewer: &FileHumanReviewer,
+    config: &mut Config, control: &mut Control, deadline: &Deadline, time: &mut F,
+    mut prediction: Option<&mut prediction::Session>) -> Result<bool, String>
+where F: FnMut() -> ElapsedTick {
+    prediction::check(&*driver.supervisor().host().map_err(debug)?, prediction.as_deref())?;
     if control.checkpoint(driver, reviewer, deadline, time)? { return Ok(false); }
     refresh(driver, config, deadline, time)?;
     {
@@ -240,6 +258,9 @@ where F: FnMut() -> ElapsedTick {
         let current = driver.supervisor().host().map_err(debug)?
             .learned_generation_inspection().map_err(debug)?;
         if !current.numerical.status.is_active() {
+            if let Some(prediction) = prediction.as_deref() {
+                prediction.complete_message(&*driver.supervisor().host().map_err(debug)?)?;
+            }
             return match current.numerical.status {
                 GenerationStatus::Finished(GenerationStop::StopToken(_)) => Ok(true),
                 _ => Err(format!("learned generation did not finish at a quiet monitored stop: {:?}",
@@ -250,6 +271,20 @@ where F: FnMut() -> ElapsedTick {
         // operation. A retained write-ahead intent completes once, never resets.
         refresh(driver, config, deadline, time)?;
         let mut host = driver.supervisor_mut().host_mut().map_err(debug)?;
+        prediction::check(&host, prediction.as_deref())?;
+        if current.numerical.status == GenerationStatus::Generating {
+            if let Some(prediction) = prediction.as_deref_mut() {
+                if !prediction.has_message() {
+                    prediction.begin_message(&mut host)?;
+                    // Forecast acknowledgment precedes a NEW normal stop,
+                    // clock and policy-source quantum before the first draw.
+                    // Acquisition never lends its elapsed time to generation.
+                    continue;
+                }
+                prediction.advance(&mut host)?;
+                continue;
+            }
+        }
         let revision = host.revision();
         host.advance_learned_generation(revision, current.numerical.actor_revision,
             current.numerical.position).map_err(debug)?.map_err(debug)?;

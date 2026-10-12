@@ -2,7 +2,8 @@
 #[path = "weights.rs"]
 pub(super) mod weights;
 use weights::WeightsInput;
-use super::{fields::{Assets, Fields, path, MAX_DATA_BYTES}, fit, monitor::MonitorInput, native::NativeRoster};
+use super::{fields::{Assets, Fields, path, MAX_DATA_BYTES}, fit, forecast::ForecastInput,
+    monitor::MonitorInput, native::NativeRoster};
 use super::super::tokenizer::TokenizerInput;
 use crate::config::{Config, debug, read_regular};
 use fa_reference::action::consequence::activation::monitor::{
@@ -63,6 +64,7 @@ struct Recipe {
 struct Files {
     configuration: PathBuf, weights: WeightsInput, tokenizer: TokenizerInput, sampling: PathBuf,
     prompt: PathBuf, fit_binding: PathBuf, fit_archive: PathBuf, monitor: PathBuf, native: PathBuf,
+    forecast: Option<PathBuf>,
 }
 
 pub(super) fn load(file: &Path, config: &Config, require_native: bool) -> Result<Loaded, String> {
@@ -82,6 +84,8 @@ pub(super) fn load(file: &Path, config: &Config, require_native: bool) -> Result
     // Closed probe/fit data admission precedes any model weight ingestion.
     let binding = fit::binding(&assets.read(&recipe.files.fit_binding, MAX_DATA_BYTES)?)?;
     let monitor = MonitorInput::decode(&assets.read(&recipe.files.monitor, MAX_KV_MONITOR_ARTIFACT_BYTES)?)?;
+    let forecast = recipe.files.forecast.as_ref().map(|path| ForecastInput::load(path, &mut assets))
+        .transpose()?;
     let configuration = assets.read(&recipe.files.configuration, MAX_CONFIG_BYTES)?;
     let negotiated = LlamaConfig::decode(recipe.identity, recipe.context, &configuration).map_err(debug)?;
     for group in recipe.priority.iter().filter(|_| require_native) {
@@ -105,6 +109,7 @@ pub(super) fn load(file: &Path, config: &Config, require_native: bool) -> Result
     let bound = (8 + MAX_WEIGHT_HEADER_BYTES + 4 * negotiated.profile().parameter_count())
         .min(MAX_WEIGHT_FILE_BYTES).min(config.profile.delivery.limits.bytes);
     let model = recipe.files.weights.load(&configuration, &negotiated, &mut assets, bound)?;
+    let forecast = forecast.map(|input| input.bind(&model, recipe.stream, recipe.publication)).transpose()?;
     let archive = assets.read(&recipe.files.fit_archive, MAX_FIT_ARCHIVE_BYTES)?;
     let codec = fit::replay(&archive, &binding, MAX_FIT_ARCHIVE_BYTES)?;
     let monitor = monitor.bind_with_tokenizer(&model, &tokenizer, codec)?;
@@ -115,11 +120,14 @@ pub(super) fn load(file: &Path, config: &Config, require_native: bool) -> Result
         output: LearnedTextOutputPolicy { max_bytes: recipe.max_output_bytes, completion: LearnedTextCompletion::StopRequired } };
     let generation = FileLearnedConfig::new_text_stream(model, tokenizer, source, recipe.binding,
         recipe.publication).map_err(debug)?;
-    let generation = if recipe.continuation {
+    let generation = if recipe.continuation && forecast.is_none() {
         generation.with_text_stream_continuation().map_err(debug)?
     } else { generation };
     let generation = generation.with_required_sidecar().map_err(debug)?
         .with_required_policy_source(config.source_policy).map_err(debug)?;
+    let generation = if let Some(forecast) = forecast {
+        forecast.pin(generation)?.with_forecast_text_stream_continuation().map_err(debug)?
+    } else { generation };
     let native = if require_native {
         { let roster = NativeRoster::load(&recipe.files.native, config, &mut assets)?;
             roster.check_limits(&recipe.native_limits, recipe.rounds.len())?; Some(roster) }
@@ -139,6 +147,7 @@ impl Recipe {
             "fa.learned-publication/2" => 2,
             "fa.learned-publication/3" => 3,
             "fa.learned-publication/4" => 4,
+            "fa.learned-publication/5" => 5,
             _ => return Err("unsupported learned publication recipe".into()),
         };
         let progressive = version >= 2;
@@ -185,7 +194,8 @@ impl Recipe {
             weights: WeightsInput::parse(files.take("weights")?, version >= 3)?,
             tokenizer: TokenizerInput::parse(files.take("tokenizer")?, true)?, sampling: files.path("sampling")?,
             prompt: files.path("prompt")?, fit_binding: files.path("fit_binding")?, fit_archive: files.path("fit_archive")?,
-            monitor: files.path("monitor")?, native: files.path("native_roster")? };
+            monitor: files.path("monitor")?, native: files.path("native_roster")?,
+            forecast: if version == 5 { Some(files.path("forecast")?) } else { None } };
         path(files_value.tokenizer.path())?;
         files.end()?;
         let mut text = root.object("text")?;
