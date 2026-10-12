@@ -281,3 +281,5 @@ fn full_unreserved_history_refuses_before_cleanup_without_widening_limits() {
     assert_eq!(FileOversight::open_guarded(root.store(), p, &expected).err(), Some(Error::Limit.into()));
     assert_eq!(files(&root), before);
 }
+
+#[path = "recovery_effect_tests.rs"] mod effects;

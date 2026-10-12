@@ -88,3 +88,29 @@ used to qualify this source. Run the original integrated gate:
 RCH_REQUIRE_REMOTE=1 rch exec -- cargo test --locked -p fa-reference guarded
 RCH_REQUIRE_REMOTE=1 rch exec -- cargo run --locked -p xtask -- check
 ```
+
+## Original effect and two-key composition controls
+
+Three additional native regression functions use the actual FileOversight action,
+full-input congress, independent human key, checked-publication and reconciliation
+paths. They exercise eight combinations of four lifecycle cuts and two polling
+schedules, from approved-but-unsent to receipt-confirmed publication. The original
+full Machine replay plus Fence supplies the independent result oracle. Old keys
+and old reviewer custody refuse; a fresh original review and new human role can
+successfully publish after recovery. Neither an unknown charge nor a visible
+unacknowledged effect is forgotten or reexecuted.
+
+All five original publication replacement barriers are injected before recovery.
+The canonical endpoint outcome, not the failed caller's stale RAM image, decides
+whether reconciliation observes execution or an unresolved liability. Missing
+current input at a newly recovered owner's real final gate still seals the effect
+without execution; the near-identical complete-input case publishes. Only original
+receipt reconciliation refunds proved nonexecution, and later better evidence
+cannot reroll a sealed outcome. The journal's read projection equals the live
+acknowledged cut after each completed scenario.
+
+The manual congress ballots are explicit synthetic controls, not native helper
+inference or evidence of detection quality. File I/O uses the existing original
+Store; injected errors are not power-cut experiments. These tests are authored
+but unexecuted under the same RCH limitation above. No production qualification
+or new authority semantics follows from their existence.
