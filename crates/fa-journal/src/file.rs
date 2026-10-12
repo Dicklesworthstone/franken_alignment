@@ -5,6 +5,7 @@
 //! remote-receipt authentication, or exactly-once external-execution boundary.
 
 mod recovery;
+mod reserve;
 pub use recovery::FileRecovery;
 
 use crate::{Event, Head, Identity, Journal, Limits};
@@ -68,7 +69,11 @@ impl FileJournal {
         identity: Identity,
         limits: Limits,
     ) -> Result<Self, Error> {
-        let journal = Journal::new(identity, limits)?;
+        Self::create_journal(path, Journal::new(identity, limits)?)
+    }
+
+    // Both profiles publish their complete original header in the first image.
+    fn create_journal(path: impl AsRef<Path>, journal: Journal) -> Result<Self, Error> {
         let path = path.as_ref();
         let directory = parent_directory(path)?;
         let mut file = OpenOptions::new()

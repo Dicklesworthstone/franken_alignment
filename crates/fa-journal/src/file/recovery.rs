@@ -50,7 +50,14 @@ impl FileJournal {
         minimum: Head,
         limits: Limits,
     ) -> Result<FileRecovery, Error> {
-        Journal::new(identity, limits)?;
+        Self::begin_open_journal(path, minimum, Journal::new(identity, limits)?)
+    }
+
+    // Shared by legacy and explicitly reserved profiles. Configuration validation
+    // precedes file opening; the cursor never infers a profile from stored bytes.
+    pub(super) fn begin_open_journal(path: impl AsRef<Path>, minimum: Head, journal: Journal)
+        -> Result<FileRecovery, Error>
+    {
         let path = path.as_ref();
         let directory = parent_directory(path)?;
         let file = OpenOptions::new().read(true).write(true).open(path)?;
@@ -59,11 +66,10 @@ impl FileJournal {
         if !metadata.is_file() {
             return Err(io::Error::new(io::ErrorKind::InvalidInput, "not a regular journal file").into());
         }
-        if metadata.len() > limits.max_total_bytes {
+        if metadata.len() > journal.limits.max_total_bytes {
             return Err(crate::Error::Limit.into());
         }
-        let replay = Journal::begin_replay(BufReader::with_capacity(READ_AHEAD, file),
-            identity, minimum, limits)?;
+        let replay = journal.replay_cursor(BufReader::with_capacity(READ_AHEAD, file), minimum)?;
         Ok(FileRecovery { replay, directory })
     }
 }

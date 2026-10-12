@@ -70,3 +70,30 @@ no original gate is weakened and no prior test receipt validates new source.
 RCH_REQUIRE_REMOTE=1 rch exec -- cargo test --locked -p fa-journal --test recovery_reserve
 RCH_REQUIRE_REMOTE=1 rch exec -- cargo run --locked -p xtask -- check
 ```
+
+## Original locked file owner
+
+`FileJournal::create_with_recovery_reserve` writes the complete v2 header in its
+first image using the original exclusive create and file/directory synchronization.
+`begin_open_with_recovery_reserve` and `open_with_recovery_reserve` require the
+same independent profile, use the original locked recovery cursor, and expose
+no writer until strict replay and both synchronization barriers complete.
+Legacy file entry points remain v1; there is no sniff-and-retry downgrade.
+
+Single and grouped commits already consume the common event-admission law.
+No new persistence or authority path is added. `FileJournal::capacity()` refuses
+on a poisoned owner, rather than offering stale free-space numbers after an
+uncertain write. A recovery-record write failure can leave no bytes, a complete
+prefix or a partial record. Complete prefixes consume their recorded space and
+retain their original unknown liabilities; partial records refuse without repair.
+The advisory lock stays held until drop, even after failure or Ready.
+
+Seven additional public file regressions cover exact first-image identity,
+ordinary and byte-cap exhaustion followed by positive revocation/settlement,
+reopening after each tail record, tiny-poll recovery, profile downgrade/widening,
+header/Ready cancellation, invalid mixed groups, anchor rollback and the original
+revoked-epoch rule paired with a valid new-epoch dispatch. Two private regressions
+inject every one of the 51 byte cuts of a 50-byte recovery group and a full-write
+unwind. The same poison, lock, independent-anchor and no-refund rules remain in
+force. These nine additional Rust tests are also authored but UNEXECUTED; injected
+failures are not power-loss experiments.
