@@ -1,7 +1,7 @@
 //! Cooperative strict replay using the original wire decoder and rights reducer.
 //! A checked prefix is never exported as recovered accounting.
 
-use crate::{Cursor, Error, HEADER_LEN, Head, Identity, Journal, Limits, apply_event, crc32_parts, decode_event};
+use crate::{Cursor, Error, Head, Identity, Journal, Limits, apply_event, crc32_parts, decode_event};
 use std::fmt;
 use std::io::{self, Read};
 
@@ -84,7 +84,7 @@ enum Phase {
 /// Each poll limits reads and complete-record checks, NOT CPU instructions or
 /// elapsed time. One record check includes its bounded checksum/decoding and the
 /// original rights reducer. That reducer may inspect already retained rights.
-/// There is at most one frame buffer (max_frame_bytes + 4, or HEADER_LEN), plus
+/// There is at most one frame buffer (max_frame_bytes + 4, or the selected fixed header), plus
 /// original decoded event/rights storage. A Read may block or buffer internally.
 /// Errors other than Interrupted, including WouldBlock, are terminal; an I/O
 /// error is not reinterpreted as temporary EOF or a reusable partial history.
@@ -120,14 +120,19 @@ impl Journal {
         minimum: Head,
         limits: Limits,
     ) -> Result<Replay<R>, Error> {
-        let journal = Self::new(identity, limits)?;
+        Self::new(identity, limits)?.replay_cursor(reader, minimum)
+    }
+
+    pub(crate) fn replay_cursor<R: Read>(self, reader: R, minimum: Head) -> Result<Replay<R>, Error> {
+        let header_len = self.header().len();
+        let journal = self;
         Ok(Replay {
             reader,
             anchor_seen: minimum == journal.head(),
             journal,
             minimum,
             phase: Phase::Header,
-            buffer: vec![0; HEADER_LEN],
+            buffer: vec![0; header_len],
             filled: 0,
             length: [0; 4],
             status: ReplayStatus::Reading,
@@ -273,6 +278,7 @@ impl<R: Read> Replay<R> {
             return Err(Error::Corrupt("record ordering or chain"));
         }
         let event = decode_event(cursor.0)?;
+        self.journal.check_event_growth(&event, body_len)?;
         apply_event(&mut self.journal.rights, &event)?;
         self.journal.head = Head { sequence, checksum };
         self.journal.encoded_len = encoded_len;

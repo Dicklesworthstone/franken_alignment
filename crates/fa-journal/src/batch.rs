@@ -60,15 +60,17 @@ impl Journal {
         let mut candidate = self.clone();
         let mut bytes = Vec::new();
         for event in events {
+            let capacity = candidate.remaining_for(event);
+            if capacity.records == 0 { return Err(Error::Limit); }
             let remaining = (limits.max_encoded_bytes - bytes.len()) as u64;
-            let remaining = remaining.min(candidate.limits.max_total_bytes - candidate.encoded_len);
+            let remaining = remaining.min(capacity.bytes);
             if remaining < 21 { return Err(Error::Limit); }
             // Restrict the ORIGINAL encoder before copying any payload. The
             // bounded cast is safe even when the lifetime byte limit is huge.
             let payload_limit = (remaining - 20).min(u64::from(candidate.limits.max_frame_bytes - 12));
             let payload = encode_event(event, payload_limit as usize)?;
             let body_len = 12 + payload.len();
-            let encoded_len = candidate.check_growth(body_len)?;
+            let encoded_len = candidate.check_event_growth(event, body_len)?;
             let sequence = candidate.head.sequence.checked_add(1).ok_or(Error::Limit)?;
             bytes.try_reserve_exact(body_len + 8).map_err(|_| Error::Limit)?;
             let start = bytes.len();

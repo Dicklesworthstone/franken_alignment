@@ -10,6 +10,8 @@
 pub mod file;
 pub mod replay;
 pub mod batch;
+pub mod reserve;
+pub use reserve::{JournalCapacity, RecoveryReserve, RemainingCapacity};
 
 use fa_reference::{Effect, Rights};
 use std::collections::BTreeSet;
@@ -104,10 +106,19 @@ pub struct Journal {
     head: Head,
     encoded_len: u64,
     rights: Rights,
+    recovery_reserve: Option<RecoveryReserve>,
 }
 
 impl Journal {
     pub fn new(identity: Identity, limits: Limits) -> Result<Self, Error> {
+        Self::configured(identity, limits, None)
+    }
+
+    // The explicit reserve constructor validates its independently bound profile
+    // here too. Legacy callers retain their original header and limit semantics.
+    fn configured(identity: Identity, limits: Limits, reserve: Option<RecoveryReserve>)
+        -> Result<Self, Error>
+    {
         if identity.run == [0; 32] || identity.policy == [0; 32] {
             return Err(Error::InvalidInput);
         }
@@ -119,13 +130,15 @@ impl Journal {
         {
             return Err(Error::Limit);
         }
-        let header = encode_header(identity);
+        if let Some(reserve) = reserve { reserve.check(limits)?; }
+        let header = encode_header(identity, limits, reserve);
         Ok(Self {
             identity,
             limits,
-            head: Head { sequence: 0, checksum: crc32(&header[..80]) },
-            encoded_len: HEADER_LEN as u64,
+            head: Head { sequence: 0, checksum: crc32(&header[..header.len() - 4]) },
+            encoded_len: header.len() as u64,
             rights: Rights::new(identity.total_units),
+            recovery_reserve: reserve,
         })
     }
 
@@ -146,17 +159,20 @@ impl Journal {
     }
 
     pub fn header(&self) -> Vec<u8> {
-        encode_header(self.identity)
+        encode_header(self.identity, self.limits, self.recovery_reserve)
     }
 
     /// Applies an event in memory and returns its canonical encoded record.
     /// Failure leaves this value unchanged. Persisting these bytes is a separate
     /// operation; this method by itself makes no durability claim.
     pub fn append(&mut self, event: &Event) -> Result<Vec<u8>, Error> {
-        let payload = encode_event(event, self.limits.max_frame_bytes as usize - 12)?;
+        let remaining = self.remaining_for(event);
+        if remaining.records == 0 || remaining.bytes < 21 { return Err(Error::Limit); }
+        let payload_limit = (remaining.bytes - 20).min(u64::from(self.limits.max_frame_bytes - 12));
+        let payload = encode_event(event, payload_limit as usize)?;
         let sequence = self.head.sequence.checked_add(1).ok_or(Error::Limit)?;
         let body_len = 12 + payload.len();
-        let encoded_len = self.check_growth(body_len)?;
+        let encoded_len = self.check_event_growth(event, body_len)?;
         let mut frame = Vec::with_capacity(body_len + 8);
         frame.extend_from_slice(&(body_len as u32).to_le_bytes());
         frame.extend_from_slice(&sequence.to_le_bytes());
@@ -177,13 +193,17 @@ impl Journal {
     /// A valid suffix beyond the anchor is replayed: an interrupted write may
     /// have persisted despite its caller not receiving an acknowledgement.
     pub fn replay(
-        mut reader: impl Read,
+        reader: impl Read,
         identity: Identity,
         minimum: Head,
         limits: Limits,
     ) -> Result<Self, Error> {
-        let mut journal = Self::new(identity, limits)?;
-        let mut header = [0; HEADER_LEN];
+        Self::new(identity, limits)?.replay_from(reader, minimum)
+    }
+
+    fn replay_from(self, mut reader: impl Read, minimum: Head) -> Result<Self, Error> {
+        let mut journal = self;
+        let mut header = vec![0; journal.header().len()];
         reader.read_exact(&mut header)?;
         if header.as_slice() != journal.header().as_slice() {
             return Err(Error::Binding);
@@ -225,6 +245,7 @@ impl Journal {
                 return Err(Error::Corrupt("record ordering or chain"));
             }
             let event = decode_event(cursor.0)?;
+            journal.check_event_growth(&event, body_len)?;
             // No per-record state clone during replay: any error discards the
             // entire local replay state, rather than returning a usable prefix.
             apply_event(&mut journal.rights, &event)?;
@@ -257,12 +278,19 @@ impl Journal {
     }
 }
 
-fn encode_header(identity: Identity) -> Vec<u8> {
-    let mut header = Vec::with_capacity(HEADER_LEN);
-    header.extend_from_slice(MAGIC);
+fn encode_header(identity: Identity, limits: Limits, reserve: Option<RecoveryReserve>) -> Vec<u8> {
+    let mut header = Vec::with_capacity(if reserve.is_some() { reserve::HEADER_LEN } else { HEADER_LEN });
+    header.extend_from_slice(if reserve.is_some() { reserve::MAGIC } else { MAGIC });
     header.extend_from_slice(&identity.run);
     header.extend_from_slice(&identity.policy);
     header.extend_from_slice(&identity.total_units.to_le_bytes());
+    if let Some(reserve) = reserve {
+        header.extend_from_slice(&limits.max_frame_bytes.to_le_bytes());
+        header.extend_from_slice(&limits.max_records.to_le_bytes());
+        header.extend_from_slice(&limits.max_total_bytes.to_le_bytes());
+        header.extend_from_slice(&reserve.records.to_le_bytes());
+        header.extend_from_slice(&reserve.bytes.to_le_bytes());
+    }
     let checksum = crc32(&header);
     header.extend_from_slice(&checksum.to_le_bytes());
     header
