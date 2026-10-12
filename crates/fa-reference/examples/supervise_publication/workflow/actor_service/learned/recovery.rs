@@ -1,4 +1,6 @@
 //! Original learned replay, complete guard inventory and receipt-only settlement.
+mod cooperative;
+use cooperative::{Progress, finish_replay};
 use super::{Config, Loaded, FileOversight, FileSupervisedDriver, FileHumanReviewer, ElapsedTick,
     RunResult, ActorWire, Command, FileLearnedTextStreamActorPort, LearnedTextRelease,
     RecoveryReserve, cleanup, debug, encode_command};
@@ -37,18 +39,26 @@ pub(super) fn create(config: &Config, loaded: &Loaded)
         RecoveryReserve::terminal()).map_err(debug)
 }
 
+#[cfg(test)]
 pub(super) fn open(config: &Config, loaded: &Loaded)
     -> Result<(FileOversight, FileHumanReviewer), String>
 {
+    open_with_checkpoints(config, loaded, &mut |_| Ok(()))
+}
+
+fn open_with_checkpoints(config: &Config, loaded: &Loaded,
+    checkpoint: &mut impl FnMut(Option<Progress>) -> Result<(), String>)
+    -> Result<(FileOversight, FileHumanReviewer), String>
+{
+    checkpoint(None)?;
     let requirements = requirements(config, loaded);
     // Match complete independently loaded model/codec/probe/text/source bytes,
     // full guard inventory and explicit external floors BEFORE cleanup or fence.
-    let mut recovery = FileOversight::begin_open_guarded_with_learned_generation(
+    let recovery = FileOversight::begin_open_guarded_with_learned_generation(
         &config.store, config.profile.clone(), &requirements, &loaded.generation).map_err(debug)?
         .require_recovery_reserve(RecoveryReserve::terminal()).map_err(debug)?;
-    let progress = recovery.progress();
-    recovery.advance(progress.replayed_events, progress.total_events).map_err(debug)?;
-    let (host, roles) = recovery.finish().map_err(debug)?;
+    let (host, roles) = finish_replay(recovery, checkpoint,
+        |run| run.progress(), |run, done| run.advance(done, 1), |run| run.finish())?;
     Ok((host, roles.human))
 }
 
@@ -65,27 +75,42 @@ fn requirements(config: &Config, loaded: &Loaded) -> FileRecoveryRequirements {
 /// after the same validated replay, terminal reserve and single recovery fence.
 /// A previously unanswered forecast becomes lost coverage, never a new attempt.
 pub(super) fn open_selected(config: &Config, loaded: &Loaded) -> Result<Custody, String> {
+    open_selected_with_checkpoints(config, loaded, &mut |_| Ok(()))
+}
+
+/// Run the SAME guarded owner one original event at a time. None is the
+/// pre-open boundary; Some contains historical progress only, never a role or
+/// mutable candidate. Checkpoints may veto before any replay event and again
+/// after complete verification, before cleanup and the original recovery fence.
+/// An error or unwind drops the original exclusive recovery without finishing.
+/// One event, framing and final persistence remain synchronous operations.
+pub(super) fn open_selected_with_checkpoints(config: &Config, loaded: &Loaded,
+    checkpoint: &mut impl FnMut(Option<Progress>) -> Result<(), String>) -> Result<Custody, String>
+{
+    if loaded.generation.required_pre_output_forecast().is_none()
+        && loaded.generation.required_owned_pre_output_forecast().is_none() {
+        let (host, human) = open_with_checkpoints(config, loaded, checkpoint)?;
+        return Ok((host, human, None));
+    }
+    checkpoint(None)?;
     let (host, roles) = if let Some(prediction) = loaded.generation.required_pre_output_forecast() {
         let expected = FilePredictiveRequirements { oversight: requirements(config, loaded),
             prediction: prediction.clone(), evaluation: None };
-        let mut recovery = FileOversight::begin_open_predictive_guarded_with_learned_generation(
+        let recovery = FileOversight::begin_open_predictive_guarded_with_learned_generation(
             &config.store, config.profile.clone(), &expected, &loaded.generation).map_err(debug)?
             .require_recovery_reserve(RecoveryReserve::terminal()).map_err(debug)?;
-        let progress = recovery.progress();
-        recovery.advance(progress.replayed_events, progress.total_events).map_err(debug)?;
-        recovery.finish().map_err(debug)?
+        finish_replay(recovery, checkpoint,
+            |run| run.progress(), |run, done| run.advance(done, 1), |run| run.finish())?
     } else if let Some(prediction) = loaded.generation.required_owned_pre_output_forecast() {
         let expected = FileOwnedPredictiveRequirements { oversight: requirements(config, loaded),
             prediction: prediction.clone(), evaluation: None };
-        let mut recovery = FileOversight::begin_open_predictive_guarded_with_owned_learned_consistency(
+        let recovery = FileOversight::begin_open_predictive_guarded_with_owned_learned_consistency(
             &config.store, config.profile.clone(), &expected, &loaded.generation).map_err(debug)?
             .require_recovery_reserve(RecoveryReserve::terminal()).map_err(debug)?;
-        let progress = recovery.progress();
-        recovery.advance(progress.replayed_events, progress.total_events).map_err(debug)?;
-        recovery.finish().map_err(debug)?
+        finish_replay(recovery, checkpoint,
+            |run| run.progress(), |run, done| run.advance(done, 1), |run| run.finish())?
     } else {
-        let (host, human) = open(config, loaded)?;
-        return Ok((host, human, None));
+        return Err("missing independently selected forecast configuration".into());
     };
     Ok((host, roles.oversight.human, Some(roles.consistency_observer)))
 }
