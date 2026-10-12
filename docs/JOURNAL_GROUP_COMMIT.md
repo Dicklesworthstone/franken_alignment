@@ -61,3 +61,33 @@ reused to qualify this increment. Run the original gate on the integrated source
 ```sh
 RCH_REQUIRE_REMOTE=1 rch exec -- cargo run --locked -p xtask -- check
 ```
+
+## Same locked file owner, one group acknowledgment
+
+`FileJournal::commit_batch` consumes the same preparation and the existing
+exclusive writer. It does one `write_all` of the combined canonical buffer and
+one final `sync_all` before returning the final head. The ordinary `commit`
+uses this same path for a singleton; there is no alternate publication owner,
+mutable-file export, background queue or unbounded accumulation. Open/create
+and recovery keep their existing file and parent-directory synchronization.
+`write_all` may issue multiple underlying writes and the filesystem may use
+more than one physical barrier; this is an API-level sync count, not a latency
+or physical-I/O measurement.
+
+All input admission precedes file metadata, seek, write or sync. After admission,
+the original poison boundary encloses extent checks and persistence; an I/O
+error or unwind leaves only the old acknowledged minimum readable, never stale
+live accounting. A second writer remains excluded until drop, even on failure.
+A successful group publishes one final head. Callers must retain that head
+independently: an internal record boundary is not a substitute acknowledgment.
+
+Five private file regressions inject failures at every byte cut of an ordered
+dispatch/unknown/revocation group, plus invalid admission, one combined persist
+invocation with lock retention, complete-write sync failure/unwind and changed
+extent. Complete unacknowledged prefixes retain their exact original accounting;
+partial records refuse without repair. Five public file regressions use actual
+files, single-record controls and tiny-poll recovery, verify later reconciliation,
+exact budget boundaries, empty groups/locking, and reject every rollback prefix
+behind an acknowledged final group head. Injected callback failures are not
+power-loss experiments. All ten additional Rust tests remain UNEXECUTED under
+the RCH limitation above; no production or performance qualification is claimed.

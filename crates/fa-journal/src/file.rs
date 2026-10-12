@@ -8,6 +8,7 @@ mod recovery;
 pub use recovery::FileRecovery;
 
 use crate::{Event, Head, Identity, Journal, Limits};
+use crate::batch::BatchLimits;
 use fa_reference::Rights;
 use std::fmt;
 use std::fs::{File, OpenOptions, TryLockError};
@@ -108,6 +109,22 @@ impl FileJournal {
         })
     }
 
+    /// Persist a nonempty ordered group with ONE final file synchronization.
+    /// All events and limits are checked before any file I/O. Only the final
+    /// head is acknowledged; no partially committed accounting is returned.
+    ///
+    /// This is not disk atomicity: failed writes/syncs can leave a complete
+    /// prefix or a truncated record. The owner stays poisoned until dropped;
+    /// reopen under the independently retained head and original strict rules.
+    /// Never infer a refund or replay a dispatch merely because this call failed.
+    /// External sends/outcome observations keep their separate causal barriers.
+    pub fn commit_batch(&mut self, events: &[Event], limits: BatchLimits) -> Result<Head, Error> {
+        self.commit_batch_with(events, limits, |file, bytes| {
+            file.write_all(bytes)?;
+            file.sync_all()
+        })
+    }
+
     /// The last successfully published head, usable as a *minimum* on recovery.
     /// After an I/O error the file may contain a complete later record.
     pub fn acknowledged_head(&self) -> Head {
@@ -131,11 +148,19 @@ impl FileJournal {
         event: &Event,
         persist: impl FnOnce(&mut File, &[u8]) -> io::Result<()>,
     ) -> Result<Head, Error> {
+        self.commit_batch_with(std::slice::from_ref(event), BatchLimits::default(), persist)
+    }
+
+    fn commit_batch_with(
+        &mut self,
+        events: &[Event],
+        limits: BatchLimits,
+        persist: impl FnOnce(&mut File, &[u8]) -> io::Result<()>,
+    ) -> Result<Head, Error> {
         if self.poisoned {
             return Err(Error::Poisoned);
         }
-        let mut candidate = self.journal.clone();
-        let record = candidate.append(event)?;
+        let (candidate, record) = self.journal.prepare_batch(events, limits)?;
         // Set this before any I/O: even a panic must not leave a usable stale
         // accounting view. Validation errors above do not poison the writer.
         self.poisoned = true;
@@ -170,3 +195,5 @@ fn lock(file: &File) -> Result<(), Error> {
 
 #[cfg(test)]
 mod tests;
+#[cfg(test)]
+mod batch_tests;
