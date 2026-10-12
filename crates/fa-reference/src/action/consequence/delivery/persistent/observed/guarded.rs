@@ -3,6 +3,7 @@
 //! signature. Every configured gate is matched before cleanup or recovery writes.
 
 pub mod anchored;
+pub mod recovery;
 pub mod learned_recovery;
 pub mod investigation;
 pub mod evaluation;
@@ -282,16 +283,8 @@ impl FileOversight {
     fn open_guarded_store(store: storage::Store, profile: FileOversightProfile,
         expected: &FileRecoveryRequirements) -> Result<(Self, FileOversightRoles), JournalError>
     {
-        let bytes = store.read(profile.delivery.limits.bytes)?;
-        let events = journal::decode(&profile, store.identity(), &bytes)?;
-        expected.guards.check_decoder_config(&events)?;
-        let machine = Machine::replay(&profile, &events)?;
-        expected.check(&profile, &machine, &events)?;
-        store.confirm_and_cleanup()?;
-        let (mut host, human) = Self::owner(profile, store, events, machine);
-        host.transact(host.revision(), Event::Core(BaseEvent::Fence))?;
-        let roles = FileOversightRoles::provision(&host, human);
-        Ok((host, roles))
+        recovery::FileGuardedRecovery::begin_store(store, profile, expected, None)?
+            .finish_synchronously()
     }
 }
 

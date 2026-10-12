@@ -114,17 +114,8 @@ impl FileOversight {
         expected: &FileRecoveryRequirements, anchor: &FileHistoryAnchor)
         -> Result<(Self, FileOversightRoles), JournalError>
     {
-        let bytes = store.read(profile.delivery.limits.bytes)?;
-        let events = journal::decode(&profile, store.identity(), &bytes)?;
-        anchor.check(&profile, store.identity(), &events)?;
-        expected.guards.check_decoder_config(&events)?;
-        let machine = Machine::replay(&profile, &events)?;
-        expected.check(&profile, &machine, &events)?;
-        store.confirm_and_cleanup()?;
-        let (mut host, human) = Self::owner(profile, store, events, machine);
-        host.transact(host.revision(), Event::Core(BaseEvent::Fence))?;
-        let roles = FileOversightRoles::provision(&host, human);
-        Ok((host, roles))
+        super::recovery::FileGuardedRecovery::begin_store(store, profile, expected, Some(anchor))?
+            .finish_synchronously()
     }
 }
 
