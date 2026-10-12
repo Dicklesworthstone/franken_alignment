@@ -51,6 +51,28 @@ remain synchronous. Forecast acquisition and recovery retain their existing
 separate contracts. Release still requires original sidecar/native review, human
 approval, current witnesses, dispatch and a confirmed original receipt.
 
+## Publication operator
+
+The existing `create-learned-generated` recipe `/5` now moves its original raw or
+owned forecast handle into this scheduler. Its numerical loop invokes one
+`advance_quantum` with a fixed maximum of 32 historical reducer calls, then
+returns to the existing workflow deadline, authenticated stop service and fresh
+policy-source observation. A separately acknowledged intent also yields before
+its completion. Progress means only that this slice completed, not that a token
+or publication is available.
+
+The original catch-up path admits the extra source/clock events and checks their
+full history without restarting the verified prefix. Every message still uses
+its original forecast, and explicit finish still gets its own original forecast.
+No recipe, model, wire schema, sample budget, authority, native review or human
+key changes. Non-forecast generation, prompt processing, forecast acquisition,
+source refresh and recovery retain their existing synchronous boundaries; this
+change does not make the entire command preemptible.
+
+Existing tests that explicitly call one complete sample keep that exact contract
+through a test-only draining helper. The production operator has no such loop;
+its new cold-replay tests call the same one-quantum method as the actual command.
+
 ## Verification status
 
 Eight new Rust unit-test functions cover both original raw and owned predictors,
@@ -60,7 +82,18 @@ expiry on both sides of intent acknowledgment, held output, dropping preparation
 and every existing storage-fault barrier for both finalizers. Two compile-fail
 doctests assert that the new raw stepper cannot be cloned or unwrapped.
 
-These tests are authored, not executed. The prescribed remote-only RCH launcher
-and Rust toolchain are absent in the delivery environment. No Rust syntax,
-formatting, type-check, Clippy, test, performance, calibration or production
-qualification is claimed. FA-111 and its existing operator beads remain open.
+Four new operator test functions use both loaded raw and owned predictor modes.
+A cold history longer than the quantum must return without a sample or journal
+write, then proceed through the original actual native reviewers, separate human
+approval and confirmed stream publication. Causal controls withdraw the real
+policy evidence file, expire the workflow deadline, or expire the forecast after
+intent acknowledgment. A Linux test queues a real peer-verified stop client
+between quanta and checks original stop/drain with no sampled or published output.
+Socket errors are not skipped. Existing per-sample and multi-message operator
+tests remain unchanged.
+
+These tests are authored, not executed. In this delivery environment `rch`,
+`cargo`, `rustc` and `rustfmt` are absent. The prescribed remote-only invocation
+stops before compilation with exit 127. No Rust syntax, formatting, type-check,
+Clippy, test, performance, calibration or production qualification is claimed.
+FA-111 and its existing in-progress operator beads remain open.

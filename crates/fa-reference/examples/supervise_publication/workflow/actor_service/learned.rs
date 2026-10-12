@@ -287,7 +287,7 @@ where F: FnMut() -> ElapsedTick {
                     // Acquisition never lends its elapsed time to generation.
                     continue;
                 }
-                prediction.advance(&mut host)?;
+                prediction.advance_quantum(&mut host)?;
                 continue;
             }
         }

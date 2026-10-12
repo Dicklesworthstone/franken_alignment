@@ -4,12 +4,17 @@
 use super::{FileOversight, GenerationStatus, GenerationStop, debug};
 use fa_reference::action::consequence::delivery::persistent::observed::consistency::{
     FileConsistencyObserver,
-    pre_output::{FilePreOutputForecast, FileOwnedPreOutputForecast, FileOwnedPreOutputStart},
+    pre_output::{FilePreOutputStepper, FileOwnedPreOutputStepper, FilePreOutputQuantum,
+        FileOwnedPreOutputStart},
 };
 
+// This is a historical reducer-call quantum, not a time/CPU guarantee.
+// The ordinary stop, deadline and policy-source loop runs after EVERY quantum.
+pub(super) const MAX_REPLAY_EVENTS_PER_QUANTUM: usize = 32;
+
 enum Message {
-    Raw(Box<FilePreOutputForecast>),
-    Owned(Box<FileOwnedPreOutputForecast>),
+    Raw(Box<FilePreOutputStepper>),
+    Owned(Box<FileOwnedPreOutputStepper>),
 }
 
 /// Custody is not returned to the actor, cloned, or reconstructed from a saved
@@ -52,7 +57,7 @@ impl Session {
         let message = if host.owned_learned_action_consistency_required() {
             match self.observer.begin_owned_pre_output_request(host, revision,
                 self.request, current.actor_revision, current.position).map_err(debug)? {
-                FileOwnedPreOutputStart::Ready(handle) => Message::Owned(handle),
+                FileOwnedPreOutputStart::Ready(handle) => Message::Owned(Box::new((*handle).into_cooperative())),
                 FileOwnedPreOutputStart::Inconclusive(report) => {
                     return Err(format!("original owned learned forecast is inconclusive: {report:?}"));
                 }
@@ -60,22 +65,42 @@ impl Session {
             }
         } else {
             Message::Raw(Box::new(self.observer.begin_pre_output_request(host, revision,
-                self.request, current.actor_revision, current.position).map_err(debug)?.map_err(debug)?))
+                self.request, current.actor_revision, current.position).map_err(debug)?.map_err(debug)?.into_cooperative()))
         };
         self.message = Some(message);
         Ok(())
     }
 
-    /// Every sample uses the existing handle's exact numerical predecessor,
-    /// immutable forecast deadline, policy epoch, and unanswered request binding.
-    pub(super) fn advance(&mut self, host: &mut FileOversight) -> Result<(), String> {
+    /// One bounded original replay slice, or one original intent/completion.
+    /// Return to the normal stop/deadline/source loop even when no token is ready.
+    /// The original forecast checks its full numerical predecessor and pending
+    /// request before replay and again before either durable finalization.
+    pub(super) fn advance_quantum(&mut self, host: &mut FileOversight) -> Result<(), String> {
+        if let FilePreOutputQuantum::Completed { result, .. } = self.quantum(host)? {
+            result.map_err(debug)?;
+        }
+        Ok(())
+    }
+
+    fn quantum(&mut self, host: &mut FileOversight) -> Result<FilePreOutputQuantum, String> {
         check(host, Some(self))?;
         let revision = host.revision();
         match self.message.as_mut().ok_or("required learned message forecast is missing")? {
-            Message::Raw(handle) => handle.advance(host, revision),
-            Message::Owned(handle) => handle.advance(host, revision),
-        }.map_err(debug)?.map_err(debug)?;
-        Ok(())
+            Message::Raw(handle) => handle.advance_quantum(host, revision, MAX_REPLAY_EVENTS_PER_QUANTUM),
+            Message::Owned(handle) => handle.advance_quantum(host, revision, MAX_REPLAY_EVENTS_PER_QUANTUM),
+        }.map_err(debug)
+    }
+
+    // Preserve the existing tests' one-call/one-sample contract without placing
+    // a draining loop in the production operator. The actual command uses only
+    // advance_quantum; every existing per-sample assertion remains unchanged.
+    #[cfg(test)]
+    pub(super) fn advance(&mut self, host: &mut FileOversight) -> Result<(), String> {
+        loop {
+            if let FilePreOutputQuantum::Completed { result, .. } = self.quantum(host)? {
+                return result.map(|_| ()).map_err(debug);
+            }
+        }
     }
 
     pub(super) fn complete_message(&self, host: &FileOversight) -> Result<(), String> {
