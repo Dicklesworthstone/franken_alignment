@@ -2,6 +2,7 @@
 //! No provider, helper, human endpoint, writer, or external effect is invoked.
 
 mod cursor;
+mod learned;
 pub use cursor::{FileReviewReplayCursor, FileReviewReplayProgress, FileReviewReplayStatus};
 
 use super::{FileDeliverySnapshot, FileOversight, FileOversightProfile, JournalError,

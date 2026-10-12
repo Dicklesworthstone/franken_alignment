@@ -75,3 +75,44 @@ original gate must run on the full integrated checkout:
 RCH_REQUIRE_REMOTE=1 rch exec -- cargo test --locked -p fa-reference action::consequence::delivery::persistent::observed::replay
 RCH_REQUIRE_REMOTE=1 rch exec -- cargo run --locked -p xtask -- check
 ```
+
+## Learned and owned-K/V journals
+
+`begin_read_review_replay_with_learned_generation` (and its synchronous `read_`
+counterpart) binds the full independently supplied `FileLearnedConfig` using the
+original `bind_history` before creating the replay machine. This includes the
+required raw-residual or owned predictor when it belongs to that recipe. The
+previous generic disk exporter cannot hydrate these runtime recipes; the new
+reader does not infer them from the archive or open a privileged recovery owner.
+
+`begin_read_review_replay_with_owned_learned_consistency` and its synchronous
+counterpart separately bind generation and predictor through the original
+`bind_owned_history`. Standalone versus recipe-owned modes retain their original
+rules and supplied capture importers stay forbidden. Neither API has a raw-mode
+fallback, arbitrary capture map, caller-provided result or runtime callback.
+Changing a declared generation or predictor refuses before any historical event
+runs, even when the original first output would be the same text.
+
+The SAME cursor reconstructs original numerical generation, compression,
+monitoring, forecast sources, sequential evidence and complete sidecar review
+inputs. It physically recomputes audit work; no live sampling or likelihood budget
+is replenished. The actual original congress finish supplies its archive; the
+actual original broker supplies its application result. Successful export requires
+the complete historical suffix, not merely an apparently consistent review.
+
+Five additional public integration functions use the existing finite learned
+model and original K/V/source, sidecar, two-key publication and reconciliation
+paths. Both forecast representations produce A, B and an independently forecast
+finish. Audit records match the live original review and publication cuts under
+two quanta and both reader forms. Controls retain a frozen first-message cut
+while the writer continues, read after owner drop without deleting staged bytes,
+reject changed total-generation allowance despite identical first messages,
+reject a changed independent owned predictor generation, and cancel during native
+history without changing live numerical state. Generic unbound replay remains a
+refusal. The probability table and congress ballots are explicit fixtures, not
+learned detector validation. These five tests are authored but UNEXECUTED under
+the same remote-only RCH limitation; no deployment or performance claim follows.
+
+```sh
+RCH_REQUIRE_REMOTE=1 rch exec -- cargo test --locked -p fa-reference --test learned_text_stream_durable review_audit
+```

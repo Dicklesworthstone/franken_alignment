@@ -74,3 +74,6 @@ fn prompt_only_forecasts_refuse_finite_message_composition_in_both_orders_and_or
         assert_eq!(host.learned_generation_inspection().unwrap().numerical, numerical);
     }
 }
+
+#[path = "forecast/review_audit.rs"]
+mod review_audit;
