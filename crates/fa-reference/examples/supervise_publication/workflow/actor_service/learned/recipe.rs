@@ -25,6 +25,7 @@ use fa_reference::action::consequence::delivery::persistent::observed::{
     decoder::learned::FileLearnedConfig, guarded::FileRecoveryFloor,
     helpers::learned::native::{NativeReviewCost, NativeReviewLimits},
 };
+use fa_reference::action::consequence::delivery::persistent::observed::guarded::anchored::FileHistoryAnchor;
 use fa_reference::action::consequence::delivery::stream::StreamProfile;
 use fa_reference::action::consequence::oversight::{
     decoder_monitoring::{DecoderBindingLimits, LearnedDecoderBindingLimits},
@@ -43,6 +44,8 @@ pub(super) struct Loaded {
     pub generation: FileLearnedConfig,
     pub stream: StreamProfile,
     pub floor: FileRecoveryFloor,
+    pub recovery_anchor: Option<FileHistoryAnchor>,
+    pub anchor_output: Option<PathBuf>,
     pub evidence: LearnedEvidenceLimits,
     pub sidecar: SidecarIdentity,
     pub disclosure: SidecarCongressBudget,
@@ -133,7 +136,8 @@ pub(super) fn load(file: &Path, config: &Config, require_native: bool) -> Result
             roster.check_limits(&recipe.native_limits, recipe.rounds.len())?; Some(roster) }
     } else { None };
     Ok(Loaded { request: recipe.request, ttl_ms: recipe.ttl_ms, generation, stream: recipe.publication,
-        floor: recipe.floor, evidence: LearnedEvidenceLimits { token_ids: recipe.binding.evidence.token_ids,
+        floor: recipe.floor, recovery_anchor: None, anchor_output: None,
+        evidence: LearnedEvidenceLimits { token_ids: recipe.binding.evidence.token_ids,
             score_words: recipe.binding.evidence.score_words, encoded_bytes: recipe.binding.encoded_bytes },
         sidecar: recipe.sidecar, disclosure: recipe.disclosure, native_limits: recipe.native_limits,
         priority: recipe.priority, rounds: recipe.rounds,

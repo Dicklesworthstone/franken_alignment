@@ -61,6 +61,13 @@ finite generation and requires fresh native and human review. Existing version
 [finite learned text stream continuation](LEARNED_TEXT_STREAM_CONTINUATION.md)
 for the complete predecessor, stop-state and remaining-capacity contract.
 
+Every recovery form can also require a separately retained exact history prefix
+with `--history-anchor INPUT`. `--retain-history-anchor NEW_OUTPUT` exports a
+checked successor from the final acknowledged owner, including after receipt
+recovery. Initial creation accepts only the output option. See
+[operator history anchors](LEARNED_OPERATOR_HISTORY_ANCHORS.md) for private
+custody, bounded admission, new-file retention and failure semantics.
+
 For example, start the supervisor with actual operator files:
 
 ```sh

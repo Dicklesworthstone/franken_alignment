@@ -368,7 +368,13 @@
       ],
       "owner_role": "systems",
       "estimated_scope": "One independently reviewable work packet; split before implementation if multiple semantics change.",
-      "result_artifacts": []
+      "result_artifacts": [
+        "docs/LEARNED_OPERATOR_HISTORY_ANCHORS.md",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/anchors.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/recovery.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/tests/anchors.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/tests/anchored_recovery.rs"
+      ]
     },
     {
       "id": "FA-015",

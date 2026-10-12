@@ -1,5 +1,20 @@
 # Changelog
 
+## 2026-10-12: connect independent history custody to learned operator recovery
+
+- Add explicit private history-anchor input and new-file successor retention to
+  the learned command, preserving recipe and journal formats.
+- Route all three learned recovery modes through their original anchored guards
+  when selected, retaining model/predictor, policy, floor and terminal-reserve
+  requirements and the single original recovery fence.
+- Preserve old archives, source-only actor responses, effect receipts and cleanup
+  when a post-effect retention write fails; no effect retry is sent.
+- Add eleven original-owner successor/fork/rollback and guard tests, bounded file and
+  option admission, native publication plus anchored receipt recovery, and an
+  output-race control. Older-rustfmt syntax parsing passed; target and full-gate
+  RCH dispatches stopped before compilation with the launcher absent (exit 127).
+  No compile/test qualification is claimed; full FA-014 prerequisites stay open.
+
 ## 2026-10-12: require forecasts in the learned publication command
 
 - Add explicit recipe `/5` and a bounded independent `fa.learned-forecast/1`

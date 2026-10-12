@@ -1,5 +1,33 @@
 # Implementation status · design revision 0.3
 
+## 2026-10-12: retain and require independent learned operator history (unqualified source)
+
+The existing learned publication command now accepts an independently retained
+exact prefix through `--history-anchor` and can export a checked successor to a
+new private file through `--retain-history-anchor`. Legacy, raw-forecast and
+owned-forecast recovery use their original anchored guarded cursors with the
+same model/predictor, complete guards, policy, numeric floors and terminal
+reserve. Genuine successors recover; valid equal-counter divergent histories
+and older prefixes refuse before fencing or staged-file cleanup.
+
+Final retention captures only the healthy acknowledged original owner, preserves
+the selected old archive and requires exclusive output creation plus file and
+parent-directory sync. Retention failure keeps the original actor receipt and
+effect state, adds an explicit failure and still cleans up; it sends no retry.
+Receipt-only recovery can advance the retained prefix without live inference,
+source or review. Early failures or a crash can leave no new archive: retention
+is not atomic with the original publication or its recovery fence.
+
+Eleven new regression functions cover original loaded owners and native publication, exact
+successors versus valid forks/rollback, unchanged staging on refusal, closed
+file intake and output races after publication. Seven changed Rust files passed
+older, unqualified rustfmt syntax parsing only. Both targeted and full-gate RCH
+dispatches stopped before compilation (missing launcher, exit 127), so no
+compile/test or release qualification is claimed. The scoped implementation does not establish custodian
+authentication or protect a jointly rolled-back journal and anchor. The scoped
+work remains in progress; full FA-014 acceptance and prerequisites stay open. See
+[the operator contract](docs/LEARNED_OPERATOR_HISTORY_ANCHORS.md).
+
 ## 2026-10-12: drive required forecasts through learned publication (unqualified source)
 
 The executable's new `fa.learned-publication/5` recipe requires an independently

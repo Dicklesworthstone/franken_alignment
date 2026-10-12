@@ -54,8 +54,13 @@ fn open_with_checkpoints(config: &Config, loaded: &Loaded,
     let requirements = requirements(config, loaded);
     // Match complete independently loaded model/codec/probe/text/source bytes,
     // full guard inventory and explicit external floors BEFORE cleanup or fence.
-    let recovery = FileOversight::begin_open_guarded_with_learned_generation(
-        &config.store, config.profile.clone(), &requirements, &loaded.generation).map_err(debug)?
+    let recovery = match loaded.recovery_anchor.as_ref() {
+        Some(anchor) => FileOversight::begin_open_guarded_anchored_with_learned_generation(
+            &config.store, config.profile.clone(), &requirements, &loaded.generation, anchor),
+        None => FileOversight::begin_open_guarded_with_learned_generation(
+            &config.store, config.profile.clone(), &requirements, &loaded.generation),
+    }.map_err(debug)?;
+    let recovery = recovery
         .require_recovery_reserve(RecoveryReserve::terminal()).map_err(debug)?;
     let (host, roles) = finish_replay(recovery, checkpoint,
         |run| run.progress(), |run, done| run.advance(done, 1), |run| run.finish())?;
@@ -96,16 +101,26 @@ pub(super) fn open_selected_with_checkpoints(config: &Config, loaded: &Loaded,
     let (host, roles) = if let Some(prediction) = loaded.generation.required_pre_output_forecast() {
         let expected = FilePredictiveRequirements { oversight: requirements(config, loaded),
             prediction: prediction.clone(), evaluation: None };
-        let recovery = FileOversight::begin_open_predictive_guarded_with_learned_generation(
-            &config.store, config.profile.clone(), &expected, &loaded.generation).map_err(debug)?
+        let recovery = match loaded.recovery_anchor.as_ref() {
+            Some(anchor) => FileOversight::begin_open_predictive_guarded_anchored_with_learned_generation(
+                &config.store, config.profile.clone(), &expected, &loaded.generation, anchor),
+            None => FileOversight::begin_open_predictive_guarded_with_learned_generation(
+                &config.store, config.profile.clone(), &expected, &loaded.generation),
+        }.map_err(debug)?;
+        let recovery = recovery
             .require_recovery_reserve(RecoveryReserve::terminal()).map_err(debug)?;
         finish_replay(recovery, checkpoint,
             |run| run.progress(), |run, done| run.advance(done, 1), |run| run.finish())?
     } else if let Some(prediction) = loaded.generation.required_owned_pre_output_forecast() {
         let expected = FileOwnedPredictiveRequirements { oversight: requirements(config, loaded),
             prediction: prediction.clone(), evaluation: None };
-        let recovery = FileOversight::begin_open_predictive_guarded_with_owned_learned_consistency(
-            &config.store, config.profile.clone(), &expected, &loaded.generation).map_err(debug)?
+        let recovery = match loaded.recovery_anchor.as_ref() {
+            Some(anchor) => FileOversight::begin_open_predictive_guarded_anchored_with_owned_learned_consistency(
+                &config.store, config.profile.clone(), &expected, &loaded.generation, anchor),
+            None => FileOversight::begin_open_predictive_guarded_with_owned_learned_consistency(
+                &config.store, config.profile.clone(), &expected, &loaded.generation),
+        }.map_err(debug)?;
+        let recovery = recovery
             .require_recovery_reserve(RecoveryReserve::terminal()).map_err(debug)?;
         finish_replay(recovery, checkpoint,
             |run| run.progress(), |run, done| run.advance(done, 1), |run| run.finish())?
@@ -152,11 +167,14 @@ where F: FnMut() -> ElapsedTick {
     let mut wire = ActorWire::new(port);
     let response = wire.exchange(&document);
     if response.result.is_err() || driver.supervisor().host().map_err(debug)?.revision() != revision {
+        let failure = super::anchors::retain(&loaded, &driver,
+            Some("original learned receipt ticket refused".into()));
         let cleanup_pending = cleanup(driver, config.timing.cleanup_ms, config.timing.poll_ms);
-        return Ok(RunResult { response, cleanup_pending, failure: Some("original learned receipt ticket refused".into()) });
+        return Ok(RunResult { response, cleanup_pending, failure });
     }
     let failure = super::super::super::resume_existing(&mut driver, loaded.request, time).err();
     let response = wire.exchange(&encode_command(&Command::Poll { request: loaded.request }).map_err(debug)?);
+    let failure = super::anchors::retain(&loaded, &driver, failure);
     let cleanup_pending = cleanup(driver, config.timing.cleanup_ms, config.timing.poll_ms);
     Ok(RunResult { response, failure, cleanup_pending })
 }

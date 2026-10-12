@@ -2,6 +2,7 @@
 //! Complete messages within one finite generation and explicit stream finish;
 //! all numerical and effect transitions belong to the existing original owners.
 #[path = "learned/fields.rs"] mod fields;
+#[path = "learned/anchors.rs"] mod anchors;
 #[path = "learned/fit.rs"] mod fit;
 #[path = "learned/monitor.rs"] mod monitor;
 #[path = "learned/native.rs"] mod native;
@@ -33,10 +34,11 @@ use fa_reference::action::consequence::oversight::{
 use fa_reference::Error;
 use std::{io::Write, path::Path, rc::Rc};
 
-const USAGE: &str = "create-learned-generated CONFIG LEARNED_RECIPE REVIEWER_PROFILE [--continue-generation | --after-message PREVIOUS_REQUEST | --finish-after-message PREVIOUS_REQUEST] | create-learned-generated CONFIG LEARNED_RECIPE --resume [--finish-after-message PREVIOUS_REQUEST]";
+const USAGE: &str = "create-learned-generated CONFIG LEARNED_RECIPE REVIEWER_PROFILE [--continue-generation | --after-message PREVIOUS_REQUEST | --finish-after-message PREVIOUS_REQUEST] [--history-anchor INPUT] [--retain-history-anchor NEW_OUTPUT] | create-learned-generated CONFIG LEARNED_RECIPE --resume [--finish-after-message PREVIOUS_REQUEST] [--history-anchor INPUT] [--retain-history-anchor NEW_OUTPUT]";
 
 pub(super) fn command(args: &[String], credibility: Option<&Path>) -> Result<(), String> {
-    let (args, after_message) = continuation::take_option(args)?;
+    let (args, anchors) = anchors::take_options(args)?;
+    let (args, after_message) = continuation::take_option(&args)?;
     let (args, finishing) = finish::take_option(args)?;
     if !matches!(args.len(), 4 | 5) || args[0] != "create-learned-generated"
         || credibility.is_some() { return Err(USAGE.into()); }
@@ -48,7 +50,8 @@ pub(super) fn command(args: &[String], credibility: Option<&Path>) -> Result<(),
     // Closed option, fit, probe and real model admission precede durable startup.
     let config = Config::read(Path::new(&args[1]))?;
     if args[3] == "--resume" {
-        let loaded = recipe::load(Path::new(&args[2]), &config, false)?;
+        let mut loaded = recipe::load(Path::new(&args[2]), &config, false)?;
+        anchors.admit(&config, &mut loaded, true)?;
         let result = match finishing {
             Some(after) => recovery::resume_finish(config, loaded, after, clock)?,
             None => recovery::resume(config, loaded, clock)?,
@@ -57,7 +60,8 @@ pub(super) fn command(args: &[String], credibility: Option<&Path>) -> Result<(),
     }
     let peers = PeerProfile::read(Path::new(&args[3]))?;
     peers.check_host(&config)?;
-    let loaded = recipe::load(Path::new(&args[2]), &config, true)?;
+    let mut loaded = recipe::load(Path::new(&args[2]), &config, true)?;
+    anchors.admit(&config, &mut loaded, continuing || after_message.is_some() || finishing.is_some())?;
     let result = match (after_message, finishing) {
         (Some(after), None) => run_after_message(config, loaded, &peers, after, clock)?,
         (None, Some(after)) => run_selected(config, loaded, &peers, true, Some(after), clock)?,
@@ -220,6 +224,7 @@ where F: FnMut() -> ElapsedTick {
         });
     }
     let response = wire.exchange(&encode_command(&Command::Poll { request: loaded.request }).map_err(debug)?);
+    let failure = anchors::retain(&loaded, &driver, failure);
     let cleanup_pending = cleanup(driver, config.timing.cleanup_ms, config.timing.poll_ms);
     // Retain original numerical history until the authority has been drained or
     // released. Its counters are evidence of work, never either publication key.
