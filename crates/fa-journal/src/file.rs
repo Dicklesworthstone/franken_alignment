@@ -7,6 +7,8 @@
 mod recovery;
 mod reserve;
 mod batch_recovery;
+mod batch_commit;
+pub use batch_commit::{BatchCommitBudget, BatchCommitReport, BatchCommitStage, FileBatchCommit};
 pub use batch_recovery::{BatchAnchor, BatchStatus, BatchInspectionBudget, BatchInspectionReport,
     BatchInspectionStatus, BatchInspectionWork, FileBatchInspection};
 pub use recovery::FileRecovery;
@@ -28,6 +30,8 @@ pub enum Error {
     Poisoned,
     /// A consumed recovery had not yet verified clean EOF and anchor coverage.
     RecoveryIncomplete,
+    /// A consumed new batch had not yet written its complete canonical group.
+    CommitIncomplete,
 }
 
 impl fmt::Display for Error {
