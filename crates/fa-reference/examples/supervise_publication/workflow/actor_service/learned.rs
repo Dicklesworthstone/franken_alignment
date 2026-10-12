@@ -8,6 +8,7 @@
 #[path = "learned/native.rs"] mod native;
 #[path = "learned/forecast.rs"] mod forecast;
 #[path = "learned/prediction.rs"] mod prediction;
+#[path = "learned/generation.rs"] mod generation;
 #[path = "learned/recipe.rs"] mod recipe;
 #[path = "learned/recovery.rs"] mod recovery;
 #[path = "learned/review.rs"] mod review;
@@ -258,6 +259,7 @@ where F: FnMut() -> ElapsedTick {
                 current.numerical.position).map_err(debug)?;
         }
     }
+    let mut numerical: Option<generation::Session> = None;
     loop {
         deadline.check(time())?;
         if control.checkpoint(driver, reviewer, deadline, time)? { return Ok(false); }
@@ -280,6 +282,8 @@ where F: FnMut() -> ElapsedTick {
         prediction::check(&host, prediction.as_deref())?;
         if current.numerical.status == GenerationStatus::Generating {
             if let Some(prediction) = prediction.as_deref_mut() {
+                // Prompt replay custody has no role in forecasted sampling.
+                numerical = None;
                 if !prediction.has_message() {
                     prediction.begin_message(&mut host)?;
                     // Forecast acknowledgment precedes a NEW normal stop,
@@ -291,9 +295,7 @@ where F: FnMut() -> ElapsedTick {
                 continue;
             }
         }
-        let revision = host.revision();
-        host.advance_learned_generation(revision, current.numerical.actor_revision,
-            current.numerical.position).map_err(debug)?.map_err(debug)?;
+        numerical.get_or_insert_with(generation::Session::new).advance_quantum(&mut host)?;
     }
 }
 
@@ -333,7 +335,7 @@ where F: FnMut() -> ElapsedTick {
     let revision = host.revision();
     host.observe_time(revision, after).map_err(debug)?;
     // Original read-start freshness must still hold AFTER parsing/persistence.
-    // Clock acknowledgement alone does not validate the policy source's lease.
+    // Clock acknowledgment alone does not validate the policy source's lease.
     let current = host.capture_file_policy_state().map_err(debug)?;
     if current.snapshot() != captured.snapshot() { return Err(debug(Error::Binding)); }
     Ok(captured)

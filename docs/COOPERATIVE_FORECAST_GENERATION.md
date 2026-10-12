@@ -65,9 +65,10 @@ The original catch-up path admits the extra source/clock events and checks their
 full history without restarting the verified prefix. Every message still uses
 its original forecast, and explicit finish still gets its own original forecast.
 No recipe, model, wire schema, sample budget, authority, native review or human
-key changes. Non-forecast generation, prompt processing, forecast acquisition,
-source refresh and recovery retain their existing synchronous boundaries; this
-change does not make the entire command preemptible.
+key changes. [Prompt and non-forecast generation](COOPERATIVE_OPERATOR_GENERATION.md)
+now use their own original bounded preparations. Forecast acquisition and source
+refresh retain synchronous work, and recovery has its separately documented
+cooperative contract. The entire command is not preemptible.
 
 Existing tests that explicitly call one complete sample keep that exact contract
 through a test-only draining helper. The production operator has no such loop;

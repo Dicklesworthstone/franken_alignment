@@ -16,6 +16,7 @@ use super::*;
 #[path = "tests/forecast.rs"] mod forecast;
 #[path = "tests/predictive.rs"] mod predictive;
 #[path = "tests/cooperative_prediction.rs"] mod cooperative_prediction;
+#[path = "tests/cooperative_generation.rs"] mod cooperative_generation;
 #[path = "tests/anchors.rs"] mod anchors;
 #[path = "tests/anchored_recovery.rs"] mod anchored_recovery;
 #[path = "tests/recovery_quanta.rs"] mod recovery_quanta;
