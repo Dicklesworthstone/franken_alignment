@@ -1,5 +1,16 @@
 # Changelog
 
+## 2026-10-12: reserve terminal recovery for required predictive streams
+
+- Compose required raw-residual or owned-K/V forecasting with the original
+  atomic learned STREAM bootstrap and an explicit recovery reserve.
+- Add exact pre-replay reserve admission to both predictive guarded recovery
+  wrappers while retaining their complete guard, policy, floor and custody checks.
+- Add five public regression functions covering both modes, numerical parity,
+  startup/recovery refusal and fence/stop/drain after ordinary capacity is full.
+  Source review is complete; execution and qualification remain pending because
+  the required remote build launcher is absent. No research packet is closed.
+
 ## 2026-10-11: implement bounded exhaustive quotient replay
 
 - Add a public closed logical replay machine bound to original FA-092 registered

@@ -2,12 +2,14 @@
 //! The full guard inventory and recipe are independent inputs, never disk defaults.
 mod inspection;
 use super::{FilePredictiveRequirements, FilePredictiveRoles};
-use super::super::{FileOversightRoles, anchored::FileHistoryAnchor, learned::check_profile};
+use super::super::{FileOversightRoles, anchored::FileHistoryAnchor, learned::check_profile,
+    learned_recovery::check_recovery_reserve};
 use super::super::super::{Event, FileOversight, FileOversightProfile, JournalError};
 use super::super::super::credibility::CredibilityEvent;
 use super::super::super::decoder::learned::{FileLearnedConfig, FileLearnedRecovery,
     FileLearnedRecoveryProgress, FileLearnedRecoveryStatus, checkpoint::FileLearnedResetIntent};
 use crate::Error;
+use crate::action::consequence::delivery::persistent::RecoveryReserve;
 use std::fmt;
 use std::path::Path;
 
@@ -115,6 +117,15 @@ fn check_history(events: &[Event], expected: &FilePredictiveRequirements) -> Res
 }
 
 impl FilePredictiveLearnedRecovery {
+    /// Require the exact independently selected original terminal reserve before
+    /// replay. Missing, changed or late requirements release no observer, perform
+    /// no cleanup/fence and replenish no allowance. Full predictive guard and
+    /// policy/floor checks still run before the original finish returns roles.
+    pub fn require_recovery_reserve(self, expected: RecoveryReserve) -> Result<Self, JournalError> {
+        check_recovery_reserve(&self.inner, expected)?;
+        Ok(self)
+    }
+
     pub fn progress(&self) -> FileLearnedRecoveryProgress {
         let mut progress = self.inner.progress();
         if let Some(error) = self.failure { progress.status = FileLearnedRecoveryStatus::Failed(error); }

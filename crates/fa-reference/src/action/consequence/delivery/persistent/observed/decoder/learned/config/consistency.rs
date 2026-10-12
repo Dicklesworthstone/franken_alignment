@@ -6,6 +6,7 @@ use super::{FileLearnedConfig, Writer, DOMAIN, MAX_CONFIG_BYTES};
 use crate::action::consequence::delivery::persistent::observed::{FileOversight,
     FileOversightProfile, FileHumanReviewer, JournalError,
     consistency::{FileConsistencyConfig, FileConsistencyObserver}};
+use crate::action::consequence::delivery::persistent::RecoveryReserve;
 use crate::Error;
 use std::path::Path;
 use std::rc::Rc;
@@ -72,6 +73,31 @@ impl FileOversight {
         };
         // The original first-image replacement acknowledged BOTH requirements.
         // This marker supplies only observer custody, never the reviewer's key.
+        let observer = FileConsistencyObserver { issuer: Rc::clone(&host.issuer) };
+        Ok((host, reviewer, observer))
+    }
+
+    /// Create a predictive learned STREAM with its independently selected
+    /// terminal reserve in the same first canonical image. The original stream
+    /// constructor records StreamBootstrap, ReserveRecovery and learned Enable
+    /// in that order, validating the pinned raw or owned predictor before I/O.
+    /// Observer custody is returned only after that complete image is persisted.
+    ///
+    /// A raw-text recipe or missing predictor refuses before storage creation.
+    /// The reserve belongs to the original fence/stop/drain lane; it supplies
+    /// no numerical work, forecast budget or publication permission. Recovery
+    /// can require this exact reserve through either predictive guarded wrapper.
+    pub fn create_with_pre_output_forecast_with_reserve(directory: impl AsRef<Path>,
+        profile: FileOversightProfile, config: FileLearnedConfig, reserve: RecoveryReserve)
+        -> Result<(Self, FileHumanReviewer, FileConsistencyObserver), JournalError>
+    {
+        if config.text_stream_profile().is_none()
+            || (config.required_pre_output_forecast().is_none()
+                && config.required_owned_pre_output_forecast().is_none()) {
+            return Err(Error::Binding.into());
+        }
+        let (host, reviewer) = Self::create_with_learned_text_stream_with_reserve(
+            directory, profile, config, reserve)?;
         let observer = FileConsistencyObserver { issuer: Rc::clone(&host.issuer) };
         Ok((host, reviewer, observer))
     }

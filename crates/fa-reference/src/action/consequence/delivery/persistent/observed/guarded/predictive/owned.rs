@@ -3,13 +3,15 @@
 mod inspection;
 pub use inspection::FileOwnedPredictiveSnapshot;
 use super::{EvaluationProtocol, FilePredictiveRoles, FileRecoveryRequirements};
-use super::super::{FileOversightRoles, anchored::FileHistoryAnchor, learned::check_profile};
+use super::super::{FileOversightRoles, anchored::FileHistoryAnchor, learned::check_profile,
+    learned_recovery::check_recovery_reserve};
 use super::super::super::{Event, FileOversight, FileOversightProfile, JournalError, Machine};
 use super::super::super::consistency::learned::FileLearnedConsistencyConfig;
 use super::super::super::credibility::CredibilityEvent;
 use super::super::super::decoder::learned::{FileLearnedConfig, FileLearnedRecovery,
     FileLearnedRecoveryProgress, FileLearnedRecoveryStatus, checkpoint::FileLearnedResetIntent};
 use crate::Error;
+use crate::action::consequence::delivery::persistent::RecoveryReserve;
 use std::fmt;
 use std::path::Path;
 
@@ -138,6 +140,15 @@ fn check_machine(profile: &FileOversightProfile, machine: &Machine, events: &[Ev
 }
 
 impl FileOwnedPredictiveRecovery {
+    /// Require the exact independently selected original terminal reserve before
+    /// replay. This shares ordinary/raw guarded admission on the same locked
+    /// history and neither adds a reserve nor changes K/V forecast lifetime work.
+    /// Full owned-source, guard and policy/floor checks remain mandatory at finish.
+    pub fn require_recovery_reserve(self, expected: RecoveryReserve) -> Result<Self, JournalError> {
+        check_recovery_reserve(&self.inner, expected)?;
+        Ok(self)
+    }
+
     pub fn progress(&self) -> FileLearnedRecoveryProgress {
         let mut progress = self.inner.progress();
         if let Some(error) = self.failure { progress.status = FileLearnedRecoveryStatus::Failed(error); }

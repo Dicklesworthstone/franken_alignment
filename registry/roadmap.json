@@ -2561,7 +2561,9 @@
       "owner_role": "research",
       "result_artifacts": [
         "docs/FORECAST_TEXT_STREAM_CONTINUATION.md",
-        "crates/fa-reference/tests/learned_text_stream_durable/continuation/forecast_messages.rs"
+        "crates/fa-reference/tests/learned_text_stream_durable/continuation/forecast_messages.rs",
+        "docs/PREDICTIVE_RECOVERY_RESERVE.md",
+        "crates/fa-reference/tests/learned_text_stream_durable/continuation/forecast_reserve.rs"
       ],
       "founding_ideas": [
         "FI-A12"

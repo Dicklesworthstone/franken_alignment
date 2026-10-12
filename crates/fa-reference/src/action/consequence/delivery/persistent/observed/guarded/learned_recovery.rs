@@ -78,18 +78,7 @@ impl FileGuardedLearnedRecovery {
     /// decoder already verifies its unique pre-work position and both limits;
     /// finish still verifies the retained canonical cut before writing.
     pub fn require_recovery_reserve(self, expected: RecoveryReserve) -> Result<Self, JournalError> {
-        let progress = self.inner.progress();
-        if progress.replayed_events != 0 || progress.status != FileLearnedRecoveryStatus::Replaying {
-            return Err(Error::WrongState.into());
-        }
-        let (_, events, _) = self.inner.guarded_history();
-        let mut reserves = events.iter().filter_map(|event| match event {
-            Event::Core(BaseEvent::ReserveRecovery(actual)) => Some(*actual),
-            _ => None,
-        });
-        if reserves.next() != Some(expected) || reserves.next().is_some() {
-            return Err(Error::Binding.into());
-        }
+        check_recovery_reserve(&self.inner, expected)?;
         Ok(self)
     }
 
@@ -153,4 +142,24 @@ impl FileGuardedLearnedRecovery {
     pub(in super::super) fn fail_once(&self, operation: super::super::super::JournalIo) {
         self.inner.fail_once(operation);
     }
+}
+
+// All learned recovery wrappers inspect the SAME locked original event list.
+// This is admission before replay, never reserve installation or replenishment.
+pub(super) fn check_recovery_reserve(inner: &FileLearnedRecovery, expected: RecoveryReserve)
+    -> Result<(), JournalError>
+{
+    let progress = inner.progress();
+    if progress.replayed_events != 0 || progress.status != FileLearnedRecoveryStatus::Replaying {
+        return Err(Error::WrongState.into());
+    }
+    let (_, events, _) = inner.guarded_history();
+    let mut reserves = events.iter().filter_map(|event| match event {
+        Event::Core(BaseEvent::ReserveRecovery(actual)) => Some(*actual),
+        _ => None,
+    });
+    if reserves.next() != Some(expected) || reserves.next().is_some() {
+        return Err(Error::Binding.into());
+    }
+    Ok(())
 }

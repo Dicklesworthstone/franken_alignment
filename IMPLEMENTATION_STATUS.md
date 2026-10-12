@@ -1,5 +1,26 @@
 # Implementation status · design revision 0.3
 
+## 2026-10-12: preserve terminal recovery capacity for predictive streams (unqualified source)
+
+Predictive learned STREAM startup now accepts an explicit recovery reserve in
+the original first canonical image, returning the host, human reviewer and
+separate consistency observer only after persistence. Required raw-residual and
+owned-K/V predictors use the original numerical and forecasting paths.
+
+Both predictive guarded recovery wrappers can require that exact reserve before
+replay or staged-file cleanup. They share the original ordinary learned recovery
+check; full recipe, guard, policy, floor and canonical-cut checks still apply.
+Recovery retains numerical work and forecast evidence, rotates observer custody
+and does not repair unanswered forecasts or replenish any allowance.
+
+Five new public test functions cover both modes, original-output parity,
+bootstrap refusal, changed/missing/late reserve requirements, unmet floors,
+old-observer refusal and actual terminal drain after ordinary capacity is full.
+They are authored and source-reviewed, but unexecuted: the prescribed remote
+build launcher is absent in the restored workspace. No compiler, target-test or
+workspace pass is claimed. FA-111 and the scoped bead remain in progress.
+See [the predictive reserve contract](docs/PREDICTIVE_RECOVERY_RESERVE.md).
+
 ## 2026-10-11: bounded exhaustive quotient replay (unqualified source)
 
 FA-093 now has a public closed logical replay oracle over the original FA-092
