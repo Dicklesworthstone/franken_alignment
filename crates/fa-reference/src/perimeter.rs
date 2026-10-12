@@ -4,6 +4,8 @@
 //! scope/family/route. It is not a broker, permit, credential store, policy
 //! evaluator, loader, or proof that a deployment perimeter is complete.
 
+pub mod coverage;
+
 use crate::Error;
 
 /// Bound the number of scoped effect-family records held by this reference model.
