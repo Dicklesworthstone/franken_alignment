@@ -1,5 +1,21 @@
 # Changelog
 
+## 2026-10-12: requalify learned helpers before resumed publication
+
+- Accept independent held-out credibility capsules on explicit learned
+  continuation, next-message and finish paths, using the original activation
+  contract before new inference or request admission.
+- Preserve paused numerical state, pending work, forecast evidence and both
+  publication keys; old activation replay cannot restore permission. Missing
+  qualification retains the existing early refusal and corrected retry path.
+- Keep initial creation admission closed and receipt recovery free of current
+  capsule reads. Recheck deadline, authenticated stop and fresh policy evidence
+  before subsequent work.
+- Add seven regression functions including real native/human second-message
+  publication in legacy, raw-forecast and owned-forecast modes. Source review
+  and older syntax parsing do not constitute execution qualification; the
+  required remote gate remains pending and full FA-105 prerequisites stay open.
+
 ## 2026-10-12: service learned recovery deadlines and authenticated stop peers
 
 - Connect the actual continuation, next-message and finish command to its

@@ -23,6 +23,7 @@ use super::*;
 #[path = "tests/replay.rs"] mod replay;
 #[path = "tests/recovery_control.rs"] mod recovery_control;
 #[path = "tests/receipt_replay_deadline.rs"] mod receipt_replay_deadline;
+#[path = "tests/qualification.rs"] mod qualification;
 use fixture::{Root, configured, evidence};
 use fa_reference::action::consequence::delivery::persistent::observed::{
     helpers::learned::native::{NativeReviewStatus, NativeMemberRecord, sequence::FileNativeSidecarSequence},

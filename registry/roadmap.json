@@ -2391,7 +2391,11 @@
         "Produce executed local evidence; source or prose alone does not close this packet."
       ],
       "owner_role": "governance",
-      "result_artifacts": [],
+      "result_artifacts": [
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/qualification.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/tests/qualification.rs",
+        "docs/LEARNED_OPERATOR_PUBLICATION.md"
+      ],
       "founding_ideas": [
         "FI-A08",
         "FI-A13",

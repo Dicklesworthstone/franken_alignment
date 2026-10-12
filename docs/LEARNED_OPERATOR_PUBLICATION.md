@@ -44,9 +44,51 @@ supervise_publication create-learned-generated CONFIG FINISH_RECIPE --resume --f
 
 Fresh creation requires a new authority store. The creation and continuation
 forms require the independently provisioned reviewer profile as their fourth
-argument. They do not accept a credibility activation option or an unchecked
-reviewer mode. The receipt-only form accepts `--resume` in that argument's place
+argument. Explicit continuation and finish can independently requalify their
+helpers as described below. There is no unchecked reviewer mode. The receipt-only form accepts `--resume` in that argument's place
 and contacts no reviewer.
+
+### Requalify helpers after recovery
+
+An original held-out qualification is invalidated by the recovery fence. An
+explicit `--continue-generation`, `--after-message` or `--finish-after-message`
+invocation may supply fresh independent evidence with the existing option:
+
+```text
+supervise_publication create-learned-generated CONFIG NEXT_RECIPE REVIEWER_PROFILE --after-message PREVIOUS_REQUEST --credibility-activation CAPSULE
+```
+
+The capsule uses the original bounded `CredibilityActivation` reference format,
+committee comparison and independently bound held-out evidence contract from
+[supervisor credibility](SUPERVISOR_CREDIBILITY.md). Its control predecessor and
+authority epoch must match the recovered owner, including the new recovery
+fence. Native activation must advance the authority epoch exactly once and
+restore current qualification; replaying an old activation cannot renew it.
+Initial creation refuses this option before configuration or durable startup.
+Receipt-only `--resume` ignores an optional capsule without opening it.
+
+Qualification occurs before new inference or request admission, within the same
+deadline and authenticated stop service. The following numerical or finish step
+must still acquire fresh policy evidence and time. Activation preserves paused
+K/V state, pending numerical intent, sampled draws, finite work allowances and
+forecast evidence. It cannot repair lost pending-forecast coverage or provide a
+native review or human publication key. Every new message and finish still need
+their original reviews and independent human approval.
+
+Omitting required qualification retains the existing early refusal and allows a
+corrected retry; an invalid message predecessor also refuses before live
+preparation. A supplied capsule that fails during live preparation follows the
+ordinary failure stop/drain path. A later deadline or source failure can therefore
+leave an acknowledged qualification and a stopped workflow, without more tokens
+or another publication. Inspect the original state before retrying.
+
+Seven regression functions cover original native/human publication after fresh
+qualification in all three learned modes, historical and malformed capsules,
+pending forecast and numerical intent preservation, deadline/source/stop ordering,
+the actual continuation caller and receipt command. Their campaigns and models
+are deterministic enforcement fixtures, not calibrated or authenticated live
+evaluation evidence. Execution and the required RCH qualification gate remain
+pending; this operator bridge does not close the full FA-105 research packet.
 
 An explicit finish uses an existing store and a new recipe request ID after the
 exact original message's confirmed receipt. It preserves the numerical recipe,

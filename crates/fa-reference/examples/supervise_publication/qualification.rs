@@ -17,9 +17,9 @@ pub fn take_option(args: &mut Vec<String>) -> Result<Option<PathBuf>, String> {
     if positions.next().is_some() { return Err("duplicate credibility activation option".into()); }
     let positional = match args.first().map(String::as_str) {
         Some("submit") => 3,
-        Some("submit-checked" | "serve-open") => 4,
+        Some("submit-checked" | "serve-open" | "create-learned-generated") => 4,
         Some("proposal-next" | "serve-open-checked") => 5,
-        _ => return Err("credibility activation requires submit, submit-checked, proposal-next, serve-open or serve-open-checked".into()),
+        _ => return Err("credibility activation requires submit, submit-checked, proposal-next, serve-open, serve-open-checked or learned recovery".into()),
     };
     if index < positional || index + 1 >= args.len() || args[index + 1].is_empty()
         || args[index + 1].starts_with("--")
@@ -69,6 +69,8 @@ mod tests {
             vec!["submit", "config", "proposal", "--reviewer-profile", "peer", FLAG, "capsule"],
             vec!["submit-checked", "config", "proposal", "witness", FLAG, "capsule"],
             vec!["proposal-next", "config", "2", "payload", "1000", FLAG, "capsule"],
+            vec!["create-learned-generated", "config", "recipe", "peer", "--after-message", "1", FLAG, "capsule"],
+            vec!["create-learned-generated", "config", "recipe", "--resume", FLAG, "capsule"],
         ] {
             let mut values = args(&values);
             let before = values.clone();

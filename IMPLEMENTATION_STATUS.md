@@ -1,5 +1,32 @@
 # Implementation status · design revision 0.3
 
+## 2026-10-12: requalify learned helpers for resumed publication (unqualified source)
+
+The learned operator now accepts the original independent held-out credibility
+capsule for explicit generation continuation, a next message or stream finish.
+Activation uses the original bounded decoder, exact committee/evidence binding
+and native epoch transition after guarded recovery and before new inference or
+request admission. An old activation cannot clear recovery invalidation. Missing
+qualification and invalid message predecessors preserve their early refusal and
+corrected retry behavior. Initial creation refuses a capsule before I/O; receipt
+recovery ignores it without reading new evidence.
+
+The original stop/deadline service surrounds activation, and subsequent work
+still obtains fresh policy evidence and time, native review and a human key.
+Paused numerical state, pending intent, sampling/work counters, old charges and
+forecast history remain intact. Requalification cannot renew a lost pending
+forecast. Errors after explicit live preparation use the existing stop/drain and
+cleanup path rather than starting a replacement numerical generation.
+
+Seven new regression functions exercise actual native/human second-message
+publication in all three modes, historical/malformed/wrong capsules, missing
+source, deadline and real authenticated stop ordering, pending forecast/intent
+preservation, the actual caller's omission retry, and receipt-only CLI recovery
+with capsule and helper files absent. Synthetic campaigns establish enforcement
+cases, not evaluator authentication or statistical calibration. The required
+RCH gate and runtime execution remain pending; full FA-105 and its prerequisites
+remain open. See [the operator contract](docs/LEARNED_OPERATOR_PUBLICATION.md#requalify-helpers-after-recovery).
+
 ## 2026-10-12: enforce deadline and authenticated stop during learned replay (unqualified source)
 
 The actual learned continuation, next-message and finish command now connects
