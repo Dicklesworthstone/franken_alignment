@@ -84,6 +84,12 @@ impl FileConsistencyObserver {
 }
 
 impl FileOwnedPreOutputForecast {
+    /// Consume this original forecast into a bounded replay driver, retaining
+    /// its distinct learned acquisition report and the same pending obligation.
+    pub fn into_cooperative(self) -> super::FileOwnedPreOutputStepper {
+        super::FileOwnedPreOutputStepper::new(self.continuation.into_cooperative(), self.report)
+    }
+
     pub fn request(&self) -> u64 { self.continuation.request() }
     pub fn prediction(&self) -> &LearnedPrediction { self.continuation.prediction() }
     /// Original acknowledged acquisition result, not a live permission or refund.

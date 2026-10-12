@@ -1,6 +1,8 @@
 //! A forecast acknowledged at an original message boundary, before sampling.
 //! This supervisor-only continuation never admits or publishes an actor request.
 mod owned;
+mod cooperative;
+pub use cooperative::{FilePreOutputStepper, FileOwnedPreOutputStepper, FilePreOutputQuantum};
 pub use owned::{FileOwnedPreOutputForecast, FileOwnedPreOutputStart};
 
 use super::{FileConsistencyObserver, FileOversight, JournalError};
