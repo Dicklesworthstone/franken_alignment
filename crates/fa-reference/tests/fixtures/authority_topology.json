@@ -1,0 +1,19 @@
+{
+  "schema": "fa.authority-topology/1",
+  "generation": 1,
+  "inventory_generation": 1,
+  "complete_inventory_generation": 1,
+  "scope": {"tenant": 1, "principal": 2, "run": 3, "branch": 4, "authority": 5, "purpose": "effect"},
+  "target": {"adapter": 10, "object": 11, "contract_version": 1, "expected_version": 1, "generation": 1},
+  "inventory_scope": {"tenant": 1, "principal": 2, "purpose": 1},
+  "family": "file-publication",
+  "nodes": [{"id": 1, "kind": "actor"}, {"id": 2, "kind": "enforcer"}, {"id": 3, "kind": "sink"}],
+  "edges": [
+    {"id": 1, "from": 1, "to": 2, "channel": "dispatch", "route": "publication", "provenance": 101},
+    {"id": 2, "from": 2, "to": 3, "channel": "dispatch", "route": "publication", "provenance": 102}
+  ],
+  "enforcers": [{"node": 2, "adapter": 10, "contract_version": 1, "generation": 1, "provenance": 90}],
+  "gates": [2],
+  "check_edge_budget": 4096,
+  "source_limits": {"checks": 4096, "read_bytes": 16777216}
+}

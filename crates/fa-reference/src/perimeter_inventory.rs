@@ -7,6 +7,8 @@
 //! but filesystem replacement after metadata inspection and operator-input
 //! authenticity remain explicit outer-boundary concerns.
 
+pub mod topology;
+
 use std::{
     collections::BTreeMap,
     fs::{self, File},

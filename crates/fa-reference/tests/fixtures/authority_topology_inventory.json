@@ -1,0 +1,21 @@
+{
+  "version": 1,
+  "families": [{
+    "scope": {"tenant": 1, "principal": 2, "purpose": 1},
+    "family": "file-publication",
+    "trust_domains": ["actor", "observation_and_analysis", "enforcement", "governance_and_investigation"],
+    "credentials": [{"credential": "file-owner", "holder": "broker"}],
+    "routes": [{
+      "route": "publication",
+      "effect": "file_write",
+      "profile": {"id": "reference-publication", "generation": 1},
+      "trust_path": ["actor", "enforcement"],
+      "threat": "direct_credential_or_egress",
+      "actor_credential": {"kind": "broker_mediated"},
+      "mediation": "brokered_effects",
+      "bypass": "blocked",
+      "residual_nonclaims": ["Controlled fixture, not evidence of host isolation"]
+    }],
+    "residual_nonclaims": ["Declared topology is not authenticated deployment coverage"]
+  }]
+}
