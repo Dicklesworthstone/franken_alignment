@@ -24,6 +24,7 @@ use super::*;
 #[path = "tests/recovery_control.rs"] mod recovery_control;
 #[path = "tests/receipt_replay_deadline.rs"] mod receipt_replay_deadline;
 #[path = "tests/qualification.rs"] mod qualification;
+#[path = "tests/stopped.rs"] mod stopped;
 use fixture::{Root, configured, evidence};
 use fa_reference::action::consequence::delivery::persistent::observed::{
     helpers::learned::native::{NativeReviewStatus, NativeMemberRecord, sequence::FileNativeSidecarSequence},

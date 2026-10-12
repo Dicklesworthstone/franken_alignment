@@ -377,7 +377,13 @@
         "docs/COOPERATIVE_LEARNED_OPERATOR_RECOVERY.md",
         "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/tests/replay.rs",
         "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/tests/recovery_control.rs",
-        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/tests/receipt_replay_deadline.rs"
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/tests/receipt_replay_deadline.rs",
+        "docs/LEARNED_STOP_RECOVERY.md",
+        "crates/fa-reference/src/action/consequence/delivery/persistent/observed/decoder/learned/recovery/stopped.rs",
+        "crates/fa-reference/src/action/consequence/delivery/persistent/observed/decoder/learned/tests/recovery/stopped.rs",
+        "crates/fa-reference/tests/learned_text_stream_durable/continuation/forecast_reserve/stop_recovery.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/stopped.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/tests/stopped.rs"
       ]
     },
     {

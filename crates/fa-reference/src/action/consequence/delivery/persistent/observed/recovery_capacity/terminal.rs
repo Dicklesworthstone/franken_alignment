@@ -6,6 +6,7 @@ use super::super::{
 };
 use crate::Error;
 use crate::action::ElapsedTick;
+use super::super::shutdown::recovery::FileStoppedRecovery;
 use std::path::Path;
 
 impl FileOversight {
@@ -72,6 +73,22 @@ impl FileOversight {
     ) -> Result<FileStopSweep, JournalError> {
         terminal_transaction(self, self.revision(), request, observed_tick, true)
     }
+
+    // Only a sealed, fully verified learned cursor may consume this private
+    // owner. Source admission sees its actual recovered machine before that
+    // machine moves into the original fixed terminal transaction. No live role
+    // or partially changed candidate escapes on success, failure or unwind.
+    pub(in super::super) fn finish_verified_stopped(mut self, request: StopRequest,
+        observed_tick: ElapsedTick, canonical: &[u8]) -> Result<FileStoppedRecovery, JournalError>
+    {
+        let revision = self.revision();
+        let sweep = terminal_with_candidate(&mut self, revision, request, observed_tick,
+            true, Some(canonical), |host| {
+                let placeholder = Machine::new(&host.profile)?;
+                Ok(std::mem::replace(&mut host.machine, placeholder))
+            })?;
+        Ok(FileStoppedRecovery::Advanced { snapshot: self.inspect(), sweep })
+    }
 }
 
 // No public event importer and no general batch-authorization path. Only these
@@ -84,6 +101,18 @@ fn terminal_transaction(
     tick: ElapsedTick,
     recover: bool,
 ) -> Result<FileStopSweep, JournalError> {
+    terminal_with_candidate(host, revision, request, tick, recover, None,
+        |host| Ok(Machine::replay(&host.profile, &host.events)?))
+}
+
+// The candidate supplier is private and has exactly two callers: ordinary
+// terminal operations replay their acknowledged cut; sealed learned completion
+// consumes the verified cut without repeating numerical history. Both use the
+// SAME event sequence, prefix admission, original reducers and replacement.
+fn terminal_with_candidate<F>(host: &mut FileOversight, revision: u64,
+    request: StopRequest, tick: ElapsedTick, recover: bool, canonical: Option<&[u8]>,
+    candidate: F) -> Result<FileStopSweep, JournalError>
+where F: FnOnce(&mut FileOversight) -> Result<Machine, JournalError> {
     if host.fault.is_some() {
         return Err(JournalError::Unavailable);
     }
@@ -116,7 +145,7 @@ fn terminal_transaction(
         }
         history.push(event.clone());
     }
-    let mut candidate = Machine::replay(&host.profile, &host.events)?;
+    let mut candidate = candidate(host)?;
     let mut sweep = None;
     for event in &next {
         candidate.preflight_consistency(event)?;
@@ -125,6 +154,14 @@ fn terminal_transaction(
         }
     }
     let sweep = sweep.ok_or(Error::Incomplete)?;
+    if let Some(canonical) = canonical {
+        // Validate the exact locked cut again after the trusted clock callback
+        // and all native preflight. Invalid intent/time leaves staging untouched.
+        if host.store.read(host.profile.delivery.limits.bytes)? != canonical {
+            return Err(Error::Binding.into());
+        }
+        host.store.confirm_and_cleanup()?;
+    }
     // Poison BEFORE replacement, including caught unwinds. Inspect remains the
     // last acknowledged cut; a newer disk image may already be visible.
     host.fault = Some(JournalFailure {

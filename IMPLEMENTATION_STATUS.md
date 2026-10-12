@@ -1,5 +1,32 @@
 # Implementation status · design revision 0.3
 
+## 2026-10-12: recover learned histories directly into stopped state (unqualified source)
+
+All four original learned replay cursor types now expose exact stop selection
+and a consuming stopped completion. Fully verified numerical state enters the
+existing fixed Stop/Fence/StopProgress transaction without another replay or an
+ordinary recovery fence first. Source, event/byte limits and original reducer
+checks remain shared with ordinary terminal operations. Guarded variants retain
+their complete independent requirements; exact anchors and terminal reserve
+remain on the same exclusive canonical history.
+
+The learned operator's offline `--recover-stop OPERATION` uses those cursors with
+its one-event elapsed replay checkpoints. It loads the original numerical and
+predictor recipe without live native helpers, policy evidence, reviewer sockets
+or a credibility capsule. It returns only the existing native stop report and
+preserves executed/unknown charges. A matching completed retry needs no clock,
+event or replacement. Input anchors remain usable; successor anchor output is
+explicitly rejected before startup because no live owner escapes this path.
+
+Fourteen new regression functions cover original stopped completion at full
+capacity; reserved, sent, executed and expired liabilities; stale/foreign stop
+intent; before/during-clock canonical changes; all five Store barriers; exact
+retries; every operator replay checkpoint; missing live assets; original guarded
+refusal; and output loss after acknowledgment. Root and an independent agent
+reviewed the implementation and tests. The required remote-only RCH gate and
+runtime tests remain pending, so this is unqualified source. The scoped work and
+full FA-014 prerequisites remain open. See [the terminal contract](docs/LEARNED_STOP_RECOVERY.md).
+
 ## 2026-10-12: requalify learned helpers for resumed publication (unqualified source)
 
 The learned operator now accepts the original independent held-out credibility

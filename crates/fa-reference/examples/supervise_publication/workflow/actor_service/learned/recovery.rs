@@ -1,15 +1,16 @@
 //! Original learned replay, complete guard inventory and receipt-only settlement.
 mod cooperative;
+mod selected;
 use cooperative::{Progress, finish_replay};
 use super::{Config, Loaded, FileOversight, FileSupervisedDriver, FileHumanReviewer, ElapsedTick,
     RunResult, ActorWire, Command, FileLearnedTextStreamActorPort, LearnedTextRelease,
     RecoveryReserve, Control, Deadline, Duration, Instant, cleanup, debug, encode_command};
 use fa_reference::action::consequence::delivery::persistent::observed::guarded::{
     FileGuardSet, FileRecoveryRequirements,
-    predictive::{FilePredictiveRequirements, owned::FileOwnedPredictiveRequirements},
 };
 use fa_reference::action::consequence::delivery::persistent::observed::consistency::FileConsistencyObserver;
 use fa_reference::action::consequence::delivery::stream::ReleaseFrame;
+use fa_reference::action::consequence::delivery::persistent::observed::shutdown::recovery::FileStoppedRecovery;
 
 type Custody = (FileOversight, FileHumanReviewer, Option<FileConsistencyObserver>);
 
@@ -43,28 +44,8 @@ pub(super) fn create(config: &Config, loaded: &Loaded)
 pub(super) fn open(config: &Config, loaded: &Loaded)
     -> Result<(FileOversight, FileHumanReviewer), String>
 {
-    open_with_checkpoints(config, loaded, &mut |_| Ok(()))
-}
-
-fn open_with_checkpoints(config: &Config, loaded: &Loaded,
-    checkpoint: &mut impl FnMut(Option<Progress>) -> Result<(), String>)
-    -> Result<(FileOversight, FileHumanReviewer), String>
-{
-    checkpoint(None)?;
-    let requirements = requirements(config, loaded);
-    // Match complete independently loaded model/codec/probe/text/source bytes,
-    // full guard inventory and explicit external floors BEFORE cleanup or fence.
-    let recovery = match loaded.recovery_anchor.as_ref() {
-        Some(anchor) => FileOversight::begin_open_guarded_anchored_with_learned_generation(
-            &config.store, config.profile.clone(), &requirements, &loaded.generation, anchor),
-        None => FileOversight::begin_open_guarded_with_learned_generation(
-            &config.store, config.profile.clone(), &requirements, &loaded.generation),
-    }.map_err(debug)?;
-    let recovery = recovery
-        .require_recovery_reserve(RecoveryReserve::terminal()).map_err(debug)?;
-    let (host, roles) = finish_replay(recovery, checkpoint,
-        |run| run.progress(), |run, done| run.advance(done, 1), |run| run.finish())?;
-    Ok((host, roles.human))
+    let (host, human, _) = open_selected_with_checkpoints(config, loaded, &mut |_| Ok(()))?;
+    Ok((host, human))
 }
 
 fn requirements(config: &Config, loaded: &Loaded) -> FileRecoveryRequirements {
@@ -129,42 +110,30 @@ pub(super) fn open_receipt_with_elapsed(config: &Config, loaded: &Loaded,
 pub(super) fn open_selected_with_checkpoints(config: &Config, loaded: &Loaded,
     checkpoint: &mut impl FnMut(Option<Progress>) -> Result<(), String>) -> Result<Custody, String>
 {
-    if loaded.generation.required_pre_output_forecast().is_none()
-        && loaded.generation.required_owned_pre_output_forecast().is_none() {
-        let (host, human) = open_with_checkpoints(config, loaded, checkpoint)?;
-        return Ok((host, human, None));
-    }
     checkpoint(None)?;
-    let (host, roles) = if let Some(prediction) = loaded.generation.required_pre_output_forecast() {
-        let expected = FilePredictiveRequirements { oversight: requirements(config, loaded),
-            prediction: prediction.clone(), evaluation: None };
-        let recovery = match loaded.recovery_anchor.as_ref() {
-            Some(anchor) => FileOversight::begin_open_predictive_guarded_anchored_with_learned_generation(
-                &config.store, config.profile.clone(), &expected, &loaded.generation, anchor),
-            None => FileOversight::begin_open_predictive_guarded_with_learned_generation(
-                &config.store, config.profile.clone(), &expected, &loaded.generation),
-        }.map_err(debug)?;
-        let recovery = recovery
-            .require_recovery_reserve(RecoveryReserve::terminal()).map_err(debug)?;
-        finish_replay(recovery, checkpoint,
-            |run| run.progress(), |run, done| run.advance(done, 1), |run| run.finish())?
-    } else if let Some(prediction) = loaded.generation.required_owned_pre_output_forecast() {
-        let expected = FileOwnedPredictiveRequirements { oversight: requirements(config, loaded),
-            prediction: prediction.clone(), evaluation: None };
-        let recovery = match loaded.recovery_anchor.as_ref() {
-            Some(anchor) => FileOversight::begin_open_predictive_guarded_anchored_with_owned_learned_consistency(
-                &config.store, config.profile.clone(), &expected, &loaded.generation, anchor),
-            None => FileOversight::begin_open_predictive_guarded_with_owned_learned_consistency(
-                &config.store, config.profile.clone(), &expected, &loaded.generation),
-        }.map_err(debug)?;
-        let recovery = recovery
-            .require_recovery_reserve(RecoveryReserve::terminal()).map_err(debug)?;
-        finish_replay(recovery, checkpoint,
-            |run| run.progress(), |run, done| run.advance(done, 1), |run| run.finish())?
-    } else {
-        return Err("missing independently selected forecast configuration".into());
+    let recovery = selected::Cursor::begin(config, loaded)?;
+    finish_replay(recovery, checkpoint, |run| run.progress(),
+        |run, done| run.advance(done), |run| run.finish())
+}
+
+/// Offline stop uses the same independently guarded replay and every wall-time
+/// checkpoint, including Ready. It never constructs live service custody, reads
+/// current helper/source evidence or consults the terminal clock during replay.
+pub(super) fn stop_selected_with_elapsed<F>(config: &Config, loaded: &Loaded,
+    operation: u64, clock: F, elapsed: &mut impl FnMut() -> Duration)
+    -> Result<FileStoppedRecovery, String>
+where F: FnOnce() -> ElapsedTick {
+    if operation == 0 { return Err("stop operation must be nonzero".into()); }
+    let wall = Duration::from_millis(config.timing.runtime_ms);
+    let mut checkpoint = |_: Option<Progress>| {
+        if elapsed() >= wall {
+            Err("learned stop recovery replay deadline reached".into())
+        } else { Ok(()) }
     };
-    Ok((host, roles.oversight.human, Some(roles.consistency_observer)))
+    checkpoint(None)?;
+    let recovery = selected::Cursor::begin(config, loaded)?;
+    finish_replay(recovery, &mut checkpoint, |run| run.progress(),
+        |run, done| run.advance(done), |run| run.finish_stopped(operation, clock))
 }
 
 pub(super) fn resume<F>(config: Config, loaded: Loaded, mut time: F) -> Result<RunResult, String>

@@ -6,6 +6,9 @@ use super::{EvaluationProtocol, FilePredictiveRoles, FileRecoveryRequirements};
 use super::super::{FileOversightRoles, anchored::FileHistoryAnchor, learned::check_profile,
     learned_recovery::check_recovery_reserve};
 use super::super::super::{Event, FileOversight, FileOversightProfile, JournalError, Machine};
+use super::super::super::shutdown::recovery::FileStoppedRecovery;
+use crate::action::consequence::delivery::StopRequest;
+use crate::action::ElapsedTick;
 use super::super::super::consistency::learned::FileLearnedConsistencyConfig;
 use super::super::super::credibility::CredibilityEvent;
 use super::super::super::decoder::learned::{FileLearnedConfig, FileLearnedRecovery,
@@ -184,6 +187,23 @@ impl FileOwnedPredictiveRecovery {
         let oversight = FileOversightRoles::provision(&host, human);
         let roles = FilePredictiveRoles::provision(&host, oversight, self.expected.evaluation.is_some());
         Ok((host, roles))
+    }
+
+    /// Select the original stop predecessor after both independent learned
+    /// recipes and the complete original ownership/guard/floor contract pass.
+    pub fn stop_request(&self, operation: u64) -> Result<StopRequest, JournalError> {
+        self.check_ready()?;
+        self.inner.stop_request(operation)
+    }
+
+    /// Consume the verified owned-predictor replay directly into original
+    /// stopped recovery. No ordinary fence, predictor role or live owner is
+    /// returned, and no original numerical history is evaluated a second time.
+    pub fn finish_stopped<F>(self, request: StopRequest, clock: F)
+        -> Result<FileStoppedRecovery, JournalError>
+    where F: FnOnce() -> ElapsedTick {
+        self.check_ready()?;
+        self.inner.finish_stopped(request, clock)
     }
 
     fn check_ready(&self) -> Result<(), JournalError> {

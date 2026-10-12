@@ -5,6 +5,9 @@ use super::{FileOversight, FileOversightProfile, FileOversightRoles, FileRecover
 use super::super::decoder::learned::{FileLearnedConfig, FileLearnedRecovery,
     FileLearnedRecoveryProgress, FileLearnedRecoveryStatus, checkpoint::FileLearnedResetIntent};
 use crate::Error;
+use crate::action::ElapsedTick;
+use super::super::shutdown::recovery::FileStoppedRecovery;
+use crate::action::consequence::delivery::StopRequest;
 use crate::action::consequence::delivery::persistent::RecoveryReserve;
 use super::{BaseEvent, Event};
 use std::fmt;
@@ -123,6 +126,23 @@ impl FileGuardedLearnedRecovery {
         let (host, human) = self.inner.finish()?;
         let roles = FileOversightRoles::provision(&host, human);
         Ok((host, roles))
+    }
+
+    /// Select the original stop predecessor only after the complete independent
+    /// guard, effective-policy, credential and recovery-floor contract passes.
+    pub fn stop_request(&self, operation: u64) -> Result<StopRequest, JournalError> {
+        self.check_ready()?;
+        self.inner.stop_request(operation)
+    }
+
+    /// Consume the same guarded replay directly into original stopped recovery.
+    /// No ordinary fence precedes stopping and no live role bundle escapes. The
+    /// exact retained reserve, anchor and canonical-cut checks remain in force.
+    pub fn finish_stopped<F>(self, request: StopRequest, clock: F)
+        -> Result<FileStoppedRecovery, JournalError>
+    where F: FnOnce() -> ElapsedTick {
+        self.check_ready()?;
+        self.inner.finish_stopped(request, clock)
     }
 
     /// Check the complete guard contract before AND after executing the exact

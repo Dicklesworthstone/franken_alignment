@@ -1,6 +1,7 @@
 //! Original replay, source inference and real journal storage across host quanta.
 use super::*;
 use super::super::{FileLearnedRecovery, FileLearnedRecoveryStatus};
+#[path = "recovery/stopped.rs"] mod stopped;
 
 fn replay_all(recovery: &mut FileLearnedRecovery, quantum: usize) {
     while recovery.progress().status == FileLearnedRecoveryStatus::Replaying {

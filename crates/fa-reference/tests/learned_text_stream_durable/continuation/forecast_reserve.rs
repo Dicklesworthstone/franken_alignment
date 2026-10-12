@@ -285,3 +285,4 @@ fn reserved_tail_fences_and_stops_with_unanswered_forecast_and_exhausted_ordinar
         assert!(host.stop_progress().unwrap().drained());
     }
 }
+#[path = "forecast_reserve/stop_recovery.rs"] mod stop_recovery;

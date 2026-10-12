@@ -73,6 +73,12 @@ or receipt from this interrupted attempt. A later invocation must independently
 reopen the store; interruption does not revoke a durable history, undo an old
 effect or create a terminal application record.
 
+For an explicit offline durable stop, use
+`create-learned-generated CONFIG LEARNED_RECIPE --recover-stop OPERATION`.
+It consumes the same fully guarded replay directly into the original terminal
+transaction, without an ordinary recovery fence or live-role handoff first.
+See [offline learned stop recovery](LEARNED_STOP_RECOVERY.md).
+
 Message and finish `--resume` use the same checkpoints with a separate elapsed
 budget of `CONFIG.timing.runtime_ms`, beginning immediately before guarded open.
 They do not consult the supplied live logical-clock function during replay,

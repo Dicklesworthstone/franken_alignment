@@ -1,5 +1,21 @@
 # Changelog
 
+## 2026-10-12: stop and drain learned histories through sealed recovery
+
+- Add stopped completion to the original learned, guarded, raw-predictive and
+  owned-predictive recovery cursors. Consume their fully verified machine into
+  the original fixed Stop/Fence/StopProgress transaction without a second
+  numerical replay or an ordinary recovery fence consuming terminal capacity.
+- Preserve exact request, guard, floor, predictor, reserve and anchor checks;
+  compare canonical history before the trusted clock and before persistence.
+  Completed retries use no clock, events or replacement, even at full capacity.
+- Add the offline learned `--recover-stop OPERATION` command and share original
+  guarded selection with live recovery. No live source, helper or reviewer is
+  required; native reports retain unresolved liabilities and report output loss.
+- Add fourteen regression functions across original public cursors, all five
+  Store barriers and the actual operator. Execution qualification remains
+  pending the required remote-only RCH gate; full FA-014 prerequisites stay open.
+
 ## 2026-10-12: requalify learned helpers before resumed publication
 
 - Accept independent held-out credibility capsules on explicit learned

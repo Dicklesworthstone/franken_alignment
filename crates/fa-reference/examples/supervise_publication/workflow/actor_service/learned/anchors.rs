@@ -42,6 +42,13 @@ pub(super) fn take_options(args: &[String]) -> Result<(Vec<String>, Options), St
 }
 
 impl Options {
+    pub(super) fn check_stopped(&self) -> Result<(), String> {
+        if self.output.is_some() {
+            return Err("learned stop recovery cannot retain a successor history anchor".into());
+        }
+        Ok(())
+    }
+
     pub(super) fn admit(self, config: &Config, loaded: &mut Loaded, recovering: bool)
         -> Result<(), String>
     {

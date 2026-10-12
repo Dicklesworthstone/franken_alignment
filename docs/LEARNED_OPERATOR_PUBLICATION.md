@@ -40,6 +40,7 @@ supervise_publication create-learned-generated CONFIG LEARNED_RECIPE --resume
 supervise_publication create-learned-generated CONFIG NEXT_RECIPE REVIEWER_PROFILE --after-message PREVIOUS_REQUEST
 supervise_publication create-learned-generated CONFIG FINISH_RECIPE REVIEWER_PROFILE --finish-after-message PREVIOUS_REQUEST
 supervise_publication create-learned-generated CONFIG FINISH_RECIPE --resume --finish-after-message PREVIOUS_REQUEST
+supervise_publication create-learned-generated CONFIG LEARNED_RECIPE --recover-stop OPERATION
 ```
 
 Fresh creation requires a new authority store. The creation and continuation
@@ -103,10 +104,18 @@ finite generation and requires fresh native and human review. Existing version
 [finite learned text stream continuation](LEARNED_TEXT_STREAM_CONTINUATION.md)
 for the complete predecessor, stop-state and remaining-capacity contract.
 
+Offline `--recover-stop OPERATION` reconstructs the original learned history and
+applies its native stop/fence/drain transaction without a live reviewer, helper
+model or current evidence file. Completed retries need no new clock or journal
+capacity. It reports original unresolved liabilities without repeating effects.
+See [offline learned stop recovery](LEARNED_STOP_RECOVERY.md) for the sealed
+completion, stop identity, output and finite-capacity contracts.
+
 Every recovery form can also require a separately retained exact history prefix
 with `--history-anchor INPUT`. `--retain-history-anchor NEW_OUTPUT` exports a
 checked successor from the final acknowledged owner, including after receipt
-recovery. Initial creation accepts only the output option. See
+recovery. Offline stop accepts only the input option and rejects successor export
+before I/O; initial creation accepts only the output option. See
 [operator history anchors](LEARNED_OPERATOR_HISTORY_ANCHORS.md) for private
 custody, bounded admission, new-file retention and failure semantics.
 
@@ -152,7 +161,8 @@ the original request deadline and terminal no-new-logical-clock behavior. See
 [cooperative recovery](COOPERATIVE_LEARNED_OPERATOR_RECOVERY.md) for the command
 contract, synchronous-operation limits and pending execution qualification.
 
-Stdout contains only the original actor-wire response. A successful command
+The publication and receipt forms emit only the original actor-wire response;
+offline stop emits the original native stop report. A successful publication command
 requires its original `Known(Executed)` result and completed cleanup. A held,
 denied, cancelled or unknown result is not converted to success. A nonzero exit
 or lost stdout receipt does not prove that no publication occurred; inspect or

@@ -12,8 +12,12 @@ Append these options to an existing `create-learned-generated` command:
 
 | Option | Meaning |
 | --- | --- |
-| `--history-anchor INPUT` | Require the independently retained original prefix before recovery. Valid with `--continue-generation`, `--after-message`, `--finish-after-message`, and message or finish receipt `--resume`; refused on initial creation. |
+| `--history-anchor INPUT` | Require the independently retained original prefix before recovery. Valid with `--continue-generation`, `--after-message`, `--finish-after-message`, message or finish receipt `--resume`, and offline `--recover-stop`; refused on initial creation. |
 | `--retain-history-anchor NEW_OUTPUT` | At final workflow or receipt settlement, export the acknowledged original owner to a new private operator file. When an input is supplied, the owner must also be a genuine successor of that prefix. |
+
+Offline [learned stop recovery](LEARNED_STOP_RECOVERY.md) accepts only an input
+anchor. Its sealed terminal result exposes no live owner for successor export,
+so selecting an output is rejected before configuration or recipe I/O.
 
 Each option takes one absolute normalized file path and can appear only once.
 The options are separate from the immutable numerical recipe. Omitting both

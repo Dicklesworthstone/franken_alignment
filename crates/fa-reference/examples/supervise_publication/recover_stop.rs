@@ -32,7 +32,7 @@ where F: FnOnce() -> ElapsedTick {
 fn ids(values: &[u64]) -> String {
     values.iter().map(|id| format!("\"{id}\"")).collect::<Vec<_>>().join(",")
 }
-fn report(recovered: &FileStoppedRecovery, out: &mut impl Write) -> Result<(), String> {
+pub(crate) fn report(recovered: &FileStoppedRecovery, out: &mut impl Write) -> Result<(), String> {
     let progress = recovered.progress(); let state = recovered.snapshot();
     let kind = match recovered { FileStoppedRecovery::AlreadyDrained { .. } => "already_drained",
         FileStoppedRecovery::Advanced { .. } => "advanced" };
