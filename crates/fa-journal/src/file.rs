@@ -7,7 +7,8 @@
 mod recovery;
 mod reserve;
 mod batch_recovery;
-pub use batch_recovery::{BatchAnchor, BatchStatus};
+pub use batch_recovery::{BatchAnchor, BatchStatus, BatchInspectionBudget, BatchInspectionReport,
+    BatchInspectionStatus, BatchInspectionWork, FileBatchInspection};
 pub use recovery::FileRecovery;
 
 use crate::{Event, Head, Identity, Journal, Limits};
