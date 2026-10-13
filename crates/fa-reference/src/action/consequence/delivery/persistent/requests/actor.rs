@@ -2,6 +2,9 @@
 //! Only the supervisor owns the host or installs a fresh admission snapshot.
 
 mod host;
+pub(in crate::action::consequence::delivery::persistent) mod precheck;
+pub use precheck::{FileActorPrecheckPort, FilePrecheckBasis, FilePrecheckDisclosure,
+    FilePrecheckObservation, FilePrecheckOutcome, MAX_PRECHECK_QUERIES};
 mod generated;
 mod learned_text;
 pub use learned_text::{FileLearnedTextActorPort, LearnedTextProposal,

@@ -1,6 +1,7 @@
 //! Durable external keys through the original FULL-INPUT two-key authority.
 //! Sharing the request book does not substitute the simpler profile's reducer.
 mod completion;
+mod precheck;
 use super::{Machine, Transition};
 use super::super::{FileOversight, BaseEvent, Event};
 use super::super::super::JournalError;

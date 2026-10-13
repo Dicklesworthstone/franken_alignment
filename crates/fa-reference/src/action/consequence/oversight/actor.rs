@@ -105,12 +105,14 @@ pub struct ActorBasis {
 }
 
 /// Epistemic projection at this reference boundary, not the production wire
-/// format. Known is emitted only for terminal outcomes; Approved is not a value.
+/// format. Actor-outcome Known values are terminal; Approved is not a value.
+/// A separately typed read basis can describe a precheck without masquerading
+/// as an admitted request. Existing actor responses keep ActorBasis by default.
 /// The unused Stale/Absent forms remain distinct from unknown or withheld data.
 /// None of these caller-copyable observations is accepted as an authority input.
 #[derive(Clone, Debug, PartialEq, Eq)]
-pub enum Knowledge<T> {
-    Known { value: T, basis: ActorBasis },
+pub enum Knowledge<T, B = ActorBasis> {
+    Known { value: T, basis: B },
     Pending { request: u64 },
     Unknown { reason: UnknownReason },
     Withheld { authority_required: &'static str },
