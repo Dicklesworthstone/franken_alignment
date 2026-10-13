@@ -27,6 +27,7 @@ pub mod replay;
 mod actor_execution;
 pub use actor_execution::{DispatchKeys, ReconciliationResults};
 pub mod credibility;
+pub mod andon;
 pub mod joint_credibility;
 pub use broker::consistency;
 pub use broker::human;
