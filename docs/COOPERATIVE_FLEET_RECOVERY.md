@@ -79,3 +79,39 @@ Targeted coordinator tests and the unchanged full xtask verifier were attempted
 with RCH_REQUIRE_REMOTE=1; both stopped at missing rch (exit 127) before Cargo.
 The selected-file worktree is not a full checkout. Source/hash checks are not
 execution qualification; FA-014 and its original prerequisites remain open.
+
+## Whole-roster checkpointed passes
+
+`recover_registered_pass_with_checkpoints(revision, clocks, max_events, callback)`
+uses the same side-effect-free full-roster, exact clock binding, visit budget and
+revision-growth admission as the existing batch/resume methods. It then drives
+the original cooperative visit per member in stable order. No subset of the
+registered denominator is accepted, and progress allocates no extra visits.
+
+The callback receives only a domain ID and optional original event progress.
+None means before intent/domain I/O; Some includes initial zero, each quantum and
+Ready before native terminal completion. False ends the pass. Before entry, the
+member stays NotVisited. After entry, cancellation records Unavailable without
+changing the domain. Every later member remains explicitly NotVisited. The pass
+predicates use only this pass, never an older successful coordinator observation.
+The caller may enforce one cumulative elapsed deadline; a new member does not
+implicitly renew any deadline, source time or allowance.
+
+Native refusals are recorded and other reachable members may proceed. Failure
+to acknowledge either native completion bookkeeping or cancellation ends the
+pass with Unacknowledged. A successful domain stop may already be visible. A
+callback unwind remains an unwind: an entered coordinator retains its poisoned
+Entered intent and requires reopen. The existing resume operation still resolves
+historical visits without automatically retrying a refused/not-yet-stopped
+member. It is not converted into a mutating checkpointed recovery pass.
+
+Seven further tests cover batch-result equivalence and quantum counts, every
+checkpoint cancellation, complete-plan admission before callbacks, offline/busy
+members alongside a reachable control, callback unwind after a completed member,
+failed acknowledgment of both cancellation and native success, and full-capacity
+clock-free domain rereads. The original batch/resume execution loop and prior
+assertions are preserved. Together the increments author fifteen Rust tests.
+Required target/full RCH launches remain blocked by the missing launcher; no
+compiled/tested/format-qualified status follows from source and hash checks.
+This API enables embedding-operator checkpoints, not a new fleet CLI, hard
+real-time scheduler or distributed stop transaction. FA-014 remains open.

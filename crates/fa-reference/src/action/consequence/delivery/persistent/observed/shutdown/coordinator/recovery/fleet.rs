@@ -1,6 +1,8 @@
 //! One bounded operator pass over EVERY independently registered domain.
 //! Per-domain acknowledgments are not a simultaneous or distributed atomic stop.
 use super::*;
+mod checkpoint;
+pub use checkpoint::FileShutdownRecoveryCheckpoint;
 
 /// A trusted operator observation in this registered domain's clock system.
 /// The binding is checked; this data type does not authenticate a clock source.
@@ -124,6 +126,37 @@ impl FileShutdownCoordinator {
     fn run_registered_pass(&mut self, revision: u64, clocks: &[FileShutdownClock], resume: bool)
         -> Result<FileShutdownRecoveryPass, JournalError>
     {
+        let (mut pass, resolutions) = self.prepare_registered_pass(revision, clocks, resume)?;
+        for (member, resolution) in pass.members.iter_mut().zip(resolutions) {
+            if let Some(visit) = resolution {
+                match self.resolve_shutdown_visit(self.revision(), visit) {
+                    Ok(observation) => member.result = FileShutdownPassResult::Observed(Box::new(observation)),
+                    Err(error) if !self.unavailable => member.result = FileShutdownPassResult::EvidenceRefused(error),
+                    Err(error) => {
+                        member.result = FileShutdownPassResult::Unacknowledged(error);
+                        break;
+                    }
+                }
+                continue;
+            }
+            match self.recover_and_drain(self.revision(), member.clock.domain, member.clock.at) {
+                Ok(Ok(observation)) => member.result = FileShutdownPassResult::Observed(Box::new(observation)),
+                Ok(Err(error)) => member.result = FileShutdownPassResult::Refused(error),
+                Err(error) => {
+                    member.result = FileShutdownPassResult::Unacknowledged(error);
+                    break;
+                }
+            }
+        }
+        pass.final_revision = self.revision();
+        Ok(pass)
+    }
+
+    // Shared, side-effect-free full-roster/clock/capacity admission. Both public
+    // pass variants keep the original denominator and never start a partial plan.
+    fn prepare_registered_pass(&self, revision: u64, clocks: &[FileShutdownClock], resume: bool)
+        -> Result<(FileShutdownRecoveryPass, Vec<Option<usize>>), JournalError>
+    {
         if self.unavailable { return Err(JournalError::Unavailable); }
         if revision != self.revision { return Err(Error::Stale.into()); }
         if clocks.len() > MAX_SHUTDOWN_DOMAINS { return Err(Error::Limit.into()); }
@@ -171,32 +204,11 @@ impl FileShutdownCoordinator {
         members.extend(ordered.into_iter().map(|clock| FileShutdownPassMember {
             clock, result: FileShutdownPassResult::NotVisited,
         }));
-        let mut pass = FileShutdownRecoveryPass { operation: self.campaign.plan.operation,
+        let pass = FileShutdownRecoveryPass { operation: self.campaign.plan.operation,
             initial_revision: revision, final_revision: revision, members };
-        for (member, resolution) in pass.members.iter_mut().zip(resolutions) {
-            if let Some(visit) = resolution {
-                match self.resolve_shutdown_visit(self.revision(), visit) {
-                    Ok(observation) => member.result = FileShutdownPassResult::Observed(Box::new(observation)),
-                    Err(error) if !self.unavailable => member.result = FileShutdownPassResult::EvidenceRefused(error),
-                    Err(error) => {
-                        member.result = FileShutdownPassResult::Unacknowledged(error);
-                        break;
-                    }
-                }
-                continue;
-            }
-            match self.recover_and_drain(self.revision(), member.clock.domain, member.clock.at) {
-                Ok(Ok(observation)) => member.result = FileShutdownPassResult::Observed(Box::new(observation)),
-                Ok(Err(error)) => member.result = FileShutdownPassResult::Refused(error),
-                Err(error) => {
-                    member.result = FileShutdownPassResult::Unacknowledged(error);
-                    break;
-                }
-            }
-        }
-        pass.final_revision = self.revision();
-        Ok(pass)
+        Ok((pass, resolutions))
     }
+
 }
 
 #[cfg(test)]
