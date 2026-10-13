@@ -9,10 +9,12 @@ use fa_reference::action::consequence::delivery::persistent::observed::{
 use std::{collections::BTreeMap, fs::{self, File}, io::{Cursor, Read},
     os::unix::fs::{MetadataExt, PermissionsExt}, path::{Component, Path, PathBuf}, time::Duration};
 
+mod archive;
+
 const MANIFEST_BYTES: usize = 256 * 1024;
 const INPUT_BYTES: usize = 128 * 1024 * 1024;
 const ANCHOR_OVERHEAD: usize = MAX_HISTORY_ANCHOR_BYTES - MAX_JOURNAL_BYTES;
-struct Member { id: u64, config: PathBuf, anchor: PathBuf }
+struct Member { id: u64, config: PathBuf, anchor: Option<PathBuf> }
 pub(super) struct Spec {
     pub coordinator: PathBuf,
     pub minimum_revision: u64,
@@ -25,6 +27,7 @@ pub(super) struct Spec {
     input_bytes: usize,
     manifest_bytes: usize,
     members: Vec<Member>,
+    plan_archive: Option<PathBuf>,
 }
 pub(super) struct Prepared { pub spec: Spec, pub plan: FileShutdownPlan }
 
@@ -37,7 +40,11 @@ impl Spec {
         let json = strict_json::parse(bytes, Limits { max_bytes: MANIFEST_BYTES, max_depth: 6,
             max_items: 1024, max_string_bytes: 4096 }).map_err(|e| format!("fleet profile JSON: {e:?}"))?;
         let mut f = Fields::new(json)?;
-        if f.text("schema_version")? != "fa.shutdown-fleet/1" { return Err("unknown fleet profile".into()); }
+        let plan_archive = match f.text("schema_version")?.as_str() {
+            "fa.shutdown-fleet/1" => None,
+            "fa.shutdown-fleet/2" => Some(path(f.text("plan_archive")?)?),
+            _ => return Err("unknown fleet profile".into()),
+        };
         let operation = f.id("operation")?;
         let coordinator = path(f.text("coordinator")?)?;
         let minimum_revision = f.id("minimum_revision")?;
@@ -54,8 +61,10 @@ impl Spec {
         for item in raw {
             let mut m = Fields::new(item)?;
             let id = m.id("id")?; let config = path(m.text("config")?)?;
-            let anchor = path(m.text("history_anchor")?)?; m.end()?;
-            if id == 0 || members.iter().any(|m| m.id == id || m.config == config || m.anchor == anchor) {
+            let anchor = if plan_archive.is_none() { Some(path(m.text("history_anchor")?)?) } else { None };
+            m.end()?;
+            if id == 0 || members.iter().any(|m| m.id == id || m.config == config
+                || anchor.as_ref().is_some_and(|path| m.anchor.as_ref() == Some(path))) {
                 return Err("duplicate or zero fleet member identity/custody".into());
             }
             members.push(Member { id, config, anchor });
@@ -63,7 +72,7 @@ impl Spec {
         f.end()?;
         if visits < members.len() { return Err("visit allowance cannot cover the fixed roster".into()); }
         Ok(Self { coordinator, minimum_revision, coordinator_bytes, wall: Duration::from_millis(runtime_ms as u64),
-            replay_events, operation, visits, head_bytes, input_bytes, manifest_bytes: bytes.len(), members })
+            replay_events, operation, visits, head_bytes, input_bytes, manifest_bytes: bytes.len(), members, plan_archive })
     }
 
     pub fn prepare(self, manifest: &Path, check: &mut impl FnMut() -> Result<(), String>) -> Result<Prepared, String> {
@@ -95,18 +104,28 @@ impl Spec {
         }
         // All independent inputs must lie outside EVERY authority/coordinator
         // directory. Domains themselves need not exist and are not opened here.
-        for member in &self.members { private_paths.push(fs::canonicalize(&member.anchor).map_err(err)?); }
+        if let Some(archive) = &self.plan_archive {
+            private_paths.push(fs::canonicalize(archive).map_err(err)?);
+        } else {
+            for member in &self.members {
+                private_paths.push(fs::canonicalize(member.anchor.as_ref().ok_or("missing history anchor")?).map_err(err)?);
+            }
+        }
         for private in &private_paths {
             if private.starts_with(&self.coordinator) || configurations.iter().any(|c| private.starts_with(&c.store)) {
                 return Err("fleet custody must be outside all authority stores".into());
             }
+        }
+        if let Some(archive) = &self.plan_archive {
+            let plan = archive::load(&self, archive, configurations, &mut remaining, check)?;
+            return Ok(Prepared { spec: self, plan });
         }
         let mut domains = Vec::new(); let mut retained = 0_usize;
         for (member, config) in self.members.iter().zip(configurations) {
             check()?;
             let limit = self.head_bytes.checked_sub(retained).ok_or("retained head overflow")?
                 .min(MAX_JOURNAL_BYTES).checked_add(ANCHOR_OVERHEAD).ok_or("anchor limit overflow")?;
-            let bytes = charged(&member.anchor, limit, &mut remaining)?;
+            let bytes = charged(member.anchor.as_ref().ok_or("missing history anchor")?, limit, &mut remaining)?;
             let anchor = FileHistoryAnchor::read_trusted(&mut Cursor::new(&bytes), limit.min(MAX_HISTORY_ANCHOR_BYTES)).map_err(err)?;
             retained = retained.checked_add(anchor.retained_bytes()).ok_or("retained head overflow")?;
             if retained > self.head_bytes { return Err("aggregate retained head allowance exceeded".into()); }
