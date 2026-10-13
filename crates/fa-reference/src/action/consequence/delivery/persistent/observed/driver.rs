@@ -3,6 +3,8 @@
 //! This owner coordinates transitions; it is not another ledger or executor.
 
 mod lifecycle;
+#[cfg(test)]
+mod unwind_tests;
 pub mod learned;
 pub mod native_learned;
 mod recovery_capacity;
@@ -201,6 +203,13 @@ impl FileSupervisedDriver {
     /// Existing callback-driven behavior. A credential-guarded host can still
     /// review, reserve and dispatch through this method, but a valid first
     /// publication will refuse unless the explicit credentialed variant is used.
+    ///
+    /// An unwinding step retires helper I/O and retains owned children for
+    /// nonblocking reaping before resuming the original panic. Undispatched
+    /// local work closes; a dispatched obligation remains query-only. This does
+    /// not cancel a request, refund a reservation, invent time or acknowledge an
+    /// effect. Storage/protocol panics are not converted into ordinary errors,
+    /// and aborting panics cannot run this cleanup.
     pub fn step_with_evidence<F, P>(&mut self, clock: F, provider: P,
         human: Option<&FileHumanPermit>) -> Result<FileDriverEvent, JournalError>
     where F: FnMut() -> ElapsedTick,
@@ -227,7 +236,7 @@ impl FileSupervisedDriver {
         -> Result<FileDriverEvent, JournalError>
     where F: FnMut() -> ElapsedTick, P: EvidenceProvider {
         self.reap_helpers();
-        let result = (|| {
+        let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
             let mut host = self.supervisor.host_mut()?;
             if host.storage_failure().is_some() { return Err(JournalError::Unavailable); }
             let Some(job) = &mut self.job else { return Ok(FileDriverEvent::Idle); };
@@ -255,10 +264,26 @@ impl FileSupervisedDriver {
             // preflight the complete operation, including reserved capacity.
             if job.phase != Phase::Reconcile { observe(&mut host, clock())?; }
             step_job(&mut host, job, &mut clock, provider, human, credential)
-        })();
+        }));
+        if result.is_err() {
+            // The host borrow has unwound before maintenance. Never leave a
+            // half-driven review or a reserved permit reusable by a caller that
+            // catches the panic. Preserve the original query-only recovery path
+            // for every obligation whose send phase has already been entered.
+            if let Some(job) = &mut self.job {
+                job.permit = None;
+                job.phase = match job.phase {
+                    Phase::Publish | Phase::Reconcile => Phase::Reconcile,
+                    Phase::Review | Phase::Ready | Phase::Closed => Phase::Closed,
+                };
+            }
+        }
         self.reap_helpers();
         if self.job.as_ref().is_some_and(|job| job.phase == Phase::Closed) { self.job = None; }
-        result
+        match result {
+            Ok(result) => result,
+            Err(payload) => std::panic::resume_unwind(payload),
+        }
     }
 }
 
