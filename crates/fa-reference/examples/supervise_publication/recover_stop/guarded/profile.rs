@@ -40,6 +40,19 @@ impl Profile {
         Ok(Self { minimum, input, output })
     }
 
+    /// Reuse the exact independent input custody for read-only investigation.
+    /// Such a read acknowledges no new cut and therefore cannot export one.
+    /// Reject output requests before touching either the store or anchor paths.
+    pub(crate) fn admit_investigation(&self, config: &Config)
+        -> Result<(FileHistoryAnchor, FileRecoveryFloor), String>
+    {
+        if self.output.is_some() {
+            return Err("read-only proposal explanation cannot retain a history anchor".into());
+        }
+        let custody = self.admit(config)?;
+        Ok((custody.anchor, self.minimum))
+    }
+
     pub(super) fn minimum(&self) -> FileRecoveryFloor { self.minimum }
 
     pub(super) fn admit(&self, config: &Config) -> Result<Custody, String> {
