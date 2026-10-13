@@ -288,3 +288,6 @@ mod qualified;
 
 #[path = "continuation/guarded_tests.rs"]
 mod guarded;
+
+#[path = "continuation/creation_tests.rs"]
+mod creation;

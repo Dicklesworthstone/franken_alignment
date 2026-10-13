@@ -8,6 +8,8 @@
 
 #[path = "continuation/guarded.rs"]
 pub(crate) mod guarded;
+#[path = "continuation/creation.rs"]
+pub(crate) mod creation;
 
 use super::{Deadline, RunResult, cleanup, execute, plus, resume_existing, stop};
 use crate::config::{CLOCK_DOMAIN, Config, debug};

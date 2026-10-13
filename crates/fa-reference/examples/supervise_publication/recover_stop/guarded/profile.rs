@@ -6,6 +6,9 @@ use fa_reference::strict_json::{self, Json, Limits};
 use std::{collections::BTreeMap, fs::{self, File, OpenOptions}, io::{self, Cursor}, path::{Path, PathBuf}};
 use std::os::unix::fs::OpenOptionsExt;
 
+mod creation;
+pub(crate) use creation::CreationOutput;
+
 const PROFILE_BYTES: usize = 16 * 1024;
 
 pub(crate) struct Profile {
