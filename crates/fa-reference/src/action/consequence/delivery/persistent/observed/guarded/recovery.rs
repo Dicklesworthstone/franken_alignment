@@ -10,6 +10,8 @@ use std::fmt;
 use std::path::Path;
 
 mod stopped;
+mod publication;
+pub use publication::FilePublicationRecoveryRequirements;
 mod reconciled;
 pub use reconciled::ReconciledGuardedOwner;
 
