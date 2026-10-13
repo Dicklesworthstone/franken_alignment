@@ -1,11 +1,12 @@
 //! Atomic guarded bootstrap and anchored native evaluation/Andon recovery.
 //! Every label, pending case, receipt and incident is recomputed by the original
 //! Machine. No scores, label roles or compact accounting seeds are imported.
-use super::{FileCredibilitySnapshot, FileEvaluatedOversightRoles, checked_events};
-use super::super::{FileCredentialRegistration, FileGuardSet, FileOversightRoles, FileRecoveryRequirements};
+use super::{FileCredibilitySnapshot, FileEvaluatedOversightRoles};
+pub use super::super::recovery::FileAndonRecovery;
+use super::super::{FileCredentialRegistration, FileGuardSet, FileRecoveryRequirements};
 use super::super::bootstrap::PreparedGuardedBootstrap;
 use super::super::anchored::FileHistoryAnchor;
-use super::super::super::{BaseEvent, Event, FileOversight, FileOversightProfile,
+use super::super::super::{Event, FileOversight, FileOversightProfile,
     JournalError, Machine, journal, storage};
 use super::super::super::credibility::{CredibilityEvent, andon::FileAndonConfig};
 use crate::action::consequence::oversight::credibility::EvaluationProtocol;
@@ -41,6 +42,29 @@ impl FileAndonRecoveryRequirements {
     pub fn config(&self) -> &FileAndonConfig { &self.config }
     pub fn windows(&self) -> &[AndonBudget] { &self.windows }
     pub fn minimum_evaluation_revision(&self) -> u64 { self.minimum_evaluation_revision }
+
+    // Shared by synchronous historical reads and the sealed cooperative cursor.
+    // No machine or original-event importer is exposed outside guarded recovery.
+    pub(in super::super) fn preflight_evaluated(&self, events: &[Event],
+        protocol: &EvaluationProtocol) -> Result<(), Error>
+    {
+        self.preflight(events)?;
+        self.base.guards.check_decoder_config(events)?;
+        super::check_protocol(events, protocol)
+    }
+
+    pub(in super::super) fn check_replayed(&self, profile: &FileOversightProfile,
+        machine: &Machine, events: &[Event], protocol: &EvaluationProtocol) -> Result<(), Error>
+    {
+        self.base.check_evaluated(profile, machine, events, Some(protocol))?;
+        if machine.andon_contract() != Some(&self.config) { return Err(Error::Binding); }
+        let source = machine.broker.andon_source()?;
+        if source.revision() < self.minimum_evaluation_revision { return Err(Error::Stale); }
+        if !source.ledger().windows().values().map(|state| state.budget).eq(self.windows.iter().copied()) {
+            return Err(Error::Binding);
+        }
+        Ok(())
+    }
 
     fn preflight(&self, events: &[Event]) -> Result<(), Error> {
         let mut activations = events.iter().filter_map(|event| match event {
@@ -112,14 +136,8 @@ impl FileOversight {
         expected: &FileAndonRecoveryRequirements, protocol: &EvaluationProtocol, anchor: &FileHistoryAnchor)
         -> Result<(Self, FileEvaluatedOversightRoles), JournalError>
     {
-        let bytes = store.read(profile.delivery.limits.bytes)?;
-        let (events, machine) = checked_image(&profile, store.identity(), &bytes, expected, protocol, anchor)?;
-        store.confirm_and_cleanup()?;
-        let (mut host, human) = Self::owner(profile, store, events, machine);
-        host.transact(host.revision(), Event::Core(BaseEvent::Fence))?;
-        let oversight = FileOversightRoles::provision(&host, human);
-        let roles = FileEvaluatedOversightRoles::provision(&host, oversight);
-        Ok((host, roles))
+        FileAndonRecovery::begin_store(store, profile, expected, protocol, anchor)?
+            .finish_synchronously()
     }
 
     /// Read a historical canonical image beside a locked/faulted owner. The
@@ -149,16 +167,9 @@ fn checked_image(profile: &FileOversightProfile, identity: &Path, bytes: &[u8],
 {
     let events = journal::decode(profile, identity, bytes)?;
     anchor.check(profile, identity, &events)?;
-    expected.preflight(&events)?;
-    // Reuse ALL original guard, protocol, effective-policy and floor checks.
-    let machine = checked_events(profile, &events, &expected.base, protocol)?;
-    if machine.andon_contract() != Some(&expected.config) { return Err(Error::Binding.into()); }
-    let source = machine.broker.andon_source()?;
-    if source.revision() < expected.minimum_evaluation_revision { return Err(Error::Stale.into()); }
-    if !source.ledger().windows().values().map(|state| state.budget).eq(expected.windows.iter().copied()) {
-        return Err(Error::Binding.into());
-    }
-    drop(source);
+    expected.preflight_evaluated(&events, protocol)?;
+    let machine = Machine::replay(profile, &events)?;
+    expected.check_replayed(profile, &machine, &events, protocol)?;
     Ok((events, machine))
 }
 

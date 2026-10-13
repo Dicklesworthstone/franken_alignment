@@ -46,3 +46,11 @@ truncated/missing source and genuine successors. One compile-fail boundary makes
 the data-only snapshot incompatible with an effect permit. Existing tests remain
 unchanged. RCH is absent: target tests and the unchanged xtask gate each exit 127
 before Cargo. Compilation, runtime tests, rustfmt and Clippy remain unexecuted.
+
+## Cooperative completion
+
+The synchronous open now uses the same sealed `FileAndonRecovery` returned by
+`begin_open_andon_guarded`. Operators can bound original event calls and cancel
+without cleanup, then publish the original fence without a second history replay.
+See [single-pass recovery](COOPERATIVE_NATIVE_ANDON_RECOVERY.md) for the precise
+progress, capacity, cancellation and acknowledgment boundaries.

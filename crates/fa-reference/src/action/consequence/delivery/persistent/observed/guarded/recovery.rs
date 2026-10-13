@@ -9,6 +9,9 @@ use crate::Error;
 use std::fmt;
 use std::path::Path;
 
+mod andon;
+pub use andon::FileAndonRecovery;
+
 mod stopped;
 mod publication;
 pub use publication::FilePublicationRecoveryRequirements;
@@ -150,7 +153,18 @@ impl FileGuardedRecovery {
     }
 
     fn advance_with(&mut self, expected_events: usize, max_events: usize,
-        mut apply: impl FnMut(&mut Machine, &Event) -> Result<Transition, Error>)
+        apply: impl FnMut(&mut Machine, &Event) -> Result<Transition, Error>)
+        -> Result<FileGuardedRecoveryProgress, JournalError>
+    {
+        self.advance_checked_with(expected_events, max_events, apply,
+            |run| run.expected.check(&run.profile, &run.machine, &run.events))
+    }
+
+    // Closed internal composition only: the native Andon wrapper supplies its
+    // complete original requirements, never a caller-selected predicate or reducer.
+    fn advance_checked_with(&mut self, expected_events: usize, max_events: usize,
+        mut apply: impl FnMut(&mut Machine, &Event) -> Result<Transition, Error>,
+        check: impl FnOnce(&Self) -> Result<(), Error>)
         -> Result<FileGuardedRecoveryProgress, JournalError>
     {
         match self.status {
@@ -177,7 +191,7 @@ impl FileGuardedRecovery {
         // expose Ready or allow resume if that check fails or unwinds either.
         self.status = FileGuardedRecoveryStatus::Interrupted;
         if self.replayed == self.events.len() {
-            if let Err(error) = self.expected.check(&self.profile, &self.machine, &self.events) {
+            if let Err(error) = check(self) {
                 self.status = FileGuardedRecoveryStatus::Failed(error);
                 return Err(error.into());
             }
@@ -207,13 +221,21 @@ impl FileGuardedRecovery {
     /// staging cleanup. File I/O, final encoding and the fence are synchronous.
     /// An error or unwind returns neither an owner nor any independently held role.
     pub fn finish(self) -> Result<(FileOversight, FileOversightRoles), JournalError> {
+        self.finish_checked(|run| run.expected.check(&run.profile, &run.machine, &run.events))
+    }
+
+    // The original fence/publication path shared by sealed recovery profiles.
+    // No public callback can turn an unchecked machine into an acknowledged owner.
+    fn finish_checked(self, check: impl FnOnce(&Self) -> Result<(), Error>)
+        -> Result<(FileOversight, FileOversightRoles), JournalError>
+    {
         match self.status {
             FileGuardedRecoveryStatus::Ready => {}
             FileGuardedRecoveryStatus::Failed(error) => return Err(error.into()),
             FileGuardedRecoveryStatus::Interrupted => return Err(JournalError::Unavailable),
             _ => return Err(Error::Incomplete.into()),
         }
-        self.expected.check(&self.profile, &self.machine, &self.events)?;
+        check(&self)?;
         let Self { profile, store, canonical, events, mut machine, .. } = self;
         if events.len() >= profile.delivery.limits.events { return Err(Error::Limit.into()); }
         let event = Event::Core(BaseEvent::Fence);
