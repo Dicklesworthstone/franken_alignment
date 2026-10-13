@@ -69,3 +69,38 @@ Required targeted and full `RCH_REQUIRE_REMOTE=1 rch exec -- ...` verification
 must execute on the exact integrated revision. Compilation, tests, formatting
 qualification and Clippy are not claimed; FA-014 and its prerequisites remain
 open. No dependency, runtime, authority or journal-format change is introduced.
+
+## Checkpointed fleet resume
+
+`resume_registered_pass_with_checkpoints(revision, clocks, max_events, callback)`
+uses the existing full-roster/clock/capacity selector with resume semantics.
+Eligible latest Entered/Observed visits take the passive cursor; other members
+use the original new-recovery branch. A passive refusal never falls through to
+new recovery. The checkpointed new-recovery API shares the same outer loop, and
+its original domain mutation/cancellation branch remains unchanged.
+
+Before each member, None progress precedes its current read or intent. Some
+progress reports zero, each bounded quantum, and Ready before resolution or
+native settlement. False ends the pass without hiding the remaining roster.
+Cancelling a passive read yields session-only EvidenceRefused(Unavailable), with
+no visit or file rewrite. Cancelling new recovery retains the original durable
+Refused acknowledgment. Both leave later members NotVisited. Ordinary evidence
+refusals allow later members to proceed; an unacknowledged coordinator write
+stops the pass immediately. Callback unwinds are not converted into results.
+
+Clocks are still bound to the complete roster, but resolution does not consume
+their ticks. Reopening does not convert old success into current success or
+replenish the durable visit allowance. Each fresh read uses an original bounded
+session attempt, and the whole pass is admitted before any callback. A consumer
+can enforce one cumulative elapsed deadline without changing source time.
+There is no new CLI, implicit retry, background worker or parallel executor.
+
+Seven additional test functions cover mixed eager/cooperative parity and exact
+refresh at the visit ceiling; all 14 read checkpoints in a two-member fixture;
+missing/unstopped evidence with a reachable new member; every completion barrier
+before an unvisited tail; callback unwind after prior success; complete-roster,
+clock, quantum and spent-attempt admission; and original two-key reserved/sent/
+executed/expired receipt accounting. Existing batch/resume tests and admission
+are unchanged. The combined increment adds 15 authored Rust tests; none has run
+in this environment. Required target and full RCH attempts still stop before
+Cargo at the absent launcher. Source/lexical/hash checks are not qualification.
