@@ -75,10 +75,10 @@ impl FileOversight {
         terminal_transaction(self, self.revision(), request, observed_tick, true)
     }
 
-    // Only a sealed, fully verified learned cursor may consume this private
-    // owner. Source admission sees its actual recovered machine before that
-    // machine moves into the original fixed terminal transaction. No live role
-    // or partially changed candidate escapes on success, failure or unwind.
+    // Only sealed complete replay (learned cursor or anchored source-free
+    // recovery) may consume this private owner. Source admission sees the actual
+    // recovered machine before it moves into the fixed terminal transaction.
+    // No live role or changed candidate escapes on failure or unwind.
     pub(in super::super) fn finish_verified_stopped(mut self, request: StopRequest,
         observed_tick: ElapsedTick, canonical: &[u8]) -> Result<FileStoppedHistory, JournalError>
     {
@@ -111,8 +111,8 @@ fn terminal_transaction(
 }
 
 // The candidate supplier is private and has exactly two callers: ordinary
-// terminal operations replay their acknowledged cut; sealed learned completion
-// consumes the verified cut without repeating numerical history. Both use the
+// terminal operations replay their acknowledged cut; sealed completion
+// consumes the verified cut without repeating its history. Both use the
 // SAME event sequence, prefix admission, original reducers and replacement.
 fn terminal_with_candidate<F>(host: &mut FileOversight, revision: u64,
     request: StopRequest, tick: ElapsedTick, recover: bool, canonical: Option<&[u8]>,

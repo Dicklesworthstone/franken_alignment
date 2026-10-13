@@ -8,6 +8,8 @@ use crate::action::consequence::delivery::persistent::FileDeliverySnapshot;
 use crate::Error;
 use std::path::Path;
 
+mod anchored;
+
 /// Observed native state, never a recovered reviewer, automatic key or owner.
 /// A completed historical stop may still contain charges for executed effects.
 #[derive(Clone, Debug, PartialEq, Eq)]
