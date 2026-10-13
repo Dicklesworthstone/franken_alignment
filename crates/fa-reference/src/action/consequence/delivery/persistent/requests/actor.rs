@@ -2,6 +2,8 @@
 //! Only the supervisor owns the host or installs a fresh admission snapshot.
 
 mod host;
+mod recovery;
+pub use recovery::FileActorRecoveryPort;
 pub(in crate::action::consequence::delivery::persistent) mod precheck;
 pub use precheck::{FileActorPrecheckPort, FilePrecheckBasis, FilePrecheckDisclosure,
     FilePrecheckObservation, FilePrecheckOutcome, MAX_PRECHECK_QUERIES};
