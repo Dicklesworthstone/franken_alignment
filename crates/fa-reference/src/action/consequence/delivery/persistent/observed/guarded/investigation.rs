@@ -150,19 +150,22 @@ impl FileReviewReplay {
     }
 }
 
-fn extract(directory: &Path, profile: &FileOversightProfile, events: &[Event], attempt: u64,
-    scope: InterventionScope, expected: Option<&FileRecoveryRequirements>)
-    -> Result<FileProposalInvestigation, JournalError>
-{
-    if attempt == 0 { return Err(Error::InvalidInput.into()); }
-    if let Some(expected) = expected { expected.guards.check_decoder_config(events)?; }
-    let mut machine = Machine::new(profile)?;
-    let mut selected = None;
-    for (index, event) in events.iter().enumerate() {
-        // A request key need not equal its allocated attempt. Observe the FIRST
-        // creation in the original action map, not an assumed ID mapping or a
-        // later retry. All refusal/recovery/source/numerical transitions still run.
-        let source = if selected.is_none() && !machine.actions.contains_key(&attempt) {
+// Both eager and cooperative readers select the FIRST creation through the
+// same original machine. This state is private until the whole image qualifies.
+struct Selection {
+    attempt: u64,
+    scope: InterventionScope,
+    selected: Option<(Option<u64>, FileDeliverySnapshot, ProposalExperiment)>,
+}
+impl Selection {
+    fn new(attempt: u64, scope: InterventionScope) -> Result<Self, Error> {
+        if attempt == 0 { return Err(Error::InvalidInput); }
+        Ok(Self { attempt, scope, selected: None })
+    }
+    fn apply(&mut self, profile: &FileOversightProfile, machine: &mut Machine,
+        index: usize, event: &Event) -> Result<(), JournalError>
+    {
+        let source = if self.selected.is_none() && !machine.actions.contains_key(&self.attempt) {
             match event {
                 Event::Core(BaseEvent::Propose(_, _, snapshot)) => Some((None, snapshot)),
                 Event::Core(BaseEvent::SubmitRequest(request, _, snapshot)) => Some((Some(*request), snapshot)),
@@ -171,26 +174,51 @@ fn extract(directory: &Path, profile: &FileOversightProfile, events: &[Event], a
         } else { None };
         machine.apply(event)?;
         if let Some((request, snapshot)) = source {
-            if let Some(action) = machine.actions.get(&attempt) {
+            if let Some(action) = machine.actions.get(&self.attempt) {
                 let admitted = machine.snapshot(index + 1);
                 let policy = Rc::new(machine.policy_updates.current(&profile.delivery.policy).clone());
-                // The native machine has already accepted THIS frozen action and
-                // disposition. Re-evaluate its original input snapshot to retain
-                // the actual trace, checking the compiled witnesses in new().
-                let proposal = Proposal { attempt, action: action.clone(),
+                let proposal = Proposal { attempt: self.attempt, action: action.clone(),
                     evaluation: policy.evaluate(action, snapshot)?, policy,
                     snapshot_semantic_epoch: snapshot.semantic_epoch,
-                    state: *admitted.control.ledger.stages.get(&attempt).ok_or(Error::Missing)? };
-                let experiment = ProposalExperiment::new(proposal, snapshot, scope.clone())?;
-                selected = Some((request, admitted, experiment));
+                    state: *admitted.control.ledger.stages.get(&self.attempt).ok_or(Error::Missing)? };
+                let experiment = ProposalExperiment::new(proposal, snapshot, self.scope.clone())?;
+                self.selected = Some((request, admitted, experiment));
             }
         }
+        Ok(())
     }
-    // Never return early at a valid prefix: malformed/contradictory suffixes and
-    // independently pinned ending policy or guards must still refuse the image.
-    if let Some(expected) = expected { expected.check(profile, &machine, events)?; }
-    let (external_request, admitted, experiment) = selected.ok_or(Error::Missing)?;
-    let origin = Rc::new(FileProposalOrigin { directory: directory.to_owned(), external_request,
-        proposal: experiment.original().clone(), scope, admitted, journal: machine.snapshot(events.len()) });
-    Ok(FileProposalInvestigation { origin, experiment })
+    fn require_selected(&self) -> Result<(), Error> {
+        if self.selected.is_some() { Ok(()) } else { Err(Error::Missing) }
+    }
+    fn finish(self, directory: &Path, machine: &Machine, count: usize)
+        -> Result<FileProposalInvestigation, JournalError>
+    {
+        let (external_request, admitted, experiment) = self.selected.ok_or(Error::Missing)?;
+        let origin = Rc::new(FileProposalOrigin { directory: directory.to_owned(), external_request,
+            proposal: experiment.original().clone(), scope: self.scope, admitted,
+            journal: machine.snapshot(count) });
+        Ok(FileProposalInvestigation { origin, experiment })
+    }
 }
+
+fn extract(directory: &Path, profile: &FileOversightProfile, events: &[Event], attempt: u64,
+    scope: InterventionScope, expected: Option<&FileRecoveryRequirements>)
+    -> Result<FileProposalInvestigation, JournalError>
+{
+    let mut selection = Selection::new(attempt, scope)?;
+    if let Some(expected) = expected { expected.guards.check_decoder_config(events)?; }
+    let mut machine = Machine::new(profile)?;
+    for (index, event) in events.iter().enumerate() {
+        selection.apply(profile, &mut machine, index, event)?;
+    }
+    // Never return early at a valid prefix: the complete suffix and independent
+    // ending policy, guards and floors must still qualify the captured image.
+    if let Some(expected) = expected { expected.check(profile, &machine, events)?; }
+    selection.finish(directory, &machine, events.len())
+}
+
+mod replay;
+pub use replay::{FileProposalRead, FileProposalReadProgress, FileProposalReadStatus};
+
+#[cfg(test)]
+mod tests;
