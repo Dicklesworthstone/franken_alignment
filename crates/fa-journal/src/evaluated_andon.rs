@@ -7,7 +7,10 @@ use crate::Head;
 use fa_reference::Error as ModelError;
 use fa_reference::action::consequence::congress::credibility::MAX_CASES;
 use fa_reference::action::consequence::oversight::andon::EvaluatedFalseHold;
-use fa_reference::round::review::andon::RecordResult;
+use fa_reference::action::consequence::oversight::credibility::native_andon::{
+    NativeAndonBinding, NativeEvaluatedFalseHold,
+};
+use fa_reference::round::review::andon::{RecordResult, TrustedFalseHold};
 use std::fmt;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -49,8 +52,27 @@ impl std::error::Error for ImportFailure {
 #[derive(Debug)]
 pub struct EvaluatedAndonImport<'a> {
     journal: &'a mut FileAndonLedger,
-    receipts: &'a [EvaluatedFalseHold],
+    receipts: ReceiptSource<'a>,
     progress: ImportProgress,
+}
+
+// Closed source variants: no caller-implemented trait can masquerade as an
+// evaluated receipt. Both variants use the same preflight, cursor and writer.
+#[derive(Debug)]
+enum ReceiptSource<'a> {
+    Campaign(&'a [EvaluatedFalseHold]),
+    Native(&'a [NativeEvaluatedFalseHold]),
+}
+impl ReceiptSource<'_> {
+    fn len(&self) -> usize {
+        match self { Self::Campaign(receipts) => receipts.len(), Self::Native(receipts) => receipts.len() }
+    }
+    fn confirmation(&self, index: usize) -> &TrustedFalseHold {
+        match self {
+            Self::Campaign(receipts) => receipts[index].confirmation(),
+            Self::Native(receipts) => receipts[index].confirmation(),
+        }
+    }
 }
 
 impl<'a> EvaluatedAndonImport<'a> {
@@ -58,13 +80,41 @@ impl<'a> EvaluatedAndonImport<'a> {
     /// before a good first entry is appended. Existing original storage limits
     /// still apply at each append; preflight is not a disk-capacity reservation.
     pub fn begin(journal: &'a mut FileAndonLedger, receipts: &'a [EvaluatedFalseHold]) -> Result<Self, Error> {
+        Self::begin_source(journal, ReceiptSource::Campaign(receipts))
+    }
+
+    /// Persist automatically emitted native receipts against an independently
+    /// retained bootstrap binding and the EXACT original occurrence budgets.
+    /// Source/protocol/contract/window mismatches refuse before any append,
+    /// including a bad final receipt. An empty import still checks file identity.
+    /// This does not atomically persist the separate native evaluation history.
+    pub fn begin_native(journal: &'a mut FileAndonLedger, binding: &NativeAndonBinding,
+        receipts: &'a [NativeEvaluatedFalseHold]) -> Result<Self, Error>
+    {
+        if receipts.len() > MAX_CASES { return Err(crate::Error::Limit.into()); }
+        let ledger = journal.ledger()?;
+        if ledger.identity() != binding.identity() { return Err(crate::Error::Binding.into()); }
+        for receipt in receipts {
+            let budget = receipt.budget();
+            if receipt.binding() != binding
+                || ledger.windows().get(&budget.window).map(|state| state.budget) != Some(budget)
+            {
+                return Err(crate::Error::Binding.into());
+            }
+        }
+        Self::begin_source(journal, ReceiptSource::Native(receipts))
+    }
+
+    fn begin_source(journal: &'a mut FileAndonLedger, receipts: ReceiptSource<'a>) -> Result<Self, Error> {
         if receipts.len() > MAX_CASES { return Err(crate::Error::Limit.into()); }
         let mut candidate = journal.ledger()?.clone();
-        for receipt in receipts { receipt.record(&mut candidate).map_err(crate::Error::Model)?; }
+        for index in 0..receipts.len() {
+            candidate.record_trusted(receipts.confirmation(index)).map_err(crate::Error::Model)?;
+        }
         let progress = ImportProgress {
             total: receipts.len(), completed: 0, newly_recorded: 0, already_recorded: 0,
             head: journal.acknowledged_head(),
-            status: if receipts.is_empty() { ImportStatus::Complete } else { ImportStatus::Pending },
+            status: if receipts.len() == 0 { ImportStatus::Complete } else { ImportStatus::Pending },
         };
         Ok(Self { journal, receipts, progress })
     }
@@ -79,7 +129,7 @@ impl<'a> EvaluatedAndonImport<'a> {
             return Err(self.failure(crate::Error::Model(ModelError::WrongState).into()));
         }
         for _ in 0..max_records.min(self.receipts.len() - self.progress.completed) {
-            let fact = self.receipts[self.progress.completed].confirmation();
+            let fact = self.receipts.confirmation(self.progress.completed);
             // Latch BEFORE entry, so caught unwinding cannot resume this cursor.
             self.progress.status = ImportStatus::Failed;
             let (result, head) = self.journal.record_trusted(fact).map_err(|error| self.failure(error))?;
