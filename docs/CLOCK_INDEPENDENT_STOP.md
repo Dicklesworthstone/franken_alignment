@@ -117,3 +117,25 @@ All prior command tests and the old receipt renderer remain unchanged. Together
 with the native increment, fifteen Rust regression functions are authored. The
 example and full xtask RCH attempts still exit 127 before Cargo; compilation,
 execution, rustfmt and Clippy remain unverified. FA-014 is not closed.
+
+## Retain the terminal cut independently
+
+Both runnable phases accept `--retain-history-anchor NEW_FILE`. The output is
+the exact native history anchor returned by the acknowledged terminal operation.
+Custody is admitted before opening the authority store, must live outside that
+store, and never overwrites an existing archive. At the write boundary the
+command repeats exclusive creation, writes the bounded anchor framing, syncs the
+file and its parent, then reports the native result.
+
+Native settlement, archive retention and stdout are separate acknowledgments.
+A late create-new race or retention failure can follow a successful native stop
+or drain; the command still emits that native result and returns the combined
+failure. Lost stdout after successful retention does not remove the archive and
+must not cause a publication or terminal operation to be repeated. Exact native
+retries append no records merely because retention/reporting previously failed.
+
+This option retains an output only; it does not consume an anchor or silently
+upgrade ordinary recovery into guarded recovery. Independently anchored guarded
+recovery remains separately selected. Three real-file regressions cover distinct
+admission/drain successors, existing/authority-local refusal before native work,
+and retained custody across lost stdout. They remain unexecuted pending RCH.
