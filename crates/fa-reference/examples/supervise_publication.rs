@@ -18,6 +18,8 @@
 #[path = "supervise_publication/qualification.rs"] mod qualification;
 #[cfg(unix)]
 #[path = "supervise_publication/recover_stop.rs"] mod recover_stop;
+#[cfg(unix)]
+#[path = "supervise_publication/guarded_resume.rs"] mod guarded_resume;
 #[cfg(all(test, unix))]
 #[path = "supervise_publication/tests.rs"] mod tests;
 #[cfg(all(test, unix))]
@@ -42,7 +44,7 @@ fn command(mut args: Vec<String>) -> Result<(), String> {
     use fa_reference::action::consequence::oversight::actor_wire::MAX_FRAME_BYTES;
     use std::io::Write;
     use std::path::Path;
-    let usage = "usage: supervise_publication create CONFIG SUBMIT_JSON [--reviewer-profile REVIEWER_JSON]\n       supervise_publication submit CONFIG SUBMIT_JSON [--reviewer-profile REVIEWER_JSON] [--credibility-activation EVIDENCE_FILE]\n       supervise_publication resume CONFIG SUBMIT_JSON\n       supervise_publication create-checked CONFIG SUBMIT_JSON WITNESS_PROFILE [--reviewer-profile REVIEWER_JSON]\n       supervise_publication submit-checked CONFIG SUBMIT_JSON WITNESS_PROFILE [--reviewer-profile REVIEWER_JSON] [--credibility-activation EVIDENCE_FILE]\n       supervise_publication resume-checked CONFIG SUBMIT_JSON WITNESS_PROFILE\n       supervise_publication review CONFIG REQUEST_ID\n       supervise_publication review-peer REVIEWER_JSON REQUEST_ID\n       supervise_publication stop-peer REVIEWER_JSON REQUEST_ID\n       supervise_publication proposal CONFIG REQUEST_ID PAYLOAD_FILE TTL_MS\n       supervise_publication proposal-next CONFIG REQUEST_ID PAYLOAD_FILE TTL_MS [--credibility-activation EVIDENCE_FILE]\n       supervise_publication recover-stop CONFIG OPERATION [--guarded RECOVERY_PROFILE]\n       supervise_publication inspect CONFIG\n       supervise_publication serve-create CONFIG ACTOR_PROFILE REVIEWER_PROFILE\n       supervise_publication serve-open CONFIG ACTOR_PROFILE REVIEWER_PROFILE [--credibility-activation EVIDENCE_FILE]\n       supervise_publication serve-create-checked CONFIG ACTOR_PROFILE REVIEWER_PROFILE WITNESS_PROFILE\n       supervise_publication serve-open-checked CONFIG ACTOR_PROFILE REVIEWER_PROFILE WITNESS_PROFILE [--credibility-activation EVIDENCE_FILE]\n       supervise_publication actor-submit ACTOR_PROFILE SUBMIT_JSON\n       supervise_publication create-generated CONFIG GENERATION_RECIPE REVIEWER_PROFILE\n       supervise_publication create-learned-generated CONFIG LEARNED_RECIPE REVIEWER_PROFILE [--continue-generation]\n       supervise_publication create-learned-generated CONFIG LEARNED_RECIPE --resume\n       supervise_publication create-learned-generated CONFIG LEARNED_RECIPE --recover-stop OPERATION [--history-anchor INPUT]";
+    let usage = "usage: supervise_publication create CONFIG SUBMIT_JSON [--reviewer-profile REVIEWER_JSON]\n       supervise_publication submit CONFIG SUBMIT_JSON [--reviewer-profile REVIEWER_JSON] [--credibility-activation EVIDENCE_FILE]\n       supervise_publication resume CONFIG SUBMIT_JSON [--guarded RECOVERY_PROFILE]\n       supervise_publication create-checked CONFIG SUBMIT_JSON WITNESS_PROFILE [--reviewer-profile REVIEWER_JSON]\n       supervise_publication submit-checked CONFIG SUBMIT_JSON WITNESS_PROFILE [--reviewer-profile REVIEWER_JSON] [--credibility-activation EVIDENCE_FILE]\n       supervise_publication resume-checked CONFIG SUBMIT_JSON WITNESS_PROFILE\n       supervise_publication review CONFIG REQUEST_ID\n       supervise_publication review-peer REVIEWER_JSON REQUEST_ID\n       supervise_publication stop-peer REVIEWER_JSON REQUEST_ID\n       supervise_publication proposal CONFIG REQUEST_ID PAYLOAD_FILE TTL_MS\n       supervise_publication proposal-next CONFIG REQUEST_ID PAYLOAD_FILE TTL_MS [--credibility-activation EVIDENCE_FILE]\n       supervise_publication recover-stop CONFIG OPERATION [--guarded RECOVERY_PROFILE]\n       supervise_publication inspect CONFIG\n       supervise_publication serve-create CONFIG ACTOR_PROFILE REVIEWER_PROFILE\n       supervise_publication serve-open CONFIG ACTOR_PROFILE REVIEWER_PROFILE [--credibility-activation EVIDENCE_FILE]\n       supervise_publication serve-create-checked CONFIG ACTOR_PROFILE REVIEWER_PROFILE WITNESS_PROFILE\n       supervise_publication serve-open-checked CONFIG ACTOR_PROFILE REVIEWER_PROFILE WITNESS_PROFILE [--credibility-activation EVIDENCE_FILE]\n       supervise_publication actor-submit ACTOR_PROFILE SUBMIT_JSON\n       supervise_publication create-generated CONFIG GENERATION_RECIPE REVIEWER_PROFILE\n       supervise_publication create-learned-generated CONFIG LEARNED_RECIPE REVIEWER_PROFILE [--continue-generation]\n       supervise_publication create-learned-generated CONFIG LEARNED_RECIPE --resume\n       supervise_publication create-learned-generated CONFIG LEARNED_RECIPE --recover-stop OPERATION [--history-anchor INPUT]";
     let credibility = qualification::take_option(&mut args)?;
     if args.first().is_some_and(|mode| matches!(mode.as_str(), "serve-create" | "serve-open"
         | "serve-create-checked" | "serve-open-checked" | "actor-submit" | "create-generated" | "create-learned-generated")) {
@@ -59,7 +61,7 @@ fn command(mut args: Vec<String>) -> Result<(), String> {
     } else { None };
     let mode = args.first().map(String::as_str).ok_or(usage)?;
     let expected = match mode {
-        "recover-stop" if args.len() == 5 && args[3] == "--guarded" => 5,
+        "resume" | "recover-stop" if args.len() == 5 && args[3] == "--guarded" => 5,
         "create" | "submit" | "resume" | "review" | "review-peer" | "stop-peer" | "recover-stop" => 3,
         "create-checked" | "submit-checked" | "resume-checked" => 4,
         "proposal" | "proposal-next" => 5,
@@ -81,6 +83,12 @@ fn command(mut args: Vec<String>) -> Result<(), String> {
     // Parse the operator file and original actor document before creating a store
     // or starting a program. No profile flag silently selects an easier fallback.
     let config = Config::read(Path::new(&args[1]))?;
+    if mode == "resume" && args.len() == 5 {
+        let document = read_regular(Path::new(&args[2]), MAX_FRAME_BYTES)?;
+        let profile = recover_stop::guarded::ResumeProfile::read(Path::new(&args[4]))?;
+        return guarded_resume::run(&config, &profile, &document, workflow::clock,
+            &mut std::io::stdout().lock());
+    }
     match mode {
         "create" | "submit" | "resume" | "create-checked" | "submit-checked" | "resume-checked" => {
             let document = read_regular(Path::new(&args[2]), MAX_FRAME_BYTES)?;

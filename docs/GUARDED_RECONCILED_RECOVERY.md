@@ -27,6 +27,14 @@ new receipt verifier, event importer, remote-effect adapter or looser recovery
 profile. The existing live `finish`, terminal methods, and
 `open_reconciled_publication` remain unchanged.
 
+The receipt-only operator now uses this path through
+[`resume --guarded`](GUARDED_RECEIPT_RECOVERY.md). Its original submit document is
+forwarded only for an existing request. `require_existing_request(request)` is
+a consuming Ready-only preflight on the same cursor: it rechecks independent
+requirements and original request existence without returning a ticket, payload,
+outcome or authority. The original actor gateway still validates exact bytes.
+Missing request keys refuse before the recovery clock or any journal mutation.
+
 ## Admission, durability and accounting
 
 The cursor must be Ready. Its complete independent guard inventory, effective
@@ -69,12 +77,12 @@ then one cloned event vector and one candidate image during preflight. Initial
 I/O, guard checks, each original event, encoding and synchronization remain
 synchronous. There is no hard cancellation-latency or remote exactly-once claim.
 
-Ten regression functions cover original full-replay and canonical-byte parity
+Eleven regression functions cover original full-replay and canonical-byte parity
 across three event quanta and both prefix modes; old approval rejection paired with a freshly approved new publication;
 incomplete/interrupted/cancelled recovery; independent policy/floor refusal;
 stale/panicking clocks; same-counter forks and canonical changes around the
 clock; emergency-reserve preservation; all five native storage barriers for
-sent/executed histories; retained expired-unknown liabilities; and separate identity/governance roles without restored eligibility.
+sent/executed histories; retained expired-unknown liabilities; and separate identity/governance roles without restored eligibility; and existing-request admission before recovery writes.
 
 These tests are authored but not compiled or executed. Required remote-only RCH
 verification is unavailable in the preparation environment. No runtime,

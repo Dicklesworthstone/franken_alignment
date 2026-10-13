@@ -19,11 +19,15 @@ impl Profile {
     }
 
     pub(crate) fn decode(bytes: &[u8]) -> Result<Self, String> {
+        Self::decode_schema(bytes, "fa.guarded-stop/1", "unsupported guarded stop profile")
+    }
+
+    fn decode_schema(bytes: &[u8], schema: &str, unsupported: &str) -> Result<Self, String> {
         let json = strict_json::parse(bytes, Limits { max_bytes: PROFILE_BYTES, max_depth: 4,
             max_items: 32, max_string_bytes: 4096 }).map_err(debug)?;
         let mut root = object(json)?;
-        if take(&mut root, "schema_version")?.as_str() != Some("fa.guarded-stop/1") {
-            return Err("unsupported guarded stop profile".into());
+        if take(&mut root, "schema_version")?.as_str() != Some(schema) {
+            return Err(unsupported.into());
         }
         let mut floor = object(take(&mut root, "minimum")?)?;
         let minimum = FileRecoveryFloor { journal_revision: number(&mut floor, "journal_revision")?,
@@ -62,14 +66,30 @@ impl Profile {
     }
 }
 
-pub(super) struct Custody {
+/// Schema-separated receipt recovery. A stop profile is never a live-recovery
+/// request, even though the same bounded floors and private custody are needed.
+pub(crate) struct ResumeProfile(Profile);
+impl ResumeProfile {
+    pub(crate) fn read(path: &Path) -> Result<Self, String> {
+        Self::decode(&read_regular(path, PROFILE_BYTES)?)
+    }
+    pub(crate) fn decode(bytes: &[u8]) -> Result<Self, String> {
+        Profile::decode_schema(bytes, "fa.guarded-resume/1", "unsupported guarded resume profile")
+            .map(Self)
+    }
+    pub(crate) fn minimum(&self) -> FileRecoveryFloor { self.0.minimum() }
+    pub(crate) fn admit(&self, config: &Config) -> Result<Custody, String> { self.0.admit(config) }
+}
+
+pub(crate) struct Custody {
     anchor: FileHistoryAnchor,
     output: Option<PathBuf>,
 }
 impl Custody {
-    pub(super) fn anchor(&self) -> &FileHistoryAnchor { &self.anchor }
+    pub(crate) fn retention_requested(&self) -> bool { self.output.is_some() }
+    pub(crate) fn anchor(&self) -> &FileHistoryAnchor { &self.anchor }
 
-    pub(super) fn retain(&self, anchor: &FileHistoryAnchor) -> Result<(), String> {
+    pub(crate) fn retain(&self, anchor: &FileHistoryAnchor) -> Result<(), String> {
         let Some(path) = self.output.as_deref() else { return Ok(()); };
         let parent = File::open(path.parent().ok_or("anchor output needs a parent")?).map_err(debug)?;
         // Repeat exclusive creation at the real write boundary, not only at

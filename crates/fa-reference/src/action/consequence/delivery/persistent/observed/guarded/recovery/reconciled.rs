@@ -20,6 +20,24 @@ pub struct ReconciledGuardedOwner {
 }
 
 impl FileGuardedRecovery {
+    /// Require a PREEXISTING actor request on the complete, independently
+    /// verified history before spending any recovery fence. This does not expose
+    /// a ticket, action bytes, result or authority, and does not validate a new
+    /// proposal. The original actor gateway still checks exact retry equality.
+    /// Missing never becomes permission for new admission during receipt recovery.
+    pub fn require_existing_request(self, request: u64) -> Result<Self, JournalError> {
+        match self.status {
+            FileGuardedRecoveryStatus::Ready => {}
+            FileGuardedRecoveryStatus::Failed(error) => return Err(error.into()),
+            FileGuardedRecoveryStatus::Interrupted => return Err(JournalError::Unavailable),
+            _ => return Err(Error::Incomplete.into()),
+        }
+        if request == 0 { return Err(Error::InvalidInput.into()); }
+        self.expected.check(&self.profile, &self.machine, &self.events)?;
+        self.machine.requests.status(request)?;
+        Ok(self)
+    }
+
     /// Consume fully verified guarded replay into the ORIGINAL fixed
     /// Fence -> Time -> Sweep transaction, with one canonical replacement.
     /// There is no second replay, intermediate live owner, new observation of
@@ -112,3 +130,7 @@ impl FileGuardedRecovery {
 
 #[cfg(test)]
 mod tests;
+
+#[cfg(test)]
+#[path = "reconciled/request_tests.rs"]
+mod request_tests;

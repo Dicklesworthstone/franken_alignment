@@ -2,7 +2,7 @@
 //! The profile supplies independent floors/custody; CONFIG supplies exact policy
 //! and source identity. No current evidence, helper or reviewer is opened.
 mod profile;
-pub(crate) use profile::Profile;
+pub(crate) use profile::{Profile, ResumeProfile};
 use super::{Config, debug, report};
 use fa_reference::action::ElapsedTick;
 use fa_reference::action::consequence::delivery::persistent::{JournalError, RecoveryReserve,
