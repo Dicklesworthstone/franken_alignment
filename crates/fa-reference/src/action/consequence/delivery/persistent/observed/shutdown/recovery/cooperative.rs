@@ -8,6 +8,9 @@ use crate::action::consequence::delivery::persistent::{MAX_JOURNAL_EVENTS, Recov
 use crate::Error;
 use std::fmt;
 use std::path::Path;
+use super::super::FileShutdownDrain;
+
+mod registered;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum FileStopRecoveryStatus {
@@ -54,6 +57,7 @@ pub struct FileStopRecovery {
     canonical: Vec<u8>,
     events: Vec<Event>,
     machine: Machine,
+    last_drain: Option<FileShutdownDrain>,
     replayed: usize,
     attempted: usize,
     status: FileStopRecoveryStatus,
@@ -96,7 +100,7 @@ impl FileStopRecovery {
         if let Some(anchor) = anchor { anchor.check(&profile, store.identity(), &events)?; }
         let machine = Machine::new(&profile)?;
         Ok(Self { profile, store, canonical, events, machine, replayed: 0, attempted: 0,
-            status: FileStopRecoveryStatus::Replaying })
+            status: FileStopRecoveryStatus::Replaying, last_drain: None })
     }
 
     /// Optional independent reserve pin, checked before replay. This neither
@@ -142,11 +146,17 @@ impl FileStopRecovery {
         while self.replayed < end {
             self.status = FileStopRecoveryStatus::Interrupted;
             self.attempted += 1; // At most one attempt per bounded decoded event.
-            if let Err(error) = apply(&mut self.machine, &self.events[self.replayed]) {
-                self.status = FileStopRecoveryStatus::Failed(error);
-                return Err(error.into());
-            }
+            let result = match apply(&mut self.machine, &self.events[self.replayed]) {
+                Ok(result) => result,
+                Err(error) => {
+                    self.status = FileStopRecoveryStatus::Failed(error);
+                    return Err(error.into());
+                }
+            };
             self.replayed += 1;
+            if let Transition::StopProgressed(sweep) = result {
+                self.last_drain = Some(FileShutdownDrain { journal_revision: self.replayed as u64, sweep });
+            }
         }
         self.status = if self.replayed == self.events.len() { FileStopRecoveryStatus::Ready }
             else { FileStopRecoveryStatus::Replaying };
