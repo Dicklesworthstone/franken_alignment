@@ -2,6 +2,8 @@
 //! This is not a second server request ledger, effect authority or socket loop.
 mod image;
 mod drive;
+#[cfg(target_os = "linux")]
+pub mod peer;
 #[cfg(test)]
 mod tests;
 use crate::action::consequence::delivery::persistent::{storage, JournalError, MAX_JOURNAL_BYTES};
