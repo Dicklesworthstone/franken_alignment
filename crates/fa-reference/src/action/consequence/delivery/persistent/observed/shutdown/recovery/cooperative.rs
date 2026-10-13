@@ -11,6 +11,8 @@ use std::path::Path;
 use super::super::FileShutdownDrain;
 
 mod registered;
+mod admission;
+pub use admission::FileAdmissionStoppedHistory;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum FileStopRecoveryStatus {
@@ -32,7 +34,8 @@ pub struct FileStopRecoveryProgress {
 }
 
 /// A terminal-only reconstruction. Unlike live guarded recovery, this object
-/// can only complete the original fixed Stop/Fence/StopProgress transaction.
+/// completes only fixed terminal operations: Stop/Fence, stopped drain, or
+/// the original combined Stop/Fence/StopProgress transaction.
 /// It cannot return a live owner or provision roles from a recorded guard set.
 /// Learned/numerical histories requiring an external reconstruction recipe keep
 /// their own recovery APIs; this cursor uses the original Machine::new/apply.

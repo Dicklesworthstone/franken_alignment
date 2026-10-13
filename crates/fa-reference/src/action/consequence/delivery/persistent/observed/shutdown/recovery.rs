@@ -10,7 +10,8 @@ use std::path::Path;
 
 mod anchored;
 mod cooperative;
-pub use cooperative::{FileStopRecovery, FileStopRecoveryProgress, FileStopRecoveryStatus};
+pub use cooperative::{FileStopRecovery, FileStopRecoveryProgress, FileStopRecoveryStatus,
+    FileAdmissionStoppedHistory};
 
 /// Observed native state, never a recovered reviewer, automatic key or owner.
 /// A completed historical stop may still contain charges for executed effects.
