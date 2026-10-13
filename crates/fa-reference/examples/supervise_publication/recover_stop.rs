@@ -2,6 +2,7 @@
 //! Only original durable stop/fence/settlement runs; no source or helper is read.
 pub(crate) mod guarded;
 mod cooperative;
+pub(crate) mod admission;
 
 use super::config::{Config, debug};
 use fa_reference::action::ElapsedTick;
