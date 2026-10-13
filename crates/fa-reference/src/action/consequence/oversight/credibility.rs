@@ -4,6 +4,8 @@
 //! The separate evaluator handle models role separation, not real authentication
 //! or institutional independence. No consensus-to-ground-truth conversion exists.
 
+pub mod native_andon;
+
 use super::CommitteeContract;
 use crate::action::consequence::congress::CongressPolicy;
 use crate::round::{MemberOutcome, Verdict};
@@ -163,10 +165,18 @@ pub struct CongressChange {
 pub struct CredibilityPromotion { pub report: CredibilityReport, pub change: CongressChange }
 
 #[derive(Debug)]
-struct Record { case: EvaluationCase, assessments: Vec<Assessment> }
+struct Record {
+    case: EvaluationCase,
+    assessments: Vec<Assessment>,
+    andon_basis: Option<native_andon::NativeReviewBasis>,
+}
 
 #[derive(Debug)]
-pub(crate) struct PendingCase { case: EvaluationCase, revision: u64 }
+pub(crate) struct PendingCase {
+    case: EvaluationCase,
+    revision: u64,
+    andon_basis: Option<native_andon::NativeReviewBasis>,
+}
 
 #[derive(Debug)]
 pub(crate) struct WeightPlan {
@@ -183,6 +193,7 @@ pub(crate) struct CredibilityLedger {
     revision: u64,
     records: BTreeMap<u64, Record>,
     promotions: Vec<CredibilityPromotion>,
+    andon: Option<native_andon::NativeAndonState>,
 }
 
 impl CredibilityLedger {
@@ -190,7 +201,7 @@ impl CredibilityLedger {
         protocol.validate()?;
         let issuer = Rc::new(());
         let evaluator = IndependentEvaluator { issuer: Rc::clone(&issuer) };
-        Ok((Self { issuer, protocol, contracts, revision: 0, records: BTreeMap::new(), promotions: Vec::new() }, evaluator))
+        Ok((Self { issuer, protocol, contracts, revision: 0, records: BTreeMap::new(), promotions: Vec::new(), andon: None }, evaluator))
     }
 
     pub(crate) fn prepare(&self, case: EvaluationCase) -> Result<PendingCase, Error> {
@@ -199,14 +210,14 @@ impl CredibilityLedger {
         if !case.verdicts.keys().eq(self.contracts.members().keys()) { return Err(Error::Binding); }
         if self.records.contains_key(&case.round) { return Err(Error::Duplicate); }
         if self.records.len() >= MAX_EVALUATION_CASES { return Err(Error::Limit); }
-        Ok(PendingCase { case, revision: self.revision.checked_add(1).ok_or(Error::Overflow)? })
+        Ok(PendingCase { case, revision: self.revision.checked_add(1).ok_or(Error::Overflow)?, andon_basis: None })
     }
 
     /// The owning facade calls this immediately after the corresponding review
     /// transition, under the same exclusive borrow and after prepare succeeded.
     pub(crate) fn record(&mut self, pending: PendingCase) {
         self.revision = pending.revision;
-        self.records.insert(pending.case.round, Record { case: pending.case, assessments: Vec::new() });
+        self.records.insert(pending.case.round, Record { case: pending.case, assessments: Vec::new(), andon_basis: pending.andon_basis });
     }
 
     pub(crate) fn ticket(&self, round: u64) -> Result<EvaluationTicket, Error> {
@@ -219,6 +230,12 @@ impl CredibilityLedger {
     }
 
     pub(crate) fn record_label(&mut self, label: SealedAssessment) -> Result<bool, Error> {
+        self.record_label_at(label, None)
+    }
+
+    pub(crate) fn record_label_at(&mut self, label: SealedAssessment,
+        observed_at: Option<crate::action::ElapsedTick>) -> Result<bool, Error>
+    {
         if !Rc::ptr_eq(&self.issuer, &label.issuer) { return Err(Error::Binding); }
         let record = self.records.get(&label.round).ok_or(Error::Missing)?;
         if let Some(previous) = record.assessments.last() {
@@ -239,8 +256,15 @@ impl CredibilityLedger {
             }
         }
         let revision = self.revision.checked_add(1).ok_or(Error::Overflow)?;
-        self.records.get_mut(&label.round).expect("checked case").assessments.push(label.assessment);
+        // Stage the original Andon transition before publishing either record.
+        // Clock, capacity or conflicting historical evidence failures leave the
+        // independent label pending; its exact corrected retry remains possible.
+        let andon = self.prepare_andon_label(&label, observed_at)?;
+        let assessments = &mut self.records.get_mut(&label.round).expect("checked case").assessments;
+        assessments.try_reserve(1).map_err(|_| Error::Limit)?;
+        assessments.push(label.assessment);
         self.revision = revision;
+        if let Some(andon) = andon { self.andon = Some(andon); }
         Ok(true)
     }
 

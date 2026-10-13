@@ -4,6 +4,9 @@
 
 mod qualification;
 
+use super::super::credibility::native_andon::{NativeAndonBinding, NativeEvaluatedFalseHold};
+use crate::round::review::andon::{AndonBudget, AndonLedger};
+
 use super::{ObservedReview, OversightBroker};
 use super::super::credibility::{
     Assessment, CredibilityLedger, CredibilityPromotion, CredibilityReport, EvaluationCase,
@@ -52,6 +55,38 @@ impl OversightBroker {
         self.credibility = Some(EvaluationState { ledger, unfinished: BTreeMap::new(),
             joint: None, joint_promotions: Vec::new() });
         Ok(evaluator)
+    }
+
+    /// Bootstrap native false-stop accounting BEFORE proposals or reviews. Seed
+    /// with independently recovered accounting when continuing a deployment;
+    /// constructing an empty ledger is not recovery. This does not change the
+    /// existing credibility protocol, weights, review rules or effect rights.
+    pub fn enable_andon(&mut self, accounting: AndonLedger) -> Result<NativeAndonBinding, Error> {
+        if !self.inputs.is_empty() || !self.started_rounds.is_empty()
+            || self.inspect().suspended || self.stop_receipt().is_some() { return Err(Error::WrongState); }
+        self.credibility.as_mut().ok_or(Error::Incomplete)?.ledger.enable_andon(self.scope, accounting)
+    }
+
+    /// New windows retain the original immutable/nonoverlapping Andon rules.
+    /// No refund, reset or post-hoc increase of an existing allowance is exposed.
+    pub fn register_andon_window(&mut self, budget: AndonBudget) -> Result<bool, Error> {
+        self.credibility.as_mut().ok_or(Error::Incomplete)?.ledger.register_andon_window(budget)
+    }
+
+    pub fn andon_binding(&self) -> Result<&NativeAndonBinding, Error> {
+        self.credibility.as_ref().ok_or(Error::Incomplete)?.ledger.andon_binding()
+    }
+
+    /// In-memory accounting, NOT a durable acknowledgment. Persist the emitted
+    /// native receipt through a storage adapter before acknowledging durability.
+    pub fn andon_ledger(&self) -> Result<&AndonLedger, Error> {
+        self.credibility.as_ref().ok_or(Error::Incomplete)?.ledger.andon_ledger()
+    }
+
+    /// Only an applied, complete empirical stop with an accepted native benign
+    /// label emits a receipt. Pending/unapplied/nonqualifying cases return Missing.
+    pub fn andon_receipt(&self, round: u64) -> Result<&NativeEvaluatedFalseHold, Error> {
+        self.credibility.as_ref().ok_or(Error::Incomplete)?.ledger.andon_receipt(round)
     }
 
     /// Irreversible bootstrap opt-in, BEFORE any proposal or review. The same
@@ -114,7 +149,10 @@ impl OversightBroker {
         self.credibility.as_ref().ok_or(Error::Incomplete)?.ledger.ticket(round)
     }
     pub fn record_evaluation(&mut self, label: SealedAssessment) -> Result<bool, Error> {
-        self.credibility.as_mut().ok_or(Error::Incomplete)?.ledger.record_label(label)
+        let observed_at = self.inspect().ledger.elapsed;
+        let ledger = &mut self.credibility.as_mut().ok_or(Error::Incomplete)?.ledger;
+        if ledger.andon_enabled() { ledger.record_label_at(label, observed_at) }
+        else { ledger.record_label(label) }
     }
     pub fn evaluation_history(&self, round: u64) -> Result<&[Assessment], Error> {
         self.credibility.as_ref().ok_or(Error::Incomplete)?.ledger.assessments(round)
@@ -138,7 +176,8 @@ impl OversightBroker {
             verdicts: round.outcomes().into_iter().map(|(member, verdict)| (member.to_owned(), verdict)).collect(),
             stopped: review.decision().consequence != Consequence::Continue,
         };
-        Ok(Some((case.round, state.ledger.prepare(case)?)))
+        Ok(Some((case.round, state.ledger.prepare_observed(case, review.decision(),
+            self.inspect().ledger.elapsed)?)))
     }
 
     /// A deterministic, label-qualified weight update, not a caller-selected
