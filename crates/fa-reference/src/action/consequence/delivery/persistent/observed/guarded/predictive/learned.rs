@@ -5,7 +5,7 @@ use super::{FilePredictiveRequirements, FilePredictiveRoles};
 use super::super::{FileOversightRoles, anchored::FileHistoryAnchor, learned::check_profile,
     learned_recovery::check_recovery_reserve};
 use super::super::super::{Event, FileOversight, FileOversightProfile, JournalError};
-use super::super::super::shutdown::recovery::FileStoppedRecovery;
+use super::super::super::shutdown::recovery::{FileStoppedHistory, FileStoppedRecovery};
 use crate::action::consequence::delivery::StopRequest;
 use crate::action::ElapsedTick;
 use super::super::super::credibility::CredibilityEvent;
@@ -185,6 +185,16 @@ impl FilePredictiveLearnedRecovery {
     where F: FnOnce() -> ElapsedTick {
         self.check_ready()?;
         self.inner.finish_stopped(request, clock)
+    }
+
+    /// Capture the exact acknowledged stopped history without returning an
+    /// observer or evaluator. The same complete predictive guard checks run
+    /// before the original terminal transaction and its anchor capture.
+    pub fn finish_stopped_with_anchor<F>(self, request: StopRequest, clock: F)
+        -> Result<FileStoppedHistory, JournalError>
+    where F: FnOnce() -> ElapsedTick {
+        self.check_ready()?;
+        self.inner.finish_stopped_with_anchor(request, clock)
     }
 
     fn check_ready(&self) -> Result<(), JournalError> {

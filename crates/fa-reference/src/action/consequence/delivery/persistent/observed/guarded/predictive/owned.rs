@@ -6,7 +6,7 @@ use super::{EvaluationProtocol, FilePredictiveRoles, FileRecoveryRequirements};
 use super::super::{FileOversightRoles, anchored::FileHistoryAnchor, learned::check_profile,
     learned_recovery::check_recovery_reserve};
 use super::super::super::{Event, FileOversight, FileOversightProfile, JournalError, Machine};
-use super::super::super::shutdown::recovery::FileStoppedRecovery;
+use super::super::super::shutdown::recovery::{FileStoppedHistory, FileStoppedRecovery};
 use crate::action::consequence::delivery::StopRequest;
 use crate::action::ElapsedTick;
 use super::super::super::consistency::learned::FileLearnedConsistencyConfig;
@@ -206,6 +206,16 @@ impl FileOwnedPredictiveRecovery {
         self.inner.finish_stopped(request, clock)
     }
 
+    /// Retain the exact stopped history after the SAME owned-source, predictor,
+    /// evaluator and floor checks. No observer, live owner, replacement forecast
+    /// or extra numerical replay is introduced by private anchor capture.
+    pub fn finish_stopped_with_anchor<F>(self, request: StopRequest, clock: F)
+        -> Result<FileStoppedHistory, JournalError>
+    where F: FnOnce() -> ElapsedTick {
+        self.check_ready()?;
+        self.inner.finish_stopped_with_anchor(request, clock)
+    }
+
     fn check_ready(&self) -> Result<(), JournalError> {
         if let Some(error) = self.failure { return Err(error.into()); }
         let (profile, events, _) = self.inner.guarded_history();
@@ -216,7 +226,7 @@ impl FileOwnedPredictiveRecovery {
     /// Complete only the independently selected original pending reset, keeping
     /// the owned source mode, pre-output timing, numerical/lifetime ceilings and
     /// optional evaluator fixed. The full contract is checked around the SAME
-    /// private reset before its completion and fence are published atomically.
+    /// private reset, then its completion and fence are published atomically.
     /// No role escapes an unacknowledged write, and an exact completed retry
     /// cannot reset, audit or count an incident again. Pending forecast loss and
     /// spent learned work are retained by the original fence, never re-armed.

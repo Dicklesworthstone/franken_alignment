@@ -2,12 +2,34 @@
 //! Original numerical steps, pending intent and endpoint history are retained;
 //! helper ballots remain deterministic fixture controls, not model evaluation.
 use super::*;
-use crate::action::consequence::delivery::persistent::{JournalIo,
-    observed::shutdown::recovery::FileStoppedRecovery};
+use crate::action::consequence::delivery::{StopRequest, persistent::{JournalIo,
+    observed::{guarded::anchored::FileHistoryAnchor, shutdown::recovery::FileStoppedRecovery}}};
 use std::cell::Cell;
 
 #[test]
 fn every_terminal_storage_barrier_returns_no_candidate_and_retry_uses_only_the_visible_original_cut() {
+    storage_barriers(false);
+}
+
+#[test]
+fn stopped_anchors_cover_only_acknowledged_bytes_and_survive_ambiguous_write_recovery() {
+    storage_barriers(true);
+}
+
+fn finish(recovery: FileLearnedRecovery, stop: StopRequest, anchored: bool,
+    clock: impl FnOnce() -> ElapsedTick)
+    -> Result<(FileStoppedRecovery, Option<FileHistoryAnchor>), JournalError>
+{
+    if anchored {
+        recovery.finish_stopped_with_anchor(stop, clock).map(|history| {
+            let (stopped, anchor) = history.into_parts(); (stopped, Some(anchor))
+        })
+    } else {
+        recovery.finish_stopped(stop, clock).map(|stopped| (stopped, None))
+    }
+}
+
+fn storage_barriers(anchored: bool) {
     for executed in [false, true] {
         for barrier in [JournalIo::Stage, JournalIo::Write, JournalIo::FileSync,
             JournalIo::Rename, JournalIo::DirectorySync] {
@@ -36,7 +58,7 @@ fn every_terminal_storage_barrier_returns_no_candidate_and_retry_uses_only_the_v
             assert_eq!(stop.expected_control_sequence, before.control.sequence);
             assert_eq!(stop.expected_authority_epoch, before.control.ledger.epoch);
             recovery.fail_once(barrier); let calls = Cell::new(0);
-            let failure = recovery.finish_stopped(stop, || { calls.set(calls.get() + 1); ElapsedTick(3) }).unwrap_err();
+            let failure = finish(recovery, stop, anchored, || { calls.set(calls.get() + 1); ElapsedTick(3) }).unwrap_err();
             let JournalError::Io(failure) = failure else { panic!("selected original Store barrier"); };
             assert_eq!(failure.operation, barrier); assert_eq!(calls.get(), 1);
             assert_eq!(failure.replacement_may_be_visible, matches!(barrier, JournalIo::Rename | JournalIo::DirectorySync));
@@ -60,7 +82,7 @@ fn every_terminal_storage_barrier_returns_no_candidate_and_retry_uses_only_the_v
             assert_eq!(machine.broker.retained_actor_state().cache(), cache);
             assert_eq!(machine.broker.retained_actor_state().sampler(), sampler);
             assert_eq!(recovery.stop_request(701).unwrap(), stop);
-            let recovered = recovery.finish_stopped(stop, || {
+            let (recovered, anchor) = finish(recovery, stop, anchored, || {
                 assert!(!visible, "a visible completed stop cannot read time or repeat its terminal events");
                 calls.set(calls.get() + 1); ElapsedTick(4)
             }).unwrap();
@@ -73,14 +95,18 @@ fn every_terminal_storage_barrier_returns_no_candidate_and_retry_uses_only_the_v
             assert_eq!(recovered.progress().reserved_units, 0);
             assert!(!root.store().join("delivery.pending").exists());
             let completed = std::fs::read(root.store().join("delivery.bin")).unwrap();
+            let expected = anchored.then(|| FileHistoryAnchor::from_acknowledged(
+                recovered.snapshot().revision.try_into().unwrap(), completed.clone()));
+            assert_eq!(anchor, expected, "capture must contain the actual acknowledged replacement");
             let mut retry = FileOversight::begin_open_with_learned_generation(root.store(), profile(), &config).unwrap();
             replay_all(&mut retry, 1);
             assert_eq!(retry.verified_guarded_machine().unwrap().broker.hosted_learned_generation().unwrap(), numerical);
             assert_eq!(retry.verified_guarded_machine().unwrap().pending_learned_step(), pending);
             retry.fail_once(JournalIo::Stage); // Any replacement, even identical bytes, must now fail.
-            let again = retry.finish_stopped(stop, || panic!("completed retry never needs a clock")).unwrap();
+            let (again, again_anchor) = finish(retry, stop, anchored, || panic!("completed retry never needs a clock")).unwrap();
             assert!(matches!(again, FileStoppedRecovery::AlreadyDrained { .. }));
             assert_eq!(again.snapshot(), recovered.snapshot()); assert_eq!(again.progress(), recovered.progress());
+            assert_eq!(again_anchor, anchor, "completed retry must retain the identical history");
             assert_eq!(std::fs::read(root.store().join("delivery.bin")).unwrap(), completed);
         }
     }

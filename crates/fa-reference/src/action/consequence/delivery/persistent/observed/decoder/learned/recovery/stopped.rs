@@ -4,7 +4,8 @@ use super::{FileLearnedRecovery, FileOversight, JournalError};
 use crate::Error;
 use crate::action::ElapsedTick;
 use crate::action::consequence::delivery::{StopRequest,
-    persistent::observed::shutdown::recovery::FileStoppedRecovery};
+    persistent::observed::{guarded::anchored::FileHistoryAnchor,
+        shutdown::recovery::{FileStoppedHistory, FileStoppedRecovery}}};
 
 impl FileLearnedRecovery {
     /// Select the original control predecessor only after complete learned
@@ -40,6 +41,22 @@ impl FileLearnedRecovery {
     pub fn finish_stopped<F>(self, request: StopRequest, clock: F)
         -> Result<FileStoppedRecovery, JournalError>
     where F: FnOnce() -> ElapsedTick {
+        self.finish_stopped_with_anchor(request, clock).map(|history| history.into_parts().0)
+    }
+
+    /// Complete the SAME terminal transaction and retain its exact acknowledged
+    /// canonical bytes alongside the stopped observations. No live owner, role,
+    /// second replay, extra encoding or storage reopen is required for capture.
+    ///
+    /// The original intent, canonical-cut and durability checks precede any
+    /// result. A failed replacement yields neither receipt nor candidate anchor.
+    /// Already-drained retry confirms and returns the identical retained cut,
+    /// without a clock call or replacement. The private anchor must subsequently
+    /// be retained outside the authority store; that export is not atomic with
+    /// the stop and cannot change its outcome or discharge unknown liabilities.
+    pub fn finish_stopped_with_anchor<F>(self, request: StopRequest, clock: F)
+        -> Result<FileStoppedHistory, JournalError>
+    where F: FnOnce() -> ElapsedTick {
         let machine = self.verified_guarded_machine()?;
         if request.operation == 0 { return Err(Error::InvalidInput.into()); }
         let snapshot = machine.snapshot(self.events.len());
@@ -56,7 +73,9 @@ impl FileLearnedRecovery {
                     return Err(Error::Binding.into());
                 }
                 self.store.confirm_and_cleanup()?;
-                return Ok(FileStoppedRecovery::AlreadyDrained { snapshot, progress });
+                let anchor = FileHistoryAnchor::from_acknowledged(self.events.len(), self.canonical);
+                return Ok(FileStoppedHistory::new(
+                    FileStoppedRecovery::AlreadyDrained { snapshot, progress }, anchor));
             }
         } else if snapshot.control.sequence != request.expected_control_sequence
             || snapshot.control.ledger.epoch != request.expected_authority_epoch {

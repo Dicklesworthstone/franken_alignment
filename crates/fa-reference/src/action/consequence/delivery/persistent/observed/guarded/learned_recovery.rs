@@ -6,7 +6,7 @@ use super::super::decoder::learned::{FileLearnedConfig, FileLearnedRecovery,
     FileLearnedRecoveryProgress, FileLearnedRecoveryStatus, checkpoint::FileLearnedResetIntent};
 use crate::Error;
 use crate::action::ElapsedTick;
-use super::super::shutdown::recovery::FileStoppedRecovery;
+use super::super::shutdown::recovery::{FileStoppedHistory, FileStoppedRecovery};
 use crate::action::consequence::delivery::StopRequest;
 use crate::action::consequence::delivery::persistent::RecoveryReserve;
 use super::{BaseEvent, Event};
@@ -143,6 +143,16 @@ impl FileGuardedLearnedRecovery {
     where F: FnOnce() -> ElapsedTick {
         self.check_ready()?;
         self.inner.finish_stopped(request, clock)
+    }
+
+    /// Return the acknowledged stopped cut together with its exact private
+    /// history anchor. All independent guards and the original canonical lock
+    /// remain mandatory; capture grants no role and adds no replay or fence.
+    pub fn finish_stopped_with_anchor<F>(self, request: StopRequest, clock: F)
+        -> Result<FileStoppedHistory, JournalError>
+    where F: FnOnce() -> ElapsedTick {
+        self.check_ready()?;
+        self.inner.finish_stopped_with_anchor(request, clock)
     }
 
     /// Check the complete guard contract before AND after executing the exact

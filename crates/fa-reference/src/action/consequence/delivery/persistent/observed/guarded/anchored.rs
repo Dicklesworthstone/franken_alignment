@@ -46,6 +46,14 @@ impl FileHistoryAnchor {
     /// Logical retained canonical bytes, not heap allocation or storage overhead.
     pub fn retained_bytes(&self) -> usize { self.canonical.len() }
 
+    // Only original owners may move their already encoded, durably acknowledged
+    // canonical cut here. This is not an event importer or a public constructor.
+    // Terminal recovery uses the bytes of its successful replacement (or the
+    // identical confirmed drained cut), without another encoding or replay.
+    pub(in super::super) fn from_acknowledged(revision: usize, canonical: Vec<u8>) -> Self {
+        Self { revision, canonical }
+    }
+
     // The read-only review auditor shares this exact checker; no public event importer.
     pub(in super::super) fn check(&self, profile: &FileOversightProfile, identity: &Path, events: &[Event])
         -> Result<(), Error>
@@ -68,7 +76,7 @@ impl FileOversight {
     pub fn history_anchor(&self) -> Result<FileHistoryAnchor, JournalError> {
         if self.fault.is_some() { return Err(JournalError::Unavailable); }
         let canonical = journal::encode(&self.profile, self.store.identity(), &self.events)?;
-        Ok(FileHistoryAnchor { revision: self.events.len(), canonical })
+        Ok(FileHistoryAnchor::from_acknowledged(self.events.len(), canonical))
     }
 
     /// Advance an independently held anchor only along this healthy owner's

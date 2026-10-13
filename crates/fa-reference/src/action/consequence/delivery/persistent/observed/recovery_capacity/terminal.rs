@@ -6,7 +6,8 @@ use super::super::{
 };
 use crate::Error;
 use crate::action::ElapsedTick;
-use super::super::shutdown::recovery::FileStoppedRecovery;
+use super::super::guarded::anchored::FileHistoryAnchor;
+use super::super::shutdown::recovery::{FileStoppedHistory, FileStoppedRecovery};
 use std::path::Path;
 
 impl FileOversight {
@@ -79,15 +80,19 @@ impl FileOversight {
     // machine moves into the original fixed terminal transaction. No live role
     // or partially changed candidate escapes on success, failure or unwind.
     pub(in super::super) fn finish_verified_stopped(mut self, request: StopRequest,
-        observed_tick: ElapsedTick, canonical: &[u8]) -> Result<FileStoppedRecovery, JournalError>
+        observed_tick: ElapsedTick, canonical: &[u8]) -> Result<FileStoppedHistory, JournalError>
     {
         let revision = self.revision();
-        let sweep = terminal_with_candidate(&mut self, revision, request, observed_tick,
+        let (sweep, committed) = terminal_with_candidate(&mut self, revision, request, observed_tick,
             true, Some(canonical), |host| {
                 let placeholder = Machine::new(&host.profile)?;
                 Ok(std::mem::replace(&mut host.machine, placeholder))
             })?;
-        Ok(FileStoppedRecovery::Advanced { snapshot: self.inspect(), sweep })
+        // Move the exact successful replacement, not a second encoding or a
+        // later disk read. No fallible work separates acknowledgment and capture.
+        let anchor = FileHistoryAnchor::from_acknowledged(self.events.len(), committed);
+        Ok(FileStoppedHistory::new(
+            FileStoppedRecovery::Advanced { snapshot: self.inspect(), sweep }, anchor))
     }
 }
 
@@ -102,7 +107,7 @@ fn terminal_transaction(
     recover: bool,
 ) -> Result<FileStopSweep, JournalError> {
     terminal_with_candidate(host, revision, request, tick, recover, None,
-        |host| Ok(Machine::replay(&host.profile, &host.events)?))
+        |host| Ok(Machine::replay(&host.profile, &host.events)?)).map(|(sweep, _)| sweep)
 }
 
 // The candidate supplier is private and has exactly two callers: ordinary
@@ -111,7 +116,7 @@ fn terminal_transaction(
 // SAME event sequence, prefix admission, original reducers and replacement.
 fn terminal_with_candidate<F>(host: &mut FileOversight, revision: u64,
     request: StopRequest, tick: ElapsedTick, recover: bool, canonical: Option<&[u8]>,
-    candidate: F) -> Result<FileStopSweep, JournalError>
+    candidate: F) -> Result<(FileStopSweep, Vec<u8>), JournalError>
 where F: FnOnce(&mut FileOversight) -> Result<Machine, JournalError> {
     if host.fault.is_some() {
         return Err(JournalError::Unavailable);
@@ -181,7 +186,7 @@ where F: FnOnce(&mut FileOversight) -> Result<Machine, JournalError> {
     host.events = history;
     host.machine = candidate;
     host.fault = None;
-    Ok(sweep)
+    Ok((sweep, bytes))
 }
 
 #[cfg(test)]

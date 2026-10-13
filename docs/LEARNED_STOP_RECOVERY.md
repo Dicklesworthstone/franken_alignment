@@ -62,6 +62,40 @@ new event, fence or replacement, including when the journal is full. Confirmed
 canonical durability may remove an abandoned staging file; staged bytes are
 never promoted into a new outcome.
 
+## Capture the acknowledged stopped history
+
+All four cursor types additionally expose `finish_stopped_with_anchor`, returning
+`FileStoppedHistory` from `observed::shutdown::recovery`:
+
+```rust,ignore
+let request = recovery.stop_request(operation)?;
+let history = recovery.finish_stopped_with_anchor(request, trusted_clock)?;
+let (stopped, anchor) = history.into_parts();
+```
+
+The stop observation and private `FileHistoryAnchor` describe the same exact
+acknowledged revision. Advancing completion moves the bytes of the successful
+original replacement into the anchor; already-drained completion moves the
+identical verified canonical image after confirming durability. Capture adds no
+journal event, clock call, numerical replay, re-encoding or storage reopen.
+It retains the already bounded canonical byte buffer until the anchor is dropped.
+The ordinary `finish_stopped` API keeps its original return type and semantics.
+
+Complete independent guard, predictor, floor, reserve and input-anchor checks
+remain mandatory. A failed terminal write returns neither a stopped observation
+nor a candidate anchor, even when a replacement might have become visible.
+The returned history contains no live owner, observer, reviewer or authority.
+Pending and irrecoverable effects remain charged and can still appear in the
+anchor; possessing an anchor is not evidence that the domain has drained.
+
+The library result is not an export acknowledgment. The custodian must write
+and synchronize a separate private archive, preserving its old archive until
+that succeeds. Export failure does not undo the stop or justify resending an
+effect. A later canonical successor does not change the captured revision.
+Independent custody and protection against rolling back both journal and
+archive remain operator assumptions. CLI retention is not enabled by this
+library addition alone.
+
 ## Results and liabilities
 
 Stdout uses the existing native stop JSON report. `stopped_drained` means the
@@ -90,15 +124,18 @@ protect a jointly rolled-back journal and anchor.
 
 Eight public integration tests cover all four cursor types, full terminal
 capacity, reserved/sent/executed/expired effects, exact stop retries, guard and
-anchor refusal, canonical conflicts and unavailable/stale clocks. One internal
-test exercises all five original Store failure barriers for both sent and
-already executed histories, preserving a sampled step and pending numerical
-intent. Five operator tests cover all three loaded modes, every replay checkpoint,
-missing live assets, the actual CLI, original guard admission and failed output.
+anchor refusal, canonical conflicts and unavailable/stale clocks. The original
+internal storage test exercises all five Store failure barriers for both sent
+and executed histories, preserving sampled work and pending numerical intent.
+An additional regression runs the same barriers through anchored completion,
+compares the returned anchor against actual canonical bytes, and requires an
+identical anchor on a drained retry with replacement deliberately unavailable.
+Five operator tests cover loaded modes, replay checkpoints, missing live assets,
+the actual CLI, original guard admission and failed output.
 
-These fourteen tests are authored and independently source-reviewed. The
-required remote-only RCH execution gate remains pending; source parsing does
-not establish type correctness, runtime behavior or release qualification.
-The scoped FA-014 bead and full packet remain open. The change implements the
-existing recovery and liability contracts in plan sections 16.4/16.9 and FI-A02;
-it adds no agent verb, dependency, alternative journal or effect executor.
+The new anchor implementation and regression have not been compiled or executed
+in this session. The required remote-only RCH execution gate remains pending;
+source inspection does not establish type correctness, runtime behavior or
+release qualification. The scoped FA-014 bead and full packet remain open.
+This implements plan sections 16.4/16.5/16.9/25.4 and FI-A02 without adding an
+agent verb, dependency, alternative journal or effect executor.
