@@ -200,3 +200,5 @@ fn invalid_missing_busy_and_foreign_recovery_never_report_success() {
     assert!(crate::command(vec!["recover-stop".into(), "missing-config".into()]).unwrap_err().contains("usage:"));
     assert!(crate::command(vec!["recover-stop".into(), "missing-config".into(), "900".into(), "--reviewer-profile".into(), "anything".into()]).unwrap_err().contains("usage:"));
 }
+
+#[path = "guarded_tests.rs"] mod guarded_tests;

@@ -1,5 +1,7 @@
 //! Privileged local recovery when the live supervisor/stop socket is unavailable.
 //! Only original durable stop/fence/settlement runs; no source or helper is read.
+pub(crate) mod guarded;
+
 use super::config::{Config, debug};
 use fa_reference::action::ElapsedTick;
 use fa_reference::action::consequence::delivery::StopRequest;

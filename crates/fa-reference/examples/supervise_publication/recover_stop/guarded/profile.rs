@@ -1,0 +1,104 @@
+//! Closed bounded operator input, not a new journal, checkpoint or authenticator.
+use crate::config::{Config, debug, read_regular};
+use fa_reference::action::consequence::delivery::persistent::observed::guarded::{
+    FileRecoveryFloor, anchored::{FileHistoryAnchor, MAX_HISTORY_ANCHOR_BYTES}};
+use fa_reference::strict_json::{self, Json, Limits};
+use std::{collections::BTreeMap, fs::{self, File, OpenOptions}, io::{self, Cursor}, path::{Path, PathBuf}};
+use std::os::unix::fs::OpenOptionsExt;
+
+const PROFILE_BYTES: usize = 16 * 1024;
+
+pub(crate) struct Profile {
+    minimum: FileRecoveryFloor,
+    input: PathBuf,
+    output: Option<PathBuf>,
+}
+impl Profile {
+    pub(crate) fn read(path: &Path) -> Result<Self, String> {
+        Self::decode(&read_regular(path, PROFILE_BYTES)?)
+    }
+
+    pub(crate) fn decode(bytes: &[u8]) -> Result<Self, String> {
+        let json = strict_json::parse(bytes, Limits { max_bytes: PROFILE_BYTES, max_depth: 4,
+            max_items: 32, max_string_bytes: 4096 }).map_err(debug)?;
+        let mut root = object(json)?;
+        if take(&mut root, "schema_version")?.as_str() != Some("fa.guarded-stop/1") {
+            return Err("unsupported guarded stop profile".into());
+        }
+        let mut floor = object(take(&mut root, "minimum")?)?;
+        let minimum = FileRecoveryFloor { journal_revision: number(&mut floor, "journal_revision")?,
+            control_sequence: number(&mut floor, "control_sequence")?,
+            authority_epoch: number(&mut floor, "authority_epoch")? };
+        end(&floor)?;
+        let input = absolute(take(&mut root, "history_anchor")?)?;
+        let output = root.remove("retain_history_anchor").map(absolute).transpose()?;
+        end(&root)?;
+        Ok(Self { minimum, input, output })
+    }
+
+    pub(super) fn minimum(&self) -> FileRecoveryFloor { self.minimum }
+
+    pub(super) fn admit(&self, config: &Config) -> Result<Custody, String> {
+        // Recovery must already have a store. Neither path admission nor an
+        // absent anchor creates a replacement store or derives a new anchor.
+        let store = fs::canonicalize(&config.store).map_err(debug)?;
+        let input = fs::canonicalize(&self.input).map_err(debug)?;
+        outside(&input, &store)?;
+        let bytes = read_regular(&self.input, MAX_HISTORY_ANCHOR_BYTES)?;
+        let anchor = FileHistoryAnchor::read_trusted(&mut Cursor::new(bytes), MAX_HISTORY_ANCHOR_BYTES)
+            .map_err(debug)?;
+        let output = self.output.as_ref().map(|path| {
+            let parent = fs::canonicalize(path.parent().ok_or("anchor output needs a parent")?).map_err(debug)?;
+            if !fs::metadata(&parent).map_err(debug)?.is_dir() { return Err("anchor parent is not a directory".into()); }
+            let path = parent.join(path.file_name().ok_or("anchor output needs a filename")?);
+            outside(&path, &store)?;
+            match fs::symlink_metadata(&path) {
+                Err(error) if error.kind() == io::ErrorKind::NotFound => Ok(path),
+                Err(error) => Err(debug(error)),
+                Ok(_) => Err("anchor output must be a new file; the previous archive is never replaced".into()),
+            }
+        }).transpose()?;
+        Ok(Custody { anchor, output })
+    }
+}
+
+pub(super) struct Custody {
+    anchor: FileHistoryAnchor,
+    output: Option<PathBuf>,
+}
+impl Custody {
+    pub(super) fn anchor(&self) -> &FileHistoryAnchor { &self.anchor }
+
+    pub(super) fn retain(&self, anchor: &FileHistoryAnchor) -> Result<(), String> {
+        let Some(path) = self.output.as_deref() else { return Ok(()); };
+        let parent = File::open(path.parent().ok_or("anchor output needs a parent")?).map_err(debug)?;
+        // Repeat exclusive creation at the real write boundary, not only at
+        // admission. A partial failed export stays unacknowledged and untouched.
+        let mut file = OpenOptions::new().write(true).create_new(true).mode(0o600).open(path).map_err(debug)?;
+        anchor.write_to(&mut file, MAX_HISTORY_ANCHOR_BYTES).map_err(debug)?;
+        file.sync_all().map_err(debug)?;
+        parent.sync_all().map_err(debug)
+    }
+}
+
+fn outside(path: &Path, store: &Path) -> Result<(), String> {
+    if path.starts_with(store) { Err("history anchors require custody outside the authority store".into()) }
+    else { Ok(()) }
+}
+fn object(value: Json) -> Result<BTreeMap<String, Json>, String> {
+    match value { Json::Object(fields) => Ok(fields), _ => Err("guarded stop profile requires an object".into()) }
+}
+fn take(fields: &mut BTreeMap<String, Json>, key: &str) -> Result<Json, String> {
+    fields.remove(key).ok_or_else(|| format!("guarded stop profile missing {key}"))
+}
+fn number(fields: &mut BTreeMap<String, Json>, key: &str) -> Result<u64, String> {
+    take(fields, key)?.as_u64().ok_or_else(|| format!("guarded stop {key} must be an unsigned integer"))
+}
+fn absolute(value: Json) -> Result<PathBuf, String> {
+    let path = PathBuf::from(value.as_str().ok_or("anchor path must be a string")?);
+    if !path.is_absolute() { return Err("anchor paths must be absolute".into()); }
+    Ok(path)
+}
+fn end(fields: &BTreeMap<String, Json>) -> Result<(), String> {
+    if fields.is_empty() { Ok(()) } else { Err("unknown guarded stop profile fields".into()) }
+}
