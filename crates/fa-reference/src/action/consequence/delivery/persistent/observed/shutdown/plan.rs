@@ -94,3 +94,26 @@ impl FileShutdownPlan {
         Ok(plan)
     }
 }
+
+impl FileShutdownDomain {
+    /// Assemble an offline registration from independently retained ORIGINAL
+    /// history and an independently supplied member profile/path. The same
+    /// constructor works while the domain is absent, busy, or still running.
+    /// It never opens an owner, cleans a file, replays a token or asserts a stop.
+    ///
+    /// Import validates canonical framing, bootstrap/path identity and the exact
+    /// event count. Semantic replay, latest-prefix comparison and numerical
+    /// admission remain mandatory when the original campaign visits the domain.
+    /// The resulting plan has precisely the same encoding as live registration.
+    /// An anchor's authenticity/completeness remains the custodian's obligation.
+    pub fn from_history_anchor(member: FileShutdownMember,
+        anchor: &super::super::guarded::anchored::FileHistoryAnchor) -> Result<Self, Error>
+    {
+        if member.id == 0 || !member.directory.is_absolute() { return Err(Error::InvalidInput); }
+        if member.directory.as_os_str().as_bytes().len() > MAX_PATH_BYTES { return Err(Error::Limit); }
+        let image = anchor.registration_image(&member.profile, &member.directory)?;
+        let revision = usize::try_from(anchor.revision()).map_err(|_| Error::Limit)?;
+        Ok(Self { id: member.id, directory: member.directory,
+            profile: Rc::new(member.profile), anchor: Rc::from(image), revision })
+    }
+}

@@ -130,3 +130,16 @@ impl FileOversight {
 
 #[cfg(test)]
 mod tests;
+
+impl FileHistoryAnchor {
+    // Registration consumes the SAME original canonical decoder as plan import.
+    // A transport-valid archive alone is not a profile/path/revision binding.
+    // No semantic replay or filesystem access is done by this private data seam.
+    pub(in super::super) fn registration_image(&self, profile: &FileOversightProfile,
+        identity: &Path) -> Result<&[u8], Error>
+    {
+        let events = journal::decode(profile, identity, &self.canonical)?;
+        if events.len() != self.revision { return Err(Error::Binding); }
+        Ok(&self.canonical)
+    }
+}
