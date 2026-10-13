@@ -53,7 +53,7 @@ fn args(root: &Directory, mode: &str, rest: &[&str]) -> Vec<String> {
 }
 fn setup(root: &Directory) -> (Port, FileActorSupervisor<FileOversight>, FileHumanReviewer, Command) {
     let (mut h, reviewer) = fixture::create(root); h.enable_publication_guard(h.revision()).unwrap();
-    let proposal = ActorProposal { target: h.inspect().target, payload: b"original publication".to_vec(),
+    let proposal = ActorProposal { target: h.inspect().target, payload: b"publication".to_vec(),
         expected_policy_epoch: 0, deadline: ElapsedTick(100), units: 16 };
     let (p, mut s) = h.into_actor_gateway();
     let r = s.host().unwrap().revision(); s.set_snapshot(r, Some(snapshot())).unwrap();
@@ -244,3 +244,6 @@ fn expiry_before_prepare_or_before_io_retains_the_exact_difference() {
         assert_eq!(cut.work().calls, 0);
     }
 }
+
+#[path = "cancel_tests.rs"]
+mod cancellation;

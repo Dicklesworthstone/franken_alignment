@@ -2,6 +2,7 @@
 //! No supervisor config, evidence reader, human role or effect owner is loaded.
 mod settings;
 mod report;
+mod cancel;
 #[cfg(test)]
 mod tests;
 use settings::Settings;
@@ -15,10 +16,10 @@ use fa_reference::action::consequence::oversight::actor_wire::{Command, MAX_FRAM
 use fa_reference::action::consequence::oversight::actor_wire::client::ClientProgress;
 use std::{io::Write, os::unix::net::UnixStream, path::Path};
 
-const USAGE: &str = "actor-submit ACTOR_PROFILE --durable CLIENT_PROFILE create SUBMIT_JSON | submit MIN_REV SUBMIT_JSON | resume MIN_REV | inspect MIN_REV";
+const USAGE: &str = "actor-submit ACTOR_PROFILE --durable CLIENT_PROFILE create SUBMIT_JSON | submit MIN_REV SUBMIT_JSON | resume MIN_REV | cancel MIN_REV | inspect MIN_REV";
 const EXPIRED: &str = "durable actor invocation deadline reached; no automatic reconnect, replacement request or cancellation was sent";
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-enum Mode { Create, Submit, Resume, Inspect }
+enum Mode { Create, Submit, Resume, Cancel, Inspect }
 struct Invocation<'a> { actor: &'a Path, settings: &'a Path, mode: Mode, minimum: u64, document: Option<&'a Path> }
 impl<'a> Invocation<'a> {
     // The entire option set is checked before any profile or document I/O.
@@ -31,6 +32,7 @@ impl<'a> Invocation<'a> {
             "submit" if args.len() == 7 => (Mode::Submit, revision(&args[5])?, Some(Path::new(&args[6]))),
             "resume" if args.len() == 6 => (Mode::Resume, revision(&args[5])?, None),
             "inspect" if args.len() == 6 => (Mode::Inspect, revision(&args[5])?, None),
+            "cancel" if args.len() == 6 => (Mode::Cancel, revision(&args[5])?, None),
             _ => return Err(USAGE.into()),
         };
         Ok(Self { actor: Path::new(&args[1]), settings: Path::new(&args[3]), mode, minimum, document })
@@ -67,11 +69,18 @@ fn command_with(args: &[String], credibility: Option<&Path>, elapsed: &mut impl 
         let cut = FilePeerClient::read(&settings.directory, &settings.profile, call.minimum).map_err(debug)?;
         return report::write(&cut, actor.request, "inspection", out);
     }
+    if call.mode == Mode::Cancel {
+        // Refuse an unacknowledged request before socket checks, writer custody
+        // or staging cleanup. Recheck the locked image below after opening.
+        let cut = FilePeerClient::read(&settings.directory, &settings.profile, call.minimum).map_err(debug)?;
+        cancel::check_record(cut.original_proposal(actor.request).is_some(),
+            cut.last_response(actor.request), actor.request)?;
+    }
     actor.check_directory()?;
     check_time(&actor, elapsed)?;
     let client = match call.mode {
         Mode::Create => FilePeerClient::create(&settings.directory, settings.profile.clone()),
-        Mode::Submit | Mode::Resume => FilePeerClient::open(&settings.directory, settings.profile.clone(), call.minimum),
+        Mode::Submit | Mode::Resume | Mode::Cancel => FilePeerClient::open(&settings.directory, settings.profile.clone(), call.minimum),
         Mode::Inspect => unreachable!("inspection does not acquire a writer"),
     }.map_err(debug)?;
     // Resume never accepts replacement document bytes, creates a new key, or
@@ -79,13 +88,19 @@ fn command_with(args: &[String], credibility: Option<&Path>, elapsed: &mut impl 
     if call.mode == Mode::Resume && client.state().original_proposal(actor.request).is_none() {
         return Err("selected request is not retained; resume does not create a replacement".into());
     }
+    if call.mode == Mode::Cancel {
+        cancel::check_record(client.state().original_proposal(actor.request).is_some(),
+            client.state().last_response(actor.request), actor.request)?;
+    }
     let floor = client.revision();
     let outcome = (|| {
         check_time(&actor, elapsed)?;
         let socket = UnixStream::connect(&actor.socket).map_err(debug)?;
         check_time(&actor, elapsed)?;
         let mut connected = client.connect(socket).map_err(|failure| format!("server peer refused: {:?}", failure.refusal))?;
-        let result = exchange(&mut connected, &actor, &settings, command.as_ref(), elapsed, wait);
+        let result = if call.mode == Mode::Cancel {
+            cancel::exchange(&mut connected, &actor, &settings, elapsed, wait)
+        } else { exchange(&mut connected, &actor, &settings, command.as_ref(), elapsed, wait) };
         // Even on failure, this is only the last ACKNOWLEDGED client revision.
         // The selected canonical image may contain a newer lost acknowledgment.
         Ok::<_, String>((result, connected))
@@ -102,6 +117,7 @@ fn command_with(args: &[String], credibility: Option<&Path>, elapsed: &mut impl 
     let status = if result.is_ok() { "observed" } else { "interrupted" };
     report::write(&cut, actor.request, status, out)?;
     let response = result?;
+    if call.mode == Mode::Cancel { return cancel::confirmed(&response); }
     if !matches!(response.result, Ok(Knowledge::Known { .. })) {
         return Err("original actor result is not known; inspect or resume only the retained request".into());
     }
@@ -123,22 +139,29 @@ fn exchange(client: &mut FilePeerConnection, actor: &Profile, settings: &Setting
         _ => return Err("expected exact selected Submit".into()),
     }.map_err(debug)?;
     loop {
+        let response = receive(client, actor, settings, elapsed, wait)?;
+        if !matches!(&response.result, Ok(Knowledge::Pending { .. }
+            | Knowledge::Unknown { reason: UnknownReason::OutcomeUnknown })) {
+            return Ok(response);
+        }
         check_time(actor, elapsed)?;
-        // Native drive acknowledges intent before any socket call and persists
-        // actual responses/failures before returning them. Never reimplement it.
+        wait(actor.poll_ms);
+        check_time(actor, elapsed)?;
+        // Only explicit observation polling; never a replacement Submit.
+        client.poll(client.revision(), actor.request).map_err(debug)?;
+    }
+}
+
+// Receive one already-prepared original command, shared by submit, resume and
+// cancellation. Only native drive touches the socket or records work/results.
+fn receive(client: &mut FilePeerConnection, actor: &Profile, settings: &Settings,
+    elapsed: &mut impl FnMut() -> Duration, wait: &mut impl FnMut(u64)) -> Result<WireResponse, String>
+{
+    loop {
+        check_time(actor, elapsed)?;
         let report = client.drive(client.revision(), settings.drive).map_err(debug)?;
         match report.progress {
-            ClientProgress::Response(response) => {
-                if !matches!(&response.result, Ok(Knowledge::Pending { .. }
-                    | Knowledge::Unknown { reason: UnknownReason::OutcomeUnknown })) {
-                    return Ok(response);
-                }
-                check_time(actor, elapsed)?;
-                wait(actor.poll_ms);
-                check_time(actor, elapsed)?;
-                // Only explicit observation polling; never a replacement Submit.
-                client.poll(client.revision(), actor.request).map_err(debug)?;
-            }
+            ClientProgress::Response(response) => return Ok(response),
             ClientProgress::Blocked => { check_time(actor, elapsed)?; wait(actor.poll_ms); }
             ClientProgress::Progress => {}
             ClientProgress::Complete => return Err("native exchange ended without a response; retained request stays unresolved".into()),
