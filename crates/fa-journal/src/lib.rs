@@ -8,6 +8,8 @@
 
 #[cfg(unix)]
 pub mod file;
+#[cfg(unix)]
+pub mod evaluated_andon;
 pub mod replay;
 pub mod batch;
 pub mod reserve;
