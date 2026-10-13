@@ -1,6 +1,7 @@
 //! Actor-side request I/O over an explicitly provisioned original server domain.
 //! Receipt parsing is not authentication and no response authorizes an effect.
 mod session;
+pub mod drive;
 pub use session::{ActorClient, ActorClientState, ClientSessionLimits};
 #[cfg(unix)]
 pub use session::ClientConnectFailure;
