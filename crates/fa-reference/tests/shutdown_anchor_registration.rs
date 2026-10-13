@@ -7,7 +7,7 @@ use fa_reference::action::ElapsedTick;
 use fa_reference::action::consequence::delivery::persistent::{MAX_JOURNAL_BYTES, JournalError};
 use fa_reference::action::consequence::delivery::persistent::observed::{FileOversight,
     guarded::anchored::{FileHistoryAnchor, MAX_HISTORY_ANCHOR_BYTES},
-    shutdown::{FileShutdownDomain, FileShutdownMember, FileShutdownPlan, MAX_SHUTDOWN_HEAD_BYTES,
+    shutdown::{FileShutdownDomain, FileShutdownPlan, MAX_SHUTDOWN_HEAD_BYTES,
         coordinator::FileShutdownCoordinator}};
 
 fn plan(domain: FileShutdownDomain, max_bytes: usize) -> FileShutdownPlan {
@@ -116,7 +116,7 @@ fn new_plan_preserves_path_roster_and_total_evidence_bounds() {
 fn initial_zero_event_anchor_is_valid_without_claiming_a_stopped_domain() {
     let root = Directory::new();
     let (host, _) = FileOversight::create(root.store(), profile()).unwrap();
-    let member = FileShutdownMember { id: 1, directory: root.store(), profile: profile() };
+    let member = host.shutdown_domain(1).unwrap().member();
     let anchor = host.history_anchor().unwrap(); assert_eq!(anchor.revision(), 0);
     let registered = FileShutdownDomain::from_history_anchor(member, &anchor).unwrap();
     let p = plan(registered, MAX_SHUTDOWN_HEAD_BYTES);
