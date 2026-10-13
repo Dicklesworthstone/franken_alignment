@@ -2,6 +2,7 @@
 //! intent precedes domain I/O; the ORIGINAL registered history remains authority.
 pub(super) mod resolution;
 pub(super) mod cooperative;
+pub(super) mod clocked;
 pub(super) mod fleet;
 #[cfg(test)]
 mod test_support;

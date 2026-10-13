@@ -26,6 +26,15 @@ impl FileStopRecovery {
     pub(in crate::action::consequence::delivery::persistent::observed::shutdown) fn finish_registered(
         self, campaign: &mut FileShutdownCampaign, index: usize, attempt: usize, at: ElapsedTick,
     ) -> Result<(FileShutdownObservation, Rc<[u8]>, usize), JournalError> {
+        self.finish_registered_with_clock(campaign, index, attempt, || Ok(at))
+    }
+
+    // A supplied-time visit keeps its old meaning. A clocked visit calls this
+    // with a real fallible acquisition, after the entire original replay.
+    pub(in crate::action::consequence::delivery::persistent::observed::shutdown) fn finish_registered_with_clock(
+        self, campaign: &mut FileShutdownCampaign, index: usize, attempt: usize,
+        clock: impl FnOnce() -> Result<ElapsedTick, JournalError>,
+    ) -> Result<(FileShutdownObservation, Rc<[u8]>, usize), JournalError> {
         self.check_ready()?;
         let domain = &campaign.plan.domains[index];
         let before = observe(domain, &self.machine, &self.events,
@@ -52,6 +61,12 @@ impl FileStopRecovery {
         };
         let expected_revision = self.events.len().checked_add(3).ok_or(Error::Limit)?;
         if expected_revision > self.profile.delivery.limits.events { return Err(Error::Limit.into()); }
+        // Refuse changed canonical custody before invoking external time. The
+        // original terminal finalizer compares again after clock and preflight.
+        if self.store.read(self.profile.delivery.limits.bytes)? != self.canonical {
+            return Err(Error::Binding.into());
+        }
+        let at = clock()?;
         // Preserve the original BEFORE-effect aggregate evidence-space check,
         // in addition to every native journal prefix and recovery-reserve check.
         let mut projected = self.events.clone();

@@ -50,7 +50,8 @@ impl FileShutdownCoordinator {
         if revision != self.revision { return Err(Error::Stale.into()); }
         let retained = self.visits.get(visit).ok_or(Error::Missing)?;
         if !matches!(retained.kind,
-            ShutdownVisitKind::Advance { .. } | ShutdownVisitKind::RecoverStopped { .. })
+            ShutdownVisitKind::Advance { .. } | ShutdownVisitKind::RecoverStopped { .. }
+                | ShutdownVisitKind::RecoverStoppedAtCompletion)
         { return Err(Error::WrongState.into()); }
         let recorded = match &retained.result {
             ShutdownVisitResult::Entered => None,

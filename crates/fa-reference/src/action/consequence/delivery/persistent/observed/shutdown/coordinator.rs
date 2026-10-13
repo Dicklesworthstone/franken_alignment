@@ -5,6 +5,7 @@ mod anchored;
 pub use anchored::{FileShutdownCoordinatorAnchor, MAX_COORDINATOR_ANCHOR_BYTES};
 mod recovery;
 pub use recovery::cooperative::FileShutdownVisitRecovery;
+pub use recovery::clocked::FileShutdownClockBinding;
 pub use recovery::resolution::FileShutdownVisitResolution;
 pub use recovery::fleet::{FileShutdownClock, FileShutdownPassMember,
     FileShutdownPassResult, FileShutdownRecoveryPass, FileShutdownRecoveryCheckpoint};
@@ -22,6 +23,8 @@ pub enum ShutdownVisitKind {
     Advance { at: ElapsedTick },
     /// Exclusive terminal recovery of an independently registered domain.
     RecoverStopped { at: ElapsedTick },
+    /// Intent has no claimed time; acquire it only at verified terminal completion.
+    RecoverStoppedAtCompletion,
     InspectCanonical,
     Unavailable,
 }
@@ -201,6 +204,7 @@ impl FileShutdownCoordinator {
         self.visits.try_reserve(1).map_err(|_| Error::Limit)?;
         let step = match kind { ShutdownVisitKind::Advance { .. } => FileShutdownStep::InspectOwner,
             ShutdownVisitKind::InspectCanonical | ShutdownVisitKind::RecoverStopped { .. }
+                | ShutdownVisitKind::RecoverStoppedAtCompletion
                 => FileShutdownStep::InspectCanonical,
             ShutdownVisitKind::Unavailable => FileShutdownStep::Unavailable };
         let pair = self.campaign.enter(domain, step)?;
