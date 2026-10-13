@@ -1,6 +1,8 @@
 //! Persist visit intent before driving an ORIGINAL domain owner.
 //! This journal owns retry/evidence progress, never effect rights or live roles.
 mod codec;
+mod anchored;
+pub use anchored::{FileShutdownCoordinatorAnchor, MAX_COORDINATOR_ANCHOR_BYTES};
 mod recovery;
 pub use recovery::cooperative::FileShutdownVisitRecovery;
 pub use recovery::resolution::FileShutdownVisitResolution;
@@ -111,11 +113,20 @@ impl FileShutdownCoordinator {
     pub fn open(directory: impl AsRef<Path>, plan: &FileShutdownPlan,
         max_bytes: usize, minimum_revision: u64) -> Result<Self, JournalError>
     {
+        Self::open_with_anchor(directory.as_ref(), plan, max_bytes, minimum_revision, None)
+    }
+
+    fn open_with_anchor(directory: &Path, plan: &FileShutdownPlan, max_bytes: usize,
+        minimum_revision: u64, anchor: Option<&FileShutdownCoordinatorAnchor>) -> Result<Self, JournalError>
+    {
         Self::check_limit(max_bytes)?;
-        let store = storage::Store::open(directory.as_ref())?;
+        let store = storage::Store::open(directory)?;
         let bytes = store.read(max_bytes)?;
         let plan_bytes = plan.encode()?;
         let restored = codec::decode(store.identity(), plan, &plan_bytes, max_bytes, minimum_revision, &bytes)?;
+        if let Some(anchor) = anchor {
+            anchor.check(store.identity(), plan, &plan_bytes, max_bytes, &restored, &bytes)?;
+        }
         // Validation precedes cleanup. Never promote a staged coordinator image.
         store.confirm_and_cleanup()?;
         let mut owner = Self::assemble(store, restored.campaign, plan_bytes, max_bytes,
