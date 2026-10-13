@@ -17,6 +17,11 @@ A request rejected without a frozen action, or a direct proposal that merely has
 the same number, yields no fictional explanation. A frozen hard-policy denial
 can be explained even when it never reached a helper congress.
 
+The separate `--search MENU_JSON` option runs the original bounded multi-edit
+repair search over this same anchored admission. It has its own explicit
+registration and result schema; see [proposal repair search](OPERATOR_PROPOSAL_SEARCH.md).
+It cannot be combined with `--payload` and does not change the modes below.
+
 ## Independent inputs and supported profile
 
 `CONFIG` is the existing operator configuration. This command accepts exactly
@@ -68,11 +73,11 @@ counters are decimal strings; node indexes and bounded counts are JSON numbers.
 Policy literal bytes use lowercase hexadecimal. Actual action and replacement
 payload bytes are not printed.
 
-`--payload` is the only intervention. Its bytes are bounded by both the original
+`--payload` changes only the hypothetical payload in this single-comparison mode. Its bytes are bounded by both the original
 action and experiment limits; an empty file means an explicit empty replacement.
 Missing, oversized or unreadable files fail instead of silently requesting a
 baseline result. Target, units, evidence keys, model state and world state are
-not editable through this command. Every comparison starts from the same
+not editable through this single-comparison mode. Every comparison starts from the same
 historical admission, not the ending state or another counterfactual.
 
 A `satisfied` result still has `purpose: experiment`, `permission: not_issued`

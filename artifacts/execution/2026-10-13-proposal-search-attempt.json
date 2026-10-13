@@ -1,0 +1,99 @@
+{
+  "schema_version": "fa.proposal-search-edit-attempt/1",
+  "repository": "Dicklesworthstone/franken_alignment",
+  "base_commit": "33b8303ef6c56ade7c91fbb68477ba88c1d4e1a8",
+  "scope": "selected-file source increment; no complete checkout or runtime qualification",
+  "qualification": "unexecuted",
+  "tools": {
+    "rch": null,
+    "cargo": null,
+    "rustc": null,
+    "rustfmt": null,
+    "br": null
+  },
+  "native_search_preimage_sha": "ad95c58ad0be0f8aee3541a036821d20ee9143a3",
+  "native_search_changed": false,
+  "source_checks": {
+    "original_preimage_sha": "fee16d34d7c049295d3ef05110fe181a09e8434f",
+    "original_read_statements_equal": true,
+    "original_payload_output_statements_equal": true,
+    "selected_whitespace_findings": [],
+    "lexical_delimiter_screen": "no findings; NOT a Rust parser/compiler/formatter",
+    "simple_format_brace_screen": "no findings",
+    "new_authored_test_functions": 12
+  },
+  "source_manifest": [
+    {
+      "path": "crates/fa-reference/examples/supervise_publication/diagnosis.rs",
+      "bytes": 6976,
+      "git_blob_sha": "3e99804d59464de942394ea8b1e9ed112d062c7a",
+      "sha256": "e3beb4655d14295ca008eb2717731cfb2b07b799bd14928ef061918bc00c89f7"
+    },
+    {
+      "path": "crates/fa-reference/examples/supervise_publication/diagnosis/search.rs",
+      "bytes": 2973,
+      "git_blob_sha": "8d0390e90ed75b3391ac4defde8026d51642c028",
+      "sha256": "c046c5be8da6e959f0d03d18ac22739152dd560cc93fd612cea3d0808e950853"
+    },
+    {
+      "path": "crates/fa-reference/examples/supervise_publication/diagnosis/search/fixture.rs",
+      "bytes": 6878,
+      "git_blob_sha": "226c46d3dc8939a8239e572ceeb1c90f9725635a",
+      "sha256": "4689a5926c08e57c9fe9c117e989c12fd137d6762f649ea95c34d12e80b12c83"
+    },
+    {
+      "path": "crates/fa-reference/examples/supervise_publication/diagnosis/search/menu.rs",
+      "bytes": 7066,
+      "git_blob_sha": "c7fb165e362417d8d4892006f49918cd3a99a979",
+      "sha256": "3f5cbefbe932160ac24902f5a09b9feca89730de2b0d01ec10972c24d5422b67"
+    },
+    {
+      "path": "crates/fa-reference/examples/supervise_publication/diagnosis/search/render.rs",
+      "bytes": 8903,
+      "git_blob_sha": "3946722da5eb970bff9f2b71432dac72e40bb8fd",
+      "sha256": "bbecff019619089f870034f8f0620195d7ca210835788dbdd4df488c970c089e"
+    },
+    {
+      "path": "crates/fa-reference/examples/supervise_publication/diagnosis/search/tests.rs",
+      "bytes": 19595,
+      "git_blob_sha": "1f499b15ae10cb525cf27a27cc4e760831a5eeaa",
+      "sha256": "45f042c70c26b59a06ed99a66ed03310804fed848d4c164895beaeb7bcc03050"
+    },
+    {
+      "path": "docs/OPERATOR_PROPOSAL_DIAGNOSIS.md",
+      "bytes": 7097,
+      "git_blob_sha": "48f0bd71c60e632a9e4cc0441cd8dafdd080c296",
+      "sha256": "f3043176e658676c4b9179580b8d08ca75a407b93856e79ac3b5ddba3001ca08"
+    },
+    {
+      "path": "docs/OPERATOR_PROPOSAL_SEARCH.md",
+      "bytes": 9065,
+      "git_blob_sha": "5fa4b421a359fa3ef463b816e9eb56af38328006",
+      "sha256": "94a27bd6c453d3f097f2fd73a1cbd7446f76b951a8ebe90a483701c6aa7545be"
+    }
+  ],
+  "attempts": [
+    {
+      "name": "targeted-tests",
+      "command": "RCH_REQUIRE_REMOTE=1 rch exec -- cargo test --locked -p fa-reference --example supervise_publication diagnosis",
+      "exit_code": 127,
+      "stdout": "",
+      "stderr": "bash: line 1: rch: command not found\n",
+      "utc": "2026-10-13T16:47:46.810309+00:00",
+      "compilation_started": false,
+      "tests_executed": false
+    },
+    {
+      "name": "full-gate",
+      "command": "RCH_REQUIRE_REMOTE=1 rch exec -- cargo run --locked -p xtask -- check",
+      "exit_code": 127,
+      "stdout": "",
+      "stderr": "bash: line 1: rch: command not found\n",
+      "utc": "2026-10-13T16:47:46.818403+00:00",
+      "compilation_started": false,
+      "tests_executed": false
+    }
+  ],
+  "beads_closed": false,
+  "production_gate_closed": false
+}

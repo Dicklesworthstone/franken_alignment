@@ -1,6 +1,7 @@
 //! Offline, request-key explanation through the ORIGINAL anchored proposal read.
 //! No live authority, helper, current evidence or effect path is constructed.
 mod render;
+mod search;
 #[cfg(test)]
 mod tests;
 use crate::config::{Config, debug, read_regular};
@@ -9,10 +10,10 @@ use fa_reference::action::MAX_PAYLOAD_BYTES;
 use fa_reference::action::consequence::experiment::{Intervention, InterventionScope, MAX_INTERVENTION_BYTES};
 use fa_reference::action::consequence::delivery::persistent::observed::{
     FileOversight, guarded::{FileGuardSet, FileRecoveryRequirements,
-        investigation::FileProposalReadStatus}};
+        investigation::{FileProposalInvestigation, FileProposalReadStatus}}};
 use std::{io::Write, path::Path, time::{Duration, Instant}};
 
-const USAGE: &str = "usage: supervise_publication explain-proposal CONFIG REQUEST_ID RECOVERY_PROFILE [--payload REPLACEMENT_FILE]";
+const USAGE: &str = "usage: supervise_publication explain-proposal CONFIG REQUEST_ID RECOVERY_PROFILE [--payload REPLACEMENT_FILE | --search SEARCH_MENU]";
 const DEADLINE: &str = "proposal explanation replay deadline reached; no diagnostic result was emitted";
 const PAYLOAD_BYTES: usize = if MAX_PAYLOAD_BYTES < MAX_INTERVENTION_BYTES {
     MAX_PAYLOAD_BYTES
@@ -23,11 +24,12 @@ struct Request<'a> {
     profile: &'a Path,
     request: u64,
     payload: Option<&'a Path>,
+    search: Option<&'a Path>,
 }
 impl<'a> Request<'a> {
     fn parse(args: &'a [String]) -> Result<Self, String> {
         if !matches!(args.len(), 4 | 6) || args[0] != "explain-proposal"
-            || (args.len() == 6 && args[4] != "--payload") {
+            || (args.len() == 6 && !matches!(args[4].as_str(), "--payload" | "--search")) {
             return Err(USAGE.into());
         }
         let text = &args[2];
@@ -37,7 +39,8 @@ impl<'a> Request<'a> {
         let request = text.parse::<u64>().map_err(|_| USAGE.to_owned())?;
         if request == 0 { return Err(USAGE.into()); }
         Ok(Self { config: Path::new(&args[1]), profile: Path::new(&args[3]), request,
-            payload: (args.len() == 6).then(|| Path::new(&args[5])) })
+            payload: (args.len() == 6 && args[4] == "--payload").then(|| Path::new(&args[5])),
+            search: (args.len() == 6 && args[4] == "--search").then(|| Path::new(&args[5])) })
     }
 }
 
@@ -57,6 +60,12 @@ fn command_with_elapsed(args: &[String], elapsed: &mut impl FnMut() -> Duration,
     checkpoint(wall, elapsed)?;
     let profile = Profile::read(request.profile)?;
     checkpoint(wall, elapsed)?;
+    if let Some(path) = request.search {
+        let menu = search::Menu::read(path)?;
+        checkpoint(wall, elapsed)?;
+        let investigation = read_with_elapsed(&config, &profile, request.request, menu.scope.clone(), elapsed)?;
+        return search::run(&investigation, &menu, wall, elapsed, out);
+    }
     let payload = request.payload.map(|path| read_regular(path, PAYLOAD_BYTES)).transpose()?;
     checkpoint(wall, elapsed)?;
     run_with_elapsed(&config, &profile, request.request, payload.as_deref(), elapsed, out)
@@ -78,6 +87,28 @@ fn run_with_elapsed(config: &Config, profile: &Profile, request: u64, payload: O
     }
     let scope = InterventionScope::new(request, payload.is_some(), false, false, &[]).map_err(debug)?;
     let wall = Duration::from_millis(config.timing.runtime_ms);
+    let investigation = read_with_elapsed(config, profile, request, scope, elapsed)?;
+    let edits: Vec<_> = payload.into_iter().map(|bytes| Intervention::Payload(bytes.to_vec())).collect();
+    let diagnosis = investigation.run(&edits).map_err(unavailable)?;
+    checkpoint(wall, elapsed)?;
+    // Complete the bounded predicate-tree encoding before any output. A timeout
+    // or reconstruction refusal never publishes a promising partial diagnosis.
+    let bytes = render::encode(&diagnosis)?;
+    checkpoint(wall, elapsed)?;
+    out.write_all(&bytes).map_err(|error| format!("proposal explanation output failed: {error}; no authority or effect was changed"))?;
+    out.flush().map_err(|error| format!("proposal explanation output flush failed: {error}; no authority or effect was changed"))
+}
+
+fn unavailable(error: impl std::fmt::Debug) -> String {
+    format!("historical proposal explanation unavailable: {error:?}; no authority or effect was changed")
+}
+
+// Both operator modes share the SAME independent custody, complete guard set,
+// one-event replay, full suffix and Ready checkpoints. No preliminary ID read.
+fn read_with_elapsed(config: &Config, profile: &Profile, request: u64, scope: InterventionScope,
+    elapsed: &mut impl FnMut() -> Duration) -> Result<FileProposalInvestigation, String>
+{
+    let wall = Duration::from_millis(config.timing.runtime_ms);
     checkpoint(wall, elapsed)?;
     let (anchor, minimum) = profile.admit_investigation(config)?;
     checkpoint(wall, elapsed)?;
@@ -98,17 +129,5 @@ fn run_with_elapsed(config: &Config, profile: &Profile, request: u64, payload: O
     }
     let investigation = read.finish().map_err(unavailable)?;
     checkpoint(wall, elapsed)?;
-    let edits: Vec<_> = payload.into_iter().map(|bytes| Intervention::Payload(bytes.to_vec())).collect();
-    let diagnosis = investigation.run(&edits).map_err(unavailable)?;
-    checkpoint(wall, elapsed)?;
-    // Complete the bounded predicate-tree encoding before any output. A timeout
-    // or reconstruction refusal never publishes a promising partial diagnosis.
-    let bytes = render::encode(&diagnosis)?;
-    checkpoint(wall, elapsed)?;
-    out.write_all(&bytes).map_err(|error| format!("proposal explanation output failed: {error}; no authority or effect was changed"))?;
-    out.flush().map_err(|error| format!("proposal explanation output flush failed: {error}; no authority or effect was changed"))
-}
-
-fn unavailable(error: impl std::fmt::Debug) -> String {
-    format!("historical proposal explanation unavailable: {error:?}; no authority or effect was changed")
+    Ok(investigation)
 }
