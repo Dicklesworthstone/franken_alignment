@@ -53,3 +53,74 @@ are used for the charge tests. Fixtures are not authenticated time or hardware
 fault evidence. Rust compilation, tests, formatting and Clippy remain unexecuted
 in the editing environment; exact-revision RCH verification is required. FA-014
 and its prerequisites remain open. No dependency or runtime is introduced.
+
+## Full-roster clocked passes
+
+`recover_registered_pass_with_clocks` and `resume_registered_pass_with_clocks`
+accept the complete independent roster of `FileShutdownClockBinding` identities,
+not a list of early timestamps. They share the original full-roster, latest-visit,
+clock-domain, visit/attempt-capacity and revision-growth admission with the
+supplied-time APIs. Admission precedes callbacks and does not create a dummy tick.
+
+Only new recovery selected by the original plan invokes the clocked single-domain
+operation. The callback runs independently after each domain's verified replay;
+there is no cached time shared by later domains. Eligible retained visits use
+passive resolution, including alongside live owners, with no time acquisition.
+An evidence failure never falls through into a new command. Cancellation preserves
+the original distinction between a session-only evidence refusal and an
+acknowledged negative new visit, leaving later members NotVisited.
+
+`FileShutdownClockedRecoveryPass` retains the original per-member result types
+plus an optional acquired tick. None means no successful acquisition; it is not
+zero or the previous member's time. A stale returned tick remains visible as an
+actual observation alongside native refusal. A successful acquisition is not a
+successful native write. Native failures may permit the remaining roster to
+proceed; a failed coordinator acknowledgment ends the pass. Unwinds propagate
+and retain entered quarantine. No result predicate imports earlier session success.
+
+Seven further native regression functions cover per-domain acquisition ordering
+and original supplied-time oracle parity, mixed ambiguous/exact/new resume at the
+visit ceiling, clock failure versus stale acquisition, every checkpoint, complete
+admission before callbacks, all intent-write barriers, and a second-clock unwind
+following an acknowledged first stop. Existing tests are unchanged. These tests
+are source only and await the same RCH qualification; no executed result is claimed.
+
+## Runnable operator selection
+
+The existing command explicitly selects this path with `--terminal-clocks`:
+
+```sh
+cargo run --locked -p fa-reference --example shutdown_fleet -- create /operator/fleet.json --terminal-clocks
+cargo run --locked -p fa-reference --example shutdown_fleet -- resume /operator/fleet.json --terminal-clocks --coordinator-anchor /operator/custody/previous.anchor --retain-coordinator-anchor /operator/custody/next.anchor
+```
+
+Both existing fleet profile formats and independent coordinator-custody options
+are supported. Without the flag, the original supplied-time invocation and result
+schema remain unchanged. A duplicate flag refuses; selecting terminal clocks never
+falls back to early timestamps after an error. Plan/configuration/custody admission
+and original anchor retention/reporting are shared, not reimplemented here.
+
+The Unix clock is sampled only when a verified member requires native settlement.
+The original cumulative elapsed budget is checked at each replay checkpoint and
+immediately before and after that clock call. A slow or failed clock supplies no
+usable time and leaves the domain unchanged; the negative coordinator completion
+may still require storage. A later member can proceed after a clock refusal, but
+elapsed expiry ends the remaining pass. Evidence-only resume can succeed without
+a working Unix clock; its elapsed deadline still requires monotonic observations.
+
+The selected path emits `fa.shutdown-fleet-result/2` using the original result
+fields plus `acquired_tick` per member. A string is the exact callback result,
+not confirmation of storage. Null means no tick was returned to native settlement:
+resolution, already-drained rereads, pre-acquisition refusal/cancellation, or a
+failed clock all qualify. A clock that blocks past the elapsed deadline is also
+rejected without reporting its result as an admitted observation. No zero timestamp
+is invented for these states. Earlier successful members and every unvisited tail
+remain explicit. Only original per-member receipts determine stopped/drained.
+
+Seven operator tests cover independently acquired ticks and prior-member settlement,
+clock-free exact resume at the visit ceiling, clock refusal with a reachable tail,
+expiry during acquisition, caught clock unwind without retry, actual flag routing
+with a legacy control, and anchored retention before lost stdout. These augment
+seven fleet-pass tests and the eight single-domain tests (22 authored functions).
+Existing test assertions are unchanged. Targeted native/example and full xtask
+commands remain required through RCH; absent tooling does not qualify this code.

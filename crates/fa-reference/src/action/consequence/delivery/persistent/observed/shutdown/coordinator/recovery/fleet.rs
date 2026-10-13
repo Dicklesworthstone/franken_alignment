@@ -2,6 +2,8 @@
 //! Per-domain acknowledgments are not a simultaneous or distributed atomic stop.
 use super::*;
 mod checkpoint;
+mod clocked;
+pub use clocked::{FileShutdownClockedPassMember, FileShutdownClockedRecoveryPass};
 pub use checkpoint::FileShutdownRecoveryCheckpoint;
 
 /// A trusted operator observation in this registered domain's clock system.
@@ -157,6 +159,24 @@ impl FileShutdownCoordinator {
     fn prepare_registered_pass(&self, revision: u64, clocks: &[FileShutdownClock], resume: bool)
         -> Result<(FileShutdownRecoveryPass, Vec<Option<usize>>), JournalError>
     {
+        let (ordered, resolutions) = self.prepare_registered_members(revision, clocks, resume,
+            |clock| (clock.domain, clock.clock_domain))?;
+        let mut members = Vec::new();
+        members.try_reserve_exact(ordered.len()).map_err(|_| Error::Limit)?;
+        members.extend(ordered.into_iter().map(|clock| FileShutdownPassMember {
+            clock, result: FileShutdownPassResult::NotVisited,
+        }));
+        let pass = FileShutdownRecoveryPass { operation: self.campaign.plan.operation,
+            initial_revision: revision, final_revision: revision, members };
+        Ok((pass, resolutions))
+    }
+
+    // Shared exact roster/identity/capacity admission. A binding has no time;
+    // validation never manufactures a tick or invokes an external callback.
+    fn prepare_registered_members<C: Copy>(&self, revision: u64, clocks: &[C], resume: bool,
+        identity: fn(&C) -> (u64, u64))
+        -> Result<(Vec<C>, Vec<Option<usize>>), JournalError>
+    {
         if self.unavailable { return Err(JournalError::Unavailable); }
         if revision != self.revision { return Err(Error::Stale.into()); }
         if clocks.len() > MAX_SHUTDOWN_DOMAINS { return Err(Error::Limit.into()); }
@@ -165,12 +185,12 @@ impl FileShutdownCoordinator {
         let mut ordered = Vec::new();
         ordered.try_reserve_exact(count).map_err(|_| Error::Limit)?;
         ordered.extend_from_slice(clocks);
-        ordered.sort_by_key(|clock| clock.domain);
-        if ordered.windows(2).any(|pair| pair[0].domain == pair[1].domain) {
+        ordered.sort_by_key(|clock| identity(clock).0);
+        if ordered.windows(2).any(|pair| identity(&pair[0]).0 == identity(&pair[1]).0) {
             return Err(Error::Duplicate.into());
         }
         for (clock, domain) in ordered.iter().zip(self.campaign.plan.domains.iter()) {
-            if clock.domain != domain.id() || clock.clock_domain != domain.clock_domain() {
+            if identity(clock) != (domain.id(), domain.clock_domain()) {
                 return Err(Error::Binding.into());
             }
         }
@@ -182,7 +202,7 @@ impl FileShutdownCoordinator {
             // Consider the LAST visit of any kind, not an older convenient
             // success. A later refusal/inspection must not disappear on resume.
             let latest = self.visits.iter().enumerate().rev()
-                .find(|(_, visit)| visit.domain == clock.domain);
+                .find(|(_, visit)| visit.domain == identity(clock).0);
             let resolution = latest.filter(|(_, visit)| resume
                 && matches!(visit.kind, ShutdownVisitKind::Advance { .. }
                     | ShutdownVisitKind::RecoverStopped { .. } | ShutdownVisitKind::RecoverStoppedAtCompletion)
@@ -199,14 +219,7 @@ impl FileShutdownCoordinator {
             || self.campaign.attempts.len().checked_add(count).ok_or(Error::Limit)? > self.campaign.plan.max_attempts
         { return Err(Error::Limit.into()); }
         self.revision.checked_add(growth).ok_or(Error::Overflow)?;
-        let mut members = Vec::new();
-        members.try_reserve_exact(count).map_err(|_| Error::Limit)?;
-        members.extend(ordered.into_iter().map(|clock| FileShutdownPassMember {
-            clock, result: FileShutdownPassResult::NotVisited,
-        }));
-        let pass = FileShutdownRecoveryPass { operation: self.campaign.plan.operation,
-            initial_revision: revision, final_revision: revision, members };
-        Ok((pass, resolutions))
+        Ok((ordered, resolutions))
     }
 
 }

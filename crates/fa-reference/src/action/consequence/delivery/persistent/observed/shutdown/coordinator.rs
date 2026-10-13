@@ -8,7 +8,8 @@ pub use recovery::cooperative::FileShutdownVisitRecovery;
 pub use recovery::clocked::FileShutdownClockBinding;
 pub use recovery::resolution::FileShutdownVisitResolution;
 pub use recovery::fleet::{FileShutdownClock, FileShutdownPassMember,
-    FileShutdownPassResult, FileShutdownRecoveryPass, FileShutdownRecoveryCheckpoint};
+    FileShutdownPassResult, FileShutdownRecoveryPass, FileShutdownRecoveryCheckpoint,
+    FileShutdownClockedPassMember, FileShutdownClockedRecoveryPass};
 #[cfg(test)]
 mod tests;
 
