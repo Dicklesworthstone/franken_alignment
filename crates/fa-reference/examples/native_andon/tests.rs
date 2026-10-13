@@ -155,3 +155,6 @@ fn actual_command_routing_checks_closed_arguments_before_configuration_and_count
     command_with_elapsed(&args, &mut || Duration::ZERO, &mut Vec::new()).unwrap();
     assert!(root.anchor().exists());
 }
+
+#[path = "mutation_tests.rs"]
+mod mutations;

@@ -1,6 +1,8 @@
 //! Original guarded creation and historical inspection with independent custody.
 #[path = "settings.rs"]
 mod settings;
+#[path = "mutations.rs"]
+mod mutations;
 use settings::Settings;
 use crate::config::{Config, debug};
 use crate::profile::{CreationOutput, ResumeProfile};
@@ -10,7 +12,7 @@ use fa_reference::action::consequence::oversight::credibility::CredibilityReport
 use fa_reference::round::review::andon::AndonLedger;
 use std::{io::Write, path::Path, time::{Duration, Instant}};
 
-const USAGE: &str = "usage: native_andon create CONFIG ANDON_PROFILE NEW_ANCHOR\n       native_andon inspect CONFIG ANDON_PROFILE RECOVERY_PROFILE";
+const USAGE: &str = "usage: native_andon create CONFIG ANDON_PROFILE NEW_ANCHOR\n       native_andon inspect CONFIG ANDON_PROFILE RECOVERY_PROFILE\n       native_andon assess CONFIG ANDON_PROFILE RECOVERY_PROFILE ASSESSMENT_JSON\n       native_andon register-window CONFIG ANDON_PROFILE RECOVERY_PROFILE WINDOW_JSON";
 
 pub(crate) fn command(args: &[String], out: &mut impl Write) -> Result<(), String> {
     let started = Instant::now();
@@ -20,7 +22,13 @@ fn command_with_elapsed(args: &[String], elapsed: &mut impl FnMut() -> Duration,
     out: &mut impl Write) -> Result<(), String>
 {
     // Closed routing BEFORE opening configuration or any authority path.
-    if args.len() != 4 || !matches!(args[0].as_str(), "create" | "inspect") {
+    let mode = args.first().map(String::as_str).unwrap_or("");
+    let expected = match mode {
+        "create" | "inspect" => 4,
+        "assess" | "register-window" => 5,
+        _ => return Err(USAGE.into()),
+    };
+    if args.len() != expected {
         return Err(USAGE.into());
     }
     let config = Config::read(Path::new(&args[1]))?;
@@ -35,6 +43,12 @@ fn command_with_elapsed(args: &[String], elapsed: &mut impl FnMut() -> Duration,
     match args[0].as_str() {
         "create" => create(&config, &settings, Path::new(&args[3]), &mut checkpoint, out),
         "inspect" => inspect(&config, &settings, Path::new(&args[3]), &mut checkpoint, out),
+        "assess" | "register-window" => {
+            let mutation = mutations::Mutation::read(mode, Path::new(&args[4]))?;
+            checkpoint()?;
+            mutations::run(&config, &settings, Path::new(&args[3]), &mutation,
+                &mut checkpoint, &mut mutations::clock, out)
+        }
         _ => unreachable!("closed command"),
     }
 }

@@ -81,16 +81,16 @@ pub(super) fn guards(config: &Config) -> FileGuardSet {
     FileGuardSet { stream: None, decoder: None, decoder_stop: None,
         source: Some(config.source_policy), identity: None, campaigns: None, credential: None }
 }
-fn object(value: Json) -> Result<BTreeMap<String, Json>, String> {
+pub(super) fn object(value: Json) -> Result<BTreeMap<String, Json>, String> {
     match value { Json::Object(fields) => Ok(fields), _ => Err("expected Andon profile object".into()) }
 }
-fn take(fields: &mut BTreeMap<String, Json>, key: &str) -> Result<Json, String> {
+pub(super) fn take(fields: &mut BTreeMap<String, Json>, key: &str) -> Result<Json, String> {
     fields.remove(key).ok_or_else(|| format!("missing Andon profile field {key}"))
 }
-fn number(fields: &mut BTreeMap<String, Json>, key: &str) -> Result<u64, String> {
+pub(super) fn number(fields: &mut BTreeMap<String, Json>, key: &str) -> Result<u64, String> {
     take(fields, key)?.as_u64().ok_or_else(|| format!("{key} must be an unsigned integer"))
 }
-fn end(fields: BTreeMap<String, Json>) -> Result<(), String> {
+pub(super) fn end(fields: BTreeMap<String, Json>) -> Result<(), String> {
     if fields.is_empty() { Ok(()) } else { Err("unknown Andon profile fields".into()) }
 }
 fn fraction(value: Json) -> Result<Fraction, String> {
@@ -103,7 +103,7 @@ fn fraction(value: Json) -> Result<Fraction, String> {
     }
     Ok(fraction)
 }
-fn windows(value: Json) -> Result<Vec<AndonBudget>, String> {
+pub(super) fn windows(value: Json) -> Result<Vec<AndonBudget>, String> {
     let Json::Array(values) = value else { return Err("windows must be an array".into()); };
     if values.len() > MAX_WINDOWS { return Err("too many Andon windows".into()); }
     values.into_iter().map(|value| {
