@@ -1,6 +1,6 @@
 //! Restart progress without a surviving in-memory domain owner. Coordinator
 //! intent precedes domain I/O; the ORIGINAL registered history remains authority.
-mod resolution;
+pub(super) mod resolution;
 pub(super) mod cooperative;
 pub(super) mod fleet;
 #[cfg(test)]

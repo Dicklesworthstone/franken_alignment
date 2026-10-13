@@ -3,6 +3,7 @@
 mod codec;
 mod recovery;
 pub use recovery::cooperative::FileShutdownVisitRecovery;
+pub use recovery::resolution::FileShutdownVisitResolution;
 pub use recovery::fleet::{FileShutdownClock, FileShutdownPassMember,
     FileShutdownPassResult, FileShutdownRecoveryPass, FileShutdownRecoveryCheckpoint};
 #[cfg(test)]

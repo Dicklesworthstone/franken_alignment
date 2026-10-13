@@ -1,7 +1,8 @@
 //! Passive resolution of ambiguous per-domain shutdown acknowledgments.
+pub(super) mod replay;
+use replay::CanonicalRead;
 use super::*;
-use super::campaign::observe;
-use super::super::{Event, Machine, Transition, storage};
+use super::super::{Event, storage};
 use super::super::decoder::DecoderEvent;
 use super::super::consistency::ConsistencyEvent;
 
@@ -19,6 +20,10 @@ impl FileShutdownCampaign {
     pub(super) fn read_canonical(&self, index: usize)
         -> Result<(FileShutdownObservation, Rc<[u8]>, usize), JournalError>
     {
+        self.begin_canonical_read(index)?.complete()
+    }
+
+    pub(super) fn begin_canonical_read(&self, index: usize) -> Result<CanonicalRead, JournalError> {
         let domain = &self.plan.domains[index];
         let path = storage::identity(&domain.directory)?;
         if path != domain.directory { return Err(Error::Binding.into()); }
@@ -26,15 +31,7 @@ impl FileShutdownCampaign {
         self.check_head_size(index, bytes.len())?;
         let events = journal::decode(&domain.profile, &path, &bytes)?;
         self.check_canonical_events(index, &path, &events)?;
-        let mut machine = Machine::new(&domain.profile)?;
-        let mut last_drain = None;
-        for (position, event) in events.iter().enumerate() {
-            if let Transition::StopProgressed(sweep) = machine.apply(event)? {
-                last_drain = Some(FileShutdownDrain { journal_revision: (position + 1) as u64, sweep });
-            }
-        }
-        let observation = observe(domain, &machine, &events, FileShutdownSource::CanonicalImage, last_drain)?;
-        Ok((observation, bytes.into(), events.len()))
+        CanonicalRead::new(domain.clone(), bytes, events)
     }
 
     /// Shared passive admission. A registered recovery must not execute an
