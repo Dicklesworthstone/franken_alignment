@@ -285,3 +285,6 @@ fn changed_bootstrap_cannot_refill_the_retained_budget() {
 
 #[path = "qualified_tests.rs"]
 mod qualified;
+
+#[path = "continuation/guarded_tests.rs"]
+mod guarded;

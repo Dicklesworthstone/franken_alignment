@@ -94,6 +94,19 @@ impl ResumeProfile {
     pub(crate) fn admit(&self, config: &Config) -> Result<Custody, String> { self.0.admit(config) }
 }
 
+/// Explicit new-work recovery intent, never inferred from a stop/receipt profile.
+pub(crate) struct SubmitProfile(Profile);
+impl SubmitProfile {
+    pub(crate) fn read(path: &Path) -> Result<Self, String> {
+        Self::decode(&read_regular(path, PROFILE_BYTES)?)
+    }
+    pub(crate) fn decode(bytes: &[u8]) -> Result<Self, String> {
+        Profile::decode_schema(bytes, "fa.guarded-submit/1", "unsupported guarded submit profile").map(Self)
+    }
+    pub(crate) fn minimum(&self) -> FileRecoveryFloor { self.0.minimum() }
+    pub(crate) fn admit(&self, config: &Config) -> Result<Custody, String> { self.0.admit(config) }
+}
+
 pub(crate) struct Custody {
     anchor: FileHistoryAnchor,
     output: Option<PathBuf>,
