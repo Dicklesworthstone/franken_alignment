@@ -8,7 +8,7 @@
 mod observation;
 pub mod routing;
 
-pub use observation::{ChangeObservation, ChangeObservationOutcome, ChangeObservationReport};
+pub use observation::{ChangeObservation, ChangeObservationOutcome, ChangeObservationReport, RoutedChangeCommit};
 use super::RefinementBudget;
 
 use super::{Error, ProductFrontiers, Witness, WitnessJudgment, WitnessRefinement, WitnessSnapshot, closed_marker};

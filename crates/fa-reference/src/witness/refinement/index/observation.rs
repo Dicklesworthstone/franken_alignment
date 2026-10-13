@@ -6,6 +6,7 @@ use super::{
     ChangeCost, Delta, Error, ProductFrontiers, WitnessChangeIndex, WitnessSnapshot, closed_marker,
 };
 use crate::witness::{SnapshotEntry, refinement::RefinementBudget};
+use super::routing::{InvalidationIndex, RoutingBudget, RoutingReport, WitnessChange};
 use std::collections::{BTreeSet, btree_map::{Iter, Keys}};
 
 /// Progress of a change observation, never evidence that a judgment is valid.
@@ -29,6 +30,19 @@ pub struct ChangeObservationReport {
     pub spent: RefinementBudget,
     pub total: RefinementBudget,
     pub cost: ChangeCost,
+}
+
+/// Result of routing a complete observation before publishing its change tail.
+/// `committed` is the publication result; `observation.outcome == Ready` alone
+/// still means only that scanning finished. Errors retain both work reports and
+/// expose no candidate prefix. This report is neither a permit nor proof that
+/// an external consumer has withdrawn the returned observations.
+#[derive(Clone, Debug, PartialEq, Eq)]
+#[must_use = "check publication and apply the complete notification or fail closed"]
+pub struct RoutedChangeCommit {
+    pub committed: Result<ChangeCost, Error>,
+    pub observation: ChangeObservationReport,
+    pub routing: RoutingReport,
 }
 
 #[derive(Clone, Copy)]
@@ -181,6 +195,57 @@ impl ChangeObservation<'_, '_> {
         self.report(outcome, RefinementBudget::default())
     }
 
+    /// Derive notifications from this ORIGINAL completed snapshot comparison,
+    /// route the entire batch, then publish through the ordinary commit path.
+    /// No unchecked changed-key list is accepted. A routing failure leaves the
+    /// current snapshot, history floor and all retained deltas unchanged.
+    ///
+    /// A different closing marker needs a domain notification even when no key
+    /// changed. An empty delta also routes the domain conservatively: equality
+    /// of structured values does not prove an opaque helper input stayed equal.
+    /// With a nonempty delta and unchanged closure, only changed keys are routed.
+    ///
+    /// Scan work is retained separately from the shared routing allowance.
+    /// Materializing at most MAX_BATCH_CHANGES value-free notification records,
+    /// allocation and commit housekeeping are bounded but not charged as routing
+    /// lookup work. No hard elapsed-time or automatic withdrawal claim is made.
+    pub fn commit_routed(mut self, routes: &InvalidationIndex, budget: RoutingBudget) -> RoutedChangeCommit {
+        let observation = self.advance(RefinementBudget::default());
+        let refusal = match observation.outcome {
+            ChangeObservationOutcome::Ready => None,
+            ChangeObservationOutcome::Refused(error) => Some(error),
+            _ => Some(Error::Incomplete),
+        };
+        if let Some(error) = refusal {
+            return RoutedChangeCommit { committed: Err(error), observation,
+                routing: RoutingReport { candidates: Err(error), spent: RoutingBudget::default() } };
+        }
+        let domain = self.next.domain_input.domain;
+        let whole_domain = self.keys.is_empty()
+            || self.before.domain_input.closure != self.next.domain_input.closure;
+        let count = if whole_domain { 1 } else { self.keys.len() };
+        let mut changes = Vec::new();
+        if count > InvalidationIndex::MAX_BATCH_CHANGES || changes.try_reserve_exact(count).is_err() {
+            return RoutedChangeCommit { committed: Err(Error::Limit), observation,
+                routing: RoutingReport { candidates: Err(Error::Limit), spent: RoutingBudget::default() } };
+        }
+        if whole_domain {
+            changes.push(WitnessChange::Domain { domain });
+        } else {
+            changes.extend(self.keys.iter().map(|key| WitnessChange::Key { domain, key: *key }));
+        }
+        let mut routing = routes.affected_batch(&changes, budget);
+        if let Err(error) = routing.candidates.as_ref() {
+            return RoutedChangeCommit { committed: Err(*error), observation, routing };
+        }
+        let committed = self.commit();
+        if let Err(error) = committed {
+            // Candidates must not be mistaken for a successfully published cut.
+            routing.candidates = Err(error);
+        }
+        RoutedChangeCommit { committed, observation, routing }
+    }
+
     /// Publish only a fully scanned delta. This consumes the update, so it
     /// cannot commit twice. No payload reads or comparisons occur here; bounded
     /// delta eviction and queue housekeeping are separate from scan work.
@@ -275,3 +340,178 @@ impl ChangeObservation<'_, '_> {
 
 #[cfg(test)]
 mod tests;
+
+#[cfg(test)]
+mod routed_tests {
+    use super::*;
+    use crate::product_frontier::{FrontierStage, ProjectionKey, TrustedClosingMarker};
+    use crate::witness::{AdapterDomainInput, DomainClosure, DomainProjection, Invalidation,
+        QueryRole, Reuse, WitnessJudgment, WitnessRequest, MAX_SNAPSHOT_ENTRIES};
+    use crate::witness::refinement::{RefinementOutcome, index::IndexSelection};
+    use crate::witness::refinement::index::routing::{RoutingLimits, RoutingStrategy};
+
+    fn scan_budget() -> RefinementBudget { RefinementBudget { steps: u64::MAX, value_bytes: u64::MAX } }
+    fn route_budget() -> RoutingBudget { RoutingBudget { steps: u64::MAX, bytes: u64::MAX } }
+    fn basis(revision: u64, generation: u64, entries: Vec<SnapshotEntry>) -> (WitnessSnapshot, ProductFrontiers) {
+        let key = ProjectionKey { source: 1, branch: 2, projection: 3, source_epoch: 4 };
+        let marker = TrustedClosingMarker { key, final_sequence: 1, marker_generation: generation };
+        let mut frontiers = ProductFrontiers::new(1, 1).unwrap();
+        frontiers.accept(key, FrontierStage::Authenticated, 1).unwrap();
+        frontiers.record_close(marker).unwrap();
+        let domain = DomainProjection::new(5, 6, key);
+        (WitnessSnapshot::new(revision, revision, 7,
+            AdapterDomainInput::new(domain, DomainClosure::Closed(marker)), entries).unwrap(), frontiers)
+    }
+    fn value(key: u64, bytes: &[u8]) -> SnapshotEntry {
+        SnapshotEntry::new(key, 1, bytes.to_vec()).unwrap()
+    }
+    fn routes(strategy: RoutingStrategy) -> InvalidationIndex {
+        InvalidationIndex::new_with_strategy(RoutingLimits { judgments: 8, dependencies: 8 }, strategy).unwrap()
+    }
+    fn captured(snapshot: &WitnessSnapshot, frontiers: &ProductFrontiers, request: WitnessRequest) -> WitnessJudgment {
+        WitnessJudgment::capture(snapshot, frontiers, vec![request]).unwrap()
+    }
+
+    #[test]
+    fn routed_commit_uses_the_original_delta_and_preserves_exact_refinement() {
+        for strategy in [RoutingStrategy::PrefixV1, RoutingStrategy::SubtreeV2] {
+            let (old, old_frontiers) = basis(1, 1, vec![value(2, b"old"), value(8, b"keep")]);
+            let (next, next_frontiers) = basis(2, 1, vec![value(2, b"new"), value(3, b"added"), value(8, b"keep")]);
+            let mut index = WitnessChangeIndex::new(&old, &old_frontiers, 2).unwrap();
+            let changed = index.capture(&old_frontiers,
+                vec![WitnessRequest::ExactValue { key: 2, role: QueryRole::PolicyInput }]).unwrap();
+            let absent = index.capture(&old_frontiers, vec![WitnessRequest::AbsentKey { key: 3 }]).unwrap();
+            let unchanged = index.capture(&old_frontiers,
+                vec![WitnessRequest::RangeMembers { start: 8, end: 9 }]).unwrap();
+            let mut routing = routes(strategy);
+            routing.register(20, Some(changed.judgment()), false).unwrap();
+            routing.register(30, Some(absent.judgment()), false).unwrap();
+            routing.register(80, Some(unchanged.judgment()), false).unwrap();
+            routing.register(7, None, true).unwrap();
+            let mut pending = index.begin_observe(&next, &next_frontiers);
+            let scanned = pending.advance(scan_budget());
+            assert_eq!(scanned.outcome, ChangeObservationOutcome::Ready);
+            let report = pending.commit_routed(&routing, route_budget());
+            assert_eq!(report.committed, Ok(scanned.cost));
+            assert_eq!(report.observation.total, scanned.total);
+            assert_eq!(report.observation.spent, RefinementBudget::default());
+            assert_eq!(report.routing.candidates, Ok(vec![20, 30, 7]));
+            assert_eq!(index.current_revision(), 2);
+            let mut ordinary = WitnessChangeIndex::new(&old, &old_frontiers, 2).unwrap();
+            assert_eq!(ordinary.observe(&next, &next_frontiers), report.committed);
+            let (selection, mut cursor) = index.begin_refinement(&unchanged, &next, &next_frontiers, u64::MAX);
+            assert_eq!(selection.selection, IndexSelection::Candidates { count: 0 });
+            assert_eq!(cursor.advance(scan_budget()).outcome, RefinementOutcome::StillValid);
+            for judgment in [&changed, &absent] {
+                let (_, mut cursor) = index.begin_refinement(judgment, &next, &next_frontiers, u64::MAX);
+                assert!(matches!(cursor.advance(scan_budget()).outcome, RefinementOutcome::Invalidated { .. }));
+            }
+        }
+    }
+
+    #[test]
+    fn routing_exhaustion_does_not_publish_or_evict_and_preserves_scan_work() {
+        let (one, f1) = basis(1, 1, vec![value(1, b"old")]);
+        let (two, f2) = basis(2, 1, vec![value(1, b"old")]);
+        let (three, f3) = basis(3, 1, vec![value(1, b"new")]);
+        let mut index = WitnessChangeIndex::new(&one, &f1, 1).unwrap();
+        index.observe(&two, &f2).unwrap();
+        let mut routing = routes(RoutingStrategy::SubtreeV2);
+        routing.register(9, None, true).unwrap();
+        let mut pending = index.begin_observe(&three, &f3);
+        let scanned = loop {
+            let report = pending.advance(RefinementBudget { steps: 1, value_bytes: 1 });
+            match report.outcome {
+                ChangeObservationOutcome::Ready => break report,
+                ChangeObservationOutcome::NeedsWork { .. } => {}
+                other => panic!("unexpected scan: {other:?}"),
+            }
+        };
+        let rejected = pending.commit_routed(&routing, RoutingBudget::default());
+        assert_eq!(rejected.committed, Err(Error::Incomplete));
+        assert_eq!(rejected.routing.candidates, Err(Error::Incomplete));
+        assert_eq!(rejected.routing.spent, RoutingBudget::default());
+        assert_eq!(rejected.observation.total, scanned.total);
+        assert!(rejected.observation.total.steps > 0 && rejected.observation.total.value_bytes > 0);
+        assert_eq!(index.current_revision(), 2);
+        assert_eq!(index.oldest_covered_revision(), 1);
+        assert_eq!(index.retained_revisions(), 1);
+        let mut retry = index.begin_observe(&three, &f3);
+        assert_eq!(retry.advance(scan_budget()).outcome, ChangeObservationOutcome::Ready);
+        let report = retry.commit_routed(&routing, route_budget());
+        assert!(report.committed.is_ok());
+        assert_eq!(report.routing.candidates, Ok(vec![9]));
+        assert_eq!(index.current_revision(), 3);
+        assert_eq!(index.oldest_covered_revision(), 2);
+    }
+
+    #[test]
+    fn unfinished_and_refused_scans_cannot_route_or_advance_history() {
+        let (old, frontiers) = basis(1, 1, vec![]);
+        let (next, nf) = basis(2, 1, vec![value(3, b"new")]);
+        let (skipped, sf) = basis(4, 1, vec![]);
+        let mut index = WitnessChangeIndex::new(&old, &frontiers, 1).unwrap();
+        let routing = routes(RoutingStrategy::PrefixV1);
+        let pending = index.begin_observe(&next, &nf);
+        let incomplete = pending.commit_routed(&routing, route_budget());
+        assert_eq!(incomplete.committed, Err(Error::Incomplete));
+        assert!(matches!(incomplete.observation.outcome, ChangeObservationOutcome::NeedsWork { .. }));
+        assert_eq!(incomplete.routing.spent, RoutingBudget::default());
+        let mut invalid = index.begin_observe(&skipped, &sf);
+        assert_eq!(invalid.advance(scan_budget()).outcome, ChangeObservationOutcome::Refused(Error::Stale));
+        let refused = invalid.commit_routed(&routing, route_budget());
+        assert_eq!(refused.committed, Err(Error::Stale));
+        assert_eq!(refused.routing.candidates, Err(Error::Stale));
+        assert_eq!(refused.observation.total.steps, 1);
+        assert_eq!(index.current_revision(), 1);
+        assert_eq!(index.retained_revisions(), 0);
+    }
+
+    #[test]
+    fn closure_only_and_empty_deltas_cannot_hide_negative_or_opaque_dependencies() {
+        for generation in [1, 2] {
+            let (old, frontiers) = basis(1, 1, vec![value(2, b"same")]);
+            let (next, nf) = basis(2, generation, vec![value(2, b"same")]);
+            let negative = captured(&old, &frontiers, WitnessRequest::AbsentKey { key: 3 });
+            let exact = captured(&old, &frontiers, WitnessRequest::ExactValue { key: 2, role: QueryRole::Subject });
+            let mut index = WitnessChangeIndex::new(&old, &frontiers, 1).unwrap();
+            let mut routing = routes(RoutingStrategy::SubtreeV2);
+            routing.register(1, Some(&negative), false).unwrap();
+            routing.register(2, Some(&exact), false).unwrap();
+            routing.register(3, None, true).unwrap();
+            let mut pending = index.begin_observe(&next, &nf);
+            assert_eq!(pending.advance(scan_budget()).cost.changed_keys, 0);
+            let report = pending.commit_routed(&routing, route_budget());
+            assert!(report.committed.is_ok());
+            assert_eq!(report.routing.candidates, Ok(vec![1, 2, 3]));
+            assert!(matches!(exact.reuse_at(&next, &nf).unwrap(), Reuse::StillValid { .. }));
+            if generation == 2 {
+                assert!(matches!(negative.reuse_at(&next, &nf).unwrap(),
+                    Reuse::Invalidated { reason: Invalidation::ClosingFrontier, .. }));
+            } else {
+                assert!(matches!(negative.reuse_at(&next, &nf).unwrap(), Reuse::StillValid { .. }));
+            }
+        }
+    }
+
+    #[test]
+    fn maximum_disjoint_snapshots_route_every_derived_key_without_truncation() {
+        let size = MAX_SNAPSHOT_ENTRIES as u64;
+        let (old, f1) = basis(1, 1, (0..size).map(|key| value(key, b"")).collect());
+        let (next, f2) = basis(2, 1, (size..size * 2).map(|key| value(key, b"")).collect());
+        let old_key = captured(&old, &f1, WitnessRequest::ExactValue { key: 0, role: QueryRole::Subject });
+        let new_key = captured(&old, &f1, WitnessRequest::AbsentKey { key: size * 2 - 1 });
+        let mut routing = routes(RoutingStrategy::PrefixV1);
+        routing.register(1, Some(&old_key), false).unwrap();
+        routing.register(2, Some(&new_key), false).unwrap();
+        let mut index = WitnessChangeIndex::new(&old, &f1, 1).unwrap();
+        let mut pending = index.begin_observe(&next, &f2);
+        let scanned = pending.advance(scan_budget());
+        assert_eq!(scanned.outcome, ChangeObservationOutcome::Ready);
+        assert_eq!(scanned.cost.changed_keys, InvalidationIndex::MAX_BATCH_CHANGES);
+        let report = pending.commit_routed(&routing, route_budget());
+        assert_eq!(report.committed, Ok(scanned.cost));
+        assert_eq!(report.routing.candidates, Ok(vec![1, 2]));
+        assert_eq!(index.current_revision(), 2);
+    }
+}
