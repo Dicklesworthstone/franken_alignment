@@ -10,6 +10,7 @@ use std::{collections::BTreeMap, fs::{self, File}, io::{Cursor, Read},
     os::unix::fs::{MetadataExt, PermissionsExt}, path::{Component, Path, PathBuf}, time::Duration};
 
 mod archive;
+pub(super) mod custody;
 
 const MANIFEST_BYTES: usize = 256 * 1024;
 const INPUT_BYTES: usize = 128 * 1024 * 1024;
@@ -29,7 +30,7 @@ pub(super) struct Spec {
     members: Vec<Member>,
     plan_archive: Option<PathBuf>,
 }
-pub(super) struct Prepared { pub spec: Spec, pub plan: FileShutdownPlan }
+pub(super) struct Prepared { pub spec: Spec, pub plan: FileShutdownPlan, remaining_input_bytes: usize }
 
 impl Spec {
     pub fn read(path: &Path) -> Result<Self, String> {
@@ -118,7 +119,7 @@ impl Spec {
         }
         if let Some(archive) = &self.plan_archive {
             let plan = archive::load(&self, archive, configurations, &mut remaining, check)?;
-            return Ok(Prepared { spec: self, plan });
+            return Ok(Prepared { spec: self, plan, remaining_input_bytes: remaining });
         }
         let mut domains = Vec::new(); let mut retained = 0_usize;
         for (member, config) in self.members.iter().zip(configurations) {
@@ -136,7 +137,7 @@ impl Spec {
         }
         let plan = FileShutdownPlan::new(self.operation, domains, self.visits, self.head_bytes).map_err(err)?;
         check()?;
-        Ok(Prepared { spec: self, plan })
+        Ok(Prepared { spec: self, plan, remaining_input_bytes: remaining })
     }
 }
 
