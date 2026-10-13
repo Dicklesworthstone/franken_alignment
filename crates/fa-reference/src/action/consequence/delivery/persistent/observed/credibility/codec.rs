@@ -1,5 +1,5 @@
 //! Fixed-size inputs to original evaluation, not serialized scores or approvals.
-use super::{CredibilityEvent, FileCredibilityUpdate, held_out_joint, joint};
+use super::{CredibilityEvent, FileCredibilityUpdate, held_out_joint, joint, andon};
 use super::super::super::codec::shared::{Reader, Writer};
 use crate::action::consequence::oversight::credibility::{Assessment, EvaluationProtocol, Fraction, GroundTruth};
 use crate::Error;
@@ -8,6 +8,8 @@ use super::super::super::credibility::CredibilityWithdrawalRequest;
 
 pub(in super::super) fn write(w: &mut Writer, event: &CredibilityEvent) -> Result<(), Error> {
     match event {
+        CredibilityEvent::EnableAndon(config) => { w.u8(7)?; andon::write_config(w, config)?; }
+        CredibilityEvent::AndonWindow(window) => { w.u8(8)?; andon::write_window(w, *window)?; }
         CredibilityEvent::EnableHeldOutJoint(policy) => {
             w.u8(6)?; held_out_joint::write_policy(w, *policy)?;
         }
@@ -41,6 +43,8 @@ pub(in super::super) fn write(w: &mut Writer, event: &CredibilityEvent) -> Resul
 pub(in super::super) fn read(r: &mut Reader<'_>) -> Result<CredibilityEvent, Error> {
     let tag = r.u8()?;
     Ok(match tag {
+        7 => CredibilityEvent::EnableAndon(andon::read_config(r)?),
+        8 => CredibilityEvent::AndonWindow(andon::read_window(r)?),
         6 => CredibilityEvent::EnableHeldOutJoint(held_out_joint::read_policy(r)?),
         3 => CredibilityEvent::ActivateHeldOut(Box::new(held_out::decode_activation(
             r.blob(held_out::MAX_ACTIVATION_BYTES)?)?)),

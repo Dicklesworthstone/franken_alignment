@@ -2,6 +2,8 @@
 mod held_out;
 
 use super::{Machine, Transition};
+use super::super::credibility::andon::FileAndonConfig;
+use crate::action::consequence::oversight::credibility::GroundTruth;
 use super::super::credibility::{CredibilityEvent, FileCredibilityUpdate};
 use crate::action::consequence::oversight::credibility::{
     CredibilityPromotion, EvaluationProtocol, IndependentEvaluator, MAX_WEIGHT_CHANGES,
@@ -12,12 +14,16 @@ use std::collections::BTreeMap;
 pub(super) struct CredibilityState {
     protocol: EvaluationProtocol,
     evaluator: IndependentEvaluator,
+    andon: Option<FileAndonConfig>,
     // Only exact operation identity and index into ORIGINAL retained promotions.
     // No copied score history, alternative denominator, or mutable congress.
     operations: BTreeMap<u64, (FileCredibilityUpdate, usize)>,
 }
 
 impl Machine {
+    pub(in super::super) fn andon_contract(&self) -> Option<&FileAndonConfig> {
+        self.credibility.as_ref().and_then(|state| state.andon.as_ref())
+    }
     pub(in super::super) fn credibility_contract(&self) -> Option<&EvaluationProtocol> {
         self.credibility.as_ref().map(|state| &state.protocol)
     }
@@ -38,6 +44,18 @@ impl Machine {
     }
     pub(super) fn apply_credibility(&mut self, event: &CredibilityEvent) -> Result<Transition, Error> {
         match event {
+            CredibilityEvent::EnableAndon(config) => {
+                let state = self.credibility.as_ref().ok_or(Error::Incomplete)?;
+                if state.andon.is_some() { return Err(Error::Duplicate); }
+                if !self.actions.is_empty() || self.requests.len() != 0 || !self.sessions.is_empty() {
+                    return Err(Error::WrongState);
+                }
+                self.broker.enable_andon(config.accounting()?)?;
+                self.credibility.as_mut().expect("enabled evaluation").andon = Some(config.clone());
+            }
+            CredibilityEvent::AndonWindow(budget) => {
+                if !self.broker.register_andon_window(*budget)? { return Err(Error::Duplicate); }
+            }
             CredibilityEvent::ActivateHeldOut(request) => return self.activate_held_out(request),
             CredibilityEvent::WithdrawHeldOut(request) => return self.withdraw_held_out(request),
             CredibilityEvent::EnableHeldOutJoint(policy) => {
@@ -57,10 +75,16 @@ impl Machine {
                 }
                 if !self.publication_guard { self.enable_publication_guard()?; }
                 self.credibility = Some(CredibilityState {
-                    protocol: protocol.clone(), evaluator, operations: BTreeMap::new(),
+                    protocol: protocol.clone(), evaluator, operations: BTreeMap::new(), andon: None,
                 });
             }
             CredibilityEvent::Assess(round, assessment) => {
+                // After recovery, historical time cannot date a NEW benign
+                // label. Censored/violation facts and public exact retries keep
+                // their original clock-free behavior. Replay sees the original
+                // Time events before their original labels, never fresh I/O.
+                if self.andon_contract().is_some() && assessment.truth == GroundTruth::Benign
+                    && !self.clock_ready { return Err(Error::Incomplete); }
                 let ticket = self.broker.evaluation_ticket(*round)?;
                 let evaluator = &self.credibility.as_ref().ok_or(Error::Incomplete)?.evaluator;
                 let label = evaluator.assess(&ticket, *assessment)?;
