@@ -49,6 +49,7 @@ pub struct NativeEvaluatedFalseHold {
     assessment: Assessment,
     fact: TrustedFalseHold,
     budget: AndonBudget,
+    accepted_revision: u64,
 }
 
 impl NativeEvaluatedFalseHold {
@@ -57,6 +58,29 @@ impl NativeEvaluatedFalseHold {
     pub fn assessment(&self) -> Assessment { self.assessment }
     pub fn confirmation(&self) -> &TrustedFalseHold { &self.fact }
     pub fn budget(&self) -> AndonBudget { self.budget }
+    /// Original label-acceptance order in this native owner. Equal clock ticks
+    /// and arbitrary round IDs cannot reorder the incident-opening evidence.
+    pub fn accepted_revision(&self) -> u64 { self.accepted_revision }
+}
+
+/// A complete immutable native accounting cut, borrowed from the actual broker.
+/// There is no subset constructor or mutable ledger escape. The seed's historical
+/// confirmations remain in `ledger` even when this owner has no native receipts
+/// for them; synchronization must find those records in its recovered file.
+#[derive(Debug)]
+pub struct NativeAndonSource<'a> {
+    binding: &'a NativeAndonBinding,
+    ledger: &'a AndonLedger,
+    receipts: Vec<&'a NativeEvaluatedFalseHold>,
+    revision: u64,
+}
+
+impl NativeAndonSource<'_> {
+    pub fn binding(&self) -> &NativeAndonBinding { self.binding }
+    pub fn ledger(&self) -> &AndonLedger { self.ledger }
+    /// Every receipt owned here, sorted by accepted revision, not round or time.
+    pub fn receipts(&self) -> &[&NativeEvaluatedFalseHold] { &self.receipts }
+    pub fn revision(&self) -> u64 { self.revision }
 }
 
 #[derive(Clone, Debug)]
@@ -103,6 +127,16 @@ impl CredibilityLedger {
     pub(crate) fn andon_ledger(&self) -> Result<&AndonLedger, Error> {
         Ok(&self.andon.as_ref().ok_or(Error::Incomplete)?.ledger)
     }
+    pub(crate) fn andon_source(&self) -> Result<NativeAndonSource<'_>, Error> {
+        let state = self.andon.as_ref().ok_or(Error::Incomplete)?;
+        let mut receipts = Vec::new();
+        receipts.try_reserve_exact(state.receipts.len()).map_err(|_| Error::Limit)?;
+        receipts.extend(state.receipts.values());
+        receipts.sort_unstable_by_key(|receipt| receipt.accepted_revision);
+        Ok(NativeAndonSource { binding: &state.binding, ledger: &state.ledger,
+            receipts, revision: self.revision })
+    }
+
     pub(crate) fn andon_receipt(&self, round: u64) -> Result<&NativeEvaluatedFalseHold, Error> {
         self.andon.as_ref().ok_or(Error::Incomplete)?.receipts.get(&round).ok_or(Error::Missing)
     }
@@ -159,7 +193,8 @@ impl CredibilityLedger {
         };
         let receipt = NativeEvaluatedFalseHold { binding: Rc::clone(&state.binding),
             case: record.case.clone(), assessment: label.assessment, fact,
-            budget: candidate.ledger.windows()[&window].budget };
+            budget: candidate.ledger.windows()[&window].budget,
+            accepted_revision: self.revision.checked_add(1).ok_or(Error::Overflow)? };
         candidate.receipts.insert(label.round, receipt);
         Ok(Some(candidate))
     }

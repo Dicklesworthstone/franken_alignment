@@ -83,6 +83,15 @@ impl OversightBroker {
         self.credibility.as_ref().ok_or(Error::Incomplete)?.ledger.andon_ledger()
     }
 
+    /// Borrow the complete accounting cut and ALL native receipts in their
+    /// original acceptance order. Retaining this view freezes the source owner
+    /// while a durable adapter checks and synchronizes it; no rights are copied.
+    pub fn andon_source(&self)
+        -> Result<super::super::credibility::native_andon::NativeAndonSource<'_>, Error>
+    {
+        self.credibility.as_ref().ok_or(Error::Incomplete)?.ledger.andon_source()
+    }
+
     /// Only an applied, complete empirical stop with an accepted native benign
     /// label emits a receipt. Pending/unapplied/nonqualifying cases return Missing.
     pub fn andon_receipt(&self, round: u64) -> Result<&NativeEvaluatedFalseHold, Error> {

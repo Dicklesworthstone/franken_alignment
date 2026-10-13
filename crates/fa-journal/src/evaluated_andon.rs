@@ -2,6 +2,8 @@
 //! Semantic preflight is all-or-nothing; disk publication is an explicit prefix
 //! of individually acknowledged records, not a new atomic batch/file format.
 
+pub mod native_sync;
+
 use crate::file::{Error, andon::FileAndonLedger};
 use crate::Head;
 use fa_reference::Error as ModelError;
