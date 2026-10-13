@@ -9,6 +9,8 @@ use crate::Error;
 use std::fmt;
 use std::path::Path;
 
+mod stopped;
+
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum FileGuardedRecoveryStatus {
     Replaying,

@@ -155,3 +155,5 @@ fn initial_publication_faults_never_leave_a_partially_guarded_canonical_owner() 
 #[path = "auto_stop_tests.rs"] mod auto_stop_tests;
 
 #[path = "recovery_tests.rs"] mod recovery_tests;
+
+#[path = "stopped_tests.rs"] mod stopped_tests;
