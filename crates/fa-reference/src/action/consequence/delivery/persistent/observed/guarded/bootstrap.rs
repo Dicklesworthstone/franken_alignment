@@ -84,6 +84,17 @@ impl PreparedGuardedBootstrap {
         Ok(self)
     }
 
+    /// Activate native accounting in the SAME first image as every guard and
+    /// the evaluation protocol. No usable pre-accounting owner escapes.
+    pub(super) fn with_andon(mut self, config: &super::super::credibility::andon::FileAndonConfig)
+        -> Result<Self, JournalError>
+    {
+        let event = Event::Credibility(super::super::credibility::CredibilityEvent::EnableAndon(config.clone()));
+        self.machine.apply(&event)?;
+        self.events.push(event);
+        Ok(self)
+    }
+
     /// Freeze marginal AND joint evaluation before the first canonical image.
     pub(super) fn jointly_evaluated(mut self,
         protocol: crate::action::consequence::oversight::credibility::EvaluationProtocol,

@@ -124,4 +124,4 @@ pub(in super::super) fn read_window(r: &mut Reader<'_>) -> Result<AndonBudget, E
 }
 
 #[cfg(test)]
-mod tests;
+pub(in super::super) mod tests;
