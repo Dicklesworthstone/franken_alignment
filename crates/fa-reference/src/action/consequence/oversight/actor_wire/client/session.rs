@@ -1,5 +1,6 @@
 //! Retain original requests, observations and budgets across explicit reconnects.
 mod recovery;
+mod drive_reservation;
 use super::{ActorExchange, ClientError, ClientFailure, ClientIoBudget, ClientIoLimits, ClientIoWork,
     ClientPhase, ClientProgress, Command, ResponseError, WireError, WireResponse};
 use super::super::super::actor::{ActorBasis, ActorOutcome, ActorProposal, Knowledge, MAX_ACTOR_BYTES, MAX_ACTOR_REQUESTS};

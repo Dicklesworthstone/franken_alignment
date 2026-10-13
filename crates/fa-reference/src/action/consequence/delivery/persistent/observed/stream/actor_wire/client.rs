@@ -1,6 +1,7 @@
 //! Write-ahead client ownership around the ORIGINAL ActorClient and Store.
 //! This is not a second server request ledger, effect authority or socket loop.
 mod image;
+mod drive;
 #[cfg(test)]
 mod tests;
 use crate::action::consequence::delivery::persistent::{storage, JournalError, MAX_JOURNAL_BYTES};
@@ -8,6 +9,7 @@ use crate::action::consequence::oversight::actor::ActorProposal;
 use crate::action::consequence::oversight::actor_wire::{Command, WireResponse};
 use crate::action::consequence::oversight::actor_wire::client::{ActorClient, ActorClientState,
     ClientError, ClientFailure, ClientIoWork, ClientPhase, ClientProgress, ClientSessionLimits};
+use crate::action::consequence::oversight::actor_wire::client::drive::{ClientDriveBudget, ClientDriveReport};
 use crate::Error;
 use std::fmt;
 use std::io::{Read, Write};
@@ -48,9 +50,17 @@ impl Owner {
         if expected != self.revision { return Err(Error::Stale.into()); } Ok(())
     }
     fn commit(&mut self, archive: &[u8], reserved: Option<ClientIoWork>) -> Result<(), FileClientError> {
+        self.commit_quantum(archive, reserved, None)
+    }
+    fn commit_quantum(&mut self, archive: &[u8], reserved: Option<ClientIoWork>,
+        drive: Option<ClientDriveBudget>) -> Result<(), FileClientError> {
         self.unavailable = true;
         let next = self.revision.checked_add(1).ok_or(Error::Overflow)?;
-        let bytes = image::encode(self.store.identity(), &self.profile, next, archive, reserved)?;
+        let bytes = match drive {
+            None => image::encode(self.store.identity(), &self.profile, next, archive, reserved)?,
+            Some(budget) => image::encode_drive(self.store.identity(), &self.profile, next,
+                archive, reserved.ok_or(Error::Binding)?, budget)?,
+        };
         self.store.replace(&bytes)?;
         self.revision = next; self.unavailable = false; Ok(())
     }
@@ -60,11 +70,15 @@ impl Owner {
 /// work. The saved response is historical; this value cannot connect or resend.
 pub struct FileClientInspection {
     revision: u64, state: ActorClientState, reserved: Option<ClientIoWork>,
+    reserved_drive: Option<ClientDriveBudget>,
 }
 impl FileClientInspection {
     pub fn revision(&self) -> u64 { self.revision }
     pub fn work(&self) -> ClientIoWork { self.state.work() }
     pub fn reserved_work(&self) -> Option<ClientIoWork> { self.reserved }
+    /// None denotes the original single-step reservation or no reservation.
+    /// Some identifies a bounded batch, not a count of completed native steps.
+    pub fn reserved_drive(&self) -> Option<ClientDriveBudget> { self.reserved_drive }
     pub fn request_count(&self) -> usize { self.state.request_count() }
     pub fn original_proposal(&self, request: u64) -> Option<&ActorProposal> { self.state.original_proposal(request) }
     pub fn last_response(&self, request: u64) -> Option<&WireResponse> { self.state.last_response(request) }
@@ -74,7 +88,8 @@ impl FileClientInspection {
 impl fmt::Debug for FileClientInspection {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("FileClientInspection").field("revision", &self.revision)
-            .field("work", &self.work()).field("reserved", &self.reserved).finish_non_exhaustive()
+            .field("work", &self.work()).field("reserved", &self.reserved)
+            .field("reserved_drive", &self.reserved_drive).finish_non_exhaustive()
     }
 }
 
@@ -108,7 +123,12 @@ impl FileActorClient {
         let bytes = store.read(profile.image_bytes)?;
         let cut = image::decode(store.identity(), &profile, minimum_revision, &bytes)?;
         let mut state = cut.state;
-        if let Some(ceiling) = cut.reserved { state.consume_recovery_reservation(ceiling)?; }
+        if let Some(ceiling) = cut.reserved {
+            match cut.reserved_drive {
+                None => state.consume_recovery_reservation(ceiling)?,
+                Some(budget) => state.consume_recovery_drive_reservation(ceiling, budget)?,
+            }
+        }
         store.confirm_and_cleanup()?;
         Ok(Self { owner: Owner { store, profile, revision: cut.revision, unavailable: false }, state })
     }
@@ -160,10 +180,18 @@ impl<S> FileActorConnection<S> {
         self.owner.check(revision)
     }
     fn persist(&mut self, reserved: Option<ClientIoWork>) -> Result<(), FileClientError> {
+        self.persist_quantum(reserved, None)
+    }
+    fn persist_quantum(&mut self, reserved: Option<ClientIoWork>, drive: Option<ClientDriveBudget>)
+        -> Result<(), FileClientError>
+    {
         self.owner.unavailable = true;
         let result = (|| {
             let bytes = self.client.as_ref().ok_or(JournalError::Unavailable)?.recovery_image(&self.owner.profile.binding)?;
-            self.owner.commit(&bytes, reserved)
+            match drive {
+                None => self.owner.commit(&bytes, reserved),
+                Some(budget) => self.owner.commit_quantum(&bytes, reserved, Some(budget)),
+            }
         })();
         if result.is_err() { self.client = None; }
         result
