@@ -10,6 +10,8 @@ use std::fmt;
 use std::path::Path;
 
 mod stopped;
+mod reconciled;
+pub use reconciled::ReconciledGuardedOwner;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum FileGuardedRecoveryStatus {
