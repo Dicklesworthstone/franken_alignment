@@ -202,3 +202,5 @@ fn invalid_missing_busy_and_foreign_recovery_never_report_success() {
 }
 
 #[path = "guarded_tests.rs"] mod guarded_tests;
+
+#[path = "cooperative_tests.rs"] mod cooperative_tests;

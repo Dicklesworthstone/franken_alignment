@@ -1,9 +1,11 @@
 //! Privileged local recovery when the live supervisor/stop socket is unavailable.
 //! Only original durable stop/fence/settlement runs; no source or helper is read.
 pub(crate) mod guarded;
+mod cooperative;
 
 use super::config::{Config, debug};
 use fa_reference::action::ElapsedTick;
+#[cfg(test)]
 use fa_reference::action::consequence::delivery::StopRequest;
 use fa_reference::action::consequence::delivery::persistent::observed::FileOversight;
 use fa_reference::action::consequence::delivery::persistent::observed::shutdown::recovery::FileStoppedRecovery;
@@ -11,24 +13,8 @@ use std::io::Write;
 
 pub fn run<F>(config: &Config, operation: u64, clock: F, out: &mut impl Write) -> Result<(), String>
 where F: FnOnce() -> ElapsedTick {
-    if operation == 0 { return Err("stop operation must be nonzero".into()); }
-    // This is read-only selection, not recovery by opening a live owner. The
-    // native call reacquires under its exclusive lock and checks this EXACT
-    // predecessor. A racing policy/stop change refuses rather than being patched.
-    let state = FileOversight::read_publication(&config.store, &config.profile).map_err(debug)?;
-    let request = match state.stop {
-        Some(receipt) => {
-            if receipt.request().operation != operation {
-                return Err("the retained stop belongs to a different operation".into());
-            }
-            receipt.request()
-        }
-        None => StopRequest { operation, expected_control_sequence: state.control.sequence,
-            expected_authority_epoch: state.control.ledger.epoch },
-    };
-    let recovered = FileOversight::recover_stopped(&config.store, config.profile.clone(), request, clock)
-        .map_err(|error| format!("native recovery completion is unconfirmed: {error:?}; no effect was resent"))?;
-    report(&recovered, out)
+    let started = std::time::Instant::now();
+    cooperative::run_with_elapsed(config, operation, clock, &mut || started.elapsed(), out)
 }
 
 fn ids(values: &[u64]) -> String {

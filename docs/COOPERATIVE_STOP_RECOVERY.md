@@ -53,3 +53,34 @@ independent profile, reserve and valid-fork anchor refusals. They use the origin
 two-key journal fixtures and leave existing tests unchanged. Rust compilation,
 runtime tests, formatting qualification and Clippy remain pending the exact-
 revision remote-only RCH verifier. Source review is not executed qualification.
+
+## Ordinary offline command
+
+`recover-stop CONFIG OPERATION` now uses this stop-only cursor directly. One
+monotonic elapsed budget from CONFIG's existing `timing.runtime_ms` is checked
+before open, before each original event and at Ready. The command executes one
+event per checkpoint; it does not reset the budget on progress or sample logical
+time during replay. Expiry drops exclusive custody without cleanup, a new stop,
+a terminal clock call or an output acknowledgment. A later explicit retry starts
+from the actual canonical file, not a serialized partial replay or saved permit.
+
+After Ready, the exact stop request comes from the same locked reconstruction,
+not a separate `read_publication` scan. Finalization and JSON reporting keep their
+existing meaning, including acknowledged stops whose reporting failed and
+unresolved charges that return pending output plus an error. Initial file decode,
+one event and synchronous final storage work can exceed the elapsed budget; this
+is cooperative responsiveness, not a hard real-time shutdown guarantee.
+
+The independently selected `--guarded` path is preserved byte-for-byte. Its
+external anchor, complete guard/floor requirements and custody export remain
+mandatory there; no failure automatically retries through ordinary recovery.
+Learned recovery keeps its original separately supplied reconstruction recipe.
+No command/schema, authority format, helper dependency or policy field is added.
+
+Six additional command tests reuse the original native helper/reviewer fixtures:
+all deadline checkpoints, cumulative expiry neighbors and uninterrupted lock
+custody, a valid canonical replacement at Ready, full-capacity clock-free retries,
+actual executed versus irrecoverably unknown effects, and elapsed/terminal-clock
+unwinds with corrected retries. Existing command tests are unchanged except for
+registering this new test module. These 14 new tests and the ownership doctests
+remain unexecuted until exact-revision RCH verification; missing RCH is not a pass.
