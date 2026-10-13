@@ -5,6 +5,7 @@ use super::{FileRecoveryRequirements, FileOversight, FileOversightProfile, Journ
 use super::super::replay::FileReviewReplay;
 use super::super::FileDeliverySnapshot;
 use crate::action::Purpose;
+use crate::action::consequence::delivery::persistent::requests::FileRequestDisposition;
 use crate::action::consequence::experiment::{Intervention, InterventionScope, PolicyExperiment};
 use crate::action::consequence::experiment::proposal::{ProposalExperiment, ProposalCounterfactualReport};
 use crate::action::consequence::experiment::proposal::search::{ProposalRepairCursor, ProposalRepairReport,
@@ -152,35 +153,59 @@ impl FileReviewReplay {
 
 // Both eager and cooperative readers select the FIRST creation through the
 // same original machine. This state is private until the whole image qualifies.
+#[derive(Clone, Copy)]
+enum ProposalIdentity { Attempt(u64), Request(u64) }
 struct Selection {
-    attempt: u64,
+    identity: ProposalIdentity,
     scope: InterventionScope,
     selected: Option<(Option<u64>, FileDeliverySnapshot, ProposalExperiment)>,
 }
 impl Selection {
     fn new(attempt: u64, scope: InterventionScope) -> Result<Self, Error> {
         if attempt == 0 { return Err(Error::InvalidInput); }
-        Ok(Self { attempt, scope, selected: None })
+        Ok(Self { identity: ProposalIdentity::Attempt(attempt), scope, selected: None })
+    }
+    fn request(request: u64, scope: InterventionScope) -> Result<Self, Error> {
+        if request == 0 { return Err(Error::InvalidInput); }
+        Ok(Self { identity: ProposalIdentity::Request(request), scope, selected: None })
     }
     fn apply(&mut self, profile: &FileOversightProfile, machine: &mut Machine,
         index: usize, event: &Event) -> Result<(), JournalError>
     {
-        let source = if self.selected.is_none() && !machine.actions.contains_key(&self.attempt) {
-            match event {
-                Event::Core(BaseEvent::Propose(_, _, snapshot)) => Some((None, snapshot)),
-                Event::Core(BaseEvent::SubmitRequest(request, _, snapshot)) => Some((Some(*request), snapshot)),
+        // A durable actor key is NOT its allocated attempt. Resolve only the
+        // first submission through the original request book, including a
+        // retained NotAdmitted disposition. Neither a direct proposal with the
+        // same number nor a later request/retry may substitute another action.
+        let source = if self.selected.is_none() {
+            match self.identity {
+                ProposalIdentity::Attempt(attempt) if !machine.actions.contains_key(&attempt) => match event {
+                    Event::Core(BaseEvent::Propose(_, _, snapshot)) => Some((None, snapshot)),
+                    Event::Core(BaseEvent::SubmitRequest(request, _, snapshot)) => Some((Some(*request), snapshot)),
+                    _ => None,
+                },
+                ProposalIdentity::Request(request) if matches!(machine.requests.status(request), Err(Error::Missing)) => match event {
+                    Event::Core(BaseEvent::SubmitRequest(key, _, snapshot)) if *key == request => Some((Some(request), snapshot)),
+                    _ => None,
+                },
                 _ => None,
             }
         } else { None };
         machine.apply(event)?;
         if let Some((request, snapshot)) = source {
-            if let Some(action) = machine.actions.get(&self.attempt) {
+            let attempt = match self.identity {
+                ProposalIdentity::Attempt(attempt) => attempt,
+                ProposalIdentity::Request(key) => match machine.requests.status(key)?.disposition {
+                    FileRequestDisposition::Admitted { attempt, .. } => attempt,
+                    FileRequestDisposition::NotAdmitted(_) => return Ok(()),
+                },
+            };
+            if let Some(action) = machine.actions.get(&attempt) {
                 let admitted = machine.snapshot(index + 1);
                 let policy = Rc::new(machine.policy_updates.current(&profile.delivery.policy).clone());
-                let proposal = Proposal { attempt: self.attempt, action: action.clone(),
+                let proposal = Proposal { attempt, action: action.clone(),
                     evaluation: policy.evaluate(action, snapshot)?, policy,
                     snapshot_semantic_epoch: snapshot.semantic_epoch,
-                    state: *admitted.control.ledger.stages.get(&self.attempt).ok_or(Error::Missing)? };
+                    state: *admitted.control.ledger.stages.get(&attempt).ok_or(Error::Missing)? };
                 let experiment = ProposalExperiment::new(proposal, snapshot, self.scope.clone())?;
                 self.selected = Some((request, admitted, experiment));
             }
@@ -222,3 +247,6 @@ pub use replay::{FileProposalRead, FileProposalReadProgress, FileProposalReadSta
 
 #[cfg(test)]
 mod tests;
+
+#[cfg(test)]
+mod request_tests;

@@ -69,17 +69,36 @@ impl FileOversight {
         expected: &FileRecoveryRequirements, anchor: &FileHistoryAnchor,
         attempt: u64, scope: InterventionScope,
     ) -> Result<FileProposalRead, JournalError> {
-        let selection = Selection::new(attempt, scope)?;
-        profile.delivery.limits.check()?;
-        expected.guards.validate()?;
-        let directory = storage::identity(directory.as_ref())?;
-        let bytes = storage::read(&directory.join(storage::CANONICAL), profile.delivery.limits.bytes)?;
-        let events = journal::decode(profile, &directory, &bytes)?;
-        anchor.check(profile, &directory, &events)?;
-        expected.guards.check_decoder_config(&events)?;
-        let machine = Machine::new(profile)?;
-        Ok(FileProposalRead { directory, profile: profile.clone(), expected: expected.clone(),
-            events, machine, selection, replayed: 0, attempted: 0, status: FileProposalReadStatus::Reading })
+        FileProposalRead::begin(directory, profile, expected, anchor, Selection::new(attempt, scope)?)
+    }
+
+    /// Investigate the FIRST submission of a durable external actor request.
+    /// The original request book determines its internal attempt during the
+    /// same single replay. Direct proposals with equal numbers cannot match.
+    /// A request refused without a frozen action returns Missing only after the
+    /// whole image and independent ending requirements have been checked.
+    pub fn begin_read_request_proposal_investigation_anchored(
+        directory: impl AsRef<Path>, profile: &FileOversightProfile,
+        expected: &FileRecoveryRequirements, anchor: &FileHistoryAnchor,
+        request: u64, scope: InterventionScope,
+    ) -> Result<FileProposalRead, JournalError> {
+        FileProposalRead::begin(directory, profile, expected, anchor, Selection::request(request, scope)?)
+    }
+
+    /// Whole-image request-key diagnosis using the same sealed event cursor.
+    /// The result is historical experiment data, never an actor capability or
+    /// permission to retry an admission or publication.
+    pub fn read_request_proposal_investigation_anchored(
+        directory: impl AsRef<Path>, profile: &FileOversightProfile,
+        expected: &FileRecoveryRequirements, anchor: &FileHistoryAnchor,
+        request: u64, scope: InterventionScope,
+    ) -> Result<FileProposalInvestigation, JournalError> {
+        let mut read = Self::begin_read_request_proposal_investigation_anchored(
+            directory, profile, expected, anchor, request, scope)?;
+        while read.status == FileProposalReadStatus::Reading {
+            read.advance(read.replayed, MAX_JOURNAL_EVENTS)?;
+        }
+        read.finish()
     }
 
     /// Convenience whole-image consumer of the same sealed read. The explicit
@@ -99,6 +118,22 @@ impl FileOversight {
 }
 
 impl FileProposalRead {
+    fn begin(directory: impl AsRef<Path>, profile: &FileOversightProfile,
+        expected: &FileRecoveryRequirements, anchor: &FileHistoryAnchor, selection: Selection)
+        -> Result<Self, JournalError>
+    {
+        profile.delivery.limits.check()?;
+        expected.guards.validate()?;
+        let directory = storage::identity(directory.as_ref())?;
+        let bytes = storage::read(&directory.join(storage::CANONICAL), profile.delivery.limits.bytes)?;
+        let events = journal::decode(profile, &directory, &bytes)?;
+        anchor.check(profile, &directory, &events)?;
+        expected.guards.check_decoder_config(&events)?;
+        let machine = Machine::new(profile)?;
+        Ok(Self { directory, profile: profile.clone(), expected: expected.clone(),
+            events, machine, selection, replayed: 0, attempted: 0, status: FileProposalReadStatus::Reading })
+    }
+
     pub fn progress(&self) -> FileProposalReadProgress {
         FileProposalReadProgress { replayed_events: self.replayed, attempted_events: self.attempted,
             total_events: self.events.len(), status: self.status }
