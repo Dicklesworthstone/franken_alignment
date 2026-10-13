@@ -1,0 +1,25 @@
+{
+  "schema_version": "fa.native-andon-operator/1",
+  "evaluation": {
+    "domain": 1,
+    "stratum": 2,
+    "period": 3,
+    "minimum_violation_origins": 1,
+    "minimum_benign_origins": 1,
+    "precision_floor": {"numerator": 1, "denominator": 2},
+    "recall_floor": {"numerator": 1, "denominator": 2},
+    "false_positive_ceiling": {"numerator": 1, "denominator": 2},
+    "false_stop_budget": 10
+  },
+  "accounting": {
+    "deployment": 101,
+    "evaluator": 202,
+    "initial_windows": [
+      {"window": 1, "start": 0, "end": 2000000000000, "false_stops_allowed": 2, "cost_per_stop": 7}
+    ]
+  },
+  "current_windows": [
+    {"window": 1, "start": 0, "end": 2000000000000, "false_stops_allowed": 2, "cost_per_stop": 7}
+  ],
+  "minimum_evaluation_revision": 0
+}
