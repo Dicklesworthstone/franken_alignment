@@ -7,6 +7,7 @@ current policy evidence or another publication attempt:
 ```text
 supervise_publication create-learned-generated CONFIG LEARNED_RECIPE --recover-stop OPERATION
 supervise_publication create-learned-generated CONFIG LEARNED_RECIPE --recover-stop OPERATION --history-anchor INPUT
+supervise_publication create-learned-generated CONFIG LEARNED_RECIPE --recover-stop OPERATION --history-anchor INPUT --retain-history-anchor OUTPUT
 ```
 
 This is the existing Linux reference example and its original Stop operation.
@@ -17,11 +18,14 @@ assets must still match the history. Native reviewer models, reviewer/stop
 sockets and the policy evidence file are not opened. An optional
 `--credibility-activation` capsule is ignored without being read.
 
-The command accepts an independently retained history anchor. It rejects
-`--retain-history-anchor` before configuration or recipe I/O: this terminal path
-returns no owner from which to export a successor. Keep the selected old archive.
-It cannot be combined with generation continuation, next-message or finish
-options, and it never creates a fresh authority store.
+The command accepts an independently retained history anchor and can retain its
+acknowledged stopped successor using `--retain-history-anchor OUTPUT`. INPUT is
+optional; omitting it does not establish external history continuity. OUTPUT must
+be a new private file outside the mutable authority directory. The same original
+path admission and bounded anchor decoder apply. Keep the old archive until the
+new export succeeds. Stop recovery cannot be combined with generation
+continuation, next-message or finish options and never creates a fresh authority
+store.
 
 ## The original sealed completion
 
@@ -93,8 +97,33 @@ and synchronize a separate private archive, preserving its old archive until
 that succeeds. Export failure does not undo the stop or justify resending an
 effect. A later canonical successor does not change the captured revision.
 Independent custody and protection against rolling back both journal and
-archive remain operator assumptions. CLI retention is not enabled by this
-library addition alone.
+archive remain operator assumptions.
+
+## Retain the terminal anchor from the operator
+
+When OUTPUT is selected, all three original operator modes consume
+`finish_stopped_with_anchor` through the same one-event replay driver, preserving
+every admission and Ready checkpoint. The command exports that captured anchor
+through the existing bounded private-file writer. It does not obtain a live
+owner, reopen the authority store, capture a newer revision or perform another
+numerical replay. The file is created exclusively with mode 0600 on Unix, then
+both the file and its parent directory are synchronized before export succeeds.
+A path appearing after admission is never overwritten.
+
+Export precedes report rendering. On export failure the command still attempts
+the native stop report and returns an error that explicitly preserves the
+acknowledged stop and says retention failed. A simultaneous output failure or
+pending drain is retained in the same error rather than hiding either outcome.
+The native stop report does not by itself acknowledge archive retention; check
+the command result. No path, anchor bytes or private evidence is added to stdout.
+
+After successful retention, INPUT may be the new stopped anchor. A drained retry
+with a fresh OUTPUT writes the identical anchor without any terminal clock,
+extra journal event or replacement. After failed retention, keep INPUT and select
+a different new OUTPUT; an existing or partial output is never overwritten or
+silently accepted as acknowledged custody. A pending drain still requires its
+original time/capacity and may advance the next retained revision. Export remains
+separate from native persistence: failure cannot undo a stop or refund a charge.
 
 ## Results and liabilities
 
@@ -133,8 +162,16 @@ identical anchor on a drained retry with replacement deliberately unavailable.
 Five operator tests cover loaded modes, replay checkpoints, missing live assets,
 the actual CLI, original guard admission and failed output.
 
-The new anchor implementation and regression have not been compiled or executed
-in this session. The required remote-only RCH execution gate remains pending;
+Seven additional operator regression functions cover exact private export and
+reuse in all three modes; actual CLI export without live assets; late output
+collisions and corrected retries; unsafe custody refusal; simultaneous export
+and report failure; all original replay deadline cuts; and invalid stop or
+independent guard refusal. Existing no-export and lost-report tests remain,
+with the former unsupported-output assertions replaced by positive terminal
+retention and configuration-admission controls.
+
+The new anchor implementation, operator integration and regressions have not
+been compiled or executed in this session. The required remote-only RCH execution gate remains pending;
 source inspection does not establish type correctness, runtime behavior or
 release qualification. The scoped FA-014 bead and full packet remain open.
 This implements plan sections 16.4/16.5/16.9/25.4 and FI-A02 without adding an

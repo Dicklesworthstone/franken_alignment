@@ -7,7 +7,7 @@ use fa_reference::action::consequence::delivery::persistent::{JournalError, obse
     guarded::{learned_recovery::FileGuardedLearnedRecovery,
         predictive::{FilePredictiveRequirements, learned::FilePredictiveLearnedRecovery,
             owned::{FileOwnedPredictiveRecovery, FileOwnedPredictiveRequirements}}},
-    shutdown::recovery::FileStoppedRecovery,
+    shutdown::recovery::{FileStoppedHistory, FileStoppedRecovery},
 }};
 
 pub(super) enum Cursor {
@@ -81,6 +81,16 @@ impl Cursor {
             Self::Plain(run) => { let request = run.stop_request(operation)?; run.finish_stopped(request, clock) }
             Self::Raw(run) => { let request = run.stop_request(operation)?; run.finish_stopped(request, clock) }
             Self::Owned(run) => { let request = run.stop_request(operation)?; run.finish_stopped(request, clock) }
+        }
+    }
+
+    pub(super) fn finish_stopped_with_anchor<F>(self, operation: u64, clock: F)
+        -> Result<FileStoppedHistory, JournalError>
+    where F: FnOnce() -> ElapsedTick {
+        match self {
+            Self::Plain(run) => { let request = run.stop_request(operation)?; run.finish_stopped_with_anchor(request, clock) }
+            Self::Raw(run) => { let request = run.stop_request(operation)?; run.finish_stopped_with_anchor(request, clock) }
+            Self::Owned(run) => { let request = run.stop_request(operation)?; run.finish_stopped_with_anchor(request, clock) }
         }
     }
 }

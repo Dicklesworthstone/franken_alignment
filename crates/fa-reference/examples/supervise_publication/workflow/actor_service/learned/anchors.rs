@@ -42,13 +42,6 @@ pub(super) fn take_options(args: &[String]) -> Result<(Vec<String>, Options), St
 }
 
 impl Options {
-    pub(super) fn check_stopped(&self) -> Result<(), String> {
-        if self.output.is_some() {
-            return Err("learned stop recovery cannot retain a successor history anchor".into());
-        }
-        Ok(())
-    }
-
     pub(super) fn admit(self, config: &Config, loaded: &mut Loaded, recovering: bool)
         -> Result<(), String>
     {
@@ -120,6 +113,13 @@ fn export(host: &FileOversight, previous: Option<&FileHistoryAnchor>, path: &Pat
         Some(previous) => host.history_anchor_after(previous),
         None => host.history_anchor(),
     }.map_err(debug)?;
+    export_acknowledged(&anchor, path)
+}
+
+/// Persist an already acknowledged native anchor to a separately admitted NEW
+/// private file. This never reads the store, recreates an owner or captures a
+/// newer revision. The caller retains stop/effect acknowledgment on failure.
+pub(super) fn export_acknowledged(anchor: &FileHistoryAnchor, path: &Path) -> Result<(), String> {
     let parent = File::open(path.parent().ok_or("history anchor needs a parent directory")?)
         .map_err(debug)?;
     let mut options = OpenOptions::new();

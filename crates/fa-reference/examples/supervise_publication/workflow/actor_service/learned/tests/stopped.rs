@@ -9,7 +9,6 @@ use fa_reference::action::consequence::delivery::persistent::{FileDeliverySnapsh
 use std::{cell::Cell, collections::BTreeMap, io, path::{Path, PathBuf}};
 
 const EXPIRED: &str = "learned stop recovery replay deadline reached";
-const NO_EXPORT: &str = "learned stop recovery cannot retain a successor history anchor";
 
 struct Case {
     root: Root, config: Config, loaded: Loaded, recipe: PathBuf,
@@ -223,13 +222,13 @@ fn actual_offline_stop_cli_needs_no_live_assets_peer_profile_or_credibility_caps
         assert!(!missing.exists()); assert!(!case.root.0.join("peers").exists());
         assert_eq!(fs::read(&case.anchor).unwrap(), case.archive);
     }
-    // The unsupported output must be rejected before even opening the absent
-    // config/recipe, so it cannot imply that a new terminal anchor was retained.
+    // A supported output cannot bypass configuration admission or create an
+    // archive/authority store when the selected configuration is unavailable.
     let root = Root::new(); let absent = root.0.join("absent"); let output = root.0.join("new.anchor");
     let args = vec!["create-learned-generated".into(), absent.to_str().unwrap().into(),
         absent.to_str().unwrap().into(), "--recover-stop".into(), "801".into(),
         "--retain-history-anchor".into(), output.to_str().unwrap().into()];
-    let error = command(&args, None).unwrap_err(); assert_eq!(error, NO_EXPORT);
+    let error = command(&args, None).unwrap_err(); assert_eq!(error, Config::read(&absent).err().unwrap());
     assert!(!output.exists()); assert!(!root.0.join("store").exists());
 }
 
@@ -256,13 +255,18 @@ fn lost_stop_report_preserves_acknowledged_history_and_retry_only_reports_the_co
             || panic!("lost output cannot repeat native stopping or acquire new time"), &mut output).unwrap();
         report(output, "already_drained", state.revision);
         assert_eq!(files(&case.config.store), original); assert_eq!(observed(&case), state);
-        let mut forbidden = recipe::load(&case.recipe, &case.config, false).unwrap();
-        forbidden.anchor_output = Some(case.root.0.join("unretained-terminal.anchor"));
+        let mut retained = recipe::load(&case.recipe, &case.config, false).unwrap();
+        let archive = case.root.0.join("retained-terminal.anchor");
+        retained.recovery_anchor = Some(custody::load(&case.anchor).unwrap());
+        retained.anchor_output = Some(archive.clone());
         let mut output = Vec::new();
-        let error = command_stop::run(&case.config, &forbidden, 801,
-            || panic!("unsupported anchor export cannot acquire time"), &mut output).unwrap_err();
-        assert_eq!(error, NO_EXPORT); assert!(output.is_empty());
+        command_stop::run(&case.config, &retained, 801,
+            || panic!("retaining a completed stop cannot acquire time"), &mut output).unwrap();
+        report(output, "already_drained", state.revision);
         assert_eq!(files(&case.config.store), original);
-        assert!(!forbidden.anchor_output.unwrap().exists());
+        assert_eq!(custody::load(&archive).unwrap().revision(), state.revision);
+        assert_eq!(fs::read(&case.anchor).unwrap(), case.archive);
     }
 }
+
+mod anchor_export;

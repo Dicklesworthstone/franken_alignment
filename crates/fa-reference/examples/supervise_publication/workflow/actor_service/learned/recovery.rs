@@ -10,7 +10,8 @@ use fa_reference::action::consequence::delivery::persistent::observed::guarded::
 };
 use fa_reference::action::consequence::delivery::persistent::observed::consistency::FileConsistencyObserver;
 use fa_reference::action::consequence::delivery::stream::ReleaseFrame;
-use fa_reference::action::consequence::delivery::persistent::observed::shutdown::recovery::FileStoppedRecovery;
+use fa_reference::action::consequence::delivery::persistent::{JournalError,
+    observed::shutdown::recovery::{FileStoppedHistory, FileStoppedRecovery}};
 
 type Custody = (FileOversight, FileHumanReviewer, Option<FileConsistencyObserver>);
 
@@ -123,6 +124,23 @@ pub(super) fn stop_selected_with_elapsed<F>(config: &Config, loaded: &Loaded,
     operation: u64, clock: F, elapsed: &mut impl FnMut() -> Duration)
     -> Result<FileStoppedRecovery, String>
 where F: FnOnce() -> ElapsedTick {
+    stop_replay(config, loaded, operation, elapsed, |run| run.finish_stopped(operation, clock))
+}
+
+/// Capture the exact acknowledged terminal image on the SAME sealed cursor.
+/// All original admission, one-event and Ready checkpoints are shared; only
+/// the successful native return value additionally carries its private anchor.
+pub(super) fn stop_selected_with_anchor_with_elapsed<F>(config: &Config, loaded: &Loaded,
+    operation: u64, clock: F, elapsed: &mut impl FnMut() -> Duration)
+    -> Result<FileStoppedHistory, String>
+where F: FnOnce() -> ElapsedTick {
+    stop_replay(config, loaded, operation, elapsed, |run| run.finish_stopped_with_anchor(operation, clock))
+}
+
+fn stop_replay<T>(config: &Config, loaded: &Loaded, operation: u64,
+    elapsed: &mut impl FnMut() -> Duration,
+    finish: impl FnOnce(selected::Cursor) -> Result<T, JournalError>) -> Result<T, String>
+{
     if operation == 0 { return Err("stop operation must be nonzero".into()); }
     let wall = Duration::from_millis(config.timing.runtime_ms);
     let mut checkpoint = |_: Option<Progress>| {
@@ -133,7 +151,7 @@ where F: FnOnce() -> ElapsedTick {
     checkpoint(None)?;
     let recovery = selected::Cursor::begin(config, loaded)?;
     finish_replay(recovery, &mut checkpoint, |run| run.progress(),
-        |run, done| run.advance(done), |run| run.finish_stopped(operation, clock))
+        |run, done| run.advance(done), finish)
 }
 
 pub(super) fn resume<F>(config: Config, loaded: Loaded, mut time: F) -> Result<RunResult, String>
