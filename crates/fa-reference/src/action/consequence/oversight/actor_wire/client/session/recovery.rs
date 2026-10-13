@@ -202,3 +202,65 @@ impl<'a> Reader<'a> {
 
 #[cfg(test)]
 mod tests;
+
+impl<S> ActorClient<S> {
+    // Only the durable adapter snapshots a live exchange. The stored command is
+    // conservative restart data, never an instruction to replay socket fragments.
+    pub(in crate::action::consequence) fn recovery_image(&self, binding: &[u8]) -> Result<Vec<u8>, ClientError> {
+        let pending = self.active.as_ref().map(ActorExchange::command).or(self.state.interrupted.as_ref());
+        let failure = self.active.as_ref().and_then(ActorExchange::failure).or(self.state.failure);
+        encode(&self.state, binding, pending, failure)
+    }
+
+    /// Absolute worst-case work for ONE original step, not a refreshed allowance.
+    /// Persist before I/O; release unused reservation only after acknowledged save.
+    pub(in crate::action::consequence) fn recovery_step_ceiling(&self) -> Result<Option<ClientIoWork>, ClientError> {
+        let Some(exchange) = &self.active else { return Ok(None); };
+        if exchange.io_active { return Err(ClientError::InterruptedOperation); }
+        let mut ceiling = self.state.work(); let limits = self.state.limits.io;
+        let calls = limits.calls - ceiling.calls;
+        if calls == 0 { return Ok(Some(ceiling)); }
+        match exchange.phase {
+            ClientPhase::Sending => {
+                let remaining = exchange.output.len() - exchange.written;
+                if remaining == 0 { ceiling.calls += 1; }
+                else {
+                    let offered = remaining.min(super::super::CLIENT_IO_CHUNK)
+                        .min(usize::try_from(limits.written_bytes - ceiling.written_bytes).map_err(|_| ClientError::Limit)?);
+                    if offered != 0 {
+                        ceiling.calls += 1;
+                        ceiling.written_bytes += offered as u64;
+                        if offered == remaining && calls > 1 { ceiling.calls += 1; }
+                    }
+                }
+            }
+            ClientPhase::Receiving => {
+                let offered = (MAX_RESPONSE_BYTES + 1 - exchange.input.len())
+                    .min(usize::try_from(limits.read_bytes - ceiling.read_bytes).map_err(|_| ClientError::Limit)?);
+                if offered != 0 { ceiling.calls += 1; ceiling.read_bytes += offered as u64; }
+            }
+            ClientPhase::Complete | ClientPhase::Failed => {}
+        }
+        Ok(Some(ceiling))
+    }
+}
+impl ActorClientState {
+    // A lost acknowledgment spends the entire previously reserved step. This can
+    // only REDUCE remaining work, never alter proposals, outcomes or visibility.
+    pub(in crate::action::consequence) fn consume_recovery_reservation(&mut self, ceiling: ClientIoWork) -> Result<(), ClientError> {
+        self.check_recovery_reservation(ceiling)?;
+        self.budget.work = ceiling;
+        Ok(())
+    }
+    pub(in crate::action::consequence) fn check_recovery_reservation(&self, ceiling: ClientIoWork) -> Result<(), ClientError> {
+        check_work(ceiling, self.limits.io, self.work())?;
+        let work = self.work();
+        if self.interrupted.is_none() || ceiling.exchanges != work.exchanges
+            || ceiling.calls - work.calls > 2
+            || ceiling.written_bytes - work.written_bytes > super::super::CLIENT_IO_CHUNK as u64
+            || ceiling.read_bytes - work.read_bytes > (MAX_RESPONSE_BYTES + 1) as u64
+            || (ceiling.written_bytes != work.written_bytes && ceiling.read_bytes != work.read_bytes)
+        { return Err(invalid()); }
+        Ok(())
+    }
+}

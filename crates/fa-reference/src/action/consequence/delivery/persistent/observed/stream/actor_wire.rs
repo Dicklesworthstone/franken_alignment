@@ -4,6 +4,7 @@
 mod codec;
 mod source;
 pub mod process;
+pub mod client;
 #[cfg(target_os = "linux")]
 pub use source::{FileStreamPeerDrive, FileStreamPeerDriveError};
 pub use codec::{STREAM_INTENT_HEADER_BYTES, encode_stream_proposal};
