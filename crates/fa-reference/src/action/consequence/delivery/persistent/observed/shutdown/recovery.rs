@@ -9,6 +9,8 @@ use crate::Error;
 use std::path::Path;
 
 mod anchored;
+mod cooperative;
+pub use cooperative::{FileStopRecovery, FileStopRecoveryProgress, FileStopRecoveryStatus};
 
 /// Observed native state, never a recovered reviewer, automatic key or owner.
 /// A completed historical stop may still contain charges for executed effects.
@@ -86,31 +88,7 @@ impl FileOversight {
 fn recover_locked<F>(store: storage::Store, profile: FileOversightProfile,
     request: StopRequest, clock: F) -> Result<FileStoppedRecovery, JournalError>
 where F: FnOnce() -> ElapsedTick {
-    let bytes = store.read(profile.delivery.limits.bytes)?;
-    let events = journal::decode(&profile, store.identity(), &bytes)?;
-    let machine = Machine::replay(&profile, &events)?;
-    let snapshot = machine.snapshot(events.len());
-    if let Some(receipt) = &snapshot.stop {
-        let previous = receipt.request();
-        if previous != request {
-            return Err(if previous.operation == request.operation { Error::Binding } else { Error::Duplicate }.into());
-        }
-        let progress = machine.broker.stop_progress()?;
-        if progress.drained() {
-            store.confirm_and_cleanup()?;
-            return Ok(FileStoppedRecovery::AlreadyDrained { snapshot, progress });
-        }
-    } else if snapshot.control.sequence != request.expected_control_sequence
-        || snapshot.control.ledger.epoch != request.expected_authority_epoch {
-        return Err(Error::Stale.into());
-    }
-    // No current evidence is acquired. A noncompleted stop still needs a trusted
-    // current clock and the original finite terminal capacity. This local owner
-    // never escapes, including on failure or unwind.
-    store.confirm_and_cleanup()?;
-    let (mut host, _reviewer) = FileOversight::owner(profile, store, events, machine);
-    let sweep = host.finish_stopped_recovery(request, clock())?;
-    Ok(FileStoppedRecovery::Advanced { snapshot: host.inspect(), sweep })
+    FileStopRecovery::begin_store(store, profile, None)?.finish_synchronously(request, clock)
 }
 
 #[cfg(test)]
