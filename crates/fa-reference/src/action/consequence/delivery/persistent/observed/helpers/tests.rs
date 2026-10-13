@@ -168,3 +168,105 @@ fn finished_worker_review_is_not_returned_from_an_unacknowledged_journal_cut() {
         assert_eq!(recovered.inspect().executions, 0);
     }
 }
+
+#[test]
+fn clock_panics_close_the_durable_pool_at_every_socket_boundary() {
+    for cut in 1..=3 {
+        let root = Directory::new();
+        let (mut host, mut pool, _client, input) = setup(&root);
+        let before = host.revision();
+        let available = host.inspect().control.ledger.available;
+        let mut calls = 0;
+        let failure = pool.pump_with_clock(&mut host, || {
+            calls += 1;
+            assert_ne!(calls, cut, "injected clock unwind");
+            ElapsedTick(2)
+        }).unwrap_err();
+        assert_eq!(calls, cut);
+        assert_eq!(failure.error, JournalError::Unavailable);
+        assert_eq!(failure.progress.io.len(), usize::from(cut == 3));
+        assert_eq!(failure.progress.workers, pool.statuses());
+        assert!(pool.is_closed());
+        assert!(!pool.ready_to_finish());
+        assert_eq!(pool.next_deadline(), None);
+        // A clock already acknowledged before the unwind remains historical.
+        // No cancellation, refund, effect or fabricated storage fault is added.
+        assert_eq!(host.revision(), before + u64::from(cut > 1));
+        assert_eq!(canonical(&host).0 as u64, host.revision());
+        assert_eq!(host.inspect().control.ledger.available, available);
+        assert_eq!(host.inspect().executions, 0);
+        assert!(host.storage_failure().is_none());
+        assert_eq!(pool.pump_with_clock(&mut host, || panic!("closed pool must not read time"))
+            .unwrap_err().error, Error::WrongState.into());
+        assert_eq!(pool.finish(&mut host, ElapsedTick(2), Some(&input), snapshot()).err(),
+            Some(Error::WrongState.into()));
+        assert!(host.commit_review(host.revision(), 101, "reviewer", 0).is_err());
+        assert!(host.authorize(host.revision(), 1, &input, snapshot()).is_err());
+    }
+}
+
+#[test]
+fn clock_panic_after_reading_a_commitment_preserves_io_but_never_opens_reveals() {
+    let root = Directory::new();
+    let (mut host, mut pool, mut client, input) = setup(&root);
+    queue_commit(&mut host, &mut pool, &mut client);
+    let before = host.store.read(host.profile.delivery.limits.bytes).unwrap();
+    let mut calls = 0;
+    let failure = pool.pump_with_clock(&mut host, || {
+        calls += 1;
+        assert_ne!(calls, 3, "post-I/O receipt clock unwind");
+        ElapsedTick(1)
+    }).unwrap_err();
+    assert_eq!(calls, 3);
+    assert_eq!(failure.error, JournalError::Unavailable);
+    assert_eq!(failure.progress.io.len(), 1);
+    assert!(failure.progress.io["reviewer"].is_ok());
+    assert!(pool.is_closed());
+    assert!(!pool.statuses()["reviewer"].committed);
+    assert_eq!(host.store.read(host.profile.delivery.limits.bytes).unwrap(), before);
+    assert!(client.step().is_err(), "failed receipt time must not release a reveal request");
+    assert!(host.authorize(host.revision(), 1, &input, snapshot()).is_err());
+    drop(host);
+    let (mut recovered, _) = FileOversight::open(root.store(), profile()).unwrap();
+    recovered.observe_time(recovered.revision(), ElapsedTick(2)).unwrap();
+    assert_eq!(recovered.inspect().control.ledger.stages[&1], ActionState::Cancelled);
+    assert_eq!(recovered.inspect().executions, 0);
+    assert!(recovered.commit_review(recovered.revision(), 101, "reviewer", 0).is_err());
+}
+
+#[test]
+fn rejected_foreign_owner_never_calls_the_clock_or_closes_the_valid_pool() {
+    let root = Directory::new();
+    let other = Directory::new();
+    let (mut host, mut pool, mut client, input) = setup(&root);
+    let (mut foreign, _other_pool, _other_client, _other_input) = setup(&other);
+    let before = host.revision();
+    let foreign_before = foreign.revision();
+    let failure = pool.pump_with_clock(&mut foreign, || panic!("foreign owner has no clock access"))
+        .unwrap_err();
+    assert_eq!(failure.error, Error::Binding.into());
+    assert!(failure.progress.io.is_empty());
+    assert!(!pool.is_closed());
+    assert_eq!(host.revision(), before);
+    assert_eq!(foreign.revision(), foreign_before);
+
+    // The same original pool can still complete a real socket commitment and
+    // reveal. Clock protection does not turn permitted reviews into refusals.
+    queue_commit(&mut host, &mut pool, &mut client);
+    for _ in 0..32 {
+        let mut calls = 0;
+        let progress = pool.pump_with_clock(&mut host, || {
+            calls += 1;
+            ElapsedTick(1)
+        }).unwrap();
+        assert_eq!(calls, 3);
+        assert_eq!(progress.io.len(), 1);
+        client.step().unwrap();
+        if pool.ready_to_finish() { break; }
+    }
+    assert!(pool.ready_to_finish());
+    pool.finish(&mut host, ElapsedTick(1), Some(&input), snapshot()).unwrap().unwrap();
+    assert!(pool.is_closed());
+    assert_eq!(canonical(&host).1.broker.inspect().decisions.get(&1), Some(&Consequence::Continue));
+    assert_eq!(host.inspect().executions, 0, "review completion alone is not publication");
+}

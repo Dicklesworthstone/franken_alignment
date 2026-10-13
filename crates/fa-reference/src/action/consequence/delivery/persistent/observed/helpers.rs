@@ -158,6 +158,13 @@ impl FileHelperPool {
     /// before another helper can receive a reveal request. Equal observations
     /// reuse the same clock event, not a new vote or an extended deadline.
     ///
+    /// An unwinding clock callback closes this pool and returns Unavailable,
+    /// retaining all I/O already performed in this pass. It cannot supply a
+    /// timestamp, promote a pending vote or leave the round runnable. Only the
+    /// callback is caught: storage/protocol panics and aborting panics retain
+    /// their separate failure boundaries. Process owners receive the ordinary
+    /// failure path and can request termination without losing their children.
+    ///
     /// File commits are synchronous. Bounded socket steps are NOT a wall-clock
     /// latency bound for journal replay, allocation, filesystem writes or sync.
     pub fn pump_with_clock<F>(&mut self, host: &mut FileOversight, mut clock: F)
@@ -167,16 +174,22 @@ impl FileHelperPool {
             return Err(FileHelperFailure { error, progress: HelperPump { io: BTreeMap::new(), workers: self.statuses() } });
         }
         let mut io = BTreeMap::new();
+        // Catch only the external observation callback, not a mutation of the
+        // coordinator or journal. A failed observation is never a clock value.
+        let mut observe_clock = || {
+            std::panic::catch_unwind(std::panic::AssertUnwindSafe(&mut clock))
+                .map_err(|_| JournalError::Unavailable)
+        };
         let result = (|| {
             let mut session = DurableSession { host, attempt: self.attempt, round: self.round, inputs: &self.inputs };
-            self.coordinator.advance(&mut session, clock()).map_err(journal_error)?;
+            self.coordinator.advance(&mut session, observe_clock()?).map_err(journal_error)?;
             for (member, connection) in &mut self.connections {
-                self.coordinator.advance(&mut session, clock()).map_err(journal_error)?;
+                self.coordinator.advance(&mut session, observe_clock()?).map_err(journal_error)?;
                 let result = connection.step();
                 // Retain this actual I/O progress even when the post-I/O clock
                 // or durable transition fails. It must not disappear in Err.
                 io.insert(member.clone(), result);
-                self.coordinator.advance(&mut session, clock()).map_err(journal_error)?;
+                self.coordinator.advance(&mut session, observe_clock()?).map_err(journal_error)?;
             }
             Ok::<(), JournalError>(())
         })();
