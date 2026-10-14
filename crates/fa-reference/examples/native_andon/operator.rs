@@ -3,6 +3,9 @@
 mod settings;
 #[path = "mutations.rs"]
 mod mutations;
+#[cfg(target_os = "linux")]
+#[path = "peer.rs"]
+mod peer;
 use settings::Settings;
 use crate::config::{Config, debug};
 use crate::profile::{CreationOutput, ResumeProfile};
@@ -25,12 +28,18 @@ fn command_with_elapsed(args: &[String], elapsed: &mut impl FnMut() -> Duration,
     let mode = args.first().map(String::as_str).unwrap_or("");
     let expected = match mode {
         "create" | "inspect" => 4,
-        "assess" | "register-window" | "promote" => 5,
+        "assess" | "register-window" | "promote" | "serve-assess" => 5,
         _ => return Err(USAGE.into()),
     };
     if args.len() != expected {
         return Err(USAGE.into());
     }
+    #[cfg(target_os = "linux")]
+    if mode == "serve-assess" {
+        return peer::serve(Path::new(&args[1]), Path::new(&args[2]), Path::new(&args[3]), Path::new(&args[4]), out);
+    }
+    #[cfg(not(target_os = "linux"))]
+    if mode == "serve-assess" { return Err("peer-verified evaluator intake requires Linux".into()); }
     let config = Config::read(Path::new(&args[1]))?;
     let mut checkpoint = || {
         if elapsed() >= Duration::from_millis(config.timing.runtime_ms) {
