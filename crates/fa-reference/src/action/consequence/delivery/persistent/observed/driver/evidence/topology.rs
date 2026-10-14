@@ -20,10 +20,11 @@ pub struct TopologyReport<T> {
 }
 
 impl FileSupervisedDriver {
-    /// Capture topology immediately BEFORE each original policy/input capture,
-    /// not before phase selection. Loss discovered after dispatch can therefore
-    /// reach the original checked endpoint's nonexecution seal. Reconciliation,
-    /// already-resolved outcomes and expired effects keep their source-free path.
+    /// Before publication, check topology BEFORE each policy/input capture.
+    /// At first publication, capture policy FIRST and then refresh topology,
+    /// so a change during policy acquisition cannot reuse an earlier check.
+    /// Both paths retain original phase selection and final sealing. Idle,
+    /// reconciliation, resolved and expired effects remain source-free.
     pub fn step_from_file_with_topology<S, F>(&mut self, source: &mut S,
         topology: &mut FileTopologySource, clock: F, human: Option<&FileHumanPermit>)
         -> TopologyReport<FileEvidenceReport<FileDriverEvent>>
@@ -96,12 +97,12 @@ impl FileSupervisedDriver {
     }
 }
 
-struct TopologyProvider<'a, S: ?Sized> {
+struct TopologyProvider<'a, P> {
     topology: &'a mut FileTopologySource,
     reports: &'a mut Vec<Result<TopologyRefresh, JournalError>>,
-    policy: FileProvider<'a, S>,
+    policy: P,
 }
-impl<S: EvidenceFile + ?Sized> EvidenceProvider for TopologyProvider<'_, S> {
+impl<P: EvidenceProvider> EvidenceProvider for TopologyProvider<'_, P> {
     fn capture<F>(&mut self, host: &mut FileOversight, action: &FrozenAction, clock: &mut F)
         -> Result<Result<DriverEvidence, Error>, JournalError>
     where F: FnMut() -> ElapsedTick {
@@ -110,6 +111,19 @@ impl<S: EvidenceFile + ?Sized> EvidenceProvider for TopologyProvider<'_, S> {
         // remains an OUTER failure and cannot attempt publication afterward.
         if !refresh(host, self.topology, self.reports)? { return Ok(Err(Error::Incomplete)); }
         self.policy.capture(host, action, clock)
+    }
+
+    fn capture_for_publication<F>(&mut self, host: &mut FileOversight,
+        action: &FrozenAction, clock: &mut F)
+        -> Result<Result<DriverEvidence, Error>, JournalError>
+    where F: FnMut() -> ElapsedTick {
+        // Do not reuse the pre-review ordering at the irrevocable send cut.
+        // Policy acquisition may itself observe time or replacement files.
+        // Its OUTER failure stops here, while an INNER refusal still requires
+        // the final topology observation before original nonexecution sealing.
+        let evidence = self.policy.capture_for_publication(host, action, clock)?;
+        if !refresh(host, self.topology, self.reports)? { return Ok(Err(Error::Incomplete)); }
+        Ok(evidence)
     }
 }
 
@@ -130,4 +144,15 @@ fn require_topology(host: &mut FileOversight, source: &mut FileTopologySource,
     reports: &mut Vec<Result<TopologyRefresh, JournalError>>) -> Result<(), JournalError>
 {
     if refresh(host, source, reports)? { Ok(()) } else { Err(Error::Incomplete.into()) }
+}
+
+// Exercise the exact production decorator with controlled policy failures.
+// Production callers still supply only the sealed concrete file readers.
+#[cfg(test)]
+pub(in super::super) fn test_provider<'a, P: EvidenceProvider + 'a>(
+    topology: &'a mut FileTopologySource,
+    reports: &'a mut Vec<Result<TopologyRefresh, JournalError>>, policy: P)
+    -> impl EvidenceProvider + 'a
+{
+    TopologyProvider { topology, reports, policy }
 }

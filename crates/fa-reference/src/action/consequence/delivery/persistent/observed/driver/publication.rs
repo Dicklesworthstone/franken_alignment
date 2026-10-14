@@ -32,7 +32,7 @@ where F: FnMut() -> ElapsedTick, P: EvidenceProvider {
         let (inputs, snapshot, source_failure) = if needs_evidence {
             // Outer persistence failure is not an observation refusal. No
             // candidate source or endpoint result can escape that failed owner.
-            let captured = provider.capture(host, &job.action, clock)?
+            let captured = provider.capture_for_publication(host, &job.action, clock)?
                 .and_then(|evidence| validate(evidence, &job.action, &host.profile.committee));
             match captured {
                 Ok(evidence) => (evidence.inputs, evidence.snapshot, None),

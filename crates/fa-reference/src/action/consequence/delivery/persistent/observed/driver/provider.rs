@@ -10,6 +10,17 @@ pub(super) trait EvidenceProvider {
     fn capture<F>(&mut self, host: &mut FileOversight, action: &FrozenAction, clock: &mut F)
         -> Result<Result<DriverEvidence, Error>, JournalError>
     where F: FnMut() -> ElapsedTick;
+
+    /// Only the original first-publication path calls this, after its exact
+    /// endpoint/expiry preflight. Ordinary review and dispatch retain capture's
+    /// ordering. An adapter may finish publication-specific observations AFTER
+    /// acquiring policy; it cannot publish or bypass the original final gate.
+    fn capture_for_publication<F>(&mut self, host: &mut FileOversight,
+        action: &FrozenAction, clock: &mut F)
+        -> Result<Result<DriverEvidence, Error>, JournalError>
+    where F: FnMut() -> ElapsedTick {
+        self.capture(host, action, clock)
+    }
 }
 
 pub(super) struct Callback<P>(pub(super) P);

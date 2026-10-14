@@ -134,9 +134,16 @@ impl Case {
         case
     }
     fn revision(&self) -> u64 { self.driver.supervisor().host().unwrap().revision() }
-    fn work(&self) -> TopologySourceWork { self.driver.topology().unwrap().source().work() }
+    fn work(&self) -> TopologySourceWork {
+        self.driver.topology().map_or_else(TopologySourceWork::default, |topology| topology.source().work())
+    }
     fn last(&self) -> &DriverTopologyObservation { self.driver.topology().unwrap().last_observation().unwrap() }
     fn review(&mut self, request: u64) -> Reviewed {
+        self.review_with_file_input(request, None)
+    }
+    fn review_with_file_input(&mut self, request: u64,
+        file: Option<&crate::action::consequence::oversight::evidence_source::EvidenceSnapshot>) -> Reviewed
+    {
         let work = self.work();
         let (target, epoch) = {
             let host = self.driver.supervisor().host().unwrap();
@@ -150,18 +157,22 @@ impl Case {
             let host = self.driver.supervisor().host().unwrap();
             let (attempt, _) = super::super::admitted(host.request_status(request).unwrap()).unwrap();
             let action = host.request_action(request).unwrap();
-            let contracts = &host.profile.committee; let helper = &contracts.members()["reviewer"];
-            let mut bytes = action_frame(action); let boundary = bytes.len();
-            bytes.extend_from_slice(helper.question()); let end = bytes.len();
-            let actual = ActualHelperInput::new(bytes, helper.profile_at(epoch), vec![
-                SubmittedPart { kind: PartKind::Other, span: ByteSpan { start: 0, end: boundary } },
-                SubmittedPart { kind: PartKind::Question, span: ByteSpan { start: boundary, end } },
-            ], Vec::new()).unwrap();
-            let view = EvidenceViewManifest::new(actual, AuthorizationProjection {
-                projection_id: 7, policy_epoch: epoch, projected_originals: Vec::new(),
-            }, Vec::new()).unwrap();
-            (attempt, CommitteeInput::capture(action, contracts,
-                BTreeMap::from([("reviewer".to_owned(), view)])).unwrap())
+            if let Some(file) = file {
+                (attempt, file.inputs_for(action, &host.profile.committee).unwrap())
+            } else {
+                let contracts = &host.profile.committee; let helper = &contracts.members()["reviewer"];
+                let mut bytes = action_frame(action); let boundary = bytes.len();
+                bytes.extend_from_slice(helper.question()); let end = bytes.len();
+                let actual = ActualHelperInput::new(bytes, helper.profile_at(epoch), vec![
+                    SubmittedPart { kind: PartKind::Other, span: ByteSpan { start: 0, end: boundary } },
+                    SubmittedPart { kind: PartKind::Question, span: ByteSpan { start: boundary, end } },
+                ], Vec::new()).unwrap();
+                let view = EvidenceViewManifest::new(actual, AuthorizationProjection {
+                    projection_id: 7, policy_epoch: epoch, projected_originals: Vec::new(),
+                }, Vec::new()).unwrap();
+                (attempt, CommitteeInput::capture(action, contracts,
+                    BTreeMap::from([("reviewer".to_owned(), view)])).unwrap())
+            }
         };
         let (server, peer) = UnixStream::pair().unwrap();
         let mut client = HelperClient::from_unix(peer, profile().committee.members()["reviewer"].profile_at(epoch)).unwrap();
@@ -533,3 +544,5 @@ fn required_credential_is_not_replaced_by_a_successful_topology_check() {
         assert_eq!(case.driver.supervisor().host().unwrap().inspect().executions, u64::from(supplied));
     }
 }
+
+mod publication_order;

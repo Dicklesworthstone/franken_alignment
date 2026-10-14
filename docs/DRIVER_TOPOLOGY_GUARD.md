@@ -127,3 +127,42 @@ AUTHORED, NOT EXECUTED. The targeted suite and full remote-only gate were
 attempted again for the final source; both stop before compilation because
 `rch` is absent. Child ownership preservation is implemented by transfer of the
 original value, not a claimed process/descendant-containment test result.
+
+## Closing the explicit adapter's policy-read publication gap
+
+`EvidenceProvider::capture_for_publication` is private to the original driver.
+It is called only after the existing exact-attempt publication preflight says
+fresh evidence is needed, never by review, approval, dispatch or reconciliation.
+Legacy providers inherit their existing capture unchanged. The explicit topology
+file decorator acquires policy first, then refreshes its original topology source
+once, then returns to the original validation, required-source check and final
+clock/endpoint gate. It no longer spends a pre-policy topology check at this cut.
+
+The earlier topology-first launch, review, human request and two dispatch capture
+contracts are unchanged. An outer policy/storage failure reaches neither another
+source observation nor publication. An inner policy refusal still runs the final
+topology observation and can reach only the native nonexecution seal. A native
+source withdrawal is not treated as a persistence failure; an unacknowledged
+source operation stops before final time or endpoint work. No charge is refunded
+by an observation or an error. Only original reconciliation can resolve it.
+
+The selected driver source is checked AFTER any explicit adapter's capture, so
+choosing another step API does not disable the required selection. Supplying an
+additional independently held source does not replace or refill the selected
+source; each retains its own actual work and native failure boundaries.
+
+This closes the explicit observation ordering gap, not an OS-level atomicity
+claim: trusted paths must still be outside actor write authority. Concurrent
+filesystem changes after the final observation remain outside this reference
+contract. Controlled callback faults in tests are not learned detector evidence.
+
+Seven additional publication-order regressions are authored: topology loss during
+policy acquisition for either file; inner versus outer policy failure; all five
+native source-persistence barriers; unchanged topology-first pre-publication
+capture; resolved/expired source-free priority; and an actual bounded policy file
+whose exact inputs pass the original socket review and two-key publication.
+The controlled callback adapter is reachable only in tests; production still uses
+sealed file readers. Combined with the fourteen retained driver tests, this is
+21 authored regression functions and two compile-fail examples, not executed
+validation. The required RCH checks and targeted test launch stopped before compilation
+(exit 127): `rch` is unavailable in this editing environment.
