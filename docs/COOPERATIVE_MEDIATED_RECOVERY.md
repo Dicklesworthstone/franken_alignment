@@ -47,3 +47,29 @@ editing environment. No bead is closed on authored tests alone.
 RCH_REQUIRE_REMOTE=1 rch exec -- cargo test --locked -p fa-reference action::consequence::delivery::persistent::observed::guarded::recovery::mediated
 RCH_REQUIRE_REMOTE=1 rch exec -- cargo run --locked -p xtask -- check
 ```
+
+## Reconcile old deliveries in the same acknowledged recovery cut
+
+`FileMediatedRecovery::finish_reconciled(clock)` consumes Ready into the original
+Fence -> Time -> Sweep replacement. It returns `ReconciledMediatedOwner` with
+`owner`, the separately held `roles`, and every original reconciliation `outcome`.
+No intermediate owner, second replay, source acquisition, approval or resend is
+introduced. An unresolved native result remains explicit rather than becoming a
+success because the recovery returned an owner.
+
+The complete mediated requirements are checked before the single trusted-clock
+call. Both original canonical-image checks remain, including the check after
+clock acquisition. All three events require ordinary capacity; this cannot spend
+the terminal-only reserve. Failure or unwind before acknowledgment returns no
+candidate owner, role or settlement. A successful recovery still leaves topology
+coverage withdrawn and requires fresh qualification before new work.
+
+Six further actual-journal regression functions reuse the original two-key
+publication fixture. They compare all three delivery dispositions across anchored
+and unanchored replay and three event quanta against original Machine transitions,
+encoded bytes and per-attempt outcomes. Additional controls cover consumed old
+approvals, incomplete/mismatching/capacity preflight, stale and unwinding clocks,
+canonical changes during the final clock, and all five storage barriers with
+post-failure recovery. Fourteen regression functions and two compile-fail examples
+are now authored in total, NOT executed. The second targeted and full RCH launches
+also stop before compilation with exit 127 because `rch` is absent.

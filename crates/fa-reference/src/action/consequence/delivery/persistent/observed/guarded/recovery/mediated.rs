@@ -8,6 +8,9 @@ use super::super::mediated::{FileMediatedRequirements, FileMediatedRoles,
 use std::fmt;
 use std::path::Path;
 
+mod reconciled;
+pub use reconciled::ReconciledMediatedOwner;
+
 /// One frozen canonical image and exclusive writer lock. A poll executes at most
 /// its requested number of ORIGINAL transitions, then returns control. Reading,
 /// decoding, history/anchor checks and final replacement remain synchronous. One
