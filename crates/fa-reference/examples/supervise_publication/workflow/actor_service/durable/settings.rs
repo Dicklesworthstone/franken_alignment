@@ -6,22 +6,38 @@ use fa_reference::action::consequence::delivery::persistent::observed::stream::a
 use fa_reference::action::consequence::oversight::actor_wire::client::{ClientIoLimits, ClientSessionLimits};
 use fa_reference::action::consequence::oversight::actor_wire::client::drive::ClientDriveBudget;
 use fa_reference::strict_json::{self, Json, Limits};
+use fa_reference::action::consequence::delivery::stream::StreamProfile;
+use fa_reference::action::consequence::delivery::persistent::observed::stream::actor_wire::validate_stream_proposal;
+use fa_reference::action::consequence::oversight::actor::ActorProposal;
 use std::{collections::BTreeMap, path::{Component, Path, PathBuf}};
 
 pub(super) struct Settings {
     pub directory: PathBuf,
     pub profile: FilePeerClientProfile,
     pub drive: ClientDriveBudget,
+    /// None retains the original version-one raw-submit profile unchanged.
+    pub stream: Option<StreamProfile>,
 }
 impl Settings {
     pub fn read(path: &Path, actor: &Profile) -> Result<Self, String> {
         Self::decode(&read_regular(path, 16384)?, actor)
     }
     pub fn decode(bytes: &[u8], actor: &Profile) -> Result<Self, String> {
-        let json = strict_json::parse(bytes, Limits { max_bytes: 16384, max_depth: 2,
+        let json = strict_json::parse(bytes, Limits { max_bytes: 16384, max_depth: 3,
             max_items: 64, max_string_bytes: 4096 }).map_err(debug)?;
         let mut f = Fields::new(json)?;
-        if f.text("schema")? != "fa.durable-actor-client/1" { return Err("unsupported durable client schema".into()); }
+        let stream = match f.text("schema")?.as_str() {
+            "fa.durable-actor-client/1" => None,
+            "fa.durable-actor-client/2" => {
+                let mut s = Fields::new(f.take("stream")?)?;
+                let profile = StreamProfile::new(s.number("id")?, s.number("generation")?,
+                    s.usize("max_messages")?, s.usize("max_message_bytes")?,
+                    s.usize("max_stream_bytes")?).map_err(debug)?;
+                s.end()?;
+                Some(profile)
+            }
+            _ => return Err("unsupported durable client schema".into()),
+        };
         let directory = PathBuf::from(f.text("directory")?);
         if !directory.is_absolute() || directory.file_name().is_none()
             || directory.components().any(|p| !matches!(p, Component::RootDir | Component::Normal(_)))
@@ -44,7 +60,19 @@ impl Settings {
         // domain identity, complete audience, clock domain and raw wire profile
         // are length-framed; the original peer wrapper then binds supervisor UID,
         // GID and optional PID. Request IDs and invocation timers are not domains.
-        let mut binding = b"FAOPCLIENT\0raw-submit-v1\0".to_vec();
+        let mut binding = match stream {
+            None => b"FAOPCLIENT\0raw-submit-v1\0".to_vec(),
+            Some(profile) => {
+                // Domain separation forbids treating a saved raw proposal as an
+                // intent (or vice versa). Every immutable stream field is pinned.
+                let mut bytes = b"FAOPCLIENT\0stream-intent-v1\0".to_vec();
+                for n in [profile.id(), profile.generation(), profile.max_messages() as u64,
+                    profile.max_message_bytes() as u64, profile.max_stream_bytes() as u64] {
+                    bytes.extend_from_slice(&n.to_be_bytes());
+                }
+                bytes
+            }
+        };
         let s = actor.scope;
         for n in [s.tenant, s.principal, s.run, s.branch, s.authority, crate::config::CLOCK_DOMAIN] {
             binding.extend_from_slice(&n.to_be_bytes());
@@ -54,7 +82,19 @@ impl Settings {
         }
         let profile = FileClientProfile::new(binding, limits, image_bytes).map_err(debug)?
             .with_peer_policy(actor.supervisor).map_err(debug)?;
-        Ok(Self { directory, profile, drive })
+        Ok(Self { directory, profile, drive, stream })
+    }
+    pub fn validate_proposal(&self, proposal: &ActorProposal) -> Result<(), String> {
+        if let Some(profile) = self.stream {
+            validate_stream_proposal(profile, proposal).map_err(debug)?;
+        }
+        Ok(())
+    }
+    /// Missing is not a nonexecution claim; the original command decides whether
+    /// this mode needs an existing request. Never rewrite a retained proposal.
+    pub fn validate_retained(&self, proposal: Option<&ActorProposal>) -> Result<(), String> {
+        if let Some(proposal) = proposal { self.validate_proposal(proposal)?; }
+        Ok(())
     }
 }
 struct Fields(BTreeMap<String, Json>);

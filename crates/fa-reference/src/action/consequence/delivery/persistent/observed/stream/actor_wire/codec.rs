@@ -31,6 +31,17 @@ pub fn encode_stream_proposal(profile: StreamProfile, intent: &FileStreamProposa
         expected_policy_epoch: intent.expected_policy_epoch, deadline: intent.deadline })
 }
 
+/// Check the exact intent representation without allocation, host access or I/O.
+/// This is the SAME decoder used by admitting and recovery ports. It accepts a
+/// complete message or explicit finish, not raw payloads or cumulative frames.
+/// Success proves only shape/profile binding: no current prefix, policy, target
+/// freshness, remaining effect budget or permission is observed or granted.
+pub fn validate_stream_proposal(profile: StreamProfile, proposal: &ActorProposal)
+    -> Result<(), ActorError>
+{
+    message(profile, proposal).map(|_| ())
+}
+
 pub(super) fn message(profile: StreamProfile, proposal: &ActorProposal) -> Result<Option<&str>, ActorError> {
     routing(proposal.target, proposal.deadline)?;
     let bytes = &proposal.payload;

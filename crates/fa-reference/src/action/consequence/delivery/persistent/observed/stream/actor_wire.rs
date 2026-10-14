@@ -9,7 +9,7 @@ pub mod process;
 pub mod client;
 #[cfg(target_os = "linux")]
 pub use source::{FileStreamPeerDrive, FileStreamPeerDriveError};
-pub use codec::{STREAM_INTENT_HEADER_BYTES, encode_stream_proposal};
+pub use codec::{STREAM_INTENT_HEADER_BYTES, encode_stream_proposal, validate_stream_proposal};
 
 use super::{FileOversight, FileStreamProposal, JournalError, StreamProfile};
 use super::super::super::requests::actor::{FileActorPort, FileActorSupervisor, FileActorTicket};
