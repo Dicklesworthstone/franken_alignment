@@ -1,6 +1,9 @@
 //! Fresh, bounded file intake for the ORIGINAL mediation observer.
 //! Trusted directories and independently provisioned expectations are required.
 //! This detects source loss/substitution at explicit checks, not all OS bypasses.
+mod publication;
+pub use publication::{TopologyPublication, TopologyPublicationReport};
+
 use super::{FileMediationObserver, FileMediationUpdate, FileOversight, JournalError};
 use super::super::{JournalFailure, JournalIo};
 use crate::action::consequence::delivery::TopologyChange;

@@ -90,3 +90,59 @@ behavior. No bead or production gate is closed by this source increment.
 RCH_REQUIRE_REMOTE=1 rch exec -- cargo test --locked -p fa-reference action::consequence::delivery::persistent::observed::mediation::source
 RCH_REQUIRE_REMOTE=1 rch exec -- cargo run --locked -p xtask -- check
 ```
+
+## First-publication integration
+
+`FileOversight::publish_checked_from_topology_source` consumes an explicit
+`TopologyPublication` request and the same original source custodian. Existing
+native dispatch must already have consumed both original approval keys. The
+wrapper first asks the original endpoint classifier whether this attempt still
+needs fresh publication evidence; it does not infer that answer from execution
+counts, source availability or a reported success flag.
+
+For an unresolved, unexpired live envelope it runs the source's real refresh,
+then acquires a fresh trusted tick AFTER that work, and calls the unchanged
+`publish_checked`. If the source acknowledged a loss or a noncertifying result,
+the original endpoint can now seal nonexecution under that withdrawn graph. The
+wrapper never interprets a missing source as a refund; original reconciliation
+remains necessary. Missing whole-input or policy evidence still refuses even
+when the graph is valid, and every stronger native guard remains in force.
+
+The original already-resolved or already-expired path skips topology reads,
+source-operation admission and source-budget spending. A repeated operation ID
+or files missing after a completed effect cannot turn receipt lookup into fresh
+publication. Deadline expiry during source work is still checked by the native
+endpoint against the post-capture tick. A clock must already be acknowledged on
+entry for the native needs-evidence classifier; no recovered tick is made fresh.
+
+The result keeps the source and publication cuts separately. An unacknowledged
+source operation returns its error with no publication attempt and no final clock
+call. An acknowledged source withdrawal is not rolled back by a later clock
+unwind. A later publication storage failure retains the earlier source report,
+and the original owner remains quarantined with an uncertain physical outcome.
+Neither calling this method again nor obtaining a fresh source creates a second
+sendable envelope or replaces either consumed approval key.
+
+The two cuts are deliberately NOT an atomic transaction over input files and
+publication. The original journal-as-publication sink is the only endpoint here;
+no remote receipt authentication or live CLI auto-wiring is implied. The explicit
+wrapper adds no persisted deployment flag or automatic background monitoring.
+Source acquisition, numerical/authority replay, verification, clock acquisition
+and canonical replacement remain synchronous and retain their trusted-host
+assumptions. Same-size malicious file substitutions between acquisition and the
+sink remain outside the cooperating/trusted-directory profile.
+
+Nine additional native regression functions cover the positive original two-key
+publication and actual post-capture clock ordering, missing topology after
+dispatch with sealed nonexecution, valid topology with missing original judgment
+inputs, executed receipt lookup after source exhaustion/removal, both sides of
+the deadline boundary, caller/owner/operation refusals, all five storage barriers
+both before and after source acknowledgment, and a clock unwind after durable
+withdrawal. Existing test bodies and publication/classification reducers remain
+unchanged. There are eighteen authored regression functions and two compile-fail
+examples across the source and its first-publication integration; none has run.
+
+The targeted integration suite and full unchanged gate were attempted through
+the required remote-only launcher. Both stopped before compilation with exit 127
+because `rch` is absent. No Rust compile, test, formatting, Clippy or runtime pass
+is claimed; source-only checks do not establish production qualification.

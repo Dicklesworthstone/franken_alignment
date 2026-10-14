@@ -334,3 +334,6 @@ fn source_loss_at_every_original_store_barrier_returns_no_usable_old_certificate
         assert!(matches!(source.last_refusal(), Some(TopologySourceRefusal::Input(_))));
     }
 }
+
+#[path = "tests/publication.rs"]
+mod publication;
