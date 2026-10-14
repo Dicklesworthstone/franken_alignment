@@ -4,6 +4,8 @@ use super::{ActorWire, BoundSocket, Config, Duration, FileOversight, Instant,
     PeerRefusal, PeerSession, Profile, PublicationProfile, debug, drive_budget,
     io, pause, prepare_host};
 use std::path::Path;
+use fa_reference::action::consequence::oversight::actor_wire::ActorRequestPort;
+mod stream;
 
 const USAGE: &str = "serve-open CONFIG ACTOR_PROFILE --receipts-only | serve-open-checked CONFIG ACTOR_PROFILE WITNESS_PROFILE --receipts-only";
 const EXPIRED: &str = "receipt-only startup deadline reached; no actor request was admitted";
@@ -15,6 +17,9 @@ pub(super) fn command(args: &[String], credibility: Option<&Path>) -> Result<(),
 fn command_with(args: &[String], credibility: Option<&Path>,
     elapsed: &mut impl FnMut() -> Duration, wait: &mut impl FnMut(u64)) -> Result<ServiceReport, String>
 {
+    if args.iter().any(|arg| arg == "--stream-recovery") {
+        return stream::command_with(args, credibility, elapsed, wait);
+    }
     // Own the complete flag grammar BEFORE config reads or shared flag removal.
     // Creation, live qualification, recipes, reviewer, sequence and fleet flags
     // must not silently select this less capable endpoint.
@@ -63,6 +68,19 @@ fn serve_owner(host: FileOversight, actor: &Profile, socket: BoundSocket, wall: 
     let (port, supervisor) = host.into_actor_gateway();
     let port = port.recovery_only().for_request(actor.request).map_err(debug)?;
     let mut session = PeerSession::new(actor.actor, ActorWire::new(port), actor.channels(), actor.connections).map_err(debug)?;
+    let (frames, candidates) = serve_session(&mut session, actor, socket, wall, elapsed, wait)?;
+    // The supervisor stays alive throughout service; dropping it now releases
+    // original exclusive custody. A weak actor port cannot retain that lock.
+    let revision = supervisor.host().map_err(debug)?.revision();
+    Ok(ServiceReport { frames, candidates, revision })
+}
+
+// One original bounded peer loop for raw and stream recovery. Only the two
+// restricted constructors in this private module hand sessions to this helper.
+fn serve_session<P: ActorRequestPort>(session: &mut PeerSession<P>, actor: &Profile,
+    socket: BoundSocket, wall: Duration, elapsed: &mut impl FnMut() -> Duration,
+    wait: &mut impl FnMut(u64)) -> Result<(usize, u64), String>
+{
     let mut candidates = 0_u64;
     let mut frames = 0_usize;
     loop {
@@ -96,10 +114,7 @@ fn serve_owner(host: FileOversight, actor: &Profile, socket: BoundSocket, wall: 
         wait(actor.poll_ms);
     }
     session.revoke();
-    // The supervisor stays alive throughout service; dropping it now releases
-    // original exclusive custody. A weak actor port cannot retain that lock.
-    let revision = supervisor.host().map_err(debug)?.revision();
-    Ok(ServiceReport { frames, candidates, revision })
+    Ok((frames, candidates))
 }
 
 #[cfg(test)]
