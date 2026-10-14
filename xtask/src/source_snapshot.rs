@@ -100,9 +100,9 @@ pub struct Limits {
 impl Default for Limits {
     fn default() -> Self {
         Limits {
-            max_files: 512,
-            max_depth: 8,
-            max_manifest_bytes: 1024 * 1024,
+            max_files: 2048,
+            max_depth: 16,
+            max_manifest_bytes: 2 * 1024 * 1024,
         }
     }
 }
@@ -776,6 +776,163 @@ fn hash_one(tool: &Tool, root: &Path, relative: &str) -> Result<String, HashErro
     Ok(digest.to_string())
 }
 
+/// Hash several already-discovered files with one invocation of the pinned
+/// operator tool. Every input is revalidated as a contained regular file before
+/// the process starts. This is only a positive-path acceleration: any batch
+/// refusal falls back to the exact single-file path so causal per-file
+/// diagnostics are preserved rather than guessed from aggregate stderr.
+fn hash_many(
+    tool: &Tool,
+    root: &Path,
+    relatives: &[String],
+) -> Result<Vec<(String, String)>, HashError> {
+    if relatives.is_empty() {
+        return Ok(Vec::new());
+    }
+
+    let mut absolute_to_relative = BTreeMap::new();
+    let mut absolutes = Vec::with_capacity(relatives.len());
+    for relative in relatives {
+        let absolute = checked_path(root, relative).map_err(HashError::Refusal)?;
+        if !absolute.is_file() {
+            return Err(HashError::Refusal(Finding::new(
+                Phase::Discovery,
+                "not_regular_file",
+                relative,
+                "operator input must be a regular file before any hashing process starts",
+            )));
+        }
+        let rendered = absolute.to_string_lossy().into_owned();
+        if absolute_to_relative
+            .insert(rendered.clone(), relative.clone())
+            .is_some()
+        {
+            return Err(HashError::Refusal(Finding::new(
+                Phase::Tool,
+                "hash_tool_path_mismatch",
+                relative,
+                "two reviewed paths resolved to the same operator input",
+            )));
+        }
+        absolutes.push(absolute);
+    }
+
+    let mut command = Command::new(&tool.program);
+    command.args(&tool.args);
+    command.args(&absolutes);
+    let output = match command.output() {
+        Ok(output) => output,
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => {
+            return Err(HashError::NotSpawnable(format!(
+                "`{}`: {error}",
+                tool.rendered()
+            )));
+        }
+        Err(error) => {
+            return Err(HashError::Refusal(Finding::new(
+                Phase::Tool,
+                "hash_tool_failed",
+                &relatives[0],
+                format!("cannot start batched `{}`: {error}", tool.rendered()),
+            )));
+        }
+    };
+    let stderr = String::from_utf8_lossy(&output.stderr).trim().to_string();
+    let quoted = if stderr.is_empty() {
+        "no stderr".to_string()
+    } else {
+        format!("stderr: {stderr}")
+    };
+    if !output.status.success() {
+        return Err(HashError::Refusal(Finding::new(
+            Phase::Tool,
+            "hash_tool_failed",
+            &relatives[0],
+            format!(
+                "batched `{}` exited {}; {quoted}",
+                tool.rendered(),
+                output.status
+            ),
+        )));
+    }
+    let text = String::from_utf8(output.stdout).map_err(|_| {
+        HashError::Refusal(Finding::new(
+            Phase::Tool,
+            "hash_tool_output_unparsable",
+            &relatives[0],
+            format!("batched tool output is not valid UTF-8; {quoted}"),
+        ))
+    })?;
+
+    let mut digests = BTreeMap::new();
+    for line in text.lines() {
+        let Some((digest, echoed)) = line.split_once("  ") else {
+            return Err(HashError::Refusal(Finding::new(
+                Phase::Tool,
+                "hash_tool_output_unparsable",
+                &relatives[0],
+                format!(
+                    "expected `<64 hex><two spaces><path>`, got `{line}`; {quoted}"
+                ),
+            )));
+        };
+        if !is_sha256_hex(digest) {
+            return Err(HashError::Refusal(Finding::new(
+                Phase::Tool,
+                "hash_tool_output_unparsable",
+                &relatives[0],
+                format!(
+                    "tool emitted `{digest}`, not 64 lowercase hex digits; {quoted}"
+                ),
+            )));
+        }
+        let echoed = echoed.trim_end();
+        let Some(relative) = absolute_to_relative.get(echoed) else {
+            return Err(HashError::Refusal(Finding::new(
+                Phase::Tool,
+                "hash_tool_path_mismatch",
+                &relatives[0],
+                format!("batched tool reported unexpected path `{echoed}`; {quoted}"),
+            )));
+        };
+        if digests
+            .insert(relative.clone(), digest.to_string())
+            .is_some()
+        {
+            return Err(HashError::Refusal(Finding::new(
+                Phase::Tool,
+                "hash_tool_output_unparsable",
+                relative,
+                format!("batched tool reported the same path more than once; {quoted}"),
+            )));
+        }
+    }
+
+    if digests.len() != relatives.len() {
+        return Err(HashError::Refusal(Finding::new(
+            Phase::Tool,
+            "hash_tool_output_unparsable",
+            &relatives[0],
+            format!(
+                "batched tool returned {} rows for {} requested files; {quoted}",
+                digests.len(),
+                relatives.len()
+            ),
+        )));
+    }
+    Ok(relatives
+        .iter()
+        .map(|relative| {
+            (
+                relative.clone(),
+                digests
+                    .remove(relative)
+                    .expect("every requested path was checked above"),
+            )
+        })
+        .collect())
+}
+
 /// Bind the manifest's own bytes to the reviewed operator policy. This is
 /// outside the manifest's file set, so there is no self-referential digest.
 pub fn verify_manifest_identity(root: &Path, relative: &str, expected: &str) -> Result<(), String> {
@@ -1003,19 +1160,68 @@ pub fn verify(root: &Path, manifest: &Manifest, limits: Limits) -> Result<Report
                 ),
             )),
             Some(tool) => {
-                // One manifest is never hashed by two different tools.
-                for relative in to_hash.iter().skip(1) {
-                    match hash_one(tool, &root, relative) {
-                        Ok(digest) => {
-                            compare(manifest, relative, &digest, &mut verified, &mut findings);
+                // One manifest is never hashed by two different tools. The
+                // common path uses one additional process for the entire tail.
+                // If that aggregate invocation refuses, rerun the tail one file
+                // at a time with the SAME pinned tool. This costs more only on a
+                // failing run and preserves the old per-file causal diagnostics.
+                let tail = &to_hash[1..];
+                if !tail.is_empty() {
+                    match hash_many(tool, &root, tail) {
+                        Ok(rows) => {
+                            for (relative, digest) in rows {
+                                compare(
+                                    manifest,
+                                    &relative,
+                                    &digest,
+                                    &mut verified,
+                                    &mut findings,
+                                );
+                            }
                         }
-                        Err(HashError::Refusal(finding)) => findings.push(finding),
-                        Err(HashError::NotSpawnable(reason)) => findings.push(Finding::new(
-                            Phase::Tool,
-                            "hash_tool_failed",
-                            relative.clone(),
-                            format!("pinned tool became unavailable mid-run: {reason}"),
-                        )),
+                        Err(batch_error) => {
+                            let findings_before = findings.len();
+                            for relative in tail {
+                                match hash_one(tool, &root, relative) {
+                                    Ok(digest) => compare(
+                                        manifest,
+                                        relative,
+                                        &digest,
+                                        &mut verified,
+                                        &mut findings,
+                                    ),
+                                    Err(HashError::Refusal(finding)) => findings.push(finding),
+                                    Err(HashError::NotSpawnable(reason)) => {
+                                        findings.push(Finding::new(
+                                            Phase::Tool,
+                                            "hash_tool_failed",
+                                            relative.clone(),
+                                            format!(
+                                                "pinned tool became unavailable mid-run: {reason}"
+                                            ),
+                                        ));
+                                    }
+                                }
+                            }
+                            // If every single-file retry succeeded, the batch
+                            // itself still gave an unusable answer. Do not turn
+                            // that contradiction into a pass.
+                            if findings.len() == findings_before {
+                                match batch_error {
+                                    HashError::Refusal(finding) => findings.push(finding),
+                                    HashError::NotSpawnable(reason) => {
+                                        findings.push(Finding::new(
+                                            Phase::Tool,
+                                            "hash_tool_failed",
+                                            tail[0].clone(),
+                                            format!(
+                                                "pinned batched tool became unavailable: {reason}"
+                                            ),
+                                        ));
+                                    }
+                                }
+                            }
+                        }
                     }
                 }
             }
@@ -1055,6 +1261,15 @@ mod tests {
 
     #[test]
     fn limits_are_clamped_to_hard_ceilings() {
+        assert_eq!(
+            Limits::default(),
+            Limits {
+                max_files: 2048,
+                max_depth: 16,
+                max_manifest_bytes: 2 * 1024 * 1024,
+            },
+            "the reviewed workspace default must cover the current source scale without weakening hard ceilings"
+        );
         let wide = Limits {
             max_files: usize::MAX,
             max_depth: usize::MAX,
@@ -1187,6 +1402,47 @@ mod tests {
             hash_one(&absent, &root, "Cargo.toml"),
             Err(HashError::NotSpawnable(_))
         ));
+    }
+
+    #[test]
+    fn batched_operator_hashes_match_the_same_pinned_single_file_tool() {
+        let root = crate::workspace_root().expect("actual invocation workspace");
+        let files = vec![
+            "Cargo.toml".to_string(),
+            "Cargo.lock".to_string(),
+            "rust-toolchain.toml".to_string(),
+        ];
+        let mut selected = None;
+        for tool in Tool::candidates_for_host() {
+            match hash_one(&tool, &root, &files[0]) {
+                Ok(_) => {
+                    selected = Some(tool);
+                    break;
+                }
+                Err(HashError::NotSpawnable(_)) => continue,
+                Err(HashError::Refusal(finding)) => {
+                    panic!("operator tool refused the positive control: {finding:?}")
+                }
+            }
+        }
+        let tool = selected.expect("one operator SHA-256 tool is required by the gate");
+        let batch = match hash_many(&tool, &root, &files) {
+            Ok(batch) => batch,
+            Err(HashError::NotSpawnable(reason)) => {
+                panic!("pinned operator tool disappeared during batch test: {reason}")
+            }
+            Err(HashError::Refusal(finding)) => {
+                panic!("batched operator tool refused the positive control: {finding:?}")
+            }
+        };
+        assert_eq!(batch.len(), files.len());
+        for (relative, digest) in batch {
+            assert_eq!(
+                digest,
+                hash_one(&tool, &root, &relative).expect("single-file positive control"),
+                "batching must not change digest semantics for {relative}"
+            );
+        }
     }
 
     #[cfg(unix)]
