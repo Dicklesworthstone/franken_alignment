@@ -34,6 +34,24 @@ impl PreparedGuardedBootstrap {
     pub(super) fn prepare(profile: FileOversightProfile, guards: &FileGuardSet,
         registration: Option<FileCredentialRegistration<'_>>) -> Result<Self, JournalError>
     {
+        Self::prepare_with_reserve(profile, guards, registration, None)
+    }
+
+    /// Reserve the original terminal tail before any bootstrap guard counts as
+    /// work. The complete first image is still published only once.
+    pub(super) fn prepare_reserved(profile: FileOversightProfile, guards: &FileGuardSet,
+        registration: Option<FileCredentialRegistration<'_>>,
+        reserve: super::super::super::RecoveryReserve) -> Result<Self, JournalError>
+    {
+        use super::super::super::recovery_capacity::{Admission, Class};
+        Admission::new(profile.delivery.limits).record(Class::Install(reserve), 0, 0)?;
+        Self::prepare_with_reserve(profile, guards, registration, Some(reserve))
+    }
+
+    fn prepare_with_reserve(profile: FileOversightProfile, guards: &FileGuardSet,
+        registration: Option<FileCredentialRegistration<'_>>,
+        reserve: Option<super::super::super::RecoveryReserve>) -> Result<Self, JournalError>
+    {
         profile.delivery.limits.check()?;
         guards.validate()?;
         let credential = match (&guards.credential, registration) {
@@ -52,6 +70,9 @@ impl PreparedGuardedBootstrap {
             Some(stream) => Event::StreamBootstrap(stream),
             None => Event::PublicationGuard,
         }];
+        if let Some(reserve) = reserve {
+            events.push(Event::Core(super::super::BaseEvent::ReserveRecovery(reserve)));
+        }
         if let Some(source) = guards.source { events.push(Event::Source(SourceEvent::Enable(source))); }
         if let Some(identity) = &guards.identity {
             events.push(Event::Identity(IdentityEvent::Enable(Rc::new(identity.passport.clone()), identity.policy)));

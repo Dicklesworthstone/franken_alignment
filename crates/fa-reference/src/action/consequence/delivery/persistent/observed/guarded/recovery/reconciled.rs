@@ -66,13 +66,22 @@ impl FileGuardedRecovery {
     /// Unlike an already-drained stop, live recovery is NOT a zero-event retry.
     pub fn finish_reconciled<F>(self, clock: F) -> Result<ReconciledGuardedOwner, JournalError>
     where F: FnOnce() -> ElapsedTick {
+        self.finish_reconciled_checked(clock,
+            |run| run.expected.check(&run.profile, &run.machine, &run.events))
+    }
+
+    // Closed composition for the native Andon cursor. The fixed original
+    // Fence/Time/Sweep implementation below is shared, not reimplemented.
+    pub(super) fn finish_reconciled_checked<F>(self, clock: F,
+        check: impl FnOnce(&Self) -> Result<(), Error>) -> Result<ReconciledGuardedOwner, JournalError>
+    where F: FnOnce() -> ElapsedTick {
         match self.status {
             FileGuardedRecoveryStatus::Ready => {}
             FileGuardedRecoveryStatus::Failed(error) => return Err(error.into()),
             FileGuardedRecoveryStatus::Interrupted => return Err(JournalError::Unavailable),
             _ => return Err(Error::Incomplete.into()),
         }
-        self.expected.check(&self.profile, &self.machine, &self.events)?;
+        check(&self)?;
         let count = self.events.len().checked_add(3).ok_or(Error::Overflow)?;
         if count > self.profile.delivery.limits.events { return Err(Error::Limit.into()); }
         if self.store.read(self.profile.delivery.limits.bytes)? != self.canonical {
