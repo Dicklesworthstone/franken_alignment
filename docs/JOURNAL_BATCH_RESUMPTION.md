@@ -89,3 +89,92 @@ The independent integrated verification remains:
 RCH_REQUIRE_REMOTE=1 rch exec -- cargo test --locked -p fa-journal batch_recovery
 RCH_REQUIRE_REMOTE=1 rch exec -- cargo run --locked -p xtask -- check
 ```
+
+## Original cooperative-writer integration
+
+Four additional public-API regression functions compose the already published
+`begin_commit_batch`, cancellation, strict reopen, `begin_inspect_batch`, and
+`resume_batch`. They compare all six boundaries of a five-event group under
+three write quanta against the original single-record encoding and rights.
+No private persistence hook supplies these integration results. Other controls
+cancel inside each record, add a legal but conflicting record AFTER successful
+inspection, and finish a cancelled reserved tail at both exact lifetime limits.
+A former inspection result is not a reusable authorization to skip verification.
+
+These four functions are also authored but unexecuted under the same RCH
+limitation. The full set comprises twelve new regression functions, with no
+changes to existing test assertions or wire-format expectations.
+
+```sh
+RCH_REQUIRE_REMOTE=1 rch exec -- cargo test --locked -p fa-journal --test file_batch_resume
+```
+
+## Cooperative resumption without a second verification pass
+
+`FileJournal::begin_resume_batch` freezes the same independently retained anchor
+and entire original batch in the existing `FileBatchInspection`. Advance with
+`BatchInspectionBudget` until `Ready`, retain its work report, then consume it
+through `FileBatchInspection::resume`. That handoff returns the existing
+`FileBatchCommit`; advance it with `BatchCommitBudget` and consume `finish` only
+after all missing bytes are written. A nonempty suffix requires the original
+file synchronization before a usable final head and accounting are returned.
+
+This is an explicit choice BEFORE inspection. Ordinary `begin_inspect_batch`
+discards its private final candidate as before and cannot later upgrade to a
+writer. The resumption path retains that candidate privately through stored-byte
+comparison and clean EOF. No partial candidate, writable owner, raw descriptor,
+import callback or asserted progress token is exposed. The same advisory lock
+survives both stages, including the handoff and final synchronization.
+
+The original replay, per-record preparation and byte comparison are unchanged.
+Resumption transfers their actual final candidate and already encoded missing
+suffix rather than replaying the prefix or re-encoding that suffix. The handoff
+checks the actual file extent and candidate identity, profile, head and byte
+length. Removing the stored prefix can compact the bounded 8 MiB group buffer;
+it is not a zero-copy or memory-reduction claim. The original inspection still
+clones its private ledger for each prepared record. Only explicit resumption
+retains one final candidate longer; ordinary inspection retention is unchanged.
+
+The inspection report accounts for all original group preparation, including
+already stored records. The writer then reports only missing records and its
+own writes; its new preparation-attempt count is zero. Keep both reports rather
+than treating one as the total cost. Initial setup, metadata, seeking, buffer
+compaction, a reducer step and final synchronization remain synchronous.
+Budgets bound logical operations, not syscall latency or physical-media traffic.
+
+If the entire matching group was already acknowledged, the returned writer is
+immediately `Ready`, with zero missing records and no new preparation or write
+work. Its `finish` checks extent and returns the original acknowledged owner
+without another synchronization. It does not replace the original live ledger
+with the replayed copy. New-group commits and nonempty suffixes still synchronize.
+
+Cancellation before handoff leaves bytes unchanged; after writing starts it may
+leave complete records or a torn record. Neither stage truncates, repairs,
+refunds or invents an external outcome. Failed reads, semantic checks, writes,
+synchronization and caught unwinds return no new usable accounting. Extent is
+checked at handoff, every write and final completion; malicious same-size edits
+remain outside the cooperating-writer contract. `finish` on the inspector still
+supports explicitly stopping after verification with only the previously
+acknowledged owner and exact status, discarding unused private preparation.
+
+Six additional public regression functions cover every surviving record boundary
+under three quanta, zero allowances, explicit selection, incomplete/failed
+handoff, cancellation before/after handoff, complete and torn suffix boundaries,
+whole-group limits, conflicting records, exact reserved capacity and changes in
+extent at each ownership boundary. Four new native fault regressions exercise
+the SAME original writer: EINTR and short writes, errors after actual writes,
+synchronization failures and unwinds, one sync for a new suffix, and no sync for
+an already acknowledged group. One compile-fail example checks one-use handoff.
+Together with the eight synchronous and four previously prepared public tests,
+22 new regression functions are authored across these two source increments.
+
+These tests remain UNEXECUTED. The targeted public suite, private resumption
+suite and full gate again stopped before compilation because `rch` is absent
+(exit 127). No compiler, formatter, Clippy, performance or deployment pass is
+claimed. Existing tests and the independent single-record encoder are unchanged.
+
+```sh
+RCH_REQUIRE_REMOTE=1 rch exec -- cargo test --locked -p fa-journal --test file_batch_resume
+RCH_REQUIRE_REMOTE=1 rch exec -- cargo test --locked -p fa-journal resumption
+RCH_REQUIRE_REMOTE=1 rch exec -- cargo run --locked -p xtask -- check
+```

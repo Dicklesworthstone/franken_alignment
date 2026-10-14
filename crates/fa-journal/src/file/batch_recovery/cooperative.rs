@@ -1,4 +1,6 @@
 //! Yield while verifying an original batch; never return a checked prefix as rights.
+mod resumption;
+
 use super::{BatchAnchor, BatchStatus, Error, FileJournal};
 use crate::{Event, Head, Journal};
 use crate::batch::{BatchLimits, MAX_BATCH_ENCODED_BYTES, MAX_BATCH_RECORDS};
@@ -43,6 +45,8 @@ pub struct BatchInspectionReport {
 /// No partial status, ledger, file handle, clone or writable owner escapes.
 /// Dropping or canceling releases the lock without changing any journal bytes.
 /// Only finish returns the original owner after exact prefix/suffix verification.
+/// An explicitly selected resumption may instead transfer to the sealed writer;
+/// neither route exposes an intermediate ledger or permits interleaved commits.
 ///
 /// The caller retains the original anchor and events independently; this does
 /// not authenticate unstored intentions or observe external effect outcomes.
@@ -65,6 +69,8 @@ pub struct FileBatchInspection {
     file: Option<File>,
     acknowledged: Journal,
     candidate: Option<Journal>,
+    // Only begin_resume_batch selects transfer of a fully verified final candidate.
+    retain_candidate: bool,
     anchor: BatchAnchor,
     events: Vec<Event>,
     limits: BatchLimits,
@@ -109,7 +115,7 @@ impl FileJournal {
         self.file.seek(SeekFrom::Start(0))?;
         let replay = initial.replay_cursor(self.file.take(anchor.encoded_len), anchor.head)?;
         Ok(FileBatchInspection { replay: Some(replay), file: None,
-            acknowledged: self.journal, candidate: None, anchor, events, limits, covered,
+            acknowledged: self.journal, candidate: None, retain_candidate: false, anchor, events, limits, covered,
             prepared: 0, records: Vec::new(), compared: 0,
             stage: BatchInspectionStatus::ReplayPrefix, failed: false,
             total: BatchInspectionWork::default() })
@@ -204,9 +210,10 @@ impl FileBatchInspection {
             self.candidate = Some(next);
         }
         if self.prepared == self.events.len() {
-            // Only the bounded canonical comparison bytes survive preparation.
-            // Never return or install any reconstructed intermediate/final ledger.
-            self.candidate = None;
+            // Ordinary inspection retains no reconstructed ledger. Explicit
+            // resumption keeps the final candidate private until full byte/EOF
+            // verification transfers it into the original bounded writer.
+            if !self.retain_candidate { self.candidate = None; }
             self.stage = BatchInspectionStatus::CompareSuffix;
         }
         Ok(())

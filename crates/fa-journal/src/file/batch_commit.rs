@@ -1,5 +1,6 @@
-//! Cooperative NEW batch writes under the original owner lock, never a replay
-//! or suffix repair. Only final synchronization acknowledges new accounting.
+//! Cooperative batch writes under the original owner lock. New groups are
+//! prepared here; exact interrupted suffixes arrive only from sealed inspection.
+//! Only final synchronization acknowledges NEW accounting. No tail repair.
 use super::{Error, FileJournal};
 use crate::{Event, Head, Journal};
 use crate::batch::{BatchLimits, BatchPreparation, BatchPreparationError, BatchPreparationStage};
@@ -24,7 +25,8 @@ impl BatchCommitBudget {
 pub enum BatchCommitStage {
     Preparing,
     Writing,
-    /// All bytes were written, but finish MUST still synchronize before ack.
+    /// All missing bytes were written; finish synchronizes new accounting.
+    /// An already acknowledged complete resumption needs no additional sync.
     Ready,
     Failed,
 }
@@ -34,8 +36,11 @@ pub enum BatchCommitStage {
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct BatchCommitReport {
     pub stage: BatchCommitStage,
+    /// New or missing records, excluding an already acknowledged stored prefix.
     pub total_records: usize,
     pub prepared_records: usize,
+    /// Attempts made by this writer. Resumption preparation is accounted in
+    /// the preceding BatchInspectionReport, not counted a second time here.
     pub preparation_attempts: usize,
     pub write_calls: u64,
     pub written_bytes: u64,
@@ -61,6 +66,7 @@ pub struct FileBatchCommit {
     bytes: Vec<u8>,
     written: usize,
     report: BatchCommitReport,
+    already_acknowledged: bool,
 }
 impl fmt::Debug for FileBatchCommit {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -80,7 +86,7 @@ impl FileJournal {
         let preparation = self.journal.begin_append_batch(events, limits)?;
         let total_records = preparation.progress().total_records;
         Ok(FileBatchCommit { owner: self, preparation: Some(preparation), candidate: None,
-            bytes: Vec::new(), written: 0, report: BatchCommitReport {
+            bytes: Vec::new(), written: 0, already_acknowledged: false, report: BatchCommitReport {
                 stage: BatchCommitStage::Preparing, total_records, prepared_records: 0,
                 preparation_attempts: 0, write_calls: 0, written_bytes: 0,
             } })
@@ -88,6 +94,37 @@ impl FileJournal {
 }
 
 impl FileBatchCommit {
+    // Called only by the sealed inspector after exact prefix, complete group,
+    // stored suffix and EOF checks. No caller-supplied bytes or Journal can use
+    // this constructor. Its checks defend the internal ownership handoff too.
+    pub(super) fn from_verified_suffix(owner: FileJournal, candidate: Journal,
+        bytes: Vec<u8>, missing_records: usize) -> Result<Self, Error>
+    {
+        if owner.poisoned { return Err(Error::Poisoned); }
+        if candidate.identity() != owner.journal.identity()
+            || candidate.limits != owner.journal.limits
+            || candidate.recovery_reserve() != owner.journal.recovery_reserve()
+            || candidate.head().sequence.checked_sub(owner.journal.head().sequence)
+                != Some(missing_records as u64)
+            || candidate.encoded_len().checked_sub(owner.journal.encoded_len())
+                != Some(bytes.len() as u64)
+            || missing_records > crate::batch::MAX_BATCH_RECORDS
+            || bytes.len() > crate::batch::MAX_BATCH_ENCODED_BYTES
+            || bytes.is_empty() != (missing_records == 0)
+        { return Err(crate::Error::Binding.into()); }
+        let already_acknowledged = missing_records == 0;
+        if already_acknowledged && (candidate.head() != owner.journal.head()
+            || candidate.rights() != owner.journal.rights())
+        { return Err(crate::Error::Binding.into()); }
+        Ok(Self { owner, preparation: None, candidate: Some(candidate), bytes,
+            written: 0, already_acknowledged, report: BatchCommitReport {
+                stage: if already_acknowledged { BatchCommitStage::Ready }
+                    else { BatchCommitStage::Writing },
+                total_records: missing_records, prepared_records: missing_records,
+                preparation_attempts: 0, write_calls: 0, written_bytes: 0,
+            } })
+    }
+
     /// Run only the CURRENT stage, yielding before the next. No poll syncs or
     /// acknowledges accounting. Budgets bound logical work, not syscall latency;
     /// metadata/seek operations and the initial clone are outside these counts.
@@ -111,6 +148,8 @@ impl FileBatchCommit {
     /// After complete writes, check extent and sync the SAME file before returning
     /// the original owner with its complete candidate installed. Failure/unwind
     /// returns no owner or new head; recovery must retain the old minimum.
+    /// Exact resumption of a fully acknowledged group checks extent but neither
+    /// writes nor syncs again, and returns the preexisting original accounting.
     pub fn finish(self) -> Result<FileJournal, Error> {
         self.finish_with(|file| file.sync_all())
     }
@@ -189,8 +228,10 @@ impl FileBatchCommit {
         self.owner.poisoned = true;
         let candidate = self.candidate.take().ok_or(Error::CommitIncomplete)?;
         self.check_extent(candidate.encoded_len())?;
-        sync(&self.owner.file)?;
-        self.owner.journal = candidate;
+        if !self.already_acknowledged {
+            sync(&self.owner.file)?;
+            self.owner.journal = candidate;
+        }
         self.owner.poisoned = false;
         Ok(self.owner)
     }
@@ -206,3 +247,6 @@ fn preparation_error(error: BatchPreparationError) -> Error {
 
 #[cfg(test)]
 mod tests;
+
+#[cfg(test)]
+mod resumption_tests;
