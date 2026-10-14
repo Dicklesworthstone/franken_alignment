@@ -222,6 +222,7 @@ fn original_socket_review_and_both_keys_publish_two_requests_with_one_retained_s
         assert!(matches!(event, FileDriverEvent::PublicationChecked { publication, source_failure: None, .. }
             if matches!(publication.outcome, EndpointOutcome::Executed { .. })));
         assert_eq!(case.work().checks, expected_checks);
+        assert_eq!(case.driver.topology().unwrap().source().last_operation(), expected_checks);
         assert_eq!(case.last().request, Some(request)); assert_eq!(case.last().attempt, Some(reviewed.attempt));
         let DriverTopologyOutcome::Finished(Ok(report)) = &case.last().outcome else { panic!("native source result"); };
         assert!(report.refusal.is_none());
@@ -347,4 +348,188 @@ fn setup_refusals_return_original_custody_without_io_or_budget_reset() {
     assert_eq!(case.root.bytes(), before);
     assert!(case.driver.refresh_topology(case.revision()).unwrap().refusal.is_none());
     assert!(other.driver.refresh_topology(other.revision()).unwrap().refusal.is_none());
+}
+
+#[test]
+fn release_handoff_keeps_required_source_work_and_does_not_resurrect_a_job() {
+    let mut case = Case::new(8); let reviewed = case.review(901); case.dispatch(&reviewed);
+    let work = case.work(); let last = case.last().clone(); let bytes = case.root.bytes();
+    let released = case.driver.release();
+    assert_eq!(released.topology.as_ref().unwrap().source().work(), work);
+    case.driver = released.into_driver().unwrap();
+    assert_eq!(case.work(), work); assert_eq!(case.last(), &last);
+    assert_eq!(case.driver.phase(), FileDriverPhase::Idle);
+    assert!(matches!(case.driver.step_with_evidence(|| panic!("no old-job clock"),
+        |_, _| panic!("no old-job provider"), None).unwrap(), FileDriverEvent::Idle));
+    assert_eq!(case.root.bytes(), bytes);
+    let host = case.driver.supervisor().host().unwrap();
+    assert_eq!(host.inspect().control.ledger.charged, 16); assert_eq!(host.inspect().executions, 0);
+    assert_eq!(host.inspect().control.ledger.stages[&reviewed.attempt], ActionState::Dispatching);
+}
+
+#[test]
+fn failed_handoff_returns_the_original_source_for_corrected_same_owner_transfer() {
+    let mut case = Case::new(8); let (other, unused_source) = Case::unselected(8);
+    let work = case.work(); let last = case.last().clone(); let bytes = case.root.bytes();
+    let mut released = case.driver.release(); let foreign = other.driver.release();
+    let original = std::mem::replace(&mut released.supervisor, foreign.supervisor);
+    let error = released.into_driver().unwrap_err();
+    assert_eq!(error.error, JournalError::Contract(Error::Binding));
+    assert_eq!(error.release.topology.as_ref().unwrap().source().work(), work);
+    let mut released = error.release; released.supervisor = original;
+    case.driver = released.into_driver().unwrap();
+    assert_eq!(case.work(), work); assert_eq!(case.last(), &last); assert_eq!(case.root.bytes(), bytes);
+    drop(unused_source);
+    let reviewed = case.review(901); case.dispatch(&reviewed);
+    fs::remove_file(case.root.inventory()).unwrap();
+    let event = case.driver.step_with_evidence(|| ElapsedTick(1), |_, _| Ok(evidence(&reviewed.inputs)), None).unwrap();
+    assert!(matches!(event, FileDriverEvent::PublicationChecked { publication, .. }
+        if matches!(publication.outcome, EndpointOutcome::NotExecuted { .. })));
+    assert_eq!(case.work().checks, 2);
+}
+
+#[test]
+fn loss_handoff_and_explicit_newer_rebind_require_fresh_review_without_budget_refill() {
+    let mut case = Case::new(32); let old = case.review(901); case.dispatch(&old);
+    fs::remove_file(case.root.topology()).unwrap();
+    assert!(matches!(case.driver.step_with_evidence(|| ElapsedTick(1), |_, _| Ok(evidence(&old.inputs)), None).unwrap(),
+        FileDriverEvent::PublicationChecked { publication, .. }
+            if matches!(publication.outcome, EndpointOutcome::NotExecuted { .. })));
+    case.reconcile(&old); let spent = case.work();
+    case.driver = case.driver.release().into_driver().unwrap();
+    fs::write(case.root.topology(), text(1)).unwrap();
+    let unchanged = case.driver.refresh_topology(case.revision()).unwrap();
+    assert_eq!(unchanged.refusal, Some(TopologySourceRefusal::CoverageUnavailable));
+    assert_eq!(case.work(), spent);
+    let before = case.root.bytes();
+    assert_eq!(case.driver.rebind_topology(case.revision(), 100, loaded(&text(1))),
+        Err(JournalError::Contract(Error::Stale)));
+    let wrong_limits = document(2, 33, 33 * TOPOLOGY_REFRESH_READ_BYTES, 0,
+        crate::action::consequence::mediation::MAX_CHECK_EDGE_VISITS);
+    assert_eq!(case.driver.rebind_topology(case.revision(), 100, loaded(&wrong_limits)),
+        Err(JournalError::Contract(Error::Binding)));
+    assert_eq!(case.root.bytes(), before); assert_eq!(case.work(), spent);
+    let replacement = text(2); fs::write(case.root.topology(), &replacement).unwrap();
+    case.driver.rebind_topology(case.revision(), 100, loaded(&replacement)).unwrap();
+    assert_eq!(case.work(), spent);
+    assert!(case.driver.supervisor().host().unwrap().mediation_snapshot().unwrap().accepted.is_none());
+    assert!(case.driver.refresh_topology(case.revision()).unwrap().refusal.is_none());
+    let fresh = case.review(902); case.dispatch(&fresh);
+    assert!(matches!(case.driver.step_with_evidence(|| ElapsedTick(1), |_, _| Ok(evidence(&fresh.inputs)), None).unwrap(),
+        FileDriverEvent::PublicationChecked { publication, .. }
+            if matches!(publication.outcome, EndpointOutcome::Executed { .. })));
+    assert_eq!(case.work().checks, spent.checks + 2);
+    case.reconcile(&fresh);
+    let host = case.driver.supervisor().host().unwrap();
+    assert_eq!(host.inspect().executions, 1);
+    assert_eq!(host.inspect().control.ledger.stages[&old.attempt], ActionState::ConfirmedNotExecuted);
+    assert_eq!(host.inspect().control.ledger.stages[&fresh.attempt], ActionState::Confirmed);
+}
+
+#[test]
+fn operation_id_overflow_quarantines_without_wrapping_or_refilling_the_source() {
+    let (mut case, mut selected) = Case::unselected(8);
+    {
+        let mut host = case.driver.supervisor_mut().host_mut().unwrap(); let revision = host.revision();
+        selected.source.refresh(&mut host, revision, u64::MAX).unwrap();
+    }
+    let spent = selected.source().work();
+    case.driver.require_topology(case.revision(), selected).unwrap(); let bytes = case.root.bytes();
+    assert_eq!(case.driver.refresh_topology(case.revision()), Err(JournalError::Contract(Error::Overflow)));
+    assert_eq!(case.work(), spent); assert_eq!(case.root.bytes(), bytes);
+    assert_eq!(case.driver.topology().unwrap().source().last_operation(), u64::MAX);
+    assert_eq!(case.last().outcome, DriverTopologyOutcome::Finished(Err(JournalError::Contract(Error::Overflow))));
+    assert!(case.driver.supervisor().host().unwrap().storage_failure().is_some());
+    let release = case.driver.release(); let error = release.into_driver().unwrap_err();
+    assert_eq!(error.error, JournalError::Unavailable);
+    assert_eq!(error.release.topology.as_ref().unwrap().source().work(), spent);
+}
+
+#[test]
+fn source_persistence_failures_at_every_barrier_stop_before_final_clock_or_publication() {
+    use crate::action::consequence::delivery::persistent::JournalIo;
+    for barrier in [JournalIo::Stage, JournalIo::Write, JournalIo::FileSync, JournalIo::Rename, JournalIo::DirectorySync] {
+        let mut case = Case::new(8); let reviewed = case.review(901); case.dispatch(&reviewed);
+        let before = case.root.bytes();
+        case.driver.supervisor_mut().host_mut().unwrap().store.fail_once(barrier);
+        let mut clocks = 0;
+        let event = case.driver.step_with_evidence(|| { clocks += 1; ElapsedTick(1) },
+            |_, _| Ok(evidence(&reviewed.inputs)), None).unwrap();
+        assert!(matches!(event, FileDriverEvent::PublicationUnknown { error: JournalError::Io(ref failure), .. }
+            if failure.operation == barrier));
+        assert_eq!(clocks, 1, "unacknowledged topology cannot reach the final clock");
+        assert!(matches!(case.last().outcome, DriverTopologyOutcome::Finished(Err(JournalError::Io(_)))));
+        assert_eq!(case.driver.topology().unwrap().source().last_refusal(), Some(&TopologySourceRefusal::CheckNotAcknowledged));
+        assert_eq!(case.work().checks, 2);
+        {
+            let host = case.driver.supervisor().host().unwrap();
+            assert!(host.storage_failure().is_some()); assert_eq!(host.inspect().executions, 0);
+            assert_eq!(host.inspect().control.ledger.charged, 16);
+        }
+        if barrier != JournalIo::DirectorySync { assert_eq!(case.root.bytes(), before); }
+        let release = case.driver.release(); let failed = release.into_driver().unwrap_err();
+        assert_eq!(failed.error, JournalError::Unavailable);
+        assert_eq!(failed.release.topology.as_ref().unwrap().source().work().checks, 2);
+    }
+}
+
+#[test]
+fn post_capture_clock_unwind_preserves_actual_source_result_and_retires_the_send_path() {
+    for missing in [false, true] {
+        let mut case = Case::new(8); let reviewed = case.review(901); case.dispatch(&reviewed);
+        if missing { fs::remove_file(case.root.topology()).unwrap(); }
+        let mut clocks = 0;
+        let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+            case.driver.step_with_evidence(|| {
+                clocks += 1;
+                if clocks == 2 { panic!("after native source acknowledgment"); }
+                ElapsedTick(1)
+            }, |_, _| Ok(evidence(&reviewed.inputs)), None)
+        }));
+        assert!(result.is_err()); assert_eq!(clocks, 2); assert_eq!(case.work().checks, 2);
+        let DriverTopologyOutcome::Finished(Ok(report)) = &case.last().outcome else { panic!("retain source result"); };
+        assert_eq!(report.refusal.is_some(), missing);
+        assert_eq!(case.driver.phase(), FileDriverPhase::AwaitingReconciliation { request: reviewed.request });
+        let host = case.driver.supervisor().host().unwrap();
+        assert_eq!(host.inspect().executions, 0); assert_eq!(host.inspect().control.ledger.charged, 16);
+        assert_eq!(host.mediation_snapshot().unwrap().available, !missing);
+    }
+}
+
+#[test]
+fn required_credential_is_not_replaced_by_a_successful_topology_check() {
+    use crate::action::consequence::delivery::credential_broker::{BrokerCredential, BrokerRouteBinding, ProviderCredential};
+    use crate::action::consequence::delivery::persistent::observed::credential::FILE_OVERSIGHT_CREDENTIAL_PROFILE;
+    use crate::perimeter_inventory::LoadedPerimeterInventory;
+    for supplied in [false, true] {
+        let (mut case, selected) = Case::unselected(8);
+        // The separately selected original credential contract has its own
+        // inventory metadata; no source parser is replaced to provision it.
+        let inventory = LoadedPerimeterInventory::from_json_bytes(INVENTORY.replace(
+            "reference-publication", FILE_OVERSIGHT_CREDENTIAL_PROFILE).as_bytes()).unwrap();
+        let binding = BrokerRouteBinding { family: "file-publication".into(), route: "publication".into() };
+        let permit = {
+            let mut host = case.driver.supervisor_mut().host_mut().unwrap(); let revision = host.revision();
+            host.enable_credential_guard(revision, &inventory, &binding).unwrap();
+            host.bind_credential_pair(host.revision(), &inventory, &binding,
+                BrokerCredential::new(vec![7; 16]).unwrap(), ProviderCredential::new(vec![7; 16]).unwrap()).unwrap()
+        };
+        case.driver.require_topology(case.revision(), selected).unwrap();
+        case.driver.refresh_topology(case.revision()).unwrap();
+        let reviewed = case.review(901); case.dispatch(&reviewed);
+        let event = if supplied {
+            case.driver.step_with_evidence_and_credential(|| ElapsedTick(1),
+                |_, _| Ok(evidence(&reviewed.inputs)), None, &permit)
+        } else { case.driver.step_with_evidence(|| ElapsedTick(1), |_, _| Ok(evidence(&reviewed.inputs)), None) }.unwrap();
+        if supplied {
+            assert!(matches!(event, FileDriverEvent::PublicationChecked { publication, .. }
+                if matches!(publication.outcome, EndpointOutcome::Executed { .. })));
+        } else {
+            assert!(matches!(event, FileDriverEvent::PublicationUnknown { error: JournalError::Contract(Error::Incomplete), .. }));
+        }
+        assert_eq!(case.work().checks, 2);
+        let DriverTopologyOutcome::Finished(Ok(report)) = &case.last().outcome else { panic!("actual valid topology"); };
+        assert!(report.refusal.is_none());
+        assert_eq!(case.driver.supervisor().host().unwrap().inspect().executions, u64::from(supplied));
+    }
 }

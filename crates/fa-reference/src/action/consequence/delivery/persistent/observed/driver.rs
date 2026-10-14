@@ -14,7 +14,7 @@ mod publication;
 mod provider;
 pub mod evidence;
 pub mod topology;
-pub use workers::{FileDriverProcessError, FileDriverRelease};
+pub use workers::{FileDriverProcessError, FileDriverRelease, FileDriverHandoffError};
 use workers::WorkerSet;
 use provider::EvidenceProvider;
 use crate::action::consequence::oversight::helper_processes::HelperChildren;

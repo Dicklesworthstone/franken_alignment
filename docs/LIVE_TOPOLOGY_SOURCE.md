@@ -146,3 +146,14 @@ The targeted integration suite and full unchanged gate were attempted through
 the required remote-only launcher. Both stopped before compilation with exit 127
 because `rch` is absent. No Rust compile, test, formatting, Clippy or runtime pass
 is claimed; source-only checks do not establish production qualification.
+
+## Selected driver consumption
+
+The existing `FileSupervisedDriver` can now retain this same custodian through
+`FileDriverTopology` and automatically refresh it at its original guarded first-
+publication boundary, irrespective of the selected evidence stepping method.
+Its checked same-owner release handoff retains source work and diagnostics.
+See [the required driver-source contract](DRIVER_TOPOLOGY_GUARD.md) for selection,
+explicit rebind, original receipt priority, source-only status and regression
+coverage. This does not turn legacy owners or CLI commands into a new persisted
+mandatory deployment profile.

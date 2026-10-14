@@ -54,8 +54,8 @@ A successful rebind still needs a fresh check before its new graph is certified.
 
 `release()` returns the SAME selection in `FileDriverRelease::topology`, together
 with the original supervisor, retained children and learned-review evidence. A
-successor driver must explicitly reattach that value. Failed attachment returns
-it unchanged. No source or observer is cloned. An actual owner restart changes
+successor can use the checked `FileDriverRelease::into_driver` handoff below or
+explicitly reattach that value. Failed attachment returns it unchanged. No source or observer is cloned. An actual owner restart changes
 issuer identity, so old custody cannot attach to its newly recovered owner.
 
 ## Trust and scope
@@ -94,3 +94,36 @@ commands for the integration owner are:
 RCH_REQUIRE_REMOTE=1 rch exec -- cargo test --locked -p fa-reference action::consequence::delivery::persistent::observed::driver::topology
 RCH_REQUIRE_REMOTE=1 rch exec -- cargo run --locked -p xtask -- check
 ```
+
+## Checked same-owner handoff and further regression controls
+
+`FileDriverRelease::into_driver` now transfers the original supervisor,
+selected source, accumulated work, last source observation, terminal computed
+review and child-reap duty back into an idle original driver. No caller needs
+to dismantle the release just to restore a loop, accidentally dropping the
+required source. Existing jobs and consumed keys are NOT reconstructed. A
+publication interrupted by release still has only its original ledger and
+endpoint reconciliation paths; handoff cannot retry its send.
+
+The release's fields are public data, so this method rechecks owner health and
+the exact source/graph binding. A substituted supervisor or failed owner refuses
+and returns the COMPLETE release in `FileDriverHandoffError`, including every
+child-reap obligation. This consumes neither an observer nor the custody needed
+for a corrected same-owner handoff. Source operation IDs are inspectable through
+`topology().source().last_operation()` so an explicit newer rebind can choose a
+fresh ID without guessing how many automatic or unavailable checks ran.
+
+Seven further regression functions cover release during an outstanding dispatch,
+substituted-owner handoff followed by corrected transfer, loss followed by old-file
+refusal and a newer rebind with fresh native review/publication, operation-ID
+overflow, all five original source-persistence barriers, a post-source clock
+unwind, and original credential-required publication with/without its real key.
+The credential inventory and fixed helper responses are explicit controlled
+inputs, not authentication or empirical learned-detection evidence. A second
+compile-fail example forbids duplicating the consumed release.
+
+In total fourteen regression functions and two compile-fail examples are
+AUTHORED, NOT EXECUTED. The targeted suite and full remote-only gate were
+attempted again for the final source; both stop before compilation because
+`rch` is absent. Child ownership preservation is implemented by transfer of the
+original value, not a claimed process/descendant-containment test result.

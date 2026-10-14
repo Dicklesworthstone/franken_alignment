@@ -65,6 +65,52 @@ pub struct FileDriverRelease {
     pub topology: Option<super::topology::FileDriverTopology>,
 }
 
+/// A refused handoff retains the actual supervisor, source and child-reap duty.
+/// Public release fields are rechecked rather than trusted as a bound assembly.
+pub struct FileDriverHandoffError {
+    pub error: JournalError,
+    pub release: FileDriverRelease,
+}
+impl std::fmt::Debug for FileDriverHandoffError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("FileDriverHandoffError").field("error", &self.error)
+            .field("topology_retained", &self.release.topology.is_some())
+            .field("children_retained", &self.release.children.is_some()).finish_non_exhaustive()
+    }
+}
+impl FileDriverRelease {
+    /// Reassemble a healthy live driver without dropping required topology,
+    /// spent source work, terminal numerical evidence or unreaped children.
+    /// No old job, automatic/human key or sendable operation is reconstructed.
+    /// This is a same-owner handoff, NOT restart/recovery of journal authority.
+    ///
+    /// ```compile_fail,E0382
+    /// use fa_reference::action::consequence::delivery::persistent::observed::driver::FileDriverRelease;
+    /// fn duplicate(released: FileDriverRelease) {
+    ///     let _ = released.into_driver();
+    ///     let _ = released.into_driver();
+    /// }
+    /// ```
+    pub fn into_driver(self) -> Result<FileSupervisedDriver, Box<FileDriverHandoffError>> {
+        let admitted = (|| {
+            let host = self.supervisor.host()?;
+            if host.storage_failure().is_some() { return Err(JournalError::Unavailable); }
+            if let Some(topology) = &self.topology {
+                topology.source().check_driver_binding(&host, host.revision())?;
+            }
+            Ok(())
+        })();
+        if let Err(error) = admitted {
+            return Err(Box::new(FileDriverHandoffError { error, release: self }));
+        }
+        let mut driver = FileSupervisedDriver::new(self.supervisor);
+        driver.retiring = self.children;
+        driver.learned_review = self.learned_review;
+        driver.topology = self.topology;
+        Ok(driver)
+    }
+}
+
 impl FileSupervisedDriver {
     /// Whole-roster admission and the original durable round precede spawning.
     /// All execution, inherited sockets and post-launch clock checks belong to
