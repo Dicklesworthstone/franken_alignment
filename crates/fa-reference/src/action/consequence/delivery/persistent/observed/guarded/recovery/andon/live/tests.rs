@@ -51,6 +51,9 @@ fn reserve_and_all_native_guards_are_in_the_first_acknowledged_image() {
     let legacy = Directory::new();
     let (host, _) = FileOversight::create_andon_guarded(legacy.store(), profile(), &guards(), None, protocol(), &config()).unwrap();
     assert_eq!(host.revision(), 3); assert_eq!(host.journal_capacity().unwrap().reserve(), None);
+    // Original non-evaluated two-key fixture remains a working positive control.
+    let control_root = Directory::new(); let mut control = Ready::new(&control_root);
+    control.dispatch(); control.publish(); assert_eq!(control.host.inspect().executions, 1);
 }
 
 #[test]
