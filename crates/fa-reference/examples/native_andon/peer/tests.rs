@@ -94,3 +94,25 @@ fn exact_kernel_peer_policy_accepts_current_process_and_pid_drift_refuses() {
     let wrong=PeerPolicy::new(observed.uid(),observed.gid(),Some(drift)).unwrap();
     assert_eq!(wrong.verify(&server).unwrap_err().kind(),std::io::ErrorKind::PermissionDenied);
 }
+
+
+#[test]
+fn evaluator_client_verifies_supervisor_before_disclosing_label() {
+    let root=Directory::new(); let config=config(&root); let settings=settings();
+    let socket=root.0.join("client.sock");
+    let listener=UnixListener::bind(&socket).unwrap();
+    let wrong=std::process::id().saturating_add(1);
+    let mut profile=String::from_utf8(profile_json(&root,&config,&settings,Some(wrong))).unwrap();
+    profile=profile.replace(&root.0.join("eval.sock").display().to_string(),&socket.display().to_string());
+    let profile_path=root.0.join("peer.json"); fs::write(&profile_path,profile).unwrap();
+    let assessment=root.0.join("assessment.json");
+    fs::write(&assessment,br#"{"schema_version":"fa.native-assessment/1","round":101,"attempt":1,"policy_generation":1,"congress_generation":1,"case_evidence_root_hex":"0101010101010101010101010101010101010101010101010101010101010101","expected_evaluation_revision":1,"origin":1,"evidence_id_hex":"0202020202020202020202020202020202020202020202020202020202020202","truth":"benign"}"#).unwrap();
+    let reader=std::thread::spawn(move || {
+        let (mut stream,_)=listener.accept().unwrap();
+        let mut bytes=Vec::new(); stream.read_to_end(&mut bytes).unwrap(); bytes
+    });
+    let error=send(&profile_path,&assessment,&mut Vec::new()).unwrap_err();
+    assert!(error.contains("unverified supervisor"));
+    assert!(reader.join().unwrap().is_empty());
+    let _=fs::remove_file(socket);
+}

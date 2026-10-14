@@ -159,6 +159,31 @@ pub(super) fn serve(config_path: &Path, settings_path: &Path, recovery_path: &Pa
     }
 }
 
+pub(super) fn send(peer_path: &Path, assessment_path: &Path, out: &mut impl Write) -> Result<(), String> {
+    let peer = EvaluatorPeerProfile::read(peer_path)?;
+    let bytes = read_regular(assessment_path, ASSESSMENT_BYTES)?;
+    // Closed schema validation occurs before any socket connection or disclosure.
+    let _ = mutations::Mutation::decode("assess", &bytes)?;
+    let started = Instant::now();
+    let wall = Duration::from_millis(peer.runtime_ms);
+    let mut stream = UnixStream::connect(&peer.socket).map_err(debug)?;
+    peer.supervisor.policy()?.verify(&stream).map_err(|error| {
+        format!("native evaluator refused unverified supervisor before label disclosure: {error:?}")
+    })?;
+    if started.elapsed() >= wall { return Err("evaluator client deadline reached before label disclosure".into()); }
+    let remaining = wall.saturating_sub(started.elapsed());
+    stream.set_write_timeout(Some(remaining)).map_err(debug)?;
+    stream.set_read_timeout(Some(remaining)).map_err(debug)?;
+    stream.write_all(&bytes).map_err(debug)?;
+    stream.shutdown(std::net::Shutdown::Write).map_err(debug)?;
+    let mut response = Vec::new();
+    stream.take(64 * 1024 + 1).read_to_end(&mut response).map_err(debug)?;
+    if response.is_empty() { return Err("verified evaluator server returned no mutation result".into()); }
+    if response.len() > 64 * 1024 { return Err("verified evaluator result exceeded byte limit".into()); }
+    out.write_all(&response).map_err(debug)?;
+    out.flush().map_err(debug)
+}
+
 fn read_document(stream: &mut UnixStream) -> Result<Vec<u8>, String> {
     let mut bytes = Vec::new();
     stream.take(ASSESSMENT_BYTES as u64 + 1).read_to_end(&mut bytes).map_err(debug)?;

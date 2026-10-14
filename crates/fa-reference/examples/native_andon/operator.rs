@@ -27,6 +27,7 @@ fn command_with_elapsed(args: &[String], elapsed: &mut impl FnMut() -> Duration,
     // Closed routing BEFORE opening configuration or any authority path.
     let mode = args.first().map(String::as_str).unwrap_or("");
     let expected = match mode {
+        "send-assess" => 3,
         "create" | "inspect" => 4,
         "assess" | "register-window" | "promote" | "serve-assess" => 5,
         _ => return Err(USAGE.into()),
@@ -34,6 +35,12 @@ fn command_with_elapsed(args: &[String], elapsed: &mut impl FnMut() -> Duration,
     if args.len() != expected {
         return Err(USAGE.into());
     }
+    #[cfg(target_os = "linux")]
+    if mode == "send-assess" {
+        return peer::send(Path::new(&args[1]), Path::new(&args[2]), out);
+    }
+    #[cfg(not(target_os = "linux"))]
+    if mode == "send-assess" { return Err("peer-verified evaluator client requires Linux".into()); }
     #[cfg(target_os = "linux")]
     if mode == "serve-assess" {
         return peer::serve(Path::new(&args[1]), Path::new(&args[2]), Path::new(&args[3]), Path::new(&args[4]), out);

@@ -180,3 +180,22 @@ before byte consumption, assessment-size framing, socket collision/cleanup and
 exact PID credential matching. The existing assessment engine regressions remain
 the evidence for durable label/accounting transitions. Required runtime execution
 must still use the repository's RCH gate; source review alone is not qualification.
+
+
+### Verified evaluator client
+
+The companion client verifies the supervisor's independently configured kernel
+identity before sending any label bytes:
+
+```sh
+cargo run --locked -p fa-reference --example native_andon -- \
+  send-assess EVALUATOR_PEER_PROFILE ASSESSMENT_JSON
+```
+
+The client validates the closed assessment schema locally, connects to the pinned
+socket, checks the server UID/GID/optional PID with the same kernel credential
+primitive, and only then writes the assessment. It half-closes the write side and
+reads one bounded mutation result. A supervisor-identity mismatch therefore
+discloses zero assessment bytes and cannot be treated as a retry or accepted
+evaluation. This remains local-process authentication, not remote cryptographic
+attestation.
