@@ -15,6 +15,7 @@ use crate::action::consequence::oversight::credibility::EvaluationProtocol;
 use crate::action::consequence::oversight::credibility::native_andon::NativeEvaluatedFalseHold;
 use crate::action::consequence::oversight::joint_credibility::JointPromotionPolicy;
 use crate::round::review::andon::{AndonBudget, AndonLedger};
+use crate::action::consequence::delivery::publication_gate::PublicationLimits;
 use crate::Error;
 use std::path::Path;
 
@@ -29,6 +30,7 @@ pub struct FileAndonRecoveryRequirements {
     minimum_evaluation_revision: u64,
     // None requires the original marginal-only profile, never any policy on disk.
     joint: Option<JointPromotionPolicy>,
+    publication: Option<PublicationLimits>,
 }
 impl FileAndonRecoveryRequirements {
     pub fn new(base: FileRecoveryRequirements, config: FileAndonConfig,
@@ -41,12 +43,19 @@ impl FileAndonRecoveryRequirements {
                 return Err(Error::Binding);
             }
         }
-        Ok(Self { base, config, windows: inventory.windows().to_vec(), minimum_evaluation_revision, joint: None })
+        Ok(Self { base, config, windows: inventory.windows().to_vec(), minimum_evaluation_revision, joint: None, publication: None })
     }
     pub fn base(&self) -> &FileRecoveryRequirements { &self.base }
     pub fn config(&self) -> &FileAndonConfig { &self.config }
     pub fn windows(&self) -> &[AndonBudget] { &self.windows }
     pub fn minimum_evaluation_revision(&self) -> u64 { self.minimum_evaluation_revision }
+
+    pub fn require_publication(mut self, limits: PublicationLimits) -> Result<Self, Error> {
+        if self.publication.is_some() { return Err(Error::Duplicate); }
+        self.publication = Some(limits);
+        Ok(self)
+    }
+    pub fn publication(&self) -> Option<PublicationLimits> { self.publication }
 
     // Shared by synchronous historical reads and the sealed cooperative cursor.
     // No machine or original-event importer is exposed outside guarded recovery.
@@ -55,7 +64,13 @@ impl FileAndonRecoveryRequirements {
     {
         self.preflight(events)?;
         self.base.guards.check_decoder_config(events)?;
-        joint::check_protocol(events, protocol, self.joint)
+        joint::check_protocol(events, protocol, self.joint)?;
+        let mut publication = events.iter().filter_map(|event| match event {
+            Event::PublicationWitness(super::super::super::publication::witness_gate::WitnessEvent::Enable(limits)) => Some(*limits),
+            _ => None,
+        });
+        if publication.next() != self.publication || publication.next().is_some() { return Err(Error::Binding); }
+        Ok(())
     }
 
     pub(in super::super) fn check_replayed(&self, profile: &FileOversightProfile,
@@ -65,6 +80,11 @@ impl FileAndonRecoveryRequirements {
         if machine.andon_contract() != Some(&self.config)
             || machine.broker.joint_credibility_policy() != self.joint
         { return Err(Error::Binding); }
+        let mut publication = events.iter().filter_map(|event| match event {
+            Event::PublicationWitness(super::super::super::publication::witness_gate::WitnessEvent::Enable(limits)) => Some(*limits),
+            _ => None,
+        });
+        if publication.next() != self.publication || publication.next().is_some() { return Err(Error::Binding); }
         let source = machine.broker.andon_source()?;
         if source.revision() < self.minimum_evaluation_revision { return Err(Error::Stale); }
         if !source.ledger().windows().values().map(|state| state.budget).eq(self.windows.iter().copied()) {
@@ -119,6 +139,21 @@ impl FileOversight {
         -> Result<(Self, FileEvaluatedOversightRoles), JournalError>
     {
         let prepared = PreparedGuardedBootstrap::prepare(profile, guards, registration)?
+            .evaluated(protocol)?.with_andon(config)?;
+        let store = storage::Store::create(directory.as_ref())?;
+        let (host, oversight) = prepared.publish(store)?;
+        let roles = FileEvaluatedOversightRoles::provision(&host, oversight);
+        Ok((host, roles))
+    }
+
+    pub fn create_checked_andon_guarded_reserved(directory: impl AsRef<Path>, profile: FileOversightProfile,
+        guards: &FileGuardSet, registration: Option<FileCredentialRegistration<'_>>,
+        protocol: EvaluationProtocol, config: &FileAndonConfig,
+        publication: PublicationLimits, reserve: super::super::super::RecoveryReserve)
+        -> Result<(Self, FileEvaluatedOversightRoles), JournalError>
+    {
+        let prepared = PreparedGuardedBootstrap::prepare_publication_reserved(
+            profile, guards, registration, reserve, publication)?
             .evaluated(protocol)?.with_andon(config)?;
         let store = storage::Store::create(directory.as_ref())?;
         let (host, oversight) = prepared.publish(store)?;

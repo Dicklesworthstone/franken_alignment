@@ -5,6 +5,7 @@ use fa_reference::action::consequence::delivery::persistent::observed::{
     guarded::{FileGuardSet, FileRecoveryFloor, FileRecoveryRequirements,
         evaluation::andon::FileAndonRecoveryRequirements},
 };
+use fa_reference::action::consequence::delivery::publication_gate::PublicationLimits;
 use fa_reference::action::consequence::delivery::persistent::{RecoveryReserve,
     observed::{FileOversight, guarded::evaluation::FileEvaluatedOversightRoles}};
 use fa_reference::action::consequence::oversight::joint_credibility::{JointPromotionPolicy, JointReplayBudget};
@@ -100,6 +101,20 @@ impl Settings {
             (None, None) => FileOversight::create_andon_guarded(
                 &config.store, config.profile.clone(), &guards(config), None,
                 self.protocol.clone(), &self.config),
+        }.map_err(debug)
+    }
+
+    pub(super) fn create_checked(&self, config: &Config, publication: PublicationLimits,
+        reserve: RecoveryReserve) -> Result<(FileOversight, FileEvaluatedOversightRoles), String>
+    {
+        self.creation()?;
+        match self.joint {
+            Some(policy) => FileOversight::create_checked_joint_andon_guarded_reserved(
+                &config.store, config.profile.clone(), &guards(config), None,
+                self.protocol.clone(), policy, &self.config, publication, reserve),
+            None => FileOversight::create_checked_andon_guarded_reserved(
+                &config.store, config.profile.clone(), &guards(config), None,
+                self.protocol.clone(), &self.config, publication, reserve),
         }.map_err(debug)
     }
 }

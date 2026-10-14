@@ -34,7 +34,7 @@ impl PreparedGuardedBootstrap {
     pub(super) fn prepare(profile: FileOversightProfile, guards: &FileGuardSet,
         registration: Option<FileCredentialRegistration<'_>>) -> Result<Self, JournalError>
     {
-        Self::prepare_with_reserve(profile, guards, registration, None)
+        Self::prepare_with_reserve(profile, guards, registration, None, None)
     }
 
     /// Reserve the original terminal tail before any bootstrap guard counts as
@@ -45,12 +45,26 @@ impl PreparedGuardedBootstrap {
     {
         use super::super::super::recovery_capacity::{Admission, Class};
         Admission::new(profile.delivery.limits).record(Class::Install(reserve), 0, 0)?;
-        Self::prepare_with_reserve(profile, guards, registration, Some(reserve))
+        Self::prepare_with_reserve(profile, guards, registration, Some(reserve), None)
+    }
+
+    pub(super) fn prepare_publication_reserved(profile: FileOversightProfile, guards: &FileGuardSet,
+        registration: Option<FileCredentialRegistration<'_>>,
+        reserve: super::super::super::RecoveryReserve,
+        publication: crate::action::consequence::delivery::publication_gate::PublicationLimits)
+        -> Result<Self, JournalError>
+    {
+        use super::super::super::recovery_capacity::{Admission, Class};
+        Admission::new(profile.delivery.limits).record(Class::Install(reserve), 0, 0)?;
+        if guards.stream.is_some() { return Err(Error::InvalidInput.into()); }
+        Self::prepare_with_reserve(profile, guards, registration, Some(reserve), Some(publication))
     }
 
     fn prepare_with_reserve(profile: FileOversightProfile, guards: &FileGuardSet,
         registration: Option<FileCredentialRegistration<'_>>,
-        reserve: Option<super::super::super::RecoveryReserve>) -> Result<Self, JournalError>
+        reserve: Option<super::super::super::RecoveryReserve>,
+        publication: Option<crate::action::consequence::delivery::publication_gate::PublicationLimits>)
+        -> Result<Self, JournalError>
     {
         profile.delivery.limits.check()?;
         guards.validate()?;
@@ -64,11 +78,15 @@ impl PreparedGuardedBootstrap {
             }
             _ => return Err(Error::InvalidInput.into()),
         };
-        // Stream bootstrap must be first. It itself enables publication checks;
-        // ordinary publication receives the same original guard explicitly.
-        let mut events = vec![match guards.stream {
-            Some(stream) => Event::StreamBootstrap(stream),
-            None => Event::PublicationGuard,
+        // Exactly one first-image publication guard. A checked witness profile
+        // replaces the ordinary PublicationGuard; it is never layered on top of
+        // stream bootstrap or silently reduced to the weaker guard.
+        let mut events = vec![match (publication, guards.stream) {
+            (Some(limits), None) => Event::PublicationWitness(
+                super::super::publication::witness_gate::WitnessEvent::Enable(limits)),
+            (None, Some(stream)) => Event::StreamBootstrap(stream),
+            (None, None) => Event::PublicationGuard,
+            (Some(_), Some(_)) => return Err(Error::InvalidInput.into()),
         }];
         if let Some(reserve) = reserve {
             events.push(Event::Core(super::super::BaseEvent::ReserveRecovery(reserve)));

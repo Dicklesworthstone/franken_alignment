@@ -170,6 +170,13 @@ impl PublicationProfile {
         Ok(Self { limits, sources, requests, feed, wait, snapshot_fallback, joint })
     }
 
+    pub(crate) fn simple_limits(&self) -> Result<PublicationLimits, String> {
+        if self.feed.is_some() || self.wait.is_some() || self.snapshot_fallback || self.joint.is_some() {
+            return Err("native Andon checked composition currently requires the plain publication witness profile; stronger feed/snapshot/joint publication profiles are not downgraded".into());
+        }
+        Ok(self.limits)
+    }
+
     fn check_scope(&self, profile: &FileOversightProfile) -> Result<(), JournalError> {
         if let PublicationSources::Producer { profile: producer, .. } = &self.sources
             && producer.scope != profile.delivery.scope { return Err(Error::Binding.into()); }

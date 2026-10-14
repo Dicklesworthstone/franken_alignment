@@ -122,7 +122,7 @@ fn document(config: &Config, request: u64, basis: Basis) -> Vec<u8> {
 }
 fn run_case(config: Config, document: &[u8], settings: &Settings, mode: Mode<'_>) -> Result<RunResult, String> {
     let started = Instant::now();
-    run(config, Submission { document, settings, mode, peers: None }, started, || ElapsedTick(1000), &mut || started.elapsed())
+    run(config, Submission { document, settings, mode, peers: None, publication: None }, started, || ElapsedTick(1000), &mut || started.elapsed())
 }
 fn executed(result: &RunResult) -> bool {
     matches!(&result.response.result, Ok(Knowledge::Known { value: ActorOutcome::Executed, .. }))
