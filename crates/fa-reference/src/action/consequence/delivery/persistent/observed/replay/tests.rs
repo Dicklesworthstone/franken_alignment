@@ -1,5 +1,6 @@
 //! Canonical-image inspection after real replacement faults, without recovery writes.
 use super::*;
+mod effects;
 use super::super::{FileHumanReviewer, JournalIo};
 use crate::action::{ActionSpec, ElapsedTick, Purpose, ResolvedTarget, Scope, VERSION};
 use crate::action::consequence::congress::{CongressPolicy, MemberPolicy};

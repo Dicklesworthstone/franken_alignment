@@ -5,6 +5,7 @@ use super::{CommitteeInput, Error, Event, FileDeliverySnapshot, FileOversight,
     ObservedDecisionArchive, ObservedReceipt, ObservedReviewAnchor, Path, Snapshot,
     journal, storage};
 use super::super::Transition;
+use super::{FileReviewEffectReplay, effect::EffectTrace};
 use super::super::super::MAX_JOURNAL_EVENTS;
 use std::cell::OnceCell;
 use std::fmt;
@@ -67,6 +68,7 @@ pub struct FileReviewReplayCursor {
     capture: Option<Rc<OnceCell<ObservedDecisionArchive>>>,
     completed: Option<Completed>,
     acknowledged: Option<FileDeliverySnapshot>,
+    effect: EffectTrace,
 }
 
 impl fmt::Debug for FileReviewReplayCursor {
@@ -121,10 +123,12 @@ impl FileReviewReplayCursor {
         let finish = events.iter().position(|event| matches!(event,
             Event::Finish(id, ..) if *id == round)).ok_or(Error::Incomplete)?;
         if finish <= begin { return Err(Error::Binding.into()); }
+        let Event::Begin(attempt, ..) = &events[begin] else { return Err(Error::Binding.into()); };
+        let effect = EffectTrace::new(*attempt);
         let machine = Machine::new(profile)?;
         Ok(Self { events, machine, round, begin, finish, replayed: 0, attempted: 0,
             status: FileReviewReplayStatus::Replaying, anchor: None, capture: None,
-            completed: None, acknowledged })
+            completed: None, acknowledged, effect })
     }
 
     pub fn progress(&self) -> FileReviewReplayProgress {
@@ -172,7 +176,16 @@ impl FileReviewReplayCursor {
     }
 
     fn step(&mut self) -> Result<(), Error> {
-        let transition = self.machine.apply(&self.events[self.replayed])?;
+        let event = &self.events[self.replayed];
+        // Finish consumes the original session. Read its attempt before apply;
+        // all attribution below waits for the original transition to succeed.
+        let reviewed_attempt = match event {
+            Event::Finish(round, ..) => self.machine.sessions.get(round).map(|session| session.0),
+            _ => None,
+        };
+        let transition = self.machine.apply(event)?;
+        self.effect.observe(event, &transition, reviewed_attempt, (self.replayed + 1) as u64,
+            &self.machine.broker)?;
         if self.replayed == self.begin {
             let session = &mut self.machine.sessions.get_mut(&self.round).ok_or(Error::Missing)?.1;
             self.anchor = Some(session.replay_anchor()?);
@@ -203,6 +216,13 @@ impl FileReviewReplayCursor {
     /// Export only after the ENTIRE selected cut verified. An archive captured
     /// earlier cannot escape an invalid or unprocessed suffix. No fence is added.
     pub fn finish(self) -> Result<FileReviewReplay, JournalError> {
+        Ok(self.finish_with_effects()?.review)
+    }
+
+    /// Return the same original review plus the exact selected-attempt effect
+    /// chain. No outcome or consumed-approval link escapes an unverified suffix.
+    /// This never obtains an endpoint receipt from outside the RAM-only replay.
+    pub fn finish_with_effects(self) -> Result<FileReviewEffectReplay, JournalError> {
         match self.status {
             FileReviewReplayStatus::Ready => {}
             FileReviewReplayStatus::Failed(error) => return Err(error.into()),
@@ -210,11 +230,13 @@ impl FileReviewReplayCursor {
             _ => return Err(Error::Incomplete.into()),
         }
         let completed = self.completed.ok_or(Error::Incomplete)?;
-        Ok(FileReviewReplay { begin_revision: (self.begin + 1) as u64,
+        let journal = self.machine.snapshot(self.events.len());
+        let effect = self.effect.finish(self.round, &completed.state, &journal)?;
+        let review = FileReviewReplay { begin_revision: (self.begin + 1) as u64,
             anchor: self.anchor.ok_or(Error::Incomplete)?, archive: completed.archive,
             application: completed.application, application_inputs: completed.inputs,
-            application_snapshot: completed.snapshot, completed: completed.state,
-            journal: self.machine.snapshot(self.events.len()) })
+            application_snapshot: completed.snapshot, completed: completed.state, journal };
+        Ok(FileReviewEffectReplay { review, effect })
     }
 
     /// Discard private reconstruction and report its work, not a refund. A prior
@@ -234,4 +256,3 @@ impl FileReviewReplayCursor {
         self.finish()
     }
 }
-

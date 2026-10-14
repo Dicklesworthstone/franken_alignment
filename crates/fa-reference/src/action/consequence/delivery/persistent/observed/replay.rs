@@ -3,8 +3,11 @@
 
 mod anchored;
 mod cursor;
+mod effect;
 mod learned;
 pub use cursor::{FileReviewReplayCursor, FileReviewReplayProgress, FileReviewReplayStatus};
+pub use effect::{AuditedAuthorization, AuditedDispatch, AuditedOutcome, AuditedReconciliation,
+    FileReviewEffectReplay, ReviewEffectAudit};
 
 use super::{FileDeliverySnapshot, FileOversight, FileOversightProfile, JournalError,
     journal::{self, Event}, machine::Machine, storage};
