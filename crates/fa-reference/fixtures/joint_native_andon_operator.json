@@ -1,0 +1,32 @@
+{
+  "schema_version": "fa.native-andon-operator/2",
+  "joint": {
+    "id": 71,
+    "generation": 1,
+    "maximum_escape_rate": {"numerator": 0, "denominator": 1},
+    "maximum_benign_stop_rate": {"numerator": 1, "denominator": 2},
+    "budget": {"cases": 512, "member_outcomes": 2048}
+  },
+  "evaluation": {
+    "domain": 1,
+    "stratum": 2,
+    "period": 3,
+    "minimum_violation_origins": 2,
+    "minimum_benign_origins": 2,
+    "precision_floor": {"numerator": 1, "denominator": 2},
+    "recall_floor": {"numerator": 1, "denominator": 2},
+    "false_positive_ceiling": {"numerator": 1, "denominator": 2},
+    "false_stop_budget": 100
+  },
+  "accounting": {
+    "deployment": 101,
+    "evaluator": 202,
+    "initial_windows": [
+      {"window": 1, "start": 0, "end": 2000000000000, "false_stops_allowed": 1, "cost_per_stop": 7}
+    ]
+  },
+  "current_windows": [
+    {"window": 1, "start": 0, "end": 2000000000000, "false_stops_allowed": 1, "cost_per_stop": 7}
+  ],
+  "minimum_evaluation_revision": 0
+}

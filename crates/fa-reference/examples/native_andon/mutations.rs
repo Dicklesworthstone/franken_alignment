@@ -1,11 +1,13 @@
 //! Offline assessment/window continuation through the original sealed recovery.
 //! The operator is a trusted evaluator custodian; JSON is NOT a signed label.
+#[path = "promotion.rs"]
+mod promotion;
 use super::{Settings, report, settings};
 use crate::config::{Config, debug, hex, read_regular};
 use crate::profile::ResumeProfile;
 use fa_reference::action::ElapsedTick;
 use fa_reference::action::consequence::delivery::persistent::observed::{
-    FileOversight, credibility::FileIndependentEvaluator,
+    FileOversight, credibility::{FileIndependentEvaluator, FileCredibilityUpdate},
     guarded::recovery::FileGuardedRecoveryStatus,
 };
 use fa_reference::action::consequence::oversight::credibility::{Assessment, GroundTruth};
@@ -18,6 +20,7 @@ pub(super) enum Mutation {
     Assess { round: u64, attempt: u64, policy: u64, congress: u64,
         root: [u8; 32], expected_revision: u64, assessment: Assessment },
     Window(AndonBudget),
+    Promote(FileCredibilityUpdate),
 }
 impl Mutation {
     pub(super) fn read(mode: &str, path: &Path) -> Result<Self, String> {
@@ -29,6 +32,17 @@ impl Mutation {
         }).map_err(debug)?)?;
         let schema = take(&mut fields, "schema_version")?;
         match mode {
+            "promote" if schema.as_str() == Some("fa.native-andon-promotion/1") => {
+                let request = FileCredibilityUpdate {
+                    operation: number(&mut fields, "operation")?,
+                    expected_control_sequence: number(&mut fields, "expected_control_sequence")?,
+                    expected_authority_epoch: number(&mut fields, "expected_authority_epoch")?,
+                    expected_evaluation_revision: number(&mut fields, "expected_evaluation_revision")?,
+                };
+                end(fields)?;
+                if request.operation == 0 { return Err("promotion operation must be nonzero".into()); }
+                Ok(Self::Promote(request))
+            }
             "register-window" if schema.as_str() == Some("fa.native-andon-window/1") => {
                 let window = settings::windows(Json::Array(vec![Json::Object(fields)]))?
                     .into_iter().next().ok_or("missing window")?;
@@ -65,7 +79,7 @@ impl Mutation {
         }
     }
     fn operation(&self) -> &'static str {
-        match self { Self::Assess { .. } => "assess", Self::Window(_) => "register-window" }
+        match self { Self::Assess { .. } => "assess", Self::Window(_) => "register-window", Self::Promote(_) => "promote" }
     }
     fn apply(&self, host: &mut FileOversight, evaluator: &FileIndependentEvaluator,
         checkpoint: &mut impl FnMut() -> Result<(), String>,
@@ -73,6 +87,7 @@ impl Mutation {
     {
         checkpoint()?;
         match self {
+            Self::Promote(request) => promotion::apply(host, request, checkpoint, clock),
             Self::Window(window) => host.register_andon_window(host.revision(), *window).map_err(debug),
             Self::Assess { round, attempt, policy, congress, root, expected_revision, assessment } => {
                 let ticket = host.evaluation_ticket(*round).map_err(debug)?;
@@ -117,6 +132,9 @@ pub(super) fn run(config: &Config, settings: &Settings, input: &Path, mutation: 
     checkpoint: &mut impl FnMut() -> Result<(), String>,
     clock: &mut impl FnMut() -> Result<ElapsedTick, String>, out: &mut impl Write) -> Result<(), String>
 {
+    if matches!(mutation, Mutation::Promote(_)) && settings.joint.is_none() {
+        return Err("operator promotion requires an explicit joint native Andon /2 profile".into());
+    }
     let request = ResumeProfile::read(input)?;
     let custody = request.admit(config)?;
     if !custody.retention_requested() {
@@ -154,6 +172,9 @@ pub(super) fn run(config: &Config, settings: &Settings, input: &Path, mutation: 
         write!(out, "{{\"schema_version\":\"fa.native-andon-mutation-result/1\",\"status\":\"{status}\",\"recovery_fence_revision\":\"{fence_revision}\",\"state\":")
             .map_err(debug)?;
         out.write_all(&state).map_err(debug)?;
+        if let Mutation::Promote(request) = mutation && outcome.is_ok() {
+            promotion::report(&host, request.operation, out)?;
+        }
         writeln!(out, "}}").map_err(debug)?;
         out.flush().map_err(debug)
     })();

@@ -87,9 +87,7 @@ where F: FnMut() -> ElapsedTick {
             // Creation is not receipt recovery; refuse an expired original
             // proposal before creating a new domain. No actor field is rewritten.
             Deadline { logical: proposal.deadline.min(runtime_deadline), started, wall }.check(time())?;
-            let (host, roles) = FileOversight::create_andon_guarded_reserved(&config.store, config.profile.clone(),
-                &settings::guards(&config), None, settings.protocol.clone(), &settings.config,
-                RecoveryReserve::terminal()).map_err(debug)?;
+            let (host, roles) = settings.create(&config, Some(RecoveryReserve::terminal()))?;
             (host, roles, Retention::Creation(output))
         }
         Mode::Existing(profile) => {

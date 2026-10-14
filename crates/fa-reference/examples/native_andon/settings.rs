@@ -5,6 +5,9 @@ use fa_reference::action::consequence::delivery::persistent::observed::{
     guarded::{FileGuardSet, FileRecoveryFloor, FileRecoveryRequirements,
         evaluation::andon::FileAndonRecoveryRequirements},
 };
+use fa_reference::action::consequence::delivery::persistent::{RecoveryReserve,
+    observed::{FileOversight, guarded::evaluation::FileEvaluatedOversightRoles}};
+use fa_reference::action::consequence::oversight::joint_credibility::{JointPromotionPolicy, JointReplayBudget};
 use fa_reference::action::consequence::oversight::credibility::{EvaluationProtocol, Fraction};
 use fa_reference::round::review::andon::{AndonBudget, LedgerIdentity, MAX_WINDOWS};
 use fa_reference::strict_json::{self, Json, Limits};
@@ -17,6 +20,7 @@ pub(super) struct Settings {
     pub(super) config: FileAndonConfig,
     pub(super) windows: Vec<AndonBudget>,
     pub(super) minimum_evaluation_revision: u64,
+    pub(super) joint: Option<JointPromotionPolicy>,
 }
 impl Settings {
     pub(super) fn read(path: &Path) -> Result<Self, String> {
@@ -26,9 +30,11 @@ impl Settings {
         let json = strict_json::parse(bytes, Limits { max_bytes: MAX_BYTES, max_depth: 6,
             max_items: 4096, max_string_bytes: 256 }).map_err(debug)?;
         let mut root = object(json)?;
-        if take(&mut root, "schema_version")?.as_str() != Some("fa.native-andon-operator/1") {
-            return Err("unsupported native Andon operator profile".into());
-        }
+        let joint = match take(&mut root, "schema_version")?.as_str() {
+            Some("fa.native-andon-operator/1") => None,
+            Some("fa.native-andon-operator/2") => Some(joint_policy(take(&mut root, "joint")?)?),
+            _ => return Err("unsupported native Andon operator profile".into()),
+        };
         let mut p = object(take(&mut root, "evaluation")?)?;
         let protocol = EvaluationProtocol {
             domain: number(&mut p, "domain")?, stratum: number(&mut p, "stratum")?,
@@ -57,7 +63,7 @@ impl Settings {
                 return Err("current windows omit or change an initial window".into());
             }
         }
-        Ok(Self { protocol, config, windows: current.windows().to_vec(), minimum_evaluation_revision })
+        Ok(Self { protocol, config, windows: current.windows().to_vec(), minimum_evaluation_revision, joint })
     }
     pub(super) fn creation(&self) -> Result<(), String> {
         if self.minimum_evaluation_revision != 0 || self.windows != self.config.windows() {
@@ -68,14 +74,37 @@ impl Settings {
     pub(super) fn requirements(&self, config: &Config, minimum: FileRecoveryFloor)
         -> Result<FileAndonRecoveryRequirements, String>
     {
-        FileAndonRecoveryRequirements::new(FileRecoveryRequirements {
+        let expected = FileAndonRecoveryRequirements::new(FileRecoveryRequirements {
             guards: guards(config), effective_policy: config.profile.delivery.policy.clone(),
             credential_epoch: None, minimum,
-        }, self.config.clone(), self.windows.clone(), self.minimum_evaluation_revision).map_err(debug)
+        }, self.config.clone(), self.windows.clone(), self.minimum_evaluation_revision).map_err(debug)?;
+        match self.joint { Some(policy) => expected.require_joint(policy).map_err(debug), None => Ok(expected) }
+    }
+
+    /// Both executable consumers select the exact same native first-image profile.
+    /// A /2 error never falls back to /1, including reserved live publication.
+    pub(super) fn create(&self, config: &Config, reserve: Option<RecoveryReserve>)
+        -> Result<(FileOversight, FileEvaluatedOversightRoles), String>
+    {
+        self.creation()?;
+        match (self.joint, reserve) {
+            (Some(policy), Some(reserve)) => FileOversight::create_joint_andon_guarded_reserved(
+                &config.store, config.profile.clone(), &guards(config), None,
+                self.protocol.clone(), policy, &self.config, reserve),
+            (Some(policy), None) => FileOversight::create_joint_andon_guarded(
+                &config.store, config.profile.clone(), &guards(config), None,
+                self.protocol.clone(), policy, &self.config),
+            (None, Some(reserve)) => FileOversight::create_andon_guarded_reserved(
+                &config.store, config.profile.clone(), &guards(config), None,
+                self.protocol.clone(), &self.config, reserve),
+            (None, None) => FileOversight::create_andon_guarded(
+                &config.store, config.profile.clone(), &guards(config), None,
+                self.protocol.clone(), &self.config),
+        }.map_err(debug)
     }
 }
 
-// Exact ordinary source-publication inventory. Optional numerical, joint,
+// Exact ordinary source-publication inventory. Optional numerical,
 // identity, campaign and credential profiles are not silently accepted.
 pub(super) fn guards(config: &Config) -> FileGuardSet {
     FileGuardSet { stream: None, decoder: None, decoder_stop: None,
@@ -115,4 +144,19 @@ pub(super) fn windows(value: Json) -> Result<Vec<AndonBudget>, String> {
         end(fields)?;
         Ok(budget)
     }).collect()
+}
+
+fn joint_policy(value: Json) -> Result<JointPromotionPolicy, String> {
+    let mut fields = object(value)?;
+    let id = number(&mut fields, "id")?;
+    let generation = number(&mut fields, "generation")?;
+    let escape = fraction(take(&mut fields, "maximum_escape_rate")?)?;
+    let benign = fraction(take(&mut fields, "maximum_benign_stop_rate")?)?;
+    let mut work = object(take(&mut fields, "budget")?)?;
+    let budget = JointReplayBudget {
+        cases: usize::try_from(number(&mut work, "cases")?).map_err(debug)?,
+        member_outcomes: usize::try_from(number(&mut work, "member_outcomes")?).map_err(debug)?,
+    };
+    end(work)?; end(fields)?;
+    JointPromotionPolicy::new(id, generation, escape, benign, budget).map_err(debug)
 }

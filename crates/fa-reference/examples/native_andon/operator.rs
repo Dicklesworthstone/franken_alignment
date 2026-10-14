@@ -12,7 +12,7 @@ use fa_reference::action::consequence::oversight::credibility::CredibilityReport
 use fa_reference::round::review::andon::AndonLedger;
 use std::{io::Write, path::Path, time::{Duration, Instant}};
 
-const USAGE: &str = "usage: native_andon create CONFIG ANDON_PROFILE NEW_ANCHOR\n       native_andon inspect CONFIG ANDON_PROFILE RECOVERY_PROFILE\n       native_andon assess CONFIG ANDON_PROFILE RECOVERY_PROFILE ASSESSMENT_JSON\n       native_andon register-window CONFIG ANDON_PROFILE RECOVERY_PROFILE WINDOW_JSON";
+const USAGE: &str = "usage: native_andon create CONFIG ANDON_PROFILE NEW_ANCHOR\n       native_andon inspect CONFIG ANDON_PROFILE RECOVERY_PROFILE\n       native_andon assess CONFIG ANDON_PROFILE RECOVERY_PROFILE ASSESSMENT_JSON\n       native_andon register-window CONFIG ANDON_PROFILE RECOVERY_PROFILE WINDOW_JSON\n       native_andon promote CONFIG ANDON_PROFILE RECOVERY_PROFILE PROMOTION_JSON";
 
 pub(crate) fn command(args: &[String], out: &mut impl Write) -> Result<(), String> {
     let started = Instant::now();
@@ -25,7 +25,7 @@ fn command_with_elapsed(args: &[String], elapsed: &mut impl FnMut() -> Duration,
     let mode = args.first().map(String::as_str).unwrap_or("");
     let expected = match mode {
         "create" | "inspect" => 4,
-        "assess" | "register-window" => 5,
+        "assess" | "register-window" | "promote" => 5,
         _ => return Err(USAGE.into()),
     };
     if args.len() != expected {
@@ -43,7 +43,7 @@ fn command_with_elapsed(args: &[String], elapsed: &mut impl FnMut() -> Duration,
     match args[0].as_str() {
         "create" => create(&config, &settings, Path::new(&args[3]), &mut checkpoint, out),
         "inspect" => inspect(&config, &settings, Path::new(&args[3]), &mut checkpoint, out),
-        "assess" | "register-window" => {
+        "assess" | "register-window" | "promote" => {
             let mutation = mutations::Mutation::read(mode, Path::new(&args[4]))?;
             checkpoint()?;
             mutations::run(&config, &settings, Path::new(&args[3]), &mutation,
@@ -59,9 +59,7 @@ fn create(config: &Config, settings: &Settings, output: &Path,
     settings.creation()?;
     let custody = CreationOutput::admit(config, output)?;
     checkpoint()?;
-    let (host, _roles) = FileOversight::create_andon_guarded(&config.store,
-        config.profile.clone(), &settings::guards(config), None,
-        settings.protocol.clone(), &settings.config).map_err(debug)?;
+    let (host, _roles) = settings.create(config, None)?;
     // Once acknowledged, never skip independent retention merely because a
     // synchronous write overran the deadline. No retry or rollback follows.
     let deadline = checkpoint();

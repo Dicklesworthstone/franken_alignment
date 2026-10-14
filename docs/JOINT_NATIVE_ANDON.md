@@ -59,3 +59,71 @@ unchanged xtask were attempted; the launcher is absent (exit 127 before Cargo).
 Compilation, Rust tests, rustfmt and Clippy remain unexecuted. Source/hash/patch
 checks do not establish runtime correctness, population calibration, evaluator
 identity or institutional independence. No dependency or authority rule changes.
+
+## Shared operator profile and guarded promotion
+
+The existing `native_andon` and `supervise_publication --andon` consumers share
+one profile selector. `fa.native-andon-operator/1` remains marginal-only;
+`fa.native-andon-operator/2` REQUIRES a complete `joint` object. The example is
+`crates/fa-reference/fixtures/joint_native_andon_operator.json`. It retains all
+existing evaluation/window/floor fields and adds:
+
+```json
+"joint": {
+  "id": 71,
+  "generation": 1,
+  "maximum_escape_rate": {"numerator": 0, "denominator": 1},
+  "maximum_benign_stop_rate": {"numerator": 1, "denominator": 2},
+  "budget": {"cases": 512, "member_outcomes": 2048}
+}
+```
+
+These numbers are example policy inputs, not population guarantees or recommended
+thresholds. Native constructors validate every value. Missing/unknown fields,
+wrong versions and excessive work ceilings refuse; /1 cannot carry a hidden joint
+field. Both ordinary and reserved creation select the original matching coupled
+constructor. Existing inspection, assessment, window and live-publication recovery
+pin the same complete selection. No recovery discovers or downgrades the policy.
+
+The privileged native operator now exposes:
+
+```sh
+cargo run --locked -p fa-reference --example native_andon -- \
+  promote CONFIG JOINT_ANDON_PROFILE RECOVERY_PROFILE PROMOTION_JSON
+```
+
+This command requires the /2 profile, exact original history/floors and a NEW
+independent `retain_history_anchor` destination. It uses the existing bounded
+recovery and custody path; no actor receives the evaluator or promotion interface.
+`PROMOTION_JSON` is a closed object with schema `fa.native-andon-promotion/1`,
+nonzero `operation`, `expected_control_sequence`, `expected_authority_epoch` and
+`expected_evaluation_revision`. The control tuple explicitly names the recovered
+pre-promotion owner: account for the original recovery fence, not just the saved
+pre-recovery epoch. The command never rewrites supplied counters or weights to
+make a stale request pass. Neither candidate weights nor a positive report can
+be supplied in the document.
+
+For a new operation the original marginal/joint preview must qualify before a
+clock is requested. After checked fresh time is acknowledged, the ORIGINAL
+promotion recomputes its evidence and candidate again; this is two bounded joint
+evaluations, not a single-call cost guarantee. Time observation and promotion
+remain separate transactions. Clock refusal, timeout or rejected evidence cannot
+promote, though the acknowledged recovery fence (and possibly Time) remains real
+history and is retained. An uncertain storage replacement exports no stale anchor.
+
+An already recorded operation goes directly through the original exact-request
+retry check: no new clock or reweighting. Each invocation still acknowledges its
+own recovery fence. Changed fields under the same operation ID refuse. Successful
+output adds only actual promotion generation/revision and joint-qualification
+metadata; no private helper/evaluator evidence is rendered. Output or independent
+retention failures cannot undo the promotion or trigger automatic retries.
+
+Seven additional authored operator regressions cover exact /1 versus /2 selection
+with/without the live reserve, actual source-captured reviews and independent
+labels, qualified and common-mode-unsafe candidates, stale requests, missing/slow
+clocks, retained output failure, strict documents, exact replay and actual command
+routing. Existing sixteen native operator tests and live workflow assertions are
+unchanged. Both executable consumers' required tests and unchanged xtask were
+attempted through remote-only RCH; the launcher remains absent (exit 127).
+Compilation, runtime tests, formatting and Clippy remain unexecuted. Numerical,
+checked, multi-client and signed-evaluator compositions are not added here.
