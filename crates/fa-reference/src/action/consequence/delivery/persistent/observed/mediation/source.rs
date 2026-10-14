@@ -29,6 +29,8 @@ pub enum TopologySourceRefusal {
     /// Installed before work; retained when an unwind prevents a complete result.
     Interrupted,
     BudgetExhausted,
+    /// No fresh nonzero operation ID remains; no wrap or stale-cut fallback.
+    OperationExhausted,
     CheckNotAcknowledged,
     Input(InventoryLoadError),
     /// Includes metadata in unselected families, not merely selected graph edges.
@@ -125,6 +127,24 @@ impl FileTopologySource {
         -> Result<TopologyRefresh, JournalError>
     {
         self.refresh_with(host, revision, operation, read_regular)
+    }
+
+    // Driver-only allocation on the SAME custodian. Existing explicit refresh
+    // and rebind calls advance this counter too; no per-step reset or second ID
+    // space can collide with an earlier native withdrawal.
+    pub(in crate::action::consequence::delivery::persistent::observed)
+    fn refresh_next(&mut self, host: &mut FileOversight, revision: u64)
+        -> Result<TopologyRefresh, JournalError>
+    {
+        self.observer.check_owner(host)?;
+        if revision != host.revision() { return Err(Error::Stale.into()); }
+        if &host.mediation_snapshot()?.graph != self.expected.graph() { return Err(Error::Binding.into()); }
+        let Some(operation) = self.last_operation.checked_add(1) else {
+            self.last_refusal = Some(TopologySourceRefusal::OperationExhausted);
+            quarantine(host);
+            return Err(Error::Overflow.into());
+        };
+        self.refresh(host, revision, operation)
     }
 
     /// Explicit independently provisioned replacement, not automatic adoption of

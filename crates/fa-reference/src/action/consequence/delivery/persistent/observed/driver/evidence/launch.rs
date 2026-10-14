@@ -1,5 +1,5 @@
 //! Review launch captures through the same live source gate as later steps.
-use super::{FileReviewLaunch, FileSourceReviewError, durable_capture};
+use super::{FileOversight, FileReviewLaunch, FileSourceReviewError, durable_capture};
 use super::super::{FileDriverLaunch, FileSupervisedDriver, admitted};
 use crate::action::{ActionState, ElapsedTick};
 use crate::action::consequence::oversight::{CommitteeInput, evidence_source::{EvidenceFile, EvidenceIdentity, EvidenceSnapshot}};
@@ -22,9 +22,17 @@ impl FileSupervisedDriver {
     /// caused by THIS exclusively owned capture are adopted for the new review.
     /// No previously completed review, approval or reservation is reused here.
     pub fn start_file_review<S, F>(&mut self, source: &mut S,
-        launch: FileReviewLaunch<UnixStream>, mut clock: F) -> Result<EvidenceIdentity, FileSourceReviewError>
+        launch: FileReviewLaunch<UnixStream>, clock: F) -> Result<EvidenceIdentity, FileSourceReviewError>
     where S: EvidenceFile + ?Sized, F: FnMut() -> ElapsedTick {
-        let prepared = self.file_review_inputs(source, &launch, &mut clock)?;
+        self.start_file_review_checked(source, launch, clock, |_| Ok(()))
+    }
+
+    pub(super) fn start_file_review_checked<S, F>(&mut self, source: &mut S,
+        launch: FileReviewLaunch<UnixStream>, mut clock: F,
+        before_capture: impl FnOnce(&mut FileOversight) -> Result<(), JournalError>)
+        -> Result<EvidenceIdentity, FileSourceReviewError>
+    where S: EvidenceFile + ?Sized, F: FnMut() -> ElapsedTick {
+        let prepared = self.file_review_inputs(source, &launch, &mut clock, before_capture)?;
         let observation = prepared.capture.identity();
         self.start_review(FileDriverLaunch {
             request: launch.request, round: launch.round, evidence_root: prepared.capture.reference_root(),
@@ -39,9 +47,17 @@ impl FileSupervisedDriver {
     /// The original launcher retains every started child on partial failure and
     /// checks fresh time after spawn. No source read failure can launch a helper.
     pub fn start_file_process_review<S, F>(&mut self, source: &mut S,
-        launch: FileReviewLaunch<HelperProgram>, mut clock: F) -> Result<EvidenceIdentity, FileSourceReviewError>
+        launch: FileReviewLaunch<HelperProgram>, clock: F) -> Result<EvidenceIdentity, FileSourceReviewError>
     where S: EvidenceFile + ?Sized, F: FnMut() -> ElapsedTick {
-        let prepared = self.file_review_inputs(source, &launch, &mut clock)?;
+        self.start_file_process_review_checked(source, launch, clock, |_| Ok(()))
+    }
+
+    pub(super) fn start_file_process_review_checked<S, F>(&mut self, source: &mut S,
+        launch: FileReviewLaunch<HelperProgram>, mut clock: F,
+        before_capture: impl FnOnce(&mut FileOversight) -> Result<(), JournalError>)
+        -> Result<EvidenceIdentity, FileSourceReviewError>
+    where S: EvidenceFile + ?Sized, F: FnMut() -> ElapsedTick {
+        let prepared = self.file_review_inputs(source, &launch, &mut clock, before_capture)?;
         let observation = prepared.capture.identity();
         self.start_process_review(FileDriverLaunch {
             request: launch.request, round: launch.round, evidence_root: prepared.capture.reference_root(),
@@ -52,7 +68,8 @@ impl FileSupervisedDriver {
         Ok(observation)
     }
 
-    fn file_review_inputs<S, W, F>(&mut self, source: &mut S, launch: &FileReviewLaunch<W>, clock: &mut F)
+    fn file_review_inputs<S, W, F>(&mut self, source: &mut S, launch: &FileReviewLaunch<W>, clock: &mut F,
+        before_capture: impl FnOnce(&mut FileOversight) -> Result<(), JournalError>)
         -> Result<PreparedInput, FileSourceReviewError>
     where S: EvidenceFile + ?Sized, F: FnMut() -> ElapsedTick {
         if self.job.is_some() { return Err(Error::WrongState.into()); }
@@ -64,6 +81,7 @@ impl FileSupervisedDriver {
         if host.input_revision(attempt)? != launch.expected_input_revision { return Err(Error::Stale.into()); }
         if !launch.workers.keys().eq(host.profile.committee.members().keys()) { return Err(Error::Binding.into()); }
         let action = host.request_action(launch.request)?.clone();
+        before_capture(&mut host)?;
         // Retain the exclusive original owner across the read. A stale caller
         // cannot hide behind a subsequent source-driven input revision change.
         let captured = if host.file_source_required() {

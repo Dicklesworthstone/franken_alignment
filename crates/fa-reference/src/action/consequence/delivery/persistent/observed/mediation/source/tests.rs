@@ -337,3 +337,5 @@ fn source_loss_at_every_original_store_barrier_returns_no_usable_old_certificate
 
 #[path = "tests/publication.rs"]
 mod publication;
+
+mod driver;
