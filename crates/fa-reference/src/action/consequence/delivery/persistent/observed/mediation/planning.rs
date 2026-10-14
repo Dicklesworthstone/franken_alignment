@@ -1,10 +1,15 @@
 //! Select placement, then persist the ORIGINAL independently checked cut.
 //! This is a supervisor integration, not an optimizer-owned permission path.
+mod cooperative;
+pub use cooperative::{FileMediationPlanning, FileMediationPlanningProgress, TopologyPlanningTask};
+
 use super::{FileMediationObserver, FileMediationUpdate, FileOversight, JournalError};
 use crate::action::consequence::delivery::TopologyChange;
-use crate::action::consequence::mediation::{CutCheck, CutProposal, MAX_CHECK_EDGE_VISITS};
-use crate::action::consequence::mediation::planning::{CutPlan, CutPlanOutcome, CutPlanningLimits, EnforcerCost};
+use crate::action::consequence::mediation::{CutCheck, MAX_CHECK_EDGE_VISITS};
+use crate::action::consequence::mediation::planning::{CutPlan, CutPlanningLimits, CutPlanningStatus, EnforcerCost};
 use crate::Error;
+#[cfg(test)]
+use crate::action::consequence::mediation::planning::CutPlanOutcome;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct MediationPlanningBudget {
@@ -51,28 +56,11 @@ impl FileMediationObserver {
         costs: &[EnforcerCost], budget: MediationPlanningBudget)
         -> Result<MediationPlanReceipt, JournalError>
     {
-        self.check_owner(host)?;
-        if revision != host.revision() || epoch != host.inspect().control.ledger.epoch {
-            return Err(Error::Stale.into());
+        let mut run = self.begin_plan_and_certify(host, revision, epoch, costs, budget)?;
+        while run.progress().solver.status == CutPlanningStatus::Planning {
+            run.advance(host, revision, usize::MAX)?;
         }
-        if budget.verification_edge_visits > MAX_CHECK_EDGE_VISITS { return Err(Error::Limit.into()); }
-        let current = host.mediation_snapshot()?;
-        if !current.available { return Err(Error::Incomplete.into()); }
-        let plan = current.graph.plan_minimum_cut(costs, budget.planning)?;
-        let proposal = match &plan.outcome {
-            CutPlanOutcome::Candidate(candidate) => candidate.proposal.clone(),
-            CutPlanOutcome::Bypass(_) | CutPlanOutcome::Unreachable { .. } => {
-                // Independently inspect all registered gates. A deliberately
-                // empty claimed partition cannot certify a graph with actors,
-                // even if a defective planner misclassified the topology.
-                // With no gates, the original checker records InvalidInput.
-                CutProposal { graph: current.graph.clone(),
-                    gates: current.graph.spec().enforcers.iter().map(|gate| gate.node).collect(),
-                    reachable: Vec::new() }
-            }
-        };
-        let checked = self.certify(host, revision, epoch, &proposal, budget.verification_edge_visits)?;
-        Ok(MediationPlanReceipt { journal_revision: host.revision(), plan, checked })
+        run.certify(self, host, revision)
     }
 
     /// A new topology is evidence, not a tentative optimization. Commit the

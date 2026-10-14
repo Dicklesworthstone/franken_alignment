@@ -61,3 +61,64 @@ bead is closed and prior execution receipts do not qualify this code.
 RCH_REQUIRE_REMOTE=1 rch exec -- cargo test --locked -p fa-reference --test mediation_cooperative_planning
 RCH_REQUIRE_REMOTE=1 rch exec -- cargo run --locked -p xtask -- check
 ```
+
+## Original durable owner integration
+
+`FileMediationObserver::begin_plan_and_certify` freezes the CURRENT graph, prices,
+authority epoch, control sequence and verification allowance in a
+`FileMediationPlanning`. The task holds no borrowed owner, file descriptor,
+writer lock or observer role. The live supervisor can record time, revoke/update
+topology, fence or stop the original owner between polls. An explicitly current
+journal predecessor admits time-only growth without discarding solver progress.
+A changed authority epoch, control sequence, graph or availability invalidates
+the task before further solver work. A caller typo or foreign-owner poll spends
+no work and cannot replace the bound issuer. A recorded basis failure is sticky.
+
+Only consuming `certify` with the ORIGINAL separately held observer and current
+owner can pass the complete candidate to the original durable independent cut
+checker. All bindings are checked again there, even after Ready. The fixed
+verification budget cannot be enlarged at completion. Original checker refusal,
+bypass and disconnected-sink results remain nonpermitting committed outcomes;
+no solver-produced VerifiedCut or asserted success is imported. A failed
+storage acknowledgment returns no receipt. The original canonical replacement
+and poisoned-owner/recovery semantics are unchanged.
+
+The existing synchronous `plan_and_certify` now drives this SAME owner-bound
+path. The standalone synchronous graph solver is retained unchanged as the
+independent differential oracle. Existing `update_and_plan` remains ordered as
+before and calls the updated consumer; its original public types and body are
+unchanged. A successful immutable plan is not a cached dispatch authorization.
+
+`update_and_begin_plan` first acknowledges the ORIGINAL topology update, then
+returns its original receipt and a separate fallible planning task. Missing
+prices, solver exhaustion, cancellation or never polling that task cannot roll
+back the update, revive an older cut, or restore withdrawn keys. Exact update
+retries reuse the original update receipt without repeating its fence. A retry
+for an older graph cannot plan a newer graph under the old operation. Beginning
+another explicit task is a separate costed attempt, not a refill of an old task.
+Neither interface refunds an unknown effect or changes existing endpoint outcomes.
+
+Nine additional native regression functions exercise the actual original locked
+file owner, full-input congress, human key, dispatch, checked publication and
+reconciliation. They cover positive publication under three quanta, interleaved
+time, cancellation through every small-fixture polling cut, wrong owner/observer/
+predecessor calls, original Stop while planning with a dispatched liability,
+late topology changes and fresh permitted work, update-before-failed-planning,
+exact update retries, solver/verifier exhaustion, all five Store barriers, and
+owner-drop/reopen without accidental lock or observer retention. Manual ballots
+are explicit controls, not independent helper inference or accuracy evidence.
+Existing test bodies and native authority/verification reducers are unchanged.
+
+These nine tests, the eight graph tests and all three compile-fail examples are
+AUTHORED, NOT EXECUTED. Remote-only RCH attempts for the owner tests and the full
+integrated gate stop before compilation because the launcher is absent. No
+compile, formatting, Clippy, runtime, latency or production pass is claimed.
+Owner binding/snapshot checks, projection setup, the independent final verifier,
+history reconstruction, encoding and storage synchronization remain synchronous;
+only the planner's searches and augmentations yield at edge quanta. This does
+not claim to make every publication or supervisory operation nonblocking.
+
+```sh
+RCH_REQUIRE_REMOTE=1 rch exec -- cargo test --locked -p fa-reference action::consequence::delivery::persistent::observed::mediation::planning
+RCH_REQUIRE_REMOTE=1 rch exec -- cargo run --locked -p xtask -- check
+```
