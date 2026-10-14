@@ -1,6 +1,7 @@
 //! Compare an independently retained group with the ORIGINAL locked journal.
 //! Prefix reconstructions stay private; no partial ledger or effect key escapes.
 mod cooperative;
+mod resume;
 pub use cooperative::{BatchInspectionBudget, BatchInspectionReport, BatchInspectionStatus,
     BatchInspectionWork, FileBatchInspection};
 
