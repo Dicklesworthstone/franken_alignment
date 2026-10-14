@@ -12,6 +12,8 @@ use std::path::Path;
 mod andon;
 pub use andon::FileAndonRecovery;
 
+pub mod mediated;
+
 mod stopped;
 mod publication;
 pub use publication::FilePublicationRecoveryRequirements;
