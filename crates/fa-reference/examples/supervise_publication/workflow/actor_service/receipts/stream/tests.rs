@@ -57,9 +57,15 @@ fn seeded(root: &Directory, mode: usize, source: bool) -> (Config, Profile, Sett
 }
 fn canonical(c: &Config) -> Vec<u8> { fs::read(c.store.join("delivery.bin")).unwrap() }
 fn observe(c: &Config, a: &Profile, settings: &Settings, original: &ActorProposal) -> WireResponse {
+    observe_with(c, a, settings, original, false)
+}
+fn observe_reconciled(c: &Config, a: &Profile, settings: &Settings, original: &ActorProposal) -> WireResponse {
+    observe_with(c, a, settings, original, true)
+}
+fn observe_with(c: &Config, a: &Profile, settings: &Settings, original: &ActorProposal, reconcile: bool) -> WireResponse {
     let tick = Cell::new(0); let mut client: Option<ActorClient<UnixStream>> = None;
     let mut response = None; let mut waits = 0;
-    let report = serve(c, a, settings, &mut || Duration::from_millis(tick.get()), &mut |_| {
+    let mut drive = |_: u64| {
         waits += 1; assert!(waits < 64, "receipt peer never completed its bounded exchange");
         if client.is_none() {
             let socket = UnixStream::connect(&a.socket).unwrap(); a.supervisor.verify(&socket).unwrap();
@@ -68,7 +74,13 @@ fn observe(c: &Config, a: &Profile, settings: &Settings, original: &ActorProposa
         }
         let progress = client.as_mut().unwrap().drive(ClientDriveBudget::default()).unwrap();
         if let ClientProgress::Response(value) = progress.progress { response = Some(value); tick.set(1000); }
-    }).unwrap();
+    };
+    let report = if reconcile {
+        serve_reconciled(c, a, settings, || ElapsedTick(2),
+            &mut || Duration::from_millis(tick.get()), &mut drive)
+    } else {
+        serve(c, a, settings, &mut || Duration::from_millis(tick.get()), &mut drive)
+    }.unwrap();
     assert!(report.frames >= 1); assert_eq!(report.candidates, 1);
     assert!(report.revision >= settings.minimum.journal_revision);
     response.unwrap()
@@ -88,11 +100,13 @@ fn old_message_and_finish_receipts_use_saved_frames_after_prefix_completion() {
         assert!(!a.socket.exists());
     }
     a.request = 999;
-    let result = observe(&c, &a, &settings, &saved[0].1);
-    assert!(matches!(result.result, Err(fa_reference::action::consequence::oversight::actor_wire::WireError::Withheld)));
+    let bytes = canonical(&c);
+    assert!(serve(&c, &a, &settings, &mut || Duration::ZERO,
+        &mut |_| panic!("missing request must refuse before service")).is_err());
     let state = FileOversight::read_stream_publication(&c.store, &c.profile, fixture::stream()).unwrap();
+    assert_eq!(canonical(&c), bytes);
     assert_eq!(state.confirmed, before.confirmed); assert!(state.confirmed.finished());
-    assert_eq!(state.publication.executions, 3);
+    assert_eq!(state.publication.executions, 3); assert!(!a.socket.exists());
 }
 
 #[test]
@@ -109,17 +123,44 @@ fn published_unreconciled_message_remains_unknown_and_charged() {
 }
 
 #[test]
-fn registered_but_unavailable_source_is_not_read_to_refuse_a_missing_key() {
+fn registered_but_unavailable_source_is_not_read_and_missing_key_spends_no_fence() {
     let root = Directory::new(); let (c, a, settings, _) = seeded(&root, 0, true);
     let state = FileOversight::read_stream_publication(&c.store, &c.profile, fixture::stream()).unwrap();
-    let intent = fa_reference::action::consequence::delivery::persistent::observed::stream::FileStreamProposal {
-        target: state.publication.target, expected_policy_epoch: 0, deadline: ElapsedTick(101), message: Some("unused".into()) };
-    let proposal = fa_reference::action::consequence::delivery::persistent::observed::stream::actor_wire::encode_stream_proposal(fixture::stream(), &intent).unwrap();
-    assert!(matches!(observe(&c, &a, &settings, &proposal).result,
-        Err(fa_reference::action::consequence::oversight::actor_wire::WireError::Withheld)));
+    let before = canonical(&c);
+    assert!(serve(&c, &a, &settings, &mut || Duration::ZERO,
+        &mut |_| panic!("missing request must refuse before socket service")).is_err());
     let after = FileOversight::read_stream_publication(&c.store, &c.profile, fixture::stream()).unwrap();
-    assert_eq!(after.publication.revision, state.publication.revision + 1, "only the recovery Fence is appended");
+    assert_eq!(canonical(&c), before);
+    assert_eq!(after.publication.revision, state.publication.revision);
     assert_eq!(after.publication.executions, 0); assert_eq!(after.confirmed.message_count(), 0);
+    assert!(!a.socket.exists());
+}
+
+#[test]
+fn reconcile_receipts_settles_published_message_before_serving_exact_intent() {
+    let root = Directory::new(); let (c, a, settings, saved) = seeded(&root, 2, false);
+    let before = FileOversight::read_stream_publication(&c.store, &c.profile, fixture::stream()).unwrap();
+    assert_eq!(before.published.message_count(), 1); assert_eq!(before.confirmed.message_count(), 0);
+    assert!(matches!(observe_reconciled(&c, &a, &settings, &saved[0].1).result,
+        Ok(Knowledge::Known { value: ActorOutcome::Executed, .. })));
+    let after = FileOversight::read_stream_publication(&c.store, &c.profile, fixture::stream()).unwrap();
+    assert_eq!(after.published.message_count(), 1); assert_eq!(after.confirmed.message_count(), 1);
+    assert_eq!(after.confirmed.messages().collect::<Vec<_>>(), vec!["é"]);
+    assert_eq!(after.publication.executions, 1);
+    assert_eq!(after.publication.control.ledger.reserved, 0);
+    assert_eq!(after.publication.control.ledger.charged, before.publication.control.ledger.charged);
+    assert_eq!(after.publication.revision, before.publication.revision + 3);
+}
+
+#[test]
+fn reconcile_mode_requires_existing_request_before_clock_or_recovery_write() {
+    let root = Directory::new(); let (c, a, settings, _) = seeded(&root, 0, false);
+    let before = canonical(&c); let clocked = Cell::new(false);
+    let result = serve_reconciled(&c, &a, &settings, || {
+        clocked.set(true); ElapsedTick(2)
+    }, &mut || Duration::ZERO, &mut |_| panic!("missing request cannot serve"));
+    assert!(result.is_err()); assert!(!clocked.get());
+    assert_eq!(canonical(&c), before); assert!(!a.socket.exists());
 }
 
 #[test]
@@ -189,7 +230,8 @@ fn closed_stream_document_and_command_grammar_do_not_select_a_raw_fallback() {
     }
     for values in [vec!["serve-create", "missing", "missing", "--stream-recovery", "missing", "--receipts-only"],
         vec!["serve-open", "missing", "missing", "--stream-recovery", "missing", "--receipts-only", "--guarded", "missing"],
-        vec!["serve-open-checked", "missing", "missing", "--stream-recovery", "missing", "--receipts-only"]] {
+        vec!["serve-open-checked", "missing", "missing", "--stream-recovery", "missing", "--receipts-only"],
+        vec!["serve-open", "missing", "missing", "--stream-recovery", "missing", "--unknown-receipt-mode"]] {
         let args = values.into_iter().map(str::to_owned).collect::<Vec<_>>();
         let error = super::super::command_with(&args, None, &mut || Duration::ZERO, &mut |_| panic!("closed options")).unwrap_err();
         assert_eq!(error, USAGE);

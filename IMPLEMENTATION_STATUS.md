@@ -1,5 +1,24 @@
 # Implementation status · design revision 0.3
 
+## 2026-10-14: reconcile stream receipts through verified recovery (unqualified source)
+
+The anchored stream receipt service now has an explicit `--reconcile-receipts`
+mode. After exact history, guard, floor and reserve replay, it requires the selected
+request to exist before any recovery mutation, then uses the original fixed
+`Fence -> Time -> Sweep` transaction before exposing the non-admitting stream
+receipt port. Missing requests therefore consume no fence or clock. Receipt-only
+mode retains its no-clock behavior; reconciliation neither reads fresh evidence
+nor launches helpers/reviewers and cannot recreate effects. Published unresolved
+messages can become confirmed only through the original endpoint receipt sweep;
+unresolved outcomes stay charged and unknown.
+
+Two new regressions exercise confirmed recovery of a published message and the
+missing-request/no-clock boundary, while existing stream recovery tests are
+strengthened to require no mutation for absent keys. The required RCH build/test
+gate remains unavailable, so this is unqualified source and no FA-014/FA-107
+closure or production qualification is claimed. See
+[the stream receipt contract](docs/STREAM_RECEIPT_SERVICE.md).
+
 ## 2026-10-12: recover learned histories directly into stopped state (unqualified source)
 
 All four original learned replay cursor types now expose exact stop selection

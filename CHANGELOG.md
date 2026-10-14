@@ -1,5 +1,20 @@
 # Changelog
 
+## 2026-10-14: reconcile retained stream receipts without reopening admission
+
+- Add explicit `--reconcile-receipts` to anchored stream recovery. Reuse the
+  original guarded cursor and fixed `Fence -> Time -> Sweep` settlement cut;
+  no fresh source read, helper, reviewer, message admission or effect resend.
+- Require the selected durable request to exist after complete verified replay
+  and before socket binding or recovery mutation. Missing keys now spend no
+  Fence/Time/Sweep and cannot consume source eligibility merely to ask for a receipt.
+- Preserve receipt-only no-clock operation. Reconciliation can confirm only what
+  the original endpoint sweep observes; unresolved liabilities remain charged
+  and `OutcomeUnknown` rather than being refunded or relabelled.
+- Add/strengthen real-owner Unix regression source for reconcile-first receipt
+  serving and missing-request refusal. RCH is unavailable, so compilation,
+  formatting, Clippy and runtime tests remain unexecuted and qualification open.
+
 ## 2026-10-12: stop and drain learned histories through sealed recovery
 
 - Add stopped completion to the original learned, guarded, raw-predictive and

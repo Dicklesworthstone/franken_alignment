@@ -4,10 +4,11 @@ The Linux publication example adds this explicitly selected baseline:
 
 ```
 supervise_publication serve-open CONFIG ACTOR_PROFILE --stream-recovery RECOVERY_PROFILE --receipts-only
+serve-open CONFIG ACTOR_PROFILE --stream-recovery RECOVERY_PROFILE --reconcile-receipts
 ```
 
-It uses `FileStreamActorRecoveryPort`, not the raw proposal recovery port. An
-actor resends its original complete-message intent, not the current cumulative
+Both modes use `FileStreamActorRecoveryPort`, not the raw proposal recovery port.
+An actor resends its original complete-message intent, not the current cumulative
 release frame. Existing message and finish requests recover their original
 outcomes even after the confirmed stream has advanced or finished. Missing keys
 remain Withheld; no new message or finish is admitted. The existing wire/client
@@ -68,8 +69,20 @@ and staged files untouched and issues no roles. Binding the socket after verifie
 replay but before the single Fence makes a collision a pre-fence refusal. The
 original bound-socket custody never removes an unrelated stale path.
 
-Successful recovery acknowledges the original Fence and discards all returned
-approval roles. Expiry afterwards cannot undo that mutation. The selected stream
+Before any recovery mutation, both modes require the independently selected
+request to exist in the completely replayed original request book. A missing key
+therefore refuses without Fence, Time, Sweep, socket binding or source access.
+Exact proposal equality remains the recovery port's later responsibility.
+
+`--receipts-only` acknowledges the original Fence and discards all returned
+approval roles. `--reconcile-receipts` instead consumes the same verified cursor
+through the existing fixed `Fence -> Time -> Sweep` transaction. Its one fresh
+clock observation supports the native endpoint receipt sweep; it is not evidence,
+review approval or permission to dispatch. Sweep queries retained endpoint state
+and cannot recreate a sendable envelope. A published message can therefore become
+confirmed before its exact receipt is served, while an unresolved/failed sweep
+remains charged and unknown under the original ledger. Neither mode admits a new
+message or finish. Expiry after an acknowledged cut cannot undo it. The selected stream
 recovery port then uses the SAME bounded peer-credential/accept/read/write/reconnect
 loop as raw receipt service. One service window and the original candidate,
 connection and exchange limits apply across all peers and reconnections. There
@@ -77,10 +90,10 @@ is no second protocol parser, outcome reducer, source read, helper process,
 reviewer channel, logical-clock acquisition, inference or reconciliation.
 
 Only unsent reservations can be released by original recovery or explicit Cancel.
-Already published messages remain published, unresolved messages remain charged
-and outcome-unknown, and a closed connection does not finish a stream. Native
-reconciliation is a separate supervisor operation after the exclusive receipt
-owner has been released. Reports count transport work, not effect success.
+Already published messages remain published. In receipt-only mode unresolved
+messages remain charged and outcome-unknown; reconcile-receipts may settle them
+only from the original endpoint receipt query. If that sweep cannot resolve them,
+they remain charged and unknown. A closed connection does not finish a stream. Reports count transport work, not effect success.
 The caller must provision the correct stream service and server identity; an
 arbitrary admitting endpoint does not become non-admitting by client intent.
 
@@ -90,7 +103,8 @@ cancellation, an independent watchdog or a disk/kernel latency guarantee. No
 source readiness or new approval is restored by serving an old receipt.
 
 Regression source uses actual original owners and Unix sockets for old message
-and finish recovery, missing keys, published-but-unreconciled history, exact
+and finish recovery, missing keys before any recovery mutation, published-but-
+unreconciled history in both observation-only and reconcile-first modes, exact
 configuration/anchor refusals, staging preservation, every pre-fence deadline and
 expiry after Fence, protected socket collisions and closed document/flag parsing.
 These are authored assertions, not executed results. RCH is unavailable in the
