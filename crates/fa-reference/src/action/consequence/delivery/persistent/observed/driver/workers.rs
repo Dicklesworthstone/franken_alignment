@@ -60,6 +60,9 @@ pub struct FileDriverRelease {
     pub children: Option<HelperChildren>,
     /// Terminal original computed review, retaining local work and round outcomes.
     pub learned_review: Option<super::learned::RetainedReview>,
+    /// Original selected topology custody, including spent work and last result.
+    /// A successor driver must explicitly reattach this same value; no refill.
+    pub topology: Option<super::topology::FileDriverTopology>,
 }
 
 impl FileSupervisedDriver {
@@ -149,6 +152,7 @@ impl FileSupervisedDriver {
         if let Some(job) = &mut self.job { job.close(); }
         self.reap_helpers();
         self.job = None;
-        FileDriverRelease { supervisor: self.supervisor, children: self.retiring, learned_review: self.learned_review }
+        FileDriverRelease { supervisor: self.supervisor, children: self.retiring,
+            learned_review: self.learned_review, topology: self.topology }
     }
 }

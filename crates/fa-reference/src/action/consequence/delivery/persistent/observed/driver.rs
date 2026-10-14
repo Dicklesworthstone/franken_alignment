@@ -13,6 +13,7 @@ mod workers;
 mod publication;
 mod provider;
 pub mod evidence;
+pub mod topology;
 pub use workers::{FileDriverProcessError, FileDriverRelease};
 use workers::WorkerSet;
 use provider::EvidenceProvider;
@@ -123,6 +124,7 @@ pub struct FileSupervisedDriver {
     job: Option<Job>,
     retiring: Option<HelperChildren>,
     learned_review: Option<learned::RetainedReview>,
+    topology: Option<topology::FileDriverTopology>,
 }
 impl fmt::Debug for FileSupervisedDriver {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -139,7 +141,7 @@ impl FileOversight {
 }
 impl FileSupervisedDriver {
     /// Adopt an existing gateway without changing its port, identity or rights.
-    pub fn new(supervisor: FileActorSupervisor<FileOversight>) -> Self { Self { supervisor, job: None, retiring: None, learned_review: None } }
+    pub fn new(supervisor: FileActorSupervisor<FileOversight>) -> Self { Self { supervisor, job: None, retiring: None, learned_review: None, topology: None } }
     pub fn supervisor(&self) -> &FileActorSupervisor<FileOversight> { &self.supervisor }
     /// Trusted integration, including use of a separately held FileHumanReviewer.
     /// Do not pass this role or its mutable host to the actor/helper processes.
@@ -263,7 +265,7 @@ impl FileSupervisedDriver {
             // canonical cut. Do not consume a lone Time record before it can
             // preflight the complete operation, including reserved capacity.
             if job.phase != Phase::Reconcile { observe(&mut host, clock())?; }
-            step_job(&mut host, job, &mut clock, provider, human, credential)
+            step_job(&mut host, job, &mut clock, provider, human, credential, self.topology.as_mut())
         }));
         if result.is_err() {
             // The host borrow has unwound before maintenance. Never leave a
@@ -339,8 +341,8 @@ where P: EvidenceProvider, F: FnMut() -> ElapsedTick {
 }
 
 fn step_job<F, P>(host: &mut FileOversight, job: &mut Job, clock: &mut F,
-    provider: &mut P, human: Option<&FileHumanPermit>, credential: Option<&FileCredentialPermit>)
-    -> Result<FileDriverEvent, JournalError>
+    provider: &mut P, human: Option<&FileHumanPermit>, credential: Option<&FileCredentialPermit>,
+    topology: Option<&mut topology::FileDriverTopology>) -> Result<FileDriverEvent, JournalError>
 where F: FnMut() -> ElapsedTick, P: EvidenceProvider {
     let request = job.request;
     match job.phase {
@@ -395,7 +397,7 @@ where F: FnMut() -> ElapsedTick, P: EvidenceProvider {
             job.phase = Phase::Publish;
             Ok(FileDriverEvent::Dispatched { request, attempt: job.attempt })
         }
-        Phase::Publish => Ok(publication::publish_job(host, job, clock, provider, credential)),
+        Phase::Publish => Ok(publication::publish_job(host, job, clock, provider, credential, topology)),
         Phase::Reconcile => {
             let revision = host.revision();
             let outcome = host.reconcile_attempt_at(revision, job.attempt, clock())?;

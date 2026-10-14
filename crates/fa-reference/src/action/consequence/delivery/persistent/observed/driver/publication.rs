@@ -7,7 +7,8 @@ use crate::action::ElapsedTick;
 use crate::{Error, Snapshot};
 
 pub(super) fn publish_job<F, P>(host: &mut FileOversight, job: &mut Job,
-    clock: &mut F, provider: &mut P, credential: Option<&FileCredentialPermit>) -> FileDriverEvent
+    clock: &mut F, provider: &mut P, credential: Option<&FileCredentialPermit>,
+    topology: Option<&mut super::topology::FileDriverTopology>) -> FileDriverEvent
 where F: FnMut() -> ElapsedTick, P: EvidenceProvider {
     let request = job.request;
     // Retire the send path BEFORE invoking external provider code. Even a
@@ -15,7 +16,7 @@ where F: FnMut() -> ElapsedTick, P: EvidenceProvider {
     job.phase = Phase::Reconcile;
     if !host.publication_guard_required() {
         // A credential permit is meaningful only for a credential-guarded host.
-        if credential.is_some() {
+        if credential.is_some() || topology.is_some() {
             return FileDriverEvent::PublicationUnknown { request, error: Error::WrongState.into() };
         }
         let revision = host.revision();
@@ -43,6 +44,14 @@ where F: FnMut() -> ElapsedTick, P: EvidenceProvider {
             // assertion or force secret availability for query-only recovery.
             (None, Snapshot::default(), None)
         };
+        // Selection belongs to this DRIVER, not to a caller's choice of step
+        // method. Refresh only after ordinary input acquisition/validation and
+        // only when the ORIGINAL endpoint still requires first-publication work.
+        // Acknowledged withdrawal reaches native sealing; persistence failure
+        // cannot proceed to clock acquisition or the endpoint.
+        if needs_evidence && let Some(topology) = topology {
+            topology.refresh_for_publication(host, request, job.attempt)?;
+        }
         // The original publication/sealing operation still samples current time
         // AFTER file reading and, for configured sources, durable observation.
         let now = clock();
