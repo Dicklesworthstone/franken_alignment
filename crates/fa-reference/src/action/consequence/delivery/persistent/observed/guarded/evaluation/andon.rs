@@ -1,6 +1,8 @@
 //! Atomic guarded bootstrap and anchored native evaluation/Andon recovery.
 //! Every label, pending case, receipt and incident is recomputed by the original
 //! Machine. No scores, label roles or compact accounting seeds are imported.
+pub mod joint;
+
 use super::{FileCredibilitySnapshot, FileEvaluatedOversightRoles};
 pub use super::super::recovery::FileAndonRecovery;
 use super::super::{FileCredentialRegistration, FileGuardSet, FileRecoveryRequirements};
@@ -11,6 +13,7 @@ use super::super::super::{Event, FileOversight, FileOversightProfile,
 use super::super::super::credibility::{CredibilityEvent, andon::FileAndonConfig};
 use crate::action::consequence::oversight::credibility::EvaluationProtocol;
 use crate::action::consequence::oversight::credibility::native_andon::NativeEvaluatedFalseHold;
+use crate::action::consequence::oversight::joint_credibility::JointPromotionPolicy;
 use crate::round::review::andon::{AndonBudget, AndonLedger};
 use crate::Error;
 use std::path::Path;
@@ -24,6 +27,8 @@ pub struct FileAndonRecoveryRequirements {
     config: FileAndonConfig,
     windows: Vec<AndonBudget>,
     minimum_evaluation_revision: u64,
+    // None requires the original marginal-only profile, never any policy on disk.
+    joint: Option<JointPromotionPolicy>,
 }
 impl FileAndonRecoveryRequirements {
     pub fn new(base: FileRecoveryRequirements, config: FileAndonConfig,
@@ -36,7 +41,7 @@ impl FileAndonRecoveryRequirements {
                 return Err(Error::Binding);
             }
         }
-        Ok(Self { base, config, windows: inventory.windows().to_vec(), minimum_evaluation_revision })
+        Ok(Self { base, config, windows: inventory.windows().to_vec(), minimum_evaluation_revision, joint: None })
     }
     pub fn base(&self) -> &FileRecoveryRequirements { &self.base }
     pub fn config(&self) -> &FileAndonConfig { &self.config }
@@ -50,14 +55,16 @@ impl FileAndonRecoveryRequirements {
     {
         self.preflight(events)?;
         self.base.guards.check_decoder_config(events)?;
-        super::check_protocol(events, protocol)
+        joint::check_protocol(events, protocol, self.joint)
     }
 
     pub(in super::super) fn check_replayed(&self, profile: &FileOversightProfile,
         machine: &Machine, events: &[Event], protocol: &EvaluationProtocol) -> Result<(), Error>
     {
         self.base.check_evaluated(profile, machine, events, Some(protocol))?;
-        if machine.andon_contract() != Some(&self.config) { return Err(Error::Binding); }
+        if machine.andon_contract() != Some(&self.config)
+            || machine.broker.joint_credibility_policy() != self.joint
+        { return Err(Error::Binding); }
         let source = machine.broker.andon_source()?;
         if source.revision() < self.minimum_evaluation_revision { return Err(Error::Stale); }
         if !source.ledger().windows().values().map(|state| state.budget).eq(self.windows.iter().copied()) {
