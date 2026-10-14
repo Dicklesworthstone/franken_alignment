@@ -2,6 +2,8 @@
 //! The trusted connection selects this profile; ordinary raw-submit ports keep
 //! their existing semantics. Intent bytes are not an execution-bearing frame.
 mod codec;
+mod recovery;
+pub use recovery::FileStreamActorRecoveryPort;
 mod source;
 pub mod process;
 pub mod client;
