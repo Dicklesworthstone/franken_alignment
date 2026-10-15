@@ -14,6 +14,7 @@ use super::super::super::credibility::CredibilityEvent;
 use super::super::super::decoder::learned::{FileLearnedConfig, FileLearnedRecovery,
     FileLearnedRecoveryProgress, FileLearnedRecoveryStatus, checkpoint::FileLearnedResetIntent};
 use crate::Error;
+use crate::action::consequence::oversight::actor::{ActorOutcome, Knowledge};
 use super::super::super::stream::FileStreamProposal;
 use crate::action::consequence::delivery::persistent::RecoveryReserve;
 use std::fmt;
@@ -144,6 +145,18 @@ fn check_machine(profile: &FileOversightProfile, machine: &Machine, events: &[Ev
 }
 
 impl FileOwnedPredictiveRecovery {
+    /// Return only the original historical actor observation after all of this
+    /// wrapper's independent guards pass. None selects a message; Some selects
+    /// a finish's exact confirmed predecessor. The inner finalizer rechecks the
+    /// locked canonical cut without cleanup, fencing, reconciliation or roles.
+    /// No reserve is consumed; pending/unknown liabilities remain unresolved.
+    pub fn finish_receipt(self, request: u64, finish_after: Option<u64>)
+        -> Result<Knowledge<ActorOutcome>, JournalError>
+    {
+        self.check_ready()?;
+        self.inner.finish_receipt(request, finish_after)
+    }
+
     /// Select an original message only after the complete independent guard,
     /// policy, recipe and floor checks pass. Read-only; no fence or role issuance.
     pub fn learned_text_stream_message_request(&self, request: u64)

@@ -7,7 +7,12 @@ use std::path::PathBuf;
 fn generated(root: &Root, mode: Option<bool>)
     -> (Config, PathBuf, Loaded, FileHumanReviewer, FileSupervisedDriver, Wire, Deadline)
 {
-    let mut config = configured(root);
+    generated_with_config(root, mode, configured(root))
+}
+
+fn generated_with_config(root: &Root, mode: Option<bool>, mut config: Config)
+    -> (Config, PathBuf, Loaded, FileHumanReviewer, FileSupervisedDriver, Wire, Deadline)
+{
     let path = fixture::write(root, b"allow");
     if let Some(owned) = mode { super::forecast::install(root, &path, owned, 60_000); }
     evidence(root, &config, 1, true, false);
@@ -124,3 +129,4 @@ fn historical_message_lookup_cannot_mint_a_request_from_ready_output() {
 }
 
 mod preflight;
+mod readonly;

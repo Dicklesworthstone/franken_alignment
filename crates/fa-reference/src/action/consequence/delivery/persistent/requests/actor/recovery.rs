@@ -90,6 +90,17 @@ impl<H: FileRequestHost> ActorRequestPort for FileActorRecoveryPort<H> {
     }
 }
 
+// One projection for live polling and independently verified historical replay.
+// Callers still validate request identity and their canonical cut; a status is
+// not a ticket, an endpoint proof, or permission to create/retry an effect.
+impl super::FileRequestStatus {
+    pub(in crate::action::consequence::delivery::persistent) fn actor_observation(self)
+        -> Knowledge<ActorOutcome>
+    {
+        super::projection(self)
+    }
+}
+
 impl FileActorRecoveryPort<super::super::super::observed::FileOversight> {
     /// The original intent-to-retained-frame path, but only after the same
     /// non-admitting gate used for raw requests. Never rebuild from a new prefix.

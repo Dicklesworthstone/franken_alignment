@@ -8,6 +8,7 @@ use super::{FileHumanReviewer, FileLearnedConfig, FileOversight, FileOversightPr
 use super::super::super::{BaseEvent, Event};
 use super::super::super::super::MAX_JOURNAL_EVENTS;
 use crate::Error;
+use crate::action::consequence::oversight::actor::{ActorOutcome, Knowledge};
 use super::super::super::stream::FileStreamProposal;
 use std::fmt;
 use std::path::Path;
@@ -192,6 +193,36 @@ impl FileLearnedRecovery {
     {
         Ok(self.verified_guarded_machine()?.learned_text_stream_finish_request(
             self.profile.delivery.scope, after_request, request)?)
+    }
+
+    /// Consume a complete replay into the ORIGINAL redacted actor observation,
+    /// without recovering a live owner or spending any journal capacity.
+    /// `None` selects a message; `Some(previous_request)` explicitly selects a
+    /// finish with that exact confirmed predecessor. There is no format fallback.
+    ///
+    /// This is a historical observation at the verified canonical cut, not a
+    /// fresh evaluation or a reconciliation. Pending and unknown outcomes stay
+    /// pending and unknown even when publication is ahead of its receipt. No
+    /// clock, source, helper, fence, cleanup, sync, reset or new inference runs.
+    /// Numerical work needed to VERIFY the original history still runs in replay.
+    ///
+    /// The exact canonical bytes are re-read under the SAME exclusive lock before
+    /// anything escapes. Changed bytes or incomplete/failed replay return no
+    /// observation. The consumed private machine and lock are dropped on either
+    /// outcome. Full journals remain inspectable: no spare event or byte is needed.
+    /// Callers must still independently authenticate access to the selected run.
+    pub fn finish_receipt(self, request: u64, finish_after: Option<u64>)
+        -> Result<Knowledge<ActorOutcome>, JournalError>
+    {
+        match finish_after {
+            None => { self.learned_text_stream_message_request(request)?; }
+            Some(after) => { self.learned_text_stream_finish_request(after, request)?; }
+        }
+        let status = self.verified_guarded_machine()?.requests.status(request)?;
+        if self.store.read(self.profile.delivery.limits.bytes)? != self.canonical {
+            return Err(Error::Binding.into());
+        }
+        Ok(status.actor_observation())
     }
 
     // Immutable composition views stop at the original observed-owner family.
