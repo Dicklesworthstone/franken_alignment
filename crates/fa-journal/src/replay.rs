@@ -108,6 +108,7 @@ pub struct Replay<R> {
     minimum: Head,
     anchor_seen: bool,
     exact_anchor: Option<HistoryAnchor>,
+    captured_history: Option<Vec<u8>>,
     phase: Phase,
     buffer: Vec<u8>,
     filled: usize,
@@ -135,6 +136,7 @@ impl Journal {
             reader,
             anchor_seen: minimum == journal.head(),
             exact_anchor: None,
+            captured_history: None,
             journal,
             minimum,
             phase: Phase::Header,
@@ -260,6 +262,15 @@ impl<R: Read> Replay<R> {
             spent.read_bytes += count as u64;
             if let Some(anchor) = &self.exact_anchor {
                 anchor.check_read(offset, &self.buffer[self.filled..self.filled + count])?;
+            }
+            if let Some(history) = &mut self.captured_history {
+                let length = (history.len() as u64).checked_add(count as u64)
+                    .ok_or(Error::Limit)?;
+                if length > self.journal.limits.max_total_bytes {
+                    return Err(Error::Limit);
+                }
+                history.try_reserve(count).map_err(|_| Error::Limit)?;
+                history.extend_from_slice(&self.buffer[self.filled..self.filled + count]);
             }
             self.filled += count;
         }

@@ -1,5 +1,5 @@
 //! Exact, independently retained history, not a signature or an authority grant.
-use super::Replay;
+use super::{Replay, ReplayError, ReplayStatus};
 use crate::{Error, Head, Identity, Journal, Limits, RecoveryReserve};
 use std::io::Read;
 use std::sync::Arc;
@@ -139,5 +139,79 @@ impl Journal {
         let mut replay = self.replay_cursor(reader, anchor.head())?;
         replay.exact_anchor = Some(anchor);
         Ok(replay)
+    }
+}
+
+
+impl Journal {
+    /// Replay and retain the exact bytes delivered to the original decoder.
+    /// Selection is explicit and precedes the first read; an ordinary replay
+    /// cannot later synthesize an archive from reconstructed accounting.
+    ///
+    /// Read/check quanta and all lifetime limits remain those of Replay. Capture
+    /// adds at most the admitted encoded history (plus allocation overhead) to
+    /// the original frame and ledger storage. It does not read the input twice.
+    /// Final conversion to the immutable archive can copy the retained bytes;
+    /// neither that conversion nor a Read is an elapsed-time guarantee.
+    pub fn begin_replay_with_history_anchor<R: Read>(
+        reader: R,
+        identity: Identity,
+        minimum: Head,
+        limits: Limits,
+    ) -> Result<Replay<R>, Error> {
+        Self::new(identity, limits)?.replay_cursor_capturing(reader, minimum)
+    }
+
+    /// Explicit v2 capture preserves the originally selected recovery reserve.
+    pub fn begin_replay_with_history_anchor_and_recovery_reserve<R: Read>(
+        reader: R,
+        identity: Identity,
+        minimum: Head,
+        limits: Limits,
+        reserve: RecoveryReserve,
+    ) -> Result<Replay<R>, Error> {
+        Self::new_with_recovery_reserve(identity, limits, reserve)?
+            .replay_cursor_capturing(reader, minimum)
+    }
+
+    pub(crate) fn replay_cursor_capturing<R: Read>(
+        self,
+        reader: R,
+        minimum: Head,
+    ) -> Result<Replay<R>, Error> {
+        let mut replay = self.replay_cursor(reader, minimum)?;
+        replay.captured_history = Some(Vec::new());
+        Ok(replay)
+    }
+}
+
+impl<R: Read> Replay<R> {
+    /// Export a complete, exact archive and the original verified accounting.
+    /// A partial/failed cursor or one not selected for capture cannot export an
+    /// anchor. No re-encoding, second replay or new authority is involved. Keep
+    /// this archive independently: it is not a signature or a freshness proof.
+    pub fn finish_with_history_anchor(self) -> Result<(Journal, HistoryAnchor), ReplayError> {
+        self.into_parts_with_history_anchor().map(|(_, journal, anchor)| (journal, anchor))
+    }
+
+    // The file adapter must retain the SAME locked reader through final checks.
+    pub(crate) fn into_parts_with_history_anchor(
+        self,
+    ) -> Result<(R, Journal, HistoryAnchor), ReplayError> {
+        match self.status {
+            ReplayStatus::Reading => return Err(ReplayError::NotReady),
+            ReplayStatus::Failed => return Err(ReplayError::Failed),
+            ReplayStatus::Ready => {}
+        }
+        let bytes = self.captured_history.ok_or(ReplayError::Journal(Error::Binding))?;
+        if bytes.len() as u64 != self.journal.encoded_len() {
+            return Err(Error::Binding.into());
+        }
+        let anchor = HistoryAnchor {
+            bytes: bytes.into(),
+            head: self.journal.head(),
+            limits: self.journal.limits,
+        };
+        Ok((self.reader, self.journal, anchor))
     }
 }
