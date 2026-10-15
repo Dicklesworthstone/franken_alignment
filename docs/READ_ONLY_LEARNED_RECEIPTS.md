@@ -50,4 +50,53 @@ These Rust tests remain UNEXECUTED. The required remote-only RCH test command
 stopped before compilation because `rch` is absent; `cargo`, `rustc` and `rustfmt`
 are absent too. Git preimage/whitespace validation is not Rust validation. No
 production, compilation, formatting, test-suite or performance qualification is
-claimed. The executable receipt-only option is a separate consuming increment.
+claimed. The following executable integration consumes this same finalizer.
+
+## Executable integration
+
+The learned publication command now exposes this finalizer as an explicit mode:
+
+```text
+create-learned-generated CONFIG LEARNED_RECIPE --resume --receipts-only [--history-anchor INPUT]
+create-learned-generated CONFIG LEARNED_RECIPE --resume --receipts-only --finish-after-message PREVIOUS_REQUEST [--history-anchor INPUT]
+```
+
+This is not a change to ordinary `--resume`. Without `--receipts-only`, the original
+owner recovery and reconciliation still run, including their fence and capacity
+requirements. With it, the same fully guarded cursor supplies only the original
+historical actor response, then drops the private machine and exclusive lock.
+In particular, a published-but-unreconciled message remains Unknown until an
+explicit mutating recovery accepts its actual endpoint receipt.
+
+The outer receipt-option router delegates this exact learned command before
+baseline service parsing, so it cannot accidentally select a non-numerical
+recovery profile. The learned parser rejects live continuation, next-message,
+stop, audit, credibility activation and successor-anchor-output combinations
+before intake. The original path-valued option parser runs before stripping the
+boolean flag, avoiding repair of malformed anchor arguments. Input anchors still
+use their original bounded reader, external-custody checks and exact-prefix law.
+No actor, reviewer or stop socket is created and no live helper is loaded.
+
+A single monotonic elapsed budget starts before command intake. It is checked
+before model loading, before guarded open, at every original replay event and at
+Ready, and again after the final canonical-file comparison. Expiry returns no
+response; it performs no fence or cleanup. An individual synchronous read or
+reducer operation is not interruptible, so this is not a hard latency guarantee.
+The original model, tokenizer, codec and predictor assets are still required to
+verify numerical history. No reference to a vanished native helper/evidence file
+causes a fallback to weaker replay or a newly created owner.
+
+The existing response encoder and exit semantics are retained. Confirmed
+execution can return success; denial, Pending and Unknown do not become successful
+publication just because receipt inspection completed. A failed or partial stdout
+write never causes an effect retry, another fence or a changed stored outcome.
+No new wire schema, journal format, dependency or authority command is introduced.
+
+Five additional regression functions cover actual command intake/output and the
+outer dispatcher; denied and native/human-confirmed messages and finishes in all
+three modes; wrong finish selection; published Unknown followed by explicit
+original reconciliation; every replay/Ready/post-read timeout; conflicting flags;
+and output failure. All original source, deadline and recovery assertions remain
+registered. These five tests and the earlier four remain **UNEXECUTED**: targeted
+and full remote-only RCH launches fail before compilation because the launcher
+is absent. No Rust compiler, formatter, Clippy or runtime qualification is claimed.

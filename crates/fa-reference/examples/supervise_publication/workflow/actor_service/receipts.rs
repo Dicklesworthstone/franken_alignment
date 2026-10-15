@@ -11,6 +11,12 @@ const USAGE: &str = "serve-open CONFIG ACTOR_PROFILE --receipts-only | serve-ope
 const EXPIRED: &str = "receipt-only startup deadline reached; no actor request was admitted";
 
 pub(super) fn command(args: &[String], credibility: Option<&Path>) -> Result<(), String> {
+    // The outer router selects this flag before the learned command. Delegate
+    // that exact verb to its independently pinned numerical receipt parser;
+    // never interpret a learned recipe as a baseline service configuration.
+    if args.first().is_some_and(|arg| arg == "create-learned-generated") {
+        return super::learned::command(args, credibility);
+    }
     let start = Instant::now();
     command_with(args, credibility, &mut || start.elapsed(), &mut pause).map(|_| ())
 }

@@ -1,6 +1,7 @@
 //! Original learned replay, complete guard inventory and receipt-only settlement.
 mod cooperative;
 mod selected;
+pub(super) mod readonly;
 use cooperative::{Progress, finish_replay};
 use fa_reference::action::consequence::delivery::persistent::observed::stream::FileStreamProposal;
 use super::{Config, Loaded, FileOversight, FileSupervisedDriver, FileHumanReviewer, ElapsedTick,
