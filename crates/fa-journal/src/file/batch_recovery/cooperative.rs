@@ -1,10 +1,11 @@
 //! Yield while verifying an original batch; never return a checked prefix as rights.
 mod resumption;
+mod anchored;
 
 use super::{BatchAnchor, BatchStatus, Error, FileJournal};
 use crate::{Event, Head, Journal};
 use crate::batch::{BatchLimits, MAX_BATCH_ENCODED_BYTES, MAX_BATCH_RECORDS};
-use crate::replay::{Replay, ReplayBudget, ReplayStatus, ReplayWork};
+use crate::replay::{HistoryAnchor, Replay, ReplayBudget, ReplayStatus, ReplayWork};
 use std::fs::File;
 use std::io::{self, Read, Seek, SeekFrom, Take};
 
@@ -52,6 +53,7 @@ pub struct BatchInspectionReport {
 /// not authenticate unstored intentions or observe external effect outcomes.
 /// At most the original frame, bounded batch bytes, an 8 KiB comparison buffer
 /// and private original ledgers are retained, plus caller-supplied event storage.
+/// Exact-history inspection additionally retains its immutable pre-group prefix.
 /// Each prepared record uses the original batch primitive and clones its private
 /// ledger; this optional yielding path does not claim lower memory or throughput.
 ///
@@ -69,7 +71,7 @@ pub struct FileBatchInspection {
     file: Option<File>,
     acknowledged: Journal,
     candidate: Option<Journal>,
-    // Only begin_resume_batch selects transfer of a fully verified final candidate.
+    // Only explicit resumption selects transfer of a fully verified final candidate.
     retain_candidate: bool,
     anchor: BatchAnchor,
     events: Vec<Event>,
@@ -89,8 +91,14 @@ impl FileJournal {
     /// No payload is read or event applied until advance. Errors consume/drop
     /// the owner; they never return its stale accounting as usable recovery.
     /// Reopen a poisoned writer strictly before calling this method.
-    pub fn begin_inspect_batch(mut self, anchor: BatchAnchor, events: Vec<Event>,
+    pub fn begin_inspect_batch(self, anchor: BatchAnchor, events: Vec<Event>,
         limits: BatchLimits) -> Result<FileBatchInspection, Error>
+    {
+        self.begin_inspect_batch_checked(anchor, events, limits, None)
+    }
+
+    fn begin_inspect_batch_checked(mut self, anchor: BatchAnchor, events: Vec<Event>,
+        limits: BatchLimits, history: Option<HistoryAnchor>) -> Result<FileBatchInspection, Error>
     {
         if self.poisoned { return Err(Error::Poisoned); }
         if anchor.identity != self.journal.identity()
@@ -108,12 +116,22 @@ impl FileJournal {
         if covered > events.len() { return Err(crate::Error::Binding.into()); }
         let initial = Journal::configured(anchor.identity, self.journal.limits,
             self.journal.recovery_reserve())?;
+        if let Some(history) = &history {
+            history.check_context(&initial)?;
+            if history.head() != anchor.head || history.encoded_len() != anchor.encoded_len {
+                return Err(crate::Error::Binding.into());
+            }
+        }
         self.poisoned = true;
         if self.file.metadata()?.len() != self.journal.encoded_len() {
             return Err(extent_changed());
         }
         self.file.seek(SeekFrom::Start(0))?;
-        let replay = initial.replay_cursor(self.file.take(anchor.encoded_len), anchor.head)?;
+        let reader = self.file.take(anchor.encoded_len);
+        let replay = match history {
+            Some(history) => initial.replay_cursor_anchored(reader, history)?,
+            None => initial.replay_cursor(reader, anchor.head)?,
+        };
         Ok(FileBatchInspection { replay: Some(replay), file: None,
             acknowledged: self.journal, candidate: None, retain_candidate: false, anchor, events, limits, covered,
             prepared: 0, records: Vec::new(), compared: 0,
