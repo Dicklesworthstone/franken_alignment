@@ -8,14 +8,15 @@ use crate::action::consequence::delivery::{StopRequest,
         shutdown::recovery::{FileStoppedHistory, FileStoppedRecovery}}};
 
 impl FileGuardedRecovery {
-    fn check_stopped_ready(&self) -> Result<(), JournalError> {
+    fn check_stopped_ready_with(&self, check: impl FnOnce(&Self) -> Result<(), Error>)
+        -> Result<(), JournalError> {
         match self.status {
             FileGuardedRecoveryStatus::Ready => {}
             FileGuardedRecoveryStatus::Failed(error) => return Err(error.into()),
             FileGuardedRecoveryStatus::Interrupted => return Err(JournalError::Unavailable),
             _ => return Err(Error::Incomplete.into()),
         }
-        self.expected.check(&self.profile, &self.machine, &self.events)?;
+        check(self)?;
         Ok(())
     }
 
@@ -24,7 +25,16 @@ impl FileGuardedRecovery {
     /// A matching retained operation reuses its exact request; another cannot
     /// take it over. This selection grants no authority and does no file I/O.
     pub fn stop_request(&self, operation: u64) -> Result<StopRequest, JournalError> {
-        self.check_stopped_ready()?;
+        self.stop_request_checked(operation,
+            |run| run.expected.check(&run.profile, &run.machine, &run.events))
+    }
+
+    // Sealed composition only. Specialised profiles supply their COMPLETE
+    // native requirements, never a public caller-selected acceptance predicate.
+    pub(super) fn stop_request_checked(&self, operation: u64,
+        check: impl FnOnce(&Self) -> Result<(), Error>) -> Result<StopRequest, JournalError>
+    {
+        self.check_stopped_ready_with(check)?;
         if operation == 0 { return Err(Error::InvalidInput.into()); }
         let snapshot = self.machine.snapshot(self.events.len());
         if let Some(receipt) = snapshot.stop {
@@ -65,7 +75,16 @@ impl FileGuardedRecovery {
     pub fn finish_stopped_with_anchor<F>(self, request: StopRequest, clock: F)
         -> Result<FileStoppedHistory, JournalError>
     where F: FnOnce() -> ElapsedTick {
-        self.check_stopped_ready()?;
+        self.finish_stopped_checked_with_anchor(request, clock,
+            |run| run.expected.check(&run.profile, &run.machine, &run.events))
+    }
+
+    // Reuse the exact original stop selection, no-clock retry and consuming
+    // finalizer for sealed profiles without weakening their independent guards.
+    pub(super) fn finish_stopped_checked_with_anchor<F>(self, request: StopRequest, clock: F,
+        check: impl FnOnce(&Self) -> Result<(), Error>) -> Result<FileStoppedHistory, JournalError>
+    where F: FnOnce() -> ElapsedTick {
+        self.check_stopped_ready_with(check)?;
         if request.operation == 0 { return Err(Error::InvalidInput.into()); }
         let snapshot = self.machine.snapshot(self.events.len());
         if let Some(receipt) = &snapshot.stop {
