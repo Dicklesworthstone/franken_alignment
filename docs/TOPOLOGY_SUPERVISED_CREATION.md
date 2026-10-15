@@ -31,19 +31,37 @@ retains the complete input objects, including metadata outside the selected
 family. The graph's scope and target must match CONFIG exactly. Trusted parent
 directories and independently provisioned input contents remain required.
 
-This option requires `--retain-history-anchor` and plain `create`. It cannot be
-used to open an existing store, reinterpret a recovery request, or silently
-replace a checked-witness, learned, stream, credential or evaluation profile.
-`create-checked` with topology refuses; its earlier meaning remains unchanged.
-The unselected legacy creation path remains the original implementation.
+This option requires `--retain-history-anchor`. Both `create` and
+`create-checked` can select topology supervision. Checked composition admits only
+the plain `fa.supervised-witnesses/1` profile; feed, waiting, snapshot and joint
+profiles refuse before topology intake or store creation instead of losing their
+additional guards. The unselected legacy paths remain unchanged. Initial
+creation still cannot open an existing store or reinterpret recovery intent.
+
+```sh
+RCH_REQUIRE_REMOTE=1 rch exec -- cargo run --locked -p fa-reference \
+  --example supervise_publication -- create-checked CONFIG.json SUBMIT.json WITNESSES.json \
+  --retain-history-anchor /operator/custody/created.anchor \
+  --topology-profile /operator/custody/create-topology.json
+```
+
+The checked profile's original/current captures, immutable witness recipe and
+validation budget pass to the SAME continuation and final publication gate.
+They are not replaced by the topology cut. The original capture is bound before
+helper launch; current witness inputs are reacquired at the existing evidence
+boundaries. After dispatch, the original final-publication path acquires inputs,
+refreshes the driver-owned topology, observes time, and runs the native guard.
+Both predicates must hold; neither human approval nor a previously verified
+cut can waive missing or changed witness evidence.
 
 ## One original owner from creation to publication
 
 The command composes the [native reserved bootstrap](TOPOLOGY_OPERATOR_BOOTSTRAP.md)
 with the existing creation/continuation workflow. Its FIRST canonical image
 contains the mandatory original publication and policy-source guards, terminal
-recovery reserve, and uncertified native graph. It returns no intermediate
-unguarded or unreserved owner to the workflow. Invalid source/graph/profile
+recovery reserve, uncertified native graph, and selected witness-validation
+limits. There is no later witness-enablement write. It returns no intermediate
+unguarded, witness-free or unreserved owner to the workflow. Invalid source/graph/profile
 configuration does not become a weaker fallback.
 
 The separately issued topology observer is consumed into the original
@@ -87,13 +105,15 @@ custody. A failure can leave an acknowledged bootstrap, hold, stop or publicatio
 without a successfully exported archive: export is separate, not atomic with
 every journal commit. Read the original response and retention error together.
 
-A retained creation archive is valid independent input to the explicit
+For source-only creation, a retained archive is valid independent input to the explicit
 [mediated offline-stop command](MEDIATED_STOP_OPERATOR.md). Supply the independently
 retained initial/current graphs, actual pre-recovery availability, exact source
 profile and floors. The stop path does not require live policy evidence or helper
 programs. It preserves published charges and supports the original no-clock
 already-drained retry. Creation does not infer those later requirements for the
-operator or automatically restart a stopped domain.
+operator or automatically restart a stopped domain. Checked creation retains the
+witness guard in its archive as well; recovery must retain that exact profile.
+This composition does not extend or qualify additional recovery command modes.
 
 ## Bounds and verification status
 
@@ -110,7 +130,7 @@ proposal, reviewer-profile and topology-envelope parsing precede this budget.
 Parsing, file reads, native replay/checking and storage barriers remain synchronous;
 no kernel-latency bound, measured memory saving or throughput claim is made.
 
-Nine new regression functions in `workflow/continuation/creation/topology_tests.rs`
+The original nine regression functions in `workflow/continuation/creation/topology_tests.rs`
 exercise the actual top-level create command followed by offline mediated stop
 and exact retry; real helper processes and human sockets; inventory loss after
 dispatch; a bypass at initial admission; malformed/mismatching/insufficient input;
@@ -118,6 +138,14 @@ existing-store refusal; post-capture deadline expiry; human rejection; output
 races; and closed command/profile selection. The original helper fixture returns
 controlled ballots: it is enforcement plumbing, not a calibrated model or proof
 of reviewer authenticity. Existing tests and native reducers remain unchanged.
+
+Six further functions in `workflow/continuation/creation/checked_topology_tests.rs`
+cover the first combined native image without capture reads; the actual checked
+command with real child/reviewer plumbing; post-dispatch phantom insertion,
+missing witness data, missing topology inventory and unrelated changes; human
+rejection; refusal of stronger feed/wait profiles before clock or topology I/O;
+and closed positional/option parsing. The existing regression assertions and
+native algorithms are unchanged.
 
 These tests are **authored, not executed evidence**. The editing environment has
 no RCH launcher; required launches stop before compilation. Rust compilation,
@@ -128,5 +156,7 @@ closing FA-014, FA-072/FA-073 or any production gate.
 ```sh
 RCH_REQUIRE_REMOTE=1 rch exec -- cargo test --locked -p fa-reference \
   --example supervise_publication workflow::continuation::creation::topology_tests
+RCH_REQUIRE_REMOTE=1 rch exec -- cargo test --locked -p fa-reference \
+  --example supervise_publication workflow::continuation::creation::checked_topology_tests
 RCH_REQUIRE_REMOTE=1 rch exec -- cargo run --locked -p xtask -- check
 ```

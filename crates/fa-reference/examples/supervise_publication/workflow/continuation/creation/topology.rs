@@ -5,6 +5,7 @@ use fa_reference::action::consequence::delivery::persistent::observed::{FileHuma
     guarded::{FileGuardSet, mediated::FileMediatedBootstrap},
     driver::topology::FileDriverTopology,
     mediation::source::TOPOLOGY_REFRESH_READ_BYTES};
+use fa_reference::action::consequence::delivery::publication_gate::PublicationLimits;
 use fa_reference::perimeter_inventory::{MAX_INVENTORY_BYTES,
     topology::{LoadedAuthorityTopology, MAX_TOPOLOGY_BYTES}};
 use fa_reference::strict_json::{self, Json, Limits};
@@ -74,17 +75,18 @@ pub(super) struct Prepared {
 }
 
 impl Prepared {
-    pub(super) fn create(self, config: &Config)
+    pub(super) fn create(self, config: &Config, publication: Option<PublicationLimits>)
         -> Result<(FileOversight, FileHumanReviewer, FileDriverTopology), String>
     {
         let guards = FileGuardSet { stream: None, decoder: None, decoder_stop: None,
             source: Some(config.source_policy), identity: None, campaigns: None, credential: None };
-        // The FIRST image includes every selected native guard and the original
-        // terminal reserve. No partially bootstrapped owner reaches admission.
+        // The FIRST image includes every selected native guard, plain witness
+        // limits and original terminal reserve. No second witness-enablement
+        // write and no partially bootstrapped owner can reach admission.
         let (host, roles) = FileOversight::create_mediated_guarded_reserved(
             &config.store, config.profile.clone(), &guards, None,
             FileMediatedBootstrap { topology: self.loaded.graph().clone(),
-                reserve: RecoveryReserve::terminal(), publication: None }, None, None).map_err(debug)?;
+                reserve: RecoveryReserve::terminal(), publication }, None, None).map_err(debug)?;
         let source = roles.topology_observer.bind_topology_source(&host, host.revision(),
             self.selection.topology, self.selection.inventory, self.loaded).map_err(debug)?;
         Ok((host, roles.oversight.human, FileDriverTopology::new(source)))

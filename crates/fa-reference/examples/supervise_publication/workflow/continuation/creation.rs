@@ -11,6 +11,8 @@ mod topology;
 
 #[cfg(test)]
 mod topology_tests;
+#[cfg(test)]
+mod checked_topology_tests;
 
 pub(crate) struct Creation<'a> {
     pub document: &'a [u8],
@@ -35,9 +37,12 @@ where F: FnMut() -> ElapsedTick {
     if config.profile.delivery.clock_domain != crate::config::CLOCK_DOMAIN {
         return Err("creation requires the configured Unix-millisecond clock domain".into());
     }
-    if selection.is_some() && publication.is_some() {
-        return Err("topology creation currently requires the plain source-publication profile".into());
-    }
+    // Admit the complete checked selection BEFORE topology I/O or storage.
+    // The native mediated bootstrap supports plain witnesses, not the stronger
+    // feed/snapshot/joint profiles. Never project those to their limits alone.
+    let topology_publication = if selection.is_some() {
+        publication.map(PublicationProfile::simple_limits).transpose()?
+    } else { None };
     if let Some(peers) = peers { peers.check_host(&config)?; }
     // No store, source, helper or reviewer side effect precedes custody admission.
     let output = CreationOutput::admit(&config, output)?;
@@ -48,9 +53,9 @@ where F: FnMut() -> ElapsedTick {
     deadline.check(start)?;
     if let Some(selection) = selection {
         let prepared = selection.prepare(&config, &mut || deadline.check(time()))?;
-        let (host, reviewer, topology) = prepared.create(&config)?;
+        let (host, reviewer, topology) = prepared.create(&config, topology_publication)?;
         return from_recovered_with_topology(config, host, reviewer, Continuation {
-            document, request, proposal, peers, publication: None, credibility: None, runtime_deadline, started,
+            document, request, proposal, peers, publication, credibility: None, runtime_deadline, started,
         }, Some(topology), time, |host| output.retain(host));
     }
     let (mut host, reviewer) = match publication {
@@ -74,7 +79,7 @@ where F: FnMut() -> ElapsedTick {
     }, time, |host| output.retain(host))
 }
 
-const USAGE: &str = "usage: supervise_publication create CONFIG SUBMIT_JSON --retain-history-anchor OUTPUT [--reviewer-profile REVIEWER_JSON] [--topology-profile TOPOLOGY_PROFILE]\n       supervise_publication create-checked CONFIG SUBMIT_JSON WITNESS_PROFILE --retain-history-anchor OUTPUT [--reviewer-profile REVIEWER_JSON]";
+const USAGE: &str = "usage: supervise_publication create CONFIG SUBMIT_JSON --retain-history-anchor OUTPUT [--reviewer-profile REVIEWER_JSON] [--topology-profile TOPOLOGY_PROFILE]\n       supervise_publication create-checked CONFIG SUBMIT_JSON WITNESS_PROFILE --retain-history-anchor OUTPUT [--reviewer-profile REVIEWER_JSON] [--topology-profile TOPOLOGY_PROFILE]";
 
 // Dispatched before general option stripping. Stop/resume/new-work recovery
 // intent and credibility activation cannot be smuggled into initial creation.
@@ -111,7 +116,7 @@ fn arguments(args: &[String]) -> Result<(&Path, Option<&Path>, bool, Option<&Pat
         let slot = match pair[0].as_str() {
             "--retain-history-anchor" => &mut output,
             "--reviewer-profile" => &mut peers,
-            "--topology-profile" if !checked => &mut topology,
+            "--topology-profile" => &mut topology,
             _ => return Err(USAGE.into()),
         };
         if slot.is_some() || pair[1].is_empty() || pair[1].starts_with("--") { return Err(USAGE.into()); }
