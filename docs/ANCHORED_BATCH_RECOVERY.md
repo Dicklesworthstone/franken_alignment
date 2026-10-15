@@ -14,7 +14,9 @@ Before attempting the original group, obtain `owner.history_anchor()` and retain
 its immutable bytes independently alongside the exact ordered group events.
 After an uncertain commit, drop the poisoned owner and use the original strict
 anchored reopen, with independently supplied identity, lifetime limits and
-explicit v2 recovery reserve where applicable. Torn records are not repaired.
+explicit v2 recovery reserve where applicable. Alternatively, use the direct
+bounded recovery below; no preliminary reopen is required. Torn records are not
+repaired.
 
 `begin_inspect_batch_anchored(history, events, batch_limits)` consumes the same
 healthy locked owner. Unlike the legacy `BatchAnchor`, the supplied `HistoryAnchor`
@@ -78,3 +80,55 @@ RCH_REQUIRE_REMOTE=1 rch exec -- cargo test --locked -p fa-journal --test anchor
 It exited 127 before compilation because `rch` is absent. Rust compilation,
 regression execution, rustfmt, Clippy and full qualification are not claimed.
 Original assertions, wire encoders, reducers and writer loops are unchanged.
+
+## Direct bounded recovery from the original file
+
+`FileJournal::begin_recover_batch_anchored(path, identity, history, limits,
+events, batch_limits)` opens and locks the existing journal itself. The explicit
+`begin_recover_batch_anchored_with_recovery_reserve` variant additionally requires
+the original reserve. Both validate context and admission before opening, create
+no missing path, and read no payload until `advance`.
+
+The same `FileBatchInspection` now distinguishes an already acknowledged owner
+from a recovery whose current accounting has not yet been established. Recovery
+replays the exact pre-group prefix once, prepares the whole original group with
+the original encoder/reducer, and retains a current-state candidate only when an
+original complete-record boundary exactly matches the opened extent. The original
+suffix comparer then checks every surviving byte and real EOF. A partial record,
+invalid unwritten event, valid fork or unrelated tail cannot become a repairable
+success. The independent minimum remains the only exposed head throughout.
+
+`finish()` synchronizes the verified file and parent directory before returning
+the current owner and `BatchStatus`; it does not complete missing events.
+`resume()` performs those same recovery barriers before handing the existing
+writer its already encoded missing suffix. This includes a complete group: bytes
+present on disk are not mistaken for already acknowledged accounting. Only after
+recovery sync can the original complete-group no-write/no-extra-sync shortcut be
+used. A nonempty missing suffix still needs the original writer's final file sync.
+No source byte is reread during handoff. There is no external dispatch, automatic
+recovery epoch, expanded authority, inferred refund, or archive authentication.
+
+The direct path removes the preliminary full reopen and second prefix replay.
+Its report separates prefix reads, group-preparation attempts and suffix reads;
+logical delivered-byte counts total the stored file length on success. One
+matched current-state clone is retained alongside the original final candidate.
+All ordinary and recovery-tail limits are unchanged. Open/lock/metadata and final
+synchronization are synchronous, outside per-poll logical budgets. No elapsed-time,
+speedup or physical-I/O benchmark is claimed.
+
+`tests/direct_batch_recovery.rs` adds eight public regression functions covering
+all surviving boundaries and both profiles, delivered-byte accounting, original
+final-state/byte parity, current Unknown recovery without completing the intent,
+pre-open refusal, every non-boundary torn suffix, unrelated tails, CRC collisions,
+rollback, cancellation, wrong reserves, and recovery after a cancelled write.
+`src/file/batch_recovery/cooperative/recovery/tests.rs` adds six internal regression
+functions using the actual original uncertain-commit path and recovery sync seams.
+They cover error/unwind before and after each recovery barrier, lock retention,
+complete groups, changed extent during sync, no sync on unverified recovery,
+no extra barriers on existing owners, read interruptions and failure latching.
+Original tests and writer/decoder/reducer assertions remain unchanged.
+
+These fourteen additional functions are authored, not executed. Targeted public
+and internal RCH launches and the full xtask gate all exited 127 before compilation
+because the launcher is absent. The full gate remains required; no packet or
+production qualification is closed by this source change.

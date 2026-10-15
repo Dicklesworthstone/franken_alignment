@@ -3,6 +3,8 @@
 use super::{BatchAnchor, BatchInspectionStatus, BatchLimits, Error, Event,
     FileBatchInspection, FileJournal, extent_changed};
 use crate::file::FileBatchCommit;
+use std::fs::File;
+use std::io;
 
 impl FileJournal {
     /// Select cooperative resumption BEFORE inspection starts. Retain the exact
@@ -31,8 +33,8 @@ impl FileJournal {
 impl FileBatchInspection {
     /// Transfer the SAME locked file and fully prepared candidate into the
     /// original bounded writer, without replaying history or encoding again.
-    /// Only begin_resume_batch selects this path. An ordinary read-only
-    /// inspection cannot be upgraded after observing a result.
+    /// Only explicit resumption or direct anchored batch recovery selects this
+    /// path. Ordinary read-only inspection cannot upgrade after observing a result.
     ///
     /// Every original record and every stored byte must already have verified,
     /// including EOF. The consumed inspector returns no owner on refusal.
@@ -45,7 +47,10 @@ impl FileBatchInspection {
     /// advisory lock; malicious same-size writes remain outside its contract.
     /// A complete acknowledged group yields a Ready writer whose finish needs
     /// neither write nor sync. Otherwise finish must sync before exposing the
-    /// new head/accounting. Dropping either stage never truncates or repairs.
+    /// new head/accounting. Direct recovery MUST first synchronize the verified
+    /// stored prefix and its parent, including a complete group, before this
+    /// handoff can use the original already-acknowledged shortcut. No source
+    /// bytes are reread. Dropping either stage never truncates or repairs.
     ///
     /// ```compile_fail,E0382
     /// use fa_journal::file::FileBatchInspection;
@@ -54,23 +59,33 @@ impl FileBatchInspection {
     ///     let _ = run.resume();
     /// }
     /// ```
-    pub fn resume(mut self) -> Result<FileBatchCommit, Error> {
+    pub fn resume(self) -> Result<FileBatchCommit, Error> {
+        self.resume_with_sync(|file, directory| {
+            file.sync_all()?;
+            directory.sync_all()
+        })
+    }
+
+    pub(super) fn resume_with_sync(mut self,
+        sync: impl FnOnce(&File, &File) -> io::Result<()>) -> Result<FileBatchCommit, Error>
+    {
         if self.failed { return Err(Error::Poisoned); }
         if !self.retain_candidate { return Err(crate::Error::InvalidInput.into()); }
         if self.stage != BatchInspectionStatus::Ready { return Err(Error::RecoveryIncomplete); }
         let candidate = self.candidate.take().ok_or(Error::RecoveryIncomplete)?;
         let file = self.file.take().ok_or(Error::RecoveryIncomplete)?;
-        if file.metadata()?.len() != self.acknowledged.encoded_len() { return Err(extent_changed()); }
+        if file.metadata()?.len() != self.origin.current()?.encoded_len() { return Err(extent_changed()); }
         if self.prepared != self.events.len()
-            || self.acknowledged.encoded_len().checked_sub(self.anchor.encoded_len)
+            || self.origin.current()?.encoded_len().checked_sub(self.anchor.encoded_len)
                 != Some(self.compared as u64)
             || self.compared > self.records.len()
         { return Err(crate::Error::Binding.into()); }
         let missing = self.events.len().checked_sub(self.covered).ok_or(crate::Error::Binding)?;
+        self.origin.synchronize(&file, sync)?;
         // The suffix was encoded against the same preceding CRC, sequence and
         // rights. Keep its exact bytes; do not import an asserted progress flag.
         drop(self.records.drain(..self.compared));
-        let owner = FileJournal { file, journal: self.acknowledged, poisoned: false };
+        let owner = FileJournal { file, journal: self.origin.into_current()?, poisoned: false };
         FileBatchCommit::from_verified_suffix(owner, candidate, self.records, missing)
     }
 }
