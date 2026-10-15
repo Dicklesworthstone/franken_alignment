@@ -62,3 +62,66 @@ remote-only RCH launcher is absent in this session, as are cargo, rustc and
 rustfmt. Preimage checks and whitespace checks do not establish compilation,
 runtime correctness, performance or production qualification. No bead or gate
 is closed and no repository verification requirement is weakened.
+
+## Explicit operator settlement
+
+The original learned publication command now accepts:
+
+```text
+create-learned-generated CONFIG LEARNED_RECIPE --resume --reconcile-receipts [--history-anchor INPUT]
+create-learned-generated CONFIG LEARNED_RECIPE --resume --reconcile-receipts --finish-after-message PREVIOUS_REQUEST [--history-anchor INPUT]
+```
+
+This opt-in path consumes the original ordinary/raw/owned guarded cursor through
+`finish_reconciled_receipt`; it does not construct a driver and then replay the
+same numerical history for new Time and Sweep transactions. A single monotonic
+budget covers command intake, original asset loading, pre-open, every replay
+event and Ready. The trusted logical clock is called only by the final native
+transaction, once. No current policy evidence, native helper, reviewer/actor/stop
+socket, new sampled token or refreshed qualification enters settlement.
+
+Both explicit receipt modes use the same closed argument/asset intake. They
+reject mixed or duplicate modes, live continuation, next-message, stop, review
+audit, credibility activation and successor-anchor output before reading input.
+Path-valued anchor parsing precedes boolean flag removal, so a missing anchor
+value cannot be repaired by stripping the reconciliation flag. Required model,
+tokenizer, codec, predictor, full guards, floors and optional old anchor retain
+their exact existing meaning. Missing or mismatched assets have no fallback.
+
+`--receipts-only` remains non-mutating and uses its unchanged historical outcome
+finalizer and elapsed-check sequence. Ordinary `--resume` also retains its
+original owner/reconciliation workflow. The new explicit settlement spends three
+original events even for an already terminal selected record; it is not a
+capacity-free retry. Original sweep outcomes for other keys are not represented
+by the selected actor response. Inspect them independently as needed.
+
+After acknowledgment, a second elapsed check can withhold the response but now
+explicitly reports that reconciliation was acknowledged. It cannot claim that
+nothing changed, roll back a confirmed image or retry an effect. A partial stdout
+failure retains the original response encoder's no-retry behavior. Subsequent
+`--receipts-only` inspection recovers the historical outcome without another
+fence. Only confirmed execution returns the original successful-publication exit
+status; a denied, pending or unresolved result is not relabeled success.
+
+The outer actor-service dispatcher now routes BOTH receipt flags. This also
+repairs the existing baseline stream `--reconcile-receipts` path, whose inner
+implementation was previously unreachable from that dispatcher. Exact learned
+verbs still delegate to numerical parsing instead of a weaker stream profile;
+baseline stream recovery retains its existing complete grammar, required request,
+independent anchor, reserved capacity and peer-bound non-admitting service.
+
+Seven additional regression functions cover actual loaded message and finish
+commands across all three modes, wrong finish/predecessor selection, unchanged
+Unknown liabilities, every precommit timer cut, acknowledged late expiry, partial
+stdout failure followed by read-only retrieval, conflicting modes/path options,
+and both real outer dispatch paths. The baseline test uses an original retained
+policy refusal and the existing stream service; missing-key retry leaves staging
+and canonical bytes unchanged. Tests use synthetic model data as controls, not
+calibration evidence. Existing read-only tests and assertions remain unchanged.
+
+These seven tests and the four library-integration tests remain UNEXECUTED.
+Targeted and full remote-only RCH launches stop before compilation because the
+launcher is absent; no Rust toolchain is available locally. Verified preimages,
+Git blob checks and selected-source whitespace checks do not qualify compilation,
+behavior, formatting, Clippy, performance or production deployment. No gate,
+assertion, dependency requirement or original packet acceptance was weakened.

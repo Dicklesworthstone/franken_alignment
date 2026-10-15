@@ -38,7 +38,7 @@ type Port = FileActorPort<FileOversight>;
 const USAGE: &str = "serve-create|serve-open CONFIG ACTOR_PROFILE REVIEWER_PROFILE; serve-create-checked|serve-open-checked CONFIG ACTOR_PROFILE REVIEWER_PROFILE WITNESS_PROFILE; actor-submit ACTOR_PROFILE SUBMIT_JSON [SUBMIT_JSON ...]; serve-open and serve-open-checked also accept --credibility-activation EVIDENCE_FILE; all serve modes accept a final --requests 7,8,9 option OR --peers ACTOR_PROFILE [ACTOR_PROFILE ...]";
 
 pub(crate) fn command(args: &[String], credibility: Option<&Path>) -> Result<(), String> {
-    if args.iter().any(|arg| arg == "--receipts-only") {
+    if args.iter().any(|arg| matches!(arg.as_str(), "--receipts-only" | "--reconcile-receipts")) {
         return receipts::command(args, credibility);
     }
     // A durable actor invocation owns its complete argument grammar before
