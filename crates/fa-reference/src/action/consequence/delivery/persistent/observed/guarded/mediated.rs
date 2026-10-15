@@ -1,6 +1,8 @@
 //! Recover topology-observer custody together with the original guarded owner.
 //! Exact graphs are independent requirements, not assumed live capture or a cut.
 mod inspection;
+mod reserved_bootstrap;
+pub use reserved_bootstrap::FileMediatedBootstrap;
 pub mod learned;
 pub mod predictive;
 pub use inspection::{FileMediatedSnapshot, FileTopologyUpdateRecord};
