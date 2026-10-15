@@ -8,6 +8,8 @@ use crate::action::consequence::delivery::TopologyChange;
 use crate::perimeter_inventory::topology::LoadedAuthorityTopology;
 use crate::Error;
 
+pub mod checkpoint;
+
 /// An interrupted source operation is not a completed native refusal. The
 /// original custodian additionally retains its last source/checker diagnostics.
 #[derive(Clone, Debug, PartialEq, Eq)]
