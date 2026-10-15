@@ -3,6 +3,8 @@
 //! This detects source loss/substitution at explicit checks, not all OS bypasses.
 mod publication;
 mod driver;
+mod recovery;
+pub use recovery::TopologySourceRecovery;
 pub use publication::{TopologyPublication, TopologyPublicationReport};
 
 use super::{FileMediationObserver, FileMediationUpdate, FileOversight, JournalError};
