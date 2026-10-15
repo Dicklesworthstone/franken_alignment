@@ -1,6 +1,8 @@
 //! Request intake consumes the original learned-stream frame builder unchanged.
 use super::{FileOversight, JournalError, ActionSpec, VERSION, Error};
-use crate::action::ElapsedTick;
+use crate::action::{ActionState, ElapsedTick, Scope};
+use crate::action::consequence::delivery::persistent::observed::Machine;
+use crate::action::consequence::delivery::persistent::requests::FileRequestDisposition;
 use crate::action::consequence::delivery::persistent::requests::actor::LearnedTextRelease;
 use crate::action::consequence::delivery::stream::ReleaseFrame;
 use crate::action::consequence::oversight::learned_host::text::stream::Release;
@@ -20,14 +22,7 @@ impl FileOversight {
         -> Result<FileStreamProposal, JournalError>
     {
         if self.fault.is_some() { return Err(JournalError::Unavailable); }
-        if request == 0 { return Err(Error::InvalidInput.into()); }
-        let original = self.machine.requests.original_spec(request).ok_or(Error::Missing)?;
-        let spec = self.prepare_learned_text_stream_request(
-            request, LearnedTextRelease::Message, original.deadline)?;
-        let frame = ReleaseFrame::decode(&spec.payload)?;
-        Ok(FileStreamProposal { target: spec.target.ok_or(Error::Binding)?,
-            expected_policy_epoch: spec.policy_epoch, deadline: spec.deadline,
-            message: Some(frame.message().ok_or(Error::Binding)?.to_owned()) })
+        Ok(self.machine.learned_text_stream_message_request(self.profile.delivery.scope, request)?)
     }
 
     /// Inspect the exact retained learned finish, including a policy admission
@@ -43,31 +38,8 @@ impl FileOversight {
         -> Result<FileStreamProposal, JournalError>
     {
         if self.fault.is_some() { return Err(JournalError::Unavailable); }
-        if request == 0 || after_request == 0 || request == after_request {
-            return Err(Error::InvalidInput.into());
-        }
-        let profile = self.machine.learned_contract().and_then(|config| config.text_stream_profile())
-            .ok_or(Error::Binding)?;
-        let original = self.machine.requests.original_spec(request).ok_or(Error::Missing)?;
-        let finish = ReleaseFrame::decode(&original.payload)?;
-        let previous = self.request_action(after_request)?;
-        let message = ReleaseFrame::decode(&previous.spec().payload)?;
-        let mut target = previous.spec().target.ok_or(Error::Binding)?;
-        target.expected_version = target.expected_version.checked_add(1).ok_or(Error::Overflow)?;
-        if self.request_resolution(after_request)?
-            != Some(EndpointOutcome::Executed { resulting_version: target.expected_version }) {
-            return Err(Error::Incomplete.into());
-        }
-        if !finish.is_finish() || message.is_finish() || finish.profile() != profile
-            || message.profile() != profile || original.version != VERSION
-            || original.scope != self.profile.delivery.scope || !original.required_witnesses.is_empty()
-            || original.units != original.payload.len() as u64 || original.target != Some(target)
-            || !message.prior_messages().iter().copied().chain(message.message())
-                .eq(finish.prior_messages().iter().copied()) {
-            return Err(Error::Binding.into());
-        }
-        Ok(FileStreamProposal { target, expected_policy_epoch: original.policy_epoch,
-            deadline: original.deadline, message: None })
+        Ok(self.machine.learned_text_stream_finish_request(
+            self.profile.delivery.scope, after_request, request)?)
     }
 
     pub(in crate::action::consequence::delivery::persistent) fn prepare_learned_text_stream_request(
@@ -75,19 +47,11 @@ impl FileOversight {
     ) -> Result<ActionSpec, JournalError> {
         if self.fault.is_some() { return Err(JournalError::Unavailable); }
         if request == 0 { return Err(Error::InvalidInput.into()); }
-        let profile = self.machine.learned_contract().and_then(|config| config.text_stream_profile())
-            .ok_or(Error::Binding)?;
-        if let Some(original) = self.machine.requests.original_spec(request) {
-            // This is the exact request-book pre-policy spec, including refused
-            // admissions. Do not derive another payload or target from today's
-            // source, pending dispatch or receipt-confirmed audience frontier.
-            let frame = ReleaseFrame::decode(&original.payload).map_err(|_| Error::Binding)?;
-            if original.deadline != deadline || original.version != VERSION
-                || original.scope != self.profile.delivery.scope || !original.required_witnesses.is_empty()
-                || original.units != original.payload.len() as u64 || frame.profile() != profile
-                || frame.is_finish() != (release == LearnedTextRelease::Finish) {
-                return Err(Error::Binding.into());
-            }
+        // Shared exact historical validation also serves the sealed recovery
+        // cursor. Absence is the only case allowed to reach live derivation.
+        if let Some(original) = self.machine.retained_learned_stream_request(
+            self.profile.delivery.scope, request, release)? {
+            if original.deadline != deadline { return Err(Error::Binding.into()); }
             return Ok(original.clone());
         }
         if self.source_interrupted || self.machine.pending_learned_reset().is_some() {
@@ -109,5 +73,75 @@ impl FileOversight {
             LearnedTextRelease::Message => Release::Message,
             LearnedTextRelease::Finish => Release::Finish,
         }, deadline)?)
+    }
+}
+
+// Pure reads of the ORIGINAL request book, source contract and accepted receipts.
+// Live ticket intake and fully verified recovery use one validator. No mutable
+// candidate, second outcome book or current source/authority claim is created.
+impl Machine {
+    fn retained_learned_stream_request(&self, scope: Scope, request: u64,
+        release: LearnedTextRelease) -> Result<Option<&ActionSpec>, Error>
+    {
+        if request == 0 { return Err(Error::InvalidInput); }
+        let profile = self.learned_contract().and_then(|config| config.text_stream_profile())
+            .ok_or(Error::Binding)?;
+        let Some(original) = self.requests.original_spec(request) else { return Ok(None); };
+        let frame = ReleaseFrame::decode(&original.payload).map_err(|_| Error::Binding)?;
+        if original.version != VERSION || original.scope != scope
+            || !original.required_witnesses.is_empty()
+            || original.units != original.payload.len() as u64 || frame.profile() != profile
+            || frame.is_finish() != (release == LearnedTextRelease::Finish) {
+            return Err(Error::Binding);
+        }
+        Ok(Some(original))
+    }
+
+    pub(in crate::action::consequence::delivery::persistent::observed)
+    fn learned_text_stream_message_request(&self, scope: Scope, request: u64)
+        -> Result<FileStreamProposal, Error>
+    {
+        let original = self.retained_learned_stream_request(scope, request,
+            LearnedTextRelease::Message)?.ok_or(Error::Missing)?;
+        let frame = ReleaseFrame::decode(&original.payload)?;
+        Ok(FileStreamProposal { target: original.target.ok_or(Error::Binding)?,
+            expected_policy_epoch: original.policy_epoch, deadline: original.deadline,
+            message: Some(frame.message().ok_or(Error::Binding)?.to_owned()) })
+    }
+
+    pub(in crate::action::consequence::delivery::persistent::observed)
+    fn learned_text_stream_finish_request(&self, scope: Scope, after_request: u64, request: u64)
+        -> Result<FileStreamProposal, Error>
+    {
+        if request == 0 || after_request == 0 || request == after_request {
+            return Err(Error::InvalidInput);
+        }
+        let original = self.retained_learned_stream_request(scope, request,
+            LearnedTextRelease::Finish)?.ok_or(Error::Missing)?;
+        let finish = ReleaseFrame::decode(&original.payload)?;
+        let FileRequestDisposition::Admitted { attempt, stage } = self.requests.status(after_request)?.disposition
+            else { return Err(Error::WrongState); };
+        let previous = self.actions.get(&attempt).ok_or(Error::Missing)?;
+        let message = ReleaseFrame::decode(&previous.spec().payload)?;
+        let mut target = previous.spec().target.ok_or(Error::Binding)?;
+        target.expected_version = target.expected_version.checked_add(1).ok_or(Error::Overflow)?;
+        // Pre-dispatch outcomes have no accepted endpoint receipt. Neither
+        // published-but-unconfirmed data nor equal message text proves execution.
+        if matches!(stage, ActionState::Proposed | ActionState::Prepared | ActionState::Reviewing
+            | ActionState::Authorized | ActionState::Denied | ActionState::Cancelled) {
+            return Err(Error::Incomplete);
+        }
+        if self.broker.resolution(attempt)?.map(|receipt| receipt.outcome())
+            != Some(EndpointOutcome::Executed { resulting_version: target.expected_version }) {
+            return Err(Error::Incomplete);
+        }
+        if message.is_finish() || message.profile() != finish.profile()
+            || original.target != Some(target)
+            || !message.prior_messages().iter().copied().chain(message.message())
+                .eq(finish.prior_messages().iter().copied()) {
+            return Err(Error::Binding);
+        }
+        Ok(FileStreamProposal { target, expected_policy_epoch: original.policy_epoch,
+            deadline: original.deadline, message: None })
     }
 }

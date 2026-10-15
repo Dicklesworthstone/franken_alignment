@@ -8,6 +8,7 @@ use fa_reference::action::consequence::delivery::persistent::{JournalError, obse
         predictive::{FilePredictiveRequirements, learned::FilePredictiveLearnedRecovery,
             owned::{FileOwnedPredictiveRecovery, FileOwnedPredictiveRequirements}}},
     shutdown::recovery::{FileStoppedHistory, FileStoppedRecovery},
+    stream::FileStreamProposal,
 }};
 
 pub(super) enum Cursor {
@@ -60,6 +61,21 @@ impl Cursor {
     pub(super) fn advance(&mut self, done: usize) -> Result<Progress, JournalError> {
         match self { Self::Plain(run) => run.advance(done, 1), Self::Raw(run) => run.advance(done, 1),
             Self::Owned(run) => run.advance(done, 1) }
+    }
+
+    /// Select historical identity on the SAME fully checked replay, before the
+    /// existing finalizer can clean staging or consume the original fence.
+    pub(super) fn receipt(&self, request: u64, after: Option<u64>)
+        -> Result<FileStreamProposal, JournalError>
+    {
+        match (self, after) {
+            (Self::Plain(run), None) => run.learned_text_stream_message_request(request),
+            (Self::Raw(run), None) => run.learned_text_stream_message_request(request),
+            (Self::Owned(run), None) => run.learned_text_stream_message_request(request),
+            (Self::Plain(run), Some(after)) => run.learned_text_stream_finish_request(after, request),
+            (Self::Raw(run), Some(after)) => run.learned_text_stream_finish_request(after, request),
+            (Self::Owned(run), Some(after)) => run.learned_text_stream_finish_request(after, request),
+        }
     }
 
     pub(super) fn finish(self) -> Result<Custody, JournalError> {

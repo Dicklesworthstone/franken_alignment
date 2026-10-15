@@ -2,6 +2,7 @@
 mod cooperative;
 mod selected;
 use cooperative::{Progress, finish_replay};
+use fa_reference::action::consequence::delivery::persistent::observed::stream::FileStreamProposal;
 use super::{Config, Loaded, FileOversight, FileSupervisedDriver, FileHumanReviewer, ElapsedTick,
     RunResult, ActorWire, Command, FileLearnedTextStreamActorPort, LearnedTextRelease,
     RecoveryReserve, Control, Deadline, Duration, Instant, cleanup, debug, encode_command};
@@ -80,25 +81,51 @@ where F: FnMut() -> ElapsedTick {
     })
 }
 
-fn open_receipt(config: &Config, loaded: &Loaded) -> Result<Custody, String> {
+fn open_receipt(config: &Config, loaded: &Loaded, after: Option<u64>)
+    -> Result<(Custody, FileStreamProposal), String>
+{
     let started = Instant::now();
-    open_receipt_with_elapsed(config, loaded, &mut || started.elapsed())
+    open_selected_receipt_with_elapsed(config, loaded, after, &mut || started.elapsed())
 }
 
-/// Receipt replay has its own finite wall budget, without consulting a new
-/// logical clock, renewing the retained request deadline or reading evidence.
-/// The elapsed supplier keeps every cancellation cut deterministic in tests;
-/// production always uses the single Instant captured before guarded open.
+/// The actual receipt path: select the original request AFTER complete guarded
+/// replay and BEFORE the sole fence. No second read/replay or unchecked owner is
+/// used. An invalid key, release kind or finish predecessor consumes no reserve.
+pub(super) fn open_selected_receipt_with_elapsed(config: &Config, loaded: &Loaded,
+    after: Option<u64>, elapsed: &mut impl FnMut() -> Duration)
+    -> Result<(Custody, FileStreamProposal), String>
+{
+    receipt_replay(config, loaded, elapsed, |run| {
+        let original = run.receipt(loaded.request, after)?;
+        Ok((run.finish()?, original))
+    })
+}
+
+// Existing elapsed-budget tests deliberately recover histories before any
+// request exists. Keep that base-finalizer test surface, never use it for --resume.
+#[cfg(test)]
 pub(super) fn open_receipt_with_elapsed(config: &Config, loaded: &Loaded,
     elapsed: &mut impl FnMut() -> Duration) -> Result<Custody, String>
 {
+    receipt_replay(config, loaded, elapsed, |run| run.finish())
+}
+
+/// One finite wall budget, without a new logical clock, evidence read or renewed
+/// request deadline. Every original event and Ready cut share the same timer.
+fn receipt_replay<T>(config: &Config, loaded: &Loaded,
+    elapsed: &mut impl FnMut() -> Duration,
+    finish: impl FnOnce(selected::Cursor) -> Result<T, JournalError>) -> Result<T, String>
+{
     let wall = Duration::from_millis(config.timing.runtime_ms);
-    open_selected_with_checkpoints(config, loaded, &mut |_| {
+    let mut checkpoint = |_: Option<Progress>| {
         if elapsed() >= wall {
-            return Err("learned receipt recovery replay deadline reached".into());
-        }
-        Ok(())
-    })
+            Err("learned receipt recovery replay deadline reached".into())
+        } else { Ok(()) }
+    };
+    checkpoint(None)?;
+    let recovery = selected::Cursor::begin(config, loaded)?;
+    finish_replay(recovery, &mut checkpoint, |run| run.progress(),
+        |run, done| run.advance(done), finish)
 }
 
 /// Run the SAME guarded owner one original event at a time. None is the
@@ -155,10 +182,8 @@ fn stop_replay<T>(config: &Config, loaded: &Loaded, operation: u64,
 
 pub(super) fn resume<F>(config: Config, loaded: Loaded, mut time: F) -> Result<RunResult, String>
 where F: FnMut() -> ElapsedTick {
-    let (host, _reviewer, _observer) = open_receipt(&config, &loaded)?;
-    // A recorded policy refusal has its original source-only request but no
-    // FrozenAction. Recover that exact ticket, not a replacement admission.
-    let original = host.learned_text_stream_message_request(loaded.request).map_err(debug)?;
+    // Selection includes policy refusals with no FrozenAction, before fencing.
+    let ((host, _reviewer, _observer), original) = open_receipt(&config, &loaded, None)?;
     resume_original(config, loaded, host, LearnedTextRelease::Message, original.deadline, &mut time)
 }
 
@@ -166,10 +191,8 @@ pub(super) fn resume_finish<F>(config: Config, loaded: Loaded, after: u64, mut t
     -> Result<RunResult, String>
 where F: FnMut() -> ElapsedTick {
     super::finish::check_ids(loaded.request, after)?;
-    let (host, _reviewer, _observer) = open_receipt(&config, &loaded)?;
-    // The original pre-policy request survives even if admission never created
-    // a FrozenAction. Only the exact predecessor receipt can select this finish.
-    let original = host.learned_text_stream_finish_request(after, loaded.request).map_err(debug)?;
+    // A wrong predecessor cannot spend a fence or clean staged bytes.
+    let ((host, _reviewer, _observer), original) = open_receipt(&config, &loaded, Some(after))?;
     resume_original(config, loaded, host, LearnedTextRelease::Finish, original.deadline, &mut time)
 }
 

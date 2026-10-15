@@ -32,6 +32,49 @@ forecast sample count after live assets have been removed.
 These Rust tests are authored but unexecuted: the required RCH launcher and Rust
 toolchain are unavailable in this session. Source-preimage and whitespace checks
 are not compilation or runtime validation. No production, calibration, performance
-or full-workspace qualification is claimed. Moving receipt selection ahead of the
-recovery fence is separate integration work; this first change does not yet make
-invalid operator recovery attempts write-free.
+or full-workspace qualification is claimed. The initial increment did not yet move receipt selection ahead of the
+recovery fence. The integration below completes that step without changing the
+original effect or recovery semantics.
+
+## Pre-fence request selection
+
+The completed integration selects the original message or exact finish/predecessor
+on the same exclusively locked, fully replayed cursor, **before** its sole recovery
+fence. A missing request, a message/finish mismatch, or a wrong finish predecessor
+returns no owner, performs no staging cleanup and consumes no journal event or
+recovery reserve. This supersedes the first-increment limitation above; no second
+replay, independently opened snapshot, or caller-supplied candidate is substituted.
+
+The base `FileLearnedRecovery` now offers the same read-only message and finish
+accessors. Incomplete, failed or interrupted replay returns no descriptor. The
+ordinary, raw-forecast and owned-K/V guarded wrappers each recheck their complete
+independent guard, source/model/predictor inventory, policy and external floors
+before forwarding. They do not expose their inner replay, mutable machine or
+role bundle. The original live source-only intake and sealed cursor share one
+retained-request validator and the same accepted predecessor-receipt checks.
+
+The actual `--resume` and `--resume --finish-after-message` paths use this selection
+within the original one-event replay driver. Its single monotonic budget still
+checks pre-open, every original event and Ready. The successful finalizer still
+rechecks the exact canonical bytes before its original cleanup/fence, then the
+source-only actor gateway and existing receipt handler perform their ordinary
+exact retry. Correct recovery still spends that one fence; this is not a read-only
+terminal receipt service and repeated valid recovery is not capacity-free.
+
+Four additional regression functions cover all three operator profiles with
+anchored missing/wrong-kind requests, correct denied receipts, replay expiry,
+unmet external floors, descriptor equality across the single fence, withheld
+pre-Ready descriptors, and canonical-file replacement after selection. The
+finish cases use an original confirmed message followed by either a policy-refused
+finish or a fresh native-reviewed and independently human-approved confirmed
+finish. Wrong selection retains the entire store and old anchor; corrected
+selection recovers the original terminal result with no logical clock or live
+assets. Existing elapsed-replay tests retain their unchanged assertions through
+the same shared timer/finalizer driver. No older negative test was weakened.
+
+These four new tests, like the first two, remain **unexecuted**. Targeted and full
+remote-only RCH commands were attempted and could not start compilation because
+the launcher is absent. There is no Rust toolchain here. Git preimage and whitespace
+checks do not qualify Rust syntax, compilation, tests or performance. One event,
+frame validation and filesystem work remain synchronous; this adds no hard wall-time,
+physical-resource, adversarial-filesystem or production guarantee. FA-014 stays open.

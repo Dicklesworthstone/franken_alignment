@@ -12,6 +12,7 @@ use super::super::super::credibility::CredibilityEvent;
 use super::super::super::decoder::learned::{FileLearnedConfig, FileLearnedRecovery,
     FileLearnedRecoveryProgress, FileLearnedRecoveryStatus, checkpoint::FileLearnedResetIntent};
 use crate::Error;
+use super::super::super::stream::FileStreamProposal;
 use crate::action::consequence::delivery::persistent::RecoveryReserve;
 use std::fmt;
 use std::path::Path;
@@ -120,6 +121,24 @@ fn check_history(events: &[Event], expected: &FilePredictiveRequirements) -> Res
 }
 
 impl FilePredictiveLearnedRecovery {
+    /// Select an original message only after the complete independent guard,
+    /// policy, recipe and floor checks pass. Read-only; no fence or role issuance.
+    pub fn learned_text_stream_message_request(&self, request: u64)
+        -> Result<FileStreamProposal, JournalError>
+    {
+        self.check_ready()?;
+        self.inner.learned_text_stream_message_request(request)
+    }
+
+    /// Select the exact retained finish and confirmed predecessor under the
+    /// SAME full guard contract. A failed selection changes no stored bytes.
+    pub fn learned_text_stream_finish_request(&self, after_request: u64, request: u64)
+        -> Result<FileStreamProposal, JournalError>
+    {
+        self.check_ready()?;
+        self.inner.learned_text_stream_finish_request(after_request, request)
+    }
+
     /// Require the exact independently selected original terminal reserve before
     /// replay. Missing, changed or late requirements release no observer, perform
     /// no cleanup/fence and replenish no allowance. Full predictive guard and

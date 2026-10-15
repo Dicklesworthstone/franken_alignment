@@ -8,6 +8,7 @@ use super::{FileHumanReviewer, FileLearnedConfig, FileOversight, FileOversightPr
 use super::super::super::{BaseEvent, Event};
 use super::super::super::super::MAX_JOURNAL_EVENTS;
 use crate::Error;
+use super::super::super::stream::FileStreamProposal;
 use std::fmt;
 use std::path::Path;
 
@@ -170,6 +171,27 @@ impl FileLearnedRecovery {
         owner.check_source_admission(&event)?;
         owner.persist_candidate(event, bytes, machine, result)?;
         Ok((owner, reviewer))
+    }
+
+    /// Historical message identity from a COMPLETE original replay, including
+    /// policy refusals. No live owner, fence, cleanup, clock or approval escapes.
+    /// The descriptor is not proof of publication. Finish still checks the exact
+    /// canonical cut; dropping this cursor after a bad selection writes nothing.
+    pub fn learned_text_stream_message_request(&self, request: u64)
+        -> Result<FileStreamProposal, JournalError>
+    {
+        Ok(self.verified_guarded_machine()?.learned_text_stream_message_request(
+            self.profile.delivery.scope, request)?)
+    }
+
+    /// Historical finish plus its exact accepted predecessor receipt. Missing,
+    /// wrong-kind or unconfirmed requests cannot consume a recovery fence.
+    /// As above, incomplete/failed replay supplies no descriptor or live role.
+    pub fn learned_text_stream_finish_request(&self, after_request: u64, request: u64)
+        -> Result<FileStreamProposal, JournalError>
+    {
+        Ok(self.verified_guarded_machine()?.learned_text_stream_finish_request(
+            self.profile.delivery.scope, after_request, request)?)
     }
 
     // Immutable composition views stop at the original observed-owner family.
