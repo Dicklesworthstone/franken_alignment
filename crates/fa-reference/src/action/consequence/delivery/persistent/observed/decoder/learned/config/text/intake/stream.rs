@@ -8,6 +8,28 @@ use crate::action::consequence::delivery::persistent::{EndpointOutcome,
     observed::stream::FileStreamProposal};
 
 impl FileOversight {
+    /// Read the ORIGINAL pre-policy message request, even when policy refused
+    /// admission and no FrozenAction exists. This is historical proposal data,
+    /// not evidence of execution or permission to publish. Exact retry binding
+    /// uses the same source-only intake validator as the actor gateway.
+    ///
+    /// No current source, clock, forecast, helper or numerical resume is needed.
+    /// The request must already exist: this accessor never derives a new message
+    /// from the current generation or audience frontier.
+    pub fn learned_text_stream_message_request(&self, request: u64)
+        -> Result<FileStreamProposal, JournalError>
+    {
+        if self.fault.is_some() { return Err(JournalError::Unavailable); }
+        if request == 0 { return Err(Error::InvalidInput.into()); }
+        let original = self.machine.requests.original_spec(request).ok_or(Error::Missing)?;
+        let spec = self.prepare_learned_text_stream_request(
+            request, LearnedTextRelease::Message, original.deadline)?;
+        let frame = ReleaseFrame::decode(&spec.payload)?;
+        Ok(FileStreamProposal { target: spec.target.ok_or(Error::Binding)?,
+            expected_policy_epoch: spec.policy_epoch, deadline: spec.deadline,
+            message: Some(frame.message().ok_or(Error::Binding)?.to_owned()) })
+    }
+
     /// Inspect the exact retained learned finish, including a policy admission
     /// refusal, cancellation or expired request. The original message receipt
     /// and full cumulative boundaries determine its predecessor; equal text

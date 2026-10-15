@@ -101,3 +101,5 @@ fn executed(wire: &mut Wire, request: u64) -> bool {
 }
 
 #[path = "tests/audit.rs"] mod audit;
+
+#[path = "tests/receipt_selection.rs"] mod receipt_selection;

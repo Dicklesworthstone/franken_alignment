@@ -9,7 +9,6 @@ use fa_reference::action::consequence::delivery::persistent::observed::guarded::
     FileGuardSet, FileRecoveryRequirements,
 };
 use fa_reference::action::consequence::delivery::persistent::observed::consistency::FileConsistencyObserver;
-use fa_reference::action::consequence::delivery::stream::ReleaseFrame;
 use fa_reference::action::consequence::delivery::persistent::{JournalError,
     observed::shutdown::recovery::{FileStoppedHistory, FileStoppedRecovery}};
 
@@ -157,13 +156,10 @@ fn stop_replay<T>(config: &Config, loaded: &Loaded, operation: u64,
 pub(super) fn resume<F>(config: Config, loaded: Loaded, mut time: F) -> Result<RunResult, String>
 where F: FnMut() -> ElapsedTick {
     let (host, _reviewer, _observer) = open_receipt(&config, &loaded)?;
-    let action = host.request_action(loaded.request).map_err(debug)?;
-    let frame = ReleaseFrame::decode(&action.spec().payload).map_err(debug)?;
-    if frame.profile() != loaded.stream || frame.is_finish() {
-        return Err("receipt recovery requires this original learned message request".into());
-    }
-    let deadline = action.spec().deadline;
-    resume_original(config, loaded, host, LearnedTextRelease::Message, deadline, &mut time)
+    // A recorded policy refusal has its original source-only request but no
+    // FrozenAction. Recover that exact ticket, not a replacement admission.
+    let original = host.learned_text_stream_message_request(loaded.request).map_err(debug)?;
+    resume_original(config, loaded, host, LearnedTextRelease::Message, original.deadline, &mut time)
 }
 
 pub(super) fn resume_finish<F>(config: Config, loaded: Loaded, after: u64, mut time: F)
