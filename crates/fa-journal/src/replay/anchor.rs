@@ -50,11 +50,29 @@ impl HistoryAnchor {
     }
 
     pub(crate) fn from_journal(bytes: Vec<u8>, journal: Journal) -> Result<Self, Error> {
+        Self::checked(bytes, journal, None)
+    }
+
+    #[cfg(unix)]
+    pub(crate) fn from_acknowledged(bytes: Vec<u8>, owner: &Journal) -> Result<Self, Error> {
+        // Start at the original header, never from a clone of the live ledger.
+        let initial = Journal::configured(owner.identity, owner.limits, owner.recovery_reserve)?;
+        Self::checked(bytes, initial, Some(owner))
+    }
+
+    fn checked(bytes: Vec<u8>, journal: Journal, owner: Option<&Journal>) -> Result<Self, Error> {
         if bytes.len() as u64 > journal.limits.max_total_bytes {
             return Err(Error::Limit);
         }
         let minimum = journal.head();
         let checked = journal.replay_from(bytes.as_slice(), minimum)?;
+        if owner.is_some_and(|owner| {
+            checked.head() != owner.head()
+                || checked.encoded_len() != owner.encoded_len()
+                || checked.rights() != owner.rights()
+        }) {
+            return Err(Error::Binding);
+        }
         Ok(Self { bytes: bytes.into(), head: checked.head(), limits: checked.limits })
     }
 

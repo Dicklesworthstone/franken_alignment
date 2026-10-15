@@ -1,10 +1,12 @@
 //! Hold the original writer lock until strict replay AND synchronization finish.
 use super::{Error, FileJournal, lock, parent_directory};
 use crate::{Head, Identity, Journal, Limits};
-use crate::replay::{Replay, ReplayBudget, ReplayError, ReplayReport, ReplayWork};
+use crate::replay::{HistoryAnchor, Replay, ReplayBudget, ReplayError, ReplayReport, ReplayWork};
 use std::fs::{File, OpenOptions};
 use std::io::{self, BufReader};
 use std::path::Path;
+
+mod history;
 
 // Explicitly bounded buffering below Replay's delivered-byte accounting.
 const READ_AHEAD: usize = 8 * 1024;
@@ -17,6 +19,7 @@ const READ_AHEAD: usize = 8 * 1024;
 ///
 /// Replay budgets count the BufReader interface, not physical disk traffic.
 /// This reader retains at most 8 KiB of read-ahead in addition to replay's frame.
+/// Exact-history recovery also retains its independently imported prefix bytes.
 /// File/metadata operations and final sync barriers are not poll-time bounds.
 /// Original trusted-directory, advisory-lock and filesystem assumptions apply.
 ///
@@ -58,6 +61,18 @@ impl FileJournal {
     pub(super) fn begin_open_journal(path: impl AsRef<Path>, minimum: Head, journal: Journal)
         -> Result<FileRecovery, Error>
     {
+        Self::begin_open_checked(path, minimum, journal, None)
+    }
+
+    fn begin_open_checked(
+        path: impl AsRef<Path>,
+        minimum: Head,
+        journal: Journal,
+        anchor: Option<HistoryAnchor>,
+    ) -> Result<FileRecovery, Error> {
+        if let Some(anchor) = &anchor {
+            anchor.check_context(&journal)?;
+        }
         let path = path.as_ref();
         let directory = parent_directory(path)?;
         let file = OpenOptions::new().read(true).write(true).open(path)?;
@@ -69,7 +84,11 @@ impl FileJournal {
         if metadata.len() > journal.limits.max_total_bytes {
             return Err(crate::Error::Limit.into());
         }
-        let replay = journal.replay_cursor(BufReader::with_capacity(READ_AHEAD, file), minimum)?;
+        let reader = BufReader::with_capacity(READ_AHEAD, file);
+        let replay = match anchor {
+            Some(anchor) => journal.replay_cursor_anchored(reader, anchor)?,
+            None => journal.replay_cursor(reader, minimum)?,
+        };
         Ok(FileRecovery { replay, directory })
     }
 }
