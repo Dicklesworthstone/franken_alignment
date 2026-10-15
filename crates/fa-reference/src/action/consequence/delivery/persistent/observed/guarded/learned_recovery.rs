@@ -76,6 +76,18 @@ fn begin(directory: &Path, profile: FileOversightProfile, expected: &FileRecover
 }
 
 impl FileGuardedLearnedRecovery {
+    /// Complete this independently guarded numerical history with the original
+    /// single-replacement Fence/Time/Sweep, then return only the selected actor
+    /// outcome. Guard failures and bad selection precede clock and mutation.
+    /// Ordinary capacity, exact canonical checks and unknown liability rules
+    /// remain unchanged; no observer, reviewer or live owner escapes.
+    pub fn finish_reconciled_receipt<F>(self, request: u64, finish_after: Option<u64>, clock: F)
+        -> Result<Knowledge<ActorOutcome>, JournalError>
+    where F: FnOnce() -> ElapsedTick {
+        self.check_ready()?;
+        self.inner.finish_reconciled_receipt(request, finish_after, clock)
+    }
+
     /// Return only the original historical actor observation after all of this
     /// wrapper's independent guards pass. None selects a message; Some selects
     /// a finish's exact confirmed predecessor. The inner finalizer rechecks the

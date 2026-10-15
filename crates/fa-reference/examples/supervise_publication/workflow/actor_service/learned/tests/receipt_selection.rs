@@ -131,3 +131,4 @@ fn historical_message_lookup_cannot_mint_a_request_from_ready_output() {
 mod preflight;
 mod readonly;
 mod readonly_operator;
+mod reconciled;

@@ -225,6 +225,39 @@ impl FileLearnedRecovery {
         Ok(status.actor_observation())
     }
 
+    /// Settle original endpoint receipts after complete numerical replay, using
+    /// the SAME fixed Fence -> Time -> Sweep transaction as guarded recovery.
+    /// Only the selected redacted actor outcome escapes; no live owner or role
+    /// is returned. A sweep covers existing liabilities, never sends an effect.
+    ///
+    /// Selection (including an exact finish predecessor) happens before the
+    /// trusted clock or any write. The clock is called once after replay and
+    /// canonical-cut validation. Every original prefix/byte/source check still
+    /// applies, and the canonical image is checked again before replacement.
+    /// A failed write may expose the whole new image but returns no receipt.
+    ///
+    /// This is MUTATING recovery, unlike finish_receipt: it spends three events
+    /// and needs ordinary capacity for Time/Sweep. Terminal-only reserve cannot
+    /// fund it. Missing receipts remain Unknown and charged; no numerical work,
+    /// source eligibility, old approval or lost forecast budget is reinstated.
+    /// Repeated calls are not zero-event retries. For observation without any
+    /// write use finish_receipt; for exhausted ordinary capacity use stopped
+    /// recovery. Independent access authorization remains the caller's duty.
+    pub fn finish_reconciled_receipt<F>(self, request: u64, finish_after: Option<u64>, clock: F)
+        -> Result<Knowledge<ActorOutcome>, JournalError>
+    where F: FnOnce() -> crate::action::ElapsedTick {
+        match finish_after {
+            None => { self.learned_text_stream_message_request(request)?; }
+            Some(after) => { self.learned_text_stream_finish_request(after, request)?; }
+        }
+        let Self { profile, store, events, machine, canonical, .. } = self;
+        let recovered = FileOversight::finish_reconciled_history(
+            profile, store, events, machine, canonical, clock)?;
+        // The retained book has no removal/reassignment operation. Reuse the
+        // original live-poll projection only AFTER the replacement acknowledges.
+        Ok(recovered.owner.request_status(request)?.actor_observation())
+    }
+
     // Immutable composition views stop at the original observed-owner family.
     // Framing is available before replay, but the machine only after full
     // verification. Neither method exposes a publicly executable candidate.
