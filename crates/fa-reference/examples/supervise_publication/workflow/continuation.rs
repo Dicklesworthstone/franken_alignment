@@ -22,6 +22,8 @@ use fa_reference::action::ElapsedTick;
 use fa_reference::action::consequence::oversight::actor::ActorProposal;
 use fa_reference::action::consequence::delivery::persistent::observed::{FileHumanReviewer, FileOversight};
 use fa_reference::action::consequence::delivery::persistent::{JournalError, RecoveryReserve};
+use fa_reference::action::consequence::delivery::persistent::observed::driver::topology::FileDriverTopology;
+use fa_reference::action::consequence::mediation::CutCheck;
 use fa_reference::action::consequence::oversight::actor_wire::{
     ActorWire, Command, decode_command, encode_command,
 };
@@ -105,8 +107,17 @@ struct Continuation<'a> {
 // One implementation of fresh source -> original helper review -> human key ->
 // publication. Retention runs exactly once while the acknowledged owner remains
 // held, including on preparation/refusal errors, and BEFORE child cleanup.
-fn from_recovered<F, R>(mut config: Config, mut host: FileOversight, reviewer: FileHumanReviewer,
-    context: Continuation<'_>, mut time: F, retain: R) -> Result<RunResult, String>
+fn from_recovered<F, R>(config: Config, host: FileOversight, reviewer: FileHumanReviewer,
+    context: Continuation<'_>, time: F, retain: R) -> Result<RunResult, String>
+where F: FnMut() -> ElapsedTick, R: FnOnce(&FileOversight) -> Result<(), String> {
+    from_recovered_with_topology(config, host, reviewer, context, None, time, retain)
+}
+
+// Initial mediated creation transfers its original source custody, never a
+// caller's certificate. Legacy/recovery callers keep their original None path.
+fn from_recovered_with_topology<F, R>(mut config: Config, mut host: FileOversight,
+    reviewer: FileHumanReviewer, context: Continuation<'_>, topology: Option<FileDriverTopology>,
+    mut time: F, retain: R) -> Result<RunResult, String>
 where F: FnMut() -> ElapsedTick, R: FnOnce(&FileOversight) -> Result<(), String> {
     let Continuation { document, request, proposal, peers, publication, credibility,
         runtime_deadline, started } = context;
@@ -130,6 +141,9 @@ where F: FnMut() -> ElapsedTick, R: FnOnce(&FileOversight) -> Result<(), String>
             Err(JournalError::Contract(Error::Missing)) => false,
             Err(error) => return Err(debug(error)),
         };
+        if topology.is_some() && existing {
+            return Err("initial topology selection cannot recover an existing request".into());
+        }
         let deadline = Deadline {
             logical: if existing { runtime_deadline } else { proposal.deadline.min(runtime_deadline) },
             started, wall: Duration::from_millis(config.timing.runtime_ms),
@@ -153,6 +167,25 @@ where F: FnMut() -> ElapsedTick, R: FnOnce(&FileOversight) -> Result<(), String>
     let (port, mut driver) = host.into_supervised_driver();
     let mut wire = ActorWire::new(port);
     let result = (|| {
+        if let Some(topology) = topology {
+            let revision = driver.supervisor().host().map_err(debug)?.revision();
+            driver.require_topology(revision, topology).map_err(debug)?;
+            deadline.check(time())?;
+            let revision = driver.supervisor().host().map_err(debug)?.revision();
+            let refreshed = driver.refresh_topology(revision).map_err(debug)?;
+            if refreshed.refusal.is_some()
+                || !matches!(refreshed.checked, Some(Ok(CutCheck::Verified(_))))
+            {
+                return Err("initial topology was not certified by the native checker".into());
+            }
+            // A slow topology read must not freeze the earlier policy lease or
+            // action deadline. The original gateway observes this later time.
+            let now = time();
+            deadline.check(now)?;
+            let mut host = driver.supervisor_mut().host_mut().map_err(debug)?;
+            let revision = host.revision();
+            host.observe_time(revision, now).map_err(debug)?;
+        }
         if let Some(snapshot) = admission {
             let revision = driver.supervisor().host().map_err(debug)?.revision();
             driver.supervisor_mut().set_snapshot(revision, Some(snapshot)).map_err(debug)?;
