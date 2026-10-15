@@ -1,5 +1,8 @@
 //! Independent source-work custody paired with the exact acknowledged journal.
 //! This is evidence transport, never source authentication or recovered authority.
+mod recovery;
+pub use recovery::TopologyCheckpointResume;
+
 use super::{FileDriverTopology, FileOversight, JournalError, LoadedAuthorityTopology,
     TOPOLOGY_REFRESH_READ_BYTES};
 use crate::action::consequence::delivery::persistent::observed::guarded::{
