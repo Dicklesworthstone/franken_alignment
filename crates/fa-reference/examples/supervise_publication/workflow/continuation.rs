@@ -12,6 +12,8 @@ pub(crate) mod guarded;
 pub(crate) mod creation;
 #[path = "continuation/andon.rs"]
 pub(crate) mod andon;
+#[path = "continuation/checkpoint.rs"]
+mod checkpoint;
 
 use super::{Deadline, RunResult, cleanup, execute, plus, resume_existing, stop};
 use crate::config::{CLOCK_DOMAIN, Config, debug};
@@ -115,10 +117,20 @@ where F: FnMut() -> ElapsedTick, R: FnOnce(&FileOversight) -> Result<(), String>
 
 // Initial mediated creation transfers its original source custody, never a
 // caller's certificate. Legacy/recovery callers keep their original None path.
-fn from_recovered_with_topology<F, R>(mut config: Config, mut host: FileOversight,
+fn from_recovered_with_topology<F, R>(config: Config, host: FileOversight,
+    reviewer: FileHumanReviewer, context: Continuation<'_>, topology: Option<FileDriverTopology>,
+    time: F, retain: R) -> Result<RunResult, String>
+where F: FnMut() -> ElapsedTick, R: FnOnce(&FileOversight) -> Result<(), String> {
+    from_recovered_with_topology_retaining(config, host, reviewer, context, topology,
+        time, |host, _| retain(host))
+}
+
+// The same completion boundary can retain ACTUAL source expenditure alongside
+// history before cleanup drops custody. No extra source read or state mutation.
+fn from_recovered_with_topology_retaining<F, R>(mut config: Config, mut host: FileOversight,
     reviewer: FileHumanReviewer, context: Continuation<'_>, topology: Option<FileDriverTopology>,
     mut time: F, retain: R) -> Result<RunResult, String>
-where F: FnMut() -> ElapsedTick, R: FnOnce(&FileOversight) -> Result<(), String> {
+where F: FnMut() -> ElapsedTick, R: FnOnce(&FileOversight, Option<&FileDriverTopology>) -> Result<(), String> {
     let Continuation { document, request, proposal, peers, publication, credibility,
         runtime_deadline, started } = context;
     let prepared = (|| {
@@ -162,7 +174,7 @@ where F: FnMut() -> ElapsedTick, R: FnOnce(&FileOversight) -> Result<(), String>
     })();
     let (existing, deadline, admission) = match prepared {
         Ok(value) => value,
-        Err(error) => return Err(combine_failure(Some(error), retain(&host).err()).expect("original failure")),
+        Err(error) => return Err(combine_failure(Some(error), retain(&host, topology.as_ref()).err()).expect("original failure")),
     };
     let (port, mut driver) = host.into_supervised_driver();
     let mut wire = ActorWire::new(port);
@@ -208,7 +220,7 @@ where F: FnMut() -> ElapsedTick, R: FnOnce(&FileOversight) -> Result<(), String>
         Ok::<_, String>((response, failure))
     })();
     let retained = match driver.supervisor().host() {
-        Ok(host) => retain(&host),
+        Ok(host) => retain(&host, driver.topology()),
         Err(error) => Err(debug(error)),
     };
     let cleanup_pending = cleanup(driver, config.timing.cleanup_ms, config.timing.poll_ms);

@@ -2,7 +2,7 @@
 //! This explicit creation route never opens an existing store or recovers keys.
 use super::{Config, Continuation, Deadline, ElapsedTick, FileOversight, PeerProfile,
     PublicationProfile, RecoveryReserve, RunResult, combine_failure, debug, from_recovered,
-    from_recovered_with_topology, plus};
+    from_recovered_with_topology_retaining, plus};
 use crate::recover_stop::guarded::CreationOutput;
 use fa_reference::action::consequence::oversight::actor_wire::{Command, MAX_FRAME_BYTES, decode_command};
 use std::{io::Write, path::Path, time::{Duration, Instant}};
@@ -52,11 +52,13 @@ where F: FnMut() -> ElapsedTick {
         wall: Duration::from_millis(config.timing.runtime_ms) };
     deadline.check(start)?;
     if let Some(selection) = selection {
-        let prepared = selection.prepare(&config, &mut || deadline.check(time()))?;
+        let mut prepared = selection.prepare(&config, &mut || deadline.check(time()))?;
+        let checkpoint_output = prepared.take_output();
         let (host, reviewer, topology) = prepared.create(&config, topology_publication)?;
-        return from_recovered_with_topology(config, host, reviewer, Continuation {
+        return from_recovered_with_topology_retaining(config, host, reviewer, Continuation {
             document, request, proposal, peers, publication, credibility: None, runtime_deadline, started,
-        }, Some(topology), time, |host| output.retain(host));
+        }, Some(topology), time, |host, topology| super::checkpoint::combine(
+            output.retain(host), checkpoint_output.as_ref().map_or(Ok(()), |output| output.retain(host, topology))));
     }
     let (mut host, reviewer) = match publication {
         Some(profile) => profile.create(&config.store, config.profile.clone()),

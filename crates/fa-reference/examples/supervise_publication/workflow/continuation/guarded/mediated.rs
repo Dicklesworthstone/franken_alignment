@@ -6,6 +6,8 @@ use super::{Config, Submission, SubmitProfile, PeerProfile, FileOversight, FileG
     FileRecoveryRequirements, FileGuardedRecoveryStatus, RecoveryReserve, JournalError,
     Reconciliation, ActionState, ElapsedTick, Deadline, RunResult, Continuation,
     combine_failure, retain, acknowledged, unconfirmed, debug, plus};
+use super::super::{checkpoint as source_checkpoint, from_recovered_with_topology_retaining};
+#[cfg(test)]
 use super::super::from_recovered_with_topology;
 use fa_reference::Error;
 use fa_reference::action::consequence::delivery::persistent::observed::guarded::{
@@ -49,13 +51,14 @@ where F: FnMut() -> ElapsedTick {
             guards: FileGuardSet { stream: None, decoder: None, decoder_stop: None,
                 source: Some(config.source_policy), identity: None, campaigns: None, credential: None },
             effective_policy: config.profile.delivery.policy.clone(), credential_epoch: None,
-            minimum: profile.minimum(),
+            minimum: history.minimum(custody.anchor(), profile.minimum())?,
         },
         topology: history.requirement.clone(), prediction: None, evaluation: None,
     };
     let mut recovery = FileOversight::begin_open_mediated_guarded_anchored(
         &config.store, config.profile.clone(), &expected, custody.anchor())
         .and_then(|run| run.require_recovery_reserve(RecoveryReserve::terminal())).map_err(unconfirmed)?;
+    history.check_extent(recovery.progress().total_events)?;
     loop {
         checkpoint()?;
         let progress = recovery.progress();
@@ -77,7 +80,12 @@ where F: FnMut() -> ElapsedTick {
             return Err("mediated submit requires the plain source-publication profile".into());
         }
         match owner.request_status(request) {
-            Ok(_) => return Ok(None),
+            Ok(_) => {
+                if topology.retention_requested() {
+                    return Err("receipt-only recovery cannot capture a fresh source checkpoint; omit retain_checkpoint".into());
+                }
+                return Ok(None);
+            }
             Err(JournalError::Contract(Error::Missing)) => {}
             Err(error) => return Err(debug(error)),
         }
@@ -89,7 +97,8 @@ where F: FnMut() -> ElapsedTick {
         // Restore independently retained source work on unavailable coverage.
         // Native rebind advances generations and revokes authority, not certifies.
         let selected = next.bind(&mut owner, roles.topology_observer)?;
-        deadline.check(time())?;
+        // Transfer custody before the shared post-rebind deadline check so an
+        // expiry can still retain the acknowledged rebind and source counters.
         Ok::<_, String>(Some(selected))
     })();
     let selected = match prepared {
@@ -99,12 +108,17 @@ where F: FnMut() -> ElapsedTick {
             return Err(acknowledged(revision, &error));
         }
     };
+    let (selected, checkpoint_output) = match selected {
+        Some((source, output)) => (Some(source), output),
+        None => (None, None),
+    };
     // SAME source acquisition, initial native certification, post-read clock,
     // helper congress, human approval, final automatic topology check and cleanup
     // as creation. No actor epoch, target, payload or deadline is rewritten.
-    let result = from_recovered_with_topology(config, owner, roles.oversight.human, Continuation {
+    let result = from_recovered_with_topology_retaining(config, owner, roles.oversight.human, Continuation {
         document, request, proposal, peers, publication: None, credibility, runtime_deadline, started,
-    }, selected, time, |host| retain(&custody, host));
+    }, selected, time, |host, topology| source_checkpoint::combine(retain(&custody, host),
+        checkpoint_output.as_ref().map_or(Ok(()), |output| output.retain(host, topology))));
     match result {
         Ok(mut result) => {
             result.failure = result.failure.map(|error| acknowledged(revision, &error));

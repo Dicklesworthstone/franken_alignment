@@ -1,6 +1,7 @@
 //! Initial topology intake and native bootstrap, not an alternate effect gate.
 use super::{Config, FileOversight, RecoveryReserve, debug};
 use crate::config::read_regular;
+use super::super::checkpoint::Output;
 use fa_reference::action::consequence::delivery::persistent::observed::{FileHumanReviewer,
     guarded::{FileGuardSet, mediated::FileMediatedBootstrap},
     driver::topology::FileDriverTopology,
@@ -16,6 +17,7 @@ const PROFILE_BYTES: usize = 16 * 1024;
 pub(super) struct Selection {
     topology: PathBuf,
     inventory: PathBuf,
+    output: Option<PathBuf>,
 }
 
 impl Selection {
@@ -25,17 +27,20 @@ impl Selection {
 
     pub(super) fn decode(bytes: &[u8]) -> Result<Self, String> {
         let value = strict_json::parse(bytes, Limits { max_bytes: PROFILE_BYTES,
-            max_depth: 2, max_items: 8, max_string_bytes: 4096 }).map_err(debug)?;
+            max_depth: 2, max_items: 12, max_string_bytes: 4096 }).map_err(debug)?;
         let Json::Object(mut fields) = value else { return Err("topology creation requires an object".into()); };
-        if fields.remove("schema_version").as_ref().and_then(Json::as_str) != Some("fa.mediated-create/1") {
-            return Err("unsupported topology creation profile".into());
-        }
+        let version = fields.remove("schema_version").ok_or("missing topology creation schema")?;
+        let output = match version.as_str() {
+            Some("fa.mediated-create/1") => None,
+            Some("fa.mediated-create/2") => Some(path(&mut fields, "retain_checkpoint")?),
+            _ => return Err("unsupported topology creation profile".into()),
+        };
         let topology = path(&mut fields, "topology_path")?;
         let inventory = path(&mut fields, "inventory_path")?;
         if !fields.is_empty() || topology == inventory {
             return Err("topology creation requires distinct paths and no unknown fields".into());
         }
-        Ok(Self { topology, inventory })
+        Ok(Self { topology, inventory, output })
     }
 
     pub(super) fn prepare(self, config: &Config,
@@ -65,16 +70,21 @@ impl Selection {
             return Err("topology budget must cover initial admission and final publication".into());
         }
         checkpoint()?;
-        Ok(Prepared { selection: self, loaded })
+        let output = self.output.as_ref().map(|path| Output::admit(config, path, topology, inventory)).transpose()?;
+        if output.is_some() { checkpoint()?; }
+        Ok(Prepared { selection: self, loaded, output })
     }
 }
 
 pub(super) struct Prepared {
     selection: Selection,
     loaded: LoadedAuthorityTopology,
+    output: Option<Output>,
 }
 
 impl Prepared {
+    pub(super) fn take_output(&mut self) -> Option<Output> { self.output.take() }
+
     pub(super) fn create(self, config: &Config, publication: Option<PublicationLimits>)
         -> Result<(FileOversight, FileHumanReviewer, FileDriverTopology), String>
     {
