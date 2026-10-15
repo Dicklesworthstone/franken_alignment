@@ -11,6 +11,8 @@ use fa_reference::action::consequence::delivery::persistent::{JournalError, Reco
 use fa_reference::action::consequence::oversight::actor_wire::{Command, decode_command};
 use std::{path::Path, time::{Duration, Instant}};
 
+mod mediated;
+
 pub(crate) struct Submission<'a> {
     pub document: &'a [u8],
     pub profile: &'a SubmitProfile,
@@ -115,6 +117,9 @@ const USAGE: &str = "usage: supervise_publication submit CONFIG SUBMIT_JSON --gu
 pub(crate) fn command(args: &[String], credibility: Option<&Path>, out: &mut impl std::io::Write)
     -> Result<(), String>
 {
+    if args.iter().skip(3).any(|argument| argument == "--topology-profile") {
+        return mediated::command(args, credibility, out);
+    }
     let (recovery_path, peer_path) = arguments(args)?;
     let config = Config::read(Path::new(&args[1]))?;
     let document = crate::config::read_regular(Path::new(&args[2]),
