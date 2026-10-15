@@ -6,6 +6,7 @@ use fa_reference::strict_json::{self, Json, Limits};
 use std::{collections::BTreeMap, fs::{self, File, OpenOptions}, io::{self, Cursor}, path::{Path, PathBuf}};
 use std::os::unix::fs::OpenOptionsExt;
 
+mod topology;
 mod creation;
 pub(crate) use creation::CreationOutput;
 
@@ -15,6 +16,7 @@ pub(crate) struct Profile {
     minimum: FileRecoveryFloor,
     input: PathBuf,
     output: Option<PathBuf>,
+    topology: Option<topology::Selection>,
 }
 impl Profile {
     pub(crate) fn read(path: &Path) -> Result<Self, String> {
@@ -29,7 +31,12 @@ impl Profile {
         let json = strict_json::parse(bytes, Limits { max_bytes: PROFILE_BYTES, max_depth: 4,
             max_items: 32, max_string_bytes: 4096 }).map_err(debug)?;
         let mut root = object(json)?;
-        if take(&mut root, "schema_version")?.as_str() != Some(schema) {
+        let version = take(&mut root, "schema_version")?;
+        // Only the stop reader may select v2. Receipt and new-work profiles
+        // retain their exact original schema; no other mode ignores topology.
+        let mediated = schema == "fa.guarded-stop/1"
+            && version.as_str() == Some("fa.guarded-stop/2");
+        if !mediated && version.as_str() != Some(schema) {
             return Err(unsupported.into());
         }
         let mut floor = object(take(&mut root, "minimum")?)?;
@@ -39,8 +46,11 @@ impl Profile {
         end(&floor)?;
         let input = absolute(take(&mut root, "history_anchor")?)?;
         let output = root.remove("retain_history_anchor").map(absolute).transpose()?;
+        let topology = if mediated {
+            Some(topology::Selection::decode(take(&mut root, "topology")?)?)
+        } else { None };
         end(&root)?;
-        Ok(Self { minimum, input, output })
+        Ok(Self { minimum, input, output, topology })
     }
 
     /// Reuse the exact independent input custody for read-only investigation.
@@ -49,6 +59,9 @@ impl Profile {
     pub(crate) fn admit_investigation(&self, config: &Config)
         -> Result<(FileHistoryAnchor, FileRecoveryFloor), String>
     {
+        if self.topology.is_some() {
+            return Err("mediated stop profiles are not read-only investigation profiles".into());
+        }
         if self.output.is_some() {
             return Err("read-only proposal explanation cannot retain a history anchor".into());
         }
@@ -57,6 +70,15 @@ impl Profile {
     }
 
     pub(super) fn minimum(&self) -> FileRecoveryFloor { self.minimum }
+
+    /// Load only independently provisioned recovery requirements. This neither
+    /// reads a live source nor certifies the declared topology for new work.
+    pub(super) fn admit_topology(&self, config: &Config,
+        checkpoint: &mut impl FnMut() -> Result<(), String>)
+        -> Result<Option<fa_reference::action::consequence::delivery::persistent::observed::guarded::mediated::FileTopologyRequirement>, String>
+    {
+        self.topology.as_ref().map(|selection| selection.admit(config, checkpoint)).transpose()
+    }
 
     pub(super) fn admit(&self, config: &Config) -> Result<Custody, String> {
         // Recovery must already have a store. Neither path admission nor an

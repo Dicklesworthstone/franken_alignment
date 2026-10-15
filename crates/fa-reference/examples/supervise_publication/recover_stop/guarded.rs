@@ -2,6 +2,7 @@
 //! The profile supplies independent floors/custody; CONFIG supplies exact policy
 //! and source identity. No current evidence, helper or reviewer is opened.
 mod profile;
+mod recovery;
 pub(crate) use profile::{CreationOutput, Custody, Profile, ResumeProfile, SubmitProfile};
 use super::{Config, debug, report};
 use fa_reference::action::ElapsedTick;
@@ -31,18 +32,18 @@ where F: FnOnce() -> ElapsedTick {
     checkpoint()?;
     let custody = profile.admit(config)?;
     checkpoint()?;
-    // This version is EXACTLY the ordinary source-publication profile. None
-    // requires absence under the original guard checker, never acceptance of
-    // whatever optional guard happens to be stored in the recovered history.
+    let topology = profile.admit_topology(config, &mut checkpoint)?;
+    // Both versions retain the exact source-publication guard inventory. Only
+    // v2 adds independently supplied initial/current topology and availability;
+    // no optional prediction, evaluation or numerical profile is inferred.
     let expected = FileRecoveryRequirements {
         guards: FileGuardSet { stream: None, decoder: None, decoder_stop: None,
             source: Some(config.source_policy), identity: None, campaigns: None, credential: None },
         effective_policy: config.profile.delivery.policy.clone(), credential_epoch: None,
         minimum: profile.minimum(),
     };
-    let mut recovery = FileOversight::begin_open_guarded_anchored(
-        &config.store, config.profile.clone(), &expected, custody.anchor())
-        .and_then(|run| run.require_recovery_reserve(RecoveryReserve::terminal())).map_err(unconfirmed)?;
+    let mut recovery = recovery::Recovery::begin(config, expected, topology, custody.anchor())
+        .map_err(unconfirmed)?;
     loop {
         // Ready has its own final checkpoint. A timeout after the last original
         // event must still drop custody without any stop, fence or staging cleanup.
@@ -69,3 +70,7 @@ where F: FnOnce() -> ElapsedTick {
 fn unconfirmed(error: JournalError) -> String {
     format!("guarded native stop completion is unconfirmed: {}; no effect was resent", debug(error))
 }
+
+#[cfg(test)]
+#[path = "guarded/mediated_tests.rs"]
+mod mediated_tests;
