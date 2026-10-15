@@ -35,3 +35,40 @@ it does not change their semantics or close that packet. The targeted remote-onl
 RCH test command was attempted and exited 127 before compilation because `rch`
 is unavailable in the editing environment. Tests are authored, not executed;
 Rust compilation, formatting, Clippy and complete qualification remain pending.
+
+## Locked file integration (2026-10-15)
+
+`FileJournal::begin_history_anchor` now consumes a healthy acknowledged writer
+into the original `FileRecovery` cursor. It retains the same descriptor and
+exclusive lock, seeks to the original header and checks with the original
+identity, limits and reserve. Every `advance` shares the original replay budgets.
+`finish_with_history_anchor` requires matching head, extent and complete rights
+before returning the original owner and exact archive. No new synchronization is
+needed for that already acknowledged owner. The synchronous borrowing
+`history_anchor` API is unchanged.
+
+For recovery from a path, select `with_history_capture` before any read/check on
+the existing cursor. This also works with independently anchored v1/v2 recovery:
+the old prefix is compared while the complete successor is captured in the same
+pass. Both the original file and parent-directory sync still precede return, and
+extent is checked again after synchronization. Ordinary `finish` shares those
+same checks; asking for an archive without selecting capture fails before sync.
+
+Cancellation/incomplete finish closes the lock and returns no writer or archive.
+A failed commit's poisoned owner cannot be captured. Only strict original
+recovery can acknowledge a surviving complete suffix; dispatch liabilities remain
+charged. None of these operations is a durable Stop, a refund, a repair or an
+external resend. As before, same-length hostile changes after a read are outside
+the trusted-directory/advisory-lock contract; metadata checks do not authenticate
+file contents. Store the returned archive independently before relying on it.
+
+Seven public file regressions cover v1/v2 original-owner parity, continued writes,
+exclusive locking, cancellation/recovery, a real equal-CRC fork with different
+rights, extent changes, anchored successors, explicit selection, partial finish
+and poisoned capture. Four private regressions exercise the original persistence
+hooks: errors/unwinds before and after both recovery barriers, healthy-owner
+no-extra-sync behavior, extent changes during sync, and an actual complete record
+whose original commit failed before acknowledgment. Together with the replay
+increment there are 17 authored regression functions. Required targeted and full
+RCH launches remain blocked before compilation by the missing launcher; no
+executed Rust result, packet closure or runtime qualification is claimed.

@@ -180,12 +180,28 @@ impl Journal {
         minimum: Head,
     ) -> Result<Replay<R>, Error> {
         let mut replay = self.replay_cursor(reader, minimum)?;
-        replay.captured_history = Some(Vec::new());
+        replay.enable_history_capture()?;
         Ok(replay)
     }
 }
 
 impl<R: Read> Replay<R> {
+    // Selection may follow a zero-work poll, but never a read, a checked record
+    // or a terminal state. Keep any independently supplied exact prefix intact.
+    pub(crate) fn enable_history_capture(&mut self) -> Result<(), Error> {
+        if self.status != ReplayStatus::Reading
+            || self.total != super::ReplayWork::default()
+            || self.filled != 0
+            || !matches!(self.phase, super::Phase::Header)
+        {
+            return Err(Error::InvalidInput);
+        }
+        if self.captured_history.is_none() {
+            self.captured_history = Some(Vec::new());
+        }
+        Ok(())
+    }
+
     /// Export a complete, exact archive and the original verified accounting.
     /// A partial/failed cursor or one not selected for capture cannot export an
     /// anchor. No re-encoding, second replay or new authority is involved. Keep

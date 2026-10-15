@@ -1,11 +1,42 @@
 //! Exact-prefix recovery and evidence capture on the original locked descriptor.
-use super::{Error, FileJournal, FileRecovery};
+use super::{Error, FileJournal, FileRecovery, READ_AHEAD};
 use crate::replay::{HistoryAnchor, ReplayBudget, ReplayStatus};
 use crate::{Identity, Journal, Limits, RecoveryReserve};
-use std::io::{self, Read, Seek, SeekFrom};
+use std::io::{self, BufReader, Read, Seek, SeekFrom};
 use std::path::Path;
 
 impl FileJournal {
+    /// Consume a healthy acknowledged writer and capture its exact history in
+    /// original bounded replay polls. Retain its head independently first.
+    /// The same file descriptor/lock and original configuration are retained;
+    /// no usable owner escapes until full head, extent and rights parity.
+    ///
+    /// Finish with FileRecovery::finish_with_history_anchor. Cancellation/drop
+    /// closes this writer without changing bytes or refunding any liability;
+    /// recover under the independently retained minimum to resume work. A
+    /// poisoned writer is refused. This is not a durable Stop acknowledgment.
+    /// No payload read occurs until advance; opening metadata and seeking are
+    /// synchronous. Capture allocation and replay obey the original lifetime
+    /// limits, not an elapsed-time bound. The synchronous borrowing API remains
+    /// available as history_anchor and as an independent comparison oracle.
+    pub fn begin_history_anchor(mut self) -> Result<FileRecovery, Error> {
+        if self.poisoned {
+            return Err(Error::Poisoned);
+        }
+        let initial = Journal::configured(
+            self.journal.identity, self.journal.limits, self.journal.recovery_reserve,
+        )?;
+        self.poisoned = true;
+        if self.file.metadata()?.len() != self.journal.encoded_len() {
+            return Err(changed_extent().into());
+        }
+        self.file.seek(SeekFrom::Start(0))?;
+        let replay = initial.replay_cursor_capturing(
+            BufReader::with_capacity(READ_AHEAD, self.file), self.journal.head(),
+        )?;
+        Ok(FileRecovery { replay, directory: None, acknowledged: Some(self.journal) })
+    }
+
     /// Begin exclusive v1 recovery using independently retained exact bytes.
     /// Reject a different identity or limit profile before accessing the path.
     /// All original locking, read budgets, suffix replay and sync barriers apply.
