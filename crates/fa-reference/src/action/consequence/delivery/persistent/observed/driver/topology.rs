@@ -1,7 +1,9 @@
 //! Selected source custody follows the ORIGINAL driver, not an optional step.
 //! This process-local composition is not a persisted deployment flag or watcher.
 use super::{FileOversight, FileSupervisedDriver, JournalError};
-use super::super::mediation::source::{FileTopologySource, TopologyRefresh};
+use super::super::mediation::FileMediationObserver;
+use super::super::mediation::source::{FileTopologySource, TopologyRefresh,
+    TopologySourceRecovery, TOPOLOGY_REFRESH_READ_BYTES};
 use crate::action::consequence::delivery::TopologyChange;
 use crate::perimeter_inventory::topology::LoadedAuthorityTopology;
 use crate::Error;
@@ -96,6 +98,44 @@ impl FileSupervisedDriver {
         if let Err(error) = admitted { return Err(Box::new(DriverTopologySetupError { error, topology })); }
         self.topology = Some(topology);
         Ok(())
+    }
+
+    /// Reconnect independently retained source work to this idle recovered
+    /// driver, then perform a real native source refresh. The original source
+    /// is installed BEFORE reading: refusal/error/unwind cannot discard spent
+    /// work or silently turn the next step into an unselected publication.
+    ///
+    /// Allowance must cover both this initial check and a final publication
+    /// check. This is admission, not a reservation against other later refreshes.
+    /// The caller supplies current native clock state as for refresh_topology;
+    /// final publication retains its original post-read clock/deadline checks.
+    /// Ok with a refusal is NOT certification. No review, human key, dispatch or
+    /// endpoint effect is manufactured here. Resumption is not disk atomicity:
+    /// a completed rebind may precede a failed read or failed durable withdrawal.
+    pub fn resume_topology(&mut self, revision: u64, operation: u64,
+        observer: FileMediationObserver, recovery: TopologySourceRecovery)
+        -> Result<TopologyRefresh, JournalError>
+    {
+        if self.topology.is_some() { return Err(Error::Duplicate.into()); }
+        if self.job.is_some() || self.learned_review.is_some() {
+            return Err(Error::WrongState.into());
+        }
+        let limits = recovery.previous.source_limits();
+        if recovery.work.checks.checked_add(2).is_none_or(|checks| checks > limits.checks)
+            || recovery.work.reserved_read_bytes.checked_add(2 * TOPOLOGY_REFRESH_READ_BYTES)
+                .is_none_or(|bytes| bytes > limits.read_bytes) {
+            return Err(Error::Limit.into());
+        }
+        if operation > u64::MAX - 2 { return Err(Error::Overflow.into()); }
+        let source = {
+            let mut host = self.supervisor.host_mut()?;
+            observer.resume_topology_source(&mut host, revision, operation, recovery)?
+        };
+        // Infallible custody installation follows the original acknowledged
+        // rebind; only then may the fallible source/checker pipeline run.
+        self.topology = Some(FileDriverTopology::new(source));
+        let revision = self.supervisor.host()?.revision();
+        self.refresh_topology(revision)
     }
 
     pub fn topology(&self) -> Option<&FileDriverTopology> { self.topology.as_ref() }

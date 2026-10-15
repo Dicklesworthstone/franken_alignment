@@ -7,6 +7,7 @@ use crate::action::consequence::delivery::persistent::{FileDeliveryProfile, Jour
 use crate::action::consequence::delivery::persistent::observed::FileOversightProfile;
 use crate::action::consequence::delivery::persistent::observed::guarded::{FileGuardSet,
     FileRecoveryFloor, FileRecoveryRequirements};
+use crate::action::consequence::delivery::persistent::observed::guarded::recovery::FileGuardedRecoveryStatus;
 use crate::action::consequence::delivery::persistent::observed::guarded::mediated::{
     FileMediatedBootstrap, FileMediatedRequirements, FileTopologyRequirement};
 use crate::action::consequence::gate::containment::{ActorState, RestartGrade, RestartProfile};
@@ -47,7 +48,7 @@ fn profile() -> FileOversightProfile {
             actor: ActorState::new(RestartProfile { id: 1, generation: 1, host_generation: 1,
                 model_generation: 1, tokenizer_generation: 1, state_schema_generation: 1,
                 grade: RestartGrade::FunctionalRestart }, vec![1], vec![2], vec![3], 1).unwrap(),
-            suspend_at_incident: 3,
+            suspend_at_incident: 100,
             policy: Policy::new(1, vec![Predicate::PayloadAtMost(128)]).unwrap(),
             congress: CongressPolicy { generation: 1, members: BTreeMap::from([("reviewer".into(),
                 MemberPolicy { cohort: "one".into(), weight: 1 })]),
@@ -112,9 +113,15 @@ fn recovered() -> Recovered {
     let revision = host.revision();
     assert_verified(source.refresh(&mut host, revision, 1).unwrap());
     let selected = source.recovery_requirements(next);
+    let anchor = host.history_anchor().unwrap();
     drop(source); drop(host);
-    let (host, roles) = FileOversight::open_mediated_guarded(root.store(), profile(),
-        &requirements(&previous, &previous, true)).unwrap();
+    let mut run = FileOversight::begin_open_mediated_guarded_anchored(root.store(), profile(),
+        &requirements(&previous, &previous, true), &anchor).unwrap()
+        .require_recovery_reserve(RecoveryReserve::terminal()).unwrap();
+    while run.progress().status == FileGuardedRecoveryStatus::Replaying {
+        run.advance(run.progress().replayed_events, 1).unwrap();
+    }
+    let (host, roles) = run.finish().unwrap();
     assert!(!host.mediation_snapshot().unwrap().available);
     assert!(host.mediation_snapshot().unwrap().accepted.is_none());
     Recovered { host, observer: roles.topology_observer, source: selected, root }
@@ -143,9 +150,15 @@ fn recovered_source_preserves_work_requires_actual_new_files_and_survives_anothe
     assert_eq!(resumed.work().checks, work.checks + 1);
     assert_eq!(resumed.work().reserved_read_bytes, work.reserved_read_bytes + TOPOLOGY_REFRESH_READ_BYTES);
     let again = resumed.recovery_requirements(loaded(&text(3)));
+    let anchor = host.history_anchor().unwrap();
     drop(resumed); drop(host);
-    let (mut host, roles) = FileOversight::open_mediated_guarded(root.store(), profile(),
-        &requirements(&previous, &next, true)).unwrap();
+    let mut run = FileOversight::begin_open_mediated_guarded_anchored(root.store(), profile(),
+        &requirements(&previous, &next, true), &anchor).unwrap()
+        .require_recovery_reserve(RecoveryReserve::terminal()).unwrap();
+    while run.progress().status == FileGuardedRecoveryStatus::Replaying {
+        run.advance(run.progress().replayed_events, 1).unwrap();
+    }
+    let (mut host, roles) = run.finish().unwrap();
     let revision = host.revision();
     let mut resumed = roles.topology_observer.resume_topology_source(&mut host, revision, 4, again).unwrap();
     assert_eq!(resumed.work().checks, 2); assert_eq!(resumed.last_operation(), 4);
@@ -221,3 +234,5 @@ fn a_live_source_cannot_be_restarted_to_reset_its_allowance() {
         Err(JournalError::Contract(Error::WrongState))));
     assert_eq!(root.bytes(), before); assert!(host.mediation_snapshot().unwrap().accepted.is_none());
 }
+
+mod driver;
