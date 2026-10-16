@@ -8,6 +8,10 @@ use std::rc::Rc;
 
 mod inspection;
 mod reset;
+pub use super::preparation::{FileLearnedCheckpointPreparation, FileLearnedCheckpointPreparationProgress};
+#[cfg(test)]
+#[path = "checkpoint/cooperative_tests.rs"]
+mod cooperative_tests;
 pub use inspection::{FileLearnedResetRecord, FileLearnedResetSnapshot};
 #[cfg(test)]
 #[path = "tests/fixture.rs"]

@@ -42,6 +42,9 @@ impl FileLearnedStepPreparation {
             Operation::Intent => host.check_learned_intent_preparation(expected_revision, self.intent)?,
             Operation::Completion => host.check_learned_completion(expected_revision,
                 self.intent.actor_revision, self.intent.position)?,
+            Operation::Checkpoint { checkpoint, authority_epoch } =>
+                host.check_learned_checkpoint_preparation(expected_revision, checkpoint,
+                    self.intent, authority_epoch)?,
         }
         self.revision = expected_revision;
         self.total = host.events.len();

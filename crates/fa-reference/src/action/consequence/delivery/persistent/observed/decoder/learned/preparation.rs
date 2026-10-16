@@ -3,11 +3,13 @@
 mod intent;
 mod catch_up;
 mod continuation;
+mod checkpoint;
+pub use checkpoint::{FileLearnedCheckpointPreparation, FileLearnedCheckpointPreparationProgress};
 pub use continuation::FileLearnedReplayContinuation;
 pub use intent::FileLearnedIntentPreparation;
 
 #[derive(Clone, Copy, PartialEq, Eq)]
-enum Operation { Intent, Completion }
+enum Operation { Intent, Completion, Checkpoint { checkpoint: u64, authority_epoch: u64 } }
 
 use super::{DecoderEvent, Error, Event, FileOversight, GenerationEvent,
     JournalError, LearnedEvent, LearnedStepIntent, Machine};
@@ -108,6 +110,8 @@ impl FileLearnedStepPreparation {
             Operation::Intent => LearnedEvent::Begin(self.intent),
             Operation::Completion => LearnedEvent::Step { actor_revision: self.intent.actor_revision,
                 position: self.intent.position, witness: Rc::from(&b""[..]) },
+            Operation::Checkpoint { checkpoint, authority_epoch } =>
+                checkpoint::shape(checkpoint, self.intent.actor_revision, authority_epoch),
         };
         host.check_source_admission(&Event::Decoder(DecoderEvent::Learned(event)))?;
         Ok(())
