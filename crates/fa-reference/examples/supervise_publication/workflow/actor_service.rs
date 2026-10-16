@@ -255,13 +255,19 @@ where F: FnMut() -> ElapsedTick {
         pause(actor.poll_ms);
     }
     ingress.session.revoke();
-    if let Some(output) = topology_output {
-        let retained = match driver.supervisor().host() {
-            Ok(host) => output.retain(&host, driver.topology()),
-            Err(error) => Err(debug(error)),
-        };
-        if let Err(error) = retained {
-            failure = Some(match failure { Some(previous) => format!("{previous}; {error}"), None => error });
+    // A retained topology checkpoint is evidence of a healthy acknowledged
+    // owner. Never publish one after execution, stop/drain, or reply-grace has
+    // already failed: doing so would let a failed live service mint a recovery
+    // anchor that looks equivalent to a clean handoff.
+    if failure.is_none() {
+        if let Some(output) = topology_output {
+            let retained = match driver.supervisor().host() {
+                Ok(host) => output.retain(&host, driver.topology()),
+                Err(error) => Err(debug(error)),
+            };
+            if let Err(error) = retained {
+                failure = Some(error);
+            }
         }
     }
     let pending = cleanup(driver, config.timing.cleanup_ms, config.timing.poll_ms);
