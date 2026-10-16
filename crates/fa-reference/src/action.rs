@@ -8,6 +8,7 @@
 
 pub mod congress;
 pub mod consequence;
+pub mod retirement;
 
 use crate::{Effect, Error, Judgment, ReadWitness, Rights, Snapshot};
 use std::collections::BTreeMap;
