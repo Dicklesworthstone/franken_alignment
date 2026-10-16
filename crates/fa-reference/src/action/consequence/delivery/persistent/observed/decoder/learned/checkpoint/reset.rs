@@ -93,23 +93,45 @@ impl FileOversight {
     /// canonical replacement returns no candidate receipt and poisons this live
     /// owner. Recovery either finds the actual completion or an interrupted
     /// barrier; it cannot silently use the previously quiet source.
+    /// An existing replay cache verifies only its appended tail. Use
+    /// prepare_learned_reset_completion for bounded historical replay quanta.
     pub fn complete_learned_reset(&mut self, revision: u64, operation: u64)
         -> Result<Result<HostedLearnedResetReceipt, Error>, JournalError>
     {
         if self.fault.is_some() { return Err(JournalError::Unavailable); }
         if let Some(result) = self.machine.learned_reset_result_optional(operation)? { return Ok(result); }
+        self.check_learned_reset_completion(revision, operation)?;
+        self.events.try_reserve(1).map_err(|_| Error::Limit)?;
+        // Reuse only an existing acknowledged cache; a cold owner remains cold.
+        // Replay failure never retries from zero inside this call.
+        let (candidate, retain_replay) = self.replay_control_candidate()?;
+        self.persist_prepared_learned_reset(revision, operation, candidate, retain_replay)
+    }
+
+    // Shared by the synchronous entry point and the sealed cooperative task.
+    // No public caller can supply a machine, replacement event or reset result.
+    pub(in super::super) fn check_learned_reset_completion(&self, revision: u64, operation: u64)
+        -> Result<(), JournalError>
+    {
+        if self.fault.is_some() { return Err(JournalError::Unavailable); }
         if revision != self.revision() { return Err(Error::Stale.into()); }
         self.machine.check_pending_learned_reset(operation)?;
         self.check_source_admission(&event(CheckpointEvent::Reset { operation, witness: Rc::from(&b""[..]) }))?;
-        self.check_learned_event_capacity(revision, 1)?;
+        self.check_learned_event_capacity(revision, 1)
+    }
+
+    pub(in super::super) fn persist_prepared_learned_reset(&mut self, revision: u64, operation: u64,
+        mut candidate: Machine, retain_replay: bool)
+        -> Result<Result<HostedLearnedResetReceipt, Error>, JournalError>
+    {
+        self.check_learned_reset_completion(revision, operation)?;
         self.events.try_reserve(1).map_err(|_| Error::Limit)?;
-        let mut candidate = Machine::replay(&self.profile, &self.events)?;
         self.fault = Some(JournalFailure { operation: JournalIo::Stage,
             kind: std::io::ErrorKind::Other, replacement_may_be_visible: false });
         let completed = candidate.prepare_learned_reset(operation)?;
         let completed = event(completed);
         let bytes = journal::encode_appended(&self.profile, self.store.identity(), &self.events, &completed)?;
-        self.persist_candidate(completed, bytes, candidate, Transition::Unit)?;
+        self.persist_control_candidate(completed, bytes, candidate, Transition::Unit, retain_replay)?;
         self.learned_reset_result(operation)
     }
 

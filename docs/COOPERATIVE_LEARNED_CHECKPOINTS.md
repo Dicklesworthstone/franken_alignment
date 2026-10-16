@@ -68,3 +68,47 @@ The incompatible operator draft is not included. Rust execution remains pending;
 selected-file hash and whitespace checks are not a complete workspace check.
 No repository gate or bead is closed, and neither old tests nor authority
 boundaries were relaxed.
+
+## Cooperative pending-reset completion
+
+`FileOversight::prepare_learned_reset_completion(revision, operation)` now
+prepares the completion of an already acknowledged, uninterrupted reset intent.
+It returns `FileLearnedResetPreparation`, exported from the same checkpoint
+module. `advance` uses the original bounded replay cursor; `catch_up` explicitly
+verifies appended control history only while the complete original intent and
+its control predecessor remain valid. A stop or fence cannot be rebased away.
+Dropping a task preserves the pending barrier and all original accounting.
+
+`finish` shares the original audit, restore, witness encoding and
+poison-before-audit persistence boundary with `complete_learned_reset`.
+No historical replay runs a second time at finalization. An outer error means
+no acknowledged outcome is returned; an inner native refusal remains an
+acknowledged refusal, not a successful reset. The same incident escalation,
+revocation, retained target ceiling and lifetime numerical/audit budgets apply.
+Dispatched and published liabilities do not rewind with numerical state.
+
+The existing synchronous completion now consumes the existing acknowledged
+replay cache when present and verifies its entire appended tail. It does not
+retry a failed cache from zero inside the same call. A cold owner still uses
+full original replay and remains cold; a warm owner retains its actual retired
+pre-reset machine only after acknowledgment. Exact completed-operation retries
+remain zero-write and do not take the cache or execute the reset again.
+Cooperative preparation leaves the live control cache available during replay.
+Neither route accepts a public machine, caller-asserted completion or replacement
+reset instruction. No journal format, dependency or authority law changes.
+
+Eight further regression functions exercise cold/cached/cooperative canonical
+byte and numerical parity, repeated result lookup, time-tail catch-up,
+interrupted and foreign owners, invalid/incomplete quanta, writer-lock lifetime,
+all five storage barriers, ordinary-capacity exhaustion with a retained terminal
+reserve, actual resumed sampling and receipt reconciliation with old-key
+revocation, acknowledged audit refusal, and foreign-cache failure without a
+hidden fallback. Two additional compile-fail doctests prohibit task cloning and
+owner extraction. Existing checkpoint, reset and recovery tests remain intact.
+
+These eight tests and doctests are authored but UNEXECUTED. Targeted and full
+remote-only RCH commands could not start because the launcher is absent; no Rust
+compiler or formatter is available here. The shared reset audit and every
+individual replay, encoding or filesystem operation remain synchronous. This
+is not a hard interruption-latency guarantee, stream-frontier reset support,
+production qualification or closure of FA-108.
