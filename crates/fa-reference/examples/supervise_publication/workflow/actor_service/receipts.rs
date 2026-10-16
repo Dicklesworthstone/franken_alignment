@@ -81,9 +81,9 @@ fn serve_owner(host: FileOversight, actor: &Profile, socket: BoundSocket, wall: 
     Ok(ServiceReport { frames, candidates, revision })
 }
 
-// One original bounded peer loop for raw and stream recovery. Only the two
-// restricted constructors in this private module hand sessions to this helper.
-fn serve_session<P: ActorRequestPort>(session: &mut PeerSession<P>, actor: &Profile,
+// One original bounded peer loop for raw, stream and sealed learned receipts.
+// Only restricted receipt-service constructors call this private family helper.
+pub(super) fn serve_session<P: ActorRequestPort>(session: &mut PeerSession<P>, actor: &Profile,
     socket: BoundSocket, wall: Duration, elapsed: &mut impl FnMut() -> Duration,
     wait: &mut impl FnMut(u64)) -> Result<(usize, u64), String>
 {

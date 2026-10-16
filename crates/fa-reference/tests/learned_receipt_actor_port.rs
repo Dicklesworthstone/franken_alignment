@@ -139,9 +139,12 @@ impl History {
             let mut host = supervisor.host_mut().unwrap();
             let (attempt, input) = dispatch(&mut host, &reviewer, 71);
             if cut != Cut::Sent {
-                let receipt = host.publish_checked(host.revision(), attempt, Some(&input), snapshot(), ElapsedTick(2)).unwrap();
+                let revision = host.revision();
+                let receipt = host.publish_checked(revision, attempt, Some(&input), snapshot(), ElapsedTick(2)).unwrap();
                 assert!(matches!(receipt.outcome, EndpointOutcome::Executed { .. }));
-                if matches!(cut, Cut::Confirmed | Cut::Finished) { host.reconcile(host.revision(), attempt).unwrap(); }
+                if matches!(cut, Cut::Confirmed | Cut::Finished) {
+                    let revision = host.revision(); host.reconcile(revision, attempt).unwrap();
+                }
             }
         }
         let (key, after) = if cut == Cut::Finished {
@@ -150,15 +153,16 @@ impl History {
             ticket = port.submit(72, LearnedTextRelease::Finish, ElapsedTick(100)).unwrap();
             let mut host = supervisor.host_mut().unwrap();
             let (attempt, input) = dispatch(&mut host, &reviewer, 72);
-            let receipt = host.publish_checked(host.revision(), attempt, Some(&input), snapshot(), ElapsedTick(3)).unwrap();
+            let revision = host.revision();
+            let receipt = host.publish_checked(revision, attempt, Some(&input), snapshot(), ElapsedTick(3)).unwrap();
             assert!(matches!(receipt.outcome, EndpointOutcome::Executed { .. }));
-            host.reconcile(host.revision(), attempt).unwrap();
+            let revision = host.revision(); host.reconcile(revision, attempt).unwrap();
             (72, Some(71))
         } else { (71, None) };
         if full {
             let mut host = supervisor.host_mut().unwrap();
             while host.journal_capacity().unwrap().remaining().events > 0 {
-                host.observe_time(host.revision(), ElapsedTick(4)).unwrap();
+                let revision = host.revision(); host.observe_time(revision, ElapsedTick(4)).unwrap();
             }
             assert_eq!(host.revision(), 128);
         }

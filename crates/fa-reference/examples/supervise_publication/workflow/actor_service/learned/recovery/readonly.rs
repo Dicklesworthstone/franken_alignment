@@ -1,5 +1,6 @@
 //! Explicit receipt inspection or settlement on the SAME guarded replay.
 //! Neither mode returns a live owner; a failed mode never falls back to the other.
+pub(in super::super) mod service;
 use super::{receipt_replay, selected::Cursor};
 use super::super::{Config, Loaded, Duration, Instant, RunResult, anchors, emit, finish, recipe};
 use fa_reference::action::consequence::oversight::actor_wire::WireResponse;
@@ -28,6 +29,9 @@ const EXPIRED: &str = "learned receipt recovery replay deadline reached";
 pub(in super::super) fn command(args: &[String], credibility: Option<&Path>,
     output: &mut impl Write) -> Result<(), String>
 {
+    if args.iter().any(|arg| arg == "--serve-receipts") {
+        return service::command(args, credibility);
+    }
     let started = Instant::now();
     if args.iter().any(|arg| arg == RECONCILE_FLAG) {
         command_reconciled_with_elapsed(args, credibility, output,
