@@ -3,6 +3,7 @@
 
 mod host;
 mod recovery;
+pub mod receipt;
 pub use recovery::FileActorRecoveryPort;
 pub(in crate::action::consequence::delivery::persistent) mod precheck;
 pub use precheck::{FileActorPrecheckPort, FilePrecheckBasis, FilePrecheckDisclosure,
