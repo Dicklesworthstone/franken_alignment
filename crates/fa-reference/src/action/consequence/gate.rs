@@ -8,6 +8,7 @@
 pub mod containment;
 
 use super::{Consequence, Decision, DecisionInputs, decide};
+use crate::action::retirement::RetirementBatch;
 use crate::action::{
     ActionState, ElapsedTick, FrozenAction, Inspection, MAX_ATTEMPTS, Permit, ReferenceAuthority,
     ResolvedTarget, Scope, TrustedOutcome,
@@ -94,6 +95,14 @@ pub struct ControlReceipt {
     pub ceiling: Option<TargetCeiling>,
 }
 
+/// Non-authorizing retirement record on the same ordered control sequence.
+/// Like review receipts, this is in-memory inspection evidence, not durability.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct RetirementReceipt {
+    pub sequence: u64,
+    pub batch: RetirementBatch,
+}
+
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct ControlInspection {
     pub ledger: Inspection,
@@ -115,6 +124,7 @@ pub struct ConsequenceAuthority {
     decisions: BTreeMap<u64, Consequence>,
     seen_rounds: BTreeSet<u64>,
     receipts: Vec<ControlReceipt>,
+    retirement_receipts: Vec<RetirementReceipt>,
 }
 
 impl ConsequenceAuthority {
@@ -127,6 +137,7 @@ impl ConsequenceAuthority {
             decisions: BTreeMap::new(),
             seen_rounds: BTreeSet::new(),
             receipts: Vec::new(),
+            retirement_receipts: Vec::new(),
         })
     }
 
@@ -192,9 +203,7 @@ impl ConsequenceAuthority {
         if self.seen_rounds.contains(&request.binding.round) {
             return Err(Error::Duplicate);
         }
-        if self.receipts.len() >= MAX_DECISIONS {
-            return Err(Error::Limit);
-        }
+        self.check_record_capacity()?;
         let attempt = self
             .authority
             .attempts
@@ -297,6 +306,54 @@ impl ConsequenceAuthority {
         self.seen_rounds.insert(request.binding.round);
         self.receipts.push(receipt.clone());
         Ok(receipt)
+    }
+
+    /// Atomically retire expired/revoked pre-dispatch work on the original owner.
+    /// A stale predecessor, exhausted journal or overflow leaves both accounting
+    /// and records unchanged. No-op calls consume no sequence or record budget.
+    /// Cleanup cannot lift a hold, widen a ceiling, resume a run or issue rights.
+    /// An expired hold is cancelled, never changed into a Continue decision.
+    pub fn retire_invalidated(
+        &mut self,
+        expected_control_sequence: u64,
+    ) -> Result<Option<RetirementReceipt>, Error> {
+        if expected_control_sequence != self.sequence {
+            return Err(Error::Stale);
+        }
+        let pending = self.authority.prepare_retirement()?;
+        if pending.report.retired.is_empty() {
+            return Ok(None);
+        }
+        self.check_record_capacity()?;
+        let sequence = self.sequence.checked_add(1).ok_or(Error::Overflow)?;
+        let receipt = RetirementReceipt {
+            sequence,
+            batch: pending.report.clone(),
+        };
+        self.authority.apply_retirement(pending);
+        for row in &receipt.batch.retired {
+            self.decisions.insert(row.attempt, Consequence::Deny);
+        }
+        self.sequence = sequence;
+        self.retirement_receipts.push(receipt.clone());
+        Ok(Some(receipt))
+    }
+
+    pub fn retirement_receipts(&self) -> &[RetirementReceipt] {
+        &self.retirement_receipts
+    }
+
+    fn check_record_capacity(&self) -> Result<(), Error> {
+        let count = self
+            .receipts
+            .len()
+            .checked_add(self.retirement_receipts.len())
+            .ok_or(Error::Limit)?;
+        if count >= MAX_DECISIONS {
+            Err(Error::Limit)
+        } else {
+            Ok(())
+        }
     }
 
     pub fn cancel(&mut self, id: u64) -> Result<(), Error> {
@@ -741,6 +798,177 @@ mod tests {
         assert_eq!(gate.propose(3, second), Err(Error::Binding));
         let review = request(&gate, 1, &first, Restriction::Continue);
         assert_eq!(gate.apply_review(review), Err(Error::WrongState));
+        conserved(&gate);
+    }
+
+    #[test]
+    fn retirement_releases_expired_hold_for_fresh_reviewed_work_only() {
+        let mut gate = authority();
+        let old = action(1, 20);
+        let permit = authorize(&mut gate, 1, &old);
+        let hold = request(&gate, 1, &old, Restriction::HoldEffect);
+        gate.apply_review(hold).unwrap();
+        gate.observe_time(ElapsedTick(99)).unwrap();
+        let before = gate.inspect();
+        assert_eq!(gate.retire_invalidated(before.sequence), Ok(None));
+        assert_eq!(gate.inspect(), before);
+        assert!(gate.retirement_receipts().is_empty());
+        assert_eq!(gate.dispatch(&permit, &old, &snapshot()), Err(Error::WrongState));
+        gate.observe_time(ElapsedTick(100)).unwrap();
+        let receipt = gate.retire_invalidated(before.sequence).unwrap().unwrap();
+        assert_eq!(receipt.sequence, before.sequence + 1);
+        assert_eq!(receipt.batch.refunded_units, 20);
+        assert_eq!(gate.retirement_receipts(), &[receipt]);
+        assert_eq!(gate.inspect().decisions[&1], Consequence::Deny);
+        assert_eq!(gate.inspect().ledger.stages[&1], ActionState::Cancelled);
+        assert_eq!(gate.dispatch(&permit, &old, &snapshot()), Err(Error::WrongState));
+        let mut spec = old.spec().clone();
+        spec.deadline = ElapsedTick(200);
+        let fresh = FrozenAction::freeze(spec).unwrap();
+        begin(&mut gate, 2, &fresh);
+        assert_eq!(
+            gate.authorize(2, &judgment(&fresh), &snapshot()).unwrap_err(),
+            Error::Incomplete
+        );
+        let review = request(&gate, 2, &fresh, Restriction::Continue);
+        gate.apply_review(review).unwrap();
+        let fresh_permit = gate.authorize(2, &judgment(&fresh), &snapshot()).unwrap();
+        gate.dispatch(&fresh_permit, &fresh, &snapshot()).unwrap();
+        let before_retry = gate.inspect();
+        assert_eq!(gate.retire_invalidated(before_retry.sequence), Ok(None));
+        assert_eq!(gate.inspect(), before_retry);
+        assert_eq!(gate.retirement_receipts().len(), 1);
+        conserved(&gate);
+    }
+
+    #[test]
+    fn retirement_invalidates_predecessors_but_not_live_actions() {
+        let mut gate = authority();
+        let old = action(1, 4);
+        let _permit = authorize(&mut gate, 1, &old);
+        let mut spec = action(2, 5).spec().clone();
+        spec.deadline = ElapsedTick(200);
+        let live = FrozenAction::freeze(spec).unwrap();
+        begin(&mut gate, 2, &live);
+        let obsolete = request(&gate, 2, &live, Restriction::Continue);
+        gate.observe_time(ElapsedTick(100)).unwrap();
+        let sequence = gate.sequence;
+        gate.retire_invalidated(sequence).unwrap().unwrap();
+        let before = gate.inspect();
+        assert_eq!(gate.apply_review(obsolete), Err(Error::Stale));
+        assert_eq!(gate.retire_invalidated(sequence), Err(Error::Stale));
+        assert_eq!(gate.inspect(), before);
+        assert_eq!(before.ledger.stages[&2], ActionState::Reviewing);
+        let current = request(&gate, 2, &live, Restriction::Continue);
+        gate.apply_review(current).unwrap();
+        let permit = gate.authorize(2, &judgment(&live), &snapshot()).unwrap();
+        gate.dispatch(&permit, &live, &snapshot()).unwrap();
+        conserved(&gate);
+    }
+
+    #[test]
+    fn retirement_cannot_widen_targets_resume_suspension_or_refund_unknown() {
+        let mut gate = authority();
+        let first = action(1, 8);
+        let second = action(2, 4);
+        let _first_permit = authorize(&mut gate, 1, &first);
+        let second_permit = authorize(&mut gate, 2, &second);
+        gate.dispatch(&second_permit, &second, &snapshot()).unwrap();
+        gate.mark_unknown(2).unwrap();
+        let mut narrow = request(&gate, 1, &first, Restriction::NarrowAuthority);
+        narrow.retained_targets =
+            Some(TargetCeiling::new(&[first.spec().target.unwrap()]).unwrap());
+        gate.apply_review(narrow).unwrap();
+        let ceiling = gate.inspect().ceiling;
+        gate.observe_time(ElapsedTick(100)).unwrap();
+        let sequence = gate.sequence;
+        let retired = gate.retire_invalidated(sequence).unwrap().unwrap();
+        assert_eq!(retired.batch.refunded_units, 8);
+        assert_eq!(gate.inspect().ceiling, ceiling);
+        assert_eq!(gate.inspect().ledger.charged, 4);
+        assert_eq!(gate.inspect().ledger.stages[&2], ActionState::Unknown);
+        assert_eq!(gate.propose(3, second.clone()), Err(Error::Binding));
+        let suspend = request(&gate, 2, &second, Restriction::SuspendRun);
+        gate.apply_review(suspend).unwrap();
+        let before = gate.inspect();
+        assert_eq!(gate.retire_invalidated(before.sequence), Ok(None));
+        assert_eq!(gate.inspect(), before);
+        assert!(before.suspended);
+        assert_eq!(gate.propose(4, first), Err(Error::WrongState));
+        gate.record_trusted_outcome(2, TrustedOutcome::NotExecuted).unwrap();
+        assert_eq!(gate.inspect().ledger.available, 20);
+        assert!(gate.inspect().suspended);
+        conserved(&gate);
+    }
+
+    #[test]
+    fn retirement_refuses_missing_clock_and_overflow_without_partial_mutation() {
+        let mut gate = ConsequenceAuthority::new(scope(), 20, 16).unwrap();
+        gate.propose(1, action(1, 4)).unwrap();
+        let before = gate.inspect();
+        assert_eq!(gate.retire_invalidated(0), Err(Error::Incomplete));
+        assert_eq!(gate.inspect(), before);
+        gate.observe_time(ElapsedTick(100)).unwrap();
+        gate.sequence = u64::MAX;
+        let before = gate.inspect();
+        assert_eq!(gate.retire_invalidated(u64::MAX), Err(Error::Overflow));
+        assert_eq!(gate.inspect(), before);
+        assert!(gate.retirement_receipts().is_empty());
+        // A no-op needs neither an increment nor an unused journal slot.
+        gate.cancel(1).unwrap();
+        assert_eq!(gate.retire_invalidated(u64::MAX), Ok(None));
+        conserved(&gate);
+    }
+
+    #[test]
+    fn retirement_and_reviews_share_the_record_bound() {
+        let mut gate = authority();
+        gate.propose(1, action(1, 1)).unwrap();
+        gate.observe_time(ElapsedTick(100)).unwrap();
+        gate.retire_invalidated(0).unwrap().unwrap();
+        let mut spec = action(2, 4).spec().clone();
+        spec.deadline = ElapsedTick(200);
+        let live = FrozenAction::freeze(spec).unwrap();
+        begin(&mut gate, 2, &live);
+        for _ in 1..MAX_DECISIONS {
+            let hold = request(&gate, 2, &live, Restriction::HoldEffect);
+            gate.apply_review(hold).unwrap();
+        }
+        assert_eq!(gate.receipts().len(), MAX_DECISIONS - 1);
+        assert_eq!(gate.retirement_receipts().len(), 1);
+        let before = gate.inspect();
+        assert_eq!(gate.retire_invalidated(before.sequence), Ok(None));
+        let excess = request(&gate, 2, &live, Restriction::Continue);
+        assert_eq!(gate.apply_review(excess), Err(Error::Limit));
+        assert_eq!(gate.inspect(), before);
+        gate.observe_time(ElapsedTick(200)).unwrap();
+        let before = gate.inspect();
+        assert_eq!(gate.retire_invalidated(before.sequence), Err(Error::Limit));
+        assert_eq!(gate.inspect(), before);
+        assert_eq!(gate.retirement_receipts().len(), 1);
+        conserved(&gate);
+    }
+
+    #[test]
+    fn retirement_accounting_failure_preserves_gate_journal_and_can_be_retried() {
+        let mut gate = authority();
+        let first = action(1, 4);
+        let second = action(2, 5);
+        let _first_permit = authorize(&mut gate, 1, &first);
+        let _second_permit = authorize(&mut gate, 2, &second);
+        gate.observe_time(ElapsedTick(100)).unwrap();
+        gate.authority.rights.reservations.get_mut(&2).unwrap().state = State::Dispatched;
+        let before = gate.inspect();
+        let reviews = gate.receipts().to_vec();
+        assert_eq!(gate.retire_invalidated(before.sequence), Err(Error::WrongState));
+        assert_eq!(gate.inspect(), before);
+        assert_eq!(gate.receipts(), reviews.as_slice());
+        assert!(gate.retirement_receipts().is_empty());
+        gate.authority.rights.reservations.get_mut(&2).unwrap().state = State::Reserved;
+        let receipt = gate.retire_invalidated(before.sequence).unwrap().unwrap();
+        assert_eq!(receipt.batch.refunded_units, 9);
+        assert_eq!(gate.inspect().ledger.available, 20);
+        assert_eq!(gate.receipts(), reviews.as_slice());
         conserved(&gate);
     }
 }
