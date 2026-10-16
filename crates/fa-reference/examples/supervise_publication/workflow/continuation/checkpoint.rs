@@ -6,13 +6,13 @@ use fa_reference::action::consequence::delivery::persistent::observed::{FileOver
 use std::{fs::{self, File, OpenOptions}, io::{self, Cursor}, path::{Component, Path, PathBuf}};
 use std::os::unix::fs::OpenOptionsExt;
 
-pub(super) struct Output {
+pub(crate) struct Output {
     path: PathBuf,
     topology: Vec<u8>,
     inventory: Vec<u8>,
 }
 impl Output {
-    pub(super) fn admit(config: &Config, path: &Path, topology: Vec<u8>, inventory: Vec<u8>)
+    pub(crate) fn admit(config: &Config, path: &Path, topology: Vec<u8>, inventory: Vec<u8>)
         -> Result<Self, String>
     {
         validate_path(path)?;
@@ -35,7 +35,7 @@ impl Output {
         }
     }
 
-    pub(super) fn retain(&self, host: &FileOversight, topology: Option<&FileDriverTopology>)
+    pub(crate) fn retain(&self, host: &FileOversight, topology: Option<&FileDriverTopology>)
         -> Result<(), String>
     {
         let result = (|| {

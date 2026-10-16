@@ -22,6 +22,8 @@ mod learned;
 mod native;
 #[path = "actor_service/tokenizer.rs"]
 mod tokenizer;
+#[path = "actor_service/topology.rs"]
+mod topology;
 use profile::Profile;
 use super::{ActionState, ActorWire, BoundSocket, Config, Deadline, Duration, ElapsedTick,
     ExecuteServices, FileOversight, FileRequestDisposition, FileSupervisedDriver, Instant,
@@ -38,6 +40,7 @@ type Port = FileActorPort<FileOversight>;
 const USAGE: &str = "serve-create|serve-open CONFIG ACTOR_PROFILE REVIEWER_PROFILE; serve-create-checked|serve-open-checked CONFIG ACTOR_PROFILE REVIEWER_PROFILE WITNESS_PROFILE; actor-submit ACTOR_PROFILE SUBMIT_JSON [SUBMIT_JSON ...]; serve-open and serve-open-checked also accept --credibility-activation EVIDENCE_FILE; all serve modes accept a final --requests 7,8,9 option OR --peers ACTOR_PROFILE [ACTOR_PROFILE ...]";
 
 pub(crate) fn command(args: &[String], credibility: Option<&Path>) -> Result<(), String> {
+    if args.iter().any(|arg| arg == "--topology-profile") { return topology::command(args, credibility); }
     if args.iter().any(|arg| matches!(arg.as_str(), "--receipts-only" | "--reconcile-receipts")) {
         return receipts::command(args, credibility);
     }
@@ -99,12 +102,23 @@ where F: FnMut() -> ElapsedTick {
 
 /// Qualification belongs to this operator-owned lifetime, not an actor frame.
 /// Recorded requests remain observation/reconciliation-only, even with a path.
-fn serve_with_credibility<F>(mut config: Config, actor: &Profile, reviewer_profile: &PeerProfile,
-    publication: Option<&PublicationProfile>, open: bool, credibility: Option<&Path>, mut time: F)
+fn serve_with_credibility<F>(config: Config, actor: &Profile, reviewer_profile: &PeerProfile,
+    publication: Option<&PublicationProfile>, open: bool, credibility: Option<&Path>, time: F)
+    -> Result<(), String>
+where F: FnMut() -> ElapsedTick {
+    serve_selected(config, actor, reviewer_profile, publication, open, credibility, None, time)
+}
+
+pub(super) fn serve_selected<F>(mut config: Config, actor: &Profile, reviewer_profile: &PeerProfile,
+    publication: Option<&PublicationProfile>, open: bool, credibility: Option<&Path>,
+    topology: Option<super::continuation::creation::topology::Selection>, mut time: F)
     -> Result<(), String>
 where F: FnMut() -> ElapsedTick {
     if !open && credibility.is_some() {
         return Err("live credibility activation requires an existing journal".into());
+    }
+    if topology.is_some() && (open || publication.is_some()) {
+        return Err("topology-supervised live service currently requires plain serve-create".into());
     }
     actor.check_host(&config)?; reviewer_profile.check_host(&config)?;
     if actor.socket == reviewer_profile.socket(actor.request)
@@ -114,11 +128,26 @@ where F: FnMut() -> ElapsedTick {
     let start = time();
     let runtime = actor.runtime_ms.min(config.timing.runtime_ms);
     let deadline = Deadline { logical: plus(start, runtime)?, started: Instant::now(), wall: Duration::from_millis(runtime) };
+    let mut prepared_topology = match topology {
+        Some(selection) => Some(selection.prepare(&config, &mut || deadline.check(time()))?),
+        None => None,
+    };
     // Claim only this new socket. Existing/stale paths are never unlinked. No
     // untrusted frame can run before the native owner and all guards are ready.
     let socket = BoundSocket::bind(&actor.socket, None)?;
     actor.secure_socket()?;
-    let (mut host, reviewer) = prepare_host(&config, publication, open)?;
+    let (mut host, reviewer, topology, topology_output) = match prepared_topology.as_mut() {
+        Some(prepared) => {
+            let output = prepared.take_output();
+            let prepared = prepared_topology.take().expect("selected topology");
+            let (host, reviewer, topology) = prepared.create(&config, None)?;
+            (host, reviewer, Some(topology), output)
+        }
+        None => {
+            let (host, reviewer) = prepare_host(&config, publication, open)?;
+            (host, reviewer, None, None)
+        }
+    };
     let recorded = match host.request_status(actor.request) {
         Ok(_) => true,
         Err(JournalError::Contract(Error::Missing)) => false,
@@ -135,6 +164,20 @@ where F: FnMut() -> ElapsedTick {
         host.check_credibility().map_err(debug)?;
     }
     let (port, mut driver) = host.into_supervised_driver();
+    if let Some(topology) = topology {
+        let revision = driver.supervisor().host().map_err(debug)?.revision();
+        driver.require_topology(revision, topology).map_err(debug)?;
+        deadline.check(time())?;
+        let revision = driver.supervisor().host().map_err(debug)?.revision();
+        let refreshed = driver.refresh_topology(revision).map_err(debug)?;
+        if refreshed.refusal.is_some()
+            || !matches!(refreshed.checked, Some(Ok(fa_reference::action::consequence::mediation::CutCheck::Verified(_)))) {
+            return Err("initial live-service topology was not certified by the native checker".into());
+        }
+        let now = time(); deadline.check(now)?;
+        let mut host = driver.supervisor_mut().host_mut().map_err(debug)?;
+        let revision = host.revision(); host.observe_time(revision, now).map_err(debug)?;
+    }
     // The operator can stop while the actor is absent or holds an incomplete
     // frame. Recorded keys stay receipt-only; they open no new control listener.
     let mut early_control = if recorded { None } else {
@@ -212,6 +255,15 @@ where F: FnMut() -> ElapsedTick {
         pause(actor.poll_ms);
     }
     ingress.session.revoke();
+    if let Some(output) = topology_output {
+        let retained = match driver.supervisor().host() {
+            Ok(host) => output.retain(&host, driver.topology()),
+            Err(error) => Err(debug(error)),
+        };
+        if let Err(error) = retained {
+            failure = Some(match failure { Some(previous) => format!("{previous}; {error}"), None => error });
+        }
+    }
     let pending = cleanup(driver, config.timing.cleanup_ms, config.timing.poll_ms);
     if let Some(error) = failure { return Err(format!("{error}; helper cleanup pending={pending}")); }
     if pending != 0 { return Err(format!("{pending} direct helper children lack reaping confirmation")); }

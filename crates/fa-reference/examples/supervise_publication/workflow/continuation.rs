@@ -13,7 +13,7 @@ pub(crate) mod creation;
 #[path = "continuation/andon.rs"]
 pub(crate) mod andon;
 #[path = "continuation/checkpoint.rs"]
-mod checkpoint;
+pub(crate) mod checkpoint;
 
 use super::{Deadline, RunResult, cleanup, execute, plus, resume_existing, stop};
 use crate::config::{CLOCK_DOMAIN, Config, debug};

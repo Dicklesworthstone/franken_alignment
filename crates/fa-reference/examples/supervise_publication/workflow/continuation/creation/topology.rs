@@ -14,18 +14,18 @@ use std::{collections::BTreeMap, fs, path::{Component, Path, PathBuf}};
 
 const PROFILE_BYTES: usize = 16 * 1024;
 
-pub(super) struct Selection {
+pub(crate) struct Selection {
     topology: PathBuf,
     inventory: PathBuf,
     output: Option<PathBuf>,
 }
 
 impl Selection {
-    pub(super) fn read(path: &Path) -> Result<Self, String> {
+    pub(crate) fn read(path: &Path) -> Result<Self, String> {
         Self::decode(&read_regular(path, PROFILE_BYTES)?)
     }
 
-    pub(super) fn decode(bytes: &[u8]) -> Result<Self, String> {
+    pub(crate) fn decode(bytes: &[u8]) -> Result<Self, String> {
         let value = strict_json::parse(bytes, Limits { max_bytes: PROFILE_BYTES,
             max_depth: 2, max_items: 12, max_string_bytes: 4096 }).map_err(debug)?;
         let Json::Object(mut fields) = value else { return Err("topology creation requires an object".into()); };
@@ -43,7 +43,7 @@ impl Selection {
         Ok(Self { topology, inventory, output })
     }
 
-    pub(super) fn prepare(self, config: &Config,
+    pub(crate) fn prepare(self, config: &Config,
         checkpoint: &mut impl FnMut() -> Result<(), String>) -> Result<Prepared, String>
     {
         checkpoint()?;
@@ -76,16 +76,16 @@ impl Selection {
     }
 }
 
-pub(super) struct Prepared {
+pub(crate) struct Prepared {
     selection: Selection,
     loaded: LoadedAuthorityTopology,
     output: Option<Output>,
 }
 
 impl Prepared {
-    pub(super) fn take_output(&mut self) -> Option<Output> { self.output.take() }
+    pub(crate) fn take_output(&mut self) -> Option<Output> { self.output.take() }
 
-    pub(super) fn create(self, config: &Config, publication: Option<PublicationLimits>)
+    pub(crate) fn create(self, config: &Config, publication: Option<PublicationLimits>)
         -> Result<(FileOversight, FileHumanReviewer, FileDriverTopology), String>
     {
         let guards = FileGuardSet { stream: None, decoder: None, decoder_stop: None,

@@ -7,7 +7,7 @@ use crate::recover_stop::guarded::CreationOutput;
 use fa_reference::action::consequence::oversight::actor_wire::{Command, MAX_FRAME_BYTES, decode_command};
 use std::{io::Write, path::Path, time::{Duration, Instant}};
 
-mod topology;
+pub(crate) mod topology;
 
 #[cfg(test)]
 mod topology_tests;
