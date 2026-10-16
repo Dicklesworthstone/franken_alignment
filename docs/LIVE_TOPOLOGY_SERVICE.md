@@ -23,10 +23,13 @@ driver's mandatory final topology refresh after evidence capture and before the
 final publication clock.
 
 Version 2 creation profiles retain their existing `retain_checkpoint` path.
-The live service now exports that checkpoint from the actual driver-owned source
-and healthy acknowledged owner before helper cleanup, preserving real spent
-checks, operation floor, source expectation and exact history. Export failure
-does not undo acknowledged work and does not trigger an effect retry.
+The live service exports that checkpoint only from the actual driver-owned
+source after the service has completed without an execution, stop/drain, or
+reply-grace failure. A failed service therefore cannot mint a recovery anchor
+that is indistinguishable from a clean handoff. Successful retention still
+preserves real spent checks, operation floor, source expectation and exact
+history. Export failure does not undo acknowledged work and does not trigger an
+effect retry.
 
 This increment intentionally refuses topology-supervised `serve-open`, checked
 publication profiles and credibility activation. Reopening must consume the
