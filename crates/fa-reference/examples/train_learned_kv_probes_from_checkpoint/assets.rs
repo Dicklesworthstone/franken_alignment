@@ -63,7 +63,8 @@ pub(super) fn load_with_source(args: &[OsString], source: bool) -> Result<(Plan,
         NativeTokenizerFormat::NativeArchive => MAX_FILE_TOKENIZER_BYTES,
         NativeTokenizerFormat::HuggingFaceRawByteLevel
             | NativeTokenizerFormat::HuggingFaceGpt2Unicode17
-            | NativeTokenizerFormat::HuggingFaceLlama3Unicode17 => ByteBpe::MAX_HUGGINGFACE_JSON_BYTES,
+            | NativeTokenizerFormat::HuggingFaceLlama3Unicode17
+            | NativeTokenizerFormat::HuggingFaceLlama3Unicode17Bos => ByteBpe::MAX_HUGGINGFACE_JSON_BYTES,
     };
     let tokenizer_bytes = auxiliary(Path::new(&args[2]), maximum)?;
     let tokenizer = match plan.tokenizer_format {
@@ -74,6 +75,8 @@ pub(super) fn load_with_source(args: &[OsString], source: bool) -> Result<(Plan,
             negotiated.profile(), &tokenizer_bytes, maximum, PreTokenization::Gpt2Unicode17),
         NativeTokenizerFormat::HuggingFaceLlama3Unicode17 => ByteBpe::from_huggingface_json_with_pre_tokenization(
             negotiated.profile(), &tokenizer_bytes, maximum, PreTokenization::Llama3Unicode17),
+        NativeTokenizerFormat::HuggingFaceLlama3Unicode17Bos => ByteBpe::from_huggingface_llama3_bos_json(
+            negotiated.profile(), &tokenizer_bytes, maximum),
     }.map_err(contract)?;
     // The independently retained codec source inventory must describe the exact
     // original cache profile and be disjoint from every declared probe origin.

@@ -229,3 +229,93 @@ fn generated_unicode_recipes_recover_exact_work_and_bind_the_complete_input_gram
         }
     }
 }
+
+
+#[test]
+fn generated_llama3_bos_recipe_recovers_the_same_tokens_and_work_with_both_publication_keys() {
+    use crate::workflow::actor_service::tokenizer::{direct, fixture::unicode_json};
+    for approve in [false, true] {
+        let root = Root::new(); let mut config = configured(&root);
+        let path = json_recipe(&root);
+        let raw_recipe = fs::read_to_string(&path).unwrap();
+        assert!(raw_recipe.contains("\"prefix_controls\":[256]"));
+        let exact_recipe = raw_recipe.replace("huggingface_raw_bytelevel", "huggingface_llama3_unicode17_bos")
+            .replace("\"prefix_controls\":[256]", "\"prefix_controls\":[]");
+        let raw_tokenizer = raw_byte_level_json(false);
+        let exact_tokenizer = unicode_json::with_llama3_bos(&raw_tokenizer, "<eos>", 256);
+        let tokenizer_path = root.0.join("tokenizer.json");
+        fs::write(&path, &exact_recipe).unwrap();
+        fs::write(&tokenizer_path, &exact_tokenizer).unwrap();
+        let loaded = recipe::load(&path, &config).unwrap();
+        assert!(loaded.text.prefix_controls.is_empty());
+        assert_eq!(loaded.tokenizer.bos_token(), Some(256));
+        let encoded = loaded.tokenizer.encode(&loaded.text.prompt, Default::default()).unwrap();
+        assert_eq!(encoded.source(), b"x");
+        assert_eq!(encoded.tokens(), &[256, 120]);
+        assert_eq!(encoded.spans(), &[0..0, 0..1]);
+        let archive = loaded.tokenizer.to_bytes().unwrap();
+        assert_eq!(&archive[..8], b"FABBPE06");
+        let (mut host, old_reviewer) = FileOversight::create_generated_text_stream_with_reserve(
+            &config.store, config.profile.clone(), loaded.stream, loaded.decoder.clone(),
+            loaded.tokenizer.clone(), RecoveryReserve::terminal()).unwrap();
+        host.enable_file_source(host.revision(), config.source_policy).unwrap();
+        direct::begin(&mut host, &mut config, loaded.generation, loaded.text.clone());
+        let pending = host.pending_decoder_text().unwrap().unwrap();
+        let numerical = host.decoder_inspection().unwrap().numerical;
+        let work = host.decoder_text_progress(loaded.generation).unwrap().numerical().partial().unwrap().work();
+        drop(host);
+
+        // The old manual prefix produces exactly the same original prompt IDs.
+        // It cannot replace the immutable automatic-prefix interpretation.
+        fs::write(&path, &raw_recipe).unwrap();
+        fs::write(&tokenizer_path, &raw_tokenizer).unwrap();
+        let changed = recipe::load(&path, &config).unwrap();
+        let old_prompt = changed.tokenizer.encode(&changed.text.prompt, Default::default()).unwrap();
+        let old_tokens: Vec<_> = changed.text.prefix_controls.iter().chain(old_prompt.tokens()).copied().collect();
+        assert_eq!(old_tokens, encoded.tokens());
+        let disk = fs::read(config.store.join("delivery.bin")).unwrap();
+        assert!(recovery::open(&config, &changed).is_err());
+        assert_eq!(fs::read(config.store.join("delivery.bin")).unwrap(), disk);
+
+        // JSON and native input select the same complete archive; the filename
+        // does not trigger a fallback and reopening does not re-run prompt work.
+        fs::write(&path, exact_recipe.replace("huggingface_llama3_unicode17_bos", "native_archive")).unwrap();
+        fs::write(&tokenizer_path, archive).unwrap();
+        let exact = recipe::load(&path, &config).unwrap();
+        assert_eq!(exact.tokenizer.to_bytes().unwrap(), loaded.tokenizer.to_bytes().unwrap());
+        let (mut host, reviewer) = recovery::open(&config, &exact).unwrap();
+        assert_eq!(host.pending_decoder_text().unwrap().unwrap(), pending);
+        assert_eq!(host.decoder_inspection().unwrap().numerical, numerical);
+        assert_eq!(host.decoder_text_progress(exact.generation).unwrap().numerical().partial().unwrap().work(), work);
+        let request = direct::complete(&mut host, &mut config, (&reviewer, &old_reviewer),
+            (exact.generation, exact.request), approve);
+        drop(host);
+        fs::remove_file(root.0.join("evidence.json")).unwrap();
+        config.programs.clear();
+        let (mut host, _) = recovery::open(&config, &exact).unwrap();
+        direct::receipt(&mut host, &config, &request, approve);
+    }
+}
+
+#[test]
+fn generated_llama3_bos_template_is_checked_before_weights_or_publication_storage() {
+    use crate::workflow::actor_service::tokenizer::fixture::unicode_json;
+    use fa_reference::action::consequence::activation::monitor::decoder::sampled::generation::tokenizer::PreTokenization;
+    let root = Root::new(); let config = configured(&root); let path = json_recipe(&root);
+    let source = fs::read_to_string(&path).unwrap().replace("huggingface_raw_bytelevel", "huggingface_llama3_unicode17_bos");
+    fs::write(&path, source).unwrap();
+    fs::remove_file(root.0.join("weights.safetensors")).unwrap();
+    let raw = raw_byte_level_json(false);
+    let valid = unicode_json::with_llama3_bos(&raw, "<eos>", 256);
+    for invalid in [
+        unicode_json::select(&raw, PreTokenization::Llama3Unicode17),
+        valid.replace("\"ids\":[256]", "\"ids\":[65]"),
+    ] {
+        fs::write(root.0.join("tokenizer.json"), invalid).unwrap();
+        assert_eq!(recipe::load(&path, &config).err().unwrap(), "tokenizer input refused: Binding");
+        assert!(!config.store.exists());
+    }
+    fs::write(root.0.join("tokenizer.json"), valid).unwrap();
+    assert!(!recipe::load(&path, &config).err().unwrap().starts_with("tokenizer input refused:"));
+    assert!(!config.store.exists());
+}

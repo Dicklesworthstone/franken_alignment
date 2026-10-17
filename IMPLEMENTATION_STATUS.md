@@ -1,5 +1,31 @@
 # Implementation status · design revision 0.3
 
+## 2026-10-17: explicit BOS tokenizer compatibility (unqualified source)
+
+The original bounded byte-BPE engine now has an explicit Llama-3/Unicode-17 BOS
+profile. Its closed importer accepts one precisely bound BOS template and the
+converter's inert ByteLevel wrapper. It preserves original token IDs and literal
+control occurrences, prepends a synthetic `0..0` token span, and retains the
+original source, work, output and decoder limits. The FA-BBPE/6 archive binds the
+prefix and original BOS ID; formats /1 through /5 are unchanged.
+
+The same selection reaches native helper bootstrap and checkpoint configuration,
+publication input, and learned monitor training. Regression source checks exact
+encoding and archive behavior, worker Allow/Deny and malformed intake, monitored
+training/artifact binding, and original publication/recovery. This does not
+expand the supported architecture or model/vocabulary bounds, provide a general
+template interpreter, or establish empirical detector quality. See
+[the exact tokenizer contract](docs/UNICODE_PRETOKENIZATION.md).
+
+FA-025 and FA-026 remain in progress. The remote-only gate command using the
+qualified `nightly-2026-09-08` was attempted with `RCH_REQUIRE_REMOTE=1`;
+RCH exited 103 and refused local fallback because the daemon was unavailable.
+After the execution server restarted, all eighteen changed Rust sources passed
+nonmutating syntax parsing with rustfmt from the qualified-date toolchain. Test
+source has been reviewed, but syntax is not type checking or execution;
+compilation, formatting, Clippy, runtime tests and release qualification remain
+open.
+
 ## 2026-10-17: process-backed learned publication (unqualified source)
 
 The original `FileLearnedProcessReview` now runs through the supervised actor

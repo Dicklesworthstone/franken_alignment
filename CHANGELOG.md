@@ -1,5 +1,20 @@
 # Changelog
 
+## 2026-10-17: bind explicit BOS tokenization through native workflows
+
+- Add a separately selected Llama-3/Unicode-17 BOS template importer and
+  programmatic constructor, preserving original IDs, literal controls, source
+  spans, cooperative work limits and the output ceiling.
+- Add FA-BBPE/6 persistence for the exact BOS ID and interpretation. Earlier
+  archive versions and null-postprocessor imports retain their semantics.
+- Connect the profile to native helper bootstrap/configuration, publication
+  input, and checkpoint monitor training; add positive and negative regression
+  source across encoding, archives, workers, training, and recovery.
+- All eighteen changed Rust sources passed nonmutating syntax parsing with
+  qualified-date rustfmt. Required remote-only RCH execution remains unavailable
+  (daemon refusal, exit 103). Source is unqualified; formatting, compilation,
+  Clippy, runtime tests and release qualification remain open.
+
 ## 2026-10-17: connect process-backed learned review to publication
 
 - Join the original bounded learned-process sequence to the supervised actor

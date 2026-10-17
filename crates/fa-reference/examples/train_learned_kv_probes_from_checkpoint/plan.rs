@@ -71,6 +71,7 @@ impl Plan {
             "huggingface_raw_bytelevel" => NativeTokenizerFormat::HuggingFaceRawByteLevel,
             "huggingface_gpt2_unicode17" => NativeTokenizerFormat::HuggingFaceGpt2Unicode17,
             "huggingface_llama3_unicode17" => NativeTokenizerFormat::HuggingFaceLlama3Unicode17,
+            "huggingface_llama3_unicode17_bos" => NativeTokenizerFormat::HuggingFaceLlama3Unicode17Bos,
             _ => return Err("unsupported explicit tokenizer format".into()),
         };
         let mut limits = root.object("input_limits")?;

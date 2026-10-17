@@ -1,8 +1,9 @@
 //! Exact, model-bound byte BPE with explicit optional named controls.
 //!
 //! Raw input remains one byte sequence. Explicit Unicode-17 profiles additionally
-//! supply the exact GPT-2 or Llama-3 pretokenization grammar, without a general
-//! regex engine, normalization, prefix insertion, templates or unknown fallback.
+//! supply the exact GPT-2 or Llama-3 pretokenization grammar. A separate explicit
+//! Llama-3 BOS profile inserts one registered control before the original input.
+//! No general regex engine, normalization, template interpreter or fallback exists.
 //! Named-control recognition is enabled only by an explicit immutable
 //! registration, retained by its canonical archive.
 //! A caller must independently establish that these are its model's trained
@@ -13,6 +14,7 @@
 mod wire;
 mod special;
 mod pretokenizer;
+mod postprocessor;
 mod unicode17;
 pub use special::MAX_SPECIAL_TOKEN_BYTES;
 pub use pretokenizer::PreTokenization;
@@ -100,6 +102,7 @@ struct Data {
     max_content_bytes: usize,
     special: special::SpecialTokens,
     pre_tokenization: PreTokenization,
+    bos_token: Option<u32>,
 }
 
 /// Immutable tokenization DATA bound to an independently supplied model profile.
@@ -110,6 +113,7 @@ impl fmt::Debug for ByteBpe {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("ByteBpe").field("profile", self.profile())
             .field("pre_tokenization", &self.pre_tokenization())
+            .field("bos_token", &self.bos_token())
             .field("merges", &self.0.merges.len()).finish_non_exhaustive()
     }
 }
@@ -129,6 +133,9 @@ pub struct TokenizedInput {
 impl TokenizedInput {
     pub fn source(&self) -> &[u8] { &self.source }
     pub fn tokens(&self) -> &[u32] { &self.tokens }
+    /// Original-byte provenance for every ID. An explicitly configured automatic
+    /// BOS has the synthetic span 0..0; the remaining spans form the complete
+    /// nonempty partition of source bytes, including any literal named controls.
     pub fn spans(&self) -> &[Range<usize>] { &self.spans }
     pub fn profile(&self) -> &DecoderProfile { self.tokenizer.profile() }
     pub fn tokenizer(&self) -> &ByteBpe { &self.tokenizer }
@@ -256,6 +263,10 @@ impl TokenizationCursor {
                 }
             }
             EncodingPhase::Collecting(Some(current)) => {
+                // The automatic BOS counts toward the original output ceiling.
+                // Scratch was reserved at admission; no partial IDs escape if
+                // an uncompressed maximum-size prompt would need one more slot.
+                if self.tokens.len() == MAX_INPUT_BYTES { return Err(Error::Limit); }
                 self.tokens.push(self.nodes[current].token);
                 self.spans.push(current..self.nodes[current].end);
                 self.phase = EncodingPhase::Collecting(self.nodes[current].next);
@@ -354,11 +365,14 @@ impl ByteBpe {
         Ok(Self(Rc::new(Data { profile, vocabulary, merges, ranks,
             singletons: singletons.map(|id| id.expect("complete singleton inventory")),
             controls, max_content_bytes, special: special::SpecialTokens::default(),
-            pre_tokenization: PreTokenization::RawBytes })))
+            pre_tokenization: PreTokenization::RawBytes, bos_token: None })))
     }
 
     pub fn profile(&self) -> &DecoderProfile { &self.0.profile }
     pub fn pre_tokenization(&self) -> PreTokenization { self.0.pre_tokenization }
+    /// The explicit automatic prefix, separate from literal control recognition.
+    /// Existing constructors and non-BOS input profiles always return None.
+    pub fn bos_token(&self) -> Option<u32> { self.0.bos_token }
     pub fn control_tokens(&self) -> &[u32] { &self.0.controls }
     pub fn max_content_bytes(&self) -> usize { self.0.max_content_bytes }
     pub fn content_bytes(&self, token: u32) -> Result<&[u8], Error> {
@@ -408,10 +422,11 @@ impl ByteBpe {
         nodes.try_reserve_exact(count).map_err(|_| Error::Limit)?;
         let mut heap = BinaryHeap::new();
         heap.try_reserve(count.saturating_mul(3)).map_err(|_| Error::Limit)?;
+        let output_count = (count + usize::from(self.bos_token().is_some())).min(MAX_INPUT_BYTES);
         let mut tokens = Vec::new();
-        tokens.try_reserve_exact(count).map_err(|_| Error::Limit)?;
+        tokens.try_reserve_exact(output_count).map_err(|_| Error::Limit)?;
         let mut spans = Vec::new();
-        spans.try_reserve_exact(count).map_err(|_| Error::Limit)?;
+        spans.try_reserve_exact(output_count).map_err(|_| Error::Limit)?;
         let mut original = Vec::new();
         original.try_reserve_exact(count).map_err(|_| Error::Limit)?;
         original.extend_from_slice(source);
@@ -425,6 +440,13 @@ impl ByteBpe {
         self.0.special.bind_nodes(source, &mut nodes)?;
         if let Some(unicode) = unicode {
             self.0.pre_tokenization.bind_nodes(unicode, &mut nodes, &self.0.vocabulary)?;
+        }
+        // Validation, source retention and all capacity admission precede the
+        // insertion. Like the fixed upstream template, even empty input gets a
+        // BOS, and a literal BOS in the source does not suppress this prefix.
+        if let Some(bos) = self.bos_token() {
+            tokens.push(bos);
+            spans.push(0..0);
         }
         Ok(TokenizationCursor { tokenizer: self.clone(), source: original,
             nodes, heap, tokens, spans, budget, work: *work,

@@ -17,3 +17,23 @@ pub fn select(raw_json: &str, mode: PreTokenization) -> String {
     };
     raw_json.replacen(&from, &format!("\"pre_tokenizer\":{pipeline}"), 1)
 }
+
+
+/// The actual Llama converter's ByteLevel/TemplateProcessing serialization.
+/// The caller names an already registered control; the importer must validate it.
+#[allow(dead_code)] // This shared fixture is included by several independent test targets.
+pub fn with_llama3_bos(raw_json: &str, name: &str, token: u32) -> String {
+    let selected = select(raw_json, PreTokenization::Llama3Unicode17);
+    let name = format!("\"{}\"", name.replace('\\', "\\\\").replace('"', "\\\""));
+    let processor = concat!(
+        r#"{"type":"Sequence","processors":["#,
+        r#"{"type":"ByteLevel","add_prefix_space":true,"trim_offsets":false,"use_regex":true},"#,
+        r#"{"type":"TemplateProcessing","single":["#,
+        r#"{"SpecialToken":{"id":BOS_NAME,"type_id":0}},{"Sequence":{"id":"A","type_id":0}}],"#,
+        r#""pair":[{"SpecialToken":{"id":BOS_NAME,"type_id":0}},{"Sequence":{"id":"A","type_id":0}},"#,
+        r#"{"SpecialToken":{"id":BOS_NAME,"type_id":1}},{"Sequence":{"id":"B","type_id":1}}],"#,
+        r#""special_tokens":{BOS_NAME:{"id":BOS_NAME,"ids":[BOS_ID],"tokens":[BOS_NAME]}}}]}"#,
+    ).replace("BOS_NAME", &name).replace("BOS_ID", &token.to_string());
+    assert!(selected.contains("\"post_processor\":null"));
+    selected.replacen("\"post_processor\":null", &format!("\"post_processor\":{processor}"), 1)
+}

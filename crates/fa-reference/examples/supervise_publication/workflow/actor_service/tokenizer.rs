@@ -27,6 +27,7 @@ impl TokenizerInput {
                 Some("huggingface_raw_bytelevel") => NativeTokenizerFormat::HuggingFaceRawByteLevel,
                 Some("huggingface_gpt2_unicode17") => NativeTokenizerFormat::HuggingFaceGpt2Unicode17,
                 Some("huggingface_llama3_unicode17") => NativeTokenizerFormat::HuggingFaceLlama3Unicode17,
+                Some("huggingface_llama3_unicode17_bos") => NativeTokenizerFormat::HuggingFaceLlama3Unicode17Bos,
                 _ => return Err("unknown tokenizer format".into()),
             };
             (format, path)
@@ -45,7 +46,8 @@ impl TokenizerInput {
             NativeTokenizerFormat::NativeArchive => MAX_FILE_TOKENIZER_BYTES,
             NativeTokenizerFormat::HuggingFaceRawByteLevel
                 | NativeTokenizerFormat::HuggingFaceGpt2Unicode17
-                | NativeTokenizerFormat::HuggingFaceLlama3Unicode17 => ByteBpe::MAX_HUGGINGFACE_JSON_BYTES,
+                | NativeTokenizerFormat::HuggingFaceLlama3Unicode17
+                | NativeTokenizerFormat::HuggingFaceLlama3Unicode17Bos => ByteBpe::MAX_HUGGINGFACE_JSON_BYTES,
         }
     }
 
@@ -58,6 +60,8 @@ impl TokenizerInput {
                 ByteBpe::from_huggingface_json_with_pre_tokenization(profile, bytes, self.byte_limit(), PreTokenization::Gpt2Unicode17),
             NativeTokenizerFormat::HuggingFaceLlama3Unicode17 =>
                 ByteBpe::from_huggingface_json_with_pre_tokenization(profile, bytes, self.byte_limit(), PreTokenization::Llama3Unicode17),
+            NativeTokenizerFormat::HuggingFaceLlama3Unicode17Bos =>
+                ByteBpe::from_huggingface_llama3_bos_json(profile, bytes, self.byte_limit()),
         }.map_err(|error| format!("tokenizer input refused: {error:?}"))
     }
 }

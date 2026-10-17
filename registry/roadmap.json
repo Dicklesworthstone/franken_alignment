@@ -653,7 +653,7 @@
       "id": "FA-025",
       "gate": "G3",
       "title": "Establish original-token recomputation baseline",
-      "status": "planned",
+      "status": "in_progress",
       "depends_on": [
         "FA-023",
         "FA-024"
@@ -669,13 +669,17 @@
       ],
       "owner_role": "systems",
       "estimated_scope": "One independently reviewable work packet; split before implementation if multiple semantics change.",
-      "result_artifacts": []
+      "result_artifacts": [
+        "docs/UNICODE_PRETOKENIZATION.md",
+        "crates/fa-reference/tests/llama3_bos.rs",
+        "IMPLEMENTATION_STATUS.md"
+      ]
     },
     {
       "id": "FA-026",
       "gate": "G3",
       "title": "Implement lossless restart manifest and serialization",
-      "status": "planned",
+      "status": "in_progress",
       "depends_on": [
         "FA-016",
         "FA-024",
@@ -693,7 +697,11 @@
       ],
       "owner_role": "systems",
       "estimated_scope": "One independently reviewable work packet; split before implementation if multiple semantics change.",
-      "result_artifacts": [],
+      "result_artifacts": [
+        "docs/UNICODE_PRETOKENIZATION.md",
+        "crates/fa-reference/tests/llama3_bos.rs",
+        "IMPLEMENTATION_STATUS.md"
+      ],
       "founding_ideas": [
         "FI-I03",
         "FI-I05"

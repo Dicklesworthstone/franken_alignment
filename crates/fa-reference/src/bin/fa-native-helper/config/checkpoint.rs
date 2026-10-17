@@ -53,6 +53,7 @@ pub(super) fn tokenizer_format(value: &Json) -> Result<NativeTokenizerFormat, La
         Some("huggingface-raw-bytelevel") => Ok(NativeTokenizerFormat::HuggingFaceRawByteLevel),
         Some("huggingface-gpt2-unicode17") => Ok(NativeTokenizerFormat::HuggingFaceGpt2Unicode17),
         Some("huggingface-llama3-unicode17") => Ok(NativeTokenizerFormat::HuggingFaceLlama3Unicode17),
+        Some("huggingface-llama3-unicode17-bos") => Ok(NativeTokenizerFormat::HuggingFaceLlama3Unicode17Bos),
         _ => Err(LaunchError::Field("tokenizer_format")),
     }
 }

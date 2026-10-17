@@ -6,7 +6,8 @@ pub mod files;
 
 /// Operator-selected data format, never inferred from a filename or a failed
 /// parser. JSON supports raw ByteLevel BPE or either explicitly selected frozen
-/// Unicode grammar, including registered literal controls, not arbitrary pipelines.
+/// Unicode grammar, including registered literal controls and the explicit
+/// Llama-3 BOS template, not arbitrary pipelines.
 /// Selecting a format does not authenticate the tokenizer or its trained model.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum NativeTokenizerFormat {
@@ -14,6 +15,7 @@ pub enum NativeTokenizerFormat {
     HuggingFaceRawByteLevel,
     HuggingFaceGpt2Unicode17,
     HuggingFaceLlama3Unicode17,
+    HuggingFaceLlama3Unicode17Bos,
 }
 
 use super::{NativeEvaluator, NativeHelperPolicy, TextDecoder};
@@ -150,6 +152,8 @@ impl NativeHelperBootstrap<'_> {
                 expected, self.tokenizer, ByteBpe::MAX_HUGGINGFACE_JSON_BYTES, PreTokenization::Gpt2Unicode17),
             NativeTokenizerFormat::HuggingFaceLlama3Unicode17 => ByteBpe::from_huggingface_json_with_pre_tokenization(
                 expected, self.tokenizer, ByteBpe::MAX_HUGGINGFACE_JSON_BYTES, PreTokenization::Llama3Unicode17),
+            NativeTokenizerFormat::HuggingFaceLlama3Unicode17Bos => ByteBpe::from_huggingface_llama3_bos_json(
+                expected, self.tokenizer, ByteBpe::MAX_HUGGINGFACE_JSON_BYTES),
         }.map_err(NativeBootstrapError::Tokenizer)?;
         self.policy.check_tokenizer(&tokenizer).map_err(NativeBootstrapError::Contract)?;
         SamplingConfig::decode(self.sampling, expected.shape().vocabulary)

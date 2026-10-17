@@ -2,8 +2,9 @@
 //!
 //! The legacy entry point keeps raw-byte semantics. An explicitly selected
 //! Unicode-17 entry point admits exactly the named GPT-2 or Llama-3 grammar.
-//! Neither admits normalization, prefix insertion, padding, truncation or
-//! postprocessing. Literal non-normalized special tokens are admitted explicitly;
+//! Those APIs admit no normalization, prefix insertion, padding, truncation or
+//! postprocessing. A separate Llama-3 BOS API admits one fixed prefix template.
+//! Literal non-normalized special tokens are admitted explicitly;
 //! other added-token transformations and arbitrary pipelines refuse.
 //! The vocabulary's reversible ByteLevel alphabet is converted to original bytes,
 //! then the ORIGINAL ByteBpe constructor validates the entire token/merge graph.
@@ -15,6 +16,8 @@
 mod reader;
 #[path = "huggingface/special.rs"]
 mod special;
+#[path = "huggingface/postprocessor.rs"]
+mod postprocessor;
 
 use super::{ByteBpe, Merge, PreTokenization, TokenBytes, MAX_MERGES, MAX_TOKEN_BYTES, MAX_VOCABULARY_BYTES};
 use crate::action::consequence::activation::tensor::kv::decoder::DecoderProfile;
@@ -81,6 +84,31 @@ impl ByteBpe {
         bytes: &[u8], max_bytes: usize, pre_tokenization: PreTokenization)
         -> Result<Self, Error>
     {
+        Self::from_huggingface_profile(expected, bytes, max_bytes, pre_tokenization, false)
+    }
+
+    /// Select Llama-3/Unicode-17 plus the exact beginning-of-sequence template.
+    /// The single template must be BOS:0, A:0 and the declared pair template
+    /// BOS:0, A:0, BOS:1, B:1. Its sole special-token record must resolve to the
+    /// same original ID and spelling as an admitted named control. The template
+    /// may be bare or follow one ByteLevel postprocessor with trim_offsets=false;
+    /// the latter's other two flags must be booleans and are semantically inert.
+    ///
+    /// This API encodes a single byte input, never a pair or arbitrary template.
+    /// It always prefixes BOS, even for empty input or a literal BOS at the start.
+    /// That prefix has a synthetic 0..0 span, followed by original byte spans.
+    /// All other model, grammar, source and work bounds retain their owner.
+    pub fn from_huggingface_llama3_bos_json(expected: &DecoderProfile,
+        bytes: &[u8], max_bytes: usize) -> Result<Self, Error>
+    {
+        Self::from_huggingface_profile(expected, bytes, max_bytes,
+            PreTokenization::Llama3Unicode17, true)
+    }
+
+    fn from_huggingface_profile(expected: &DecoderProfile, bytes: &[u8],
+        max_bytes: usize, pre_tokenization: PreTokenization, bos_template: bool)
+        -> Result<Self, Error>
+    {
         if max_bytes == 0 || max_bytes > MAX_JSON_BYTES || bytes.len() > max_bytes {
             return Err(Error::Limit);
         }
@@ -97,9 +125,10 @@ impl ByteBpe {
         })?;
         let root = exact_object(&value, ROOT_FIELDS)?;
         if required(root, "version")?.as_str() != Some("1.0") { return Err(Error::Binding); }
-        for field in ["truncation", "padding", "normalizer", "post_processor"] {
+        for field in ["truncation", "padding", "normalizer"] {
             require_null(required(root, field)?)?;
         }
+        if !bos_template { require_null(required(root, "post_processor")?)?; }
         let added = required(root, "added_tokens")?.as_array().ok_or(Error::InvalidInput)?;
         pipeline(required(root, "pre_tokenizer")?, required(root, "decoder")?, pre_tokenization)?;
         let model = exact_object(required(root, "model")?, MODEL_FIELDS)?;
@@ -119,6 +148,9 @@ impl ByteBpe {
         let rules = required(model, "merges")?.as_array().ok_or(Error::InvalidInput)?;
         if rules.len() > MAX_MERGES { return Err(Error::Limit); }
         let names = special::names(added, declared, count)?;
+        let bos = if bos_template {
+            Some(postprocessor::bos_token(required(root, "post_processor")?, &names)?)
+        } else { None };
         let alphabet = alphabet_inverse();
         let mut slots = Vec::new();
         slots.try_reserve_exact(count).map_err(|_| Error::Limit)?;
@@ -175,7 +207,10 @@ impl ByteBpe {
         }
         // Reuse the original total-byte, singleton, ordering, duplicate-pair and
         // reachability checks. A parsed JSON graph alone never admits a tokenizer.
-        Self::new_with_pre_tokenization(expected.clone(), vocabulary, merges, names, pre_tokenization)
+        match bos {
+            Some(bos) => Self::new_with_bos_token(expected.clone(), vocabulary, merges, names, bos),
+            None => Self::new_with_pre_tokenization(expected.clone(), vocabulary, merges, names, pre_tokenization),
+        }
     }
 }
 
