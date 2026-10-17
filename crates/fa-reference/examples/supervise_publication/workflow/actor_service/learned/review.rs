@@ -17,6 +17,7 @@ use std::collections::BTreeSet;
 pub(super) struct Reviewed {
     pub driver: FileSupervisedDriver,
     pub history: Option<FileNativeSidecarSequence>,
+    pub process: Option<super::process::ProcessHistory>,
     pub stop_requested: bool,
     pub failure: Option<String>,
 }
@@ -86,9 +87,12 @@ where F: FnMut() -> ElapsedTick {
 pub(super) fn run<F>(driver: FileSupervisedDriver, config: &mut Config, loaded: &Loaded,
     reviewer: &FileHumanReviewer, control: &mut Control, deadline: &Deadline, time: &mut F) -> Reviewed
 where F: FnMut() -> ElapsedTick {
+    if loaded.process.is_some() {
+        return super::process::run(driver, config, loaded, reviewer, control, deadline, time);
+    }
     let mut run = match start(driver, config, loaded, deadline, time) {
         Ok(run) => run, Err((driver, error)) => return Reviewed {
-            driver, history: None, stop_requested: false, failure: Some(error) },
+            driver, history: None, process: None, stop_requested: false, failure: Some(error) },
     };
     let mut stop_requested = false;
     let result = (|| {
@@ -138,7 +142,7 @@ where F: FnMut() -> ElapsedTick {
             Err(error) => failure = Some(error),
         }
     }
-    Reviewed { driver, history: Some(handoff.review), stop_requested, failure }
+    Reviewed { driver, history: Some(handoff.review), process: None, stop_requested, failure }
 }
 
 // Polls and review revisions advance even when the protocol cannot. The caller

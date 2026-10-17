@@ -464,7 +464,7 @@
       "id": "FA-018",
       "gate": "G2",
       "title": "Implement isolated bounded helper workers",
-      "status": "planned",
+      "status": "in_progress",
       "depends_on": [
         "FA-008",
         "FA-011",
@@ -481,7 +481,12 @@
       ],
       "owner_role": "systems",
       "estimated_scope": "One independently reviewable work packet; split before implementation if multiple semantics change.",
-      "result_artifacts": [],
+      "result_artifacts": [
+        "docs/PROCESS_LEARNED_PUBLICATION.md",
+        "crates/fa-reference/tests/file_process_learned_driver.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/tests/processes.rs",
+        "IMPLEMENTATION_STATUS.md"
+      ],
       "founding_ideas": [
         "FI-A03"
       ]
@@ -490,7 +495,7 @@
       "id": "FA-019",
       "gate": "G2",
       "title": "Implement native frozen congress rounds",
-      "status": "planned",
+      "status": "in_progress",
       "depends_on": [
         "FA-004",
         "FA-018"
@@ -506,7 +511,12 @@
       ],
       "owner_role": "systems",
       "estimated_scope": "One independently reviewable work packet; split before implementation if multiple semantics change.",
-      "result_artifacts": [],
+      "result_artifacts": [
+        "docs/PROCESS_LEARNED_PUBLICATION.md",
+        "crates/fa-reference/tests/file_process_learned_driver.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/tests/processes.rs",
+        "IMPLEMENTATION_STATUS.md"
+      ],
       "founding_ideas": [
         "FI-A06",
         "FI-A13",
@@ -2442,7 +2452,7 @@
       "id": "FA-107",
       "gate": "G2",
       "title": "Enforce one-directional control flow",
-      "status": "planned",
+      "status": "in_progress",
       "depends_on": [
         "FA-018",
         "FA-049"
@@ -2458,7 +2468,12 @@
         "Produce executed local evidence; source or prose alone does not close this packet."
       ],
       "owner_role": "systems",
-      "result_artifacts": [],
+      "result_artifacts": [
+        "docs/PROCESS_LEARNED_PUBLICATION.md",
+        "crates/fa-reference/tests/file_process_learned_driver.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/tests/processes.rs",
+        "IMPLEMENTATION_STATUS.md"
+      ],
       "founding_ideas": [
         "FI-A15",
         "FI-A16"
@@ -2626,7 +2641,7 @@
       "id": "FA-113",
       "gate": "G4",
       "title": "Implement and measure the sidecar-to-congress pipeline",
-      "status": "planned",
+      "status": "in_progress",
       "depends_on": [
         "FA-030",
         "FA-019",
@@ -2644,7 +2659,12 @@
         "Produce executed local evidence; source or prose alone does not close this packet."
       ],
       "owner_role": "research",
-      "result_artifacts": [],
+      "result_artifacts": [
+        "docs/PROCESS_LEARNED_PUBLICATION.md",
+        "crates/fa-reference/tests/file_process_learned_driver.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/tests/processes.rs",
+        "IMPLEMENTATION_STATUS.md"
+      ],
       "founding_ideas": [
         "FI-A05",
         "FI-I04"

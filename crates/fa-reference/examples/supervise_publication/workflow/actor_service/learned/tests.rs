@@ -5,6 +5,7 @@ use super::*;
 #[path = "tests/models.rs"] mod models;
 #[path = "tests/fixture.rs"] mod fixture;
 #[path = "tests/direct.rs"] mod direct;
+#[path = "tests/processes.rs"] mod processes;
 #[path = "tests/admission.rs"] mod admission;
 #[path = "tests/transport.rs"] mod transport;
 #[path = "tests/refinement.rs"] mod refinement;

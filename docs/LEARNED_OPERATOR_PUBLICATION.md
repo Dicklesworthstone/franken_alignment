@@ -16,7 +16,13 @@ before sampling each message, with a separate forecast for finish. See
 [required operator forecasts](LEARNED_OPERATOR_FORECASTS.md) for the artifact,
 runtime and recovery contract and its pending execution qualification.
 
-The native helper models execute **inside the supervising process**, with separate
+Version 6 explicitly selects separately launched process reviewers using a fixed
+per-round program schedule. It retains finite continuation and supports either
+explicitly absent or required forecasts. See
+[process-backed learned publication](PROCESS_LEARNED_PUBLICATION.md) for its
+recipe, original process protocol, cleanup and remaining containment boundaries.
+
+In versions /1 through /5, native helper models execute **inside the supervising process**, with separate
 original evaluator owners and fixed input contracts. They are not helper OS
 processes. Their configured names, models and cohorts do not establish statistical
 independence or process isolation. The reviewer and stop clients use the existing
@@ -25,7 +31,7 @@ Linux peer-checked socket protocols.
 The implementation is
 [`workflow/actor_service/learned.rs`](../crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned.rs).
 The schema parsers are its `learned/recipe.rs`, `weights.rs`, `fit.rs`, `monitor.rs`, `forecast.rs`,
-`native.rs` and `fields.rs` modules. Checkpoint sources use the shared
+`native.rs`, `process.rs`, `process/config.rs` and `fields.rs` modules. Checkpoint sources use the shared
 [`support/checkpoint_source.rs`](../crates/fa-reference/examples/support/checkpoint_source.rs)
 loader and the original decoder, indexed reader and static adapter merger.
 

@@ -13,6 +13,7 @@
 #[path = "learned/recipe.rs"] mod recipe;
 #[path = "learned/recovery.rs"] mod recovery;
 #[path = "learned/review.rs"] mod review;
+#[path = "learned/process.rs"] mod process;
 #[path = "learned/finish.rs"] mod finish;
 #[path = "learned/continuation.rs"] mod continuation;
 #[path = "learned/qualification.rs"] mod qualification;
@@ -213,6 +214,7 @@ where F: FnMut() -> ElapsedTick {
     })();
     let mut failure = None;
     let mut history = None;
+    let mut process = None;
     match prepared {
         Err(error) => failure = Some(error),
         Ok(false) => {}
@@ -221,6 +223,7 @@ where F: FnMut() -> ElapsedTick {
                 &mut control, &deadline, &mut time);
             driver = reviewed.driver;
             history = reviewed.history;
+            process = reviewed.process;
             failure = reviewed.failure;
             if failure.is_none() && !reviewed.stop_requested {
                 let result = (|| {
@@ -259,7 +262,12 @@ where F: FnMut() -> ElapsedTick {
     }
     let response = wire.exchange(&encode_command(&Command::Poll { request: loaded.request }).map_err(debug)?);
     let failure = anchors::retain(&loaded, &driver, failure);
+    let cleanup_started = Instant::now();
     let cleanup_pending = cleanup(driver, config.timing.cleanup_ms, config.timing.poll_ms);
+    let remaining = config.timing.cleanup_ms.saturating_sub(
+        u64::try_from(cleanup_started.elapsed().as_millis()).unwrap_or(u64::MAX));
+    let cleanup_pending = cleanup_pending.saturating_add(process.map_or(0,
+        |history| history.cleanup(remaining, config.timing.poll_ms)));
     // Retain original numerical history until the authority has been drained or
     // released. Its counters are evidence of work, never either publication key.
     drop(history);

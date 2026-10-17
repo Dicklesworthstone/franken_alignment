@@ -7,6 +7,7 @@ mod lifecycle;
 mod unwind_tests;
 pub mod learned;
 pub mod native_learned;
+pub mod process_learned;
 mod recovery_capacity;
 pub use recovery_capacity::{CapacityDrain, CapacityStop};
 mod workers;

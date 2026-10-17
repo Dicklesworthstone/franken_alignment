@@ -1,5 +1,20 @@
 # Changelog
 
+## 2026-10-17: connect process-backed learned review to publication
+
+- Join the original bounded learned-process sequence to the supervised actor
+  driver. Preserve Begin-before-spawn, post-I/O clock admission, witnessed
+  refinement, predecessor reaping, child custody and both publication keys.
+- Add explicit `fa.learned-publication/6` operator recipes with complete fixed
+  process rosters, bounded starts and polling, optional required forecasting,
+  authenticated stop and truthful cleanup. Earlier recipe modes are unchanged.
+- Add actual-child public and operator regression source covering refinement,
+  publication, denial, EOF, exact deadlines, cancellation, source withdrawal,
+  bounded admission and receipt-only recovery without helper executables.
+- The required remote RCH gate remains unavailable. This is source work pending
+  compilation, Clippy, runtime execution and release qualification; broad
+  helper-isolation and sidecar measurement packets remain open.
+
 ## 2026-10-14: reconcile retained stream receipts without reopening admission
 
 - Add explicit `--reconcile-receipts` to anchored stream recovery. Reuse the

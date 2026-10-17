@@ -3,7 +3,7 @@
 pub(super) mod weights;
 use weights::WeightsInput;
 use super::{fields::{Assets, Fields, path, MAX_DATA_BYTES}, fit, forecast::ForecastInput,
-    monitor::MonitorInput, native::NativeRoster};
+    monitor::MonitorInput, native::NativeRoster, process::ProcessRecipe};
 use super::super::tokenizer::TokenizerInput;
 use crate::config::{Config, debug, read_regular};
 use fa_reference::action::consequence::activation::monitor::{
@@ -54,6 +54,7 @@ pub(super) struct Loaded {
     pub native_limits: NativeReviewLimits,
     pub probes: BTreeMap<KvTap, Vec<LinearProbe>>,
     pub native: Option<NativeRoster>,
+    pub process: Option<ProcessRecipe>,
 }
 struct Recipe {
     request: u64, ttl_ms: u64, assets_bytes: usize,
@@ -63,10 +64,11 @@ struct Recipe {
     tokenization: TokenizationBudget, budget: GenerationBudget, telemetry: GenerationTelemetryBudget,
     sidecar: SidecarIdentity, disclosure: SidecarCongressBudget, native_limits: NativeReviewLimits,
     priority: Vec<KvGroup>, rounds: Vec<u64>, continuation: bool,
+    process: Option<ProcessRecipe>,
 }
 struct Files {
     configuration: PathBuf, weights: WeightsInput, tokenizer: TokenizerInput, sampling: PathBuf,
-    prompt: PathBuf, fit_binding: PathBuf, fit_archive: PathBuf, monitor: PathBuf, native: PathBuf,
+    prompt: PathBuf, fit_binding: PathBuf, fit_archive: PathBuf, monitor: PathBuf, native: Option<PathBuf>,
     forecast: Option<PathBuf>,
 }
 
@@ -81,6 +83,9 @@ pub(super) fn load(file: &Path, config: &Config, require_native: bool) -> Result
     if require_native && recipe.rounds.len() > 1 && config.timing.reveal_ms
         .checked_mul(recipe.rounds.len() as u64).is_none_or(|duration| duration >= recipe.ttl_ms.min(config.timing.runtime_ms)) {
         return Err("complete learned review schedule must fit the original request lifetime".into());
+    }
+    if let Some(process) = &recipe.process {
+        process.check_roster(config)?;
     }
     let mut assets = Assets::new(recipe.assets_bytes)?;
     // The independent binding is never obtained from the archive it checks.
@@ -132,8 +137,11 @@ pub(super) fn load(file: &Path, config: &Config, require_native: bool) -> Result
         forecast.pin(generation)?.with_forecast_text_stream_continuation().map_err(debug)?
     } else { generation };
     let native = if require_native {
-        { let roster = NativeRoster::load(&recipe.files.native, config, &mut assets)?;
-            roster.check_limits(&recipe.native_limits, recipe.rounds.len())?; Some(roster) }
+        recipe.files.native.as_ref().map(|path| {
+            let roster = NativeRoster::load(path, config, &mut assets)?;
+            roster.check_limits(&recipe.native_limits, recipe.rounds.len())?;
+            Ok::<_, String>(roster)
+        }).transpose()?
     } else { None };
     Ok(Loaded { request: recipe.request, ttl_ms: recipe.ttl_ms, generation, stream: recipe.publication,
         floor: recipe.floor, recovery_anchor: None, anchor_output: None,
@@ -141,7 +149,7 @@ pub(super) fn load(file: &Path, config: &Config, require_native: bool) -> Result
             score_words: recipe.binding.evidence.score_words, encoded_bytes: recipe.binding.encoded_bytes },
         sidecar: recipe.sidecar, disclosure: recipe.disclosure, native_limits: recipe.native_limits,
         priority: recipe.priority, rounds: recipe.rounds,
-        probes: monitor.probes, native })
+        probes: monitor.probes, native, process: recipe.process })
 }
 impl Recipe {
     fn decode(bytes: &[u8]) -> Result<Self, String> {
@@ -152,6 +160,7 @@ impl Recipe {
             "fa.learned-publication/3" => 3,
             "fa.learned-publication/4" => 4,
             "fa.learned-publication/5" => 5,
+            "fa.learned-publication/6" => 6,
             _ => return Err("unsupported learned publication recipe".into()),
         };
         let progressive = version >= 2;
@@ -198,8 +207,14 @@ impl Recipe {
             weights: WeightsInput::parse(files.take("weights")?, version >= 3)?,
             tokenizer: TokenizerInput::parse(files.take("tokenizer")?, true)?, sampling: files.path("sampling")?,
             prompt: files.path("prompt")?, fit_binding: files.path("fit_binding")?, fit_archive: files.path("fit_archive")?,
-            monitor: files.path("monitor")?, native: files.path("native_roster")?,
-            forecast: if version == 5 { Some(files.path("forecast")?) } else { None } };
+            monitor: files.path("monitor")?,
+            native: if version == 6 { None } else { Some(files.path("native_roster")?) },
+            forecast: if version == 6 {
+                match files.take("forecast")? {
+                    fa_reference::strict_json::Json::Null => None,
+                    value => Some(path(value.as_str().ok_or("forecast must be null or an absolute path")?)?),
+                }
+            } else if version == 5 { Some(files.path("forecast")?) } else { None } };
         path(files_value.tokenizer.path())?;
         files.end()?;
         let mut text = root.object("text")?;
@@ -245,6 +260,14 @@ impl Recipe {
                 "learned publication requires nonzero sidecar identity and one bounded review round"
             }.into());
         }
+        let (rounds, native_limits, process) = if version == 6 {
+            let process = ProcessRecipe::decode(root.object("process_review")?)?;
+            let rounds = process.rounds();
+            if rounds.len() != disclosure_value.rounds || rounds.len() > priority.len() + 1 {
+                return Err("process schedule must match the disclosure budget and retained priority ladder".into());
+            }
+            (rounds, NativeReviewLimits::default(), Some(process))
+        } else {
         let mut native = root.object("native_review")?;
         let rounds = if progressive {
             let ids = native.array("round_ids", MAX_SIDECAR_REFINEMENT_ROUNDS)?;
@@ -269,7 +292,7 @@ impl Recipe {
                 scalar_products: native.number("scalar_products")?, sampling_entries: native.number("sampling_entries")? },
             ..NativeReviewLimits::default()
         };
-        native.end()?; root.end()?;
+        native.end()?;
         let caps = NativeReviewLimits::default();
         if native_limits.polls == 0 || native_limits.polls > caps.polls
             || native_limits.probes.coordinates > caps.probes.coordinates
@@ -279,11 +302,15 @@ impl Recipe {
             || native_limits.native.sampling_entries > caps.native.sampling_entries {
             return Err("native review requires explicit nonzero finite work bounds".into());
         }
+
+            (rounds, native_limits, None)
+        };
+        root.end()?;
         Ok(Self { request, ttl_ms, assets_bytes, identity, context, stream, evaluation_origin, monitor_generation,
             publication: publication_value, binding: binding_value, floor: floor_value, files: files_value,
             max_new_tokens, max_output_bytes, stop_tokens, tokenization, budget, telemetry,
             sidecar: sidecar_identity, disclosure: disclosure_value, native_limits, priority, rounds,
-            continuation: version >= 4 })
+            continuation: version >= 4, process })
     }
 }
 fn priority(groups: Vec<fa_reference::strict_json::Json>) -> Result<Vec<KvGroup>, String> {

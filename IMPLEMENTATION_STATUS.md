@@ -1,5 +1,36 @@
 # Implementation status · design revision 0.3
 
+## 2026-10-17: process-backed learned publication (unqualified source)
+
+The original `FileLearnedProcessReview` now runs through the supervised actor
+driver and the explicit `fa.learned-publication/6` operator recipe. External
+helpers receive the exact learned input through the existing private-socket
+commit/reveal protocol. A witnessed refinement updates the pending actor job;
+the next fixed roster starts only after predecessor children have been reaped.
+An original permitting receipt returns the same driver to independent human
+approval and its existing automatic, current-input and publication checks.
+
+The operator validates complete fixed rosters and aggregate start bounds before
+model ingestion, retains live post-launch and post-I/O clocks, polls in bounded
+short intervals, and carries actual child custody through stop and cleanup.
+Receipt-only recovery can read a recorded effect without executable preflight
+or a live helper. Old /1–/5 recipes retain their original semantics; /6 reuses
+finite numerical continuation and can select the existing required forecast.
+
+Six substantive public-driver tests and operator regressions are authored,
+including real child processes and an original publication, with causal
+controls for deny/EOF, cancellation, missing evidence, exact clock cutoffs,
+roster limits and missing executables during receipt recovery. Synthetic
+ballots exercise protocol and authority behavior, not detector quality.
+The twelve changed process Rust sources passed nonmutating syntax parsing with
+qualified-date rustfmt. Source review and syntax do not establish runtime
+qualification. The required remote
+RCH attempt refused local fallback with its daemon unavailable (exit 103);
+compilation, Clippy, runtime tests and release qualification remain open.
+FA-018, FA-019, FA-107 and FA-113 stay in progress: this does not establish
+host containment, judgment independence, residual-channel measurements or
+held-out sidecar quality. See [the process publication contract](docs/PROCESS_LEARNED_PUBLICATION.md).
+
 ## 2026-10-14: reconcile stream receipts through verified recovery (unqualified source)
 
 The anchored stream receipt service now has an explicit `--reconcile-receipts`
