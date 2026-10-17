@@ -117,9 +117,16 @@ where F: FnMut() -> ElapsedTick {
     if !open && credibility.is_some() {
         return Err("live credibility activation requires an existing journal".into());
     }
-    if topology.is_some() && (open || publication.is_some()) {
-        return Err("topology-supervised live service currently requires plain serve-create".into());
+    if topology.is_some() && open {
+        return Err("topology-supervised live service requires an explicit create mode".into());
     }
+    // The native mediated bootstrap currently composes plain witness limits.
+    // Feed, waiting, snapshot and joint contracts must never be reduced to those
+    // limits. Refuse them before clock, topology reads, socket or Store creation.
+    let topology_publication = if topology.is_some() {
+        publication.map(|profile| profile.simple_limits().map_err(|_|
+            "topology-supervised checked creation requires the plain witness profile; feed, wait, snapshot and joint contracts are not downgraded".to_owned())).transpose()?
+    } else { None };
     actor.check_host(&config)?; reviewer_profile.check_host(&config)?;
     if actor.socket == reviewer_profile.socket(actor.request)
         || actor.socket == super::control::socket_path(reviewer_profile, actor.request) {
@@ -140,7 +147,10 @@ where F: FnMut() -> ElapsedTick {
         Some(prepared) => {
             let output = prepared.take_output();
             let prepared = prepared_topology.take().expect("selected topology");
-            let (host, reviewer, topology) = prepared.create(&config, None)?;
+            // Both controls belong in the FIRST canonical image. A checked
+            // request cannot fall back to plain publication under topology.
+            let (host, reviewer, topology) = prepared.create(&config, topology_publication)?;
+            check_deployment(&config, &host, publication)?;
             (host, reviewer, Some(topology), output)
         }
         None => {
@@ -328,11 +338,20 @@ fn prepare_host(config: &Config, publication: Option<&PublicationProfile>, open:
         host.enable_recovery_reserve(host.revision(), RecoveryReserve::terminal()).map_err(debug)?;
         host.enable_file_source(host.revision(), config.source_policy).map_err(debug)?;
     }
+    check_deployment(config, &host, publication)?;
+    Ok((host, reviewer))
+}
+
+// Exact deployment equality applies to ordinary AND mediated bootstraps. This
+// is an immutable check; it cannot install a missing guard or renew a reserve.
+fn check_deployment(config: &Config, host: &FileOversight, publication: Option<&PublicationProfile>)
+    -> Result<(), String>
+{
     if host.publication_validation_profile().map_err(debug)? != publication.map(|p| p.limits)
         || host.file_source_status().map(|s| s.policy) != Some(config.source_policy)
         || host.journal_capacity().map_err(debug)?.reserve() != Some(RecoveryReserve::terminal())
         || !host.publication_guard_required() || config.profile.delivery.clock_domain != CLOCK_DOMAIN {
         return Err("stored deployment does not match the explicit live service profile".into());
     }
-    Ok((host, reviewer))
+    Ok(())
 }
