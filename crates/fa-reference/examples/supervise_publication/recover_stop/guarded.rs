@@ -1,6 +1,7 @@
 //! Offline guarded source-publication recovery using the original sealed cursor.
 //! The profile supplies independent floors/custody; CONFIG supplies exact policy
 //! and source identity. No current evidence, helper or reviewer is opened.
+#[path = "guarded/profile.rs"]
 mod profile;
 pub(crate) use profile::{CreationOutput, Custody, Profile, ResumeProfile, SubmitProfile};
 use super::{Config, debug, report};

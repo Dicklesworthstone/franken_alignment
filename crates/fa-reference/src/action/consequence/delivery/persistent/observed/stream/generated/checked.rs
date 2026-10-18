@@ -3,18 +3,21 @@
 pub mod joint;
 pub mod source;
 
-use super::{BaseEvent, Event, FileOversight, JournalError, Machine};
-use super::super::{FileHumanReviewer, FileOversightProfile, StreamProfile};
-use super::super::super::{journal, storage};
-use super::super::super::decoder::{DecoderEvent, FileDecoderConfig,
-    text::{MAX_FILE_TOKENIZER_BYTES, replay_text_events}};
+use super::super::super::decoder::{
+    DecoderEvent, FileDecoderConfig,
+    text::{MAX_FILE_TOKENIZER_BYTES, replay_text_events},
+};
 use super::super::super::publication::witness_gate::{WitnessEvent, freshness::FreshnessEvent};
+use super::super::super::{journal, storage};
+use super::super::{FileHumanReviewer, FileOversightProfile, StreamProfile};
+use super::{BaseEvent, Event, FileOversight, JournalError, Machine};
+use crate::Error;
 use crate::action::consequence::activation::monitor::decoder::sampled::generation::tokenizer::ByteBpe;
 use crate::action::consequence::delivery::persistent::RecoveryReserve;
 use crate::action::consequence::delivery::publication_gate::PublicationLimits;
-use crate::action::consequence::delivery::publication_gate::changes::{PublicationChangePolicy,
-    freshness::PublicationFreshnessPolicy};
-use crate::Error;
+use crate::action::consequence::delivery::publication_gate::changes::{
+    PublicationChangePolicy, freshness::PublicationFreshnessPolicy,
+};
 use std::path::Path;
 use std::rc::Rc;
 
@@ -43,7 +46,9 @@ impl GeneratedPublicationProfile {
         let mut events = vec![WitnessEvent::Enable(self.limits)];
         if let Some(feed) = self.feed {
             events.push(WitnessEvent::ChangeProfile(feed.changes));
-            events.push(WitnessEvent::Freshness(FreshnessEvent::Enable(feed.freshness)));
+            events.push(WitnessEvent::Freshness(FreshnessEvent::Enable(
+                feed.freshness,
+            )));
             if feed.snapshot_fallback {
                 events.push(WitnessEvent::Freshness(FreshnessEvent::SnapshotFallback));
             }
@@ -54,22 +59,32 @@ impl GeneratedPublicationProfile {
     /// Compare the entire selected bootstrap, including duplicates/extra modes,
     /// before numerical replay or any store confirmation/cleanup/recovery write.
     fn check(self, events: &[Event]) -> Result<(), Error> {
-        if !matches!(events.first(), Some(Event::GeneratedStreamBootstrap(actual)) if *actual == self.stream) {
+        if !matches!(events.first(), Some(Event::GeneratedStreamBootstrap(actual)) if *actual == self.stream)
+        {
             return Err(Error::Binding);
         }
         let mut reserves = events.iter().filter_map(|event| match event {
-            Event::Core(BaseEvent::ReserveRecovery(actual)) => Some(*actual), _ => None,
+            Event::Core(BaseEvent::ReserveRecovery(actual)) => Some(*actual),
+            _ => None,
         });
-        if reserves.next() != self.reserve || reserves.next().is_some() { return Err(Error::Binding); }
+        if reserves.next() != self.reserve || reserves.next().is_some() {
+            return Err(Error::Binding);
+        }
         let mut actual = events.iter().filter_map(|event| match event {
-            Event::PublicationWitness(witness) if witness.bootstrap() => Some(witness), _ => None,
+            Event::PublicationWitness(witness) if witness.bootstrap() => Some(witness),
+            _ => None,
         });
         for expected in self.witnesses() {
-            if !actual.next().is_some_and(|actual| same_bootstrap(actual, &expected)) {
+            if !actual
+                .next()
+                .is_some_and(|actual| same_bootstrap(actual, &expected))
+            {
                 return Err(Error::Binding);
             }
         }
-        if actual.next().is_some() { return Err(Error::Binding); }
+        if actual.next().is_some() {
+            return Err(Error::Binding);
+        }
         Ok(())
     }
 }
@@ -78,10 +93,14 @@ fn same_bootstrap(actual: &WitnessEvent, expected: &WitnessEvent) -> bool {
     match (actual, expected) {
         (WitnessEvent::Enable(a), WitnessEvent::Enable(b)) => a == b,
         (WitnessEvent::ChangeProfile(a), WitnessEvent::ChangeProfile(b)) => a == b,
-        (WitnessEvent::Freshness(FreshnessEvent::Enable(a)),
-            WitnessEvent::Freshness(FreshnessEvent::Enable(b))) => a == b,
-        (WitnessEvent::Freshness(FreshnessEvent::SnapshotFallback),
-            WitnessEvent::Freshness(FreshnessEvent::SnapshotFallback)) => true,
+        (
+            WitnessEvent::Freshness(FreshnessEvent::Enable(a)),
+            WitnessEvent::Freshness(FreshnessEvent::Enable(b)),
+        ) => a == b,
+        (
+            WitnessEvent::Freshness(FreshnessEvent::SnapshotFallback),
+            WitnessEvent::Freshness(FreshnessEvent::SnapshotFallback),
+        ) => true,
         _ => false,
     }
 }
@@ -96,20 +115,38 @@ impl FileOversight {
     /// Actual source capture, complete helper review, the independent human key
     /// and fresh final publication validation remain separate requirements.
     /// This local reference constructor is not remote delivery or OS isolation.
-    pub fn create_generated_text_stream_checked(directory: impl AsRef<Path>,
-        profile: FileOversightProfile, decoder: FileDecoderConfig, tokenizer: ByteBpe,
-        selected: GeneratedPublicationProfile) -> Result<(Self, FileHumanReviewer), JournalError>
-    {
+    pub fn create_generated_text_stream_checked(
+        directory: impl AsRef<Path>,
+        profile: FileOversightProfile,
+        decoder: FileDecoderConfig,
+        tokenizer: ByteBpe,
+        selected: GeneratedPublicationProfile,
+    ) -> Result<(Self, FileHumanReviewer), JournalError> {
         profile.delivery.limits.check()?;
-        if !tokenizer.binds(decoder.profile()) { return Err(Error::Binding.into()); }
+        if !tokenizer.binds(decoder.profile()) {
+            return Err(Error::Binding.into());
+        }
         let canonical = tokenizer.to_bytes()?;
-        if canonical.len() > MAX_FILE_TOKENIZER_BYTES { return Err(Error::Limit.into()); }
+        if canonical.len() > MAX_FILE_TOKENIZER_BYTES {
+            return Err(Error::Limit.into());
+        }
         let mut events = vec![Event::GeneratedStreamBootstrap(selected.stream)];
-        if let Some(reserve) = selected.reserve { events.push(Event::Core(BaseEvent::ReserveRecovery(reserve))); }
-        events.extend(selected.witnesses().into_iter().map(Event::PublicationWitness));
-        events.extend([Event::Decoder(DecoderEvent::Enable(Rc::new(decoder))),
-            Event::Decoder(DecoderEvent::Tokenizer(canonical.into()))]);
-        if events.len() > profile.delivery.limits.events { return Err(Error::Limit.into()); }
+        if let Some(reserve) = selected.reserve {
+            events.push(Event::Core(BaseEvent::ReserveRecovery(reserve)));
+        }
+        events.extend(
+            selected
+                .witnesses()
+                .into_iter()
+                .map(Event::PublicationWitness),
+        );
+        events.extend([
+            Event::Decoder(DecoderEvent::Enable(Rc::new(decoder))),
+            Event::Decoder(DecoderEvent::Tokenizer(canonical.into())),
+        ]);
+        if events.len() > profile.delivery.limits.events {
+            return Err(Error::Limit.into());
+        }
         let machine = Machine::replay(&profile, &events)?;
         let store = storage::Store::create(directory.as_ref())?;
         store.replace(&journal::encode(&profile, store.identity(), &events)?)?;
@@ -129,14 +166,21 @@ impl FileOversight {
     ///
     /// This does not pin an independently authenticated latest head or compose
     /// additional anchored/joint-governance roles. Those retain their own APIs.
-    pub fn open_generated_text_stream_checked(directory: impl AsRef<Path>,
-        profile: FileOversightProfile, decoder: &FileDecoderConfig, tokenizer: &ByteBpe,
-        selected: GeneratedPublicationProfile) -> Result<(Self, FileHumanReviewer), JournalError>
-    {
+    pub fn open_generated_text_stream_checked(
+        directory: impl AsRef<Path>,
+        profile: FileOversightProfile,
+        decoder: &FileDecoderConfig,
+        tokenizer: &ByteBpe,
+        selected: GeneratedPublicationProfile,
+    ) -> Result<(Self, FileHumanReviewer), JournalError> {
         profile.delivery.limits.check()?;
-        if !tokenizer.binds(decoder.profile()) { return Err(Error::Binding.into()); }
+        if !tokenizer.binds(decoder.profile()) {
+            return Err(Error::Binding.into());
+        }
         let canonical = tokenizer.to_bytes()?;
-        if canonical.len() > MAX_FILE_TOKENIZER_BYTES { return Err(Error::Limit.into()); }
+        if canonical.len() > MAX_FILE_TOKENIZER_BYTES {
+            return Err(Error::Limit.into());
+        }
         let store = storage::Store::open(directory.as_ref())?;
         let bytes = store.read(profile.delivery.limits.bytes)?;
         let events = journal::decode(&profile, store.identity(), &bytes)?;

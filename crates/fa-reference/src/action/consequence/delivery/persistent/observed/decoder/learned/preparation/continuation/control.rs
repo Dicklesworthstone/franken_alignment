@@ -14,8 +14,9 @@ impl FileOversight {
     // fault flag here would prevent recording that loss. Do not clear the latch.
     // The original transaction still owns encoding, its new-event checks and
     // application, and its existing acknowledgment/failure boundary.
-    pub(in crate::action::consequence::delivery::persistent::observed)
-    fn replay_control_candidate(&mut self) -> Result<(Machine, bool), JournalError> {
+    pub(in crate::action::consequence::delivery::persistent::observed) fn replay_control_candidate(
+        &mut self,
+    ) -> Result<(Machine, bool), JournalError> {
         let Some(carry) = self.learned_replay.take() else {
             return Ok((Machine::replay(&self.profile, &self.events)?, false));
         };
@@ -23,7 +24,9 @@ impl FileOversight {
             return Err(Error::Binding.into());
         }
         let mut candidate = carry.candidate;
-        for event in &self.events[carry.through..] { candidate.apply(event)?; }
+        for event in &self.events[carry.through..] {
+            candidate.apply(event)?;
+        }
         // A replay failure or unwind discards this private candidate. Never
         // retry a cold replay inside the same call or conceal witness divergence.
         Ok((candidate, true))
@@ -34,13 +37,20 @@ impl FileOversight {
     // call this: cooperative recovery retires an empty placeholder, not a
     // verified predecessor. A cold owner stays cold until learned generation
     // explicitly seeds its existing cache; no new per-owner slot is allocated.
-    pub(in crate::action::consequence::delivery::persistent::observed)
-    fn persist_control_candidate(&mut self, event: Event, bytes: Vec<u8>, candidate: Machine,
-        result: Transition, retain_replay: bool) -> Result<Transition, JournalError>
-    {
-        if !retain_replay { return self.persist_candidate(event, bytes, candidate, result); }
+    pub(in crate::action::consequence::delivery::persistent::observed) fn persist_control_candidate(
+        &mut self,
+        event: Event,
+        bytes: Vec<u8>,
+        candidate: Machine,
+        result: Transition,
+        retain_replay: bool,
+    ) -> Result<Transition, JournalError> {
+        if !retain_replay {
+            return self.persist_candidate(event, bytes, candidate, result);
+        }
         let through = self.events.len();
-        let (result, retired) = self.persist_candidate_retaining(event, bytes, candidate, result)?;
+        let (result, retired) =
+            self.persist_candidate_retaining(event, bytes, candidate, result)?;
         self.retain_control_replay(through, retired);
         Ok(result)
     }
@@ -48,9 +58,15 @@ impl FileOversight {
     // Only an acknowledged control transaction or fixed publication cut whose
     // replay consumed the existing cache may transfer its actual retired owner.
     // A batch uses its PRE-batch length, never the last event's predecessor.
-    pub(in crate::action::consequence::delivery::persistent::observed)
-    fn retain_control_replay(&mut self, through: usize, retired: Machine) {
+    pub(in crate::action::consequence::delivery::persistent::observed) fn retain_control_replay(
+        &mut self,
+        through: usize,
+        retired: Machine,
+    ) {
         self.learned_replay = Some(FileLearnedReplayContinuation::new(
-            Rc::clone(&self.issuer), through, retired));
+            Rc::clone(&self.issuer),
+            through,
+            retired,
+        ));
     }
 }

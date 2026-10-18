@@ -1,4 +1,4 @@
-#![allow(dead_code)]
+#![allow(dead_code, unused_imports)]
 #[path = "file_helper.rs"] pub mod helper;
 pub use helper::{Directory, Clients, ROOT, MEMBERS, profile, snapshot, sockets, worker_steps};
 use fa_reference::action::consequence::delivery::persistent::observed::{FileOversight, FileHumanPermit, FileHumanReviewer};

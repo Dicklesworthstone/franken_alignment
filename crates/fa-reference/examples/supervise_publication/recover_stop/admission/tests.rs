@@ -22,7 +22,7 @@ fn effect(root: &Directory, mode: u64) -> Config {
     let (mut host, reviewer) = FileOversight::create(&c.store, c.profile.clone()).unwrap();
     host.enable_recovery_reserve(host.revision(), RecoveryReserve::terminal()).unwrap();
     host.observe_time(host.revision(), ElapsedTick(1)).unwrap();
-    let keys = fixture::ready(&mut host, &reviewer, 1, b"original reviewed effect");
+    let keys = fixture::ready(&mut host, &reviewer, 1, b"reviewed-effect");
     if mode > 0 { fixture::dispatch(&mut host, &keys); }
     if mode == 2 { host.publish(host.revision(), 1).unwrap(); }
     drop(keys); drop(reviewer); drop(host); c
@@ -172,7 +172,7 @@ fn the_runnable_two_phase_path_uses_only_the_original_terminal_reserve() {
     let (mut host, reviewer) = FileOversight::create(&c.store, c.profile.clone()).unwrap();
     host.enable_recovery_reserve(host.revision(), RecoveryReserve::terminal()).unwrap();
     host.observe_time(host.revision(), ElapsedTick(1)).unwrap();
-    let keys = fixture::ready(&mut host, &reviewer, 1, b"original reviewed effect");
+    let keys = fixture::ready(&mut host, &reviewer, 1, b"reviewed-effect");
     fixture::dispatch(&mut host, &keys);
     assert_eq!(host.journal_capacity().unwrap().ordinary_remaining().events, 0);
     drop(keys); drop(reviewer); drop(host);

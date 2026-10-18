@@ -1,5 +1,5 @@
 //! Bind mandatory numerical identity provenance into the independent recipe.
-use super::{FileLearnedConfig, Writer, DOMAIN, MAX_CONFIG_BYTES};
+use super::{DOMAIN, FileLearnedConfig, MAX_CONFIG_BYTES, Writer};
 use crate::Error;
 
 impl FileLearnedConfig {
@@ -18,7 +18,9 @@ impl FileLearnedConfig {
     /// fn downgrade(owner: &mut FileOversight) { owner.disable_computed_identity(); }
     /// ```
     pub fn with_required_computed_identity(mut self) -> Result<Self, Error> {
-        if self.computed_identity_required { return Err(Error::Duplicate); }
+        if self.computed_identity_required {
+            return Err(Error::Duplicate);
+        }
         let mut writer = Writer::new(MAX_CONFIG_BYTES);
         writer.raw(DOMAIN)?;
         writer.u64(0)?;
@@ -30,5 +32,7 @@ impl FileLearnedConfig {
     }
 
     /// Frozen admission policy, not an assertion that an identity check passed.
-    pub fn requires_computed_identity(&self) -> bool { self.computed_identity_required }
+    pub fn requires_computed_identity(&self) -> bool {
+        self.computed_identity_required
+    }
 }

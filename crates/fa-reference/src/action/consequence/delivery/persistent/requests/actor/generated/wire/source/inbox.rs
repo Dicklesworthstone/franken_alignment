@@ -1,7 +1,9 @@
 //! Native generated requests on the original bounded, journal-checked inbox.
 mod pool;
 
-use super::{ElapsedTick, EvidenceFile, FileGeneratedTextActorPort, FileSupervisedDriver, JournalError};
+use super::{
+    ElapsedTick, EvidenceFile, FileGeneratedTextActorPort, FileSupervisedDriver, JournalError,
+};
 use crate::action::consequence::delivery::persistent::requests::FileRequestStatus;
 use crate::action::consequence::delivery::persistent::requests::actor::FileActorInbox;
 use crate::action::consequence::delivery::persistent::requests::actor::source_wire::{
@@ -22,14 +24,26 @@ impl FileActorInbox<FileGeneratedTextActorPort> {
     /// evidence; complete new valid submissions consume their original one-use
     /// source observations. Preparation success is not admission, and a hint
     /// for an existing request never grants new authority after a refusal.
-    pub fn drive<S, F>(&mut self, driver: &mut FileSupervisedDriver, source: &mut S,
-        mut clock: F, budget: DriveBudget) -> Result<FileActorPeerDrive, FileActorPeerDriveError>
-    where S: EvidenceFile + ?Sized, F: FnMut() -> ElapsedTick {
-        self.drive_prepared(driver, budget,
+    pub fn drive<S, F>(
+        &mut self,
+        driver: &mut FileSupervisedDriver,
+        source: &mut S,
+        mut clock: F,
+        budget: DriveBudget,
+    ) -> Result<FileActorPeerDrive, FileActorPeerDriveError>
+    where
+        S: EvidenceFile + ?Sized,
+        F: FnMut() -> ElapsedTick,
+    {
+        self.drive_prepared(
+            driver,
+            budget,
             |supervisor, port| supervisor.check_source_wire(&port.port),
             |supervisor, request, proposal, intake| {
-                supervisor.prepare_generated_submission(request, proposal, source, &mut clock, intake)
-            })
+                supervisor
+                    .prepare_generated_submission(request, proposal, source, &mut clock, intake)
+            },
+        )
     }
 
     /// Return the next ORIGINAL request still needing supervision. Reviewing
@@ -37,10 +51,13 @@ impl FileActorInbox<FileGeneratedTextActorPort> {
     /// Dispatching/Unknown is reconciliation-only, never permission to replay.
     /// Cancelled and terminal hints are skipped. A foreign or faulted owner
     /// cannot consume a hint, and ingress revocation does not erase obligations.
-    pub fn next_request(&mut self, driver: &FileSupervisedDriver)
-        -> Result<Option<FileRequestStatus>, JournalError>
-    {
-        self.next_checked(driver, |supervisor, port| supervisor.check_source_wire(&port.port))
+    pub fn next_request(
+        &mut self,
+        driver: &FileSupervisedDriver,
+    ) -> Result<Option<FileRequestStatus>, JournalError> {
+        self.next_checked(driver, |supervisor, port| {
+            supervisor.check_source_wire(&port.port)
+        })
     }
 }
 

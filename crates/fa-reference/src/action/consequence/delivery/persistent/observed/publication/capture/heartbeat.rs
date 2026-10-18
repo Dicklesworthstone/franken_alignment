@@ -2,13 +2,15 @@
 //! The producer/path and shared elapsed clock remain operator trust boundaries.
 mod bootstrap;
 pub mod feed;
-use super::FileCaptureError;
 use super::super::super::{FileOversight, JournalError, JournalFailure, JournalIo};
 use super::super::witness_gate::freshness::{read_heartbeat, write_heartbeat};
+use super::FileCaptureError;
+use crate::Error;
 use crate::action::ElapsedTick;
 use crate::action::consequence::delivery::persistent::codec::shared::{Reader, Writer};
-use crate::action::consequence::delivery::publication_gate::changes::freshness::{PublicationHeartbeat, PublicationFreshnessStatus};
-use crate::Error;
+use crate::action::consequence::delivery::publication_gate::changes::freshness::{
+    PublicationFreshnessStatus, PublicationHeartbeat,
+};
 use std::fs::{self, File, Metadata};
 use std::io::{self, Read};
 use std::os::unix::ffi::OsStrExt;
@@ -23,18 +25,27 @@ impl PublicationHeartbeat {
     /// it atomically. Increase generation when any field changes; never rewrite
     /// produced_at merely because a consumer reads the file again.
     pub fn to_bytes(self) -> Result<Vec<u8>, Error> {
-        if self.source == 0 || self.clock_domain == 0 || self.generation == 0 { return Err(Error::InvalidInput); }
+        if self.source == 0 || self.clock_domain == 0 || self.generation == 0 {
+            return Err(Error::InvalidInput);
+        }
         let mut w = Writer::new(PUBLICATION_HEARTBEAT_BYTES);
-        w.raw(DOMAIN)?; write_heartbeat(&mut w, self)?;
+        w.raw(DOMAIN)?;
+        write_heartbeat(&mut w, self)?;
         Ok(w.finish())
     }
     pub fn from_bytes(bytes: &[u8]) -> Result<Self, Error> {
-        if bytes.len() > PUBLICATION_HEARTBEAT_BYTES { return Err(Error::Limit); }
+        if bytes.len() > PUBLICATION_HEARTBEAT_BYTES {
+            return Err(Error::Limit);
+        }
         let mut r = Reader::new(bytes);
-        if r.take(DOMAIN.len())? != DOMAIN { return Err(Error::Binding); }
+        if r.take(DOMAIN.len())? != DOMAIN {
+            return Err(Error::Binding);
+        }
         let heartbeat = read_heartbeat(&mut r)?;
         r.end()?;
-        if heartbeat.to_bytes()?.as_slice() != bytes { return Err(Error::Binding); }
+        if heartbeat.to_bytes()?.as_slice() != bytes {
+            return Err(Error::Binding);
+        }
         Ok(heartbeat)
     }
 }
@@ -49,36 +60,69 @@ pub struct PublicationHeartbeatFile {
 impl PublicationHeartbeatFile {
     pub fn new(path: impl AsRef<Path>, source: u64) -> Result<Self, Error> {
         let path = path.as_ref();
-        if source == 0 || path.as_os_str().is_empty() { return Err(Error::InvalidInput); }
-        if path.as_os_str().as_bytes().len() > 4_096 { return Err(Error::Limit); }
-        Ok(Self { path: path.to_owned(), source })
+        if source == 0 || path.as_os_str().is_empty() {
+            return Err(Error::InvalidInput);
+        }
+        if path.as_os_str().as_bytes().len() > 4_096 {
+            return Err(Error::Limit);
+        }
+        Ok(Self {
+            path: path.to_owned(),
+            source,
+        })
     }
-    pub fn source(&self) -> u64 { self.source }
+    pub fn source(&self) -> u64 {
+        self.source
+    }
     pub fn read_heartbeat(&self) -> Result<PublicationHeartbeat, FileCaptureError> {
         let before = regular(&self.path)?;
         let file = File::open(&self.path)?;
         let opened = file.metadata()?;
-        if !opened.is_file() || stamp(&before) != stamp(&opened) { return Err(Error::Stale.into()); }
+        if !opened.is_file() || stamp(&before) != stamp(&opened) {
+            return Err(Error::Stale.into());
+        }
         let mut bytes = Vec::with_capacity(PUBLICATION_HEARTBEAT_BYTES + 1);
-        (&file).take(PUBLICATION_HEARTBEAT_BYTES as u64 + 1).read_to_end(&mut bytes)?;
-        if bytes.len() > PUBLICATION_HEARTBEAT_BYTES { return Err(Error::Limit.into()); }
-        if stamp(&opened) != stamp(&file.metadata()?) || stamp(&opened) != stamp(&regular(&self.path)?) {
+        (&file)
+            .take(PUBLICATION_HEARTBEAT_BYTES as u64 + 1)
+            .read_to_end(&mut bytes)?;
+        if bytes.len() > PUBLICATION_HEARTBEAT_BYTES {
+            return Err(Error::Limit.into());
+        }
+        if stamp(&opened) != stamp(&file.metadata()?)
+            || stamp(&opened) != stamp(&regular(&self.path)?)
+        {
             return Err(Error::Stale.into());
         }
         let heartbeat = PublicationHeartbeat::from_bytes(&bytes)?;
-        if heartbeat.source != self.source { return Err(Error::Binding.into()); }
+        if heartbeat.source != self.source {
+            return Err(Error::Binding.into());
+        }
         Ok(heartbeat)
     }
 }
 fn regular(path: &Path) -> Result<Metadata, FileCaptureError> {
     let metadata = fs::symlink_metadata(path)?;
-    if !metadata.is_file() || metadata.file_type().is_symlink() { return Err(Error::Binding.into()); }
-    if metadata.len() > PUBLICATION_HEARTBEAT_BYTES as u64 { return Err(Error::Limit.into()); }
-    if metadata.len() < PUBLICATION_HEARTBEAT_BYTES as u64 { return Err(Error::Incomplete.into()); }
+    if !metadata.is_file() || metadata.file_type().is_symlink() {
+        return Err(Error::Binding.into());
+    }
+    if metadata.len() > PUBLICATION_HEARTBEAT_BYTES as u64 {
+        return Err(Error::Limit.into());
+    }
+    if metadata.len() < PUBLICATION_HEARTBEAT_BYTES as u64 {
+        return Err(Error::Incomplete.into());
+    }
     Ok(metadata)
 }
 fn stamp(m: &Metadata) -> (u64, u64, u64, i64, i64, i64, i64) {
-    (m.dev(), m.ino(), m.len(), m.mtime(), m.mtime_nsec(), m.ctime(), m.ctime_nsec())
+    (
+        m.dev(),
+        m.ino(),
+        m.len(),
+        m.mtime(),
+        m.mtime_nsec(),
+        m.ctime(),
+        m.ctime_nsec(),
+    )
 }
 
 impl FileOversight {
@@ -90,10 +134,15 @@ impl FileOversight {
     /// clock, allocation or storage failure is an outer error and leaves this live
     /// owner unavailable. Neither the source nor an old report is needed to settle
     /// an already executed effect through the original receipt path.
-    pub fn refresh_publication_heartbeat<F>(&mut self, revision: u64,
-        source: &PublicationHeartbeatFile, mut clock: F)
-        -> Result<Result<PublicationFreshnessStatus, FileCaptureError>, JournalError>
-    where F: FnMut() -> ElapsedTick {
+    pub fn refresh_publication_heartbeat<F>(
+        &mut self,
+        revision: u64,
+        source: &PublicationHeartbeatFile,
+        mut clock: F,
+    ) -> Result<Result<PublicationFreshnessStatus, FileCaptureError>, JournalError>
+    where
+        F: FnMut() -> ElapsedTick,
+    {
         self.publication_changes_unavailable(revision, source.source())?;
         let expected = self.revision();
         let heartbeat = match source.read_heartbeat() {
@@ -102,9 +151,14 @@ impl FileOversight {
         };
         // Caught clock unwind must not forget a newly read producer generation.
         // Only fenced recovery can make this owner writable after that failure.
-        self.fault = Some(JournalFailure { operation: JournalIo::Stage,
-            kind: io::ErrorKind::Other, replacement_may_be_visible: false });
+        self.fault = Some(JournalFailure {
+            operation: JournalIo::Stage,
+            kind: io::ErrorKind::Other,
+            replacement_may_be_visible: false,
+        });
         let now = clock();
-        Ok(Ok(self.finish_publication_heartbeat(expected, heartbeat, now)?))
+        Ok(Ok(
+            self.finish_publication_heartbeat(expected, heartbeat, now)?
+        ))
     }
 }

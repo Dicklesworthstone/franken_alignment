@@ -5,8 +5,10 @@
 //! and expired retention. No failure rolls back another domain's real progress.
 
 use super::{FundingInspection, FundingPool, FundingReturn};
-use crate::action::consequence::delivery::{PublicationEndpoint, StopReceipt, StopRequest, StopSweep};
 use crate::Error;
+use crate::action::consequence::delivery::{
+    PublicationEndpoint, StopReceipt, StopRequest, StopSweep,
+};
 use std::collections::BTreeMap;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -50,15 +52,21 @@ impl PoolDrainSweep {
     /// and settled its sends, and collection/accounting completed. Executed
     /// effects remain charged. This diagnostic is not a capability or proof.
     pub fn drained(&self) -> bool {
-        self.accounting.as_ref().is_ok_and(FundingInspection::conserved)
-            && self.domains.values().all(|domain| matches!(domain,
+        self.accounting
+            .as_ref()
+            .is_ok_and(FundingInspection::conserved)
+            && self.domains.values().all(|domain| {
+                matches!(domain,
                 DomainDrain::Stopped { endpoint: Ok(sweep), returned: Ok(_), .. }
-                    if sweep.progress.drained()))
+                    if sweep.progress.drained())
+            })
     }
 }
 
 impl FundingPool {
-    pub fn stop_request(&self) -> Option<PoolStopRequest> { self.stop }
+    pub fn stop_request(&self) -> Option<PoolStopRequest> {
+        self.stop
+    }
 
     /// Permanently close ALL parent admission before attempting any child stop.
     /// No endpoint I/O occurs. Exact retries use the original operation and retry
@@ -68,13 +76,21 @@ impl FundingPool {
     /// keep admission open. The named predecessor is still checked on first use.
     /// Later collection may fail on revision overflow without reopening anything.
     pub fn request_stop_all(&mut self, request: PoolStopRequest) -> Result<PoolStopSweep, Error> {
-        if request.operation == 0 { return Err(Error::InvalidInput); }
+        if request.operation == 0 {
+            return Err(Error::InvalidInput);
+        }
         if let Some(previous) = self.stop {
             if previous != request {
-                return Err(if previous.operation == request.operation { Error::Binding } else { Error::Duplicate });
+                return Err(if previous.operation == request.operation {
+                    Error::Binding
+                } else {
+                    Error::Duplicate
+                });
             }
         } else {
-            if request.expected_revision != self.revision { return Err(Error::Stale); }
+            if request.expected_revision != self.revision {
+                return Err(Error::Stale);
+            }
             // There are no external callbacks here. A borrowed domain cannot
             // coexist with this mutable pool borrow or bypass this stop bit.
             self.stop = Some(request);
@@ -95,7 +111,11 @@ impl FundingPool {
             };
             domains.insert(*authority, result);
         }
-        Ok(PoolStopSweep { request, domains, accounting: self.inspect() })
+        Ok(PoolStopSweep {
+            request,
+            domains,
+            accounting: self.inspect(),
+        })
     }
 
     /// Visit every allocated child, not merely the endpoints supplied by the
@@ -103,9 +123,10 @@ impl FundingPool {
     /// Original receipt reconciliation and exact-once collection stay separate.
     /// No effect is retried and no child or endpoint is automatically created.
     /// Endpoint clocks must be observed independently before this call.
-    pub fn progress_stop_all(&mut self, endpoints: &mut BTreeMap<u64, PublicationEndpoint>)
-        -> Result<PoolDrainSweep, Error>
-    {
+    pub fn progress_stop_all(
+        &mut self,
+        endpoints: &mut BTreeMap<u64, PublicationEndpoint>,
+    ) -> Result<PoolDrainSweep, Error> {
         let request = self.stop.ok_or(Error::Incomplete)?;
         let stopped = self.request_stop_all(request)?;
         let mut domains = BTreeMap::new();
@@ -113,7 +134,11 @@ impl FundingPool {
             let disposition = match result {
                 Err(error) => DomainDrain::StopFailed(error),
                 Ok(receipt) => {
-                    let broker = &mut self.allocations.get_mut(&authority).expect("retained allocation").broker;
+                    let broker = &mut self
+                        .allocations
+                        .get_mut(&authority)
+                        .expect("retained allocation")
+                        .broker;
                     let endpoint = match endpoints.get_mut(&authority) {
                         Some(endpoint) => broker.progress_stop(endpoint),
                         None => Err(Error::Missing),
@@ -121,11 +146,19 @@ impl FundingPool {
                     // Only original available rights can return, irrespective
                     // of this endpoint result. Preserve both outcomes on error.
                     let returned = self.collect_returned(self.revision, authority);
-                    DomainDrain::Stopped { receipt, endpoint, returned }
+                    DomainDrain::Stopped {
+                        receipt,
+                        endpoint,
+                        returned,
+                    }
                 }
             };
             domains.insert(authority, disposition);
         }
-        Ok(PoolDrainSweep { request, domains, accounting: self.inspect() })
+        Ok(PoolDrainSweep {
+            request,
+            domains,
+            accounting: self.inspect(),
+        })
     }
 }

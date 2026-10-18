@@ -1,10 +1,10 @@
 //! Targeted settlement through the original full-input, two-key owner.
 //! Only native cancellation or endpoint receipts can release retained resources.
 
-use super::super::{BaseEvent, Event, FileOversight, JournalError};
 use super::super::super::requests::{FileRequestDisposition, FileRequestStatus};
-use crate::action::{ActionState, ElapsedTick};
+use super::super::{BaseEvent, Event, FileOversight, JournalError};
 use crate::Error;
+use crate::action::{ActionState, ElapsedTick};
 
 impl FileOversight {
     /// Cancel or settle ONE durable request without stopping unrelated work.
@@ -63,7 +63,10 @@ impl FileOversight {
         };
         self.commit_publication_cut(
             revision,
-            &[Event::Core(BaseEvent::Time(observed_tick)), Event::Core(event)],
+            &[
+                Event::Core(BaseEvent::Time(observed_tick)),
+                Event::Core(event),
+            ],
         )?;
         self.request_status(request)
     }

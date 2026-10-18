@@ -1,5 +1,6 @@
 //! Supplied numerical fixtures captured through the actual public tensor API.
 //! No native model execution or host qualification is implied.
+#![allow(dead_code, unused_imports)]
 
 use fa_reference::action::consequence::activation::CaptureProfile;
 use fa_reference::action::consequence::activation::tensor::{

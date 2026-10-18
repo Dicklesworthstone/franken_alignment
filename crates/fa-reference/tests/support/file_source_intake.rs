@@ -1,4 +1,4 @@
-#![allow(dead_code)]
+#![allow(dead_code, unused_imports)]
 #[path = "file_evidence_driver.rs"] pub mod evidence;
 pub use evidence::{FileRig, SOURCE, document, replace, driver};
 use fa_reference::action::consequence::delivery::persistent::observed::source::FileSourcePolicy;

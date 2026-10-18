@@ -9,14 +9,22 @@
 
 pub(super) const VERSION: (u8, u8, u8) = (17, 0, 0);
 
-pub(super) fn is_letter(c: char) -> bool { in_ranges(LETTERS, c) }
-pub(super) fn is_number(c: char) -> bool { in_ranges(NUMBERS, c) }
-pub(super) fn is_white_space(c: char) -> bool { in_ranges(WHITE_SPACE, c) }
+pub(super) fn is_letter(c: char) -> bool {
+    in_ranges(LETTERS, c)
+}
+pub(super) fn is_number(c: char) -> bool {
+    in_ranges(NUMBERS, c)
+}
+pub(super) fn is_white_space(c: char) -> bool {
+    in_ranges(WHITE_SPACE, c)
+}
 
 fn in_ranges(ranges: &[(u32, u32)], c: char) -> bool {
     let point = u32::from(c);
     let after = ranges.partition_point(|&(low, _)| low <= point);
-    after.checked_sub(1).is_some_and(|index| point <= ranges[index].1)
+    after
+        .checked_sub(1)
+        .is_some_and(|index| point <= ranges[index].1)
 }
 
 pub(super) fn fold_simple(c: char) -> char {

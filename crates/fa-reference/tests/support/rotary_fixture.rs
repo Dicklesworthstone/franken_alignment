@@ -1,6 +1,6 @@
 //! Controlled weights isolate the actual rotary query while retaining causal
 //! attention and nontrivial logits. They are not pretrained-model evidence.
-#![allow(dead_code)]
+#![allow(dead_code, unused_imports)]
 #[path = "pretrained_fixture.rs"]
 mod interchange;
 use fa_reference::action::consequence::activation::{ProgressiveFrame, SourceFrame};

@@ -93,11 +93,13 @@ fn reviewed(host: &mut FileOversight, reviewer: &FileHumanReviewer, request: u64
     let sidecar = host.begin_learned_sidecar_plan(host.revision(), attempt, n.actor_revision,
         LearnedSidecarRequest { identity: SidecarIdentity { object_id: 1000 + request,
             generation: 1, transform_id: 7 }, priority, budget: SidecarCongressBudget::default() }).unwrap();
-    let original = host.checked_learned_sidecar(&sidecar).unwrap();
-    let rows: BTreeSet<_> = original.source().groups().map(|group| group.row).collect();
-    let members = original.round().input().views().iter().enumerate().map(|(index, (name, view))| {
+    let message = host.learned_text_message(LearnedEvidenceLimits::default()).unwrap();
+    let source = message.evidence().audit().source();
+    let input = host.current_learned_sidecar(&sidecar).unwrap();
+    let rows: BTreeSet<_> = source.groups().map(|group| group.row).collect();
+    let members = input.views().iter().enumerate().map(|(index, (name, view))| {
         let queries = rows.iter().map(|row| {
-            let (frame, heads, channels) = original.source().row_shape(*row).unwrap();
+            let (frame, heads, channels) = source.row_shape(*row).unwrap();
             SidecarProbeQuery { row: *row, probe: LinearProbe::new(1, 1, frame.profile,
                 &vec![0.0; heads * channels], 0.0, 1.0).unwrap() }
         }).collect();

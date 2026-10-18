@@ -128,7 +128,11 @@ impl WitnessRefinement<'_> {
         let mut spent = RefinementBudget::default();
         loop {
             if let Some(outcome) = self.terminal {
-                return RefinementReport { outcome, spent, total: self.total };
+                return RefinementReport {
+                    outcome,
+                    spent,
+                    total: self.total,
+                };
             }
             let bytes_left = budget.value_bytes - spent.value_bytes;
             let minimum = RefinementBudget {
@@ -143,9 +147,9 @@ impl WitnessRefinement<'_> {
                 };
             }
             let bytes = match self.stage {
-                Stage::Compare { expected, offset, .. } => {
-                    bytes_left.min((expected.len() - offset) as u64)
-                }
+                Stage::Compare {
+                    expected, offset, ..
+                } => bytes_left.min((expected.len() - offset) as u64),
                 _ => 0,
             };
             let Some(steps) = self.total.steps.checked_add(1) else {
@@ -183,7 +187,9 @@ impl WitnessRefinement<'_> {
     }
 
     fn needs_exact(&self) -> bool {
-        self.candidates.as_ref().is_none_or(|mask| mask[self.witness])
+        self.candidates
+            .as_ref()
+            .is_none_or(|mask| mask[self.witness])
     }
 
     fn step(&mut self, bytes: usize) -> Result<(), Error> {
@@ -215,8 +221,10 @@ impl WitnessRefinement<'_> {
                 }
             }
             Stage::Begin => {
-                if matches!(self.judgment.witnesses[self.witness], Witness::ExactValue { .. })
-                    && !self.needs_exact()
+                if matches!(
+                    self.judgment.witnesses[self.witness],
+                    Witness::ExactValue { .. }
+                ) && !self.needs_exact()
                 {
                     self.next_witness();
                     return Ok(());
@@ -252,9 +260,15 @@ impl WitnessRefinement<'_> {
                 }
             }
             Stage::Exact => {
-                let Witness::ExactValue { key, version, value, .. } =
-                    &self.judgment.witnesses[self.witness]
-                else { unreachable!("exact value step") };
+                let Witness::ExactValue {
+                    key,
+                    version,
+                    value,
+                    ..
+                } = &self.judgment.witnesses[self.witness]
+                else {
+                    unreachable!("exact value step")
+                };
                 let Some(actual) = self.snapshot.entry(*key) else {
                     self.invalidate(Invalidation::ExactValue, false);
                     return Ok(());
@@ -265,13 +279,17 @@ impl WitnessRefinement<'_> {
                     self.next_witness();
                 } else {
                     self.stage = Stage::Compare {
-                        expected: value, actual: &actual.value, offset: 0, in_range: false,
+                        expected: value,
+                        actual: &actual.value,
+                        offset: 0,
+                        in_range: false,
                     };
                 }
             }
             Stage::Absent => {
-                let Witness::AbsentKey { key, .. } = &self.judgment.witnesses[self.witness]
-                else { unreachable!("absent key step") };
+                let Witness::AbsentKey { key, .. } = &self.judgment.witnesses[self.witness] else {
+                    unreachable!("absent key step")
+                };
                 if self.snapshot.entry(*key).is_some() {
                     self.invalidate(Invalidation::AbsentKey, false);
                 } else {
@@ -300,8 +318,10 @@ impl WitnessRefinement<'_> {
                                     self.member += 1;
                                 } else {
                                     self.stage = Stage::Compare {
-                                        expected: &expected.value, actual: &actual.value,
-                                        offset: 0, in_range: true,
+                                        expected: &expected.value,
+                                        actual: &actual.value,
+                                        offset: 0,
+                                        in_range: true,
                                     };
                                 }
                             }
@@ -311,14 +331,22 @@ impl WitnessRefinement<'_> {
                     _ => unreachable!("range witness step"),
                 }
             }
-            Stage::Compare { expected, actual, offset, in_range } => {
+            Stage::Compare {
+                expected,
+                actual,
+                offset,
+                in_range,
+            } => {
                 let end = offset + bytes;
                 if expected[offset..end] != actual[offset..end] {
-                    self.invalidate(if in_range {
-                        Invalidation::RangeMembers
-                    } else {
-                        Invalidation::ExactValue
-                    }, false);
+                    self.invalidate(
+                        if in_range {
+                            Invalidation::RangeMembers
+                        } else {
+                            Invalidation::ExactValue
+                        },
+                        false,
+                    );
                 } else if end == expected.len() {
                     if in_range {
                         self.member += 1;
@@ -327,7 +355,12 @@ impl WitnessRefinement<'_> {
                         self.next_witness();
                     }
                 } else {
-                    self.stage = Stage::Compare { expected, actual, offset: end, in_range };
+                    self.stage = Stage::Compare {
+                        expected,
+                        actual,
+                        offset: end,
+                        in_range,
+                    };
                 }
             }
         }

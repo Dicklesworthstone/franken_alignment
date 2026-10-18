@@ -7,25 +7,44 @@
 pub mod native;
 
 use super::helper_workers::io::WorkerIoError;
-use super::helper_workers::wire::{WorkerInput, REQUEST_HEADER_BYTES, REVEAL_REQUEST,
-    decode_request, request_frame_len};
+use super::helper_workers::wire::{
+    REQUEST_HEADER_BYTES, REVEAL_REQUEST, WorkerInput, decode_request, request_frame_len,
+};
+use crate::Error;
 use crate::full_input::{InputProfileBinding, MAX_PROFILE_BYTES};
 use crate::round::Verdict;
-use crate::Error;
 use std::fmt;
 use std::io::{self, Read, Write};
 
 pub const CLIENT_READ_CHUNK: usize = 4_096;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum ClientPhase { ReadingRequest, NeedsInference, SendingCommitment, AwaitingReveal, SendingReveal, ReplySent, Failed }
+pub enum ClientPhase {
+    ReadingRequest,
+    NeedsInference,
+    SendingCommitment,
+    AwaitingReveal,
+    SendingReveal,
+    ReplySent,
+    Failed,
+}
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum ClientProgress { Progress, Blocked, NeedsInference, ReplySent }
+pub enum ClientProgress {
+    Progress,
+    Blocked,
+    NeedsInference,
+    ReplySent,
+}
 
 /// Scheduling advice, never evidence that a model ran or a vote was accepted.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum ClientInterest { Readable, Writable, Inference, Finished }
+pub enum ClientInterest {
+    Readable,
+    Writable,
+    Inference,
+    Finished,
+}
 
 /// One connected worker, one exact input and one immutable response. This owns
 /// no helper port, coordinator, broker, provider snapshot or production rights.
@@ -50,25 +69,44 @@ pub struct HelperClient<S> {
 
 impl<S> fmt::Debug for HelperClient<S> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("HelperClient").field("phase", &self.phase)
-            .field("buffered_bytes", &self.raw.len()).field("failure", &self.failure)
+        f.debug_struct("HelperClient")
+            .field("phase", &self.phase)
+            .field("buffered_bytes", &self.raw.len())
+            .field("failure", &self.failure)
             .finish_non_exhaustive()
     }
 }
 
 impl<S: Read + Write> HelperClient<S> {
     pub fn new(stream: S, expected: InputProfileBinding) -> Result<Self, Error> {
-        if expected.profile_bytes.len() > MAX_PROFILE_BYTES { return Err(Error::Limit); }
-        Ok(Self { stream, expected, phase: ClientPhase::ReadingRequest,
-            raw: Vec::with_capacity(REQUEST_HEADER_BYTES), expected_bytes: REQUEST_HEADER_BYTES,
-            input: None, output: Vec::new(), reveal: Vec::new(), written: 0, failure: None })
+        if expected.profile_bytes.len() > MAX_PROFILE_BYTES {
+            return Err(Error::Limit);
+        }
+        Ok(Self {
+            stream,
+            expected,
+            phase: ClientPhase::ReadingRequest,
+            raw: Vec::with_capacity(REQUEST_HEADER_BYTES),
+            expected_bytes: REQUEST_HEADER_BYTES,
+            input: None,
+            output: Vec::new(),
+            reveal: Vec::new(),
+            written: 0,
+            failure: None,
+        })
     }
 
-    pub fn phase(&self) -> ClientPhase { self.phase }
-    pub fn failure(&self) -> Option<WorkerIoError> { self.failure }
+    pub fn phase(&self) -> ClientPhase {
+        self.phase
+    }
+    pub fn failure(&self) -> Option<WorkerIoError> {
+        self.failure
+    }
     /// Available only after the complete request passes the original parser and
     /// exact expected-profile comparison. Remains historical data after failure.
-    pub fn input(&self) -> Option<&WorkerInput> { self.input.as_ref() }
+    pub fn input(&self) -> Option<&WorkerInput> {
+        self.input.as_ref()
+    }
 
     pub fn interest(&self) -> ClientInterest {
         match self.phase {
@@ -83,7 +121,9 @@ impl<S: Read + Write> HelperClient<S> {
     /// salt lengths retain the uncommitted input. Once chosen, even before the
     /// first write, no API replaces the verdict or salt. No default vote exists.
     pub fn respond(&mut self, verdict: Verdict, salt: &[u8]) -> Result<(), Error> {
-        if self.phase != ClientPhase::NeedsInference { return Err(Error::WrongState); }
+        if self.phase != ClientPhase::NeedsInference {
+            return Err(Error::WrongState);
+        }
         let input = self.input.as_ref().ok_or(Error::Incomplete)?;
         let commitment = input.commitment_frame(verdict, salt)?;
         let reveal = input.reveal_frame(verdict, salt)?;
@@ -98,7 +138,9 @@ impl<S: Read + Write> HelperClient<S> {
     /// and Interrupted preserve offsets and never rerun inference or a command.
     /// A terminal error is latched; future steps perform no I/O.
     pub fn step(&mut self) -> Result<ClientProgress, WorkerIoError> {
-        if let Some(error) = self.failure { return Err(error); }
+        if let Some(error) = self.failure {
+            return Err(error);
+        }
         let result = match self.phase {
             ClientPhase::ReadingRequest => self.read_request(),
             ClientPhase::NeedsInference => Ok(ClientProgress::NeedsInference),
@@ -110,7 +152,10 @@ impl<S: Read + Write> HelperClient<S> {
         if let Err(error) = result {
             self.failure = Some(error);
             self.phase = ClientPhase::Failed;
-            self.raw.clear(); self.output.clear(); self.reveal.clear(); self.written = 0;
+            self.raw.clear();
+            self.output.clear();
+            self.reveal.clear();
+            self.written = 0;
         }
         result
     }
@@ -128,12 +173,17 @@ impl<S: Read + Write> HelperClient<S> {
             };
             self.raw.extend_from_slice(&scratch[..count]);
         }
-        if self.raw.len() < self.expected_bytes { return Ok(ClientProgress::Progress); }
+        if self.raw.len() < self.expected_bytes {
+            return Ok(ClientProgress::Progress);
+        }
         if self.expected_bytes == REQUEST_HEADER_BYTES {
             self.expected_bytes = request_frame_len(&self.raw).map_err(WorkerIoError::Protocol)?;
-            self.raw.try_reserve_exact(self.expected_bytes - self.raw.len())
+            self.raw
+                .try_reserve_exact(self.expected_bytes - self.raw.len())
                 .map_err(|_| WorkerIoError::Protocol(Error::Limit))?;
-            if self.raw.len() < self.expected_bytes { return Ok(ClientProgress::Progress); }
+            if self.raw.len() < self.expected_bytes {
+                return Ok(ClientProgress::Progress);
+            }
         }
         let input = decode_request(&self.raw).map_err(WorkerIoError::Protocol)?;
         if input.actual_input().input_profile() != &self.expected {
@@ -171,18 +221,27 @@ impl<S: Read + Write> HelperClient<S> {
                 Err(error) if transient(error.kind()) => return Ok(ClientProgress::Blocked),
                 Err(error) => return Err(WorkerIoError::Io(error.kind())),
             }
-            if self.written < self.output.len() { return Ok(ClientProgress::Progress); }
+            if self.written < self.output.len() {
+                return Ok(ClientProgress::Progress);
+            }
         }
         match self.stream.flush() {
             Ok(()) => {
-                self.output.clear(); self.written = 0;
+                self.output.clear();
+                self.written = 0;
                 self.phase = if self.phase == ClientPhase::SendingCommitment {
                     ClientPhase::AwaitingReveal
-                } else { ClientPhase::ReplySent };
-                Ok(if self.phase == ClientPhase::ReplySent { ClientProgress::ReplySent } else { ClientProgress::Progress })
+                } else {
+                    ClientPhase::ReplySent
+                };
+                Ok(if self.phase == ClientPhase::ReplySent {
+                    ClientProgress::ReplySent
+                } else {
+                    ClientProgress::Progress
+                })
             }
             Err(error) if transient(error.kind()) => Ok(ClientProgress::Blocked),
-            Err(error) => Err(WorkerIoError::Io(error.kind())) ,
+            Err(error) => Err(WorkerIoError::Io(error.kind())),
         }
     }
 }
@@ -195,13 +254,20 @@ fn transient(kind: io::ErrorKind) -> bool {
 impl HelperClient<std::os::unix::net::UnixStream> {
     /// The caller provisions/authenticates the connected peer. No listener,
     /// process launcher, model loader or second executor is hidden here.
-    pub fn from_unix(stream: std::os::unix::net::UnixStream, expected: InputProfileBinding) -> Result<Self, WorkerIoError> {
-        stream.set_nonblocking(true).map_err(|error| WorkerIoError::Io(error.kind()))?;
+    pub fn from_unix(
+        stream: std::os::unix::net::UnixStream,
+        expected: InputProfileBinding,
+    ) -> Result<Self, WorkerIoError> {
+        stream
+            .set_nonblocking(true)
+            .map_err(|error| WorkerIoError::Io(error.kind()))?;
         Self::new(stream, expected).map_err(WorkerIoError::Protocol)
     }
 }
 
 #[cfg(unix)]
 impl std::os::fd::AsFd for HelperClient<std::os::unix::net::UnixStream> {
-    fn as_fd(&self) -> std::os::fd::BorrowedFd<'_> { std::os::fd::AsFd::as_fd(&self.stream) }
+    fn as_fd(&self) -> std::os::fd::BorrowedFd<'_> {
+        std::os::fd::AsFd::as_fd(&self.stream)
+    }
 }

@@ -1,13 +1,20 @@
 //! Coupled producer projections in the original private effect transaction.
-use super::{Completion, CompletionEvidence, SourceCut, FileOversight, JournalError,
-    FileCaptureError, ElapsedTick, failure};
 use super::super::FilePublicationCapture;
+use super::{
+    Completion, CompletionEvidence, ElapsedTick, FileCaptureError, FileOversight, JournalError,
+    SourceCut, failure,
+};
 
 impl<F, P> Completion<'_, F, P>
-where F: FnMut() -> ElapsedTick, P: CompletionEvidence {
-    pub(super) fn read_for_cut(&mut self, host: &mut FileOversight, cut: &mut SourceCut)
-        -> Result<Result<FilePublicationCapture, FileCaptureError>, JournalError>
-    {
+where
+    F: FnMut() -> ElapsedTick,
+    P: CompletionEvidence,
+{
+    pub(super) fn read_for_cut(
+        &mut self,
+        host: &mut FileOversight,
+        cut: &mut SourceCut,
+    ) -> Result<Result<FilePublicationCapture, FileCaptureError>, JournalError> {
         let Some(feed) = self.feed.filter(|feed| self.source.shares_producer(feed)) else {
             return Ok(self.read());
         };

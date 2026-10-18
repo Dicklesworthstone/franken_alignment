@@ -42,18 +42,23 @@ impl RoundTranscript {
     /// Reconstruct the protocol rather than trusting reported member outcomes.
     /// Collection and byte bounds are checked before constructing the round.
     pub fn replay(&self) -> Result<Round, Error> {
-        if self.version != TRANSCRIPT_VERSION || self.round == 0
-            || self.evidence_root == [0; 32] || self.members.is_empty()
+        if self.version != TRANSCRIPT_VERSION
+            || self.round == 0
+            || self.evidence_root == [0; 32]
+            || self.members.is_empty()
         {
             return Err(Error::InvalidInput);
         }
-        if self.members.len() > MAX_VOTES || self.commits.len() > MAX_VOTES
+        if self.members.len() > MAX_VOTES
+            || self.commits.len() > MAX_VOTES
             || self.reveals.len() > MAX_VOTES
         {
             return Err(Error::Limit);
         }
         let mut bytes = 0_usize;
-        for name in self.members.iter()
+        for name in self
+            .members
+            .iter()
             .chain(self.commits.iter().map(|entry| &entry.member))
             .chain(self.reveals.iter().map(|entry| &entry.member))
         {
@@ -105,7 +110,9 @@ mod tests {
                 digest: commitment(17, "alice", &[3; 32], Verdict::Allow, b"salt").unwrap(),
             }],
             reveals: vec![RevealRecord {
-                member: "alice".into(), verdict: Verdict::Allow, salt: b"salt".to_vec(),
+                member: "alice".into(),
+                verdict: Verdict::Allow,
+                salt: b"salt".to_vec(),
             }],
         }
     }
@@ -113,7 +120,10 @@ mod tests {
     #[test]
     fn accepted_protocol_replays_without_losing_missing_members() {
         let round = transcript().replay().unwrap();
-        assert_eq!(round.outcome("alice"), Ok(MemberOutcome::Revealed(Verdict::Allow)));
+        assert_eq!(
+            round.outcome("alice"),
+            Ok(MemberOutcome::Revealed(Verdict::Allow))
+        );
         assert_eq!(round.outcome("bob"), Ok(MemberOutcome::Missing));
         assert_eq!(round.member_count(), 2);
     }

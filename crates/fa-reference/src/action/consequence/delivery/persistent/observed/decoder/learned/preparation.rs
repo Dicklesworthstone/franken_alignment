@@ -1,17 +1,22 @@
 //! Cooperative reconstruction for one ORIGINAL pending numerical completion.
 //! The live owner remains available; any journal mutation invalidates this cut.
-mod intent;
 mod catch_up;
 mod continuation;
+mod intent;
 pub use continuation::FileLearnedReplayContinuation;
 pub use intent::FileLearnedIntentPreparation;
 
 #[derive(Clone, Copy, PartialEq, Eq)]
-enum Operation { Intent, Completion }
+enum Operation {
+    Intent,
+    Completion,
+}
 
-use super::{DecoderEvent, Error, Event, FileOversight, GenerationEvent,
-    JournalError, LearnedEvent, LearnedStepIntent, Machine};
 use super::super::super::super::MAX_JOURNAL_EVENTS;
+use super::{
+    DecoderEvent, Error, Event, FileOversight, GenerationEvent, JournalError, LearnedEvent,
+    LearnedStepIntent, Machine,
+};
 use std::fmt;
 use std::rc::Rc;
 
@@ -66,7 +71,9 @@ pub struct FileLearnedStepPreparation {
 }
 impl fmt::Debug for FileLearnedStepPreparation {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("FileLearnedStepPreparation").field("progress", &self.progress()).finish_non_exhaustive()
+        f.debug_struct("FileLearnedStepPreparation")
+            .field("progress", &self.progress())
+            .finish_non_exhaustive()
     }
 }
 
@@ -75,14 +82,22 @@ impl FileOversight {
     /// historical inference or journal write yet. Capacity is checked before
     /// work; the promise is event slots, not future witness bytes or disk space.
     /// The original pending intent must already have been acknowledged.
-    pub fn prepare_learned_step_completion(&self, revision: u64, actor_revision: u64,
-        position: u64) -> Result<FileLearnedStepPreparation, JournalError>
-    {
+    pub fn prepare_learned_step_completion(
+        &self,
+        revision: u64,
+        actor_revision: u64,
+        position: u64,
+    ) -> Result<FileLearnedStepPreparation, JournalError> {
         self.check_learned_completion(revision, actor_revision, position)?;
         Ok(FileLearnedStepPreparation {
-            issuer: Rc::clone(&self.issuer), revision,
-            intent: LearnedStepIntent { actor_revision, position },
-            total: self.events.len(), replayed: 0,
+            issuer: Rc::clone(&self.issuer),
+            revision,
+            intent: LearnedStepIntent {
+                actor_revision,
+                position,
+            },
+            total: self.events.len(),
+            replayed: 0,
             status: FileLearnedStepPreparationStatus::Replaying,
             candidate: Machine::new(&self.profile)?,
             operation: Operation::Completion,
@@ -92,22 +107,35 @@ impl FileOversight {
 
 impl FileLearnedStepPreparation {
     pub fn progress(&self) -> FileLearnedStepPreparationProgress {
-        FileLearnedStepPreparationProgress { journal_revision: self.revision,
-            intent: self.intent, replayed_events: self.replayed, total_events: self.total,
-            status: self.status }
+        FileLearnedStepPreparationProgress {
+            journal_revision: self.revision,
+            intent: self.intent,
+            replayed_events: self.replayed,
+            total_events: self.total,
+            status: self.status,
+        }
     }
 
     // Even a READY candidate cannot cross a changed owner, journal cut, live
     // source-interruption latch or failed write. Pending identity never changes
     // without a journal transition, so the original completion checks suffice.
     fn check_owner_cut(&self, host: &FileOversight) -> Result<(), JournalError> {
-        if !Rc::ptr_eq(&self.issuer, &host.issuer) { return Err(Error::Binding.into()); }
-        if host.storage_failure().is_some() { return Err(JournalError::Unavailable); }
-        if host.revision() != self.revision { return Err(Error::Stale.into()); }
+        if !Rc::ptr_eq(&self.issuer, &host.issuer) {
+            return Err(Error::Binding.into());
+        }
+        if host.storage_failure().is_some() {
+            return Err(JournalError::Unavailable);
+        }
+        if host.revision() != self.revision {
+            return Err(Error::Stale.into());
+        }
         let event = match self.operation {
             Operation::Intent => LearnedEvent::Begin(self.intent),
-            Operation::Completion => LearnedEvent::Step { actor_revision: self.intent.actor_revision,
-                position: self.intent.position, witness: Rc::from(&b""[..]) },
+            Operation::Completion => LearnedEvent::Step {
+                actor_revision: self.intent.actor_revision,
+                position: self.intent.position,
+                witness: Rc::from(&b""[..]),
+            },
         };
         host.check_source_admission(&Event::Decoder(DecoderEvent::Learned(event)))?;
         Ok(())
@@ -127,15 +155,26 @@ impl FileLearnedStepPreparation {
     /// quanta and stale cursors do no work; the first reducer failure is sticky.
     /// Any intervening live mutation refuses here. Construct a new preparation
     /// or explicitly call catch_up to verify the appended tail before finishing.
-    pub fn advance(&mut self, host: &FileOversight, expected_events: usize,
-        max_events: usize) -> Result<FileLearnedStepPreparationProgress, JournalError>
-    {
+    pub fn advance(
+        &mut self,
+        host: &FileOversight,
+        expected_events: usize,
+        max_events: usize,
+    ) -> Result<FileLearnedStepPreparationProgress, JournalError> {
         self.check_status()?;
-        if expected_events != self.replayed { return Err(Error::Stale.into()); }
-        if max_events == 0 { return Err(Error::InvalidInput.into()); }
-        if max_events > MAX_JOURNAL_EVENTS { return Err(Error::Limit.into()); }
+        if expected_events != self.replayed {
+            return Err(Error::Stale.into());
+        }
+        if max_events == 0 {
+            return Err(Error::InvalidInput.into());
+        }
+        if max_events > MAX_JOURNAL_EVENTS {
+            return Err(Error::Limit.into());
+        }
         self.check_owner_cut(host)?;
-        if self.status == FileLearnedStepPreparationStatus::Ready { return Ok(self.progress()); }
+        if self.status == FileLearnedStepPreparationStatus::Ready {
+            return Ok(self.progress());
+        }
         let end = self.replayed.saturating_add(max_events).min(self.total);
         while self.replayed < end {
             self.status = FileLearnedStepPreparationStatus::Interrupted;
@@ -146,7 +185,9 @@ impl FileLearnedStepPreparation {
             self.replayed += 1;
             self.status = FileLearnedStepPreparationStatus::Replaying;
         }
-        if self.replayed == self.total { self.status = FileLearnedStepPreparationStatus::Ready; }
+        if self.replayed == self.total {
+            self.status = FileLearnedStepPreparationStatus::Ready;
+        }
         Ok(self.progress())
     }
 
@@ -156,33 +197,55 @@ impl FileLearnedStepPreparation {
     /// Encoding, one numerical step and storage replacement remain synchronous.
     /// Only acknowledged completion returns output (or an acknowledged numerical
     /// error); persistence failure exposes neither the candidate nor its result.
-    pub fn finish(self, host: &mut FileOversight)
-        -> Result<Result<Rc<GenerationEvent>, Error>, JournalError>
-    {
+    pub fn finish(
+        self,
+        host: &mut FileOversight,
+    ) -> Result<Result<Rc<GenerationEvent>, Error>, JournalError> {
         self.check_finalization(host)?;
-        host.persist_prepared_learned_step(self.revision, self.intent.actor_revision,
-            self.intent.position, self.candidate)
+        host.persist_prepared_learned_step(
+            self.revision,
+            self.intent.actor_revision,
+            self.intent.position,
+            self.candidate,
+        )
     }
 
     /// Same original completion, retaining its former acknowledged predecessor
     /// for later replay. The result and continuation are returned only AFTER the
     /// canonical write succeeds. An acknowledged numerical Err remains an Err;
     /// the continuation cannot bypass that failed/held generation's admission.
-    pub fn finish_with_continuation(self, host: &mut FileOversight)
-        -> Result<(Result<Rc<GenerationEvent>, Error>, FileLearnedReplayContinuation), JournalError>
-    {
+    pub fn finish_with_continuation(
+        self,
+        host: &mut FileOversight,
+    ) -> Result<
+        (
+            Result<Rc<GenerationEvent>, Error>,
+            FileLearnedReplayContinuation,
+        ),
+        JournalError,
+    > {
         self.check_finalization(host)?;
-        let (result, retired) = host.persist_prepared_learned_step_retaining(self.revision,
-            self.intent.actor_revision, self.intent.position, self.candidate)?;
-        Ok((result, FileLearnedReplayContinuation::new(self.issuer, self.total, retired)))
+        let (result, retired) = host.persist_prepared_learned_step_retaining(
+            self.revision,
+            self.intent.actor_revision,
+            self.intent.position,
+            self.candidate,
+        )?;
+        Ok((
+            result,
+            FileLearnedReplayContinuation::new(self.issuer, self.total, retired),
+        ))
     }
 
     fn check_finalization(&self, host: &FileOversight) -> Result<(), JournalError> {
         self.check_status()?;
         self.check_owner_cut(host)?;
-        if self.status != FileLearnedStepPreparationStatus::Ready { return Err(Error::Incomplete.into()); }
-        if self.operation != Operation::Completion { return Err(Error::WrongState.into()); }
+        if self.status != FileLearnedStepPreparationStatus::Ready {
+            return Err(Error::Incomplete.into());
+        }
+        if self.operation != Operation::Completion {
+            return Err(Error::WrongState.into());
+        }
         Ok(())
     }
 }
-

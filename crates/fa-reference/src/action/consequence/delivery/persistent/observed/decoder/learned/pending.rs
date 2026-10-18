@@ -1,11 +1,12 @@
 //! A fixed original recovery sequence with one acknowledged canonical cut.
 //! No partial clock/resume, candidate token, effect key or refund escapes it.
-use super::{DecoderEvent, Event, FileOversight, GenerationEvent, JournalError,
-    JournalFailure, JournalIo, LearnedEvent, LearnedStepIntent, Machine, Transition,
-    journal};
 use super::super::super::BaseEvent;
-use crate::action::ElapsedTick;
+use super::{
+    DecoderEvent, Event, FileOversight, GenerationEvent, JournalError, JournalFailure, JournalIo,
+    LearnedEvent, LearnedStepIntent, Machine, Transition, journal,
+};
 use crate::Error;
+use crate::action::ElapsedTick;
 use std::rc::Rc;
 
 impl FileOversight {
@@ -31,21 +32,40 @@ impl FileOversight {
         position: u64,
         observed_at: ElapsedTick,
     ) -> Result<Result<Rc<GenerationEvent>, Error>, JournalError> {
-        if self.fault.is_some() { return Err(JournalError::Unavailable); }
-        if revision != self.revision() { return Err(Error::Stale.into()); }
-        let pending = self.machine.pending_learned_step().ok_or(Error::Incomplete)?;
-        if pending != (LearnedStepIntent { actor_revision, position }) {
+        if self.fault.is_some() {
+            return Err(JournalError::Unavailable);
+        }
+        if revision != self.revision() {
+            return Err(Error::Stale.into());
+        }
+        let pending = self
+            .machine
+            .pending_learned_step()
+            .ok_or(Error::Incomplete)?;
+        if pending
+            != (LearnedStepIntent {
+                actor_revision,
+                position,
+            })
+        {
             return Err(Error::Binding.into());
         }
-        if !self.machine.learned_paused() { return Err(Error::WrongState.into()); }
+        if !self.machine.learned_paused() {
+            return Err(Error::WrongState.into());
+        }
         self.check_learned_event_capacity(revision, 3)?;
 
         let prefix = [
             Event::Core(BaseEvent::Time(observed_at)),
-            Event::Decoder(DecoderEvent::Learned(LearnedEvent::Resume { actor_revision, position })),
+            Event::Decoder(DecoderEvent::Learned(LearnedEvent::Resume {
+                actor_revision,
+                position,
+            })),
         ];
         let shape = Event::Decoder(DecoderEvent::Learned(LearnedEvent::Step {
-            actor_revision, position, witness: Rc::from(&b""[..]),
+            actor_revision,
+            position,
+            witness: Rc::from(&b""[..]),
         }));
         for event in prefix.iter().chain(std::iter::once(&shape)) {
             self.check_source_admission(event)?;
@@ -68,16 +88,25 @@ impl FileOversight {
         candidate.preflight_learned_step(actor_revision, position)?;
         // A caught unwind, failed witness encoding or late byte-capacity refusal
         // cannot make an older quiet prefix eligible after attempted inference.
-        self.fault = Some(JournalFailure { operation: JournalIo::Stage,
-            kind: std::io::ErrorKind::Other, replacement_may_be_visible: false });
+        self.fault = Some(JournalFailure {
+            operation: JournalIo::Stage,
+            kind: std::io::ErrorKind::Other,
+            replacement_may_be_visible: false,
+        });
         let (step, result) = candidate.prepare_learned_step(actor_revision, position)?;
         let step = Event::Decoder(DecoderEvent::Learned(step));
-        let bytes = journal::encode_appended(&self.profile, self.store.identity(), &history, &step)?;
+        let bytes =
+            journal::encode_appended(&self.profile, self.store.identity(), &history, &step)?;
         history.push(step);
-        self.fault = Some(JournalFailure { operation: JournalIo::Stage,
-            kind: std::io::ErrorKind::Other, replacement_may_be_visible: true });
+        self.fault = Some(JournalFailure {
+            operation: JournalIo::Stage,
+            kind: std::io::ErrorKind::Other,
+            replacement_may_be_visible: true,
+        });
         if let Err(error) = self.store.replace(&bytes) {
-            if let JournalError::Io(failure) = &error { self.fault = Some(failure.clone()); }
+            if let JournalError::Io(failure) = &error {
+                self.fault = Some(failure.clone());
+            }
             return Err(error);
         }
         for event in &history[self.events.len()..] {

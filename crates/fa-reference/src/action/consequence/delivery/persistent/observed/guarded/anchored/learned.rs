@@ -1,10 +1,12 @@
 //! Independently anchored recovery and read-only inspection of learned owners.
 //! Anchors bind history; the original recipe and control checks remain separate.
 
-use super::{FileHistoryAnchor, FileOversight, FileOversightProfile, FileOversightRoles,
-    FileRecoveryRequirements, JournalError, journal, storage};
-use super::super::learned::{check_profile, reconstruct, recover};
 use super::super::super::decoder::learned::FileLearnedConfig;
+use super::super::learned::{check_profile, reconstruct, recover};
+use super::{
+    FileHistoryAnchor, FileOversight, FileOversightProfile, FileOversightRoles,
+    FileRecoveryRequirements, JournalError, journal, storage,
+};
 use crate::action::consequence::delivery::persistent::FileDeliverySnapshot;
 use std::path::Path;
 
@@ -56,7 +58,10 @@ impl FileOversight {
         super::super::super::super::codec::validate_profile(&profile.delivery)?;
         check_profile(&expected.guards)?;
         let identity = storage::identity(directory.as_ref())?;
-        let bytes = storage::read(&identity.join(storage::CANONICAL), profile.delivery.limits.bytes)?;
+        let bytes = storage::read(
+            &identity.join(storage::CANONICAL),
+            profile.delivery.limits.bytes,
+        )?;
         let mut events = journal::decode(profile, &identity, &bytes)?;
         anchor.check(profile, &identity, &events)?;
         let machine = reconstruct(profile, &mut events, expected, config)?;

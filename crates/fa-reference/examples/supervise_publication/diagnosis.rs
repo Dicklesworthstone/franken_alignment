@@ -1,8 +1,11 @@
 //! Offline, request-key explanation through the ORIGINAL anchored proposal read.
 //! No live authority, helper, current evidence or effect path is constructed.
+#[path = "diagnosis/render.rs"]
 mod render;
+#[path = "diagnosis/search.rs"]
 mod search;
 #[cfg(test)]
+#[path = "diagnosis/tests.rs"]
 mod tests;
 use crate::config::{Config, debug, read_regular};
 use crate::recover_stop::guarded::Profile;

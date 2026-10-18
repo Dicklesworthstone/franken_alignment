@@ -1,16 +1,18 @@
 //! Publish the complete configured guard set in the FIRST canonical image.
 //! No intermediate unguarded owner, callback, effect, or new journal format.
 
-use super::{FileGuardSet, FileOversightRoles};
 use super::super::credential::FileCredentialPolicy;
 use super::super::decoder::DecoderEvent;
 use super::super::governance::campaigns::CampaignEvent;
 use super::super::identity::IdentityEvent;
 use super::super::source::SourceEvent;
-use super::super::{Event, FileOversight, FileOversightProfile, JournalError, Machine, journal, storage};
+use super::super::{
+    Event, FileOversight, FileOversightProfile, JournalError, Machine, journal, storage,
+};
+use super::{FileGuardSet, FileOversightRoles};
+use crate::Error;
 use crate::action::consequence::delivery::credential_broker::BrokerRouteBinding;
 use crate::perimeter_inventory::LoadedPerimeterInventory;
-use crate::Error;
 use std::path::Path;
 use std::rc::Rc;
 
@@ -31,35 +33,47 @@ pub(super) struct PreparedGuardedBootstrap {
 }
 
 impl PreparedGuardedBootstrap {
-    pub(super) fn prepare(profile: FileOversightProfile, guards: &FileGuardSet,
-        registration: Option<FileCredentialRegistration<'_>>) -> Result<Self, JournalError>
-    {
+    pub(super) fn prepare(
+        profile: FileOversightProfile,
+        guards: &FileGuardSet,
+        registration: Option<FileCredentialRegistration<'_>>,
+    ) -> Result<Self, JournalError> {
         Self::prepare_with_reserve(profile, guards, registration, None)
     }
 
     /// Reserve the original terminal tail before any bootstrap guard counts as
     /// work. The complete first image is still published only once.
-    pub(super) fn prepare_reserved(profile: FileOversightProfile, guards: &FileGuardSet,
+    pub(super) fn prepare_reserved(
+        profile: FileOversightProfile,
+        guards: &FileGuardSet,
         registration: Option<FileCredentialRegistration<'_>>,
-        reserve: super::super::super::RecoveryReserve) -> Result<Self, JournalError>
-    {
+        reserve: super::super::super::RecoveryReserve,
+    ) -> Result<Self, JournalError> {
         use super::super::super::recovery_capacity::{Admission, Class};
         Admission::new(profile.delivery.limits).record(Class::Install(reserve), 0, 0)?;
         Self::prepare_with_reserve(profile, guards, registration, Some(reserve))
     }
 
-    fn prepare_with_reserve(profile: FileOversightProfile, guards: &FileGuardSet,
+    fn prepare_with_reserve(
+        profile: FileOversightProfile,
+        guards: &FileGuardSet,
         registration: Option<FileCredentialRegistration<'_>>,
-        reserve: Option<super::super::super::RecoveryReserve>) -> Result<Self, JournalError>
-    {
+        reserve: Option<super::super::super::RecoveryReserve>,
+    ) -> Result<Self, JournalError> {
         profile.delivery.limits.check()?;
         guards.validate()?;
         let credential = match (&guards.credential, registration) {
             (None, None) => None,
             (Some(expected), Some(registration)) => {
-                let actual = FileCredentialPolicy::resolve(registration.inventory, registration.binding,
-                    profile.delivery.scope, profile.delivery.target)?;
-                if &actual != expected { return Err(Error::Binding.into()); }
+                let actual = FileCredentialPolicy::resolve(
+                    registration.inventory,
+                    registration.binding,
+                    profile.delivery.scope,
+                    profile.delivery.target,
+                )?;
+                if &actual != expected {
+                    return Err(Error::Binding.into());
+                }
                 Some(actual)
             }
             _ => return Err(Error::InvalidInput.into()),
@@ -71,18 +85,32 @@ impl PreparedGuardedBootstrap {
             None => Event::PublicationGuard,
         }];
         if let Some(reserve) = reserve {
-            events.push(Event::Core(super::super::BaseEvent::ReserveRecovery(reserve)));
+            events.push(Event::Core(super::super::BaseEvent::ReserveRecovery(
+                reserve,
+            )));
         }
-        if let Some(source) = guards.source { events.push(Event::Source(SourceEvent::Enable(source))); }
+        if let Some(source) = guards.source {
+            events.push(Event::Source(SourceEvent::Enable(source)));
+        }
         if let Some(identity) = &guards.identity {
-            events.push(Event::Identity(IdentityEvent::Enable(Rc::new(identity.passport.clone()), identity.policy)));
+            events.push(Event::Identity(IdentityEvent::Enable(
+                Rc::new(identity.passport.clone()),
+                identity.policy,
+            )));
         }
         if let Some(campaigns) = guards.campaigns {
-            events.push(Event::Campaign(CampaignEvent::Enable(campaigns.limits, campaigns.max_campaigns)));
+            events.push(Event::Campaign(CampaignEvent::Enable(
+                campaigns.limits,
+                campaigns.max_campaigns,
+            )));
         }
-        if let Some(credential) = credential { events.push(Event::CredentialGuard(credential)); }
+        if let Some(credential) = credential {
+            events.push(Event::CredentialGuard(credential));
+        }
         if let Some(config) = &guards.decoder {
-            events.push(Event::Decoder(DecoderEvent::Enable(Rc::new(config.clone()))));
+            events.push(Event::Decoder(DecoderEvent::Enable(Rc::new(
+                config.clone(),
+            ))));
         }
         if let Some(policy) = guards.decoder_stop {
             events.push(Event::Decoder(DecoderEvent::StopPolicy(policy)));
@@ -91,15 +119,21 @@ impl PreparedGuardedBootstrap {
         // No profile is silently dropped, reordered after work, or downgraded.
         let machine = Machine::replay(&profile, &events)?;
         guards.check(&machine, &events)?;
-        Ok(Self { profile, events, machine })
+        Ok(Self {
+            profile,
+            events,
+            machine,
+        })
     }
 
     /// Append the native evaluation bootstrap BEFORE the sole canonical write.
-    pub(super) fn evaluated(mut self,
-        protocol: crate::action::consequence::oversight::credibility::EvaluationProtocol)
-        -> Result<Self, JournalError>
-    {
-        let event = Event::Credibility(super::super::credibility::CredibilityEvent::Enable(protocol));
+    pub(super) fn evaluated(
+        mut self,
+        protocol: crate::action::consequence::oversight::credibility::EvaluationProtocol,
+    ) -> Result<Self, JournalError> {
+        let event = Event::Credibility(super::super::credibility::CredibilityEvent::Enable(
+            protocol,
+        ));
         self.machine.apply(&event)?;
         self.events.push(event);
         Ok(self)
@@ -107,41 +141,50 @@ impl PreparedGuardedBootstrap {
 
     /// Activate native accounting in the SAME first image as every guard and
     /// the evaluation protocol. No usable pre-accounting owner escapes.
-    pub(super) fn with_andon(mut self, config: &super::super::credibility::andon::FileAndonConfig)
-        -> Result<Self, JournalError>
-    {
-        let event = Event::Credibility(super::super::credibility::CredibilityEvent::EnableAndon(config.clone()));
+    pub(super) fn with_andon(
+        mut self,
+        config: &super::super::credibility::andon::FileAndonConfig,
+    ) -> Result<Self, JournalError> {
+        let event = Event::Credibility(super::super::credibility::CredibilityEvent::EnableAndon(
+            config.clone(),
+        ));
         self.machine.apply(&event)?;
         self.events.push(event);
         Ok(self)
     }
 
     /// Freeze marginal AND joint evaluation before the first canonical image.
-    pub(super) fn jointly_evaluated(mut self,
+    pub(super) fn jointly_evaluated(
+        mut self,
         protocol: crate::action::consequence::oversight::credibility::EvaluationProtocol,
-        policy: crate::action::consequence::oversight::joint_credibility::JointPromotionPolicy)
-        -> Result<Self, JournalError>
-    {
-        let event = Event::Credibility(super::super::credibility::CredibilityEvent::EnableJoint(protocol, policy));
+        policy: crate::action::consequence::oversight::joint_credibility::JointPromotionPolicy,
+    ) -> Result<Self, JournalError> {
+        let event = Event::Credibility(super::super::credibility::CredibilityEvent::EnableJoint(
+            protocol, policy,
+        ));
         self.machine.apply(&event)?;
         self.events.push(event);
         Ok(self)
     }
 
     /// Apply the original predictor gate before the FIRST canonical write.
-    pub(super) fn predictive(mut self, config: super::super::consistency::FileConsistencyConfig)
-        -> Result<Self, JournalError>
-    {
-        let event = Event::Consistency(super::super::consistency::ConsistencyEvent::Enable(Rc::new(config)));
+    pub(super) fn predictive(
+        mut self,
+        config: super::super::consistency::FileConsistencyConfig,
+    ) -> Result<Self, JournalError> {
+        let event = Event::Consistency(super::super::consistency::ConsistencyEvent::Enable(
+            Rc::new(config),
+        ));
         self.machine.apply(&event)?;
         self.events.push(event);
         Ok(self)
     }
 
     /// Install the original topology gate, uncertified, before publishing roles.
-    pub(super) fn mediated(mut self, graph: crate::action::consequence::mediation::AuthorityGraph)
-        -> Result<Self, JournalError>
-    {
+    pub(super) fn mediated(
+        mut self,
+        graph: crate::action::consequence::mediation::AuthorityGraph,
+    ) -> Result<Self, JournalError> {
         let event = Event::Mediation(super::super::mediation::MediationEvent::Enable(graph));
         self.machine.apply(&event)?;
         self.events.push(event);
@@ -149,12 +192,14 @@ impl PreparedGuardedBootstrap {
     }
 
     /// Install the original learned recipe before the sole canonical write.
-    pub(super) fn learned(mut self, config: super::super::decoder::learned::FileLearnedConfig)
-        -> Result<Self, JournalError>
-    {
+    pub(super) fn learned(
+        mut self,
+        config: super::super::decoder::learned::FileLearnedConfig,
+    ) -> Result<Self, JournalError> {
         use super::super::decoder::learned::{Configuration, LearnedEvent};
-        let event = Event::Decoder(DecoderEvent::Learned(
-            LearnedEvent::Enable(Configuration::new(config))));
+        let event = Event::Decoder(DecoderEvent::Learned(LearnedEvent::Enable(
+            Configuration::new(config),
+        )));
         self.machine.apply(&event)?;
         self.events.push(event);
         Ok(self)
@@ -162,42 +207,51 @@ impl PreparedGuardedBootstrap {
 
     /// Compare the complete independently declared guard inventory after native
     /// recipe-owned installations, while the entire bootstrap remains private.
-    pub(super) fn checked_evaluated(self, guards: &FileGuardSet,
-        protocol: &crate::action::consequence::oversight::credibility::EvaluationProtocol)
-        -> Result<Self, JournalError>
-    {
+    pub(super) fn checked_evaluated(
+        self,
+        guards: &FileGuardSet,
+        protocol: &crate::action::consequence::oversight::credibility::EvaluationProtocol,
+    ) -> Result<Self, JournalError> {
         guards.check_evaluated(&self.machine, &self.events, Some(protocol))?;
         Ok(self)
     }
 
     /// Check the complete learned/guarded topology inventory before its first
     /// image exists. Native recipe-owned source installation remains unique.
-    pub(super) fn checked_mediated(self, guards: &FileGuardSet,
+    pub(super) fn checked_mediated(
+        self,
+        guards: &FileGuardSet,
         protocol: Option<&crate::action::consequence::oversight::credibility::EvaluationProtocol>,
-        topology: &crate::action::consequence::mediation::AuthorityGraph)
-        -> Result<Self, JournalError>
-    {
+        topology: &crate::action::consequence::mediation::AuthorityGraph,
+    ) -> Result<Self, JournalError> {
         guards.check_mediated(&self.machine, &self.events, protocol, None, Some(topology))?;
         Ok(self)
     }
 
     /// Match the complete recipe-owned predictor and mediation inventory before
     /// the first image exists, including owned representation and work ceilings.
-    pub(super) fn checked_predictive_mediated(self, guards: &FileGuardSet,
+    pub(super) fn checked_predictive_mediated(
+        self,
+        guards: &FileGuardSet,
         protocol: Option<&crate::action::consequence::oversight::credibility::EvaluationProtocol>,
         prediction: &super::mediated::predictive::FileMediatedPredictor,
-        topology: &crate::action::consequence::mediation::AuthorityGraph)
-        -> Result<Self, JournalError>
-    {
+        topology: &crate::action::consequence::mediation::AuthorityGraph,
+    ) -> Result<Self, JournalError> {
         prediction.check_machine(&self.machine)?;
-        guards.check_mediated(&self.machine, &self.events, protocol,
-            Some(prediction.consistency()), Some(topology))?;
+        guards.check_mediated(
+            &self.machine,
+            &self.events,
+            protocol,
+            Some(prediction.consistency()),
+            Some(topology),
+        )?;
         Ok(self)
     }
 
-    pub(super) fn publish(self, store: storage::Store)
-        -> Result<(FileOversight, FileOversightRoles), JournalError>
-    {
+    pub(super) fn publish(
+        self,
+        store: storage::Store,
+    ) -> Result<(FileOversight, FileOversightRoles), JournalError> {
         let bytes = journal::encode(&self.profile, store.identity(), &self.events)?;
         // The only canonical replacement. A failed or ambiguous write returns
         // neither owner nor roles. Recovery validates the actual canonical image.
@@ -214,10 +268,12 @@ impl FileOversight {
     /// campaign approval, effect key or provider secret is restored or invented.
     /// Use the original interfaces to supply them separately after bootstrap.
     /// Existing directories are refused; this is not an in-place upgrade API.
-    pub fn create_guarded(directory: impl AsRef<Path>, profile: FileOversightProfile,
-        guards: &FileGuardSet, registration: Option<FileCredentialRegistration<'_>>)
-        -> Result<(Self, FileOversightRoles), JournalError>
-    {
+    pub fn create_guarded(
+        directory: impl AsRef<Path>,
+        profile: FileOversightProfile,
+        guards: &FileGuardSet,
+        registration: Option<FileCredentialRegistration<'_>>,
+    ) -> Result<(Self, FileOversightRoles), JournalError> {
         let prepared = PreparedGuardedBootstrap::prepare(profile, guards, registration)?;
         let store = storage::Store::create(directory.as_ref())?;
         prepared.publish(store)

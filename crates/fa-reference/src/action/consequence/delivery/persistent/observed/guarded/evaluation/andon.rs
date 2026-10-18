@@ -3,19 +3,20 @@
 //! Machine. No scores, label roles or compact accounting seeds are imported.
 pub mod joint;
 
-use super::{FileCredibilitySnapshot, FileEvaluatedOversightRoles};
+use super::super::super::credibility::{CredibilityEvent, andon::FileAndonConfig};
+use super::super::super::{
+    Event, FileOversight, FileOversightProfile, JournalError, Machine, journal, storage,
+};
+use super::super::anchored::FileHistoryAnchor;
+use super::super::bootstrap::PreparedGuardedBootstrap;
 pub use super::super::recovery::FileAndonRecovery;
 use super::super::{FileCredentialRegistration, FileGuardSet, FileRecoveryRequirements};
-use super::super::bootstrap::PreparedGuardedBootstrap;
-use super::super::anchored::FileHistoryAnchor;
-use super::super::super::{Event, FileOversight, FileOversightProfile,
-    JournalError, Machine, journal, storage};
-use super::super::super::credibility::{CredibilityEvent, andon::FileAndonConfig};
+use super::{FileCredibilitySnapshot, FileEvaluatedOversightRoles};
+use crate::Error;
 use crate::action::consequence::oversight::credibility::EvaluationProtocol;
 use crate::action::consequence::oversight::credibility::native_andon::NativeEvaluatedFalseHold;
 use crate::action::consequence::oversight::joint_credibility::JointPromotionPolicy;
 use crate::round::review::andon::{AndonBudget, AndonLedger};
-use crate::Error;
 use std::path::Path;
 
 /// Operator-retained expectations, never discovered from the journal under
@@ -31,43 +32,82 @@ pub struct FileAndonRecoveryRequirements {
     joint: Option<JointPromotionPolicy>,
 }
 impl FileAndonRecoveryRequirements {
-    pub fn new(base: FileRecoveryRequirements, config: FileAndonConfig,
-        windows: Vec<AndonBudget>, minimum_evaluation_revision: u64) -> Result<Self, Error>
-    {
+    pub fn new(
+        base: FileRecoveryRequirements,
+        config: FileAndonConfig,
+        windows: Vec<AndonBudget>,
+        minimum_evaluation_revision: u64,
+    ) -> Result<Self, Error> {
         let inventory = FileAndonConfig::new(config.identity(), windows)?;
         let ledger = inventory.accounting()?;
         for initial in config.windows() {
-            if ledger.windows().get(&initial.window).map(|state| state.budget) != Some(*initial) {
+            if ledger
+                .windows()
+                .get(&initial.window)
+                .map(|state| state.budget)
+                != Some(*initial)
+            {
                 return Err(Error::Binding);
             }
         }
-        Ok(Self { base, config, windows: inventory.windows().to_vec(), minimum_evaluation_revision, joint: None })
+        Ok(Self {
+            base,
+            config,
+            windows: inventory.windows().to_vec(),
+            minimum_evaluation_revision,
+            joint: None,
+        })
     }
-    pub fn base(&self) -> &FileRecoveryRequirements { &self.base }
-    pub fn config(&self) -> &FileAndonConfig { &self.config }
-    pub fn windows(&self) -> &[AndonBudget] { &self.windows }
-    pub fn minimum_evaluation_revision(&self) -> u64 { self.minimum_evaluation_revision }
+    pub fn base(&self) -> &FileRecoveryRequirements {
+        &self.base
+    }
+    pub fn config(&self) -> &FileAndonConfig {
+        &self.config
+    }
+    pub fn windows(&self) -> &[AndonBudget] {
+        &self.windows
+    }
+    pub fn minimum_evaluation_revision(&self) -> u64 {
+        self.minimum_evaluation_revision
+    }
 
     // Shared by synchronous historical reads and the sealed cooperative cursor.
     // No machine or original-event importer is exposed outside guarded recovery.
-    pub(in super::super) fn preflight_evaluated(&self, events: &[Event],
-        protocol: &EvaluationProtocol) -> Result<(), Error>
-    {
+    pub(in super::super) fn preflight_evaluated(
+        &self,
+        events: &[Event],
+        protocol: &EvaluationProtocol,
+    ) -> Result<(), Error> {
         self.preflight(events)?;
         self.base.guards.check_decoder_config(events)?;
         joint::check_protocol(events, protocol, self.joint)
     }
 
-    pub(in super::super) fn check_replayed(&self, profile: &FileOversightProfile,
-        machine: &Machine, events: &[Event], protocol: &EvaluationProtocol) -> Result<(), Error>
-    {
-        self.base.check_evaluated(profile, machine, events, Some(protocol))?;
+    pub(in super::super) fn check_replayed(
+        &self,
+        profile: &FileOversightProfile,
+        machine: &Machine,
+        events: &[Event],
+        protocol: &EvaluationProtocol,
+    ) -> Result<(), Error> {
+        self.base
+            .check_evaluated(profile, machine, events, Some(protocol))?;
         if machine.andon_contract() != Some(&self.config)
             || machine.broker.joint_credibility_policy() != self.joint
-        { return Err(Error::Binding); }
+        {
+            return Err(Error::Binding);
+        }
         let source = machine.broker.andon_source()?;
-        if source.revision() < self.minimum_evaluation_revision { return Err(Error::Stale); }
-        if !source.ledger().windows().values().map(|state| state.budget).eq(self.windows.iter().copied()) {
+        if source.revision() < self.minimum_evaluation_revision {
+            return Err(Error::Stale);
+        }
+        if !source
+            .ledger()
+            .windows()
+            .values()
+            .map(|state| state.budget)
+            .eq(self.windows.iter().copied())
+        {
             return Err(Error::Binding);
         }
         Ok(())
@@ -84,9 +124,17 @@ impl FileAndonRecoveryRequirements {
         let mut inventory = self.config.accounting()?;
         for event in events {
             if let Event::Credibility(CredibilityEvent::AndonWindow(window)) = event
-                && !inventory.register_window(*window)? { return Err(Error::Duplicate); }
+                && !inventory.register_window(*window)?
+            {
+                return Err(Error::Duplicate);
+            }
         }
-        if !inventory.windows().values().map(|state| state.budget).eq(self.windows.iter().copied()) {
+        if !inventory
+            .windows()
+            .values()
+            .map(|state| state.budget)
+            .eq(self.windows.iter().copied())
+        {
             return Err(Error::Binding);
         }
         Ok(())
@@ -113,13 +161,17 @@ impl FileOversight {
     /// Validate all guards, native evaluation and accounting before storage is
     /// created. The ORIGINAL first replacement publishes them together; a failed
     /// or uncertain write returns neither owner nor evaluator/human roles.
-    pub fn create_andon_guarded(directory: impl AsRef<Path>, profile: FileOversightProfile,
-        guards: &FileGuardSet, registration: Option<FileCredentialRegistration<'_>>,
-        protocol: EvaluationProtocol, config: &FileAndonConfig)
-        -> Result<(Self, FileEvaluatedOversightRoles), JournalError>
-    {
+    pub fn create_andon_guarded(
+        directory: impl AsRef<Path>,
+        profile: FileOversightProfile,
+        guards: &FileGuardSet,
+        registration: Option<FileCredentialRegistration<'_>>,
+        protocol: EvaluationProtocol,
+        config: &FileAndonConfig,
+    ) -> Result<(Self, FileEvaluatedOversightRoles), JournalError> {
         let prepared = PreparedGuardedBootstrap::prepare(profile, guards, registration)?
-            .evaluated(protocol)?.with_andon(config)?;
+            .evaluated(protocol)?
+            .with_andon(config)?;
         let store = storage::Store::create(directory.as_ref())?;
         let (host, oversight) = prepared.publish(store)?;
         let roles = FileEvaluatedOversightRoles::provision(&host, oversight);
@@ -130,19 +182,25 @@ impl FileOversight {
     /// independent counter floors AND exact history before cleanup or fencing.
     /// Native replay restores source labels and receipts, not old role brands or
     /// approval keys. A fresh clock is required for every NEW Benign assessment.
-    pub fn open_andon_guarded(directory: impl AsRef<Path>, profile: FileOversightProfile,
-        expected: &FileAndonRecoveryRequirements, protocol: &EvaluationProtocol, anchor: &FileHistoryAnchor)
-        -> Result<(Self, FileEvaluatedOversightRoles), JournalError>
-    {
+    pub fn open_andon_guarded(
+        directory: impl AsRef<Path>,
+        profile: FileOversightProfile,
+        expected: &FileAndonRecoveryRequirements,
+        protocol: &EvaluationProtocol,
+        anchor: &FileHistoryAnchor,
+    ) -> Result<(Self, FileEvaluatedOversightRoles), JournalError> {
         profile.delivery.limits.check()?;
         let store = storage::Store::open(directory.as_ref())?;
         Self::open_andon_guarded_store(store, profile, expected, protocol, anchor)
     }
 
-    fn open_andon_guarded_store(store: storage::Store, profile: FileOversightProfile,
-        expected: &FileAndonRecoveryRequirements, protocol: &EvaluationProtocol, anchor: &FileHistoryAnchor)
-        -> Result<(Self, FileEvaluatedOversightRoles), JournalError>
-    {
+    fn open_andon_guarded_store(
+        store: storage::Store,
+        profile: FileOversightProfile,
+        expected: &FileAndonRecoveryRequirements,
+        protocol: &EvaluationProtocol,
+        anchor: &FileHistoryAnchor,
+    ) -> Result<(Self, FileEvaluatedOversightRoles), JournalError> {
         FileAndonRecovery::begin_store(store, profile, expected, protocol, anchor)?
             .finish_synchronously()
     }
@@ -150,28 +208,48 @@ impl FileOversight {
     /// Read a historical canonical image beside a locked/faulted owner. The
     /// same anchor, inventory, floors and original replay apply. No cleanup,
     /// fresh clock, helper invocation, fence or evaluator role is issued.
-    pub fn read_andon_guarded(directory: impl AsRef<Path>, profile: &FileOversightProfile,
-        expected: &FileAndonRecoveryRequirements, protocol: &EvaluationProtocol, anchor: &FileHistoryAnchor)
-        -> Result<FileNativeAndonSnapshot, JournalError>
-    {
+    pub fn read_andon_guarded(
+        directory: impl AsRef<Path>,
+        profile: &FileOversightProfile,
+        expected: &FileAndonRecoveryRequirements,
+        protocol: &EvaluationProtocol,
+        anchor: &FileHistoryAnchor,
+    ) -> Result<FileNativeAndonSnapshot, JournalError> {
         profile.delivery.limits.check()?;
         let identity = storage::identity(directory.as_ref())?;
-        let bytes = storage::read(&identity.join(storage::CANONICAL), profile.delivery.limits.bytes)?;
-        let (events, machine) = checked_image(profile, &identity, &bytes, expected, protocol, anchor)?;
+        let bytes = storage::read(
+            &identity.join(storage::CANONICAL),
+            profile.delivery.limits.bytes,
+        )?;
+        let (events, machine) =
+            checked_image(profile, &identity, &bytes, expected, protocol, anchor)?;
         let source = machine.broker.andon_source()?;
-        let receipts = source.receipts().iter().map(|receipt| (**receipt).clone()).collect();
+        let receipts = source
+            .receipts()
+            .iter()
+            .map(|receipt| (**receipt).clone())
+            .collect();
         Ok(FileNativeAndonSnapshot {
-            credibility: FileCredibilitySnapshot { journal: machine.snapshot(events.len()),
-                report: machine.broker.credibility_report()?, promotions: machine.broker.credibility_promotions()?.to_vec() },
-            accounting: source.ledger().clone(), receipts, source_revision: source.revision(),
+            credibility: FileCredibilitySnapshot {
+                journal: machine.snapshot(events.len()),
+                report: machine.broker.credibility_report()?,
+                promotions: machine.broker.credibility_promotions()?.to_vec(),
+            },
+            accounting: source.ledger().clone(),
+            receipts,
+            source_revision: source.revision(),
         })
     }
 }
 
-fn checked_image(profile: &FileOversightProfile, identity: &Path, bytes: &[u8],
-    expected: &FileAndonRecoveryRequirements, protocol: &EvaluationProtocol, anchor: &FileHistoryAnchor)
-    -> Result<(Vec<Event>, Machine), JournalError>
-{
+fn checked_image(
+    profile: &FileOversightProfile,
+    identity: &Path,
+    bytes: &[u8],
+    expected: &FileAndonRecoveryRequirements,
+    protocol: &EvaluationProtocol,
+    anchor: &FileHistoryAnchor,
+) -> Result<(Vec<Event>, Machine), JournalError> {
     let events = journal::decode(profile, identity, bytes)?;
     anchor.check(profile, identity, &events)?;
     expected.preflight_evaluated(&events, protocol)?;

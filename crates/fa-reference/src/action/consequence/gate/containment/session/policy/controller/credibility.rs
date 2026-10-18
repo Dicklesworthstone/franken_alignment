@@ -8,10 +8,10 @@
 pub mod joint;
 
 use super::{ActionState, Error, PolicyAuthority, Scope, undispatched};
+use crate::action::consequence::congress::credibility::CredibilitySnapshot;
 use crate::action::consequence::congress::{
     CredibilityBinding, CredibilityRequirements, PromotedCongressPolicy,
 };
-use crate::action::consequence::congress::credibility::CredibilitySnapshot;
 use crate::action::consequence::gate::containment::RestartProfile;
 
 pub const MAX_CREDIBILITY_ACTIVATIONS: usize = 64;
@@ -132,17 +132,23 @@ impl PolicyAuthority {
                 id.len() > crate::reducer::MAX_IDENTIFIER_BYTES
                     || profile.cohort.len() > crate::reducer::MAX_IDENTIFIER_BYTES
             })
-            || request.binding.strata.iter().any(|stratum| {
-                stratum.len() > crate::reducer::MAX_IDENTIFIER_BYTES
-            })
+            || request
+                .binding
+                .strata
+                .iter()
+                .any(|stratum| stratum.len() > crate::reducer::MAX_IDENTIFIER_BYTES)
         {
             return Err(Error::Limit);
         }
         let context = request.context();
-        if let Some(previous) = self.credibility_history.iter()
+        if let Some(previous) = self
+            .credibility_history
+            .iter()
             .find(|entry| entry.context.operation == request.operation)
         {
-            return if previous.context == context && previous.promoted.snapshot() == &request.snapshot {
+            return if previous.context == context
+                && previous.promoted.snapshot() == &request.snapshot
+            {
                 Ok(previous.receipt.clone())
             } else {
                 Err(Error::Binding)
@@ -172,29 +178,45 @@ impl PolicyAuthority {
             // A refresh cannot silently relax the evidence gate, drop a hard
             // stratum, change evaluator ownership or roll helper identity back.
             let old = &previous.context;
-            if request.requirements != old.requirements || request.stratum != old.stratum
+            if request.requirements != old.requirements
+                || request.stratum != old.stratum
                 || request.binding.strata != old.binding.strata
                 || request.binding.label_owner != old.binding.label_owner
-                || !request.binding.helpers.keys().eq(old.binding.helpers.keys())
+                || !request
+                    .binding
+                    .helpers
+                    .keys()
+                    .eq(old.binding.helpers.keys())
             {
                 return Err(Error::Binding);
             }
             if request.snapshot.sealed_sequence() < previous.promoted.snapshot().sealed_sequence()
-                || request.snapshot.oldest_case_sequence() < previous.promoted.snapshot().oldest_case_sequence()
-                || request.binding.scope.evaluator_generation < old.binding.scope.evaluator_generation
-                || request.binding.helpers.iter().any(|(id, helper)| {
-                    helper.generation < old.binding.helpers[id].generation
-                })
+                || request.snapshot.oldest_case_sequence()
+                    < previous.promoted.snapshot().oldest_case_sequence()
+                || request.binding.scope.evaluator_generation
+                    < old.binding.scope.evaluator_generation
+                || request
+                    .binding
+                    .helpers
+                    .iter()
+                    .any(|(id, helper)| helper.generation < old.binding.helpers[id].generation)
             {
                 return Err(Error::Stale);
             }
         }
-        let observations = request.snapshot.scores().values()
+        let observations = request
+            .snapshot
+            .scores()
+            .values()
             .flat_map(|strata| strata.values())
             .try_fold(0_u64, |total, score| total.checked_add(score.cases))
             .ok_or(Error::Overflow)?;
-        let retained = self.credibility_history.iter()
-            .try_fold(observations, |total, entry| total.checked_add(entry.observations))
+        let retained = self
+            .credibility_history
+            .iter()
+            .try_fold(observations, |total, entry| {
+                total.checked_add(entry.observations)
+            })
             .ok_or(Error::Overflow)?;
         if retained > MAX_CREDIBILITY_OBSERVATIONS {
             return Err(Error::Limit);
@@ -203,7 +225,10 @@ impl PolicyAuthority {
         // Promotion is checked at its resulting predecessor. It cannot be born
         // already expired after its own activation event advances the journal.
         let promoted = self.congress.promote_credibility(
-            request.snapshot, &request.requirements, &request.binding, sequence,
+            request.snapshot,
+            &request.requirements,
+            &request.binding,
+            sequence,
         )?;
         let mut next_congress = self.congress.clone();
         next_congress.generation = request.binding.reducer_generation;
@@ -212,9 +237,12 @@ impl PolicyAuthority {
         // The optional bootstrap guard is consumed by THIS original transition,
         // not a second caller-selectable promotion path. No candidate report is
         // imported, and no authority is touched before the comparison succeeds.
-        let joint = self.held_out_joint.map(|policy| {
-            joint::evaluate(policy, &self.congress, &next_congress, promoted.snapshot())
-        }).transpose()?;
+        let joint = self
+            .held_out_joint
+            .map(|policy| {
+                joint::evaluate(policy, &self.congress, &next_congress, promoted.snapshot())
+            })
+            .transpose()?;
         if joint.as_ref().is_some_and(|report| !report.qualified()) {
             return Err(Error::Incomplete);
         }
@@ -225,9 +253,13 @@ impl PolicyAuthority {
         }
         let available = rights.available();
         rights.revoke_epoch()?;
-        let cancelled: Vec<_> = gate.authority.attempts.iter()
+        let cancelled: Vec<_> = gate
+            .authority
+            .attempts
+            .iter()
             .filter(|(_, attempt)| undispatched(attempt.stage))
-            .map(|(id, _)| *id).collect();
+            .map(|(id, _)| *id)
+            .collect();
         for id in &cancelled {
             if gate.authority.attempts[id].stage == ActionState::Authorized {
                 rights.abort_before_dispatch(*id)?;
@@ -237,24 +269,40 @@ impl PolicyAuthority {
             return Err(Error::WrongState);
         }
         let receipt = CredibilityChange {
-            operation: request.operation, sequence, revocation_floor: rights.epoch(),
+            operation: request.operation,
+            sequence,
+            revocation_floor: rights.epoch(),
             previous_reducer_generation: self.congress.generation,
             reducer_generation: next_congress.generation,
             policy_generation: self.policy.generation(),
-            campaign: request.binding.scope.campaign, valid_through: promoted.valid_through(),
-            cancelled, refunded_units: rights.available().checked_sub(available).ok_or(Error::WrongState)?,
+            campaign: request.binding.scope.campaign,
+            valid_through: promoted.valid_through(),
+            cancelled,
+            refunded_units: rights
+                .available()
+                .checked_sub(available)
+                .ok_or(Error::WrongState)?,
         };
         let gate = &mut self.host.gate;
         gate.authority.rights = rights;
         for id in &receipt.cancelled {
-            gate.authority.attempts.get_mut(id).expect("validated attempt").stage = ActionState::Cancelled;
+            gate.authority
+                .attempts
+                .get_mut(id)
+                .expect("validated attempt")
+                .stage = ActionState::Cancelled;
             gate.decisions.remove(id);
         }
         gate.sequence = sequence;
         self.congress = next_congress;
         self.credibility_invalidated = false;
         self.credibility_history.push(ActivationRecord {
-            context, promoted, observations, receipt: receipt.clone(), withdrawal: None, joint,
+            context,
+            promoted,
+            observations,
+            receipt: receipt.clone(),
+            withdrawal: None,
+            joint,
         });
         Ok(receipt)
     }
@@ -271,7 +319,8 @@ impl PolicyAuthority {
         if request.operation == 0 {
             return Err(Error::InvalidInput);
         }
-        if let Some(previous) = self.credibility_withdrawals()
+        if let Some(previous) = self
+            .credibility_withdrawals()
             .find(|entry| entry.request.operation == request.operation)
         {
             return if previous.request == request {
@@ -297,9 +346,13 @@ impl PolicyAuthority {
         }
         let available = rights.available();
         rights.revoke_epoch()?;
-        let cancelled: Vec<_> = gate.authority.attempts.iter()
+        let cancelled: Vec<_> = gate
+            .authority
+            .attempts
+            .iter()
             .filter(|(_, attempt)| undispatched(attempt.stage))
-            .map(|(id, _)| *id).collect();
+            .map(|(id, _)| *id)
+            .collect();
         for id in &cancelled {
             if gate.authority.attempts[id].stage == ActionState::Authorized {
                 rights.abort_before_dispatch(*id)?;
@@ -309,23 +362,38 @@ impl PolicyAuthority {
             return Err(Error::WrongState);
         }
         let receipt = CredibilityWithdrawal {
-            request, sequence, revocation_floor: rights.epoch(), cancelled,
-            refunded_units: rights.available().checked_sub(available).ok_or(Error::WrongState)?,
+            request,
+            sequence,
+            revocation_floor: rights.epoch(),
+            cancelled,
+            refunded_units: rights
+                .available()
+                .checked_sub(available)
+                .ok_or(Error::WrongState)?,
         };
         let gate = &mut self.host.gate;
         gate.authority.rights = rights;
         for id in &receipt.cancelled {
-            gate.authority.attempts.get_mut(id).expect("validated attempt").stage = ActionState::Cancelled;
+            gate.authority
+                .attempts
+                .get_mut(id)
+                .expect("validated attempt")
+                .stage = ActionState::Cancelled;
             gate.decisions.remove(id);
         }
         gate.sequence = sequence;
         self.credibility_invalidated = true;
-        self.credibility_history.last_mut().expect("validated activation").withdrawal = Some(receipt.clone());
+        self.credibility_history
+            .last_mut()
+            .expect("validated activation")
+            .withdrawal = Some(receipt.clone());
         Ok(receipt)
     }
 
     pub fn credibility_withdrawals(&self) -> impl Iterator<Item = &CredibilityWithdrawal> {
-        self.credibility_history.iter().filter_map(|entry| entry.withdrawal.as_ref())
+        self.credibility_history
+            .iter()
+            .filter_map(|entry| entry.withdrawal.as_ref())
     }
 
     pub fn credibility_changes(&self) -> impl ExactSizeIterator<Item = &CredibilityChange> {
@@ -345,7 +413,8 @@ impl PolicyAuthority {
             return Ok(());
         };
         let context = &active.context;
-        if self.credibility_invalidated || self.policy.generation() != context.policy_generation
+        if self.credibility_invalidated
+            || self.policy.generation() != context.policy_generation
             || self.host.actor().profile() != context.actor_profile
             || self.host.gate.sequence < active.receipt.sequence
             || self.host.gate.sequence > active.promoted.valid_through()

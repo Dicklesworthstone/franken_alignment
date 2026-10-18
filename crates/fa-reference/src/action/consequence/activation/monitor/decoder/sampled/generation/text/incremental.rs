@@ -2,14 +2,16 @@
 //! One pull computes at most one token; no output sink or background task exists.
 //! Cancellation destroys the unfinished owner, never rewinds or returns its keys.
 
-use super::{PreparedText, TextDecoder, TextGenerationAdmission, TextGenerationFailure,
-    TextGenerationReport, TextGenerationRequest, TextOutputError, TokenizationProgress,
-    TokenizedInput, append_output};
-use super::super::{GenerationFinish, GenerationWork};
 use super::super::incremental::{GenerationProgress, GenerationSession};
+use super::super::{GenerationFinish, GenerationWork};
+use super::{
+    PreparedText, TextDecoder, TextGenerationAdmission, TextGenerationFailure,
+    TextGenerationReport, TextGenerationRequest, TextOutputError, TokenizationProgress,
+    TokenizedInput, append_output,
+};
+use crate::Error;
 use crate::action::consequence::activation::monitor::decoder::MonitoringWork;
 use crate::action::consequence::activation::tensor::kv::decoder::DecoderWork;
-use crate::Error;
 use std::fmt;
 use std::ops::Range;
 
@@ -27,18 +29,34 @@ pub struct TextChunk<'a> {
     work: GenerationWork,
 }
 impl TextChunk<'_> {
-    pub fn position(&self) -> u64 { self.position }
-    pub fn byte_range(&self) -> Range<usize> { self.byte_range.clone() }
-    pub fn bytes(&self) -> &[u8] { self.bytes }
-    pub fn tokens(&self) -> &[u32] { self.tokens }
-    pub fn finish(&self) -> Option<GenerationFinish> { self.finish }
-    pub fn work(&self) -> GenerationWork { self.work }
+    pub fn position(&self) -> u64 {
+        self.position
+    }
+    pub fn byte_range(&self) -> Range<usize> {
+        self.byte_range.clone()
+    }
+    pub fn bytes(&self) -> &[u8] {
+        self.bytes
+    }
+    pub fn tokens(&self) -> &[u32] {
+        self.tokens
+    }
+    pub fn finish(&self) -> Option<GenerationFinish> {
+        self.finish
+    }
+    pub fn work(&self) -> GenerationWork {
+        self.work
+    }
 }
 impl fmt::Debug for TextChunk<'_> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("TextChunk").field("position", &self.position)
-            .field("byte_range", &self.byte_range).field("tokens", &self.tokens.len())
-            .field("finish", &self.finish).field("work", &self.work).finish_non_exhaustive()
+        f.debug_struct("TextChunk")
+            .field("position", &self.position)
+            .field("byte_range", &self.byte_range)
+            .field("tokens", &self.tokens.len())
+            .field("finish", &self.finish)
+            .field("work", &self.work)
+            .finish_non_exhaustive()
     }
 }
 
@@ -67,9 +85,12 @@ pub struct TextGenerationSession {
 }
 impl fmt::Debug for TextGenerationSession {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("TextGenerationSession").field("progress", &self.progress)
-            .field("output_bytes", &self.output.len()).field("interrupted", &self.interrupted)
-            .field("output_failure", &self.output_failure).finish_non_exhaustive()
+        f.debug_struct("TextGenerationSession")
+            .field("progress", &self.progress)
+            .field("output_bytes", &self.output.len())
+            .field("interrupted", &self.interrupted)
+            .field("output_failure", &self.output_failure)
+            .finish_non_exhaustive()
     }
 }
 
@@ -79,9 +100,11 @@ impl TextDecoder {
     /// owner even on admission refusal, as the native into_generation API does;
     /// generate remains the borrowed alternative. Only a terminated session can
     /// later return this same TextDecoder, with all original latches preserved.
-    pub fn into_generation(self, expected_position: u64, request: TextGenerationRequest)
-        -> Result<TextGenerationSession, TextGenerationFailure>
-    {
+    pub fn into_generation(
+        self,
+        expected_position: u64,
+        request: TextGenerationRequest,
+    ) -> Result<TextGenerationSession, TextGenerationFailure> {
         let mut admission = self.into_generation_admission(expected_position, request)?;
         while admission.advance()? != TokenizationProgress::Complete {}
         admission.finish_incremental()
@@ -89,17 +112,39 @@ impl TextDecoder {
 
     // Only the original admission owner can supply this preparation. All
     // numerical request admission remains in the existing GenerationSession.
-    fn into_prepared_generation(self, expected_position: u64, prepared: PreparedText)
-        -> Result<TextGenerationSession, TextGenerationFailure>
-    {
+    fn into_prepared_generation(
+        self,
+        expected_position: u64,
+        prepared: PreparedText,
+    ) -> Result<TextGenerationSession, TextGenerationFailure> {
         let work = prepared.encoded.work();
-        let PreparedText { encoded, prefix_controls, numerical, output, capacity } = prepared;
+        let PreparedText {
+            encoded,
+            prefix_controls,
+            numerical,
+            output,
+            capacity,
+        } = prepared;
         let Self { decoder, tokenizer } = self;
-        let numerical = decoder.into_generation(expected_position, numerical)
-            .map_err(|error| TextGenerationFailure { error, tokenization: work })?;
+        let numerical = decoder
+            .into_generation(expected_position, numerical)
+            .map_err(|error| TextGenerationFailure {
+                error,
+                tokenization: work,
+            })?;
         let progress = numerical.progress();
-        Ok(TextGenerationSession { numerical, tokenizer, prompt: encoded, prefix_controls,
-            progress, output, capacity, decoded_tokens: 0, interrupted: false, output_failure: None })
+        Ok(TextGenerationSession {
+            numerical,
+            tokenizer,
+            prompt: encoded,
+            prefix_controls,
+            progress,
+            output,
+            capacity,
+            decoded_tokens: 0,
+            interrupted: false,
+            output_failure: None,
+        })
     }
 }
 
@@ -122,19 +167,41 @@ impl TextGenerationAdmission {
 }
 
 impl TextGenerationSession {
-    pub fn prompt(&self) -> &TokenizedInput { &self.prompt }
-    pub fn prefix_controls(&self) -> &[u32] { &self.prefix_controls }
+    pub fn prompt(&self) -> &TokenizedInput {
+        &self.prompt
+    }
+    pub fn prefix_controls(&self) -> &[u32] {
+        &self.prefix_controls
+    }
     /// Last returned native progress, not a claim about an interrupted operation.
-    pub fn progress(&self) -> &GenerationProgress { &self.progress }
-    pub fn position(&self) -> u64 { self.numerical.position() }
-    pub fn sampled_draws(&self) -> u64 { self.numerical.sampled_draws() }
-    pub fn decoder_work(&self) -> DecoderWork { self.numerical.decoder_work() }
-    pub fn monitoring_work(&self) -> MonitoringWork { self.numerical.monitoring_work() }
-    pub fn interrupted(&self) -> bool { self.interrupted }
-    pub fn output_failure(&self) -> Option<Error> { self.output_failure }
+    pub fn progress(&self) -> &GenerationProgress {
+        &self.progress
+    }
+    pub fn position(&self) -> u64 {
+        self.numerical.position()
+    }
+    pub fn sampled_draws(&self) -> u64 {
+        self.numerical.sampled_draws()
+    }
+    pub fn decoder_work(&self) -> DecoderWork {
+        self.numerical.decoder_work()
+    }
+    pub fn monitoring_work(&self) -> MonitoringWork {
+        self.numerical.monitoring_work()
+    }
+    pub fn interrupted(&self) -> bool {
+        self.interrupted
+    }
+    pub fn output_failure(&self) -> Option<Error> {
+        self.output_failure
+    }
     pub fn bytes(&self) -> Result<&[u8], Error> {
-        if self.interrupted { return Err(Error::Incomplete); }
-        if let Some(error) = self.output_failure { return Err(error); }
+        if self.interrupted {
+            return Err(Error::Incomplete);
+        }
+        if let Some(error) = self.output_failure {
+            return Err(error);
+        }
         Ok(&self.output)
     }
     /// A token can end inside a Unicode character. Retain those exact bytes;
@@ -152,21 +219,33 @@ impl TextGenerationSession {
     }
 
     // Private interruption seam, not a user callback or alternative token source.
-    fn advance_with<F: FnOnce()>(&mut self, expected_position: u64, after_native: F)
-        -> Result<TextChunk<'_>, Error>
-    {
-        if self.interrupted || self.output_failure.is_some() { return Err(Error::WrongState); }
-        if expected_position != self.position() { return Err(Error::Stale); }
+    fn advance_with<F: FnOnce()>(
+        &mut self,
+        expected_position: u64,
+        after_native: F,
+    ) -> Result<TextChunk<'_>, Error> {
+        if self.interrupted || self.output_failure.is_some() {
+            return Err(Error::WrongState);
+        }
+        if expected_position != self.position() {
+            return Err(Error::Stale);
+        }
         let byte_start = self.output.len();
         let token_start = self.decoded_tokens;
         self.interrupted = true;
         self.progress = self.numerical.advance(expected_position)?;
         after_native();
         let result = (|| {
-            let tokens = self.progress.tokens().get(token_start..).ok_or(Error::Binding)?;
+            let tokens = self
+                .progress
+                .tokens()
+                .get(token_start..)
+                .ok_or(Error::Binding)?;
             // Native advance releases at most one token; validate this before
             // appending anything, so an upstream error cannot smuggle a batch.
-            if tokens.len() > 1 { return Err(Error::Binding); }
+            if tokens.len() > 1 {
+                return Err(Error::Binding);
+            }
             append_output(&self.tokenizer, &mut self.output, tokens, self.capacity)
         })();
         if let Err(error) = result {
@@ -176,9 +255,14 @@ impl TextGenerationSession {
         }
         self.decoded_tokens = self.progress.tokens().len();
         self.interrupted = false;
-        Ok(TextChunk { position: self.position(), byte_range: byte_start..self.output.len(),
-            bytes: &self.output[byte_start..], tokens: &self.progress.tokens()[token_start..],
-            finish: self.progress.finish(), work: self.progress.work() })
+        Ok(TextChunk {
+            position: self.position(),
+            byte_range: byte_start..self.output.len(),
+            bytes: &self.output[byte_start..],
+            tokens: &self.progress.tokens()[token_start..],
+            finish: self.progress.finish(),
+            work: self.progress.work(),
+        })
     }
 
     /// Return the same owner ONLY after native termination, including a held or
@@ -189,9 +273,19 @@ impl TextGenerationSession {
             return Err(Error::Incomplete);
         }
         let (decoder, generation) = self.numerical.into_parts()?;
-        let report = TextGenerationReport { prompt: self.prompt, prefix_controls: self.prefix_controls,
-            generation, output: Ok(self.output) };
-        Ok((TextDecoder { decoder, tokenizer: self.tokenizer }, report))
+        let report = TextGenerationReport {
+            prompt: self.prompt,
+            prefix_controls: self.prefix_controls,
+            generation,
+            output: Ok(self.output),
+        };
+        Ok((
+            TextDecoder {
+                decoder,
+                tokenizer: self.tokenizer,
+            },
+            report,
+        ))
     }
 
     /// Stop without computing another token. Destroy the numerical owner BEFORE
@@ -199,14 +293,31 @@ impl TextGenerationSession {
     /// owner, RNG reset, refund or fabricated successful GenerationReport escapes.
     /// The native finish (possibly None) is preserved even on terminal cancellation.
     pub fn cancel(self) -> CancelledTextGeneration {
-        let Self { numerical, prompt, prefix_controls, progress, output,
-            interrupted, output_failure, .. } = self;
+        let Self {
+            numerical,
+            prompt,
+            prefix_controls,
+            progress,
+            output,
+            interrupted,
+            output_failure,
+            ..
+        } = self;
         let decoder_work = numerical.decoder_work();
         let monitoring_work = numerical.monitoring_work();
         let sampled_draws = numerical.sampled_draws();
         drop(numerical);
-        CancelledTextGeneration { prompt, prefix_controls, progress, output, interrupted,
-            output_failure, decoder_work, monitoring_work, sampled_draws }
+        CancelledTextGeneration {
+            prompt,
+            prefix_controls,
+            progress,
+            output,
+            interrupted,
+            output_failure,
+            decoder_work,
+            monitoring_work,
+            sampled_draws,
+        }
     }
 }
 
@@ -232,21 +343,42 @@ pub struct CancelledTextGeneration {
     sampled_draws: u64,
 }
 impl CancelledTextGeneration {
-    pub fn prompt(&self) -> &TokenizedInput { &self.prompt }
-    pub fn prefix_controls(&self) -> &[u32] { &self.prefix_controls }
-    pub fn progress(&self) -> &GenerationProgress { &self.progress }
-    pub fn bytes(&self) -> &[u8] { &self.output }
-    pub fn interrupted(&self) -> bool { self.interrupted }
-    pub fn output_failure(&self) -> Option<Error> { self.output_failure }
-    pub fn decoder_work(&self) -> DecoderWork { self.decoder_work }
-    pub fn monitoring_work(&self) -> MonitoringWork { self.monitoring_work }
-    pub fn sampled_draws(&self) -> u64 { self.sampled_draws }
+    pub fn prompt(&self) -> &TokenizedInput {
+        &self.prompt
+    }
+    pub fn prefix_controls(&self) -> &[u32] {
+        &self.prefix_controls
+    }
+    pub fn progress(&self) -> &GenerationProgress {
+        &self.progress
+    }
+    pub fn bytes(&self) -> &[u8] {
+        &self.output
+    }
+    pub fn interrupted(&self) -> bool {
+        self.interrupted
+    }
+    pub fn output_failure(&self) -> Option<Error> {
+        self.output_failure
+    }
+    pub fn decoder_work(&self) -> DecoderWork {
+        self.decoder_work
+    }
+    pub fn monitoring_work(&self) -> MonitoringWork {
+        self.monitoring_work
+    }
+    pub fn sampled_draws(&self) -> u64 {
+        self.sampled_draws
+    }
 }
 impl fmt::Debug for CancelledTextGeneration {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("CancelledTextGeneration").field("progress", &self.progress)
-            .field("output_bytes", &self.output.len()).field("interrupted", &self.interrupted)
-            .field("output_failure", &self.output_failure).finish_non_exhaustive()
+        f.debug_struct("CancelledTextGeneration")
+            .field("progress", &self.progress)
+            .field("output_bytes", &self.output.len())
+            .field("interrupted", &self.interrupted)
+            .field("output_failure", &self.output_failure)
+            .finish_non_exhaustive()
     }
 }
 
@@ -255,8 +387,8 @@ mod tests;
 
 #[cfg(test)]
 mod admission_tests {
-    use super::*;
     use super::super::tests::{request, run};
+    use super::*;
     use crate::action::consequence::activation::monitor::decoder::MonitoringStatus;
     use crate::action::consequence::activation::monitor::decoder::observation::DecoderAvailability;
 
@@ -271,7 +403,9 @@ mod admission_tests {
             assert_eq!(admission.sampled_draws(), draws);
             assert_eq!(admission.decoder_work(), decoder);
             assert_eq!(admission.monitoring_work(), monitoring);
-            if progress == TokenizationProgress::Complete { return admission; }
+            if progress == TokenizationProgress::Complete {
+                return admission;
+            }
         }
         panic!("small prompt failed to complete within its bounded step allowance");
     }
@@ -280,8 +414,11 @@ mod admission_tests {
     fn cooperative_prompt_to_stream_keeps_exact_work_and_original_output() {
         let mut reference = run(259, None);
         let expected = reference.generate(0, request(b"ab", 3)).unwrap();
-        let pending = prepared(run(259, None)
-            .into_generation_admission(0, request(b"ab", 3)).unwrap());
+        let pending = prepared(
+            run(259, None)
+                .into_generation_admission(0, request(b"ab", 3))
+                .unwrap(),
+        );
         let tokenization = pending.tokenization_work();
         let mut session = pending.finish_incremental().unwrap();
         assert_eq!(session.position(), 0);
@@ -295,12 +432,18 @@ mod admission_tests {
             let before = session.sampled_draws();
             let chunk = session.advance(position).unwrap();
             assert!(chunk.tokens().len() <= 1);
-            assert_eq!(chunk.byte_range(), bytes.len()..bytes.len() + chunk.bytes().len());
+            assert_eq!(
+                chunk.byte_range(),
+                bytes.len()..bytes.len() + chunk.bytes().len()
+            );
             bytes.extend_from_slice(chunk.bytes());
             assert!(session.sampled_draws() - before <= 1);
         }
         assert_eq!(bytes, "ééé".as_bytes());
-        assert_eq!(session.progress().finish(), Some(GenerationFinish::TokenLimit));
+        assert_eq!(
+            session.progress().finish(),
+            Some(GenerationFinish::TokenLimit)
+        );
         assert_eq!(session.decoder_work(), reference.decoder_work());
         assert_eq!(session.monitoring_work(), reference.monitoring_work());
         assert_eq!(session.sampled_draws(), reference.sampled_draws());
@@ -315,7 +458,9 @@ mod admission_tests {
     fn pending_handoff_refuses_instead_of_finishing_a_partial_prompt() {
         let owner = run(65, None);
         let source = owner.observation();
-        let mut pending = owner.into_generation_admission(0, request(b"ab", 2)).unwrap();
+        let mut pending = owner
+            .into_generation_admission(0, request(b"ab", 2))
+            .unwrap();
         assert_eq!(pending.advance().unwrap(), TokenizationProgress::Pending);
         let work = pending.tokenization_work();
         assert_eq!(pending.decoder_work().tokens, 0);
@@ -329,7 +474,11 @@ mod admission_tests {
     fn cancelling_after_handoff_before_prefill_preserves_prompt_work_not_authority() {
         let owner = run(65, None);
         let source = owner.observation();
-        let pending = prepared(owner.into_generation_admission(0, request(b"ab", 2)).unwrap());
+        let pending = prepared(
+            owner
+                .into_generation_admission(0, request(b"ab", 2))
+                .unwrap(),
+        );
         let work = pending.tokenization_work();
         let session = pending.finish_incremental().unwrap();
         let cancelled = session.cancel();
@@ -346,8 +495,11 @@ mod admission_tests {
 
     #[test]
     fn held_output_stays_withheld_through_cooperative_prompt_and_streaming() {
-        let pending = prepared(run(33, Some(33))
-            .into_generation_admission(0, request(b"ab", 3)).unwrap());
+        let pending = prepared(
+            run(33, Some(33))
+                .into_generation_admission(0, request(b"ab", 3))
+                .unwrap(),
+        );
         let mut session = pending.finish_incremental().unwrap();
         for position in 0..3 {
             let chunk = session.advance(position).unwrap();
@@ -360,8 +512,13 @@ mod admission_tests {
         assert_eq!(owner.status(), MonitoringStatus::Held);
         assert!(report.bytes().unwrap().is_empty());
         let position = owner.position();
-        assert_eq!(owner.into_generation_admission(position, request(b"ab", 1))
-            .unwrap_err().error, Error::WrongState);
+        assert_eq!(
+            owner
+                .into_generation_admission(position, request(b"ab", 1))
+                .unwrap_err()
+                .error,
+            Error::WrongState
+        );
     }
 
     #[test]
@@ -385,8 +542,11 @@ mod admission_tests {
 
     #[test]
     fn stale_pull_after_handoff_does_not_charge_or_skip_the_next_valid_step() {
-        let pending = prepared(run(65, None)
-            .into_generation_admission(0, request(b"ab", 1)).unwrap());
+        let pending = prepared(
+            run(65, None)
+                .into_generation_admission(0, request(b"ab", 1))
+                .unwrap(),
+        );
         let mut session = pending.finish_incremental().unwrap();
         let work = session.decoder_work();
         assert_eq!(session.advance(1).unwrap_err(), Error::Stale);

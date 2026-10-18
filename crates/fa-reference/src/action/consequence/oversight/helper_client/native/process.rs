@@ -2,9 +2,9 @@
 //! dedicated child process, never an executor thread. No listener or retry task.
 //! An absolute local deadline complements, but cannot replace, supervisor cutoffs.
 
-use super::{NativeEvaluationProgress, NativeEvaluator};
-use super::peer::{NativeClientError, NativeClientProgress, NativeHelperClient};
 use super::super::{ClientPhase, ClientProgress};
+use super::peer::{NativeClientError, NativeClientProgress, NativeHelperClient};
+use super::{NativeEvaluationProgress, NativeEvaluator};
 use crate::Error;
 use std::fmt;
 use std::io;
@@ -27,24 +27,41 @@ pub struct NativeProcessBudget {
 }
 impl NativeProcessBudget {
     pub fn new(milliseconds: u64, max_steps: usize) -> Result<Self, Error> {
-        if milliseconds == 0 || max_steps == 0 { return Err(Error::InvalidInput); }
+        if milliseconds == 0 || max_steps == 0 {
+            return Err(Error::InvalidInput);
+        }
         if milliseconds > MAX_PROCESS_MILLIS || max_steps > MAX_PROCESS_STEPS {
             return Err(Error::Limit);
         }
         let started = Instant::now();
-        let deadline = started.checked_add(Duration::from_millis(milliseconds)).ok_or(Error::Overflow)?;
-        Ok(Self { started, deadline, max_steps })
+        let deadline = started
+            .checked_add(Duration::from_millis(milliseconds))
+            .ok_or(Error::Overflow)?;
+        Ok(Self {
+            started,
+            deadline,
+            max_steps,
+        })
     }
-    pub fn expired(&self) -> bool { Instant::now() >= self.deadline }
+    pub fn expired(&self) -> bool {
+        Instant::now() >= self.deadline
+    }
     fn remaining(&self, now: Instant) -> Option<Duration> {
-        self.deadline.checked_duration_since(now).filter(|duration| !duration.is_zero())
+        self.deadline
+            .checked_duration_since(now)
+            .filter(|duration| !duration.is_zero())
     }
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum NativeProcessError { Contract(Error), Socket(io::ErrorKind) }
+pub enum NativeProcessError {
+    Contract(Error),
+    Socket(io::ErrorKind),
+}
 impl fmt::Display for NativeProcessError {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result { write!(f, "{self:?}") }
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{self:?}")
+    }
 }
 impl std::error::Error for NativeProcessError {}
 
@@ -93,38 +110,61 @@ pub fn inherited_worker_socket() -> Result<UnixStream, NativeProcessError> {
 /// No threads, sleep polling, second executor, reconnect, hidden model reroll or
 /// substitute vote. On every exit the sole evaluator/client are destroyed. The
 /// parent still owns process termination and its authoritative review deadlines.
-pub fn run_native_worker(socket: UnixStream, evaluator: NativeEvaluator, salt: Vec<u8>,
-    budget: NativeProcessBudget) -> Result<NativeProcessReport, NativeProcessError>
-{
+pub fn run_native_worker(
+    socket: UnixStream,
+    evaluator: NativeEvaluator,
+    salt: Vec<u8>,
+    budget: NativeProcessBudget,
+) -> Result<NativeProcessReport, NativeProcessError> {
     run_with_clock(socket, evaluator, salt, budget, |_, _| Instant::now())
 }
 
-fn socket_error(error: io::Error) -> NativeProcessError { NativeProcessError::Socket(error.kind()) }
+fn socket_error(error: io::Error) -> NativeProcessError {
+    NativeProcessError::Socket(error.kind())
+}
 
 // Private deterministic deadline seam for causal boundary tests. Production
 // always samples Instant directly; no caller timestamp can extend its lifetime.
-fn run_with_clock<F>(socket: UnixStream, evaluator: NativeEvaluator, salt: Vec<u8>,
-    budget: NativeProcessBudget, mut now: F) -> Result<NativeProcessReport, NativeProcessError>
-where F: FnMut(usize, &NativeHelperClient<UnixStream>) -> Instant {
+fn run_with_clock<F>(
+    socket: UnixStream,
+    evaluator: NativeEvaluator,
+    salt: Vec<u8>,
+    budget: NativeProcessBudget,
+    mut now: F,
+) -> Result<NativeProcessReport, NativeProcessError>
+where
+    F: FnMut(usize, &NativeHelperClient<UnixStream>) -> Instant,
+{
     socket.peer_addr().map_err(socket_error)?;
     socket.set_nonblocking(false).map_err(socket_error)?;
     let control = socket.try_clone().map_err(socket_error)?;
-    let mut client = NativeHelperClient::new(socket, evaluator, salt).map_err(NativeProcessError::Contract)?;
+    let mut client =
+        NativeHelperClient::new(socket, evaluator, salt).map_err(NativeProcessError::Contract)?;
     let mut steps = 0;
     let stop = loop {
-        let Some(remaining) = budget.remaining(now(steps, &client)) else { break NativeProcessStop::Deadline; };
-        if steps == budget.max_steps { break NativeProcessStop::StepLimit; }
-        if let Err(error) = control.set_read_timeout(Some(remaining))
-            .and_then(|()| control.set_write_timeout(Some(remaining))) {
+        let Some(remaining) = budget.remaining(now(steps, &client)) else {
+            break NativeProcessStop::Deadline;
+        };
+        if steps == budget.max_steps {
+            break NativeProcessStop::StepLimit;
+        }
+        if let Err(error) = control
+            .set_read_timeout(Some(remaining))
+            .and_then(|()| control.set_write_timeout(Some(remaining)))
+        {
             break NativeProcessStop::Socket(error.kind());
         }
         steps += 1;
         let result = client.step_cooperative();
         // Never acknowledge completion outside the configured interval, including
         // a final syscall whose bytes were accepted before the clock check.
-        if budget.remaining(now(steps, &client)).is_none() { break NativeProcessStop::Deadline; }
+        if budget.remaining(now(steps, &client)).is_none() {
+            break NativeProcessStop::Deadline;
+        }
         match result {
-            Ok(NativeClientProgress::Protocol(ClientProgress::ReplySent)) => break NativeProcessStop::ReplySent,
+            Ok(NativeClientProgress::Protocol(ClientProgress::ReplySent)) => {
+                break NativeProcessStop::ReplySent;
+            }
             Err(error) => break NativeProcessStop::Client(error),
             Ok(_) => {}
         }
@@ -132,8 +172,15 @@ where F: FnMut(usize, &NativeHelperClient<UnixStream>) -> Instant {
     let phase = client.phase();
     let failure = client.failure();
     client.cancel(); // retains first failure, final verdict and native work
-    let report = NativeProcessReport { stop, steps, phase, failure, evaluations: client.evaluations(),
-        evaluation: client.evaluation_progress(), elapsed: budget.started.elapsed() };
+    let report = NativeProcessReport {
+        stop,
+        steps,
+        phase,
+        failure,
+        evaluations: client.evaluations(),
+        evaluation: client.evaluation_progress(),
+        elapsed: budget.started.elapsed(),
+    };
     drop(client);
     drop(control);
     Ok(report)

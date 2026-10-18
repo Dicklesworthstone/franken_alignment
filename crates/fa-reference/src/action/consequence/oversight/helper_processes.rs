@@ -7,8 +7,8 @@
 use super::CommitteeContract;
 use super::helper_client::HelperClient;
 use super::helper_workers::io::WorkerIoError;
-use crate::full_input::InputProfileBinding;
 use crate::Error;
+use crate::full_input::InputProfileBinding;
 use std::collections::BTreeMap;
 use std::ffi::OsString;
 use std::fmt;
@@ -41,35 +41,61 @@ pub struct HelperProgram {
 
 impl fmt::Debug for HelperProgram {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("HelperProgram").field("argument_count", &self.arguments.len())
-            .field("environment_count", &self.environment.len()).finish_non_exhaustive()
+        f.debug_struct("HelperProgram")
+            .field("argument_count", &self.arguments.len())
+            .field("environment_count", &self.environment.len())
+            .finish_non_exhaustive()
     }
 }
 
 impl HelperProgram {
     pub fn new(
-        executable: PathBuf, directory: PathBuf, arguments: Vec<OsString>,
+        executable: PathBuf,
+        directory: PathBuf,
+        arguments: Vec<OsString>,
         environment: BTreeMap<OsString, OsString>,
     ) -> Result<Self, Error> {
-        if !executable.is_absolute() || !directory.is_absolute() { return Err(Error::InvalidInput); }
+        if !executable.is_absolute() || !directory.is_absolute() {
+            return Err(Error::InvalidInput);
+        }
         if arguments.len() > MAX_PROGRAM_ARGUMENTS || environment.len() > MAX_PROGRAM_ENVIRONMENT {
             return Err(Error::Limit);
         }
         let mut text_bytes = 0_usize;
-        for text in [executable.as_os_str(), directory.as_os_str()].into_iter()
+        for text in [executable.as_os_str(), directory.as_os_str()]
+            .into_iter()
             .chain(arguments.iter().map(OsString::as_os_str))
-            .chain(environment.iter().flat_map(|(key, value)| [key.as_os_str(), value.as_os_str()]))
+            .chain(
+                environment
+                    .iter()
+                    .flat_map(|(key, value)| [key.as_os_str(), value.as_os_str()]),
+            )
         {
             let bytes = text.as_encoded_bytes();
-            if bytes.len() > MAX_PROGRAM_FIELD_BYTES { return Err(Error::Limit); }
-            if bytes.contains(&0) { return Err(Error::InvalidInput); }
+            if bytes.len() > MAX_PROGRAM_FIELD_BYTES {
+                return Err(Error::Limit);
+            }
+            if bytes.contains(&0) {
+                return Err(Error::InvalidInput);
+            }
             text_bytes = text_bytes.checked_add(bytes.len()).ok_or(Error::Limit)?;
-            if text_bytes > MAX_PROGRAM_TEXT_BYTES { return Err(Error::Limit); }
+            if text_bytes > MAX_PROGRAM_TEXT_BYTES {
+                return Err(Error::Limit);
+            }
         }
-        if environment.keys().any(|key| key.is_empty() || key.as_encoded_bytes().contains(&b'=')) {
+        if environment
+            .keys()
+            .any(|key| key.is_empty() || key.as_encoded_bytes().contains(&b'='))
+        {
             return Err(Error::InvalidInput);
         }
-        Ok(Self { executable, directory, arguments, environment, text_bytes })
+        Ok(Self {
+            executable,
+            directory,
+            arguments,
+            environment,
+            text_bytes,
+        })
     }
 }
 
@@ -77,45 +103,80 @@ impl HelperProgram {
     pub(crate) fn preflight(&self) -> Result<(), ProcessFailure> {
         let metadata = fs::metadata(&self.executable)
             .map_err(|error| io_failure(ProcessStage::InspectProgram, error))?;
-        if !metadata.is_file() { return Err(ProcessFailure::Refused(Error::Binding)); }
+        if !metadata.is_file() {
+            return Err(ProcessFailure::Refused(Error::Binding));
+        }
         let metadata = fs::metadata(&self.directory)
             .map_err(|error| io_failure(ProcessStage::InspectDirectory, error))?;
-        if !metadata.is_dir() { return Err(ProcessFailure::Refused(Error::Binding)); }
+        if !metadata.is_dir() {
+            return Err(ProcessFailure::Refused(Error::Binding));
+        }
         Ok(())
     }
 
     // Call only after validating the full launch. No fallible setup follows spawn.
     pub(crate) fn spawn_socket(&self) -> Result<(UnixStream, Child), ProcessFailure> {
-        let (parent, worker) = UnixStream::pair().map_err(|error| io_failure(ProcessStage::SocketPair, error))?;
-        parent.set_nonblocking(true).map_err(|error| io_failure(ProcessStage::SocketSetup, error))?;
+        let (parent, worker) =
+            UnixStream::pair().map_err(|error| io_failure(ProcessStage::SocketPair, error))?;
+        parent
+            .set_nonblocking(true)
+            .map_err(|error| io_failure(ProcessStage::SocketSetup, error))?;
         let input: OwnedFd = worker.into();
-        let child = Command::new(&self.executable).args(&self.arguments)
-            .current_dir(&self.directory).env_clear().envs(&self.environment)
-            .stdin(Stdio::from(input)).stdout(Stdio::from(io::stderr())).stderr(Stdio::inherit())
-            .spawn().map_err(|error| io_failure(ProcessStage::Spawn, error))?;
+        let child = Command::new(&self.executable)
+            .args(&self.arguments)
+            .current_dir(&self.directory)
+            .env_clear()
+            .envs(&self.environment)
+            .stdin(Stdio::from(input))
+            .stdout(Stdio::from(io::stderr()))
+            .stderr(Stdio::inherit())
+            .spawn()
+            .map_err(|error| io_failure(ProcessStage::Spawn, error))?;
         Ok((parent, child))
     }
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum ProcessStage { InspectProgram, InspectDirectory, SocketPair, SocketSetup, Spawn, Reap, Terminate }
+pub enum ProcessStage {
+    InspectProgram,
+    InspectDirectory,
+    SocketPair,
+    SocketSetup,
+    Spawn,
+    Reap,
+    Terminate,
+}
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum ProcessFailure {
     Refused(Error),
-    Io { stage: ProcessStage, kind: io::ErrorKind },
+    Io {
+        stage: ProcessStage,
+        kind: io::ErrorKind,
+    },
 }
 
 fn io_failure(stage: ProcessStage, error: io::Error) -> ProcessFailure {
-    ProcessFailure::Io { stage, kind: error.kind() }
+    ProcessFailure::Io {
+        stage,
+        kind: error.kind(),
+    }
 }
 
 /// OS process outcome only. Success never stands in for an accepted reveal.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub struct ProcessExit { pub success: bool, pub code: Option<i32>, pub signal: Option<i32> }
+pub struct ProcessExit {
+    pub success: bool,
+    pub code: Option<i32>,
+    pub signal: Option<i32>,
+}
 impl From<ExitStatus> for ProcessExit {
     fn from(status: ExitStatus) -> Self {
-        Self { success: status.success(), code: status.code(), signal: status.signal() }
+        Self {
+            success: status.success(),
+            code: status.code(),
+            signal: status.signal(),
+        }
     }
 }
 
@@ -129,21 +190,38 @@ pub struct ProcessStatus {
 }
 
 // Shared process lifecycle only: no helper ballot or actor authority is here.
-pub(crate) struct OwnedChild { child: Option<Child>, status: ProcessStatus }
+pub(crate) struct OwnedChild {
+    child: Option<Child>,
+    status: ProcessStatus,
+}
 impl OwnedChild {
     pub(crate) fn new(child: Child) -> Self {
-        let status = ProcessStatus { pid: child.id(), stop_requested: false,
-            termination_sent: false, exit: None, failure: None };
-        Self { child: Some(child), status }
+        let status = ProcessStatus {
+            pid: child.id(),
+            stop_requested: false,
+            termination_sent: false,
+            exit: None,
+            failure: None,
+        };
+        Self {
+            child: Some(child),
+            status,
+        }
     }
-    pub(crate) fn status(&self) -> ProcessStatus { self.status }
-    pub(crate) fn reaped(&self) -> bool { self.child.is_none() }
+    pub(crate) fn status(&self) -> ProcessStatus {
+        self.status
+    }
+    pub(crate) fn reaped(&self) -> bool {
+        self.child.is_none()
+    }
     pub(crate) fn request_stop(&mut self) {
         self.status.stop_requested = true;
         self.poll();
     }
     pub(crate) fn poll(&mut self) {
-        let Some(child) = self.child.as_mut() else { return; };
+        let Some(child) = self.child.as_mut() else {
+            return;
+        };
         match child.try_wait() {
             Ok(Some(exit)) => {
                 self.status.exit = Some(exit.into());
@@ -160,7 +238,9 @@ impl OwnedChild {
         if self.status.stop_requested && !self.status.termination_sent {
             match child.kill() {
                 Ok(()) => self.status.termination_sent = true,
-                Err(error) => self.status.failure = Some(io_failure(ProcessStage::Terminate, error)),
+                Err(error) => {
+                    self.status.failure = Some(io_failure(ProcessStage::Terminate, error))
+                }
             }
         }
     }
@@ -171,22 +251,37 @@ impl OwnedChild {
 /// No worker is restarted, and no exit status is converted into a verdict.
 /// Descendants and inherited non-CLOEXEC descriptors are host responsibilities.
 #[must_use = "retain the child owner, request shutdown, and poll until all children are reaped"]
-pub struct HelperChildren { children: BTreeMap<String, OwnedChild> }
+pub struct HelperChildren {
+    children: BTreeMap<String, OwnedChild>,
+}
 
 impl fmt::Debug for HelperChildren {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("HelperChildren").field("statuses", &self.statuses()).finish()
+        f.debug_struct("HelperChildren")
+            .field("statuses", &self.statuses())
+            .finish()
     }
 }
 
 impl HelperChildren {
-    fn empty() -> Self { Self { children: BTreeMap::new() } }
-    pub fn statuses(&self) -> BTreeMap<String, ProcessStatus> {
-        self.children.iter().map(|(member, child)| (member.clone(), child.status)).collect()
+    fn empty() -> Self {
+        Self {
+            children: BTreeMap::new(),
+        }
     }
-    pub fn all_reaped(&self) -> bool { self.children.values().all(|child| child.child.is_none()) }
+    pub fn statuses(&self) -> BTreeMap<String, ProcessStatus> {
+        self.children
+            .iter()
+            .map(|(member, child)| (member.clone(), child.status))
+            .collect()
+    }
+    pub fn all_reaped(&self) -> bool {
+        self.children.values().all(|child| child.child.is_none())
+    }
     pub fn reap(&mut self) -> BTreeMap<String, ProcessStatus> {
-        for child in self.children.values_mut() { child.poll(); }
+        for child in self.children.values_mut() {
+            child.poll();
+        }
         self.statuses()
     }
     pub fn request_stop(&mut self, member: &str) -> Result<ProcessStatus, Error> {
@@ -211,11 +306,19 @@ impl Drop for HelperChildren {
         for child in self.children.values_mut() {
             child.status.stop_requested = true;
             child.poll();
-            if child.child.is_some() { child.poll(); }
+            if child.child.is_some() {
+                child.poll();
+            }
         }
-        let remaining = self.children.values().filter(|child| child.child.is_some()).count();
+        let remaining = self
+            .children
+            .values()
+            .filter(|child| child.child.is_some())
+            .count();
         if remaining != 0 {
-            eprintln!("franken_alignment: {remaining} direct helper children not reaped on drop; retain and poll HelperChildren during shutdown");
+            eprintln!(
+                "franken_alignment: {remaining} direct helper children not reaped on drop; retain and poll HelperChildren during shutdown"
+            );
         }
     }
 }
@@ -230,9 +333,17 @@ pub struct HelperLaunchError {
     pub children: HelperChildren,
 }
 
-fn rejected(member: Option<String>, failure: ProcessFailure, mut children: HelperChildren) -> HelperLaunchError {
+fn rejected(
+    member: Option<String>,
+    failure: ProcessFailure,
+    mut children: HelperChildren,
+) -> HelperLaunchError {
     children.request_stop_all();
-    HelperLaunchError { member, failure, children }
+    HelperLaunchError {
+        member,
+        failure,
+        children,
+    }
 }
 
 /// Launch the entire frozen roster. Metadata and aggregate bounds are checked
@@ -246,7 +357,8 @@ fn rejected(member: Option<String>, failure: ProcessFailure, mut children: Helpe
 /// an executable-image attestation, descriptor sandbox, process tree supervisor,
 /// wall-clock-bounded spawn, or a claim that a model actually used its input.
 pub fn launch_helpers(
-    contract: &CommitteeContract, programs: &BTreeMap<String, HelperProgram>,
+    contract: &CommitteeContract,
+    programs: &BTreeMap<String, HelperProgram>,
 ) -> Result<(BTreeMap<String, UnixStream>, HelperChildren), HelperLaunchError> {
     let preflight = (|| -> Result<(), (Option<String>, ProcessFailure)> {
         if !contract.members().keys().eq(programs.keys()) {
@@ -254,10 +366,16 @@ pub fn launch_helpers(
         }
         let mut total = 0_usize;
         for (member, program) in programs {
-            total = total.checked_add(program.text_bytes).and_then(|sum| sum.checked_add(member.len()))
+            total = total
+                .checked_add(program.text_bytes)
+                .and_then(|sum| sum.checked_add(member.len()))
                 .ok_or((None, ProcessFailure::Refused(Error::Limit)))?;
-            if total > MAX_LAUNCH_TEXT_BYTES { return Err((None, ProcessFailure::Refused(Error::Limit))); }
-            program.preflight().map_err(|failure| (Some(member.clone()), failure))?;
+            if total > MAX_LAUNCH_TEXT_BYTES {
+                return Err((None, ProcessFailure::Refused(Error::Limit)));
+            }
+            program
+                .preflight()
+                .map_err(|failure| (Some(member.clone()), failure))?;
         }
         Ok(())
     })();
@@ -270,7 +388,9 @@ pub fn launch_helpers(
         let spawned = program.spawn_socket();
         match spawned {
             Ok((stream, child)) => {
-                children.children.insert(member.clone(), OwnedChild::new(child));
+                children
+                    .children
+                    .insert(member.clone(), OwnedChild::new(child));
                 streams.insert(member.clone(), stream);
             }
             Err(failure) => return Err(rejected(Some(member.clone()), failure, children)),
@@ -285,10 +405,14 @@ impl HelperClient<UnixStream> {
     /// required. Cloning preserves the process's ownership of its standard fd.
     pub fn from_process_stdin(expected: InputProfileBinding) -> Result<Self, WorkerIoError> {
         let input = io::stdin();
-        let descriptor = input.as_fd().try_clone_to_owned()
+        let descriptor = input
+            .as_fd()
+            .try_clone_to_owned()
             .map_err(|error| WorkerIoError::Io(error.kind()))?;
         let stream = UnixStream::from(descriptor);
-        stream.peer_addr().map_err(|error| WorkerIoError::Io(error.kind()))?;
+        stream
+            .peer_addr()
+            .map_err(|error| WorkerIoError::Io(error.kind()))?;
         Self::from_unix(stream, expected)
     }
 }

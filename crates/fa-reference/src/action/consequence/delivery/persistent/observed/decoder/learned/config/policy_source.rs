@@ -1,10 +1,10 @@
 //! Independent bootstrap binding for the ORIGINAL leased policy-state source.
 //! Learned evidence still owns helper input; policy files may contain no context.
-use super::{FileLearnedConfig, Writer, DOMAIN, MAX_CONFIG_BYTES};
 use super::super::super::super::source::{FileSourcePolicy, SourceEvent};
-use crate::action::consequence::oversight::policy_state::PolicyStateCapture;
-use crate::action::Purpose;
+use super::{DOMAIN, FileLearnedConfig, MAX_CONFIG_BYTES, Writer};
 use crate::Error;
+use crate::action::Purpose;
+use crate::action::consequence::oversight::policy_state::PolicyStateCapture;
 
 impl FileLearnedConfig {
     /// Require both the original learned sidecar AND the original durable policy
@@ -13,8 +13,13 @@ impl FileLearnedConfig {
     /// The source identity, event/byte bounds and read-start lease are part of the
     /// independently supplied exact recovery recipe. No new writer is exposed.
     pub fn with_required_policy_source(mut self, policy: FileSourcePolicy) -> Result<Self, Error> {
-        if self.policy_source.is_some() { return Err(Error::Duplicate); }
-        if !self.sidecar_required || self.text.is_none() || policy.source.scope.purpose != Purpose::Effect {
+        if self.policy_source.is_some() {
+            return Err(Error::Duplicate);
+        }
+        if !self.sidecar_required
+            || self.text.is_none()
+            || policy.source.scope.purpose != Purpose::Effect
+        {
             return Err(Error::Binding);
         }
         // Use the original capture constructor's bounds, not another validator.
@@ -34,7 +39,9 @@ impl FileLearnedConfig {
 
     /// Immutable bootstrap contract. Current writer generations and observation
     /// eligibility are in the ORIGINAL file_source_status, not in this recipe.
-    pub fn required_policy_source(&self) -> Option<FileSourcePolicy> { self.policy_source }
+    pub fn required_policy_source(&self) -> Option<FileSourcePolicy> {
+        self.policy_source
+    }
 }
 
 impl super::super::super::super::FileOversight {

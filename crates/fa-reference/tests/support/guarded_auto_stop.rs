@@ -1,4 +1,5 @@
 //! Automatic numerical stopping in the complete guarded publication profile.
+#![allow(dead_code, unused_imports)]
 use super::*;
 use fa_reference::action::consequence::activation::monitor::MonitorOutcome;
 use fa_reference::action::consequence::activation::monitor::decoder::MonitoredStep;

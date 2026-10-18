@@ -1,10 +1,14 @@
 //! Feed actual complete file observations into the original mandatory live gate.
 //! The adapter owns only the original writer; there is no parallel state ledger.
 
-use super::{EvidenceError, EvidenceFile, EvidenceSnapshot, EvidenceSourceStatus, FileEvidenceSource};
-use crate::action::consequence::oversight::OversightBroker;
-use crate::action::consequence::oversight::policy_state::{PolicyStateWriter, StateEvent, StateFrontier, StateLimits, StateSource};
+use super::{
+    EvidenceError, EvidenceFile, EvidenceSnapshot, EvidenceSourceStatus, FileEvidenceSource,
+};
 use crate::Error;
+use crate::action::consequence::oversight::OversightBroker;
+use crate::action::consequence::oversight::policy_state::{
+    PolicyStateWriter, StateEvent, StateFrontier, StateLimits, StateSource,
+};
 use std::fmt;
 use std::rc::Rc;
 
@@ -40,7 +44,9 @@ pub struct PolicyFileSource {
 
 impl fmt::Debug for PolicyFileSource {
     fn fmt(&self, out: &mut fmt::Formatter<'_>) -> fmt::Result {
-        out.debug_struct("PolicyFileSource").field("status", &self.status()).finish_non_exhaustive()
+        out.debug_struct("PolicyFileSource")
+            .field("status", &self.status())
+            .finish_non_exhaustive()
     }
 }
 
@@ -50,19 +56,39 @@ impl PolicyFileSource {
     /// one file version creates one local full-image event, not an invented log
     /// of every external event that occurred between reads.
     pub fn attach(
-        file: FileEvidenceSource, broker: &mut OversightBroker,
-        source_generation: u64, limits: StateLimits,
+        file: FileEvidenceSource,
+        broker: &mut OversightBroker,
+        source_generation: u64,
+        limits: StateLimits,
     ) -> Result<Self, Error> {
-        let source = StateSource { scope: file.scope, source: file.source, generation: source_generation };
+        let source = StateSource {
+            scope: file.scope,
+            source: file.source,
+            generation: source_generation,
+        };
         let writer = broker.enable_policy_state(source, limits)?;
-        Ok(Self { file, writer, source, sequence: 0, marker: 0, recorded_generation: None,
-            closed: None, needs_full: true, fault: None })
+        Ok(Self {
+            file,
+            writer,
+            source,
+            sequence: 0,
+            marker: 0,
+            recorded_generation: None,
+            closed: None,
+            needs_full: true,
+            fault: None,
+        })
     }
 
     pub fn status(&self) -> PolicyFileStatus {
-        PolicyFileStatus { file: self.file.status(), source: self.source,
-            recorded_through: self.sequence, closed: self.closed,
-            needs_full_image: self.needs_full, fault: self.fault }
+        PolicyFileStatus {
+            file: self.file.status(),
+            source: self.source,
+            recorded_through: self.sequence,
+            closed: self.closed,
+            needs_full_image: self.needs_full,
+            fault: self.fault,
+        }
     }
 
     /// Explicit observation loss, not an empty complete state. Recovery requires
@@ -80,24 +106,36 @@ impl PolicyFileSource {
     /// An unchanged healthy reread does not spend another retained event slot.
     pub fn read(&mut self) -> Result<Rc<EvidenceSnapshot>, EvidenceError> {
         let result = self.read_inner();
-        if result.is_err() { self.withdraw(); }
+        if result.is_err() {
+            self.withdraw();
+        }
         result
     }
 
     fn read_inner(&mut self) -> Result<Rc<EvidenceSnapshot>, EvidenceError> {
-        if let Some(fault) = self.fault { return Err(fault.into()); }
+        if let Some(fault) = self.fault {
+            return Err(fault.into());
+        }
         let observed = self.file.read()?;
-        if !observed.snapshot().complete { return Err(Error::Incomplete.into()); }
+        if !observed.snapshot().complete {
+            return Err(Error::Incomplete.into());
+        }
         if !self.needs_full && self.recorded_generation == Some(observed.identity().generation) {
             return Ok(observed);
         }
         let next = match self.sequence.checked_add(1) {
             Some(next) => next,
-            None => { self.fault = Some(Error::Overflow); return Err(Error::Overflow.into()); }
+            None => {
+                self.fault = Some(Error::Overflow);
+                return Err(Error::Overflow.into());
+            }
         };
         let marker = match self.marker.checked_add(1) {
             Some(marker) => marker,
-            None => { self.fault = Some(Error::Overflow); return Err(Error::Overflow.into()); }
+            None => {
+                self.fault = Some(Error::Overflow);
+                return Err(Error::Overflow.into());
+            }
         };
         let event = StateEvent::Snapshot {
             semantic_epoch: observed.snapshot().semantic_epoch,
@@ -112,7 +150,10 @@ impl PolicyFileSource {
         self.sequence = next;
         let frontier = match self.writer.close(next, marker) {
             Ok(frontier) => frontier,
-            Err(error) => { self.fault = Some(error); return Err(error.into()); }
+            Err(error) => {
+                self.fault = Some(error);
+                return Err(error.into());
+            }
         };
         self.marker = marker;
         self.recorded_generation = Some(observed.identity().generation);
@@ -124,5 +165,7 @@ impl PolicyFileSource {
 
 impl super::sealed::Sealed for PolicyFileSource {}
 impl EvidenceFile for PolicyFileSource {
-    fn read_evidence(&mut self) -> Result<Rc<EvidenceSnapshot>, EvidenceError> { self.read() }
+    fn read_evidence(&mut self) -> Result<Rc<EvidenceSnapshot>, EvidenceError> {
+        self.read()
+    }
 }

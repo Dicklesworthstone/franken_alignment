@@ -1,7 +1,7 @@
 //! Expire a silent actor's unanswered forecast, never synthesize its outcome.
 use super::OversightBroker;
-use crate::action::ElapsedTick;
 use crate::Error;
+use crate::action::ElapsedTick;
 
 /// Exact timer basis retained from the original pending forecast. This is data,
 /// not a role, an action observation, a fresh clock or a transferable permission.
@@ -33,13 +33,19 @@ impl OversightBroker {
 
     /// Pure admission for a proposed clock observation. It cannot set time or
     /// withdraw eligibility. Used by durable owners BEFORE entering persistence.
-    pub fn check_consistency_deadline(&self, expected: ConsistencyDeadline,
-        at: ElapsedTick) -> Result<bool, Error>
-    {
+    pub fn check_consistency_deadline(
+        &self,
+        expected: ConsistencyDeadline,
+        at: ElapsedTick,
+    ) -> Result<bool, Error> {
         let actual = self.consistency_deadline()?.ok_or(Error::Missing)?;
-        if actual != expected { return Err(Error::Stale); }
+        if actual != expected {
+            return Err(Error::Stale);
+        }
         let previous = self.inspect().ledger.elapsed.ok_or(Error::Incomplete)?;
-        if at < previous || at < actual.created_at { return Err(Error::Stale); }
+        if at < previous || at < actual.created_at {
+            return Err(Error::Stale);
+        }
         Ok(at >= actual.expires_at)
     }
 
@@ -49,11 +55,14 @@ impl OversightBroker {
     /// The original optional stop policy chooses containment. A containment error
     /// leaves coverage lost and its incident retained, never restores eligibility.
     /// Repeating a due check cannot generate another sample or rewind any effect.
-    pub fn expire_consistency_deadline(&mut self, expected: ConsistencyDeadline)
-        -> Result<bool, Error>
-    {
+    pub fn expire_consistency_deadline(
+        &mut self,
+        expected: ConsistencyDeadline,
+    ) -> Result<bool, Error> {
         let now = self.inspect().ledger.elapsed.ok_or(Error::Incomplete)?;
-        if !self.check_consistency_deadline(expected, now)? { return Ok(false); }
+        if !self.check_consistency_deadline(expected, now)? {
+            return Ok(false);
+        }
         self.consistency_unavailable()?;
         Ok(true)
     }

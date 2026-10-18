@@ -3,14 +3,16 @@
 //! Programs are operator supplied; an exit code is never an accepted vote.
 use super::{FileHelperFailure, FileHelperPool, FileOversight, JournalError};
 use crate::action::ElapsedTick;
-use crate::action::consequence::oversight::{CommitteeInput, ObservedReceipt, ReviewWindow};
 use crate::action::consequence::oversight::helper_processes::{
     HelperChildren, HelperProgram, ProcessFailure, ProcessStatus, launch_helpers,
 };
-use crate::action::consequence::oversight::helper_workers::{HelperLimits, HelperPhase, HelperStatus};
 use crate::action::consequence::oversight::helper_workers::coordinator::Coordinator;
 use crate::action::consequence::oversight::helper_workers::io::{HelperPump, WorkerIoError};
 use crate::action::consequence::oversight::helper_workers::wire::encode_request;
+use crate::action::consequence::oversight::helper_workers::{
+    HelperLimits, HelperPhase, HelperStatus,
+};
+use crate::action::consequence::oversight::{CommitteeInput, ObservedReceipt, ReviewWindow};
 use crate::{Error, Snapshot};
 use std::collections::BTreeMap;
 use std::rc::Rc;
@@ -27,7 +29,11 @@ pub struct FileHelperProcessLaunch {
 
 /// Admission of THIS launch, not an effect outcome or a process cleanup claim.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum HelperRoundAdmission { NotStarted, Committed, Unknown }
+pub enum HelperRoundAdmission {
+    NotStarted,
+    Committed,
+    Unknown,
+}
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum FileProcessFailure {
@@ -35,13 +41,20 @@ pub enum FileProcessFailure {
     Transport(WorkerIoError),
     /// The post-launch clock callback unwound; children are returned for cleanup.
     PostLaunchClockPanicked,
-    Launch { member: Option<String>, failure: ProcessFailure },
+    Launch {
+        member: Option<String>,
+        failure: ProcessFailure,
+    },
 }
 impl From<JournalError> for FileProcessFailure {
-    fn from(error: JournalError) -> Self { Self::Journal(error) }
+    fn from(error: JournalError) -> Self {
+        Self::Journal(error)
+    }
 }
 impl From<Error> for FileProcessFailure {
-    fn from(error: Error) -> Self { Self::Journal(error.into()) }
+    fn from(error: Error) -> Self {
+        Self::Journal(error.into())
+    }
 }
 
 /// A failed start can retain live children. Their original owner is returned,
@@ -53,11 +66,19 @@ pub struct FileHelperProcessError {
     pub admission: HelperRoundAdmission,
     pub children: Option<HelperChildren>,
 }
-fn failed(failure: impl Into<FileProcessFailure>, admission: HelperRoundAdmission,
-    mut children: Option<HelperChildren>) -> FileHelperProcessError
-{
-    if let Some(children) = &mut children { children.request_stop_all(); }
-    FileHelperProcessError { failure: failure.into(), admission, children }
+fn failed(
+    failure: impl Into<FileProcessFailure>,
+    admission: HelperRoundAdmission,
+    mut children: Option<HelperChildren>,
+) -> FileHelperProcessError {
+    if let Some(children) = &mut children {
+        children.request_stop_all();
+    }
+    FileHelperProcessError {
+        failure: failure.into(),
+        admission,
+        children,
+    }
 }
 
 /// One nonblocking review pool and every direct child launched for it. There is
@@ -75,42 +96,93 @@ impl FileOversight {
     /// remains consumed if a later spawn or post-launch clock check fails. No
     /// input bytes are sent before the entire roster is ready and the fresh
     /// post-launch observation remains before the commit cutoff.
-    pub fn begin_helper_processes<F>(&mut self, revision: u64, launch: FileHelperProcessLaunch,
-        snapshot: Snapshot, mut clock: F) -> Result<FileHelperProcesses, FileHelperProcessError>
-    where F: FnMut() -> ElapsedTick {
+    pub fn begin_helper_processes<F>(
+        &mut self,
+        revision: u64,
+        launch: FileHelperProcessLaunch,
+        snapshot: Snapshot,
+        mut clock: F,
+    ) -> Result<FileHelperProcesses, FileHelperProcessError>
+    where
+        F: FnMut() -> ElapsedTick,
+    {
         let pending = (|| -> Result<_, JournalError> {
-            if self.fault.is_some() { return Err(JournalError::Unavailable); }
-            if revision != self.revision() { return Err(Error::Stale.into()); }
-            if self.worker_rounds.contains(&launch.round) { return Err(Error::Duplicate.into()); }
-            if !launch.programs.keys().eq(self.machine.broker.contracts().members().keys()) { return Err(Error::Binding.into()); }
-            if self.machine.broker.input_revision(launch.attempt)? != launch.expected_input_revision { return Err(Error::Stale.into()); }
+            if self.fault.is_some() {
+                return Err(JournalError::Unavailable);
+            }
+            if revision != self.revision() {
+                return Err(Error::Stale.into());
+            }
+            if self.worker_rounds.contains(&launch.round) {
+                return Err(Error::Duplicate.into());
+            }
+            if !launch
+                .programs
+                .keys()
+                .eq(self.machine.broker.contracts().members().keys())
+            {
+                return Err(Error::Binding.into());
+            }
+            if self.machine.broker.input_revision(launch.attempt)? != launch.expected_input_revision
+            {
+                return Err(Error::Stale.into());
+            }
             let now = clock();
             // The process-independent clock domain is the same one already
             // bound to this file profile. A caller closure is not a worker clock.
             if !self.clock_ready() || self.inspect().control.ledger.elapsed != Some(now) {
                 self.observe_time(self.revision(), now)?;
             }
-            let input = self.machine.broker.current_inputs(launch.attempt)?.ok_or(Error::Incomplete)?;
-            let (coordinator, ports) = Coordinator::new(launch.round, launch.evidence_root, input,
-                launch.window, now, launch.limits)?;
-            for port in ports.values() { encode_request(port)?; }
+            let input = self
+                .machine
+                .broker
+                .current_inputs(launch.attempt)?
+                .ok_or(Error::Incomplete)?;
+            let (coordinator, ports) = Coordinator::new(
+                launch.round,
+                launch.evidence_root,
+                input,
+                launch.window,
+                now,
+                launch.limits,
+            )?;
+            for port in ports.values() {
+                encode_request(port)?;
+            }
             Ok((input.clone(), coordinator, ports))
-        })().map_err(|error| failed(error, HelperRoundAdmission::NotStarted, None))?;
+        })()
+        .map_err(|error| failed(error, HelperRoundAdmission::NotStarted, None))?;
         let (inputs, coordinator, ports) = pending;
-        if let Err(error) = self.begin_review(self.revision(), launch.attempt, launch.round,
-            launch.evidence_root, launch.window, snapshot)
-        {
-            let admission = if self.storage_failure().is_some() { HelperRoundAdmission::Unknown }
-                else { HelperRoundAdmission::NotStarted };
+        if let Err(error) = self.begin_review(
+            self.revision(),
+            launch.attempt,
+            launch.round,
+            launch.evidence_root,
+            launch.window,
+            snapshot,
+        ) {
+            let admission = if self.storage_failure().is_some() {
+                HelperRoundAdmission::Unknown
+            } else {
+                HelperRoundAdmission::NotStarted
+            };
             return Err(failed(error, admission, None));
         }
         self.worker_rounds.insert(launch.round);
-        let (streams, children) = match launch_helpers(self.machine.broker.contracts(), &launch.programs) {
-            Ok(launched) => launched,
-            Err(error) => return Err(failed(FileProcessFailure::Launch {
-                member: error.member, failure: error.failure,
-            }, HelperRoundAdmission::Committed, Some(error.children))),
-        };
+        let (streams, children) =
+            match launch_helpers(self.machine.broker.contracts(), &launch.programs) {
+                Ok(launched) => launched,
+                Err(error) => {
+                    return Err(failed(
+                        FileProcessFailure::Launch {
+                            member: error.member,
+                            failure: error.failure,
+                        },
+                        HelperRoundAdmission::Committed,
+                        Some(error.children),
+                    ));
+                }
+            };
         // Keep all successfully launched children OUTSIDE the callback's unwind
         // boundary. A panicking clock is not a timestamp, a vote, or a reason to
         // lose cleanup ownership after the original Begin has been committed.
@@ -120,23 +192,47 @@ impl FileOversight {
             Ok(now) => now,
             Err(_) => {
                 drop(streams); // No request bytes were transmitted.
-                return Err(failed(FileProcessFailure::PostLaunchClockPanicked,
-                    HelperRoundAdmission::Committed, Some(children)));
+                return Err(failed(
+                    FileProcessFailure::PostLaunchClockPanicked,
+                    HelperRoundAdmission::Committed,
+                    Some(children),
+                ));
             }
         };
         if let Err(error) = self.observe_time(self.revision(), now) {
-            return Err(failed(error, HelperRoundAdmission::Committed, Some(children)));
+            return Err(failed(
+                error,
+                HelperRoundAdmission::Committed,
+                Some(children),
+            ));
         }
         if now >= launch.window.commit_by {
-            return Err(failed(Error::Stale, HelperRoundAdmission::Committed, Some(children)));
+            return Err(failed(
+                Error::Stale,
+                HelperRoundAdmission::Committed,
+                Some(children),
+            ));
         }
         let connections = match super::connect(ports, streams) {
             Ok(connections) => connections,
-            Err(error) => return Err(failed(FileProcessFailure::Transport(error),
-                HelperRoundAdmission::Committed, Some(children))),
+            Err(error) => {
+                return Err(failed(
+                    FileProcessFailure::Transport(error),
+                    HelperRoundAdmission::Committed,
+                    Some(children),
+                ));
+            }
         };
-        let pool = FileHelperPool { issuer: Rc::clone(&self.issuer), attempt: launch.attempt,
-            round: launch.round, inputs, window: launch.window, coordinator, connections, closed: false };
+        let pool = FileHelperPool {
+            issuer: Rc::clone(&self.issuer),
+            attempt: launch.attempt,
+            round: launch.round,
+            inputs,
+            window: launch.window,
+            coordinator,
+            connections,
+            closed: false,
+        };
         Ok(FileHelperProcesses { pool, children })
     }
 }
@@ -148,43 +244,76 @@ impl FileHelperProcesses {
         (self.pool, self.children)
     }
 
-    pub fn round(&self) -> u64 { self.pool.round() }
-    pub fn statuses(&self) -> BTreeMap<String, HelperStatus> { self.pool.statuses() }
-    pub fn process_statuses(&self) -> BTreeMap<String, ProcessStatus> { self.children.statuses() }
-    pub fn all_reaped(&self) -> bool { self.children.all_reaped() }
-    pub fn ready_to_finish(&self) -> bool { self.pool.ready_to_finish() }
-    pub fn next_deadline(&self) -> Option<ElapsedTick> { self.pool.next_deadline() }
-    pub fn is_closed(&self) -> bool { self.pool.is_closed() }
+    pub fn round(&self) -> u64 {
+        self.pool.round()
+    }
+    pub fn statuses(&self) -> BTreeMap<String, HelperStatus> {
+        self.pool.statuses()
+    }
+    pub fn process_statuses(&self) -> BTreeMap<String, ProcessStatus> {
+        self.children.statuses()
+    }
+    pub fn all_reaped(&self) -> bool {
+        self.children.all_reaped()
+    }
+    pub fn ready_to_finish(&self) -> bool {
+        self.pool.ready_to_finish()
+    }
+    pub fn next_deadline(&self) -> Option<ElapsedTick> {
+        self.pool.next_deadline()
+    }
+    pub fn is_closed(&self) -> bool {
+        self.pool.is_closed()
+    }
 
     /// Exit status alone does not fail or complete a helper slot: buffered
     /// commitment/reveal bytes must still pass the original socket decoder.
     pub fn reap(&mut self) -> BTreeMap<String, ProcessStatus> {
-        if self.pool.is_closed() { self.children.request_stop_all(); }
-        else {
+        if self.pool.is_closed() {
+            self.children.request_stop_all();
+        } else {
             for (member, status) in self.pool.statuses() {
-                if matches!(status.phase, HelperPhase::Complete | HelperPhase::Failed | HelperPhase::Closed) {
+                if matches!(
+                    status.phase,
+                    HelperPhase::Complete | HelperPhase::Failed | HelperPhase::Closed
+                ) {
                     // The roster is immutable and matches the original child map.
-                    self.children.request_stop(&member).expect("frozen child roster");
+                    self.children
+                        .request_stop(&member)
+                        .expect("frozen child roster");
                 }
             }
         }
         self.children.reap()
     }
 
-    pub fn pump(&mut self, host: &mut FileOversight, now: ElapsedTick) -> Result<HelperPump, FileHelperFailure> {
+    pub fn pump(
+        &mut self,
+        host: &mut FileOversight,
+        now: ElapsedTick,
+    ) -> Result<HelperPump, FileHelperFailure> {
         self.pump_with_clock(host, || now)
     }
-    pub fn pump_with_clock<F>(&mut self, host: &mut FileOversight, clock: F) -> Result<HelperPump, FileHelperFailure>
-    where F: FnMut() -> ElapsedTick {
+    pub fn pump_with_clock<F>(
+        &mut self,
+        host: &mut FileOversight,
+        clock: F,
+    ) -> Result<HelperPump, FileHelperFailure>
+    where
+        F: FnMut() -> ElapsedTick,
+    {
         self.reap();
         let result = self.pool.pump_with_clock(host, clock);
         self.reap();
         result
     }
-    pub fn finish(&mut self, host: &mut FileOversight, now: ElapsedTick,
-        current: Option<&CommitteeInput>, snapshot: Snapshot)
-        -> Result<Result<ObservedReceipt, Error>, JournalError>
-    {
+    pub fn finish(
+        &mut self,
+        host: &mut FileOversight,
+        now: ElapsedTick,
+        current: Option<&CommitteeInput>,
+        snapshot: Snapshot,
+    ) -> Result<Result<ObservedReceipt, Error>, JournalError> {
         let result = self.pool.finish(host, now, current, snapshot);
         self.reap();
         result

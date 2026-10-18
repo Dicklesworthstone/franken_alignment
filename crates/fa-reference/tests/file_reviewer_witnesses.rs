@@ -44,7 +44,7 @@ impl NativeReview {
         p.delivery.policy = Policy::new(1, nodes).unwrap();
         let (mut host, reviewer) = FileOversight::create(root.store(), p).unwrap();
         host.observe_time(host.revision(), ElapsedTick(1)).unwrap();
-        let (action, inputs) = reviewed(&mut host, 1, b"witnessed publication");
+        let (action, inputs) = reviewed(&mut host, 1, b"witnessed");
         let request = host.request_human_approval(host.revision(), 1001, 1, &inputs, ElapsedTick(31)).unwrap();
         Self { host, reviewer, request: Some(request), action, inputs, _root: root }
     }

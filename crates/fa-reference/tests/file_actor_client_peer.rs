@@ -44,7 +44,7 @@ fn exchange<P: ActorRequestPort>(client: &mut FilePeerConnection, server: &mut U
 fn verified_client_recovers_an_executed_request_without_a_replacement_effect() {
     let root = Directory::new(); let (mut host, human) = ordinary::create(&root);
     host.enable_publication_guard(host.revision()).unwrap();
-    let proposal = ActorProposal { target: host.inspect().target, payload: b"peer-checked publication".to_vec(),
+    let proposal = ActorProposal { target: host.inspect().target, payload: b"peer-checked".to_vec(),
         expected_policy_epoch: 0, deadline: ElapsedTick(100), units: 16 };
     let (port, mut supervisor) = host.into_actor_gateway();
     let r = supervisor.host().unwrap().revision(); supervisor.set_snapshot(r, Some(snapshot())).unwrap();

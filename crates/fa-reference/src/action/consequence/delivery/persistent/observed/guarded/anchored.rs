@@ -5,13 +5,15 @@
 //! guard admission, semantic replay and recovery fence as guarded recovery.
 //! The anchor is sensitive operator data, not a signature, permit or checkpoint.
 
-mod wire;
-mod text;
 mod learned;
+mod text;
+mod wire;
 pub use wire::{FileHistoryAnchorError, MAX_HISTORY_ANCHOR_BYTES};
 
-use super::{BaseEvent, Event, FileOversight, FileOversightProfile, FileOversightRoles,
-    FileRecoveryRequirements, JournalError, Machine, journal, storage};
+use super::{
+    BaseEvent, Event, FileOversight, FileOversightProfile, FileOversightRoles,
+    FileRecoveryRequirements, JournalError, Machine, journal, storage,
+};
 use crate::Error;
 use std::fmt;
 use std::path::Path;
@@ -42,29 +44,43 @@ impl fmt::Debug for FileHistoryAnchor {
 }
 
 impl FileHistoryAnchor {
-    pub fn revision(&self) -> u64 { self.revision as u64 }
+    pub fn revision(&self) -> u64 {
+        self.revision as u64
+    }
     /// Logical retained canonical bytes, not heap allocation or storage overhead.
-    pub fn retained_bytes(&self) -> usize { self.canonical.len() }
+    pub fn retained_bytes(&self) -> usize {
+        self.canonical.len()
+    }
 
     // Only original owners may move their already encoded, durably acknowledged
     // canonical cut here. This is not an event importer or a public constructor.
     // Terminal recovery uses the bytes of its successful replacement (or the
     // identical confirmed drained cut), without another encoding or replay.
     pub(in super::super) fn from_acknowledged(revision: usize, canonical: Vec<u8>) -> Self {
-        Self { revision, canonical }
+        Self {
+            revision,
+            canonical,
+        }
     }
 
     // The read-only review auditor shares this exact checker; no public event importer.
-    pub(in super::super) fn check(&self, profile: &FileOversightProfile, identity: &Path, events: &[Event])
-        -> Result<(), Error>
-    {
-        if self.revision > events.len() { return Err(Error::Stale); }
+    pub(in super::super) fn check(
+        &self,
+        profile: &FileOversightProfile,
+        identity: &Path,
+        events: &[Event],
+    ) -> Result<(), Error> {
+        if self.revision > events.len() {
+            return Err(Error::Stale);
+        }
         // Comparing the entire encoded file directly would reject legitimate
         // successors because the journal header contains its event count.
         // Re-encode exactly the anchored prefix using the ORIGINAL encoder,
         // including its independent bootstrap, path identity and format domain.
         let prefix = journal::encode(profile, identity, &events[..self.revision])?;
-        if prefix != self.canonical { return Err(Error::Binding); }
+        if prefix != self.canonical {
+            return Err(Error::Binding);
+        }
         Ok(())
     }
 }
@@ -74,9 +90,14 @@ impl FileOversight {
     /// newer disk bytes or advancing the journal. A poisoned owner cannot issue
     /// an anchor for its old RAM state after an ambiguous replacement.
     pub fn history_anchor(&self) -> Result<FileHistoryAnchor, JournalError> {
-        if self.fault.is_some() { return Err(JournalError::Unavailable); }
+        if self.fault.is_some() {
+            return Err(JournalError::Unavailable);
+        }
         let canonical = journal::encode(&self.profile, self.store.identity(), &self.events)?;
-        Ok(FileHistoryAnchor::from_acknowledged(self.events.len(), canonical))
+        Ok(FileHistoryAnchor::from_acknowledged(
+            self.events.len(),
+            canonical,
+        ))
     }
 
     /// Advance an independently held anchor only along this healthy owner's
@@ -88,10 +109,13 @@ impl FileOversight {
     /// The custodian must retain the old anchor until the new one is durably
     /// acknowledged. Passing a stale previous anchor cannot protect intervening
     /// history which the custodian did not independently retain.
-    pub fn history_anchor_after(&self, previous: &FileHistoryAnchor)
-        -> Result<FileHistoryAnchor, JournalError>
-    {
-        if self.fault.is_some() { return Err(JournalError::Unavailable); }
+    pub fn history_anchor_after(
+        &self,
+        previous: &FileHistoryAnchor,
+    ) -> Result<FileHistoryAnchor, JournalError> {
+        if self.fault.is_some() {
+            return Err(JournalError::Unavailable);
+        }
         previous.check(&self.profile, self.store.identity(), &self.events)?;
         self.history_anchor()
     }
@@ -109,20 +133,24 @@ impl FileOversight {
     /// This is the base composed guarded profile. Evaluated, predictive and
     /// mediated profiles are deliberately rejected by its existing gate-inventory
     /// checks rather than silently downgraded. No remote effect is replayed.
-    pub fn open_guarded_anchored(directory: impl AsRef<Path>, profile: FileOversightProfile,
-        expected: &FileRecoveryRequirements, anchor: &FileHistoryAnchor)
-        -> Result<(Self, FileOversightRoles), JournalError>
-    {
+    pub fn open_guarded_anchored(
+        directory: impl AsRef<Path>,
+        profile: FileOversightProfile,
+        expected: &FileRecoveryRequirements,
+        anchor: &FileHistoryAnchor,
+    ) -> Result<(Self, FileOversightRoles), JournalError> {
         profile.delivery.limits.check()?;
         let store = storage::Store::open(directory.as_ref())?;
         Self::open_guarded_anchored_store(store, profile, expected, anchor)
     }
 
     // Private Store seam for real barrier-failure tests, never an actor callback.
-    fn open_guarded_anchored_store(store: storage::Store, profile: FileOversightProfile,
-        expected: &FileRecoveryRequirements, anchor: &FileHistoryAnchor)
-        -> Result<(Self, FileOversightRoles), JournalError>
-    {
+    fn open_guarded_anchored_store(
+        store: storage::Store,
+        profile: FileOversightProfile,
+        expected: &FileRecoveryRequirements,
+        anchor: &FileHistoryAnchor,
+    ) -> Result<(Self, FileOversightRoles), JournalError> {
         super::recovery::FileGuardedRecovery::begin_store(store, profile, expected, Some(anchor))?
             .finish_synchronously()
     }
@@ -135,11 +163,15 @@ impl FileHistoryAnchor {
     // Registration consumes the SAME original canonical decoder as plan import.
     // A transport-valid archive alone is not a profile/path/revision binding.
     // No semantic replay or filesystem access is done by this private data seam.
-    pub(in super::super) fn registration_image(&self, profile: &FileOversightProfile,
-        identity: &Path) -> Result<&[u8], Error>
-    {
+    pub(in super::super) fn registration_image(
+        &self,
+        profile: &FileOversightProfile,
+        identity: &Path,
+    ) -> Result<&[u8], Error> {
         let events = journal::decode(profile, identity, &self.canonical)?;
-        if events.len() != self.revision { return Err(Error::Binding); }
+        if events.len() != self.revision {
+            return Err(Error::Binding);
+        }
         Ok(&self.canonical)
     }
 }

@@ -5,7 +5,7 @@
 //! All socket I/O is bounded per drive; dropping a connection never cancels work.
 
 use super::actor::{ActorError, ActorPort, ActorProposal};
-use super::actor_wire::{ActorRequestPort, ActorChannel, ActorWire, ChannelState, WireError};
+use super::actor_wire::{ActorChannel, ActorRequestPort, ActorWire, ChannelState, WireError};
 use std::fmt;
 use std::io::{self, Read, Write};
 use std::os::fd::{AsFd, BorrowedFd};
@@ -27,23 +27,41 @@ pub struct DriveBudget {
 }
 
 impl Default for DriveBudget {
-    fn default() -> Self { Self { read_bytes: 65_536, write_bytes: 65_536, frames: 16, io_calls: 64 } }
+    fn default() -> Self {
+        Self {
+            read_bytes: 65_536,
+            write_bytes: 65_536,
+            frames: 16,
+            io_calls: 64,
+        }
+    }
 }
 
 impl DriveBudget {
     pub(crate) fn validate(self) -> Result<(), WireError> {
-        if self.read_bytes > MAX_DRIVE_BYTES || self.write_bytes > MAX_DRIVE_BYTES
-            || self.frames > MAX_DRIVE_FRAMES || self.io_calls > MAX_DRIVE_IO_CALLS
-        { return Err(WireError::Capacity); }
+        if self.read_bytes > MAX_DRIVE_BYTES
+            || self.write_bytes > MAX_DRIVE_BYTES
+            || self.frames > MAX_DRIVE_FRAMES
+            || self.io_calls > MAX_DRIVE_IO_CALLS
+        {
+            return Err(WireError::Capacity);
+        }
         Ok(())
     }
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum IoDirection { Read, Write, Flush }
+pub enum IoDirection {
+    Read,
+    Write,
+    Flush,
+}
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub struct ConnectionFailure { pub direction: IoDirection, pub kind: io::ErrorKind }
+pub struct ConnectionFailure {
+    pub direction: IoDirection,
+    pub kind: io::ErrorKind,
+}
 
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub struct DriveProgress {
@@ -68,10 +86,14 @@ pub struct ConnectionStatus {
 }
 
 impl ConnectionStatus {
-    pub fn closed(self) -> bool { self.failure.is_some() || matches!(self.channel, ChannelState::Closed(_)) }
+    pub fn closed(self) -> bool {
+        self.failure.is_some() || matches!(self.channel, ChannelState::Closed(_))
+    }
 
     pub fn interest(self) -> DriveInterest {
-        if self.closed() { return DriveInterest::Closed; }
+        if self.closed() {
+            return DriveInterest::Closed;
+        }
         match self.channel {
             ChannelState::Reading if self.buffered_input_bytes > 0 => DriveInterest::LocalWork,
             ChannelState::Reading => DriveInterest::Readable,
@@ -85,10 +107,18 @@ impl ConnectionStatus {
 /// Scheduling action, not an effect-admission result. Buffered requests and an
 /// outstanding local flush must not wait for a new peer-readability event.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum DriveInterest { LocalWork, Readable, Writable, Closed }
+pub enum DriveInterest {
+    LocalWork,
+    Readable,
+    Writable,
+    Closed,
+}
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub struct DriveReport { pub progress: DriveProgress, pub status: ConnectionStatus }
+pub struct DriveReport {
+    pub progress: DriveProgress,
+    pub status: ConnectionStatus,
+}
 
 /// Give the peer only the opposite socket, never this trusted-side connection.
 /// A successful write acknowledges local socket acceptance, not peer delivery.
@@ -111,12 +141,16 @@ pub struct UnixActorConnection<P: ActorRequestPort = ActorPort> {
 
 impl<P: ActorRequestPort> fmt::Debug for UnixActorConnection<P> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("UnixActorConnection").field("status", &self.status()).finish_non_exhaustive()
+        f.debug_struct("UnixActorConnection")
+            .field("status", &self.status())
+            .finish_non_exhaustive()
     }
 }
 
 impl<P: ActorRequestPort> AsFd for UnixActorConnection<P> {
-    fn as_fd(&self) -> BorrowedFd<'_> { self.socket.as_fd() }
+    fn as_fd(&self) -> BorrowedFd<'_> {
+        self.socket.as_fd()
+    }
 }
 
 impl<P: ActorRequestPort> UnixActorConnection<P> {
@@ -130,17 +164,28 @@ impl<P: ActorRequestPort> UnixActorConnection<P> {
     /// Internal constructor after peer authentication and nonblocking setup.
     /// No fallible syscall runs after the original actor session is moved here.
     pub(super) fn from_nonblocking(socket: UnixStream, channel: ActorChannel<P>) -> Self {
-        Self { socket, channel, input: [0; SOCKET_BUFFER_BYTES], start: 0, end: 0, failure: None }
+        Self {
+            socket,
+            channel,
+            input: [0; SOCKET_BUFFER_BYTES],
+            start: 0,
+            end: 0,
+            failure: None,
+        }
     }
 
     pub fn status(&self) -> ConnectionStatus {
         ConnectionStatus {
-            channel: self.channel.state(), buffered_input_bytes: self.end - self.start,
-            pending_output_bytes: self.channel.pending_output().len(), failure: self.failure,
+            channel: self.channel.state(),
+            buffered_input_bytes: self.end - self.start,
+            pending_output_bytes: self.channel.pending_output().len(),
+            failure: self.failure,
         }
     }
 
-    pub(crate) fn request_port(&self) -> &P { self.channel.request_port() }
+    pub(crate) fn request_port(&self) -> &P {
+        self.channel.request_port()
+    }
 
     /// Invalid budgets refuse before any work. Later socket failures are returned
     /// WITH completed progress, then latched: another drive never retries intake.
@@ -153,78 +198,136 @@ impl<P: ActorRequestPort> UnixActorConnection<P> {
     /// callback invoked only by complete Submit frames. This lets trusted durable
     /// hosts acquire source evidence after peer authentication without exposing an
     /// alternate public wire or bypassing framing/backpressure.
-    pub(crate) fn drive_with_admission<A>(&mut self, budget: DriveBudget, mut admission: A)
-        -> Result<DriveReport, WireError>
-    where A: FnMut(&P, u64, &ActorProposal) -> Result<(), ActorError> {
+    pub(crate) fn drive_with_admission<A>(
+        &mut self,
+        budget: DriveBudget,
+        mut admission: A,
+    ) -> Result<DriveReport, WireError>
+    where
+        A: FnMut(&P, u64, &ActorProposal) -> Result<(), ActorError>,
+    {
         budget.validate()?;
         let mut progress = DriveProgress::default();
         while !self.status().closed() {
             match self.channel.state() {
                 ChannelState::Reading => {
-                    if progress.frames == budget.frames { break; }
+                    if progress.frames == budget.frames {
+                        break;
+                    }
                     if self.start != self.end {
-                        let fed = self.channel.feed_with_admission(&self.input[self.start..self.end], &mut admission);
+                        let fed = self
+                            .channel
+                            .feed_with_admission(&self.input[self.start..self.end], &mut admission);
                         self.start += fed.consumed;
                         progress.consumed_bytes += fed.consumed;
-                        if fed.state == ChannelState::ReplyReady { progress.frames += 1; }
-                        if fed.consumed == 0 { break; }
+                        if fed.state == ChannelState::ReplyReady {
+                            progress.frames += 1;
+                        }
+                        if fed.consumed == 0 {
+                            break;
+                        }
                         continue;
                     }
-                    if progress.read_bytes == budget.read_bytes || progress.io_calls == budget.io_calls { break; }
+                    if progress.read_bytes == budget.read_bytes
+                        || progress.io_calls == budget.io_calls
+                    {
+                        break;
+                    }
                     let length = SOCKET_BUFFER_BYTES.min(budget.read_bytes - progress.read_bytes);
                     progress.io_calls += 1;
                     match self.socket.read(&mut self.input[..length]) {
-                        Ok(0) => { self.channel.finish_input(); break; }
-                        Ok(count) => { self.start = 0; self.end = count; progress.read_bytes += count; }
+                        Ok(0) => {
+                            self.channel.finish_input();
+                            break;
+                        }
+                        Ok(count) => {
+                            self.start = 0;
+                            self.end = count;
+                            progress.read_bytes += count;
+                        }
                         Err(error) if error.kind() == io::ErrorKind::WouldBlock => {
-                            progress.would_block = Some(IoDirection::Read); break;
+                            progress.would_block = Some(IoDirection::Read);
+                            break;
                         }
                         Err(error) if error.kind() == io::ErrorKind::Interrupted => {}
-                        Err(error) => { self.fail(IoDirection::Read, error.kind()); break; }
+                        Err(error) => {
+                            self.fail(IoDirection::Read, error.kind());
+                            break;
+                        }
                     }
                 }
                 ChannelState::ReplyReady => {
-                    if progress.io_calls == budget.io_calls { break; }
+                    if progress.io_calls == budget.io_calls {
+                        break;
+                    }
                     if self.channel.pending_output().is_empty() {
                         // Preserve the channel's write-then-flush barrier even
                         // when the byte budget ended on the last response byte.
                         progress.io_calls += 1;
                         match self.socket.flush() {
-                            Ok(()) => { self.channel.acknowledge_flushed().expect("fully written channel response"); }
+                            Ok(()) => {
+                                self.channel
+                                    .acknowledge_flushed()
+                                    .expect("fully written channel response");
+                            }
                             Err(error) if error.kind() == io::ErrorKind::WouldBlock => {
-                                progress.would_block = Some(IoDirection::Flush); break;
+                                progress.would_block = Some(IoDirection::Flush);
+                                break;
                             }
                             Err(error) if error.kind() == io::ErrorKind::Interrupted => {}
-                            Err(error) => { self.fail(IoDirection::Flush, error.kind()); break; }
+                            Err(error) => {
+                                self.fail(IoDirection::Flush, error.kind());
+                                break;
+                            }
                         }
                     } else {
-                        if progress.written_bytes == budget.write_bytes { break; }
-                        let length = self.channel.pending_output().len().min(budget.write_bytes - progress.written_bytes);
+                        if progress.written_bytes == budget.write_bytes {
+                            break;
+                        }
+                        let length = self
+                            .channel
+                            .pending_output()
+                            .len()
+                            .min(budget.write_bytes - progress.written_bytes);
                         progress.io_calls += 1;
                         match self.socket.write(&self.channel.pending_output()[..length]) {
-                            Ok(0) => { self.fail(IoDirection::Write, io::ErrorKind::WriteZero); break; }
+                            Ok(0) => {
+                                self.fail(IoDirection::Write, io::ErrorKind::WriteZero);
+                                break;
+                            }
                             Ok(count) => {
-                                self.channel.acknowledge_written(count).expect("socket accepted no more than offered");
+                                self.channel
+                                    .acknowledge_written(count)
+                                    .expect("socket accepted no more than offered");
                                 progress.written_bytes += count;
                             }
                             Err(error) if error.kind() == io::ErrorKind::WouldBlock => {
-                                progress.would_block = Some(IoDirection::Write); break;
+                                progress.would_block = Some(IoDirection::Write);
+                                break;
                             }
                             Err(error) if error.kind() == io::ErrorKind::Interrupted => {}
-                            Err(error) => { self.fail(IoDirection::Write, error.kind()); break; }
+                            Err(error) => {
+                                self.fail(IoDirection::Write, error.kind());
+                                break;
+                            }
                         }
                     }
                 }
                 ChannelState::Closed(_) => break,
             }
         }
-        Ok(DriveReport { progress, status: self.status() })
+        Ok(DriveReport {
+            progress,
+            status: self.status(),
+        })
     }
 
     /// Explicit operator reconnect: close this socket and retain the SAME actor
     /// ticket/idempotency session. Unfinished input and unsent replies are lost,
     /// not accepted effects. Clients retry the original key and exact proposal.
-    pub fn into_session(self) -> ActorWire<P> { self.channel.into_wire() }
+    pub fn into_session(self) -> ActorWire<P> {
+        self.channel.into_wire()
+    }
 
     fn fail(&mut self, direction: IoDirection, kind: io::ErrorKind) {
         self.failure = Some(ConnectionFailure { direction, kind });
@@ -233,23 +336,32 @@ impl<P: ActorRequestPort> UnixActorConnection<P> {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use super::super::actor_wire::CloseReason;
+    use super::*;
 
     #[test]
     fn buffered_work_and_flushes_do_not_wait_for_a_new_readability_edge() {
-        let mut status = ConnectionStatus { channel: ChannelState::Reading,
-            buffered_input_bytes: 0, pending_output_bytes: 0, failure: None };
+        let mut status = ConnectionStatus {
+            channel: ChannelState::Reading,
+            buffered_input_bytes: 0,
+            pending_output_bytes: 0,
+            failure: None,
+        };
         assert_eq!(status.interest(), DriveInterest::Readable);
         status.buffered_input_bytes = 3;
         assert_eq!(status.interest(), DriveInterest::LocalWork);
-        status.channel = ChannelState::ReplyReady; status.pending_output_bytes = 1;
+        status.channel = ChannelState::ReplyReady;
+        status.pending_output_bytes = 1;
         assert_eq!(status.interest(), DriveInterest::Writable);
         status.pending_output_bytes = 0;
         assert_eq!(status.interest(), DriveInterest::LocalWork);
-        status.failure = Some(ConnectionFailure { direction: IoDirection::Write, kind: io::ErrorKind::BrokenPipe });
+        status.failure = Some(ConnectionFailure {
+            direction: IoDirection::Write,
+            kind: io::ErrorKind::BrokenPipe,
+        });
         assert_eq!(status.interest(), DriveInterest::Closed);
-        status.failure = None; status.channel = ChannelState::Closed(CloseReason::PeerClosed);
+        status.failure = None;
+        status.channel = ChannelState::Closed(CloseReason::PeerClosed);
         assert_eq!(status.interest(), DriveInterest::Closed);
     }
 }

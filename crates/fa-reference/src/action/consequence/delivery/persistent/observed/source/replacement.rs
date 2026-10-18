@@ -1,10 +1,10 @@
 //! Governed recovery of the original bounded file-observation stream.
 //! A replacement changes the capture incarnation, never the producer identity,
 //! fixed freshness/retention limits, journal budget or already charged effects.
-use super::{FileOversight, JournalError, SourceEvent};
 use super::super::Event;
-use crate::action::consequence::delivery::PolicySourceChange;
+use super::{FileOversight, JournalError, SourceEvent};
 use crate::Error;
+use crate::action::consequence::delivery::PolicySourceChange;
 
 #[cfg(test)]
 mod tests;
@@ -29,13 +29,21 @@ impl FileOversight {
     /// Only undispatched reservations are cancelled/refunded. Existing dispatches
     /// retain their envelopes for guarded nonexecution or historical reconciliation;
     /// no previously admitted effect is retried, refunded or declared successful.
-    pub fn replace_file_source(&mut self, revision: u64, request: FileSourceReplacement)
-        -> Result<PolicySourceChange, JournalError>
-    {
-        if self.fault.is_some() { return Err(JournalError::Unavailable); }
-        if request.operation == 0 { return Err(Error::InvalidInput.into()); }
+    pub fn replace_file_source(
+        &mut self,
+        revision: u64,
+        request: FileSourceReplacement,
+    ) -> Result<PolicySourceChange, JournalError> {
+        if self.fault.is_some() {
+            return Err(JournalError::Unavailable);
+        }
+        if request.operation == 0 {
+            return Err(Error::InvalidInput.into());
+        }
         if let Some((original, receipt)) = self.machine.source_replacement(request.operation) {
-            if original != &request { return Err(Error::Binding.into()); }
+            if original != &request {
+                return Err(Error::Binding.into());
+            }
             return Ok(receipt.clone());
         }
         self.transact(revision, Event::Source(SourceEvent::Replace(request)))?;
@@ -44,9 +52,16 @@ impl FileOversight {
 
     /// Inspect an acknowledged historical replacement. This grants no source
     /// eligibility and never clears a later interrupted-observation latch.
-    pub fn file_source_replacement(&self, operation: u64) -> Result<PolicySourceChange, JournalError> {
-        if self.fault.is_some() { return Err(JournalError::Unavailable); }
-        self.machine.source_replacement(operation).map(|(_, receipt)| receipt.clone())
+    pub fn file_source_replacement(
+        &self,
+        operation: u64,
+    ) -> Result<PolicySourceChange, JournalError> {
+        if self.fault.is_some() {
+            return Err(JournalError::Unavailable);
+        }
+        self.machine
+            .source_replacement(operation)
+            .map(|(_, receipt)| receipt.clone())
             .ok_or_else(|| Error::Missing.into())
     }
 }

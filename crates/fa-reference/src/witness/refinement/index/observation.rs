@@ -2,12 +2,15 @@
 //! visible to candidate selection: only an explicitly committed, complete scan
 //! replaces the indexed snapshot. Dropping a scan leaves the history unchanged.
 
+use super::routing::{InvalidationIndex, RoutingBudget, RoutingReport, WitnessChange};
 use super::{
     ChangeCost, Delta, Error, ProductFrontiers, WitnessChangeIndex, WitnessSnapshot, closed_marker,
 };
 use crate::witness::{SnapshotEntry, refinement::RefinementBudget};
-use super::routing::{InvalidationIndex, RoutingBudget, RoutingReport, WitnessChange};
-use std::collections::{BTreeSet, btree_map::{Iter, Keys}};
+use std::collections::{
+    BTreeSet,
+    btree_map::{Iter, Keys},
+};
 
 /// Progress of a change observation, never evidence that a judgment is valid.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -158,9 +161,9 @@ impl ChangeObservation<'_, '_> {
                 return self.report(ChangeObservationOutcome::NeedsWork { minimum }, spent);
             }
             let bytes = match self.stage {
-                Stage::Compare { expected, offset, .. } => {
-                    bytes_left.min((expected.len() - offset) as u64)
-                }
+                Stage::Compare {
+                    expected, offset, ..
+                } => bytes_left.min((expected.len() - offset) as u64),
                 _ => 0,
             };
             let Some(steps) = self.total.steps.checked_add(1) else {
@@ -209,7 +212,11 @@ impl ChangeObservation<'_, '_> {
     /// Materializing at most MAX_BATCH_CHANGES value-free notification records,
     /// allocation and commit housekeeping are bounded but not charged as routing
     /// lookup work. No hard elapsed-time or automatic withdrawal claim is made.
-    pub fn commit_routed(mut self, routes: &InvalidationIndex, budget: RoutingBudget) -> RoutedChangeCommit {
+    pub fn commit_routed(
+        mut self,
+        routes: &InvalidationIndex,
+        budget: RoutingBudget,
+    ) -> RoutedChangeCommit {
         let observation = self.advance(RefinementBudget::default());
         let refusal = match observation.outcome {
             ChangeObservationOutcome::Ready => None,
@@ -217,33 +224,58 @@ impl ChangeObservation<'_, '_> {
             _ => Some(Error::Incomplete),
         };
         if let Some(error) = refusal {
-            return RoutedChangeCommit { committed: Err(error), observation,
-                routing: RoutingReport { candidates: Err(error), spent: RoutingBudget::default() } };
+            return RoutedChangeCommit {
+                committed: Err(error),
+                observation,
+                routing: RoutingReport {
+                    candidates: Err(error),
+                    spent: RoutingBudget::default(),
+                },
+            };
         }
         let domain = self.next.domain_input.domain;
         let whole_domain = self.keys.is_empty()
             || self.before.domain_input.closure != self.next.domain_input.closure;
         let count = if whole_domain { 1 } else { self.keys.len() };
         let mut changes = Vec::new();
-        if count > InvalidationIndex::MAX_BATCH_CHANGES || changes.try_reserve_exact(count).is_err() {
-            return RoutedChangeCommit { committed: Err(Error::Limit), observation,
-                routing: RoutingReport { candidates: Err(Error::Limit), spent: RoutingBudget::default() } };
+        if count > InvalidationIndex::MAX_BATCH_CHANGES || changes.try_reserve_exact(count).is_err()
+        {
+            return RoutedChangeCommit {
+                committed: Err(Error::Limit),
+                observation,
+                routing: RoutingReport {
+                    candidates: Err(Error::Limit),
+                    spent: RoutingBudget::default(),
+                },
+            };
         }
         if whole_domain {
             changes.push(WitnessChange::Domain { domain });
         } else {
-            changes.extend(self.keys.iter().map(|key| WitnessChange::Key { domain, key: *key }));
+            changes.extend(
+                self.keys
+                    .iter()
+                    .map(|key| WitnessChange::Key { domain, key: *key }),
+            );
         }
         let mut routing = routes.affected_batch(&changes, budget);
         if let Err(error) = routing.candidates.as_ref() {
-            return RoutedChangeCommit { committed: Err(*error), observation, routing };
+            return RoutedChangeCommit {
+                committed: Err(*error),
+                observation,
+                routing,
+            };
         }
         let committed = self.commit();
         if let Err(error) = committed {
             // Candidates must not be mistaken for a successfully published cut.
             routing.candidates = Err(error);
         }
-        RoutedChangeCommit { committed, observation, routing }
+        RoutedChangeCommit {
+            committed,
+            observation,
+            routing,
+        }
     }
 
     /// Publish only a fully scanned delta. This consumes the update, so it
@@ -273,14 +305,20 @@ impl ChangeObservation<'_, '_> {
         outcome: ChangeObservationOutcome,
         spent: RefinementBudget,
     ) -> ChangeObservationReport {
-        ChangeObservationReport { outcome, spent, total: self.total, cost: self.cost }
+        ChangeObservationReport {
+            outcome,
+            spent,
+            total: self.total,
+            cost: self.cost,
+        }
     }
 
     fn step(&mut self, bytes: usize) -> Result<(), Error> {
         match self.stage {
             Stage::Admission => {
                 let expected = self.before.revision.checked_add(1).ok_or(Error::Overflow)?;
-                if self.next.revision != expected || self.next.control_cut < self.before.control_cut {
+                if self.next.revision != expected || self.next.control_cut < self.before.control_cut
+                {
                     return Err(Error::Stale);
                 }
                 if self.next.semantic_epoch != self.before.semantic_epoch
@@ -298,19 +336,31 @@ impl ChangeObservation<'_, '_> {
                 };
                 self.cost.point_lookups += 1;
                 match self.next.values.get(&key) {
-                    None => { self.keys.insert(key); }
-                    Some(new) if old.version != new.version || old.value.len() != new.value.len() => {
+                    None => {
+                        self.keys.insert(key);
+                    }
+                    Some(new)
+                        if old.version != new.version || old.value.len() != new.value.len() =>
+                    {
                         self.keys.insert(key);
                     }
                     Some(new) if !old.value.is_empty() => {
                         self.stage = Stage::Compare {
-                            key, expected: &old.value, actual: &new.value, offset: 0,
+                            key,
+                            expected: &old.value,
+                            actual: &new.value,
+                            offset: 0,
                         };
                     }
                     Some(_) => {}
                 }
             }
-            Stage::Compare { key, expected, actual, offset } => {
+            Stage::Compare {
+                key,
+                expected,
+                actual,
+                offset,
+            } => {
                 // Admission to this stage establishes equal lengths and a
                 // nonempty remainder; advance reserves at most that remainder.
                 let end = offset + bytes;
@@ -320,7 +370,12 @@ impl ChangeObservation<'_, '_> {
                 } else if end == expected.len() {
                     self.stage = Stage::OldKeys;
                 } else {
-                    self.stage = Stage::Compare { key, expected, actual, offset: end };
+                    self.stage = Stage::Compare {
+                        key,
+                        expected,
+                        actual,
+                        offset: end,
+                    };
                 }
             }
             Stage::NewKeys => {
@@ -345,30 +400,77 @@ mod tests;
 mod routed_tests {
     use super::*;
     use crate::product_frontier::{FrontierStage, ProjectionKey, TrustedClosingMarker};
-    use crate::witness::{AdapterDomainInput, DomainClosure, DomainProjection, Invalidation,
-        QueryRole, Reuse, WitnessJudgment, WitnessRequest, MAX_SNAPSHOT_ENTRIES};
-    use crate::witness::refinement::{RefinementOutcome, index::IndexSelection};
     use crate::witness::refinement::index::routing::{RoutingLimits, RoutingStrategy};
+    use crate::witness::refinement::{RefinementOutcome, index::IndexSelection};
+    use crate::witness::{
+        AdapterDomainInput, DomainClosure, DomainProjection, Invalidation, MAX_SNAPSHOT_ENTRIES,
+        QueryRole, Reuse, WitnessJudgment, WitnessRequest,
+    };
 
-    fn scan_budget() -> RefinementBudget { RefinementBudget { steps: u64::MAX, value_bytes: u64::MAX } }
-    fn route_budget() -> RoutingBudget { RoutingBudget { steps: u64::MAX, bytes: u64::MAX } }
-    fn basis(revision: u64, generation: u64, entries: Vec<SnapshotEntry>) -> (WitnessSnapshot, ProductFrontiers) {
-        let key = ProjectionKey { source: 1, branch: 2, projection: 3, source_epoch: 4 };
-        let marker = TrustedClosingMarker { key, final_sequence: 1, marker_generation: generation };
+    fn scan_budget() -> RefinementBudget {
+        RefinementBudget {
+            steps: u64::MAX,
+            value_bytes: u64::MAX,
+        }
+    }
+    fn route_budget() -> RoutingBudget {
+        RoutingBudget {
+            steps: u64::MAX,
+            bytes: u64::MAX,
+        }
+    }
+    fn basis(
+        revision: u64,
+        generation: u64,
+        entries: Vec<SnapshotEntry>,
+    ) -> (WitnessSnapshot, ProductFrontiers) {
+        let key = ProjectionKey {
+            source: 1,
+            branch: 2,
+            projection: 3,
+            source_epoch: 4,
+        };
+        let marker = TrustedClosingMarker {
+            key,
+            final_sequence: 1,
+            marker_generation: generation,
+        };
         let mut frontiers = ProductFrontiers::new(1, 1).unwrap();
-        frontiers.accept(key, FrontierStage::Authenticated, 1).unwrap();
+        frontiers
+            .accept(key, FrontierStage::Authenticated, 1)
+            .unwrap();
         frontiers.record_close(marker).unwrap();
         let domain = DomainProjection::new(5, 6, key);
-        (WitnessSnapshot::new(revision, revision, 7,
-            AdapterDomainInput::new(domain, DomainClosure::Closed(marker)), entries).unwrap(), frontiers)
+        (
+            WitnessSnapshot::new(
+                revision,
+                revision,
+                7,
+                AdapterDomainInput::new(domain, DomainClosure::Closed(marker)),
+                entries,
+            )
+            .unwrap(),
+            frontiers,
+        )
     }
     fn value(key: u64, bytes: &[u8]) -> SnapshotEntry {
         SnapshotEntry::new(key, 1, bytes.to_vec()).unwrap()
     }
     fn routes(strategy: RoutingStrategy) -> InvalidationIndex {
-        InvalidationIndex::new_with_strategy(RoutingLimits { judgments: 8, dependencies: 8 }, strategy).unwrap()
+        InvalidationIndex::new_with_strategy(
+            RoutingLimits {
+                judgments: 8,
+                dependencies: 8,
+            },
+            strategy,
+        )
+        .unwrap()
     }
-    fn captured(snapshot: &WitnessSnapshot, frontiers: &ProductFrontiers, request: WitnessRequest) -> WitnessJudgment {
+    fn captured(
+        snapshot: &WitnessSnapshot,
+        frontiers: &ProductFrontiers,
+        request: WitnessRequest,
+    ) -> WitnessJudgment {
         WitnessJudgment::capture(snapshot, frontiers, vec![request]).unwrap()
     }
 
@@ -376,17 +478,40 @@ mod routed_tests {
     fn routed_commit_uses_the_original_delta_and_preserves_exact_refinement() {
         for strategy in [RoutingStrategy::PrefixV1, RoutingStrategy::SubtreeV2] {
             let (old, old_frontiers) = basis(1, 1, vec![value(2, b"old"), value(8, b"keep")]);
-            let (next, next_frontiers) = basis(2, 1, vec![value(2, b"new"), value(3, b"added"), value(8, b"keep")]);
+            let (next, next_frontiers) = basis(
+                2,
+                1,
+                vec![value(2, b"new"), value(3, b"added"), value(8, b"keep")],
+            );
             let mut index = WitnessChangeIndex::new(&old, &old_frontiers, 2).unwrap();
-            let changed = index.capture(&old_frontiers,
-                vec![WitnessRequest::ExactValue { key: 2, role: QueryRole::PolicyInput }]).unwrap();
-            let absent = index.capture(&old_frontiers, vec![WitnessRequest::AbsentKey { key: 3 }]).unwrap();
-            let unchanged = index.capture(&old_frontiers,
-                vec![WitnessRequest::RangeMembers { start: 8, end: 9 }]).unwrap();
+            let changed = index
+                .capture(
+                    &old_frontiers,
+                    vec![WitnessRequest::ExactValue {
+                        key: 2,
+                        role: QueryRole::PolicyInput,
+                    }],
+                )
+                .unwrap();
+            let absent = index
+                .capture(&old_frontiers, vec![WitnessRequest::AbsentKey { key: 3 }])
+                .unwrap();
+            let unchanged = index
+                .capture(
+                    &old_frontiers,
+                    vec![WitnessRequest::RangeMembers { start: 8, end: 9 }],
+                )
+                .unwrap();
             let mut routing = routes(strategy);
-            routing.register(20, Some(changed.judgment()), false).unwrap();
-            routing.register(30, Some(absent.judgment()), false).unwrap();
-            routing.register(80, Some(unchanged.judgment()), false).unwrap();
+            routing
+                .register(20, Some(changed.judgment()), false)
+                .unwrap();
+            routing
+                .register(30, Some(absent.judgment()), false)
+                .unwrap();
+            routing
+                .register(80, Some(unchanged.judgment()), false)
+                .unwrap();
             routing.register(7, None, true).unwrap();
             let mut pending = index.begin_observe(&next, &next_frontiers);
             let scanned = pending.advance(scan_budget());
@@ -399,12 +524,20 @@ mod routed_tests {
             assert_eq!(index.current_revision(), 2);
             let mut ordinary = WitnessChangeIndex::new(&old, &old_frontiers, 2).unwrap();
             assert_eq!(ordinary.observe(&next, &next_frontiers), report.committed);
-            let (selection, mut cursor) = index.begin_refinement(&unchanged, &next, &next_frontiers, u64::MAX);
+            let (selection, mut cursor) =
+                index.begin_refinement(&unchanged, &next, &next_frontiers, u64::MAX);
             assert_eq!(selection.selection, IndexSelection::Candidates { count: 0 });
-            assert_eq!(cursor.advance(scan_budget()).outcome, RefinementOutcome::StillValid);
+            assert_eq!(
+                cursor.advance(scan_budget()).outcome,
+                RefinementOutcome::StillValid
+            );
             for judgment in [&changed, &absent] {
-                let (_, mut cursor) = index.begin_refinement(judgment, &next, &next_frontiers, u64::MAX);
-                assert!(matches!(cursor.advance(scan_budget()).outcome, RefinementOutcome::Invalidated { .. }));
+                let (_, mut cursor) =
+                    index.begin_refinement(judgment, &next, &next_frontiers, u64::MAX);
+                assert!(matches!(
+                    cursor.advance(scan_budget()).outcome,
+                    RefinementOutcome::Invalidated { .. }
+                ));
             }
         }
     }
@@ -420,7 +553,10 @@ mod routed_tests {
         routing.register(9, None, true).unwrap();
         let mut pending = index.begin_observe(&three, &f3);
         let scanned = loop {
-            let report = pending.advance(RefinementBudget { steps: 1, value_bytes: 1 });
+            let report = pending.advance(RefinementBudget {
+                steps: 1,
+                value_bytes: 1,
+            });
             match report.outcome {
                 ChangeObservationOutcome::Ready => break report,
                 ChangeObservationOutcome::NeedsWork { .. } => {}
@@ -437,7 +573,10 @@ mod routed_tests {
         assert_eq!(index.oldest_covered_revision(), 1);
         assert_eq!(index.retained_revisions(), 1);
         let mut retry = index.begin_observe(&three, &f3);
-        assert_eq!(retry.advance(scan_budget()).outcome, ChangeObservationOutcome::Ready);
+        assert_eq!(
+            retry.advance(scan_budget()).outcome,
+            ChangeObservationOutcome::Ready
+        );
         let report = retry.commit_routed(&routing, route_budget());
         assert!(report.committed.is_ok());
         assert_eq!(report.routing.candidates, Ok(vec![9]));
@@ -455,10 +594,16 @@ mod routed_tests {
         let pending = index.begin_observe(&next, &nf);
         let incomplete = pending.commit_routed(&routing, route_budget());
         assert_eq!(incomplete.committed, Err(Error::Incomplete));
-        assert!(matches!(incomplete.observation.outcome, ChangeObservationOutcome::NeedsWork { .. }));
+        assert!(matches!(
+            incomplete.observation.outcome,
+            ChangeObservationOutcome::NeedsWork { .. }
+        ));
         assert_eq!(incomplete.routing.spent, RoutingBudget::default());
         let mut invalid = index.begin_observe(&skipped, &sf);
-        assert_eq!(invalid.advance(scan_budget()).outcome, ChangeObservationOutcome::Refused(Error::Stale));
+        assert_eq!(
+            invalid.advance(scan_budget()).outcome,
+            ChangeObservationOutcome::Refused(Error::Stale)
+        );
         let refused = invalid.commit_routed(&routing, route_budget());
         assert_eq!(refused.committed, Err(Error::Stale));
         assert_eq!(refused.routing.candidates, Err(Error::Stale));
@@ -473,7 +618,14 @@ mod routed_tests {
             let (old, frontiers) = basis(1, 1, vec![value(2, b"same")]);
             let (next, nf) = basis(2, generation, vec![value(2, b"same")]);
             let negative = captured(&old, &frontiers, WitnessRequest::AbsentKey { key: 3 });
-            let exact = captured(&old, &frontiers, WitnessRequest::ExactValue { key: 2, role: QueryRole::Subject });
+            let exact = captured(
+                &old,
+                &frontiers,
+                WitnessRequest::ExactValue {
+                    key: 2,
+                    role: QueryRole::Subject,
+                },
+            );
             let mut index = WitnessChangeIndex::new(&old, &frontiers, 1).unwrap();
             let mut routing = routes(RoutingStrategy::SubtreeV2);
             routing.register(1, Some(&negative), false).unwrap();
@@ -484,12 +636,23 @@ mod routed_tests {
             let report = pending.commit_routed(&routing, route_budget());
             assert!(report.committed.is_ok());
             assert_eq!(report.routing.candidates, Ok(vec![1, 2, 3]));
-            assert!(matches!(exact.reuse_at(&next, &nf).unwrap(), Reuse::StillValid { .. }));
+            assert!(matches!(
+                exact.reuse_at(&next, &nf).unwrap(),
+                Reuse::StillValid { .. }
+            ));
             if generation == 2 {
-                assert!(matches!(negative.reuse_at(&next, &nf).unwrap(),
-                    Reuse::Invalidated { reason: Invalidation::ClosingFrontier, .. }));
+                assert!(matches!(
+                    negative.reuse_at(&next, &nf).unwrap(),
+                    Reuse::Invalidated {
+                        reason: Invalidation::ClosingFrontier,
+                        ..
+                    }
+                ));
             } else {
-                assert!(matches!(negative.reuse_at(&next, &nf).unwrap(), Reuse::StillValid { .. }));
+                assert!(matches!(
+                    negative.reuse_at(&next, &nf).unwrap(),
+                    Reuse::StillValid { .. }
+                ));
             }
         }
     }
@@ -499,7 +662,14 @@ mod routed_tests {
         let size = MAX_SNAPSHOT_ENTRIES as u64;
         let (old, f1) = basis(1, 1, (0..size).map(|key| value(key, b"")).collect());
         let (next, f2) = basis(2, 1, (size..size * 2).map(|key| value(key, b"")).collect());
-        let old_key = captured(&old, &f1, WitnessRequest::ExactValue { key: 0, role: QueryRole::Subject });
+        let old_key = captured(
+            &old,
+            &f1,
+            WitnessRequest::ExactValue {
+                key: 0,
+                role: QueryRole::Subject,
+            },
+        );
         let new_key = captured(&old, &f1, WitnessRequest::AbsentKey { key: size * 2 - 1 });
         let mut routing = routes(RoutingStrategy::PrefixV1);
         routing.register(1, Some(&old_key), false).unwrap();
@@ -508,7 +678,10 @@ mod routed_tests {
         let mut pending = index.begin_observe(&next, &f2);
         let scanned = pending.advance(scan_budget());
         assert_eq!(scanned.outcome, ChangeObservationOutcome::Ready);
-        assert_eq!(scanned.cost.changed_keys, InvalidationIndex::MAX_BATCH_CHANGES);
+        assert_eq!(
+            scanned.cost.changed_keys,
+            InvalidationIndex::MAX_BATCH_CHANGES
+        );
         let report = pending.commit_routed(&routing, route_budget());
         assert_eq!(report.committed, Ok(scanned.cost));
         assert_eq!(report.routing.candidates, Ok(vec![1, 2]));

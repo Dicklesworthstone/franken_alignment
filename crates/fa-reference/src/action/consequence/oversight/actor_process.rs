@@ -3,12 +3,16 @@
 //! The host must isolate ambient filesystem/network rights and private stderr.
 use super::actor::{ActorError, ActorPort, ActorProposal};
 use super::actor_transport::{ConnectionStatus, DriveBudget, DriveReport, UnixActorConnection};
-use super::actor_wire::{ActorChannel, ActorRequestPort, ActorWire, ChannelLimits,
-    MAX_CHANNEL_EXCHANGES, MAX_FRAME_BYTES, WireError};
 use super::actor_wire::client::{ActorClient, ActorClientState, ClientError};
+use super::actor_wire::{
+    ActorChannel, ActorRequestPort, ActorWire, ChannelLimits, MAX_CHANNEL_EXCHANGES,
+    MAX_FRAME_BYTES, WireError,
+};
 use super::helper_processes::{HelperProgram, OwnedChild};
-pub use super::helper_processes::{ProcessExit, ProcessFailure, ProcessStage, ProcessStatus,
-    MAX_PROGRAM_ARGUMENTS, MAX_PROGRAM_ENVIRONMENT, MAX_PROGRAM_FIELD_BYTES, MAX_PROGRAM_TEXT_BYTES};
+pub use super::helper_processes::{
+    MAX_PROGRAM_ARGUMENTS, MAX_PROGRAM_ENVIRONMENT, MAX_PROGRAM_FIELD_BYTES,
+    MAX_PROGRAM_TEXT_BYTES, ProcessExit, ProcessFailure, ProcessStage, ProcessStatus,
+};
 use crate::Error;
 use std::collections::BTreeMap;
 use std::ffi::OsString;
@@ -24,15 +28,21 @@ use std::path::PathBuf;
 #[derive(Debug)]
 pub struct ActorProgram(HelperProgram);
 impl ActorProgram {
-    pub fn new(executable: PathBuf, directory: PathBuf, arguments: Vec<OsString>,
-        environment: BTreeMap<OsString, OsString>) -> Result<Self, Error>
-    {
+    pub fn new(
+        executable: PathBuf,
+        directory: PathBuf,
+        arguments: Vec<OsString>,
+        environment: BTreeMap<OsString, OsString>,
+    ) -> Result<Self, Error> {
         HelperProgram::new(executable, directory, arguments, environment).map(Self)
     }
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum ActorLaunchFailure { Protocol(WireError), Process(ProcessFailure) }
+pub enum ActorLaunchFailure {
+    Protocol(WireError),
+    Process(ProcessFailure),
+}
 
 /// No child exists on returned failure. The original ticket session is returned
 /// untouched, instead of losing it when program inspection or spawn refuses.
@@ -42,7 +52,9 @@ pub struct ActorLaunchError<P: ActorRequestPort = ActorPort> {
 }
 impl<P: ActorRequestPort> fmt::Debug for ActorLaunchError<P> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("ActorLaunchError").field("failure", &self.failure).finish_non_exhaustive()
+        f.debug_struct("ActorLaunchError")
+            .field("failure", &self.failure)
+            .finish_non_exhaustive()
     }
 }
 
@@ -80,7 +92,9 @@ pub struct ActorProcess<P: ActorRequestPort = ActorPort> {
 }
 impl<P: ActorRequestPort> fmt::Debug for ActorProcess<P> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("ActorProcess").field("status", &self.status()).finish()
+        f.debug_struct("ActorProcess")
+            .field("status", &self.status())
+            .finish()
     }
 }
 impl<P: ActorRequestPort> ActorProcess<P> {
@@ -88,30 +102,45 @@ impl<P: ActorRequestPort> ActorProcess<P> {
     /// precedes spawn. On success there is exactly one retained direct child.
     /// stdin is a private full-duplex socket; stdout/stderr go to PRIVATE host
     /// diagnostics, never the actor protocol. Only explicit environment survives.
-    pub fn launch(program: &ActorProgram, session: ActorWire<P>, limits: ChannelLimits)
-        -> Result<Self, ActorLaunchError<P>>
-    {
+    pub fn launch(
+        program: &ActorProgram,
+        session: ActorWire<P>,
+        limits: ChannelLimits,
+    ) -> Result<Self, ActorLaunchError<P>> {
         // Same immutable bounds as ActorChannel::new, checked without consuming
         // the caller's ticket session. Construction below is the actual validator.
         let failure = if limits.frame_bytes == 0 || limits.exchanges == 0 {
             Some(ActorLaunchFailure::Protocol(WireError::MalformedRequest))
         } else if limits.frame_bytes > MAX_FRAME_BYTES || limits.exchanges > MAX_CHANNEL_EXCHANGES {
             Some(ActorLaunchFailure::Protocol(WireError::Capacity))
-        } else { program.0.preflight().err().map(ActorLaunchFailure::Process) };
-        if let Some(failure) = failure { return Err(ActorLaunchError { failure, session }); }
-        let channel = ActorChannel::new(session, limits).expect("validated immutable channel limits");
+        } else {
+            program.0.preflight().err().map(ActorLaunchFailure::Process)
+        };
+        if let Some(failure) = failure {
+            return Err(ActorLaunchError { failure, session });
+        }
+        let channel =
+            ActorChannel::new(session, limits).expect("validated immutable channel limits");
         match program.0.spawn_socket() {
-            Ok((socket, child)) => Ok(Self { child: OwnedChild::new(child),
+            Ok((socket, child)) => Ok(Self {
+                child: OwnedChild::new(child),
                 connection: Some(UnixActorConnection::from_nonblocking(socket, channel)),
-                session: None, interrupted: false }),
-            Err(failure) => Err(ActorLaunchError { failure: ActorLaunchFailure::Process(failure),
-                session: channel.into_wire() }),
+                session: None,
+                interrupted: false,
+            }),
+            Err(failure) => Err(ActorLaunchError {
+                failure: ActorLaunchFailure::Process(failure),
+                session: channel.into_wire(),
+            }),
         }
     }
     pub fn status(&self) -> ActorProcessStatus {
-        ActorProcessStatus { child: self.child.status(),
+        ActorProcessStatus {
+            child: self.child.status(),
             transport: self.connection.as_ref().map(UnixActorConnection::status),
-            ingress_closed: self.connection.is_none(), interrupted_drive: self.interrupted }
+            ingress_closed: self.connection.is_none(),
+            interrupted_drive: self.interrupted,
+        }
     }
     pub fn socket_fd(&self) -> Option<BorrowedFd<'_>> {
         self.connection.as_ref().map(AsFd::as_fd)
@@ -120,7 +149,9 @@ impl<P: ActorRequestPort> ActorProcess<P> {
     /// is NEVER transformed into a cancellation, nonexecution receipt or refund.
     pub fn poll(&mut self) -> ActorProcessStatus {
         self.child.poll();
-        if self.child.reaped() { self.close_ingress(); }
+        if self.child.reaped() {
+            self.close_ingress();
+        }
         self.status()
     }
     /// Close request ingress BEFORE requesting direct-child termination. Killing
@@ -131,55 +162,89 @@ impl<P: ActorRequestPort> ActorProcess<P> {
         self.status()
     }
     fn close_ingress(&mut self) {
-        if let Some(connection) = self.connection.take() { self.session = Some(connection.into_session()); }
+        if let Some(connection) = self.connection.take() {
+            self.session = Some(connection.into_session());
+        }
     }
     /// Recover the SAME ticket session only after observing/reaping this child.
     /// No automatic restart, reconnect or replay follows. Running ownership is
     /// returned intact on refusal, including its stop/reap obligations.
     pub fn into_session(mut self) -> Result<ActorWire<P>, Box<Self>> {
-        if !self.child.reaped() { return Err(Box::new(self)); }
+        if !self.child.reaped() {
+            return Err(Box::new(self));
+        }
         self.close_ingress();
-        Ok(self.session.take().expect("closed actor retains original session"))
+        Ok(self
+            .session
+            .take()
+            .expect("closed actor retains original session"))
     }
     pub fn drive(&mut self, budget: DriveBudget) -> Result<ActorProcessDrive, WireError> {
         self.drive_with_admission(budget, |_, _, _| Ok(()))
     }
     pub(crate) fn request_port(&self) -> &P {
-        if let Some(connection) = &self.connection { connection.request_port() }
-        else { self.session.as_ref().expect("closed actor retains session").request_port() }
+        if let Some(connection) = &self.connection {
+            connection.request_port()
+        } else {
+            self.session
+                .as_ref()
+                .expect("closed actor retains session")
+                .request_port()
+        }
     }
     /// Only existing trusted source integrations may install admission work.
     /// An unwind leaves a latched interruption; another call cannot repeat intake.
-    pub(crate) fn drive_with_admission<A>(&mut self, budget: DriveBudget, admission: A)
-        -> Result<ActorProcessDrive, WireError>
-    where A: FnMut(&P, u64, &ActorProposal) -> Result<(), ActorError> {
+    pub(crate) fn drive_with_admission<A>(
+        &mut self,
+        budget: DriveBudget,
+        admission: A,
+    ) -> Result<ActorProcessDrive, WireError>
+    where
+        A: FnMut(&P, u64, &ActorProposal) -> Result<(), ActorError>,
+    {
         // Budget refusal precedes process polling and all socket/source work.
         budget.validate()?;
         if self.interrupted {
             self.request_stop();
             return Err(WireError::Unavailable);
         }
-        if self.connection.is_none() { return Err(WireError::Withheld); }
+        if self.connection.is_none() {
+            return Err(WireError::Withheld);
+        }
         let observed = self.poll().child;
         if observed.exit.is_some() || observed.failure.is_some() {
-            if observed.failure.is_some() { self.request_stop(); }
+            if observed.failure.is_some() {
+                self.request_stop();
+            }
             return Err(WireError::Unavailable);
         }
         self.interrupted = true;
-        let result = self.connection.as_mut().expect("live actor connection")
+        let result = self
+            .connection
+            .as_mut()
+            .expect("live actor connection")
             .drive_with_admission(budget, admission);
         self.interrupted = false;
         let drive = result?;
-        if drive.status.closed() { self.close_ingress(); }
-        Ok(ActorProcessDrive { drive, process: self.status() })
+        if drive.status.closed() {
+            self.close_ingress();
+        }
+        Ok(ActorProcessDrive {
+            drive,
+            process: self.status(),
+        })
     }
 }
 impl<P: ActorRequestPort> Drop for ActorProcess<P> {
     fn drop(&mut self) {
         self.request_stop();
-        if !self.child.reaped() { self.child.poll(); }
         if !self.child.reaped() {
-            eprintln!("franken_alignment: direct actor child not reaped on drop; retain and poll ActorProcess during shutdown");
+            self.child.poll();
+        }
+        if !self.child.reaped() {
+            eprintln!(
+                "franken_alignment: direct actor child not reaped on drop; retain and poll ActorProcess during shutdown"
+            );
         }
     }
 }
@@ -187,7 +252,10 @@ impl<P: ActorRequestPort> Drop for ActorProcess<P> {
 /// An unsuccessful inherited-socket attachment keeps the original client state.
 /// No command, time observation or request retry is emitted during attachment.
 #[derive(Debug)]
-pub struct ActorStdinFailure { pub error: ClientError, pub state: ActorClientState }
+pub struct ActorStdinFailure {
+    pub error: ClientError,
+    pub state: ActorClientState,
+}
 impl ActorClientState {
     /// Worker-side counterpart of ActorProcess::launch, using safe owned-fd APIs.
     /// Ordinary file/pipe stdin is refused before setting nonblocking mode.
@@ -202,7 +270,10 @@ impl ActorClientState {
         })();
         match socket {
             Ok(socket) => Ok(self.connect(socket)),
-            Err(error) => Err(ActorStdinFailure { error: ClientError::Io(error.kind()), state: self }),
+            Err(error) => Err(ActorStdinFailure {
+                error: ClientError::Io(error.kind()),
+                state: self,
+            }),
         }
     }
 }

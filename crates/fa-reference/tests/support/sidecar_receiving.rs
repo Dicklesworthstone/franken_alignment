@@ -1,5 +1,6 @@
 //! Real source fitting and original congress; tiny parameters and ballots are
 //! synthetic plumbing controls, not detector calibration or live authentication.
+#![allow(dead_code, unused_imports)]
 #[path = "restart_model.rs"]
 pub mod original;
 use fa_reference::{Error, Snapshot};

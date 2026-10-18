@@ -4,10 +4,10 @@
 //! This module checks structural identity and actual finite binary32 values;
 //! the decoder adapter executes stimuli, without authenticating a serving host.
 
-pub mod wire;
 pub mod decoder;
+pub mod wire;
 
-use super::{CaptureProfile, FrameIdentity, SourceFrame, MAX_VALUES};
+use super::{CaptureProfile, FrameIdentity, MAX_VALUES, SourceFrame};
 use crate::Error;
 use std::collections::BTreeMap;
 
@@ -32,10 +32,23 @@ pub struct ModelManifest {
 
 impl ModelManifest {
     fn validate(&self) -> Result<(), Error> {
-        if [self.tenant, self.model, self.model_generation, self.host_generation,
-            self.tokenizer_generation].contains(&0)
-            || [&self.weights, &self.adapters, &self.tokenizer, &self.architecture,
-                &self.numeric_profile].iter().any(|digest| **digest == [0; 32])
+        if [
+            self.tenant,
+            self.model,
+            self.model_generation,
+            self.host_generation,
+            self.tokenizer_generation,
+        ]
+        .contains(&0)
+            || [
+                &self.weights,
+                &self.adapters,
+                &self.tokenizer,
+                &self.architecture,
+                &self.numeric_profile,
+            ]
+            .iter()
+            .any(|digest| **digest == [0; 32])
         {
             return Err(Error::InvalidInput);
         }
@@ -73,44 +86,90 @@ pub struct AnchorObservation {
 }
 
 impl AnchorObservation {
-    pub fn anchor(&self) -> u64 { self.anchor }
-    pub fn frame(&self) -> FrameIdentity { self.frame }
-    pub fn coordinates(&self) -> usize { self.coordinates }
-    pub fn outside(&self) -> usize { self.outside }
-    pub fn first_outlier(&self) -> Option<AnchorOutlier> { self.first_outlier }
+    pub fn anchor(&self) -> u64 {
+        self.anchor
+    }
+    pub fn frame(&self) -> FrameIdentity {
+        self.frame
+    }
+    pub fn coordinates(&self) -> usize {
+        self.coordinates
+    }
+    pub fn outside(&self) -> usize {
+        self.outside
+    }
+    pub fn first_outlier(&self) -> Option<AnchorOutlier> {
+        self.first_outlier
+    }
 }
 
 impl IdentityAnchor {
     pub fn new(
-        id: u64, profile: CaptureProfile, stream: u64,
-        stimulus: Vec<u32>, bounds: &[[f32; 2]],
+        id: u64,
+        profile: CaptureProfile,
+        stream: u64,
+        stimulus: Vec<u32>,
+        bounds: &[[f32; 2]],
     ) -> Result<Self, Error> {
-        if [id, profile.tenant, profile.model, profile.model_generation, profile.tap,
-            profile.layout_generation, stream].contains(&0)
-            || stimulus.is_empty() || bounds.is_empty()
+        if [
+            id,
+            profile.tenant,
+            profile.model,
+            profile.model_generation,
+            profile.tap,
+            profile.layout_generation,
+            stream,
+        ]
+        .contains(&0)
+            || stimulus.is_empty()
+            || bounds.is_empty()
         {
             return Err(Error::InvalidInput);
         }
         if stimulus.len() > MAX_STIMULUS_TOKENS || bounds.len() > MAX_VALUES {
             return Err(Error::Limit);
         }
-        if bounds.iter().any(|[lo, hi]| !lo.is_finite() || !hi.is_finite() || lo > hi) {
+        if bounds
+            .iter()
+            .any(|[lo, hi]| !lo.is_finite() || !hi.is_finite() || lo > hi)
+        {
             return Err(Error::InvalidInput);
         }
-        Ok(Self { id, profile, stream, stimulus,
-            bounds: bounds.iter().map(|[lo, hi]| [lo.to_bits(), hi.to_bits()]).collect() })
+        Ok(Self {
+            id,
+            profile,
+            stream,
+            stimulus,
+            bounds: bounds
+                .iter()
+                .map(|[lo, hi]| [lo.to_bits(), hi.to_bits()])
+                .collect(),
+        })
     }
 
-    pub fn id(&self) -> u64 { self.id }
-    pub fn profile(&self) -> CaptureProfile { self.profile }
-    pub fn stream(&self) -> u64 { self.stream }
-    pub fn stimulus(&self) -> &[u32] { &self.stimulus }
-    pub fn dimensions(&self) -> usize { self.bounds.len() }
-    pub fn bound_bits(&self) -> &[[u32; 2]] { &self.bounds }
+    pub fn id(&self) -> u64 {
+        self.id
+    }
+    pub fn profile(&self) -> CaptureProfile {
+        self.profile
+    }
+    pub fn stream(&self) -> u64 {
+        self.stream
+    }
+    pub fn stimulus(&self) -> &[u32] {
+        &self.stimulus
+    }
+    pub fn dimensions(&self) -> usize {
+        self.bounds.len()
+    }
+    pub fn bound_bits(&self) -> &[[u32; 2]] {
+        &self.bounds
+    }
 
     pub fn compare(&self, source: &SourceFrame) -> Result<AnchorObservation, Error> {
         let frame = source.identity();
-        if frame.profile != self.profile || frame.stream != self.stream
+        if frame.profile != self.profile
+            || frame.stream != self.stream
             || frame.position != (self.stimulus.len() - 1) as u64
             || source.dimensions() != self.bounds.len()
         {
@@ -119,19 +178,27 @@ impl IdentityAnchor {
         let mut outside = 0;
         let mut first_outlier = None;
         // SourceFrame owns validated finite bits; no mutable host buffer is read.
-        for (coordinate, (&word, &[lower_bits, upper_bits])) in source.words.iter()
-            .zip(&self.bounds).enumerate()
+        for (coordinate, (&word, &[lower_bits, upper_bits])) in
+            source.words.iter().zip(&self.bounds).enumerate()
         {
             let value = f32::from_bits(word);
             if value < f32::from_bits(lower_bits) || value > f32::from_bits(upper_bits) {
                 outside += 1;
                 first_outlier.get_or_insert(AnchorOutlier {
-                    coordinate, observed_bits: word, lower_bits, upper_bits,
+                    coordinate,
+                    observed_bits: word,
+                    lower_bits,
+                    upper_bits,
                 });
             }
         }
-        Ok(AnchorObservation { anchor: self.id, frame, coordinates: self.bounds.len(),
-            outside, first_outlier })
+        Ok(AnchorObservation {
+            anchor: self.id,
+            frame,
+            coordinates: self.bounds.len(),
+            outside,
+            first_outlier,
+        })
     }
 }
 
@@ -148,32 +215,61 @@ pub struct ModelPassport {
 
 impl ModelPassport {
     pub fn new(
-        id: u64, generation: u64, manifest: ModelManifest, anchors: Vec<IdentityAnchor>,
+        id: u64,
+        generation: u64,
+        manifest: ModelManifest,
+        anchors: Vec<IdentityAnchor>,
     ) -> Result<Self, Error> {
         manifest.validate()?;
-        if id == 0 || generation == 0 || anchors.is_empty() { return Err(Error::InvalidInput); }
-        if anchors.len() > MAX_ANCHORS { return Err(Error::Limit); }
+        if id == 0 || generation == 0 || anchors.is_empty() {
+            return Err(Error::InvalidInput);
+        }
+        if anchors.len() > MAX_ANCHORS {
+            return Err(Error::Limit);
+        }
         let mut retained = BTreeMap::new();
         let mut coordinates = 0_usize;
         let mut tokens = 0_usize;
         for anchor in anchors {
             let profile = anchor.profile();
-            if profile.tenant != manifest.tenant || profile.model != manifest.model
+            if profile.tenant != manifest.tenant
+                || profile.model != manifest.model
                 || profile.model_generation != manifest.model_generation
             {
                 return Err(Error::Binding);
             }
-            coordinates = coordinates.checked_add(anchor.dimensions()).ok_or(Error::Limit)?;
-            tokens = tokens.checked_add(anchor.stimulus().len()).ok_or(Error::Limit)?;
-            if coordinates > MAX_VALUES || tokens > MAX_STIMULUS_TOKENS { return Err(Error::Limit); }
-            if retained.insert(anchor.id(), anchor).is_some() { return Err(Error::Duplicate); }
+            coordinates = coordinates
+                .checked_add(anchor.dimensions())
+                .ok_or(Error::Limit)?;
+            tokens = tokens
+                .checked_add(anchor.stimulus().len())
+                .ok_or(Error::Limit)?;
+            if coordinates > MAX_VALUES || tokens > MAX_STIMULUS_TOKENS {
+                return Err(Error::Limit);
+            }
+            if retained.insert(anchor.id(), anchor).is_some() {
+                return Err(Error::Duplicate);
+            }
         }
-        Ok(Self { id, generation, manifest, anchors: retained })
+        Ok(Self {
+            id,
+            generation,
+            manifest,
+            anchors: retained,
+        })
     }
-    pub fn id(&self) -> u64 { self.id }
-    pub fn generation(&self) -> u64 { self.generation }
-    pub fn manifest(&self) -> &ModelManifest { &self.manifest }
-    pub fn anchors(&self) -> &BTreeMap<u64, IdentityAnchor> { &self.anchors }
+    pub fn id(&self) -> u64 {
+        self.id
+    }
+    pub fn generation(&self) -> u64 {
+        self.generation
+    }
+    pub fn manifest(&self) -> &ModelManifest {
+        &self.manifest
+    }
+    pub fn anchors(&self) -> &BTreeMap<u64, IdentityAnchor> {
+        &self.anchors
+    }
 }
 
 #[cfg(test)]
@@ -181,18 +277,42 @@ mod tests {
     use super::*;
 
     fn profile() -> CaptureProfile {
-        CaptureProfile { tenant: 1, model: 2, model_generation: 3, tap: 4, layout_generation: 5 }
+        CaptureProfile {
+            tenant: 1,
+            model: 2,
+            model_generation: 3,
+            tap: 4,
+            layout_generation: 5,
+        }
     }
     fn manifest() -> ModelManifest {
-        ModelManifest { tenant: 1, model: 2, model_generation: 3, host_generation: 1,
-            tokenizer_generation: 1, weights: [1; 32], adapters: [2; 32], tokenizer: [3; 32],
-            architecture: [4; 32], numeric_profile: [5; 32] }
+        ModelManifest {
+            tenant: 1,
+            model: 2,
+            model_generation: 3,
+            host_generation: 1,
+            tokenizer_generation: 1,
+            weights: [1; 32],
+            adapters: [2; 32],
+            tokenizer: [3; 32],
+            architecture: [4; 32],
+            numeric_profile: [5; 32],
+        }
     }
     fn anchor(bounds: &[[f32; 2]]) -> IdentityAnchor {
         IdentityAnchor::new(1, profile(), 6, vec![10, 20], bounds).unwrap()
     }
     fn source(values: &[f32]) -> SourceFrame {
-        SourceFrame::capture(FrameIdentity { profile: profile(), stream: 6, sequence: 1, position: 1 }, values).unwrap()
+        SourceFrame::capture(
+            FrameIdentity {
+                profile: profile(),
+                stream: 6,
+                sequence: 1,
+                position: 1,
+            },
+            values,
+        )
+        .unwrap()
     }
 
     #[test]
@@ -206,7 +326,10 @@ mod tests {
         }
         let observation = anchor.compare(&source(&[0.5, -2.5])).unwrap();
         assert_eq!(observation.outside(), 2);
-        assert_eq!(observation.first_outlier().unwrap().observed_bits, 0.5_f32.to_bits());
+        assert_eq!(
+            observation.first_outlier().unwrap().observed_bits,
+            0.5_f32.to_bits()
+        );
         assert_eq!(observation.first_outlier().unwrap().coordinate, 0);
     }
 
@@ -215,9 +338,17 @@ mod tests {
         let smallest = f32::from_bits(1);
         let anchor = anchor(&[[-0.0, 0.0], [-smallest, smallest], [f32::MAX, f32::MAX]]);
         for zero in [0.0, -0.0] {
-            assert_eq!(anchor.compare(&source(&[zero, smallest, f32::MAX])).unwrap().outside(), 0);
+            assert_eq!(
+                anchor
+                    .compare(&source(&[zero, smallest, f32::MAX]))
+                    .unwrap()
+                    .outside(),
+                0
+            );
         }
-        let observation = anchor.compare(&source(&[smallest, smallest, f32::MAX])).unwrap();
+        let observation = anchor
+            .compare(&source(&[smallest, smallest, f32::MAX]))
+            .unwrap();
         assert_eq!(observation.outside(), 1);
         assert_eq!(observation.first_outlier().unwrap().observed_bits, 1);
     }
@@ -236,7 +367,10 @@ mod tests {
                 4 => identity.stream += 1,
                 _ => identity.position += 1,
             }
-            assert_eq!(anchor.compare(&SourceFrame::capture(identity, &[1.0]).unwrap()), Err(Error::Binding));
+            assert_eq!(
+                anchor.compare(&SourceFrame::capture(identity, &[1.0]).unwrap()),
+                Err(Error::Binding)
+            );
         }
         assert_eq!(anchor.compare(&source(&[1.0, 1.0])), Err(Error::Binding));
         assert_eq!(anchor.compare(&valid).unwrap().outside(), 0);
@@ -245,7 +379,8 @@ mod tests {
     #[test]
     fn passports_bind_every_manifest_component_and_unique_anchor() {
         let baseline = manifest();
-        let passport = ModelPassport::new(1, 1, baseline.clone(), vec![anchor(&[[0.0, 1.0]])]).unwrap();
+        let passport =
+            ModelPassport::new(1, 1, baseline.clone(), vec![anchor(&[[0.0, 1.0]])]).unwrap();
         assert_eq!(passport.manifest(), &baseline);
         for index in 0..5 {
             let mut changed = baseline.clone();
@@ -258,22 +393,55 @@ mod tests {
             }
             assert_ne!(passport.manifest(), &changed);
         }
-        assert_eq!(ModelPassport::new(1, 1, baseline, vec![anchor(&[[0.0, 1.0]]), anchor(&[[0.0, 1.0]])]), Err(Error::Duplicate));
-        let mut changed = manifest(); changed.model += 1;
-        assert_eq!(ModelPassport::new(1, 1, changed, vec![anchor(&[[0.0, 1.0]])]), Err(Error::Binding));
+        assert_eq!(
+            ModelPassport::new(
+                1,
+                1,
+                baseline,
+                vec![anchor(&[[0.0, 1.0]]), anchor(&[[0.0, 1.0]])]
+            ),
+            Err(Error::Duplicate)
+        );
+        let mut changed = manifest();
+        changed.model += 1;
+        assert_eq!(
+            ModelPassport::new(1, 1, changed, vec![anchor(&[[0.0, 1.0]])]),
+            Err(Error::Binding)
+        );
     }
 
     #[test]
     fn invalid_registration_and_aggregate_capacity_are_rejected() {
-        for bounds in [vec![], vec![[f32::NAN, 1.0]], vec![[0.0, f32::INFINITY]], vec![[2.0, 1.0]]] {
+        for bounds in [
+            vec![],
+            vec![[f32::NAN, 1.0]],
+            vec![[0.0, f32::INFINITY]],
+            vec![[2.0, 1.0]],
+        ] {
             assert!(IdentityAnchor::new(1, profile(), 6, vec![10], &bounds).is_err());
         }
-        let mut invalid = manifest(); invalid.numeric_profile = [0; 32];
-        assert_eq!(ModelPassport::new(1, 1, invalid, vec![anchor(&[[0.0, 1.0]])]), Err(Error::InvalidInput));
+        let mut invalid = manifest();
+        invalid.numeric_profile = [0; 32];
+        assert_eq!(
+            ModelPassport::new(1, 1, invalid, vec![anchor(&[[0.0, 1.0]])]),
+            Err(Error::InvalidInput)
+        );
         let large = anchor(&vec![[0.0, 1.0]; MAX_VALUES]);
         assert!(ModelPassport::new(1, 1, manifest(), vec![large.clone()]).is_ok());
         let extra = IdentityAnchor::new(2, profile(), 6, vec![10], &[[0.0, 1.0]]).unwrap();
-        assert_eq!(ModelPassport::new(1, 1, manifest(), vec![large, extra]), Err(Error::Limit));
-        assert!(IdentityAnchor::new(1, profile(), 6, vec![10; MAX_STIMULUS_TOKENS + 1], &[[0.0, 1.0]]).is_err());
+        assert_eq!(
+            ModelPassport::new(1, 1, manifest(), vec![large, extra]),
+            Err(Error::Limit)
+        );
+        assert!(
+            IdentityAnchor::new(
+                1,
+                profile(),
+                6,
+                vec![10; MAX_STIMULUS_TOKENS + 1],
+                &[[0.0, 1.0]]
+            )
+            .is_err()
+        );
     }
 }

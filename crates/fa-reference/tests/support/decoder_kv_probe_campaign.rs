@@ -1,4 +1,5 @@
 //! Separable real decoder K/V with GQA, not a pretrained detector quality claim.
+#![allow(dead_code, unused_imports)]
 use fa_reference::action::consequence::activation::monitor::learned::{
     LearnedMonitorBudget, model::{KvTap, LearnedAuditBudget, LearnedAuditPreparationBudget},
 };

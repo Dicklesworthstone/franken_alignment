@@ -16,21 +16,38 @@ mod reader;
 #[path = "huggingface/special.rs"]
 mod special;
 
-use super::{ByteBpe, Merge, PreTokenization, TokenBytes, MAX_MERGES, MAX_TOKEN_BYTES, MAX_VOCABULARY_BYTES};
+use super::{
+    ByteBpe, MAX_MERGES, MAX_TOKEN_BYTES, MAX_VOCABULARY_BYTES, Merge, PreTokenization, TokenBytes,
+};
+use crate::Error;
 use crate::action::consequence::activation::tensor::kv::decoder::DecoderProfile;
 use crate::strict_json::{self, ErrorKind, Json, Limits};
-use crate::Error;
 use std::collections::BTreeMap;
 
 pub const MAX_JSON_BYTES: usize = 32 * 1_048_576;
 const MAX_JSON_ITEMS: usize = 1_000_000;
 const ROOT_FIELDS: &[&str] = &[
-    "version", "truncation", "padding", "added_tokens", "normalizer",
-    "pre_tokenizer", "post_processor", "decoder", "model",
+    "version",
+    "truncation",
+    "padding",
+    "added_tokens",
+    "normalizer",
+    "pre_tokenizer",
+    "post_processor",
+    "decoder",
+    "model",
 ];
 const MODEL_FIELDS: &[&str] = &[
-    "type", "dropout", "unk_token", "continuing_subword_prefix", "end_of_word_suffix",
-    "fuse_unk", "byte_fallback", "ignore_merges", "vocab", "merges",
+    "type",
+    "dropout",
+    "unk_token",
+    "continuing_subword_prefix",
+    "end_of_word_suffix",
+    "fuse_unk",
+    "byte_fallback",
+    "ignore_merges",
+    "vocab",
+    "merges",
 ];
 const BYTE_LEVEL_FIELDS: &[&str] = &["type", "add_prefix_space", "trim_offsets", "use_regex"];
 
@@ -60,10 +77,17 @@ impl ByteBpe {
     /// Original-byte spans remain the native TokenizedInput partition, not Hugging
     /// Face's Unicode-character offset convention. Decoding remains strict bytes,
     /// not a lossy UTF-8 string. No inference, network/file access or effects occur.
-    pub fn from_huggingface_json(expected: &DecoderProfile, bytes: &[u8], max_bytes: usize)
-        -> Result<Self, Error>
-    {
-        Self::from_huggingface_json_with_pre_tokenization(expected, bytes, max_bytes, PreTokenization::RawBytes)
+    pub fn from_huggingface_json(
+        expected: &DecoderProfile,
+        bytes: &[u8],
+        max_bytes: usize,
+    ) -> Result<Self, Error> {
+        Self::from_huggingface_json_with_pre_tokenization(
+            expected,
+            bytes,
+            max_bytes,
+            PreTokenization::RawBytes,
+        )
     }
 
     /// Select exact raw, GPT-2/Unicode-17 or Llama-3/Unicode-17 input semantics
@@ -77,47 +101,81 @@ impl ByteBpe {
     /// trim_offsets flag and decoder's unused flags must still be present booleans.
     /// Native spans remain a complete original-byte partition; this API does not
     /// expose upstream character offsets or lossy string decoding.
-    pub fn from_huggingface_json_with_pre_tokenization(expected: &DecoderProfile,
-        bytes: &[u8], max_bytes: usize, pre_tokenization: PreTokenization)
-        -> Result<Self, Error>
-    {
+    pub fn from_huggingface_json_with_pre_tokenization(
+        expected: &DecoderProfile,
+        bytes: &[u8],
+        max_bytes: usize,
+        pre_tokenization: PreTokenization,
+    ) -> Result<Self, Error> {
         if max_bytes == 0 || max_bytes > MAX_JSON_BYTES || bytes.len() > max_bytes {
             return Err(Error::Limit);
         }
-        let value = strict_json::parse(bytes, Limits {
-            max_bytes, max_depth: 16, max_items: MAX_JSON_ITEMS,
-            // A legacy merge contains two independently bounded UTF-8 spellings.
-            max_string_bytes: 4 * MAX_TOKEN_BYTES + 1,
-        }).map_err(|error| match error.kind {
-            ErrorKind::SizeLimit | ErrorKind::DepthLimit | ErrorKind::ItemLimit
-                | ErrorKind::StringLimit => Error::Limit,
+        let value = strict_json::parse(
+            bytes,
+            Limits {
+                max_bytes,
+                max_depth: 16,
+                max_items: MAX_JSON_ITEMS,
+                // A legacy merge contains two independently bounded UTF-8 spellings.
+                max_string_bytes: 4 * MAX_TOKEN_BYTES + 1,
+            },
+        )
+        .map_err(|error| match error.kind {
+            ErrorKind::SizeLimit
+            | ErrorKind::DepthLimit
+            | ErrorKind::ItemLimit
+            | ErrorKind::StringLimit => Error::Limit,
             ErrorKind::DuplicateKey(_) => Error::Duplicate,
             ErrorKind::UnexpectedEof => Error::Incomplete,
             _ => Error::InvalidInput,
         })?;
         let root = exact_object(&value, ROOT_FIELDS)?;
-        if required(root, "version")?.as_str() != Some("1.0") { return Err(Error::Binding); }
+        if required(root, "version")?.as_str() != Some("1.0") {
+            return Err(Error::Binding);
+        }
         for field in ["truncation", "padding", "normalizer", "post_processor"] {
             require_null(required(root, field)?)?;
         }
-        let added = required(root, "added_tokens")?.as_array().ok_or(Error::InvalidInput)?;
-        pipeline(required(root, "pre_tokenizer")?, required(root, "decoder")?, pre_tokenization)?;
+        let added = required(root, "added_tokens")?
+            .as_array()
+            .ok_or(Error::InvalidInput)?;
+        pipeline(
+            required(root, "pre_tokenizer")?,
+            required(root, "decoder")?,
+            pre_tokenization,
+        )?;
         let model = exact_object(required(root, "model")?, MODEL_FIELDS)?;
-        if required(model, "type")?.as_str() != Some("BPE") { return Err(Error::Binding); }
-        for field in ["dropout", "unk_token"] { require_null(required(model, field)?)?; }
+        if required(model, "type")?.as_str() != Some("BPE") {
+            return Err(Error::Binding);
+        }
+        for field in ["dropout", "unk_token"] {
+            require_null(required(model, field)?)?;
+        }
         for field in ["continuing_subword_prefix", "end_of_word_suffix"] {
             let value = required(model, field)?;
-            if !value.is_null() && value.as_str() != Some("") { return Err(Error::Binding); }
+            if !value.is_null() && value.as_str() != Some("") {
+                return Err(Error::Binding);
+            }
         }
         for field in ["fuse_unk", "byte_fallback", "ignore_merges"] {
             require_false(required(model, field)?)?;
         }
-        let declared = required(model, "vocab")?.as_object().ok_or(Error::InvalidInput)?;
+        let declared = required(model, "vocab")?
+            .as_object()
+            .ok_or(Error::InvalidInput)?;
         let count = expected.shape().vocabulary;
-        if declared.len() > count { return Err(Error::Binding); }
-        if count < 256 { return Err(Error::Incomplete); }
-        let rules = required(model, "merges")?.as_array().ok_or(Error::InvalidInput)?;
-        if rules.len() > MAX_MERGES { return Err(Error::Limit); }
+        if declared.len() > count {
+            return Err(Error::Binding);
+        }
+        if count < 256 {
+            return Err(Error::Incomplete);
+        }
+        let rules = required(model, "merges")?
+            .as_array()
+            .ok_or(Error::InvalidInput)?;
+        if rules.len() > MAX_MERGES {
+            return Err(Error::Limit);
+        }
         let names = special::names(added, declared, count)?;
         let alphabet = alphabet_inverse();
         let mut slots = Vec::new();
@@ -127,17 +185,25 @@ impl ByteBpe {
         for (spelling, id) in declared {
             let id = token_id(id)?;
             // The BPE model is a dense prefix; added-only controls may extend it.
-            if id as usize >= declared.len() { return Err(Error::Binding); }
+            if id as usize >= declared.len() {
+                return Err(Error::Binding);
+            }
             let slot = slots.get_mut(id as usize).ok_or(Error::Binding)?;
-            if slot.is_some() { return Err(Error::Duplicate); }
+            if slot.is_some() {
+                return Err(Error::Duplicate);
+            }
             if let Some(name) = names.get(&id) {
-                if name.as_slice() != spelling.as_bytes() { return Err(Error::Binding); }
+                if name.as_slice() != spelling.as_bytes() {
+                    return Err(Error::Binding);
+                }
                 *slot = Some(TokenBytes::Control);
                 continue;
             }
             let decoded = spelling_bytes(spelling, &alphabet)?;
             retained = retained.checked_add(decoded.len()).ok_or(Error::Limit)?;
-            if retained > MAX_VOCABULARY_BYTES { return Err(Error::Limit); }
+            if retained > MAX_VOCABULARY_BYTES {
+                return Err(Error::Limit);
+            }
             *slot = Some(TokenBytes::Content(decoded));
         }
         for id in names.keys() {
@@ -149,11 +215,19 @@ impl ByteBpe {
             }
         }
         let mut vocabulary = Vec::new();
-        vocabulary.try_reserve_exact(count).map_err(|_| Error::Limit)?;
-        for slot in slots { vocabulary.push(slot.ok_or(Error::Incomplete)?); }
+        vocabulary
+            .try_reserve_exact(count)
+            .map_err(|_| Error::Limit)?;
+        for slot in slots {
+            vocabulary.push(slot.ok_or(Error::Incomplete)?);
+        }
         let mut merges = Vec::new();
-        merges.try_reserve_exact(rules.len()).map_err(|_| Error::Limit)?;
-        let legacy = rules.first().is_some_and(|rule| matches!(rule, Json::String(_)));
+        merges
+            .try_reserve_exact(rules.len())
+            .map_err(|_| Error::Limit)?;
+        let legacy = rules
+            .first()
+            .is_some_and(|rule| matches!(rule, Json::String(_)));
         for rule in rules {
             let (left, right) = merge_pair(rule, legacy)?;
             let left_id = lookup(declared, left)?;
@@ -164,32 +238,56 @@ impl ByteBpe {
                 Some(TokenBytes::Content(bytes)) => Ok(bytes.len()),
                 _ => Err(Error::Binding),
             };
-            let result_len = content_len(left_id)?.checked_add(content_len(right_id)?).ok_or(Error::Limit)?;
-            if result_len > MAX_TOKEN_BYTES { return Err(Error::Limit); }
+            let result_len = content_len(left_id)?
+                .checked_add(content_len(right_id)?)
+                .ok_or(Error::Limit)?;
+            if result_len > MAX_TOKEN_BYTES {
+                return Err(Error::Limit);
+            }
             let joined_len = left.len().checked_add(right.len()).ok_or(Error::Limit)?;
             let mut joined = String::new();
-            joined.try_reserve_exact(joined_len).map_err(|_| Error::Limit)?;
+            joined
+                .try_reserve_exact(joined_len)
+                .map_err(|_| Error::Limit)?;
             joined.push_str(left);
             joined.push_str(right);
-            merges.push(Merge { left: left_id, right: right_id, result: lookup(declared, &joined)? });
+            merges.push(Merge {
+                left: left_id,
+                right: right_id,
+                result: lookup(declared, &joined)?,
+            });
         }
         // Reuse the original total-byte, singleton, ordering, duplicate-pair and
         // reachability checks. A parsed JSON graph alone never admits a tokenizer.
-        Self::new_with_pre_tokenization(expected.clone(), vocabulary, merges, names, pre_tokenization)
+        Self::new_with_pre_tokenization(
+            expected.clone(),
+            vocabulary,
+            merges,
+            names,
+            pre_tokenization,
+        )
     }
 }
 
 fn exact_object<'a>(value: &'a Json, fields: &[&str]) -> Result<&'a Object, Error> {
     let object = value.as_object().ok_or(Error::InvalidInput)?;
-    if object.keys().any(|key| !fields.contains(&key.as_str())) { return Err(Error::Binding); }
-    if object.len() != fields.len() { return Err(Error::Incomplete); }
+    if object.keys().any(|key| !fields.contains(&key.as_str())) {
+        return Err(Error::Binding);
+    }
+    if object.len() != fields.len() {
+        return Err(Error::Incomplete);
+    }
     Ok(object)
 }
 fn required<'a>(object: &'a Object, field: &str) -> Result<&'a Json, Error> {
     object.get(field).ok_or(Error::Incomplete)
 }
 fn require_null(value: &Json) -> Result<(), Error> {
-    if value.is_null() { Ok(()) } else { Err(Error::Binding) }
+    if value.is_null() {
+        Ok(())
+    } else {
+        Err(Error::Binding)
+    }
 }
 fn require_false(value: &Json) -> Result<(), Error> {
     match value.as_bool() {
@@ -200,7 +298,9 @@ fn require_false(value: &Json) -> Result<(), Error> {
 }
 fn byte_level(value: &Json) -> Result<(), Error> {
     let object = exact_object(value, BYTE_LEVEL_FIELDS)?;
-    if required(object, "type")?.as_str() != Some("ByteLevel") { return Err(Error::Binding); }
+    if required(object, "type")?.as_str() != Some("ByteLevel") {
+        return Err(Error::Binding);
+    }
     for field in ["add_prefix_space", "trim_offsets", "use_regex"] {
         require_false(required(object, field)?)?;
     }
@@ -214,31 +314,55 @@ fn pipeline(pre: &Json, decoder: &Json, mode: PreTokenization) -> Result<(), Err
     // ByteLevel decoding consults no behavior flags. They are checked as typed
     // inert data, rather than applied to the native strict-byte output contract.
     let decoder = exact_object(decoder, BYTE_LEVEL_FIELDS)?;
-    if required(decoder, "type")?.as_str() != Some("ByteLevel") { return Err(Error::Binding); }
-    for field in ["add_prefix_space", "trim_offsets", "use_regex"] {
-        required(decoder, field)?.as_bool().ok_or(Error::InvalidInput)?;
+    if required(decoder, "type")?.as_str() != Some("ByteLevel") {
+        return Err(Error::Binding);
     }
-    if mode == PreTokenization::Gpt2Unicode17 { return unicode_byte_level(pre, true); }
+    for field in ["add_prefix_space", "trim_offsets", "use_regex"] {
+        required(decoder, field)?
+            .as_bool()
+            .ok_or(Error::InvalidInput)?;
+    }
+    if mode == PreTokenization::Gpt2Unicode17 {
+        return unicode_byte_level(pre, true);
+    }
     let sequence = exact_object(pre, &["type", "pretokenizers"])?;
-    if required(sequence, "type")?.as_str() != Some("Sequence") { return Err(Error::Binding); }
-    let steps = required(sequence, "pretokenizers")?.as_array().ok_or(Error::InvalidInput)?;
-    if steps.len() != 2 { return Err(Error::Binding); }
+    if required(sequence, "type")?.as_str() != Some("Sequence") {
+        return Err(Error::Binding);
+    }
+    let steps = required(sequence, "pretokenizers")?
+        .as_array()
+        .ok_or(Error::InvalidInput)?;
+    if steps.len() != 2 {
+        return Err(Error::Binding);
+    }
     let split = exact_object(&steps[0], &["type", "pattern", "behavior", "invert"])?;
     if required(split, "type")?.as_str() != Some("Split")
         || required(split, "behavior")?.as_str() != Some("Isolated")
-    { return Err(Error::Binding); }
+    {
+        return Err(Error::Binding);
+    }
     require_false(required(split, "invert")?)?;
     let pattern = exact_object(required(split, "pattern")?, &["Regex"])?;
-    if required(pattern, "Regex")?.as_str() != mode.pattern() { return Err(Error::Binding); }
+    if required(pattern, "Regex")?.as_str() != mode.pattern() {
+        return Err(Error::Binding);
+    }
     unicode_byte_level(&steps[1], false)
 }
 fn unicode_byte_level(value: &Json, use_regex: bool) -> Result<(), Error> {
     let object = exact_object(value, BYTE_LEVEL_FIELDS)?;
-    if required(object, "type")?.as_str() != Some("ByteLevel") { return Err(Error::Binding); }
+    if required(object, "type")?.as_str() != Some("ByteLevel") {
+        return Err(Error::Binding);
+    }
     require_false(required(object, "add_prefix_space")?)?;
-    required(object, "trim_offsets")?.as_bool().ok_or(Error::InvalidInput)?;
-    let declared = required(object, "use_regex")?.as_bool().ok_or(Error::InvalidInput)?;
-    if declared != use_regex { return Err(Error::Binding); }
+    required(object, "trim_offsets")?
+        .as_bool()
+        .ok_or(Error::InvalidInput)?;
+    let declared = required(object, "use_regex")?
+        .as_bool()
+        .ok_or(Error::InvalidInput)?;
+    if declared != use_regex {
+        return Err(Error::Binding);
+    }
     Ok(())
 }
 fn token_id(value: &Json) -> Result<u32, Error> {
@@ -268,12 +392,22 @@ fn alphabet_inverse() -> [Option<u8>; 512] {
 }
 fn spelling_bytes(spelling: &str, alphabet: &[Option<u8>; 512]) -> Result<Vec<u8>, Error> {
     let count = spelling.chars().count();
-    if count == 0 { return Err(Error::InvalidInput); }
-    if count > MAX_TOKEN_BYTES { return Err(Error::Limit); }
+    if count == 0 {
+        return Err(Error::InvalidInput);
+    }
+    if count > MAX_TOKEN_BYTES {
+        return Err(Error::Limit);
+    }
     let mut bytes = Vec::new();
     bytes.try_reserve_exact(count).map_err(|_| Error::Limit)?;
     for glyph in spelling.chars() {
-        bytes.push(alphabet.get(glyph as usize).copied().flatten().ok_or(Error::Binding)?);
+        bytes.push(
+            alphabet
+                .get(glyph as usize)
+                .copied()
+                .flatten()
+                .ok_or(Error::Binding)?,
+        );
     }
     Ok(bytes)
 }
@@ -281,14 +415,23 @@ fn merge_pair(value: &Json, legacy: bool) -> Result<(&str, &str), Error> {
     let pair = if legacy {
         let text = value.as_str().ok_or(Error::InvalidInput)?;
         let (left, right) = text.split_once(' ').ok_or(Error::InvalidInput)?;
-        if right.contains(' ') { return Err(Error::InvalidInput); }
+        if right.contains(' ') {
+            return Err(Error::InvalidInput);
+        }
         (left, right)
     } else {
         let pair = value.as_array().ok_or(Error::InvalidInput)?;
-        if pair.len() != 2 { return Err(Error::InvalidInput); }
-        (pair[0].as_str().ok_or(Error::InvalidInput)?, pair[1].as_str().ok_or(Error::InvalidInput)?)
+        if pair.len() != 2 {
+            return Err(Error::InvalidInput);
+        }
+        (
+            pair[0].as_str().ok_or(Error::InvalidInput)?,
+            pair[1].as_str().ok_or(Error::InvalidInput)?,
+        )
     };
-    if pair.0.is_empty() || pair.1.is_empty() { return Err(Error::InvalidInput); }
+    if pair.0.is_empty() || pair.1.is_empty() {
+        return Err(Error::InvalidInput);
+    }
     Ok(pair)
 }
 

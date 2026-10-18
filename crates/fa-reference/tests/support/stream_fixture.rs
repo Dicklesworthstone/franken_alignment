@@ -1,5 +1,6 @@
 //! Shared public-API fixtures for the bounded streaming reference profile.
 //! The endpoint is in-memory and helper outcomes are explicit test inputs.
+#![allow(dead_code, unused_imports)]
 
 use fa_reference::action::consequence::congress::{CongressPolicy, MemberPolicy};
 use fa_reference::action::consequence::delivery::{DispatchEnvelope, PublicationEndpoint};

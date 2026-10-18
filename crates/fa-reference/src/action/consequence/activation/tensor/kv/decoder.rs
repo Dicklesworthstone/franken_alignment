@@ -4,24 +4,28 @@
 //! Q/K/V. This is CPU reference inference, not a trained-model or serving-host
 //! qualification. There is no effect authority, tokenizer, runtime or I/O here.
 
-mod weights;
-mod rotary;
 mod checkpoint;
-pub mod safetensors;
-pub mod sampling;
 pub mod experiment;
 pub mod monitoring;
+mod rotary;
+pub mod safetensors;
+pub mod sampling;
+mod weights;
 pub use checkpoint::{DecoderCheckpoint, DecoderRestoreBudget, DecoderRestoreReceipt};
-pub use weights::{DecoderIdentity, DecoderLayerWeights, DecoderModel, DecoderProfile, DecoderShape,
-    MAX_DECODER_HIDDEN, MAX_DECODER_INTERMEDIATE, MAX_DECODER_PARAMETERS, MAX_DECODER_VOCABULARY};
 pub use rotary::{LinearRotaryScaling, Llama3RotaryScaling, RotaryScaling};
+pub use weights::{
+    DecoderIdentity, DecoderLayerWeights, DecoderModel, DecoderProfile, DecoderShape,
+    MAX_DECODER_HIDDEN, MAX_DECODER_INTERMEDIATE, MAX_DECODER_PARAMETERS, MAX_DECODER_VOCABULARY,
+};
 
-use super::attention::{self, AttentionRows, MAX_ATTENTION_PRODUCTS,
-    MAX_ATTENTION_RESOLUTION_STEPS, MAX_ATTENTION_WORKSPACE_BYTES, AttentionBudget};
+use super::super::{BufferIdentity, HostTensor, TensorCapture, TensorContract, TokenSelection};
+use super::attention::{
+    self, AttentionBudget, AttentionRows, MAX_ATTENTION_PRODUCTS, MAX_ATTENTION_RESOLUTION_STEPS,
+    MAX_ATTENTION_WORKSPACE_BYTES,
+};
 use super::image::KvImageDescriptor;
 use super::model::{ModelKvBudget, ModelKvCapture, ModelKvImage};
 use super::{KvAppend, KvContract};
-use super::super::{BufferIdentity, HostTensor, TensorCapture, TensorContract, TokenSelection};
 use crate::Error;
 use std::collections::BTreeMap;
 use std::fmt;
@@ -33,7 +37,9 @@ pub const MAX_DECODER_PRODUCTS: u64 = 1_099_511_627_776;
 /// Admission budget for matrix and attention product terms, not a FLOP, memory,
 /// latency, wall-clock cancellation, or production-resource accounting claim.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub struct DecoderBudget { pub scalar_products: u64 }
+pub struct DecoderBudget {
+    pub scalar_products: u64,
+}
 
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub struct DecoderWork {
@@ -49,10 +55,14 @@ pub struct DecoderWork {
 
 impl DecoderWork {
     pub fn scalar_products(self) -> Result<u64, Error> {
-        self.matrix_products.checked_add(self.attention_products).ok_or(Error::Overflow)
+        self.matrix_products
+            .checked_add(self.attention_products)
+            .ok_or(Error::Overflow)
     }
     fn check(self, budget: DecoderBudget) -> Result<(), Error> {
-        if budget.scalar_products > MAX_DECODER_PRODUCTS || self.scalar_products()? > budget.scalar_products {
+        if budget.scalar_products > MAX_DECODER_PRODUCTS
+            || self.scalar_products()? > budget.scalar_products
+        {
             return Err(Error::Limit);
         }
         Ok(())
@@ -64,7 +74,10 @@ impl DecoderWork {
             matrix_products: add(self.matrix_products, other.matrix_products)?,
             attention_products: add(self.attention_products, other.attention_products)?,
             attention_exponentials: add(self.attention_exponentials, other.attention_exponentials)?,
-            normalization_coordinates: add(self.normalization_coordinates, other.normalization_coordinates)?,
+            normalization_coordinates: add(
+                self.normalization_coordinates,
+                other.normalization_coordinates,
+            )?,
             rotary_pairs: add(self.rotary_pairs, other.rotary_pairs)?,
             gate_coordinates: add(self.gate_coordinates, other.gate_coordinates)?,
             cache_values_appended: add(self.cache_values_appended, other.cache_values_appended)?,
@@ -87,7 +100,9 @@ impl DecoderProfile {
     pub fn estimate(&self, first_position: usize, tokens: usize) -> Result<DecoderWork, Error> {
         let s = self.shape();
         let end = first_position.checked_add(tokens).ok_or(Error::Overflow)?;
-        if end > s.context { return Err(Error::Limit); }
+        if end > s.context {
+            return Err(Error::Limit);
+        }
         let h = s.hidden as u64;
         let k = self.cache_width() as u64;
         let i = s.intermediate as u64;
@@ -96,7 +111,8 @@ impl DecoderProfile {
         let positions = n * (2 * first_position as u64 + n + 1) / 2;
         Ok(DecoderWork {
             tokens: n,
-            matrix_products: n * (layers * (2 * h * h + 2 * k * h + 3 * i * h) + s.vocabulary as u64 * h),
+            matrix_products: n
+                * (layers * (2 * h * h + 2 * k * h + 3 * i * h) + s.vocabulary as u64 * h),
             attention_products: layers * 2 * h * positions,
             attention_exponentials: layers * s.query_heads as u64 * positions,
             normalization_coordinates: n * (2 * layers + 1) * h,
@@ -105,32 +121,58 @@ impl DecoderProfile {
             cache_values_appended: n * layers * 2 * k,
         })
     }
-
 }
 
 impl DecoderModel {
     pub fn session(&self, stream: u64) -> Result<DecoderSession, Error> {
         let shape = self.profile().shape();
-        let cache = ModelKvCapture::new(self.data.cache.clone(), stream, 0, 0, 1, ModelKvBudget {
-            positions: shape.context,
-            normalized_values: shape.context * self.data.cache.values_per_token(),
-        })?;
-        Ok(DecoderSession { model: self.clone(), stream, cache, tokens: Vec::new(), logits: None,
-            work: DecoderWork::default() })
+        let cache = ModelKvCapture::new(
+            self.data.cache.clone(),
+            stream,
+            0,
+            0,
+            1,
+            ModelKvBudget {
+                positions: shape.context,
+                normalized_values: shape.context * self.data.cache.values_per_token(),
+            },
+        )?;
+        Ok(DecoderSession {
+            model: self.clone(),
+            stream,
+            cache,
+            tokens: Vec::new(),
+            logits: None,
+            work: DecoderWork::default(),
+        })
     }
 
     /// Uses the ORIGINAL token IDs, never a decode/re-tokenize round trip. All
     /// IDs, context bounds and the COMPLETE run budget are checked before work.
     /// A refusal returns no partially constructed session or imported cache.
-    pub fn recompute(&self, stream: u64, tokens: &[u32], budget: DecoderBudget) -> Result<DecoderSession, Error> {
+    pub fn recompute(
+        &self,
+        stream: u64,
+        tokens: &[u32],
+        budget: DecoderBudget,
+    ) -> Result<DecoderSession, Error> {
         self.estimate(0, tokens.len())?.check(budget)?;
-        if tokens.iter().any(|token| *token as usize >= self.profile().shape().vocabulary) {
+        if tokens
+            .iter()
+            .any(|token| *token as usize >= self.profile().shape().vocabulary)
+        {
             return Err(Error::InvalidInput);
         }
         let mut session = self.session(stream)?;
         for (position, token) in tokens.iter().copied().enumerate() {
             let products = self.estimate(position, 1)?.scalar_products()?;
-            session.advance(position as u64, token, DecoderBudget { scalar_products: products })?;
+            session.advance(
+                position as u64,
+                token,
+                DecoderBudget {
+                    scalar_products: products,
+                },
+            )?;
         }
         Ok(session)
     }
@@ -157,8 +199,12 @@ pub struct DecoderStep {
 }
 impl fmt::Debug for DecoderStep {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("DecoderStep").field("token", &self.token).field("position", &self.position)
-            .field("vocabulary", &self.logits.len()).field("work", &self.work).finish_non_exhaustive()
+        f.debug_struct("DecoderStep")
+            .field("token", &self.token)
+            .field("position", &self.position)
+            .field("vocabulary", &self.logits.len())
+            .field("work", &self.work)
+            .finish_non_exhaustive()
     }
 }
 
@@ -181,18 +227,33 @@ pub struct DecoderSession {
 }
 impl fmt::Debug for DecoderSession {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("DecoderSession").field("profile", self.model.profile())
-            .field("position", &self.tokens.len()).field("work", &self.work).finish_non_exhaustive()
+        f.debug_struct("DecoderSession")
+            .field("profile", self.model.profile())
+            .field("position", &self.tokens.len())
+            .field("work", &self.work)
+            .finish_non_exhaustive()
     }
 }
 
 impl DecoderSession {
-    pub fn model(&self) -> &DecoderModel { &self.model }
-    pub fn tokens(&self) -> &[u32] { &self.tokens }
-    pub fn position(&self) -> u64 { self.tokens.len() as u64 }
-    pub fn work(&self) -> DecoderWork { self.work }
-    pub fn logits(&self) -> Result<&[f32], Error> { self.logits.as_deref().ok_or(Error::Incomplete) }
-    pub fn cache_image(&self) -> Result<ModelKvImage, Error> { self.cache.snapshot(self.cache.revision()) }
+    pub fn model(&self) -> &DecoderModel {
+        &self.model
+    }
+    pub fn tokens(&self) -> &[u32] {
+        &self.tokens
+    }
+    pub fn position(&self) -> u64 {
+        self.tokens.len() as u64
+    }
+    pub fn work(&self) -> DecoderWork {
+        self.work
+    }
+    pub fn logits(&self) -> Result<&[f32], Error> {
+        self.logits.as_deref().ok_or(Error::Incomplete)
+    }
+    pub fn cache_image(&self) -> Result<ModelKvImage, Error> {
+        self.cache.snapshot(self.cache.revision())
+    }
 
     /// Full vocabulary scan; equal scores select the lowest original token ID.
     /// EOS/stop strings and tokenization are not guessed by this numerical API.
@@ -200,43 +261,91 @@ impl DecoderSession {
         let logits = self.logits()?;
         let mut selected = 0;
         for index in 1..logits.len() {
-            if logits[index] > logits[selected] { selected = index; }
+            if logits[index] > logits[selected] {
+                selected = index;
+            }
         }
         Ok(selected as u32)
     }
 
-    pub fn advance(&mut self, expected_position: u64, token: u32, budget: DecoderBudget) -> Result<DecoderStep, Error> {
-        if expected_position != self.position() { return Err(Error::Stale); }
+    pub fn advance(
+        &mut self,
+        expected_position: u64,
+        token: u32,
+        budget: DecoderBudget,
+    ) -> Result<DecoderStep, Error> {
+        if expected_position != self.position() {
+            return Err(Error::Stale);
+        }
         let shape = self.model.profile().shape();
-        if token as usize >= shape.vocabulary { return Err(Error::InvalidInput); }
+        if token as usize >= shape.vocabulary {
+            return Err(Error::InvalidInput);
+        }
         let work = self.model.estimate(self.tokens.len(), 1)?;
         work.check(budget)?;
         let next_work = self.work.add(work)?;
-        let computed = self.model.forward_token(&self.cache, self.stream, self.position(), token, true)?;
+        let computed =
+            self.model
+                .forward_token(&self.cache, self.stream, self.position(), token, true)?;
         self.publish_computed(token, work, next_work, computed)
     }
 
     // Shared by ordinary execution and learned monitoring. Pending data has no
     // public constructor; both callers use the same original forward_token.
-    fn publish_computed(&mut self, token: u32, work: DecoderWork, next_work: DecoderWork,
-        computed: ComputedToken) -> Result<DecoderStep, Error>
-    {
+    fn publish_computed(
+        &mut self,
+        token: u32,
+        work: DecoderWork,
+        next_work: DecoderWork,
+        computed: ComputedToken,
+    ) -> Result<DecoderStep, Error> {
         let position = self.position();
         let sequence = position.checked_add(1).ok_or(Error::Overflow)?;
-        let ComputedToken { logits, observations, staged } = computed;
+        let ComputedToken {
+            logits,
+            observations,
+            staged,
+        } = computed;
         let data = &self.model.data;
-        let step = DecoderStep { token, position, logits: Rc::clone(&logits), layers: observations, work };
+        let step = DecoderStep {
+            token,
+            position,
+            logits: Rc::clone(&logits),
+            layers: observations,
+            work,
+        };
         self.tokens.try_reserve(1).map_err(|_| Error::Limit)?;
-        let requests = staged.iter().map(|(id, keys, values)| {
-            let contract = &data.cache.layers()[id];
-            (*id, KvAppend {
-                keys: HostTensor { identity: BufferIdentity { object: contract.keys().profile().tap, generation: sequence },
-                    layout: &data.key_layout, bytes: keys },
-                values: HostTensor { identity: BufferIdentity { object: contract.values().profile().tap, generation: sequence },
-                    layout: &data.value_layout, bytes: values },
-                first_token: 0, token_count: 1, buffer_first_position: position, first_sequence: sequence,
+        let requests = staged
+            .iter()
+            .map(|(id, keys, values)| {
+                let contract = &data.cache.layers()[id];
+                (
+                    *id,
+                    KvAppend {
+                        keys: HostTensor {
+                            identity: BufferIdentity {
+                                object: contract.keys().profile().tap,
+                                generation: sequence,
+                            },
+                            layout: &data.key_layout,
+                            bytes: keys,
+                        },
+                        values: HostTensor {
+                            identity: BufferIdentity {
+                                object: contract.values().profile().tap,
+                                generation: sequence,
+                            },
+                            layout: &data.value_layout,
+                            bytes: values,
+                        },
+                        first_token: 0,
+                        token_count: 1,
+                        buffer_first_position: position,
+                        first_sequence: sequence,
+                    },
+                )
             })
-        }).collect::<BTreeMap<_, _>>();
+            .collect::<BTreeMap<_, _>>();
         // Original model-wide capture stages ALL layers before publishing any.
         // No fallible action follows its commit; no prior scalar rows are copied.
         self.cache.append(self.cache.revision(), requests)?;
@@ -257,35 +366,82 @@ struct ComputedToken {
     staged: ComputedLayers,
 }
 trait DecoderHistory {
-    fn scalar(&self, layer: u64, values: bool, position: u64, head: usize, channel: usize) -> Result<f64, Error>;
+    fn scalar(
+        &self,
+        layer: u64,
+        values: bool,
+        position: u64,
+        head: usize,
+        channel: usize,
+    ) -> Result<f64, Error>;
 }
 impl DecoderHistory for ModelKvCapture {
-    fn scalar(&self, layer: u64, values: bool, position: u64, head: usize, channel: usize) -> Result<f64, Error> {
+    fn scalar(
+        &self,
+        layer: u64,
+        values: bool,
+        position: u64,
+        head: usize,
+        channel: usize,
+    ) -> Result<f64, Error> {
         let cache = self.layer(layer)?;
-        let contract = if values { cache.contract().values() } else { cache.contract().keys() };
-        if head >= contract.heads() || channel >= contract.channels() { return Err(Error::Binding); }
+        let contract = if values {
+            cache.contract().values()
+        } else {
+            cache.contract().keys()
+        };
+        if head >= contract.heads() || channel >= contract.channels() {
+            return Err(Error::Binding);
+        }
         let token = cache.token(position)?;
-        let source = if values { token.value().source() } else { token.key().source() };
-        attention::finite(*source.words.get(head * contract.channels() + channel).ok_or(Error::Missing)?)
+        let source = if values {
+            token.value().source()
+        } else {
+            token.key().source()
+        };
+        attention::finite(
+            *source
+                .words
+                .get(head * contract.channels() + channel)
+                .ok_or(Error::Missing)?,
+        )
     }
 }
 impl DecoderModel {
     fn forward_token(
-        &self, history: &dyn DecoderHistory, stream: u64, position: u64, token: u32, observe: bool,
+        &self,
+        history: &dyn DecoderHistory,
+        stream: u64,
+        position: u64,
+        token: u32,
+        observe: bool,
     ) -> Result<ComputedToken, Error> {
         let shape = self.profile().shape();
-        if position >= shape.context as u64 || token as usize >= shape.vocabulary { return Err(Error::InvalidInput); }
+        if position >= shape.context as u64 || token as usize >= shape.vocabulary {
+            return Err(Error::InvalidInput);
+        }
         let sequence = position.checked_add(1).ok_or(Error::Overflow)?;
-        let selected = TokenSelection { batch: 0, token: 0, first_position: position,
-            stream, sequence };
+        let selected = TokenSelection {
+            batch: 0,
+            token: 0,
+            first_position: position,
+            stream,
+            sequence,
+        };
         let data = &self.data;
         let h = shape.hidden;
         let start = token as usize * h;
         let mut hidden = data.embeddings[start..start + h].to_vec();
         let mut staged = Vec::new();
         let mut observations = Vec::new();
-        staged.try_reserve_exact(shape.layers).map_err(|_| Error::Limit)?;
-        if observe { observations.try_reserve_exact(shape.layers).map_err(|_| Error::Limit)?; }
+        staged
+            .try_reserve_exact(shape.layers)
+            .map_err(|_| Error::Limit)?;
+        if observe {
+            observations
+                .try_reserve_exact(shape.layers)
+                .map_err(|_| Error::Limit)?;
+        }
         for (index, layer) in data.layers.iter().enumerate() {
             let id = index as u64 + 1;
             let w = &layer.weights;
@@ -293,21 +449,51 @@ impl DecoderModel {
             let mut q = matrix(&w.queries, h, &normalized)?;
             let mut k = matrix(&w.keys, data.profile.cache_width(), &normalized)?;
             let v = matrix(&w.values, data.profile.cache_width(), &normalized)?;
-            rotary(&mut q, data.profile.head_width(), position, data.profile.theta(), data.profile.rotary_scaling())?;
-            rotary(&mut k, data.profile.head_width(), position, data.profile.theta(), data.profile.rotary_scaling())?;
+            rotary(
+                &mut q,
+                data.profile.head_width(),
+                position,
+                data.profile.theta(),
+                data.profile.rotary_scaling(),
+            )?;
+            rotary(
+                &mut k,
+                data.profile.head_width(),
+                position,
+                data.profile.theta(),
+                data.profile.rotary_scaling(),
+            )?;
             let query = capture(layer.attention.queries(), &q, selected)?;
             let descriptor = KvImageDescriptor {
-                contract: layer.attention.cache().clone(), stream, source_batch: 0,
-                first_position: 0, first_sequence: 1, source_revision: sequence,
+                contract: layer.attention.cache().clone(),
+                stream,
+                source_batch: 0,
+                first_position: 0,
+                first_sequence: 1,
+                source_revision: sequence,
                 token_count: position as usize + 1,
             };
             let plan = attention::prepare(&layer.attention, &query, &descriptor)?;
-            plan.work(1)?.check(AttentionBudget { scalar_products: MAX_ATTENTION_PRODUCTS,
-                resolution_steps: MAX_ATTENTION_RESOLUTION_STEPS, workspace_bytes: MAX_ATTENTION_WORKSPACE_BYTES })?;
-            let rows = ExtendedRows { previous: history, layer: id, contract: layer.attention.cache(),
-                position, keys: &k, values: &v };
+            plan.work(1)?.check(AttentionBudget {
+                scalar_products: MAX_ATTENTION_PRODUCTS,
+                resolution_steps: MAX_ATTENTION_RESOLUTION_STEPS,
+                workspace_bytes: MAX_ATTENTION_WORKSPACE_BYTES,
+            })?;
+            let rows = ExtendedRows {
+                previous: history,
+                layer: id,
+                contract: layer.attention.cache(),
+                position,
+                keys: &k,
+                values: &v,
+            };
             let attention = plan.evaluate(&rows)?;
-            let mixed = attention.output().iter().copied().map(rounded).collect::<Result<Vec<_>, _>>()?;
+            let mixed = attention
+                .output()
+                .iter()
+                .copied()
+                .map(rounded)
+                .collect::<Result<Vec<_>, _>>()?;
             let projected = matrix(&w.attention_output, h, &mixed)?;
             hidden = residual(&hidden, &projected)?;
             let normalized = rms(&hidden, &w.feed_forward_norm, data.profile.epsilon())?;
@@ -318,13 +504,21 @@ impl DecoderModel {
             hidden = residual(&hidden, &down)?;
             if observe {
                 let residual = capture(&layer.residual, &hidden, selected)?;
-                observations.push(DecoderLayerObservation { layer: id, query, residual });
+                observations.push(DecoderLayerObservation {
+                    layer: id,
+                    query,
+                    residual,
+                });
             }
             staged.push((id, words(&k), words(&v)));
         }
         let normalized = rms(&hidden, &data.final_norm, data.profile.epsilon())?;
         let logits: Rc<[f32]> = matrix(&data.output, shape.vocabulary, &normalized)?.into();
-        Ok(ComputedToken { logits, observations, staged })
+        Ok(ComputedToken {
+            logits,
+            observations,
+            staged,
+        })
     }
 }
 
@@ -337,27 +531,59 @@ struct ExtendedRows<'a> {
     values: &'a [f32],
 }
 impl AttentionRows for ExtendedRows<'_> {
-    fn scalar(&self, values: bool, position: u64, head: usize, channel: usize) -> Result<f64, Error> {
-        let contract = if values { self.contract.values() } else { self.contract.keys() };
-        if head >= contract.heads() || channel >= contract.channels() { return Err(Error::Binding); }
+    fn scalar(
+        &self,
+        values: bool,
+        position: u64,
+        head: usize,
+        channel: usize,
+    ) -> Result<f64, Error> {
+        let contract = if values {
+            self.contract.values()
+        } else {
+            self.contract.keys()
+        };
+        if head >= contract.heads() || channel >= contract.channels() {
+            return Err(Error::Binding);
+        }
         let index = head * contract.channels() + channel;
         if position == self.position {
             let row = if values { self.values } else { self.keys };
-            return row.get(index).map(|value| f64::from(*value)).ok_or(Error::Missing);
+            return row
+                .get(index)
+                .map(|value| f64::from(*value))
+                .ok_or(Error::Missing);
         }
-        if position > self.position { return Err(Error::Missing); }
-        self.previous.scalar(self.layer, values, position, head, channel)
+        if position > self.position {
+            return Err(Error::Missing);
+        }
+        self.previous
+            .scalar(self.layer, values, position, head, channel)
     }
 }
 
 fn words(values: &[f32]) -> Vec<u8> {
-    values.iter().flat_map(|value| value.to_le_bytes()).collect()
+    values
+        .iter()
+        .flat_map(|value| value.to_le_bytes())
+        .collect()
 }
-fn capture(contract: &TensorContract, values: &[f32], selected: TokenSelection) -> Result<TensorCapture, Error> {
+fn capture(
+    contract: &TensorContract,
+    values: &[f32],
+    selected: TokenSelection,
+) -> Result<TensorCapture, Error> {
     let layout = dense_layout(contract.heads(), contract.channels())?;
     let bytes = words(values);
-    contract.capture(HostTensor {
-        identity: BufferIdentity { object: contract.profile().tap, generation: selected.sequence },
-        layout: &layout, bytes: &bytes,
-    }, selected)
+    contract.capture(
+        HostTensor {
+            identity: BufferIdentity {
+                object: contract.profile().tap,
+                generation: selected.sequence,
+            },
+            layout: &layout,
+            bytes: &bytes,
+        },
+        selected,
+    )
 }

@@ -3,17 +3,19 @@
 
 pub mod sampled;
 
-use super::{FileDecoderCheckpoint, FileDecoderCheckpointInfo, FileOversight, JournalError, Machine};
-use super::super::{DecoderEvent, FileDecoderConfig};
 use super::super::super::{Event, FileOversightProfile, journal, storage};
-use crate::action::{Purpose, Scope};
+use super::super::{DecoderEvent, FileDecoderConfig};
+use super::{
+    FileDecoderCheckpoint, FileDecoderCheckpointInfo, FileOversight, JournalError, Machine,
+};
+use crate::Error;
 use crate::action::consequence::activation::tensor::kv::decoder::DecoderCheckpoint;
 use crate::action::consequence::activation::tensor::kv::decoder::experiment::DecoderLayerIntervention;
 use crate::action::consequence::activation::tensor::kv::decoder::experiment::comparison::{
     DecoderComparisonBudget, DecoderContinuationComparison, DecoderContinuationStep,
     cursor::{DecoderComparisonCursor, DecoderComparisonStatus, DecoderComparisonWork},
 };
-use crate::Error;
+use crate::action::{Purpose, Scope};
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 use std::rc::Rc;
@@ -46,11 +48,21 @@ pub struct FileInvestigationOrigin {
     configuration: FileDecoderConfig,
 }
 impl FileInvestigationOrigin {
-    pub fn directory(&self) -> &Path { &self.directory }
-    pub fn journal_revision(&self) -> u64 { self.journal_revision }
-    pub fn source_scope(&self) -> Scope { self.source_scope }
-    pub fn checkpoint(&self) -> &FileDecoderCheckpointInfo { &self.checkpoint }
-    pub fn configuration(&self) -> &FileDecoderConfig { &self.configuration }
+    pub fn directory(&self) -> &Path {
+        &self.directory
+    }
+    pub fn journal_revision(&self) -> u64 {
+        self.journal_revision
+    }
+    pub fn source_scope(&self) -> Scope {
+        self.source_scope
+    }
+    pub fn checkpoint(&self) -> &FileDecoderCheckpointInfo {
+        &self.checkpoint
+    }
+    pub fn configuration(&self) -> &FileDecoderConfig {
+        &self.configuration
+    }
 }
 
 /// This report cannot apply a congress decision, reset an actor or clear a hold.
@@ -68,10 +80,18 @@ pub struct FileInvestigationReport {
     comparison: DecoderContinuationComparison,
 }
 impl FileInvestigationReport {
-    pub fn purpose(&self) -> Purpose { Purpose::Experiment }
-    pub fn origin(&self) -> &FileInvestigationOrigin { &self.origin }
-    pub fn request(&self) -> &FileInvestigationRequest { &self.request }
-    pub fn comparison(&self) -> &DecoderContinuationComparison { &self.comparison }
+    pub fn purpose(&self) -> Purpose {
+        Purpose::Experiment
+    }
+    pub fn origin(&self) -> &FileInvestigationOrigin {
+        &self.origin
+    }
+    pub fn request(&self) -> &FileInvestigationRequest {
+        &self.request
+    }
+    pub fn comparison(&self) -> &DecoderContinuationComparison {
+        &self.comparison
+    }
 }
 
 /// Owns only immutable checkpoint data and private experimental suffixes. No
@@ -89,31 +109,64 @@ pub struct FileDecoderInvestigation {
     cursor: DecoderComparisonCursor,
 }
 impl FileDecoderInvestigation {
-    fn prepare(origin: FileInvestigationOrigin, source: DecoderCheckpoint,
-        mut request: FileInvestigationRequest) -> Result<Self, Error>
-    {
+    fn prepare(
+        origin: FileInvestigationOrigin,
+        source: DecoderCheckpoint,
+        mut request: FileInvestigationRequest,
+    ) -> Result<Self, Error> {
         // Move unvalidated edits into the original validator. Clone only its
         // successfully bounded specification, never a caller's unbounded map.
-        let plan = source.intervene(request.experiment, std::mem::take(&mut request.layers), request.edit_limit)?;
+        let plan = source.intervene(
+            request.experiment,
+            std::mem::take(&mut request.layers),
+            request.edit_limit,
+        )?;
         let cursor = match &request.continuation {
-            FileInvestigationContinuation::TeacherForced(tokens) => plan.begin_forced_comparison(tokens, request.budget)?,
-            FileInvestigationContinuation::Greedy { first_token, steps } =>
-                plan.begin_greedy_comparison(*first_token, *steps, request.budget)?,
+            FileInvestigationContinuation::TeacherForced(tokens) => {
+                plan.begin_forced_comparison(tokens, request.budget)?
+            }
+            FileInvestigationContinuation::Greedy { first_token, steps } => {
+                plan.begin_greedy_comparison(*first_token, *steps, request.budget)?
+            }
         };
         request.layers = plan.specification().clone();
-        Ok(Self { origin, request, cursor })
+        Ok(Self {
+            origin,
+            request,
+            cursor,
+        })
     }
-    pub fn purpose(&self) -> Purpose { Purpose::Experiment }
-    pub fn origin(&self) -> &FileInvestigationOrigin { &self.origin }
-    pub fn request(&self) -> &FileInvestigationRequest { &self.request }
-    pub fn status(&self) -> DecoderComparisonStatus { self.cursor.status() }
-    pub fn work(&self) -> Result<DecoderComparisonWork, Error> { self.cursor.work() }
-    pub fn completed_pairs(&self) -> &[DecoderContinuationStep] { self.cursor.completed_pairs() }
-    pub fn advance(&mut self) -> Result<DecoderComparisonStatus, Error> { self.cursor.advance() }
-    pub fn cancel(&mut self) -> Result<(), Error> { self.cursor.cancel() }
+    pub fn purpose(&self) -> Purpose {
+        Purpose::Experiment
+    }
+    pub fn origin(&self) -> &FileInvestigationOrigin {
+        &self.origin
+    }
+    pub fn request(&self) -> &FileInvestigationRequest {
+        &self.request
+    }
+    pub fn status(&self) -> DecoderComparisonStatus {
+        self.cursor.status()
+    }
+    pub fn work(&self) -> Result<DecoderComparisonWork, Error> {
+        self.cursor.work()
+    }
+    pub fn completed_pairs(&self) -> &[DecoderContinuationStep] {
+        self.cursor.completed_pairs()
+    }
+    pub fn advance(&mut self) -> Result<DecoderComparisonStatus, Error> {
+        self.cursor.advance()
+    }
+    pub fn cancel(&mut self) -> Result<(), Error> {
+        self.cursor.cancel()
+    }
     pub fn finish(&self) -> Result<FileInvestigationReport, Error> {
         let comparison = self.cursor.finish()?;
-        Ok(FileInvestigationReport { origin: self.origin.clone(), request: self.request.clone(), comparison })
+        Ok(FileInvestigationReport {
+            origin: self.origin.clone(),
+            request: self.request.clone(),
+            comparison,
+        })
     }
 }
 
@@ -121,45 +174,69 @@ impl FileOversight {
     /// Branch from this exact original saved pair, not today's actor state.
     /// An acknowledged held/stopped/recovery-paused owner can be investigated
     /// without fresh permitting evidence. Its state, costs and rights do not change.
-    pub fn investigate_decoder_checkpoint(&self, checkpoint: &FileDecoderCheckpoint,
-        request: FileInvestigationRequest) -> Result<FileDecoderInvestigation, JournalError>
-    {
+    pub fn investigate_decoder_checkpoint(
+        &self,
+        checkpoint: &FileDecoderCheckpoint,
+        request: FileInvestigationRequest,
+    ) -> Result<FileDecoderInvestigation, JournalError> {
         let (origin, source) = self.investigation_source(checkpoint)?;
         Ok(FileDecoderInvestigation::prepare(origin, source, request)?)
     }
 
     // Both deterministic and sampled experiments use this SAME handle check and
     // original numerical half. No caller-supplied checkpoint/model can enter it.
-    fn investigation_source(&self, checkpoint: &FileDecoderCheckpoint)
-        -> Result<(FileInvestigationOrigin, DecoderCheckpoint), JournalError>
-    {
-        if self.fault.is_some() { return Err(JournalError::Unavailable); }
+    fn investigation_source(
+        &self,
+        checkpoint: &FileDecoderCheckpoint,
+    ) -> Result<(FileInvestigationOrigin, DecoderCheckpoint), JournalError> {
+        if self.fault.is_some() {
+            return Err(JournalError::Unavailable);
+        }
         if !Rc::ptr_eq(&self.issuer, &checkpoint.issuer)
-            || self.machine.decoder_checkpoint_info(checkpoint.id())? != checkpoint.info {
+            || self.machine.decoder_checkpoint_info(checkpoint.id())? != checkpoint.info
+        {
             return Err(Error::Binding.into());
         }
-        Ok(investigation_source(self.store.identity(), self.revision(), &self.profile,
-            &self.machine, checkpoint.id())?)
+        Ok(investigation_source(
+            self.store.identity(),
+            self.revision(),
+            &self.profile,
+            &self.machine,
+            checkpoint.id(),
+        )?)
     }
 
     /// Inspect one full canonical image beside a locked or faulted live owner.
     /// Pin exact numerical inputs BEFORE token replay, then validate the ENTIRE
     /// original history. No writer lock, cleanup, clock, fence or role provisioning
     /// occurs. Reconstruction costs are separate from the experimental budget.
-    pub fn read_decoder_investigation(directory: impl AsRef<Path>, profile: &FileOversightProfile,
-        expected_decoder: &FileDecoderConfig, checkpoint: u64, request: FileInvestigationRequest)
-        -> Result<FileDecoderInvestigation, JournalError>
-    {
-        let (origin, source) = Self::read_investigation_source(directory.as_ref(), profile, expected_decoder, checkpoint)?;
+    pub fn read_decoder_investigation(
+        directory: impl AsRef<Path>,
+        profile: &FileOversightProfile,
+        expected_decoder: &FileDecoderConfig,
+        checkpoint: u64,
+        request: FileInvestigationRequest,
+    ) -> Result<FileDecoderInvestigation, JournalError> {
+        let (origin, source) = Self::read_investigation_source(
+            directory.as_ref(),
+            profile,
+            expected_decoder,
+            checkpoint,
+        )?;
         Ok(FileDecoderInvestigation::prepare(origin, source, request)?)
     }
 
-    fn read_investigation_source(directory: &Path, profile: &FileOversightProfile,
-        expected_decoder: &FileDecoderConfig, checkpoint: u64)
-        -> Result<(FileInvestigationOrigin, DecoderCheckpoint), JournalError>
-    {
+    fn read_investigation_source(
+        directory: &Path,
+        profile: &FileOversightProfile,
+        expected_decoder: &FileDecoderConfig,
+        checkpoint: u64,
+    ) -> Result<(FileInvestigationOrigin, DecoderCheckpoint), JournalError> {
         let identity = storage::identity(directory)?;
-        let bytes = storage::read(&identity.join(storage::CANONICAL), profile.delivery.limits.bytes)?;
+        let bytes = storage::read(
+            &identity.join(storage::CANONICAL),
+            profile.delivery.limits.bytes,
+        )?;
         let events = journal::decode(profile, &identity, &bytes)?;
         let mut configurations = events.iter().filter_map(|event| match event {
             Event::Decoder(DecoderEvent::Enable(config)) => Some(config.as_ref()),
@@ -169,15 +246,32 @@ impl FileOversight {
             return Err(Error::Binding.into());
         }
         let machine = Machine::replay(profile, &events)?;
-        Ok(investigation_source(&identity, events.len() as u64, profile, &machine, checkpoint)?)
+        Ok(investigation_source(
+            &identity,
+            events.len() as u64,
+            profile,
+            &machine,
+            checkpoint,
+        )?)
     }
 }
 
-fn investigation_source(directory: &Path, revision: u64, profile: &FileOversightProfile,
-    machine: &Machine, checkpoint: u64) -> Result<(FileInvestigationOrigin, DecoderCheckpoint), Error>
-{
-    let origin = FileInvestigationOrigin { directory: directory.to_owned(), journal_revision: revision,
-        source_scope: profile.delivery.scope, checkpoint: machine.decoder_checkpoint_info(checkpoint)?,
-        configuration: machine.decoder_contract().ok_or(Error::Incomplete)?.clone() };
-    Ok((origin, machine.decoder_experiment_source(checkpoint)?.clone()))
+fn investigation_source(
+    directory: &Path,
+    revision: u64,
+    profile: &FileOversightProfile,
+    machine: &Machine,
+    checkpoint: u64,
+) -> Result<(FileInvestigationOrigin, DecoderCheckpoint), Error> {
+    let origin = FileInvestigationOrigin {
+        directory: directory.to_owned(),
+        journal_revision: revision,
+        source_scope: profile.delivery.scope,
+        checkpoint: machine.decoder_checkpoint_info(checkpoint)?,
+        configuration: machine.decoder_contract().ok_or(Error::Incomplete)?.clone(),
+    };
+    Ok((
+        origin,
+        machine.decoder_experiment_source(checkpoint)?.clone(),
+    ))
 }

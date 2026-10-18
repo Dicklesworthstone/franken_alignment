@@ -1,7 +1,10 @@
 //! Privileged local recovery when the live supervisor/stop socket is unavailable.
 //! Only original durable stop/fence/settlement runs; no source or helper is read.
+#[path = "recover_stop/guarded.rs"]
 pub(crate) mod guarded;
+#[path = "recover_stop/cooperative.rs"]
 mod cooperative;
+#[path = "recover_stop/admission.rs"]
 pub(crate) mod admission;
 
 use super::config::{Config, debug};

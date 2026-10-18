@@ -26,4 +26,5 @@ pub(super) fn load(spec: &Spec, archive: &Path, configurations: Vec<Config>,
 }
 
 #[cfg(test)]
+#[path = "archive/tests.rs"]
 mod tests;

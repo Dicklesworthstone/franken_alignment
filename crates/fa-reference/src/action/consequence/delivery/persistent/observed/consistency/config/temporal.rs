@@ -1,5 +1,5 @@
 //! Canonical opt-in timing requirement, not another forecast or likelihood process.
-use super::{Error, FileConsistencyConfig, Reader, Writer, MAX_CONFIG_BYTES};
+use super::{Error, FileConsistencyConfig, MAX_CONFIG_BYTES, Reader, Writer};
 
 pub(super) const DOMAIN: &[u8; 8] = b"FACPRED\x05";
 
@@ -13,18 +13,27 @@ impl FileConsistencyConfig {
     /// finish has its own later forecast after the original append receipt.
     /// Old configurations and the optional pre-output handle are unchanged.
     pub fn with_pre_output_forecast(self) -> Result<Self, Error> {
-        if self.requires_pre_output_forecast() { return Err(Error::Duplicate); }
-        if self.hosted_residual_layer().is_none() { return Err(Error::Binding); }
+        if self.requires_pre_output_forecast() {
+            return Err(Error::Duplicate);
+        }
+        if self.hosted_residual_layer().is_none() {
+            return Err(Error::Binding);
+        }
         if let Some(policy) = self.terminal_stop_policy() {
             let inner = super::stopping::parts(&self.bytes)?.0;
-            return Self::from_bytes(inner)?.with_pre_output_forecast()?.with_terminal_stop(policy);
+            return Self::from_bytes(inner)?
+                .with_pre_output_forecast()?
+                .with_terminal_stop(policy);
         }
         if let Some(policy) = self.progressive_forecast_policy() {
             let inner = super::progressive::parts(&self.bytes)?.0;
-            return Self::from_bytes(inner)?.with_pre_output_forecast()?.with_progressive_forecast(policy);
+            return Self::from_bytes(inner)?
+                .with_pre_output_forecast()?
+                .with_progressive_forecast(policy);
         }
         let mut writer = Writer::new(MAX_CONFIG_BYTES);
-        writer.raw(DOMAIN)?; writer.blob(&self.bytes)?;
+        writer.raw(DOMAIN)?;
+        writer.blob(&self.bytes)?;
         Self::from_bytes(&writer.finish())
     }
 
@@ -34,8 +43,11 @@ impl FileConsistencyConfig {
 
     pub(super) fn without_temporal(&self) -> &[u8] {
         let bytes = self.without_progressive();
-        if bytes.starts_with(DOMAIN) { parts(bytes).expect("validated temporal configuration") }
-        else { bytes }
+        if bytes.starts_with(DOMAIN) {
+            parts(bytes).expect("validated temporal configuration")
+        } else {
+            bytes
+        }
     }
 }
 
@@ -44,12 +56,19 @@ impl FileConsistencyConfig {
 // profiles, suffixes and missing data before coefficients are allocated.
 pub(super) fn parts(bytes: &[u8]) -> Result<&[u8], Error> {
     let mut reader = Reader::new(bytes);
-    if reader.take(8)? != DOMAIN { return Err(Error::Binding); }
+    if reader.take(8)? != DOMAIN {
+        return Err(Error::Binding);
+    }
     let inner = reader.blob(MAX_CONFIG_BYTES)?;
     reader.end()?;
-    let base = if inner.starts_with(super::MESSAGE_DOMAIN) { super::message_parts(inner)?.0 }
-        else { inner };
-    if !base.starts_with(super::HOSTED_DOMAIN) { return Err(Error::Binding); }
+    let base = if inner.starts_with(super::MESSAGE_DOMAIN) {
+        super::message_parts(inner)?.0
+    } else {
+        inner
+    };
+    if !base.starts_with(super::HOSTED_DOMAIN) {
+        return Err(Error::Binding);
+    }
     Ok(inner)
 }
 

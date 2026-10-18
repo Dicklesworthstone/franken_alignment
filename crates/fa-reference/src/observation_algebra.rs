@@ -17,6 +17,8 @@ use crate::{
     witness::{DomainClosure, DomainProjection, WitnessSnapshot},
 };
 
+pub mod physical_plan;
+
 pub const MAX_OPERATOR_INPUTS: usize = 16;
 pub const MAX_OPERATOR_OUTPUTS: usize = 16;
 pub const MAX_OPERATOR_WITNESSES: usize = 32;

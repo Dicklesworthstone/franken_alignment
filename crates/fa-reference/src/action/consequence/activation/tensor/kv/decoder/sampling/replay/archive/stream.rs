@@ -7,8 +7,8 @@
 
 use super::wire::{Reader, Writer};
 use super::{
-    ARCHIVE_HEADER_BYTES, ArchiveLimits, GenerationArchive, GenerationCheckpoint,
-    ReplayableGeneration, binding, state, DOMAIN,
+    ARCHIVE_HEADER_BYTES, ArchiveLimits, DOMAIN, GenerationArchive, GenerationCheckpoint,
+    ReplayableGeneration, binding, state,
 };
 use crate::Error;
 use std::fmt;
@@ -38,10 +38,14 @@ impl std::error::Error for ArchiveIoError {
     }
 }
 impl From<Error> for ArchiveIoError {
-    fn from(error: Error) -> Self { Self::Refused(error) }
+    fn from(error: Error) -> Self {
+        Self::Refused(error)
+    }
 }
 impl From<io::Error> for ArchiveIoError {
-    fn from(error: io::Error) -> Self { Self::Io(error) }
+    fn from(error: io::Error) -> Self {
+        Self::Io(error)
+    }
 }
 
 /// Exact logical bytes accepted and flushed by the supplied writer. Flushing is
@@ -59,7 +63,9 @@ impl GenerationCheckpoint {
     /// same V1 encoder as `encode_archive`, without allocating its archive Vec.
     /// On an I/O error the sink may contain a prefix; callers must not publish it.
     pub fn write_archive_to<W: Write + ?Sized>(
-        &self, output: &mut W, limits: ArchiveLimits,
+        &self,
+        output: &mut W,
+        limits: ArchiveLimits,
     ) -> Result<ArchiveWrite, ArchiveIoError> {
         let layout = self.archive_layout(limits)?;
         let recipe_bytes = layout.recipe_bytes;
@@ -79,7 +85,12 @@ impl GenerationCheckpoint {
         };
         transport_result(result, io_error)?;
         output.flush()?;
-        Ok(ArchiveWrite { encoded_bytes, recipe_bytes, state_bytes, positions: self.positions() })
+        Ok(ArchiveWrite {
+            encoded_bytes,
+            recipe_bytes,
+            state_bytes,
+            positions: self.positions(),
+        })
     }
 }
 
@@ -93,26 +104,38 @@ impl GenerationArchive {
     /// Failure leaves the reader partially consumed. No mutable or partially
     /// reconstructed generator is returned; dispose of that transport on error.
     pub fn read_archive_from<R: Read + ?Sized>(
-        input: &mut R, intended: &ReplayableGeneration, limits: ArchiveLimits,
+        input: &mut R,
+        intended: &ReplayableGeneration,
+        limits: ArchiveLimits,
     ) -> Result<Self, ArchiveIoError> {
         limits.check()?;
-        if limits.bytes < ARCHIVE_HEADER_BYTES { return Err(Error::Limit.into()); }
+        if limits.bytes < ARCHIVE_HEADER_BYTES {
+            return Err(Error::Limit.into());
+        }
         let mut header = [0; ARCHIVE_HEADER_BYTES];
         input.read_exact(&mut header)?;
         let mut reader = Reader::new(&header);
-        if reader.take(DOMAIN.len())? != DOMAIN { return Err(Error::InvalidInput.into()); }
+        if reader.take(DOMAIN.len())? != DOMAIN {
+            return Err(Error::InvalidInput.into());
+        }
         let recipe_bytes = reader.count(limits.recipe_bytes)?;
         let state_bytes = reader.count(limits.state.state_bytes)?;
         reader.end()?;
-        let encoded_bytes = ARCHIVE_HEADER_BYTES.checked_add(recipe_bytes)
-            .and_then(|n| n.checked_add(state_bytes)).ok_or(Error::Limit)?;
-        if encoded_bytes > limits.bytes { return Err(Error::Limit.into()); }
+        let encoded_bytes = ARCHIVE_HEADER_BYTES
+            .checked_add(recipe_bytes)
+            .and_then(|n| n.checked_add(state_bytes))
+            .ok_or(Error::Limit)?;
+        if encoded_bytes > limits.bytes {
+            return Err(Error::Limit.into());
+        }
 
         // A shorter/longer declared recipe cannot turn omitted/extra fields into
         // defaults. Count it before asking the transport for any recipe bytes.
         let mut count = Writer::count(limits.recipe_bytes);
         binding::write(&mut count, &intended.recipe)?;
-        if count.len() != recipe_bytes { return Err(Error::Binding.into()); }
+        if count.len() != recipe_bytes {
+            return Err(Error::Binding.into());
+        }
         let mut io_error = None;
         let result = {
             let mut buffer = [0_u8; 4096];
@@ -123,7 +146,9 @@ impl GenerationArchive {
                         io_error = Some(error);
                         Error::Incomplete
                     })?;
-                    if &*actual != chunk { return Err(Error::Binding); }
+                    if &*actual != chunk {
+                        return Err(Error::Binding);
+                    }
                 }
                 Ok(())
             };
@@ -133,7 +158,9 @@ impl GenerationArchive {
         transport_result(result, io_error)?;
 
         let mut bytes = Vec::new();
-        bytes.try_reserve_exact(state_bytes).map_err(|_| Error::Limit)?;
+        bytes
+            .try_reserve_exact(state_bytes)
+            .map_err(|_| Error::Limit)?;
         bytes.resize(state_bytes, 0);
         input.read_exact(&mut bytes)?;
         let mut tail = [0];
@@ -146,12 +173,19 @@ impl GenerationArchive {
             }
         }
         let expected = state::read(&bytes, &intended.recipe, limits)?;
-        Ok(Self { recipe: Rc::clone(&intended.recipe), expected: Rc::new(expected),
-            encoded_bytes, recipe_bytes })
+        Ok(Self {
+            recipe: Rc::clone(&intended.recipe),
+            expected: Rc::new(expected),
+            encoded_bytes,
+            recipe_bytes,
+        })
     }
 }
 
-fn transport_result(result: Result<(), Error>, io_error: Option<io::Error>) -> Result<(), ArchiveIoError> {
+fn transport_result(
+    result: Result<(), Error>,
+    io_error: Option<io::Error>,
+) -> Result<(), ArchiveIoError> {
     match io_error {
         Some(error) => Err(ArchiveIoError::Io(error)),
         None => result.map_err(ArchiveIoError::Refused),

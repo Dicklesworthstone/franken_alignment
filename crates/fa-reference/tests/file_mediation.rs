@@ -87,7 +87,7 @@ fn bypass_unknown_and_disconnected_graphs_never_become_certified_or_admit_action
 fn a_postdispatch_topology_change_seals_instead_of_publishing_and_refunds_only_on_reconciliation() {
     for changed in [false, true] {
         let root = Directory::new(); let (mut host, human, observer) = start(&root); certify(&mut host, &observer);
-        let keys = ready(&mut host, &human, 1, b"exact publication"); dispatch(&mut host, &keys);
+        let keys = ready(&mut host, &human, 1, b"exact-published"); dispatch(&mut host, &keys);
         let original = host.delivery_mediation(1).unwrap().cloned();
         if changed { update(&mut host, &observer, 10, Some(graph(2, true))); }
         assert_eq!(host.inspect().control.ledger.charged, 16);

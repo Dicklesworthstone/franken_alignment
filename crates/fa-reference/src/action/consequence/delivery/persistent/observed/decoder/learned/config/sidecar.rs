@@ -1,5 +1,5 @@
 //! Bind the original mandatory sidecar gate to independently retained bootstrap.
-use super::{FileLearnedConfig, Writer, DOMAIN, MAX_CONFIG_BYTES};
+use super::{DOMAIN, FileLearnedConfig, MAX_CONFIG_BYTES, Writer};
 use crate::Error;
 
 impl FileLearnedConfig {
@@ -9,7 +9,9 @@ impl FileLearnedConfig {
     /// The disjoint wrapper retains EVERY byte of the original recipe; all
     /// existing recovery APIs must match it before replay or role provisioning.
     pub fn with_required_sidecar(mut self) -> Result<Self, Error> {
-        if self.sidecar_required { return Err(Error::Duplicate); }
+        if self.sidecar_required {
+            return Err(Error::Duplicate);
+        }
         let mut writer = Writer::new(MAX_CONFIG_BYTES);
         writer.raw(DOMAIN)?;
         // Numeric recipes have a nonzero generation at this offset; the other
@@ -23,5 +25,7 @@ impl FileLearnedConfig {
     }
 
     /// Frozen configuration, not evidence that a particular action was reviewed.
-    pub fn requires_sidecar(&self) -> bool { self.sidecar_required }
+    pub fn requires_sidecar(&self) -> bool {
+        self.sidecar_required
+    }
 }

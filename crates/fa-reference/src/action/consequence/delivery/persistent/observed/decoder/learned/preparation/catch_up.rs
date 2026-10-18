@@ -1,8 +1,10 @@
 //! Explicit bounded catch-up over the SAME live owner's append-only journal.
 //! Never skip a new transition or silently replace the requested numerical step.
-use super::{Error, FileLearnedStepPreparation, FileLearnedStepPreparationProgress,
-    FileLearnedStepPreparationStatus, FileOversight, JournalError, Operation, Rc,
-    MAX_JOURNAL_EVENTS};
+use super::{
+    Error, FileLearnedStepPreparation, FileLearnedStepPreparationProgress,
+    FileLearnedStepPreparationStatus, FileOversight, JournalError, MAX_JOURNAL_EVENTS, Operation,
+    Rc,
+};
 
 impl FileLearnedStepPreparation {
     /// Adopt exactly the caller-observed live journal revision and replay at
@@ -21,16 +23,29 @@ impl FileLearnedStepPreparation {
     /// occurs here. The strict advance/finish APIs never opt into catch-up by
     /// themselves; finishing still requires every adopted event and the exact
     /// current cut. This does not guarantee progress under unbounded write churn.
-    pub fn catch_up(&mut self, host: &FileOversight, expected_revision: u64,
-        expected_events: usize, max_events: usize)
-        -> Result<FileLearnedStepPreparationProgress, JournalError>
-    {
+    pub fn catch_up(
+        &mut self,
+        host: &FileOversight,
+        expected_revision: u64,
+        expected_events: usize,
+        max_events: usize,
+    ) -> Result<FileLearnedStepPreparationProgress, JournalError> {
         self.check_status()?;
-        if expected_events != self.replayed { return Err(Error::Stale.into()); }
-        if max_events == 0 { return Err(Error::InvalidInput.into()); }
-        if max_events > MAX_JOURNAL_EVENTS { return Err(Error::Limit.into()); }
-        if !Rc::ptr_eq(&self.issuer, &host.issuer) { return Err(Error::Binding.into()); }
-        if host.storage_failure().is_some() { return Err(JournalError::Unavailable); }
+        if expected_events != self.replayed {
+            return Err(Error::Stale.into());
+        }
+        if max_events == 0 {
+            return Err(Error::InvalidInput.into());
+        }
+        if max_events > MAX_JOURNAL_EVENTS {
+            return Err(Error::Limit.into());
+        }
+        if !Rc::ptr_eq(&self.issuer, &host.issuer) {
+            return Err(Error::Binding.into());
+        }
+        if host.storage_failure().is_some() {
+            return Err(JournalError::Unavailable);
+        }
         if expected_revision != host.revision() || expected_revision < self.revision {
             return Err(Error::Stale.into());
         }
@@ -39,13 +54,20 @@ impl FileLearnedStepPreparation {
         // this cursor. No disk bytes, new owner or deserialized prefix is adopted.
         // Recheck the complete original law BEFORE changing the captured cut.
         match self.operation {
-            Operation::Intent => host.check_learned_intent_preparation(expected_revision, self.intent)?,
-            Operation::Completion => host.check_learned_completion(expected_revision,
-                self.intent.actor_revision, self.intent.position)?,
+            Operation::Intent => {
+                host.check_learned_intent_preparation(expected_revision, self.intent)?
+            }
+            Operation::Completion => host.check_learned_completion(
+                expected_revision,
+                self.intent.actor_revision,
+                self.intent.position,
+            )?,
         }
         self.revision = expected_revision;
         self.total = host.events.len();
-        if self.replayed < self.total { self.status = FileLearnedStepPreparationStatus::Replaying; }
+        if self.replayed < self.total {
+            self.status = FileLearnedStepPreparationStatus::Replaying;
+        }
         // One reducer and one cursor algorithm; this visits all adopted records,
         // including any unread portion of the original prefix, exactly once.
         self.advance(host, expected_events, max_events)

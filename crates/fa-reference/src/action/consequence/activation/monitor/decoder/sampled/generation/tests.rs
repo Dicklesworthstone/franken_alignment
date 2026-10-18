@@ -1,11 +1,15 @@
-use super::*;
 use super::super::tests::fixture;
+use super::*;
 
 fn request(prompt: &[u32], max_new_tokens: usize) -> GenerationRequest {
     GenerationRequest {
-        prompt: prompt.to_vec(), max_new_tokens, stop_tokens: Vec::new(),
-        budget: GenerationBudget { scalar_products: MAX_DECODER_PRODUCTS,
-            sampling_entries: MAX_SAMPLING_ENTRIES },
+        prompt: prompt.to_vec(),
+        max_new_tokens,
+        stop_tokens: Vec::new(),
+        budget: GenerationBudget {
+            scalar_products: MAX_DECODER_PRODUCTS,
+            sampling_entries: MAX_SAMPLING_ENTRIES,
+        },
     }
 }
 
@@ -17,8 +21,13 @@ fn completion_matches_original_stepwise_sampler_and_charges_the_whole_request() 
     original.advance_forced(0, 0, budget.decoder).unwrap();
     let mut expected = Vec::new();
     for position in 1..3 {
-        let step = original.advance_sampled(position, budget).unwrap().into_monitored();
-        let MonitoredStep::Released(step) = step else { panic!("quiet control"); };
+        let step = original
+            .advance_sampled(position, budget)
+            .unwrap()
+            .into_monitored();
+        let MonitoredStep::Released(step) = step else {
+            panic!("quiet control");
+        };
         expected.push(step.step().token);
     }
     assert_eq!(report.tokens(), expected.as_slice());
@@ -29,7 +38,10 @@ fn completion_matches_original_stepwise_sampler_and_charges_the_whole_request() 
     assert_eq!(run.sampled_draws(), 2);
     assert_eq!(report.work().attempted_samples, 2);
     assert_eq!(report.work().admitted_sampling_entries, 4);
-    assert_eq!(report.work().admitted_scalar_products, run.decoder_work().scalar_products().unwrap());
+    assert_eq!(
+        report.work().admitted_scalar_products,
+        run.decoder_work().scalar_products().unwrap()
+    );
     assert_eq!(run.decoder_work(), original.decoder_work());
     assert_eq!(run.monitoring_work(), original.monitoring_work());
     assert_eq!(report.last_review().unwrap().position(), 2);
@@ -122,7 +134,8 @@ fn a_held_sample_retains_its_draw_and_cannot_be_rerolled_or_exposed() {
     run.advance_forced(0, 0, budget.decoder).unwrap();
     let used = run.monitoring_work();
     run.monitored.budget = super::super::RefinementBudget {
-        encoded_bytes: used.encoded_bytes, probe_coordinates: used.probe_coordinates,
+        encoded_bytes: used.encoded_bytes,
+        probe_coordinates: used.probe_coordinates,
     };
     let report = run.generate(1, request(&[], 2)).unwrap();
     assert_eq!(report.finish(), GenerationFinish::Held);
@@ -132,7 +145,10 @@ fn a_held_sample_retains_its_draw_and_cannot_be_rerolled_or_exposed() {
     assert!(report.work().admitted_scalar_products > 0);
     assert_eq!(run.sampled_draws(), 1);
     assert_eq!(run.status(), MonitoringStatus::Held);
-    assert_eq!(run.generate(2, request(&[], 1)).unwrap_err(), Error::WrongState);
+    assert_eq!(
+        run.generate(2, request(&[], 1)).unwrap_err(),
+        Error::WrongState
+    );
     assert_eq!(run.sampled_draws(), 1);
 }
 

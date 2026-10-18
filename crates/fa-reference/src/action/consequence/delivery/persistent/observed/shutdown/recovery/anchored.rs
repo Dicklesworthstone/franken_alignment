@@ -1,8 +1,9 @@
 //! Exact retained-prefix continuity for the original source-free stop operation.
 //! No recovered owner or candidate anchor escapes before acknowledgment.
-use super::{Error, FileHistoryAnchor, FileOversight, FileOversightProfile,
-    FileStoppedHistory, FileStoppedRecovery, JournalError, Machine, StopRequest,
-    ElapsedTick, Path, journal, storage};
+use super::{
+    ElapsedTick, Error, FileHistoryAnchor, FileOversight, FileOversightProfile, FileStoppedHistory,
+    FileStoppedRecovery, JournalError, Machine, Path, StopRequest, journal, storage,
+};
 
 impl FileOversight {
     /// Require an independently retained exact history prefix before recovering
@@ -29,12 +30,20 @@ impl FileOversight {
     /// Pending/expired effects remain charged. External export and custodian
     /// authentication are separate; keep the previous archive until export is
     /// acknowledged. Joint rollback of journal and archive remains out of scope.
-    pub fn recover_stopped_anchored<F>(directory: impl AsRef<Path>, profile: FileOversightProfile,
-        request: StopRequest, anchor: &FileHistoryAnchor, clock: F)
-        -> Result<FileStoppedHistory, JournalError>
-    where F: FnOnce() -> ElapsedTick {
+    pub fn recover_stopped_anchored<F>(
+        directory: impl AsRef<Path>,
+        profile: FileOversightProfile,
+        request: StopRequest,
+        anchor: &FileHistoryAnchor,
+        clock: F,
+    ) -> Result<FileStoppedHistory, JournalError>
+    where
+        F: FnOnce() -> ElapsedTick,
+    {
         profile.delivery.limits.check()?;
-        if request.operation == 0 { return Err(Error::InvalidInput.into()); }
+        if request.operation == 0 {
+            return Err(Error::InvalidInput.into());
+        }
         let store = storage::Store::open(directory.as_ref())?;
         recover_anchored_locked(store, profile, request, anchor, clock)
     }
@@ -43,10 +52,16 @@ impl FileOversight {
 // The same native Store is kept locked through prefix admission, replay,
 // original terminal preflight and acknowledgment. This private seam exists for
 // the existing deterministic Store barriers, never caller-selected persistence.
-fn recover_anchored_locked<F>(store: storage::Store, profile: FileOversightProfile,
-    request: StopRequest, anchor: &FileHistoryAnchor, clock: F)
-    -> Result<FileStoppedHistory, JournalError>
-where F: FnOnce() -> ElapsedTick {
+fn recover_anchored_locked<F>(
+    store: storage::Store,
+    profile: FileOversightProfile,
+    request: StopRequest,
+    anchor: &FileHistoryAnchor,
+    clock: F,
+) -> Result<FileStoppedHistory, JournalError>
+where
+    F: FnOnce() -> ElapsedTick,
+{
     let canonical = store.read(profile.delivery.limits.bytes)?;
     let events = journal::decode(&profile, store.identity(), &canonical)?;
     anchor.check(&profile, store.identity(), &events)?;
@@ -55,22 +70,33 @@ where F: FnOnce() -> ElapsedTick {
     if let Some(receipt) = &snapshot.stop {
         let previous = receipt.request();
         if previous != request {
-            return Err(if previous.operation == request.operation { Error::Binding }
-                else { Error::Duplicate }.into());
+            return Err(if previous.operation == request.operation {
+                Error::Binding
+            } else {
+                Error::Duplicate
+            }
+            .into());
         }
         let progress = machine.broker.stop_progress()?;
         if progress.drained() {
-            if store.read(profile.delivery.limits.bytes)? != canonical { return Err(Error::Binding.into()); }
+            if store.read(profile.delivery.limits.bytes)? != canonical {
+                return Err(Error::Binding.into());
+            }
             store.confirm_and_cleanup()?;
             let anchor = FileHistoryAnchor::from_acknowledged(events.len(), canonical);
             return Ok(FileStoppedHistory::new(
-                FileStoppedRecovery::AlreadyDrained { snapshot, progress }, anchor));
+                FileStoppedRecovery::AlreadyDrained { snapshot, progress },
+                anchor,
+            ));
         }
     } else if snapshot.control.sequence != request.expected_control_sequence
-        || snapshot.control.ledger.epoch != request.expected_authority_epoch {
+        || snapshot.control.ledger.epoch != request.expected_authority_epoch
+    {
         return Err(Error::Stale.into());
     }
-    if store.read(profile.delivery.limits.bytes)? != canonical { return Err(Error::Binding.into()); }
+    if store.read(profile.delivery.limits.bytes)? != canonical {
+        return Err(Error::Binding.into());
+    }
     // No cleanup before the clock or terminal preflight. The native consuming
     // finalizer rechecks this same canonical image before cleanup/replacement
     // and moves its successful encoded bytes into the returned history anchor.

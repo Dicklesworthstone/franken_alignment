@@ -1,4 +1,5 @@
 //! Deterministic nontrivial parameters are fixtures, not trained-model evidence.
+#![allow(dead_code, unused_imports)]
 use fa_reference::action::consequence::activation::tensor::kv::decoder::{
     DecoderIdentity, DecoderLayerWeights, DecoderModel, DecoderProfile, DecoderShape,
 };

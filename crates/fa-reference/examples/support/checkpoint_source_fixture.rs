@@ -1,6 +1,7 @@
 //! Independent file framing for the existing two-layer K/V command fixture.
 //! This helper writes real checkpoint/adapter tensors; it never loads or merges
 //! them and never supplies numerical success, a probe, or a source observation.
+#![allow(dead_code, unused_imports)]
 use fa_reference::strict_json::{self, Limits};
 use std::collections::BTreeMap;
 use std::ffi::OsString;

@@ -1,16 +1,16 @@
 //! Bounded, lossless presentation of a native human request, never an approval
 //! capability. The original journal's action primitives and view codec are reused.
 //! This is a plaintext reference protocol for a preauthenticated private channel.
-mod witnesses;
 #[cfg(test)]
 mod tests;
+mod witnesses;
 
-use super::super::{FileHumanRequest, views};
 use super::super::super::codec::shared::{Reader, Writer};
-use crate::action::{ActionSpec, ElapsedTick, FrozenAction, MAX_PAYLOAD_BYTES};
-use crate::action::consequence::oversight::human::HumanDisposition;
-use crate::evidence_view::EvidenceViewManifest;
+use super::super::{FileHumanRequest, views};
 use crate::Error;
+use crate::action::consequence::oversight::human::HumanDisposition;
+use crate::action::{ActionSpec, ElapsedTick, FrozenAction, MAX_PAYLOAD_BYTES};
+use crate::evidence_view::EvidenceViewManifest;
 use std::collections::BTreeMap;
 use std::fmt;
 
@@ -35,11 +35,26 @@ pub struct ReviewBinding {
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum ReviewDecision { Approve, Reject, Revoke }
+pub enum ReviewDecision {
+    Approve,
+    Reject,
+    Revoke,
+}
 impl ReviewDecision {
-    fn tag(self) -> u8 { match self { Self::Approve => 1, Self::Reject => 2, Self::Revoke => 3 } }
+    fn tag(self) -> u8 {
+        match self {
+            Self::Approve => 1,
+            Self::Reject => 2,
+            Self::Revoke => 3,
+        }
+    }
     fn decode(tag: u8) -> Result<Self, Error> {
-        match tag { 1 => Ok(Self::Approve), 2 => Ok(Self::Reject), 3 => Ok(Self::Revoke), _ => Err(Error::InvalidInput) }
+        match tag {
+            1 => Ok(Self::Approve),
+            2 => Ok(Self::Reject),
+            3 => Ok(Self::Revoke),
+            _ => Err(Error::InvalidInput),
+        }
     }
 }
 
@@ -61,48 +76,95 @@ pub struct ReviewPacket {
 }
 impl fmt::Debug for ReviewPacket {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("ReviewPacket").field("binding", &self.binding)
-            .field("members", &self.views.len()).field("expires_at", &self.expires_at)
+        f.debug_struct("ReviewPacket")
+            .field("binding", &self.binding)
+            .field("members", &self.views.len())
+            .field("expires_at", &self.expires_at)
             .finish_non_exhaustive()
     }
 }
 impl ReviewPacket {
-    pub fn binding(&self) -> ReviewBinding { self.binding }
-    pub fn clock_domain(&self) -> u64 { self.clock_domain }
-    pub fn control_sequence(&self) -> u64 { self.control_sequence }
-    pub fn input_revision(&self) -> u64 { self.input_revision }
-    pub fn policy_generation(&self) -> u64 { self.policy_generation }
-    pub fn created_at(&self) -> ElapsedTick { self.created_at }
-    pub fn expires_at(&self) -> ElapsedTick { self.expires_at }
+    pub fn binding(&self) -> ReviewBinding {
+        self.binding
+    }
+    pub fn clock_domain(&self) -> u64 {
+        self.clock_domain
+    }
+    pub fn control_sequence(&self) -> u64 {
+        self.control_sequence
+    }
+    pub fn input_revision(&self) -> u64 {
+        self.input_revision
+    }
+    pub fn policy_generation(&self) -> u64 {
+        self.policy_generation
+    }
+    pub fn created_at(&self) -> ElapsedTick {
+        self.created_at
+    }
+    pub fn expires_at(&self) -> ElapsedTick {
+        self.expires_at
+    }
     /// Recorded at offer creation, not a current approval or expiry guarantee.
-    pub fn disposition(&self) -> HumanDisposition { self.disposition }
-    pub fn action(&self) -> &FrozenAction { &self.action }
-    pub fn views(&self) -> &BTreeMap<String, EvidenceViewManifest> { &self.views }
+    pub fn disposition(&self) -> HumanDisposition {
+        self.disposition
+    }
+    pub fn action(&self) -> &FrozenAction {
+        &self.action
+    }
+    pub fn views(&self) -> &BTreeMap<String, EvidenceViewManifest> {
+        &self.views
+    }
 
     /// The offer packet for `request`, validated exactly as the server sends it.
     /// Includes the original action's private read witnesses: provision only an
     /// independently authorized human reviewer, never an actor/helper channel.
-    pub fn capture(request: &FileHumanRequest, clock_domain: u64, revision: u64,
-        disposition: HumanDisposition, session: [u8; 32]) -> Result<Self, Error>
-    {
+    pub fn capture(
+        request: &FileHumanRequest,
+        clock_domain: u64,
+        revision: u64,
+        disposition: HumanDisposition,
+        session: [u8; 32],
+    ) -> Result<Self, Error> {
         let evidence = request.evidence();
         let packet = Self {
-            binding: ReviewBinding { session, request: evidence.id(), reviewer: evidence.reviewer_id(),
-                attempt: evidence.attempt(), offer_revision: revision },
-            clock_domain, control_sequence: evidence.control_sequence(), input_revision: evidence.input_revision(),
-            policy_generation: evidence.policy_generation(), created_at: evidence.created_at(),
-            expires_at: evidence.expires_at(), disposition, action: evidence.action().clone(),
+            binding: ReviewBinding {
+                session,
+                request: evidence.id(),
+                reviewer: evidence.reviewer_id(),
+                attempt: evidence.attempt(),
+                offer_revision: revision,
+            },
+            clock_domain,
+            control_sequence: evidence.control_sequence(),
+            input_revision: evidence.input_revision(),
+            policy_generation: evidence.policy_generation(),
+            created_at: evidence.created_at(),
+            expires_at: evidence.expires_at(),
+            disposition,
+            action: evidence.action().clone(),
             views: evidence.inputs().views().clone(),
         };
         packet.validate()?;
         Ok(packet)
     }
     fn validate(&self) -> Result<(), Error> {
-        if self.binding.session == [0; 32] || self.binding.request == 0 || self.binding.reviewer == 0
-            || self.binding.attempt == 0 || self.clock_domain == 0 || self.input_revision == 0
-            || self.expires_at <= self.created_at || self.expires_at > self.action.spec().deadline
-            || self.views.is_empty() { return Err(Error::InvalidInput); }
-        if !matches!(self.disposition, HumanDisposition::Pending | HumanDisposition::Approved) {
+        if self.binding.session == [0; 32]
+            || self.binding.request == 0
+            || self.binding.reviewer == 0
+            || self.binding.attempt == 0
+            || self.clock_domain == 0
+            || self.input_revision == 0
+            || self.expires_at <= self.created_at
+            || self.expires_at > self.action.spec().deadline
+            || self.views.is_empty()
+        {
+            return Err(Error::InvalidInput);
+        }
+        if !matches!(
+            self.disposition,
+            HumanDisposition::Pending | HumanDisposition::Approved
+        ) {
             return Err(Error::WrongState);
         }
         // The FrozenAction already enforces witness bounds and range validity.
@@ -115,16 +177,38 @@ impl ReviewPacket {
         let witnessed = !self.action.spec().required_witnesses.is_empty();
         // Preserve byte-identical v1 offers for witness-free actions. Older
         // clients refuse v2 before reading evidence rather than losing fields.
-        w.raw(if witnessed { WITNESSED_OFFER } else { OFFER })?; w.u64(0)?;
-        for value in [self.binding.request, self.binding.reviewer, self.binding.attempt,
-            self.binding.offer_revision, self.clock_domain, self.control_sequence,
-            self.input_revision, self.policy_generation, self.created_at.0, self.expires_at.0] { w.u64(value)?; }
-        w.u8(if self.disposition == HumanDisposition::Pending { 0 } else { 1 })?;
+        w.raw(if witnessed { WITNESSED_OFFER } else { OFFER })?;
+        w.u64(0)?;
+        for value in [
+            self.binding.request,
+            self.binding.reviewer,
+            self.binding.attempt,
+            self.binding.offer_revision,
+            self.clock_domain,
+            self.control_sequence,
+            self.input_revision,
+            self.policy_generation,
+            self.created_at.0,
+            self.expires_at.0,
+        ] {
+            w.u64(value)?;
+        }
+        w.u8(if self.disposition == HumanDisposition::Pending {
+            0
+        } else {
+            1
+        })?;
         let action = self.action.spec();
-        w.u32(action.version)?; w.scope(action.scope)?;
-        w.target(action.target.ok_or(Error::Incomplete)?)?; w.blob(&action.payload)?;
-        w.u64(action.policy_epoch)?; w.u64(action.deadline.0)?; w.u64(action.units)?;
-        if witnessed { witnesses::write(&mut w, &action.required_witnesses)?; }
+        w.u32(action.version)?;
+        w.scope(action.scope)?;
+        w.target(action.target.ok_or(Error::Incomplete)?)?;
+        w.blob(&action.payload)?;
+        w.u64(action.policy_epoch)?;
+        w.u64(action.deadline.0)?;
+        w.u64(action.units)?;
+        if witnessed {
+            witnesses::write(&mut w, &action.required_witnesses)?;
+        }
         views::write(&mut w, &self.views)?;
         // The correlation nonce comes AFTER all evidence, never instead of it.
         w.raw(&self.binding.session)?;
@@ -135,30 +219,75 @@ impl ReviewPacket {
     }
     pub fn decode(bytes: &[u8]) -> Result<Self, Error> {
         let length = offer_frame_len(bytes.get(..OFFER_HEADER_BYTES).ok_or(Error::Incomplete)?)?;
-        if bytes.len() != length { return Err(Error::InvalidInput); }
+        if bytes.len() != length {
+            return Err(Error::InvalidInput);
+        }
         let witnessed = &bytes[..8] == WITNESSED_OFFER;
         let mut r = Reader::new(&bytes[OFFER_HEADER_BYTES..]);
-        let request = r.u64()?; let reviewer = r.u64()?; let attempt = r.u64()?; let offer_revision = r.u64()?;
-        let clock_domain = r.u64()?; let control_sequence = r.u64()?; let input_revision = r.u64()?;
-        let policy_generation = r.u64()?; let created_at = ElapsedTick(r.u64()?); let expires_at = ElapsedTick(r.u64()?);
-        let disposition = match r.u8()? { 0 => HumanDisposition::Pending, 1 => HumanDisposition::Approved,
-            _ => return Err(Error::InvalidInput) };
-        let version = r.u32()?; let scope = r.scope()?; let target = Some(r.target()?);
+        let request = r.u64()?;
+        let reviewer = r.u64()?;
+        let attempt = r.u64()?;
+        let offer_revision = r.u64()?;
+        let clock_domain = r.u64()?;
+        let control_sequence = r.u64()?;
+        let input_revision = r.u64()?;
+        let policy_generation = r.u64()?;
+        let created_at = ElapsedTick(r.u64()?);
+        let expires_at = ElapsedTick(r.u64()?);
+        let disposition = match r.u8()? {
+            0 => HumanDisposition::Pending,
+            1 => HumanDisposition::Approved,
+            _ => return Err(Error::InvalidInput),
+        };
+        let version = r.u32()?;
+        let scope = r.scope()?;
+        let target = Some(r.target()?);
         let payload = r.blob(MAX_PAYLOAD_BYTES)?.to_vec();
-        let policy_epoch = r.u64()?; let deadline = ElapsedTick(r.u64()?); let units = r.u64()?;
-        let required_witnesses = if witnessed { witnesses::read(&mut r)? } else { Vec::new() };
-        let action = FrozenAction::freeze(ActionSpec { version, scope, target, payload,
-            required_witnesses, policy_epoch, deadline, units })?;
+        let policy_epoch = r.u64()?;
+        let deadline = ElapsedTick(r.u64()?);
+        let units = r.u64()?;
+        let required_witnesses = if witnessed {
+            witnesses::read(&mut r)?
+        } else {
+            Vec::new()
+        };
+        let action = FrozenAction::freeze(ActionSpec {
+            version,
+            scope,
+            target,
+            payload,
+            required_witnesses,
+            policy_epoch,
+            deadline,
+            units,
+        })?;
         let views = views::read(&mut r)?;
         let session = r.take(32)?.try_into().map_err(|_| Error::Incomplete)?;
         r.end()?;
-        let packet = Self { binding: ReviewBinding { session, request, reviewer, attempt, offer_revision },
-            clock_domain, control_sequence, input_revision, policy_generation, created_at, expires_at,
-            disposition, action, views };
+        let packet = Self {
+            binding: ReviewBinding {
+                session,
+                request,
+                reviewer,
+                attempt,
+                offer_revision,
+            },
+            clock_domain,
+            control_sequence,
+            input_revision,
+            policy_generation,
+            created_at,
+            expires_at,
+            disposition,
+            action,
+            views,
+        };
         packet.validate()?;
         // Original witness/view ordering and metadata must remain lossless.
         // In particular, v2 with an empty witness list is not a v1 alias.
-        if packet.encode()?.as_slice() != bytes { return Err(Error::Binding); }
+        if packet.encode()?.as_slice() != bytes {
+            return Err(Error::Binding);
+        }
         Ok(packet)
     }
     /// Encoding an explicit UI decision is not evidence that it was received,
@@ -172,7 +301,9 @@ impl ReviewPacket {
     }
     pub fn receipt(&self, bytes: &[u8]) -> Result<ReviewReceipt, Error> {
         let receipt = ReviewReceipt::decode(bytes)?;
-        if receipt.binding != self.binding { return Err(Error::Binding); }
+        if receipt.binding != self.binding {
+            return Err(Error::Binding);
+        }
         Ok(receipt)
     }
 }
@@ -181,17 +312,30 @@ impl ReviewPacket {
 pub fn offer_frame_len(header: &[u8]) -> Result<usize, Error> {
     if header.len() != OFFER_HEADER_BYTES
         || (&header[..8] != OFFER && &header[..8] != WITNESSED_OFFER)
-    { return Err(Error::InvalidInput); }
+    {
+        return Err(Error::InvalidInput);
+    }
     let count = u64::from_be_bytes(header[8..16].try_into().map_err(|_| Error::Incomplete)?);
     let count = usize::try_from(count).map_err(|_| Error::Limit)?;
-    if count > MAX_REVIEW_BYTES { return Err(Error::Limit); }
-    if count <= OFFER_HEADER_BYTES { return Err(Error::InvalidInput); }
+    if count > MAX_REVIEW_BYTES {
+        return Err(Error::Limit);
+    }
+    if count <= OFFER_HEADER_BYTES {
+        return Err(Error::InvalidInput);
+    }
     Ok(count)
 }
 
-pub(super) fn decode_decision(bytes: &[u8], expected: ReviewBinding) -> Result<ReviewDecision, Error> {
-    if bytes.len() != DECISION_BYTES || &bytes[..8] != DECISION { return Err(Error::InvalidInput); }
-    if read_binding(&bytes[8..72])? != expected { return Err(Error::Binding); }
+pub(super) fn decode_decision(
+    bytes: &[u8],
+    expected: ReviewBinding,
+) -> Result<ReviewDecision, Error> {
+    if bytes.len() != DECISION_BYTES || &bytes[..8] != DECISION {
+        return Err(Error::InvalidInput);
+    }
+    if read_binding(&bytes[8..72])? != expected {
+        return Err(Error::Binding);
+    }
     ReviewDecision::decode(bytes[72])
 }
 
@@ -213,23 +357,40 @@ impl ReviewReceipt {
         bytes
     }
     fn decode(bytes: &[u8]) -> Result<Self, Error> {
-        if bytes.len() != RECEIPT_BYTES || &bytes[..8] != RECEIPT { return Err(Error::InvalidInput); }
-        let receipt = Self { binding: read_binding(&bytes[8..72])?, decision: ReviewDecision::decode(bytes[72])?,
-            revision: u64::from_be_bytes(bytes[73..].try_into().map_err(|_| Error::Incomplete)?) };
-        if receipt.revision <= receipt.binding.offer_revision { return Err(Error::Stale); }
+        if bytes.len() != RECEIPT_BYTES || &bytes[..8] != RECEIPT {
+            return Err(Error::InvalidInput);
+        }
+        let receipt = Self {
+            binding: read_binding(&bytes[8..72])?,
+            decision: ReviewDecision::decode(bytes[72])?,
+            revision: u64::from_be_bytes(bytes[73..].try_into().map_err(|_| Error::Incomplete)?),
+        };
+        if receipt.revision <= receipt.binding.offer_revision {
+            return Err(Error::Stale);
+        }
         Ok(receipt)
     }
 }
 fn write_binding(bytes: &mut [u8], binding: ReviewBinding) {
     bytes[..32].copy_from_slice(&binding.session);
     for (chunk, value) in bytes[32..].chunks_exact_mut(8).zip([
-        binding.request, binding.reviewer, binding.attempt, binding.offer_revision,
-    ]) { chunk.copy_from_slice(&value.to_be_bytes()); }
+        binding.request,
+        binding.reviewer,
+        binding.attempt,
+        binding.offer_revision,
+    ]) {
+        chunk.copy_from_slice(&value.to_be_bytes());
+    }
 }
 fn read_binding(bytes: &[u8]) -> Result<ReviewBinding, Error> {
     let mut r = Reader::new(bytes);
-    let binding = ReviewBinding { session: r.take(32)?.try_into().map_err(|_| Error::Incomplete)?,
-        request: r.u64()?, reviewer: r.u64()?, attempt: r.u64()?, offer_revision: r.u64()? };
+    let binding = ReviewBinding {
+        session: r.take(32)?.try_into().map_err(|_| Error::Incomplete)?,
+        request: r.u64()?,
+        reviewer: r.u64()?,
+        attempt: r.u64()?,
+        offer_revision: r.u64()?,
+    };
     r.end()?;
     Ok(binding)
 }

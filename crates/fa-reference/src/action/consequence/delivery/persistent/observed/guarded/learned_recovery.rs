@@ -1,15 +1,19 @@
 //! Cooperative learned recovery with the original complete guard/role contract.
 //! The inner candidate, original reset and sole persistence boundary stay sealed.
-use super::{FileOversight, FileOversightProfile, FileOversightRoles, FileRecoveryRequirements,
-    JournalError, anchored::FileHistoryAnchor, learned::check_profile};
-use super::super::decoder::learned::{FileLearnedConfig, FileLearnedRecovery,
-    FileLearnedRecoveryProgress, FileLearnedRecoveryStatus, checkpoint::FileLearnedResetIntent};
+use super::super::decoder::learned::{
+    FileLearnedConfig, FileLearnedRecovery, FileLearnedRecoveryProgress, FileLearnedRecoveryStatus,
+    checkpoint::FileLearnedResetIntent,
+};
+use super::super::shutdown::recovery::{FileStoppedHistory, FileStoppedRecovery};
+use super::{BaseEvent, Event};
+use super::{
+    FileOversight, FileOversightProfile, FileOversightRoles, FileRecoveryRequirements,
+    JournalError, anchored::FileHistoryAnchor, learned::check_profile,
+};
 use crate::Error;
 use crate::action::ElapsedTick;
-use super::super::shutdown::recovery::{FileStoppedHistory, FileStoppedRecovery};
 use crate::action::consequence::delivery::StopRequest;
 use crate::action::consequence::delivery::persistent::RecoveryReserve;
-use super::{BaseEvent, Event};
 use std::fmt;
 use std::path::Path;
 
@@ -33,7 +37,9 @@ pub struct FileGuardedLearnedRecovery {
 }
 impl fmt::Debug for FileGuardedLearnedRecovery {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("FileGuardedLearnedRecovery").field("progress", &self.progress()).finish_non_exhaustive()
+        f.debug_struct("FileGuardedLearnedRecovery")
+            .field("progress", &self.progress())
+            .finish_non_exhaustive()
     }
 }
 
@@ -41,10 +47,12 @@ impl FileOversight {
     /// Match the original decoder inventory and exact learned recipe before any
     /// numerical replay. Completion additionally checks the full original guard,
     /// effective-policy, credential-epoch and independent recovery-floor contract.
-    pub fn begin_open_guarded_with_learned_generation(directory: impl AsRef<Path>,
-        profile: FileOversightProfile, expected: &FileRecoveryRequirements, config: &FileLearnedConfig)
-        -> Result<FileGuardedLearnedRecovery, JournalError>
-    {
+    pub fn begin_open_guarded_with_learned_generation(
+        directory: impl AsRef<Path>,
+        profile: FileOversightProfile,
+        expected: &FileRecoveryRequirements,
+        config: &FileLearnedConfig,
+    ) -> Result<FileGuardedLearnedRecovery, JournalError> {
         begin(directory.as_ref(), profile, expected, config, None)
     }
 
@@ -52,25 +60,36 @@ impl FileOversight {
     /// and exclusive lock before numerical replay. Genuine append-only successors
     /// are accepted by the original anchor checker; divergent/truncated cuts are
     /// not. This does not authenticate observations or advance the held anchor.
-    pub fn begin_open_guarded_anchored_with_learned_generation(directory: impl AsRef<Path>,
-        profile: FileOversightProfile, expected: &FileRecoveryRequirements,
-        config: &FileLearnedConfig, anchor: &FileHistoryAnchor)
-        -> Result<FileGuardedLearnedRecovery, JournalError>
-    {
+    pub fn begin_open_guarded_anchored_with_learned_generation(
+        directory: impl AsRef<Path>,
+        profile: FileOversightProfile,
+        expected: &FileRecoveryRequirements,
+        config: &FileLearnedConfig,
+        anchor: &FileHistoryAnchor,
+    ) -> Result<FileGuardedLearnedRecovery, JournalError> {
         begin(directory.as_ref(), profile, expected, config, Some(anchor))
     }
 }
 
-fn begin(directory: &Path, profile: FileOversightProfile, expected: &FileRecoveryRequirements,
-    config: &FileLearnedConfig, anchor: Option<&FileHistoryAnchor>)
-    -> Result<FileGuardedLearnedRecovery, JournalError>
-{
+fn begin(
+    directory: &Path,
+    profile: FileOversightProfile,
+    expected: &FileRecoveryRequirements,
+    config: &FileLearnedConfig,
+    anchor: Option<&FileHistoryAnchor>,
+) -> Result<FileGuardedLearnedRecovery, JournalError> {
     check_profile(&expected.guards)?;
     let inner = FileOversight::begin_open_with_learned_generation(directory, profile, config)?;
     let (profile, events, identity) = inner.guarded_history();
-    if let Some(anchor) = anchor { anchor.check(profile, identity, events)?; }
+    if let Some(anchor) = anchor {
+        anchor.check(profile, identity, events)?;
+    }
     expected.guards.check_decoder_config(events)?;
-    Ok(FileGuardedLearnedRecovery { inner, expected: expected.clone(), failure: None })
+    Ok(FileGuardedLearnedRecovery {
+        inner,
+        expected: expected.clone(),
+        failure: None,
+    })
 }
 
 impl FileGuardedLearnedRecovery {
@@ -87,7 +106,9 @@ impl FileGuardedLearnedRecovery {
 
     pub fn progress(&self) -> FileLearnedRecoveryProgress {
         let mut progress = self.inner.progress();
-        if let Some(error) = self.failure { progress.status = FileLearnedRecoveryStatus::Failed(error); }
+        if let Some(error) = self.failure {
+            progress.status = FileLearnedRecoveryStatus::Failed(error);
+        }
         progress
     }
 
@@ -95,14 +116,21 @@ impl FileGuardedLearnedRecovery {
     /// A guard mismatch is retained as terminal, never reported as Ready or
     /// recoverable by changing requirements. Costs and numerical failures stay
     /// those of the original replay. Event quanta are not wall-clock bounds.
-    pub fn advance(&mut self, expected_events: usize, max_events: usize)
-        -> Result<FileLearnedRecoveryProgress, JournalError>
-    {
-        if let Some(error) = self.failure { return Err(error.into()); }
+    pub fn advance(
+        &mut self,
+        expected_events: usize,
+        max_events: usize,
+    ) -> Result<FileLearnedRecoveryProgress, JournalError> {
+        if let Some(error) = self.failure {
+            return Err(error.into());
+        }
         self.inner.advance(expected_events, max_events)?;
         if self.inner.progress().status == FileLearnedRecoveryStatus::Ready {
             let (profile, events, _) = self.inner.guarded_history();
-            if let Err(error) = self.expected.check(profile, self.inner.verified_guarded_machine()?, events) {
+            if let Err(error) =
+                self.expected
+                    .check(profile, self.inner.verified_guarded_machine()?, events)
+            {
                 self.failure = Some(error);
                 return Err(error.into());
             }
@@ -111,7 +139,9 @@ impl FileGuardedLearnedRecovery {
     }
 
     fn check_ready(&self) -> Result<(), JournalError> {
-        if let Some(error) = self.failure { return Err(error.into()); }
+        if let Some(error) = self.failure {
+            return Err(error.into());
+        }
         let machine = self.inner.verified_guarded_machine()?;
         let (profile, events, _) = self.inner.guarded_history();
         self.expected.check(profile, machine, events)?;
@@ -138,9 +168,14 @@ impl FileGuardedLearnedRecovery {
     /// Consume the same guarded replay directly into original stopped recovery.
     /// No ordinary fence precedes stopping and no live role bundle escapes. The
     /// exact retained reserve, anchor and canonical-cut checks remain in force.
-    pub fn finish_stopped<F>(self, request: StopRequest, clock: F)
-        -> Result<FileStoppedRecovery, JournalError>
-    where F: FnOnce() -> ElapsedTick {
+    pub fn finish_stopped<F>(
+        self,
+        request: StopRequest,
+        clock: F,
+    ) -> Result<FileStoppedRecovery, JournalError>
+    where
+        F: FnOnce() -> ElapsedTick,
+    {
         self.check_ready()?;
         self.inner.finish_stopped(request, clock)
     }
@@ -148,9 +183,14 @@ impl FileGuardedLearnedRecovery {
     /// Return the acknowledged stopped cut together with its exact private
     /// history anchor. All independent guards and the original canonical lock
     /// remain mandatory; capture grants no role and adds no replay or fence.
-    pub fn finish_stopped_with_anchor<F>(self, request: StopRequest, clock: F)
-        -> Result<FileStoppedHistory, JournalError>
-    where F: FnOnce() -> ElapsedTick {
+    pub fn finish_stopped_with_anchor<F>(
+        self,
+        request: StopRequest,
+        clock: F,
+    ) -> Result<FileStoppedHistory, JournalError>
+    where
+        F: FnOnce() -> ElapsedTick,
+    {
         self.check_ready()?;
         self.inner.finish_stopped_with_anchor(request, clock)
     }
@@ -160,9 +200,10 @@ impl FileGuardedLearnedRecovery {
     /// completion-plus-fence replacement exposes owner/roles. Completed matching
     /// commands do not reset again; interrupted or changed commands still refuse.
     /// Original native refusals remain acknowledged results, not permitting keys.
-    pub fn finish_pending_reset(mut self, intent: &FileLearnedResetIntent)
-        -> Result<(FileOversight, FileOversightRoles), JournalError>
-    {
+    pub fn finish_pending_reset(
+        mut self,
+        intent: &FileLearnedResetIntent,
+    ) -> Result<(FileOversight, FileOversightRoles), JournalError> {
         self.check_ready()?;
         self.inner = self.inner.prepare_pending_reset(intent)?;
         self.finish()
@@ -176,9 +217,10 @@ impl FileGuardedLearnedRecovery {
 
 // All learned recovery wrappers inspect the SAME locked original event list.
 // This is admission before replay, never reserve installation or replenishment.
-pub(super) fn check_recovery_reserve(inner: &FileLearnedRecovery, expected: RecoveryReserve)
-    -> Result<(), JournalError>
-{
+pub(super) fn check_recovery_reserve(
+    inner: &FileLearnedRecovery,
+    expected: RecoveryReserve,
+) -> Result<(), JournalError> {
     let progress = inner.progress();
     if progress.replayed_events != 0 || progress.status != FileLearnedRecoveryStatus::Replaying {
         return Err(Error::WrongState.into());

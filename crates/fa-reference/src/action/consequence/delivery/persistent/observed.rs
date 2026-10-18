@@ -4,37 +4,41 @@
 //! Its endpoint is memory-only during replay; the existing locked Store owns the
 //! sole externally visible canonical replacement. There is no one-key fallback.
 //! Operator storage, helper provenance, human identity and clock remain trusted.
+pub mod consistency;
+pub mod containment;
+pub mod credential;
+pub mod credibility;
+pub mod decoder;
+pub mod driver;
+pub mod governance;
+pub mod guarded;
+pub mod helpers;
+mod human;
+pub mod identity;
 mod journal;
 mod machine;
-mod human;
-mod views;
-mod recovery_capacity;
-pub mod governance;
-pub mod containment;
-pub mod helpers;
-pub mod driver;
-pub mod reviewer;
-pub mod publication;
-pub mod credential;
-pub mod source;
-pub mod replay;
-pub mod stream;
-pub mod identity;
-pub mod decoder;
-pub mod guarded;
-pub mod credibility;
-pub mod consistency;
 pub mod mediation;
+pub mod publication;
+mod recovery_capacity;
+pub mod replay;
+pub mod reviewer;
 pub mod shutdown;
+pub mod source;
+pub mod stream;
 #[cfg(test)]
 mod tests;
+mod views;
 pub use human::{FileHumanPermit, FileHumanRequest, FileHumanReviewer};
 
-use super::{FileDeliveryProfile, FileDeliverySnapshot, FilePermit, FileStopSweep,
-    JournalError, JournalFailure, JournalIo, Reconciliation, Event as BaseEvent, storage};
 use super::super::{EndpointOutcome, StopProgress, StopReceipt, StopRequest};
-use crate::action::consequence::oversight::{CommitteeContract, CommitteeInput, ObservedReceipt, ReviewWindow};
+use super::{
+    Event as BaseEvent, FileDeliveryProfile, FileDeliverySnapshot, FilePermit, FileStopSweep,
+    JournalError, JournalFailure, JournalIo, Reconciliation, storage,
+};
 use crate::action::consequence::oversight::human::{HumanReviewPolicy, HumanStatus};
+use crate::action::consequence::oversight::{
+    CommitteeContract, CommitteeInput, ObservedReceipt, ReviewWindow,
+};
 use crate::action::{ActionSpec, ElapsedTick, FrozenAction};
 use crate::evidence_view::EvidenceViewManifest;
 use crate::round::{Digest, Verdict};
@@ -50,7 +54,7 @@ use std::rc::Rc;
 /// Independent bootstrap authority. The complete original publication profile,
 /// effective helper contracts and mandatory reviewer policy are bound to disk.
 /// Optional identity and numerical profiles are also journal-bound.
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct FileOversightProfile {
     pub delivery: FileDeliveryProfile,
     pub committee: CommitteeContract,
@@ -86,13 +90,19 @@ pub struct FileOversight {
 }
 impl fmt::Debug for FileOversight {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("FileOversight").field("revision", &self.revision())
-            .field("clock_ready", &self.clock_ready()).field("fault", &self.fault).finish_non_exhaustive()
+        f.debug_struct("FileOversight")
+            .field("revision", &self.revision())
+            .field("clock_ready", &self.clock_ready())
+            .field("fault", &self.fault)
+            .finish_non_exhaustive()
     }
 }
 
 impl FileOversight {
-    pub fn create(directory: impl AsRef<Path>, profile: FileOversightProfile) -> Result<(Self, FileHumanReviewer), JournalError> {
+    pub fn create(
+        directory: impl AsRef<Path>,
+        profile: FileOversightProfile,
+    ) -> Result<(Self, FileHumanReviewer), JournalError> {
         let machine = Machine::new(&profile)?;
         let store = storage::Store::create(directory.as_ref())?;
         store.replace(&journal::encode(&profile, store.identity(), &[])?)?;
@@ -103,7 +113,10 @@ impl FileOversight {
     /// keys, cancel only undispatched reservations and fence the endpoint BEFORE
     /// exposing an owner or fresh reviewer role. Old dispatches are query-only.
     /// Saved time is never current; a fresh explicit observation is still needed.
-    pub fn open(directory: impl AsRef<Path>, profile: FileOversightProfile) -> Result<(Self, FileHumanReviewer), JournalError> {
+    pub fn open(
+        directory: impl AsRef<Path>,
+        profile: FileOversightProfile,
+    ) -> Result<(Self, FileHumanReviewer), JournalError> {
         profile.delivery.limits.check()?;
         let store = storage::Store::open(directory.as_ref())?;
         let bytes = store.read(profile.delivery.limits.bytes)?;
@@ -114,89 +127,203 @@ impl FileOversight {
         host.transact(host.revision(), Event::Core(BaseEvent::Fence))?;
         Ok((host, reviewer))
     }
-    fn owner(profile: FileOversightProfile, store: storage::Store, events: Vec<Event>, machine: Machine) -> (Self, FileHumanReviewer) {
+    fn owner(
+        profile: FileOversightProfile,
+        store: storage::Store,
+        events: Vec<Event>,
+        machine: Machine,
+    ) -> (Self, FileHumanReviewer) {
         let issuer = Rc::new(());
-        let reviewer = FileHumanReviewer { issuer: Rc::clone(&issuer), reviewer: profile.human.reviewer_id };
-        (Self { profile, store, events, machine, learned_replay: None, issuer, fault: None, source_interrupted: false, worker_rounds: BTreeSet::new() }, reviewer)
+        let reviewer = FileHumanReviewer {
+            issuer: Rc::clone(&issuer),
+            reviewer: profile.human.reviewer_id,
+        };
+        (
+            Self {
+                profile,
+                store,
+                events,
+                machine,
+                learned_replay: None,
+                issuer,
+                fault: None,
+                source_interrupted: false,
+                worker_rounds: BTreeSet::new(),
+            },
+            reviewer,
+        )
     }
 
     /// Historical data only. No live broker, helper session or approval key is
     /// returned by this pure read, including after an unacknowledged replacement.
-    pub fn read_publication(directory: impl AsRef<Path>, profile: &FileOversightProfile) -> Result<FileDeliverySnapshot, JournalError> {
+    pub fn read_publication(
+        directory: impl AsRef<Path>,
+        profile: &FileOversightProfile,
+    ) -> Result<FileDeliverySnapshot, JournalError> {
         super::codec::validate_profile(&profile.delivery)?;
         let identity = storage::identity(directory.as_ref())?;
-        let bytes = storage::read(&identity.join(storage::CANONICAL), profile.delivery.limits.bytes)?;
+        let bytes = storage::read(
+            &identity.join(storage::CANONICAL),
+            profile.delivery.limits.bytes,
+        )?;
         let events = journal::decode(profile, &identity, &bytes)?;
         Ok(Machine::replay(profile, &events)?.snapshot(events.len()))
     }
-    pub fn revision(&self) -> u64 { self.events.len() as u64 }
-    pub fn inspect(&self) -> FileDeliverySnapshot { self.machine.snapshot(self.events.len()) }
-    pub fn clock_ready(&self) -> bool { self.fault.is_none() && self.machine.clock_ready }
-    pub fn storage_failure(&self) -> Option<&JournalFailure> { self.fault.as_ref() }
-    pub fn input_revision(&self, attempt: u64) -> Result<u64, JournalError> { Ok(self.machine.broker.input_revision(attempt)?) }
-    pub fn human_status(&self, request: u64) -> Result<HumanStatus, JournalError> { Ok(self.machine.broker.human_status(request)?) }
+    pub fn revision(&self) -> u64 {
+        self.events.len() as u64
+    }
+    pub fn inspect(&self) -> FileDeliverySnapshot {
+        self.machine.snapshot(self.events.len())
+    }
+    pub fn clock_ready(&self) -> bool {
+        self.fault.is_none() && self.machine.clock_ready
+    }
+    pub fn storage_failure(&self) -> Option<&JournalFailure> {
+        self.fault.as_ref()
+    }
+    pub fn input_revision(&self, attempt: u64) -> Result<u64, JournalError> {
+        Ok(self.machine.broker.input_revision(attempt)?)
+    }
+    pub fn human_status(&self, request: u64) -> Result<HumanStatus, JournalError> {
+        Ok(self.machine.broker.human_status(request)?)
+    }
 
     pub fn observe_time(&mut self, revision: u64, tick: ElapsedTick) -> Result<(), JournalError> {
-        self.transact(revision, Event::Core(BaseEvent::Time(tick)))?; Ok(())
+        self.transact(revision, Event::Core(BaseEvent::Time(tick)))?;
+        Ok(())
     }
-    pub fn propose(&mut self, revision: u64, attempt: u64, action: ActionSpec, snapshot: Snapshot) -> Result<FrozenAction, JournalError> {
-        match self.transact(revision, Event::Core(BaseEvent::Propose(attempt, action, snapshot)))? {
+    pub fn propose(
+        &mut self,
+        revision: u64,
+        attempt: u64,
+        action: ActionSpec,
+        snapshot: Snapshot,
+    ) -> Result<FrozenAction, JournalError> {
+        match self.transact(
+            revision,
+            Event::Core(BaseEvent::Propose(attempt, action, snapshot)),
+        )? {
             Transition::Proposed(action) => Ok(action),
             Transition::ConsistencyProposed(result) => result.map_err(Into::into),
             _ => unreachable!("proposal transition"),
         }
     }
-    pub fn record_inputs(&mut self, revision: u64, attempt: u64, expected: u64, inputs: CommitteeInput) -> Result<u64, JournalError> {
-        inputs.validate_for(self.machine.actions.get(&attempt).ok_or(Error::Missing)?, self.machine.broker.contracts())?;
-        match self.transact(revision, Event::Inputs(attempt, expected, inputs.views().clone()))? {
-            Transition::Inputs(revision) => Ok(revision), _ => unreachable!("input transition"),
+    pub fn record_inputs(
+        &mut self,
+        revision: u64,
+        attempt: u64,
+        expected: u64,
+        inputs: CommitteeInput,
+    ) -> Result<u64, JournalError> {
+        inputs.validate_for(
+            self.machine.actions.get(&attempt).ok_or(Error::Missing)?,
+            self.machine.broker.contracts(),
+        )?;
+        match self.transact(
+            revision,
+            Event::Inputs(attempt, expected, inputs.views().clone()),
+        )? {
+            Transition::Inputs(revision) => Ok(revision),
+            _ => unreachable!("input transition"),
         }
     }
-    pub fn inputs_unavailable(&mut self, revision: u64, attempt: u64, expected: u64) -> Result<u64, JournalError> {
+    pub fn inputs_unavailable(
+        &mut self,
+        revision: u64,
+        attempt: u64,
+        expected: u64,
+    ) -> Result<u64, JournalError> {
         match self.transact(revision, Event::InputsUnavailable(attempt, expected))? {
-            Transition::Inputs(revision) => Ok(revision), _ => unreachable!("input withdrawal transition"),
+            Transition::Inputs(revision) => Ok(revision),
+            _ => unreachable!("input withdrawal transition"),
         }
     }
-    pub fn begin_review(&mut self, revision: u64, attempt: u64, round: u64, evidence_root: [u8; 32],
-        window: ReviewWindow, snapshot: Snapshot) -> Result<(), JournalError>
-    {
-        self.transact(revision, Event::Begin(attempt, round, evidence_root, window, snapshot))?; Ok(())
+    pub fn begin_review(
+        &mut self,
+        revision: u64,
+        attempt: u64,
+        round: u64,
+        evidence_root: [u8; 32],
+        window: ReviewWindow,
+        snapshot: Snapshot,
+    ) -> Result<(), JournalError> {
+        self.transact(
+            revision,
+            Event::Begin(attempt, round, evidence_root, window, snapshot),
+        )?;
+        Ok(())
     }
     /// Exactly the bytes and provenance frozen for THIS member. Read-only data,
     /// not a worker credential, current-source claim or automatic review result.
-    pub fn review_input(&self, round: u64, member: &str) -> Result<&EvidenceViewManifest, JournalError> {
-        Ok(self.machine.sessions.get(&round).ok_or(Error::Missing)?.1.input(member)?)
+    pub fn review_input(
+        &self,
+        round: u64,
+        member: &str,
+    ) -> Result<&EvidenceViewManifest, JournalError> {
+        Ok(self
+            .machine
+            .sessions
+            .get(&round)
+            .ok_or(Error::Missing)?
+            .1
+            .input(member)?)
     }
     /// Trusted worker-channel observation, through the original reference digest
     /// importer. The configured roster is fixed; this does not authenticate a peer.
-    pub fn commit_review(&mut self, revision: u64, round: u64, member: &str, digest: Digest) -> Result<(), JournalError> {
+    pub fn commit_review(
+        &mut self,
+        revision: u64,
+        round: u64,
+        member: &str,
+        digest: Digest,
+    ) -> Result<(), JournalError> {
         self.check_manual_round(round)?;
         self.review_input(round, member)?;
-        self.transact(revision, Event::Commit(round, member.to_owned(), digest))?; Ok(())
+        self.transact(revision, Event::Commit(round, member.to_owned(), digest))?;
+        Ok(())
     }
     pub fn open_reveals(&mut self, revision: u64, round: u64) -> Result<(), JournalError> {
         self.check_manual_round(round)?;
-        self.transact(revision, Event::OpenReveals(round))?; Ok(())
+        self.transact(revision, Event::OpenReveals(round))?;
+        Ok(())
     }
-    pub fn reveal_review(&mut self, revision: u64, round: u64, member: &str, verdict: Verdict, salt: Vec<u8>) -> Result<(), JournalError> {
+    pub fn reveal_review(
+        &mut self,
+        revision: u64,
+        round: u64,
+        member: &str,
+        verdict: Verdict,
+        salt: Vec<u8>,
+    ) -> Result<(), JournalError> {
         self.check_manual_round(round)?;
         self.review_input(round, member)?;
-        self.transact(revision, Event::Reveal(round, member.to_owned(), verdict, salt))?; Ok(())
+        self.transact(
+            revision,
+            Event::Reveal(round, member.to_owned(), verdict, salt),
+        )?;
+        Ok(())
     }
 
     /// Outer Err: no acknowledged journal transaction. Inner Err: the ORIGINAL
     /// completed review was consumed and its application refusal was COMMITTED.
     /// That completed round can never be repaired, reused or applied twice.
     /// Restrictive original decisions may still apply with current=None.
-    pub fn finish_review(&mut self, revision: u64, round: u64, current: Option<&CommitteeInput>,
-        snapshot: Snapshot) -> Result<Result<ObservedReceipt, Error>, JournalError>
-    {
+    pub fn finish_review(
+        &mut self,
+        revision: u64,
+        round: u64,
+        current: Option<&CommitteeInput>,
+        snapshot: Snapshot,
+    ) -> Result<Result<ObservedReceipt, Error>, JournalError> {
         self.check_manual_round(round)?;
         let attempt = self.machine.sessions.get(&round).ok_or(Error::Missing)?.0;
-        if let Some(input) = current { self.check_action(attempt, input.action())?; }
+        if let Some(input) = current {
+            self.check_action(attempt, input.action())?;
+        }
         let supplied = current.map(|input| input.views().clone());
         match self.transact(revision, Event::Finish(round, supplied, snapshot))? {
-            Transition::Reviewed(result) => Ok(result), _ => unreachable!("completed review transition"),
+            Transition::Reviewed(result) => Ok(result),
+            _ => unreachable!("completed review transition"),
         }
     }
 
@@ -204,158 +331,298 @@ impl FileOversight {
     // referenced by a revision instead of duplicated into every subsequent event.
     // Recovery replays historical transitions in RAM; it never calls this a fresh
     // provider observation or exposes the reconstructed live keys to the caller.
-    fn current_reference(&self, attempt: u64, supplied: &CommitteeInput) -> Result<u64, JournalError> {
-        let current = self.machine.broker.current_inputs(attempt)?.ok_or(Error::Incomplete)?;
-        if current != supplied { return Err(Error::Stale.into()); }
+    fn current_reference(
+        &self,
+        attempt: u64,
+        supplied: &CommitteeInput,
+    ) -> Result<u64, JournalError> {
+        let current = self
+            .machine
+            .broker
+            .current_inputs(attempt)?
+            .ok_or(Error::Incomplete)?;
+        if current != supplied {
+            return Err(Error::Stale.into());
+        }
         Ok(self.machine.broker.input_revision(attempt)?)
     }
     fn check_action(&self, attempt: u64, action: &FrozenAction) -> Result<(), JournalError> {
-        if self.machine.actions.get(&attempt) != Some(action) { return Err(Error::Binding.into()); }
+        if self.machine.actions.get(&attempt) != Some(action) {
+            return Err(Error::Binding.into());
+        }
         Ok(())
     }
-    pub fn authorize(&mut self, revision: u64, attempt: u64, current: &CommitteeInput, snapshot: Snapshot) -> Result<FilePermit, JournalError> {
+    pub fn authorize(
+        &mut self,
+        revision: u64,
+        attempt: u64,
+        current: &CommitteeInput,
+        snapshot: Snapshot,
+    ) -> Result<FilePermit, JournalError> {
         let input_revision = self.current_reference(attempt, current)?;
-        self.transact(revision, Event::Authorize(attempt, input_revision, snapshot))?;
-        Ok(FilePermit { issuer: Rc::clone(&self.issuer), attempt })
+        self.transact(
+            revision,
+            Event::Authorize(attempt, input_revision, snapshot),
+        )?;
+        Ok(FilePermit {
+            issuer: Rc::clone(&self.issuer),
+            attempt,
+        })
     }
-    pub fn request_human_approval(&mut self, revision: u64, request: u64, attempt: u64,
-        current: &CommitteeInput, expires_at: ElapsedTick) -> Result<FileHumanRequest, JournalError>
-    {
+    pub fn request_human_approval(
+        &mut self,
+        revision: u64,
+        request: u64,
+        attempt: u64,
+        current: &CommitteeInput,
+        expires_at: ElapsedTick,
+    ) -> Result<FileHumanRequest, JournalError> {
         let input_revision = self.current_reference(attempt, current)?;
-        match self.transact(revision, Event::RequestHuman(request, attempt, input_revision, expires_at))? {
-            Transition::HumanRequested(evidence) => Ok(FileHumanRequest { issuer: Rc::clone(&self.issuer), evidence }),
+        match self.transact(
+            revision,
+            Event::RequestHuman(request, attempt, input_revision, expires_at),
+        )? {
+            Transition::HumanRequested(evidence) => Ok(FileHumanRequest {
+                issuer: Rc::clone(&self.issuer),
+                evidence,
+            }),
             _ => unreachable!("human request transition"),
         }
     }
     /// Recover only the immutable review request, never a lost approval key.
     pub fn human_request(&self, request: u64) -> Result<FileHumanRequest, JournalError> {
-        Ok(FileHumanRequest { issuer: Rc::clone(&self.issuer), evidence: self.machine.broker.human_request(request)? })
+        Ok(FileHumanRequest {
+            issuer: Rc::clone(&self.issuer),
+            evidence: self.machine.broker.human_request(request)?,
+        })
     }
-    pub fn dispatch(&mut self, revision: u64, automatic: &FilePermit, human: &FileHumanPermit,
-        action: &FrozenAction, current: &CommitteeInput, snapshot: Snapshot) -> Result<(), JournalError>
-    {
-        if !Rc::ptr_eq(&self.issuer, &automatic.issuer) || !Rc::ptr_eq(&self.issuer, &human.issuer)
-            || automatic.attempt != human.attempt { return Err(Error::Binding.into()); }
+    pub fn dispatch(
+        &mut self,
+        revision: u64,
+        automatic: &FilePermit,
+        human: &FileHumanPermit,
+        action: &FrozenAction,
+        current: &CommitteeInput,
+        snapshot: Snapshot,
+    ) -> Result<(), JournalError> {
+        if !Rc::ptr_eq(&self.issuer, &automatic.issuer)
+            || !Rc::ptr_eq(&self.issuer, &human.issuer)
+            || automatic.attempt != human.attempt
+        {
+            return Err(Error::Binding.into());
+        }
         self.check_action(automatic.attempt, action)?;
         let input_revision = self.current_reference(automatic.attempt, current)?;
-        self.transact(revision, Event::Dispatch(automatic.attempt, human.request, input_revision, snapshot))?;
+        self.transact(
+            revision,
+            Event::Dispatch(automatic.attempt, human.request, input_revision, snapshot),
+        )?;
         Ok(())
     }
-    pub fn publish(&mut self, revision: u64, attempt: u64) -> Result<EndpointOutcome, JournalError> {
+    pub fn publish(
+        &mut self,
+        revision: u64,
+        attempt: u64,
+    ) -> Result<EndpointOutcome, JournalError> {
         match self.transact(revision, Event::Core(BaseEvent::Publish(attempt)))? {
-            Transition::Published(result) => Ok(result), _ => unreachable!("publication transition"),
+            Transition::Published(result) => Ok(result),
+            _ => unreachable!("publication transition"),
         }
     }
-    pub fn reconcile(&mut self, revision: u64, attempt: u64) -> Result<Reconciliation, JournalError> {
+    pub fn reconcile(
+        &mut self,
+        revision: u64,
+        attempt: u64,
+    ) -> Result<Reconciliation, JournalError> {
         match self.transact(revision, Event::Core(BaseEvent::Reconcile(attempt)))? {
-            Transition::Reconciled(result) => Ok(result), _ => unreachable!("reconciliation transition"),
+            Transition::Reconciled(result) => Ok(result),
+            _ => unreachable!("reconciliation transition"),
         }
     }
-    pub fn seal_unexecuted(&mut self, revision: u64, attempt: u64) -> Result<Reconciliation, JournalError> {
+    pub fn seal_unexecuted(
+        &mut self,
+        revision: u64,
+        attempt: u64,
+    ) -> Result<Reconciliation, JournalError> {
         match self.transact(revision, Event::Core(BaseEvent::Seal(attempt)))? {
-            Transition::Reconciled(result) => Ok(result), _ => unreachable!("sealing transition"),
+            Transition::Reconciled(result) => Ok(result),
+            _ => unreachable!("sealing transition"),
         }
     }
-    pub fn reconcile_pending(&mut self, revision: u64) -> Result<BTreeMap<u64, Result<Reconciliation, Error>>, JournalError> {
+    pub fn reconcile_pending(
+        &mut self,
+        revision: u64,
+    ) -> Result<BTreeMap<u64, Result<Reconciliation, Error>>, JournalError> {
         match self.transact(revision, Event::Core(BaseEvent::Sweep))? {
-            Transition::Swept(results) => Ok(results), _ => unreachable!("pending sweep transition"),
+            Transition::Swept(results) => Ok(results),
+            _ => unreachable!("pending sweep transition"),
         }
     }
     pub fn cancel(&mut self, revision: u64, attempt: u64) -> Result<(), JournalError> {
-        self.transact(revision, Event::Core(BaseEvent::Cancel(attempt)))?; Ok(())
+        self.transact(revision, Event::Core(BaseEvent::Cancel(attempt)))?;
+        Ok(())
     }
     pub fn fence(&mut self, revision: u64) -> Result<(), JournalError> {
-        self.transact(revision, Event::Core(BaseEvent::Fence))?; Ok(())
+        self.transact(revision, Event::Core(BaseEvent::Fence))?;
+        Ok(())
     }
-    pub fn request_stop(&mut self, revision: u64, request: StopRequest) -> Result<StopReceipt, JournalError> {
+    pub fn request_stop(
+        &mut self,
+        revision: u64,
+        request: StopRequest,
+    ) -> Result<StopReceipt, JournalError> {
         match self.transact(revision, Event::Core(BaseEvent::Stop(request)))? {
-            Transition::Stopped(receipt) => Ok(receipt), _ => unreachable!("terminal stop transition"),
+            Transition::Stopped(receipt) => Ok(receipt),
+            _ => unreachable!("terminal stop transition"),
         }
     }
     pub fn stop_progress(&self) -> Result<StopProgress, JournalError> {
-        if self.fault.is_some() { return Err(JournalError::Unavailable); }
+        if self.fault.is_some() {
+            return Err(JournalError::Unavailable);
+        }
         Ok(self.machine.broker.stop_progress()?)
     }
-    pub fn progress_stop(&mut self, revision: u64, tick: ElapsedTick) -> Result<FileStopSweep, JournalError> {
+    pub fn progress_stop(
+        &mut self,
+        revision: u64,
+        tick: ElapsedTick,
+    ) -> Result<FileStopSweep, JournalError> {
         match self.transact(revision, Event::Core(BaseEvent::StopProgress(tick)))? {
-            Transition::StopProgressed(result) => Ok(result), _ => unreachable!("stop drain transition"),
+            Transition::StopProgressed(result) => Ok(result),
+            _ => unreachable!("stop drain transition"),
         }
     }
 
     fn transact(&mut self, revision: u64, mut event: Event) -> Result<Transition, JournalError> {
-        if self.fault.is_some() { return Err(JournalError::Unavailable); }
-        if revision != self.revision() { return Err(Error::Stale.into()); }
+        if self.fault.is_some() {
+            return Err(JournalError::Unavailable);
+        }
+        if revision != self.revision() {
+            return Err(Error::Stale.into());
+        }
         // Refuse a source-required stream's ordinary message before predictive
         // observation can poison the owner or consume its pending forecast.
         self.machine.check_generated_text_origin(&event)?;
         // Historical labels and explicit prediction coverage loss cannot
         // publish effects or clear an interrupted source acquisition.
-        if !matches!(&event, Event::Credibility(credibility::CredibilityEvent::Assess(..))
-            | Event::Consistency(consistency::ConsistencyEvent::Unavailable) | Event::Mediation(_)) {
+        if !matches!(
+            &event,
+            Event::Credibility(credibility::CredibilityEvent::Assess(..))
+                | Event::Consistency(consistency::ConsistencyEvent::Unavailable)
+                | Event::Mediation(_)
+        ) {
             self.check_source_admission(&event)?;
         }
         if let Event::Mediation(mediation::MediationEvent::Update(update)) = &event {
             self.machine.preflight_mediation_update(update)?;
             // A new topology observation or known capture loss cannot fall back
             // to the previous certified graph if encoding, capacity or I/O fails.
-            self.fault = Some(JournalFailure { operation: JournalIo::Stage,
-                kind: io::ErrorKind::Other, replacement_may_be_visible: false });
+            self.fault = Some(JournalFailure {
+                operation: JournalIo::Stage,
+                kind: io::ErrorKind::Other,
+                replacement_may_be_visible: false,
+            });
         }
-        if matches!(&event, Event::Consistency(consistency::ConsistencyEvent::Unavailable)) {
-            if !self.action_consistency_required() { return Err(Error::Incomplete.into()); }
+        if matches!(
+            &event,
+            Event::Consistency(consistency::ConsistencyEvent::Unavailable)
+        ) {
+            if !self.action_consistency_required() {
+                return Err(Error::Incomplete.into());
+            }
             // Known capture loss is already evidence. Close the live owner
             // BEFORE capacity, encoding or replay can fail or unwind; an older
             // quiet image cannot remain eligible when loss cannot be recorded.
             // Stale revisions and foreign observer roles have refused above.
-            self.fault = Some(JournalFailure { operation: JournalIo::Stage,
-                kind: io::ErrorKind::Other, replacement_may_be_visible: false });
+            self.fault = Some(JournalFailure {
+                operation: JournalIo::Stage,
+                kind: io::ErrorKind::Other,
+                replacement_may_be_visible: false,
+            });
         }
-        if self.events.len() >= self.profile.delivery.limits.events { return Err(Error::Limit.into()); }
-        let mut bytes = journal::encode_appended(&self.profile, self.store.identity(), &self.events, &event)?;
+        if self.events.len() >= self.profile.delivery.limits.events {
+            return Err(Error::Limit.into());
+        }
+        let mut bytes =
+            journal::encode_appended(&self.profile, self.store.identity(), &self.events, &event)?;
         let (mut candidate, retain_replay) = self.replay_control_candidate()?;
         candidate.preflight_consistency(&event)?;
-        if self.action_consistency_required() && matches!(&event,
-            Event::Consistency(consistency::ConsistencyEvent::Forecast(..) | consistency::ConsistencyEvent::ForecastRequest(..)
-                | consistency::ConsistencyEvent::ForecastHosted(..) | consistency::ConsistencyEvent::ForecastHostedRequest(..)
-                | consistency::ConsistencyEvent::ForecastLearned(..) | consistency::ConsistencyEvent::ForecastLearnedRequest(..)
-                | consistency::ConsistencyEvent::ForecastOwnedLearned(..) | consistency::ConsistencyEvent::ForecastOwnedLearnedRequest(..))
-            | Event::Core(BaseEvent::Propose(..) | BaseEvent::SubmitRequest(..)) | Event::TextMessage(..)) {
+        if self.action_consistency_required()
+            && matches!(
+                &event,
+                Event::Consistency(
+                    consistency::ConsistencyEvent::Forecast(..)
+                        | consistency::ConsistencyEvent::ForecastRequest(..)
+                        | consistency::ConsistencyEvent::ForecastHosted(..)
+                        | consistency::ConsistencyEvent::ForecastHostedRequest(..)
+                        | consistency::ConsistencyEvent::ForecastLearned(..)
+                        | consistency::ConsistencyEvent::ForecastLearnedRequest(..)
+                        | consistency::ConsistencyEvent::ForecastOwnedLearned(..)
+                        | consistency::ConsistencyEvent::ForecastOwnedLearnedRequest(..)
+                ) | Event::Core(BaseEvent::Propose(..) | BaseEvent::SubmitRequest(..))
+                    | Event::TextMessage(..)
+            )
+        {
             // Entering prediction/observation cannot unwind back to an older
             // permitting evidence state. Only this commit acknowledgment clears it.
-            self.fault = Some(JournalFailure { operation: JournalIo::Stage,
-                kind: io::ErrorKind::Other, replacement_may_be_visible: false });
+            self.fault = Some(JournalFailure {
+                operation: JournalIo::Stage,
+                kind: io::ErrorKind::Other,
+                replacement_may_be_visible: false,
+            });
         }
         let result = candidate.apply(&event)?;
         // Only recomputed learned results become comparison witnesses. Final
         // framing/capacity failure stays poisoned and exposes no candidate report.
         if consistency::learned::complete_event(&mut event, &result, &candidate.broker)? {
-            bytes = journal::encode_appended(&self.profile, self.store.identity(), &self.events, &event)?;
+            bytes = journal::encode_appended(
+                &self.profile,
+                self.store.identity(),
+                &self.events,
+                &event,
+            )?;
         }
         self.persist_control_candidate(event, bytes, candidate, result, retain_replay)
     }
 
     // Both ordinary and numerically prepared events use this SAME storage cut.
-    fn persist_candidate(&mut self, event: Event, bytes: Vec<u8>, candidate: Machine,
-        result: Transition) -> Result<Transition, JournalError>
-    {
-        self.persist_candidate_retaining(event, bytes, candidate, result).map(|(result, _)| result)
+    fn persist_candidate(
+        &mut self,
+        event: Event,
+        bytes: Vec<u8>,
+        candidate: Machine,
+        result: Transition,
+    ) -> Result<Transition, JournalError> {
+        self.persist_candidate_retaining(event, bytes, candidate, result)
+            .map(|(result, _)| result)
     }
 
     // The SAME acknowledgment cut can hand the former live machine to an
     // internal replay consumer instead of dropping it. No candidate or retired
     // state leaves on failure; replacement precedes every ownership transfer.
-    fn persist_candidate_retaining(&mut self, event: Event, bytes: Vec<u8>, candidate: Machine,
-        result: Transition) -> Result<(Transition, Machine), JournalError>
-    {
+    fn persist_candidate_retaining(
+        &mut self,
+        event: Event,
+        bytes: Vec<u8>,
+        candidate: Machine,
+        result: Transition,
+    ) -> Result<(Transition, Machine), JournalError> {
         self.events.try_reserve(1).map_err(|_| Error::Limit)?;
         // Retain conservative unavailability even if replacement unwinds rather
         // than returns Err. Only a fully acknowledged publication clears it.
-        self.fault = Some(JournalFailure { operation: JournalIo::Stage,
-            kind: io::ErrorKind::Other, replacement_may_be_visible: true });
+        self.fault = Some(JournalFailure {
+            operation: JournalIo::Stage,
+            kind: io::ErrorKind::Other,
+            replacement_may_be_visible: true,
+        });
         if let Err(error) = self.store.replace(&bytes) {
             self.fault = Some(match &error {
                 JournalError::Io(failure) => failure.clone(),
-                _ => JournalFailure { operation: JournalIo::Stage, kind: io::ErrorKind::Other, replacement_may_be_visible: true },
+                _ => JournalFailure {
+                    operation: JournalIo::Stage,
+                    kind: io::ErrorKind::Other,
+                    replacement_may_be_visible: true,
+                },
             });
             // No candidate automatic/human key, decision, receipt or refund is
             // returned. Inspection remains the last fully acknowledged cut.

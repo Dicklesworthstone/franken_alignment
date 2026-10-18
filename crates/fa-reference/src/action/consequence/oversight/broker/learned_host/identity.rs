@@ -1,15 +1,17 @@
 //! Actual owned-model stimuli through the original numerical identity engine.
 //! Measurement is observation, never source eligibility or effect authority.
 mod check;
-pub use check::{HostedIdentityCheckRequest, HostedIdentityCheckStatus,
-    HostedIdentityStartFailure, HostedLearnedIdentityCheck};
+pub use check::{
+    HostedIdentityCheckRequest, HostedIdentityCheckStatus, HostedIdentityStartFailure,
+    HostedLearnedIdentityCheck,
+};
 
 use super::OversightBroker;
+use crate::Error;
 use crate::action::consequence::activation::identity::{
     ModelPassport, decoder::DecoderIdentityProbe,
 };
 use crate::action::consequence::activation::tensor::kv::decoder::DecoderBudget;
-use crate::Error;
 
 impl OversightBroker {
     /// Probe THIS learned owner's immutable parameters, not a caller-selected
@@ -32,11 +34,17 @@ impl OversightBroker {
     ///     owner.hosted_learned_identity_probe(owner.actor_revision(), passport, 1, budget).unwrap()
     /// }
     /// ```
-    pub fn hosted_learned_identity_probe(&self, expected_actor_revision: u64,
-        passport: &ModelPassport, measurement_sequence: u64, budget: DecoderBudget)
-        -> Result<DecoderIdentityProbe, Error>
-    {
-        if expected_actor_revision != self.actor_revision() { return Err(Error::Stale); }
-        self.hosted_learned_original()?.host_identity_probe(passport, measurement_sequence, budget)
+    pub fn hosted_learned_identity_probe(
+        &self,
+        expected_actor_revision: u64,
+        passport: &ModelPassport,
+        measurement_sequence: u64,
+        budget: DecoderBudget,
+    ) -> Result<DecoderIdentityProbe, Error> {
+        if expected_actor_revision != self.actor_revision() {
+            return Err(Error::Stale);
+        }
+        self.hosted_learned_original()?
+            .host_identity_probe(passport, measurement_sequence, budget)
     }
 }

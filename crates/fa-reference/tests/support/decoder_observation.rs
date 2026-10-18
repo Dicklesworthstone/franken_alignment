@@ -1,4 +1,5 @@
 //! Read complete source values through the existing public verification path.
+#![allow(dead_code, unused_imports)]
 use fa_reference::action::consequence::activation::{ProgressiveFrame, SourceFrame};
 
 pub fn words(source: &SourceFrame) -> Vec<u32> {

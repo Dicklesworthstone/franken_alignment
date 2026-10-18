@@ -1,8 +1,10 @@
 //! Opt-in outgoing peer verification around the ORIGINAL durable client.
 //! Kernel connection credentials are not executable or application attestation.
-use super::{ActorClientState, ActorProposal, ClientDriveBudget, ClientDriveReport,
-    ClientPhase, ClientProgress, ClientSessionLimits, FileActorClient, FileActorConnection,
-    FileClientError, FileClientInspection, FileClientProfile};
+use super::{
+    ActorClientState, ActorProposal, ClientDriveBudget, ClientDriveReport, ClientPhase,
+    ClientProgress, ClientSessionLimits, FileActorClient, FileActorConnection, FileClientError,
+    FileClientInspection, FileClientProfile,
+};
 use crate::action::consequence::delivery::persistent::codec::shared::Writer;
 use crate::action::consequence::oversight::actor_peer::{
     PeerCredentials, PeerPolicy, PeerRefusal, PeerSetupStage,
@@ -22,25 +24,40 @@ pub struct FilePeerClientProfile {
 }
 impl fmt::Debug for FilePeerClientProfile {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("FilePeerClientProfile").field("policy", &self.policy)
-            .field("limits", &self.inner.limits()).finish_non_exhaustive()
+        f.debug_struct("FilePeerClientProfile")
+            .field("policy", &self.policy)
+            .field("limits", &self.inner.limits())
+            .finish_non_exhaustive()
     }
 }
 impl FilePeerClientProfile {
-    pub fn policy(&self) -> PeerPolicy { self.policy }
-    pub fn limits(&self) -> ClientSessionLimits { self.inner.limits() }
-    pub fn image_bytes(&self) -> usize { self.inner.image_bytes() }
+    pub fn policy(&self) -> PeerPolicy {
+        self.policy
+    }
+    pub fn limits(&self) -> ClientSessionLimits {
+        self.inner.limits()
+    }
+    pub fn image_bytes(&self) -> usize {
+        self.inner.image_bytes()
+    }
 }
 impl FileClientProfile {
     /// Select the verified-peer mode before creating storage. Domain separation
     /// pins the entire original opaque binding and exact UID/GID/optional PID in
     /// the ORIGINAL recovery image. Old raw-mode stores are not migrated here.
-    pub fn with_peer_policy(self, policy: PeerPolicy) -> Result<FilePeerClientProfile, FileClientError> {
+    pub fn with_peer_policy(
+        self,
+        policy: PeerPolicy,
+    ) -> Result<FilePeerClientProfile, FileClientError> {
         let mut w = Writer::new(MAX_BINDING_BYTES);
-        w.raw(BINDING_DOMAIN)?; w.blob(&self.binding)?;
-        w.u32(policy.uid())?; w.u32(policy.gid())?;
+        w.raw(BINDING_DOMAIN)?;
+        w.blob(&self.binding)?;
+        w.u32(policy.uid())?;
+        w.u32(policy.gid())?;
         w.u8(u8::from(policy.pid().is_some()))?;
-        if let Some(pid) = policy.pid() { w.u32(pid)?; }
+        if let Some(pid) = policy.pid() {
+            w.u32(pid)?;
+        }
         let inner = Self::new(w.finish(), self.limits, self.image_bytes)?;
         Ok(FilePeerClientProfile { inner, policy })
     }
@@ -60,32 +77,47 @@ pub struct FilePeerClient {
 }
 impl fmt::Debug for FilePeerClient {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("FilePeerClient").field("revision", &self.revision())
-            .field("policy", &self.profile.policy).finish_non_exhaustive()
+        f.debug_struct("FilePeerClient")
+            .field("revision", &self.revision())
+            .field("policy", &self.profile.policy)
+            .finish_non_exhaustive()
     }
 }
 impl FilePeerClient {
-    pub fn create(directory: impl AsRef<Path>, profile: FilePeerClientProfile) -> Result<Self, FileClientError> {
+    pub fn create(
+        directory: impl AsRef<Path>,
+        profile: FilePeerClientProfile,
+    ) -> Result<Self, FileClientError> {
         let client = FileActorClient::create(directory, profile.inner.clone())?;
         Ok(Self { client, profile })
     }
     /// Original full-image checks, work-reservation handling and revision floor
     /// precede staging cleanup. Changing the peer policy is a binding mismatch.
     /// No socket is created, and saved credentials never stand in for a new check.
-    pub fn open(directory: impl AsRef<Path>, profile: FilePeerClientProfile,
-        minimum_revision: u64) -> Result<Self, FileClientError>
-    {
+    pub fn open(
+        directory: impl AsRef<Path>,
+        profile: FilePeerClientProfile,
+        minimum_revision: u64,
+    ) -> Result<Self, FileClientError> {
         let client = FileActorClient::open(directory, profile.inner.clone(), minimum_revision)?;
         Ok(Self { client, profile })
     }
-    pub fn read(directory: impl AsRef<Path>, profile: &FilePeerClientProfile,
-        minimum_revision: u64) -> Result<FileClientInspection, FileClientError>
-    {
+    pub fn read(
+        directory: impl AsRef<Path>,
+        profile: &FilePeerClientProfile,
+        minimum_revision: u64,
+    ) -> Result<FileClientInspection, FileClientError> {
         FileActorClient::read(directory, &profile.inner, minimum_revision)
     }
-    pub fn revision(&self) -> u64 { self.client.revision() }
-    pub fn state(&self) -> &ActorClientState { self.client.state() }
-    pub fn profile(&self) -> &FilePeerClientProfile { &self.profile }
+    pub fn revision(&self) -> u64 {
+        self.client.revision()
+    }
+    pub fn state(&self) -> &ActorClientState {
+        self.client.state()
+    }
+    pub fn profile(&self) -> &FilePeerClientProfile {
+        &self.profile
+    }
 
     /// Reuse PeerPolicy::verify on THIS socket before mode changes, protocol work
     /// or moving the original client. An error drops only the candidate socket
@@ -99,17 +131,32 @@ impl FilePeerClient {
             Err(error) => {
                 let refusal = if error.kind() == io::ErrorKind::PermissionDenied {
                     PeerRefusal::CredentialsRejected
-                } else { PeerRefusal::Io { stage: PeerSetupStage::Credentials, kind: error.kind() } };
-                return Err(FilePeerConnectFailure { refusal, client: self });
+                } else {
+                    PeerRefusal::Io {
+                        stage: PeerSetupStage::Credentials,
+                        kind: error.kind(),
+                    }
+                };
+                return Err(FilePeerConnectFailure {
+                    refusal,
+                    client: self,
+                });
             }
         };
         if let Err(error) = socket.set_nonblocking(true) {
-            return Err(FilePeerConnectFailure { refusal: PeerRefusal::Io {
-                stage: PeerSetupStage::Nonblocking, kind: error.kind(),
-            }, client: self });
+            return Err(FilePeerConnectFailure {
+                refusal: PeerRefusal::Io {
+                    stage: PeerSetupStage::Nonblocking,
+                    kind: error.kind(),
+                },
+                client: self,
+            });
         }
-        Ok(FilePeerConnection { connection: self.client.connect(socket),
-            profile: self.profile, credentials })
+        Ok(FilePeerConnection {
+            connection: self.client.connect(socket),
+            profile: self.profile,
+            credentials,
+        })
     }
 }
 
@@ -132,18 +179,36 @@ pub struct FilePeerConnection {
 }
 impl fmt::Debug for FilePeerConnection {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("FilePeerConnection").field("revision", &self.revision())
-            .field("credentials", &self.credentials).field("unavailable", &self.unavailable()).finish()
+        f.debug_struct("FilePeerConnection")
+            .field("revision", &self.revision())
+            .field("credentials", &self.credentials)
+            .field("unavailable", &self.unavailable())
+            .finish()
     }
 }
 impl FilePeerConnection {
     /// Historical credentials of this socket's connection, not of each sender.
-    pub fn credentials(&self) -> PeerCredentials { self.credentials }
-    pub fn revision(&self) -> u64 { self.connection.revision() }
-    pub fn unavailable(&self) -> bool { self.connection.unavailable() }
-    pub fn state(&self) -> Result<&ActorClientState, FileClientError> { self.connection.state() }
-    pub fn phase(&self) -> Result<Option<ClientPhase>, FileClientError> { self.connection.phase() }
-    pub fn submit(&mut self, revision: u64, request: u64, proposal: &ActorProposal) -> Result<(), FileClientError> {
+    pub fn credentials(&self) -> PeerCredentials {
+        self.credentials
+    }
+    pub fn revision(&self) -> u64 {
+        self.connection.revision()
+    }
+    pub fn unavailable(&self) -> bool {
+        self.connection.unavailable()
+    }
+    pub fn state(&self) -> Result<&ActorClientState, FileClientError> {
+        self.connection.state()
+    }
+    pub fn phase(&self) -> Result<Option<ClientPhase>, FileClientError> {
+        self.connection.phase()
+    }
+    pub fn submit(
+        &mut self,
+        revision: u64,
+        request: u64,
+        proposal: &ActorProposal,
+    ) -> Result<(), FileClientError> {
         self.connection.submit(revision, request, proposal)
     }
     pub fn retry_submission(&mut self, revision: u64, request: u64) -> Result<(), FileClientError> {
@@ -158,13 +223,20 @@ impl FilePeerConnection {
     pub fn step(&mut self, revision: u64) -> Result<ClientProgress, FileClientError> {
         self.connection.step(revision)
     }
-    pub fn drive(&mut self, revision: u64, budget: ClientDriveBudget) -> Result<ClientDriveReport, FileClientError> {
+    pub fn drive(
+        &mut self,
+        revision: u64,
+        budget: ClientDriveBudget,
+    ) -> Result<ClientDriveReport, FileClientError> {
         self.connection.drive(revision, budget)
     }
     /// Preserve the same immutable policy and original client. The next socket
     /// must verify afresh; no accepted credentials or ticket visibility transfer.
     pub fn into_disconnected(self) -> Result<FilePeerClient, FileClientError> {
-        Ok(FilePeerClient { client: self.connection.into_disconnected()?, profile: self.profile })
+        Ok(FilePeerClient {
+            client: self.connection.into_disconnected()?,
+            profile: self.profile,
+        })
     }
 }
 

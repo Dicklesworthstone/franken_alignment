@@ -1,4 +1,5 @@
 //! Separable synthetic residuals, not evidence about a pretrained detector.
+#![allow(dead_code, unused_imports)]
 use fa_reference::action::consequence::activation::probe::training::{
     CaseLabel, CaseOrigin, DataSplit, FitPolicy,
 };

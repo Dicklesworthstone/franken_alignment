@@ -1,32 +1,45 @@
 //! Source-free recovery of one original domain without retaining a live owner.
 //! An exact completed retry confirms the same canonical image, not another fence.
-use super::{FileOversight, FileOversightProfile, FileStopSweep, JournalError, StopProgress, StopRequest};
-use super::super::{Machine, journal, storage};
 use super::super::guarded::anchored::FileHistoryAnchor;
+use super::super::{Machine, journal, storage};
+use super::{
+    FileOversight, FileOversightProfile, FileStopSweep, JournalError, StopProgress, StopRequest,
+};
+use crate::Error;
 use crate::action::ElapsedTick;
 use crate::action::consequence::delivery::persistent::FileDeliverySnapshot;
-use crate::Error;
 use std::path::Path;
 
 mod anchored;
 mod cooperative;
-pub use cooperative::{FileStopRecovery, FileStopRecoveryProgress, FileStopRecoveryStatus,
-    FileAdmissionStoppedHistory};
+pub use cooperative::{
+    FileAdmissionStoppedHistory, FileStopRecovery, FileStopRecoveryProgress, FileStopRecoveryStatus,
+};
 
 /// Observed native state, never a recovered reviewer, automatic key or owner.
 /// A completed historical stop may still contain charges for executed effects.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum FileStoppedRecovery {
-    AlreadyDrained { snapshot: FileDeliverySnapshot, progress: StopProgress },
-    Advanced { snapshot: FileDeliverySnapshot, sweep: FileStopSweep },
+    AlreadyDrained {
+        snapshot: FileDeliverySnapshot,
+        progress: StopProgress,
+    },
+    Advanced {
+        snapshot: FileDeliverySnapshot,
+        sweep: FileStopSweep,
+    },
 }
 impl FileStoppedRecovery {
     pub fn snapshot(&self) -> &FileDeliverySnapshot {
-        match self { Self::AlreadyDrained { snapshot, .. } | Self::Advanced { snapshot, .. } => snapshot }
+        match self {
+            Self::AlreadyDrained { snapshot, .. } | Self::Advanced { snapshot, .. } => snapshot,
+        }
     }
     pub fn progress(&self) -> &StopProgress {
-        match self { Self::AlreadyDrained { progress, .. } => progress,
-            Self::Advanced { sweep, .. } => &sweep.progress }
+        match self {
+            Self::AlreadyDrained { progress, .. } => progress,
+            Self::Advanced { sweep, .. } => &sweep.progress,
+        }
     }
 }
 
@@ -44,8 +57,12 @@ pub struct FileStoppedHistory {
     anchor: FileHistoryAnchor,
 }
 impl FileStoppedHistory {
-    pub fn stopped(&self) -> &FileStoppedRecovery { &self.stopped }
-    pub fn history_anchor(&self) -> &FileHistoryAnchor { &self.anchor }
+    pub fn stopped(&self) -> &FileStoppedRecovery {
+        &self.stopped
+    }
+    pub fn history_anchor(&self) -> &FileHistoryAnchor {
+        &self.anchor
+    }
     pub fn into_parts(self) -> (FileStoppedRecovery, FileHistoryAnchor) {
         (self.stopped, self.anchor)
     }
@@ -74,11 +91,19 @@ impl FileOversight {
     /// candidate receipt. A failure does not imply that no replacement occurred.
     /// This is one local reference sink, not a remote or process-stop guarantee;
     /// storage integrity and anti-rollback remain independent host assumptions.
-    pub fn recover_stopped<F>(directory: impl AsRef<Path>, profile: FileOversightProfile,
-        request: StopRequest, clock: F) -> Result<FileStoppedRecovery, JournalError>
-    where F: FnOnce() -> ElapsedTick {
+    pub fn recover_stopped<F>(
+        directory: impl AsRef<Path>,
+        profile: FileOversightProfile,
+        request: StopRequest,
+        clock: F,
+    ) -> Result<FileStoppedRecovery, JournalError>
+    where
+        F: FnOnce() -> ElapsedTick,
+    {
         profile.delivery.limits.check()?;
-        if request.operation == 0 { return Err(Error::InvalidInput.into()); }
+        if request.operation == 0 {
+            return Err(Error::InvalidInput.into());
+        }
         let store = storage::Store::open(directory.as_ref())?;
         recover_locked(store, profile, request, clock)
     }
@@ -86,9 +111,15 @@ impl FileOversight {
 
 // Private split for deterministic native Store fault tests. It cannot be used to
 // substitute a caller's snapshot, unlock between read/write, or import an owner.
-fn recover_locked<F>(store: storage::Store, profile: FileOversightProfile,
-    request: StopRequest, clock: F) -> Result<FileStoppedRecovery, JournalError>
-where F: FnOnce() -> ElapsedTick {
+fn recover_locked<F>(
+    store: storage::Store,
+    profile: FileOversightProfile,
+    request: StopRequest,
+    clock: F,
+) -> Result<FileStoppedRecovery, JournalError>
+where
+    F: FnOnce() -> ElapsedTick,
+{
     FileStopRecovery::begin_store(store, profile, None)?.finish_synchronously(request, clock)
 }
 

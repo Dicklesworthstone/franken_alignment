@@ -20,8 +20,13 @@ impl OversightBroker {
     /// Select the immutable held-out joint guard before ANY empirical work.
     /// Owned-round evaluation is mutually exclusive, including before labels.
     pub fn enable_held_out_joint(&mut self, policy: HeldOutJointPolicy) -> Result<(), Error> {
-        if self.credibility.is_some() { return Err(Error::Binding); }
-        if !self.inputs.is_empty() || !self.started_rounds.is_empty() || self.stop_receipt().is_some() {
+        if self.credibility.is_some() {
+            return Err(Error::Binding);
+        }
+        if !self.inputs.is_empty()
+            || !self.started_rounds.is_empty()
+            || self.stop_receipt().is_some()
+        {
             return Err(Error::WrongState);
         }
         self.delivery.enable_held_out_joint(policy)
@@ -31,7 +36,10 @@ impl OversightBroker {
         self.delivery.controller().held_out_joint_policy()
     }
 
-    pub fn held_out_joint_report(&self, operation: u64) -> Result<Option<&HeldOutJointReport>, Error> {
+    pub fn held_out_joint_report(
+        &self,
+        operation: u64,
+    ) -> Result<Option<&HeldOutJointReport>, Error> {
         self.delivery.controller().held_out_joint_report(operation)
     }
 

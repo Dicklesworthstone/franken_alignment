@@ -1,4 +1,5 @@
 //! Shared small, history-sensitive decoder for restart integration tests.
+#![allow(dead_code, unused_imports)]
 use fa_reference::action::consequence::activation::monitor::learned::{
     LearnedMonitorBudget, LearnedRefinementMonitor,
     model::{KvTap, LearnedAuditBudget, LearnedAuditPreparationBudget, LearnedModelMonitor},

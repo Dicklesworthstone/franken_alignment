@@ -1,4 +1,4 @@
-#![allow(dead_code)]
+#![allow(dead_code, unused_imports)]
 use fa_reference::action::consequence::activation::identity::{IdentityAnchor, ModelManifest, ModelPassport};
 use fa_reference::action::consequence::activation::tensor::kv::decoder::{
     DecoderIdentity, DecoderLayerWeights, DecoderModel, DecoderProfile, DecoderShape,

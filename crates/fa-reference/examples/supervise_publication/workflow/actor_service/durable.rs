@@ -1,9 +1,13 @@
 //! Runnable actor-only custody of exact requests through the original durable client.
 //! No supervisor config, evidence reader, human role or effect owner is loaded.
+#[path = "durable/settings.rs"]
 mod settings;
+#[path = "durable/report.rs"]
 mod report;
+#[path = "durable/cancel.rs"]
 mod cancel;
 #[cfg(test)]
+#[path = "durable/tests.rs"]
 mod tests;
 use settings::Settings;
 use super::{Profile, Duration, Instant, debug, pause};

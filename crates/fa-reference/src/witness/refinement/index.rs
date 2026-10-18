@@ -8,10 +8,15 @@
 mod observation;
 pub mod routing;
 
-pub use observation::{ChangeObservation, ChangeObservationOutcome, ChangeObservationReport, RoutedChangeCommit};
 use super::RefinementBudget;
+pub use observation::{
+    ChangeObservation, ChangeObservationOutcome, ChangeObservationReport, RoutedChangeCommit,
+};
 
-use super::{Error, ProductFrontiers, Witness, WitnessJudgment, WitnessRefinement, WitnessSnapshot, closed_marker};
+use super::{
+    Error, ProductFrontiers, Witness, WitnessJudgment, WitnessRefinement, WitnessSnapshot,
+    closed_marker,
+};
 use crate::witness::{MAX_WITNESSES, WitnessRequest};
 use std::collections::{BTreeSet, VecDeque};
 use std::rc::Rc;
@@ -42,7 +47,9 @@ pub enum IndexFallback {
 pub enum IndexSelection {
     /// Candidate membership is NOT an invalidation verdict. ABA changes still
     /// need exact final-value validation, and negative frontiers always recheck.
-    Candidates { count: usize },
+    Candidates {
+        count: usize,
+    },
     ExactFallback(IndexFallback),
 }
 
@@ -192,15 +199,22 @@ impl<'a> WitnessChangeIndex<'a> {
         }
         let mut candidates = [false; MAX_WITNESSES];
         for (position, dependency) in captured.judgment.witnesses.iter().enumerate() {
-            for delta in self.deltas.iter().filter(|delta| delta.revision > captured.judgment.revision) {
+            for delta in self
+                .deltas
+                .iter()
+                .filter(|delta| delta.revision > captured.judgment.revision)
+            {
                 if report.dependency_checks == max_checks {
                     report.selection = IndexSelection::ExactFallback(IndexFallback::PlanningBudget);
                     return (report, cursor);
                 }
                 report.dependency_checks += 1;
                 let overlaps = match dependency {
-                    Witness::ExactValue { key, .. } | Witness::AbsentKey { key, .. } => delta.keys.contains(key),
-                    Witness::EmptyRange { start, end, .. } | Witness::RangeMembers { start, end, .. } => {
+                    Witness::ExactValue { key, .. } | Witness::AbsentKey { key, .. } => {
+                        delta.keys.contains(key)
+                    }
+                    Witness::EmptyRange { start, end, .. }
+                    | Witness::RangeMembers { start, end, .. } => {
                         delta.keys.range(*start..*end).next().is_some()
                     }
                 };

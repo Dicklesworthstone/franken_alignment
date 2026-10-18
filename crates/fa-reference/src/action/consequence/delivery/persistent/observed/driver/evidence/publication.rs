@@ -2,17 +2,18 @@
 //! Reuse its review, authorization, two-key dispatch and publish/reconcile phases.
 //! This is an acquisition adapter, not another driver or a permitting fallback.
 pub mod completion;
-pub mod heartbeat;
-pub mod feed;
 pub mod deferred;
-use super::{FileEvidenceReport, FileProvider};
-use super::super::{CommitteeContract, DriverEvidence, ElapsedTick, Error,
-    FileCredentialPermit, FileDriverEvent, FileHumanPermit, FileOversight,
-    FileSupervisedDriver, FrozenAction, JournalError};
-use super::super::provider::{Callback, EvidenceProvider, validate};
+pub mod feed;
+pub mod heartbeat;
 use super::super::super::publication::capture::{
     FileCaptureError, FileCaptureIdentity, PublicationInputFile,
 };
+use super::super::provider::{Callback, EvidenceProvider, validate};
+use super::super::{
+    CommitteeContract, DriverEvidence, ElapsedTick, Error, FileCredentialPermit, FileDriverEvent,
+    FileHumanPermit, FileOversight, FileSupervisedDriver, FrozenAction, JournalError,
+};
+use super::{FileEvidenceReport, FileProvider};
 use crate::action::consequence::oversight::evidence_source::EvidenceFile;
 
 /// Actual witness-file reads alongside the original committee-source report.
@@ -35,43 +36,84 @@ impl FileSupervisedDriver {
     /// Idle, reconciliation and already resolved/expired publication do not read
     /// either provider. Credential capability remains optional here and required
     /// by a credential-guarded host at its original first-publication boundary.
-    pub fn step_with_publication_source<F, P>(&mut self, source: &PublicationInputFile,
-        clock: F, provider: P, human: Option<&FileHumanPermit>,
-        credential: Option<&FileCredentialPermit>) -> FilePublicationDriverReport<FileDriverEvent>
-    where F: FnMut() -> ElapsedTick,
+    pub fn step_with_publication_source<F, P>(
+        &mut self,
+        source: &PublicationInputFile,
+        clock: F,
+        provider: P,
+        human: Option<&FileHumanPermit>,
+        credential: Option<&FileCredentialPermit>,
+    ) -> FilePublicationDriverReport<FileDriverEvent>
+    where
+        F: FnMut() -> ElapsedTick,
         P: FnMut(&FrozenAction, &CommitteeContract) -> Result<DriverEvidence, Error>,
     {
         let attempt = self.job.as_ref().map(|job| job.attempt);
         let mut reads = Vec::with_capacity(2);
-        let result = self.step_with_provider(clock, &mut PublicationProvider {
-            inner: Callback(provider), attempt, source, reads: &mut reads,
-        }, human, credential);
-        FilePublicationDriverReport { reads, evidence: FileEvidenceReport {
-            observations: Vec::new(), source_updates: Vec::new(), result,
-        } }
+        let result = self.step_with_provider(
+            clock,
+            &mut PublicationProvider {
+                inner: Callback(provider),
+                attempt,
+                source,
+                reads: &mut reads,
+            },
+            human,
+            credential,
+        );
+        FilePublicationDriverReport {
+            reads,
+            evidence: FileEvidenceReport {
+                observations: Vec::new(),
+                source_updates: Vec::new(),
+                result,
+            },
+        }
     }
 
     /// Both sources use concrete readers. The inner adapter is the SAME native
     /// file/source gate used by step_from_file, including source failure and
     /// generation/freshness handling; no callback can substitute a cached image.
     /// The two reads are sequential, not an atomic cross-producer snapshot.
-    pub fn step_from_files_with_publication_source<S, F>(&mut self,
-        evidence_source: &mut S, source: &PublicationInputFile, clock: F,
-        human: Option<&FileHumanPermit>, credential: Option<&FileCredentialPermit>)
-        -> FilePublicationDriverReport<FileDriverEvent>
-    where S: EvidenceFile + ?Sized, F: FnMut() -> ElapsedTick {
+    pub fn step_from_files_with_publication_source<S, F>(
+        &mut self,
+        evidence_source: &mut S,
+        source: &PublicationInputFile,
+        clock: F,
+        human: Option<&FileHumanPermit>,
+        credential: Option<&FileCredentialPermit>,
+    ) -> FilePublicationDriverReport<FileDriverEvent>
+    where
+        S: EvidenceFile + ?Sized,
+        F: FnMut() -> ElapsedTick,
+    {
         let attempt = self.job.as_ref().map(|job| job.attempt);
         let mut observations = Vec::with_capacity(2);
         let mut source_updates = Vec::with_capacity(2);
         let mut reads = Vec::with_capacity(2);
-        let result = self.step_with_provider(clock, &mut PublicationProvider {
-            inner: FileProvider { source: evidence_source, observations: &mut observations,
-                updates: &mut source_updates },
-            attempt, source, reads: &mut reads,
-        }, human, credential);
-        FilePublicationDriverReport { reads, evidence: FileEvidenceReport {
-            observations, source_updates, result,
-        } }
+        let result = self.step_with_provider(
+            clock,
+            &mut PublicationProvider {
+                inner: FileProvider {
+                    source: evidence_source,
+                    observations: &mut observations,
+                    updates: &mut source_updates,
+                },
+                attempt,
+                source,
+                reads: &mut reads,
+            },
+            human,
+            credential,
+        );
+        FilePublicationDriverReport {
+            reads,
+            evidence: FileEvidenceReport {
+                observations,
+                source_updates,
+                result,
+            },
+        }
     }
 }
 
@@ -82,21 +124,38 @@ struct PublicationProvider<'a, P> {
     reads: &'a mut Vec<Result<FileCaptureIdentity, FileCaptureError>>,
 }
 impl<P: EvidenceProvider> EvidenceProvider for PublicationProvider<'_, P> {
-    fn capture<F>(&mut self, host: &mut FileOversight, action: &FrozenAction, clock: &mut F)
-        -> Result<Result<DriverEvidence, Error>, JournalError>
-    where F: FnMut() -> ElapsedTick {
+    fn capture<F>(
+        &mut self,
+        host: &mut FileOversight,
+        action: &FrozenAction,
+        clock: &mut F,
+    ) -> Result<Result<DriverEvidence, Error>, JournalError>
+    where
+        F: FnMut() -> ElapsedTick,
+    {
         let attempt = self.attempt.ok_or(Error::Missing)?;
         // Commit withdrawal BEFORE either external observation, including before
         // a committee callback can unwind. Neither an outer nor inner failure can
         // leave a previous witness capture eligible for a later direct publish.
         let revision = host.revision();
         let expected = host.begin_publication_capture(revision, attempt, self.source.source())?;
-        let captured = self.inner.capture(host, action, clock)?
+        let captured = self
+            .inner
+            .capture(host, action, clock)?
             .and_then(|evidence| validate(evidence, action, &host.profile.committee));
-        let evidence = match captured { Ok(evidence) => evidence, Err(error) => return Ok(Err(error)) };
+        let evidence = match captured {
+            Ok(evidence) => evidence,
+            Err(error) => return Ok(Err(error)),
+        };
         let capture = match self.source.read_capture() {
-            Ok(capture) => { self.reads.push(Ok(capture.identity())); capture }
-            Err(error) => { self.reads.push(Err(error)); return Ok(Err(error.contract_error())); }
+            Ok(capture) => {
+                self.reads.push(Ok(capture.identity()));
+                capture
+            }
+            Err(error) => {
+                self.reads.push(Err(error));
+                return Ok(Err(error.contract_error()));
+            }
         };
         // Source/action/generation and immutable requirements are checked by the
         // original journal candidate. A failed install is an OUTER journal error,

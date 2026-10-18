@@ -1,4 +1,4 @@
-#![allow(dead_code)]
+#![allow(dead_code, unused_imports)]
 #[path = "file_oversight.rs"] mod oversight;
 #[path = "decoder_inputs.rs"] pub mod data;
 pub use oversight::*;

@@ -1,12 +1,14 @@
 //! Fresh registered observations at the original source-only actor boundary.
 //! The source reference is validated before any clock, file read or snapshot use.
 #[cfg(target_os = "linux")]
-mod peer;
-#[cfg(target_os = "linux")]
 mod inbox;
+#[cfg(target_os = "linux")]
+mod peer;
 
-use super::{ActorError, ActorProposal, ElapsedTick, FileGeneratedTextActorPort, FileOversight, decode};
 use super::super::super::{FileActorExchange, FileActorFeed, FileActorSupervisor, JournalError};
+use super::{
+    ActorError, ActorProposal, ElapsedTick, FileGeneratedTextActorPort, FileOversight, decode,
+};
 use crate::action::consequence::delivery::persistent::observed::driver::FileSupervisedDriver;
 use crate::action::consequence::delivery::persistent::observed::driver::evidence::FileEvidenceReport;
 use crate::action::consequence::oversight::actor_wire::{ActorChannel, ActorWire};
@@ -15,10 +17,18 @@ use crate::action::consequence::oversight::evidence_source::{EvidenceFile, Evide
 impl FileActorSupervisor<FileOversight> {
     // One private adapter for complete Submit frames. Reuse BOTH existing
     // validators; never derive a fresh observation from a source ID or old slot.
-    fn prepare_generated_submission<S, F>(&mut self, request: u64, proposal: &ActorProposal,
-        source: &mut S, clock: &mut F, intake: &mut Option<FileEvidenceReport<EvidenceIdentity>>)
-        -> Result<(), ActorError>
-    where S: EvidenceFile + ?Sized, F: FnMut() -> ElapsedTick {
+    fn prepare_generated_submission<S, F>(
+        &mut self,
+        request: u64,
+        proposal: &ActorProposal,
+        source: &mut S,
+        clock: &mut F,
+        intake: &mut Option<FileEvidenceReport<EvidenceIdentity>>,
+    ) -> Result<(), ActorError>
+    where
+        S: EvidenceFile + ?Sized,
+        F: FnMut() -> ElapsedTick,
+    {
         decode(request, proposal)?;
         self.prepare_wire_submission(request, source, clock, intake)
     }
@@ -33,10 +43,17 @@ impl FileActorSupervisor<FileOversight> {
     /// a successful intake report does not mean the following proposal committed.
     /// Private producer/IO diagnostics remain in intake, never the actor response.
     /// A foreign gateway refuses before parsing, observation or host mutation.
-    pub fn exchange_generated_actor_from_file<S, F>(&mut self,
-        wire: &mut ActorWire<FileGeneratedTextActorPort>, document: &[u8], source: &mut S,
-        mut clock: F) -> Result<FileActorExchange, JournalError>
-    where S: EvidenceFile + ?Sized, F: FnMut() -> ElapsedTick {
+    pub fn exchange_generated_actor_from_file<S, F>(
+        &mut self,
+        wire: &mut ActorWire<FileGeneratedTextActorPort>,
+        document: &[u8],
+        source: &mut S,
+        mut clock: F,
+    ) -> Result<FileActorExchange, JournalError>
+    where
+        S: EvidenceFile + ?Sized,
+        F: FnMut() -> ElapsedTick,
+    {
         self.check_source_wire(&wire.request_port().port)?;
         let mut intake = None;
         let response = wire.exchange_with_admission(document, |_, request, proposal| {
@@ -50,10 +67,17 @@ impl FileActorSupervisor<FileOversight> {
     /// a read for the next request. FeedResult retains its exact consumed prefix.
     /// No unbounded queue, observation callback supplied by an actor, implicit
     /// generation step or extra effect authority is introduced.
-    pub fn feed_generated_actor_from_file<S, F>(&mut self,
-        channel: &mut ActorChannel<FileGeneratedTextActorPort>, bytes: &[u8], source: &mut S,
-        mut clock: F) -> Result<FileActorFeed, JournalError>
-    where S: EvidenceFile + ?Sized, F: FnMut() -> ElapsedTick {
+    pub fn feed_generated_actor_from_file<S, F>(
+        &mut self,
+        channel: &mut ActorChannel<FileGeneratedTextActorPort>,
+        bytes: &[u8],
+        source: &mut S,
+        mut clock: F,
+    ) -> Result<FileActorFeed, JournalError>
+    where
+        S: EvidenceFile + ?Sized,
+        F: FnMut() -> ElapsedTick,
+    {
         self.check_source_wire(&channel.request_port().port)?;
         let mut intake = None;
         let feed = channel.feed_with_admission(bytes, |_, request, proposal| {
@@ -65,20 +89,38 @@ impl FileActorSupervisor<FileOversight> {
 
 impl FileSupervisedDriver {
     /// Same intake, with existing helper cleanup after success or refusal.
-    pub fn exchange_generated_actor_from_file<S, F>(&mut self,
-        wire: &mut ActorWire<FileGeneratedTextActorPort>, document: &[u8], source: &mut S,
-        clock: F) -> Result<FileActorExchange, JournalError>
-    where S: EvidenceFile + ?Sized, F: FnMut() -> ElapsedTick {
-        let result = self.supervisor_mut().exchange_generated_actor_from_file(wire, document, source, clock);
+    pub fn exchange_generated_actor_from_file<S, F>(
+        &mut self,
+        wire: &mut ActorWire<FileGeneratedTextActorPort>,
+        document: &[u8],
+        source: &mut S,
+        clock: F,
+    ) -> Result<FileActorExchange, JournalError>
+    where
+        S: EvidenceFile + ?Sized,
+        F: FnMut() -> ElapsedTick,
+    {
+        let result = self
+            .supervisor_mut()
+            .exchange_generated_actor_from_file(wire, document, source, clock);
         self.reap_helpers();
         result
     }
 
-    pub fn feed_generated_actor_from_file<S, F>(&mut self,
-        channel: &mut ActorChannel<FileGeneratedTextActorPort>, bytes: &[u8], source: &mut S,
-        clock: F) -> Result<FileActorFeed, JournalError>
-    where S: EvidenceFile + ?Sized, F: FnMut() -> ElapsedTick {
-        let result = self.supervisor_mut().feed_generated_actor_from_file(channel, bytes, source, clock);
+    pub fn feed_generated_actor_from_file<S, F>(
+        &mut self,
+        channel: &mut ActorChannel<FileGeneratedTextActorPort>,
+        bytes: &[u8],
+        source: &mut S,
+        clock: F,
+    ) -> Result<FileActorFeed, JournalError>
+    where
+        S: EvidenceFile + ?Sized,
+        F: FnMut() -> ElapsedTick,
+    {
+        let result = self
+            .supervisor_mut()
+            .feed_generated_actor_from_file(channel, bytes, source, clock);
         self.reap_helpers();
         result
     }

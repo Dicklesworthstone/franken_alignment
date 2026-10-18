@@ -1,9 +1,9 @@
 //! Freeze automatic learned containment into the exact durable bootstrap recipe.
 //! The ORIGINAL learned stop policy, trigger detector and stop reducer do the work.
-use super::{FileLearnedConfig, HostedStopPolicy, Writer, DOMAIN, MAX_CONFIG_BYTES};
+use super::{DOMAIN, FileLearnedConfig, HostedStopPolicy, MAX_CONFIG_BYTES, Writer};
+use crate::Error;
 use crate::action::consequence::delivery::persistent::{JournalError, observed::FileOversight};
 use crate::action::consequence::oversight::learned_host::LearnedHostStopIncident;
-use crate::Error;
 
 impl FileLearnedConfig {
     /// Select the original terminal-stop profile before installation or inference.
@@ -16,7 +16,9 @@ impl FileLearnedConfig {
     /// Text, stream and mandatory-sidecar choices are preserved. Wrapper order is
     /// part of the byte-exact recipe, just as its other configuration choices are.
     pub fn with_automatic_stop(mut self, policy: HostedStopPolicy) -> Result<Self, Error> {
-        if self.automatic_stop.is_some() { return Err(Error::Duplicate); }
+        if self.automatic_stop.is_some() {
+            return Err(Error::Duplicate);
+        }
         let mut writer = Writer::new(MAX_CONFIG_BYTES);
         writer.raw(DOMAIN)?;
         // Legacy numeric recipes require nonzero monitor generation. Existing
@@ -24,13 +26,17 @@ impl FileLearnedConfig {
         writer.u64(0)?;
         writer.raw(b"FALSTOP\x01")?;
         writer.blob(&self.bytes)?;
-        for value in [policy.id(), policy.generation(), policy.operation()] { writer.u64(value)?; }
+        for value in [policy.id(), policy.generation(), policy.operation()] {
+            writer.u64(value)?;
+        }
         self.bytes = writer.finish().into();
         self.automatic_stop = Some(policy);
         Ok(self)
     }
 
-    pub fn automatic_stop_policy(&self) -> Option<HostedStopPolicy> { self.automatic_stop }
+    pub fn automatic_stop_policy(&self) -> Option<HostedStopPolicy> {
+        self.automatic_stop
+    }
 }
 
 impl FileOversight {
@@ -50,8 +56,12 @@ impl FileOversight {
     /// use fa_reference::action::consequence::delivery::persistent::observed::FileOversight;
     /// fn relax(host: &mut FileOversight) { host.disable_learned_host_stop(); }
     /// ```
-    pub fn learned_host_stop_incident(&self) -> Result<Option<LearnedHostStopIncident>, JournalError> {
-        if self.fault.is_some() { return Err(JournalError::Unavailable); }
+    pub fn learned_host_stop_incident(
+        &self,
+    ) -> Result<Option<LearnedHostStopIncident>, JournalError> {
+        if self.fault.is_some() {
+            return Err(JournalError::Unavailable);
+        }
         Ok(self.machine.broker.learned_host_stop_incident().cloned())
     }
 }

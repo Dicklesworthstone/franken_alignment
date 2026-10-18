@@ -17,7 +17,7 @@ use std::io::{self, Read, Write};
 use std::os::unix::net::UnixStream;
 
 fn pending(host: &mut FileOversight) -> (FrozenAction, CommitteeInput, FileHumanRequest) {
-    let (action, input) = reviewed(host, 1, b"human-reviewed publication");
+    let (action, input) = reviewed(host, 1, b"human-reviewed");
     let request = host.request_human_approval(host.revision(), 1001, 1, &input, ElapsedTick(20)).unwrap();
     (action, input, request)
 }
@@ -82,7 +82,7 @@ fn exact_original_review_packet_and_remote_decision_feed_two_key_publication() {
     assert_eq!(packet.control_sequence(), request.evidence().control_sequence());
     assert_eq!(packet.policy_generation(), request.evidence().policy_generation());
     assert_eq!(packet.expires_at(), ElapsedTick(20));
-    assert!(!format!("{packet:?}").contains("human-reviewed publication"));
+    assert!(!format!("{packet:?}").contains("human-reviewed"));
     let applied = apply(&mut server, &mut host, &role, &mut peer, &packet, ReviewDecision::Approve);
     let human = applied.approval.unwrap();
     assert_eq!(host.human_status(1001).unwrap().disposition, HumanDisposition::Approved);

@@ -45,7 +45,10 @@ impl Predicate {
     }
 
     fn reads_state(&self) -> bool {
-        matches!(self, Self::ExactValue { .. } | Self::Absent { .. } | Self::EmptyRange { .. })
+        matches!(
+            self,
+            Self::ExactValue { .. } | Self::Absent { .. } | Self::EmptyRange { .. }
+        )
     }
 }
 
@@ -121,8 +124,14 @@ impl Policy {
             reads += usize::from(node.reads_state());
             match node {
                 Predicate::TargetIs(target) => {
-                    if [target.adapter, target.object, target.contract_version,
-                        target.expected_version, target.generation].contains(&0)
+                    if [
+                        target.adapter,
+                        target.object,
+                        target.contract_version,
+                        target.expected_version,
+                        target.generation,
+                    ]
+                    .contains(&0)
                     {
                         return Err(Error::InvalidInput);
                     }
@@ -135,7 +144,8 @@ impl Policy {
                 }
                 _ => {}
             }
-            if edges > MAX_POLICY_EDGES || literals > MAX_POLICY_LITERAL_BYTES
+            if edges > MAX_POLICY_EDGES
+                || literals > MAX_POLICY_LITERAL_BYTES
                 || reads > MAX_REQUIRED_WITNESSES
             {
                 return Err(Error::Limit);
@@ -163,7 +173,11 @@ impl Policy {
         &self.nodes
     }
 
-    pub fn evaluate(&self, action: &FrozenAction, snapshot: &Snapshot) -> Result<Evaluation, Error> {
+    pub fn evaluate(
+        &self,
+        action: &FrozenAction,
+        snapshot: &Snapshot,
+    ) -> Result<Evaluation, Error> {
         // Charge every retained occurrence before cloning any provider bytes.
         // Empty-range violations retain one actual member as a nonemptiness
         // witness, not an invalid claim that the range was empty.
@@ -174,12 +188,16 @@ impl Policy {
                     Predicate::ExactValue { key, .. } | Predicate::Absent { key } => {
                         snapshot.values.get(key)
                     }
-                    Predicate::EmptyRange { start, end } => {
-                        snapshot.values.range(*start..*end).next().map(|(_, value)| value)
-                    }
+                    Predicate::EmptyRange { start, end } => snapshot
+                        .values
+                        .range(*start..*end)
+                        .next()
+                        .map(|(_, value)| value),
                     _ => None,
                 };
-                retained = retained.checked_add(value.map_or(0, Vec::len)).ok_or(Error::Limit)?;
+                retained = retained
+                    .checked_add(value.map_or(0, Vec::len))
+                    .ok_or(Error::Limit)?;
                 if retained > MAX_WITNESS_BYTES {
                     return Err(Error::Limit);
                 }
@@ -199,36 +217,60 @@ impl Policy {
                     Predicate::UnitsAtMost(limit) => truth(action.spec().units <= *limit),
                     Predicate::ExactValue { key, value } => {
                         let actual = snapshot.values.get(key);
-                        witnesses.push(ReadWitness::Exact { key: *key, value: actual.cloned() });
+                        witnesses.push(ReadWitness::Exact {
+                            key: *key,
+                            value: actual.cloned(),
+                        });
                         truth(actual == Some(value))
                     }
                     Predicate::Absent { key } => {
                         let actual = snapshot.values.get(key);
-                        witnesses.push(ReadWitness::Exact { key: *key, value: actual.cloned() });
+                        witnesses.push(ReadWitness::Exact {
+                            key: *key,
+                            value: actual.cloned(),
+                        });
                         truth(actual.is_none())
                     }
                     Predicate::EmptyRange { start, end } => {
                         if let Some((key, value)) = snapshot.values.range(*start..*end).next() {
-                            witnesses.push(ReadWitness::Exact { key: *key, value: Some(value.clone()) });
+                            witnesses.push(ReadWitness::Exact {
+                                key: *key,
+                                value: Some(value.clone()),
+                            });
                             Truth::Violated
                         } else {
-                            witnesses.push(ReadWitness::EmptyRange { start: *start, end: *end });
+                            witnesses.push(ReadWitness::EmptyRange {
+                                start: *start,
+                                end: *end,
+                            });
                             Truth::Satisfied
                         }
                     }
                     Predicate::All(children) => {
-                        if children.iter().any(|child| trace[*child].result == Truth::Violated) {
+                        if children
+                            .iter()
+                            .any(|child| trace[*child].result == Truth::Violated)
+                        {
                             Truth::Violated
-                        } else if children.iter().any(|child| trace[*child].result == Truth::Unknown) {
+                        } else if children
+                            .iter()
+                            .any(|child| trace[*child].result == Truth::Unknown)
+                        {
                             Truth::Unknown
                         } else {
                             Truth::Satisfied
                         }
                     }
                     Predicate::Any(children) => {
-                        if children.iter().any(|child| trace[*child].result == Truth::Satisfied) {
+                        if children
+                            .iter()
+                            .any(|child| trace[*child].result == Truth::Satisfied)
+                        {
                             Truth::Satisfied
-                        } else if children.iter().any(|child| trace[*child].result == Truth::Unknown) {
+                        } else if children
+                            .iter()
+                            .any(|child| trace[*child].result == Truth::Unknown)
+                        {
                             Truth::Unknown
                         } else {
                             Truth::Violated
@@ -258,59 +300,109 @@ impl Policy {
 }
 
 fn truth(value: bool) -> Truth {
-    if value { Truth::Satisfied } else { Truth::Violated }
+    if value {
+        Truth::Satisfied
+    } else {
+        Truth::Violated
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::action::{ActionSpec, ElapsedTick, Purpose, Scope, VERSION};
     use crate::Judgment;
+    use crate::action::{ActionSpec, ElapsedTick, Purpose, Scope, VERSION};
     use std::collections::BTreeMap;
 
     fn action() -> FrozenAction {
         FrozenAction::freeze(ActionSpec {
             version: VERSION,
-            scope: Scope { tenant: 1, principal: 2, run: 3, branch: 4, authority: 5, purpose: Purpose::Effect },
-            target: Some(ResolvedTarget { adapter: 1, object: 2, contract_version: 3, expected_version: 4, generation: 5 }),
-            payload: b"publish".to_vec(), required_witnesses: Vec::new(),
-            policy_epoch: 0, deadline: ElapsedTick(100), units: 4,
-        }).unwrap()
+            scope: Scope {
+                tenant: 1,
+                principal: 2,
+                run: 3,
+                branch: 4,
+                authority: 5,
+                purpose: Purpose::Effect,
+            },
+            target: Some(ResolvedTarget {
+                adapter: 1,
+                object: 2,
+                contract_version: 3,
+                expected_version: 4,
+                generation: 5,
+            }),
+            payload: b"publish".to_vec(),
+            required_witnesses: Vec::new(),
+            policy_epoch: 0,
+            deadline: ElapsedTick(100),
+            units: 4,
+        })
+        .unwrap()
     }
 
     fn snapshot() -> Snapshot {
-        Snapshot { semantic_epoch: 3, complete: true, values: BTreeMap::from([(7, vec![9])]) }
+        Snapshot {
+            semantic_epoch: 3,
+            complete: true,
+            values: BTreeMap::from([(7, vec![9])]),
+        }
     }
 
     #[test]
     fn exact_policy_trace_and_witnesses_agree() {
         let action = action();
-        let policy = Policy::new(1, vec![
-            Predicate::TargetIs(action.spec().target.unwrap()),
-            Predicate::ExactValue { key: 7, value: vec![9] },
-            Predicate::PayloadIs(b"publish".to_vec()), Predicate::UnitsAtMost(4),
-            Predicate::All(vec![0, 1, 2, 3]),
-        ]).unwrap();
+        let policy = Policy::new(
+            1,
+            vec![
+                Predicate::TargetIs(action.spec().target.unwrap()),
+                Predicate::ExactValue {
+                    key: 7,
+                    value: vec![9],
+                },
+                Predicate::PayloadIs(b"publish".to_vec()),
+                Predicate::UnitsAtMost(4),
+                Predicate::All(vec![0, 1, 2, 3]),
+            ],
+        )
+        .unwrap();
         let evaluation = policy.evaluate(&action, &snapshot()).unwrap();
         assert!(evaluation.certifiable());
         assert_eq!(evaluation.generation(), 1);
         assert_eq!(evaluation.trace().len(), 5);
         assert_eq!(evaluation.trace()[1].witness, Some(0));
-        assert_eq!(evaluation.witnesses(), &[ReadWitness::Exact { key: 7, value: Some(vec![9]) }]);
+        assert_eq!(
+            evaluation.witnesses(),
+            &[ReadWitness::Exact {
+                key: 7,
+                value: Some(vec![9])
+            }]
+        );
         assert_eq!(evaluation, policy.evaluate(&action, &snapshot()).unwrap());
         let mut changed = snapshot();
         changed.values.insert(7, vec![8]);
         let changed = policy.evaluate(&action, &changed).unwrap();
         assert_eq!(changed.result(), Truth::Violated);
-        assert_eq!(changed.witnesses(), &[ReadWitness::Exact { key: 7, value: Some(vec![8]) }]);
+        assert_eq!(
+            changed.witnesses(),
+            &[ReadWitness::Exact {
+                key: 7,
+                value: Some(vec![8])
+            }]
+        );
     }
 
     #[test]
     fn negative_domains_detect_new_keys_but_allow_unrelated_changes() {
-        let policy = Policy::new(1, vec![
-            Predicate::Absent { key: 8 }, Predicate::EmptyRange { start: 10, end: 20 },
-            Predicate::All(vec![0, 1]),
-        ]).unwrap();
+        let policy = Policy::new(
+            1,
+            vec![
+                Predicate::Absent { key: 8 },
+                Predicate::EmptyRange { start: 10, end: 20 },
+                Predicate::All(vec![0, 1]),
+            ],
+        )
+        .unwrap();
         let original = snapshot();
         let result = policy.evaluate(&action(), &original).unwrap();
         assert!(result.certifiable());
@@ -319,7 +411,10 @@ mod tests {
             let mut changed = original.clone();
             changed.values.insert(key, vec![1]);
             assert!(!judgment.valid_at(&changed).unwrap());
-            assert_eq!(policy.evaluate(&action(), &changed).unwrap().result(), Truth::Violated);
+            assert_eq!(
+                policy.evaluate(&action(), &changed).unwrap().result(),
+                Truth::Violated
+            );
         }
         let mut unrelated = original;
         unrelated.values.insert(20, vec![1]);
@@ -328,24 +423,44 @@ mod tests {
 
     #[test]
     fn negated_empty_range_uses_a_real_nonempty_witness() {
-        let policy = Policy::new(1, vec![
-            Predicate::EmptyRange { start: 5, end: 10 }, Predicate::Not(0),
-        ]).unwrap();
+        let policy = Policy::new(
+            1,
+            vec![
+                Predicate::EmptyRange { start: 5, end: 10 },
+                Predicate::Not(0),
+            ],
+        )
+        .unwrap();
         let mut snapshot = snapshot();
         let result = policy.evaluate(&action(), &snapshot).unwrap();
         assert!(result.certifiable());
-        assert_eq!(result.witnesses(), &[ReadWitness::Exact { key: 7, value: Some(vec![9]) }]);
+        assert_eq!(
+            result.witnesses(),
+            &[ReadWitness::Exact {
+                key: 7,
+                value: Some(vec![9])
+            }]
+        );
         let judgment = Judgment::capture(&snapshot, result.witnesses().to_vec()).unwrap();
         snapshot.values.remove(&7);
         assert!(!judgment.valid_at(&snapshot).unwrap());
-        assert_eq!(policy.evaluate(&action(), &snapshot).unwrap().result(), Truth::Violated);
+        assert_eq!(
+            policy.evaluate(&action(), &snapshot).unwrap().result(),
+            Truth::Violated
+        );
     }
 
     #[test]
     fn any_arm_is_not_a_hidden_dependency() {
-        let policy = Policy::new(1, vec![
-            Predicate::PayloadAtMost(100), Predicate::Absent { key: 7 }, Predicate::Any(vec![0, 1]),
-        ]).unwrap();
+        let policy = Policy::new(
+            1,
+            vec![
+                Predicate::PayloadAtMost(100),
+                Predicate::Absent { key: 7 },
+                Predicate::Any(vec![0, 1]),
+            ],
+        )
+        .unwrap();
         let original = snapshot();
         let result = policy.evaluate(&action(), &original).unwrap();
         assert!(result.certifiable());
@@ -361,14 +476,21 @@ mod tests {
     fn unknown_does_not_become_permission_through_not_or_any() {
         let mut snapshot = snapshot();
         snapshot.complete = false;
-        let negated = Policy::new(1, vec![Predicate::Absent { key: 7 }, Predicate::Not(0)]).unwrap();
+        let negated =
+            Policy::new(1, vec![Predicate::Absent { key: 7 }, Predicate::Not(0)]).unwrap();
         let result = negated.evaluate(&action(), &snapshot).unwrap();
         assert_eq!(result.result(), Truth::Unknown);
         assert!(!result.certifiable());
         assert!(result.witnesses().is_empty());
-        let alternative = Policy::new(1, vec![
-            Predicate::Absent { key: 7 }, Predicate::PayloadAtMost(100), Predicate::Any(vec![0, 1]),
-        ]).unwrap();
+        let alternative = Policy::new(
+            1,
+            vec![
+                Predicate::Absent { key: 7 },
+                Predicate::PayloadAtMost(100),
+                Predicate::Any(vec![0, 1]),
+            ],
+        )
+        .unwrap();
         let result = alternative.evaluate(&action(), &snapshot).unwrap();
         assert_eq!(result.result(), Truth::Satisfied);
         assert!(!result.certifiable());
@@ -376,14 +498,20 @@ mod tests {
 
     #[test]
     fn graph_shape_validation_refuses_cycles_and_unreachable_decoys() {
-        for nodes in [vec![], vec![Predicate::Not(0)],
-            vec![Predicate::All(vec![])], vec![Predicate::Any(vec![])],
+        for nodes in [
+            vec![],
+            vec![Predicate::Not(0)],
+            vec![Predicate::All(vec![])],
+            vec![Predicate::Any(vec![])],
             vec![Predicate::UnitsAtMost(10), Predicate::UnitsAtMost(10)],
             vec![Predicate::EmptyRange { start: 10, end: 10 }],
         ] {
             assert_eq!(Policy::new(1, nodes), Err(Error::InvalidInput));
         }
-        assert_eq!(Policy::new(0, vec![Predicate::UnitsAtMost(1)]), Err(Error::InvalidInput));
+        assert_eq!(
+            Policy::new(0, vec![Predicate::UnitsAtMost(1)]),
+            Err(Error::InvalidInput)
+        );
     }
 
     #[test]
@@ -397,9 +525,24 @@ mod tests {
         assert_eq!(Policy::new(1, nodes), Err(Error::Limit));
         let edges = |count| vec![Predicate::UnitsAtMost(10), Predicate::All(vec![0; count])];
         assert!(Policy::new(1, edges(MAX_POLICY_EDGES)).is_ok());
-        assert_eq!(Policy::new(1, edges(MAX_POLICY_EDGES + 1)), Err(Error::Limit));
-        assert!(Policy::new(1, vec![Predicate::PayloadIs(vec![0; MAX_POLICY_LITERAL_BYTES])]).is_ok());
-        assert_eq!(Policy::new(1, vec![Predicate::PayloadIs(vec![0; MAX_POLICY_LITERAL_BYTES + 1])]), Err(Error::Limit));
+        assert_eq!(
+            Policy::new(1, edges(MAX_POLICY_EDGES + 1)),
+            Err(Error::Limit)
+        );
+        assert!(
+            Policy::new(
+                1,
+                vec![Predicate::PayloadIs(vec![0; MAX_POLICY_LITERAL_BYTES])]
+            )
+            .is_ok()
+        );
+        assert_eq!(
+            Policy::new(
+                1,
+                vec![Predicate::PayloadIs(vec![0; MAX_POLICY_LITERAL_BYTES + 1])]
+            ),
+            Err(Error::Limit)
+        );
     }
 
     #[test]
@@ -410,7 +553,10 @@ mod tests {
             nodes
         };
         assert!(Policy::new(1, nodes(MAX_REQUIRED_WITNESSES)).is_ok());
-        assert_eq!(Policy::new(1, nodes(MAX_REQUIRED_WITNESSES + 1)), Err(Error::Limit));
+        assert_eq!(
+            Policy::new(1, nodes(MAX_REQUIRED_WITNESSES + 1)),
+            Err(Error::Limit)
+        );
         let policy = Policy::new(1, nodes(2)).unwrap();
         let mut snapshot = snapshot();
         snapshot.values.insert(7, vec![0; MAX_WITNESS_BYTES / 2]);
@@ -418,16 +564,29 @@ mod tests {
         snapshot.values.get_mut(&7).unwrap().push(0);
         assert_eq!(policy.evaluate(&action(), &snapshot), Err(Error::Limit));
         snapshot.complete = false;
-        assert_eq!(policy.evaluate(&action(), &snapshot).unwrap().result(), Truth::Unknown);
+        assert_eq!(
+            policy.evaluate(&action(), &snapshot).unwrap().result(),
+            Truth::Unknown
+        );
     }
 
     #[test]
     fn extreme_range_endpoint_never_uses_an_overflowing_successor() {
-        let policy = Policy::new(1, vec![Predicate::EmptyRange { start: u64::MAX - 1, end: u64::MAX }]).unwrap();
+        let policy = Policy::new(
+            1,
+            vec![Predicate::EmptyRange {
+                start: u64::MAX - 1,
+                end: u64::MAX,
+            }],
+        )
+        .unwrap();
         let mut snapshot = snapshot();
         snapshot.values.insert(u64::MAX, vec![1]);
         assert!(policy.evaluate(&action(), &snapshot).unwrap().certifiable());
         snapshot.values.insert(u64::MAX - 1, vec![1]);
-        assert_eq!(policy.evaluate(&action(), &snapshot).unwrap().result(), Truth::Violated);
+        assert_eq!(
+            policy.evaluate(&action(), &snapshot).unwrap().result(),
+            Truth::Violated
+        );
     }
 }

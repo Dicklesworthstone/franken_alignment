@@ -3,35 +3,37 @@
 //! signature. Every configured gate is matched before cleanup or recovery writes.
 
 pub mod anchored;
-pub mod recovery;
-pub mod learned_recovery;
-pub mod investigation;
 pub mod evaluation;
-pub mod predictive;
+pub mod investigation;
+pub mod learned_recovery;
 pub mod mediated;
+pub mod predictive;
+pub mod recovery;
 
 mod bootstrap;
 mod learned;
 pub use bootstrap::FileCredentialRegistration;
 
-use super::credential::FileCredentialPolicy;
-use crate::action::consequence::mediation::AuthorityGraph;
 use super::consistency::FileConsistencyConfig;
-use crate::action::consequence::oversight::credibility::EvaluationProtocol;
+use super::credential::FileCredentialPolicy;
 use super::decoder::{DecoderEvent, FileDecoderConfig};
 use super::governance::campaigns::{CampaignEvent, FilePolicyGovernor};
 use super::identity::FileIdentityObserver;
 use super::source::FileSourcePolicy;
-use super::{BaseEvent, Event, FileHumanReviewer, FileOversight, FileOversightProfile,
-    JournalError, Machine, journal, storage};
+use super::{
+    BaseEvent, Event, FileHumanReviewer, FileOversight, FileOversightProfile, JournalError,
+    Machine, journal, storage,
+};
+use crate::Error;
 use crate::action::consequence::activation::identity::ModelPassport;
 use crate::action::consequence::delivery::stream::StreamProfile;
 use crate::action::consequence::gate::containment::session::policy::Policy;
-use crate::action::consequence::oversight::identity::IdentityPolicy;
+use crate::action::consequence::mediation::AuthorityGraph;
+use crate::action::consequence::oversight::credibility::EvaluationProtocol;
 use crate::action::consequence::oversight::decoder_host::HostedStopPolicy;
+use crate::action::consequence::oversight::identity::IdentityPolicy;
 use crate::action::consequence::oversight::policy_governance::MAX_POLICY_CAMPAIGNS;
 use crate::action::consequence::policy_campaign::ReplayLimits;
-use crate::Error;
 use std::path::Path;
 use std::rc::Rc;
 
@@ -105,12 +107,20 @@ pub struct FileOversightRoles {
 
 impl FileGuardSet {
     fn validate(&self) -> Result<(), Error> {
-        if self.decoder_stop.is_some() && self.decoder.is_none() { return Err(Error::InvalidInput); }
-        if let Some(credential) = &self.credential { credential.check()?; }
+        if self.decoder_stop.is_some() && self.decoder.is_none() {
+            return Err(Error::InvalidInput);
+        }
+        if let Some(credential) = &self.credential {
+            credential.check()?;
+        }
         if let Some(campaigns) = self.campaigns {
             campaigns.limits.validate()?;
-            if campaigns.max_campaigns == 0 { return Err(Error::InvalidInput); }
-            if campaigns.max_campaigns > MAX_POLICY_CAMPAIGNS { return Err(Error::Limit); }
+            if campaigns.max_campaigns == 0 {
+                return Err(Error::InvalidInput);
+            }
+            if campaigns.max_campaigns > MAX_POLICY_CAMPAIGNS {
+                return Err(Error::Limit);
+            }
         }
         Ok(())
     }
@@ -122,16 +132,20 @@ impl FileGuardSet {
         self.check_replay_config(events, None)
     }
 
-    fn check_replay_config(&self, events: &[Event], prediction: Option<&FileConsistencyConfig>)
-        -> Result<(), Error>
-    {
+    fn check_replay_config(
+        &self,
+        events: &[Event],
+        prediction: Option<&FileConsistencyConfig>,
+    ) -> Result<(), Error> {
         self.check_mediated_replay_config(events, prediction, None)
     }
 
-    fn check_mediated_replay_config(&self, events: &[Event],
-        prediction: Option<&FileConsistencyConfig>, topology: Option<&AuthorityGraph>)
-        -> Result<(), Error>
-    {
+    fn check_mediated_replay_config(
+        &self,
+        events: &[Event],
+        prediction: Option<&FileConsistencyConfig>,
+        topology: Option<&AuthorityGraph>,
+    ) -> Result<(), Error> {
         mediated::check_topology(events, topology)?;
         predictive::check_prediction(events, prediction)?;
         let mut configured = events.iter().filter_map(|event| match event {
@@ -155,93 +169,150 @@ impl FileGuardSet {
         self.check_evaluated(machine, events, None)
     }
 
-    fn check_evaluated(&self, machine: &Machine, events: &[Event],
-        evaluation: Option<&EvaluationProtocol>) -> Result<(), Error>
-    {
+    fn check_evaluated(
+        &self,
+        machine: &Machine,
+        events: &[Event],
+        evaluation: Option<&EvaluationProtocol>,
+    ) -> Result<(), Error> {
         self.check_predictive(machine, events, evaluation, None)
     }
 
-    fn check_predictive(&self, machine: &Machine, events: &[Event],
-        evaluation: Option<&EvaluationProtocol>, prediction: Option<&FileConsistencyConfig>)
-        -> Result<(), Error>
-    {
+    fn check_predictive(
+        &self,
+        machine: &Machine,
+        events: &[Event],
+        evaluation: Option<&EvaluationProtocol>,
+        prediction: Option<&FileConsistencyConfig>,
+    ) -> Result<(), Error> {
         self.check_mediated(machine, events, evaluation, prediction, None)
     }
 
-    fn check_mediated(&self, machine: &Machine, events: &[Event],
-        evaluation: Option<&EvaluationProtocol>, prediction: Option<&FileConsistencyConfig>,
-        topology: Option<&AuthorityGraph>) -> Result<(), Error>
-    {
+    fn check_mediated(
+        &self,
+        machine: &Machine,
+        events: &[Event],
+        evaluation: Option<&EvaluationProtocol>,
+        prediction: Option<&FileConsistencyConfig>,
+        topology: Option<&AuthorityGraph>,
+    ) -> Result<(), Error> {
         self.validate()?;
         mediated::check_topology(events, topology)?;
         // The original entry points require absence, never unchecked acceptance
         // of a new evaluator contract. The explicit evaluated profile pins it.
         if machine.credibility_contract() != evaluation
-            || machine.consistency.as_deref() != prediction { return Err(Error::Binding); }
-        if !machine.publication_guard { return Err(Error::Incomplete); }
+            || machine.consistency.as_deref() != prediction
+        {
+            return Err(Error::Binding);
+        }
+        if !machine.publication_guard {
+            return Err(Error::Incomplete);
+        }
         // Replay has already checked every transition, including uniqueness and
         // bootstrap order. Reading this original event does not invent a second
         // campaign configuration or bypass the native gate's limits.
         let campaigns = events.iter().find_map(|event| match event {
-            Event::Campaign(CampaignEvent::Enable(limits, max_campaigns)) =>
-                Some(FileCampaignRequirement { limits: *limits, max_campaigns: *max_campaigns }),
+            Event::Campaign(CampaignEvent::Enable(limits, max_campaigns)) => {
+                Some(FileCampaignRequirement {
+                    limits: *limits,
+                    max_campaigns: *max_campaigns,
+                })
+            }
             _ => None,
         });
-        let stream = machine.broker.stream_state().map(|(_, view)| view.profile());
+        let stream = machine
+            .broker
+            .stream_state()
+            .map(|(_, view)| view.profile());
         let source = machine.file_source_status().map(|status| status.policy);
-        let identity = self.identity.as_ref().map(|expected| (&expected.passport, expected.policy));
-        if stream != self.stream || source != self.source
-            || machine.identity_contract() != identity || campaigns != self.campaigns
+        let identity = self
+            .identity
+            .as_ref()
+            .map(|expected| (&expected.passport, expected.policy));
+        if stream != self.stream
+            || source != self.source
+            || machine.identity_contract() != identity
+            || campaigns != self.campaigns
             || machine.broker.policy_campaigns_required() != self.campaigns.is_some()
             || machine.credential_policy.as_ref() != self.credential.as_ref()
             || machine.decoder_contract() != self.decoder.as_ref()
             || machine.broker.hosted_stop_policy() != self.decoder_stop
-        { return Err(Error::Binding); }
+        {
+            return Err(Error::Binding);
+        }
         Ok(())
     }
 }
 
 impl FileRecoveryRequirements {
-    fn check(&self, profile: &FileOversightProfile, machine: &Machine,
-        events: &[Event]) -> Result<(), Error>
-    {
+    fn check(
+        &self,
+        profile: &FileOversightProfile,
+        machine: &Machine,
+        events: &[Event],
+    ) -> Result<(), Error> {
         self.check_evaluated(profile, machine, events, None)
     }
 
-    fn check_evaluated(&self, profile: &FileOversightProfile, machine: &Machine,
-        events: &[Event], evaluation: Option<&EvaluationProtocol>) -> Result<(), Error>
-    {
+    fn check_evaluated(
+        &self,
+        profile: &FileOversightProfile,
+        machine: &Machine,
+        events: &[Event],
+        evaluation: Option<&EvaluationProtocol>,
+    ) -> Result<(), Error> {
         self.check_predictive(profile, machine, events, evaluation, None)
     }
 
-    fn check_predictive(&self, profile: &FileOversightProfile, machine: &Machine,
-        events: &[Event], evaluation: Option<&EvaluationProtocol>,
-        prediction: Option<&FileConsistencyConfig>) -> Result<(), Error>
-    {
+    fn check_predictive(
+        &self,
+        profile: &FileOversightProfile,
+        machine: &Machine,
+        events: &[Event],
+        evaluation: Option<&EvaluationProtocol>,
+        prediction: Option<&FileConsistencyConfig>,
+    ) -> Result<(), Error> {
         self.check_mediated(profile, machine, events, evaluation, prediction, None)
     }
 
-    fn check_mediated(&self, profile: &FileOversightProfile, machine: &Machine,
-        events: &[Event], evaluation: Option<&EvaluationProtocol>,
-        prediction: Option<&FileConsistencyConfig>, topology: Option<&AuthorityGraph>)
-        -> Result<(), Error>
-    {
-        self.guards.check_mediated(machine, events, evaluation, prediction, topology)?;
+    fn check_mediated(
+        &self,
+        profile: &FileOversightProfile,
+        machine: &Machine,
+        events: &[Event],
+        evaluation: Option<&EvaluationProtocol>,
+        prediction: Option<&FileConsistencyConfig>,
+        topology: Option<&AuthorityGraph>,
+    ) -> Result<(), Error> {
+        self.guards
+            .check_mediated(machine, events, evaluation, prediction, topology)?;
         if self.guards.credential.is_some() != self.credential_epoch.is_some()
-            || self.credential_epoch.is_some_and(|epoch| epoch.generation == 0)
-        { return Err(Error::InvalidInput); }
-        let credential_epoch = machine.credential_policy.as_ref().map(|_| FileCredentialEpoch {
-            generation: machine.credential_generation, revoked: machine.credential_revoked,
-        });
+            || self
+                .credential_epoch
+                .is_some_and(|epoch| epoch.generation == 0)
+        {
+            return Err(Error::InvalidInput);
+        }
+        let credential_epoch = machine
+            .credential_policy
+            .as_ref()
+            .map(|_| FileCredentialEpoch {
+                generation: machine.credential_generation,
+                revoked: machine.credential_revoked,
+            });
         if credential_epoch != self.credential_epoch
             || machine.policy_updates.current(&profile.delivery.policy) != &self.effective_policy
-        { return Err(Error::Binding); }
+        {
+            return Err(Error::Binding);
+        }
         let revision = u64::try_from(events.len()).map_err(|_| Error::Limit)?;
         let control = machine.broker.inspect();
         if revision < self.minimum.journal_revision
             || control.sequence < self.minimum.control_sequence
             || control.ledger.epoch < self.minimum.authority_epoch
-        { return Err(Error::Stale); }
+        {
+            return Err(Error::Stale);
+        }
         Ok(())
     }
 }
@@ -250,13 +321,21 @@ impl FileOversightRoles {
     // Called only after acknowledged creation/recovery. Deliberately no public
     // constructor, clone or live-owner role getter. Credentials are not recovered.
     fn provision(host: &FileOversight, human: FileHumanReviewer) -> Self {
-        let identity_observer = host.identity_checks_required().then(|| FileIdentityObserver {
-            issuer: Rc::clone(&host.issuer),
-        });
-        let policy_governor = host.policy_campaigns_required().then(|| FilePolicyGovernor {
-            issuer: Rc::clone(&host.issuer),
-        });
-        Self { human, identity_observer, policy_governor }
+        let identity_observer = host
+            .identity_checks_required()
+            .then(|| FileIdentityObserver {
+                issuer: Rc::clone(&host.issuer),
+            });
+        let policy_governor = host
+            .policy_campaigns_required()
+            .then(|| FilePolicyGovernor {
+                issuer: Rc::clone(&host.issuer),
+            });
+        Self {
+            human,
+            identity_observer,
+            policy_governor,
+        }
     }
 }
 
@@ -270,9 +349,11 @@ impl FileOversight {
     /// use fa_reference::action::consequence::delivery::persistent::observed::FileOversight;
     /// fn regain_roles(host: &FileOversight) { let _ = host.roles(); }
     /// ```
-    pub fn open_guarded(directory: impl AsRef<Path>, profile: FileOversightProfile,
-        expected: &FileRecoveryRequirements) -> Result<(Self, FileOversightRoles), JournalError>
-    {
+    pub fn open_guarded(
+        directory: impl AsRef<Path>,
+        profile: FileOversightProfile,
+        expected: &FileRecoveryRequirements,
+    ) -> Result<(Self, FileOversightRoles), JournalError> {
         profile.delivery.limits.check()?;
         let store = storage::Store::open(directory.as_ref())?;
         Self::open_guarded_store(store, profile, expected)
@@ -280,9 +361,11 @@ impl FileOversight {
 
     // Shared by the public entry point and private Store-barrier regressions.
     // No public storage/callback interface can issue a replacement owner.
-    fn open_guarded_store(store: storage::Store, profile: FileOversightProfile,
-        expected: &FileRecoveryRequirements) -> Result<(Self, FileOversightRoles), JournalError>
-    {
+    fn open_guarded_store(
+        store: storage::Store,
+        profile: FileOversightProfile,
+        expected: &FileRecoveryRequirements,
+    ) -> Result<(Self, FileOversightRoles), JournalError> {
         recovery::FileGuardedRecovery::begin_store(store, profile, expected, None)?
             .finish_synchronously()
     }

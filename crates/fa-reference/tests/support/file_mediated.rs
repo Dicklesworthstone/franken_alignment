@@ -1,4 +1,4 @@
-#![allow(dead_code)]
+#![allow(dead_code, unused_imports)]
 #[path = "file_oversight.rs"] pub mod ordinary;
 #[path = "file_mediation.rs"] pub mod topology;
 pub use ordinary::{Directory, profile, snapshot};

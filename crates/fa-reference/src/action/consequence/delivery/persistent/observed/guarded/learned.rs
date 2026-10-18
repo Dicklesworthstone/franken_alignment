@@ -2,10 +2,12 @@
 //! Independently supplied requirements never come from the journal being opened.
 //! No numerical, authority, storage or role-provisioning algorithm is replaced.
 
-use super::{BaseEvent, Event, FileCredentialRegistration, FileGuardSet, FileOversight,
-    FileOversightProfile, FileOversightRoles, FileRecoveryRequirements, JournalError,
-    Machine, bootstrap::PreparedGuardedBootstrap, journal, storage};
 use super::super::decoder::learned::{FileLearnedConfig, bind_history};
+use super::{
+    BaseEvent, Event, FileCredentialRegistration, FileGuardSet, FileOversight,
+    FileOversightProfile, FileOversightRoles, FileRecoveryRequirements, JournalError, Machine,
+    bootstrap::PreparedGuardedBootstrap, journal, storage,
+};
 use crate::Error;
 use std::path::Path;
 
@@ -23,8 +25,8 @@ impl FileOversight {
         config: FileLearnedConfig,
     ) -> Result<(Self, FileOversightRoles), JournalError> {
         check_profile(guards)?;
-        let prepared = PreparedGuardedBootstrap::prepare(profile, guards, registration)?
-            .learned(config)?;
+        let prepared =
+            PreparedGuardedBootstrap::prepare(profile, guards, registration)?.learned(config)?;
         let store = storage::Store::create(directory.as_ref())?;
         prepared.publish(store)
     }

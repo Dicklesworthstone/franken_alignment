@@ -1,16 +1,18 @@
 //! Endpoint interruption without losing the original supervisor, keys or jobs.
 //! Reconnection is fenced; recovery does not rerun a helper or resend an effect.
 
-use super::{Job, SupervisedDriver};
 use super::super::helper_processes::{HelperChildren, ProcessStatus};
+use super::{Job, SupervisedDriver};
+use crate::Error;
+use crate::action::ElapsedTick;
 use crate::action::consequence::delivery::{EndpointReceipt, PublicationEndpoint};
-use crate::action::consequence::oversight::{ReconciliationResults, actor::ActorSupervisor};
-use crate::action::consequence::oversight::decoder_host::{HostedCheckpointHandle, HostedResetReceipt, HostedResetRequest};
+use crate::action::consequence::oversight::decoder_host::{
+    HostedCheckpointHandle, HostedResetReceipt, HostedResetRequest,
+};
 use crate::action::consequence::oversight::learned_host::checkpoint::{
     HostedLearnedCheckpointHandle, HostedLearnedResetReceipt, HostedLearnedResetRequest,
 };
-use crate::action::ElapsedTick;
-use crate::Error;
+use crate::action::consequence::oversight::{ReconciliationResults, actor::ActorSupervisor};
 use std::collections::BTreeMap;
 use std::fmt;
 
@@ -39,7 +41,10 @@ pub struct ReconnectFailure {
 
 impl fmt::Debug for ReconnectFailure {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
-        formatter.debug_struct("ReconnectFailure").field("error", &self.error).finish_non_exhaustive()
+        formatter
+            .debug_struct("ReconnectFailure")
+            .field("error", &self.error)
+            .finish_non_exhaustive()
     }
 }
 
@@ -48,8 +53,22 @@ impl SupervisedDriver {
     /// file endpoint releases its existing lock so its retained recovery key can
     /// reopen it. Detachment alone is NOT an external fence or nonexecution proof.
     pub fn detach_endpoint(self) -> (OfflineDriver, PublicationEndpoint) {
-        let Self { supervisor, endpoint, job, children, identity_restart } = self;
-        (OfflineDriver { supervisor, job, children, identity_restart }, endpoint)
+        let Self {
+            supervisor,
+            endpoint,
+            job,
+            children,
+            identity_restart,
+        } = self;
+        (
+            OfflineDriver {
+                supervisor,
+                job,
+                children,
+                identity_restart,
+            },
+            endpoint,
+        )
     }
 
     /// Existing obligations are processed without helper input or human keys,
@@ -72,15 +91,20 @@ impl SupervisedDriver {
 }
 
 impl OfflineDriver {
-    pub fn supervisor(&self) -> &ActorSupervisor { &self.supervisor }
+    pub fn supervisor(&self) -> &ActorSupervisor {
+        &self.supervisor
+    }
 
     /// Close the original controller and mailbox while disconnected. This
     /// requests child cleanup but does not claim to have fenced the endpoint.
     pub fn request_stop(
-        &mut self, request: crate::action::consequence::delivery::StopRequest,
+        &mut self,
+        request: crate::action::consequence::delivery::StopRequest,
     ) -> Result<crate::action::consequence::delivery::StopReceipt, Error> {
         let result = self.supervisor.request_stop(request);
-        if self.supervisor.stop_receipt().is_some() { self.job = None; }
+        if self.supervisor.stop_receipt().is_some() {
+            self.job = None;
+        }
         self.reap_helpers();
         result
     }
@@ -89,26 +113,38 @@ impl OfflineDriver {
         self.supervisor.stop_receipt()
     }
 
-    pub fn capture_hosted_checkpoint(&mut self, id: u64, expected_actor_revision: u64)
-        -> Result<HostedCheckpointHandle, Error>
-    {
-        self.supervisor.capture_hosted_checkpoint(id, expected_actor_revision)
+    pub fn capture_hosted_checkpoint(
+        &mut self,
+        id: u64,
+        expected_actor_revision: u64,
+    ) -> Result<HostedCheckpointHandle, Error> {
+        self.supervisor
+            .capture_hosted_checkpoint(id, expected_actor_revision)
     }
 
     /// Reset the ORIGINAL numerical/control owner while disconnected. This
     /// does not establish an endpoint fence or settle a remote effect. Reconnect
     /// later moves the same checkpoint map, mailbox and outstanding obligations.
-    pub fn reset_hosted_decoder(&mut self, request: HostedResetRequest) -> Result<HostedResetReceipt, Error> {
+    pub fn reset_hosted_decoder(
+        &mut self,
+        request: HostedResetRequest,
+    ) -> Result<HostedResetReceipt, Error> {
         let result = self.supervisor.reset_hosted_decoder(request);
-        if result.is_ok() { self.job = None; }
+        if result.is_ok() {
+            self.job = None;
+        }
         self.reap_helpers();
         result
     }
 
-    pub fn capture_hosted_learned_checkpoint(&mut self, id: u64, expected_actor_revision: u64)
-        -> Result<HostedLearnedCheckpointHandle, Error>
-    {
-        let result = self.supervisor.capture_hosted_learned_checkpoint(id, expected_actor_revision);
+    pub fn capture_hosted_learned_checkpoint(
+        &mut self,
+        id: u64,
+        expected_actor_revision: u64,
+    ) -> Result<HostedLearnedCheckpointHandle, Error> {
+        let result = self
+            .supervisor
+            .capture_hosted_learned_checkpoint(id, expected_actor_revision);
         self.reap_helpers();
         result
     }
@@ -116,20 +152,27 @@ impl OfflineDriver {
     /// Reset the same learned source while its endpoint is detached. This moves
     /// no authority to another owner, introduces no send path and cannot settle
     /// unknown effects. Reconnection still requires the original endpoint fence.
-    pub fn reset_hosted_learned(&mut self, request: HostedLearnedResetRequest)
-        -> Result<HostedLearnedResetReceipt, Error>
-    {
+    pub fn reset_hosted_learned(
+        &mut self,
+        request: HostedLearnedResetRequest,
+    ) -> Result<HostedLearnedResetReceipt, Error> {
         let result = self.supervisor.reset_hosted_learned(request);
-        if result.is_ok() { self.job = None; }
+        if result.is_ok() {
+            self.job = None;
+        }
         self.reap_helpers();
         result
     }
 
     pub fn helper_processes(&self) -> BTreeMap<String, ProcessStatus> {
-        self.children.as_ref().map_or_else(BTreeMap::new, HelperChildren::statuses)
+        self.children
+            .as_ref()
+            .map_or_else(BTreeMap::new, HelperChildren::statuses)
     }
     pub fn helpers_reaped(&self) -> bool {
-        self.children.as_ref().is_none_or(HelperChildren::all_reaped)
+        self.children
+            .as_ref()
+            .is_none_or(HelperChildren::all_reaped)
     }
     /// Stop children belonging to a lower-level reset/cancelled job even when
     /// reconnection refuses, without discarding the pending driver outcome event.
@@ -137,7 +180,9 @@ impl OfflineDriver {
         super::processes::maintain_owned(&self.supervisor, &mut self.children, &mut self.job)
     }
     pub fn stop_helper_processes(&mut self) -> BTreeMap<String, ProcessStatus> {
-        self.children.as_mut().map_or_else(BTreeMap::new, HelperChildren::request_stop_all)
+        self.children
+            .as_mut()
+            .map_or_else(BTreeMap::new, HelperChildren::request_stop_all)
     }
 
     /// A real late receipt remains usable while no transport is connected.
@@ -165,7 +210,9 @@ impl OfflineDriver {
     /// its Unknown projections, and require the new endpoint fence acknowledgment
     /// before returning a sending driver. This does not settle pending effects.
     pub fn reconnect(
-        mut self, mut endpoint: PublicationEndpoint, now: ElapsedTick,
+        mut self,
+        mut endpoint: PublicationEndpoint,
+        now: ElapsedTick,
     ) -> Result<SupervisedDriver, ReconnectFailure> {
         self.reap_helpers();
         let result = (|| -> Result<(), Error> {
@@ -178,9 +225,18 @@ impl OfflineDriver {
             self.supervisor.broker_mut().confirm_fence(acknowledgment)
         })();
         match result {
-            Ok(()) => Ok(SupervisedDriver { supervisor: self.supervisor, endpoint, job: self.job,
-                children: self.children, identity_restart: self.identity_restart }),
-            Err(error) => Err(ReconnectFailure { error, offline: self, endpoint }),
+            Ok(()) => Ok(SupervisedDriver {
+                supervisor: self.supervisor,
+                endpoint,
+                job: self.job,
+                children: self.children,
+                identity_restart: self.identity_restart,
+            }),
+            Err(error) => Err(ReconnectFailure {
+                error,
+                offline: self,
+                endpoint,
+            }),
         }
     }
 }

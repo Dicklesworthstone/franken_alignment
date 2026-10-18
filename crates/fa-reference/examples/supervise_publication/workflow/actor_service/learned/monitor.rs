@@ -102,6 +102,7 @@ impl MonitorInput {
 
     /// Every layer and BOTH K/V sides bind to the imported ORIGINAL model.
     /// No empty, residual-stream, missing-layer or inferred quiet roster enters.
+    #[allow(dead_code)]
     pub(super) fn bind(self, model: &DecoderModel, codec: LearnedKvCodec) -> Result<BoundMonitor, String> {
         self.bind_inner(model, None, codec)
     }

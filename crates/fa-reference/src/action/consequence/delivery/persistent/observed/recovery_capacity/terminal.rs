@@ -1,13 +1,13 @@
 //! Terminal composition for the ORIGINAL full-input, mandatory two-key owner.
 //! Replay is memory-only; the existing canonical journal is the sole effect sink.
+use super::super::guarded::anchored::FileHistoryAnchor;
+use super::super::shutdown::recovery::{FileStoppedHistory, FileStoppedRecovery};
 use super::super::{
     BaseEvent, Event, FileOversight, FileOversightProfile, FileStopSweep, JournalError,
     JournalFailure, JournalIo, Machine, StopRequest, Transition, journal, storage,
 };
 use crate::Error;
 use crate::action::ElapsedTick;
-use super::super::guarded::anchored::FileHistoryAnchor;
-use super::super::shutdown::recovery::{FileStoppedHistory, FileStoppedRecovery};
 use std::path::Path;
 
 impl FileOversight {
@@ -70,7 +70,9 @@ impl FileOversight {
     // Shared only inside the original durable owner. Callers must retain the
     // exclusive Store and never expose the unfenced replay owner or its roles.
     pub(in super::super) fn finish_stopped_recovery(
-        &mut self, request: StopRequest, observed_tick: ElapsedTick,
+        &mut self,
+        request: StopRequest,
+        observed_tick: ElapsedTick,
     ) -> Result<FileStopSweep, JournalError> {
         terminal_transaction(self, self.revision(), request, observed_tick, true)
     }
@@ -79,20 +81,35 @@ impl FileOversight {
     // recovery) may consume this private owner. Source admission sees the actual
     // recovered machine before it moves into the fixed terminal transaction.
     // No live role or changed candidate escapes on failure or unwind.
-    pub(in super::super) fn finish_verified_stopped(mut self, request: StopRequest,
-        observed_tick: ElapsedTick, canonical: &[u8]) -> Result<FileStoppedHistory, JournalError>
-    {
+    pub(in super::super) fn finish_verified_stopped(
+        mut self,
+        request: StopRequest,
+        observed_tick: ElapsedTick,
+        canonical: &[u8],
+    ) -> Result<FileStoppedHistory, JournalError> {
         let revision = self.revision();
-        let (sweep, committed) = terminal_with_candidate(&mut self, revision, request, observed_tick,
-            true, Some(canonical), |host| {
+        let (sweep, committed) = terminal_with_candidate(
+            &mut self,
+            revision,
+            request,
+            observed_tick,
+            true,
+            Some(canonical),
+            |host| {
                 let placeholder = Machine::new(&host.profile)?;
                 Ok(std::mem::replace(&mut host.machine, placeholder))
-            })?;
+            },
+        )?;
         // Move the exact successful replacement, not a second encoding or a
         // later disk read. No fallible work separates acknowledgment and capture.
         let anchor = FileHistoryAnchor::from_acknowledged(self.events.len(), committed);
         Ok(FileStoppedHistory::new(
-            FileStoppedRecovery::Advanced { snapshot: self.inspect(), sweep }, anchor))
+            FileStoppedRecovery::Advanced {
+                snapshot: self.inspect(),
+                sweep,
+            },
+            anchor,
+        ))
     }
 }
 
@@ -106,18 +123,28 @@ fn terminal_transaction(
     tick: ElapsedTick,
     recover: bool,
 ) -> Result<FileStopSweep, JournalError> {
-    terminal_with_candidate(host, revision, request, tick, recover, None,
-        |host| Ok(Machine::replay(&host.profile, &host.events)?)).map(|(sweep, _)| sweep)
+    terminal_with_candidate(host, revision, request, tick, recover, None, |host| {
+        Ok(Machine::replay(&host.profile, &host.events)?)
+    })
+    .map(|(sweep, _)| sweep)
 }
 
 // The candidate supplier is private and has exactly two callers: ordinary
 // terminal operations replay their acknowledged cut; sealed completion
 // consumes the verified cut without repeating its history. Both use the
 // SAME event sequence, prefix admission, original reducers and replacement.
-fn terminal_with_candidate<F>(host: &mut FileOversight, revision: u64,
-    request: StopRequest, tick: ElapsedTick, recover: bool, canonical: Option<&[u8]>,
-    candidate: F) -> Result<(FileStopSweep, Vec<u8>), JournalError>
-where F: FnOnce(&mut FileOversight) -> Result<Machine, JournalError> {
+fn terminal_with_candidate<F>(
+    host: &mut FileOversight,
+    revision: u64,
+    request: StopRequest,
+    tick: ElapsedTick,
+    recover: bool,
+    canonical: Option<&[u8]>,
+    candidate: F,
+) -> Result<(FileStopSweep, Vec<u8>), JournalError>
+where
+    F: FnOnce(&mut FileOversight) -> Result<Machine, JournalError>,
+{
     if host.fault.is_some() {
         return Err(JournalError::Unavailable);
     }
@@ -130,23 +157,25 @@ where F: FnOnce(&mut FileOversight) -> Result<Machine, JournalError> {
         next.push(Event::Core(BaseEvent::Fence));
     }
     next.push(Event::Core(BaseEvent::StopProgress(tick)));
-    let count = host.events.len().checked_add(next.len()).ok_or(Error::Overflow)?;
+    let count = host
+        .events
+        .len()
+        .checked_add(next.len())
+        .ok_or(Error::Overflow)?;
     if count > host.profile.delivery.limits.events {
         return Err(Error::Limit.into());
     }
     let mut history = Vec::new();
     history.try_reserve_exact(count).map_err(|_| Error::Limit)?;
     // Preflight the first new record before retaining a cloned history.
-    let mut bytes = journal::encode_appended(
-        &host.profile, host.store.identity(), &host.events, &next[0],
-    )?;
+    let mut bytes =
+        journal::encode_appended(&host.profile, host.store.identity(), &host.events, &next[0])?;
     history.extend(host.events.iter().cloned());
     for (index, event) in next.iter().enumerate() {
         host.check_source_admission(event)?;
         if index != 0 {
-            bytes = journal::encode_appended(
-                &host.profile, host.store.identity(), &history, event,
-            )?;
+            bytes =
+                journal::encode_appended(&host.profile, host.store.identity(), &history, event)?;
         }
         history.push(event.clone());
     }

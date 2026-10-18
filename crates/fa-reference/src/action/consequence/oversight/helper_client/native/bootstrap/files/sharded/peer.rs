@@ -1,14 +1,20 @@
 //! Provisioned sockets and the ORIGINAL native worker; no implicit listener,
 //! reconnect, retry task, new transcript, default vote or second executor.
 
-use super::{NativeEvaluator, NativeShardFileBootstrap, NativeShardFileBootstrapError,
-    NativeAssetReadBudget, WeightReadBudget, PretrainedShardReceipt};
-use crate::action::consequence::oversight::helper_client::native::peer::{NativeHelperClient, MIN_NATIVE_SALT_BYTES};
+use super::{
+    NativeAssetReadBudget, NativeEvaluator, NativeShardFileBootstrap,
+    NativeShardFileBootstrapError, PretrainedShardReceipt, WeightReadBudget,
+};
+use crate::Error;
+use crate::action::consequence::oversight::helper_client::native::peer::{
+    MIN_NATIVE_SALT_BYTES, NativeHelperClient,
+};
 use crate::action::consequence::oversight::helper_client::native::process::{
     NativeProcessBudget, NativeProcessError, NativeProcessReport, run_native_worker,
 };
-use crate::action::consequence::oversight::helper_workers::{MAX_WORKER_SALT_BYTES, io::WorkerIoError};
-use crate::Error;
+use crate::action::consequence::oversight::helper_workers::{
+    MAX_WORKER_SALT_BYTES, io::WorkerIoError,
+};
 use std::fmt;
 use std::os::unix::net::UnixStream;
 
@@ -18,7 +24,9 @@ pub enum NativeShardFilePeerError {
     Transport(WorkerIoError),
 }
 impl fmt::Display for NativeShardFilePeerError {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result { write!(f, "{self:?}") }
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{self:?}")
+    }
 }
 impl std::error::Error for NativeShardFilePeerError {}
 
@@ -29,17 +37,26 @@ impl NativeHelperClient<UnixStream> {
     /// The caller drives the SAME cooperative client afterward; only its original
     /// admitted input and fully monitored answer can produce commit/reveal bytes.
     /// Startup failure destroys the socket and returns no partial helper/vote.
-    pub fn from_llama_shard_files(request: NativeShardFileBootstrap<'_>,
-        socket: UnixStream, salt: Vec<u8>, assets: &mut NativeAssetReadBudget,
-        weights: &mut WeightReadBudget) -> Result<(Self, PretrainedShardReceipt), NativeShardFilePeerError>
-    {
-        check_salt(&salt).map_err(|error| NativeShardFilePeerError::Transport(WorkerIoError::Protocol(error)))?;
-        socket.peer_addr().map_err(|error| NativeShardFilePeerError::Transport(WorkerIoError::Io(error.kind())))?;
-        socket.set_nonblocking(true)
-            .map_err(|error| NativeShardFilePeerError::Transport(WorkerIoError::Io(error.kind())))?;
-        let (evaluator, receipt) = NativeEvaluator::from_llama_shard_files(request, assets, weights)
-            .map_err(NativeShardFilePeerError::Startup)?;
-        let client = Self::from_unix(socket, evaluator, salt).map_err(NativeShardFilePeerError::Transport)?;
+    pub fn from_llama_shard_files(
+        request: NativeShardFileBootstrap<'_>,
+        socket: UnixStream,
+        salt: Vec<u8>,
+        assets: &mut NativeAssetReadBudget,
+        weights: &mut WeightReadBudget,
+    ) -> Result<(Self, PretrainedShardReceipt), NativeShardFilePeerError> {
+        check_salt(&salt)
+            .map_err(|error| NativeShardFilePeerError::Transport(WorkerIoError::Protocol(error)))?;
+        socket.peer_addr().map_err(|error| {
+            NativeShardFilePeerError::Transport(WorkerIoError::Io(error.kind()))
+        })?;
+        socket.set_nonblocking(true).map_err(|error| {
+            NativeShardFilePeerError::Transport(WorkerIoError::Io(error.kind()))
+        })?;
+        let (evaluator, receipt) =
+            NativeEvaluator::from_llama_shard_files(request, assets, weights)
+                .map_err(NativeShardFilePeerError::Startup)?;
+        let client = Self::from_unix(socket, evaluator, salt)
+            .map_err(NativeShardFilePeerError::Transport)?;
         Ok((client, receipt))
     }
 }
@@ -52,7 +69,9 @@ pub enum NativeShardProcessError {
     Process(NativeProcessError),
 }
 impl fmt::Display for NativeShardProcessError {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result { write!(f, "{self:?}") }
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{self:?}")
+    }
 }
 impl std::error::Error for NativeShardProcessError {}
 
@@ -71,17 +90,26 @@ impl std::error::Error for NativeShardProcessError {}
 /// Original reports distinguish reply transmission from acceptance; an error or
 /// late write never claims that no protocol bytes reached the supervisor.
 /// Every exit consumes the socket, evaluator and lifetime; nothing is resent.
-pub fn run_native_worker_from_shard_files(request: NativeShardFileBootstrap<'_>,
-    socket: UnixStream, salt: Vec<u8>, assets: &mut NativeAssetReadBudget,
-    weights: &mut WeightReadBudget, lifetime: NativeProcessBudget)
-    -> Result<(NativeProcessReport, PretrainedShardReceipt), NativeShardProcessError>
-{
-    check_salt(&salt).map_err(|error| NativeShardProcessError::Process(NativeProcessError::Contract(error)))?;
-    socket.peer_addr().map_err(|error| NativeShardProcessError::Process(NativeProcessError::Socket(error.kind())))?;
-    if lifetime.expired() { return Err(NativeShardProcessError::ExpiredBeforeStartup); }
+pub fn run_native_worker_from_shard_files(
+    request: NativeShardFileBootstrap<'_>,
+    socket: UnixStream,
+    salt: Vec<u8>,
+    assets: &mut NativeAssetReadBudget,
+    weights: &mut WeightReadBudget,
+    lifetime: NativeProcessBudget,
+) -> Result<(NativeProcessReport, PretrainedShardReceipt), NativeShardProcessError> {
+    check_salt(&salt)
+        .map_err(|error| NativeShardProcessError::Process(NativeProcessError::Contract(error)))?;
+    socket.peer_addr().map_err(|error| {
+        NativeShardProcessError::Process(NativeProcessError::Socket(error.kind()))
+    })?;
+    if lifetime.expired() {
+        return Err(NativeShardProcessError::ExpiredBeforeStartup);
+    }
     let (evaluator, receipt) = NativeEvaluator::from_llama_shard_files(request, assets, weights)
         .map_err(NativeShardProcessError::Startup)?;
-    let report = run_native_worker(socket, evaluator, salt, lifetime).map_err(NativeShardProcessError::Process)?;
+    let report = run_native_worker(socket, evaluator, salt, lifetime)
+        .map_err(NativeShardProcessError::Process)?;
     Ok((report, receipt))
 }
 

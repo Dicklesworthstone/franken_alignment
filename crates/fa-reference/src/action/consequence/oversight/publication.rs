@@ -8,12 +8,12 @@
 mod refinement;
 pub use refinement::{PublicationProgress, PublicationRefinement};
 
+use crate::Error;
 use crate::action::FrozenAction;
 use crate::full_input::{ActualHelperInput, OpaqueJudgment};
 use crate::product_frontier::ProductFrontiers;
 use crate::witness::refinement::{RefinementBudget, RefinementOutcome};
 use crate::witness::{Invalidation, WitnessJudgment, WitnessSnapshot};
-use crate::Error;
 
 /// Immutable evidence requirements. There is no operation to remove a lane,
 /// replace a judgment, or rebind the action after review.
@@ -35,7 +35,10 @@ pub struct PublicationBasis<'a> {
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum PublicationInvalidation {
-    Structured { reason: Invalidation, witness: Option<usize> },
+    Structured {
+        reason: Invalidation,
+        witness: Option<usize>,
+    },
     OpaqueInput,
 }
 
@@ -77,16 +80,24 @@ impl PublicationJudgment {
         if structured.is_none() && opaque.is_none() {
             return Err(Error::Incomplete);
         }
-        Ok(Self { action, structured, opaque })
+        Ok(Self {
+            action,
+            structured,
+            opaque,
+        })
     }
 
-    pub fn action(&self) -> &FrozenAction { &self.action }
+    pub fn action(&self) -> &FrozenAction {
+        &self.action
+    }
 
     /// The original owner derives routes from these immutable requirements.
     /// Opaque dependencies remain whole-input even beside precise witnesses.
-    pub(crate) fn register_invalidation(&self, attempt: u64,
-        index: &mut crate::witness::refinement::index::routing::InvalidationIndex) -> Result<(), Error>
-    {
+    pub(crate) fn register_invalidation(
+        &self,
+        attempt: u64,
+        index: &mut crate::witness::refinement::index::routing::InvalidationIndex,
+    ) -> Result<(), Error> {
         index.register(attempt, self.structured.as_ref(), self.opaque.is_some())
     }
 
@@ -109,7 +120,9 @@ impl PublicationJudgment {
             outcome: PublicationOutcome::Refused(error),
             spent: RefinementBudget::default(),
         };
-        if &self.action != action { return refused(Error::Binding); }
+        if &self.action != action {
+            return refused(Error::Binding);
+        }
         if (self.structured.is_some() && basis.structured.is_none())
             || (self.opaque.is_some() && basis.opaque.is_none())
         {
@@ -120,27 +133,36 @@ impl PublicationJudgment {
         {
             return refused(Error::Binding);
         }
-        if let (Some(judgment), Some((snapshot, frontiers))) = (&self.structured, basis.structured) {
-            let report = judgment.begin_refinement(snapshot, frontiers).advance(budget);
+        if let (Some(judgment), Some((snapshot, frontiers))) = (&self.structured, basis.structured)
+        {
+            let report = judgment
+                .begin_refinement(snapshot, frontiers)
+                .advance(budget);
             spent = report.spent;
             let outcome = match report.outcome {
                 RefinementOutcome::StillValid => None,
-                RefinementOutcome::Invalidated { reason, witness } => Some(
-                    PublicationOutcome::Invalidated(PublicationInvalidation::Structured { reason, witness }),
-                ),
+                RefinementOutcome::Invalidated { reason, witness } => {
+                    Some(PublicationOutcome::Invalidated(
+                        PublicationInvalidation::Structured { reason, witness },
+                    ))
+                }
                 RefinementOutcome::NeedsRefinement { minimum } => {
                     Some(PublicationOutcome::NeedsRefinement { minimum })
                 }
                 RefinementOutcome::Refused(error) => Some(PublicationOutcome::Refused(error)),
             };
-            if let Some(outcome) = outcome { return PublicationReport { outcome, spent }; }
+            if let Some(outcome) = outcome {
+                return PublicationReport { outcome, spent };
+            }
         }
         if let (Some(judgment), Some(actual)) = (&self.opaque, basis.opaque) {
             let captured = judgment.witness().actual_input();
             // Constructors bound these sizes to 72 KiB and 192 metadata items.
             // Equality can short-circuit, but never compares more than charged.
             let minimum = RefinementBudget {
-                steps: 1 + captured.ordered_parts().len() as u64 + captured.omissions().len() as u64,
+                steps: 1
+                    + captured.ordered_parts().len() as u64
+                    + captured.omissions().len() as u64,
                 value_bytes: captured.submitted_bytes().len() as u64
                     + captured.input_profile().profile_bytes.len() as u64,
             };
@@ -148,22 +170,34 @@ impl PublicationJudgment {
                 || budget.value_bytes - spent.value_bytes < minimum.value_bytes
             {
                 return PublicationReport {
-                    outcome: PublicationOutcome::NeedsRefinement { minimum }, spent,
+                    outcome: PublicationOutcome::NeedsRefinement { minimum },
+                    spent,
                 };
             }
             spent.steps += minimum.steps;
             spent.value_bytes += minimum.value_bytes;
             match refinement::opaque_equal(judgment, actual) {
                 Ok(true) => {}
-                Ok(false) => return PublicationReport {
-                    outcome: PublicationOutcome::Invalidated(PublicationInvalidation::OpaqueInput), spent,
-                },
-                Err(error) => return PublicationReport {
-                    outcome: PublicationOutcome::Refused(error), spent,
-                },
+                Ok(false) => {
+                    return PublicationReport {
+                        outcome: PublicationOutcome::Invalidated(
+                            PublicationInvalidation::OpaqueInput,
+                        ),
+                        spent,
+                    };
+                }
+                Err(error) => {
+                    return PublicationReport {
+                        outcome: PublicationOutcome::Refused(error),
+                        spent,
+                    };
+                }
             }
         }
-        PublicationReport { outcome: PublicationOutcome::StillValid, spent }
+        PublicationReport {
+            outcome: PublicationOutcome::StillValid,
+            spent,
+        }
     }
 }
 

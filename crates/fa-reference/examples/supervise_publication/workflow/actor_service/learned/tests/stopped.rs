@@ -269,4 +269,5 @@ fn lost_stop_report_preserves_acknowledged_history_and_retry_only_reports_the_co
     }
 }
 
+#[path = "stopped/anchor_export.rs"]
 mod anchor_export;

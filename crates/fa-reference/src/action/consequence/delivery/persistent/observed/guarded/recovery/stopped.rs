@@ -3,9 +3,13 @@
 use super::{FileGuardedRecovery, FileGuardedRecoveryStatus, FileOversight, JournalError};
 use crate::Error;
 use crate::action::ElapsedTick;
-use crate::action::consequence::delivery::{StopRequest,
-    persistent::observed::{guarded::anchored::FileHistoryAnchor,
-        shutdown::recovery::{FileStoppedHistory, FileStoppedRecovery}}};
+use crate::action::consequence::delivery::{
+    StopRequest,
+    persistent::observed::{
+        guarded::anchored::FileHistoryAnchor,
+        shutdown::recovery::{FileStoppedHistory, FileStoppedRecovery},
+    },
+};
 
 impl FileGuardedRecovery {
     fn check_stopped_ready(&self) -> Result<(), JournalError> {
@@ -15,7 +19,8 @@ impl FileGuardedRecovery {
             FileGuardedRecoveryStatus::Interrupted => return Err(JournalError::Unavailable),
             _ => return Err(Error::Incomplete.into()),
         }
-        self.expected.check(&self.profile, &self.machine, &self.events)?;
+        self.expected
+            .check(&self.profile, &self.machine, &self.events)?;
         Ok(())
     }
 
@@ -25,25 +30,38 @@ impl FileGuardedRecovery {
     /// take it over. This selection grants no authority and does no file I/O.
     pub fn stop_request(&self, operation: u64) -> Result<StopRequest, JournalError> {
         self.check_stopped_ready()?;
-        if operation == 0 { return Err(Error::InvalidInput.into()); }
+        if operation == 0 {
+            return Err(Error::InvalidInput.into());
+        }
         let snapshot = self.machine.snapshot(self.events.len());
         if let Some(receipt) = snapshot.stop {
             let request = receipt.request();
-            if request.operation != operation { return Err(Error::Duplicate.into()); }
+            if request.operation != operation {
+                return Err(Error::Duplicate.into());
+            }
             return Ok(request);
         }
-        Ok(StopRequest { operation, expected_control_sequence: snapshot.control.sequence,
-            expected_authority_epoch: snapshot.control.ledger.epoch })
+        Ok(StopRequest {
+            operation,
+            expected_control_sequence: snapshot.control.sequence,
+            expected_authority_epoch: snapshot.control.ledger.epoch,
+        })
     }
 
     /// Consume the SAME fully verified cursor into the original fixed
     /// Stop -> Fence -> StopProgress transaction, with no ordinary fence first.
     /// Only stopped observations escape. Outstanding effects remain original
     /// liabilities; no helper, current evidence or replacement key is acquired.
-    pub fn finish_stopped<F>(self, request: StopRequest, clock: F)
-        -> Result<FileStoppedRecovery, JournalError>
-    where F: FnOnce() -> ElapsedTick {
-        self.finish_stopped_with_anchor(request, clock).map(|history| history.into_parts().0)
+    pub fn finish_stopped<F>(
+        self,
+        request: StopRequest,
+        clock: F,
+    ) -> Result<FileStoppedRecovery, JournalError>
+    where
+        F: FnOnce() -> ElapsedTick,
+    {
+        self.finish_stopped_with_anchor(request, clock)
+            .map(|history| history.into_parts().0)
     }
 
     /// Return the native stop observation and exact acknowledged history anchor.
@@ -62,17 +80,28 @@ impl FileGuardedRecovery {
     /// Export is separate: keep the old archive until new custody is acknowledged.
     /// This is the base guarded profile, not admission of a learned, evaluated,
     /// predictive or mediated profile through a weaker recovery entry point.
-    pub fn finish_stopped_with_anchor<F>(self, request: StopRequest, clock: F)
-        -> Result<FileStoppedHistory, JournalError>
-    where F: FnOnce() -> ElapsedTick {
+    pub fn finish_stopped_with_anchor<F>(
+        self,
+        request: StopRequest,
+        clock: F,
+    ) -> Result<FileStoppedHistory, JournalError>
+    where
+        F: FnOnce() -> ElapsedTick,
+    {
         self.check_stopped_ready()?;
-        if request.operation == 0 { return Err(Error::InvalidInput.into()); }
+        if request.operation == 0 {
+            return Err(Error::InvalidInput.into());
+        }
         let snapshot = self.machine.snapshot(self.events.len());
         if let Some(receipt) = &snapshot.stop {
             let previous = receipt.request();
             if previous != request {
-                return Err(if previous.operation == request.operation { Error::Binding }
-                    else { Error::Duplicate }.into());
+                return Err(if previous.operation == request.operation {
+                    Error::Binding
+                } else {
+                    Error::Duplicate
+                }
+                .into());
             }
             let progress = self.machine.broker.stop_progress()?;
             if progress.drained() {
@@ -80,19 +109,30 @@ impl FileGuardedRecovery {
                     return Err(Error::Binding.into());
                 }
                 self.store.confirm_and_cleanup()?;
-                let anchor = FileHistoryAnchor::from_acknowledged(self.events.len(), self.canonical);
+                let anchor =
+                    FileHistoryAnchor::from_acknowledged(self.events.len(), self.canonical);
                 return Ok(FileStoppedHistory::new(
-                    FileStoppedRecovery::AlreadyDrained { snapshot, progress }, anchor));
+                    FileStoppedRecovery::AlreadyDrained { snapshot, progress },
+                    anchor,
+                ));
             }
         } else if snapshot.control.sequence != request.expected_control_sequence
-            || snapshot.control.ledger.epoch != request.expected_authority_epoch {
+            || snapshot.control.ledger.epoch != request.expected_authority_epoch
+        {
             return Err(Error::Stale.into());
         }
         if self.store.read(self.profile.delivery.limits.bytes)? != self.canonical {
             return Err(Error::Binding.into());
         }
         let tick = clock();
-        let Self { profile, store, events, machine, canonical, .. } = self;
+        let Self {
+            profile,
+            store,
+            events,
+            machine,
+            canonical,
+            ..
+        } = self;
         let (host, _reviewer) = FileOversight::owner(profile, store, events, machine);
         host.finish_verified_stopped(request, tick, &canonical)
     }

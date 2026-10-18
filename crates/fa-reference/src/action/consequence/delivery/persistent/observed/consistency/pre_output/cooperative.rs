@@ -1,14 +1,19 @@
 //! Bounded original-history quanta under an already acknowledged forecast.
 //! No forecast, source, numerical owner, effect key or budget is recreated.
-use super::{ConsistencyDeadline, Error, FileOversight, FilePreOutputForecast,
-    GenerationEvent, HostedLearnedInspection, JournalError, Prediction, Rc, fmt};
+use super::{
+    ConsistencyDeadline, Error, FileOversight, FilePreOutputForecast, GenerationEvent,
+    HostedLearnedInspection, JournalError, Prediction, Rc, fmt,
+};
 use crate::action::consequence::activation::consistency::learned::{
     LearnedForecastReport, LearnedPrediction,
 };
-use crate::action::consequence::delivery::persistent::{MAX_JOURNAL_EVENTS,
-    observed::decoder::learned::{FileLearnedIntentPreparation,
-        FileLearnedReplayContinuation, FileLearnedStepPreparation,
-        FileLearnedStepPreparationProgress, FileLearnedStepPreparationStatus}};
+use crate::action::consequence::delivery::persistent::{
+    MAX_JOURNAL_EVENTS,
+    observed::decoder::learned::{
+        FileLearnedIntentPreparation, FileLearnedReplayContinuation, FileLearnedStepPreparation,
+        FileLearnedStepPreparationProgress, FileLearnedStepPreparationStatus,
+    },
+};
 
 /// One bounded slice of original history, followed by at most ONE original
 /// finalization. IntentAcknowledged is not a numerical result. Only Completed
@@ -39,10 +44,18 @@ impl FilePreOutputQuantum {
     /// prefix is not counted again. The one finalizer is excluded explicitly.
     pub fn replayed_events(&self) -> usize {
         match self {
-            Self::ReplayingIntent { replayed_events, .. }
-            | Self::ReplayingCompletion { replayed_events, .. }
-            | Self::IntentAcknowledged { replayed_events, .. }
-            | Self::Completed { replayed_events, .. } => *replayed_events,
+            Self::ReplayingIntent {
+                replayed_events, ..
+            }
+            | Self::ReplayingCompletion {
+                replayed_events, ..
+            }
+            | Self::IntentAcknowledged {
+                replayed_events, ..
+            }
+            | Self::Completed {
+                replayed_events, ..
+            } => *replayed_events,
         }
     }
 }
@@ -98,16 +111,28 @@ impl<P> FilePreOutputForecast<P> {
     /// Conversion itself does no replay, I/O, inference or clock observation.
     /// The existing synchronous advance method and immutable journal stay intact.
     pub fn into_cooperative(self) -> FilePreOutputStepper<P> {
-        FilePreOutputStepper { forecast: self, preparation: None, carry: None,
-            finalization_interrupted: false }
+        FilePreOutputStepper {
+            forecast: self,
+            preparation: None,
+            carry: None,
+            finalization_interrupted: false,
+        }
     }
 }
 impl<P> FilePreOutputStepper<P> {
-    pub fn request(&self) -> u64 { self.forecast.request() }
-    pub fn prediction(&self) -> &P { self.forecast.prediction() }
-    pub fn deadline(&self) -> ConsistencyDeadline { self.forecast.deadline() }
+    pub fn request(&self) -> u64 {
+        self.forecast.request()
+    }
+    pub fn prediction(&self) -> &P {
+        self.forecast.prediction()
+    }
+    pub fn deadline(&self) -> ConsistencyDeadline {
+        self.forecast.deadline()
+    }
     /// Last acknowledged numerical state, not a fresh policy/authority judgment.
-    pub fn numerical(&self) -> &HostedLearnedInspection { self.forecast.numerical() }
+    pub fn numerical(&self) -> &HostedLearnedInspection {
+        self.forecast.numerical()
+    }
 
     /// Replay at most max_events historical transitions and finalize at most one
     /// original intent OR completion. A newly acknowledged intent always yields
@@ -124,13 +149,22 @@ impl<P> FilePreOutputStepper<P> {
     /// retry an uncertain operation. Recovery, not this value, settles storage.
     /// Completed.result distinguishes an acknowledged numerical refusal from an
     /// outer storage/admission error. Neither can be treated as permitted output.
-    pub fn advance_quantum(&mut self, host: &mut FileOversight, revision: u64,
-        max_events: usize) -> Result<FilePreOutputQuantum, JournalError>
-    {
-        if max_events == 0 { return Err(Error::InvalidInput.into()); }
-        if max_events > MAX_JOURNAL_EVENTS { return Err(Error::Limit.into()); }
+    pub fn advance_quantum(
+        &mut self,
+        host: &mut FileOversight,
+        revision: u64,
+        max_events: usize,
+    ) -> Result<FilePreOutputQuantum, JournalError> {
+        if max_events == 0 {
+            return Err(Error::InvalidInput.into());
+        }
+        if max_events > MAX_JOURNAL_EVENTS {
+            return Err(Error::Limit.into());
+        }
         self.forecast.check_current(host, revision)?;
-        if self.finalization_interrupted { return Err(JournalError::Unavailable); }
+        if self.finalization_interrupted {
+            return Err(JournalError::Unavailable);
+        }
         if self.preparation.is_none() {
             let actor = self.forecast.numerical.actor_revision;
             let position = self.forecast.numerical.position;
@@ -141,51 +175,83 @@ impl<P> FilePreOutputStepper<P> {
             // original predecessors; it never clones either owner's state.
             let carry = self.carry.take();
             self.preparation = Some(match (pending, carry) {
-                (false, Some(carry)) => Preparation::Intent(
-                    carry.prepare_intent(host, revision, actor, position)?),
+                (false, Some(carry)) => {
+                    Preparation::Intent(carry.prepare_intent(host, revision, actor, position)?)
+                }
                 (false, None) => Preparation::Intent(
-                    host.prepare_learned_step_intent(revision, actor, position)?),
+                    host.prepare_learned_step_intent(revision, actor, position)?,
+                ),
                 (true, Some(carry)) => Preparation::Completion(
-                    carry.prepare_completion(host, revision, actor, position)?),
+                    carry.prepare_completion(host, revision, actor, position)?,
+                ),
                 (true, None) => Preparation::Completion(
-                    host.prepare_learned_step_completion(revision, actor, position)?),
+                    host.prepare_learned_step_completion(revision, actor, position)?,
+                ),
             });
         }
-        let (intent, before, progress) = match self.preparation.as_mut()
-            .expect("original preparation was installed") {
+        let (intent, before, progress) = match self
+            .preparation
+            .as_mut()
+            .expect("original preparation was installed")
+        {
             Preparation::Intent(task) => {
                 let before = task.progress().replayed_events;
-                (true, before, task.catch_up(host, revision, before, max_events)?)
+                (
+                    true,
+                    before,
+                    task.catch_up(host, revision, before, max_events)?,
+                )
             }
             Preparation::Completion(task) => {
                 let before = task.progress().replayed_events;
-                (false, before, task.catch_up(host, revision, before, max_events)?)
+                (
+                    false,
+                    before,
+                    task.catch_up(host, revision, before, max_events)?,
+                )
             }
         };
-        let replayed_events = progress.replayed_events.checked_sub(before).ok_or(Error::Binding)?;
+        let replayed_events = progress
+            .replayed_events
+            .checked_sub(before)
+            .ok_or(Error::Binding)?;
         if progress.status != FileLearnedStepPreparationStatus::Ready {
             return Ok(if intent {
-                FilePreOutputQuantum::ReplayingIntent { progress, replayed_events }
+                FilePreOutputQuantum::ReplayingIntent {
+                    progress,
+                    replayed_events,
+                }
             } else {
-                FilePreOutputQuantum::ReplayingCompletion { progress, replayed_events }
+                FilePreOutputQuantum::ReplayingCompletion {
+                    progress,
+                    replayed_events,
+                }
             });
         }
         self.forecast.check_current(host, revision)?;
         // Set BEFORE consuming the candidate, including before encoding/I/O.
         // On unwinding or an outer Err there is no reusable earlier candidate.
         self.finalization_interrupted = true;
-        let outcome = match self.preparation.take().expect("fully replayed original preparation") {
+        let outcome = match self
+            .preparation
+            .take()
+            .expect("fully replayed original preparation")
+        {
             Preparation::Intent(task) => {
                 self.carry = Some(task.finish_with_continuation(host)?);
                 FilePreOutputQuantum::IntentAcknowledged {
-                    journal_revision: host.revision(), replayed_events,
+                    journal_revision: host.revision(),
+                    replayed_events,
                 }
             }
             Preparation::Completion(task) => {
                 let (result, carry) = task.finish_with_continuation(host)?;
                 self.forecast.numerical = host.learned_generation_inspection()?.numerical;
                 self.carry = Some(carry);
-                FilePreOutputQuantum::Completed { result, replayed_events }
+                FilePreOutputQuantum::Completed {
+                    result,
+                    replayed_events,
+                }
             }
         };
         self.finalization_interrupted = false;
@@ -202,18 +268,38 @@ pub struct FileOwnedPreOutputStepper {
     report: LearnedForecastReport,
 }
 impl FileOwnedPreOutputStepper {
-    pub(super) fn new(continuation: FilePreOutputStepper<LearnedPrediction>,
-        report: LearnedForecastReport) -> Self {
-        Self { continuation, report }
+    pub(super) fn new(
+        continuation: FilePreOutputStepper<LearnedPrediction>,
+        report: LearnedForecastReport,
+    ) -> Self {
+        Self {
+            continuation,
+            report,
+        }
     }
-    pub fn request(&self) -> u64 { self.continuation.request() }
-    pub fn prediction(&self) -> &LearnedPrediction { self.continuation.prediction() }
-    pub fn forecast_report(&self) -> &LearnedForecastReport { &self.report }
-    pub fn deadline(&self) -> ConsistencyDeadline { self.continuation.deadline() }
-    pub fn numerical(&self) -> &HostedLearnedInspection { self.continuation.numerical() }
-    pub fn advance_quantum(&mut self, host: &mut FileOversight, revision: u64,
-        max_events: usize) -> Result<FilePreOutputQuantum, JournalError> {
-        self.continuation.advance_quantum(host, revision, max_events)
+    pub fn request(&self) -> u64 {
+        self.continuation.request()
+    }
+    pub fn prediction(&self) -> &LearnedPrediction {
+        self.continuation.prediction()
+    }
+    pub fn forecast_report(&self) -> &LearnedForecastReport {
+        &self.report
+    }
+    pub fn deadline(&self) -> ConsistencyDeadline {
+        self.continuation.deadline()
+    }
+    pub fn numerical(&self) -> &HostedLearnedInspection {
+        self.continuation.numerical()
+    }
+    pub fn advance_quantum(
+        &mut self,
+        host: &mut FileOversight,
+        revision: u64,
+        max_events: usize,
+    ) -> Result<FilePreOutputQuantum, JournalError> {
+        self.continuation
+            .advance_quantum(host, revision, max_events)
     }
 }
 

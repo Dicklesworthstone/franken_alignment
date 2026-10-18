@@ -136,4 +136,5 @@ where F: FnMut() -> ElapsedTick {
 }
 
 #[cfg(test)]
+#[path = "andon/tests.rs"]
 mod tests;

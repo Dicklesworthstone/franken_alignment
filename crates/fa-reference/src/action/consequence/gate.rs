@@ -233,7 +233,11 @@ impl ConsequenceAuthority {
         if suspend || decision.consequence == Consequence::NarrowAuthority {
             for (id, attempt) in &self.authority.attempts {
                 let outside = next_ceiling.as_ref().is_some_and(|ceiling| {
-                    !attempt.action.spec().target.is_some_and(|t| ceiling.contains(t))
+                    !attempt
+                        .action
+                        .spec()
+                        .target
+                        .is_some_and(|t| ceiling.contains(t))
                 });
                 if undispatched(attempt.stage) && (suspend || outside) {
                     stops.insert(*id, ActionState::Cancelled);
@@ -287,7 +291,11 @@ impl ConsequenceAuthority {
 
         self.authority.rights = next_rights;
         for (id, terminal) in stops {
-            self.authority.attempts.get_mut(&id).expect("checked attempt").stage = terminal;
+            self.authority
+                .attempts
+                .get_mut(&id)
+                .expect("checked attempt")
+                .stage = terminal;
             self.decisions.insert(id, Consequence::Deny);
         }
         self.decisions.insert(request.attempt, decision.consequence);
@@ -350,7 +358,10 @@ impl ConsequenceAuthority {
             return Err(Error::Binding);
         }
         if self.ceiling.as_ref().is_some_and(|ceiling| {
-            !action.spec().target.is_some_and(|target| ceiling.contains(target))
+            !action
+                .spec()
+                .target
+                .is_some_and(|target| ceiling.contains(target))
         }) {
             return Err(Error::Binding);
         }
@@ -385,9 +396,9 @@ fn undispatched(state: ActionState) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::ReadWitness;
     use crate::action::consequence::Restriction;
     use crate::action::{ActionSpec, Purpose, VERSION};
-    use crate::ReadWitness;
 
     fn scope() -> Scope {
         Scope {
@@ -481,7 +492,10 @@ mod tests {
 
     fn conserved(gate: &ConsequenceAuthority) {
         let inspection = gate.inspect().ledger;
-        assert_eq!(inspection.available + inspection.reserved + inspection.charged, 20);
+        assert_eq!(
+            inspection.available + inspection.reserved + inspection.charged,
+            20
+        );
         assert!(gate.authority.rights.conserved());
     }
 
@@ -491,7 +505,8 @@ mod tests {
         let action = action(1, 4);
         begin(&mut gate, 1, &action);
         assert_eq!(
-            gate.authorize(1, &judgment(&action), &snapshot()).unwrap_err(),
+            gate.authorize(1, &judgment(&action), &snapshot())
+                .unwrap_err(),
             Error::Incomplete
         );
         let review = request(&gate, 1, &action, Restriction::Continue);
@@ -504,9 +519,15 @@ mod tests {
             Error::Binding
         );
         let permit = gate.authorize(1, &judgment(&action), &snapshot()).unwrap();
-        assert_eq!(gate.dispatch(&permit, &action, &changed), Err(Error::Binding));
+        assert_eq!(
+            gate.dispatch(&permit, &action, &changed),
+            Err(Error::Binding)
+        );
         gate.dispatch(&permit, &action, &snapshot()).unwrap();
-        assert_eq!(gate.dispatch(&permit, &action, &snapshot()), Err(Error::WrongState));
+        assert_eq!(
+            gate.dispatch(&permit, &action, &snapshot()),
+            Err(Error::WrongState)
+        );
         conserved(&gate);
     }
 
@@ -521,7 +542,8 @@ mod tests {
         assert_eq!(receipt.decision.consequence, Consequence::HoldEffect);
         assert_eq!(receipt.after, ActionState::Reviewing);
         assert_eq!(
-            gate.authorize(1, &judgment(&action), &snapshot()).unwrap_err(),
+            gate.authorize(1, &judgment(&action), &snapshot())
+                .unwrap_err(),
             Error::WrongState
         );
         conserved(&gate);
@@ -537,7 +559,10 @@ mod tests {
         let receipt = gate.apply_review(review).unwrap();
         assert_eq!(receipt.refunded_units, 0);
         assert_eq!(gate.inspect().ledger, before);
-        assert_eq!(gate.dispatch(&permit, &action, &snapshot()), Err(Error::WrongState));
+        assert_eq!(
+            gate.dispatch(&permit, &action, &snapshot()),
+            Err(Error::WrongState)
+        );
         let review = request(&gate, 1, &action, Restriction::Continue);
         gate.apply_review(review).unwrap();
         gate.dispatch(&permit, &action, &snapshot()).unwrap();
@@ -579,14 +604,14 @@ mod tests {
         assert_eq!(receipt.refunded_units, 5);
         assert_eq!(gate.inspect().ledger.stages[&2], ActionState::Cancelled);
         assert!(gate.dispatch(&second_permit, &second, &snapshot()).is_err());
-        assert_eq!(gate.dispatch(&first_permit, &first, &snapshot()), Err(Error::WrongState));
+        assert_eq!(
+            gate.dispatch(&first_permit, &first, &snapshot()),
+            Err(Error::WrongState)
+        );
         let mut review = request(&gate, 1, &first, Restriction::NarrowAuthority);
         review.retained_targets = Some(
-            TargetCeiling::new(&[
-                first.spec().target.unwrap(),
-                second.spec().target.unwrap(),
-            ])
-            .unwrap(),
+            TargetCeiling::new(&[first.spec().target.unwrap(), second.spec().target.unwrap()])
+                .unwrap(),
         );
         gate.apply_review(review).unwrap();
         assert_eq!(gate.propose(3, second), Err(Error::Binding));
@@ -624,8 +649,10 @@ mod tests {
         assert!(gate.propose(4, first.clone()).is_err());
         let review = request(&gate, 1, &first, Restriction::Continue);
         assert_eq!(gate.apply_review(review), Err(Error::WrongState));
-        gate.record_trusted_outcome(2, TrustedOutcome::Executed).unwrap();
-        gate.record_trusted_outcome(3, TrustedOutcome::NotExecuted).unwrap();
+        gate.record_trusted_outcome(2, TrustedOutcome::Executed)
+            .unwrap();
+        gate.record_trusted_outcome(3, TrustedOutcome::NotExecuted)
+            .unwrap();
         assert_eq!(gate.inspect().ledger.available, 15);
         assert_eq!(gate.inspect().ledger.charged, 5);
         conserved(&gate);
@@ -677,11 +704,20 @@ mod tests {
         let action = action(1, 4);
         let permit = authorize(&mut first, 1, &action);
         let other = authorize(&mut second, 1, &action);
-        assert_eq!(second.dispatch(&permit, &action, &snapshot()), Err(Error::Binding));
+        assert_eq!(
+            second.dispatch(&permit, &action, &snapshot()),
+            Err(Error::Binding)
+        );
         second.observe_time(ElapsedTick(100)).unwrap();
-        assert_eq!(second.dispatch(&other, &action, &snapshot()), Err(Error::Stale));
+        assert_eq!(
+            second.dispatch(&other, &action, &snapshot()),
+            Err(Error::Stale)
+        );
         first.revoke_epoch().unwrap();
-        assert_eq!(first.dispatch(&permit, &action, &snapshot()), Err(Error::Stale));
+        assert_eq!(
+            first.dispatch(&permit, &action, &snapshot()),
+            Err(Error::Stale)
+        );
         conserved(&first);
         conserved(&second);
     }
@@ -718,7 +754,8 @@ mod tests {
         assert_eq!(receipt.refunded_units, 5);
         assert_eq!(gate.inspect().ledger.charged, 4);
         assert!(gate.inspect().suspended);
-        gate.record_trusted_outcome(1, TrustedOutcome::Executed).unwrap();
+        gate.record_trusted_outcome(1, TrustedOutcome::Executed)
+            .unwrap();
         assert_eq!(gate.inspect().ledger.stages[&1], ActionState::Confirmed);
         conserved(&gate);
     }

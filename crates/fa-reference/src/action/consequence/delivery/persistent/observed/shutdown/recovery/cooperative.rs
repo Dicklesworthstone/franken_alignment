@@ -1,17 +1,19 @@
 //! Stop-only cooperative replay of one original, exclusively locked history.
 //! No partial state, live authority, helper session or reviewer role can escape.
-use super::{FileHistoryAnchor, FileOversight, FileOversightProfile, FileStoppedHistory,
-    FileStoppedRecovery, JournalError, Machine, StopRequest, journal, storage};
 use super::super::super::{BaseEvent, Event, machine::Transition};
+use super::super::FileShutdownDrain;
+use super::{
+    FileHistoryAnchor, FileOversight, FileOversightProfile, FileStoppedHistory,
+    FileStoppedRecovery, JournalError, Machine, StopRequest, journal, storage,
+};
+use crate::Error;
 use crate::action::ElapsedTick;
 use crate::action::consequence::delivery::persistent::{MAX_JOURNAL_EVENTS, RecoveryReserve};
-use crate::Error;
 use std::fmt;
 use std::path::Path;
-use super::super::FileShutdownDrain;
 
-mod registered;
 mod admission;
+mod registered;
 pub use admission::FileAdmissionStoppedHistory;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -68,16 +70,19 @@ pub struct FileStopRecovery {
 
 impl fmt::Debug for FileStopRecovery {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("FileStopRecovery").field("progress", &self.progress()).finish_non_exhaustive()
+        f.debug_struct("FileStopRecovery")
+            .field("progress", &self.progress())
+            .finish_non_exhaustive()
     }
 }
 
 impl FileOversight {
     /// Retain exclusive canonical custody before executing any historical event.
     /// No source read, saved-clock refresh, ordinary fence or role issuance occurs.
-    pub fn begin_stopped_recovery(directory: impl AsRef<Path>, profile: FileOversightProfile)
-        -> Result<FileStopRecovery, JournalError>
-    {
+    pub fn begin_stopped_recovery(
+        directory: impl AsRef<Path>,
+        profile: FileOversightProfile,
+    ) -> Result<FileStopRecovery, JournalError> {
         profile.delivery.limits.check()?;
         let store = storage::Store::open(directory.as_ref())?;
         FileStopRecovery::begin_store(store, profile, None)
@@ -85,9 +90,11 @@ impl FileOversight {
 
     /// Match an independently retained exact prefix before original event replay.
     /// An invalid suffix still refuses; the anchor is never a saved state importer.
-    pub fn begin_stopped_recovery_anchored(directory: impl AsRef<Path>, profile: FileOversightProfile,
-        anchor: &FileHistoryAnchor) -> Result<FileStopRecovery, JournalError>
-    {
+    pub fn begin_stopped_recovery_anchored(
+        directory: impl AsRef<Path>,
+        profile: FileOversightProfile,
+        anchor: &FileHistoryAnchor,
+    ) -> Result<FileStopRecovery, JournalError> {
         profile.delivery.limits.check()?;
         let store = storage::Store::open(directory.as_ref())?;
         FileStopRecovery::begin_store(store, profile, Some(anchor))
@@ -95,15 +102,28 @@ impl FileOversight {
 }
 
 impl FileStopRecovery {
-    pub(super) fn begin_store(store: storage::Store, profile: FileOversightProfile,
-        anchor: Option<&FileHistoryAnchor>) -> Result<Self, JournalError>
-    {
+    pub(super) fn begin_store(
+        store: storage::Store,
+        profile: FileOversightProfile,
+        anchor: Option<&FileHistoryAnchor>,
+    ) -> Result<Self, JournalError> {
         let canonical = store.read(profile.delivery.limits.bytes)?;
         let events = journal::decode(&profile, store.identity(), &canonical)?;
-        if let Some(anchor) = anchor { anchor.check(&profile, store.identity(), &events)?; }
+        if let Some(anchor) = anchor {
+            anchor.check(&profile, store.identity(), &events)?;
+        }
         let machine = Machine::new(&profile)?;
-        Ok(Self { profile, store, canonical, events, machine, replayed: 0, attempted: 0,
-            status: FileStopRecoveryStatus::Replaying, last_drain: None })
+        Ok(Self {
+            profile,
+            store,
+            canonical,
+            events,
+            machine,
+            replayed: 0,
+            attempted: 0,
+            status: FileStopRecoveryStatus::Replaying,
+            last_drain: None,
+        })
     }
 
     /// Optional independent reserve pin, checked before replay. This neither
@@ -113,7 +133,8 @@ impl FileStopRecovery {
             return Err(Error::WrongState.into());
         }
         let mut reserves = self.events.iter().filter_map(|event| match event {
-            Event::Core(BaseEvent::ReserveRecovery(actual)) => Some(*actual), _ => None,
+            Event::Core(BaseEvent::ReserveRecovery(actual)) => Some(*actual),
+            _ => None,
         });
         if reserves.next() != Some(expected) || reserves.next().is_some() {
             return Err(Error::Binding.into());
@@ -122,29 +143,43 @@ impl FileStopRecovery {
     }
 
     pub fn progress(&self) -> FileStopRecoveryProgress {
-        FileStopRecoveryProgress { replayed_events: self.replayed, attempted_events: self.attempted,
-            total_events: self.events.len(), status: self.status }
+        FileStopRecoveryProgress {
+            replayed_events: self.replayed,
+            attempted_events: self.attempted,
+            total_events: self.events.len(),
+            status: self.status,
+        }
     }
 
-    pub fn advance(&mut self, expected_events: usize, max_events: usize)
-        -> Result<FileStopRecoveryProgress, JournalError>
-    {
+    pub fn advance(
+        &mut self,
+        expected_events: usize,
+        max_events: usize,
+    ) -> Result<FileStopRecoveryProgress, JournalError> {
         self.advance_with(expected_events, max_events, Machine::apply)
     }
 
-    fn advance_with(&mut self, expected_events: usize, max_events: usize,
-        mut apply: impl FnMut(&mut Machine, &Event) -> Result<Transition, Error>)
-        -> Result<FileStopRecoveryProgress, JournalError>
-    {
+    fn advance_with(
+        &mut self,
+        expected_events: usize,
+        max_events: usize,
+        mut apply: impl FnMut(&mut Machine, &Event) -> Result<Transition, Error>,
+    ) -> Result<FileStopRecoveryProgress, JournalError> {
         match self.status {
             FileStopRecoveryStatus::Interrupted => return Err(JournalError::Unavailable),
             FileStopRecoveryStatus::Failed(error) => return Err(error.into()),
             FileStopRecoveryStatus::Cancelled => return Err(Error::WrongState.into()),
             _ => {}
         }
-        if expected_events != self.replayed { return Err(Error::Stale.into()); }
-        if max_events == 0 { return Err(Error::InvalidInput.into()); }
-        if max_events > MAX_JOURNAL_EVENTS { return Err(Error::Limit.into()); }
+        if expected_events != self.replayed {
+            return Err(Error::Stale.into());
+        }
+        if max_events == 0 {
+            return Err(Error::InvalidInput.into());
+        }
+        if max_events > MAX_JOURNAL_EVENTS {
+            return Err(Error::Limit.into());
+        }
         let end = self.replayed + max_events.min(self.events.len() - self.replayed);
         while self.replayed < end {
             self.status = FileStopRecoveryStatus::Interrupted;
@@ -158,17 +193,26 @@ impl FileStopRecovery {
             };
             self.replayed += 1;
             if let Transition::StopProgressed(sweep) = result {
-                self.last_drain = Some(FileShutdownDrain { journal_revision: self.replayed as u64, sweep });
+                self.last_drain = Some(FileShutdownDrain {
+                    journal_revision: self.replayed as u64,
+                    sweep,
+                });
             }
         }
-        self.status = if self.replayed == self.events.len() { FileStopRecoveryStatus::Ready }
-            else { FileStopRecoveryStatus::Replaying };
+        self.status = if self.replayed == self.events.len() {
+            FileStopRecoveryStatus::Ready
+        } else {
+            FileStopRecoveryStatus::Replaying
+        };
         Ok(self.progress())
     }
 
     pub fn cancel(self) -> FileStopRecoveryProgress {
         let mut progress = self.progress();
-        if matches!(progress.status, FileStopRecoveryStatus::Replaying | FileStopRecoveryStatus::Ready) {
+        if matches!(
+            progress.status,
+            FileStopRecoveryStatus::Replaying | FileStopRecoveryStatus::Ready
+        ) {
             progress.status = FileStopRecoveryStatus::Cancelled;
         }
         progress
@@ -187,23 +231,36 @@ impl FileStopRecovery {
     /// complete replay. A recorded operation cannot be replaced by another one.
     pub fn stop_request(&self, operation: u64) -> Result<StopRequest, JournalError> {
         self.check_ready()?;
-        if operation == 0 { return Err(Error::InvalidInput.into()); }
+        if operation == 0 {
+            return Err(Error::InvalidInput.into());
+        }
         let snapshot = self.machine.snapshot(self.events.len());
         if let Some(receipt) = snapshot.stop {
             let request = receipt.request();
-            if request.operation != operation { return Err(Error::Duplicate.into()); }
+            if request.operation != operation {
+                return Err(Error::Duplicate.into());
+            }
             return Ok(request);
         }
-        Ok(StopRequest { operation, expected_control_sequence: snapshot.control.sequence,
-            expected_authority_epoch: snapshot.control.ledger.epoch })
+        Ok(StopRequest {
+            operation,
+            expected_control_sequence: snapshot.control.sequence,
+            expected_authority_epoch: snapshot.control.ledger.epoch,
+        })
     }
 
     /// No historical event is replayed again. Only the original terminal
     /// transaction may mutate the journal, and only stopped observations escape.
-    pub fn finish_stopped<F>(self, request: StopRequest, clock: F)
-        -> Result<FileStoppedRecovery, JournalError>
-    where F: FnOnce() -> ElapsedTick {
-        self.finish_stopped_with_anchor(request, clock).map(|history| history.into_parts().0)
+    pub fn finish_stopped<F>(
+        self,
+        request: StopRequest,
+        clock: F,
+    ) -> Result<FileStoppedRecovery, JournalError>
+    where
+        F: FnOnce() -> ElapsedTick,
+    {
+        self.finish_stopped_with_anchor(request, clock)
+            .map(|history| history.into_parts().0)
     }
 
     /// Retain the acknowledged stopped cut, never speculative candidate bytes.
@@ -211,17 +268,28 @@ impl FileStopRecovery {
     /// at capacity. Intent and canonical identity are checked before the clock;
     /// the original finalizer repeats canonical comparison after preflight and
     /// before cleanup/replacement. I/O failure may still leave a visible result.
-    pub fn finish_stopped_with_anchor<F>(self, request: StopRequest, clock: F)
-        -> Result<FileStoppedHistory, JournalError>
-    where F: FnOnce() -> ElapsedTick {
+    pub fn finish_stopped_with_anchor<F>(
+        self,
+        request: StopRequest,
+        clock: F,
+    ) -> Result<FileStoppedHistory, JournalError>
+    where
+        F: FnOnce() -> ElapsedTick,
+    {
         self.check_ready()?;
-        if request.operation == 0 { return Err(Error::InvalidInput.into()); }
+        if request.operation == 0 {
+            return Err(Error::InvalidInput.into());
+        }
         let snapshot = self.machine.snapshot(self.events.len());
         if let Some(receipt) = &snapshot.stop {
             let previous = receipt.request();
             if previous != request {
-                return Err(if previous.operation == request.operation { Error::Binding }
-                    else { Error::Duplicate }.into());
+                return Err(if previous.operation == request.operation {
+                    Error::Binding
+                } else {
+                    Error::Duplicate
+                }
+                .into());
             }
             let progress = self.machine.broker.stop_progress()?;
             if progress.drained() {
@@ -229,26 +297,39 @@ impl FileStopRecovery {
                     return Err(Error::Binding.into());
                 }
                 self.store.confirm_and_cleanup()?;
-                let anchor = FileHistoryAnchor::from_acknowledged(self.events.len(), self.canonical);
+                let anchor =
+                    FileHistoryAnchor::from_acknowledged(self.events.len(), self.canonical);
                 return Ok(FileStoppedHistory::new(
-                    FileStoppedRecovery::AlreadyDrained { snapshot, progress }, anchor));
+                    FileStoppedRecovery::AlreadyDrained { snapshot, progress },
+                    anchor,
+                ));
             }
         } else if snapshot.control.sequence != request.expected_control_sequence
-            || snapshot.control.ledger.epoch != request.expected_authority_epoch {
+            || snapshot.control.ledger.epoch != request.expected_authority_epoch
+        {
             return Err(Error::Stale.into());
         }
         if self.store.read(self.profile.delivery.limits.bytes)? != self.canonical {
             return Err(Error::Binding.into());
         }
         let now = clock();
-        let Self { profile, store, events, machine, canonical, .. } = self;
+        let Self {
+            profile,
+            store,
+            events,
+            machine,
+            canonical,
+            ..
+        } = self;
         let (host, _reviewer) = FileOversight::owner(profile, store, events, machine);
         host.finish_verified_stopped(request, now, &canonical)
     }
 
-    pub(super) fn finish_synchronously(mut self, request: StopRequest,
-        clock: impl FnOnce() -> ElapsedTick) -> Result<FileStoppedRecovery, JournalError>
-    {
+    pub(super) fn finish_synchronously(
+        mut self,
+        request: StopRequest,
+        clock: impl FnOnce() -> ElapsedTick,
+    ) -> Result<FileStoppedRecovery, JournalError> {
         while self.status == FileStopRecoveryStatus::Replaying {
             self.advance(self.replayed, MAX_JOURNAL_EVENTS)?;
         }

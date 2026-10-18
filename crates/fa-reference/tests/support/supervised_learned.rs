@@ -1,5 +1,6 @@
 //! Original learned inference and real socket review; tiny weights and supplied
 //! ballots are deterministic controls, not model or restart qualification.
+#![allow(dead_code, unused_imports)]
 use super::numerical;
 use fa_reference::{Error, Snapshot};
 use fa_reference::action::{ElapsedTick, Purpose, ResolvedTarget, Scope};

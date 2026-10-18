@@ -2,6 +2,7 @@ use std::collections::BTreeMap;
 
 // Analytic model: the sole layer preserves embeddings [1,0] / [2,0]. The
 // vocabulary head prefers token 1. top_k=1 still consumes one original RNG draw.
+#[allow(dead_code)]
 pub fn weights() -> Vec<u8> {
     let mut tensors = BTreeMap::from([
         ("model.embed_tokens.weight".to_owned(), (vec![2, 2], vec![1.0_f32, 0.0, 2.0, 0.0])),
@@ -27,6 +28,7 @@ pub fn weights() -> Vec<u8> {
     bytes.extend_from_slice(header.as_bytes()); bytes.extend(data); bytes
 }
 
+#[allow(dead_code)]
 pub fn monitor(threshold: f32) -> Vec<u8> {
     r#"{"schema":"fa.decoder-monitor/1","generation":1,
       "identity":{"tenant":1,"model":9,"model_generation":1,"tokenizer_generation":1,"profile_generation":1},
@@ -35,6 +37,7 @@ pub fn monitor(threshold: f32) -> Vec<u8> {
         "probes":[{"id":1,"generation":1,"weights":[1.0,0.0],"bias":0.0,"threshold":THRESHOLD}]}]}"#
         .replace("THRESHOLD", &threshold.to_string()).into_bytes()
 }
+#[allow(dead_code)]
 pub fn sampling() -> Vec<u8> {
     br#"{"schema":"fa.decoder-sampling/1","id":1,"generation":1,"vocabulary":2,
       "temperature":1.0,"top_k":1,"top_p":1.0,"stream":21,"seed":9}"#.to_vec()

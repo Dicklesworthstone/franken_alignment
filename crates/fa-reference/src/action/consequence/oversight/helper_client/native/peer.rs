@@ -2,16 +2,21 @@
 //! one frozen input, one native evaluation, one immutable commit/reveal pair.
 
 #[cfg(test)]
-mod tests;
-#[cfg(test)]
 mod cooperative_tests;
+#[cfg(test)]
+mod tests;
 
-use super::{NativeEvaluationError, NativeEvaluationProgress, NativeEvaluationStatus, NativeEvaluator, TextGenerationReport};
-use super::super::{ClientInterest, ClientPhase, ClientProgress, HelperClient};
 use super::super::super::helper_client_drive::MAX_CLIENT_DRIVE_STEPS;
-use super::super::super::helper_workers::{MAX_WORKER_SALT_BYTES, io::WorkerIoError, wire::WorkerInput};
-use crate::round::Verdict;
+use super::super::super::helper_workers::{
+    MAX_WORKER_SALT_BYTES, io::WorkerIoError, wire::WorkerInput,
+};
+use super::super::{ClientInterest, ClientPhase, ClientProgress, HelperClient};
+use super::{
+    NativeEvaluationError, NativeEvaluationProgress, NativeEvaluationStatus, NativeEvaluator,
+    TextGenerationReport,
+};
 use crate::Error;
+use crate::round::Verdict;
 use std::fmt;
 use std::io::{Read, Write};
 
@@ -32,7 +37,9 @@ pub enum NativeClientError {
     Interrupted,
 }
 impl fmt::Display for NativeClientError {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result { write!(f, "{self:?}") }
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{self:?}")
+    }
 }
 impl std::error::Error for NativeClientError {}
 
@@ -75,8 +82,10 @@ pub struct NativeHelperClient<S> {
 }
 impl<S> fmt::Debug for NativeHelperClient<S> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("NativeHelperClient").field("failure", &self.failure)
-            .field("evaluations", &self.evaluations).finish_non_exhaustive()
+        f.debug_struct("NativeHelperClient")
+            .field("failure", &self.failure)
+            .field("evaluations", &self.evaluations)
+            .finish_non_exhaustive()
     }
 }
 impl<S: Read + Write> NativeHelperClient<S> {
@@ -84,22 +93,50 @@ impl<S: Read + Write> NativeHelperClient<S> {
         if !(MIN_NATIVE_SALT_BYTES..=MAX_WORKER_SALT_BYTES).contains(&salt.len()) {
             return Err(Error::Limit);
         }
-        if evaluator.status() != NativeEvaluationStatus::AwaitingInput { return Err(Error::WrongState); }
+        if evaluator.status() != NativeEvaluationStatus::AwaitingInput {
+            return Err(Error::WrongState);
+        }
         let client = HelperClient::new(stream, evaluator.policy().input_profile.clone())?;
-        Ok(Self { client, evaluator, salt, failure: None, evaluations: 0 })
+        Ok(Self {
+            client,
+            evaluator,
+            salt,
+            failure: None,
+            evaluations: 0,
+        })
     }
     pub fn phase(&self) -> ClientPhase {
-        if self.failure.is_some() { ClientPhase::Failed } else { self.client.phase() }
+        if self.failure.is_some() {
+            ClientPhase::Failed
+        } else {
+            self.client.phase()
+        }
     }
     pub fn interest(&self) -> ClientInterest {
-        if self.failure.is_some() { ClientInterest::Finished } else { self.client.interest() }
+        if self.failure.is_some() {
+            ClientInterest::Finished
+        } else {
+            self.client.interest()
+        }
     }
-    pub fn failure(&self) -> Option<NativeClientError> { self.failure }
-    pub fn input(&self) -> Option<&WorkerInput> { self.client.input() }
-    pub fn report(&self) -> Option<&TextGenerationReport> { self.evaluator.report() }
-    pub fn evaluations(&self) -> usize { self.evaluations }
-    pub fn sampled_draws(&self) -> u64 { self.evaluator.sampled_draws() }
-    pub fn evaluation_progress(&self) -> NativeEvaluationProgress { self.evaluator.progress() }
+    pub fn failure(&self) -> Option<NativeClientError> {
+        self.failure
+    }
+    pub fn input(&self) -> Option<&WorkerInput> {
+        self.client.input()
+    }
+    pub fn report(&self) -> Option<&TextGenerationReport> {
+        self.evaluator.report()
+    }
+    pub fn evaluations(&self) -> usize {
+        self.evaluations
+    }
+    pub fn sampled_draws(&self) -> u64 {
+        self.evaluator.sampled_draws()
+    }
+    pub fn evaluation_progress(&self) -> NativeEvaluationProgress {
+        self.evaluator.progress()
+    }
 
     /// One original I/O step OR at most one native monitored token. Complete
     /// input decoding yields NeedsInference without computing in that I/O call.
@@ -124,13 +161,18 @@ impl<S: Read + Write> NativeHelperClient<S> {
     }
 
     // Private causal interruption seam; no public transport/inference callback.
-    fn step_with<F: FnOnce()>(&mut self, after_step: F) -> Result<NativeClientProgress, NativeClientError> {
+    fn step_with<F: FnOnce()>(
+        &mut self,
+        after_step: F,
+    ) -> Result<NativeClientProgress, NativeClientError> {
         self.step_with_mode(false, after_step)
     }
 
-    fn step_with_mode<F: FnOnce()>(&mut self, cooperative: bool, after_step: F)
-        -> Result<NativeClientProgress, NativeClientError>
-    {
+    fn step_with_mode<F: FnOnce()>(
+        &mut self,
+        cooperative: bool,
+        after_step: F,
+    ) -> Result<NativeClientProgress, NativeClientError> {
         if let Some(error) = self.failure {
             self.release_evaluation();
             return Err(error);
@@ -144,28 +186,47 @@ impl<S: Read + Write> NativeHelperClient<S> {
         let result = self.step_once(cooperative);
         after_step();
         self.failure = result.as_ref().err().copied();
-        if self.failure.is_some() { self.release_evaluation(); }
+        if self.failure.is_some() {
+            self.release_evaluation();
+        }
         result
     }
     fn step_once(&mut self, cooperative: bool) -> Result<NativeClientProgress, NativeClientError> {
         if self.client.phase() != ClientPhase::NeedsInference {
-            return self.client.step().map(NativeClientProgress::Protocol).map_err(NativeClientError::Protocol);
+            return self
+                .client
+                .step()
+                .map(NativeClientProgress::Protocol)
+                .map_err(NativeClientError::Protocol);
         }
-        let input = self.client.input().ok_or(NativeClientError::Protocol(WorkerIoError::Protocol(Error::Incomplete)))?;
+        let input =
+            self.client
+                .input()
+                .ok_or(NativeClientError::Protocol(WorkerIoError::Protocol(
+                    Error::Incomplete,
+                )))?;
         if self.salt.len() > input.salt_limit() {
-            return Err(NativeClientError::Protocol(WorkerIoError::Protocol(Error::Limit)));
+            return Err(NativeClientError::Protocol(WorkerIoError::Protocol(
+                Error::Limit,
+            )));
         }
         // Admit once, never once per poll. The original client retains the exact
         // request while its one-shot response slot remains NeedsInference.
         if self.evaluator.status() == NativeEvaluationStatus::AwaitingInput {
             self.evaluations += 1;
-            let admission = if cooperative { self.evaluator.begin_cooperative(input) }
-                else { self.evaluator.begin(input) };
+            let admission = if cooperative {
+                self.evaluator.begin_cooperative(input)
+            } else {
+                self.evaluator.begin(input)
+            };
             admission.map_err(NativeClientError::Inference)?;
         }
         if self.evaluator.status() == NativeEvaluationStatus::Admitting {
             for _ in 0..TOKENIZATION_STEPS_PER_POLL {
-                let progress = self.evaluator.advance(self.evaluator.position()).map_err(NativeClientError::Inference)?;
+                let progress = self
+                    .evaluator
+                    .advance(self.evaluator.position())
+                    .map_err(NativeClientError::Inference)?;
                 // Do not spend even one numerical token in the call that moves
                 // a completed encoding into its original generation owner.
                 if progress.status != NativeEvaluationStatus::Admitting {
@@ -174,13 +235,19 @@ impl<S: Read + Write> NativeHelperClient<S> {
             }
             return Ok(NativeClientProgress::Inference(self.evaluator.progress()));
         }
-        let progress = self.evaluator.advance(self.evaluator.position()).map_err(NativeClientError::Inference)?;
+        let progress = self
+            .evaluator
+            .advance(self.evaluator.position())
+            .map_err(NativeClientError::Inference)?;
         let verdict = match progress.status {
-            NativeEvaluationStatus::Running => return Ok(NativeClientProgress::Inference(progress)),
+            NativeEvaluationStatus::Running => {
+                return Ok(NativeClientProgress::Inference(progress));
+            }
             NativeEvaluationStatus::Judged(verdict) => verdict,
             _ => return Err(NativeClientError::Inference(Error::WrongState.into())),
         };
-        self.client.respond(verdict, &self.salt)
+        self.client
+            .respond(verdict, &self.salt)
             .map_err(|error| NativeClientError::Protocol(WorkerIoError::Protocol(error)))?;
         // The original client now retains the one reveal frame. Erasing this
         // redundant logical copy is not a zeroization or secure-memory claim.
@@ -193,25 +260,47 @@ impl<S: Read + Write> NativeHelperClient<S> {
     /// drive(MAX_CLIENT_DRIVE_STEPS) cannot compute a whole prompt without yielding.
     /// Attempts count once; evaluation_progress retains actual native work.
     pub fn drive(&mut self, max_steps: usize) -> Result<NativeClientDrive, Error> {
-        if max_steps == 0 { return Err(Error::InvalidInput); }
-        if max_steps > MAX_CLIENT_DRIVE_STEPS { return Err(Error::Limit); }
-        let before = self.evaluations;
-        let initial = if let Some(error) = self.failure { Some(Err(error)) }
-            else if self.phase() == ClientPhase::ReplySent {
-                Some(Ok(NativeClientProgress::Protocol(ClientProgress::ReplySent)))
-            } else { None };
-        if let Some(progress) = initial {
-            if self.failure.is_some() { self.release_evaluation(); }
-            return Ok(NativeClientDrive { steps: 0, evaluations: 0, phase: self.phase(), progress });
+        if max_steps == 0 {
+            return Err(Error::InvalidInput);
         }
-        let mut report = NativeClientDrive { steps: 0, evaluations: 0, phase: self.phase(),
-            progress: Ok(NativeClientProgress::Protocol(ClientProgress::Progress)) };
+        if max_steps > MAX_CLIENT_DRIVE_STEPS {
+            return Err(Error::Limit);
+        }
+        let before = self.evaluations;
+        let initial = if let Some(error) = self.failure {
+            Some(Err(error))
+        } else if self.phase() == ClientPhase::ReplySent {
+            Some(Ok(NativeClientProgress::Protocol(
+                ClientProgress::ReplySent,
+            )))
+        } else {
+            None
+        };
+        if let Some(progress) = initial {
+            if self.failure.is_some() {
+                self.release_evaluation();
+            }
+            return Ok(NativeClientDrive {
+                steps: 0,
+                evaluations: 0,
+                phase: self.phase(),
+                progress,
+            });
+        }
+        let mut report = NativeClientDrive {
+            steps: 0,
+            evaluations: 0,
+            phase: self.phase(),
+            progress: Ok(NativeClientProgress::Protocol(ClientProgress::Progress)),
+        };
         for _ in 0..max_steps {
             report.steps += 1;
             report.progress = self.step();
             report.phase = self.phase();
             report.evaluations = self.evaluations - before;
-            if report.progress != Ok(NativeClientProgress::Protocol(ClientProgress::Progress)) { break; }
+            if report.progress != Ok(NativeClientProgress::Protocol(ClientProgress::Progress)) {
+                break;
+            }
         }
         Ok(report)
     }
@@ -222,7 +311,9 @@ impl<S: Read + Write> NativeHelperClient<S> {
     /// still decide the round, with the original member in the denominator.
     pub fn cancel(&mut self) -> bool {
         self.release_evaluation();
-        if self.failure.is_some() || self.client.phase() == ClientPhase::ReplySent { return false; }
+        if self.failure.is_some() || self.client.phase() == ClientPhase::ReplySent {
+            return false;
+        }
         self.failure = Some(NativeClientError::Cancelled);
         true
     }
@@ -237,14 +328,20 @@ impl<S: Read + Write> NativeHelperClient<S> {
 
 #[cfg(unix)]
 impl NativeHelperClient<std::os::unix::net::UnixStream> {
-    pub fn from_unix(stream: std::os::unix::net::UnixStream, evaluator: NativeEvaluator,
-        salt: Vec<u8>) -> Result<Self, WorkerIoError>
-    {
-        stream.set_nonblocking(true).map_err(|error| WorkerIoError::Io(error.kind()))?;
+    pub fn from_unix(
+        stream: std::os::unix::net::UnixStream,
+        evaluator: NativeEvaluator,
+        salt: Vec<u8>,
+    ) -> Result<Self, WorkerIoError> {
+        stream
+            .set_nonblocking(true)
+            .map_err(|error| WorkerIoError::Io(error.kind()))?;
         Self::new(stream, evaluator, salt).map_err(WorkerIoError::Protocol)
     }
 }
 #[cfg(unix)]
 impl std::os::fd::AsFd for NativeHelperClient<std::os::unix::net::UnixStream> {
-    fn as_fd(&self) -> std::os::fd::BorrowedFd<'_> { std::os::fd::AsFd::as_fd(&self.client) }
+    fn as_fd(&self) -> std::os::fd::BorrowedFd<'_> {
+        std::os::fd::AsFd::as_fd(&self.client)
+    }
 }

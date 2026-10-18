@@ -1,10 +1,13 @@
 //! Original direct-child lifecycle coupled to a durable learned-source round.
 //! Reuse the executable launcher, source-bound socket owner and witnessed finish.
 pub mod sequence;
-use super::{FileLearnedSocketRound, FileLearnedSidecar, FileLearnedSidecarFinish,
-    FileOversight, FileHelperFailure, HelperPump, JournalError, LearnedSocketStatus};
-use super::super::processes::{FileHelperProcessError, FileHelperProcessLaunch,
-    FileProcessFailure, HelperRoundAdmission};
+use super::super::processes::{
+    FileHelperProcessError, FileHelperProcessLaunch, FileProcessFailure, HelperRoundAdmission,
+};
+use super::{
+    FileHelperFailure, FileLearnedSidecar, FileLearnedSidecarFinish, FileLearnedSocketRound,
+    FileOversight, HelperPump, JournalError, LearnedSocketStatus,
+};
 use crate::action::ElapsedTick;
 use crate::action::consequence::oversight::{
     helper_processes::{HelperChildren, HelperProgram, ProcessStatus},
@@ -40,8 +43,11 @@ pub struct FileLearnedProcessRound {
 }
 
 fn not_started(error: impl Into<FileProcessFailure>) -> FileHelperProcessError {
-    FileHelperProcessError { failure: error.into(), admission: HelperRoundAdmission::NotStarted,
-        children: None }
+    FileHelperProcessError {
+        failure: error.into(),
+        admission: HelperRoundAdmission::NotStarted,
+        children: None,
+    }
 }
 
 impl FileOversight {
@@ -49,44 +55,98 @@ impl FileOversight {
     /// launch. The existing launcher consumes Begin before spawning, returns
     /// partial children on ordinary failure and checks a fresh post-launch clock.
     /// No packet is sent here. A failed launch never enables manual-round fallback.
-    pub fn begin_learned_process_round<F>(&mut self, revision: u64, sidecar: FileLearnedSidecar,
-        launch: LearnedProcessLaunch, snapshot: Snapshot, clock: F)
-        -> Result<FileLearnedProcessRound, FileHelperProcessError>
-    where F: FnMut() -> ElapsedTick {
-        if revision != self.revision() { return Err(not_started(Error::Stale)); }
-        self.current_learned_sidecar(&sidecar).map_err(not_started)?;
-        let processes = self.begin_helper_processes(revision, FileHelperProcessLaunch {
-            attempt: sidecar.attempt(), expected_input_revision: sidecar.input_revision(),
-            round: launch.round.round, evidence_root: launch.round.evidence_root,
-            window: launch.round.window, programs: launch.programs, limits: launch.limits,
-        }, snapshot, clock)?;
+    pub fn begin_learned_process_round<F>(
+        &mut self,
+        revision: u64,
+        sidecar: FileLearnedSidecar,
+        launch: LearnedProcessLaunch,
+        snapshot: Snapshot,
+        clock: F,
+    ) -> Result<FileLearnedProcessRound, FileHelperProcessError>
+    where
+        F: FnMut() -> ElapsedTick,
+    {
+        if revision != self.revision() {
+            return Err(not_started(Error::Stale));
+        }
+        self.current_learned_sidecar(&sidecar)
+            .map_err(not_started)?;
+        let processes = self.begin_helper_processes(
+            revision,
+            FileHelperProcessLaunch {
+                attempt: sidecar.attempt(),
+                expected_input_revision: sidecar.input_revision(),
+                round: launch.round.round,
+                evidence_root: launch.round.evidence_root,
+                window: launch.round.window,
+                programs: launch.programs,
+                limits: launch.limits,
+            },
+            snapshot,
+            clock,
+        )?;
         if let Err(error) = self.current_learned_sidecar(&sidecar) {
-            return Err(FileHelperProcessError { failure: error.into(),
+            return Err(FileHelperProcessError {
+                failure: error.into(),
                 admission: HelperRoundAdmission::Committed,
-                children: Some(processes.into_children()) });
+                children: Some(processes.into_children()),
+            });
         }
         let (pool, children) = processes.into_running_parts();
         let workers = pool.statuses();
-        let round = FileLearnedSocketRound { issuer: Rc::clone(&self.issuer), sidecar,
-            pool: Some(pool), round: launch.round.round, revision: 0,
-            status: LearnedSocketStatus::Running, failure: None,
-            progress: HelperPump { io: BTreeMap::new(), workers }, connection_steps: 0, result: None };
+        let round = FileLearnedSocketRound {
+            issuer: Rc::clone(&self.issuer),
+            sidecar,
+            pool: Some(pool),
+            round: launch.round.round,
+            revision: 0,
+            status: LearnedSocketStatus::Running,
+            failure: None,
+            progress: HelperPump {
+                io: BTreeMap::new(),
+                workers,
+            },
+            connection_steps: 0,
+            result: None,
+        };
         Ok(FileLearnedProcessRound { round, children })
     }
 }
 
 impl FileLearnedProcessRound {
-    pub fn round(&self) -> u64 { self.round.round() }
-    pub fn revision(&self) -> u64 { self.round.revision() }
-    pub fn status(&self) -> LearnedSocketStatus { self.round.status() }
-    pub fn failure(&self) -> Option<&JournalError> { self.round.failure() }
-    pub fn progress(&self) -> &HelperPump { self.round.progress() }
-    pub fn connection_steps(&self) -> u64 { self.round.connection_steps() }
-    pub fn ready_to_finish(&self) -> bool { self.round.ready_to_finish() }
-    pub fn next_deadline(&self) -> Option<ElapsedTick> { self.round.next_deadline() }
-    pub fn outcome(&self) -> Option<&FileLearnedSidecarFinish> { self.round.outcome() }
-    pub fn process_statuses(&self) -> BTreeMap<String, ProcessStatus> { self.children.statuses() }
-    pub fn all_reaped(&self) -> bool { self.children.all_reaped() }
+    pub fn round(&self) -> u64 {
+        self.round.round()
+    }
+    pub fn revision(&self) -> u64 {
+        self.round.revision()
+    }
+    pub fn status(&self) -> LearnedSocketStatus {
+        self.round.status()
+    }
+    pub fn failure(&self) -> Option<&JournalError> {
+        self.round.failure()
+    }
+    pub fn progress(&self) -> &HelperPump {
+        self.round.progress()
+    }
+    pub fn connection_steps(&self) -> u64 {
+        self.round.connection_steps()
+    }
+    pub fn ready_to_finish(&self) -> bool {
+        self.round.ready_to_finish()
+    }
+    pub fn next_deadline(&self) -> Option<ElapsedTick> {
+        self.round.next_deadline()
+    }
+    pub fn outcome(&self) -> Option<&FileLearnedSidecarFinish> {
+        self.round.outcome()
+    }
+    pub fn process_statuses(&self) -> BTreeMap<String, ProcessStatus> {
+        self.children.statuses()
+    }
+    pub fn all_reaped(&self) -> bool {
+        self.children.all_reaped()
+    }
 
     /// Original bounded try_wait/kill operations only; no blocking wait or hidden
     /// reaper. A reaped child can still have buffered protocol bytes to consume.
@@ -95,24 +155,44 @@ impl FileLearnedProcessRound {
             return self.children.request_stop_all();
         }
         for (member, status) in &self.round.progress().workers {
-            if matches!(status.phase, HelperPhase::Complete | HelperPhase::Failed | HelperPhase::Closed) {
-                self.children.request_stop(member).expect("original complete child roster");
+            if matches!(
+                status.phase,
+                HelperPhase::Complete | HelperPhase::Failed | HelperPhase::Closed
+            ) {
+                self.children
+                    .request_stop(member)
+                    .expect("original complete child roster");
             }
         }
         self.children.reap()
     }
 
-    pub fn pump(&mut self, host: &mut FileOversight, revision: u64, now: ElapsedTick)
-        -> Result<HelperPump, FileHelperFailure>
-    {
+    pub fn pump(
+        &mut self,
+        host: &mut FileOversight,
+        revision: u64,
+        now: ElapsedTick,
+    ) -> Result<HelperPump, FileHelperFailure> {
         self.pump_with_clock(host, revision, || now)
     }
-    pub fn pump_with_clock<F>(&mut self, host: &mut FileOversight, revision: u64, clock: F)
-        -> Result<HelperPump, FileHelperFailure>
-    where F: FnMut() -> ElapsedTick {
+    pub fn pump_with_clock<F>(
+        &mut self,
+        host: &mut FileOversight,
+        revision: u64,
+        clock: F,
+    ) -> Result<HelperPump, FileHelperFailure>
+    where
+        F: FnMut() -> ElapsedTick,
+    {
         // Invalid owner/revision calls do not even poll child processes.
-        self.round.bind(host, revision).map_err(|error| self.round.failed_pump(error))?;
-        let mut guard = StopOnUnwind { round: &mut self.round, children: &mut self.children, armed: true };
+        self.round
+            .bind(host, revision)
+            .map_err(|error| self.round.failed_pump(error))?;
+        let mut guard = StopOnUnwind {
+            round: &mut self.round,
+            children: &mut self.children,
+            armed: true,
+        };
         let result = guard.round.pump_with_clock(host, revision, clock);
         guard.armed = false;
         drop(guard);
@@ -120,17 +200,31 @@ impl FileLearnedProcessRound {
         result
     }
 
-    pub fn finish(&mut self, host: &mut FileOversight, revision: u64, snapshot: Snapshot)
-        -> Result<FileLearnedSidecarFinish, JournalError>
-    {
+    pub fn finish(
+        &mut self,
+        host: &mut FileOversight,
+        revision: u64,
+        snapshot: Snapshot,
+    ) -> Result<FileLearnedSidecarFinish, JournalError> {
         self.finish_bound(host, revision, false, snapshot)
     }
-    fn finish_bound(&mut self, host: &mut FileOversight, revision: u64, refine: bool,
-        snapshot: Snapshot) -> Result<FileLearnedSidecarFinish, JournalError>
-    {
+    fn finish_bound(
+        &mut self,
+        host: &mut FileOversight,
+        revision: u64,
+        refine: bool,
+        snapshot: Snapshot,
+    ) -> Result<FileLearnedSidecarFinish, JournalError> {
         self.round.bind(host, revision)?;
-        let mut guard = StopOnUnwind { round: &mut self.round, children: &mut self.children, armed: true };
-        let result = guard.round.finish_bound(host, revision, refine, snapshot).cloned();
+        let mut guard = StopOnUnwind {
+            round: &mut self.round,
+            children: &mut self.children,
+            armed: true,
+        };
+        let result = guard
+            .round
+            .finish_bound(host, revision, refine, snapshot)
+            .cloned();
         guard.armed = false;
         drop(guard);
         self.reap();

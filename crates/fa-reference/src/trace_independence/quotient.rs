@@ -32,15 +32,38 @@ const TRACE_HEADER: &[u8; 8] = b"FAQTRC01";
 /// Missing required evidence holds; a present wrong value produces a denial.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum ReplayInstruction {
-    Read { domain: DomainId },
-    Write { domain: DomainId, value: Option<u64> },
-    CopyAdd { source: DomainId, target: DomainId, addend: u64 },
-    Check { domain: DomainId, expected: Option<u64> },
-    Consume { resource: DomainId, units: u64 },
-    Draw { stream: DomainId },
-    Authority { enabled: bool },
-    Ordered { domain: DomainId },
-    External { domain: DomainId },
+    Read {
+        domain: DomainId,
+    },
+    Write {
+        domain: DomainId,
+        value: Option<u64>,
+    },
+    CopyAdd {
+        source: DomainId,
+        target: DomainId,
+        addend: u64,
+    },
+    Check {
+        domain: DomainId,
+        expected: Option<u64>,
+    },
+    Consume {
+        resource: DomainId,
+        units: u64,
+    },
+    Draw {
+        stream: DomainId,
+    },
+    Authority {
+        enabled: bool,
+    },
+    Ordered {
+        domain: DomainId,
+    },
+    External {
+        domain: DomainId,
+    },
 }
 
 /// Registration and typed code are bound once. Extra declared dependencies
@@ -91,12 +114,22 @@ impl ReplayOccurrence {
         if !covered {
             return Err(Error::Binding);
         }
-        Ok(Self { id, operation, instruction })
+        Ok(Self {
+            id,
+            operation,
+            instruction,
+        })
     }
 
-    pub fn id(&self) -> u64 { self.id }
-    pub fn operation(&self) -> &RegisteredTraceOperation { &self.operation }
-    pub fn instruction(&self) -> ReplayInstruction { self.instruction }
+    pub fn id(&self) -> u64 {
+        self.id
+    }
+    pub fn operation(&self) -> &RegisteredTraceOperation {
+        &self.operation
+    }
+    pub fn instruction(&self) -> ReplayInstruction {
+        self.instruction
+    }
 }
 
 /// An explicit fixture state, never a live authority or storage handle.
@@ -111,11 +144,18 @@ impl ReplayState {
         if cells.len() > MAX_QUOTIENT_CELLS {
             return Err(Error::Limit);
         }
-        Ok(Self { cells, authority_enabled })
+        Ok(Self {
+            cells,
+            authority_enabled,
+        })
     }
 
-    pub fn cells(&self) -> &BTreeMap<DomainId, u64> { &self.cells }
-    pub fn authority_enabled(&self) -> bool { self.authority_enabled }
+    pub fn cells(&self) -> &BTreeMap<DomainId, u64> {
+        &self.cells
+    }
+    pub fn authority_enabled(&self) -> bool {
+        self.authority_enabled
+    }
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -153,11 +193,17 @@ pub struct LogicalReplay {
 }
 
 impl LogicalReplay {
-    pub fn state(&self) -> &ReplayState { &self.state }
+    pub fn state(&self) -> &ReplayState {
+        &self.state
+    }
     /// Sorted by stable occurrence identity, not execution position.
-    pub fn results(&self) -> &[OccurrenceResult] { &self.results }
+    pub fn results(&self) -> &[OccurrenceResult] {
+        &self.results
+    }
     /// Ordered attempts retain execution order, including rejected attempts.
-    pub fn ordered(&self) -> &[OrderedObservation] { &self.ordered }
+    pub fn ordered(&self) -> &[OrderedObservation] {
+        &self.ordered
+    }
 }
 
 /// Order-only trace encoding. These bytes require the original program, initial
@@ -168,7 +214,9 @@ pub struct TraceSchedule {
 }
 
 impl TraceSchedule {
-    pub fn occurrences(&self) -> &[u64] { &self.occurrences }
+    pub fn occurrences(&self) -> &[u64] {
+        &self.occurrences
+    }
 
     pub fn encode(&self) -> Vec<u8> {
         let mut bytes = Vec::with_capacity(16 + 8 * self.occurrences.len());
@@ -237,9 +285,15 @@ pub struct ReplayRepresentative {
 }
 
 impl ReplayRepresentative {
-    pub fn schedule(&self) -> &TraceSchedule { &self.schedule }
-    pub fn replay(&self) -> &LogicalReplay { &self.replay }
-    pub fn members(&self) -> usize { self.members }
+    pub fn schedule(&self) -> &TraceSchedule {
+        &self.schedule
+    }
+    pub fn replay(&self) -> &LogicalReplay {
+        &self.replay
+    }
+    pub fn members(&self) -> usize {
+        self.members
+    }
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -251,10 +305,18 @@ pub struct QuotientReport {
 }
 
 impl QuotientReport {
-    pub fn admission(&self) -> ReplayAdmission { self.admission }
-    pub fn relation(&self) -> RelationEvaluation { self.relation }
-    pub fn progress(&self) -> ReplayProgress { self.progress }
-    pub fn representatives(&self) -> &[ReplayRepresentative] { &self.representatives }
+    pub fn admission(&self) -> ReplayAdmission {
+        self.admission
+    }
+    pub fn relation(&self) -> RelationEvaluation {
+        self.relation
+    }
+    pub fn progress(&self) -> ReplayProgress {
+        self.progress
+    }
+    pub fn representatives(&self) -> &[ReplayRepresentative] {
+        &self.representatives
+    }
     pub fn unreduced_trace_bytes(&self) -> usize {
         self.admission.required.schedules * self.admission.schedule_bytes
     }
@@ -283,7 +345,9 @@ pub enum ReplayFailure {
 }
 
 impl From<Error> for ReplayFailure {
-    fn from(error: Error) -> Self { Self::Admission(error) }
+    fn from(error: Error) -> Self {
+        Self::Admission(error)
+    }
 }
 
 /// Count factorial schedules and worst-case work/storage before execution.
@@ -301,13 +365,19 @@ pub fn estimate(
             | ReplayInstruction::Write { domain, .. }
             | ReplayInstruction::Check { domain, .. }
             | ReplayInstruction::Ordered { domain }
-            | ReplayInstruction::External { domain } => { domains.insert(domain); }
+            | ReplayInstruction::External { domain } => {
+                domains.insert(domain);
+            }
             ReplayInstruction::CopyAdd { source, target, .. } => {
                 domains.insert(source);
                 domains.insert(target);
             }
-            ReplayInstruction::Consume { resource, .. } => { domains.insert(resource); }
-            ReplayInstruction::Draw { stream } => { domains.insert(stream); }
+            ReplayInstruction::Consume { resource, .. } => {
+                domains.insert(resource);
+            }
+            ReplayInstruction::Draw { stream } => {
+                domains.insert(stream);
+            }
             ReplayInstruction::Authority { .. } => {}
         }
     }
@@ -326,8 +396,7 @@ pub fn estimate(
         replay_steps: 2 * schedules * n,
         canonical_checks: pairs + schedules * (pairs + n * n),
         comparison_entries: schedules * (domains.len() + 2 * n + 1),
-        retained_bytes: schedules * (64 + schedule_bytes + result_bytes)
-            + 2 * result_bytes + 512,
+        retained_bytes: schedules * (64 + schedule_bytes + result_bytes) + 2 * result_bytes + 512,
     };
     if !fits(required, ReplayBudget::default()) {
         return Err(Error::Limit);
@@ -351,7 +420,10 @@ pub fn canonicalize(
     let order = validate_schedule(occurrences, schedule)?;
     let (matrix, _) = relation(registry, occurrences);
     let mut checks = 0;
-    Ok(trace(occurrences, &canonical_order(occurrences, &matrix, &order, &mut checks)))
+    Ok(trace(
+        occurrences,
+        &canonical_order(occurrences, &matrix, &order, &mut checks),
+    ))
 }
 
 /// Replay one exact bounded schedule from the original fixture state.
@@ -418,7 +490,9 @@ fn validate_schedule(
         if !seen.insert(*occurrence_id) {
             return Err(Error::Duplicate);
         }
-        let index = occurrences.iter().position(|occurrence| occurrence.id == *occurrence_id)
+        let index = occurrences
+            .iter()
+            .position(|occurrence| occurrence.id == *occurrence_id)
             .ok_or(Error::Binding)?;
         order.push(index);
     }
@@ -436,18 +510,25 @@ fn relation(
     let mut independent_pairs = 0;
     for left in 0..occurrences.len() {
         for right in left + 1..occurrences.len() {
-            let commutes = independent(registry, &occurrences[left].operation, &occurrences[right].operation);
+            let commutes = independent(
+                registry,
+                &occurrences[left].operation,
+                &occurrences[right].operation,
+            );
             matrix[left][right] = commutes;
             matrix[right][left] = commutes;
             evaluated_pairs += 1;
             independent_pairs += usize::from(commutes);
         }
     }
-    (matrix, RelationEvaluation {
-        evaluated_pairs,
-        independent_pairs,
-        ordered_pairs: evaluated_pairs - independent_pairs,
-    })
+    (
+        matrix,
+        RelationEvaluation {
+            evaluated_pairs,
+            independent_pairs,
+            ordered_pairs: evaluated_pairs - independent_pairs,
+        },
+    )
 }
 
 fn canonical_order(
@@ -506,11 +587,13 @@ fn verify_relation(
     };
     let mut representatives = Vec::<ReplayRepresentative>::new();
     // Reserve the maximum number of records before executing any instruction.
-    representatives.try_reserve_exact(admission.required.schedules)
+    representatives
+        .try_reserve_exact(admission.required.schedules)
         .map_err(|_| ReplayFailure::Admission(Error::Limit))?;
     let mut by_order = BTreeMap::<[u64; MAX_QUOTIENT_OPERATIONS], usize>::new();
     loop {
-        let canonical = canonical_order(occurrences, &matrix, &order, &mut progress.canonical_checks);
+        let canonical =
+            canonical_order(occurrences, &matrix, &order, &mut progress.canonical_checks);
         let mut key = [0u64; MAX_QUOTIENT_OPERATIONS];
         for (position, index) in canonical.iter().copied().enumerate() {
             key[position] = occurrences[index].id;
@@ -553,17 +636,26 @@ fn verify_relation(
         }
     }
     debug_assert_eq!(progress.compared_schedules, admission.required.schedules);
-    Ok(QuotientReport { admission, relation: evaluation, progress, representatives })
+    Ok(QuotientReport {
+        admission,
+        relation: evaluation,
+        progress,
+        representatives,
+    })
 }
 
 fn next_order(occurrences: &[ReplayOccurrence], order: &mut [usize]) -> bool {
     if order.len() < 2 {
         return false;
     }
-    let Some(pivot) = (0..order.len() - 1).rev()
+    let Some(pivot) = (0..order.len() - 1)
+        .rev()
         .find(|index| occurrences[order[*index]].id < occurrences[order[*index + 1]].id)
-    else { return false };
-    let successor = (pivot + 1..order.len()).rev()
+    else {
+        return false;
+    };
+    let successor = (pivot + 1..order.len())
+        .rev()
         .find(|index| occurrences[order[pivot]].id < occurrences[order[*index]].id)
         .expect("a successor exists for an increasing pivot");
     order.swap(pivot, successor);
@@ -589,23 +681,29 @@ fn execute(
             }
             ReplayInstruction::Write { domain, value } => {
                 match value {
-                    Some(value) => { result.state.cells.insert(domain, value); }
-                    None => { result.state.cells.remove(&domain); }
+                    Some(value) => {
+                        result.state.cells.insert(domain, value);
+                    }
+                    None => {
+                        result.state.cells.remove(&domain);
+                    }
                 }
                 ReplayValue::Written
             }
-            ReplayInstruction::CopyAdd { source, target, addend } => {
-                match result.state.cells.get(&source).copied() {
-                    None => ReplayValue::Rejected(Error::Missing),
-                    Some(value) => match value.checked_add(addend) {
-                        None => ReplayValue::Rejected(Error::Overflow),
-                        Some(value) => {
-                            result.state.cells.insert(target, value);
-                            ReplayValue::Written
-                        }
+            ReplayInstruction::CopyAdd {
+                source,
+                target,
+                addend,
+            } => match result.state.cells.get(&source).copied() {
+                None => ReplayValue::Rejected(Error::Missing),
+                Some(value) => match value.checked_add(addend) {
+                    None => ReplayValue::Rejected(Error::Overflow),
+                    Some(value) => {
+                        result.state.cells.insert(target, value);
+                        ReplayValue::Written
                     }
-                }
-            }
+                },
+            },
             ReplayInstruction::Check { domain, expected } => {
                 let actual = result.state.cells.get(&domain).copied();
                 let mandatory_absent = actual.is_none() && expected.is_some();
@@ -625,7 +723,7 @@ fn execute(
                             result.state.cells.insert(resource, remaining);
                             ReplayValue::Consumed { remaining }
                         }
-                    }
+                    },
                 }
             }
             ReplayInstruction::Draw { stream } => {
@@ -633,7 +731,8 @@ fn execute(
                     None => ReplayValue::Rejected(Error::Missing),
                     Some(previous) => {
                         // Fixed fixture transition; no cryptographic/statistical claim.
-                        let next = previous.wrapping_mul(6_364_136_223_846_793_005)
+                        let next = previous
+                            .wrapping_mul(6_364_136_223_846_793_005)
                             .wrapping_add(1_442_695_040_888_963_407);
                         result.state.cells.insert(stream, next);
                         ReplayValue::Drawn(next)
@@ -649,7 +748,11 @@ fn execute(
                 let external = matches!(occurrence.instruction, ReplayInstruction::External { .. });
                 let admitted = !external || (result.state.authority_enabled && observed.is_some());
                 result.ordered.push(OrderedObservation {
-                    occurrence: occurrence.id, domain, observed, external, admitted,
+                    occurrence: occurrence.id,
+                    domain,
+                    observed,
+                    external,
+                    admitted,
                 });
                 if external {
                     ReplayValue::Decision(decide(DecisionInputs {
@@ -667,7 +770,10 @@ fn execute(
                 }
             }
         };
-        result.results.push(OccurrenceResult { occurrence: occurrence.id, value });
+        result.results.push(OccurrenceResult {
+            occurrence: occurrence.id,
+            value,
+        });
     }
     result.results.sort_by_key(|row| row.occurrence);
     result
@@ -675,8 +781,8 @@ fn execute(
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use super::super::{OperatorId, OperatorPair, TraceOperationSpec};
+    use super::*;
 
     #[test]
     fn a_bad_quotient_fails_on_computed_decisions_even_with_equal_final_state() {
@@ -700,20 +806,38 @@ mod tests {
         reader.positive_read_domains.insert(domain);
         let occurrences = [
             ReplayOccurrence::new(
-                1, RegisteredTraceOperation::try_from_spec(writer).unwrap(),
-                ReplayInstruction::Write { domain, value: Some(2) },
-            ).unwrap(),
+                1,
+                RegisteredTraceOperation::try_from_spec(writer).unwrap(),
+                ReplayInstruction::Write {
+                    domain,
+                    value: Some(2),
+                },
+            )
+            .unwrap(),
             ReplayOccurrence::new(
-                2, RegisteredTraceOperation::try_from_spec(reader).unwrap(),
-                ReplayInstruction::Check { domain, expected: Some(1) },
-            ).unwrap(),
+                2,
+                RegisteredTraceOperation::try_from_spec(reader).unwrap(),
+                ReplayInstruction::Check {
+                    domain,
+                    expected: Some(1),
+                },
+            )
+            .unwrap(),
         ];
-        let registry = TraceRelationRegistry::new(BTreeSet::from([
-            OperatorPair::new(operator(1), operator(2)).unwrap(),
-        ])).unwrap();
+        let registry = TraceRelationRegistry::new(BTreeSet::from([OperatorPair::new(
+            operator(1),
+            operator(2),
+        )
+        .unwrap()]))
+        .unwrap();
         let initial = ReplayState::new(BTreeMap::from([(domain, 1)]), true).unwrap();
-        assert_eq!(verify(&registry, &occurrences, &initial, ReplayBudget::default())
-            .unwrap().representatives().len(), 2);
+        assert_eq!(
+            verify(&registry, &occurrences, &initial, ReplayBudget::default())
+                .unwrap()
+                .representatives()
+                .len(),
+            2
+        );
         let admission = estimate(&occurrences, &initial).unwrap();
         let (mut matrix, evaluation) = relation(&registry, &occurrences);
         // Deliberately mutate this private relation to test the real comparator.
@@ -722,7 +846,9 @@ mod tests {
         matrix[1][0] = true;
         let Err(ReplayFailure::Mismatch(mismatch)) =
             verify_relation(&occurrences, &initial, admission, matrix, evaluation)
-        else { panic!("computed decision mismatch must fail the quotient") };
+        else {
+            panic!("computed decision mismatch must fail the quotient")
+        };
         assert_eq!(mismatch.admission.required.schedules, 2);
         assert_eq!(mismatch.progress.compared_schedules, 1);
         assert_eq!(mismatch.progress.unreduced_replays, 2);

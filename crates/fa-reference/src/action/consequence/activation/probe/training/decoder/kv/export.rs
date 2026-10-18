@@ -2,15 +2,19 @@
 //! operator schema. JSON is provisioning data; it does not authenticate the model,
 //! tokenizer, labels, split declarations, or experiment lineage.
 use super::KvDecoderCampaign;
+use crate::Error;
 use crate::action::consequence::activation::monitor::learned::{
     LearnedMonitorBudget, LearnedRefinementMonitor,
     model::{KvTap, LearnedAuditBudget, LearnedAuditPreparationBudget, LearnedModelMonitor},
 };
 use crate::action::consequence::activation::tensor::kv::{
-    decoder::{DecoderBudget, monitoring::{LearnedDecoderPolicy, LearnedStreamRetention}},
-    experiment::KvSide, model::learned::LearnedKvCodec,
+    decoder::{
+        DecoderBudget,
+        monitoring::{LearnedDecoderPolicy, LearnedStreamRetention},
+    },
+    experiment::KvSide,
+    model::learned::LearnedKvCodec,
 };
-use crate::Error;
 use std::collections::BTreeMap;
 use std::fmt::{self, Write as _};
 
@@ -30,10 +34,19 @@ pub struct KvMonitorSettings {
 
 impl KvDecoderCampaign {
     pub fn monitor(&self, settings: &KvMonitorSettings) -> Result<LearnedModelMonitor, Error> {
-        if !settings.taps.keys().eq(self.taps().keys()) { return Err(Error::Binding); }
-        let taps = self.probes()?.into_iter().map(|(tap, probe)| {
-            Ok((tap, LearnedRefinementMonitor::new(vec![probe], settings.taps[&tap])?))
-        }).collect::<Result<BTreeMap<_, _>, Error>>()?;
+        if !settings.taps.keys().eq(self.taps().keys()) {
+            return Err(Error::Binding);
+        }
+        let taps = self
+            .probes()?
+            .into_iter()
+            .map(|(tap, probe)| {
+                Ok((
+                    tap,
+                    LearnedRefinementMonitor::new(vec![probe], settings.taps[&tap])?,
+                ))
+            })
+            .collect::<Result<BTreeMap<_, _>, Error>>()?;
         LearnedModelMonitor::new(self.model.cache_profile().clone(), taps, settings.audit)
     }
 
@@ -41,18 +54,33 @@ impl KvDecoderCampaign {
     /// the probe population. Here codec fit source keys mean lineage IDs, while
     /// descriptor streams mean task IDs. These are declarations, not proofs of
     /// hidden-origin independence or authentication of external model bytes.
-    pub fn policy(&self, codec: LearnedKvCodec, settings: &KvMonitorSettings)
-        -> Result<LearnedDecoderPolicy, Error>
-    {
-        if codec.profile() != self.model.cache_profile() { return Err(Error::Binding); }
+    pub fn policy(
+        &self,
+        codec: LearnedKvCodec,
+        settings: &KvMonitorSettings,
+    ) -> Result<LearnedDecoderPolicy, Error> {
+        if codec.profile() != self.model.cache_profile() {
+            return Err(Error::Binding);
+        }
         for (lineage, source) in &codec.fit_report().sources {
-            if self.cases.keys().any(|origin| origin.lineage == *lineage
-                || source.descriptor.layers().values().any(|layer| layer.stream == origin.task)) {
+            if self.cases.keys().any(|origin| {
+                origin.lineage == *lineage
+                    || source
+                        .descriptor
+                        .layers()
+                        .values()
+                        .any(|layer| layer.stream == origin.task)
+            }) {
                 return Err(Error::Duplicate);
             }
         }
-        LearnedDecoderPolicy::new(codec, self.monitor(settings)?, settings.retention.clone(),
-            settings.preparation, settings.inference)
+        LearnedDecoderPolicy::new(
+            codec,
+            self.monitor(settings)?,
+            settings.retention.clone(),
+            settings.preparation,
+            settings.inference,
+        )
     }
 
     /// Export directly consumable `fa.learned-kv-monitor/1` data after the whole
@@ -62,10 +90,15 @@ impl KvDecoderCampaign {
     /// model and case metadata outside this JSON when provisioning that consumer.
     /// Head-selected retention remains available through `policy`; v1 can encode
     /// only All or None. No file creation or live policy promotion occurs here.
-    pub fn monitor_json(&self, codec: &LearnedKvCodec, settings: &KvMonitorSettings,
-        max_bytes: usize) -> Result<Vec<u8>, Error>
-    {
-        if max_bytes > MAX_KV_MONITOR_JSON_BYTES { return Err(Error::Limit); }
+    pub fn monitor_json(
+        &self,
+        codec: &LearnedKvCodec,
+        settings: &KvMonitorSettings,
+        max_bytes: usize,
+    ) -> Result<Vec<u8>, Error> {
+        if max_bytes > MAX_KV_MONITOR_JSON_BYTES {
+            return Err(Error::Limit);
+        }
         let policy = self.policy(codec.clone(), settings)?;
         encode_monitor_json(&policy, max_bytes)
     }
@@ -73,10 +106,13 @@ impl KvDecoderCampaign {
 
 // One canonical emitter for v1 exports and FAKVMON2 policy comparison. The
 // campaign delegates here only after its original whole-roster acceptance.
-pub(super) fn encode_monitor_json(policy: &LearnedDecoderPolicy, max_bytes: usize)
-    -> Result<Vec<u8>, Error>
-{
-    if max_bytes > MAX_KV_MONITOR_JSON_BYTES { return Err(Error::Limit); }
+pub(super) fn encode_monitor_json(
+    policy: &LearnedDecoderPolicy,
+    max_bytes: usize,
+) -> Result<Vec<u8>, Error> {
+    if max_bytes > MAX_KV_MONITOR_JSON_BYTES {
+        return Err(Error::Limit);
+    }
     let retention = match policy.retention_policy() {
         LearnedStreamRetention::All => "all",
         LearnedStreamRetention::None => "none",
@@ -85,7 +121,10 @@ pub(super) fn encode_monitor_json(policy: &LearnedDecoderPolicy, max_bytes: usiz
     let monitor = policy.monitor();
     let compression = policy.preparation().compression;
     let checked = policy.preparation().source_check;
-    let mut json = LimitedJson { bytes: String::new(), limit: max_bytes };
+    let mut json = LimitedJson {
+        bytes: String::new(),
+        limit: max_bytes,
+    };
     write!(json, "{{\"schema\":\"fa.learned-kv-monitor/1\",\"retention\":\"{retention}\",\"inference_products\":{},\"preparation\":{{\"compression\":{{\"source_values\":{},\"encoded_bytes\":{},\"work_units\":{}}},\"source_check\":{{\"source_values\":{},\"encoded_bytes\":{},\"reconstruction_products\":{}}}}},\"audit\":{{\"rows\":{},\"budget\":",
         policy.inference().scalar_products, compression.source_values, compression.encoded_bytes,
         compression.work_units, checked.source_values, checked.encoded_bytes,
@@ -93,23 +132,46 @@ pub(super) fn encode_monitor_json(policy: &LearnedDecoderPolicy, max_bytes: usiz
     monitoring(&mut json, monitor.budget().monitoring)?;
     json.write_str("},\"taps\":[").map_err(|_| Error::Limit)?;
     for (index, (tap, row)) in monitor.taps().iter().enumerate() {
-        if index > 0 { json.write_str(",").map_err(|_| Error::Limit)?; }
-        let side = match tap.side { KvSide::Key => "key", KvSide::Value => "value" };
-        write!(json, "{{\"layer\":{},\"side\":\"{side}\",\"budget\":", tap.layer).map_err(|_| Error::Limit)?;
+        if index > 0 {
+            json.write_str(",").map_err(|_| Error::Limit)?;
+        }
+        let side = match tap.side {
+            KvSide::Key => "key",
+            KvSide::Value => "value",
+        };
+        write!(
+            json,
+            "{{\"layer\":{},\"side\":\"{side}\",\"budget\":",
+            tap.layer
+        )
+        .map_err(|_| Error::Limit)?;
         monitoring(&mut json, row.budget())?;
         json.write_str(",\"probes\":[").map_err(|_| Error::Limit)?;
         for (index, probe) in row.registered_probes().iter().enumerate() {
-            if index > 0 { json.write_str(",").map_err(|_| Error::Limit)?; }
+            if index > 0 {
+                json.write_str(",").map_err(|_| Error::Limit)?;
+            }
             let identity = probe.identity();
             let (weights, bias, threshold) = probe.coefficient_bits();
-            write!(json, "{{\"id\":{},\"generation\":{},\"weights\":[",
-                identity.id, identity.generation).map_err(|_| Error::Limit)?;
+            write!(
+                json,
+                "{{\"id\":{},\"generation\":{},\"weights\":[",
+                identity.id, identity.generation
+            )
+            .map_err(|_| Error::Limit)?;
             for (index, weight) in weights.iter().enumerate() {
-                if index > 0 { json.write_str(",").map_err(|_| Error::Limit)?; }
+                if index > 0 {
+                    json.write_str(",").map_err(|_| Error::Limit)?;
+                }
                 write!(json, "{}", f32::from_bits(*weight)).map_err(|_| Error::Limit)?;
             }
-            write!(json, "],\"bias\":{},\"threshold\":{}}}",
-                f32::from_bits(bias), f32::from_bits(threshold)).map_err(|_| Error::Limit)?;
+            write!(
+                json,
+                "],\"bias\":{},\"threshold\":{}}}",
+                f32::from_bits(bias),
+                f32::from_bits(threshold)
+            )
+            .map_err(|_| Error::Limit)?;
         }
         json.write_str("]}").map_err(|_| Error::Limit)?;
     }
@@ -118,10 +180,16 @@ pub(super) fn encode_monitor_json(policy: &LearnedDecoderPolicy, max_bytes: usiz
     // Match the actual unchanged consumer's parser bounds, in addition to
     // incremental output admission. Original probe constructors ensure all
     // emitted binary32 values are finite; Display preserves their bits.
-    crate::strict_json::parse(&bytes, crate::strict_json::Limits {
-        max_bytes: MAX_KV_MONITOR_JSON_BYTES, max_depth: 10,
-        max_items: 262_144, max_string_bytes: MAX_KV_MONITOR_JSON_BYTES,
-    }).map_err(|_| Error::Limit)?;
+    crate::strict_json::parse(
+        &bytes,
+        crate::strict_json::Limits {
+            max_bytes: MAX_KV_MONITOR_JSON_BYTES,
+            max_depth: 10,
+            max_items: 262_144,
+            max_string_bytes: MAX_KV_MONITOR_JSON_BYTES,
+        },
+    )
+    .map_err(|_| Error::Limit)?;
     Ok(bytes)
 }
 
@@ -131,12 +199,19 @@ fn monitoring(json: &mut LimitedJson, budget: LearnedMonitorBudget) -> Result<()
         budget.materialized_values, budget.refinements).map_err(|_| Error::Limit)
 }
 
-struct LimitedJson { bytes: String, limit: usize }
+struct LimitedJson {
+    bytes: String,
+    limit: usize,
+}
 impl fmt::Write for LimitedJson {
     fn write_str(&mut self, text: &str) -> fmt::Result {
         let length = self.bytes.len().checked_add(text.len()).ok_or(fmt::Error)?;
-        if length > self.limit { return Err(fmt::Error); }
-        self.bytes.try_reserve_exact(text.len()).map_err(|_| fmt::Error)?;
+        if length > self.limit {
+            return Err(fmt::Error);
+        }
+        self.bytes
+            .try_reserve_exact(text.len())
+            .map_err(|_| fmt::Error)?;
         self.bytes.push_str(text);
         Ok(())
     }

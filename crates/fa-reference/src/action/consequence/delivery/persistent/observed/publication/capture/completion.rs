@@ -5,19 +5,21 @@ mod coupled;
 pub mod feed;
 pub mod files;
 mod provider;
-use provider::{CallbackEvidence, CompletionEvidence};
-use super::heartbeat::feed::{PublicationFeedFile, PublicationFeedReport};
-use crate::action::consequence::delivery::publication_gate::changes::freshness::PublicationHeartbeat;
-use super::super::witness_gate::freshness::FreshnessEvent;
-use super::{FileCaptureError, FileCaptureIdentity, PublicationInputFile};
-use super::super::{CheckedPublication, witness_gate::WitnessEvent};
-use super::super::super::{BaseEvent, Event, FileHumanPermit, FileOversight, FilePermit,
-    JournalError, JournalFailure, JournalIo, Machine, Reconciliation, Transition, journal};
 use super::super::super::credential::FileCredentialPermit;
-use crate::action::{ActionState, ElapsedTick, FrozenAction};
-use crate::action::consequence::oversight::{CommitteeContract, CommitteeInput};
+use super::super::super::{
+    BaseEvent, Event, FileHumanPermit, FileOversight, FilePermit, JournalError, JournalFailure,
+    JournalIo, Machine, Reconciliation, Transition, journal,
+};
+use super::super::witness_gate::freshness::FreshnessEvent;
+use super::super::{CheckedPublication, witness_gate::WitnessEvent};
+use super::heartbeat::feed::{PublicationFeedFile, PublicationFeedReport};
+use super::{FileCaptureError, FileCaptureIdentity, PublicationInputFile};
+use crate::action::consequence::delivery::publication_gate::changes::freshness::PublicationHeartbeat;
 use crate::action::consequence::oversight::supervised::DriverEvidence;
+use crate::action::consequence::oversight::{CommitteeContract, CommitteeInput};
+use crate::action::{ActionState, ElapsedTick, FrozenAction};
 use crate::{Error, Snapshot};
+use provider::{CallbackEvidence, CompletionEvidence};
 use std::rc::Rc;
 
 /// Borrowed ORIGINAL capabilities, not an authority constructor. The optional
@@ -55,17 +57,35 @@ impl FileOversight {
     /// the original canonical journal: it contains either withdrawn undispatched
     /// work or the whole completed effect. Never infer an outcome from an I/O error.
     /// Callback evidence does NOT renew a separately configured policy-source lease.
-    pub fn complete_publication_from_source<F, P>(&mut self, revision: u64,
-        keys: CapturedCompletionKeys<'_>, source: &PublicationInputFile, clock: F, provider: P)
-        -> CapturedCompletionReport
-    where F: FnMut() -> ElapsedTick,
+    pub fn complete_publication_from_source<F, P>(
+        &mut self,
+        revision: u64,
+        keys: CapturedCompletionKeys<'_>,
+        source: &PublicationInputFile,
+        clock: F,
+        provider: P,
+    ) -> CapturedCompletionReport
+    where
+        F: FnMut() -> ElapsedTick,
         P: FnMut(&FrozenAction, &CommitteeContract) -> Result<DriverEvidence, Error>,
     {
-        let mut completion = Completion { keys, source, clock, provider: CallbackEvidence(provider),
-            reads: Vec::with_capacity(2), evidence_failure: None, feed: None, feed_reads: Vec::new(), feeds: Vec::new() };
+        let mut completion = Completion {
+            keys,
+            source,
+            clock,
+            provider: CallbackEvidence(provider),
+            reads: Vec::with_capacity(2),
+            evidence_failure: None,
+            feed: None,
+            feed_reads: Vec::new(),
+            feeds: Vec::new(),
+        };
         let result = completion.run(self, revision);
-        CapturedCompletionReport { reads: completion.reads,
-            evidence_failure: completion.evidence_failure, result }
+        CapturedCompletionReport {
+            reads: completion.reads,
+            evidence_failure: completion.evidence_failure,
+            result,
+        }
     }
 }
 
@@ -81,44 +101,83 @@ struct Completion<'a, F, P> {
     evidence_failure: Option<Error>,
 }
 impl<F, P> Completion<'_, F, P>
-where F: FnMut() -> ElapsedTick, P: CompletionEvidence,
+where
+    F: FnMut() -> ElapsedTick,
+    P: CompletionEvidence,
 {
-    fn sample(&mut self, host: &mut FileOversight, cut: &mut SourceCut, action: &FrozenAction)
-        -> Result<Result<DriverEvidence, Error>, JournalError>
-    {
-        let result = self.provider.capture(host, cut, action, &mut self.clock)?.and_then(|evidence| {
-            if !evidence.snapshot.complete { return Err(Error::Incomplete); }
-            evidence.inputs.as_ref().ok_or(Error::Incomplete)?.validate_for(action, &host.profile.committee)?;
-            let snapshot = &evidence.snapshot;
-            if snapshot.values.len() > super::super::super::super::MAX_SNAPSHOT_ENTRIES {
-                return Err(Error::Limit);
-            }
-            let bytes = snapshot.values.values().try_fold(0_usize, |n, value| n.checked_add(value.len()))
-                .ok_or(Error::Limit)?;
-            if bytes > super::super::super::super::MAX_SNAPSHOT_BYTES { return Err(Error::Limit); }
-            Ok(evidence)
-        });
-        if let Err(error) = &result { self.evidence_failure = Some(*error); }
+    fn sample(
+        &mut self,
+        host: &mut FileOversight,
+        cut: &mut SourceCut,
+        action: &FrozenAction,
+    ) -> Result<Result<DriverEvidence, Error>, JournalError> {
+        let result = self
+            .provider
+            .capture(host, cut, action, &mut self.clock)?
+            .and_then(|evidence| {
+                if !evidence.snapshot.complete {
+                    return Err(Error::Incomplete);
+                }
+                evidence
+                    .inputs
+                    .as_ref()
+                    .ok_or(Error::Incomplete)?
+                    .validate_for(action, &host.profile.committee)?;
+                let snapshot = &evidence.snapshot;
+                if snapshot.values.len() > super::super::super::super::MAX_SNAPSHOT_ENTRIES {
+                    return Err(Error::Limit);
+                }
+                let bytes = snapshot
+                    .values
+                    .values()
+                    .try_fold(0_usize, |n, value| n.checked_add(value.len()))
+                    .ok_or(Error::Limit)?;
+                if bytes > super::super::super::super::MAX_SNAPSHOT_BYTES {
+                    return Err(Error::Limit);
+                }
+                Ok(evidence)
+            });
+        if let Err(error) = &result {
+            self.evidence_failure = Some(*error);
+        }
         Ok(result)
     }
 
     fn read(&mut self) -> Result<super::FilePublicationCapture, FileCaptureError> {
         let captured = self.source.read_capture();
-        self.reads.push(captured.as_ref().map(|capture| capture.identity()).map_err(|error| *error));
+        self.reads.push(
+            captured
+                .as_ref()
+                .map(|capture| capture.identity())
+                .map_err(|error| *error),
+        );
         captured
     }
 
-    fn run(&mut self, host: &mut FileOversight, revision: u64) -> Result<CheckedPublication, JournalError> {
-        if host.fault.is_some() { return Err(JournalError::Unavailable); }
-        if host.revision() != revision { return Err(Error::Stale.into()); }
+    fn run(
+        &mut self,
+        host: &mut FileOversight,
+        revision: u64,
+    ) -> Result<CheckedPublication, JournalError> {
+        if host.fault.is_some() {
+            return Err(JournalError::Unavailable);
+        }
+        if host.revision() != revision {
+            return Err(Error::Stale.into());
+        }
         let attempt = self.keys.automatic.attempt;
         if !Rc::ptr_eq(&host.issuer, &self.keys.automatic.issuer)
             || !Rc::ptr_eq(&host.issuer, &self.keys.human.issuer)
-            || self.keys.human.attempt != attempt { return Err(Error::Binding.into()); }
+            || self.keys.human.attempt != attempt
+        {
+            return Err(Error::Binding.into());
+        }
         if host.inspect().control.ledger.stages.get(&attempt) != Some(&ActionState::Authorized) {
             return Err(Error::WrongState.into());
         }
-        if !host.publication_guard_required() { return Err(Error::Incomplete.into()); }
+        if !host.publication_guard_required() {
+            return Err(Error::Incomplete.into());
+        }
         match self.keys.credential {
             Some(permit) => host.check_credential_permit(permit)?,
             None if host.credential_policy().is_some() => return Err(Error::Incomplete.into()),
@@ -129,20 +188,43 @@ where F: FnMut() -> ElapsedTick, P: CompletionEvidence,
         // event/byte and recovery-reserve admission before candidate execution.
         self.provider.preflight(host)?;
         let fixed = (if self.feed.is_some() { 12 } else { 8 }) + self.provider.fixed_events();
-        if host.events.len().checked_add(fixed).ok_or(Error::Overflow)? > host.profile.delivery.limits.events {
+        if host
+            .events
+            .len()
+            .checked_add(fixed)
+            .ok_or(Error::Overflow)?
+            > host.profile.delivery.limits.events
+        {
             return Err(Error::Limit.into());
         }
-        let action = host.machine.actions.get(&attempt).ok_or(Error::Missing)?.clone();
-        let coupled = self.feed.is_some_and(|feed| self.source.shares_producer(feed));
+        let action = host
+            .machine
+            .actions
+            .get(&attempt)
+            .ok_or(Error::Missing)?
+            .clone();
+        let coupled = self
+            .feed
+            .is_some_and(|feed| self.source.shares_producer(feed));
         if coupled {
-            self.source.check_producer_binding(self.feed.ok_or(Error::Incomplete)?, attempt, &action)?;
-            if host.publication_input_cut(attempt)?.is_none() { return Err(Error::Incomplete.into()); }
+            self.source.check_producer_binding(
+                self.feed.ok_or(Error::Incomplete)?,
+                attempt,
+                &action,
+            )?;
+            if host.publication_input_cut(attempt)?.is_none() {
+                return Err(Error::Incomplete.into());
+            }
         }
         if let Some(feed) = self.feed {
             let bound = host.publication_source(attempt)?.ok_or(Error::Incomplete)?;
-            if bound.source != self.source.source() { return Err(Error::Binding.into()); }
+            if bound.source != self.source.source() {
+                return Err(Error::Binding.into());
+            }
             host.publication_change_freshness()?;
-            if host.publication_change_status()?.source != feed.source() { return Err(Error::Binding.into()); }
+            if host.publication_change_status()?.source != feed.source() {
+                return Err(Error::Binding.into());
+            }
             // Both live feed and witness eligibility are withdrawn before any
             // external read. Staged catch-up can then change the witness revision.
             host.publication_changes_unavailable(revision, feed.source())?;
@@ -150,40 +232,70 @@ where F: FnMut() -> ElapsedTick, P: CompletionEvidence,
         host.begin_publication_capture(host.revision(), attempt, self.source.source())?;
         let mut cut = SourceCut::new(host)?;
         if self.feed.is_some() && !coupled {
-            self.capture_feed(host, &mut cut)?.map_err(|error| JournalError::from(error.contract_error()))?;
+            self.capture_feed(host, &mut cut)?
+                .map_err(|error| JournalError::from(error.contract_error()))?;
         }
         let first = self.sample(host, &mut cut, &action)??;
         let first_inputs = first.inputs.as_ref().ok_or(Error::Incomplete)?;
         let committee_revision = cut.current_reference(attempt, first_inputs)?;
-        let captured = self.read_for_cut(host, &mut cut)?.map_err(|error| JournalError::from(error.contract_error()))?;
+        let captured = self
+            .read_for_cut(host, &mut cut)?
+            .map_err(|error| JournalError::from(error.contract_error()))?;
         let expected = cut.machine.broker.publication_input_revision(attempt)?;
         // An admitted producer observation may carry a new high-water mark. From
         // here, no failure/unwind may revive an older, quieter live observation.
         host.fault = Some(failure(false));
         let now = (self.clock)();
         cut.stage(host, Event::Core(BaseEvent::Time(now)))?;
-        cut.stage(host, Event::PublicationWitness(WitnessEvent::Captured(attempt, expected, Rc::new(captured))))?;
-        cut.stage(host, Event::Dispatch(attempt, self.keys.human.request, committee_revision, first.snapshot))?;
+        cut.stage(
+            host,
+            Event::PublicationWitness(WitnessEvent::Captured(attempt, expected, Rc::new(captured))),
+        )?;
+        cut.stage(
+            host,
+            Event::Dispatch(
+                attempt,
+                self.keys.human.request,
+                committee_revision,
+                first.snapshot,
+            ),
+        )?;
 
         if let Some(feed) = self.feed {
-            cut.stage(host, Event::PublicationWitness(WitnessEvent::Freshness(
-                FreshnessEvent::Unavailable(feed.source()))))?;
+            cut.stage(
+                host,
+                Event::PublicationWitness(WitnessEvent::Freshness(FreshnessEvent::Unavailable(
+                    feed.source(),
+                ))),
+            )?;
             // An ordinary second read failure leaves the staged feed unavailable.
             // Continue to the original publication/seal and receipt path; do not
             // fabricate changed committee evidence or a successful installation.
-            if !coupled { let _read = self.capture_feed(host, &mut cut)?; }
+            if !coupled {
+                let _read = self.capture_feed(host, &mut cut)?;
+            }
         }
         // This withdrawal is staged after native dispatch, but the canonical owner
         // has ALREADY durably withdrawn before both external reads. A caught panic
         // cannot expose this candidate or leave an old sendable source capture.
         let expected = cut.machine.broker.publication_input_revision(attempt)?;
-        cut.stage(host, Event::PublicationWitness(WitnessEvent::Inputs(attempt, expected, None)))?;
+        cut.stage(
+            host,
+            Event::PublicationWitness(WitnessEvent::Inputs(attempt, expected, None)),
+        )?;
         let second = self.sample(host, &mut cut, &action)?;
         let (inputs, snapshot) = match second {
             Ok(evidence) => match self.read_for_cut(host, &mut cut)? {
                 Ok(captured) => {
                     let expected = cut.machine.broker.publication_input_revision(attempt)?;
-                    cut.stage(host, Event::PublicationWitness(WitnessEvent::Captured(attempt, expected, Rc::new(captured))))?;
+                    cut.stage(
+                        host,
+                        Event::PublicationWitness(WitnessEvent::Captured(
+                            attempt,
+                            expected,
+                            Rc::new(captured),
+                        )),
+                    )?;
                     (evidence.inputs, evidence.snapshot)
                 }
                 Err(_) => (None, Snapshot::default()),
@@ -203,7 +315,8 @@ where F: FnMut() -> ElapsedTick, P: CompletionEvidence,
             return Err(Error::Binding.into());
         };
         match cut.stage(host, Event::Core(BaseEvent::Reconcile(attempt)))? {
-            Transition::Reconciled(Reconciliation::Resolved(outcome)) if outcome == publication.outcome => {}
+            Transition::Reconciled(Reconciliation::Resolved(outcome))
+                if outcome == publication.outcome => {}
             _ => return Err(Error::Binding.into()),
         }
         cut.persist(host)?;
@@ -212,8 +325,11 @@ where F: FnMut() -> ElapsedTick, P: CompletionEvidence,
 }
 
 fn failure(visible: bool) -> JournalFailure {
-    JournalFailure { operation: JournalIo::Stage, kind: std::io::ErrorKind::Other,
-        replacement_may_be_visible: visible }
+    JournalFailure {
+        operation: JournalIo::Stage,
+        kind: std::io::ErrorKind::Other,
+        replacement_may_be_visible: visible,
+    }
 }
 
 /// Private original-event composition, never a public event importer. No native
@@ -229,40 +345,59 @@ struct SourceCut {
 impl SourceCut {
     fn new(host: &FileOversight) -> Result<Self, JournalError> {
         let mut history = Vec::new();
-        history.try_reserve_exact(host.events.len().checked_add(7).ok_or(Error::Overflow)?)
+        history
+            .try_reserve_exact(host.events.len().checked_add(7).ok_or(Error::Overflow)?)
             .map_err(|_| Error::Limit)?;
         history.extend(host.events.iter().cloned());
-        Ok(Self { base_revision: host.revision(), history,
-            machine: Machine::replay(&host.profile, &host.events)?, bytes: Vec::new(),
-            source_interrupted: host.source_interrupted })
+        Ok(Self {
+            base_revision: host.revision(),
+            history,
+            machine: Machine::replay(&host.profile, &host.events)?,
+            bytes: Vec::new(),
+            source_interrupted: host.source_interrupted,
+        })
     }
     fn stage(&mut self, host: &FileOversight, event: Event) -> Result<Transition, JournalError> {
         host.check_source_admission_at(self.source_interrupted, &event)?;
         self.history.try_reserve(1).map_err(|_| Error::Limit)?;
-        self.bytes = journal::encode_appended(&host.profile, host.store.identity(), &self.history, &event)?;
+        self.bytes =
+            journal::encode_appended(&host.profile, host.store.identity(), &self.history, &event)?;
         self.machine.preflight_consistency(&event)?;
         let result = self.machine.apply(&event)?;
-        if FileOversight::source_operation_acknowledges(&event) { self.source_interrupted = false; }
+        if FileOversight::source_operation_acknowledges(&event) {
+            self.source_interrupted = false;
+        }
         self.history.push(event);
         Ok(result)
     }
     fn current_reference(&self, attempt: u64, supplied: &CommitteeInput) -> Result<u64, Error> {
-        let current = self.machine.broker.current_inputs(attempt)?.ok_or(Error::Incomplete)?;
-        if current != supplied { return Err(Error::Stale); }
+        let current = self
+            .machine
+            .broker
+            .current_inputs(attempt)?
+            .ok_or(Error::Incomplete)?;
+        if current != supplied {
+            return Err(Error::Stale);
+        }
         self.machine.broker.input_revision(attempt)
     }
     fn persist(self, host: &mut FileOversight) -> Result<(), JournalError> {
-        if host.revision() != self.base_revision { return Err(Error::Stale.into()); }
+        if host.revision() != self.base_revision {
+            return Err(Error::Stale.into());
+        }
         host.fault = Some(failure(true));
         if let Err(error) = host.store.replace(&self.bytes) {
             host.fault = Some(match &error {
-                JournalError::Io(failure) => failure.clone(), _ => failure(true),
+                JournalError::Io(failure) => failure.clone(),
+                _ => failure(true),
             });
             return Err(error);
         }
         // Only acknowledged original source transitions can clear live source
         // interruption. The candidate status never escapes an unsuccessful write.
-        for event in &self.history[host.events.len()..] { host.source_operation_committed(event); }
+        for event in &self.history[host.events.len()..] {
+            host.source_operation_committed(event);
+        }
         host.events = self.history;
         host.machine = self.machine;
         host.source_interrupted = self.source_interrupted;

@@ -1,4 +1,5 @@
 //! Complete byte vocabulary with the existing real, separable GQA K/V signal.
+#![allow(dead_code, unused_imports)]
 #[path = "decoder_kv_probe_campaign.rs"]
 #[allow(dead_code)]
 pub mod trained;

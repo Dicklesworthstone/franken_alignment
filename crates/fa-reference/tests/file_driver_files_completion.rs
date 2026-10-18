@@ -2,7 +2,7 @@
 #![cfg(unix)]
 #[path = "support/file_driver_source.rs"] mod files;
 #[path = "support/file_publication_capture.rs"] mod capture;
-use files::driver::{Rig, profile, snapshot};
+use files::driver::{Rig, profile};
 use fa_reference::action::{ActionState, ElapsedTick};
 use fa_reference::action::consequence::delivery::{EndpointOutcome, NonExecutionReason};
 use fa_reference::action::consequence::delivery::persistent::JournalError;

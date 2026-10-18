@@ -5,7 +5,10 @@ fn pieces(mode: PreTokenization, source: &str) -> Vec<&str> {
     let mut at = 0;
     while at < source.len() {
         let length = mode.piece_length(&source[at..]);
-        assert!(length != 0, "a complete grammar must consume {source:?} at {at}");
+        assert!(
+            length != 0,
+            "a complete grammar must consume {source:?} at {at}"
+        );
         result.push(&source[at..at + length]);
         at += length;
     }
@@ -16,7 +19,10 @@ fn pieces(mode: PreTokenization, source: &str) -> Vec<&str> {
 fn unicode_gpt2_matches_independently_written_unicode_and_whitespace_splits() {
     for (source, expected) in [
         ("hello world!", vec!["hello", " world", "!"]),
-        ("we're I'M we'll", vec!["we", "'re", " I", "'", "M", " we", "'ll"]),
+        (
+            "we're I'M we'll",
+            vec!["we", "'re", " I", "'", "M", " we", "'ll"],
+        ),
         ("a12b", vec!["a", "12", "b"]),
         ("  a\t \r\nb  ", vec![" ", " a", "\t \r", "\n", "b", "  "]),
         ("a\u{0345}b", vec!["a", "\u{0345}", "b"]),
@@ -36,7 +42,11 @@ fn unicode_gpt2_matches_independently_written_unicode_and_whitespace_splits() {
         ("\u{85}a", vec!["\u{85}", "a"]),
         ("a\0b", vec!["a", "\0", "b"]),
     ] {
-        assert_eq!(pieces(PreTokenization::Gpt2Unicode17, source), expected, "{source:?}");
+        assert_eq!(
+            pieces(PreTokenization::Gpt2Unicode17, source),
+            expected,
+            "{source:?}"
+        );
     }
 }
 
@@ -44,7 +54,10 @@ fn unicode_gpt2_matches_independently_written_unicode_and_whitespace_splits() {
 fn unicode_llama3_respects_simple_case_folding_scalar_groups_and_greedy_newlines() {
     for (source, expected) in [
         ("hello world!", vec!["hello", " world", "!"]),
-        ("we're I'M we'll", vec!["we", "'re", " I", "'M", " we", "'ll"]),
+        (
+            "we're I'M we'll",
+            vec!["we", "'re", " I", "'M", " we", "'ll"],
+        ),
         ("a12b", vec!["a", "12", "b"]),
         ("  a\t \r\nb  ", vec![" ", " a", "\t \r\n", "b", "  "]),
         ("a\u{0345}b", vec!["a", "\u{0345}b"]),
@@ -64,7 +77,11 @@ fn unicode_llama3_respects_simple_case_folding_scalar_groups_and_greedy_newlines
         ("\u{85}a", vec!["\u{85}a"]),
         ("a\0b", vec!["a", "\0b"]),
     ] {
-        assert_eq!(pieces(PreTokenization::Llama3Unicode17, source), expected, "{source:?}");
+        assert_eq!(
+            pieces(PreTokenization::Llama3Unicode17, source),
+            expected,
+            "{source:?}"
+        );
     }
 }
 
@@ -89,18 +106,27 @@ fn unicode_tables_distinguish_general_categories_from_derived_alphabetic() {
     }
     assert_eq!(unicode17::fold_simple('ſ'), 's');
     assert_eq!(unicode17::fold_simple('S'), 's');
-    assert_eq!(PreTokenization::Gpt2Unicode17.unicode_version(), Some((17, 0, 0)));
+    assert_eq!(
+        PreTokenization::Gpt2Unicode17.unicode_version(),
+        Some((17, 0, 0))
+    );
     assert_eq!(PreTokenization::RawBytes.unicode_version(), None);
 }
 
 #[test]
 fn unicode_short_mixed_inputs_always_partition_without_byte_rewriting() {
     let alphabet = ['a', 'Ⅲ', '²', ' ', '\r', '\n', '\u{0345}', '🙂', 'ſ', '\''];
-    for mode in [PreTokenization::Gpt2Unicode17, PreTokenization::Llama3Unicode17] {
+    for mode in [
+        PreTokenization::Gpt2Unicode17,
+        PreTokenization::Llama3Unicode17,
+    ] {
         for length in 0..=4_u32 {
             for mut code in 0..alphabet.len().pow(length) {
                 let mut input = String::new();
-                for _ in 0..length { input.push(alphabet[code % alphabet.len()]); code /= alphabet.len(); }
+                for _ in 0..length {
+                    input.push(alphabet[code % alphabet.len()]);
+                    code /= alphabet.len();
+                }
                 let actual = pieces(mode, &input);
                 assert!(actual.iter().all(|piece| !piece.is_empty()));
                 assert_eq!(actual.concat(), input);

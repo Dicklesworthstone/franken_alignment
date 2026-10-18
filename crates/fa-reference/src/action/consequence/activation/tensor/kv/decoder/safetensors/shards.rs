@@ -1,9 +1,11 @@
 //! Exact shard assignment from a data-only index. Names do not open files.
 //! Model shape, execution profile and authority never come from the index.
 
-use super::{DecoderModel, DecoderProfile, TensorLoad, WeightError, MAX_WEIGHT_FILE_BYTES,
-    MAX_WEIGHT_TENSORS, construct_with_output_head, describe, inspect_subset, inventory, read_tensor,
-    OutputHead, OUTPUT_HEAD};
+use super::{
+    DecoderModel, DecoderProfile, MAX_WEIGHT_FILE_BYTES, MAX_WEIGHT_TENSORS, OUTPUT_HEAD,
+    OutputHead, TensorLoad, WeightError, construct_with_output_head, describe, inspect_subset,
+    inventory, read_tensor,
+};
 use crate::strict_json::{self, ErrorKind, Limits};
 use std::collections::BTreeMap;
 
@@ -34,29 +36,53 @@ pub(super) struct ShardPlan {
     pub(super) total_size: Option<usize>,
 }
 impl ShardPlan {
-    pub(super) fn parse(profile: &DecoderProfile, index: &[u8], output_head: OutputHead)
-        -> Result<Self, WeightError>
-    {
-        let json = strict_json::parse(index, Limits { max_bytes: MAX_WEIGHT_INDEX_BYTES,
-            max_depth: 3, max_items: MAX_WEIGHT_TENSORS * 4 + 32, max_string_bytes: 256,
-        }).map_err(|error| match error.kind {
-            ErrorKind::SizeLimit | ErrorKind::DepthLimit | ErrorKind::ItemLimit | ErrorKind::StringLimit => WeightError::Limit,
+    pub(super) fn parse(
+        profile: &DecoderProfile,
+        index: &[u8],
+        output_head: OutputHead,
+    ) -> Result<Self, WeightError> {
+        let json = strict_json::parse(
+            index,
+            Limits {
+                max_bytes: MAX_WEIGHT_INDEX_BYTES,
+                max_depth: 3,
+                max_items: MAX_WEIGHT_TENSORS * 4 + 32,
+                max_string_bytes: 256,
+            },
+        )
+        .map_err(|error| match error.kind {
+            ErrorKind::SizeLimit
+            | ErrorKind::DepthLimit
+            | ErrorKind::ItemLimit
+            | ErrorKind::StringLimit => WeightError::Limit,
             _ => WeightError::Header,
         })?;
         let root = json.as_object().ok_or(WeightError::Header)?;
-        if !root.contains_key("weight_map") || root.keys().any(|key| key != "weight_map" && key != "metadata") {
+        if !root.contains_key("weight_map")
+            || root
+                .keys()
+                .any(|key| key != "weight_map" && key != "metadata")
+        {
             return Err(WeightError::Header);
         }
         let total_size = match root.get("metadata") {
             None => None,
             Some(value) => {
                 let map = value.as_object().ok_or(WeightError::Header)?;
-                if map.keys().any(|key| key != "total_size") { return Err(WeightError::Header); }
-                map.get("total_size").map(|size| usize::try_from(size.as_u64().ok_or(WeightError::Header)?)
-                    .map_err(|_| WeightError::Limit)).transpose()?
+                if map.keys().any(|key| key != "total_size") {
+                    return Err(WeightError::Header);
+                }
+                map.get("total_size")
+                    .map(|size| {
+                        usize::try_from(size.as_u64().ok_or(WeightError::Header)?)
+                            .map_err(|_| WeightError::Limit)
+                    })
+                    .transpose()?
             }
         };
-        if total_size.is_some_and(|size| size > profile.parameter_count() * 4) { return Err(WeightError::Limit); }
+        if total_size.is_some_and(|size| size > profile.parameter_count() * 4) {
+            return Err(WeightError::Limit);
+        }
         let weights = root["weight_map"].as_object().ok_or(WeightError::Header)?;
         let mut expected = inventory(profile);
         // Only the complete index may omit the explicitly shared head. A head
@@ -64,32 +90,52 @@ impl ShardPlan {
         if output_head == OutputHead::TiedEmbeddings && !weights.contains_key(OUTPUT_HEAD) {
             expected.remove(OUTPUT_HEAD);
         }
-        if !weights.keys().eq(expected.keys()) { return Err(WeightError::Inventory); }
+        if !weights.keys().eq(expected.keys()) {
+            return Err(WeightError::Inventory);
+        }
         let mut partitions: BTreeMap<String, BTreeMap<String, Vec<usize>>> = BTreeMap::new();
         for (name, shape) in expected {
             let shard = weights[&name].as_str().ok_or(WeightError::Header)?;
             // Literal source-map labels. In particular, no URL, absolute path,
             // parent component, slash, drive prefix or control byte is accepted.
-            if !valid_name(shard) { return Err(WeightError::Inventory); }
-            partitions.entry(shard.to_owned()).or_default().insert(name, shape);
-            if partitions.len() > MAX_WEIGHT_SHARDS { return Err(WeightError::Limit); }
+            if !valid_name(shard) {
+                return Err(WeightError::Inventory);
+            }
+            partitions
+                .entry(shard.to_owned())
+                .or_default()
+                .insert(name, shape);
+            if partitions.len() > MAX_WEIGHT_SHARDS {
+                return Err(WeightError::Limit);
+            }
         }
-        Ok(Self { partitions, total_size })
+        Ok(Self {
+            partitions,
+            total_size,
+        })
     }
 }
 fn valid_name(name: &str) -> bool {
-    !name.is_empty() && name.len() <= 256 && name.ends_with(".safetensors")
-        && !name.starts_with('.') && !name.contains("..")
-        && name.bytes().all(|byte| byte.is_ascii_alphanumeric() || matches!(byte, b'.' | b'_' | b'-'))
+    !name.is_empty()
+        && name.len() <= 256
+        && name.ends_with(".safetensors")
+        && !name.starts_with('.')
+        && !name.contains("..")
+        && name
+            .bytes()
+            .all(|byte| byte.is_ascii_alphanumeric() || matches!(byte, b'.' | b'_' | b'-'))
 }
 
 /// Run the original complete index admission before opening any declared weight
 /// path. Only a label comparison escapes, not tensor authority or an
 /// index-selected filesystem path. Supply labels in sorted, unique order.
 /// Output sharing is the independently parsed configuration, never guessed.
-pub fn check_shard_labels<'a>(profile: &DecoderProfile, index: &[u8],
-    labels: impl Iterator<Item = &'a str>, output_head: OutputHead) -> Result<(), WeightError>
-{
+pub fn check_shard_labels<'a>(
+    profile: &DecoderProfile,
+    index: &[u8],
+    labels: impl Iterator<Item = &'a str>,
+    output_head: OutputHead,
+) -> Result<(), WeightError> {
     let plan = ShardPlan::parse(profile, index, output_head)?;
     if !plan.partitions.keys().map(String::as_str).eq(labels) {
         return Err(WeightError::Inventory);
@@ -103,9 +149,16 @@ impl DecoderModel {
     /// duplicate/misplaced/unknown tensors are not resolved by last-writer-wins.
     /// Receipts retain actual source-file counts, not a fictional concatenation.
     pub fn from_safetensors_shards(
-        profile: DecoderProfile, index: &[u8], sources: &BTreeMap<String, &[u8]>,
+        profile: DecoderProfile,
+        index: &[u8],
+        sources: &BTreeMap<String, &[u8]>,
     ) -> Result<(Self, ShardedWeightLoadReceipt), WeightError> {
-        Self::from_safetensors_shards_with_output_head(profile, index, sources, OutputHead::Independent)
+        Self::from_safetensors_shards_with_output_head(
+            profile,
+            index,
+            sources,
+            OutputHead::Independent,
+        )
     }
 
     /// Sharing is explicit for the whole checkpoint, not inferred shard-by-shard.
@@ -113,32 +166,60 @@ impl DecoderModel {
     /// output copy, including one in another shard, must match the embeddings'
     /// normalized bits. Actual per-file receipts do not invent a stored alias.
     pub fn from_safetensors_shards_with_output_head(
-        profile: DecoderProfile, index: &[u8], sources: &BTreeMap<String, &[u8]>,
+        profile: DecoderProfile,
+        index: &[u8],
+        sources: &BTreeMap<String, &[u8]>,
         output_head: OutputHead,
     ) -> Result<(Self, ShardedWeightLoadReceipt), WeightError> {
         let plan = ShardPlan::parse(&profile, index, output_head)?;
-        if !plan.partitions.keys().eq(sources.keys()) { return Err(WeightError::Inventory); }
-        let file_bytes = sources.values().try_fold(0_usize, |sum, bytes| sum.checked_add(bytes.len()))
+        if !plan.partitions.keys().eq(sources.keys()) {
+            return Err(WeightError::Inventory);
+        }
+        let file_bytes = sources
+            .values()
+            .try_fold(0_usize, |sum, bytes| sum.checked_add(bytes.len()))
             .ok_or(WeightError::Limit)?;
-        if file_bytes > MAX_WEIGHT_SET_BYTES { return Err(WeightError::Limit); }
-        let mut tensors = BTreeMap::new(); let mut shards = BTreeMap::new(); let mut data_bytes = 0;
+        if file_bytes > MAX_WEIGHT_SET_BYTES {
+            return Err(WeightError::Limit);
+        }
+        let mut tensors = BTreeMap::new();
+        let mut shards = BTreeMap::new();
+        let mut data_bytes = 0;
         for (shard, expected) in &plan.partitions {
             let bytes = sources[shard];
             let (selected, header_bytes) = inspect_subset(expected, bytes)?;
             let raw = bytes.len() - 8 - header_bytes;
             data_bytes += raw;
-            shards.insert(shard.clone(), ShardLoad { file_bytes: bytes.len(), header_bytes,
-                data_bytes: raw, tensors: describe(&selected) });
+            shards.insert(
+                shard.clone(),
+                ShardLoad {
+                    file_bytes: bytes.len(),
+                    header_bytes,
+                    data_bytes: raw,
+                    tensors: describe(&selected),
+                },
+            );
             for (name, tensor) in selected {
-                if tensors.insert(name, tensor).is_some() { return Err(WeightError::Inventory); }
+                if tensors.insert(name, tensor).is_some() {
+                    return Err(WeightError::Inventory);
+                }
             }
         }
-        if plan.total_size.is_some_and(|total| total != data_bytes) { return Err(WeightError::Inventory); }
-        let receipt = ShardedWeightLoadReceipt { normalized_bytes: profile.parameter_count() * 4,
-            profile: profile.clone(), index_bytes: index.len(), file_bytes, data_bytes, shards };
+        if plan.total_size.is_some_and(|total| total != data_bytes) {
+            return Err(WeightError::Inventory);
+        }
+        let receipt = ShardedWeightLoadReceipt {
+            normalized_bytes: profile.parameter_count() * 4,
+            profile: profile.clone(),
+            index_bytes: index.len(),
+            file_bytes,
+            data_bytes,
+            shards,
+        };
         let stored_head = tensors.contains_key(OUTPUT_HEAD);
-        let model = construct_with_output_head(profile, output_head, stored_head,
-            |name| read_tensor(name, &tensors))?;
+        let model = construct_with_output_head(profile, output_head, stored_head, |name| {
+            read_tensor(name, &tensors)
+        })?;
         Ok((model, receipt))
     }
 }

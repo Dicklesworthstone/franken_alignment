@@ -10,25 +10,37 @@ impl LearnedGeneration {
     /// owning stream must first establish its receipt-confirmed message cut.
     /// No prompt, sampler, token ceiling, numerical or telemetry budget changes.
     pub(crate) fn check_host_message_continuation(&self) -> Result<(), Error> {
-        let super::GenerationStatus::Finished(super::GenerationStop::StopToken(token)) = self.status
-            else { return Err(Error::WrongState); };
+        let super::GenerationStatus::Finished(super::GenerationStop::StopToken(token)) =
+            self.status
+        else {
+            return Err(Error::WrongState);
+        };
         if !self.spec.stop_tokens().contains(&token)
-            || self.samples.last().map(|sample| sample.token) != Some(token) {
+            || self.samples.last().map(|sample| sample.token) != Some(token)
+        {
             return Err(Error::Binding);
         }
         if self.samples.len() >= self.spec.max_new_tokens()
-            || self.work.admitted_tokens >= self.estimate.audited_positions as u64 {
+            || self.work.admitted_tokens >= self.estimate.audited_positions as u64
+        {
             return Err(Error::Limit);
         }
         let next = self.model.estimate(self.position() as usize, 1)?;
-        let products = self.work.reserved_decoder_products.checked_add(next.scalar_products()?)
+        let products = self
+            .work
+            .reserved_decoder_products
+            .checked_add(next.scalar_products()?)
             .ok_or(Error::Overflow)?;
-        let scores = self.work.reserved_vocabulary_scores
-            .checked_add(self.spec.sampling().policy.vocabulary() as u64).ok_or(Error::Overflow)?;
+        let scores = self
+            .work
+            .reserved_vocabulary_scores
+            .checked_add(self.spec.sampling().policy.vocabulary() as u64)
+            .ok_or(Error::Overflow)?;
         if products > self.budget.decoder_products || scores > self.budget.vocabulary_scores {
             return Err(Error::Limit);
         }
-        self.telemetry_budget.allowance(self.telemetry_work, self.guard.policy())?;
+        self.telemetry_budget
+            .allowance(self.telemetry_work, self.guard.policy())?;
         Ok(())
     }
 
@@ -41,10 +53,12 @@ impl LearnedGeneration {
     /// Check the predictor's residual contract against THIS immutable model.
     /// This exposes neither parameters nor a mutable numerical owner and does
     /// no inference. The supervising broker separately binds stream and lifetime.
-    pub(crate) fn check_host_forecast_residual(&self, layer: u64,
-        profile: crate::action::consequence::activation::CaptureProfile, dimensions: usize)
-        -> Result<(), Error>
-    {
+    pub(crate) fn check_host_forecast_residual(
+        &self,
+        layer: u64,
+        profile: crate::action::consequence::activation::CaptureProfile,
+        dimensions: usize,
+    ) -> Result<(), Error> {
         let contract = self.model.residual_contract(layer)?;
         if contract.profile() != profile || contract.dimensions() != dimensions {
             return Err(Error::Binding);
@@ -61,9 +75,15 @@ impl LearnedGeneration {
         passport: &crate::action::consequence::activation::identity::ModelPassport,
         measurement_sequence: u64,
         budget: crate::action::consequence::activation::tensor::kv::decoder::DecoderBudget,
-    ) -> Result<crate::action::consequence::activation::identity::decoder::DecoderIdentityProbe, Error> {
+    ) -> Result<
+        crate::action::consequence::activation::identity::decoder::DecoderIdentityProbe,
+        Error,
+    > {
         crate::action::consequence::activation::identity::decoder::DecoderIdentityProbe::new(
-            self.model.clone(), passport, measurement_sequence, budget,
+            self.model.clone(),
+            passport,
+            measurement_sequence,
+            budget,
         )
     }
 
@@ -78,21 +98,32 @@ impl LearnedGeneration {
             || self.spec.stop_tokens() != live.spec.stop_tokens()
             || self.spec.sampling().policy != live.spec.sampling().policy
             || self.spec.sampling().stream != live.spec.sampling().stream
-            || self.spec.sampling().seed != live.spec.sampling().seed {
+            || self.spec.sampling().seed != live.spec.sampling().seed
+        {
             return Err(Error::Binding);
         }
         let budget = GenerationBudget {
-            decoder_products: conserve(self.work.reserved_decoder_products, self.budget.decoder_products,
-                live.work.reserved_decoder_products, live.budget.decoder_products)?,
-            vocabulary_scores: conserve(self.work.reserved_vocabulary_scores, self.budget.vocabulary_scores,
-                live.work.reserved_vocabulary_scores, live.budget.vocabulary_scores)?,
+            decoder_products: conserve(
+                self.work.reserved_decoder_products,
+                self.budget.decoder_products,
+                live.work.reserved_decoder_products,
+                live.budget.decoder_products,
+            )?,
+            vocabulary_scores: conserve(
+                self.work.reserved_vocabulary_scores,
+                self.budget.vocabulary_scores,
+                live.work.reserved_vocabulary_scores,
+                live.budget.vocabulary_scores,
+            )?,
         };
         let saved = self.telemetry_work;
         let spent = live.telemetry_work;
         let ceiling = self.telemetry_budget;
         let current = live.telemetry_budget;
         macro_rules! remaining {
-            ($field:ident) => { conserve(saved.$field, ceiling.$field, spent.$field, current.$field)? };
+            ($field:ident) => {
+                conserve(saved.$field, ceiling.$field, spent.$field, current.$field)?
+            };
         }
         let telemetry = GenerationTelemetryBudget {
             compression_source_values: remaining!(compression_source_values),
@@ -115,11 +146,20 @@ impl LearnedGeneration {
     }
 }
 
-fn conserve(saved_spend: u64, saved_ceiling: u64, live_spend: u64, live_ceiling: u64)
-    -> Result<u64, Error>
-{
-    if saved_spend > live_spend { return Err(Error::Binding); }
-    let saved_remaining = saved_ceiling.checked_sub(saved_spend).ok_or(Error::Binding)?;
+fn conserve(
+    saved_spend: u64,
+    saved_ceiling: u64,
+    live_spend: u64,
+    live_ceiling: u64,
+) -> Result<u64, Error> {
+    if saved_spend > live_spend {
+        return Err(Error::Binding);
+    }
+    let saved_remaining = saved_ceiling
+        .checked_sub(saved_spend)
+        .ok_or(Error::Binding)?;
     let live_remaining = live_ceiling.checked_sub(live_spend).ok_or(Error::Binding)?;
-    saved_spend.checked_add(saved_remaining.min(live_remaining)).ok_or(Error::Overflow)
+    saved_spend
+        .checked_add(saved_remaining.min(live_remaining))
+        .ok_or(Error::Overflow)
 }

@@ -1,23 +1,29 @@
 //! The original numerical owner and gate, reconstructed from exact INPUTS.
 //! Expected bytes only reject divergence; they are never loaded into the actor.
-use super::{Machine, Transition};
-use super::super::{Event, BaseEvent, journal::HumanDecision};
-use super::super::credibility::CredibilityEvent;
-use super::super::decoder::{DecoderEvent, FileDecoderConfig, StepRequest, MAX_WITNESS_BYTES};
 use super::super::super::codec::shared::Writer;
-use crate::action::consequence::activation::monitor::decoder::{MonitoredStep, MonitoringStatus, ReviewedStep};
-use crate::action::consequence::activation::monitor::decoder::sampled::{MonitoredSampledStep, host::replay::error_tag};
-use crate::action::consequence::activation::tensor::kv::decoder::DecoderBudget;
-use crate::action::consequence::activation::tensor::kv::decoder::sampling::{SampleBudget, SamplingBudget};
+use super::super::credibility::CredibilityEvent;
+use super::super::decoder::{DecoderEvent, FileDecoderConfig, MAX_WITNESS_BYTES, StepRequest};
+use super::super::{BaseEvent, Event, journal::HumanDecision};
+use super::{Machine, Transition};
 use crate::Error;
+use crate::action::consequence::activation::monitor::decoder::sampled::{
+    MonitoredSampledStep, host::replay::error_tag,
+};
+use crate::action::consequence::activation::monitor::decoder::{
+    MonitoredStep, MonitoringStatus, ReviewedStep,
+};
+use crate::action::consequence::activation::tensor::kv::decoder::DecoderBudget;
+use crate::action::consequence::activation::tensor::kv::decoder::sampling::{
+    SampleBudget, SamplingBudget,
+};
 use std::rc::Rc;
 
 mod checkpoint;
 mod generation;
-mod stopping;
-mod text;
 #[cfg(test)]
 mod qualification_tests;
+mod stopping;
+mod text;
 use super::super::decoder::checkpoint::CheckpointRequest;
 
 pub(super) struct DecoderState {
@@ -36,7 +42,9 @@ impl Machine {
         self.decoder.as_ref().is_some_and(|state| state.paused) || self.learned_paused()
     }
     pub(super) fn pause_decoder(&mut self) {
-        if let Some(state) = &mut self.decoder { state.paused = true; }
+        if let Some(state) = &mut self.decoder {
+            state.paused = true;
+        }
         self.pause_learned();
     }
 
@@ -45,28 +53,57 @@ impl Machine {
     /// transition: neither one-token inference nor reset can abandon its input.
     /// Restrictive operations and original obligation reconciliation remain open.
     pub(super) fn check_decoder_admission(&self, event: &Event) -> Result<(), Error> {
-        if let Some(result) = self.learned_reset_admission(event) { return result; }
+        if let Some(result) = self.learned_reset_admission(event) {
+            return result;
+        }
         self.check_learned_message_request(event)?;
         let pending = self.pending_decoder_generation();
         let learned_pending = self.pending_learned_step();
         // No final positive publication from a prefix whose next numerical
         // outcome is unresolved. Status/seal/reconciliation remain available.
-        if learned_pending.is_some() && matches!(event,
-            Event::PublishChecked(..) | Event::PublishCredentialed(..)) { return Err(Error::Incomplete); }
+        if learned_pending.is_some()
+            && matches!(
+                event,
+                Event::PublishChecked(..) | Event::PublishCredentialed(..)
+            )
+        {
+            return Err(Error::Incomplete);
+        }
         if !self.decoder_paused() {
-            if pending.is_none() && learned_pending.is_none() { return Ok(()); }
+            if pending.is_none() && learned_pending.is_none() {
+                return Ok(());
+            }
             if let Event::Decoder(DecoderEvent::Learned(
-                super::super::decoder::learned::LearnedEvent::Step { actor_revision, position, .. })) = event
+                super::super::decoder::learned::LearnedEvent::Step {
+                    actor_revision,
+                    position,
+                    ..
+                },
+            )) = event
             {
-                return if learned_pending == Some(super::super::decoder::learned::LearnedStepIntent {
-                    actor_revision: *actor_revision, position: *position,
-                }) { Ok(()) } else { Err(Error::Binding) };
+                return if learned_pending
+                    == Some(super::super::decoder::learned::LearnedStepIntent {
+                        actor_revision: *actor_revision,
+                        position: *position,
+                    }) {
+                    Ok(())
+                } else {
+                    Err(Error::Binding)
+                };
             }
             if let Event::Decoder(DecoderEvent::Generate(command, _)) = event {
-                return if pending == Some(command.as_ref()) { Ok(()) } else { Err(Error::Binding) };
+                return if pending == Some(command.as_ref()) {
+                    Ok(())
+                } else {
+                    Err(Error::Binding)
+                };
             }
             if let Event::Decoder(DecoderEvent::AdvanceGeneration { id, .. }) = event {
-                return if pending.is_some_and(|command| command.id() == *id) { Ok(()) } else { Err(Error::Binding) };
+                return if pending.is_some_and(|command| command.id() == *id) {
+                    Ok(())
+                } else {
+                    Err(Error::Binding)
+                };
             }
         }
         if pending.is_some() && matches!(event, Event::Decoder(DecoderEvent::Checkpoint(..))) {
@@ -78,52 +115,97 @@ impl Machine {
         // Recovery invalidates old qualification, so explicit reactivation must
         // be possible before resume. Bootstrap, assessment and promotion are NOT
         // blanket-admitted through this exception; their existing rules remain.
-        if matches!(event,
-            Event::Decoder(DecoderEvent::Learned(super::super::decoder::learned::LearnedEvent::Resume { .. })
-                | DecoderEvent::Resume { .. }
-                | DecoderEvent::CancelGeneration { .. }
-                | DecoderEvent::Checkpoint(CheckpointRequest::Reset { .. }, _))
-            | Event::Core(BaseEvent::Time(_) | BaseEvent::Cancel(_) | BaseEvent::Fence
-                | BaseEvent::Stop(_) | BaseEvent::StopProgress(_) | BaseEvent::Reconcile(_)
-                | BaseEvent::Seal(_) | BaseEvent::Sweep | BaseEvent::ReplacePolicy(_) | BaseEvent::ReserveRecovery(_))
-            | Event::InputsUnavailable(..) | Event::RevokeHumans
-            | Event::Human(_, HumanDecision::Reject | HumanDecision::Revoke)
-            | Event::Source(_) | Event::Identity(_) | Event::Campaign(_)
-            | Event::Credibility(CredibilityEvent::ActivateHeldOut(_) | CredibilityEvent::WithdrawHeldOut(_))
-            | Event::CredentialRotate(_) | Event::CredentialRevoke(_)
-            | Event::PublishChecked(..) | Event::PublishCredentialed(..)) { Ok(()) }
-        else { Err(Error::Incomplete) }
+        if matches!(
+            event,
+            Event::Decoder(
+                DecoderEvent::Learned(super::super::decoder::learned::LearnedEvent::Resume { .. })
+                    | DecoderEvent::Resume { .. }
+                    | DecoderEvent::CancelGeneration { .. }
+                    | DecoderEvent::Checkpoint(CheckpointRequest::Reset { .. }, _)
+            ) | Event::Core(
+                BaseEvent::Time(_)
+                    | BaseEvent::Cancel(_)
+                    | BaseEvent::Fence
+                    | BaseEvent::Stop(_)
+                    | BaseEvent::StopProgress(_)
+                    | BaseEvent::Reconcile(_)
+                    | BaseEvent::Seal(_)
+                    | BaseEvent::Sweep
+                    | BaseEvent::ReplacePolicy(_)
+                    | BaseEvent::ReserveRecovery(_)
+            ) | Event::InputsUnavailable(..)
+                | Event::RevokeHumans
+                | Event::Human(_, HumanDecision::Reject | HumanDecision::Revoke)
+                | Event::Source(_)
+                | Event::Identity(_)
+                | Event::Campaign(_)
+                | Event::Credibility(
+                    CredibilityEvent::ActivateHeldOut(_) | CredibilityEvent::WithdrawHeldOut(_)
+                )
+                | Event::CredentialRotate(_)
+                | Event::CredentialRevoke(_)
+                | Event::PublishChecked(..)
+                | Event::PublishCredentialed(..)
+        ) {
+            Ok(())
+        } else {
+            Err(Error::Incomplete)
+        }
     }
 
     pub(super) fn apply_decoder(&mut self, event: &DecoderEvent) -> Result<Transition, Error> {
         match event {
             DecoderEvent::Learned(event) => self.apply_learned(event),
-            DecoderEvent::CancelGeneration { id, revision } => self.apply_decoder_generation_cancel(*id, *revision),
+            DecoderEvent::CancelGeneration { id, revision } => {
+                self.apply_decoder_generation_cancel(*id, *revision)
+            }
             DecoderEvent::Tokenizer(bytes) => self.install_decoder_tokenizer(bytes),
             DecoderEvent::TextIntent(command) => self.apply_decoder_text_intent(command),
             DecoderEvent::BeginGeneration(command) => self.apply_decoder_generation_intent(command),
-            DecoderEvent::Generate(command, expected) => self.apply_decoder_generation(command, expected),
-            DecoderEvent::AdvanceGeneration { id, revision, witness } => self.apply_decoder_generation_progress(*id, *revision, witness),
+            DecoderEvent::Generate(command, expected) => {
+                self.apply_decoder_generation(command, expected)
+            }
+            DecoderEvent::AdvanceGeneration {
+                id,
+                revision,
+                witness,
+            } => self.apply_decoder_generation_progress(*id, *revision, witness),
             DecoderEvent::StopPolicy(policy) => {
                 self.enable_decoder_stop_policy(*policy)?;
                 Ok(Transition::Unit)
             }
             DecoderEvent::Enable(config) => {
-                if self.decoder.is_some() || self.learned.is_some() { return Err(Error::Duplicate); }
-                if !self.actions.is_empty() || self.requests.len() != 0 || !self.sessions.is_empty()
-                    || !self.containment.updates.is_empty() || !self.containment.checkpoints.is_empty()
-                    || self.broker.stop_receipt().is_some() { return Err(Error::WrongState); }
+                if self.decoder.is_some() || self.learned.is_some() {
+                    return Err(Error::Duplicate);
+                }
+                if !self.actions.is_empty()
+                    || self.requests.len() != 0
+                    || !self.sessions.is_empty()
+                    || !self.containment.updates.is_empty()
+                    || !self.containment.checkpoints.is_empty()
+                    || self.broker.stop_receipt().is_some()
+                {
+                    return Err(Error::WrongState);
+                }
                 let run = config.build()?;
                 self.broker.own_sampled_decoder(run, config.limits)?;
-                if !self.publication_guard { self.enable_publication_guard()?; }
-                self.decoder = Some(DecoderState { config: Rc::clone(config), paused: false,
+                if !self.publication_guard {
+                    self.enable_publication_guard()?;
+                }
+                self.decoder = Some(DecoderState {
+                    config: Rc::clone(config),
+                    paused: false,
                     checkpoints: checkpoint::CheckpointHistory::default(),
-                    generations: generation::GenerationHistory::default(), text: text::TextHistory::default() });
+                    generations: generation::GenerationHistory::default(),
+                    text: text::TextHistory::default(),
+                });
                 Ok(Transition::Unit)
             }
             DecoderEvent::Step(request, expected) => {
                 let result = self.execute_decoder_step(*request)?;
-                if self.decoder_witness(&result)?.as_slice() != expected.as_ref() { return Err(Error::Binding); }
+                if self.decoder_witness(&result)?.as_slice() != expected.as_ref() {
+                    return Err(Error::Binding);
+                }
                 Ok(result)
             }
             DecoderEvent::Checkpoint(request, expected) => {
@@ -134,23 +216,37 @@ impl Machine {
                 Ok(Transition::Unit)
             }
             DecoderEvent::Resume { revision, position } => {
-                if !self.clock_ready { return Err(Error::Incomplete); }
+                if !self.clock_ready {
+                    return Err(Error::Incomplete);
+                }
                 let state = self.decoder.as_ref().ok_or(Error::Incomplete)?;
-                if !state.paused { return Err(Error::WrongState); }
+                if !state.paused {
+                    return Err(Error::WrongState);
+                }
                 let actual = self.broker.hosted_decoder()?;
-                if actual.actor_revision != *revision || actual.position != *position { return Err(Error::Stale); }
-                if actual.status != MonitoringStatus::Ready || self.broker.inspect().suspended
-                    || self.broker.stop_receipt().is_some() { return Err(Error::WrongState); }
+                if actual.actor_revision != *revision || actual.position != *position {
+                    return Err(Error::Stale);
+                }
+                if actual.status != MonitoringStatus::Ready
+                    || self.broker.inspect().suspended
+                    || self.broker.stop_receipt().is_some()
+                {
+                    return Err(Error::WrongState);
+                }
                 self.decoder.as_mut().expect("checked decoder").paused = false;
                 Ok(Transition::Unit)
             }
         }
     }
 
-    pub(in super::super) fn prepare_decoder_step(&mut self, request: StepRequest)
-        -> Result<(DecoderEvent, Transition), Error>
-    {
-        self.check_decoder_admission(&Event::Decoder(DecoderEvent::Step(request, Rc::from(&b""[..]))))?;
+    pub(in super::super) fn prepare_decoder_step(
+        &mut self,
+        request: StepRequest,
+    ) -> Result<(DecoderEvent, Transition), Error> {
+        self.check_decoder_admission(&Event::Decoder(DecoderEvent::Step(
+            request,
+            Rc::from(&b""[..]),
+        )))?;
         let result = self.execute_decoder_step(request)?;
         let witness = self.decoder_witness(&result)?;
         self.requests.refresh(&self.broker.inspect())?;
@@ -160,22 +256,48 @@ impl Machine {
     // Only the original generation recorder can step past the pending-intent
     // gate. Whole-request and incremental paths both call this same operation.
     fn execute_decoder_step(&mut self, request: StepRequest) -> Result<Transition, Error> {
-        if self.decoder.is_none() || self.decoder_paused() || !self.clock_ready { return Err(Error::Incomplete); }
+        if self.decoder.is_none() || self.decoder_paused() || !self.clock_ready {
+            return Err(Error::Incomplete);
+        }
         // Original failures may latch monitoring or follow a committed draw.
         // Store that result rather than rolling back a failed numerical observation.
         let already_stopped = self.broker.stop_receipt().is_some();
         let result = match request {
-            StepRequest::Forced { revision, position, token, products } => Transition::DecoderForced(Box::new(
-                self.broker.advance_hosted_forced(revision, position, token, DecoderBudget { scalar_products: products }))),
-            StepRequest::Sampled { revision, position, products, vocabulary } => Transition::DecoderSampled(Box::new(
-                self.broker.advance_hosted_sampled(revision, position, SampleBudget {
-                    decoder: DecoderBudget { scalar_products: products }, sampling: SamplingBudget { vocabulary } }))),
+            StepRequest::Forced {
+                revision,
+                position,
+                token,
+                products,
+            } => Transition::DecoderForced(Box::new(self.broker.advance_hosted_forced(
+                revision,
+                position,
+                token,
+                DecoderBudget {
+                    scalar_products: products,
+                },
+            ))),
+            StepRequest::Sampled {
+                revision,
+                position,
+                products,
+                vocabulary,
+            } => Transition::DecoderSampled(Box::new(self.broker.advance_hosted_sampled(
+                revision,
+                position,
+                SampleBudget {
+                    decoder: DecoderBudget {
+                        scalar_products: products,
+                    },
+                    sampling: SamplingBudget { vocabulary },
+                },
+            ))),
         };
         self.finish_decoder_stop(already_stopped)?;
         Ok(result)
     }
     fn decoder_witness(&self, result: &Transition) -> Result<Vec<u8>, Error> {
-        let mut w = Writer::new(MAX_WITNESS_BYTES); w.raw(b"FADSTEP\x01")?;
+        let mut w = Writer::new(MAX_WITNESS_BYTES);
+        w.raw(b"FADSTEP\x01")?;
         self.write_decoder_state(&mut w)?;
         write_decoder_result(&mut w, result)?;
         self.write_decoder_stop_witness(&mut w)?;
@@ -187,10 +309,14 @@ impl Machine {
         // Retain the ORIGINAL actor's projection too, including a failed sync.
         // No saved ActorState is installed by replaying this comparison material.
         let actor = self.broker.retained_actor_state();
-        w.u64(self.broker.actor_revision())?; w.u64(actor.next_position())?;
+        w.u64(self.broker.actor_revision())?;
+        w.u64(actor.next_position())?;
         w.count(actor.tokens().len())?;
-        for token in actor.tokens() { w.u32(*token)?; }
-        w.blob(actor.cache())?; w.blob(actor.sampler())?;
+        for token in actor.tokens() {
+            w.u32(*token)?;
+        }
+        w.blob(actor.cache())?;
+        w.blob(actor.sampler())?;
         Ok(())
     }
 }
@@ -200,21 +326,41 @@ fn write_decoder_result(w: &mut Writer, result: &Transition) -> Result<(), Error
         Transition::DecoderForced(result) => {
             w.u8(0)?;
             match result.as_ref() {
-                Err(error) => { w.u8(0)?; w.u8(error_tag(*error))?; }
+                Err(error) => {
+                    w.u8(0)?;
+                    w.u8(error_tag(*error))?;
+                }
                 Ok(MonitoredStep::Held(_)) => w.u8(1)?,
-                Ok(MonitoredStep::Released(step)) => { w.u8(2)?; released(w, step)?; }
+                Ok(MonitoredStep::Released(step)) => {
+                    w.u8(2)?;
+                    released(w, step)?;
+                }
             }
         }
         Transition::DecoderSampled(result) => {
             w.u8(1)?;
             match result.as_ref() {
-                Err(error) => { w.u8(0)?; w.u8(error_tag(*error))?; }
+                Err(error) => {
+                    w.u8(0)?;
+                    w.u8(error_tag(*error))?;
+                }
                 Ok(MonitoredSampledStep::Held(_)) => w.u8(1)?,
                 Ok(MonitoredSampledStep::Released(step)) => {
-                    w.u8(2)?; released(w, step.reviewed())?;
-                    let c = step.choice(); w.u32(c.token)?;
-                    for value in [c.stream, c.draw, c.random_word, c.probability.to_bits()] { w.u64(value)?; }
-                    for value in [c.work.logits_scanned, c.work.exponentials, c.work.retained_candidates, c.work.zero_weights] { w.count(value)?; }
+                    w.u8(2)?;
+                    released(w, step.reviewed())?;
+                    let c = step.choice();
+                    w.u32(c.token)?;
+                    for value in [c.stream, c.draw, c.random_word, c.probability.to_bits()] {
+                        w.u64(value)?;
+                    }
+                    for value in [
+                        c.work.logits_scanned,
+                        c.work.exponentials,
+                        c.work.retained_candidates,
+                        c.work.zero_weights,
+                    ] {
+                        w.count(value)?;
+                    }
                 }
             }
         }
@@ -223,7 +369,9 @@ fn write_decoder_result(w: &mut Writer, result: &Transition) -> Result<(), Error
     Ok(())
 }
 fn released(w: &mut Writer, reviewed: &ReviewedStep) -> Result<(), Error> {
-    let step = reviewed.step(); w.u32(step.token)?; w.u64(step.position)?;
+    let step = reviewed.step();
+    w.u32(step.token)?;
+    w.u64(step.position)?;
     w.count(step.layers.len())?;
     for layer in &step.layers {
         w.u64(layer.layer)?;

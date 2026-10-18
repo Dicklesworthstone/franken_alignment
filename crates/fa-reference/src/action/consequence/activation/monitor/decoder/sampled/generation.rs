@@ -4,16 +4,16 @@
 //! numerical failures still retain actual work and never roll back a sampled draw.
 
 pub mod incremental;
-pub mod tokenizer;
 pub mod text;
+pub mod tokenizer;
 
-use super::{MonitoredSampledDecoder, MonitoredStep, MonitoringStatus};
 use super::super::DecoderReview;
+use super::{MonitoredSampledDecoder, MonitoredStep, MonitoringStatus};
+use crate::Error;
+use crate::action::consequence::activation::tensor::kv::decoder::sampling::SampleBudget;
 use crate::action::consequence::activation::tensor::kv::decoder::{
     DecoderBudget, DecoderProfile, DecoderWork, MAX_DECODER_PRODUCTS,
 };
-use crate::action::consequence::activation::tensor::kv::decoder::sampling::SampleBudget;
-use crate::Error;
 use std::fmt;
 use std::rc::Rc;
 
@@ -85,14 +85,30 @@ pub struct GenerationReport {
     last_review: Option<Rc<DecoderReview>>,
 }
 impl GenerationReport {
-    pub fn start_position(&self) -> u64 { self.start_position }
-    pub fn end_position(&self) -> u64 { self.end_position }
-    pub fn requested_prompt_tokens(&self) -> usize { self.requested_prompt_tokens }
-    pub fn reviewed_prompt_tokens(&self) -> usize { self.reviewed_prompt_tokens }
-    pub fn tokens(&self) -> &[u32] { &self.tokens }
-    pub fn finish(&self) -> GenerationFinish { self.finish }
-    pub fn work(&self) -> GenerationWork { self.work }
-    pub fn last_review(&self) -> Option<&DecoderReview> { self.last_review.as_deref() }
+    pub fn start_position(&self) -> u64 {
+        self.start_position
+    }
+    pub fn end_position(&self) -> u64 {
+        self.end_position
+    }
+    pub fn requested_prompt_tokens(&self) -> usize {
+        self.requested_prompt_tokens
+    }
+    pub fn reviewed_prompt_tokens(&self) -> usize {
+        self.reviewed_prompt_tokens
+    }
+    pub fn tokens(&self) -> &[u32] {
+        &self.tokens
+    }
+    pub fn finish(&self) -> GenerationFinish {
+        self.finish
+    }
+    pub fn work(&self) -> GenerationWork {
+        self.work
+    }
+    pub fn last_review(&self) -> Option<&DecoderReview> {
+        self.last_review.as_deref()
+    }
 }
 impl fmt::Debug for GenerationReport {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -101,7 +117,8 @@ impl fmt::Debug for GenerationReport {
             .field("end_position", &self.end_position)
             .field("reviewed_prompt_tokens", &self.reviewed_prompt_tokens)
             .field("released_tokens", &self.tokens.len())
-            .field("finish", &self.finish).field("work", &self.work)
+            .field("finish", &self.finish)
+            .field("work", &self.work)
             .finish_non_exhaustive()
     }
 }
@@ -112,22 +129,36 @@ impl fmt::Debug for GenerationReport {
 // does not turn it into an admitted/completely reviewed prompt.
 #[cfg(unix)]
 impl GenerationReport {
-    pub(crate) fn cancelled(start: u64, request: &GenerationRequest,
-        progress: Option<&incremental::GenerationProgress>) -> Result<Self, Error>
-    {
-        let mut report = Self { start_position: start, end_position: start,
-            requested_prompt_tokens: request.prompt.len(), reviewed_prompt_tokens: 0,
-            tokens: Vec::new(), finish: GenerationFinish::Cancelled,
-            work: GenerationWork::default(), last_review: None };
+    pub(crate) fn cancelled(
+        start: u64,
+        request: &GenerationRequest,
+        progress: Option<&incremental::GenerationProgress>,
+    ) -> Result<Self, Error> {
+        let mut report = Self {
+            start_position: start,
+            end_position: start,
+            requested_prompt_tokens: request.prompt.len(),
+            reviewed_prompt_tokens: 0,
+            tokens: Vec::new(),
+            finish: GenerationFinish::Cancelled,
+            work: GenerationWork::default(),
+            last_review: None,
+        };
         if let Some(progress) = progress {
-            if progress.finish().is_some() || progress.start_position() != start
+            if progress.finish().is_some()
+                || progress.start_position() != start
                 || progress.requested_prompt_tokens() != request.prompt.len()
                 || progress.reviewed_prompt_tokens() > request.prompt.len()
                 || progress.tokens().len() > request.max_new_tokens
                 || progress.work().admitted_scalar_products > request.budget.scalar_products
                 || progress.work().admitted_sampling_entries > request.budget.sampling_entries
-            { return Err(Error::Binding); }
-            report.tokens.try_reserve_exact(progress.tokens().len()).map_err(|_| Error::Limit)?;
+            {
+                return Err(Error::Binding);
+            }
+            report
+                .tokens
+                .try_reserve_exact(progress.tokens().len())
+                .map_err(|_| Error::Limit)?;
             report.tokens.extend_from_slice(progress.tokens());
             report.end_position = progress.position();
             report.reviewed_prompt_tokens = progress.reviewed_prompt_tokens();
@@ -145,22 +176,47 @@ pub(crate) trait GenerationOwner {
     fn generation_position(&self) -> Result<u64, Error>;
     fn generation_status(&self) -> Result<MonitoringStatus, Error>;
     fn generation_estimate(&self, tokens: usize) -> Result<DecoderWork, Error>;
-    fn generation_forced(&mut self, position: u64, token: u32,
-        budget: DecoderBudget) -> Result<MonitoredStep, Error>;
-    fn generation_sampled(&mut self, position: u64,
-        budget: SampleBudget) -> Result<MonitoredStep, Error>;
+    fn generation_forced(
+        &mut self,
+        position: u64,
+        token: u32,
+        budget: DecoderBudget,
+    ) -> Result<MonitoredStep, Error>;
+    fn generation_sampled(
+        &mut self,
+        position: u64,
+        budget: SampleBudget,
+    ) -> Result<MonitoredStep, Error>;
 }
 impl GenerationOwner for MonitoredSampledDecoder {
-    fn generation_profile(&self) -> Result<&DecoderProfile, Error> { Ok(self.profile()) }
-    fn generation_position(&self) -> Result<u64, Error> { Ok(self.position()) }
-    fn generation_status(&self) -> Result<MonitoringStatus, Error> { Ok(self.status()) }
-    fn generation_estimate(&self, tokens: usize) -> Result<DecoderWork, Error> { self.estimate(tokens) }
-    fn generation_forced(&mut self, position: u64, token: u32,
-        budget: DecoderBudget) -> Result<MonitoredStep, Error>
-    { self.advance_forced(position, token, budget) }
-    fn generation_sampled(&mut self, position: u64,
-        budget: SampleBudget) -> Result<MonitoredStep, Error>
-    { self.advance_sampled(position, budget).map(super::MonitoredSampledStep::into_monitored) }
+    fn generation_profile(&self) -> Result<&DecoderProfile, Error> {
+        Ok(self.profile())
+    }
+    fn generation_position(&self) -> Result<u64, Error> {
+        Ok(self.position())
+    }
+    fn generation_status(&self) -> Result<MonitoringStatus, Error> {
+        Ok(self.status())
+    }
+    fn generation_estimate(&self, tokens: usize) -> Result<DecoderWork, Error> {
+        self.estimate(tokens)
+    }
+    fn generation_forced(
+        &mut self,
+        position: u64,
+        token: u32,
+        budget: DecoderBudget,
+    ) -> Result<MonitoredStep, Error> {
+        self.advance_forced(position, token, budget)
+    }
+    fn generation_sampled(
+        &mut self,
+        position: u64,
+        budget: SampleBudget,
+    ) -> Result<MonitoredStep, Error> {
+        self.advance_sampled(position, budget)
+            .map(super::MonitoredSampledStep::into_monitored)
+    }
 }
 
 impl MonitoredSampledDecoder {
@@ -174,18 +230,26 @@ impl MonitoredSampledDecoder {
     /// prefill; this is not a promise that all prompt inference will succeed.
     /// This is synchronous numerical execution, not an async runtime, token
     /// transport, tokenizer, provider authentication or publication API.
-    pub fn generate(&mut self, expected_position: u64, request: GenerationRequest)
-        -> Result<GenerationReport, Error>
-    { drive(self, expected_position, request) }
+    pub fn generate(
+        &mut self,
+        expected_position: u64,
+        request: GenerationRequest,
+    ) -> Result<GenerationReport, Error> {
+        drive(self, expected_position, request)
+    }
 }
 
 /// One-shot and incremental execution share the SAME admission and step reducer.
 /// No caller can supply a cursor, precharged report or an alternative owner.
-pub(crate) fn drive<O: GenerationOwner>(owner: &mut O, expected_position: u64,
-    request: GenerationRequest) -> Result<GenerationReport, Error>
-{
+pub(crate) fn drive<O: GenerationOwner>(
+    owner: &mut O,
+    expected_position: u64,
+    request: GenerationRequest,
+) -> Result<GenerationReport, Error> {
     let mut cursor = incremental::GenerationCursor::new(owner, expected_position, request)?;
-    while !cursor.is_complete() { cursor.advance(owner)?; }
+    while !cursor.is_complete() {
+        cursor.advance(owner)?;
+    }
     cursor.into_report()
 }
 

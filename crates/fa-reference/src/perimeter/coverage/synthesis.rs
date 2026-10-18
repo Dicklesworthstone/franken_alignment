@@ -82,9 +82,15 @@ impl CutPlan {
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum CutSynthesis {
     /// No active sink exists; no positive coverage certificate is issued.
-    AlreadyUnreachable { audit: CoverageAudit, work: CutWork },
+    AlreadyUnreachable {
+        audit: CoverageAudit,
+        work: CutWork,
+    },
     /// A concrete bypass survives even deletion of EVERY eligible candidate.
-    Impossible { audit: CoverageAudit, work: CutWork },
+    Impossible {
+        audit: CoverageAudit,
+        work: CutWork,
+    },
     Planned(Box<CutPlan>),
 }
 
@@ -135,7 +141,10 @@ impl CoverageProblem {
                     CutSynthesis::AlreadyUnreachable { work, .. }
                     | CutSynthesis::Impossible { work, .. } => work,
                 };
-                Err(CutFailure { error: Error::Binding, work })
+                Err(CutFailure {
+                    error: Error::Binding,
+                    work,
+                })
             }
         }
     }
@@ -160,10 +169,16 @@ impl CoverageProblem {
         let all = self.audit(&self.declaration.candidates)?;
         work.topology_audits += 1;
         if all.active_sinks() == 0 {
-            return Ok(CutSynthesis::AlreadyUnreachable { audit: all, work: *work });
+            return Ok(CutSynthesis::AlreadyUnreachable {
+                audit: all,
+                work: *work,
+            });
         }
         if all.has_bypass() {
-            return Ok(CutSynthesis::Impossible { audit: all, work: *work });
+            return Ok(CutSynthesis::Impossible {
+                audit: all,
+                work: *work,
+            });
         }
 
         let nodes = self.graph.edges.len();
@@ -173,7 +188,9 @@ impl CoverageProblem {
             return Err(Error::Limit);
         }
         let mut residual = Vec::new();
-        residual.try_reserve_exact(cells).map_err(|_| Error::Limit)?;
+        residual
+            .try_reserve_exact(cells)
+            .map_err(|_| Error::Limit)?;
         residual.resize(cells, 0_u128);
         work.residual_cells = cells;
         let total = costs.values().try_fold(0_u128, |sum, &cost| {
@@ -231,11 +248,16 @@ impl CoverageProblem {
                 return Err(Error::Binding);
             }
         };
-        let barriers: BTreeSet<_> = self.declaration.candidates.iter().copied()
+        let barriers: BTreeSet<_> = self
+            .declaration
+            .candidates
+            .iter()
+            .copied()
             .filter(|&node| reachable[2 * node].is_some() && reachable[2 * node + 1].is_none())
             .collect();
         let selected_cost = barriers.iter().try_fold(0_u128, |sum, node| {
-            sum.checked_add(u128::from(costs[node])).ok_or(Error::Overflow)
+            sum.checked_add(u128::from(costs[node]))
+                .ok_or(Error::Overflow)
         })?;
         if selected_cost != flow {
             return Err(Error::Binding);

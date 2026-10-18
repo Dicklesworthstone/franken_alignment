@@ -11,11 +11,11 @@
 
 pub mod shutdown;
 
-use super::{MAX_FLEET_DOMAINS, DomainFenceAcknowledgment, FleetCoordinator, FleetFence};
 use super::super::{
     DeliveryBroker, DispatchEnvelope, EndpointReceipt, PublicationEndpoint, StopReceipt,
     StopRequest, StopSweep,
 };
+use super::{DomainFenceAcknowledgment, FleetCoordinator, FleetFence, MAX_FLEET_DOMAINS};
 use crate::action::consequence::gate::containment::session::policy::controller::{
     ControllerConfig, PolicyReceipt, PolicyReview, PolicySession, Proposal,
 };
@@ -60,9 +60,11 @@ pub struct FundingInspection {
 
 impl FundingInspection {
     pub fn conserved(&self) -> bool {
-        self.unallocated.checked_add(self.available_in_domains)
+        self.unallocated
+            .checked_add(self.available_in_domains)
             .and_then(|sum| sum.checked_add(self.reserved))
-            .and_then(|sum| sum.checked_add(self.charged)) == Some(self.total)
+            .and_then(|sum| sum.checked_add(self.charged))
+            == Some(self.total)
     }
 }
 
@@ -101,35 +103,68 @@ impl FundingPool {
         if tenant == 0 || authority == 0 || total == 0 || max_domains == 0 {
             return Err(Error::InvalidInput);
         }
-        if max_domains > MAX_FLEET_DOMAINS { return Err(Error::Limit); }
+        if max_domains > MAX_FLEET_DOMAINS {
+            return Err(Error::Limit);
+        }
         Ok(Self {
-            tenant, authority, total, unallocated: total, revision: 0, max_domains,
-            stop: None, allocations: BTreeMap::new(),
+            tenant,
+            authority,
+            total,
+            unallocated: total,
+            revision: 0,
+            max_domains,
+            stop: None,
+            allocations: BTreeMap::new(),
         })
     }
 
     /// Funding/return predecessor only, not a child control sequence or clock.
-    pub fn revision(&self) -> u64 { self.revision }
+    pub fn revision(&self) -> u64 {
+        self.revision
+    }
 
     /// A supervisor allocates config.total, not a new independent budget. All
     /// pool checks precede endpoint attachment. A rejected configuration leaves
     /// the original pool untouched; the original constructor validates policy.
     /// Child authority identities are retained permanently, including on stop.
-    pub fn fund_domain(&mut self, expected_revision: u64, config: ControllerConfig,
-        endpoint: &mut PublicationEndpoint) -> Result<(), Error>
-    {
-        if self.stop.is_some() { return Err(Error::WrongState); }
-        if expected_revision != self.revision { return Err(Error::Stale); }
+    pub fn fund_domain(
+        &mut self,
+        expected_revision: u64,
+        config: ControllerConfig,
+        endpoint: &mut PublicationEndpoint,
+    ) -> Result<(), Error> {
+        if self.stop.is_some() {
+            return Err(Error::WrongState);
+        }
+        if expected_revision != self.revision {
+            return Err(Error::Stale);
+        }
         let scope = config.scope;
-        if scope.tenant != self.tenant || scope.authority == self.authority
-            || scope.purpose != Purpose::Effect { return Err(Error::Binding); }
-        if self.allocations.contains_key(&scope.authority) { return Err(Error::Duplicate); }
-        if self.allocations.len() >= self.max_domains { return Err(Error::Limit); }
+        if scope.tenant != self.tenant
+            || scope.authority == self.authority
+            || scope.purpose != Purpose::Effect
+        {
+            return Err(Error::Binding);
+        }
+        if self.allocations.contains_key(&scope.authority) {
+            return Err(Error::Duplicate);
+        }
+        if self.allocations.len() >= self.max_domains {
+            return Err(Error::Limit);
+        }
         let issued = config.total;
         let unallocated = self.unallocated.checked_sub(issued).ok_or(Error::Limit)?;
         let revision = self.revision.checked_add(1).ok_or(Error::Overflow)?;
         let broker = DeliveryBroker::new(config, endpoint)?;
-        self.allocations.insert(scope.authority, Allocation { scope, issued, returned: 0, broker });
+        self.allocations.insert(
+            scope.authority,
+            Allocation {
+                scope,
+                issued,
+                returned: 0,
+                broker,
+            },
+        );
         self.unallocated = unallocated;
         self.revision = revision;
         Ok(())
@@ -138,7 +173,10 @@ impl FundingPool {
     /// A limited borrow, never an independently replaceable inner broker.
     pub fn domain(&mut self, authority: u64) -> Result<FundedDomain<'_>, Error> {
         let allocation = self.allocations.get_mut(&authority).ok_or(Error::Missing)?;
-        Ok(FundedDomain { broker: &mut allocation.broker, admission_closed: self.stop.is_some() })
+        Ok(FundedDomain {
+            broker: &mut allocation.broker,
+            admission_closed: self.stop.is_some(),
+        })
     }
 
     /// Collect only actual available rights from a PERMANENTLY stopped child.
@@ -146,25 +184,48 @@ impl FundingPool {
     /// stay charged. Later NotExecuted receipts can make more rights available.
     /// Repeated collection never transfers the same units twice. The original
     /// child and all of its receipt/attempt tombstones are retained.
-    pub fn collect_returned(&mut self, expected_revision: u64, authority: u64)
-        -> Result<FundingReturn, Error>
-    {
-        if expected_revision != self.revision { return Err(Error::Stale); }
+    pub fn collect_returned(
+        &mut self,
+        expected_revision: u64,
+        authority: u64,
+    ) -> Result<FundingReturn, Error> {
+        if expected_revision != self.revision {
+            return Err(Error::Stale);
+        }
         let allocation = self.allocations.get(&authority).ok_or(Error::Missing)?;
-        if allocation.broker.stop_receipt().is_none() { return Err(Error::WrongState); }
-        let ledger = allocation.broker.inspect().ledger;
-        if ledger.reserved != 0 || ledger.available.checked_add(ledger.charged) != Some(allocation.issued) {
+        if allocation.broker.stop_receipt().is_none() {
             return Err(Error::WrongState);
         }
-        let units = ledger.available.checked_sub(allocation.returned).ok_or(Error::WrongState)?;
+        let ledger = allocation.broker.inspect().ledger;
+        if ledger.reserved != 0
+            || ledger.available.checked_add(ledger.charged) != Some(allocation.issued)
+        {
+            return Err(Error::WrongState);
+        }
+        let units = ledger
+            .available
+            .checked_sub(allocation.returned)
+            .ok_or(Error::WrongState)?;
         let unallocated = self.unallocated.checked_add(units).ok_or(Error::Overflow)?;
-        if unallocated > self.total { return Err(Error::WrongState); }
-        let revision = if units == 0 { self.revision }
-            else { self.revision.checked_add(1).ok_or(Error::Overflow)? };
-        let receipt = FundingReturn {
-            revision, authority, units, returned_total: ledger.available, unallocated,
+        if unallocated > self.total {
+            return Err(Error::WrongState);
+        }
+        let revision = if units == 0 {
+            self.revision
+        } else {
+            self.revision.checked_add(1).ok_or(Error::Overflow)?
         };
-        self.allocations.get_mut(&authority).expect("checked allocation").returned = ledger.available;
+        let receipt = FundingReturn {
+            revision,
+            authority,
+            units,
+            returned_total: ledger.available,
+            unallocated,
+        };
+        self.allocations
+            .get_mut(&authority)
+            .expect("checked allocation")
+            .returned = ledger.available;
         self.unallocated = unallocated;
         self.revision = revision;
         Ok(receipt)
@@ -179,26 +240,53 @@ impl FundingPool {
         let mut charged = 0_u64;
         for (authority, allocation) in &self.allocations {
             let ledger = allocation.broker.inspect().ledger;
-            if ledger.available.checked_add(ledger.reserved)
-                .and_then(|sum| sum.checked_add(ledger.charged)) != Some(allocation.issued)
-            { return Err(Error::WrongState); }
-            let available = ledger.available.checked_sub(allocation.returned).ok_or(Error::WrongState)?;
-            available_in_domains = available_in_domains.checked_add(available).ok_or(Error::Overflow)?;
-            reserved = reserved.checked_add(ledger.reserved).ok_or(Error::Overflow)?;
+            if ledger
+                .available
+                .checked_add(ledger.reserved)
+                .and_then(|sum| sum.checked_add(ledger.charged))
+                != Some(allocation.issued)
+            {
+                return Err(Error::WrongState);
+            }
+            let available = ledger
+                .available
+                .checked_sub(allocation.returned)
+                .ok_or(Error::WrongState)?;
+            available_in_domains = available_in_domains
+                .checked_add(available)
+                .ok_or(Error::Overflow)?;
+            reserved = reserved
+                .checked_add(ledger.reserved)
+                .ok_or(Error::Overflow)?;
             charged = charged.checked_add(ledger.charged).ok_or(Error::Overflow)?;
-            allocations.insert(*authority, AllocationInspection {
-                scope: allocation.scope, issued: allocation.issued, returned: allocation.returned,
-                available, reserved: ledger.reserved, charged: ledger.charged,
-                stopped: allocation.broker.stop_receipt().is_some(),
-            });
+            allocations.insert(
+                *authority,
+                AllocationInspection {
+                    scope: allocation.scope,
+                    issued: allocation.issued,
+                    returned: allocation.returned,
+                    available,
+                    reserved: ledger.reserved,
+                    charged: ledger.charged,
+                    stopped: allocation.broker.stop_receipt().is_some(),
+                },
+            );
         }
         let result = FundingInspection {
-            tenant: self.tenant, authority: self.authority, revision: self.revision,
-            total: self.total, admission_closed: self.stop.is_some(),
-            unallocated: self.unallocated, available_in_domains,
-            reserved, charged, allocations,
+            tenant: self.tenant,
+            authority: self.authority,
+            revision: self.revision,
+            total: self.total,
+            admission_closed: self.stop.is_some(),
+            unallocated: self.unallocated,
+            available_in_domains,
+            reserved,
+            charged,
+            allocations,
         };
-        if !result.conserved() { return Err(Error::WrongState); }
+        if !result.conserved() {
+            return Err(Error::WrongState);
+        }
         Ok(result)
     }
 }
@@ -219,41 +307,78 @@ pub struct FundedDomain<'a> {
 
 impl FundedDomain<'_> {
     fn check_admission(&self) -> Result<(), Error> {
-        if self.admission_closed { Err(Error::WrongState) } else { Ok(()) }
+        if self.admission_closed {
+            Err(Error::WrongState)
+        } else {
+            Ok(())
+        }
     }
 
     /// Enroll the original funded broker; the fleet never creates extra rights.
-    pub fn join_fleet(&mut self, fleet: &mut FleetCoordinator, domain: u64,
-        expected_revision: u64, lease_until: ElapsedTick) -> Result<(), Error>
-    {
+    pub fn join_fleet(
+        &mut self,
+        fleet: &mut FleetCoordinator,
+        domain: u64,
+        expected_revision: u64,
+        lease_until: ElapsedTick,
+    ) -> Result<(), Error> {
         self.check_admission()?;
-        self.broker.join_fleet(fleet, domain, expected_revision, lease_until)
+        self.broker
+            .join_fleet(fleet, domain, expected_revision, lease_until)
     }
 
     /// Installation preserves its original scope, predecessor and issuer checks.
     /// A fleet acknowledgment does not itself make funding returnable.
-    pub fn install_fleet_fence(&mut self, fence: &FleetFence, sequence: u64, epoch: u64)
-        -> Result<DomainFenceAcknowledgment, Error>
-    { self.broker.install_fleet_fence(fence, sequence, epoch) }
+    pub fn install_fleet_fence(
+        &mut self,
+        fence: &FleetFence,
+        sequence: u64,
+        epoch: u64,
+    ) -> Result<DomainFenceAcknowledgment, Error> {
+        self.broker.install_fleet_fence(fence, sequence, epoch)
+    }
 
     /// Original historical ledger; a stopped child's available balance includes
     /// returned tombstones. Use FundingPool::inspect for spendable pool balances.
-    pub fn broker(&self) -> &DeliveryBroker { self.broker }
-    pub fn observe_time(&mut self, now: ElapsedTick) -> Result<(), Error> { self.broker.observe_time(now) }
+    pub fn broker(&self) -> &DeliveryBroker {
+        self.broker
+    }
+    pub fn observe_time(&mut self, now: ElapsedTick) -> Result<(), Error> {
+        self.broker.observe_time(now)
+    }
 
-    pub fn confirm_endpoint_fence(&mut self, endpoint: &mut PublicationEndpoint) -> Result<(), Error> {
+    pub fn confirm_endpoint_fence(
+        &mut self,
+        endpoint: &mut PublicationEndpoint,
+    ) -> Result<(), Error> {
         let acknowledgment = endpoint.install_fence(self.broker.fence_request())?;
         self.broker.confirm_fence(acknowledgment)
     }
 
-    pub fn propose(&mut self, id: u64, action: ActionSpec, snapshot: &Snapshot) -> Result<Proposal, Error> {
+    pub fn propose(
+        &mut self,
+        id: u64,
+        action: ActionSpec,
+        snapshot: &Snapshot,
+    ) -> Result<Proposal, Error> {
         self.check_admission()?;
         self.broker.propose(id, action, snapshot)
     }
-    pub fn begin_review(&self, id: u64, round: u64, root: [u8; 32], snapshot: &Snapshot)
-        -> Result<PolicySession, Error>
-    { self.check_admission()?; self.broker.begin_review(id, round, root, snapshot) }
-    pub fn apply_review(&mut self, review: PolicyReview, snapshot: &Snapshot) -> Result<PolicyReceipt, Error> {
+    pub fn begin_review(
+        &self,
+        id: u64,
+        round: u64,
+        root: [u8; 32],
+        snapshot: &Snapshot,
+    ) -> Result<PolicySession, Error> {
+        self.check_admission()?;
+        self.broker.begin_review(id, round, root, snapshot)
+    }
+    pub fn apply_review(
+        &mut self,
+        review: PolicyReview,
+        snapshot: &Snapshot,
+    ) -> Result<PolicyReceipt, Error> {
         if review.decision().consequence == crate::action::consequence::Consequence::Continue {
             self.check_admission()?;
         }
@@ -263,19 +388,34 @@ impl FundedDomain<'_> {
         self.check_admission()?;
         self.broker.authorize(id, snapshot)
     }
-    pub fn dispatch(&mut self, permit: &Permit, action: &FrozenAction, snapshot: &Snapshot)
-        -> Result<DispatchEnvelope, Error>
-    { self.check_admission()?; self.broker.dispatch(permit, action, snapshot) }
-    pub fn cancel(&mut self, id: u64) -> Result<(), Error> { self.broker.cancel(id) }
-    pub fn acknowledgment_lost(&mut self, id: u64) -> Result<(), Error> { self.broker.acknowledgment_lost(id) }
+    pub fn dispatch(
+        &mut self,
+        permit: &Permit,
+        action: &FrozenAction,
+        snapshot: &Snapshot,
+    ) -> Result<DispatchEnvelope, Error> {
+        self.check_admission()?;
+        self.broker.dispatch(permit, action, snapshot)
+    }
+    pub fn cancel(&mut self, id: u64) -> Result<(), Error> {
+        self.broker.cancel(id)
+    }
+    pub fn acknowledgment_lost(&mut self, id: u64) -> Result<(), Error> {
+        self.broker.acknowledgment_lost(id)
+    }
     pub fn accept_receipt(&mut self, receipt: EndpointReceipt) -> Result<bool, Error> {
         self.broker.accept_receipt(receipt)
     }
-    pub fn abandon_unknown(&mut self, id: u64) -> Result<(), Error> { self.broker.abandon_unknown(id) }
+    pub fn abandon_unknown(&mut self, id: u64) -> Result<(), Error> {
+        self.broker.abandon_unknown(id)
+    }
     pub fn request_stop(&mut self, request: StopRequest) -> Result<StopReceipt, Error> {
         self.broker.request_stop(request)
     }
-    pub fn progress_stop(&mut self, endpoint: &mut PublicationEndpoint) -> Result<StopSweep, Error> {
+    pub fn progress_stop(
+        &mut self,
+        endpoint: &mut PublicationEndpoint,
+    ) -> Result<StopSweep, Error> {
         self.broker.progress_stop(endpoint)
     }
 }

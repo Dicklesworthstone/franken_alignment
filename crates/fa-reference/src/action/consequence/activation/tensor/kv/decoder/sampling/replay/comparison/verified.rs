@@ -3,11 +3,13 @@
 //! Policy and paired-work admission freeze before verification starts. Parsed
 //! archive words remain expectations, never installed state. Reconstruction and
 //! paired recomputation have separate work rows and no executable-owner escape.
-use super::{ComparisonLimits, ComparisonLineage, PolicyComparison};
-use super::super::{GenerationCheckpoint, GenerationReplay, ReplayBudget, ReplayReceipt, ReplayStatus,
-    archive::GenerationArchive};
-use super::super::super::monitored::{GenerationTelemetryWork, GenerationWork};
 use super::super::super::super::monitoring::LearnedDecoderPolicy;
+use super::super::super::monitored::{GenerationTelemetryWork, GenerationWork};
+use super::super::{
+    GenerationCheckpoint, GenerationReplay, ReplayBudget, ReplayReceipt, ReplayStatus,
+    archive::GenerationArchive,
+};
+use super::{ComparisonLimits, ComparisonLineage, PolicyComparison};
 use crate::Error;
 use std::fmt;
 
@@ -40,37 +42,47 @@ pub struct ComparisonPreparation {
 }
 impl fmt::Debug for ComparisonPreparation {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("ComparisonPreparation").field("report", &self.report()).finish_non_exhaustive()
+        f.debug_struct("ComparisonPreparation")
+            .field("report", &self.report())
+            .finish_non_exhaustive()
     }
 }
 
 impl GenerationCheckpoint {
     /// Frozen candidate policy is for an isolated experiment, never a replacement
     /// for the baseline's original monitoring during checkpoint verification.
-    pub fn begin_policy_comparison(&self, candidate: LearnedDecoderPolicy,
-        replay_budget: ReplayBudget, comparison_limits: ComparisonLimits)
-        -> Result<ComparisonPreparation, Error>
-    {
-        self.begin_replay(replay_budget)?.prepare_policy_comparison(candidate, comparison_limits)
+    pub fn begin_policy_comparison(
+        &self,
+        candidate: LearnedDecoderPolicy,
+        replay_budget: ReplayBudget,
+        comparison_limits: ComparisonLimits,
+    ) -> Result<ComparisonPreparation, Error> {
+        self.begin_replay(replay_budget)?
+            .prepare_policy_comparison(candidate, comparison_limits)
     }
 }
 impl GenerationArchive {
     /// Import already checked the complete intended recipe. This still requires
     /// original numerical/learned replay; parsing alone never releases a pair.
-    pub fn begin_policy_comparison(&self, candidate: LearnedDecoderPolicy,
-        replay_budget: ReplayBudget, comparison_limits: ComparisonLimits)
-        -> Result<ComparisonPreparation, Error>
-    {
-        self.begin_replay(replay_budget)?.prepare_policy_comparison(candidate, comparison_limits)
+    pub fn begin_policy_comparison(
+        &self,
+        candidate: LearnedDecoderPolicy,
+        replay_budget: ReplayBudget,
+        comparison_limits: ComparisonLimits,
+    ) -> Result<ComparisonPreparation, Error> {
+        self.begin_replay(replay_budget)?
+            .prepare_policy_comparison(candidate, comparison_limits)
     }
 }
 impl GenerationReplay {
     /// Adopt only an unadvanced verifier. This freezes the candidate and paired
     /// limits before any baseline computation or final state comparison. A
     /// nonempty zero-step call does not compute a token and remains admissible.
-    pub fn prepare_policy_comparison(self, candidate: LearnedDecoderPolicy, limits: ComparisonLimits)
-        -> Result<ComparisonPreparation, Error>
-    {
+    pub fn prepare_policy_comparison(
+        self,
+        candidate: LearnedDecoderPolicy,
+        limits: ComparisonLimits,
+    ) -> Result<ComparisonPreparation, Error> {
         if !matches!(self.status, ReplayStatus::Pending { compared: 0, .. }) || self.compared != 0 {
             return Err(Error::WrongState);
         }
@@ -78,23 +90,35 @@ impl GenerationReplay {
         // constructor checks, without executing inference. The pair remains
         // private until replay.finish verifies the entire saved state.
         let checkpoint = &self.checkpoint;
-        let pair = PolicyComparison::start(&checkpoint.recipe, candidate, limits, ComparisonLineage {
-            stream: checkpoint.recipe.stream,
-            evaluation_origin: checkpoint.recipe.evaluation_origin,
-            source_position: checkpoint.positions() as u64,
-            source_status: checkpoint.status(),
-        })?;
+        let pair = PolicyComparison::start(
+            &checkpoint.recipe,
+            candidate,
+            limits,
+            ComparisonLineage {
+                stream: checkpoint.recipe.stream,
+                evaluation_origin: checkpoint.recipe.evaluation_origin,
+                source_position: checkpoint.positions() as u64,
+                source_status: checkpoint.status(),
+            },
+        )?;
         Ok(ComparisonPreparation { replay: self, pair })
     }
 }
 impl ComparisonPreparation {
-    pub fn status(&self) -> ReplayStatus { self.replay.status() }
-    pub fn receipt(&self) -> Option<&ReplayReceipt> { self.replay.receipt() }
+    pub fn status(&self) -> ReplayStatus {
+        self.replay.status()
+    }
+    pub fn receipt(&self) -> Option<&ReplayReceipt> {
+        self.replay.receipt()
+    }
     pub fn report(&self) -> PreparationReport {
-        PreparationReport { status: self.replay.status(), compared_positions: self.replay.compared,
+        PreparationReport {
+            status: self.replay.status(),
+            compared_positions: self.replay.compared,
             reserved_and_accepted_work: self.replay.candidate.work(),
             reported_telemetry: self.replay.candidate.telemetry_work(),
-            verification_complete: self.replay.status() == ReplayStatus::Verified }
+            verification_complete: self.replay.status() == ReplayStatus::Verified,
+        }
     }
 
     /// Delegate all state comparison, original-probe execution, resource guards

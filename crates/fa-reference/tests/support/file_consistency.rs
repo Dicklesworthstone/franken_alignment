@@ -1,4 +1,4 @@
-#![allow(dead_code)]
+#![allow(dead_code, unused_imports)]
 use fa_reference::action::consequence::activation::{CaptureProfile, FrameIdentity, SourceFrame};
 use fa_reference::action::consequence::activation::consistency::{BinaryForecast, ErrorBudget, ForecastRegistration, Prediction};
 use fa_reference::action::consequence::delivery::persistent::observed::FileOversight;

@@ -1,4 +1,4 @@
-#![allow(dead_code)]
+#![allow(dead_code, unused_imports)]
 #[path = "file_publication_capture.rs"] pub mod base;
 pub use base::{Directory, Keys, profile, snapshot};
 use fa_reference::action::{ElapsedTick, FrozenAction};

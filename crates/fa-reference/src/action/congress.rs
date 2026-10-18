@@ -81,7 +81,8 @@ impl CongressAuthority {
         let judgment = Judgment::capture(snapshot, action.spec().required_witnesses.clone())?;
         let congress = CongressReview::new(self.policy.clone(), id, &challenge)?;
         self.authority.propose(id, action)?;
-        self.reviews.insert(id, RegisteredReview { congress, judgment });
+        self.reviews
+            .insert(id, RegisteredReview { congress, judgment });
         Ok(())
     }
 
@@ -116,7 +117,13 @@ impl CongressAuthority {
             .open_reveals()
     }
 
-    pub fn reveal(&mut self, id: u64, member: &str, verdict: Verdict, salt: &[u8]) -> Result<(), Error> {
+    pub fn reveal(
+        &mut self,
+        id: u64,
+        member: &str,
+        verdict: Verdict,
+        salt: &[u8],
+    ) -> Result<(), Error> {
         self.authority.attempt_at(id, ActionState::Reviewing)?;
         self.reviews
             .get_mut(&id)
@@ -151,8 +158,15 @@ impl CongressAuthority {
         evidence: &[u8],
         exact: ExactStatus,
     ) -> Result<(), Error> {
-        self.check_review(permit.inner.attempt, final_action, snapshot, evidence, exact)?;
-        self.authority.dispatch(&permit.inner, final_action, snapshot)
+        self.check_review(
+            permit.inner.attempt,
+            final_action,
+            snapshot,
+            evidence,
+            exact,
+        )?;
+        self.authority
+            .dispatch(&permit.inner, final_action, snapshot)
     }
 
     pub fn cancel(&mut self, id: u64) -> Result<(), Error> {
@@ -167,7 +181,11 @@ impl CongressAuthority {
         self.authority.mark_unknown(id)
     }
 
-    pub fn record_trusted_outcome(&mut self, id: u64, outcome: TrustedOutcome) -> Result<(), Error> {
+    pub fn record_trusted_outcome(
+        &mut self,
+        id: u64,
+        outcome: TrustedOutcome,
+    ) -> Result<(), Error> {
         self.authority.record_trusted_outcome(id, outcome)
     }
 
@@ -305,7 +323,8 @@ impl Binding {
         if end > MAX_FIELD_LEN {
             return Err(Error::Limit);
         }
-        self.0.extend_from_slice(&(value.len() as u64).to_be_bytes());
+        self.0
+            .extend_from_slice(&(value.len() as u64).to_be_bytes());
         self.0.extend_from_slice(value);
         Ok(())
     }

@@ -83,11 +83,11 @@ fn an_interrupted_helper_round_is_not_resumed_but_a_new_epoch_can_review_new_wor
     host.observe_time(host.revision(), ElapsedTick(2)).unwrap();
     assert_eq!(host.begin_review(host.revision(), 1, 101, ROOT, window(&host), snapshot()).unwrap_err(),
         JournalError::Contract(Error::Duplicate));
-    let keys = ready(&mut host, &reviewer, 2, b"new approved epoch");
+    let keys = ready(&mut host, &reviewer, 2, b"approved-epoch");
     assert!(keys.action.spec().policy_epoch > action.spec().policy_epoch);
     dispatch(&mut host, &keys);
     host.publish(host.revision(), 2).unwrap();
-    assert_eq!(host.inspect().payload, b"new approved epoch");
+    assert_eq!(host.inspect().payload, b"approved-epoch");
     assert_eq!(host.inspect().executions, 1);
 }
 

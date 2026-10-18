@@ -2,9 +2,12 @@
 //! Count criteria are empirical operating points, not probability calibration,
 //! confidence bounds, a learned-label guarantee or production qualification.
 
-use super::{CaseLabel, CaseOrigin, ClassCounts, DataSplit, FittedProbe, MAX_CORPUS_CASES, MAX_CORPUS_COORDINATES};
+use super::super::super::{FrameIdentity, HEADER_BYTES, ProgressiveFrame};
 use super::super::{ExactScore, LinearProbe, SignedSum};
-use super::super::super::{FrameIdentity, ProgressiveFrame, HEADER_BYTES};
+use super::{
+    CaseLabel, CaseOrigin, ClassCounts, DataSplit, FittedProbe, MAX_CORPUS_CASES,
+    MAX_CORPUS_COORDINATES,
+};
 use crate::Error;
 use std::cmp::Ordering;
 use std::rc::Rc;
@@ -14,19 +17,34 @@ pub const MAX_SCORING_BYTES: usize = 16_777_216;
 pub const MAX_THRESHOLD_COMPARISONS: usize = MAX_CORPUS_CASES * MAX_THRESHOLD_CANDIDATES;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub struct ScreeningCriteria { min_violation_alarms: usize, max_benign_holds: usize }
+pub struct ScreeningCriteria {
+    min_violation_alarms: usize,
+    max_benign_holds: usize,
+}
 impl ScreeningCriteria {
     /// Equality is a hold but NOT a demonstrated alarm. Requiring at least one
     /// true alarm prevents qualification of a detector that always stays quiet.
     pub fn new(min_violation_alarms: usize, max_benign_holds: usize) -> Result<Self, Error> {
-        if min_violation_alarms == 0 { return Err(Error::InvalidInput); }
-        if min_violation_alarms > MAX_CORPUS_CASES || max_benign_holds > MAX_CORPUS_CASES { return Err(Error::Limit); }
-        Ok(Self { min_violation_alarms, max_benign_holds })
+        if min_violation_alarms == 0 {
+            return Err(Error::InvalidInput);
+        }
+        if min_violation_alarms > MAX_CORPUS_CASES || max_benign_holds > MAX_CORPUS_CASES {
+            return Err(Error::Limit);
+        }
+        Ok(Self {
+            min_violation_alarms,
+            max_benign_holds,
+        })
     }
-    pub fn min_violation_alarms(self) -> usize { self.min_violation_alarms }
-    pub fn max_benign_holds(self) -> usize { self.max_benign_holds }
+    pub fn min_violation_alarms(self) -> usize {
+        self.min_violation_alarms
+    }
+    pub fn max_benign_holds(self) -> usize {
+        self.max_benign_holds
+    }
     fn accepts(self, counts: ConfusionCounts) -> bool {
-        counts.violation_alarm >= self.min_violation_alarms && counts.benign_holds() <= self.max_benign_holds
+        counts.violation_alarm >= self.min_violation_alarms
+            && counts.benign_holds() <= self.max_benign_holds
     }
 }
 
@@ -41,22 +59,46 @@ pub struct CalibrationPolicy {
     evaluation: ScreeningCriteria,
 }
 impl CalibrationPolicy {
-    pub fn new(id: u64, generation: u64, thresholds: &[f32], calibration: ScreeningCriteria,
-        evaluation: ScreeningCriteria) -> Result<Self, Error>
-    {
-        if id == 0 || generation == 0 || thresholds.is_empty() { return Err(Error::InvalidInput); }
-        if thresholds.len() > MAX_THRESHOLD_CANDIDATES { return Err(Error::Limit); }
-        if thresholds.iter().any(|v| !v.is_finite()) || thresholds.windows(2).any(|p| p[0] >= p[1]) {
+    pub fn new(
+        id: u64,
+        generation: u64,
+        thresholds: &[f32],
+        calibration: ScreeningCriteria,
+        evaluation: ScreeningCriteria,
+    ) -> Result<Self, Error> {
+        if id == 0 || generation == 0 || thresholds.is_empty() {
             return Err(Error::InvalidInput);
         }
-        Ok(Self { id, generation, threshold_bits: thresholds.iter().map(|v| v.to_bits()).collect(),
-            calibration, evaluation })
+        if thresholds.len() > MAX_THRESHOLD_CANDIDATES {
+            return Err(Error::Limit);
+        }
+        if thresholds.iter().any(|v| !v.is_finite()) || thresholds.windows(2).any(|p| p[0] >= p[1])
+        {
+            return Err(Error::InvalidInput);
+        }
+        Ok(Self {
+            id,
+            generation,
+            threshold_bits: thresholds.iter().map(|v| v.to_bits()).collect(),
+            calibration,
+            evaluation,
+        })
     }
-    pub fn id(&self) -> u64 { self.id }
-    pub fn generation(&self) -> u64 { self.generation }
-    pub fn thresholds(&self) -> impl Iterator<Item = f32> + '_ { self.threshold_bits.iter().map(|v| f32::from_bits(*v)) }
-    pub fn calibration_criteria(&self) -> ScreeningCriteria { self.calibration }
-    pub fn evaluation_criteria(&self) -> ScreeningCriteria { self.evaluation }
+    pub fn id(&self) -> u64 {
+        self.id
+    }
+    pub fn generation(&self) -> u64 {
+        self.generation
+    }
+    pub fn thresholds(&self) -> impl Iterator<Item = f32> + '_ {
+        self.threshold_bits.iter().map(|v| f32::from_bits(*v))
+    }
+    pub fn calibration_criteria(&self) -> ScreeningCriteria {
+        self.calibration
+    }
+    pub fn evaluation_criteria(&self) -> ScreeningCriteria {
+        self.evaluation
+    }
 }
 
 /// Every case appears in exactly one cell. At-threshold cases never turn into
@@ -72,10 +114,14 @@ pub struct ConfusionCounts {
 }
 impl ConfusionCounts {
     pub fn classes(self) -> ClassCounts {
-        ClassCounts { benign: self.benign_alarm + self.benign_quiet + self.benign_boundary,
-            violation: self.violation_alarm + self.violation_quiet + self.violation_boundary }
+        ClassCounts {
+            benign: self.benign_alarm + self.benign_quiet + self.benign_boundary,
+            violation: self.violation_alarm + self.violation_quiet + self.violation_boundary,
+        }
     }
-    pub fn benign_holds(self) -> usize { self.benign_alarm + self.benign_boundary }
+    pub fn benign_holds(self) -> usize {
+        self.benign_alarm + self.benign_boundary
+    }
     fn record(&mut self, label: CaseLabel, ordering: Ordering) {
         match (label, ordering) {
             (CaseLabel::Benign, Ordering::Greater) => self.benign_alarm += 1,
@@ -103,29 +149,57 @@ pub struct ScoringWork {
 }
 impl ScoringWork {
     fn check(self, budget: ScoringBudget) -> Result<(), Error> {
-        if budget.encoded_bytes > MAX_SCORING_BYTES || budget.probe_coordinates > MAX_CORPUS_COORDINATES
+        if budget.encoded_bytes > MAX_SCORING_BYTES
+            || budget.probe_coordinates > MAX_CORPUS_COORDINATES
             || budget.threshold_comparisons > MAX_THRESHOLD_COMPARISONS
-            || self.encoded_bytes > budget.encoded_bytes || self.probe_coordinates > budget.probe_coordinates
-            || self.threshold_comparisons > budget.threshold_comparisons { return Err(Error::Limit); }
+            || self.encoded_bytes > budget.encoded_bytes
+            || self.probe_coordinates > budget.probe_coordinates
+            || self.threshold_comparisons > budget.threshold_comparisons
+        {
+            return Err(Error::Limit);
+        }
         Ok(())
     }
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
-pub struct CaseScore { origin: CaseOrigin, label: CaseLabel, frame: FrameIdentity, score: ExactScore }
+pub struct CaseScore {
+    origin: CaseOrigin,
+    label: CaseLabel,
+    frame: FrameIdentity,
+    score: ExactScore,
+}
 impl CaseScore {
-    pub fn origin(&self) -> CaseOrigin { self.origin }
-    pub fn label(&self) -> CaseLabel { self.label }
-    pub fn frame(&self) -> FrameIdentity { self.frame }
+    pub fn origin(&self) -> CaseOrigin {
+        self.origin
+    }
+    pub fn label(&self) -> CaseLabel {
+        self.label
+    }
+    pub fn frame(&self) -> FrameIdentity {
+        self.frame
+    }
     /// Exact raw dot+bias before subtracting any candidate threshold.
-    pub fn score(&self) -> &ExactScore { &self.score }
+    pub fn score(&self) -> &ExactScore {
+        &self.score
+    }
 }
 #[derive(Clone, Debug, PartialEq, Eq)]
-pub struct ThresholdTrial { threshold_bits: u32, counts: ConfusionCounts, accepted: bool }
+pub struct ThresholdTrial {
+    threshold_bits: u32,
+    counts: ConfusionCounts,
+    accepted: bool,
+}
 impl ThresholdTrial {
-    pub fn threshold(&self) -> f32 { f32::from_bits(self.threshold_bits) }
-    pub fn counts(&self) -> ConfusionCounts { self.counts }
-    pub fn accepted(&self) -> bool { self.accepted }
+    pub fn threshold(&self) -> f32 {
+        f32::from_bits(self.threshold_bits)
+    }
+    pub fn counts(&self) -> ConfusionCounts {
+        self.counts
+    }
+    pub fn accepted(&self) -> bool {
+        self.accepted
+    }
 }
 #[derive(Debug)]
 struct CalibrationData {
@@ -140,14 +214,28 @@ struct CalibrationData {
 /// All tested operating points remain recorded, including a campaign with no
 /// eligible threshold. The final evaluation cannot select a different candidate.
 #[derive(Clone, Debug)]
-pub struct CalibrationRun { data: Rc<CalibrationData> }
+pub struct CalibrationRun {
+    data: Rc<CalibrationData>,
+}
 impl CalibrationRun {
-    pub fn fitted(&self) -> &FittedProbe { &self.data.fitted }
-    pub fn policy(&self) -> &CalibrationPolicy { &self.data.policy }
-    pub fn scores(&self) -> &[CaseScore] { &self.data.scores }
-    pub fn trials(&self) -> &[ThresholdTrial] { &self.data.trials }
-    pub fn work(&self) -> ScoringWork { self.data.work }
-    pub fn selected_threshold(&self) -> Option<f32> { self.data.selected.map(|i| self.data.trials[i].threshold()) }
+    pub fn fitted(&self) -> &FittedProbe {
+        &self.data.fitted
+    }
+    pub fn policy(&self) -> &CalibrationPolicy {
+        &self.data.policy
+    }
+    pub fn scores(&self) -> &[CaseScore] {
+        &self.data.scores
+    }
+    pub fn trials(&self) -> &[ThresholdTrial] {
+        &self.data.trials
+    }
+    pub fn work(&self) -> ScoringWork {
+        self.data.work
+    }
+    pub fn selected_threshold(&self) -> Option<f32> {
+        self.data.selected.map(|i| self.data.trials[i].threshold())
+    }
 
     /// Consumes ALL of the originally reserved evaluation split exactly as
     /// labelled. No caller subset, threshold override or re-fit input is accepted.
@@ -157,9 +245,17 @@ impl CalibrationRun {
         work.check(budget)?;
         let scores = score(self.fitted(), DataSplit::Evaluation, work)?;
         let counts = classify(&scores, threshold)?;
-        if counts.classes() != self.fitted().corpus().counts(DataSplit::Evaluation) { return Err(Error::Binding); }
+        if counts.classes() != self.fitted().corpus().counts(DataSplit::Evaluation) {
+            return Err(Error::Binding);
+        }
         let accepted = self.policy().evaluation.accepts(counts);
-        Ok(EvaluationReport { calibration: self.clone(), scores, counts, accepted, work })
+        Ok(EvaluationReport {
+            calibration: self.clone(),
+            scores,
+            counts,
+            accepted,
+            work,
+        })
     }
 }
 
@@ -174,57 +270,113 @@ pub struct EvaluationReport {
     work: ScoringWork,
 }
 impl EvaluationReport {
-    pub fn calibration(&self) -> &CalibrationRun { &self.calibration }
-    pub fn scores(&self) -> &[CaseScore] { &self.scores }
-    pub fn counts(&self) -> ConfusionCounts { self.counts }
-    pub fn accepted(&self) -> bool { self.accepted }
-    pub fn work(&self) -> ScoringWork { self.work }
+    pub fn calibration(&self) -> &CalibrationRun {
+        &self.calibration
+    }
+    pub fn scores(&self) -> &[CaseScore] {
+        &self.scores
+    }
+    pub fn counts(&self) -> ConfusionCounts {
+        self.counts
+    }
+    pub fn accepted(&self) -> bool {
+        self.accepted
+    }
+    pub fn work(&self) -> ScoringWork {
+        self.work
+    }
     /// Feed the existing monitor only after this evaluation passed its frozen
     /// rules. This exports data, not a live policy-promotion or effect capability.
     pub fn probe(&self) -> Result<LinearProbe, Error> {
-        if !self.accepted { return Err(Error::WrongState); }
-        self.calibration.fitted().probe(self.calibration.selected_threshold().ok_or(Error::WrongState)?)
+        if !self.accepted {
+            return Err(Error::WrongState);
+        }
+        self.calibration.fitted().probe(
+            self.calibration
+                .selected_threshold()
+                .ok_or(Error::WrongState)?,
+        )
     }
 }
 
 impl FittedProbe {
     /// Highest violation-alarm count, then fewest benign holds, then the first
     /// (lowest) declared threshold. These rules never inspect evaluation scores.
-    pub fn calibrate(&self, policy: CalibrationPolicy, budget: ScoringBudget) -> Result<CalibrationRun, Error> {
+    pub fn calibrate(
+        &self,
+        policy: CalibrationPolicy,
+        budget: ScoringBudget,
+    ) -> Result<CalibrationRun, Error> {
         let work = estimate(self, DataSplit::Calibration, policy.threshold_bits.len())?;
         work.check(budget)?;
         let scores = score(self, DataSplit::Calibration, work)?;
         let mut trials: Vec<ThresholdTrial> = Vec::new();
-        trials.try_reserve_exact(policy.threshold_bits.len()).map_err(|_| Error::Limit)?;
+        trials
+            .try_reserve_exact(policy.threshold_bits.len())
+            .map_err(|_| Error::Limit)?;
         let mut selected: Option<usize> = None;
         for threshold in policy.thresholds() {
             let counts = classify(&scores, threshold)?;
-            if counts.classes() != self.corpus().counts(DataSplit::Calibration) { return Err(Error::Binding); }
+            if counts.classes() != self.corpus().counts(DataSplit::Calibration) {
+                return Err(Error::Binding);
+            }
             let accepted = policy.calibration.accepts(counts);
-            if accepted && selected.is_none_or(|i| {
-                counts.violation_alarm > trials[i].counts.violation_alarm
-                    || (counts.violation_alarm == trials[i].counts.violation_alarm
-                        && counts.benign_holds() < trials[i].counts.benign_holds())
-            }) { selected = Some(trials.len()); }
-            trials.push(ThresholdTrial { threshold_bits: threshold.to_bits(), counts, accepted });
+            if accepted
+                && selected.is_none_or(|i| {
+                    counts.violation_alarm > trials[i].counts.violation_alarm
+                        || (counts.violation_alarm == trials[i].counts.violation_alarm
+                            && counts.benign_holds() < trials[i].counts.benign_holds())
+                })
+            {
+                selected = Some(trials.len());
+            }
+            trials.push(ThresholdTrial {
+                threshold_bits: threshold.to_bits(),
+                counts,
+                accepted,
+            });
         }
-        Ok(CalibrationRun { data: Rc::new(CalibrationData { fitted: self.clone(), policy,
-            scores, trials, selected, work }) })
+        Ok(CalibrationRun {
+            data: Rc::new(CalibrationData {
+                fitted: self.clone(),
+                policy,
+                scores,
+                trials,
+                selected,
+                work,
+            }),
+        })
     }
 }
 
-fn estimate(fitted: &FittedProbe, split: DataSplit, thresholds: usize) -> Result<ScoringWork, Error> {
+fn estimate(
+    fitted: &FittedProbe,
+    split: DataSplit,
+    thresholds: usize,
+) -> Result<ScoringWork, Error> {
     let cases = fitted.corpus().counts(split).total();
     let dimensions = fitted.corpus().dimensions();
-    let per_frame = dimensions.checked_mul(4).and_then(|n| n.checked_add(HEADER_BYTES)).ok_or(Error::Overflow)?;
-    Ok(ScoringWork { cases, encoded_bytes: cases.checked_mul(per_frame).ok_or(Error::Overflow)?,
+    let per_frame = dimensions
+        .checked_mul(4)
+        .and_then(|n| n.checked_add(HEADER_BYTES))
+        .ok_or(Error::Overflow)?;
+    Ok(ScoringWork {
+        cases,
+        encoded_bytes: cases.checked_mul(per_frame).ok_or(Error::Overflow)?,
         probe_coordinates: cases.checked_mul(dimensions).ok_or(Error::Overflow)?,
-        threshold_comparisons: cases.checked_mul(thresholds).ok_or(Error::Overflow)? })
+        threshold_comparisons: cases.checked_mul(thresholds).ok_or(Error::Overflow)?,
+    })
 }
-fn score(fitted: &FittedProbe, split: DataSplit, work: ScoringWork) -> Result<Vec<CaseScore>, Error> {
+fn score(
+    fitted: &FittedProbe,
+    split: DataSplit,
+    work: ScoringWork,
+) -> Result<Vec<CaseScore>, Error> {
     let probe = fitted.probe(0.0)?;
     let mut scores = Vec::new();
-    scores.try_reserve_exact(work.cases).map_err(|_| Error::Limit)?;
+    scores
+        .try_reserve_exact(work.cases)
+        .map_err(|_| Error::Limit)?;
     let mut encoded = 0;
     for (origin, row) in fitted.corpus().rows(split) {
         let bytes = row.source.encode_initial(23)?;
@@ -232,10 +384,19 @@ fn score(fitted: &FittedProbe, split: DataSplit, work: ScoringWork) -> Result<Ve
         let block = row.source.verify_block(&bytes)?;
         let frame = ProgressiveFrame::from_initial(&block)?;
         let observed = probe.evaluate(&frame)?;
-        if observed.interval().lower != observed.interval().upper { return Err(Error::Binding); }
-        scores.push(CaseScore { origin, label: row.label, frame: observed.frame(), score: observed.interval().lower.clone() });
+        if observed.interval().lower != observed.interval().upper {
+            return Err(Error::Binding);
+        }
+        scores.push(CaseScore {
+            origin,
+            label: row.label,
+            frame: observed.frame(),
+            score: observed.interval().lower.clone(),
+        });
     }
-    if encoded != work.encoded_bytes || scores.len() != work.cases { return Err(Error::Binding); }
+    if encoded != work.encoded_bytes || scores.len() != work.cases {
+        return Err(Error::Binding);
+    }
     Ok(scores)
 }
 fn classify(scores: &[CaseScore], threshold: f32) -> Result<ConfusionCounts, Error> {
@@ -243,6 +404,8 @@ fn classify(scores: &[CaseScore], threshold: f32) -> Result<ConfusionCounts, Err
     value.product(threshold.to_bits(), 1.0_f32.to_bits())?;
     let threshold = value.finish();
     let mut counts = ConfusionCounts::default();
-    for case in scores { counts.record(case.label, case.score.cmp(&threshold)); }
+    for case in scores {
+        counts.record(case.label, case.score.cmp(&threshold));
+    }
     Ok(counts)
 }

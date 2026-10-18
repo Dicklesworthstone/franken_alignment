@@ -1,10 +1,14 @@
 //! Inspect canonical topology changes without recovering observer authority.
-use super::{FileMediatedRequirements, FileOversight, FileOversightProfile, JournalError,
-    Event, MediationEvent, checked_image, storage};
 use super::super::super::FileDeliverySnapshot;
+use super::{
+    Event, FileMediatedRequirements, FileOversight, FileOversightProfile, JournalError,
+    MediationEvent, checked_image, storage,
+};
 use crate::action::consequence::delivery::TopologyChange;
-use crate::action::consequence::delivery::persistent::observed::mediation::{FileMediationSnapshot, FileMediationUpdate};
 use crate::action::consequence::delivery::persistent::observed::consistency::FileConsistencySnapshot;
+use crate::action::consequence::delivery::persistent::observed::mediation::{
+    FileMediationSnapshot, FileMediationUpdate,
+};
 use crate::action::consequence::oversight::credibility::CredibilityReport;
 use std::path::Path;
 
@@ -40,22 +44,41 @@ impl FileOversight {
     /// exact old/new graph expectation is explicit even after an ambiguous write;
     /// an unexpected topology is refused, never blessed as fresh capture. No lock,
     /// staging cleanup, fence, clock update or callback can run through this API.
-    pub fn read_mediation(directory: impl AsRef<Path>, profile: &FileOversightProfile,
-        expected: &FileMediatedRequirements) -> Result<FileMediatedSnapshot, JournalError>
-    {
+    pub fn read_mediation(
+        directory: impl AsRef<Path>,
+        profile: &FileOversightProfile,
+        expected: &FileMediatedRequirements,
+    ) -> Result<FileMediatedSnapshot, JournalError> {
         let identity = storage::identity(directory.as_ref())?;
-        let bytes = storage::read(&identity.join(storage::CANONICAL), profile.delivery.limits.bytes)?;
+        let bytes = storage::read(
+            &identity.join(storage::CANONICAL),
+            profile.delivery.limits.bytes,
+        )?;
         let (events, machine) = checked_image(profile, &identity, &bytes, expected)?;
         let mut updates = Vec::new();
         for (position, event) in events.iter().enumerate() {
             if let Event::Mediation(MediationEvent::Update(request)) = event {
-                updates.push(FileTopologyUpdateRecord { journal_revision: (position + 1) as u64,
-                    request: request.clone(), change: machine.mediation_update(request.operation)?.clone() });
+                updates.push(FileTopologyUpdateRecord {
+                    journal_revision: (position + 1) as u64,
+                    request: request.clone(),
+                    change: machine.mediation_update(request.operation)?.clone(),
+                });
             }
         }
-        Ok(FileMediatedSnapshot { journal: machine.snapshot(events.len()),
-            topology: machine.mediation_snapshot(events.len() as u64)?, updates,
-            consistency: expected.prediction.as_ref().map(|_| machine.consistency_snapshot(events.len() as u64)).transpose()?,
-            credibility: expected.evaluation.as_ref().map(|_| machine.broker.credibility_report()).transpose()? })
+        Ok(FileMediatedSnapshot {
+            journal: machine.snapshot(events.len()),
+            topology: machine.mediation_snapshot(events.len() as u64)?,
+            updates,
+            consistency: expected
+                .prediction
+                .as_ref()
+                .map(|_| machine.consistency_snapshot(events.len() as u64))
+                .transpose()?,
+            credibility: expected
+                .evaluation
+                .as_ref()
+                .map(|_| machine.broker.credibility_report())
+                .transpose()?,
+        })
     }
 }

@@ -1,17 +1,21 @@
 //! Recover a pinned predictive learned owner through the original replay/fence.
 //! The full guard inventory and recipe are independent inputs, never disk defaults.
 mod inspection;
-use super::{FilePredictiveRequirements, FilePredictiveRoles};
-use super::super::{FileOversightRoles, anchored::FileHistoryAnchor, learned::check_profile,
-    learned_recovery::check_recovery_reserve};
-use super::super::super::{Event, FileOversight, FileOversightProfile, JournalError};
-use super::super::super::shutdown::recovery::{FileStoppedHistory, FileStoppedRecovery};
-use crate::action::consequence::delivery::StopRequest;
-use crate::action::ElapsedTick;
 use super::super::super::credibility::CredibilityEvent;
-use super::super::super::decoder::learned::{FileLearnedConfig, FileLearnedRecovery,
-    FileLearnedRecoveryProgress, FileLearnedRecoveryStatus, checkpoint::FileLearnedResetIntent};
+use super::super::super::decoder::learned::{
+    FileLearnedConfig, FileLearnedRecovery, FileLearnedRecoveryProgress, FileLearnedRecoveryStatus,
+    checkpoint::FileLearnedResetIntent,
+};
+use super::super::super::shutdown::recovery::{FileStoppedHistory, FileStoppedRecovery};
+use super::super::super::{Event, FileOversight, FileOversightProfile, JournalError};
+use super::super::{
+    FileOversightRoles, anchored::FileHistoryAnchor, learned::check_profile,
+    learned_recovery::check_recovery_reserve,
+};
+use super::{FilePredictiveRequirements, FilePredictiveRoles};
 use crate::Error;
+use crate::action::ElapsedTick;
+use crate::action::consequence::delivery::StopRequest;
 use crate::action::consequence::delivery::persistent::RecoveryReserve;
 use std::fmt;
 use std::path::Path;
@@ -37,7 +41,9 @@ pub struct FilePredictiveLearnedRecovery {
 }
 impl fmt::Debug for FilePredictiveLearnedRecovery {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("FilePredictiveLearnedRecovery").field("progress", &self.progress()).finish_non_exhaustive()
+        f.debug_struct("FilePredictiveLearnedRecovery")
+            .field("progress", &self.progress())
+            .finish_non_exhaustive()
     }
 }
 
@@ -47,10 +53,12 @@ impl FileOversight {
     /// before any numerical replay; all guards, policy, credential epoch and
     /// independent counter floors are checked before cleanup or fence writes.
     /// Saved identity/source eligibility and effect keys remain withdrawn.
-    pub fn begin_open_predictive_guarded_with_learned_generation(directory: impl AsRef<Path>,
-        profile: FileOversightProfile, expected: &FilePredictiveRequirements, config: &FileLearnedConfig)
-        -> Result<FilePredictiveLearnedRecovery, JournalError>
-    {
+    pub fn begin_open_predictive_guarded_with_learned_generation(
+        directory: impl AsRef<Path>,
+        profile: FileOversightProfile,
+        expected: &FilePredictiveRequirements,
+        config: &FileLearnedConfig,
+    ) -> Result<FilePredictiveLearnedRecovery, JournalError> {
         begin(directory.as_ref(), profile, expected, config, None)
     }
 
@@ -58,11 +66,13 @@ impl FileOversight {
     /// prefix on the SAME locked canonical bytes before numerical replay. Counter
     /// floors alone do not distinguish forks; this does not authenticate the
     /// anchor or make an out-of-date operator anchor current.
-    pub fn begin_open_predictive_guarded_anchored_with_learned_generation(directory: impl AsRef<Path>,
-        profile: FileOversightProfile, expected: &FilePredictiveRequirements,
-        config: &FileLearnedConfig, anchor: &FileHistoryAnchor)
-        -> Result<FilePredictiveLearnedRecovery, JournalError>
-    {
+    pub fn begin_open_predictive_guarded_anchored_with_learned_generation(
+        directory: impl AsRef<Path>,
+        profile: FileOversightProfile,
+        expected: &FilePredictiveRequirements,
+        config: &FileLearnedConfig,
+        anchor: &FileHistoryAnchor,
+    ) -> Result<FilePredictiveLearnedRecovery, JournalError> {
         begin(directory.as_ref(), profile, expected, config, Some(anchor))
     }
 
@@ -70,12 +80,15 @@ impl FileOversight {
     /// replay, role getter or replacement forecast is introduced. Provision each
     /// returned role separately; unanswered forecasts remain permanently lost
     /// coverage even though a newly bound observer is returned.
-    pub fn open_predictive_guarded_with_learned_generation(directory: impl AsRef<Path>,
-        profile: FileOversightProfile, expected: &FilePredictiveRequirements, config: &FileLearnedConfig)
-        -> Result<(Self, FilePredictiveRoles), JournalError>
-    {
+    pub fn open_predictive_guarded_with_learned_generation(
+        directory: impl AsRef<Path>,
+        profile: FileOversightProfile,
+        expected: &FilePredictiveRequirements,
+        config: &FileLearnedConfig,
+    ) -> Result<(Self, FilePredictiveRoles), JournalError> {
         let mut run = Self::begin_open_predictive_guarded_with_learned_generation(
-            directory, profile, expected, config)?;
+            directory, profile, expected, config,
+        )?;
         while run.progress().status == FileLearnedRecoveryStatus::Replaying {
             let completed = run.progress().replayed_events;
             run.advance(completed, 1)?;
@@ -84,21 +97,35 @@ impl FileOversight {
     }
 }
 
-fn begin(directory: &Path, profile: FileOversightProfile, expected: &FilePredictiveRequirements,
-    config: &FileLearnedConfig, anchor: Option<&FileHistoryAnchor>)
-    -> Result<FilePredictiveLearnedRecovery, JournalError>
-{
+fn begin(
+    directory: &Path,
+    profile: FileOversightProfile,
+    expected: &FilePredictiveRequirements,
+    config: &FileLearnedConfig,
+    anchor: Option<&FileHistoryAnchor>,
+) -> Result<FilePredictiveLearnedRecovery, JournalError> {
     check_configuration(expected, config)?;
     let inner = FileOversight::begin_open_with_learned_generation(directory, profile, config)?;
     let (profile, events, identity) = inner.guarded_history();
-    if let Some(anchor) = anchor { anchor.check(profile, identity, events)?; }
+    if let Some(anchor) = anchor {
+        anchor.check(profile, identity, events)?;
+    }
     check_history(events, expected)?;
-    Ok(FilePredictiveLearnedRecovery { inner, expected: expected.clone(), failure: None })
+    Ok(FilePredictiveLearnedRecovery {
+        inner,
+        expected: expected.clone(),
+        failure: None,
+    })
 }
 
-fn check_configuration(expected: &FilePredictiveRequirements, config: &FileLearnedConfig) -> Result<(), Error> {
+fn check_configuration(
+    expected: &FilePredictiveRequirements,
+    config: &FileLearnedConfig,
+) -> Result<(), Error> {
     check_profile(&expected.oversight.guards)?;
-    if config.required_pre_output_forecast() != Some(&expected.prediction) { return Err(Error::Binding); }
+    if config.required_pre_output_forecast() != Some(&expected.prediction) {
+        return Err(Error::Binding);
+    }
     Ok(())
 }
 
@@ -111,7 +138,8 @@ fn check_history(events: &[Event], expected: &FilePredictiveRequirements) -> Res
     // Never append a synthetic Enable or filter actual events to satisfy it.
     expected.oversight.guards.check_decoder_config(events)?;
     let mut protocols = events.iter().filter_map(|event| match event {
-        Event::Credibility(CredibilityEvent::Enable(protocol)) => Some(protocol), _ => None,
+        Event::Credibility(CredibilityEvent::Enable(protocol)) => Some(protocol),
+        _ => None,
     });
     if protocols.next() != expected.evaluation.as_ref() || protocols.next().is_some() {
         return Err(Error::Binding);
@@ -131,7 +159,9 @@ impl FilePredictiveLearnedRecovery {
 
     pub fn progress(&self) -> FileLearnedRecoveryProgress {
         let mut progress = self.inner.progress();
-        if let Some(error) = self.failure { progress.status = FileLearnedRecoveryStatus::Failed(error); }
+        if let Some(error) = self.failure {
+            progress.status = FileLearnedRecoveryStatus::Failed(error);
+        }
         progress
     }
 
@@ -139,16 +169,24 @@ impl FilePredictiveLearnedRecovery {
     /// witness. Original replay errors/unwinds stay terminal. A completed replay
     /// with a mismatching guard is Failed, never Ready; requirements cannot be
     /// changed afterward. One event, final encoding and I/O remain synchronous.
-    pub fn advance(&mut self, expected_events: usize, max_events: usize)
-        -> Result<FileLearnedRecoveryProgress, JournalError>
-    {
-        if let Some(error) = self.failure { return Err(error.into()); }
+    pub fn advance(
+        &mut self,
+        expected_events: usize,
+        max_events: usize,
+    ) -> Result<FileLearnedRecoveryProgress, JournalError> {
+        if let Some(error) = self.failure {
+            return Err(error.into());
+        }
         self.inner.advance(expected_events, max_events)?;
         if self.inner.progress().status == FileLearnedRecoveryStatus::Ready {
             let (profile, events, _) = self.inner.guarded_history();
-            if let Err(error) = self.expected.oversight.check_predictive(profile,
-                self.inner.verified_guarded_machine()?, events,
-                self.expected.evaluation.as_ref(), Some(&self.expected.prediction)) {
+            if let Err(error) = self.expected.oversight.check_predictive(
+                profile,
+                self.inner.verified_guarded_machine()?,
+                events,
+                self.expected.evaluation.as_ref(),
+                Some(&self.expected.prediction),
+            ) {
                 self.failure = Some(error);
                 return Err(error.into());
             }
@@ -166,7 +204,8 @@ impl FilePredictiveLearnedRecovery {
         self.check_ready()?;
         let (host, human) = self.inner.finish()?;
         let oversight = FileOversightRoles::provision(&host, human);
-        let roles = FilePredictiveRoles::provision(&host, oversight, self.expected.evaluation.is_some());
+        let roles =
+            FilePredictiveRoles::provision(&host, oversight, self.expected.evaluation.is_some());
         Ok((host, roles))
     }
 
@@ -180,9 +219,14 @@ impl FilePredictiveLearnedRecovery {
     /// Finish the sealed predictive replay with original Stop/Fence/StopProgress,
     /// returning only stopped observations. No observer, evaluator or human role
     /// escapes; unknown liability and the exact retained reserve are preserved.
-    pub fn finish_stopped<F>(self, request: StopRequest, clock: F)
-        -> Result<FileStoppedRecovery, JournalError>
-    where F: FnOnce() -> ElapsedTick {
+    pub fn finish_stopped<F>(
+        self,
+        request: StopRequest,
+        clock: F,
+    ) -> Result<FileStoppedRecovery, JournalError>
+    where
+        F: FnOnce() -> ElapsedTick,
+    {
         self.check_ready()?;
         self.inner.finish_stopped(request, clock)
     }
@@ -190,18 +234,30 @@ impl FilePredictiveLearnedRecovery {
     /// Capture the exact acknowledged stopped history without returning an
     /// observer or evaluator. The same complete predictive guard checks run
     /// before the original terminal transaction and its anchor capture.
-    pub fn finish_stopped_with_anchor<F>(self, request: StopRequest, clock: F)
-        -> Result<FileStoppedHistory, JournalError>
-    where F: FnOnce() -> ElapsedTick {
+    pub fn finish_stopped_with_anchor<F>(
+        self,
+        request: StopRequest,
+        clock: F,
+    ) -> Result<FileStoppedHistory, JournalError>
+    where
+        F: FnOnce() -> ElapsedTick,
+    {
         self.check_ready()?;
         self.inner.finish_stopped_with_anchor(request, clock)
     }
 
     fn check_ready(&self) -> Result<(), JournalError> {
-        if let Some(error) = self.failure { return Err(error.into()); }
+        if let Some(error) = self.failure {
+            return Err(error.into());
+        }
         let (profile, events, _) = self.inner.guarded_history();
-        self.expected.oversight.check_predictive(profile, self.inner.verified_guarded_machine()?,
-            events, self.expected.evaluation.as_ref(), Some(&self.expected.prediction))?;
+        self.expected.oversight.check_predictive(
+            profile,
+            self.inner.verified_guarded_machine()?,
+            events,
+            self.expected.evaluation.as_ref(),
+            Some(&self.expected.prediction),
+        )?;
         Ok(())
     }
 
@@ -212,9 +268,10 @@ impl FilePredictiveLearnedRecovery {
     /// takes only the original fence; an interrupted or changed intent refuses.
     /// Predictor timing, lifetime spend and unanswered-forecast coverage loss
     /// remain outside the restored checkpoint. Reset is never a fresh forecast.
-    pub fn finish_pending_reset(mut self, intent: &FileLearnedResetIntent)
-        -> Result<(FileOversight, FilePredictiveRoles), JournalError>
-    {
+    pub fn finish_pending_reset(
+        mut self,
+        intent: &FileLearnedResetIntent,
+    ) -> Result<(FileOversight, FilePredictiveRoles), JournalError> {
         self.check_ready()?;
         self.inner = self.inner.prepare_pending_reset(intent)?;
         self.finish()

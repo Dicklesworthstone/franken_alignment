@@ -1,8 +1,10 @@
 //! Independently require a native-message-only stream while retaining the
 //! original base guarded/text/history recovery checks and role custody.
-use super::{ByteBpe, Error, Event, FileHistoryAnchor, FileOversight, FileOversightProfile,
-    FileOversightRoles, FileRecoveryRequirements, JournalError, Machine, Path,
-    open_text_store, storage, tokenizer_bytes};
+use super::{
+    ByteBpe, Error, Event, FileHistoryAnchor, FileOversight, FileOversightProfile,
+    FileOversightRoles, FileRecoveryRequirements, JournalError, Machine, Path, open_text_store,
+    storage, tokenizer_bytes,
+};
 
 impl FileOversight {
     /// Recover only a stream bootstrapped with mandatory native-text provenance.
@@ -20,11 +22,13 @@ impl FileOversight {
     /// contracts just like open_guarded_text_anchored. Their existing composed
     /// anchored openers preserve this mode when their retained anchor covers it;
     /// they do not independently assert this additional bootstrap requirement.
-    pub fn open_generated_text_stream_anchored(directory: impl AsRef<Path>,
-        profile: FileOversightProfile, expected: &FileRecoveryRequirements,
-        tokenizer: &ByteBpe, anchor: &FileHistoryAnchor)
-        -> Result<(Self, FileOversightRoles), JournalError>
-    {
+    pub fn open_generated_text_stream_anchored(
+        directory: impl AsRef<Path>,
+        profile: FileOversightProfile,
+        expected: &FileRecoveryRequirements,
+        tokenizer: &ByteBpe,
+        anchor: &FileHistoryAnchor,
+    ) -> Result<(Self, FileOversightRoles), JournalError> {
         profile.delivery.limits.check()?;
         expected.guards.stream.ok_or(Error::Incomplete)?;
         let canonical = tokenizer_bytes(expected, tokenizer)?;
@@ -32,21 +36,32 @@ impl FileOversight {
         Self::open_generated_text_stream_store(store, profile, expected, &canonical, anchor)
     }
 
-    fn open_generated_text_stream_store(store: storage::Store, profile: FileOversightProfile,
-        expected: &FileRecoveryRequirements, canonical: &[u8], anchor: &FileHistoryAnchor)
-        -> Result<(Self, FileOversightRoles), JournalError>
-    {
+    fn open_generated_text_stream_store(
+        store: storage::Store,
+        profile: FileOversightProfile,
+        expected: &FileRecoveryRequirements,
+        canonical: &[u8],
+        anchor: &FileHistoryAnchor,
+    ) -> Result<(Self, FileOversightRoles), JournalError> {
         let stream = expected.guards.stream.ok_or(Error::Incomplete)?;
         let config = expected.guards.decoder.as_ref().ok_or(Error::Incomplete)?;
-        let (host, human) = open_text_store(store, profile, config, canonical, anchor, |profile, events| {
-            if !matches!(events.first(), Some(Event::GeneratedStreamBootstrap(actual)) if *actual == stream) {
-                return Err(Error::Binding.into());
-            }
-            expected.guards.check_decoder_config(events)?;
-            let machine = Machine::replay(profile, events)?;
-            expected.check(profile, &machine, events)?;
-            Ok(machine)
-        })?;
+        let (host, human) = open_text_store(
+            store,
+            profile,
+            config,
+            canonical,
+            anchor,
+            |profile, events| {
+                if !matches!(events.first(), Some(Event::GeneratedStreamBootstrap(actual)) if *actual == stream)
+                {
+                    return Err(Error::Binding.into());
+                }
+                expected.guards.check_decoder_config(events)?;
+                let machine = Machine::replay(profile, events)?;
+                expected.check(profile, &machine, events)?;
+                Ok(machine)
+            },
+        )?;
         let roles = FileOversightRoles::provision(&host, human);
         Ok((host, roles))
     }

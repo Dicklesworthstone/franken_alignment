@@ -1,8 +1,9 @@
 //! Recover only ORIGINAL retained requests through the existing actor protocol.
 //! No request allocation, evidence acquisition or alternative outcome reducer.
-use super::{ActorError, ActorOutcome, ActorProposal, ActorRequestPort, Error,
-    FileActorPort, FileActorTicket, FileDelivery, FileRequestHost, JournalError,
-    Knowledge, backend, fmt};
+use super::{
+    ActorError, ActorOutcome, ActorProposal, ActorRequestPort, Error, FileActorPort,
+    FileActorTicket, FileDelivery, FileRequestHost, JournalError, Knowledge, backend, fmt,
+};
 
 /// A permanently non-admitting gateway. Submit means exact ticket recovery for
 /// an existing record, never permission to create one. Poll and Cancel retain
@@ -18,11 +19,18 @@ pub struct FileActorRecoveryPort<H: FileRequestHost = FileDelivery> {
     selected: Option<u64>,
 }
 impl<H: FileRequestHost> Clone for FileActorRecoveryPort<H> {
-    fn clone(&self) -> Self { Self { port: self.port.clone(), selected: self.selected } }
+    fn clone(&self) -> Self {
+        Self {
+            port: self.port.clone(),
+            selected: self.selected,
+        }
+    }
 }
 impl<H: FileRequestHost> fmt::Debug for FileActorRecoveryPort<H> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("FileActorRecoveryPort").field("selected", &self.selected).finish_non_exhaustive()
+        f.debug_struct("FileActorRecoveryPort")
+            .field("selected", &self.selected)
+            .finish_non_exhaustive()
     }
 }
 impl<H: FileRequestHost> FileActorPort<H> {
@@ -31,19 +39,28 @@ impl<H: FileRequestHost> FileActorPort<H> {
     /// The result works with the ORIGINAL wire, channel, socket and peer session.
     /// Other independently retained ordinary ports are not revoked by narrowing.
     pub fn recovery_only(self) -> FileActorRecoveryPort<H> {
-        FileActorRecoveryPort { port: self, selected: None }
+        FileActorRecoveryPort {
+            port: self,
+            selected: None,
+        }
     }
 }
 impl<H: FileRequestHost> FileActorRecoveryPort<H> {
     /// Further narrow to one externally selected request. Repeated selection can
     /// retain that same key but never widen or retarget the resulting capability.
     pub fn for_request(mut self, request: u64) -> Result<Self, Error> {
-        if request == 0 { return Err(Error::InvalidInput); }
-        if self.selected.is_some_and(|selected| selected != request) { return Err(Error::Binding); }
+        if request == 0 {
+            return Err(Error::InvalidInput);
+        }
+        if self.selected.is_some_and(|selected| selected != request) {
+            return Err(Error::Binding);
+        }
         self.selected = Some(request);
         Ok(self)
     }
-    pub fn selected_request(&self) -> Option<u64> { self.selected }
+    pub fn selected_request(&self) -> Option<u64> {
+        self.selected
+    }
     fn allowed(&self, request: u64) -> bool {
         request != 0 && self.selected.is_none_or(|selected| selected == request)
     }
@@ -52,12 +69,14 @@ impl<H: FileRequestHost> backend::Sealed for FileActorRecoveryPort<H> {}
 impl<H: FileRequestHost> ActorRequestPort for FileActorRecoveryPort<H> {
     type Ticket = FileActorTicket<H>;
     fn submit(&self, request: u64, proposal: &ActorProposal) -> Result<Self::Ticket, ActorError> {
-        if !self.allowed(request) { return Err(ActorError::Withheld); }
+        if !self.allowed(request) {
+            return Err(ActorError::Withheld);
+        }
         let owner = self.port.owner.upgrade().ok_or(ActorError::Unavailable)?;
         {
             let state = owner.try_borrow().map_err(|_| ActorError::Unavailable)?;
             match state.host.request_status(request) {
-                Ok(_) => {},
+                Ok(_) => {}
                 // Do not manufacture an Absent/NotAdmitted receipt from failure
                 // to find a record. No one-use intake snapshot is consumed here.
                 Err(JournalError::Contract(Error::Missing)) => return Err(ActorError::Withheld),
@@ -73,12 +92,16 @@ impl<H: FileRequestHost> ActorRequestPort for FileActorRecoveryPort<H> {
     }
     fn poll(&self, ticket: &Self::Ticket) -> Knowledge<ActorOutcome> {
         if !self.allowed(ticket.request()) {
-            return Knowledge::Withheld { authority_required: "own_request" };
+            return Knowledge::Withheld {
+                authority_required: "own_request",
+            };
         }
         self.port.poll(ticket)
     }
     fn cancel(&self, ticket: &Self::Ticket) -> Result<(), ActorError> {
-        if !self.allowed(ticket.request()) { return Err(ActorError::Withheld); }
+        if !self.allowed(ticket.request()) {
+            return Err(ActorError::Withheld);
+        }
         self.port.cancel(ticket)
     }
 }

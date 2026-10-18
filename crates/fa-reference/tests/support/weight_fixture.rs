@@ -1,4 +1,5 @@
 //! An independent file writer for deterministic fixture parameters, not training.
+#![allow(dead_code, unused_imports)]
 #[path = "decoder_fixture.rs"]
 pub mod decoder;
 use fa_reference::action::consequence::activation::tensor::kv::decoder::{DecoderProfile, DecoderModel, DecoderLayerWeights};

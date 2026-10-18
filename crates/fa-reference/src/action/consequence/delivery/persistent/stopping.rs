@@ -1,7 +1,7 @@
 //! Persist the original terminal admission stop separately from endpoint drain.
 //! Neither local-stop evidence nor a clock reading is a nonexecution receipt.
-use super::*;
 use super::super::StopProgress;
+use super::*;
 
 /// Projection of the original stop sweep, acknowledged only after the canonical
 /// journal replacement succeeds. The original endpoint outcomes, not a second
@@ -33,7 +33,11 @@ impl Machine {
         let sweep = self.broker.progress_stop(&mut self.endpoint)?;
         self.clock_ready = true;
         Ok(Transition::StopProgressed(FileStopSweep {
-            outcomes: sweep.outcomes.into_iter().map(|(id, result)| (id, result.map(project_status))).collect(),
+            outcomes: sweep
+                .outcomes
+                .into_iter()
+                .map(|(id, result)| (id, result.map(project_status)))
+                .collect(),
             progress: sweep.progress,
         }))
     }
@@ -45,20 +49,29 @@ impl FileDelivery {
     /// resume operation. Only undispatched reservations may be refunded here.
     /// No endpoint fence or outstanding-effect settlement is claimed by this
     /// receipt. No time, policy snapshot or helper ballot is needed to stop.
-    pub fn request_stop(&mut self, revision: u64, request: StopRequest) -> Result<StopReceipt, JournalError> {
+    pub fn request_stop(
+        &mut self,
+        revision: u64,
+        request: StopRequest,
+    ) -> Result<StopReceipt, JournalError> {
         match self.transact(revision, Event::Stop(request))? {
-            Transition::Stopped(receipt) => Ok(receipt), _ => unreachable!("stop transition"),
+            Transition::Stopped(receipt) => Ok(receipt),
+            _ => unreachable!("stop transition"),
         }
     }
 
     /// Last acknowledged local-stop evidence, which can lag the canonical file
     /// after storage failure. This read-only receipt is never permission to send.
-    pub fn stop_receipt(&self) -> Option<&StopReceipt> { self.machine.broker.stop_receipt() }
+    pub fn stop_receipt(&self) -> Option<&StopReceipt> {
+        self.machine.broker.stop_receipt()
+    }
 
     /// Original stop accounting at the last acknowledged healthy cut. Inspect
     /// every unresolved ID; even a fully drained stop can retain executed charges.
     pub fn stop_progress(&self) -> Result<StopProgress, JournalError> {
-        if self.fault.is_some() { return Err(JournalError::Unavailable); }
+        if self.fault.is_some() {
+            return Err(JournalError::Unavailable);
+        }
         Ok(self.machine.broker.stop_progress()?)
     }
 
@@ -70,9 +83,14 @@ impl FileDelivery {
     ///
     /// The original sweep's per-attempt results are committed as one journal
     /// replacement. An outer storage error returns no candidate results/refunds.
-    pub fn progress_stop(&mut self, revision: u64, tick: ElapsedTick) -> Result<FileStopSweep, JournalError> {
+    pub fn progress_stop(
+        &mut self,
+        revision: u64,
+        tick: ElapsedTick,
+    ) -> Result<FileStopSweep, JournalError> {
         match self.transact(revision, Event::StopProgress(tick))? {
-            Transition::StopProgressed(sweep) => Ok(sweep), _ => unreachable!("stop-progress transition"),
+            Transition::StopProgressed(sweep) => Ok(sweep),
+            _ => unreachable!("stop-progress transition"),
         }
     }
 }

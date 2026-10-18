@@ -1,4 +1,4 @@
-#![allow(dead_code)]
+#![allow(dead_code, unused_imports)]
 #[path = "file_oversight.rs"] mod oversight;
 pub use oversight::{Directory, Keys, snapshot, inputs, review_existing};
 use fa_reference::action::ElapsedTick;

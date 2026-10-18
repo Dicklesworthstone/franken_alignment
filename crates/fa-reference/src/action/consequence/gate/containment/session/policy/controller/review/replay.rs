@@ -10,14 +10,18 @@
 mod wire;
 pub use wire::MAX_ARCHIVE_BYTES;
 
-use super::{PolicyReceipt, PolicyReview, PolicySession};
 use super::super::{PolicyAuthority, validate_congress};
-use crate::action::{FrozenAction, MAX_REQUIRED_WITNESSES, MAX_WITNESS_BYTES};
-use crate::action::consequence::{Consequence, Decision};
+use super::{PolicyReceipt, PolicyReview, PolicySession};
 use crate::action::consequence::congress::{CongressPolicy, evaluate_round};
+use crate::action::consequence::gate::containment::session::policy::{
+    Evaluation, MAX_POLICY_NODES, Policy, Truth,
+};
+use crate::action::consequence::gate::containment::session::{
+    SessionSpec, transcript::RoundTranscript,
+};
 use crate::action::consequence::gate::{ControlReceipt, TargetCeiling};
-use crate::action::consequence::gate::containment::session::{SessionSpec, transcript::RoundTranscript};
-use crate::action::consequence::gate::containment::session::policy::{Evaluation, MAX_POLICY_NODES, Policy, Truth};
+use crate::action::consequence::{Consequence, Decision};
+use crate::action::{FrozenAction, MAX_REQUIRED_WITNESSES, MAX_WITNESS_BYTES};
 use crate::reducer::{MAX_IDENTIFIER_BYTES, MAX_VOTES, Reduction};
 use crate::{Error, Judgment, ReadWitness, Snapshot};
 use std::collections::BTreeMap;
@@ -67,11 +71,21 @@ pub struct ReplayedDecision {
 }
 
 impl ReplayedDecision {
-    pub fn decision(&self) -> &Decision { &self.decision }
-    pub fn evaluation(&self) -> &Evaluation { &self.evaluation }
-    pub fn tally(&self) -> &Reduction { &self.tally }
-    pub fn missing(&self) -> &[String] { &self.missing }
-    pub fn abstained(&self) -> &[String] { &self.abstained }
+    pub fn decision(&self) -> &Decision {
+        &self.decision
+    }
+    pub fn evaluation(&self) -> &Evaluation {
+        &self.evaluation
+    }
+    pub fn tally(&self) -> &Reduction {
+        &self.tally
+    }
+    pub fn missing(&self) -> &[String] {
+        &self.missing
+    }
+    pub fn abstained(&self) -> &[String] {
+        &self.abstained
+    }
 }
 
 impl DecisionArchive {
@@ -85,22 +99,33 @@ impl DecisionArchive {
         validate_observations(&self.anchor.observations)?;
         validate_observations(&expected.observations)?;
         validate_observations(self.evaluation.witnesses())?;
-        if self.evaluation.trace().len() > MAX_POLICY_NODES || self.decision.rules.len() > 4
+        if self.evaluation.trace().len() > MAX_POLICY_NODES
+            || self.decision.rules.len() > 4
             || self.tally.admitted_weights.len() > MAX_VOTES
             || self.tally.admitted_cohort_weights.len() > MAX_VOTES
-            || self.missing.len() > MAX_VOTES || self.abstained.len() > MAX_VOTES
+            || self.missing.len() > MAX_VOTES
+            || self.abstained.len() > MAX_VOTES
         {
             return Err(Error::Limit);
         }
-        for name in self.tally.admitted_weights.keys()
+        for name in self
+            .tally
+            .admitted_weights
+            .keys()
             .chain(self.tally.admitted_cohort_weights.keys())
-            .chain(self.missing.iter()).chain(self.abstained.iter())
+            .chain(self.missing.iter())
+            .chain(self.abstained.iter())
         {
-            if name.len() > MAX_IDENTIFIER_BYTES { return Err(Error::Limit); }
-            if name.is_empty() { return Err(Error::InvalidInput); }
+            if name.len() > MAX_IDENTIFIER_BYTES {
+                return Err(Error::Limit);
+            }
+            if name.is_empty() {
+                return Err(Error::InvalidInput);
+            }
         }
         let round = self.transcript.replay()?;
-        if &self.anchor != expected || expected.attempt == 0
+        if &self.anchor != expected
+            || expected.attempt == 0
             || round.id() != expected.round
             || round.evidence_root() != expected.evidence_root.as_slice()
         {
@@ -124,18 +149,24 @@ impl DecisionArchive {
             return Err(Error::Binding);
         }
         let reduced = evaluate_round(
-            &round, &expected.congress, evaluation.result() == Truth::Violated,
+            &round,
+            &expected.congress,
+            evaluation.result() == Truth::Violated,
             expected.contradiction,
         )?;
-        if reduced.decision() != self.decision || reduced.tally() != &self.tally
+        if reduced.decision() != self.decision
+            || reduced.tally() != &self.tally
             || reduced.missing() != self.missing.as_slice()
             || reduced.abstained() != self.abstained.as_slice()
         {
             return Err(Error::Binding);
         }
         Ok(ReplayedDecision {
-            decision: reduced.decision(), evaluation, tally: reduced.tally().clone(),
-            missing: reduced.missing().to_vec(), abstained: reduced.abstained().to_vec(),
+            decision: reduced.decision(),
+            evaluation,
+            tally: reduced.tally().clone(),
+            missing: reduced.missing().to_vec(),
+            abstained: reduced.abstained().to_vec(),
         })
     }
 
@@ -147,9 +178,14 @@ impl DecisionArchive {
         receipt: &ControlReceipt,
     ) -> Result<ReplayedDecision, Error> {
         let replayed = self.verify(expected)?;
-        let sequence = expected.expected_control_sequence.checked_add(1).ok_or(Error::Overflow)?;
-        if receipt.sequence != sequence || receipt.attempt != expected.attempt
-            || receipt.action != expected.action || receipt.binding.round != expected.round
+        let sequence = expected
+            .expected_control_sequence
+            .checked_add(1)
+            .ok_or(Error::Overflow)?;
+        if receipt.sequence != sequence
+            || receipt.attempt != expected.attempt
+            || receipt.action != expected.action
+            || receipt.binding.round != expected.round
             || receipt.binding.evidence_root != expected.evidence_root
             || receipt.binding.reducer_generation != expected.congress.generation
             || receipt.decision != replayed.decision
@@ -167,7 +203,9 @@ fn validate_observations(observations: &[ReadWitness]) -> Result<(), Error> {
     let mut bytes = 0_usize;
     for witness in observations {
         match witness {
-            ReadWitness::Exact { value: Some(value), .. } => {
+            ReadWitness::Exact {
+                value: Some(value), ..
+            } => {
                 bytes = bytes.checked_add(value.len()).ok_or(Error::Limit)?;
             }
             ReadWitness::EmptyRange { start, end } if start >= end => {
@@ -201,7 +239,10 @@ fn reconstruct_snapshot(anchor: &ReviewAnchor) -> Result<Snapshot, Error> {
     let snapshot = Snapshot {
         semantic_epoch: anchor.snapshot_semantic_epoch,
         complete: anchor.complete,
-        values: exact.into_iter().filter_map(|(key, value)| value.map(|v| (key, v))).collect(),
+        values: exact
+            .into_iter()
+            .filter_map(|(key, value)| value.map(|v| (key, v)))
+            .collect(),
     };
     Judgment::capture(&snapshot, anchor.observations.clone())?;
     Ok(snapshot)
@@ -216,11 +257,18 @@ fn make_anchor(
     semantic_epoch: u64,
 ) -> ReviewAnchor {
     ReviewAnchor {
-        attempt: spec.attempt, action: action.clone(), expected_control_sequence: sequence,
-        round: spec.round, evidence_root: spec.evidence_root, policy: policy.clone(),
-        congress: spec.policy.clone(), narrowed_targets: spec.narrowed_targets.clone(),
-        snapshot_semantic_epoch: semantic_epoch, observations: evaluation.witnesses().to_vec(),
-        complete: evaluation.complete, contradiction: spec.contradiction,
+        attempt: spec.attempt,
+        action: action.clone(),
+        expected_control_sequence: sequence,
+        round: spec.round,
+        evidence_root: spec.evidence_root,
+        policy: policy.clone(),
+        congress: spec.policy.clone(),
+        narrowed_targets: spec.narrowed_targets.clone(),
+        snapshot_semantic_epoch: semantic_epoch,
+        observations: evaluation.witnesses().to_vec(),
+        complete: evaluation.complete,
+        contradiction: spec.contradiction,
     }
 }
 
@@ -228,8 +276,14 @@ impl PolicySession {
     /// Obtain before any votes so a later archive can be checked against it.
     pub fn replay_anchor(&self) -> ReviewAnchor {
         let context = &self.session.context;
-        make_anchor(&context.spec, &context.action, context.expected_control_sequence,
-            &self.policy, &self.evaluation, self.snapshot_semantic_epoch)
+        make_anchor(
+            &context.spec,
+            &context.action,
+            context.expected_control_sequence,
+            &self.policy,
+            &self.evaluation,
+            self.snapshot_semantic_epoch,
+        )
     }
 }
 
@@ -238,11 +292,19 @@ impl PolicyReview {
         let context = &self.review.context;
         DecisionArchive {
             version: DECISION_ARCHIVE_VERSION,
-            anchor: make_anchor(&context.spec, &context.action, context.expected_control_sequence,
-                &self.policy, &self.evaluation, self.snapshot_semantic_epoch),
+            anchor: make_anchor(
+                &context.spec,
+                &context.action,
+                context.expected_control_sequence,
+                &self.policy,
+                &self.evaluation,
+                self.snapshot_semantic_epoch,
+            ),
             transcript: self.review.transcript().clone(),
-            evaluation: self.evaluation.clone(), decision: self.review.decision().clone(),
-            tally: self.review.tally().clone(), missing: self.review.missing().to_vec(),
+            evaluation: self.evaluation.clone(),
+            decision: self.review.decision().clone(),
+            tally: self.review.tally().clone(),
+            missing: self.review.missing().to_vec(),
             abstained: self.review.abstained().to_vec(),
         }
     }
@@ -265,7 +327,8 @@ impl PolicyReceipt {
         expected: &ReviewAnchor,
     ) -> Result<ReplayedDecision, Error> {
         let replayed = archive.verify_control_binding(expected, &self.control)?;
-        if self.policy.as_ref() != &expected.policy || self.evaluation != replayed.evaluation
+        if self.policy.as_ref() != &expected.policy
+            || self.evaluation != replayed.evaluation
             || self.snapshot_semantic_epoch != expected.snapshot_semantic_epoch
         {
             return Err(Error::Binding);

@@ -1,7 +1,9 @@
 //! Original owned-K/V prediction, with the SAME checked numerical continuation.
 //! LearnedPrediction is never relabeled as a raw residual Prediction.
-use super::{FileConsistencyObserver, FileOversight, FilePreOutputForecast, JournalError,
-    GenerationEvent, ConsistencyDeadline, HostedLearnedInspection, Error, Rc};
+use super::{
+    ConsistencyDeadline, Error, FileConsistencyObserver, FileOversight, FilePreOutputForecast,
+    GenerationEvent, HostedLearnedInspection, JournalError, Rc,
+};
 use crate::action::consequence::activation::consistency::learned::{
     LearnedForecastReport, LearnedPrediction,
 };
@@ -46,40 +48,75 @@ impl FileConsistencyObserver {
     /// forecast_owned_learned_request transaction. This method does not retry a
     /// refusal or purchase refinement outside that fixed acquisition. An
     /// inconclusive report remains visible and yields no generation handle.
-    pub fn begin_owned_pre_output_request(&self, host: &mut FileOversight, revision: u64,
-        request: u64, actor_revision: u64, position: u64)
-        -> Result<FileOwnedPreOutputStart, JournalError>
-    {
-        if host.storage_failure().is_some() { return Err(JournalError::Unavailable); }
-        if !Rc::ptr_eq(&self.issuer, &host.issuer) { return Err(Error::Binding.into()); }
-        if revision != host.revision() { return Err(Error::Stale.into()); }
-        if request == 0 { return Err(Error::InvalidInput.into()); }
-        if !host.owned_learned_action_consistency_required() { return Err(Error::Binding.into()); }
-        let inspected = host.learned_generation_inspection()?;
-        if inspected.numerical.actor_revision != actor_revision || inspected.numerical.position != position {
+    pub fn begin_owned_pre_output_request(
+        &self,
+        host: &mut FileOversight,
+        revision: u64,
+        request: u64,
+        actor_revision: u64,
+        position: u64,
+    ) -> Result<FileOwnedPreOutputStart, JournalError> {
+        if host.storage_failure().is_some() {
+            return Err(JournalError::Unavailable);
+        }
+        if !Rc::ptr_eq(&self.issuer, &host.issuer) {
+            return Err(Error::Binding.into());
+        }
+        if revision != host.revision() {
             return Err(Error::Stale.into());
         }
-        if inspected.paused || inspected.pending.is_some() || host.source_interrupted
-            || host.machine.pending_learned_reset().is_some() { return Err(Error::Incomplete.into()); }
+        if request == 0 {
+            return Err(Error::InvalidInput.into());
+        }
+        if !host.owned_learned_action_consistency_required() {
+            return Err(Error::Binding.into());
+        }
+        let inspected = host.learned_generation_inspection()?;
+        if inspected.numerical.actor_revision != actor_revision
+            || inspected.numerical.position != position
+        {
+            return Err(Error::Stale.into());
+        }
+        if inspected.paused
+            || inspected.pending.is_some()
+            || host.source_interrupted
+            || host.machine.pending_learned_reset().is_some()
+        {
+            return Err(Error::Incomplete.into());
+        }
         host.machine.check_pre_output_message_point(request)?;
-        let report = match self.forecast_owned_learned_request(host, revision, request, actor_revision)? {
-            Ok(report) => report,
-            Err(error) => return Ok(FileOwnedPreOutputStart::Refused(error)),
-        };
+        let report =
+            match self.forecast_owned_learned_request(host, revision, request, actor_revision)? {
+                Ok(report) => report,
+                Err(error) => return Ok(FileOwnedPreOutputStart::Refused(error)),
+            };
         let prediction = match report.prediction() {
             Ok(prediction) => prediction.clone(),
             Err(_) => return Ok(FileOwnedPreOutputStart::Inconclusive(Box::new(report))),
         };
-        let deadline = host.machine.broker.consistency_deadline()?.ok_or(Error::Incomplete)?;
+        let deadline = host
+            .machine
+            .broker
+            .consistency_deadline()?
+            .ok_or(Error::Incomplete)?;
         if host.machine.consistency_request != Some((request, deadline.attempt))
-            || deadline.actor_revision != actor_revision || deadline.source_sequence != position {
+            || deadline.actor_revision != actor_revision
+            || deadline.source_sequence != position
+        {
             return Err(Error::Binding.into());
         }
-        Ok(FileOwnedPreOutputStart::Ready(Box::new(FileOwnedPreOutputForecast {
-            continuation: FilePreOutputForecast { issuer: Rc::clone(&host.issuer), request,
-                deadline, prediction, numerical: inspected.numerical },
-            report,
-        })))
+        Ok(FileOwnedPreOutputStart::Ready(Box::new(
+            FileOwnedPreOutputForecast {
+                continuation: FilePreOutputForecast {
+                    issuer: Rc::clone(&host.issuer),
+                    request,
+                    deadline,
+                    prediction,
+                    numerical: inspected.numerical,
+                },
+                report,
+            },
+        )))
     }
 }
 
@@ -90,19 +127,31 @@ impl FileOwnedPreOutputForecast {
         super::FileOwnedPreOutputStepper::new(self.continuation.into_cooperative(), self.report)
     }
 
-    pub fn request(&self) -> u64 { self.continuation.request() }
-    pub fn prediction(&self) -> &LearnedPrediction { self.continuation.prediction() }
+    pub fn request(&self) -> u64 {
+        self.continuation.request()
+    }
+    pub fn prediction(&self) -> &LearnedPrediction {
+        self.continuation.prediction()
+    }
     /// Original acknowledged acquisition result, not a live permission or refund.
-    pub fn forecast_report(&self) -> &LearnedForecastReport { &self.report }
-    pub fn deadline(&self) -> ConsistencyDeadline { self.continuation.deadline() }
-    pub fn numerical(&self) -> &HostedLearnedInspection { self.continuation.numerical() }
+    pub fn forecast_report(&self) -> &LearnedForecastReport {
+        &self.report
+    }
+    pub fn deadline(&self) -> ConsistencyDeadline {
+        self.continuation.deadline()
+    }
+    pub fn numerical(&self) -> &HostedLearnedInspection {
+        self.continuation.numerical()
+    }
 
     /// Delegate to the SAME raw/owned continuation implementation. It rechecks
     /// owner identity, journal predecessor, full original numerical state,
     /// request, deadline, policy epoch and coverage before either durable step.
-    pub fn advance(&mut self, host: &mut FileOversight, revision: u64)
-        -> Result<Result<Rc<GenerationEvent>, Error>, JournalError>
-    {
+    pub fn advance(
+        &mut self,
+        host: &mut FileOversight,
+        revision: u64,
+    ) -> Result<Result<Rc<GenerationEvent>, Error>, JournalError> {
         self.continuation.advance(host, revision)
     }
 }

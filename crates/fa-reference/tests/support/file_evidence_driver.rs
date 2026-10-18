@@ -1,4 +1,4 @@
-#![allow(dead_code)]
+#![allow(dead_code, unused_imports)]
 #[path = "file_driver.rs"] pub mod driver;
 use driver::Rig;
 use fa_reference::action::consequence::delivery::persistent::observed::FileHumanPermit;

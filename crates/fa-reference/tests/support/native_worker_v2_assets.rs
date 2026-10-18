@@ -1,5 +1,6 @@
 //! Explicit version-two fixtures over the existing synthetic numerical assets.
 //! Repacking weights supplies input data, not an expected output or live proof.
+#![allow(dead_code, unused_imports)]
 use super::assets;
 use fa_reference::strict_json::{self, Limits};
 use std::fs;

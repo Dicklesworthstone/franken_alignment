@@ -1,7 +1,7 @@
 //! Read acknowledged original outcomes after a lost response or process restart.
 //! This projection cannot complete a round, reacquire a handle or grant authority.
-use super::{FileLearnedSidecarFinish, FileOversight, JournalError, Machine};
 use super::super::{FileLearnedConfig, FileOversightProfile, bind_history, journal, storage};
+use super::{FileLearnedSidecarFinish, FileOversight, JournalError, Machine};
 use std::path::Path;
 
 /// Exact original completion plus its journaled source/input binding. These are
@@ -27,8 +27,13 @@ impl FileOversight {
     /// Return the original ACKNOWLEDGED result without recomputing or completing
     /// a round. Missing means no such retained completion, not a nonexecution
     /// proof. A faulted owner refuses rather than returning its older RAM cut.
-    pub fn learned_sidecar_outcome(&self, round: u64) -> Result<FileLearnedSidecarOutcome, JournalError> {
-        if self.fault.is_some() { return Err(JournalError::Unavailable); }
+    pub fn learned_sidecar_outcome(
+        &self,
+        round: u64,
+    ) -> Result<FileLearnedSidecarOutcome, JournalError> {
+        if self.fault.is_some() {
+            return Err(JournalError::Unavailable);
+        }
         Ok(self.machine.learned_sidecar_outcome(round)?.clone())
     }
 
@@ -39,12 +44,18 @@ impl FileOversight {
     /// hide a corrupt suffix. This performs no writer lock, cleanup, fence, role
     /// provisioning, clock refresh or external-effect replay. It returns a
     /// historical cut, NOT necessarily the latest concurrently published image.
-    pub fn read_learned_sidecar_outcome(directory: impl AsRef<Path>, profile: &FileOversightProfile,
-        expected: &FileLearnedConfig, round: u64) -> Result<FileLearnedSidecarOutcome, JournalError>
-    {
+    pub fn read_learned_sidecar_outcome(
+        directory: impl AsRef<Path>,
+        profile: &FileOversightProfile,
+        expected: &FileLearnedConfig,
+        round: u64,
+    ) -> Result<FileLearnedSidecarOutcome, JournalError> {
         super::super::super::super::super::codec::validate_profile(&profile.delivery)?;
         let identity = storage::identity(directory.as_ref())?;
-        let bytes = storage::read(&identity.join(storage::CANONICAL), profile.delivery.limits.bytes)?;
+        let bytes = storage::read(
+            &identity.join(storage::CANONICAL),
+            profile.delivery.limits.bytes,
+        )?;
         let mut events = journal::decode(profile, &identity, &bytes)?;
         bind_history(&mut events, expected)?;
         let machine = Machine::replay(profile, &events)?;

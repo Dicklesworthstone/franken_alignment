@@ -1,4 +1,4 @@
-#![allow(dead_code)]
+#![allow(dead_code, unused_imports)]
 use fa_reference::action::consequence::activation::tensor::kv::decoder::{
     DecoderBudget, DecoderIdentity, DecoderModel, DecoderProfile, DecoderShape, MAX_DECODER_PRODUCTS,
 };

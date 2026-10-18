@@ -60,7 +60,7 @@ fn finish(mut run: FileDecoderInvestigation) -> FileInvestigationReport {
 fn saved_prefix_branches_without_touching_later_actor_state_or_pending_effect_keys() {
     let root = Directory::new(); let (mut host, human, configuration, cp) = create(&root, 100.0, false);
     force(&mut host, 0); // Current actor is later than the saved branch point.
-    let keys = ordinary::ready(&mut host, &human, 1, b"still requires keys");
+    let keys = ordinary::ready(&mut host, &human, 1, b"needs-both-keys");
     let before = host.inspect(); let actor = host.actor_snapshot().unwrap();
     let n = host.decoder_inspection().unwrap(); let recovery = host.decoder_recovery_usage().unwrap();
     let canonical = std::fs::read(root.store().join("delivery.bin")).unwrap();

@@ -1,4 +1,5 @@
 //! Synthetic checkpoint assets; original loaders, inference and protocol run.
+#![allow(dead_code, unused_imports)]
 use fa_reference::action::consequence::activation::monitor::decoder::sampled::generation::{GenerationBudget, MAX_SAMPLING_ENTRIES};
 use fa_reference::action::consequence::activation::monitor::decoder::sampled::generation::tokenizer::{ByteBpe, Merge, TokenBytes, TokenizationBudget};
 use fa_reference::action::consequence::activation::tensor::kv::decoder::{DecoderIdentity, DecoderProfile, DecoderShape, MAX_DECODER_PRODUCTS};

@@ -1,14 +1,16 @@
 //! Terminal shutdown and paired hosted reset use distinct original transitions.
 
 use super::SupervisedDriver;
+use crate::Error;
 use crate::action::ElapsedTick;
 use crate::action::consequence::delivery::{StopProgress, StopReceipt, StopRequest, StopSweep};
+use crate::action::consequence::oversight::decoder_host::{
+    HostedCheckpointHandle, HostedResetReceipt, HostedResetRequest,
+};
 use crate::action::consequence::oversight::helper_processes::ProcessStatus;
-use crate::action::consequence::oversight::decoder_host::{HostedCheckpointHandle, HostedResetReceipt, HostedResetRequest};
 use crate::action::consequence::oversight::learned_host::checkpoint::{
     HostedLearnedCheckpointHandle, HostedLearnedResetReceipt, HostedLearnedResetRequest,
 };
-use crate::Error;
 use std::collections::BTreeMap;
 
 /// Supervisor-only observation. Drained effects do not imply that a direct
@@ -36,15 +38,19 @@ impl SupervisedDriver {
         let result = self.supervisor.request_stop(request);
         // A local stop can precede a later projection error. Never let such an
         // error retain a driving job or leave helper cleanup unrequested.
-        if self.supervisor.stop_receipt().is_some() { self.job = None; }
+        if self.supervisor.stop_receipt().is_some() {
+            self.job = None;
+        }
         self.reap_helpers();
         result
     }
 
     pub fn stop_progress(&self) -> Result<DriverStopProgress, Error> {
         Ok(DriverStopProgress {
-            effects: self.supervisor.stop_progress()?, review_released: self.job.is_none(),
-            helpers: self.helper_processes(), helpers_reaped: self.helpers_reaped(),
+            effects: self.supervisor.stop_progress()?,
+            review_released: self.job.is_none(),
+            helpers: self.helper_processes(),
+            helpers_reaped: self.helpers_reaped(),
         })
     }
 
@@ -54,7 +60,9 @@ impl SupervisedDriver {
     pub fn progress_stop(&mut self, now: ElapsedTick) -> Result<StopSweep, Error> {
         // Also handle a stop initiated through the trusted supervisor/broker.
         // Release its now-cancelled job before fallible clock or endpoint work.
-        if self.supervisor.stop_receipt().is_some() { self.job = None; }
+        if self.supervisor.stop_receipt().is_some() {
+            self.job = None;
+        }
         let result = (|| {
             self.supervisor.stop_receipt().ok_or(Error::Incomplete)?;
             self.supervisor.synchronize()?;
@@ -65,26 +73,38 @@ impl SupervisedDriver {
         result
     }
 
-    pub fn capture_hosted_checkpoint(&mut self, id: u64, expected_actor_revision: u64)
-        -> Result<HostedCheckpointHandle, Error>
-    {
-        self.supervisor.capture_hosted_checkpoint(id, expected_actor_revision)
+    pub fn capture_hosted_checkpoint(
+        &mut self,
+        id: u64,
+        expected_actor_revision: u64,
+    ) -> Result<HostedCheckpointHandle, Error> {
+        self.supervisor
+            .capture_hosted_checkpoint(id, expected_actor_revision)
     }
 
     /// The numerical/authority reset happens first. Only a successful original
     /// transition releases the active review and retained permit. Cleanup still
     /// recognizes an already cancelled job if a later projection returns error.
-    pub fn reset_hosted_decoder(&mut self, request: HostedResetRequest) -> Result<HostedResetReceipt, Error> {
+    pub fn reset_hosted_decoder(
+        &mut self,
+        request: HostedResetRequest,
+    ) -> Result<HostedResetReceipt, Error> {
         let result = self.supervisor.reset_hosted_decoder(request);
-        if result.is_ok() { self.job = None; }
+        if result.is_ok() {
+            self.job = None;
+        }
         self.reap_helpers();
         result
     }
 
-    pub fn capture_hosted_learned_checkpoint(&mut self, id: u64, expected_actor_revision: u64)
-        -> Result<HostedLearnedCheckpointHandle, Error>
-    {
-        let result = self.supervisor.capture_hosted_learned_checkpoint(id, expected_actor_revision);
+    pub fn capture_hosted_learned_checkpoint(
+        &mut self,
+        id: u64,
+        expected_actor_revision: u64,
+    ) -> Result<HostedLearnedCheckpointHandle, Error> {
+        let result = self
+            .supervisor
+            .capture_hosted_learned_checkpoint(id, expected_actor_revision);
         self.reap_helpers();
         result
     }
@@ -92,11 +112,14 @@ impl SupervisedDriver {
     /// Only the original learned reset can release this review and its retained
     /// permit. Failed preflight keeps both. Cleanup recognizes actual cancellation
     /// or an automatic stop even when a later projection returns an error.
-    pub fn reset_hosted_learned(&mut self, request: HostedLearnedResetRequest)
-        -> Result<HostedLearnedResetReceipt, Error>
-    {
+    pub fn reset_hosted_learned(
+        &mut self,
+        request: HostedLearnedResetRequest,
+    ) -> Result<HostedLearnedResetReceipt, Error> {
         let result = self.supervisor.reset_hosted_learned(request);
-        if result.is_ok() { self.job = None; }
+        if result.is_ok() {
+            self.job = None;
+        }
         self.reap_helpers();
         result
     }

@@ -1,5 +1,5 @@
 //! Synthetic bounded F32 tensors through the original checked all-layer capture.
-#![allow(dead_code)]
+#![allow(dead_code, unused_imports)]
 use fa_reference::action::consequence::activation::CaptureProfile;
 use fa_reference::action::consequence::activation::tensor::{BufferIdentity, ByteOrder, HostTensor, ScalarEncoding, TensorContract, TensorLayout};
 use fa_reference::action::consequence::activation::tensor::kv::{KvAppend, KvContract};

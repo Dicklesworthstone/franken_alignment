@@ -148,6 +148,7 @@ fn credential_success_does_not_bypass_logical_reviewer_binding_or_changed_eviden
     for stale_input in [false, true] {
         let root = Directory::new(); let (mut host, reviewer) = create(&root);
         let (action, original) = reviewed(&mut host, 1, b"held");
+        let _automatic = host.authorize(host.revision(), 1, &original, snapshot()).unwrap();
         let request = host.request_human_approval(host.revision(), 1001, 1, &original, ElapsedTick(31)).unwrap();
         let (server, client) = verified_pair();
         let mut server = server.into_connection(&host, &reviewer, request, [6; 32]).unwrap();

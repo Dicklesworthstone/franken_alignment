@@ -1,5 +1,7 @@
 //! Original learned replay, complete guard inventory and receipt-only settlement.
+#[path = "recovery/cooperative.rs"]
 mod cooperative;
+#[path = "recovery/selected.rs"]
 mod selected;
 use cooperative::{Progress, finish_replay};
 use super::{Config, Loaded, FileOversight, FileSupervisedDriver, FileHumanReviewer, ElapsedTick,

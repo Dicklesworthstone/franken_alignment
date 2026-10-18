@@ -1,4 +1,4 @@
-#![allow(dead_code)]
+#![allow(dead_code, unused_imports)]
 #[path = "file_oversight.rs"] pub mod oversight;
 pub use oversight::{Directory, MEMBERS, ROOT, create, inputs, profile, snapshot, spec, window};
 use fa_reference::action::consequence::delivery::persistent::observed::FileOversight;

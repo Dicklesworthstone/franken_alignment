@@ -1,10 +1,10 @@
 //! Source-only intake for the ORIGINAL durable learned-text generator.
 //! Request keys name the first completed message admitted under that key, not
 //! a fresh read on every retry. No actor-supplied output or source is accepted.
-use super::{FileActorPort, FileActorSupervisor, FileActorTicket, redact};
 use super::super::super::{JournalError, observed::FileOversight};
-use crate::action::{ActionSpec, ElapsedTick, ResolvedTarget};
+use super::{FileActorPort, FileActorSupervisor, FileActorTicket, redact};
 use crate::action::consequence::oversight::actor::{ActorError, ActorOutcome, Knowledge};
+use crate::action::{ActionSpec, ElapsedTick, ResolvedTarget};
 use crate::{Error, Snapshot};
 
 mod stream;
@@ -34,14 +34,16 @@ pub struct LearnedTextProposal {
 /// fn escape(port: FileLearnedTextActorPort) { port.host_mut(); }
 /// ```
 #[derive(Clone, Debug)]
-pub struct FileLearnedTextActorPort { port: FileActorPort<FileOversight> }
+pub struct FileLearnedTextActorPort {
+    port: FileActorPort<FileOversight>,
+}
 
 impl FileOversight {
     /// Adopt this EXACT durable owner. Recovered owners remain fenced and their
     /// generators remain paused. Raw text and framed streams are distinct routes.
-    pub fn into_learned_text_actor_gateway(self)
-        -> Result<(FileLearnedTextActorPort, FileActorSupervisor<FileOversight>), JournalError>
-    {
+    pub fn into_learned_text_actor_gateway(
+        self,
+    ) -> Result<(FileLearnedTextActorPort, FileActorSupervisor<FileOversight>), JournalError> {
         if !self.learned_text_required() || self.learned_text_stream_required() {
             return Err(Error::Binding.into());
         }
@@ -55,10 +57,14 @@ impl FileLearnedTextActorPort {
     /// Exact retries resolve the ORIGINAL request even after cancellation,
     /// policy change, source loss or recovery; changed destination/bounds conflict.
     /// No inference, new observation or fresh admission is performed on a retry.
-    pub fn submit(&self, request: u64, proposal: LearnedTextProposal)
-        -> Result<FileActorTicket<FileOversight>, ActorError>
-    {
-        submit_source(&self.port, request, |host| host.prepare_learned_text_request(request, proposal))
+    pub fn submit(
+        &self,
+        request: u64,
+        proposal: LearnedTextProposal,
+    ) -> Result<FileActorTicket<FileOversight>, ActorError> {
+        submit_source(&self.port, request, |host| {
+            host.prepare_learned_text_request(request, proposal)
+        })
     }
 
     pub fn poll(&self, ticket: &FileActorTicket<FileOversight>) -> Knowledge<ActorOutcome> {
@@ -72,24 +78,44 @@ impl FileLearnedTextActorPort {
 // Only the two concrete source adapters call this; no public callback can
 // supply output. Holding the SAME owner borrow makes derivation and the original
 // request transaction indivisible relative to actor/supervisor mutations.
-fn submit_source<F>(port: &FileActorPort<FileOversight>, request: u64, derive: F)
-    -> Result<FileActorTicket<FileOversight>, ActorError>
-where F: FnOnce(&FileOversight) -> Result<ActionSpec, JournalError> {
-    if request == 0 { return Err(ActorError::MalformedProposal); }
+fn submit_source<F>(
+    port: &FileActorPort<FileOversight>,
+    request: u64,
+    derive: F,
+) -> Result<FileActorTicket<FileOversight>, ActorError>
+where
+    F: FnOnce(&FileOversight) -> Result<ActionSpec, JournalError>,
+{
+    if request == 0 {
+        return Err(ActorError::MalformedProposal);
+    }
     let owner = port.owner.upgrade().ok_or(ActorError::Unavailable)?;
-    let mut state = owner.try_borrow_mut().map_err(|_| ActorError::Unavailable)?;
+    let mut state = owner
+        .try_borrow_mut()
+        .map_err(|_| ActorError::Unavailable)?;
     let existing = match state.host.request_status(request) {
         Ok(_) => true,
         Err(JournalError::Contract(Error::Missing)) => false,
         Err(_) => return Err(ActorError::Unavailable),
     };
-    if !existing && state.snapshot.is_none() { return Err(ActorError::Unavailable); }
+    if !existing && state.snapshot.is_none() {
+        return Err(ActorError::Unavailable);
+    }
     // Resolve under the SAME owner borrow. Do not consume the observation
     // for a malformed request or unavailable/incomplete numerical source.
     let spec = derive(&state.host).map_err(redact)?;
-    let snapshot = if existing { Snapshot::default() }
-        else { state.snapshot.take().ok_or(ActorError::Unavailable)? };
+    let snapshot = if existing {
+        Snapshot::default()
+    } else {
+        state.snapshot.take().ok_or(ActorError::Unavailable)?
+    };
     let revision = state.host.revision();
-    state.host.submit_request(revision, request, spec, snapshot).map_err(redact)?;
-    Ok(FileActorTicket { owner: port.owner.clone(), request })
+    state
+        .host
+        .submit_request(revision, request, spec, snapshot)
+        .map_err(redact)?;
+    Ok(FileActorTicket {
+        owner: port.owner.clone(),
+        request,
+    })
 }

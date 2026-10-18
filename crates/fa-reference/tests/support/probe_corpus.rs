@@ -1,4 +1,5 @@
 //! Synthetic labelled captures for algorithm tests, not detector qualification.
+#![allow(dead_code, unused_imports)]
 use fa_reference::action::consequence::activation::{CaptureProfile, FrameIdentity, SourceFrame, ProgressiveFrame};
 use fa_reference::action::consequence::activation::probe::{LinearProbe, ProbeOutcome};
 use fa_reference::action::consequence::activation::probe::training::*;

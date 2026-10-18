@@ -1,4 +1,4 @@
-#![allow(dead_code)]
+#![allow(dead_code, unused_imports)]
 use fa_reference::action::consequence::congress::{CongressPolicy, MemberPolicy};
 use fa_reference::action::consequence::delivery::persistent::*;
 use fa_reference::action::consequence::gate::containment::{ActorState, RestartGrade, RestartProfile};

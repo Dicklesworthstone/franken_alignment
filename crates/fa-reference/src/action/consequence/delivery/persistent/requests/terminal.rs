@@ -147,8 +147,12 @@ impl FileDelivery {
         page.try_reserve_exact(limit.min(self.machine.requests.len()))
             .map_err(|_| crate::Error::Limit)?;
         let start = after.map_or(std::ops::Bound::Unbounded, std::ops::Bound::Excluded);
-        for (_, row) in self.machine.requests.records
-            .range((start, std::ops::Bound::Unbounded)).take(limit)
+        for (_, row) in self
+            .machine
+            .requests
+            .records
+            .range((start, std::ops::Bound::Unbounded))
+            .take(limit)
         {
             page.push(row.status);
         }
@@ -168,18 +172,21 @@ impl FileDelivery {
         revision: u64,
     ) -> Result<Vec<super::FileRequestStatus>, JournalError> {
         let mut statuses = self.request_status_page(revision, None, super::MAX_FILE_REQUESTS)?;
-        statuses.retain(|status| matches!(status.disposition,
-            super::FileRequestDisposition::Admitted {
-                stage: crate::action::ActionState::Proposed
-                    | crate::action::ActionState::Prepared
-                    | crate::action::ActionState::Reviewing
-                    | crate::action::ActionState::Authorized
-                    | crate::action::ActionState::Dispatching
-                    | crate::action::ActionState::Unknown
-                    | crate::action::ActionState::IrrecoverablyUnknown,
-                ..
-            }
-        ));
+        statuses.retain(|status| {
+            matches!(
+                status.disposition,
+                super::FileRequestDisposition::Admitted {
+                    stage: crate::action::ActionState::Proposed
+                        | crate::action::ActionState::Prepared
+                        | crate::action::ActionState::Reviewing
+                        | crate::action::ActionState::Authorized
+                        | crate::action::ActionState::Dispatching
+                        | crate::action::ActionState::Unknown
+                        | crate::action::ActionState::IrrecoverablyUnknown,
+                    ..
+                }
+            )
+        });
         Ok(statuses)
     }
 }

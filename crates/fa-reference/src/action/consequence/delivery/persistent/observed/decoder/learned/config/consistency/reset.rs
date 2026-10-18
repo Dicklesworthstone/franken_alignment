@@ -1,5 +1,5 @@
 //! Opt in to source successors without changing the original forecast contract.
-use super::{Error, FileLearnedConfig, Writer, DOMAIN, MAX_CONFIG_BYTES};
+use super::{DOMAIN, Error, FileLearnedConfig, MAX_CONFIG_BYTES, Writer};
 
 impl FileLearnedConfig {
     /// Follow only this original learned owner's successfully restored streams.
@@ -17,12 +17,18 @@ impl FileLearnedConfig {
     /// remain unavailable; this grants no fresh work or likelihood budget.
     /// Cumulative text streams retain their separate, unsupported reset protocol.
     pub fn with_forecast_reset_successors(mut self) -> Result<Self, Error> {
-        if self.forecast_reset_successors { return Err(Error::Duplicate); }
+        if self.forecast_reset_successors {
+            return Err(Error::Duplicate);
+        }
         if self.text_stream_profile().is_some()
             || (self.pre_output_forecast.is_none() && self.owned_pre_output_forecast.is_none())
-        { return Err(Error::Binding); }
+        {
+            return Err(Error::Binding);
+        }
         let mut writer = Writer::new(MAX_CONFIG_BYTES);
-        writer.raw(DOMAIN)?; writer.u64(0)?; writer.raw(b"FALFRST\x01")?;
+        writer.raw(DOMAIN)?;
+        writer.u64(0)?;
+        writer.raw(b"FALFRST\x01")?;
         writer.blob(&self.bytes)?;
         self.bytes = writer.finish().into();
         self.forecast_reset_successors = true;

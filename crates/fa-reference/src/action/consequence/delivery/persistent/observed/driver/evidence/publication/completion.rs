@@ -3,18 +3,25 @@
 //! two-read atomic effect/accounting cut. No duplicated effect state machine.
 mod acquisition;
 pub mod files;
-use acquisition::{BorrowedProvider, CompletionDriverEvidence};
+use super::super::super::super::publication::capture::completion::feed::FeedCompletionReport;
+use super::super::super::super::publication::capture::completion::{
+    CapturedCompletionKeys, CapturedCompletionReport,
+};
+use super::super::super::super::publication::capture::heartbeat::feed::{
+    PublicationFeedFile, PublicationFeedReport,
+};
+use super::super::super::super::publication::capture::{
+    FileCaptureError, FileCaptureIdentity, PublicationInputFile,
+};
+use super::super::super::provider::{Callback, EvidenceProvider};
+use super::super::super::{
+    CommitteeContract, DriverEvidence, ElapsedTick, Error, FileCredentialPermit, FileHumanPermit,
+    FileSupervisedDriver, FrozenAction, JournalError, Phase, observe, sample, stage,
+};
 use super::PublicationProvider;
 use super::feed::FeedProvider;
-use super::super::super::super::publication::capture::heartbeat::feed::{PublicationFeedFile, PublicationFeedReport};
-use super::super::super::super::publication::capture::completion::feed::FeedCompletionReport;
-use super::super::super::{CommitteeContract, DriverEvidence, ElapsedTick, Error,
-    FileCredentialPermit, FileHumanPermit, FileSupervisedDriver, FrozenAction,
-    JournalError, Phase, observe, sample, stage};
-use super::super::super::provider::{Callback, EvidenceProvider};
-use super::super::super::super::publication::capture::{FileCaptureError, FileCaptureIdentity, PublicationInputFile};
-use super::super::super::super::publication::capture::completion::{CapturedCompletionKeys, CapturedCompletionReport};
 use crate::action::ActionState;
+use acquisition::{BorrowedProvider, CompletionDriverEvidence};
 use std::rc::Rc;
 
 /// Separate acquisition costs: at most one authorization read, then the host's
@@ -50,15 +57,30 @@ impl FileSupervisedDriver {
     /// This callback supplies committee/policy observations, not a native source
     /// lease renewal. Stronger configured source checks remain mandatory. The
     /// existing paired-file step API retains its separate transition semantics.
-    pub fn complete_with_publication_source<F, P>(&mut self, source: &PublicationInputFile,
-        clock: F, provider: P, human: &FileHumanPermit,
-        credential: Option<&FileCredentialPermit>) -> FileSourceCompletionReport
-    where F: FnMut() -> ElapsedTick,
+    pub fn complete_with_publication_source<F, P>(
+        &mut self,
+        source: &PublicationInputFile,
+        clock: F,
+        provider: P,
+        human: &FileHumanPermit,
+        credential: Option<&FileCredentialPermit>,
+    ) -> FileSourceCompletionReport
+    where
+        F: FnMut() -> ElapsedTick,
         P: FnMut(&FrozenAction, &CommitteeContract) -> Result<DriverEvidence, Error>,
     {
-        let report = self.complete_source_job(source, None, clock, &mut Callback(provider), human, credential);
-        FileSourceCompletionReport { authorization_reads: report.authorization_reads,
-            completion: report.completion.completion }
+        let report = self.complete_source_job(
+            source,
+            None,
+            clock,
+            &mut Callback(provider),
+            human,
+            credential,
+        );
+        FileSourceCompletionReport {
+            authorization_reads: report.authorization_reads,
+            completion: report.completion.completion,
+        }
     }
 
     /// Complete a reviewed job with feed catch-up before every effect boundary.
@@ -66,19 +88,41 @@ impl FileSupervisedDriver {
     /// atomic completion. Existing unspent permits are retained on healthy
     /// pre-read refusal; success closes the already-settled job without another
     /// publication/sweep turn. This callback does not renew native policy leases.
-    pub fn complete_with_publication_feed<F, P>(&mut self, source: &PublicationInputFile,
-        feed: &PublicationFeedFile, clock: F, provider: P, human: &FileHumanPermit,
-        credential: Option<&FileCredentialPermit>) -> FileFeedCompletionReport
-    where F: FnMut() -> ElapsedTick,
+    pub fn complete_with_publication_feed<F, P>(
+        &mut self,
+        source: &PublicationInputFile,
+        feed: &PublicationFeedFile,
+        clock: F,
+        provider: P,
+        human: &FileHumanPermit,
+        credential: Option<&FileCredentialPermit>,
+    ) -> FileFeedCompletionReport
+    where
+        F: FnMut() -> ElapsedTick,
         P: FnMut(&FrozenAction, &CommitteeContract) -> Result<DriverEvidence, Error>,
     {
-        self.complete_source_job(source, Some(feed), clock, &mut Callback(provider), human, credential)
+        self.complete_source_job(
+            source,
+            Some(feed),
+            clock,
+            &mut Callback(provider),
+            human,
+            credential,
+        )
     }
 
-    fn complete_source_job<F, P>(&mut self, source: &PublicationInputFile,
-        feed: Option<&PublicationFeedFile>, mut clock: F, provider: &mut P,
-        human: &FileHumanPermit, credential: Option<&FileCredentialPermit>) -> FileFeedCompletionReport
-    where F: FnMut() -> ElapsedTick, P: CompletionDriverEvidence,
+    fn complete_source_job<F, P>(
+        &mut self,
+        source: &PublicationInputFile,
+        feed: Option<&PublicationFeedFile>,
+        mut clock: F,
+        provider: &mut P,
+        human: &FileHumanPermit,
+        credential: Option<&FileCredentialPermit>,
+    ) -> FileFeedCompletionReport
+    where
+        F: FnMut() -> ElapsedTick,
+        P: CompletionDriverEvidence,
     {
         self.reap_helpers();
         let mut authorization_feeds = Vec::with_capacity(usize::from(feed.is_some()));
@@ -89,17 +133,29 @@ impl FileSupervisedDriver {
         let mut evidence_failure = None;
         let result = (|| {
             let mut host = self.supervisor.host_mut()?;
-            if host.storage_failure().is_some() { return Err(JournalError::Unavailable); }
+            if host.storage_failure().is_some() {
+                return Err(JournalError::Unavailable);
+            }
             let job = self.job.as_mut().ok_or(Error::Missing)?;
             job.check_owner(&host)?;
-            if job.phase != Phase::Ready || !matches!(stage(&host, job.request)?,
-                ActionState::Reviewing | ActionState::Authorized) { return Err(Error::WrongState.into()); }
+            if job.phase != Phase::Ready
+                || !matches!(
+                    stage(&host, job.request)?,
+                    ActionState::Reviewing | ActionState::Authorized
+                )
+            {
+                return Err(Error::WrongState.into());
+            }
             job.check_ready(&host, job.inputs.as_ref())?;
             if !Rc::ptr_eq(&host.issuer, &human.issuer) || human.attempt != job.attempt {
                 return Err(Error::Binding.into());
             }
-            let bound = host.publication_source(job.attempt)?.ok_or(Error::Incomplete)?;
-            if bound.source != source.source() { return Err(Error::Binding.into()); }
+            let bound = host
+                .publication_source(job.attempt)?
+                .ok_or(Error::Incomplete)?;
+            if bound.source != source.source() {
+                return Err(Error::Binding.into());
+            }
             match credential {
                 Some(permit) => host.check_credential_permit(permit)?,
                 None if host.credential_policy().is_some() => return Err(Error::Incomplete.into()),
@@ -108,17 +164,28 @@ impl FileSupervisedDriver {
             provider.preflight(&host)?;
             if let Some(feed) = feed {
                 host.publication_change_freshness()?;
-                if host.publication_change_status()?.source != feed.source() { return Err(Error::Binding.into()); }
+                if host.publication_change_status()?.source != feed.source() {
+                    return Err(Error::Binding.into());
+                }
             }
             if job.permit.is_none() {
                 let mut capture = PublicationProvider {
-                    inner: BorrowedProvider(&mut *provider), attempt: Some(job.attempt), source,
+                    inner: BorrowedProvider(&mut *provider),
+                    attempt: Some(job.attempt),
+                    source,
                     reads: &mut authorization_reads,
                 };
                 let captured = match feed {
-                    Some(feed) => sample(&mut host, job, &mut FeedProvider {
-                        inner: capture, source: feed, reports: &mut authorization_feeds,
-                    }, &mut clock)?,
+                    Some(feed) => sample(
+                        &mut host,
+                        job,
+                        &mut FeedProvider {
+                            inner: capture,
+                            source: feed,
+                            reports: &mut authorization_feeds,
+                        },
+                        &mut clock,
+                    )?,
                     None => sample(&mut host, job, &mut capture, &mut clock)?,
                 };
                 observe(&mut host, clock())?;
@@ -128,15 +195,21 @@ impl FileSupervisedDriver {
                 }
                 job.check_ready(&host, captured.evidence.inputs.as_ref())?;
                 let revision = host.revision();
-                job.permit = Some(host.authorize(revision, job.attempt,
-                    captured.evidence.inputs.as_ref().ok_or(Error::Incomplete)?, captured.evidence.snapshot)?);
+                job.permit = Some(host.authorize(
+                    revision,
+                    job.attempt,
+                    captured.evidence.inputs.as_ref().ok_or(Error::Incomplete)?,
+                    captured.evidence.snapshot,
+                )?);
             }
             // Retire BEFORE external completion code. Even a caller-caught panic
             // cannot leave this job poised to issue another dispatch automatically.
             job.phase = Phase::Reconcile;
             let revision = host.revision();
             let keys = CapturedCompletionKeys {
-                automatic: job.permit.as_ref().ok_or(Error::Incomplete)?, human, credential,
+                automatic: job.permit.as_ref().ok_or(Error::Incomplete)?,
+                human,
+                credential,
             };
             let completed = provider.complete(&mut host, revision, keys, source, feed, &mut clock);
             feed_reads = completed.reads;
@@ -147,7 +220,9 @@ impl FileSupervisedDriver {
             if completed.result.is_ok() {
                 job.close();
             } else if host.storage_failure().is_none()
-                && host.inspect().control.ledger.stages.get(&job.attempt) == Some(&ActionState::Authorized) {
+                && host.inspect().control.ledger.stages.get(&job.attempt)
+                    == Some(&ActionState::Authorized)
+            {
                 // Original authority proves the keys remain unspent. Keep that
                 // SAME permit; the next call still performs two new acquisitions.
                 job.phase = Phase::Ready;
@@ -157,9 +232,25 @@ impl FileSupervisedDriver {
             completed.result
         })();
         self.reap_helpers();
-        if self.job.as_ref().is_some_and(|job| job.phase == Phase::Closed) { self.job = None; }
-        FileFeedCompletionReport { authorization_feeds, authorization_reads,
-            completion: FeedCompletionReport { reads: feed_reads, committed,
-                completion: CapturedCompletionReport { reads, evidence_failure, result } } }
+        if self
+            .job
+            .as_ref()
+            .is_some_and(|job| job.phase == Phase::Closed)
+        {
+            self.job = None;
+        }
+        FileFeedCompletionReport {
+            authorization_feeds,
+            authorization_reads,
+            completion: FeedCompletionReport {
+                reads: feed_reads,
+                committed,
+                completion: CapturedCompletionReport {
+                    reads,
+                    evidence_failure,
+                    result,
+                },
+            },
+        }
     }
 }

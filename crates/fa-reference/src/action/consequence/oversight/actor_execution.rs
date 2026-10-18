@@ -2,9 +2,11 @@
 //! No method is available on ActorPort; payloads come from the retained action.
 
 use super::{CommitteeInput, actor::ActorSupervisor, human::HumanPermit};
-use crate::action::consequence::delivery::{DispatchEnvelope, EndpointReceipt, EndpointStatus, PublicationEndpoint};
 #[cfg(unix)]
 use crate::action::consequence::delivery::credential_broker::CredentialBroker;
+use crate::action::consequence::delivery::{
+    DispatchEnvelope, EndpointReceipt, EndpointStatus, PublicationEndpoint,
+};
 use crate::action::{ActionState, Permit};
 use crate::{Error, Snapshot};
 use std::collections::BTreeMap;
@@ -17,9 +19,17 @@ pub struct DispatchKeys<'a> {
 }
 
 impl<'a> DispatchKeys<'a> {
-    pub fn single(automatic: &'a Permit) -> Self { Self { automatic, human: None } }
+    pub fn single(automatic: &'a Permit) -> Self {
+        Self {
+            automatic,
+            human: None,
+        }
+    }
     pub fn two(automatic: &'a Permit, human: &'a HumanPermit) -> Self {
-        Self { automatic, human: Some(human) }
+        Self {
+            automatic,
+            human: Some(human),
+        }
     }
 }
 
@@ -29,7 +39,10 @@ impl ActorSupervisor {
     /// Reserve only through the existing policy, congress, evidence, topology
     /// and identity checks. Only the supervisor receives the resulting permit.
     pub fn authorize_request(
-        &mut self, request: u64, current: Option<&CommitteeInput>, snapshot: &Snapshot,
+        &mut self,
+        request: u64,
+        current: Option<&CommitteeInput>,
+        snapshot: &Snapshot,
     ) -> Result<Permit, Error> {
         self.synchronize()?;
         let attempt = self.attempt(request)?;
@@ -42,19 +55,32 @@ impl ActorSupervisor {
     /// returning a sendable envelope. Even identical actions cannot exchange
     /// permits between request IDs. Errors never trigger automatic re-proposal.
     pub fn dispatch_request(
-        &mut self, request: u64, keys: DispatchKeys<'_>,
-        current: Option<&CommitteeInput>, snapshot: &Snapshot,
+        &mut self,
+        request: u64,
+        keys: DispatchKeys<'_>,
+        current: Option<&CommitteeInput>,
+        snapshot: &Snapshot,
     ) -> Result<DispatchEnvelope, Error> {
         self.synchronize()?;
         let attempt = self.attempt(request)?;
-        if keys.automatic.attempt != attempt { return Err(Error::Binding); }
+        if keys.automatic.attempt != attempt {
+            return Err(Error::Binding);
+        }
         if self.broker().inspect().ledger.stages.get(&attempt) != Some(&ActionState::Authorized) {
             return Err(Error::WrongState);
         }
         let action = self.action(request)?.clone();
         let result = match (self.broker().human_review_required(), keys.human) {
-            (true, Some(human)) => self.broker_mut().dispatch_with_human(keys.automatic, human, &action, current, snapshot),
-            (false, None) => self.broker_mut().dispatch(keys.automatic, &action, current, snapshot),
+            (true, Some(human)) => self.broker_mut().dispatch_with_human(
+                keys.automatic,
+                human,
+                &action,
+                current,
+                snapshot,
+            ),
+            (false, None) => self
+                .broker_mut()
+                .dispatch(keys.automatic, &action, current, snapshot),
             (true, None) => Err(Error::Incomplete),
             (false, Some(_)) => Err(Error::Binding),
         };
@@ -66,8 +92,12 @@ impl ActorSupervisor {
     /// Every endpoint error is conservatively unknown, including a failure after
     /// a visible file publication. The caller must reconcile, never resend here.
     pub fn deliver_request(
-        &mut self, request: u64, keys: DispatchKeys<'_>, current: Option<&CommitteeInput>,
-        snapshot: &Snapshot, endpoint: &mut PublicationEndpoint,
+        &mut self,
+        request: u64,
+        keys: DispatchKeys<'_>,
+        current: Option<&CommitteeInput>,
+        snapshot: &Snapshot,
+        endpoint: &mut PublicationEndpoint,
     ) -> Result<EndpointReceipt, Error> {
         let message = self.dispatch_request(request, keys, current, snapshot)?;
         match endpoint.deliver(&message) {
@@ -105,7 +135,10 @@ impl ActorSupervisor {
     /// Uses the existing bounded sweep, not a retry loop or another outcome
     /// store. Map keys are privileged ledger attempts; this map never reaches
     /// the actor. Each request receives only its redacted outcome projection.
-    pub fn reconcile_pending(&mut self, endpoint: &mut PublicationEndpoint) -> Result<ReconciliationResults, Error> {
+    pub fn reconcile_pending(
+        &mut self,
+        endpoint: &mut PublicationEndpoint,
+    ) -> Result<ReconciliationResults, Error> {
         let result = self.broker_mut().reconcile_pending(endpoint);
         self.synchronize()?;
         result
@@ -118,8 +151,12 @@ impl ActorSupervisor {
     /// effect sink is the broker-held credential route. No raw endpoint or secret
     /// is exposed to the actor supervisor.
     pub fn deliver_request_brokered(
-        &mut self, request: u64, keys: DispatchKeys<'_>, current: Option<&CommitteeInput>,
-        snapshot: &Snapshot, perimeter: &mut CredentialBroker,
+        &mut self,
+        request: u64,
+        keys: DispatchKeys<'_>,
+        current: Option<&CommitteeInput>,
+        snapshot: &Snapshot,
+        perimeter: &mut CredentialBroker,
     ) -> Result<EndpointReceipt, Error> {
         let message = self.dispatch_request(request, keys, current, snapshot)?;
         match perimeter.deliver(&message) {
@@ -139,7 +176,10 @@ impl ActorSupervisor {
 
     /// Re-establish the ORIGINAL dispatcher fence through the hidden endpoint.
     /// This issues no action, credential, helper review or human approval.
-    pub fn restart_brokered_dispatcher(&mut self, perimeter: &mut CredentialBroker) -> Result<(), Error> {
+    pub fn restart_brokered_dispatcher(
+        &mut self,
+        perimeter: &mut CredentialBroker,
+    ) -> Result<(), Error> {
         let request = self.broker_mut().restart_dispatcher()?;
         self.synchronize()?;
         let acknowledgment = perimeter.install_fence(request)?;
@@ -151,7 +191,8 @@ impl ActorSupervisor {
     /// are resolved only by the hidden endpoint's expiry operation; there is no
     /// resend and no credential presentation during reconciliation.
     pub fn reconcile_brokered_pending(
-        &mut self, perimeter: &mut CredentialBroker,
+        &mut self,
+        perimeter: &mut CredentialBroker,
     ) -> Result<ReconciliationResults, Error> {
         let queries = self.broker().pending_reconciliation()?;
         let mut outcomes = BTreeMap::new();

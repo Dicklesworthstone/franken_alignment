@@ -1,10 +1,12 @@
 //! Historical reset discovery without taking ownership of the journal.
 //! Replay verifies the whole canonical cut; no saved result becomes authority.
-use super::{CheckpointEvent, DecoderEvent, Event, FileLearnedResetIntent, FileOversight,
-    JournalError, LearnedEvent, Machine, PendingLearnedReset, journal};
 use super::super::{FileLearnedConfig, FileOversightProfile, bind_history, storage};
-use crate::action::consequence::oversight::learned_host::checkpoint::HostedLearnedResetReceipt;
+use super::{
+    CheckpointEvent, DecoderEvent, Event, FileLearnedResetIntent, FileOversight, JournalError,
+    LearnedEvent, Machine, PendingLearnedReset, journal,
+};
 use crate::Error;
+use crate::action::consequence::oversight::learned_host::checkpoint::HostedLearnedResetReceipt;
 use std::path::Path;
 
 /// What the complete original replay established at the selected journal cut.
@@ -37,9 +39,15 @@ pub struct FileLearnedResetSnapshot {
     record: FileLearnedResetRecord,
 }
 impl FileLearnedResetSnapshot {
-    pub fn journal_revision(&self) -> u64 { self.journal_revision }
-    pub fn operation(&self) -> u64 { self.operation }
-    pub fn record(&self) -> &FileLearnedResetRecord { &self.record }
+    pub fn journal_revision(&self) -> u64 {
+        self.journal_revision
+    }
+    pub fn operation(&self) -> u64 {
+        self.operation
+    }
+    pub fn record(&self) -> &FileLearnedResetRecord {
+        &self.record
+    }
 }
 
 impl FileOversight {
@@ -52,33 +60,53 @@ impl FileOversight {
     /// This is synchronous, bounded original replay, not a cached receipt reader
     /// or authentication of local storage. Absence and progress are relative to
     /// one complete canonical read under the existing storage trust boundary.
-    pub fn read_learned_reset_result(directory: impl AsRef<Path>, profile: &FileOversightProfile,
-        expected: &FileLearnedConfig, operation: u64) -> Result<FileLearnedResetSnapshot, JournalError>
-    {
-        if operation == 0 { return Err(Error::InvalidInput.into()); }
+    pub fn read_learned_reset_result(
+        directory: impl AsRef<Path>,
+        profile: &FileOversightProfile,
+        expected: &FileLearnedConfig,
+        operation: u64,
+    ) -> Result<FileLearnedResetSnapshot, JournalError> {
+        if operation == 0 {
+            return Err(Error::InvalidInput.into());
+        }
         super::super::super::super::super::codec::validate_profile(&profile.delivery)?;
         let identity = storage::identity(directory.as_ref())?;
-        let bytes = storage::read(&identity.join(storage::CANONICAL), profile.delivery.limits.bytes)?;
+        let bytes = storage::read(
+            &identity.join(storage::CANONICAL),
+            profile.delivery.limits.bytes,
+        )?;
         let mut events = journal::decode(profile, &identity, &bytes)?;
         bind_history(&mut events, expected)?;
         let machine = Machine::replay(profile, &events)?;
         let intent = events.iter().find_map(|event| match event {
             Event::Decoder(DecoderEvent::Learned(LearnedEvent::Checkpoint(
-                CheckpointEvent::BeginReset(intent)))) if intent.control().operation == operation =>
-                    Some(intent.as_ref().clone()),
+                CheckpointEvent::BeginReset(intent),
+            ))) if intent.control().operation == operation => Some(intent.as_ref().clone()),
             _ => None,
         });
         let record = if let Some(result) = machine.learned_reset_result_optional(operation)? {
-            FileLearnedResetRecord::Completed { intent: intent.ok_or(Error::Binding)?, result: result.map(Box::new) }
-        } else if let Some(pending) = machine.pending_learned_reset()
-            .filter(|pending| pending.intent.control().operation == operation) {
-            if intent.as_ref() != Some(&pending.intent) { return Err(Error::Binding.into()); }
+            FileLearnedResetRecord::Completed {
+                intent: intent.ok_or(Error::Binding)?,
+                result: result.map(Box::new),
+            }
+        } else if let Some(pending) = machine
+            .pending_learned_reset()
+            .filter(|pending| pending.intent.control().operation == operation)
+        {
+            if intent.as_ref() != Some(&pending.intent) {
+                return Err(Error::Binding.into());
+            }
             FileLearnedResetRecord::Pending(pending.clone())
         } else {
-            if intent.is_some() { return Err(Error::Binding.into()); }
+            if intent.is_some() {
+                return Err(Error::Binding.into());
+            }
             FileLearnedResetRecord::NotRecorded
         };
-        Ok(FileLearnedResetSnapshot { journal_revision: u64::try_from(events.len()).map_err(|_| Error::Overflow)?,
-            operation, record })
+        Ok(FileLearnedResetSnapshot {
+            journal_revision: u64::try_from(events.len()).map_err(|_| Error::Overflow)?,
+            operation,
+            record,
+        })
     }
 }

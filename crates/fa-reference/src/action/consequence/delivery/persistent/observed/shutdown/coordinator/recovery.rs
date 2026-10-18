@@ -1,15 +1,15 @@
 //! Restart progress without a surviving in-memory domain owner. Coordinator
 //! intent precedes domain I/O; the ORIGINAL registered history remains authority.
-pub(super) mod resolution;
-pub(super) mod cooperative;
 pub(super) mod clocked;
+pub(super) mod cooperative;
 pub(super) mod fleet;
+pub(super) mod resolution;
 #[cfg(test)]
 mod test_support;
-use super::*;
 #[cfg(test)]
 use super::super::super::{BaseEvent, Event, Machine};
 use super::super::recovery::{FileStopRecovery, FileStopRecoveryStatus};
+use super::*;
 use crate::action::consequence::delivery::persistent::MAX_JOURNAL_EVENTS;
 
 impl FileShutdownCoordinator {
@@ -31,25 +31,36 @@ impl FileShutdownCoordinator {
     /// missing/busy/refused members remain in the original fixed denominator;
     /// other members may be visited after a durably recorded domain refusal.
     pub fn recover_and_drain(
-        &mut self, revision: u64, domain: u64, at: ElapsedTick,
+        &mut self,
+        revision: u64,
+        domain: u64,
+        at: ElapsedTick,
     ) -> Result<Result<FileShutdownObservation, JournalError>, JournalError> {
-        let (index, attempt) = self.begin(revision, domain, ShutdownVisitKind::RecoverStopped { at })?;
+        let (index, attempt) =
+            self.begin(revision, domain, ShutdownVisitKind::RecoverStopped { at })?;
         let result = self.recover_domain(index, attempt, at);
         self.finish(index, attempt, result)
     }
 
-    fn recover_domain(&mut self, index: usize, attempt: usize, at: ElapsedTick)
-        -> Result<(FileShutdownObservation, Rc<[u8]>, usize), JournalError>
-    {
+    fn recover_domain(
+        &mut self,
+        index: usize,
+        attempt: usize,
+        at: ElapsedTick,
+    ) -> Result<(FileShutdownObservation, Rc<[u8]>, usize), JournalError> {
         let store = storage::Store::open(&self.campaign.plan.domains[index].directory)?;
         self.recover_locked(index, attempt, at, store)
     }
 
     // The private split permits deterministic Store barrier injection. There is
     // no external callback and no way for an actor to supply a replacement owner.
-    fn recover_locked(&mut self, index: usize, attempt: usize, at: ElapsedTick, store: storage::Store)
-        -> Result<(FileShutdownObservation, Rc<[u8]>, usize), JournalError>
-    {
+    fn recover_locked(
+        &mut self,
+        index: usize,
+        attempt: usize,
+        at: ElapsedTick,
+        store: storage::Store,
+    ) -> Result<(FileShutdownObservation, Rc<[u8]>, usize), JournalError> {
         let mut recovery = FileStopRecovery::begin_registered(store, &self.campaign, index)?;
         while recovery.progress().status == FileStopRecoveryStatus::Replaying {
             recovery.advance(recovery.progress().replayed_events, MAX_JOURNAL_EVENTS)?;

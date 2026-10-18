@@ -1,14 +1,20 @@
 //! Jointly evaluated guarded bootstrap/recovery with separately returned roles.
 //! The operator pins both evaluation contracts independently of journal bytes.
 //! This reuses the existing store, native replay and single recovery fence.
-use super::{FileCredibilitySnapshot, FileEvaluatedOversightRoles};
-use super::super::{FileCredentialRegistration, FileGuardSet, FileOversightRoles, FileRecoveryRequirements};
-use super::super::bootstrap::PreparedGuardedBootstrap;
-use super::super::super::{BaseEvent, Event, FileOversight, FileOversightProfile, JournalError, Machine, journal, storage};
 use super::super::super::credibility::CredibilityEvent;
-use crate::action::consequence::oversight::credibility::EvaluationProtocol;
-use crate::action::consequence::oversight::joint_credibility::{JointPromotionPolicy, JointPromotionReport};
+use super::super::super::{
+    BaseEvent, Event, FileOversight, FileOversightProfile, JournalError, Machine, journal, storage,
+};
+use super::super::bootstrap::PreparedGuardedBootstrap;
+use super::super::{
+    FileCredentialRegistration, FileGuardSet, FileOversightRoles, FileRecoveryRequirements,
+};
+use super::{FileCredibilitySnapshot, FileEvaluatedOversightRoles};
 use crate::Error;
+use crate::action::consequence::oversight::credibility::EvaluationProtocol;
+use crate::action::consequence::oversight::joint_credibility::{
+    JointPromotionPolicy, JointPromotionReport,
+};
 use std::path::Path;
 
 /// A historical canonical cut. No role, effect key, live clock, current source,
@@ -62,7 +68,14 @@ impl FileOversight {
         joint: JointPromotionPolicy,
     ) -> Result<(Self, FileEvaluatedOversightRoles), JournalError> {
         let bytes = store.read(profile.delivery.limits.bytes)?;
-        let (events, machine) = checked_joint_image(&profile, store.identity(), &bytes, expected, protocol, joint)?;
+        let (events, machine) = checked_joint_image(
+            &profile,
+            store.identity(),
+            &bytes,
+            expected,
+            protocol,
+            joint,
+        )?;
         store.confirm_and_cleanup()?;
         let (mut host, human) = Self::owner(profile, store, events, machine);
         host.transact(host.revision(), Event::Core(BaseEvent::Fence))?;
@@ -82,8 +95,12 @@ impl FileOversight {
         joint: JointPromotionPolicy,
     ) -> Result<FileJointCredibilitySnapshot, JournalError> {
         let identity = storage::identity(directory.as_ref())?;
-        let bytes = storage::read(&identity.join(storage::CANONICAL), profile.delivery.limits.bytes)?;
-        let (events, machine) = checked_joint_image(profile, &identity, &bytes, expected, protocol, joint)?;
+        let bytes = storage::read(
+            &identity.join(storage::CANONICAL),
+            profile.delivery.limits.bytes,
+        )?;
+        let (events, machine) =
+            checked_joint_image(profile, &identity, &bytes, expected, protocol, joint)?;
         Ok(FileJointCredibilitySnapshot {
             credibility: FileCredibilitySnapshot {
                 journal: machine.snapshot(events.len()),

@@ -1,13 +1,14 @@
 //! Computed learned congress in the ORIGINAL actor/publication driver.
 //! No second request book, numerical engine, vote importer or approval path.
 pub mod evidence;
-use super::{FileSupervisedDriver, FileDriverEvent, Job, Phase, admitted, observe, stage};
+use super::super::super::JournalError;
 use super::super::decoder::learned::sidecar::{FileLearnedSidecar, FileLearnedSidecarFinish};
 use super::super::helpers::learned::{FileLearnedProbeReview, FileLearnedProbeStatus};
-use super::super::super::JournalError;
+use super::{FileDriverEvent, FileSupervisedDriver, Job, Phase, admitted, observe, stage};
 use crate::action::consequence::Consequence;
 use crate::action::consequence::oversight::learned_host::sidecar::workers::{
-    LearnedWorkerSchedule, probes::{ProbeReviewLimits, ProbeReviewMember},
+    LearnedWorkerSchedule,
+    probes::{ProbeReviewLimits, ProbeReviewMember},
 };
 use crate::action::{ActionState, ElapsedTick};
 use crate::{Error, Snapshot};
@@ -37,28 +38,42 @@ pub struct RetainedReview {
     review: FileLearnedProbeReview,
 }
 impl RetainedReview {
-    pub fn request(&self) -> u64 { self.request }
-    pub fn review(&self) -> &FileLearnedProbeReview { &self.review }
+    pub fn request(&self) -> u64 {
+        self.request
+    }
+    pub fn review(&self) -> &FileLearnedProbeReview {
+        &self.review
+    }
 }
 
 /// Each advance either yields original bounded numerical/protocol progress or
 /// returns the SAME applied/rejected event as the ordinary publication driver.
 #[derive(Debug)]
 pub enum FileDriverLearnedEvent {
-    Progress { request: u64, round: u64, polls: usize, input_revision: u64 },
+    Progress {
+        request: u64,
+        round: u64,
+        polls: usize,
+        input_revision: u64,
+    },
     Completed(FileDriverEvent),
 }
 
 impl FileSupervisedDriver {
     /// Keep this evidence until the consumer explicitly takes it, or return it
     /// with release(). Starting another computed review never silently evicts it.
-    pub fn learned_probe_review(&self) -> Option<&RetainedReview> { self.learned_review.as_ref() }
+    pub fn learned_probe_review(&self) -> Option<&RetainedReview> {
+        self.learned_review.as_ref()
+    }
 
     /// Extraction does not clear a request, refund work or restore a review.
     /// Running evaluators cannot be detached from the supervising driver.
     pub fn take_learned_probe_review(&mut self) -> Result<Option<RetainedReview>, Error> {
-        if self.learned_review.as_ref().is_some_and(|saved|
-            saved.review.status() == FileLearnedProbeStatus::Running) {
+        if self
+            .learned_review
+            .as_ref()
+            .is_some_and(|saved| saved.review.status() == FileLearnedProbeStatus::Running)
+        {
             return Err(Error::WrongState);
         }
         Ok(self.learned_review.take())
@@ -68,28 +83,57 @@ impl FileSupervisedDriver {
     /// actual computed evaluator into this driver. No input overwrite or socket
     /// fallback occurs. The original numerical roster/schedule admission and
     /// durable Begin own their failure boundaries; no new permit is issued.
-    pub fn start_learned_probe_review(&mut self, launch: FileDriverLearnedLaunch,
-        snapshot: Snapshot, now: ElapsedTick) -> Result<(), JournalError>
-    {
-        if self.job.is_some() || self.learned_review.is_some() { return Err(Error::WrongState.into()); }
+    pub fn start_learned_probe_review(
+        &mut self,
+        launch: FileDriverLearnedLaunch,
+        snapshot: Snapshot,
+        now: ElapsedTick,
+    ) -> Result<(), JournalError> {
+        if self.job.is_some() || self.learned_review.is_some() {
+            return Err(Error::WrongState.into());
+        }
         self.ensure_child_slot()?;
         let mut host = self.supervisor.host_mut()?;
         let (attempt, state) = admitted(host.request_status(launch.request)?)?;
-        if state != ActionState::Reviewing { return Err(Error::WrongState.into()); }
-        if launch.sidecar.attempt() != attempt { return Err(Error::Binding.into()); }
+        if state != ActionState::Reviewing {
+            return Err(Error::WrongState.into());
+        }
+        if launch.sidecar.attempt() != attempt {
+            return Err(Error::Binding.into());
+        }
         let action = host.request_action(launch.request)?.clone();
         if host.current_learned_sidecar(&launch.sidecar)?.action() != &action {
             return Err(Error::Binding.into());
         }
-        if !snapshot.complete { return Err(Error::Incomplete.into()); }
+        if !snapshot.complete {
+            return Err(Error::Incomplete.into());
+        }
         observe(&mut host, now)?;
         let revision = host.revision();
-        let review = host.begin_learned_probe_review(revision, launch.sidecar,
-            launch.schedule, launch.members, launch.limits, snapshot)?;
-        self.job = Some(Job { issuer: Rc::clone(&host.issuer), request: launch.request,
-            attempt, action, inputs: Some(review.input().clone()), input_revision: review.input_revision(),
-            control_sequence: None, pool: None, permit: None, phase: Phase::Review });
-        self.learned_review = Some(RetainedReview { request: launch.request, review });
+        let review = host.begin_learned_probe_review(
+            revision,
+            launch.sidecar,
+            launch.schedule,
+            launch.members,
+            launch.limits,
+            snapshot,
+        )?;
+        self.job = Some(Job {
+            issuer: Rc::clone(&host.issuer),
+            request: launch.request,
+            attempt,
+            action,
+            inputs: Some(review.input().clone()),
+            input_revision: review.input_revision(),
+            control_sequence: None,
+            pool: None,
+            permit: None,
+            phase: Phase::Review,
+        });
+        self.learned_review = Some(RetainedReview {
+            request: launch.request,
+            review,
+        });
         Ok(())
     }
 
@@ -97,25 +141,38 @@ impl FileSupervisedDriver {
     /// source before scoring and journals its real commit/reveal/refinement.
     /// Refined bytes stay Reviewing until a fresh complete round judges them.
     /// Only original Continue can enter the existing mandatory two-key path.
-    pub fn advance_learned_probe_review(&mut self, expected_revision: u64,
-        now: ElapsedTick, snapshot: Snapshot) -> Result<FileDriverLearnedEvent, JournalError>
-    {
+    pub fn advance_learned_probe_review(
+        &mut self,
+        expected_revision: u64,
+        now: ElapsedTick,
+        snapshot: Snapshot,
+    ) -> Result<FileDriverLearnedEvent, JournalError> {
         let saved = self.learned_review.as_ref().ok_or(Error::Missing)?;
-        if expected_revision != saved.review.revision() { return Err(Error::Stale.into()); }
-        if saved.review.status() != FileLearnedProbeStatus::Running { return Err(Error::WrongState.into()); }
+        if expected_revision != saved.review.revision() {
+            return Err(Error::Stale.into());
+        }
+        if saved.review.status() != FileLearnedProbeStatus::Running {
+            return Err(Error::WrongState.into());
+        }
         self.reap_helpers();
         let result = (|| {
             let saved = self.learned_review.as_mut().ok_or(Error::Missing)?;
             let job = self.job.as_mut().ok_or(Error::Missing)?;
-            if job.request != saved.request || job.phase != Phase::Review
-                || saved.review.status() != FileLearnedProbeStatus::Running {
+            if job.request != saved.request
+                || job.phase != Phase::Review
+                || saved.review.status() != FileLearnedProbeStatus::Running
+            {
                 return Err(Error::WrongState.into());
             }
             let mut host = self.supervisor.host_mut()?;
             job.check_owner(&host)?;
-            let advanced = saved.review.advance(&mut host, expected_revision, now, snapshot);
+            let advanced = saved
+                .review
+                .advance(&mut host, expected_revision, now, snapshot);
             if let Err(error) = advanced {
-                if saved.review.status() != FileLearnedProbeStatus::Running { job.close(); }
+                if saved.review.status() != FileLearnedProbeStatus::Running {
+                    job.close();
+                }
                 return Err(error);
             }
             // Copy only the ORIGINAL acknowledged plan revision, including any
@@ -123,37 +180,76 @@ impl FileSupervisedDriver {
             job.inputs = Some(saved.review.input().clone());
             job.input_revision = saved.review.input_revision();
             if saved.review.status() == FileLearnedProbeStatus::Running {
-                return Ok(FileDriverLearnedEvent::Progress { request: saved.request,
-                    round: saved.review.current_round().round, polls: saved.review.polls(),
-                    input_revision: saved.review.input_revision() });
+                return Ok(FileDriverLearnedEvent::Progress {
+                    request: saved.request,
+                    round: saved.review.current_round().round,
+                    polls: saved.review.polls(),
+                    input_revision: saved.review.input_revision(),
+                });
             }
             let completed = match saved.review.history().last() {
-                Some(FileLearnedSidecarFinish::Applied { receipt: Ok(receipt), .. }) => {
+                Some(FileLearnedSidecarFinish::Applied {
+                    receipt: Ok(receipt),
+                    ..
+                }) => {
                     if receipt.policy.control.decision.consequence == Consequence::Continue {
                         job.control_sequence = Some(receipt.policy.control.sequence);
                         job.phase = Phase::Ready;
-                    } else { job.close(); }
-                    FileDriverEvent::ReviewApplied { request: saved.request, receipt: Box::new(receipt.clone()) }
+                    } else {
+                        job.close();
+                    }
+                    FileDriverEvent::ReviewApplied {
+                        request: saved.request,
+                        receipt: Box::new(receipt.clone()),
+                    }
                 }
-                Some(FileLearnedSidecarFinish::Applied { receipt: Err(error), .. }) => {
+                Some(FileLearnedSidecarFinish::Applied {
+                    receipt: Err(error),
+                    ..
+                }) => {
                     job.close();
-                    FileDriverEvent::ReviewRejected { request: saved.request, error: *error }
+                    FileDriverEvent::ReviewRejected {
+                        request: saved.request,
+                        error: *error,
+                    }
                 }
-                _ => { job.close(); return Err(Error::Incomplete.into()); }
+                _ => {
+                    job.close();
+                    return Err(Error::Incomplete.into());
+                }
             };
             Ok(FileDriverLearnedEvent::Completed(completed))
         })();
         self.reap_helpers();
-        if self.job.as_ref().is_some_and(|job| job.phase == Phase::Closed) { self.job = None; }
+        if self
+            .job
+            .as_ref()
+            .is_some_and(|job| job.phase == Phase::Closed)
+        {
+            self.job = None;
+        }
         result
     }
 
     pub(super) fn learned_review_deadline(&self) -> Option<ElapsedTick> {
         let saved = self.learned_review.as_ref()?;
-        if saved.review.status() != FileLearnedProbeStatus::Running { return None; }
+        if saved.review.status() != FileLearnedProbeStatus::Running {
+            return None;
+        }
         let window = saved.review.current_round().window;
-        let now = self.supervisor.host().ok()?.inspect().control.ledger.elapsed?;
-        Some(if now < window.commit_by { window.commit_by } else { window.reveal_by })
+        let now = self
+            .supervisor
+            .host()
+            .ok()?
+            .inspect()
+            .control
+            .ledger
+            .elapsed?;
+        Some(if now < window.commit_by {
+            window.commit_by
+        } else {
+            window.reveal_by
+        })
     }
 
     /// Called by EVERY existing worker-maintenance path, including cancel,
@@ -161,13 +257,19 @@ impl FileSupervisedDriver {
     /// Uses live original ledger state, never a historical receipt's cancellations.
     /// Cancelling local numerical custody neither cancels nor refunds the ledger.
     pub(super) fn maintain_learned_review(&mut self) {
-        let Some(saved) = &mut self.learned_review else { return; };
-        let active = self.job.as_ref().is_some_and(|job| job.request == saved.request
-            && job.phase == Phase::Review && self.supervisor.host().is_ok_and(|host| {
-                job.check_owner(&host).is_ok() && host.storage_failure().is_none()
-                    && host.inspect().stop.is_none()
-                    && stage(&host, job.request) == Ok(ActionState::Reviewing)
-            }));
+        let Some(saved) = &mut self.learned_review else {
+            return;
+        };
+        let active = self.job.as_ref().is_some_and(|job| {
+            job.request == saved.request
+                && job.phase == Phase::Review
+                && self.supervisor.host().is_ok_and(|host| {
+                    job.check_owner(&host).is_ok()
+                        && host.storage_failure().is_none()
+                        && host.inspect().stop.is_none()
+                        && stage(&host, job.request) == Ok(ActionState::Reviewing)
+                })
+        });
         if saved.review.status() == FileLearnedProbeStatus::Running && !active {
             let _ = saved.review.cancel(saved.review.revision());
         }
@@ -175,7 +277,9 @@ impl FileSupervisedDriver {
         // driver's phase was not updated. Never route that state to socket I/O.
         if saved.review.status() != FileLearnedProbeStatus::Running {
             if let Some(job) = &mut self.job {
-                if job.request == saved.request && job.phase == Phase::Review { job.close(); }
+                if job.request == saved.request && job.phase == Phase::Review {
+                    job.close();
+                }
             }
         }
     }

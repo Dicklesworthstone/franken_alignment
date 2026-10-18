@@ -221,7 +221,9 @@ impl ProductFrontiers {
     /// This exposes the caller-supplied marker; it adds no origin authentication.
     #[must_use]
     pub fn closing_marker(&self, key: ProjectionKey) -> Option<TrustedClosingMarker> {
-        self.projections.get(&key).and_then(|projection| projection.close)
+        self.projections
+            .get(&key)
+            .and_then(|projection| projection.close)
     }
 
     /// Returns whether all named positive and optional closing obligations hold.

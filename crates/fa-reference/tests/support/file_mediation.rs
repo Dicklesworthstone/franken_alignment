@@ -1,4 +1,4 @@
-#![allow(dead_code)]
+#![allow(dead_code, unused_imports)]
 use fa_reference::action::{ResolvedTarget, Scope};
 use fa_reference::action::consequence::mediation::*;
 use fa_reference::perimeter::*;

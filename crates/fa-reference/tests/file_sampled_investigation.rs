@@ -58,7 +58,7 @@ fn words(values: &[f32]) -> Vec<u32> { values.iter().map(|v| v.to_bits()).collec
 fn fixed_seed_campaign_matches_native_trials_and_leaves_later_actor_and_keys_intact() {
     let root = Directory::new(); let (mut host, human, configuration, cp) = create(&root, 100.0, false);
     force(&mut host, 0); // Deliberately later than the saved original checkpoint.
-    let keys = ordinary::ready(&mut host, &human, 1, b"not an experiment approval");
+    let keys = ordinary::ready(&mut host, &human, 1, b"not-experiment");
     let before = host.inspect(); let n = host.decoder_inspection().unwrap(); let actor = host.actor_snapshot().unwrap();
     let canonical = std::fs::read(root.store().join("delivery.bin")).unwrap();
     let original = request(10.0);

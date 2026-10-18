@@ -1,15 +1,21 @@
 //! Acknowledged actual-model measurements, recomputed rather than imported on replay.
 mod preparation;
-pub(in super::super) use preparation::IdentityComputation;
-use super::{Event, FileIdentityChallenge, FileIdentityObservation, FileIdentityObserver,
-    FileOversight, IdentityEvent, JournalError, Machine, ModelManifest, Transition, journal};
 use super::super::decoder::MAX_WITNESS_BYTES;
+use super::{
+    Event, FileIdentityChallenge, FileIdentityObservation, FileIdentityObserver, FileOversight,
+    IdentityEvent, JournalError, Machine, ModelManifest, Transition, journal,
+};
+use crate::Error;
 use crate::action::ElapsedTick;
 use crate::action::consequence::activation::identity::{decoder::IdentityProbeWork, wire};
-use crate::action::consequence::activation::tensor::kv::decoder::{DecoderBudget, MAX_DECODER_PRODUCTS};
-use crate::action::consequence::delivery::persistent::{JournalFailure, JournalIo,
-    codec::shared::{Reader, Writer}};
-use crate::Error;
+use crate::action::consequence::activation::tensor::kv::decoder::{
+    DecoderBudget, MAX_DECODER_PRODUCTS,
+};
+use crate::action::consequence::delivery::persistent::{
+    JournalFailure, JournalIo,
+    codec::shared::{Reader, Writer},
+};
+pub(in super::super) use preparation::IdentityComputation;
 use std::rc::Rc;
 
 /// All stimuli come from the existing challenge; the model comes from the owner.
@@ -48,9 +54,15 @@ pub(in super::super) struct ComputedIdentityEvent {
 }
 impl ComputedIdentityEvent {
     pub(in super::super) fn validate(&self) -> Result<(), Error> {
-        if self.check == 0 || self.input.measurement_sequence == 0 { return Err(Error::InvalidInput); }
-        if self.input.budget.scalar_products > MAX_DECODER_PRODUCTS { return Err(Error::Limit); }
-        if self.completed_at < self.started_at { return Err(Error::Stale); }
+        if self.check == 0 || self.input.measurement_sequence == 0 {
+            return Err(Error::InvalidInput);
+        }
+        if self.input.budget.scalar_products > MAX_DECODER_PRODUCTS {
+            return Err(Error::Limit);
+        }
+        if self.completed_at < self.started_at {
+            return Err(Error::Stale);
+        }
         wire::decode_manifest(&wire::encode_manifest(&self.input.observed_manifest))?;
         Ok(())
     }
@@ -71,31 +83,59 @@ impl FileIdentityObserver {
     /// or unwinds after admission poison the owner; no candidate observation is
     /// released and recovery withdraws the old challenge. Exact replay recomputes
     /// the original model, frames and work before comparing the saved witness.
-    pub fn observe_computed_learned<F>(&self, host: &mut FileOversight, revision: u64,
-        challenge: &FileIdentityChallenge, input: FileLearnedIdentityInput, mut clock: F)
-        -> Result<FileComputedIdentityObservation, JournalError>
-    where F: FnMut() -> ElapsedTick {
+    pub fn observe_computed_learned<F>(
+        &self,
+        host: &mut FileOversight,
+        revision: u64,
+        challenge: &FileIdentityChallenge,
+        input: FileLearnedIdentityInput,
+        mut clock: F,
+    ) -> Result<FileComputedIdentityObservation, JournalError>
+    where
+        F: FnMut() -> ElapsedTick,
+    {
         self.check(host, challenge)?;
-        if revision != host.revision() { return Err(Error::Stale.into()); }
-        wire::decode_manifest(&wire::encode_manifest(&input.observed_manifest))?;
-        // Preflight creates no session, executes no token, and writes nothing.
-        host.machine.preflight_computed_identity(challenge.id(), &input)?;
-        if host.events.len() >= host.profile.delivery.limits.events { return Err(Error::Limit.into()); }
-        host.events.try_reserve(1).map_err(|_| Error::Limit)?;
-        let started_at = clock();
-        if started_at < host.inspect().control.ledger.elapsed.ok_or(Error::Incomplete)? {
+        if revision != host.revision() {
             return Err(Error::Stale.into());
         }
-        let event = ComputedIdentityEvent { check: challenge.id(), input, started_at,
-            completed_at: started_at, witness: Rc::from(&b""[..]) };
+        wire::decode_manifest(&wire::encode_manifest(&input.observed_manifest))?;
+        // Preflight creates no session, executes no token, and writes nothing.
+        host.machine
+            .preflight_computed_identity(challenge.id(), &input)?;
+        if host.events.len() >= host.profile.delivery.limits.events {
+            return Err(Error::Limit.into());
+        }
+        host.events.try_reserve(1).map_err(|_| Error::Limit)?;
+        let started_at = clock();
+        if started_at
+            < host
+                .inspect()
+                .control
+                .ledger
+                .elapsed
+                .ok_or(Error::Incomplete)?
+        {
+            return Err(Error::Stale.into());
+        }
+        let event = ComputedIdentityEvent {
+            check: challenge.id(),
+            input,
+            started_at,
+            completed_at: started_at,
+            witness: Rc::from(&b""[..]),
+        };
         event.validate()?;
         host.check_source_admission(&Event::Identity(IdentityEvent::Computed(event.clone())))?;
         let mut candidate = Machine::replay(&host.profile, &host.events)?;
-        host.fault = Some(JournalFailure { operation: JournalIo::Stage,
-            kind: std::io::ErrorKind::Other, replacement_may_be_visible: false });
+        host.fault = Some(JournalFailure {
+            operation: JournalIo::Stage,
+            kind: std::io::ErrorKind::Other,
+            replacement_may_be_visible: false,
+        });
         let (event, result) = candidate.prepare_computed_identity(event, &mut clock)?;
         let event = Event::Identity(IdentityEvent::Computed(event));
-        let bytes = journal::encode_appended(&host.profile, host.store.identity(), &host.events, &event)?;
+        let bytes =
+            journal::encode_appended(&host.profile, host.store.identity(), &host.events, &event)?;
         host.persist_candidate(event, bytes, candidate, Transition::Unit)?;
         Ok(result)
     }
@@ -103,23 +143,44 @@ impl FileIdentityObserver {
 
 pub(in super::super) fn write(w: &mut Writer, event: &ComputedIdentityEvent) -> Result<(), Error> {
     event.validate()?;
-    if event.witness.is_empty() { return Err(Error::Incomplete); }
-    if event.witness.len() > MAX_WITNESS_BYTES { return Err(Error::Limit); }
-    w.u64(event.check)?; w.u64(event.input.measurement_sequence)?;
+    if event.witness.is_empty() {
+        return Err(Error::Incomplete);
+    }
+    if event.witness.len() > MAX_WITNESS_BYTES {
+        return Err(Error::Limit);
+    }
+    w.u64(event.check)?;
+    w.u64(event.input.measurement_sequence)?;
     w.u64(event.input.budget.scalar_products)?;
     w.blob(&wire::encode_manifest(&event.input.observed_manifest))?;
-    w.u64(event.started_at.0)?; w.u64(event.completed_at.0)?; w.blob(&event.witness)
+    w.u64(event.started_at.0)?;
+    w.u64(event.completed_at.0)?;
+    w.blob(&event.witness)
 }
 pub(in super::super) fn read(r: &mut Reader<'_>) -> Result<ComputedIdentityEvent, Error> {
-    let check = r.u64()?; let measurement_sequence = r.u64()?;
-    let budget = DecoderBudget { scalar_products: r.u64()? };
+    let check = r.u64()?;
+    let measurement_sequence = r.u64()?;
+    let budget = DecoderBudget {
+        scalar_products: r.u64()?,
+    };
     let observed_manifest = wire::decode_manifest(r.blob(wire::MANIFEST_BYTES)?)?;
-    let started_at = ElapsedTick(r.u64()?); let completed_at = ElapsedTick(r.u64()?);
+    let started_at = ElapsedTick(r.u64()?);
+    let completed_at = ElapsedTick(r.u64()?);
     let witness = Rc::from(r.blob(MAX_WITNESS_BYTES)?);
-    let event = ComputedIdentityEvent { check,
-        input: FileLearnedIdentityInput { measurement_sequence, budget, observed_manifest },
-        started_at, completed_at, witness };
+    let event = ComputedIdentityEvent {
+        check,
+        input: FileLearnedIdentityInput {
+            measurement_sequence,
+            budget,
+            observed_manifest,
+        },
+        started_at,
+        completed_at,
+        witness,
+    };
     event.validate()?;
-    if event.witness.is_empty() { return Err(Error::Incomplete); }
+    if event.witness.is_empty() {
+        return Err(Error::Incomplete);
+    }
     Ok(event)
 }

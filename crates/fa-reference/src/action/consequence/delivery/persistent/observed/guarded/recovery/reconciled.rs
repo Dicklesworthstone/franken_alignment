@@ -1,10 +1,13 @@
 //! Complete original guarded replay and reconcile existing deliveries in one cut.
 //! A sweep queries the original endpoint; it cannot recreate sendable envelopes.
-use super::{BaseEvent, Error, Event, FileGuardedRecovery, FileGuardedRecoveryStatus,
-    FileOversight, FileOversightRoles, JournalError, Machine, Transition, journal};
+use super::{
+    BaseEvent, Error, Event, FileGuardedRecovery, FileGuardedRecoveryStatus, FileOversight,
+    FileOversightRoles, JournalError, Machine, Transition, journal,
+};
 use crate::action::ElapsedTick;
-use crate::action::consequence::delivery::persistent::{JournalFailure, JournalIo,
-    requests::PendingReconciliations};
+use crate::action::consequence::delivery::persistent::{
+    JournalFailure, JournalIo, requests::PendingReconciliations,
+};
 
 /// The original owner and all separately held roles, released only after its
 /// Fence/Time/Sweep replacement is acknowledged. Inspect every outcome: returning
@@ -32,8 +35,11 @@ impl FileGuardedRecovery {
             FileGuardedRecoveryStatus::Interrupted => return Err(JournalError::Unavailable),
             _ => return Err(Error::Incomplete.into()),
         }
-        if request == 0 { return Err(Error::InvalidInput.into()); }
-        self.expected.check(&self.profile, &self.machine, &self.events)?;
+        if request == 0 {
+            return Err(Error::InvalidInput.into());
+        }
+        self.expected
+            .check(&self.profile, &self.machine, &self.events)?;
         self.machine.requests.status(request)?;
         Ok(self)
     }
@@ -65,16 +71,24 @@ impl FileGuardedRecovery {
     /// applies another ordinary fence and queries original receipts, not effects.
     /// Unlike an already-drained stop, live recovery is NOT a zero-event retry.
     pub fn finish_reconciled<F>(self, clock: F) -> Result<ReconciledGuardedOwner, JournalError>
-    where F: FnOnce() -> ElapsedTick {
-        self.finish_reconciled_checked(clock,
-            |run| run.expected.check(&run.profile, &run.machine, &run.events))
+    where
+        F: FnOnce() -> ElapsedTick,
+    {
+        self.finish_reconciled_checked(clock, |run| {
+            run.expected.check(&run.profile, &run.machine, &run.events)
+        })
     }
 
     // Closed composition for the native Andon cursor. The fixed original
     // Fence/Time/Sweep implementation below is shared, not reimplemented.
-    pub(super) fn finish_reconciled_checked<F>(self, clock: F,
-        check: impl FnOnce(&Self) -> Result<(), Error>) -> Result<ReconciledGuardedOwner, JournalError>
-    where F: FnOnce() -> ElapsedTick {
+    pub(super) fn finish_reconciled_checked<F>(
+        self,
+        clock: F,
+        check: impl FnOnce(&Self) -> Result<(), Error>,
+    ) -> Result<ReconciledGuardedOwner, JournalError>
+    where
+        F: FnOnce() -> ElapsedTick,
+    {
         match self.status {
             FileGuardedRecoveryStatus::Ready => {}
             FileGuardedRecoveryStatus::Failed(error) => return Err(error.into()),
@@ -83,30 +97,47 @@ impl FileGuardedRecovery {
         }
         check(&self)?;
         let count = self.events.len().checked_add(3).ok_or(Error::Overflow)?;
-        if count > self.profile.delivery.limits.events { return Err(Error::Limit.into()); }
+        if count > self.profile.delivery.limits.events {
+            return Err(Error::Limit.into());
+        }
         if self.store.read(self.profile.delivery.limits.bytes)? != self.canonical {
             return Err(Error::Binding.into());
         }
         let now = clock();
-        let Self { profile, store, canonical, events, mut machine, .. } = self;
+        let Self {
+            profile,
+            store,
+            canonical,
+            events,
+            mut machine,
+            ..
+        } = self;
         // The original full machine stays private. As in live finish(), an
         // empty placeholder allows only the acknowledged candidate to become
         // the owner; no historical or numerical event is executed twice.
         let placeholder = Machine::new(&profile)?;
         let (mut host, human) = FileOversight::owner(profile, store, events, placeholder);
-        let next = [Event::Core(BaseEvent::Fence), Event::Core(BaseEvent::Time(now)),
-            Event::Core(BaseEvent::Sweep)];
+        let next = [
+            Event::Core(BaseEvent::Fence),
+            Event::Core(BaseEvent::Time(now)),
+            Event::Core(BaseEvent::Sweep),
+        ];
         let mut history = Vec::new();
         history.try_reserve_exact(count).map_err(|_| Error::Limit)?;
         // Check the first appended prefix before retaining a cloned history.
-        let mut bytes = journal::encode_appended(&host.profile, host.store.identity(),
-            &host.events, &next[0])?;
+        let mut bytes =
+            journal::encode_appended(&host.profile, host.store.identity(), &host.events, &next[0])?;
         history.extend(host.events.iter().cloned());
         let mut outcomes = None;
         for (index, event) in next.iter().enumerate() {
             host.check_source_admission(event)?;
             if index != 0 {
-                bytes = journal::encode_appended(&host.profile, host.store.identity(), &history, event)?;
+                bytes = journal::encode_appended(
+                    &host.profile,
+                    host.store.identity(),
+                    &history,
+                    event,
+                )?;
             }
             machine.preflight_consistency(event)?;
             match (index, machine.apply(event)?) {
@@ -123,17 +154,26 @@ impl FileGuardedRecovery {
             return Err(Error::Binding.into());
         }
         host.store.confirm_and_cleanup()?;
-        host.fault = Some(JournalFailure { operation: JournalIo::Stage,
-            kind: std::io::ErrorKind::Other, replacement_may_be_visible: true });
+        host.fault = Some(JournalFailure {
+            operation: JournalIo::Stage,
+            kind: std::io::ErrorKind::Other,
+            replacement_may_be_visible: true,
+        });
         // Self is consumed: any error or unwind drops the private candidate and
         // the locked owner. No old view or returned role can continue using it.
         host.store.replace(&bytes)?;
-        for event in &next { host.source_operation_committed(event); }
+        for event in &next {
+            host.source_operation_committed(event);
+        }
         host.events = history;
         host.machine = machine;
         host.fault = None;
         let roles = FileOversightRoles::provision(&host, human);
-        Ok(ReconciledGuardedOwner { owner: host, roles, outcomes })
+        Ok(ReconciledGuardedOwner {
+            owner: host,
+            roles,
+            outcomes,
+        })
     }
 }
 

@@ -7,20 +7,22 @@
 
 pub mod credibility;
 mod review;
-pub use review::{PolicyReceipt, PolicyReview, PolicySession, replay};
 pub use review::replay::{
     ArchivedPolicyReceipt, DecisionArchive, MAX_ARCHIVE_BYTES, ReplayedDecision, ReviewAnchor,
 };
+pub use review::{PolicyReceipt, PolicyReview, PolicySession, replay};
 
-use super::{Evaluation, Policy, Truth};
 use super::super::{ReviewSession, SessionSpec};
+use super::{Evaluation, Policy, Truth};
 use crate::action::consequence::Consequence;
 use crate::action::consequence::congress::CongressPolicy;
-use crate::action::consequence::gate::{ControlInspection, TargetCeiling, undispatched};
 use crate::action::consequence::gate::containment::{
     ActorState, CheckpointHandle, ContainmentAuthority, ResetReceipt, ResetRequest,
 };
-use crate::action::{ActionSpec, ActionState, ElapsedTick, FrozenAction, Permit, Scope, TrustedOutcome};
+use crate::action::consequence::gate::{ControlInspection, TargetCeiling, undispatched};
+use crate::action::{
+    ActionSpec, ActionState, ElapsedTick, FrozenAction, Permit, Scope, TrustedOutcome,
+};
 use crate::reducer::{MAX_IDENTIFIER_BYTES, MAX_VOTES};
 use crate::{Error, Judgment, Snapshot};
 use std::collections::BTreeMap;
@@ -92,7 +94,10 @@ impl PolicyAuthority {
         validate_congress(&config.congress)?;
         Ok(Self {
             host: ContainmentAuthority::new(
-                config.scope, config.total, config.max_attempts, config.actor,
+                config.scope,
+                config.total,
+                config.max_attempts,
+                config.actor,
                 config.suspend_at_incident,
             )?,
             policy: Rc::new(config.policy),
@@ -132,7 +137,12 @@ impl PolicyAuthority {
         self.host.gate.check_ceiling(&candidate)?;
         self.host.gate.authority.validate_current(&candidate)?;
         let evaluation = self.policy.evaluate(&candidate, snapshot)?;
-        if !evaluation.complete || evaluation.trace().iter().any(|step| step.result == Truth::Unknown) {
+        if !evaluation.complete
+            || evaluation
+                .trace()
+                .iter()
+                .any(|step| step.result == Truth::Unknown)
+        {
             return Err(Error::Incomplete);
         }
         if evaluation.certifiable() {
@@ -142,24 +152,46 @@ impl PolicyAuthority {
         spec.required_witnesses = evaluation.witnesses().to_vec();
         let action = FrozenAction::freeze(spec)?;
         let judgment = Judgment::capture(snapshot, evaluation.witnesses().to_vec())?;
-        let state = if evaluation.certifiable() { ActionState::Reviewing } else { ActionState::Denied };
+        let state = if evaluation.certifiable() {
+            ActionState::Reviewing
+        } else {
+            ActionState::Denied
+        };
 
         // All data/currentness validation above is complete before insertion.
         // The following transitions cannot fail after this successful fresh
         // proposal: no clock, epoch, scope or stage can change under &mut self.
         self.host.gate.propose(id, action.clone())?;
         if state == ActionState::Denied {
-            self.host.gate.deny(id).expect("fresh undispatched proposal");
+            self.host
+                .gate
+                .deny(id)
+                .expect("fresh undispatched proposal");
         } else {
-            self.host.gate.prepare(id).expect("prevalidated current action");
-            self.host.gate.begin_review(id).expect("fresh prepared action");
+            self.host
+                .gate
+                .prepare(id)
+                .expect("prevalidated current action");
+            self.host
+                .gate
+                .begin_review(id)
+                .expect("fresh prepared action");
         }
-        self.records.insert(id, Record {
-            judgment, policy: Rc::clone(&self.policy), evaluation: evaluation.clone(),
-        });
+        self.records.insert(
+            id,
+            Record {
+                judgment,
+                policy: Rc::clone(&self.policy),
+                evaluation: evaluation.clone(),
+            },
+        );
         Ok(Proposal {
-            attempt: id, action, policy: Rc::clone(&self.policy), evaluation,
-            snapshot_semantic_epoch: snapshot.semantic_epoch, state,
+            attempt: id,
+            action,
+            policy: Rc::clone(&self.policy),
+            evaluation,
+            snapshot_semantic_epoch: snapshot.semantic_epoch,
+            state,
         })
     }
 
@@ -173,27 +205,45 @@ impl PolicyAuthority {
         evidence_root: [u8; 32],
         snapshot: &Snapshot,
     ) -> Result<PolicySession, Error> {
-        let action = &self.host.gate.authority.attempts.get(&id).ok_or(Error::Missing)?.action;
+        let action = &self
+            .host
+            .gate
+            .authority
+            .attempts
+            .get(&id)
+            .ok_or(Error::Missing)?
+            .action;
         self.records.get(&id).ok_or(Error::Missing)?;
         let current = self.policy.evaluate(action, snapshot)?;
-        if !current.complete || current.trace().iter().any(|step| step.result == Truth::Unknown) {
+        if !current.complete
+            || current
+                .trace()
+                .iter()
+                .any(|step| step.result == Truth::Unknown)
+        {
             return Err(Error::Incomplete);
         }
         let exact_disqualifier = current.result() == Truth::Violated;
         if !exact_disqualifier {
             self.recheck(id, snapshot)?;
         }
-        let session = ReviewSession::begin_containment(&self.host, SessionSpec {
-            attempt: id,
-            round,
-            evidence_root,
-            policy: self.congress.clone(),
-            exact_disqualifier,
-            contradiction: false,
-            narrowed_targets: self.narrowed_targets.clone(),
-        })?;
+        let session = ReviewSession::begin_containment(
+            &self.host,
+            SessionSpec {
+                attempt: id,
+                round,
+                evidence_root,
+                policy: self.congress.clone(),
+                exact_disqualifier,
+                contradiction: false,
+                narrowed_targets: self.narrowed_targets.clone(),
+            },
+        )?;
         Ok(PolicySession::new(
-            session, Rc::clone(&self.policy), current, snapshot.semantic_epoch,
+            session,
+            Rc::clone(&self.policy),
+            current,
+            snapshot.semantic_epoch,
         ))
     }
 
@@ -202,7 +252,10 @@ impl PolicyAuthority {
         review: PolicyReview,
         snapshot: &Snapshot,
     ) -> Result<PolicyReceipt, Error> {
-        if !Rc::ptr_eq(&review.review.context.authority_issuer, &self.host.gate.authority.issuer) {
+        if !Rc::ptr_eq(
+            &review.review.context.authority_issuer,
+            &self.host.gate.authority.issuer,
+        ) {
             return Err(Error::Binding);
         }
         if !Rc::ptr_eq(&review.policy, &self.policy) {
@@ -281,7 +334,11 @@ impl PolicyAuthority {
         self.host.gate.mark_irrecoverable(id)
     }
 
-    pub fn record_trusted_outcome(&mut self, id: u64, outcome: TrustedOutcome) -> Result<(), Error> {
+    pub fn record_trusted_outcome(
+        &mut self,
+        id: u64,
+        outcome: TrustedOutcome,
+    ) -> Result<(), Error> {
         self.host.gate.record_trusted_outcome(id, outcome)
     }
 
@@ -306,7 +363,11 @@ impl PolicyAuthority {
         Ok(())
     }
 
-    pub fn capture_checkpoint(&mut self, id: u64, expected: u64) -> Result<CheckpointHandle, Error> {
+    pub fn capture_checkpoint(
+        &mut self,
+        id: u64,
+        expected: u64,
+    ) -> Result<CheckpointHandle, Error> {
         self.host.capture_checkpoint(id, expected)
     }
 
@@ -349,9 +410,13 @@ impl PolicyAuthority {
         }
         let previous_available = rights.available();
         rights.revoke_epoch()?;
-        let cancelled: Vec<_> = gate.authority.attempts.iter()
+        let cancelled: Vec<_> = gate
+            .authority
+            .attempts
+            .iter()
             .filter(|(_, attempt)| undispatched(attempt.stage))
-            .map(|(id, _)| *id).collect();
+            .map(|(id, _)| *id)
+            .collect();
         for id in &cancelled {
             if gate.authority.attempts[id].stage == ActionState::Authorized {
                 rights.abort_before_dispatch(*id)?;
@@ -369,11 +434,18 @@ impl PolicyAuthority {
             sequence,
             revocation_floor: rights.epoch(),
             cancelled,
-            refunded_units: rights.available().checked_sub(previous_available).ok_or(Error::WrongState)?,
+            refunded_units: rights
+                .available()
+                .checked_sub(previous_available)
+                .ok_or(Error::WrongState)?,
         };
         gate.authority.rights = rights;
         for id in &change.cancelled {
-            gate.authority.attempts.get_mut(id).expect("validated attempt").stage = ActionState::Cancelled;
+            gate.authority
+                .attempts
+                .get_mut(id)
+                .expect("validated attempt")
+                .stage = ActionState::Cancelled;
             gate.decisions.remove(id);
         }
         gate.sequence = sequence;
@@ -393,14 +465,27 @@ impl PolicyAuthority {
         if !Rc::ptr_eq(&record.policy, &self.policy) {
             return Err(Error::Stale);
         }
-        let action = &self.host.gate.authority.attempts.get(&id).ok_or(Error::Missing)?.action;
+        let action = &self
+            .host
+            .gate
+            .authority
+            .attempts
+            .get(&id)
+            .ok_or(Error::Missing)?
+            .action;
         self.host.gate.check_ceiling(action)?;
         self.host.gate.authority.validate_current(action)?;
         let current = self.policy.evaluate(action, snapshot)?;
-        if !current.complete || current.trace().iter().any(|step| step.result == Truth::Unknown) {
+        if !current.complete
+            || current
+                .trace()
+                .iter()
+                .any(|step| step.result == Truth::Unknown)
+        {
             return Err(Error::Incomplete);
         }
-        if !current.certifiable() || !record.judgment.valid_at(snapshot)?
+        if !current.certifiable()
+            || !record.judgment.valid_at(snapshot)?
             || current.witnesses() != action.spec().required_witnesses.as_slice()
         {
             return Err(Error::Binding);
@@ -413,11 +498,16 @@ fn validate_congress(policy: &CongressPolicy) -> Result<(), Error> {
     if policy.members.len() > MAX_VOTES {
         return Err(Error::Limit);
     }
-    if policy.generation == 0 || policy.members.is_empty()
-        || policy.caps.per_member == 0 || policy.caps.per_cohort == 0
-        || policy.continue_minimum == 0 || policy.continue_hold_maximum >= policy.narrow_at
-        || policy.narrow_at >= policy.suspend_at || policy.minimum_members == 0
-        || policy.minimum_cohorts == 0 || policy.minimum_members > policy.members.len()
+    if policy.generation == 0
+        || policy.members.is_empty()
+        || policy.caps.per_member == 0
+        || policy.caps.per_cohort == 0
+        || policy.continue_minimum == 0
+        || policy.continue_hold_maximum >= policy.narrow_at
+        || policy.narrow_at >= policy.suspend_at
+        || policy.minimum_members == 0
+        || policy.minimum_cohorts == 0
+        || policy.minimum_members > policy.members.len()
         || policy.minimum_cohorts > policy.minimum_members
     {
         return Err(Error::InvalidInput);
@@ -435,8 +525,8 @@ fn validate_congress(policy: &CongressPolicy) -> Result<(), Error> {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use super::super::Predicate;
+    use super::*;
     use crate::action::consequence::congress::MemberPolicy;
     use crate::action::consequence::gate::containment::{RestartGrade, RestartProfile};
     use crate::action::{Purpose, ResolvedTarget, VERSION};
@@ -444,52 +534,114 @@ mod tests {
     use crate::round::Verdict;
 
     fn actor() -> ActorState {
-        ActorState::new(RestartProfile {
-            id: 1, generation: 1, host_generation: 1, model_generation: 1,
-            tokenizer_generation: 1, state_schema_generation: 1, grade: RestartGrade::ExactRestart,
-        }, vec![1], vec![2], vec![3], 1).unwrap()
+        ActorState::new(
+            RestartProfile {
+                id: 1,
+                generation: 1,
+                host_generation: 1,
+                model_generation: 1,
+                tokenizer_generation: 1,
+                state_schema_generation: 1,
+                grade: RestartGrade::ExactRestart,
+            },
+            vec![1],
+            vec![2],
+            vec![3],
+            1,
+        )
+        .unwrap()
     }
 
     fn spec(epoch: u64) -> ActionSpec {
         ActionSpec {
             version: VERSION,
-            scope: Scope { tenant: 1, principal: 2, run: 3, branch: 4, authority: 5, purpose: Purpose::Effect },
-            target: Some(ResolvedTarget { adapter: 1, object: 1, contract_version: 1, expected_version: 1, generation: 1 }),
-            payload: b"publish".to_vec(), required_witnesses: Vec::new(),
-            policy_epoch: epoch, deadline: ElapsedTick(100), units: 4,
+            scope: Scope {
+                tenant: 1,
+                principal: 2,
+                run: 3,
+                branch: 4,
+                authority: 5,
+                purpose: Purpose::Effect,
+            },
+            target: Some(ResolvedTarget {
+                adapter: 1,
+                object: 1,
+                contract_version: 1,
+                expected_version: 1,
+                generation: 1,
+            }),
+            payload: b"publish".to_vec(),
+            required_witnesses: Vec::new(),
+            policy_epoch: epoch,
+            deadline: ElapsedTick(100),
+            units: 4,
         }
     }
 
     fn policy(generation: u64) -> Policy {
-        Policy::new(generation, vec![
-            Predicate::ExactValue { key: 7, value: vec![9] }, Predicate::Absent { key: 8 },
-            Predicate::EmptyRange { start: 10, end: 20 }, Predicate::All(vec![0, 1, 2]),
-        ]).unwrap()
+        Policy::new(
+            generation,
+            vec![
+                Predicate::ExactValue {
+                    key: 7,
+                    value: vec![9],
+                },
+                Predicate::Absent { key: 8 },
+                Predicate::EmptyRange { start: 10, end: 20 },
+                Predicate::All(vec![0, 1, 2]),
+            ],
+        )
+        .unwrap()
     }
 
     fn snapshot() -> Snapshot {
-        Snapshot { semantic_epoch: 3, complete: true, values: BTreeMap::from([(7, vec![9])]) }
+        Snapshot {
+            semantic_epoch: 3,
+            complete: true,
+            values: BTreeMap::from([(7, vec![9])]),
+        }
     }
 
     fn controller() -> PolicyAuthority {
         let congress = CongressPolicy {
             generation: 1,
-            members: BTreeMap::from([("helper".to_owned(), MemberPolicy { cohort: "a".to_owned(), weight: 1 })]),
-            caps: Caps { per_member: 1, per_cohort: 1 }, continue_minimum: 1,
-            continue_hold_maximum: 0, narrow_at: 2, suspend_at: 3,
-            minimum_members: 1, minimum_cohorts: 1,
+            members: BTreeMap::from([(
+                "helper".to_owned(),
+                MemberPolicy {
+                    cohort: "a".to_owned(),
+                    weight: 1,
+                },
+            )]),
+            caps: Caps {
+                per_member: 1,
+                per_cohort: 1,
+            },
+            continue_minimum: 1,
+            continue_hold_maximum: 0,
+            narrow_at: 2,
+            suspend_at: 3,
+            minimum_members: 1,
+            minimum_cohorts: 1,
         };
         let mut controller = PolicyAuthority::new(ControllerConfig {
-            scope: spec(0).scope, total: 20, max_attempts: 32, actor: actor(),
-            suspend_at_incident: 3, policy: policy(1), congress,
+            scope: spec(0).scope,
+            total: 20,
+            max_attempts: 32,
+            actor: actor(),
+            suspend_at_incident: 3,
+            policy: policy(1),
+            congress,
             narrowed_targets: TargetCeiling::new(&[spec(0).target.unwrap()]).unwrap(),
-        }).unwrap();
+        })
+        .unwrap();
         controller.observe_time(ElapsedTick(1)).unwrap();
         controller
     }
 
     fn finish(mut session: PolicySession) -> PolicyReview {
-        let commitment = session.commitment("helper", Verdict::Allow, b"salt").unwrap();
+        let commitment = session
+            .commitment("helper", Verdict::Allow, b"salt")
+            .unwrap();
         session.commit("helper", commitment).unwrap();
         session.open_reveals().unwrap();
         session.reveal("helper", Verdict::Allow, b"salt").unwrap();
@@ -497,9 +649,15 @@ mod tests {
     }
 
     fn authorize(controller: &mut PolicyAuthority, id: u64, round: u64) -> (FrozenAction, Permit) {
-        let proposal = controller.propose(id, spec(controller.inspect().ledger.epoch), &snapshot()).unwrap();
-        let session = controller.begin_review(id, round, [1; 32], &snapshot()).unwrap();
-        controller.apply_review(finish(session), &snapshot()).unwrap();
+        let proposal = controller
+            .propose(id, spec(controller.inspect().ledger.epoch), &snapshot())
+            .unwrap();
+        let session = controller
+            .begin_review(id, round, [1; 32], &snapshot())
+            .unwrap();
+        controller
+            .apply_review(finish(session), &snapshot())
+            .unwrap();
         let permit = controller.authorize(id, &snapshot()).unwrap();
         (proposal.action, permit)
     }
@@ -514,7 +672,10 @@ mod tests {
         unrelated.values.insert(21, vec![1]);
         controller.dispatch(&permit, &action, &unrelated).unwrap();
         assert_eq!(controller.inspect().ledger.charged, 4);
-        assert_eq!(controller.dispatch(&permit, &action, &unrelated), Err(Error::WrongState));
+        assert_eq!(
+            controller.dispatch(&permit, &action, &unrelated),
+            Err(Error::WrongState)
+        );
     }
 
     #[test]
@@ -523,7 +684,10 @@ mod tests {
         let mut missing = snapshot();
         missing.complete = false;
         let before = controller.inspect();
-        assert_eq!(controller.propose(1, spec(0), &missing), Err(Error::Incomplete));
+        assert_eq!(
+            controller.propose(1, spec(0), &missing),
+            Err(Error::Incomplete)
+        );
         assert_eq!(controller.inspect(), before);
         let mut violated = snapshot();
         violated.values.insert(8, vec![1]);
@@ -533,8 +697,14 @@ mod tests {
         assert_eq!(controller.inspect().ledger.available, 20);
         assert!(controller.authorize(1, &snapshot()).is_err());
         let mut supplied = spec(0);
-        supplied.required_witnesses = vec![crate::ReadWitness::Exact { key: 100, value: None }];
-        assert_eq!(controller.propose(2, supplied, &snapshot()), Err(Error::InvalidInput));
+        supplied.required_witnesses = vec![crate::ReadWitness::Exact {
+            key: 100,
+            value: None,
+        }];
+        assert_eq!(
+            controller.propose(2, supplied, &snapshot()),
+            Err(Error::InvalidInput)
+        );
         assert!(!controller.inspect().ledger.stages.contains_key(&2));
     }
 
@@ -543,18 +713,33 @@ mod tests {
         for key in [7, 8, 15] {
             let mut controller = controller();
             controller.propose(1, spec(0), &snapshot()).unwrap();
-            let session = controller.begin_review(1, 11, [1; 32], &snapshot()).unwrap();
+            let session = controller
+                .begin_review(1, 11, [1; 32], &snapshot())
+                .unwrap();
             let mut changed = snapshot();
             changed.values.insert(key, vec![8]);
             let before = controller.inspect();
-            assert_eq!(controller.apply_review(finish(session), &changed), Err(Error::Binding));
+            assert_eq!(
+                controller.apply_review(finish(session), &changed),
+                Err(Error::Binding)
+            );
             assert_eq!(controller.inspect(), before);
-            let session = controller.begin_review(1, 12, [1; 32], &snapshot()).unwrap();
-            controller.apply_review(finish(session), &snapshot()).unwrap();
-            assert_eq!(controller.authorize(1, &changed).unwrap_err(), Error::Binding);
+            let session = controller
+                .begin_review(1, 12, [1; 32], &snapshot())
+                .unwrap();
+            controller
+                .apply_review(finish(session), &snapshot())
+                .unwrap();
+            assert_eq!(
+                controller.authorize(1, &changed).unwrap_err(),
+                Error::Binding
+            );
             let permit = controller.authorize(1, &snapshot()).unwrap();
             let action = controller.host.gate.authority.attempts[&1].action.clone();
-            assert_eq!(controller.dispatch(&permit, &action, &changed), Err(Error::Binding));
+            assert_eq!(
+                controller.dispatch(&permit, &action, &changed),
+                Err(Error::Binding)
+            );
             assert_eq!(controller.inspect().ledger.reserved, 4);
             controller.dispatch(&permit, &action, &snapshot()).unwrap();
         }
@@ -576,11 +761,19 @@ mod tests {
         assert!(proposal.evaluation.certifiable());
         assert_eq!(receipt.evaluation.result(), Truth::Violated);
         assert_eq!(receipt.snapshot_semantic_epoch, 3);
-        assert!(receipt.evaluation.witnesses().contains(&crate::ReadWitness::Exact {
-            key: 8, value: Some(vec![1]),
-        }));
+        assert!(
+            receipt
+                .evaluation
+                .witnesses()
+                .contains(&crate::ReadWitness::Exact {
+                    key: 8,
+                    value: Some(vec![1]),
+                })
+        );
         let before = controller.inspect();
-        controller.replace_policy(before.sequence, before.ledger.epoch, policy(2)).unwrap();
+        controller
+            .replace_policy(before.sequence, before.ledger.epoch, policy(2))
+            .unwrap();
         assert_eq!(controller.policy().generation(), 2);
         assert_eq!(controller.evaluated_policy(1).unwrap().generation(), 1);
         assert_eq!(receipt.policy.generation(), 1);
@@ -595,11 +788,17 @@ mod tests {
         second.propose(1, spec(0), &snapshot()).unwrap();
         let review = finish(second.begin_review(1, 12, [1; 32], &snapshot()).unwrap());
         assert_eq!(first.apply_review(review, &snapshot()), Err(Error::Binding));
-        assert_eq!(second.dispatch(&permit, &action, &snapshot()), Err(Error::Binding));
+        assert_eq!(
+            second.dispatch(&permit, &action, &snapshot()),
+            Err(Error::Binding)
+        );
         let mut replacement = action.spec().clone();
         replacement.payload.push(1);
         let replacement = FrozenAction::freeze(replacement).unwrap();
-        assert_eq!(first.dispatch(&permit, &replacement, &snapshot()), Err(Error::Binding));
+        assert_eq!(
+            first.dispatch(&permit, &replacement, &snapshot()),
+            Err(Error::Binding)
+        );
         first.dispatch(&permit, &action, &snapshot()).unwrap();
     }
 
@@ -608,12 +807,19 @@ mod tests {
         let mut controller = controller();
         let (first, pending) = authorize(&mut controller, 1, 11);
         let (second, dispatched) = authorize(&mut controller, 2, 12);
-        controller.dispatch(&dispatched, &second, &snapshot()).unwrap();
+        controller
+            .dispatch(&dispatched, &second, &snapshot())
+            .unwrap();
         controller.mark_unknown(2).unwrap();
         let before = controller.inspect();
-        assert_eq!(controller.replace_policy(before.sequence + 1, before.ledger.epoch, policy(2)), Err(Error::Stale));
+        assert_eq!(
+            controller.replace_policy(before.sequence + 1, before.ledger.epoch, policy(2)),
+            Err(Error::Stale)
+        );
         assert_eq!(controller.inspect(), before);
-        let change = controller.replace_policy(before.sequence, before.ledger.epoch, policy(2)).unwrap();
+        let change = controller
+            .replace_policy(before.sequence, before.ledger.epoch, policy(2))
+            .unwrap();
         assert_eq!(change.cancelled, vec![1]);
         assert_eq!(change.refunded_units, 4);
         assert_eq!(change.revocation_floor, 1);
@@ -622,11 +828,16 @@ mod tests {
         assert_eq!(controller.inspect().ledger.available, 16);
         assert_eq!(controller.inspect().ledger.charged, 4);
         assert_eq!(controller.inspect().ledger.stages[&2], ActionState::Unknown);
-        assert_eq!(controller.dispatch(&pending, &first, &snapshot()), Err(Error::Stale));
+        assert_eq!(
+            controller.dispatch(&pending, &first, &snapshot()),
+            Err(Error::Stale)
+        );
         let (fresh, permit) = authorize(&mut controller, 3, 13);
         assert_eq!(fresh.spec().policy_epoch, 1);
         controller.dispatch(&permit, &fresh, &snapshot()).unwrap();
-        controller.record_trusted_outcome(2, TrustedOutcome::NotExecuted).unwrap();
+        controller
+            .record_trusted_outcome(2, TrustedOutcome::NotExecuted)
+            .unwrap();
         assert_eq!(controller.inspect().ledger.available, 16);
         assert_eq!(controller.inspect().ledger.charged, 4);
     }
@@ -637,13 +848,17 @@ mod tests {
         let checkpoint = controller.capture_checkpoint(1, 0).unwrap();
         let (old_action, old_permit) = authorize(&mut controller, 1, 11);
         let before = controller.inspect();
-        controller.replace_policy(before.sequence, before.ledger.epoch, policy(2)).unwrap();
+        controller
+            .replace_policy(before.sequence, before.ledger.epoch, policy(2))
+            .unwrap();
         let request = ResetRequest {
             checkpoint,
             expected_control_sequence: controller.inspect().sequence,
             expected_actor_revision: controller.actor_revision(),
             binding: crate::action::consequence::gate::ReviewBinding {
-                round: 12, evidence_root: [2; 32], reducer_generation: 1,
+                round: 12,
+                evidence_root: [2; 32],
+                reducer_generation: 1,
             },
             retained_targets: TargetCeiling::new(&[spec(0).target.unwrap()]).unwrap(),
         };
@@ -651,7 +866,11 @@ mod tests {
         assert!(reset.restored);
         assert_eq!(controller.policy().generation(), 2);
         assert_eq!(controller.incident_count(), 1);
-        assert!(controller.dispatch(&old_permit, &old_action, &snapshot()).is_err());
+        assert!(
+            controller
+                .dispatch(&old_permit, &old_action, &snapshot())
+                .is_err()
+        );
         let (fresh, permit) = authorize(&mut controller, 2, 13);
         assert_eq!(fresh.spec().policy_epoch, 2);
         controller.dispatch(&permit, &fresh, &snapshot()).unwrap();
@@ -662,7 +881,10 @@ mod tests {
         let mut controller = controller();
         controller.host.gate.authority.rights.epoch = u64::MAX;
         let before = controller.inspect();
-        assert_eq!(controller.replace_policy(before.sequence, u64::MAX, policy(2)), Err(Error::Overflow));
+        assert_eq!(
+            controller.replace_policy(before.sequence, u64::MAX, policy(2)),
+            Err(Error::Overflow)
+        );
         assert_eq!(controller.inspect(), before);
         assert_eq!(controller.policy().generation(), 1);
         assert!(controller.policy_changes().is_empty());
@@ -672,10 +894,17 @@ mod tests {
     fn a_completed_old_policy_review_cannot_survive_policy_rotation() {
         let mut controller = controller();
         controller.propose(1, spec(0), &snapshot()).unwrap();
-        let review = finish(controller.begin_review(1, 11, [1; 32], &snapshot()).unwrap());
+        let review = finish(
+            controller
+                .begin_review(1, 11, [1; 32], &snapshot())
+                .unwrap(),
+        );
         controller.replace_policy(0, 0, policy(2)).unwrap();
         let before = controller.inspect();
-        assert_eq!(controller.apply_review(review, &snapshot()), Err(Error::Stale));
+        assert_eq!(
+            controller.apply_review(review, &snapshot()),
+            Err(Error::Stale)
+        );
         assert_eq!(controller.inspect(), before);
         assert!(controller.review_receipts().is_empty());
     }

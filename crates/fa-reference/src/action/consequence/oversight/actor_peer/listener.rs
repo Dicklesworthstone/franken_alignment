@@ -38,7 +38,10 @@ pub struct ListenerPollBudget {
 
 impl Default for ListenerPollBudget {
     fn default() -> Self {
-        Self { accept: true, drive: DriveBudget::default() }
+        Self {
+            accept: true,
+            drive: DriveBudget::default(),
+        }
     }
 }
 
@@ -64,7 +67,9 @@ pub struct ListenerSetupFailure<P: ActorRequestPort = ActorPort> {
 
 impl<P: ActorRequestPort> fmt::Debug for ListenerSetupFailure<P> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("ListenerSetupFailure").field("kind", &self.error.kind()).finish_non_exhaustive()
+        f.debug_struct("ListenerSetupFailure")
+            .field("kind", &self.error.kind())
+            .finish_non_exhaustive()
     }
 }
 
@@ -83,39 +88,64 @@ pub struct UnixPeerListener<P: ActorRequestPort = ActorPort> {
 
 impl<P: ActorRequestPort> fmt::Debug for UnixPeerListener<P> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("UnixPeerListener").field("status", &self.status()).finish_non_exhaustive()
+        f.debug_struct("UnixPeerListener")
+            .field("status", &self.status())
+            .finish_non_exhaustive()
     }
 }
 
 impl<P: ActorRequestPort> UnixPeerListener<P> {
-    pub fn new(listener: UnixListener, session: PeerSession<P>) -> Result<Self, ListenerSetupFailure<P>> {
+    pub fn new(
+        listener: UnixListener,
+        session: PeerSession<P>,
+    ) -> Result<Self, ListenerSetupFailure<P>> {
         if let Err(error) = listener.set_nonblocking(true) {
-            return Err(ListenerSetupFailure { error, listener, session });
+            return Err(ListenerSetupFailure {
+                error,
+                listener,
+                session,
+            });
         }
-        Ok(Self { listener: Some(listener), session })
+        Ok(Self {
+            listener: Some(listener),
+            session,
+        })
     }
 
     pub fn status(&self) -> PeerListenerStatus {
         let session = self.session.status();
-        PeerListenerStatus { listening: self.listener.is_some() && !session.revoked, session }
+        PeerListenerStatus {
+            listening: self.listener.is_some() && !session.revoked,
+            session,
+        }
     }
 
     pub fn listener_fd(&self) -> Option<BorrowedFd<'_>> {
-        if self.session.status().revoked { return None; }
+        if self.session.status().revoked {
+            return None;
+        }
         self.listener.as_ref().map(AsFd::as_fd)
     }
 
-    pub fn socket_fd(&self) -> Option<BorrowedFd<'_>> { self.session.socket_fd() }
+    pub fn socket_fd(&self) -> Option<BorrowedFd<'_>> {
+        self.session.socket_fd()
+    }
 
     /// At most one accept syscall, followed by the original peer check. An
     /// Interrupted error returns to the scheduler; there is no hidden retry loop.
     /// Busy/revoked/quota failures never replace the original session or socket.
     pub fn accept_once(&mut self) -> io::Result<AcceptEvent> {
-        if self.session.status().revoked { return Ok(AcceptEvent::Stopped); }
-        let Some(listener) = &self.listener else { return Ok(AcceptEvent::Stopped); };
+        if self.session.status().revoked {
+            return Ok(AcceptEvent::Stopped);
+        }
+        let Some(listener) = &self.listener else {
+            return Ok(AcceptEvent::Stopped);
+        };
         let (socket, _) = match listener.accept() {
             Ok(accepted) => accepted,
-            Err(error) if error.kind() == io::ErrorKind::WouldBlock => return Ok(AcceptEvent::Idle),
+            Err(error) if error.kind() == io::ErrorKind::WouldBlock => {
+                return Ok(AcceptEvent::Idle);
+            }
             Err(error) => return Err(error),
         };
         Ok(match self.session.attach(socket) {
@@ -149,13 +179,20 @@ impl<P: ActorRequestPort> UnixPeerListener<P> {
     }
 
     /// Identity inspection is available only to existing trusted integrations.
-    pub(crate) fn request_port(&self) -> &P { self.session.request_port() }
+    pub(crate) fn request_port(&self) -> &P {
+        self.session.request_port()
+    }
 
     /// Keep acceptance, peer authentication and ticket ownership in this owner;
     /// the original source-aware supervisor supplies only its existing drive.
-    pub(crate) fn poll_with<D, E, F>(&mut self, budget: ListenerPollBudget, drive: F)
-        -> Result<ListenerPollReport<D, E>, WireError>
-    where F: FnOnce(&mut PeerSession<P>, DriveBudget) -> Result<D, E> {
+    pub(crate) fn poll_with<D, E, F>(
+        &mut self,
+        budget: ListenerPollBudget,
+        drive: F,
+    ) -> Result<ListenerPollReport<D, E>, WireError>
+    where
+        F: FnOnce(&mut PeerSession<P>, DriveBudget) -> Result<D, E>,
+    {
         budget.drive.validate()?;
         let accept = if budget.accept {
             Some(self.accept_once().map_err(|error| error.kind()))
@@ -171,7 +208,9 @@ impl<P: ActorRequestPort> UnixPeerListener<P> {
     }
 
     /// A later candidate must authenticate again. No effect is cancelled.
-    pub fn disconnect(&mut self) -> bool { self.session.disconnect() }
+    pub fn disconnect(&mut self) -> bool {
+        self.session.disconnect()
+    }
 
     /// Close listener and active ingress; retain accepted obligations only in
     /// their original supervisor. This is NOT a control-ledger or endpoint fence.
@@ -182,5 +221,7 @@ impl<P: ActorRequestPort> UnixPeerListener<P> {
 
     /// Move the SAME credential gate and ticket session to another explicitly
     /// provisioned listener. Revocation and lifetime connection counts survive.
-    pub fn into_session(self) -> PeerSession<P> { self.session }
+    pub fn into_session(self) -> PeerSession<P> {
+        self.session
+    }
 }

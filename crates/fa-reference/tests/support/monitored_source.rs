@@ -1,4 +1,5 @@
 //! Synthetic numerical parameters/probes, not learned-detector qualification.
+#![allow(dead_code, unused_imports)]
 #[path = "decoder_fixture.rs"]
 #[allow(dead_code)]
 pub mod fixture;

@@ -1,4 +1,5 @@
 //! Literal-name interchange fixtures, not trained weights or serving evidence.
+#![allow(dead_code, unused_imports)]
 use fa_reference::action::consequence::activation::tensor::kv::decoder::{
     DecoderIdentity, DecoderLayerWeights, DecoderModel, DecoderProfile, DecoderShape,
 };

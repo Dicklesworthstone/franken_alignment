@@ -7,18 +7,19 @@ pub mod peer;
 
 use super::SidecarCommitteeRound;
 use super::receiver::{DisclosedProbe, ReceivedSidecar, SidecarReceiveBudget, SidecarReceiver};
-use crate::action::consequence::activation::probe::{LinearProbe, ProbeOutcome};
+use crate::Error;
 use crate::action::consequence::activation::probe::learned::{
-    CheckedLearnedKv, KvGroup, KvRefinementBudget, KvRow,
-    MAX_CHECKED_KV_BYTES, MAX_CHECKED_KV_PRODUCTS,
+    CheckedLearnedKv, KvGroup, KvRefinementBudget, KvRow, MAX_CHECKED_KV_BYTES,
+    MAX_CHECKED_KV_PRODUCTS,
 };
+use crate::action::consequence::activation::probe::{LinearProbe, ProbeOutcome};
 use crate::action::consequence::activation::tensor::kv::model::MAX_MODEL_KV_VALUES;
 use crate::action::consequence::oversight::helper_workers::{
-    HelperPhase, HelperPort, wire::{self, WorkerInput, MAX_HELPER_FRAME_BYTES},
+    HelperPhase, HelperPort,
+    wire::{self, MAX_HELPER_FRAME_BYTES, WorkerInput},
 };
 use crate::full_input::{InputProfileBinding, MAX_SUBMITTED_BYTES};
 use crate::round::Verdict;
-use crate::Error;
 use std::collections::{BTreeMap, BTreeSet};
 use std::fmt;
 
@@ -40,26 +41,34 @@ pub struct ProbeHelperBudget {
 }
 impl Default for ProbeHelperBudget {
     fn default() -> Self {
-        Self { input_bytes: MAX_SUBMITTED_BYTES, probes: MAX_SIDECAR_PROBES,
+        Self {
+            input_bytes: MAX_SUBMITTED_BYTES,
+            probes: MAX_SIDECAR_PROBES,
             probe_coordinates: MAX_SIDECAR_PROBE_COORDINATES,
-            refinement_bytes: MAX_CHECKED_KV_BYTES, materialized_values: MAX_MODEL_KV_VALUES,
-            reconstruction_products: MAX_CHECKED_KV_PRODUCTS }
+            refinement_bytes: MAX_CHECKED_KV_BYTES,
+            materialized_values: MAX_MODEL_KV_VALUES,
+            reconstruction_products: MAX_CHECKED_KV_PRODUCTS,
+        }
     }
 }
 impl ProbeHelperBudget {
     fn admits(self, needed: Self) -> Result<(), Error> {
         let maximum = Self::default();
-        if self.input_bytes > maximum.input_bytes || self.probes > maximum.probes
+        if self.input_bytes > maximum.input_bytes
+            || self.probes > maximum.probes
             || self.probe_coordinates > maximum.probe_coordinates
             || self.refinement_bytes > maximum.refinement_bytes
             || self.materialized_values > maximum.materialized_values
             || self.reconstruction_products > maximum.reconstruction_products
-            || needed.input_bytes > self.input_bytes || needed.probes > self.probes
+            || needed.input_bytes > self.input_bytes
+            || needed.probes > self.probes
             || needed.probe_coordinates > self.probe_coordinates
             || needed.refinement_bytes > self.refinement_bytes
             || needed.materialized_values > self.materialized_values
             || needed.reconstruction_products > self.reconstruction_products
-        { return Err(Error::Limit); }
+        {
+            return Err(Error::Limit);
+        }
         Ok(())
     }
 }
@@ -99,10 +108,18 @@ pub struct ProbeHelperReport {
     work: ProbeHelperWork,
 }
 impl ProbeHelperReport {
-    pub fn verdict(&self) -> Verdict { self.verdict }
-    pub fn observations(&self) -> &[DisclosedProbe] { &self.observations }
-    pub fn selected_groups(&self) -> &[KvGroup] { &self.selected }
-    pub fn work(&self) -> ProbeHelperWork { self.work }
+    pub fn verdict(&self) -> Verdict {
+        self.verdict
+    }
+    pub fn observations(&self) -> &[DisclosedProbe] {
+        &self.observations
+    }
+    pub fn selected_groups(&self) -> &[KvGroup] {
+        &self.selected
+    }
+    pub fn work(&self) -> ProbeHelperWork {
+        self.work
+    }
 }
 
 /// One immutable registered helper for one disclosed input, not a vote callback.
@@ -139,8 +156,11 @@ pub struct SidecarProbeEvaluator {
 }
 impl fmt::Debug for SidecarProbeEvaluator {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("SidecarProbeEvaluator").field("member", &self.member)
-            .field("status", &self.status).field("work", &self.work).finish_non_exhaustive()
+        f.debug_struct("SidecarProbeEvaluator")
+            .field("member", &self.member)
+            .field("status", &self.status)
+            .field("work", &self.work)
+            .finish_non_exhaustive()
     }
 }
 impl SidecarProbeEvaluator {
@@ -148,32 +168,51 @@ impl SidecarProbeEvaluator {
     /// including both K and V. It covers exactly this descriptor, not an unseen
     /// prefix or whole run. Same probe IDs may recur at different positions.
     /// Sizing checks all native profile/bounds before encoding the source again.
-    pub fn required_budget(source: &CheckedLearnedKv, round: &SidecarCommitteeRound,
-        member: &str, probes: &BTreeMap<KvRow, Vec<LinearProbe>>)
-        -> Result<ProbeHelperBudget, Error>
-    {
+    pub fn required_budget(
+        source: &CheckedLearnedKv,
+        round: &SidecarCommitteeRound,
+        member: &str,
+        probes: &BTreeMap<KvRow, Vec<LinearProbe>>,
+    ) -> Result<ProbeHelperBudget, Error> {
         let expected = round.input().views().get(member).ok_or(Error::Missing)?;
         let rows: BTreeSet<_> = source.groups().map(|group| group.row).collect();
-        if rows.is_empty() || probes.len() != rows.len()
-            || probes.keys().any(|row| !rows.contains(row)) { return Err(Error::Incomplete); }
-        if rows.len() > MAX_SIDECAR_PROBES { return Err(Error::Limit); }
-        let mut needed = ProbeHelperBudget { input_bytes: expected.actual_input().submitted_bytes().len(),
-            probes: 0, probe_coordinates: 0, refinement_bytes: 0,
-            materialized_values: 0, reconstruction_products: 0 };
+        if rows.is_empty()
+            || probes.len() != rows.len()
+            || probes.keys().any(|row| !rows.contains(row))
+        {
+            return Err(Error::Incomplete);
+        }
+        if rows.len() > MAX_SIDECAR_PROBES {
+            return Err(Error::Limit);
+        }
+        let mut needed = ProbeHelperBudget {
+            input_bytes: expected.actual_input().submitted_bytes().len(),
+            probes: 0,
+            probe_coordinates: 0,
+            refinement_bytes: 0,
+            materialized_values: 0,
+            reconstruction_products: 0,
+        };
         let view = source.view();
         for (row, roster) in probes {
-            if roster.is_empty() { return Err(Error::Incomplete); }
+            if roster.is_empty() {
+                return Err(Error::Incomplete);
+            }
             needed.probes = add(needed.probes, roster.len())?;
-            if needed.probes > MAX_SIDECAR_PROBES { return Err(Error::Limit); }
+            if needed.probes > MAX_SIDECAR_PROBES {
+                return Err(Error::Limit);
+            }
             let mut identities = BTreeSet::new();
             for probe in roster {
                 // A duplicate identity cannot be counted twice or silently carry
                 // changed coefficients. Model/tap/layout bind via the original API.
-                if !identities.insert(probe.identity().id) { return Err(Error::Duplicate); }
+                if !identities.insert(probe.identity().id) {
+                    return Err(Error::Duplicate);
+                }
                 let work = probe.learned_work(&view, *row)?;
                 needed.probe_coordinates = add(needed.probe_coordinates, work.coordinates)?;
-                needed.reconstruction_products = add_products(needed.reconstruction_products,
-                    work.reconstruction_products)?;
+                needed.reconstruction_products =
+                    add_products(needed.reconstruction_products, work.reconstruction_products)?;
                 ProbeHelperBudget::default().admits(needed)?;
             }
         }
@@ -181,14 +220,18 @@ impl SidecarProbeEvaluator {
         let mut previous = None;
         let mut payload_bytes = add(24, source.report().base_encoded_bytes)?;
         for group in round.selected_groups() {
-            if previous.is_some_and(|value| value >= *group) { return Err(Error::Binding); }
+            if previous.is_some_and(|value| value >= *group) {
+                return Err(Error::Binding);
+            }
             previous = Some(*group);
             let bytes = source.residual_bytes(*group)?.len();
             let values = source.channels(*group)?;
             needed.refinement_bytes = add(needed.refinement_bytes, bytes)?;
             needed.materialized_values = add(needed.materialized_values, values)?;
-            needed.reconstruction_products = add_products(needed.reconstruction_products,
-                (values as u64).checked_mul(rank).ok_or(Error::Overflow)?)?;
+            needed.reconstruction_products = add_products(
+                needed.reconstruction_products,
+                (values as u64).checked_mul(rank).ok_or(Error::Overflow)?,
+            )?;
             payload_bytes = add(payload_bytes, add(8, bytes)?)?;
         }
         ProbeHelperBudget::default().admits(needed)?;
@@ -203,52 +246,95 @@ impl SidecarProbeEvaluator {
     /// Freeze the exact ORIGINAL member/round/root/salt-limit binding before any
     /// commitment is queued. The existing receiver alone admits and promotes
     /// the disclosed source; no source/view escapes through a probe report.
-    pub fn new(port: &HelperPort, round: &SidecarCommitteeRound, source: CheckedLearnedKv,
-        probes: BTreeMap<KvRow, Vec<LinearProbe>>, budget: ProbeHelperBudget) -> Result<Self, Error>
-    {
-        if port.phase() != HelperPhase::AwaitCommit { return Err(Error::WrongState); }
+    pub fn new(
+        port: &HelperPort,
+        round: &SidecarCommitteeRound,
+        source: CheckedLearnedKv,
+        probes: BTreeMap<KvRow, Vec<LinearProbe>>,
+        budget: ProbeHelperBudget,
+    ) -> Result<Self, Error> {
+        if port.phase() != HelperPhase::AwaitCommit {
+            return Err(Error::WrongState);
+        }
         let member = port.request().member();
         let reservation = Self::required_budget(&source, round, member, &probes)?;
         budget.admits(reservation)?;
         let mut roster = Vec::new();
-        roster.try_reserve_exact(reservation.probes).map_err(|_| Error::Limit)?;
+        roster
+            .try_reserve_exact(reservation.probes)
+            .map_err(|_| Error::Limit)?;
         for (row, probes) in probes {
             roster.extend(probes.into_iter().map(|probe| (row, probe)));
         }
         let mut observations = Vec::new();
-        observations.try_reserve_exact(reservation.probes).map_err(|_| Error::Limit)?;
-        let receiver = SidecarReceiver::new(port, round, source, SidecarReceiveBudget {
-            payload_bytes: reservation.input_bytes, request_bytes: MAX_HELPER_FRAME_BYTES,
-            residual: KvRefinementBudget {
-                encoded_bytes: reservation.refinement_bytes,
-                materialized_values: reservation.materialized_values,
-                reconstruction_products: reservation.reconstruction_products,
+        observations
+            .try_reserve_exact(reservation.probes)
+            .map_err(|_| Error::Limit)?;
+        let receiver = SidecarReceiver::new(
+            port,
+            round,
+            source,
+            SidecarReceiveBudget {
+                payload_bytes: reservation.input_bytes,
+                request_bytes: MAX_HELPER_FRAME_BYTES,
+                residual: KvRefinementBudget {
+                    encoded_bytes: reservation.refinement_bytes,
+                    materialized_values: reservation.materialized_values,
+                    reconstruction_products: reservation.reconstruction_products,
+                },
             },
-        })?;
+        )?;
         let profile = receiver.input_profile().clone();
-        Ok(Self { receiver: Some(receiver), received: None, profile, member: member.to_owned(), probes: roster,
-            selected: round.selected_groups().to_vec(), reservation,
-            status: ProbeHelperStatus::AwaitingInput, revision: 0, cancelled: false,
-            work: ProbeHelperWork::default(), observations, report: None })
+        Ok(Self {
+            receiver: Some(receiver),
+            received: None,
+            profile,
+            member: member.to_owned(),
+            probes: roster,
+            selected: round.selected_groups().to_vec(),
+            reservation,
+            status: ProbeHelperStatus::AwaitingInput,
+            revision: 0,
+            cancelled: false,
+            work: ProbeHelperWork::default(),
+            observations,
+            report: None,
+        })
     }
 
-    pub fn input_profile(&self) -> &InputProfileBinding { &self.profile }
-    pub fn status(&self) -> ProbeHelperStatus { self.status }
-    pub fn revision(&self) -> u64 { self.revision }
-    pub fn reservation(&self) -> ProbeHelperBudget { self.reservation }
-    pub fn work(&self) -> ProbeHelperWork { self.work }
-    pub fn report(&self) -> Option<&ProbeHelperReport> { self.report.as_ref() }
+    pub fn input_profile(&self) -> &InputProfileBinding {
+        &self.profile
+    }
+    pub fn status(&self) -> ProbeHelperStatus {
+        self.status
+    }
+    pub fn revision(&self) -> u64 {
+        self.revision
+    }
+    pub fn reservation(&self) -> ProbeHelperBudget {
+        self.reservation
+    }
+    pub fn work(&self) -> ProbeHelperWork {
+        self.work
+    }
+    pub fn report(&self) -> Option<&ProbeHelperReport> {
+        self.report.as_ref()
+    }
     /// Completed numerical measurements only. Partial scores are not a verdict,
     /// and no received view or undisclosed source can be extracted through them.
     pub fn observations(&self) -> &[DisclosedProbe] {
-        match &self.report { Some(report) => report.observations(), None => &self.observations }
+        match &self.report {
+            Some(report) => report.observations(),
+            None => &self.observations,
+        }
     }
 
     /// Local delivery uses the ORIGINAL wire encoder and decoder too, so it
     /// cannot accidentally omit round/root/salt-limit checks from its binding.
     pub fn evaluate_port(&mut self, port: &HelperPort) -> Result<Verdict, Error> {
         self.start()?;
-        let result = wire::encode_request(port).and_then(|bytes| wire::decode_request(&bytes))
+        let result = wire::encode_request(port)
+            .and_then(|bytes| wire::decode_request(&bytes))
             .and_then(|input| self.begin_actual(&input));
         self.finish_begin(result)?;
         self.run_to_completion()
@@ -272,7 +358,9 @@ impl SidecarProbeEvaluator {
     }
 
     fn start(&mut self) -> Result<(), Error> {
-        if self.status != ProbeHelperStatus::AwaitingInput { return Err(Error::WrongState); }
+        if self.status != ProbeHelperStatus::AwaitingInput {
+            return Err(Error::WrongState);
+        }
         // A caught unwind or an invalid first input cannot retry this owner.
         let revision = self.revision.checked_add(1).ok_or(Error::Overflow)?;
         self.status = ProbeHelperStatus::Busy;
@@ -281,8 +369,14 @@ impl SidecarProbeEvaluator {
     }
     fn finish_begin(&mut self, result: Result<(), Error>) -> Result<ProbeHelperStatus, Error> {
         match result {
-            Ok(()) => { self.status = ProbeHelperStatus::Evaluating; Ok(self.status) }
-            Err(error) => { self.fail(error); Err(error) }
+            Ok(()) => {
+                self.status = ProbeHelperStatus::Evaluating;
+                Ok(self.status)
+            }
+            Err(error) => {
+                self.fail(error);
+                Err(error)
+            }
         }
     }
     fn begin_actual(&mut self, input: &WorkerInput) -> Result<(), Error> {
@@ -301,7 +395,9 @@ impl SidecarProbeEvaluator {
     /// after an alarm: no partial evaluation produces a report or final vote.
     /// Stale predecessors cost no work, and completed decisions are idempotent.
     pub fn advance(&mut self, expected_revision: u64) -> Result<ProbeHelperStatus, Error> {
-        if expected_revision != self.revision { return Err(Error::Stale); }
+        if expected_revision != self.revision {
+            return Err(Error::Stale);
+        }
         match self.status {
             ProbeHelperStatus::Judged(_) => return Ok(self.status),
             ProbeHelperStatus::Failed(error) => return Err(error),
@@ -312,21 +408,40 @@ impl SidecarProbeEvaluator {
         self.status = ProbeHelperStatus::Busy;
         self.revision = revision;
         match self.probe_once() {
-            Ok(status) => { self.status = status; Ok(status) }
-            Err(error) => { self.fail(error); Err(error) }
+            Ok(status) => {
+                self.status = status;
+                Ok(status)
+            }
+            Err(error) => {
+                self.fail(error);
+                Err(error)
+            }
         }
     }
 
     fn probe_once(&mut self) -> Result<ProbeHelperStatus, Error> {
-        let (row, probe) = self.probes.get(self.observations.len()).ok_or(Error::WrongState)?;
+        let (row, probe) = self
+            .probes
+            .get(self.observations.len())
+            .ok_or(Error::WrongState)?;
         let received = self.received.as_ref().ok_or(Error::Incomplete)?;
-        let remaining_coordinates = self.reservation.probe_coordinates
-            .checked_sub(self.work.probe_coordinates).ok_or(Error::Binding)?;
-        let remaining_products = self.reservation.reconstruction_products
-            .checked_sub(add_products(self.work.refinement_products, self.work.probe_products)?)
+        let remaining_coordinates = self
+            .reservation
+            .probe_coordinates
+            .checked_sub(self.work.probe_coordinates)
+            .ok_or(Error::Binding)?;
+        let remaining_products = self
+            .reservation
+            .reconstruction_products
+            .checked_sub(add_products(
+                self.work.refinement_products,
+                self.work.probe_products,
+            )?)
             .ok_or(Error::Binding)?;
         let needed = received.probe_work(probe, *row)?;
-        if needed.coordinates > remaining_coordinates || needed.reconstruction_products > remaining_products {
+        if needed.coordinates > remaining_coordinates
+            || needed.reconstruction_products > remaining_products
+        {
             return Err(Error::Limit);
         }
         // Only the receiver's disclosed numerical observation crosses outward;
@@ -346,21 +461,43 @@ impl SidecarProbeEvaluator {
         }
         if self.work.evaluated_probes != self.reservation.probes
             || self.work.probe_coordinates != self.reservation.probe_coordinates
-            || add_products(self.work.refinement_products, self.work.probe_products)? > self.reservation.reconstruction_products
-        { return Err(Error::Binding); }
-        let alarm = self.observations.iter().any(|value| value.outcome() == ProbeOutcome::CertifiedAlarm);
-        let uncertain = self.observations.iter().any(|value|
-            matches!(value.outcome(), ProbeOutcome::NeedsRefinement | ProbeOutcome::AtThreshold));
-        let verdict = if alarm { Verdict::Hold } else if uncertain { Verdict::Abstain } else { Verdict::Allow };
-        self.report = Some(ProbeHelperReport { verdict, observations: std::mem::take(&mut self.observations),
-            selected: std::mem::take(&mut self.selected), work: self.work });
+            || add_products(self.work.refinement_products, self.work.probe_products)?
+                > self.reservation.reconstruction_products
+        {
+            return Err(Error::Binding);
+        }
+        let alarm = self
+            .observations
+            .iter()
+            .any(|value| value.outcome() == ProbeOutcome::CertifiedAlarm);
+        let uncertain = self.observations.iter().any(|value| {
+            matches!(
+                value.outcome(),
+                ProbeOutcome::NeedsRefinement | ProbeOutcome::AtThreshold
+            )
+        });
+        let verdict = if alarm {
+            Verdict::Hold
+        } else if uncertain {
+            Verdict::Abstain
+        } else {
+            Verdict::Allow
+        };
+        self.report = Some(ProbeHelperReport {
+            verdict,
+            observations: std::mem::take(&mut self.observations),
+            selected: std::mem::take(&mut self.selected),
+            work: self.work,
+        });
         self.received = None;
         Ok(ProbeHelperStatus::Judged(verdict))
     }
 
     fn run_to_completion(&mut self) -> Result<Verdict, Error> {
         loop {
-            if let ProbeHelperStatus::Judged(verdict) = self.advance(self.revision)? { return Ok(verdict); }
+            if let ProbeHelperStatus::Judged(verdict) = self.advance(self.revision)? {
+                return Ok(verdict);
+            }
         }
     }
     fn fail(&mut self, error: Error) {
@@ -373,18 +510,29 @@ impl SidecarProbeEvaluator {
     /// discarding its observations. Complete reports and first failures survive.
     /// Repeating cancellation at the current revision is an idempotent no-op.
     pub fn cancel(&mut self, expected_revision: u64) -> Result<(), Error> {
-        if expected_revision != self.revision { return Err(Error::Stale); }
-        if self.cancelled { return Ok(()); }
+        if expected_revision != self.revision {
+            return Err(Error::Stale);
+        }
+        if self.cancelled {
+            return Ok(());
+        }
         let revision = self.revision.checked_add(1).ok_or(Error::Overflow)?;
         self.receiver = None;
         self.received = None;
         self.revision = revision;
         self.cancelled = true;
-        if matches!(self.status, ProbeHelperStatus::AwaitingInput | ProbeHelperStatus::Evaluating) {
+        if matches!(
+            self.status,
+            ProbeHelperStatus::AwaitingInput | ProbeHelperStatus::Evaluating
+        ) {
             self.status = ProbeHelperStatus::Cancelled;
         }
         Ok(())
     }
 }
-fn add(a: usize, b: usize) -> Result<usize, Error> { a.checked_add(b).ok_or(Error::Overflow) }
-fn add_products(a: u64, b: u64) -> Result<u64, Error> { a.checked_add(b).ok_or(Error::Overflow) }
+fn add(a: usize, b: usize) -> Result<usize, Error> {
+    a.checked_add(b).ok_or(Error::Overflow)
+}
+fn add_products(a: u64, b: u64) -> Result<u64, Error> {
+    a.checked_add(b).ok_or(Error::Overflow)
+}

@@ -1,5 +1,5 @@
 //! Real checked tensor fixtures; values are synthetic, not model execution.
-#![allow(dead_code)]
+#![allow(dead_code, unused_imports)]
 
 use fa_reference::action::consequence::activation::CaptureProfile;
 use fa_reference::action::consequence::activation::tensor::{

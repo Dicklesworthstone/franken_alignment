@@ -5,13 +5,22 @@
 //! prompt/sample inference nor refills any remaining continuation allowance.
 pub mod incremental;
 
-use super::{GenerationBudget, GenerationEstimate, GenerationSpec, GenerationStatus,
-    GenerationStop, GenerationTelemetryBudget, GenerationTelemetryWork, GenerationWork,
-    LearnedGeneration, MAX_GENERATION_TOKENS};
-use super::super::{Sampler, SamplerSnapshot, SampledToken};
-use super::super::super::{DecoderModel, DecoderRestoreBudget,
-    monitoring::{LearnedDecoderPolicy, restart::{KvRestartBudget, MonitoredKvCheckpoint,
-        MonitoredKvRestart, MonitoredKvRestartReceipt, RestartAudit}}};
+use super::super::super::{
+    DecoderModel, DecoderRestoreBudget,
+    monitoring::{
+        LearnedDecoderPolicy,
+        restart::{
+            KvRestartBudget, MonitoredKvCheckpoint, MonitoredKvRestart, MonitoredKvRestartReceipt,
+            RestartAudit,
+        },
+    },
+};
+use super::super::{SampledToken, Sampler, SamplerSnapshot};
+use super::{
+    GenerationBudget, GenerationEstimate, GenerationSpec, GenerationStatus, GenerationStop,
+    GenerationTelemetryBudget, GenerationTelemetryWork, GenerationWork, LearnedGeneration,
+    MAX_GENERATION_TOKENS,
+};
 use crate::Error;
 use std::fmt;
 use std::rc::Rc;
@@ -40,8 +49,11 @@ pub struct GenerationKvCheckpoint {
 }
 impl fmt::Debug for GenerationKvCheckpoint {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("GenerationKvCheckpoint").field("position", &self.position())
-            .field("status", &self.status).field("work", &self.work).finish_non_exhaustive()
+        f.debug_struct("GenerationKvCheckpoint")
+            .field("position", &self.position())
+            .field("status", &self.status)
+            .field("work", &self.work)
+            .finish_non_exhaustive()
     }
 }
 impl LearnedGeneration {
@@ -49,7 +61,10 @@ impl LearnedGeneration {
     /// shorter prefix. Model weights/cache arrays are retained through their
     /// original immutable objects; all histories remain bounded by the admitted
     /// profile/spec and MAX_GENERATION_TOKENS, not allocator/RSS guarantees.
-    pub fn checkpoint_kv(&self, limits: DecoderRestoreBudget) -> Result<GenerationKvCheckpoint, Error> {
+    pub fn checkpoint_kv(
+        &self,
+        limits: DecoderRestoreBudget,
+    ) -> Result<GenerationKvCheckpoint, Error> {
         if !self.status.is_active() && !matches!(self.status, GenerationStatus::Finished(_)) {
             return Err(Error::WrongState);
         }
@@ -57,76 +72,141 @@ impl LearnedGeneration {
         let samples = count.saturating_sub(self.spec.prompt().len());
         let sampler = self.sampler.snapshot();
         let numerical = self.model.estimate(0, count)?;
-        let scores = (samples as u64).checked_mul(self.spec.sampling().policy.vocabulary() as u64)
+        let scores = (samples as u64)
+            .checked_mul(self.spec.sampling().policy.vocabulary() as u64)
             .ok_or(Error::Overflow)?;
-        if count > MAX_GENERATION_TOKENS || self.position() != count as u64
-            || self.work.admitted_tokens != count as u64 || self.work.accepted_decoder != numerical
+        if count > MAX_GENERATION_TOKENS
+            || self.position() != count as u64
+            || self.work.admitted_tokens != count as u64
+            || self.work.accepted_decoder != numerical
             || self.work.reserved_decoder_products != numerical.scalar_products()?
-            || self.work.sampling_attempts != samples as u64 || self.work.reserved_vocabulary_scores != scores
-            || self.samples.len() != samples || sampler.draws() != samples as u64
-            || sampler.policy() != &self.spec.sampling().policy || sampler.stream() != self.spec.sampling().stream
-            || !self.telemetry_work.fits(self.telemetry_budget) { return Err(Error::Binding); }
+            || self.work.sampling_attempts != samples as u64
+            || self.work.reserved_vocabulary_scores != scores
+            || self.samples.len() != samples
+            || sampler.draws() != samples as u64
+            || sampler.policy() != &self.spec.sampling().policy
+            || sampler.stream() != self.spec.sampling().stream
+            || !self.telemetry_work.fits(self.telemetry_budget)
+        {
+            return Err(Error::Binding);
+        }
         let expected_status = if count < self.spec.prompt().len() {
             GenerationStatus::Prefilling
-        } else if samples > 0 && self.spec.stop_tokens().contains(&self.accepted_tokens()[count - 1]) {
+        } else if samples > 0
+            && self
+                .spec
+                .stop_tokens()
+                .contains(&self.accepted_tokens()[count - 1])
+        {
             GenerationStatus::Finished(GenerationStop::StopToken(self.accepted_tokens()[count - 1]))
         } else if samples == self.spec.max_new_tokens() {
             GenerationStatus::Finished(GenerationStop::TokenLimit)
-        } else { GenerationStatus::Generating };
+        } else {
+            GenerationStatus::Generating
+        };
         let prompt = count.min(self.spec.prompt().len());
-        if samples > self.spec.max_new_tokens() || self.status != expected_status
+        if samples > self.spec.max_new_tokens()
+            || self.status != expected_status
             || self.accepted_tokens()[..prompt] != self.spec.prompt()[..prompt]
             || self.samples.iter().enumerate().any(|(index, sample)| {
                 sample.token != self.accepted_tokens()[self.spec.prompt().len() + index]
-                    || sample.draw != index as u64 + 1 || sample.stream != sampler.stream()
-            }) { return Err(Error::Binding); }
+                    || sample.draw != index as u64 + 1
+                    || sample.stream != sampler.stream()
+            })
+        {
+            return Err(Error::Binding);
+        }
         let mut history = Vec::new();
-        history.try_reserve_exact(samples).map_err(|_| Error::Limit)?;
+        history
+            .try_reserve_exact(samples)
+            .map_err(|_| Error::Limit)?;
         history.extend_from_slice(&self.samples);
         let guard = self.guard.checkpoint_kv(limits)?;
-        Ok(GenerationKvCheckpoint { model: self.model.clone(), guard, sampler,
-            spec: self.spec.clone(), budget: self.budget, telemetry_budget: self.telemetry_budget,
-            estimate: self.estimate, status: self.status, work: self.work,
-            telemetry_work: self.telemetry_work, samples: history.into() })
+        Ok(GenerationKvCheckpoint {
+            model: self.model.clone(),
+            guard,
+            sampler,
+            spec: self.spec.clone(),
+            budget: self.budget,
+            telemetry_budget: self.telemetry_budget,
+            estimate: self.estimate,
+            status: self.status,
+            work: self.work,
+            telemetry_work: self.telemetry_work,
+            samples: history.into(),
+        })
     }
 }
 impl GenerationKvCheckpoint {
-    pub fn position(&self) -> u64 { self.guard.position() }
-    pub fn status(&self) -> GenerationStatus { self.status }
-    pub fn work(&self) -> GenerationWork { self.work }
-    pub fn telemetry_work(&self) -> GenerationTelemetryWork { self.telemetry_work }
-    pub fn cache_values(&self) -> usize { self.guard.cache_values() }
-    pub fn policy(&self) -> &LearnedDecoderPolicy { self.guard.policy() }
-    pub fn spec(&self) -> &GenerationSpec { &self.spec }
+    pub fn position(&self) -> u64 {
+        self.guard.position()
+    }
+    pub fn status(&self) -> GenerationStatus {
+        self.status
+    }
+    pub fn work(&self) -> GenerationWork {
+        self.work
+    }
+    pub fn telemetry_work(&self) -> GenerationTelemetryWork {
+        self.telemetry_work
+    }
+    pub fn cache_values(&self) -> usize {
+        self.guard.cache_values()
+    }
+    pub fn policy(&self) -> &LearnedDecoderPolicy {
+        self.guard.policy()
+    }
+    pub fn spec(&self) -> &GenerationSpec {
+        &self.spec
+    }
 
     /// Destination stream identifies derived KV; original sampling stream/seed
     /// and current random state are unchanged. Audit work is a separately bounded
     /// restart cost, never a refill of the original aggregate telemetry budget.
-    pub fn begin_restart(&self, resumed_stream: u64, budget: KvRestartBudget)
-        -> Result<GenerationKvRestart, Error>
-    {
+    pub fn begin_restart(
+        &self,
+        resumed_stream: u64,
+        budget: KvRestartBudget,
+    ) -> Result<GenerationKvRestart, Error> {
         // The ORIGINAL generation reserves all sample capacity before any token
         // can commit. Preserve that guarantee, not merely the current Vec length.
         let mut samples = Vec::new();
-        samples.try_reserve_exact(self.spec.max_new_tokens()).map_err(|_| Error::Limit)?;
+        samples
+            .try_reserve_exact(self.spec.max_new_tokens())
+            .map_err(|_| Error::Limit)?;
         samples.extend_from_slice(&self.samples);
         let restart = self.guard.begin_restart(resumed_stream, budget)?;
-        Ok(GenerationKvRestart { checkpoint: self.clone(), restart, samples })
+        Ok(GenerationKvRestart {
+            checkpoint: self.clone(),
+            restart,
+            samples,
+        })
     }
 
     // Shared only by the two sealed, freshly verified restart paths. Neither
     // imported state nor a caller-provided guard can reach this composition seam.
-    fn resume(self, guard: super::super::super::monitoring::LearnedDecoderSession,
-        samples: Vec<SampledToken>) -> LearnedGeneration
-    {
+    fn resume(
+        self,
+        guard: super::super::super::monitoring::LearnedDecoderSession,
+        samples: Vec<SampledToken>,
+    ) -> LearnedGeneration {
         // This is a typed original checkpoint, NOT the archive's untrusted State.
         // Fresh learned evidence gated the guard above; only immutable original
         // generation metadata is transferred. No old last_event is republished.
-        LearnedGeneration { model: self.model, guard,
-            sampler: Sampler::from_snapshot(&self.sampler), spec: self.spec,
-            budget: self.budget, telemetry_budget: self.telemetry_budget,
-            estimate: self.estimate, status: self.status, work: self.work,
-            telemetry_work: self.telemetry_work, samples, last_event: None }
+        LearnedGeneration {
+            model: self.model,
+            guard,
+            sampler: Sampler::from_snapshot(&self.sampler),
+            spec: self.spec,
+            budget: self.budget,
+            telemetry_budget: self.telemetry_budget,
+            estimate: self.estimate,
+            status: self.status,
+            work: self.work,
+            telemetry_work: self.telemetry_work,
+            samples,
+            last_event: None,
+        }
     }
 }
 
@@ -144,19 +224,33 @@ pub struct GenerationKvRestart {
 }
 impl fmt::Debug for GenerationKvRestart {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("GenerationKvRestart").field("checkpoint", &self.checkpoint)
-            .field("ready", &self.is_ready()).finish_non_exhaustive()
+        f.debug_struct("GenerationKvRestart")
+            .field("checkpoint", &self.checkpoint)
+            .field("ready", &self.is_ready())
+            .finish_non_exhaustive()
     }
 }
 impl GenerationKvRestart {
-    pub fn audit(&self) -> Option<&RestartAudit> { self.restart.audit() }
-    pub fn is_ready(&self) -> bool { self.restart.is_ready() }
+    pub fn audit(&self) -> Option<&RestartAudit> {
+        self.restart.audit()
+    }
+    pub fn is_ready(&self) -> bool {
+        self.restart.is_ready()
+    }
     pub fn finish(self) -> Result<(LearnedGeneration, GenerationKvRestartReceipt), Error> {
-        let Self { checkpoint, restart, samples } = self;
+        let Self {
+            checkpoint,
+            restart,
+            samples,
+        } = self;
         let (guard, kv) = restart.finish()?;
-        let receipt = GenerationKvRestartReceipt { kv, historical_work: checkpoint.work,
-            historical_telemetry: checkpoint.telemetry_work, status: checkpoint.status,
-            sampler_draws: checkpoint.sampler.draws() };
+        let receipt = GenerationKvRestartReceipt {
+            kv,
+            historical_work: checkpoint.work,
+            historical_telemetry: checkpoint.telemetry_work,
+            status: checkpoint.status,
+            sampler_draws: checkpoint.sampler.draws(),
+        };
         let generation = checkpoint.resume(guard, samples);
         Ok((generation, receipt))
     }
@@ -173,9 +267,19 @@ pub struct GenerationKvRestartReceipt {
     sampler_draws: u64,
 }
 impl GenerationKvRestartReceipt {
-    pub fn kv(&self) -> &MonitoredKvRestartReceipt { &self.kv }
-    pub fn historical_work(&self) -> GenerationWork { self.historical_work }
-    pub fn historical_telemetry(&self) -> GenerationTelemetryWork { self.historical_telemetry }
-    pub fn status(&self) -> GenerationStatus { self.status }
-    pub fn sampler_draws(&self) -> u64 { self.sampler_draws }
+    pub fn kv(&self) -> &MonitoredKvRestartReceipt {
+        &self.kv
+    }
+    pub fn historical_work(&self) -> GenerationWork {
+        self.historical_work
+    }
+    pub fn historical_telemetry(&self) -> GenerationTelemetryWork {
+        self.historical_telemetry
+    }
+    pub fn status(&self) -> GenerationStatus {
+        self.status
+    }
+    pub fn sampler_draws(&self) -> u64 {
+        self.sampler_draws
+    }
 }

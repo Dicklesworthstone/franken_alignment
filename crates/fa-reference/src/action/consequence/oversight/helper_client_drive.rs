@@ -21,10 +21,18 @@ impl<S: Read + Write> HelperClient<S> {
     /// once; inference is never invoked and a selected response is never rerolled.
     /// Even a long sequence of Interrupted errors cannot create a hidden loop.
     pub fn drive(&mut self, max_steps: usize) -> Result<ClientDrive, Error> {
-        if max_steps == 0 { return Err(Error::InvalidInput); }
-        if max_steps > MAX_CLIENT_DRIVE_STEPS { return Err(Error::Limit); }
+        if max_steps == 0 {
+            return Err(Error::InvalidInput);
+        }
+        if max_steps > MAX_CLIENT_DRIVE_STEPS {
+            return Err(Error::Limit);
+        }
         if let Some(error) = self.failure() {
-            return Ok(ClientDrive { steps: 0, phase: self.phase(), progress: Err(error) });
+            return Ok(ClientDrive {
+                steps: 0,
+                phase: self.phase(),
+                progress: Err(error),
+            });
         }
         let ready = match self.phase() {
             ClientPhase::NeedsInference => Some(ClientProgress::NeedsInference),
@@ -32,14 +40,24 @@ impl<S: Read + Write> HelperClient<S> {
             _ => None,
         };
         if let Some(progress) = ready {
-            return Ok(ClientDrive { steps: 0, phase: self.phase(), progress: Ok(progress) });
+            return Ok(ClientDrive {
+                steps: 0,
+                phase: self.phase(),
+                progress: Ok(progress),
+            });
         }
-        let mut report = ClientDrive { steps: 0, phase: self.phase(), progress: Ok(ClientProgress::Progress) };
+        let mut report = ClientDrive {
+            steps: 0,
+            phase: self.phase(),
+            progress: Ok(ClientProgress::Progress),
+        };
         for _ in 0..max_steps {
             report.steps += 1;
             report.progress = self.step();
             report.phase = self.phase();
-            if report.progress != Ok(ClientProgress::Progress) { break; }
+            if report.progress != Ok(ClientProgress::Progress) {
+                break;
+            }
         }
         Ok(report)
     }

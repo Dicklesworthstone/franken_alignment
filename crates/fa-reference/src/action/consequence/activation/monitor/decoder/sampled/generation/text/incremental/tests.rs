@@ -1,12 +1,16 @@
-use super::*;
 use super::super::tests::{numerical, profile, request, run, tokenizer};
+use super::*;
+use crate::action::consequence::activation::monitor::decoder::MonitoringStatus;
 use crate::action::consequence::activation::monitor::decoder::observation::DecoderAvailability;
 use crate::action::consequence::activation::monitor::decoder::sampled::MonitoredSampledDecoder;
-use crate::action::consequence::activation::monitor::decoder::MonitoringStatus;
 use crate::action::consequence::activation::monitor::{RefinementBudget, RefinementMonitor};
 use crate::action::consequence::activation::probe::LinearProbe;
-use crate::action::consequence::activation::tensor::kv::decoder::{DecoderLayerWeights, DecoderModel};
-use crate::action::consequence::activation::tensor::kv::decoder::sampling::{SamplingPolicy, SamplingStart};
+use crate::action::consequence::activation::tensor::kv::decoder::sampling::{
+    SamplingPolicy, SamplingStart,
+};
+use crate::action::consequence::activation::tensor::kv::decoder::{
+    DecoderLayerWeights, DecoderModel,
+};
 use std::collections::BTreeMap;
 
 fn prefill(session: &mut TextGenerationSession) {
@@ -23,7 +27,9 @@ fn prefill(session: &mut TextGenerationSession) {
 fn every_pull_matches_one_shot_without_duplicate_bytes_or_tokens() {
     let mut reference = run(259, None);
     let expected = reference.generate(0, request(b"ab", 3)).unwrap();
-    let mut session = run(259, None).into_generation(0, request(b"ab", 3)).unwrap();
+    let mut session = run(259, None)
+        .into_generation(0, request(b"ab", 3))
+        .unwrap();
     assert!(session.progress().finish().is_none());
     assert_eq!(session.decoder_work().tokens, 0);
     assert_eq!(session.prompt().tokens(), &[258]);
@@ -36,7 +42,10 @@ fn every_pull_matches_one_shot_without_duplicate_bytes_or_tokens() {
         assert_eq!(chunk.tokens(), &[259]);
         assert_eq!(chunk.bytes(), "é".as_bytes());
         assert_eq!(chunk.position(), position + 1);
-        assert_eq!(chunk.finish(), (position == 4).then_some(GenerationFinish::TokenLimit));
+        assert_eq!(
+            chunk.finish(),
+            (position == 4).then_some(GenerationFinish::TokenLimit)
+        );
         bytes.extend_from_slice(chunk.bytes());
         tokens.extend_from_slice(chunk.tokens());
     }
@@ -108,13 +117,18 @@ fn cancelling_before_work_and_during_prefill_never_claims_a_complete_prompt() {
         let owner = run(65, None);
         let source = owner.observation();
         let mut session = owner.into_generation(0, request(b"abc", 3)).unwrap();
-        for position in 0..pulls { session.advance(position).unwrap(); }
+        for position in 0..pulls {
+            session.advance(position).unwrap();
+        }
         let cancelled = session.cancel();
         assert_eq!(source.availability(), DecoderAvailability::Closed);
         assert_eq!(cancelled.prompt().source(), b"abc");
         assert_eq!(cancelled.prompt().tokens(), &[258, 99]);
         assert_eq!(cancelled.progress().requested_prompt_tokens(), 3);
-        assert_eq!(cancelled.progress().reviewed_prompt_tokens(), pulls as usize);
+        assert_eq!(
+            cancelled.progress().reviewed_prompt_tokens(),
+            pulls as usize
+        );
         assert!(cancelled.progress().finish().is_none());
         assert!(cancelled.bytes().is_empty());
         assert_eq!(cancelled.decoder_work().tokens, pulls);
@@ -138,7 +152,9 @@ fn pending_session_cannot_export_an_unfinished_owner() {
 
 #[test]
 fn held_token_produces_no_chunk_and_the_exported_owner_stays_held() {
-    let mut session = run(33, Some(33)).into_generation(0, request(b"ab", 3)).unwrap();
+    let mut session = run(33, Some(33))
+        .into_generation(0, request(b"ab", 3))
+        .unwrap();
     prefill(&mut session);
     let chunk = session.advance(2).unwrap();
     assert!(chunk.tokens().is_empty());
@@ -149,7 +165,10 @@ fn held_token_produces_no_chunk_and_the_exported_owner_stays_held() {
     let (mut owner, report) = session.into_parts().unwrap();
     assert_eq!(owner.status(), MonitoringStatus::Held);
     assert_eq!(report.generation().finish(), GenerationFinish::Held);
-    assert_eq!(owner.generate(3, request(b"ab", 1)).unwrap_err().error, Error::WrongState);
+    assert_eq!(
+        owner.generate(3, request(b"ab", 1)).unwrap_err().error,
+        Error::WrongState
+    );
     assert_eq!(owner.sampled_draws(), 1);
 }
 
@@ -172,7 +191,9 @@ fn a_later_hold_preserves_the_quiet_prefix_and_cancellation_keeps_that_finish() 
 
 #[test]
 fn stop_control_is_reviewed_once_but_never_emitted() {
-    let mut session = run(257, None).into_generation(0, request(b"ab", 3)).unwrap();
+    let mut session = run(257, None)
+        .into_generation(0, request(b"ab", 3))
+        .unwrap();
     prefill(&mut session);
     let stopped = session.advance(2).unwrap();
     assert_eq!(stopped.finish(), Some(GenerationFinish::StopToken));
@@ -194,36 +215,83 @@ fn split_utf8_owner() -> TextDecoder {
     let mut output = vec![0.0; 520];
     output[195 * 2] = 1.0;
     output[169 * 2 + 1] = 1.0;
-    let model = DecoderModel::new(p, embeddings, vec![DecoderLayerWeights {
-        attention_norm: vec![1.0; 2], queries: vec![0.0; 4], keys: vec![0.0; 4], values: vec![0.0; 4],
-        attention_output: vec![0.0; 4], feed_forward_norm: vec![1.0; 2],
-        gate: vec![0.0; 4], up: vec![0.0; 4], down: vec![0.0; 4],
-    }], vec![1.0; 2], output).unwrap();
-    let allowance = RefinementBudget { encoded_bytes: 100_000, probe_coordinates: 100_000 };
-    let probe = LinearProbe::new(1, 1, model.residual_contract(1).unwrap().profile(), &[1.0, 0.0], 0.0, 2.0).unwrap();
-    let monitors = BTreeMap::from([(1, RefinementMonitor::new(vec![probe], vec![23], allowance).unwrap())]);
-    let numerical = MonitoredSampledDecoder::new(model, 7, 11, monitors, allowance, SamplingStart {
-        policy: SamplingPolicy::new(1, 1, 260, 1.0, 1, 1.0).unwrap(), stream: 9, seed: 42,
-    }).unwrap();
+    let model = DecoderModel::new(
+        p,
+        embeddings,
+        vec![DecoderLayerWeights {
+            attention_norm: vec![1.0; 2],
+            queries: vec![0.0; 4],
+            keys: vec![0.0; 4],
+            values: vec![0.0; 4],
+            attention_output: vec![0.0; 4],
+            feed_forward_norm: vec![1.0; 2],
+            gate: vec![0.0; 4],
+            up: vec![0.0; 4],
+            down: vec![0.0; 4],
+        }],
+        vec![1.0; 2],
+        output,
+    )
+    .unwrap();
+    let allowance = RefinementBudget {
+        encoded_bytes: 100_000,
+        probe_coordinates: 100_000,
+    };
+    let probe = LinearProbe::new(
+        1,
+        1,
+        model.residual_contract(1).unwrap().profile(),
+        &[1.0, 0.0],
+        0.0,
+        2.0,
+    )
+    .unwrap();
+    let monitors = BTreeMap::from([(
+        1,
+        RefinementMonitor::new(vec![probe], vec![23], allowance).unwrap(),
+    )]);
+    let numerical = MonitoredSampledDecoder::new(
+        model,
+        7,
+        11,
+        monitors,
+        allowance,
+        SamplingStart {
+            policy: SamplingPolicy::new(1, 1, 260, 1.0, 1, 1.0).unwrap(),
+            stream: 9,
+            seed: 42,
+        },
+    )
+    .unwrap();
     TextDecoder::new(numerical, tokenizer()).unwrap()
 }
 
 #[test]
 fn utf8_boundaries_can_cross_chunks_without_lossy_replacement() {
-    let mut session = split_utf8_owner().into_generation(0, request(b"ab", 2)).unwrap();
+    let mut session = split_utf8_owner()
+        .into_generation(0, request(b"ab", 2))
+        .unwrap();
     prefill(&mut session);
     assert_eq!(session.advance(2).unwrap().bytes(), &[195]);
-    assert!(matches!(session.utf8(), Err(TextOutputError::InvalidUtf8(_))));
+    assert!(matches!(
+        session.utf8(),
+        Err(TextOutputError::InvalidUtf8(_))
+    ));
     assert_eq!(session.bytes().unwrap(), &[195]);
     assert_eq!(session.advance(3).unwrap().bytes(), &[169]);
     assert_eq!(session.utf8().unwrap(), "é");
     let (_, report) = session.into_parts().unwrap();
     assert_eq!(report.generation().tokens(), &[195, 169]);
     assert_eq!(report.bytes().unwrap(), "é".as_bytes());
-    let mut invalid = run(255, None).into_generation(0, request(b"ab", 1)).unwrap();
+    let mut invalid = run(255, None)
+        .into_generation(0, request(b"ab", 1))
+        .unwrap();
     prefill(&mut invalid);
     assert_eq!(invalid.advance(2).unwrap().bytes(), &[255]);
-    assert!(matches!(invalid.utf8(), Err(TextOutputError::InvalidUtf8(_))));
+    assert!(matches!(
+        invalid.utf8(),
+        Err(TextOutputError::InvalidUtf8(_))
+    ));
     assert_eq!(invalid.into_parts().unwrap().1.bytes().unwrap(), &[255]);
 }
 
@@ -242,7 +310,10 @@ fn numerical_budget_survives_yielding_and_exhaustion_is_not_text_success() {
     assert_eq!(session.sampled_draws(), 1);
     let (_, report) = session.into_parts().unwrap();
     assert_eq!(report.bytes().unwrap(), b"A");
-    assert_eq!(report.generation().finish(), GenerationFinish::BudgetExhausted);
+    assert_eq!(
+        report.generation().finish(),
+        GenerationFinish::BudgetExhausted
+    );
 }
 
 #[test]
@@ -260,7 +331,15 @@ fn completed_export_continues_original_cache_and_never_retokens_previous_text() 
     assert_eq!(resumed.advance(4).unwrap().bytes(), b"A");
     assert_eq!(resumed.sampled_draws(), 3);
     assert_eq!(resumed.decoder_work().tokens, 5);
-    assert_eq!(resumed.into_parts().unwrap().1.generation().requested_prompt_tokens(), 0);
+    assert_eq!(
+        resumed
+            .into_parts()
+            .unwrap()
+            .1
+            .generation()
+            .requested_prompt_tokens(),
+        0
+    );
 }
 
 #[test]

@@ -2,12 +2,12 @@
 //! Credentials are checked live; only the nonsecret original events are retained.
 //! This is not a transaction over a remote provider or an independent file sink.
 
-use super::FileCredentialPermit;
+use super::super::publication::{CheckedCompletion, CheckedPublication};
 use super::super::{
     BaseEvent, Event, FileOversight, JournalError, JournalFailure, JournalIo, Machine,
     Reconciliation, Transition, journal,
 };
-use super::super::publication::{CheckedCompletion, CheckedPublication};
+use super::FileCredentialPermit;
 use crate::{Error, Snapshot};
 use std::rc::Rc;
 
@@ -43,7 +43,14 @@ impl FileOversight {
             return Err(Error::Stale.into());
         }
         self.check_credential_permit(credential)?;
-        let CheckedCompletion { automatic, human, action, current, snapshot, now } = completion;
+        let CheckedCompletion {
+            automatic,
+            human,
+            action,
+            current,
+            snapshot,
+            now,
+        } = completion;
         if !Rc::ptr_eq(&self.issuer, &automatic.issuer)
             || !Rc::ptr_eq(&self.issuer, &human.issuer)
             || automatic.attempt != human.attempt
@@ -64,7 +71,11 @@ impl FileOversight {
         for event in &events {
             self.check_source_admission(event)?;
         }
-        let count = self.events.len().checked_add(events.len()).ok_or(Error::Overflow)?;
+        let count = self
+            .events
+            .len()
+            .checked_add(events.len())
+            .ok_or(Error::Overflow)?;
         if count > self.profile.delivery.limits.events {
             return Err(Error::Limit.into());
         }
@@ -77,16 +88,17 @@ impl FileOversight {
         for (index, event) in events.iter().enumerate() {
             // Admission includes the original recovery reserve at EVERY prefix,
             // not merely a check that the final serialized bytes fit.
-            bytes = journal::encode_appended(
-                &self.profile, self.store.identity(), &history, event,
-            )?;
+            bytes =
+                journal::encode_appended(&self.profile, self.store.identity(), &history, event)?;
             candidate.preflight_consistency(event)?;
             let transition = candidate.apply(event)?;
             match (index, transition) {
                 (0 | 1, Transition::Unit) => {}
                 (2, Transition::PublicationChecked(result)) => publication = Some(result),
                 (3, Transition::Reconciled(Reconciliation::Resolved(outcome)))
-                    if publication.as_ref().is_some_and(|result| result.outcome == outcome) => {}
+                    if publication
+                        .as_ref()
+                        .is_some_and(|result| result.outcome == outcome) => {}
                 _ => return Err(Error::Binding.into()),
             }
             history.push(event.clone());
@@ -117,9 +129,11 @@ fn check_snapshot(snapshot: &Snapshot) -> Result<(), Error> {
     if snapshot.values.len() > super::super::super::MAX_SNAPSHOT_ENTRIES {
         return Err(Error::Limit);
     }
-    let bytes = snapshot.values.values().try_fold(0_usize, |total, value| {
-        total.checked_add(value.len())
-    }).ok_or(Error::Limit)?;
+    let bytes = snapshot
+        .values
+        .values()
+        .try_fold(0_usize, |total, value| total.checked_add(value.len()))
+        .ok_or(Error::Limit)?;
     if bytes > super::super::super::MAX_SNAPSHOT_BYTES {
         return Err(Error::Limit);
     }

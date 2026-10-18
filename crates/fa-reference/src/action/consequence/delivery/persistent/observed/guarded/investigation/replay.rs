@@ -1,7 +1,7 @@
 //! Read-only event-bounded diagnosis of one independently anchored canonical image.
 //! Neither a partial proposal nor reconstructed live authority can escape.
-use super::*;
 use super::super::anchored::FileHistoryAnchor;
+use super::*;
 use crate::action::consequence::delivery::persistent::MAX_JOURNAL_EVENTS;
 use std::fmt;
 
@@ -56,7 +56,9 @@ pub struct FileProposalRead {
 }
 impl fmt::Debug for FileProposalRead {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("FileProposalRead").field("progress", &self.progress()).finish_non_exhaustive()
+        f.debug_struct("FileProposalRead")
+            .field("progress", &self.progress())
+            .finish_non_exhaustive()
     }
 }
 
@@ -65,11 +67,20 @@ impl FileOversight {
     /// prefix BEFORE executing any historical event. This does not acknowledge
     /// the image, acquire a writer lock, or infer requirements from journal data.
     pub fn begin_read_proposal_investigation_anchored(
-        directory: impl AsRef<Path>, profile: &FileOversightProfile,
-        expected: &FileRecoveryRequirements, anchor: &FileHistoryAnchor,
-        attempt: u64, scope: InterventionScope,
+        directory: impl AsRef<Path>,
+        profile: &FileOversightProfile,
+        expected: &FileRecoveryRequirements,
+        anchor: &FileHistoryAnchor,
+        attempt: u64,
+        scope: InterventionScope,
     ) -> Result<FileProposalRead, JournalError> {
-        FileProposalRead::begin(directory, profile, expected, anchor, Selection::new(attempt, scope)?)
+        FileProposalRead::begin(
+            directory,
+            profile,
+            expected,
+            anchor,
+            Selection::new(attempt, scope)?,
+        )
     }
 
     /// Investigate the FIRST submission of a durable external actor request.
@@ -78,23 +89,36 @@ impl FileOversight {
     /// A request refused without a frozen action returns Missing only after the
     /// whole image and independent ending requirements have been checked.
     pub fn begin_read_request_proposal_investigation_anchored(
-        directory: impl AsRef<Path>, profile: &FileOversightProfile,
-        expected: &FileRecoveryRequirements, anchor: &FileHistoryAnchor,
-        request: u64, scope: InterventionScope,
+        directory: impl AsRef<Path>,
+        profile: &FileOversightProfile,
+        expected: &FileRecoveryRequirements,
+        anchor: &FileHistoryAnchor,
+        request: u64,
+        scope: InterventionScope,
     ) -> Result<FileProposalRead, JournalError> {
-        FileProposalRead::begin(directory, profile, expected, anchor, Selection::request(request, scope)?)
+        FileProposalRead::begin(
+            directory,
+            profile,
+            expected,
+            anchor,
+            Selection::request(request, scope)?,
+        )
     }
 
     /// Whole-image request-key diagnosis using the same sealed event cursor.
     /// The result is historical experiment data, never an actor capability or
     /// permission to retry an admission or publication.
     pub fn read_request_proposal_investigation_anchored(
-        directory: impl AsRef<Path>, profile: &FileOversightProfile,
-        expected: &FileRecoveryRequirements, anchor: &FileHistoryAnchor,
-        request: u64, scope: InterventionScope,
+        directory: impl AsRef<Path>,
+        profile: &FileOversightProfile,
+        expected: &FileRecoveryRequirements,
+        anchor: &FileHistoryAnchor,
+        request: u64,
+        scope: InterventionScope,
     ) -> Result<FileProposalInvestigation, JournalError> {
         let mut read = Self::begin_read_request_proposal_investigation_anchored(
-            directory, profile, expected, anchor, request, scope)?;
+            directory, profile, expected, anchor, request, scope,
+        )?;
         while read.status == FileProposalReadStatus::Reading {
             read.advance(read.replayed, MAX_JOURNAL_EVENTS)?;
         }
@@ -104,12 +128,16 @@ impl FileOversight {
     /// Convenience whole-image consumer of the same sealed read. The explicit
     /// cursor lets hosts check cancellation before each event and again at Ready.
     pub fn read_proposal_investigation_anchored(
-        directory: impl AsRef<Path>, profile: &FileOversightProfile,
-        expected: &FileRecoveryRequirements, anchor: &FileHistoryAnchor,
-        attempt: u64, scope: InterventionScope,
+        directory: impl AsRef<Path>,
+        profile: &FileOversightProfile,
+        expected: &FileRecoveryRequirements,
+        anchor: &FileHistoryAnchor,
+        attempt: u64,
+        scope: InterventionScope,
     ) -> Result<FileProposalInvestigation, JournalError> {
         let mut read = Self::begin_read_proposal_investigation_anchored(
-            directory, profile, expected, anchor, attempt, scope)?;
+            directory, profile, expected, anchor, attempt, scope,
+        )?;
         while read.status == FileProposalReadStatus::Reading {
             read.advance(read.replayed, MAX_JOURNAL_EVENTS)?;
         }
@@ -118,55 +146,100 @@ impl FileOversight {
 }
 
 impl FileProposalRead {
-    fn begin(directory: impl AsRef<Path>, profile: &FileOversightProfile,
-        expected: &FileRecoveryRequirements, anchor: &FileHistoryAnchor, selection: Selection)
-        -> Result<Self, JournalError>
-    {
+    fn begin(
+        directory: impl AsRef<Path>,
+        profile: &FileOversightProfile,
+        expected: &FileRecoveryRequirements,
+        anchor: &FileHistoryAnchor,
+        selection: Selection,
+    ) -> Result<Self, JournalError> {
         profile.delivery.limits.check()?;
         expected.guards.validate()?;
         let directory = storage::identity(directory.as_ref())?;
-        let bytes = storage::read(&directory.join(storage::CANONICAL), profile.delivery.limits.bytes)?;
+        let bytes = storage::read(
+            &directory.join(storage::CANONICAL),
+            profile.delivery.limits.bytes,
+        )?;
         let events = journal::decode(profile, &directory, &bytes)?;
         anchor.check(profile, &directory, &events)?;
         expected.guards.check_decoder_config(&events)?;
         let machine = Machine::new(profile)?;
-        Ok(Self { directory, profile: profile.clone(), expected: expected.clone(),
-            events, machine, selection, replayed: 0, attempted: 0, status: FileProposalReadStatus::Reading })
+        Ok(Self {
+            directory,
+            profile: profile.clone(),
+            expected: expected.clone(),
+            events,
+            machine,
+            selection,
+            replayed: 0,
+            attempted: 0,
+            status: FileProposalReadStatus::Reading,
+        })
     }
 
     pub fn progress(&self) -> FileProposalReadProgress {
-        FileProposalReadProgress { replayed_events: self.replayed, attempted_events: self.attempted,
-            total_events: self.events.len(), status: self.status }
+        FileProposalReadProgress {
+            replayed_events: self.replayed,
+            attempted_events: self.attempted,
+            total_events: self.events.len(),
+            status: self.status,
+        }
     }
 
     /// Stale or invalid polls do no work. Interrupted/failed execution latches
     /// permanently, including an unwind after the original reducer changed RAM.
-    pub fn advance(&mut self, expected_events: usize, max_events: usize)
-        -> Result<FileProposalReadProgress, JournalError>
-    {
+    pub fn advance(
+        &mut self,
+        expected_events: usize,
+        max_events: usize,
+    ) -> Result<FileProposalReadProgress, JournalError> {
         self.advance_with(expected_events, max_events, Selection::apply)
     }
 
-    fn advance_with(&mut self, expected_events: usize, max_events: usize,
-        mut apply: impl FnMut(&mut Selection, &FileOversightProfile, &mut Machine, usize, &Event)
-            -> Result<(), JournalError>) -> Result<FileProposalReadProgress, JournalError>
-    {
+    fn advance_with(
+        &mut self,
+        expected_events: usize,
+        max_events: usize,
+        mut apply: impl FnMut(
+            &mut Selection,
+            &FileOversightProfile,
+            &mut Machine,
+            usize,
+            &Event,
+        ) -> Result<(), JournalError>,
+    ) -> Result<FileProposalReadProgress, JournalError> {
         match self.status {
             FileProposalReadStatus::Failed(error) => return Err(error.into()),
             FileProposalReadStatus::Interrupted => return Err(JournalError::Unavailable),
             FileProposalReadStatus::Cancelled => return Err(Error::WrongState.into()),
             _ => {}
         }
-        if expected_events != self.replayed { return Err(Error::Stale.into()); }
-        if max_events == 0 { return Err(Error::InvalidInput.into()); }
-        if max_events > MAX_JOURNAL_EVENTS { return Err(Error::Limit.into()); }
-        if self.status == FileProposalReadStatus::Ready { return Ok(self.progress()); }
-        let end = self.replayed.saturating_add(max_events).min(self.events.len());
+        if expected_events != self.replayed {
+            return Err(Error::Stale.into());
+        }
+        if max_events == 0 {
+            return Err(Error::InvalidInput.into());
+        }
+        if max_events > MAX_JOURNAL_EVENTS {
+            return Err(Error::Limit.into());
+        }
+        if self.status == FileProposalReadStatus::Ready {
+            return Ok(self.progress());
+        }
+        let end = self
+            .replayed
+            .saturating_add(max_events)
+            .min(self.events.len());
         while self.replayed < end {
             self.status = FileProposalReadStatus::Interrupted;
             self.attempted += 1;
-            let result = apply(&mut self.selection, &self.profile, &mut self.machine,
-                self.replayed, &self.events[self.replayed]);
+            let result = apply(
+                &mut self.selection,
+                &self.profile,
+                &mut self.machine,
+                self.replayed,
+                &self.events[self.replayed],
+            );
             if let Err(error) = result {
                 if let JournalError::Contract(contract) = &error {
                     self.status = FileProposalReadStatus::Failed(*contract);
@@ -177,14 +250,18 @@ impl FileProposalRead {
         }
         self.status = FileProposalReadStatus::Interrupted;
         if self.replayed == self.events.len() {
-            let result = self.expected.check(&self.profile, &self.machine, &self.events)
+            let result = self
+                .expected
+                .check(&self.profile, &self.machine, &self.events)
                 .and_then(|_| self.selection.require_selected());
             if let Err(error) = result {
                 self.status = FileProposalReadStatus::Failed(error);
                 return Err(error.into());
             }
             self.status = FileProposalReadStatus::Ready;
-        } else { self.status = FileProposalReadStatus::Reading; }
+        } else {
+            self.status = FileProposalReadStatus::Reading;
+        }
         Ok(self.progress())
     }
 
@@ -195,13 +272,18 @@ impl FileProposalRead {
             FileProposalReadStatus::Interrupted => return Err(JournalError::Unavailable),
             _ => return Err(Error::Incomplete.into()),
         }
-        self.expected.check(&self.profile, &self.machine, &self.events)?;
-        self.selection.finish(&self.directory, &self.machine, self.events.len())
+        self.expected
+            .check(&self.profile, &self.machine, &self.events)?;
+        self.selection
+            .finish(&self.directory, &self.machine, self.events.len())
     }
 
     pub fn cancel(self) -> FileProposalReadProgress {
         let mut progress = self.progress();
-        if matches!(progress.status, FileProposalReadStatus::Reading | FileProposalReadStatus::Ready) {
+        if matches!(
+            progress.status,
+            FileProposalReadStatus::Reading | FileProposalReadStatus::Ready
+        ) {
             progress.status = FileProposalReadStatus::Cancelled;
         }
         progress
@@ -209,9 +291,13 @@ impl FileProposalRead {
 
     #[cfg(test)]
     pub(super) fn interrupt_after_event(&mut self) {
-        let _ = self.advance_with(self.replayed, 1, |selection, profile, machine, index, event| {
-            selection.apply(profile, machine, index, event)?;
-            panic!("injected unwind after actual historical event");
-        });
+        let _ = self.advance_with(
+            self.replayed,
+            1,
+            |selection, profile, machine, index, event| {
+                selection.apply(profile, machine, index, event)?;
+                panic!("injected unwind after actual historical event");
+            },
+        );
     }
 }

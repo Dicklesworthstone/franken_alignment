@@ -4,18 +4,20 @@
 #[cfg(unix)]
 pub mod peer;
 
-use super::{NativeAsset, NativeAssetReadBudget, NativeAssetReadUsage, NativeFileBootstrapError,
-    NativeHelperFileLimits, NativeHelperPolicy, NativeEvaluator, NativeHelperBootstrap,
-    NativeBootstrapError, WeightReadBudget, MAX_ASSET_READ_BYTES, MAX_ASSET_READ_CALLS,
-    open_regular, read_asset};
 use super::super::{NativeTokenizerFormat, PretrainedShardReceipt};
+use super::{
+    MAX_ASSET_READ_BYTES, MAX_ASSET_READ_CALLS, NativeAsset, NativeAssetReadBudget,
+    NativeAssetReadUsage, NativeBootstrapError, NativeEvaluator, NativeFileBootstrapError,
+    NativeHelperBootstrap, NativeHelperFileLimits, NativeHelperPolicy, WeightReadBudget,
+    open_regular, read_asset,
+};
+use crate::Error;
 use crate::action::consequence::activation::tensor::kv::decoder::DecoderModel;
 use crate::action::consequence::activation::tensor::kv::decoder::safetensors::pretrained::LlamaConfig;
 use crate::action::consequence::activation::tensor::kv::decoder::safetensors::reader::WeightReadError;
 use crate::action::consequence::activation::tensor::kv::decoder::safetensors::shards::{
-    check_shard_labels, MAX_WEIGHT_INDEX_BYTES, MAX_WEIGHT_SHARDS,
+    MAX_WEIGHT_INDEX_BYTES, MAX_WEIGHT_SHARDS, check_shard_labels,
 };
-use crate::Error;
 use std::collections::BTreeMap;
 use std::fmt;
 use std::path::{Path, PathBuf};
@@ -51,15 +53,22 @@ pub enum NativeShardFileBootstrapError {
     Asset(NativeFileBootstrapError),
     Bootstrap(NativeBootstrapError),
     /// Only a bounded, admitted label is reported, never an untrusted path.
-    Shard { label: String, error: NativeFileBootstrapError },
+    Shard {
+        label: String,
+        error: NativeFileBootstrapError,
+    },
     Weights(WeightReadError),
 }
 impl fmt::Display for NativeShardFileBootstrapError {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result { write!(f, "{self:?}") }
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{self:?}")
+    }
 }
 impl std::error::Error for NativeShardFileBootstrapError {}
 impl From<NativeFileBootstrapError> for NativeShardFileBootstrapError {
-    fn from(error: NativeFileBootstrapError) -> Self { Self::Asset(error) }
+    fn from(error: NativeFileBootstrapError) -> Self {
+        Self::Asset(error)
+    }
 }
 
 impl NativeAssetReadBudget {
@@ -68,11 +77,17 @@ impl NativeAssetReadBudget {
     /// The original new constructor and its ceiling are unchanged. Read attempts,
     /// failures and EOF probes use the original accounting implementation.
     pub fn for_shards(bytes: usize, calls: usize) -> Result<Self, Error> {
-        if bytes == 0 || calls == 0 { return Err(Error::InvalidInput); }
+        if bytes == 0 || calls == 0 {
+            return Err(Error::InvalidInput);
+        }
         if bytes > MAX_SHARDED_ASSET_READ_BYTES || calls > MAX_ASSET_READ_CALLS {
             return Err(Error::Limit);
         }
-        Ok(Self { bytes, calls, usage: NativeAssetReadUsage::default() })
+        Ok(Self {
+            bytes,
+            calls,
+            usage: NativeAssetReadUsage::default(),
+        })
     }
 }
 
@@ -95,65 +110,137 @@ impl NativeEvaluator {
     /// As with from_llama_files, final-component symlink checks plus opened-file
     /// checks are NOT a race-free filesystem sandbox. Protect every path component
     /// and immutable asset set independently. This API grants no effect authority.
-    pub fn from_llama_shard_files(request: NativeShardFileBootstrap<'_>,
-        assets: &mut NativeAssetReadBudget, weights: &mut WeightReadBudget)
-        -> Result<(Self, PretrainedShardReceipt), NativeShardFileBootstrapError>
-    {
+    pub fn from_llama_shard_files(
+        request: NativeShardFileBootstrap<'_>,
+        assets: &mut NativeAssetReadBudget,
+        weights: &mut WeightReadBudget,
+    ) -> Result<(Self, PretrainedShardReceipt), NativeShardFileBootstrapError> {
         Self::from_llama_shard_files_with_tokenizer_format(
-            request, assets, weights, NativeTokenizerFormat::NativeArchive)
+            request,
+            assets,
+            weights,
+            NativeTokenizerFormat::NativeArchive,
+        )
     }
 
     /// Select the original native archive or strict raw ByteLevel JSON parser
     /// before index loading and before ANY weight path is inspected. Preserve
     /// the complete explicit label map, aggregate limits, shared read budgets,
     /// configured tied-head checks and mandatory monitor. No parser fallback.
-    pub fn from_llama_shard_files_with_tokenizer_format(request: NativeShardFileBootstrap<'_>,
-        assets: &mut NativeAssetReadBudget, weights: &mut WeightReadBudget,
-        format: NativeTokenizerFormat)
-        -> Result<(Self, PretrainedShardReceipt), NativeShardFileBootstrapError>
-    {
+    pub fn from_llama_shard_files_with_tokenizer_format(
+        request: NativeShardFileBootstrap<'_>,
+        assets: &mut NativeAssetReadBudget,
+        weights: &mut WeightReadBudget,
+        format: NativeTokenizerFormat,
+    ) -> Result<(Self, PretrainedShardReceipt), NativeShardFileBootstrapError> {
         request.limits.check()?;
         if request.stream == 0 || request.files.shards.is_empty() {
             return Err(NativeFileBootstrapError::Contract(Error::InvalidInput).into());
         }
-        if request.index_bytes == 0 || request.index_bytes > MAX_WEIGHT_INDEX_BYTES
+        if request.index_bytes == 0
+            || request.index_bytes > MAX_WEIGHT_INDEX_BYTES
             || request.files.shards.len() > MAX_WEIGHT_SHARDS
             || request.files.shards.keys().any(|label| label.len() > 256)
-        { return Err(NativeFileBootstrapError::Contract(Error::Limit).into()); }
+        {
+            return Err(NativeFileBootstrapError::Contract(Error::Limit).into());
+        }
         let files = request.files;
-        let configuration = read_asset(files.configuration, request.limits.configuration_bytes,
-            NativeAsset::Configuration, assets)?;
-        let tokenizer = read_asset(files.tokenizer, request.limits.tokenizer_bytes, NativeAsset::Tokenizer, assets)?;
-        let monitoring = read_asset(files.monitoring, request.limits.monitoring_bytes, NativeAsset::Monitoring, assets)?;
-        let sampling = read_asset(files.sampling, request.limits.sampling_bytes, NativeAsset::Sampling, assets)?;
-        let bootstrap = NativeHelperBootstrap { policy: request.policy, stream: request.stream,
-            configuration: &configuration, tokenizer: &tokenizer, monitoring: &monitoring, sampling: &sampling };
-        let tokenizer = bootstrap.preflight(format).map_err(NativeShardFileBootstrapError::Bootstrap)?;
+        let configuration = read_asset(
+            files.configuration,
+            request.limits.configuration_bytes,
+            NativeAsset::Configuration,
+            assets,
+        )?;
+        let tokenizer = read_asset(
+            files.tokenizer,
+            request.limits.tokenizer_bytes,
+            NativeAsset::Tokenizer,
+            assets,
+        )?;
+        let monitoring = read_asset(
+            files.monitoring,
+            request.limits.monitoring_bytes,
+            NativeAsset::Monitoring,
+            assets,
+        )?;
+        let sampling = read_asset(
+            files.sampling,
+            request.limits.sampling_bytes,
+            NativeAsset::Sampling,
+            assets,
+        )?;
+        let bootstrap = NativeHelperBootstrap {
+            policy: request.policy,
+            stream: request.stream,
+            configuration: &configuration,
+            tokenizer: &tokenizer,
+            monitoring: &monitoring,
+            sampling: &sampling,
+        };
+        let tokenizer = bootstrap
+            .preflight(format)
+            .map_err(NativeShardFileBootstrapError::Bootstrap)?;
         let profile = &request.policy.decoder_profile;
         // Retain the ORIGINAL config receipt and its explicit head-sharing law.
         // Both label preflight and actual directory reads must use that same law.
-        let configuration_receipt = LlamaConfig::decode(profile.identity(), profile.shape().context, &configuration)
-            .map_err(|error| NativeShardFileBootstrapError::Bootstrap(NativeBootstrapError::Checkpoint(error)))?;
-        let index = read_asset(files.index, request.index_bytes, NativeAsset::WeightIndex, assets)?;
-        check_shard_labels(profile, &index, files.shards.keys().map(String::as_str), configuration_receipt.output_head())
-            .map_err(|error| NativeShardFileBootstrapError::Weights(WeightReadError::Refused(error)))?;
+        let configuration_receipt =
+            LlamaConfig::decode(profile.identity(), profile.shape().context, &configuration)
+                .map_err(|error| {
+                    NativeShardFileBootstrapError::Bootstrap(NativeBootstrapError::Checkpoint(
+                        error,
+                    ))
+                })?;
+        let index = read_asset(
+            files.index,
+            request.index_bytes,
+            NativeAsset::WeightIndex,
+            assets,
+        )?;
+        check_shard_labels(
+            profile,
+            &index,
+            files.shards.keys().map(String::as_str),
+            configuration_receipt.output_head(),
+        )
+        .map_err(|error| NativeShardFileBootstrapError::Weights(WeightReadError::Refused(error)))?;
 
         let mut sources = BTreeMap::new();
         let mut total = 0_usize;
         for (label, path) in files.shards {
-            let (file, size) = open_regular(path, request.limits.weight_bytes, NativeAsset::Weights)
-                .map_err(|error| NativeShardFileBootstrapError::Shard { label: label.clone(), error })?;
-            total = total.checked_add(size).ok_or(NativeFileBootstrapError::Limit(NativeAsset::Weights))?;
+            let (file, size) =
+                open_regular(path, request.limits.weight_bytes, NativeAsset::Weights).map_err(
+                    |error| NativeShardFileBootstrapError::Shard {
+                        label: label.clone(),
+                        error,
+                    },
+                )?;
+            total = total
+                .checked_add(size)
+                .ok_or(NativeFileBootstrapError::Limit(NativeAsset::Weights))?;
             if total > request.limits.weight_bytes {
                 return Err(NativeFileBootstrapError::Limit(NativeAsset::Weights).into());
             }
             sources.insert(label.clone(), file);
         }
         let (model, loaded) = DecoderModel::read_safetensors_shards_bounded(
-            profile.clone(), &index, &mut sources, weights, request.limits.weight_bytes, configuration_receipt.output_head(),
-        ).map_err(NativeShardFileBootstrapError::Weights)?;
-        let evaluator = bootstrap.finish(model, tokenizer).map_err(NativeShardFileBootstrapError::Bootstrap)?;
-        Ok((evaluator, PretrainedShardReceipt { configuration: configuration_receipt, weights: loaded }))
+            profile.clone(),
+            &index,
+            &mut sources,
+            weights,
+            request.limits.weight_bytes,
+            configuration_receipt.output_head(),
+        )
+        .map_err(NativeShardFileBootstrapError::Weights)?;
+        let evaluator = bootstrap
+            .finish(model, tokenizer)
+            .map_err(NativeShardFileBootstrapError::Bootstrap)?;
+        Ok((
+            evaluator,
+            PretrainedShardReceipt {
+                configuration: configuration_receipt,
+                weights: loaded,
+            },
+        ))
     }
 }
 

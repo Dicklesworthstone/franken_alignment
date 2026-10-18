@@ -10,19 +10,19 @@
 //! Original prompt bytes and token boundaries survive encoding; replay uses the
 //! emitted IDs, never a decode/re-tokenize round trip. No authority is created.
 
-mod wire;
-mod special;
 mod pretokenizer;
+mod special;
 mod unicode17;
-pub use special::MAX_SPECIAL_TOKEN_BYTES;
+mod wire;
 pub use pretokenizer::PreTokenization;
+pub use special::MAX_SPECIAL_TOKEN_BYTES;
 #[cfg(test)]
 mod tests;
 
+use crate::Error;
 use crate::action::consequence::activation::tensor::kv::decoder::{
     DecoderProfile, MAX_DECODER_VOCABULARY,
 };
-use crate::Error;
 use std::cmp::Reverse;
 use std::collections::{BTreeMap, BTreeSet, BinaryHeap};
 use std::fmt;
@@ -63,8 +63,11 @@ pub struct TokenizationBudget {
 }
 impl Default for TokenizationBudget {
     fn default() -> Self {
-        Self { input_bytes: MAX_INPUT_BYTES, pair_lookups: MAX_PAIR_LOOKUPS,
-            heap_pops: MAX_HEAP_POPS }
+        Self {
+            input_bytes: MAX_INPUT_BYTES,
+            pair_lookups: MAX_PAIR_LOOKUPS,
+            heap_pops: MAX_HEAP_POPS,
+        }
     }
 }
 
@@ -86,7 +89,9 @@ pub struct TokenizationFailure {
     pub work: TokenizationWork,
 }
 impl fmt::Display for TokenizationFailure {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result { write!(f, "{self:?}") }
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{self:?}")
+    }
 }
 impl std::error::Error for TokenizationFailure {}
 
@@ -108,9 +113,11 @@ struct Data {
 pub struct ByteBpe(Rc<Data>);
 impl fmt::Debug for ByteBpe {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("ByteBpe").field("profile", self.profile())
+        f.debug_struct("ByteBpe")
+            .field("profile", self.profile())
             .field("pre_tokenization", &self.pre_tokenization())
-            .field("merges", &self.0.merges.len()).finish_non_exhaustive()
+            .field("merges", &self.0.merges.len())
+            .finish_non_exhaustive()
     }
 }
 
@@ -127,17 +134,31 @@ pub struct TokenizedInput {
     work: TokenizationWork,
 }
 impl TokenizedInput {
-    pub fn source(&self) -> &[u8] { &self.source }
-    pub fn tokens(&self) -> &[u32] { &self.tokens }
-    pub fn spans(&self) -> &[Range<usize>] { &self.spans }
-    pub fn profile(&self) -> &DecoderProfile { self.tokenizer.profile() }
-    pub fn tokenizer(&self) -> &ByteBpe { &self.tokenizer }
-    pub fn work(&self) -> TokenizationWork { self.work }
+    pub fn source(&self) -> &[u8] {
+        &self.source
+    }
+    pub fn tokens(&self) -> &[u32] {
+        &self.tokens
+    }
+    pub fn spans(&self) -> &[Range<usize>] {
+        &self.spans
+    }
+    pub fn profile(&self) -> &DecoderProfile {
+        self.tokenizer.profile()
+    }
+    pub fn tokenizer(&self) -> &ByteBpe {
+        &self.tokenizer
+    }
+    pub fn work(&self) -> TokenizationWork {
+        self.work
+    }
 }
 impl fmt::Debug for TokenizedInput {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("TokenizedInput").field("source_bytes", &self.source.len())
-            .field("tokens", &self.tokens.len()).field("work", &self.work)
+        f.debug_struct("TokenizedInput")
+            .field("source_bytes", &self.source.len())
+            .field("tokens", &self.tokens.len())
+            .field("work", &self.work)
             .finish_non_exhaustive()
     }
 }
@@ -198,7 +219,9 @@ impl fmt::Debug for TokenizationCursor {
 }
 
 impl TokenizationCursor {
-    pub fn work(&self) -> TokenizationWork { self.work }
+    pub fn work(&self) -> TokenizationWork {
+        self.work
+    }
 
     /// Repeated terminal calls are inert. The first failure and all performed
     /// work survive retries; neither a retry nor finish restarts the merge pass.
@@ -207,7 +230,10 @@ impl TokenizationCursor {
             Ok(progress) => Ok(progress),
             Err(error) => {
                 self.phase = EncodingPhase::Failed(error);
-                Err(TokenizationFailure { error, work: self.work })
+                Err(TokenizationFailure {
+                    error,
+                    work: self.work,
+                })
             }
         }
     }
@@ -218,8 +244,13 @@ impl TokenizationCursor {
             EncodingPhase::Complete => return Ok(TokenizationProgress::Complete),
             EncodingPhase::Offering(index) => {
                 if index < self.nodes.len() {
-                    self.tokenizer.offer(index, &self.nodes, &mut self.heap,
-                        self.budget, &mut self.work)?;
+                    self.tokenizer.offer(
+                        index,
+                        &self.nodes,
+                        &mut self.heap,
+                        self.budget,
+                        &mut self.work,
+                    )?;
                     self.phase = EncodingPhase::Offering(index + 1);
                 } else {
                     self.phase = EncodingPhase::Merging;
@@ -227,14 +258,23 @@ impl TokenizationCursor {
             }
             EncodingPhase::Merging => {
                 if self.heap.is_empty() {
-                    self.phase = EncodingPhase::Collecting(
-                        (!self.nodes.is_empty()).then_some(0));
+                    self.phase = EncodingPhase::Collecting((!self.nodes.is_empty()).then_some(0));
                 } else {
-                    if self.work.heap_pops == self.budget.heap_pops { return Err(Error::Limit); }
+                    if self.work.heap_pops == self.budget.heap_pops {
+                        return Err(Error::Limit);
+                    }
                     self.work.heap_pops += 1;
                     let Reverse(candidate) = self.heap.pop().expect("nonempty candidate heap");
-                    let Candidate { left, right, left_token, right_token, result, .. } = candidate;
-                    if self.nodes[left].live && self.nodes[right].live
+                    let Candidate {
+                        left,
+                        right,
+                        left_token,
+                        right_token,
+                        result,
+                        ..
+                    } = candidate;
+                    if self.nodes[left].live
+                        && self.nodes[right].live
                         && self.nodes[left].next == Some(right)
                         && self.nodes[left].token == left_token
                         && self.nodes[right].token == right_token
@@ -244,14 +284,26 @@ impl TokenizationCursor {
                         self.nodes[left].end = self.nodes[right].end;
                         self.nodes[left].next = next;
                         self.nodes[right].live = false;
-                        if let Some(next) = next { self.nodes[next].previous = Some(left); }
+                        if let Some(next) = next {
+                            self.nodes[next].previous = Some(left);
+                        }
                         self.work.merges += 1;
                         if let Some(previous) = self.nodes[left].previous {
-                            self.tokenizer.offer(previous, &self.nodes, &mut self.heap,
-                                self.budget, &mut self.work)?;
+                            self.tokenizer.offer(
+                                previous,
+                                &self.nodes,
+                                &mut self.heap,
+                                self.budget,
+                                &mut self.work,
+                            )?;
                         }
-                        self.tokenizer.offer(left, &self.nodes, &mut self.heap,
-                            self.budget, &mut self.work)?;
+                        self.tokenizer.offer(
+                            left,
+                            &self.nodes,
+                            &mut self.heap,
+                            self.budget,
+                            &mut self.work,
+                        )?;
                     }
                 }
             }
@@ -275,14 +327,24 @@ impl TokenizationCursor {
             _ => Some(Error::Incomplete),
         };
         if let Some(error) = error {
-            return Err(TokenizationFailure { error, work: self.work });
+            return Err(TokenizationFailure {
+                error,
+                work: self.work,
+            });
         }
-        Ok(TokenizedInput { tokenizer: self.tokenizer, source: self.source,
-            tokens: self.tokens, spans: self.spans, work: self.work })
+        Ok(TokenizedInput {
+            tokenizer: self.tokenizer,
+            source: self.source,
+            tokens: self.tokens,
+            spans: self.spans,
+            work: self.work,
+        })
     }
 
     /// Drop scratch and unfinished output without refunding observed work.
-    pub fn cancel(self) -> TokenizationWork { self.work }
+    pub fn cancel(self) -> TokenizationWork {
+        self.work
+    }
 }
 
 impl ByteBpe {
@@ -291,11 +353,17 @@ impl ByteBpe {
     /// content, uses only earlier-defined operands and has a unique input pair.
     /// Every multi-byte token must be reachable through at least one merge.
     /// Controls cannot participate in merges or be recognized from input text.
-    pub fn new(profile: DecoderProfile, vocabulary: Vec<TokenBytes>, merges: Vec<Merge>)
-        -> Result<Self, Error>
-    {
-        if vocabulary.len() != profile.shape().vocabulary { return Err(Error::Binding); }
-        if vocabulary.len() < 256 { return Err(Error::Incomplete); }
+    pub fn new(
+        profile: DecoderProfile,
+        vocabulary: Vec<TokenBytes>,
+        merges: Vec<Merge>,
+    ) -> Result<Self, Error> {
+        if vocabulary.len() != profile.shape().vocabulary {
+            return Err(Error::Binding);
+        }
+        if vocabulary.len() < 256 {
+            return Err(Error::Incomplete);
+        }
         if vocabulary.len() > MAX_DECODER_VOCABULARY || merges.len() > MAX_MERGES {
             return Err(Error::Limit);
         }
@@ -306,14 +374,22 @@ impl ByteBpe {
         for (id, token) in vocabulary.iter().enumerate() {
             match token {
                 TokenBytes::Control => {
-                    if controls.len() == MAX_CONTROL_TOKENS { return Err(Error::Limit); }
+                    if controls.len() == MAX_CONTROL_TOKENS {
+                        return Err(Error::Limit);
+                    }
                     controls.push(id as u32);
                 }
                 TokenBytes::Content(value) => {
-                    if value.is_empty() { return Err(Error::InvalidInput); }
-                    if value.len() > MAX_TOKEN_BYTES { return Err(Error::Limit); }
+                    if value.is_empty() {
+                        return Err(Error::InvalidInput);
+                    }
+                    if value.len() > MAX_TOKEN_BYTES {
+                        return Err(Error::Limit);
+                    }
                     bytes = bytes.checked_add(value.len()).ok_or(Error::Limit)?;
-                    if bytes > MAX_VOCABULARY_BYTES { return Err(Error::Limit); }
+                    if bytes > MAX_VOCABULARY_BYTES {
+                        return Err(Error::Limit);
+                    }
                     max_content_bytes = max_content_bytes.max(value.len());
                 }
             }
@@ -323,14 +399,18 @@ impl ByteBpe {
         let mut available = BTreeSet::new();
         for (id, token) in vocabulary.iter().enumerate() {
             if let TokenBytes::Content(value) = token {
-                if !seen.insert(value.as_slice()) { return Err(Error::Duplicate); }
+                if !seen.insert(value.as_slice()) {
+                    return Err(Error::Duplicate);
+                }
                 if value.len() == 1 {
                     singletons[usize::from(value[0])] = Some(id as u32);
                     available.insert(id as u32);
                 }
             }
         }
-        if singletons.iter().any(Option::is_none) { return Err(Error::Incomplete); }
+        if singletons.iter().any(Option::is_none) {
+            return Err(Error::Incomplete);
+        }
         let mut ranks = BTreeMap::new();
         for (rank, rule) in merges.iter().enumerate() {
             let left = content(&vocabulary, rule.left)?;
@@ -340,40 +420,73 @@ impl ByteBpe {
                 return Err(Error::Binding);
             }
             if result.len() != left.len() + right.len()
-                || !result.starts_with(left) || &result[left.len()..] != right
-            { return Err(Error::Binding); }
-            if ranks.insert((rule.left, rule.right), (rank, rule.result)).is_some() {
+                || !result.starts_with(left)
+                || &result[left.len()..] != right
+            {
+                return Err(Error::Binding);
+            }
+            if ranks
+                .insert((rule.left, rule.right), (rank, rule.result))
+                .is_some()
+            {
                 return Err(Error::Duplicate);
             }
             available.insert(rule.result);
         }
         if vocabulary.iter().enumerate().any(|(id, token)| {
             matches!(token, TokenBytes::Content(_)) && !available.contains(&(id as u32))
-        }) { return Err(Error::Incomplete); }
+        }) {
+            return Err(Error::Incomplete);
+        }
         drop(seen);
-        Ok(Self(Rc::new(Data { profile, vocabulary, merges, ranks,
+        Ok(Self(Rc::new(Data {
+            profile,
+            vocabulary,
+            merges,
+            ranks,
             singletons: singletons.map(|id| id.expect("complete singleton inventory")),
-            controls, max_content_bytes, special: special::SpecialTokens::default(),
-            pre_tokenization: PreTokenization::RawBytes })))
+            controls,
+            max_content_bytes,
+            special: special::SpecialTokens::default(),
+            pre_tokenization: PreTokenization::RawBytes,
+        })))
     }
 
-    pub fn profile(&self) -> &DecoderProfile { &self.0.profile }
-    pub fn pre_tokenization(&self) -> PreTokenization { self.0.pre_tokenization }
-    pub fn control_tokens(&self) -> &[u32] { &self.0.controls }
-    pub fn max_content_bytes(&self) -> usize { self.0.max_content_bytes }
+    pub fn profile(&self) -> &DecoderProfile {
+        &self.0.profile
+    }
+    pub fn pre_tokenization(&self) -> PreTokenization {
+        self.0.pre_tokenization
+    }
+    pub fn control_tokens(&self) -> &[u32] {
+        &self.0.controls
+    }
+    pub fn max_content_bytes(&self) -> usize {
+        self.0.max_content_bytes
+    }
     pub fn content_bytes(&self, token: u32) -> Result<&[u8], Error> {
         content(&self.0.vocabulary, token)
     }
     pub fn is_control(&self, token: u32) -> Result<bool, Error> {
-        Ok(matches!(self.0.vocabulary.get(token as usize).ok_or(Error::Missing)?, TokenBytes::Control))
+        Ok(matches!(
+            self.0
+                .vocabulary
+                .get(token as usize)
+                .ok_or(Error::Missing)?,
+            TokenBytes::Control
+        ))
     }
-    pub fn binds(&self, profile: &DecoderProfile) -> bool { self.profile() == profile }
+    pub fn binds(&self, profile: &DecoderProfile) -> bool {
+        self.profile() == profile
+    }
 
     /// Run the same cooperative cursor to completion. No second BPE engine or
     /// alternate rank, special-token, span or work-accounting policy exists.
-    pub fn encode(&self, source: &[u8], budget: TokenizationBudget)
-        -> Result<TokenizedInput, TokenizationFailure>
-    {
+    pub fn encode(
+        &self,
+        source: &[u8],
+        budget: TokenizationBudget,
+    ) -> Result<TokenizedInput, TokenizationFailure> {
         let mut cursor = self.begin_encode(source, budget)?;
         while cursor.advance()? != TokenizationProgress::Complete {}
         cursor.finish()
@@ -382,67 +495,115 @@ impl ByteBpe {
     /// Admit owned input and scratch, then yield before initial pair lookups.
     /// Copying, named-control recognition and Unicode segmentation remain a bounded synchronous
     /// admission pass; the candidate and final-output passes are cooperative.
-    pub fn begin_encode(&self, source: &[u8], budget: TokenizationBudget)
-        -> Result<TokenizationCursor, TokenizationFailure>
-    {
+    pub fn begin_encode(
+        &self,
+        source: &[u8],
+        budget: TokenizationBudget,
+    ) -> Result<TokenizationCursor, TokenizationFailure> {
         let mut work = TokenizationWork::default();
         self.begin_encode_inner(source, budget, &mut work)
             .map_err(|error| TokenizationFailure { error, work })
     }
 
-    fn begin_encode_inner(&self, source: &[u8], budget: TokenizationBudget,
-        work: &mut TokenizationWork) -> Result<TokenizationCursor, Error>
-    {
-        if budget.input_bytes > MAX_INPUT_BYTES || budget.pair_lookups > MAX_PAIR_LOOKUPS
-            || budget.heap_pops > MAX_HEAP_POPS || source.len() > budget.input_bytes
-        { return Err(Error::Limit); }
+    fn begin_encode_inner(
+        &self,
+        source: &[u8],
+        budget: TokenizationBudget,
+        work: &mut TokenizationWork,
+    ) -> Result<TokenizationCursor, Error> {
+        if budget.input_bytes > MAX_INPUT_BYTES
+            || budget.pair_lookups > MAX_PAIR_LOOKUPS
+            || budget.heap_pops > MAX_HEAP_POPS
+            || source.len() > budget.input_bytes
+        {
+            return Err(Error::Limit);
+        }
         let count = source.len();
         // Unicode profiles consume a complete, bounded UTF-8 input. Invalid bytes
         // never become replacement characters or a successfully encoded prefix.
         // RawBytes keeps its existing arbitrary-byte contract and work sequence.
-        let unicode = if self.0.pre_tokenization == PreTokenization::RawBytes { None } else {
+        let unicode = if self.0.pre_tokenization == PreTokenization::RawBytes {
+            None
+        } else {
             work.input_bytes = count;
             Some(std::str::from_utf8(source).map_err(|_| Error::InvalidInput)?)
         };
         let mut nodes = Vec::new();
         nodes.try_reserve_exact(count).map_err(|_| Error::Limit)?;
         let mut heap = BinaryHeap::new();
-        heap.try_reserve(count.saturating_mul(3)).map_err(|_| Error::Limit)?;
+        heap.try_reserve(count.saturating_mul(3))
+            .map_err(|_| Error::Limit)?;
         let mut tokens = Vec::new();
         tokens.try_reserve_exact(count).map_err(|_| Error::Limit)?;
         let mut spans = Vec::new();
         spans.try_reserve_exact(count).map_err(|_| Error::Limit)?;
         let mut original = Vec::new();
-        original.try_reserve_exact(count).map_err(|_| Error::Limit)?;
+        original
+            .try_reserve_exact(count)
+            .map_err(|_| Error::Limit)?;
         original.extend_from_slice(source);
         for (index, byte) in source.iter().enumerate() {
-            nodes.push(Node { token: self.0.singletons[usize::from(*byte)],
-                end: index + 1, previous: index.checked_sub(1),
-                next: (index + 1 < count).then_some(index + 1), live: true,
-                boundary_before: false });
+            nodes.push(Node {
+                token: self.0.singletons[usize::from(*byte)],
+                end: index + 1,
+                previous: index.checked_sub(1),
+                next: (index + 1 < count).then_some(index + 1),
+                live: true,
+                boundary_before: false,
+            });
         }
         work.input_bytes = count;
         self.0.special.bind_nodes(source, &mut nodes)?;
         if let Some(unicode) = unicode {
-            self.0.pre_tokenization.bind_nodes(unicode, &mut nodes, &self.0.vocabulary)?;
+            self.0
+                .pre_tokenization
+                .bind_nodes(unicode, &mut nodes, &self.0.vocabulary)?;
         }
-        Ok(TokenizationCursor { tokenizer: self.clone(), source: original,
-            nodes, heap, tokens, spans, budget, work: *work,
-            phase: EncodingPhase::Offering(0) })
+        Ok(TokenizationCursor {
+            tokenizer: self.clone(),
+            source: original,
+            nodes,
+            heap,
+            tokens,
+            spans,
+            budget,
+            work: *work,
+            phase: EncodingPhase::Offering(0),
+        })
     }
 
-    fn offer(&self, left: usize, nodes: &[Node], heap: &mut BinaryHeap<Reverse<Candidate>>,
-        budget: TokenizationBudget, work: &mut TokenizationWork) -> Result<(), Error>
-    {
-        if !nodes[left].live { return Ok(()); }
-        let Some(right) = nodes[left].next else { return Ok(()); };
-        if nodes[right].boundary_before { return Ok(()); }
-        if work.pair_lookups == budget.pair_lookups { return Err(Error::Limit); }
+    fn offer(
+        &self,
+        left: usize,
+        nodes: &[Node],
+        heap: &mut BinaryHeap<Reverse<Candidate>>,
+        budget: TokenizationBudget,
+        work: &mut TokenizationWork,
+    ) -> Result<(), Error> {
+        if !nodes[left].live {
+            return Ok(());
+        }
+        let Some(right) = nodes[left].next else {
+            return Ok(());
+        };
+        if nodes[right].boundary_before {
+            return Ok(());
+        }
+        if work.pair_lookups == budget.pair_lookups {
+            return Err(Error::Limit);
+        }
         work.pair_lookups += 1;
         let left_token = nodes[left].token;
         let right_token = nodes[right].token;
         if let Some(&(rank, result)) = self.0.ranks.get(&(left_token, right_token)) {
-            heap.push(Reverse(Candidate { rank, left, right, left_token, right_token, result }));
+            heap.push(Reverse(Candidate {
+                rank,
+                left,
+                right,
+                left_token,
+                right_token,
+                result,
+            }));
         }
         Ok(())
     }
@@ -451,15 +612,23 @@ impl ByteBpe {
     /// stripping, replacement characters or pretending arbitrary bytes are UTF-8.
     /// The entire length and token inventory are admitted before allocation.
     pub fn decode(&self, tokens: &[u32], max_bytes: usize) -> Result<Vec<u8>, Error> {
-        if tokens.len() > MAX_INPUT_BYTES || max_bytes > MAX_DECODE_BYTES { return Err(Error::Limit); }
+        if tokens.len() > MAX_INPUT_BYTES || max_bytes > MAX_DECODE_BYTES {
+            return Err(Error::Limit);
+        }
         let mut bytes = 0_usize;
         for token in tokens {
-            bytes = bytes.checked_add(tokenizer_content(self, *token)?.len()).ok_or(Error::Limit)?;
-            if bytes > max_bytes { return Err(Error::Limit); }
+            bytes = bytes
+                .checked_add(tokenizer_content(self, *token)?.len())
+                .ok_or(Error::Limit)?;
+            if bytes > max_bytes {
+                return Err(Error::Limit);
+            }
         }
         let mut output = Vec::new();
         output.try_reserve_exact(bytes).map_err(|_| Error::Limit)?;
-        for token in tokens { output.extend_from_slice(self.content_bytes(*token)?); }
+        for token in tokens {
+            output.extend_from_slice(self.content_bytes(*token)?);
+        }
         Ok(output)
     }
 }
@@ -495,27 +664,71 @@ struct Candidate {
 #[cfg(test)]
 mod cooperative_tests {
     use super::*;
-    use crate::action::consequence::activation::tensor::kv::decoder::{DecoderIdentity, DecoderShape};
+    use crate::action::consequence::activation::tensor::kv::decoder::{
+        DecoderIdentity, DecoderShape,
+    };
 
     fn tokenizer(named: bool) -> ByteBpe {
         let mut vocabulary: Vec<_> = (0..=255)
-            .map(|byte| TokenBytes::Content(vec![byte])).collect();
-        vocabulary.extend([TokenBytes::Content(b"aa".to_vec()),
-            TokenBytes::Content(b"ab".to_vec()), TokenBytes::Content(b"aab".to_vec())]);
-        if named { vocabulary.extend([TokenBytes::Control, TokenBytes::Control]); }
-        let profile = DecoderProfile::new(DecoderIdentity {
-            tenant: 1, model: 2, model_generation: 3, tokenizer_generation: 4,
-            profile_generation: 5,
-        }, DecoderShape { vocabulary: vocabulary.len(), hidden: 2, intermediate: 2,
-            layers: 1, query_heads: 1, cache_heads: 1, context: 64 }, 1e-5, 10000.0).unwrap();
+            .map(|byte| TokenBytes::Content(vec![byte]))
+            .collect();
+        vocabulary.extend([
+            TokenBytes::Content(b"aa".to_vec()),
+            TokenBytes::Content(b"ab".to_vec()),
+            TokenBytes::Content(b"aab".to_vec()),
+        ]);
+        if named {
+            vocabulary.extend([TokenBytes::Control, TokenBytes::Control]);
+        }
+        let profile = DecoderProfile::new(
+            DecoderIdentity {
+                tenant: 1,
+                model: 2,
+                model_generation: 3,
+                tokenizer_generation: 4,
+                profile_generation: 5,
+            },
+            DecoderShape {
+                vocabulary: vocabulary.len(),
+                hidden: 2,
+                intermediate: 2,
+                layers: 1,
+                query_heads: 1,
+                cache_heads: 1,
+                context: 64,
+            },
+            1e-5,
+            10000.0,
+        )
+        .unwrap();
         let names = if named {
             BTreeMap::from([(259, b"<q>".to_vec()), (260, b"<q>x".to_vec())])
-        } else { BTreeMap::new() };
-        ByteBpe::new_with_special_tokens(profile, vocabulary, vec![
-            Merge { left: 97, right: 97, result: 256 },
-            Merge { left: 97, right: 98, result: 257 },
-            Merge { left: 256, right: 98, result: 258 },
-        ], names).unwrap()
+        } else {
+            BTreeMap::new()
+        };
+        ByteBpe::new_with_special_tokens(
+            profile,
+            vocabulary,
+            vec![
+                Merge {
+                    left: 97,
+                    right: 97,
+                    result: 256,
+                },
+                Merge {
+                    left: 97,
+                    right: 98,
+                    result: 257,
+                },
+                Merge {
+                    left: 256,
+                    right: 98,
+                    result: 258,
+                },
+            ],
+            names,
+        )
+        .unwrap()
     }
 
     // Independent rank-ordered vector rewrite; no production heap or node links.
@@ -529,15 +742,22 @@ mod cooperative_tests {
                     break;
                 }
             }
-            let Some((index, result)) = chosen else { return tokens; };
+            let Some((index, result)) = chosen else {
+                return tokens;
+            };
             tokens[index] = result;
             tokens.remove(index + 1);
         }
     }
 
     fn drain(mut cursor: TokenizationCursor) -> TokenizedInput {
-        let capacities = (cursor.nodes.capacity(), cursor.heap.capacity(),
-            cursor.tokens.capacity(), cursor.spans.capacity(), cursor.source.capacity());
+        let capacities = (
+            cursor.nodes.capacity(),
+            cursor.heap.capacity(),
+            cursor.tokens.capacity(),
+            cursor.spans.capacity(),
+            cursor.source.capacity(),
+        );
         loop {
             let before = cursor.work();
             let progress = cursor.advance().unwrap();
@@ -545,9 +765,19 @@ mod cooperative_tests {
             assert!(after.heap_pops - before.heap_pops <= 1);
             assert!(after.pair_lookups - before.pair_lookups <= 2);
             assert!(after.merges - before.merges <= 1);
-            assert_eq!(capacities, (cursor.nodes.capacity(), cursor.heap.capacity(),
-                cursor.tokens.capacity(), cursor.spans.capacity(), cursor.source.capacity()));
-            if progress == TokenizationProgress::Complete { break; }
+            assert_eq!(
+                capacities,
+                (
+                    cursor.nodes.capacity(),
+                    cursor.heap.capacity(),
+                    cursor.tokens.capacity(),
+                    cursor.spans.capacity(),
+                    cursor.source.capacity()
+                )
+            );
+            if progress == TokenizationProgress::Complete {
+                break;
+            }
         }
         let work = cursor.work();
         assert_eq!(cursor.advance().unwrap(), TokenizationProgress::Complete);
@@ -561,18 +791,28 @@ mod cooperative_tests {
         for length in 0..=8 {
             for bits in 0..(1_usize << length) {
                 let source: Vec<_> = (0..length)
-                    .map(|index| if bits & (1 << index) == 0 { b'a' } else { b'b' }).collect();
-                let encoded = drain(tokenizer.begin_encode(&source, TokenizationBudget::default()).unwrap());
+                    .map(|index| if bits & (1 << index) == 0 { b'a' } else { b'b' })
+                    .collect();
+                let encoded = drain(
+                    tokenizer
+                        .begin_encode(&source, TokenizationBudget::default())
+                        .unwrap(),
+                );
                 assert_eq!(encoded.tokens(), oracle(&source));
                 assert_eq!(encoded.source(), source);
                 let mut through = 0;
                 for (&token, span) in encoded.tokens().iter().zip(encoded.spans()) {
                     assert_eq!(span.start, through);
-                    assert_eq!(tokenizer.content_bytes(token).unwrap(), &source[span.clone()]);
+                    assert_eq!(
+                        tokenizer.content_bytes(token).unwrap(),
+                        &source[span.clone()]
+                    );
                     through = span.end;
                 }
                 assert_eq!(through, source.len());
-                let synchronous = tokenizer.encode(&source, TokenizationBudget::default()).unwrap();
+                let synchronous = tokenizer
+                    .encode(&source, TokenizationBudget::default())
+                    .unwrap();
                 assert_eq!(encoded.work(), synchronous.work());
                 assert_eq!(encoded.spans(), synchronous.spans());
             }
@@ -582,7 +822,11 @@ mod cooperative_tests {
     #[test]
     fn named_controls_keep_leftmost_longest_original_boundaries() {
         let tokenizer = tokenizer(true);
-        let encoded = drain(tokenizer.begin_encode(b"a<q>bc<q>x", TokenizationBudget::default()).unwrap());
+        let encoded = drain(
+            tokenizer
+                .begin_encode(b"a<q>bc<q>x", TokenizationBudget::default())
+                .unwrap(),
+        );
         assert_eq!(encoded.tokens(), &[97, 259, 98, 99, 260]);
         assert_eq!(encoded.spans(), &[0..1, 1..4, 4..5, 5..6, 6..10]);
         assert_eq!(encoded.source(), b"a<q>bc<q>x");
@@ -592,10 +836,17 @@ mod cooperative_tests {
     fn owned_input_survives_mutation_and_interleaved_cursors() {
         let tokenizer = tokenizer(false);
         let mut source = b"aab\xff\0".to_vec();
-        let mut first = tokenizer.begin_encode(&source, TokenizationBudget::default()).unwrap();
-        let mut second = tokenizer.begin_encode(b"abab", TokenizationBudget::default()).unwrap();
+        let mut first = tokenizer
+            .begin_encode(&source, TokenizationBudget::default())
+            .unwrap();
+        let mut second = tokenizer
+            .begin_encode(b"abab", TokenizationBudget::default())
+            .unwrap();
         source.fill(b'z');
-        for _ in 0..3 { first.advance().unwrap(); second.advance().unwrap(); }
+        for _ in 0..3 {
+            first.advance().unwrap();
+            second.advance().unwrap();
+        }
         let first = drain(first);
         assert_eq!(first.source(), b"aab\xff\0");
         assert_eq!(first.tokens(), &[258, 255, 0]);
@@ -605,14 +856,20 @@ mod cooperative_tests {
     #[test]
     fn cancellation_and_pending_finish_never_expose_partial_success() {
         let tokenizer = tokenizer(false);
-        let mut cursor = tokenizer.begin_encode(b"aaab", TokenizationBudget::default()).unwrap();
-        for _ in 0..3 { assert_eq!(cursor.advance().unwrap(), TokenizationProgress::Pending); }
+        let mut cursor = tokenizer
+            .begin_encode(b"aaab", TokenizationBudget::default())
+            .unwrap();
+        for _ in 0..3 {
+            assert_eq!(cursor.advance().unwrap(), TokenizationProgress::Pending);
+        }
         let work = cursor.work();
         assert_eq!(work.input_bytes, 4);
         assert_eq!(work.pair_lookups, 3);
         assert_eq!(work.heap_pops, 0);
         assert_eq!(cursor.cancel(), work);
-        let cursor = tokenizer.begin_encode(b"aaab", TokenizationBudget::default()).unwrap();
+        let cursor = tokenizer
+            .begin_encode(b"aaab", TokenizationBudget::default())
+            .unwrap();
         let error = cursor.finish().unwrap_err();
         assert_eq!(error.error, Error::Incomplete);
         assert_eq!(error.work.input_bytes, 4);
@@ -621,7 +878,11 @@ mod cooperative_tests {
     #[test]
     fn merge_budget_failure_is_sticky_and_retains_completed_work() {
         let tokenizer = tokenizer(false);
-        let budget = TokenizationBudget { input_bytes: 3, pair_lookups: 2, heap_pops: 8 };
+        let budget = TokenizationBudget {
+            input_bytes: 3,
+            pair_lookups: 2,
+            heap_pops: 8,
+        };
         let mut cursor = tokenizer.begin_encode(b"aaa", budget).unwrap();
         let failure = loop {
             match cursor.advance() {
@@ -630,9 +891,15 @@ mod cooperative_tests {
             }
         };
         assert_eq!(failure.error, Error::Limit);
-        assert_eq!(failure.work, TokenizationWork {
-            input_bytes: 3, pair_lookups: 2, heap_pops: 1, merges: 1,
-        });
+        assert_eq!(
+            failure.work,
+            TokenizationWork {
+                input_bytes: 3,
+                pair_lookups: 2,
+                heap_pops: 1,
+                merges: 1,
+            }
+        );
         assert_eq!(cursor.advance(), Err(failure));
         assert_eq!(cursor.finish().unwrap_err(), failure);
         assert_eq!(tokenizer.encode(b"aaa", budget).unwrap_err(), failure);
@@ -641,14 +908,31 @@ mod cooperative_tests {
     #[test]
     fn input_and_heap_limits_refuse_without_unaccounted_retry() {
         let tokenizer = tokenizer(false);
-        let failure = tokenizer.begin_encode(b"a", TokenizationBudget {
-            input_bytes: 0, ..TokenizationBudget::default()
-        }).unwrap_err();
-        assert_eq!(failure, TokenizationFailure { error: Error::Limit,
-            work: TokenizationWork::default() });
-        let mut cursor = tokenizer.begin_encode(b"aa", TokenizationBudget {
-            heap_pops: 0, ..TokenizationBudget::default()
-        }).unwrap();
+        let failure = tokenizer
+            .begin_encode(
+                b"a",
+                TokenizationBudget {
+                    input_bytes: 0,
+                    ..TokenizationBudget::default()
+                },
+            )
+            .unwrap_err();
+        assert_eq!(
+            failure,
+            TokenizationFailure {
+                error: Error::Limit,
+                work: TokenizationWork::default()
+            }
+        );
+        let mut cursor = tokenizer
+            .begin_encode(
+                b"aa",
+                TokenizationBudget {
+                    heap_pops: 0,
+                    ..TokenizationBudget::default()
+                },
+            )
+            .unwrap();
         let failure = loop {
             match cursor.advance() {
                 Ok(TokenizationProgress::Pending) => {}
@@ -659,7 +943,14 @@ mod cooperative_tests {
         assert_eq!(failure.work.merges, 0);
         assert_eq!(failure.work.pair_lookups, 1);
         assert_eq!(cursor.cancel(), failure.work);
-        assert!(drain(tokenizer.begin_encode(&[], TokenizationBudget::default()).unwrap())
-            .tokens().is_empty());
+        assert!(
+            drain(
+                tokenizer
+                    .begin_encode(&[], TokenizationBudget::default())
+                    .unwrap()
+            )
+            .tokens()
+            .is_empty()
+        );
     }
 }

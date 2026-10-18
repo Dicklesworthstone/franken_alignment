@@ -5,11 +5,11 @@
 //! unchanged sealed FileEvidenceSource and the original durable source gate.
 
 use super::super::super::{JournalError, storage};
-use crate::action::{Purpose, Scope};
+use crate::Error;
 use crate::action::consequence::oversight::evidence_source::{
     EvidenceIdentity, EvidenceSnapshot, FileEvidenceSource, MAX_EVIDENCE_FILE_BYTES,
 };
-use crate::Error;
+use crate::action::{Purpose, Scope};
 use std::fmt;
 use std::path::Path;
 
@@ -118,7 +118,13 @@ impl FileEvidencePublisher {
         let bytes = profile.encode(&initial)?;
         let store = storage::Store::create(directory.as_ref())?;
         store.replace(&bytes)?;
-        let owner = Self { profile, store, current: initial, current_bytes: bytes, fault: None };
+        let owner = Self {
+            profile,
+            store,
+            current: initial,
+            current_bytes: bytes,
+            fault: None,
+        };
         let result = owner.publication(EvidencePublicationKind::Created);
         Ok((owner, result))
     }
@@ -128,7 +134,8 @@ impl FileEvidencePublisher {
     /// discard staged leftovers. Pending bytes are NEVER promoted as evidence.
     /// A malformed/missing/rolled-back canonical image fails before cleanup.
     pub fn open(
-        directory: impl AsRef<Path>, profile: EvidencePublisherProfile,
+        directory: impl AsRef<Path>,
+        profile: EvidencePublisherProfile,
     ) -> Result<Self, JournalError> {
         profile.check()?;
         let store = storage::Store::open(directory.as_ref())?;
@@ -136,13 +143,23 @@ impl FileEvidencePublisher {
         let current = EvidenceSnapshot::decode(&current_bytes)?;
         profile.check_snapshot(&current)?;
         store.confirm_and_cleanup()?;
-        Ok(Self { profile, store, current, current_bytes, fault: None })
+        Ok(Self {
+            profile,
+            store,
+            current,
+            current_bytes,
+            fault: None,
+        })
     }
 
     /// Last acknowledged (or explicitly reopened) data, not a fresh file read.
     /// After an ambiguous failure it may differ from the currently visible file.
-    pub fn snapshot(&self) -> &EvidenceSnapshot { &self.current }
-    pub fn failure(&self) -> Option<&JournalError> { self.fault.as_ref() }
+    pub fn snapshot(&self) -> &EvidenceSnapshot {
+        &self.current
+    }
+    pub fn failure(&self) -> Option<&JournalError> {
+        self.fault.as_ref()
+    }
 
     /// The existing concrete reader reopens the canonical path on EVERY read.
     /// This neither transfers the producer lock nor grants an observer authority.
@@ -150,7 +167,9 @@ impl FileEvidencePublisher {
         self.ensure_live()?;
         Ok(FileEvidenceSource::new(
             self.store.identity().join(storage::CANONICAL),
-            self.profile.source, self.profile.scope, self.profile.max_bytes,
+            self.profile.source,
+            self.profile.scope,
+            self.profile.max_bytes,
         )?)
     }
 
@@ -158,7 +177,9 @@ impl FileEvidencePublisher {
     /// observations: the ORIGINAL consumer holds them, never fills their gaps.
     /// A metadata result is returned only after file and directory barriers.
     pub fn publish(
-        &mut self, expected_generation: u64, next: EvidenceSnapshot,
+        &mut self,
+        expected_generation: u64,
+        next: EvidenceSnapshot,
     ) -> Result<EvidencePublication, JournalError> {
         self.ensure_live()?;
         self.profile.check_snapshot(&next)?;
@@ -199,7 +220,11 @@ impl FileEvidencePublisher {
     }
 
     fn ensure_live(&self) -> Result<(), JournalError> {
-        if self.fault.is_some() { Err(JournalError::Unavailable) } else { Ok(()) }
+        if self.fault.is_some() {
+            Err(JournalError::Unavailable)
+        } else {
+            Ok(())
+        }
     }
 
     fn fail<T>(&mut self, error: JournalError) -> Result<T, JournalError> {
@@ -208,9 +233,12 @@ impl FileEvidencePublisher {
     }
 
     fn publication(&self, kind: EvidencePublicationKind) -> EvidencePublication {
-        EvidencePublication { identity: self.current.identity(),
+        EvidencePublication {
+            identity: self.current.identity(),
             semantic_epoch: self.current.snapshot().semantic_epoch,
-            encoded_bytes: self.current_bytes.len(), kind }
+            encoded_bytes: self.current_bytes.len(),
+            kind,
+        }
     }
 }
 

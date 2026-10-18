@@ -2,17 +2,23 @@
 pub mod learned;
 pub mod owned;
 mod stopping;
-pub use stopping::FilePredictiveStopSnapshot;
-use super::{FileCredentialRegistration, FileGuardSet, FileOversightRoles, FileRecoveryRequirements};
-use super::bootstrap::PreparedGuardedBootstrap;
-use super::super::{BaseEvent, Event, FileDeliverySnapshot, FileOversight, FileOversightProfile,
-    JournalError, Machine, journal, storage};
-use super::super::consistency::{ConsistencyEvent, FileConsistencyConfig, FileConsistencyObserver, FileConsistencySnapshot};
+use super::super::consistency::{
+    ConsistencyEvent, FileConsistencyConfig, FileConsistencyObserver, FileConsistencySnapshot,
+};
 use super::super::credibility::{CredibilityEvent, FileIndependentEvaluator};
-use crate::action::consequence::oversight::credibility::{CredibilityReport, EvaluationProtocol};
+use super::super::{
+    BaseEvent, Event, FileDeliverySnapshot, FileOversight, FileOversightProfile, JournalError,
+    Machine, journal, storage,
+};
+use super::bootstrap::PreparedGuardedBootstrap;
+use super::{
+    FileCredentialRegistration, FileGuardSet, FileOversightRoles, FileRecoveryRequirements,
+};
 use crate::Error;
+use crate::action::consequence::oversight::credibility::{CredibilityReport, EvaluationProtocol};
 use std::path::Path;
 use std::rc::Rc;
+pub use stopping::FilePredictiveStopSnapshot;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct FilePredictiveRequirements {
@@ -31,9 +37,20 @@ pub struct FilePredictiveRoles {
     pub evaluator: Option<FileIndependentEvaluator>,
 }
 impl FilePredictiveRoles {
-    pub(super) fn provision(host: &FileOversight, oversight: FileOversightRoles, evaluated: bool) -> Self {
-        Self { oversight, consistency_observer: FileConsistencyObserver { issuer: Rc::clone(&host.issuer) },
-            evaluator: evaluated.then(|| FileIndependentEvaluator { issuer: Rc::clone(&host.issuer) }) }
+    pub(super) fn provision(
+        host: &FileOversight,
+        oversight: FileOversightRoles,
+        evaluated: bool,
+    ) -> Self {
+        Self {
+            oversight,
+            consistency_observer: FileConsistencyObserver {
+                issuer: Rc::clone(&host.issuer),
+            },
+            evaluator: evaluated.then(|| FileIndependentEvaluator {
+                issuer: Rc::clone(&host.issuer),
+            }),
+        }
     }
 }
 
@@ -53,14 +70,19 @@ pub struct FilePredictiveSnapshot {
 impl FileOversight {
     /// Validate every original gate transition, then publish ONCE before exposing
     /// any owner or role. Prediction is not an effect key or calibrated identity.
-    pub fn create_predictive_guarded(directory: impl AsRef<Path>, profile: FileOversightProfile,
-        guards: &FileGuardSet, registration: Option<FileCredentialRegistration<'_>>,
-        prediction: FileConsistencyConfig, evaluation: Option<EvaluationProtocol>)
-        -> Result<(Self, FilePredictiveRoles), JournalError>
-    {
+    pub fn create_predictive_guarded(
+        directory: impl AsRef<Path>,
+        profile: FileOversightProfile,
+        guards: &FileGuardSet,
+        registration: Option<FileCredentialRegistration<'_>>,
+        prediction: FileConsistencyConfig,
+        evaluation: Option<EvaluationProtocol>,
+    ) -> Result<(Self, FilePredictiveRoles), JournalError> {
         let evaluated = evaluation.is_some();
         let mut prepared = PreparedGuardedBootstrap::prepare(profile, guards, registration)?;
-        if let Some(protocol) = evaluation { prepared = prepared.evaluated(protocol)?; }
+        if let Some(protocol) = evaluation {
+            prepared = prepared.evaluated(protocol)?;
+        }
         let prepared = prepared.predictive(prediction)?;
         let store = storage::Store::create(directory.as_ref())?;
         let (host, oversight) = prepared.publish(store)?;
@@ -71,17 +93,21 @@ impl FileOversight {
     /// Pin exact coefficients, calibration, category, lifetime bounds, optional
     /// evaluator and all existing guards before replay or cleanup. The ONE native
     /// fence retains evidence and turns an unanswered forecast into lost coverage.
-    pub fn open_predictive_guarded(directory: impl AsRef<Path>, profile: FileOversightProfile,
-        expected: &FilePredictiveRequirements) -> Result<(Self, FilePredictiveRoles), JournalError>
-    {
+    pub fn open_predictive_guarded(
+        directory: impl AsRef<Path>,
+        profile: FileOversightProfile,
+        expected: &FilePredictiveRequirements,
+    ) -> Result<(Self, FilePredictiveRoles), JournalError> {
         profile.delivery.limits.check()?;
         let store = storage::Store::open(directory.as_ref())?;
         Self::open_predictive_store(store, profile, expected)
     }
 
-    fn open_predictive_store(store: storage::Store, profile: FileOversightProfile,
-        expected: &FilePredictiveRequirements) -> Result<(Self, FilePredictiveRoles), JournalError>
-    {
+    fn open_predictive_store(
+        store: storage::Store,
+        profile: FileOversightProfile,
+        expected: &FilePredictiveRequirements,
+    ) -> Result<(Self, FilePredictiveRoles), JournalError> {
         let bytes = store.read(profile.delivery.limits.bytes)?;
         let (events, machine) = checked_image(&profile, store.identity(), &bytes, expected)?;
         store.confirm_and_cleanup()?;
@@ -94,28 +120,49 @@ impl FileOversight {
 
     /// Read beside a locked/faulted owner. No writer lock, cleanup, time update,
     /// fence or role is created. Full historical numerical replay is extra work.
-    pub fn read_predictive_consistency(directory: impl AsRef<Path>, profile: &FileOversightProfile,
-        expected: &FilePredictiveRequirements) -> Result<FilePredictiveSnapshot, JournalError>
-    {
+    pub fn read_predictive_consistency(
+        directory: impl AsRef<Path>,
+        profile: &FileOversightProfile,
+        expected: &FilePredictiveRequirements,
+    ) -> Result<FilePredictiveSnapshot, JournalError> {
         let identity = storage::identity(directory.as_ref())?;
-        let bytes = storage::read(&identity.join(storage::CANONICAL), profile.delivery.limits.bytes)?;
+        let bytes = storage::read(
+            &identity.join(storage::CANONICAL),
+            profile.delivery.limits.bytes,
+        )?;
         let (events, machine) = checked_image(profile, &identity, &bytes, expected)?;
-        let credibility = expected.evaluation.as_ref().map(|_| machine.broker.credibility_report()).transpose()?;
-        Ok(FilePredictiveSnapshot { journal: machine.snapshot(events.len()),
-            consistency: machine.consistency_snapshot(events.len() as u64)?, credibility })
+        let credibility = expected
+            .evaluation
+            .as_ref()
+            .map(|_| machine.broker.credibility_report())
+            .transpose()?;
+        Ok(FilePredictiveSnapshot {
+            journal: machine.snapshot(events.len()),
+            consistency: machine.consistency_snapshot(events.len() as u64)?,
+            credibility,
+        })
     }
 }
 
-pub(super) fn check_prediction(events: &[Event], expected: Option<&FileConsistencyConfig>) -> Result<(), Error> {
+pub(super) fn check_prediction(
+    events: &[Event],
+    expected: Option<&FileConsistencyConfig>,
+) -> Result<(), Error> {
     let mut configurations = events.iter().filter_map(|event| match event {
-        Event::Consistency(ConsistencyEvent::Enable(config)) => Some(config.as_ref()), _ => None,
+        Event::Consistency(ConsistencyEvent::Enable(config)) => Some(config.as_ref()),
+        _ => None,
     });
-    if configurations.next() != expected || configurations.next().is_some() { return Err(Error::Binding); }
+    if configurations.next() != expected || configurations.next().is_some() {
+        return Err(Error::Binding);
+    }
     Ok(())
 }
-fn checked_image(profile: &FileOversightProfile, identity: &Path, bytes: &[u8],
-    expected: &FilePredictiveRequirements) -> Result<(Vec<Event>, Machine), JournalError>
-{
+fn checked_image(
+    profile: &FileOversightProfile,
+    identity: &Path,
+    bytes: &[u8],
+    expected: &FilePredictiveRequirements,
+) -> Result<(Vec<Event>, Machine), JournalError> {
     let events = journal::decode(profile, identity, bytes)?;
     let machine = checked_events(profile, &events, expected)?;
     Ok((events, machine))
@@ -123,17 +170,30 @@ fn checked_image(profile: &FileOversightProfile, identity: &Path, bytes: &[u8],
 
 // Shared native validator after a caller-specific, internal history preflight.
 // No public event import or role-provisioning bypass is exposed.
-pub(super) fn checked_events(profile: &FileOversightProfile, events: &[Event],
-    expected: &FilePredictiveRequirements) -> Result<Machine, JournalError>
-{
-    expected.oversight.guards.check_replay_config(events, Some(&expected.prediction))?;
+pub(super) fn checked_events(
+    profile: &FileOversightProfile,
+    events: &[Event],
+    expected: &FilePredictiveRequirements,
+) -> Result<Machine, JournalError> {
+    expected
+        .oversight
+        .guards
+        .check_replay_config(events, Some(&expected.prediction))?;
     let mut protocols = events.iter().filter_map(|event| match event {
-        Event::Credibility(CredibilityEvent::Enable(protocol)) => Some(protocol), _ => None,
+        Event::Credibility(CredibilityEvent::Enable(protocol)) => Some(protocol),
+        _ => None,
     });
-    if protocols.next() != expected.evaluation.as_ref() || protocols.next().is_some() { return Err(Error::Binding.into()); }
+    if protocols.next() != expected.evaluation.as_ref() || protocols.next().is_some() {
+        return Err(Error::Binding.into());
+    }
     let machine = Machine::replay(profile, events)?;
-    expected.oversight.check_predictive(profile, &machine, events,
-        expected.evaluation.as_ref(), Some(&expected.prediction))?;
+    expected.oversight.check_predictive(
+        profile,
+        &machine,
+        events,
+        expected.evaluation.as_ref(),
+        Some(&expected.prediction),
+    )?;
     Ok(machine)
 }
 

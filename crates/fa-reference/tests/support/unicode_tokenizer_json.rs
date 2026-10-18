@@ -1,5 +1,6 @@
 //! External pipeline fixtures; patterns come from the upstream grammars, not
 //! from the implementation's pattern accessor or native archive serializer.
+#![allow(dead_code, unused_imports)]
 use fa_reference::action::consequence::activation::monitor::decoder::sampled::generation::tokenizer::PreTokenization;
 
 pub fn select(raw_json: &str, mode: PreTokenization) -> String {

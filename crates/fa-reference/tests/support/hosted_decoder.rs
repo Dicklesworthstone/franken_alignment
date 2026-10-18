@@ -1,4 +1,5 @@
 //! Real reference arithmetic with synthetic parameters, probes and helper verdicts.
+#![allow(dead_code, unused_imports)]
 #[path = "decoder_control.rs"]
 #[allow(dead_code)]
 pub mod control;

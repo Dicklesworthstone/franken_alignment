@@ -1,4 +1,4 @@
-#![allow(dead_code)]
+#![allow(dead_code, unused_imports)]
 #[path = "file_oversight.rs"]
 pub mod oversight;
 pub use oversight::{Directory, snapshot, profile};

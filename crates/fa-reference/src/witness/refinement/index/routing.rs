@@ -6,8 +6,8 @@ mod subtree;
 #[cfg(test)]
 mod tests;
 
-use crate::witness::{DomainProjection, Witness, WitnessJudgment, MAX_WITNESSES};
 use crate::Error;
+use crate::witness::{DomainProjection, MAX_WITNESSES, Witness, WitnessJudgment};
 
 pub const MAX_ROUTED_JUDGMENTS: usize = 128;
 pub const MAX_ROUTED_DEPENDENCIES: usize = MAX_ROUTED_JUDGMENTS * MAX_WITNESSES;
@@ -42,9 +42,18 @@ pub struct RoutingBudget {
 /// Ranges are half-open; Key can represent u64::MAX without overflowing an end.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum WitnessChange {
-    Key { domain: DomainProjection, key: u64 },
-    Range { domain: DomainProjection, start: u64, end: u64 },
-    Domain { domain: DomainProjection },
+    Key {
+        domain: DomainProjection,
+        key: u64,
+    },
+    Range {
+        domain: DomainProjection,
+        start: u64,
+        end: u64,
+    },
+    Domain {
+        domain: DomainProjection,
+    },
     All,
 }
 impl WitnessChange {
@@ -56,7 +65,9 @@ impl WitnessChange {
     }
     fn domain(self) -> Option<DomainProjection> {
         match self {
-            Self::Key { domain, .. } | Self::Range { domain, .. } | Self::Domain { domain } => Some(domain),
+            Self::Key { domain, .. } | Self::Range { domain, .. } | Self::Domain { domain } => {
+                Some(domain)
+            }
             Self::All => None,
         }
     }
@@ -81,11 +92,25 @@ impl From<DomainProjection> for DomainKey {
     }
 }
 #[derive(Clone, Copy, Debug)]
-struct Registration { id: u64, domain: Option<DomainProjection>, opaque: bool }
+struct Registration {
+    id: u64,
+    domain: Option<DomainProjection>,
+    opaque: bool,
+}
 #[derive(Clone, Copy, Debug)]
-struct Point { domain: DomainKey, key: u64, slot: usize }
+struct Point {
+    domain: DomainKey,
+    key: u64,
+    slot: usize,
+}
 #[derive(Clone, Copy, Debug)]
-struct Interval { domain: DomainKey, start: u64, end: u64, slot: usize, prefix_end: u64 }
+struct Interval {
+    domain: DomainKey,
+    start: u64,
+    end: u64,
+    slot: usize,
+    prefix_end: u64,
+}
 
 /// Append-only, value-free index of ORIGINAL judgments. Registration derives
 /// dependencies from private captured witnesses, not caller-asserted footprints.
@@ -108,24 +133,60 @@ impl InvalidationIndex {
         Self::new_with_strategy(limits, RoutingStrategy::PrefixV1)
     }
 
-    pub fn new_with_strategy(limits: RoutingLimits, strategy: RoutingStrategy) -> Result<Self, Error> {
-        if limits.judgments == 0 || limits.judgments > MAX_ROUTED_JUDGMENTS
-            || limits.dependencies > MAX_ROUTED_DEPENDENCIES { return Err(Error::Limit); }
-        Ok(Self { limits, strategy, subtrees: Vec::new(), registrations: Vec::new(), points: Vec::new(), intervals: Vec::new() })
+    pub fn new_with_strategy(
+        limits: RoutingLimits,
+        strategy: RoutingStrategy,
+    ) -> Result<Self, Error> {
+        if limits.judgments == 0
+            || limits.judgments > MAX_ROUTED_JUDGMENTS
+            || limits.dependencies > MAX_ROUTED_DEPENDENCIES
+        {
+            return Err(Error::Limit);
+        }
+        Ok(Self {
+            limits,
+            strategy,
+            subtrees: Vec::new(),
+            registrations: Vec::new(),
+            points: Vec::new(),
+            intervals: Vec::new(),
+        })
     }
-    pub fn strategy(&self) -> RoutingStrategy { self.strategy }
-    pub fn registered(&self) -> usize { self.registrations.len() }
-    pub fn dependencies(&self) -> usize { self.points.len() + self.intervals.len() }
+    pub fn strategy(&self) -> RoutingStrategy {
+        self.strategy
+    }
+    pub fn registered(&self) -> usize {
+        self.registrations.len()
+    }
+    pub fn dependencies(&self) -> usize {
+        self.points.len() + self.intervals.len()
+    }
 
     /// Build the entire next bounded index before changing the current one.
     /// Construction may temporarily retain two footprint indexes, never witness
     /// values. This admission work is separate from notification lookup budgets.
-    pub fn register(&mut self, id: u64, structured: Option<&WitnessJudgment>, opaque: bool) -> Result<(), Error> {
-        if structured.is_none() && !opaque { return Err(Error::Incomplete); }
-        if self.registrations.iter().any(|entry| entry.id == id) { return Err(Error::Duplicate); }
-        if self.registered() == self.limits.judgments { return Err(Error::Limit); }
+    pub fn register(
+        &mut self,
+        id: u64,
+        structured: Option<&WitnessJudgment>,
+        opaque: bool,
+    ) -> Result<(), Error> {
+        if structured.is_none() && !opaque {
+            return Err(Error::Incomplete);
+        }
+        if self.registrations.iter().any(|entry| entry.id == id) {
+            return Err(Error::Duplicate);
+        }
+        if self.registered() == self.limits.judgments {
+            return Err(Error::Limit);
+        }
         let added = structured.map_or(0, |judgment| judgment.witnesses.len());
-        if self.dependencies().checked_add(added).ok_or(Error::Overflow)? > self.limits.dependencies {
+        if self
+            .dependencies()
+            .checked_add(added)
+            .ok_or(Error::Overflow)?
+            > self.limits.dependencies
+        {
             return Err(Error::Limit);
         }
         let mut points = copy_with_room(&self.points, added)?;
@@ -136,10 +197,21 @@ impl InvalidationIndex {
             for witness in &judgment.witnesses {
                 match witness {
                     Witness::ExactValue { key, .. } | Witness::AbsentKey { key, .. } => {
-                        points.push(Point { domain, key: *key, slot });
+                        points.push(Point {
+                            domain,
+                            key: *key,
+                            slot,
+                        });
                     }
-                    Witness::EmptyRange { start, end, .. } | Witness::RangeMembers { start, end, .. } => {
-                        intervals.push(Interval { domain, start: *start, end: *end, slot, prefix_end: 0 });
+                    Witness::EmptyRange { start, end, .. }
+                    | Witness::RangeMembers { start, end, .. } => {
+                        intervals.push(Interval {
+                            domain,
+                            start: *start,
+                            end: *end,
+                            slot,
+                            prefix_end: 0,
+                        });
                     }
                 }
             }
@@ -149,7 +221,9 @@ impl InvalidationIndex {
         let mut previous = None;
         let mut prefix = 0;
         for interval in &mut intervals {
-            if previous != Some(interval.domain) { prefix = 0; }
+            if previous != Some(interval.domain) {
+                prefix = 0;
+            }
             prefix = prefix.max(interval.end);
             interval.prefix_end = prefix;
             previous = Some(interval.domain);
@@ -158,18 +232,29 @@ impl InvalidationIndex {
             RoutingStrategy::PrefixV1 => Vec::new(),
             RoutingStrategy::SubtreeV2 => subtree::build(&intervals)?,
         };
-        self.registrations.try_reserve(1).map_err(|_| Error::Limit)?;
+        self.registrations
+            .try_reserve(1)
+            .map_err(|_| Error::Limit)?;
         self.subtrees = subtrees;
         self.points = points;
         self.intervals = intervals;
-        self.registrations.push(Registration { id, domain: structured.map(|j| j.domain), opaque });
+        self.registrations.push(Registration {
+            id,
+            domain: structured.map(|j| j.domain),
+            opaque,
+        });
         Ok(())
     }
 
     pub fn affected(&self, change: WitnessChange, budget: RoutingBudget) -> RoutingReport {
         let mut meter = lookup::Meter::new(budget);
-        let candidates = change.validate().and_then(|()| self.lookup(change, &mut meter));
-        RoutingReport { candidates, spent: meter.spent() }
+        let candidates = change
+            .validate()
+            .and_then(|()| self.lookup(change, &mut meter));
+        RoutingReport {
+            candidates,
+            spent: meter.spent(),
+        }
     }
 }
 

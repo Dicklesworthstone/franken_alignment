@@ -99,13 +99,20 @@ pub fn evaluate_round(
         return Err(Error::Limit);
     }
     policy.validate()?;
-    let evidence_root: [u8; 32] = round.evidence_root().try_into().map_err(|_| Error::Binding)?;
+    let evidence_root: [u8; 32] = round
+        .evidence_root()
+        .try_into()
+        .map_err(|_| Error::Binding)?;
     if round.id() == 0 || evidence_root == [0; 32] {
         return Err(Error::InvalidInput);
     }
     let outcomes = round.outcomes();
     if outcomes.keys().copied().collect::<BTreeSet<_>>()
-        != policy.members.keys().map(String::as_str).collect::<BTreeSet<_>>()
+        != policy
+            .members
+            .keys()
+            .map(String::as_str)
+            .collect::<BTreeSet<_>>()
     {
         return Err(Error::Binding);
     }
@@ -247,18 +254,22 @@ impl CredibilityEvaluation {
         action: FrozenAction,
         retained_targets: Option<TargetCeiling>,
     ) -> ReviewRequest {
-        self.evaluation.into_request(attempt, self.control_sequence, action, retained_targets)
+        self.evaluation
+            .into_request(attempt, self.control_sequence, action, retained_targets)
     }
 }
 
 impl CredibilityRequirements {
     fn validate(&self) -> Result<(), Error> {
-        if self.minimum_safe_cases == 0 || self.minimum_violation_cases == 0
-            || self.minimum_precision_ppm == 0 || self.minimum_precision_ppm > CREDIBILITY_PPM
+        if self.minimum_safe_cases == 0
+            || self.minimum_violation_cases == 0
+            || self.minimum_precision_ppm == 0
+            || self.minimum_precision_ppm > CREDIBILITY_PPM
             || self.minimum_timely_recall_ppm == 0
             || self.minimum_timely_recall_ppm > CREDIBILITY_PPM
             || self.maximum_false_positive_ppm > CREDIBILITY_PPM
-            || self.base_weight == 0 || self.lead_bonus_weight > self.base_weight
+            || self.base_weight == 0
+            || self.lead_bonus_weight > self.base_weight
             || (self.lead_bonus_weight != 0 && self.lead_saturation_sequences == 0)
             || self.maximum_evidence_age == 0
             || self.maximum_member_share_ppm == 0
@@ -268,17 +279,25 @@ impl CredibilityRequirements {
         {
             return Err(Error::InvalidInput);
         }
-        self.base_weight.checked_add(self.lead_bonus_weight).ok_or(Error::Overflow)?;
+        self.base_weight
+            .checked_add(self.lead_bonus_weight)
+            .ok_or(Error::Overflow)?;
         Ok(())
     }
 
-    fn weight(&self, scores: &BTreeMap<String, credibility::CredibilityScore>) -> Result<u64, Error> {
+    fn weight(
+        &self,
+        scores: &BTreeMap<String, credibility::CredibilityScore>,
+    ) -> Result<u64, Error> {
         let mut weakest = u64::MAX;
         for score in scores.values() {
             // This conservative reference profile requires fully resolved,
             // complete held-out data. It does NOT estimate censored outcomes or
             // approve a deployment from a selectively reviewed subset.
-            if score.pending != 0 || score.censored != 0 || score.missing != 0 || score.abstained != 0
+            if score.pending != 0
+                || score.censored != 0
+                || score.missing != 0
+                || score.abstained != 0
                 || score.safe < self.minimum_safe_cases
                 || score.violations < self.minimum_violation_cases
             {
@@ -286,15 +305,16 @@ impl CredibilityRequirements {
             }
             let precision = ppm(score.precision().ok_or(Error::Incomplete)?)?;
             let timely_recall = ppm(score.timely_recall().ok_or(Error::Incomplete)?)?;
-            if precision < self.minimum_precision_ppm || timely_recall < self.minimum_timely_recall_ppm
+            if precision < self.minimum_precision_ppm
+                || timely_recall < self.minimum_timely_recall_ppm
                 || u128::from(score.false_positives) * u128::from(CREDIBILITY_PPM)
                     > u128::from(score.safe) * u128::from(self.maximum_false_positive_ppm)
             {
                 return Err(Error::Incomplete);
             }
             let quality = precision.min(timely_recall);
-            let base = u128::from(self.base_weight) * u128::from(quality)
-                / u128::from(CREDIBILITY_PPM);
+            let base =
+                u128::from(self.base_weight) * u128::from(quality) / u128::from(CREDIBILITY_PPM);
             // Divide by ALL violations, not just successes. Missing a violation
             // cannot improve the earliness score by shrinking its denominator.
             let average_lead = score.lead_time_credit / u128::from(score.violations);
@@ -319,8 +339,10 @@ fn ppm(ratio: credibility::Ratio) -> Result<u64, Error> {
     if ratio.denominator == 0 || ratio.numerator > ratio.denominator {
         return Err(Error::InvalidInput);
     }
-    u64::try_from(u128::from(ratio.numerator) * u128::from(CREDIBILITY_PPM)
-        / u128::from(ratio.denominator)).map_err(|_| Error::Overflow)
+    u64::try_from(
+        u128::from(ratio.numerator) * u128::from(CREDIBILITY_PPM) / u128::from(ratio.denominator),
+    )
+    .map_err(|_| Error::Overflow)
 }
 
 impl CongressPolicy {
@@ -328,11 +350,16 @@ impl CongressPolicy {
         if self.members.len() > MAX_VOTES {
             return Err(Error::Limit);
         }
-        if self.generation == 0 || self.members.is_empty()
-            || self.caps.per_member == 0 || self.caps.per_cohort == 0
-            || self.continue_minimum == 0 || self.continue_hold_maximum >= self.narrow_at
-            || self.narrow_at >= self.suspend_at || self.minimum_members == 0
-            || self.minimum_cohorts == 0 || self.minimum_members > self.members.len()
+        if self.generation == 0
+            || self.members.is_empty()
+            || self.caps.per_member == 0
+            || self.caps.per_cohort == 0
+            || self.continue_minimum == 0
+            || self.continue_hold_maximum >= self.narrow_at
+            || self.narrow_at >= self.suspend_at
+            || self.minimum_members == 0
+            || self.minimum_cohorts == 0
+            || self.minimum_members > self.members.len()
             || self.minimum_cohorts > self.minimum_members
         {
             return Err(Error::InvalidInput);
@@ -362,8 +389,10 @@ impl CongressPolicy {
         if binding.reducer_generation <= self.generation {
             return Err(Error::Stale);
         }
-        if snapshot.scope() != &binding.scope || snapshot.label_owner() != binding.label_owner
-            || snapshot.helpers() != &binding.helpers || snapshot.strata() != &binding.strata
+        if snapshot.scope() != &binding.scope
+            || snapshot.label_owner() != binding.label_owner
+            || snapshot.helpers() != &binding.helpers
+            || snapshot.strata() != &binding.strata
             || !self.members.keys().eq(binding.helpers.keys())
         {
             return Err(Error::Binding);
@@ -374,8 +403,10 @@ impl CongressPolicy {
             }
         }
         // Sealing old samples today does not make them fresh today.
-        let valid_through = snapshot.oldest_case_sequence()
-            .checked_add(requirements.maximum_evidence_age).ok_or(Error::Overflow)?;
+        let valid_through = snapshot
+            .oldest_case_sequence()
+            .checked_add(requirements.maximum_evidence_age)
+            .ok_or(Error::Overflow)?;
         if sequence < snapshot.sealed_sequence() || sequence > valid_through {
             return Err(Error::Stale);
         }
@@ -388,28 +419,34 @@ impl CongressPolicy {
             let weight = requirements.weight(scores)?;
             uncapped_weights.insert(helper.clone(), weight);
             votes.push(Vote::Empirical {
-                member: helper.clone(), cohort: member.cohort.clone(),
+                member: helper.clone(),
+                cohort: member.cohort.clone(),
                 recommendation: Recommendation::Permit,
             });
         }
         let capped = reduce(&votes, &uncapped_weights, self.caps, false)?;
         let total = capped.permit_weight;
-        if total == 0 || total < self.continue_minimum
+        if total == 0
+            || total < self.continue_minimum
             || capped.admitted_weights.values().any(|weight| *weight == 0)
-            || capped.admitted_cohort_weights.values().filter(|weight| **weight > 0).count()
+            || capped
+                .admitted_cohort_weights
+                .values()
+                .filter(|weight| **weight > 0)
+                .count()
                 < self.minimum_cohorts
         {
             return Err(Error::Incomplete);
         }
         // Share caps use ACTUAL admitted influence, not a nominal budget. A
         // singleton or a renamed collection of one cohort cannot appear diverse.
-        if capped.admitted_weights.values().any(|weight|
+        if capped.admitted_weights.values().any(|weight| {
             u128::from(*weight) * u128::from(CREDIBILITY_PPM)
-                > u128::from(total) * u128::from(requirements.maximum_member_share_ppm))
-            || capped.admitted_cohort_weights.values().any(|weight|
-                u128::from(*weight) * u128::from(CREDIBILITY_PPM)
-                    > u128::from(total) * u128::from(requirements.maximum_cohort_share_ppm))
-        {
+                > u128::from(total) * u128::from(requirements.maximum_member_share_ppm)
+        }) || capped.admitted_cohort_weights.values().any(|weight| {
+            u128::from(*weight) * u128::from(CREDIBILITY_PPM)
+                > u128::from(total) * u128::from(requirements.maximum_cohort_share_ppm)
+        }) {
             return Err(Error::Limit);
         }
         for (helper, member) in &mut policy.members {
@@ -418,8 +455,12 @@ impl CongressPolicy {
         // Store already capped weights so a missing reveal cannot redistribute
         // its cohort allocation to the remaining responders.
         Ok(PromotedCongressPolicy {
-            policy, binding: binding.clone(), snapshot, uncapped_weights,
-            valid_from: sequence, valid_through,
+            policy,
+            binding: binding.clone(),
+            snapshot,
+            uncapped_weights,
+            valid_from: sequence,
+            valid_through,
         })
     }
 }
@@ -460,7 +501,10 @@ impl PromotedCongressPolicy {
             return Err(Error::Stale);
         }
         let evaluation = evaluate_round(round, &self.policy, exact_disqualifier, contradiction)?;
-        Ok(CredibilityEvaluation { evaluation, control_sequence: sequence })
+        Ok(CredibilityEvaluation {
+            evaluation,
+            control_sequence: sequence,
+        })
     }
 }
 
@@ -474,10 +518,25 @@ mod tests {
         CongressPolicy {
             generation: 1,
             members: BTreeMap::from([
-                ("alice".to_owned(), MemberPolicy { cohort: "a".to_owned(), weight: 5 }),
-                ("bob".to_owned(), MemberPolicy { cohort: "b".to_owned(), weight: 5 }),
+                (
+                    "alice".to_owned(),
+                    MemberPolicy {
+                        cohort: "a".to_owned(),
+                        weight: 5,
+                    },
+                ),
+                (
+                    "bob".to_owned(),
+                    MemberPolicy {
+                        cohort: "b".to_owned(),
+                        weight: 5,
+                    },
+                ),
             ]),
-            caps: Caps { per_member: 5, per_cohort: 5 },
+            caps: Caps {
+                per_member: 5,
+                per_cohort: 5,
+            },
             continue_minimum: 8,
             continue_hold_maximum: 0,
             narrow_at: 8,
@@ -493,9 +552,13 @@ mod tests {
         round.add_member("bob").unwrap();
         for (member, verdict) in [("alice", alice), ("bob", bob)] {
             let digest = commitment(
-                round.id(), member, round.evidence_root(),
-                verdict.unwrap_or(Verdict::Allow), b"reference-salt",
-            ).unwrap();
+                round.id(),
+                member,
+                round.evidence_root(),
+                verdict.unwrap_or(Verdict::Allow),
+                b"reference-salt",
+            )
+            .unwrap();
             round.commit(member, digest).unwrap();
         }
         round.open_reveals().unwrap();
@@ -515,11 +578,17 @@ mod tests {
         assert_eq!(evaluation.tally().permit_weight, 10);
         assert!(evaluation.missing().is_empty());
         assert_eq!(
-            evaluate_round(&round, &policy(), true, false).unwrap().decision().consequence,
+            evaluate_round(&round, &policy(), true, false)
+                .unwrap()
+                .decision()
+                .consequence,
             Consequence::Deny
         );
         assert_eq!(
-            evaluate_round(&round, &policy(), false, true).unwrap().decision().consequence,
+            evaluate_round(&round, &policy(), false, true)
+                .unwrap()
+                .decision()
+                .consequence,
             Consequence::HoldEffect
         );
     }
@@ -530,12 +599,15 @@ mod tests {
         policy.continue_minimum = 1;
         policy.minimum_members = 1;
         policy.minimum_cohorts = 1;
-        let missing = evaluate_round(
-            &panel(Some(Verdict::Allow), None), &policy, false, false,
-        ).unwrap();
+        let missing =
+            evaluate_round(&panel(Some(Verdict::Allow), None), &policy, false, false).unwrap();
         let abstained = evaluate_round(
-            &panel(Some(Verdict::Allow), Some(Verdict::Abstain)), &policy, false, false,
-        ).unwrap();
+            &panel(Some(Verdict::Allow), Some(Verdict::Abstain)),
+            &policy,
+            false,
+            false,
+        )
+        .unwrap();
         assert_eq!(missing.missing(), &["bob".to_owned()]);
         assert!(missing.abstained().is_empty());
         assert_eq!(abstained.abstained(), &["bob".to_owned()]);
@@ -558,12 +630,18 @@ mod tests {
         let round = panel(Some(Verdict::Hold), Some(Verdict::Hold));
         let mut policy = policy();
         assert_eq!(
-            evaluate_round(&round, &policy, false, false).unwrap().decision().consequence,
+            evaluate_round(&round, &policy, false, false)
+                .unwrap()
+                .decision()
+                .consequence,
             Consequence::SuspendRun
         );
         policy.suspend_at = 11;
         assert_eq!(
-            evaluate_round(&round, &policy, false, false).unwrap().decision().consequence,
+            evaluate_round(&round, &policy, false, false)
+                .unwrap()
+                .decision()
+                .consequence,
             Consequence::NarrowAuthority
         );
     }
@@ -588,15 +666,27 @@ mod tests {
         invalid.members.remove("bob");
         invalid.minimum_members = 1;
         invalid.minimum_cohorts = 1;
-        assert_eq!(evaluate_round(&round, &invalid, false, false).unwrap_err(), Error::Binding);
+        assert_eq!(
+            evaluate_round(&round, &invalid, false, false).unwrap_err(),
+            Error::Binding
+        );
         let mut invalid = policy();
         invalid.continue_minimum = 0;
-        assert_eq!(evaluate_round(&round, &invalid, false, false).unwrap_err(), Error::InvalidInput);
+        assert_eq!(
+            evaluate_round(&round, &invalid, false, false).unwrap_err(),
+            Error::InvalidInput
+        );
         let mut invalid = policy();
         invalid.suspend_at = invalid.narrow_at;
-        assert_eq!(evaluate_round(&round, &invalid, false, false).unwrap_err(), Error::InvalidInput);
+        assert_eq!(
+            evaluate_round(&round, &invalid, false, false).unwrap_err(),
+            Error::InvalidInput
+        );
         let unopened = Round::new(7, &[9; 32]).unwrap();
-        assert_eq!(evaluate_round(&unopened, &policy(), false, false).unwrap_err(), Error::WrongState);
+        assert_eq!(
+            evaluate_round(&unopened, &policy(), false, false).unwrap_err(),
+            Error::WrongState
+        );
     }
 
     fn requirements() -> CredibilityRequirements {
@@ -619,18 +709,37 @@ mod tests {
         use credibility::*;
         let mut campaign = Campaign {
             scope: EvaluationScope {
-                campaign: 1, model_generation: 2, evaluator_generation: 3,
+                campaign: 1,
+                model_generation: 2,
+                evaluator_generation: 3,
                 held_out_manifest: [4; 32],
             },
             label_owner: "independent-evaluation".into(),
             helpers: BTreeMap::from([
-                ("alice".into(), HelperGeneration { generation: 1, cohort: "a".into() }),
-                ("bob".into(), HelperGeneration { generation: 1, cohort: "b".into() }),
+                (
+                    "alice".into(),
+                    HelperGeneration {
+                        generation: 1,
+                        cohort: "a".into(),
+                    },
+                ),
+                (
+                    "bob".into(),
+                    HelperGeneration {
+                        generation: 1,
+                        cohort: "b".into(),
+                    },
+                ),
             ]),
             strata: BTreeSet::from(["tool".into()]),
-            cases: (1..=2).map(|id| CaseSpec {
-                id, stratum: "tool".into(), evidence_root: [id as u8; 32], dispatch_sequence: 100,
-            }).collect(),
+            cases: (1..=2)
+                .map(|id| CaseSpec {
+                    id,
+                    stratum: "tool".into(),
+                    evidence_root: [id as u8; 32],
+                    dispatch_sequence: 100,
+                })
+                .collect(),
         };
         if fault == "same-cohort" {
             campaign.helpers.get_mut("bob").unwrap().cohort = "a".into();
@@ -639,7 +748,9 @@ mod tests {
             campaign.strata.insert("publication".into());
             for id in 3..=4 {
                 campaign.cases.push(CaseSpec {
-                    id, stratum: "publication".into(), evidence_root: [id as u8; 32],
+                    id,
+                    stratum: "publication".into(),
+                    evidence_root: [id as u8; 32],
                     dispatch_sequence: 100,
                 });
             }
@@ -648,38 +759,67 @@ mod tests {
         let mut ledger = CredibilityLedger::new(campaign).unwrap();
         for case in cases {
             let violation = case.id % 2 == 1;
-            let mut alice = if violation { Observation::Hold { first_sequence: 10 } }
-                else { Observation::Clear };
-            let bob = if violation { Observation::Hold { first_sequence: 20 } }
-                else { Observation::Clear };
+            let mut alice = if violation {
+                Observation::Hold { first_sequence: 10 }
+            } else {
+                Observation::Clear
+            };
+            let bob = if violation {
+                Observation::Hold { first_sequence: 20 }
+            } else {
+                Observation::Clear
+            };
             match (fault, case.id) {
                 ("missing", 1) => alice = Observation::Missing,
                 ("abstained", 1) => alice = Observation::Abstain,
-                ("late", 1) => alice = Observation::Hold { first_sequence: 100 },
+                ("late", 1) => {
+                    alice = Observation::Hold {
+                        first_sequence: 100,
+                    }
+                }
                 ("false-alarm", 2) => alice = Observation::Hold { first_sequence: 1 },
                 ("weak-stratum", 3) => alice = Observation::Clear,
                 _ => {}
             }
-            ledger.record_observations(case.id,
-                BTreeMap::from([("alice".into(), alice), ("bob".into(), bob)])).unwrap();
+            ledger
+                .record_observations(
+                    case.id,
+                    BTreeMap::from([("alice".into(), alice), ("bob".into(), bob)]),
+                )
+                .unwrap();
             if fault == "pending" && case.id == 2 {
                 continue;
             }
-            let verdict = if fault == "censored" && case.id == 2 { LabelVerdict::Censored }
-                else if violation { LabelVerdict::Violation } else { LabelVerdict::Safe };
-            ledger.record_label(case.id, EvaluationLabel {
-                owner: "independent-evaluation".into(), evaluator_generation: 3,
-                source: LabelSource::IndependentEvaluation,
-                evidence_root: case.evidence_root, recorded_sequence: 120, verdict,
-            }).unwrap();
+            let verdict = if fault == "censored" && case.id == 2 {
+                LabelVerdict::Censored
+            } else if violation {
+                LabelVerdict::Violation
+            } else {
+                LabelVerdict::Safe
+            };
+            ledger
+                .record_label(
+                    case.id,
+                    EvaluationLabel {
+                        owner: "independent-evaluation".into(),
+                        evaluator_generation: 3,
+                        source: LabelSource::IndependentEvaluation,
+                        evidence_root: case.evidence_root,
+                        recorded_sequence: 120,
+                        verdict,
+                    },
+                )
+                .unwrap();
         }
         ledger.seal(seal_at).unwrap()
     }
 
     fn deployment(snapshot: &credibility::CredibilitySnapshot) -> CredibilityBinding {
         CredibilityBinding {
-            scope: snapshot.scope().clone(), label_owner: snapshot.label_owner().into(),
-            helpers: snapshot.helpers().clone(), strata: snapshot.strata().clone(),
+            scope: snapshot.scope().clone(),
+            label_owner: snapshot.label_owner().into(),
+            helpers: snapshot.helpers().clone(),
+            strata: snapshot.strata().clone(),
             reducer_generation: 2,
         }
     }
@@ -690,7 +830,9 @@ mod tests {
         let before = base.clone();
         let snapshot = calibration("", 120);
         let binding = deployment(&snapshot);
-        let promoted = base.promote_credibility(snapshot, &requirements(), &binding, 120).unwrap();
+        let promoted = base
+            .promote_credibility(snapshot, &requirements(), &binding, 120)
+            .unwrap();
         assert_eq!(base, before);
         assert_eq!(promoted.uncapped_weights()["alice"], 20);
         assert_eq!(promoted.uncapped_weights()["bob"], 10);
@@ -699,10 +841,14 @@ mod tests {
         assert_eq!(promoted.policy.continue_minimum, before.continue_minimum);
         assert_eq!(promoted.policy.caps, before.caps);
         assert_eq!(promoted.valid_through(), 200);
-        assert_eq!(promoted.snapshot().case_label(1).unwrap().verdict,
-            credibility::LabelVerdict::Violation);
+        assert_eq!(
+            promoted.snapshot().case_label(1).unwrap().verdict,
+            credibility::LabelVerdict::Violation
+        );
         let round = panel(Some(Verdict::Allow), Some(Verdict::Allow));
-        let result = promoted.evaluate_round(&round, &binding, "tool", 120, false, false).unwrap();
+        let result = promoted
+            .evaluate_round(&round, &binding, "tool", 120, false, false)
+            .unwrap();
         assert_eq!(result.decision().consequence, Consequence::Continue);
         assert_eq!(result.tally().permit_weight, 10);
         assert_eq!(result.evaluation.binding.reducer_generation, 2);
@@ -711,11 +857,24 @@ mod tests {
 
     #[test]
     fn incomplete_weak_and_late_campaigns_cannot_be_promoted() {
-        for fault in ["pending", "censored", "missing", "abstained", "late", "false-alarm", "weak-stratum"] {
+        for fault in [
+            "pending",
+            "censored",
+            "missing",
+            "abstained",
+            "late",
+            "false-alarm",
+            "weak-stratum",
+        ] {
             let snapshot = calibration(fault, 120);
             let binding = deployment(&snapshot);
-            assert_eq!(policy().promote_credibility(snapshot, &requirements(), &binding, 120)
-                .unwrap_err(), Error::Incomplete, "{fault}");
+            assert_eq!(
+                policy()
+                    .promote_credibility(snapshot, &requirements(), &binding, 120)
+                    .unwrap_err(),
+                Error::Incomplete,
+                "{fault}"
+            );
         }
     }
 
@@ -723,24 +882,40 @@ mod tests {
     fn fresh_sealing_cannot_launder_old_evidence_and_expiry_is_rechecked() {
         let snapshot = calibration("", 500);
         let binding = deployment(&snapshot);
-        assert_eq!(policy().promote_credibility(snapshot, &requirements(), &binding, 500)
-            .unwrap_err(), Error::Stale);
+        assert_eq!(
+            policy()
+                .promote_credibility(snapshot, &requirements(), &binding, 500)
+                .unwrap_err(),
+            Error::Stale
+        );
         let snapshot = calibration("", 120);
         let binding = deployment(&snapshot);
-        let promoted = policy().promote_credibility(snapshot, &requirements(), &binding, 120).unwrap();
+        let promoted = policy()
+            .promote_credibility(snapshot, &requirements(), &binding, 120)
+            .unwrap();
         let round = panel(Some(Verdict::Allow), Some(Verdict::Allow));
         for sequence in [119, 201] {
-            assert_eq!(promoted.evaluate_round(&round, &binding, "tool", sequence, false, false)
-                .unwrap_err(), Error::Stale);
+            assert_eq!(
+                promoted
+                    .evaluate_round(&round, &binding, "tool", sequence, false, false)
+                    .unwrap_err(),
+                Error::Stale
+            );
         }
-        assert!(promoted.evaluate_round(&round, &binding, "tool", 200, false, false).is_ok());
+        assert!(
+            promoted
+                .evaluate_round(&round, &binding, "tool", 200, false, false)
+                .is_ok()
+        );
     }
 
     #[test]
     fn model_helper_cohort_evaluator_manifest_and_reducer_drift_fail_closed() {
         let snapshot = calibration("", 120);
         let binding = deployment(&snapshot);
-        let promoted = policy().promote_credibility(snapshot, &requirements(), &binding, 120).unwrap();
+        let promoted = policy()
+            .promote_credibility(snapshot, &requirements(), &binding, 120)
+            .unwrap();
         let round = panel(Some(Verdict::Allow), Some(Verdict::Allow));
         for mutation in 0..8 {
             let mut changed = binding.clone();
@@ -752,13 +927,23 @@ mod tests {
                 4 => changed.scope.held_out_manifest = [99; 32],
                 5 => changed.reducer_generation += 1,
                 6 => changed.label_owner = "alice".into(),
-                _ => { changed.strata.remove("tool"); }
+                _ => {
+                    changed.strata.remove("tool");
+                }
             }
-            assert_eq!(promoted.evaluate_round(&round, &changed, "tool", 120, false, false)
-                .unwrap_err(), Error::Binding);
+            assert_eq!(
+                promoted
+                    .evaluate_round(&round, &changed, "tool", 120, false, false)
+                    .unwrap_err(),
+                Error::Binding
+            );
         }
-        assert_eq!(promoted.evaluate_round(&round, &binding, "unqualified", 120, false, false)
-            .unwrap_err(), Error::Binding);
+        assert_eq!(
+            promoted
+                .evaluate_round(&round, &binding, "unqualified", 120, false, false)
+                .unwrap_err(),
+            Error::Binding
+        );
     }
 
     #[test]
@@ -766,19 +951,29 @@ mod tests {
         let snapshot = calibration("", 120);
         let mut binding = deployment(&snapshot);
         binding.reducer_generation = 1;
-        assert_eq!(policy().promote_credibility(snapshot.clone(), &requirements(), &binding, 120)
-            .unwrap_err(), Error::Stale);
+        assert_eq!(
+            policy()
+                .promote_credibility(snapshot.clone(), &requirements(), &binding, 120)
+                .unwrap_err(),
+            Error::Stale
+        );
         binding.reducer_generation = 2;
         let mut base = policy();
         base.members.remove("bob");
         base.minimum_members = 1;
         base.minimum_cohorts = 1;
-        assert_eq!(base.promote_credibility(snapshot.clone(), &requirements(), &binding, 120)
-            .unwrap_err(), Error::Binding);
+        assert_eq!(
+            base.promote_credibility(snapshot.clone(), &requirements(), &binding, 120)
+                .unwrap_err(),
+            Error::Binding
+        );
         let mut base = policy();
         base.members.get_mut("bob").unwrap().cohort = "a".into();
-        assert_eq!(base.promote_credibility(snapshot, &requirements(), &binding, 120)
-            .unwrap_err(), Error::Binding);
+        assert_eq!(
+            base.promote_credibility(snapshot, &requirements(), &binding, 120)
+                .unwrap_err(),
+            Error::Binding
+        );
     }
 
     #[test]
@@ -787,38 +982,70 @@ mod tests {
         let binding = deployment(&snapshot);
         let mut limits = requirements();
         limits.maximum_member_share_ppm = 499_999;
-        assert_eq!(policy().promote_credibility(snapshot, &limits, &binding, 120)
-            .unwrap_err(), Error::Limit);
+        assert_eq!(
+            policy()
+                .promote_credibility(snapshot, &limits, &binding, 120)
+                .unwrap_err(),
+            Error::Limit
+        );
         let snapshot = calibration("same-cohort", 120);
         let binding = deployment(&snapshot);
         let mut base = policy();
         base.members.get_mut("bob").unwrap().cohort = "a".into();
         base.minimum_cohorts = 1;
         base.caps.per_cohort = 10;
-        assert_eq!(base.promote_credibility(snapshot.clone(), &requirements(), &binding, 120)
-            .unwrap_err(), Error::Limit);
+        assert_eq!(
+            base.promote_credibility(snapshot.clone(), &requirements(), &binding, 120)
+                .unwrap_err(),
+            Error::Limit
+        );
         base.caps.per_cohort = 1;
-        assert_eq!(base.promote_credibility(snapshot, &requirements(), &binding, 120)
-            .unwrap_err(), Error::Incomplete);
+        assert_eq!(
+            base.promote_credibility(snapshot, &requirements(), &binding, 120)
+                .unwrap_err(),
+            Error::Incomplete
+        );
     }
 
     #[test]
     fn promoted_round_keeps_missing_abstention_contradiction_and_exact_veto_semantics() {
         let snapshot = calibration("", 120);
         let binding = deployment(&snapshot);
-        let promoted = policy().promote_credibility(snapshot, &requirements(), &binding, 120).unwrap();
+        let promoted = policy()
+            .promote_credibility(snapshot, &requirements(), &binding, 120)
+            .unwrap();
         for verdict in [None, Some(Verdict::Abstain)] {
-            let result = promoted.evaluate_round(&panel(Some(Verdict::Allow), verdict),
-                &binding, "tool", 120, false, false).unwrap();
+            let result = promoted
+                .evaluate_round(
+                    &panel(Some(Verdict::Allow), verdict),
+                    &binding,
+                    "tool",
+                    120,
+                    false,
+                    false,
+                )
+                .unwrap();
             assert_eq!(result.decision().consequence, Consequence::HoldEffect);
             assert_eq!(result.tally().permit_weight, 5);
             assert_eq!(result.missing().len() + result.abstained().len(), 1);
         }
         let round = panel(Some(Verdict::Allow), Some(Verdict::Allow));
-        assert_eq!(promoted.evaluate_round(&round, &binding, "tool", 120, true, false)
-            .unwrap().decision().consequence, Consequence::Deny);
-        assert_eq!(promoted.evaluate_round(&round, &binding, "tool", 120, false, true)
-            .unwrap().decision().consequence, Consequence::HoldEffect);
+        assert_eq!(
+            promoted
+                .evaluate_round(&round, &binding, "tool", 120, true, false)
+                .unwrap()
+                .decision()
+                .consequence,
+            Consequence::Deny
+        );
+        assert_eq!(
+            promoted
+                .evaluate_round(&round, &binding, "tool", 120, false, true)
+                .unwrap()
+                .decision()
+                .consequence,
+            Consequence::HoldEffect
+        );
     }
 
     #[test]
@@ -827,18 +1054,29 @@ mod tests {
         let binding = deployment(&snapshot);
         let mut base = policy();
         base.continue_minimum = 11;
-        assert_eq!(base.promote_credibility(snapshot.clone(), &requirements(), &binding, 120)
-            .unwrap_err(), Error::Incomplete);
+        assert_eq!(
+            base.promote_credibility(snapshot.clone(), &requirements(), &binding, 120)
+                .unwrap_err(),
+            Error::Incomplete
+        );
         assert_eq!(base.continue_minimum, 11);
         let mut limits = requirements();
         limits.base_weight = u64::MAX;
         limits.lead_bonus_weight = 1;
-        assert_eq!(policy().promote_credibility(snapshot.clone(), &limits, &binding, 120)
-            .unwrap_err(), Error::Overflow);
+        assert_eq!(
+            policy()
+                .promote_credibility(snapshot.clone(), &limits, &binding, 120)
+                .unwrap_err(),
+            Error::Overflow
+        );
         let mut limits = requirements();
         limits.maximum_evidence_age = u64::MAX;
-        assert_eq!(policy().promote_credibility(snapshot, &limits, &binding, 120)
-            .unwrap_err(), Error::Overflow);
+        assert_eq!(
+            policy()
+                .promote_credibility(snapshot, &limits, &binding, 120)
+                .unwrap_err(),
+            Error::Overflow
+        );
     }
 
     #[test]
@@ -846,18 +1084,43 @@ mod tests {
         use crate::action::{ActionSpec, ElapsedTick, Purpose, ResolvedTarget, Scope, VERSION};
         let snapshot = calibration("", 120);
         let binding = deployment(&snapshot);
-        let promoted = policy().promote_credibility(snapshot, &requirements(), &binding, 120).unwrap();
-        let result = promoted.evaluate_round(&panel(Some(Verdict::Allow), Some(Verdict::Allow)),
-            &binding, "tool", 125, false, false).unwrap();
+        let promoted = policy()
+            .promote_credibility(snapshot, &requirements(), &binding, 120)
+            .unwrap();
+        let result = promoted
+            .evaluate_round(
+                &panel(Some(Verdict::Allow), Some(Verdict::Allow)),
+                &binding,
+                "tool",
+                125,
+                false,
+                false,
+            )
+            .unwrap();
         let action = FrozenAction::freeze(ActionSpec {
             version: VERSION,
-            scope: Scope { tenant: 1, principal: 1, run: 1, branch: 1, authority: 1, purpose: Purpose::Effect },
+            scope: Scope {
+                tenant: 1,
+                principal: 1,
+                run: 1,
+                branch: 1,
+                authority: 1,
+                purpose: Purpose::Effect,
+            },
             target: Some(ResolvedTarget {
-                adapter: 1, object: 1, contract_version: 1, expected_version: 1, generation: 1,
+                adapter: 1,
+                object: 1,
+                contract_version: 1,
+                expected_version: 1,
+                generation: 1,
             }),
-            payload: b"reviewed-effect".to_vec(), required_witnesses: Vec::new(),
-            policy_epoch: 1, deadline: ElapsedTick(1000), units: 1,
-        }).unwrap();
+            payload: b"reviewed-effect".to_vec(),
+            required_witnesses: Vec::new(),
+            policy_epoch: 1,
+            deadline: ElapsedTick(1000),
+            units: 1,
+        })
+        .unwrap();
         let request = result.into_request(7, action.clone(), None);
         assert_eq!(request.expected_control_sequence, 125);
         assert_eq!(request.binding.reducer_generation, 2);

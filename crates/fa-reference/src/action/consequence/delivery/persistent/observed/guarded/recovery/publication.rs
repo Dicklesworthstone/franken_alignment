@@ -1,9 +1,9 @@
 //! Exact independent publication configuration on the original frozen cursor.
 //! This selects no live evidence and changes no journal or recovery transition.
-use super::{Error, Event, FileGuardedRecovery, FileGuardedRecoveryStatus, JournalError};
-use super::super::super::credibility::{CredibilityEvent, held_out_joint::HeldOutJointPolicy};
 use super::super::super::credibility::held_out_joint::publication::JointPublicationFeed;
+use super::super::super::credibility::{CredibilityEvent, held_out_joint::HeldOutJointPolicy};
 use super::super::super::publication::witness_gate::{WitnessEvent, freshness::FreshnessEvent};
+use super::{Error, Event, FileGuardedRecovery, FileGuardedRecoveryStatus, JournalError};
 use crate::action::consequence::delivery::publication_gate::PublicationLimits;
 
 /// Independently selected ORIGINAL publication gates, in addition to the full
@@ -33,14 +33,17 @@ impl FileGuardedRecovery {
     /// Full semantic replay still validates uniqueness, order, observations and
     /// all independent guards/floors; matching configuration never skips it.
     /// No history is replayed, no budget installed and no source file opened here.
-    pub fn require_publication_profile(self, expected: FilePublicationRecoveryRequirements)
-        -> Result<Self, JournalError>
-    {
+    pub fn require_publication_profile(
+        self,
+        expected: FilePublicationRecoveryRequirements,
+    ) -> Result<Self, JournalError> {
         if self.attempted != 0 || self.status != FileGuardedRecoveryStatus::Replaying {
             return Err(Error::WrongState.into());
         }
         if let Some(feed) = expected.feed {
-            if expected.validation.is_none() { return Err(Error::InvalidInput.into()); }
+            if expected.validation.is_none() {
+                return Err(Error::InvalidInput.into());
+            }
             feed.freshness.check()?;
             if feed.freshness.clock_domain != self.profile.delivery.clock_domain {
                 return Err(Error::Binding.into());
@@ -55,23 +58,41 @@ impl FileGuardedRecovery {
             _ => None,
         });
         let freshness = self.events.iter().filter_map(|event| match event {
-            Event::PublicationWitness(WitnessEvent::Freshness(FreshnessEvent::Enable(policy))) => Some(*policy),
+            Event::PublicationWitness(WitnessEvent::Freshness(FreshnessEvent::Enable(policy))) => {
+                Some(*policy)
+            }
             _ => None,
         });
         let joint = self.events.iter().filter_map(|event| match event {
             Event::Credibility(CredibilityEvent::EnableHeldOutJoint(policy)) => Some(*policy),
             _ => None,
         });
-        let fallback = self.events.iter().filter(|event| matches!(event,
-            Event::PublicationWitness(WitnessEvent::Freshness(FreshnessEvent::SnapshotFallback)))).count();
+        let fallback = self
+            .events
+            .iter()
+            .filter(|event| {
+                matches!(
+                    event,
+                    Event::PublicationWitness(WitnessEvent::Freshness(
+                        FreshnessEvent::SnapshotFallback
+                    ))
+                )
+            })
+            .count();
         if !validation.eq(expected.validation)
             || !changes.eq(expected.feed.map(|feed| feed.changes))
             || !freshness.eq(expected.feed.map(|feed| feed.freshness))
             || !joint.eq(expected.joint)
             || fallback != usize::from(expected.feed.is_some_and(|feed| feed.snapshot_fallback))
-            || self.events.iter().any(|event| matches!(event,
-                Event::PublicationWitness(WitnessEvent::SubtreeRouting)))
-        { return Err(Error::Binding.into()); }
+            || self.events.iter().any(|event| {
+                matches!(
+                    event,
+                    Event::PublicationWitness(WitnessEvent::SubtreeRouting)
+                )
+            })
+        {
+            return Err(Error::Binding.into());
+        }
         Ok(self)
     }
 }

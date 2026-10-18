@@ -1,15 +1,18 @@
 //! Original learned text release survives the existing journal replay and fence.
 //! No new audience ledger, restored permission, or saved-output import is added.
-use super::{ByteBpe, Configuration, DecoderEvent, DecoderModel, Event, FileHumanReviewer,
+use super::{
+    ByteBpe, Configuration, DOMAIN, DecoderEvent, DecoderModel, Event, FileHumanReviewer,
     FileLearnedConfig, FileOversight, FileOversightProfile, JournalError,
-    LearnedDecoderBindingLimits, LearnedEvent, LearnedTextConfig, Machine, Writer,
-    DOMAIN, MAX_CONFIG_BYTES, journal, storage};
-use crate::action::{ElapsedTick, FrozenAction};
-use crate::action::consequence::delivery::{stream::StreamProfile, persistent::observed::stream::{
-    FileStreamSnapshot, write_profile,
-}};
-use crate::action::consequence::oversight::learned_host::text::stream::Release;
+    LearnedDecoderBindingLimits, LearnedEvent, LearnedTextConfig, MAX_CONFIG_BYTES, Machine,
+    Writer, journal, storage,
+};
 use crate::action::consequence::delivery::persistent::{Event as BaseEvent, RecoveryReserve};
+use crate::action::consequence::delivery::{
+    persistent::observed::stream::{FileStreamSnapshot, write_profile},
+    stream::StreamProfile,
+};
+use crate::action::consequence::oversight::learned_host::text::stream::Release;
+use crate::action::{ElapsedTick, FrozenAction};
 use crate::{Error, ReadWitness, Snapshot};
 use std::path::Path;
 
@@ -20,18 +23,28 @@ impl FileLearnedConfig {
     /// A successor buys no new tokens, telemetry, RNG state or context. The
     /// receipt-confirmed stream and the remaining original ceilings still gate it.
     pub fn with_text_stream_continuation(mut self) -> Result<Self, Error> {
-        if self.text_stream_continuation { return Err(Error::Duplicate); }
-        if self.text_stream_profile().is_none() || self.pre_output_forecast.is_some()
-            || self.owned_pre_output_forecast.is_some() { return Err(Error::Binding); }
+        if self.text_stream_continuation {
+            return Err(Error::Duplicate);
+        }
+        if self.text_stream_profile().is_none()
+            || self.pre_output_forecast.is_some()
+            || self.owned_pre_output_forecast.is_some()
+        {
+            return Err(Error::Binding);
+        }
         let mut writer = Writer::new(MAX_CONFIG_BYTES);
-        writer.raw(DOMAIN)?; writer.u64(0)?; writer.raw(b"FALMULT\x01")?;
+        writer.raw(DOMAIN)?;
+        writer.u64(0)?;
+        writer.raw(b"FALMULT\x01")?;
         writer.blob(&self.bytes)?;
         self.bytes = writer.finish().into();
         self.text_stream_continuation = true;
         Ok(self)
     }
 
-    pub fn allows_text_stream_continuation(&self) -> bool { self.text_stream_continuation }
+    pub fn allows_text_stream_continuation(&self) -> bool {
+        self.text_stream_continuation
+    }
 
     /// Require a new original-source forecast at EVERY receipt-bound message
     /// boundary of this finite generation. Pin either required predictor first.
@@ -42,13 +55,19 @@ impl FileLearnedConfig {
     /// This distinct recipe preserves all legacy bytes and prompt-only refusals.
     /// It adds no tokens, work, probability budget, source history or authority.
     pub fn with_forecast_text_stream_continuation(mut self) -> Result<Self, Error> {
-        if self.text_stream_continuation { return Err(Error::Duplicate); }
-        if self.text_stream_profile().is_none() || !self.sidecar_required
-            || (self.pre_output_forecast.is_none() && self.owned_pre_output_forecast.is_none()) {
+        if self.text_stream_continuation {
+            return Err(Error::Duplicate);
+        }
+        if self.text_stream_profile().is_none()
+            || !self.sidecar_required
+            || (self.pre_output_forecast.is_none() && self.owned_pre_output_forecast.is_none())
+        {
             return Err(Error::Binding);
         }
         let mut writer = Writer::new(MAX_CONFIG_BYTES);
-        writer.raw(DOMAIN)?; writer.u64(0)?; writer.raw(b"FALMPRD\x01")?;
+        writer.raw(DOMAIN)?;
+        writer.u64(0)?;
+        writer.raw(b"FALMPRD\x01")?;
         writer.blob(&self.bytes)?;
         self.bytes = writer.finish().into();
         self.text_stream_continuation = true;
@@ -65,18 +84,31 @@ impl FileLearnedConfig {
     /// The stream domain differs from every legacy numeric/raw-text recipe;
     /// those encodings are unchanged. Configuration does no token inference and
     /// trusts no tokenizer, weight, monitor, or output supplied by the journal.
-    pub fn new_text_stream(model: DecoderModel, tokenizer: ByteBpe, source: LearnedTextConfig,
-        limits: LearnedDecoderBindingLimits, stream: StreamProfile) -> Result<Self, Error>
-    {
+    pub fn new_text_stream(
+        model: DecoderModel,
+        tokenizer: ByteBpe,
+        source: LearnedTextConfig,
+        limits: LearnedDecoderBindingLimits,
+        stream: StreamProfile,
+    ) -> Result<Self, Error> {
         if source.output.max_bytes > stream.max_message_bytes()
-            || source.output.max_bytes > stream.max_stream_bytes() { return Err(Error::Limit); }
+            || source.output.max_bytes > stream.max_stream_bytes()
+        {
+            return Err(Error::Limit);
+        }
         let mut config = Self::new_text(model, tokenizer, source, limits)?;
         let mut w = Writer::new(MAX_CONFIG_BYTES);
-        w.raw(DOMAIN)?; w.u64(0)?; w.raw(b"FALSTRM\x01")?;
+        w.raw(DOMAIN)?;
+        w.u64(0)?;
+        w.raw(b"FALSTRM\x01")?;
         w.blob(config.bytes().as_ref())?;
         write_profile(&mut w, stream)?;
         config.bytes = w.finish().into();
-        config.text.as_mut().expect("admitted original text recipe").stream = Some(stream);
+        config
+            .text
+            .as_mut()
+            .expect("admitted original text recipe")
+            .stream = Some(stream);
         Ok(config)
     }
 
@@ -89,9 +121,11 @@ impl FileOversight {
     /// The FIRST canonical image contains BOTH original bootstrap operations.
     /// There is no acknowledged stream-only or unconstrained-generation phase.
     /// Original replay validates the complete pair before storage is created.
-    pub fn create_with_learned_text_stream(directory: impl AsRef<Path>, profile: FileOversightProfile,
-        config: FileLearnedConfig) -> Result<(Self, FileHumanReviewer), JournalError>
-    {
+    pub fn create_with_learned_text_stream(
+        directory: impl AsRef<Path>,
+        profile: FileOversightProfile,
+        config: FileLearnedConfig,
+    ) -> Result<(Self, FileHumanReviewer), JournalError> {
         Self::create_learned_stream_bootstrap(directory.as_ref(), profile, config, None)
     }
 
@@ -100,21 +134,29 @@ impl FileOversight {
     /// after learned Enable, even before the first sampled token. Only the
     /// existing Fence/Stop/StopProgress lane can spend the retained tail; this
     /// does not reserve physical disk space or replenish numerical budgets.
-    pub fn create_with_learned_text_stream_with_reserve(directory: impl AsRef<Path>,
-        profile: FileOversightProfile, config: FileLearnedConfig, reserve: RecoveryReserve)
-        -> Result<(Self, FileHumanReviewer), JournalError>
-    {
+    pub fn create_with_learned_text_stream_with_reserve(
+        directory: impl AsRef<Path>,
+        profile: FileOversightProfile,
+        config: FileLearnedConfig,
+        reserve: RecoveryReserve,
+    ) -> Result<(Self, FileHumanReviewer), JournalError> {
         Self::create_learned_stream_bootstrap(directory.as_ref(), profile, config, Some(reserve))
     }
 
-    fn create_learned_stream_bootstrap(directory: &Path, profile: FileOversightProfile,
-        config: FileLearnedConfig, reserve: Option<RecoveryReserve>)
-        -> Result<(Self, FileHumanReviewer), JournalError>
-    {
+    fn create_learned_stream_bootstrap(
+        directory: &Path,
+        profile: FileOversightProfile,
+        config: FileLearnedConfig,
+        reserve: Option<RecoveryReserve>,
+    ) -> Result<(Self, FileHumanReviewer), JournalError> {
         let stream = config.text_stream_profile().ok_or(Error::Binding)?;
         let mut events = vec![Event::StreamBootstrap(stream)];
-        if let Some(reserve) = reserve { events.push(Event::Core(BaseEvent::ReserveRecovery(reserve))); }
-        events.push(Event::Decoder(DecoderEvent::Learned(LearnedEvent::Enable(Configuration::new(config)))));
+        if let Some(reserve) = reserve {
+            events.push(Event::Core(BaseEvent::ReserveRecovery(reserve)));
+        }
+        events.push(Event::Decoder(DecoderEvent::Learned(LearnedEvent::Enable(
+            Configuration::new(config),
+        ))));
         let machine = Machine::replay(&profile, &events)?;
         let store = storage::Store::create(directory)?;
         store.replace(&journal::encode(&profile, store.identity(), &events)?)?;
@@ -125,28 +167,38 @@ impl FileOversight {
     /// cleanup and recovery fencing. The pinned recipe's installer also checks
     /// the actual StreamBootstrap profile BEFORE replaying any numerical step.
     /// Reconstructed generation remains paused until fresh time and explicit resume.
-    pub fn open_with_learned_text_stream(directory: impl AsRef<Path>, profile: FileOversightProfile,
-        expected: &FileLearnedConfig) -> Result<(Self, FileHumanReviewer), JournalError>
-    {
+    pub fn open_with_learned_text_stream(
+        directory: impl AsRef<Path>,
+        profile: FileOversightProfile,
+        expected: &FileLearnedConfig,
+    ) -> Result<(Self, FileHumanReviewer), JournalError> {
         expected.text_stream_profile().ok_or(Error::Binding)?;
         Self::open_with_learned_generation(directory, profile, expected)
     }
 
     pub fn learned_text_stream_required(&self) -> bool {
-        self.machine.learned_contract().is_some_and(|config| config.text_stream_profile().is_some())
+        self.machine
+            .learned_contract()
+            .is_some_and(|config| config.text_stream_profile().is_some())
     }
 
     /// Historical confirmed AND published cuts, including any unresolved send.
     /// This does not acquire a writer, clean up staging files, fence, observe a
     /// clock, resume generation, or return an executable owner/approval key.
-    pub fn read_stream_publication_with_learned_generation(directory: impl AsRef<Path>,
-        profile: &FileOversightProfile, expected: &FileLearnedConfig)
-        -> Result<FileStreamSnapshot, JournalError>
-    {
+    pub fn read_stream_publication_with_learned_generation(
+        directory: impl AsRef<Path>,
+        profile: &FileOversightProfile,
+        expected: &FileLearnedConfig,
+    ) -> Result<FileStreamSnapshot, JournalError> {
         let stream = expected.text_stream_profile().ok_or(Error::Binding)?;
-        crate::action::consequence::delivery::persistent::codec::validate_profile(&profile.delivery)?;
+        crate::action::consequence::delivery::persistent::codec::validate_profile(
+            &profile.delivery,
+        )?;
         let identity = storage::identity(directory.as_ref())?;
-        let bytes = storage::read(&identity.join(storage::CANONICAL), profile.delivery.limits.bytes)?;
+        let bytes = storage::read(
+            &identity.join(storage::CANONICAL),
+            profile.delivery.limits.bytes,
+        )?;
         let mut events = journal::decode(profile, &identity, &bytes)?;
         if !matches!(events.first(), Some(Event::StreamBootstrap(actual)) if *actual == stream) {
             return Err(Error::Binding.into());
@@ -158,33 +210,64 @@ impl FileOversight {
     /// Derive the ORIGINAL complete cumulative frame from acknowledged model
     /// output, never caller-selected content. The existing durable propose path
     /// enforces all source/currentness/witness/authority checks and records it.
-    pub fn propose_learned_text_stream_message(&mut self, revision: u64, attempt: u64,
-        deadline: ElapsedTick, required_witnesses: Vec<ReadWitness>, snapshot: Snapshot)
-        -> Result<FrozenAction, JournalError>
-    {
-        self.propose_learned_stream(revision, attempt, Release::Message,
-            deadline, required_witnesses, snapshot)
+    pub fn propose_learned_text_stream_message(
+        &mut self,
+        revision: u64,
+        attempt: u64,
+        deadline: ElapsedTick,
+        required_witnesses: Vec<ReadWitness>,
+        snapshot: Snapshot,
+    ) -> Result<FrozenAction, JournalError> {
+        self.propose_learned_stream(
+            revision,
+            attempt,
+            Release::Message,
+            deadline,
+            required_witnesses,
+            snapshot,
+        )
     }
 
     /// A separately reviewed finish is available only after an ORIGINAL receipt
     /// confirms this generation's message. It adds no generation step or sampler
     /// draw; ordinary journal replay still recomputes historical inference.
     /// An unknown append/finish remains an original reconciliation obligation.
-    pub fn propose_learned_text_stream_finish(&mut self, revision: u64, attempt: u64,
-        deadline: ElapsedTick, required_witnesses: Vec<ReadWitness>, snapshot: Snapshot)
-        -> Result<FrozenAction, JournalError>
-    {
-        self.propose_learned_stream(revision, attempt, Release::Finish,
-            deadline, required_witnesses, snapshot)
+    pub fn propose_learned_text_stream_finish(
+        &mut self,
+        revision: u64,
+        attempt: u64,
+        deadline: ElapsedTick,
+        required_witnesses: Vec<ReadWitness>,
+        snapshot: Snapshot,
+    ) -> Result<FrozenAction, JournalError> {
+        self.propose_learned_stream(
+            revision,
+            attempt,
+            Release::Finish,
+            deadline,
+            required_witnesses,
+            snapshot,
+        )
     }
 
-    fn propose_learned_stream(&mut self, revision: u64, attempt: u64, release: Release,
-        deadline: ElapsedTick, required_witnesses: Vec<ReadWitness>, snapshot: Snapshot)
-        -> Result<FrozenAction, JournalError>
-    {
-        if self.fault.is_some() { return Err(JournalError::Unavailable); }
-        if revision != self.revision() { return Err(Error::Stale.into()); }
-        if !self.learned_text_stream_required() { return Err(Error::Binding.into()); }
+    fn propose_learned_stream(
+        &mut self,
+        revision: u64,
+        attempt: u64,
+        release: Release,
+        deadline: ElapsedTick,
+        required_witnesses: Vec<ReadWitness>,
+        snapshot: Snapshot,
+    ) -> Result<FrozenAction, JournalError> {
+        if self.fault.is_some() {
+            return Err(JournalError::Unavailable);
+        }
+        if revision != self.revision() {
+            return Err(Error::Stale.into());
+        }
+        if !self.learned_text_stream_required() {
+            return Err(Error::Binding.into());
+        }
         let current = self.learned_generation_inspection()?;
         if !self.clock_ready() || current.paused || current.pending.is_some() {
             return Err(Error::Incomplete.into());

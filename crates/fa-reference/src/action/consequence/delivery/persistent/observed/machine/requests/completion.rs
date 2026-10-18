@@ -1,13 +1,13 @@
 //! Durable external-request completion, using ORIGINAL two-key capabilities and
 //! endpoint evidence. No replayed key, new outcome ledger or implicit resend.
-use super::super::super::{FileOversight, FilePermit, FileHumanPermit};
-use super::super::super::credential::FileCredentialPermit;
-use super::super::super::publication::CheckedCompletion;
 use super::super::super::super::JournalError;
 use super::super::super::super::requests::FileRequestDisposition;
-use crate::action::{ActionState, FrozenAction};
-use crate::action::consequence::delivery::{EndpointOutcome, EndpointReceipt};
+use super::super::super::credential::FileCredentialPermit;
+use super::super::super::publication::CheckedCompletion;
+use super::super::super::{FileHumanPermit, FileOversight, FilePermit};
 use crate::Error;
+use crate::action::consequence::delivery::{EndpointOutcome, EndpointReceipt};
+use crate::action::{ActionState, FrozenAction};
 use std::rc::Rc;
 
 impl FileOversight {
@@ -24,25 +24,49 @@ impl FileOversight {
     ///
     /// A faulted owner refuses rather than return its old acknowledged projection
     /// as current after a possibly visible, unacknowledged replacement.
-    pub fn request_resolution(&self, request: u64) -> Result<Option<EndpointOutcome>, JournalError> {
-        let FileRequestDisposition::Admitted { attempt, stage } = self.request_status(request)?.disposition else {
+    pub fn request_resolution(
+        &self,
+        request: u64,
+    ) -> Result<Option<EndpointOutcome>, JournalError> {
+        let FileRequestDisposition::Admitted { attempt, stage } =
+            self.request_status(request)?.disposition
+        else {
             return Ok(None);
         };
         match stage {
-            ActionState::Proposed | ActionState::Prepared | ActionState::Reviewing
-            | ActionState::Authorized | ActionState::Denied | ActionState::Cancelled => Ok(None),
+            ActionState::Proposed
+            | ActionState::Prepared
+            | ActionState::Reviewing
+            | ActionState::Authorized
+            | ActionState::Denied
+            | ActionState::Cancelled => Ok(None),
             ActionState::Dispatching | ActionState::Unknown | ActionState::IrrecoverablyUnknown => {
                 // Even an endpoint-visible execution remains unaccepted here
                 // until the original broker's reconciliation transition commits.
-                Ok(self.machine.broker.resolution(attempt)?.map(EndpointReceipt::outcome))
+                Ok(self
+                    .machine
+                    .broker
+                    .resolution(attempt)?
+                    .map(EndpointReceipt::outcome))
             }
             ActionState::Confirmed | ActionState::ConfirmedNotExecuted => {
-                let outcome = self.machine.broker.resolution(attempt)?
-                    .map(EndpointReceipt::outcome).ok_or(Error::Incomplete)?;
-                let compatible = matches!((stage, outcome),
+                let outcome = self
+                    .machine
+                    .broker
+                    .resolution(attempt)?
+                    .map(EndpointReceipt::outcome)
+                    .ok_or(Error::Incomplete)?;
+                let compatible = matches!(
+                    (stage, outcome),
                     (ActionState::Confirmed, EndpointOutcome::Executed { .. })
-                    | (ActionState::ConfirmedNotExecuted, EndpointOutcome::NotExecuted { .. }));
-                if !compatible { return Err(Error::Binding.into()); }
+                        | (
+                            ActionState::ConfirmedNotExecuted,
+                            EndpointOutcome::NotExecuted { .. }
+                        )
+                );
+                if !compatible {
+                    return Err(Error::Binding.into());
+                }
                 Ok(Some(outcome))
             }
         }
@@ -74,19 +98,29 @@ impl FileOversight {
         credential: Option<&FileCredentialPermit>,
     ) -> Result<EndpointOutcome, JournalError> {
         let stage = self.check_request_completion(
-            request, completion.automatic, completion.human, completion.action,
+            request,
+            completion.automatic,
+            completion.human,
+            completion.action,
         )?;
         // A changed action inside the supplied committee view is a conflicting
         // retry too. Historical lookup does not inspect its other observation bytes.
         self.check_action(completion.automatic.attempt, completion.current.action())?;
-        if matches!(stage, ActionState::Confirmed | ActionState::ConfirmedNotExecuted) {
-            return self.request_resolution(request)?.ok_or_else(|| Error::Incomplete.into());
+        if matches!(
+            stage,
+            ActionState::Confirmed | ActionState::ConfirmedNotExecuted
+        ) {
+            return self
+                .request_resolution(request)?
+                .ok_or_else(|| Error::Incomplete.into());
         }
         if stage != ActionState::Authorized {
             return Err(Error::WrongState.into());
         }
         let publication = match credential {
-            Some(credential) => self.complete_credentialed_publication(revision, completion, credential)?,
+            Some(credential) => {
+                self.complete_credentialed_publication(revision, completion, credential)?
+            }
             None => self.complete_checked_publication(revision, completion)?,
         };
         Ok(publication.outcome)
@@ -99,15 +133,23 @@ impl FileOversight {
         human: &FileHumanPermit,
         action: &FrozenAction,
     ) -> Result<ActionState, JournalError> {
-        if self.fault.is_some() { return Err(JournalError::Unavailable); }
+        if self.fault.is_some() {
+            return Err(JournalError::Unavailable);
+        }
         if !Rc::ptr_eq(&self.issuer, &automatic.issuer)
             || !Rc::ptr_eq(&self.issuer, &human.issuer)
             || automatic.attempt != human.attempt
-        { return Err(Error::Binding.into()); }
-        let FileRequestDisposition::Admitted { attempt, stage } = self.request_status(request)?.disposition else {
+        {
+            return Err(Error::Binding.into());
+        }
+        let FileRequestDisposition::Admitted { attempt, stage } =
+            self.request_status(request)?.disposition
+        else {
             return Err(Error::WrongState.into());
         };
-        if automatic.attempt != attempt { return Err(Error::Binding.into()); }
+        if automatic.attempt != attempt {
+            return Err(Error::Binding.into());
+        }
         self.check_action(attempt, action)?;
         Ok(stage)
     }

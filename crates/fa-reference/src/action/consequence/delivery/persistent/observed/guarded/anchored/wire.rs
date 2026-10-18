@@ -3,8 +3,8 @@
 //! anchored recovery against the independently supplied profile and Store.
 
 use super::FileHistoryAnchor;
-use crate::action::consequence::delivery::persistent::{MAX_JOURNAL_BYTES, MAX_JOURNAL_EVENTS};
 use crate::Error;
+use crate::action::consequence::delivery::persistent::{MAX_JOURNAL_BYTES, MAX_JOURNAL_EVENTS};
 use std::fmt;
 use std::io::{self, Read, Write};
 
@@ -18,13 +18,19 @@ pub enum FileHistoryAnchorError {
     Io(io::ErrorKind),
 }
 impl From<Error> for FileHistoryAnchorError {
-    fn from(error: Error) -> Self { Self::Contract(error) }
+    fn from(error: Error) -> Self {
+        Self::Contract(error)
+    }
 }
 impl From<io::Error> for FileHistoryAnchorError {
-    fn from(error: io::Error) -> Self { Self::Io(error.kind()) }
+    fn from(error: io::Error) -> Self {
+        Self::Io(error.kind())
+    }
 }
 impl fmt::Display for FileHistoryAnchorError {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result { write!(f, "{self:?}") }
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{self:?}")
+    }
 }
 impl std::error::Error for FileHistoryAnchorError {}
 
@@ -41,16 +47,20 @@ impl FileHistoryAnchor {
     /// borrowed: this does not flush, sync, replace files, or silently retry an
     /// I/O failure. A partial failed write is NOT a retained/acknowledged anchor.
     /// The caller owns private storage, atomic publication and durability.
-    pub fn write_to(&self, writer: &mut impl Write, max_bytes: usize)
-        -> Result<usize, FileHistoryAnchorError>
-    {
+    pub fn write_to(
+        &self,
+        writer: &mut impl Write,
+        max_bytes: usize,
+    ) -> Result<usize, FileHistoryAnchorError> {
         check_budget(max_bytes)?;
         let len = self.canonical.len();
         if len == 0 || len > MAX_JOURNAL_BYTES || self.revision > MAX_JOURNAL_EVENTS {
             return Err(Error::Limit.into());
         }
         let total = HEADER_BYTES.checked_add(len).ok_or(Error::Limit)?;
-        if total > max_bytes { return Err(Error::Limit.into()); }
+        if total > max_bytes {
+            return Err(Error::Limit.into());
+        }
         let mut header = [0_u8; HEADER_BYTES];
         header[..8].copy_from_slice(DOMAIN);
         header[8..16].copy_from_slice(&(self.revision as u64).to_le_bytes());
@@ -71,14 +81,18 @@ impl FileHistoryAnchor {
     /// rejects trailing data, including at the exact declared size limit.
     /// The caller supplies I/O deadlines for blocking readers. No I/O fault is
     /// translated into an empty/default anchor or ignored trailing evidence.
-    pub fn read_trusted(reader: &mut impl Read, max_bytes: usize)
-        -> Result<Self, FileHistoryAnchorError>
-    {
+    pub fn read_trusted(
+        reader: &mut impl Read,
+        max_bytes: usize,
+    ) -> Result<Self, FileHistoryAnchorError> {
         check_budget(max_bytes)?;
         let mut header = [0_u8; HEADER_BYTES];
         reader.read_exact(&mut header)?;
-        if &header[..8] != DOMAIN { return Err(Error::Binding.into()); }
-        let revision = u64::from_le_bytes(header[8..16].try_into().map_err(|_| Error::InvalidInput)?);
+        if &header[..8] != DOMAIN {
+            return Err(Error::Binding.into());
+        }
+        let revision =
+            u64::from_le_bytes(header[8..16].try_into().map_err(|_| Error::InvalidInput)?);
         let len = u64::from_le_bytes(header[16..24].try_into().map_err(|_| Error::InvalidInput)?);
         if revision > MAX_JOURNAL_EVENTS as u64 || len == 0 || len > MAX_JOURNAL_BYTES as u64 {
             return Err(Error::Limit.into());
@@ -101,7 +115,10 @@ impl FileHistoryAnchor {
                 Err(error) => return Err(error.into()),
             }
         }
-        Ok(Self { revision, canonical })
+        Ok(Self {
+            revision,
+            canonical,
+        })
     }
 }
 
@@ -114,32 +131,45 @@ mod tests {
     // framing tests claim no recovery or authentication; real-file controls live
     // in anchored/tests.rs and run through the original journal and authority.
     fn sample() -> FileHistoryAnchor {
-        FileHistoryAnchor { revision: 2, canonical: vec![31, 41, 59] }
+        FileHistoryAnchor {
+            revision: 2,
+            canonical: vec![31, 41, 59],
+        }
     }
     fn manual() -> Vec<u8> {
-        vec![70, 65, 72, 65, 78, 67, 0, 1,
-            2, 0, 0, 0, 0, 0, 0, 0,
-            3, 0, 0, 0, 0, 0, 0, 0, 31, 41, 59]
+        vec![
+            70, 65, 72, 65, 78, 67, 0, 1, 2, 0, 0, 0, 0, 0, 0, 0, 3, 0, 0, 0, 0, 0, 0, 0, 31, 41,
+            59,
+        ]
     }
 
     #[test]
     fn manual_bytes_round_trip_at_exact_budget_and_write_preflight_is_atomic() {
         let bytes = manual();
         let mut output = Vec::new();
-        assert_eq!(sample().write_to(&mut output, bytes.len() - 1),
-            Err(FileHistoryAnchorError::Contract(Error::Limit)));
+        assert_eq!(
+            sample().write_to(&mut output, bytes.len() - 1),
+            Err(FileHistoryAnchorError::Contract(Error::Limit))
+        );
         assert!(output.is_empty());
         assert_eq!(sample().write_to(&mut output, bytes.len()), Ok(bytes.len()));
         assert_eq!(output, bytes);
-        assert_eq!(FileHistoryAnchor::read_trusted(&mut Cursor::new(&bytes), bytes.len()), Ok(sample()));
+        assert_eq!(
+            FileHistoryAnchor::read_trusted(&mut Cursor::new(&bytes), bytes.len()),
+            Ok(sample())
+        );
         let mut input = Cursor::new(&bytes);
-        assert_eq!(FileHistoryAnchor::read_trusted(&mut input, bytes.len() - 1),
-            Err(FileHistoryAnchorError::Contract(Error::Limit)));
+        assert_eq!(
+            FileHistoryAnchor::read_trusted(&mut input, bytes.len() - 1),
+            Err(FileHistoryAnchorError::Contract(Error::Limit))
+        );
         assert_eq!(input.position(), HEADER_BYTES as u64);
         for limit in [0, HEADER_BYTES - 1, MAX_HISTORY_ANCHOR_BYTES + 1] {
             let mut input = Cursor::new(&bytes);
-            assert_eq!(FileHistoryAnchor::read_trusted(&mut input, limit),
-                Err(FileHistoryAnchorError::Contract(Error::Limit)));
+            assert_eq!(
+                FileHistoryAnchor::read_trusted(&mut input, limit),
+                Err(FileHistoryAnchorError::Contract(Error::Limit))
+            );
             assert_eq!(input.position(), 0);
         }
     }
@@ -150,18 +180,26 @@ mod tests {
             let mut bytes = manual();
             bytes[index] ^= 1;
             let mut input = Cursor::new(bytes);
-            assert_eq!(FileHistoryAnchor::read_trusted(&mut input, MAX_HISTORY_ANCHOR_BYTES),
-                Err(FileHistoryAnchorError::Contract(Error::Binding)));
+            assert_eq!(
+                FileHistoryAnchor::read_trusted(&mut input, MAX_HISTORY_ANCHOR_BYTES),
+                Err(FileHistoryAnchorError::Contract(Error::Binding))
+            );
             assert_eq!(input.position(), HEADER_BYTES as u64);
         }
-        for (start, value) in [(8, MAX_JOURNAL_EVENTS as u64 + 1),
-            (8, u64::MAX), (16, MAX_JOURNAL_BYTES as u64 + 1), (16, u64::MAX), (16, 0)]
-        {
+        for (start, value) in [
+            (8, MAX_JOURNAL_EVENTS as u64 + 1),
+            (8, u64::MAX),
+            (16, MAX_JOURNAL_BYTES as u64 + 1),
+            (16, u64::MAX),
+            (16, 0),
+        ] {
             let mut bytes = manual();
             bytes[start..start + 8].copy_from_slice(&value.to_le_bytes());
             let mut input = Cursor::new(bytes);
-            assert_eq!(FileHistoryAnchor::read_trusted(&mut input, MAX_HISTORY_ANCHOR_BYTES),
-                Err(FileHistoryAnchorError::Contract(Error::Limit)));
+            assert_eq!(
+                FileHistoryAnchor::read_trusted(&mut input, MAX_HISTORY_ANCHOR_BYTES),
+                Err(FileHistoryAnchorError::Contract(Error::Limit))
+            );
             assert_eq!(input.position(), HEADER_BYTES as u64);
         }
     }
@@ -170,19 +208,29 @@ mod tests {
     fn every_truncation_and_trailing_bytes_refuse() {
         let bytes = manual();
         for cut in 0..bytes.len() {
-            assert_eq!(FileHistoryAnchor::read_trusted(&mut Cursor::new(&bytes[..cut]), bytes.len()),
-                Err(FileHistoryAnchorError::Io(io::ErrorKind::UnexpectedEof)));
+            assert_eq!(
+                FileHistoryAnchor::read_trusted(&mut Cursor::new(&bytes[..cut]), bytes.len()),
+                Err(FileHistoryAnchorError::Io(io::ErrorKind::UnexpectedEof))
+            );
         }
         let mut trailing = bytes.clone();
         trailing.push(0);
-        assert_eq!(FileHistoryAnchor::read_trusted(&mut Cursor::new(trailing), bytes.len()),
-            Err(FileHistoryAnchorError::Contract(Error::InvalidInput)));
-        assert_eq!(FileHistoryAnchor::read_trusted(&mut Cursor::new(bytes), 27), Ok(sample()));
+        assert_eq!(
+            FileHistoryAnchor::read_trusted(&mut Cursor::new(trailing), bytes.len()),
+            Err(FileHistoryAnchorError::Contract(Error::InvalidInput))
+        );
+        assert_eq!(
+            FileHistoryAnchor::read_trusted(&mut Cursor::new(bytes), 27),
+            Ok(sample())
+        );
     }
 
     #[test]
     fn interrupted_and_fragmented_reads_work_but_write_failure_is_not_retried() {
-        struct Fragmented { input: Cursor<Vec<u8>>, interrupted: bool }
+        struct Fragmented {
+            input: Cursor<Vec<u8>>,
+            interrupted: bool,
+        }
         impl Read for Fragmented {
             fn read(&mut self, out: &mut [u8]) -> io::Result<usize> {
                 if !self.interrupted {
@@ -193,21 +241,39 @@ mod tests {
                 self.input.read(&mut out[..count])
             }
         }
-        let mut input = Fragmented { input: Cursor::new(manual()), interrupted: false };
-        assert_eq!(FileHistoryAnchor::read_trusted(&mut input, 27), Ok(sample()));
-        struct FailedWriter { calls: usize, bytes: Vec<u8> }
+        let mut input = Fragmented {
+            input: Cursor::new(manual()),
+            interrupted: false,
+        };
+        assert_eq!(
+            FileHistoryAnchor::read_trusted(&mut input, 27),
+            Ok(sample())
+        );
+        struct FailedWriter {
+            calls: usize,
+            bytes: Vec<u8>,
+        }
         impl Write for FailedWriter {
             fn write(&mut self, bytes: &[u8]) -> io::Result<usize> {
                 self.calls += 1;
-                if self.calls == 2 { return Err(io::ErrorKind::PermissionDenied.into()); }
+                if self.calls == 2 {
+                    return Err(io::ErrorKind::PermissionDenied.into());
+                }
                 self.bytes.extend_from_slice(bytes);
                 Ok(bytes.len())
             }
-            fn flush(&mut self) -> io::Result<()> { panic!("caller owns flushing") }
+            fn flush(&mut self) -> io::Result<()> {
+                panic!("caller owns flushing")
+            }
         }
-        let mut writer = FailedWriter { calls: 0, bytes: Vec::new() };
-        assert_eq!(sample().write_to(&mut writer, 27),
-            Err(FileHistoryAnchorError::Io(io::ErrorKind::PermissionDenied)));
+        let mut writer = FailedWriter {
+            calls: 0,
+            bytes: Vec::new(),
+        };
+        assert_eq!(
+            sample().write_to(&mut writer, 27),
+            Err(FileHistoryAnchorError::Io(io::ErrorKind::PermissionDenied))
+        );
         assert_eq!(writer.calls, 2);
         assert_eq!(writer.bytes, manual()[..HEADER_BYTES]);
     }

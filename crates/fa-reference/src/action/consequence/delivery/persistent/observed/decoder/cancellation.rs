@@ -1,6 +1,6 @@
 //! Supervisor cancellation of one durable numerical request, not its effects.
-use super::{DecoderEvent, Event, FileOversight, JournalError};
 use super::progress::{FileGenerationProgress, check_progress_key};
+use super::{DecoderEvent, Event, FileOversight, JournalError};
 use crate::Error;
 
 impl FileOversight {
@@ -30,19 +30,32 @@ impl FileOversight {
     /// candidate receipt, and exclusive recovery must inspect the actual cut.
     /// Historical replay may recompute older tokens; this transition computes no
     /// NEW token and provides no exactly-once CPU or external-effect guarantee.
-    pub fn cancel_decoder_generation(&mut self, journal_revision: u64, id: u64,
-        generation_revision: u64) -> Result<FileGenerationProgress, JournalError>
-    {
+    pub fn cancel_decoder_generation(
+        &mut self,
+        journal_revision: u64,
+        id: u64,
+        generation_revision: u64,
+    ) -> Result<FileGenerationProgress, JournalError> {
         let current = self.decoder_generation_progress(id)?;
-        if generation_revision > current.generation_revision() { return Err(Error::Stale.into()); }
-        if current.is_complete() { return Ok(current); }
-        if generation_revision != current.generation_revision() || journal_revision != self.revision() {
+        if generation_revision > current.generation_revision() {
+            return Err(Error::Stale.into());
+        }
+        if current.is_complete() {
+            return Ok(current);
+        }
+        if generation_revision != current.generation_revision()
+            || journal_revision != self.revision()
+        {
             return Err(Error::Stale.into());
         }
         check_progress_key(id, generation_revision)?;
-        self.transact(journal_revision, Event::Decoder(DecoderEvent::CancelGeneration {
-            id, revision: generation_revision,
-        }))?;
+        self.transact(
+            journal_revision,
+            Event::Decoder(DecoderEvent::CancelGeneration {
+                id,
+                revision: generation_revision,
+            }),
+        )?;
         self.decoder_generation_progress(id)
     }
 }

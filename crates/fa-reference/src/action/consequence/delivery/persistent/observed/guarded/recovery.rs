@@ -1,19 +1,21 @@
 //! Single-pass guarded recovery over the original journal and machine.
 //! Polls retain the original Store lock. Only the acknowledged fence releases
 //! an owner and its separate roles; no partially replayed authority is exported.
-use super::{BaseEvent, Event, FileOversight, FileOversightProfile, FileOversightRoles,
-    FileRecoveryRequirements, JournalError, Machine, anchored::FileHistoryAnchor, journal, storage};
 use super::super::machine::Transition;
-use crate::action::consequence::delivery::persistent::{MAX_JOURNAL_EVENTS, RecoveryReserve};
+use super::{
+    BaseEvent, Event, FileOversight, FileOversightProfile, FileOversightRoles,
+    FileRecoveryRequirements, JournalError, Machine, anchored::FileHistoryAnchor, journal, storage,
+};
 use crate::Error;
+use crate::action::consequence::delivery::persistent::{MAX_JOURNAL_EVENTS, RecoveryReserve};
 use std::fmt;
 use std::path::Path;
 
 mod andon;
 pub use andon::FileAndonRecovery;
 
-mod stopped;
 mod publication;
+mod stopped;
 pub use publication::FilePublicationRecoveryRequirements;
 mod reconciled;
 pub use reconciled::ReconciledGuardedOwner;
@@ -78,16 +80,20 @@ pub struct FileGuardedRecovery {
 
 impl fmt::Debug for FileGuardedRecovery {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("FileGuardedRecovery").field("progress", &self.progress()).finish_non_exhaustive()
+        f.debug_struct("FileGuardedRecovery")
+            .field("progress", &self.progress())
+            .finish_non_exhaustive()
     }
 }
 
 impl FileOversight {
     /// Freeze the original guarded recovery inputs and retain the exclusive
     /// writer lock without executing history. No fresh observation is invented.
-    pub fn begin_open_guarded(directory: impl AsRef<Path>, profile: FileOversightProfile,
-        expected: &FileRecoveryRequirements) -> Result<FileGuardedRecovery, JournalError>
-    {
+    pub fn begin_open_guarded(
+        directory: impl AsRef<Path>,
+        profile: FileOversightProfile,
+        expected: &FileRecoveryRequirements,
+    ) -> Result<FileGuardedRecovery, JournalError> {
         profile.delivery.limits.check()?;
         let store = storage::Store::open(directory.as_ref())?;
         FileGuardedRecovery::begin_store(store, profile, expected, None)
@@ -96,10 +102,12 @@ impl FileOversight {
     /// Check the exact independently retained prefix before ANY event execution.
     /// The same locked canonical image supplies prefix and complete-suffix replay.
     /// Matching the prefix never excuses an invalid suffix or wrong guard set.
-    pub fn begin_open_guarded_anchored(directory: impl AsRef<Path>, profile: FileOversightProfile,
-        expected: &FileRecoveryRequirements, anchor: &FileHistoryAnchor)
-        -> Result<FileGuardedRecovery, JournalError>
-    {
+    pub fn begin_open_guarded_anchored(
+        directory: impl AsRef<Path>,
+        profile: FileOversightProfile,
+        expected: &FileRecoveryRequirements,
+        anchor: &FileHistoryAnchor,
+    ) -> Result<FileGuardedRecovery, JournalError> {
         profile.delivery.limits.check()?;
         let store = storage::Store::open(directory.as_ref())?;
         FileGuardedRecovery::begin_store(store, profile, expected, Some(anchor))
@@ -107,17 +115,30 @@ impl FileOversight {
 }
 
 impl FileGuardedRecovery {
-    pub(super) fn begin_store(store: storage::Store, profile: FileOversightProfile,
-        expected: &FileRecoveryRequirements, anchor: Option<&FileHistoryAnchor>)
-        -> Result<Self, JournalError>
-    {
+    pub(super) fn begin_store(
+        store: storage::Store,
+        profile: FileOversightProfile,
+        expected: &FileRecoveryRequirements,
+        anchor: Option<&FileHistoryAnchor>,
+    ) -> Result<Self, JournalError> {
         let canonical = store.read(profile.delivery.limits.bytes)?;
         let events = journal::decode(&profile, store.identity(), &canonical)?;
-        if let Some(anchor) = anchor { anchor.check(&profile, store.identity(), &events)?; }
+        if let Some(anchor) = anchor {
+            anchor.check(&profile, store.identity(), &events)?;
+        }
         expected.guards.check_decoder_config(&events)?;
         let machine = Machine::new(&profile)?;
-        Ok(Self { profile, expected: expected.clone(), store, canonical, events, machine,
-            replayed: 0, attempted: 0, status: FileGuardedRecoveryStatus::Replaying })
+        Ok(Self {
+            profile,
+            expected: expected.clone(),
+            store,
+            canonical,
+            events,
+            machine,
+            replayed: 0,
+            attempted: 0,
+            status: FileGuardedRecoveryStatus::Replaying,
+        })
     }
 
     /// Pin the existing original recovery reserve before the first replay call.
@@ -139,45 +160,67 @@ impl FileGuardedRecovery {
     }
 
     pub fn progress(&self) -> FileGuardedRecoveryProgress {
-        FileGuardedRecoveryProgress { replayed_events: self.replayed,
-            attempted_events: self.attempted, total_events: self.events.len(), status: self.status }
+        FileGuardedRecoveryProgress {
+            replayed_events: self.replayed,
+            attempted_events: self.attempted,
+            total_events: self.events.len(),
+            status: self.status,
+        }
     }
 
     /// Execute at most max_events original transitions from the exact verified
     /// predecessor. Stale/invalid polls do no work. Failures and unwinds latch
     /// before any later call can reuse a partially changed private machine.
-    pub fn advance(&mut self, expected_events: usize, max_events: usize)
-        -> Result<FileGuardedRecoveryProgress, JournalError>
-    {
+    pub fn advance(
+        &mut self,
+        expected_events: usize,
+        max_events: usize,
+    ) -> Result<FileGuardedRecoveryProgress, JournalError> {
         self.advance_with(expected_events, max_events, Machine::apply)
     }
 
-    fn advance_with(&mut self, expected_events: usize, max_events: usize,
-        apply: impl FnMut(&mut Machine, &Event) -> Result<Transition, Error>)
-        -> Result<FileGuardedRecoveryProgress, JournalError>
-    {
-        self.advance_checked_with(expected_events, max_events, apply,
-            |run| run.expected.check(&run.profile, &run.machine, &run.events))
+    fn advance_with(
+        &mut self,
+        expected_events: usize,
+        max_events: usize,
+        apply: impl FnMut(&mut Machine, &Event) -> Result<Transition, Error>,
+    ) -> Result<FileGuardedRecoveryProgress, JournalError> {
+        self.advance_checked_with(expected_events, max_events, apply, |run| {
+            run.expected.check(&run.profile, &run.machine, &run.events)
+        })
     }
 
     // Closed internal composition only: the native Andon wrapper supplies its
     // complete original requirements, never a caller-selected predicate or reducer.
-    fn advance_checked_with(&mut self, expected_events: usize, max_events: usize,
+    fn advance_checked_with(
+        &mut self,
+        expected_events: usize,
+        max_events: usize,
         mut apply: impl FnMut(&mut Machine, &Event) -> Result<Transition, Error>,
-        check: impl FnOnce(&Self) -> Result<(), Error>)
-        -> Result<FileGuardedRecoveryProgress, JournalError>
-    {
+        check: impl FnOnce(&Self) -> Result<(), Error>,
+    ) -> Result<FileGuardedRecoveryProgress, JournalError> {
         match self.status {
             FileGuardedRecoveryStatus::Failed(error) => return Err(error.into()),
             FileGuardedRecoveryStatus::Interrupted => return Err(JournalError::Unavailable),
             FileGuardedRecoveryStatus::Cancelled => return Err(Error::WrongState.into()),
             _ => {}
         }
-        if expected_events != self.replayed { return Err(Error::Stale.into()); }
-        if max_events == 0 { return Err(Error::InvalidInput.into()); }
-        if max_events > MAX_JOURNAL_EVENTS { return Err(Error::Limit.into()); }
-        if self.status == FileGuardedRecoveryStatus::Ready { return Ok(self.progress()); }
-        let end = self.replayed.saturating_add(max_events).min(self.events.len());
+        if expected_events != self.replayed {
+            return Err(Error::Stale.into());
+        }
+        if max_events == 0 {
+            return Err(Error::InvalidInput.into());
+        }
+        if max_events > MAX_JOURNAL_EVENTS {
+            return Err(Error::Limit.into());
+        }
+        if self.status == FileGuardedRecoveryStatus::Ready {
+            return Ok(self.progress());
+        }
+        let end = self
+            .replayed
+            .saturating_add(max_events)
+            .min(self.events.len());
         while self.replayed < end {
             self.status = FileGuardedRecoveryStatus::Interrupted;
             self.attempted += 1; // At most the decoded, bounded original event count.
@@ -206,7 +249,10 @@ impl FileGuardedRecovery {
     /// Preserve a terminal failure/interruption in the returned progress record.
     pub fn cancel(self) -> FileGuardedRecoveryProgress {
         let mut progress = self.progress();
-        if matches!(progress.status, FileGuardedRecoveryStatus::Replaying | FileGuardedRecoveryStatus::Ready) {
+        if matches!(
+            progress.status,
+            FileGuardedRecoveryStatus::Replaying | FileGuardedRecoveryStatus::Ready
+        ) {
             progress.status = FileGuardedRecoveryStatus::Cancelled;
         }
         progress
@@ -226,9 +272,10 @@ impl FileGuardedRecovery {
 
     // The original fence/publication path shared by sealed recovery profiles.
     // No public callback can turn an unchecked machine into an acknowledged owner.
-    fn finish_checked(self, check: impl FnOnce(&Self) -> Result<(), Error>)
-        -> Result<(FileOversight, FileOversightRoles), JournalError>
-    {
+    fn finish_checked(
+        self,
+        check: impl FnOnce(&Self) -> Result<(), Error>,
+    ) -> Result<(FileOversight, FileOversightRoles), JournalError> {
         match self.status {
             FileGuardedRecoveryStatus::Ready => {}
             FileGuardedRecoveryStatus::Failed(error) => return Err(error.into()),
@@ -236,8 +283,17 @@ impl FileGuardedRecovery {
             _ => return Err(Error::Incomplete.into()),
         }
         check(&self)?;
-        let Self { profile, store, canonical, events, mut machine, .. } = self;
-        if events.len() >= profile.delivery.limits.events { return Err(Error::Limit.into()); }
+        let Self {
+            profile,
+            store,
+            canonical,
+            events,
+            mut machine,
+            ..
+        } = self;
+        if events.len() >= profile.delivery.limits.events {
+            return Err(Error::Limit.into());
+        }
         let event = Event::Core(BaseEvent::Fence);
         let bytes = journal::encode_appended(&profile, store.identity(), &events, &event)?;
         machine.preflight_consistency(&event)?;
@@ -246,7 +302,9 @@ impl FileGuardedRecovery {
         // This empty placeholder runs no historical/numerical events and cannot
         // escape on either success or a failed replacement.
         let placeholder = Machine::new(&profile)?;
-        if store.read(profile.delivery.limits.bytes)? != canonical { return Err(Error::Binding.into()); }
+        if store.read(profile.delivery.limits.bytes)? != canonical {
+            return Err(Error::Binding.into());
+        }
         store.confirm_and_cleanup()?;
         let (mut host, human) = FileOversight::owner(profile, store, events, placeholder);
         host.check_source_admission(&event)?;
@@ -255,9 +313,9 @@ impl FileGuardedRecovery {
         Ok((host, roles))
     }
 
-    pub(super) fn finish_synchronously(mut self)
-        -> Result<(FileOversight, FileOversightRoles), JournalError>
-    {
+    pub(super) fn finish_synchronously(
+        mut self,
+    ) -> Result<(FileOversight, FileOversightRoles), JournalError> {
         while self.status == FileGuardedRecoveryStatus::Replaying {
             self.advance(self.replayed, MAX_JOURNAL_EVENTS)?;
         }

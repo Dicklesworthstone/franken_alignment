@@ -1,4 +1,5 @@
 //! Public-API fixtures: real sockets, deterministic fixture verdicts, no model claim.
+#![allow(dead_code, unused_imports)]
 use fa_reference::action::consequence::congress::{CongressPolicy, MemberPolicy};
 use fa_reference::action::consequence::delivery::PublicationEndpoint;
 use fa_reference::action::consequence::gate::TargetCeiling;

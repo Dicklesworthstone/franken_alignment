@@ -26,56 +26,102 @@ impl FileOversight {
     /// rechecks its native predecessor. No live human/automatic key is restored.
     /// Before submission there is no recorded effect deadline or request binding;
     /// the operator must separately choose a fresh, unused publication request.
-    pub fn prepare_decoder_text_publication_recovery(&self, generation: u64,
-        expected: &TextGenerationRequest) -> Result<FileTextGenerationCommand, JournalError>
-    {
-        if self.fault.is_some() { return Err(JournalError::Unavailable); }
-        if generation == 0 { return Err(Error::InvalidInput.into()); }
-        if !self.generated_text_stream_required()? { return Err(Error::Binding.into()); }
+    pub fn prepare_decoder_text_publication_recovery(
+        &self,
+        generation: u64,
+        expected: &TextGenerationRequest,
+    ) -> Result<FileTextGenerationCommand, JournalError> {
+        if self.fault.is_some() {
+            return Err(JournalError::Unavailable);
+        }
+        if generation == 0 {
+            return Err(Error::InvalidInput.into());
+        }
+        if !self.generated_text_stream_required()? {
+            return Err(Error::Binding.into());
+        }
         let progress = self.decoder_text_progress(generation)?;
         let command = progress.command();
-        if command.request() != expected { return Err(Error::Binding.into()); }
+        if command.request() != expected {
+            return Err(Error::Binding.into());
+        }
         // Scan the ORIGINAL bounded event sequence, not a second mutable index.
-        if self.events.iter().any(|event| matches!(event,
-            Event::TextMessage(source, _) if source.generation == generation))
-        { return Err(Error::Duplicate.into()); }
+        if self.events.iter().any(|event| {
+            matches!(event,
+            Event::TextMessage(source, _) if source.generation == generation)
+        }) {
+            return Err(Error::Duplicate.into());
+        }
         let stream = self.stream_snapshot()?;
-        if stream.publication.stop.is_some() || stream.publication.control.suspended
-            || stream.confirmed.finished() { return Err(Error::WrongState.into()); }
-        if stream.pending.is_some() || stream.confirmed != stream.published
+        if stream.publication.stop.is_some()
+            || stream.publication.control.suspended
+            || stream.confirmed.finished()
+        {
+            return Err(Error::WrongState.into());
+        }
+        if stream.pending.is_some()
+            || stream.confirmed != stream.published
             || stream.confirmed_target != stream.publication.target
-        { return Err(Error::Incomplete.into()); }
+        {
+            return Err(Error::Incomplete.into());
+        }
         let profile = stream.confirmed.profile();
-        if expected.max_new_tokens == 0 || expected.max_output_bytes == 0 || expected.stop_tokens.is_empty() {
+        if expected.max_new_tokens == 0
+            || expected.max_output_bytes == 0
+            || expected.stop_tokens.is_empty()
+        {
             return Err(Error::InvalidInput.into());
         }
         if stream.confirmed.message_count() >= profile.max_messages()
             || expected.max_output_bytes > profile.max_message_bytes()
-            || expected.max_output_bytes > profile.max_stream_bytes()
-                .checked_sub(stream.confirmed.visible().len()).ok_or(Error::Binding)?
-        { return Err(Error::Limit.into()); }
+            || expected.max_output_bytes
+                > profile
+                    .max_stream_bytes()
+                    .checked_sub(stream.confirmed.visible().len())
+                    .ok_or(Error::Binding)?
+        {
+            return Err(Error::Limit.into());
+        }
         let tokenizer = self.machine.decoder_tokenizer()?;
         for token in &expected.stop_tokens {
-            if !tokenizer.is_control(*token)? { return Err(Error::Binding.into()); }
+            if !tokenizer.is_control(*token)? {
+                return Err(Error::Binding.into());
+            }
         }
         let pending = self.pending_decoder_text()?;
         let position = if let Some(receipt) = progress.numerical().receipt() {
-            if self.pending_decoder_generation()?.is_some() { return Err(Error::Incomplete.into()); }
+            if self.pending_decoder_generation()?.is_some() {
+                return Err(Error::Incomplete.into());
+            }
             let report = receipt.result()?;
             if report.finish() != GenerationFinish::StopToken
                 || report.reviewed_prompt_tokens() != report.requested_prompt_tokens()
-            { return Err(Error::WrongState.into()); }
+            {
+                return Err(Error::WrongState.into());
+            }
             report.end_position()
         } else {
-            if pending.as_ref() != Some(command) { return Err(Error::Incomplete.into()); }
+            if pending.as_ref() != Some(command) {
+                return Err(Error::Incomplete.into());
+            }
             // Generation revision counts transitions, NOT numerical positions.
             // In particular, an unstarted intent has no partial report yet.
-            progress.numerical().partial().map_or(command.position(), |partial| partial.position())
+            progress
+                .numerical()
+                .partial()
+                .map_or(command.position(), |partial| partial.position())
         };
         let numerical = self.decoder_inspection()?.numerical;
-        if numerical.status != MonitoringStatus::Ready { return Err(Error::WrongState.into()); }
-        let steps = position.checked_sub(command.position()).ok_or(Error::Binding)?;
-        let actor_revision = command.actor_revision().checked_add(steps).ok_or(Error::Overflow)?;
+        if numerical.status != MonitoringStatus::Ready {
+            return Err(Error::WrongState.into());
+        }
+        let steps = position
+            .checked_sub(command.position())
+            .ok_or(Error::Binding)?;
+        let actor_revision = command
+            .actor_revision()
+            .checked_add(steps)
+            .ok_or(Error::Overflow)?;
         if numerical.position != position || numerical.actor_revision != actor_revision {
             return Err(Error::Stale.into());
         }

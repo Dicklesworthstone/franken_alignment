@@ -1,19 +1,23 @@
 //! Native checked publication with independently pinned joint-helper policy.
 //! The original generated/witness bootstrap and held-out reducer own semantics.
-use super::{BaseEvent, ByteBpe, DecoderEvent, Event, FileDecoderConfig, FileHumanReviewer,
-    FileOversight, FileOversightProfile, GeneratedPublicationProfile, JournalError, Machine,
-    MAX_FILE_TOKENIZER_BYTES, Path, Rc, journal, replay_text_events, storage};
+use super::{
+    BaseEvent, ByteBpe, DecoderEvent, Event, FileDecoderConfig, FileHumanReviewer, FileOversight,
+    FileOversightProfile, GeneratedPublicationProfile, JournalError, MAX_FILE_TOKENIZER_BYTES,
+    Machine, Path, Rc, journal, replay_text_events, storage,
+};
+use crate::Error;
 use crate::action::consequence::delivery::persistent::observed::credibility::{
     CredibilityEvent, held_out_joint::HeldOutJointPolicy,
 };
-use crate::Error;
 
 fn check_joint(events: &[Event], expected: HeldOutJointPolicy) -> Result<(), Error> {
     let actual = events.iter().filter_map(|event| match event {
         Event::Credibility(CredibilityEvent::EnableHeldOutJoint(policy)) => Some(*policy),
         _ => None,
     });
-    if !actual.eq(std::iter::once(expected)) { return Err(Error::Binding); }
+    if !actual.eq(std::iter::once(expected)) {
+        return Err(Error::Binding);
+    }
     Ok(())
 }
 
@@ -26,24 +30,42 @@ impl FileOversight {
     /// but later credibility promotion must pass its independent joint evidence
     /// requirements. Model generation is not helper qualification or permission.
     /// Invalid configuration fails native replay before storage is created.
-    pub fn create_generated_text_stream_with_joint_publication(directory: impl AsRef<Path>,
-        profile: FileOversightProfile, decoder: FileDecoderConfig, tokenizer: ByteBpe,
-        selected: GeneratedPublicationProfile, joint: HeldOutJointPolicy)
-        -> Result<(Self, FileHumanReviewer), JournalError>
-    {
+    pub fn create_generated_text_stream_with_joint_publication(
+        directory: impl AsRef<Path>,
+        profile: FileOversightProfile,
+        decoder: FileDecoderConfig,
+        tokenizer: ByteBpe,
+        selected: GeneratedPublicationProfile,
+        joint: HeldOutJointPolicy,
+    ) -> Result<(Self, FileHumanReviewer), JournalError> {
         profile.delivery.limits.check()?;
-        if !tokenizer.binds(decoder.profile()) { return Err(Error::Binding.into()); }
+        if !tokenizer.binds(decoder.profile()) {
+            return Err(Error::Binding.into());
+        }
         let canonical = tokenizer.to_bytes()?;
-        if canonical.len() > MAX_FILE_TOKENIZER_BYTES { return Err(Error::Limit.into()); }
+        if canonical.len() > MAX_FILE_TOKENIZER_BYTES {
+            return Err(Error::Limit.into());
+        }
         let mut events = vec![Event::GeneratedStreamBootstrap(selected.stream)];
         if let Some(reserve) = selected.reserve {
             events.push(Event::Core(BaseEvent::ReserveRecovery(reserve)));
         }
-        events.push(Event::Credibility(CredibilityEvent::EnableHeldOutJoint(joint)));
-        events.extend(selected.witnesses().into_iter().map(Event::PublicationWitness));
-        events.extend([Event::Decoder(DecoderEvent::Enable(Rc::new(decoder))),
-            Event::Decoder(DecoderEvent::Tokenizer(canonical.into()))]);
-        if events.len() > profile.delivery.limits.events { return Err(Error::Limit.into()); }
+        events.push(Event::Credibility(CredibilityEvent::EnableHeldOutJoint(
+            joint,
+        )));
+        events.extend(
+            selected
+                .witnesses()
+                .into_iter()
+                .map(Event::PublicationWitness),
+        );
+        events.extend([
+            Event::Decoder(DecoderEvent::Enable(Rc::new(decoder))),
+            Event::Decoder(DecoderEvent::Tokenizer(canonical.into())),
+        ]);
+        if events.len() > profile.delivery.limits.events {
+            return Err(Error::Limit.into());
+        }
         let machine = Machine::replay(&profile, &events)?;
         let store = storage::Store::create(directory.as_ref())?;
         store.replace(&journal::encode(&profile, store.identity(), &events)?)?;
@@ -59,15 +81,22 @@ impl FileOversight {
     /// historical results survive without becoming current evidence or approval.
     /// No source is read, no helper runs, and no message is published by opening.
     /// This does not provide an independent anti-rollback anchor or OS isolation.
-    pub fn open_generated_text_stream_with_joint_publication(directory: impl AsRef<Path>,
-        profile: FileOversightProfile, decoder: &FileDecoderConfig, tokenizer: &ByteBpe,
-        selected: GeneratedPublicationProfile, joint: HeldOutJointPolicy)
-        -> Result<(Self, FileHumanReviewer), JournalError>
-    {
+    pub fn open_generated_text_stream_with_joint_publication(
+        directory: impl AsRef<Path>,
+        profile: FileOversightProfile,
+        decoder: &FileDecoderConfig,
+        tokenizer: &ByteBpe,
+        selected: GeneratedPublicationProfile,
+        joint: HeldOutJointPolicy,
+    ) -> Result<(Self, FileHumanReviewer), JournalError> {
         profile.delivery.limits.check()?;
-        if !tokenizer.binds(decoder.profile()) { return Err(Error::Binding.into()); }
+        if !tokenizer.binds(decoder.profile()) {
+            return Err(Error::Binding.into());
+        }
         let canonical = tokenizer.to_bytes()?;
-        if canonical.len() > MAX_FILE_TOKENIZER_BYTES { return Err(Error::Limit.into()); }
+        if canonical.len() > MAX_FILE_TOKENIZER_BYTES {
+            return Err(Error::Limit.into());
+        }
         let store = storage::Store::open(directory.as_ref())?;
         let bytes = store.read(profile.delivery.limits.bytes)?;
         let events = journal::decode(&profile, store.identity(), &bytes)?;
@@ -82,11 +111,14 @@ impl FileOversight {
 
     /// Configuration equality only. Call before preparation on an already owned
     /// host; it cannot certify current source or held-out evaluation evidence.
-    pub fn check_generated_text_joint_publication(&self,
-        selected: GeneratedPublicationProfile, joint: HeldOutJointPolicy)
-        -> Result<(), JournalError>
-    {
-        if self.fault.is_some() { return Err(JournalError::Unavailable); }
+    pub fn check_generated_text_joint_publication(
+        &self,
+        selected: GeneratedPublicationProfile,
+        joint: HeldOutJointPolicy,
+    ) -> Result<(), JournalError> {
+        if self.fault.is_some() {
+            return Err(JournalError::Unavailable);
+        }
         selected.check(&self.events)?;
         check_joint(&self.events, joint).map_err(Into::into)
     }

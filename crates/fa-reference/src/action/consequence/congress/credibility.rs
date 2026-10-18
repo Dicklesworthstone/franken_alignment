@@ -126,7 +126,10 @@ pub struct CredibilityScore {
 
 impl CredibilityScore {
     pub fn precision(&self) -> Option<Ratio> {
-        ratio(self.true_positives, self.true_positives.checked_add(self.false_positives)?)
+        ratio(
+            self.true_positives,
+            self.true_positives.checked_add(self.false_positives)?,
+        )
     }
 
     pub fn recall(&self) -> Option<Ratio> {
@@ -138,12 +141,20 @@ impl CredibilityScore {
     }
 
     pub fn coverage(&self) -> Option<Ratio> {
-        ratio(self.cases.checked_sub(self.missing)?.checked_sub(self.abstained)?, self.cases)
+        ratio(
+            self.cases
+                .checked_sub(self.missing)?
+                .checked_sub(self.abstained)?,
+            self.cases,
+        )
     }
 }
 
 fn ratio(numerator: u64, denominator: u64) -> Option<Ratio> {
-    (denominator != 0).then_some(Ratio { numerator, denominator })
+    (denominator != 0).then_some(Ratio {
+        numerator,
+        denominator,
+    })
 }
 
 /// Immutable, sealed evidence. It has no permit-minting or live-update API.
@@ -180,11 +191,15 @@ impl CredibilitySnapshot {
     }
 
     pub fn case_label(&self, case: u64) -> Option<&EvaluationLabel> {
-        self.records.get(&case).and_then(|record| record.label.as_ref())
+        self.records
+            .get(&case)
+            .and_then(|record| record.label.as_ref())
     }
 
     pub fn case_observations(&self, case: u64) -> Option<&BTreeMap<String, Observation>> {
-        self.records.get(&case).and_then(|record| record.observations.as_ref())
+        self.records
+            .get(&case)
+            .and_then(|record| record.observations.as_ref())
     }
 
     pub fn scope(&self) -> &EvaluationScope {
@@ -220,13 +235,23 @@ fn identifier(value: &str) -> Result<(), Error> {
 
 impl CredibilityLedger {
     pub fn new(campaign: Campaign) -> Result<Self, Error> {
-        let Campaign { scope, label_owner, helpers, strata, cases } = campaign;
+        let Campaign {
+            scope,
+            label_owner,
+            helpers,
+            strata,
+            cases,
+        } = campaign;
         if helpers.len() > MAX_VOTES || strata.len() > MAX_STRATA || cases.len() > MAX_CASES {
             return Err(Error::Limit);
         }
-        if scope.campaign == 0 || scope.model_generation == 0
-            || scope.evaluator_generation == 0 || scope.held_out_manifest == [0; 32]
-            || helpers.is_empty() || strata.is_empty() || cases.is_empty()
+        if scope.campaign == 0
+            || scope.model_generation == 0
+            || scope.evaluator_generation == 0
+            || scope.held_out_manifest == [0; 32]
+            || helpers.is_empty()
+            || strata.is_empty()
+            || cases.is_empty()
         {
             return Err(Error::InvalidInput);
         }
@@ -260,12 +285,26 @@ impl CredibilityLedger {
             }
             represented.insert(spec.stratum.clone());
             last_sequence = last_sequence.max(spec.dispatch_sequence);
-            records.insert(spec.id, CaseRecord { spec, observations: None, label: None });
+            records.insert(
+                spec.id,
+                CaseRecord {
+                    spec,
+                    observations: None,
+                    label: None,
+                },
+            );
         }
         if represented != strata {
             return Err(Error::Incomplete);
         }
-        Ok(Self { scope, label_owner, helpers, strata, cases: records, last_sequence })
+        Ok(Self {
+            scope,
+            label_owner,
+            helpers,
+            strata,
+            cases: records,
+            last_sequence,
+        })
     }
 
     /// One immutable report vector per predeclared case. Every registered helper
@@ -295,7 +334,10 @@ impl CredibilityLedger {
                 last_sequence = last_sequence.max(*first_sequence);
             }
         }
-        self.cases.get_mut(&case).ok_or(Error::Missing)?.observations = Some(observations);
+        self.cases
+            .get_mut(&case)
+            .ok_or(Error::Missing)?
+            .observations = Some(observations);
         self.last_sequence = last_sequence;
         Ok(())
     }
@@ -312,16 +354,23 @@ impl CredibilityLedger {
         {
             return Err(Error::Binding);
         }
-        let latest_observation = record.observations.iter().flat_map(|o| o.values())
+        let latest_observation = record
+            .observations
+            .iter()
+            .flat_map(|o| o.values())
             .filter_map(|o| match o {
                 Observation::Hold { first_sequence } => Some(*first_sequence),
                 _ => None,
-            }).max().unwrap_or(0).max(record.spec.dispatch_sequence);
+            })
+            .max()
+            .unwrap_or(0)
+            .max(record.spec.dispatch_sequence);
         if label.recorded_sequence < latest_observation {
             return Err(Error::Stale);
         }
         if let Some(previous) = &record.label {
-            if previous.verdict != LabelVerdict::Censored || label.verdict == LabelVerdict::Censored {
+            if previous.verdict != LabelVerdict::Censored || label.verdict == LabelVerdict::Censored
+            {
                 return Err(Error::Duplicate);
             }
             if label.recorded_sequence <= previous.recorded_sequence {
@@ -339,18 +388,34 @@ impl CredibilityLedger {
         if sequence < self.last_sequence {
             return Err(Error::Stale);
         }
-        let mut scores: BTreeMap<String, BTreeMap<String, CredibilityScore>> = self.helpers.keys()
-            .map(|helper| (helper.clone(), self.strata.iter()
-                .map(|stratum| (stratum.clone(), CredibilityScore::default())).collect()))
+        let mut scores: BTreeMap<String, BTreeMap<String, CredibilityScore>> = self
+            .helpers
+            .keys()
+            .map(|helper| {
+                (
+                    helper.clone(),
+                    self.strata
+                        .iter()
+                        .map(|stratum| (stratum.clone(), CredibilityScore::default()))
+                        .collect(),
+                )
+            })
             .collect();
         // Counts are bounded by MAX_CASES; sums of u64 lead times use u128.
         for record in self.cases.values() {
             for helper in self.helpers.keys() {
-                let score = scores.get_mut(helper).ok_or(Error::Missing)?
-                    .get_mut(&record.spec.stratum).ok_or(Error::Missing)?;
+                let score = scores
+                    .get_mut(helper)
+                    .ok_or(Error::Missing)?
+                    .get_mut(&record.spec.stratum)
+                    .ok_or(Error::Missing)?;
                 score.cases += 1;
-                let observation = record.observations.as_ref().and_then(|o| o.get(helper))
-                    .copied().unwrap_or(Observation::Missing);
+                let observation = record
+                    .observations
+                    .as_ref()
+                    .and_then(|o| o.get(helper))
+                    .copied()
+                    .unwrap_or(Observation::Missing);
                 match observation {
                     Observation::Missing => score.missing += 1,
                     Observation::Abstain => score.abstained += 1,
@@ -376,16 +441,23 @@ impl CredibilityLedger {
                             score.true_positives += 1;
                             if first_sequence < record.spec.dispatch_sequence {
                                 score.timely_true_positives += 1;
-                                let peer_or_dispatch = record.observations.as_ref().into_iter()
+                                let peer_or_dispatch = record
+                                    .observations
+                                    .as_ref()
+                                    .into_iter()
                                     .flat_map(|o| o.iter())
                                     .filter(|(peer, _)| *peer != helper)
                                     .filter_map(|(_, o)| match o {
-                                        Observation::Hold { first_sequence } => Some(*first_sequence),
+                                        Observation::Hold { first_sequence } => {
+                                            Some(*first_sequence)
+                                        }
                                         _ => None,
-                                    }).min().unwrap_or(record.spec.dispatch_sequence)
+                                    })
+                                    .min()
+                                    .unwrap_or(record.spec.dispatch_sequence)
                                     .min(record.spec.dispatch_sequence);
-                                score.lead_time_credit += u128::from(
-                                    peer_or_dispatch.saturating_sub(first_sequence));
+                                score.lead_time_credit +=
+                                    u128::from(peer_or_dispatch.saturating_sub(first_sequence));
                             }
                         } else {
                             score.false_negatives += 1;
@@ -394,12 +466,21 @@ impl CredibilityLedger {
                 }
             }
         }
-        let oldest_case_sequence = self.cases.values().map(|record| record.spec.dispatch_sequence)
-            .min().ok_or(Error::Incomplete)?;
+        let oldest_case_sequence = self
+            .cases
+            .values()
+            .map(|record| record.spec.dispatch_sequence)
+            .min()
+            .ok_or(Error::Incomplete)?;
         Ok(CredibilitySnapshot {
-            label_owner: self.label_owner, records: self.cases, oldest_case_sequence,
-            scope: self.scope, helpers: self.helpers, strata: self.strata,
-            scores, sealed_sequence: sequence,
+            label_owner: self.label_owner,
+            records: self.cases,
+            oldest_case_sequence,
+            scope: self.scope,
+            helpers: self.helpers,
+            strata: self.strata,
+            scores,
+            sealed_sequence: sequence,
         })
     }
 }
@@ -418,16 +499,30 @@ mod tests {
             },
             label_owner: "independent-evaluation".into(),
             helpers: BTreeMap::from([
-                ("alice".into(), HelperGeneration { generation: 1, cohort: "a".into() }),
-                ("bob".into(), HelperGeneration { generation: 1, cohort: "b".into() }),
+                (
+                    "alice".into(),
+                    HelperGeneration {
+                        generation: 1,
+                        cohort: "a".into(),
+                    },
+                ),
+                (
+                    "bob".into(),
+                    HelperGeneration {
+                        generation: 1,
+                        cohort: "b".into(),
+                    },
+                ),
             ]),
             strata: BTreeSet::from(["tool".into()]),
-            cases: (1..=4).map(|id| CaseSpec {
-                id,
-                stratum: "tool".into(),
-                evidence_root: [id as u8; 32],
-                dispatch_sequence: 100,
-            }).collect(),
+            cases: (1..=4)
+                .map(|id| CaseSpec {
+                    id,
+                    stratum: "tool".into(),
+                    evidence_root: [id as u8; 32],
+                    dispatch_sequence: 100,
+                })
+                .collect(),
         }
     }
 
@@ -449,39 +544,82 @@ mod tests {
     #[test]
     fn independent_truth_rewards_early_dissent_not_early_false_holds() {
         let mut ledger = CredibilityLedger::new(campaign()).unwrap();
-        ledger.record_observations(1, observations(
-            Observation::Hold { first_sequence: 10 },
-            Observation::Hold { first_sequence: 20 },
-        )).unwrap();
-        ledger.record_observations(2, observations(
-            Observation::Hold { first_sequence: 1 }, Observation::Clear,
-        )).unwrap();
-        ledger.record_observations(3, observations(
-            Observation::Hold { first_sequence: 30 }, Observation::Clear,
-        )).unwrap();
-        ledger.record_observations(4, observations(Observation::Clear, Observation::Clear)).unwrap();
-        for (case, verdict) in [(1, LabelVerdict::Violation), (2, LabelVerdict::Safe),
-            (3, LabelVerdict::Violation), (4, LabelVerdict::Safe)] {
-            ledger.record_label(case.into(), label(case, verdict, 120)).unwrap();
+        ledger
+            .record_observations(
+                1,
+                observations(
+                    Observation::Hold { first_sequence: 10 },
+                    Observation::Hold { first_sequence: 20 },
+                ),
+            )
+            .unwrap();
+        ledger
+            .record_observations(
+                2,
+                observations(Observation::Hold { first_sequence: 1 }, Observation::Clear),
+            )
+            .unwrap();
+        ledger
+            .record_observations(
+                3,
+                observations(Observation::Hold { first_sequence: 30 }, Observation::Clear),
+            )
+            .unwrap();
+        ledger
+            .record_observations(4, observations(Observation::Clear, Observation::Clear))
+            .unwrap();
+        for (case, verdict) in [
+            (1, LabelVerdict::Violation),
+            (2, LabelVerdict::Safe),
+            (3, LabelVerdict::Violation),
+            (4, LabelVerdict::Safe),
+        ] {
+            ledger
+                .record_label(case.into(), label(case, verdict, 120))
+                .unwrap();
         }
         let snapshot = ledger.seal(120).unwrap();
         let alice = &snapshot.scores()["alice"]["tool"];
         let bob = &snapshot.scores()["bob"]["tool"];
-        assert_eq!(alice.precision(), Some(Ratio { numerator: 2, denominator: 3 }));
-        assert_eq!(alice.recall(), Some(Ratio { numerator: 2, denominator: 2 }));
+        assert_eq!(
+            alice.precision(),
+            Some(Ratio {
+                numerator: 2,
+                denominator: 3
+            })
+        );
+        assert_eq!(
+            alice.recall(),
+            Some(Ratio {
+                numerator: 2,
+                denominator: 2
+            })
+        );
         assert_eq!(alice.false_positives, 1);
         assert_eq!(alice.lead_time_credit, 10 + 70);
         assert_eq!(bob.lead_time_credit, 0);
         assert_eq!(bob.false_negatives, 1);
-        assert_eq!(bob.recall(), Some(Ratio { numerator: 1, denominator: 2 }));
+        assert_eq!(
+            bob.recall(),
+            Some(Ratio {
+                numerator: 1,
+                denominator: 2
+            })
+        );
     }
 
     #[test]
     fn censoring_and_unreviewed_cases_never_become_safe_examples() {
         let mut ledger = CredibilityLedger::new(campaign()).unwrap();
-        ledger.record_observations(1, observations(Observation::Abstain, Observation::Missing)).unwrap();
-        ledger.record_label(1, label(1, LabelVerdict::Violation, 110)).unwrap();
-        ledger.record_label(2, label(2, LabelVerdict::Censored, 110)).unwrap();
+        ledger
+            .record_observations(1, observations(Observation::Abstain, Observation::Missing))
+            .unwrap();
+        ledger
+            .record_label(1, label(1, LabelVerdict::Violation, 110))
+            .unwrap();
+        ledger
+            .record_label(2, label(2, LabelVerdict::Censored, 110))
+            .unwrap();
         let snapshot = ledger.seal(110).unwrap();
         let alice = &snapshot.scores()["alice"]["tool"];
         assert_eq!(alice.cases, 4);
@@ -492,7 +630,13 @@ mod tests {
         assert_eq!(alice.abstained, 1);
         assert_eq!(alice.missing, 3);
         assert_eq!(alice.precision(), None);
-        assert_eq!(alice.coverage(), Some(Ratio { numerator: 0, denominator: 4 }));
+        assert_eq!(
+            alice.coverage(),
+            Some(Ratio {
+                numerator: 0,
+                denominator: 4
+            })
+        );
     }
 
     #[test]
@@ -509,19 +653,33 @@ mod tests {
             }
             assert_eq!(ledger.record_label(1, invalid), Err(Error::Binding));
             // Rejection is atomic: a genuine label still succeeds.
-            ledger.record_label(1, label(1, LabelVerdict::Safe, 100)).unwrap();
+            ledger
+                .record_label(1, label(1, LabelVerdict::Safe, 100))
+                .unwrap();
         }
     }
 
     #[test]
     fn delayed_labels_do_not_allow_backfilled_predictions_or_final_label_rewrites() {
         let mut ledger = CredibilityLedger::new(campaign()).unwrap();
-        ledger.record_label(1, label(1, LabelVerdict::Censored, 110)).unwrap();
-        assert_eq!(ledger.record_observations(1, observations(Observation::Clear, Observation::Clear)),
-            Err(Error::WrongState));
-        assert_eq!(ledger.record_label(1, label(1, LabelVerdict::Safe, 110)), Err(Error::Stale));
-        ledger.record_label(1, label(1, LabelVerdict::Violation, 120)).unwrap();
-        assert_eq!(ledger.record_label(1, label(1, LabelVerdict::Safe, 130)), Err(Error::Duplicate));
+        ledger
+            .record_label(1, label(1, LabelVerdict::Censored, 110))
+            .unwrap();
+        assert_eq!(
+            ledger.record_observations(1, observations(Observation::Clear, Observation::Clear)),
+            Err(Error::WrongState)
+        );
+        assert_eq!(
+            ledger.record_label(1, label(1, LabelVerdict::Safe, 110)),
+            Err(Error::Stale)
+        );
+        ledger
+            .record_label(1, label(1, LabelVerdict::Violation, 120))
+            .unwrap();
+        assert_eq!(
+            ledger.record_label(1, label(1, LabelVerdict::Safe, 130)),
+            Err(Error::Duplicate)
+        );
         let snapshot = ledger.seal(120).unwrap();
         assert_eq!(snapshot.scores()["alice"]["tool"].false_negatives, 1);
         assert_eq!(snapshot.scores()["alice"]["tool"].censored, 0);
@@ -533,27 +691,61 @@ mod tests {
         let mut partial = observations(Observation::Clear, Observation::Clear);
         partial.remove("bob");
         assert_eq!(ledger.record_observations(1, partial), Err(Error::Binding));
-        assert_eq!(ledger.record_observations(1, observations(
-            Observation::Hold { first_sequence: 0 }, Observation::Clear,
-        )), Err(Error::InvalidInput));
-        ledger.record_observations(1, observations(Observation::Clear, Observation::Clear)).unwrap();
-        assert_eq!(ledger.record_observations(1, observations(Observation::Clear, Observation::Clear)),
-            Err(Error::WrongState));
-        assert_eq!(ledger.record_label(99, label(1, LabelVerdict::Safe, 100)), Err(Error::Missing));
+        assert_eq!(
+            ledger.record_observations(
+                1,
+                observations(Observation::Hold { first_sequence: 0 }, Observation::Clear,)
+            ),
+            Err(Error::InvalidInput)
+        );
+        ledger
+            .record_observations(1, observations(Observation::Clear, Observation::Clear))
+            .unwrap();
+        assert_eq!(
+            ledger.record_observations(1, observations(Observation::Clear, Observation::Clear)),
+            Err(Error::WrongState)
+        );
+        assert_eq!(
+            ledger.record_label(99, label(1, LabelVerdict::Safe, 100)),
+            Err(Error::Missing)
+        );
     }
 
     #[test]
     fn late_or_tied_holds_do_not_receive_unearned_lead_credit() {
         let mut ledger = CredibilityLedger::new(campaign()).unwrap();
-        ledger.record_observations(1, observations(
-            Observation::Hold { first_sequence: 100 }, Observation::Hold { first_sequence: 101 },
-        )).unwrap();
-        ledger.record_observations(2, observations(
-            Observation::Hold { first_sequence: 20 }, Observation::Hold { first_sequence: 20 },
-        )).unwrap();
-        assert_eq!(ledger.record_label(1, label(1, LabelVerdict::Violation, 100)), Err(Error::Stale));
-        ledger.record_label(1, label(1, LabelVerdict::Violation, 110)).unwrap();
-        ledger.record_label(2, label(2, LabelVerdict::Violation, 110)).unwrap();
+        ledger
+            .record_observations(
+                1,
+                observations(
+                    Observation::Hold {
+                        first_sequence: 100,
+                    },
+                    Observation::Hold {
+                        first_sequence: 101,
+                    },
+                ),
+            )
+            .unwrap();
+        ledger
+            .record_observations(
+                2,
+                observations(
+                    Observation::Hold { first_sequence: 20 },
+                    Observation::Hold { first_sequence: 20 },
+                ),
+            )
+            .unwrap();
+        assert_eq!(
+            ledger.record_label(1, label(1, LabelVerdict::Violation, 100)),
+            Err(Error::Stale)
+        );
+        ledger
+            .record_label(1, label(1, LabelVerdict::Violation, 110))
+            .unwrap();
+        ledger
+            .record_label(2, label(2, LabelVerdict::Violation, 110))
+            .unwrap();
         let snapshot = ledger.seal(110).unwrap();
         for helper in ["alice", "bob"] {
             let score = &snapshot.scores()[helper]["tool"];
@@ -567,25 +759,42 @@ mod tests {
     fn predeclared_manifest_prevents_case_aliasing_and_unrepresented_strata() {
         let mut duplicate = campaign();
         duplicate.cases[1].evidence_root = duplicate.cases[0].evidence_root;
-        assert_eq!(CredibilityLedger::new(duplicate).unwrap_err(), Error::Duplicate);
+        assert_eq!(
+            CredibilityLedger::new(duplicate).unwrap_err(),
+            Error::Duplicate
+        );
         let mut duplicate = campaign();
         duplicate.cases[1].id = duplicate.cases[0].id;
-        assert_eq!(CredibilityLedger::new(duplicate).unwrap_err(), Error::Duplicate);
+        assert_eq!(
+            CredibilityLedger::new(duplicate).unwrap_err(),
+            Error::Duplicate
+        );
         let mut incomplete = campaign();
         incomplete.strata.insert("unseen".into());
-        assert_eq!(CredibilityLedger::new(incomplete).unwrap_err(), Error::Incomplete);
+        assert_eq!(
+            CredibilityLedger::new(incomplete).unwrap_err(),
+            Error::Incomplete
+        );
         let mut self_labelled = campaign();
         self_labelled.label_owner = "alice".into();
-        assert_eq!(CredibilityLedger::new(self_labelled).unwrap_err(), Error::Binding);
+        assert_eq!(
+            CredibilityLedger::new(self_labelled).unwrap_err(),
+            Error::Binding
+        );
         let mut invalid = campaign();
         invalid.helpers.get_mut("alice").unwrap().generation = 0;
-        assert_eq!(CredibilityLedger::new(invalid).unwrap_err(), Error::InvalidInput);
+        assert_eq!(
+            CredibilityLedger::new(invalid).unwrap_err(),
+            Error::InvalidInput
+        );
     }
 
     #[test]
     fn sealing_is_not_allowed_before_all_observation_and_label_positions() {
         let mut ledger = CredibilityLedger::new(campaign()).unwrap();
-        ledger.record_label(1, label(1, LabelVerdict::Safe, 200)).unwrap();
+        ledger
+            .record_label(1, label(1, LabelVerdict::Safe, 200))
+            .unwrap();
         assert_eq!(ledger.seal(199).unwrap_err(), Error::Stale);
     }
 
@@ -597,14 +806,21 @@ mod tests {
         }
         let mut ledger = CredibilityLedger::new(manifest).unwrap();
         for case in 1..=4_u8 {
-            ledger.record_observations(case.into(), observations(
-                Observation::Hold { first_sequence: 1 }, Observation::Clear,
-            )).unwrap();
-            ledger.record_label(case.into(), label(case, LabelVerdict::Violation, u64::MAX)).unwrap();
+            ledger
+                .record_observations(
+                    case.into(),
+                    observations(Observation::Hold { first_sequence: 1 }, Observation::Clear),
+                )
+                .unwrap();
+            ledger
+                .record_label(case.into(), label(case, LabelVerdict::Violation, u64::MAX))
+                .unwrap();
         }
         let snapshot = ledger.seal(u64::MAX).unwrap();
-        assert_eq!(snapshot.scores()["alice"]["tool"].lead_time_credit,
-            4 * u128::from(u64::MAX - 1));
+        assert_eq!(
+            snapshot.scores()["alice"]["tool"].lead_time_credit,
+            4 * u128::from(u64::MAX - 1)
+        );
     }
 
     #[test]
@@ -614,8 +830,12 @@ mod tests {
         manifest.strata.insert("publication".into());
         manifest.cases[0].stratum = "publication".into();
         let mut ledger = CredibilityLedger::new(manifest).unwrap();
-        ledger.record_observations(1, observations(Observation::Clear, Observation::Clear)).unwrap();
-        ledger.record_label(1, label(1, LabelVerdict::Safe, 100)).unwrap();
+        ledger
+            .record_observations(1, observations(Observation::Clear, Observation::Clear))
+            .unwrap();
+        ledger
+            .record_label(1, label(1, LabelVerdict::Safe, 100))
+            .unwrap();
         let snapshot = ledger.seal(100).unwrap();
         assert_eq!(snapshot.helpers()["alice"].generation, 9);
         assert_eq!(snapshot.scores()["alice"]["publication"].safe, 1);

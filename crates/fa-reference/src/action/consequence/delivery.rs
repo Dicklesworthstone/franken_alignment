@@ -7,36 +7,37 @@
 //! A missing status is consequently never a nonexecution proof or a refund.
 
 mod approval;
-mod endpoint;
-mod mediation_gate;
-mod state_gate;
-mod stopping;
-pub mod fleet;
-pub mod publication_gate;
-pub mod stream;
-#[cfg(unix)]
-pub mod persistent;
 #[cfg(unix)]
 pub mod credential_broker;
+mod endpoint;
+pub mod fleet;
+mod mediation_gate;
+#[cfg(unix)]
+pub mod persistent;
+pub mod publication_gate;
+mod state_gate;
+mod stopping;
+pub mod stream;
 pub use approval::DispatchApproval;
 pub use endpoint::PublicationEndpoint;
 #[cfg(unix)]
 pub use endpoint::filesystem::{self, FileEndpointRecovery, FilePublicationLimits};
 pub use mediation_gate::TopologyChange;
-pub use state_gate::{PolicySourceChange, MAX_POLICY_STATE_GENERATIONS};
+pub use state_gate::{MAX_POLICY_STATE_GENERATIONS, PolicySourceChange};
 pub use stopping::{StopProgress, StopReceipt, StopRequest, StopSweep};
 
+use super::gate::ControlInspection;
 use super::gate::containment::session::policy::Policy;
 use super::gate::containment::session::policy::controller::{
     ControllerConfig, PolicyAuthority, PolicyChange, PolicyReceipt, PolicyReview, PolicySession,
     Proposal,
 };
 use super::gate::containment::{ActorState, CheckpointHandle, ResetReceipt, ResetRequest};
-use super::gate::ControlInspection;
 use super::mediation::VerifiedCut;
 use super::oversight::policy_state::CapturedSnapshot;
 use crate::action::{
-    ActionSpec, ActionState, ElapsedTick, FrozenAction, Permit, ResolvedTarget, Scope, TrustedOutcome,
+    ActionSpec, ActionState, ElapsedTick, FrozenAction, Permit, ResolvedTarget, Scope,
+    TrustedOutcome,
 };
 use crate::{Error, ReadWitness, Snapshot};
 use std::collections::BTreeMap;
@@ -63,34 +64,59 @@ pub struct PublicationRequest {
 }
 
 impl PublicationRequest {
-    pub fn scope(&self) -> Scope { self.scope }
-    pub fn target(&self) -> ResolvedTarget { self.target }
-    pub fn payload(&self) -> &[u8] { &self.payload }
-    pub fn policy_epoch(&self) -> u64 { self.policy_epoch }
+    pub fn scope(&self) -> Scope {
+        self.scope
+    }
+    pub fn target(&self) -> ResolvedTarget {
+        self.target
+    }
+    pub fn payload(&self) -> &[u8] {
+        &self.payload
+    }
+    pub fn policy_epoch(&self) -> u64 {
+        self.policy_epoch
+    }
     /// The deadline in the original frozen action, never rewritten after review.
-    pub fn deadline(&self) -> ElapsedTick { self.deadline }
-    pub fn units(&self) -> u64 { self.units }
-    pub fn approval(&self) -> Option<DispatchApproval> { self.approval }
+    pub fn deadline(&self) -> ElapsedTick {
+        self.deadline
+    }
+    pub fn units(&self) -> u64 {
+        self.units
+    }
+    pub fn approval(&self) -> Option<DispatchApproval> {
+        self.approval
+    }
 
     /// A second key can shorten, but never extend, the execution window.
     pub fn execution_deadline(&self) -> ElapsedTick {
-        self.approval.map_or(self.deadline, |approval| self.deadline.min(approval.expires_at()))
+        self.approval.map_or(self.deadline, |approval| {
+            self.deadline.min(approval.expires_at())
+        })
     }
 
     fn from_action(action: &FrozenAction) -> Self {
         let spec = action.spec();
         Self {
-            version: spec.version, scope: spec.scope, target: spec.target.expect("frozen target"),
-            payload: spec.payload.clone(), policy_epoch: spec.policy_epoch,
-            deadline: spec.deadline, units: spec.units, approval: None,
+            version: spec.version,
+            scope: spec.scope,
+            target: spec.target.expect("frozen target"),
+            payload: spec.payload.clone(),
+            policy_epoch: spec.policy_epoch,
+            deadline: spec.deadline,
+            units: spec.units,
+            approval: None,
         }
     }
 
     fn matches_action(&self, action: &FrozenAction) -> bool {
         let spec = action.spec();
-        self.version == spec.version && self.scope == spec.scope && Some(self.target) == spec.target
-            && self.payload == spec.payload && self.policy_epoch == spec.policy_epoch
-            && self.deadline == spec.deadline && self.units == spec.units
+        self.version == spec.version
+            && self.scope == spec.scope
+            && Some(self.target) == spec.target
+            && self.payload == spec.payload
+            && self.policy_epoch == spec.policy_epoch
+            && self.deadline == spec.deadline
+            && self.units == spec.units
     }
 }
 
@@ -107,9 +133,15 @@ pub struct DispatchEnvelope {
 }
 
 impl DispatchEnvelope {
-    pub fn attempt(&self) -> u64 { self.attempt }
-    pub fn request(&self) -> &PublicationRequest { &self.request }
-    pub fn retained_until(&self) -> ElapsedTick { self.retained_until }
+    pub fn attempt(&self) -> u64 {
+        self.attempt
+    }
+    pub fn request(&self) -> &PublicationRequest {
+        &self.request
+    }
+    pub fn retained_until(&self) -> ElapsedTick {
+        self.retained_until
+    }
 }
 
 /// Status queries cannot be converted into dispatch messages. Sealing this key
@@ -118,7 +150,9 @@ impl DispatchEnvelope {
 pub struct StatusQuery(DispatchEnvelope);
 
 impl StatusQuery {
-    pub fn attempt(&self) -> u64 { self.0.attempt }
+    pub fn attempt(&self) -> u64 {
+        self.0.attempt
+    }
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -153,15 +187,23 @@ pub struct EndpointReceipt {
 }
 
 impl EndpointReceipt {
-    pub fn attempt(&self) -> u64 { self.attempt }
-    pub fn request(&self) -> &PublicationRequest { &self.request }
-    pub fn outcome(&self) -> EndpointOutcome { self.outcome }
+    pub fn attempt(&self) -> u64 {
+        self.attempt
+    }
+    pub fn request(&self) -> &PublicationRequest {
+        &self.request
+    }
+    pub fn outcome(&self) -> EndpointOutcome {
+        self.outcome
+    }
 }
 
 impl PartialEq for EndpointReceipt {
     fn eq(&self, other: &Self) -> bool {
-        Rc::ptr_eq(&self.binding, &other.binding) && self.attempt == other.attempt
-            && self.request == other.request && self.retained_until == other.retained_until
+        Rc::ptr_eq(&self.binding, &other.binding)
+            && self.attempt == other.attempt
+            && self.request == other.request
+            && self.retained_until == other.retained_until
             && self.outcome == other.outcome
     }
 }
@@ -224,7 +266,10 @@ pub struct DeliveryBroker {
 }
 
 impl DeliveryBroker {
-    pub fn new(config: ControllerConfig, endpoint: &mut PublicationEndpoint) -> Result<Self, Error> {
+    pub fn new(
+        config: ControllerConfig,
+        endpoint: &mut PublicationEndpoint,
+    ) -> Result<Self, Error> {
         let scope = config.scope;
         let controller = PolicyAuthority::new(config)?;
         endpoint.attach(scope)?;
@@ -250,10 +295,18 @@ impl DeliveryBroker {
     }
 
     /// Inspection and starting a review are read-only; no mutable authority leaks.
-    pub fn controller(&self) -> &PolicyAuthority { &self.controller }
-    pub fn inspect(&self) -> ControlInspection { self.controller.inspect() }
-    pub fn dispatcher_epoch(&self) -> u64 { self.epoch }
-    pub fn fence_confirmed(&self) -> bool { self.fenced }
+    pub fn controller(&self) -> &PolicyAuthority {
+        &self.controller
+    }
+    pub fn inspect(&self) -> ControlInspection {
+        self.controller.inspect()
+    }
+    pub fn dispatcher_epoch(&self) -> u64 {
+        self.epoch
+    }
+    pub fn fence_confirmed(&self) -> bool {
+        self.fenced
+    }
 
     /// Explicit offline credibility activation, with a new dispatcher fence.
     /// Uses the original authority's evidence, idempotency and rights checks.
@@ -263,11 +316,18 @@ impl DeliveryBroker {
     pub fn activate_credibility(
         &mut self,
         request: super::gate::containment::session::policy::controller::credibility::CredibilityActivation,
-    ) -> Result<super::gate::containment::session::policy::controller::credibility::CredibilityChange, Error> {
+    ) -> Result<
+        super::gate::containment::session::policy::controller::credibility::CredibilityChange,
+        Error,
+    > {
         // A historical retry is handled by the controller's exact request
         // comparison, even during stopping or after the dispatcher epoch fills.
         // It must not reinstall an old fence or clear a later qualification loss.
-        if self.controller.credibility_changes().any(|change| change.operation == request.operation) {
+        if self
+            .controller
+            .credibility_changes()
+            .any(|change| change.operation == request.operation)
+        {
             return self.controller.activate_credibility(request);
         }
         self.check_not_stopping()?;
@@ -286,8 +346,15 @@ impl DeliveryBroker {
     pub fn withdraw_credibility(
         &mut self,
         request: super::gate::containment::session::policy::controller::credibility::CredibilityWithdrawalRequest,
-    ) -> Result<super::gate::containment::session::policy::controller::credibility::CredibilityWithdrawal, Error> {
-        if self.controller.credibility_withdrawals().any(|entry| entry.request.operation == request.operation) {
+    ) -> Result<
+        super::gate::containment::session::policy::controller::credibility::CredibilityWithdrawal,
+        Error,
+    > {
+        if self
+            .controller
+            .credibility_withdrawals()
+            .any(|entry| entry.request.operation == request.operation)
+        {
             return self.controller.withdraw_credibility(request);
         }
         self.check_not_stopping()?;
@@ -303,10 +370,15 @@ impl DeliveryBroker {
     pub fn stream_state(&self) -> Option<(ResolvedTarget, &StreamView)> {
         self.stream.as_ref().map(|view| (self.resource, view))
     }
-    pub fn stream_pending(&self) -> Option<u64> { self.stream_pending }
+    pub fn stream_pending(&self) -> Option<u64> {
+        self.stream_pending
+    }
 
     pub fn fence_request(&self) -> FenceRequest {
-        FenceRequest { binding: Rc::clone(&self.binding), epoch: self.epoch }
+        FenceRequest {
+            binding: Rc::clone(&self.binding),
+            epoch: self.epoch,
+        }
     }
 
     pub fn confirm_fence(&mut self, acknowledgment: FenceAcknowledgment) -> Result<(), Error> {
@@ -327,7 +399,12 @@ impl DeliveryBroker {
         Ok(())
     }
 
-    pub fn propose(&mut self, id: u64, spec: ActionSpec, snapshot: &Snapshot) -> Result<Proposal, Error> {
+    pub fn propose(
+        &mut self,
+        id: u64,
+        spec: ActionSpec,
+        snapshot: &Snapshot,
+    ) -> Result<Proposal, Error> {
         self.check_not_stopping()?;
         let _ = self.check_policy_state(snapshot)?;
         self.check_mediation()?;
@@ -341,14 +418,22 @@ impl DeliveryBroker {
     }
 
     pub fn begin_review(
-        &self, id: u64, round: u64, root: [u8; 32], snapshot: &Snapshot,
+        &self,
+        id: u64,
+        round: u64,
+        root: [u8; 32],
+        snapshot: &Snapshot,
     ) -> Result<PolicySession, Error> {
         self.check_not_stopping()?;
         let _ = self.check_policy_state(snapshot)?;
         self.controller.begin_review(id, round, root, snapshot)
     }
 
-    pub fn apply_review(&mut self, review: PolicyReview, snapshot: &Snapshot) -> Result<PolicyReceipt, Error> {
+    pub fn apply_review(
+        &mut self,
+        review: PolicyReview,
+        snapshot: &Snapshot,
+    ) -> Result<PolicyReceipt, Error> {
         if review.decision().consequence == super::Consequence::Continue {
             self.check_not_stopping()?;
             let _ = self.check_policy_state(snapshot)?;
@@ -370,7 +455,10 @@ impl DeliveryBroker {
     /// Normal exact-policy dispatch consumes the one-use permit and charges the
     /// original rights before this method returns any sendable envelope.
     pub fn dispatch(
-        &mut self, permit: &Permit, action: &FrozenAction, snapshot: &Snapshot,
+        &mut self,
+        permit: &Permit,
+        action: &FrozenAction,
+        snapshot: &Snapshot,
     ) -> Result<DispatchEnvelope, Error> {
         self.dispatch_bound(permit, action, snapshot, None)
     }
@@ -378,50 +466,90 @@ impl DeliveryBroker {
     /// Only the validated two-key oversight path supplies this additional bound.
     /// No public entrypoint accepts caller-asserted approval metadata.
     pub(crate) fn dispatch_with_approval(
-        &mut self, permit: &Permit, action: &FrozenAction, snapshot: &Snapshot,
+        &mut self,
+        permit: &Permit,
+        action: &FrozenAction,
+        snapshot: &Snapshot,
         approval: DispatchApproval,
     ) -> Result<DispatchEnvelope, Error> {
         self.dispatch_bound(permit, action, snapshot, Some(approval))
     }
 
     fn dispatch_bound(
-        &mut self, permit: &Permit, action: &FrozenAction, snapshot: &Snapshot,
+        &mut self,
+        permit: &Permit,
+        action: &FrozenAction,
+        snapshot: &Snapshot,
         approval: Option<DispatchApproval>,
     ) -> Result<DispatchEnvelope, Error> {
         self.check_not_stopping()?;
         let captured_policy_state = self.check_policy_state(snapshot)?;
         self.check_mediation()?;
-        if !self.fenced { return Err(Error::Incomplete); }
+        if !self.fenced {
+            return Err(Error::Incomplete);
+        }
         check_resource(action.spec(), self.scope, self.resource)?;
-        if self.records.contains_key(&permit.attempt) { return Err(Error::Duplicate); }
+        if self.records.contains_key(&permit.attempt) {
+            return Err(Error::Duplicate);
+        }
         self.check_stream(action.spec())?;
-        if self.records.len() >= self.max_deliveries { return Err(Error::Limit); }
-        let bytes = self.action_bytes.checked_add(retained_action_bytes(action)?).ok_or(Error::Limit)?;
-        if bytes > MAX_DELIVERY_ACTION_BYTES { return Err(Error::Limit); }
+        if self.records.len() >= self.max_deliveries {
+            return Err(Error::Limit);
+        }
+        let bytes = self
+            .action_bytes
+            .checked_add(retained_action_bytes(action)?)
+            .ok_or(Error::Limit)?;
+        if bytes > MAX_DELIVERY_ACTION_BYTES {
+            return Err(Error::Limit);
+        }
         let now = self.inspect().ledger.elapsed.ok_or(Error::Incomplete)?;
-        if let Some(approval) = approval { approval.validate_at(now, action.spec().deadline)?; }
-        let retained_until = ElapsedTick(now.0.checked_add(self.retention_ticks).ok_or(Error::Overflow)?);
+        if let Some(approval) = approval {
+            approval.validate_at(now, action.spec().deadline)?;
+        }
+        let retained_until = ElapsedTick(
+            now.0
+                .checked_add(self.retention_ticks)
+                .ok_or(Error::Overflow)?,
+        );
         let envelope = DispatchEnvelope {
-            binding: Rc::clone(&self.binding), epoch: self.epoch, attempt: permit.attempt,
-            request: PublicationRequest { approval, ..PublicationRequest::from_action(action) },
+            binding: Rc::clone(&self.binding),
+            epoch: self.epoch,
+            attempt: permit.attempt,
+            request: PublicationRequest {
+                approval,
+                ..PublicationRequest::from_action(action)
+            },
             retained_until,
         };
-        let record = DeliveryRecord { action: action.clone(), approval, mediation: self.mediation_cut().cloned(),
-            policy_state: captured_policy_state, retained_until, resolution: None };
+        let record = DeliveryRecord {
+            action: action.clone(),
+            approval,
+            mediation: self.mediation_cut().cloned(),
+            policy_state: captured_policy_state,
+            retained_until,
+            resolution: None,
+        };
         self.check_publication(permit.attempt, Some(action))?;
         let fleet_admission = self.prepare_fleet_dispatch(permit.attempt)?;
         self.controller.dispatch(permit, action, snapshot)?;
         self.records.insert(permit.attempt, record);
         self.action_bytes = bytes;
-        if self.stream.is_some() { self.stream_pending = Some(permit.attempt); }
+        if self.stream.is_some() {
+            self.stream_pending = Some(permit.attempt);
+        }
         self.publish_fleet_dispatch(permit.attempt, fleet_admission);
         Ok(envelope)
     }
 
     fn check_stream(&self, spec: &ActionSpec) -> Result<(), Error> {
         if let Some(stream) = &self.stream {
-            if self.stream_pending.is_some() { return Err(Error::Incomplete); }
-            if spec.target != Some(self.resource) { return Err(Error::Stale); }
+            if self.stream_pending.is_some() {
+                return Err(Error::Incomplete);
+            }
+            if spec.target != Some(self.resource) {
+                return Err(Error::Stale);
+            }
             stream.advance(&spec.payload)?;
         }
         Ok(())
@@ -429,7 +557,14 @@ impl DeliveryBroker {
 
     pub fn acknowledgment_lost(&mut self, attempt: u64) -> Result<(), Error> {
         self.records.get(&attempt).ok_or(Error::Missing)?;
-        match self.inspect().ledger.stages.get(&attempt).copied().ok_or(Error::Missing)? {
+        match self
+            .inspect()
+            .ledger
+            .stages
+            .get(&attempt)
+            .copied()
+            .ok_or(Error::Missing)?
+        {
             ActionState::Dispatching => self.controller.mark_unknown(attempt),
             ActionState::Unknown => Ok(()),
             _ => Err(Error::WrongState),
@@ -439,8 +574,13 @@ impl DeliveryBroker {
     pub fn status_query(&self, attempt: u64) -> Result<StatusQuery, Error> {
         let record = self.records.get(&attempt).ok_or(Error::Missing)?;
         Ok(StatusQuery(DispatchEnvelope {
-            binding: Rc::clone(&self.binding), epoch: self.epoch, attempt,
-            request: PublicationRequest { approval: record.approval, ..PublicationRequest::from_action(&record.action) },
+            binding: Rc::clone(&self.binding),
+            epoch: self.epoch,
+            attempt,
+            request: PublicationRequest {
+                approval: record.approval,
+                ..PublicationRequest::from_action(&record.action)
+            },
             retained_until: record.retained_until,
         }))
     }
@@ -450,35 +590,59 @@ impl DeliveryBroker {
     /// A stream prefix advances only for executed evidence; missing status,
     /// cancellation, actor rewind and dispatcher restart cannot advance it.
     pub fn accept_receipt(&mut self, receipt: EndpointReceipt) -> Result<bool, Error> {
-        if !Rc::ptr_eq(&self.binding, &receipt.binding) { return Err(Error::Binding); }
+        if !Rc::ptr_eq(&self.binding, &receipt.binding) {
+            return Err(Error::Binding);
+        }
         let record = self.records.get(&receipt.attempt).ok_or(Error::Missing)?;
-        if !receipt.request.matches_action(&record.action) || receipt.retained_until != record.retained_until
+        if !receipt.request.matches_action(&record.action)
+            || receipt.retained_until != record.retained_until
             || receipt.request.approval != record.approval
         {
             return Err(Error::Binding);
         }
         if let Some(previous) = &record.resolution {
-            return if previous == &receipt { Ok(false) } else { Err(Error::Binding) };
+            return if previous == &receipt {
+                Ok(false)
+            } else {
+                Err(Error::Binding)
+            };
         }
         let next_stream = if let Some(stream) = &self.stream {
-            if self.stream_pending != Some(receipt.attempt) { return Err(Error::WrongState); }
+            if self.stream_pending != Some(receipt.attempt) {
+                return Err(Error::WrongState);
+            }
             match receipt.outcome {
                 EndpointOutcome::Executed { resulting_version } => {
-                    if resulting_version != self.resource.expected_version.checked_add(1).ok_or(Error::Overflow)? {
+                    if resulting_version
+                        != self
+                            .resource
+                            .expected_version
+                            .checked_add(1)
+                            .ok_or(Error::Overflow)?
+                    {
                         return Err(Error::Binding);
                     }
-                    Some((resulting_version, stream.advance(&record.action.spec().payload)?))
+                    Some((
+                        resulting_version,
+                        stream.advance(&record.action.spec().payload)?,
+                    ))
                 }
                 EndpointOutcome::NotExecuted { .. } => None,
             }
-        } else { None };
+        } else {
+            None
+        };
         let outcome = match receipt.outcome {
             EndpointOutcome::Executed { .. } => TrustedOutcome::Executed,
             EndpointOutcome::NotExecuted { .. } => TrustedOutcome::NotExecuted,
         };
-        self.controller.record_trusted_outcome(receipt.attempt, outcome)?;
+        self.controller
+            .record_trusted_outcome(receipt.attempt, outcome)?;
         let attempt = receipt.attempt;
-        self.records.get_mut(&attempt).expect("retained delivery").resolution = Some(receipt);
+        self.records
+            .get_mut(&attempt)
+            .expect("retained delivery")
+            .resolution = Some(receipt);
         if self.stream.is_some() {
             if let Some((version, next)) = next_stream {
                 self.resource.expected_version = version;
@@ -490,23 +654,43 @@ impl DeliveryBroker {
     }
 
     pub fn resolution(&self, attempt: u64) -> Result<Option<&EndpointReceipt>, Error> {
-        Ok(self.records.get(&attempt).ok_or(Error::Missing)?.resolution.as_ref())
+        Ok(self
+            .records
+            .get(&attempt)
+            .ok_or(Error::Missing)?
+            .resolution
+            .as_ref())
     }
 
-    pub fn cancel(&mut self, attempt: u64) -> Result<(), Error> { self.controller.cancel(attempt) }
-    pub fn deny(&mut self, attempt: u64) -> Result<(), Error> { self.controller.deny(attempt) }
-    pub fn revoke_epoch(&mut self) -> Result<(), Error> { self.controller.revoke_epoch() }
+    pub fn cancel(&mut self, attempt: u64) -> Result<(), Error> {
+        self.controller.cancel(attempt)
+    }
+    pub fn deny(&mut self, attempt: u64) -> Result<(), Error> {
+        self.controller.deny(attempt)
+    }
+    pub fn revoke_epoch(&mut self) -> Result<(), Error> {
+        self.controller.revoke_epoch()
+    }
 
     pub fn abandon_unknown(&mut self, attempt: u64) -> Result<(), Error> {
         self.records.get(&attempt).ok_or(Error::Missing)?;
         self.controller.mark_irrecoverable(attempt)
     }
 
-    pub fn replace_policy(&mut self, sequence: u64, epoch: u64, next: Policy) -> Result<PolicyChange, Error> {
+    pub fn replace_policy(
+        &mut self,
+        sequence: u64,
+        epoch: u64,
+        next: Policy,
+    ) -> Result<PolicyChange, Error> {
         self.controller.replace_policy(sequence, epoch, next)
     }
 
-    pub fn capture_checkpoint(&mut self, id: u64, revision: u64) -> Result<CheckpointHandle, Error> {
+    pub fn capture_checkpoint(
+        &mut self,
+        id: u64,
+        revision: u64,
+    ) -> Result<CheckpointHandle, Error> {
         self.controller.capture_checkpoint(id, revision)
     }
 
@@ -520,24 +704,36 @@ impl DeliveryBroker {
 }
 
 fn same_resource(target: ResolvedTarget, resource: ResolvedTarget) -> bool {
-    target.adapter == resource.adapter && target.object == resource.object
-        && target.contract_version == resource.contract_version && target.generation == resource.generation
+    target.adapter == resource.adapter
+        && target.object == resource.object
+        && target.contract_version == resource.contract_version
+        && target.generation == resource.generation
 }
 
 fn check_resource(spec: &ActionSpec, scope: Scope, resource: ResolvedTarget) -> Result<(), Error> {
     let target = spec.target.ok_or(Error::Incomplete)?;
-    if spec.scope != scope || !same_resource(target, resource) { return Err(Error::Binding); }
+    if spec.scope != scope || !same_resource(target, resource) {
+        return Err(Error::Binding);
+    }
     let bytes = u64::try_from(spec.payload.len()).map_err(|_| Error::Limit)?;
-    if bytes > spec.units { return Err(Error::Limit); }
+    if bytes > spec.units {
+        return Err(Error::Limit);
+    }
     Ok(())
 }
 
 fn retained_action_bytes(action: &FrozenAction) -> Result<usize, Error> {
-    action.spec().required_witnesses.iter().try_fold(action.spec().payload.len(), |sum, witness| {
-        let bytes = match witness {
-            ReadWitness::Exact { value: Some(value), .. } => value.len(),
-            _ => 0,
-        };
-        sum.checked_add(bytes).ok_or(Error::Limit)
-    })
+    action
+        .spec()
+        .required_witnesses
+        .iter()
+        .try_fold(action.spec().payload.len(), |sum, witness| {
+            let bytes = match witness {
+                ReadWitness::Exact {
+                    value: Some(value), ..
+                } => value.len(),
+                _ => 0,
+            };
+            sum.checked_add(bytes).ok_or(Error::Limit)
+        })
 }

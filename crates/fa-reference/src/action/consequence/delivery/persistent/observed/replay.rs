@@ -6,10 +6,16 @@ mod cursor;
 mod learned;
 pub use cursor::{FileReviewReplayCursor, FileReviewReplayProgress, FileReviewReplayStatus};
 
-use super::{FileDeliverySnapshot, FileOversight, FileOversightProfile, JournalError,
-    journal::{self, Event}, machine::Machine, storage};
+use super::{
+    FileDeliverySnapshot, FileOversight, FileOversightProfile, JournalError,
+    journal::{self, Event},
+    machine::Machine,
+    storage,
+};
+use crate::action::consequence::oversight::replay::{
+    ObservedDecisionArchive, ObservedReviewAnchor,
+};
 use crate::action::consequence::oversight::{CommitteeInput, ObservedReceipt};
-use crate::action::consequence::oversight::replay::{ObservedDecisionArchive, ObservedReviewAnchor};
 use crate::{Error, Snapshot};
 use std::path::Path;
 
@@ -34,16 +40,32 @@ pub struct FileReviewReplay {
     journal: FileDeliverySnapshot,
 }
 impl FileReviewReplay {
-    pub fn begin_revision(&self) -> u64 { self.begin_revision }
-    pub fn anchor(&self) -> &ObservedReviewAnchor { &self.anchor }
-    pub fn archive(&self) -> &ObservedDecisionArchive { &self.archive }
-    pub fn application(&self) -> &Result<ObservedReceipt, Error> { &self.application }
-    pub fn application_inputs(&self) -> Option<&CommitteeInput> { self.application_inputs.as_ref() }
-    pub fn application_snapshot(&self) -> &Snapshot { &self.application_snapshot }
+    pub fn begin_revision(&self) -> u64 {
+        self.begin_revision
+    }
+    pub fn anchor(&self) -> &ObservedReviewAnchor {
+        &self.anchor
+    }
+    pub fn archive(&self) -> &ObservedDecisionArchive {
+        &self.archive
+    }
+    pub fn application(&self) -> &Result<ObservedReceipt, Error> {
+        &self.application
+    }
+    pub fn application_inputs(&self) -> Option<&CommitteeInput> {
+        self.application_inputs.as_ref()
+    }
+    pub fn application_snapshot(&self) -> &Snapshot {
+        &self.application_snapshot
+    }
     /// Original state immediately after the completed review's application.
-    pub fn completed_snapshot(&self) -> &FileDeliverySnapshot { &self.completed }
+    pub fn completed_snapshot(&self) -> &FileDeliverySnapshot {
+        &self.completed
+    }
     /// Historical state at the END of the selected canonical/acknowledged image.
-    pub fn journal_snapshot(&self) -> &FileDeliverySnapshot { &self.journal }
+    pub fn journal_snapshot(&self) -> &FileDeliverySnapshot {
+        &self.journal
+    }
 }
 
 impl FileOversight {
@@ -51,8 +73,16 @@ impl FileOversight {
     /// Also works for an original helper-pool round before its first pump. Once
     /// the round is consumed, use review_replay for historical material instead.
     pub fn review_anchor(&self, round: u64) -> Result<ObservedReviewAnchor, JournalError> {
-        if self.fault.is_some() { return Err(JournalError::Unavailable); }
-        Ok(self.machine.sessions.get(&round).ok_or(Error::Missing)?.1.replay_anchor()?)
+        if self.fault.is_some() {
+            return Err(JournalError::Unavailable);
+        }
+        Ok(self
+            .machine
+            .sessions
+            .get(&round)
+            .ok_or(Error::Missing)?
+            .1
+            .replay_anchor()?)
     }
 
     /// Export one explicit completed round from the last ACKNOWLEDGED journal.
@@ -66,31 +96,51 @@ impl FileOversight {
     /// the ENTIRE image, including its suffix, against the independent bootstrap
     /// before extracting. No lock, fence, staging cleanup or clock refresh occurs.
     /// A visible but unacknowledged completion is historical data, not live keys.
-    pub fn read_review_replay(directory: impl AsRef<Path>, profile: &FileOversightProfile,
-        round: u64) -> Result<FileReviewReplay, JournalError>
-    {
+    pub fn read_review_replay(
+        directory: impl AsRef<Path>,
+        profile: &FileOversightProfile,
+        round: u64,
+    ) -> Result<FileReviewReplay, JournalError> {
         Self::begin_read_review_replay(directory, profile, round)?.complete()
     }
 }
 
 // Retain the previous extraction path as an independent test-only oracle.
 #[cfg(test)]
-fn extract(profile: &FileOversightProfile, events: &[Event], round: u64,
-    at_end: FileDeliverySnapshot) -> Result<FileReviewReplay, JournalError>
-{
-    if round == 0 { return Err(Error::InvalidInput.into()); }
-    let begin = events.iter().position(|event| matches!(event, Event::Begin(_, id, ..) if *id == round))
+fn extract(
+    profile: &FileOversightProfile,
+    events: &[Event],
+    round: u64,
+    at_end: FileDeliverySnapshot,
+) -> Result<FileReviewReplay, JournalError> {
+    if round == 0 {
+        return Err(Error::InvalidInput.into());
+    }
+    let begin = events
+        .iter()
+        .position(|event| matches!(event, Event::Begin(_, id, ..) if *id == round))
         .ok_or(Error::Missing)?;
-    let finish = events.iter().position(|event| matches!(event, Event::Finish(id, ..) if *id == round))
+    let finish = events
+        .iter()
+        .position(|event| matches!(event, Event::Finish(id, ..) if *id == round))
         .ok_or(Error::Incomplete)?;
-    if finish <= begin { return Err(Error::Binding.into()); }
+    if finish <= begin {
+        return Err(Error::Binding.into());
+    }
 
     let mut machine = Machine::new(profile)?;
     let mut anchor = None;
     for (position, event) in events[..finish].iter().enumerate() {
         machine.apply(event)?;
         if position == begin {
-            anchor = Some(machine.sessions.get(&round).ok_or(Error::Missing)?.1.replay_anchor()?);
+            anchor = Some(
+                machine
+                    .sessions
+                    .get(&round)
+                    .ok_or(Error::Missing)?
+                    .1
+                    .replay_anchor()?,
+            );
         }
     }
     let anchor = anchor.ok_or(Error::Incomplete)?;
@@ -100,22 +150,50 @@ fn extract(profile: &FileOversightProfile, events: &[Event], round: u64,
     let attempt = machine.sessions.get(&round).ok_or(Error::Missing)?.0;
     // Reconstruct the exact supplied FINISH input too: it may differ from the
     // original reviewed input and explain a committed Stale/Incomplete refusal.
-    let current = supplied.as_ref().map(|views| {
-        CommitteeInput::capture(machine.actions.get(&attempt).ok_or(Error::Missing)?,
-            machine.broker.contracts(), views.clone())
-    }).transpose()?;
-    let now = machine.broker.inspect().ledger.elapsed.ok_or(Error::Incomplete)?;
-    let review = machine.sessions.get_mut(&round).ok_or(Error::Missing)?.1.finish(now)?;
+    let current = supplied
+        .as_ref()
+        .map(|views| {
+            CommitteeInput::capture(
+                machine.actions.get(&attempt).ok_or(Error::Missing)?,
+                machine.broker.contracts(),
+                views.clone(),
+            )
+        })
+        .transpose()?;
+    let now = machine
+        .broker
+        .inspect()
+        .ledger
+        .elapsed
+        .ok_or(Error::Incomplete)?;
+    let review = machine
+        .sessions
+        .get_mut(&round)
+        .ok_or(Error::Missing)?
+        .1
+        .finish(now)?;
     machine.sessions.remove(&round);
     let archive = review.replay_archive();
     archive.verify(&anchor)?;
     // The SAME original broker applies the reconstructed review. No alternative
     // policy, consequence, source-eligibility or rights algorithm is introduced.
-    let application = machine.broker.apply_review(review, current.as_ref(), snapshot);
-    if let Ok(receipt) = &application { archive.verify_receipt(&anchor, receipt)?; }
+    let application = machine
+        .broker
+        .apply_review(review, current.as_ref(), snapshot);
+    if let Ok(receipt) = &application {
+        archive.verify_receipt(&anchor, receipt)?;
+    }
     let completed = machine.snapshot(finish + 1);
-    Ok(FileReviewReplay { begin_revision: (begin + 1) as u64, anchor, archive, application,
-        application_inputs: current, application_snapshot: snapshot.clone(), completed, journal: at_end })
+    Ok(FileReviewReplay {
+        begin_revision: (begin + 1) as u64,
+        anchor,
+        archive,
+        application,
+        application_inputs: current,
+        application_snapshot: snapshot.clone(),
+        completed,
+        journal: at_end,
+    })
 }
 
 #[cfg(test)]

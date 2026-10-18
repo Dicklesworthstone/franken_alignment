@@ -6,7 +6,8 @@ use super::super::*;
 impl DeliveryBroker {
     /// Trusted bootstrap of the original controller's promotion guard only.
     /// This does not acknowledge an endpoint fence or issue any effect rights.
-    pub fn enable_held_out_joint(&mut self,
+    pub fn enable_held_out_joint(
+        &mut self,
         policy: crate::action::consequence::gate::containment::session::policy::controller::credibility::joint::HeldOutJointPolicy,
     ) -> Result<(), Error> {
         self.controller.enable_held_out_joint(policy)
@@ -23,9 +24,19 @@ impl DeliveryBroker {
         let inspection = self.inspect();
         let mut interrupted = Vec::new();
         for (id, record) in &self.records {
-            let state = inspection.ledger.stages.get(id).copied().ok_or(Error::Missing)?;
+            let state = inspection
+                .ledger
+                .stages
+                .get(id)
+                .copied()
+                .ok_or(Error::Missing)?;
             if record.resolution.is_some() {
-                if !matches!(state, ActionState::Confirmed | ActionState::ConfirmedNotExecuted) { return Err(Error::WrongState); }
+                if !matches!(
+                    state,
+                    ActionState::Confirmed | ActionState::ConfirmedNotExecuted
+                ) {
+                    return Err(Error::WrongState);
+                }
             } else {
                 match state {
                     ActionState::Dispatching => interrupted.push(*id),
@@ -34,7 +45,11 @@ impl DeliveryBroker {
                 }
             }
         }
-        for id in interrupted { self.controller.mark_unknown(id).expect("validated interrupted dispatch"); }
+        for id in interrupted {
+            self.controller
+                .mark_unknown(id)
+                .expect("validated interrupted dispatch");
+        }
         self.epoch = epoch;
         self.fenced = false;
         Ok(self.fence_request())
@@ -45,8 +60,13 @@ impl DeliveryBroker {
         let mut queries = Vec::new();
         for (id, record) in &self.records {
             if record.resolution.is_none()
-                && matches!(inspection.ledger.stages.get(id), Some(ActionState::Dispatching | ActionState::Unknown))
-            { queries.push(self.status_query(*id)?); }
+                && matches!(
+                    inspection.ledger.stages.get(id),
+                    Some(ActionState::Dispatching | ActionState::Unknown)
+                )
+            {
+                queries.push(self.status_query(*id)?);
+            }
         }
         Ok(queries)
     }
@@ -59,11 +79,18 @@ impl DeliveryBroker {
     /// No proposal, helper review, human key, checkpoint or permit is recreated.
     /// This synchronous reference sweep is not a transactional remote batch.
     pub fn reconcile_pending(
-        &mut self, endpoint: &mut PublicationEndpoint,
+        &mut self,
+        endpoint: &mut PublicationEndpoint,
     ) -> Result<BTreeMap<u64, Result<EndpointStatus, Error>>, Error> {
-        if !Rc::ptr_eq(&self.binding, &endpoint.binding) { return Err(Error::Binding); }
-        if !self.fenced { return Err(Error::Incomplete); }
-        if self.epoch != endpoint.epoch { return Err(Error::Stale); }
+        if !Rc::ptr_eq(&self.binding, &endpoint.binding) {
+            return Err(Error::Binding);
+        }
+        if !self.fenced {
+            return Err(Error::Incomplete);
+        }
+        if self.epoch != endpoint.epoch {
+            return Err(Error::Stale);
+        }
         endpoint.elapsed.ok_or(Error::Incomplete)?;
         let queries = self.pending_reconciliation()?;
         let mut outcomes = BTreeMap::new();
@@ -88,22 +115,35 @@ impl DeliveryBroker {
         Ok(outcomes)
     }
 
-    pub fn reconcile_status(&mut self, query: &StatusQuery, status: EndpointStatus) -> Result<EndpointStatus, Error> {
-        if !Rc::ptr_eq(&self.binding, &query.0.binding) { return Err(Error::Binding); }
-        if query.0.epoch != self.epoch { return Err(Error::Stale); }
+    pub fn reconcile_status(
+        &mut self,
+        query: &StatusQuery,
+        status: EndpointStatus,
+    ) -> Result<EndpointStatus, Error> {
+        if !Rc::ptr_eq(&self.binding, &query.0.binding) {
+            return Err(Error::Binding);
+        }
+        if query.0.epoch != self.epoch {
+            return Err(Error::Stale);
+        }
         let record = self.records.get(&query.0.attempt).ok_or(Error::Missing)?;
-        if !query.0.request.matches_action(&record.action) || record.retained_until != query.0.retained_until
+        if !query.0.request.matches_action(&record.action)
+            || record.retained_until != query.0.retained_until
             || query.0.request.approval != record.approval
         {
             return Err(Error::Binding);
         }
         match &status {
             EndpointStatus::Resolved(receipt) => {
-                if receipt.attempt != query.0.attempt { return Err(Error::Binding); }
+                if receipt.attempt != query.0.attempt {
+                    return Err(Error::Binding);
+                }
                 self.accept_receipt(receipt.clone())?;
             }
             EndpointStatus::AwaitingResolution | EndpointStatus::RetentionExpired => {
-                if record.resolution.is_some() { return Err(Error::WrongState); }
+                if record.resolution.is_some() {
+                    return Err(Error::WrongState);
+                }
                 self.acknowledgment_lost(query.0.attempt)?;
             }
         }
@@ -113,20 +153,30 @@ impl DeliveryBroker {
     /// Only the crate's evaluated-oversight path calls this fenced transition.
     /// Outstanding endpoint obligations do not depend on the new helper weights.
     pub(crate) fn replace_congress_weights(
-        &mut self, sequence: u64, epoch: u64,
+        &mut self,
+        sequence: u64,
+        epoch: u64,
         next: crate::action::consequence::congress::CongressPolicy,
     ) -> Result<crate::action::consequence::oversight::credibility::CongressChange, Error> {
-        self.controller.replace_congress_weights(sequence, epoch, next)
+        self.controller
+            .replace_congress_weights(sequence, epoch, next)
     }
 
     /// Reuse the original authority's stop transaction for a latched identity
     /// incident. Returns sequence, floor, cancelled IDs and exact refund. This
     /// does NOT fence or settle envelopes already returned to an external caller.
     pub(crate) fn fence_identity(
-        &mut self, sequence: u64, epoch: u64,
+        &mut self,
+        sequence: u64,
+        epoch: u64,
     ) -> Result<(u64, u64, Vec<u64>, u64), Error> {
         let minimum = epoch.checked_add(1).ok_or(Error::Overflow)?;
         let stopped = self.controller.fence_authority(sequence, epoch, minimum)?;
-        Ok((stopped.sequence, stopped.revocation_floor, stopped.cancelled, stopped.refunded_units))
+        Ok((
+            stopped.sequence,
+            stopped.revocation_floor,
+            stopped.cancelled,
+            stopped.refunded_units,
+        ))
     }
 }

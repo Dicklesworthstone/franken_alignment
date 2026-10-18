@@ -1,11 +1,11 @@
 //! Fair, bounded multi-peer intake into ONE original durable supervisor.
 //! This schedules existing inboxes; it creates no ledger, authority or executor.
 use super::{
-    ActorError, ActorProposal, ActorRequestPort, DriveBudget, ElapsedTick, Error,
-    EvidenceFile, EvidenceIdentity, FileActorInbox, FileActorPeerDrive,
-    FileActorPeerDriveError, FileActorSupervisor, FileEvidenceReport, FileOversight,
-    FileRequestStatus, FileSupervisedDriver, JournalError, PeerAdmission, PeerRefusal,
-    PeerSessionStatus, Port, UnixStream,
+    ActorError, ActorProposal, ActorRequestPort, DriveBudget, ElapsedTick, Error, EvidenceFile,
+    EvidenceIdentity, FileActorInbox, FileActorPeerDrive, FileActorPeerDriveError,
+    FileActorSupervisor, FileEvidenceReport, FileOversight, FileRequestStatus,
+    FileSupervisedDriver, JournalError, PeerAdmission, PeerRefusal, PeerSessionStatus, Port,
+    UnixStream,
 };
 use crate::action::consequence::delivery::persistent::observed::driver::FileDriverPhase;
 use crate::action::consequence::oversight::actor_transport::ConnectionStatus;
@@ -26,7 +26,12 @@ impl Default for PoolBudget {
     fn default() -> Self {
         Self {
             total: DriveBudget::default(),
-            per_peer: DriveBudget { read_bytes: 8192, write_bytes: 8192, frames: 1, io_calls: 8 },
+            per_peer: DriveBudget {
+                read_bytes: 8192,
+                write_bytes: 8192,
+                frames: 1,
+                io_calls: 8,
+            },
         }
     }
 }
@@ -39,13 +44,18 @@ pub struct PoolSetupFailure<P: ActorRequestPort = Port> {
 }
 impl<P: ActorRequestPort> fmt::Debug for PoolSetupFailure<P> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("PoolSetupFailure").field("error", &self.error)
-            .field("peers", &self.peers.len()).finish_non_exhaustive()
+        f.debug_struct("PoolSetupFailure")
+            .field("error", &self.error)
+            .field("peers", &self.peers.len())
+            .finish_non_exhaustive()
     }
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum PoolAttachError { UnknownPeer, Refused(PeerRefusal) }
+pub enum PoolAttachError {
+    UnknownPeer,
+    Refused(PeerRefusal),
+}
 
 /// Supervisor-only diagnostics. No source report is serialized to an actor.
 #[derive(Debug)]
@@ -65,13 +75,18 @@ impl PoolDriveReport {
     /// A successful outer Result means preflight succeeded, not that every peer
     /// drive succeeded. A peer failure stops this call; inspect its exact error.
     pub fn stopped_on_error(&self) -> bool {
-        self.visits.last().is_some_and(|visit| visit.result.is_err())
+        self.visits
+            .last()
+            .is_some_and(|visit| visit.result.is_err())
     }
 }
 
 /// A scheduling hint plus the freshly read original journal status, not a key.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub struct PoolReady { pub peer: u64, pub status: FileRequestStatus }
+pub struct PoolReady {
+    pub peer: u64,
+    pub status: FileRequestStatus,
+}
 
 /// Fixed, operator-named sessions with independent kernel credential policies,
 /// tickets, framing and queues. Peers must ALL belong to the supplied supervisor;
@@ -99,11 +114,24 @@ impl<P: ActorRequestPort> FileActorPool<P> {
             Some(Error::Limit)
         } else if peers.iter().any(|(id, _)| *id == 0) {
             Some(Error::InvalidInput)
-        } else if peers.iter().enumerate().any(|(i, (id, _))| peers[..i].iter().any(|(old, _)| old == id)) {
+        } else if peers
+            .iter()
+            .enumerate()
+            .any(|(i, (id, _))| peers[..i].iter().any(|(old, _)| old == id))
+        {
             Some(Error::Duplicate)
-        } else { None };
-        if let Some(error) = error { return Err(PoolSetupFailure { error, peers }); }
-        Ok(Self { peers, drive_cursor: 0, ready_cursor: 0, request_bound: false })
+        } else {
+            None
+        };
+        if let Some(error) = error {
+            return Err(PoolSetupFailure { error, peers });
+        }
+        Ok(Self {
+            peers,
+            drive_cursor: 0,
+            ready_cursor: 0,
+            request_bound: false,
+        })
     }
 
     /// Bind every future Submit to the request whose ID is its operator-selected
@@ -113,38 +141,68 @@ impl<P: ActorRequestPort> FileActorPool<P> {
     /// endpoint. Pre-existing unrelated work hints refuse construction intact.
     pub fn for_requests(peers: Vec<(u64, FileActorInbox<P>)>) -> Result<Self, PoolSetupFailure<P>> {
         let mut pool = Self::new(peers)?;
-        if pool.peers.iter().any(|(request, inbox)| inbox.ready.iter().any(|id| id != request)) {
-            return Err(PoolSetupFailure { error: Error::Binding, peers: pool.peers });
+        if pool
+            .peers
+            .iter()
+            .any(|(request, inbox)| inbox.ready.iter().any(|id| id != request))
+        {
+            return Err(PoolSetupFailure {
+                error: Error::Binding,
+                peers: pool.peers,
+            });
         }
         pool.request_bound = true;
         Ok(pool)
     }
 
     pub fn statuses(&self) -> impl Iterator<Item = (u64, PeerSessionStatus, usize)> + '_ {
-        self.peers.iter().map(|(id, inbox)| (*id, inbox.status(), inbox.queued()))
+        self.peers
+            .iter()
+            .map(|(id, inbox)| (*id, inbox.status(), inbox.queued()))
     }
-    pub fn attach(&mut self, peer: u64, socket: UnixStream) -> Result<PeerAdmission, PoolAttachError> {
-        let (_, inbox) = self.peers.iter_mut().find(|(id, _)| *id == peer)
+    pub fn attach(
+        &mut self,
+        peer: u64,
+        socket: UnixStream,
+    ) -> Result<PeerAdmission, PoolAttachError> {
+        let (_, inbox) = self
+            .peers
+            .iter_mut()
+            .find(|(id, _)| *id == peer)
             .ok_or(PoolAttachError::UnknownPeer)?;
         inbox.attach(socket).map_err(PoolAttachError::Refused)
     }
     pub fn disconnect(&mut self, peer: u64) -> Result<bool, Error> {
-        let (_, inbox) = self.peers.iter_mut().find(|(id, _)| *id == peer).ok_or(Error::Missing)?;
+        let (_, inbox) = self
+            .peers
+            .iter_mut()
+            .find(|(id, _)| *id == peer)
+            .ok_or(Error::Missing)?;
         Ok(inbox.disconnect())
     }
     pub fn revoke(&mut self, peer: u64) -> Result<bool, Error> {
-        let (_, inbox) = self.peers.iter_mut().find(|(id, _)| *id == peer).ok_or(Error::Missing)?;
+        let (_, inbox) = self
+            .peers
+            .iter_mut()
+            .find(|(id, _)| *id == peer)
+            .ok_or(Error::Missing)?;
         Ok(inbox.revoke())
     }
     /// Withdraw ingress, not effect authority. Retain every ready obligation.
     pub fn revoke_all(&mut self) {
-        for (_, inbox) in &mut self.peers { inbox.revoke(); }
+        for (_, inbox) in &mut self.peers {
+            inbox.revoke();
+        }
     }
     /// Move back the exact original sessions; no reset of tickets or quotas.
-    pub fn into_inboxes(self) -> Vec<(u64, FileActorInbox<P>)> { self.peers }
+    pub fn into_inboxes(self) -> Vec<(u64, FileActorInbox<P>)> {
+        self.peers
+    }
 
     fn check_all<C>(&self, driver: &FileSupervisedDriver, check: &C) -> Result<(), JournalError>
-    where C: Fn(&FileActorSupervisor<FileOversight>, &P) -> Result<(), JournalError> {
+    where
+        C: Fn(&FileActorSupervisor<FileOversight>, &P) -> Result<(), JournalError>,
+    {
         for (_, inbox) in &self.peers {
             check(driver.supervisor(), inbox.session.request_port())?;
         }
@@ -155,39 +213,69 @@ impl<P: ActorRequestPort> FileActorPool<P> {
     }
 
     // Sealed composition: callers cannot replace identity or source admission.
-    pub(in crate::action::consequence::delivery::persistent::requests::actor)
-    fn drive_prepared<C, A>(&mut self, driver: &mut FileSupervisedDriver,
-        budget: PoolBudget, check: C, prepare: A)
-        -> Result<PoolDriveReport, FileActorPeerDriveError>
-    where C: Fn(&FileActorSupervisor<FileOversight>, &P) -> Result<(), JournalError>,
-        A: FnMut(&mut FileActorSupervisor<FileOversight>, u64, &ActorProposal,
-            &mut Option<FileEvidenceReport<EvidenceIdentity>>) -> Result<(), ActorError>,
+    pub(in crate::action::consequence::delivery::persistent::requests::actor) fn drive_prepared<
+        C,
+        A,
+    >(
+        &mut self,
+        driver: &mut FileSupervisedDriver,
+        budget: PoolBudget,
+        check: C,
+        prepare: A,
+    ) -> Result<PoolDriveReport, FileActorPeerDriveError>
+    where
+        C: Fn(&FileActorSupervisor<FileOversight>, &P) -> Result<(), JournalError>,
+        A: FnMut(
+            &mut FileActorSupervisor<FileOversight>,
+            u64,
+            &ActorProposal,
+            &mut Option<FileEvidenceReport<EvidenceIdentity>>,
+        ) -> Result<(), ActorError>,
     {
         self.drive_selected(driver, budget, check, prepare, false)
     }
 
     // Request-bound services can leave NEW peers unread while the one original
     // congress is busy. Existing tickets still poll/cancel through the same path.
-    fn drive_selected<C, A>(&mut self, driver: &mut FileSupervisedDriver,
-        budget: PoolBudget, check: C, mut prepare: A, recorded_only: bool)
-        -> Result<PoolDriveReport, FileActorPeerDriveError>
-    where C: Fn(&FileActorSupervisor<FileOversight>, &P) -> Result<(), JournalError>,
-        A: FnMut(&mut FileActorSupervisor<FileOversight>, u64, &ActorProposal,
-            &mut Option<FileEvidenceReport<EvidenceIdentity>>) -> Result<(), ActorError>,
+    fn drive_selected<C, A>(
+        &mut self,
+        driver: &mut FileSupervisedDriver,
+        budget: PoolBudget,
+        check: C,
+        mut prepare: A,
+        recorded_only: bool,
+    ) -> Result<PoolDriveReport, FileActorPeerDriveError>
+    where
+        C: Fn(&FileActorSupervisor<FileOversight>, &P) -> Result<(), JournalError>,
+        A: FnMut(
+            &mut FileActorSupervisor<FileOversight>,
+            u64,
+            &ActorProposal,
+            &mut Option<FileEvidenceReport<EvidenceIdentity>>,
+        ) -> Result<(), ActorError>,
     {
         let result = (|| {
-            if recorded_only && !self.request_bound { return Err(JournalError::from(Error::Binding).into()); }
+            if recorded_only && !self.request_bound {
+                return Err(JournalError::from(Error::Binding).into());
+            }
             budget.total.validate()?;
             budget.per_peer.validate()?;
             self.check_all(driver, &check)?;
-            let mut report = PoolDriveReport { visits: Vec::new(), remaining: budget.total };
-            report.visits.try_reserve_exact(self.peers.len())
+            let mut report = PoolDriveReport {
+                visits: Vec::new(),
+                remaining: budget.total,
+            };
+            report
+                .visits
+                .try_reserve_exact(self.peers.len())
                 .map_err(|_| JournalError::from(Error::Limit))?;
             let count = self.peers.len();
             let start = self.drive_cursor;
             for offset in 0..count {
                 let allowance = intersect(report.remaining, budget.per_peer);
-                if empty(allowance) { break; }
+                if empty(allowance) {
+                    break;
+                }
                 let slot = (start + offset) % count;
                 let (peer, inbox) = &mut self.peers[slot];
                 if recorded_only {
@@ -197,35 +285,58 @@ impl<P: ActorRequestPort> FileActorPool<P> {
                         Err(error) => return Err(error.into()),
                     }
                 }
-                let Some(status) = inbox.status().transport else { continue; };
-                if !runnable(status, allowance) { continue; }
+                let Some(status) = inbox.status().transport else {
+                    continue;
+                };
+                if !runnable(status, allowance) {
+                    continue;
+                }
                 // An ineligible visit must not undo the rotation after the last
                 // peer that actually spent the shared budget.
                 self.drive_cursor = (slot + 1) % count;
                 let bound = self.request_bound;
                 let request_key = *peer;
-                let result = inbox.drive_prepared(driver, allowance, &check,
+                let result = inbox.drive_prepared(
+                    driver,
+                    allowance,
+                    &check,
                     |supervisor, request, proposal, intake| {
-                        if bound && request != request_key { return Err(ActorError::Withheld); }
+                        if bound && request != request_key {
+                            return Err(ActorError::Withheld);
+                        }
                         prepare(supervisor, request, proposal, intake)
-                    });
+                    },
+                );
                 let charge = match &result {
                     Ok(report) => {
                         let p = report.drive.progress;
-                        DriveBudget { read_bytes: p.read_bytes, write_bytes: p.written_bytes,
-                            frames: p.frames, io_calls: p.io_calls }
+                        DriveBudget {
+                            read_bytes: p.read_bytes,
+                            write_bytes: p.written_bytes,
+                            frames: p.frames,
+                            io_calls: p.io_calls,
+                        }
                     }
                     // Unknown partial socket work is not refunded, and no later
                     // peer may run after a drive failed against the shared owner.
                     Err(_) => allowance,
                 };
                 report.remaining = subtract(report.remaining, charge);
-                if result.as_ref().is_ok_and(|report| report.drive.status.closed()) {
+                if result
+                    .as_ref()
+                    .is_ok_and(|report| report.drive.status.closed())
+                {
                     inbox.disconnect(); // no effect cancellation or queue loss
                 }
                 let failed = result.is_err();
-                report.visits.push(PoolVisit { peer: *peer, allowance, result });
-                if failed { break; }
+                report.visits.push(PoolVisit {
+                    peer: *peer,
+                    allowance,
+                    result,
+                });
+                if failed {
+                    break;
+                }
             }
             Ok(report)
         })();
@@ -233,71 +344,112 @@ impl<P: ActorRequestPort> FileActorPool<P> {
         result
     }
 
-    pub(in crate::action::consequence::delivery::persistent::requests::actor)
-    fn next_checked<C>(&mut self, driver: &FileSupervisedDriver, check: C)
-        -> Result<Option<PoolReady>, JournalError>
-    where C: Fn(&FileActorSupervisor<FileOversight>, &P) -> Result<(), JournalError> {
+    pub(in crate::action::consequence::delivery::persistent::requests::actor) fn next_checked<C>(
+        &mut self,
+        driver: &FileSupervisedDriver,
+        check: C,
+    ) -> Result<Option<PoolReady>, JournalError>
+    where
+        C: Fn(&FileActorSupervisor<FileOversight>, &P) -> Result<(), JournalError>,
+    {
         self.check_all(driver, &check)?;
         // The original congress is serial. Queue fairness never permits two
         // concurrent reviews of its shared predecessor or a duplicate dispatch.
-        if driver.phase() != FileDriverPhase::Idle { return Err(Error::WrongState.into()); }
+        if driver.phase() != FileDriverPhase::Idle {
+            return Err(Error::WrongState.into());
+        }
         let count = self.peers.len();
         for _ in 0..count {
             let slot = self.ready_cursor;
             let (peer, inbox) = &mut self.peers[slot];
             let next = inbox.next_checked(driver, &check)?;
             self.ready_cursor = (slot + 1) % count;
-            if let Some(status) = next { return Ok(Some(PoolReady { peer: *peer, status })); }
+            if let Some(status) = next {
+                return Ok(Some(PoolReady {
+                    peer: *peer,
+                    status,
+                }));
+            }
         }
         Ok(None)
     }
 }
 
 impl FileActorPool<Port> {
-    pub fn drive<S, F>(&mut self, driver: &mut FileSupervisedDriver, source: &mut S,
-        mut clock: F, budget: PoolBudget) -> Result<PoolDriveReport, FileActorPeerDriveError>
-    where S: EvidenceFile + ?Sized, F: FnMut() -> ElapsedTick {
-        self.drive_prepared(driver, budget,
+    pub fn drive<S, F>(
+        &mut self,
+        driver: &mut FileSupervisedDriver,
+        source: &mut S,
+        mut clock: F,
+        budget: PoolBudget,
+    ) -> Result<PoolDriveReport, FileActorPeerDriveError>
+    where
+        S: EvidenceFile + ?Sized,
+        F: FnMut() -> ElapsedTick,
+    {
+        self.drive_prepared(
+            driver,
+            budget,
             |supervisor, port| supervisor.check_source_wire(port),
             |supervisor, request, _, intake| {
                 supervisor.prepare_wire_submission(request, source, &mut clock, intake)
-            })
+            },
+        )
     }
     /// Service recorded retries, polls and cancellation without acquiring source
     /// evidence or sampling a clock. NEW submissions are withheld before the
     /// original port can consume any waiting admission snapshot. This is useful
     /// during an active congress or terminal reply grace, not an effect stop.
-    pub fn observe(&mut self, driver: &mut FileSupervisedDriver, budget: PoolBudget)
-        -> Result<PoolDriveReport, FileActorPeerDriveError>
-    {
-        self.drive_prepared(driver, budget,
+    pub fn observe(
+        &mut self,
+        driver: &mut FileSupervisedDriver,
+        budget: PoolBudget,
+    ) -> Result<PoolDriveReport, FileActorPeerDriveError> {
+        self.drive_prepared(
+            driver,
+            budget,
             |supervisor, port| supervisor.check_source_wire(port),
-            |supervisor, request, _, _| require_recorded(supervisor, request))
+            |supervisor, request, _, _| require_recorded(supervisor, request),
+        )
     }
     /// Backpressure for a for_requests pool: leave an unrecorded peer's bytes
     /// unread rather than return a transient refusal while another review owns
     /// the predecessor. Recorded peers retain polls, cancellation and exact
     /// retries. No source or clock is acquired. Unrestricted pools refuse this
     /// operation because a peer name there does not identify its possible work.
-    pub fn observe_registered(&mut self, driver: &mut FileSupervisedDriver, budget: PoolBudget)
-        -> Result<PoolDriveReport, FileActorPeerDriveError>
-    {
-        self.drive_selected(driver, budget,
+    pub fn observe_registered(
+        &mut self,
+        driver: &mut FileSupervisedDriver,
+        budget: PoolBudget,
+    ) -> Result<PoolDriveReport, FileActorPeerDriveError> {
+        self.drive_selected(
+            driver,
+            budget,
             |supervisor, port| supervisor.check_source_wire(port),
-            |supervisor, request, _, _| require_recorded(supervisor, request), true)
+            |supervisor, request, _, _| require_recorded(supervisor, request),
+            true,
+        )
     }
-    pub fn next_request(&mut self, driver: &FileSupervisedDriver) -> Result<Option<PoolReady>, JournalError> {
-        self.next_checked(driver, |supervisor, port| supervisor.check_source_wire(port))
+    pub fn next_request(
+        &mut self,
+        driver: &FileSupervisedDriver,
+    ) -> Result<Option<PoolReady>, JournalError> {
+        self.next_checked(driver, |supervisor, port| {
+            supervisor.check_source_wire(port)
+        })
     }
 }
 
 // Existing retries STILL pass the original port's exact binding checks. A
 // lookup is not permission to replace a frozen action or renew its authority.
-pub(in crate::action::consequence::delivery::persistent::requests::actor)
-fn require_recorded(supervisor: &FileActorSupervisor<FileOversight>, request: u64)
-    -> Result<(), ActorError>
-{
-    match supervisor.host().and_then(|host| host.request_status(request)) {
+pub(in crate::action::consequence::delivery::persistent::requests::actor) fn require_recorded(
+    supervisor: &FileActorSupervisor<FileOversight>,
+    request: u64,
+) -> Result<(), ActorError> {
+    match supervisor
+        .host()
+        .and_then(|host| host.request_status(request))
+    {
         Ok(_) => Ok(()),
         Err(JournalError::Contract(Error::Missing)) => Err(ActorError::Withheld),
         Err(_) => Err(ActorError::Unavailable),
@@ -305,18 +457,26 @@ fn require_recorded(supervisor: &FileActorSupervisor<FileOversight>, request: u6
 }
 
 fn intersect(a: DriveBudget, b: DriveBudget) -> DriveBudget {
-    DriveBudget { read_bytes: a.read_bytes.min(b.read_bytes), write_bytes: a.write_bytes.min(b.write_bytes),
-        frames: a.frames.min(b.frames), io_calls: a.io_calls.min(b.io_calls) }
+    DriveBudget {
+        read_bytes: a.read_bytes.min(b.read_bytes),
+        write_bytes: a.write_bytes.min(b.write_bytes),
+        frames: a.frames.min(b.frames),
+        io_calls: a.io_calls.min(b.io_calls),
+    }
 }
 fn empty(b: DriveBudget) -> bool {
     b.read_bytes == 0 && b.write_bytes == 0 && b.frames == 0 && b.io_calls == 0
 }
 fn runnable(status: ConnectionStatus, budget: DriveBudget) -> bool {
     match status.channel {
-        ChannelState::Reading => budget.frames > 0 && (status.buffered_input_bytes > 0
-            || (budget.read_bytes > 0 && budget.io_calls > 0)),
-        ChannelState::ReplyReady => budget.io_calls > 0
-            && (status.pending_output_bytes == 0 || budget.write_bytes > 0),
+        ChannelState::Reading => {
+            budget.frames > 0
+                && (status.buffered_input_bytes > 0
+                    || (budget.read_bytes > 0 && budget.io_calls > 0))
+        }
+        ChannelState::ReplyReady => {
+            budget.io_calls > 0 && (status.pending_output_bytes == 0 || budget.write_bytes > 0)
+        }
         ChannelState::Closed(_) => false,
     }
 }
@@ -324,8 +484,12 @@ fn subtract(a: DriveBudget, b: DriveBudget) -> DriveBudget {
     // Original UnixActorConnection guarantees each counter is bounded by the
     // issued allowance. Buffered consumed bytes are NOT read bytes and are not
     // subtracted here. No saturating arithmetic can hide a budget violation.
-    DriveBudget { read_bytes: a.read_bytes - b.read_bytes, write_bytes: a.write_bytes - b.write_bytes,
-        frames: a.frames - b.frames, io_calls: a.io_calls - b.io_calls }
+    DriveBudget {
+        read_bytes: a.read_bytes - b.read_bytes,
+        write_bytes: a.write_bytes - b.write_bytes,
+        frames: a.frames - b.frames,
+        io_calls: a.io_calls - b.io_calls,
+    }
 }
 
 #[cfg(test)]

@@ -45,7 +45,7 @@ fn replacement(host: &FileOversight, operation: u64, next_generation: u64) -> Fi
 }
 fn ready(host: &mut FileOversight, reviewer: &FileHumanReviewer, id: u64, value: &EvidenceSnapshot) -> Keys {
     let state = value.snapshot().clone();
-    let action = host.propose(host.revision(), id, spec(host, b"recovered publication"), state.clone()).unwrap();
+    let action = host.propose(host.revision(), id, spec(host, b"recovered-pub"), state.clone()).unwrap();
     let inputs = value.inputs_for(&action, &profile().committee).unwrap();
     host.record_inputs(host.revision(), id, host.input_revision(id).unwrap(), inputs.clone()).unwrap();
     host.begin_review(host.revision(), id, id + 100, ROOT, window(host), state.clone()).unwrap();
@@ -65,7 +65,7 @@ fn publish(host: &mut FileOversight, id: u64, keys: &Keys, value: &EvidenceSnaps
     let result = host.publish_checked(host.revision(), id, Some(&keys.inputs), value.snapshot().clone(), ElapsedTick(tick)).unwrap();
     assert_eq!(result.basis, PublicationBasis::Revalidated);
     assert_eq!(host.inspect().executions, 1);
-    assert_eq!(host.inspect().payload, b"recovered publication");
+    assert_eq!(host.inspect().payload, b"recovered-pub");
     assert_eq!(host.reconcile(host.revision(), id).unwrap(), Reconciliation::Resolved(result.outcome));
 }
 

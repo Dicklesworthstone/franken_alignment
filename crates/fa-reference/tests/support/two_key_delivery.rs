@@ -1,4 +1,5 @@
 //! Shared public-API fixture for delayed two-key delivery and reconciliation.
+#![allow(dead_code, unused_imports)]
 
 use fa_reference::action::consequence::congress::{CongressPolicy, MemberPolicy};
 use fa_reference::action::consequence::delivery::{DispatchEnvelope, PublicationEndpoint};

@@ -1,7 +1,7 @@
 //! Read-only cooperative screening of the owner's ORIGINAL retained requirements.
 use super::{DeliveryBroker, PublicationBasis, PublicationInputs};
-use crate::action::consequence::oversight::publication::PublicationRefinement;
 use crate::Error;
+use crate::action::consequence::oversight::publication::PublicationRefinement;
 
 impl DeliveryBroker {
     /// Begin a comparison of retained evidence at an exact input predecessor.
@@ -25,14 +25,21 @@ impl DeliveryBroker {
     ///     let _ = check.advance(RefinementBudget::default());
     /// }
     /// ```
-    pub fn begin_publication_precheck(&self, attempt: u64, expected_revision: u64)
-        -> Result<PublicationRefinement<'_>, Error>
-    {
+    pub fn begin_publication_precheck(
+        &self,
+        attempt: u64,
+        expected_revision: u64,
+    ) -> Result<PublicationRefinement<'_>, Error> {
         let gate = self.publication.as_ref().ok_or(Error::Incomplete)?;
         let slot = gate.slots.get(&attempt).ok_or(Error::Missing)?;
-        if slot.revision != expected_revision { return Err(Error::Stale); }
+        if slot.revision != expected_revision {
+            return Err(Error::Stale);
+        }
         let judgment = slot.judgment.as_ref().ok_or(Error::Incomplete)?;
-        let basis = slot.current.as_ref().map_or_else(PublicationBasis::default, PublicationInputs::basis);
+        let basis = slot
+            .current
+            .as_ref()
+            .map_or_else(PublicationBasis::default, PublicationInputs::basis);
         Ok(judgment.begin_refinement(basis, gate.limits.validation))
     }
 }

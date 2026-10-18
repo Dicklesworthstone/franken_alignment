@@ -2,12 +2,13 @@
 //! Recovery compares these bytes before constructing the configured runtime.
 mod owned;
 mod reset;
-use super::{FileLearnedConfig, Writer, DOMAIN, MAX_CONFIG_BYTES};
-use crate::action::consequence::delivery::persistent::observed::{FileOversight,
-    FileOversightProfile, FileHumanReviewer, JournalError,
-    consistency::{FileConsistencyConfig, FileConsistencyObserver}};
-use crate::action::consequence::delivery::persistent::RecoveryReserve;
+use super::{DOMAIN, FileLearnedConfig, MAX_CONFIG_BYTES, Writer};
 use crate::Error;
+use crate::action::consequence::delivery::persistent::RecoveryReserve;
+use crate::action::consequence::delivery::persistent::observed::{
+    FileHumanReviewer, FileOversight, FileOversightProfile, JournalError,
+    consistency::{FileConsistencyConfig, FileConsistencyObserver},
+};
 use std::path::Path;
 use std::rc::Rc;
 
@@ -21,16 +22,25 @@ impl FileLearnedConfig {
     /// must agree exactly. Actual model/layer/stream and authority checks remain
     /// in the original bootstrap reducer, before the first storage image exists.
     /// Other recipe wrappers retain this requirement; wrapper order is identity.
-    pub fn with_required_pre_output_forecast(mut self, forecast: FileConsistencyConfig)
-        -> Result<Self, Error>
-    {
-        if self.pre_output_forecast.is_some() || self.owned_pre_output_forecast.is_some() { return Err(Error::Duplicate); }
-        if self.text_stream_continuation || !self.sidecar_required || !self.is_text() || !forecast.requires_pre_output_forecast()
-            || self.text_stream_profile() != forecast.stream_message_profile() {
+    pub fn with_required_pre_output_forecast(
+        mut self,
+        forecast: FileConsistencyConfig,
+    ) -> Result<Self, Error> {
+        if self.pre_output_forecast.is_some() || self.owned_pre_output_forecast.is_some() {
+            return Err(Error::Duplicate);
+        }
+        if self.text_stream_continuation
+            || !self.sidecar_required
+            || !self.is_text()
+            || !forecast.requires_pre_output_forecast()
+            || self.text_stream_profile() != forecast.stream_message_profile()
+        {
             return Err(Error::Binding);
         }
         let mut writer = Writer::new(MAX_CONFIG_BYTES);
-        writer.raw(DOMAIN)?; writer.u64(0)?; writer.raw(b"FALPRED\x01")?;
+        writer.raw(DOMAIN)?;
+        writer.u64(0)?;
+        writer.raw(b"FALPRED\x01")?;
         writer.blob(&self.bytes)?;
         writer.blob(forecast.encoded())?;
         self.bytes = writer.finish().into();
@@ -60,12 +70,16 @@ impl FileOversight {
     /// It does not return another observer or revive pending forecast coverage.
     /// Legacy pair-returning constructors also enforce a pinned requirement, but
     /// deliberately do not issue its observer; use this constructor to receive it.
-    pub fn create_with_pre_output_forecast(directory: impl AsRef<Path>,
-        profile: FileOversightProfile, config: FileLearnedConfig)
-        -> Result<(Self, FileHumanReviewer, FileConsistencyObserver), JournalError>
-    {
+    pub fn create_with_pre_output_forecast(
+        directory: impl AsRef<Path>,
+        profile: FileOversightProfile,
+        config: FileLearnedConfig,
+    ) -> Result<(Self, FileHumanReviewer, FileConsistencyObserver), JournalError> {
         if config.required_pre_output_forecast().is_none()
-            && config.required_owned_pre_output_forecast().is_none() { return Err(Error::Binding.into()); }
+            && config.required_owned_pre_output_forecast().is_none()
+        {
+            return Err(Error::Binding.into());
+        }
         let (host, reviewer) = if config.text_stream_profile().is_some() {
             Self::create_with_learned_text_stream(directory, profile, config)?
         } else {
@@ -73,7 +87,9 @@ impl FileOversight {
         };
         // The original first-image replacement acknowledged BOTH requirements.
         // This marker supplies only observer custody, never the reviewer's key.
-        let observer = FileConsistencyObserver { issuer: Rc::clone(&host.issuer) };
+        let observer = FileConsistencyObserver {
+            issuer: Rc::clone(&host.issuer),
+        };
         Ok((host, reviewer, observer))
     }
 
@@ -87,18 +103,24 @@ impl FileOversight {
     /// The reserve belongs to the original fence/stop/drain lane; it supplies
     /// no numerical work, forecast budget or publication permission. Recovery
     /// can require this exact reserve through either predictive guarded wrapper.
-    pub fn create_with_pre_output_forecast_with_reserve(directory: impl AsRef<Path>,
-        profile: FileOversightProfile, config: FileLearnedConfig, reserve: RecoveryReserve)
-        -> Result<(Self, FileHumanReviewer, FileConsistencyObserver), JournalError>
-    {
+    pub fn create_with_pre_output_forecast_with_reserve(
+        directory: impl AsRef<Path>,
+        profile: FileOversightProfile,
+        config: FileLearnedConfig,
+        reserve: RecoveryReserve,
+    ) -> Result<(Self, FileHumanReviewer, FileConsistencyObserver), JournalError> {
         if config.text_stream_profile().is_none()
             || (config.required_pre_output_forecast().is_none()
-                && config.required_owned_pre_output_forecast().is_none()) {
+                && config.required_owned_pre_output_forecast().is_none())
+        {
             return Err(Error::Binding.into());
         }
         let (host, reviewer) = Self::create_with_learned_text_stream_with_reserve(
-            directory, profile, config, reserve)?;
-        let observer = FileConsistencyObserver { issuer: Rc::clone(&host.issuer) };
+            directory, profile, config, reserve,
+        )?;
+        let observer = FileConsistencyObserver {
+            issuer: Rc::clone(&host.issuer),
+        };
         Ok((host, reviewer, observer))
     }
 
@@ -107,17 +129,24 @@ impl FileOversight {
     /// the FIRST numerical installation, not an observer getter or reissuer.
     /// Original enable admission, source checks and persistence run unchanged.
     /// Failure returns no observer; a duplicate install cannot recover a lost one.
-    pub fn enable_learned_generation_with_pre_output_forecast(&mut self, revision: u64,
-        config: FileLearnedConfig) -> Result<FileConsistencyObserver, JournalError>
-    {
+    pub fn enable_learned_generation_with_pre_output_forecast(
+        &mut self,
+        revision: u64,
+        config: FileLearnedConfig,
+    ) -> Result<FileConsistencyObserver, JournalError> {
         if config.required_pre_output_forecast().is_none()
-            && config.required_owned_pre_output_forecast().is_none() { return Err(Error::Binding.into()); }
+            && config.required_owned_pre_output_forecast().is_none()
+        {
+            return Err(Error::Binding.into());
+        }
         self.enable_learned_generation(revision, config)?;
-        Ok(FileConsistencyObserver { issuer: Rc::clone(&self.issuer) })
+        Ok(FileConsistencyObserver {
+            issuer: Rc::clone(&self.issuer),
+        })
     }
 }
 
 #[cfg(test)]
-mod tests;
-#[cfg(test)]
 mod lifecycle_tests;
+#[cfg(test)]
+mod tests;

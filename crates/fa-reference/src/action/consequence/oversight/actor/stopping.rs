@@ -1,12 +1,16 @@
 //! Supervising lifecycle transitions without losing the original actor mailbox.
 
-use super::{ActorSupervisor, ActorOutcome, BasisSource, Projection};
-use crate::action::consequence::delivery::{PublicationEndpoint, StopProgress, StopReceipt, StopRequest, StopSweep};
-use crate::action::consequence::oversight::decoder_host::{HostedCheckpointHandle, HostedResetReceipt, HostedResetRequest};
+use super::{ActorOutcome, ActorSupervisor, BasisSource, Projection};
+use crate::Error;
+use crate::action::consequence::delivery::{
+    PublicationEndpoint, StopProgress, StopReceipt, StopRequest, StopSweep,
+};
+use crate::action::consequence::oversight::decoder_host::{
+    HostedCheckpointHandle, HostedResetReceipt, HostedResetRequest,
+};
 use crate::action::consequence::oversight::learned_host::checkpoint::{
     HostedLearnedCheckpointHandle, HostedLearnedResetReceipt, HostedLearnedResetRequest,
 };
-use crate::Error;
 
 impl ActorSupervisor {
     /// A confirmed ORIGINAL identity fence is terminal even though it is not a
@@ -14,11 +18,22 @@ impl ActorSupervisor {
     /// project exclusively from the same ledger. No copied report is accepted.
     pub(in super::super) fn synchronize_identity_fence(&mut self) -> Result<bool, Error> {
         use crate::action::consequence::oversight::identity::{IdentityOutcome, IdentityStatus};
-        let IdentityStatus::Mismatch { check } = self.broker.identity_status()? else { return Ok(false); };
-        let installed = self.broker.identity_installation(check)?.ok_or(Error::Incomplete)?;
+        let IdentityStatus::Mismatch { check } = self.broker.identity_status()? else {
+            return Ok(false);
+        };
+        let installed = self
+            .broker
+            .identity_installation(check)?
+            .ok_or(Error::Incomplete)?;
         if !matches!(installed.report.outcome, IdentityOutcome::Mismatch(_))
-            || !self.broker.inspect().suspended { return Err(Error::WrongState); }
-        let mut state = self.mailbox.try_borrow_mut().map_err(|_| Error::WrongState)?;
+            || !self.broker.inspect().suspended
+        {
+            return Err(Error::WrongState);
+        }
+        let mut state = self
+            .mailbox
+            .try_borrow_mut()
+            .map_err(|_| Error::WrongState)?;
         state.close_intake();
         drop(state);
         self.synchronize()?;
@@ -30,7 +45,10 @@ impl ActorSupervisor {
     /// queued or genuinely undispatched work becomes cancelled-before-dispatch.
     /// The actor cannot call this supervisor method through its ActorPort.
     pub fn request_stop(&mut self, request: StopRequest) -> Result<StopReceipt, Error> {
-        let mut state = self.mailbox.try_borrow_mut().map_err(|_| Error::WrongState)?;
+        let mut state = self
+            .mailbox
+            .try_borrow_mut()
+            .map_err(|_| Error::WrongState)?;
         let receipt = self.broker.request_stop(request)?;
         state.close_intake();
         drop(state);
@@ -38,34 +56,55 @@ impl ActorSupervisor {
         Ok(receipt)
     }
 
-    pub fn stop_receipt(&self) -> Option<&StopReceipt> { self.broker.stop_receipt() }
-    pub fn stop_progress(&self) -> Result<StopProgress, Error> { self.broker.stop_progress() }
+    pub fn stop_receipt(&self) -> Option<&StopReceipt> {
+        self.broker.stop_receipt()
+    }
+    pub fn stop_progress(&self) -> Result<StopProgress, Error> {
+        self.broker.stop_progress()
+    }
 
-    pub fn progress_stop(&mut self, endpoint: &mut PublicationEndpoint) -> Result<StopSweep, Error> {
+    pub fn progress_stop(
+        &mut self,
+        endpoint: &mut PublicationEndpoint,
+    ) -> Result<StopSweep, Error> {
         let result = self.broker.progress_stop(endpoint);
         self.synchronize()?;
         result
     }
 
-    pub fn capture_hosted_checkpoint(&mut self, id: u64, expected_actor_revision: u64)
-        -> Result<HostedCheckpointHandle, Error>
-    {
-        self.broker.capture_hosted_checkpoint(id, expected_actor_revision)
+    pub fn capture_hosted_checkpoint(
+        &mut self,
+        id: u64,
+        expected_actor_revision: u64,
+    ) -> Result<HostedCheckpointHandle, Error> {
+        self.broker
+            .capture_hosted_checkpoint(id, expected_actor_revision)
     }
 
     /// A restoring reset cancels queued work from the abandoned continuation
     /// without closing fresh intake or evicting its original keys. A suspending
     /// reset closes intake. Accepted/sent work is projected ONLY from the ledger.
     /// There is no ActorPort entrypoint or implicit upgrade of expected epochs.
-    pub fn reset_hosted_decoder(&mut self, request: HostedResetRequest) -> Result<HostedResetReceipt, Error> {
-        let mut state = self.mailbox.try_borrow_mut().map_err(|_| Error::WrongState)?;
+    pub fn reset_hosted_decoder(
+        &mut self,
+        request: HostedResetRequest,
+    ) -> Result<HostedResetReceipt, Error> {
+        let mut state = self
+            .mailbox
+            .try_borrow_mut()
+            .map_err(|_| Error::WrongState)?;
         let result = self.broker.reset_hosted_decoder(request);
         if let Ok(receipt) = &result {
             if receipt.control.restored {
                 while let Some(id) = state.queued.pop_front() {
-                    state.entries.get_mut(&id).expect("queued actor request retained").project(
-                        Projection::Terminal(ActorOutcome::CancelledBeforeDispatch, BasisSource::Intake),
-                    );
+                    state
+                        .entries
+                        .get_mut(&id)
+                        .expect("queued actor request retained")
+                        .project(Projection::Terminal(
+                            ActorOutcome::CancelledBeforeDispatch,
+                            BasisSource::Intake,
+                        ));
                 }
             } else {
                 state.close_intake();
@@ -76,13 +115,19 @@ impl ActorSupervisor {
         result
     }
 
-    pub fn capture_hosted_learned_checkpoint(&mut self, id: u64, expected_actor_revision: u64)
-        -> Result<HostedLearnedCheckpointHandle, Error>
-    {
-        let result = self.broker.capture_hosted_learned_checkpoint(id, expected_actor_revision);
+    pub fn capture_hosted_learned_checkpoint(
+        &mut self,
+        id: u64,
+        expected_actor_revision: u64,
+    ) -> Result<HostedLearnedCheckpointHandle, Error> {
+        let result = self
+            .broker
+            .capture_hosted_learned_checkpoint(id, expected_actor_revision);
         // Capture preflight can discover an existing numerical trip. Publish
         // only its actual original stop, never a stop inferred from an error.
-        if self.broker.stop_receipt().is_some() { self.synchronize()?; }
+        if self.broker.stop_receipt().is_some() {
+            self.synchronize()?;
+        }
         result
     }
 
@@ -90,17 +135,26 @@ impl ActorSupervisor {
     /// reset. A successful restore retires the abandoned queued continuation;
     /// invalid preflight leaves it usable. No actor command or epoch rewrite is
     /// introduced, and dispatched outcomes still come only from the ledger.
-    pub fn reset_hosted_learned(&mut self, request: HostedLearnedResetRequest)
-        -> Result<HostedLearnedResetReceipt, Error>
-    {
-        let mut state = self.mailbox.try_borrow_mut().map_err(|_| Error::WrongState)?;
+    pub fn reset_hosted_learned(
+        &mut self,
+        request: HostedLearnedResetRequest,
+    ) -> Result<HostedLearnedResetReceipt, Error> {
+        let mut state = self
+            .mailbox
+            .try_borrow_mut()
+            .map_err(|_| Error::WrongState)?;
         let result = self.broker.reset_hosted_learned(request);
         if let Ok(receipt) = &result {
             if receipt.control.restored {
                 while let Some(id) = state.queued.pop_front() {
-                    state.entries.get_mut(&id).expect("queued actor request retained").project(
-                        Projection::Terminal(ActorOutcome::CancelledBeforeDispatch, BasisSource::Intake),
-                    );
+                    state
+                        .entries
+                        .get_mut(&id)
+                        .expect("queued actor request retained")
+                        .project(Projection::Terminal(
+                            ActorOutcome::CancelledBeforeDispatch,
+                            BasisSource::Intake,
+                        ));
                 }
             } else {
                 state.close_intake();

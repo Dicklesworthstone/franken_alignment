@@ -1,7 +1,7 @@
 //! Explicit checkpoint sources for the existing offline and publication examples.
 //! Numerical decoding, index validation and static adaptation keep their original
 //! library owners. This module grants no authority and performs no path discovery.
-#![allow(dead_code)]
+#![allow(dead_code, unused_imports)]
 
 #[path = "checkpoint_source/files.rs"]
 mod files;

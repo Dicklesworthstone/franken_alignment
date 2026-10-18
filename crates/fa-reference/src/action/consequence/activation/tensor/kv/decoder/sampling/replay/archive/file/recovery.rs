@@ -1,9 +1,11 @@
 //! Bounded replay while retaining the original file-owner lock and exact cut.
 //! No task, thread, callback-based storage or alternative generator is introduced.
-use super::{ArchiveLimits, FileGeneration, GenerationFileCommit, GenerationFileError,
-    GenerationFileFloor, ReplayBudget, ReplayReceipt, ReplayableGeneration, file_limit, parse, storage};
-use super::super::GenerationArchive;
 use super::super::super::{GenerationReplay, ReplayStatus};
+use super::super::GenerationArchive;
+use super::{
+    ArchiveLimits, FileGeneration, GenerationFileCommit, GenerationFileError, GenerationFileFloor,
+    ReplayBudget, ReplayReceipt, ReplayableGeneration, file_limit, parse, storage,
+};
 use crate::Error;
 use std::fmt;
 use std::path::Path;
@@ -31,31 +33,48 @@ pub struct FileGenerationRecovery {
 }
 impl fmt::Debug for FileGenerationRecovery {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("FileGenerationRecovery").field("status", &self.status()).finish_non_exhaustive()
+        f.debug_struct("FileGenerationRecovery")
+            .field("status", &self.status())
+            .finish_non_exhaustive()
     }
 }
 impl FileGeneration {
     /// Read and validate the exact archive, recipe and floors before beginning
     /// token work. The same exclusive lock survives every host-selected quantum.
     /// Bounds are checked for the WHOLE replay, not refilled for each advance.
-    pub fn begin_open(directory: impl AsRef<Path>, intended: &ReplayableGeneration,
-        limits: ArchiveLimits, budget: ReplayBudget, minimum: GenerationFileFloor)
-        -> Result<FileGenerationRecovery, GenerationFileError>
-    {
+    pub fn begin_open(
+        directory: impl AsRef<Path>,
+        intended: &ReplayableGeneration,
+        limits: ArchiveLimits,
+        budget: ReplayBudget,
+        minimum: GenerationFileFloor,
+    ) -> Result<FileGenerationRecovery, GenerationFileError> {
         limits.check()?;
         let store = storage::Store::open(directory.as_ref())?;
         let bytes = store.read(file_limit(limits)?)?;
         let saved = parse(&bytes, store.identity(), limits, minimum)?;
         let committed = saved.commit;
         let archive = GenerationArchive::decode(saved.archive, intended, limits)?;
-        if archive.positions() as u64 != committed.position { return Err(Error::Binding.into()); }
+        if archive.positions() as u64 != committed.position {
+            return Err(Error::Binding.into());
+        }
         let replay = archive.begin_replay(budget)?;
-        Ok(FileGenerationRecovery { store, replay, limits, committed, canonical: bytes })
+        Ok(FileGenerationRecovery {
+            store,
+            replay,
+            limits,
+            committed,
+            canonical: bytes,
+        })
     }
 }
 impl FileGenerationRecovery {
-    pub fn status(&self) -> ReplayStatus { self.replay.status() }
-    pub fn receipt(&self) -> Option<&ReplayReceipt> { self.replay.receipt() }
+    pub fn status(&self) -> ReplayStatus {
+        self.replay.status()
+    }
+    pub fn receipt(&self) -> Option<&ReplayReceipt> {
+        self.replay.receipt()
+    }
 
     /// At most this many original token computations, followed by the original
     /// final-state comparison when complete. This does not preempt blocked file
@@ -69,10 +88,27 @@ impl FileGenerationRecovery {
     /// cooperating lock is still the exclusion contract; rereading is not a claim
     /// of atomic containment against a hostile writer or directory replacement.
     pub fn finish(self) -> Result<(FileGeneration, ReplayReceipt), GenerationFileError> {
-        let Self { store, replay, limits, committed, canonical } = self;
+        let Self {
+            store,
+            replay,
+            limits,
+            committed,
+            canonical,
+        } = self;
         let (run, receipt) = replay.finish()?;
-        if store.read(file_limit(limits)?)? != canonical { return Err(Error::Binding.into()); }
+        if store.read(file_limit(limits)?)? != canonical {
+            return Err(Error::Binding.into());
+        }
         store.confirm_and_cleanup()?;
-        Ok((FileGeneration { store, run, limits, committed, fault: None }, receipt))
+        Ok((
+            FileGeneration {
+                store,
+                run,
+                limits,
+                committed,
+                fault: None,
+            },
+            receipt,
+        ))
     }
 }

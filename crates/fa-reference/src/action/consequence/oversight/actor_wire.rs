@@ -3,19 +3,28 @@
 //! The host binds one port to an authenticated connection outside this module.
 //! No broker, clock, policy, helper, permit, or endpoint is reachable here.
 
-mod codec;
 mod channel;
-mod response;
 pub mod client;
+mod codec;
+mod response;
+pub use channel::{
+    ActorChannel, ChannelLimits, ChannelState, CloseReason, FeedResult, MAX_CHANNEL_EXCHANGES,
+};
+pub use codec::{
+    Command, MAX_FRAME_BYTES, MAX_RESPONSE_BYTES, WireError, WireResponse, decode_command,
+    encode_command,
+};
 pub use response::{ResponseError, decode_response};
-pub use channel::{ActorChannel, ChannelLimits, ChannelState, CloseReason, FeedResult, MAX_CHANNEL_EXCHANGES};
-pub use codec::{Command, MAX_FRAME_BYTES, MAX_RESPONSE_BYTES, WireError, WireResponse, decode_command, encode_command};
 
-use super::actor::{ActorError, ActorOutcome, ActorPort, ActorProposal, ActorTicket, Knowledge, MAX_ACTOR_REQUESTS};
+use super::actor::{
+    ActorError, ActorOutcome, ActorPort, ActorProposal, ActorTicket, Knowledge, MAX_ACTOR_REQUESTS,
+};
 use std::collections::BTreeMap;
 use std::fmt;
 
-pub(crate) mod backend { pub trait Sealed {} }
+pub(crate) mod backend {
+    pub trait Sealed {}
+}
 
 /// Actor-only operations supported by the in-memory and durable gateways.
 /// Sealed implementations cannot introduce a clock, permit or authority method.
@@ -29,9 +38,15 @@ pub trait ActorRequestPort: backend::Sealed {
 impl backend::Sealed for ActorPort {}
 impl ActorRequestPort for ActorPort {
     type Ticket = ActorTicket;
-    fn submit(&self, key: u64, proposal: &ActorProposal) -> Result<Self::Ticket, ActorError> { ActorPort::submit(self, key, proposal) }
-    fn poll(&self, ticket: &Self::Ticket) -> Knowledge<ActorOutcome> { ActorPort::poll(self, ticket) }
-    fn cancel(&self, ticket: &Self::Ticket) -> Result<(), ActorError> { ActorPort::cancel(self, ticket) }
+    fn submit(&self, key: u64, proposal: &ActorProposal) -> Result<Self::Ticket, ActorError> {
+        ActorPort::submit(self, key, proposal)
+    }
+    fn poll(&self, ticket: &Self::Ticket) -> Knowledge<ActorOutcome> {
+        ActorPort::poll(self, ticket)
+    }
+    fn cancel(&self, ticket: &Self::Ticket) -> Result<(), ActorError> {
+        ActorPort::cancel(self, ticket)
+    }
 }
 
 /// Retain this value across transport reconnection to retain ticket visibility.
@@ -49,12 +64,19 @@ pub struct ActorWire<P: ActorRequestPort = ActorPort> {
 
 impl<P: ActorRequestPort> fmt::Debug for ActorWire<P> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("ActorWire").field("tickets", &self.tickets.len()).finish_non_exhaustive()
+        f.debug_struct("ActorWire")
+            .field("tickets", &self.tickets.len())
+            .finish_non_exhaustive()
     }
 }
 
 impl<P: ActorRequestPort> ActorWire<P> {
-    pub fn new(port: P) -> Self { Self { port, tickets: BTreeMap::new() } }
+    pub fn new(port: P) -> Self {
+        Self {
+            port,
+            tickets: BTreeMap::new(),
+        }
+    }
 
     /// Process exactly one bounded JSON document, with no framing or I/O.
     /// Parse failures disclose no partially decoded request or private diagnostics.
@@ -64,42 +86,68 @@ impl<P: ActorRequestPort> ActorWire<P> {
     }
 
     #[cfg(unix)]
-    pub(crate) fn request_port(&self) -> &P { &self.port }
+    pub(crate) fn request_port(&self) -> &P {
+        &self.port
+    }
 
     /// Internal host handoff after original parsing and ticket-capacity checks.
     /// The actor cannot install this hook. It neither grants a permit nor replaces
     /// the original port's validation, deduplication or outcome projection.
-    pub(crate) fn exchange_with_admission<A>(&mut self, document: &[u8], admission: A) -> WireResponse
-    where A: FnOnce(&P, u64, &ActorProposal) -> Result<(), ActorError> {
+    pub(crate) fn exchange_with_admission<A>(
+        &mut self,
+        document: &[u8],
+        admission: A,
+    ) -> WireResponse
+    where
+        A: FnOnce(&P, u64, &ActorProposal) -> Result<(), ActorError>,
+    {
         let command = match decode_command(document) {
             Ok(command) => command,
-            Err(error) => return WireResponse { request: None, result: Err(error) },
+            Err(error) => {
+                return WireResponse {
+                    request: None,
+                    result: Err(error),
+                };
+            }
         };
         let request = command.request();
         let result = match command {
             Command::Submit { proposal, .. } => {
-                if !self.tickets.contains_key(&request) && self.tickets.len() >= MAX_ACTOR_REQUESTS {
+                if !self.tickets.contains_key(&request) && self.tickets.len() >= MAX_ACTOR_REQUESTS
+                {
                     Err(WireError::Capacity)
                 } else {
-                    admission(&self.port, request, &proposal).and_then(|()| self.port.submit(request, &proposal)).map(|ticket| {
-                        let observation = self.port.poll(&ticket);
-                        self.tickets.insert(request, ticket);
-                        observation
-                    }).map_err(WireError::from)
+                    admission(&self.port, request, &proposal)
+                        .and_then(|()| self.port.submit(request, &proposal))
+                        .map(|ticket| {
+                            let observation = self.port.poll(&ticket);
+                            self.tickets.insert(request, ticket);
+                            observation
+                        })
+                        .map_err(WireError::from)
                 }
             }
             Command::Poll { .. } => Ok(self.poll(request)),
             Command::Cancel { .. } => match self.tickets.get(&request) {
-                Some(ticket) => self.port.cancel(ticket).map(|()| self.port.poll(ticket)).map_err(WireError::from),
+                Some(ticket) => self
+                    .port
+                    .cancel(ticket)
+                    .map(|()| self.port.poll(ticket))
+                    .map_err(WireError::from),
                 None => Err(WireError::Withheld),
             },
         };
-        WireResponse { request: Some(request), result }
+        WireResponse {
+            request: Some(request),
+            result,
+        }
     }
 
     fn poll(&self, request: u64) -> Knowledge<ActorOutcome> {
         self.tickets.get(&request).map_or(
-            Knowledge::Withheld { authority_required: "own_request" },
+            Knowledge::Withheld {
+                authority_required: "own_request",
+            },
             |ticket| self.port.poll(ticket),
         )
     }

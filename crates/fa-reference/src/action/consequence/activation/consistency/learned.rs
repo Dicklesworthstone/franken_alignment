@@ -2,11 +2,16 @@
 //! The original monitor owns selective XOR refinement and all scoring costs.
 //! This numerical component has no request ledger, sampler or publication key.
 use super::{BinaryForecast, CaptureProfile, ForecastModel, ProbeOutcome};
-use crate::action::consequence::activation::monitor::{MonitorOutcome,
-    learned::{LearnedMonitorBudget, LearnedMonitorReport, LearnedMonitorWork, LearnedRefinementMonitor}};
-use crate::action::consequence::activation::probe::learned::{CheckedLearnedKv,
-    KvRow, LearnedProbeObservation};
 use crate::Error;
+use crate::action::consequence::activation::monitor::{
+    MonitorOutcome,
+    learned::{
+        LearnedMonitorBudget, LearnedMonitorReport, LearnedMonitorWork, LearnedRefinementMonitor,
+    },
+};
+use crate::action::consequence::activation::probe::learned::{
+    CheckedLearnedKv, KvRow, LearnedProbeObservation,
+};
 
 /// Frozen original coefficients, calibration table and refinement allowance.
 /// Unlike mantissa ladders, this source uses its fitted codebook, checked error
@@ -29,7 +34,7 @@ pub struct LearnedForecastModel {
 /// use fa_reference::action::{Permit, consequence::activation::consistency::learned::LearnedPrediction};
 /// fn allow(value: LearnedPrediction) -> Permit { value }
 /// ```
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct LearnedPrediction {
     observation: LearnedProbeObservation,
     forecast: BinaryForecast,
@@ -39,16 +44,30 @@ pub struct LearnedPrediction {
     work: LearnedMonitorWork,
 }
 impl LearnedPrediction {
-    pub fn observation(&self) -> &LearnedProbeObservation { &self.observation }
-    pub fn forecast(&self) -> BinaryForecast { self.forecast }
-    pub fn domain(&self) -> u64 { self.domain }
-    pub fn generation(&self) -> u64 { self.generation }
-    pub fn policy_generation(&self) -> u64 { self.policy_generation }
+    pub fn observation(&self) -> &LearnedProbeObservation {
+        &self.observation
+    }
+    pub fn forecast(&self) -> BinaryForecast {
+        self.forecast
+    }
+    pub fn domain(&self) -> u64 {
+        self.domain
+    }
+    pub fn generation(&self) -> u64 {
+        self.generation
+    }
+    pub fn policy_generation(&self) -> u64 {
+        self.policy_generation
+    }
     /// Base representation plus every residual used, not just the last block.
     /// Fitting, initial compression/source checking and retained storage are
     /// separate upstream costs; no reuse discount is silently claimed here.
-    pub fn work(&self) -> LearnedMonitorWork { self.work }
-    pub fn encoded_bytes(&self) -> usize { self.work.encoded_bytes }
+    pub fn work(&self) -> LearnedMonitorWork {
+        self.work
+    }
+    pub fn encoded_bytes(&self) -> usize {
+        self.work.encoded_bytes
+    }
 }
 
 /// Preserve the ORIGINAL report even when no probability can be certified.
@@ -61,11 +80,15 @@ pub struct LearnedForecastReport {
     prediction: Result<LearnedPrediction, Error>,
 }
 impl LearnedForecastReport {
-    pub fn monitor(&self) -> &LearnedMonitorReport { &self.monitor }
+    pub fn monitor(&self) -> &LearnedMonitorReport {
+        &self.monitor
+    }
     pub fn prediction(&self) -> Result<&LearnedPrediction, Error> {
         self.prediction.as_ref().map_err(|error| *error)
     }
-    pub fn work(&self) -> LearnedMonitorWork { self.monitor.work() }
+    pub fn work(&self) -> LearnedMonitorWork {
+        self.monitor.work()
+    }
 }
 
 impl ForecastModel {
@@ -74,26 +97,43 @@ impl ForecastModel {
     /// binary32 ladder is rejected rather than silently ignored or reinterpreted
     /// as a residual budget. Neither mode supplies a fitted/calibrated predictor.
     pub fn into_learned(self, budget: LearnedMonitorBudget) -> Result<LearnedForecastModel, Error> {
-        if self.progressive.is_some() { return Err(Error::Binding); }
+        if self.progressive.is_some() {
+            return Err(Error::Binding);
+        }
         let monitor = LearnedRefinementMonitor::new(vec![self.probe.clone()], budget)?;
-        Ok(LearnedForecastModel { model: self, monitor })
+        Ok(LearnedForecastModel {
+            model: self,
+            monitor,
+        })
     }
 }
 impl LearnedForecastModel {
-    pub fn profile(&self) -> CaptureProfile { self.model.profile() }
-    pub fn dimensions(&self) -> usize { self.model.dimensions() }
-    pub fn policy_generation(&self) -> u64 { self.model.policy_generation() }
-    pub fn event(&self, payload: &[u8]) -> bool { self.model.event(payload) }
-    pub fn budget(&self) -> LearnedMonitorBudget { self.monitor.budget() }
+    pub fn profile(&self) -> CaptureProfile {
+        self.model.profile()
+    }
+    pub fn dimensions(&self) -> usize {
+        self.model.dimensions()
+    }
+    pub fn policy_generation(&self) -> u64 {
+        self.model.policy_generation()
+    }
+    pub fn event(&self, payload: &[u8]) -> bool {
+        self.model.event(payload)
+    }
+    pub fn budget(&self) -> LearnedMonitorBudget {
+        self.monitor.budget()
+    }
 
     /// Judge an actual checked row; callers cannot import approximate values,
     /// a pre-refined free view, an MSE claim, a score or an outcome. The original
     /// monitor may stop on a certified coarse band or selectively refine exact
     /// groups. Missing residuals and exhausted allowances produce no forecast.
     /// No full reconstruction or raw-frame fallback is performed on refusal.
-    pub fn predict(&self, source: &CheckedLearnedKv, row: KvRow)
-        -> Result<LearnedForecastReport, Error>
-    {
+    pub fn predict(
+        &self,
+        source: &CheckedLearnedKv,
+        row: KvRow,
+    ) -> Result<LearnedForecastReport, Error> {
         self.predict_with_budget(source, row, self.budget())
     }
 
@@ -106,12 +146,18 @@ impl LearnedForecastModel {
     /// This method does not own or refill the caller's shared budget. Account
     /// for work on refused reports too; an outer error has no complete receipt
     /// and must not be interpreted as zero work or retried without accounting.
-    pub fn predict_with_budget(&self, source: &CheckedLearnedKv, row: KvRow,
-        remaining: LearnedMonitorBudget) -> Result<LearnedForecastReport, Error>
-    {
+    pub fn predict_with_budget(
+        &self,
+        source: &CheckedLearnedKv,
+        row: KvRow,
+        remaining: LearnedMonitorBudget,
+    ) -> Result<LearnedForecastReport, Error> {
         let monitor = self.monitor.analyze_with_budget(source, row, remaining)?;
         let prediction = self.certify(&monitor);
-        Ok(LearnedForecastReport { monitor, prediction })
+        Ok(LearnedForecastReport {
+            monitor,
+            prediction,
+        })
     }
 
     fn certify(&self, monitor: &LearnedMonitorReport) -> Result<LearnedPrediction, Error> {
@@ -125,15 +171,25 @@ impl LearnedForecastModel {
         // Exactly one frozen probe. Never recover a probability from an older
         // observation if the complete monitor result was unresolved/exhausted.
         let step = monitor.steps().last().ok_or(Error::Incomplete)?;
-        if step.observations.len() != 1 { return Err(Error::Binding); }
+        if step.observations.len() != 1 {
+            return Err(Error::Binding);
+        }
         let observation = &step.observations[0];
         if observation.probe() != self.model.probe.identity()
-            || observation.frame() != monitor.frame() || observation.row() != monitor.row()
-            || observation.outcome() != expected { return Err(Error::Binding); }
-        Ok(LearnedPrediction { observation: observation.clone(),
-            forecast: self.model.forecast_band(expected)?, domain: self.model.registration.domain,
+            || observation.frame() != monitor.frame()
+            || observation.row() != monitor.row()
+            || observation.outcome() != expected
+        {
+            return Err(Error::Binding);
+        }
+        Ok(LearnedPrediction {
+            observation: observation.clone(),
+            forecast: self.model.forecast_band(expected)?,
+            domain: self.model.registration.domain,
             generation: self.model.registration.generation,
-            policy_generation: self.model.registration.policy_generation, work: monitor.work() })
+            policy_generation: self.model.registration.policy_generation,
+            work: monitor.work(),
+        })
     }
 }
 

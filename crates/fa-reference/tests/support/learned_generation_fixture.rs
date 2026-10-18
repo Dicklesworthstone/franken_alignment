@@ -1,4 +1,5 @@
 //! Small ORIGINAL numerical model and fitted monitor recipe for transport tests.
+#![allow(dead_code, unused_imports)]
 #[path = "decoder_fixture.rs"]
 mod decoder;
 use fa_reference::action::consequence::activation::monitor::learned::{

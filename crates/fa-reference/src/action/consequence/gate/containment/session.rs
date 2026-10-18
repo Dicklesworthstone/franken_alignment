@@ -71,7 +71,11 @@ impl ReviewSession {
         if gate.seen_rounds.len() >= MAX_DECISIONS || spec.policy.members.len() > MAX_VOTES {
             return Err(Error::Limit);
         }
-        let attempt = gate.authority.attempts.get(&spec.attempt).ok_or(Error::Missing)?;
+        let attempt = gate
+            .authority
+            .attempts
+            .get(&spec.attempt)
+            .ok_or(Error::Missing)?;
         let mut round = Round::new(spec.round, &spec.evidence_root)?;
         for member in spec.policy.members.keys() {
             round.add_member(member)?;
@@ -79,7 +83,12 @@ impl ReviewSession {
         // Validate the policy without deriving approval from the real round.
         let mut validation = round.clone();
         validation.open_reveals()?;
-        evaluate_round(&validation, &spec.policy, spec.exact_disqualifier, spec.contradiction)?;
+        evaluate_round(
+            &validation,
+            &spec.policy,
+            spec.exact_disqualifier,
+            spec.contradiction,
+        )?;
         let transcript = RoundTranscript {
             version: TRANSCRIPT_VERSION,
             round: spec.round,
@@ -94,7 +103,11 @@ impl ReviewSession {
             expected_control_sequence: gate.sequence,
             authority_issuer: Rc::clone(&gate.authority.issuer),
         };
-        Ok(Self { context: Rc::new(context), round, transcript })
+        Ok(Self {
+            context: Rc::new(context),
+            round,
+            transcript,
+        })
     }
 
     pub fn begin_containment(
@@ -125,7 +138,11 @@ impl ReviewSession {
         }
         self.round.outcome(member)?;
         let digest = commitment(
-            self.round.id(), member, self.round.evidence_root(), verdict, salt,
+            self.round.id(),
+            member,
+            self.round.evidence_root(),
+            verdict,
+            salt,
         )?;
         Ok(BoundCommitment {
             context: Rc::clone(&self.context),
@@ -138,12 +155,18 @@ impl ReviewSession {
     /// digest is untrusted reference evidence, NOT a signature or permission.
     /// The original round still verifies its reveal and replays the transcript.
     pub(crate) fn import_reference_commitment(
-        &self, member: &str, digest: Digest,
+        &self,
+        member: &str,
+        digest: Digest,
     ) -> Result<BoundCommitment, Error> {
-        if self.round.phase() != Phase::Commit { return Err(Error::WrongState); }
+        if self.round.phase() != Phase::Commit {
+            return Err(Error::WrongState);
+        }
         self.round.outcome(member)?;
         Ok(BoundCommitment {
-            context: Rc::clone(&self.context), member: member.to_owned(), digest,
+            context: Rc::clone(&self.context),
+            member: member.to_owned(),
+            digest,
         })
     }
 
@@ -158,7 +181,8 @@ impl ReviewSession {
         self.round.commit(member, value.digest)?;
         // Only accepted events are retained. The round bounds one per member.
         self.transcript.commits.push(CommitRecord {
-            member: member.to_owned(), digest: value.digest,
+            member: member.to_owned(),
+            digest: value.digest,
         });
         Ok(())
     }
@@ -171,7 +195,9 @@ impl ReviewSession {
         self.round.reveal(member, verdict, salt)?;
         // The round checks salt length before allocation and rejects duplicates.
         self.transcript.reveals.push(RevealRecord {
-            member: member.to_owned(), verdict, salt: salt.to_vec(),
+            member: member.to_owned(),
+            verdict,
+            salt: salt.to_vec(),
         });
         Ok(())
     }
@@ -188,7 +214,10 @@ impl ReviewSession {
         }
         let spec = &self.context.spec;
         let evaluation = evaluate_round(
-            &replayed, &spec.policy, spec.exact_disqualifier, spec.contradiction,
+            &replayed,
+            &spec.policy,
+            spec.exact_disqualifier,
+            spec.contradiction,
         )?;
         let decision = evaluation.decision();
         let tally = evaluation.tally().clone();
@@ -203,7 +232,12 @@ impl ReviewSession {
             retained,
         );
         Ok(BoundReview {
-            context: self.context, request, decision, tally, missing, abstained,
+            context: self.context,
+            request,
+            decision,
+            tally,
+            missing,
+            abstained,
             transcript: self.transcript,
         })
     }
@@ -263,7 +297,10 @@ impl BoundReview {
         self,
         authority: &mut ContainmentAuthority,
     ) -> Result<ControlReceipt, Error> {
-        if !Rc::ptr_eq(&self.context.authority_issuer, &authority.gate.authority.issuer) {
+        if !Rc::ptr_eq(
+            &self.context.authority_issuer,
+            &authority.gate.authority.issuer,
+        ) {
             return Err(Error::Binding);
         }
         authority.apply_review(self.request)

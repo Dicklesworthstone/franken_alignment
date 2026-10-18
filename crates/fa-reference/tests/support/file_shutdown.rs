@@ -1,4 +1,4 @@
-#![allow(dead_code)]
+#![allow(dead_code, unused_imports)]
 #[path = "file_oversight.rs"] mod ordinary;
 pub use ordinary::{Directory, snapshot, inputs, review_existing, dispatch, Keys};
 use fa_reference::action::{ElapsedTick, ActionSpec};

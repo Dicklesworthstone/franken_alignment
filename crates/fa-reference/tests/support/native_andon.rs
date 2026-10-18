@@ -1,4 +1,5 @@
 //! Real public native broker path shared by reference and file-adapter tests.
+#![allow(dead_code, unused_imports)]
 use fa_reference::action::{ActionSpec, ElapsedTick, Purpose, ResolvedTarget, Scope, VERSION};
 use fa_reference::action::consequence::congress::{CongressPolicy, MemberPolicy};
 use fa_reference::action::consequence::delivery::PublicationEndpoint;

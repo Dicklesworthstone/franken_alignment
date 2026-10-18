@@ -103,4 +103,5 @@ fn serve_owner(host: FileOversight, actor: &Profile, socket: BoundSocket, wall: 
 }
 
 #[cfg(test)]
+#[path = "receipts/tests.rs"]
 mod tests;

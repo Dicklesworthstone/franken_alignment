@@ -1,9 +1,11 @@
 //! Cooperatively prepare the ORIGINAL write-ahead intent before completion.
 //! Distinct finalizers prevent intent preparation from returning numerical output.
-use super::{Error, Event, DecoderEvent, FileOversight, FileLearnedStepPreparation,
-    FileLearnedStepPreparationProgress, FileLearnedStepPreparationStatus,
-    JournalError, LearnedEvent, LearnedStepIntent, Machine, Operation, Rc, FileLearnedReplayContinuation};
 use super::super::journal;
+use super::{
+    DecoderEvent, Error, Event, FileLearnedReplayContinuation, FileLearnedStepPreparation,
+    FileLearnedStepPreparationProgress, FileLearnedStepPreparationStatus, FileOversight,
+    JournalError, LearnedEvent, LearnedStepIntent, Machine, Operation, Rc,
+};
 
 /// Reconstructed intent admission, not an already admitted numerical operation.
 /// Dropping it before successful finish leaves NO new durable intent. After
@@ -16,27 +18,44 @@ use super::super::journal;
 /// ```
 #[derive(Debug)]
 #[must_use = "advance and finish intent admission, or drop it without recording an intent"]
-pub struct FileLearnedIntentPreparation { pub(super) replay: FileLearnedStepPreparation }
+pub struct FileLearnedIntentPreparation {
+    pub(super) replay: FileLearnedStepPreparation,
+}
 
 impl FileOversight {
     /// Check the ORIGINAL next-position and two-ordinary-slot admission rules,
     /// then return a private empty reconstruction. No numerical history, new
     /// token, journal intent or snapshot consumption occurs at construction.
-    pub fn prepare_learned_step_intent(&self, revision: u64, actor_revision: u64,
-        position: u64) -> Result<FileLearnedIntentPreparation, JournalError>
-    {
-        let intent = LearnedStepIntent { actor_revision, position };
+    pub fn prepare_learned_step_intent(
+        &self,
+        revision: u64,
+        actor_revision: u64,
+        position: u64,
+    ) -> Result<FileLearnedIntentPreparation, JournalError> {
+        let intent = LearnedStepIntent {
+            actor_revision,
+            position,
+        };
         self.check_learned_intent_preparation(revision, intent)?;
-        Ok(FileLearnedIntentPreparation { replay: FileLearnedStepPreparation {
-            issuer: Rc::clone(&self.issuer), revision, intent, total: self.events.len(), replayed: 0,
-            status: FileLearnedStepPreparationStatus::Replaying,
-            candidate: Machine::new(&self.profile)?, operation: Operation::Intent,
-        } })
+        Ok(FileLearnedIntentPreparation {
+            replay: FileLearnedStepPreparation {
+                issuer: Rc::clone(&self.issuer),
+                revision,
+                intent,
+                total: self.events.len(),
+                replayed: 0,
+                status: FileLearnedStepPreparationStatus::Replaying,
+                candidate: Machine::new(&self.profile)?,
+                operation: Operation::Intent,
+            },
+        })
     }
 
-    pub(super) fn check_learned_intent_preparation(&self, revision: u64, intent: LearnedStepIntent)
-        -> Result<(), JournalError>
-    {
+    pub(super) fn check_learned_intent_preparation(
+        &self,
+        revision: u64,
+        intent: LearnedStepIntent,
+    ) -> Result<(), JournalError> {
         self.check_learned_event_capacity(revision, 2)?;
         let event = Event::Decoder(DecoderEvent::Learned(LearnedEvent::Begin(intent)));
         self.machine.check_generated_text_origin(&event)?;
@@ -47,13 +66,18 @@ impl FileOversight {
 }
 
 impl FileLearnedIntentPreparation {
-    pub fn progress(&self) -> FileLearnedStepPreparationProgress { self.replay.progress() }
+    pub fn progress(&self) -> FileLearnedStepPreparationProgress {
+        self.replay.progress()
+    }
 
     /// Same exact-owner/cursor checks and original reducer as pending completion.
     /// Supervisor mutations invalidate this cut. No automatic restart or rebase.
-    pub fn advance(&mut self, host: &FileOversight, expected_events: usize,
-        max_events: usize) -> Result<FileLearnedStepPreparationProgress, JournalError>
-    {
+    pub fn advance(
+        &mut self,
+        host: &FileOversight,
+        expected_events: usize,
+        max_events: usize,
+    ) -> Result<FileLearnedStepPreparationProgress, JournalError> {
         self.replay.advance(host, expected_events, max_events)
     }
 
@@ -61,11 +85,15 @@ impl FileLearnedIntentPreparation {
     /// appended tail without restarting verified history. The same original
     /// next-position, source, pause and two-slot laws run before adoption.
     /// No intent is acknowledged and no new inference runs during catch-up.
-    pub fn catch_up(&mut self, host: &FileOversight, expected_revision: u64,
-        expected_events: usize, max_events: usize)
-        -> Result<FileLearnedStepPreparationProgress, JournalError>
-    {
-        self.replay.catch_up(host, expected_revision, expected_events, max_events)
+    pub fn catch_up(
+        &mut self,
+        host: &FileOversight,
+        expected_revision: u64,
+        expected_events: usize,
+        max_events: usize,
+    ) -> Result<FileLearnedStepPreparationProgress, JournalError> {
+        self.replay
+            .catch_up(host, expected_revision, expected_events, max_events)
     }
 
     /// Persist ONLY the original Begin event after complete reconstruction and
@@ -80,22 +108,30 @@ impl FileLearnedIntentPreparation {
     /// Persist the same Begin, retaining the previous live machine for the next
     /// replay stage. The returned value still precedes Begin and MUST replay it
     /// before it can prepare completion. No new numerical work runs here.
-    pub fn finish_with_continuation(self, host: &mut FileOversight)
-        -> Result<FileLearnedReplayContinuation, JournalError>
-    {
+    pub fn finish_with_continuation(
+        self,
+        host: &mut FileOversight,
+    ) -> Result<FileLearnedReplayContinuation, JournalError> {
         let replay = self.replay;
         replay.check_status()?;
         replay.check_owner_cut(host)?;
-        if replay.status != FileLearnedStepPreparationStatus::Ready { return Err(Error::Incomplete.into()); }
+        if replay.status != FileLearnedStepPreparationStatus::Ready {
+            return Err(Error::Incomplete.into());
+        }
         host.check_learned_intent_preparation(replay.revision, replay.intent)?;
         let event = Event::Decoder(DecoderEvent::Learned(LearnedEvent::Begin(replay.intent)));
         // Same encoding, consistency preflight, original apply and persistence
         // order as transact(Begin). Only its historical replay was scheduled.
-        let bytes = journal::encode_appended(&host.profile, host.store.identity(), &host.events, &event)?;
+        let bytes =
+            journal::encode_appended(&host.profile, host.store.identity(), &host.events, &event)?;
         let mut candidate = replay.candidate;
         candidate.preflight_consistency(&event)?;
         let result = candidate.apply(&event)?;
         let (_, retired) = host.persist_candidate_retaining(event, bytes, candidate, result)?;
-        Ok(FileLearnedReplayContinuation::new(replay.issuer, replay.total, retired))
+        Ok(FileLearnedReplayContinuation::new(
+            replay.issuer,
+            replay.total,
+            retired,
+        ))
     }
 }

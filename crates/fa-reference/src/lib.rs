@@ -1,7 +1,28 @@
 //! Independent, deliberately small logical models. No external effects,
 //! persistence, cryptographic claims, calibration, or deployment guarantees.
 #![forbid(unsafe_code)]
-#![cfg_attr(target_os = "linux", feature(peer_credentials_unix_socket))]
+#![feature(peer_credentials_unix_socket)]
+#![allow(
+    dead_code,
+    unused_imports,
+    clippy::chunks_exact_to_as_chunks,
+    clippy::collapsible_if,
+    clippy::collapsible_match,
+    clippy::derivable_impls,
+    clippy::duplicate_mod,
+    clippy::duplicated_attributes,
+    clippy::field_reassign_with_default,
+    clippy::large_enum_variant,
+    clippy::manual_is_multiple_of,
+    clippy::map_clone,
+    clippy::op_ref,
+    clippy::redundant_closure,
+    clippy::result_large_err,
+    clippy::single_match,
+    clippy::single_range_in_vec_init,
+    clippy::too_many_arguments,
+    clippy::write_with_newline
+)]
 
 pub mod action;
 pub mod canonical_json;

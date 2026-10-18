@@ -41,9 +41,15 @@ pub struct RepairSearch {
 }
 
 impl RepairSearch {
-    pub fn candidates(&self) -> &[Intervention] { &self.candidates }
-    pub fn cases(&self) -> &[SearchCase] { &self.cases }
-    pub fn sufficient_repairs(&self) -> &[SufficientRepair] { &self.repairs }
+    pub fn candidates(&self) -> &[Intervention] {
+        &self.candidates
+    }
+    pub fn cases(&self) -> &[SearchCase] {
+        &self.cases
+    }
+    pub fn sufficient_repairs(&self) -> &[SufficientRepair] {
+        &self.repairs
+    }
 }
 
 impl PolicyExperiment {
@@ -52,16 +58,26 @@ impl PolicyExperiment {
     /// alternatives remain explicit refused branches; they are never dropped.
     /// A sufficient repair means exact predicates only, never a new permission.
     pub fn search_repairs(&self, candidates: &[Intervention]) -> Result<RepairSearch, Error> {
-        if candidates.len() > MAX_SEARCH_CANDIDATES { return Err(Error::Limit); }
+        if candidates.len() > MAX_SEARCH_CANDIDATES {
+            return Err(Error::Limit);
+        }
         validate_edit_bounds(candidates)?;
         let mut cases = Vec::with_capacity(1_usize << candidates.len());
         for mask in 0_u16..(1_u16 << candidates.len()) {
-            let edits: Vec<_> = candidates.iter().enumerate()
+            let edits: Vec<_> = candidates
+                .iter()
+                .enumerate()
                 .filter(|(index, _)| mask & (1_u16 << *index) != 0)
-                .map(|(_, edit)| edit.clone()).collect();
-            cases.push(SearchCase { mask, outcome: self.run(&edits) });
+                .map(|(_, edit)| edit.clone())
+                .collect();
+            cases.push(SearchCase {
+                mask,
+                outcome: self.run(&edits),
+            });
         }
-        let repairs = cases.iter().filter(|case| sufficient(&case.outcome))
+        let repairs = cases
+            .iter()
+            .filter(|case| sufficient(&case.outcome))
             .map(|case| {
                 // Inspect ALL proper subsets, not merely one-edit deletions:
                 // arbitrary Boolean policies need not be monotone in edits.
@@ -90,8 +106,13 @@ impl PolicyExperiment {
                         Minimality::EstablishedWithinMenu
                     },
                 }
-            }).collect();
-        Ok(RepairSearch { candidates: candidates.to_vec(), cases, repairs })
+            })
+            .collect();
+        Ok(RepairSearch {
+            candidates: candidates.to_vec(),
+            cases,
+            repairs,
+        })
     }
 }
 

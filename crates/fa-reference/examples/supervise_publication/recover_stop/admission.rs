@@ -1,4 +1,5 @@
 //! Explicit clock-free stop and later drain; never a fallback from guarded recovery.
+#[path = "admission/custody.rs"]
 mod custody;
 use custody::AnchorOutput;
 use super::{Config, FileOversight, debug, ids, report};
@@ -43,6 +44,7 @@ where F: FnOnce() -> Result<ElapsedTick, JournalError> {
     run_with_retention(&config, phase, operation, clock, elapsed, out, retention.as_ref())
 }
 
+#[cfg(test)]
 fn run_with_elapsed<F>(config: &Config, phase: Phase, operation: u64, clock: F,
     elapsed: &mut impl FnMut() -> Duration, out: &mut impl Write) -> Result<(), String>
 where F: FnOnce() -> Result<ElapsedTick, JournalError> {
@@ -128,6 +130,8 @@ fn admission_report(stopped: &FileAdmissionStoppedHistory, out: &mut impl Write)
 }
 
 #[cfg(test)]
+#[path = "admission/tests.rs"]
 mod tests;
 #[cfg(test)]
+#[path = "admission/custody_tests.rs"]
 mod custody_tests;

@@ -68,26 +68,41 @@ impl NativeEvaluator {
     fn snapshot(&self) -> Snapshot {
         match &self.execution {
             Execution::Admitting(admission) => Snapshot {
-                work: NativeEvaluationWork { position: admission.position(), sampled_draws: admission.sampled_draws(),
-                    decoder: admission.decoder_work(), monitoring: admission.monitoring_work() },
+                work: NativeEvaluationWork {
+                    position: admission.position(),
+                    sampled_draws: admission.sampled_draws(),
+                    decoder: admission.decoder_work(),
+                    monitoring: admission.monitoring_work(),
+                },
                 tokenization: admission.tokenization_work(),
                 ..Snapshot::default()
             },
             Execution::Running(run) => {
                 let p = run.progress();
                 Snapshot {
-                    work: NativeEvaluationWork { position: run.position(), sampled_draws: run.sampled_draws(),
-                        decoder: run.decoder_work(), monitoring: run.monitoring_work() },
+                    work: NativeEvaluationWork {
+                        position: run.position(),
+                        sampled_draws: run.sampled_draws(),
+                        decoder: run.decoder_work(),
+                        monitoring: run.monitoring_work(),
+                    },
                     tokenization: run.prompt().work(),
-                    requested: p.requested_prompt_tokens(), reviewed: p.reviewed_prompt_tokens(),
-                    released: p.tokens().len(), finish: p.finish(),
+                    requested: p.requested_prompt_tokens(),
+                    reviewed: p.reviewed_prompt_tokens(),
+                    released: p.tokens().len(),
+                    finish: p.finish(),
                 }
             }
             Execution::Decoder(decoder) => {
-                let mut snapshot = Snapshot { work: NativeEvaluationWork {
-                    position: decoder.position(), sampled_draws: decoder.sampled_draws(),
-                    decoder: decoder.decoder_work(), monitoring: decoder.monitoring_work(),
-                }, ..Snapshot::default() };
+                let mut snapshot = Snapshot {
+                    work: NativeEvaluationWork {
+                        position: decoder.position(),
+                        sampled_draws: decoder.sampled_draws(),
+                        decoder: decoder.decoder_work(),
+                        monitoring: decoder.monitoring_work(),
+                    },
+                    ..Snapshot::default()
+                };
                 if let Some(report) = &self.report {
                     let p = report.generation();
                     snapshot.tokenization = report.prompt().work();
@@ -102,22 +117,33 @@ impl NativeEvaluator {
         }
     }
 
-    pub fn work(&self) -> NativeEvaluationWork { self.snapshot().work }
+    pub fn work(&self) -> NativeEvaluationWork {
+        self.snapshot().work
+    }
 
     /// No mutable run, output prefix, sampler or policy is exposed between steps.
     pub fn progress(&self) -> NativeEvaluationProgress {
         let snapshot = self.snapshot();
-        NativeEvaluationProgress { status: self.status, work: snapshot.work,
-            tokenization: snapshot.tokenization, admission_steps: self.admission_steps,
-            requested_prompt_tokens: snapshot.requested, reviewed_prompt_tokens: snapshot.reviewed,
-            released_answer_tokens: snapshot.released, finish: snapshot.finish }
+        NativeEvaluationProgress {
+            status: self.status,
+            work: snapshot.work,
+            tokenization: snapshot.tokenization,
+            admission_steps: self.admission_steps,
+            requested_prompt_tokens: snapshot.requested,
+            reviewed_prompt_tokens: snapshot.reviewed,
+            released_answer_tokens: snapshot.released,
+            finish: snapshot.finish,
+        }
     }
 
     /// Freeze ALL original request bytes and admit the entire prompt/output and
     /// numerical request before any inference. No framing, salt, policy text or
     /// hidden prefix is appended. Refusal consumes the sole evaluation opportunity.
     /// Successful admission yields Running at position zero, not a judgment.
-    pub fn begin(&mut self, input: &WorkerInput) -> Result<NativeEvaluationProgress, NativeEvaluationError> {
+    pub fn begin(
+        &mut self,
+        input: &WorkerInput,
+    ) -> Result<NativeEvaluationProgress, NativeEvaluationError> {
         self.begin_with(input, false)
     }
 
@@ -128,14 +154,21 @@ impl NativeEvaluator {
     /// next advance may compute the first token. No input is rendered or added.
     /// Initial bounded copies, allocation and control/segmentation scans remain
     /// synchronous; this API does not preempt those operations.
-    pub fn begin_cooperative(&mut self, input: &WorkerInput) -> Result<NativeEvaluationProgress, NativeEvaluationError> {
+    pub fn begin_cooperative(
+        &mut self,
+        input: &WorkerInput,
+    ) -> Result<NativeEvaluationProgress, NativeEvaluationError> {
         self.begin_with(input, true)
     }
 
-    fn begin_with(&mut self, input: &WorkerInput, cooperative: bool)
-        -> Result<NativeEvaluationProgress, NativeEvaluationError>
-    {
-        if self.status != NativeEvaluationStatus::AwaitingInput { return Err(Error::WrongState.into()); }
+    fn begin_with(
+        &mut self,
+        input: &WorkerInput,
+        cooperative: bool,
+    ) -> Result<NativeEvaluationProgress, NativeEvaluationError> {
+        if self.status != NativeEvaluationStatus::AwaitingInput {
+            return Err(Error::WrongState.into());
+        }
         self.status = NativeEvaluationStatus::Evaluating;
         self.input = Some(input.clone());
         let result = self.begin_once(input, cooperative);
@@ -146,26 +179,37 @@ impl NativeEvaluator {
         result.map(|_| self.progress())
     }
 
-    fn begin_once(&mut self, input: &WorkerInput, cooperative: bool)
-        -> Result<NativeEvaluationStatus, NativeEvaluationError>
-    {
+    fn begin_once(
+        &mut self,
+        input: &WorkerInput,
+        cooperative: bool,
+    ) -> Result<NativeEvaluationStatus, NativeEvaluationError> {
         let actual = input.actual_input();
-        if actual.input_profile() != &self.policy.input_profile { return Err(Error::Binding.into()); }
+        if actual.input_profile() != &self.policy.input_profile {
+            return Err(Error::Binding.into());
+        }
         let request = TextGenerationRequest {
-            prompt: actual.submitted_bytes().to_vec(), prefix_controls: Vec::new(),
-            max_new_tokens: self.policy.max_new_tokens, stop_tokens: self.policy.stop_tokens.clone(),
-            tokenization: self.policy.tokenization, generation: self.policy.generation,
+            prompt: actual.submitted_bytes().to_vec(),
+            prefix_controls: Vec::new(),
+            max_new_tokens: self.policy.max_new_tokens,
+            stop_tokens: self.policy.stop_tokens.clone(),
+            tokenization: self.policy.tokenization,
+            generation: self.policy.generation,
             max_output_bytes: self.policy.max_output_bytes,
         };
         let mut snapshot = self.snapshot();
-        let Execution::Decoder(decoder) = std::mem::replace(&mut self.execution, Execution::Closed(snapshot)) else {
+        let Execution::Decoder(decoder) =
+            std::mem::replace(&mut self.execution, Execution::Closed(snapshot))
+        else {
             return Err(Error::WrongState.into());
         };
         let result = if cooperative {
-            (*decoder).into_generation_admission(0, request)
+            (*decoder)
+                .into_generation_admission(0, request)
                 .map(|admission| Execution::Admitting(Box::new(admission)))
         } else {
-            (*decoder).into_generation(0, request)
+            (*decoder)
+                .into_generation(0, request)
                 .map(|run| Execution::Running(Box::new(run)))
         };
         match result {
@@ -178,7 +222,11 @@ impl NativeEvaluator {
                 return Err(NativeEvaluationError::Admission(error));
             }
         }
-        Ok(if cooperative { NativeEvaluationStatus::Admitting } else { NativeEvaluationStatus::Running })
+        Ok(if cooperative {
+            NativeEvaluationStatus::Admitting
+        } else {
+            NativeEvaluationStatus::Running
+        })
     }
 
     /// During Admitting, perform at most ONE original tokenizer step and yield
@@ -188,35 +236,52 @@ impl NativeEvaluator {
     /// No bytes or vote are returned before the terminal control's own review.
     /// Stale positions do not spend work. A terminal judgment can be inspected
     /// repeatedly without another draw; evaluate/begin never accept a second input.
-    pub fn advance(&mut self, expected_position: u64) -> Result<NativeEvaluationProgress, NativeEvaluationError> {
+    pub fn advance(
+        &mut self,
+        expected_position: u64,
+    ) -> Result<NativeEvaluationProgress, NativeEvaluationError> {
         self.advance_with(expected_position, || {})
     }
 
     // Private causal interruption seam, not a public callback or token source.
-    fn advance_with<F: FnOnce()>(&mut self, expected_position: u64, after_native: F)
-        -> Result<NativeEvaluationProgress, NativeEvaluationError>
-    {
+    fn advance_with<F: FnOnce()>(
+        &mut self,
+        expected_position: u64,
+        after_native: F,
+    ) -> Result<NativeEvaluationProgress, NativeEvaluationError> {
         match self.status {
-            NativeEvaluationStatus::Admitting | NativeEvaluationStatus::Running | NativeEvaluationStatus::Judged(_) => {}
+            NativeEvaluationStatus::Admitting
+            | NativeEvaluationStatus::Running
+            | NativeEvaluationStatus::Judged(_) => {}
             NativeEvaluationStatus::Failed(error) => return Err(error),
             _ => return Err(Error::WrongState.into()),
         }
-        if expected_position != self.position() { return Err(Error::Stale.into()); }
-        if matches!(self.status, NativeEvaluationStatus::Judged(_)) { return Ok(self.progress()); }
+        if expected_position != self.position() {
+            return Err(Error::Stale.into());
+        }
+        if matches!(self.status, NativeEvaluationStatus::Judged(_)) {
+            return Ok(self.progress());
+        }
         // If execution or report handling unwinds, a runnable state is never restored.
         self.status = NativeEvaluationStatus::Evaluating;
         let result = self.advance_once(expected_position, after_native);
-        if let Err(error) = result { self.status = NativeEvaluationStatus::Failed(error); }
+        if let Err(error) = result {
+            self.status = NativeEvaluationStatus::Failed(error);
+        }
         result.map(|()| self.progress())
     }
 
-    fn advance_once<F: FnOnce()>(&mut self, expected_position: u64, after_native: F)
-        -> Result<(), NativeEvaluationError>
-    {
+    fn advance_once<F: FnOnce()>(
+        &mut self,
+        expected_position: u64,
+        after_native: F,
+    ) -> Result<(), NativeEvaluationError> {
         if matches!(&self.execution, Execution::Admitting(_)) {
             return self.advance_admission_once(after_native);
         }
-        let Execution::Running(run) = &mut self.execution else { return Err(Error::WrongState.into()); };
+        let Execution::Running(run) = &mut self.execution else {
+            return Err(Error::WrongState.into());
+        };
         run.advance(expected_position)?;
         after_native();
         if run.progress().finish().is_none() {
@@ -224,7 +289,9 @@ impl NativeEvaluator {
             return Ok(());
         }
         let snapshot = self.snapshot();
-        let Execution::Running(run) = std::mem::replace(&mut self.execution, Execution::Closed(snapshot)) else {
+        let Execution::Running(run) =
+            std::mem::replace(&mut self.execution, Execution::Closed(snapshot))
+        else {
             return Err(Error::WrongState.into());
         };
         let (decoder, report) = (*run).into_parts()?;
@@ -234,25 +301,35 @@ impl NativeEvaluator {
         Ok(())
     }
 
-    fn advance_admission_once<F: FnOnce()>(&mut self, after_step: F)
-        -> Result<(), NativeEvaluationError>
-    {
-        let Execution::Admitting(admission) = &mut self.execution else { return Err(Error::WrongState.into()); };
+    fn advance_admission_once<F: FnOnce()>(
+        &mut self,
+        after_step: F,
+    ) -> Result<(), NativeEvaluationError> {
+        let Execution::Admitting(admission) = &mut self.execution else {
+            return Err(Error::WrongState.into());
+        };
         self.admission_steps = self.admission_steps.checked_add(1).ok_or(Error::Overflow)?;
-        let progress = admission.advance().map_err(NativeEvaluationError::Admission)?;
+        let progress = admission
+            .advance()
+            .map_err(NativeEvaluationError::Admission)?;
         after_step();
         if progress == TokenizationProgress::Pending {
             self.status = NativeEvaluationStatus::Admitting;
             return Ok(());
         }
         let snapshot = self.snapshot();
-        let Execution::Admitting(admission) = std::mem::replace(&mut self.execution, Execution::Closed(snapshot)) else {
+        let Execution::Admitting(admission) =
+            std::mem::replace(&mut self.execution, Execution::Closed(snapshot))
+        else {
             return Err(Error::WrongState.into());
         };
         // The ORIGINAL handoff checks the entire prompt/output/numerical request
         // and moves the completed encoding. It neither re-tokenizes nor infers.
-        self.execution = Execution::Running(Box::new((*admission).finish_incremental()
-            .map_err(NativeEvaluationError::Admission)?));
+        self.execution = Execution::Running(Box::new(
+            (*admission)
+                .finish_incremental()
+                .map_err(NativeEvaluationError::Admission)?,
+        ));
         self.status = NativeEvaluationStatus::Running;
         Ok(())
     }
@@ -263,9 +340,16 @@ impl NativeEvaluator {
     /// A caught interruption, failure or completed judgment is preserved, not
     /// relabeled as successful cancellation. False means already destroyed.
     pub fn cancel(&mut self) -> bool {
-        if matches!(&self.execution, Execution::Closed(_)) { return false; }
+        if matches!(&self.execution, Execution::Closed(_)) {
+            return false;
+        }
         let snapshot = self.snapshot();
-        if matches!(self.status, NativeEvaluationStatus::AwaitingInput | NativeEvaluationStatus::Admitting | NativeEvaluationStatus::Running) {
+        if matches!(
+            self.status,
+            NativeEvaluationStatus::AwaitingInput
+                | NativeEvaluationStatus::Admitting
+                | NativeEvaluationStatus::Running
+        ) {
             self.status = NativeEvaluationStatus::Cancelled;
         }
         let previous = std::mem::replace(&mut self.execution, Execution::Closed(snapshot));

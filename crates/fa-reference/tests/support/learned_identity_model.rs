@@ -1,5 +1,6 @@
 //! Actual tiny models differing in parameters while retaining identical labels.
 //! Fixed intervals/zero monitors are causal controls, not calibrated fingerprints.
+#![allow(dead_code, unused_imports)]
 use fa_reference::action::consequence::activation::identity::{IdentityAnchor, ModelManifest, ModelPassport};
 use fa_reference::action::consequence::activation::monitor::learned::{
     LearnedMonitorBudget, LearnedRefinementMonitor,

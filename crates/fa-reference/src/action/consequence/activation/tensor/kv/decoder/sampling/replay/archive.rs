@@ -6,14 +6,16 @@ pub mod files;
 
 mod binding;
 pub(crate) use binding::{encode_monitor_binding, verify_monitor_binding};
+#[cfg(unix)]
+pub mod file;
 mod state;
 pub mod stream;
 mod wire;
-#[cfg(unix)]
-pub mod file;
 
-use super::{CheckpointLimits, GenerationCheckpoint, GenerationReplay, Recipe, ReplayableGeneration,
-    ReplayBudget, ReplayReceipt, State, MAX_REPLAY_STATE_BYTES};
+use super::{
+    CheckpointLimits, GenerationCheckpoint, GenerationReplay, MAX_REPLAY_STATE_BYTES, Recipe,
+    ReplayBudget, ReplayReceipt, ReplayableGeneration, State,
+};
 use crate::Error;
 use std::fmt;
 use std::rc::Rc;
@@ -22,7 +24,8 @@ use wire::{Reader, Writer};
 const DOMAIN: &[u8; 8] = b"FALGA\0\0\x01";
 pub const ARCHIVE_HEADER_BYTES: usize = 24;
 pub const MAX_RECIPE_BYTES: usize = 128 * 1024 * 1024;
-pub const MAX_GENERATION_ARCHIVE_BYTES: usize = ARCHIVE_HEADER_BYTES + MAX_RECIPE_BYTES + MAX_REPLAY_STATE_BYTES;
+pub const MAX_GENERATION_ARCHIVE_BYTES: usize =
+    ARCHIVE_HEADER_BYTES + MAX_RECIPE_BYTES + MAX_REPLAY_STATE_BYTES;
 
 /// Independent import/export ceilings, not run-budget refills or restart rights.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -33,8 +36,11 @@ pub struct ArchiveLimits {
 }
 impl Default for ArchiveLimits {
     fn default() -> Self {
-        Self { bytes: MAX_GENERATION_ARCHIVE_BYTES, recipe_bytes: MAX_RECIPE_BYTES,
-            state: CheckpointLimits::default() }
+        Self {
+            bytes: MAX_GENERATION_ARCHIVE_BYTES,
+            recipe_bytes: MAX_RECIPE_BYTES,
+            state: CheckpointLimits::default(),
+        }
     }
 }
 impl ArchiveLimits {
@@ -79,8 +85,10 @@ pub struct GenerationArchive {
 }
 impl fmt::Debug for GenerationArchive {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("GenerationArchive").field("positions", &self.positions())
-            .field("encoded_bytes", &self.encoded_bytes).finish_non_exhaustive()
+        f.debug_struct("GenerationArchive")
+            .field("positions", &self.positions())
+            .field("encoded_bytes", &self.encoded_bytes)
+            .finish_non_exhaustive()
     }
 }
 impl GenerationCheckpoint {
@@ -96,10 +104,19 @@ impl GenerationCheckpoint {
         let mut count = Writer::count(limits.recipe_bytes);
         binding::write(&mut count, &self.recipe)?;
         let recipe_bytes = count.len();
-        let total = ARCHIVE_HEADER_BYTES.checked_add(recipe_bytes)
-            .and_then(|n| n.checked_add(state_bytes)).ok_or(Error::Limit)?;
-        if total > limits.bytes { return Err(Error::Limit); }
-        Ok(ArchiveLayout { encoded_bytes: total, recipe_bytes, state_bytes, positions: self.positions() })
+        let total = ARCHIVE_HEADER_BYTES
+            .checked_add(recipe_bytes)
+            .and_then(|n| n.checked_add(state_bytes))
+            .ok_or(Error::Limit)?;
+        if total > limits.bytes {
+            return Err(Error::Limit);
+        }
+        Ok(ArchiveLayout {
+            encoded_bytes: total,
+            recipe_bytes,
+            state_bytes,
+            positions: self.positions(),
+        })
     }
 
     /// Includes exact model/codebook/probe parameters and sampling state. Protect
@@ -112,10 +129,15 @@ impl GenerationCheckpoint {
         w.finish()
     }
 
-    fn write_archive_body(&self, writer: &mut Writer<'_>, recipe_bytes: usize, state_bytes: usize)
-        -> Result<(), Error>
-    {
-        writer.bytes(DOMAIN)?; writer.size(recipe_bytes)?; writer.size(state_bytes)?;
+    fn write_archive_body(
+        &self,
+        writer: &mut Writer<'_>,
+        recipe_bytes: usize,
+        state_bytes: usize,
+    ) -> Result<(), Error> {
+        writer.bytes(DOMAIN)?;
+        writer.size(recipe_bytes)?;
+        writer.size(state_bytes)?;
         binding::write(writer, &self.recipe)?;
         state::write(writer, &self.expected)
     }
@@ -125,41 +147,77 @@ impl GenerationArchive {
     /// owner, NOT from this file. Reading does not advance or reset that owner,
     /// even if it is currently held. Exact recipe matching also protects empty
     /// prefixes and unused weights whose mismatch a prefix replay cannot reveal.
-    pub fn decode(bytes: &[u8], intended: &ReplayableGeneration, limits: ArchiveLimits) -> Result<Self, Error> {
+    pub fn decode(
+        bytes: &[u8],
+        intended: &ReplayableGeneration,
+        limits: ArchiveLimits,
+    ) -> Result<Self, Error> {
         limits.check()?;
-        if bytes.len() > limits.bytes { return Err(Error::Limit); }
+        if bytes.len() > limits.bytes {
+            return Err(Error::Limit);
+        }
         let mut r = Reader::new(bytes);
-        if r.take(DOMAIN.len())? != DOMAIN { return Err(Error::InvalidInput); }
+        if r.take(DOMAIN.len())? != DOMAIN {
+            return Err(Error::InvalidInput);
+        }
         let recipe_bytes = r.count(limits.recipe_bytes)?;
         let state_bytes = r.count(limits.state.state_bytes)?;
-        let total = ARCHIVE_HEADER_BYTES.checked_add(recipe_bytes)
-            .and_then(|n| n.checked_add(state_bytes)).ok_or(Error::Limit)?;
-        if bytes.len() != total { return Err(Error::Binding); }
+        let total = ARCHIVE_HEADER_BYTES
+            .checked_add(recipe_bytes)
+            .and_then(|n| n.checked_add(state_bytes))
+            .ok_or(Error::Limit)?;
+        if bytes.len() != total {
+            return Err(Error::Binding);
+        }
         let supplied = r.take(recipe_bytes)?;
         let mut comparison = Writer::compare(supplied);
         binding::write(&mut comparison, &intended.recipe)?;
-        if comparison.len() != supplied.len() { return Err(Error::Binding); }
+        if comparison.len() != supplied.len() {
+            return Err(Error::Binding);
+        }
         let expected = state::read(r.take(state_bytes)?, &intended.recipe, limits)?;
         r.end()?;
-        Ok(Self { recipe: Rc::clone(&intended.recipe), expected: Rc::new(expected),
-            encoded_bytes: bytes.len(), recipe_bytes })
+        Ok(Self {
+            recipe: Rc::clone(&intended.recipe),
+            expected: Rc::new(expected),
+            encoded_bytes: bytes.len(),
+            recipe_bytes,
+        })
     }
-    pub fn positions(&self) -> usize { self.expected.tokens.len() }
-    pub fn encoded_bytes(&self) -> usize { self.encoded_bytes }
-    pub fn recipe_bytes(&self) -> usize { self.recipe_bytes }
-    pub fn state_bytes(&self) -> usize { self.expected.logical_bytes }
+    pub fn positions(&self) -> usize {
+        self.expected.tokens.len()
+    }
+    pub fn encoded_bytes(&self) -> usize {
+        self.encoded_bytes
+    }
+    pub fn recipe_bytes(&self) -> usize {
+        self.recipe_bytes
+    }
+    pub fn state_bytes(&self) -> usize {
+        self.expected.logical_bytes
+    }
     pub fn layout(&self) -> ArchiveLayout {
-        ArchiveLayout { encoded_bytes: self.encoded_bytes, recipe_bytes: self.recipe_bytes,
-            state_bytes: self.state_bytes(), positions: self.positions() }
+        ArchiveLayout {
+            encoded_bytes: self.encoded_bytes,
+            recipe_bytes: self.recipe_bytes,
+            state_bytes: self.state_bytes(),
+            positions: self.positions(),
+        }
     }
 
     /// Delegate to the original verifier. Saved values remain comparisons, not
     /// assignment inputs, and every prompt/sample is learned-audited again.
     pub fn begin_replay(&self, budget: ReplayBudget) -> Result<GenerationReplay, Error> {
-        GenerationCheckpoint { recipe: Rc::clone(&self.recipe), expected: Rc::clone(&self.expected) }
-            .begin_replay(budget)
+        GenerationCheckpoint {
+            recipe: Rc::clone(&self.recipe),
+            expected: Rc::clone(&self.expected),
+        }
+        .begin_replay(budget)
     }
-    pub fn replay(&self, budget: ReplayBudget) -> Result<(ReplayableGeneration, ReplayReceipt), Error> {
+    pub fn replay(
+        &self,
+        budget: ReplayBudget,
+    ) -> Result<(ReplayableGeneration, ReplayReceipt), Error> {
         let mut replay = self.begin_replay(budget)?;
         replay.advance(self.positions())?;
         replay.finish()
@@ -169,7 +227,11 @@ impl GenerationArchive {
 impl ReplayableGeneration {
     /// Use this independently constructed owner's immutable recipe for the
     /// original archive decoder. Reading never changes this owner, even held.
-    pub fn decode_archive(&self, bytes: &[u8], limits: ArchiveLimits) -> Result<GenerationArchive, Error> {
+    pub fn decode_archive(
+        &self,
+        bytes: &[u8],
+        limits: ArchiveLimits,
+    ) -> Result<GenerationArchive, Error> {
         GenerationArchive::decode(bytes, self, limits)
     }
 }

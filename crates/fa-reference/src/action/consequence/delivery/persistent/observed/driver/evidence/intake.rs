@@ -1,10 +1,14 @@
 //! Fresh registered-source capture into the ORIGINAL one-use actor intake slot.
-use super::{FileEvidenceReport, FileOversight, FileSourceError, FileSupervisedDriver,
-    JournalError, durable_capture, evidence_error, observe};
+use super::{
+    FileEvidenceReport, FileOversight, FileSourceError, FileSupervisedDriver, JournalError,
+    durable_capture, evidence_error, observe,
+};
+use crate::Error;
 use crate::action::ElapsedTick;
 use crate::action::consequence::delivery::persistent::requests::actor::FileActorSupervisor;
-use crate::action::consequence::oversight::evidence_source::{EvidenceError, EvidenceFile, EvidenceIdentity};
-use crate::Error;
+use crate::action::consequence::oversight::evidence_source::{
+    EvidenceError, EvidenceFile, EvidenceIdentity,
+};
 
 impl FileActorSupervisor<FileOversight> {
     /// Publish one intake snapshot only after an acknowledged registered-source
@@ -23,22 +27,42 @@ impl FileActorSupervisor<FileOversight> {
     /// use fa_reference::action::consequence::oversight::evidence_source::EvidenceIdentity;
     /// fn grant(report: FileEvidenceReport<EvidenceIdentity>) -> FilePermit { report }
     /// ```
-    pub fn prepare_file_intake<S, F>(&mut self, source: &mut S, mut clock: F)
-        -> FileEvidenceReport<EvidenceIdentity>
-    where S: EvidenceFile + ?Sized, F: FnMut() -> ElapsedTick {
+    pub fn prepare_file_intake<S, F>(
+        &mut self,
+        source: &mut S,
+        mut clock: F,
+    ) -> FileEvidenceReport<EvidenceIdentity>
+    where
+        S: EvidenceFile + ?Sized,
+        F: FnMut() -> ElapsedTick,
+    {
         let mut observations = Vec::with_capacity(1);
         let mut source_updates = Vec::with_capacity(1);
         let result = (|| {
             // host_mut withdraws the old slot before returning this exclusive
             // borrow. Reentrant port/supervisor calls during I/O cannot use it.
             let mut host = self.host_mut()?;
-            if host.storage_failure().is_some() { return Err(JournalError::Unavailable); }
-            if !host.file_source_required() || host.inspect().control.suspended
-                || host.inspect().stop.is_some() { return Err(Error::WrongState.into()); }
+            if host.storage_failure().is_some() {
+                return Err(JournalError::Unavailable);
+            }
+            if !host.file_source_required()
+                || host.inspect().control.suspended
+                || host.inspect().stop.is_some()
+            {
+                return Err(Error::WrongState.into());
+            }
             let captured = durable_capture(&mut host, source, &mut clock);
-            source_updates.push(captured.as_ref().map(|value| value.identity()).map_err(Clone::clone));
+            source_updates.push(
+                captured
+                    .as_ref()
+                    .map(|value| value.identity())
+                    .map_err(Clone::clone),
+            );
             let captured = match captured {
-                Ok(value) => { observations.push(Ok(value.identity())); value }
+                Ok(value) => {
+                    observations.push(Ok(value.identity()));
+                    value
+                }
                 Err(FileSourceError::Refused(error)) => {
                     observations.push(Err(EvidenceError::Data(error)));
                     return Err(error.into());
@@ -53,22 +77,34 @@ impl FileActorSupervisor<FileOversight> {
             // lease. Neither captured bytes nor a saved tick can extend it.
             observe(&mut host, clock())?;
             let cut = host.machine.broker.capture_policy_state()?;
-            if cut.snapshot() != captured.snapshot() { return Err(Error::Binding.into()); }
+            if cut.snapshot() != captured.snapshot() {
+                return Err(Error::Binding.into());
+            }
             let revision = host.revision();
             drop(host);
             self.set_snapshot(revision, Some(captured.snapshot().clone()))?;
             Ok(captured.identity())
         })();
-        FileEvidenceReport { observations, source_updates, result }
+        FileEvidenceReport {
+            observations,
+            source_updates,
+            result,
+        }
     }
 }
 
 impl FileSupervisedDriver {
     /// Same original gateway operation, with existing helper maintenance even
     /// on failure. No second intake queue or source owner is introduced.
-    pub fn prepare_file_intake<S, F>(&mut self, source: &mut S, clock: F)
-        -> FileEvidenceReport<EvidenceIdentity>
-    where S: EvidenceFile + ?Sized, F: FnMut() -> ElapsedTick {
+    pub fn prepare_file_intake<S, F>(
+        &mut self,
+        source: &mut S,
+        clock: F,
+    ) -> FileEvidenceReport<EvidenceIdentity>
+    where
+        S: EvidenceFile + ?Sized,
+        F: FnMut() -> ElapsedTick,
+    {
         let report = self.supervisor.prepare_file_intake(source, clock);
         self.reap_helpers();
         report
@@ -88,20 +124,34 @@ impl FileActorSupervisor<FileOversight> {
     /// eligible. Clock transactions and ensuing request admission are separate;
     /// a successful report neither admits a request nor grants either effect key.
     /// The source-only port rechecks original output and request binding afterward.
-    pub fn prepare_learned_policy_intake<S, F>(&mut self, source: &mut S, mut clock: F)
-        -> FileEvidenceReport<EvidenceIdentity>
-    where S: EvidenceFile + ?Sized, F: FnMut() -> ElapsedTick {
+    pub fn prepare_learned_policy_intake<S, F>(
+        &mut self,
+        source: &mut S,
+        mut clock: F,
+    ) -> FileEvidenceReport<EvidenceIdentity>
+    where
+        S: EvidenceFile + ?Sized,
+        F: FnMut() -> ElapsedTick,
+    {
         // This prepares policy only, including explicit recovery/repair. The
         // coupled actor path checks the original completed generation first;
         // neither this read nor recovery resumes inference or admits an effect.
-        let durable = self.host().is_ok_and(|host| host.policy_only_file_source_required());
-        if durable { return self.prepare_file_intake(source, clock); }
+        let durable = self
+            .host()
+            .is_ok_and(|host| host.policy_only_file_source_required());
+        if durable {
+            return self.prepare_file_intake(source, clock);
+        }
         let mut observations = Vec::with_capacity(1);
         let result = (|| {
             let mut host = self.host_mut()?;
-            if host.storage_failure().is_some() { return Err(JournalError::Unavailable); }
+            if host.storage_failure().is_some() {
+                return Err(JournalError::Unavailable);
+            }
             let full_context_source = host.file_source_required();
-            if !host.learned_text_required() || full_context_source { return Err(Error::Binding.into()); }
+            if !host.learned_text_required() || full_context_source {
+                return Err(Error::Binding.into());
+            }
             if host.inspect().control.suspended || host.inspect().stop.is_some() {
                 return Err(Error::WrongState.into());
             }
@@ -116,15 +166,27 @@ impl FileActorSupervisor<FileOversight> {
             let members: Vec<_> = host.profile.committee.members().keys().cloned().collect();
             observe(&mut host, clock())?;
             let snapshot = super::super::learned::evidence::policy_snapshot(
-                source, scope, &members, full_context_source, &mut observations)?;
+                source,
+                scope,
+                &members,
+                full_context_source,
+                &mut observations,
+            )?;
             observe(&mut host, clock())?;
-            let identity = observations.last().and_then(|value| value.as_ref().ok()).copied()
+            let identity = observations
+                .last()
+                .and_then(|value| value.as_ref().ok())
+                .copied()
                 .ok_or(Error::Incomplete)?;
             let revision = host.revision();
             drop(host);
             self.set_snapshot(revision, Some(snapshot))?;
             Ok(identity)
         })();
-        FileEvidenceReport { observations, source_updates: Vec::new(), result }
+        FileEvidenceReport {
+            observations,
+            source_updates: Vec::new(),
+            result,
+        }
     }
 }

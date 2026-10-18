@@ -1,10 +1,12 @@
 //! Select placement, then persist the ORIGINAL independently checked cut.
 //! This is a supervisor integration, not an optimizer-owned permission path.
 use super::{FileMediationObserver, FileMediationUpdate, FileOversight, JournalError};
-use crate::action::consequence::delivery::TopologyChange;
-use crate::action::consequence::mediation::{CutCheck, CutProposal, MAX_CHECK_EDGE_VISITS};
-use crate::action::consequence::mediation::planning::{CutPlan, CutPlanOutcome, CutPlanningLimits, EnforcerCost};
 use crate::Error;
+use crate::action::consequence::delivery::TopologyChange;
+use crate::action::consequence::mediation::planning::{
+    CutPlan, CutPlanOutcome, CutPlanningLimits, EnforcerCost,
+};
+use crate::action::consequence::mediation::{CutCheck, CutProposal, MAX_CHECK_EDGE_VISITS};
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct MediationPlanningBudget {
@@ -13,7 +15,10 @@ pub struct MediationPlanningBudget {
 }
 impl Default for MediationPlanningBudget {
     fn default() -> Self {
-        Self { planning: CutPlanningLimits::default(), verification_edge_visits: MAX_CHECK_EDGE_VISITS }
+        Self {
+            planning: CutPlanningLimits::default(),
+            verification_edge_visits: MAX_CHECK_EDGE_VISITS,
+        }
     }
 }
 
@@ -47,17 +52,25 @@ impl FileMediationObserver {
     /// by the original checker. Neither can manufacture a certificate. A rejected
     /// advisory plan does not withdraw an earlier valid cut of the SAME immutable
     /// graph. Actual topology changes use update_and_plan instead.
-    pub fn plan_and_certify(&self, host: &mut FileOversight, revision: u64, epoch: u64,
-        costs: &[EnforcerCost], budget: MediationPlanningBudget)
-        -> Result<MediationPlanReceipt, JournalError>
-    {
+    pub fn plan_and_certify(
+        &self,
+        host: &mut FileOversight,
+        revision: u64,
+        epoch: u64,
+        costs: &[EnforcerCost],
+        budget: MediationPlanningBudget,
+    ) -> Result<MediationPlanReceipt, JournalError> {
         self.check_owner(host)?;
         if revision != host.revision() || epoch != host.inspect().control.ledger.epoch {
             return Err(Error::Stale.into());
         }
-        if budget.verification_edge_visits > MAX_CHECK_EDGE_VISITS { return Err(Error::Limit.into()); }
+        if budget.verification_edge_visits > MAX_CHECK_EDGE_VISITS {
+            return Err(Error::Limit.into());
+        }
         let current = host.mediation_snapshot()?;
-        if !current.available { return Err(Error::Incomplete.into()); }
+        if !current.available {
+            return Err(Error::Incomplete.into());
+        }
         let plan = current.graph.plan_minimum_cut(costs, budget.planning)?;
         let proposal = match &plan.outcome {
             CutPlanOutcome::Candidate(candidate) => candidate.proposal.clone(),
@@ -66,13 +79,31 @@ impl FileMediationObserver {
                 // empty claimed partition cannot certify a graph with actors,
                 // even if a defective planner misclassified the topology.
                 // With no gates, the original checker records InvalidInput.
-                CutProposal { graph: current.graph.clone(),
-                    gates: current.graph.spec().enforcers.iter().map(|gate| gate.node).collect(),
-                    reachable: Vec::new() }
+                CutProposal {
+                    graph: current.graph.clone(),
+                    gates: current
+                        .graph
+                        .spec()
+                        .enforcers
+                        .iter()
+                        .map(|gate| gate.node)
+                        .collect(),
+                    reachable: Vec::new(),
+                }
             }
         };
-        let checked = self.certify(host, revision, epoch, &proposal, budget.verification_edge_visits)?;
-        Ok(MediationPlanReceipt { journal_revision: host.revision(), plan, checked })
+        let checked = self.certify(
+            host,
+            revision,
+            epoch,
+            &proposal,
+            budget.verification_edge_visits,
+        )?;
+        Ok(MediationPlanReceipt {
+            journal_revision: host.revision(),
+            plan,
+            checked,
+        })
     }
 
     /// A new topology is evidence, not a tentative optimization. Commit the
@@ -85,21 +116,32 @@ impl FileMediationObserver {
     /// only while that same graph remains current and available; retrying an old
     /// operation after a newer update must not certify the wrong generation.
     /// A withdrawal stays withdrawn and cannot be repaired by this optimizer.
-    pub fn update_and_plan(&self, host: &mut FileOversight, revision: u64,
-        update: &FileMediationUpdate, costs: &[EnforcerCost], budget: MediationPlanningBudget)
-        -> Result<TopologyPlanningReceipt, JournalError>
-    {
+    pub fn update_and_plan(
+        &self,
+        host: &mut FileOversight,
+        revision: u64,
+        update: &FileMediationUpdate,
+        costs: &[EnforcerCost],
+        budget: MediationPlanningBudget,
+    ) -> Result<TopologyPlanningReceipt, JournalError> {
         let change = self.update(host, revision, update)?;
         let certification = (|| {
             let current = host.mediation_snapshot()?;
             let expected = update.next.as_ref().ok_or(Error::Incomplete)?;
-            if &current.graph != expected { return Err(Error::Stale.into()); }
-            if !current.available { return Err(Error::Incomplete.into()); }
+            if &current.graph != expected {
+                return Err(Error::Stale.into());
+            }
+            if !current.available {
+                return Err(Error::Incomplete.into());
+            }
             let revision = host.revision();
             let epoch = host.inspect().control.ledger.epoch;
             self.plan_and_certify(host, revision, epoch, costs, budget)
         })();
-        Ok(TopologyPlanningReceipt { change, certification })
+        Ok(TopologyPlanningReceipt {
+            change,
+            certification,
+        })
     }
 }
 

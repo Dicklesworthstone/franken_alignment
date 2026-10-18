@@ -8,13 +8,17 @@ pub mod incremental;
 #[path = "text/tests.rs"]
 mod tests;
 
-use super::{GenerationBudget, GenerationReport, GenerationRequest, MAX_GENERATION_TOKENS, MAX_STOP_TOKENS};
-use super::tokenizer::{ByteBpe, TokenizationBudget, TokenizationCursor, TokenizationProgress,
-    TokenizationWork, TokenizedInput, MAX_DECODE_BYTES};
 use super::super::{MonitoredSampledDecoder, MonitoringStatus, MonitoringWork};
+use super::tokenizer::{
+    ByteBpe, MAX_DECODE_BYTES, TokenizationBudget, TokenizationCursor, TokenizationProgress,
+    TokenizationWork, TokenizedInput,
+};
+use super::{
+    GenerationBudget, GenerationReport, GenerationRequest, MAX_GENERATION_TOKENS, MAX_STOP_TOKENS,
+};
+use crate::Error;
 use crate::action::consequence::activation::monitor::decoder::observation::DecoderObservation;
 use crate::action::consequence::activation::tensor::kv::decoder::{DecoderProfile, DecoderWork};
-use crate::Error;
 use std::collections::BTreeSet;
 use std::fmt;
 
@@ -45,7 +49,9 @@ pub struct TextGenerationFailure {
     pub tokenization: TokenizationWork,
 }
 impl fmt::Display for TextGenerationFailure {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result { write!(f, "{self:?}") }
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{self:?}")
+    }
 }
 impl std::error::Error for TextGenerationFailure {}
 
@@ -55,7 +61,9 @@ pub enum TextOutputError {
     InvalidUtf8(std::str::Utf8Error),
 }
 impl fmt::Display for TextOutputError {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result { write!(f, "{self:?}") }
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{self:?}")
+    }
 }
 impl std::error::Error for TextOutputError {}
 
@@ -78,10 +86,18 @@ pub struct TextGenerationReport {
     output: Result<Vec<u8>, Error>,
 }
 impl TextGenerationReport {
-    pub fn prompt(&self) -> &TokenizedInput { &self.prompt }
-    pub fn prefix_controls(&self) -> &[u32] { &self.prefix_controls }
-    pub fn generation(&self) -> &GenerationReport { &self.generation }
-    pub fn bytes(&self) -> Result<&[u8], Error> { self.output.as_deref().map_err(|error| *error) }
+    pub fn prompt(&self) -> &TokenizedInput {
+        &self.prompt
+    }
+    pub fn prefix_controls(&self) -> &[u32] {
+        &self.prefix_controls
+    }
+    pub fn generation(&self) -> &GenerationReport {
+        &self.generation
+    }
+    pub fn bytes(&self) -> Result<&[u8], Error> {
+        self.output.as_deref().map_err(|error| *error)
+    }
     /// Strict conversion only. Split or invalid UTF-8 remains available as exact
     /// bytes with the original token report, never a replacement-character string.
     pub fn utf8(&self) -> Result<&str, TextOutputError> {
@@ -91,7 +107,8 @@ impl TextGenerationReport {
 }
 impl fmt::Debug for TextGenerationReport {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("TextGenerationReport").field("prompt", &self.prompt)
+        f.debug_struct("TextGenerationReport")
+            .field("prompt", &self.prompt)
             .field("prefix_controls", &self.prefix_controls.len())
             .field("generation", &self.generation)
             .field("output_bytes", &self.output.as_ref().map(Vec::len))
@@ -119,40 +136,74 @@ pub struct TextDecoder {
 }
 impl fmt::Debug for TextDecoder {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("TextDecoder").field("decoder", &self.decoder)
-            .field("tokenizer", &self.tokenizer).finish_non_exhaustive()
+        f.debug_struct("TextDecoder")
+            .field("decoder", &self.decoder)
+            .field("tokenizer", &self.tokenizer)
+            .finish_non_exhaustive()
     }
 }
 impl TextDecoder {
     pub fn new(decoder: MonitoredSampledDecoder, tokenizer: ByteBpe) -> Result<Self, Error> {
-        if !tokenizer.binds(decoder.profile()) { return Err(Error::Binding); }
-        if decoder.position() != 0 || decoder.sampled_draws() != 0
+        if !tokenizer.binds(decoder.profile()) {
+            return Err(Error::Binding);
+        }
+        if decoder.position() != 0
+            || decoder.sampled_draws() != 0
             || decoder.status() != MonitoringStatus::Ready
-        { return Err(Error::WrongState); }
+        {
+            return Err(Error::WrongState);
+        }
         Ok(Self { decoder, tokenizer })
     }
-    pub fn profile(&self) -> &DecoderProfile { self.decoder.profile() }
-    pub fn tokenizer(&self) -> &ByteBpe { &self.tokenizer }
-    pub fn position(&self) -> u64 { self.decoder.position() }
-    pub fn status(&self) -> MonitoringStatus { self.decoder.status() }
-    pub fn observation(&self) -> DecoderObservation { self.decoder.observation() }
-    pub fn sampled_draws(&self) -> u64 { self.decoder.sampled_draws() }
-    pub fn monitoring_work(&self) -> MonitoringWork { self.decoder.monitoring_work() }
-    pub fn decoder_work(&self) -> DecoderWork { self.decoder.decoder_work() }
+    pub fn profile(&self) -> &DecoderProfile {
+        self.decoder.profile()
+    }
+    pub fn tokenizer(&self) -> &ByteBpe {
+        &self.tokenizer
+    }
+    pub fn position(&self) -> u64 {
+        self.decoder.position()
+    }
+    pub fn status(&self) -> MonitoringStatus {
+        self.decoder.status()
+    }
+    pub fn observation(&self) -> DecoderObservation {
+        self.decoder.observation()
+    }
+    pub fn sampled_draws(&self) -> u64 {
+        self.decoder.sampled_draws()
+    }
+    pub fn monitoring_work(&self) -> MonitoringWork {
+        self.decoder.monitoring_work()
+    }
+    pub fn decoder_work(&self) -> DecoderWork {
+        self.decoder.decoder_work()
+    }
 
     /// Own the decoder while tokenizing the fixed prompt cooperatively. This
     /// consumes ownership even on refusal, like into_generation. The original
     /// numerical admission still runs only after the whole prompt is available.
-    pub fn into_generation_admission(self, expected_position: u64, request: TextGenerationRequest)
-        -> Result<TextGenerationAdmission, TextGenerationFailure>
-    {
+    pub fn into_generation_admission(
+        self,
+        expected_position: u64,
+        request: TextGenerationRequest,
+    ) -> Result<TextGenerationAdmission, TextGenerationFailure> {
         let refuse = |error| TextGenerationFailure {
-            error, tokenization: TokenizationWork::default(),
+            error,
+            tokenization: TokenizationWork::default(),
         };
-        if self.status() != MonitoringStatus::Ready { return Err(refuse(Error::WrongState)); }
-        if self.position() != expected_position { return Err(refuse(Error::Stale)); }
+        if self.status() != MonitoringStatus::Ready {
+            return Err(refuse(Error::WrongState));
+        }
+        if self.position() != expected_position {
+            return Err(refuse(Error::Stale));
+        }
         let preparation = begin_text_request(&self.tokenizer, request)?;
-        Ok(TextGenerationAdmission { decoder: self, expected_position, preparation })
+        Ok(TextGenerationAdmission {
+            decoder: self,
+            expected_position,
+            preparation,
+        })
     }
 
     /// Encode ALL prompt bytes and admit all output capacity before delegating to
@@ -160,38 +211,66 @@ impl TextDecoder {
     /// special-token bypass is implemented here. Predictable prompt/context/budget
     /// refusals do not run inference; after admission, the original report retains
     /// every quiet prefix, hold, failure and consumed draw without a rewind.
-    pub fn generate(&mut self, expected_position: u64, request: TextGenerationRequest)
-        -> Result<TextGenerationReport, TextGenerationFailure>
-    {
+    pub fn generate(
+        &mut self,
+        expected_position: u64,
+        request: TextGenerationRequest,
+    ) -> Result<TextGenerationReport, TextGenerationFailure> {
         let mut work = TokenizationWork::default();
         self.generate_inner(expected_position, request, &mut work)
-            .map_err(|error| TextGenerationFailure { error, tokenization: work })
+            .map_err(|error| TextGenerationFailure {
+                error,
+                tokenization: work,
+            })
     }
 
-    fn generate_inner(&mut self, expected_position: u64, request: TextGenerationRequest,
-        work: &mut TokenizationWork) -> Result<TextGenerationReport, Error>
-    {
+    fn generate_inner(
+        &mut self,
+        expected_position: u64,
+        request: TextGenerationRequest,
+        work: &mut TokenizationWork,
+    ) -> Result<TextGenerationReport, Error> {
         let prepared = self.prepare_text(expected_position, request, work)?;
         self.run_prepared(expected_position, prepared)
     }
 
-    fn run_prepared(&mut self, expected_position: u64, prepared: PreparedText)
-        -> Result<TextGenerationReport, Error>
-    {
-        let PreparedText { encoded, prefix_controls, numerical, mut output, capacity } = prepared;
+    fn run_prepared(
+        &mut self,
+        expected_position: u64,
+        prepared: PreparedText,
+    ) -> Result<TextGenerationReport, Error> {
+        let PreparedText {
+            encoded,
+            prefix_controls,
+            numerical,
+            mut output,
+            capacity,
+        } = prepared;
         let generation = self.decoder.generate(expected_position, numerical)?;
         let decoded = append_output(&self.tokenizer, &mut output, generation.tokens(), capacity)
             .map(|()| output);
-        Ok(TextGenerationReport { prompt: encoded, prefix_controls, generation, output: decoded })
+        Ok(TextGenerationReport {
+            prompt: encoded,
+            prefix_controls,
+            generation,
+            output: decoded,
+        })
     }
 
     // One text admission path for borrowed one-shot and owned incremental runs.
     // The original numerical owner still admits the ENTIRE request before work.
-    fn prepare_text(&self, expected_position: u64, request: TextGenerationRequest,
-        work: &mut TokenizationWork) -> Result<PreparedText, Error>
-    {
-        if self.status() != MonitoringStatus::Ready { return Err(Error::WrongState); }
-        if self.position() != expected_position { return Err(Error::Stale); }
+    fn prepare_text(
+        &self,
+        expected_position: u64,
+        request: TextGenerationRequest,
+        work: &mut TokenizationWork,
+    ) -> Result<PreparedText, Error> {
+        if self.status() != MonitoringStatus::Ready {
+            return Err(Error::WrongState);
+        }
+        if self.position() != expected_position {
+            return Err(Error::Stale);
+        }
         prepare_text_request(&self.tokenizer, request, work)
     }
 }
@@ -225,11 +304,21 @@ impl fmt::Debug for TextGenerationAdmission {
     }
 }
 impl TextGenerationAdmission {
-    pub fn position(&self) -> u64 { self.decoder.position() }
-    pub fn sampled_draws(&self) -> u64 { self.decoder.sampled_draws() }
-    pub fn decoder_work(&self) -> DecoderWork { self.decoder.decoder_work() }
-    pub fn monitoring_work(&self) -> MonitoringWork { self.decoder.monitoring_work() }
-    pub fn tokenization_work(&self) -> TokenizationWork { self.preparation.cursor.work() }
+    pub fn position(&self) -> u64 {
+        self.decoder.position()
+    }
+    pub fn sampled_draws(&self) -> u64 {
+        self.decoder.sampled_draws()
+    }
+    pub fn decoder_work(&self) -> DecoderWork {
+        self.decoder.decoder_work()
+    }
+    pub fn monitoring_work(&self) -> MonitoringWork {
+        self.decoder.monitoring_work()
+    }
+    pub fn tokenization_work(&self) -> TokenizationWork {
+        self.preparation.cursor.work()
+    }
 
     /// One original tokenizer step. Terminal failure is sticky and neither
     /// completion nor repeated polling starts inference as a side effect.
@@ -244,25 +333,40 @@ impl TextGenerationAdmission {
     pub fn finish(self) -> Result<(TextDecoder, TextGenerationReport), TextGenerationFailure> {
         let (expected_position, mut decoder, prepared) = self.into_prepared()?;
         let work = prepared.encoded.work();
-        let report = decoder.run_prepared(expected_position, prepared)
-            .map_err(|error| TextGenerationFailure { error, tokenization: work })?;
+        let report = decoder
+            .run_prepared(expected_position, prepared)
+            .map_err(|error| TextGenerationFailure {
+                error,
+                tokenization: work,
+            })?;
         Ok((decoder, report))
     }
 
     // Only the original text paths may attach this private preparation to its
     // original owner. No profile-only rebinding or re-tokenization is permitted.
     fn into_prepared(self) -> Result<(u64, TextDecoder, PreparedText), TextGenerationFailure> {
-        let Self { decoder, expected_position, preparation } = self;
+        let Self {
+            decoder,
+            expected_position,
+            preparation,
+        } = self;
         let prepared = preparation.finish()?;
         Ok((expected_position, decoder, prepared))
     }
 
     pub fn cancel(self) -> CancelledTextAdmission {
-        let Self { decoder, preparation, .. } = self;
+        let Self {
+            decoder,
+            preparation,
+            ..
+        } = self;
         let cancelled = CancelledTextAdmission {
-            position: decoder.position(), sampled_draws: decoder.sampled_draws(),
-            decoder_work: decoder.decoder_work(), monitoring_work: decoder.monitoring_work(),
-            tokenization: preparation.cursor.work(), failure: preparation.failure,
+            position: decoder.position(),
+            sampled_draws: decoder.sampled_draws(),
+            decoder_work: decoder.decoder_work(),
+            monitoring_work: decoder.monitoring_work(),
+            tokenization: preparation.cursor.work(),
+            failure: preparation.failure,
         };
         drop(preparation);
         drop(decoder);
@@ -282,12 +386,24 @@ pub struct CancelledTextAdmission {
     failure: Option<Error>,
 }
 impl CancelledTextAdmission {
-    pub fn position(&self) -> u64 { self.position }
-    pub fn sampled_draws(&self) -> u64 { self.sampled_draws }
-    pub fn decoder_work(&self) -> DecoderWork { self.decoder_work }
-    pub fn monitoring_work(&self) -> MonitoringWork { self.monitoring_work }
-    pub fn tokenization_work(&self) -> TokenizationWork { self.tokenization }
-    pub fn failure(&self) -> Option<Error> { self.failure }
+    pub fn position(&self) -> u64 {
+        self.position
+    }
+    pub fn sampled_draws(&self) -> u64 {
+        self.sampled_draws
+    }
+    pub fn decoder_work(&self) -> DecoderWork {
+        self.decoder_work
+    }
+    pub fn monitoring_work(&self) -> MonitoringWork {
+        self.monitoring_work
+    }
+    pub fn tokenization_work(&self) -> TokenizationWork {
+        self.tokenization
+    }
+    pub fn failure(&self) -> Option<Error> {
+        self.failure
+    }
 }
 
 struct PromptPreparation {
@@ -303,77 +419,150 @@ impl PromptPreparation {
     fn advance(&mut self) -> Result<TokenizationProgress, TextGenerationFailure> {
         self.cursor.advance().map_err(|failure| {
             self.failure = Some(failure.error);
-            TextGenerationFailure { error: failure.error, tokenization: failure.work }
+            TextGenerationFailure {
+                error: failure.error,
+                tokenization: failure.work,
+            }
         })
     }
 
     fn finish(self) -> Result<PreparedText, TextGenerationFailure> {
-        let Self { cursor, prefix_controls, max_new_tokens, stop_tokens,
-            generation, capacity, .. } = self;
+        let Self {
+            cursor,
+            prefix_controls,
+            max_new_tokens,
+            stop_tokens,
+            generation,
+            capacity,
+            ..
+        } = self;
         let encoded = cursor.finish().map_err(|failure| TextGenerationFailure {
-            error: failure.error, tokenization: failure.work,
+            error: failure.error,
+            tokenization: failure.work,
         })?;
         let work = encoded.work();
         (|| {
-            let count = encoded.tokens().len().checked_add(prefix_controls.len()).ok_or(Error::Limit)?;
-            if count > MAX_GENERATION_TOKENS { return Err(Error::Limit); }
+            let count = encoded
+                .tokens()
+                .len()
+                .checked_add(prefix_controls.len())
+                .ok_or(Error::Limit)?;
+            if count > MAX_GENERATION_TOKENS {
+                return Err(Error::Limit);
+            }
             let mut prompt = Vec::new();
             prompt.try_reserve_exact(count).map_err(|_| Error::Limit)?;
             prompt.extend_from_slice(&prefix_controls);
             prompt.extend_from_slice(encoded.tokens());
             // Full output allocation still precedes original numerical admission.
             let mut output = Vec::new();
-            output.try_reserve_exact(capacity).map_err(|_| Error::Limit)?;
-            Ok(PreparedText { encoded, prefix_controls, output, capacity,
-                numerical: GenerationRequest { prompt, max_new_tokens,
-                    stop_tokens, budget: generation } })
-        })().map_err(|error| TextGenerationFailure { error, tokenization: work })
+            output
+                .try_reserve_exact(capacity)
+                .map_err(|_| Error::Limit)?;
+            Ok(PreparedText {
+                encoded,
+                prefix_controls,
+                output,
+                capacity,
+                numerical: GenerationRequest {
+                    prompt,
+                    max_new_tokens,
+                    stop_tokens,
+                    budget: generation,
+                },
+            })
+        })()
+        .map_err(|error| TextGenerationFailure {
+            error,
+            tokenization: work,
+        })
     }
 }
 
 // Shared by in-memory and durable text owners. All paths use the same original
 // request guards, tokenizer cursor and complete-prompt construction.
-pub(crate) fn prepare_text_request(tokenizer: &ByteBpe, request: TextGenerationRequest,
-    work: &mut TokenizationWork) -> Result<PreparedText, Error>
-{
+pub(crate) fn prepare_text_request(
+    tokenizer: &ByteBpe,
+    request: TextGenerationRequest,
+    work: &mut TokenizationWork,
+) -> Result<PreparedText, Error> {
     let result = (|| {
         let mut preparation = begin_text_request(tokenizer, request)?;
         while preparation.advance()? != TokenizationProgress::Complete {}
         preparation.finish()
     })();
     match result {
-        Ok(prepared) => { *work = prepared.encoded.work(); Ok(prepared) }
-        Err(failure) => { *work = failure.tokenization; Err(failure.error) }
+        Ok(prepared) => {
+            *work = prepared.encoded.work();
+            Ok(prepared)
+        }
+        Err(failure) => {
+            *work = failure.tokenization;
+            Err(failure.error)
+        }
     }
 }
 
-fn begin_text_request(tokenizer: &ByteBpe, request: TextGenerationRequest)
-    -> Result<PromptPreparation, TextGenerationFailure>
-{
+fn begin_text_request(
+    tokenizer: &ByteBpe,
+    request: TextGenerationRequest,
+) -> Result<PromptPreparation, TextGenerationFailure> {
     let capacity = (|| {
-        if request.max_new_tokens > MAX_GENERATION_TOKENS || request.stop_tokens.len() > MAX_STOP_TOKENS
-            || request.prefix_controls.len() > MAX_PREFIX_CONTROLS || request.max_output_bytes > MAX_DECODE_BYTES
-        { return Err(Error::Limit); }
+        if request.max_new_tokens > MAX_GENERATION_TOKENS
+            || request.stop_tokens.len() > MAX_STOP_TOKENS
+            || request.prefix_controls.len() > MAX_PREFIX_CONTROLS
+            || request.max_output_bytes > MAX_DECODE_BYTES
+        {
+            return Err(Error::Limit);
+        }
         for control in &request.prefix_controls {
-            if !tokenizer.is_control(*control)? { return Err(Error::Binding); }
+            if !tokenizer.is_control(*control)? {
+                return Err(Error::Binding);
+            }
         }
         let mut stops = BTreeSet::new();
         for token in &request.stop_tokens {
             tokenizer.is_control(*token)?; // also validate content stop IDs
-            if !stops.insert(*token) { return Err(Error::Duplicate); }
+            if !stops.insert(*token) {
+                return Err(Error::Duplicate);
+            }
         }
         if request.max_new_tokens != 0
-            && tokenizer.control_tokens().iter().any(|token| !stops.contains(token))
-        { return Err(Error::Incomplete); }
-        let capacity = request.max_new_tokens.checked_mul(tokenizer.max_content_bytes()).ok_or(Error::Limit)?;
-        if capacity > request.max_output_bytes { return Err(Error::Limit); }
+            && tokenizer
+                .control_tokens()
+                .iter()
+                .any(|token| !stops.contains(token))
+        {
+            return Err(Error::Incomplete);
+        }
+        let capacity = request
+            .max_new_tokens
+            .checked_mul(tokenizer.max_content_bytes())
+            .ok_or(Error::Limit)?;
+        if capacity > request.max_output_bytes {
+            return Err(Error::Limit);
+        }
         Ok(capacity)
-    })().map_err(|error| TextGenerationFailure { error, tokenization: TokenizationWork::default() })?;
-    let cursor = tokenizer.begin_encode(&request.prompt, request.tokenization)
-        .map_err(|failure| TextGenerationFailure { error: failure.error, tokenization: failure.work })?;
-    Ok(PromptPreparation { cursor, prefix_controls: request.prefix_controls,
-        max_new_tokens: request.max_new_tokens, stop_tokens: request.stop_tokens,
-        generation: request.generation, capacity, failure: None })
+    })()
+    .map_err(|error| TextGenerationFailure {
+        error,
+        tokenization: TokenizationWork::default(),
+    })?;
+    let cursor = tokenizer
+        .begin_encode(&request.prompt, request.tokenization)
+        .map_err(|failure| TextGenerationFailure {
+            error: failure.error,
+            tokenization: failure.work,
+        })?;
+    Ok(PromptPreparation {
+        cursor,
+        prefix_controls: request.prefix_controls,
+        max_new_tokens: request.max_new_tokens,
+        stop_tokens: request.stop_tokens,
+        generation: request.generation,
+        capacity,
+        failure: None,
+    })
 }
 
 pub(crate) struct PreparedText {
@@ -389,39 +578,62 @@ impl PreparedText {
     /// reserved by original text admission. It cannot create a report or owner.
     #[cfg(unix)]
     pub(crate) fn decode_output(mut self, tokens: &[u32]) -> Result<Vec<u8>, Error> {
-        append_output(self.encoded.tokenizer(), &mut self.output, tokens, self.capacity)?;
+        append_output(
+            self.encoded.tokenizer(),
+            &mut self.output,
+            tokens,
+            self.capacity,
+        )?;
         Ok(self.output)
     }
 
     #[cfg(unix)]
     pub(crate) fn finish(mut self, generation: GenerationReport) -> TextGenerationReport {
-        let output = append_output(self.encoded.tokenizer(), &mut self.output,
-            generation.tokens(), self.capacity).map(|()| self.output);
-        TextGenerationReport { prompt: self.encoded, prefix_controls: self.prefix_controls,
-            generation, output }
+        let output = append_output(
+            self.encoded.tokenizer(),
+            &mut self.output,
+            generation.tokens(),
+            self.capacity,
+        )
+        .map(|()| self.output);
+        TextGenerationReport {
+            prompt: self.encoded,
+            prefix_controls: self.prefix_controls,
+            generation,
+            output,
+        }
     }
 }
 
 // Validate the entire new token slice before appending any bytes. Capacity was
 // reserved BEFORE inference, so output retention cannot request more allocation.
 // This only accepts the original cursor's released IDs, not sampled-but-held IDs.
-fn append_output(tokenizer: &ByteBpe, output: &mut Vec<u8>, tokens: &[u32], capacity: usize)
-    -> Result<(), Error>
-{
+fn append_output(
+    tokenizer: &ByteBpe,
+    output: &mut Vec<u8>,
+    tokens: &[u32],
+    capacity: usize,
+) -> Result<(), Error> {
     let mut bytes = output.len();
     for token in tokens {
-        bytes = bytes.checked_add(tokenizer.content_bytes(*token)?.len()).ok_or(Error::Limit)?;
-        if bytes > capacity || bytes > output.capacity() { return Err(Error::Limit); }
+        bytes = bytes
+            .checked_add(tokenizer.content_bytes(*token)?.len())
+            .ok_or(Error::Limit)?;
+        if bytes > capacity || bytes > output.capacity() {
+            return Err(Error::Limit);
+        }
     }
-    for token in tokens { output.extend_from_slice(tokenizer.content_bytes(*token)?); }
+    for token in tokens {
+        output.extend_from_slice(tokenizer.content_bytes(*token)?);
+    }
     Ok(())
 }
 
 #[cfg(test)]
 mod admission_tests {
-    use super::*;
     use super::super::GenerationFinish;
     use super::tests::{request, run};
+    use super::*;
 
     fn drain(mut admission: TextGenerationAdmission) -> TextGenerationAdmission {
         let position = admission.position();
@@ -434,7 +646,9 @@ mod admission_tests {
             assert_eq!(admission.sampled_draws(), draws);
             assert_eq!(admission.decoder_work(), decoder);
             assert_eq!(admission.monitoring_work(), monitoring);
-            if progress == TokenizationProgress::Complete { return admission; }
+            if progress == TokenizationProgress::Complete {
+                return admission;
+            }
         }
     }
 
@@ -442,7 +656,9 @@ mod admission_tests {
     fn cooperative_prompt_admission_matches_original_numerical_generation() {
         let mut synchronous = run(65, None);
         let expected = synchronous.generate(0, request(b"ab", 3)).unwrap();
-        let pending = run(65, None).into_generation_admission(0, request(b"ab", 3)).unwrap();
+        let pending = run(65, None)
+            .into_generation_admission(0, request(b"ab", 3))
+            .unwrap();
         assert_eq!(pending.tokenization_work().pair_lookups, 0);
         let (owner, actual) = drain(pending).finish().unwrap();
         assert_eq!(actual.prompt().tokens(), &[258]);
@@ -465,7 +681,9 @@ mod admission_tests {
         let position = owner.position();
         let decoder = owner.decoder_work();
         let monitoring = owner.monitoring_work();
-        let mut pending = owner.into_generation_admission(position, request(b"abab", 3)).unwrap();
+        let mut pending = owner
+            .into_generation_admission(position, request(b"abab", 3))
+            .unwrap();
         pending.advance().unwrap();
         let work = pending.tokenization_work();
         let cancelled = pending.cancel();
@@ -482,7 +700,9 @@ mod admission_tests {
     fn pending_finish_refuses_without_running_prefill_or_sampling() {
         let owner = run(65, None);
         let observation = owner.observation();
-        let pending = owner.into_generation_admission(0, request(b"ab", 2)).unwrap();
+        let pending = owner
+            .into_generation_admission(0, request(b"ab", 2))
+            .unwrap();
         assert_eq!(pending.position(), 0);
         assert_eq!(pending.sampled_draws(), 0);
         let failure = pending.finish().unwrap_err();
@@ -496,15 +716,21 @@ mod admission_tests {
     fn request_guards_precede_tokenization_and_cannot_widen_control_policy() {
         let mut missing = request(b"ab", 2);
         missing.stop_tokens.pop();
-        let error = run(65, None).into_generation_admission(0, missing).unwrap_err();
+        let error = run(65, None)
+            .into_generation_admission(0, missing)
+            .unwrap_err();
         assert_eq!(error.error, Error::Incomplete);
         assert_eq!(error.tokenization, TokenizationWork::default());
-        let stale = run(65, None).into_generation_admission(1, request(b"ab", 2)).unwrap_err();
+        let stale = run(65, None)
+            .into_generation_admission(1, request(b"ab", 2))
+            .unwrap_err();
         assert_eq!(stale.error, Error::Stale);
         assert_eq!(stale.tokenization, TokenizationWork::default());
         let mut small = request(b"ab", 2);
         small.max_output_bytes = 3;
-        let error = run(65, None).into_generation_admission(0, small).unwrap_err();
+        let error = run(65, None)
+            .into_generation_admission(0, small)
+            .unwrap_err();
         assert_eq!(error.error, Error::Limit);
         assert_eq!(error.tokenization, TokenizationWork::default());
     }
@@ -532,14 +758,21 @@ mod admission_tests {
 
     #[test]
     fn original_monitor_hold_survives_the_admission_handoff() {
-        let pending = run(33, Some(33)).into_generation_admission(0, request(b"ab", 3)).unwrap();
+        let pending = run(33, Some(33))
+            .into_generation_admission(0, request(b"ab", 3))
+            .unwrap();
         let (owner, report) = drain(pending).finish().unwrap();
         assert_eq!(report.generation().finish(), GenerationFinish::Held);
         assert!(report.bytes().unwrap().is_empty());
         assert_eq!(owner.status(), MonitoringStatus::Held);
         assert_eq!(owner.sampled_draws(), 1);
         let position = owner.position();
-        assert_eq!(owner.into_generation_admission(position, request(b"ab", 1))
-            .unwrap_err().error, Error::WrongState);
+        assert_eq!(
+            owner
+                .into_generation_admission(position, request(b"ab", 1))
+                .unwrap_err()
+                .error,
+            Error::WrongState
+        );
     }
 }

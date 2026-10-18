@@ -10,9 +10,9 @@ pub use execution::{
     PreparedKvExperimentRestore, PreparedKvTwinRestore,
 };
 
+use super::super::TensorContract;
 use super::image::{KvImage, KvImageDescriptor};
 use super::restore::encode_exact;
-use super::super::TensorContract;
 use crate::Error;
 use std::collections::BTreeMap;
 use std::fmt;
@@ -24,7 +24,10 @@ pub const MAX_KV_EDITS_PER_FORK: usize = 1024;
 pub const MAX_KV_RETAINED_EDITS: usize = 65_536;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
-pub enum KvSide { Key, Value }
+pub enum KvSide {
+    Key,
+    Value,
+}
 
 /// Absolute position, stored cache head and channel; not a query-head index.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
@@ -66,15 +69,22 @@ impl KvExperimentLimits {
         if self.branches == 0 || self.retained_edits == 0 || self.resolution_depth == 0 {
             return Err(Error::InvalidInput);
         }
-        if self.branches > MAX_KV_BRANCHES || self.retained_edits > MAX_KV_RETAINED_EDITS
+        if self.branches > MAX_KV_BRANCHES
+            || self.retained_edits > MAX_KV_RETAINED_EDITS
             || self.resolution_depth > MAX_KV_BRANCH_DEPTH
-        { return Err(Error::Limit); }
+        {
+            return Err(Error::Limit);
+        }
         Ok(())
     }
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum KvBranchKind { Baseline, Intervention, Rebase }
+pub enum KvBranchKind {
+    Baseline,
+    Intervention,
+    Rebase,
+}
 
 /// Provenance of experimental data, not a claim that an actor produced it.
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -96,8 +106,10 @@ struct Base {
 
 impl fmt::Debug for Base {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("Base").field("experiment", &self.experiment)
-            .field("descriptor", self.image.descriptor()).field("scope", &self.scope)
+        f.debug_struct("Base")
+            .field("experiment", &self.experiment)
+            .field("descriptor", self.image.descriptor())
+            .field("scope", &self.scope)
             .finish_non_exhaustive()
     }
 }
@@ -115,10 +127,14 @@ struct Node {
 impl fmt::Debug for Node {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         // Do not recursively render two aliases of every ancestor or dump values.
-        f.debug_struct("Node").field("id", &self.id).field("kind", &self.kind)
-            .field("depth", &self.depth).field("parent", &self.parent.as_ref().map(|n| n.id))
+        f.debug_struct("Node")
+            .field("id", &self.id)
+            .field("kind", &self.kind)
+            .field("depth", &self.depth)
+            .field("parent", &self.parent.as_ref().map(|n| n.id))
             .field("origin", &self.origin.as_ref().map(|n| n.id))
-            .field("edit_count", &self.edits.len()).finish()
+            .field("edit_count", &self.edits.len())
+            .finish()
     }
 }
 
@@ -144,15 +160,23 @@ impl fmt::Debug for Node {
 /// fn relabel(branch: KvBranch) -> KvImage { branch }
 /// ```
 #[derive(Clone, Debug)]
-pub struct KvBranch { base: Rc<Base>, node: Rc<Node> }
+pub struct KvBranch {
+    base: Rc<Base>,
+    node: Rc<Node>,
+}
 
 impl KvBranch {
-    pub fn id(&self) -> u64 { self.node.id }
+    pub fn id(&self) -> u64 {
+        self.node.id
+    }
     pub fn basis(&self) -> KvBranchBasis {
         KvBranchBasis {
-            experiment: self.base.experiment, branch: self.node.id, kind: self.node.kind,
+            experiment: self.base.experiment,
+            branch: self.node.id,
+            kind: self.node.kind,
             derived_from: self.node.origin.as_ref().map(|node| node.id),
-            resolution_depth: self.node.depth, source: self.base.image.descriptor().clone(),
+            resolution_depth: self.node.depth,
+            source: self.base.image.descriptor().clone(),
         }
     }
 
@@ -161,7 +185,9 @@ impl KvBranch {
         let original = baseline_bits(&self.base.image, cell)?;
         let mut next = Some(self.node.as_ref());
         while let Some(node) = next {
-            if let Some(edit) = node.edits.get(&cell) { return Ok(edit.replacement_bits); }
+            if let Some(edit) = node.edits.get(&cell) {
+                return Ok(edit.replacement_bits);
+            }
             next = node.parent.as_deref();
         }
         Ok(original)
@@ -199,7 +225,13 @@ impl KvBranch {
         for (cell, edit) in effective {
             let original = baseline_bits(&self.base.image, cell)?;
             if original != edit.replacement_bits {
-                changes.insert(cell, KvEdit { expected_bits: original, ..edit });
+                changes.insert(
+                    cell,
+                    KvEdit {
+                        expected_bits: original,
+                        ..edit
+                    },
+                );
             }
         }
         Ok(changes)
@@ -218,7 +250,10 @@ pub struct KvExperiment {
 
 impl KvExperiment {
     pub fn new(
-        id: u64, image: KvImage, scope: KvEditScope, limits: KvExperimentLimits,
+        id: u64,
+        image: KvImage,
+        scope: KvEditScope,
+        limits: KvExperimentLimits,
     ) -> Result<Self, Error> {
         limits.validate()?;
         image.descriptor().encoded_len()?;
@@ -226,43 +261,94 @@ impl KvExperiment {
             return Err(Error::InvalidInput);
         }
         let count = u64::try_from(scope.token_count).map_err(|_| Error::Overflow)?;
-        let end = scope.first_position.checked_add(count).ok_or(Error::Overflow)?;
+        let end = scope
+            .first_position
+            .checked_add(count)
+            .ok_or(Error::Overflow)?;
         let descriptor = image.descriptor();
-        let image_end = descriptor.first_position.checked_add(descriptor.token_count as u64)
+        let image_end = descriptor
+            .first_position
+            .checked_add(descriptor.token_count as u64)
             .ok_or(Error::Overflow)?;
         if scope.first_position < descriptor.first_position || end > image_end {
             return Err(Error::Missing);
         }
-        let node = Rc::new(Node { id: 0, kind: KvBranchKind::Baseline, depth: 0,
-            parent: None, origin: None, edits: BTreeMap::new() });
-        let base = Rc::new(Base { experiment: id, image, scope, end });
-        let root = KvBranch { base, node: Rc::clone(&node) };
-        Ok(Self { root, nodes: BTreeMap::from([(0, node)]), limits, retained_edits: 0 })
+        let node = Rc::new(Node {
+            id: 0,
+            kind: KvBranchKind::Baseline,
+            depth: 0,
+            parent: None,
+            origin: None,
+            edits: BTreeMap::new(),
+        });
+        let base = Rc::new(Base {
+            experiment: id,
+            image,
+            scope,
+            end,
+        });
+        let root = KvBranch {
+            base,
+            node: Rc::clone(&node),
+        };
+        Ok(Self {
+            root,
+            nodes: BTreeMap::from([(0, node)]),
+            limits,
+            retained_edits: 0,
+        })
     }
 
-    pub fn baseline(&self) -> KvBranch { self.root.clone() }
-    pub fn branch_count(&self) -> usize { self.nodes.len() - 1 }
-    pub fn retained_edit_count(&self) -> usize { self.retained_edits }
+    pub fn baseline(&self) -> KvBranch {
+        self.root.clone()
+    }
+    pub fn branch_count(&self) -> usize {
+        self.nodes.len() - 1
+    }
+    pub fn retained_edit_count(&self) -> usize {
+        self.retained_edits
+    }
 
     /// All Result-producing validation precedes publication of the new node.
     /// An empty edit set is an explicit unchanged control, not a free new budget.
-    pub fn fork(&mut self, id: u64, parent: &KvBranch, edits: &[KvEdit]) -> Result<KvBranch, Error> {
+    pub fn fork(
+        &mut self,
+        id: u64,
+        parent: &KvBranch,
+        edits: &[KvEdit],
+    ) -> Result<KvBranch, Error> {
         self.check_new_node(id, parent)?;
-        if edits.len() > MAX_KV_EDITS_PER_FORK { return Err(Error::Limit); }
+        if edits.len() > MAX_KV_EDITS_PER_FORK {
+            return Err(Error::Limit);
+        }
         let depth = parent.node.depth.checked_add(1).ok_or(Error::Overflow)?;
-        if depth > self.limits.resolution_depth { return Err(Error::Limit); }
+        if depth > self.limits.resolution_depth {
+            return Err(Error::Limit);
+        }
         let retained = self.checked_retention(edits.len())?;
         let mut staged = BTreeMap::new();
         for edit in edits {
             self.check_edit_scope(edit.cell)?;
-            if parent.bits(edit.cell)? != edit.expected_bits { return Err(Error::Stale); }
+            if parent.bits(edit.cell)? != edit.expected_bits {
+                return Err(Error::Stale);
+            }
             let contract = contract(&self.root.base.image, edit.cell.side);
-            encode_exact(edit.replacement_bits, contract.encoding(), contract.byte_order())?;
-            if staged.insert(edit.cell, *edit).is_some() { return Err(Error::Duplicate); }
+            encode_exact(
+                edit.replacement_bits,
+                contract.encoding(),
+                contract.byte_order(),
+            )?;
+            if staged.insert(edit.cell, *edit).is_some() {
+                return Err(Error::Duplicate);
+            }
         }
         let node = Node {
-            id, kind: KvBranchKind::Intervention, depth,
-            parent: Some(Rc::clone(&parent.node)), origin: Some(Rc::clone(&parent.node)), edits: staged,
+            id,
+            kind: KvBranchKind::Intervention,
+            depth,
+            parent: Some(Rc::clone(&parent.node)),
+            origin: Some(Rc::clone(&parent.node)),
+            edits: staged,
         };
         Ok(self.publish(node, retained))
     }
@@ -275,33 +361,53 @@ impl KvExperiment {
         let retained = self.checked_retention(staged.len())?;
         // Separate point lookups check the composed map before publication.
         for edit in staged.values() {
-            if source.bits(edit.cell)? != edit.replacement_bits { return Err(Error::Binding); }
+            if source.bits(edit.cell)? != edit.replacement_bits {
+                return Err(Error::Binding);
+            }
         }
         let node = Node {
-            id, kind: KvBranchKind::Rebase, depth: 1,
-            parent: Some(Rc::clone(&self.root.node)), origin: Some(Rc::clone(&source.node)), edits: staged,
+            id,
+            kind: KvBranchKind::Rebase,
+            depth: 1,
+            parent: Some(Rc::clone(&self.root.node)),
+            origin: Some(Rc::clone(&source.node)),
+            edits: staged,
         };
         Ok(self.publish(node, retained))
     }
 
     fn check_new_node(&self, id: u64, source: &KvBranch) -> Result<(), Error> {
         self.check_branch(source)?;
-        if id == 0 { return Err(Error::InvalidInput); }
-        if self.nodes.contains_key(&id) { return Err(Error::Duplicate); }
-        if self.branch_count() >= self.limits.branches { return Err(Error::Limit); }
+        if id == 0 {
+            return Err(Error::InvalidInput);
+        }
+        if self.nodes.contains_key(&id) {
+            return Err(Error::Duplicate);
+        }
+        if self.branch_count() >= self.limits.branches {
+            return Err(Error::Limit);
+        }
         Ok(())
     }
 
     fn check_branch(&self, branch: &KvBranch) -> Result<(), Error> {
         if !Rc::ptr_eq(&self.root.base, &branch.base)
-            || !self.nodes.get(&branch.node.id).is_some_and(|node| Rc::ptr_eq(node, &branch.node))
-        { return Err(Error::Binding); }
+            || !self
+                .nodes
+                .get(&branch.node.id)
+                .is_some_and(|node| Rc::ptr_eq(node, &branch.node))
+        {
+            return Err(Error::Binding);
+        }
         Ok(())
     }
 
     fn check_edit_scope(&self, cell: KvCell) -> Result<(), Error> {
         let base = &self.root.base;
-        let side = match cell.side { KvSide::Key => base.scope.keys, KvSide::Value => base.scope.values };
+        let side = match cell.side {
+            KvSide::Key => base.scope.keys,
+            KvSide::Value => base.scope.values,
+        };
         if !side || cell.position < base.scope.first_position || cell.position >= base.end {
             return Err(Error::Binding);
         }
@@ -310,8 +416,13 @@ impl KvExperiment {
     }
 
     fn checked_retention(&self, count: usize) -> Result<usize, Error> {
-        let retained = self.retained_edits.checked_add(count).ok_or(Error::Overflow)?;
-        if retained > self.limits.retained_edits { return Err(Error::Limit); }
+        let retained = self
+            .retained_edits
+            .checked_add(count)
+            .ok_or(Error::Overflow)?;
+        if retained > self.limits.retained_edits {
+            return Err(Error::Limit);
+        }
         Ok(retained)
     }
 
@@ -319,59 +430,157 @@ impl KvExperiment {
         let node = Rc::new(node);
         self.nodes.insert(node.id, Rc::clone(&node));
         self.retained_edits = retained;
-        KvBranch { base: Rc::clone(&self.root.base), node }
+        KvBranch {
+            base: Rc::clone(&self.root.base),
+            node,
+        }
     }
 }
 
 fn contract(image: &KvImage, side: KvSide) -> &TensorContract {
-    match side { KvSide::Key => image.descriptor().contract.keys(), KvSide::Value => image.descriptor().contract.values() }
+    match side {
+        KvSide::Key => image.descriptor().contract.keys(),
+        KvSide::Value => image.descriptor().contract.values(),
+    }
 }
 
 fn baseline_bits(image: &KvImage, cell: KvCell) -> Result<u32, Error> {
     let contract = contract(image, cell.side);
-    if cell.head >= contract.heads() || cell.channel >= contract.channels() { return Err(Error::InvalidInput); }
+    if cell.head >= contract.heads() || cell.channel >= contract.channels() {
+        return Err(Error::InvalidInput);
+    }
     let token = image.token(cell.position)?;
-    let source = match cell.side { KvSide::Key => token.key(), KvSide::Value => token.value() };
-    source.words.get(cell.head * contract.channels() + cell.channel).copied().ok_or(Error::Missing)
+    let source = match cell.side {
+        KvSide::Key => token.key(),
+        KvSide::Value => token.value(),
+    };
+    source
+        .words
+        .get(cell.head * contract.channels() + cell.channel)
+        .copied()
+        .ok_or(Error::Missing)
 }
 
 #[cfg(test)]
 mod tests {
+    use super::super::{KvAppend, KvBudget, KvCapture, KvContract};
     use super::*;
     use crate::action::consequence::activation::CaptureProfile;
     use crate::action::consequence::activation::tensor::{
         BufferIdentity, ByteOrder, HostTensor, ScalarEncoding, TensorLayout,
     };
-    use super::super::{KvAppend, KvBudget, KvCapture, KvContract};
 
     fn image() -> KvImage {
-        let profile = CaptureProfile { tenant: 1, model: 2, model_generation: 3, tap: 4, layout_generation: 5 };
-        let keys = TensorContract::new(profile, ScalarEncoding::Binary32, ByteOrder::Little, 1, 2).unwrap();
-        let values = TensorContract::new(CaptureProfile { tap: 6, ..profile }, ScalarEncoding::Binary32, ByteOrder::Little, 1, 2).unwrap();
-        let mut capture = KvCapture::new(KvContract::new(keys, values, 2).unwrap(), 7, 0, 10, 20,
-            KvBudget { positions: 2, normalized_values: 8 }).unwrap();
-        let layout = TensorLayout::new([1, 2, 1, 2], [16, 8, 8, 4], 0, ScalarEncoding::Binary32, ByteOrder::Little).unwrap();
-        let kb: Vec<_> = [1_f32, 2.0, 3.0, 4.0].into_iter().flat_map(f32::to_le_bytes).collect();
-        let vb: Vec<_> = [5_f32, 6.0, 7.0, 8.0].into_iter().flat_map(f32::to_le_bytes).collect();
-        capture.append(0, KvAppend {
-            keys: HostTensor { identity: BufferIdentity { object: 1, generation: 1 }, layout: &layout, bytes: &kb },
-            values: HostTensor { identity: BufferIdentity { object: 2, generation: 1 }, layout: &layout, bytes: &vb },
-            first_token: 0, token_count: 2, buffer_first_position: 10, first_sequence: 20,
-        }).unwrap();
+        let profile = CaptureProfile {
+            tenant: 1,
+            model: 2,
+            model_generation: 3,
+            tap: 4,
+            layout_generation: 5,
+        };
+        let keys = TensorContract::new(profile, ScalarEncoding::Binary32, ByteOrder::Little, 1, 2)
+            .unwrap();
+        let values = TensorContract::new(
+            CaptureProfile { tap: 6, ..profile },
+            ScalarEncoding::Binary32,
+            ByteOrder::Little,
+            1,
+            2,
+        )
+        .unwrap();
+        let mut capture = KvCapture::new(
+            KvContract::new(keys, values, 2).unwrap(),
+            7,
+            0,
+            10,
+            20,
+            KvBudget {
+                positions: 2,
+                normalized_values: 8,
+            },
+        )
+        .unwrap();
+        let layout = TensorLayout::new(
+            [1, 2, 1, 2],
+            [16, 8, 8, 4],
+            0,
+            ScalarEncoding::Binary32,
+            ByteOrder::Little,
+        )
+        .unwrap();
+        let kb: Vec<_> = [1_f32, 2.0, 3.0, 4.0]
+            .into_iter()
+            .flat_map(f32::to_le_bytes)
+            .collect();
+        let vb: Vec<_> = [5_f32, 6.0, 7.0, 8.0]
+            .into_iter()
+            .flat_map(f32::to_le_bytes)
+            .collect();
+        capture
+            .append(
+                0,
+                KvAppend {
+                    keys: HostTensor {
+                        identity: BufferIdentity {
+                            object: 1,
+                            generation: 1,
+                        },
+                        layout: &layout,
+                        bytes: &kb,
+                    },
+                    values: HostTensor {
+                        identity: BufferIdentity {
+                            object: 2,
+                            generation: 1,
+                        },
+                        layout: &layout,
+                        bytes: &vb,
+                    },
+                    first_token: 0,
+                    token_count: 2,
+                    buffer_first_position: 10,
+                    first_sequence: 20,
+                },
+            )
+            .unwrap();
         capture.snapshot(1).unwrap()
     }
 
     fn limits() -> KvExperimentLimits {
-        KvExperimentLimits { branches: 16, retained_edits: 64, resolution_depth: 2 }
+        KvExperimentLimits {
+            branches: 16,
+            retained_edits: 64,
+            resolution_depth: 2,
+        }
     }
     fn experiment() -> KvExperiment {
-        KvExperiment::new(1, image(), KvEditScope { first_position: 10, token_count: 2, keys: true, values: true }, limits()).unwrap()
+        KvExperiment::new(
+            1,
+            image(),
+            KvEditScope {
+                first_position: 10,
+                token_count: 2,
+                keys: true,
+                values: true,
+            },
+            limits(),
+        )
+        .unwrap()
     }
     fn cell(side: KvSide, position: u64, channel: usize) -> KvCell {
-        KvCell { side, position, head: 0, channel }
+        KvCell {
+            side,
+            position,
+            head: 0,
+            channel,
+        }
     }
     fn edit(cell: KvCell, expected: f32, replacement: f32) -> KvEdit {
-        KvEdit { cell, expected_bits: expected.to_bits(), replacement_bits: replacement.to_bits() }
+        KvEdit {
+            cell,
+            expected_bits: expected.to_bits(),
+            replacement_bits: replacement.to_bits(),
+        }
     }
 
     #[test]
@@ -397,8 +606,18 @@ mod tests {
         let root = space.baseline();
         let c = cell(KvSide::Key, 10, 0);
         let v = cell(KvSide::Value, 11, 1);
-        assert_eq!(space.fork(1, &root, &[edit(c, 1.0, 4.0), edit(v, 0.0, 9.0)]).unwrap_err(), Error::Stale);
-        assert_eq!(space.fork(1, &root, &[edit(c, 1.0, 4.0), edit(c, 1.0, 5.0)]).unwrap_err(), Error::Duplicate);
+        assert_eq!(
+            space
+                .fork(1, &root, &[edit(c, 1.0, 4.0), edit(v, 0.0, 9.0)])
+                .unwrap_err(),
+            Error::Stale
+        );
+        assert_eq!(
+            space
+                .fork(1, &root, &[edit(c, 1.0, 4.0), edit(c, 1.0, 5.0)])
+                .unwrap_err(),
+            Error::Duplicate
+        );
         assert_eq!((space.branch_count(), space.retained_edit_count()), (0, 0));
         assert!(space.fork(1, &root, &[edit(c, 1.0, 4.0)]).is_ok());
     }
@@ -409,7 +628,10 @@ mod tests {
         let root = space.baseline();
         let c = cell(KvSide::Key, 10, 0);
         let first = space.fork(1, &root, &[edit(c, 1.0, -0.0)]).unwrap();
-        assert_eq!(space.fork(2, &first, &[edit(c, 0.0, 3.0)]).unwrap_err(), Error::Stale);
+        assert_eq!(
+            space.fork(2, &first, &[edit(c, 0.0, 3.0)]).unwrap_err(),
+            Error::Stale
+        );
         let child = space.fork(2, &first, &[edit(c, -0.0, 3.0)]).unwrap();
         assert_eq!(child.bits(c).unwrap(), 3_f32.to_bits());
     }
@@ -420,7 +642,9 @@ mod tests {
         let root = space.baseline();
         let c = cell(KvSide::Key, 10, 0);
         let v = cell(KvSide::Value, 11, 1);
-        let first = space.fork(1, &root, &[edit(c, 1.0, -1.0), edit(v, 8.0, 9.0)]).unwrap();
+        let first = space
+            .fork(1, &root, &[edit(c, 1.0, -1.0), edit(v, 8.0, 9.0)])
+            .unwrap();
         let second = space.fork(2, &first, &[edit(c, -1.0, 1.0)]).unwrap();
         assert_eq!(space.fork(3, &second, &[]).unwrap_err(), Error::Limit);
         let rebased = space.rebase(3, &second).unwrap();
@@ -434,8 +658,15 @@ mod tests {
                 }
             }
         }
-        assert_eq!(rebased.lineage(), vec![(0, KvBranchKind::Baseline),
-            (1, KvBranchKind::Intervention), (2, KvBranchKind::Intervention), (3, KvBranchKind::Rebase)]);
+        assert_eq!(
+            rebased.lineage(),
+            vec![
+                (0, KvBranchKind::Baseline),
+                (1, KvBranchKind::Intervention),
+                (2, KvBranchKind::Intervention),
+                (3, KvBranchKind::Rebase)
+            ]
+        );
         assert!(space.fork(4, &rebased, &[edit(c, 1.0, 4.0)]).is_ok());
         assert_eq!(space.retained_edit_count(), 5);
     }
@@ -445,10 +676,18 @@ mod tests {
         let branch = {
             let mut space = experiment();
             let root = space.baseline();
-            space.fork(1, &root, &[edit(cell(KvSide::Value, 10, 0), 5.0, 10.0)]).unwrap()
+            space
+                .fork(1, &root, &[edit(cell(KvSide::Value, 10, 0), 5.0, 10.0)])
+                .unwrap()
         };
-        assert_eq!(branch.bits(cell(KvSide::Value, 10, 0)).unwrap(), 10_f32.to_bits());
-        assert_eq!(branch.bits(cell(KvSide::Key, 11, 1)).unwrap(), 4_f32.to_bits());
+        assert_eq!(
+            branch.bits(cell(KvSide::Value, 10, 0)).unwrap(),
+            10_f32.to_bits()
+        );
+        assert_eq!(
+            branch.bits(cell(KvSide::Key, 11, 1)).unwrap(),
+            4_f32.to_bits()
+        );
         assert_eq!(branch.lineage().len(), 2);
     }
 
@@ -456,34 +695,77 @@ mod tests {
     fn foreign_same_number_experiment_cannot_supply_a_parent() {
         let mut left = experiment();
         let right = experiment();
-        assert_eq!(left.fork(1, &right.baseline(), &[]).unwrap_err(), Error::Binding);
-        assert_eq!(left.rebase(1, &right.baseline()).unwrap_err(), Error::Binding);
+        assert_eq!(
+            left.fork(1, &right.baseline(), &[]).unwrap_err(),
+            Error::Binding
+        );
+        assert_eq!(
+            left.rebase(1, &right.baseline()).unwrap_err(),
+            Error::Binding
+        );
         assert_eq!(left.branch_count(), 0);
     }
 
     #[test]
     fn frozen_scope_coordinates_and_nonfinite_values_are_checked() {
-        let mut space = KvExperiment::new(1, image(), KvEditScope {
-            first_position: 10, token_count: 1, keys: true, values: false,
-        }, limits()).unwrap();
+        let mut space = KvExperiment::new(
+            1,
+            image(),
+            KvEditScope {
+                first_position: 10,
+                token_count: 1,
+                keys: true,
+                values: false,
+            },
+            limits(),
+        )
+        .unwrap();
         let root = space.baseline();
         for c in [cell(KvSide::Value, 10, 0), cell(KvSide::Key, 11, 0)] {
-            assert_eq!(space.fork(1, &root, &[edit(c, 1.0, 2.0)]).unwrap_err(), Error::Binding);
+            assert_eq!(
+                space.fork(1, &root, &[edit(c, 1.0, 2.0)]).unwrap_err(),
+                Error::Binding
+            );
         }
-        assert_eq!(space.fork(1, &root, &[edit(cell(KvSide::Key, 10, 2), 1.0, 2.0)]).unwrap_err(), Error::InvalidInput);
+        assert_eq!(
+            space
+                .fork(1, &root, &[edit(cell(KvSide::Key, 10, 2), 1.0, 2.0)])
+                .unwrap_err(),
+            Error::InvalidInput
+        );
         for value in [f32::NAN, f32::INFINITY, f32::NEG_INFINITY] {
-            assert_eq!(space.fork(1, &root, &[edit(cell(KvSide::Key, 10, 0), 1.0, value)]).unwrap_err(), Error::InvalidInput);
+            assert_eq!(
+                space
+                    .fork(1, &root, &[edit(cell(KvSide::Key, 10, 0), 1.0, value)])
+                    .unwrap_err(),
+                Error::InvalidInput
+            );
         }
         assert_eq!(space.branch_count(), 0);
     }
 
     #[test]
     fn branch_and_retained_edit_limits_do_not_reset_on_controls_or_rebase() {
-        let mut space = KvExperiment::new(1, image(), KvEditScope {
-            first_position: 10, token_count: 2, keys: true, values: true,
-        }, KvExperimentLimits { branches: 3, retained_edits: 1, resolution_depth: 2 }).unwrap();
+        let mut space = KvExperiment::new(
+            1,
+            image(),
+            KvEditScope {
+                first_position: 10,
+                token_count: 2,
+                keys: true,
+                values: true,
+            },
+            KvExperimentLimits {
+                branches: 3,
+                retained_edits: 1,
+                resolution_depth: 2,
+            },
+        )
+        .unwrap();
         let root = space.baseline();
-        let first = space.fork(1, &root, &[edit(cell(KvSide::Key, 10, 0), 1.0, 2.0)]).unwrap();
+        let first = space
+            .fork(1, &root, &[edit(cell(KvSide::Key, 10, 0), 1.0, 2.0)])
+            .unwrap();
         assert_eq!(space.rebase(2, &first).unwrap_err(), Error::Limit);
         assert_eq!(space.retained_edit_count(), 1);
         space.fork(2, &root, &[]).unwrap();

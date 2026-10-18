@@ -1,5 +1,6 @@
 //! Synthetic categorical model executed by the ORIGINAL native helper stack.
 //! Its actual final prompt byte changes the answer; no supplied verdict enters.
+#![allow(dead_code, unused_imports)]
 use fa_reference::action::consequence::activation::monitor::{RefinementBudget, RefinementMonitor};
 use fa_reference::action::consequence::activation::monitor::decoder::sampled::{MonitoredSampledDecoder,
     generation::{GenerationBudget, MAX_SAMPLING_ENTRIES,

@@ -1,4 +1,4 @@
-#![allow(dead_code)]
+#![allow(dead_code, unused_imports)]
 #[path = "file_delivery.rs"] mod delivery;
 pub use delivery::{Directory, snapshot};
 use fa_reference::action::consequence::delivery::persistent::FilePermit;

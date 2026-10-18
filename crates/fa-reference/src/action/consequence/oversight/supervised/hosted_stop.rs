@@ -1,8 +1,9 @@
 //! Close the gap between an owned numerical trip and an endpoint stop barrier.
 //! Inference, actor projection and external outcome are different observations.
 
-use super::SupervisedDriver;
 use super::super::OversightBroker;
+use super::SupervisedDriver;
+use crate::Error;
 use crate::action::ElapsedTick;
 use crate::action::consequence::activation::monitor::decoder::MonitoredStep;
 use crate::action::consequence::activation::monitor::decoder::sampled::MonitoredSampledStep;
@@ -10,7 +11,6 @@ use crate::action::consequence::activation::tensor::kv::decoder::DecoderBudget;
 use crate::action::consequence::activation::tensor::kv::decoder::sampling::SampleBudget;
 use crate::action::consequence::activation::tensor::kv::decoder::sampling::monitored::GenerationEvent;
 use crate::action::consequence::delivery::StopSweep;
-use crate::Error;
 use std::rc::Rc;
 
 /// Successful numerical inference does not imply an acknowledged endpoint fence.
@@ -30,37 +30,53 @@ impl SupervisedDriver {
     /// is sampled before computation and freshly before the stop's endpoint work.
     /// Active review jobs do not authorize a token or bypass this supervision.
     pub fn advance_hosted_forced<F>(
-        &mut self, expected_actor_revision: u64, expected_position: u64, token: u32,
-        budget: DecoderBudget, clock: F,
+        &mut self,
+        expected_actor_revision: u64,
+        expected_position: u64,
+        token: u32,
+        budget: DecoderBudget,
+        clock: F,
     ) -> HostedDriverStep<MonitoredStep>
-    where F: FnMut() -> ElapsedTick {
-        self.drive_hosted(clock, |broker| broker.advance_hosted_forced(
-            expected_actor_revision, expected_position, token, budget,
-        ))
+    where
+        F: FnMut() -> ElapsedTick,
+    {
+        self.drive_hosted(clock, |broker| {
+            broker.advance_hosted_forced(expected_actor_revision, expected_position, token, budget)
+        })
     }
 
     /// The original sampler commits exactly with numerical success. Stopping,
     /// endpoint I/O failure or a late clock refusal cannot rewind its spent draw.
     pub fn advance_hosted_sampled<F>(
-        &mut self, expected_actor_revision: u64, expected_position: u64,
-        budget: SampleBudget, clock: F,
+        &mut self,
+        expected_actor_revision: u64,
+        expected_position: u64,
+        budget: SampleBudget,
+        clock: F,
     ) -> HostedDriverStep<MonitoredSampledStep>
-    where F: FnMut() -> ElapsedTick {
-        self.drive_hosted(clock, |broker| broker.advance_hosted_sampled(
-            expected_actor_revision, expected_position, budget,
-        ))
+    where
+        F: FnMut() -> ElapsedTick,
+    {
+        self.drive_hosted(clock, |broker| {
+            broker.advance_hosted_sampled(expected_actor_revision, expected_position, budget)
+        })
     }
 
     /// One original learned-generation step, including its complete registered
     /// K/V monitoring. A configured trip is synchronized and then fenced/drained
     /// through the SAME endpoint path as conventional hosted inference.
     pub fn advance_hosted_learned<F>(
-        &mut self, expected_actor_revision: u64, expected_position: u64, clock: F,
+        &mut self,
+        expected_actor_revision: u64,
+        expected_position: u64,
+        clock: F,
     ) -> HostedDriverStep<Rc<GenerationEvent>>
-    where F: FnMut() -> ElapsedTick {
-        self.drive_hosted(clock, |broker| broker.advance_hosted_learned(
-            expected_actor_revision, expected_position,
-        ))
+    where
+        F: FnMut() -> ElapsedTick,
+    {
+        self.drive_hosted(clock, |broker| {
+            broker.advance_hosted_learned(expected_actor_revision, expected_position)
+        })
     }
 
     /// Progress either original owned numerical profile's configured trip,
@@ -70,7 +86,9 @@ impl SupervisedDriver {
     /// their existing separate API. A completed trip remains idempotently visible.
     /// The ordinary step loop also invokes this before helper I/O or evidence.
     pub fn service_hosted_stop<F>(&mut self, mut clock: F) -> Option<Result<StopSweep, Error>>
-    where F: FnMut() -> ElapsedTick {
+    where
+        F: FnMut() -> ElapsedTick,
+    {
         // Bootstrap makes the two numerical owners mutually exclusive. A missing
         // conventional incident is not evidence that the learned owner is quiet.
         // Both original handlers retain their own configured/latched incidents;
@@ -85,7 +103,8 @@ impl SupervisedDriver {
             Err(error) => {
                 // A failed local transition must still request child cleanup,
                 // but cannot discard its possibly still-reserved original job.
-                self.stop_helper_processes(); self.reap_helpers();
+                self.stop_helper_processes();
+                self.reap_helpers();
                 return Some(Err(error));
             }
         }
@@ -106,12 +125,19 @@ impl SupervisedDriver {
     // No caller-supplied inference callback is exposed; the typed methods
     // above always use the original broker-owned numerical implementation.
     fn drive_hosted<T, F>(
-        &mut self, mut clock: F, advance: impl FnOnce(&mut OversightBroker) -> Result<T, Error>,
+        &mut self,
+        mut clock: F,
+        advance: impl FnOnce(&mut OversightBroker) -> Result<T, Error>,
     ) -> HostedDriverStep<T>
-    where F: FnMut() -> ElapsedTick {
+    where
+        F: FnMut() -> ElapsedTick,
+    {
         if let Some(containment) = self.service_hosted_stop(&mut clock) {
-            return HostedDriverStep { inference: Err(Error::WrongState),
-                synchronization: self.supervisor.synchronize(), containment: Some(containment) };
+            return HostedDriverStep {
+                inference: Err(Error::WrongState),
+                synchronization: self.supervisor.synchronize(),
+                containment: Some(containment),
+            };
         }
         self.reap_helpers();
         let inference = (|| {
@@ -124,6 +150,10 @@ impl SupervisedDriver {
         // containment independently. No effect is resent and no helper rerun.
         let containment = self.service_hosted_stop(&mut clock);
         self.reap_helpers();
-        HostedDriverStep { inference, synchronization, containment }
+        HostedDriverStep {
+            inference,
+            synchronization,
+            containment,
+        }
     }
 }

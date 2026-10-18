@@ -1,4 +1,5 @@
 //! Existing congress/actor fixture with mandatory live policy-state freshness.
+#![allow(dead_code, unused_imports)]
 #[path = "actor_gateway.rs"]
 mod gateway;
 use fa_reference::action::{ElapsedTick, Permit, Purpose, Scope};

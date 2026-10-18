@@ -1,16 +1,16 @@
 //! A forecast acknowledged at an original message boundary, before sampling.
 //! This supervisor-only continuation never admits or publishes an actor request.
-mod owned;
 mod cooperative;
-pub use cooperative::{FilePreOutputStepper, FileOwnedPreOutputStepper, FilePreOutputQuantum};
+mod owned;
+pub use cooperative::{FileOwnedPreOutputStepper, FilePreOutputQuantum, FilePreOutputStepper};
 pub use owned::{FileOwnedPreOutputForecast, FileOwnedPreOutputStart};
 
 use super::{FileConsistencyObserver, FileOversight, JournalError};
+use crate::Error;
 use crate::action::consequence::activation::consistency::Prediction;
 use crate::action::consequence::activation::tensor::kv::decoder::sampling::monitored::GenerationEvent;
 use crate::action::consequence::oversight::consistency::ConsistencyDeadline;
 use crate::action::consequence::oversight::learned_host::HostedLearnedInspection;
-use crate::Error;
 use std::fmt;
 use std::rc::Rc;
 
@@ -43,8 +43,10 @@ pub struct FilePreOutputForecast<P = Prediction> {
 }
 impl<P> fmt::Debug for FilePreOutputForecast<P> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("FilePreOutputForecast").field("request", &self.request)
-            .field("position", &self.numerical.position).field("status", &self.numerical.status)
+        f.debug_struct("FilePreOutputForecast")
+            .field("request", &self.request)
+            .field("position", &self.numerical.position)
+            .field("status", &self.numerical.status)
             .finish_non_exhaustive()
     }
 }
@@ -64,42 +66,84 @@ impl FileConsistencyObserver {
     /// Success acknowledges only the forecast, not an actor request or either
     /// publication key. The existing unrestricted pre-action API is unchanged;
     /// only this explicitly selected path claims a pre-output boundary.
-    pub fn begin_pre_output_request(&self, host: &mut FileOversight, revision: u64,
-        request: u64, actor_revision: u64, position: u64)
-        -> Result<Result<FilePreOutputForecast, Error>, JournalError>
-    {
-        if host.storage_failure().is_some() { return Err(JournalError::Unavailable); }
-        if !Rc::ptr_eq(&self.issuer, &host.issuer) { return Err(Error::Binding.into()); }
-        if revision != host.revision() { return Err(Error::Stale.into()); }
-        if request == 0 { return Err(Error::InvalidInput.into()); }
-        if host.hosted_consistency_layer()?.is_none() { return Err(Error::Binding.into()); }
-        let inspected = host.learned_generation_inspection()?;
-        if inspected.numerical.actor_revision != actor_revision || inspected.numerical.position != position {
+    pub fn begin_pre_output_request(
+        &self,
+        host: &mut FileOversight,
+        revision: u64,
+        request: u64,
+        actor_revision: u64,
+        position: u64,
+    ) -> Result<Result<FilePreOutputForecast, Error>, JournalError> {
+        if host.storage_failure().is_some() {
+            return Err(JournalError::Unavailable);
+        }
+        if !Rc::ptr_eq(&self.issuer, &host.issuer) {
+            return Err(Error::Binding.into());
+        }
+        if revision != host.revision() {
             return Err(Error::Stale.into());
         }
-        if inspected.paused || inspected.pending.is_some() || host.source_interrupted
-            || host.machine.pending_learned_reset().is_some() { return Err(Error::Incomplete.into()); }
+        if request == 0 {
+            return Err(Error::InvalidInput.into());
+        }
+        if host.hosted_consistency_layer()?.is_none() {
+            return Err(Error::Binding.into());
+        }
+        let inspected = host.learned_generation_inspection()?;
+        if inspected.numerical.actor_revision != actor_revision
+            || inspected.numerical.position != position
+        {
+            return Err(Error::Stale.into());
+        }
+        if inspected.paused
+            || inspected.pending.is_some()
+            || host.source_interrupted
+            || host.machine.pending_learned_reset().is_some()
+        {
+            return Err(Error::Incomplete.into());
+        }
         host.machine.check_pre_output_message_point(request)?;
-        let prediction = match self.forecast_hosted_request(host, revision, request, actor_revision)? {
-            Ok(prediction) => prediction,
-            Err(error) => return Ok(Err(error)),
-        };
+        let prediction =
+            match self.forecast_hosted_request(host, revision, request, actor_revision)? {
+                Ok(prediction) => prediction,
+                Err(error) => return Ok(Err(error)),
+            };
         // These are the existing acknowledged forecast's immutable fields,
         // never a fresh timer or another allocator reservation.
-        let deadline = host.machine.broker.consistency_deadline()?.ok_or(Error::Incomplete)?;
+        let deadline = host
+            .machine
+            .broker
+            .consistency_deadline()?
+            .ok_or(Error::Incomplete)?;
         if host.machine.consistency_request != Some((request, deadline.attempt))
-            || deadline.actor_revision != actor_revision || deadline.source_sequence != position
-        { return Err(Error::Binding.into()); }
-        Ok(Ok(FilePreOutputForecast { issuer: Rc::clone(&host.issuer), request,
-            deadline, prediction, numerical: inspected.numerical }))
+            || deadline.actor_revision != actor_revision
+            || deadline.source_sequence != position
+        {
+            return Err(Error::Binding.into());
+        }
+        Ok(Ok(FilePreOutputForecast {
+            issuer: Rc::clone(&host.issuer),
+            request,
+            deadline,
+            prediction,
+            numerical: inspected.numerical,
+        }))
     }
 }
 impl<P> FilePreOutputForecast<P> {
-    pub fn request(&self) -> u64 { self.request }
-    pub fn prediction(&self) -> &P { &self.prediction }
-    pub fn deadline(&self) -> ConsistencyDeadline { self.deadline }
+    pub fn request(&self) -> u64 {
+        self.request
+    }
+    pub fn prediction(&self) -> &P {
+        &self.prediction
+    }
+    pub fn deadline(&self) -> ConsistencyDeadline {
+        self.deadline
+    }
     /// Last acknowledged numerical state, not current policy or effect authority.
-    pub fn numerical(&self) -> &HostedLearnedInspection { &self.numerical }
+    pub fn numerical(&self) -> &HostedLearnedInspection {
+        &self.numerical
+    }
 
     /// One ORIGINAL numerical step under the already acknowledged forecast.
     /// Intent and witnessed completion retain their two distinct durable writes.
@@ -115,12 +159,17 @@ impl<P> FilePreOutputForecast<P> {
     /// Once output completes, submit it through the existing source-only actor
     /// port under request(). That original admission observes the category once.
     /// Congress, both keys and current-source checks remain separate operations.
-    pub fn advance(&mut self, host: &mut FileOversight, revision: u64)
-        -> Result<Result<Rc<GenerationEvent>, Error>, JournalError>
-    {
+    pub fn advance(
+        &mut self,
+        host: &mut FileOversight,
+        revision: u64,
+    ) -> Result<Result<Rc<GenerationEvent>, Error>, JournalError> {
         self.check_current(host, revision)?;
-        let result = host.advance_learned_generation(revision,
-            self.numerical.actor_revision, self.numerical.position)?;
+        let result = host.advance_learned_generation(
+            revision,
+            self.numerical.actor_revision,
+            self.numerical.position,
+        )?;
         // Both an accepted/held event and an inner numerical Err are committed
         // outcomes. Keep their actual state; never retry an earlier quiet prefix.
         self.numerical = host.learned_generation_inspection()?.numerical;
@@ -128,24 +177,47 @@ impl<P> FilePreOutputForecast<P> {
     }
 
     fn check_current(&self, host: &FileOversight, revision: u64) -> Result<(), JournalError> {
-        if host.storage_failure().is_some() { return Err(JournalError::Unavailable); }
-        if !Rc::ptr_eq(&self.issuer, &host.issuer) { return Err(Error::Binding.into()); }
-        if host.revision() != revision { return Err(Error::Stale.into()); }
-        if !self.numerical.status.is_active() { return Err(Error::WrongState.into()); }
+        if host.storage_failure().is_some() {
+            return Err(JournalError::Unavailable);
+        }
+        if !Rc::ptr_eq(&self.issuer, &host.issuer) {
+            return Err(Error::Binding.into());
+        }
+        if host.revision() != revision {
+            return Err(Error::Stale.into());
+        }
+        if !self.numerical.status.is_active() {
+            return Err(Error::WrongState.into());
+        }
         let current = host.learned_generation_inspection()?;
-        if current.paused || host.source_interrupted || host.machine.pending_learned_reset().is_some()
-            || !host.clock_ready() { return Err(Error::Incomplete.into()); }
-        if current.numerical != self.numerical { return Err(Error::Stale.into()); }
+        if current.paused
+            || host.source_interrupted
+            || host.machine.pending_learned_reset().is_some()
+            || !host.clock_ready()
+        {
+            return Err(Error::Incomplete.into());
+        }
+        if current.numerical != self.numerical {
+            return Err(Error::Stale.into());
+        }
         if host.machine.consistency_request != Some((self.request, self.deadline.attempt))
             || host.machine.broker.consistency_deadline()? != Some(self.deadline)
-        { return Err(Error::Binding.into()); }
+        {
+            return Err(Error::Binding.into());
+        }
         let evidence = host.action_consistency_snapshot()?;
-        if evidence.coverage_lost || evidence.evidence.crossed() { return Err(Error::Incomplete.into()); }
+        if evidence.coverage_lost || evidence.evidence.crossed() {
+            return Err(Error::Incomplete.into());
+        }
         let control = host.inspect().control;
-        if control.suspended || host.inspect().stop.is_some() { return Err(Error::WrongState.into()); }
+        if control.suspended || host.inspect().stop.is_some() {
+            return Err(Error::WrongState.into());
+        }
         let now = control.ledger.elapsed.ok_or(Error::Incomplete)?;
         if control.ledger.epoch != self.deadline.authority_epoch
-            || now < self.deadline.created_at || now >= self.deadline.expires_at {
+            || now < self.deadline.created_at
+            || now >= self.deadline.expires_at
+        {
             return Err(Error::Stale.into());
         }
         Ok(())

@@ -3,8 +3,8 @@
 use super::*;
 mod checkpoint;
 mod clocked;
-pub use clocked::{FileShutdownClockedPassMember, FileShutdownClockedRecoveryPass};
 pub use checkpoint::FileShutdownRecoveryCheckpoint;
+pub use clocked::{FileShutdownClockedPassMember, FileShutdownClockedRecoveryPass};
 
 /// A trusted operator observation in this registered domain's clock system.
 /// The binding is checked; this data type does not authenticate a clock source.
@@ -55,22 +55,34 @@ pub struct FileShutdownRecoveryPass {
     members: Vec<FileShutdownPassMember>,
 }
 impl FileShutdownRecoveryPass {
-    pub fn operation(&self) -> u64 { self.operation }
-    pub fn initial_revision(&self) -> u64 { self.initial_revision }
-    pub fn final_revision(&self) -> u64 { self.final_revision }
-    pub fn members(&self) -> &[FileShutdownPassMember] { &self.members }
+    pub fn operation(&self) -> u64 {
+        self.operation
+    }
+    pub fn initial_revision(&self) -> u64 {
+        self.initial_revision
+    }
+    pub fn final_revision(&self) -> u64 {
+        self.final_revision
+    }
+    pub fn members(&self) -> &[FileShutdownPassMember] {
+        &self.members
+    }
     pub fn unobserved_stops(&self) -> Vec<u64> {
-        self.members.iter().filter(|member| !self.stopped(member))
-            .map(|member| member.clock.domain).collect()
+        self.members
+            .iter()
+            .filter(|member| !self.stopped(member))
+            .map(|member| member.clock.domain)
+            .collect()
     }
     pub fn all_observed_stopped(&self) -> bool {
         !self.members.is_empty() && self.members.iter().all(|member| self.stopped(member))
     }
     pub fn all_observed_drained(&self) -> bool {
-        self.all_observed_stopped() && self.members.iter().all(|member| {
-            matches!(&member.result, FileShutdownPassResult::Observed(observation)
+        self.all_observed_stopped()
+            && self.members.iter().all(|member| {
+                matches!(&member.result, FileShutdownPassResult::Observed(observation)
                 if observation.stop.as_ref().is_some_and(|stop| stop.drained()))
-        })
+            })
     }
     fn stopped(&self, member: &FileShutdownPassMember) -> bool {
         matches!(&member.result, FileShutdownPassResult::Observed(observation)
@@ -98,9 +110,11 @@ impl FileShutdownCoordinator {
     /// Old successes never make this pass complete. Original unresolved effects
     /// remain charged, and no publication is resent. This is bounded synchronous
     /// supervision, not a watchdog, OS kill or simultaneous fleet-stop protocol.
-    pub fn recover_registered_pass(&mut self, revision: u64, clocks: &[FileShutdownClock])
-        -> Result<FileShutdownRecoveryPass, JournalError>
-    {
+    pub fn recover_registered_pass(
+        &mut self,
+        revision: u64,
+        clocks: &[FileShutdownClock],
+    ) -> Result<FileShutdownRecoveryPass, JournalError> {
         self.run_registered_pass(revision, clocks, false)
     }
 
@@ -119,21 +133,30 @@ impl FileShutdownCoordinator {
     /// charges new visit slots only to members that require new recovery, one
     /// completion revision per pending resolution, and zero for exact refreshes.
     /// Any failed coordinator acknowledgment still stops the whole pass.
-    pub fn resume_registered_pass(&mut self, revision: u64, clocks: &[FileShutdownClock])
-        -> Result<FileShutdownRecoveryPass, JournalError>
-    {
+    pub fn resume_registered_pass(
+        &mut self,
+        revision: u64,
+        clocks: &[FileShutdownClock],
+    ) -> Result<FileShutdownRecoveryPass, JournalError> {
         self.run_registered_pass(revision, clocks, true)
     }
 
-    fn run_registered_pass(&mut self, revision: u64, clocks: &[FileShutdownClock], resume: bool)
-        -> Result<FileShutdownRecoveryPass, JournalError>
-    {
+    fn run_registered_pass(
+        &mut self,
+        revision: u64,
+        clocks: &[FileShutdownClock],
+        resume: bool,
+    ) -> Result<FileShutdownRecoveryPass, JournalError> {
         let (mut pass, resolutions) = self.prepare_registered_pass(revision, clocks, resume)?;
         for (member, resolution) in pass.members.iter_mut().zip(resolutions) {
             if let Some(visit) = resolution {
                 match self.resolve_shutdown_visit(self.revision(), visit) {
-                    Ok(observation) => member.result = FileShutdownPassResult::Observed(Box::new(observation)),
-                    Err(error) if !self.unavailable => member.result = FileShutdownPassResult::EvidenceRefused(error),
+                    Ok(observation) => {
+                        member.result = FileShutdownPassResult::Observed(Box::new(observation))
+                    }
+                    Err(error) if !self.unavailable => {
+                        member.result = FileShutdownPassResult::EvidenceRefused(error)
+                    }
                     Err(error) => {
                         member.result = FileShutdownPassResult::Unacknowledged(error);
                         break;
@@ -142,7 +165,9 @@ impl FileShutdownCoordinator {
                 continue;
             }
             match self.recover_and_drain(self.revision(), member.clock.domain, member.clock.at) {
-                Ok(Ok(observation)) => member.result = FileShutdownPassResult::Observed(Box::new(observation)),
+                Ok(Ok(observation)) => {
+                    member.result = FileShutdownPassResult::Observed(Box::new(observation))
+                }
                 Ok(Err(error)) => member.result = FileShutdownPassResult::Refused(error),
                 Err(error) => {
                     member.result = FileShutdownPassResult::Unacknowledged(error);
@@ -156,37 +181,63 @@ impl FileShutdownCoordinator {
 
     // Shared, side-effect-free full-roster/clock/capacity admission. Both public
     // pass variants keep the original denominator and never start a partial plan.
-    fn prepare_registered_pass(&self, revision: u64, clocks: &[FileShutdownClock], resume: bool)
-        -> Result<(FileShutdownRecoveryPass, Vec<Option<usize>>), JournalError>
-    {
-        let (ordered, resolutions) = self.prepare_registered_members(revision, clocks, resume,
-            |clock| (clock.domain, clock.clock_domain))?;
+    fn prepare_registered_pass(
+        &self,
+        revision: u64,
+        clocks: &[FileShutdownClock],
+        resume: bool,
+    ) -> Result<(FileShutdownRecoveryPass, Vec<Option<usize>>), JournalError> {
+        let (ordered, resolutions) =
+            self.prepare_registered_members(revision, clocks, resume, |clock| {
+                (clock.domain, clock.clock_domain)
+            })?;
         let mut members = Vec::new();
-        members.try_reserve_exact(ordered.len()).map_err(|_| Error::Limit)?;
+        members
+            .try_reserve_exact(ordered.len())
+            .map_err(|_| Error::Limit)?;
         members.extend(ordered.into_iter().map(|clock| FileShutdownPassMember {
-            clock, result: FileShutdownPassResult::NotVisited,
+            clock,
+            result: FileShutdownPassResult::NotVisited,
         }));
-        let pass = FileShutdownRecoveryPass { operation: self.campaign.plan.operation,
-            initial_revision: revision, final_revision: revision, members };
+        let pass = FileShutdownRecoveryPass {
+            operation: self.campaign.plan.operation,
+            initial_revision: revision,
+            final_revision: revision,
+            members,
+        };
         Ok((pass, resolutions))
     }
 
     // Shared exact roster/identity/capacity admission. A binding has no time;
     // validation never manufactures a tick or invokes an external callback.
-    fn prepare_registered_members<C: Copy>(&self, revision: u64, clocks: &[C], resume: bool,
-        identity: fn(&C) -> (u64, u64))
-        -> Result<(Vec<C>, Vec<Option<usize>>), JournalError>
-    {
-        if self.unavailable { return Err(JournalError::Unavailable); }
-        if revision != self.revision { return Err(Error::Stale.into()); }
-        if clocks.len() > MAX_SHUTDOWN_DOMAINS { return Err(Error::Limit.into()); }
+    fn prepare_registered_members<C: Copy>(
+        &self,
+        revision: u64,
+        clocks: &[C],
+        resume: bool,
+        identity: fn(&C) -> (u64, u64),
+    ) -> Result<(Vec<C>, Vec<Option<usize>>), JournalError> {
+        if self.unavailable {
+            return Err(JournalError::Unavailable);
+        }
+        if revision != self.revision {
+            return Err(Error::Stale.into());
+        }
+        if clocks.len() > MAX_SHUTDOWN_DOMAINS {
+            return Err(Error::Limit.into());
+        }
         let count = self.campaign.plan.domains.len();
-        if clocks.len() != count { return Err(Error::Binding.into()); }
+        if clocks.len() != count {
+            return Err(Error::Binding.into());
+        }
         let mut ordered = Vec::new();
         ordered.try_reserve_exact(count).map_err(|_| Error::Limit)?;
         ordered.extend_from_slice(clocks);
         ordered.sort_by_key(|clock| identity(clock).0);
-        if ordered.windows(2).any(|pair| identity(&pair[0]).0 == identity(&pair[1]).0) {
+        if ordered
+            .windows(2)
+            .any(|pair| identity(&pair[0]).0 == identity(&pair[1]).0)
+        {
             return Err(Error::Duplicate.into());
         }
         for (clock, domain) in ordered.iter().zip(self.campaign.plan.domains.iter()) {
@@ -195,33 +246,62 @@ impl FileShutdownCoordinator {
             }
         }
         let mut resolutions = Vec::new();
-        resolutions.try_reserve_exact(count).map_err(|_| Error::Limit)?;
+        resolutions
+            .try_reserve_exact(count)
+            .map_err(|_| Error::Limit)?;
         let mut new_visits = 0_usize;
         let mut growth = 0_u64;
         for clock in &ordered {
             // Consider the LAST visit of any kind, not an older convenient
             // success. A later refusal/inspection must not disappear on resume.
-            let latest = self.visits.iter().enumerate().rev()
+            let latest = self
+                .visits
+                .iter()
+                .enumerate()
+                .rev()
                 .find(|(_, visit)| visit.domain == identity(clock).0);
-            let resolution = latest.filter(|(_, visit)| resume
-                && matches!(visit.kind, ShutdownVisitKind::Advance { .. }
-                    | ShutdownVisitKind::RecoverStopped { .. } | ShutdownVisitKind::RecoverStoppedAtCompletion)
-                && matches!(visit.result, ShutdownVisitResult::Entered
-                    | ShutdownVisitResult::Observed { .. }));
+            let resolution = latest.filter(|(_, visit)| {
+                resume
+                    && matches!(
+                        visit.kind,
+                        ShutdownVisitKind::Advance { .. }
+                            | ShutdownVisitKind::RecoverStopped { .. }
+                            | ShutdownVisitKind::RecoverStoppedAtCompletion
+                    )
+                    && matches!(
+                        visit.result,
+                        ShutdownVisitResult::Entered | ShutdownVisitResult::Observed { .. }
+                    )
+            });
             let cost = match resolution {
                 Some((_, visit)) => u64::from(matches!(visit.result, ShutdownVisitResult::Entered)),
-                None => { new_visits = new_visits.checked_add(1).ok_or(Error::Limit)?; 2 }
+                None => {
+                    new_visits = new_visits.checked_add(1).ok_or(Error::Limit)?;
+                    2
+                }
             };
             growth = growth.checked_add(cost).ok_or(Error::Overflow)?;
             resolutions.push(resolution.map(|(index, _)| index));
         }
-        if self.visits.len().checked_add(new_visits).ok_or(Error::Limit)? > self.campaign.plan.max_attempts
-            || self.campaign.attempts.len().checked_add(count).ok_or(Error::Limit)? > self.campaign.plan.max_attempts
-        { return Err(Error::Limit.into()); }
+        if self
+            .visits
+            .len()
+            .checked_add(new_visits)
+            .ok_or(Error::Limit)?
+            > self.campaign.plan.max_attempts
+            || self
+                .campaign
+                .attempts
+                .len()
+                .checked_add(count)
+                .ok_or(Error::Limit)?
+                > self.campaign.plan.max_attempts
+        {
+            return Err(Error::Limit.into());
+        }
         self.revision.checked_add(growth).ok_or(Error::Overflow)?;
         Ok((ordered, resolutions))
     }
-
 }
 
 #[cfg(test)]

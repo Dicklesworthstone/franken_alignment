@@ -1,13 +1,17 @@
 //! Replay source observations through the original leased capture/writer pair.
 //! These operations never reopen a file during replay and never mint effect rights.
+use super::super::source::{
+    FileSourcePolicy, FileSourceReplacement, FileSourceStatus, SourceEvent,
+};
 use super::{Machine, Transition};
-use super::super::source::{FileSourcePolicy, FileSourceReplacement, FileSourceStatus, SourceEvent};
+use crate::Error;
 use crate::action::ElapsedTick;
 use crate::action::consequence::delivery::PolicySourceChange;
 use crate::action::consequence::oversight::CommitteeInput;
 use crate::action::consequence::oversight::evidence_source::EvidenceSnapshot;
-use crate::action::consequence::oversight::policy_state::{PolicyStateWriter, StateEvent, StateFrontier};
-use crate::Error;
+use crate::action::consequence::oversight::policy_state::{
+    PolicyStateWriter, StateEvent, StateFrontier,
+};
 use std::rc::Rc;
 
 pub(super) struct SourceState {
@@ -23,39 +27,79 @@ pub(super) struct SourceState {
 impl Machine {
     // Called only by the original Enable event or the independently bound
     // learned bootstrap. No event or live API can change an existing role.
-    pub(super) fn enable_source(&mut self, policy: FileSourcePolicy, policy_only: bool) -> Result<(), Error> {
-        if self.file_source.is_some() { return Err(Error::Duplicate); }
-        if !self.actions.is_empty() || self.requests.len() != 0 || !self.sessions.is_empty()
-            || self.broker.inspect().sequence != 0 || self.broker.stop_receipt().is_some()
-        { return Err(Error::WrongState); }
+    pub(super) fn enable_source(
+        &mut self,
+        policy: FileSourcePolicy,
+        policy_only: bool,
+    ) -> Result<(), Error> {
+        if self.file_source.is_some() {
+            return Err(Error::Duplicate);
+        }
+        if !self.actions.is_empty()
+            || self.requests.len() != 0
+            || !self.sessions.is_empty()
+            || self.broker.inspect().sequence != 0
+            || self.broker.stop_receipt().is_some()
+        {
+            return Err(Error::WrongState);
+        }
         if policy.source.scope != self.scope
-            || (policy_only && !self.broker.learned_sidecar_required()) { return Err(Error::Binding); }
-        let writer = self.broker.enable_fresh_policy_state(policy.source, policy.limits, policy.freshness)?;
-        if !self.publication_guard { self.enable_publication_guard()?; }
-        self.file_source = Some(SourceState { policy, policy_only, writer, latest: None,
-            sequence: 0, last_refusal: None, replacements: Vec::new() });
+            || (policy_only && !self.broker.learned_sidecar_required())
+        {
+            return Err(Error::Binding);
+        }
+        let writer = self.broker.enable_fresh_policy_state(
+            policy.source,
+            policy.limits,
+            policy.freshness,
+        )?;
+        if !self.publication_guard {
+            self.enable_publication_guard()?;
+        }
+        self.file_source = Some(SourceState {
+            policy,
+            policy_only,
+            writer,
+            latest: None,
+            sequence: 0,
+            last_refusal: None,
+            replacements: Vec::new(),
+        });
         Ok(())
     }
 
     pub(in super::super) fn policy_only_file_source(&self) -> bool {
-        self.file_source.as_ref().is_some_and(|source| source.policy_only)
+        self.file_source
+            .as_ref()
+            .is_some_and(|source| source.policy_only)
     }
 
     pub(in super::super) fn file_source_status(&self) -> Option<FileSourceStatus> {
         self.file_source.as_ref().map(|source| FileSourceStatus {
             policy: source.policy,
             producer: source.latest.as_ref().map(|capture| capture.identity()),
-            semantic_epoch: source.latest.as_ref().map(|capture| capture.snapshot().semantic_epoch),
-            capture: self.broker.policy_state_status().expect("registered original capture"),
+            semantic_epoch: source
+                .latest
+                .as_ref()
+                .map(|capture| capture.snapshot().semantic_epoch),
+            capture: self
+                .broker
+                .policy_state_status()
+                .expect("registered original capture"),
             last_refusal: source.last_refusal,
             interrupted: false,
         })
     }
 
-    pub(in super::super) fn source_replacement(&self, operation: u64)
-        -> Option<&(FileSourceReplacement, PolicySourceChange)>
-    {
-        self.file_source.as_ref()?.replacements.iter().find(|(request, _)| request.operation == operation)
+    pub(in super::super) fn source_replacement(
+        &self,
+        operation: u64,
+    ) -> Option<&(FileSourceReplacement, PolicySourceChange)> {
+        self.file_source
+            .as_ref()?
+            .replacements
+            .iter()
+            .find(|(request, _)| request.operation == operation)
     }
 
     pub(super) fn apply_source(&mut self, event: &SourceEvent) -> Result<Transition, Error> {
@@ -65,7 +109,9 @@ impl Machine {
                 Ok(Transition::Unit)
             }
             SourceEvent::Withdraw => {
-                if self.file_source.is_none() { return Err(Error::WrongState); }
+                if self.file_source.is_none() {
+                    return Err(Error::WrongState);
+                }
                 self.withdraw_source()?;
                 Ok(Transition::Unit)
             }
@@ -75,19 +121,34 @@ impl Machine {
     }
 
     fn replace_source(&mut self, request: FileSourceReplacement) -> Result<Transition, Error> {
-        if request.operation == 0 { return Err(Error::InvalidInput); }
-        if let Some((original, _)) = self.source_replacement(request.operation) {
-            return if original == &request { Ok(Transition::Unit) } else { Err(Error::Binding) };
+        if request.operation == 0 {
+            return Err(Error::InvalidInput);
         }
-        if self.broker.stop_receipt().is_some() { return Err(Error::WrongState); }
+        if let Some((original, _)) = self.source_replacement(request.operation) {
+            return if original == &request {
+                Ok(Transition::Unit)
+            } else {
+                Err(Error::Binding)
+            };
+        }
+        if self.broker.stop_receipt().is_some() {
+            return Err(Error::WrongState);
+        }
         let source = self.file_source.as_mut().ok_or(Error::WrongState)?;
         let mut next = source.policy.source;
         next.generation = request.next_generation;
         // The original gate bounds the lifetime number of generations. Reserve
         // our corresponding receipt slot before changing its authority ledger.
-        source.replacements.try_reserve(1).map_err(|_| Error::Limit)?;
-        let (writer, receipt) = self.broker.replace_policy_state(request.expected_generation,
-            request.expected_authority_epoch, next, source.policy.limits)?;
+        source
+            .replacements
+            .try_reserve(1)
+            .map_err(|_| Error::Limit)?;
+        let (writer, receipt) = self.broker.replace_policy_state(
+            request.expected_generation,
+            request.expected_authority_epoch,
+            next,
+            source.policy.limits,
+        )?;
         source.writer = writer;
         source.policy.source = next;
         source.sequence = 0;
@@ -107,7 +168,9 @@ impl Machine {
     /// Withdrawal affects original full-input eligibility and reviewer keys,
     /// never reservations, historical execution receipts or unknown liabilities.
     pub(super) fn withdraw_source(&mut self) -> Result<(), Error> {
-        let Some(source) = &self.file_source else { return Ok(()); };
+        let Some(source) = &self.file_source else {
+            return Ok(());
+        };
         source.writer.withdraw();
         self.invalidate_source_basis()
     }
@@ -121,7 +184,11 @@ impl Machine {
         Ok(())
     }
 
-    fn observe_source(&mut self, captured: &Rc<EvidenceSnapshot>, at: ElapsedTick) -> Result<Transition, Error> {
+    fn observe_source(
+        &mut self,
+        captured: &Rc<EvidenceSnapshot>,
+        at: ElapsedTick,
+    ) -> Result<Transition, Error> {
         let source = self.file_source.as_mut().ok_or(Error::WrongState)?;
         let unchanged = source.latest.as_deref() == Some(captured.as_ref());
         // Withdraw before validating ANY newly observed value. Failed checks
@@ -129,22 +196,41 @@ impl Machine {
         source.writer.withdraw();
         let admitted = (|| {
             let identity = captured.identity();
-            if identity.scope != source.policy.source.scope || identity.source != source.policy.source.source {
+            if identity.scope != source.policy.source.scope
+                || identity.source != source.policy.source.source
+            {
                 return Err(Error::Binding);
             }
             if let Some(previous) = &source.latest {
                 if identity.generation < previous.identity().generation
                     || captured.snapshot().semantic_epoch < previous.snapshot().semantic_epoch
-                { return Err(Error::Stale); }
-                if identity.generation == previous.identity().generation && !unchanged { return Err(Error::Binding); }
+                {
+                    return Err(Error::Stale);
+                }
+                if identity.generation == previous.identity().generation && !unchanged {
+                    return Err(Error::Binding);
+                }
             }
             // A well-formed, correctly scoped newer producer version remains a
             // floor even if it is incomplete or fails the native capture limits.
             // An earlier complete version cannot become the recovery fallback.
             source.latest = Some(Rc::clone(captured));
-            if !captured.snapshot().complete { return Err(Error::Incomplete); }
-            if !captured.contexts().keys().eq(self.broker.contracts().members().keys()) { return Err(Error::Binding); }
-            if source.policy_only && captured.contexts().values().any(|context| !context.is_empty()) {
+            if !captured.snapshot().complete {
+                return Err(Error::Incomplete);
+            }
+            if !captured
+                .contexts()
+                .keys()
+                .eq(self.broker.contracts().members().keys())
+            {
+                return Err(Error::Binding);
+            }
+            if source.policy_only
+                && captured
+                    .contexts()
+                    .values()
+                    .any(|context| !context.is_empty())
+            {
                 return Err(Error::Binding);
             }
             Ok(())
@@ -155,16 +241,24 @@ impl Machine {
             let source = self.file_source.as_mut().expect("registered source");
             let sequence = source.sequence.checked_add(1).ok_or(Error::Overflow)?;
             source.sequence = sequence;
-            source.writer.record(sequence, &StateEvent::Snapshot {
-                semantic_epoch: captured.snapshot().semantic_epoch,
-                values: captured.snapshot().values.clone(),
-            })?;
+            source.writer.record(
+                sequence,
+                &StateEvent::Snapshot {
+                    semantic_epoch: captured.snapshot().semantic_epoch,
+                    values: captured.snapshot().values.clone(),
+                },
+            )?;
             // Every refresh, even equal producer bytes, is a NEW observation.
             // Native freshness cannot be renewed by relabeling an old closure.
             source.writer.close_observed(sequence, sequence, at)
         })();
-        if !unchanged || result.is_err() { self.invalidate_source_basis()?; }
-        self.file_source.as_mut().expect("registered source").last_refusal = result.as_ref().err().copied();
+        if !unchanged || result.is_err() {
+            self.invalidate_source_basis()?;
+        }
+        self.file_source
+            .as_mut()
+            .expect("registered source")
+            .last_refusal = result.as_ref().err().copied();
         Ok(Transition::SourceObserved(result))
     }
 
@@ -172,18 +266,24 @@ impl Machine {
     /// contexts while using a valid policy snapshot from the registered source.
     /// Legacy owners remain unchanged. The ORIGINAL builder defines equality.
     pub(super) fn check_source_inputs(&self, inputs: &CommitteeInput) -> Result<(), Error> {
-        let Some(source) = &self.file_source else { return Ok(()); };
+        let Some(source) = &self.file_source else {
+            return Ok(());
+        };
         let _ = self.broker.capture_policy_state()?;
         let capture = source.latest.as_ref().ok_or(Error::Incomplete)?;
         if source.policy_only {
             // The mandatory ORIGINAL learned gate, not file contexts, binds
             // helper input and its registered provenance at every permitting
             // boundary. Never synthesize a file-context packet for that gate.
-            if !self.broker.learned_sidecar_required() { return Err(Error::Binding); }
+            if !self.broker.learned_sidecar_required() {
+                return Err(Error::Binding);
+            }
             return Ok(());
         }
         let expected = capture.inputs_for(inputs.action(), self.broker.contracts())?;
-        if &expected != inputs { return Err(Error::Binding); }
+        if &expected != inputs {
+            return Err(Error::Binding);
+        }
         Ok(())
     }
 }

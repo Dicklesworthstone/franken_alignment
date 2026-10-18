@@ -1,5 +1,6 @@
 //! Tiny actual decoder with history-sensitive attention and a deterministic token
 //! chain. These weights and zero probes are controls, not detector qualification.
+#![allow(dead_code, unused_imports)]
 use fa_reference::action::consequence::activation::monitor::decoder::sampled::generation::tokenizer::{
     ByteBpe, Merge, TokenBytes, TokenizationBudget,
 };

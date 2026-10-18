@@ -1,6 +1,6 @@
 //! Pin owned-code prediction in the SAME immutable generator recipe.
 //! No standalone Enable can be omitted to weaken its first canonical state.
-use super::{Error, FileLearnedConfig, Writer, DOMAIN, MAX_CONFIG_BYTES};
+use super::{DOMAIN, Error, FileLearnedConfig, MAX_CONFIG_BYTES, Writer};
 use crate::action::consequence::delivery::persistent::observed::consistency::learned::FileLearnedConsistencyConfig;
 
 impl FileLearnedConfig {
@@ -12,19 +12,26 @@ impl FileLearnedConfig {
     /// The original Enable reducer validates actual model/tap/dimensions/stream
     /// before canonical creation or attachment acknowledgment. Other recipe
     /// wrappers retain this field and its bytes; wrapper order remains identity.
-    pub fn with_required_owned_pre_output_forecast(mut self, forecast: FileLearnedConsistencyConfig)
-        -> Result<Self, Error>
-    {
+    pub fn with_required_owned_pre_output_forecast(
+        mut self,
+        forecast: FileLearnedConsistencyConfig,
+    ) -> Result<Self, Error> {
         if self.pre_output_forecast.is_some() || self.owned_pre_output_forecast.is_some() {
             return Err(Error::Duplicate);
         }
-        if self.text_stream_continuation || !self.sidecar_required || !self.is_text() || !forecast.uses_owned_generation()
+        if self.text_stream_continuation
+            || !self.sidecar_required
+            || !self.is_text()
+            || !forecast.uses_owned_generation()
             || !forecast.requires_pre_output_forecast()
-            || self.text_stream_profile() != forecast.consistency().stream_message_profile() {
+            || self.text_stream_profile() != forecast.consistency().stream_message_profile()
+        {
             return Err(Error::Binding);
         }
         let mut writer = Writer::new(MAX_CONFIG_BYTES);
-        writer.raw(DOMAIN)?; writer.u64(0)?; writer.raw(b"FALKPRD\x01")?;
+        writer.raw(DOMAIN)?;
+        writer.u64(0)?;
+        writer.raw(b"FALKPRD\x01")?;
         writer.blob(&self.bytes)?;
         writer.blob(forecast.encoded())?;
         self.bytes = writer.finish().into();

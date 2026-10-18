@@ -1,7 +1,9 @@
 //! Bounded original cursor transitions behind ONE canonical acknowledgment.
 //! The persisted history contains ordinary per-step events, not a batch format.
-use super::{DecoderEvent, Event, FileGenerationProgress, FileOversight, JournalError,
-    JournalFailure, JournalIo, Machine, check_progress_key, journal};
+use super::{
+    DecoderEvent, Event, FileGenerationProgress, FileOversight, JournalError, JournalFailure,
+    JournalIo, Machine, check_progress_key, journal,
+};
 use crate::Error;
 use std::rc::Rc;
 
@@ -46,41 +48,79 @@ impl FileOversight {
     /// Every original full-state witness remains stored, and old event metadata
     /// is cloned for encoding. This reduces replay/replacement count, not journal
     /// size; no throughput, hard deadline or exactly-once CPU claim is made.
-    pub fn advance_decoder_generation_batch(&mut self, journal_revision: u64, id: u64,
-        generation_revision: u64, max_steps: usize) -> Result<FileGenerationProgress, JournalError>
-    {
-        if self.fault.is_some() { return Err(JournalError::Unavailable); }
+    pub fn advance_decoder_generation_batch(
+        &mut self,
+        journal_revision: u64,
+        id: u64,
+        generation_revision: u64,
+        max_steps: usize,
+    ) -> Result<FileGenerationProgress, JournalError> {
+        if self.fault.is_some() {
+            return Err(JournalError::Unavailable);
+        }
         check_batch_steps(max_steps)?;
         let current = self.decoder_generation_progress(id)?;
-        if generation_revision > current.generation_revision() { return Err(Error::Stale.into()); }
-        if current.is_complete() || generation_revision < current.generation_revision() { return Ok(current); }
-        if journal_revision != self.revision() { return Err(Error::Stale.into()); }
+        if generation_revision > current.generation_revision() {
+            return Err(Error::Stale.into());
+        }
+        if current.is_complete() || generation_revision < current.generation_revision() {
+            return Ok(current);
+        }
+        if journal_revision != self.revision() {
+            return Err(Error::Stale.into());
+        }
         check_progress_key(id, generation_revision)?;
         self.check_source_admission(&Event::Decoder(DecoderEvent::AdvanceGeneration {
-            id, revision: generation_revision, witness: Rc::from(&b""[..]),
+            id,
+            revision: generation_revision,
+            witness: Rc::from(&b""[..]),
         }))?;
-        self.machine.check_decoder_generation_progress(id, generation_revision)?;
+        self.machine
+            .check_decoder_generation_progress(id, generation_revision)?;
         let requested = current.command().check()?;
         let completed = usize::try_from(generation_revision).map_err(|_| Error::Limit)?;
         let remaining = requested.checked_sub(completed).ok_or(Error::Stale)?;
         let steps = max_steps.min(remaining);
-        if steps == 0 { return Err(Error::Binding.into()); }
-        let required = if generation_revision == 0 { requested } else { steps };
-        if self.events.len().checked_add(required).ok_or(Error::Overflow)? > self.profile.delivery.limits.events {
+        if steps == 0 {
+            return Err(Error::Binding.into());
+        }
+        let required = if generation_revision == 0 {
+            requested
+        } else {
+            steps
+        };
+        if self
+            .events
+            .len()
+            .checked_add(required)
+            .ok_or(Error::Overflow)?
+            > self.profile.delivery.limits.events
+        {
             return Err(Error::Limit.into());
         }
-        let capacity = self.events.len().checked_add(steps).ok_or(Error::Overflow)?;
+        let capacity = self
+            .events
+            .len()
+            .checked_add(steps)
+            .ok_or(Error::Overflow)?;
         let mut events = Vec::new();
-        events.try_reserve_exact(capacity).map_err(|_| Error::Limit)?;
+        events
+            .try_reserve_exact(capacity)
+            .map_err(|_| Error::Limit)?;
         events.extend(self.events.iter().cloned());
         // Exactly one replay, not one replay for each prospective token. The
         // acknowledged live Machine remains untouched until the final receipt.
         let mut candidate = Machine::replay(&self.profile, &self.events)?;
-        self.fault = Some(JournalFailure { operation: JournalIo::Stage,
-            kind: std::io::ErrorKind::Other, replacement_may_be_visible: false });
+        self.fault = Some(JournalFailure {
+            operation: JournalIo::Stage,
+            kind: std::io::ErrorKind::Other,
+            replacement_may_be_visible: false,
+        });
         let mut witness_bytes = 0_usize;
         for offset in 0..steps {
-            let revision = generation_revision.checked_add(offset as u64).ok_or(Error::Overflow)?;
+            let revision = generation_revision
+                .checked_add(offset as u64)
+                .ok_or(Error::Overflow)?;
             let step = candidate.prepare_decoder_generation_progress(id, revision)?;
             let DecoderEvent::AdvanceGeneration { witness, .. } = &step else {
                 return Err(Error::Binding.into());
@@ -89,10 +129,16 @@ impl FileOversight {
             // The original encoder below still charges ALL framing, old records
             // and reserves exactly; this is not a substitute admission formula.
             // At most one additional bounded witness is transient on refusal.
-            witness_bytes = witness_bytes.checked_add(witness.len()).ok_or(Error::Limit)?;
-            if witness_bytes > self.profile.delivery.limits.bytes { return Err(Error::Limit.into()); }
+            witness_bytes = witness_bytes
+                .checked_add(witness.len())
+                .ok_or(Error::Limit)?;
+            if witness_bytes > self.profile.delivery.limits.bytes {
+                return Err(Error::Limit.into());
+            }
             events.push(Event::Decoder(step));
-            if candidate.recorded_decoder_generation(id).is_some() { break; }
+            if candidate.recorded_decoder_generation(id).is_some() {
+                break;
+            }
         }
         let progress = candidate.decoder_generation_progress(id)?;
         // encode checks EVERY event prefix through the original Admission and
@@ -101,13 +147,19 @@ impl FileOversight {
         // Same Store and conservative fault/acknowledgment law as persist_candidate.
         // This closed path contains ONLY original AdvanceGeneration events. It
         // cannot import arbitrary events, acknowledge a source, or publish effects.
-        self.fault = Some(JournalFailure { operation: JournalIo::Stage,
-            kind: std::io::ErrorKind::Other, replacement_may_be_visible: true });
+        self.fault = Some(JournalFailure {
+            operation: JournalIo::Stage,
+            kind: std::io::ErrorKind::Other,
+            replacement_may_be_visible: true,
+        });
         if let Err(error) = self.store.replace(&bytes) {
             self.fault = Some(match &error {
                 JournalError::Io(failure) => failure.clone(),
-                _ => JournalFailure { operation: JournalIo::Stage,
-                    kind: std::io::ErrorKind::Other, replacement_may_be_visible: true },
+                _ => JournalFailure {
+                    operation: JournalIo::Stage,
+                    kind: std::io::ErrorKind::Other,
+                    replacement_may_be_visible: true,
+                },
             });
             return Err(error);
         }
@@ -121,8 +173,12 @@ impl FileOversight {
 }
 
 pub(in super::super) fn check_batch_steps(steps: usize) -> Result<(), Error> {
-    if steps == 0 { return Err(Error::InvalidInput); }
-    if steps > MAX_FILE_GENERATION_BATCH_STEPS { return Err(Error::Limit); }
+    if steps == 0 {
+        return Err(Error::InvalidInput);
+    }
+    if steps > MAX_FILE_GENERATION_BATCH_STEPS {
+        return Err(Error::Limit);
+    }
     Ok(())
 }
 

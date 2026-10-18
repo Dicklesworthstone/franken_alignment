@@ -103,7 +103,7 @@ fn evaluator_and_ticket_brands_refuse_cross_owner_and_lost_roles() {
 #[test]
 fn weight_promotion_keeps_sent_charges_and_requires_original_endpoint_reconciliation() {
     let root = Directory::new(); let (mut host, human, evaluator) = create(&root); qualified(&mut host, &evaluator);
-    let keys = ordinary::ready(&mut host, &human, 3, b"sent before weight change");
+    let keys = ordinary::ready(&mut host, &human, 3, b"sent-pre-weight");
     label(&mut host, &evaluator, 3, 3, GroundTruth::Benign); ordinary::dispatch(&mut host, &keys);
     let request = update(&host, 1); host.promote_credibility(host.revision(), &request).unwrap();
     assert_eq!(host.inspect().control.ledger.charged, 16);
@@ -122,7 +122,7 @@ fn late_enable_and_invalid_protocol_refuse_without_weakening_original_admission(
     let before = host.inspect(); let mut invalid = protocol(); invalid.precision_floor.denominator = 0;
     assert!(host.enable_credibility(host.revision(), invalid).is_err()); assert_eq!(host.inspect(), before);
     host.observe_time(host.revision(), ElapsedTick(1)).unwrap();
-    host.propose(host.revision(), 1, ordinary::spec(&host, b"admitted before evaluation"), snapshot()).unwrap();
+    host.propose(host.revision(), 1, ordinary::spec(&host, b"pre-evaluation"), snapshot()).unwrap();
     assert!(matches!(host.enable_credibility(host.revision(), protocol()), Err(JournalError::Contract(Error::WrongState))));
     assert!(host.credibility_protocol().unwrap().is_none());
     let valid = Directory::new(); let (mut host, _, _) = create(&valid);

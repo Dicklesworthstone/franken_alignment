@@ -1,17 +1,19 @@
 //! Complete-message intents over the ORIGINAL actor wire and Unix transports.
 //! The trusted connection selects this profile; ordinary raw-submit ports keep
 //! their existing semantics. Intent bytes are not an execution-bearing frame.
-mod codec;
-mod source;
-pub mod process;
 pub mod client;
+mod codec;
+pub mod process;
+mod source;
+pub use codec::{STREAM_INTENT_HEADER_BYTES, encode_stream_proposal};
 #[cfg(target_os = "linux")]
 pub use source::{FileStreamPeerDrive, FileStreamPeerDriveError};
-pub use codec::{STREAM_INTENT_HEADER_BYTES, encode_stream_proposal};
 
-use super::{FileOversight, FileStreamProposal, JournalError, StreamProfile};
 use super::super::super::requests::actor::{FileActorPort, FileActorSupervisor, FileActorTicket};
-use crate::action::consequence::oversight::actor::{ActorError, ActorOutcome, ActorProposal, Knowledge};
+use super::{FileOversight, FileStreamProposal, JournalError, StreamProfile};
+use crate::action::consequence::oversight::actor::{
+    ActorError, ActorOutcome, ActorProposal, Knowledge,
+};
 use crate::action::consequence::oversight::actor_wire::{ActorRequestPort, backend};
 
 /// Weak actor-only access. There is no constructor from an arbitrary backend,
@@ -34,9 +36,9 @@ impl FileOversight {
     /// out of the returned actor port. No admission observation is installed.
     /// Call after independently configured creation/recovery, never instead of
     /// it. A non-stream or unavailable owner is refused, not converted in place.
-    pub fn into_stream_actor_gateway(self)
-        -> Result<(FileStreamActorPort, FileActorSupervisor<Self>), JournalError>
-    {
+    pub fn into_stream_actor_gateway(
+        self,
+    ) -> Result<(FileStreamActorPort, FileActorSupervisor<Self>), JournalError> {
         let profile = self.stream_snapshot()?.confirmed.profile();
         let (port, supervisor) = self.into_actor_gateway();
         Ok((FileStreamActorPort { port, profile }, supervisor))
@@ -45,7 +47,9 @@ impl FileOversight {
 
 impl FileStreamActorPort {
     /// Immutable receiver contract, not current actor or publication state.
-    pub fn profile(&self) -> StreamProfile { self.profile }
+    pub fn profile(&self) -> StreamProfile {
+        self.profile
+    }
 
     // Validate without allocation or source access, before the original trusted
     // intake hook can refresh a file or clock. Native retry checks still follow.
@@ -60,14 +64,21 @@ impl ActorRequestPort for FileStreamActorPort {
 
     fn submit(&self, request: u64, proposal: &ActorProposal) -> Result<Self::Ticket, ActorError> {
         let message = codec::message(self.profile, proposal)?;
-        let intent = FileStreamProposal { target: proposal.target,
-            expected_policy_epoch: proposal.expected_policy_epoch, deadline: proposal.deadline,
-            message: message.map(str::to_owned) };
+        let intent = FileStreamProposal {
+            target: proposal.target,
+            expected_policy_epoch: proposal.expected_policy_epoch,
+            deadline: proposal.deadline,
+            message: message.map(str::to_owned),
+        };
         // The original builder retains every confirmed message/boundary, charges
         // the whole frame, and uses the recorded frame on exact retries. No wire
         // packet, claimed units or invented history replaces that native path.
         self.port.submit_stream(request, &intent)
     }
-    fn poll(&self, ticket: &Self::Ticket) -> Knowledge<ActorOutcome> { self.port.poll(ticket) }
-    fn cancel(&self, ticket: &Self::Ticket) -> Result<(), ActorError> { self.port.cancel(ticket) }
+    fn poll(&self, ticket: &Self::Ticket) -> Knowledge<ActorOutcome> {
+        self.port.poll(ticket)
+    }
+    fn cancel(&self, ticket: &Self::Ticket) -> Result<(), ActorError> {
+        self.port.cancel(ticket)
+    }
 }

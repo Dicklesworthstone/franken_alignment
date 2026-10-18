@@ -1,14 +1,22 @@
 //! First-publication orchestration over the ORIGINAL durable guard.
 //! Observation failure is input to sealing, not permission to skip the guard.
-use super::{FileDriverEvent, FileOversight, Job, JournalError, Phase};
-use super::provider::{EvidenceProvider, validate};
 use super::super::credential::FileCredentialPermit;
+use super::provider::{EvidenceProvider, validate};
+use super::{FileDriverEvent, FileOversight, Job, JournalError, Phase};
 use crate::action::ElapsedTick;
 use crate::{Error, Snapshot};
 
-pub(super) fn publish_job<F, P>(host: &mut FileOversight, job: &mut Job,
-    clock: &mut F, provider: &mut P, credential: Option<&FileCredentialPermit>) -> FileDriverEvent
-where F: FnMut() -> ElapsedTick, P: EvidenceProvider {
+pub(super) fn publish_job<F, P>(
+    host: &mut FileOversight,
+    job: &mut Job,
+    clock: &mut F,
+    provider: &mut P,
+    credential: Option<&FileCredentialPermit>,
+) -> FileDriverEvent
+where
+    F: FnMut() -> ElapsedTick,
+    P: EvidenceProvider,
+{
     let request = job.request;
     // Retire the send path BEFORE invoking external provider code. Even a
     // caller-caught unwind may only be followed by original reconciliation.
@@ -16,7 +24,10 @@ where F: FnMut() -> ElapsedTick, P: EvidenceProvider {
     if !host.publication_guard_required() {
         // A credential permit is meaningful only for a credential-guarded host.
         if credential.is_some() {
-            return FileDriverEvent::PublicationUnknown { request, error: Error::WrongState.into() };
+            return FileDriverEvent::PublicationUnknown {
+                request,
+                error: Error::WrongState.into(),
+            };
         }
         let revision = host.revision();
         return match host.publish(revision, job.attempt) {
@@ -31,7 +42,8 @@ where F: FnMut() -> ElapsedTick, P: EvidenceProvider {
         let (inputs, snapshot, source_failure) = if needs_evidence {
             // Outer persistence failure is not an observation refusal. No
             // candidate source or endpoint result can escape that failed owner.
-            let captured = provider.capture(host, &job.action, clock)?
+            let captured = provider
+                .capture(host, &job.action, clock)?
                 .and_then(|evidence| validate(evidence, &job.action, &host.profile.committee));
             match captured {
                 Ok(evidence) => (evidence.inputs, evidence.snapshot, None),
@@ -49,13 +61,23 @@ where F: FnMut() -> ElapsedTick, P: EvidenceProvider {
         let revision = host.revision();
         let publication = match credential {
             Some(credential) => host.publish_checked_with_credential(
-                revision, job.attempt, inputs.as_ref(), snapshot, now, credential),
+                revision,
+                job.attempt,
+                inputs.as_ref(),
+                snapshot,
+                now,
+                credential,
+            ),
             None => host.publish_checked(revision, job.attempt, inputs.as_ref(), snapshot, now),
         }?;
         Ok::<_, JournalError>((publication, source_failure))
     })();
     match result {
-        Ok((publication, source_failure)) => FileDriverEvent::PublicationChecked { request, publication, source_failure },
+        Ok((publication, source_failure)) => FileDriverEvent::PublicationChecked {
+            request,
+            publication,
+            source_failure,
+        },
         Err(error) => FileDriverEvent::PublicationUnknown { request, error },
     }
 }

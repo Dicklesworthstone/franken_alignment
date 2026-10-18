@@ -1,13 +1,14 @@
 //! Ingest real change records before the original witness-acquisition cycle.
 //! Catch-up can change input revisions; never install a witness using a token
 //! captured before that catch-up. Feed/committee failures remain distinct.
-use super::{Callback, CommitteeContract, DriverEvidence, ElapsedTick, Error,
-    EvidenceFile, EvidenceProvider, FileCaptureError, FileCredentialPermit,
-    FileDriverEvent, FileEvidenceReport, FileHumanPermit, FileOversight,
-    FileProvider, FilePublicationDriverReport, FileSupervisedDriver, FrozenAction,
-    JournalError, PublicationInputFile, PublicationProvider};
 use super::super::super::super::publication::capture::heartbeat::feed::{
     PublicationFeedFile, PublicationFeedReport,
+};
+use super::{
+    Callback, CommitteeContract, DriverEvidence, ElapsedTick, Error, EvidenceFile,
+    EvidenceProvider, FileCaptureError, FileCredentialPermit, FileDriverEvent, FileEvidenceReport,
+    FileHumanPermit, FileOversight, FileProvider, FilePublicationDriverReport,
+    FileSupervisedDriver, FrozenAction, JournalError, PublicationInputFile, PublicationProvider,
 };
 
 /// Actual acknowledged ingestion results, not heartbeat-only coverage claims.
@@ -23,49 +24,101 @@ impl FileSupervisedDriver {
     /// and concrete witness input at each original evidence boundary. The feed
     /// withdraws its global eligibility before I/O; the original witness provider
     /// withdraws its attempt before calling external committee code.
-    pub fn step_with_publication_feed<F, P>(&mut self,
-        source: &PublicationInputFile, feed: &PublicationFeedFile,
-        clock: F, provider: P, human: Option<&FileHumanPermit>,
-        credential: Option<&FileCredentialPermit>) -> FileFeedDriverReport<FileDriverEvent>
-    where F: FnMut() -> ElapsedTick,
+    pub fn step_with_publication_feed<F, P>(
+        &mut self,
+        source: &PublicationInputFile,
+        feed: &PublicationFeedFile,
+        clock: F,
+        provider: P,
+        human: Option<&FileHumanPermit>,
+        credential: Option<&FileCredentialPermit>,
+    ) -> FileFeedDriverReport<FileDriverEvent>
+    where
+        F: FnMut() -> ElapsedTick,
         P: FnMut(&FrozenAction, &CommitteeContract) -> Result<DriverEvidence, Error>,
     {
         let attempt = self.job.as_ref().map(|job| job.attempt);
         let mut feeds = Vec::with_capacity(2);
         let mut reads = Vec::with_capacity(2);
-        let result = self.step_with_provider(clock, &mut FeedProvider {
-            inner: PublicationProvider { inner: Callback(provider), attempt, source, reads: &mut reads },
-            source: feed, reports: &mut feeds,
-        }, human, credential);
-        FileFeedDriverReport { feeds, publication: FilePublicationDriverReport {
-            reads, evidence: FileEvidenceReport { observations: Vec::new(), source_updates: Vec::new(), result },
-        } }
+        let result = self.step_with_provider(
+            clock,
+            &mut FeedProvider {
+                inner: PublicationProvider {
+                    inner: Callback(provider),
+                    attempt,
+                    source,
+                    reads: &mut reads,
+                },
+                source: feed,
+                reports: &mut feeds,
+            },
+            human,
+            credential,
+        );
+        FileFeedDriverReport {
+            feeds,
+            publication: FilePublicationDriverReport {
+                reads,
+                evidence: FileEvidenceReport {
+                    observations: Vec::new(),
+                    source_updates: Vec::new(),
+                    result,
+                },
+            },
+        }
     }
 
     /// Concrete change-feed, native policy/committee and witness readers. Reuse
     /// the original policy-source lease/floor checks rather than a cached callback.
     /// These reads are sequential, not an atomic snapshot across producers.
-    pub fn step_from_files_with_publication_feed<S, F>(&mut self,
-        evidence_source: &mut S, source: &PublicationInputFile,
-        feed: &PublicationFeedFile, clock: F,
-        human: Option<&FileHumanPermit>, credential: Option<&FileCredentialPermit>)
-        -> FileFeedDriverReport<FileDriverEvent>
-    where S: EvidenceFile + ?Sized, F: FnMut() -> ElapsedTick {
+    pub fn step_from_files_with_publication_feed<S, F>(
+        &mut self,
+        evidence_source: &mut S,
+        source: &PublicationInputFile,
+        feed: &PublicationFeedFile,
+        clock: F,
+        human: Option<&FileHumanPermit>,
+        credential: Option<&FileCredentialPermit>,
+    ) -> FileFeedDriverReport<FileDriverEvent>
+    where
+        S: EvidenceFile + ?Sized,
+        F: FnMut() -> ElapsedTick,
+    {
         let attempt = self.job.as_ref().map(|job| job.attempt);
         let mut feeds = Vec::with_capacity(2);
         let mut observations = Vec::with_capacity(2);
         let mut source_updates = Vec::with_capacity(2);
         let mut reads = Vec::with_capacity(2);
-        let result = self.step_with_provider(clock, &mut FeedProvider {
-            inner: PublicationProvider {
-                inner: FileProvider { source: evidence_source, observations: &mut observations, updates: &mut source_updates },
-                attempt, source, reads: &mut reads,
+        let result = self.step_with_provider(
+            clock,
+            &mut FeedProvider {
+                inner: PublicationProvider {
+                    inner: FileProvider {
+                        source: evidence_source,
+                        observations: &mut observations,
+                        updates: &mut source_updates,
+                    },
+                    attempt,
+                    source,
+                    reads: &mut reads,
+                },
+                source: feed,
+                reports: &mut feeds,
             },
-            source: feed, reports: &mut feeds,
-        }, human, credential);
-        FileFeedDriverReport { feeds, publication: FilePublicationDriverReport {
-            reads, evidence: FileEvidenceReport { observations, source_updates, result },
-        } }
+            human,
+            credential,
+        );
+        FileFeedDriverReport {
+            feeds,
+            publication: FilePublicationDriverReport {
+                reads,
+                evidence: FileEvidenceReport {
+                    observations,
+                    source_updates,
+                    result,
+                },
+            },
+        }
     }
 }
 pub(super) struct FeedProvider<'a, P> {
@@ -74,17 +127,27 @@ pub(super) struct FeedProvider<'a, P> {
     pub(super) reports: &'a mut Vec<Result<PublicationFeedReport, FileCaptureError>>,
 }
 impl<P: EvidenceProvider> EvidenceProvider for FeedProvider<'_, PublicationProvider<'_, P>> {
-    fn capture<F>(&mut self, host: &mut FileOversight, action: &FrozenAction, clock: &mut F)
-        -> Result<Result<DriverEvidence, Error>, JournalError>
-    where F: FnMut() -> ElapsedTick {
+    fn capture<F>(
+        &mut self,
+        host: &mut FileOversight,
+        action: &FrozenAction,
+        clock: &mut F,
+    ) -> Result<Result<DriverEvidence, Error>, JournalError>
+    where
+        F: FnMut() -> ElapsedTick,
+    {
         if self.inner.source.shares_producer(self.source) {
             let attempt = self.inner.attempt.ok_or(Error::Missing)?;
             host.begin_producer_capture(host.revision(), attempt, self.inner.source, self.source)?;
             // Both lanes were durably withdrawn BEFORE the independent policy
             // provider. Read the bundle only after that provider finishes; a
             // concurrent producer update is then one whole pair, not mixed reads.
-            let evidence = match self.inner.inner.capture(host, action, clock)?
-                .and_then(|evidence| super::validate(evidence, action, &host.profile.committee)) {
+            let evidence = match self
+                .inner
+                .inner
+                .capture(host, action, clock)?
+                .and_then(|evidence| super::validate(evidence, action, &host.profile.committee))
+            {
                 Ok(evidence) => evidence,
                 Err(error) => return Ok(Err(error)),
             };

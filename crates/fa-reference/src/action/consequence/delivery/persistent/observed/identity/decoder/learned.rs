@@ -1,7 +1,9 @@
 //! Bind original durable identity challenges to the actual owned learned model.
 //! No imported probe/model, cached frame, alternate matcher or journal format.
-use super::{FileDecoderIdentityProbe, FileIdentityChallenge, FileIdentityObserver,
-    FileOversight, JournalError, ModelManifest};
+use super::{
+    FileDecoderIdentityProbe, FileIdentityChallenge, FileIdentityObserver, FileOversight,
+    JournalError, ModelManifest,
+};
 use crate::action::consequence::activation::tensor::kv::decoder::DecoderBudget;
 
 impl FileIdentityObserver {
@@ -25,15 +27,21 @@ impl FileIdentityObserver {
     /// use fa_reference::action::consequence::delivery::persistent::observed::identity::decoder::FileDecoderIdentityProbe;
     /// fn replace(run: &mut FileDecoderIdentityProbe) { run.replace_learned_model(); }
     /// ```
-    pub fn learned_decoder_probe(&self, host: &FileOversight,
-        challenge: &FileIdentityChallenge, measurement_sequence: u64,
-        budget: DecoderBudget, observed_manifest: ModelManifest)
-        -> Result<FileDecoderIdentityProbe, JournalError>
-    {
+    pub fn learned_decoder_probe(
+        &self,
+        host: &FileOversight,
+        challenge: &FileIdentityChallenge,
+        measurement_sequence: u64,
+        budget: DecoderBudget,
+        observed_manifest: ModelManifest,
+    ) -> Result<FileDecoderIdentityProbe, JournalError> {
         self.check(host, challenge)?;
         let expected = challenge.evidence();
         let probe = host.machine.broker.hosted_learned_identity_probe(
-            expected.actor_revision(), expected.passport(), measurement_sequence, budget,
+            expected.actor_revision(),
+            expected.passport(),
+            measurement_sequence,
+            budget,
         )?;
         self.decoder_probe(host, challenge, probe, observed_manifest)
     }

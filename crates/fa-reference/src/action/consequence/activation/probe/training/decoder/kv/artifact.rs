@@ -1,13 +1,18 @@
 //! Exact portable comparison for an independently provisioned learned monitor.
 //! Parameters are comparison bytes, never a model/tokenizer/codec importer.
 use super::{KvDecoderCampaign, KvMonitorSettings, MAX_KV_MONITOR_JSON_BYTES};
+use crate::Error;
 use crate::action::consequence::activation::{
     monitor::decoder::sampled::generation::tokenizer::ByteBpe,
-    tensor::kv::{decoder::{DecoderModel, monitoring::LearnedDecoderPolicy,
-        sampling::replay::archive::{encode_monitor_binding, verify_monitor_binding}},
-        model::learned::LearnedKvCodec},
+    tensor::kv::{
+        decoder::{
+            DecoderModel,
+            monitoring::LearnedDecoderPolicy,
+            sampling::replay::archive::{encode_monitor_binding, verify_monitor_binding},
+        },
+        model::learned::LearnedKvCodec,
+    },
 };
-use crate::Error;
 
 /// The durable learned profile's current 16 MiB ceiling. Larger exact bindings
 /// refuse rather than replacing complete parameters with a weaker identifier.
@@ -28,7 +33,9 @@ pub struct KvMonitorArtifact<'a> {
     binding: &'a [u8],
 }
 impl<'a> KvMonitorArtifact<'a> {
-    pub fn is_encoded(bytes: &[u8]) -> bool { bytes.starts_with(DOMAIN) }
+    pub fn is_encoded(bytes: &[u8]) -> bool {
+        bytes.starts_with(DOMAIN)
+    }
 
     /// Check complete framing and bounds without allocating model-sized storage
     /// or accepting saved parameters as executable objects. V1 JSON remains a
@@ -37,40 +44,71 @@ impl<'a> KvMonitorArtifact<'a> {
         if max_bytes > MAX_KV_MONITOR_ARTIFACT_BYTES || bytes.len() > max_bytes {
             return Err(Error::Limit);
         }
-        if bytes.len() < HEADER_BYTES { return Err(Error::Incomplete); }
-        if !Self::is_encoded(bytes) { return Err(Error::InvalidInput); }
+        if bytes.len() < HEADER_BYTES {
+            return Err(Error::Incomplete);
+        }
+        if !Self::is_encoded(bytes) {
+            return Err(Error::InvalidInput);
+        }
         let mut sizes = [0_usize; 3];
         for (index, size) in sizes.iter_mut().enumerate() {
             let start = 8 + index * 8;
-            *size = usize::try_from(u64::from_be_bytes(bytes[start..start + 8]
-                .try_into().map_err(|_| Error::Incomplete)?)).map_err(|_| Error::Limit)?;
-            if *size == 0 { return Err(Error::InvalidInput); }
-            if *size > max_bytes { return Err(Error::Limit); }
+            *size = usize::try_from(u64::from_be_bytes(
+                bytes[start..start + 8]
+                    .try_into()
+                    .map_err(|_| Error::Incomplete)?,
+            ))
+            .map_err(|_| Error::Limit)?;
+            if *size == 0 {
+                return Err(Error::InvalidInput);
+            }
+            if *size > max_bytes {
+                return Err(Error::Limit);
+            }
         }
-        if sizes[0] > MAX_KV_MONITOR_JSON_BYTES { return Err(Error::Limit); }
+        if sizes[0] > MAX_KV_MONITOR_JSON_BYTES {
+            return Err(Error::Limit);
+        }
         let json_end = HEADER_BYTES.checked_add(sizes[0]).ok_or(Error::Limit)?;
         let tokenizer_end = json_end.checked_add(sizes[1]).ok_or(Error::Limit)?;
         let end = tokenizer_end.checked_add(sizes[2]).ok_or(Error::Limit)?;
-        if end != bytes.len() { return Err(Error::Binding); }
-        Ok(Self { monitor_json: &bytes[HEADER_BYTES..json_end],
-            tokenizer: &bytes[json_end..tokenizer_end], binding: &bytes[tokenizer_end..] })
+        if end != bytes.len() {
+            return Err(Error::Binding);
+        }
+        Ok(Self {
+            monitor_json: &bytes[HEADER_BYTES..json_end],
+            tokenizer: &bytes[json_end..tokenizer_end],
+            binding: &bytes[tokenizer_end..],
+        })
     }
 
     /// Unchanged v1 provisioning schema; its coefficients/settings are not an
     /// independent authentication of the training or calibration campaign.
-    pub fn monitor_json(&self) -> &'a [u8] { self.monitor_json }
+    pub fn monitor_json(&self) -> &'a [u8] {
+        self.monitor_json
+    }
 
     /// Compare the actual independently supplied assets and policy, including
     /// every unused weight, exact tokenizer semantics, codec basis/provenance,
     /// probe coefficient/threshold and operational cap. No token executes and
     /// no journal, sampler, cache, budget or permission is installed or changed.
-    pub fn verify(&self, model: &DecoderModel, tokenizer: &ByteBpe,
-        policy: &LearnedDecoderPolicy) -> Result<(), Error>
-    {
-        if !tokenizer.binds(model.profile()) { return Err(Error::Binding); }
-        if self.monitor_json != super::export::encode_monitor_json(policy,
-            MAX_KV_MONITOR_JSON_BYTES)?.as_slice() { return Err(Error::Binding); }
-        if self.tokenizer != tokenizer.to_bytes()?.as_slice() { return Err(Error::Binding); }
+    pub fn verify(
+        &self,
+        model: &DecoderModel,
+        tokenizer: &ByteBpe,
+        policy: &LearnedDecoderPolicy,
+    ) -> Result<(), Error> {
+        if !tokenizer.binds(model.profile()) {
+            return Err(Error::Binding);
+        }
+        if self.monitor_json
+            != super::export::encode_monitor_json(policy, MAX_KV_MONITOR_JSON_BYTES)?.as_slice()
+        {
+            return Err(Error::Binding);
+        }
+        if self.tokenizer != tokenizer.to_bytes()?.as_slice() {
+            return Err(Error::Binding);
+        }
         verify_monitor_binding(self.binding, model, policy)
     }
 }
@@ -84,16 +122,26 @@ impl KvDecoderCampaign {
     /// bytes and the shared original replay model/policy encoding. It grants no
     /// live promotion or authentication. Retain the trusted artifact and asset
     /// provenance independently. The size limit counts emitted bytes, not RSS.
-    pub fn monitor_artifact(&self, tokenizer: &ByteBpe, codec: &LearnedKvCodec,
-        settings: &KvMonitorSettings, max_bytes: usize) -> Result<Vec<u8>, Error>
-    {
-        if max_bytes > MAX_KV_MONITOR_ARTIFACT_BYTES { return Err(Error::Limit); }
-        if !tokenizer.binds(self.model().profile()) { return Err(Error::Binding); }
+    pub fn monitor_artifact(
+        &self,
+        tokenizer: &ByteBpe,
+        codec: &LearnedKvCodec,
+        settings: &KvMonitorSettings,
+        max_bytes: usize,
+    ) -> Result<Vec<u8>, Error> {
+        if max_bytes > MAX_KV_MONITOR_ARTIFACT_BYTES {
+            return Err(Error::Limit);
+        }
+        if !tokenizer.binds(self.model().profile()) {
+            return Err(Error::Binding);
+        }
         let policy = self.policy(codec.clone(), settings)?;
         let monitor = self.monitor_json(codec, settings, MAX_KV_MONITOR_JSON_BYTES)?;
         let tokenizer = tokenizer.to_bytes()?;
-        let prefix = HEADER_BYTES.checked_add(monitor.len())
-            .and_then(|size| size.checked_add(tokenizer.len())).ok_or(Error::Limit)?;
+        let prefix = HEADER_BYTES
+            .checked_add(monitor.len())
+            .and_then(|size| size.checked_add(tokenizer.len()))
+            .ok_or(Error::Limit)?;
         let remaining = max_bytes.checked_sub(prefix).ok_or(Error::Limit)?;
         let binding = encode_monitor_binding(self.model(), &policy, remaining)?;
         let total = prefix.checked_add(binding.len()).ok_or(Error::Limit)?;

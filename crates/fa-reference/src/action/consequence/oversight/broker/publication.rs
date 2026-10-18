@@ -1,29 +1,48 @@
 //! Configure the original delivery owner's additional final-cut witness lane.
 use super::OversightBroker;
 use crate::Error;
-use crate::action::consequence::delivery::publication_gate::{PublicationInputs, PublicationLimits, PublicationSourceStatus};
+use crate::action::consequence::delivery::publication_gate::changes::freshness::{
+    PublicationFreshnessPolicy, PublicationFreshnessStatus, PublicationHeartbeat,
+};
+use crate::action::consequence::delivery::publication_gate::changes::{
+    PublicationCaptureOutcome, PublicationInputCut, PublicationInputCutStatus,
+};
+use crate::action::consequence::delivery::publication_gate::changes::{
+    PublicationChange, PublicationChangePolicy, PublicationChangeReport, PublicationChangeStatus,
+};
+use crate::action::consequence::delivery::publication_gate::{
+    PublicationInputs, PublicationLimits, PublicationSourceStatus,
+};
 use crate::action::consequence::oversight::publication::{PublicationJudgment, PublicationReport};
-use crate::action::consequence::delivery::publication_gate::changes::{PublicationChange, PublicationChangePolicy, PublicationChangeReport, PublicationChangeStatus};
-use crate::action::consequence::delivery::publication_gate::changes::freshness::{PublicationFreshnessPolicy, PublicationFreshnessStatus, PublicationHeartbeat};
 use std::rc::Rc;
-use crate::action::consequence::delivery::publication_gate::changes::{PublicationInputCut, PublicationInputCutStatus, PublicationCaptureOutcome};
 
 impl OversightBroker {
     /// Mandatory on every subsequent attempt. Ordinary committee, policy,
     /// decoder and human-key checks remain independent conjunctive requirements.
-    pub fn enable_publication_validation(&mut self, limits: PublicationLimits) -> Result<(), Error> {
+    pub fn enable_publication_validation(
+        &mut self,
+        limits: PublicationLimits,
+    ) -> Result<(), Error> {
         self.delivery.enable_publication_validation(limits)
     }
 
-    pub fn bind_publication_judgment(&mut self, attempt: u64, judgment: PublicationJudgment) -> Result<(), Error> {
+    pub fn bind_publication_judgment(
+        &mut self,
+        attempt: u64,
+        judgment: PublicationJudgment,
+    ) -> Result<(), Error> {
         self.delivery.bind_publication_judgment(attempt, judgment)
     }
 
     /// Host-supplied current data, not an authenticated capture or permit.
     pub fn record_publication_inputs(
-        &mut self, attempt: u64, expected_revision: u64, inputs: Option<PublicationInputs>,
+        &mut self,
+        attempt: u64,
+        expected_revision: u64,
+        inputs: Option<PublicationInputs>,
     ) -> Result<u64, Error> {
-        self.delivery.record_publication_inputs(attempt, expected_revision, inputs)
+        self.delivery
+            .record_publication_inputs(attempt, expected_revision, inputs)
     }
 
     pub fn publication_input_revision(&self, attempt: u64) -> Result<u64, Error> {
@@ -35,23 +54,40 @@ impl OversightBroker {
         self.delivery.publication_validation(attempt)
     }
 
-    pub fn bind_publication_source(&mut self, attempt: u64, source: u64, generation: u64,
-        original: PublicationInputs) -> Result<(), Error>
-    {
-        self.delivery.bind_publication_source(attempt, source, generation, original)
+    pub fn bind_publication_source(
+        &mut self,
+        attempt: u64,
+        source: u64,
+        generation: u64,
+        original: PublicationInputs,
+    ) -> Result<(), Error> {
+        self.delivery
+            .bind_publication_source(attempt, source, generation, original)
     }
 
-    pub fn publication_source(&self, attempt: u64) -> Result<Option<PublicationSourceStatus>, Error> {
+    pub fn publication_source(
+        &self,
+        attempt: u64,
+    ) -> Result<Option<PublicationSourceStatus>, Error> {
         self.delivery.publication_source(attempt)
     }
 
-    pub fn record_captured_publication_inputs(&mut self, attempt: u64, revision: u64,
-        source: u64, generation: u64, inputs: PublicationInputs) -> Result<u64, Error>
-    {
-        self.delivery.record_captured_publication_inputs(attempt, revision, source, generation, inputs)
+    pub fn record_captured_publication_inputs(
+        &mut self,
+        attempt: u64,
+        revision: u64,
+        source: u64,
+        generation: u64,
+        inputs: PublicationInputs,
+    ) -> Result<u64, Error> {
+        self.delivery
+            .record_captured_publication_inputs(attempt, revision, source, generation, inputs)
     }
 
-    pub fn enable_publication_changes(&mut self, policy: PublicationChangePolicy) -> Result<(), Error> {
+    pub fn enable_publication_changes(
+        &mut self,
+        policy: PublicationChangePolicy,
+    ) -> Result<(), Error> {
         self.delivery.enable_publication_changes(policy)
     }
     pub fn publication_change_status(&self) -> Result<PublicationChangeStatus, Error> {
@@ -63,11 +99,17 @@ impl OversightBroker {
     pub fn preflight_publication_change(&self, notice: PublicationChange) -> Result<(), Error> {
         self.delivery.preflight_publication_change(notice)
     }
-    pub fn record_publication_change(&mut self, notice: PublicationChange) -> Result<Rc<PublicationChangeReport>, Error> {
+    pub fn record_publication_change(
+        &mut self,
+        notice: PublicationChange,
+    ) -> Result<Rc<PublicationChangeReport>, Error> {
         self.delivery.record_publication_change(notice)
     }
 
-    pub fn enable_publication_change_freshness(&mut self, policy: PublicationFreshnessPolicy) -> Result<(), Error> {
+    pub fn enable_publication_change_freshness(
+        &mut self,
+        policy: PublicationFreshnessPolicy,
+    ) -> Result<(), Error> {
         self.delivery.enable_publication_change_freshness(policy)
     }
     pub fn publication_change_freshness(&self) -> Result<PublicationFreshnessStatus, Error> {
@@ -76,7 +118,10 @@ impl OversightBroker {
     pub fn publication_changes_unavailable(&mut self, source: u64) -> Result<(), Error> {
         self.delivery.publication_changes_unavailable(source)
     }
-    pub fn record_publication_heartbeat(&mut self, heartbeat: PublicationHeartbeat) -> Result<PublicationFreshnessStatus, Error> {
+    pub fn record_publication_heartbeat(
+        &mut self,
+        heartbeat: PublicationHeartbeat,
+    ) -> Result<PublicationFreshnessStatus, Error> {
         self.delivery.record_publication_heartbeat(heartbeat)
     }
 
@@ -89,28 +134,52 @@ impl OversightBroker {
 }
 
 impl OversightBroker {
-    pub fn bind_publication_source_at_cut(&mut self, attempt: u64, source: u64, generation: u64,
-        original: PublicationInputs, cut: PublicationInputCut) -> Result<(), Error>
-    {
-        self.delivery.bind_publication_source_at_cut(attempt, source, generation, original, cut)
+    pub fn bind_publication_source_at_cut(
+        &mut self,
+        attempt: u64,
+        source: u64,
+        generation: u64,
+        original: PublicationInputs,
+        cut: PublicationInputCut,
+    ) -> Result<(), Error> {
+        self.delivery
+            .bind_publication_source_at_cut(attempt, source, generation, original, cut)
     }
-    pub fn publication_input_cut(&self, attempt: u64) -> Result<Option<PublicationInputCutStatus>, Error> {
+    pub fn publication_input_cut(
+        &self,
+        attempt: u64,
+    ) -> Result<Option<PublicationInputCutStatus>, Error> {
         self.delivery.publication_input_cut(attempt)
     }
-    pub fn record_captured_publication_inputs_at_cut(&mut self, attempt: u64, revision: u64,
-        source: u64, generation: u64, inputs: PublicationInputs, cut: PublicationInputCut) -> Result<u64, Error>
-    {
-        self.delivery.record_captured_publication_inputs_at_cut(attempt, revision, source, generation, inputs, cut)
+    pub fn record_captured_publication_inputs_at_cut(
+        &mut self,
+        attempt: u64,
+        revision: u64,
+        source: u64,
+        generation: u64,
+        inputs: PublicationInputs,
+        cut: PublicationInputCut,
+    ) -> Result<u64, Error> {
+        self.delivery.record_captured_publication_inputs_at_cut(
+            attempt, revision, source, generation, inputs, cut,
+        )
     }
 }
 
 impl OversightBroker {
     /// The original pre-dispatch source observation, never another authority.
-    pub fn record_captured_publication_inputs_or_defer(&mut self, attempt: u64, revision: u64,
-        source: u64, generation: u64, inputs: PublicationInputs, cut: PublicationInputCut)
-        -> Result<PublicationCaptureOutcome, Error>
-    {
-        self.delivery.record_captured_publication_inputs_or_defer(attempt, revision, source, generation, inputs, cut)
+    pub fn record_captured_publication_inputs_or_defer(
+        &mut self,
+        attempt: u64,
+        revision: u64,
+        source: u64,
+        generation: u64,
+        inputs: PublicationInputs,
+        cut: PublicationInputCut,
+    ) -> Result<PublicationCaptureOutcome, Error> {
+        self.delivery.record_captured_publication_inputs_or_defer(
+            attempt, revision, source, generation, inputs, cut,
+        )
     }
 }
 
@@ -129,7 +198,9 @@ impl OversightBroker {
     pub fn enable_publication_subtree_routing(&mut self) -> Result<(), Error> {
         self.delivery.enable_publication_subtree_routing()
     }
-    pub fn publication_routing_strategy(&self) -> Result<crate::witness::refinement::index::routing::RoutingStrategy, Error> {
+    pub fn publication_routing_strategy(
+        &self,
+    ) -> Result<crate::witness::refinement::index::routing::RoutingStrategy, Error> {
         self.delivery.publication_routing_strategy()
     }
 }
@@ -137,9 +208,13 @@ impl OversightBroker {
 impl OversightBroker {
     /// Poll the original retained evidence conjunction without copying inputs or
     /// granting authority. Freshness, both keys and final checks remain separate.
-    pub fn begin_publication_precheck(&self, attempt: u64, expected_revision: u64)
-        -> Result<crate::action::consequence::oversight::publication::PublicationRefinement<'_>, Error>
+    pub fn begin_publication_precheck(
+        &self,
+        attempt: u64,
+        expected_revision: u64,
+    ) -> Result<crate::action::consequence::oversight::publication::PublicationRefinement<'_>, Error>
     {
-        self.delivery.begin_publication_precheck(attempt, expected_revision)
+        self.delivery
+            .begin_publication_precheck(attempt, expected_revision)
     }
 }

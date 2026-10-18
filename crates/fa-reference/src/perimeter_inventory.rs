@@ -253,17 +253,27 @@ impl LoadedPerimeterInventory {
     ) -> Result<&str, Error> {
         let loaded = self.route_for(scope, family, route)?;
         if loaded.record().mediation != Mediation::BrokeredEffects
-            || !matches!(loaded.metadata().actor_credential(), ActorCredentialDisposition::BrokerMediated)
+            || !matches!(
+                loaded.metadata().actor_credential(),
+                ActorCredentialDisposition::BrokerMediated
+            )
         {
             return Err(Error::Binding);
         }
-        let family_record = self.inventory.records().iter()
+        let family_record = self
+            .inventory
+            .records()
+            .iter()
             .find(|record| record.scope == scope && record.family == family)
             .ok_or(Error::Missing)?;
-        let mut brokers = family_record.credentials.iter()
+        let mut brokers = family_record
+            .credentials
+            .iter()
             .filter(|credential| credential.holder == CredentialHolder::Broker);
         let credential = brokers.next().ok_or(Error::Incomplete)?;
-        if brokers.next().is_some() { return Err(Error::Binding); }
+        if brokers.next().is_some() {
+            return Err(Error::Binding);
+        }
         Ok(&credential.credential)
     }
 
@@ -725,21 +735,41 @@ mod tests {
     }
 
     fn scope() -> PerimeterScope {
-        PerimeterScope { tenant: 1, principal: 2, purpose: 3 }
+        PerimeterScope {
+            tenant: 1,
+            principal: 2,
+            purpose: 3,
+        }
     }
 
     #[test]
     fn loads_complete_metadata_with_exact_classification_lookup() {
         let loaded = LoadedPerimeterInventory::from_json_bytes(&valid_json()).unwrap();
-        let route = loaded.route_for(scope(), "egress", "adapter:disposable").unwrap();
+        let route = loaded
+            .route_for(scope(), "egress", "adapter:disposable")
+            .unwrap();
         assert_eq!(route.record().mediation, Mediation::BrokeredEffects);
-        assert_eq!(route.record().threat, Some(ThreatClass::DirectCredentialOrEgress));
+        assert_eq!(
+            route.record().threat,
+            Some(ThreatClass::DirectCredentialOrEgress)
+        );
         assert_eq!(route.metadata().effect(), EffectKind::NetworkRequest);
         assert_eq!(route.metadata().profile().id(), "reference-v1");
         assert_eq!(route.metadata().profile().generation(), 1);
-        assert_eq!(route.metadata().trust_path(), &[TrustDomain::Actor, TrustDomain::Enforcement]);
-        assert!(matches!(route.metadata().actor_credential(), ActorCredentialDisposition::BrokerMediated));
-        assert_eq!(loaded.broker_credential_for_route(scope(), "egress", "adapter:disposable").unwrap(), "broker-token");
+        assert_eq!(
+            route.metadata().trust_path(),
+            &[TrustDomain::Actor, TrustDomain::Enforcement]
+        );
+        assert!(matches!(
+            route.metadata().actor_credential(),
+            ActorCredentialDisposition::BrokerMediated
+        ));
+        assert_eq!(
+            loaded
+                .broker_credential_for_route(scope(), "egress", "adapter:disposable")
+                .unwrap(),
+            "broker-token"
+        );
     }
 
     #[test]
@@ -749,8 +779,15 @@ mod tests {
             "{\"credential\":\"broker-token\",\"holder\":\"broker\"},{\"credential\":\"backup-token\",\"holder\":\"broker\"}",
         );
         let loaded = LoadedPerimeterInventory::from_json_bytes(ambiguous.as_bytes()).unwrap();
-        assert!(loaded.route_for(scope(), "egress", "adapter:disposable").is_ok());
-        assert_eq!(loaded.broker_credential_for_route(scope(), "egress", "adapter:disposable"), Err(Error::Binding));
+        assert!(
+            loaded
+                .route_for(scope(), "egress", "adapter:disposable")
+                .is_ok()
+        );
+        assert_eq!(
+            loaded.broker_credential_for_route(scope(), "egress", "adapter:disposable"),
+            Err(Error::Binding)
+        );
     }
 
     #[test]

@@ -1,4 +1,4 @@
-#![allow(dead_code)]
+#![allow(dead_code, unused_imports)]
 #[path = "file_stream_wire.rs"] pub mod stream;
 pub use stream::{Directory, ordinary, profile, snapshot};
 use fa_reference::action::ElapsedTick;

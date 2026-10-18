@@ -1,20 +1,28 @@
 //! Explicit recovery of an acknowledged reset intent before the recovery fence.
 //! Only the original command, original reset and original canonical cut are used.
-use super::{Event, FileHumanReviewer, FileLearnedRecovery, FileLearnedRecoveryStatus,
-    FileOversight, JournalError};
 use super::super::{DecoderEvent, LearnedEvent, checkpoint::FileLearnedResetIntent};
-use crate::action::consequence::delivery::persistent::observed::containment::FileResetRequest;
-use crate::action::consequence::activation::tensor::kv::decoder::monitoring::restart::KvRestartBudget;
+use super::{
+    Event, FileHumanReviewer, FileLearnedRecovery, FileLearnedRecoveryStatus, FileOversight,
+    JournalError,
+};
 use crate::Error;
+use crate::action::consequence::activation::tensor::kv::decoder::monitoring::restart::KvRestartBudget;
+use crate::action::consequence::delivery::persistent::observed::containment::FileResetRequest;
 
 impl FileLearnedResetIntent {
     /// Independently retain the exact intended instruction for recovery. This
     /// validates DATA only: it captures no checkpoint, records no intent, and
     /// cannot supply a native handle or install a replacement numerical state.
-    pub fn for_recovery(checkpoint: u64, control: FileResetRequest, budget: KvRestartBudget)
-        -> Result<Self, Error>
-    {
-        let intent = Self { checkpoint, control, budget };
+    pub fn for_recovery(
+        checkpoint: u64,
+        control: FileResetRequest,
+        budget: KvRestartBudget,
+    ) -> Result<Self, Error> {
+        let intent = Self {
+            checkpoint,
+            control,
+            budget,
+        };
         intent.validate()?;
         Ok(intent)
     }
@@ -47,18 +55,20 @@ impl FileLearnedRecovery {
     ///     let _ = recovery.finish();
     /// }
     /// ```
-    pub fn finish_pending_reset(self, expected: &FileLearnedResetIntent)
-        -> Result<(FileOversight, FileHumanReviewer), JournalError>
-    {
+    pub fn finish_pending_reset(
+        self,
+        expected: &FileLearnedResetIntent,
+    ) -> Result<(FileOversight, FileHumanReviewer), JournalError> {
         self.prepare_pending_reset(expected)?.finish()
     }
 
     // Only the composed guarded owner may recheck its independently held gate
     // inventory around this SAME private transition. No mutable machine or
     // unfenced candidate can escape through the public recovery interfaces.
-    pub(in super::super::super::super) fn prepare_pending_reset(mut self,
-        expected: &FileLearnedResetIntent) -> Result<Self, JournalError>
-    {
+    pub(in super::super::super::super) fn prepare_pending_reset(
+        mut self,
+        expected: &FileLearnedResetIntent,
+    ) -> Result<Self, JournalError> {
         match self.status {
             FileLearnedRecoveryStatus::Ready => {}
             FileLearnedRecoveryStatus::Failed(error) => return Err(error.into()),
@@ -67,18 +77,27 @@ impl FileLearnedRecovery {
         }
         expected.validate()?;
         if let Some(pending) = self.machine.pending_learned_reset() {
-            if &pending.intent != expected { return Err(Error::Binding.into()); }
-            self.machine.check_pending_learned_reset(expected.control().operation)?;
+            if &pending.intent != expected {
+                return Err(Error::Binding.into());
+            }
+            self.machine
+                .check_pending_learned_reset(expected.control().operation)?;
             // Reserve BOTH completion and fencing before new original audit work.
-            if self.events.len().checked_add(2).ok_or(Error::Limit)? > self.profile.delivery.limits.events {
+            if self.events.len().checked_add(2).ok_or(Error::Limit)?
+                > self.profile.delivery.limits.events
+            {
                 return Err(Error::Limit.into());
             }
             self.events.try_reserve(2).map_err(|_| Error::Limit)?;
             if self.store.read(self.profile.delivery.limits.bytes)? != self.canonical {
                 return Err(Error::Binding.into());
             }
-            let completed = self.machine.prepare_learned_reset(expected.control().operation)?;
-            self.events.push(Event::Decoder(DecoderEvent::Learned(LearnedEvent::Checkpoint(completed))));
+            let completed = self
+                .machine
+                .prepare_learned_reset(expected.control().operation)?;
+            self.events.push(Event::Decoder(DecoderEvent::Learned(
+                LearnedEvent::Checkpoint(completed),
+            )));
             self.replayed = self.events.len();
         } else if self.machine.learned_reset_retry(expected)?.is_none() {
             // A newly constructed expectation cannot create its own BeginReset.

@@ -5,10 +5,12 @@ pub mod freshness;
 mod routing;
 pub use super::source::deferred::PublicationCaptureOutcome;
 pub use super::source::{PublicationInputCut, PublicationInputCutStatus};
-use super::{DeliveryBroker, PublicationGate, PublicationJudgment, MAX_PUBLICATION_BINDINGS};
-use crate::witness::refinement::index::routing::{InvalidationIndex, RoutingBudget, RoutingLimits, WitnessChange};
-use crate::witness::MAX_WITNESSES;
+use super::{DeliveryBroker, MAX_PUBLICATION_BINDINGS, PublicationGate, PublicationJudgment};
 use crate::Error;
+use crate::witness::MAX_WITNESSES;
+use crate::witness::refinement::index::routing::{
+    InvalidationIndex, RoutingBudget, RoutingLimits, WitnessChange,
+};
 use std::rc::Rc;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -34,7 +36,9 @@ pub struct PublicationChangeStatus {
     pub unavailable: bool,
 }
 impl PublicationChangeStatus {
-    pub fn complete(self) -> bool { !self.unavailable && self.through == self.observed_through }
+    pub fn complete(self) -> bool {
+        !self.unavailable && self.through == self.observed_through
+    }
 }
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum ChangeRouting {
@@ -64,8 +68,14 @@ pub(super) struct ChangeState {
     freshness: Option<freshness::FreshnessState>,
 }
 impl ChangeState {
-    pub(super) fn complete(&self) -> bool { self.status.complete() }
-    pub(super) fn register(&mut self, attempt: u64, judgment: &PublicationJudgment) -> Result<(), Error> {
+    pub(super) fn complete(&self) -> bool {
+        self.status.complete()
+    }
+    pub(super) fn register(
+        &mut self,
+        attempt: u64,
+        judgment: &PublicationJudgment,
+    ) -> Result<(), Error> {
         judgment.register_invalidation(attempt, &mut self.index)
     }
 }
@@ -73,44 +83,87 @@ impl ChangeState {
 impl DeliveryBroker {
     /// One bootstrap profile, before every proposal. No later disable, source
     /// replacement, sequence reset or budget widening exists for this owner.
-    pub fn enable_publication_changes(&mut self, policy: PublicationChangePolicy) -> Result<(), Error> {
-        if policy.source == 0 { return Err(Error::InvalidInput); }
+    pub fn enable_publication_changes(
+        &mut self,
+        policy: PublicationChangePolicy,
+    ) -> Result<(), Error> {
+        if policy.source == 0 {
+            return Err(Error::InvalidInput);
+        }
         let control = self.inspect();
         let gate = self.publication.as_mut().ok_or(Error::Incomplete)?;
-        if gate.changes.is_some() { return Err(Error::Duplicate); }
-        if !gate.slots.is_empty() || control.sequence != 0 { return Err(Error::WrongState); }
+        if gate.changes.is_some() {
+            return Err(Error::Duplicate);
+        }
+        if !gate.slots.is_empty() || control.sequence != 0 {
+            return Err(Error::WrongState);
+        }
         let index = InvalidationIndex::new(RoutingLimits {
-            judgments: gate.limits.bindings, dependencies: gate.limits.bindings * MAX_WITNESSES,
+            judgments: gate.limits.bindings,
+            dependencies: gate.limits.bindings * MAX_WITNESSES,
         })?;
-        gate.changes = Some(ChangeState { policy, status: PublicationChangeStatus {
-            source: policy.source, through: policy.after, observed_through: policy.after, unavailable: false,
-        }, index, last: None, freshness: None });
+        gate.changes = Some(ChangeState {
+            policy,
+            status: PublicationChangeStatus {
+                source: policy.source,
+                through: policy.after,
+                observed_through: policy.after,
+                unavailable: false,
+            },
+            index,
+            last: None,
+            freshness: None,
+        });
         Ok(())
     }
 
     pub fn publication_change_status(&self) -> Result<PublicationChangeStatus, Error> {
-        Ok(self.publication.as_ref().and_then(|gate| gate.changes.as_ref()).ok_or(Error::Incomplete)?.status)
+        Ok(self
+            .publication
+            .as_ref()
+            .and_then(|gate| gate.changes.as_ref())
+            .ok_or(Error::Incomplete)?
+            .status)
     }
     pub fn publication_change_report(&self) -> Result<Option<Rc<PublicationChangeReport>>, Error> {
-        Ok(self.publication.as_ref().and_then(|gate| gate.changes.as_ref()).ok_or(Error::Incomplete)?.last.clone())
+        Ok(self
+            .publication
+            .as_ref()
+            .and_then(|gate| gate.changes.as_ref())
+            .ok_or(Error::Incomplete)?
+            .last
+            .clone())
     }
     /// Side-effect-free ownership/predecessor checks for a durable consumer.
     /// Out-of-order future notices pass: their coverage loss must be COMMITTED,
     /// not thrown away as a stale speculative candidate.
     pub fn preflight_publication_change(&self, notice: PublicationChange) -> Result<(), Error> {
         let state = self.publication_change_status()?;
-        if notice.source != state.source { return Err(Error::Binding); }
-        if notice.sequence <= state.through { return Err(Error::Stale); }
+        if notice.source != state.source {
+            return Err(Error::Binding);
+        }
+        if notice.sequence <= state.through {
+            return Err(Error::Stale);
+        }
         Ok(())
     }
-    pub fn record_publication_change(&mut self, notice: PublicationChange) -> Result<Rc<PublicationChangeReport>, Error> {
+    pub fn record_publication_change(
+        &mut self,
+        notice: PublicationChange,
+    ) -> Result<Rc<PublicationChangeReport>, Error> {
         self.preflight_publication_change(notice)?;
-        self.publication.as_mut().ok_or(Error::Incomplete)?.apply_change(notice)
+        self.publication
+            .as_mut()
+            .ok_or(Error::Incomplete)?
+            .apply_change(notice)
     }
 }
 
 impl PublicationGate {
-    fn apply_change(&mut self, notice: PublicationChange) -> Result<Rc<PublicationChangeReport>, Error> {
+    fn apply_change(
+        &mut self,
+        notice: PublicationChange,
+    ) -> Result<Rc<PublicationChangeReport>, Error> {
         let state = self.changes.as_mut().ok_or(Error::Incomplete)?;
         let old = state.status;
         // Once a current-source notice is accepted, allocation/overflow/unwind
@@ -138,24 +191,41 @@ impl PublicationGate {
                 Err(error) => ChangeRouting::Conservative(error),
             }
         };
-        if routing != ChangeRouting::Indexed { selected.fill(true); }
+        if routing != ChangeRouting::Indexed {
+            selected.fill(true);
+        }
         let mut affected = Vec::new();
-        affected.try_reserve_exact(self.slots.len()).map_err(|_| Error::Limit)?;
+        affected
+            .try_reserve_exact(self.slots.len())
+            .map_err(|_| Error::Limit)?;
         for (position, (id, slot)) in self.slots.iter().enumerate() {
             if selected[position] {
                 slot.revision.checked_add(1).ok_or(Error::Overflow)?;
                 affected.push(*id);
             }
         }
-        let status = PublicationChangeStatus { source: old.source,
-            through: if contiguous { notice.sequence } else { old.through },
-            observed_through: old.observed_through.max(notice.sequence), unavailable: false };
-        let report = Rc::new(PublicationChangeReport { status, routing, affected, spent });
+        let status = PublicationChangeStatus {
+            source: old.source,
+            through: if contiguous {
+                notice.sequence
+            } else {
+                old.through
+            },
+            observed_through: old.observed_through.max(notice.sequence),
+            unavailable: false,
+        };
+        let report = Rc::new(PublicationChangeReport {
+            status,
+            routing,
+            affected,
+            spent,
+        });
         for (position, slot) in self.slots.values_mut().enumerate() {
             if selected[position] {
                 // None preserves snapshot and producer high-water marks. It
                 // revokes source freshness, not either authority key or rights.
-                slot.record_inputs(slot.revision, None).expect("preflighted withdrawal revision");
+                slot.record_inputs(slot.revision, None)
+                    .expect("preflighted withdrawal revision");
                 slot.require_capture_through(status.observed_through);
                 slot.last = None;
             }

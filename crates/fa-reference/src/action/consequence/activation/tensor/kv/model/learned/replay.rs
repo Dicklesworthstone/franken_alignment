@@ -2,8 +2,8 @@
 //! Checkpoints deliberately retain training inputs and repeat fitting work.
 pub mod archive;
 pub mod training;
-use super::{FitBudget, LearnedKvCodec, LearnedKvPolicy, ModelKvImage, ModelKvProfile};
 use super::fit::MAX_TRAINING_SOURCES;
+use super::{FitBudget, LearnedKvCodec, LearnedKvPolicy, ModelKvImage, ModelKvProfile};
 use crate::Error;
 use std::collections::BTreeMap;
 use std::fmt;
@@ -33,13 +33,17 @@ struct FitCheckpointData {
 /// fn bypass(saved: LearnedKvFitCheckpoint) -> LearnedKvCodec { saved }
 /// ```
 #[derive(Clone)]
-pub struct LearnedKvFitCheckpoint { data: Rc<FitCheckpointData> }
+pub struct LearnedKvFitCheckpoint {
+    data: Rc<FitCheckpointData>,
+}
 impl fmt::Debug for LearnedKvFitCheckpoint {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("LearnedKvFitCheckpoint").field("policy", &self.policy())
+        f.debug_struct("LearnedKvFitCheckpoint")
+            .field("policy", &self.policy())
             .field("training_sources", &self.data.training.len())
             .field("input_bytes", &self.input_bytes())
-            .field("comparison_bytes", &self.comparison_bytes()).finish_non_exhaustive()
+            .field("comparison_bytes", &self.comparison_bytes())
+            .finish_non_exhaustive()
     }
 }
 
@@ -52,28 +56,48 @@ impl LearnedKvCodec {
     /// All checkpoint input lengths are admitted before fitting. An allocation
     /// failure while recording the result returns no checkpoint. This offline
     /// operation is not a transaction that refunds physical computation.
-    pub fn fit_with_checkpoint(policy: LearnedKvPolicy,
-        training: &BTreeMap<u64, ModelKvImage>, budget: FitBudget)
-        -> Result<(Self, LearnedKvFitCheckpoint), Error>
-    {
+    pub fn fit_with_checkpoint(
+        policy: LearnedKvPolicy,
+        training: &BTreeMap<u64, ModelKvImage>,
+        budget: FitBudget,
+    ) -> Result<(Self, LearnedKvFitCheckpoint), Error> {
         let input_bytes = input_bytes(training)?;
         let codec = Self::fit(policy, training, budget)?;
         let witness = comparison(&codec)?;
-        let saved = LearnedKvFitCheckpoint { data: Rc::new(FitCheckpointData {
-            policy, budget, training: training.clone(), input_bytes, witness,
-        }) };
+        let saved = LearnedKvFitCheckpoint {
+            data: Rc::new(FitCheckpointData {
+                policy,
+                budget,
+                training: training.clone(),
+                input_bytes,
+                witness,
+            }),
+        };
         Ok((codec, saved))
     }
 }
 
 impl LearnedKvFitCheckpoint {
-    pub fn policy(&self) -> LearnedKvPolicy { self.data.policy }
-    pub fn budget(&self) -> FitBudget { self.data.budget }
-    pub fn profile(&self) -> &ModelKvProfile {
-        self.data.training.values().next().expect("nonempty original training corpus").profile()
+    pub fn policy(&self) -> LearnedKvPolicy {
+        self.data.policy
     }
-    pub fn input_bytes(&self) -> usize { self.data.input_bytes }
-    pub fn comparison_bytes(&self) -> usize { self.data.witness.len() }
+    pub fn budget(&self) -> FitBudget {
+        self.data.budget
+    }
+    pub fn profile(&self) -> &ModelKvProfile {
+        self.data
+            .training
+            .values()
+            .next()
+            .expect("nonempty original training corpus")
+            .profile()
+    }
+    pub fn input_bytes(&self) -> usize {
+        self.data.input_bytes
+    }
+    pub fn comparison_bytes(&self) -> usize {
+        self.data.witness.len()
+    }
 
     /// Rerun the ORIGINAL fit, then compare every emitted parameter word and
     /// every fit-report field before returning the newly computed codec. Saved
@@ -88,7 +112,9 @@ impl LearnedKvFitCheckpoint {
     pub fn replay(&self, budget: FitBudget) -> Result<LearnedKvCodec, Error> {
         check_budget(budget, self.data.budget)?;
         let codec = LearnedKvCodec::fit(self.data.policy, &self.data.training, budget)?;
-        if comparison(&codec)? != self.data.witness { return Err(Error::Binding); }
+        if comparison(&codec)? != self.data.witness {
+            return Err(Error::Binding);
+        }
         Ok(codec)
     }
 }
@@ -97,17 +123,28 @@ fn check_budget(actual: FitBudget, original: FitBudget) -> Result<(), Error> {
     if actual.source_values > original.source_values
         || actual.parameter_values > original.parameter_values
         || actual.scratch_values > original.scratch_values
-        || actual.work_units > original.work_units { return Err(Error::Limit); }
+        || actual.work_units > original.work_units
+    {
+        return Err(Error::Limit);
+    }
     Ok(())
 }
 
 fn input_bytes(training: &BTreeMap<u64, ModelKvImage>) -> Result<usize, Error> {
-    if training.is_empty() || training.contains_key(&0) { return Err(Error::InvalidInput); }
-    if training.len() > MAX_TRAINING_SOURCES { return Err(Error::Limit); }
+    if training.is_empty() || training.contains_key(&0) {
+        return Err(Error::InvalidInput);
+    }
+    if training.len() > MAX_TRAINING_SOURCES {
+        return Err(Error::Limit);
+    }
     let mut total = 0_usize;
     for image in training.values() {
-        total = total.checked_add(image.descriptor().image_len()?).ok_or(Error::Limit)?;
-        if total > MAX_FIT_CHECKPOINT_INPUT_BYTES { return Err(Error::Limit); }
+        total = total
+            .checked_add(image.descriptor().image_len()?)
+            .ok_or(Error::Limit)?;
+        if total > MAX_FIT_CHECKPOINT_INPUT_BYTES {
+            return Err(Error::Limit);
+        }
     }
     Ok(total)
 }
@@ -119,7 +156,12 @@ fn comparison(codec: &LearnedKvCodec) -> Result<Vec<u8>, Error> {
     let mut out = Witness { bytes: Vec::new() };
     out.raw(b"FAKVCMP\x01")?;
     let policy = codec.policy();
-    for value in [policy.id(), policy.generation(), policy.rank() as u64, policy.sweeps() as u64] {
+    for value in [
+        policy.id(),
+        policy.generation(),
+        policy.rank() as u64,
+        policy.sweeps() as u64,
+    ] {
         out.word(value)?;
     }
     let report = codec.fit_report();
@@ -127,37 +169,75 @@ fn comparison(codec: &LearnedKvCodec) -> Result<Vec<u8>, Error> {
     for (origin, source) in &report.sources {
         out.word(*origin)?;
         let descriptor = source.descriptor.encode()?;
-        out.count(descriptor.len())?; out.raw(&descriptor)?;
+        out.count(descriptor.len())?;
+        out.raw(&descriptor)?;
     }
-    for value in [report.rows_per_group, report.training_values, report.source_coordinate_visits,
-        report.parameter_values, report.scratch_values_reserved] { out.count(value)?; }
+    for value in [
+        report.rows_per_group,
+        report.training_values,
+        report.source_coordinate_visits,
+        report.parameter_values,
+        report.scratch_values_reserved,
+    ] {
+        out.count(value)?;
+    }
     out.word(report.work_units_reserved)?;
-    if !codec.groups().keys().eq(report.groups.keys()) { return Err(Error::Binding); }
+    if !codec.groups().keys().eq(report.groups.keys()) {
+        return Err(Error::Binding);
+    }
     out.count(codec.groups().len())?;
     for (key, basis) in codec.groups() {
         out.word(key.layer)?;
-        out.raw(&[match key.side { super::KvSide::Key => 0, super::KvSide::Value => 1 }])?;
+        out.raw(&[match key.side {
+            super::KvSide::Key => 0,
+            super::KvSide::Value => 1,
+        }])?;
         out.count(key.head)?;
-        out.count(basis.mean().len())?; out.count(basis.axes().len())?;
-        for value in basis.mean().iter().chain(basis.axes()) { out.raw(&value.to_bits().to_be_bytes())?; }
+        out.count(basis.mean().len())?;
+        out.count(basis.axes().len())?;
+        for value in basis.mean().iter().chain(basis.axes()) {
+            out.raw(&value.to_bits().to_be_bytes())?;
+        }
         let group = &report.groups[key];
-        for value in [group.rows, group.channels, group.rotations] { out.count(value)?; }
-        for value in [group.covariance_trace, group.remaining_off_diagonal_squared,
-            group.emitted_orthogonality_max_error] { out.word(value.to_bits())?; }
+        for value in [group.rows, group.channels, group.rotations] {
+            out.count(value)?;
+        }
+        for value in [
+            group.covariance_trace,
+            group.remaining_off_diagonal_squared,
+            group.emitted_orthogonality_max_error,
+        ] {
+            out.word(value.to_bits())?;
+        }
         out.count(group.selected_diagonal.len())?;
-        for value in &group.selected_diagonal { out.word(value.to_bits())?; }
+        for value in &group.selected_diagonal {
+            out.word(value.to_bits())?;
+        }
     }
     Ok(out.bytes)
 }
-struct Witness { bytes: Vec<u8> }
+struct Witness {
+    bytes: Vec<u8>,
+}
 impl Witness {
     fn raw(&mut self, bytes: &[u8]) -> Result<(), Error> {
-        let total = self.bytes.len().checked_add(bytes.len()).ok_or(Error::Limit)?;
-        if total > MAX_FIT_CHECKPOINT_WITNESS_BYTES { return Err(Error::Limit); }
-        self.bytes.try_reserve(bytes.len()).map_err(|_| Error::Limit)?;
-        self.bytes.extend_from_slice(bytes); Ok(())
+        let total = self
+            .bytes
+            .len()
+            .checked_add(bytes.len())
+            .ok_or(Error::Limit)?;
+        if total > MAX_FIT_CHECKPOINT_WITNESS_BYTES {
+            return Err(Error::Limit);
+        }
+        self.bytes
+            .try_reserve(bytes.len())
+            .map_err(|_| Error::Limit)?;
+        self.bytes.extend_from_slice(bytes);
+        Ok(())
     }
-    fn word(&mut self, value: u64) -> Result<(), Error> { self.raw(&value.to_be_bytes()) }
+    fn word(&mut self, value: u64) -> Result<(), Error> {
+        self.raw(&value.to_be_bytes())
+    }
     fn count(&mut self, value: usize) -> Result<(), Error> {
         self.word(u64::try_from(value).map_err(|_| Error::Limit)?)
     }

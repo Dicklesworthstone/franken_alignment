@@ -3,10 +3,12 @@
 
 pub mod search;
 
-use super::{EvidenceSlice, Intervention, InterventionScope, NextRequirement, NodeChange,
-    apply_interventions};
-use crate::action::{ActionState, Purpose};
+use super::{
+    EvidenceSlice, Intervention, InterventionScope, NextRequirement, NodeChange,
+    apply_interventions,
+};
 use crate::action::consequence::gate::containment::session::policy::{Truth, controller::Proposal};
+use crate::action::{ActionState, Purpose};
 use crate::{Error, Snapshot};
 
 /// Immutable observation data. The original evaluator checks the complete
@@ -42,71 +44,144 @@ pub struct ProposalCounterfactualReport {
     next: NextRequirement,
 }
 impl ProposalCounterfactualReport {
-    pub fn purpose(&self) -> Purpose { Purpose::Experiment }
-    pub fn scope(&self) -> u64 { self.scope }
-    pub fn attempt(&self) -> u64 { self.attempt }
-    pub fn initial_state(&self) -> ActionState { self.initial_state }
-    pub fn baseline(&self) -> Truth { self.baseline }
-    pub fn counterfactual(&self) -> Truth { self.counterfactual }
-    pub fn trace(&self) -> &[Truth] { &self.trace }
-    pub fn changes(&self) -> &[NodeChange] { &self.changes }
-    pub fn interventions(&self) -> &[Intervention] { &self.interventions }
-    pub fn next_requirement(&self) -> NextRequirement { self.next }
+    pub fn purpose(&self) -> Purpose {
+        Purpose::Experiment
+    }
+    pub fn scope(&self) -> u64 {
+        self.scope
+    }
+    pub fn attempt(&self) -> u64 {
+        self.attempt
+    }
+    pub fn initial_state(&self) -> ActionState {
+        self.initial_state
+    }
+    pub fn baseline(&self) -> Truth {
+        self.baseline
+    }
+    pub fn counterfactual(&self) -> Truth {
+        self.counterfactual
+    }
+    pub fn trace(&self) -> &[Truth] {
+        &self.trace
+    }
+    pub fn changes(&self) -> &[NodeChange] {
+        &self.changes
+    }
+    pub fn interventions(&self) -> &[Intervention] {
+        &self.interventions
+    }
+    pub fn next_requirement(&self) -> NextRequirement {
+        self.next
+    }
 }
 
 impl ProposalExperiment {
     /// Consumes bounded native proposal data; verifies before retaining a clone
     /// of anything supplied through its publicly constructible outer record.
     /// The snapshot is not retained or treated as current permitting evidence.
-    pub fn new(proposal: Proposal, snapshot: &Snapshot, scope: InterventionScope) -> Result<Self, Error> {
+    pub fn new(
+        proposal: Proposal,
+        snapshot: &Snapshot,
+        scope: InterventionScope,
+    ) -> Result<Self, Error> {
         if proposal.attempt == 0 || proposal.action.spec().scope.purpose != Purpose::Effect {
             return Err(Error::InvalidInput);
         }
-        if !snapshot.complete { return Err(Error::Incomplete); }
-        if snapshot.semantic_epoch != proposal.snapshot_semantic_epoch { return Err(Error::Stale); }
+        if !snapshot.complete {
+            return Err(Error::Incomplete);
+        }
+        if snapshot.semantic_epoch != proposal.snapshot_semantic_epoch {
+            return Err(Error::Stale);
+        }
         let evaluation = proposal.policy.evaluate(&proposal.action, snapshot)?;
         if evaluation != proposal.evaluation
             || proposal.action.spec().required_witnesses.as_slice() != evaluation.witnesses()
-            || evaluation.trace().iter().any(|step| step.result == Truth::Unknown)
-        { return Err(Error::Binding); }
-        let state = if evaluation.certifiable() { ActionState::Reviewing } else { ActionState::Denied };
-        if proposal.state != state { return Err(Error::Binding); }
+            || evaluation
+                .trace()
+                .iter()
+                .any(|step| step.result == Truth::Unknown)
+        {
+            return Err(Error::Binding);
+        }
+        let state = if evaluation.certifiable() {
+            ActionState::Reviewing
+        } else {
+            ActionState::Denied
+        };
+        if proposal.state != state {
+            return Err(Error::Binding);
+        }
         let evidence = EvidenceSlice::new(evaluation.witnesses())?;
         for key in &scope.keys {
-            if evidence.lookup(*key).is_none() { return Err(Error::Incomplete); }
+            if evidence.lookup(*key).is_none() {
+                return Err(Error::Incomplete);
+            }
         }
         // Preserve the archived experiment's partial-evidence law: a positive
         // member proves nonemptiness, NOT closure of its entire queried range.
         let trace = evidence.evaluate(&proposal.policy, &proposal.action)?;
         if trace.len() != evaluation.trace().len()
-            || trace.iter().zip(evaluation.trace()).any(|(a, b)| *a != b.result)
-        { return Err(Error::Binding); }
-        Ok(Self { proposal, scope, evidence })
+            || trace
+                .iter()
+                .zip(evaluation.trace())
+                .any(|(a, b)| *a != b.result)
+        {
+            return Err(Error::Binding);
+        }
+        Ok(Self {
+            proposal,
+            scope,
+            evidence,
+        })
     }
 
-    pub fn purpose(&self) -> Purpose { Purpose::Experiment }
-    pub fn original(&self) -> &Proposal { &self.proposal }
-    pub fn scope(&self) -> &InterventionScope { &self.scope }
+    pub fn purpose(&self) -> Purpose {
+        Purpose::Experiment
+    }
+    pub fn original(&self) -> &Proposal {
+        &self.proposal
+    }
+    pub fn scope(&self) -> &InterventionScope {
+        &self.scope
+    }
 
     /// Every invocation starts at the SAME original admission, even when later
     /// policy epochs, source values or effect outcomes have changed elsewhere.
     pub fn run(&self, edits: &[Intervention]) -> Result<ProposalCounterfactualReport, Error> {
-        let (action, evidence, _) = apply_interventions(
-            &self.proposal.action, &self.evidence, &self.scope, edits,
-        )?;
+        let (action, evidence, _) =
+            apply_interventions(&self.proposal.action, &self.evidence, &self.scope, edits)?;
         let trace = evidence.evaluate(&self.proposal.policy, &action)?;
         let counterfactual = *trace.last().ok_or(Error::Incomplete)?;
-        let changes = trace.iter().zip(self.proposal.evaluation.trace()).enumerate()
-            .filter_map(|(node, (after, before))| (*after != before.result).then_some(NodeChange {
-                node, baseline: before.result, counterfactual: *after,
-            })).collect();
+        let changes = trace
+            .iter()
+            .zip(self.proposal.evaluation.trace())
+            .enumerate()
+            .filter_map(|(node, (after, before))| {
+                (*after != before.result).then_some(NodeChange {
+                    node,
+                    baseline: before.result,
+                    counterfactual: *after,
+                })
+            })
+            .collect();
         let next = match counterfactual {
             Truth::Violated => NextRequirement::ExactPolicyViolation,
-            Truth::Satisfied if !trace.contains(&Truth::Unknown) => NextRequirement::FreshIndependentReview,
+            Truth::Satisfied if !trace.contains(&Truth::Unknown) => {
+                NextRequirement::FreshIndependentReview
+            }
             _ => NextRequirement::MoreEvidence,
         };
-        Ok(ProposalCounterfactualReport { scope: self.scope.id, attempt: self.proposal.attempt,
-            initial_state: self.proposal.state, baseline: self.proposal.evaluation.result(),
-            counterfactual, trace, changes, interventions: edits.to_vec(), next })
+        Ok(ProposalCounterfactualReport {
+            scope: self.scope.id,
+            attempt: self.proposal.attempt,
+            initial_state: self.proposal.state,
+            baseline: self.proposal.evaluation.result(),
+            counterfactual,
+            trace,
+            changes,
+            interventions: edits.to_vec(),
+            next,
+        })
     }
 }

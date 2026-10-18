@@ -1,14 +1,21 @@
 //! Cooperative paired experiments using the original numerical sessions.
 //! One advance computes at most one arm-token. Partial pairs never form a report.
 
-use super::{DecoderComparisonBudget, DecoderContinuationComparison, DecoderContinuationPolicy,
-    DecoderContinuationStep, DecoderIntervention, DecoderWork, contrast};
-use super::super::{DecoderExperimentArm, DecoderExperimentSession, DecoderExperimentStep};
 use super::super::super::DecoderBudget;
+use super::super::{DecoderExperimentArm, DecoderExperimentSession, DecoderExperimentStep};
+use super::{
+    DecoderComparisonBudget, DecoderContinuationComparison, DecoderContinuationPolicy,
+    DecoderContinuationStep, DecoderIntervention, DecoderWork, contrast,
+};
 use crate::Error;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum DecoderComparisonStatus { Running, Complete, Cancelled, Failed(Error) }
+pub enum DecoderComparisonStatus {
+    Running,
+    Complete,
+    Cancelled,
+    Failed(Error),
+}
 
 /// Entered terms are upper bounds for whole attempted tokens, not measured FLOPs.
 /// Completed work comes from the original sessions, including an unpaired arm.
@@ -49,50 +56,96 @@ pub struct DecoderComparisonCursor {
 }
 
 impl DecoderIntervention {
-    pub fn begin_forced_comparison(&self, tokens: &[u32], budget: DecoderComparisonBudget)
-        -> Result<DecoderComparisonCursor, Error>
-    {
-        DecoderComparisonCursor::new(self, tokens, tokens.len(), DecoderContinuationPolicy::TeacherForced, budget)
+    pub fn begin_forced_comparison(
+        &self,
+        tokens: &[u32],
+        budget: DecoderComparisonBudget,
+    ) -> Result<DecoderComparisonCursor, Error> {
+        DecoderComparisonCursor::new(
+            self,
+            tokens,
+            tokens.len(),
+            DecoderContinuationPolicy::TeacherForced,
+            budget,
+        )
     }
 
     /// The first token is common; each arm subsequently consumes its own greedy
     /// choice. The unconsumed last next-choice is diagnostic, not an extra token.
-    pub fn begin_greedy_comparison(&self, first_token: u32, steps: usize, budget: DecoderComparisonBudget)
-        -> Result<DecoderComparisonCursor, Error>
-    {
-        DecoderComparisonCursor::new(self, &[first_token], steps,
-            DecoderContinuationPolicy::GreedyAfterFirstToken, budget)
+    pub fn begin_greedy_comparison(
+        &self,
+        first_token: u32,
+        steps: usize,
+        budget: DecoderComparisonBudget,
+    ) -> Result<DecoderComparisonCursor, Error> {
+        DecoderComparisonCursor::new(
+            self,
+            &[first_token],
+            steps,
+            DecoderContinuationPolicy::GreedyAfterFirstToken,
+            budget,
+        )
     }
 }
 
 impl DecoderComparisonCursor {
-    fn new(plan: &DecoderIntervention, tokens: &[u32], count: usize,
-        policy: DecoderContinuationPolicy, budget: DecoderComparisonBudget) -> Result<Self, Error>
-    {
+    fn new(
+        plan: &DecoderIntervention,
+        tokens: &[u32],
+        count: usize,
+        policy: DecoderContinuationPolicy,
+        budget: DecoderComparisonBudget,
+    ) -> Result<Self, Error> {
         let (planned, retained_limit) = plan.comparison_admission(tokens, count, budget)?;
         let mut retained_tokens = Vec::new();
-        retained_tokens.try_reserve_exact(tokens.len()).map_err(|_| Error::Limit)?;
+        retained_tokens
+            .try_reserve_exact(tokens.len())
+            .map_err(|_| Error::Limit)?;
         retained_tokens.extend_from_slice(tokens);
         let mut pairs = Vec::new();
         pairs.try_reserve_exact(count).map_err(|_| Error::Limit)?;
-        Ok(Self { plan: plan.clone(), policy, tokens: retained_tokens, count, planned, retained_limit,
+        Ok(Self {
+            plan: plan.clone(),
+            policy,
+            tokens: retained_tokens,
+            count,
+            planned,
+            retained_limit,
             control: plan.session(DecoderExperimentArm::Control),
-            intervention: plan.session(DecoderExperimentArm::Intervention), pending: None, pairs,
-            entered_tokens: 0, entered_products: 0, status: DecoderComparisonStatus::Running })
+            intervention: plan.session(DecoderExperimentArm::Intervention),
+            pending: None,
+            pairs,
+            entered_tokens: 0,
+            entered_products: 0,
+            status: DecoderComparisonStatus::Running,
+        })
     }
 
-    pub fn status(&self) -> DecoderComparisonStatus { self.status }
-    pub fn horizon(&self) -> usize { self.count }
+    pub fn status(&self) -> DecoderComparisonStatus {
+        self.status
+    }
+    pub fn horizon(&self) -> usize {
+        self.count
+    }
     /// Explicitly partial evidence. These pairs cover only the completed prefix.
-    pub fn completed_pairs(&self) -> &[DecoderContinuationStep] { &self.pairs }
+    pub fn completed_pairs(&self) -> &[DecoderContinuationStep] {
+        &self.pairs
+    }
 
     pub fn work(&self) -> Result<DecoderComparisonWork, Error> {
         let completed = self.control.work().add(self.intervention.work())?;
-        let retained_logit_values = usize::try_from(completed.tokens).map_err(|_| Error::Overflow)?
-            .checked_mul(self.plan.source().model().profile().shape().vocabulary).ok_or(Error::Overflow)?;
-        Ok(DecoderComparisonWork { planned: self.planned, entered_tokens: self.entered_tokens,
-            entered_products: self.entered_products, completed, completed_pairs: self.pairs.len(),
-            retained_logit_values })
+        let retained_logit_values = usize::try_from(completed.tokens)
+            .map_err(|_| Error::Overflow)?
+            .checked_mul(self.plan.source().model().profile().shape().vocabulary)
+            .ok_or(Error::Overflow)?;
+        Ok(DecoderComparisonWork {
+            planned: self.planned,
+            entered_tokens: self.entered_tokens,
+            entered_products: self.entered_products,
+            completed,
+            completed_pairs: self.pairs.len(),
+            retained_logit_values,
+        })
     }
 
     /// Cooperative numerical boundary, not preemptive cancellation or a latency
@@ -106,17 +159,25 @@ impl DecoderComparisonCursor {
         self.status = DecoderComparisonStatus::Failed(Error::Incomplete);
         match self.advance_inner() {
             Ok(complete) => {
-                self.status = if complete { DecoderComparisonStatus::Complete } else { DecoderComparisonStatus::Running };
+                self.status = if complete {
+                    DecoderComparisonStatus::Complete
+                } else {
+                    DecoderComparisonStatus::Running
+                };
                 Ok(self.status)
             }
-            Err(error) => { self.status = DecoderComparisonStatus::Failed(error); Err(error) }
+            Err(error) => {
+                self.status = DecoderComparisonStatus::Failed(error);
+                Err(error)
+            }
         }
     }
 
     pub fn cancel(&mut self) -> Result<(), Error> {
         match self.status {
             DecoderComparisonStatus::Running | DecoderComparisonStatus::Cancelled => {
-                self.status = DecoderComparisonStatus::Cancelled; Ok(())
+                self.status = DecoderComparisonStatus::Cancelled;
+                Ok(())
             }
             _ => Err(Error::WrongState),
         }
@@ -125,16 +186,38 @@ impl DecoderComparisonCursor {
     /// Only a full, successful horizon can become the original comparison type.
     /// Repeated finish clones observation data; it does not rerun either arm.
     pub fn finish(&self) -> Result<DecoderContinuationComparison, Error> {
-        if self.status != DecoderComparisonStatus::Complete { return Err(Error::Incomplete); }
+        if self.status != DecoderComparisonStatus::Complete {
+            return Err(Error::Incomplete);
+        }
         let work = self.work()?;
-        if work.completed != self.planned || self.pairs.len() != self.count || self.pending.is_some()
-            || work.retained_logit_values != self.retained_limit { return Err(Error::Binding); }
+        if work.completed != self.planned
+            || self.pairs.len() != self.count
+            || self.pending.is_some()
+            || work.retained_logit_values != self.retained_limit
+        {
+            return Err(Error::Binding);
+        }
         Ok(DecoderContinuationComparison {
-            plan: self.plan.clone(), policy: self.policy, steps: self.pairs.clone(), work: work.completed,
+            plan: self.plan.clone(),
+            policy: self.policy,
+            steps: self.pairs.clone(),
+            work: work.completed,
             retained_logit_values: work.retained_logit_values,
-            first_different_logits: self.pairs.iter().find(|s| s.changed_logit_words > 0).map(|s| s.position),
-            first_different_consumed_token: self.pairs.iter().find(|s| s.control_token != s.intervention_token).map(|s| s.position),
-            first_different_next_choice: self.pairs.iter().find(|s| s.control_next_token != s.intervention_next_token).map(|s| s.position + 1),
+            first_different_logits: self
+                .pairs
+                .iter()
+                .find(|s| s.changed_logit_words > 0)
+                .map(|s| s.position),
+            first_different_consumed_token: self
+                .pairs
+                .iter()
+                .find(|s| s.control_token != s.intervention_token)
+                .map(|s| s.position),
+            first_different_next_choice: self
+                .pairs
+                .iter()
+                .find(|s| s.control_next_token != s.intervention_next_token)
+                .map(|s| s.position + 1),
         })
     }
 
@@ -143,25 +226,48 @@ impl DecoderComparisonCursor {
         let start = self.plan.source().tokens().len();
         let position = (start + offset) as u64;
         let left_arm = self.pending.is_none();
-        let token = if self.policy == DecoderContinuationPolicy::TeacherForced { self.tokens[offset] }
-            else if offset == 0 { self.tokens[0] }
-            else if left_arm { self.control.greedy_token()? } else { self.intervention.greedy_token()? };
-        let products = self.plan.source().model().estimate(start + offset, 1)?.scalar_products()?;
+        let token = if self.policy == DecoderContinuationPolicy::TeacherForced {
+            self.tokens[offset]
+        } else if offset == 0 {
+            self.tokens[0]
+        } else if left_arm {
+            self.control.greedy_token()?
+        } else {
+            self.intervention.greedy_token()?
+        };
+        let products = self
+            .plan
+            .source()
+            .model()
+            .estimate(start + offset, 1)?
+            .scalar_products()?;
         self.entered_tokens = self.entered_tokens.checked_add(1).ok_or(Error::Overflow)?;
-        self.entered_products = self.entered_products.checked_add(products).ok_or(Error::Overflow)?;
-        let budget = DecoderBudget { scalar_products: products };
+        self.entered_products = self
+            .entered_products
+            .checked_add(products)
+            .ok_or(Error::Overflow)?;
+        let budget = DecoderBudget {
+            scalar_products: products,
+        };
         if left_arm {
             self.pending = Some(self.control.advance(position, token, budget)?);
             return Ok(false);
         }
         let b = self.intervention.advance(position, token, budget)?;
         let a = self.pending.take().ok_or(Error::Incomplete)?;
-        let (changed_logit_words, max_abs_logit_delta, l2_logit_delta) = contrast(&a.logits, &b.logits)?;
+        let (changed_logit_words, max_abs_logit_delta, l2_logit_delta) =
+            contrast(&a.logits, &b.logits)?;
         self.pairs.push(DecoderContinuationStep {
-            position, control_token: a.token, intervention_token: b.token,
-            control_next_token: self.control.greedy_token()?, intervention_next_token: self.intervention.greedy_token()?,
-            control_logits: a.logits, intervention_logits: b.logits,
-            changed_logit_words, max_abs_logit_delta, l2_logit_delta,
+            position,
+            control_token: a.token,
+            intervention_token: b.token,
+            control_next_token: self.control.greedy_token()?,
+            intervention_next_token: self.intervention.greedy_token()?,
+            control_logits: a.logits,
+            intervention_logits: b.logits,
+            changed_logit_words,
+            max_abs_logit_delta,
+            l2_logit_delta,
         });
         if self.pairs.len() == self.count {
             let work = self.work()?;

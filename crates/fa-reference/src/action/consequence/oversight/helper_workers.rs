@@ -5,22 +5,22 @@
 //! This profile uses round::commitment's non-cryptographic comparison oracle;
 //! it does not authenticate a model, prove independent inference or mint rights.
 
+pub mod coordinator;
 pub mod io;
 pub mod wire;
-pub mod coordinator;
 
 use super::{MAX_COMMITTEE_BYTES, ObservedReview, ObservedSession};
+use crate::Error;
 use crate::action::ElapsedTick;
 use crate::evidence_view::EvidenceViewManifest;
 use crate::reducer::MAX_VOTES;
 use crate::round::{Digest, Verdict, commitment};
-use crate::Error;
+use coordinator::{AdvanceError, Coordinator, Session};
 use std::cell::RefCell;
 use std::collections::BTreeMap;
 use std::convert::Infallible;
 use std::fmt;
 use std::rc::Rc;
-use coordinator::{AdvanceError, Coordinator, Session};
 
 pub const MAX_WORKER_SALT_BYTES: usize = 256;
 
@@ -33,7 +33,11 @@ pub struct HelperLimits {
 
 impl Default for HelperLimits {
     fn default() -> Self {
-        Self { members: MAX_VOTES, input_bytes: MAX_COMMITTEE_BYTES, salt_bytes: MAX_WORKER_SALT_BYTES }
+        Self {
+            members: MAX_VOTES,
+            input_bytes: MAX_COMMITTEE_BYTES,
+            salt_bytes: MAX_WORKER_SALT_BYTES,
+        }
     }
 }
 
@@ -48,10 +52,18 @@ pub struct HelperRequest {
 }
 
 impl HelperRequest {
-    pub fn round(&self) -> u64 { self.round }
-    pub fn member(&self) -> &str { &self.member }
-    pub fn evidence_root(&self) -> &[u8; 32] { &self.evidence_root }
-    pub fn view(&self) -> &EvidenceViewManifest { &self.view }
+    pub fn round(&self) -> u64 {
+        self.round
+    }
+    pub fn member(&self) -> &str {
+        &self.member
+    }
+    pub fn evidence_root(&self) -> &[u8; 32] {
+        &self.evidence_root
+    }
+    pub fn view(&self) -> &EvidenceViewManifest {
+        &self.view
+    }
 
     /// Reference protocol only, not a collision-resistant commitment.
     pub fn commitment(&self, verdict: Verdict, salt: &[u8]) -> Result<Digest, Error> {
@@ -100,7 +112,12 @@ struct Slot {
 impl Slot {
     fn fail(&mut self, failure: HelperFailure) {
         // No later transport event rewrites a previously accepted vote.
-        if matches!(self.status.phase, HelperPhase::Complete | HelperPhase::Failed | HelperPhase::Closed) { return; }
+        if matches!(
+            self.status.phase,
+            HelperPhase::Complete | HelperPhase::Failed | HelperPhase::Closed
+        ) {
+            return;
+        }
         self.pending = None;
         self.status.phase = HelperPhase::Failed;
         self.status.failure = Some(failure);
@@ -127,41 +144,60 @@ pub struct HelperPort {
 
 impl fmt::Debug for HelperPort {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("HelperPort").field("member", &self.request.member()).finish_non_exhaustive()
+        f.debug_struct("HelperPort")
+            .field("member", &self.request.member())
+            .finish_non_exhaustive()
     }
 }
 
 impl HelperPort {
-    pub fn request(&self) -> &HelperRequest { &self.request }
+    pub fn request(&self) -> &HelperRequest {
+        &self.request
+    }
     pub fn phase(&self) -> HelperPhase {
-        self.slot.try_borrow().map_or(HelperPhase::Closed, |slot| slot.status.phase)
+        self.slot
+            .try_borrow()
+            .map_or(HelperPhase::Closed, |slot| slot.status.phase)
     }
 
     /// The coordinator supplies receipt time; a helper cannot backdate a reply.
     pub fn submit_commitment(&self, digest: Digest) -> Result<(), Error> {
         let mut slot = self.slot.try_borrow_mut().map_err(|_| Error::WrongState)?;
-        if slot.status.phase != HelperPhase::AwaitCommit { return Err(Error::WrongState); }
+        if slot.status.phase != HelperPhase::AwaitCommit {
+            return Err(Error::WrongState);
+        }
         slot.pending = Some(Reply::Commit(digest));
         slot.status.phase = HelperPhase::CommitQueued;
         Ok(())
     }
 
     pub fn reveal(&self, verdict: Verdict, salt: &[u8]) -> Result<(), Error> {
-        if salt.len() > self.salt_limit { return Err(Error::Limit); }
+        if salt.len() > self.salt_limit {
+            return Err(Error::Limit);
+        }
         let mut slot = self.slot.try_borrow_mut().map_err(|_| Error::WrongState)?;
-        if slot.status.phase != HelperPhase::ReadyReveal { return Err(Error::WrongState); }
-        slot.pending = Some(Reply::Reveal { verdict, salt: salt.to_vec() });
+        if slot.status.phase != HelperPhase::ReadyReveal {
+            return Err(Error::WrongState);
+        }
+        slot.pending = Some(Reply::Reveal {
+            verdict,
+            salt: salt.to_vec(),
+        });
         slot.status.phase = HelperPhase::RevealQueued;
         Ok(())
     }
 
     pub fn disconnect(&self) {
-        if let Ok(mut slot) = self.slot.try_borrow_mut() { slot.fail(HelperFailure::Disconnected); }
+        if let Ok(mut slot) = self.slot.try_borrow_mut() {
+            slot.fail(HelperFailure::Disconnected);
+        }
     }
 }
 
 impl Drop for HelperPort {
-    fn drop(&mut self) { self.disconnect(); }
+    fn drop(&mut self) {
+        self.disconnect();
+    }
 }
 
 /// Owns the one original session, not a replacement reducer. Returned ports are
@@ -173,24 +209,52 @@ pub struct HelperRound {
 }
 
 impl HelperRound {
-    pub fn new(session: ObservedSession, limits: HelperLimits) -> Result<(Self, BTreeMap<String, HelperPort>), Error> {
-        if limits.members == 0 || limits.input_bytes == 0 || limits.salt_bytes == 0 { return Err(Error::InvalidInput); }
-        if limits.members > MAX_VOTES || limits.input_bytes > MAX_COMMITTEE_BYTES
-            || limits.salt_bytes > MAX_WORKER_SALT_BYTES { return Err(Error::Limit); }
+    pub fn new(
+        session: ObservedSession,
+        limits: HelperLimits,
+    ) -> Result<(Self, BTreeMap<String, HelperPort>), Error> {
+        if limits.members == 0 || limits.input_bytes == 0 || limits.salt_bytes == 0 {
+            return Err(Error::InvalidInput);
+        }
+        if limits.members > MAX_VOTES
+            || limits.input_bytes > MAX_COMMITTEE_BYTES
+            || limits.salt_bytes > MAX_WORKER_SALT_BYTES
+        {
+            return Err(Error::Limit);
+        }
         let (round, root) = session.worker_identity()?;
-        let (coordinator, ports) = Coordinator::new(round, root, session.inputs(), session.window(), session.elapsed(), limits)?;
-        Ok((Self { session, coordinator }, ports))
+        let (coordinator, ports) = Coordinator::new(
+            round,
+            root,
+            session.inputs(),
+            session.window(),
+            session.elapsed(),
+            limits,
+        )?;
+        Ok((
+            Self {
+                session,
+                coordinator,
+            },
+            ports,
+        ))
     }
 
-    pub fn elapsed(&self) -> ElapsedTick { self.coordinator.elapsed() }
+    pub fn elapsed(&self) -> ElapsedTick {
+        self.coordinator.elapsed()
+    }
 
     /// Supervisor-only health information. It is not a vote or permission.
-    pub fn statuses(&self) -> BTreeMap<String, HelperStatus> { self.coordinator.statuses() }
+    pub fn statuses(&self) -> BTreeMap<String, HelperStatus> {
+        self.coordinator.statuses()
+    }
 
     /// At most one queued reply per frozen member is consumed per invocation.
     /// The original session still checks each commitment, reveal and cutoff.
     pub fn advance(&mut self, now: ElapsedTick) -> Result<(), Error> {
-        self.coordinator.advance(&mut NativeSession(&mut self.session), now).map_err(native_error)
+        self.coordinator
+            .advance(&mut NativeSession(&mut self.session), now)
+            .map_err(native_error)
     }
 
     /// Returns the original authority-bound review, with missing workers still
@@ -199,9 +263,15 @@ impl HelperRound {
     pub fn finish(&mut self, now: ElapsedTick) -> Result<ObservedReview, Error> {
         self.advance(now)?;
         match self.session.finish(now) {
-            Ok(review) => { self.coordinator.close(); Ok(review) }
+            Ok(review) => {
+                self.coordinator.close();
+                Ok(review)
+            }
             Err(Error::Incomplete) => Err(Error::Incomplete),
-            Err(error) => { self.coordinator.close(); Err(error) }
+            Err(error) => {
+                self.coordinator.close();
+                Err(error)
+            }
         }
     }
 }
@@ -211,17 +281,37 @@ impl Session for NativeSession<'_> {
     type Failure = Infallible;
     // Preserve the existing memory-only adapter: receipt time is observed by
     // its ORIGINAL commit/open/reveal methods, not a new authority operation.
-    fn observe(&mut self, _now: ElapsedTick) -> Result<(), Infallible> { Ok(()) }
-    fn commit(&mut self, member: &str, digest: Digest, now: ElapsedTick) -> Result<(), AdvanceError<Infallible>> {
-        self.0.commit_from_worker(member, digest, now).map_err(AdvanceError::Protocol)
+    fn observe(&mut self, _now: ElapsedTick) -> Result<(), Infallible> {
+        Ok(())
+    }
+    fn commit(
+        &mut self,
+        member: &str,
+        digest: Digest,
+        now: ElapsedTick,
+    ) -> Result<(), AdvanceError<Infallible>> {
+        self.0
+            .commit_from_worker(member, digest, now)
+            .map_err(AdvanceError::Protocol)
     }
     fn open(&mut self, now: ElapsedTick) -> Result<(), AdvanceError<Infallible>> {
         self.0.open_reveals(now).map_err(AdvanceError::Protocol)
     }
-    fn reveal(&mut self, member: &str, verdict: Verdict, salt: &[u8], now: ElapsedTick) -> Result<(), AdvanceError<Infallible>> {
-        self.0.reveal(member, verdict, salt, now).map_err(AdvanceError::Protocol)
+    fn reveal(
+        &mut self,
+        member: &str,
+        verdict: Verdict,
+        salt: &[u8],
+        now: ElapsedTick,
+    ) -> Result<(), AdvanceError<Infallible>> {
+        self.0
+            .reveal(member, verdict, salt, now)
+            .map_err(AdvanceError::Protocol)
     }
 }
 fn native_error(error: AdvanceError<Infallible>) -> Error {
-    match error { AdvanceError::Protocol(error) => error, AdvanceError::Backend(impossible) => match impossible {} }
+    match error {
+        AdvanceError::Protocol(error) => error,
+        AdvanceError::Backend(impossible) => match impossible {},
+    }
 }

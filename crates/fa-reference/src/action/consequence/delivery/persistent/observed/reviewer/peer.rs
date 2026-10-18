@@ -2,10 +2,12 @@
 //! Reuse the original actor peer-policy checker; the credential namespace and
 //! its limitations are identical. An authenticated process is not a human.
 pub mod control;
-use super::{FileHumanRequest, FileHumanReviewer, FileOversight, ReviewerConnection, ReviewerError};
 use super::client::{ReviewerClient, ReviewerExpectation};
-pub use crate::action::consequence::oversight::actor_peer::{PeerCredentials, PeerPolicy};
+use super::{
+    FileHumanRequest, FileHumanReviewer, FileOversight, ReviewerConnection, ReviewerError,
+};
 use crate::Error;
+pub use crate::action::consequence::oversight::actor_peer::{PeerCredentials, PeerPolicy};
 use std::fmt;
 use std::io;
 use std::os::unix::net::UnixStream;
@@ -20,7 +22,9 @@ pub enum ReviewerPeerError {
     Nonblocking(io::ErrorKind),
 }
 impl fmt::Display for ReviewerPeerError {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result { write!(f, "reviewer peer: {self:?}") }
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "reviewer peer: {self:?}")
+    }
 }
 impl std::error::Error for ReviewerPeerError {}
 
@@ -39,8 +43,10 @@ pub struct VerifiedReviewerSocket {
 }
 impl fmt::Debug for VerifiedReviewerSocket {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("VerifiedReviewerSocket").field("peer", &self.peer)
-            .field("policy", &self.policy).finish_non_exhaustive()
+        f.debug_struct("VerifiedReviewerSocket")
+            .field("peer", &self.peer)
+            .field("policy", &self.policy)
+            .finish_non_exhaustive()
     }
 }
 impl VerifiedReviewerSocket {
@@ -48,42 +54,66 @@ impl VerifiedReviewerSocket {
     /// evidence offer or writing anything. Rejection drops only this socket.
     /// Root has no exception; UID AND effective GID and any specified PID match.
     pub fn verify(stream: UnixStream, policy: PeerPolicy) -> Result<Self, ReviewerPeerError> {
-        let peer = policy.verify(&stream).map_err(|error| ReviewerPeerError::Credentials(error.kind()))?;
-        stream.set_nonblocking(true).map_err(|error| ReviewerPeerError::Nonblocking(error.kind()))?;
-        Ok(Self { stream, peer, policy })
+        let peer = policy
+            .verify(&stream)
+            .map_err(|error| ReviewerPeerError::Credentials(error.kind()))?;
+        stream
+            .set_nonblocking(true)
+            .map_err(|error| ReviewerPeerError::Nonblocking(error.kind()))?;
+        Ok(Self {
+            stream,
+            peer,
+            policy,
+        })
     }
-    pub fn peer(&self) -> PeerCredentials { self.peer }
-    pub fn policy(&self) -> PeerPolicy { self.policy }
+    pub fn peer(&self) -> PeerCredentials {
+        self.peer
+    }
+    pub fn policy(&self) -> PeerPolicy {
+        self.policy
+    }
 
     /// Host-side offer, still requiring the independently retained reviewer role
     /// and exact original request. Merely admitting a peer creates no decision,
     /// automatic reservation or human key; step() performs the original protocol.
-    pub fn into_connection(self, host: &FileOversight, reviewer: &FileHumanReviewer,
-        request: FileHumanRequest, session: [u8; 32])
-        -> Result<ReviewerConnection<UnixStream>, ReviewerError>
-    {
+    pub fn into_connection(
+        self,
+        host: &FileOversight,
+        reviewer: &FileHumanReviewer,
+        request: FileHumanRequest,
+        session: [u8; 32],
+    ) -> Result<ReviewerConnection<UnixStream>, ReviewerError> {
         ReviewerConnection::new(host, reviewer, request, self.stream, session)
     }
 
     /// Client-side server authentication BEFORE reading any claimed offer.
     /// The separately configured logical audience must still match the packet.
     /// A valid server identity never chooses a default reviewer decision.
-    pub fn into_client(self, expected: ReviewerExpectation) -> Result<ReviewerClient<UnixStream>, Error> {
+    pub fn into_client(
+        self,
+        expected: ReviewerExpectation,
+    ) -> Result<ReviewerClient<UnixStream>, Error> {
         ReviewerClient::new(self.stream, expected)
     }
 
     /// Explicit stop-only service on this SAME authenticated connection. The
     /// supervisor still supplies its separately held reviewer role and a fresh
     /// session; no pending human approval request or evidence provider is needed.
-    pub fn into_stop_connection(self, host: &FileOversight, reviewer: &FileHumanReviewer,
-        operation: u64, session: [u8; 32]) -> Result<control::StopControlConnection<UnixStream>, ReviewerError>
-    {
+    pub fn into_stop_connection(
+        self,
+        host: &FileOversight,
+        reviewer: &FileHumanReviewer,
+        operation: u64,
+        session: [u8; 32],
+    ) -> Result<control::StopControlConnection<UnixStream>, ReviewerError> {
         control::StopControlConnection::new(host, reviewer, operation, self.stream, session)
     }
 
-    pub fn into_stop_client(self, expected: ReviewerExpectation, operation: u64)
-        -> Result<control::StopClient<UnixStream>, Error>
-    {
+    pub fn into_stop_client(
+        self,
+        expected: ReviewerExpectation,
+        operation: u64,
+    ) -> Result<control::StopClient<UnixStream>, Error> {
         control::StopClient::new(self.stream, expected, operation)
     }
 }
@@ -109,32 +139,60 @@ pub struct ReviewerPeerAdmission {
 }
 impl fmt::Debug for ReviewerPeerAdmission {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("ReviewerPeerAdmission").field("policy", &self.policy)
-            .field("status", &self.status).finish()
+        f.debug_struct("ReviewerPeerAdmission")
+            .field("policy", &self.policy)
+            .field("status", &self.status)
+            .finish()
     }
 }
 impl ReviewerPeerAdmission {
     pub fn new(policy: PeerPolicy, maximum: u32) -> Result<Self, Error> {
-        if maximum == 0 { return Err(Error::InvalidInput); }
-        if maximum > MAX_REVIEWER_CANDIDATES { return Err(Error::Limit); }
-        Ok(Self { policy, status: ReviewerAdmissionStatus {
-            maximum, attempted: 0, rejected: 0, admitted: None,
-        } })
+        if maximum == 0 {
+            return Err(Error::InvalidInput);
+        }
+        if maximum > MAX_REVIEWER_CANDIDATES {
+            return Err(Error::Limit);
+        }
+        Ok(Self {
+            policy,
+            status: ReviewerAdmissionStatus {
+                maximum,
+                attempted: 0,
+                rejected: 0,
+                admitted: None,
+            },
+        })
     }
-    pub fn status(&self) -> ReviewerAdmissionStatus { self.status }
-    pub fn policy(&self) -> PeerPolicy { self.policy }
-    pub fn exhausted(&self) -> bool { self.status.attempted == self.status.maximum }
+    pub fn status(&self) -> ReviewerAdmissionStatus {
+        self.status
+    }
+    pub fn policy(&self) -> PeerPolicy {
+        self.policy
+    }
+    pub fn exhausted(&self) -> bool {
+        self.status.attempted == self.status.maximum
+    }
 
-    pub fn admit(&mut self, stream: UnixStream) -> Result<VerifiedReviewerSocket, ReviewerPeerError> {
-        if self.status.admitted.is_some() { return Err(ReviewerPeerError::AlreadyAdmitted); }
-        if self.exhausted() { return Err(ReviewerPeerError::Exhausted); }
+    pub fn admit(
+        &mut self,
+        stream: UnixStream,
+    ) -> Result<VerifiedReviewerSocket, ReviewerPeerError> {
+        if self.status.admitted.is_some() {
+            return Err(ReviewerPeerError::AlreadyAdmitted);
+        }
+        if self.exhausted() {
+            return Err(ReviewerPeerError::Exhausted);
+        }
         self.status.attempted += 1;
         match VerifiedReviewerSocket::verify(stream, self.policy) {
             Ok(socket) => {
                 self.status.admitted = Some(socket.peer());
                 Ok(socket)
             }
-            Err(error) => { self.status.rejected += 1; Err(error) }
+            Err(error) => {
+                self.status.rejected += 1;
+                Err(error)
+            }
         }
     }
 }

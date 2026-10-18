@@ -5,21 +5,21 @@
 //! (or unavailability) before publication. Configured feed freshness uses an
 //! independently named elapsed clock; unconfigured legacy profiles have no lease.
 
+pub mod changes;
 mod precheck;
 mod source;
-pub mod changes;
-pub use source::PublicationSourceStatus;
 use super::DeliveryBroker;
 use crate::Error;
-use crate::action::{ActionState, FrozenAction};
 use crate::action::consequence::gate::containment::session::policy::controller::Proposal;
 use crate::action::consequence::oversight::publication::{
     PublicationBasis, PublicationJudgment, PublicationOutcome, PublicationReport,
 };
+use crate::action::{ActionState, FrozenAction};
 use crate::full_input::ActualHelperInput;
 use crate::product_frontier::ProductFrontiers;
 use crate::witness::WitnessSnapshot;
 use crate::witness::refinement::RefinementBudget;
+pub use source::PublicationSourceStatus;
 use std::collections::BTreeMap;
 
 /// Lifetime bound; cancelled attempts are not evicted to reopen capacity or
@@ -45,7 +45,10 @@ pub struct PublicationInputs {
 impl PublicationInputs {
     fn basis(&self) -> PublicationBasis<'_> {
         PublicationBasis {
-            structured: self.structured.as_ref().map(|(snapshot, frontiers)| (snapshot, frontiers)),
+            structured: self
+                .structured
+                .as_ref()
+                .map(|(snapshot, frontiers)| (snapshot, frontiers)),
             opaque: self.opaque.as_ref(),
         }
     }
@@ -73,27 +76,50 @@ pub(super) struct PublicationGate {
 impl DeliveryBroker {
     /// Trusted bootstrap only, before any proposal. There is no disable, limit
     /// increase, judgment replacement, or mutable accessor to this gate.
-    pub fn enable_publication_validation(&mut self, limits: PublicationLimits) -> Result<(), Error> {
-        if self.publication.is_some() { return Err(Error::Duplicate); }
-        if limits.bindings == 0 || limits.bindings > MAX_PUBLICATION_BINDINGS { return Err(Error::Limit); }
+    pub fn enable_publication_validation(
+        &mut self,
+        limits: PublicationLimits,
+    ) -> Result<(), Error> {
+        if self.publication.is_some() {
+            return Err(Error::Duplicate);
+        }
+        if limits.bindings == 0 || limits.bindings > MAX_PUBLICATION_BINDINGS {
+            return Err(Error::Limit);
+        }
         let state = self.inspect();
-        if !state.ledger.stages.is_empty() || state.sequence != 0 { return Err(Error::WrongState); }
-        self.publication = Some(PublicationGate { limits, slots: BTreeMap::new(), changes: None });
+        if !state.ledger.stages.is_empty() || state.sequence != 0 {
+            return Err(Error::WrongState);
+        }
+        self.publication = Some(PublicationGate {
+            limits,
+            slots: BTreeMap::new(),
+            changes: None,
+        });
         Ok(())
     }
 
     /// Attach the reviewed requirements once, to the exact controller-produced
     /// action (including its derived policy witnesses), before authorization.
     /// This trusted assertion does not itself run a helper or grant any rights.
-    pub fn bind_publication_judgment(&mut self, attempt: u64, judgment: PublicationJudgment) -> Result<(), Error> {
+    pub fn bind_publication_judgment(
+        &mut self,
+        attempt: u64,
+        judgment: PublicationJudgment,
+    ) -> Result<(), Error> {
         if self.inspect().ledger.stages.get(&attempt) != Some(&ActionState::Reviewing) {
             return Err(Error::WrongState);
         }
         let gate = self.publication.as_mut().ok_or(Error::Incomplete)?;
         let slot = gate.slots.get_mut(&attempt).ok_or(Error::Missing)?;
-        if slot.judgment.is_some() { return Err(Error::Duplicate); }
-        if judgment.action() != &slot.action { return Err(Error::Binding); }
-        if let Some(changes) = &mut gate.changes { changes.register(attempt, &judgment)?; }
+        if slot.judgment.is_some() {
+            return Err(Error::Duplicate);
+        }
+        if judgment.action() != &slot.action {
+            return Err(Error::Binding);
+        }
+        if let Some(changes) = &mut gate.changes {
+            changes.register(attempt, &judgment)?;
+        }
         slot.judgment = Some(judgment);
         Ok(())
     }
@@ -104,7 +130,10 @@ impl DeliveryBroker {
     /// Source-bound slots allow only withdrawal here; positive inputs must come
     /// through record_captured_publication_inputs after that withdrawal.
     pub fn record_publication_inputs(
-        &mut self, attempt: u64, expected_revision: u64, inputs: Option<PublicationInputs>,
+        &mut self,
+        attempt: u64,
+        expected_revision: u64,
+        inputs: Option<PublicationInputs>,
     ) -> Result<u64, Error> {
         let gate = self.publication.as_mut().ok_or(Error::Incomplete)?;
         let slot = gate.slots.get_mut(&attempt).ok_or(Error::Missing)?;
@@ -125,29 +154,49 @@ impl DeliveryBroker {
 
     pub(super) fn prepare_publication_proposal(&self, attempt: u64) -> Result<(), Error> {
         if let Some(gate) = &self.publication {
-            if gate.slots.contains_key(&attempt) { return Err(Error::Duplicate); }
-            if gate.slots.len() >= gate.limits.bindings { return Err(Error::Limit); }
+            if gate.slots.contains_key(&attempt) {
+                return Err(Error::Duplicate);
+            }
+            if gate.slots.len() >= gate.limits.bindings {
+                return Err(Error::Limit);
+            }
         }
         Ok(())
     }
 
     pub(super) fn record_publication_proposal(&mut self, proposal: &Proposal) {
         if let Some(gate) = &mut self.publication {
-            gate.slots.insert(proposal.attempt, Slot {
-                action: proposal.action.clone(), judgment: None, revision: 0,
-                current: None, floor: None, last: None, source: None,
-            });
+            gate.slots.insert(
+                proposal.attempt,
+                Slot {
+                    action: proposal.action.clone(),
+                    judgment: None,
+                    revision: 0,
+                    current: None,
+                    floor: None,
+                    last: None,
+                    source: None,
+                },
+            );
         }
     }
 
-    pub(in crate::action::consequence) fn check_publication(&mut self, attempt: u64, action: Option<&FrozenAction>) -> Result<(), Error> {
+    pub(in crate::action::consequence) fn check_publication(
+        &mut self,
+        attempt: u64,
+        action: Option<&FrozenAction>,
+    ) -> Result<(), Error> {
         let now = self.inspect().ledger.elapsed;
         let epoch = self.epoch;
-        let Some(gate) = &mut self.publication else { return Ok(()); };
+        let Some(gate) = &mut self.publication else {
+            return Ok(());
+        };
         let slot = gate.slots.get_mut(&attempt).ok_or(Error::Incomplete)?;
         let coverage = gate.changes.as_ref().map_or(Ok(()), |state| {
             state.current(now, epoch).or_else(|error| {
-                if error != Error::Incomplete { return Err(error); }
+                if error != Error::Incomplete {
+                    return Err(error);
+                }
                 state.snapshot_current(now, epoch, slot.captured_input_cut())
             })
         });
@@ -156,11 +205,14 @@ impl DeliveryBroker {
         let fresh = slot.consume_capture();
         let report = match (coverage, &slot.judgment, fresh) {
             (Err(error), _, _) => PublicationReport {
-                outcome: PublicationOutcome::Refused(error), spent: RefinementBudget::default(),
+                outcome: PublicationOutcome::Refused(error),
+                spent: RefinementBudget::default(),
             },
             (Ok(()), Some(judgment), true) => judgment.validate(
                 action.unwrap_or(&slot.action),
-                slot.current.as_ref().map_or_else(PublicationBasis::default, PublicationInputs::basis),
+                slot.current
+                    .as_ref()
+                    .map_or_else(PublicationBasis::default, PublicationInputs::basis),
                 gate.limits.validation,
             ),
             _ => PublicationReport {

@@ -1,4 +1,5 @@
 //! Existing congress/endpoint fixture plus an actual, identity-matched decoder.
+#![allow(dead_code, unused_imports)]
 #[path = "two_key_delivery.rs"]
 #[allow(dead_code)]
 pub mod delivery_fixture;
