@@ -21,6 +21,22 @@ match, forecast, cut certificate, or effect approval is invented. When the
 recipe owns a policy-only file source, its policy must exactly match the
 separate source guard. The original learned Enable installs it once.
 
+## Reserved terminal recovery
+
+`create_mediated_guarded_with_learned_generation_reserved` adds an explicit
+`RecoveryReserve` to the same atomic bootstrap. The original guarded builder
+records that reserve before guard and learned work. A failed recipe, graph,
+guard, or reserve admission creates no storage and releases no roles. The
+existing constructor remains unreserved and keeps its original event encoding.
+
+The reserve protects the existing terminal fence/stop/drain lane when ordinary
+journal capacity is exhausted. It does not reserve physical disk space, buy
+numerical work, or permit publication. During recovery, call
+`require_recovery_reserve(expected)` on the sealed cursor before the first
+`advance`. It compares the independently selected reserve against exactly one
+original retained reserve event. A missing, different, or late requirement
+refuses without installing capacity, cleaning staging, or changing history.
+
 ## Recovery and fresh qualification
 
 `begin_open_mediated_guarded_with_learned_generation` returns the sealed
@@ -71,6 +87,28 @@ that fence; after an earlier successful recovery its topology is unavailable.
 The original incident, authority, numerical-work, and effect ledgers remain
 authoritative. An unresolved dispatch stays charged until its actual original
 reconciliation or nonexecution receipt resolves it.
+
+## Historical receipts and stopped recovery
+
+The same sealed mediated cursor supports `learned_text_stream_message_request`
+and `learned_text_stream_finish_request`, followed by `finish_receipt` or
+`finish_reconciled_receipt`. Every selection and completion checks the complete
+mediated requirements before delegating to the original learned finalizer.
+Receipt-only completion observes the selected historical cut without a clock,
+fence, cleanup, or live owner. Explicit reconciliation retains the original
+single-image Fence/Time/Sweep operation and returns only the actor observation.
+
+`finish_receipt_port` and `finish_reconciled_receipt_port` expose that observation
+through the existing immutable, request-bound actor port. Repeated submission
+must exactly match the original envelope. The port has no journal owner,
+topology observer, or cancellation capability, and cannot admit another effect.
+
+`stop_request`, `finish_stopped`, and `finish_stopped_with_anchor` use the same
+complete requirements and exclusive replay. They consume it directly into the
+original Stop/Fence/StopProgress operation; an ordinary recovery fence does not
+consume terminal capacity first. No live roles or replacement numerical replay
+are introduced. Exact completed retries and unknown-effect liabilities remain
+governed by the original stopped-recovery contract.
 
 ## Scope and verification
 

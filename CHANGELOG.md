@@ -1,5 +1,19 @@
 # Changelog
 
+## 2026-10-18: reserve terminal recovery for mediated learned publication
+
+- Add atomic reserved startup for ordinary, raw-predictive, and owned-predictive
+  topology-mediated learned generation, using the original guarded builder and
+  learned Enable. Old constructors and journal formats remain compatible.
+- Require the exact independently selected recovery reserve before replay and
+  retain full topology, guard, predictor, policy, anchor, and floor checks.
+- Connect mediated learned recovery to original receipt, receipt-port,
+  reconciliation, and stopped finalizers without releasing live roles or
+  spending an ordinary recovery fence before terminal shutdown.
+- Add independent public regression source for atomic startup, reserve binding,
+  full-capacity shutdown, and guarded recovery behavior. Remote RCH
+  execution is unavailable; compilation and runtime qualification remain open.
+
 ## 2026-10-17: bind explicit BOS tokenization through native workflows
 
 - Add a separately selected Llama-3/Unicode-17 BOS template importer and

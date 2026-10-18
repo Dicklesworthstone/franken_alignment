@@ -4,6 +4,8 @@ use super::{FileLearnedTextStreamActorPort, LearnedTextRelease};
 use super::super::super::{JournalError, observed::{
     decoder::learned::FileLearnedRecovery,
     guarded::{learned_recovery::FileGuardedLearnedRecovery,
+        mediated::{learned::FileMediatedLearnedRecovery,
+            predictive::FilePredictiveMediatedLearnedRecovery},
         predictive::{learned::FilePredictiveLearnedRecovery, owned::FileOwnedPredictiveRecovery}},
 }};
 use crate::action::ElapsedTick;
@@ -102,7 +104,7 @@ impl ActorRequestPort for FileLearnedReceiptActorPort {
     fn cancel(&self, ticket: &Self::Ticket) -> Result<(), ActorError> { Self::cancel(self, ticket) }
 }
 
-// Only these four concrete, independently checked cursor types receive this
+// Only these concrete, independently checked cursor types receive this
 // convenience composition. There is no generic callback/trait accepting caller
 // observations and no unchecked conversion out of a guarded recovery wrapper.
 macro_rules! learned_receipt_ports {
@@ -148,7 +150,8 @@ macro_rules! learned_receipt_ports {
     )+ };
 }
 learned_receipt_ports!(FileLearnedRecovery, FileGuardedLearnedRecovery,
-    FilePredictiveLearnedRecovery, FileOwnedPredictiveRecovery);
+    FilePredictiveLearnedRecovery, FileOwnedPredictiveRecovery,
+    FileMediatedLearnedRecovery, FilePredictiveMediatedLearnedRecovery);
 
 #[cfg(test)]
 mod tests;

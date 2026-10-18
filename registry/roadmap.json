@@ -350,7 +350,7 @@
       "id": "FA-014",
       "gate": "G1",
       "title": "Implement crash recovery and unknown reconciliation",
-      "status": "planned",
+      "status": "in_progress",
       "depends_on": [
         "FA-010",
         "FA-012",
@@ -383,7 +383,13 @@
         "crates/fa-reference/src/action/consequence/delivery/persistent/observed/decoder/learned/tests/recovery/stopped.rs",
         "crates/fa-reference/tests/learned_text_stream_durable/continuation/forecast_reserve/stop_recovery.rs",
         "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/stopped.rs",
-        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/tests/stopped.rs"
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/tests/stopped.rs",
+        "crates/fa-reference/src/action/consequence/delivery/persistent/observed/guarded/mediated/learned.rs",
+        "crates/fa-reference/src/action/consequence/delivery/persistent/observed/guarded/mediated/predictive.rs",
+        "crates/fa-reference/src/action/consequence/delivery/persistent/requests/actor/receipt.rs",
+        "crates/fa-reference/tests/mediated_learned_reserve.rs",
+        "docs/MEDIATED_LEARNED_RECOVERY.md",
+        "docs/PREDICTIVE_MEDIATED_LEARNED_RECOVERY.md"
       ]
     },
     {
@@ -1756,7 +1762,7 @@
       "id": "FA-073",
       "gate": "G2",
       "title": "Implement independent cut checker",
-      "status": "planned",
+      "status": "in_progress",
       "depends_on": [
         "FA-072"
       ],
@@ -1768,7 +1774,14 @@
         "Produce executed local evidence; source or prose alone does not close this packet."
       ],
       "owner_role": "systems",
-      "result_artifacts": []
+      "result_artifacts": [
+        "crates/fa-reference/src/action/consequence/delivery/persistent/observed/guarded/mediated/learned.rs",
+        "crates/fa-reference/src/action/consequence/delivery/persistent/observed/guarded/mediated/predictive.rs",
+        "crates/fa-reference/src/action/consequence/delivery/persistent/requests/actor/receipt.rs",
+        "crates/fa-reference/tests/mediated_learned_reserve.rs",
+        "docs/MEDIATED_LEARNED_RECOVERY.md",
+        "docs/PREDICTIVE_MEDIATED_LEARNED_RECOVERY.md"
+      ]
     },
     {
       "id": "FA-074",

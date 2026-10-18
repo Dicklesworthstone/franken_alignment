@@ -4,11 +4,17 @@ use super::{AuthorityGraph, CredibilityEvent, EvaluationProtocol, Event,
     FileCredentialRegistration, FileGuardSet, FileMediatedRequirements, FileMediatedRoles,
     FileOversight, FileOversightProfile, FileOversightRoles, JournalError, Machine,
     MediationEvent, PreparedGuardedBootstrap, storage};
-use super::super::{anchored::FileHistoryAnchor, learned::check_profile};
+use super::super::{anchored::FileHistoryAnchor, learned::check_profile,
+    learned_recovery::check_recovery_reserve};
 use super::super::super::consistency::ConsistencyEvent;
 use super::super::super::decoder::learned::{FileLearnedConfig, FileLearnedRecovery,
     FileLearnedRecoveryProgress, FileLearnedRecoveryStatus, checkpoint::FileLearnedResetIntent};
+use super::super::super::shutdown::recovery::{FileStoppedHistory, FileStoppedRecovery};
+use super::super::super::stream::FileStreamProposal;
 use crate::Error;
+use crate::action::ElapsedTick;
+use crate::action::consequence::delivery::{StopRequest, persistent::RecoveryReserve};
+use crate::action::consequence::oversight::actor::{ActorOutcome, Knowledge};
 use std::fmt;
 use std::path::Path;
 
@@ -52,22 +58,20 @@ impl FileOversight {
         guards: &FileGuardSet, registration: Option<FileCredentialRegistration<'_>>,
         topology: AuthorityGraph, evaluation: Option<EvaluationProtocol>, config: FileLearnedConfig,
     ) -> Result<(Self, FileMediatedRoles), JournalError> {
-        check_profile(guards)?;
-        check_recipe(&config)?;
-        let mut prepared_guards = guards.clone();
-        if let Some(policy) = config.required_policy_source() {
-            if guards.source != Some(policy) { return Err(Error::Binding.into()); }
-            prepared_guards.source = None;
-        }
-        let mut prepared = PreparedGuardedBootstrap::prepare(profile, &prepared_guards, registration)?
-            .learned(config)?;
-        if let Some(protocol) = &evaluation { prepared = prepared.evaluated(protocol.clone())?; }
-        let prepared = prepared.mediated(topology.clone())?
-            .checked_mediated(guards, evaluation.as_ref(), &topology)?;
-        let store = storage::Store::create(directory.as_ref())?;
-        let (host, oversight) = prepared.publish(store)?;
-        let roles = FileMediatedRoles::provision(&host, oversight, false, evaluation.is_some());
-        Ok((host, roles))
+        create(directory.as_ref(), profile, guards, registration, topology, evaluation, config, None)
+    }
+
+    /// Reserve the original terminal recovery tail before any learned or guard
+    /// work in the same first canonical image. All independent guards, topology
+    /// and numerical configuration are admitted before creating storage; no
+    /// intermediate unreserved owner or observer can escape.
+    pub fn create_mediated_guarded_with_learned_generation_reserved(
+        directory: impl AsRef<Path>, profile: FileOversightProfile,
+        guards: &FileGuardSet, registration: Option<FileCredentialRegistration<'_>>,
+        topology: AuthorityGraph, evaluation: Option<EvaluationProtocol>, config: FileLearnedConfig,
+        reserve: RecoveryReserve,
+    ) -> Result<(Self, FileMediatedRoles), JournalError> {
+        create(directory.as_ref(), profile, guards, registration, topology, evaluation, config, Some(reserve))
     }
 
     /// Bind the exact original recipe, topology inventory and evaluator before
@@ -104,6 +108,32 @@ impl FileOversight {
         }
         recovery.finish()
     }
+}
+
+fn create(directory: &Path, profile: FileOversightProfile, guards: &FileGuardSet,
+    registration: Option<FileCredentialRegistration<'_>>, topology: AuthorityGraph,
+    evaluation: Option<EvaluationProtocol>, config: FileLearnedConfig, reserve: Option<RecoveryReserve>)
+    -> Result<(FileOversight, FileMediatedRoles), JournalError>
+{
+    check_profile(guards)?;
+    check_recipe(&config)?;
+    let mut prepared_guards = guards.clone();
+    if let Some(policy) = config.required_policy_source() {
+        if guards.source != Some(policy) { return Err(Error::Binding.into()); }
+        prepared_guards.source = None;
+    }
+    let prepared = match reserve {
+        Some(reserve) => PreparedGuardedBootstrap::prepare_reserved(profile, &prepared_guards, registration, reserve)?,
+        None => PreparedGuardedBootstrap::prepare(profile, &prepared_guards, registration)?,
+    };
+    let mut prepared = prepared.learned(config)?;
+    if let Some(protocol) = &evaluation { prepared = prepared.evaluated(protocol.clone())?; }
+    let prepared = prepared.mediated(topology.clone())?
+        .checked_mediated(guards, evaluation.as_ref(), &topology)?;
+    let store = storage::Store::create(directory)?;
+    let (host, oversight) = prepared.publish(store)?;
+    let roles = FileMediatedRoles::provision(&host, oversight, false, evaluation.is_some());
+    Ok((host, roles))
 }
 
 fn check_recipe(config: &FileLearnedConfig) -> Result<(), Error> {
@@ -160,6 +190,14 @@ fn check_machine(profile: &FileOversightProfile, machine: &Machine, events: &[Ev
 }
 
 impl FileMediatedLearnedRecovery {
+    /// Require the exact original terminal reserve on the same locked history
+    /// before replay. Missing, changed or late requirements refuse without a
+    /// cleanup, replacement or role. Recovery never installs or enlarges it.
+    pub fn require_recovery_reserve(self, expected: RecoveryReserve) -> Result<Self, JournalError> {
+        check_recovery_reserve(&self.inner, expected)?;
+        Ok(self)
+    }
+
     pub fn progress(&self) -> FileLearnedRecoveryProgress {
         let mut progress = self.inner.progress();
         if let Some(error) = self.failure { progress.status = FileLearnedRecoveryStatus::Failed(error); }
@@ -189,6 +227,72 @@ impl FileMediatedLearnedRecovery {
         let (profile, events, _) = self.inner.guarded_history();
         check_machine(profile, self.inner.verified_guarded_machine()?, events, &self.expected)?;
         Ok(())
+    }
+
+    /// Select the retained original message only after every independent guard,
+    /// exact topology, availability, policy and floor requirement passes.
+    /// No observer, fence or live owner is returned by this read-only operation.
+    pub fn learned_text_stream_message_request(&self, request: u64)
+        -> Result<FileStreamProposal, JournalError>
+    {
+        self.check_ready()?;
+        self.inner.learned_text_stream_message_request(request)
+    }
+
+    /// Select the exact original finish and confirmed predecessor under this
+    /// same mediated guard contract. Failed selection changes no stored bytes.
+    pub fn learned_text_stream_finish_request(&self, after_request: u64, request: u64)
+        -> Result<FileStreamProposal, JournalError>
+    {
+        self.check_ready()?;
+        self.inner.learned_text_stream_finish_request(after_request, request)
+    }
+
+    /// Return only the original actor observation after complete mediated
+    /// validation and the original canonical-cut check. No cleanup, clock,
+    /// fence or role is needed; unknown liabilities remain unresolved.
+    pub fn finish_receipt(self, request: u64, finish_after: Option<u64>)
+        -> Result<Knowledge<ActorOutcome>, JournalError>
+    {
+        self.check_ready()?;
+        self.inner.finish_receipt(request, finish_after)
+    }
+
+    /// Complete the same validated history through the original single-image
+    /// Fence/Time/Sweep and expose only its selected actor observation. Failed
+    /// guards and selection precede clock and mutation; no topology role escapes.
+    pub fn finish_reconciled_receipt<F>(self, request: u64, finish_after: Option<u64>, clock: F)
+        -> Result<Knowledge<ActorOutcome>, JournalError>
+    where F: FnOnce() -> ElapsedTick {
+        self.check_ready()?;
+        self.inner.finish_reconciled_receipt(request, finish_after, clock)
+    }
+
+    /// Select the original stop predecessor only after the same complete
+    /// mediated graph, guard, effective-policy and independent-floor checks.
+    pub fn stop_request(&self, operation: u64) -> Result<StopRequest, JournalError> {
+        self.check_ready()?;
+        self.inner.stop_request(operation)
+    }
+
+    /// Consume the original guarded numerical replay directly into its native
+    /// Stop/Fence/StopProgress transaction. No ordinary recovery fence or live
+    /// observer precedes stopping; executed and unknown charges stay retained.
+    pub fn finish_stopped<F>(self, request: StopRequest, clock: F)
+        -> Result<FileStoppedRecovery, JournalError>
+    where F: FnOnce() -> ElapsedTick {
+        self.check_ready()?;
+        self.inner.finish_stopped(request, clock)
+    }
+
+    /// Capture the exact acknowledged stopped history through the same native
+    /// transaction, with every mediated requirement and original lock retained.
+    /// The private history anchor grants no role and adds no replay or fence.
+    pub fn finish_stopped_with_anchor<F>(self, request: StopRequest, clock: F)
+        -> Result<FileStoppedHistory, JournalError>
+    where F: FnOnce() -> ElapsedTick {
+        self.check_ready()?;
+        self.inner.finish_stopped_with_anchor(request, clock)
     }
 
     /// Recheck all independent requirements, then acknowledge the one original

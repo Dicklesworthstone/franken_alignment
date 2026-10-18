@@ -5,11 +5,17 @@ use super::{AuthorityGraph, CredibilityEvent, EvaluationProtocol, Event,
     FileConsistencyConfig, FileCredentialRegistration, FileGuardSet, FileMediatedRoles,
     FileOversight, FileOversightProfile, FileOversightRoles, FileRecoveryRequirements,
     FileTopologyRequirement, JournalError, Machine, MediationEvent, PreparedGuardedBootstrap, storage};
-use super::super::{anchored::FileHistoryAnchor, learned::check_profile};
+use super::super::{anchored::FileHistoryAnchor, learned::check_profile,
+    learned_recovery::check_recovery_reserve};
 use super::super::super::consistency::{ConsistencyEvent, learned::FileLearnedConsistencyConfig};
 use super::super::super::decoder::learned::{FileLearnedConfig, FileLearnedRecovery,
     FileLearnedRecoveryProgress, FileLearnedRecoveryStatus, checkpoint::FileLearnedResetIntent};
+use super::super::super::shutdown::recovery::{FileStoppedHistory, FileStoppedRecovery};
+use super::super::super::stream::FileStreamProposal;
 use crate::Error;
+use crate::action::ElapsedTick;
+use crate::action::consequence::delivery::{StopRequest, persistent::RecoveryReserve};
+use crate::action::consequence::oversight::actor::{ActorOutcome, Knowledge};
 use std::fmt;
 use std::path::Path;
 
@@ -95,24 +101,20 @@ impl FileOversight {
         topology: AuthorityGraph, prediction: FileMediatedPredictor,
         evaluation: Option<EvaluationProtocol>, config: FileLearnedConfig,
     ) -> Result<(Self, FileMediatedRoles), JournalError> {
-        check_profile(guards)?;
-        prediction.check_recipe(&config)?;
-        let mut prepared_guards = guards.clone();
-        if let Some(policy) = config.required_policy_source() {
-            if guards.source != Some(policy) { return Err(Error::Binding.into()); }
-            prepared_guards.source = None;
-        }
-        // The sole learned Enable installs its pinned predictor and policy
-        // source itself. Never append a second predictor/source Enable.
-        let mut prepared = PreparedGuardedBootstrap::prepare(profile, &prepared_guards, registration)?
-            .learned(config)?;
-        if let Some(protocol) = &evaluation { prepared = prepared.evaluated(protocol.clone())?; }
-        let prepared = prepared.mediated(topology.clone())?
-            .checked_predictive_mediated(guards, evaluation.as_ref(), &prediction, &topology)?;
-        let store = storage::Store::create(directory.as_ref())?;
-        let (host, oversight) = prepared.publish(store)?;
-        let roles = FileMediatedRoles::provision(&host, oversight, true, evaluation.is_some());
-        Ok((host, roles))
+        create(directory.as_ref(), profile, guards, registration, topology, prediction, evaluation, config, None)
+    }
+
+    /// Reserve the original terminal tail before any guard or numerical work
+    /// in the same first canonical image. The exact raw/owned predictor remains
+    /// installed only by the original learned Enable; complete guards, topology
+    /// and reserve admission precede storage and release of any separate role.
+    pub fn create_predictive_mediated_guarded_with_learned_generation_reserved(
+        directory: impl AsRef<Path>, profile: FileOversightProfile,
+        guards: &FileGuardSet, registration: Option<FileCredentialRegistration<'_>>,
+        topology: AuthorityGraph, prediction: FileMediatedPredictor,
+        evaluation: Option<EvaluationProtocol>, config: FileLearnedConfig, reserve: RecoveryReserve,
+    ) -> Result<(Self, FileMediatedRoles), JournalError> {
+        create(directory.as_ref(), profile, guards, registration, topology, prediction, evaluation, config, Some(reserve))
     }
 
     /// Bind both original recipe and predictor before numerical replay, then
@@ -148,6 +150,35 @@ impl FileOversight {
         }
         recovery.finish()
     }
+}
+
+fn create(directory: &Path, profile: FileOversightProfile, guards: &FileGuardSet,
+    registration: Option<FileCredentialRegistration<'_>>, topology: AuthorityGraph,
+    prediction: FileMediatedPredictor, evaluation: Option<EvaluationProtocol>,
+    config: FileLearnedConfig, reserve: Option<RecoveryReserve>)
+    -> Result<(FileOversight, FileMediatedRoles), JournalError>
+{
+    check_profile(guards)?;
+    prediction.check_recipe(&config)?;
+    let mut prepared_guards = guards.clone();
+    if let Some(policy) = config.required_policy_source() {
+        if guards.source != Some(policy) { return Err(Error::Binding.into()); }
+        prepared_guards.source = None;
+    }
+    let prepared = match reserve {
+        Some(reserve) => PreparedGuardedBootstrap::prepare_reserved(profile, &prepared_guards, registration, reserve)?,
+        None => PreparedGuardedBootstrap::prepare(profile, &prepared_guards, registration)?,
+    };
+    // The sole learned Enable installs its pinned predictor and policy source
+    // itself. The optional reserve already occupies its original pre-work slot.
+    let mut prepared = prepared.learned(config)?;
+    if let Some(protocol) = &evaluation { prepared = prepared.evaluated(protocol.clone())?; }
+    let prepared = prepared.mediated(topology.clone())?
+        .checked_predictive_mediated(guards, evaluation.as_ref(), &prediction, &topology)?;
+    let store = storage::Store::create(directory)?;
+    let (host, oversight) = prepared.publish(store)?;
+    let roles = FileMediatedRoles::provision(&host, oversight, true, evaluation.is_some());
+    Ok((host, roles))
 }
 
 fn begin(directory: &Path, profile: FileOversightProfile,
@@ -214,6 +245,14 @@ fn check_machine(profile: &FileOversightProfile, machine: &Machine, events: &[Ev
 }
 
 impl FilePredictiveMediatedLearnedRecovery {
+    /// Require the exact original terminal reserve from this same locked
+    /// canonical image before numerical replay. Missing, changed or late
+    /// requirements refuse without mutation; no allowance is replenished.
+    pub fn require_recovery_reserve(self, expected: RecoveryReserve) -> Result<Self, JournalError> {
+        check_recovery_reserve(&self.inner, expected)?;
+        Ok(self)
+    }
+
     pub fn progress(&self) -> FileLearnedRecoveryProgress {
         let mut progress = self.inner.progress();
         if let Some(error) = self.failure { progress.status = FileLearnedRecoveryStatus::Failed(error); }
@@ -243,6 +282,72 @@ impl FilePredictiveMediatedLearnedRecovery {
         let (profile, events, _) = self.inner.guarded_history();
         check_machine(profile, self.inner.verified_guarded_machine()?, events, &self.expected)?;
         Ok(())
+    }
+
+    /// Select the original retained message after the complete independent
+    /// predictor, topology, guard, policy and floor contract passes. This read
+    /// issues no observer, new forecast, fence or live owner.
+    pub fn learned_text_stream_message_request(&self, request: u64)
+        -> Result<FileStreamProposal, JournalError>
+    {
+        self.check_ready()?;
+        self.inner.learned_text_stream_message_request(request)
+    }
+
+    /// Select the exact retained finish and confirmed predecessor under the
+    /// same complete predictive mediation contract without changing storage.
+    pub fn learned_text_stream_finish_request(&self, after_request: u64, request: u64)
+        -> Result<FileStreamProposal, JournalError>
+    {
+        self.check_ready()?;
+        self.inner.learned_text_stream_finish_request(after_request, request)
+    }
+
+    /// Expose only the original historical actor observation after independent
+    /// validation and the original canonical-cut check. No new forecast, clock,
+    /// cleanup, fence or role escapes; pending liabilities remain unresolved.
+    pub fn finish_receipt(self, request: u64, finish_after: Option<u64>)
+        -> Result<Knowledge<ActorOutcome>, JournalError>
+    {
+        self.check_ready()?;
+        self.inner.finish_receipt(request, finish_after)
+    }
+
+    /// Reconcile the same fully validated numerical history through the
+    /// original single-image Fence/Time/Sweep. Guard and selection failures
+    /// precede clock and mutation; only the selected actor observation escapes.
+    pub fn finish_reconciled_receipt<F>(self, request: u64, finish_after: Option<u64>, clock: F)
+        -> Result<Knowledge<ActorOutcome>, JournalError>
+    where F: FnOnce() -> ElapsedTick {
+        self.check_ready()?;
+        self.inner.finish_reconciled_receipt(request, finish_after, clock)
+    }
+
+    /// Select the original stop predecessor after the complete predictor,
+    /// topology, guard, policy and independent-floor requirements pass.
+    pub fn stop_request(&self, operation: u64) -> Result<StopRequest, JournalError> {
+        self.check_ready()?;
+        self.inner.stop_request(operation)
+    }
+
+    /// Consume the same original replay directly into native stopped recovery.
+    /// No ordinary fence, new forecast or observer precedes the original
+    /// Stop/Fence/StopProgress transaction; all spent and unknown work survives.
+    pub fn finish_stopped<F>(self, request: StopRequest, clock: F)
+        -> Result<FileStoppedRecovery, JournalError>
+    where F: FnOnce() -> ElapsedTick {
+        self.check_ready()?;
+        self.inner.finish_stopped(request, clock)
+    }
+
+    /// Return that acknowledged stopped cut and its original private history
+    /// anchor, preserving every predictive mediation requirement and the one
+    /// canonical lock. Capturing it issues no role, replay or extra fence.
+    pub fn finish_stopped_with_anchor<F>(self, request: StopRequest, clock: F)
+        -> Result<FileStoppedHistory, JournalError>
+    where F: FnOnce() -> ElapsedTick {
+        self.check_ready()?;
+        self.inner.finish_stopped_with_anchor(request, clock)
     }
 
     /// Acknowledge exactly the original fence before returning separate human,

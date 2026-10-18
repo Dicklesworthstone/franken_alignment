@@ -25,6 +25,7 @@ The types live in
 The `FileOversight` entry points are:
 
 - `create_predictive_mediated_guarded_with_learned_generation`;
+- `create_predictive_mediated_guarded_with_learned_generation_reserved`;
 - `begin_open_predictive_mediated_guarded_with_learned_generation`;
 - `begin_open_predictive_mediated_guarded_anchored_with_learned_generation`;
 - `open_predictive_mediated_guarded_with_learned_generation`.
@@ -51,6 +52,19 @@ Original native validation of all guards, predictor and topology completes befor
 storage creation. A single first canonical replacement precedes owner or role
 issuance. No intermediate publication owner is returned.
 
+The `_reserved` constructor additionally accepts the original `RecoveryReserve`
+as its last argument. It installs that terminal allowance before guard and
+learned work in the same first image. The learned Enable still owns the sole
+predictor and recipe-owned source installation. Raw and owned predictor modes
+return their separate observer only after the entire image is acknowledged.
+The existing constructor and old journal formats retain their behavior.
+
+`require_recovery_reserve(expected)` on the sealed cursor checks exactly one
+retained original reserve before replay. Missing or changed capacity refuses;
+calling it after replay begins also refuses. It neither installs a reserve nor
+replenishes work, forecast allowance, or spent rights. This is the original
+terminal-event reservation, not a physical disk-space guarantee.
+
 Recovery opens the original exclusive `FileLearnedRecovery`, binds the exact
 recipe and, for owned prediction, its original owned-history binder. The
 independent anchor is compared with the same locked canonical bytes before
@@ -68,6 +82,27 @@ unfinished cursor releases it without canonical replacement or pending cleanup.
 The original single recovery fence pauses numerical work and withdraws topology
 availability, old identity evidence and effect approvals. A returned observer is
 new custody, not a current source, fresh forecast or certified cut.
+
+## Receipt and stop completion without live roles
+
+Both predictive modes expose the original message/finish selectors and
+`finish_receipt` / `finish_reconciled_receipt` through this same guarded cursor.
+The complete predictor, topology, guard, policy, and floor requirements precede
+the original finalizer. A historical receipt needs no new forecast, source,
+clock, or role. Explicit reconciliation uses the original Fence/Time/Sweep
+transaction and retains unresolved liabilities.
+
+The corresponding `finish_receipt_port` and
+`finish_reconciled_receipt_port` methods return the original immutable actor
+receipt port. It accepts only the selected request's exact original envelope;
+it cannot submit a new effect, cancel a charge, or recover a live supervisor.
+
+`stop_request`, `finish_stopped`, and `finish_stopped_with_anchor` similarly
+delegate to original stopped recovery after the full predictive mediation
+check. The original Stop/Fence/StopProgress transaction runs directly, so an
+ordinary recovery fence does not consume reserved terminal capacity first.
+Forecast custody, spent numerical work, and unknown effects retain their
+original meaning. A returned stopped history anchor adds no authority.
 
 ## Reset and publication ordering
 

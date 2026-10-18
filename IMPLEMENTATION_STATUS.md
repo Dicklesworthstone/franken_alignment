@@ -1,5 +1,33 @@
 # Implementation status · design revision 0.3
 
+## 2026-10-18: reserved mediated learned recovery (unqualified source)
+
+The original topology-mediated learned and predictive learned constructors now
+have explicit reserved variants. Their existing guarded bootstrap installs the
+terminal recovery reserve before guard and numerical work and publishes the
+complete configuration in one first canonical image. Ordinary, raw-predictive,
+and owned-predictive modes retain their exact original recipe and role custody.
+Older constructors and journal formats are unchanged.
+
+Both sealed mediated recovery cursors can require the exact independently
+selected reserve before replay. Their original full guard, topology, predictor,
+policy, floor, and anchor checks now also protect message/finish receipt
+selection, immutable actor receipt ports, explicit reconciliation, and direct
+stopped recovery. No ordinary recovery fence consumes terminal capacity before
+the original Stop/Fence/StopProgress transaction, and no live role escapes a
+receipt or stopped finalizer.
+
+Four independent public regression functions cover all three modes, pairing
+useful numerical output and full-capacity shutdown with startup, reserve, and
+recovery refusals. These tests and the changed library sources passed
+nonmutating syntax parsing with
+nightly-2026-09-21 rustfmt. This is not type checking, format qualification, or
+test execution. RCH exits 103 because the remote daemon is unavailable and
+refuses local fallback as required by AGENTS.md. Compilation, Clippy, runtime
+tests, full packet acceptance, and production qualification remain open.
+See [ordinary mediated recovery](docs/MEDIATED_LEARNED_RECOVERY.md) and
+[predictive mediated recovery](docs/PREDICTIVE_MEDIATED_LEARNED_RECOVERY.md).
+
 ## 2026-10-17: explicit BOS tokenizer compatibility (unqualified source)
 
 The original bounded byte-BPE engine now has an explicit Llama-3/Unicode-17 BOS
