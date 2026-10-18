@@ -9,23 +9,48 @@ use super::{Config, Submission, SubmitProfile, PeerProfile, FileOversight, FileG
 use super::super::{checkpoint as source_checkpoint, from_recovered_with_topology_retaining};
 #[cfg(test)]
 use super::super::from_recovered_with_topology;
+use crate::publication::PublicationProfile;
 use fa_reference::Error;
+use fa_reference::action::consequence::delivery::persistent::observed::guarded::recovery::FilePublicationRecoveryRequirements;
 use fa_reference::action::consequence::delivery::persistent::observed::guarded::{
     mediated::FileMediatedRequirements, recovery::mediated::ReconciledMediatedOwner};
 use fa_reference::action::consequence::oversight::actor_wire::{Command, decode_command, MAX_FRAME_BYTES};
 use std::{io::Write, path::Path, time::{Duration, Instant}};
 
+#[cfg(test)]
 fn submit<F>(config: Config, submission: Submission<'_>, topology: &Selection, time: F)
     -> Result<RunResult, String>
 where F: FnMut() -> ElapsedTick {
-    let started = Instant::now();
-    submit_with_elapsed(config, submission, topology, time, started, &mut || started.elapsed())
+    submit_selected(config, submission, topology, None, time)
 }
 
+fn submit_selected<F>(config: Config, submission: Submission<'_>, topology: &Selection,
+    publication: Option<&PublicationProfile>, time: F) -> Result<RunResult, String>
+where F: FnMut() -> ElapsedTick {
+    let started = Instant::now();
+    submit_selected_with_elapsed(config, submission, topology, publication, time, started,
+        &mut || started.elapsed())
+}
+
+#[cfg(test)]
 fn submit_with_elapsed<F>(config: Config, submission: Submission<'_>, topology: &Selection,
-    mut time: F, started: Instant, elapsed: &mut impl FnMut() -> Duration)
+    time: F, started: Instant, elapsed: &mut impl FnMut() -> Duration)
     -> Result<RunResult, String>
 where F: FnMut() -> ElapsedTick {
+    submit_selected_with_elapsed(config, submission, topology, None, time, started, elapsed)
+}
+
+fn submit_selected_with_elapsed<F>(config: Config, submission: Submission<'_>, topology: &Selection,
+    publication: Option<&PublicationProfile>, mut time: F, started: Instant,
+    elapsed: &mut impl FnMut() -> Duration) -> Result<RunResult, String>
+where F: FnMut() -> ElapsedTick {
+    // Checked mode is independently selected, never inferred from the journal.
+    // A richer profile cannot be reduced to just its numerical witness limits.
+    // This preflight reads no capture, clock, topology source or canonical store.
+    let publication_limits = publication.map(PublicationProfile::simple_limits).transpose()?;
+    let publication_requirements = FilePublicationRecoveryRequirements {
+        validation: publication_limits, feed: None, joint: None,
+    };
     let Submission { document, profile, peers, credibility } = submission;
     let Command::Submit { request, proposal } = decode_command(document).map_err(debug)? else {
         return Err("mediated submit requires an original submit document".into());
@@ -57,7 +82,8 @@ where F: FnMut() -> ElapsedTick {
     };
     let mut recovery = FileOversight::begin_open_mediated_guarded_anchored(
         &config.store, config.profile.clone(), &expected, custody.anchor())
-        .and_then(|run| run.require_recovery_reserve(RecoveryReserve::terminal())).map_err(unconfirmed)?;
+        .and_then(|run| run.require_recovery_reserve(RecoveryReserve::terminal()))
+        .and_then(|run| run.require_publication_profile(publication_requirements)).map_err(unconfirmed)?;
     history.check_extent(recovery.progress().total_events)?;
     loop {
         checkpoint()?;
@@ -76,8 +102,8 @@ where F: FnMut() -> ElapsedTick {
         if outstanding || outcomes.values().any(|result| !matches!(result, Ok(Reconciliation::Resolved(_)))) {
             return Err("unresolved prior deliveries; no new work admitted; charges remain in the original ledger".into());
         }
-        if owner.publication_validation_profile().map_err(debug)?.is_some() {
-            return Err("mediated submit requires the plain source-publication profile".into());
+        if owner.publication_validation_profile().map_err(debug)? != publication_limits {
+            return Err("mediated submit requires its matching explicit publication profile".into());
         }
         match owner.request_status(request) {
             Ok(_) => {
@@ -116,7 +142,7 @@ where F: FnMut() -> ElapsedTick {
     // helper congress, human approval, final automatic topology check and cleanup
     // as creation. No actor epoch, target, payload or deadline is rewritten.
     let result = from_recovered_with_topology_retaining(config, owner, roles.oversight.human, Continuation {
-        document, request, proposal, peers, publication: None, credibility, runtime_deadline, started,
+        document, request, proposal, peers, publication, credibility, runtime_deadline, started,
     }, selected, time, |host, topology| source_checkpoint::combine(retain(&custody, host),
         checkpoint_output.as_ref().map_or(Ok(()), |output| output.retain(host, topology))));
     match result {
@@ -128,18 +154,43 @@ where F: FnMut() -> ElapsedTick {
     }
 }
 
-const USAGE: &str = "usage: supervise_publication submit CONFIG SUBMIT_JSON --guarded RECOVERY_PROFILE --topology-profile TOPOLOGY_PROFILE [--reviewer-profile REVIEWER_JSON] [--credibility-activation EVIDENCE_FILE]";
+const USAGE: &str = "usage: supervise_publication submit CONFIG SUBMIT_JSON --guarded RECOVERY_PROFILE --topology-profile TOPOLOGY_PROFILE [--publication-profile WITNESS_PROFILE] [--reviewer-profile REVIEWER_JSON] [--credibility-activation EVIDENCE_FILE]";
 
 pub(super) fn command(args: &[String], credibility: Option<&Path>, out: &mut impl Write) -> Result<(), String> {
-    let (recovery_path, topology_path, peer_path) = arguments(args)?;
+    let (args, publication_path) = publication_option(args)?;
+    let (recovery_path, topology_path, peer_path) = arguments(&args)?;
     let config = Config::read(Path::new(&args[1]))?;
     let document = crate::config::read_regular(Path::new(&args[2]), MAX_FRAME_BYTES)?;
     let recovery = SubmitProfile::read(recovery_path)?;
     let topology = Selection::read(topology_path)?;
     let peers = peer_path.map(PeerProfile::read).transpose()?;
-    let result = submit(config, Submission { document: &document, profile: &recovery,
-        peers: peers.as_ref(), credibility }, &topology, crate::workflow::clock)?;
+    let publication = publication_path.map(PublicationProfile::read).transpose()?;
+    let result = submit_selected(config, Submission { document: &document, profile: &recovery,
+        peers: peers.as_ref(), credibility }, &topology, publication.as_ref(), crate::workflow::clock)?;
     super::emit(result, out)
+}
+
+// Validate the entire pair grammar before removing the one optional profile.
+// A missing option value cannot consume another flag or be repaired by removal.
+fn publication_option(args: &[String]) -> Result<(Vec<String>, Option<&Path>), String> {
+    if !matches!(args.len(), 7 | 9 | 11) || args[0] != "submit"
+        || args[1..3].iter().any(|arg| arg.is_empty() || arg.starts_with("--")) {
+        return Err(USAGE.into());
+    }
+    let mut stripped = args[..3].to_vec();
+    let mut publication = None;
+    for pair in args[3..].chunks_exact(2) {
+        if pair[1].is_empty() || pair[1].starts_with("--") { return Err(USAGE.into()); }
+        if pair[0] == "--publication-profile" {
+            if publication.is_some() { return Err(USAGE.into()); }
+            publication = Some(Path::new(&pair[1]));
+        } else {
+            stripped.extend_from_slice(pair);
+        }
+    }
+    // Own all duplicate/unknown flags before opening a single input file.
+    arguments(&stripped)?;
+    Ok((stripped, publication))
 }
 
 fn arguments(args: &[String]) -> Result<(&Path, &Path, Option<&Path>), String> {
@@ -160,3 +211,6 @@ fn arguments(args: &[String]) -> Result<(&Path, &Path, Option<&Path>), String> {
 
 #[cfg(test)]
 mod tests;
+#[cfg(test)]
+#[path = "mediated/checked.rs"]
+mod checked;

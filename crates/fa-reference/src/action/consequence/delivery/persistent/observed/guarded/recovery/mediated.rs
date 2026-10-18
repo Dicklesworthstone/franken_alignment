@@ -5,6 +5,7 @@ use super::{FileGuardedRecovery, FileGuardedRecoveryProgress, FileGuardedRecover
     RecoveryReserve, MAX_JOURNAL_EVENTS, journal, storage};
 use super::super::mediated::{FileMediatedRequirements, FileMediatedRoles,
     check_history, check_machine};
+use super::FilePublicationRecoveryRequirements;
 use std::fmt;
 use std::path::Path;
 
@@ -92,6 +93,18 @@ impl FileMediatedRecovery {
     /// refill one. A late/mismatching selection consumes the cursor without writes.
     pub fn require_recovery_reserve(self, expected: RecoveryReserve) -> Result<Self, JournalError> {
         Ok(Self { inner: self.inner.require_recovery_reserve(expected)?, expected: self.expected })
+    }
+
+    /// Pin the independently selected publication bootstrap on the SAME locked
+    /// canonical image before the first replay attempt. None fields require
+    /// absence; no feed, freshness, fallback or joint gate is silently omitted.
+    /// A mismatch or late call consumes recovery without a clock, fence, cleanup
+    /// or role. The original checker owns uniqueness and complete field binding;
+    /// matching publication settings never bypasses our mediation requirements.
+    pub fn require_publication_profile(self, expected: FilePublicationRecoveryRequirements)
+        -> Result<Self, JournalError>
+    {
+        Ok(Self { inner: self.inner.require_publication_profile(expected)?, expected: self.expected })
     }
 
     pub fn progress(&self) -> FileGuardedRecoveryProgress { self.inner.progress() }
