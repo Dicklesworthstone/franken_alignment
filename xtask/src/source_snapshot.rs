@@ -100,9 +100,9 @@ pub struct Limits {
 impl Default for Limits {
     fn default() -> Self {
         Limits {
-            max_files: 512,
-            max_depth: 8,
-            max_manifest_bytes: 1024 * 1024,
+            max_files: MAX_FILES_CEILING,
+            max_depth: MAX_DEPTH_CEILING,
+            max_manifest_bytes: MAX_MANIFEST_BYTES_CEILING,
         }
     }
 }
@@ -231,6 +231,7 @@ impl Tool {
 }
 
 /// Why a hash attempt did not yield a digest.
+#[derive(Debug)]
 enum HashError {
     /// The tool was not found. Only this advances to the next
     /// candidate: a tool that is absent has said nothing about the file.
@@ -776,6 +777,51 @@ fn hash_one(tool: &Tool, root: &Path, relative: &str) -> Result<String, HashErro
     Ok(digest.to_string())
 }
 
+/// Fast-path batch hash for a slice of relative paths using the pinned `tool`.
+/// Returns `None` on any precheck, process, or output anomaly so the caller can
+/// fall back to `hash_one` per file and record the exact causal [`Finding`].
+fn hash_chunk_fast(tool: &Tool, root: &Path, chunk: &[String]) -> Option<Vec<(String, String)>> {
+    if chunk.is_empty() {
+        return Some(Vec::new());
+    }
+    let mut absolutes = Vec::with_capacity(chunk.len());
+    for relative in chunk {
+        let absolute = checked_path(root, relative).ok()?;
+        if !absolute.is_file() {
+            return None;
+        }
+        absolutes.push(absolute);
+    }
+    let mut command = Command::new(&tool.program);
+    for argument in &tool.args {
+        command.arg(argument);
+    }
+    for absolute in &absolutes {
+        command.arg(absolute);
+    }
+    let output = command.output().ok()?;
+    if !output.status.success() {
+        return None;
+    }
+    let text = String::from_utf8(output.stdout).ok()?;
+    let lines: Vec<&str> = text.lines().collect();
+    if lines.len() != chunk.len() {
+        return None;
+    }
+    let mut pairs = Vec::with_capacity(chunk.len());
+    for ((relative, absolute), line) in chunk.iter().zip(absolutes.iter()).zip(lines) {
+        let (digest, echoed) = line.split_once("  ")?;
+        if !is_sha256_hex(digest) {
+            return None;
+        }
+        if Path::new(echoed.trim_end()) != absolute.as_path() {
+            return None;
+        }
+        pairs.push((relative.clone(), digest.to_string()));
+    }
+    Some(pairs)
+}
+
 /// Bind the manifest's own bytes to the reviewed operator policy. This is
 /// outside the manifest's file set, so there is no self-referential digest.
 pub fn verify_manifest_identity(root: &Path, relative: &str, expected: &str) -> Result<(), String> {
@@ -1004,18 +1050,38 @@ pub fn verify(root: &Path, manifest: &Manifest, limits: Limits) -> Result<Report
             )),
             Some(tool) => {
                 // One manifest is never hashed by two different tools.
-                for relative in to_hash.iter().skip(1) {
-                    match hash_one(tool, &root, relative) {
-                        Ok(digest) => {
-                            compare(manifest, relative, &digest, &mut verified, &mut findings);
+                // Batch verified regular files in chunks of 256 to avoid spawning
+                // thousands of processes sequentially; fall back to `hash_one`
+                // per file whenever any precheck, exit status or output line fails
+                // so every causal refusal finding is preserved verbatim.
+                for chunk in to_hash[1..].chunks(256) {
+                    if let Some(pairs) = hash_chunk_fast(tool, &root, chunk) {
+                        for (relative, digest) in pairs {
+                            compare(manifest, &relative, &digest, &mut verified, &mut findings);
                         }
-                        Err(HashError::Refusal(finding)) => findings.push(finding),
-                        Err(HashError::NotSpawnable(reason)) => findings.push(Finding::new(
-                            Phase::Tool,
-                            "hash_tool_failed",
-                            relative.clone(),
-                            format!("pinned tool became unavailable mid-run: {reason}"),
-                        )),
+                    } else {
+                        for relative in chunk {
+                            match hash_one(tool, &root, relative) {
+                                Ok(digest) => {
+                                    compare(
+                                        manifest,
+                                        relative,
+                                        &digest,
+                                        &mut verified,
+                                        &mut findings,
+                                    );
+                                }
+                                Err(HashError::Refusal(finding)) => findings.push(finding),
+                                Err(HashError::NotSpawnable(reason)) => {
+                                    findings.push(Finding::new(
+                                        Phase::Tool,
+                                        "hash_tool_failed",
+                                        relative.clone(),
+                                        format!("pinned tool became unavailable mid-run: {reason}"),
+                                    ));
+                                }
+                            }
+                        }
                     }
                 }
             }
@@ -1225,5 +1291,48 @@ mod tests {
             "a passing report must not read as tool or runtime attestation"
         );
         assert!(rendered.contains("no cryptography is implemented here"));
+    }
+
+    #[test]
+    fn default_limits_cover_current_workspace_depth_and_file_count_within_hard_ceilings() {
+        let limits = Limits::default();
+        assert_eq!(limits.max_files, MAX_FILES_CEILING);
+        assert_eq!(limits.max_depth, MAX_DEPTH_CEILING);
+        assert_eq!(limits.max_manifest_bytes, MAX_MANIFEST_BYTES_CEILING);
+        let depth_16 = "crates/fa-reference/src/action/consequence/delivery/persistent/observed/decoder/learned/config/text/intake/wire_tests/policy_tests/pipeline.rs";
+        assert_eq!(depth_16.split('/').count(), 16);
+        assert!(check_relative_path(depth_16, limits).is_ok());
+        let depth_17 = format!("extra/{depth_16}");
+        let refused = check_relative_path(&depth_17, limits).expect_err("depth 17 must refuse");
+        assert_eq!(refused.0, "path_depth_exceeded");
+    }
+
+    #[test]
+    fn hash_chunk_fast_matches_hash_one_and_returns_none_on_missing_or_non_regular_entry() {
+        let root = std::fs::canonicalize(crate::workspace_root().expect("workspace root"))
+            .expect("canonical root");
+        let tool = Tool::candidates_for_host()
+            .into_iter()
+            .find(|candidate| hash_one(candidate, &root, "Cargo.toml").is_ok())
+            .expect("host operator SHA-256 tool must be available");
+        let chunk = vec!["Cargo.toml".to_string(), "LICENSE".to_string()];
+        let batched = hash_chunk_fast(&tool, &root, &chunk).expect("batch of regular files");
+        assert_eq!(
+            batched,
+            vec![
+                (
+                    "Cargo.toml".to_string(),
+                    hash_one(&tool, &root, "Cargo.toml").expect("hash Cargo.toml")
+                ),
+                (
+                    "LICENSE".to_string(),
+                    hash_one(&tool, &root, "LICENSE").expect("hash LICENSE")
+                ),
+            ]
+        );
+        // Causal negative: any non-regular entry in the chunk forces `None` so
+        // `verify` falls back to `hash_one` and records `not_regular_file`.
+        let with_dir = vec!["Cargo.toml".to_string(), "xtask".to_string()];
+        assert_eq!(hash_chunk_fast(&tool, &root, &with_dir), None);
     }
 }

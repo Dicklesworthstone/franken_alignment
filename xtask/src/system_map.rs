@@ -1173,3 +1173,273 @@ fn constitutional_variants() -> BTreeSet<String> {
         .map(str::to_owned)
         .collect()
 }
+
+const PLAYBOOKS_FILE: &str = "docs/playbooks/playbooks.json";
+
+/// Validate the machine-checkable playbook step sidecar (`docs/playbooks/playbooks.json`)
+/// against `registry/vocabulary.json`.
+#[must_use]
+pub fn check_playbooks(playbooks: &Json, vocabulary: &Json) -> Vec<Finding> {
+    let mut checker = Checker::default();
+    let Some(vocab_root) = checker.object(vocabulary, VOCABULARY_FILE, "$", None) else {
+        return checker.finish().findings;
+    };
+    let vocab = checker.vocabulary(vocab_root);
+    let Some(root) = checker.object(playbooks, PLAYBOOKS_FILE, "$", None) else {
+        return checker.finish().findings;
+    };
+    if let Some(schema) = checker.string(root, PLAYBOOKS_FILE, "schema_version", None)
+        && schema != "fa.playbooks/0.3"
+    {
+        checker.finding(
+            PLAYBOOKS_FILE,
+            Some(schema),
+            "invalid_schema_version",
+            "$.schema_version must be fa.playbooks/0.3",
+        );
+    }
+    let Some(rows) = checker.array(root, PLAYBOOKS_FILE, "playbooks", None) else {
+        return checker.finish().findings;
+    };
+    if rows.len() > MAX_ROWS {
+        checker.finding(
+            PLAYBOOKS_FILE,
+            None,
+            "input_too_large",
+            "$.playbooks exceeds row bound",
+        );
+        return checker.finish().findings;
+    }
+    let mut seen_playbooks = BTreeSet::new();
+    let mut used_verbs = BTreeSet::new();
+    for (p_idx, row) in rows.iter().enumerate() {
+        let p_loc = format!("$.playbooks[{p_idx}]");
+        let Some(row) = checker.object(row, PLAYBOOKS_FILE, &p_loc, None) else {
+            continue;
+        };
+        let Some(id) = checker.string(row, PLAYBOOKS_FILE, "id", None) else {
+            continue;
+        };
+        if !seen_playbooks.insert(id.to_owned()) {
+            checker.finding(
+                PLAYBOOKS_FILE,
+                Some(id),
+                "duplicate_id",
+                format!("{p_loc} repeats playbook id {id}"),
+            );
+        }
+        let _ = checker.string(row, PLAYBOOKS_FILE, "title", Some(id));
+        let Some(steps) = checker.array(row, PLAYBOOKS_FILE, "steps", Some(id)) else {
+            continue;
+        };
+        if steps.is_empty() {
+            checker.finding(
+                PLAYBOOKS_FILE,
+                Some(id),
+                "missing_field",
+                format!("{p_loc}.steps must not be empty"),
+            );
+            continue;
+        }
+        for (s_idx, step) in steps.iter().enumerate() {
+            let s_loc = format!("{p_loc}.steps[{s_idx}]");
+            let Some(step) = checker.object(step, PLAYBOOKS_FILE, &s_loc, Some(id)) else {
+                continue;
+            };
+            match step.get("step").and_then(Json::as_u64) {
+                Some(num) if num == (s_idx as u64 + 1) => {}
+                Some(num) => checker.finding(
+                    PLAYBOOKS_FILE,
+                    Some(id),
+                    "invalid_step_sequence",
+                    format!("{s_loc}.step must be {}, found {num}", s_idx + 1),
+                ),
+                None => checker.finding(
+                    PLAYBOOKS_FILE,
+                    Some(id),
+                    "missing_field",
+                    format!("{s_loc}.step must be a 1-indexed integer"),
+                ),
+            }
+            if let Some(verb) = checker.string(step, PLAYBOOKS_FILE, "verb", Some(id)) {
+                if vocab.retired.contains(verb) {
+                    checker.finding(
+                        PLAYBOOKS_FILE,
+                        Some(verb),
+                        "retired_verb",
+                        format!("{s_loc}.verb uses retired verb {verb}"),
+                    );
+                } else if !vocab.verbs.contains(verb) {
+                    checker.finding(
+                        PLAYBOOKS_FILE,
+                        Some(verb),
+                        "unregistered_verb",
+                        format!("{s_loc}.verb uses unregistered verb {verb}"),
+                    );
+                } else {
+                    used_verbs.insert(verb.to_owned());
+                }
+            }
+            if let Some(inputs) = checker.array(step, PLAYBOOKS_FILE, "inputs", Some(id)) {
+                if inputs.is_empty() {
+                    checker.finding(
+                        PLAYBOOKS_FILE,
+                        Some(id),
+                        "missing_field",
+                        format!("{s_loc}.inputs must not be empty"),
+                    );
+                }
+                for (i_idx, input) in inputs.iter().enumerate() {
+                    if let Some(addr) = input.as_str() {
+                        check_playbook_address(
+                            &mut checker,
+                            id,
+                            &format!("{s_loc}.inputs[{i_idx}]"),
+                            addr,
+                            &vocab,
+                        );
+                    } else {
+                        checker.finding(
+                            PLAYBOOKS_FILE,
+                            Some(id),
+                            "invalid_type",
+                            format!("{s_loc}.inputs[{i_idx}] must be a string"),
+                        );
+                    }
+                }
+            }
+            if let Some(outputs) = checker.array(step, PLAYBOOKS_FILE, "outputs", Some(id)) {
+                if outputs.is_empty() {
+                    checker.finding(
+                        PLAYBOOKS_FILE,
+                        Some(id),
+                        "missing_field",
+                        format!("{s_loc}.outputs must not be empty"),
+                    );
+                }
+                for (o_idx, output) in outputs.iter().enumerate() {
+                    let o_loc = format!("{s_loc}.outputs[{o_idx}]");
+                    let Some(output) = checker.object(output, PLAYBOOKS_FILE, &o_loc, Some(id))
+                    else {
+                        continue;
+                    };
+                    if let Some(addr) = checker.string(output, PLAYBOOKS_FILE, "address", Some(id))
+                    {
+                        check_playbook_address(
+                            &mut checker,
+                            id,
+                            &format!("{o_loc}.address"),
+                            addr,
+                            &vocab,
+                        );
+                    }
+                    if let Some(ty) = checker.string(output, PLAYBOOKS_FILE, "type", Some(id))
+                        && (!ty.starts_with("Knowledge<")
+                            || !ty.ends_with('>')
+                            || ty.len() <= "Knowledge<>".len())
+                    {
+                        checker.finding(
+                            PLAYBOOKS_FILE,
+                            Some(ty),
+                            "bare_scalar_output",
+                            format!("{o_loc}.type must be wrapped in Knowledge<T>, found {ty}"),
+                        );
+                    }
+                }
+            }
+            if let Some(branches) =
+                checker.array(step, PLAYBOOKS_FILE, "failure_branches", Some(id))
+            {
+                if branches.is_empty() {
+                    checker.finding(
+                        PLAYBOOKS_FILE,
+                        Some(id),
+                        "missing_field",
+                        format!("{s_loc}.failure_branches must not be empty"),
+                    );
+                }
+                for (b_idx, branch) in branches.iter().enumerate() {
+                    let b_loc = format!("{s_loc}.failure_branches[{b_idx}]");
+                    let Some(branch) = checker.object(branch, PLAYBOOKS_FILE, &b_loc, Some(id))
+                    else {
+                        continue;
+                    };
+                    if let Some(code) =
+                        checker.string(branch, PLAYBOOKS_FILE, "reason_code", Some(id))
+                        && !vocab.reason_codes.contains(code)
+                    {
+                        checker.finding(
+                            PLAYBOOKS_FILE,
+                            Some(code),
+                            "unregistered_reason_code",
+                            format!(
+                                "{b_loc}.reason_code {code} is not registered in vocabulary.json"
+                            ),
+                        );
+                    }
+                    let _ = checker.string(branch, PLAYBOOKS_FILE, "action", Some(id));
+                }
+            }
+        }
+    }
+    for required in ["P0", "P1", "P2", "P3", "P4", "P5", "P6", "P7", "P8", "P9"] {
+        if !seen_playbooks.contains(required) {
+            checker.finding(
+                PLAYBOOKS_FILE,
+                Some(required),
+                "missing_playbook",
+                format!("required playbook {required} is absent from playbooks.json"),
+            );
+        }
+    }
+    for verb in &vocab.verbs {
+        if !used_verbs.contains(verb) {
+            checker.finding(
+                PLAYBOOKS_FILE,
+                Some(verb),
+                "unreferenced_verb",
+                format!("registered verb {verb} is not exercised by any playbook step"),
+            );
+        }
+    }
+    checker.finish().findings
+}
+
+fn check_playbook_address(
+    checker: &mut Checker,
+    playbook_id: &str,
+    location: &str,
+    address: &str,
+    vocab: &Vocabulary,
+) {
+    let Some(rest) = address.strip_prefix("fa://") else {
+        checker.finding(
+            PLAYBOOKS_FILE,
+            Some(playbook_id),
+            "invalid_address",
+            format!("{location} must start with fa://, found {address}"),
+        );
+        return;
+    };
+    let mut parts = rest.split('/');
+    let Some(tenant) = parts.next() else { return };
+    let Some(kind) = parts.next() else { return };
+    let Some(id) = parts.next() else { return };
+    if tenant.is_empty() || kind.is_empty() || id.is_empty() || parts.next().is_some() {
+        checker.finding(
+            PLAYBOOKS_FILE,
+            Some(playbook_id),
+            "invalid_address",
+            format!("{location} must follow fa://<tenant>/<kind>/<id>, found {address}"),
+        );
+        return;
+    }
+    if !vocab.nouns.contains(kind) {
+        checker.finding(
+            PLAYBOOKS_FILE,
+            Some(kind),
+            "unknown_noun",
+            format!("{location} address {address} uses unregistered noun {kind}"),
+        );
+    }
+}

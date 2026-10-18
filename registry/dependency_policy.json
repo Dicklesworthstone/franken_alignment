@@ -1,6 +1,7 @@
 {
   "schema_version": "fa.dependencies/0.3",
   "reference_packages": [
+    "fa-journal",
     "fa-reference",
     "xtask"
   ],
@@ -33,7 +34,7 @@
     "packet_completion": {
       "fa_053_complete": false,
       "fa_054_complete": false,
-      "reason": "FA-053 and FA-054 are general packets: a freeze of the complete transitive dependency policy, and a general Cargo admission compiler. What exists here qualifies only the closed initial inventory: two local path packages, no external admission path, and one target profile per actually collected metadata. Qualifying the initial inventory does not close either packet, and neither packet may be marked complete on the strength of this block or its checker.",
+      "reason": "FA-053 and FA-054 are general packets: a freeze of the complete transitive dependency policy, and a general Cargo admission compiler. What exists here qualifies only the closed initial inventory: three local path packages, no external admission path, and one target profile per actually collected metadata. Qualifying the initial inventory does not close either packet, and neither packet may be marked complete on the strength of this block or its checker.",
       "still_required": [
         "Per-target source, feature, build-script and runtime/downloaded-artifact inventories for every foundation considered for admission.",
         "A reachable external admission path with a positive case, which does not exist today.",
@@ -169,6 +170,47 @@
           "registry/source_snapshot.json",
           "docs/DEPENDENCY_CONSTITUTION.md"
         ]
+      },
+      {
+        "name": "fa-journal",
+        "version": "0.2.0",
+        "manifest_path": "crates/fa-journal/Cargo.toml",
+        "direct_reason": "Domain-local typed event journal, projection folds, and explainable decision closure (plan section 6.7, 6.8, 17.5).",
+        "owner": "systems",
+        "decision": "admitted",
+        "decision_date": "2026-09-07",
+        "source_snapshot": "initial-reviewed-workspace",
+        "targets": [
+          "aarch64-apple-darwin",
+          "x86_64-unknown-linux-gnu"
+        ],
+        "build_closure": {
+          "dependencies": [
+            "fa-reference"
+          ],
+          "build_dependencies": [],
+          "build_scripts": [],
+          "proc_macros": [],
+          "native_links": []
+        },
+        "runtime_closure": {
+          "scope": "reviewed_local_rust_source",
+          "direct_network": false,
+          "dynamic_loading": false,
+          "downloaded_artifacts": [],
+          "operator_tools": [],
+          "filesystem": "in_memory_only",
+          "test_filesystem": "in_memory_only",
+          "trust_boundary": [
+            "std",
+            "os",
+            "toolchain"
+          ]
+        },
+        "evidence": [
+          "registry/source_snapshot.json",
+          "docs/DEPENDENCY_CONSTITUTION.md"
+        ]
       }
     ],
     "external_rows": [],
@@ -176,6 +218,7 @@
       {
         "target": "aarch64-apple-darwin",
         "expected_features": {
+          "fa-journal": [],
           "fa-reference": [],
           "xtask": []
         },
@@ -185,6 +228,7 @@
       {
         "target": "x86_64-unknown-linux-gnu",
         "expected_features": {
+          "fa-journal": [],
           "fa-reference": [],
           "xtask": []
         },
@@ -232,7 +276,7 @@
       "id": "initial-reviewed-workspace",
       "schema": "fa.source_snapshot/1",
       "manifest_path": "registry/source_snapshot.json",
-      "sha256": "821e4eac495c1fecf9c3eb289452f3f63069abfc912683a7d3f7e86cf87f288a",
+      "sha256": "e443e909e7c776a7c764d048183da6a0ae0c5f85f4769f9a4dc426098dffff2e",
       "source_url": "https://github.com/Dicklesworthstone/franken_alignment.git",
       "identity_scope": "reviewed_snapshot_bytes"
     },

@@ -1,0 +1,872 @@
+{
+  "schema_version": "fa.playbooks/0.3",
+  "playbooks": [
+    {
+      "id": "P0",
+      "title": "The first ten minutes on an unfamiliar deployment",
+      "steps": [
+        {
+          "step": 1,
+          "verb": "doctor",
+          "inputs": ["fa://acme/profile/default"],
+          "outputs": [
+            {
+              "address": "fa://acme/profile/default",
+              "type": "Knowledge<Vec<LayerStatus>>"
+            }
+          ],
+          "failure_branches": [
+            {
+              "reason_code": "LowerLayerUnverified",
+              "action": "Stop trusting anything above the failing layer; treat upper-layer claims as Unknown{LowerLayerUnverified}."
+            }
+          ]
+        },
+        {
+          "step": 2,
+          "verb": "capabilities",
+          "inputs": ["fa://acme/profile/default"],
+          "outputs": [
+            {
+              "address": "fa://acme/profile/default",
+              "type": "Knowledge<AssuranceProfile>"
+            }
+          ],
+          "failure_branches": [
+            {
+              "reason_code": "CapabilityUnsupported",
+              "action": "Treat any effect family missing from the profile as uncovered and refuse unmediated dispatch."
+            }
+          ]
+        },
+        {
+          "step": 3,
+          "verb": "situation",
+          "inputs": ["fa://acme/run/current"],
+          "outputs": [
+            {
+              "address": "fa://acme/run/current",
+              "type": "Knowledge<SituationReport>"
+            }
+          ],
+          "failure_branches": [
+            {
+              "reason_code": "MissingRequiredObservation",
+              "action": "Inspect the named Pending frontier or request wider authority for Withheld items; never infer from silence."
+            }
+          ]
+        },
+        {
+          "step": 4,
+          "verb": "tail",
+          "inputs": ["fa://acme/run/current"],
+          "outputs": [
+            {
+              "address": "fa://acme/observation/stream",
+              "type": "Knowledge<Stream<Event>>"
+            }
+          ],
+          "failure_branches": [
+            {
+              "reason_code": "StaleGeneration",
+              "action": "Re-read the situation report from the latest acknowledged sequence rather than filling gaps from memory."
+            }
+          ]
+        },
+        {
+          "step": 5,
+          "verb": "related",
+          "inputs": ["fa://acme/handoff/latest"],
+          "outputs": [
+            {
+              "address": "fa://acme/handoff/latest",
+              "type": "Knowledge<Vec<Edge>>"
+            }
+          ],
+          "failure_branches": [
+            {
+              "reason_code": "MissingRequiredObservation",
+              "action": "Proceed as first operator on the run and write a handoff before stopping."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "P1",
+      "title": "A proposal is held",
+      "steps": [
+        {
+          "step": 1,
+          "verb": "why-held",
+          "inputs": ["fa://acme/attempt/42"],
+          "outputs": [
+            {
+              "address": "fa://acme/frontier/42",
+              "type": "Knowledge<PredicateTree>"
+            }
+          ],
+          "failure_branches": [
+            {
+              "reason_code": "StaleGeneration",
+              "action": "Re-read the situation from the returned predecessor generation."
+            }
+          ]
+        },
+        {
+          "step": 2,
+          "verb": "next",
+          "inputs": ["fa://acme/attempt/42"],
+          "outputs": [
+            {
+              "address": "fa://acme/frontier/42",
+              "type": "Knowledge<Vec<Affordance>>"
+            }
+          ],
+          "failure_branches": [
+            {
+              "reason_code": "DeniedByPolicy",
+              "action": "Hard floors cannot be bypassed; escalate to human review or narrow authority."
+            }
+          ]
+        },
+        {
+          "step": 3,
+          "verb": "precheck",
+          "inputs": ["fa://acme/attempt/42"],
+          "outputs": [
+            {
+              "address": "fa://acme/attempt/42",
+              "type": "Knowledge<PrecheckResult>"
+            }
+          ],
+          "failure_branches": [
+            {
+              "reason_code": "PurposeMismatch",
+              "action": "Only exact_predicates disclosure profiles permit actor precheck; use rehearsal in a branch instead."
+            }
+          ]
+        },
+        {
+          "step": 4,
+          "verb": "cost",
+          "inputs": ["fa://acme/attempt/42"],
+          "outputs": [
+            {
+              "address": "fa://acme/round/7",
+              "type": "Knowledge<CostEstimate>"
+            }
+          ],
+          "failure_branches": [
+            {
+              "reason_code": "BudgetExhausted",
+              "action": "Do not raise the budget to finish a hold; escalate through governance or accept the hold."
+            }
+          ]
+        },
+        {
+          "step": 5,
+          "verb": "rehearse",
+          "inputs": ["fa://acme/attempt/42", "fa://acme/branch/rehearsal-1"],
+          "outputs": [
+            {
+              "address": "fa://acme/branch/rehearsal-1",
+              "type": "Knowledge<RehearsalOutcome>"
+            }
+          ],
+          "failure_branches": [
+            {
+              "reason_code": "BudgetExhausted",
+              "action": "Abort rehearsal and keep the attempt held."
+            }
+          ]
+        },
+        {
+          "step": 6,
+          "verb": "convene",
+          "inputs": ["fa://acme/attempt/42"],
+          "outputs": [
+            {
+              "address": "fa://acme/round/7",
+              "type": "Knowledge<RoundOpened>"
+            }
+          ],
+          "failure_branches": [
+            {
+              "reason_code": "BudgetExhausted",
+              "action": "Retain HoldEffect and record exhaustion in the closure."
+            },
+            {
+              "reason_code": "DeadlineExpired",
+              "action": "Fail closed to HoldEffect or Deny when the review window expires."
+            }
+          ]
+        },
+        {
+          "step": 7,
+          "verb": "propose",
+          "inputs": ["fa://acme/attempt/42", "fa://acme/permit/42"],
+          "outputs": [
+            {
+              "address": "fa://acme/closure/42",
+              "type": "Knowledge<DecisionCard>"
+            }
+          ],
+          "failure_branches": [
+            {
+              "reason_code": "OutcomeUnknown",
+              "action": "Transition to P3 reconciliation; never retry or re-propose an ambiguous effect."
+            },
+            {
+              "reason_code": "PermitConsumed",
+              "action": "Verify the existing receipt rather than minting a duplicate permit."
+            }
+          ]
+        },
+        {
+          "step": 8,
+          "verb": "hold",
+          "inputs": ["fa://acme/attempt/42"],
+          "outputs": [
+            {
+              "address": "fa://acme/consequence/42",
+              "type": "Knowledge<Consequence>"
+            }
+          ],
+          "failure_branches": [
+            {
+              "reason_code": "StaleGeneration",
+              "action": "Refresh from the current control sequence before recording the hold."
+            }
+          ]
+        },
+        {
+          "step": 9,
+          "verb": "narrow",
+          "inputs": ["fa://acme/attempt/42"],
+          "outputs": [
+            {
+              "address": "fa://acme/consequence/42",
+              "type": "Knowledge<Consequence>"
+            }
+          ],
+          "failure_branches": [
+            {
+              "reason_code": "StaleGeneration",
+              "action": "Refresh from the current control sequence before narrowing authority."
+            }
+          ]
+        },
+        {
+          "step": 10,
+          "verb": "suspend",
+          "inputs": ["fa://acme/run/current"],
+          "outputs": [
+            {
+              "address": "fa://acme/consequence/42",
+              "type": "Knowledge<Consequence>"
+            }
+          ],
+          "failure_branches": [
+            {
+              "reason_code": "StaleGeneration",
+              "action": "Refresh run state and re-issue suspend at the current predecessor."
+            }
+          ]
+        },
+        {
+          "step": 11,
+          "verb": "reset",
+          "inputs": ["fa://acme/run/current", "fa://acme/checkpoint/pre-incident"],
+          "outputs": [
+            {
+              "address": "fa://acme/checkpoint/pre-incident",
+              "type": "Knowledge<ResetEvent>"
+            }
+          ],
+          "failure_branches": [
+            {
+              "reason_code": "CapabilityUnsupported",
+              "action": "If the host profile lacks functional_restart, fall back to SuspendRun without rewinding the ledger."
+            }
+          ]
+        },
+        {
+          "step": 12,
+          "verb": "annotate",
+          "inputs": ["fa://acme/closure/42"],
+          "outputs": [
+            {
+              "address": "fa://acme/annotation/42",
+              "type": "Knowledge<Annotation>"
+            }
+          ],
+          "failure_branches": [
+            {
+              "reason_code": "StaleGeneration",
+              "action": "Re-read the closure address and attach the conclusion annotation."
+            }
+          ]
+        },
+        {
+          "step": 13,
+          "verb": "handoff",
+          "inputs": ["fa://acme/run/current"],
+          "outputs": [
+            {
+              "address": "fa://acme/handoff/latest",
+              "type": "Knowledge<Handoff>"
+            }
+          ],
+          "failure_branches": [
+            {
+              "reason_code": "StaleGeneration",
+              "action": "Re-read the latest control sequence before writing the handoff."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "P2",
+      "title": "Investigating an incident",
+      "steps": [
+        {
+          "step": 1,
+          "verb": "get",
+          "inputs": ["fa://acme/incident/9", "fa://acme/passport/model-1"],
+          "outputs": [
+            {
+              "address": "fa://acme/incident/9",
+              "type": "Knowledge<Object>"
+            }
+          ],
+          "failure_branches": [
+            {
+              "reason_code": "IntegrityFailure",
+              "action": "Treat the guarded model identity or incident bundle as compromised and fence the domain."
+            }
+          ]
+        },
+        {
+          "step": 2,
+          "verb": "verify",
+          "inputs": ["fa://acme/receipt/42"],
+          "outputs": [
+            {
+              "address": "fa://acme/receipt/42",
+              "type": "Knowledge<VerificationReport>"
+            }
+          ],
+          "failure_branches": [
+            {
+              "reason_code": "IntegrityFailure",
+              "action": "Refuse to rely on the receipt or bundle; escalate integrity failure."
+            }
+          ]
+        },
+        {
+          "step": 3,
+          "verb": "when",
+          "inputs": ["fa://acme/observation/10", "fa://acme/closure/42"],
+          "outputs": [
+            {
+              "address": "fa://acme/observation/10",
+              "type": "Knowledge<Ordering>"
+            }
+          ],
+          "failure_branches": [
+            {
+              "reason_code": "MissingRequiredObservation",
+              "action": "Treat cross-domain wall-clock comparisons without a causal edge as Concurrent."
+            }
+          ]
+        },
+        {
+          "step": 4,
+          "verb": "explain",
+          "inputs": ["fa://acme/closure/42"],
+          "outputs": [
+            {
+              "address": "fa://acme/closure/42",
+              "type": "Knowledge<PredicateTree>"
+            }
+          ],
+          "failure_branches": [
+            {
+              "reason_code": "MissingRequiredObservation",
+              "action": "Compare helper view manifests via related before attributing disagreement to model error."
+            }
+          ]
+        },
+        {
+          "step": 5,
+          "verb": "related",
+          "inputs": ["fa://acme/view/helper-alpha"],
+          "outputs": [
+            {
+              "address": "fa://acme/view/helper-alpha",
+              "type": "Knowledge<Vec<Edge>>"
+            }
+          ],
+          "failure_branches": [
+            {
+              "reason_code": "MissingRequiredObservation",
+              "action": "Record the missing view edge as an explicit frontier."
+            }
+          ]
+        },
+        {
+          "step": 6,
+          "verb": "invalidate",
+          "inputs": ["fa://acme/evidence/corrupt-doc"],
+          "outputs": [
+            {
+              "address": "fa://acme/witness/invalidation-1",
+              "type": "Knowledge<InvalidationEvent>"
+            }
+          ],
+          "failure_branches": [
+            {
+              "reason_code": "StaleGeneration",
+              "action": "Re-read predecessor generation and append invalidation without rewriting history."
+            }
+          ]
+        },
+        {
+          "step": 7,
+          "verb": "replay-plan",
+          "inputs": ["fa://acme/closure/42"],
+          "outputs": [
+            {
+              "address": "fa://acme/closure/42",
+              "type": "Knowledge<ReplayPlan>"
+            }
+          ],
+          "failure_branches": [
+            {
+              "reason_code": "ReplayClosureUnavailable",
+              "action": "Do not claim counterfactual replay; report the missing capture frontier."
+            }
+          ]
+        },
+        {
+          "step": 8,
+          "verb": "branch",
+          "inputs": ["fa://acme/closure/42"],
+          "outputs": [
+            {
+              "address": "fa://acme/branch/incident-9",
+              "type": "Knowledge<BranchAddress>"
+            }
+          ],
+          "failure_branches": [
+            {
+              "reason_code": "PurposeMismatch",
+              "action": "Switch to ExperimentCx; branches carry zero production authority."
+            }
+          ]
+        },
+        {
+          "step": 9,
+          "verb": "intervene",
+          "inputs": ["fa://acme/branch/incident-9", "fa://acme/evidence/corrupt-doc"],
+          "outputs": [
+            {
+              "address": "fa://acme/branch/incident-9",
+              "type": "Knowledge<InterventionRecord>"
+            }
+          ],
+          "failure_branches": [
+            {
+              "reason_code": "CapabilityUnsupported",
+              "action": "Downgrade witness claim when the required intervention grade is unsupported."
+            }
+          ]
+        },
+        {
+          "step": 10,
+          "verb": "replay",
+          "inputs": ["fa://acme/branch/incident-9"],
+          "outputs": [
+            {
+              "address": "fa://acme/witness/counterfactual-9",
+              "type": "Knowledge<CounterfactualWitness>"
+            }
+          ],
+          "failure_branches": [
+            {
+              "reason_code": "ReplayClosureUnavailable",
+              "action": "Annotate witness as exploratory if controls or closure inputs are incomplete."
+            }
+          ]
+        },
+        {
+          "step": 11,
+          "verb": "annotate",
+          "inputs": ["fa://acme/incident/9"],
+          "outputs": [
+            {
+              "address": "fa://acme/annotation/incident-9",
+              "type": "Knowledge<Annotation>"
+            }
+          ],
+          "failure_branches": [
+            {
+              "reason_code": "StaleGeneration",
+              "action": "Re-read incident generation and append the hypothesis/inference/conclusion trail."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "P3",
+      "title": "An effect's outcome is unknown",
+      "steps": [
+        {
+          "step": 1,
+          "verb": "situation",
+          "inputs": ["fa://acme/run/current"],
+          "outputs": [
+            {
+              "address": "fa://acme/run/current",
+              "type": "Knowledge<SituationReport>"
+            }
+          ],
+          "failure_branches": [
+            {
+              "reason_code": "OutcomeUnknown",
+              "action": "Keep reserved budget units charged until the adapter outcome is explicitly resolved."
+            }
+          ]
+        },
+        {
+          "step": 2,
+          "verb": "resolve",
+          "inputs": ["fa://acme/attempt/42", "fa://acme/effect/42"],
+          "outputs": [
+            {
+              "address": "fa://acme/effect/42",
+              "type": "Knowledge<Outcome>"
+            }
+          ],
+          "failure_branches": [
+            {
+              "reason_code": "OutcomeUnknown",
+              "action": "Record IrrecoverablyUnknown with operator authority; never re-propose to 'make sure'."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "P4",
+      "title": "A helper needs promotion, demotion or rotation",
+      "steps": [
+        {
+          "step": 1,
+          "verb": "ledger",
+          "inputs": ["fa://acme/helper/alpha@2"],
+          "outputs": [
+            {
+              "address": "fa://acme/ledger/helper-alpha",
+              "type": "Knowledge<LedgerSummary>"
+            }
+          ],
+          "failure_branches": [
+            {
+              "reason_code": "MissingRequiredObservation",
+              "action": "Refuse promotion when independent-evaluator attack-conditioned labels are absent."
+            }
+          ]
+        },
+        {
+          "step": 2,
+          "verb": "policy-replay",
+          "inputs": ["fa://acme/helper/alpha@2", "fa://acme/policy/roster-candidate"],
+          "outputs": [
+            {
+              "address": "fa://acme/policy/roster-candidate",
+              "type": "Knowledge<PolicyReplayCampaign>"
+            }
+          ],
+          "failure_branches": [
+            {
+              "reason_code": "ReplayClosureUnavailable",
+              "action": "Run the candidate helper generation in shadow mode before replay promotion."
+            }
+          ]
+        },
+        {
+          "step": 3,
+          "verb": "promote",
+          "inputs": ["fa://acme/helper/alpha@2", "fa://acme/evidence/evaluator-report-1"],
+          "outputs": [
+            {
+              "address": "fa://acme/helper/alpha@2",
+              "type": "Knowledge<GovernanceTransition>"
+            }
+          ],
+          "failure_branches": [
+            {
+              "reason_code": "DeniedByPolicy",
+              "action": "Journal the refusal when the evaluator report fails FA-INV-032 requirements."
+            }
+          ]
+        },
+        {
+          "step": 4,
+          "verb": "rotate",
+          "inputs": ["fa://acme/helper/alpha@2", "fa://acme/evidence/evaluator-report-1"],
+          "outputs": [
+            {
+              "address": "fa://acme/helper/alpha@2",
+              "type": "Knowledge<GovernanceTransition>"
+            }
+          ],
+          "failure_branches": [
+            {
+              "reason_code": "DeniedByPolicy",
+              "action": "Journal the refusal and keep the existing cohort cap intact."
+            }
+          ]
+        },
+        {
+          "step": 5,
+          "verb": "findings",
+          "inputs": ["fa://acme/ledger/helper-alpha"],
+          "outputs": [
+            {
+              "address": "fa://acme/finding/roster-churn",
+              "type": "Knowledge<Vec<Finding>>"
+            }
+          ],
+          "failure_branches": [
+            {
+              "reason_code": "IntegrityFailure",
+              "action": "Investigate roster churn near a confirmed hold flagged by the risk-theater detector."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "P5",
+      "title": "Widening an agent's autonomy",
+      "steps": [
+        {
+          "step": 1,
+          "verb": "ledger",
+          "inputs": ["fa://acme/grade/coder-1"],
+          "outputs": [
+            {
+              "address": "fa://acme/ledger/grade-coder-1",
+              "type": "Knowledge<LedgerSummary>"
+            }
+          ],
+          "failure_branches": [
+            {
+              "reason_code": "MissingRequiredObservation",
+              "action": "Keep the current autonomy floor when dwell time or evaluator track record is incomplete."
+            }
+          ]
+        },
+        {
+          "step": 2,
+          "verb": "promote",
+          "inputs": ["fa://acme/grade/coder-1", "fa://acme/evidence/evaluator-report-2"],
+          "outputs": [
+            {
+              "address": "fa://acme/grade/coder-1",
+              "type": "Knowledge<GovernanceTransition>"
+            }
+          ],
+          "failure_branches": [
+            {
+              "reason_code": "DeniedByPolicy",
+              "action": "Refuse widening without evaluator report, dwell time, and governance authority (FA-INV-036)."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "P6",
+      "title": "Changing policy",
+      "steps": [
+        {
+          "step": 1,
+          "verb": "policy-replay",
+          "inputs": ["fa://acme/policy/candidate-v2"],
+          "outputs": [
+            {
+              "address": "fa://acme/policy/candidate-v2",
+              "type": "Knowledge<PolicyReplayCampaign>"
+            }
+          ],
+          "failure_branches": [
+            {
+              "reason_code": "ReplayClosureUnavailable",
+              "action": "Label campaign mode as shadow rather than presenting shadow as historical replay."
+            }
+          ]
+        },
+        {
+          "step": 2,
+          "verb": "promote",
+          "inputs": ["fa://acme/policy/candidate-v2", "fa://acme/evidence/campaign-v2"],
+          "outputs": [
+            {
+              "address": "fa://acme/policy/candidate-v2",
+              "type": "Knowledge<GovernanceTransition>"
+            }
+          ],
+          "failure_branches": [
+            {
+              "reason_code": "DeniedByPolicy",
+              "action": "Refuse policy promotion without the retained campaign artifact."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "P7",
+      "title": "Running an experiment",
+      "steps": [
+        {
+          "step": 1,
+          "verb": "preregister",
+          "inputs": ["fa://acme/evidence/protocol-h1"],
+          "outputs": [
+            {
+              "address": "fa://acme/ledger/experiment-h1",
+              "type": "Knowledge<ExperimentRow>"
+            }
+          ],
+          "failure_branches": [
+            {
+              "reason_code": "StaleGeneration",
+              "action": "Label any protocol registered after confirmatory data collection as exploratory."
+            }
+          ]
+        },
+        {
+          "step": 2,
+          "verb": "branch",
+          "inputs": ["fa://acme/closure/42"],
+          "outputs": [
+            {
+              "address": "fa://acme/branch/exp-h1",
+              "type": "Knowledge<BranchAddress>"
+            }
+          ],
+          "failure_branches": [
+            {
+              "reason_code": "PurposeMismatch",
+              "action": "Enforce ExperimentCx so no branch can ever mint a production permit."
+            }
+          ]
+        },
+        {
+          "step": 3,
+          "verb": "intervene",
+          "inputs": ["fa://acme/branch/exp-h1", "fa://acme/evidence/canary-input"],
+          "outputs": [
+            {
+              "address": "fa://acme/branch/exp-h1",
+              "type": "Knowledge<InterventionRecord>"
+            }
+          ],
+          "failure_branches": [
+            {
+              "reason_code": "CapabilityUnsupported",
+              "action": "Refuse intervention if the target capture level is absent."
+            }
+          ]
+        },
+        {
+          "step": 4,
+          "verb": "replay",
+          "inputs": ["fa://acme/branch/exp-h1"],
+          "outputs": [
+            {
+              "address": "fa://acme/witness/exp-h1",
+              "type": "Knowledge<CounterfactualWitness>"
+            }
+          ],
+          "failure_branches": [
+            {
+              "reason_code": "ReplayClosureUnavailable",
+              "action": "Record the witness as exploratory and block promotion."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "P8",
+      "title": "Fencing a fleet",
+      "steps": [
+        {
+          "step": 1,
+          "verb": "fence",
+          "inputs": ["fa://acme/policy/current"],
+          "outputs": [
+            {
+              "address": "fa://acme/fence/epoch-9",
+              "type": "Knowledge<FenceRecord>"
+            }
+          ],
+          "failure_branches": [
+            {
+              "reason_code": "DeadlineExpired",
+              "action": "Domains under a partition lease fence automatically at lease expiry."
+            }
+          ]
+        },
+        {
+          "step": 2,
+          "verb": "get",
+          "inputs": ["fa://acme/fence/epoch-9"],
+          "outputs": [
+            {
+              "address": "fa://acme/fence/epoch-9",
+              "type": "Knowledge<Object>"
+            }
+          ],
+          "failure_branches": [
+            {
+              "reason_code": "OutcomeUnknown",
+              "action": "Treat post-fence effects in unacknowledged domains as real effects requiring reconciliation."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "P9",
+      "title": "Handing off",
+      "steps": [
+        {
+          "step": 1,
+          "verb": "handoff",
+          "inputs": ["fa://acme/run/current", "fa://acme/incident/9"],
+          "outputs": [
+            {
+              "address": "fa://acme/handoff/latest",
+              "type": "Knowledge<Handoff>"
+            }
+          ],
+          "failure_branches": [
+            {
+              "reason_code": "StaleGeneration",
+              "action": "Re-read the current control sequence and include all open affordances and rehearsals."
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

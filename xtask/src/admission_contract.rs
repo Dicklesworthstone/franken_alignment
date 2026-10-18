@@ -16,7 +16,11 @@ const IDENTITY_SCOPE: &str = "reviewed_snapshot_bytes";
 const CONSTITUTION: &str = "docs/DEPENDENCY_CONSTITUTION.md";
 const TARGETS: [&str; 2] = ["aarch64-apple-darwin", "x86_64-unknown-linux-gnu"];
 
-const LOCAL_ROWS: [(&str, &str); 2] = [("fa-reference", "0.2.0"), ("xtask", "0.2.0")];
+const LOCAL_ROWS: [(&str, &str); 3] = [
+    ("fa-journal", "0.2.0"),
+    ("fa-reference", "0.2.0"),
+    ("xtask", "0.2.0"),
+];
 const BUILD_FIELDS: [&str; 5] = [
     "dependencies",
     "build_dependencies",
@@ -192,8 +196,12 @@ fn target_profiles(admission: &BTreeMap<String, Json>) -> Result<BTreeSet<String
             field(profile, "expected_features", &profile_path)?,
             &features_path,
         )?;
-        exact_keys(features, &features_path, &["fa-reference", "xtask"])?;
-        for name in ["fa-reference", "xtask"] {
+        exact_keys(
+            features,
+            &features_path,
+            &["fa-journal", "fa-reference", "xtask"],
+        )?;
+        for name in ["fa-journal", "fa-reference", "xtask"] {
             string_set(features, name, &format!("{features_path}.{name}"))?;
         }
     }
@@ -260,25 +268,25 @@ fn check_local_row(
         }
     }
 
+    let pkg_name = text(field(row, "name", path)?, &format!("{path}.name"))?;
     let build_path = format!("{path}.build_closure");
     let build = object(field(row, "build_closure", path)?, &build_path)?;
     exact_keys(build, &build_path, &BUILD_FIELDS)?;
     for name in BUILD_FIELDS {
-        let values = array(
-            field(build, name, &build_path)?,
-            &format!("{build_path}.{name}"),
-        )?;
-        if !values.is_empty() {
+        let field_path = format!("{build_path}.{name}");
+        let values = array(field(build, name, &build_path)?, &field_path)?;
+        if pkg_name == "fa-journal" && name == "dependencies" {
+            exact_string_set(build, "dependencies", &["fa-reference"], &build_path)?;
+        } else if !values.is_empty() {
             return Err(format!(
-                "{build_path}.{name} must be an empty array in the closed inventory"
+                "{field_path} must be an empty array in the closed inventory"
             ));
         }
     }
 
-    let name = text(field(row, "name", path)?, &format!("{path}.name"))?;
     let runtime_path = format!("{path}.runtime_closure");
     let runtime = object(field(row, "runtime_closure", path)?, &runtime_path)?;
-    check_runtime(runtime, &runtime_path, name)
+    check_runtime(runtime, &runtime_path, pkg_name)
 }
 
 fn check_runtime(
@@ -306,7 +314,7 @@ fn check_runtime(
     exact_string_set(runtime, "downloaded_artifacts", &[], path)?;
 
     match package {
-        "fa-reference" => {
+        "fa-journal" | "fa-reference" => {
             exact_string_set(runtime, "operator_tools", &[], path)?;
             exact_text(runtime, "filesystem", "in_memory_only", path)?;
             exact_text(runtime, "test_filesystem", "in_memory_only", path)?;
@@ -618,7 +626,7 @@ mod tests {
             }),
             _ => panic!("profiles must be an array"),
         }
-        for index in 0..2 {
+        for index in 0..3 {
             match row_mut(&mut jointly_removed, index)
                 .get_mut("targets")
                 .expect("row targets exist")
@@ -651,7 +659,7 @@ mod tests {
             Json::Array(profiles) => profiles.push(cloned_profile),
             _ => panic!("profiles must be an array"),
         }
-        for index in 0..2 {
+        for index in 0..3 {
             match row_mut(&mut unknown_target, index)
                 .get_mut("targets")
                 .expect("row targets exist")

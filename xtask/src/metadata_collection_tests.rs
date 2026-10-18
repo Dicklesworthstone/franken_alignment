@@ -81,12 +81,16 @@ fn real_cargo_metadata_for_current_workspace_parses_to_closed_package_inventory(
 
     assert_eq!(
         packages.len(),
-        2,
+        3,
         "the real metadata inventory must not contain an unapproved extra package"
     );
     assert_eq!(
         package_names(&document),
-        BTreeSet::from(["fa-reference".to_owned(), "xtask".to_owned()]),
+        BTreeSet::from([
+            "fa-journal".to_owned(),
+            "fa-reference".to_owned(),
+            "xtask".to_owned()
+        ]),
         "the real metadata collection must expose exactly the closed local package inventory"
     );
 }

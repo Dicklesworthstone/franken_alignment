@@ -55,21 +55,14 @@ impl Sandbox {
         let outside = base.join("outside");
         fs::create_dir(&outside).expect("create owned sandbox outside directory");
         copy_tree(&source.join("artifacts"), &root.join("artifacts"));
-        copy_file(
-            &source.join("docs/RESEARCH_AGENDA.md"),
-            &root.join("docs/RESEARCH_AGENDA.md"),
-        );
+        copy_tree(&source.join("docs"), &root.join("docs"));
         copy_file(
             &source.join("registry/foundation_audit.json"),
             &root.join("registry/foundation_audit.json"),
         );
         copy_tree(
-            &source.join("crates/fa-reference/src"),
-            &root.join("crates/fa-reference/src"),
-        );
-        copy_tree(
-            &source.join("crates/fa-reference/tests"),
-            &root.join("crates/fa-reference/tests"),
+            &source.join("crates/fa-reference"),
+            &root.join("crates/fa-reference"),
         );
         copy_file(
             &source.join("IMPLEMENTATION_STATUS.md"),

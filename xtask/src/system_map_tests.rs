@@ -661,3 +661,74 @@ fn layer_row_bound_refuses_oversized_map_before_semantic_traversal() {
     );
     assert_only_finding(&report, "registry/system_map.json", None, "input_too_large");
 }
+
+#[test]
+fn real_playbooks_sidecar_covers_all_playbooks_and_registered_verbs() {
+    let root = crate::workspace_root().expect("workspace root");
+    let playbooks_bytes =
+        std::fs::read(root.join("docs/playbooks/playbooks.json")).expect("read playbooks.json");
+    let vocab_bytes =
+        std::fs::read(root.join("registry/vocabulary.json")).expect("read vocabulary.json");
+    let playbooks = fixture_json(&playbooks_bytes);
+    let vocab = fixture_json(&vocab_bytes);
+    let findings = crate::system_map::check_playbooks(&playbooks, &vocab);
+    assert!(
+        findings.is_empty(),
+        "real playbooks sidecar must pass cleanly: {findings:#?}"
+    );
+}
+
+#[test]
+fn playbooks_checker_refuses_retired_verb_bare_scalar_and_unregistered_reason_code() {
+    let root = crate::workspace_root().expect("workspace root");
+    let playbooks_text = std::fs::read_to_string(root.join("docs/playbooks/playbooks.json"))
+        .expect("read playbooks.json");
+    let vocab_bytes =
+        std::fs::read(root.join("registry/vocabulary.json")).expect("read vocabulary.json");
+    let vocab = fixture_json(&vocab_bytes);
+
+    let retired = playbooks_text.replacen(r#""verb": "doctor""#, r#""verb": "status""#, 1);
+    let retired_findings =
+        crate::system_map::check_playbooks(&fixture_json(retired.as_bytes()), &vocab);
+    assert!(
+        retired_findings
+            .iter()
+            .any(|f| f.code == "retired_verb" && f.id.as_deref() == Some("status")),
+        "expected retired_verb finding, got {retired_findings:#?}"
+    );
+    assert!(
+        retired_findings
+            .iter()
+            .any(|f| f.code == "unreferenced_verb" && f.id.as_deref() == Some("doctor")),
+        "replacing doctor must also trigger unreferenced_verb, got {retired_findings:#?}"
+    );
+
+    let bare_scalar = playbooks_text.replacen(
+        r#""type": "Knowledge<Vec<LayerStatus>>""#,
+        r#""type": "Vec<LayerStatus>""#,
+        1,
+    );
+    let scalar_findings =
+        crate::system_map::check_playbooks(&fixture_json(bare_scalar.as_bytes()), &vocab);
+    assert!(
+        scalar_findings
+            .iter()
+            .any(|f| f.code == "bare_scalar_output" && f.id.as_deref() == Some("Vec<LayerStatus>")),
+        "expected bare_scalar_output finding, got {scalar_findings:#?}"
+    );
+
+    let bad_reason = playbooks_text.replacen(
+        r#""reason_code": "LowerLayerUnverified""#,
+        r#""reason_code": "InventedReason""#,
+        1,
+    );
+    let reason_findings =
+        crate::system_map::check_playbooks(&fixture_json(bad_reason.as_bytes()), &vocab);
+    assert!(
+        reason_findings
+            .iter()
+            .any(|f| f.code == "unregistered_reason_code"
+                && f.id.as_deref() == Some("InventedReason")),
+        "expected unregistered_reason_code finding, got {reason_findings:#?}"
+    );
+}

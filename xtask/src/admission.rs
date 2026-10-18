@@ -143,6 +143,8 @@ pub struct LocalRow {
     /// `docs/DEPENDENCY_CONSTITUTION.md`. An unowned row is not an admission,
     /// so a missing or empty owner is a policy load error.
     pub owner: String,
+    /// Admitted normal intra-workspace dependency names from `build_closure.dependencies`.
+    pub dependencies: BTreeSet<String>,
 }
 
 /// How Cargo's `dep_kinds[].kind` spells an ordinary dependency: as JSON null.
@@ -626,6 +628,22 @@ pub fn parse_policy(bytes: &[u8]) -> Result<Policy, String> {
             }
         }
 
+        let mut row_dependencies: BTreeSet<String> = BTreeSet::new();
+        if let Some(build) = row.get("build_closure").and_then(Json::as_object)
+            && let Some(deps) = build.get("dependencies").and_then(Json::as_array)
+        {
+            for item in deps {
+                if let Some(dep_name) = req_str(
+                    item,
+                    Phase::Policy,
+                    &format!("{path}.build_closure.dependencies"),
+                    &mut findings,
+                ) {
+                    row_dependencies.insert(dep_name.to_string());
+                }
+            }
+        }
+
         if let (Some(name), Some(version), Some(manifest), Some(owner), Some(_)) =
             (name, version, manifest, owner, decision)
         {
@@ -643,6 +661,7 @@ pub fn parse_policy(bytes: &[u8]) -> Result<Policy, String> {
                 manifest_path: manifest.to_string(),
                 targets: row_targets,
                 owner: owner.to_string(),
+                dependencies: row_dependencies,
             });
         }
     }
@@ -1503,6 +1522,25 @@ pub fn check(metadata_bytes: &[u8], policy: &Policy, target: &str) -> Result<Rep
     // duplicated into the scope, so there remains one source of truth for them.
     let mut reviewed_rows = Vec::with_capacity(policy.local.len());
     for row in &policy.local {
+        let mut admitted_edges = BTreeSet::new();
+        for dep_name in &row.dependencies {
+            let Some(dest_row) = policy.local.iter().find(|r| &r.name == dep_name) else {
+                return Err(format!(
+                    "dependency policy admits edge from `{}` to `{dep_name}`, which has no local row",
+                    row.name
+                ));
+            };
+            admitted_edges.insert(EdgeId {
+                to: PackageId {
+                    source: SourceId::WorkspacePath {
+                        manifest_path: dest_row.manifest_path.clone(),
+                    },
+                    name: dest_row.name.clone(),
+                    version: dest_row.version.clone(),
+                },
+                kind: DepKind::Normal,
+            });
+        }
         // Real per-target scope. The frozen profile must actually declare a
         // feature set for this package on this triple: `parse_policy` enforces
         // that for a loaded policy, but a `Policy` built by hand must not be
@@ -1528,11 +1566,7 @@ pub fn check(metadata_bytes: &[u8], policy: &Policy, target: &str) -> Result<Rep
                 triple.clone(),
                 TargetScope {
                     features: features.iter().cloned().collect(),
-                    // The policy admits no edges today: the schema refuses
-                    // every external row and the workspace has no
-                    // intra-workspace dependency. This is the real admitted
-                    // set, not a placeholder.
-                    edges: BTreeSet::new(),
+                    edges: admitted_edges.clone(),
                 },
             );
         }
@@ -1594,6 +1628,18 @@ pub fn check(metadata_bytes: &[u8], policy: &Policy, target: &str) -> Result<Rep
             None
         }
     };
+
+    let mut pkg_id_to_name: BTreeMap<&str, &str> = BTreeMap::new();
+    if let Some(pkgs) = root.get("packages").and_then(Json::as_array) {
+        for pkg in pkgs {
+            if let (Some(id), Some(name)) = (
+                pkg.get("id").and_then(Json::as_str),
+                pkg.get("name").and_then(Json::as_str),
+            ) {
+                pkg_id_to_name.insert(id, name);
+            }
+        }
+    }
 
     // -- Phase Graph: resolve must exist, be well formed, and have unique ids -
     let mut nodes: BTreeMap<String, Node> = BTreeMap::new();
@@ -1666,24 +1712,76 @@ pub fn check(metadata_bytes: &[u8], policy: &Policy, target: &str) -> Result<Rep
                                             )
                                         });
 
+                                let admitted_deps_for_node = id
+                                    .and_then(|node_id| pkg_id_to_name.get(node_id))
+                                    .and_then(|pkg_name| {
+                                        policy.local.iter().find(|r| r.name == *pkg_name)
+                                    })
+                                    .map(|r| &r.dependencies);
+
                                 if let Some(dependencies) = dependencies
                                     && !dependencies.is_empty()
                                 {
-                                    findings.push(Finding::new(
-                                        Phase::Graph,
-                                        "resolved_dependency_present",
-                                        format!("{path}.dependencies"),
-                                        format!(
-                                            "{} resolved dependency id(s); the closed inventory \
-                                             has none",
-                                            dependencies.len()
-                                        ),
-                                    ));
+                                    let all_admitted =
+                                        admitted_deps_for_node.is_some_and(|admitted_deps| {
+                                            !admitted_deps.is_empty()
+                                                && dependencies.iter().all(|dep_id| {
+                                                    dep_id
+                                                        .as_str()
+                                                        .and_then(|id_str| {
+                                                            pkg_id_to_name.get(id_str)
+                                                        })
+                                                        .is_some_and(|dest_name| {
+                                                            admitted_deps.contains(*dest_name)
+                                                        })
+                                                })
+                                        });
+                                    if !all_admitted {
+                                        findings.push(Finding::new(
+                                            Phase::Graph,
+                                            "resolved_dependency_present",
+                                            format!("{path}.dependencies"),
+                                            format!(
+                                                "{} resolved dependency id(s); the closed inventory \
+                                                 has none",
+                                                dependencies.len()
+                                            ),
+                                        ));
+                                    }
                                 }
                                 if let Some(deps) = deps {
                                     for (dep_index, dep) in deps.iter().enumerate() {
                                         let dep_path = format!("{path}.deps[{dep_index}]");
-                                        report_dep_edge(dep, &dep_path, &mut findings);
+                                        let is_admitted_normal_local_edge = admitted_deps_for_node
+                                            .is_some_and(|admitted_deps| {
+                                                let dest_ok = dep
+                                                    .get("pkg")
+                                                    .and_then(Json::as_str)
+                                                    .and_then(|pkg_id| pkg_id_to_name.get(pkg_id))
+                                                    .is_some_and(|dest_name| {
+                                                        admitted_deps.contains(*dest_name)
+                                                    });
+                                                let kinds_ok = dep
+                                                    .get("dep_kinds")
+                                                    .and_then(Json::as_array)
+                                                    .is_some_and(|entries| {
+                                                        !entries.is_empty()
+                                                            && entries.iter().all(|entry| {
+                                                                entry.as_object().is_some_and(|e| {
+                                                                    e.get("kind")
+                                                                        .is_some_and(Json::is_null)
+                                                                        && e.get("target")
+                                                                            .is_some_and(
+                                                                                Json::is_null,
+                                                                            )
+                                                                })
+                                                            })
+                                                    });
+                                                dest_ok && kinds_ok
+                                            });
+                                        if !is_admitted_normal_local_edge {
+                                            report_dep_edge(dep, &dep_path, &mut findings);
+                                        }
                                     }
                                 }
 
@@ -1763,7 +1861,11 @@ pub fn check(metadata_bytes: &[u8], policy: &Policy, target: &str) -> Result<Rep
         let source = req_null_or_string(package, "source", Phase::Source, &path, &mut findings);
         let links = req_null_or_string(package, "links", Phase::Build, &path, &mut findings);
 
-        // Package-level declared dependencies must be present and empty.
+        let admitted_deps_for_pkg = name
+            .and_then(|pkg_name| policy.local.iter().find(|r| r.name == pkg_name))
+            .map(|r| &r.dependencies);
+
+        // Package-level declared dependencies must be present and match admitted local dependencies.
         if let Some(value) = req_field(package, "dependencies", Phase::Build, &path, &mut findings)
             && let Some(items) = req_array(
                 value,
@@ -1774,7 +1876,17 @@ pub fn check(metadata_bytes: &[u8], policy: &Policy, target: &str) -> Result<Rep
         {
             for (dep_index, dep) in items.iter().enumerate() {
                 let dep_path = format!("{path}.dependencies[{dep_index}]");
-                report_manifest_dependency(dep, &dep_path, &mut findings);
+                let is_admitted_manifest_dep = admitted_deps_for_pkg.is_some_and(|admitted_deps| {
+                    dep.get("name")
+                        .and_then(Json::as_str)
+                        .is_some_and(|dep_name| admitted_deps.contains(dep_name))
+                        && dep.get("kind").is_some_and(Json::is_null)
+                        && dep.get("target").is_some_and(Json::is_null)
+                        && dep.get("source").is_some_and(Json::is_null)
+                });
+                if !is_admitted_manifest_dep {
+                    report_manifest_dependency(dep, &dep_path, &mut findings);
+                }
             }
         }
 

@@ -22,18 +22,18 @@ Each playbook is a sequence of verbs from [`registry/vocabulary.json`](../regist
 
 1. `fa why-held <attempt>` → the unsatisfied predicate nodes and their affordances.
 2. `fa next <attempt>` → affordances ranked by expected information gain per cost within the allowed action set. Hard floors are not in the list; nothing here can skip a mandatory observation.
-3. Rehearse the top affordance: `fa propose <affordance> --branch <b>` → `RehearsalOutcome` with the tree the nucleus would produce and the cost it would charge.
-4. Execute: `fa propose <affordance>` → the decision card (alternatives not chosen), realized cost, new control sequence.
-5. Repeat from step 1 until the tree is satisfied (`Continue`) or a consequence at or above `HoldEffect` is final. A `SuspendRun` or `ResetToCheckpoint` is not a failure of the playbook; it is the outcome.
+3. Estimate committee or observation spend when a full round is offered: `fa cost <attempt>` → `CostEstimate`, then rehearse the round (`fa convene <attempt> --branch <b>` or `fa rehearse <affordance> --branch <b>`) or rehearse the top affordance (`fa propose <affordance> --branch <b>`) → `RehearsalOutcome` with the tree the nucleus would produce and the cost it would charge.
+4. Execute: `fa convene <attempt>` when opening a live committee round, or `fa propose <affordance>` → the decision card (alternatives not chosen), realized cost, new control sequence.
+5. Repeat from step 1 until the tree is satisfied (`Continue`) or an explicit consequence transition (`fa hold <attempt>`, `fa narrow <attempt>`, `fa suspend <run>`, or `fa reset <run>`) is final. A `SuspendRun` or `ResetToCheckpoint` is not a failure of the playbook; it is the outcome, and `fa reset` never rewinds the effect or budget ledger (FA-INV-034).
 6. `fa annotate <closure> --class conclusion` with what resolved it, then `fa handoff <run>` if you stop here.
 
 Failure branches: `BudgetExhausted` names the budget and the governance transition that could raise it (never raise it yourself to finish a hold); `StaleGeneration` means re-read the situation from the returned predecessor; `OutcomeUnknown` on a dispatched effect means reconcile (P3), never retry.
 
 ### P2. Investigating an incident
 
-1. `fa get fa://…/incident/<id>` → the incident with its `Knowledge` status and the addresses of the closures, rounds, evidence and findings it references.
-2. `fa explain <closure>` for each implicated closure → predicate trees; disagreement between helpers is localized first by comparing their view manifests (`fa related <view>`), never by assuming they saw the same document.
-3. `fa branch --from <closure>` → a capability-free branch; `fa intervene --branch <b> --remove <evidence>` or `--substitute`, `--clamp`; `fa replay --branch <b>` → a `CounterfactualWitness` with its replay grade.
+1. `fa get fa://…/incident/<id>` → the incident with its `Knowledge` status and the addresses of the closures, rounds, evidence and findings it references; `fa verify fa://…/receipt/<id>` confirms independent bundle and receipt integrity before trusting retained artifacts.
+2. `fa explain <closure>` for each implicated closure → predicate trees; disagreement between helpers is localized first by comparing their view manifests (`fa related <view>`), never by assuming they saw the same document. If an upstream observation is confirmed corrupt or superseded, record an append-only invalidation with `fa invalidate <evidence>` rather than mutating history.
+3. Inspect `fa replay-plan <closure>` to confirm whether `ReplayGrade` is `Exact`, `InterventionFaithful`, or `AuditOnly`; then open `fa branch --from <closure>` → a capability-free branch; `fa intervene --branch <b> --remove <evidence>` or `--substitute`, `--clamp`; `fa replay --branch <b>` → a `CounterfactualWitness` with its replay grade.
 4. Include the controls: unchanged replay, sham intervention, lossless-versus-lossy checkpoint. A witness without controls is annotated as exploratory.
 5. `fa annotate <incident> --class hypothesis|inference|conclusion` at each step; the trail is the deliverable.
 6. If the incident implicates the guarded model's identity, check `fa get fa://…/passport/<id>` and the latest liveness observation before anything else; substitution changes every conclusion.
