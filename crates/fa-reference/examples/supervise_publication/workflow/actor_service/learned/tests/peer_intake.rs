@@ -9,7 +9,7 @@ use fa_reference::action::consequence::delivery::{stream::ReleaseFrame,
         client::ReviewClientProgress, wire::{ReviewDecision, ReviewPacket}}}};
 use fa_reference::action::consequence::oversight::{
     actor_peer::{PeerCredentials, PeerPolicy},
-    actor_wire::{WireResponse, client::{ActorClient, ActorClientState, ClientProgress,
+    actor_wire::{WireError, WireResponse, client::{ActorClient, ActorClientState, ClientError, ClientProgress,
         ClientSessionLimits, drive::ClientDriveBudget}}, helper_workers::HelperLimits,
 };
 use std::{collections::BTreeMap, io::Read, os::unix::net::UnixStream, path::PathBuf,
@@ -97,9 +97,23 @@ fn actor(profile: Profile, release: LearnedTextRelease, due: ElapsedTick, behavi
         let started = Instant::now(); let mut client = client(&profile);
         let proposal = FileLearnedTextStreamActorPort::encode_release(profile.request, release, due).unwrap();
         if matches!(behavior, Behavior::InvalidThenValid) {
-            let mut wrong = proposal.clone(); wrong.target.generation += 1;
+            let mut wrong = proposal.clone();
+            wrong.target.generation = if wrong.target.generation == 1 { 2 } else { 1 };
             client.submit(profile.request, &wrong).unwrap();
             assert!(next_reply(&mut client, started).result.is_err());
+            // The original client correctly retains even rejected proposals.
+            // Do not weaken that binding just to exercise the server's repair
+            // path: this rejected client cannot change its used request key.
+            assert!(matches!(client.submit(profile.request, &proposal),
+                Err(ClientError::Command(WireError::IdempotencyConflict))));
+            let rejected = client.into_state();
+            assert_eq!(rejected.original_proposal(profile.request), Some(&wrong));
+            assert!(rejected.work().written_bytes > 0);
+            // A separate explicitly provisioned client supplies the valid
+            // intent after the malformed server refusal. This is NOT a retry
+            // that resets the rejected client's history or spent I/O budget.
+            let socket = UnixStream::connect(&profile.socket).unwrap(); profile.supervisor.verify(&socket).unwrap();
+            client = ActorClientState::new(ClientSessionLimits::default()).unwrap().connect_unix(socket).unwrap();
         }
         client.submit(profile.request, &proposal).unwrap();
         let mut first = true;
@@ -108,10 +122,12 @@ fn actor(profile: Profile, release: LearnedTextRelease, due: ElapsedTick, behavi
             if matches!(response.result, Ok(Knowledge::Known { .. })) { return response; }
             assert!(matches!(response.result, Ok(Knowledge::Pending { .. } | Knowledge::Unknown { .. })), "{response:?}");
             if first && matches!(behavior, Behavior::Reconnect) {
-                drop(client);
+                let state = client.into_state(); let spent = state.work();
                 let socket = UnixStream::connect(&profile.socket).unwrap(); profile.supervisor.verify(&socket).unwrap();
-                client = ActorClientState::new(ClientSessionLimits::default()).unwrap().connect_unix(socket).unwrap();
-                client.submit(profile.request, &proposal).unwrap();
+                client = state.connect_unix(socket).unwrap();
+                assert_eq!(client.state().work(), spent);
+                assert_eq!(client.state().original_proposal(profile.request), Some(&proposal));
+                client.retry_submission(profile.request).unwrap();
             } else if first && matches!(behavior, Behavior::Cancel) {
                 client.cancel(profile.request).unwrap();
             } else {
