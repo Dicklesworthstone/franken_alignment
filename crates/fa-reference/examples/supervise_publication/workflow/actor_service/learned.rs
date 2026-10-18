@@ -14,6 +14,7 @@
 #[path = "learned/recovery.rs"] mod recovery;
 #[path = "learned/review.rs"] mod review;
 #[path = "learned/process.rs"] mod process;
+#[path = "learned/ingress.rs"] mod ingress;
 #[path = "learned/finish.rs"] mod finish;
 #[path = "learned/continuation.rs"] mod continuation;
 #[path = "learned/qualification.rs"] mod qualification;
@@ -39,7 +40,7 @@ use fa_reference::action::consequence::oversight::{
 use fa_reference::Error;
 use std::{io::Write, path::Path, rc::Rc};
 
-const USAGE: &str = "create-learned-generated CONFIG LEARNED_RECIPE REVIEWER_PROFILE [--continue-generation | --after-message PREVIOUS_REQUEST | --finish-after-message PREVIOUS_REQUEST] [--credibility-activation CAPSULE] [--history-anchor INPUT] [--retain-history-anchor NEW_OUTPUT] | create-learned-generated CONFIG LEARNED_RECIPE --resume [--finish-after-message PREVIOUS_REQUEST] [--history-anchor INPUT] [--retain-history-anchor NEW_OUTPUT] | create-learned-generated CONFIG LEARNED_RECIPE --recover-stop OPERATION [--history-anchor INPUT] | create-learned-generated CONFIG LEARNED_RECIPE --audit-review ROUND HISTORY_ANCHOR | create-learned-generated CONFIG LEARNED_RECIPE --resume (--receipts-only | --reconcile-receipts) [--finish-after-message PREVIOUS_REQUEST] [--history-anchor INPUT]";
+const USAGE: &str = "create-learned-generated CONFIG LEARNED_RECIPE REVIEWER_PROFILE [--continue-generation | --after-message PREVIOUS_REQUEST | --finish-after-message PREVIOUS_REQUEST] [--actor-profile ACTOR_PROFILE] [--credibility-activation CAPSULE] [--history-anchor INPUT] [--retain-history-anchor NEW_OUTPUT] | create-learned-generated CONFIG LEARNED_RECIPE --resume [--finish-after-message PREVIOUS_REQUEST] [--history-anchor INPUT] [--retain-history-anchor NEW_OUTPUT] | create-learned-generated CONFIG LEARNED_RECIPE --recover-stop OPERATION [--history-anchor INPUT] | create-learned-generated CONFIG LEARNED_RECIPE --audit-review ROUND HISTORY_ANCHOR | create-learned-generated CONFIG LEARNED_RECIPE --resume (--receipts-only | --reconcile-receipts) [--finish-after-message PREVIOUS_REQUEST] [--history-anchor INPUT]";
 
 pub(super) fn command(args: &[String], credibility: Option<&Path>) -> Result<(), String> {
     if args.iter().any(|arg| matches!(arg.as_str(), "--receipts-only" | "--reconcile-receipts")) {
@@ -49,7 +50,8 @@ pub(super) fn command(args: &[String], credibility: Option<&Path>) -> Result<(),
         if credibility.is_some() { return Err("historical audit cannot activate credibility".into()); }
         return audit::command(args, &mut std::io::stdout().lock());
     }
-    let (args, anchors) = anchors::take_options(args)?;
+    let (args, actor_path) = ingress::take_option(args)?;
+    let (args, anchors) = anchors::take_options(&args)?;
     if args.iter().any(|arg| arg == "--recover-stop") {
         // Explicit offline Stop never enters live continuation, consumes a
         // credibility capsule or claims a reviewer/stop transport endpoint.
@@ -83,10 +85,16 @@ pub(super) fn command(args: &[String], credibility: Option<&Path>) -> Result<(),
     }
     let peers = PeerProfile::read(Path::new(&args[3]))?;
     peers.check_host(&config)?;
+    let actor = actor_path.map(super::Profile::read).transpose()?;
+    if let Some(actor) = actor.as_ref() { actor.check_host(&config)?; }
     let mut loaded = recipe::load(Path::new(&args[2]), &config, true)?;
     anchors.admit(&config, &mut loaded, live_continuation)?;
-    let result = run_qualified(config, loaded, &peers, live_continuation,
-        finishing, after_message, credibility, clock)?;
+    let result = match actor.as_ref() {
+        Some(actor) => run_with_actor(config, loaded, &peers, live_continuation,
+            finishing, after_message, credibility, Some(actor), clock)?,
+        None => run_qualified(config, loaded, &peers, live_continuation,
+            finishing, after_message, credibility, clock)?,
+    };
     emit(result, &mut std::io::stdout().lock())
 }
 
@@ -128,14 +136,22 @@ where F: FnMut() -> ElapsedTick {
     run_qualified(config, loaded, peers, continuing, finishing, after_message, None, time)
 }
 
-fn run_qualified<F>(mut config: Config, loaded: Loaded, peers: &PeerProfile, continuing: bool,
+fn run_qualified<F>(config: Config, loaded: Loaded, peers: &PeerProfile, continuing: bool,
     finishing: Option<u64>, after_message: Option<u64>, credibility: Option<&Path>,
-    mut time: F) -> Result<RunResult, String>
+    time: F) -> Result<RunResult, String>
+where F: FnMut() -> ElapsedTick {
+    run_with_actor(config, loaded, peers, continuing, finishing, after_message, credibility, None, time)
+}
+
+fn run_with_actor<F>(mut config: Config, loaded: Loaded, peers: &PeerProfile, continuing: bool,
+    finishing: Option<u64>, after_message: Option<u64>, credibility: Option<&Path>,
+    actor: Option<&super::Profile>, mut time: F) -> Result<RunResult, String>
 where F: FnMut() -> ElapsedTick {
     if credibility.is_some() && !continuing {
         return Err("credibility activation requires explicit learned continuation or finish".into());
     }
     peers.check_host(&config)?;
+    if let Some(actor) = actor { ingress::check(&config, &loaded, peers, actor)?; }
     if let Some(after) = finishing { finish::check_ids(loaded.request, after)?; }
     if let Some(after) = after_message {
         continuation::check_ids(loaded.request, after)?;
@@ -145,12 +161,14 @@ where F: FnMut() -> ElapsedTick {
     }
     let start = time();
     let lifetime = loaded.ttl_ms.min(config.timing.runtime_ms);
-    let deadline = Deadline { logical: plus(start, lifetime)?, started: Instant::now(),
+    let lifetime = actor.map_or(lifetime, |actor| lifetime.min(actor.runtime_ms));
+    let mut deadline = Deadline { logical: plus(start, lifetime)?, started: Instant::now(),
         wall: Duration::from_millis(lifetime) };
     deadline.check(start)?;
     // Claim the real authenticated stop endpoint BEFORE store creation/open.
     // The same service and deadline cover replay, generation, review and dispatch.
     let mut control = Control::new(&config, loaded.request, Some(peers))?;
+    let bound_actor = actor.map(ingress::Bound::bind).transpose()?;
     let (host, reviewer, observer) = if continuing {
         recovery::open_selected_live(&config, &loaded, &mut control, &deadline, &mut time)? }
         else { recovery::create_selected(&config, &loaded)? };
@@ -179,6 +197,8 @@ where F: FnMut() -> ElapsedTick {
         return Err("continued learned generation belongs to a different original request".into());
     }
     let (port, supervisor) = host.into_learned_text_stream_actor_gateway().map_err(debug)?;
+    let release = if finishing.is_some() { LearnedTextRelease::Finish } else { LearnedTextRelease::Message };
+    let mut intake = bound_actor.map(|bound| bound.attach(port.clone(), release, deadline.logical)).transpose()?;
     let mut driver = FileSupervisedDriver::new(supervisor);
     let mut wire = ActorWire::new(port);
     let prepared = (|| {
@@ -203,10 +223,19 @@ where F: FnMut() -> ElapsedTick {
             }
             LearnedTextRelease::Message
         };
-        match release {
-            LearnedTextRelease::Message => submit(&mut driver, &mut wire, &mut config, &loaded, &deadline, &mut time)?,
-            LearnedTextRelease::Finish => submit_release(&mut driver, &mut wire, &mut config, &loaded,
-                release, &deadline, &mut time)?,
+        if let Some(intake) = intake.as_mut() {
+            if !intake.admit(&mut driver, &mut config, &reviewer, &mut control, &deadline, &mut time)? {
+                return Ok(false);
+            }
+            let accepted_deadline = intake.observe_original(&driver, &mut wire, release, finishing)?;
+            deadline.logical = deadline.logical.min(accepted_deadline);
+            deadline.check(time())?;
+        } else {
+            match release {
+                LearnedTextRelease::Message => submit(&mut driver, &mut wire, &mut config, &loaded, &deadline, &mut time)?,
+                LearnedTextRelease::Finish => submit_release(&mut driver, &mut wire, &mut config, &loaded,
+                    release, &deadline, &mut time)?,
+            }
         }
         let status = driver.supervisor().host().map_err(debug)?.request_status(loaded.request).map_err(debug)?;
         Ok(matches!(status.disposition, FileRequestDisposition::Admitted {
@@ -219,8 +248,13 @@ where F: FnMut() -> ElapsedTick {
         Err(error) => failure = Some(error),
         Ok(false) => {}
         Ok(true) => {
-            let reviewed = review::run(driver, &mut config, &loaded, &reviewer,
-                &mut control, &deadline, &mut time);
+            let reviewed = if intake.is_some() {
+                review::run_serviced(driver, &mut config, &loaded, &reviewer,
+                    &mut control, &deadline, &mut time, &mut intake)
+            } else {
+                review::run(driver, &mut config, &loaded, &reviewer,
+                    &mut control, &deadline, &mut time)
+            };
             driver = reviewed.driver;
             history = reviewed.history;
             process = reviewed.process;
@@ -231,8 +265,9 @@ where F: FnMut() -> ElapsedTick {
                         cancel_unspent(&mut driver, loaded.request)?;
                         return Ok(());
                     }
-                    let mut no_ingress = |_: &mut FileSupervisedDriver| Ok(false);
-                    let mut live = LiveControl { stop: control, ingress: &mut no_ingress };
+                    let mut actor_ingress = |driver: &mut FileSupervisedDriver|
+                        ingress::observe(&mut intake, driver.supervisor_mut());
+                    let mut live = LiveControl { stop: control, ingress: &mut actor_ingress };
                     let approval = human_review(&mut driver, &reviewer, &mut config,
                         loaded.request, &deadline, (Some(peers), &mut live), &mut time)?;
                     let Some(approval) = approval else {
@@ -259,6 +294,14 @@ where F: FnMut() -> ElapsedTick {
         failure = Some(match stop(&mut driver, loaded.request, &mut time) {
             Ok(()) => error, Err(stopping) => format!("{error}; stop/drain: {stopping}"),
         });
+    }
+    // Receipt delivery cannot restart generation, review, reconciliation or an
+    // effect. Preserve transport failure alongside the original actor outcome.
+    if let Some(intake) = intake.as_mut() {
+        if let Err(error) = intake.finish(driver.supervisor_mut(), &deadline, &mut time) {
+            let error = format!("learned actor response service failed: {error}; no effect retry was sent");
+            failure = Some(match failure { Some(original) => format!("{original}; {error}"), None => error });
+        }
     }
     let response = wire.exchange(&encode_command(&Command::Poll { request: loaded.request }).map_err(debug)?);
     let failure = anchors::retain(&loaded, &driver, failure);

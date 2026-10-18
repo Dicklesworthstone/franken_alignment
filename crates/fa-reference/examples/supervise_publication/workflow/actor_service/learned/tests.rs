@@ -106,3 +106,5 @@ fn executed(wire: &mut Wire, request: u64) -> bool {
 #[path = "tests/receipt_selection.rs"] mod receipt_selection;
 
 #[path = "tests/receipt_service.rs"] mod receipt_service;
+
+#[path = "tests/peer_intake.rs"] mod peer_intake;

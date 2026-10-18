@@ -3,6 +3,7 @@ mod config;
 pub(super) use config::ProcessRecipe;
 use super::{Config, Loaded, Deadline, ElapsedTick, FileSupervisedDriver, FileHumanReviewer,
     debug, plus, refresh, Duration, Instant};
+use super::ingress::{self, Intake};
 use super::super::super::control::Control;
 use super::review::Reviewed;
 use fa_reference::action::consequence::delivery::persistent::{
@@ -118,6 +119,18 @@ fn active(status: LearnedProcessStatus) -> bool {
 pub(super) fn run<F>(driver: FileSupervisedDriver, config: &mut Config, loaded: &Loaded,
     reviewer: &FileHumanReviewer, control: &mut Control, deadline: &Deadline, time: &mut F) -> Reviewed
 where F: FnMut() -> ElapsedTick {
+    run_serviced(driver, config, loaded, reviewer, control, deadline, time, &mut None)
+}
+
+pub(super) fn run_serviced<F>(mut driver: FileSupervisedDriver, config: &mut Config, loaded: &Loaded,
+    reviewer: &FileHumanReviewer, control: &mut Control, deadline: &Deadline, time: &mut F,
+    intake: &mut Option<Intake>) -> Reviewed
+where F: FnMut() -> ElapsedTick {
+    match ingress::observe(intake, driver.supervisor_mut()) {
+        Ok(false) => {},
+        result => return Reviewed { driver, history: None, process: None,
+            stop_requested: false, failure: result.err() },
+    }
     let mut run = match start(driver, config, loaded, deadline, time) {
         Ok(run) => run,
         Err((driver, error, process)) => return Reviewed {
@@ -131,6 +144,10 @@ where F: FnMut() -> ElapsedTick {
             if control.pending_peer()? {
                 stop_requested = true;
                 if active(run.review().status()) { run.cancel(run.review().revision()).map_err(debug)?; }
+                break;
+            }
+            if ingress::observe(intake, run.supervisor_mut())? {
+                run.cancel(run.review().revision()).map_err(debug)?;
                 break;
             }
             if !active(run.review().status()) { break; }
