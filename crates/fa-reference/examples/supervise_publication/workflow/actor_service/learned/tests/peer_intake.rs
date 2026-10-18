@@ -18,9 +18,9 @@ use std::{collections::BTreeMap, io::Read, os::unix::net::UnixStream, path::Path
 #[derive(Clone, Copy)]
 enum Model { Plain, Raw, Owned, Process }
 #[derive(Clone, Copy)]
-enum Behavior { Observe, Reconnect, Cancel, InvalidThenValid }
+pub(super) enum Behavior { Observe, Reconnect, Cancel, InvalidThenValid }
 
-fn actor_profile(root: &Root, config: &Config, request: u64) -> Profile {
+pub(super) fn actor_profile(root: &Root, config: &Config, request: u64) -> Profile {
     let (socket, _) = UnixStream::pair().unwrap();
     let credentials = PeerCredentials::observe(&socket).unwrap();
     let peer = PeerPolicy::new(credentials.uid(), credentials.gid(), Some(credentials.pid())).unwrap();
@@ -58,8 +58,8 @@ fn setup(root: &Root, model: Model) -> (Config, PathBuf, Loaded) {
     } else {
         let path = native::write(root);
         match model {
-            Model::Raw => super::forecast::install(root, &path, false, 60_000),
-            Model::Owned => super::forecast::install(root, &path, true, 60_000),
+            Model::Raw => { super::forecast::install(root, &path, false, 60_000); }
+            Model::Owned => { super::forecast::install(root, &path, true, 60_000); }
             _ => {},
         }
         path
@@ -90,7 +90,7 @@ fn next_reply(client: &mut ActorClient<UnixStream>, started: Instant) -> WireRes
         thread::sleep(Duration::from_millis(1));
     }
 }
-fn actor(profile: Profile, release: LearnedTextRelease, due: ElapsedTick, behavior: Behavior)
+pub(super) fn actor(profile: Profile, release: LearnedTextRelease, due: ElapsedTick, behavior: Behavior)
     -> thread::JoinHandle<WireResponse>
 {
     thread::spawn(move || {
@@ -138,7 +138,7 @@ fn actor(profile: Profile, release: LearnedTextRelease, due: ElapsedTick, behavi
         }
     })
 }
-fn human(peers: PeerProfile, request: u64, choice: ReviewDecision) -> thread::JoinHandle<ReviewPacket> {
+pub(super) fn human(peers: PeerProfile, request: u64, choice: ReviewDecision) -> thread::JoinHandle<ReviewPacket> {
     thread::spawn(move || {
         let started = Instant::now(); let mut client = peers.connect_client(request).unwrap();
         let mut packet = None;

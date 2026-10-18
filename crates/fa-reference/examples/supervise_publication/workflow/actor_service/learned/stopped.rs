@@ -1,9 +1,10 @@
 //! Offline terminal recovery through the original independently guarded cursor.
 //! This command returns a native stop report, never live actor/reviewer custody.
-use super::{Config, Loaded, ElapsedTick, Instant, USAGE, anchors, clock, recipe, recovery};
+use super::{Config, Loaded, ElapsedTick, Instant, USAGE, anchors, clock, recipe, recovery, topology};
 use std::{io::Write, path::Path};
 
 pub(super) fn command(args: &[String], options: anchors::Options) -> Result<(), String> {
+    let (args, topology_path) = topology::take_option(args)?;
     if args.len() != 5 || args[0] != "create-learned-generated" || args[3] != "--recover-stop" {
         return Err(USAGE.into());
     }
@@ -16,6 +17,7 @@ pub(super) fn command(args: &[String], options: anchors::Options) -> Result<(), 
     // helper models, opening a reviewer/stop socket or reading current evidence.
     let mut loaded = recipe::load(Path::new(&args[2]), &config, false)?;
     options.admit(&config, &mut loaded, true)?;
+    topology::admit(&config, &mut loaded, topology_path.as_deref(), topology::Mode::Historical)?;
     run(&config, &loaded, operation, clock, &mut std::io::stdout().lock())
 }
 

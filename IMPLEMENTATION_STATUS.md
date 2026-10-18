@@ -1,5 +1,42 @@
 # Implementation status · design revision 0.3
 
+## 2026-10-18: topology-mediated learned operator (unqualified source)
+
+The original learned publication command now accepts `--topology-profile` for
+creation, continuation, explicit Finish, historical receipt/reconciliation
+operations, receipt service and offline stop. It reuses the existing
+`fa.mediated-create/1` and `/2`, `fa.mediated-submit/1` and `/2`, original
+topology source/checker and independently retained history/source checkpoints.
+No new recipe, journal, wire command, dependency or numerical owner is added.
+
+The source enters the same supervised driver before live preparation. Fresh
+native certification follows qualification and precedes numerical or forecast
+work; the original final publication refresh remains attached through both
+native and process review. Ordinary learned, raw-predictive and owned-predictive
+recovery preserve complete independently selected guards, topology,
+availability, predictor, policy, reserve, anchor, source expenditure and floors.
+Historical modes load no next live topology files and cannot export a fresh
+source checkpoint. Reconciliation retains its original Fence/Time/Sweep;
+passive receipts and direct terminal stop retain their separate original laws.
+
+Four new operator regression functions exercise real authenticated actor and
+human peers with native model review, all three forecast modes, multiple
+messages and explicit Finish, exact source/history continuity, historical
+receipts, offline stop/retry, initial bypass and source loss after dispatch.
+Five independent public receipt functions cover all three modes at original
+Sent, Published and Confirmed cuts, exact source envelopes, full capacity,
+independent requirements, canonical races and unknown-liability conservation.
+These synthetic models are enforcement fixtures, not calibration evidence.
+
+All seventeen changed Rust sources passed nonmutating syntax parsing using
+nightly-2026-09-21 rustfmt. Production custody and new test source received
+independent review. This does not establish Rust type checking, formatting,
+Clippy, runtime behavior or deployment qualification. The required RCH gate
+remains blocked before compilation by the unavailable remote daemon (exit 103,
+local fallback refused under AGENTS.md). The scoped beads and full FA-014/FA-073
+packets remain in progress. See [operator usage](docs/LEARNED_OPERATOR_PUBLICATION.md)
+and [receipt service](docs/LEARNED_RECEIPT_SERVICE.md).
+
 ## 2026-10-18: reserved mediated learned recovery (unqualified source)
 
 The original topology-mediated learned and predictive learned constructors now

@@ -14,6 +14,7 @@ use std::{collections::BTreeMap, fs, path::{Component, Path, PathBuf}};
 
 const PROFILE_BYTES: usize = 16 * 1024;
 
+#[derive(Clone)]
 pub(crate) struct Selection {
     topology: PathBuf,
     inventory: PathBuf,
@@ -84,6 +85,19 @@ pub(crate) struct Prepared {
 
 impl Prepared {
     pub(crate) fn take_output(&mut self) -> Option<Output> { self.output.take() }
+
+    pub(crate) fn loaded(&self) -> &LoadedAuthorityTopology { &self.loaded }
+
+    /// Bind this exact admitted input to an already atomically bootstrapped
+    /// native owner. The observer must come from that owner's original custody.
+    pub(crate) fn bind(self, host: &FileOversight,
+        observer: fa_reference::action::consequence::delivery::persistent::observed::mediation::FileMediationObserver)
+        -> Result<FileDriverTopology, String>
+    {
+        let source = observer.bind_topology_source(host, host.revision(),
+            self.selection.topology, self.selection.inventory, self.loaded).map_err(debug)?;
+        Ok(FileDriverTopology::new(source))
+    }
 
     pub(crate) fn create(self, config: &Config, publication: Option<PublicationLimits>)
         -> Result<(FileOversight, FileHumanReviewer, FileDriverTopology), String>

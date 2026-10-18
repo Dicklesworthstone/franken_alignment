@@ -13,23 +13,27 @@ use fa_reference::strict_json::{self, Json, Limits};
 use std::{collections::BTreeMap, fs, path::{Component, Path, PathBuf}};
 
 const PROFILE_BYTES: usize = 16 * 1024;
+#[derive(Clone)]
 struct Pair { topology: PathBuf, inventory: PathBuf }
 struct Documents { loaded: LoadedAuthorityTopology, topology: Vec<u8>, inventory: Vec<u8> }
+#[derive(Clone)]
 enum Basis {
     Manual { current: Pair, available: bool, work: TopologySourceWork, last_operation: u64 },
     Checkpoint(PathBuf),
 }
-pub(super) struct Selection {
+#[derive(Clone)]
+pub(crate) struct Selection {
     initial: Pair, basis: Basis, next: Pair, operation: u64, output: Option<PathBuf>,
 }
-pub(super) struct History {
+#[derive(Clone)]
+pub(crate) struct History {
     pub requirement: FileTopologyRequirement,
     current: LoadedAuthorityTopology,
     work: TopologySourceWork,
     last_operation: u64,
     saved: Option<TopologyCheckpoint>,
 }
-pub(super) struct Next {
+pub(crate) struct Next {
     topology: PathBuf, inventory: PathBuf, current: LoadedAuthorityTopology,
     next: LoadedAuthorityTopology, operation: u64, work: TopologySourceWork, last_operation: u64,
     output: Option<Output>,
@@ -37,7 +41,7 @@ pub(super) struct Next {
 impl History {
     /// Uncheckpointed journal successors may contain additional source work.
     /// v2 cannot reuse older counters as their accounting; v1 remains a minimum.
-    pub(super) fn check_extent(&self, events: usize) -> Result<(), String> {
+    pub(crate) fn check_extent(&self, events: usize) -> Result<(), String> {
         if self.saved.as_ref().is_some_and(|saved| saved.history_anchor().revision() != events as u64) {
             return Err("journal advanced beyond the source checkpoint; retained work is incomplete".into());
         }
@@ -45,7 +49,7 @@ impl History {
     }
     /// A checkpoint cannot be mixed with another independently selected cut.
     /// Its floors can only strengthen the original external minimum.
-    pub(super) fn minimum(&self, anchor: &FileHistoryAnchor, mut minimum: FileRecoveryFloor)
+    pub(crate) fn minimum(&self, anchor: &FileHistoryAnchor, mut minimum: FileRecoveryFloor)
         -> Result<FileRecoveryFloor, String>
     {
         if let Some(saved) = &self.saved {
@@ -59,10 +63,10 @@ impl History {
     }
 }
 impl Selection {
-    pub(super) fn read(path: &Path) -> Result<Self, String> {
+    pub(crate) fn read(path: &Path) -> Result<Self, String> {
         Self::decode(&crate::config::read_regular(path, PROFILE_BYTES)?)
     }
-    pub(super) fn decode(bytes: &[u8]) -> Result<Self, String> {
+    pub(crate) fn decode(bytes: &[u8]) -> Result<Self, String> {
         let value = strict_json::parse(bytes, Limits { max_bytes: PROFILE_BYTES,
             max_depth: 4, max_items: 64, max_string_bytes: 4096 }).map_err(debug)?;
         let mut root = object(value)?;
@@ -98,8 +102,8 @@ impl Selection {
         end(&root)?;
         Ok(Self { initial, basis, next, operation, output })
     }
-    pub(super) fn retention_requested(&self) -> bool { self.output.is_some() }
-    pub(super) fn history(&self, config: &Config, checkpoint: &mut impl FnMut() -> Result<(), String>)
+    pub(crate) fn retention_requested(&self) -> bool { self.output.is_some() }
+    pub(crate) fn history(&self, config: &Config, checkpoint: &mut impl FnMut() -> Result<(), String>)
         -> Result<History, String>
     {
         let initial = self.initial.load(config, checkpoint)?;
@@ -115,7 +119,7 @@ impl Selection {
         Ok(History { requirement: FileTopologyRequirement { initial: initial.graph().clone(),
             current: current.graph().clone(), available }, current, work, last_operation, saved })
     }
-    pub(super) fn next(&self, config: &Config, history: History,
+    pub(crate) fn next(&self, config: &Config, history: History,
         checkpoint: &mut impl FnMut() -> Result<(), String>) -> Result<Next, String>
     {
         let Documents { loaded: next, topology, inventory } = self.next.documents(config, checkpoint)?;
@@ -140,7 +144,7 @@ impl Selection {
     }
 }
 impl Next {
-    pub(super) fn bind(self, host: &mut FileOversight, observer: FileMediationObserver)
+    pub(crate) fn bind(self, host: &mut FileOversight, observer: FileMediationObserver)
         -> Result<(FileDriverTopology, Option<Output>), String>
     {
         let revision = host.revision();

@@ -1,5 +1,22 @@
 # Changelog
 
+## 2026-10-18: enforce topology through the learned publication operator
+
+- Connect `--topology-profile` to learned creation, continuation, explicit
+  Finish, historical receipts, receipt service, reconciliation and offline stop.
+  Reuse the original creation/continuation profiles and anchored source custody
+  across ordinary, raw-predictive and owned-predictive learned generation.
+- Keep the original source on the native/process review driver, require a
+  verified cut before inference, and retain its final publication refresh.
+  Historical finalizers need no next live topology or helper/evidence inputs.
+- Add four operator regressions using actual actor/human peers and native model
+  review, including late source loss after charged dispatch. Add five public
+  receipt regressions for exact envelopes, full capacity, canonical races and
+  confirmed versus unknown outcomes across all three predictor modes.
+- Seventeen changed Rust files passed nonmutating syntax parsing. Source review
+  is independent; compilation, Clippy and runtime qualification remain pending
+  because required remote-only RCH execution has no available daemon.
+
 ## 2026-10-18: reserve terminal recovery for mediated learned publication
 
 - Add atomic reserved startup for ordinary, raw-predictive, and owned-predictive

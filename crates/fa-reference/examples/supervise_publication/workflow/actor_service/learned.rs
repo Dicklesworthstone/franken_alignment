@@ -19,6 +19,7 @@
 #[path = "learned/continuation.rs"] mod continuation;
 #[path = "learned/qualification.rs"] mod qualification;
 #[path = "learned/stopped.rs"] mod stopped;
+#[path = "learned/topology.rs"] mod topology;
 use recipe::Loaded;
 use super::super::{Config, Deadline, Duration, ElapsedTick, FileOversight, FileHumanReviewer,
     FileDriverEvent, FileDriverPhase, FileSupervisedDriver, Instant, PeerProfile,
@@ -40,7 +41,7 @@ use fa_reference::action::consequence::oversight::{
 use fa_reference::Error;
 use std::{io::Write, path::Path, rc::Rc};
 
-const USAGE: &str = "create-learned-generated CONFIG LEARNED_RECIPE REVIEWER_PROFILE [--continue-generation | --after-message PREVIOUS_REQUEST | --finish-after-message PREVIOUS_REQUEST] [--actor-profile ACTOR_PROFILE] [--credibility-activation CAPSULE] [--history-anchor INPUT] [--retain-history-anchor NEW_OUTPUT] | create-learned-generated CONFIG LEARNED_RECIPE --resume [--finish-after-message PREVIOUS_REQUEST] [--history-anchor INPUT] [--retain-history-anchor NEW_OUTPUT] | create-learned-generated CONFIG LEARNED_RECIPE --recover-stop OPERATION [--history-anchor INPUT] | create-learned-generated CONFIG LEARNED_RECIPE --audit-review ROUND HISTORY_ANCHOR | create-learned-generated CONFIG LEARNED_RECIPE --resume (--receipts-only | --reconcile-receipts) [--finish-after-message PREVIOUS_REQUEST] [--history-anchor INPUT]";
+const USAGE: &str = "create-learned-generated CONFIG LEARNED_RECIPE REVIEWER_PROFILE [--continue-generation | --after-message PREVIOUS_REQUEST | --finish-after-message PREVIOUS_REQUEST] [--actor-profile ACTOR_PROFILE] [--credibility-activation CAPSULE] [--topology-profile PATH] [--history-anchor INPUT] [--retain-history-anchor NEW_OUTPUT] | create-learned-generated CONFIG LEARNED_RECIPE --resume [--finish-after-message PREVIOUS_REQUEST] [--topology-profile PATH] [--history-anchor INPUT] [--retain-history-anchor NEW_OUTPUT] | create-learned-generated CONFIG LEARNED_RECIPE --recover-stop OPERATION [--topology-profile PATH] [--history-anchor INPUT] | create-learned-generated CONFIG LEARNED_RECIPE --audit-review ROUND HISTORY_ANCHOR | create-learned-generated CONFIG LEARNED_RECIPE --resume (--receipts-only | --reconcile-receipts) [--finish-after-message PREVIOUS_REQUEST] [--topology-profile PATH] [--history-anchor INPUT]";
 
 pub(super) fn command(args: &[String], credibility: Option<&Path>) -> Result<(), String> {
     if args.iter().any(|arg| matches!(arg.as_str(), "--receipts-only" | "--reconcile-receipts")) {
@@ -57,6 +58,7 @@ pub(super) fn command(args: &[String], credibility: Option<&Path>) -> Result<(),
         // credibility capsule or claims a reviewer/stop transport endpoint.
         return stopped::command(&args, anchors);
     }
+    let (args, topology_path) = topology::take_option(&args)?;
     let (args, after_message) = continuation::take_option(&args)?;
     let (args, finishing) = finish::take_option(args)?;
     if !matches!(args.len(), 4 | 5) || args[0] != "create-learned-generated"
@@ -77,6 +79,7 @@ pub(super) fn command(args: &[String], credibility: Option<&Path>) -> Result<(),
         // optional capsule cannot turn historical outcome lookup into live work.
         let mut loaded = recipe::load(Path::new(&args[2]), &config, false)?;
         anchors.admit(&config, &mut loaded, true)?;
+        topology::admit(&config, &mut loaded, topology_path.as_deref(), topology::Mode::Historical)?;
         let result = match finishing {
             Some(after) => recovery::resume_finish(config, loaded, after, clock)?,
             None => recovery::resume(config, loaded, clock)?,
@@ -89,6 +92,8 @@ pub(super) fn command(args: &[String], credibility: Option<&Path>) -> Result<(),
     if let Some(actor) = actor.as_ref() { actor.check_host(&config)?; }
     let mut loaded = recipe::load(Path::new(&args[2]), &config, true)?;
     anchors.admit(&config, &mut loaded, live_continuation)?;
+    topology::admit(&config, &mut loaded, topology_path.as_deref(),
+        if live_continuation { topology::Mode::Live } else { topology::Mode::Create })?;
     let result = match actor.as_ref() {
         Some(actor) => run_with_actor(config, loaded, &peers, live_continuation,
             finishing, after_message, credibility, Some(actor), clock)?,
@@ -169,9 +174,9 @@ where F: FnMut() -> ElapsedTick {
     // The same service and deadline cover replay, generation, review and dispatch.
     let mut control = Control::new(&config, loaded.request, Some(peers))?;
     let bound_actor = actor.map(ingress::Bound::bind).transpose()?;
-    let (host, reviewer, observer) = if continuing {
-        recovery::open_selected_live(&config, &loaded, &mut control, &deadline, &mut time)? }
-        else { recovery::create_selected(&config, &loaded)? };
+    let topology::Started { custody: (host, reviewer, observer), source: topology_source,
+        output: topology_output } = topology::start(&config, &loaded, continuing,
+            &mut control, &deadline, &mut time)?;
     let mut prediction = observer.map(|observer| prediction::Session::new(loaded.request, observer));
     prediction::check(&host, prediction.as_ref())?;
     if continuing {
@@ -200,10 +205,15 @@ where F: FnMut() -> ElapsedTick {
     let release = if finishing.is_some() { LearnedTextRelease::Finish } else { LearnedTextRelease::Message };
     let mut intake = bound_actor.map(|bound| bound.attach(port.clone(), release, deadline.logical)).transpose()?;
     let mut driver = FileSupervisedDriver::new(supervisor);
+    topology::attach(&mut driver, topology_source)?;
     let mut wire = ActorWire::new(port);
     let prepared = (|| {
         if !qualification::prepare(&mut driver, &config, credibility,
             (&mut control, &reviewer, &deadline), &mut time)? { return Ok(false); }
+        if driver.topology().is_some() {
+            if control.checkpoint(&mut driver, &reviewer, &deadline, &mut time)? { return Ok(false); }
+            topology::certify(&mut driver, &deadline, &mut time)?;
+        }
         let release = if let Some(after) = finishing {
             if !finish::prepare(&mut driver, &reviewer, &mut config, &loaded, after,
                 &mut control, &deadline, &mut time)? { return Ok(false); }
@@ -304,6 +314,9 @@ where F: FnMut() -> ElapsedTick {
         }
     }
     let response = wire.exchange(&encode_command(&Command::Poll { request: loaded.request }).map_err(debug)?);
+    // The anchor exporter preserves incoming errors while still trying its own
+    // output; retain source custody first so either output can survive the other.
+    let failure = topology::retain(topology_output.as_ref(), &driver, failure);
     let failure = anchors::retain(&loaded, &driver, failure);
     let cleanup_started = Instant::now();
     let cleanup_pending = cleanup(driver, config.timing.cleanup_ms, config.timing.poll_ms);

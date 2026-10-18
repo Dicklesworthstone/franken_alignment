@@ -11,7 +11,7 @@ use fa_reference::action::consequence::delivery::persistent::{JournalError, Reco
 use fa_reference::action::consequence::oversight::actor_wire::{Command, decode_command};
 use std::{path::Path, time::{Duration, Instant}};
 
-mod mediated;
+pub(crate) mod mediated;
 
 pub(crate) struct Submission<'a> {
     pub document: &'a [u8],

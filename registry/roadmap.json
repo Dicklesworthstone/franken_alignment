@@ -389,7 +389,24 @@
         "crates/fa-reference/src/action/consequence/delivery/persistent/requests/actor/receipt.rs",
         "crates/fa-reference/tests/mediated_learned_reserve.rs",
         "docs/MEDIATED_LEARNED_RECOVERY.md",
-        "docs/PREDICTIVE_MEDIATED_LEARNED_RECOVERY.md"
+        "docs/PREDICTIVE_MEDIATED_LEARNED_RECOVERY.md",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/recipe.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/recovery/readonly.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/recovery/readonly/service.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/recovery/selected.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/topology.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/tests.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/tests/peer_intake.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/tests/topology.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/continuation/creation/topology.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/continuation/guarded.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/continuation/guarded/mediated.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/continuation/guarded/mediated/profile.rs",
+        "crates/fa-reference/tests/mediated_learned_receipts.rs",
+        "docs/LEARNED_OPERATOR_PUBLICATION.md",
+        "docs/LEARNED_RECEIPT_SERVICE.md"
       ]
     },
     {
@@ -1780,7 +1797,26 @@
         "crates/fa-reference/src/action/consequence/delivery/persistent/requests/actor/receipt.rs",
         "crates/fa-reference/tests/mediated_learned_reserve.rs",
         "docs/MEDIATED_LEARNED_RECOVERY.md",
-        "docs/PREDICTIVE_MEDIATED_LEARNED_RECOVERY.md"
+        "docs/PREDICTIVE_MEDIATED_LEARNED_RECOVERY.md",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/recipe.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/recovery.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/recovery/readonly.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/recovery/readonly/service.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/recovery/selected.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/stopped.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/topology.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/tests.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/tests/peer_intake.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/tests/topology.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/continuation/creation/topology.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/continuation/guarded.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/continuation/guarded/mediated.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/continuation/guarded/mediated/profile.rs",
+        "crates/fa-reference/tests/mediated_learned_receipts.rs",
+        "docs/LEARNED_OPERATOR_PUBLICATION.md",
+        "docs/LEARNED_RECEIPT_SERVICE.md"
       ]
     },
     {

@@ -14,7 +14,9 @@ use fa_reference::action::consequence::delivery::persistent::observed::consisten
 use fa_reference::action::consequence::delivery::persistent::{JournalError,
     observed::shutdown::recovery::{FileStoppedHistory, FileStoppedRecovery}};
 
-type Custody = (FileOversight, FileHumanReviewer, Option<FileConsistencyObserver>);
+pub(super) type Custody = (FileOversight, FileHumanReviewer, Option<FileConsistencyObserver>);
+pub(super) type TopologyCustody = (Custody,
+    Option<fa_reference::action::consequence::delivery::persistent::observed::mediation::FileMediationObserver>);
 
 pub(super) fn create_selected(config: &Config, loaded: &Loaded) -> Result<Custody, String> {
     if loaded.generation.required_pre_output_forecast().is_some()
@@ -50,7 +52,7 @@ pub(super) fn open(config: &Config, loaded: &Loaded)
     Ok((host, human))
 }
 
-fn requirements(config: &Config, loaded: &Loaded) -> FileRecoveryRequirements {
+pub(super) fn requirements(config: &Config, loaded: &Loaded) -> FileRecoveryRequirements {
     FileRecoveryRequirements {
         guards: FileGuardSet { stream: Some(loaded.stream), decoder: None, decoder_stop: None,
             source: Some(config.source_policy), identity: None, campaigns: None, credential: None },
@@ -80,6 +82,24 @@ where F: FnMut() -> ElapsedTick {
         }
         Ok(())
     })
+}
+
+/// Preserve the separately owned topology observer through the SAME one-event
+/// guarded replay. No source read or observer is issued before finalization.
+pub(super) fn open_selected_live_with_topology<F>(config: &Config, loaded: &Loaded,
+    control: &mut Control, deadline: &Deadline, time: &mut F) -> Result<TopologyCustody, String>
+where F: FnMut() -> ElapsedTick {
+    let mut checkpoint = |_: Option<Progress>| {
+        deadline.check(time())?;
+        if control.pending_peer()? {
+            return Err("learned recovery interrupted by authenticated stop peer; no durable Stop applied or acknowledged".into());
+        }
+        Ok(())
+    };
+    checkpoint(None)?;
+    let recovery = selected::Cursor::begin(config, loaded)?;
+    finish_replay(recovery, &mut checkpoint, |run| run.progress(),
+        |run, done| run.advance(done), |run| run.finish_with_topology())
 }
 
 fn open_receipt(config: &Config, loaded: &Loaded, after: Option<u64>)

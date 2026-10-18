@@ -27,6 +27,16 @@ retain their behavior.
 `CONFIG` and `LEARNED_RECIPE` are the original independently selected supervisor
 and learned numerical inputs. Plain learned, required raw-residual forecasts and
 required owned-K/V forecasts use their corresponding original guarded cursors.
+For a topology-mediated learned history, also supply `--topology-profile PATH`
+with the existing `fa.mediated-submit/1` or `/2` historical contract and no new
+source-checkpoint output. Both sealed mediated cursors retain complete guard,
+predictor, original/current topology, availability, floor, anchor and exact
+reserve checks before selecting a receipt. The input anchor is mandatory in
+every topology recovery mode. Historical admission never opens the profile's
+`next` live topology files or returns a live topology observer. See
+[learned topology operation](LEARNED_OPERATOR_PUBLICATION.md#enforce-topology-during-learned-publication)
+for checkpoint extent, spent work and withdrawn-availability requirements.
+
 Primary model, tokenizer, fit/monitor and predictor assets still have to bind to
 the exact retained history. Recovery is not inference-free: verification of
 historical numerical operations and original fitting still performs work.

@@ -55,6 +55,85 @@ argument. Explicit continuation and finish can independently requalify their
 helpers as described below. There is no unchecked reviewer mode. The receipt-only form accepts `--resume` in that argument's place
 and contacts no reviewer.
 
+### Enforce topology during learned publication
+
+Add `--topology-profile PATH` to select the original topology custodian for
+learned generation, native or process review, and checked publication. This
+composes with ordinary learned generation, required raw-residual forecasting,
+and required owned-K/V forecasting. The existing learned recipe, numerical
+limits, separate predictor role, native review and independent human key remain
+the selected contracts.
+
+| Invocation | Topology input | Independent history anchor |
+| --- | --- | --- |
+| Fresh creation | `fa.mediated-create/1` or `/2` | Input forbidden; a new output may be retained |
+| `--continue-generation`, `--after-message`, `--finish-after-message` | `fa.mediated-submit/1` or `/2` | Required before opening the store |
+| `--resume`, passive or reconciled receipts, receipt service, `--recover-stop` | `fa.mediated-submit/1` or `/2`, with no checkpoint output | Required; complete historical requirements remain checked |
+
+For example, using independently provisioned files and a fresh output path:
+
+```text
+supervise_publication create-learned-generated CONFIG LEARNED_RECIPE REVIEWER_PROFILE --topology-profile CREATE_TOPOLOGY --retain-history-anchor FIRST_ANCHOR
+supervise_publication create-learned-generated CONFIG NEXT_RECIPE REVIEWER_PROFILE --after-message PREVIOUS_REQUEST --topology-profile NEXT_TOPOLOGY --history-anchor FIRST_ANCHOR --retain-history-anchor NEXT_ANCHOR
+supervise_publication create-learned-generated CONFIG FINISH_RECIPE REVIEWER_PROFILE --finish-after-message PREVIOUS_REQUEST --topology-profile FINISH_TOPOLOGY --history-anchor NEXT_ANCHOR
+supervise_publication create-learned-generated CONFIG LEARNED_RECIPE --resume --receipts-only --topology-profile SAVED_TOPOLOGY --history-anchor SAVED_ANCHOR
+supervise_publication create-learned-generated CONFIG LEARNED_RECIPE --recover-stop OPERATION --topology-profile SAVED_TOPOLOGY --history-anchor SAVED_ANCHOR
+```
+
+The input formats are the existing [creation profile](TOPOLOGY_SUPERVISED_CREATION.md),
+[continuation profile](TOPOLOGY_SUPERVISED_CONTINUATION.md) and
+[version-2 source checkpoint profiles](TOPOLOGY_CHECKPOINT_OPERATOR.md).
+No second graph parser, checker or learned recipe version is introduced.
+Version 1 requires independently retained original/current graphs, availability,
+spent source work and operation floors. Version 2 takes the current contract and
+spent work from the original source checkpoint. Its nested anchor must describe
+the same cut as the separately selected learned history anchor, and the
+canonical event count must still equal that retained checkpoint's extent.
+Keep history and source outputs at distinct, fresh paths.
+
+Creation installs the original terminal reserve, complete guards, numerical
+generation and mediation in one first canonical image. The unique source is
+attached to the original supervised driver before live preparation. After any
+required fresh helper qualification, the original native cut must be verified
+before learned inference, a forecast, a subsequent message or Finish. The same
+driver retains source custody through both native and process review and checks
+the source again at final publication. Missing inventory or a new bypass at that
+late check cannot acquire permission from earlier native or human approval.
+Already-dispatched uncertainty retains its original charge and outcome rules.
+
+Each live recovery checks the complete original numerical, predictor, guard,
+topology, reserve, policy, anchor and floor requirements before releasing roles.
+Its fresh source must advance both graph and inventory generations, retain the
+exact source/checker limits, and carry forward spent checks, reserved read bytes
+and operation floors. A recovery fence does not recertify the graph or replenish
+source allowances. Output failures cannot undo an acknowledged publication or
+request another send.
+
+Historical operations load only the independently selected original/current
+topology requirements; they do not open `next` live topology files or fresh
+native helper/evidence inputs. They refuse a requested new source checkpoint
+because no active source is being returned. Passive receipts consume no clock,
+fence or spare journal capacity. Explicit reconciliation retains the original
+`Fence -> Time -> Sweep`, including for an already-known receipt. Offline stop
+uses the original terminal tail directly. These are distinct finalizers, each
+protected by the same complete recovery checks.
+
+After a fence or acknowledged stop withdraws topology availability, the next
+independent historical profile must describe that saved unavailable state.
+Reusing `available: true`, a stale source checkpoint or an unretained successor
+cut refuses without silently changing expectations. A matching completed stop
+retry remains clock-free and adds no new fence. This bridge does not add the
+separate plain publication-witness profile to learned stream bootstrap.
+
+Four operator regression functions cover authenticated actor/native/human
+message publication and Finish across all three predictor modes, anchored
+source continuity, offline receipts and stop, loss of the source after dispatch,
+an initial bypass before numerical work, and closed option parsing. Five public
+receipt tests additionally cover full capacity, exact envelopes, independent
+recovery requirements, real settlement versus unknown liability, and canonical
+changes. Source review and nonmutating syntax parsing passed; compilation and
+runtime execution remain pending because the required RCH daemon is unavailable.
+
 ### Requalify helpers after recovery
 
 An original held-out qualification is invalidated by the recovery fence. An

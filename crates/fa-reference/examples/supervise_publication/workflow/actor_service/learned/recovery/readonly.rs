@@ -2,15 +2,15 @@
 //! Neither mode returns a live owner; a failed mode never falls back to the other.
 pub(in super::super) mod service;
 use super::{receipt_replay, selected::Cursor};
-use super::super::{Config, Loaded, Duration, Instant, RunResult, anchors, emit, finish, recipe};
+use super::super::{Config, Loaded, Duration, Instant, RunResult, anchors, emit, finish, recipe, topology};
 use fa_reference::action::consequence::oversight::actor_wire::WireResponse;
 use fa_reference::action::ElapsedTick;
 use std::{io::Write, path::Path};
 
 const FLAG: &str = "--receipts-only";
-const USAGE: &str = "create-learned-generated CONFIG LEARNED_RECIPE --resume --receipts-only [--finish-after-message PREVIOUS_REQUEST] [--history-anchor INPUT]";
+const USAGE: &str = "create-learned-generated CONFIG LEARNED_RECIPE --resume --receipts-only [--finish-after-message PREVIOUS_REQUEST] [--topology-profile PATH] [--history-anchor INPUT]";
 const RECONCILE_FLAG: &str = "--reconcile-receipts";
-const RECONCILE_USAGE: &str = "create-learned-generated CONFIG LEARNED_RECIPE --resume --reconcile-receipts [--finish-after-message PREVIOUS_REQUEST] [--history-anchor INPUT]";
+const RECONCILE_USAGE: &str = "create-learned-generated CONFIG LEARNED_RECIPE --resume --reconcile-receipts [--finish-after-message PREVIOUS_REQUEST] [--topology-profile PATH] [--history-anchor INPUT]";
 const ACKNOWLEDGED_EXPIRED: &str = "learned receipt reconciliation acknowledged; deadline expired before response; inspect with --receipts-only; no effect retry was sent";
 
 #[derive(Clone, Copy)]
@@ -68,6 +68,7 @@ where F: FnOnce() -> ElapsedTick {
 fn load(args: &[String], credibility: Option<&Path>, mode: Mode,
     elapsed: &mut impl FnMut() -> Duration) -> Result<(Config, Loaded, Option<u64>), String>
 {
+    let (args, topology_path) = topology::take_option(args)?;
     let usage = mode.usage(); let flag = mode.flag();
     if credibility.is_some() || args.iter().filter(|arg|
         matches!(arg.as_str(), FLAG | RECONCILE_FLAG)).count() != 1
@@ -79,7 +80,7 @@ fn load(args: &[String], credibility: Option<&Path>, mode: Mode,
     }
     // Consume path-valued options FIRST so a missing path cannot be repaired by
     // stripping our boolean flag out of another option's value position.
-    let (mut args, anchors) = anchors::take_options(args)?;
+    let (mut args, anchors) = anchors::take_options(&args)?;
     let at = args.iter().position(|arg| arg == flag).ok_or(usage)?;
     if at < 4 { return Err(usage.into()); }
     args.remove(at);
@@ -92,6 +93,7 @@ fn load(args: &[String], credibility: Option<&Path>, mode: Mode,
     check_elapsed(&config, elapsed)?;
     let mut loaded = recipe::load(Path::new(&args[2]), &config, false)?;
     anchors.admit(&config, &mut loaded, true)?;
+    topology::admit(&config, &mut loaded, topology_path.as_deref(), topology::Mode::Historical)?;
     Ok((config, loaded, after))
 }
 
@@ -103,11 +105,8 @@ pub(in super::super) fn read(config: &Config, loaded: &Loaded, after: Option<u64
     }
     if loaded.request == 0 { return Err("receipt request must be nonzero".into()); }
     if let Some(after) = after { finish::check_ids(loaded.request, after)?; }
-    let outcome = receipt_replay(config, loaded, elapsed, |run| match run {
-        Cursor::Plain(run) => run.finish_receipt(loaded.request, after),
-        Cursor::Raw(run) => run.finish_receipt(loaded.request, after),
-        Cursor::Owned(run) => run.finish_receipt(loaded.request, after),
-    })?;
+    let outcome = receipt_replay(config, loaded, elapsed, |run|
+        run.finish_receipt(loaded.request, after))?;
     // The final canonical re-read can take time. Late expiry withholds output;
     // it cannot leave a fence, role or staged-file cleanup behind this path.
     check_elapsed(config, elapsed)?;
@@ -125,11 +124,8 @@ where F: FnOnce() -> ElapsedTick {
     }
     if loaded.request == 0 { return Err("receipt request must be nonzero".into()); }
     if let Some(after) = after { finish::check_ids(loaded.request, after)?; }
-    let outcome = receipt_replay(config, loaded, elapsed, |run| match run {
-        Cursor::Plain(run) => run.finish_reconciled_receipt(loaded.request, after, clock),
-        Cursor::Raw(run) => run.finish_reconciled_receipt(loaded.request, after, clock),
-        Cursor::Owned(run) => run.finish_reconciled_receipt(loaded.request, after, clock),
-    })?;
+    let outcome = receipt_replay(config, loaded, elapsed, |run|
+        run.finish_reconciled_receipt(loaded.request, after, clock))?;
     // The single replacement has ACKNOWLEDGED. Expiry now withholds stdout but
     // cannot truthfully claim no mutation; it never retries or attempts an undo.
     if elapsed() >= Duration::from_millis(config.timing.runtime_ms) {

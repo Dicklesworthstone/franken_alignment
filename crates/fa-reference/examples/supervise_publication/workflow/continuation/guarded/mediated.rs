@@ -1,6 +1,6 @@
 //! Continue the ORIGINAL mediated domain; never reopen through a weaker profile.
 //! Historical requests stay query-only and never consume the next live source.
-mod profile;
+pub(crate) mod profile;
 use profile::Selection;
 use super::{Config, Submission, SubmitProfile, PeerProfile, FileOversight, FileGuardSet,
     FileRecoveryRequirements, FileGuardedRecoveryStatus, RecoveryReserve, JournalError,
