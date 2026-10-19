@@ -109,3 +109,5 @@ fn executed(wire: &mut Wire, request: u64) -> bool {
 
 #[path = "tests/peer_intake.rs"] mod peer_intake;
 #[path = "tests/topology.rs"] mod mediated_topology;
+
+#[path = "tests/sequence.rs"] mod resident_sequence;

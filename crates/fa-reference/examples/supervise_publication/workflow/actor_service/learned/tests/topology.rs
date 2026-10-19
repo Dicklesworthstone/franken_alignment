@@ -37,7 +37,7 @@ fn pair(root: &Root, topology: &str, inventory: &str) -> String {
         root.0.join(topology).display(), root.0.join(inventory).display())
 }
 
-fn selected(root: &Root, mode: Option<bool>, bypass: bool) -> (Config, PathBuf, Loaded) {
+pub(super) fn selected(root: &Root, mode: Option<bool>, bypass: bool) -> (Config, PathBuf, Loaded) {
     let config = configured(root); let path = native::write(root);
     if let Some(owned) = mode { super::forecast::install(root, &path, owned, 60_000); }
     evidence(root, &config, 1, true, false);
@@ -53,7 +53,7 @@ fn selected(root: &Root, mode: Option<bool>, bypass: bool) -> (Config, PathBuf, 
     (config, path, loaded)
 }
 
-fn checkpoint(root: &Root, generation: u64) -> TopologyCheckpoint {
+pub(super) fn checkpoint(root: &Root, generation: u64) -> TopologyCheckpoint {
     let bytes = fs::read(root.0.join(format!("source-{generation}.bin"))).unwrap();
     TopologyCheckpoint::read_trusted(&mut Cursor::new(bytes), MAX_TOPOLOGY_CHECKPOINT_BYTES).unwrap()
 }
@@ -257,7 +257,7 @@ fn topology_options_preserve_original_learned_modes_and_refuse_incomplete_paths(
 
 // These files pass through the actual command parser and independent profile
 // loaders, rather than starting at run_with_actor with already admitted inputs.
-fn command_inputs(root: &Root, config: &Config, recipe: &Path,
+pub(super) fn command_inputs(root: &Root, config: &Config, recipe: &Path,
     actor: &crate::workflow::actor_service::Profile) -> Vec<String>
 {
     let host_path = root.0.join("command-host.json");

@@ -389,6 +389,16 @@
       "cost_class": "cheap",
       "response": "ExperimentRow",
       "note": ""
+    },
+    {
+      "verb": "serve-learned-generated",
+      "layer": "L4",
+      "class": "mutation",
+      "authority": "independently configured operator; fresh authenticated actor, native or process review, and independent human approval per release",
+      "idempotency": "original distinct request identity and expected predecessor; no effect retry after an ambiguous receipt",
+      "cost_class": "expensive",
+      "response": "Vec<WireResponse> retaining original Knowledge<ActorOutcome>",
+      "note": "bounded resident operator adapter; one original generation, forecast observer and topology custodian; no lifetime allowance refill or branch authority"
     }
   ],
   "reason_codes": [

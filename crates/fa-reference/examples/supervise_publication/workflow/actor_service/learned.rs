@@ -20,6 +20,7 @@
 #[path = "learned/qualification.rs"] mod qualification;
 #[path = "learned/stopped.rs"] mod stopped;
 #[path = "learned/topology.rs"] mod topology;
+#[path = "learned/sequence.rs"] mod sequence;
 use recipe::Loaded;
 use super::super::{Config, Deadline, Duration, ElapsedTick, FileOversight, FileHumanReviewer,
     FileDriverEvent, FileDriverPhase, FileSupervisedDriver, Instant, PeerProfile,
@@ -42,6 +43,10 @@ use fa_reference::Error;
 use std::{io::Write, path::Path, rc::Rc};
 
 const USAGE: &str = "create-learned-generated CONFIG LEARNED_RECIPE REVIEWER_PROFILE [--continue-generation | --after-message PREVIOUS_REQUEST | --finish-after-message PREVIOUS_REQUEST] [--actor-profile ACTOR_PROFILE] [--credibility-activation CAPSULE] [--topology-profile PATH] [--history-anchor INPUT] [--retain-history-anchor NEW_OUTPUT] | create-learned-generated CONFIG LEARNED_RECIPE --resume [--finish-after-message PREVIOUS_REQUEST] [--topology-profile PATH] [--history-anchor INPUT] [--retain-history-anchor NEW_OUTPUT] | create-learned-generated CONFIG LEARNED_RECIPE --recover-stop OPERATION [--topology-profile PATH] [--history-anchor INPUT] | create-learned-generated CONFIG LEARNED_RECIPE --audit-review ROUND HISTORY_ANCHOR | create-learned-generated CONFIG LEARNED_RECIPE --resume (--receipts-only | --reconcile-receipts) [--finish-after-message PREVIOUS_REQUEST] [--topology-profile PATH] [--history-anchor INPUT]";
+
+pub(super) fn sequence_command(args: &[String], credibility: Option<&Path>) -> Result<(), String> {
+    sequence::command(args, credibility)
+}
 
 pub(super) fn command(args: &[String], credibility: Option<&Path>) -> Result<(), String> {
     command_with_clock(args, credibility, clock)
@@ -186,141 +191,19 @@ where F: FnMut() -> ElapsedTick {
             &mut control, &deadline, &mut time)?;
     let mut prediction = observer.map(|observer| prediction::Session::new(loaded.request, observer));
     prediction::check(&host, prediction.as_ref())?;
-    if continuing {
-        match host.request_status(loaded.request) {
-            Err(JournalError::Contract(Error::Missing)) => {}
-            Ok(_) => return Err("learned request already exists; use --resume for its original receipt".into()),
-            Err(error) => return Err(debug(error)),
-        }
-        // Preserve the existing omission refusal before live preparation. A
-        // caller may retry with fresh qualification instead of terminally
-        // stopping the history just because the option was omitted.
-        if credibility.is_none() { host.check_credibility().map_err(debug)?; }
-    }
-    if let Some(after) = finishing { finish::check_fresh(&host, &loaded, after)?; }
-    // This read-only command binds request IDs and the numerical predecessor,
-    // which held-out activation preserves. Invalid predecessors remain a
-    // pre-intake refusal; continuation repeats the native checks after activation.
-    let message_continuation = after_message.map(|after|
-        host.prepare_learned_text_stream_continuation(after, loaded.request).map_err(debug)).transpose()?;
-    if continuing && finishing.is_none() && after_message.is_none()
-        && host.current_learned_text_continuation().map_err(debug)?
-            .is_some_and(|command| command.request() != loaded.request) {
-        return Err("continued learned generation belongs to a different original request".into());
-    }
+    let message_continuation = request_preflight(&host, &loaded, continuing,
+        finishing, after_message, credibility)?;
     let (port, supervisor) = host.into_learned_text_stream_actor_gateway().map_err(debug)?;
     let release = if finishing.is_some() { LearnedTextRelease::Finish } else { LearnedTextRelease::Message };
     let mut intake = bound_actor.map(|bound| bound.attach(port.clone(), release, deadline.logical)).transpose()?;
     let mut driver = FileSupervisedDriver::new(supervisor);
     topology::attach(&mut driver, topology_source)?;
     let mut wire = ActorWire::new(port);
-    let prepared = (|| {
-        if !qualification::prepare(&mut driver, &config, credibility,
-            (&mut control, &reviewer, &deadline), &mut time)? { return Ok(false); }
-        if driver.topology().is_some() {
-            if control.checkpoint(&mut driver, &reviewer, &deadline, &mut time)? { return Ok(false); }
-            topology::certify(&mut driver, &deadline, &mut time)?;
-        }
-        let release = if let Some(after) = finishing {
-            if !finish::prepare(&mut driver, &reviewer, &mut config, &loaded, after,
-                &mut control, &deadline, &mut time)? { return Ok(false); }
-            if let Some(prediction) = prediction.as_mut() {
-                let mut host = driver.supervisor_mut().host_mut().map_err(debug)?;
-                prediction.finish_request(&mut host)?;
-            }
-            LearnedTextRelease::Finish
-        } else {
-            if let Some(command) = message_continuation {
-                if !continuation::prepare(&mut driver, &reviewer, &mut config, command,
-                    &mut control, &deadline, &mut time)? { return Ok(false); }
-            }
-            if !generate_selected(&mut driver, &reviewer, &mut config, &mut control,
-                &deadline, &mut time, prediction.as_mut())? {
-                return Ok(false);
-            }
-            LearnedTextRelease::Message
-        };
-        if let Some(intake) = intake.as_mut() {
-            if !intake.admit(&mut driver, &mut config, &reviewer, &mut control, &deadline, &mut time)? {
-                return Ok(false);
-            }
-            let accepted_deadline = intake.observe_original(&driver, &mut wire, release, finishing)?;
-            deadline.logical = deadline.logical.min(accepted_deadline);
-            deadline.check(time())?;
-        } else {
-            match release {
-                LearnedTextRelease::Message => submit(&mut driver, &mut wire, &mut config, &loaded, &deadline, &mut time)?,
-                LearnedTextRelease::Finish => submit_release(&mut driver, &mut wire, &mut config, &loaded,
-                    release, &deadline, &mut time)?,
-            }
-        }
-        let status = driver.supervisor().host().map_err(debug)?.request_status(loaded.request).map_err(debug)?;
-        Ok(matches!(status.disposition, FileRequestDisposition::Admitted {
-            stage: ActionState::Reviewing, .. }))
-    })();
-    let mut failure = None;
-    let mut history = None;
-    let mut process = None;
-    match prepared {
-        Err(error) => failure = Some(error),
-        Ok(false) => {}
-        Ok(true) => {
-            let reviewed = if intake.is_some() {
-                review::run_serviced(driver, &mut config, &loaded, &reviewer,
-                    &mut control, &deadline, &mut time, &mut intake)
-            } else {
-                review::run(driver, &mut config, &loaded, &reviewer,
-                    &mut control, &deadline, &mut time)
-            };
-            driver = reviewed.driver;
-            history = reviewed.history;
-            process = reviewed.process;
-            failure = reviewed.failure;
-            if failure.is_none() && !reviewed.stop_requested {
-                let result = (|| {
-                    if !matches!(driver.phase(), FileDriverPhase::AwaitingDispatch { .. }) {
-                        cancel_unspent(&mut driver, loaded.request)?;
-                        return Ok(());
-                    }
-                    let mut actor_ingress = |driver: &mut FileSupervisedDriver|
-                        ingress::observe(&mut intake, driver.supervisor_mut());
-                    let mut live = LiveControl { stop: control, ingress: &mut actor_ingress };
-                    let approval = human_review(&mut driver, &reviewer, &mut config,
-                        loaded.request, &deadline, (Some(peers), &mut live), &mut time)?;
-                    let Some(approval) = approval else {
-                        cancel_unspent(&mut driver, loaded.request)?; return Ok(());
-                    };
-                    loop {
-                        deadline.check(time())?;
-                        if live.checkpoint(&mut driver, &reviewer, &deadline, &mut time)? { return Ok(()); }
-                        let event = driver.step_computed_from_policy_file(&mut config.source,
-                            &mut time, Some(&approval)).result.map_err(debug)?;
-                        match event {
-                            FileDriverEvent::Dispatched { .. } | FileDriverEvent::PublicationChecked { .. } => {}
-                            FileDriverEvent::Reconciled { .. } | FileDriverEvent::Stopped { .. } => return Ok(()),
-                            FileDriverEvent::PublicationUnknown { error, .. } => return Err(debug(error)),
-                            _ => return Err(format!("unexpected original learned publication event: {event:?}")),
-                        }
-                    }
-                })();
-                failure = result.err();
-            }
-        }
-    }
-    if let Some(error) = failure.take() {
-        failure = Some(match stop(&mut driver, loaded.request, &mut time) {
-            Ok(()) => error, Err(stopping) => format!("{error}; stop/drain: {stopping}"),
-        });
-    }
-    // Receipt delivery cannot restart generation, review, reconciliation or an
-    // effect. Preserve transport failure alongside the original actor outcome.
-    if let Some(intake) = intake.as_mut() {
-        if let Err(error) = intake.finish(driver.supervisor_mut(), &deadline, &mut time) {
-            let error = format!("learned actor response service failed: {error}; no effect retry was sent");
-            failure = Some(match failure { Some(original) => format!("{original}; {error}"), None => error });
-        }
-    }
-    let response = wire.exchange(&encode_command(&Command::Poll { request: loaded.request }).map_err(debug)?);
+    let RequestCycle { driver, response, failure, history, process } = execute_request(
+        driver, &mut config, &loaded, RequestServices { peers, reviewer: &reviewer,
+            prediction: &mut prediction, intake: &mut intake, wire: &mut wire,
+            finishing, message_continuation, credibility, stop_operation: loaded.request },
+        &mut control, &mut deadline, &mut time);
     // The anchor exporter preserves incoming errors while still trying its own
     // output; retain source custody first so either output can survive the other.
     let failure = topology::retain(topology_output.as_ref(), &driver, failure);
@@ -335,6 +218,179 @@ where F: FnMut() -> ElapsedTick {
     // released. Its counters are evidence of work, never either publication key.
     drop(history);
     Ok(RunResult { response, failure, cleanup_pending })
+}
+
+type MessageContinuation = fa_reference::action::consequence::delivery::persistent::observed::decoder::learned::FileLearnedTextContinuation;
+
+/// Original read-only guards before a live request starts. A sequence and the
+/// single-request command select the same request/numerical predecessor.
+fn request_preflight(host: &FileOversight, loaded: &Loaded, continuing: bool,
+    finishing: Option<u64>, after_message: Option<u64>, credibility: Option<&Path>)
+    -> Result<Option<MessageContinuation>, String>
+{
+    if continuing {
+        match host.request_status(loaded.request) {
+            Err(JournalError::Contract(Error::Missing)) => {}
+            Ok(_) => return Err("learned request already exists; use --resume for its original receipt".into()),
+            Err(error) => return Err(debug(error)),
+        }
+        // Preserve the existing omission refusal before live preparation. A
+        // caller may retry with fresh qualification instead of terminally
+        // stopping the history just because the option was omitted.
+        if credibility.is_none() { host.check_credibility().map_err(debug)?; }
+    }
+    if let Some(after) = finishing { finish::check_fresh(host, loaded, after)?; }
+    // This read-only command binds request IDs and the numerical predecessor,
+    // which held-out activation preserves. Invalid predecessors remain a
+    // pre-intake refusal; continuation repeats the native checks after activation.
+    let message_continuation = after_message.map(|after|
+        host.prepare_learned_text_stream_continuation(after, loaded.request).map_err(debug)).transpose()?;
+    if continuing && finishing.is_none() && after_message.is_none()
+        && host.current_learned_text_continuation().map_err(debug)?
+            .is_some_and(|command| command.request() != loaded.request) {
+        return Err("continued learned generation belongs to a different original request".into());
+    }
+    Ok(message_continuation)
+}
+
+struct RequestServices<'a> {
+    peers: &'a PeerProfile,
+    reviewer: &'a FileHumanReviewer,
+    prediction: &'a mut Option<prediction::Session>,
+    intake: &'a mut Option<ingress::Intake>,
+    wire: &'a mut ActorWire<FileLearnedTextStreamActorPort>,
+    finishing: Option<u64>,
+    message_continuation: Option<MessageContinuation>,
+    credibility: Option<&'a Path>,
+    stop_operation: u64,
+}
+
+struct RequestCycle {
+    driver: FileSupervisedDriver,
+    response: fa_reference::action::consequence::oversight::actor_wire::WireResponse,
+    failure: Option<String>,
+    history: Option<fa_reference::action::consequence::delivery::persistent::observed::helpers::learned::native::sequence::FileNativeSidecarSequence>,
+    process: Option<process::ProcessHistory>,
+}
+
+/// One original generation/review/two-key/publication cycle. Retain the same
+/// authority, topology and numerical owner for either final cleanup or the next
+/// independently selected request; this function never opens another store.
+fn execute_request<F>(mut driver: FileSupervisedDriver, config: &mut Config,
+    loaded: &Loaded, services: RequestServices<'_>, control: &mut Control,
+    deadline: &mut Deadline, time: &mut F) -> RequestCycle
+where F: FnMut() -> ElapsedTick {
+    let RequestServices { peers, reviewer, prediction, intake, wire, finishing,
+        message_continuation, credibility, stop_operation } = services;
+    let prepared = (|| {
+        if !qualification::prepare(&mut driver, config, credibility,
+            (&mut *control, reviewer, deadline), time)? { return Ok(false); }
+        if driver.topology().is_some() {
+            if control.checkpoint(&mut driver, reviewer, deadline, time)? { return Ok(false); }
+            topology::certify(&mut driver, deadline, time)?;
+        }
+        let release = if let Some(after) = finishing {
+            if !finish::prepare(&mut driver, reviewer, config, loaded, after,
+                control, deadline, time)? { return Ok(false); }
+            if let Some(prediction) = prediction.as_mut() {
+                let mut host = driver.supervisor_mut().host_mut().map_err(debug)?;
+                prediction.finish_request(&mut host)?;
+            }
+            LearnedTextRelease::Finish
+        } else {
+            if let Some(command) = message_continuation {
+                if !continuation::prepare(&mut driver, reviewer, config, command,
+                    control, deadline, time)? { return Ok(false); }
+            }
+            if !generate_selected(&mut driver, reviewer, config, control,
+                deadline, time, prediction.as_mut())? {
+                return Ok(false);
+            }
+            LearnedTextRelease::Message
+        };
+        if let Some(intake) = intake.as_mut() {
+            if !intake.admit(&mut driver, config, reviewer, control, deadline, time)? {
+                return Ok(false);
+            }
+            let accepted_deadline = intake.observe_original(&driver, wire, release, finishing)?;
+            deadline.logical = deadline.logical.min(accepted_deadline);
+            deadline.check(time())?;
+        } else {
+            match release {
+                LearnedTextRelease::Message => submit(&mut driver, wire, config, loaded, deadline, time)?,
+                LearnedTextRelease::Finish => submit_release(&mut driver, wire, config, loaded,
+                    release, deadline, time)?,
+            }
+        }
+        let status = driver.supervisor().host().map_err(debug)?.request_status(loaded.request).map_err(debug)?;
+        Ok(matches!(status.disposition, FileRequestDisposition::Admitted {
+            stage: ActionState::Reviewing, .. }))
+    })();
+    let mut failure = None;
+    let mut history = None;
+    let mut process = None;
+    match prepared {
+        Err(error) => failure = Some(error),
+        Ok(false) => {}
+        Ok(true) => {
+            let reviewed = if intake.is_some() {
+                review::run_serviced(driver, config, loaded, reviewer,
+                    control, deadline, time, intake)
+            } else {
+                review::run(driver, config, loaded, reviewer,
+                    control, deadline, time)
+            };
+            driver = reviewed.driver;
+            history = reviewed.history;
+            process = reviewed.process;
+            failure = reviewed.failure;
+            if failure.is_none() && !reviewed.stop_requested {
+                let result = (|| {
+                    if !matches!(driver.phase(), FileDriverPhase::AwaitingDispatch { .. }) {
+                        cancel_unspent(&mut driver, loaded.request)?;
+                        return Ok(());
+                    }
+                    let mut actor_ingress = |driver: &mut FileSupervisedDriver|
+                        ingress::observe(intake, driver.supervisor_mut());
+                    let mut live = LiveControl { stop: control.share(), ingress: &mut actor_ingress };
+                    let approval = human_review(&mut driver, reviewer, config,
+                        loaded.request, deadline, (Some(peers), &mut live), time)?;
+                    let Some(approval) = approval else {
+                        cancel_unspent(&mut driver, loaded.request)?; return Ok(());
+                    };
+                    loop {
+                        deadline.check(time())?;
+                        if live.checkpoint(&mut driver, reviewer, deadline, time)? { return Ok(()); }
+                        let event = driver.step_computed_from_policy_file(&mut config.source,
+                            &mut *time, Some(&approval)).result.map_err(debug)?;
+                        match event {
+                            FileDriverEvent::Dispatched { .. } | FileDriverEvent::PublicationChecked { .. } => {}
+                            FileDriverEvent::Reconciled { .. } | FileDriverEvent::Stopped { .. } => return Ok(()),
+                            FileDriverEvent::PublicationUnknown { error, .. } => return Err(debug(error)),
+                            _ => return Err(format!("unexpected original learned publication event: {event:?}")),
+                        }
+                    }
+                })();
+                failure = result.err();
+            }
+        }
+    }
+    if let Some(error) = failure.take() {
+        failure = Some(match stop(&mut driver, stop_operation, time) {
+            Ok(()) => error, Err(stopping) => format!("{error}; stop/drain: {stopping}"),
+        });
+    }
+    // Receipt delivery cannot restart generation, review, reconciliation or an
+    // effect. Preserve transport failure alongside the original actor outcome.
+    if let Some(intake) = intake.as_mut() {
+        if let Err(error) = intake.finish(driver.supervisor_mut(), deadline, time) {
+            let error = format!("learned actor response service failed: {error}; no effect retry was sent");
+            failure = Some(match failure { Some(original) => format!("{original}; {error}"), None => error });
+        }
+    }
+    let response = wire.exchange(&encode_command(&Command::Poll { request: loaded.request })
+        .expect("validated request ID fits the bounded original Poll frame"));
+    RequestCycle { driver, response, failure, history, process }
 }
 
 #[cfg(test)]

@@ -1,5 +1,26 @@
 # Changelog
 
+## 2026-10-19: keep learned publication resident across a reviewed sequence
+
+- Add `serve-learned-generated` for 2..=16 independently selected Messages and
+  an optional final Finish, using one original authority owner, numerical
+  generation, actor gateway, forecast observer and topology custodian.
+- Require exact immutable generation/stream admission and distinct request,
+  review and actor selections before startup. Every release retains its own
+  native or process congress, authenticated actor and fresh human decision;
+  advance only after original Confirmed Executed and both helper owners reaped.
+- Preserve original charges, finite numerical/forecast/source work and one
+  global lifetime. Bound each entry on logical and monotonic time, retain the
+  first request's authenticated Stop operation, and export one final paired
+  source/history cut without an inter-message authority recovery Fence.
+- Add regression source for all three forecast modes, mixed native/process
+  review, cancellation, ambiguous dispatch, exhausted prediction capacity,
+  live Stop, complete command/topology composition and stalled-clock deadlines.
+  Independent source review and nonmutating Rust 2024 parsing of all 17 changed
+  Rust files in this wave passed. Compilation and execution remain pending:
+  the device is full and the required remote RCH worker is unavailable.
+  Full FA-027 long-horizon and branch acceptance remains open.
+
 ## 2026-10-19: stop active supervisors through an authenticated fleet command
 
 - Add `supervise_publication stop-fleet FLEET_JSON` for 1..=64 independently

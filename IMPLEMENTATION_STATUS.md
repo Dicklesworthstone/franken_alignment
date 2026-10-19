@@ -1,5 +1,37 @@
 # Implementation status · design revision 0.3
 
+## 2026-10-19: resident learned publication sequence (unqualified source)
+
+`supervise_publication serve-learned-generated` now admits a fixed sequence of
+2..=16 learned Messages and an optional final Finish, each with an independently
+selected recipe and authenticated actor profile. One original locked authority,
+driver, numerical generation, human reviewer, forecast observer and topology
+custodian remain resident. The complete immutable generation and stream must
+match; each release still needs its own original native or process congress,
+fresh forecast when required, and separate human approval.
+
+A successor requires both original Known(Executed) and native Confirmed
+Executed, plus confirmed retirement of direct and process-review children.
+Intermediate entries do not reopen the authority, add a recovery Fence or
+requalify helpers. Original draws, forecast work, source checks and publication
+charges remain cumulative. One global lifetime bounds all entries, each TTL
+has a monotonic wall bound, and the initial request owns the same Stop endpoint
+even during automatic failure handling in later requests. Final source/history
+outputs are retained once from the original owner after the sequence.
+
+Independent regression source covers ordinary, raw-predictive and
+owned-predictive A/A/Finish, mixed native/process review, cancellation, original
+prediction exhaustion, real post-Dispatch staging failure, live Stop during
+request two, full profile admission, on-disk command/topology/export composition
+and a short TTL under a stalled logical clock. Source review corrected typed
+owned-forecast observation, per-entry wall deadlines and fixed Stop operation
+before publication. All 17 changed Rust files in this wave passed nonmutating
+Rust 2024 syntax parsing from their exact candidate contents. No compilation,
+runtime or Clippy result is claimed: the normal sandbox cannot start on the
+full device and the mandatory remote-only RCH gate is unavailable.
+FA-027 is in progress; long-horizon and isolated-branch acceptance remain open.
+See [resident sequence usage](docs/RESIDENT_LEARNED_PUBLICATION.md).
+
 ## 2026-10-19: live authenticated fleet Stop (unqualified source)
 
 `supervise_publication stop-fleet FLEET_JSON` now drives the original native

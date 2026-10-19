@@ -54,6 +54,10 @@ whose stop endpoint the live invocation owns: for example,
 `stop-101.sock` inside the first profile's directory. It is not a new fleet
 operation identifier.
 
+A [resident learned sequence](RESIDENT_LEARNED_PUBLICATION.md) retains the
+**first recipe's request ID** as its Stop operation for the whole invocation.
+Select that original endpoint even while it serves a later message or Finish.
+
 All fields are required and the parser rejects unknown fields. Member IDs and
 operations are nonzero canonical decimal **strings**, including values above
 JavaScript's exact integer range. Paths are absolute and normalized. IDs,

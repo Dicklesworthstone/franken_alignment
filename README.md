@@ -38,6 +38,12 @@ and use [learned publication](docs/LEARNED_OPERATOR_PUBLICATION.md) with a
 The linked contracts and implementation status distinguish executed reference
 behavior from detector quality and complete project qualification.
 
+The [resident learned sequence](docs/RESIDENT_LEARNED_PUBLICATION.md) keeps one
+original supervised owner through a bounded sequence of Messages and Finish,
+with fresh actor, native or process, and human review at every release.
+Its original numerical, forecast and source allowances remain cumulative;
+the new command and regression source remain pending execution qualification.
+
 The [live fleet Stop command](docs/LIVE_FLEET_STOP.md) connects authenticated
 stop-only peers to active supervisors while they own their journals, with a
 complete per-member acknowledgement/drain report and no automatic retry.

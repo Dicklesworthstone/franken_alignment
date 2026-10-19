@@ -734,7 +734,7 @@
       "id": "FA-027",
       "gate": "G3",
       "title": "Validate real resumed continuations and isolated branches",
-      "status": "planned",
+      "status": "in_progress",
       "depends_on": [
         "FA-011",
         "FA-025",
@@ -751,7 +751,14 @@
       ],
       "owner_role": "systems",
       "estimated_scope": "One independently reviewable work packet; split before implementation if multiple semantics change.",
-      "result_artifacts": [],
+      "result_artifacts": [
+        "docs/RESIDENT_LEARNED_PUBLICATION.md",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/sequence.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/sequence/profile.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/prediction.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/tests/sequence.rs"
+      ],
       "founding_ideas": [
         "FI-I03",
         "FI-I07",

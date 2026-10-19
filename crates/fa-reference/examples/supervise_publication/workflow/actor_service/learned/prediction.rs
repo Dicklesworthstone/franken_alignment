@@ -46,6 +46,43 @@ impl Session {
 
     pub(super) fn has_message(&self) -> bool { self.message.is_some() }
 
+    /// Select a new independently provisioned request only after this message's
+    /// original forecast was consumed and its publication has an Executed
+    /// receipt. Keep the SAME observer and original lifetime evidence owner.
+    pub(super) fn select_request(&mut self, host: &FileOversight, request: u64) -> Result<(), String> {
+        use fa_reference::action::ActionState;
+        use fa_reference::action::consequence::delivery::{EndpointOutcome,
+            persistent::{JournalError, requests::FileRequestDisposition}};
+        use fa_reference::Error;
+        if request == 0 || request == self.request {
+            return Err("forecast successor requires a distinct nonzero request".into());
+        }
+        self.complete_message(host)?;
+        let FileRequestDisposition::Admitted { attempt, stage: ActionState::Confirmed, .. } =
+            host.request_status(self.request).map_err(debug)?.disposition
+            else { return Err("forecast predecessor has no confirmed request".into()); };
+        if !matches!(host.request_resolution(self.request).map_err(debug)?,
+            Some(EndpointOutcome::Executed { .. }))
+            || host.action_consistency_snapshot().map_err(debug)?.pending_attempt.is_some() {
+            return Err("forecast successor requires a consumed prediction and Executed receipt".into());
+        }
+        // Each predictor retains its own native consumed record. An owned
+        // learned observation cannot be relabeled as a raw forecast.
+        if host.owned_learned_action_consistency_required() {
+            host.learned_action_consistency_observation(attempt).map_err(debug)?;
+        } else {
+            host.action_consistency_observation(attempt).map_err(debug)?;
+        }
+        match host.request_status(request) {
+            Err(JournalError::Contract(Error::Missing)) => {},
+            Ok(_) => return Err("forecast successor request is already recorded".into()),
+            Err(error) => return Err(debug(error)),
+        }
+        self.request = request;
+        self.message = None;
+        Ok(())
+    }
+
     /// The original fixed prompt completes first. The library admits only its
     /// original output boundary or this request's retained finite successor.
     /// A late, wrong-request, or unanswered forecast cannot acquire a handle.

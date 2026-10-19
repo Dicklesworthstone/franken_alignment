@@ -212,7 +212,8 @@
         "narrow",
         "suspend",
         "reset",
-        "precheck"
+        "precheck",
+        "serve-learned-generated"
       ],
       "packets": [
         "FA-009",

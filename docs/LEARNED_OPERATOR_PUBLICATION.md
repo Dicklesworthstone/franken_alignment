@@ -37,6 +37,13 @@ loader and the original decoder, indexed reader and static adapter merger.
 
 ## Commands and ordinary operation
 
+For several independently selected releases in one invocation,
+[`serve-learned-generated`](RESIDENT_LEARNED_PUBLICATION.md) retains one original
+owner through 2..=16 Messages and an optional final Finish. It preserves the
+same generation, forecast observer and topology source while requiring a fresh
+actor request, native or process congress and human decision for each release.
+This source remains pending compilation and execution qualification.
+
 Use the repository-built `supervise_publication` example on Linux:
 
 ```text

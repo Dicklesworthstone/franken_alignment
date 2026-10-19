@@ -29,7 +29,7 @@ pub(super) enum ProcessHistory {
 }
 
 impl ProcessHistory {
-    fn reap(&mut self) {
+    pub(super) fn reap(&mut self) {
         match self {
             Self::Review(review) => review.reap(),
             Self::Partial { children: Some(children), .. } => { children.request_stop_all(); },
