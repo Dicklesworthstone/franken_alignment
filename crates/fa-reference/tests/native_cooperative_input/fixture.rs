@@ -14,7 +14,9 @@ use fa_reference::action::consequence::oversight::helper_workers::wire::{WorkerI
 
 pub fn prompt(last: u8) -> Vec<u8> {
     let mut bytes = b"\0\xff".to_vec();
-    for _ in 0..80 { bytes.extend_from_slice(b"allow"); }
+    for _ in 0..80 {
+        bytes.extend_from_slice(b"allow");
+    }
     bytes.push(last);
     bytes
 }
@@ -26,8 +28,11 @@ pub fn frame(prompt: &[u8]) -> Vec<u8> {
     // typed parts and a real declared closed-absence marker.
     bytes.truncate(bytes.len() - 13);
     bytes.extend_from_slice(&3_u16.to_be_bytes());
-    for (start, end, kind) in [(0, 2, 7_u8), (2, prompt.len() - 1, 5),
-        (prompt.len() - 1, prompt.len(), 1)] {
+    for (start, end, kind) in [
+        (0, 2, 7_u8),
+        (2, prompt.len() - 1, 5),
+        (prompt.len() - 1, prompt.len(), 1),
+    ] {
         bytes.extend_from_slice(&u32::try_from(start).unwrap().to_be_bytes());
         bytes.extend_from_slice(&u32::try_from(end).unwrap().to_be_bytes());
         bytes.push(kind);
@@ -44,22 +49,30 @@ pub fn frame(prompt: &[u8]) -> Vec<u8> {
     bytes
 }
 
-pub fn input(prompt: &[u8]) -> WorkerInput { decode_request(&frame(prompt)).unwrap() }
+pub fn input(prompt: &[u8]) -> WorkerInput {
+    decode_request(&frame(prompt)).unwrap()
+}
 
 pub fn load(fixture: &assets::Fixture, policy: &NativeHelperPolicy) -> NativeEvaluator {
     let mut asset_budget = NativeAssetReadBudget::new(1_048_576, 4096).unwrap();
     let mut weight_budget = WeightReadBudget::new(1_048_576, 4096).unwrap();
-    let (worker, _) = NativeEvaluator::from_llama_files(NativeFileBootstrap {
-        policy, stream: 12,
-        files: NativeHelperFiles {
-            configuration: &fixture.root.join("config.json"),
-            tokenizer: &fixture.root.join("tokenizer.bin"),
-            monitoring: &fixture.root.join("monitor.json"),
-            sampling: &fixture.root.join("sampling.json"),
-            weights: &fixture.root.join("weights.safetensors"),
+    let (worker, _) = NativeEvaluator::from_llama_files(
+        NativeFileBootstrap {
+            policy,
+            stream: 12,
+            files: NativeHelperFiles {
+                configuration: &fixture.root.join("config.json"),
+                tokenizer: &fixture.root.join("tokenizer.bin"),
+                monitoring: &fixture.root.join("monitor.json"),
+                sampling: &fixture.root.join("sampling.json"),
+                weights: &fixture.root.join("weights.safetensors"),
+            },
+            limits: NativeHelperFileLimits::default(),
         },
-        limits: NativeHelperFileLimits::default(),
-    }, &mut asset_budget, &mut weight_budget).unwrap();
+        &mut asset_budget,
+        &mut weight_budget,
+    )
+    .unwrap();
     assert!(asset_budget.usage().bytes_read > 0);
     assert!(weight_budget.usage().bytes_read > 0);
     assert_eq!(worker.position(), 0);
@@ -67,13 +80,20 @@ pub fn load(fixture: &assets::Fixture, policy: &NativeHelperPolicy) -> NativeEva
 }
 
 pub fn tokenizer(fixture: &assets::Fixture) -> ByteBpe {
-    ByteBpe::from_bytes(&fixture.policy.decoder_profile,
-        &std::fs::read(fixture.root.join("tokenizer.bin")).unwrap()).unwrap()
+    ByteBpe::from_bytes(
+        &fixture.policy.decoder_profile,
+        &std::fs::read(fixture.root.join("tokenizer.bin")).unwrap(),
+    )
+    .unwrap()
 }
 
-pub fn admit(worker: &mut NativeEvaluator) -> Result<NativeEvaluationProgress, NativeEvaluationError> {
+pub fn admit(
+    worker: &mut NativeEvaluator,
+) -> Result<NativeEvaluationProgress, NativeEvaluationError> {
     for _ in 0..8192 {
-        if worker.status() == NativeEvaluationStatus::Running { return Ok(worker.progress()); }
+        if worker.status() == NativeEvaluationStatus::Running {
+            return Ok(worker.progress());
+        }
         let before = worker.progress();
         let progress = worker.advance(0)?;
         assert_eq!(progress.admission_steps, before.admission_steps + 1);
@@ -95,14 +115,18 @@ pub fn admit(worker: &mut NativeEvaluator) -> Result<NativeEvaluationProgress, N
     panic!("bounded original tokenizer did not terminate");
 }
 
-pub fn finish(worker: &mut NativeEvaluator) -> Result<NativeEvaluationProgress, NativeEvaluationError> {
+pub fn finish(
+    worker: &mut NativeEvaluator,
+) -> Result<NativeEvaluationProgress, NativeEvaluationError> {
     for _ in 0..2048 {
         let before = worker.progress();
         let progress = worker.advance(worker.position())?;
         assert_eq!(progress.work.decoder.tokens, before.work.decoder.tokens + 1);
         assert_eq!(progress.admission_steps, before.admission_steps);
         assert_eq!(progress.tokenization, before.tokenization);
-        if matches!(progress.status, NativeEvaluationStatus::Judged(_)) { return Ok(progress); }
+        if matches!(progress.status, NativeEvaluationStatus::Judged(_)) {
+            return Ok(progress);
+        }
         assert_eq!(progress.status, NativeEvaluationStatus::Running);
         assert!(worker.report().is_none());
     }

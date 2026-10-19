@@ -31,7 +31,9 @@ fn cooperative_native_evaluator_preserves_complete_binary_input_and_original_inf
         let packet = input(&bytes);
         assert_eq!(packet.actual_input().ordered_parts().len(), 3);
         assert_eq!(packet.actual_input().omissions().len(), 1);
-        let encoded = tokenizer(&fixture).encode(&bytes, fixture.policy.tokenization).unwrap();
+        let encoded = tokenizer(&fixture)
+            .encode(&bytes, fixture.policy.tokenization)
+            .unwrap();
         assert_eq!(encoded.tokens().len(), 83);
         assert_eq!(encoded.work().merges, 320);
         let mut original = load(&fixture, &fixture.policy);
@@ -48,9 +50,16 @@ fn cooperative_native_evaluator_preserves_complete_binary_input_and_original_inf
         assert_eq!(pending.tokenization.input_bytes, bytes.len());
         assert_eq!(pending.tokenization.pair_lookups, 0);
         assert_eq!(cooperative.input(), Some(&packet));
-        assert_eq!(cooperative.advance(1), Err(NativeEvaluationError::Contract(Error::Stale)));
+        assert_eq!(
+            cooperative.advance(1),
+            Err(NativeEvaluationError::Contract(Error::Stale))
+        );
         assert_eq!(cooperative.progress(), pending);
-        assert!(cooperative.begin_cooperative(&input(&prompt(b'!'))).is_err());
+        assert!(
+            cooperative
+                .begin_cooperative(&input(&prompt(b'!')))
+                .is_err()
+        );
         assert_eq!(cooperative.progress(), pending);
 
         let complete = admit(&mut cooperative).unwrap();
@@ -64,7 +73,10 @@ fn cooperative_native_evaluator_preserves_complete_binary_input_and_original_inf
         assert_eq!(result.work, expected.work);
         assert_eq!(result.tokenization, expected.tokenization);
         assert_eq!(result.reviewed_prompt_tokens, encoded.tokens().len());
-        assert_eq!(result.work.decoder.tokens, encoded.tokens().len() as u64 + 2);
+        assert_eq!(
+            result.work.decoder.tokens,
+            encoded.tokens().len() as u64 + 2
+        );
         assert_eq!(result.work.sampled_draws, 2);
         assert_eq!(result.finish, Some(GenerationFinish::StopToken));
         let report = cooperative.report().unwrap();
@@ -74,7 +86,10 @@ fn cooperative_native_evaluator_preserves_complete_binary_input_and_original_inf
         assert_eq!(report.prompt().spans(), encoded.spans());
         assert_eq!(report.prompt().source(), baseline.prompt().source());
         assert_eq!(report.generation().work(), baseline.generation().work());
-        assert_eq!(report.generation().last_review(), baseline.generation().last_review());
+        assert_eq!(
+            report.generation().last_review(),
+            baseline.generation().last_review()
+        );
         assert_eq!(report.bytes(), baseline.bytes());
         assert!(report.prefix_controls().is_empty());
         assert_eq!(cooperative.input(), Some(&packet));
@@ -88,20 +103,38 @@ fn cooperative_native_tokenizer_budgets_have_exact_success_and_one_short_refusal
     let bytes = prompt(b'?');
     let packet = input(&bytes);
     let tokenizer = tokenizer(&fixture);
-    let work = tokenizer.encode(&bytes, fixture.policy.tokenization).unwrap().work();
-    let exact = TokenizationBudget { input_bytes: bytes.len(),
-        pair_lookups: work.pair_lookups, heap_pops: work.heap_pops };
+    let work = tokenizer
+        .encode(&bytes, fixture.policy.tokenization)
+        .unwrap()
+        .work();
+    let exact = TokenizationBudget {
+        input_bytes: bytes.len(),
+        pair_lookups: work.pair_lookups,
+        heap_pops: work.heap_pops,
+    };
     let mut policy = fixture.policy.clone();
     policy.tokenization = exact;
     let mut valid = load(&fixture, &policy);
     valid.begin_cooperative(&packet).unwrap();
     assert_eq!(admit(&mut valid).unwrap().tokenization, work);
-    assert_eq!(finish(&mut valid).unwrap().status, NativeEvaluationStatus::Judged(Verdict::Allow));
+    assert_eq!(
+        finish(&mut valid).unwrap().status,
+        NativeEvaluationStatus::Judged(Verdict::Allow)
+    );
 
     for budget in [
-        TokenizationBudget { input_bytes: exact.input_bytes - 1, ..exact },
-        TokenizationBudget { pair_lookups: exact.pair_lookups - 1, ..exact },
-        TokenizationBudget { heap_pops: exact.heap_pops - 1, ..exact },
+        TokenizationBudget {
+            input_bytes: exact.input_bytes - 1,
+            ..exact
+        },
+        TokenizationBudget {
+            pair_lookups: exact.pair_lookups - 1,
+            ..exact
+        },
+        TokenizationBudget {
+            heap_pops: exact.heap_pops - 1,
+            ..exact
+        },
     ] {
         policy.tokenization = budget;
         let tokenizer_failure = tokenizer.encode(&bytes, budget).unwrap_err();
@@ -114,7 +147,10 @@ fn cooperative_native_tokenizer_budgets_have_exact_success_and_one_short_refusal
         };
         assert_eq!(error, expected);
         assert_eq!(cooperative.progress().tokenization, tokenizer_failure.work);
-        assert_eq!(cooperative.progress().tokenization, synchronous.progress().tokenization);
+        assert_eq!(
+            cooperative.progress().tokenization,
+            synchronous.progress().tokenization
+        );
         assert_eq!(cooperative.work(), NativeEvaluationWork::default());
         assert_eq!(cooperative.status(), NativeEvaluationStatus::Failed(error));
         assert!(cooperative.report().is_none());
@@ -134,7 +170,9 @@ fn cooperative_native_context_admission_uses_complete_tokenization_before_any_pr
     for length in [1022, 1023] {
         let bytes = vec![b'?'; length];
         let packet = input(&bytes);
-        let encoded = tokenizer(&fixture).encode(&bytes, fixture.policy.tokenization).unwrap();
+        let encoded = tokenizer(&fixture)
+            .encode(&bytes, fixture.policy.tokenization)
+            .unwrap();
         let mut synchronous = load(&fixture, &fixture.policy);
         let expected = synchronous.begin(&packet);
         let mut cooperative = load(&fixture, &fixture.policy);
@@ -145,8 +183,10 @@ fn cooperative_native_context_admission_uses_complete_tokenization_before_any_pr
             assert_eq!(observed.unwrap().status, NativeEvaluationStatus::Running);
         } else {
             assert_eq!(observed.unwrap_err(), expected.unwrap_err());
-            assert!(matches!(cooperative.status(), NativeEvaluationStatus::Failed(
-                NativeEvaluationError::Admission(_))));
+            assert!(matches!(
+                cooperative.status(),
+                NativeEvaluationStatus::Failed(NativeEvaluationError::Admission(_))
+            ));
         }
         assert_eq!(cooperative.progress().tokenization, encoded.work());
         assert_eq!(cooperative.work(), NativeEvaluationWork::default());
@@ -154,6 +194,9 @@ fn cooperative_native_context_admission_uses_complete_tokenization_before_any_pr
         let before = cooperative.progress();
         cooperative.cancel();
         assert_eq!(cooperative.progress().tokenization, before.tokenization);
-        assert_eq!(cooperative.progress().admission_steps, before.admission_steps);
+        assert_eq!(
+            cooperative.progress().admission_steps,
+            before.admission_steps
+        );
     }
 }

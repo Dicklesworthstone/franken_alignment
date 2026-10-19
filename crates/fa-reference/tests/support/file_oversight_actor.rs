@@ -1,19 +1,29 @@
 #![allow(dead_code, unused_imports)]
 #[path = "file_oversight.rs"]
 pub mod oversight;
-pub use oversight::{Directory, snapshot, profile};
-use fa_reference::action::consequence::delivery::persistent::observed::{FileOversight, FileHumanReviewer};
-use fa_reference::action::consequence::delivery::persistent::requests::{FileRequestDisposition, actor::{FileActorPort, FileActorSupervisor}};
+use fa_reference::action::consequence::delivery::persistent::observed::{
+    FileHumanReviewer, FileOversight,
+};
+use fa_reference::action::consequence::delivery::persistent::requests::{
+    FileRequestDisposition,
+    actor::{FileActorPort, FileActorSupervisor},
+};
 use fa_reference::action::consequence::oversight::actor::ActorProposal;
 use fa_reference::action::consequence::oversight::actor_wire::{Command, encode_command};
 use fa_reference::action::{ActionSpec, ElapsedTick};
+pub use oversight::{Directory, profile, snapshot};
 
 pub type Port = FileActorPort<FileOversight>;
 pub type Supervisor = FileActorSupervisor<FileOversight>;
 
 pub fn proposal(spec: &ActionSpec) -> ActorProposal {
-    ActorProposal { target: spec.target.unwrap(), payload: spec.payload.clone(), units: spec.units,
-        deadline: spec.deadline, expected_policy_epoch: spec.policy_epoch }
+    ActorProposal {
+        target: spec.target.unwrap(),
+        payload: spec.payload.clone(),
+        units: spec.units,
+        deadline: spec.deadline,
+        expected_policy_epoch: spec.policy_epoch,
+    }
 }
 pub fn create(root: &Directory) -> (Port, Supervisor, FileHumanReviewer, ActorProposal) {
     let (host, reviewer) = oversight::create(root);
@@ -26,7 +36,11 @@ pub fn observe(supervisor: &mut Supervisor) {
     supervisor.set_snapshot(revision, Some(snapshot())).unwrap();
 }
 pub fn submit_bytes(request: u64, proposal: &ActorProposal) -> Vec<u8> {
-    encode_command(&Command::Submit { request, proposal: proposal.clone() }).unwrap()
+    encode_command(&Command::Submit {
+        request,
+        proposal: proposal.clone(),
+    })
+    .unwrap()
 }
 pub fn attempt(host: &FileOversight, request: u64) -> u64 {
     match host.request_status(request).unwrap().disposition {
@@ -34,7 +48,11 @@ pub fn attempt(host: &FileOversight, request: u64) -> u64 {
         other => panic!("request not admitted: {other:?}"),
     }
 }
-pub fn ready(supervisor: &mut Supervisor, reviewer: &FileHumanReviewer, request: u64) -> oversight::Keys {
+pub fn ready(
+    supervisor: &mut Supervisor,
+    reviewer: &FileHumanReviewer,
+    request: u64,
+) -> oversight::Keys {
     let mut host = supervisor.host_mut().unwrap();
     let id = attempt(&host, request);
     let action = host.request_action(request).unwrap().clone();
@@ -43,8 +61,16 @@ pub fn ready(supervisor: &mut Supervisor, reviewer: &FileHumanReviewer, request:
     let revision = host.revision();
     let automatic = host.authorize(revision, id, &inputs, snapshot()).unwrap();
     let revision = host.revision();
-    let request = host.request_human_approval(revision, request + 1000, id, &inputs, ElapsedTick(31)).unwrap();
+    let request = host
+        .request_human_approval(revision, request + 1000, id, &inputs, ElapsedTick(31))
+        .unwrap();
     let revision = host.revision();
     let human = reviewer.approve(&mut host, revision, &request).unwrap();
-    oversight::Keys { action, inputs, automatic, human, request }
+    oversight::Keys {
+        action,
+        inputs,
+        automatic,
+        human,
+        request,
+    }
 }

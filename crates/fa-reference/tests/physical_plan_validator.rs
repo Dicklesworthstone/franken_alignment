@@ -117,9 +117,11 @@ fn closed_frontiers() -> (ProductFrontiers, FrontierRequirement) {
         marker_generation: 43,
     };
     let mut frontiers = ProductFrontiers::new(2, 8).expect("bounded frontiers");
-    frontiers
-        .accept(key, FrontierStage::Authenticated, 5)
-        .expect("authenticated prefix");
+    for seq in 1..=5 {
+        frontiers
+            .accept(key, FrontierStage::Authenticated, seq)
+            .expect("authenticated prefix");
+    }
     frontiers.record_close(marker).expect("closed marker");
     let req = FrontierRequirement {
         key,
@@ -278,9 +280,7 @@ fn valid_multi_branch_plan_rehearses_exact_lookup_refinement_checkpoint_decode_a
         // 8: JoinEvidence (combining refined witness branch 5 and exact lookup branch 7)
         PhysicalPlanNode {
             node_id: 9,
-            operator: PhysicalOperatorKind::JoinEvidence {
-                inputs: vec![5, 7],
-            },
+            operator: PhysicalOperatorKind::JoinEvidence { inputs: vec![5, 7] },
             context: ctx(
                 RequirementClass::JoinedEvidence,
                 UncertaintyClass::Exact,
@@ -328,7 +328,11 @@ fn valid_multi_branch_plan_rehearses_exact_lookup_refinement_checkpoint_decode_a
     };
 
     let outcome = validate_physical_plan(&plan).expect("valid plan must rehearse cleanly");
-    let Knowledge::Known { value: summary, basis } = outcome else {
+    let Knowledge::Known {
+        value: summary,
+        basis,
+    } = outcome
+    else {
         panic!("expected Known rehearsal summary, got {outcome:?}");
     };
     assert!(summary.is_rehearsal_only());
@@ -357,7 +361,12 @@ fn rejects_ann_for_absence_in_lookup_and_discovery_nodes() {
                 source_generation: 29,
                 bytes: 16,
             },
-            context: ctx(RequirementClass::Capture, UncertaintyClass::Exact, vec![], vec![]),
+            context: ctx(
+                RequirementClass::Capture,
+                UncertaintyClass::Exact,
+                vec![],
+                vec![],
+            ),
         },
         PhysicalPlanNode {
             node_id: 2,
@@ -368,7 +377,12 @@ fn rejects_ann_for_absence_in_lookup_and_discovery_nodes() {
                     projection_id: 31,
                 },
             },
-            context: ctx(RequirementClass::Projection, UncertaintyClass::Exact, vec![], vec![]),
+            context: ctx(
+                RequirementClass::Projection,
+                UncertaintyClass::Exact,
+                vec![],
+                vec![],
+            ),
         },
         PhysicalPlanNode {
             node_id: 3,
@@ -377,7 +391,12 @@ fn rejects_ann_for_absence_in_lookup_and_discovery_nodes() {
                 requirement: closed_req,
                 claim_closed_prefix: true,
             },
-            context: ctx(RequirementClass::Prefix, UncertaintyClass::Exact, vec![], vec![]),
+            context: ctx(
+                RequirementClass::Prefix,
+                UncertaintyClass::Exact,
+                vec![],
+                vec![],
+            ),
         },
         PhysicalPlanNode {
             node_id: 4,
@@ -390,7 +409,12 @@ fn rejects_ann_for_absence_in_lookup_and_discovery_nodes() {
                 },
                 verifier_law: LawDeclaration::new(41, 29, 4, 3).expect("law"),
             },
-            context: ctx(RequirementClass::ExactObject, UncertaintyClass::Exact, vec![], vec![]),
+            context: ctx(
+                RequirementClass::ExactObject,
+                UncertaintyClass::Exact,
+                vec![],
+                vec![],
+            ),
         },
         PhysicalPlanNode {
             node_id: 5,
@@ -415,7 +439,12 @@ fn rejects_ann_for_absence_in_lookup_and_discovery_nodes() {
                 closed_scope: Some(4),
                 require_absence_proof: true,
             },
-            context: ctx(RequirementClass::ExactLookup, UncertaintyClass::Exact, vec![], vec![]),
+            context: ctx(
+                RequirementClass::ExactLookup,
+                UncertaintyClass::Exact,
+                vec![],
+                vec![],
+            ),
         },
     ];
     let plan = PhysicalPlan {
@@ -458,7 +487,12 @@ fn rejects_lossy_decode_for_exact_restart_checkpoint() {
                 source_generation: 29,
                 bytes: 16,
             },
-            context: ctx(RequirementClass::Capture, UncertaintyClass::Exact, vec![], vec![]),
+            context: ctx(
+                RequirementClass::Capture,
+                UncertaintyClass::Exact,
+                vec![],
+                vec![],
+            ),
         },
         PhysicalPlanNode {
             node_id: 2,
@@ -469,7 +503,12 @@ fn rejects_lossy_decode_for_exact_restart_checkpoint() {
                     projection_id: 31,
                 },
             },
-            context: ctx(RequirementClass::Projection, UncertaintyClass::Exact, vec![], vec![]),
+            context: ctx(
+                RequirementClass::Projection,
+                UncertaintyClass::Exact,
+                vec![],
+                vec![],
+            ),
         },
         PhysicalPlanNode {
             node_id: 3,
@@ -478,7 +517,12 @@ fn rejects_lossy_decode_for_exact_restart_checkpoint() {
                 requirement: closed_req,
                 claim_closed_prefix: true,
             },
-            context: ctx(RequirementClass::Prefix, UncertaintyClass::Exact, vec![], vec![]),
+            context: ctx(
+                RequirementClass::Prefix,
+                UncertaintyClass::Exact,
+                vec![],
+                vec![],
+            ),
         },
         PhysicalPlanNode {
             node_id: 4,
@@ -491,7 +535,12 @@ fn rejects_lossy_decode_for_exact_restart_checkpoint() {
                 },
                 verifier_law: LawDeclaration::new(41, 29, 4, 3).expect("law"),
             },
-            context: ctx(RequirementClass::ExactObject, UncertaintyClass::Exact, vec![], vec![]),
+            context: ctx(
+                RequirementClass::ExactObject,
+                UncertaintyClass::Exact,
+                vec![],
+                vec![],
+            ),
         },
         PhysicalPlanNode {
             node_id: 5,
@@ -550,7 +599,12 @@ fn rejects_premature_prefix_closure_while_open_prefix_returns_pending() {
                 source_generation: 29,
                 bytes: 16,
             },
-            context: ctx(RequirementClass::Capture, UncertaintyClass::Exact, vec![], vec![]),
+            context: ctx(
+                RequirementClass::Capture,
+                UncertaintyClass::Exact,
+                vec![],
+                vec![],
+            ),
         },
         PhysicalPlanNode {
             node_id: 2,
@@ -561,7 +615,12 @@ fn rejects_premature_prefix_closure_while_open_prefix_returns_pending() {
                     projection_id: 31,
                 },
             },
-            context: ctx(RequirementClass::Projection, UncertaintyClass::Exact, vec![], vec![]),
+            context: ctx(
+                RequirementClass::Projection,
+                UncertaintyClass::Exact,
+                vec![],
+                vec![],
+            ),
         },
         PhysicalPlanNode {
             node_id: 3,
@@ -570,7 +629,12 @@ fn rejects_premature_prefix_closure_while_open_prefix_returns_pending() {
                 requirement: unclosed_req,
                 claim_closed_prefix: true,
             },
-            context: ctx(RequirementClass::Prefix, UncertaintyClass::Exact, vec![], vec![]),
+            context: ctx(
+                RequirementClass::Prefix,
+                UncertaintyClass::Exact,
+                vec![],
+                vec![],
+            ),
         },
     ];
     let premature_plan = PhysicalPlan {
@@ -619,7 +683,12 @@ fn rejects_missing_authorization_unclosed_stream_and_unsatisfied_fallback() {
                 source_generation: 29,
                 bytes: 8,
             },
-            context: ctx(RequirementClass::Capture, UncertaintyClass::Exact, vec![], vec![]),
+            context: ctx(
+                RequirementClass::Capture,
+                UncertaintyClass::Exact,
+                vec![],
+                vec![],
+            ),
         }],
         root: 0,
         granted_authority: AuthorityRequirements::new(vec![AuthorityKind::Project]).unwrap(),
@@ -645,7 +714,12 @@ fn rejects_missing_authorization_unclosed_stream_and_unsatisfied_fallback() {
                 closed_scope: None,
                 require_absence_proof: true,
             },
-            context: ctx(RequirementClass::ExactLookup, UncertaintyClass::Exact, vec![], vec![]),
+            context: ctx(
+                RequirementClass::ExactLookup,
+                UncertaintyClass::Exact,
+                vec![],
+                vec![],
+            ),
         }],
         root: 0,
         granted_authority: all_authorities(),
@@ -667,7 +741,12 @@ fn rejects_missing_authorization_unclosed_stream_and_unsatisfied_fallback() {
                 source_generation: 29,
                 bytes: 16,
             },
-            context: ctx(RequirementClass::Capture, UncertaintyClass::Exact, vec![], vec![]),
+            context: ctx(
+                RequirementClass::Capture,
+                UncertaintyClass::Exact,
+                vec![],
+                vec![],
+            ),
         },
         PhysicalPlanNode {
             node_id: 2,
@@ -678,7 +757,12 @@ fn rejects_missing_authorization_unclosed_stream_and_unsatisfied_fallback() {
                     projection_id: 31,
                 },
             },
-            context: ctx(RequirementClass::Projection, UncertaintyClass::Exact, vec![], vec![]),
+            context: ctx(
+                RequirementClass::Projection,
+                UncertaintyClass::Exact,
+                vec![],
+                vec![],
+            ),
         },
         PhysicalPlanNode {
             node_id: 3,
@@ -687,7 +771,12 @@ fn rejects_missing_authorization_unclosed_stream_and_unsatisfied_fallback() {
                 requirement: closed_req,
                 claim_closed_prefix: true,
             },
-            context: ctx(RequirementClass::Prefix, UncertaintyClass::Exact, vec![], vec![]),
+            context: ctx(
+                RequirementClass::Prefix,
+                UncertaintyClass::Exact,
+                vec![],
+                vec![],
+            ),
         },
         PhysicalPlanNode {
             node_id: 4,
@@ -700,7 +789,12 @@ fn rejects_missing_authorization_unclosed_stream_and_unsatisfied_fallback() {
                 },
                 verifier_law: LawDeclaration::new(41, 29, 4, 3).expect("law"),
             },
-            context: ctx(RequirementClass::ExactObject, UncertaintyClass::Exact, vec![], vec![]),
+            context: ctx(
+                RequirementClass::ExactObject,
+                UncertaintyClass::Exact,
+                vec![],
+                vec![],
+            ),
         },
         PhysicalPlanNode {
             node_id: 5,
@@ -783,7 +877,12 @@ fn rejects_cycles_duplicate_ids_privacy_escape_and_envelope_exhaustion() {
                     projection_id: 31,
                 },
             },
-            context: ctx(RequirementClass::Projection, UncertaintyClass::Exact, vec![], vec![]),
+            context: ctx(
+                RequirementClass::Projection,
+                UncertaintyClass::Exact,
+                vec![],
+                vec![],
+            ),
         }],
         root: 0,
         granted_authority: all_authorities(),
@@ -843,7 +942,12 @@ fn rejects_cycles_duplicate_ids_privacy_escape_and_envelope_exhaustion() {
                 source_generation: 29,
                 bytes: 32,
             },
-            context: ctx(RequirementClass::Capture, UncertaintyClass::Exact, vec![], vec![]),
+            context: ctx(
+                RequirementClass::Capture,
+                UncertaintyClass::Exact,
+                vec![],
+                vec![],
+            ),
         }],
         root: 0,
         granted_authority: all_authorities(),

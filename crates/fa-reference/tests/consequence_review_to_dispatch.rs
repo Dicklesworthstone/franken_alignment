@@ -1,9 +1,7 @@
 //! End-to-end reference composition; no real effects or cryptographic claims.
 
 use fa_reference::action::consequence::Consequence;
-use fa_reference::action::consequence::congress::{
-    CongressPolicy, MemberPolicy, evaluate_round,
-};
+use fa_reference::action::consequence::congress::{CongressPolicy, MemberPolicy, evaluate_round};
 use fa_reference::action::consequence::gate::ConsequenceAuthority;
 use fa_reference::action::{
     ActionSpec, ActionState, ElapsedTick, FrozenAction, Purpose, ResolvedTarget, Scope, VERSION,
@@ -123,7 +121,10 @@ fn complete_round_reaches_dispatch_only_after_normal_authorization() {
     let permit = gate.authorize(1, &judgment, &snapshot).unwrap();
     gate.dispatch(&permit, &action, &snapshot).unwrap();
     assert_eq!(gate.inspect().ledger.charged, 4);
-    assert_eq!(gate.dispatch(&permit, &action, &snapshot), Err(Error::WrongState));
+    assert_eq!(
+        gate.dispatch(&permit, &action, &snapshot),
+        Err(Error::WrongState)
+    );
 }
 
 #[test]
@@ -135,7 +136,10 @@ fn late_reveal_requires_new_round_instead_of_rewriting_an_applied_hold() {
     let request = evaluation.into_request(1, 0, action.clone(), None);
     let receipt = gate.apply_review(request).unwrap();
     assert_eq!(receipt.decision.consequence, Consequence::HoldEffect);
-    assert_eq!(gate.authorize(1, &judgment, &snapshot).unwrap_err(), Error::WrongState);
+    assert_eq!(
+        gate.authorize(1, &judgment, &snapshot).unwrap_err(),
+        Error::WrongState
+    );
     frozen.reveal("bob", Verdict::Allow, b"salt").unwrap();
     let evaluation = evaluate_round(&frozen, &policy(), false, false).unwrap();
     let request = evaluation.into_request(1, 1, action.clone(), None);
@@ -155,7 +159,10 @@ fn unanimous_empirical_approval_cannot_override_an_exact_disqualifier() {
     gate.apply_review(request).unwrap();
     assert_eq!(gate.inspect().ledger.stages[&1], ActionState::Denied);
     assert_eq!(gate.inspect().ledger.available, 10);
-    assert_eq!(gate.authorize(1, &judgment, &snapshot).unwrap_err(), Error::WrongState);
+    assert_eq!(
+        gate.authorize(1, &judgment, &snapshot).unwrap_err(),
+        Error::WrongState
+    );
 }
 
 #[test]

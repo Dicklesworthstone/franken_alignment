@@ -1,13 +1,13 @@
 mod support {
     pub mod native_andon;
 }
-use support::native_andon::*;
+use fa_reference::Error;
 use fa_reference::action::ElapsedTick;
 use fa_reference::action::consequence::oversight::credibility::GroundTruth;
 use fa_reference::round::Verdict;
 use fa_reference::round::review::andon::{AndonBudget, AndonLedger};
-use fa_reference::Error;
 use std::collections::BTreeMap;
+use support::native_andon::*;
 
 #[test]
 fn accepted_native_label_emits_original_case_and_charges_without_authority_change() {
@@ -25,8 +25,17 @@ fn accepted_native_label_emits_original_case_and_charges_without_authority_chang
     assert_eq!(receipt.budget(), budget());
     assert_eq!(receipt.case(), host.evaluation_ticket(101).unwrap().case());
     assert_eq!(receipt.assessment().truth, GroundTruth::Benign);
-    assert_eq!(receipt.confirmation().helper_generations, BTreeMap::from([("a".into(), 11)]));
-    assert_eq!((receipt.confirmation().occurred_at, receipt.confirmation().confirmed_at), (10, 30));
+    assert_eq!(
+        receipt.confirmation().helper_generations,
+        BTreeMap::from([("a".into(), 11)])
+    );
+    assert_eq!(
+        (
+            receipt.confirmation().occurred_at,
+            receipt.confirmation().confirmed_at
+        ),
+        (10, 30)
+    );
     let window = &host.andon_ledger().unwrap().windows()[&1];
     assert_eq!((window.false_stops, window.total_cost), (1, 7));
     assert_eq!(window.incident.as_ref().unwrap().opened_by_round, 101);
@@ -42,11 +51,15 @@ fn foreign_evaluator_cannot_charge_or_record_but_corrected_label_succeeds() {
     apply(&mut foreign, 1, 10, [Verdict::Hold, Verdict::Allow]);
     let before = host.credibility_report().unwrap();
     let accounting = host.andon_ledger().unwrap().clone();
-    assert_eq!(host.record_evaluation(label(&foreign, &foreign_evaluator, 1, GroundTruth::Benign)), Err(Error::Binding));
+    assert_eq!(
+        host.record_evaluation(label(&foreign, &foreign_evaluator, 1, GroundTruth::Benign)),
+        Err(Error::Binding)
+    );
     assert_eq!(host.credibility_report().unwrap(), before);
     assert_eq!(host.andon_ledger().unwrap(), &accounting);
     assert!(host.evaluation_history(101).unwrap().is_empty());
-    host.record_evaluation(label(&host, &evaluator, 1, GroundTruth::Benign)).unwrap();
+    host.record_evaluation(label(&host, &evaluator, 1, GroundTruth::Benign))
+        .unwrap();
     assert_eq!(host.andon_ledger().unwrap().windows()[&1].false_stops, 1);
 }
 
@@ -55,7 +68,8 @@ fn native_censor_resolution_and_exact_retry_retain_first_confirmation_clock() {
     let (mut host, evaluator, _) = setup(0);
     host.enable_andon(accounting()).unwrap();
     apply(&mut host, 1, 10, [Verdict::Hold, Verdict::Allow]);
-    host.record_evaluation(label(&host, &evaluator, 1, GroundTruth::Censored)).unwrap();
+    host.record_evaluation(label(&host, &evaluator, 1, GroundTruth::Censored))
+        .unwrap();
     assert_eq!(host.andon_receipt(101), Err(Error::Missing));
     assert_eq!(host.andon_ledger().unwrap().windows()[&1].false_stops, 0);
     let truth = label(&host, &evaluator, 1, GroundTruth::Benign);
@@ -75,7 +89,13 @@ fn native_censor_resolution_and_exact_retry_retain_first_confirmation_clock() {
 fn uncovered_occurrence_refuses_both_updates_and_adding_window_allows_same_label() {
     let (mut host, evaluator, _) = setup(0);
     let mut seed = AndonLedger::new(identity()).unwrap();
-    seed.register_window(AndonBudget { window: 2, start: 20, end: 40, ..budget() }).unwrap();
+    seed.register_window(AndonBudget {
+        window: 2,
+        start: 20,
+        end: 40,
+        ..budget()
+    })
+    .unwrap();
     host.enable_andon(seed).unwrap();
     apply(&mut host, 1, 10, [Verdict::Hold, Verdict::Allow]);
     host.observe_time(ElapsedTick(30)).unwrap();
@@ -105,7 +125,8 @@ fn ready_minority_abstaining_and_confirmed_violations_do_not_charge_native_andon
         host.enable_andon(accounting()).unwrap();
         apply(&mut host, 1, 10, verdicts);
         let control = host.inspect();
-        host.record_evaluation(label(&host, &evaluator, 1, truth)).unwrap();
+        host.record_evaluation(label(&host, &evaluator, 1, truth))
+            .unwrap();
         assert_eq!(host.inspect(), control);
         assert_eq!(host.andon_receipt(101), Err(Error::Missing));
         assert_eq!(host.andon_ledger().unwrap().windows()[&1].false_stops, 0);
@@ -130,33 +151,66 @@ fn recovered_seed_retains_old_accounting_without_claiming_to_recreate_receipts()
     let (mut old, evaluator, _) = setup(0);
     old.enable_andon(accounting()).unwrap();
     apply(&mut old, 1, 10, [Verdict::Hold, Verdict::Allow]);
-    old.record_evaluation(label(&old, &evaluator, 1, GroundTruth::Benign)).unwrap();
+    old.record_evaluation(label(&old, &evaluator, 1, GroundTruth::Benign))
+        .unwrap();
     let old_receipt = old.andon_receipt(101).unwrap().clone();
     let seed = old.andon_ledger().unwrap().clone();
     let (mut next, evaluator, _) = setup(0);
     next.enable_andon(seed).unwrap();
-    next.register_andon_window(AndonBudget { window: 2, start: 20, end: 40, ..budget() }).unwrap();
+    next.register_andon_window(AndonBudget {
+        window: 2,
+        start: 20,
+        end: 40,
+        ..budget()
+    })
+    .unwrap();
     apply(&mut next, 2, 30, [Verdict::Allow, Verdict::Hold]);
-    next.record_evaluation(label(&next, &evaluator, 2, GroundTruth::Benign)).unwrap();
-    assert_eq!(next.andon_ledger().unwrap().confirmation(101), Some(old_receipt.confirmation()));
+    next.record_evaluation(label(&next, &evaluator, 2, GroundTruth::Benign))
+        .unwrap();
+    assert_eq!(
+        next.andon_ledger().unwrap().confirmation(101),
+        Some(old_receipt.confirmation())
+    );
     assert_eq!(next.andon_ledger().unwrap().windows()[&1].false_stops, 1);
     assert_eq!(next.andon_ledger().unwrap().windows()[&2].false_stops, 1);
     assert_eq!(next.andon_receipt(101), Err(Error::Missing));
-    assert_eq!(next.andon_receipt(102).unwrap().confirmation().helper_generations, BTreeMap::from([("b".into(), 22)]));
+    assert_eq!(
+        next.andon_receipt(102)
+            .unwrap()
+            .confirmation()
+            .helper_generations,
+        BTreeMap::from([("b".into(), 22)])
+    );
 }
 
 #[test]
 fn bootstrap_and_window_changes_cannot_reconfigure_prior_accounting() {
     let (mut host, evaluator, _) = setup(0);
-    assert_eq!(host.enable_andon(AndonLedger::new(identity()).unwrap()), Err(Error::Incomplete));
+    assert_eq!(
+        host.enable_andon(AndonLedger::new(identity()).unwrap()),
+        Err(Error::Incomplete)
+    );
     let binding = host.enable_andon(accounting()).unwrap();
     assert_eq!(host.enable_andon(accounting()), Err(Error::Duplicate));
     apply(&mut host, 1, 10, [Verdict::Hold, Verdict::Allow]);
-    host.record_evaluation(label(&host, &evaluator, 1, GroundTruth::Benign)).unwrap();
+    host.record_evaluation(label(&host, &evaluator, 1, GroundTruth::Benign))
+        .unwrap();
     let before = host.andon_ledger().unwrap().clone();
     assert_eq!(host.register_andon_window(budget()), Ok(false));
-    assert_eq!(host.register_andon_window(AndonBudget { false_stops_allowed: 1000, ..budget() }), Err(Error::Binding));
-    assert_eq!(host.register_andon_window(AndonBudget { window: 2, ..budget() }), Err(Error::Binding));
+    assert_eq!(
+        host.register_andon_window(AndonBudget {
+            false_stops_allowed: 1000,
+            ..budget()
+        }),
+        Err(Error::Binding)
+    );
+    assert_eq!(
+        host.register_andon_window(AndonBudget {
+            window: 2,
+            ..budget()
+        }),
+        Err(Error::Binding)
+    );
     assert_eq!(host.enable_andon(accounting()), Err(Error::WrongState));
     assert_eq!(host.andon_ledger().unwrap(), &before);
     assert_eq!(host.andon_binding().unwrap(), &binding);

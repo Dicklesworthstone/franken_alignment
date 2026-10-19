@@ -1,7 +1,7 @@
 use fa_reference::action::congress::CongressAuthority;
 use fa_reference::action::{
-    ActionSpec, ActionState, ElapsedTick, FrozenAction, Purpose, ResolvedTarget, Scope, TrustedOutcome,
-    VERSION,
+    ActionSpec, ActionState, ElapsedTick, FrozenAction, Purpose, ResolvedTarget, Scope,
+    TrustedOutcome, VERSION,
 };
 use fa_reference::reducer::Caps;
 use fa_reference::round::review::{ExactStatus, Member, Requirements, ReviewPolicy};
@@ -104,13 +104,17 @@ fn committed(authority: &mut CongressAuthority, id: u64) {
         authority.commit(id, member, digest).unwrap();
     }
     authority.open_reveals(id).unwrap();
-    authority.reveal(id, "alice", Verdict::Allow, b"salt").unwrap();
+    authority
+        .reveal(id, "alice", Verdict::Allow, b"salt")
+        .unwrap();
 }
 
 fn ready(authority: &mut CongressAuthority, id: u64, action: FrozenAction) {
     start(authority, id, action);
     committed(authority, id);
-    authority.reveal(id, "bob", Verdict::Allow, b"salt").unwrap();
+    authority
+        .reveal(id, "bob", Verdict::Allow, b"salt")
+        .unwrap();
 }
 
 const EVIDENCE: &[u8] = b"whole declared helper input";
@@ -136,7 +140,9 @@ fn reviewed_action_reserves_dispatches_and_confirms_once() {
         Err(Error::WrongState)
     );
     assert_eq!(authority.inspect(), before);
-    authority.record_trusted_outcome(7, TrustedOutcome::Executed).unwrap();
+    authority
+        .record_trusted_outcome(7, TrustedOutcome::Executed)
+        .unwrap();
     assert_eq!(authority.inspect().stages[&7], ActionState::Confirmed);
     assert_eq!(authority.inspect().charged, 3);
 }
@@ -221,15 +227,33 @@ fn dispatch_rechecks_action_evidence_and_exact_status_without_refunding() {
         Err(Error::Binding)
     );
     assert_eq!(
-        authority.dispatch(&permit, &action, &snapshot(), b"changed", ExactStatus::Clear),
+        authority.dispatch(
+            &permit,
+            &action,
+            &snapshot(),
+            b"changed",
+            ExactStatus::Clear
+        ),
         Err(Error::Binding)
     );
     assert_eq!(
-        authority.dispatch(&permit, &action, &snapshot(), EVIDENCE, ExactStatus::Unknown),
+        authority.dispatch(
+            &permit,
+            &action,
+            &snapshot(),
+            EVIDENCE,
+            ExactStatus::Unknown
+        ),
         Err(Error::Incomplete)
     );
     assert_eq!(
-        authority.dispatch(&permit, &action, &snapshot(), EVIDENCE, ExactStatus::Disqualified),
+        authority.dispatch(
+            &permit,
+            &action,
+            &snapshot(),
+            EVIDENCE,
+            ExactStatus::Disqualified
+        ),
         Err(Error::Binding)
     );
     assert_eq!(authority.inspect(), before);
@@ -278,12 +302,20 @@ fn unknown_effect_is_not_refunded_by_cancellation_or_a_later_hold() {
     let before = authority.inspect();
     assert_eq!(authority.cancel(7), Err(Error::WrongState));
     assert_eq!(
-        authority.dispatch(&permit, &action, &snapshot(), EVIDENCE, ExactStatus::Unknown),
+        authority.dispatch(
+            &permit,
+            &action,
+            &snapshot(),
+            EVIDENCE,
+            ExactStatus::Unknown
+        ),
         Err(Error::Incomplete)
     );
     assert_eq!(authority.inspect(), before);
     assert_eq!(before.charged, 3);
-    authority.record_trusted_outcome(7, TrustedOutcome::NotExecuted).unwrap();
+    authority
+        .record_trusted_outcome(7, TrustedOutcome::NotExecuted)
+        .unwrap();
     assert_eq!(authority.inspect().available, 10);
 }
 
@@ -302,12 +334,24 @@ fn cloned_transcripts_do_not_transfer_a_permit_between_authorities() {
         .unwrap();
     let before = second.inspect();
     assert_eq!(
-        second.dispatch(&first_permit, &action, &snapshot(), EVIDENCE, ExactStatus::Clear),
+        second.dispatch(
+            &first_permit,
+            &action,
+            &snapshot(),
+            EVIDENCE,
+            ExactStatus::Clear
+        ),
         Err(Error::Binding)
     );
     assert_eq!(second.inspect(), before);
     second
-        .dispatch(&second_permit, &action, &snapshot(), EVIDENCE, ExactStatus::Clear)
+        .dispatch(
+            &second_permit,
+            &action,
+            &snapshot(),
+            EVIDENCE,
+            ExactStatus::Clear,
+        )
         .unwrap();
 }
 
@@ -346,7 +390,12 @@ fn exact_binding_capacity_is_accepted_and_one_over_never_inserts_an_attempt() {
         .propose(7, action(3), &snapshot(), &exact_evidence)
         .unwrap();
     assert_eq!(
-        accepted.review(7).unwrap().transcript().evidence_root().len(),
+        accepted
+            .review(7)
+            .unwrap()
+            .transcript()
+            .evidence_root()
+            .len(),
         fa_reference::round::MAX_FIELD_LEN
     );
     accepted.prepare(7).unwrap();

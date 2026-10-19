@@ -1,14 +1,19 @@
-use super::{assets, fixture::{frame, input, load, prompt, tokenizer}};
+use super::{
+    assets,
+    fixture::{frame, input, load, prompt, tokenizer},
+};
 use fa_reference::action::consequence::oversight::helper_client::{
     ClientInterest, ClientPhase, ClientProgress,
-    native::{NativeEvaluationStatus, NativeEvaluationWork, NativeEvaluator,
-        peer::{NativeClientError, NativeClientProgress, NativeHelperClient}},
+    native::{
+        NativeEvaluationStatus, NativeEvaluationWork, NativeEvaluator,
+        peer::{NativeClientError, NativeClientProgress, NativeHelperClient},
+    },
 };
+use fa_reference::round::Verdict;
 use std::cell::RefCell;
 use std::collections::VecDeque;
 use std::io::{self, Read, Write};
 use std::rc::Rc;
-use fa_reference::round::Verdict;
 
 #[derive(Default)]
 struct Wire {
@@ -22,9 +27,13 @@ impl Read for Stream {
     fn read(&mut self, bytes: &mut [u8]) -> io::Result<usize> {
         let mut wire = self.0.borrow_mut();
         wire.reads += 1;
-        if wire.input.is_empty() { return Err(io::ErrorKind::WouldBlock.into()); }
+        if wire.input.is_empty() {
+            return Err(io::ErrorKind::WouldBlock.into());
+        }
         let count = bytes.len().min(wire.input.len()).min(17);
-        for byte in &mut bytes[..count] { *byte = wire.input.pop_front().unwrap(); }
+        for byte in &mut bytes[..count] {
+            *byte = wire.input.pop_front().unwrap();
+        }
         Ok(count)
     }
 }
@@ -36,16 +45,28 @@ impl Write for Stream {
         wire.output.extend_from_slice(&bytes[..count]);
         Ok(count)
     }
-    fn flush(&mut self) -> io::Result<()> { Ok(()) }
+    fn flush(&mut self) -> io::Result<()> {
+        Ok(())
+    }
 }
-fn client(bytes: &[u8], evaluator: NativeEvaluator) -> (NativeHelperClient<Stream>, Rc<RefCell<Wire>>) {
-    let wire = Rc::new(RefCell::new(Wire { input: frame(bytes).into(), ..Wire::default() }));
-    let client = NativeHelperClient::new(Stream(Rc::clone(&wire)), evaluator, assets::SALT.to_vec()).unwrap();
+fn client(
+    bytes: &[u8],
+    evaluator: NativeEvaluator,
+) -> (NativeHelperClient<Stream>, Rc<RefCell<Wire>>) {
+    let wire = Rc::new(RefCell::new(Wire {
+        input: frame(bytes).into(),
+        ..Wire::default()
+    }));
+    let client =
+        NativeHelperClient::new(Stream(Rc::clone(&wire)), evaluator, assets::SALT.to_vec())
+            .unwrap();
     (client, wire)
 }
 fn until(client: &mut NativeHelperClient<Stream>, phase: ClientPhase) {
     for _ in 0..4096 {
-        if client.phase() == phase { return; }
+        if client.phase() == phase {
+            return;
+        }
         client.step_cooperative().unwrap();
     }
     panic!("bounded peer did not reach {phase:?}");
@@ -57,14 +78,18 @@ fn cooperative_native_peer_yields_before_prefill_and_keeps_original_commit_revea
     for (last, verdict) in [(b'?', Verdict::Allow), (b'!', Verdict::Deny)] {
         let bytes = prompt(last);
         let packet = input(&bytes);
-        let encoded = tokenizer(&fixture).encode(&bytes, fixture.policy.tokenization).unwrap();
+        let encoded = tokenizer(&fixture)
+            .encode(&bytes, fixture.policy.tokenization)
+            .unwrap();
         let (mut worker, wire) = client(&bytes, load(&fixture, &fixture.policy));
         until(&mut worker, ClientPhase::NeedsInference);
         assert_eq!(worker.evaluations(), 0);
         assert_eq!(worker.input(), Some(&packet));
         let reads = wire.borrow().reads;
         let first = worker.step_cooperative().unwrap();
-        let NativeClientProgress::Inference(first) = first else { panic!("expected original admission"); };
+        let NativeClientProgress::Inference(first) = first else {
+            panic!("expected original admission");
+        };
         assert_eq!(first.status, NativeEvaluationStatus::Admitting);
         assert_eq!(first.admission_steps, 256);
         assert_eq!(first.tokenization.pair_lookups, 256);
@@ -78,10 +103,15 @@ fn cooperative_native_peer_yields_before_prefill_and_keeps_original_commit_revea
         assert_eq!(next.steps, 1);
         assert_eq!(next.evaluations, 0);
         assert_eq!(worker.evaluation_progress().admission_steps, 512);
-        assert_eq!(worker.evaluation_progress().status, NativeEvaluationStatus::Admitting);
+        assert_eq!(
+            worker.evaluation_progress().status,
+            NativeEvaluationStatus::Admitting
+        );
         assert!(worker.evaluation_progress().tokenization.merges > 0);
         for _ in 0..32 {
-            if worker.evaluation_progress().status == NativeEvaluationStatus::Running { break; }
+            if worker.evaluation_progress().status == NativeEvaluationStatus::Running {
+                break;
+            }
             let before = worker.evaluation_progress();
             let NativeClientProgress::Inference(after) = worker.step_cooperative().unwrap() else {
                 panic!("tokenization emitted an early vote");
@@ -100,8 +130,14 @@ fn cooperative_native_peer_yields_before_prefill_and_keeps_original_commit_revea
         assert!(wire.borrow().output.is_empty());
 
         until(&mut worker, ClientPhase::SendingCommitment);
-        assert_eq!(worker.evaluation_progress().status, NativeEvaluationStatus::Judged(verdict));
-        assert_eq!(worker.evaluation_progress().work.decoder.tokens, encoded.tokens().len() as u64 + 2);
+        assert_eq!(
+            worker.evaluation_progress().status,
+            NativeEvaluationStatus::Judged(verdict)
+        );
+        assert_eq!(
+            worker.evaluation_progress().work.decoder.tokens,
+            encoded.tokens().len() as u64 + 2
+        );
         assert_eq!(worker.sampled_draws(), 2);
         assert_eq!(worker.evaluations(), 1);
         let report = worker.report().unwrap();
@@ -115,12 +151,18 @@ fn cooperative_native_peer_yields_before_prefill_and_keeps_original_commit_revea
         let reveal = packet.reveal_frame(verdict, assets::SALT).unwrap();
         assert_eq!(wire.borrow().output, commitment);
         let completed = worker.evaluation_progress();
-        assert_eq!(worker.step_cooperative(), Ok(NativeClientProgress::Protocol(ClientProgress::Blocked)));
+        assert_eq!(
+            worker.step_cooperative(),
+            Ok(NativeClientProgress::Protocol(ClientProgress::Blocked))
+        );
         assert_eq!(worker.evaluation_progress(), completed);
         assert_eq!(wire.borrow().output, commitment);
         wire.borrow_mut().input.push_back(b'R');
         until(&mut worker, ClientPhase::ReplySent);
-        assert_eq!(wire.borrow().output, [commitment.as_slice(), reveal.as_slice()].concat());
+        assert_eq!(
+            wire.borrow().output,
+            [commitment.as_slice(), reveal.as_slice()].concat()
+        );
         assert_eq!(worker.evaluation_progress(), completed);
         assert!(!worker.cancel());
     }
@@ -160,7 +202,10 @@ fn cooperative_native_peer_cancel_retains_real_merges_without_io_or_reroll() {
     // the owner is allowed to continue.
     let (mut permitted, _) = client(&bytes, load(&fixture, &fixture.policy));
     until(&mut permitted, ClientPhase::SendingCommitment);
-    assert_eq!(permitted.evaluation_progress().status, NativeEvaluationStatus::Judged(Verdict::Allow));
+    assert_eq!(
+        permitted.evaluation_progress().status,
+        NativeEvaluationStatus::Judged(Verdict::Allow)
+    );
 }
 
 #[test]

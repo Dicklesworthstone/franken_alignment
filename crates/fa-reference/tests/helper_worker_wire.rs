@@ -2,16 +2,18 @@
 #[path = "support/helper_workers.rs"]
 mod support;
 
-use support::Fixture;
+use fa_reference::Error;
+use fa_reference::action::ElapsedTick;
 use fa_reference::action::consequence::Consequence;
-use fa_reference::action::consequence::oversight::helper_workers::{HelperFailure, HelperLimits, HelperRound};
 use fa_reference::action::consequence::oversight::helper_workers::wire::{
     MAX_HELPER_FRAME_BYTES, REQUEST_HEADER_BYTES, decode_request, encode_request, request_frame_len,
 };
-use fa_reference::action::ElapsedTick;
+use fa_reference::action::consequence::oversight::helper_workers::{
+    HelperFailure, HelperLimits, HelperRound,
+};
 use fa_reference::full_input::{Omission, PartKind};
 use fa_reference::round::Verdict;
-use fa_reference::Error;
+use support::Fixture;
 
 #[test]
 fn original_input_bytes_profiles_parts_and_omissions_cross_the_wire_unchanged() {
@@ -20,15 +22,27 @@ fn original_input_bytes_profiles_parts_and_omissions_cross_the_wire_unchanged() 
     for (name, port) in ports {
         let encoded = encode_request(&port).unwrap();
         assert_eq!(&encoded[..5], b"FAHW1");
-        assert_eq!(request_frame_len(&encoded[..REQUEST_HEADER_BYTES]).unwrap(), encoded.len());
+        assert_eq!(
+            request_frame_len(&encoded[..REQUEST_HEADER_BYTES]).unwrap(),
+            encoded.len()
+        );
         let decoded = decode_request(&encoded).unwrap();
         assert_eq!(decoded.member(), name);
         assert_eq!(decoded.round(), 11);
-        assert_eq!(decoded.actual_input(), f.inputs.views()[&name].actual_input());
+        assert_eq!(
+            decoded.actual_input(),
+            f.inputs.views()[&name].actual_input()
+        );
         let commit = decoded.commitment_frame(Verdict::Allow, b"salt").unwrap();
         assert_eq!(commit[0], b'C');
-        assert_eq!(u64::from_be_bytes(commit[1..].try_into().unwrap()), port.request().commitment(Verdict::Allow, b"salt").unwrap());
-        assert_eq!(decoded.reveal_frame(Verdict::Hold, b"abc").unwrap(), b"R\x02\x00\x03abc");
+        assert_eq!(
+            u64::from_be_bytes(commit[1..].try_into().unwrap()),
+            port.request().commitment(Verdict::Allow, b"salt").unwrap()
+        );
+        assert_eq!(
+            decoded.reveal_frame(Verdict::Hold, b"abc").unwrap(),
+            b"R\x02\x00\x03abc"
+        );
         assert!(encoded.len() < MAX_HELPER_FRAME_BYTES);
     }
 }
@@ -39,7 +53,9 @@ fn manual() -> Vec<u8> {
     body.extend_from_slice(&u64::MAX.to_be_bytes());
     body.extend_from_slice(&[8; 32]);
     body.extend_from_slice(&[0, 1, b'a', 0, 3]);
-    for value in [1, u64::MAX, 0, u64::MAX] { body.extend_from_slice(&value.to_be_bytes()); }
+    for value in [1, u64::MAX, 0, u64::MAX] {
+        body.extend_from_slice(&value.to_be_bytes());
+    }
     body.extend_from_slice(&[0, 0, 0, 0]); // Empty profile bytes are supported.
     body.extend_from_slice(&[0, 0, 0, 7]);
     body.extend_from_slice(b"Qpitsed");
@@ -50,7 +66,10 @@ fn manual() -> Vec<u8> {
         body.push(index as u8 + 1);
         match index + 1 {
             4 => body.extend_from_slice(&3_u64.to_be_bytes()),
-            5 => { body.extend_from_slice(&1_u64.to_be_bytes()); body.extend_from_slice(&2_u64.to_be_bytes()); }
+            5 => {
+                body.extend_from_slice(&1_u64.to_be_bytes());
+                body.extend_from_slice(&2_u64.to_be_bytes());
+            }
             _ => {}
         }
     }
@@ -73,33 +92,68 @@ fn manual_wire_fixture_preserves_all_part_kinds_full_width_epochs_and_closed_abs
     assert_eq!(actual.input_profile().model_epoch, u64::MAX);
     assert_eq!(actual.input_profile().policy_epoch, u64::MAX);
     assert_eq!(actual.input_profile().tokenizer_epoch, 0);
-    assert_eq!(actual.ordered_parts().iter().map(|p| p.kind.clone()).collect::<Vec<_>>(), vec![
-        PartKind::Question, PartKind::Prompt, PartKind::Instruction,
-        PartKind::ToolSchema { schema_id: 3 }, PartKind::Evidence { source_id: 1, transform_id: 2 },
-        PartKind::Delimiter, PartKind::Other,
-    ]);
-    assert_eq!(actual.omissions(), &[Omission::ClosedAbsent { domain_id: 99, trusted_closure_marker_id: 100 }]);
-    assert_eq!(packet.reveal_frame(Verdict::Allow, b"abc").unwrap(), b"R\x01\x00\x03abc");
-    assert_eq!(packet.reveal_frame(Verdict::Allow, b"abcd"), Err(Error::Limit));
+    assert_eq!(
+        actual
+            .ordered_parts()
+            .iter()
+            .map(|p| p.kind.clone())
+            .collect::<Vec<_>>(),
+        vec![
+            PartKind::Question,
+            PartKind::Prompt,
+            PartKind::Instruction,
+            PartKind::ToolSchema { schema_id: 3 },
+            PartKind::Evidence {
+                source_id: 1,
+                transform_id: 2
+            },
+            PartKind::Delimiter,
+            PartKind::Other,
+        ]
+    );
+    assert_eq!(
+        actual.omissions(),
+        &[Omission::ClosedAbsent {
+            domain_id: 99,
+            trusted_closure_marker_id: 100
+        }]
+    );
+    assert_eq!(
+        packet.reveal_frame(Verdict::Allow, b"abc").unwrap(),
+        b"R\x01\x00\x03abc"
+    );
+    assert_eq!(
+        packet.reveal_frame(Verdict::Allow, b"abcd"),
+        Err(Error::Limit)
+    );
 }
 
 #[test]
 fn truncated_unknown_oversized_and_trailing_frames_are_not_partial_requests() {
     let bytes = manual();
     assert!(decode_request(&bytes).is_ok());
-    for end in 0..bytes.len() { assert!(decode_request(&bytes[..end]).is_err(), "prefix {end}"); }
-    let mut unknown = bytes.clone(); unknown[4] = b'2';
+    for end in 0..bytes.len() {
+        assert!(decode_request(&bytes[..end]).is_err(), "prefix {end}");
+    }
+    let mut unknown = bytes.clone();
+    unknown[4] = b'2';
     assert_eq!(decode_request(&unknown), Err(Error::InvalidInput));
-    let mut trailing = bytes.clone(); trailing.push(0);
+    let mut trailing = bytes.clone();
+    trailing.push(0);
     assert_eq!(decode_request(&trailing), Err(Error::InvalidInput));
     // A self-consistent length does not authorize hidden trailing fields either.
     let length = (trailing.len() - REQUEST_HEADER_BYTES) as u32;
     trailing[5..9].copy_from_slice(&length.to_be_bytes());
     assert_eq!(decode_request(&trailing), Err(Error::InvalidInput));
-    let mut huge = bytes[..REQUEST_HEADER_BYTES].to_vec(); huge[5..9].copy_from_slice(&u32::MAX.to_be_bytes());
+    let mut huge = bytes[..REQUEST_HEADER_BYTES].to_vec();
+    huge[5..9].copy_from_slice(&u32::MAX.to_be_bytes());
     assert_eq!(request_frame_len(&huge), Err(Error::Limit));
-    assert_eq!(decode_request(&vec![0; MAX_HELPER_FRAME_BYTES + 1]), Err(Error::Limit));
-    let mut bad_member = bytes; bad_member[51] = 0xff;
+    assert_eq!(
+        decode_request(&vec![0; MAX_HELPER_FRAME_BYTES + 1]),
+        Err(Error::Limit)
+    );
+    let mut bad_member = bytes;
+    bad_member[51] = 0xff;
     assert!(decode_request(&bad_member).is_err());
 }
 
@@ -111,16 +165,32 @@ fn independently_received_foreign_round_and_member_digests_fail_before_deadlines
         let packet = decode_request(&encode_request(&ports["alpha"]).unwrap()).unwrap();
         let correct = packet.commitment_frame(Verdict::Allow, b"salt").unwrap();
         let wrong = fa_reference::round::commitment(
-            if wrong_round { 12 } else { 11 }, if wrong_round { "alpha" } else { "beta" },
-            &[8; 32], Verdict::Allow, b"salt",
-        ).unwrap();
+            if wrong_round { 12 } else { 11 },
+            if wrong_round { "alpha" } else { "beta" },
+            &[8; 32],
+            Verdict::Allow,
+            b"salt",
+        )
+        .unwrap();
         assert_ne!(wrong, u64::from_be_bytes(correct[1..].try_into().unwrap()));
         ports["alpha"].submit_commitment(wrong).unwrap();
-        ports["beta"].submit_commitment(ports["beta"].request().commitment(Verdict::Allow, b"salt").unwrap()).unwrap();
+        ports["beta"]
+            .submit_commitment(
+                ports["beta"]
+                    .request()
+                    .commitment(Verdict::Allow, b"salt")
+                    .unwrap(),
+            )
+            .unwrap();
         round.advance(ElapsedTick(1)).unwrap();
-        for port in ports.values() { port.reveal(Verdict::Allow, b"salt").unwrap(); }
+        for port in ports.values() {
+            port.reveal(Verdict::Allow, b"salt").unwrap();
+        }
         round.advance(ElapsedTick(2)).unwrap();
-        assert_eq!(round.statuses()["alpha"].failure, Some(HelperFailure::Rejected(Error::Binding)));
+        assert_eq!(
+            round.statuses()["alpha"].failure,
+            Some(HelperFailure::Rejected(Error::Binding))
+        );
         assert!(round.statuses()["beta"].revealed);
         let result = round.finish(ElapsedTick(10)).unwrap();
         assert_eq!(result.missing(), &["alpha".to_owned()]);

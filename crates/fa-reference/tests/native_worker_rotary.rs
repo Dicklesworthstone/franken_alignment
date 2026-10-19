@@ -5,12 +5,12 @@
 
 #[path = "support/native_worker_assets.rs"]
 mod assets;
-#[path = "support/native_worker_v2_assets.rs"]
-mod v2_assets;
 #[path = "native_worker_rotary/fixture.rs"]
 mod fixture;
 #[path = "native_worker_rotary/process.rs"]
 mod process;
+#[path = "support/native_worker_v2_assets.rs"]
+mod v2_assets;
 
 use fa_reference::round::Verdict;
 use fixture::{LINEAR, LLAMA3, NONE, configure};
@@ -22,7 +22,9 @@ fn worker_v3_static_profiles_preserve_input_dependent_commit_and_reveal() {
         for (sharded, json) in [(false, false), (true, true)] {
             let mut fixture = assets::Fixture::new(false);
             configure(&mut fixture, scaling, sharded, json);
-            if sharded { std::fs::remove_file(fixture.root.join("weights.safetensors")).unwrap(); }
+            if sharded {
+                std::fs::remove_file(fixture.root.join("weights.safetensors")).unwrap();
+            }
             for (prompt, verdict) in [(b"?".as_slice(), Verdict::Allow), (b"!", Verdict::Deny)] {
                 exchange(&fixture, prompt, verdict);
             }
@@ -60,14 +62,19 @@ fn worker_v3_requires_explicit_rotary_and_preserves_legacy_manifest_contracts() 
         std::fs::remove_file(fixture.root.join("salt.bin")).unwrap();
         std::fs::remove_file(fixture.root.join("config.json")).unwrap();
         let stderr = no_vote(&fixture, None);
-        assert!(stderr.contains("invalid manifest field") || stderr.contains("refused configuration"), "{stderr}");
+        assert!(
+            stderr.contains("invalid manifest field") || stderr.contains("refused configuration"),
+            "{stderr}"
+        );
         assert!(!stderr.contains("operator file I/O"), "{stderr}");
     }
     for old_version in [None, Some("fa.native-worker/1"), Some("fa.native-worker/2")] {
         let mut fixture = assets::Fixture::new(false);
         configure(&mut fixture, LINEAR, false, true);
         fixture.manifest = match old_version {
-            None => fixture.manifest.replace(&format!(",\"rotary\":{LINEAR}"), ""),
+            None => fixture
+                .manifest
+                .replace(&format!(",\"rotary\":{LINEAR}"), ""),
             Some(schema) => fixture.manifest.replace("fa.native-worker/3", schema),
         };
         fixture.save();
@@ -81,7 +88,10 @@ fn worker_v3_profile_substitution_refuses_before_weight_or_index_access() {
     for sharded in [false, true] {
         for (declared, substituted) in [
             (LINEAR, r#"{"kind":"linear","factor":5}"#),
-            (LLAMA3, r#"{"kind":"llama3","factor":8,"low_freq_factor":1,"high_freq_factor":4,"original_max_position_embeddings":256}"#),
+            (
+                LLAMA3,
+                r#"{"kind":"llama3","factor":8,"low_freq_factor":1,"high_freq_factor":4,"original_max_position_embeddings":256}"#,
+            ),
         ] {
             let mut fixture = assets::Fixture::new(false);
             configure(&mut fixture, declared, sharded, true);
@@ -100,15 +110,28 @@ fn worker_v3_profile_substitution_refuses_before_weight_or_index_access() {
         configure(&mut fixture, LINEAR, sharded, true);
         remove_weights(&fixture, sharded);
         let stderr = no_vote(&fixture, None);
-        assert!(stderr.contains("Io {") && stderr.contains("Weight"), "{stderr}");
+        assert!(
+            stderr.contains("Io {") && stderr.contains("Weight"),
+            "{stderr}"
+        );
         assert!(!stderr.contains("Binding"), "{stderr}");
     }
 
     let mut fixture = assets::Fixture::new(false);
     configure(&mut fixture, LINEAR, false, false);
-    let unscaled = fixture.policy.decoder_profile.clone()
-        .with_rotary_scaling(fa_reference::action::consequence::activation::tensor::kv::decoder::RotaryScaling::None).unwrap();
-    std::fs::write(fixture.root.join("tokenizer.bin"), fixture::tokenizer(&unscaled)).unwrap();
+    let unscaled = fixture
+        .policy
+        .decoder_profile
+        .clone()
+        .with_rotary_scaling(
+            fa_reference::action::consequence::activation::tensor::kv::decoder::RotaryScaling::None,
+        )
+        .unwrap();
+    std::fs::write(
+        fixture.root.join("tokenizer.bin"),
+        fixture::tokenizer(&unscaled),
+    )
+    .unwrap();
     remove_weights(&fixture, false);
     let stderr = no_vote(&fixture, None);
     assert!(stderr.contains("Tokenizer(Binding)"), "{stderr}");
@@ -121,11 +144,16 @@ fn worker_v3_held_or_incomplete_output_and_spent_steps_never_become_votes() {
             let mut fixture = assets::Fixture::new(alarm);
             configure(&mut fixture, scaling, true, true);
             if !alarm {
-                fixture.manifest = fixture.manifest.replace("\"max_new_tokens\":2", "\"max_new_tokens\":1");
+                fixture.manifest = fixture
+                    .manifest
+                    .replace("\"max_new_tokens\":2", "\"max_new_tokens\":1");
                 fixture.save();
             }
             let stderr = no_vote(&fixture, Some(b"?"));
-            assert!(stderr.contains(if alarm { "Held" } else { "TokenLimit" }), "{stderr}");
+            assert!(
+                stderr.contains(if alarm { "Held" } else { "TokenLimit" }),
+                "{stderr}"
+            );
         }
     }
     let mut fixture = assets::Fixture::new(false);

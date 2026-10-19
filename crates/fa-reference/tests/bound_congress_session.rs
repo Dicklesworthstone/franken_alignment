@@ -1,5 +1,6 @@
 //! Public congress-to-dispatch tests using immutable, authority-bound sessions.
 
+use fa_reference::action::consequence::Consequence;
 use fa_reference::action::consequence::congress::{CongressPolicy, MemberPolicy};
 use fa_reference::action::consequence::gate::containment::session::{
     BoundReview, ReviewSession, SessionSpec,
@@ -8,7 +9,6 @@ use fa_reference::action::consequence::gate::containment::{
     ActorState, ContainmentAuthority, ResetRequest, RestartGrade, RestartProfile,
 };
 use fa_reference::action::consequence::gate::{ConsequenceAuthority, ReviewBinding, TargetCeiling};
-use fa_reference::action::consequence::Consequence;
 use fa_reference::action::{
     ActionSpec, ActionState, ElapsedTick, FrozenAction, Purpose, ResolvedTarget, Scope, VERSION,
 };
@@ -60,10 +60,25 @@ fn spec(attempt: u64, round: u64) -> SessionSpec {
         policy: CongressPolicy {
             generation: 1,
             members: BTreeMap::from([
-                ("alice".to_owned(), MemberPolicy { cohort: "a".to_owned(), weight: 2 }),
-                ("bob".to_owned(), MemberPolicy { cohort: "b".to_owned(), weight: 2 }),
+                (
+                    "alice".to_owned(),
+                    MemberPolicy {
+                        cohort: "a".to_owned(),
+                        weight: 2,
+                    },
+                ),
+                (
+                    "bob".to_owned(),
+                    MemberPolicy {
+                        cohort: "b".to_owned(),
+                        weight: 2,
+                    },
+                ),
             ]),
-            caps: Caps { per_member: 2, per_cohort: 2 },
+            caps: Caps {
+                per_member: 2,
+                per_cohort: 2,
+            },
             continue_minimum: 3,
             continue_hold_maximum: 0,
             narrow_at: 3,
@@ -101,7 +116,9 @@ fn setup() -> (ConsequenceAuthority, FrozenAction) {
 
 fn complete(mut session: ReviewSession, verdict: Verdict) -> BoundReview {
     for member in ["alice", "bob"] {
-        let commitment = session.commitment(member, verdict, member.as_bytes()).unwrap();
+        let commitment = session
+            .commitment(member, verdict, member.as_bytes())
+            .unwrap();
         session.commit(member, commitment).unwrap();
     }
     session.open_reveals().unwrap();
@@ -130,7 +147,10 @@ fn bound_approval_preserves_exact_action_policy_and_normal_permit_checks() {
     assert_eq!(gate.inspect().ledger.available, 20);
     let permit = gate.authorize(1, &judgment(), &snapshot()).unwrap();
     gate.dispatch(&permit, &action, &snapshot()).unwrap();
-    assert_eq!(gate.dispatch(&permit, &action, &snapshot()), Err(Error::WrongState));
+    assert_eq!(
+        gate.dispatch(&permit, &action, &snapshot()),
+        Err(Error::WrongState)
+    );
 }
 
 #[test]
@@ -151,12 +171,15 @@ fn commitments_cannot_cross_actions_policies_evidence_or_restriction_contexts() 
     let (mut gate, _) = setup();
     let mut other = action(0, 10).spec().clone();
     other.payload.push(99);
-    gate.propose(2, FrozenAction::freeze(other).unwrap()).unwrap();
+    gate.propose(2, FrozenAction::freeze(other).unwrap())
+        .unwrap();
     gate.prepare(2).unwrap();
     gate.begin_review(2).unwrap();
     for change in 0..5 {
         let original = ReviewSession::begin(&gate, spec(1, 10)).unwrap();
-        let commitment = original.commitment("alice", Verdict::Allow, b"salt").unwrap();
+        let commitment = original
+            .commitment("alice", Verdict::Allow, b"salt")
+            .unwrap();
         let mut changed = spec(1, 10);
         match change {
             0 => changed.attempt = 2,
@@ -190,10 +213,16 @@ fn wrong_member_and_bad_reveal_leave_the_valid_commitment_usable() {
     session.commit("alice", alice).unwrap();
     session.commit("bob", bob).unwrap();
     session.open_reveals().unwrap();
-    assert_eq!(session.reveal("alice", Verdict::Deny, b"a"), Err(Error::Binding));
+    assert_eq!(
+        session.reveal("alice", Verdict::Deny, b"a"),
+        Err(Error::Binding)
+    );
     session.reveal("alice", Verdict::Allow, b"a").unwrap();
     session.reveal("bob", Verdict::Allow, b"b").unwrap();
-    assert_eq!(session.reveal("alice", Verdict::Allow, b"a"), Err(Error::Duplicate));
+    assert_eq!(
+        session.reveal("alice", Verdict::Allow, b"a"),
+        Err(Error::Duplicate)
+    );
     session.finish().unwrap().apply(&mut gate).unwrap();
     gate.authorize(1, &judgment(), &snapshot()).unwrap();
 }
@@ -211,10 +240,18 @@ fn missing_reveal_holds_and_only_a_new_complete_round_releases() {
     assert!(review.abstained().is_empty());
     assert_eq!(review.decision().consequence, Consequence::HoldEffect);
     review.apply(&mut gate).unwrap();
-    assert_eq!(gate.authorize(1, &judgment(), &snapshot()).unwrap_err(), Error::WrongState);
-    assert_eq!(ReviewSession::begin(&gate, spec(1, 10)).unwrap_err(), Error::Duplicate);
+    assert_eq!(
+        gate.authorize(1, &judgment(), &snapshot()).unwrap_err(),
+        Error::WrongState
+    );
+    assert_eq!(
+        ReviewSession::begin(&gate, spec(1, 10)).unwrap_err(),
+        Error::Duplicate
+    );
     let new_round = ReviewSession::begin(&gate, spec(1, 11)).unwrap();
-    complete(new_round, Verdict::Allow).apply(&mut gate).unwrap();
+    complete(new_round, Verdict::Allow)
+        .apply(&mut gate)
+        .unwrap();
     let permit = gate.authorize(1, &judgment(), &snapshot()).unwrap();
     gate.dispatch(&permit, &action, &snapshot()).unwrap();
 }
@@ -225,7 +262,10 @@ fn revocation_during_voting_cannot_be_bypassed_by_frozen_approval() {
     let session = ReviewSession::begin(&gate, spec(1, 10)).unwrap();
     gate.revoke_epoch().unwrap();
     complete(session, Verdict::Allow).apply(&mut gate).unwrap();
-    assert_eq!(gate.authorize(1, &judgment(), &snapshot()).unwrap_err(), Error::Stale);
+    assert_eq!(
+        gate.authorize(1, &judgment(), &snapshot()).unwrap_err(),
+        Error::Stale
+    );
     assert_eq!(gate.inspect().ledger.available, 20);
 }
 
@@ -268,7 +308,9 @@ fn containment_reset_invalidates_a_completed_pre_reset_review() {
     gate.prepare(2).unwrap();
     gate.begin_review(2).unwrap();
     let session = ReviewSession::begin_containment(&gate, spec(2, 100)).unwrap();
-    complete(session, Verdict::Allow).apply_to_containment(&mut gate).unwrap();
+    complete(session, Verdict::Allow)
+        .apply_to_containment(&mut gate)
+        .unwrap();
     let permit = gate.authorize(2, &judgment(), &snapshot()).unwrap();
     gate.dispatch(&permit, &fresh, &snapshot()).unwrap();
 }
@@ -292,7 +334,10 @@ fn frozen_narrowing_cancels_outside_work_but_preserves_a_fresh_allowed_path() {
     assert_eq!(receipt.stopped, vec![2]);
     assert_eq!(receipt.refunded_units, 4);
     assert_eq!(gate.inspect().ledger.stages[&2], ActionState::Cancelled);
-    assert!(gate.dispatch(&outside_permit, &outside, &snapshot()).is_err());
+    assert!(
+        gate.dispatch(&outside_permit, &outside, &snapshot())
+            .is_err()
+    );
     let allowed = ReviewSession::begin(&gate, spec(1, 12)).unwrap();
     complete(allowed, Verdict::Allow).apply(&mut gate).unwrap();
     let permit = gate.authorize(1, &judgment(), &snapshot()).unwrap();
@@ -310,5 +355,8 @@ fn frozen_exact_disqualifier_cannot_be_outvoted_by_unanimous_approval() {
     assert_eq!(review.decision().consequence, Consequence::Deny);
     review.apply(&mut gate).unwrap();
     assert_eq!(gate.inspect().ledger.stages[&1], ActionState::Denied);
-    assert_eq!(gate.authorize(1, &judgment(), &snapshot()).unwrap_err(), Error::WrongState);
+    assert_eq!(
+        gate.authorize(1, &judgment(), &snapshot()).unwrap_err(),
+        Error::WrongState
+    );
 }

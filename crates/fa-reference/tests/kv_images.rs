@@ -1,41 +1,123 @@
 //! Frozen and serialized KV values feed the same checked host-buffer writer.
 
+use fa_reference::Error;
 use fa_reference::action::consequence::activation::CaptureProfile;
+use fa_reference::action::consequence::activation::tensor::kv::image::{
+    IMAGE_HEADER_BYTES, KvImage, KvImageDescriptor, MAX_IMAGE_BYTES,
+};
+use fa_reference::action::consequence::activation::tensor::kv::restore::{
+    HostTensorMut, KvDestination, KvRestoreWindow,
+};
+use fa_reference::action::consequence::activation::tensor::kv::{
+    KvAppend, KvBudget, KvCapture, KvContract, MAX_KV_POSITIONS, MAX_KV_VALUES,
+};
 use fa_reference::action::consequence::activation::tensor::{
     BufferIdentity, ByteOrder, HostTensor, ScalarEncoding, TensorContract, TensorLayout,
 };
-use fa_reference::action::consequence::activation::tensor::kv::{KvAppend, KvBudget, KvCapture, KvContract, MAX_KV_POSITIONS, MAX_KV_VALUES};
-use fa_reference::action::consequence::activation::tensor::kv::image::{KvImage, KvImageDescriptor, IMAGE_HEADER_BYTES, MAX_IMAGE_BYTES};
-use fa_reference::action::consequence::activation::tensor::kv::restore::{HostTensorMut, KvDestination, KvRestoreWindow};
-use fa_reference::Error;
 
 fn contract() -> KvContract {
-    let profile = CaptureProfile { tenant: 1, model: 2, model_generation: 3, tap: 4, layout_generation: 5 };
+    let profile = CaptureProfile {
+        tenant: 1,
+        model: 2,
+        model_generation: 3,
+        tap: 4,
+        layout_generation: 5,
+    };
     KvContract::new(
         TensorContract::new(profile, ScalarEncoding::Binary16, ByteOrder::Big, 1, 2).unwrap(),
-        TensorContract::new(CaptureProfile { tap: 6, ..profile }, ScalarEncoding::Binary32, ByteOrder::Little, 1, 1).unwrap(),
+        TensorContract::new(
+            CaptureProfile { tap: 6, ..profile },
+            ScalarEncoding::Binary32,
+            ByteOrder::Little,
+            1,
+            1,
+        )
+        .unwrap(),
         4,
-    ).unwrap()
+    )
+    .unwrap()
 }
 fn capture() -> KvCapture {
-    KvCapture::new(contract(), 7, 0, 10, 20, KvBudget { positions: 4, normalized_values: 12 }).unwrap()
+    KvCapture::new(
+        contract(),
+        7,
+        0,
+        10,
+        20,
+        KvBudget {
+            positions: 4,
+            normalized_values: 12,
+        },
+    )
+    .unwrap()
 }
 fn kl() -> TensorLayout {
-    TensorLayout::new([1, 2, 1, 2], [0, 4, 0, 2], 0, ScalarEncoding::Binary16, ByteOrder::Big).unwrap()
+    TensorLayout::new(
+        [1, 2, 1, 2],
+        [0, 4, 0, 2],
+        0,
+        ScalarEncoding::Binary16,
+        ByteOrder::Big,
+    )
+    .unwrap()
 }
 fn vl() -> TensorLayout {
-    TensorLayout::new([1, 2, 1, 1], [0, 4, 0, 0], 0, ScalarEncoding::Binary32, ByteOrder::Little).unwrap()
+    TensorLayout::new(
+        [1, 2, 1, 1],
+        [0, 4, 0, 0],
+        0,
+        ScalarEncoding::Binary32,
+        ByteOrder::Little,
+    )
+    .unwrap()
 }
-fn append(capture: &mut KvCapture, revision: u64, position: u64, sequence: u64, kb: &[u8], vb: &[u8]) {
-    capture.append(revision, KvAppend {
-        keys: HostTensor { identity: BufferIdentity { object: 1, generation: revision + 1 }, layout: &kl(), bytes: kb },
-        values: HostTensor { identity: BufferIdentity { object: 2, generation: revision + 1 }, layout: &vl(), bytes: vb },
-        first_token: 0, token_count: 2, buffer_first_position: position, first_sequence: sequence,
-    }).unwrap();
+fn append(
+    capture: &mut KvCapture,
+    revision: u64,
+    position: u64,
+    sequence: u64,
+    kb: &[u8],
+    vb: &[u8],
+) {
+    capture
+        .append(
+            revision,
+            KvAppend {
+                keys: HostTensor {
+                    identity: BufferIdentity {
+                        object: 1,
+                        generation: revision + 1,
+                    },
+                    layout: &kl(),
+                    bytes: kb,
+                },
+                values: HostTensor {
+                    identity: BufferIdentity {
+                        object: 2,
+                        generation: revision + 1,
+                    },
+                    layout: &vl(),
+                    bytes: vb,
+                },
+                first_token: 0,
+                token_count: 2,
+                buffer_first_position: position,
+                first_sequence: sequence,
+            },
+        )
+        .unwrap();
 }
 fn bytes() -> (Vec<u8>, Vec<u8>) {
-    ([0x3c00_u16, 0x8000, 1, 0x7bff].into_iter().flat_map(u16::to_be_bytes).collect(),
-     [1_u32, 0xff7f_ffff].into_iter().flat_map(u32::to_le_bytes).collect())
+    (
+        [0x3c00_u16, 0x8000, 1, 0x7bff]
+            .into_iter()
+            .flat_map(u16::to_be_bytes)
+            .collect(),
+        [1_u32, 0xff7f_ffff]
+            .into_iter()
+            .flat_map(u32::to_le_bytes)
+            .collect(),
+    )
 }
 fn image() -> KvImage {
     let mut c = capture();
@@ -46,11 +128,36 @@ fn image() -> KvImage {
 fn restore(image: &KvImage) -> (Vec<u8>, Vec<u8>) {
     let mut kb = vec![0xee; 8];
     let mut vb = vec![0xee; 8];
-    image.prepare_restore(KvDestination::Separate {
-        keys: HostTensorMut { identity: BufferIdentity { object: 3, generation: 1 }, layout: &kl(), bytes: &mut kb },
-        values: HostTensorMut { identity: BufferIdentity { object: 4, generation: 1 }, layout: &vl(), bytes: &mut vb },
-    }, KvRestoreWindow { first_position: 10, token_count: 2, batch: 0, first_token: 0, buffer_first_position: 10 })
-        .unwrap().commit();
+    image
+        .prepare_restore(
+            KvDestination::Separate {
+                keys: HostTensorMut {
+                    identity: BufferIdentity {
+                        object: 3,
+                        generation: 1,
+                    },
+                    layout: &kl(),
+                    bytes: &mut kb,
+                },
+                values: HostTensorMut {
+                    identity: BufferIdentity {
+                        object: 4,
+                        generation: 1,
+                    },
+                    layout: &vl(),
+                    bytes: &mut vb,
+                },
+            },
+            KvRestoreWindow {
+                first_position: 10,
+                token_count: 2,
+                batch: 0,
+                first_token: 0,
+                buffer_first_position: 10,
+            },
+        )
+        .unwrap()
+        .commit();
     (kb, vb)
 }
 
@@ -97,13 +204,21 @@ fn all_truncations_extra_bytes_and_header_substitution_refuse() {
     let image = image();
     let encoded = image.encode().unwrap();
     for end in 0..encoded.len() {
-        assert!(KvImage::decode(&encoded[..end], image.descriptor()).is_err(), "end={end}");
+        assert!(
+            KvImage::decode(&encoded[..end], image.descriptor()).is_err(),
+            "end={end}"
+        );
     }
-    let mut extra = encoded.clone(); extra.push(0);
+    let mut extra = encoded.clone();
+    extra.push(0);
     assert!(KvImage::decode(&extra, image.descriptor()).is_err());
     for byte in 0..IMAGE_HEADER_BYTES {
-        let mut changed = encoded.clone(); changed[byte] ^= 1;
-        assert!(KvImage::decode(&changed, image.descriptor()).is_err(), "byte={byte}");
+        let mut changed = encoded.clone();
+        changed[byte] ^= 1;
+        assert!(
+            KvImage::decode(&changed, image.descriptor()).is_err(),
+            "byte={byte}"
+        );
     }
 }
 
@@ -114,7 +229,10 @@ fn nonfinite_late_values_refuse_without_a_partial_image() {
     let end = encoded.len();
     // The last V is binary32 little-endian. Earlier K and V rows are valid.
     encoded[end - 4..].copy_from_slice(&f32::INFINITY.to_le_bytes());
-    assert_eq!(KvImage::decode(&encoded, image.descriptor()).unwrap_err(), Error::InvalidInput);
+    assert_eq!(
+        KvImage::decode(&encoded, image.descriptor()).unwrap_err(),
+        Error::InvalidInput
+    );
     assert_eq!(restore(&image), bytes());
 }
 
@@ -143,7 +261,10 @@ fn descriptor_identity_position_and_budget_mismatches_are_rejected() {
             3 => expected.source_batch += 1,
             _ => expected.source_revision += 1,
         }
-        assert_eq!(KvImage::decode(&encoded, &expected).unwrap_err(), Error::Binding);
+        assert_eq!(
+            KvImage::decode(&encoded, &expected).unwrap_err(),
+            Error::Binding
+        );
     }
     let mut too_many = image.descriptor().clone();
     too_many.token_count = MAX_KV_POSITIONS + 1;
@@ -151,12 +272,24 @@ fn descriptor_identity_position_and_budget_mismatches_are_rejected() {
     let mut overflow = image.descriptor().clone();
     overflow.first_position = u64::MAX;
     assert_eq!(overflow.encode(), Err(Error::Overflow));
-    assert_eq!(KvImage::decode(&vec![0; MAX_IMAGE_BYTES + 1], image.descriptor()).unwrap_err(), Error::Limit);
+    assert_eq!(
+        KvImage::decode(&vec![0; MAX_IMAGE_BYTES + 1], image.descriptor()).unwrap_err(),
+        Error::Limit
+    );
     let p = contract().keys().profile();
     let wide = KvContract::new(
         TensorContract::new(p, ScalarEncoding::Binary32, ByteOrder::Little, 1, 65_536).unwrap(),
-        TensorContract::new(CaptureProfile { tap: 6, ..p }, ScalarEncoding::Binary32, ByteOrder::Little, 1, 65_536).unwrap(), 1,
-    ).unwrap();
+        TensorContract::new(
+            CaptureProfile { tap: 6, ..p },
+            ScalarEncoding::Binary32,
+            ByteOrder::Little,
+            1,
+            65_536,
+        )
+        .unwrap(),
+        1,
+    )
+    .unwrap();
     let mut exact = image.descriptor().clone();
     exact.contract = wide;
     exact.token_count = MAX_KV_VALUES / 131_072;

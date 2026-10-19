@@ -3,7 +3,7 @@
 
 use fa_reference::action::consequence::gate::containment::{
     ActorState, CheckpointHandle, ContainmentAuthority, MAX_CACHE_BYTES, MAX_CHECKPOINTS,
-    RestartGrade, RestartProfile, ResetRequest,
+    ResetRequest, RestartGrade, RestartProfile,
 };
 use fa_reference::action::consequence::gate::{ReviewBinding, ReviewRequest, TargetCeiling};
 use fa_reference::action::consequence::{Consequence, DecisionInputs, Restriction};
@@ -39,7 +39,11 @@ fn profile() -> RestartProfile {
 
 fn actor(marker: u8) -> ActorState {
     ActorState::new(
-        profile(), vec![u32::from(marker)], vec![marker, 11], vec![marker, 22], 1,
+        profile(),
+        vec![u32::from(marker)],
+        vec![marker, 11],
+        vec![marker, 22],
+        1,
     )
     .unwrap()
 }
@@ -155,7 +159,8 @@ fn rewind_restores_actor_only_and_preserves_every_effect_disposition() {
     ] {
         gate.dispatch(permit, action, &snapshot()).unwrap();
     }
-    gate.record_trusted_outcome(3, TrustedOutcome::Executed).unwrap();
+    gate.record_trusted_outcome(3, TrustedOutcome::Executed)
+        .unwrap();
     gate.mark_unknown(4).unwrap();
     gate.mark_unknown(5).unwrap();
     gate.mark_irrecoverable(5).unwrap();
@@ -190,7 +195,8 @@ fn rewind_restores_actor_only_and_preserves_every_effect_disposition() {
     assert!(gate.dispatch(&old_permit, &reserved, &snapshot()).is_err());
     assert_eq!(gate.cancel(4), Err(Error::WrongState));
     assert_eq!(gate.cancel(5), Err(Error::WrongState));
-    gate.record_trusted_outcome(4, TrustedOutcome::NotExecuted).unwrap();
+    gate.record_trusted_outcome(4, TrustedOutcome::NotExecuted)
+        .unwrap();
     assert_eq!(gate.inspect().ledger.available, 44);
     conserved(&gate);
 }
@@ -212,11 +218,17 @@ fn resumed_actor_needs_fresh_attempt_epoch_review_and_one_use_permit() {
     gate.prepare(3).unwrap();
     gate.begin_review(3).unwrap();
     let judgment = Judgment::capture(&snapshot(), vec![]).unwrap();
-    assert_eq!(gate.authorize(3, &judgment, &snapshot()).unwrap_err(), Error::Incomplete);
+    assert_eq!(
+        gate.authorize(3, &judgment, &snapshot()).unwrap_err(),
+        Error::Incomplete
+    );
     gate.apply_review(review(&gate, 3, &fresh)).unwrap();
     let permit = gate.authorize(3, &judgment, &snapshot()).unwrap();
     gate.dispatch(&permit, &fresh, &snapshot()).unwrap();
-    assert_eq!(gate.dispatch(&permit, &fresh, &snapshot()), Err(Error::WrongState));
+    assert_eq!(
+        gate.dispatch(&permit, &fresh, &snapshot()),
+        Err(Error::WrongState)
+    );
     conserved(&gate);
 }
 
@@ -229,7 +241,8 @@ fn repeated_resets_escalate_without_restoring_actor_or_blocking_reconciliation()
     gate.dispatch(&permit, &pending, &snapshot()).unwrap();
     gate.mark_unknown(1).unwrap();
     for incident in 1..=2 {
-        gate.replace_actor_state(gate.actor_revision(), actor(90)).unwrap();
+        gate.replace_actor_state(gate.actor_revision(), actor(90))
+            .unwrap();
         let receipt = gate.reset(reset_request(&gate, &checkpoint)).unwrap();
         assert!(receipt.restored);
         assert_eq!(gate.actor(), &actor(1));
@@ -237,7 +250,8 @@ fn repeated_resets_escalate_without_restoring_actor_or_blocking_reconciliation()
         assert_eq!(gate.inspect().ledger.charged, 7);
         conserved(&gate);
     }
-    gate.replace_actor_state(gate.actor_revision(), actor(99)).unwrap();
+    gate.replace_actor_state(gate.actor_revision(), actor(99))
+        .unwrap();
     let receipt = gate.reset(reset_request(&gate, &checkpoint)).unwrap();
     assert_eq!(receipt.consequence, Consequence::SuspendRun);
     assert!(!receipt.restored);
@@ -245,10 +259,17 @@ fn repeated_resets_escalate_without_restoring_actor_or_blocking_reconciliation()
     assert_eq!(gate.incident_count(), 3);
     assert!(gate.inspect().suspended);
     assert_eq!(gate.inspect().ledger.epoch, 3);
-    assert_eq!(gate.reset(reset_request(&gate, &checkpoint)), Err(Error::WrongState));
+    assert_eq!(
+        gate.reset(reset_request(&gate, &checkpoint)),
+        Err(Error::WrongState)
+    );
     assert_eq!(gate.propose(2, action(3, 1, 1)), Err(Error::WrongState));
-    assert_eq!(gate.replace_actor_state(gate.actor_revision(), actor(1)), Err(Error::WrongState));
-    gate.record_trusted_outcome(1, TrustedOutcome::Executed).unwrap();
+    assert_eq!(
+        gate.replace_actor_state(gate.actor_revision(), actor(1)),
+        Err(Error::WrongState)
+    );
+    gate.record_trusted_outcome(1, TrustedOutcome::Executed)
+        .unwrap();
     assert_eq!(gate.inspect().ledger.charged, 7);
     assert_eq!(gate.inspect().ledger.available, 93);
     assert_eq!(gate.reset_receipts().len(), 3);
@@ -279,11 +300,19 @@ fn checkpoint_from_another_controller_is_not_a_same_number_alias() {
     let foreign = first.capture_checkpoint(1, 0).unwrap();
     let local = second.capture_checkpoint(1, 0).unwrap();
     let before = second.inspect();
-    assert_eq!(second.reset(reset_request(&second, &foreign)), Err(Error::Binding));
+    assert_eq!(
+        second.reset(reset_request(&second, &foreign)),
+        Err(Error::Binding)
+    );
     assert_eq!(second.inspect(), before);
     assert_eq!(second.incident_count(), 0);
     assert!(second.reset_receipts().is_empty());
-    assert!(second.reset(reset_request(&second, &local)).unwrap().restored);
+    assert!(
+        second
+            .reset(reset_request(&second, &local))
+            .unwrap()
+            .restored
+    );
 }
 
 #[test]
@@ -329,7 +358,10 @@ fn restart_qualification_and_profile_identity_are_not_inferred_from_byte_shape()
     audit.grade = RestartGrade::AuditOnly;
     let state = ActorState::new(audit, vec![1], vec![2], vec![3], 1).unwrap();
     let mut gate = ContainmentAuthority::new(scope(), 100, 32, state, 3).unwrap();
-    assert_eq!(gate.capture_checkpoint(1, 0).unwrap_err(), Error::Incomplete);
+    assert_eq!(
+        gate.capture_checkpoint(1, 0).unwrap_err(),
+        Error::Incomplete
+    );
     let mut gate = authority(3);
     for changed in 0..6 {
         let mut profile = profile();
@@ -356,14 +388,13 @@ fn checkpoint_count_and_aggregate_byte_bounds_keep_existing_checkpoints_usable()
         gate.capture_checkpoint(id, 0).unwrap();
     }
     assert_eq!(
-        gate.capture_checkpoint(MAX_CHECKPOINTS as u64 + 1, 0).unwrap_err(),
+        gate.capture_checkpoint(MAX_CHECKPOINTS as u64 + 1, 0)
+            .unwrap_err(),
         Error::Limit
     );
     gate.reset(reset_request(&gate, &first)).unwrap();
-    let state = ActorState::new(
-        profile(), vec![], vec![1; MAX_CACHE_BYTES - 1], vec![1], 0,
-    )
-    .unwrap();
+    let state =
+        ActorState::new(profile(), vec![], vec![1; MAX_CACHE_BYTES - 1], vec![1], 0).unwrap();
     let mut gate = ContainmentAuthority::new(scope(), 100, 32, state, 3).unwrap();
     let first = gate.capture_checkpoint(1, 0).unwrap();
     for id in 2..=8 {

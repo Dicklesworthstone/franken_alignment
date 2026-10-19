@@ -1,11 +1,12 @@
 //! Separate owners are forcibly killed only after their real journal operation
 //! has returned. These are process-death scenarios, not hardware power-cut tests.
 #![cfg(unix)]
-#[path = "support/file_delivery.rs"] mod fixture;
-use fixture::*;
-use fa_reference::action::consequence::delivery::persistent::*;
+#[path = "support/file_delivery.rs"]
+mod fixture;
 use fa_reference::action::consequence::delivery::EndpointOutcome;
+use fa_reference::action::consequence::delivery::persistent::*;
 use fa_reference::action::{ActionState, ElapsedTick};
+use fixture::*;
 use std::process::{Child, Command, Stdio};
 use std::time::{Duration, Instant};
 
@@ -19,7 +20,9 @@ impl Drop for ChildGuard {
             Ok(Some(_)) => {}
             _ => {
                 let _ = self.0.kill();
-                if let Err(error) = self.0.wait() { eprintln!("file-delivery child reap failed: {error}"); }
+                if let Err(error) = self.0.wait() {
+                    eprintln!("file-delivery child reap failed: {error}");
+                }
             }
         }
     }
@@ -27,7 +30,9 @@ impl Drop for ChildGuard {
 
 #[test]
 fn file_delivery_process_child() {
-    let Some(root) = std::env::var_os(ROOT_ENV) else { return; };
+    let Some(root) = std::env::var_os(ROOT_ENV) else {
+        return;
+    };
     let root = std::path::PathBuf::from(root);
     let mode = std::env::var(MODE_ENV).unwrap();
     let mut host = FileDelivery::create(root.join("publication"), profile()).unwrap();
@@ -35,9 +40,13 @@ fn file_delivery_process_child() {
     let (action, permit) = approved(&mut host, 1, b"child publication");
     match mode.as_str() {
         "authorized" => {}
-        "dispatched" => { host.dispatch(host.revision(), &permit, &action, snapshot()).unwrap(); }
+        "dispatched" => {
+            host.dispatch(host.revision(), &permit, &action, snapshot())
+                .unwrap();
+        }
         "published" => {
-            host.dispatch(host.revision(), &permit, &action, snapshot()).unwrap();
+            host.dispatch(host.revision(), &permit, &action, snapshot())
+                .unwrap();
             host.publish(host.revision(), 1).unwrap();
         }
         _ => panic!("invalid child mode"),
@@ -53,22 +62,38 @@ fn file_delivery_process_child() {
 
 fn kill_owner(root: &Directory, mode: &str) {
     let child = Command::new(std::env::current_exe().unwrap())
-        .arg("--exact").arg(CHILD_TEST).arg("--nocapture")
-        .env(ROOT_ENV, &root.0).env(MODE_ENV, mode)
-        .stdin(Stdio::null()).stdout(Stdio::null()).stderr(Stdio::inherit())
-        .spawn().unwrap();
+        .arg("--exact")
+        .arg(CHILD_TEST)
+        .arg("--nocapture")
+        .env(ROOT_ENV, &root.0)
+        .env(MODE_ENV, mode)
+        .stdin(Stdio::null())
+        .stdout(Stdio::null())
+        .stderr(Stdio::inherit())
+        .spawn()
+        .unwrap();
     let mut child = ChildGuard(child);
     let deadline = Instant::now() + Duration::from_secs(20);
     loop {
-        if let Some(status) = child.0.try_wait().unwrap() { panic!("child exited before kill: {status}"); }
-        if root.0.join("ready").is_file() { break; }
+        if let Some(status) = child.0.try_wait().unwrap() {
+            panic!("child exited before kill: {status}");
+        }
+        if root.0.join("ready").is_file() {
+            break;
+        }
         assert!(Instant::now() < deadline, "child did not become ready");
         std::thread::sleep(Duration::from_millis(10));
     }
-    assert_eq!(FileDelivery::open(root.store(), profile()).unwrap_err(), JournalError::Busy);
+    assert_eq!(
+        FileDelivery::open(root.store(), profile()).unwrap_err(),
+        JournalError::Busy
+    );
     child.0.kill().unwrap();
     let status = child.0.wait().unwrap();
-    assert!(!status.success(), "the owner must be terminated, not exit through normal cleanup");
+    assert!(
+        !status.success(),
+        "the owner must be terminated, not exit through normal cleanup"
+    );
 }
 
 #[test]
@@ -90,7 +115,9 @@ fn abrupt_owner_death_preserves_exact_liabilities_and_releases_the_kernel_lock()
             assert_eq!(state.control.ledger.charged, 16);
             assert_eq!(state.control.ledger.available, 84);
         }
-        recovered.observe_time(recovered.revision(), ElapsedTick(2)).unwrap();
+        recovered
+            .observe_time(recovered.revision(), ElapsedTick(2))
+            .unwrap();
         let results = recovered.reconcile_pending(recovered.revision()).unwrap();
         match mode {
             "authorized" => assert!(results.is_empty()),
@@ -101,13 +128,21 @@ fn abrupt_owner_death_preserves_exact_liabilities_and_releases_the_kernel_lock()
                 assert_eq!(recovered.inspect().control.ledger.available, 100);
             }
             "published" => {
-                assert_eq!(results[&1], Ok(Reconciliation::Resolved(EndpointOutcome::Executed { resulting_version: 2 })));
+                assert_eq!(
+                    results[&1],
+                    Ok(Reconciliation::Resolved(EndpointOutcome::Executed {
+                        resulting_version: 2
+                    }))
+                );
                 assert_eq!(recovered.inspect().control.ledger.charged, 16);
                 assert_eq!(recovered.inspect().payload, b"child publication");
             }
             _ => unreachable!(),
         }
         assert!(recovered.publish(recovered.revision(), 1).is_err());
-        assert_eq!(recovered.inspect().executions, u64::from(mode == "published"));
+        assert_eq!(
+            recovered.inspect().executions,
+            u64::from(mode == "published")
+        );
     }
 }

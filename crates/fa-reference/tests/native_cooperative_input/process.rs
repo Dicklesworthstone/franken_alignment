@@ -1,22 +1,44 @@
-use super::{assets, fixture::{admit, frame, input, load, prompt, tokenizer}};
+use super::{
+    assets,
+    fixture::{admit, frame, input, load, prompt, tokenizer},
+};
 use crate::process_fixture;
 use fa_reference::action::consequence::oversight::helper_client::{
-    ClientPhase, native::{NativeEvaluationStatus, NativeEvaluationWork,
-        process::{NativeProcessBudget, NativeProcessReport, NativeProcessStop, run_native_worker}},
+    ClientPhase,
+    native::{
+        NativeEvaluationStatus, NativeEvaluationWork,
+        process::{NativeProcessBudget, NativeProcessReport, NativeProcessStop, run_native_worker},
+    },
 };
 use fa_reference::round::Verdict;
 use std::io::{Read, Write};
 use std::os::unix::net::UnixStream;
 use std::time::Duration;
 
-fn run(fixture: &assets::Fixture, bytes: &[u8], steps: usize, reveal: bool) -> (NativeProcessReport, Vec<u8>) {
+fn run(
+    fixture: &assets::Fixture,
+    bytes: &[u8],
+    steps: usize,
+    reveal: bool,
+) -> (NativeProcessReport, Vec<u8>) {
     let (mut parent, socket) = UnixStream::pair().unwrap();
-    parent.set_read_timeout(Some(Duration::from_secs(10))).unwrap();
-    parent.set_write_timeout(Some(Duration::from_secs(10))).unwrap();
+    parent
+        .set_read_timeout(Some(Duration::from_secs(10)))
+        .unwrap();
+    parent
+        .set_write_timeout(Some(Duration::from_secs(10)))
+        .unwrap();
     parent.write_all(&frame(bytes)).unwrap();
-    if reveal { parent.write_all(b"R").unwrap(); }
-    let report = run_native_worker(socket, load(fixture, &fixture.policy), assets::SALT.to_vec(),
-        NativeProcessBudget::new(10_000, steps).unwrap()).unwrap();
+    if reveal {
+        parent.write_all(b"R").unwrap();
+    }
+    let report = run_native_worker(
+        socket,
+        load(fixture, &fixture.policy),
+        assets::SALT.to_vec(),
+        NativeProcessBudget::new(10_000, steps).unwrap(),
+    )
+    .unwrap();
     let mut output = Vec::new();
     parent.read_to_end(&mut output).unwrap();
     (report, output)
@@ -27,7 +49,9 @@ fn cooperative_native_process_charges_tokenizer_quanta_and_yields_before_prefill
     let fixture = assets::Fixture::new(false);
     let bytes = prompt(b'?');
     let packet = input(&bytes);
-    let encoded = tokenizer(&fixture).encode(&bytes, fixture.policy.tokenization).unwrap();
+    let encoded = tokenizer(&fixture)
+        .encode(&bytes, fixture.policy.tokenization)
+        .unwrap();
     let mut baseline = load(&fixture, &fixture.policy);
     baseline.begin_cooperative(&packet).unwrap();
     let admitted = admit(&mut baseline).unwrap();
@@ -78,13 +102,24 @@ fn cooperative_native_process_exact_completion_budget_preserves_sent_commitment_
     let (complete, bytes_out) = run(&fixture, &bytes, steps, true);
     assert_eq!(complete.stop, NativeProcessStop::ReplySent);
     assert_eq!(complete.steps, steps);
-    assert_eq!(complete.evaluation.status, NativeEvaluationStatus::Judged(Verdict::Deny));
+    assert_eq!(
+        complete.evaluation.status,
+        NativeEvaluationStatus::Judged(Verdict::Deny)
+    );
     assert_eq!(complete.evaluation.work.sampled_draws, 2);
-    assert_eq!(complete.evaluation.reviewed_prompt_tokens, admitted.requested_prompt_tokens);
+    assert_eq!(
+        complete.evaluation.reviewed_prompt_tokens,
+        admitted.requested_prompt_tokens
+    );
     assert_eq!(complete.evaluation.tokenization, admitted.tokenization);
-    let commitment = packet.commitment_frame(Verdict::Deny, assets::SALT).unwrap();
+    let commitment = packet
+        .commitment_frame(Verdict::Deny, assets::SALT)
+        .unwrap();
     let reveal = packet.reveal_frame(Verdict::Deny, assets::SALT).unwrap();
-    assert_eq!(bytes_out, [commitment.as_slice(), reveal.as_slice()].concat());
+    assert_eq!(
+        bytes_out,
+        [commitment.as_slice(), reveal.as_slice()].concat()
+    );
 
     let (short, bytes_out) = run(&fixture, &bytes, steps - 1, true);
     assert_eq!(short.stop, NativeProcessStop::StepLimit);
