@@ -1,5 +1,21 @@
 # Changelog
 
+## 2026-10-19: stop active supervisors through an authenticated fleet command
+
+- Add `supervise_publication stop-fleet FLEET_JSON` for 1..=64 independently
+  configured live owners, using their existing protected stop endpoints while
+  they retain journal locks. Share the original credential-checked connection
+  path with `stop-peer`.
+- Admit the complete bounded roster before connecting and fairly advance each
+  connected native client under original per-peer and overall limits. Preserve
+  every member, unknown transmissions and distinct stop/drain outcomes; never
+  reconnect or resend after a lost response or output error.
+- Add real original-owner/socket regression source plus causal protocol,
+  deadline, capacity, admission and output-failure controls. Scope synchronous
+  connection/file-intake limits and keep full distributed fencing/frontier
+  acceptance open. Source review does not establish runtime qualification;
+  the executor is offline and required remote-only RCH is unavailable.
+
 ## 2026-10-19: admit actor and topology profiles in the full learned command
 
 - Fix the live actor option whitelist so `--actor-profile` composes with

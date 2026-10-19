@@ -2905,7 +2905,7 @@
       "id": "FA-120",
       "gate": "G5",
       "title": "Fleet fence with acknowledgment frontier",
-      "status": "planned",
+      "status": "in_progress",
       "depends_on": [
         "FA-034",
         "FA-041"
@@ -2921,7 +2921,13 @@
         "Produce executed local evidence; source or prose alone does not close this packet."
       ],
       "owner_role": "systems",
-      "result_artifacts": [],
+      "result_artifacts": [
+        "docs/LIVE_FLEET_STOP.md",
+        "crates/fa-reference/examples/supervise_publication/stop_fleet.rs",
+        "crates/fa-reference/examples/supervise_publication/stop_fleet/profile.rs",
+        "crates/fa-reference/examples/supervise_publication/stop_fleet/tests.rs",
+        "crates/fa-reference/examples/supervise_publication/peers.rs"
+      ],
       "founding_ideas": [
         "FI-A02"
       ]

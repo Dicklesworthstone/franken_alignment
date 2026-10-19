@@ -231,6 +231,16 @@
       "note": ""
     },
     {
+      "verb": "stop-fleet",
+      "layer": "L5",
+      "class": "mutation",
+      "authority": "independently configured operator with authenticated stop-only peer sessions",
+      "idempotency": "one original operation per member session; no automatic reconnect or retry after uncertain transmission",
+      "cost_class": "bounded roster and per-peer protocol work",
+      "response": "Per-domain native stop receipts and explicit unconfirmed outcomes",
+      "note": "supervise_publication operator adapter; preserves original per-domain Stop/drain, not a distributed ordered fence or persistent acknowledgement frontier"
+    },
+    {
       "verb": "resolve",
       "layer": "L5",
       "class": "mutation",

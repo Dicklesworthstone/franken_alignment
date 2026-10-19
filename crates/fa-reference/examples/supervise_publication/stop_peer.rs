@@ -9,13 +9,11 @@ pub fn request(_profile: &super::PeerProfile, _operation: u64, _out: &mut impl s
 
 #[cfg(target_os = "linux")]
 mod linux {
-    use super::super::{PeerProfile, VerifiedReviewerSocket, debug};
-    use crate::workflow::control::socket_path;
+    use super::super::{PeerProfile, debug};
     use fa_reference::action::consequence::delivery::persistent::observed::reviewer::peer::control::{
         StopClient, StopClientProgress, StopControlReceipt, StopStatus,
     };
     use std::io::{Read, Write};
-    use std::os::unix::net::UnixStream;
     use std::time::{Duration, Instant};
 
     #[derive(Debug)]
@@ -30,10 +28,7 @@ mod linux {
             || profile.poll_ms == 0 || profile.poll_ms > 1000 || profile.poll_ms > profile.runtime_ms {
             return Err("invalid bounded stop-client timing".into());
         }
-        profile.check_directory()?;
-        let stream = UnixStream::connect(socket_path(profile, operation)).map_err(|e| format!("no stop confirmation: {e}"))?;
-        let verified = VerifiedReviewerSocket::verify(stream, profile.supervisor.policy()?).map_err(debug)?;
-        let mut client = verified.into_stop_client(profile.expected, operation).map_err(debug)?;
+        let mut client = profile.connect_stop_client(operation)?;
         let outcome = drive(&mut client, Duration::from_millis(profile.runtime_ms), profile.poll_ms);
         finish(operation, outcome, out)
     }

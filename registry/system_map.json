@@ -165,7 +165,8 @@
         "propose",
         "resolve",
         "fence",
-        "tail"
+        "tail",
+        "stop-fleet"
       ],
       "packets": [
         "FA-012",

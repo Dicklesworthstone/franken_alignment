@@ -1,5 +1,30 @@
 # Implementation status · design revision 0.3
 
+## 2026-10-19: live authenticated fleet Stop (unqualified source)
+
+`supervise_publication stop-fleet FLEET_JSON` now drives the original native
+stop-only protocol for a fixed independently selected roster of 1..=64 active
+supervisors. Unlike offline journal recovery, it can reach the owner while its
+original journal lock is held. Full manifest/profile admission precedes all
+connections. Linux kernel identity, complete audience, original operation and
+fresh-session binding remain on the existing checked client path.
+
+Each connected member advances at most one native step per round with its own
+work bound and the same overall elapsed budget. The complete roster reports
+not-attempted, unconfirmed/may-have-sent, stop acknowledged, drain refused,
+pending and drained outcomes. No failure, lost acknowledgement or failed output
+triggers a reconnect, effect retry or liability refund. Synchronous file intake
+and Unix connect are not preemptible; fairness applies to connected nonblocking
+clients. This is a local live Stop consumer, not the complete FA-120 ordered
+distributed fence, lease protocol or persistent acknowledgement frontier.
+
+Regression source uses real file-backed live drivers and authenticated named
+sockets, plus causal protocol, incomplete-drain, full-roster, time/work and
+output controls. The executor was unavailable and the required remote-only RCH
+gate has no available worker. No compilation, test execution, Clippy or
+production qualification is claimed. FA-120 is in progress; all full packet
+acceptance conditions remain open. See [live fleet usage](docs/LIVE_FLEET_STOP.md).
+
 ## 2026-10-19: complete actor/topology command admission (unqualified source)
 
 The learned actor option parser now admits the documented `--topology-profile`

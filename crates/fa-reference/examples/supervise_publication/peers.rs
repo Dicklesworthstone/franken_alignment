@@ -2,6 +2,8 @@
 //! command. Contains no helper executable, environment, source path or ledger key.
 #[path = "stop_peer.rs"]
 pub mod stop;
+#[path = "stop_fleet.rs"]
+pub mod fleet;
 use super::config::{Config, CLOCK_DOMAIN, debug, read_regular};
 use fa_reference::action::{Purpose, Scope};
 use fa_reference::action::consequence::delivery::persistent::observed::{FileHumanRequest, FileHumanReviewer, FileOversight};
@@ -103,6 +105,21 @@ impl PeerProfile {
         Ok(())
     }
     pub fn socket(&self, request: u64) -> PathBuf { self.directory.join(format!("review-{request}.sock")) }
+
+    /// Connect ONCE to the original stop endpoint and authenticate this exact
+    /// socket before reading an offer. UnixStream::connect is synchronous;
+    /// nonblocking protocol I/O begins only after credential verification.
+    #[cfg(target_os = "linux")]
+    pub fn connect_stop_client(&self, operation: u64)
+        -> Result<fa_reference::action::consequence::delivery::persistent::observed::reviewer::peer::control::StopClient<UnixStream>, String>
+    {
+        if operation == 0 { return Err("stop operation must be nonzero".into()); }
+        self.check_directory()?;
+        let stream = UnixStream::connect(crate::workflow::control::socket_path(self, operation))
+            .map_err(|error| format!("no stop confirmation: {error}"))?;
+        let verified = VerifiedReviewerSocket::verify(stream, self.supervisor.policy()?).map_err(debug)?;
+        verified.into_stop_client(self.expected, operation).map_err(debug)
+    }
 
     /// Called only on the just-bound socket in the protected directory. No
     /// existing socket is unlinked or chmodded to make a conflicting launch work.

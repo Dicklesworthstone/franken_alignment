@@ -5,6 +5,10 @@ Unqualified source implementing the operator consumer of FA-014, plan
 registered-domain coordinator and cooperative recovery/resolution. It does not
 introduce another stop reducer, rights ledger, runtime or journal format.
 
+For supervisors still holding their live journal locks, use the authenticated
+[online fleet Stop command](LIVE_FLEET_STOP.md). This offline coordinator
+requires journal ownership and does not contact active stop endpoints.
+
 ## Invocation and independent inputs
 
 From a built, qualified Unix executable:
