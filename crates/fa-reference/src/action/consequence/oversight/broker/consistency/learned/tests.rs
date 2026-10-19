@@ -282,7 +282,7 @@ fn later_native_admission_failure_cannot_erase_or_repeat_the_observed_category()
         .prediction()
         .unwrap();
     let mut forbidden = spec(0, b"risk");
-    forbidden.units = 101;
+    forbidden.units = 1;
     assert!(broker.propose(1, forbidden, &snapshot()).is_err());
     assert!(broker.learned_consistency_observation(1).unwrap().event());
     assert_eq!(broker.consistency_evidence().unwrap().samples(), 1);

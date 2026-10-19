@@ -176,7 +176,7 @@ impl<P> FilePreOutputForecast<P> {
         Ok(result)
     }
 
-    fn check_current(&self, host: &FileOversight, revision: u64) -> Result<(), JournalError> {
+    fn check_current(&self, host: &mut FileOversight, revision: u64) -> Result<(), JournalError> {
         if host.storage_failure().is_some() {
             return Err(JournalError::Unavailable);
         }
@@ -218,6 +218,11 @@ impl<P> FilePreOutputForecast<P> {
             || now < self.deadline.created_at
             || now >= self.deadline.expires_at
         {
+            if control.ledger.epoch == self.deadline.authority_epoch
+                && now >= self.deadline.expires_at
+            {
+                let _ = host.machine.broker.consistency_unavailable();
+            }
             return Err(Error::Stale.into());
         }
         Ok(())

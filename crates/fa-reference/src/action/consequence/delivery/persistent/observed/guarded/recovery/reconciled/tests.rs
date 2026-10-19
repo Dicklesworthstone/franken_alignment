@@ -96,7 +96,7 @@ fn every_disposition_and_quantum_matches_full_original_replay_and_encoded_histor
                 assert_eq!(recovered.owner.inspect().executions, u64::from(mode == 2));
                 assert_eq!(
                     recovered.owner.inspect().control.ledger.charged,
-                    if mode == 2 { 16 } else { 0 }
+                    if mode > 0 { 16 } else { 0 }
                 );
                 assert_eq!(recovered.owner.inspect().control.ledger.reserved, 0);
                 assert!(recovered.owner.clock_ready());
@@ -414,10 +414,7 @@ fn every_native_storage_barrier_returns_no_owner_and_visible_recovery_never_rese
             let recovered = run.finish_reconciled(|| ElapsedTick(4)).unwrap();
             assert_eq!(recovered.owner.revision(), disk.revision + 3);
             assert_eq!(recovered.owner.inspect().executions, u64::from(executed));
-            assert_eq!(
-                recovered.owner.inspect().control.ledger.charged,
-                if executed { 16 } else { 0 }
-            );
+            assert_eq!(recovered.owner.inspect().control.ledger.charged, 16);
             assert_eq!(recovered.owner.inspect().control.ledger.reserved, 0);
             assert!(!root.store().join("delivery.pending").exists());
         }

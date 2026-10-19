@@ -118,9 +118,9 @@ fn recipe_wraps_exact_original_predictor_bytes_and_preserves_the_legacy_recipe()
     let mut golden = b"FALBOOT\x01".to_vec();
     golden.extend_from_slice(&0_u64.to_be_bytes());
     golden.extend_from_slice(b"FALPRED\x01");
-    golden.extend_from_slice(&(before.len() as u64).to_be_bytes());
+    golden.extend_from_slice(&(before.len() as u32).to_be_bytes());
     golden.extend_from_slice(&before);
-    golden.extend_from_slice(&(forecast.encoded().len() as u64).to_be_bytes());
+    golden.extend_from_slice(&(forecast.encoded().len() as u32).to_be_bytes());
     golden.extend_from_slice(forecast.encoded());
     assert_eq!(exact.bytes().as_ref(), golden);
     assert_eq!(exact.required_pre_output_forecast(), Some(&forecast));

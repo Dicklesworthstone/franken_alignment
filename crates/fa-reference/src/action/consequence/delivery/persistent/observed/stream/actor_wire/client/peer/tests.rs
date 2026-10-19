@@ -67,7 +67,7 @@ fn proposal() -> ActorProposal {
         payload: b"exact peer-checked request".to_vec(),
         expected_policy_epoch: 0,
         deadline: ElapsedTick(100),
-        units: 16,
+        units: 26,
     }
 }
 fn response() -> WireResponse {

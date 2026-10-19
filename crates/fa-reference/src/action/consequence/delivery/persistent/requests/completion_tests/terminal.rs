@@ -329,8 +329,10 @@ fn terminal_reopen_preserves_executed_charges_and_refuses_new_intake() {
     assert_eq!(recovered.inspect().executions, 1);
     assert_eq!(recovered.inspect().control.ledger.available, 84);
     let stopped = recovered.inspect();
+    let mut spec = action.spec().clone();
+    spec.required_witnesses.clear();
     assert_eq!(
-        recovered.submit_request(recovered.revision(), 701, action.spec().clone(), snapshot()),
+        recovered.submit_request(recovered.revision(), 701, spec, snapshot()),
         Err(JournalError::Contract(Error::WrongState))
     );
     assert_eq!(recovered.inspect(), stopped);

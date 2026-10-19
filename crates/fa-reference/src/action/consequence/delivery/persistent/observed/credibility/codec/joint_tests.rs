@@ -92,7 +92,7 @@ fn joint_bootstrap_vector_and_every_truncation_reconstruct_the_original_policy()
         assert!(read(&mut Reader::new(&invalid)).is_err(), "word {word}");
     }
     let mut unknown = expected;
-    unknown[0] = 6;
+    unknown[0] = 9;
     assert!(read(&mut Reader::new(&unknown)).is_err());
 }
 

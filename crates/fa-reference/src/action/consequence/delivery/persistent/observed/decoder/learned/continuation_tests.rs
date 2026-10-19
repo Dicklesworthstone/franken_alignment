@@ -398,7 +398,7 @@ fn carried_replay_preserves_executed_receipts_and_unknown_charges_without_publis
             );
             host.reconcile(host.revision(), 1).unwrap();
         } else {
-            host.cancel(host.revision(), 1).unwrap();
+            host.reconcile(host.revision(), 1).unwrap();
         }
         let prior = host.inspect();
         let disk = bytes(&host);

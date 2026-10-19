@@ -314,6 +314,13 @@ impl OversightBroker {
         let Some(gate) = &self.decoder else {
             return Ok(None);
         };
+        if self
+            .consistency
+            .as_ref()
+            .is_some_and(|state| state.coverage_lost || state.evidence.crossed())
+        {
+            return Err(Error::Incomplete);
+        }
         let (evidence, score_words, encoded_bytes) = match &gate.source {
             Source::Residual(source) => {
                 let evidence = source.capture()?;

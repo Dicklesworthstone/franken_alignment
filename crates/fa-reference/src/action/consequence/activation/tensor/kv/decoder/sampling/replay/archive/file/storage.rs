@@ -16,6 +16,11 @@ pub(super) struct Store {
     #[cfg(test)]
     failure: std::cell::Cell<Option<(Stage, usize)>>,
 }
+impl Drop for Store {
+    fn drop(&mut self) {
+        let _ = self._owner.unlock();
+    }
+}
 fn io_result<T>(result: io::Result<T>, operation: Stage, visible: bool) -> Result<T, Failure> {
     result.map_err(|error| Failure::Io {
         operation,

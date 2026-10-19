@@ -44,12 +44,53 @@ fn snapshot() -> Snapshot {
     }
 }
 
+fn profile() -> FileOversightProfile {
+    use crate::action::consequence::congress::MemberPolicy;
+    use crate::action::consequence::oversight::{CommitteeContract, HelperContract};
+    use crate::full_input::InputProfileBinding;
+    use crate::reducer::Caps;
+    let mut p = fixtures::host_profile();
+    p.delivery.congress.members.insert(
+        "peer".into(),
+        MemberPolicy {
+            cohort: "two".into(),
+            weight: 1,
+        },
+    );
+    p.delivery.congress.caps = Caps {
+        per_member: 2,
+        per_cohort: 2,
+    };
+    p.delivery.congress.narrow_at = 3;
+    p.delivery.congress.suspend_at = 4;
+    p.delivery.congress.minimum_members = 2;
+    p.delivery.congress.minimum_cohorts = 2;
+    let mut members = p.committee.members().clone();
+    members.insert(
+        "peer".into(),
+        HelperContract::new(
+            InputProfileBinding {
+                profile_id: 2,
+                profile_bytes: b"durable-text-peer".to_vec(),
+                tokenizer_epoch: 1,
+                policy_epoch: 0,
+                model_epoch: 1,
+            },
+            7,
+            b"approve?".to_vec(),
+        )
+        .unwrap(),
+    );
+    p.committee = CommitteeContract::new(members).unwrap();
+    p
+}
+
 // Establish genuine control-sequence history with two original reviewed and
 // cancelled proposals. Never edit the sequence or pretend elapsed ticks are
 // campaign positions. Neither proposal is authorized, dispatched or published.
 fn seeded(root: &Directory) -> FileOversight {
-    let p = fixtures::host_profile();
-    let mut host = fixtures::owner(root, &fixtures::stopped());
+    let p = profile();
+    let mut host = fixtures::owner_with_profile(root, &fixtures::stopped(), p.clone());
     let intent = command(&host, 6, request(b"ab", 2));
     host.generate_decoder_text(host.revision(), intent).unwrap();
     for id in [10, 11] {
@@ -77,7 +118,10 @@ fn seeded(root: &Directory) -> FileOversight {
                 generation: id,
             },
             snapshot(),
-            BTreeMap::from([("reviewer".into(), b"original review context".to_vec())]),
+            BTreeMap::from([
+                ("reviewer".into(), b"original review context".to_vec()),
+                ("peer".into(), b"original peer context".to_vec()),
+            ]),
         )
         .unwrap();
         let inputs = source.inputs_for(&action, &p.committee).unwrap();
@@ -97,22 +141,26 @@ fn seeded(root: &Directory) -> FileOversight {
             snapshot(),
         )
         .unwrap();
-        host.commit_review(
-            host.revision(),
-            round,
-            "reviewer",
-            commitment(round, "reviewer", &root, Verdict::Allow, b"salt").unwrap(),
-        )
-        .unwrap();
+        for member in ["reviewer", "peer"] {
+            host.commit_review(
+                host.revision(),
+                round,
+                member,
+                commitment(round, member, &root, Verdict::Allow, b"salt").unwrap(),
+            )
+            .unwrap();
+        }
         host.open_reveals(host.revision(), round).unwrap();
-        host.reveal_review(
-            host.revision(),
-            round,
-            "reviewer",
-            Verdict::Allow,
-            b"salt".to_vec(),
-        )
-        .unwrap();
+        for member in ["reviewer", "peer"] {
+            host.reveal_review(
+                host.revision(),
+                round,
+                member,
+                Verdict::Allow,
+                b"salt".to_vec(),
+            )
+            .unwrap();
+        }
         host.finish_review(host.revision(), round, Some(&inputs), snapshot())
             .unwrap()
             .unwrap();
@@ -123,16 +171,25 @@ fn seeded(root: &Directory) -> FileOversight {
     host
 }
 fn activation(host: &FileOversight, operation: u64, generation: u64) -> CredibilityActivation {
-    let p = fixtures::host_profile();
+    let p = profile();
     let frontier = host.inspect().control.sequence;
     assert!(frontier >= 2);
-    let helpers = BTreeMap::from([(
-        "reviewer".to_owned(),
-        HelperGeneration {
-            generation: p.committee.members()["reviewer"].profile_at(0).model_epoch,
-            cohort: p.delivery.congress.members["reviewer"].cohort.clone(),
-        },
-    )]);
+    let helpers = BTreeMap::from([
+        (
+            "reviewer".to_owned(),
+            HelperGeneration {
+                generation: p.committee.members()["reviewer"].profile_at(0).model_epoch,
+                cohort: p.delivery.congress.members["reviewer"].cohort.clone(),
+            },
+        ),
+        (
+            "peer".to_owned(),
+            HelperGeneration {
+                generation: p.committee.members()["peer"].profile_at(0).model_epoch,
+                cohort: p.delivery.congress.members["peer"].cohort.clone(),
+            },
+        ),
+    ]);
     let mut ledger = CredibilityLedger::new(Campaign {
         scope: EvaluationScope {
             campaign: operation,
@@ -162,7 +219,13 @@ fn activation(host: &FileOversight, operation: u64, generation: u64) -> Credibil
             }
         };
         ledger
-            .record_observations(id, BTreeMap::from([("reviewer".into(), observation)]))
+            .record_observations(
+                id,
+                BTreeMap::from([
+                    ("reviewer".into(), observation),
+                    ("peer".into(), observation),
+                ]),
+            )
             .unwrap();
         ledger
             .record_label(
@@ -208,20 +271,16 @@ fn activation(host: &FileOversight, operation: u64, generation: u64) -> Credibil
             lead_bonus_weight: 0,
             lead_saturation_sequences: 0,
             maximum_evidence_age: 100,
-            maximum_member_share_ppm: 1_000_000,
-            maximum_cohort_share_ppm: 1_000_000,
+            maximum_member_share_ppm: 500_000,
+            maximum_cohort_share_ppm: 500_000,
         },
         snapshot: evidence,
     }
 }
 fn qualify(host: &mut FileOversight, operation: u64, generation: u64) -> CredibilityActivation {
     let request = activation(host, operation, generation);
-    host.activate_credibility(
-        host.revision(),
-        request.clone(),
-        &fixtures::host_profile().committee,
-    )
-    .unwrap();
+    host.activate_credibility(host.revision(), request.clone(), &profile().committee)
+        .unwrap();
     host.check_credibility().unwrap();
     request
 }
@@ -253,14 +312,14 @@ fn native_qualification_recovery_preserves_pause_cursor_and_work_until_explicit_
     drop(host);
     let (mut host, _) = FileOversight::open_with_text_decoder(
         root.store(),
-        fixtures::host_profile(),
+        profile(),
         &fixtures::stopped(),
         &tokenizer(false),
     )
     .unwrap();
     assert!(host.check_credibility().is_err());
     let frozen = bytes(&host);
-    host.activate_credibility(0, old, &fixtures::host_profile().committee)
+    host.activate_credibility(0, old, &profile().committee)
         .unwrap();
     assert_eq!(bytes(&host), frozen);
     assert!(host.check_credibility().is_err()); // historical receipt is not reactivation
@@ -365,12 +424,8 @@ fn native_qualification_exception_retains_governance_predecessors_and_numerical_
             _ => invalid.binding.reducer_generation = 2,
         }
         assert!(
-            host.activate_credibility(
-                host.revision(),
-                invalid,
-                &fixtures::host_profile().committee
-            )
-            .is_err()
+            host.activate_credibility(host.revision(), invalid, &profile().committee)
+                .is_err()
         );
         assert_eq!(bytes(&host), frozen);
         assert!(host.storage_failure().is_none());
@@ -394,7 +449,7 @@ fn native_qualification_exception_retains_governance_predecessors_and_numerical_
     );
     assert_eq!(bytes(&host), frozen);
     assert_eq!(host.decoder_inspection().unwrap(), numerical);
-    host.activate_credibility(host.revision(), valid, &fixtures::host_profile().committee)
+    host.activate_credibility(host.revision(), valid, &profile().committee)
         .unwrap();
     host.check_credibility().unwrap();
 }
@@ -417,7 +472,7 @@ fn native_pending_withdrawal_storage_failure_closes_owner_and_recovery_keeps_qua
         drop(host);
         let (host, _) = FileOversight::open_with_text_decoder(
             root.store(),
-            fixtures::host_profile(),
+            profile(),
             &fixtures::stopped(),
             &tokenizer(false),
         )

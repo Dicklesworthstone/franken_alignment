@@ -188,7 +188,7 @@ fn generated_source_peer_backpressure_then_new_file_version_changes_admission() 
     assert!(matches!(
         refused.result,
         Ok(Knowledge::Known {
-            value: ActorOutcome::NotAdmitted,
+            value: ActorOutcome::Denied,
             ..
         })
     ));

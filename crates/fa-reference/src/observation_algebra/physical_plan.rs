@@ -257,18 +257,12 @@ struct ValidatedNodeState {
 pub fn validate_physical_plan(
     plan: &PhysicalPlan,
 ) -> Result<Knowledge<RehearsedPlanSummary>, PlanRefusalReason> {
-    if plan.nodes.is_empty()
-        || plan.nodes.len() > MAX_PLAN_NODES
-        || plan.root >= plan.nodes.len()
-    {
+    if plan.nodes.is_empty() || plan.nodes.len() > MAX_PLAN_NODES || plan.root >= plan.nodes.len() {
         return Err(PlanRefusalReason::EmptyOrOversizedPlan);
     }
 
     let mut seen_ids = BTreeSet::new();
     let mut total_edges = 0_usize;
-    let mut total_bytes = 0_usize;
-    let mut total_decoded_bytes = 0_usize;
-    let mut total_witnesses = 0_usize;
     let mut states: Vec<ValidatedNodeState> = Vec::with_capacity(plan.nodes.len());
 
     for (idx, node) in plan.nodes.iter().enumerate() {
@@ -319,19 +313,9 @@ pub fn validate_physical_plan(
             }
         }
 
-        total_bytes = total_bytes
-            .checked_add(state.bytes)
-            .ok_or(PlanRefusalReason::ResourceEnvelopeExceeded { node_index: idx })?;
-        total_decoded_bytes = total_decoded_bytes
-            .checked_add(state.decoded_bytes)
-            .ok_or(PlanRefusalReason::ResourceEnvelopeExceeded { node_index: idx })?;
-        total_witnesses = total_witnesses
-            .checked_add(state.witness_count)
-            .ok_or(PlanRefusalReason::ResourceEnvelopeExceeded { node_index: idx })?;
-
-        if total_bytes > plan.total_envelope.max_bytes()
-            || total_decoded_bytes > plan.total_envelope.max_decoded_bytes()
-            || total_witnesses > plan.total_envelope.max_witnesses()
+        if state.bytes > plan.total_envelope.max_bytes()
+            || state.decoded_bytes > plan.total_envelope.max_decoded_bytes()
+            || state.witness_count > plan.total_envelope.max_witnesses()
             || state.frontiers.len() > plan.total_envelope.max_frontiers()
         {
             return Err(PlanRefusalReason::ResourceEnvelopeExceeded { node_index: idx });
@@ -361,9 +345,9 @@ pub fn validate_physical_plan(
         accumulated_privacy: root_state.privacy.clone(),
         accumulated_frontiers: root_state.frontiers.clone(),
         accumulated_obligations: root_state.obligations.clone(),
-        total_bytes,
-        total_decoded_bytes,
-        total_witnesses,
+        total_bytes: root_state.bytes,
+        total_decoded_bytes: root_state.decoded_bytes,
+        total_witnesses: root_state.witness_count,
     };
 
     Ok(Knowledge::known(summary, root_state.basis))
@@ -409,9 +393,7 @@ fn validate_node(
 
     match &node.operator {
         PhysicalOperatorKind::Tap {
-            source_id,
-            bytes,
-            ..
+            source_id, bytes, ..
         } => {
             if req.class != RequirementClass::Capture || req.uncertainty != UncertaintyClass::Exact
             {
@@ -461,7 +443,17 @@ fn validate_node(
             } else {
                 return Err(PlanRefusalReason::LawOrBasisMismatch { node_index: idx });
             }
-            inherit_single(idx, up, ctx, &[AuthorityKind::Project], 1, 0, 0, Vec::new(), Vec::new())
+            inherit_single(
+                idx,
+                up,
+                ctx,
+                &[AuthorityKind::Project],
+                1,
+                0,
+                0,
+                Vec::new(),
+                Vec::new(),
+            )
         }
         PhysicalOperatorKind::RequirePrefix {
             input,
@@ -552,7 +544,17 @@ fn validate_node(
             ) {
                 return Err(PlanRefusalReason::LawOrBasisMismatch { node_index: idx });
             }
-            inherit_single(idx, up, ctx, &[AuthorityKind::Verify], 1, 0, 0, Vec::new(), Vec::new())
+            inherit_single(
+                idx,
+                up,
+                ctx,
+                &[AuthorityKind::Verify],
+                1,
+                0,
+                0,
+                Vec::new(),
+                Vec::new(),
+            )
         }
         PhysicalOperatorKind::LookupExact {
             key,
@@ -819,7 +821,9 @@ fn validate_node(
                 return Err(PlanRefusalReason::LawOrBasisMismatch { node_index: idx });
             }
             let margin_inside_interval = signed_margin.unsigned_abs() <= (*error_bound as u64);
-            if margin_inside_interval || matches!(up.uncertainty, UncertaintyClass::Approximate { .. }) {
+            if margin_inside_interval
+                || matches!(up.uncertainty, UncertaintyClass::Approximate { .. })
+            {
                 let Some(fb_idx) = fallback else {
                     return Err(PlanRefusalReason::UnsatisfiedFallback { node_index: idx });
                 };
@@ -956,7 +960,7 @@ fn validate_node(
                 pending_frontiers = union_frontiers(
                     &pending_frontiers,
                     &up.pending_frontiers,
-                     MAX_OPERATOR_FRONTIERS,
+                    MAX_OPERATOR_FRONTIERS,
                 )
                 .map_err(|_| PlanRefusalReason::ResourceEnvelopeExceeded { node_index: idx })?;
                 witness_count = witness_count
@@ -1085,9 +1089,12 @@ fn inherit_single(
         .map_err(|_| translate_obligation_err(idx))?;
     let frontiers = union_frontiers(&up.frontiers, &added_frontiers, res.max_frontiers())
         .map_err(|_| PlanRefusalReason::ResourceEnvelopeExceeded { node_index: idx })?;
-    let pending_frontiers =
-        union_frontiers(&up.pending_frontiers, &added_pending, MAX_OPERATOR_FRONTIERS)
-            .map_err(|_| PlanRefusalReason::ResourceEnvelopeExceeded { node_index: idx })?;
+    let pending_frontiers = union_frontiers(
+        &up.pending_frontiers,
+        &added_pending,
+        MAX_OPERATOR_FRONTIERS,
+    )
+    .map_err(|_| PlanRefusalReason::ResourceEnvelopeExceeded { node_index: idx })?;
     let witness_count = up
         .witness_count
         .checked_add(added_witnesses)

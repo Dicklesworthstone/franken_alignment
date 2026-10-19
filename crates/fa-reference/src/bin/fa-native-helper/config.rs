@@ -2,10 +2,10 @@
 //! No path, salt, profile or runtime option is accepted from a helper request.
 #[path = "config/checkpoint.rs"]
 mod checkpoint;
-#[path = "config/rotary.rs"]
-mod rotary;
 #[path = "config/lora.rs"]
 mod lora;
+#[path = "config/rotary.rs"]
+mod rotary;
 use checkpoint::CheckpointFiles;
 use fa_reference::action::consequence::oversight::helper_client::native::NativeHelperPolicy;
 use fa_reference::action::consequence::oversight::helper_client::native::process::{
@@ -51,7 +51,9 @@ pub enum LaunchError {
 impl std::fmt::Display for LaunchError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Self::Usage => f.write_str("usage: fa-native-helper /absolute/worker.json (private socket on stdin)"),
+            Self::Usage => f.write_str(
+                "usage: fa-native-helper /absolute/worker.json (private socket on stdin)",
+            ),
             Self::Manifest => f.write_str("invalid bounded worker manifest"),
             Self::Field(field) => write!(f, "invalid manifest field: {field}"),
             Self::Contract(error) => write!(f, "refused configuration: {error:?}"),
@@ -84,9 +86,16 @@ struct Manifest {
 }
 impl Manifest {
     fn parse(bytes: &[u8]) -> Result<Self, LaunchError> {
-        let json = strict_json::parse(bytes, Limits { max_bytes: MAX_MANIFEST_BYTES,
-            max_depth: 5, max_items: 4096, max_string_bytes: MAX_PROFILE_BYTES * 2 })
-            .map_err(|_| LaunchError::Manifest)?;
+        let json = strict_json::parse(
+            bytes,
+            Limits {
+                max_bytes: MAX_MANIFEST_BYTES,
+                max_depth: 5,
+                max_items: 4096,
+                max_string_bytes: MAX_PROFILE_BYTES * 2,
+            },
+        )
+        .map_err(|_| LaunchError::Manifest)?;
         let version = match json.get("schema").and_then(Json::as_str) {
             Some("fa.native-worker/1") => 1,
             Some("fa.native-worker/2") => 2,
@@ -95,82 +104,257 @@ impl Manifest {
             _ => return Err(LaunchError::Field("schema")),
         };
         let fields: &[&str] = if version == 4 {
-            &["schema", "input", "decoder", "policy", "files", "stream",
-                "salt_file", "lifetime", "startup", "tokenizer_format", "adapter"]
+            &[
+                "schema",
+                "input",
+                "decoder",
+                "policy",
+                "files",
+                "stream",
+                "salt_file",
+                "lifetime",
+                "startup",
+                "tokenizer_format",
+                "adapter",
+            ]
         } else if version >= 2 {
-            &["schema", "input", "decoder", "policy", "files", "stream",
-                "salt_file", "lifetime", "startup", "tokenizer_format"]
+            &[
+                "schema",
+                "input",
+                "decoder",
+                "policy",
+                "files",
+                "stream",
+                "salt_file",
+                "lifetime",
+                "startup",
+                "tokenizer_format",
+            ]
         } else {
-            &["schema", "input", "decoder", "policy", "files", "stream",
-                "salt_file", "lifetime", "startup"]
+            &[
+                "schema",
+                "input",
+                "decoder",
+                "policy",
+                "files",
+                "stream",
+                "salt_file",
+                "lifetime",
+                "startup",
+            ]
         };
         let r = object(&json, fields, "$")?;
-        let tokenizer_format = if version >= 2 { checkpoint::tokenizer_format(&r["tokenizer_format"])? }
-            else { NativeTokenizerFormat::NativeArchive };
-        let input = object(&r["input"], &["id", "bytes_hex", "model_epoch", "tokenizer_epoch", "policy_epoch"], "input")?;
-        let profile = InputProfileBinding { profile_id: u64_field(input, "id")?,
-            profile_bytes: hex(&input["bytes_hex"])?, model_epoch: u64_field(input, "model_epoch")?,
-            tokenizer_epoch: u64_field(input, "tokenizer_epoch")?, policy_epoch: u64_field(input, "policy_epoch")? };
+        let tokenizer_format = if version >= 2 {
+            checkpoint::tokenizer_format(&r["tokenizer_format"])?
+        } else {
+            NativeTokenizerFormat::NativeArchive
+        };
+        let input = object(
+            &r["input"],
+            &[
+                "id",
+                "bytes_hex",
+                "model_epoch",
+                "tokenizer_epoch",
+                "policy_epoch",
+            ],
+            "input",
+        )?;
+        let profile = InputProfileBinding {
+            profile_id: u64_field(input, "id")?,
+            profile_bytes: hex(&input["bytes_hex"])?,
+            model_epoch: u64_field(input, "model_epoch")?,
+            tokenizer_epoch: u64_field(input, "tokenizer_epoch")?,
+            policy_epoch: u64_field(input, "policy_epoch")?,
+        };
         let decoder_fields: &[&str] = if version >= 3 {
             &["identity", "shape", "epsilon", "theta", "rotary"]
-        } else { &["identity", "shape", "epsilon", "theta"] };
+        } else {
+            &["identity", "shape", "epsilon", "theta"]
+        };
         let decoder = object(&r["decoder"], decoder_fields, "decoder")?;
-        let id = object(&decoder["identity"], &["tenant", "model", "model_generation", "tokenizer_generation", "profile_generation"], "identity")?;
-        let shape = object(&decoder["shape"], &["vocabulary", "hidden", "intermediate", "layers", "query_heads", "cache_heads", "context"], "shape")?;
-        let decoder_profile = DecoderProfile::new(DecoderIdentity {
-            tenant: u64_field(id, "tenant")?, model: u64_field(id, "model")?, model_generation: u64_field(id, "model_generation")?,
-            tokenizer_generation: u64_field(id, "tokenizer_generation")?, profile_generation: u64_field(id, "profile_generation")?,
-        }, DecoderShape { vocabulary: count(shape, "vocabulary")?, hidden: count(shape, "hidden")?,
-            intermediate: count(shape, "intermediate")?, layers: count(shape, "layers")?,
-            query_heads: count(shape, "query_heads")?, cache_heads: count(shape, "cache_heads")?, context: count(shape, "context")?,
-        }, scalar(&decoder["epsilon"], "epsilon")?, scalar(&decoder["theta"], "theta")?).map_err(LaunchError::Contract)?;
+        let id = object(
+            &decoder["identity"],
+            &[
+                "tenant",
+                "model",
+                "model_generation",
+                "tokenizer_generation",
+                "profile_generation",
+            ],
+            "identity",
+        )?;
+        let shape = object(
+            &decoder["shape"],
+            &[
+                "vocabulary",
+                "hidden",
+                "intermediate",
+                "layers",
+                "query_heads",
+                "cache_heads",
+                "context",
+            ],
+            "shape",
+        )?;
+        let decoder_profile = DecoderProfile::new(
+            DecoderIdentity {
+                tenant: u64_field(id, "tenant")?,
+                model: u64_field(id, "model")?,
+                model_generation: u64_field(id, "model_generation")?,
+                tokenizer_generation: u64_field(id, "tokenizer_generation")?,
+                profile_generation: u64_field(id, "profile_generation")?,
+            },
+            DecoderShape {
+                vocabulary: count(shape, "vocabulary")?,
+                hidden: count(shape, "hidden")?,
+                intermediate: count(shape, "intermediate")?,
+                layers: count(shape, "layers")?,
+                query_heads: count(shape, "query_heads")?,
+                cache_heads: count(shape, "cache_heads")?,
+                context: count(shape, "context")?,
+            },
+            scalar(&decoder["epsilon"], "epsilon")?,
+            scalar(&decoder["theta"], "theta")?,
+        )
+        .map_err(LaunchError::Contract)?;
         let decoder_profile = if version >= 3 {
-            decoder_profile.with_rotary_scaling(rotary::parse(&decoder["rotary"])?)
+            decoder_profile
+                .with_rotary_scaling(rotary::parse(&decoder["rotary"])?)
                 .map_err(LaunchError::Contract)?
-        } else { decoder_profile };
-        let adapter = if version == 4 { Some(lora::parse(&r["adapter"], &decoder_profile)?) } else { None };
-        let p = object(&r["policy"], &["max_new_tokens", "stop_tokens", "max_output_bytes", "tokenization", "generation"], "policy")?;
-        let tokens = p["stop_tokens"].as_array().ok_or(LaunchError::Field("stop_tokens"))?;
-        if tokens.len() > MAX_STOP_TOKENS { return Err(LaunchError::Limit); }
-        let stop_tokens = tokens.iter().map(|value| value.as_u64().and_then(|n| u32::try_from(n).ok())
-            .ok_or(LaunchError::Field("stop_tokens"))).collect::<Result<Vec<_>, _>>()?;
-        let t = object(&p["tokenization"], &["input_bytes", "pair_lookups", "heap_pops"], "tokenization")?;
-        let g = object(&p["generation"], &["scalar_products", "sampling_entries"], "generation")?;
-        let policy = NativeHelperPolicy { input_profile: profile, decoder_profile,
-            max_new_tokens: count(p, "max_new_tokens")?, stop_tokens, max_output_bytes: count(p, "max_output_bytes")?,
-            tokenization: TokenizationBudget { input_bytes: count(t, "input_bytes")?, pair_lookups: count(t, "pair_lookups")?, heap_pops: count(t, "heap_pops")? },
-            generation: GenerationBudget { scalar_products: u64_field(g, "scalar_products")?, sampling_entries: u64_field(g, "sampling_entries")? } };
-        let files = object(&r["files"], &["configuration", "tokenizer", "monitoring", "sampling", "weights"], "files")?;
+        } else {
+            decoder_profile
+        };
+        let adapter = if version == 4 {
+            Some(lora::parse(&r["adapter"], &decoder_profile)?)
+        } else {
+            None
+        };
+        let p = object(
+            &r["policy"],
+            &[
+                "max_new_tokens",
+                "stop_tokens",
+                "max_output_bytes",
+                "tokenization",
+                "generation",
+            ],
+            "policy",
+        )?;
+        let tokens = p["stop_tokens"]
+            .as_array()
+            .ok_or(LaunchError::Field("stop_tokens"))?;
+        if tokens.len() > MAX_STOP_TOKENS {
+            return Err(LaunchError::Limit);
+        }
+        let stop_tokens = tokens
+            .iter()
+            .map(|value| {
+                value
+                    .as_u64()
+                    .and_then(|n| u32::try_from(n).ok())
+                    .ok_or(LaunchError::Field("stop_tokens"))
+            })
+            .collect::<Result<Vec<_>, _>>()?;
+        let t = object(
+            &p["tokenization"],
+            &["input_bytes", "pair_lookups", "heap_pops"],
+            "tokenization",
+        )?;
+        let g = object(
+            &p["generation"],
+            &["scalar_products", "sampling_entries"],
+            "generation",
+        )?;
+        let policy = NativeHelperPolicy {
+            input_profile: profile,
+            decoder_profile,
+            max_new_tokens: count(p, "max_new_tokens")?,
+            stop_tokens,
+            max_output_bytes: count(p, "max_output_bytes")?,
+            tokenization: TokenizationBudget {
+                input_bytes: count(t, "input_bytes")?,
+                pair_lookups: count(t, "pair_lookups")?,
+                heap_pops: count(t, "heap_pops")?,
+            },
+            generation: GenerationBudget {
+                scalar_products: u64_field(g, "scalar_products")?,
+                sampling_entries: u64_field(g, "sampling_entries")?,
+            },
+        };
+        let files = object(
+            &r["files"],
+            &[
+                "configuration",
+                "tokenizer",
+                "monitoring",
+                "sampling",
+                "weights",
+            ],
+            "files",
+        )?;
         let l = object(&r["lifetime"], &["milliseconds", "steps"], "lifetime")?;
-        let startup = object(&r["startup"], &["asset_bytes", "asset_calls", "weight_bytes", "weight_calls"], "startup")?;
-        let checkpoint = if version >= 2 { CheckpointFiles::parse(&files["weights"])? }
-            else { CheckpointFiles::Single(path(&files["weights"], "weights")?) };
-        let result = Self { policy, checkpoint, tokenizer_format, adapter, files: [path(&files["configuration"], "configuration")?,
-            path(&files["tokenizer"], "tokenizer")?, path(&files["monitoring"], "monitoring")?,
-            path(&files["sampling"], "sampling")?],
-            stream: u64_field(r, "stream")?, salt_file: path(&r["salt_file"], "salt_file")?,
-            milliseconds: u64_field(l, "milliseconds")?, steps: count(l, "steps")?,
-            asset_bytes: count(startup, "asset_bytes")?, asset_calls: count(startup, "asset_calls")?,
-            weight_bytes: count(startup, "weight_bytes")?, weight_calls: count(startup, "weight_calls")? };
-        if result.stream == 0 { return Err(LaunchError::Field("stream")); }
+        let startup = object(
+            &r["startup"],
+            &["asset_bytes", "asset_calls", "weight_bytes", "weight_calls"],
+            "startup",
+        )?;
+        let checkpoint = if version >= 2 {
+            CheckpointFiles::parse(&files["weights"])?
+        } else {
+            CheckpointFiles::Single(path(&files["weights"], "weights")?)
+        };
+        let result = Self {
+            policy,
+            checkpoint,
+            tokenizer_format,
+            adapter,
+            files: [
+                path(&files["configuration"], "configuration")?,
+                path(&files["tokenizer"], "tokenizer")?,
+                path(&files["monitoring"], "monitoring")?,
+                path(&files["sampling"], "sampling")?,
+            ],
+            stream: u64_field(r, "stream")?,
+            salt_file: path(&r["salt_file"], "salt_file")?,
+            milliseconds: u64_field(l, "milliseconds")?,
+            steps: count(l, "steps")?,
+            asset_bytes: count(startup, "asset_bytes")?,
+            asset_calls: count(startup, "asset_calls")?,
+            weight_bytes: count(startup, "weight_bytes")?,
+            weight_calls: count(startup, "weight_calls")?,
+        };
+        if result.stream == 0 {
+            return Err(LaunchError::Field("stream"));
+        }
         Ok(result)
     }
 }
 
 pub fn run(args: Vec<OsString>) -> Result<NativeProcessReport, LaunchError> {
-    if args.len() != 1 { return Err(LaunchError::Usage); }
+    if args.len() != 1 {
+        return Err(LaunchError::Usage);
+    }
     let manifest_path = Path::new(&args[0]);
-    if !manifest_path.is_absolute() { return Err(LaunchError::Usage); }
+    if !manifest_path.is_absolute() {
+        return Err(LaunchError::Usage);
+    }
     // Reject pipes/regular stdin before reading startup assets. No protocol I/O.
     let socket = inherited_worker_socket().map_err(LaunchError::Socket)?;
     let manifest = Manifest::parse(&read_regular(manifest_path, MAX_MANIFEST_BYTES)?)?;
     // This one budget covers salt/assets/weights and protocol; never reset it.
-    let lifetime = NativeProcessBudget::new(manifest.milliseconds, manifest.steps).map_err(LaunchError::Contract)?;
+    let lifetime = NativeProcessBudget::new(manifest.milliseconds, manifest.steps)
+        .map_err(LaunchError::Contract)?;
     let mut assets = manifest.asset_budget()?;
-    let mut weights = WeightReadBudget::new(manifest.weight_bytes, manifest.weight_calls).map_err(|_| LaunchError::Limit)?;
+    let mut weights = WeightReadBudget::new(manifest.weight_bytes, manifest.weight_calls)
+        .map_err(|_| LaunchError::Limit)?;
     let salt = read_regular(&manifest.salt_file, MAX_WORKER_SALT_BYTES)?;
-    if salt.len() < MIN_NATIVE_SALT_BYTES { return Err(LaunchError::Limit); }
-    if lifetime.expired() { return Err(LaunchError::Deadline); }
+    if salt.len() < MIN_NATIVE_SALT_BYTES {
+        return Err(LaunchError::Limit);
+    }
+    if lifetime.expired() {
+        return Err(LaunchError::Deadline);
+    }
     // The original lifetime was started BEFORE either checkpoint path. Neither
     // sharding nor JSON parsing constructs a new budget or a second worker loop.
     let evaluator = manifest.load(&mut assets, &mut weights)?;
@@ -181,14 +365,24 @@ pub fn run(args: Vec<OsString>) -> Result<NativeProcessReport, LaunchError> {
 // Both final-component checks reject symlinks/devices, with bounds before buffers.
 fn read_regular(path: &Path, maximum: usize) -> Result<Vec<u8>, LaunchError> {
     let metadata = fs::symlink_metadata(path).map_err(|e| LaunchError::File(e.kind()))?;
-    if !metadata.file_type().is_file() { return Err(LaunchError::NotRegular); }
-    if metadata.len() > maximum as u64 { return Err(LaunchError::Limit); }
+    if !metadata.file_type().is_file() {
+        return Err(LaunchError::NotRegular);
+    }
+    if metadata.len() > maximum as u64 {
+        return Err(LaunchError::Limit);
+    }
     let mut source = File::open(path).map_err(|e| LaunchError::File(e.kind()))?;
     let metadata = source.metadata().map_err(|e| LaunchError::File(e.kind()))?;
-    if !metadata.is_file() { return Err(LaunchError::NotRegular); }
-    if metadata.len() > maximum as u64 { return Err(LaunchError::Limit); }
+    if !metadata.is_file() {
+        return Err(LaunchError::NotRegular);
+    }
+    if metadata.len() > maximum as u64 {
+        return Err(LaunchError::Limit);
+    }
     let mut bytes = Vec::new();
-    bytes.try_reserve_exact(maximum + 1).map_err(|_| LaunchError::Limit)?;
+    bytes
+        .try_reserve_exact(maximum + 1)
+        .map_err(|_| LaunchError::Limit)?;
     let mut buffer = [0; 4096];
     for _ in 0..MAX_FILE_READS {
         let offered = buffer.len().min(maximum - bytes.len() + 1);
@@ -198,12 +392,18 @@ fn read_regular(path: &Path, maximum: usize) -> Result<Vec<u8>, LaunchError> {
             Err(e) if e.kind() == io::ErrorKind::Interrupted => continue,
             Err(e) => return Err(LaunchError::File(e.kind())),
         };
-        if count > maximum - bytes.len() { return Err(LaunchError::Limit); }
+        if count > maximum - bytes.len() {
+            return Err(LaunchError::Limit);
+        }
         bytes.extend_from_slice(&buffer[..count]);
     }
     Err(LaunchError::Limit)
 }
-fn object<'a>(value: &'a Json, fields: &[&str], label: &'static str) -> Result<&'a BTreeMap<String, Json>, LaunchError> {
+fn object<'a>(
+    value: &'a Json,
+    fields: &[&str],
+    label: &'static str,
+) -> Result<&'a BTreeMap<String, Json>, LaunchError> {
     let object = value.as_object().ok_or(LaunchError::Field(label))?;
     if object.len() != fields.len() || fields.iter().any(|key| !object.contains_key(*key)) {
         return Err(LaunchError::Field(label));
@@ -217,12 +417,19 @@ fn count(object: &BTreeMap<String, Json>, field: &'static str) -> Result<usize, 
     usize::try_from(u64_field(object, field)?).map_err(|_| LaunchError::Limit)
 }
 fn scalar(value: &Json, field: &'static str) -> Result<f64, LaunchError> {
-    let number = match value { Json::Number(n) => n.lexeme().parse::<f64>().ok(), _ => None };
-    number.filter(|n| n.is_finite()).ok_or(LaunchError::Field(field))
+    let number = match value {
+        Json::Number(n) => n.lexeme().parse::<f64>().ok(),
+        _ => None,
+    };
+    number
+        .filter(|n| n.is_finite())
+        .ok_or(LaunchError::Field(field))
 }
 fn path(value: &Json, field: &'static str) -> Result<PathBuf, LaunchError> {
     let name = value.as_str().ok_or(LaunchError::Field(field))?;
-    if name.len() > 4096 { return Err(LaunchError::Limit); }
+    if name.len() > 4096 {
+        return Err(LaunchError::Limit);
+    }
     if name.chars().any(char::is_control) || !Path::new(name).is_absolute() {
         return Err(LaunchError::Field(field));
     }
@@ -230,13 +437,21 @@ fn path(value: &Json, field: &'static str) -> Result<PathBuf, LaunchError> {
 }
 fn hex(value: &Json) -> Result<Vec<u8>, LaunchError> {
     let text = value.as_str().ok_or(LaunchError::Field("bytes_hex"))?;
-    if text.len() > 2 * MAX_PROFILE_BYTES { return Err(LaunchError::Limit); }
-    if !text.len().is_multiple_of(2) { return Err(LaunchError::Field("bytes_hex")); }
+    if text.len() > 2 * MAX_PROFILE_BYTES {
+        return Err(LaunchError::Limit);
+    }
+    if !text.len().is_multiple_of(2) {
+        return Err(LaunchError::Field("bytes_hex"));
+    }
     let digit = |b: u8| match b {
-        b'0'..=b'9' => Ok(b - b'0'), b'a'..=b'f' => Ok(b - b'a' + 10),
+        b'0'..=b'9' => Ok(b - b'0'),
+        b'a'..=b'f' => Ok(b - b'a' + 10),
         _ => Err(LaunchError::Field("bytes_hex")),
     };
-    text.as_bytes().chunks_exact(2).map(|pair| Ok(digit(pair[0])? * 16 + digit(pair[1])?)).collect()
+    text.as_bytes()
+        .chunks_exact(2)
+        .map(|pair| Ok(digit(pair[0])? * 16 + digit(pair[1])?))
+        .collect()
 }
 
 #[cfg(test)]

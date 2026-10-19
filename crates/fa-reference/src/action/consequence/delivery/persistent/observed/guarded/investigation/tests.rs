@@ -177,7 +177,7 @@ fn setup(root: &Root) -> (FileOversight, FileRecoveryRequirements, FileHistoryAn
                 required_witnesses: Vec::new(),
                 policy_epoch: 0,
                 deadline: ElapsedTick(100),
-                units: 2,
+                units: 8,
             },
             Snapshot {
                 semantic_epoch: 1,
@@ -490,7 +490,13 @@ fn later_writer_progress_never_becomes_the_captured_diagnosis_or_a_new_source_ob
     let (mut host, expected, anchor) = setup(&root);
     let original = host.investigate_proposal(1, scope()).unwrap();
     let mut read = begin(&root, &expected, &anchor);
+    fs::remove_file(root.store().join("delivery.pending")).unwrap();
     host.observe_time(host.revision(), ElapsedTick(3)).unwrap();
+    fs::write(
+        root.store().join("delivery.pending"),
+        b"never promote or delete investigation staging",
+    )
+    .unwrap();
     let later = root.files();
     complete(&mut read, 1);
     let captured = read.finish().unwrap();

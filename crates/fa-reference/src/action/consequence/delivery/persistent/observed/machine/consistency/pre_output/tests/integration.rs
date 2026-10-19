@@ -363,13 +363,14 @@ fn required_stream_finish_waits_for_receipt_then_uses_a_new_forecast_review_and_
     let message = port
         .submit(71, LearnedTextRelease::Message, ElapsedTick(100))
         .unwrap();
-    let message_spec = supervisor
+    let mut message_spec = supervisor
         .host()
         .unwrap()
         .request_action(71)
         .unwrap()
         .spec()
         .clone();
+    message_spec.required_witnesses.clear();
     let mut run = review(FileSupervisedDriver::new(supervisor), 71, 101, b"allow");
     reject_early_finish(&mut run, &role);
     let human = approve(&mut run, &reviewer, 1001);

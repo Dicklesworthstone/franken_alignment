@@ -459,7 +459,7 @@ fn named_listener_fragments_and_reply_backpressure_preserve_source_read_boundari
     assert!(matches!(
         drain(&mut listener, &mut client).result,
         Ok(Knowledge::Known {
-            value: ActorOutcome::NotAdmitted,
+            value: ActorOutcome::Denied,
             ..
         })
     ));

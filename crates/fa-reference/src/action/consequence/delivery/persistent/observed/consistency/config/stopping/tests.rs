@@ -129,7 +129,7 @@ fn every_truncation_invalid_stop_identity_nested_wrapper_and_extra_suffix_refuse
         Err(Error::Binding)
     );
     let mut bad = bytes;
-    bad[7] = 5;
+    bad[7] = 7;
     assert_eq!(FileConsistencyConfig::from_bytes(&bad), Err(Error::Binding));
     assert_eq!(
         original

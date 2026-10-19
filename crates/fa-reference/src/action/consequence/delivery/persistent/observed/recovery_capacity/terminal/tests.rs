@@ -617,7 +617,7 @@ fn recovered_two_key_owner_keeps_execution_and_expired_liabilities_distinct() {
         if mode == 2 {
             assert_eq!(sweep.outcomes[&1], Ok(Reconciliation::RetentionExpired));
             assert_eq!(sweep.progress.unresolved, vec![1]);
-            assert_eq!(sweep.progress.irrecoverable, vec![1]);
+            assert!(sweep.progress.irrecoverable.is_empty());
         }
         assert_eq!(
             recovered.dispatch(

@@ -162,7 +162,8 @@ impl PublicationRefinement<'_> {
                     );
                 }
                 OpaqueOutcome::Pending(minimum) => {
-                    return self.finish_poll(PublicationOutcome::NeedsRefinement { minimum }, spent);
+                    return self
+                        .finish_poll(PublicationOutcome::NeedsRefinement { minimum }, spent);
                 }
             }
         }

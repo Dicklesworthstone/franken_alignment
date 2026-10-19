@@ -102,6 +102,7 @@ fn profile() -> FileOversightProfile {
                         key: 7,
                         value: b"allow".to_vec(),
                     },
+                    Predicate::All(vec![0, 1]),
                 ],
             )
             .unwrap(),

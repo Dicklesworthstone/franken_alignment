@@ -11,7 +11,7 @@ use std::cell::RefCell;
 use std::collections::{BTreeMap, BTreeSet};
 use std::rc::Rc;
 
-pub const MAX_STATE_EVENTS: usize = 1_024;
+pub const MAX_STATE_EVENTS: usize = 4_096;
 pub const MAX_STATE_PENDING: u64 = 64;
 pub const MAX_STATE_ENTRIES: usize = 256;
 pub const MAX_STATE_VALUE_BYTES: usize = 8_192;

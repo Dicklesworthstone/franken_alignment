@@ -182,7 +182,7 @@ pub(super) fn profile() -> FileOversightProfile {
                 authority: 5,
                 purpose: Purpose::Effect,
             },
-            total: 100,
+            total: 16,
             max_attempts: 16,
             actor: actor(1, vec![2]),
             suspend_at_incident: 3,

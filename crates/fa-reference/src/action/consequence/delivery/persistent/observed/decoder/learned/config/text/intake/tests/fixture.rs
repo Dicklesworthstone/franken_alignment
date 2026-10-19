@@ -47,7 +47,7 @@ impl Directory {
             .unwrap()
             .as_nanos();
         let path = std::env::temp_dir().join(format!(
-            "fa-learned-text-intake-{}-{time}-{}",
+            "fa-lti-{}-{time}-{}",
             std::process::id(),
             NEXT.fetch_add(1, Ordering::Relaxed)
         ));
@@ -286,7 +286,7 @@ pub(super) fn profile() -> FileOversightProfile {
             target,
             initial_payload: b"initial".to_vec(),
             retention_ticks: 1000,
-            max_deliveries: 8,
+            max_deliveries: 16,
             clock_domain: 99,
             limits: JournalLimits::default(),
         },

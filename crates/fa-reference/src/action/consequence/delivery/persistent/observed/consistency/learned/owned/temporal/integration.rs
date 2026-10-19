@@ -386,13 +386,14 @@ fn stream_finish_requires_receipt_confirmation_a_later_kv_forecast_and_new_revie
     let message = port
         .submit(71, LearnedTextRelease::Message, ElapsedTick(100))
         .unwrap();
-    let message_spec = supervisor
+    let mut message_spec = supervisor
         .host()
         .unwrap()
         .request_action(71)
         .unwrap()
         .spec()
         .clone();
+    message_spec.required_witnesses.clear();
     let mut run = review(FileSupervisedDriver::new(supervisor), 71, 101, b"allow");
     reject_early_finish(&mut run, &role);
     let first_key = approve(&mut run, &human, 1001);

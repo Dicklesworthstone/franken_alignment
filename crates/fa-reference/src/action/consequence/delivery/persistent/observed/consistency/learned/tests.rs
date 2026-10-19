@@ -124,7 +124,7 @@ fn consumed_refusal_and_lifetime_remainder_survive_recovery_and_a_new_capture() 
     let first_report = predict(&mut host, &observer, &first).unwrap().unwrap();
     first_report.prediction().unwrap();
     let mut denied = proposal(&host);
-    denied.units = 17;
+    denied.units = 1;
     assert!(
         host.propose_consistent(host.revision(), 1, denied, snapshot())
             .unwrap()

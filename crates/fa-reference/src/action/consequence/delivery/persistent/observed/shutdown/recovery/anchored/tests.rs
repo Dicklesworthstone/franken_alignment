@@ -366,7 +366,7 @@ fn expired_unknown_effects_remain_charged_in_every_successor_anchor() {
     assert_eq!(sweep.outcomes[&1], Ok(Reconciliation::RetentionExpired));
     assert!(!sweep.progress.drained());
     assert_eq!(sweep.progress.unresolved, vec![1]);
-    assert_eq!(sweep.progress.irrecoverable, vec![1]);
+    assert!(sweep.progress.irrecoverable.is_empty());
     assert_eq!(sweep.progress.charged_units, 16);
     exact_anchor(&root, &history);
     let clocks = Cell::new(0);

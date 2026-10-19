@@ -245,7 +245,7 @@ fn checked_native_invalid_limits_and_foreign_clock_fail_before_store_creation() 
         let mut selected = selection(true, false);
         match which {
             0 => selected.limits.bindings = 0,
-            1 => selected.feed.as_mut().unwrap().freshness.clock_domain += 1,
+            1 => selected.feed.as_mut().unwrap().freshness.clock_domain = 0,
             _ => selected.feed.as_mut().unwrap().changes.source = 0,
         }
         assert!(

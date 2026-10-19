@@ -121,6 +121,21 @@ pub(super) fn read_events(
     Ok(journal::decode(profile, &identity, &bytes)?)
 }
 
+pub(super) fn is_round_finish(event: &Event, round: u64) -> bool {
+    matches!(
+        event,
+        Event::Finish(id, ..)
+            | Event::Decoder(super::super::decoder::DecoderEvent::Learned(
+                super::super::decoder::learned::LearnedEvent::Sidecar(
+                    super::super::decoder::learned::sidecar::SidecarEvent::Finish {
+                        round: id,
+                        ..
+                    },
+                ),
+            )) if *id == round
+    )
+}
+
 impl FileReviewReplayCursor {
     // Only existing acknowledged history or fully decoded canonical input enters
     // this constructor. It is not a public event/claim import or replay shortcut.
@@ -145,10 +160,7 @@ impl FileReviewReplayCursor {
             .ok_or(Error::Missing)?;
         let finish = events
             .iter()
-            .position(|event| {
-                matches!(event,
-            Event::Finish(id, ..) if *id == round)
-            })
+            .position(|event| is_round_finish(event, round))
             .ok_or(Error::Incomplete)?;
         if finish <= begin {
             return Err(Error::Binding.into());
@@ -248,40 +260,67 @@ impl FileReviewReplayCursor {
             self.capture = Some(session.retain_replay_archive()?);
         }
         if self.replayed == self.finish {
-            let Transition::Reviewed(application) = transition else {
-                return Err(Error::Binding);
-            };
-            // Machine removed the consumed session; only this private observer
-            // still owns its one-shot output. No archive is reconstructed from
-            // a caller-supplied verdict or by running Finish a second time.
-            let capture = self.capture.take().ok_or(Error::Incomplete)?;
-            let archive = Rc::try_unwrap(capture)
-                .map_err(|_| Error::WrongState)?
-                .into_inner()
-                .ok_or(Error::Incomplete)?;
+            let (application, archive, inputs, snapshot) =
+                match (transition, &self.events[self.replayed]) {
+                    (Transition::Reviewed(application), Event::Finish(_, supplied, snapshot)) => {
+                        // Machine removed the consumed session; only this private observer
+                        // still owns its one-shot output. No archive is reconstructed from
+                        // a caller-supplied verdict or by running Finish a second time.
+                        let capture = self.capture.take().ok_or(Error::Incomplete)?;
+                        let archive = Rc::try_unwrap(capture)
+                            .map_err(|_| Error::WrongState)?
+                            .into_inner()
+                            .ok_or(Error::Incomplete)?;
+                        let inputs = supplied
+                            .as_ref()
+                            .map(|views| {
+                                CommitteeInput::capture(
+                                    archive.inputs.action(),
+                                    self.machine.broker.contracts(),
+                                    views.clone(),
+                                )
+                            })
+                            .transpose()?;
+                        (application, archive, inputs, snapshot.clone())
+                    }
+                    (
+                        Transition::LearnedSidecarFinished(result),
+                        Event::Decoder(super::super::decoder::DecoderEvent::Learned(
+                            super::super::decoder::learned::LearnedEvent::Sidecar(
+                                super::super::decoder::learned::sidecar::SidecarEvent::Finish {
+                                    snapshot,
+                                    ..
+                                },
+                            ),
+                        )),
+                    ) => {
+                        let _ = self.capture.take();
+                        match *result {
+                            super::super::decoder::learned::sidecar::FileLearnedSidecarFinish::Applied {
+                                receipt,
+                                archive,
+                                ..
+                            } => {
+                                let inputs = Some(archive.inputs.as_ref().clone());
+                                (receipt, archive, inputs, snapshot.clone())
+                            }
+                            super::super::decoder::learned::sidecar::FileLearnedSidecarFinish::Refined {
+                                ..
+                            } => return Err(Error::Incomplete),
+                        }
+                    }
+                    _ => return Err(Error::Binding),
+                };
             let anchor = self.anchor.as_ref().ok_or(Error::Incomplete)?;
             archive.verify(anchor)?;
             if let Ok(receipt) = &application {
                 archive.verify_receipt(anchor, receipt)?;
             }
-            let Event::Finish(_, supplied, snapshot) = &self.events[self.replayed] else {
-                return Err(Error::Binding);
-            };
-            let inputs = supplied
-                .as_ref()
-                .map(|views| {
-                    CommitteeInput::capture(
-                        archive.inputs.action(),
-                        self.machine.broker.contracts(),
-                        views.clone(),
-                    )
-                })
-                .transpose()?;
             self.completed = Some(Completed {
                 archive,
                 application,
                 inputs,
-                snapshot: snapshot.clone(),
+                snapshot,
                 state: self.machine.snapshot(self.replayed + 1),
             });
         }

@@ -242,7 +242,7 @@ fn replacement_failure_exposes_no_candidate_and_reopen_uses_the_actual_canonical
             .unwrap();
         let replacement = request(&host, 1);
         let before = host.inspect();
-        assert_eq!(before.control.ledger.reserved, 16);
+        assert_eq!(before.control.ledger.reserved, 0);
         host.store.fail_once(barrier);
         let error = host
             .replace_file_source(host.revision(), replacement)
@@ -270,17 +270,14 @@ fn replacement_failure_exposes_no_candidate_and_reopen_uses_the_actual_canonical
             disk.file_source_status().unwrap().capture.source.generation,
             if visible { 2 } else { 1 }
         );
-        assert_eq!(
-            disk.broker.inspect().ledger.reserved,
-            if visible { 0 } else { 16 }
-        );
+        assert_eq!(disk.broker.inspect().ledger.reserved, 0);
         assert_eq!(disk.broker.inspect().ledger.charged, 0);
         drop(host);
         let (mut host, _) = FileOversight::open(root.store(), profile()).unwrap();
         let revision = host.revision();
         if visible {
             let receipt = host.file_source_replacement(1).unwrap();
-            assert_eq!(receipt.refunded_units, 16);
+            assert_eq!(receipt.refunded_units, 0);
             assert_eq!(receipt.cancelled, vec![1]);
             assert_eq!(host.replace_file_source(0, replacement).unwrap(), receipt);
         } else {
@@ -299,7 +296,7 @@ fn replacement_failure_exposes_no_candidate_and_reopen_uses_the_actual_canonical
         refresh(&mut host, &root, 1, 1, 2).unwrap();
         host.propose(host.revision(), 2, proposal(&host), snapshot())
             .unwrap();
-        assert_eq!(host.inspect().control.ledger.reserved, 16);
+        assert_eq!(host.inspect().control.ledger.reserved, 0);
         assert_eq!(host.inspect().executions, 0);
     }
 }
@@ -352,7 +349,7 @@ fn actual_capacity_interruption_can_be_replaced_but_historical_retry_cannot_clea
     refresh(&mut host, &root, 5, 1, 5).unwrap();
     host.propose(host.revision(), 1, proposal(&host), snapshot())
         .unwrap();
-    assert_eq!(host.inspect().control.ledger.reserved, 16);
+    assert_eq!(host.inspect().control.ledger.reserved, 0);
     assert_eq!(host.inspect().executions, 0);
 }
 

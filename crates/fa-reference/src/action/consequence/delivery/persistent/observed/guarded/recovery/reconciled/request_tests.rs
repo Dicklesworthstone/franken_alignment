@@ -29,7 +29,8 @@ fn receipt_preflight_requires_a_real_request_before_clock_or_recovery_writes() {
     let root = Directory::new();
     let mut prepared = Ready::new(&root);
     // Use the ORIGINAL recorded actor admission, not an invented request row.
-    let spec = prepared.action.spec().clone();
+    let mut spec = prepared.action.spec().clone();
+    spec.required_witnesses.clear();
     let revision = prepared.host.revision();
     prepared
         .host

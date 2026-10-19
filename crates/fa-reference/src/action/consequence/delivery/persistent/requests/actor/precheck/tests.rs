@@ -177,7 +177,7 @@ fn write_source(root: &Root, epoch: u64, value: &[u8]) {
     let data = EvidenceSnapshot::new(
         EvidenceIdentity {
             source: 51,
-            generation: 1,
+            generation: epoch,
             scope: profile().delivery.scope,
         },
         snapshot(epoch, value),

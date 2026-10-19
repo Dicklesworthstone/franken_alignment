@@ -129,6 +129,14 @@ impl<P: ActorRequestPort> FileActorInbox<P> {
                     }
                     result
                 })?;
+            if let Some(error) = intakes.iter().find_map(|report| match &report.result {
+                Err(error @ (JournalError::Io(_) | JournalError::Unavailable)) => {
+                    Some(error.clone())
+                }
+                _ => None,
+            }) {
+                return Err(error.into());
+            }
             let host = supervisor.host()?;
             for request in seen {
                 match host.request_status(request) {

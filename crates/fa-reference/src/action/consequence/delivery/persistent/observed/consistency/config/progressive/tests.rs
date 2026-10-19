@@ -41,10 +41,10 @@ fn precision() -> ProgressiveForecastPolicy {
 }
 fn wrap(inner: &[u8], p: ProgressiveForecastPolicy) -> Vec<u8> {
     let mut bytes = b"FACPRED\x06".to_vec();
-    bytes.extend_from_slice(&(inner.len() as u64).to_be_bytes());
+    bytes.extend_from_slice(&(inner.len() as u32).to_be_bytes());
     bytes.extend_from_slice(inner);
     bytes.extend_from_slice(&[p.initial_bits(), p.refinement_bits(), p.maximum_bits()]);
-    bytes.extend_from_slice(&(p.max_encoded_bytes() as u64).to_be_bytes());
+    bytes.extend_from_slice(&(p.max_encoded_bytes() as u32).to_be_bytes());
     bytes
 }
 
@@ -179,19 +179,19 @@ fn truncation_suffixes_invalid_caps_and_recursive_or_reordered_wrappers_never_do
     assert!(FileConsistencyConfig::from_bytes(&wrap(stopped.encoded(), precision())).is_err());
     for (offset, value) in [(0, 24), (1, 0), (1, 24), (2, 24)] {
         let mut bad = good.encoded().to_vec();
-        let start = bad.len() - 11;
+        let start = bad.len() - 7;
         bad[start + offset] = value;
         assert!(FileConsistencyConfig::from_bytes(&bad).is_err());
     }
-    for bytes in [0_u64, (MAX_PROGRESSIVE_FORECAST_BYTES as u64) + 1, u64::MAX] {
+    for bytes in [0_u32, (MAX_PROGRESSIVE_FORECAST_BYTES as u32) + 1, u32::MAX] {
         let mut bad = good.encoded().to_vec();
-        let start = bad.len() - 8;
+        let start = bad.len() - 4;
         bad[start..].copy_from_slice(&bytes.to_be_bytes());
         assert!(FileConsistencyConfig::from_bytes(&bad).is_err());
     }
     for domain in [b"FACPRED\x03", b"FACPRED\x05"] {
         let mut wrong = domain.to_vec();
-        wrong.extend_from_slice(&(good.encoded().len() as u64).to_be_bytes());
+        wrong.extend_from_slice(&(good.encoded().len() as u32).to_be_bytes());
         wrong.extend_from_slice(good.encoded());
         assert!(FileConsistencyConfig::from_bytes(&wrong).is_err());
     }

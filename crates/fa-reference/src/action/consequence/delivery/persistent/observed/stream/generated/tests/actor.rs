@@ -215,7 +215,7 @@ fn generated_actor_returns_recorded_refusal_without_disclosing_policy_or_consumi
     assert!(matches!(
         port.poll(&ticket),
         Knowledge::Known {
-            value: ActorOutcome::NotAdmitted,
+            value: ActorOutcome::Denied,
             ..
         }
     ));

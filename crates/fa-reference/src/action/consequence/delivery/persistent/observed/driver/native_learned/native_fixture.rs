@@ -68,7 +68,7 @@ pub(super) fn evaluator(profile_binding: InputProfileBinding, spelling: &[u8]) -
             layers: 1,
             query_heads: 1,
             cache_heads: 1,
-            context: 8192,
+            context: 4096,
         },
         0.00001,
         10000.0,
@@ -104,8 +104,8 @@ pub(super) fn evaluator(profile_binding: InputProfileBinding, spelling: &[u8]) -
     )
     .unwrap();
     let allowance = RefinementBudget {
-        encoded_bytes: 100_000,
-        probe_coordinates: 100_000,
+        encoded_bytes: 250_000,
+        probe_coordinates: 250_000,
     };
     let probe = LinearProbe::new(
         1,

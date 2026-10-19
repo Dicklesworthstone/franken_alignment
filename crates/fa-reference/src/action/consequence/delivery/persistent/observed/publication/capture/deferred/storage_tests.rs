@@ -212,7 +212,7 @@ fn fixture(root: &Directory, p: FileOversightProfile) -> FileOversight {
             model_epoch: 1,
         },
         vec![SubmittedPart {
-            kind: PartKind::Other,
+            kind: PartKind::Question,
             span: ByteSpan { start: 0, end: 6 },
         }],
         Vec::new(),

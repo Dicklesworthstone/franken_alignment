@@ -81,7 +81,7 @@ fn checked_history(
     anchor.check(profile, &identity, &events)?;
     let finish = events
         .iter()
-        .position(|event| matches!(event, Event::Finish(id, ..) if *id == round))
+        .position(|event| super::cursor::is_round_finish(event, round))
         .ok_or(Error::Incomplete)?;
     let completed = u64::try_from(finish + 1).map_err(|_| Error::Limit)?;
     if anchor.revision() < completed {

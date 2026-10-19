@@ -82,7 +82,12 @@ fn start(
     root: &Directory,
     owned: bool,
     alarm: bool,
-) -> (FileOversight, Original, FileLearnedConfig) {
+) -> (
+    FileOversight,
+    Original,
+    FileLearnedConfig,
+    Option<FileLearnedConsistencyConfig>,
+) {
     let config = config(alarm, 1);
     let (mut host, _) = owner(root, &config);
     let profile = if owned {
@@ -113,7 +118,7 @@ fn start(
         max_prediction_age_ticks: 10,
     })
     .unwrap();
-    let observer = if owned {
+    let (observer, owned_predictor) = if owned {
         let predictor = FileLearnedConsistencyConfig::new(
             predictor,
             1,
@@ -125,11 +130,19 @@ fn start(
         .unwrap()
         .with_owned_generation()
         .unwrap();
-        host.enable_learned_action_consistency(host.revision(), predictor)
-            .unwrap()
+        let observer = host
+            .enable_learned_action_consistency(host.revision(), predictor.clone())
+            .unwrap();
+        (observer, Some(predictor))
     } else {
-        host.enable_action_consistency(host.revision(), predictor.with_hosted_residual(1).unwrap())
-            .unwrap()
+        (
+            host.enable_action_consistency(
+                host.revision(),
+                predictor.with_hosted_residual(1).unwrap(),
+            )
+            .unwrap(),
+            None,
+        )
     };
     step(&mut host).unwrap(); // Complete original prompt, with zero samples.
     let numerical = host.learned_generation_inspection().unwrap().numerical;
@@ -165,7 +178,7 @@ fn start(
     // Force the initial cold path; subsequent quanta must retain their genuine
     // acknowledged predecessor rather than reconstructing from zero each time.
     host.clear_learned_replay_cache();
-    (host, original, config)
+    (host, original, config, owned_predictor)
 }
 fn disk(host: &FileOversight) -> Vec<u8> {
     host.store.read(host.profile.delivery.limits.bytes).unwrap()
@@ -203,8 +216,8 @@ fn raw_and_owned_quanta_preserve_original_samples_journal_bytes_and_lifetime_wor
         for quantum in [1, 2, 32] {
             let root = Directory::new();
             let control_root = Directory::new();
-            let (mut host, original, config) = start(&root, owned, false);
-            let (mut control, mut reference, _) = start(&control_root, owned, false);
+            let (mut host, original, config, owned_predictor) = start(&root, owned, false);
+            let (mut control, mut reference, _, _) = start(&control_root, owned, false);
             let before = disk(&host);
             let mut run = original.cooperative();
             assert_eq!(disk(&host), before); // Conversion is not a transaction.
@@ -241,10 +254,19 @@ fn raw_and_owned_quanta_preserve_original_samples_journal_bytes_and_lifetime_wor
                     disk(&host),
                     journal::encode(&host.profile, host.store.identity(), &control.events).unwrap()
                 );
-                assert_eq!(
-                    read_machine(&host, &config).snapshot(host.events.len()),
-                    host.inspect()
-                );
+                let replayed = if let Some(predictor) = &owned_predictor {
+                    FileOversight::read_publication_with_owned_learned_consistency(
+                        root.store(),
+                        &profile(),
+                        &config,
+                        predictor,
+                    )
+                    .unwrap()
+                    .publication
+                } else {
+                    read_machine(&host, &config).snapshot(host.events.len())
+                };
+                assert_eq!(replayed, host.inspect());
             }
             assert_eq!(
                 host.action_consistency_snapshot()
@@ -270,8 +292,8 @@ fn appended_time_is_replayed_without_restarting_the_verified_prefix() {
     for owned in [false, true] {
         let root = Directory::new();
         let control_root = Directory::new();
-        let (mut host, original, _) = start(&root, owned, false);
-        let (mut control, mut reference, _) = start(&control_root, owned, false);
+        let (mut host, original, _, _) = start(&root, owned, false);
+        let (mut control, mut reference, _, _) = start(&control_root, owned, false);
         let mut run = original.cooperative();
         let before = disk(&host);
         let FilePreOutputQuantum::ReplayingIntent {
@@ -312,8 +334,8 @@ fn invalid_quanta_stale_revisions_and_foreign_owners_preserve_pending_replay() {
     for owned in [false, true] {
         let root = Directory::new();
         let foreign_root = Directory::new();
-        let (mut host, original, _) = start(&root, owned, false);
-        let (mut foreign, _, _) = start(&foreign_root, owned, false);
+        let (mut host, original, _, _) = start(&root, owned, false);
+        let (mut foreign, _, _, _) = start(&foreign_root, owned, false);
         let mut run = original.cooperative();
         let _ = run.poll(&mut host, 1).unwrap();
         let bytes = disk(&host);
@@ -351,7 +373,7 @@ fn expiry_between_quanta_cannot_start_or_complete_an_original_sample() {
         for acknowledged_intent in [false, true] {
             for expired in [false, true] {
                 let root = Directory::new();
-                let (mut host, original, _) = start(&root, owned, false);
+                let (mut host, original, _, _) = start(&root, owned, false);
                 let mut run = original.cooperative();
                 if acknowledged_intent {
                     intent(&mut run, &mut host);
@@ -391,7 +413,7 @@ fn another_numerical_step_or_consumed_forecast_cannot_be_adopted_by_catch_up() {
     for owned in [false, true] {
         for consume in [false, true] {
             let root = Directory::new();
-            let (mut host, original, _) = start(&root, owned, false);
+            let (mut host, original, _, _) = start(&root, owned, false);
             let mut run = original.cooperative();
             let _ = run.poll(&mut host, 1).unwrap();
             if consume {
@@ -425,7 +447,7 @@ fn dropping_preparation_preserves_forecast_and_only_acknowledged_intents() {
     for owned in [false, true] {
         for acknowledged_intent in [false, true] {
             let root = Directory::new();
-            let (mut host, original, _) = start(&root, owned, false);
+            let (mut host, original, _, _) = start(&root, owned, false);
             let mut run = original.cooperative();
             if acknowledged_intent {
                 intent(&mut run, &mut host);
@@ -449,7 +471,7 @@ fn dropping_preparation_preserves_forecast_and_only_acknowledged_intents() {
 fn held_original_sample_is_not_released_or_retried_by_a_later_quantum() {
     for owned in [false, true] {
         let root = Directory::new();
-        let (mut host, original, _) = start(&root, owned, true);
+        let (mut host, original, _, _) = start(&root, owned, true);
         let mut run = original.cooperative();
         let event = complete(&mut run, &mut host, 1).unwrap();
         assert!(matches!(event.status(), GenerationStatus::Held(_)));
@@ -474,7 +496,7 @@ fn both_finalizers_preserve_unknown_storage_outcomes_and_never_cold_retry() {
                 JournalIo::DirectorySync,
             ] {
                 let root = Directory::new();
-                let (mut host, original, config) = start(&root, owned, false);
+                let (mut host, original, config, owned_predictor) = start(&root, owned, false);
                 let mut run = original.cooperative();
                 if completion {
                     intent(&mut run, &mut host);
@@ -505,9 +527,19 @@ fn both_finalizers_preserve_unknown_storage_outcomes_and_never_cold_retry() {
                     Some(JournalError::Unavailable)
                 );
                 drop(host);
-                let (mut recovered, _) =
+                let (mut recovered, _) = if let Some(predictor) = &owned_predictor {
+                    let (host, reviewer, _) = FileOversight::open_with_owned_learned_consistency(
+                        root.store(),
+                        profile(),
+                        &config,
+                        predictor,
+                    )
+                    .unwrap();
+                    (host, reviewer)
+                } else {
                     FileOversight::open_with_learned_generation(root.store(), profile(), &config)
-                        .unwrap();
+                        .unwrap()
+                };
                 assert!(
                     recovered
                         .action_consistency_snapshot()

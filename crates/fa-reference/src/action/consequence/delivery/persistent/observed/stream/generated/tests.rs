@@ -1,6 +1,5 @@
 //! Original numerical generation and original message authority, not supplied output.
 use super::*;
-use crate::action::FrozenAction;
 use crate::action::consequence::activation::monitor::decoder::sampled::generation::{
     GenerationRequest, MAX_SAMPLING_ENTRIES, text::TextGenerationRequest, tokenizer::ByteBpe,
 };
@@ -22,6 +21,7 @@ use crate::action::consequence::oversight::{
     CommitteeInput, ReviewWindow,
     evidence_source::{EvidenceIdentity, EvidenceSnapshot},
 };
+use crate::action::{ActionState, FrozenAction};
 use crate::round::{Verdict, commitment};
 use std::collections::BTreeMap;
 
@@ -304,7 +304,13 @@ fn generated_message_retries_preserve_recorded_refusals_and_do_not_rebase_or_pau
             .submit_decoder_text_message(host.revision(), input.clone(), snapshot())
             .unwrap();
         assert_eq!(
-            matches!(status.disposition, FileRequestDisposition::NotAdmitted(_)),
+            matches!(
+                status.disposition,
+                FileRequestDisposition::Admitted {
+                    stage: ActionState::Denied,
+                    ..
+                }
+            ),
             denied
         );
         if !denied {

@@ -16,6 +16,11 @@ pub(super) struct Store {
     #[cfg(test)]
     failure: std::cell::Cell<Option<JournalIo>>,
 }
+impl Drop for Store {
+    fn drop(&mut self) {
+        let _ = self.owner.unlock();
+    }
+}
 fn failed(
     operation: JournalIo,
     error: io::Error,

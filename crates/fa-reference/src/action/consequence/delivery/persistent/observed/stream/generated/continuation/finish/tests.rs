@@ -2,7 +2,6 @@
 //! Synthetic weights/ballots are fixtures, not detector or isolation evidence.
 use super::*;
 use crate::Snapshot;
-use crate::action::FrozenAction;
 use crate::action::consequence::activation::monitor::decoder::sampled::generation::{
     MAX_SAMPLING_ENTRIES, text::TextGenerationRequest, tokenizer::ByteBpe,
 };
@@ -22,6 +21,7 @@ use crate::action::consequence::oversight::{
     CommitteeInput, ReviewWindow,
     evidence_source::{EvidenceIdentity, EvidenceSnapshot},
 };
+use crate::action::{ActionState, FrozenAction};
 use crate::round::{Verdict, commitment};
 use std::collections::BTreeMap;
 
@@ -40,6 +40,7 @@ fn profile(cap: usize) -> FileOversightProfile {
     let mut p = fixtures::host_profile();
     p.delivery.initial_payload.clear();
     p.delivery.total = 4096;
+    p.delivery.max_deliveries = 16;
     p.delivery.policy = Policy::new(1, vec![Predicate::PayloadAtMost(cap)]).unwrap();
     p
 }
@@ -298,7 +299,10 @@ fn native_finish_retains_refused_and_cancelled_intents_without_rebasing_their_de
         assert_eq!(
             matches!(
                 host.request_status(92).unwrap().disposition,
-                FileRequestDisposition::NotAdmitted(_)
+                FileRequestDisposition::Admitted {
+                    stage: ActionState::Denied,
+                    ..
+                }
             ),
             denied
         );

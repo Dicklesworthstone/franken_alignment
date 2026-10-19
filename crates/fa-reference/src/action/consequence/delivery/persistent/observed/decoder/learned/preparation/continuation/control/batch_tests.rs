@@ -197,7 +197,7 @@ fn query_only_batch_preserves_interrupted_source_and_unknown_effect_charge() {
         snapshot(),
     )
     .unwrap();
-    host.cancel(host.revision(), 1).unwrap();
+    host.reconcile(host.revision(), 1).unwrap();
     current_predecessor(&host);
     host.source_interrupted = true;
     let before = host.events.len();

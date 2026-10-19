@@ -114,14 +114,14 @@ pub(super) struct ConsistencyState {
     learned: Option<LearnedLane>,
     hosted_layer: Option<u64>,
     event_domain: ConsistencyEventDomain,
-    evidence: LikelihoodEvidence,
+    pub(super) evidence: LikelihoodEvidence,
     pending: Option<PendingForecast>,
     observations: BTreeMap<u64, ForecastRecord>,
     jobs: usize,
     follow_learned_resets: bool,
     last_stream: u64,
     last_sequence: u64,
-    coverage_lost: bool,
+    pub(super) coverage_lost: bool,
     automatic_stop: Option<stopping::ConsistencyStopState>,
 }
 

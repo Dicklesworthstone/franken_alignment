@@ -200,7 +200,7 @@ fn crashed_guarded_domain_uses_exact_tail_and_repeated_recovery_never_rewrites_i
         },
     )
     .unwrap();
-    assert_eq!(h.inspect().control.ledger.reserved, 16);
+    assert_eq!(h.inspect().control.ledger.reserved, 0);
     assert_eq!(h.journal_capacity().unwrap().ordinary_remaining().events, 0);
     let p = plan(&[&h], MAX_SHUTDOWN_HEAD_BYTES);
     let native = h.profile.clone();

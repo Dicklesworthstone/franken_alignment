@@ -161,6 +161,11 @@ pub(super) struct FileStore {
     #[cfg(test)]
     fail_at: Option<StorageStage>,
 }
+impl Drop for FileStore {
+    fn drop(&mut self) {
+        let _ = self._lock.unlock();
+    }
+}
 
 impl fmt::Debug for FileStore {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {

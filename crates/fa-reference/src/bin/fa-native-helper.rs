@@ -9,7 +9,9 @@ mod config;
 fn main() -> std::process::ExitCode {
     use fa_reference::action::consequence::oversight::helper_client::native::process::NativeProcessStop;
     match config::run(std::env::args_os().skip(1).take(2).collect()) {
-        Ok(report) if report.stop == NativeProcessStop::ReplySent => std::process::ExitCode::SUCCESS,
+        Ok(report) if report.stop == NativeProcessStop::ReplySent => {
+            std::process::ExitCode::SUCCESS
+        }
         Ok(report) => {
             eprintln!("fa-native-helper: stopped: {report:?}");
             std::process::ExitCode::FAILURE

@@ -43,7 +43,7 @@ fn opaque(value: u8) -> PublicationInputs {
                     model_epoch: 1,
                 },
                 vec![SubmittedPart {
-                    kind: PartKind::Other,
+                    kind: PartKind::Question,
                     span: ByteSpan { start: 0, end: 1 },
                 }],
                 Vec::new(),

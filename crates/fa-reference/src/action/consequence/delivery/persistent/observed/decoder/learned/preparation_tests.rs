@@ -402,7 +402,7 @@ fn history_reconstruction_neither_republishes_executed_effects_nor_refunds_unkno
             );
             host.reconcile(host.revision(), 1).unwrap();
         } else {
-            host.cancel(host.revision(), 1).unwrap();
+            host.reconcile(host.revision(), 1).unwrap();
         }
         let mut task = prepare(&mut host);
         let bytes = disk(&host);

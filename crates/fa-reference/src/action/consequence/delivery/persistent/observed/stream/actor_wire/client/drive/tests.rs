@@ -121,7 +121,7 @@ fn proposal() -> ActorProposal {
         payload: vec![b'x'; 9000],
         expected_policy_epoch: 0,
         deadline: ElapsedTick(50),
-        units: 16,
+        units: 9000,
     }
 }
 fn profile() -> FileClientProfile {

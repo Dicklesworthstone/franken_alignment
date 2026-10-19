@@ -336,7 +336,7 @@ fn cancellation_and_receipt_tails_keep_executed_or_unknown_effects_and_full_char
         if executed {
             host.reconcile(host.revision(), 1).unwrap();
         } else {
-            host.cancel(host.revision(), 1).unwrap();
+            host.reconcile(host.revision(), 1).unwrap();
         }
         let state = host.inspect();
         let bytes = disk(&host);

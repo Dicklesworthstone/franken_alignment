@@ -15,12 +15,27 @@ pub(super) fn parse(value: &Json) -> Result<RotaryScaling, LaunchError> {
                 .map_err(LaunchError::Contract)
         }
         Some("llama3") => {
-            let fields = object(value, &["kind", "factor", "low_freq_factor", "high_freq_factor",
-                "original_max_position_embeddings"], "decoder.rotary")?;
-            RotaryScaling::llama3(scalar(&fields["factor"], "decoder.rotary.factor")?,
+            let fields = object(
+                value,
+                &[
+                    "kind",
+                    "factor",
+                    "low_freq_factor",
+                    "high_freq_factor",
+                    "original_max_position_embeddings",
+                ],
+                "decoder.rotary",
+            )?;
+            RotaryScaling::llama3(
+                scalar(&fields["factor"], "decoder.rotary.factor")?,
                 scalar(&fields["low_freq_factor"], "decoder.rotary.low_freq_factor")?,
-                scalar(&fields["high_freq_factor"], "decoder.rotary.high_freq_factor")?,
-                count(fields, "original_max_position_embeddings")?).map_err(LaunchError::Contract)
+                scalar(
+                    &fields["high_freq_factor"],
+                    "decoder.rotary.high_freq_factor",
+                )?,
+                count(fields, "original_max_position_embeddings")?,
+            )
+            .map_err(LaunchError::Contract)
         }
         _ => Err(LaunchError::Field("decoder.rotary.kind")),
     }

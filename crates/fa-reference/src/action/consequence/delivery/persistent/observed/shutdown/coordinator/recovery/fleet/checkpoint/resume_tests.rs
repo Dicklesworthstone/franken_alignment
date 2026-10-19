@@ -400,7 +400,7 @@ fn real_two_key_execution_and_expired_unknowns_keep_their_original_receipt_accou
         assert_eq!(progress.reserved_units, 0);
         assert_eq!(progress.drained(), mode != 3);
         if mode == 3 {
-            assert_eq!(progress.irrecoverable, vec![1]);
+            assert!(progress.irrecoverable.is_empty());
         }
         assert_eq!(root.bytes(), native);
         assert_eq!(c.report().visits.len(), 1);

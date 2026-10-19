@@ -171,7 +171,7 @@ fn spec(payload: &[u8]) -> ActionSpec {
         required_witnesses: Vec::new(),
         policy_epoch: 0,
         deadline: ElapsedTick(100),
-        units: 2,
+        units: 8,
     }
 }
 fn snapshot() -> Snapshot {
@@ -306,11 +306,17 @@ fn terminal_outcome_and_exact_retry_do_not_replace_the_original_request_admissio
     let root = Root::new();
     let (mut host, expected, anchor) = setup(&root);
     let original = host.investigate_proposal(3, scope()).unwrap();
+    fs::remove_file(root.store().join("delivery.pending")).unwrap();
     host.cancel_request(host.revision(), 2).unwrap();
     let before_retry = host.revision();
     let status = host
         .submit_request(0, 2, spec(b"ok"), Snapshot::default())
         .unwrap();
+    fs::write(
+        root.store().join("delivery.pending"),
+        b"preserve original staging",
+    )
+    .unwrap();
     assert_eq!(
         status.disposition,
         FileRequestDisposition::Admitted {
@@ -339,6 +345,7 @@ fn terminal_outcome_and_exact_retry_do_not_replace_the_original_request_admissio
 fn not_admitted_missing_and_direct_only_keys_never_select_another_proposal() {
     let root = Root::new();
     let (mut host, expected, anchor) = setup(&root);
+    fs::remove_file(root.store().join("delivery.pending")).unwrap();
     let rejected = host
         .submit_request(host.revision(), 3, spec(b"bad"), Snapshot::default())
         .unwrap();
@@ -349,6 +356,11 @@ fn not_admitted_missing_and_direct_only_keys_never_select_another_proposal() {
     let allowed = host
         .submit_request(host.revision(), 4, spec(b"yes"), snapshot())
         .unwrap();
+    fs::write(
+        root.store().join("delivery.pending"),
+        b"preserve original staging",
+    )
+    .unwrap();
     assert!(matches!(
         allowed.disposition,
         FileRequestDisposition::Admitted { attempt: 5, .. }
