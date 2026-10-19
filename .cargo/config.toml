@@ -1,2 +1,6 @@
 [alias]
 xtask = "run --locked -p xtask --"
+
+[env]
+TMPDIR = { value = "/tmp", force = true }
+
