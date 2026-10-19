@@ -1,8 +1,9 @@
 //! Fixed labels and native counters only; never serialize evidence or error prose.
-use fa_reference::action::consequence::delivery::persistent::observed::shutdown::coordinator::{
-    FileShutdownRecoveryPass, FileShutdownPassResult, FileShutdownClockedRecoveryPass};
-use fa_reference::action::consequence::delivery::persistent::{JournalError, JournalIo};
 use fa_reference::Error;
+use fa_reference::action::consequence::delivery::persistent::observed::shutdown::coordinator::{
+    FileShutdownClockedRecoveryPass, FileShutdownPassResult, FileShutdownRecoveryPass,
+};
+use fa_reference::action::consequence::delivery::persistent::{JournalError, JournalIo};
 use std::fmt::Write;
 
 pub(super) fn encode(mode: &str, timed_out: bool, pass: &FileShutdownRecoveryPass) -> String {
@@ -14,12 +15,25 @@ pub(super) fn encode(mode: &str, timed_out: bool, pass: &FileShutdownRecoveryPas
         mode, pass.operation(), pass.initial_revision(), pass.final_revision(), timed_out,
         pass.all_observed_stopped(), pass.all_observed_drained()).expect("String write");
     for (index, member) in pass.members().iter().enumerate() {
-        if index != 0 { out.push(','); }
-        record(&mut out, member.clock.domain, member.clock.clock_domain, &member.result, None);
+        if index != 0 {
+            out.push(',');
+        }
+        record(
+            &mut out,
+            member.clock.domain,
+            member.clock.clock_domain,
+            &member.result,
+            None,
+        );
     }
-    out.push_str("]}\n"); out
+    out.push_str("]}\n");
+    out
 }
-pub(super) fn encode_clocked(mode: &str, timed_out: bool, pass: &FileShutdownClockedRecoveryPass) -> String {
+pub(super) fn encode_clocked(
+    mode: &str,
+    timed_out: bool,
+    pass: &FileShutdownClockedRecoveryPass,
+) -> String {
     let mut out = String::new();
     write!(out, concat!("{{\"schema_version\":\"fa.shutdown-fleet-result/2\",\"mode\":\"{}\",",
         "\"operation\":\"{}\",\"initial_revision\":\"{}\",\"final_revision\":\"{}\",",
@@ -27,14 +41,28 @@ pub(super) fn encode_clocked(mode: &str, timed_out: bool, pass: &FileShutdownClo
         mode, pass.operation(), pass.initial_revision(), pass.final_revision(), timed_out,
         pass.all_observed_stopped(), pass.all_observed_drained()).expect("String write");
     for (index, member) in pass.members().iter().enumerate() {
-        if index != 0 { out.push(','); }
-        record(&mut out, member.binding.domain, member.binding.clock_domain, &member.result, Some(member.acquired_tick));
+        if index != 0 {
+            out.push(',');
+        }
+        record(
+            &mut out,
+            member.binding.domain,
+            member.binding.clock_domain,
+            &member.result,
+            Some(member.acquired_tick),
+        );
     }
-    out.push_str("]}\n"); out
+    out.push_str("]}\n");
+    out
 }
 
-fn record(out: &mut String, domain: u64, clock_domain: u64, result: &FileShutdownPassResult,
-    acquisition: Option<Option<fa_reference::action::ElapsedTick>>) {
+fn record(
+    out: &mut String,
+    domain: u64,
+    clock_domain: u64,
+    result: &FileShutdownPassResult,
+    acquisition: Option<Option<fa_reference::action::ElapsedTick>>,
+) {
     let label = match result {
         FileShutdownPassResult::NotVisited => "not_visited",
         FileShutdownPassResult::Observed(_) => "observed",
@@ -42,21 +70,32 @@ fn record(out: &mut String, domain: u64, clock_domain: u64, result: &FileShutdow
         FileShutdownPassResult::EvidenceRefused(_) => "evidence_refused",
         FileShutdownPassResult::Unacknowledged(_) => "unacknowledged",
     };
-    write!(out, "{{\"domain\":\"{}\",\"clock_domain\":\"{}\",\"result\":\"{}\"",
-        domain, clock_domain, label).expect("String write");
+    write!(
+        out,
+        "{{\"domain\":\"{}\",\"clock_domain\":\"{}\",\"result\":\"{}\"",
+        domain, clock_domain, label
+    )
+    .expect("String write");
     if let FileShutdownPassResult::Observed(observation) = result {
-        write!(out, ",\"journal_revision\":\"{}\",\"executions\":\"{}\"",
-            observation.journal_revision, observation.executions).expect("String write");
+        write!(
+            out,
+            ",\"journal_revision\":\"{}\",\"executions\":\"{}\"",
+            observation.journal_revision, observation.executions
+        )
+        .expect("String write");
         if let Some(progress) = &observation.stop {
             write!(out, ",\"stop_operation\":\"{}\",\"drained\":{},\"reserved\":\"{}\",\"charged\":\"{}\",\"unresolved\":[",
                 progress.receipt.request().operation, progress.drained(), progress.reserved_units,
                 progress.charged_units).expect("String write");
             ids(out, &progress.unresolved);
-            out.push_str("],\"irrecoverable\":["); ids(out, &progress.irrecoverable); out.push(']');
+            out.push_str("],\"irrecoverable\":[");
+            ids(out, &progress.irrecoverable);
+            out.push(']');
         }
     }
     match result {
-        FileShutdownPassResult::Refused(error) | FileShutdownPassResult::EvidenceRefused(error)
+        FileShutdownPassResult::Refused(error)
+        | FileShutdownPassResult::EvidenceRefused(error)
         | FileShutdownPassResult::Unacknowledged(error) => failure(out, error),
         _ => {}
     }
@@ -71,7 +110,9 @@ fn record(out: &mut String, domain: u64, clock_domain: u64, result: &FileShutdow
 
 fn ids(out: &mut String, values: &[u64]) {
     for (index, value) in values.iter().enumerate() {
-        if index != 0 { out.push(','); }
+        if index != 0 {
+            out.push(',');
+        }
         write!(out, "\"{value}\"").expect("String write");
     }
 }
@@ -87,17 +128,29 @@ fn failure(out: &mut String, error: &JournalError) {
         JournalError::Contract(Error::WrongState) => "wrong_state",
         JournalError::Contract(Error::Stale) => "stale",
         JournalError::Contract(Error::Binding) => "binding",
-        JournalError::Busy => "busy", JournalError::Unavailable => "unavailable",
-        JournalError::InvalidFile => "invalid_file", JournalError::Io(_) => "io",
+        JournalError::Busy => "busy",
+        JournalError::Unavailable => "unavailable",
+        JournalError::InvalidFile => "invalid_file",
+        JournalError::Io(_) => "io",
     };
     write!(out, ",\"error\":\"{code}\"").expect("String write");
     if let JournalError::Io(failure) = error {
         let operation = match failure.operation {
-            JournalIo::Directory => "directory", JournalIo::Lock => "lock", JournalIo::Read => "read",
-            JournalIo::Stage => "stage", JournalIo::Write => "write", JournalIo::FileSync => "file_sync",
-            JournalIo::Rename => "rename", JournalIo::DirectorySync => "directory_sync", JournalIo::Cleanup => "cleanup",
+            JournalIo::Directory => "directory",
+            JournalIo::Lock => "lock",
+            JournalIo::Read => "read",
+            JournalIo::Stage => "stage",
+            JournalIo::Write => "write",
+            JournalIo::FileSync => "file_sync",
+            JournalIo::Rename => "rename",
+            JournalIo::DirectorySync => "directory_sync",
+            JournalIo::Cleanup => "cleanup",
         };
-        write!(out, ",\"io_operation\":\"{operation}\",\"replacement_may_be_visible\":{}",
-            failure.replacement_may_be_visible).expect("String write");
+        write!(
+            out,
+            ",\"io_operation\":\"{operation}\",\"replacement_may_be_visible\":{}",
+            failure.replacement_may_be_visible
+        )
+        .expect("String write");
     }
 }

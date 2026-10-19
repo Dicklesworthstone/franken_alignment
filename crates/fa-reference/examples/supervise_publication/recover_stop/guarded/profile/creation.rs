@@ -10,7 +10,9 @@ impl CreationOutput {
     /// Resolve the new store via its original parent, without creating it.
     /// An existing store is still refused by the original create-only owner API.
     pub(crate) fn admit(config: &Config, output: &Path) -> Result<Self, String> {
-        if !output.is_absolute() { return Err("anchor paths must be absolute".into()); }
+        if !output.is_absolute() {
+            return Err("anchor paths must be absolute".into());
+        }
         let store = match fs::canonicalize(&config.store) {
             Ok(path) => path,
             Err(error) if error.kind() == io::ErrorKind::NotFound => resolved_new(&config.store)?,
@@ -21,7 +23,9 @@ impl CreationOutput {
         match fs::symlink_metadata(&path) {
             Err(error) if error.kind() == io::ErrorKind::NotFound => Ok(Self { path }),
             Err(error) => Err(debug(error)),
-            Ok(_) => Err("anchor output must be a new file; the previous archive is never replaced".into()),
+            Ok(_) => Err(
+                "anchor output must be a new file; the previous archive is never replaced".into(),
+            ),
         }
     }
 
@@ -31,7 +35,10 @@ impl CreationOutput {
     pub(crate) fn retain(&self, host: &FileOversight) -> Result<(), String> {
         let result = (|| {
             let anchor = host.history_anchor().map_err(debug)?;
-            let custody = Custody { anchor, output: Some(self.path.clone()) };
+            let custody = Custody {
+                anchor,
+                output: Some(self.path.clone()),
+            };
             custody.retain(custody.anchor())
         })();
         result.map_err(|error| format!(
@@ -40,7 +47,10 @@ impl CreationOutput {
 }
 
 fn resolved_new(path: &Path) -> Result<PathBuf, String> {
-    let parent = fs::canonicalize(path.parent().ok_or("anchor output needs a parent")?).map_err(debug)?;
-    if !fs::metadata(&parent).map_err(debug)?.is_dir() { return Err("anchor parent is not a directory".into()); }
+    let parent =
+        fs::canonicalize(path.parent().ok_or("anchor output needs a parent")?).map_err(debug)?;
+    if !fs::metadata(&parent).map_err(debug)?.is_dir() {
+        return Err("anchor parent is not a directory".into());
+    }
     Ok(parent.join(path.file_name().ok_or("anchor output needs a filename")?))
 }

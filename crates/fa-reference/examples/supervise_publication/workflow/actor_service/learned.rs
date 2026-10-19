@@ -1,48 +1,70 @@
 //! Imported learned K/V generation, original native sidecar review and two keys.
 //! Complete messages within one finite generation and explicit stream finish;
 //! all numerical and effect transitions belong to the existing original owners.
-#[path = "learned/fields.rs"] mod fields;
-#[path = "learned/anchors.rs"] mod anchors;
-#[path = "learned/audit.rs"] mod audit;
-#[path = "learned/fit.rs"] mod fit;
-#[path = "learned/monitor.rs"] mod monitor;
-#[path = "learned/native.rs"] mod native;
-#[path = "learned/forecast.rs"] mod forecast;
-#[path = "learned/prediction.rs"] mod prediction;
-#[path = "learned/generation.rs"] mod generation;
-#[path = "learned/recipe.rs"] mod recipe;
-#[path = "learned/recovery.rs"] mod recovery;
-#[path = "learned/review.rs"] mod review;
-#[path = "learned/finish.rs"] mod finish;
-#[path = "learned/continuation.rs"] mod continuation;
-#[path = "learned/qualification.rs"] mod qualification;
-#[path = "learned/stopped.rs"] mod stopped;
-use recipe::Loaded;
-use super::super::{Config, Deadline, Duration, ElapsedTick, FileOversight, FileHumanReviewer,
-    FileDriverEvent, FileDriverPhase, FileSupervisedDriver, Instant, PeerProfile,
-    RecoveryReserve, RunResult, LiveControl, cancel_unspent, cleanup, clock,
-    control::Control, debug, human_review, plus, stop};
+#[path = "learned/anchors.rs"]
+mod anchors;
+#[path = "learned/audit.rs"]
+mod audit;
+#[path = "learned/continuation.rs"]
+mod continuation;
+#[path = "learned/fields.rs"]
+mod fields;
+#[path = "learned/finish.rs"]
+mod finish;
+#[path = "learned/fit.rs"]
+mod fit;
+#[path = "learned/forecast.rs"]
+mod forecast;
+#[path = "learned/generation.rs"]
+mod generation;
+#[path = "learned/monitor.rs"]
+mod monitor;
+#[path = "learned/native.rs"]
+mod native;
+#[path = "learned/prediction.rs"]
+mod prediction;
+#[path = "learned/qualification.rs"]
+mod qualification;
+#[path = "learned/recipe.rs"]
+mod recipe;
+#[path = "learned/recovery.rs"]
+mod recovery;
+#[path = "learned/review.rs"]
+mod review;
+#[path = "learned/stopped.rs"]
+mod stopped;
+use super::super::{
+    Config, Deadline, Duration, ElapsedTick, FileDriverEvent, FileDriverPhase, FileHumanReviewer,
+    FileOversight, FileSupervisedDriver, Instant, LiveControl, PeerProfile, RecoveryReserve,
+    RunResult, cancel_unspent, cleanup, clock, control::Control, debug, human_review, plus, stop,
+};
+use fa_reference::Error;
 use fa_reference::action::ActionState;
 use fa_reference::action::consequence::activation::tensor::kv::decoder::sampling::monitored::{
     GenerationStatus, GenerationStop,
 };
 use fa_reference::action::consequence::delivery::persistent::{
-    JournalError, requests::{FileRequestDisposition,
-        actor::{FileLearnedTextStreamActorPort, LearnedTextRelease}},
+    JournalError,
+    requests::{
+        FileRequestDisposition,
+        actor::{FileLearnedTextStreamActorPort, LearnedTextRelease},
+    },
 };
 use fa_reference::action::consequence::oversight::{
     actor::{ActorOutcome, Knowledge},
     actor_wire::{ActorWire, Command, encode_command},
     evidence_source::EvidenceSnapshot,
 };
-use fa_reference::Error;
+use recipe::Loaded;
 use std::{io::Write, path::Path, rc::Rc};
 
 const USAGE: &str = "create-learned-generated CONFIG LEARNED_RECIPE REVIEWER_PROFILE [--continue-generation | --after-message PREVIOUS_REQUEST | --finish-after-message PREVIOUS_REQUEST] [--credibility-activation CAPSULE] [--history-anchor INPUT] [--retain-history-anchor NEW_OUTPUT] | create-learned-generated CONFIG LEARNED_RECIPE --resume [--finish-after-message PREVIOUS_REQUEST] [--history-anchor INPUT] [--retain-history-anchor NEW_OUTPUT] | create-learned-generated CONFIG LEARNED_RECIPE --recover-stop OPERATION [--history-anchor INPUT] | create-learned-generated CONFIG LEARNED_RECIPE --audit-review ROUND HISTORY_ANCHOR";
 
 pub(super) fn command(args: &[String], credibility: Option<&Path>) -> Result<(), String> {
     if args.iter().any(|arg| arg == "--audit-review") {
-        if credibility.is_some() { return Err("historical audit cannot activate credibility".into()); }
+        if credibility.is_some() {
+            return Err("historical audit cannot activate credibility".into());
+        }
         return audit::command(args, &mut std::io::stdout().lock());
     }
     let (args, anchors) = anchors::take_options(args)?;
@@ -53,13 +75,19 @@ pub(super) fn command(args: &[String], credibility: Option<&Path>) -> Result<(),
     }
     let (args, after_message) = continuation::take_option(&args)?;
     let (args, finishing) = finish::take_option(args)?;
-    if !matches!(args.len(), 4 | 5) || args[0] != "create-learned-generated"
-        || (after_message.is_some() && finishing.is_some()) { return Err(USAGE.into()); }
+    if !matches!(args.len(), 4 | 5)
+        || args[0] != "create-learned-generated"
+        || (after_message.is_some() && finishing.is_some())
+    {
+        return Err(USAGE.into());
+    }
     let continuing = args.len() == 5;
     if continuing && (args[4] != "--continue-generation" || args[3].starts_with("--")) {
         return Err(USAGE.into());
     }
-    if args[3].starts_with("--") && args[3] != "--resume" { return Err(USAGE.into()); }
+    if args[3].starts_with("--") && args[3] != "--resume" {
+        return Err(USAGE.into());
+    }
     let live_continuation = continuing || after_message.is_some() || finishing.is_some();
     if credibility.is_some() && !live_continuation && args[3] != "--resume" {
         return Err(USAGE.into());
@@ -81,108 +109,221 @@ pub(super) fn command(args: &[String], credibility: Option<&Path>) -> Result<(),
     peers.check_host(&config)?;
     let mut loaded = recipe::load(Path::new(&args[2]), &config, true)?;
     anchors.admit(&config, &mut loaded, live_continuation)?;
-    let result = run_qualified(config, loaded, &peers, live_continuation,
-        finishing, after_message, credibility, clock)?;
+    let result = run_qualified(
+        config,
+        loaded,
+        &peers,
+        live_continuation,
+        finishing,
+        after_message,
+        credibility,
+        clock,
+    )?;
     emit(result, &mut std::io::stdout().lock())
 }
 
 // Only the original restricted actor response reaches stdout. A failed output
 // never causes a second effect, another native review or a new human approval.
 fn emit(result: RunResult, output: &mut impl Write) -> Result<(), String> {
-    output.write_all(&result.response.encode()).and_then(|()| output.write_all(b"\n"))
-        .and_then(|()| output.flush()).map_err(|error|
-            format!("original response output failed: {error}; no effect retry was sent"))?;
-    if let Some(error) = result.failure { return Err(error); }
-    if result.cleanup_pending != 0 {
-        return Err(format!("{} direct helper children lack reaping confirmation", result.cleanup_pending));
+    output
+        .write_all(&result.response.encode())
+        .and_then(|()| output.write_all(b"\n"))
+        .and_then(|()| output.flush())
+        .map_err(|error| {
+            format!("original response output failed: {error}; no effect retry was sent")
+        })?;
+    if let Some(error) = result.failure {
+        return Err(error);
     }
-    if !matches!(result.response.result,
-        Ok(Knowledge::Known { value: ActorOutcome::Executed, .. })) {
+    if result.cleanup_pending != 0 {
+        return Err(format!(
+            "{} direct helper children lack reaping confirmation",
+            result.cleanup_pending
+        ));
+    }
+    if !matches!(
+        result.response.result,
+        Ok(Knowledge::Known {
+            value: ActorOutcome::Executed,
+            ..
+        })
+    ) {
         return Err("learned publication is not confirmed; inspect the original response".into());
     }
     Ok(())
 }
 
 #[cfg(test)]
-fn run<F>(config: Config, loaded: Loaded, peers: &PeerProfile, continuing: bool, time: F)
-    -> Result<RunResult, String>
-where F: FnMut() -> ElapsedTick {
+fn run<F>(
+    config: Config,
+    loaded: Loaded,
+    peers: &PeerProfile,
+    continuing: bool,
+    time: F,
+) -> Result<RunResult, String>
+where
+    F: FnMut() -> ElapsedTick,
+{
     run_selected(config, loaded, peers, continuing, None, time)
 }
 
 #[cfg(test)]
-fn run_selected<F>(config: Config, loaded: Loaded, peers: &PeerProfile, continuing: bool,
-    finishing: Option<u64>, time: F) -> Result<RunResult, String>
-where F: FnMut() -> ElapsedTick {
+fn run_selected<F>(
+    config: Config,
+    loaded: Loaded,
+    peers: &PeerProfile,
+    continuing: bool,
+    finishing: Option<u64>,
+    time: F,
+) -> Result<RunResult, String>
+where
+    F: FnMut() -> ElapsedTick,
+{
     run_selected_message(config, loaded, peers, continuing, finishing, None, time)
 }
 
 #[cfg(test)]
-fn run_selected_message<F>(config: Config, loaded: Loaded, peers: &PeerProfile, continuing: bool,
-    finishing: Option<u64>, after_message: Option<u64>, time: F) -> Result<RunResult, String>
-where F: FnMut() -> ElapsedTick {
-    run_qualified(config, loaded, peers, continuing, finishing, after_message, None, time)
+fn run_selected_message<F>(
+    config: Config,
+    loaded: Loaded,
+    peers: &PeerProfile,
+    continuing: bool,
+    finishing: Option<u64>,
+    after_message: Option<u64>,
+    time: F,
+) -> Result<RunResult, String>
+where
+    F: FnMut() -> ElapsedTick,
+{
+    run_qualified(
+        config,
+        loaded,
+        peers,
+        continuing,
+        finishing,
+        after_message,
+        None,
+        time,
+    )
 }
 
-fn run_qualified<F>(mut config: Config, loaded: Loaded, peers: &PeerProfile, continuing: bool,
-    finishing: Option<u64>, after_message: Option<u64>, credibility: Option<&Path>,
-    mut time: F) -> Result<RunResult, String>
-where F: FnMut() -> ElapsedTick {
+fn run_qualified<F>(
+    mut config: Config,
+    loaded: Loaded,
+    peers: &PeerProfile,
+    continuing: bool,
+    finishing: Option<u64>,
+    after_message: Option<u64>,
+    credibility: Option<&Path>,
+    mut time: F,
+) -> Result<RunResult, String>
+where
+    F: FnMut() -> ElapsedTick,
+{
     if credibility.is_some() && !continuing {
-        return Err("credibility activation requires explicit learned continuation or finish".into());
+        return Err(
+            "credibility activation requires explicit learned continuation or finish".into(),
+        );
     }
     peers.check_host(&config)?;
-    if let Some(after) = finishing { finish::check_ids(loaded.request, after)?; }
+    if let Some(after) = finishing {
+        finish::check_ids(loaded.request, after)?;
+    }
     if let Some(after) = after_message {
         continuation::check_ids(loaded.request, after)?;
         if !loaded.generation.allows_text_stream_continuation() {
-            return Err("learned continuation requires the explicitly admitted finite-message recipe".into());
+            return Err(
+                "learned continuation requires the explicitly admitted finite-message recipe"
+                    .into(),
+            );
         }
     }
     let start = time();
     let lifetime = loaded.ttl_ms.min(config.timing.runtime_ms);
-    let deadline = Deadline { logical: plus(start, lifetime)?, started: Instant::now(),
-        wall: Duration::from_millis(lifetime) };
+    let deadline = Deadline {
+        logical: plus(start, lifetime)?,
+        started: Instant::now(),
+        wall: Duration::from_millis(lifetime),
+    };
     deadline.check(start)?;
     // Claim the real authenticated stop endpoint BEFORE store creation/open.
     // The same service and deadline cover replay, generation, review and dispatch.
     let mut control = Control::new(&config, loaded.request, Some(peers))?;
     let (host, reviewer, observer) = if continuing {
-        recovery::open_selected_live(&config, &loaded, &mut control, &deadline, &mut time)? }
-        else { recovery::create_selected(&config, &loaded)? };
-    let mut prediction = observer.map(|observer| prediction::Session::new(loaded.request, observer));
+        recovery::open_selected_live(&config, &loaded, &mut control, &deadline, &mut time)?
+    } else {
+        recovery::create_selected(&config, &loaded)?
+    };
+    let mut prediction =
+        observer.map(|observer| prediction::Session::new(loaded.request, observer));
     prediction::check(&host, prediction.as_ref())?;
     if continuing {
         match host.request_status(loaded.request) {
             Err(JournalError::Contract(Error::Missing)) => {}
-            Ok(_) => return Err("learned request already exists; use --resume for its original receipt".into()),
+            Ok(_) => {
+                return Err(
+                    "learned request already exists; use --resume for its original receipt".into(),
+                );
+            }
             Err(error) => return Err(debug(error)),
         }
         // Preserve the existing omission refusal before live preparation. A
         // caller may retry with fresh qualification instead of terminally
         // stopping the history just because the option was omitted.
-        if credibility.is_none() { host.check_credibility().map_err(debug)?; }
+        if credibility.is_none() {
+            host.check_credibility().map_err(debug)?;
+        }
     }
-    if let Some(after) = finishing { finish::check_fresh(&host, &loaded, after)?; }
+    if let Some(after) = finishing {
+        finish::check_fresh(&host, &loaded, after)?;
+    }
     // This read-only command binds request IDs and the numerical predecessor,
     // which held-out activation preserves. Invalid predecessors remain a
     // pre-intake refusal; continuation repeats the native checks after activation.
-    let message_continuation = after_message.map(|after|
-        host.prepare_learned_text_stream_continuation(after, loaded.request).map_err(debug)).transpose()?;
-    if continuing && finishing.is_none() && after_message.is_none()
-        && host.current_learned_text_continuation().map_err(debug)?
-            .is_some_and(|command| command.request() != loaded.request) {
+    let message_continuation = after_message
+        .map(|after| {
+            host.prepare_learned_text_stream_continuation(after, loaded.request)
+                .map_err(debug)
+        })
+        .transpose()?;
+    if continuing
+        && finishing.is_none()
+        && after_message.is_none()
+        && host
+            .current_learned_text_continuation()
+            .map_err(debug)?
+            .is_some_and(|command| command.request() != loaded.request)
+    {
         return Err("continued learned generation belongs to a different original request".into());
     }
-    let (port, supervisor) = host.into_learned_text_stream_actor_gateway().map_err(debug)?;
+    let (port, supervisor) = host
+        .into_learned_text_stream_actor_gateway()
+        .map_err(debug)?;
     let mut driver = FileSupervisedDriver::new(supervisor);
     let mut wire = ActorWire::new(port);
     let prepared = (|| {
-        if !qualification::prepare(&mut driver, &config, credibility,
-            (&mut control, &reviewer, &deadline), &mut time)? { return Ok(false); }
+        if !qualification::prepare(
+            &mut driver,
+            &config,
+            credibility,
+            (&mut control, &reviewer, &deadline),
+            &mut time,
+        )? {
+            return Ok(false);
+        }
         let release = if let Some(after) = finishing {
-            if !finish::prepare(&mut driver, &reviewer, &mut config, &loaded, after,
-                &mut control, &deadline, &mut time)? { return Ok(false); }
+            if !finish::prepare(
+                &mut driver,
+                &reviewer,
+                &mut config,
+                &loaded,
+                after,
+                &mut control,
+                &deadline,
+                &mut time,
+            )? {
+                return Ok(false);
+            }
             if let Some(prediction) = prediction.as_mut() {
                 let mut host = driver.supervisor_mut().host_mut().map_err(debug)?;
                 prediction.finish_request(&mut host)?;
@@ -190,23 +331,63 @@ where F: FnMut() -> ElapsedTick {
             LearnedTextRelease::Finish
         } else {
             if let Some(command) = message_continuation {
-                if !continuation::prepare(&mut driver, &reviewer, &mut config, command,
-                    &mut control, &deadline, &mut time)? { return Ok(false); }
+                if !continuation::prepare(
+                    &mut driver,
+                    &reviewer,
+                    &mut config,
+                    command,
+                    &mut control,
+                    &deadline,
+                    &mut time,
+                )? {
+                    return Ok(false);
+                }
             }
-            if !generate_selected(&mut driver, &reviewer, &mut config, &mut control,
-                &deadline, &mut time, prediction.as_mut())? {
+            if !generate_selected(
+                &mut driver,
+                &reviewer,
+                &mut config,
+                &mut control,
+                &deadline,
+                &mut time,
+                prediction.as_mut(),
+            )? {
                 return Ok(false);
             }
             LearnedTextRelease::Message
         };
         match release {
-            LearnedTextRelease::Message => submit(&mut driver, &mut wire, &mut config, &loaded, &deadline, &mut time)?,
-            LearnedTextRelease::Finish => submit_release(&mut driver, &mut wire, &mut config, &loaded,
-                release, &deadline, &mut time)?,
+            LearnedTextRelease::Message => submit(
+                &mut driver,
+                &mut wire,
+                &mut config,
+                &loaded,
+                &deadline,
+                &mut time,
+            )?,
+            LearnedTextRelease::Finish => submit_release(
+                &mut driver,
+                &mut wire,
+                &mut config,
+                &loaded,
+                release,
+                &deadline,
+                &mut time,
+            )?,
         }
-        let status = driver.supervisor().host().map_err(debug)?.request_status(loaded.request).map_err(debug)?;
-        Ok(matches!(status.disposition, FileRequestDisposition::Admitted {
-            stage: ActionState::Reviewing, .. }))
+        let status = driver
+            .supervisor()
+            .host()
+            .map_err(debug)?
+            .request_status(loaded.request)
+            .map_err(debug)?;
+        Ok(matches!(
+            status.disposition,
+            FileRequestDisposition::Admitted {
+                stage: ActionState::Reviewing,
+                ..
+            }
+        ))
     })();
     let mut failure = None;
     let mut history = None;
@@ -214,8 +395,15 @@ where F: FnMut() -> ElapsedTick {
         Err(error) => failure = Some(error),
         Ok(false) => {}
         Ok(true) => {
-            let reviewed = review::run(driver, &mut config, &loaded, &reviewer,
-                &mut control, &deadline, &mut time);
+            let reviewed = review::run(
+                driver,
+                &mut config,
+                &loaded,
+                &reviewer,
+                &mut control,
+                &deadline,
+                &mut time,
+            );
             driver = reviewed.driver;
             history = reviewed.history;
             failure = reviewed.failure;
@@ -226,22 +414,49 @@ where F: FnMut() -> ElapsedTick {
                         return Ok(());
                     }
                     let mut no_ingress = |_: &mut FileSupervisedDriver| Ok(false);
-                    let mut live = LiveControl { stop: control, ingress: &mut no_ingress };
-                    let approval = human_review(&mut driver, &reviewer, &mut config,
-                        loaded.request, &deadline, (Some(peers), &mut live), &mut time)?;
+                    let mut live = LiveControl {
+                        stop: control,
+                        ingress: &mut no_ingress,
+                    };
+                    let approval = human_review(
+                        &mut driver,
+                        &reviewer,
+                        &mut config,
+                        loaded.request,
+                        &deadline,
+                        (Some(peers), &mut live),
+                        &mut time,
+                    )?;
                     let Some(approval) = approval else {
-                        cancel_unspent(&mut driver, loaded.request)?; return Ok(());
+                        cancel_unspent(&mut driver, loaded.request)?;
+                        return Ok(());
                     };
                     loop {
                         deadline.check(time())?;
-                        if live.checkpoint(&mut driver, &reviewer, &deadline, &mut time)? { return Ok(()); }
-                        let event = driver.step_computed_from_policy_file(&mut config.source,
-                            &mut time, Some(&approval)).result.map_err(debug)?;
+                        if live.checkpoint(&mut driver, &reviewer, &deadline, &mut time)? {
+                            return Ok(());
+                        }
+                        let event = driver
+                            .step_computed_from_policy_file(
+                                &mut config.source,
+                                &mut time,
+                                Some(&approval),
+                            )
+                            .result
+                            .map_err(debug)?;
                         match event {
-                            FileDriverEvent::Dispatched { .. } | FileDriverEvent::PublicationChecked { .. } => {}
-                            FileDriverEvent::Reconciled { .. } | FileDriverEvent::Stopped { .. } => return Ok(()),
-                            FileDriverEvent::PublicationUnknown { error, .. } => return Err(debug(error)),
-                            _ => return Err(format!("unexpected original learned publication event: {event:?}")),
+                            FileDriverEvent::Dispatched { .. }
+                            | FileDriverEvent::PublicationChecked { .. } => {}
+                            FileDriverEvent::Reconciled { .. }
+                            | FileDriverEvent::Stopped { .. } => return Ok(()),
+                            FileDriverEvent::PublicationUnknown { error, .. } => {
+                                return Err(debug(error));
+                            }
+                            _ => {
+                                return Err(format!(
+                                    "unexpected original learned publication event: {event:?}"
+                                ));
+                            }
                         }
                     }
                 })();
@@ -251,31 +466,62 @@ where F: FnMut() -> ElapsedTick {
     }
     if let Some(error) = failure.take() {
         failure = Some(match stop(&mut driver, loaded.request, &mut time) {
-            Ok(()) => error, Err(stopping) => format!("{error}; stop/drain: {stopping}"),
+            Ok(()) => error,
+            Err(stopping) => format!("{error}; stop/drain: {stopping}"),
         });
     }
-    let response = wire.exchange(&encode_command(&Command::Poll { request: loaded.request }).map_err(debug)?);
+    let response = wire.exchange(
+        &encode_command(&Command::Poll {
+            request: loaded.request,
+        })
+        .map_err(debug)?,
+    );
     let failure = anchors::retain(&loaded, &driver, failure);
     let cleanup_pending = cleanup(driver, config.timing.cleanup_ms, config.timing.poll_ms);
     // Retain original numerical history until the authority has been drained or
     // released. Its counters are evidence of work, never either publication key.
     drop(history);
-    Ok(RunResult { response, failure, cleanup_pending })
+    Ok(RunResult {
+        response,
+        failure,
+        cleanup_pending,
+    })
 }
 
 #[cfg(test)]
-fn generate<F>(driver: &mut FileSupervisedDriver, reviewer: &FileHumanReviewer, config: &mut Config,
-    control: &mut Control, deadline: &Deadline, time: &mut F) -> Result<bool, String>
-where F: FnMut() -> ElapsedTick {
+fn generate<F>(
+    driver: &mut FileSupervisedDriver,
+    reviewer: &FileHumanReviewer,
+    config: &mut Config,
+    control: &mut Control,
+    deadline: &Deadline,
+    time: &mut F,
+) -> Result<bool, String>
+where
+    F: FnMut() -> ElapsedTick,
+{
     generate_selected(driver, reviewer, config, control, deadline, time, None)
 }
 
-fn generate_selected<F>(driver: &mut FileSupervisedDriver, reviewer: &FileHumanReviewer,
-    config: &mut Config, control: &mut Control, deadline: &Deadline, time: &mut F,
-    mut prediction: Option<&mut prediction::Session>) -> Result<bool, String>
-where F: FnMut() -> ElapsedTick {
-    prediction::check(&*driver.supervisor().host().map_err(debug)?, prediction.as_deref())?;
-    if control.checkpoint(driver, reviewer, deadline, time)? { return Ok(false); }
+fn generate_selected<F>(
+    driver: &mut FileSupervisedDriver,
+    reviewer: &FileHumanReviewer,
+    config: &mut Config,
+    control: &mut Control,
+    deadline: &Deadline,
+    time: &mut F,
+    mut prediction: Option<&mut prediction::Session>,
+) -> Result<bool, String>
+where
+    F: FnMut() -> ElapsedTick,
+{
+    prediction::check(
+        &*driver.supervisor().host().map_err(debug)?,
+        prediction.as_deref(),
+    )?;
+    if control.checkpoint(driver, reviewer, deadline, time)? {
+        return Ok(false);
+    }
     refresh(driver, config, deadline, time)?;
     {
         let mut host = driver.supervisor_mut().host_mut().map_err(debug)?;
@@ -284,24 +530,36 @@ where F: FnMut() -> ElapsedTick {
             // Exact recovered KV, sampler, pending intent and lifetime work are
             // retained. Resume changes neither numerical budget nor effect epoch.
             let revision = host.revision();
-            host.resume_learned_generation(revision, current.numerical.actor_revision,
-                current.numerical.position).map_err(debug)?;
+            host.resume_learned_generation(
+                revision,
+                current.numerical.actor_revision,
+                current.numerical.position,
+            )
+            .map_err(debug)?;
         }
     }
     let mut numerical: Option<generation::Session> = None;
     loop {
         deadline.check(time())?;
-        if control.checkpoint(driver, reviewer, deadline, time)? { return Ok(false); }
-        let current = driver.supervisor().host().map_err(debug)?
-            .learned_generation_inspection().map_err(debug)?;
+        if control.checkpoint(driver, reviewer, deadline, time)? {
+            return Ok(false);
+        }
+        let current = driver
+            .supervisor()
+            .host()
+            .map_err(debug)?
+            .learned_generation_inspection()
+            .map_err(debug)?;
         if !current.numerical.status.is_active() {
             if let Some(prediction) = prediction.as_deref() {
                 prediction.complete_message(&*driver.supervisor().host().map_err(debug)?)?;
             }
             return match current.numerical.status {
                 GenerationStatus::Finished(GenerationStop::StopToken(_)) => Ok(true),
-                _ => Err(format!("learned generation did not finish at a quiet monitored stop: {:?}",
-                    current.numerical.status)),
+                _ => Err(format!(
+                    "learned generation did not finish at a quiet monitored stop: {:?}",
+                    current.numerical.status
+                )),
             };
         }
         // Read-start and post-read clocks precede EVERY original numerical
@@ -324,51 +582,104 @@ where F: FnMut() -> ElapsedTick {
                 continue;
             }
         }
-        numerical.get_or_insert_with(generation::Session::new).advance_quantum(&mut host)?;
+        numerical
+            .get_or_insert_with(generation::Session::new)
+            .advance_quantum(&mut host)?;
     }
 }
 
-fn submit<F>(driver: &mut FileSupervisedDriver,
-    wire: &mut ActorWire<FileLearnedTextStreamActorPort>, config: &mut Config, loaded: &Loaded,
-    deadline: &Deadline, time: &mut F) -> Result<(), String>
-where F: FnMut() -> ElapsedTick {
-    submit_release(driver, wire, config, loaded, LearnedTextRelease::Message, deadline, time)
+fn submit<F>(
+    driver: &mut FileSupervisedDriver,
+    wire: &mut ActorWire<FileLearnedTextStreamActorPort>,
+    config: &mut Config,
+    loaded: &Loaded,
+    deadline: &Deadline,
+    time: &mut F,
+) -> Result<(), String>
+where
+    F: FnMut() -> ElapsedTick,
+{
+    submit_release(
+        driver,
+        wire,
+        config,
+        loaded,
+        LearnedTextRelease::Message,
+        deadline,
+        time,
+    )
 }
 
-fn submit_release<F>(driver: &mut FileSupervisedDriver,
-    wire: &mut ActorWire<FileLearnedTextStreamActorPort>, config: &mut Config, loaded: &Loaded,
-    release: LearnedTextRelease, deadline: &Deadline, time: &mut F) -> Result<(), String>
-where F: FnMut() -> ElapsedTick {
+fn submit_release<F>(
+    driver: &mut FileSupervisedDriver,
+    wire: &mut ActorWire<FileLearnedTextStreamActorPort>,
+    config: &mut Config,
+    loaded: &Loaded,
+    release: LearnedTextRelease,
+    deadline: &Deadline,
+    time: &mut F,
+) -> Result<(), String>
+where
+    F: FnMut() -> ElapsedTick,
+{
     // A closed source-only envelope: the actor supplies no output bytes, logits,
     // prompt edits, helper inputs, automatic key or human approval.
-    let proposal = FileLearnedTextStreamActorPort::encode_release(loaded.request,
-        release, deadline.logical).map_err(debug)?;
-    let document = encode_command(&Command::Submit { request: loaded.request, proposal }).map_err(debug)?;
+    let proposal =
+        FileLearnedTextStreamActorPort::encode_release(loaded.request, release, deadline.logical)
+            .map_err(debug)?;
+    let document = encode_command(&Command::Submit {
+        request: loaded.request,
+        proposal,
+    })
+    .map_err(debug)?;
     deadline.check(time())?;
-    let response = driver.supervisor_mut().exchange_learned_text_stream_actor_from_policy_file(
-        wire, &document, &mut config.source, &mut *time).map_err(debug)?.response;
+    let response = driver
+        .supervisor_mut()
+        .exchange_learned_text_stream_actor_from_policy_file(
+            wire,
+            &document,
+            &mut config.source,
+            &mut *time,
+        )
+        .map_err(debug)?
+        .response;
     if let Err(error) = response.result {
-        return Err(format!("original learned source gateway refused publication: {error:?}"));
+        return Err(format!(
+            "original learned source gateway refused publication: {error:?}"
+        ));
     }
     Ok(())
 }
 
-fn refresh<F>(driver: &mut FileSupervisedDriver, config: &mut Config, deadline: &Deadline,
-    time: &mut F) -> Result<Rc<EvidenceSnapshot>, String>
-where F: FnMut() -> ElapsedTick {
-    let before = time(); deadline.check(before)?;
+fn refresh<F>(
+    driver: &mut FileSupervisedDriver,
+    config: &mut Config,
+    deadline: &Deadline,
+    time: &mut F,
+) -> Result<Rc<EvidenceSnapshot>, String>
+where
+    F: FnMut() -> ElapsedTick,
+{
+    let before = time();
+    deadline.check(before)?;
     let mut host = driver.supervisor_mut().host_mut().map_err(debug)?;
     let revision = host.revision();
-    let captured = host.refresh_file_source(revision, &mut config.source, before).map_err(debug)?;
-    let after = time(); deadline.check(after)?;
+    let captured = host
+        .refresh_file_source(revision, &mut config.source, before)
+        .map_err(debug)?;
+    let after = time();
+    deadline.check(after)?;
     let revision = host.revision();
     host.observe_time(revision, after).map_err(debug)?;
     // Original read-start freshness must still hold AFTER parsing/persistence.
     // Clock acknowledgment alone does not validate the policy source's lease.
     let current = host.capture_file_policy_state().map_err(debug)?;
-    if current.snapshot() != captured.snapshot() { return Err(debug(Error::Binding)); }
+    if current.snapshot() != captured.snapshot() {
+        return Err(debug(Error::Binding));
+    }
     Ok(captured)
 }
 
 #[cfg(test)]
-#[path = "learned/tests.rs"] mod tests;
+#[path = "learned/tests.rs"]
+mod tests;

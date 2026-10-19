@@ -1,17 +1,19 @@
 //! Bounded operator input; the original model/tokenizer constructors own semantics.
+use super::super::tokenizer::TokenizerInput;
 use super::*;
 use crate::config::read_regular;
-use super::super::tokenizer::TokenizerInput;
 use fa_reference::action::consequence::activation::monitor::decoder::config::MAX_MONITOR_CONFIG_BYTES;
 use fa_reference::action::consequence::activation::monitor::decoder::sampled::config::MAX_SAMPLING_CONFIG_BYTES;
 use fa_reference::action::consequence::activation::monitor::decoder::sampled::generation::{
     GenerationBudget, MAX_GENERATION_TOKENS, MAX_SAMPLING_ENTRIES,
-    text::{TextGenerationRequest, MAX_PREFIX_CONTROLS},
-    tokenizer::{ByteBpe, TokenizationBudget, MAX_INPUT_BYTES},
+    text::{MAX_PREFIX_CONTROLS, TextGenerationRequest},
+    tokenizer::{ByteBpe, MAX_INPUT_BYTES, TokenizationBudget},
 };
-use fa_reference::action::consequence::activation::tensor::kv::decoder::{DecoderIdentity, MAX_DECODER_PRODUCTS};
-use fa_reference::action::consequence::activation::tensor::kv::decoder::safetensors::{
-    pretrained::{LlamaConfig, MAX_CONFIG_BYTES},
+use fa_reference::action::consequence::activation::tensor::kv::decoder::safetensors::pretrained::{
+    LlamaConfig, MAX_CONFIG_BYTES,
+};
+use fa_reference::action::consequence::activation::tensor::kv::decoder::{
+    DecoderIdentity, MAX_DECODER_PRODUCTS,
 };
 use fa_reference::action::consequence::delivery::persistent::observed::decoder::{
     FileDecoderConfig, text::FileTextGenerationCommand,
@@ -38,9 +40,18 @@ pub(super) struct Inputs {
 /// No output, verdict, cursor, key or callback can be supplied in this document.
 pub(super) fn load(path: &Path, tenant: u64, byte_limit: usize) -> Result<Inputs, String> {
     let bytes = read_regular(path, MAX_RECIPE_BYTES.min(byte_limit))?;
-    let mut f = Fields::new(strict_json::parse(&bytes, Limits {
-        max_bytes: MAX_RECIPE_BYTES, max_depth: 4, max_items: 1024, max_string_bytes: 4096,
-    }).map_err(debug)?)?;
+    let mut f = Fields::new(
+        strict_json::parse(
+            &bytes,
+            Limits {
+                max_bytes: MAX_RECIPE_BYTES,
+                max_depth: 4,
+                max_items: 1024,
+                max_string_bytes: 4096,
+            },
+        )
+        .map_err(debug)?,
+    )?;
     let (sharded, explicit_tokenizer) = match f.text("schema")?.as_str() {
         "fa.native-text-service/1" => (false, false),
         "fa.native-text-service/2" => (true, false),
@@ -49,11 +60,17 @@ pub(super) fn load(path: &Path, tenant: u64, byte_limit: usize) -> Result<Inputs
         _ => return Err("unsupported native service recipe".into()),
     };
     let mut ids = Fields::new(f.take("identity")?)?;
-    let identity = DecoderIdentity { tenant: ids.number("tenant")?, model: ids.number("model")?,
-        model_generation: ids.number("model_generation")?, tokenizer_generation: ids.number("tokenizer_generation")?,
-        profile_generation: ids.number("profile_generation")? };
+    let identity = DecoderIdentity {
+        tenant: ids.number("tenant")?,
+        model: ids.number("model")?,
+        model_generation: ids.number("model_generation")?,
+        tokenizer_generation: ids.number("tokenizer_generation")?,
+        profile_generation: ids.number("profile_generation")?,
+    };
     ids.end()?;
-    if identity.tenant != tenant { return Err("native model belongs to a different tenant".into()); }
+    if identity.tenant != tenant {
+        return Err("native model belongs to a different tenant".into());
+    }
     let context = f.count("context")?;
     let cache_stream = f.number("cache_stream")?;
     let generation = f.number("generation")?;
@@ -64,7 +81,8 @@ pub(super) fn load(path: &Path, tenant: u64, byte_limit: usize) -> Result<Inputs
     let message_bytes = stream.count("max_message_bytes")?;
     let total_bytes = stream.count("max_total_bytes")?;
     stream.end()?;
-    let stream = StreamProfile::new(id, epoch, messages, message_bytes, total_bytes).map_err(debug)?;
+    let stream =
+        StreamProfile::new(id, epoch, messages, message_bytes, total_bytes).map_err(debug)?;
     let prefix_controls = f.tokens("prefix_controls", MAX_PREFIX_CONTROLS)?;
     let stop_tokens = f.tokens("stop_tokens", 256)?;
     let max_new_tokens = f.count("max_new_tokens")?;
@@ -75,31 +93,57 @@ pub(super) fn load(path: &Path, tenant: u64, byte_limit: usize) -> Result<Inputs
     let weights = WeightFiles::parse(f.take("weights")?, base, sharded)?;
     let tokenizer = TokenizerInput::parse(f.take("tokenizer")?, explicit_tokenizer)?;
     let names = ["model_config", "monitor", "sampling", "prompt"];
-    let paths: Vec<_> = names.iter().map(|name| f.text(name)).collect::<Result<_, _>>()?;
+    let paths: Vec<_> = names
+        .iter()
+        .map(|name| f.text(name))
+        .collect::<Result<_, _>>()?;
     f.end()?; // Full schema admission BEFORE opening any referred file.
-    if generation == 0 || cache_stream == 0 || max_new_tokens == 0
-        || max_new_tokens > MAX_GENERATION_TOKENS || stop_tokens.is_empty()
-        || max_output_bytes == 0 || max_output_bytes > message_bytes
-        || products > MAX_DECODER_PRODUCTS || sampling > MAX_SAMPLING_ENTRIES {
+    if generation == 0
+        || cache_stream == 0
+        || max_new_tokens == 0
+        || max_new_tokens > MAX_GENERATION_TOKENS
+        || stop_tokens.is_empty()
+        || max_output_bytes == 0
+        || max_output_bytes > message_bytes
+        || products > MAX_DECODER_PRODUCTS
+        || sampling > MAX_SAMPLING_ENTRIES
+    {
         return Err("native generation bounds are invalid".into());
     }
-    let mut remaining = byte_limit.checked_sub(bytes.len()).ok_or("recipe exceeds input allowance")?;
+    let mut remaining = byte_limit
+        .checked_sub(bytes.len())
+        .ok_or("recipe exceeds input allowance")?;
     let read = |name: &str, limit: usize, remaining: &mut usize| -> Result<Vec<u8>, String> {
-        if name.is_empty() || name.as_bytes().contains(&0) { return Err("invalid native input path".into()); }
+        if name.is_empty() || name.as_bytes().contains(&0) {
+            return Err("invalid native input path".into());
+        }
         let path = PathBuf::from(name);
-        let path = if path.is_absolute() { path } else { base.join(path) };
+        let path = if path.is_absolute() {
+            path
+        } else {
+            base.join(path)
+        };
         let bytes = read_regular(&path, limit.min(*remaining))?;
-        *remaining = remaining.checked_sub(bytes.len()).ok_or("native input allowance exhausted")?;
+        *remaining = remaining
+            .checked_sub(bytes.len())
+            .ok_or("native input allowance exhausted")?;
         Ok(bytes)
     };
-    let model = LlamaConfig::decode(identity, context, &read(&paths[0], MAX_CONFIG_BYTES, &mut remaining)?).map_err(debug)?;
+    let model = LlamaConfig::decode(
+        identity,
+        context,
+        &read(&paths[0], MAX_CONFIG_BYTES, &mut remaining)?,
+    )
+    .map_err(debug)?;
     // Preserve the model's explicit declaration through durable replay. Missing
     // matrices never choose the mode, and contradictory stored heads refuse.
     let profile = model.profile().clone();
     // Admit the selected tokenizer's complete semantics before any weight I/O.
     // Its native immutable encoding is still the original durable binding.
-    let tokenizer = tokenizer.decode(&profile,
-        &read(tokenizer.path(), tokenizer.byte_limit(), &mut remaining)?)?;
+    let tokenizer = tokenizer.decode(
+        &profile,
+        &read(tokenizer.path(), tokenizer.byte_limit(), &mut remaining)?,
+    )?;
     let weights = weights.read(&profile, model.output_head(), &mut remaining)?;
     let monitor = read(&paths[1], MAX_MONITOR_CONFIG_BYTES, &mut remaining)?;
     let sampling_config = read(&paths[2], MAX_SAMPLING_CONFIG_BYTES, &mut remaining)?;
@@ -109,47 +153,104 @@ pub(super) fn load(path: &Path, tenant: u64, byte_limit: usize) -> Result<Inputs
             return Err("prefix and stop IDs must be registered Control tokens".into());
         }
     }
-    if stop_tokens.iter().enumerate().any(|(i, token)| stop_tokens[..i].contains(token)) {
+    if stop_tokens
+        .iter()
+        .enumerate()
+        .any(|(i, token)| stop_tokens[..i].contains(token))
+    {
         return Err("duplicate stop token".into());
     }
     let tokenization = TokenizationBudget::default();
     let encoded = tokenizer.encode(&prompt, tokenization).map_err(debug)?;
-    let prompt_tokens = encoded.tokens().len().checked_add(prefix_controls.len()).ok_or("prompt size overflow")?;
-    if prompt_tokens == 0 || prompt_tokens.checked_add(max_new_tokens)
-        .is_none_or(|n| n > MAX_GENERATION_TOKENS || n > profile.shape().context) {
+    let prompt_tokens = encoded
+        .tokens()
+        .len()
+        .checked_add(prefix_controls.len())
+        .ok_or("prompt size overflow")?;
+    if prompt_tokens == 0
+        || prompt_tokens
+            .checked_add(max_new_tokens)
+            .is_none_or(|n| n > MAX_GENERATION_TOKENS || n > profile.shape().context)
+    {
         return Err("complete prompt and continuation exceed the native context".into());
     }
-    let request = TextGenerationRequest { prompt, prefix_controls, max_new_tokens, stop_tokens,
-        tokenization, generation: GenerationBudget { scalar_products: products, sampling_entries: sampling }, max_output_bytes };
+    let request = TextGenerationRequest {
+        prompt,
+        prefix_controls,
+        max_new_tokens,
+        stop_tokens,
+        tokenization,
+        generation: GenerationBudget {
+            scalar_products: products,
+            sampling_entries: sampling,
+        },
+        max_output_bytes,
+    };
     FileTextGenerationCommand::new(generation, 0, 0, request.clone()).map_err(debug)?;
-    let decoder = weights.configure(profile, monitor, sampling_config, cache_stream,
-        DecoderBindingLimits::default(), model.output_head())?;
-    Ok(Inputs { decoder, tokenizer, stream, generation, request })
+    let decoder = weights.configure(
+        profile,
+        monitor,
+        sampling_config,
+        cache_stream,
+        DecoderBindingLimits::default(),
+        model.output_head(),
+    )?;
+    Ok(Inputs {
+        decoder,
+        tokenizer,
+        stream,
+        generation,
+        request,
+    })
 }
 
 struct Fields(BTreeMap<String, Json>);
 impl Fields {
     fn new(value: Json) -> Result<Self, String> {
-        match value { Json::Object(fields) => Ok(Self(fields)), _ => Err("expected recipe object".into()) }
+        match value {
+            Json::Object(fields) => Ok(Self(fields)),
+            _ => Err("expected recipe object".into()),
+        }
     }
     fn take(&mut self, name: &str) -> Result<Json, String> {
-        self.0.remove(name).ok_or_else(|| format!("missing native recipe field {name}"))
+        self.0
+            .remove(name)
+            .ok_or_else(|| format!("missing native recipe field {name}"))
     }
     fn text(&mut self, name: &str) -> Result<String, String> {
-        self.take(name)?.as_str().map(str::to_owned).ok_or_else(|| format!("{name} must be text"))
+        self.take(name)?
+            .as_str()
+            .map(str::to_owned)
+            .ok_or_else(|| format!("{name} must be text"))
     }
     fn number(&mut self, name: &str) -> Result<u64, String> {
-        self.take(name)?.as_u64().ok_or_else(|| format!("{name} must be an unsigned integer"))
+        self.take(name)?
+            .as_u64()
+            .ok_or_else(|| format!("{name} must be an unsigned integer"))
     }
-    fn count(&mut self, name: &str) -> Result<usize, String> { usize::try_from(self.number(name)?).map_err(debug) }
+    fn count(&mut self, name: &str) -> Result<usize, String> {
+        usize::try_from(self.number(name)?).map_err(debug)
+    }
     fn tokens(&mut self, name: &str, limit: usize) -> Result<Vec<u32>, String> {
         let value = self.take(name)?;
         let array = value.as_array().ok_or("token IDs must be an array")?;
-        if array.len() > limit { return Err("too many explicit token IDs".into()); }
-        array.iter().map(|v| v.as_u64().and_then(|n| u32::try_from(n).ok())
-            .ok_or_else(|| "invalid token ID".to_owned())).collect()
+        if array.len() > limit {
+            return Err("too many explicit token IDs".into());
+        }
+        array
+            .iter()
+            .map(|v| {
+                v.as_u64()
+                    .and_then(|n| u32::try_from(n).ok())
+                    .ok_or_else(|| "invalid token ID".to_owned())
+            })
+            .collect()
     }
     fn end(self) -> Result<(), String> {
-        if self.0.is_empty() { Ok(()) } else { Err("unknown native recipe field".into()) }
+        if self.0.is_empty() {
+            Ok(())
+        } else {
+            Err("unknown native recipe field".into())
+        }
     }
 }

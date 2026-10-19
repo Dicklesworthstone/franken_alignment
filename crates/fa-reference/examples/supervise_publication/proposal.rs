@@ -2,11 +2,11 @@
 //! authority. A retained-state proposal anticipates the owner's NEXT recovery
 //! fence; it is not a reservation and concurrent changes can make it stale.
 use crate::config::{Config, debug};
-use fa_reference::action::{ElapsedTick, MAX_PAYLOAD_BYTES};
-use fa_reference::action::consequence::delivery::persistent::observed::FileOversight;
 use fa_reference::action::consequence::delivery::persistent::credibility::CredibilityActivation;
+use fa_reference::action::consequence::delivery::persistent::observed::FileOversight;
 use fa_reference::action::consequence::oversight::actor::ActorProposal;
 use fa_reference::action::consequence::oversight::actor_wire::{Command, encode_command};
+use fa_reference::action::{ElapsedTick, MAX_PAYLOAD_BYTES};
 
 #[cfg(test)]
 #[path = "proposal_tests.rs"]
@@ -40,7 +40,15 @@ pub fn document_qualified(
     now: ElapsedTick,
     qualification: &CredibilityActivation,
 ) -> Result<Vec<u8>, String> {
-    document_for(config, request, payload, ttl, now, Basis::Existing, Some(qualification))
+    document_for(
+        config,
+        request,
+        payload,
+        ttl,
+        now,
+        Basis::Existing,
+        Some(qualification),
+    )
 }
 
 fn document_for(
@@ -68,9 +76,13 @@ fn document_for(
             // Read-only historical inspection, NOT open(): opening would fence
             // outstanding work merely to print a document. The original owner
             // will verify the target and epoch again when submit opens the store.
-            let state = FileOversight::read_publication(&config.store, &config.profile)
-                .map_err(debug)?;
-            let epoch = state.control.ledger.epoch.checked_add(1)
+            let state =
+                FileOversight::read_publication(&config.store, &config.profile).map_err(debug)?;
+            let epoch = state
+                .control
+                .ledger
+                .epoch
+                .checked_add(1)
                 .ok_or("policy epoch exhausted")?;
             let epoch = if let Some(qualification) = qualification {
                 if qualification.scope != config.profile.delivery.scope
@@ -81,8 +93,12 @@ fn document_for(
                 }
                 // Recovery and activation are distinct original transitions.
                 // Neither is executed just to print an actor proposal.
-                epoch.checked_add(1).ok_or("post-activation epoch exhausted")?
-            } else { epoch };
+                epoch
+                    .checked_add(1)
+                    .ok_or("post-activation epoch exhausted")?
+            } else {
+                epoch
+            };
             (state.target, epoch)
         }
     };

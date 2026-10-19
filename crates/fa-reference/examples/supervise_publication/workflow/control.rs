@@ -9,7 +9,9 @@ use std::{cell::RefCell, rc::Rc};
 
 #[cfg(target_os = "linux")]
 pub(crate) fn socket_path(profile: &PeerProfile, operation: u64) -> PathBuf {
-    profile.socket(operation).with_file_name(format!("stop-{operation}.sock"))
+    profile
+        .socket(operation)
+        .with_file_name(format!("stop-{operation}.sock"))
 }
 
 pub(super) struct Control {
@@ -17,15 +19,31 @@ pub(super) struct Control {
     service: Option<Rc<RefCell<Service>>>,
 }
 impl Control {
-    pub(super) fn new(config: &Config, operation: u64, profile: Option<&PeerProfile>) -> Result<Self, String> {
-        if let Some(profile) = profile { profile.check_host(config)?; }
+    pub(super) fn new(
+        config: &Config,
+        operation: u64,
+        profile: Option<&PeerProfile>,
+    ) -> Result<Self, String> {
+        if let Some(profile) = profile {
+            profile.check_host(config)?;
+        }
         #[cfg(target_os = "linux")]
-        { Ok(Self { service: profile.map(|p| Service::new(config, operation, p)
-            .map(|service| Rc::new(RefCell::new(service)))).transpose()? }) }
+        {
+            Ok(Self {
+                service: profile
+                    .map(|p| {
+                        Service::new(config, operation, p)
+                            .map(|service| Rc::new(RefCell::new(service)))
+                    })
+                    .transpose()?,
+            })
+        }
         #[cfg(not(target_os = "linux"))]
         {
             let _ = (config, operation);
-            if profile.is_some() { return Err("stop control requires Linux peer credentials".into()); }
+            if profile.is_some() {
+                return Err("stop control requires Linux peer credentials".into());
+            }
             Ok(Self {})
         }
     }
@@ -35,7 +53,9 @@ impl Control {
     /// one object. No reviewer role, effect permit or new admission budget exists.
     #[cfg(target_os = "linux")]
     pub(super) fn share(&self) -> Self {
-        Self { service: self.service.as_ref().map(Rc::clone) }
+        Self {
+            service: self.service.as_ref().map(Rc::clone),
+        }
     }
 
     /// Accept and retain only an authenticated stop peer. A native learned
@@ -45,7 +65,10 @@ impl Control {
     #[cfg(target_os = "linux")]
     pub(super) fn pending_peer(&mut self) -> Result<bool, String> {
         match &self.service {
-            Some(service) => service.try_borrow_mut().map_err(|_| "stop transport is already being driven")?.accept_peer(),
+            Some(service) => service
+                .try_borrow_mut()
+                .map_err(|_| "stop transport is already being driven")?
+                .accept_peer(),
             None => Ok(false),
         }
     }
@@ -53,12 +76,21 @@ impl Control {
     /// No connection means no journal access or time observation. An admitted
     /// control exchange pauses forward work under the original workflow deadline
     /// and a bounded session timeout. It can only stop, never approve an effect.
-    pub(super) fn checkpoint<F>(&mut self, driver: &mut FileSupervisedDriver,
-        reviewer: &FileHumanReviewer, deadline: &Deadline, time: &mut F) -> Result<bool, String>
-    where F: FnMut() -> ElapsedTick {
+    pub(super) fn checkpoint<F>(
+        &mut self,
+        driver: &mut FileSupervisedDriver,
+        reviewer: &FileHumanReviewer,
+        deadline: &Deadline,
+        time: &mut F,
+    ) -> Result<bool, String>
+    where
+        F: FnMut() -> ElapsedTick,
+    {
         #[cfg(target_os = "linux")]
         if let Some(service) = &self.service {
-            let mut service = service.try_borrow_mut().map_err(|_| "stop transport is already being driven")?;
+            let mut service = service
+                .try_borrow_mut()
+                .map_err(|_| "stop transport is already being driven")?;
             return service.checkpoint(driver, reviewer, deadline, time);
         }
         let _ = (driver, reviewer, deadline, time);
@@ -91,20 +123,38 @@ struct Service {
 #[cfg(target_os = "linux")]
 impl Service {
     fn new(config: &Config, operation: u64, profile: &PeerProfile) -> Result<Self, String> {
-        if operation == 0 { return Err("stop operation must be nonzero".into()); }
+        if operation == 0 {
+            return Err("stop operation must be nonzero".into());
+        }
         let admission = Admission::new(Some(profile))?;
         let path = socket_path(profile, operation);
         let socket = BoundSocket::bind(&path, Some(profile))?;
         eprintln!("Independent stop endpoint ready: {path:?}");
-        Ok(Self { socket, admission, operation, runtime: Duration::from_millis(profile.runtime_ms),
-            cleanup: Duration::from_millis(config.timing.cleanup_ms), poll_ms: profile.poll_ms,
-            outcome: None, pending: None })
+        Ok(Self {
+            socket,
+            admission,
+            operation,
+            runtime: Duration::from_millis(profile.runtime_ms),
+            cleanup: Duration::from_millis(config.timing.cleanup_ms),
+            poll_ms: profile.poll_ms,
+            outcome: None,
+            pending: None,
+        })
     }
     fn accept_peer(&mut self) -> Result<bool, String> {
-        if self.outcome.is_some() || self.pending.is_some() { return Ok(true); }
+        if self.outcome.is_some() || self.pending.is_some() {
+            return Ok(true);
+        }
         let stream = match self.socket.listener.accept() {
             Ok((stream, _)) => stream,
-            Err(error) if matches!(error.kind(), io::ErrorKind::WouldBlock | io::ErrorKind::Interrupted) => return Ok(false),
+            Err(error)
+                if matches!(
+                    error.kind(),
+                    io::ErrorKind::WouldBlock | io::ErrorKind::Interrupted
+                ) =>
+            {
+                return Ok(false);
+            }
             Err(error) => return Err(debug(error)),
         };
         self.pending = match self.admission.admit(stream)? {
@@ -114,11 +164,22 @@ impl Service {
         };
         Ok(true)
     }
-    fn checkpoint<F>(&mut self, driver: &mut FileSupervisedDriver, reviewer: &FileHumanReviewer,
-        deadline: &Deadline, time: &mut F) -> Result<bool, String>
-    where F: FnMut() -> ElapsedTick {
-        if let Some(result) = &self.outcome { return result.clone(); }
-        if !self.accept_peer()? { return Ok(false); }
+    fn checkpoint<F>(
+        &mut self,
+        driver: &mut FileSupervisedDriver,
+        reviewer: &FileHumanReviewer,
+        deadline: &Deadline,
+        time: &mut F,
+    ) -> Result<bool, String>
+    where
+        F: FnMut() -> ElapsedTick,
+    {
+        if let Some(result) = &self.outcome {
+            return result.clone();
+        }
+        if !self.accept_peer()? {
+            return Ok(false);
+        }
         let verified = match self.pending.take() {
             Some(ReviewStream::Checked(socket)) => socket,
             _ => return Err("unchecked stop connection refused".into()),
@@ -128,42 +189,68 @@ impl Service {
         let result = (|| {
             let mut connection = {
                 let host = driver.supervisor().host().map_err(debug)?;
-                verified.into_stop_connection(&host, reviewer, self.operation, nonce()?).map_err(debug)?
+                verified
+                    .into_stop_connection(&host, reviewer, self.operation, nonce()?)
+                    .map_err(debug)?
             };
             self.exchange(&mut connection, driver, deadline, time)
         })();
         self.outcome = Some(result.clone());
         result
     }
-    fn exchange<F>(&self, connection: &mut StopControlConnection<UnixStream>,
-        driver: &mut FileSupervisedDriver, deadline: &Deadline, time: &mut F) -> Result<bool, String>
-    where F: FnMut() -> ElapsedTick {
+    fn exchange<F>(
+        &self,
+        connection: &mut StopControlConnection<UnixStream>,
+        driver: &mut FileSupervisedDriver,
+        deadline: &Deadline,
+        time: &mut F,
+    ) -> Result<bool, String>
+    where
+        F: FnMut() -> ElapsedTick,
+    {
         let started = Instant::now();
         loop {
             deadline.check(time())?;
-            if started.elapsed() >= self.runtime { return Err("authenticated stop session timed out".into()); }
+            if started.elapsed() >= self.runtime {
+                return Err("authenticated stop session timed out".into());
+            }
             match connection.step(driver, &mut *time).map_err(debug)? {
                 StopControlProgress::Applied => break,
-                StopControlProgress::Complete => return Err("stop channel completed without a native application".into()),
+                StopControlProgress::Complete => {
+                    return Err("stop channel completed without a native application".into());
+                }
                 StopControlProgress::Progress | StopControlProgress::Blocked => pause(self.poll_ms),
             }
         }
-        let application = connection.application().ok_or("missing native stop result")?.clone();
+        let application = connection
+            .application()
+            .ok_or("missing native stop result")?
+            .clone();
         // Native stop already ran. Only the historical reply is drained here;
         // a disconnected client must not erase it or cause another application.
         let started = Instant::now();
         while connection.phase() != StopControlPhase::Complete && started.elapsed() < self.cleanup {
             match connection.step(driver, &mut *time) {
                 Ok(StopControlProgress::Complete) => break,
-                Ok(StopControlProgress::Applied) => return Err("duplicate native stop application".into()),
+                Ok(StopControlProgress::Applied) => {
+                    return Err("duplicate native stop application".into());
+                }
                 Ok(_) => pause(self.poll_ms),
-                Err(error) => { eprintln!("Native stop reply was not delivered: {error:?}"); break; }
+                Err(error) => {
+                    eprintln!("Native stop reply was not delivered: {error:?}");
+                    break;
+                }
             }
         }
-        if connection.phase() != StopControlPhase::Complete { eprintln!("Stop reply delivery is unconfirmed"); }
+        if connection.phase() != StopControlPhase::Complete {
+            eprintln!("Stop reply delivery is unconfirmed");
+        }
         application.result.map_err(debug)?;
         if !application.receipt.drained() {
-            return Err(format!("native stop acknowledged; recovery remains {:?}", application.receipt.status));
+            return Err(format!(
+                "native stop acknowledged; recovery remains {:?}",
+                application.receipt.status
+            ));
         }
         Ok(true)
     }

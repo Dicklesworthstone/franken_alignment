@@ -2,9 +2,11 @@
 #![forbid(unsafe_code)]
 #[cfg(unix)]
 #[allow(dead_code)]
-#[path = "supervise_publication/config.rs"] mod config;
+#[path = "supervise_publication/config.rs"]
+mod config;
 #[cfg(unix)]
-#[path = "shutdown_fleet/operator.rs"] mod operator;
+#[path = "shutdown_fleet/operator.rs"]
+mod operator;
 
 #[cfg(unix)]
 fn main() {

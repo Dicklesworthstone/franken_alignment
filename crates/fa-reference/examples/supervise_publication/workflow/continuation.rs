@@ -6,12 +6,12 @@
 //! caller must supply the resulting authority epoch in a new proposal; this
 //! workflow never edits the actor's frozen bytes to make a stale request pass.
 
-#[path = "continuation/guarded.rs"]
-pub(crate) mod guarded;
-#[path = "continuation/creation.rs"]
-pub(crate) mod creation;
 #[path = "continuation/andon.rs"]
 pub(crate) mod andon;
+#[path = "continuation/creation.rs"]
+pub(crate) mod creation;
+#[path = "continuation/guarded.rs"]
+pub(crate) mod guarded;
 
 use super::{Deadline, RunResult, cleanup, execute, plus, resume_existing, stop};
 use crate::config::{CLOCK_DOMAIN, Config, debug};
@@ -19,9 +19,11 @@ use crate::peers::PeerProfile;
 use crate::publication::PublicationProfile;
 use fa_reference::Error;
 use fa_reference::action::ElapsedTick;
-use fa_reference::action::consequence::oversight::actor::ActorProposal;
-use fa_reference::action::consequence::delivery::persistent::observed::{FileHumanReviewer, FileOversight};
+use fa_reference::action::consequence::delivery::persistent::observed::{
+    FileHumanReviewer, FileOversight,
+};
 use fa_reference::action::consequence::delivery::persistent::{JournalError, RecoveryReserve};
+use fa_reference::action::consequence::oversight::actor::ActorProposal;
 use fa_reference::action::consequence::oversight::actor_wire::{
     ActorWire, Command, decode_command, encode_command,
 };
@@ -84,9 +86,23 @@ where
     }
     .map_err(debug)?;
 
-    from_recovered(config, host, reviewer, Continuation {
-        document, request, proposal, peers, publication, credibility, runtime_deadline, started,
-    }, time, |_| Ok(()))
+    from_recovered(
+        config,
+        host,
+        reviewer,
+        Continuation {
+            document,
+            request,
+            proposal,
+            peers,
+            publication,
+            credibility,
+            runtime_deadline,
+            started,
+        },
+        time,
+        |_| Ok(()),
+    )
 }
 
 // Both openers transfer the ORIGINAL owner and separate reviewer, never keys.
@@ -105,23 +121,45 @@ struct Continuation<'a> {
 // One implementation of fresh source -> original helper review -> human key ->
 // publication. Retention runs exactly once while the acknowledged owner remains
 // held, including on preparation/refusal errors, and BEFORE child cleanup.
-fn from_recovered<F, R>(mut config: Config, mut host: FileOversight, reviewer: FileHumanReviewer,
-    context: Continuation<'_>, mut time: F, retain: R) -> Result<RunResult, String>
-where F: FnMut() -> ElapsedTick, R: FnOnce(&FileOversight) -> Result<(), String> {
-    let Continuation { document, request, proposal, peers, publication, credibility,
-        runtime_deadline, started } = context;
+fn from_recovered<F, R>(
+    mut config: Config,
+    mut host: FileOversight,
+    reviewer: FileHumanReviewer,
+    context: Continuation<'_>,
+    mut time: F,
+    retain: R,
+) -> Result<RunResult, String>
+where
+    F: FnMut() -> ElapsedTick,
+    R: FnOnce(&FileOversight) -> Result<(), String>,
+{
+    let Continuation {
+        document,
+        request,
+        proposal,
+        peers,
+        publication,
+        credibility,
+        runtime_deadline,
+        started,
+    } = context;
     let prepared = (|| {
         if host.publication_validation_profile().map_err(debug)?
             != publication.map(|profile| profile.limits)
         {
-            return Err("stored witness profile requires its matching explicit checked mode".into());
+            return Err(
+                "stored witness profile requires its matching explicit checked mode".into(),
+            );
         }
         if host.file_source_status().map(|status| status.policy) != Some(config.source_policy)
-            || host.journal_capacity().map_err(debug)?.reserve() != Some(RecoveryReserve::terminal())
+            || host.journal_capacity().map_err(debug)?.reserve()
+                != Some(RecoveryReserve::terminal())
             || !host.publication_guard_required()
             || config.profile.delivery.clock_domain != CLOCK_DOMAIN
         {
-            return Err("stored deployment does not match this mandatory source/recovery profile".into());
+            return Err(
+                "stored deployment does not match this mandatory source/recovery profile".into(),
+            );
         }
         // Only original Missing admits a new request. Existing keys remain
         // query-only even when their proposal deadline has already elapsed.
@@ -131,16 +169,25 @@ where F: FnMut() -> ElapsedTick, R: FnOnce(&FileOversight) -> Result<(), String>
             Err(error) => return Err(debug(error)),
         };
         let deadline = Deadline {
-            logical: if existing { runtime_deadline } else { proposal.deadline.min(runtime_deadline) },
-            started, wall: Duration::from_millis(config.timing.runtime_ms),
+            logical: if existing {
+                runtime_deadline
+            } else {
+                proposal.deadline.min(runtime_deadline)
+            },
+            started,
+            wall: Duration::from_millis(config.timing.runtime_ms),
         };
         deadline.check(time())?;
-        let admission = if existing { None } else {
+        let admission = if existing {
+            None
+        } else {
             if let Some(path) = credibility {
                 crate::qualification::activate(&mut host, &config, &proposal, path)?;
                 deadline.check(time())?;
             }
-            let observed = host.refresh_file_source(host.revision(), &mut config.source, time()).map_err(debug)?;
+            let observed = host
+                .refresh_file_source(host.revision(), &mut config.source, time())
+                .map_err(debug)?;
             host.observe_time(host.revision(), time()).map_err(debug)?;
             Some(observed.snapshot().clone())
         };
@@ -148,22 +195,42 @@ where F: FnMut() -> ElapsedTick, R: FnOnce(&FileOversight) -> Result<(), String>
     })();
     let (existing, deadline, admission) = match prepared {
         Ok(value) => value,
-        Err(error) => return Err(combine_failure(Some(error), retain(&host).err()).expect("original failure")),
+        Err(error) => {
+            return Err(
+                combine_failure(Some(error), retain(&host).err()).expect("original failure")
+            );
+        }
     };
     let (port, mut driver) = host.into_supervised_driver();
     let mut wire = ActorWire::new(port);
     let result = (|| {
         if let Some(snapshot) = admission {
             let revision = driver.supervisor().host().map_err(debug)?.revision();
-            driver.supervisor_mut().set_snapshot(revision, Some(snapshot)).map_err(debug)?;
+            driver
+                .supervisor_mut()
+                .set_snapshot(revision, Some(snapshot))
+                .map_err(debug)?;
         }
         let submitted = wire.exchange(document);
         if submitted.result.is_err() {
-            return Ok((submitted, Some("original actor gateway refused submission".to_owned())));
+            return Ok((
+                submitted,
+                Some("original actor gateway refused submission".to_owned()),
+            ));
         }
-        let work = if existing { resume_existing(&mut driver, request, &mut time) }
-            else { execute(&mut driver, &reviewer, &mut config, request, &deadline,
-                (peers, publication), &mut time) };
+        let work = if existing {
+            resume_existing(&mut driver, request, &mut time)
+        } else {
+            execute(
+                &mut driver,
+                &reviewer,
+                &mut config,
+                request,
+                &deadline,
+                (peers, publication),
+                &mut time,
+            )
+        };
         let failure = match work {
             Ok(()) => None,
             Err(error) => Some(match stop(&mut driver, request, &mut time) {
@@ -181,12 +248,19 @@ where F: FnMut() -> ElapsedTick, R: FnOnce(&FileOversight) -> Result<(), String>
     let cleanup_pending = cleanup(driver, config.timing.cleanup_ms, config.timing.poll_ms);
     match result {
         Ok((response, failure)) => Ok(RunResult {
-            response, failure: combine_failure(failure, retained.err()), cleanup_pending,
+            response,
+            failure: combine_failure(failure, retained.err()),
+            cleanup_pending,
         }),
         Err(error) => {
             let error = combine_failure(Some(error), retained.err()).expect("original failure");
-            if cleanup_pending == 0 { Err(error) }
-            else { Err(format!("{error}; {cleanup_pending} direct helper children lack reaping confirmation")) }
+            if cleanup_pending == 0 {
+                Err(error)
+            } else {
+                Err(format!(
+                    "{error}; {cleanup_pending} direct helper children lack reaping confirmation"
+                ))
+            }
         }
     }
 }

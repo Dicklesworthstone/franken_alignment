@@ -1,10 +1,10 @@
 //! Original stop and checked-publication boundaries around qualified live intake.
 use super::*;
-use fa_reference::action::consequence::delivery::persistent::observed::reviewer::peer::{
-    PeerPolicy, VerifiedReviewerSocket,
-};
 use fa_reference::action::consequence::delivery::persistent::observed::reviewer::peer::control::{
     StopClientProgress, StopControlReceipt,
+};
+use fa_reference::action::consequence::delivery::persistent::observed::reviewer::peer::{
+    PeerPolicy, VerifiedReviewerSocket,
 };
 use std::io::Write;
 use std::os::unix::fs::MetadataExt;
@@ -15,9 +15,14 @@ fn stop_client(profile: &PeerProfile, operation: u64) -> StopControlReceipt {
     wait(&path);
     let (local, _) = UnixStream::pair().unwrap();
     let id = PeerCredentials::observe(&local).unwrap();
-    let socket = VerifiedReviewerSocket::verify(UnixStream::connect(path).unwrap(),
-        PeerPolicy::new(id.uid(), id.gid(), Some(id.pid())).unwrap()).unwrap();
-    let mut client = socket.into_stop_client(profile.expected, operation).unwrap();
+    let socket = VerifiedReviewerSocket::verify(
+        UnixStream::connect(path).unwrap(),
+        PeerPolicy::new(id.uid(), id.gid(), Some(id.pid())).unwrap(),
+    )
+    .unwrap();
+    let mut client = socket
+        .into_stop_client(profile.expected, operation)
+        .unwrap();
     let started = Instant::now();
     loop {
         assert!(started.elapsed() < Duration::from_secs(10));
@@ -32,8 +37,10 @@ fn stop_client(profile: &PeerProfile, operation: u64) -> StopControlReceipt {
 #[test]
 fn independent_stop_preempts_absent_or_partial_actor_without_current_evidence() {
     for fragmented in [false, true] {
-        let root = Directory::new(); seed(&root, None);
-        let (mut config, actor_profile, peer, _, capsule, qualification) = prepared(&root, 7, 100, 2);
+        let root = Directory::new();
+        seed(&root, None);
+        let (mut config, actor_profile, peer, _, capsule, qualification) =
+            prepared(&root, 7, 100, 2);
         let before = FileOversight::read_publication(&config.store, &config.profile).unwrap();
         config.programs.clear();
         fs::remove_file(root.0.join("evidence.json")).unwrap();
@@ -55,15 +62,28 @@ fn independent_stop_preempts_absent_or_partial_actor_without_current_evidence() 
                     pause(1);
                 }
                 Some(socket)
-            } else { None };
+            } else {
+                None
+            };
             let receipt = stop_client(&stop_profile, 7);
             drop(stalled);
             receipt
         });
-        serve_with_credibility(config, &actor_profile, &peer, None, true, Some(&capsule), || {
-            if polls.load(Ordering::Acquire) != 0 { polls.fetch_add(1, Ordering::AcqRel); }
-            ElapsedTick(1001)
-        }).unwrap();
+        serve_with_credibility(
+            config,
+            &actor_profile,
+            &peer,
+            None,
+            true,
+            Some(&capsule),
+            || {
+                if polls.load(Ordering::Acquire) != 0 {
+                    polls.fetch_add(1, Ordering::AcqRel);
+                }
+                ElapsedTick(1001)
+            },
+        )
+        .unwrap();
         let receipt = controller.join().unwrap();
         assert!(receipt.acknowledged());
         assert!(receipt.drained());
@@ -85,7 +105,8 @@ fn independent_stop_preempts_absent_or_partial_actor_without_current_evidence() 
 
 #[test]
 fn same_stop_listener_survives_intake_and_interrupts_the_wait_for_human_review() {
-    let root = Directory::new(); seed(&root, None);
+    let root = Directory::new();
+    seed(&root, None);
     let (config, actor_profile, peer, document, capsule, _) = prepared(&root, 7, 100, 2);
     let stop_path = crate::workflow::control::socket_path(&peer, 7);
     let actor_policy = actor_profile.clone();
@@ -97,7 +118,8 @@ fn same_stop_listener_survives_intake_and_interrupts_the_wait_for_human_review()
         sender.send((metadata.dev(), metadata.ino())).unwrap();
         let mut out = Vec::new();
         let result = client::submit(&actor_policy, &document, &mut out);
-        let response = decode_response(out.strip_suffix(b"\n").expect("original stop result")).unwrap();
+        let response =
+            decode_response(out.strip_suffix(b"\n").expect("original stop result")).unwrap();
         (result, response)
     });
     let stop_profile = peer.clone();
@@ -109,10 +131,19 @@ fn same_stop_listener_survives_intake_and_interrupts_the_wait_for_human_review()
         assert_eq!((current.dev(), current.ino()), original);
         stop_client(&stop_profile, 7)
     });
-    serve_with_credibility(config, &actor_profile, &peer, None, true,
-        Some(&capsule), || ElapsedTick(1001)).unwrap();
+    serve_with_credibility(
+        config,
+        &actor_profile,
+        &peer,
+        None,
+        true,
+        Some(&capsule),
+        || ElapsedTick(1001),
+    )
+    .unwrap();
     let receipt = controller.join().unwrap();
-    assert!(receipt.acknowledged()); assert!(receipt.drained());
+    assert!(receipt.acknowledged());
+    assert!(receipt.drained());
     assert!(!executed(&submitted.join().unwrap().1));
     let config = configured(&root, 0);
     let after = FileOversight::read_publication(&config.store, &config.profile).unwrap();
@@ -120,7 +151,10 @@ fn same_stop_listener_survives_intake_and_interrupts_the_wait_for_human_review()
     assert_eq!(after.executions, 1);
     assert_eq!(after.control.ledger.charged, 4);
     assert_eq!(after.control.ledger.reserved, 0);
-    assert_eq!(after.control.ledger.available, config.profile.delivery.total - 4);
+    assert_eq!(
+        after.control.ledger.available,
+        config.profile.delivery.total - 4
+    );
     assert!(!actor_profile.socket.exists());
     assert!(!peer.socket(7).exists());
     assert!(!crate::workflow::control::socket_path(&peer, 7).exists());
@@ -132,11 +166,16 @@ fn recovered_qualification_needs_a_fresh_operation_not_omission_or_historical_re
     let (_, old_capsule) = qualified(&root);
     fs::remove_file(root.0.join("evidence.json")).unwrap();
     for capsule in [None, Some(old_capsule.as_path())] {
-        let mut config = configured(&root, 0); config.programs.clear();
+        let mut config = configured(&root, 0);
+        config.programs.clear();
         let before = FileOversight::read_publication(&config.store, &config.profile).unwrap();
         let (actor_profile, peer) = profiles(&root, &config, 8);
-        assert!(serve_with_credibility(config, &actor_profile, &peer, None, true,
-            capsule, || ElapsedTick(1002)).is_err());
+        assert!(
+            serve_with_credibility(config, &actor_profile, &peer, None, true, capsule, || {
+                ElapsedTick(1002)
+            })
+            .is_err()
+        );
         let config = configured(&root, 0);
         let after = FileOversight::read_publication(&config.store, &config.profile).unwrap();
         assert_eq!(after.revision, before.revision + 1);
@@ -151,11 +190,20 @@ fn recovered_qualification_needs_a_fresh_operation_not_omission_or_historical_re
     evidence(&root, &config);
     let submitted = actor(actor_profile.clone(), document);
     let human = reviewer(peer.clone(), 8);
-    serve_with_credibility(config, &actor_profile, &peer, None, true,
-        Some(&capsule), || ElapsedTick(1003)).unwrap();
+    serve_with_credibility(
+        config,
+        &actor_profile,
+        &peer,
+        None,
+        true,
+        Some(&capsule),
+        || ElapsedTick(1003),
+    )
+    .unwrap();
     human.join().unwrap();
     let (status, response) = submitted.join().unwrap();
-    assert!(status.is_ok(), "{status:?}"); assert!(executed(&response));
+    assert!(status.is_ok(), "{status:?}");
+    assert!(executed(&response));
     let config = configured(&root, 0);
     let after = FileOversight::read_publication(&config.store, &config.profile).unwrap();
     assert_eq!(after.executions, 3);
@@ -171,34 +219,84 @@ fn qualified_checked_live_publication_still_seals_late_whole_input_drift() {
     };
     use fa_reference::full_input::{ActualHelperInput, ByteSpan, InputProfileBinding, PartKind, SubmittedPart};
     for changed in [false, true] {
-        let root = Directory::new(); let config = configured(&root, 0);
-        let actual = |epoch| ActualHelperInput::new(b"Q".to_vec(), InputProfileBinding {
-            profile_id: 1, profile_bytes: vec![], tokenizer_epoch: 1, policy_epoch: 0, model_epoch: epoch,
-        }, vec![SubmittedPart { span: ByteSpan { start: 0, end: 1 }, kind: PartKind::Question }], vec![]).unwrap();
-        let producer_profile = PublicationProducerProfile { source: 91, scope: config.profile.delivery.scope,
-            feed: 41, clock_domain: CLOCK_DOMAIN, after: 0 };
-        let (mut producer, _) = FilePublicationProducer::create(root.0.join("producer"), producer_profile,
-            FilePublicationInputs::new(None, Some(actual(1))), ElapsedTick(1000)).unwrap();
-        let json = format!(r#"{{"schema":"fa.supervised-whole-input/1","source":91,"producer":{{"path":"{}/producer/delivery.bin","scope":{}}},"feed":{{"source":41,"after":0,"clock":"unix_milliseconds","max_age_ms":5000,"lookup":{{"steps":10000,"bytes":1048576}}}},"limits":{{"bindings":8,"steps":10000,"value_bytes":1048576}},"requests":[]}}"#,
-            root.0.display(), scope(&config));
+        let root = Directory::new();
+        let config = configured(&root, 0);
+        let actual = |epoch| {
+            ActualHelperInput::new(
+                b"Q".to_vec(),
+                InputProfileBinding {
+                    profile_id: 1,
+                    profile_bytes: vec![],
+                    tokenizer_epoch: 1,
+                    policy_epoch: 0,
+                    model_epoch: epoch,
+                },
+                vec![SubmittedPart {
+                    span: ByteSpan { start: 0, end: 1 },
+                    kind: PartKind::Question,
+                }],
+                vec![],
+            )
+            .unwrap()
+        };
+        let producer_profile = PublicationProducerProfile {
+            source: 91,
+            scope: config.profile.delivery.scope,
+            feed: 41,
+            clock_domain: CLOCK_DOMAIN,
+            after: 0,
+        };
+        let (mut producer, _) = FilePublicationProducer::create(
+            root.0.join("producer"),
+            producer_profile,
+            FilePublicationInputs::new(None, Some(actual(1))),
+            ElapsedTick(1000),
+        )
+        .unwrap();
+        let json = format!(
+            r#"{{"schema":"fa.supervised-whole-input/1","source":91,"producer":{{"path":"{}/producer/delivery.bin","scope":{}}},"feed":{{"source":41,"after":0,"clock":"unix_milliseconds","max_age_ms":5000,"lookup":{{"steps":10000,"bytes":1048576}}}},"limits":{{"bindings":8,"steps":10000,"value_bytes":1048576}},"requests":[]}}"#,
+            root.0.display(),
+            scope(&config)
+        );
         let publication = PublicationProfile::decode(json.as_bytes()).unwrap();
         seed(&root, Some(&publication));
         let (config, actor_profile, peer, document, capsule, _) = prepared(&root, 7, 100, 2);
-        let store = config.store.clone(); let bootstrap = config.profile.clone();
+        let store = config.store.clone();
+        let bootstrap = config.profile.clone();
         let submitted = actor(actor_profile.clone(), document);
         let human = reviewer(peer.clone(), 7);
         let mut advanced = false;
-        let result = serve_with_credibility(config, &actor_profile, &peer, Some(&publication), true,
-            Some(&capsule), || {
-                if !advanced && let Ok(disk) = FileOversight::read_publication(&store, &bootstrap)
-                    && disk.control.ledger.charged > 4 && disk.executions == 1 {
-                    producer.publish(1, FilePublicationInputs::new(None, Some(actual(if changed { 2 } else { 1 }))),
-                        ElapsedTick(1001)).unwrap();
+        let result = serve_with_credibility(
+            config,
+            &actor_profile,
+            &peer,
+            Some(&publication),
+            true,
+            Some(&capsule),
+            || {
+                if !advanced
+                    && let Ok(disk) = FileOversight::read_publication(&store, &bootstrap)
+                    && disk.control.ledger.charged > 4
+                    && disk.executions == 1
+                {
+                    producer
+                        .publish(
+                            1,
+                            FilePublicationInputs::new(
+                                None,
+                                Some(actual(if changed { 2 } else { 1 })),
+                            ),
+                            ElapsedTick(1001),
+                        )
+                        .unwrap();
                     advanced = true;
                 }
                 ElapsedTick(1001)
-            });
-        if !changed { assert!(result.is_ok(), "{result:?}"); }
+            },
+        );
+        if !changed {
+            assert!(result.is_ok(), "{result:?}");
+        }
         human.join().unwrap();
         let (_, response) = submitted.join().unwrap();
         assert!(advanced);
@@ -206,7 +304,14 @@ fn qualified_checked_live_publication_still_seals_late_whole_input_drift() {
         let disk = FileOversight::read_publication(&store, &bootstrap).unwrap();
         assert_eq!(disk.executions, if changed { 1 } else { 2 });
         assert_eq!(disk.control.ledger.charged, if changed { 4 } else { 11 });
-        assert_eq!(disk.payload, if changed { b"seed".as_slice() } else { b"network".as_slice() });
+        assert_eq!(
+            disk.payload,
+            if changed {
+                b"seed".as_slice()
+            } else {
+                b"network".as_slice()
+            }
+        );
         assert_eq!(disk.control.ledger.reserved, 0);
     }
 }

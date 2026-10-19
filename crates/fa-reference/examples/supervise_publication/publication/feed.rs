@@ -23,34 +23,70 @@ impl FeedProfile {
         let selected = path(f.text("path")?)?;
         let (changes, freshness) = policies(&mut f)?;
         f.end()?;
-        Ok(Self { changes, freshness,
-            reader: PublicationFeedFile::new(selected, changes.source).map_err(super::debug)? })
+        Ok(Self {
+            changes,
+            freshness,
+            reader: PublicationFeedFile::new(selected, changes.source).map_err(super::debug)?,
+        })
     }
 
     /// Version 3 selects ONE path for both projections. A separate feed path is
     /// an error, not a fallback if the producer bundle becomes unavailable.
-    pub(super) fn producer(json: Json, selected: PathBuf, source: u64, scope: Scope)
-        -> Result<(Self, PublicationProducerProfile), String>
-    {
+    pub(super) fn producer(
+        json: Json,
+        selected: PathBuf,
+        source: u64,
+        scope: Scope,
+    ) -> Result<(Self, PublicationProducerProfile), String> {
         let mut f = Fields::new(json)?;
         let (changes, freshness) = policies(&mut f)?;
         f.end()?;
-        let profile = PublicationProducerProfile { source, scope, feed: changes.source,
-            clock_domain: freshness.clock_domain, after: changes.after };
+        let profile = PublicationProducerProfile {
+            source,
+            scope,
+            feed: changes.source,
+            clock_domain: freshness.clock_domain,
+            after: changes.after,
+        };
         let reader = PublicationFeedFile::from_producer(selected, profile).map_err(super::debug)?;
-        Ok((Self { changes, freshness, reader }, profile))
+        Ok((
+            Self {
+                changes,
+                freshness,
+                reader,
+            },
+            profile,
+        ))
     }
 }
 
-fn policies(f: &mut Fields) -> Result<(PublicationChangePolicy, PublicationFreshnessPolicy), String> {
+fn policies(
+    f: &mut Fields,
+) -> Result<(PublicationChangePolicy, PublicationFreshnessPolicy), String> {
     let source = f.number("source")?;
     let after = f.number("after")?;
-    if f.text("clock")? != "unix_milliseconds" { return Err("feed clock must be unix_milliseconds".into()); }
+    if f.text("clock")? != "unix_milliseconds" {
+        return Err("feed clock must be unix_milliseconds".into());
+    }
     let max_age_ticks = f.number("max_age_ms")?;
-    if max_age_ticks == 0 { return Err("feed freshness must have a positive maximum age".into()); }
+    if max_age_ticks == 0 {
+        return Err("feed freshness must have a positive maximum age".into());
+    }
     let mut lookup = Fields::new(f.take("lookup")?)?;
-    let budget = RoutingBudget { steps: lookup.number("steps")?, bytes: lookup.number("bytes")? };
+    let budget = RoutingBudget {
+        steps: lookup.number("steps")?,
+        bytes: lookup.number("bytes")?,
+    };
     lookup.end()?;
-    Ok((PublicationChangePolicy { source, after, lookup: budget },
-        PublicationFreshnessPolicy { clock_domain: CLOCK_DOMAIN, max_age_ticks }))
+    Ok((
+        PublicationChangePolicy {
+            source,
+            after,
+            lookup: budget,
+        },
+        PublicationFreshnessPolicy {
+            clock_domain: CLOCK_DOMAIN,
+            max_age_ticks,
+        },
+    ))
 }

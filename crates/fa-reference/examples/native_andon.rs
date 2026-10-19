@@ -9,18 +9,19 @@
 #[path = "supervise_publication/config.rs"]
 mod config;
 #[cfg(unix)]
+#[path = "native_andon/operator.rs"]
+mod operator;
+#[cfg(unix)]
 #[allow(dead_code)]
 #[path = "supervise_publication/recover_stop/guarded/profile.rs"]
 mod profile;
-#[cfg(unix)]
-#[path = "native_andon/operator.rs"]
-mod operator;
 
 #[cfg(unix)]
 fn main() {
-    if let Err(error) = operator::command(&std::env::args().skip(1).collect::<Vec<_>>(),
-        &mut std::io::stdout().lock())
-    {
+    if let Err(error) = operator::command(
+        &std::env::args().skip(1).collect::<Vec<_>>(),
+        &mut std::io::stdout().lock(),
+    ) {
         eprintln!("native_andon: {error}");
         std::process::exit(1);
     }

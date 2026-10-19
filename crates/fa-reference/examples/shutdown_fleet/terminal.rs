@@ -1,15 +1,24 @@
 //! Explicit terminal-clock execution over the original roster and custody path.
 use super::*;
-use fa_reference::action::consequence::delivery::persistent::{JournalError,
-    observed::shutdown::coordinator::FileShutdownClockBinding};
+use fa_reference::action::consequence::delivery::persistent::{
+    JournalError, observed::shutdown::coordinator::FileShutdownClockBinding,
+};
 use std::cell::{Cell, RefCell};
 
 pub(super) fn take_flag(args: &[String]) -> Result<Option<Vec<String>>, String> {
-    let positions: Vec<_> = args.iter().enumerate().skip(2)
-        .filter_map(|(index, arg)| (arg == "--terminal-clocks").then_some(index)).collect();
+    let positions: Vec<_> = args
+        .iter()
+        .enumerate()
+        .skip(2)
+        .filter_map(|(index, arg)| (arg == "--terminal-clocks").then_some(index))
+        .collect();
     match positions.as_slice() {
         [] => Ok(None),
-        [index] => { let mut clean = args.to_vec(); clean.remove(*index); Ok(Some(clean)) }
+        [index] => {
+            let mut clean = args.to_vec();
+            clean.remove(*index);
+            Ok(Some(clean))
+        }
         _ => Err("duplicate --terminal-clocks option".into()),
     }
 }
@@ -17,14 +26,22 @@ pub(super) fn take_flag(args: &[String]) -> Result<Option<Vec<String>>, String> 
 // The executable and real-file tests use this same entry point. A caller cannot
 // supply timestamps to the roster: only the bound native terminal callback can
 // acquire one. Legacy no-flag invocation retains its separate supplied-time API.
-pub(super) fn command_with(args: &[String], mut clock: impl FnMut() -> Result<ElapsedTick, String>,
-    elapsed: &mut impl FnMut() -> Duration, out: &mut impl Write) -> Result<(), String>
-{
+pub(super) fn command_with(
+    args: &[String],
+    mut clock: impl FnMut() -> Result<ElapsedTick, String>,
+    elapsed: &mut impl FnMut() -> Duration,
+    out: &mut impl Write,
+) -> Result<(), String> {
     let (mode, prepared, custody) = prepare_command(args, elapsed)?;
     let Prepared { spec, plan, .. } = prepared;
-    let bindings: Vec<_> = plan.domains().iter().map(|domain| FileShutdownClockBinding {
-        domain: domain.id(), clock_domain: domain.clock_domain(),
-    }).collect();
+    let bindings: Vec<_> = plan
+        .domains()
+        .iter()
+        .map(|domain| FileShutdownClockBinding {
+            domain: domain.id(),
+            clock_domain: domain.clock_domain(),
+        })
+        .collect();
     checkpoint(spec.wall, elapsed)?;
     let mut owner = acquire_coordinator(&spec, &plan, &custody, mode)?;
     let revision = owner.revision();
@@ -54,10 +71,21 @@ pub(super) fn command_with(args: &[String], mut clock: impl FnMut() -> Result<El
                 revision, &bindings, spec.replay_events, &mut acquire, &mut poll),
         }
     }.map_err(|error| format!("fleet pass admission refused at coordinator revision {revision}: {error}; no member visit started"))?;
-    report_pass(&owner, &custody, &spec,
-        (timed_out.get(), pass.final_revision(), pass.all_observed_drained()),
-        || render::encode_clocked(mode.label(), timed_out.get(), &pass), elapsed, out)
+    report_pass(
+        &owner,
+        &custody,
+        &spec,
+        (
+            timed_out.get(),
+            pass.final_revision(),
+            pass.all_observed_drained(),
+        ),
+        || render::encode_clocked(mode.label(), timed_out.get(), &pass),
+        elapsed,
+        out,
+    )
 }
 
 #[cfg(test)]
-#[path = "terminal_tests.rs"] mod tests;
+#[path = "terminal_tests.rs"]
+mod tests;

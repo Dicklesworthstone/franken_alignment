@@ -28,10 +28,16 @@ pub(crate) struct NativePublicationSelection {
 impl NativePublicationSelection {
     pub(crate) fn with_source(self, source: FileSourcePolicy) -> GeneratedSourceProfile {
         let publication = match self.joint {
-            Some(policy) => GeneratedSourcePublication::Joint { publication: self.publication, policy },
+            Some(policy) => GeneratedSourcePublication::Joint {
+                publication: self.publication,
+                policy,
+            },
             None => GeneratedSourcePublication::Checked(self.publication),
         };
-        GeneratedSourceProfile { source, publication }
+        GeneratedSourceProfile {
+            source,
+            publication,
+        }
     }
 }
 
@@ -39,31 +45,62 @@ impl NativePublicationSelection {
 // only the source-backed selection, never the old second-write installation.
 #[cfg(test)]
 impl NativePublicationSelection {
-    pub(crate) fn create(self, directory: &Path, profile: FileOversightProfile,
-        decoder: FileDecoderConfig, tokenizer: ByteBpe)
-        -> Result<(FileOversight, FileHumanReviewer), JournalError>
-    {
+    pub(crate) fn create(
+        self,
+        directory: &Path,
+        profile: FileOversightProfile,
+        decoder: FileDecoderConfig,
+        tokenizer: ByteBpe,
+    ) -> Result<(FileOversight, FileHumanReviewer), JournalError> {
         match self.joint {
             Some(joint) => FileOversight::create_generated_text_stream_with_joint_publication(
-                directory, profile, decoder, tokenizer, self.publication, joint),
+                directory,
+                profile,
+                decoder,
+                tokenizer,
+                self.publication,
+                joint,
+            ),
             None => FileOversight::create_generated_text_stream_checked(
-                directory, profile, decoder, tokenizer, self.publication),
+                directory,
+                profile,
+                decoder,
+                tokenizer,
+                self.publication,
+            ),
         }
     }
-    pub(crate) fn open(self, directory: &Path, profile: FileOversightProfile,
-        decoder: &FileDecoderConfig, tokenizer: &ByteBpe)
-        -> Result<(FileOversight, FileHumanReviewer), JournalError>
-    {
+    #[allow(dead_code)]
+    pub(crate) fn open(
+        self,
+        directory: &Path,
+        profile: FileOversightProfile,
+        decoder: &FileDecoderConfig,
+        tokenizer: &ByteBpe,
+    ) -> Result<(FileOversight, FileHumanReviewer), JournalError> {
         match self.joint {
             Some(joint) => FileOversight::open_generated_text_stream_with_joint_publication(
-                directory, profile, decoder, tokenizer, self.publication, joint),
+                directory,
+                profile,
+                decoder,
+                tokenizer,
+                self.publication,
+                joint,
+            ),
             None => {
                 let result = FileOversight::open_generated_text_stream_checked(
-                    directory, profile, decoder, tokenizer, self.publication)?;
+                    directory,
+                    profile,
+                    decoder,
+                    tokenizer,
+                    self.publication,
+                )?;
                 // The generic opener replays every stored guard and has already
                 // fenced. Do not return its stronger owner under an omitted
                 // joint selection. No stored guard is disabled by this refusal.
-                if result.0.held_out_joint_policy()?.is_some() { return Err(Error::Binding.into()); }
+                if result.0.held_out_joint_policy()?.is_some() {
+                    return Err(Error::Binding.into());
+                }
                 Ok(result)
             }
         }
@@ -73,31 +110,54 @@ impl NativePublicationSelection {
 impl PublicationProfile {
     // Retain the original expressly non-joint projection for existing callers.
     // Its refusal cannot be changed into a silent loss of the joint requirement.
-    pub(crate) fn generated_profile(&self, profile: &FileOversightProfile, stream: StreamProfile,
-        reserve: Option<RecoveryReserve>) -> Result<GeneratedPublicationProfile, JournalError>
-    {
+    pub(crate) fn generated_profile(
+        &self,
+        profile: &FileOversightProfile,
+        stream: StreamProfile,
+        reserve: Option<RecoveryReserve>,
+    ) -> Result<GeneratedPublicationProfile, JournalError> {
         self.check_scope(profile)?;
-        if self.joint.is_some() { return Err(Error::Binding.into()); }
+        if self.joint.is_some() {
+            return Err(Error::Binding.into());
+        }
         self.generated_fields(stream, reserve)
     }
 
-    pub(crate) fn native_selection(&self, profile: &FileOversightProfile, stream: StreamProfile,
-        reserve: Option<RecoveryReserve>) -> Result<NativePublicationSelection, JournalError>
-    {
+    pub(crate) fn native_selection(
+        &self,
+        profile: &FileOversightProfile,
+        stream: StreamProfile,
+        reserve: Option<RecoveryReserve>,
+    ) -> Result<NativePublicationSelection, JournalError> {
         let publication = if self.joint.is_some() {
             self.check_scope(profile)?;
             self.generated_fields(stream, reserve)?
-        } else { self.generated_profile(profile, stream, reserve)? };
-        Ok(NativePublicationSelection { publication, joint: self.joint })
+        } else {
+            self.generated_profile(profile, stream, reserve)?
+        };
+        Ok(NativePublicationSelection {
+            publication,
+            joint: self.joint,
+        })
     }
 
-    fn generated_fields(&self, stream: StreamProfile, reserve: Option<RecoveryReserve>)
-        -> Result<GeneratedPublicationProfile, JournalError>
-    {
-        if self.snapshot_fallback && self.feed.is_none() { return Err(Error::Binding.into()); }
-        Ok(GeneratedPublicationProfile { stream, reserve, limits: self.limits,
+    fn generated_fields(
+        &self,
+        stream: StreamProfile,
+        reserve: Option<RecoveryReserve>,
+    ) -> Result<GeneratedPublicationProfile, JournalError> {
+        if self.snapshot_fallback && self.feed.is_none() {
+            return Err(Error::Binding.into());
+        }
+        Ok(GeneratedPublicationProfile {
+            stream,
+            reserve,
+            limits: self.limits,
             feed: self.feed.as_ref().map(|feed| GeneratedPublicationFeed {
-                changes: feed.changes, freshness: feed.freshness, snapshot_fallback: self.snapshot_fallback,
-            }) })
+                changes: feed.changes,
+                freshness: feed.freshness,
+                snapshot_fallback: self.snapshot_fallback,
+            }),
+        })
     }
 }

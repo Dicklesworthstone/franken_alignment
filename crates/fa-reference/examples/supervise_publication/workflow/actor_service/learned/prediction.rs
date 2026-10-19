@@ -4,8 +4,10 @@
 use super::{FileOversight, GenerationStatus, GenerationStop, debug};
 use fa_reference::action::consequence::delivery::persistent::observed::consistency::{
     FileConsistencyObserver,
-    pre_output::{FilePreOutputStepper, FileOwnedPreOutputStepper, FilePreOutputQuantum,
-        FileOwnedPreOutputStart},
+    pre_output::{
+        FileOwnedPreOutputStart, FileOwnedPreOutputStepper, FilePreOutputQuantum,
+        FilePreOutputStepper,
+    },
 };
 
 // This is a historical reducer-call quantum, not a time/CPU guarantee.
@@ -28,7 +30,9 @@ pub(super) struct Session {
 
 pub(super) fn check(host: &FileOversight, session: Option<&Session>) -> Result<(), String> {
     if host.action_consistency_required() != session.is_some() {
-        return Err("required learned forecast and separately held observer custody do not match".into());
+        return Err(
+            "required learned forecast and separately held observer custody do not match".into(),
+        );
     }
     if session.is_some() {
         let evidence = host.action_consistency_snapshot().map_err(debug)?;
@@ -41,31 +45,66 @@ pub(super) fn check(host: &FileOversight, session: Option<&Session>) -> Result<(
 
 impl Session {
     pub(super) fn new(request: u64, observer: FileConsistencyObserver) -> Self {
-        Self { request, observer, message: None }
+        Self {
+            request,
+            observer,
+            message: None,
+        }
     }
 
-    pub(super) fn has_message(&self) -> bool { self.message.is_some() }
+    pub(super) fn has_message(&self) -> bool {
+        self.message.is_some()
+    }
 
     /// The original fixed prompt completes first. The library admits only its
     /// original output boundary or this request's retained finite successor.
     /// A late, wrong-request, or unanswered forecast cannot acquire a handle.
     pub(super) fn begin_message(&mut self, host: &mut FileOversight) -> Result<(), String> {
         check(host, Some(self))?;
-        if self.message.is_some() { return Err("learned request already has its original forecast".into()); }
-        let current = host.learned_generation_inspection().map_err(debug)?.numerical;
+        if self.message.is_some() {
+            return Err("learned request already has its original forecast".into());
+        }
+        let current = host
+            .learned_generation_inspection()
+            .map_err(debug)?
+            .numerical;
         let revision = host.revision();
         let message = if host.owned_learned_action_consistency_required() {
-            match self.observer.begin_owned_pre_output_request(host, revision,
-                self.request, current.actor_revision, current.position).map_err(debug)? {
-                FileOwnedPreOutputStart::Ready(handle) => Message::Owned(Box::new((*handle).into_cooperative())),
+            match self
+                .observer
+                .begin_owned_pre_output_request(
+                    host,
+                    revision,
+                    self.request,
+                    current.actor_revision,
+                    current.position,
+                )
+                .map_err(debug)?
+            {
+                FileOwnedPreOutputStart::Ready(handle) => {
+                    Message::Owned(Box::new((*handle).into_cooperative()))
+                }
                 FileOwnedPreOutputStart::Inconclusive(report) => {
-                    return Err(format!("original owned learned forecast is inconclusive: {report:?}"));
+                    return Err(format!(
+                        "original owned learned forecast is inconclusive: {report:?}"
+                    ));
                 }
                 FileOwnedPreOutputStart::Refused(error) => return Err(debug(error)),
             }
         } else {
-            Message::Raw(Box::new(self.observer.begin_pre_output_request(host, revision,
-                self.request, current.actor_revision, current.position).map_err(debug)?.map_err(debug)?.into_cooperative()))
+            Message::Raw(Box::new(
+                self.observer
+                    .begin_pre_output_request(
+                        host,
+                        revision,
+                        self.request,
+                        current.actor_revision,
+                        current.position,
+                    )
+                    .map_err(debug)?
+                    .map_err(debug)?
+                    .into_cooperative(),
+            ))
         };
         self.message = Some(message);
         Ok(())
@@ -85,10 +124,19 @@ impl Session {
     fn quantum(&mut self, host: &mut FileOversight) -> Result<FilePreOutputQuantum, String> {
         check(host, Some(self))?;
         let revision = host.revision();
-        match self.message.as_mut().ok_or("required learned message forecast is missing")? {
-            Message::Raw(handle) => handle.advance_quantum(host, revision, MAX_REPLAY_EVENTS_PER_QUANTUM),
-            Message::Owned(handle) => handle.advance_quantum(host, revision, MAX_REPLAY_EVENTS_PER_QUANTUM),
-        }.map_err(debug)
+        match self
+            .message
+            .as_mut()
+            .ok_or("required learned message forecast is missing")?
+        {
+            Message::Raw(handle) => {
+                handle.advance_quantum(host, revision, MAX_REPLAY_EVENTS_PER_QUANTUM)
+            }
+            Message::Owned(handle) => {
+                handle.advance_quantum(host, revision, MAX_REPLAY_EVENTS_PER_QUANTUM)
+            }
+        }
+        .map_err(debug)
     }
 
     // Preserve the existing tests' one-call/one-sample contract without placing
@@ -105,12 +153,23 @@ impl Session {
 
     pub(super) fn complete_message(&self, host: &FileOversight) -> Result<(), String> {
         check(host, Some(self))?;
-        let current = host.learned_generation_inspection().map_err(debug)?.numerical;
-        let original = match self.message.as_ref().ok_or("completed learned output has no current request forecast")? {
+        let current = host
+            .learned_generation_inspection()
+            .map_err(debug)?
+            .numerical;
+        let original = match self
+            .message
+            .as_ref()
+            .ok_or("completed learned output has no current request forecast")?
+        {
             Message::Raw(handle) => handle.numerical(),
             Message::Owned(handle) => handle.numerical(),
         };
-        if &current != original { return Err("learned output no longer matches its original forecast continuation".into()); }
+        if &current != original {
+            return Err(
+                "learned output no longer matches its original forecast continuation".into(),
+            );
+        }
         Ok(())
     }
 
@@ -119,20 +178,43 @@ impl Session {
     /// participates. Original admission still classifies and consumes it once.
     pub(super) fn finish_request(&mut self, host: &mut FileOversight) -> Result<(), String> {
         check(host, Some(self))?;
-        if self.message.is_some() { return Err("a message forecast cannot be reused for stream finish".into()); }
-        let current = host.learned_generation_inspection().map_err(debug)?.numerical;
-        if !matches!(current.status, GenerationStatus::Finished(GenerationStop::StopToken(_))) {
-            return Err("learned finish forecast requires the original completed message boundary".into());
+        if self.message.is_some() {
+            return Err("a message forecast cannot be reused for stream finish".into());
+        }
+        let current = host
+            .learned_generation_inspection()
+            .map_err(debug)?
+            .numerical;
+        if !matches!(
+            current.status,
+            GenerationStatus::Finished(GenerationStop::StopToken(_))
+        ) {
+            return Err(
+                "learned finish forecast requires the original completed message boundary".into(),
+            );
         }
         let revision = host.revision();
         if host.owned_learned_action_consistency_required() {
-            let report = self.observer.forecast_owned_learned_request(host, revision,
-                self.request, current.actor_revision).map_err(debug)?.map_err(debug)?;
-            report.prediction().map_err(|error|
-                format!("original owned learned finish forecast is inconclusive: {error:?}; {report:?}"))?;
+            let report = self
+                .observer
+                .forecast_owned_learned_request(
+                    host,
+                    revision,
+                    self.request,
+                    current.actor_revision,
+                )
+                .map_err(debug)?
+                .map_err(debug)?;
+            report.prediction().map_err(|error| {
+                format!(
+                    "original owned learned finish forecast is inconclusive: {error:?}; {report:?}"
+                )
+            })?;
         } else {
-            self.observer.forecast_hosted_request(host, revision,
-                self.request, current.actor_revision).map_err(debug)?.map_err(debug)?;
+            self.observer
+                .forecast_hosted_request(host, revision, self.request, current.actor_revision)
+                .map_err(debug)?
+                .map_err(debug)?;
         }
         Ok(())
     }

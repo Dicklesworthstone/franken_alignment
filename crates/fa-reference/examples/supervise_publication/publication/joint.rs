@@ -12,8 +12,20 @@ const SCHEMA: &str = "fa.supervised-joint-publication/1";
 /// Legacy documents are re-parsed under their ORIGINAL depth limit, so the new
 /// schema does not expand their accepted syntax. No source file is read here.
 pub(super) fn decode(bytes: &[u8]) -> Result<(Json, Option<HeldOutJointPolicy>), String> {
-    let limits = Limits { max_bytes: PROFILE_BYTES, max_depth: 5, max_items: 2048, max_string_bytes: 4096 };
-    let json = strict_json::parse(bytes, Limits { max_depth: 6, ..limits }).map_err(debug)?;
+    let limits = Limits {
+        max_bytes: PROFILE_BYTES,
+        max_depth: 5,
+        max_items: 2048,
+        max_string_bytes: 4096,
+    };
+    let json = strict_json::parse(
+        bytes,
+        Limits {
+            max_depth: 6,
+            ..limits
+        },
+    )
+    .map_err(debug)?;
     if json.get("schema").and_then(Json::as_str) != Some(SCHEMA) {
         return Ok((strict_json::parse(bytes, limits).map_err(debug)?, None));
     }
@@ -21,14 +33,19 @@ pub(super) fn decode(bytes: &[u8]) -> Result<(Json, Option<HeldOutJointPolicy>),
     wrapper.text("schema")?;
     let mut fields = Fields::new(wrapper.take("joint")?)?;
     let policy = HeldOutJointPolicy::new(
-        fields.number("id")?, fields.number("generation")?,
-        fields.number("minimum_safe_roots")?, fields.number("minimum_violation_roots")?,
-        fields.number("maximum_escape_ppm")?, fields.number("maximum_false_stop_ppm")?,
+        fields.number("id")?,
+        fields.number("generation")?,
+        fields.number("minimum_safe_roots")?,
+        fields.number("minimum_violation_roots")?,
+        fields.number("maximum_escape_ppm")?,
+        fields.number("maximum_false_stop_ppm")?,
         HeldOutJointBudget {
             cases: usize::try_from(fields.number("max_cases")?).map_err(debug)?,
-            member_outcomes: usize::try_from(fields.number("max_member_outcomes")?).map_err(debug)?,
+            member_outcomes: usize::try_from(fields.number("max_member_outcomes")?)
+                .map_err(debug)?,
         },
-    ).map_err(debug)?;
+    )
+    .map_err(debug)?;
     fields.end()?;
     let publication = wrapper.take("publication")?;
     wrapper.end()?;
@@ -42,9 +59,11 @@ pub(super) fn decode(bytes: &[u8]) -> Result<(Json, Option<HeldOutJointPolicy>),
 impl PublicationProfile {
     pub(super) fn joint_policy(&self) -> Option<JointPublicationProfile> {
         self.joint.map(|joint| JointPublicationProfile {
-            joint, validation: Some(self.limits),
+            joint,
+            validation: Some(self.limits),
             feed: self.feed.as_ref().map(|feed| JointPublicationFeed {
-                changes: feed.changes, freshness: feed.freshness,
+                changes: feed.changes,
+                freshness: feed.freshness,
                 snapshot_fallback: self.snapshot_fallback,
             }),
         })

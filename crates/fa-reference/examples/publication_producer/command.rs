@@ -23,14 +23,22 @@ pub(super) fn run(args: &[String], out: &mut impl Write) -> Result<(), String> {
         "inspect" | "source-observation" => 2,
         _ => return Err(USAGE.into()),
     };
-    if args.len() != count { return Err(USAGE.into()); }
+    if args.len() != count {
+        return Err(USAGE.into());
+    }
     if mode == "observation" {
         let expected_generation = args[1].parse::<u64>().map_err(debug)?;
-        expected_generation.checked_add(1).ok_or("producer generation overflow")?;
+        expected_generation
+            .checked_add(1)
+            .ok_or("producer generation overflow")?;
         let observed_at = ElapsedTick(args[2].parse::<u64>().map_err(debug)?);
         let bytes = read_regular(Path::new(&args[3]), MAX_PUBLICATION_PACKET_BYTES)?;
         let inputs = FilePublicationInputs::from_bytes(&bytes).map_err(debug)?;
-        let observation = Observation { expected_generation, observed_at, inputs };
+        let observation = Observation {
+            expected_generation,
+            observed_at,
+            inputs,
+        };
         out.write_all(&observation.encode()?).map_err(debug)?;
         return out.flush().map_err(debug);
     }
@@ -41,7 +49,12 @@ pub(super) fn run(args: &[String], out: &mut impl Write) -> Result<(), String> {
     }
     let profile = Profile::read(Path::new(&args[1]))?;
     if mode == "inspect" {
-        let image = FilePublicationProducer::read_image(&profile.directory, profile.identity, profile.minimum_generation).map_err(debug)?;
+        let image = FilePublicationProducer::read_image(
+            &profile.directory,
+            profile.identity,
+            profile.minimum_generation,
+        )
+        .map_err(debug)?;
         // Historical data only. Inspect does not acquire the writer lock, clean
         // staging files, advance time or turn a read into a producer observation.
         writeln!(out, "{{\"status\":\"historical\",\"generation\":\"{}\",\"input_generation\":\"{}\",\"through\":\"{}\",\"retained_after\":\"{}\",\"observed_at_unix_ms\":\"{}\",\"records\":{},\"structured_available\":{},\"opaque_available\":{}}}",
@@ -54,29 +67,57 @@ pub(super) fn run(args: &[String], out: &mut impl Write) -> Result<(), String> {
     // store. It binds original time to exact native bytes, not a mutable file path.
     let observation = if matches!(mode, "create-source" | "publish-source") {
         source::read(Path::new(&args[2]))?
-    } else { Observation::read(Path::new(&args[2]))? };
-    let successor = observation.expected_generation.checked_add(1).ok_or("producer generation overflow")?;
-    if profile.minimum_generation > successor { return Err("observation precedes the independent generation floor".into()); }
+    } else {
+        Observation::read(Path::new(&args[2]))?
+    };
+    let successor = observation
+        .expected_generation
+        .checked_add(1)
+        .ok_or("producer generation overflow")?;
+    if profile.minimum_generation > successor {
+        return Err("observation precedes the independent generation floor".into());
+    }
     let report = if matches!(mode, "create" | "create-source") {
         if observation.expected_generation != 0 || profile.minimum_generation != 1 {
-            return Err("creation requires expected generation zero and minimum generation one".into());
+            return Err(
+                "creation requires expected generation zero and minimum generation one".into(),
+            );
         }
-        let (_owner, report) = FilePublicationProducer::create(&profile.directory, profile.identity,
-            observation.inputs, observation.observed_at).map_err(debug)?;
+        let (_owner, report) = FilePublicationProducer::create(
+            &profile.directory,
+            profile.identity,
+            observation.inputs,
+            observation.observed_at,
+        )
+        .map_err(debug)?;
         report
     } else {
         // No create-on-missing. An exact retry, including a lost creation receipt,
         // verifies current bytes without another notice or a renewed timestamp.
-        let mut owner = FilePublicationProducer::open(&profile.directory, profile.identity, profile.minimum_generation).map_err(debug)?;
-        owner.publish(observation.expected_generation, observation.inputs, observation.observed_at).map_err(debug)?
+        let mut owner = FilePublicationProducer::open(
+            &profile.directory,
+            profile.identity,
+            profile.minimum_generation,
+        )
+        .map_err(debug)?;
+        owner
+            .publish(
+                observation.expected_generation,
+                observation.inputs,
+                observation.observed_at,
+            )
+            .map_err(debug)?
     };
     // Storage has already committed. Output failure must not undo or retry it.
     report_to(report, out)?;
     out.flush().map_err(debug)
 }
 fn report_to(report: ProducerPublication, out: &mut impl Write) -> Result<(), String> {
-    let status = match report.kind { ProducerPublicationKind::Created => "created",
-        ProducerPublicationKind::Replaced => "replaced", ProducerPublicationKind::AlreadyCurrent => "already_current" };
+    let status = match report.kind {
+        ProducerPublicationKind::Created => "created",
+        ProducerPublicationKind::Replaced => "replaced",
+        ProducerPublicationKind::AlreadyCurrent => "already_current",
+    };
     writeln!(out, "{{\"status\":\"{}\",\"generation\":\"{}\",\"input_generation\":\"{}\",\"through\":\"{}\",\"retained_after\":\"{}\",\"encoded_bytes\":{}}}",
         status, report.generation, report.input_generation, report.through, report.retained_after, report.encoded_bytes).map_err(debug)
 }

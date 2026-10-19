@@ -7,16 +7,16 @@ use fa_reference::action::consequence::delivery::persistent::observed::publicati
     FilePublicationInputs, FileWitnessInput, MAX_PUBLICATION_PACKET_BYTES,
 };
 use fa_reference::full_input::{
-    ActualHelperInput, ByteSpan, InputProfileBinding, Omission, PartKind, SubmittedPart,
-    MAX_OMISSIONS, MAX_PROFILE_BYTES, MAX_SUBMITTED_BYTES, MAX_SUBMITTED_PARTS,
+    ActualHelperInput, ByteSpan, InputProfileBinding, MAX_OMISSIONS, MAX_PROFILE_BYTES,
+    MAX_SUBMITTED_BYTES, MAX_SUBMITTED_PARTS, Omission, PartKind, SubmittedPart,
 };
 use fa_reference::product_frontier::{
     FrontierStage, ProductFrontiers, ProjectionKey, TrustedClosingMarker,
 };
 use fa_reference::strict_json::{self, Json, Limits};
 use fa_reference::witness::{
-    AdapterDomainInput, DomainClosure, DomainProjection, SnapshotEntry,
-    MAX_SNAPSHOT_ENTRIES, MAX_VALUE_BYTES,
+    AdapterDomainInput, DomainClosure, DomainProjection, MAX_SNAPSHOT_ENTRIES, MAX_VALUE_BYTES,
+    SnapshotEntry,
 };
 use std::path::Path;
 
@@ -29,16 +29,24 @@ pub(super) fn read(path: &Path) -> Result<Observation, String> {
 }
 
 pub(super) fn decode(bytes: &[u8]) -> Result<Observation, String> {
-    let json = strict_json::parse(bytes, Limits {
-        max_bytes: SOURCE_BYTES, max_depth: 12, max_items: 8192,
-        max_string_bytes: 2 * MAX_SUBMITTED_BYTES,
-    }).map_err(debug)?;
+    let json = strict_json::parse(
+        bytes,
+        Limits {
+            max_bytes: SOURCE_BYTES,
+            max_depth: 12,
+            max_items: 8192,
+            max_string_bytes: 2 * MAX_SUBMITTED_BYTES,
+        },
+    )
+    .map_err(debug)?;
     let mut f = Fields::object(json)?;
     if f.text("schema")? != "fa.publication-source/1" {
         return Err("unsupported publication source document".into());
     }
     let expected_generation = f.number("expected_generation")?;
-    expected_generation.checked_add(1).ok_or("producer generation overflow")?;
+    expected_generation
+        .checked_add(1)
+        .ok_or("producer generation overflow")?;
     let observed_at = ElapsedTick(f.number("observed_at_unix_ms")?);
     // Both keys are REQUIRED. Explicit null means unavailable, never permission
     // to remove a previously bound consumer dependency or infer a closed domain.
@@ -48,25 +56,39 @@ pub(super) fn decode(bytes: &[u8]) -> Result<Observation, String> {
     let inputs = FilePublicationInputs::new(structured, opaque);
     // Enforce the combined native wire ceiling before any owner is opened.
     inputs.to_bytes().map_err(debug)?;
-    Ok(Observation { expected_generation, observed_at, inputs })
+    Ok(Observation {
+        expected_generation,
+        observed_at,
+        inputs,
+    })
 }
 
 fn nullable<T>(value: Json, decode: fn(Json) -> Result<T, String>) -> Result<Option<T>, String> {
-    match value { Json::Null => Ok(None), value => decode(value).map(Some) }
+    match value {
+        Json::Null => Ok(None),
+        value => decode(value).map(Some),
+    }
 }
 
 fn key(value: Json) -> Result<ProjectionKey, String> {
     let mut f = Fields::object(value)?;
-    let result = ProjectionKey { source: f.number("source")?, branch: f.number("branch")?,
-        projection: f.number("projection")?, source_epoch: f.number("source_epoch")? };
+    let result = ProjectionKey {
+        source: f.number("source")?,
+        branch: f.number("branch")?,
+        projection: f.number("projection")?,
+        source_epoch: f.number("source_epoch")?,
+    };
     f.end()?;
     Ok(result)
 }
 
 fn marker(value: Json) -> Result<TrustedClosingMarker, String> {
     let mut f = Fields::object(value)?;
-    let result = TrustedClosingMarker { key: key(f.take("key")?)?,
-        final_sequence: f.number("final_sequence")?, marker_generation: f.number("marker_generation")? };
+    let result = TrustedClosingMarker {
+        key: key(f.take("key")?)?,
+        final_sequence: f.number("final_sequence")?,
+        marker_generation: f.number("marker_generation")?,
+    };
     f.end()?;
     Ok(result)
 }
@@ -89,8 +111,11 @@ fn structured(value: Json) -> Result<FileWitnessInput, String> {
     let control_cut = f.number("control_cut")?;
     let semantic_epoch = f.number("semantic_epoch")?;
     let mut d = Fields::object(f.take("domain")?)?;
-    let domain = DomainProjection::new(d.number("domain_id")?, d.number("domain_epoch")?,
-        key(d.take("projection")?)?);
+    let domain = DomainProjection::new(
+        d.number("domain_id")?,
+        d.number("domain_epoch")?,
+        key(d.take("projection")?)?,
+    );
     d.end()?;
     let declared = closure(f.take("closure")?)?;
     let admitted = nullable(f.take("admitted_close")?, marker)?;
@@ -115,13 +140,26 @@ fn structured(value: Json) -> Result<FileWitnessInput, String> {
             return Err("admitted close belongs to another source projection".into());
         }
         if admitted.final_sequence != 0 {
-            frontiers.accept_contiguous(admitted.key, FrontierStage::Authenticated,
-                1, admitted.final_sequence).map_err(debug)?;
+            frontiers
+                .accept_contiguous(
+                    admitted.key,
+                    FrontierStage::Authenticated,
+                    1,
+                    admitted.final_sequence,
+                )
+                .map_err(debug)?;
         }
         frontiers.record_close(admitted).map_err(debug)?;
     }
-    FileWitnessInput::new(revision, control_cut, semantic_epoch,
-        AdapterDomainInput::new(domain, declared), entries, &frontiers).map_err(debug)
+    FileWitnessInput::new(
+        revision,
+        control_cut,
+        semantic_epoch,
+        AdapterDomainInput::new(domain, declared),
+        entries,
+        &frontiers,
+    )
+    .map_err(debug)
 }
 
 fn opaque(value: Json) -> Result<ActualHelperInput, String> {
@@ -129,8 +167,10 @@ fn opaque(value: Json) -> Result<ActualHelperInput, String> {
     let bytes = unhex(&f.text("submitted_hex")?, MAX_SUBMITTED_BYTES)?;
     let mut p = Fields::object(f.take("input_profile")?)?;
     let profile = InputProfileBinding {
-        profile_id: p.number("profile_id")?, profile_bytes: unhex(&p.text("profile_hex")?, MAX_PROFILE_BYTES)?,
-        tokenizer_epoch: p.number("tokenizer_epoch")?, policy_epoch: p.number("policy_epoch")?,
+        profile_id: p.number("profile_id")?,
+        profile_bytes: unhex(&p.text("profile_hex")?, MAX_PROFILE_BYTES)?,
+        tokenizer_epoch: p.number("tokenizer_epoch")?,
+        policy_epoch: p.number("policy_epoch")?,
         model_epoch: p.number("model_epoch")?,
     };
     p.end()?;
@@ -145,14 +185,22 @@ fn opaque(value: Json) -> Result<ActualHelperInput, String> {
             "question" => PartKind::Question,
             "prompt" => PartKind::Prompt,
             "instruction" => PartKind::Instruction,
-            "tool_schema" => PartKind::ToolSchema { schema_id: p.number("schema_id")? },
-            "evidence" => PartKind::Evidence { source_id: p.number("source_id")?, transform_id: p.number("transform_id")? },
+            "tool_schema" => PartKind::ToolSchema {
+                schema_id: p.number("schema_id")?,
+            },
+            "evidence" => PartKind::Evidence {
+                source_id: p.number("source_id")?,
+                transform_id: p.number("transform_id")?,
+            },
             "delimiter" => PartKind::Delimiter,
             "other" => PartKind::Other,
             _ => return Err("unsupported submitted part kind".into()),
         };
         p.end()?;
-        parts.push(SubmittedPart { span: ByteSpan { start, end }, kind });
+        parts.push(SubmittedPart {
+            span: ByteSpan { start, end },
+            kind,
+        });
     }
     let raw = f.array("omissions", MAX_OMISSIONS)?;
     f.end()?;
@@ -162,11 +210,19 @@ fn opaque(value: Json) -> Result<ActualHelperInput, String> {
         let mut o = Fields::object(item)?;
         let domain_id = o.number("domain_id")?;
         let omission = match o.text("kind")?.as_str() {
-            "closed_absent" => Omission::ClosedAbsent { domain_id,
-                trusted_closure_marker_id: o.number("trusted_closure_marker_id")? },
-            "gapped" => Omission::Gapped { domain_id, first_missing: o.number("first_missing")? },
+            "closed_absent" => Omission::ClosedAbsent {
+                domain_id,
+                trusted_closure_marker_id: o.number("trusted_closure_marker_id")?,
+            },
+            "gapped" => Omission::Gapped {
+                domain_id,
+                first_missing: o.number("first_missing")?,
+            },
             "unsupported" => Omission::Unsupported { domain_id },
-            "redacted" => Omission::Redacted { domain_id, transform_id: o.number("transform_id")? },
+            "redacted" => Omission::Redacted {
+                domain_id,
+                transform_id: o.number("transform_id")?,
+            },
             _ => return Err("unsupported omission kind".into()),
         };
         o.end()?;

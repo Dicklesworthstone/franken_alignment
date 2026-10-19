@@ -8,10 +8,19 @@ use std::{io::Write, time::Duration};
 
 // Deterministic elapsed seam for boundary tests. The actual command uses one
 // monotonic Instant; it never samples the logical clock to budget historical work.
-pub(super) fn run_with_elapsed<F>(config: &Config, operation: u64, clock: F,
-    elapsed: &mut impl FnMut() -> Duration, out: &mut impl Write) -> Result<(), String>
-where F: FnOnce() -> ElapsedTick {
-    if operation == 0 { return Err("stop operation must be nonzero".into()); }
+pub(super) fn run_with_elapsed<F>(
+    config: &Config,
+    operation: u64,
+    clock: F,
+    elapsed: &mut impl FnMut() -> Duration,
+    out: &mut impl Write,
+) -> Result<(), String>
+where
+    F: FnOnce() -> ElapsedTick,
+{
+    if operation == 0 {
+        return Err("stop operation must be nonzero".into());
+    }
     let wall = Duration::from_millis(config.timing.runtime_ms);
     if elapsed() >= wall {
         return Err("stop recovery replay deadline reached before open; no recovery completion was acknowledged".into());
@@ -26,18 +35,29 @@ where F: FnOnce() -> ElapsedTick {
         // cannot trigger a stop/fence, staging cleanup or terminal clock call.
         if elapsed() >= wall {
             recovery.cancel();
-            return Err(format!("stop recovery replay deadline reached after {} of {} original events; no recovery completion was acknowledged; no effect was resent",
-                progress.replayed_events, progress.total_events));
+            return Err(format!(
+                "stop recovery replay deadline reached after {} of {} original events; no recovery completion was acknowledged; no effect was resent",
+                progress.replayed_events, progress.total_events
+            ));
         }
         match progress.status {
             FileStopRecoveryStatus::Ready => {
                 let request = recovery.stop_request(operation).map_err(unconfirmed)?;
-                break recovery.finish_stopped(request, clock).map_err(unconfirmed)?;
+                break recovery
+                    .finish_stopped(request, clock)
+                    .map_err(unconfirmed)?;
             }
             FileStopRecoveryStatus::Replaying => {
-                recovery.advance(progress.replayed_events, 1).map_err(unconfirmed)?;
+                recovery
+                    .advance(progress.replayed_events, 1)
+                    .map_err(unconfirmed)?;
             }
-            _ => return Err("native stop replay is unavailable; no recovery completion was acknowledged".into()),
+            _ => {
+                return Err(
+                    "native stop replay is unavailable; no recovery completion was acknowledged"
+                        .into(),
+                );
+            }
         }
     };
     // Keep the original receipt/report law, including output-loss uncertainty,
@@ -46,5 +66,8 @@ where F: FnOnce() -> ElapsedTick {
 }
 
 fn unconfirmed(error: JournalError) -> String {
-    format!("native recovery completion is unconfirmed: {}; no effect was resent", debug(error))
+    format!(
+        "native recovery completion is unconfirmed: {}; no effect was resent",
+        debug(error)
+    )
 }

@@ -1,6 +1,8 @@
 //! All explicit handles precede scalar reads; one original budget spans them.
-use super::{CheckpointLoadError, CheckpointWork, DecoderModel, LoadedCheckpoint,
-    PreparedBase, PreparedCheckpoint, WeightReadBudget, debug};
+use super::{
+    CheckpointLoadError, CheckpointWork, DecoderModel, LoadedCheckpoint, PreparedBase,
+    PreparedCheckpoint, WeightReadBudget, debug,
+};
 use fa_reference::action::consequence::activation::tensor::kv::decoder::safetensors::{
     MAX_WEIGHT_HEADER_BYTES, lora::MAX_LORA_WEIGHT_BYTES,
 };
@@ -9,16 +11,22 @@ use std::fs::{self, File};
 use std::path::Path;
 
 impl PreparedCheckpoint {
-    pub(crate) fn load(mut self, reads: &mut WeightReadBudget, physical_limit: usize)
-        -> Result<LoadedCheckpoint, CheckpointLoadError>
-    {
+    pub(crate) fn load(
+        mut self,
+        reads: &mut WeightReadBudget,
+        physical_limit: usize,
+    ) -> Result<LoadedCheckpoint, CheckpointLoadError> {
         let before = reads.usage();
         let mut work = CheckpointWork::default();
         let result = (|| -> Result<DecoderModel, String> {
             let limit = physical_limit.min(self.weight_bytes);
-            if limit == 0 || reads.remaining_bytes() > limit + 1
-                || reads.remaining_calls() > self.weight_read_calls {
-                return Err("caller must conjoin checkpoint and existing read/byte allowances".into());
+            if limit == 0
+                || reads.remaining_bytes() > limit + 1
+                || reads.remaining_calls() > self.weight_read_calls
+            {
+                return Err(
+                    "caller must conjoin checkpoint and existing read/byte allowances".into(),
+                );
             }
             let mut total = 0_usize;
             let mut single = None;
@@ -52,25 +60,53 @@ impl PreparedCheckpoint {
             let model = match &self.base {
                 PreparedBase::Single(_) => {
                     let (model, receipt) = DecoderModel::read_llama_safetensors(
-                        self.base_configuration.profile().identity(), self.profile.shape().context,
-                        &self.configuration, single.as_mut().ok_or("missing admitted base handle")?, reads)
-                        .map_err(debug)?;
+                        self.base_configuration.profile().identity(),
+                        self.profile.shape().context,
+                        &self.configuration,
+                        single.as_mut().ok_or("missing admitted base handle")?,
+                        reads,
+                    )
+                    .map_err(debug)?;
                     if receipt.configuration != self.base_configuration {
                         return Err("base configuration changed during original import".into());
                     }
                     model
                 }
-                PreparedBase::Sharded { index, .. } => DecoderModel::read_safetensors_shards_bounded(
-                    self.base_configuration.profile().clone(), index, &mut shards, reads, limit,
-                    self.base_configuration.output_head()).map_err(debug)?.0,
+                PreparedBase::Sharded { index, .. } => {
+                    DecoderModel::read_safetensors_shards_bounded(
+                        self.base_configuration.profile().clone(),
+                        index,
+                        &mut shards,
+                        reads,
+                        limit,
+                        self.base_configuration.output_head(),
+                    )
+                    .map_err(debug)?
+                    .0
+                }
             };
             let model = if let Some(adapter) = &mut self.adapter {
-                model.read_lora_safetensors(self.profile.identity(), &adapter.configuration,
-                    adapter_file.as_mut().ok_or("missing admitted adapter handle")?, reads, &mut adapter.products)
-                    .map_err(debug)?.0
-            } else { model };
-            if model.profile() != &self.profile || reads.usage().bytes_read - before.bytes_read > limit {
-                return Err("effective checkpoint profile or aggregate actual bytes changed".into());
+                model
+                    .read_lora_safetensors(
+                        self.profile.identity(),
+                        &adapter.configuration,
+                        adapter_file
+                            .as_mut()
+                            .ok_or("missing admitted adapter handle")?,
+                        reads,
+                        &mut adapter.products,
+                    )
+                    .map_err(debug)?
+                    .0
+            } else {
+                model
+            };
+            if model.profile() != &self.profile
+                || reads.usage().bytes_read - before.bytes_read > limit
+            {
+                return Err(
+                    "effective checkpoint profile or aggregate actual bytes changed".into(),
+                );
             }
             Ok(model)
         })();
@@ -101,7 +137,9 @@ fn open(path: &Path, maximum: usize, total: &mut usize) -> Result<File, String> 
     let file = File::open(path).map_err(debug)?;
     let opened = file.metadata().map_err(debug)?;
     let size = usize::try_from(opened.len()).map_err(debug)?;
-    let next = total.checked_add(size).ok_or("checkpoint aggregate byte count overflow")?;
+    let next = total
+        .checked_add(size)
+        .ok_or("checkpoint aggregate byte count overflow")?;
     if !opened.is_file() || next > maximum {
         return Err("checkpoint files exceed one aggregate byte allowance".into());
     }
