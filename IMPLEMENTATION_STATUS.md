@@ -1,5 +1,20 @@
 # Implementation status · design revision 0.3
 
+## 2026-10-19: complete actor/topology command admission (unqualified source)
+
+The learned actor option parser now admits the documented `--topology-profile`
+pair. Previously its closed whitelist refused combined actor/topology commands
+before the topology parser, despite the underlying workflow supporting both.
+Both flag orders now reach the original independent profile admission.
+
+A full-command regression drives actual learned generation, native review,
+authenticated actor ingress and independent human approval in all three
+forecast modes, and checks original publication plus paired source/history
+checkpoints. Invalid combinations must refuse before time observation or
+durable/socket creation. The production clock is unchanged. Source review is
+not type checking or execution: the workspace executor is offline and required
+remote-only RCH qualification is still unavailable. FA-073 remains in progress.
+
 ## 2026-10-18: topology-mediated learned operator (unqualified source)
 
 The original learned publication command now accepts `--topology-profile` for

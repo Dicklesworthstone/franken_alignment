@@ -44,6 +44,13 @@ use std::{io::Write, path::Path, rc::Rc};
 const USAGE: &str = "create-learned-generated CONFIG LEARNED_RECIPE REVIEWER_PROFILE [--continue-generation | --after-message PREVIOUS_REQUEST | --finish-after-message PREVIOUS_REQUEST] [--actor-profile ACTOR_PROFILE] [--credibility-activation CAPSULE] [--topology-profile PATH] [--history-anchor INPUT] [--retain-history-anchor NEW_OUTPUT] | create-learned-generated CONFIG LEARNED_RECIPE --resume [--finish-after-message PREVIOUS_REQUEST] [--topology-profile PATH] [--history-anchor INPUT] [--retain-history-anchor NEW_OUTPUT] | create-learned-generated CONFIG LEARNED_RECIPE --recover-stop OPERATION [--topology-profile PATH] [--history-anchor INPUT] | create-learned-generated CONFIG LEARNED_RECIPE --audit-review ROUND HISTORY_ANCHOR | create-learned-generated CONFIG LEARNED_RECIPE --resume (--receipts-only | --reconcile-receipts) [--finish-after-message PREVIOUS_REQUEST] [--topology-profile PATH] [--history-anchor INPUT]";
 
 pub(super) fn command(args: &[String], credibility: Option<&Path>) -> Result<(), String> {
+    command_with_clock(args, credibility, clock)
+}
+
+// The command and its admission tests use the same complete parser, artifact
+// selection and workflow; a test clock supplies no publication or reviewer key.
+fn command_with_clock<F>(args: &[String], credibility: Option<&Path>, time: F) -> Result<(), String>
+where F: FnMut() -> ElapsedTick {
     if args.iter().any(|arg| matches!(arg.as_str(), "--receipts-only" | "--reconcile-receipts")) {
         return recovery::readonly::command(args, credibility, &mut std::io::stdout().lock());
     }
@@ -81,8 +88,8 @@ pub(super) fn command(args: &[String], credibility: Option<&Path>) -> Result<(),
         anchors.admit(&config, &mut loaded, true)?;
         topology::admit(&config, &mut loaded, topology_path.as_deref(), topology::Mode::Historical)?;
         let result = match finishing {
-            Some(after) => recovery::resume_finish(config, loaded, after, clock)?,
-            None => recovery::resume(config, loaded, clock)?,
+            Some(after) => recovery::resume_finish(config, loaded, after, time)?,
+            None => recovery::resume(config, loaded, time)?,
         };
         return emit(result, &mut std::io::stdout().lock());
     }
@@ -96,9 +103,9 @@ pub(super) fn command(args: &[String], credibility: Option<&Path>) -> Result<(),
         if live_continuation { topology::Mode::Live } else { topology::Mode::Create })?;
     let result = match actor.as_ref() {
         Some(actor) => run_with_actor(config, loaded, &peers, live_continuation,
-            finishing, after_message, credibility, Some(actor), clock)?,
+            finishing, after_message, credibility, Some(actor), time)?,
         None => run_qualified(config, loaded, &peers, live_continuation,
-            finishing, after_message, credibility, clock)?,
+            finishing, after_message, credibility, time)?,
     };
     emit(result, &mut std::io::stdout().lock())
 }

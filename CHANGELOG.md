@@ -1,5 +1,17 @@
 # Changelog
 
+## 2026-10-19: admit actor and topology profiles in the full learned command
+
+- Fix the live actor option whitelist so `--actor-profile` composes with
+  `--topology-profile` in either order, before durable startup.
+- Exercise the complete command parser and independent on-disk profiles with
+  real numerical generation, native congress, actor and human peers in ordinary,
+  raw-predictive and owned-predictive modes. Malformed compositions refuse
+  before clocks, sockets, journals or output checkpoints are created.
+- Production still supplies the original clock; the injected test clock grants
+  no authority. New source has not been compiled or executed: the workspace
+  executor is offline and the required remote RCH worker remains unavailable.
+
 ## 2026-10-18: enforce topology through the learned publication operator
 
 - Connect `--topology-profile` to learned creation, continuation, explicit

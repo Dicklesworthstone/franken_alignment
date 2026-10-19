@@ -36,7 +36,7 @@ pub(super) fn take_option(args: &[String]) -> Result<(Vec<String>, Option<&Path>
             output.push(args[at].clone()); at += 1; continue;
         }
         if !matches!(flag, "--actor-profile" | "--after-message" | "--finish-after-message"
-            | "--history-anchor" | "--retain-history-anchor") {
+            | "--history-anchor" | "--retain-history-anchor" | "--topology-profile") {
             return Err(USAGE.into());
         }
         let value = args.get(at + 1).ok_or(USAGE)?;

@@ -253,3 +253,86 @@ fn topology_options_preserve_original_learned_modes_and_refuse_incomplete_paths(
     selected.extend(["--topology-profile".into(), "/another".into()]);
     assert!(custody::take_option(&selected).is_err());
 }
+
+
+// These files pass through the actual command parser and independent profile
+// loaders, rather than starting at run_with_actor with already admitted inputs.
+fn command_inputs(root: &Root, config: &Config, recipe: &Path,
+    actor: &crate::workflow::actor_service::Profile) -> Vec<String>
+{
+    let host_path = root.0.join("command-host.json");
+    let source = include_str!(concat!(env!("CARGO_MANIFEST_DIR"),
+        "/fixtures/supervised_publication.json"))
+        .replace("/operator/publication-store", config.store.to_str().unwrap())
+        .replace("/operator/evidence.json", root.0.join("evidence.json").to_str().unwrap())
+        .replace("\"initial_payload_hex\": \"696e697469616c\"", "\"initial_payload_hex\": \"\"")
+        .replace("\"events\": 256", "\"events\": 1024")
+        .replace("\"runtime_ms\": 120000", "\"runtime_ms\": 60000")
+        .replace("\"poll_ms\": 10", "\"poll_ms\": 1")
+        .replace("\"cleanup_ms\": 2000", "\"cleanup_ms\": 1000");
+    fs::write(&host_path, source).unwrap();
+    assert_eq!(Config::read(&host_path).unwrap().profile, config.profile);
+    let actor_path = root.0.join("command-actor.json");
+    let reviewer_path = root.0.join("command-reviewer.json");
+    let scope = actor.scope;
+    let audience = format!(r#"{{"tenant":{},"principal":{},"run":{},"branch":{},"authority":{}}}"#,
+        scope.tenant, scope.principal, scope.run, scope.branch, scope.authority);
+    let identity = format!(r#"{{"uid":{},"gid":{},"pid":{}}}"#,
+        actor.actor.uid(), actor.actor.gid(), actor.actor.pid().unwrap());
+    fs::write(&actor_path, format!(r#"{{"schema":"fa.actor-service/1","clock":"unix_milliseconds","request":{},"scope":{audience},"socket":"{}","supervisor":{identity},"actor":{identity},"candidate_limit":4,"connection_limit":4,"exchange_limit":4096,"runtime_ms":60000,"poll_ms":1,"reply_ms":500}}"#,
+        actor.request, actor.socket.display())).unwrap();
+    fs::write(&reviewer_path, format!(r#"{{"version":1,"clock":"unix_milliseconds","scope":{audience},"reviewer_id":{},"socket_directory":"{}/peers","supervisor":{identity},"reviewer":{identity},"candidate_limit":2,"runtime_ms":5000,"poll_ms":1}}"#,
+        config.profile.human.reviewer_id, root.0.display())).unwrap();
+    vec!["create-learned-generated".into(), host_path.display().to_string(),
+        recipe.display().to_string(), reviewer_path.display().to_string(),
+        "--actor-profile".into(), actor_path.display().to_string()]
+}
+
+#[test]
+fn command_parsing_composes_authenticated_actor_and_topology_before_real_publication_in_all_modes() {
+    for mode in [None, Some(false), Some(true)] {
+        let root = Root::new(); let (config, path, _) = selected(&root, mode, false);
+        let actor_profile = peers::actor_profile(&root, &config, 1);
+        let reviewer = fixture::peers(&root, &config);
+        let mut args = command_inputs(&root, &config, &path, &actor_profile);
+        let topology_path = root.0.join("create-topology.json").display().to_string();
+        let topology_args = ["--topology-profile".to_owned(), topology_path];
+        if mode == Some(false) { args.splice(4..4, topology_args); }
+        else { args.extend(topology_args); }
+        args.extend(["--retain-history-anchor".into(),
+            root.0.join("history-1.bin").display().to_string()]);
+        // These malformed compositions must still refuse before any authority,
+        // socket, time observation or source-checkpoint output is created.
+        for tail in [vec!["--topology-profile"], vec!["--topology-profile", "/duplicate"],
+            vec!["--after-message", "--topology-profile"], vec!["--resume"]] {
+            let mut malformed = args.clone(); malformed.extend(tail.into_iter().map(str::to_owned));
+            assert!(command_with_clock(&malformed, None,
+                || panic!("invalid command must refuse before reading time")).is_err());
+            assert!(!config.store.exists()); assert!(!actor_profile.socket.exists());
+            assert!(!root.0.join("source-1.bin").exists());
+        }
+        let mut actor = None; let mut human = None;
+        let result = command_with_clock(&args, None, || {
+            if actor.is_none() && actor_profile.socket.exists() {
+                actor = Some(peers::actor(actor_profile.clone(), LearnedTextRelease::Message,
+                    ElapsedTick(50_000), peers::Behavior::Observe));
+            }
+            if human.is_none() && reviewer.socket(1).exists() {
+                human = Some(peers::human(reviewer.clone(), 1, ReviewDecision::Approve));
+            }
+            ElapsedTick(1000)
+        });
+        assert!(result.is_ok(), "{result:?}");
+        let response = actor.expect("the command admitted its actor listener").join().unwrap();
+        assert!(matches!(response.result, Ok(Knowledge::Known { value: ActorOutcome::Executed, .. })));
+        let packet = human.expect("the command required independent human approval").join().unwrap();
+        let loaded = recipe::load(&path, &config, false).unwrap();
+        let state = observed(&config, &loaded);
+        assert_eq!(state.executions, 1); assert_eq!(state.payload, b"A");
+        assert_eq!(state.control.ledger.charged, packet.action().spec().units);
+        let saved = checkpoint(&root, 1);
+        assert!(saved.available()); assert!(saved.work().checks >= 2);
+        assert_eq!(saved.history_anchor(), &anchors::load(&root.0.join("history-1.bin")).unwrap());
+        assert_eq!(fs::read_dir(root.0.join("peers")).unwrap().count(), 0);
+    }
+}

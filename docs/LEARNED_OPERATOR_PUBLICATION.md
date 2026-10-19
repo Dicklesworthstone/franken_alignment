@@ -57,6 +57,12 @@ and contacts no reviewer.
 
 ### Enforce topology during learned publication
 
+For authenticated learned actor ingress, `--actor-profile ACTOR_PROFILE` and
+`--topology-profile PATH` may appear in either order. Both independently selected
+profiles pass through the complete command admission before any original store
+or transport is created. Duplicate, missing and conflicting option selections
+remain errors.
+
 Add `--topology-profile PATH` to select the original topology custodian for
 learned generation, native or process review, and checked publication. This
 composes with ordinary learned generation, required raw-residual forecasting,
