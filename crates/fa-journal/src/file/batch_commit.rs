@@ -1,8 +1,8 @@
 //! Cooperative NEW batch writes under the original owner lock, never a replay
 //! or suffix repair. Only final synchronization acknowledges new accounting.
 use super::{Error, FileJournal};
-use crate::{Event, Head, Journal};
 use crate::batch::{BatchLimits, BatchPreparation, BatchPreparationError, BatchPreparationStage};
+use crate::{Event, Head, Journal};
 use std::fmt;
 use std::fs::File;
 use std::io::{self, Seek, SeekFrom, Write};
@@ -16,8 +16,11 @@ pub struct BatchCommitBudget {
     pub write_bytes: u64,
 }
 impl BatchCommitBudget {
-    pub const UNLIMITED: Self = Self { prepared_records: usize::MAX,
-        write_calls: u64::MAX, write_bytes: u64::MAX };
+    pub const UNLIMITED: Self = Self {
+        prepared_records: usize::MAX,
+        write_calls: u64::MAX,
+        write_bytes: u64::MAX,
+    };
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -64,7 +67,9 @@ pub struct FileBatchCommit {
 }
 impl fmt::Debug for FileBatchCommit {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("FileBatchCommit").field("progress", &self.progress()).finish_non_exhaustive()
+        f.debug_struct("FileBatchCommit")
+            .field("progress", &self.progress())
+            .finish_non_exhaustive()
     }
 }
 
@@ -73,17 +78,31 @@ impl FileJournal {
     /// Freeze inputs and do cheap whole-group admission before the private clone.
     /// Invalid admission consumes/drops this owner without a write. Every event
     /// must validate before any file I/O; further native commits cannot interleave.
-    pub fn begin_commit_batch(self, events: Vec<Event>, limits: BatchLimits)
-        -> Result<FileBatchCommit, Error>
-    {
-        if self.poisoned { return Err(Error::Poisoned); }
+    pub fn begin_commit_batch(
+        self,
+        events: Vec<Event>,
+        limits: BatchLimits,
+    ) -> Result<FileBatchCommit, Error> {
+        if self.poisoned {
+            return Err(Error::Poisoned);
+        }
         let preparation = self.journal.begin_append_batch(events, limits)?;
         let total_records = preparation.progress().total_records;
-        Ok(FileBatchCommit { owner: self, preparation: Some(preparation), candidate: None,
-            bytes: Vec::new(), written: 0, report: BatchCommitReport {
-                stage: BatchCommitStage::Preparing, total_records, prepared_records: 0,
-                preparation_attempts: 0, write_calls: 0, written_bytes: 0,
-            } })
+        Ok(FileBatchCommit {
+            owner: self,
+            preparation: Some(preparation),
+            candidate: None,
+            bytes: Vec::new(),
+            written: 0,
+            report: BatchCommitReport {
+                stage: BatchCommitStage::Preparing,
+                total_records,
+                prepared_records: 0,
+                preparation_attempts: 0,
+                write_calls: 0,
+                written_bytes: 0,
+            },
+        })
     }
 }
 
@@ -96,7 +115,9 @@ impl FileBatchCommit {
     }
 
     /// Only the ORIGINAL acknowledged minimum; not the candidate's newer head.
-    pub fn acknowledged_head(&self) -> Head { self.owner.acknowledged_head() }
+    pub fn acknowledged_head(&self) -> Head {
+        self.owner.acknowledged_head()
+    }
 
     pub fn progress(&self) -> BatchCommitReport {
         let mut report = self.report;
@@ -118,20 +139,25 @@ impl FileBatchCommit {
     /// No cancellation rollback or refund. Before writing, bytes are unchanged;
     /// afterwards any complete prefix or torn record can remain. Drop the lock,
     /// then use the ORIGINAL strict open path with an independent recovery head.
-    pub fn cancel(self) -> BatchCommitReport { self.progress() }
+    pub fn cancel(self) -> BatchCommitReport {
+        self.progress()
+    }
 
     // Private hooks inject real file failures in tests, not alternate public I/O.
-    fn advance_with(&mut self, budget: BatchCommitBudget,
-        mut write: impl FnMut(&mut File, &[u8]) -> io::Result<usize>)
-        -> Result<BatchCommitReport, Error>
-    {
+    fn advance_with(
+        &mut self,
+        budget: BatchCommitBudget,
+        mut write: impl FnMut(&mut File, &[u8]) -> io::Result<usize>,
+    ) -> Result<BatchCommitReport, Error> {
         match self.report.stage {
             BatchCommitStage::Ready => return Ok(self.progress()),
             BatchCommitStage::Failed => return Err(Error::Poisoned),
             BatchCommitStage::Preparing => {
                 self.report.stage = BatchCommitStage::Failed;
                 let preparation = self.preparation.as_mut().ok_or(Error::CommitIncomplete)?;
-                let progress = preparation.advance(budget.prepared_records).map_err(preparation_error)?;
+                let progress = preparation
+                    .advance(budget.prepared_records)
+                    .map_err(preparation_error)?;
                 if progress.stage == BatchPreparationStage::Ready {
                     let preparation = self.preparation.take().ok_or(Error::CommitIncomplete)?;
                     let (candidate, bytes) = preparation.finish().map_err(preparation_error)?;
@@ -140,51 +166,91 @@ impl FileBatchCommit {
                     self.candidate = Some(candidate);
                     self.bytes = bytes;
                     self.report.stage = BatchCommitStage::Writing;
-                } else { self.report.stage = BatchCommitStage::Preparing; }
+                } else {
+                    self.report.stage = BatchCommitStage::Preparing;
+                }
                 return Ok(self.progress());
             }
             BatchCommitStage::Writing => {}
         }
-        if budget.write_calls == 0 || budget.write_bytes == 0 { return Ok(self.progress()); }
+        if budget.write_calls == 0 || budget.write_bytes == 0 {
+            return Ok(self.progress());
+        }
         self.report.stage = BatchCommitStage::Failed;
         self.owner.poisoned = true; // BEFORE extent checks, writes and caught unwinds.
         let mut calls = 0;
         let mut bytes = 0;
-        while self.written < self.bytes.len() && calls < budget.write_calls && bytes < budget.write_bytes {
-            let expected = self.owner.journal.encoded_len().checked_add(self.written as u64)
+        while self.written < self.bytes.len()
+            && calls < budget.write_calls
+            && bytes < budget.write_bytes
+        {
+            let expected = self
+                .owner
+                .journal
+                .encoded_len()
+                .checked_add(self.written as u64)
                 .ok_or(crate::Error::Limit)?;
             self.check_extent(expected)?;
-            let amount = (budget.write_bytes - bytes).min((self.bytes.len() - self.written) as u64) as usize;
-            self.report.write_calls = self.report.write_calls.checked_add(1).ok_or(crate::Error::Limit)?;
+            let amount =
+                (budget.write_bytes - bytes).min((self.bytes.len() - self.written) as u64) as usize;
+            self.report.write_calls = self
+                .report
+                .write_calls
+                .checked_add(1)
+                .ok_or(crate::Error::Limit)?;
             calls += 1;
-            let count = match write(&mut self.owner.file, &self.bytes[self.written..self.written + amount]) {
+            let count = match write(
+                &mut self.owner.file,
+                &self.bytes[self.written..self.written + amount],
+            ) {
                 Err(error) if error.kind() == io::ErrorKind::Interrupted => continue,
                 result => result?,
             };
-            if count == 0 { return Err(io::Error::from(io::ErrorKind::WriteZero).into()); }
+            if count == 0 {
+                return Err(io::Error::from(io::ErrorKind::WriteZero).into());
+            }
             if count > amount {
-                return Err(io::Error::new(io::ErrorKind::InvalidData, "write overreported length").into());
+                return Err(io::Error::new(
+                    io::ErrorKind::InvalidData,
+                    "write overreported length",
+                )
+                .into());
             }
             self.written += count;
             bytes += count as u64;
             self.report.written_bytes = self.written as u64;
         }
-        self.report.stage = if self.written == self.bytes.len() { BatchCommitStage::Ready }
-            else { BatchCommitStage::Writing };
+        self.report.stage = if self.written == self.bytes.len() {
+            BatchCommitStage::Ready
+        } else {
+            BatchCommitStage::Writing
+        };
         Ok(self.progress())
     }
 
     fn check_extent(&mut self, expected: u64) -> Result<(), Error> {
         if self.owner.file.metadata()?.len() != expected
-            || self.owner.file.seek(SeekFrom::End(0))? != expected {
-            return Err(io::Error::new(io::ErrorKind::InvalidData, "journal extent changed during batch").into());
+            || self.owner.file.seek(SeekFrom::End(0))? != expected
+        {
+            return Err(io::Error::new(
+                io::ErrorKind::InvalidData,
+                "journal extent changed during batch",
+            )
+            .into());
         }
         Ok(())
     }
 
-    fn finish_with(mut self, sync: impl FnOnce(&File) -> io::Result<()>) -> Result<FileJournal, Error> {
-        if self.report.stage == BatchCommitStage::Failed { return Err(Error::Poisoned); }
-        if self.report.stage != BatchCommitStage::Ready { return Err(Error::CommitIncomplete); }
+    fn finish_with(
+        mut self,
+        sync: impl FnOnce(&File) -> io::Result<()>,
+    ) -> Result<FileJournal, Error> {
+        if self.report.stage == BatchCommitStage::Failed {
+            return Err(Error::Poisoned);
+        }
+        if self.report.stage != BatchCommitStage::Ready {
+            return Err(Error::CommitIncomplete);
+        }
         self.report.stage = BatchCommitStage::Failed;
         self.owner.poisoned = true;
         let candidate = self.candidate.take().ok_or(Error::CommitIncomplete)?;

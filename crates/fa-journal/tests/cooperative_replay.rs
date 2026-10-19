@@ -1,11 +1,17 @@
+use fa_journal::replay::{
+    Replay, ReplayBudget, ReplayError, ReplayReport, ReplayStatus, ReplayWork,
+};
 use fa_journal::{Error, Event, Head, Identity, Journal, Limits};
-use fa_journal::replay::{Replay, ReplayBudget, ReplayError, ReplayReport, ReplayStatus, ReplayWork};
 use fa_reference::{Effect, State};
 use std::collections::BTreeSet;
 use std::io::{self, Read};
 
 fn identity() -> Identity {
-    Identity { run: [1; 32], policy: [2; 32], total_units: 100 }
+    Identity {
+        run: [1; 32],
+        policy: [2; 32],
+        total_units: 100,
+    }
 }
 
 fn effect(units: u64) -> Effect {
@@ -22,19 +28,51 @@ fn fixture() -> (Journal, Vec<u8>, Head) {
     let genesis = journal.head();
     let mut bytes = journal.header();
     for event in [
-        Event::Reserve { id: 1, effect: effect(30) },
-        Event::Dispatch { id: 1, effect: effect(30) },
+        Event::Reserve {
+            id: 1,
+            effect: effect(30),
+        },
+        Event::Dispatch {
+            id: 1,
+            effect: effect(30),
+        },
         Event::MarkUnknown { id: 1 },
-        Event::Reserve { id: 2, effect: effect(20) },
+        Event::Reserve {
+            id: 2,
+            effect: effect(20),
+        },
         Event::AbortBeforeDispatch { id: 2 },
-        Event::Reserve { id: 3, effect: effect(10) },
-        Event::Dispatch { id: 3, effect: effect(10) },
-        Event::Reconcile { id: 3, occurred: true },
-        Event::Reserve { id: 4, effect: effect(5) },
-        Event::Dispatch { id: 4, effect: effect(5) },
-        Event::Reconcile { id: 4, occurred: false },
-        Event::Reserve { id: 5, effect: effect(7) },
-        Event::ResetToCheckpoint { keep: BTreeSet::from([1, 3]) },
+        Event::Reserve {
+            id: 3,
+            effect: effect(10),
+        },
+        Event::Dispatch {
+            id: 3,
+            effect: effect(10),
+        },
+        Event::Reconcile {
+            id: 3,
+            occurred: true,
+        },
+        Event::Reserve {
+            id: 4,
+            effect: effect(5),
+        },
+        Event::Dispatch {
+            id: 4,
+            effect: effect(5),
+        },
+        Event::Reconcile {
+            id: 4,
+            occurred: false,
+        },
+        Event::Reserve {
+            id: 5,
+            effect: effect(7),
+        },
+        Event::ResetToCheckpoint {
+            keep: BTreeSet::from([1, 3]),
+        },
         Event::RevokeEpoch,
     ] {
         bytes.extend(journal.append(&event).unwrap());
@@ -44,9 +82,21 @@ fn fixture() -> (Journal, Vec<u8>, Head) {
 
 fn schedules() -> [ReplayBudget; 4] {
     [
-        ReplayBudget { read_calls: 1, read_bytes: 1, checked_records: 1 },
-        ReplayBudget { read_calls: 2, read_bytes: 7, checked_records: 1 },
-        ReplayBudget { read_calls: 64, read_bytes: 65_536, checked_records: 3 },
+        ReplayBudget {
+            read_calls: 1,
+            read_bytes: 1,
+            checked_records: 1,
+        },
+        ReplayBudget {
+            read_calls: 2,
+            read_bytes: 7,
+            checked_records: 1,
+        },
+        ReplayBudget {
+            read_calls: 64,
+            read_bytes: 65_536,
+            checked_records: 3,
+        },
         ReplayBudget::UNLIMITED,
     ]
 }
@@ -57,9 +107,18 @@ fn poll<R: Read>(run: &mut Replay<R>, budget: ReplayBudget) -> Result<ReplayRepo
     assert!(report.spent.read_calls <= budget.read_calls);
     assert!(report.spent.read_bytes <= budget.read_bytes);
     assert!(report.spent.checked_records <= budget.checked_records);
-    assert_eq!(report.total.read_calls, before.read_calls + report.spent.read_calls);
-    assert_eq!(report.total.read_bytes, before.read_bytes + report.spent.read_bytes);
-    assert_eq!(report.total.checked_records, before.checked_records + report.spent.checked_records);
+    assert_eq!(
+        report.total.read_calls,
+        before.read_calls + report.spent.read_calls
+    );
+    assert_eq!(
+        report.total.read_bytes,
+        before.read_bytes + report.spent.read_bytes
+    );
+    assert_eq!(
+        report.total.checked_records,
+        before.checked_records + report.spent.checked_records
+    );
     Ok(report)
 }
 
@@ -88,7 +147,8 @@ fn class(error: Error) -> String {
 fn compare(bytes: &[u8], context: Identity, minimum: Head, limits: Limits, budget: ReplayBudget) {
     let eager = Journal::replay(bytes, context, minimum, limits);
     let cooperative = Journal::begin_replay(bytes, context, minimum, limits)
-        .map_err(ReplayError::Journal).and_then(|run| finish(run, budget));
+        .map_err(ReplayError::Journal)
+        .and_then(|run| finish(run, budget));
     match (eager, cooperative) {
         (Ok(left), Ok(right)) => {
             assert_eq!(left.head(), right.head());
@@ -107,7 +167,9 @@ fn every_transition_and_unknown_suffix_match_original_replay_under_all_schedules
     for minimum in [genesis, expected.head()] {
         for budget in schedules() {
             compare(&bytes, identity(), minimum, Limits::default(), budget);
-            let run = Journal::begin_replay(bytes.as_slice(), identity(), minimum, Limits::default()).unwrap();
+            let run =
+                Journal::begin_replay(bytes.as_slice(), identity(), minimum, Limits::default())
+                    .unwrap();
             let recovered = finish(run, budget).unwrap();
             assert_eq!(recovered.rights().state(1), Ok(State::Unknown));
             assert_eq!(recovered.rights().state(2), Ok(State::Aborted));
@@ -126,26 +188,51 @@ fn reaching_an_anchor_or_a_complete_record_does_not_substitute_for_eof() {
     let mut bytes = expected.header();
     bytes.extend(expected.append(&Event::RevokeEpoch).unwrap());
     for finish_early in [false, true] {
-        let mut run = Journal::begin_replay(bytes.as_slice(), identity(), expected.head(), Limits::default()).unwrap();
-        assert_eq!(poll(&mut run, ReplayBudget::default()).unwrap().total, ReplayWork::default());
-        let buffered = poll(&mut run, ReplayBudget {
-            checked_records: 0, ..ReplayBudget::UNLIMITED
-        }).unwrap();
+        let mut run = Journal::begin_replay(
+            bytes.as_slice(),
+            identity(),
+            expected.head(),
+            Limits::default(),
+        )
+        .unwrap();
+        assert_eq!(
+            poll(&mut run, ReplayBudget::default()).unwrap().total,
+            ReplayWork::default()
+        );
+        let buffered = poll(
+            &mut run,
+            ReplayBudget {
+                checked_records: 0,
+                ..ReplayBudget::UNLIMITED
+            },
+        )
+        .unwrap();
         assert_eq!(buffered.total.read_bytes, bytes.len() as u64);
         assert_eq!(buffered.total.checked_records, 0);
         assert_eq!(buffered.status, ReplayStatus::Reading);
-        let checked = poll(&mut run, ReplayBudget {
-            checked_records: 1, ..ReplayBudget::default()
-        }).unwrap();
+        let checked = poll(
+            &mut run,
+            ReplayBudget {
+                checked_records: 1,
+                ..ReplayBudget::default()
+            },
+        )
+        .unwrap();
         assert_eq!(checked.total.read_bytes, buffered.total.read_bytes);
         assert_eq!(checked.total.checked_records, 1);
         assert_eq!(checked.status, ReplayStatus::Reading);
         if finish_early {
             assert!(matches!(run.finish(), Err(ReplayError::NotReady)));
         } else {
-            let done = poll(&mut run, ReplayBudget {
-                read_calls: 1, read_bytes: 1, checked_records: 0,
-            }).unwrap();
+            let done = poll(
+                &mut run,
+                ReplayBudget {
+                    read_calls: 1,
+                    read_bytes: 1,
+                    checked_records: 0,
+                },
+            )
+            .unwrap();
             assert_eq!(done.status, ReplayStatus::Ready);
             assert_eq!(done.spent.read_bytes, 0);
             assert_eq!(done.spent.read_calls, 1);
@@ -158,12 +245,24 @@ fn reaching_an_anchor_or_a_complete_record_does_not_substitute_for_eof() {
 fn all_truncations_and_single_byte_damage_match_the_original_error_boundary() {
     let (journal, bytes, _) = fixture();
     for end in 0..bytes.len() {
-        compare(&bytes[..end], identity(), journal.head(), Limits::default(), schedules()[1]);
+        compare(
+            &bytes[..end],
+            identity(),
+            journal.head(),
+            Limits::default(),
+            schedules()[1],
+        );
     }
     for offset in 0..bytes.len() {
         let mut changed = bytes.clone();
         changed[offset] ^= 1;
-        compare(&changed, identity(), journal.head(), Limits::default(), schedules()[1]);
+        compare(
+            &changed,
+            identity(),
+            journal.head(),
+            Limits::default(),
+            schedules()[1],
+        );
     }
 }
 
@@ -172,24 +271,55 @@ fn context_anchor_and_lifetime_limits_cannot_be_reset_by_polling() {
     let (journal, bytes, genesis) = fixture();
     for budget in schedules() {
         for context in [
-            Identity { run: [9; 32], ..identity() },
-            Identity { policy: [9; 32], ..identity() },
-            Identity { total_units: 101, ..identity() },
+            Identity {
+                run: [9; 32],
+                ..identity()
+            },
+            Identity {
+                policy: [9; 32],
+                ..identity()
+            },
+            Identity {
+                total_units: 101,
+                ..identity()
+            },
         ] {
             compare(&bytes, context, genesis, Limits::default(), budget);
         }
         for minimum in [
-            Head { checksum: genesis.checksum ^ 1, ..genesis },
-            Head { checksum: journal.head().checksum ^ 1, ..journal.head() },
-            Head { sequence: journal.head().sequence + 1, checksum: 0 },
+            Head {
+                checksum: genesis.checksum ^ 1,
+                ..genesis
+            },
+            Head {
+                checksum: journal.head().checksum ^ 1,
+                ..journal.head()
+            },
+            Head {
+                sequence: journal.head().sequence + 1,
+                checksum: 0,
+            },
         ] {
             compare(&bytes, identity(), minimum, Limits::default(), budget);
         }
         for limits in [
-            Limits { max_records: journal.head().sequence, max_total_bytes: bytes.len() as u64, ..Limits::default() },
-            Limits { max_records: journal.head().sequence - 1, ..Limits::default() },
-            Limits { max_total_bytes: bytes.len() as u64 - 1, ..Limits::default() },
-            Limits { max_frame_bytes: 13, ..Limits::default() },
+            Limits {
+                max_records: journal.head().sequence,
+                max_total_bytes: bytes.len() as u64,
+                ..Limits::default()
+            },
+            Limits {
+                max_records: journal.head().sequence - 1,
+                ..Limits::default()
+            },
+            Limits {
+                max_total_bytes: bytes.len() as u64 - 1,
+                ..Limits::default()
+            },
+            Limits {
+                max_frame_bytes: 13,
+                ..Limits::default()
+            },
         ] {
             compare(&bytes, identity(), genesis, limits, budget);
         }
@@ -204,7 +334,9 @@ struct Fragmented<'a> {
 impl Read for Fragmented<'_> {
     fn read(&mut self, out: &mut [u8]) -> io::Result<usize> {
         self.interrupt = !self.interrupt;
-        if self.interrupt { return Err(io::ErrorKind::Interrupted.into()); }
+        if self.interrupt {
+            return Err(io::ErrorKind::Interrupted.into());
+        }
         let length = out.len().min(3).min(self.bytes.len());
         out[..length].copy_from_slice(&self.bytes[..length]);
         self.bytes = &self.bytes[length..];
@@ -215,14 +347,27 @@ impl Read for Fragmented<'_> {
 #[test]
 fn fragmented_reads_never_restart_or_double_charge_a_returned_byte() {
     let (expected, bytes, minimum) = fixture();
-    let mut run = Journal::begin_replay(Fragmented { bytes: &bytes, interrupt: false },
-        identity(), minimum, Limits::default()).unwrap();
+    let mut run = Journal::begin_replay(
+        Fragmented {
+            bytes: &bytes,
+            interrupt: false,
+        },
+        identity(),
+        minimum,
+        Limits::default(),
+    )
+    .unwrap();
     for _ in 0..20_000 {
         let report = poll(&mut run, schedules()[0]).unwrap();
-        if report.status == ReplayStatus::Ready { break; }
+        if report.status == ReplayStatus::Ready {
+            break;
+        }
     }
     assert_eq!(run.progress().total.read_bytes, bytes.len() as u64);
-    assert_eq!(run.progress().total.checked_records, expected.head().sequence);
+    assert_eq!(
+        run.progress().total.checked_records,
+        expected.head().sequence
+    );
     assert_eq!(run.finish().unwrap().rights(), expected.rights());
 }
 
@@ -236,9 +381,17 @@ impl Read for Interrupted {
 #[test]
 fn a_permanently_interrupted_reader_yields_and_cancellation_retains_work() {
     let minimum = Journal::new(identity(), Limits::default()).unwrap().head();
-    let mut run = Journal::begin_replay(Interrupted, identity(), minimum, Limits::default()).unwrap();
+    let mut run =
+        Journal::begin_replay(Interrupted, identity(), minimum, Limits::default()).unwrap();
     for total in [7, 14, 21] {
-        let report = poll(&mut run, ReplayBudget { read_calls: 7, ..ReplayBudget::UNLIMITED }).unwrap();
+        let report = poll(
+            &mut run,
+            ReplayBudget {
+                read_calls: 7,
+                ..ReplayBudget::UNLIMITED
+            },
+        )
+        .unwrap();
         assert_eq!(report.status, ReplayStatus::Reading);
         assert_eq!(report.total.read_calls, total);
         assert_eq!(report.total.read_bytes, 0);
@@ -253,18 +406,32 @@ fn hostile_length_refuses_before_payload_reads_or_record_checks_and_stays_failed
     let mut bytes = original.header();
     bytes.extend(u32::MAX.to_le_bytes());
     bytes.extend([1; 32]);
-    let mut run = Journal::begin_replay(bytes.as_slice(), identity(), original.head(), Limits::default()).unwrap();
-    assert!(matches!(run.advance(ReplayBudget::UNLIMITED), Err(ReplayError::Journal(Error::Limit))));
+    let mut run = Journal::begin_replay(
+        bytes.as_slice(),
+        identity(),
+        original.head(),
+        Limits::default(),
+    )
+    .unwrap();
+    assert!(matches!(
+        run.advance(ReplayBudget::UNLIMITED),
+        Err(ReplayError::Journal(Error::Limit))
+    ));
     let failed = run.progress();
     assert_eq!(failed.status, ReplayStatus::Failed);
     assert_eq!(failed.total.read_bytes, 88);
     assert_eq!(failed.total.checked_records, 0);
-    assert!(matches!(run.advance(ReplayBudget::UNLIMITED), Err(ReplayError::Failed)));
+    assert!(matches!(
+        run.advance(ReplayBudget::UNLIMITED),
+        Err(ReplayError::Failed)
+    ));
     assert_eq!(run.progress(), failed);
     assert!(matches!(run.finish(), Err(ReplayError::Failed)));
 }
 
-struct FailingReader { panic: bool }
+struct FailingReader {
+    panic: bool,
+}
 impl Read for FailingReader {
     fn read(&mut self, _: &mut [u8]) -> io::Result<usize> {
         assert!(!self.panic, "injected reader unwind");
@@ -276,16 +443,30 @@ impl Read for FailingReader {
 fn read_errors_and_unwinds_never_leave_a_resumable_private_prefix() {
     let minimum = Journal::new(identity(), Limits::default()).unwrap().head();
     for panic in [false, true] {
-        let mut run = Journal::begin_replay(FailingReader { panic }, identity(), minimum, Limits::default()).unwrap();
-        let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| run.advance(ReplayBudget::UNLIMITED)));
-        if panic { assert!(result.is_err()); }
-        else {
-            assert!(matches!(result.unwrap(), Err(ReplayError::Journal(Error::Io(error)))
-                if error.kind() == io::ErrorKind::WouldBlock));
+        let mut run = Journal::begin_replay(
+            FailingReader { panic },
+            identity(),
+            minimum,
+            Limits::default(),
+        )
+        .unwrap();
+        let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+            run.advance(ReplayBudget::UNLIMITED)
+        }));
+        if panic {
+            assert!(result.is_err());
+        } else {
+            assert!(
+                matches!(result.unwrap(), Err(ReplayError::Journal(Error::Io(error)))
+                if error.kind() == io::ErrorKind::WouldBlock)
+            );
         }
         assert_eq!(run.progress().status, ReplayStatus::Failed);
         assert_eq!(run.progress().total.read_calls, 1);
-        assert!(matches!(run.advance(ReplayBudget::UNLIMITED), Err(ReplayError::Failed)));
+        assert!(matches!(
+            run.advance(ReplayBudget::UNLIMITED),
+            Err(ReplayError::Failed)
+        ));
         assert!(matches!(run.finish(), Err(ReplayError::Failed)));
     }
 }

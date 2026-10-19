@@ -6,12 +6,12 @@
 //! is NOT authentication, a signature, or protection against a malicious writer.
 #![forbid(unsafe_code)]
 
-#[cfg(unix)]
-pub mod file;
+pub mod batch;
 #[cfg(unix)]
 pub mod evaluated_andon;
+#[cfg(unix)]
+pub mod file;
 pub mod replay;
-pub mod batch;
 pub mod reserve;
 pub use reserve::{JournalCapacity, RecoveryReserve, RemainingCapacity};
 
@@ -59,14 +59,29 @@ impl Default for Limits {
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum Event {
-    Reserve { id: u64, effect: Effect },
-    Dispatch { id: u64, effect: Effect },
-    MarkUnknown { id: u64 },
-    AbortBeforeDispatch { id: u64 },
+    Reserve {
+        id: u64,
+        effect: Effect,
+    },
+    Dispatch {
+        id: u64,
+        effect: Effect,
+    },
+    MarkUnknown {
+        id: u64,
+    },
+    AbortBeforeDispatch {
+        id: u64,
+    },
     /// Trusted reference input. Does not authenticate a remote effect receipt.
-    Reconcile { id: u64, occurred: bool },
+    Reconcile {
+        id: u64,
+        occurred: bool,
+    },
     RevokeEpoch,
-    ResetToCheckpoint { keep: BTreeSet<u64> },
+    ResetToCheckpoint {
+        keep: BTreeSet<u64>,
+    },
 }
 
 #[derive(Debug)]
@@ -118,9 +133,11 @@ impl Journal {
 
     // The explicit reserve constructor validates its independently bound profile
     // here too. Legacy callers retain their original header and limit semantics.
-    fn configured(identity: Identity, limits: Limits, reserve: Option<RecoveryReserve>)
-        -> Result<Self, Error>
-    {
+    fn configured(
+        identity: Identity,
+        limits: Limits,
+        reserve: Option<RecoveryReserve>,
+    ) -> Result<Self, Error> {
         if identity.run == [0; 32] || identity.policy == [0; 32] {
             return Err(Error::InvalidInput);
         }
@@ -132,12 +149,17 @@ impl Journal {
         {
             return Err(Error::Limit);
         }
-        if let Some(reserve) = reserve { reserve.check(limits)?; }
+        if let Some(reserve) = reserve {
+            reserve.check(limits)?;
+        }
         let header = encode_header(identity, limits, reserve);
         Ok(Self {
             identity,
             limits,
-            head: Head { sequence: 0, checksum: crc32(&header[..header.len() - 4]) },
+            head: Head {
+                sequence: 0,
+                checksum: crc32(&header[..header.len() - 4]),
+            },
             encoded_len: header.len() as u64,
             rights: Rights::new(identity.total_units),
             recovery_reserve: reserve,
@@ -169,7 +191,9 @@ impl Journal {
     /// operation; this method by itself makes no durability claim.
     pub fn append(&mut self, event: &Event) -> Result<Vec<u8>, Error> {
         let remaining = self.remaining_for(event);
-        if remaining.records == 0 || remaining.bytes < 21 { return Err(Error::Limit); }
+        if remaining.records == 0 || remaining.bytes < 21 {
+            return Err(Error::Limit);
+        }
         let payload_limit = (remaining.bytes - 20).min(u64::from(self.limits.max_frame_bytes - 12));
         let payload = encode_event(event, payload_limit as usize)?;
         let sequence = self.head.sequence.checked_add(1).ok_or(Error::Limit)?;
@@ -281,8 +305,16 @@ impl Journal {
 }
 
 fn encode_header(identity: Identity, limits: Limits, reserve: Option<RecoveryReserve>) -> Vec<u8> {
-    let mut header = Vec::with_capacity(if reserve.is_some() { reserve::HEADER_LEN } else { HEADER_LEN });
-    header.extend_from_slice(if reserve.is_some() { reserve::MAGIC } else { MAGIC });
+    let mut header = Vec::with_capacity(if reserve.is_some() {
+        reserve::HEADER_LEN
+    } else {
+        HEADER_LEN
+    });
+    header.extend_from_slice(if reserve.is_some() {
+        reserve::MAGIC
+    } else {
+        MAGIC
+    });
     header.extend_from_slice(&identity.run);
     header.extend_from_slice(&identity.policy);
     header.extend_from_slice(&identity.total_units.to_le_bytes());
@@ -323,7 +355,11 @@ fn encode_event(event: &Event, limit: usize) -> Result<Vec<u8>, Error> {
     let mut out = Vec::new();
     match event {
         Event::Reserve { id, effect } | Event::Dispatch { id, effect } => {
-            out.push(if matches!(event, Event::Reserve { .. }) { 1 } else { 2 });
+            out.push(if matches!(event, Event::Reserve { .. }) {
+                1
+            } else {
+                2
+            });
             out.extend_from_slice(&id.to_le_bytes());
             out.extend_from_slice(&effect.units.to_le_bytes());
             put_bytes(&mut out, effect.principal.as_bytes(), limit)?;
@@ -363,7 +399,10 @@ fn encode_event(event: &Event, limit: usize) -> Result<Vec<u8>, Error> {
 }
 
 fn put_bytes(out: &mut Vec<u8>, bytes: &[u8], limit: usize) -> Result<(), Error> {
-    let end = out.len().checked_add(4).and_then(|n| n.checked_add(bytes.len()));
+    let end = out
+        .len()
+        .checked_add(4)
+        .and_then(|n| n.checked_add(bytes.len()));
     if end.is_none_or(|n| n > limit) {
         return Err(Error::Limit);
     }
@@ -422,7 +461,11 @@ fn decode_event(bytes: &[u8]) -> Result<Event, Error> {
                 resolved_target: cursor.string()?,
                 payload: cursor.bytes()?.to_vec(),
             };
-            if tag == 1 { Event::Reserve { id, effect } } else { Event::Dispatch { id, effect } }
+            if tag == 1 {
+                Event::Reserve { id, effect }
+            } else {
+                Event::Dispatch { id, effect }
+            }
         }
         3 => Event::MarkUnknown { id: cursor.u64()? },
         4 => Event::AbortBeforeDispatch { id: cursor.u64()? },

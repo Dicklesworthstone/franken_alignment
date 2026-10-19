@@ -4,7 +4,11 @@ use crate::{Error, Event, Journal};
 use std::fmt;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum BatchPreparationStage { Preparing, Ready, Failed }
+pub enum BatchPreparationStage {
+    Preparing,
+    Ready,
+    Failed,
+}
 
 /// Logical work, not an applied prefix, durable head or external-effect receipt.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -23,7 +27,9 @@ pub enum BatchPreparationError {
     Failed,
 }
 impl From<Error> for BatchPreparationError {
-    fn from(error: Error) -> Self { Self::Journal(error) }
+    fn from(error: Error) -> Self {
+        Self::Journal(error)
+    }
 }
 impl fmt::Display for BatchPreparationError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -54,7 +60,9 @@ pub struct BatchPreparation {
 }
 impl fmt::Debug for BatchPreparation {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("BatchPreparation").field("progress", &self.progress()).finish_non_exhaustive()
+        f.debug_struct("BatchPreparation")
+            .field("progress", &self.progress())
+            .finish_non_exhaustive()
     }
 }
 
@@ -66,12 +74,19 @@ impl Journal {
     /// The source Journal is unchanged, even if a late event fails. Ready/finish
     /// means in-memory validity only, NOT durable commit or authority to send.
     /// The initial clone and a single bounded event's work are not time budgets.
-    pub fn begin_append_batch(&self, events: Vec<Event>, limits: BatchLimits)
-        -> Result<BatchPreparation, Error>
-    {
+    pub fn begin_append_batch(
+        &self,
+        events: Vec<Event>,
+        limits: BatchLimits,
+    ) -> Result<BatchPreparation, Error> {
         let encoder = Encoder::new(self, events.len(), limits)?;
-        Ok(BatchPreparation { encoder, events, prepared: 0, attempted: 0,
-            stage: BatchPreparationStage::Preparing })
+        Ok(BatchPreparation {
+            encoder,
+            events,
+            prepared: 0,
+            attempted: 0,
+            stage: BatchPreparationStage::Preparing,
+        })
     }
 }
 
@@ -79,9 +94,10 @@ impl BatchPreparation {
     /// Attempt at most max_records original encodings/reductions. Zero performs
     /// no work. The cumulative record/byte/recovery limits never reset on yield.
     /// A failure or unwind latches Failed before an incomplete candidate escapes.
-    pub fn advance(&mut self, max_records: usize)
-        -> Result<BatchPreparationReport, BatchPreparationError>
-    {
+    pub fn advance(
+        &mut self,
+        max_records: usize,
+    ) -> Result<BatchPreparationReport, BatchPreparationError> {
         match self.stage {
             BatchPreparationStage::Ready => return Ok(self.progress()),
             BatchPreparationStage::Failed => return Err(BatchPreparationError::Failed),
@@ -93,15 +109,22 @@ impl BatchPreparation {
             self.attempted += 1; // Admission caps the entire owned list at 1,024.
             self.encoder.push(&self.events[self.prepared])?;
             self.prepared += 1;
-            self.stage = if self.prepared == self.events.len() { BatchPreparationStage::Ready }
-                else { BatchPreparationStage::Preparing };
+            self.stage = if self.prepared == self.events.len() {
+                BatchPreparationStage::Ready
+            } else {
+                BatchPreparationStage::Preparing
+            };
         }
         Ok(self.progress())
     }
 
     pub fn progress(&self) -> BatchPreparationReport {
-        BatchPreparationReport { stage: self.stage, total_records: self.events.len(),
-            prepared_records: self.prepared, attempted_records: self.attempted }
+        BatchPreparationReport {
+            stage: self.stage,
+            total_records: self.events.len(),
+            prepared_records: self.prepared,
+            attempted_records: self.attempted,
+        }
     }
 
     /// Return the complete IN-MEMORY journal and canonical group. Persisting it
@@ -114,5 +137,7 @@ impl BatchPreparation {
         }
     }
 
-    pub fn cancel(self) -> BatchPreparationReport { self.progress() }
+    pub fn cancel(self) -> BatchPreparationReport {
+        self.progress()
+    }
 }

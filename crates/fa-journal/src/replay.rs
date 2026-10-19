@@ -1,7 +1,9 @@
 //! Cooperative strict replay using the original wire decoder and rights reducer.
 //! A checked prefix is never exported as recovered accounting.
 
-use crate::{Cursor, Error, Head, Identity, Journal, Limits, apply_event, crc32_parts, decode_event};
+use crate::{
+    Cursor, Error, Head, Identity, Journal, Limits, apply_event, crc32_parts, decode_event,
+};
 use std::fmt;
 use std::io::{self, Read};
 
@@ -123,7 +125,11 @@ impl Journal {
         Self::new(identity, limits)?.replay_cursor(reader, minimum)
     }
 
-    pub(crate) fn replay_cursor<R: Read>(self, reader: R, minimum: Head) -> Result<Replay<R>, Error> {
+    pub(crate) fn replay_cursor<R: Read>(
+        self,
+        reader: R,
+        minimum: Head,
+    ) -> Result<Replay<R>, Error> {
         let header_len = self.header().len();
         let journal = self;
         Ok(Replay {
@@ -160,12 +166,20 @@ impl<R: Read> Replay<R> {
         let mut spent = ReplayWork::default();
         let status = self.advance_inner(budget, &mut spent)?;
         self.status = status;
-        Ok(ReplayReport { status, spent, total: self.total })
+        Ok(ReplayReport {
+            status,
+            spent,
+            total: self.total,
+        })
     }
 
     /// Inspection performs no work. Counts are not a validated-head claim.
     pub fn progress(&self) -> ReplayReport {
-        ReplayReport { status: self.status, spent: ReplayWork::default(), total: self.total }
+        ReplayReport {
+            status: self.status,
+            spent: ReplayWork::default(),
+            total: self.total,
+        }
     }
 
     /// No usable accounting can escape before both clean EOF and anchor coverage.
@@ -187,9 +201,11 @@ impl<R: Read> Replay<R> {
         }
     }
 
-    fn advance_inner(&mut self, budget: ReplayBudget, spent: &mut ReplayWork)
-        -> Result<ReplayStatus, Error>
-    {
+    fn advance_inner(
+        &mut self,
+        budget: ReplayBudget,
+        spent: &mut ReplayWork,
+    ) -> Result<ReplayStatus, Error> {
         loop {
             if self.filled == self.buffer.len() {
                 match self.phase {
@@ -209,13 +225,22 @@ impl<R: Read> Replay<R> {
                         // allocation, payload reads or a reducer attempt.
                         let encoded_len = self.journal.check_growth(body_len)?;
                         self.resize_buffer(body_len + 4)?;
-                        self.phase = Phase::Record { body_len, encoded_len };
+                        self.phase = Phase::Record {
+                            body_len,
+                            encoded_len,
+                        };
                     }
-                    Phase::Record { body_len, encoded_len } => {
+                    Phase::Record {
+                        body_len,
+                        encoded_len,
+                    } => {
                         if spent.checked_records == budget.checked_records {
                             return Ok(ReplayStatus::Reading);
                         }
-                        self.total.checked_records = self.total.checked_records.checked_add(1)
+                        self.total.checked_records = self
+                            .total
+                            .checked_records
+                            .checked_add(1)
                             .ok_or(Error::Limit)?;
                         spent.checked_records += 1;
                         self.check_record(body_len, encoded_len)?;
@@ -232,7 +257,10 @@ impl<R: Read> Replay<R> {
                 .min((self.buffer.len() - self.filled) as u64) as usize;
             self.total.read_calls = self.total.read_calls.checked_add(1).ok_or(Error::Limit)?;
             spent.read_calls += 1;
-            let count = match self.reader.read(&mut self.buffer[self.filled..self.filled + amount]) {
+            let count = match self
+                .reader
+                .read(&mut self.buffer[self.filled..self.filled + amount])
+            {
                 Err(error) if error.kind() == io::ErrorKind::Interrupted => continue,
                 other => other?,
             };
@@ -241,12 +269,18 @@ impl<R: Read> Replay<R> {
             }
             if count == 0 {
                 if matches!(self.phase, Phase::Length) && self.filled == 0 {
-                    return if self.anchor_seen { Ok(ReplayStatus::Ready) }
-                        else { Err(Error::BehindAnchor) };
+                    return if self.anchor_seen {
+                        Ok(ReplayStatus::Ready)
+                    } else {
+                        Err(Error::BehindAnchor)
+                    };
                 }
                 return Err(io::Error::from(io::ErrorKind::UnexpectedEof).into());
             }
-            self.total.read_bytes = self.total.read_bytes.checked_add(count as u64)
+            self.total.read_bytes = self
+                .total
+                .read_bytes
+                .checked_add(count as u64)
                 .ok_or(Error::Limit)?;
             spent.read_bytes += count as u64;
             self.filled += count;
@@ -255,7 +289,9 @@ impl<R: Read> Replay<R> {
 
     fn resize_buffer(&mut self, size: usize) -> Result<(), Error> {
         self.buffer.clear();
-        self.buffer.try_reserve_exact(size).map_err(|_| Error::Limit)?;
+        self.buffer
+            .try_reserve_exact(size)
+            .map_err(|_| Error::Limit)?;
         self.buffer.resize(size, 0);
         self.filled = 0;
         Ok(())
@@ -283,7 +319,9 @@ impl<R: Read> Replay<R> {
         self.journal.head = Head { sequence, checksum };
         self.journal.encoded_len = encoded_len;
         if sequence == self.minimum.sequence {
-            if self.journal.head != self.minimum { return Err(Error::Binding); }
+            if self.journal.head != self.minimum {
+                return Err(Error::Binding);
+            }
             self.anchor_seen = true;
         }
         Ok(())

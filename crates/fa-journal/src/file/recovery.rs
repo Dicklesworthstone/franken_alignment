@@ -1,7 +1,7 @@
 //! Hold the original writer lock until strict replay AND synchronization finish.
 use super::{Error, FileJournal, lock, parent_directory};
-use crate::{Head, Identity, Journal, Limits};
 use crate::replay::{Replay, ReplayBudget, ReplayError, ReplayReport, ReplayWork};
+use crate::{Head, Identity, Journal, Limits};
 use std::fs::{File, OpenOptions};
 use std::io::{self, BufReader};
 use std::path::Path;
@@ -55,16 +55,20 @@ impl FileJournal {
 
     // Shared by legacy and explicitly reserved profiles. Configuration validation
     // precedes file opening; the cursor never infers a profile from stored bytes.
-    pub(super) fn begin_open_journal(path: impl AsRef<Path>, minimum: Head, journal: Journal)
-        -> Result<FileRecovery, Error>
-    {
+    pub(super) fn begin_open_journal(
+        path: impl AsRef<Path>,
+        minimum: Head,
+        journal: Journal,
+    ) -> Result<FileRecovery, Error> {
         let path = path.as_ref();
         let directory = parent_directory(path)?;
         let file = OpenOptions::new().read(true).write(true).open(path)?;
         lock(&file)?;
         let metadata = file.metadata()?;
         if !metadata.is_file() {
-            return Err(io::Error::new(io::ErrorKind::InvalidInput, "not a regular journal file").into());
+            return Err(
+                io::Error::new(io::ErrorKind::InvalidInput, "not a regular journal file").into(),
+            );
         }
         if metadata.len() > journal.limits.max_total_bytes {
             return Err(crate::Error::Limit.into());
@@ -98,16 +102,25 @@ impl FileRecovery {
         })
     }
 
-    fn finish_with(self, synchronize: impl FnOnce(&File, &File) -> io::Result<()>)
-        -> Result<FileJournal, Error>
-    {
+    fn finish_with(
+        self,
+        synchronize: impl FnOnce(&File, &File) -> io::Result<()>,
+    ) -> Result<FileJournal, Error> {
         let (reader, journal) = self.replay.into_parts()?;
         let file = reader.into_inner();
         if file.metadata()?.len() != journal.encoded_len() {
-            return Err(io::Error::new(io::ErrorKind::InvalidData, "journal extent changed during recovery").into());
+            return Err(io::Error::new(
+                io::ErrorKind::InvalidData,
+                "journal extent changed during recovery",
+            )
+            .into());
         }
         synchronize(&file, &self.directory)?;
-        Ok(FileJournal { file, journal, poisoned: false })
+        Ok(FileJournal {
+            file,
+            journal,
+            poisoned: false,
+        })
     }
 }
 

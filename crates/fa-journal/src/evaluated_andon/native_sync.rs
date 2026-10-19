@@ -53,38 +53,77 @@ impl<'a> NativeAndonSync<'a> {
             return Err(crate::Error::Binding.into());
         }
         let mut windows = Vec::new();
-        windows.try_reserve_exact(source.ledger().windows().len())
+        windows
+            .try_reserve_exact(source.ledger().windows().len())
             .map_err(|_| crate::Error::Limit)?;
-        windows.extend(source.ledger().windows().values().map(|window| window.budget));
+        windows.extend(
+            source
+                .ledger()
+                .windows()
+                .values()
+                .map(|window| window.budget),
+        );
         let mut candidate = ledger.clone();
         for budget in &windows {
-            candidate.register_window(*budget).map_err(crate::Error::Model)?;
+            candidate
+                .register_window(*budget)
+                .map_err(crate::Error::Model)?;
         }
         for receipt in source.receipts() {
             if receipt.binding() != binding
-                || candidate.windows().get(&receipt.budget().window).map(|w| w.budget)
+                || candidate
+                    .windows()
+                    .get(&receipt.budget().window)
+                    .map(|w| w.budget)
                     != Some(receipt.budget())
             {
                 return Err(crate::Error::Binding.into());
             }
-            candidate.record_trusted(receipt.confirmation()).map_err(crate::Error::Model)?;
+            candidate
+                .record_trusted(receipt.confirmation())
+                .map_err(crate::Error::Model)?;
         }
         // Counts alone are insufficient: incident opener, all contributors,
         // immutable budgets, exact confirmations and retained seed must agree.
-        if &candidate != source.ledger() { return Err(crate::Error::Binding.into()); }
-        let total = windows.len().checked_add(source.receipts().len()).ok_or(crate::Error::Limit)?;
+        if &candidate != source.ledger() {
+            return Err(crate::Error::Binding.into());
+        }
+        let total = windows
+            .len()
+            .checked_add(source.receipts().len())
+            .ok_or(crate::Error::Limit)?;
         let progress = ImportProgress {
-            total, completed: 0, newly_recorded: 0, already_recorded: 0,
+            total,
+            completed: 0,
+            newly_recorded: 0,
+            already_recorded: 0,
             head: journal.acknowledged_head(),
-            status: if total == 0 { ImportStatus::Complete } else { ImportStatus::Pending },
+            status: if total == 0 {
+                ImportStatus::Complete
+            } else {
+                ImportStatus::Pending
+            },
         };
-        Ok(Self { journal, source, windows, progress })
+        Ok(Self {
+            journal,
+            source,
+            windows,
+            progress,
+        })
     }
 
-    pub fn source_revision(&self) -> u64 { self.source.revision() }
-    pub fn window_count(&self) -> usize { self.windows.len() }
-    pub fn receipt_count(&self) -> usize { self.source.receipts().len() }
-    pub fn progress(&self) -> ImportProgress { self.progress }
+    pub fn source_revision(&self) -> u64 {
+        self.source.revision()
+    }
+    pub fn window_count(&self) -> usize {
+        self.windows.len()
+    }
+    pub fn receipt_count(&self) -> usize {
+        self.source.receipts().len()
+    }
+    pub fn progress(&self) -> ImportProgress {
+        self.progress
+    }
 
     /// Each budget unit enters at most one original window/confirmation call.
     /// Synchronous storage may exceed an elapsed deadline. No writes on zero.
@@ -98,13 +137,18 @@ impl<'a> NativeAndonSync<'a> {
             let result = if index < self.windows.len() {
                 self.journal.register_window(self.windows[index])
             } else {
-                self.journal.record_trusted(
-                    self.source.receipts()[index - self.windows.len()].confirmation(),
-                ).map(|(_, head)| head)
+                self.journal
+                    .record_trusted(
+                        self.source.receipts()[index - self.windows.len()].confirmation(),
+                    )
+                    .map(|(_, head)| head)
             };
             let head = result.map_err(|error| self.failure(error))?;
-            if head == self.progress.head { self.progress.already_recorded += 1; }
-            else { self.progress.newly_recorded += 1; }
+            if head == self.progress.head {
+                self.progress.already_recorded += 1;
+            } else {
+                self.progress.newly_recorded += 1;
+            }
             self.progress.completed += 1;
             self.progress.head = head;
             if self.progress.completed == self.progress.total {
@@ -113,7 +157,9 @@ impl<'a> NativeAndonSync<'a> {
                     return Err(self.failure(crate::Error::Binding.into()));
                 }
                 self.progress.status = ImportStatus::Complete;
-            } else { self.progress.status = ImportStatus::Pending; }
+            } else {
+                self.progress.status = ImportStatus::Pending;
+            }
         }
         Ok(self.progress)
     }
@@ -127,5 +173,10 @@ impl<'a> NativeAndonSync<'a> {
         Ok(self.progress)
     }
 
-    fn failure(&self, error: Error) -> ImportFailure { ImportFailure { error, progress: self.progress } }
+    fn failure(&self, error: Error) -> ImportFailure {
+        ImportFailure {
+            error,
+            progress: self.progress,
+        }
+    }
 }
