@@ -26,6 +26,10 @@ pub enum ShutdownVisitKind {
     RecoverStopped { at: ElapsedTick },
     /// Intent has no claimed time; acquire it only at verified terminal completion.
     RecoverStoppedAtCompletion,
+    /// Clock-free withdrawal of admission, without a claimed settlement sweep.
+    StopAdmission,
+    /// Settle an existing stop; never create a stop or another fence.
+    DrainStoppedAtCompletion,
     InspectCanonical,
     Unavailable,
 }
@@ -206,6 +210,7 @@ impl FileShutdownCoordinator {
         let step = match kind { ShutdownVisitKind::Advance { .. } => FileShutdownStep::InspectOwner,
             ShutdownVisitKind::InspectCanonical | ShutdownVisitKind::RecoverStopped { .. }
                 | ShutdownVisitKind::RecoverStoppedAtCompletion
+                | ShutdownVisitKind::StopAdmission | ShutdownVisitKind::DrainStoppedAtCompletion
                 => FileShutdownStep::InspectCanonical,
             ShutdownVisitKind::Unavailable => FileShutdownStep::Unavailable };
         let pair = self.campaign.enter(domain, step)?;

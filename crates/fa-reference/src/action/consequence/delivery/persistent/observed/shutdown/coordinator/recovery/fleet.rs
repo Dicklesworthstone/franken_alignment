@@ -205,7 +205,8 @@ impl FileShutdownCoordinator {
                 .find(|(_, visit)| visit.domain == identity(clock).0);
             let resolution = latest.filter(|(_, visit)| resume
                 && matches!(visit.kind, ShutdownVisitKind::Advance { .. }
-                    | ShutdownVisitKind::RecoverStopped { .. } | ShutdownVisitKind::RecoverStoppedAtCompletion)
+                    | ShutdownVisitKind::RecoverStopped { .. } | ShutdownVisitKind::RecoverStoppedAtCompletion
+                    | ShutdownVisitKind::StopAdmission | ShutdownVisitKind::DrainStoppedAtCompletion)
                 && matches!(visit.result, ShutdownVisitResult::Entered
                     | ShutdownVisitResult::Observed { .. }));
             let cost = match resolution {

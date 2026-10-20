@@ -5,6 +5,8 @@ use super::super::super::{FileShutdownCampaign, FileShutdownObservation, FileShu
     FileShutdownStep, campaign::observe};
 use std::rc::Rc;
 
+mod phases;
+
 impl FileStopRecovery {
     pub(in crate::action::consequence::delivery::persistent::observed::shutdown) fn begin_registered(
         store: storage::Store, campaign: &FileShutdownCampaign, index: usize,
