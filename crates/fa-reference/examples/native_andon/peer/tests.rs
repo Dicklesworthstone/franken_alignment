@@ -1,6 +1,6 @@
 use super::*;
 use fa_reference::action::consequence::oversight::actor_peer::PeerCredentials;
-use std::{io::Write as _, net::Shutdown, os::unix::net::UnixStream, sync::atomic::{AtomicU64, Ordering}};
+use std::{io::Read, net::Shutdown, os::unix::net::UnixStream, sync::atomic::{AtomicU64, Ordering}};
 
 struct Directory(PathBuf);
 impl Directory {
@@ -14,11 +14,11 @@ impl Directory {
 impl Drop for Directory { fn drop(&mut self){ let _=fs::remove_dir_all(&self.0); } }
 
 fn config(root:&Directory)->Config {
-    let mut c=Config::decode(include_bytes!("../../fixtures/supervised_publication.json")).unwrap();
+    let mut c=Config::decode(include_bytes!("../../../fixtures/supervised_publication.json")).unwrap();
     c.store=root.0.join("store"); c
 }
 fn settings()->Settings {
-    Settings::decode(include_bytes!("../../fixtures/joint_native_andon_operator.json")).unwrap()
+    Settings::decode(include_bytes!("../../../fixtures/joint_native_andon_operator.json")).unwrap()
 }
 fn profile_json(root:&Directory, config:&Config, settings:&Settings, pid:Option<u32>)->Vec<u8> {
     let meta=fs::metadata(&root.0).unwrap();
@@ -66,7 +66,10 @@ fn bounded_document_reader_accepts_exact_input_and_refuses_oversize() {
             client.write_all(&vec![b'x';size]).unwrap();
             client.shutdown(Shutdown::Write).unwrap();
         });
-        let result=read_document(&mut server); handle.join().unwrap();
+        let started=Instant::now();
+        let result=read_document(&mut server, &mut || {
+            if started.elapsed() < Duration::from_secs(5) { Ok(()) } else { Err("test deadline".into()) }
+        }, &mut || std::thread::yield_now()); handle.join().unwrap();
         assert_eq!(result.is_ok(),size<=ASSESSMENT_BYTES);
         if let Ok(bytes)=result { assert_eq!(bytes.len(),size); }
     }
@@ -115,4 +118,20 @@ fn evaluator_client_verifies_supervisor_before_disclosing_label() {
     assert!(error.contains("unverified supervisor"));
     assert!(reader.join().unwrap().is_empty());
     let _=fs::remove_file(socket);
+}
+
+#[test]
+fn socket_cleanup_preserves_a_replacement_at_the_original_path() {
+    for replacement_socket in [false, true] {
+        let root=Directory::new(); let config=config(&root); let settings=settings();
+        let p=EvaluatorPeerProfile::decode(&profile_json(&root,&config,&settings,Some(std::process::id()))).unwrap();
+        let bound=BoundEvaluatorSocket::bind(&p).unwrap();
+        fs::rename(&p.socket, root.0.join("moved.sock")).unwrap();
+        let replacement=if replacement_socket { Some(UnixListener::bind(&p.socket).unwrap()) }
+            else { fs::write(&p.socket,b"replacement").unwrap(); None };
+        drop(bound);
+        if replacement_socket { assert!(fs::symlink_metadata(&p.socket).unwrap().file_type().is_socket()); }
+        else { assert_eq!(fs::read(&p.socket).unwrap(), b"replacement"); }
+        drop(replacement);
+    }
 }

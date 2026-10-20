@@ -1,11 +1,13 @@
 //! Peer-verified local evaluator intake for the native Andon operator.
 //! Kernel credentials authenticate the connecting process at socket creation;
 //! they do not authenticate a human, executable image, or remote identity.
+mod transport;
+
 use super::{Settings, mutations};
 use crate::config::{Config, debug, read_regular};
 use fa_reference::action::consequence::oversight::actor_peer::PeerPolicy;
 use fa_reference::strict_json::{self, Json, Limits};
-use std::{collections::BTreeMap, fs, io::{Read, Write}, os::unix::fs::{FileTypeExt, MetadataExt, PermissionsExt},
+use std::{collections::BTreeMap, fs, io::Write, os::unix::fs::{FileTypeExt, MetadataExt, PermissionsExt},
     os::unix::net::{UnixListener, UnixStream}, path::{Component, Path, PathBuf}, time::{Duration, Instant}};
 
 const PROFILE_BYTES: usize = 16 * 1024;
@@ -85,7 +87,7 @@ impl EvaluatorPeerProfile {
     }
 }
 
-struct BoundEvaluatorSocket { listener: UnixListener, path: PathBuf }
+struct BoundEvaluatorSocket { listener: UnixListener, path: PathBuf, identity: (u64, u64) }
 impl BoundEvaluatorSocket {
     fn bind(profile: &EvaluatorPeerProfile) -> Result<Self, String> {
         match fs::symlink_metadata(&profile.socket) {
@@ -94,18 +96,28 @@ impl BoundEvaluatorSocket {
             Ok(_) => return Err("evaluator socket path already exists; it is never unlinked automatically".into()),
         }
         let listener = UnixListener::bind(&profile.socket).map_err(debug)?;
-        let bound = Self { listener, path: profile.socket.clone() };
         let meta = fs::symlink_metadata(&profile.socket).map_err(debug)?;
         if !meta.file_type().is_socket() || meta.uid() != profile.supervisor.uid || meta.gid() != profile.supervisor.gid {
             return Err("new evaluator socket has unexpected ownership or type".into());
         }
+        let bound = Self { listener, path: profile.socket.clone(), identity: (meta.dev(), meta.ino()) };
         fs::set_permissions(&profile.socket, fs::Permissions::from_mode(0o660)).map_err(debug)?;
         bound.listener.set_nonblocking(true).map_err(debug)?;
         Ok(bound)
     }
 }
 impl Drop for BoundEvaluatorSocket {
-    fn drop(&mut self) { let _ = fs::remove_file(&self.path); }
+    fn drop(&mut self) {
+        // The namespace is operator controlled. Do not remove a replacement
+        // file/socket after our original pathname was renamed or unlinked.
+        match fs::symlink_metadata(&self.path) {
+            Ok(meta) if meta.file_type().is_socket() && (meta.dev(), meta.ino()) == self.identity => {
+                if let Err(error) = fs::remove_file(&self.path) { eprintln!("evaluator socket cleanup: {error}"); }
+            }
+            Err(error) if error.kind() != std::io::ErrorKind::NotFound => eprintln!("evaluator socket inspection: {error}"),
+            _ => {}
+        }
+    }
 }
 
 pub(super) fn serve(config_path: &Path, settings_path: &Path, recovery_path: &Path,
@@ -118,6 +130,10 @@ pub(super) fn serve(config_path: &Path, settings_path: &Path, recovery_path: &Pa
     peer.check(&config, &settings)?;
     let wall = Duration::from_millis(peer.runtime_ms.min(config.timing.runtime_ms));
     if started.elapsed() >= wall { return Err("evaluator intake deadline reached before bind".into()); }
+    let mut checkpoint = || if started.elapsed() < wall { Ok(()) }
+        else { Err("evaluator invocation deadline reached".to_owned()) };
+    let mut wait = || std::thread::sleep(Duration::from_millis(peer.poll_ms)
+        .min(wall.saturating_sub(started.elapsed())));
     let socket = BoundEvaluatorSocket::bind(&peer)?;
     let policy = peer.evaluator.policy()?;
     let mut attempted = 0_u32;
@@ -130,19 +146,21 @@ pub(super) fn serve(config_path: &Path, settings_path: &Path, recovery_path: &Pa
                 match policy.verify(&stream) {
                     Ok(credentials) => {
                         eprintln!("Verified native evaluator peer: uid={}, gid={}, pid={}", credentials.uid(), credentials.gid(), credentials.pid());
-                        let remaining = wall.saturating_sub(started.elapsed());
-                        stream.set_read_timeout(Some(remaining)).map_err(debug)?;
-                        let bytes = read_document(&mut stream)?;
+                        let bytes = read_document(&mut stream, &mut checkpoint, &mut wait)?;
                         let mutation = mutations::Mutation::decode("assess", &bytes)?;
-                        if started.elapsed() >= wall { return Err("evaluator intake deadline reached before durable recovery".into()); }
-                        let mut checkpoint = || if started.elapsed() < wall { Ok(()) }
-                            else { Err("evaluator intake deadline reached".to_owned()) };
+                        checkpoint()?;
+                        // The native owner, journal and independent anchor finish
+                        // before socket output can stall or fail. A report failure
+                        // cannot undo an acknowledged mutation or justify resending.
+                        let mut response = transport::Output::default();
                         let result = mutations::run(&config, &settings, recovery_path, &mutation,
-                            &mut checkpoint, &mut mutations::clock, &mut stream);
-                        let status = if result.is_ok() { "accepted" } else { "refused" };
-                        writeln!(out, "{{\"schema_version\":\"fa.native-evaluator-peer-result/1\",\"status\":\"{status}\",\"candidates\":{attempted}}}").map_err(debug)?;
-                        out.flush().map_err(debug)?;
-                        return result;
+                            &mut checkpoint, &mut mutations::clock, &mut response);
+                        let delivered = transport::write(&mut stream, &response.0, &mut checkpoint, &mut wait)
+                            .and_then(|()| stream.shutdown(std::net::Shutdown::Write).map_err(debug));
+                        let reported = writeln!(out,
+                            "{{\"schema_version\":\"fa.native-evaluator-peer-result/2\",\"native_completed\":{},\"reply_written\":{},\"candidates\":{attempted}}}",
+                            result.is_ok(), delivered.is_ok()).and_then(|()| out.flush()).map_err(debug);
+                        return completion([result, delivered, reported]);
                     }
                     Err(error) if error.kind() == std::io::ErrorKind::PermissionDenied => {
                         eprintln!("Rejected native evaluator peer credentials; attempted={attempted}");
@@ -152,7 +170,7 @@ pub(super) fn serve(config_path: &Path, settings_path: &Path, recovery_path: &Pa
                 }
             }
             Err(error) if matches!(error.kind(), std::io::ErrorKind::WouldBlock|std::io::ErrorKind::Interrupted) => {
-                std::thread::sleep(Duration::from_millis(peer.poll_ms));
+                wait();
             }
             Err(error) => return Err(debug(error)),
         }
@@ -160,36 +178,43 @@ pub(super) fn serve(config_path: &Path, settings_path: &Path, recovery_path: &Pa
 }
 
 pub(super) fn send(peer_path: &Path, assessment_path: &Path, out: &mut impl Write) -> Result<(), String> {
+    let started = Instant::now();
     let peer = EvaluatorPeerProfile::read(peer_path)?;
+    let wall = Duration::from_millis(peer.runtime_ms);
+    let mut checkpoint = || if started.elapsed() < wall { Ok(()) }
+        else { Err("evaluator client deadline reached; completion is unconfirmed; no automatic retry".to_owned()) };
+    let mut wait = || std::thread::sleep(Duration::from_millis(peer.poll_ms)
+        .min(wall.saturating_sub(started.elapsed())));
+    checkpoint()?;
     let bytes = read_regular(assessment_path, ASSESSMENT_BYTES)?;
     // Closed schema validation occurs before any socket connection or disclosure.
     let _ = mutations::Mutation::decode("assess", &bytes)?;
-    let started = Instant::now();
-    let wall = Duration::from_millis(peer.runtime_ms);
+    checkpoint()?;
+    // Standard-library connect and file/native operations remain synchronous;
+    // these surrounding checks are not a hard preemption guarantee.
     let mut stream = UnixStream::connect(&peer.socket).map_err(debug)?;
     peer.supervisor.policy()?.verify(&stream).map_err(|error| {
         format!("native evaluator refused unverified supervisor before label disclosure: {error:?}")
     })?;
-    if started.elapsed() >= wall { return Err("evaluator client deadline reached before label disclosure".into()); }
-    let remaining = wall.saturating_sub(started.elapsed());
-    stream.set_write_timeout(Some(remaining)).map_err(debug)?;
-    stream.set_read_timeout(Some(remaining)).map_err(debug)?;
-    stream.write_all(&bytes).map_err(debug)?;
+    checkpoint()?;
+    transport::write(&mut stream, &bytes, &mut checkpoint, &mut wait)?;
     stream.shutdown(std::net::Shutdown::Write).map_err(debug)?;
-    let mut response = Vec::new();
-    stream.take(64 * 1024 + 1).read_to_end(&mut response).map_err(debug)?;
-    if response.is_empty() { return Err("verified evaluator server returned no mutation result".into()); }
-    if response.len() > 64 * 1024 { return Err("verified evaluator result exceeded byte limit".into()); }
+    let response = transport::read(&mut stream, transport::MAX_MESSAGE_BYTES, &mut checkpoint, &mut wait)?;
+    checkpoint()?;
     out.write_all(&response).map_err(debug)?;
     out.flush().map_err(debug)
 }
 
-fn read_document(stream: &mut UnixStream) -> Result<Vec<u8>, String> {
-    let mut bytes = Vec::new();
-    stream.take(ASSESSMENT_BYTES as u64 + 1).read_to_end(&mut bytes).map_err(debug)?;
-    if bytes.is_empty() { return Err("empty evaluator assessment document".into()); }
-    if bytes.len() > ASSESSMENT_BYTES { return Err("evaluator assessment exceeds byte limit".into()); }
-    Ok(bytes)
+fn read_document(stream: &mut UnixStream, checkpoint: &mut impl FnMut() -> Result<(), String>,
+    wait: &mut impl FnMut()) -> Result<Vec<u8>, String>
+{
+    transport::read(stream, ASSESSMENT_BYTES, checkpoint, wait)
+}
+
+fn completion(results: [Result<(), String>; 3]) -> Result<(), String> {
+    let errors: Vec<_> = results.into_iter().filter_map(Result::err).collect();
+    if errors.is_empty() { Ok(()) } else { Err(format!(
+        "{}; native work is not rolled back and no operation was retried", errors.join("; "))) }
 }
 
 fn object<'a>(value: &'a Json, fields: &[&str]) -> Result<&'a BTreeMap<String,Json>,String> {
