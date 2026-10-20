@@ -1,6 +1,8 @@
 //! Full-roster recovery with time acquired only at each native terminal cut.
 //! Retained-visit resolution is still passive and never invokes the clock.
 use super::*;
+mod phases;
+use phases::RegisteredPhase;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct FileShutdownClockedPassMember {
@@ -59,7 +61,7 @@ impl FileShutdownCoordinator {
     where C: FnMut(FileShutdownClockBinding) -> Result<ElapsedTick, JournalError>,
         P: FnMut(FileShutdownRecoveryCheckpoint) -> bool,
     {
-        self.run_registered_pass_with_clocks(revision, bindings, max_events, false, clock, checkpoint)
+        self.run_registered_pass_with_clocks(revision, bindings, max_events, (false, RegisteredPhase::Combined), Some(clock), checkpoint)
     }
 
     /// Resolve eligible retained visits without clock calls or new commands.
@@ -72,12 +74,12 @@ impl FileShutdownCoordinator {
     where C: FnMut(FileShutdownClockBinding) -> Result<ElapsedTick, JournalError>,
         P: FnMut(FileShutdownRecoveryCheckpoint) -> bool,
     {
-        self.run_registered_pass_with_clocks(revision, bindings, max_events, true, clock, checkpoint)
+        self.run_registered_pass_with_clocks(revision, bindings, max_events, (true, RegisteredPhase::Combined), Some(clock), checkpoint)
     }
 
     fn run_registered_pass_with_clocks<C, P>(&mut self, revision: u64,
-        bindings: &[FileShutdownClockBinding], max_events: usize, resume: bool,
-        mut clock: C, mut checkpoint: P) -> Result<FileShutdownClockedRecoveryPass, JournalError>
+        bindings: &[FileShutdownClockBinding], max_events: usize, (resume, phase): (bool, RegisteredPhase),
+        mut clock: Option<C>, mut checkpoint: P) -> Result<FileShutdownClockedRecoveryPass, JournalError>
     where C: FnMut(FileShutdownClockBinding) -> Result<ElapsedTick, JournalError>,
         P: FnMut(FileShutdownRecoveryCheckpoint) -> bool,
     {
@@ -116,16 +118,22 @@ impl FileShutdownCoordinator {
                     Err(error) => { member.result = FileShutdownPassResult::Unacknowledged(error); break; }
                 }
             } else {
-                let result = self.recover_and_drain_with_clock(self.revision(), binding, max_events,
-                    |actual| {
-                        let at = clock(actual)?;
-                        member.acquired_tick = Some(at);
-                        Ok(at)
-                    }, |progress| {
-                        let proceed = checkpoint(FileShutdownRecoveryCheckpoint { domain: binding.domain, replay: Some(progress) });
-                        if !proceed { cancelled = true; }
-                        proceed
-                    });
+                let acquire = |actual| {
+                    let read = clock.as_mut().ok_or(JournalError::Unavailable)?;
+                    let at = read(actual)?;
+                    member.acquired_tick = Some(at);
+                    Ok(at)
+                };
+                let poll = |progress| {
+                    let proceed = checkpoint(FileShutdownRecoveryCheckpoint { domain: binding.domain, replay: Some(progress) });
+                    if !proceed { cancelled = true; }
+                    proceed
+                };
+                let result = match phase {
+                    RegisteredPhase::Combined => self.recover_and_drain_with_clock(self.revision(), binding, max_events, acquire, poll),
+                    RegisteredPhase::Admission => self.recover_admission_stop(self.revision(), binding, max_events, poll),
+                    RegisteredPhase::Drain => self.drain_stopped_with_clock(self.revision(), binding, max_events, acquire, poll),
+                };
                 match result {
                     Ok(Ok(observation)) => member.result = FileShutdownPassResult::Observed(Box::new(observation)),
                     Ok(Err(error)) => member.result = FileShutdownPassResult::Refused(error),

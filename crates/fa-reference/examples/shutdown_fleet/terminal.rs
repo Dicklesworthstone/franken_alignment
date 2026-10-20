@@ -17,8 +17,14 @@ pub(super) fn take_flag(args: &[String]) -> Result<Option<Vec<String>>, String> 
 // The executable and real-file tests use this same entry point. A caller cannot
 // supply timestamps to the roster: only the bound native terminal callback can
 // acquire one. Legacy no-flag invocation retains its separate supplied-time API.
-pub(super) fn command_with(args: &[String], mut clock: impl FnMut() -> Result<ElapsedTick, String>,
+pub(super) fn command_with(args: &[String], clock: impl FnMut() -> Result<ElapsedTick, String>,
     elapsed: &mut impl FnMut() -> Duration, out: &mut impl Write) -> Result<(), String>
+{
+    command_for_phase(args, clock, elapsed, out, None)
+}
+
+pub(super) fn command_for_phase(args: &[String], mut clock: impl FnMut() -> Result<ElapsedTick, String>,
+    elapsed: &mut impl FnMut() -> Duration, out: &mut impl Write, phase: Option<phases::Phase>) -> Result<(), String>
 {
     let (mode, prepared, custody) = prepare_command(args, elapsed)?;
     let Prepared { spec, plan, .. } = prepared;
@@ -47,16 +53,29 @@ pub(super) fn command_with(args: &[String], mut clock: impl FnMut() -> Result<El
             Ok(tick)
         };
         let mut poll = |_| within_budget();
-        match mode {
-            Mode::Create | Mode::Recover => owner.recover_registered_pass_with_clocks(
+        match (phase, mode) {
+            (None, Mode::Create | Mode::Recover) => owner.recover_registered_pass_with_clocks(
                 revision, &bindings, spec.replay_events, &mut acquire, &mut poll),
-            Mode::Resume => owner.resume_registered_pass_with_clocks(
+            (None, Mode::Resume) => owner.resume_registered_pass_with_clocks(
+                revision, &bindings, spec.replay_events, &mut acquire, &mut poll),
+            (Some(phases::Phase::Admission), Mode::Create | Mode::Recover) => owner.stop_registered_admission(
+                revision, &bindings, spec.replay_events, &mut poll),
+            (Some(phases::Phase::Admission), Mode::Resume) => owner.resume_registered_admission(
+                revision, &bindings, spec.replay_events, &mut poll),
+            (Some(phases::Phase::Drain), Mode::Create | Mode::Recover) => owner.drain_registered_stopped_with_clocks(
+                revision, &bindings, spec.replay_events, &mut acquire, &mut poll),
+            (Some(phases::Phase::Drain), Mode::Resume) => owner.resume_registered_stopped_with_clocks(
                 revision, &bindings, spec.replay_events, &mut acquire, &mut poll),
         }
     }.map_err(|error| format!("fleet pass admission refused at coordinator revision {revision}: {error}; no member visit started"))?;
+    let complete = if phase == Some(phases::Phase::Admission) { pass.all_observed_stopped() }
+        else { pass.all_observed_drained() };
     report_pass(&owner, &custody, &spec,
-        (timed_out.get(), pass.final_revision(), pass.all_observed_drained()),
-        || render::encode_clocked(mode.label(), timed_out.get(), &pass), elapsed, out)
+        (timed_out.get(), pass.final_revision(), complete),
+        || match phase {
+            Some(phase) => render::encode_phased(mode.label(), phase, timed_out.get(), &pass),
+            None => render::encode_clocked(mode.label(), timed_out.get(), &pass),
+        }, elapsed, out)
 }
 
 #[cfg(test)]

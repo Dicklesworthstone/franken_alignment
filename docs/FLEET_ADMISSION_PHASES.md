@@ -62,3 +62,60 @@ the exact integrated revision; source comparisons and successful commits are
 not compilation or qualification. No Bead is closed or production gate activated.
 The APIs authenticate neither clocks nor custodians, do not establish real-world
 fleet completeness, and cannot make synchronous I/O hard-real-time.
+
+## Full-roster passes and runnable selection
+
+The existing `shutdown_fleet` executable selects the phases independently:
+
+```sh
+cargo run --locked -p fa-reference --example shutdown_fleet -- create /operator/fleet.json --admission-only
+cargo run --locked -p fa-reference --example shutdown_fleet -- recover /operator/fleet.json --drain-only
+cargo run --locked -p fa-reference --example shutdown_fleet -- resume /operator/fleet.json --admission-only
+```
+
+Both roster formats and the existing coordinator-anchor input/output options are
+supported. The phase flags are mutually exclusive and cannot be combined with
+`--terminal-clocks`. Unknown/duplicate flags and flags in a custody-value slot
+refuse before profile intake. No-flag and `--terminal-clocks` behavior retains its
+original contract and output schema. No automatic stronger-to-weaker fallback
+or new clock, source, helper, review or publication route is introduced.
+
+`stop_registered_admission` and `resume_registered_admission` accept the complete
+registered bindings but no logical clock provider. New work invokes the native
+admission stop. `drain_registered_stopped_with_clocks` and
+`resume_registered_stopped_with_clocks` restrict new work to already stopped
+members and acquire independent time only for needed settlement. All four share
+the existing full-roster admission, latest-visit selector and checkpoint loop.
+The original immutable clocked-pass result is reused, with absent acquired ticks
+rather than invented times on the admission path.
+
+Resume remains evidence-first, NOT a command retry. Eligible retained visits
+are inspected, including undrained ones; missing or unstopped evidence does not
+fall through. Explicit `recover --drain-only` is needed to request new settlement
+after an acknowledged admission pass. The original visit/session allowances
+apply to both phases, so an operator must provision enough visits for its chosen
+operations; this does not replenish budgets or make fleet settlement atomic.
+
+The new `fa.shutdown-fleet-result/3` report names the selected phase and whether
+settlement was requested, while retaining every original per-member outcome,
+charge, acquired tick and explicit fence state. Admission-only success requires
+all registered members observed stopped, not drained; drain-only success still
+requires all drained. An unknown effect stays charged and unresolved even when
+its domain's admission stop succeeds. Busy/offline/cancelled members remain in
+the denominator. Coordinator write failures end the pass with an unvisited tail.
+
+Both execution phases share the original cumulative deadline, independent
+custody admission, archive retention and output-failure handling. Failure to
+retain/report cannot undo acknowledged native work. Admission stopping acquires
+no Unix-time observation, but cooperative deadlines still use monotonic elapsed
+time. Synchronous acquisition, one replay event and storage work can exceed that
+budget; this is not a hard-real-time or simultaneous fleet halt guarantee.
+
+Six further native regressions cover complete two-key fleet stop/drain, active
+drain controls, mixed interrupted resume at the visit ceiling, cancellation,
+full-roster admission and failed intent writes. Five operator regressions cover
+actual phase routing and clock-free resume, active-drain refusal, closed options,
+every elapsed checkpoint, and independent custody surviving lost stdout. The
+combined increment contains nineteen authored regression functions. None has
+executed in this environment. Targeted native/example and unchanged xtask RCH
+launches still require exact-revision execution; FA-014 remains open.
