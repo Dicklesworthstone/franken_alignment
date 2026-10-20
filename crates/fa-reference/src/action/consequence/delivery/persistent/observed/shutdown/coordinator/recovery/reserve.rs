@@ -1,4 +1,4 @@
-//! Admit negative completion capacity before entering registered terminal work.
+//! Admit negative completion and retained-head capacity before terminal work.
 //! Scratch metadata is encoded by the original codec, never installed as truth.
 use super::*;
 use super::super::codec;
@@ -12,7 +12,7 @@ impl FileShutdownCoordinator {
         if self.visits.len() >= self.campaign.plan.max_attempts
             || self.campaign.attempts.len() >= self.campaign.plan.max_attempts
         { return Err(Error::Limit.into()); }
-        self.campaign.plan.domains.binary_search_by_key(&domain, |entry| entry.id())
+        let index = self.campaign.plan.domains.binary_search_by_key(&domain, |entry| entry.id())
             .map_err(|_| Error::Missing)?;
         // This reserve is for these native recovery consumers, not a live owner
         // supplied by a caller or an alternate passive-resolution policy.
@@ -35,11 +35,27 @@ impl FileShutdownCoordinator {
         };
         codec::encode(self.store.identity(), &self.plan_bytes, self.max_bytes,
             completed, &visits, &self.campaign)?;
+        // Encode the same pending visit as Observed using the current heads.
+        // Only head payload bytes can grow before finish: counts and revisions
+        // are fixed-width in the original codec, and no second visit can enter.
+        visits.last_mut().ok_or(Error::Missing)?.result = ShutdownVisitResult::Observed {
+            domain_revision: self.campaign.slots[index].revision as u64,
+        };
+        let observed = codec::encode(self.store.identity(), &self.plan_bytes, self.max_bytes,
+            completed, &visits, &self.campaign)?;
+        let overhead = observed.len().checked_sub(self.campaign.head_bytes).ok_or(Error::Binding)?;
+        let head_limit = self.max_bytes.checked_sub(overhead).ok_or(Error::Limit)?;
         // No attempt, intent, owner poisoning, domain I/O or callback preceded
-        // admission. Actual storage errors retain original uncertainty semantics.
-        self.begin(revision, domain, kind)
+        // admission. The original registered preflights consume this ceiling
+        // BEFORE native mutation. It is not stored or a reserve replenishment.
+        let pair = self.begin(revision, domain, kind)?;
+        self.campaign.completion_head_limit = Some(head_limit);
+        Ok(pair)
     }
 }
 
 #[cfg(test)]
 mod tests;
+
+#[cfg(test)]
+mod head_tests;

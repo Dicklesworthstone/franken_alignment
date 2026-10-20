@@ -21,6 +21,9 @@ pub struct FileShutdownCampaign {
     pub(super) slots: Vec<Slot>,
     pub(super) attempts: Vec<FileShutdownAttempt>,
     pub(super) head_bytes: usize,
+    // Session-only completion ceiling for one coordinator-admitted terminal visit.
+    // Never serialized, inferred from a saved result, or a larger plan allowance.
+    pub(super) completion_head_limit: Option<usize>,
 }
 impl fmt::Debug for FileShutdownCampaign {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -38,7 +41,7 @@ impl FileShutdownCampaign {
             head: Rc::clone(&domain.anchor), revision: domain.revision,
         }).collect();
         let head_bytes = plan.domains.iter().map(|domain| domain.anchor.len()).sum();
-        Self { plan, slots, attempts: Vec::new(), head_bytes }
+        Self { plan, slots, attempts: Vec::new(), head_bytes, completion_head_limit: None }
     }
     pub fn plan(&self) -> &FileShutdownPlan { &self.plan }
     pub fn report(&self) -> FileShutdownReport {
@@ -142,6 +145,7 @@ impl FileShutdownCampaign {
         let index = self.plan.domains.binary_search_by_key(&domain, |domain| domain.id).map_err(|_| Error::Missing)?;
         if self.attempts.len() >= self.plan.max_attempts { return Err(Error::Limit.into()); }
         self.attempts.try_reserve(1).map_err(|_| Error::Limit)?;
+        self.completion_head_limit = None;
         let attempt = self.attempts.len();
         self.attempts.push(FileShutdownAttempt { domain, step, result: FileShutdownResult::Interrupted });
         self.slots[index].report.latest_succeeded = false;
@@ -150,7 +154,9 @@ impl FileShutdownCampaign {
     pub(super) fn check_head_size(&self, index: usize, bytes: usize) -> Result<(), Error> {
         let total = self.head_bytes.checked_sub(self.slots[index].head.len())
             .and_then(|n| n.checked_add(bytes)).ok_or(Error::Limit)?;
-        if total > self.plan.max_head_bytes { return Err(Error::Limit); }
+        if total > self.plan.max_head_bytes
+            || self.completion_head_limit.is_some_and(|limit| total > limit)
+        { return Err(Error::Limit); }
         Ok(())
     }
     pub(super) fn check_prefix(&self, index: usize, profile: &FileOversightProfile,
@@ -170,6 +176,7 @@ impl FileShutdownCampaign {
         match result {
             Ok((observation, head, revision)) => {
                 self.check_head_size(index, head.len())?;
+                self.completion_head_limit = None;
                 let retained = observation.clone();
                 let recorded = Box::new(observation.clone());
                 self.head_bytes = self.head_bytes - self.slots[index].head.len() + head.len();
@@ -182,6 +189,7 @@ impl FileShutdownCampaign {
                 Ok(observation)
             }
             Err(error) => {
+                self.completion_head_limit = None;
                 self.attempts[attempt].result = FileShutdownResult::Refused(error.clone());
                 Err(error)
             }
