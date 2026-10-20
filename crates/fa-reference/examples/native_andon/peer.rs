@@ -2,6 +2,7 @@
 //! Kernel credentials authenticate the connecting process at socket creation;
 //! they do not authenticate a human, executable image, or remote identity.
 mod transport;
+mod receipt;
 
 use super::{Settings, mutations};
 use crate::config::{Config, debug, read_regular};
@@ -146,16 +147,17 @@ pub(super) fn serve(config_path: &Path, settings_path: &Path, recovery_path: &Pa
                 match policy.verify(&stream) {
                     Ok(credentials) => {
                         eprintln!("Verified native evaluator peer: uid={}, gid={}, pid={}", credentials.uid(), credentials.gid(), credentials.pid());
-                        let bytes = read_document(&mut stream, &mut checkpoint, &mut wait)?;
-                        let mutation = mutations::Mutation::decode("assess", &bytes)?;
+                        let bytes = transport::read(&mut stream, receipt::REQUEST_BYTES, &mut checkpoint, &mut wait)?;
+                        let request = receipt::Request::accept(&peer, &bytes)?;
                         checkpoint()?;
                         // The native owner, journal and independent anchor finish
                         // before socket output can stall or fail. A report failure
                         // cannot undo an acknowledged mutation or justify resending.
                         let mut response = transport::Output::default();
-                        let result = mutations::run(&config, &settings, recovery_path, &mutation,
+                        let result = mutations::run(&config, &settings, recovery_path, request.mutation(),
                             &mut checkpoint, &mut mutations::clock, &mut response);
-                        let delivered = transport::write(&mut stream, &response.0, &mut checkpoint, &mut wait)
+                        let delivered = receipt::capture(&request, &response.0, result.is_ok())
+                            .and_then(|wire| transport::write(&mut stream, &wire, &mut checkpoint, &mut wait))
                             .and_then(|()| stream.shutdown(std::net::Shutdown::Write).map_err(debug));
                         let reported = writeln!(out,
                             "{{\"schema_version\":\"fa.native-evaluator-peer-result/2\",\"native_completed\":{},\"reply_written\":{},\"candidates\":{attempted}}}",
@@ -188,7 +190,7 @@ pub(super) fn send(peer_path: &Path, assessment_path: &Path, out: &mut impl Writ
     checkpoint()?;
     let bytes = read_regular(assessment_path, ASSESSMENT_BYTES)?;
     // Closed schema validation occurs before any socket connection or disclosure.
-    let _ = mutations::Mutation::decode("assess", &bytes)?;
+    let request = receipt::Request::prepare(&peer, &bytes)?;
     checkpoint()?;
     // Standard-library connect and file/native operations remain synchronous;
     // these surrounding checks are not a hard preemption guarantee.
@@ -197,18 +199,20 @@ pub(super) fn send(peer_path: &Path, assessment_path: &Path, out: &mut impl Writ
         format!("native evaluator refused unverified supervisor before label disclosure: {error:?}")
     })?;
     checkpoint()?;
-    transport::write(&mut stream, &bytes, &mut checkpoint, &mut wait)?;
-    stream.shutdown(std::net::Shutdown::Write).map_err(debug)?;
-    let response = transport::read(&mut stream, transport::MAX_MESSAGE_BYTES, &mut checkpoint, &mut wait)?;
+    let response = (|| {
+        transport::write(&mut stream, request.wire(), &mut checkpoint, &mut wait)?;
+        stream.shutdown(std::net::Shutdown::Write).map_err(debug)?;
+        transport::read(&mut stream, transport::MAX_MESSAGE_BYTES, &mut checkpoint, &mut wait)
+    })().map_err(|error| format!("evaluator exchange incomplete: {error}; the original assessment may be recorded; no automatic retry"))?;
     checkpoint()?;
-    out.write_all(&response).map_err(debug)?;
-    out.flush().map_err(debug)
-}
-
-fn read_document(stream: &mut UnixStream, checkpoint: &mut impl FnMut() -> Result<(), String>,
-    wait: &mut impl FnMut()) -> Result<Vec<u8>, String>
-{
-    transport::read(stream, ASSESSMENT_BYTES, checkpoint, wait)
+    // Authentication alone is not a success response. Validate exact request,
+    // audience, schema and native acknowledgment BEFORE rendering any bytes.
+    let outcome = receipt::validate(&request, &response).map_err(|error| format!(
+        "evaluator result unconfirmed: {error}; the original assessment may be recorded; no automatic retry"))?;
+    let reported = out.write_all(&response).and_then(|()| out.write_all(b"\n"))
+        .and_then(|()| out.flush()).map_err(debug);
+    let result = if outcome.completed() { Ok(()) } else { Err(outcome.error().into()) };
+    completion([result, reported, checkpoint()])
 }
 
 fn completion(results: [Result<(), String>; 3]) -> Result<(), String> {

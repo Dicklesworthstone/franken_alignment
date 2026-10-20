@@ -67,7 +67,7 @@ fn bounded_document_reader_accepts_exact_input_and_refuses_oversize() {
             client.shutdown(Shutdown::Write).unwrap();
         });
         let started=Instant::now();
-        let result=read_document(&mut server, &mut || {
+        let result=transport::read(&mut server, ASSESSMENT_BYTES, &mut || {
             if started.elapsed() < Duration::from_secs(5) { Ok(()) } else { Err("test deadline".into()) }
         }, &mut || std::thread::yield_now()); handle.join().unwrap();
         assert_eq!(result.is_ok(),size<=ASSESSMENT_BYTES);
@@ -135,3 +135,6 @@ fn socket_cleanup_preserves_a_replacement_at_the_original_path() {
         drop(replacement);
     }
 }
+
+#[path = "integration_tests.rs"]
+mod integration;
