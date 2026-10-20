@@ -13,11 +13,13 @@ use fa_reference::action::consequence::oversight::actor_peer::{PeerCredentials, 
 use fa_reference::action::consequence::oversight::actor_wire::{ActorRequestPort, Command, WireResponse};
 use fa_reference::action::consequence::oversight::actor_wire::client::{ActorClient, ActorClientState, ClientProgress, ClientSessionLimits};
 use fa_reference::action::consequence::oversight::actor_wire::client::drive::ClientDriveBudget;
-use std::{cell::Cell, fs, os::unix::net::UnixStream};
+use std::{cell::Cell, fs, os::unix::{fs::PermissionsExt, net::UnixStream}};
 
 fn configured(root: &Directory) -> Config {
     let mut config = Config::decode(include_bytes!("../../../../../../fixtures/supervised_publication.json")).unwrap();
     config.store = root.store(); config.profile = fixture::profile();
+    config.profile.delivery.clock_domain = crate::config::CLOCK_DOMAIN;
+    fs::set_permissions(&root.0, fs::Permissions::from_mode(0o700)).unwrap();
     config.programs.clear(); config.timing.runtime_ms = 1000; config
 }
 fn actor(root: &Directory, config: &Config) -> Profile {
@@ -165,7 +167,7 @@ fn reconcile_mode_requires_existing_request_before_clock_or_recovery_write() {
 
 #[test]
 fn exact_guards_history_floors_and_socket_collisions_refuse_without_cleanup() {
-    let root = Directory::new(); let (c, a, mut settings, _) = seeded(&root, 0, false);
+    let root = Directory::new(); let (c, a, mut settings, _) = seeded(&root, 1, false);
     let before = canonical(&c); let staging = c.store.join("delivery.pending"); fs::write(&staging, b"unacknowledged").unwrap();
     let minimum = settings.minimum; let history = settings.history.clone();
     for field in 0..4 {
@@ -191,17 +193,18 @@ fn exact_guards_history_floors_and_socket_collisions_refuse_without_cleanup() {
 
 #[test]
 fn every_pre_fence_deadline_preserves_history_but_late_expiry_preserves_the_fence() {
-    let root = Directory::new(); let (c, a, settings, _) = seeded(&root, 0, false); let before = canonical(&c);
+    let root = Directory::new(); let (c, a, settings, _) = seeded(&root, 1, false); let before = canonical(&c);
     let checks = Cell::new(0);
     let error = serve(&c, &a, &settings, &mut || {
         if canonical(&c) == before { checks.set(checks.get() + 1); Duration::ZERO }
         else { Duration::from_millis(1000) }
     }, &mut |_| panic!("post-fence expiry cannot serve actors")).unwrap_err();
-    assert_eq!(error, EXPIRED); assert_ne!(canonical(&c), before);
+    assert!(error.starts_with(EXPIRED));
+    assert!(error.contains("acknowledged stream recovery")); assert_ne!(canonical(&c), before);
     let after = FileOversight::read_stream_publication(&c.store, &c.profile, fixture::stream()).unwrap();
     assert_eq!(after.publication.revision, settings.minimum.journal_revision + 1);
     for cutoff in 0..checks.get() {
-        let root = Directory::new(); let (c, a, settings, _) = seeded(&root, 0, false); let before = canonical(&c);
+        let root = Directory::new(); let (c, a, settings, _) = seeded(&root, 1, false); let before = canonical(&c);
         let pending = c.store.join("delivery.pending"); fs::write(&pending, b"preserved").unwrap(); let n = Cell::new(0);
         let error = serve(&c, &a, &settings, &mut || { let current = n.get(); n.set(current + 1);
             Duration::from_millis(if current >= cutoff { 1000 } else { 0 })

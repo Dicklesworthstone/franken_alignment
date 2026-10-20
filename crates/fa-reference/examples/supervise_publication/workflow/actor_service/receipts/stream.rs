@@ -1,5 +1,10 @@
 //! Anchored stream receipt recovery with no admitting or numerical fallback.
 mod settings;
+mod completion;
+use completion::RecoveryReport;
+#[cfg(test)]
+#[path = "stream/completion_tests.rs"]
+mod completion_tests;
 #[cfg(test)]
 mod tests;
 use settings::Settings;
@@ -36,7 +41,7 @@ pub(super) fn command_with(args: &[String], credibility: Option<&Path>,
         Mode::ReconcileReceipts => serve_reconciled(&config, &actor, &settings,
             crate::workflow::clock, elapsed, wait)?,
     };
-    eprintln!("Stream receipt service window ended: frames={}, candidates={}, revision={}, reconciled={}; no message or finish was admitted",
+    eprintln!("Stream receipt service window ended: frames={}, candidates={}, revision={}, reconciliation_attempted={}; no message or finish was admitted",
         report.frames, report.candidates, report.revision, mode == Mode::ReconcileReceipts);
     Ok(report)
 }
@@ -94,26 +99,35 @@ where F: FnOnce() -> ElapsedTick
     let socket = BoundSocket::bind(&actor.socket, None)?;
     actor.secure_socket()?;
     checkpoint(wall, elapsed)?;
-    let host = match mode {
+    let (host, outcomes) = match mode {
         Mode::ReceiptsOnly => {
             let (host, roles) = recovery.finish().map_err(debug)?;
             drop(roles);
-            host
+            (host, None)
         }
         Mode::ReconcileReceipts => {
-            let ReconciledGuardedOwner { owner, roles, outcomes: _ } =
+            let ReconciledGuardedOwner { owner, roles, outcomes } =
                 recovery.finish_reconciled(clock).map_err(debug)?;
             drop(roles);
-            owner
+            (owner, Some(outcomes))
         }
     };
-    checkpoint(wall, elapsed)?; // Late expiry cannot undo an acknowledged cut.
-    let (port, supervisor) = host.into_stream_actor_gateway().map_err(debug)?;
-    let port = port.recovery_only().for_request(actor.request).map_err(debug)?;
-    let mut session = PeerSession::new(actor.actor, ActorWire::new(port), actor.channels(), actor.connections).map_err(debug)?;
-    let (frames, candidates) = serve_session(&mut session, actor, socket, wall, elapsed, wait)?;
-    let revision = supervisor.host().map_err(debug)?.revision();
-    Ok(ServiceReport { frames, candidates, revision })
+    // Retain the actual acknowledged sweep AND the full ledger's unresolved
+    // stages. A later sweep can omit an irrecoverable liability; omission is
+    // not settlement. This report never enters an actor response or authority.
+    let completion = RecoveryReport::capture(&host, outcomes)?;
+    let service = (|| {
+        checkpoint(wall, elapsed)?; // Late expiry cannot undo the acknowledged cut.
+        let (port, supervisor) = host.into_stream_actor_gateway().map_err(debug)?;
+        let port = port.recovery_only().for_request(actor.request).map_err(debug)?;
+        let mut session = PeerSession::new(actor.actor, ActorWire::new(port), actor.channels(), actor.connections).map_err(debug)?;
+        let (frames, candidates) = serve_session(&mut session, actor, socket, wall, elapsed, wait)?;
+        let revision = supervisor.host().map_err(debug)?.revision();
+        Ok(ServiceReport { frames, candidates, revision })
+    })();
+    // Deliver legitimate selected receipts before reporting domain-level debt.
+    // A socket error or late timeout must also retain the acknowledged cut.
+    completion.finish(service)
 }
 fn checkpoint(wall: Duration, elapsed: &mut impl FnMut() -> Duration) -> Result<(), String> {
     if elapsed() >= wall { Err(EXPIRED.into()) } else { Ok(()) }
