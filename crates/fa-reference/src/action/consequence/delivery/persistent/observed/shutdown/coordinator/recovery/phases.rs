@@ -44,7 +44,7 @@ impl FileShutdownCoordinator {
         }
         let kind = if clock.is_some() { ShutdownVisitKind::DrainStoppedAtCompletion }
             else { ShutdownVisitKind::StopAdmission };
-        let pair = self.begin(revision, binding.domain, kind)?;
+        let pair = self.begin_registered_terminal(revision, binding.domain, kind)?;
         let result = storage::Store::open(&self.campaign.plan.domains[index].directory)
             .and_then(|store| self.recover_phase_locked(pair, store, max_events, clock, checkpoint));
         self.finish(pair.0, pair.1, result)

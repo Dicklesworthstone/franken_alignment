@@ -38,7 +38,7 @@ impl FileShutdownCoordinator {
         if self.campaign.plan.domains[index].clock_domain() != binding.clock_domain {
             return Err(Error::Binding.into());
         }
-        let pair = self.begin(revision, binding.domain, ShutdownVisitKind::RecoverStoppedAtCompletion)?;
+        let pair = self.begin_registered_terminal(revision, binding.domain, ShutdownVisitKind::RecoverStoppedAtCompletion)?;
         let result = storage::Store::open(&self.campaign.plan.domains[index].directory)
             .and_then(|store| self.recover_clocked_locked(pair, store, max_events, clock, checkpoint));
         self.finish(pair.0, pair.1, result)
