@@ -5,7 +5,8 @@ use crate::Error;
 use crate::action::ElapsedTick;
 use crate::action::consequence::delivery::{StopRequest,
     persistent::observed::{guarded::anchored::FileHistoryAnchor,
-        shutdown::recovery::{FileStoppedHistory, FileStoppedRecovery}}};
+        shutdown::recovery::{FileAdmissionStoppedHistory, FileStopRecovery,
+            FileStoppedHistory, FileStoppedRecovery}}};
 
 impl FileGuardedRecovery {
     fn check_stopped_ready_with(&self, check: impl FnOnce(&Self) -> Result<(), Error>)
@@ -79,6 +80,53 @@ impl FileGuardedRecovery {
             |run| run.expected.check(&run.profile, &run.machine, &run.events))
     }
 
+    /// Stop admission without sampling time, while retaining this cursor's
+    /// complete independent guard/policy/credential/floor and anchor checks.
+    /// A new stop uses only the original Stop/Fence events; an existing matching
+    /// stop is confirmed unchanged. No sweep, live owner or role is returned.
+    /// This does not load learned recipes or relax specialised recovery profiles.
+    pub fn finish_admission_stop(self, request: StopRequest)
+        -> Result<FileAdmissionStoppedHistory, JournalError>
+    {
+        self.finish_admission_stop_checked(request,
+            |run| run.expected.check(&run.profile, &run.machine, &run.events))
+    }
+
+    /// Drain an already matching stop with one original StopProgress event.
+    /// Recheck the independently selected profile before any clock or mutation.
+    /// The original terminal consumer refuses active domains, rechecks canonical
+    /// bytes around the fallible clock and skips clock/write for drained retries.
+    pub fn finish_stopped_drain<F>(self, request: StopRequest, clock: F)
+        -> Result<FileStoppedHistory, JournalError>
+    where F: FnOnce() -> Result<ElapsedTick, JournalError> {
+        self.finish_stopped_drain_checked(request, clock,
+            |run| run.expected.check(&run.profile, &run.machine, &run.events))
+    }
+
+    // These checks are sealed, like the original combined-stop checker. A
+    // mediated wrapper supplies its complete original requirements, never the
+    // weaker base predicate or a caller-controlled acceptance callback.
+    pub(super) fn finish_admission_stop_checked(self, request: StopRequest,
+        check: impl FnOnce(&Self) -> Result<(), Error>)
+        -> Result<FileAdmissionStoppedHistory, JournalError>
+    {
+        self.into_terminal_checked(check)?.finish_admission_stop(request)
+    }
+
+    pub(super) fn finish_stopped_drain_checked<F>(self, request: StopRequest, clock: F,
+        check: impl FnOnce(&Self) -> Result<(), Error>) -> Result<FileStoppedHistory, JournalError>
+    where F: FnOnce() -> Result<ElapsedTick, JournalError> {
+        self.into_terminal_checked(check)?.finish_stopped_drain(request, clock)
+    }
+
+    fn into_terminal_checked(self, check: impl FnOnce(&Self) -> Result<(), Error>)
+        -> Result<FileStopRecovery, JournalError>
+    {
+        self.check_stopped_ready_with(check)?;
+        let Self { profile, store, canonical, events, machine, .. } = self;
+        Ok(FileStopRecovery::from_verified_terminal(profile, store, canonical, events, machine))
+    }
+
     // Reuse the exact original stop selection, no-clock retry and consuming
     // finalizer for sealed profiles without weakening their independent guards.
     pub(super) fn finish_stopped_checked_with_anchor<F>(self, request: StopRequest, clock: F,
@@ -116,3 +164,7 @@ impl FileGuardedRecovery {
         host.finish_verified_stopped(request, tick, &canonical)
     }
 }
+
+#[cfg(test)]
+#[path = "stopped/phases_tests.rs"]
+mod phases_tests;

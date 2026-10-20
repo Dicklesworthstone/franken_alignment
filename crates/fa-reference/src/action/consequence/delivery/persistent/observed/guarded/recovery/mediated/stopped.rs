@@ -3,7 +3,7 @@
 use super::{FileMediatedRecovery, JournalError, check_machine};
 use crate::action::ElapsedTick;
 use crate::action::consequence::delivery::{StopRequest,
-    persistent::observed::shutdown::recovery::{FileStoppedHistory, FileStoppedRecovery}};
+    persistent::observed::shutdown::recovery::{FileAdmissionStoppedHistory, FileStoppedHistory, FileStoppedRecovery}};
 
 impl FileMediatedRecovery {
     /// Select one native stop only after the entire original history and ALL
@@ -14,6 +14,29 @@ impl FileMediatedRecovery {
     pub fn stop_request(&self, operation: u64) -> Result<StopRequest, JournalError> {
         self.inner.stop_request_checked(operation,
             |run| check_machine(&run.profile, &run.machine, &run.events, &self.expected))
+    }
+
+    /// Clock-free admission withdrawal with the COMPLETE mediated requirements.
+    /// No weaker cursor, ordinary recovery fence or second replay is exposed.
+    /// Initial/current topology, availability, prediction/evaluation and the
+    /// underlying independent guards, policy, credentials and floors all apply.
+    pub fn finish_admission_stop(self, request: StopRequest)
+        -> Result<FileAdmissionStoppedHistory, JournalError>
+    {
+        let expected = self.expected;
+        self.inner.finish_admission_stop_checked(request,
+            |run| check_machine(&run.profile, &run.machine, &run.events, &expected))
+    }
+
+    /// Settle only an existing stop using the original one-event drain. The
+    /// independently supplied availability must match the stopped pre-drain cut;
+    /// an old permitting topology is not silently substituted during recovery.
+    pub fn finish_stopped_drain<F>(self, request: StopRequest, clock: F)
+        -> Result<FileStoppedHistory, JournalError>
+    where F: FnOnce() -> Result<ElapsedTick, JournalError> {
+        let expected = self.expected;
+        self.inner.finish_stopped_drain_checked(request, clock,
+            |run| check_machine(&run.profile, &run.machine, &run.events, &expected))
     }
 
     /// Finish through the ORIGINAL Stop -> Fence -> StopProgress transaction.
@@ -63,3 +86,7 @@ impl FileMediatedRecovery {
 #[cfg(test)]
 #[path = "stopped_tests.rs"]
 mod tests;
+
+#[cfg(test)]
+#[path = "phase_tests.rs"]
+mod phase_tests;

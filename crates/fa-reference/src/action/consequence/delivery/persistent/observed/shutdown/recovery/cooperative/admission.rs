@@ -30,6 +30,20 @@ impl FileAdmissionStoppedHistory {
 }
 
 impl FileStopRecovery {
+    // Sealed recovery handoff only. The caller has completed original replay
+    // and rechecked its FULL independent requirements. Keep the SAME machine,
+    // canonical image and exclusive Store; never reopen or replay the history.
+    // The resulting cursor is consumed immediately by a fixed terminal method,
+    // not exposed to callers or used as a registered fleet observation.
+    pub(in crate::action::consequence::delivery::persistent::observed)
+    fn from_verified_terminal(profile: FileOversightProfile, store: storage::Store,
+        canonical: Vec<u8>, events: Vec<Event>, machine: Machine) -> Self
+    {
+        let count = events.len();
+        Self { profile, store, canonical, events, machine, last_drain: None,
+            replayed: count, attempted: count, status: FileStopRecoveryStatus::Ready }
+    }
+
     /// Stop admission and withdraw old dispatch eligibility without acquiring a
     /// clock, publishing an effect or claiming settlement of unknown effects.
     /// A new stop appends only ORIGINAL Stop/Fence in one replacement. Existing
