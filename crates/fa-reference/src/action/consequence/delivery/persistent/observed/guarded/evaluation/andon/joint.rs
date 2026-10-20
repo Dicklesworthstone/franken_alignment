@@ -4,7 +4,7 @@
 use super::{CredibilityEvent, EvaluationProtocol, Event, FileAndonConfig,
     FileAndonRecoveryRequirements, FileCredentialRegistration, FileEvaluatedOversightRoles,
     FileGuardSet, FileOversight, FileOversightProfile, JointPromotionPolicy, JournalError,
-    PreparedGuardedBootstrap, storage};
+    PreparedGuardedBootstrap, PublicationLimits, storage};
 use crate::action::consequence::delivery::persistent::RecoveryReserve;
 use crate::Error;
 use std::path::Path;
@@ -39,6 +39,19 @@ pub(super) fn check_protocol(events: &[Event], protocol: &EvaluationProtocol,
 }
 
 impl FileOversight {
+    /// Atomically install checked witnesses, joint evaluation and accounting
+    /// with no implicit reserve. This never upgrades or resets an existing owner.
+    pub fn create_checked_joint_andon_guarded(
+        directory: impl AsRef<Path>, profile: FileOversightProfile, guards: &FileGuardSet,
+        registration: Option<FileCredentialRegistration<'_>>, protocol: EvaluationProtocol,
+        joint: JointPromotionPolicy, config: &FileAndonConfig, publication: PublicationLimits,
+    ) -> Result<(Self, FileEvaluatedOversightRoles), JournalError> {
+        let prepared = PreparedGuardedBootstrap::prepare_publication(
+            profile, guards, registration, publication)?.jointly_evaluated(protocol, joint)?
+            .with_andon(config)?;
+        publish(prepared, directory.as_ref())
+    }
+
     pub fn create_checked_joint_andon_guarded_reserved(
         directory: impl AsRef<Path>, profile: FileOversightProfile, guards: &FileGuardSet,
         registration: Option<FileCredentialRegistration<'_>>, protocol: EvaluationProtocol,

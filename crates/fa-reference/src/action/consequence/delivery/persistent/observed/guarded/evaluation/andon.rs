@@ -16,6 +16,7 @@ use crate::action::consequence::oversight::credibility::native_andon::NativeEval
 use crate::action::consequence::oversight::joint_credibility::JointPromotionPolicy;
 use crate::round::review::andon::{AndonBudget, AndonLedger};
 use crate::action::consequence::delivery::publication_gate::PublicationLimits;
+use crate::action::consequence::delivery::persistent::RecoveryReserve;
 use crate::Error;
 use std::path::Path;
 
@@ -146,10 +147,26 @@ impl FileOversight {
         Ok((host, roles))
     }
 
+    /// Create a checked native accounting owner without silently installing a
+    /// recovery reserve. All gates are prepared before the sole first write.
+    /// The reserved constructor remains the separate live-publication choice.
+    pub fn create_checked_andon_guarded(directory: impl AsRef<Path>, profile: FileOversightProfile,
+        guards: &FileGuardSet, registration: Option<FileCredentialRegistration<'_>>,
+        protocol: EvaluationProtocol, config: &FileAndonConfig, publication: PublicationLimits)
+        -> Result<(Self, FileEvaluatedOversightRoles), JournalError>
+    {
+        let prepared = PreparedGuardedBootstrap::prepare_publication(
+            profile, guards, registration, publication)?.evaluated(protocol)?.with_andon(config)?;
+        let store = storage::Store::create(directory.as_ref())?;
+        let (host, oversight) = prepared.publish(store)?;
+        let roles = FileEvaluatedOversightRoles::provision(&host, oversight);
+        Ok((host, roles))
+    }
+
     pub fn create_checked_andon_guarded_reserved(directory: impl AsRef<Path>, profile: FileOversightProfile,
         guards: &FileGuardSet, registration: Option<FileCredentialRegistration<'_>>,
         protocol: EvaluationProtocol, config: &FileAndonConfig,
-        publication: PublicationLimits, reserve: super::super::super::RecoveryReserve)
+        publication: PublicationLimits, reserve: RecoveryReserve)
         -> Result<(Self, FileEvaluatedOversightRoles), JournalError>
     {
         let prepared = PreparedGuardedBootstrap::prepare_publication_reserved(

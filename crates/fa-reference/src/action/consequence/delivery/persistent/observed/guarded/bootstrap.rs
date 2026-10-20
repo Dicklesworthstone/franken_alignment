@@ -48,6 +48,15 @@ impl PreparedGuardedBootstrap {
         Self::prepare_with_reserve(profile, guards, registration, Some(reserve), None)
     }
 
+    /// The same checked first image without an implicit recovery reserve.
+    pub(super) fn prepare_publication(profile: FileOversightProfile, guards: &FileGuardSet,
+        registration: Option<FileCredentialRegistration<'_>>,
+        publication: crate::action::consequence::delivery::publication_gate::PublicationLimits)
+        -> Result<Self, JournalError>
+    {
+        Self::prepare_with_reserve(profile, guards, registration, None, Some(publication))
+    }
+
     pub(super) fn prepare_publication_reserved(profile: FileOversightProfile, guards: &FileGuardSet,
         registration: Option<FileCredentialRegistration<'_>>,
         reserve: super::super::super::RecoveryReserve,
