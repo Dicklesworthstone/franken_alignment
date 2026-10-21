@@ -2,6 +2,7 @@
 //! Retained-visit resolution is still passive and never invokes the clock.
 use super::*;
 mod phases;
+mod selected;
 use phases::RegisteredPhase;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -79,13 +80,24 @@ impl FileShutdownCoordinator {
 
     fn run_registered_pass_with_clocks<C, P>(&mut self, revision: u64,
         bindings: &[FileShutdownClockBinding], max_events: usize, (resume, phase): (bool, RegisteredPhase),
+        clock: Option<C>, checkpoint: P) -> Result<FileShutdownClockedRecoveryPass, JournalError>
+    where C: FnMut(FileShutdownClockBinding) -> Result<ElapsedTick, JournalError>,
+        P: FnMut(FileShutdownRecoveryCheckpoint) -> bool,
+    {
+        let selection = if resume { VisitSelection::Resume } else { VisitSelection::All };
+        self.run_selected_pass(revision, bindings, max_events, (selection, phase), clock, checkpoint)
+    }
+
+    fn run_selected_pass<C, P>(&mut self, revision: u64,
+        bindings: &[FileShutdownClockBinding], max_events: usize,
+        (selection, phase): (VisitSelection<'_>, RegisteredPhase),
         mut clock: Option<C>, mut checkpoint: P) -> Result<FileShutdownClockedRecoveryPass, JournalError>
     where C: FnMut(FileShutdownClockBinding) -> Result<ElapsedTick, JournalError>,
         P: FnMut(FileShutdownRecoveryCheckpoint) -> bool,
     {
         if max_events == 0 { return Err(Error::InvalidInput.into()); }
         if max_events > MAX_JOURNAL_EVENTS { return Err(Error::Limit.into()); }
-        let (ordered, resolutions) = self.prepare_registered_members(revision, bindings, resume,
+        let (ordered, resolutions) = self.prepare_registered_selection(revision, bindings, selection,
             |binding| (binding.domain, binding.clock_domain))?;
         let mut members = Vec::new();
         members.try_reserve_exact(ordered.len()).map_err(|_| Error::Limit)?;

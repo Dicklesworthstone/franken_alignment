@@ -3,6 +3,9 @@
 use super::*;
 mod checkpoint;
 mod clocked;
+
+#[derive(Clone, Copy)]
+enum VisitSelection<'a> { All, Resume, Explicit(&'a [u64]) }
 pub use clocked::{FileShutdownClockedPassMember, FileShutdownClockedRecoveryPass};
 pub use checkpoint::FileShutdownRecoveryCheckpoint;
 
@@ -177,6 +180,14 @@ impl FileShutdownCoordinator {
         identity: fn(&C) -> (u64, u64))
         -> Result<(Vec<C>, Vec<Option<usize>>), JournalError>
     {
+        let selection = if resume { VisitSelection::Resume } else { VisitSelection::All };
+        self.prepare_registered_selection(revision, clocks, selection, identity)
+    }
+
+    fn prepare_registered_selection<C: Copy>(&self, revision: u64, clocks: &[C],
+        selection: VisitSelection<'_>, identity: fn(&C) -> (u64, u64))
+        -> Result<(Vec<C>, Vec<Option<usize>>), JournalError>
+    {
         if self.unavailable { return Err(JournalError::Unavailable); }
         if revision != self.revision { return Err(Error::Stale.into()); }
         if clocks.len() > MAX_SHUTDOWN_DOMAINS { return Err(Error::Limit.into()); }
@@ -194,6 +205,23 @@ impl FileShutdownCoordinator {
                 return Err(Error::Binding.into());
             }
         }
+        // Selection changes work, never membership. An unselected domain MUST
+        // have an eligible latest visit; it cannot silently become a new command.
+        let selected = if let VisitSelection::Explicit(domains) = selection {
+            if domains.is_empty() { return Err(Error::InvalidInput.into()); }
+            if domains.len() > count { return Err(Error::Limit.into()); }
+            let mut ids = Vec::new();
+            ids.try_reserve_exact(domains.len()).map_err(|_| Error::Limit)?;
+            ids.extend_from_slice(domains);
+            ids.sort_unstable();
+            if ids.windows(2).any(|pair| pair[0] == pair[1]) { return Err(Error::Duplicate.into()); }
+            for id in &ids {
+                if self.campaign.plan.domains.binary_search_by_key(id, |domain| domain.id()).is_err() {
+                    return Err(Error::Missing.into());
+                }
+            }
+            Some(ids)
+        } else { None };
         let mut resolutions = Vec::new();
         resolutions.try_reserve_exact(count).map_err(|_| Error::Limit)?;
         let mut new_visits = 0_usize;
@@ -203,12 +231,19 @@ impl FileShutdownCoordinator {
             // success. A later refusal/inspection must not disappear on resume.
             let latest = self.visits.iter().enumerate().rev()
                 .find(|(_, visit)| visit.domain == identity(clock).0);
-            let resolution = latest.filter(|(_, visit)| resume
+            let passive = match &selected {
+                Some(ids) => ids.binary_search(&identity(clock).0).is_err(),
+                None => matches!(selection, VisitSelection::Resume),
+            };
+            let resolution = latest.filter(|(_, visit)| passive
                 && matches!(visit.kind, ShutdownVisitKind::Advance { .. }
                     | ShutdownVisitKind::RecoverStopped { .. } | ShutdownVisitKind::RecoverStoppedAtCompletion
                     | ShutdownVisitKind::StopAdmission | ShutdownVisitKind::DrainStoppedAtCompletion)
                 && matches!(visit.result, ShutdownVisitResult::Entered
                     | ShutdownVisitResult::Observed { .. }));
+            if selected.is_some() && passive && resolution.is_none() {
+                return Err(Error::WrongState.into());
+            }
             let cost = match resolution {
                 Some((_, visit)) => u64::from(matches!(visit.result, ShutdownVisitResult::Entered)),
                 None => { new_visits = new_visits.checked_add(1).ok_or(Error::Limit)?; 2 }
