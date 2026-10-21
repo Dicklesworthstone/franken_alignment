@@ -5,7 +5,7 @@ use crate::Error;
 use crate::action::ElapsedTick;
 use crate::action::consequence::delivery::{StopRequest,
     persistent::observed::{guarded::anchored::FileHistoryAnchor,
-        shutdown::recovery::{FileStoppedHistory, FileStoppedRecovery}}};
+        shutdown::recovery::{FileAdmissionStoppedHistory, FileStopRecovery, FileStoppedHistory, FileStoppedRecovery}}};
 
 impl FileLearnedRecovery {
     /// Select the original control predecessor only after complete learned
@@ -22,6 +22,46 @@ impl FileLearnedRecovery {
         }
         Ok(StopRequest { operation, expected_control_sequence: snapshot.control.sequence,
             expected_authority_epoch: snapshot.control.ledger.epoch })
+    }
+
+    /// Withdraw admission without acquiring time or completing a pending
+    /// numerical step. Reuse the original Stop/Fence consumer on this fully
+    /// verified learned machine and its SAME exclusive canonical cut. No owner,
+    /// predictor, reviewer or numerical continuation is returned. Unresolved and
+    /// executed effects keep their original charges; this is not a drain receipt.
+    pub fn finish_admission_stop(self, request: StopRequest)
+        -> Result<FileAdmissionStoppedHistory, JournalError>
+    {
+        self.into_terminal()?.finish_admission_stop(request)
+    }
+
+    /// Settle only an already matching stop through one original StopProgress
+    /// event. A failed clock leaves the acknowledged admission stop unchanged.
+    /// Exact drained retries require no clock, event or write, even at capacity.
+    /// The original terminal consumer checks intent and canonical bytes before
+    /// time acquisition and again before replacement; no numerical work repeats.
+    pub fn finish_stopped_drain<F>(self, request: StopRequest, clock: F)
+        -> Result<FileStoppedHistory, JournalError>
+    where F: FnOnce() -> Result<ElapsedTick, JournalError> {
+        self.into_terminal()?.finish_stopped_drain(request, clock)
+    }
+
+    /// Fallible-clock combined recovery. Clock refusal returns no candidate
+    /// receipt or anchor and precedes cleanup and the original combined write.
+    /// This permits a caller to reject a late acquisition without inventing time.
+    pub fn try_finish_stopped_with_anchor<F>(self, request: StopRequest, clock: F)
+        -> Result<FileStoppedHistory, JournalError>
+    where F: FnOnce() -> Result<ElapsedTick, JournalError> {
+        self.into_terminal()?.try_finish_stopped_with_anchor(request, clock)
+    }
+
+    // Private handoff after complete ORIGINAL learned replay. A specialised
+    // wrapper must run its full independent checks before delegating here.
+    // Never expose the ordinary cursor or reconstruct an unchecked live owner.
+    fn into_terminal(self) -> Result<FileStopRecovery, JournalError> {
+        self.verified_guarded_machine()?;
+        let Self { profile, store, canonical, events, machine, .. } = self;
+        Ok(FileStopRecovery::from_verified_terminal(profile, store, canonical, events, machine))
     }
 
     /// Consume completely verified learned history directly into the ORIGINAL
