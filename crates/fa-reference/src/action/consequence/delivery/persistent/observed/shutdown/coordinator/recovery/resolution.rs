@@ -1,6 +1,7 @@
 //! Resolve existing shutdown bookkeeping from native evidence, never by retrying
 //! a domain command or spending a second durable visit allowance.
 use super::*;
+mod capacity;
 use super::super::super::canonical::replay::CanonicalRead;
 use crate::action::consequence::delivery::persistent::observed::shutdown::recovery::FileStopRecoveryProgress;
 
@@ -68,7 +69,16 @@ impl FileShutdownCoordinator {
         // Before native read/replay: an unwind cannot reuse older success.
         self.unavailable = true;
         self.check_canonical_image()?;
-        match self.campaign.begin_canonical_read(index) {
+        let read = (|| {
+            // Only pending results need a new persisted acknowledgment. Admit
+            // fixed overhead and install the retained-head ceiling before the
+            // original canonical acquisition. Exact refreshes write nothing.
+            if recorded.is_none() {
+                self.campaign.completion_head_limit = Some(self.resolution_head_limit(visit, index)?);
+            }
+            self.campaign.begin_canonical_read(index)
+        })();
+        match read {
             Ok(read) => Ok(FileShutdownVisitResolution { coordinator: self, visit, index, attempt, recorded, read }),
             Err(error) => Err(self.refuse_resolution(index, attempt, error)),
         }
