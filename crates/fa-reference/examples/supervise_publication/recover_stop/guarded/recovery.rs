@@ -6,7 +6,7 @@ use fa_reference::action::consequence::delivery::{StopRequest, persistent::obser
     guarded::{anchored::FileHistoryAnchor,
         mediated::{FileMediatedRecovery, FileMediatedRequirements, FileTopologyRequirement},
         recovery::{FileGuardedRecovery, FileGuardedRecoveryProgress}},
-    shutdown::recovery::FileStoppedHistory}};
+    shutdown::recovery::{FileAdmissionStoppedHistory, FileStoppedHistory}}};
 
 // These variants are private to the executable. Neither can be converted into
 // the other; all mode-specific validation remains in its original library type.
@@ -52,6 +52,22 @@ impl Recovery {
     pub(super) fn stop_request(&self, operation: u64) -> Result<StopRequest, JournalError> {
         match self { Self::Base(run) => run.stop_request(operation),
             Self::Mediated(run) => run.stop_request(operation) }
+    }
+
+    // Forward only to the selected sealed cursor; it rechecks its complete
+    // independent requirements before invoking the original terminal consumer.
+    pub(super) fn finish_admission_stop(self, request: StopRequest)
+        -> Result<FileAdmissionStoppedHistory, JournalError>
+    {
+        match self { Self::Base(run) => run.finish_admission_stop(request),
+            Self::Mediated(run) => run.finish_admission_stop(request) }
+    }
+
+    pub(super) fn finish_stopped_drain<F>(self, request: StopRequest, clock: F)
+        -> Result<FileStoppedHistory, JournalError>
+    where F: FnOnce() -> Result<ElapsedTick, JournalError> {
+        match self { Self::Base(run) => run.finish_stopped_drain(request, clock),
+            Self::Mediated(run) => run.finish_stopped_drain(request, clock) }
     }
 
     pub(super) fn finish_stopped_with_anchor<F>(self, request: StopRequest, clock: F)

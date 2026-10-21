@@ -3,6 +3,7 @@
 //! and source identity. No current evidence, helper or reviewer is opened.
 mod profile;
 mod recovery;
+pub(super) mod phases;
 pub(crate) use profile::{CreationOutput, Custody, Profile, ResumeProfile, SubmitProfile};
 use super::{Config, debug, report};
 use fa_reference::action::ElapsedTick;
@@ -29,21 +30,7 @@ where F: FnOnce() -> ElapsedTick {
         if elapsed() >= wall { Err("guarded stop recovery replay deadline reached".to_owned()) }
         else { Ok(()) }
     };
-    checkpoint()?;
-    let custody = profile.admit(config)?;
-    checkpoint()?;
-    let topology = profile.admit_topology(config, &mut checkpoint)?;
-    // Both versions retain the exact source-publication guard inventory. Only
-    // v2 adds independently supplied initial/current topology and availability;
-    // no optional prediction, evaluation or numerical profile is inferred.
-    let expected = FileRecoveryRequirements {
-        guards: FileGuardSet { stream: None, decoder: None, decoder_stop: None,
-            source: Some(config.source_policy), identity: None, campaigns: None, credential: None },
-        effective_policy: config.profile.delivery.policy.clone(), credential_epoch: None,
-        minimum: profile.minimum(),
-    };
-    let mut recovery = recovery::Recovery::begin(config, expected, topology, custody.anchor())
-        .map_err(unconfirmed)?;
+    let (mut recovery, custody) = prepare_recovery(config, profile, &mut checkpoint)?;
     loop {
         // Ready has its own final checkpoint. A timeout after the last original
         // event must still drop custody without any stop, fence or staging cleanup.
@@ -65,6 +52,30 @@ where F: FnOnce() -> ElapsedTick {
         (Err(error), Ok(())) | (Ok(()), Err(error)) => Err(error),
         (Err(report), Err(retention)) => Err(format!("{report}; {retention}")),
     }
+}
+
+// Both combined recovery and the independently selected phases retain this
+// exact custody, guard inventory, policy, topology and reserve admission.
+fn prepare_recovery(config: &Config, profile: &Profile,
+    checkpoint: &mut impl FnMut() -> Result<(), String>)
+    -> Result<(recovery::Recovery, Custody), String>
+{
+    checkpoint()?;
+    let custody = profile.admit(config)?;
+    checkpoint()?;
+    let topology = profile.admit_topology(config, checkpoint)?;
+    // Both versions retain the exact source-publication guard inventory. Only
+    // v2 adds independently supplied initial/current topology and availability;
+    // no optional prediction, evaluation or numerical profile is inferred.
+    let expected = FileRecoveryRequirements {
+        guards: FileGuardSet { stream: None, decoder: None, decoder_stop: None,
+            source: Some(config.source_policy), identity: None, campaigns: None, credential: None },
+        effective_policy: config.profile.delivery.policy.clone(), credential_epoch: None,
+        minimum: profile.minimum(),
+    };
+    let recovery = recovery::Recovery::begin(config, expected, topology, custody.anchor())
+        .map_err(unconfirmed)?;
+    Ok((recovery, custody))
 }
 
 fn unconfirmed(error: JournalError) -> String {

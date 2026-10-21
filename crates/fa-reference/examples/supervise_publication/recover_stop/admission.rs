@@ -9,17 +9,24 @@ use fa_reference::action::consequence::delivery::persistent::observed::shutdown:
 use fa_reference::Error;
 use std::{io::Write, path::Path, time::{Duration, Instant, SystemTime, UNIX_EPOCH}};
 
-const USAGE: &str = "usage: supervise_publication stop-admission|drain-stopped CONFIG OPERATION [--retain-history-anchor NEW_FILE]";
+const USAGE: &str = "usage: supervise_publication stop-admission|drain-stopped CONFIG OPERATION [--retain-history-anchor NEW_FILE | --guarded RECOVERY_PROFILE]";
 const DEADLINE: &str = "terminal replay/acquisition deadline reached; no additional native completion was acknowledged";
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-enum Phase { Admission, Drain }
+pub(super) enum Phase { Admission, Drain }
 
 pub(crate) fn command(args: &[String], out: &mut impl Write) -> Result<(), String> {
     let started = Instant::now();
-    command_with(args, || {
+    let clock = || {
         let elapsed = SystemTime::now().duration_since(UNIX_EPOCH).map_err(|_| Error::Incomplete)?;
         Ok(ElapsedTick(u64::try_from(elapsed.as_millis()).map_err(|_| Error::Overflow)?))
-    }, &mut || started.elapsed(), out)
+    };
+    // Select the guarded route before ordinary option parsing. A guarded error
+    // is returned as-is, never retried with the ordinary reconstruction.
+    if args.iter().skip(3).any(|arg| arg == "--guarded") {
+        super::guarded::phases::command_with(args, clock, &mut || started.elapsed(), out)
+    } else {
+        command_with(args, clock, &mut || started.elapsed(), out)
+    }
 }
 
 fn command_with<F>(args: &[String], clock: F,
@@ -99,7 +106,7 @@ where F: FnOnce() -> Result<ElapsedTick, JournalError> {
     }
 }
 
-fn combine_report(reported: Result<(), String>, retained: Result<(), String>) -> Result<(), String> {
+pub(super) fn combine_report(reported: Result<(), String>, retained: Result<(), String>) -> Result<(), String> {
     match (reported, retained) {
         (Ok(()), Ok(())) => Ok(()),
         (Err(error), Ok(())) | (Ok(()), Err(error)) => Err(error),
@@ -111,7 +118,7 @@ fn unconfirmed(error: JournalError) -> String {
     format!("native terminal completion is unconfirmed: {}; no effect was resent", debug(error))
 }
 
-fn admission_report(stopped: &FileAdmissionStoppedHistory, out: &mut impl Write) -> Result<(), String> {
+pub(super) fn admission_report(stopped: &FileAdmissionStoppedHistory, out: &mut impl Write) -> Result<(), String> {
     let state = stopped.snapshot(); let progress = stopped.progress();
     let document = format!(concat!(
         "{{\"schema_version\":\"fa.admission-stop/1\",\"status\":\"admission_stopped\",",
