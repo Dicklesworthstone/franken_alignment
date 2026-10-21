@@ -12,6 +12,8 @@ pub use recovery::fleet::{FileShutdownClock, FileShutdownPassMember,
     FileShutdownClockedPassMember, FileShutdownClockedRecoveryPass};
 #[cfg(test)]
 mod tests;
+#[cfg(test)]
+mod custody_tests;
 
 use super::*;
 use super::super::super::{storage, MAX_JOURNAL_BYTES};
@@ -85,6 +87,9 @@ pub struct FileShutdownCoordinator {
     visits: Vec<ShutdownVisit>,
     unavailable: bool,
     acknowledged: FileShutdownCoordinatorReport,
+    // Exact bytes installed by the last acknowledged write or verified open.
+    // None exists only while initial creation has not yet acknowledged storage.
+    acknowledged_image: Option<Vec<u8>>,
 }
 impl fmt::Debug for FileShutdownCoordinator {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -110,6 +115,7 @@ impl FileShutdownCoordinator {
         let mut owner = Self::assemble(store, campaign, plan_bytes, max_bytes, 0, Vec::new());
         let bytes = owner.encoded(0)?;
         owner.store.replace(&bytes)?;
+        owner.acknowledged_image = Some(bytes);
         owner.unavailable = false;
         Ok(owner)
     }
@@ -135,10 +141,13 @@ impl FileShutdownCoordinator {
         if let Some(anchor) = anchor {
             anchor.check(store.identity(), plan, &plan_bytes, max_bytes, &restored, &bytes)?;
         }
-        // Validation precedes cleanup. Never promote a staged coordinator image.
+        // Validation precedes cleanup. A changed canonical image cannot be
+        // confirmed using validation of the earlier captured bytes.
+        if store.read(max_bytes)? != bytes { return Err(Error::Binding.into()); }
         store.confirm_and_cleanup()?;
         let mut owner = Self::assemble(store, restored.campaign, plan_bytes, max_bytes,
             restored.revision, restored.visits);
+        owner.acknowledged_image = Some(bytes);
         owner.unavailable = false;
         Ok(owner)
     }
@@ -149,7 +158,7 @@ impl FileShutdownCoordinator {
         let acknowledged = FileShutdownCoordinatorReport { revision, visits: visits.clone(),
             current_session: campaign.report(), unavailable: false };
         Self { store, campaign, plan_bytes, max_bytes, revision, visits,
-            unavailable: true, acknowledged }
+            unavailable: true, acknowledged, acknowledged_image: None }
     }
     fn check_limit(limit: usize) -> Result<(), Error> {
         if limit == 0 || limit > MAX_JOURNAL_BYTES { Err(Error::Limit) } else { Ok(()) }
@@ -245,6 +254,18 @@ impl FileShutdownCoordinator {
         codec::encode(self.store.identity(), &self.plan_bytes, self.max_bytes,
             revision, &self.visits, &self.campaign)
     }
+    // Callers latch unavailable BEFORE this fallible read. A conflict or read
+    // error cannot be cleared by restoring bytes and reusing the same owner.
+    // This is an exact comparison, not a substitute for filesystem isolation or
+    // an atomic compare-and-swap against non-cooperating concurrent writers.
+    fn check_canonical_image(&self) -> Result<(), JournalError> {
+        let expected = self.acknowledged_image.as_deref().ok_or(Error::Incomplete)?;
+        if self.store.read(self.max_bytes)?.as_slice() != expected {
+            return Err(Error::Binding.into());
+        }
+        Ok(())
+    }
+
     fn commit(&mut self) -> Result<(), JournalError> {
         self.unavailable = true;
         let revision = self.revision.checked_add(1).ok_or(Error::Overflow)?;
@@ -252,7 +273,11 @@ impl FileShutdownCoordinator {
         // Preallocate returned reports before publishing their acknowledgment.
         let next = FileShutdownCoordinatorReport { revision, visits: self.visits.clone(),
             current_session: self.campaign.report(), unavailable: false };
+        // Intent is checked before domain work; completion is checked again
+        // afterward. Never replace a changed image with stale in-memory history.
+        self.check_canonical_image()?;
         self.store.replace(&bytes)?;
+        self.acknowledged_image = Some(bytes);
         self.revision = revision;
         self.acknowledged = next;
         Ok(())

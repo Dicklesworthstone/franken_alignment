@@ -67,6 +67,7 @@ impl FileShutdownCoordinator {
         let (index, attempt) = self.campaign.enter(domain, FileShutdownStep::InspectCanonical)?;
         // Before native read/replay: an unwind cannot reuse older success.
         self.unavailable = true;
+        self.check_canonical_image()?;
         match self.campaign.begin_canonical_read(index) {
             Ok(read) => Ok(FileShutdownVisitResolution { coordinator: self, visit, index, attempt, recorded, read }),
             Err(error) => Err(self.refuse_resolution(index, attempt, error)),
@@ -74,6 +75,9 @@ impl FileShutdownCoordinator {
     }
 
     fn refuse_resolution(&mut self, index: usize, attempt: usize, error: JournalError) -> JournalError {
+        // A domain read refusal or cancellation cannot clear lost coordinator
+        // custody. Leave the owner quarantined and preserve both files.
+        if let Err(conflict) = self.check_canonical_image() { return conflict; }
         let _ = self.campaign.complete(index, attempt, Err(error.clone()));
         self.acknowledged.current_session = self.campaign.report();
         self.unavailable = false;
@@ -84,6 +88,9 @@ impl FileShutdownCoordinator {
         recorded: Option<u64>, result: Result<(FileShutdownObservation, Rc<[u8]>, usize), JournalError>)
         -> Result<FileShutdownObservation, JournalError>
     {
+        // Exact observed-cut refreshes write nothing, so they must validate
+        // coordinator custody here rather than relying only on commit().
+        self.check_canonical_image()?;
         let result = result.and_then(|observed| {
             let stop = observed.0.stop.as_ref().ok_or(Error::Incomplete)?;
             if stop.receipt.request().operation != self.campaign.plan.operation {
@@ -176,8 +183,8 @@ impl FileShutdownVisitResolution<'_> {
             FileStopRecoveryStatus::Failed(error) => error.into(),
             _ => JournalError::Unavailable,
         };
-        self.coordinator.refuse_resolution(self.index, self.attempt, error);
-        Ok(())
+        let error = self.coordinator.refuse_resolution(self.index, self.attempt, error);
+        if self.coordinator.unavailable { Err(error) } else { Ok(()) }
     }
 }
 
