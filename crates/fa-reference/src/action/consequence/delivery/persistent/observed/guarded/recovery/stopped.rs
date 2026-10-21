@@ -80,6 +80,22 @@ impl FileGuardedRecovery {
             |run| run.expected.check(&run.profile, &run.machine, &run.events))
     }
 
+    /// Fallible time acquisition after complete independently guarded replay.
+    /// A refusal yields no terminal write, cleanup, receipt or live role. The
+    /// same sealed requirements and original terminal finalizer still apply.
+    pub fn try_finish_stopped_with_anchor<F>(self, request: StopRequest, clock: F)
+        -> Result<FileStoppedHistory, JournalError>
+    where F: FnOnce() -> Result<ElapsedTick, JournalError> {
+        self.try_finish_stopped_checked_with_anchor(request, clock,
+            |run| run.expected.check(&run.profile, &run.machine, &run.events))
+    }
+
+    pub(super) fn try_finish_stopped_checked_with_anchor<F>(self, request: StopRequest, clock: F,
+        check: impl FnOnce(&Self) -> Result<(), Error>) -> Result<FileStoppedHistory, JournalError>
+    where F: FnOnce() -> Result<ElapsedTick, JournalError> {
+        self.into_terminal_checked(check)?.try_finish_stopped_with_anchor(request, clock)
+    }
+
     /// Stop admission without sampling time, while retaining this cursor's
     /// complete independent guard/policy/credential/floor and anchor checks.
     /// A new stop uses only the original Stop/Fence events; an existing matching

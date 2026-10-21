@@ -32,7 +32,17 @@ where F: FnOnce() -> ElapsedTick {
         match progress.status {
             FileStopRecoveryStatus::Ready => {
                 let request = recovery.stop_request(operation).map_err(unconfirmed)?;
-                break recovery.finish_stopped(request, clock).map_err(unconfirmed)?;
+                let mut timed_out = false;
+                let result = recovery.try_finish_stopped_with_anchor(request, || {
+                    if elapsed() >= wall { timed_out = true; return Err(JournalError::Unavailable); }
+                    let tick = clock();
+                    if elapsed() >= wall { timed_out = true; return Err(JournalError::Unavailable); }
+                    Ok(tick)
+                });
+                if timed_out {
+                    return Err("stop recovery acquisition deadline reached; no native completion was acknowledged; no effect was resent".into());
+                }
+                break result.map_err(unconfirmed)?.into_parts().0;
             }
             FileStopRecoveryStatus::Replaying => {
                 recovery.advance(progress.replayed_events, 1).map_err(unconfirmed)?;

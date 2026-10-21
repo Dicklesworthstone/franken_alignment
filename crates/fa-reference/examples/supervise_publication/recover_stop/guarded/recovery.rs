@@ -72,8 +72,8 @@ impl Recovery {
 
     pub(super) fn finish_stopped_with_anchor<F>(self, request: StopRequest, clock: F)
         -> Result<FileStoppedHistory, JournalError>
-    where F: FnOnce() -> ElapsedTick {
-        match self { Self::Base(run) => run.finish_stopped_with_anchor(request, clock),
-            Self::Mediated(run) => run.finish_stopped_with_anchor(request, clock) }
+    where F: FnOnce() -> Result<ElapsedTick, JournalError> {
+        match self { Self::Base(run) => run.try_finish_stopped_with_anchor(request, clock),
+            Self::Mediated(run) => run.try_finish_stopped_with_anchor(request, clock) }
     }
 }

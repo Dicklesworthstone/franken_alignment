@@ -40,7 +40,20 @@ where F: FnOnce() -> ElapsedTick {
         recovery.advance(current.replayed_events, 1).map_err(unconfirmed)?;
     }
     let request = recovery.stop_request(operation).map_err(unconfirmed)?;
-    let history = recovery.finish_stopped_with_anchor(request, clock).map_err(unconfirmed)?;
+    // Replay completion is not permission to use a clock result obtained after
+    // the original deadline. Both checks stay inside native time acquisition,
+    // so a completed receipt still skips the clock and these extra checkpoints.
+    let mut timed_out = false;
+    let history = recovery.finish_stopped_with_anchor(request, || {
+        if checkpoint().is_err() { timed_out = true; return Err(JournalError::Unavailable); }
+        let tick = clock();
+        if checkpoint().is_err() { timed_out = true; return Err(JournalError::Unavailable); }
+        Ok(tick)
+    });
+    if timed_out {
+        return Err("guarded stop recovery acquisition deadline reached; no native completion was acknowledged; no effect was resent".into());
+    }
+    let history = history.map_err(unconfirmed)?;
     // Native acknowledgment comes first. Export only this exact captured cut,
     // never a reopened owner or a possibly newer canonical image.
     let retained = custody.retain(history.history_anchor()).map_err(|error| format!(

@@ -39,6 +39,18 @@ impl FileMediatedRecovery {
             |run| check_machine(&run.profile, &run.machine, &run.events, &expected))
     }
 
+    /// Fallible clock acquisition retains ALL independent mediated checks.
+    /// Failure or deadline refusal cannot select a weaker reconstruction, write
+    /// a partial stop, or return an unacknowledged anchor. Exact drained retries
+    /// continue to skip time acquisition, including at the journal ceiling.
+    pub fn try_finish_stopped_with_anchor<F>(self, request: StopRequest, clock: F)
+        -> Result<FileStoppedHistory, JournalError>
+    where F: FnOnce() -> Result<ElapsedTick, JournalError> {
+        let expected = self.expected;
+        self.inner.try_finish_stopped_checked_with_anchor(request, clock,
+            |run| check_machine(&run.profile, &run.machine, &run.events, &expected))
+    }
+
     /// Finish through the ORIGINAL Stop -> Fence -> StopProgress transaction.
     /// No ordinary recovery fence or second replay occurs first. Only a stopped
     /// observation escapes; no live owner, helper, reviewer or observer role does.
