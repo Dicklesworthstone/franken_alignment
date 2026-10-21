@@ -51,6 +51,27 @@ pub(super) fn encode_phased(mode: &str, phase: super::phases::Phase, timed_out: 
     out.push_str("]}\n"); out
 }
 
+pub(super) fn encode_selected(mode: &str, phase: Option<super::phases::Phase>,
+    selected: &[u64], timed_out: bool, pass: &FileShutdownClockedRecoveryPass) -> String {
+    let mut out = String::new();
+    write!(out, concat!("{{\"schema_version\":\"fa.shutdown-fleet-result/4\",\"mode\":\"{}\",",
+        "\"phase\":\"{}\",\"settlement_requested\":{},\"operation\":\"{}\",",
+        "\"initial_revision\":\"{}\",\"final_revision\":\"{}\",\"deadline_reached\":{},",
+        "\"all_observed_stopped\":{},\"all_observed_drained\":{},\"selected_domains\":["),
+        mode, phase.map_or("combined", super::phases::Phase::label),
+        phase != Some(super::phases::Phase::Admission), pass.operation(),
+        pass.initial_revision(), pass.final_revision(), timed_out,
+        pass.all_observed_stopped(), pass.all_observed_drained()).expect("String write");
+    // Requested new work is not proof it ran. All original outcomes follow.
+    ids(&mut out, selected); out.push_str("],\"members\":[");
+    for (index, member) in pass.members().iter().enumerate() {
+        if index != 0 { out.push(','); }
+        record(&mut out, member.binding.domain, member.binding.clock_domain, &member.result,
+            Some(member.acquired_tick), true);
+    }
+    out.push_str("]}\n"); out
+}
+
 fn record(out: &mut String, domain: u64, clock_domain: u64, result: &FileShutdownPassResult,
     acquisition: Option<Option<fa_reference::action::ElapsedTick>>, include_fence: bool) {
     let label = match result {

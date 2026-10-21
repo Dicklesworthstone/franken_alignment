@@ -51,3 +51,43 @@ required. No production qualification or full FA-014 closure is claimed. Trusted
 filesystem isolation, clock provenance, independent custody and actual roster
 completeness remain external assumptions. Storage and single-event replay remain
 synchronous, not hard-real-time or a simultaneous fleet-stop guarantee.
+
+## Runnable selection
+
+`shutdown_fleet recover PROFILE --recover-domain ID` selects this path. Repeat
+the option for multiple members. Combine it with `--admission-only` or
+`--drain-only` to select those original operations; otherwise it uses combined
+recovery with per-domain terminal clocks, also explicitly selectable with
+`--terminal-clocks`. The full original profile is still mandatory. For example:
+
+```sh
+cargo run --locked -p fa-reference --example shutdown_fleet -- recover /operator/fleet.json --drain-only --recover-domain 2
+```
+
+Selection is rejected with `create` or `resume`. Unknown/duplicate/missing IDs,
+conflicting phases, unknown flags and selection flags placed in custody-value
+slots refuse. IDs are checked against the prepared original plan before opening
+the coordinator; complete latest-visit and remaining-capacity checks then run
+through the native planner before any member command. No rejected selection
+falls back to ordinary all-member recovery or an automatically enlarged budget.
+
+Both existing roster formats and independent coordinator-anchor options use the
+unchanged preparation and custody path. The existing cumulative elapsed budget
+covers configuration, full-roster reads, selected terminal work and retention.
+Clock failure, expiration and output/retention failure preserve their original
+acknowledgment boundaries. Operators use ordinary passive resume after lost
+output, not an automatic repeat of the selection.
+
+The explicit route emits `fa.shutdown-fleet-result/4`, naming the requested phase
+and sorted `selected_domains`. This field states requested new work, NOT that
+it ran or succeeded. Every member still carries the original result, liabilities,
+optional acquired tick and fence observation. An unselected missing receipt
+keeps fleet success false even if selected settlement succeeds. Existing commands
+without selection retain schemas one, two and three and their previous behavior.
+
+Seven additional operator regression functions cover actual flag routing,
+selective drain at the visit ceiling, strict options and custody-value slots,
+unknown IDs before staged-file cleanup, missing unselected receipts, failed/slow
+clocks, active-drain and combined controls, and retained independent custody
+across lost stdout. Together with the native increment, fifteen regression
+functions are authored; none is claimed executed in this editing environment.

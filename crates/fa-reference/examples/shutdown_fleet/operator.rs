@@ -3,6 +3,7 @@
 #[path = "render.rs"] mod render;
 #[path = "terminal.rs"] mod terminal;
 #[path = "phases.rs"] mod phases;
+#[path = "selected.rs"] mod selected;
 #[cfg(test)]
 #[path = "tests.rs"] mod tests;
 use profile::{Prepared, Spec, custody::{Options, Custody}};
@@ -12,7 +13,7 @@ use fa_reference::action::consequence::delivery::persistent::observed::shutdown:
 use fa_reference::action::consequence::delivery::persistent::observed::shutdown::FileShutdownPlan;
 use std::{io::Write, path::Path, time::{Duration, Instant, SystemTime, UNIX_EPOCH}};
 
-const USAGE: &str = "usage: shutdown_fleet create|recover|resume FLEET_PROFILE [--terminal-clocks | --admission-only | --drain-only] [--coordinator-anchor FILE] [--retain-coordinator-anchor NEW_FILE]";
+const USAGE: &str = "usage: shutdown_fleet create|recover|resume FLEET_PROFILE [--terminal-clocks | --admission-only | --drain-only] [--coordinator-anchor FILE] [--retain-coordinator-anchor NEW_FILE] [--recover-domain ID ... (recover only)]";
 const DEADLINE: &str = "fleet recovery deadline reached; not all registered domains are confirmed drained";
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 enum Mode { Create, Recover, Resume }
@@ -37,6 +38,9 @@ pub(crate) fn command(args: &[String], out: &mut impl Write) -> Result<(), Strin
         let tick = u64::try_from(duration.as_millis()).map_err(|_| "Unix clock overflow".to_owned())?;
         Ok(ElapsedTick(tick))
     };
+    if selected::requested(args) {
+        return selected::command_with(args, clock, &mut || started.elapsed(), out);
+    }
     if let Some((phase, args)) = phases::take_flag(args)? {
         return terminal::command_for_phase(&args, clock, &mut || started.elapsed(), out, Some(phase));
     }
