@@ -1,5 +1,29 @@
 # Implementation status · design revision 0.3
 
+## 2026-10-21: recovery/fleet compilation repair (partial verification)
+
+The P0 compilation bridge was checked against the current source and the exact
+qualified `nightly-2026-09-08` compiler
+(`cea272fa356e94bd2ee2cadf376630aa0683867a`). The baseline workspace check
+reported 52 errors: two missing test-module paths caused most follow-on errors,
+and a review replay test accessed `FileOversight.actions` instead of its
+original `machine.actions`. These are now repaired without dropping tests.
+The subsequent scoped check compiled the `fa-reference` and `fa-journal`
+library targets, then exposed missing fleet profile archive/custody module
+paths. Those paths and the archive's nested test path are also corrected.
+A subsequent xtask test compile exposed a missing Debug implementation for its
+internal hash failure type; the existing hash positive control now has that
+required diagnostic trait, with no change to hash/refusal behavior.
+
+This is partial compilation evidence, not a passing workspace gate. Shared
+overlay and host temporary storage exhausted during verification; a later
+attempt lost its execution environment with `environment_offline`. The final
+fleet path repair has not been compiled or tested. No runtime, Clippy, complete
+formatting, RCH or production qualification is claimed. The baseline full gate
+also refuses the stale two-package admission inventory, and baseline formatting
+emitted extensive differences. Their historical records are unchanged.
+The P0 bridge and full roadmap packets remain open.
+
 ## 2026-10-19: resident learned publication sequence (unqualified source)
 
 `supervise_publication serve-learned-generated` now admits a fixed sequence of

@@ -1,5 +1,23 @@
 # Changelog
 
+## 2026-10-21: restore recovery and fleet test compilation
+
+- Resolve the original learned terminal-recovery phases and guarded publication
+  fixtures through explicit nested module paths; retain their existing tests.
+- Repair the review/effect replay assertion to inspect the original machine's
+  action map. Resolve fleet plan archive/custody modules and their test module
+  from the actual source locations.
+- Make operator hash failures printable by the existing positive-control test,
+  preserving all hash-tool refusal behavior.
+- Remove unused numerical imports and the unused workspace license field; each
+  package continues to name the unchanged custom license.
+- The exact qualified nightly reproduced 52 baseline errors (mostly follow-on
+  errors from the missing fixture) and disk exhaustion. After the first repairs,
+  the core library targets compiled and the next check exposed the fleet module
+  paths repaired here. The final fleet fixes have not executed: shared storage
+  filled and the executor disconnected. Full tests, formatting, Clippy and
+  production qualification remain open; no bead is closed by this change.
+
 ## 2026-10-19: keep learned publication resident across a reviewed sequence
 
 - Add `serve-learned-generated` for 2..=16 independently selected Messages and

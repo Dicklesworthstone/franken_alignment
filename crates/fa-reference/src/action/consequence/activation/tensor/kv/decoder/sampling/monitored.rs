@@ -8,7 +8,7 @@ use super::{PreparedSample, SampledToken, Sampler, SamplerSnapshot, SamplingBudg
 use super::super::{DecoderBudget, DecoderModel, DecoderStep, DecoderWork, MAX_DECODER_PRODUCTS};
 use super::super::monitoring::{LearnedDecoderAllowance, LearnedDecoderEvent, LearnedDecoderPolicy, LearnedDecoderSession};
 use super::super::super::model::{MAX_MODEL_KV_VALUES, ModelKvImage, learned::{CompressionBudget,
-    CompressionReport, MAX_COMPRESSION_WORK, MAX_LEARNED_IMAGE_BYTES}};
+    CompressionReport}};
 use crate::action::consequence::activation::monitor::{MonitorOutcome, learned::{LearnedMonitorBudget,
     LearnedMonitorWork, MAX_LEARNED_MONITOR_COORDINATES, model::{LearnedAuditPreparationBudget, LearnedModelReport}}};
 use crate::action::consequence::activation::probe::learned::{CheckedKvBudget, MAX_CHECKED_KV_BYTES,

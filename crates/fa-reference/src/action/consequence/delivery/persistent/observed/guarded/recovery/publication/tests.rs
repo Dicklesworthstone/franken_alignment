@@ -12,6 +12,7 @@ use crate::action::consequence::delivery::publication_gate::changes::{
 };
 use crate::witness::refinement::{RefinementBudget, index::routing::RoutingBudget};
 use std::{cell::Cell, fs};
+#[path = "fixture.rs"]
 mod fixture;
 use fixture::*;
 

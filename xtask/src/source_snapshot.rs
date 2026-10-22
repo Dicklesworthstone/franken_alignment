@@ -231,6 +231,7 @@ impl Tool {
 }
 
 /// Why a hash attempt did not yield a digest.
+#[derive(Debug)]
 enum HashError {
     /// The tool was not found. Only this advances to the next
     /// candidate: a tool that is absent has said nothing about the file.

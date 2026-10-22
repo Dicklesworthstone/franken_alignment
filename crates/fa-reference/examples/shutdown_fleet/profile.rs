@@ -9,7 +9,9 @@ use fa_reference::action::consequence::delivery::persistent::observed::{
 use std::{collections::BTreeMap, fs::{self, File}, io::{Cursor, Read},
     os::unix::fs::{MetadataExt, PermissionsExt}, path::{Component, Path, PathBuf}, time::Duration};
 
+#[path = "profile/archive.rs"]
 mod archive;
+#[path = "profile/custody.rs"]
 pub(super) mod custody;
 
 const MANIFEST_BYTES: usize = 256 * 1024;

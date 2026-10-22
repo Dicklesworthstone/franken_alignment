@@ -6,7 +6,6 @@ resolver = "3"
 version = "0.2.0"
 edition = "2024"
 publish = false
-license-file = "LICENSE"
 
 [workspace.lints.rust]
 unsafe_code = "forbid"

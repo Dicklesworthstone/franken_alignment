@@ -19,7 +19,7 @@ fn begin(host: &mut FileOversight, attempt: u64, round: u64, input: &CommitteeIn
     host.commit_review(host.revision(), round, "judge", digest).unwrap();
     host.open_reveals(host.revision(), round).unwrap();
     host.reveal_review(host.revision(), round, "judge", Verdict::Allow, b"salt".to_vec()).unwrap();
-    assert_eq!(input.action(), host.actions.get(&attempt).unwrap());
+    assert_eq!(input.action(), host.machine.actions.get(&attempt).unwrap());
 }
 fn review(host: &mut FileOversight, attempt: u64, round: u64) -> (FrozenAction, CommitteeInput) {
     let action = host.propose(host.revision(), attempt, ActionSpec { version: VERSION,
