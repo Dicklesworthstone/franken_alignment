@@ -125,6 +125,37 @@ fn intent(run: &mut Run, host: &mut FileOversight) {
     panic!("finite intent did not acknowledge");
 }
 
+// Opaque learned views intentionally do not implement whole-value equality.
+// Compare every prediction/observation field and the actual retained source and
+// refinement bits, so equal probabilities cannot conceal different evidence.
+fn assert_same_prediction(left: &LearnedPrediction, right: &LearnedPrediction) {
+    assert_eq!(left.forecast(), right.forecast());
+    assert_eq!(left.domain(), right.domain());
+    assert_eq!(left.generation(), right.generation());
+    assert_eq!(left.policy_generation(), right.policy_generation());
+    assert_eq!(left.work(), right.work());
+    let (left, right) = (left.observation(), right.observation());
+    assert_eq!(left.row(), right.row());
+    assert_eq!(left.frame(), right.frame());
+    assert_eq!(left.probe(), right.probe());
+    assert_eq!(left.interval(), right.interval());
+    assert_eq!(left.outcome(), right.outcome());
+    assert_eq!(left.work(), right.work());
+    let (left, right) = (left.view(), right.view());
+    assert_eq!(left.source().encode().unwrap(), right.source().encode().unwrap());
+    assert_eq!(left.source().report(), right.source().report());
+    assert_eq!(left.revision(), right.revision());
+    assert_eq!(left.materialized_values(), right.materialized_values());
+    let groups = left.refined_groups().collect::<Vec<_>>();
+    assert_eq!(groups, right.refined_groups().collect::<Vec<_>>());
+    for group in groups {
+        for channel in 0..left.source().channels(group).unwrap() {
+            assert_eq!(left.interval(group, channel).unwrap().map(f32::to_bits),
+                right.interval(group, channel).unwrap().map(f32::to_bits));
+        }
+    }
+}
+
 #[test]
 fn raw_and_owned_quanta_preserve_original_samples_journal_bytes_and_lifetime_work() {
     for owned in [false, true] {
@@ -136,7 +167,7 @@ fn raw_and_owned_quanta_preserve_original_samples_journal_bytes_and_lifetime_wor
             let mut run = original.cooperative();
             assert_eq!(disk(&host), before); // Conversion is not a transaction.
             if let Run::Owned(run) = &run {
-                assert_eq!(run.forecast_report().prediction().unwrap(), run.prediction());
+                assert_same_prediction(run.forecast_report().prediction().unwrap(), run.prediction());
             }
             while run.numerical().status.is_active() {
                 let prior = host.learned_generation_inspection().unwrap().numerical;

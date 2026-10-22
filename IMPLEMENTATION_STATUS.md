@@ -1,5 +1,37 @@
 # Implementation status · design revision 0.3
 
+## 2026-10-22: guarded learned admission stop and separate drain
+
+The original learned stop phases now reach every guarded cursor: ordinary
+learned, raw-predictive, owned-predictive, topology-mediated and predictive
+topology-mediated recovery. Each terminal consumer keeps the original
+`check_ready()` before delegating to the same verified machine and exclusive
+canonical store. Admission-only stop uses the original two-event Stop/Fence
+transaction without logical time; later drain consumes only the original
+StopProgress event. Both return the exact acknowledged history anchor and no
+live authority or reviewer role.
+
+Matching admission retries append zero events, including histories with
+unresolved liabilities. Completed drain retries need no clock or spare journal
+capacity. Original dispatched uncertainty and executed effects keep their
+charges; a stop never resends an effect. Fallible combined completion preserves
+the original atomic transaction and does not silently fall back to admission.
+
+Four additional public regression functions cover the original four
+non-topology library lanes, including real reserved, sent, executed and expired
+effects, acknowledged anchor reuse, failure without implicit admission fallback,
+post-clock canonical conflicts and failed independent floors on all consumers.
+They are source-reviewed; execution is pending at this commit. Operator phase
+selection and topology regression coverage remain in progress.
+
+The exact earlier c09def8 source now passes all 42 shutdown_fleet tests on the
+qualified nightly. The next core unit-test compile exposed an opaque
+LearnedPrediction equality assertion, repaired here by comparing every exposed
+field, exact encoded checked source and refinement bits. Its subsequent
+monolithic unit-test build was killed by SIGKILL before tests ran. No complete
+core-test, formatting, Clippy, RCH or workspace-gate pass is claimed. Full
+qualification and the scoped FA-014 and P0 compilation beads remain open.
+
 ## 2026-10-21: recovery/fleet compilation repair (partial verification)
 
 The P0 compilation bridge was checked against the current source and the exact

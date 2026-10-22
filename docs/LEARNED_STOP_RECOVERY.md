@@ -27,10 +27,49 @@ new export succeeds. Stop recovery cannot be combined with generation
 continuation, next-message or finish options and never creates a fresh authority
 store.
 
+## Separate sealed library phases
+
+The original learned cursor and all five guarded variants expose a clock-free
+admission stop and a fallible later drain:
+
+```rust,ignore
+let request = recovery.stop_request(operation)?;
+let admitted = recovery.finish_admission_stop(request)?;
+// On a separately opened and completely verified stopped history:
+let request = stopped_recovery.stop_request(operation)?;
+let drained = stopped_recovery.finish_stopped_drain(request, fallible_clock)?;
+```
+
+Admission appends only the original Stop/Fence pair and returns
+`FileAdmissionStoppedHistory`, including its exact acknowledged anchor.
+A matching retained stop appends zero events, even when unresolved liabilities
+remain. It does not consult logical time or attempt settlement. Later drain
+requires the same acknowledged stop and appends only its original StopProgress
+event when needed. A completed drain retry uses no clock or additional event.
+Both phases preserve executed and unresolved charges without returning a live
+owner, predictor, reviewer or topology role.
+
+Each guarded consumer calls the original complete readiness check before
+delegating to the same verified machine and exclusive canonical store.
+Independent policy, floor, predictor, topology, availability, reserve and anchor
+requirements still apply. `try_finish_stopped_with_anchor` additionally exposes
+fallible-clock combined completion on every cursor, preserving the original
+atomic transaction and returning no successful receipt or anchor on refusal.
+Existing infallible combined methods retain their signatures and behavior.
+Command-line phase selection is a separate integration step.
+
+Four public regression functions exercise real reserved, dispatched, executed
+and expired effects through the learned, guarded, raw-predictive and
+owned-predictive cursors. Controls cover exact anchors and retries, unavailable
+clocks without an implicit admission fallback, canonical replacement during
+clock acquisition, and failed independent floors on every new consumer.
+Their execution qualification is recorded in IMPLEMENTATION_STATUS.md.
+
 ## The original sealed completion
 
 `FileLearnedRecovery`, `FileGuardedLearnedRecovery`,
-`FilePredictiveLearnedRecovery` and `FileOwnedPredictiveRecovery` expose:
+`FilePredictiveLearnedRecovery`, `FileOwnedPredictiveRecovery`,
+`FileMediatedLearnedRecovery` and `FilePredictiveMediatedLearnedRecovery` expose:
 
 ```rust,ignore
 let request = recovery.stop_request(operation)?;
@@ -68,7 +107,7 @@ never promoted into a new outcome.
 
 ## Capture the acknowledged stopped history
 
-All four cursor types additionally expose `finish_stopped_with_anchor`, returning
+All six cursor types additionally expose `finish_stopped_with_anchor`, returning
 `FileStoppedHistory` from `observed::shutdown::recovery`:
 
 ```rust,ignore

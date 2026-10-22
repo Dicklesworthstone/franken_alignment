@@ -1,5 +1,23 @@
 # Changelog
 
+## 2026-10-22: carry learned stop phases through every independent guard
+
+- Add clock-free admission stop, fallible later drain and fallible anchored
+  combined completion to all five guarded learned cursor variants.
+- Keep each existing guard, policy, floor, predictor, topology, reserve and anchor
+  readiness check before consuming the same original verified recovery.
+- Add four public regression functions across ordinary, guarded, raw-predictive
+  and owned-predictive histories, covering real effect liabilities, exact
+  acknowledged anchors, zero-event retries, unavailable clocks, post-clock
+  canonical conflicts and failed independent floors.
+- Repair the cooperative owned-prediction test's opaque equality assertion by
+  checking every prediction/observation field, encoded source, work report and
+  exact refinement bits; no evidence assertion is removed.
+
+- The exact c09def8 fleet example passes 42/42 tests on the qualified nightly.
+  New phase tests await execution; the core unit-test build was killed by
+  SIGKILL before runtime tests. Full workspace qualification remains open.
+
 ## 2026-10-21: restore recovery and fleet test compilation
 
 - Resolve the original learned terminal-recovery phases and guarded publication

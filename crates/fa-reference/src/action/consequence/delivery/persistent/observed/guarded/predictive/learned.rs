@@ -5,7 +5,7 @@ use super::{FilePredictiveRequirements, FilePredictiveRoles};
 use super::super::{FileOversightRoles, anchored::FileHistoryAnchor, learned::check_profile,
     learned_recovery::check_recovery_reserve};
 use super::super::super::{Event, FileOversight, FileOversightProfile, JournalError};
-use super::super::super::shutdown::recovery::{FileStoppedHistory, FileStoppedRecovery};
+use super::super::super::shutdown::recovery::{FileAdmissionStoppedHistory, FileStoppedHistory, FileStoppedRecovery};
 use crate::action::consequence::delivery::StopRequest;
 use crate::action::ElapsedTick;
 use super::super::super::credibility::CredibilityEvent;
@@ -219,6 +219,36 @@ impl FilePredictiveLearnedRecovery {
     pub fn stop_request(&self, operation: u64) -> Result<StopRequest, JournalError> {
         self.check_ready()?;
         self.inner.stop_request(operation)
+    }
+
+    /// Withdraw admission through the original Stop/Fence without acquiring
+    /// settlement time. Complete independent requirements, the retained reserve
+    /// and canonical custody still apply; no live role or drain receipt escapes.
+    pub fn finish_admission_stop(self, request: StopRequest)
+        -> Result<FileAdmissionStoppedHistory, JournalError>
+    {
+        self.check_ready()?;
+        self.inner.finish_admission_stop(request)
+    }
+
+    /// Drain only the matching acknowledged stop through the original terminal
+    /// event. A failed clock preserves that stop and its charged liabilities.
+    /// An already-drained retry does not acquire time or append another event.
+    pub fn finish_stopped_drain<F>(self, request: StopRequest, clock: F)
+        -> Result<FileStoppedHistory, JournalError>
+    where F: FnOnce() -> Result<ElapsedTick, JournalError> {
+        self.check_ready()?;
+        self.inner.finish_stopped_drain(request, clock)
+    }
+
+    /// Retain the same fully guarded combined terminal transaction while
+    /// allowing the caller to refuse unavailable or late settlement time.
+    /// Refusal returns neither a candidate receipt nor a history anchor.
+    pub fn try_finish_stopped_with_anchor<F>(self, request: StopRequest, clock: F)
+        -> Result<FileStoppedHistory, JournalError>
+    where F: FnOnce() -> Result<ElapsedTick, JournalError> {
+        self.check_ready()?;
+        self.inner.try_finish_stopped_with_anchor(request, clock)
     }
 
     /// Finish the sealed predictive replay with original Stop/Fence/StopProgress,

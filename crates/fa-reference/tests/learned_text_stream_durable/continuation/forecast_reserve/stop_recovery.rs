@@ -419,3 +419,6 @@ fn anchored_stop_rejects_an_original_equal_counter_fork_without_cleanup_and_acce
         history.assert_observed(&result);
     }
 }
+
+#[path = "stop_recovery/phases.rs"]
+mod phases;
