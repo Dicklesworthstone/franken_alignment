@@ -223,7 +223,8 @@ fn actual_offline_stop_cli_needs_no_live_assets_peer_profile_or_credibility_caps
     for mode in [None, Some(false), Some(true)] {
         let case = generated(mode, Some(RecoveryReserve::terminal())); let path = write_config(&case.root);
         let disk_config = Config::read(&path).unwrap();
-        assert_eq!(disk_config.profile, case.config.profile); assert_eq!(disk_config.source_policy, case.config.source_policy);
+        crate::config::assert_oversight_profiles_eq(&disk_config.profile, &case.config.profile);
+        assert_eq!(disk_config.source_policy, case.config.source_policy);
         fs::remove_dir(case.root.0.join("peers")).unwrap();
         let missing = case.root.0.join("missing-qualification-capsule");
         let args = vec!["create-learned-generated".into(), path.to_str().unwrap().into(),

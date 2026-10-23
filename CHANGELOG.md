@@ -1,5 +1,25 @@
 # Changelog
 
+## 2026-10-23: exercise native stop and learned terminal integration
+
+- Repair operator test compilation with exhaustive profile-field comparisons,
+  a complete submission fixture and valid topology JSON. Keep all original
+  assertions and production interfaces.
+- Keep native stop/fleet fixture payloads within their original finite action
+  allowance. Derive topology receipt expiry from the actual dispatch and assert
+  exact retention-expired, charged, unresolved `Unknown` behavior without
+  manufacturing an irrecoverable-abandonment transition.
+- Repair the native forecast fixture's unsupported decoder context and derive
+  its finite monitoring allowance from the supported context. Assert complete
+  original input review and monitoring through the native model path.
+- Pass 36 selected operator tests, four public topology phase regressions and
+  four native forecast/continuation lifecycle tests using the same qualified
+  nightly's official Cranelift backend after standard library code generation
+  was killed by SIGKILL. Standard targeted checks pass.
+- Attempt the full standard gate; its existing two-package lock admission still
+  refuses the current workspace. No gate, packet or release qualification is
+  waived or closed by the alternate-backend runtime evidence.
+
 ## 2026-10-22: connect learned operator admission stop and later drain
 
 - Add `--stop-admission` and `--drain-stopped` to learned terminal recovery in

@@ -199,7 +199,7 @@ fn selection_text(root: &Directory, current: u64, available: bool, checks: u64, 
         "initial":{{"topology_path":"{}","inventory_path":"{}"}},
         "current":{{"topology_path":"{}","inventory_path":"{}"}},"available":{available},
         "next":{{"topology_path":"{}","inventory_path":"{}"}},"operation":{operation},
-        "source":{{"checks":{checks},"reserved_read_bytes":{},"last_operation":{last}}}}"#,
+        "source":{{"checks":{checks},"reserved_read_bytes":{},"last_operation":{last}}}}}"#,
         root.path("saved1.json").display(), root.path("saved-inventory.json").display(),
         root.path(&format!("saved{current}.json")).display(), root.path("saved-inventory.json").display(),
         root.path("live.json").display(), root.path("live-inventory.json").display(), checks * TOPOLOGY_REFRESH_READ_BYTES)
@@ -435,7 +435,8 @@ fn actual_command_selects_checked_topology_recovery_without_changing_actor_bytes
     for member in ["alpha", "beta"] {
         text = text.replacen("\"environment\": {}", &format!(r#""environment": {{"{MEMBER}":"{member}","{EPOCH}":"3"}}"#), 1);
     }
-    let read = Config::decode(text.as_bytes()).unwrap(); assert_eq!(read.profile, config.profile);
+    let read = Config::decode(text.as_bytes()).unwrap();
+    crate::config::assert_oversight_profiles_eq(&read.profile, &config.profile);
     fs::write(root.path("config.json"), text).unwrap();
     let human = reviewer(&config, 2, ReviewDecision::Approve);
     let result = crate::command(vec!["submit".into(), root.path("config.json").display().to_string(), root.path("submit.json").display().to_string(),

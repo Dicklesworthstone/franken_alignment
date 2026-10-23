@@ -273,7 +273,7 @@ pub(super) fn command_inputs(root: &Root, config: &Config, recipe: &Path,
         .replace("\"poll_ms\": 10", "\"poll_ms\": 1")
         .replace("\"cleanup_ms\": 2000", "\"cleanup_ms\": 1000");
     fs::write(&host_path, source).unwrap();
-    assert_eq!(Config::read(&host_path).unwrap().profile, config.profile);
+    crate::config::assert_oversight_profiles_eq(&Config::read(&host_path).unwrap().profile, &config.profile);
     let actor_path = root.0.join("command-actor.json");
     let reviewer_path = root.0.join("command-reviewer.json");
     let scope = actor.scope;

@@ -152,7 +152,7 @@ impl Server {
 fn seed_effect(host: &mut FileOversight, reviewer: &FileHumanReviewer,
     profile: &FileOversightProfile, seed: Seed)
 {
-    let mut spec = fixture::spec(host, b"actual fleet-controlled publication");
+    let mut spec = fixture::spec(host, b"fleet publish");
     spec.scope = profile.delivery.scope;
     let action = host.propose(host.revision(), 1, spec, fixture::snapshot()).unwrap();
     let inputs = fixture::inputs(&action, b"original complete evidence");

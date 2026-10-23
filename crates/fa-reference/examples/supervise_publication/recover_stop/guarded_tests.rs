@@ -212,7 +212,8 @@ fn actual_guarded_stop_command_uses_the_independent_profile_without_live_assets(
         .replace("/operator/publication-store", case.config.store.to_str().unwrap())
         .replace("/operator/evidence.json", root.0.join("evidence.json").to_str().unwrap());
     let config = root.0.join("config.json"); fs::write(&config, text).unwrap();
-    let parsed = Config::read(&config).unwrap(); assert_eq!(parsed.profile, case.config.profile);
+    let parsed = Config::read(&config).unwrap();
+    crate::config::assert_oversight_profiles_eq(&parsed.profile, &case.config.profile);
     let profile = root.0.join("recovery.json"); fs::write(&profile, document(case.floor, &case.anchor, Some(&target))).unwrap();
     let args = vec!["recover-stop".into(), config.to_str().unwrap().into(), "900".into(),
         "--guarded".into(), profile.to_str().unwrap().into()];

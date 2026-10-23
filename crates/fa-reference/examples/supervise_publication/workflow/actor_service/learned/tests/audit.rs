@@ -86,7 +86,7 @@ fn actual_cli_audits_all_original_modes_after_live_helper_and_evidence_removal()
     for mode in [None, Some(false), Some(true)] {
         let case = recorded(mode, b"allow", true);
         let anchor = anchor_file(&case); let config = write_config(&case.root);
-        assert_eq!(Config::read(&config).unwrap().profile, case.config.profile);
+        crate::config::assert_oversight_profiles_eq(&Config::read(&config).unwrap().profile, &case.config.profile);
         for name in ["evidence.json", "native-roster.json", "helper-model.json",
             "helper-weights.safetensors", "helper-tokenizer.bbpe", "helper-sampling.json", "helper-monitor.json"] {
             fs::remove_file(case.root.0.join(name)).unwrap();

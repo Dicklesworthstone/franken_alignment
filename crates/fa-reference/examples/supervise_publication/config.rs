@@ -47,6 +47,36 @@ pub struct Config {
     pub programs: BTreeMap<String, HelperProgram>,
     pub timing: Timing,
 }
+
+// These bootstrap profiles do not implement equality. Exhaustive
+// patterns keep test fixture comparisons complete when either profile grows;
+// each original field is compared directly, including full policies and state.
+#[cfg(test)]
+#[track_caller]
+pub(crate) fn assert_oversight_profiles_eq(actual: &FileOversightProfile, expected: &FileOversightProfile) {
+    let FileOversightProfile { delivery, committee, human } = actual;
+    assert_eq!(committee, &expected.committee, "committee");
+    assert_eq!(human, &expected.human, "human");
+    let FileDeliveryProfile { scope, total, max_attempts, actor, suspend_at_incident, policy,
+        congress, narrowed_targets, target, initial_payload, retention_ticks, max_deliveries,
+        clock_domain, limits } = delivery;
+    let expected = &expected.delivery;
+    assert_eq!(scope, &expected.scope, "delivery.scope");
+    assert_eq!(total, &expected.total, "delivery.total");
+    assert_eq!(max_attempts, &expected.max_attempts, "delivery.max_attempts");
+    assert_eq!(actor, &expected.actor, "delivery.actor");
+    assert_eq!(suspend_at_incident, &expected.suspend_at_incident, "delivery.suspend_at_incident");
+    assert_eq!(policy, &expected.policy, "delivery.policy");
+    assert_eq!(congress, &expected.congress, "delivery.congress");
+    assert_eq!(narrowed_targets, &expected.narrowed_targets, "delivery.narrowed_targets");
+    assert_eq!(target, &expected.target, "delivery.target");
+    assert_eq!(initial_payload, &expected.initial_payload, "delivery.initial_payload");
+    assert_eq!(retention_ticks, &expected.retention_ticks, "delivery.retention_ticks");
+    assert_eq!(max_deliveries, &expected.max_deliveries, "delivery.max_deliveries");
+    assert_eq!(clock_domain, &expected.clock_domain, "delivery.clock_domain");
+    assert_eq!(limits, &expected.limits, "delivery.limits");
+}
+
 impl Config {
     pub fn read(path: &Path) -> Result<Self, String> { Self::decode(&read_regular(path, CONFIG_BYTES)?) }
 

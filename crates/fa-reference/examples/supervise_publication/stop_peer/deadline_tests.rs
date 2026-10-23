@@ -53,7 +53,7 @@ impl Native {
         host.enable_recovery_reserve(host.revision(), RecoveryReserve::terminal())
             .unwrap();
         host.observe_time(host.revision(), ElapsedTick(1)).unwrap();
-        let keys = fixture::ready(&mut host, &reviewer, 1, b"original publication");
+        let keys = fixture::ready(&mut host, &reviewer, 1, b"original stop");
         assert_eq!(
             host.inspect().control.ledger.reserved,
             keys.action.spec().units

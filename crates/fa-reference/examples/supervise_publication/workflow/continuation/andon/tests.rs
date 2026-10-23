@@ -235,7 +235,7 @@ fn expired_or_wrong_inventory_admission_preserves_canonical_and_staging() {
     let root = Directory::new(); let config = configured(&root, true, 0); let settings = settings();
     let first = document(&config, 7, Basis::Bootstrap); let input = root.0.join("first.anchor");
     let started = Instant::now();
-    assert!(run(config, Submission { document: &first, settings: &settings, mode: Mode::Create(&input), peers: None },
+    assert!(run(config, Submission { document: &first, settings: &settings, mode: Mode::Create(&input), peers: None, publication: None },
         started, || panic!("expired invocation clock"), &mut || Duration::from_secs(100)).is_err());
     assert!(!root.0.join("store").exists());
     let config = configured(&root, true, 0); evidence(&root, &config);

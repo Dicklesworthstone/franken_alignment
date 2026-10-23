@@ -90,7 +90,7 @@ fn learned_topology_terminal_cli_keeps_all_predictor_custody_through_stop_and_dr
         .replace("\"runtime_ms\": 120000", "\"runtime_ms\": 60000");
         fs::write(&config_path, source).unwrap();
         let admitted_config = Config::read(&config_path).unwrap();
-        assert_eq!(admitted_config.profile, config.profile);
+        crate::config::assert_oversight_profiles_eq(&admitted_config.profile, &config.profile);
         assert_eq!(admitted_config.timing.runtime_ms, config.timing.runtime_ms);
         for name in [
             "live-1.json",

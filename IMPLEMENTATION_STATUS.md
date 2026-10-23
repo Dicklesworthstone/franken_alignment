@@ -1,5 +1,48 @@
 # Implementation status · design revision 0.3
 
+## 2026-10-23: execute learned terminal and authenticated stop regressions
+
+The operator and both changed integration targets pass targeted `cargo check`
+with the qualified `nightly-2026-09-08` and its standard backend. The standard
+runtime build was killed by SIGKILL during library compilation on the shared
+host. Installing that same nightly's official Cranelift component made bounded
+runtime verification possible without changing the repository toolchain,
+dependencies, source admission or qualification gates.
+
+The complete 677-test operator harness compiles with that alternate backend.
+Selected runtime results are 7/7 authenticated single-peer stop tests, 10/10
+authenticated fleet-stop tests, 18/18 learned stop/export/phase tests, and 1/1
+topology terminal test covering all three predictor modes. All 4/4 new public
+topology phase regressions also pass, including real reserved, sent, executed
+and retention-expired effects at complete terminal capacity. Another 4/4 native
+forecast/continuation lifecycle tests pass, for 44 selected passing functions.
+All runtime builds used `RUSTFLAGS=-Zcodegen-backend=cranelift`. Socket tests ran
+with approved native execution because the sandbox rejects Unix socket creation.
+One initial 60-second setup timeout passed in isolation and in the final complete
+18-test selection; no deadline or production limit was relaxed.
+
+Compilation exposed unsupported equality assertions on bootstrap profiles,
+a malformed JSON fixture and an incomplete submission fixture. A test-only
+helper now compares every original profile field through exhaustive patterns;
+the fixtures retain their original checks. Native stop fixtures use payloads
+within their existing 16-unit allowance. The topology expiry fixture derives
+receipt retention from the actual original dispatch time and checks the native
+`RetentionExpired` outcome directly. Expiry preserves a charged, unresolved
+`Unknown` attempt; it does not invent explicit irrecoverable abandonment.
+The native forecast fixture also selected an unsupported 8192-token context.
+It now uses the existing 4096-token maximum with a monitoring allowance derived
+from that fixed context. Its strengthened assertions require original native
+model evidence, every submitted byte and prompt token, both sampled draws and
+monitoring of every decoded token. No input is truncated or production bound
+increased to make the fixture pass.
+
+The required `cargo run --locked -p xtask -- check` was attempted with the
+standard qualified compiler and stops at the existing lock admission refusal:
+the gate admits only `fa-reference` and `xtask`, while the workspace lock also
+contains `fa-journal`. That gate is unchanged. Cranelift runtime results do not
+constitute the full standard-backend, formatting, Clippy, remote RCH or release
+qualification. Full FA-014 and the compilation bridge remain open.
+
 ## 2026-10-22: expose learned stop and drain as independent operator actions
 
 `create-learned-generated` now accepts explicit `--stop-admission OPERATION`

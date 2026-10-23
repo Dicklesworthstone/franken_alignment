@@ -469,7 +469,7 @@ fn actual_receipt_command_ignores_missing_capsule_and_live_sources_after_qualifi
             &seed.config.profile, &selected.generation).unwrap();
         let config_path = write_config(&root);
         let disk_config = Config::read(&config_path).unwrap();
-        assert_eq!(disk_config.profile, seed.config.profile);
+        crate::config::assert_oversight_profiles_eq(&disk_config.profile, &seed.config.profile);
         assert_eq!(disk_config.source_policy, seed.config.source_policy);
         for name in ["evidence.json", "native-roster.json", "helper-model.json",
             "helper-weights.safetensors", "helper-monitor.json", "helper-tokenizer.bbpe",

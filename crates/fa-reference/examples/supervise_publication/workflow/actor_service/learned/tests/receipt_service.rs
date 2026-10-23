@@ -311,7 +311,8 @@ fn config_file(case: &Case) -> PathBuf {
         .replace("\"initial_payload_hex\": \"696e697469616c\"", "\"initial_payload_hex\": \"\"")
         .replace("\"events\": 256", "\"events\": 1024");
     let path = case.root.0.join("service-config.json"); fs::write(&path, text).unwrap();
-    let read = Config::read(&path).unwrap(); assert_eq!(read.profile, case.config.profile);
+    let read = Config::read(&path).unwrap();
+    crate::config::assert_oversight_profiles_eq(&read.profile, &case.config.profile);
     assert_eq!(read.source_policy, case.config.source_policy); path
 }
 fn actor_file(case: &Case) -> PathBuf {

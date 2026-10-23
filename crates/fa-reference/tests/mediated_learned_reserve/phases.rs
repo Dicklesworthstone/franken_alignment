@@ -3,10 +3,11 @@
 //! create the liabilities. Synthetic weights and graphs are not calibration or
 //! evidence that a deployed operating-system perimeter has no bypass.
 use super::*;
+use fa_reference::action::ActionState;
 use fa_reference::action::consequence::delivery::{
     EndpointOutcome,
     persistent::{
-        FileDeliverySnapshot,
+        FileDeliverySnapshot, Reconciliation,
         observed::{
             consistency::learned::FileLearnedConsistencySnapshot,
             shutdown::recovery::FileAdmissionStoppedHistory,
@@ -64,6 +65,7 @@ struct History {
     request: StopRequest,
     attempt: u64,
     units: u64,
+    retained_until: Option<ElapsedTick>,
     owned_source: Option<FileLearnedConsistencySnapshot>,
 }
 
@@ -106,6 +108,7 @@ impl History {
         let units = action.spec().units;
         assert_eq!(host.inspect().control.ledger.reserved, units);
         assert_eq!(host.inspect().executions, 0);
+        let mut retained_until = None;
         if cut != Cut::Reserved {
             let revision = host.revision();
             let human = roles
@@ -113,6 +116,15 @@ impl History {
                 .human
                 .approve(&mut host, revision, &offer)
                 .unwrap();
+            // Native helper review advanced the original clock before dispatch.
+            // Retention starts at that dispatch time, not at initial admission.
+            let dispatch_at = host.inspect().control.ledger.elapsed.unwrap();
+            retained_until = Some(ElapsedTick(
+                dispatch_at
+                    .0
+                    .checked_add(profile.delivery.retention_ticks)
+                    .unwrap(),
+            ));
             host.dispatch(
                 host.revision(),
                 &automatic,
@@ -174,6 +186,7 @@ impl History {
             request,
             attempt,
             units,
+            retained_until,
             owned_source,
         }
     }
@@ -295,7 +308,11 @@ fn mediated_phases_preserve_original_liabilities_and_exact_anchors_at_capacity()
                 .ready()
                 .drain(history.request, || {
                     calls.set(calls.get() + 1);
-                    Ok(ElapsedTick(if cut == Cut::Expired { 1001 } else { 4 }))
+                    Ok(if cut == Cut::Expired {
+                        history.retained_until.expect("original dispatched retention")
+                    } else {
+                        ElapsedTick(4)
+                    })
                 })
                 .unwrap();
             let result = drained.stopped();
@@ -305,15 +322,26 @@ fn mediated_phases_preserve_original_liabilities_and_exact_anchors_at_capacity()
                 admitted.snapshot().revision + u64::from(cut != Cut::Reserved)
             );
             assert_eq!(result.snapshot().executions, history.before.executions);
+            let charged_units = if matches!(cut, Cut::Executed | Cut::Expired) {
+                history.units
+            } else {
+                0
+            };
             assert_eq!(
                 result.progress().charged_units,
-                if matches!(cut, Cut::Executed | Cut::Expired) {
-                    history.units
-                } else {
-                    0
-                }
+                charged_units,
+                "{lane:?} {cut:?}: original execution or uncertainty stays charged"
             );
-            assert_eq!(result.progress().drained(), cut != Cut::Expired);
+            assert_eq!(
+                result.snapshot().control.ledger.charged,
+                charged_units,
+                "{lane:?} {cut:?}: stop progress preserves the original authority ledger"
+            );
+            assert_eq!(
+                result.progress().drained(),
+                cut != Cut::Expired,
+                "{lane:?} {cut:?}"
+            );
             assert_eq!(&history.observe(), result.snapshot());
             assert_eq!(
                 drained.history_anchor().revision(),
@@ -330,8 +358,22 @@ fn mediated_phases_preserve_original_liabilities_and_exact_anchors_at_capacity()
             assert_eq!(retried_stop.history_anchor(), drained.history_anchor());
             if cut == Cut::Expired {
                 assert_eq!(result.snapshot().revision, 128);
+                let FileStoppedRecovery::Advanced { sweep, .. } = result else {
+                    panic!("expired retention must be observed by the original drain");
+                };
+                assert_eq!(
+                    sweep.outcomes[&history.attempt],
+                    Ok(Reconciliation::RetentionExpired),
+                    "{lane:?}: original endpoint retention expired"
+                );
                 assert_eq!(result.progress().unresolved, vec![history.attempt]);
-                assert_eq!(result.progress().irrecoverable, vec![history.attempt]);
+                // Retention expiry leaves Unknown; only explicit abandonment
+                // marks an attempt irrecoverable. Time cannot abandon a charge.
+                assert_eq!(
+                    result.snapshot().control.ledger.stages[&history.attempt],
+                    ActionState::Unknown
+                );
+                assert!(result.progress().irrecoverable.is_empty());
                 history.pending();
                 let files_before = files(&history.root);
                 assert_eq!(

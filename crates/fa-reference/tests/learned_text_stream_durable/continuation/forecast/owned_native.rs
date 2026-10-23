@@ -9,7 +9,7 @@ use fa_reference::action::consequence::delivery::persistent::observed::{
 use fa_reference::action::consequence::oversight::{
     learned_host::sidecar::{LearnedSidecarRequest, workers::{LearnedWorkerRound, MAX_LEARNED_REVIEW_POLLS}},
     sidecar::{SidecarIdentity, SidecarCongressBudget,
-        receiver::native::SidecarProbeQuery},
+        receiver::native::{SidecarDecisionBasis, SidecarProbeQuery}},
 };
 #[path = "native.rs"]
 mod native;
@@ -122,7 +122,18 @@ fn reviewed(host: &mut FileOversight, reviewer: &FileHumanReviewer, request: u64
     assert_eq!(review.status(), NativeReviewStatus::Finished);
     assert!(review.outcome().is_some());
     assert!(review.records().values().all(|record| record.failure.is_none()
-        && record.commitment_queued && record.reveal_queued));
+        && record.commitment_queued && record.reveal_queued), "{:?}", review.records());
+    for (member, record) in review.records() {
+        let progress = record.progress;
+        assert_eq!(progress.basis, Some(SidecarDecisionBasis::NativeModel));
+        assert!(progress.native_started);
+        assert_eq!(progress.native.tokenization.input_bytes,
+            original.views()[member].actual_input().submitted_bytes().len());
+        assert!(progress.native.requested_prompt_tokens > 0);
+        assert_eq!(progress.native.reviewed_prompt_tokens, progress.native.requested_prompt_tokens);
+        assert_eq!(progress.native.work.sampled_draws, 2);
+        assert_eq!(progress.native.work.monitoring.frame_reviews, progress.native.work.decoder.tokens);
+    }
     let inputs = review.input().clone();
     let automatic = host.authorize(host.revision(), attempt, &inputs, snapshot()).unwrap();
     let offer = host.request_human_approval(host.revision(), 1000 + attempt,
