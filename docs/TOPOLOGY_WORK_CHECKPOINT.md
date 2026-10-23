@@ -98,6 +98,41 @@ Durable export remains separate from native acknowledgement. Trusted custody,
 joint rollback and unretained work retain their existing limits. The consumer
 must keep the prior archive until the new exact checkpoint is durably retained.
 
+## Recover an interrupted terminal export
+
+A native stop can acknowledge before its source checkpoint is exported. The
+previous checkpoint then names an older cut, but a strictly terminal suffix
+cannot have spent additional topology-source work. Learned recovery can use
+that retained custody through the separate
+`guarded::mediated::terminal::FileTerminalTopologyRecovery` cursor.
+
+Before replay, consume an ordinary or predictive mediated learned cursor with
+`require_terminal_checkpoint(&saved, operation)`. The original independently
+selected bootstrap, recipe, guards, graph, availability, history anchor and
+floors remain required. The adapter checks the saved exact prefix against the
+same exclusively locked canonical image, requires the original terminal
+reserve and strengthens floors with the checkpoint's minima. An older cut is
+accepted only across Stop, Fence and StopProgress belonging to the selected
+stop operation. Any intervening source, time, publication or other ordinary
+event refuses. The exact-cut case also supports an initial terminal attempt.
+
+The original saved graph and availability must agree with the independently
+selected requirements before terminal availability can advance. Fence can
+withdraw availability; Stop alone cannot. All original numerical replay and
+final guard checks still run. The resulting cursor binds the stop operation
+and exposes bounded progress/replay and only the native admission-stop,
+drain and combined-stop consumers. It has no live finalizer, observer, receipt
+reconciliation or authority-returning operation. Ordinary live and receipt
+cursors keep their existing exact selection rules.
+
+The sealed native result can then produce a new checkpoint with the existing
+`after_admission_stop` or `after_stopped` method. The same spent work, original
+documents and last source operation accompany the newly acknowledged exact
+anchor and floors. No next topology file or source is opened. A failed attempt
+cannot turn a later ordinary history into accounted source work, replace the
+original stop identity or revive an old authority floor. Independent retention
+of the successor remains necessary; the adapter does not make exports atomic.
+
 ## Verification status
 
 The original five authored native regression functions cover exact history/work

@@ -5,6 +5,7 @@ mod reserved_bootstrap;
 pub use reserved_bootstrap::FileMediatedBootstrap;
 pub mod learned;
 pub mod predictive;
+pub mod terminal;
 pub use inspection::{FileMediatedSnapshot, FileTopologyUpdateRecord};
 pub use super::recovery::mediated::FileMediatedRecovery;
 

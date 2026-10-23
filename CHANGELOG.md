@@ -1,5 +1,19 @@
 # Changelog
 
+## 2026-10-23: recover source custody through a sealed terminal-only cursor
+
+- Add `require_terminal_checkpoint` to both mediated learned recovery variants,
+  returning a cursor restricted to one native stop operation. Recover an older
+  retained source cut only across its exact matching terminal suffix.
+- Keep original prefix, graph, availability, predictor, guard, reserve and floor
+  requirements. Full replay still verifies the history; no live finalizer,
+  observer, receipt-reconciliation path or inner-cursor escape is exposed.
+- Pass five new public regression functions across all three predictor modes
+  and all six existing terminal-checkpoint regressions with the qualified
+  nightly's official Cranelift backend. Cover lost exports, real source work,
+  post-Stop time, same-path forks and canonical replacement without weakening
+  the full qualification gate.
+
 ## 2026-10-23: keep healthy learned source custody after service failure
 
 - Retain selected source checkpoints after learned service errors whenever the

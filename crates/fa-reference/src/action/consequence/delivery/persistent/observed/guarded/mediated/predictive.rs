@@ -245,6 +245,21 @@ fn check_machine(profile: &FileOversightProfile, machine: &Machine, events: &[Ev
 }
 
 impl FilePredictiveMediatedLearnedRecovery {
+    /// Restrict this still-unreplayed predictive cursor to one native terminal
+    /// operation after exact retained-source admission. Only the same Stop's
+    /// terminal suffix can advance the cut; no source work, weaker predictor or
+    /// live continuation is inferred. All original floors, guards and terminal
+    /// reserve remain required, including exact-cut initial stopping.
+    pub fn require_terminal_checkpoint(mut self,
+        saved: &super::super::super::driver::topology::checkpoint::TopologyCheckpoint,
+        operation: u64) -> Result<super::terminal::FileTerminalTopologyRecovery, JournalError>
+    {
+        let progress = self.progress();
+        super::terminal::prepare(&self.inner, progress, &mut self.expected.topology,
+            &mut self.expected.oversight.minimum, saved, operation)?;
+        Ok(super::terminal::FileTerminalTopologyRecovery::predictive(self, operation))
+    }
+
     /// Require the exact original terminal reserve from this same locked
     /// canonical image before numerical replay. Missing, changed or late
     /// requirements refuse without mutation; no allowance is replenished.

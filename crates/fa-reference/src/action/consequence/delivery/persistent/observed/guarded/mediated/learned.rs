@@ -190,6 +190,22 @@ fn check_machine(profile: &FileOversightProfile, machine: &Machine, events: &[Ev
 }
 
 impl FileMediatedLearnedRecovery {
+    /// Restrict this still-unreplayed cursor to one native terminal operation.
+    /// The retained source cut must match the independent topology requirement;
+    /// only that operation's terminal suffix may follow it. Exact-cut initial
+    /// stops are allowed, but stale-cut repair requires an existing matching
+    /// Stop. Original floors and terminal reserve remain mandatory. The returned
+    /// type cannot recover a live owner, observer or receipt-only consumer.
+    pub fn require_terminal_checkpoint(mut self,
+        saved: &super::super::super::driver::topology::checkpoint::TopologyCheckpoint,
+        operation: u64) -> Result<super::terminal::FileTerminalTopologyRecovery, JournalError>
+    {
+        let progress = self.progress();
+        super::terminal::prepare(&self.inner, progress, &mut self.expected.topology,
+            &mut self.expected.oversight.minimum, saved, operation)?;
+        Ok(super::terminal::FileTerminalTopologyRecovery::mediated(self, operation))
+    }
+
     /// Require the exact original terminal reserve on the same locked history
     /// before replay. Missing, changed or late requirements refuse without a
     /// cleanup, replacement or role. Recovery never installs or enlarges it.

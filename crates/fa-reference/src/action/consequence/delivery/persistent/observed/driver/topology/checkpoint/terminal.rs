@@ -12,6 +12,48 @@ use crate::Error;
 use std::path::Path;
 
 impl TopologyCheckpoint {
+    // Admission for the dedicated terminal-only learned cursor. It retains the
+    // original locked image for full semantic replay; this bounded scan grants
+    // no owner and does not acknowledge a candidate checkpoint. Only terminal
+    // history can explain a successor without spending additional source work.
+    pub(in super::super::super::super) fn terminal_successor_available(&self,
+        profile: &FileOversightProfile, identity: &Path, events: &[Event], operation: u64)
+        -> Result<bool, Error>
+    {
+        if operation == 0 { return Err(Error::InvalidInput); }
+        check_work(&self.expected, self.work, self.last_operation)?;
+        self.history.check(profile, identity, events)?;
+        let after = usize::try_from(self.history.revision()).map_err(|_| Error::Limit)?;
+        let (graph, available) = topology_at(&events[..after])?;
+        if graph != self.expected.graph() || available != self.available {
+            return Err(Error::Binding);
+        }
+        let mut stopped = events[..after].iter().rev().find_map(|event| match event {
+            Event::Core(BaseEvent::Stop(request)) => Some(*request), _ => None,
+        });
+        if stopped.is_some_and(|request| request.operation != operation) {
+            return Err(Error::Duplicate);
+        }
+        for event in &events[after..] {
+            match event {
+                Event::Core(BaseEvent::Stop(request)) if request.operation == operation => {
+                    if stopped.is_some_and(|original| original != *request) {
+                        return Err(Error::Binding);
+                    }
+                    stopped = Some(*request);
+                }
+                Event::Core(BaseEvent::Fence | BaseEvent::StopProgress(_)) if stopped.is_some() => {}
+                _ => return Err(Error::Stale),
+            }
+        }
+        // An exact source cut may start its first native stop. A stale cut must
+        // already contain the selected Stop before any later terminal event;
+        // an ordinary recovery Fence cannot silently become terminal custody.
+        let (graph, available) = topology_at(events)?;
+        if graph != self.expected.graph() { return Err(Error::Binding); }
+        Ok(available)
+    }
+
     /// Advance independently retained source custody to the SAME acknowledged
     /// admission-stop cut. Original documents, spent work and last source
     /// operation remain unchanged; only the captured history and native floors

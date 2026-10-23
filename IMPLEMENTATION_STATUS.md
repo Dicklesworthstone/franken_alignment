@@ -1,5 +1,33 @@
 # Implementation status · design revision 0.3
 
+## 2026-10-23: recover retained source custody after interrupted terminal export
+
+Ordinary and predictive mediated learned cursors can now be consumed before
+replay into `FileTerminalTopologyRecovery`, bound to one stop operation. The
+adapter checks the retained source checkpoint's exact original prefix against
+the same locked canonical image, verifies old graph and availability, requires
+the original terminal reserve and preserves or strengthens all independent
+floors. Only the same Stop's closed Stop/Fence/StopProgress suffix can explain
+an older cut. Ordinary events, later source work, an equal-counter fork or a
+different stop refuse. Full numerical replay and original guard checks remain
+mandatory; only terminal availability can advance. The resulting type exposes
+native admission, drain and combined completion without any live owner,
+observer, receipt-reconciliation operation or inner-cursor escape.
+
+Five new public regression functions pass across ordinary, raw-predictive and
+owned-predictive modes, including loss of the transient acknowledgement,
+missing live files, true Stop-only versus Fence availability, unretained source
+and time work, stronger saved and external floors, missing reserve, late cursor
+conversion, same-path equal-counter forks and canonical replacement during the
+clock. A Time event after a matching Stop is a causal negative, paired with a
+newer-checkpoint positive. All six existing public terminal-checkpoint
+regressions also pass, and the new public target passes the standard qualified
+compiler check. Runtime execution used the qualified nightly's official
+Cranelift backend in an isolated temporary build directory because shared disk
+storage was exhausted. No test body, source check or production bound was
+relaxed. These results do not close full FA-014, dependency admission or release
+qualification; operator activation is a separate following change.
+
 ## 2026-10-23: preserve source work after failed learned service
 
 Learned source retention no longer returns early merely because the service has
