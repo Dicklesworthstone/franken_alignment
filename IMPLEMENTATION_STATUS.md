@@ -1,5 +1,26 @@
 # Implementation status · design revision 0.3
 
+## 2026-10-22: preserve the original authenticated stop-peer deadline
+
+The live `stop-peer` operator now starts one elapsed budget before socket
+connection and peer authentication, carries it through every native step, and
+caps polling waits at the remaining allowance. A slow connection cannot reset
+the budget or permit a new stop request after expiry. Public profile-file intake
+still precedes this budget; synchronous kernel calls remain nonpreemptible.
+
+A genuine native receipt received across the deadline keeps its original
+acknowledgment, drain facts and sequence in the unchanged JSON report, while the
+command returns a deadline error. A failed output also preserves the late-receipt
+status in its error. No reconnect, replacement request or effect retry occurs.
+
+Three new regression functions use authenticated named Unix sockets and the
+original native authority with a real reserved publication. They pair timely
+durable success with connection exhaustion before any request and a final
+receipt crossing the exact cutoff. They verify canonical history, liabilities,
+native receipt identity and single application. Central compilation and runtime
+verification are pending at this source commit; no qualification gate or packet
+is closed by source review.
+
 ## 2026-10-22: guarded learned admission stop and separate drain
 
 The original learned stop phases now reach every guarded cursor: ordinary

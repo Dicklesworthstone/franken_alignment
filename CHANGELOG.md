@@ -1,5 +1,16 @@
 # Changelog
 
+## 2026-10-22: keep authenticated stop-peer completion within one deadline
+
+- Start one elapsed budget before connection and authentication, preserve it
+  through the native exchange, and cap polling at the remaining allowance.
+- Recheck time after every protocol step. Preserve a genuine late receipt in
+  the existing report while returning a deadline error; never report timely
+  success solely because that receipt says the domain drained.
+- Add three real authenticated/native-owner regression functions for timely
+  completion, an exhausted connection budget and a late final receipt. Runtime
+  qualification remains pending at this source commit.
+
 ## 2026-10-22: carry learned stop phases through every independent guard
 
 - Add clock-free admission stop, fallible later drain and fallible anchored

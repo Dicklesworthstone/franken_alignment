@@ -85,8 +85,19 @@ was not performed. On receipt loss or timeout, the result records whether the
 request may have been sent; neither case reconnects, resets identity rules, or
 replays a request. Failure writing stdout also cannot undo native stop.
 
-The command uses the profile's runtime and polling limits once connected. Like
-the host, it does not promise to preempt a blocking OS call. A mismatched audience,
+One original runtime budget begins before socket-directory checks, connection
+and peer authentication. Reading the command's reviewer profile precedes this
+budget. The client checks elapsed time after connection and before and after
+each native protocol step; time spent connecting cannot grant a fresh exchange
+budget. An exhausted budget prevents a new stop request, and polling waits are
+clipped to the remaining allowance. Like the host, the client cannot preempt a
+blocking OS call.
+
+A valid native receipt that arrives after the budget remains factual evidence:
+the command renders its original acknowledgment and liabilities, then returns a
+deadline error. Even a late `stopped_drained` receipt therefore does not imply
+timely command success. It never reconnects or repeats the stop to replace a late
+or missing reply. A mismatched audience,
 request ID, server process, or nonce fails instead of selecting another endpoint.
 The live socket disappears when the workflow exits. Subsequent settlement belongs
 to the original recovery/inspection paths, not a new control service or a claim
@@ -96,4 +107,10 @@ Additional tests exercise the actual operator client against a pending human
 decision, queued stop after dispatch versus successful publication, and scripted
 client outcomes for missing/foreign replies, deadlines, partial settlement, and
 failed output. Scripted wire receipts are parser/output tests, not physical stop
-evidence. All new Rust tests remain unexecuted in this editing environment.
+evidence. That initial test wave was introduced without runtime execution.
+
+The subsequent deadline regressions connect real authenticated sockets to the
+original native stop owner. They pair timely durable success with connection
+exhaustion before any request and a complete receipt crossing the exact cutoff.
+Current execution results appear in `IMPLEMENTATION_STATUS.md`; they do not
+establish OS-call preemption or a hard real-time stop guarantee.
