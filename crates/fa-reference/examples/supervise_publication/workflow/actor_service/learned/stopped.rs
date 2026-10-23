@@ -3,7 +3,50 @@
 use super::{Config, Loaded, ElapsedTick, Instant, USAGE, anchors, recipe, recovery, topology,
     Duration, JournalError, Error};
 use recovery::{StopPhase, TerminalHistory};
-use std::{io::Write, path::Path, time::{SystemTime, UNIX_EPOCH}};
+use crate::workflow::continuation::checkpoint::AcknowledgedOutput;
+use std::{fs, io::Write, path::{Path, PathBuf}, time::{SystemTime, UNIX_EPOCH}};
+
+const CHECKPOINT_OUTPUT: &str = "--retain-topology-checkpoint";
+
+struct TerminalOutput { archive: AcknowledgedOutput, identity: PathBuf }
+
+fn take_output(args: &[String]) -> Result<(Vec<String>, Option<PathBuf>), String> {
+    let mut remaining = Vec::new();
+    let mut output = None;
+    let mut index = 0;
+    while index < args.len() {
+        if args[index] == CHECKPOINT_OUTPUT {
+            if index < 5 || output.is_some() { return Err(USAGE.into()); }
+            output = Some(super::fields::path(args.get(index + 1).ok_or(USAGE)?)?);
+            index += 2;
+        } else {
+            remaining.push(args[index].clone());
+            index += 1;
+        }
+    }
+    Ok((remaining, output))
+}
+
+fn admit_output(config: &Config, loaded: &Loaded, path: Option<&Path>)
+    -> Result<Option<TerminalOutput>, String>
+{
+    let Some(path) = path else { return Ok(None); };
+    let history = topology::history(loaded)?
+        .ok_or("terminal topology checkpoint retention requires an explicit topology profile")?;
+    if history.checkpoint().is_none() {
+        return Err("terminal topology checkpoint retention requires an exact v2 source checkpoint; manual source-work minima cannot establish complete custody".into());
+    }
+    let anchor = loaded.anchor_output.as_deref()
+        .ok_or("terminal topology checkpoint retention requires --retain-history-anchor for the same acknowledged cut")?;
+    let archive = AcknowledgedOutput::admit(config, path)?;
+    if archive.path() == anchor {
+        return Err("history anchor and topology checkpoint outputs must be distinct new files".into());
+    }
+    // Canonical identity is admitted before native completion. Export never
+    // reopens the mutable authority directory or substitutes a newer journal.
+    let identity = fs::canonicalize(&config.store).map_err(super::debug)?;
+    Ok(Some(TerminalOutput { archive, identity }))
+}
 
 pub(super) fn is_option(value: &str) -> bool {
     matches!(value, "--recover-stop" | "--stop-admission" | "--drain-stopped")
@@ -23,7 +66,8 @@ pub(super) fn command(args: &[String], options: anchors::Options) -> Result<(), 
 pub(super) fn command_with<F>(args: &[String], options: anchors::Options, clock: F,
     elapsed: &mut impl FnMut() -> Duration, out: &mut impl Write) -> Result<(), String>
 where F: FnOnce() -> Result<ElapsedTick, JournalError> {
-    let (args, topology_path) = topology::take_option(args)?;
+    let (args, output_path) = take_output(args)?;
+    let (args, topology_path) = topology::take_option(&args)?;
     if args.len() != 5 || args[0] != "create-learned-generated" {
         return Err(USAGE.into());
     }
@@ -52,7 +96,9 @@ where F: FnOnce() -> Result<ElapsedTick, JournalError> {
     checkpoint()?;
     topology::admit(&config, &mut loaded, topology_path.as_deref(), topology::Mode::Historical)?;
     checkpoint()?;
-    run_phase_with_elapsed(&config, &loaded, phase, operation, clock, elapsed, out)
+    let output = admit_output(&config, &loaded, output_path.as_deref())?;
+    checkpoint()?;
+    run_phase_retaining_with_elapsed(&config, &loaded, phase, operation, output.as_ref(), clock, elapsed, out)
 }
 
 #[cfg(test)]
@@ -64,8 +110,16 @@ where F: FnOnce() -> ElapsedTick {
         &mut || started.elapsed(), out)
 }
 
+#[cfg(test)]
 pub(super) fn run_phase_with_elapsed<F>(config: &Config, loaded: &Loaded,
     phase: StopPhase, operation: u64, clock: F,
+    elapsed: &mut impl FnMut() -> Duration, out: &mut impl Write) -> Result<(), String>
+where F: FnOnce() -> Result<ElapsedTick, JournalError> {
+    run_phase_retaining_with_elapsed(config, loaded, phase, operation, None, clock, elapsed, out)
+}
+
+fn run_phase_retaining_with_elapsed<F>(config: &Config, loaded: &Loaded,
+    phase: StopPhase, operation: u64, output: Option<&TerminalOutput>, clock: F,
     elapsed: &mut impl FnMut() -> Duration, out: &mut impl Write) -> Result<(), String>
 where F: FnOnce() -> Result<ElapsedTick, JournalError> {
     if operation == 0 { return Err("stop operation must be nonzero".into()); }
@@ -81,17 +135,31 @@ where F: FnOnce() -> Result<ElapsedTick, JournalError> {
         .transpose().map(|_| ()).map_err(|error| format!(
         "native stop acknowledged at revision {}, but history anchor retention failed: {error}; no effect retry was sent; keep the previous archive and select a new output path",
         revision));
+    // Source work comes only from the independently selected exact v2 cut.
+    // Native terminal validation proves the suffix contains no further source
+    // work and pairs the unchanged source custody with this SAME stopped anchor.
+    // Attempt this output even when independent history retention failed.
+    let topology_retained = output.map(|output| {
+        let saved = topology::history(loaded)?.and_then(|history| history.checkpoint())
+            .ok_or("terminal topology checkpoint custody is missing")?;
+        let checkpoint = match &history {
+            TerminalHistory::Admission(history) => saved.after_admission_stop(
+                &config.profile, &output.identity, history),
+            TerminalHistory::Completed(history) => saved.after_stopped(
+                &config.profile, &output.identity, history),
+        }.map_err(super::debug)?;
+        output.archive.retain(&checkpoint)
+    }).transpose().map(|_| ()).map_err(|error: String| format!(
+        "native stop acknowledged at revision {}, but terminal topology checkpoint retention failed: {error}; no effect retry was sent; keep previous custody and select new output paths",
+        revision));
     // A failed export must not hide the native stop or its remaining liabilities.
     // Conversely a failed/pending report must not hide failed archive retention.
     let reported = match &history {
         TerminalHistory::Admission(history) => crate::recover_stop::report_admission(history, out),
         TerminalHistory::Completed(history) => crate::recover_stop::report(history.stopped(), out),
     };
-    match (reported, retained) {
-        (Ok(()), Ok(())) => Ok(()),
-        (Err(error), Ok(())) | (Ok(()), Err(error)) => Err(error),
-        (Err(report), Err(retention)) => Err(format!("{report}; {retention}")),
-    }
+    let failures: Vec<_> = [reported, retained, topology_retained].into_iter().filter_map(Result::err).collect();
+    if failures.is_empty() { Ok(()) } else { Err(failures.join("; ")) }
 }
 
 fn unconfirmed(error: String) -> String {

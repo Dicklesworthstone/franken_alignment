@@ -1,5 +1,23 @@
 # Changelog
 
+## 2026-10-23: retain paired learned terminal topology checkpoints
+
+- Add explicit `--retain-topology-checkpoint` to learned admission stop, later
+  drain and combined recovery, requiring exact version-2 source custody and a
+  paired new history-anchor output before native mutation.
+- Preserve source work, complete documents and exact native floors across
+  offline terminal cuts in all three predictor modes. Reject unsafe output
+  aliases and manual-minimum attempts to fabricate exact checkpoints.
+- Attempt both private exports and the native report independently; retain the
+  acknowledged stop and each error when an output races or reporting fails.
+  Document the strict-v2 recovery limits after partial export.
+- Pass four new operator regressions in a registration-only scoped harness
+  with the qualified nightly's official Cranelift backend, preserving all test
+  bodies and production logic. The complete operator test source passes the
+  standard compiler check; eight existing checkpoint regressions and their
+  helper entry point also pass. Full code generation hit host memory limits,
+  and the standard xtask gate still refuses the pre-existing dependency graph.
+
 ## 2026-10-22: carry source checkpoints through native terminal recovery
 
 - Add native checkpoint successors for sealed admission-stop and stopped/drained

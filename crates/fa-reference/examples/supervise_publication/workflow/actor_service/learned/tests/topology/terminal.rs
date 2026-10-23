@@ -3,6 +3,9 @@ use super::super::super::{recovery::STOP_ACQUISITION_DEADLINE, stopped as termin
 use super::*;
 use std::{cell::Cell, collections::BTreeMap};
 
+#[path = "terminal/retained.rs"]
+mod retained;
+
 fn files(config: &Config) -> BTreeMap<PathBuf, Vec<u8>> {
     fs::read_dir(&config.store)
         .unwrap()

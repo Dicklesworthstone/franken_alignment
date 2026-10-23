@@ -39,6 +39,10 @@ pub(crate) struct Next {
     output: Option<Output>,
 }
 impl History {
+    /// Only v2 retained custody accounts for the exact complete original cut.
+    /// Manual v1 minima cannot mint a source-work checkpoint after terminal work.
+    pub(crate) fn checkpoint(&self) -> Option<&TopologyCheckpoint> { self.saved.as_ref() }
+
     /// Uncheckpointed journal successors may contain additional source work.
     /// v2 cannot reuse older counters as their accounting; v1 remains a minimum.
     pub(crate) fn check_extent(&self, events: usize) -> Result<(), String> {

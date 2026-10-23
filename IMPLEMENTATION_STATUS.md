@@ -1,5 +1,40 @@
 # Implementation status · design revision 0.3
 
+## 2026-10-23: retain paired topology custody from learned terminal commands
+
+Learned `--stop-admission`, `--drain-stopped` and `--recover-stop` now accept
+`--retain-topology-checkpoint NEW_OUTPUT` with a separately selected version-2
+source checkpoint and paired `--retain-history-anchor NEW_OUTPUT`. The original
+exact-cut requirements are checked before native recovery. Both destinations
+must be new, distinct private files outside the authority store; canonical
+parent aliases and version-1 manual minima cannot create exact source custody.
+The sealed native result advances the retained source checkpoint without live
+files or another journal read. Both exports and the native report are attempted
+independently, preserving each failure and the acknowledged native revision.
+A retained successor pair supports later drain and clock-free completed retries
+in ordinary, raw-predictive and owned-predictive modes.
+
+Four new operator regressions pass: real dispatched liability through both
+phases and all predictor modes; malformed/manual/aliased output refusal paired
+with a permitted command; independent output races; and broken report output.
+All eight existing checkpoint creation/continuation regressions and their
+synthetic helper entry point also pass against the shared private writer.
+The unchanged complete operator test source also passes the standard qualified
+`nightly-2026-09-08` check. Full operator code generation was killed by SIGKILL
+twice on the shared host. Focused execution uses that same nightly's official
+Cranelift backend and a disposable copy changing only unrelated libtest
+registration, preserving all test bodies, assertions, fixtures and production
+logic. Disk-exhausted attempts remain recorded; the four final cases pass with
+private temporary fixtures. The full standard xtask gate was retried and still
+refuses the existing dependency graph before formatting, Clippy or tests.
+These results do not close the wider packet, RCH or release qualification.
+
+Terminal persistence and paired exports remain separate writes. An earlier v2
+source checkpoint becomes stale after an advancing stop even if export fails.
+The operator contract now explicitly requires valid independently selected
+historical custody for retry; changing output paths alone cannot bypass exact
+cut matching, infer requirements or silently downgrade a profile.
+
 ## 2026-10-22: retain exact topology custody across native terminal cuts
 
 `TopologyCheckpoint::after_admission_stop` and `after_stopped` carry an

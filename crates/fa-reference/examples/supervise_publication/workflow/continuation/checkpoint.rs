@@ -7,13 +7,36 @@ use std::{fs::{self, File, OpenOptions}, io::{self, Cursor}, path::{Component, P
 use std::os::unix::fs::OpenOptionsExt;
 
 pub(crate) struct Output {
-    path: PathBuf,
+    archive: AcknowledgedOutput,
     topology: Vec<u8>,
     inventory: Vec<u8>,
 }
 impl Output {
     pub(crate) fn admit(config: &Config, path: &Path, topology: Vec<u8>, inventory: Vec<u8>)
         -> Result<Self, String>
+    {
+        Ok(Self { archive: AcknowledgedOutput::admit(config, path)?, topology, inventory })
+    }
+
+    pub(crate) fn retain(&self, host: &FileOversight, topology: Option<&FileDriverTopology>)
+        -> Result<(), String>
+    {
+        let result = (|| {
+            let topology = topology.ok_or("no retained topology-source custody to checkpoint")?;
+            // Use retained expectations, NOT newly read live files. Native capture
+            // pairs actual expenditure with this SAME acknowledged owner's history.
+            let checkpoint = topology.checkpoint(host, &self.topology, &self.inventory).map_err(debug)?;
+            self.archive.write(&checkpoint)
+        })();
+        result.map_err(retention_error)
+    }
+}
+
+/// A separately admitted destination for an already acknowledged native cut.
+/// No live source or owner is opened to retain this evidence.
+pub(crate) struct AcknowledgedOutput { path: PathBuf }
+impl AcknowledgedOutput {
+    pub(crate) fn admit(config: &Config, path: &Path) -> Result<Self, String>
     {
         validate_path(path)?;
         let parent = fs::canonicalize(path.parent().ok_or("checkpoint output needs a parent")?).map_err(debug)?;
@@ -29,29 +52,30 @@ impl Output {
         };
         if path.starts_with(&store) { return Err("topology checkpoints require custody outside the authority store".into()); }
         match fs::symlink_metadata(&path) {
-            Err(error) if error.kind() == io::ErrorKind::NotFound => Ok(Self { path, topology, inventory }),
+            Err(error) if error.kind() == io::ErrorKind::NotFound => Ok(Self { path }),
             Err(error) => Err(debug(error)),
             Ok(_) => Err("checkpoint output must be a new file; previous custody is never replaced".into()),
         }
     }
 
-    pub(crate) fn retain(&self, host: &FileOversight, topology: Option<&FileDriverTopology>)
-        -> Result<(), String>
-    {
-        let result = (|| {
-            let topology = topology.ok_or("no retained topology-source custody to checkpoint")?;
-            // Use retained expectations, NOT newly read live files. Native capture
-            // pairs actual expenditure with this SAME acknowledged owner's history.
-            let checkpoint = topology.checkpoint(host, &self.topology, &self.inventory).map_err(debug)?;
-            let parent = File::open(self.path.parent().ok_or("checkpoint output needs a parent")?).map_err(debug)?;
-            let mut file = OpenOptions::new().write(true).create_new(true).mode(0o600)
-                .open(&self.path).map_err(debug)?;
-            checkpoint.write_to(&mut file, MAX_TOPOLOGY_CHECKPOINT_BYTES).map_err(debug)?;
-            file.sync_all().map_err(debug)?;
-            parent.sync_all().map_err(debug)
-        })();
-        result.map_err(|error: String| format!("topology checkpoint retention failed: {error}; acknowledged work is not undone; keep previous custody and do not resend an effect"))
+    pub(crate) fn path(&self) -> &Path { &self.path }
+
+    pub(crate) fn retain(&self, checkpoint: &TopologyCheckpoint) -> Result<(), String> {
+        self.write(checkpoint).map_err(retention_error)
     }
+
+    fn write(&self, checkpoint: &TopologyCheckpoint) -> Result<(), String> {
+        let parent = File::open(self.path.parent().ok_or("checkpoint output needs a parent")?).map_err(debug)?;
+        let mut file = OpenOptions::new().write(true).create_new(true).mode(0o600)
+            .open(&self.path).map_err(debug)?;
+        checkpoint.write_to(&mut file, MAX_TOPOLOGY_CHECKPOINT_BYTES).map_err(debug)?;
+        file.sync_all().map_err(debug)?;
+        parent.sync_all().map_err(debug)
+    }
+}
+
+fn retention_error(error: String) -> String {
+    format!("topology checkpoint retention failed: {error}; acknowledged work is not undone; keep previous custody and do not resend an effect")
 }
 
 pub(super) fn read(config: &Config, path: &Path,

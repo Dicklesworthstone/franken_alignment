@@ -50,14 +50,52 @@ evidence, opens peer sockets or returns live authority.
 The two-command example above applies directly to histories without topology.
 For topology histories, each command also needs `--topology-profile PATH` and
 an independently retained `--history-anchor`. A `fa.mediated-submit/2` source
-checkpoint binds the exact selected anchor and complete journal extent.
-Admission stop extends that history and withdraws topology availability, so
-reusing the earlier source checkpoint for drain or retry is refused. Select an
-independently retained historical `fa.mediated-submit/1` profile that preserves
-the original topology, forecast and source-work requirements and explicitly
-requires `available: false`, together with the acknowledged stopped anchor.
-The command never infers weaker requirements from recovered history or silently
-rewrites a checkpoint to make stopped recovery pass.
+checkpoint binds the exact selected anchor and complete journal extent. Use the
+terminal-only `--retain-topology-checkpoint NEW_OUTPUT` option together with
+`--retain-history-anchor NEW_OUTPUT` to retain the acknowledged successor pair:
+
+```text
+supervise_publication create-learned-generated CONFIG LEARNED_RECIPE --stop-admission OPERATION --topology-profile ACTIVE_PROFILE --history-anchor ACTIVE_ANCHOR --retain-history-anchor STOPPED_ANCHOR --retain-topology-checkpoint STOPPED_SOURCE
+supervise_publication create-learned-generated CONFIG LEARNED_RECIPE --drain-stopped OPERATION --topology-profile STOPPED_PROFILE --history-anchor STOPPED_ANCHOR --retain-history-anchor DRAINED_ANCHOR --retain-topology-checkpoint DRAINED_SOURCE
+```
+
+`STOPPED_PROFILE` is an independently selected version-2 profile whose
+`source_checkpoint` names `STOPPED_SOURCE`; preserve the original `initial`
+documents and select an `operation` above the saved last source operation.
+Its `next` paths are not opened by terminal recovery. For a later retry, select
+the drained pair in the same way. Do not include the live-only profile field
+`retain_checkpoint`: the explicit terminal flag owns this output.
+
+The native successor preserves the complete original topology/inventory bytes,
+source work, last operation and limits. It takes its exact anchor and floors
+from the sealed native acknowledgement, without reopening the journal or
+creating a source, observer, reviewer or owner. Only the original matching Stop,
+Fence and StopProgress events may follow the saved source cut. A recovery Fence
+withdraws historical topology availability; an exact retry of a live Stop that
+did not fence topology preserves its actual historical availability. Neither
+state is current certification or permission to admit work.
+
+Both outputs must be distinct new private files outside the authority store;
+aliases through resolved parent directories are rejected before replay. Both
+exports and the original report are attempted independently. A partial export
+does not undo the acknowledged stop, settle an unknown charge or authorize a
+resend. Keep the previous custody until both outputs succeed.
+
+Terminal mutation and the two exports are not atomic. If source-checkpoint
+retention fails after the journal advances, the earlier version-2 checkpoint
+is stale; changing only output paths cannot make it reusable. Preserve the
+previous archives and every successful output. Recovery then requires
+independently selected historical requirements, such as a supported version-1
+profile with the correct availability, original source-work minima and all
+other original guards. The command does not infer those requirements or
+automatically downgrade the profile. If the source archive succeeds but the
+standalone anchor fails, the trusted source archive API exposes its exact
+embedded anchor for separate export; this CLI does not extract it automatically.
+
+Reusing the earlier source checkpoint after admission still refuses. An
+independently retained historical version-1 profile remains supported for
+recovery, but its manual source-work minima cannot export an exact terminal
+source checkpoint. No requirement or counter is guessed from recovered history.
 
 `--stop-admission` appends only the original Stop/Fence transaction. Its
 `fa.admission-stop/1` report distinguishes `stop_acknowledged: true` from
@@ -209,11 +247,14 @@ the command result. No path, anchor bytes or private evidence is added to stdout
 
 After successful retention, INPUT may be the new stopped anchor. A drained retry
 with a fresh OUTPUT writes the identical anchor without any terminal clock,
-extra journal event or replacement. After failed retention, keep INPUT and select
-a different new OUTPUT; an existing or partial output is never overwritten or
-silently accepted as acknowledged custody. A pending drain still requires its
-original time/capacity and may advance the next retained revision. Export remains
-separate from native persistence: failure cannot undo a stop or refund a charge.
+extra journal event or replacement. Without strict version-2 topology custody,
+failed retention can be retried with the original INPUT and a different new
+OUTPUT. With version-2 topology, the source and anchor must still form a valid
+exact pair; follow the partial-export requirements above. An existing or partial
+output is never overwritten or silently accepted as acknowledged custody.
+A pending drain still requires its original time/capacity and may advance the
+next retained revision. Export remains separate from native persistence:
+failure cannot undo a stop or refund a charge.
 
 ## Results and liabilities
 
@@ -228,8 +269,10 @@ to a successful receipt. A repeated pending drain still needs fresh time and
 finite terminal capacity.
 
 If report output fails after the stop is acknowledged, the error says so. Retry
-the same operation to report the verified original stopped cut. Output failure
-does not initiate another effect or invalidate an acknowledged stop.
+the same operation using valid recovery inputs, including the newly retained
+topology/history pair when applicable, to report the verified original stopped
+cut. Output failure does not initiate another effect or invalidate an
+acknowledged stop.
 
 The operator services its original elapsed budget before opening, before every
 original event, once more at Ready, and around terminal clock acquisition.
@@ -243,6 +286,17 @@ prove remote-provider settlement, authenticate independent anchor custody or
 protect a jointly rolled-back journal and anchor.
 
 ## Verification status
+
+Four terminal-checkpoint operator regressions in
+`learned/tests/topology/terminal/retained.rs` pass using the qualified nightly's
+official Cranelift backend and a scoped harness preserving the original test
+bodies, assertions, fixtures and production logic. They exercise all three
+predictor modes, real sent liabilities, paired admission/drain/retry custody,
+unsafe-output refusals, independent export races and report failure. The
+complete unchanged operator test source passes the standard compiler check.
+Full-harness code generation hit the host memory limit; broader qualification
+and the existing dependency-admission gate remain open as recorded in
+`IMPLEMENTATION_STATUS.md`.
 
 Eight public integration tests cover all four cursor types, full terminal
 capacity, reserved/sent/executed/expired effects, exact stop retries, guard and

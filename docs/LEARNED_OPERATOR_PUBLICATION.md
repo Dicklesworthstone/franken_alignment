@@ -81,7 +81,8 @@ the selected contracts.
 | --- | --- | --- |
 | Fresh creation | `fa.mediated-create/1` or `/2` | Input forbidden; a new output may be retained |
 | `--continue-generation`, `--after-message`, `--finish-after-message` | `fa.mediated-submit/1` or `/2` | Required before opening the store |
-| `--resume`, passive or reconciled receipts, receipt service, `--recover-stop` | `fa.mediated-submit/1` or `/2`, with no checkpoint output | Required; complete historical requirements remain checked |
+| `--resume`, passive or reconciled receipts, receipt service | `fa.mediated-submit/1` or `/2`, with no checkpoint output | Required; complete historical requirements remain checked |
+| `--recover-stop`, `--stop-admission`, `--drain-stopped` | `fa.mediated-submit/1` or `/2`; v2 permits explicit paired terminal checkpoint output | Required; exact source cut and complete historical requirements remain checked |
 
 For example, using independently provisioned files and a fresh output path:
 
@@ -124,19 +125,28 @@ request another send.
 
 Historical operations load only the independently selected original/current
 topology requirements; they do not open `next` live topology files or fresh
-native helper/evidence inputs. They refuse a requested new source checkpoint
-because no active source is being returned. Passive receipts consume no clock,
-fence or spare journal capacity. Explicit reconciliation retains the original
+native helper/evidence inputs. Receipt and audit modes refuse a requested new
+source checkpoint because no active source is being returned. The three
+terminal modes instead accept explicit paired `--retain-topology-checkpoint`
+and `--retain-history-anchor` outputs from an exact version-2 source cut. The
+native successor validates that only matching Stop, Fence and StopProgress
+events followed that cut, preserving the original source expenditure without
+creating a live source. Passive receipts consume no clock, fence or spare
+journal capacity. Explicit reconciliation retains the original
 `Fence -> Time -> Sweep`, including for an already-known receipt. Offline stop
 uses the original terminal tail directly. These are distinct finalizers, each
 protected by the same complete recovery checks.
 
-After a fence or acknowledged stop withdraws topology availability, the next
-independent historical profile must describe that saved unavailable state.
-Reusing `available: true`, a stale source checkpoint or an unretained successor
-cut refuses without silently changing expectations. A matching completed stop
-retry remains clock-free and adds no new fence. This bridge does not add the
-separate plain publication-witness profile to learned stream bootstrap.
+After a Fence withdraws topology availability, the next independent historical
+profile must describe that saved unavailable state. A native live Stop or
+StopProgress without that Fence preserves actual historical availability; it
+does not grant current certification. Reusing mismatched availability, a stale
+source checkpoint or an unretained successor cut refuses without silently
+changing expectations. A matching completed stop retry remains clock-free and
+adds no new fence. Select the newly retained pair for later drain or retry as
+described in [terminal recovery](LEARNED_STOP_RECOVERY.md#separate-operator-phases).
+This bridge does not add the separate plain publication-witness profile to
+learned stream bootstrap.
 
 Four operator regression functions cover authenticated actor/native/human
 message publication and Finish across all three predictor modes, anchored
@@ -212,8 +222,9 @@ completion, stop identity, output and finite-capacity contracts.
 Every recovery form can also require a separately retained exact history prefix
 with `--history-anchor INPUT`. `--retain-history-anchor NEW_OUTPUT` exports a
 checked successor from the final acknowledged owner, including after receipt
-recovery. Offline stop accepts only the input option and rejects successor export
-before I/O; initial creation accepts only the output option. See
+recovery. Offline stop exports the sealed native terminal acknowledgement and
+can pair it with an exact source checkpoint; initial creation accepts only the
+output option. See
 [operator history anchors](LEARNED_OPERATOR_HISTORY_ANCHORS.md) for private
 custody, bounded admission, new-file retention and failure semantics.
 

@@ -107,6 +107,25 @@ export can still occur. Because recovery itself advances the journal, an older
 checkpoint cannot simply be reused indefinitely through this strict operator
 mode; no automatic counter advancement or safe-suffix inference is implied.
 
+## Learned terminal recovery
+
+The learned operator can retain a source checkpoint after offline
+`--stop-admission`, `--drain-stopped` or combined `--recover-stop` with the
+explicit `--retain-topology-checkpoint NEW_OUTPUT` option. This requires a
+version-2 source checkpoint and paired `--retain-history-anchor NEW_OUTPUT`.
+The native consumer validates an exact terminal successor of the saved cut,
+preserves all original documents and source expenditure, and pairs them with
+the acknowledged terminal anchor and floors. It does not create a live source
+or read the profile's next files. The successor pair can be selected by a new
+version-2 profile for later drain or retry. See the full
+[terminal workflow](LEARNED_STOP_RECOVERY.md#separate-operator-phases).
+
+This does not change receipt-only or live continuation selection. The profile
+field `retain_checkpoint` remains a live-source output, while the new flag is
+accepted only by the three learned terminal modes. Version-1 manual minima
+cannot produce an exact source checkpoint. Both terminal outputs must be new,
+distinct and outside the authority store before any stop mutation occurs.
+
 ## Failure and cost boundaries
 
 Each export uses private create-new mode, then file and parent synchronization.
@@ -143,10 +162,17 @@ counter overrides, mixed history, newer canonical history, pre-creation refusal
 and human rejection. Synthetic ballots are plumbing controls, not model-quality
 or reviewer-authentication evidence. Existing test assertions are unchanged.
 
-These are authored tests, not passing results. Remote-only targeted tests and the
-full gate stop before compilation because `rch` is absent in the editing
-environment. Rust compilation, test execution, rustfmt, Clippy and qualification
-remain pending; no Beads or roadmap item is closed.
+The initial remote-only attempt stopped before compilation because `rch` was
+absent. On 2026-10-23 all eight regressions and their helper entry point pass
+with the qualified nightly's official Cranelift backend in a disposable scoped
+harness. Only unrelated libtest registration is changed; the original test
+bodies, assertions, fixtures and production logic remain intact. Four new
+learned terminal-checkpoint regressions also pass, including paired exports,
+all predictor modes, output races and report failure. The complete unmodified
+operator test source passes the standard compiler check. Full-harness code
+generation hit the host memory limit, while the full standard xtask gate still
+refuses the existing dependency graph. RCH, rustfmt, Clippy and release
+qualification remain pending; no Beads or roadmap item is closed.
 
 ```sh
 RCH_REQUIRE_REMOTE=1 rch exec -- cargo test --locked -p fa-reference \
