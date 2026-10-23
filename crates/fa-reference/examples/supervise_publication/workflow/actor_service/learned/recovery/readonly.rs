@@ -1,6 +1,6 @@
 //! Explicit receipt inspection or settlement on the SAME guarded replay.
 //! Neither mode returns a live owner; a failed mode never falls back to the other.
-pub(in super::super) mod service;
+#[path = "readonly/service.rs"] pub(in super::super) mod service;
 use super::{receipt_replay, selected::Cursor};
 use super::super::{Config, Loaded, Duration, Instant, RunResult, anchors, emit, finish, recipe, topology};
 use fa_reference::action::consequence::oversight::actor_wire::WireResponse;

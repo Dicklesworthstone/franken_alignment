@@ -1,12 +1,12 @@
 //! Anchored stream receipt recovery with no admitting or numerical fallback.
-mod settings;
-mod completion;
+#[path = "stream/settings.rs"] mod settings;
+#[path = "stream/completion.rs"] mod completion;
 use completion::RecoveryReport;
 #[cfg(test)]
 #[path = "stream/completion_tests.rs"]
 mod completion_tests;
 #[cfg(test)]
-mod tests;
+#[path = "stream/tests.rs"] mod tests;
 use settings::Settings;
 use super::{ActorWire, BoundSocket, Config, Duration, FileOversight, Path, PeerSession,
     Profile, ServiceReport, debug, serve_session};

@@ -4,7 +4,7 @@ use super::*;
 use crate::workflow::actor_service::learned::recovery::readonly as query;
 use fa_reference::action::consequence::oversight::actor_wire::WireResponse;
 use std::{io, path::Path};
-mod fixture;
+#[path = "operator/fixture.rs"] mod fixture;
 
 fn encoded(response: &WireResponse) -> Vec<u8> {
     let mut bytes = response.encode(); bytes.push(b'\n'); bytes

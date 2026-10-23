@@ -128,7 +128,7 @@ fn historical_message_lookup_cannot_mint_a_request_from_ready_output() {
     }
 }
 
-mod preflight;
-mod readonly;
-mod readonly_operator;
-mod reconciled;
+#[path = "receipt_selection/preflight.rs"] mod preflight;
+#[path = "receipt_selection/readonly.rs"] mod readonly;
+#[path = "receipt_selection/readonly_operator.rs"] mod readonly_operator;
+#[path = "receipt_selection/reconciled.rs"] mod reconciled;

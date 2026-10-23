@@ -71,6 +71,9 @@ use fa_reference::action::consequence::delivery::{StopRequest, stream::StreamPro
     }}};
 use std::cell::Cell;
 
+#[path = "mediated_learned_reserve/phases.rs"]
+mod phases;
+
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 enum Lane { Plain, Raw, Owned }
 const LANES: [Lane; 3] = [Lane::Plain, Lane::Raw, Lane::Owned];

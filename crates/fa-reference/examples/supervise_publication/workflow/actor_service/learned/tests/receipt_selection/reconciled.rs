@@ -236,4 +236,4 @@ fn settlement_never_spends_terminal_only_capacity_but_readonly_receipts_still_wo
     }
 }
 
-mod operator;
+#[path = "reconciled/operator.rs"] mod operator;

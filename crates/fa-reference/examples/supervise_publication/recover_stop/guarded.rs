@@ -1,9 +1,9 @@
 //! Offline guarded source-publication recovery using the original sealed cursor.
 //! The profile supplies independent floors/custody; CONFIG supplies exact policy
 //! and source identity. No current evidence, helper or reviewer is opened.
-mod profile;
-mod recovery;
-pub(super) mod phases;
+#[path = "guarded/profile.rs"] mod profile;
+#[path = "guarded/recovery.rs"] mod recovery;
+#[path = "guarded/phases.rs"] pub(super) mod phases;
 pub(crate) use profile::{CreationOutput, Custody, Profile, ResumeProfile, SubmitProfile};
 use super::{Config, debug, report};
 use fa_reference::action::ElapsedTick;

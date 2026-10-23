@@ -1,5 +1,5 @@
 //! External reviewers on the original learned process sequence and action owner.
-mod config;
+#[path = "process/config.rs"] mod config;
 pub(super) use config::ProcessRecipe;
 use super::{Config, Loaded, Deadline, ElapsedTick, FileSupervisedDriver, FileHumanReviewer,
     debug, plus, refresh, Duration, Instant};

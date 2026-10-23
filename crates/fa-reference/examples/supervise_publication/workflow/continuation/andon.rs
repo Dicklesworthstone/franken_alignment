@@ -156,6 +156,6 @@ where F: FnMut() -> ElapsedTick {
 }
 
 #[cfg(test)]
-mod tests;
+#[path = "andon/tests.rs"] mod tests;
 #[cfg(test)]
-mod checked_tests;
+#[path = "andon/checked_tests.rs"] mod checked_tests;

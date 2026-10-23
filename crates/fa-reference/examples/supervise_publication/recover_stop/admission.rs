@@ -1,5 +1,5 @@
 //! Explicit clock-free stop and later drain; never a fallback from guarded recovery.
-mod custody;
+#[path = "admission/custody.rs"] mod custody;
 use custody::AnchorOutput;
 use super::{Config, FileOversight, debug, ids, report};
 use fa_reference::action::ElapsedTick;
@@ -135,6 +135,6 @@ pub(super) fn admission_report(stopped: &FileAdmissionStoppedHistory, out: &mut 
 }
 
 #[cfg(test)]
-mod tests;
+#[path = "admission/tests.rs"] mod tests;
 #[cfg(test)]
-mod custody_tests;
+#[path = "admission/custody_tests.rs"] mod custody_tests;

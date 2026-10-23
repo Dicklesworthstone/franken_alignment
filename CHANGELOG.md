@@ -1,5 +1,28 @@
 # Changelog
 
+## 2026-10-22: connect learned operator admission stop and later drain
+
+- Add `--stop-admission` and `--drain-stopped` to learned terminal recovery in
+  ordinary, raw-predictive, owned-predictive and topology-mediated modes.
+  Reuse the original guarded cursors, Stop/Fence/StopProgress transitions,
+  native reports and exact acknowledged history anchors.
+- Keep `--recover-stop` atomic, and check the original command budget before
+  and after fallible terminal time acquisition. A failed or late clock cannot
+  mutate the history through an implicit admission fallback.
+- Add seven operator regressions and four independent topology phase
+  regressions using real numerical generation, native review, independent human
+  approval and original publication liabilities.
+- Repair the baseline owned-forecast integration fixture's private-method call
+  using the existing public checked evidence and acknowledged input. Preserve
+  its original checks and add exact review-input equality without widening APIs.
+- Resolve 53 existing operator module declarations to their actual source files,
+  including the original tests, and remove a fleet-profile validator shadow.
+  These repair concrete compilation blockers without excluding any modules.
+- Rust 2024 syntax and diff checks pass. The first targeted runtime build was
+  killed by SIGKILL during library compilation before any tests ran. The qualified
+  nightly type-checks the operator and both changed integration-test targets.
+  No full packet or release gate is closed.
+
 ## 2026-10-22: keep authenticated stop-peer completion within one deadline
 
 - Start one elapsed budget before connection and authentication, preserve it

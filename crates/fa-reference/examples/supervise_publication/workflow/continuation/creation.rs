@@ -7,12 +7,12 @@ use crate::recover_stop::guarded::CreationOutput;
 use fa_reference::action::consequence::oversight::actor_wire::{Command, MAX_FRAME_BYTES, decode_command};
 use std::{io::Write, path::Path, time::{Duration, Instant}};
 
-pub(crate) mod topology;
+#[path = "creation/topology.rs"] pub(crate) mod topology;
 
 #[cfg(test)]
-mod topology_tests;
+#[path = "creation/topology_tests.rs"] mod topology_tests;
 #[cfg(test)]
-mod checked_topology_tests;
+#[path = "creation/checked_topology_tests.rs"] mod checked_topology_tests;
 
 pub(crate) struct Creation<'a> {
     pub document: &'a [u8],

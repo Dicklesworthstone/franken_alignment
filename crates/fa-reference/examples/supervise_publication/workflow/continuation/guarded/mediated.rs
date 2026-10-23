@@ -1,6 +1,6 @@
 //! Continue the ORIGINAL mediated domain; never reopen through a weaker profile.
 //! Historical requests stay query-only and never consume the next live source.
-pub(crate) mod profile;
+#[path = "mediated/profile.rs"] pub(crate) mod profile;
 use profile::Selection;
 use super::{Config, Submission, SubmitProfile, PeerProfile, FileOversight, FileGuardSet,
     FileRecoveryRequirements, FileGuardedRecoveryStatus, RecoveryReserve, JournalError,
@@ -210,7 +210,7 @@ fn arguments(args: &[String]) -> Result<(&Path, &Path, Option<&Path>), String> {
 }
 
 #[cfg(test)]
-mod tests;
+#[path = "mediated/tests.rs"] mod tests;
 #[cfg(test)]
 #[path = "mediated/checked.rs"]
 mod checked;

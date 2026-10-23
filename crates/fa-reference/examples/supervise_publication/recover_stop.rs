@@ -1,8 +1,8 @@
 //! Privileged local recovery when the live supervisor/stop socket is unavailable.
 //! Only original durable stop/fence/settlement runs; no source or helper is read.
-pub(crate) mod guarded;
-mod cooperative;
-pub(crate) mod admission;
+#[path = "recover_stop/guarded.rs"] pub(crate) mod guarded;
+#[path = "recover_stop/cooperative.rs"] mod cooperative;
+#[path = "recover_stop/admission.rs"] pub(crate) mod admission;
 
 use super::config::{Config, debug};
 use fa_reference::action::ElapsedTick;
@@ -20,6 +20,12 @@ where F: FnOnce() -> ElapsedTick {
 
 fn ids(values: &[u64]) -> String {
     values.iter().map(|id| format!("\"{id}\"")).collect::<Vec<_>>().join(",")
+}
+pub(crate) fn report_admission(
+    stopped: &fa_reference::action::consequence::delivery::persistent::observed::shutdown::recovery::FileAdmissionStoppedHistory,
+    out: &mut impl Write,
+) -> Result<(), String> {
+    admission::admission_report(stopped, out)
 }
 pub(crate) fn report(recovered: &FileStoppedRecovery, out: &mut impl Write) -> Result<(), String> {
     let progress = recovered.progress(); let state = recovered.snapshot();

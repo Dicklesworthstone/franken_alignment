@@ -90,4 +90,4 @@ fn retain(custody: &super::Custody,
 }
 
 #[cfg(test)]
-mod tests;
+#[path = "phases/tests.rs"] mod tests;

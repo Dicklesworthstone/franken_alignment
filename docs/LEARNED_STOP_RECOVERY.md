@@ -20,12 +20,61 @@ sockets and the policy evidence file are not opened. An optional
 
 The command accepts an independently retained history anchor and can retain its
 acknowledged stopped successor using `--retain-history-anchor OUTPUT`. INPUT is
-optional; omitting it does not establish external history continuity. OUTPUT must
+optional for histories without topology; topology recovery requires INPUT.
+Omitting it for a non-topology history does not establish external history
+continuity. OUTPUT must
 be a new private file outside the mutable authority directory. The same original
 path admission and bounded anchor decoder apply. Keep the old archive until the
 new export succeeds. Stop recovery cannot be combined with generation
 continuation, next-message or finish options and never creates a fresh authority
 store.
+
+## Separate operator phases
+
+Use admission-only stop when new work must be fenced without obtaining a
+settlement timestamp, then explicitly drain the same stopped operation later:
+
+```text
+supervise_publication create-learned-generated CONFIG LEARNED_RECIPE --stop-admission OPERATION --history-anchor INPUT --retain-history-anchor STOPPED_ANCHOR
+supervise_publication create-learned-generated CONFIG LEARNED_RECIPE --drain-stopped OPERATION --history-anchor STOPPED_ANCHOR --retain-history-anchor DRAINED_ANCHOR
+```
+
+Both commands accept the same input/output anchor options and historical
+`--topology-profile PATH` as combined `--recover-stop`. They support ordinary,
+raw-predictive and owned-predictive histories, including topology-mediated
+histories. Each command independently verifies the exact recipe, guards, floors,
+reserve and retained history before consuming the original sealed recovery.
+Neither command loads live reviewer models, reads current policy/topology
+evidence, opens peer sockets or returns live authority.
+
+The two-command example above applies directly to histories without topology.
+For topology histories, each command also needs `--topology-profile PATH` and
+an independently retained `--history-anchor`. A `fa.mediated-submit/2` source
+checkpoint binds the exact selected anchor and complete journal extent.
+Admission stop extends that history and withdraws topology availability, so
+reusing the earlier source checkpoint for drain or retry is refused. Select an
+independently retained historical `fa.mediated-submit/1` profile that preserves
+the original topology, forecast and source-work requirements and explicitly
+requires `available: false`, together with the acknowledged stopped anchor.
+The command never infers weaker requirements from recovered history or silently
+rewrites a checkpoint to make stopped recovery pass.
+
+`--stop-admission` appends only the original Stop/Fence transaction. Its
+`fa.admission-stop/1` report distinguishes `stop_acknowledged: true` from
+`drain_attempted: false`; acknowledged admission stop is successful even when
+liabilities remain. It never consults the settlement clock. `--drain-stopped`
+requires a previously acknowledged stop with the same operation identity and
+uses the existing stopped/drained report. An active history or different
+operation is refused before clock acquisition. Missing or late time leaves the
+earlier stop intact.
+
+The existing `--recover-stop` remains one atomic combined transaction. Failure
+does not silently perform admission-only stop. Phase selectors are mutually
+exclusive and cannot accompany live creation, continuation, receipt, or Finish
+options. The original monotonic runtime budget begins at command entry and
+covers input admission, complete replay and terminal clock acquisition; it is
+checked both before and after the fallible clock. A completed retry still needs
+no clock and adds no event. Synchronous filesystem work is not preemptible.
 
 ## Separate sealed library phases
 
@@ -56,7 +105,8 @@ requirements still apply. `try_finish_stopped_with_anchor` additionally exposes
 fallible-clock combined completion on every cursor, preserving the original
 atomic transaction and returning no successful receipt or anchor on refusal.
 Existing infallible combined methods retain their signatures and behavior.
-Command-line phase selection is a separate integration step.
+The explicit operator phases above use these same consumers; there is no
+ordinary recovery fallback or second numerical replay.
 
 Four public regression functions exercise real reserved, dispatched, executed
 and expired effects through the learned, guarded, raw-predictive and
@@ -140,9 +190,10 @@ archive remain operator assumptions.
 
 ## Retain the terminal anchor from the operator
 
-When OUTPUT is selected, all three original operator modes consume
-`finish_stopped_with_anchor` through the same one-event replay driver, preserving
-every admission and Ready checkpoint. The command exports that captured anchor
+When OUTPUT is selected, ordinary, raw-predictive and owned-predictive modes,
+with or without topology, consume the selected native phased or fallible
+combined finalizer through the same one-event replay driver, preserving every
+admission and Ready checkpoint. The command exports that captured anchor
 through the existing bounded private-file writer. It does not obtain a live
 owner, reopen the authority store, capture a newer revision or perform another
 numerical replay. The file is created exclusively with mode 0600 on Unix, then
@@ -166,7 +217,9 @@ separate from native persistence: failure cannot undo a stop or refund a charge.
 
 ## Results and liabilities
 
-Stdout uses the existing native stop JSON report. `stopped_drained` means the
+Drain and combined completion use the existing native stop JSON report.
+Admission-only completion uses the separate acknowledgment report described
+above. `stopped_drained` means the
 original stop and drain are confirmed. `stopped_pending` reports the unresolved
 and irrecoverable operation IDs and returns a command error. Original executed
 effects and expired unknown outcomes remain charged. Only original receipts can
@@ -178,8 +231,9 @@ If report output fails after the stop is acknowledged, the error says so. Retry
 the same operation to report the verified original stopped cut. Output failure
 does not initiate another effect or invalidate an acknowledged stop.
 
-The operator services its elapsed replay budget before opening, before every
-original event and once more at Ready. Cancellation drops the original cursor
+The operator services its original elapsed budget before opening, before every
+original event, once more at Ready, and around terminal clock acquisition.
+Cancellation drops the original cursor
 without fencing, cleaning staging, obtaining terminal time or returning a live
 role. Initial framing, an individual reducer call and final storage work remain
 synchronous; the budget is cooperative, not a hard cancellation-latency bound.
@@ -209,9 +263,11 @@ independent guard refusal. Existing no-export and lost-report tests remain,
 with the former unsupported-output assertions replaced by positive terminal
 retention and configuration-admission controls.
 
-The new anchor implementation, operator integration and regressions have not
-been compiled or executed in this session. The required remote-only RCH execution gate remains pending;
-source inspection does not establish type correctness, runtime behavior or
-release qualification. The scoped FA-014 bead and full packet remain open.
+The original anchor implementation and its initial regression wave were
+source-reviewed without compilation. Current phase integration and topology
+regression execution are recorded in the latest `IMPLEMENTATION_STATUS.md`
+entry; those results do not retrospectively qualify earlier unexecuted source
+waves. The complete remote RCH/workspace gate and full FA-014 packet remain
+open. Source inspection alone is not type checking or runtime qualification.
 This implements plan sections 16.4/16.5/16.9/25.4 and FI-A02 without adding an
 agent verb, dependency, alternative journal or effect executor.

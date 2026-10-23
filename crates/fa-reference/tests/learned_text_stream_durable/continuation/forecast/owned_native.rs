@@ -88,16 +88,20 @@ fn reviewed(host: &mut FileOversight, reviewer: &FileHumanReviewer, request: u64
     text: Option<&str>) -> (u64, FrozenAction, CommitteeInput, FilePermit, FileHumanPermit) {
     let (attempt, action) = super::super::request(host, request, text);
     let n = host.learned_generation_inspection().unwrap().numerical;
-    let priority = host.learned_text_message(LearnedEvidenceLimits::default()).unwrap()
-        .evidence().audit().source().groups().collect();
+    let message = host.learned_text_message(LearnedEvidenceLimits::default()).unwrap();
+    let source = message.evidence().audit().source();
+    let priority = source.groups().collect();
     let sidecar = host.begin_learned_sidecar_plan(host.revision(), attempt, n.actor_revision,
         LearnedSidecarRequest { identity: SidecarIdentity { object_id: 1000 + request,
             generation: 1, transform_id: 7 }, priority, budget: SidecarCongressBudget::default() }).unwrap();
-    let original = host.checked_learned_sidecar(&sidecar).unwrap();
-    let rows: BTreeSet<_> = original.source().groups().map(|group| group.row).collect();
-    let members = original.round().input().views().iter().enumerate().map(|(index, (name, view))| {
+    // Public live evidence supplies the checked original row shapes; the
+    // acknowledged plan supplies its exact current helper input. Native review
+    // independently checks both without exporting internal planner custody.
+    let original = host.current_learned_sidecar(&sidecar).unwrap().clone();
+    let rows: BTreeSet<_> = source.groups().map(|group| group.row).collect();
+    let members = original.views().iter().enumerate().map(|(index, (name, view))| {
         let queries = rows.iter().map(|row| {
-            let (frame, heads, channels) = original.source().row_shape(*row).unwrap();
+            let (frame, heads, channels) = source.row_shape(*row).unwrap();
             SidecarProbeQuery { row: *row, probe: LinearProbe::new(1, 1, frame.profile,
                 &vec![0.0; heads * channels], 0.0, 1.0).unwrap() }
         }).collect();
@@ -110,6 +114,7 @@ fn reviewed(host: &mut FileOversight, reviewer: &FileHumanReviewer, request: u64
         LearnedWorkerRound { round: 100 + request, evidence_root: [7; 32],
             window: ReviewWindow { commit_by: ElapsedTick(20), reveal_by: ElapsedTick(30) } },
         members, NativeReviewLimits::default(), snapshot()).unwrap();
+    assert_eq!(review.input(), &original);
     for _ in 0..MAX_LEARNED_REVIEW_POLLS {
         if review.status() != NativeReviewStatus::Running { break; }
         review.advance(host, review.revision(), ElapsedTick(1), snapshot()).unwrap();

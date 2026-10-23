@@ -22,8 +22,8 @@ pub(super) struct Plan {
     pub members: Vec<Member>,
 }
 impl Plan {
-    pub fn read<T: FnMut() -> Duration>(path: &Path, elapsed: &mut T) -> Result<Self, String> {
-        let bytes = read_regular(path, MAX_MANIFEST_BYTES)?;
+    pub fn read<T: FnMut() -> Duration>(manifest_path: &Path, elapsed: &mut T) -> Result<Self, String> {
+        let bytes = read_regular(manifest_path, MAX_MANIFEST_BYTES)?;
         let json = strict_json::parse(&bytes, Limits { max_bytes: MAX_MANIFEST_BYTES,
             max_depth: 4, max_items: 1024, max_string_bytes: 4096 }).map_err(debug)?;
         let root = object(&json, &["schema_version", "runtime_ms", "poll_ms", "steps_per_peer", "members"])?;

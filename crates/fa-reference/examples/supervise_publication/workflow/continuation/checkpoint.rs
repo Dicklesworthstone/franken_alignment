@@ -91,4 +91,4 @@ fn validate_path(path: &Path) -> Result<(), String> {
 }
 
 #[cfg(test)]
-mod tests;
+#[path = "checkpoint/tests.rs"] mod tests;

@@ -1,7 +1,7 @@
 //! Exhaustive native subset search over an independently reconstructed admission.
 //! No alternate evaluator, early-success shortcut, or effect-bearing result.
-mod menu;
-mod render;
+#[path = "search/menu.rs"] mod menu;
+#[path = "search/render.rs"] mod render;
 pub(super) use menu::Menu;
 use super::{FileProposalInvestigation, Intervention, InterventionScope, checkpoint, debug, unavailable};
 use fa_reference::action::consequence::delivery::persistent::observed::guarded::investigation::FileProposalRepairReport;
@@ -51,4 +51,4 @@ fn evaluate(investigation: &FileProposalInvestigation, menu: &Menu, wall: Durati
 }
 
 #[cfg(test)]
-mod tests;
+#[path = "search/tests.rs"] mod tests;

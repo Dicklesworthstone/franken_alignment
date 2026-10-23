@@ -339,4 +339,4 @@ fn missing_or_malformed_independent_anchor_and_existing_output_refuse_before_mut
     }
 }
 
-mod combined;
+#[path = "tests/combined.rs"] mod combined;

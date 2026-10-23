@@ -10,11 +10,13 @@ use fa_reference::action::consequence::delivery::persistent::{JournalError, obse
                 FilePredictiveMediatedLearnedRecovery}},
         predictive::{FilePredictiveRequirements, learned::FilePredictiveLearnedRecovery,
             owned::{FileOwnedPredictiveRecovery, FileOwnedPredictiveRequirements}}},
-    shutdown::recovery::{FileStoppedHistory, FileStoppedRecovery},
+    shutdown::recovery::{FileAdmissionStoppedHistory, FileStoppedHistory},
     stream::FileStreamProposal,
 }};
 use fa_reference::action::consequence::delivery::persistent::requests::actor::receipt::FileLearnedReceiptActorPort;
 use fa_reference::action::consequence::oversight::actor::{ActorOutcome, Knowledge};
+#[cfg(test)]
+use fa_reference::action::consequence::delivery::persistent::observed::shutdown::recovery::FileStoppedRecovery;
 
 pub(super) enum Cursor {
     Plain(FileGuardedLearnedRecovery),
@@ -193,6 +195,7 @@ impl Cursor {
         }
     }
 
+    #[cfg(test)]
     pub(super) fn finish_stopped<F>(self, operation: u64, clock: F)
         -> Result<FileStoppedRecovery, JournalError>
     where F: FnOnce() -> ElapsedTick {
@@ -205,6 +208,7 @@ impl Cursor {
         }
     }
 
+    #[cfg(test)]
     pub(super) fn finish_stopped_with_anchor<F>(self, operation: u64, clock: F)
         -> Result<FileStoppedHistory, JournalError>
     where F: FnOnce() -> ElapsedTick {
@@ -214,6 +218,42 @@ impl Cursor {
             Self::Owned(run) => { let request = run.stop_request(operation)?; run.finish_stopped_with_anchor(request, clock) }
             Self::Mediated(run) => { let request = run.stop_request(operation)?; run.finish_stopped_with_anchor(request, clock) }
             Self::PredictiveMediated(run) => { let request = run.stop_request(operation)?; run.finish_stopped_with_anchor(request, clock) }
+        }
+    }
+
+    pub(super) fn finish_admission_stop(self, operation: u64)
+        -> Result<FileAdmissionStoppedHistory, JournalError>
+    {
+        match self {
+            Self::Plain(run) => { let request = run.stop_request(operation)?; run.finish_admission_stop(request) }
+            Self::Raw(run) => { let request = run.stop_request(operation)?; run.finish_admission_stop(request) }
+            Self::Owned(run) => { let request = run.stop_request(operation)?; run.finish_admission_stop(request) }
+            Self::Mediated(run) => { let request = run.stop_request(operation)?; run.finish_admission_stop(request) }
+            Self::PredictiveMediated(run) => { let request = run.stop_request(operation)?; run.finish_admission_stop(request) }
+        }
+    }
+
+    pub(super) fn finish_stopped_drain<F>(self, operation: u64, clock: F)
+        -> Result<FileStoppedHistory, JournalError>
+    where F: FnOnce() -> Result<ElapsedTick, JournalError> {
+        match self {
+            Self::Plain(run) => { let request = run.stop_request(operation)?; run.finish_stopped_drain(request, clock) }
+            Self::Raw(run) => { let request = run.stop_request(operation)?; run.finish_stopped_drain(request, clock) }
+            Self::Owned(run) => { let request = run.stop_request(operation)?; run.finish_stopped_drain(request, clock) }
+            Self::Mediated(run) => { let request = run.stop_request(operation)?; run.finish_stopped_drain(request, clock) }
+            Self::PredictiveMediated(run) => { let request = run.stop_request(operation)?; run.finish_stopped_drain(request, clock) }
+        }
+    }
+
+    pub(super) fn try_finish_stopped_with_anchor<F>(self, operation: u64, clock: F)
+        -> Result<FileStoppedHistory, JournalError>
+    where F: FnOnce() -> Result<ElapsedTick, JournalError> {
+        match self {
+            Self::Plain(run) => { let request = run.stop_request(operation)?; run.try_finish_stopped_with_anchor(request, clock) }
+            Self::Raw(run) => { let request = run.stop_request(operation)?; run.try_finish_stopped_with_anchor(request, clock) }
+            Self::Owned(run) => { let request = run.stop_request(operation)?; run.try_finish_stopped_with_anchor(request, clock) }
+            Self::Mediated(run) => { let request = run.stop_request(operation)?; run.try_finish_stopped_with_anchor(request, clock) }
+            Self::PredictiveMediated(run) => { let request = run.stop_request(operation)?; run.try_finish_stopped_with_anchor(request, clock) }
         }
     }
 }

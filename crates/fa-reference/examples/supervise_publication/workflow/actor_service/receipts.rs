@@ -5,7 +5,7 @@ use super::{ActorWire, BoundSocket, Config, Duration, FileOversight, Instant,
     io, pause, prepare_host};
 use std::path::Path;
 use fa_reference::action::consequence::oversight::actor_wire::ActorRequestPort;
-mod stream;
+#[path = "receipts/stream.rs"] mod stream;
 
 const USAGE: &str = "serve-open CONFIG ACTOR_PROFILE --receipts-only | serve-open-checked CONFIG ACTOR_PROFILE WITNESS_PROFILE --receipts-only";
 const EXPIRED: &str = "receipt-only startup deadline reached; no actor request was admitted";
@@ -124,4 +124,4 @@ pub(super) fn serve_session<P: ActorRequestPort>(session: &mut PeerSession<P>, a
 }
 
 #[cfg(test)]
-mod tests;
+#[path = "receipts/tests.rs"] mod tests;

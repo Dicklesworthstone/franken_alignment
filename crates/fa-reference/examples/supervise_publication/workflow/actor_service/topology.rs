@@ -42,4 +42,4 @@ fn arguments(args: &[String]) -> Result<(Option<&Path>, &Path), String> {
 }
 
 #[cfg(test)]
-mod tests;
+#[path = "topology/tests.rs"] mod tests;

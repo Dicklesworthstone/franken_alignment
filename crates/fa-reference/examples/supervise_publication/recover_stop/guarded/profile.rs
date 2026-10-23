@@ -6,8 +6,8 @@ use fa_reference::strict_json::{self, Json, Limits};
 use std::{collections::BTreeMap, fs::{self, File, OpenOptions}, io::{self, Cursor}, path::{Path, PathBuf}};
 use std::os::unix::fs::OpenOptionsExt;
 
-mod topology;
-mod creation;
+#[path = "profile/topology.rs"] mod topology;
+#[path = "profile/creation.rs"] mod creation;
 pub(crate) use creation::CreationOutput;
 
 const PROFILE_BYTES: usize = 16 * 1024;

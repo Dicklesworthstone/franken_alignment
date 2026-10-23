@@ -1,5 +1,49 @@
 # Implementation status · design revision 0.3
 
+## 2026-10-22: expose learned stop and drain as independent operator actions
+
+`create-learned-generated` now accepts explicit `--stop-admission OPERATION`
+and `--drain-stopped OPERATION` terminal modes alongside the unchanged atomic
+`--recover-stop`. All ordinary, raw-predictive and owned-predictive selections,
+with or without topology, consume the original fully verified guarded cursor.
+Admission uses only Stop/Fence and no settlement clock; later drain requires the
+matching acknowledged Stop and uses only StopProgress when needed. Both retain
+the original policy, predictor, topology, availability, reserve, floor and
+anchor requirements and return no live custody.
+
+The operator shares one monotonic budget from command entry through input
+admission, every replay event and terminal clock acquisition. The combined and
+drain consumers check both before and after their fallible clock. Late time
+leaves active history unchanged for combined completion and preserves the exact
+earlier stop for separate drain; no failure implicitly selects another phase.
+Acknowledged anchors and native reports remain distinct from successful export.
+
+Seven operator regression functions cover all predictor modes, actual command
+parsing, real dispatched liabilities, unavailable/late clocks, replay deadlines,
+missing reserve, independent guards/anchors, conflicting options, missing live
+assets, output/export failures and topology source continuity. Four independent
+public-library functions cover all three mediated predictor modes and real
+reserved/sent/executed/expired effects, complete terminal capacity, exact anchors,
+zero-event retries, failed guards and canonical replacement during clock
+acquisition. These are enforcement fixtures, not detector calibration.
+
+The untouched baseline workspace check reached an existing private-method call
+in `learned_text_stream_durable/continuation/forecast/owned_native.rs`. That test
+now obtains checked source shapes and acknowledged input through the existing
+public evidence APIs; its native adapter checks and all prior assertions remain,
+with an added exact-input equality assertion. No production visibility changed.
+The operator check also exposed unresolved child modules beneath explicitly
+selected source paths and a fleet-profile parameter shadowing its validator.
+Explicit paths now bind all 53 affected declarations to their existing source
+files, including the original test modules; the shadowing parameter is renamed.
+No module or test was removed to make compilation advance.
+The first targeted runtime attempt was killed by SIGKILL while compiling the
+library under shared host memory pressure, before any test function executed.
+The qualified `nightly-2026-09-08` targeted check now passes for the operator
+example and the `mediated_learned_reserve` and `learned_text_stream_durable`
+integration targets. This does not execute their tests or compile the example's
+test harness. Full RCH/workspace qualification and FA-014 remain open.
+
 ## 2026-10-22: preserve the original authenticated stop-peer deadline
 
 The live `stop-peer` operator now starts one elapsed budget before socket

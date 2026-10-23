@@ -1,7 +1,7 @@
 //! Original learned replay, complete guard inventory and receipt-only settlement.
-mod cooperative;
-mod selected;
-pub(super) mod readonly;
+#[path = "recovery/cooperative.rs"] mod cooperative;
+#[path = "recovery/selected.rs"] mod selected;
+#[path = "recovery/readonly.rs"] pub(super) mod readonly;
 use cooperative::{Progress, finish_replay};
 use fa_reference::action::consequence::delivery::persistent::observed::stream::FileStreamProposal;
 use super::{Config, Loaded, FileOversight, FileSupervisedDriver, FileHumanReviewer, ElapsedTick,
@@ -12,7 +12,9 @@ use fa_reference::action::consequence::delivery::persistent::observed::guarded::
 };
 use fa_reference::action::consequence::delivery::persistent::observed::consistency::FileConsistencyObserver;
 use fa_reference::action::consequence::delivery::persistent::{JournalError,
-    observed::shutdown::recovery::{FileStoppedHistory, FileStoppedRecovery}};
+    observed::shutdown::recovery::{FileAdmissionStoppedHistory, FileStoppedHistory}};
+#[cfg(test)]
+use fa_reference::action::consequence::delivery::persistent::observed::shutdown::recovery::FileStoppedRecovery;
 
 pub(super) type Custody = (FileOversight, FileHumanReviewer, Option<FileConsistencyObserver>);
 pub(super) type TopologyCustody = (Custody,
@@ -167,6 +169,7 @@ pub(super) fn open_selected_with_checkpoints(config: &Config, loaded: &Loaded,
 /// Offline stop uses the same independently guarded replay and every wall-time
 /// checkpoint, including Ready. It never constructs live service custody, reads
 /// current helper/source evidence or consults the terminal clock during replay.
+#[cfg(test)]
 pub(super) fn stop_selected_with_elapsed<F>(config: &Config, loaded: &Loaded,
     operation: u64, clock: F, elapsed: &mut impl FnMut() -> Duration)
     -> Result<FileStoppedRecovery, String>
@@ -177,11 +180,53 @@ where F: FnOnce() -> ElapsedTick {
 /// Capture the exact acknowledged terminal image on the SAME sealed cursor.
 /// All original admission, one-event and Ready checkpoints are shared; only
 /// the successful native return value additionally carries its private anchor.
+#[cfg(test)]
 pub(super) fn stop_selected_with_anchor_with_elapsed<F>(config: &Config, loaded: &Loaded,
     operation: u64, clock: F, elapsed: &mut impl FnMut() -> Duration)
     -> Result<FileStoppedHistory, String>
 where F: FnOnce() -> ElapsedTick {
     stop_replay(config, loaded, operation, elapsed, |run| run.finish_stopped_with_anchor(operation, clock))
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(super) enum StopPhase { Combined, Admission, Drain }
+
+pub(super) enum TerminalHistory {
+    Admission(FileAdmissionStoppedHistory),
+    Completed(FileStoppedHistory),
+}
+
+pub(super) const STOP_ACQUISITION_DEADLINE: &str =
+    "learned stop recovery acquisition deadline reached; no additional native completion was acknowledged";
+
+/// All terminal modes consume the SAME complete guarded replay. Admission has
+/// no logical-clock dependency. Drain cannot manufacture a missing admission;
+/// combined completion stays one atomic native transaction, with no fallback.
+pub(super) fn terminal_selected_with_elapsed<F>(config: &Config, loaded: &Loaded,
+    phase: StopPhase, operation: u64, clock: F, elapsed: &mut impl FnMut() -> Duration)
+    -> Result<TerminalHistory, String>
+where F: FnOnce() -> Result<ElapsedTick, JournalError> {
+    let run = stop_replay(config, loaded, operation, elapsed, Ok)?;
+    if phase == StopPhase::Admission {
+        return run.finish_admission_stop(operation).map(TerminalHistory::Admission).map_err(debug);
+    }
+    let wall = Duration::from_millis(config.timing.runtime_ms);
+    let mut expired = false;
+    let clock = || {
+        if elapsed() >= wall { expired = true; return Err(JournalError::Unavailable); }
+        let tick = clock()?;
+        // A slow or stalled clock callback cannot extend the original runtime
+        // allowance. Native finalizers have not published any phase yet.
+        if elapsed() >= wall { expired = true; return Err(JournalError::Unavailable); }
+        Ok(tick)
+    };
+    let history = match phase {
+        StopPhase::Combined => run.try_finish_stopped_with_anchor(operation, clock),
+        StopPhase::Drain => run.finish_stopped_drain(operation, clock),
+        StopPhase::Admission => unreachable!("admission returned before clock construction"),
+    };
+    if expired { return Err(STOP_ACQUISITION_DEADLINE.into()); }
+    history.map(TerminalHistory::Completed).map_err(debug)
 }
 
 fn stop_replay<T>(config: &Config, loaded: &Loaded, operation: u64,
