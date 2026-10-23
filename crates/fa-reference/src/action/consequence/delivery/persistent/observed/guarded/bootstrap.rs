@@ -189,6 +189,24 @@ impl PreparedGuardedBootstrap {
 
     /// Compare the complete independently declared guard inventory after native
     /// recipe-owned installations, while the entire bootstrap remains private.
+    pub(super) fn checked_guards(self, guards: &FileGuardSet) -> Result<Self, JournalError> {
+        guards.check(&self.machine, &self.events)?;
+        Ok(self)
+    }
+
+    /// Match the complete ordinary predictor and guard inventory, including
+    /// owned representation/work bounds, before publishing any separate role.
+    pub(super) fn checked_predictive(self, guards: &FileGuardSet,
+        protocol: Option<&crate::action::consequence::oversight::credibility::EvaluationProtocol>,
+        prediction: &super::mediated::predictive::FileMediatedPredictor)
+        -> Result<Self, JournalError>
+    {
+        prediction.check_machine(&self.machine)?;
+        guards.check_predictive(&self.machine, &self.events, protocol, Some(prediction.consistency()))?;
+        Ok(self)
+    }
+
+    /// Compare the full guard inventory after the native evaluator installation.
     pub(super) fn checked_evaluated(self, guards: &FileGuardSet,
         protocol: &crate::action::consequence::oversight::credibility::EvaluationProtocol)
         -> Result<Self, JournalError>

@@ -6,6 +6,7 @@ use super::{BaseEvent, Event, FileCredentialRegistration, FileGuardSet, FileOver
     FileOversightProfile, FileOversightRoles, FileRecoveryRequirements, JournalError,
     Machine, bootstrap::PreparedGuardedBootstrap, journal, storage};
 use super::super::decoder::learned::{FileLearnedConfig, bind_history};
+use crate::action::consequence::delivery::persistent::RecoveryReserve;
 use crate::Error;
 use std::path::Path;
 
@@ -27,6 +28,25 @@ impl FileOversight {
             .learned(config)?;
         let store = storage::Store::create(directory.as_ref())?;
         prepared.publish(store)
+    }
+
+    /// Publish the terminal reserve, complete independent guards and original
+    /// learned recipe in one first image, returning every separate guard role.
+    /// A recipe-owned policy source must match the declaration and is installed
+    /// once by learned Enable. Stream bootstrap precedes the reserve and guards.
+    /// Predictive recipes require the distinct role-preserving constructors.
+    pub fn create_guarded_with_learned_generation_reserved(
+        directory: impl AsRef<Path>, profile: FileOversightProfile,
+        guards: &FileGuardSet, registration: Option<FileCredentialRegistration<'_>>,
+        config: FileLearnedConfig, reserve: RecoveryReserve,
+    ) -> Result<(Self, FileOversightRoles), JournalError> {
+        if config.required_pre_output_forecast().is_some()
+            || config.required_owned_pre_output_forecast().is_some() {
+            return Err(Error::Binding.into());
+        }
+        let prepared = prepare_reserved(profile, guards, registration, config, reserve)?
+            .checked_guards(guards)?;
+        prepared.publish(storage::Store::create(directory.as_ref())?)
     }
 
     /// Recover ONE composed owner and all its separately provisioned roles.
@@ -52,6 +72,22 @@ impl FileOversight {
         let events = journal::decode(&profile, store.identity(), &bytes)?;
         recover(store, profile, events, expected, config)
     }
+}
+
+// Shared by the plain/raw/owned role-preserving first-image adapters. The
+// native source installation remains recipe-owned, exactly as in mediation.
+pub(super) fn prepare_reserved(profile: FileOversightProfile, guards: &FileGuardSet,
+    registration: Option<FileCredentialRegistration<'_>>, config: FileLearnedConfig,
+    reserve: RecoveryReserve) -> Result<PreparedGuardedBootstrap, JournalError>
+{
+    check_profile(guards)?;
+    let mut prepared_guards = guards.clone();
+    if let Some(policy) = config.required_policy_source() {
+        if guards.source != Some(policy) { return Err(Error::Binding.into()); }
+        prepared_guards.source = None;
+    }
+    PreparedGuardedBootstrap::prepare_reserved(profile, &prepared_guards, registration, reserve)?
+        .learned(config)
 }
 
 pub(super) fn check_profile(guards: &FileGuardSet) -> Result<(), Error> {

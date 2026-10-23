@@ -80,6 +80,10 @@ impl Machine {
                     || self.broker.stop_receipt().is_some() { return Err(Error::WrongState); }
                 let config = config.runtime()?;
                 if config.requires_computed_identity() { self.check_computed_identity_bootstrap()?; }
+                if let Some(identity) = config.required_computed_identity_registration()
+                    && self.identity_contract() != Some((&identity.passport, identity.policy)) {
+                    return Err(Error::Binding);
+                }
                 if let Some(policy) = config.required_held_out_joint() {
                     // The independently bound recipe owns this original guard.
                     // Reuse native bootstrap/mutual-exclusion checks in the same

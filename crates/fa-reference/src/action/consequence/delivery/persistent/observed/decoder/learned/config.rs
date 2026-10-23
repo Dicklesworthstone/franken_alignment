@@ -50,6 +50,7 @@ pub struct FileLearnedConfig {
     sidecar_required: bool,
     automatic_stop: Option<HostedStopPolicy>,
     computed_identity_required: bool,
+    computed_identity_registration: Option<super::super::super::guarded::FileIdentityRequirement>,
     policy_source: Option<super::super::super::source::FileSourcePolicy>,
     pre_output_forecast: Option<super::super::super::consistency::FileConsistencyConfig>,
     owned_pre_output_forecast: Option<super::super::super::consistency::learned::FileLearnedConsistencyConfig>,
@@ -88,7 +89,7 @@ impl FileLearnedConfig {
         w.u64(source.monitor_generation)?;
         w.count(limits.evidence.token_ids)?; w.count(limits.evidence.score_words)?;
         w.count(limits.encoded_bytes)?; w.blob(&archive)?;
-        Ok(Self { model, source, limits, bytes: w.finish().into(), text: None, sidecar_required: false, automatic_stop: None, computed_identity_required: false, policy_source: None, pre_output_forecast: None, owned_pre_output_forecast: None, forecast_reset_successors: false, text_stream_continuation: false, forecast_text_stream_continuation: false, held_out_joint: None })
+        Ok(Self { model, source, limits, bytes: w.finish().into(), text: None, sidecar_required: false, automatic_stop: None, computed_identity_required: false, computed_identity_registration: None, policy_source: None, pre_output_forecast: None, owned_pre_output_forecast: None, forecast_reset_successors: false, text_stream_continuation: false, forecast_text_stream_continuation: false, held_out_joint: None })
     }
     pub fn encoded_bytes(&self) -> usize { self.bytes.len() }
     pub(super) fn bytes(&self) -> &Rc<[u8]> { &self.bytes }

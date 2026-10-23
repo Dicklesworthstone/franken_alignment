@@ -28,7 +28,7 @@ pub enum FileMediatedPredictor {
     Owned(FileLearnedConsistencyConfig),
 }
 impl FileMediatedPredictor {
-    fn check_recipe(&self, config: &FileLearnedConfig) -> Result<(), Error> {
+    pub(in super::super) fn check_recipe(&self, config: &FileLearnedConfig) -> Result<(), Error> {
         let matches = match self {
             Self::Raw(prediction) => config.required_pre_output_forecast() == Some(prediction)
                 && config.required_owned_pre_output_forecast().is_none(),

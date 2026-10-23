@@ -1,5 +1,22 @@
 # Changelog
 
+## 2026-10-23: pin complete model identity for reserved learned owners
+
+- Add an exact computed-identity registration wrapper around the full original
+  learned recipe. Bind the complete passport and policy through the original
+  native codec; preserve old optional and boolean-only recipe bytes.
+- Check the real bootstrap identity registration before learned installation,
+  covering independent historical audit and recovery through existing exact
+  recipe binding.
+- Add ordinary/raw/owned reserved creation with complete original guards and
+  all separate observer roles, preserving one initial canonical image, exact
+  source/predictor requirements and both later publication keys.
+- Pass five new native integration functions and twenty existing strict identity
+  functions using unchanged LLVM harnesses and the qualified nightly's official
+  Cranelift library; standard library checking and independent source review pass.
+  Retain the initial two Cranelift nested-panic failures and the minimal backend
+  control; no production rule or test assertion was changed.
+
 ## 2026-10-23: select joint credibility for learned publication and resident recovery
 
 - Add the closed `fa.learned-joint-publication/1` envelope around unchanged

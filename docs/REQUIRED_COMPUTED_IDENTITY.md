@@ -161,3 +161,63 @@ changes. Both stopped before compilation because `rch` is absent (exit 127).
 The twenty regression functions and three compile-fail examples in this feature
 series remain UNEXECUTED, as do Rust compilation, rustfmt and Clippy. Source-only
 checks do not qualify the feature or close a Bead.
+
+## Exact registration and reserved learned creation
+
+`with_required_computed_identity_registration(FileIdentityRequirement)` selects
+the same computed-only rule and pins the complete independently registered
+passport and identity policy into the original learned recipe. Use it instead
+of the older boolean-only modifier when historical readers must also verify the
+expected registration. The `required_computed_identity_registration` accessor
+returns that frozen requirement, never a measurement or qualification result.
+
+The disjoint `FALCIR` wrapper reuses the original bounded identity-registration
+codec, including the passport manifest, stimulus roster, exact anchor intervals
+and every policy field. Existing unselected and boolean-only recipe bytes are
+unchanged. Repeated or mixed computed-only modifiers refuse. Source, predictor,
+sidecar and joint-credibility wrappers retain the registration; their complete
+order remains part of exact recipe identity.
+
+Native learned Enable requires the original identity gate, no prior challenge,
+and an exact match with this registration before numerical installation. This
+binds historical audits as well as live, receipt and terminal recovery: changing
+or omitting independently expected registration cannot be hidden by an otherwise
+matching model recipe. It adds no alternative identity matcher, observation
+input, live policy replacement or permission to publish.
+
+Three reserved creation adapters publish the original stream, terminal reserve,
+complete guard inventory and learned configuration in one first canonical image:
+
+- `create_guarded_with_learned_generation_reserved` for ordinary generation;
+- `create_predictive_guarded_with_learned_generation_reserved` for raw prediction;
+- `create_predictive_guarded_with_owned_learned_consistency_reserved` for owned
+  K/V prediction.
+
+Each validates the complete configuration before creating storage and returns
+all separate original roles, including identity-observer custody and, where
+selected, predictor custody. A recipe-owned source policy is installed exactly
+once and must match the independent guard declaration. Predictor source mode,
+configuration and work ceilings retain their original exact checks. These
+constructors do not supply a source observation, matching identity, forecast,
+committee vote or human approval.
+
+2026-10-23: all five new `learned_registered_identity` functions pass, covering
+19 valid individual registration changes, legacy-byte compatibility, joint-policy
+composition, bootstrap rollback, actual same-label parameter substitution with
+its original two-key publication control, audit/recovery before a first identity
+measurement, and all three reserved source/predictor/identity lanes. Independent
+source review found no blocker, and the standard qualified compiler's library
+check passes.
+
+All twenty existing `durable_required_identity` functions also pass. Both complete
+unchanged public targets execute with the qualified nightly's standard LLVM test
+harnesses linked to its official-Cranelift native library; the new target also
+passed as an ordinary Cranelift Cargo target. The first all-Cranelift existing
+suite passed eighteen cases but let two intentional callback panics escape their
+nested catches. A separate minimal unchanged catch control failed with Cranelift
+and passed with LLVM, confirming the local backend limitation without modifying
+any repository test, assertion, production rule or work bound. The full twenty
+then passed under the LLVM harness. Both build modes use the same qualified
+nightly, and runtime test threads use a 32 MiB stack. Failed attempts are retained.
+This is scoped mixed-backend runtime evidence, not full LLVM library code
+execution or full dependency/release qualification.

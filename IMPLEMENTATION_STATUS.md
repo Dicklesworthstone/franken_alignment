@@ -1,5 +1,43 @@
 # Implementation status · design revision 0.3
 
+## 2026-10-23: bind complete identity registration to learned ownership
+
+The immutable learned recipe can now require original-model computation with an
+exact independently supplied passport and identity policy. The new registration
+wrapper reuses the original bounded native codec; unselected and boolean-only
+recipes keep their original bytes. Native learned installation checks the actual
+bootstrap registration before it can create storage or return roles. Every
+existing exact-recipe reader, including historical audit, therefore retains the
+complete identity selection rather than only a computed-only flag.
+
+Ordinary, raw-predictive and owned-predictive reserved creation now supports the
+complete original guard inventory and returns every separate role. The original
+stream, terminal reserve, source, learned owner and selected predictor become
+visible together in the first canonical image. Source policies are installed
+once, and exact predictor mode/work checks remain intact. Computed observations,
+identity installation, native Congress and human approval remain separate.
+
+All five new public registration functions and all twenty existing required
+identity functions pass with unchanged LLVM test harnesses linked to the
+qualified nightly's official-Cranelift native library. The five new cases also
+pass as an ordinary Cranelift Cargo target; they cover actual same-label model
+substitution, positive original two-key publication, exact registration and
+legacy-byte identity, pre-measurement audit/recovery and all three reserved
+source/predictor/identity lanes. The standard library compiler check and
+independent source review pass.
+
+The first all-Cranelift existing suite passed eighteen cases and failed two
+intentional nested-panic catches. A minimal control reproduced that backend
+limitation, and the complete unchanged twenty-function LLVM harness passes.
+No assertion, production guard or numerical budget changed. Runtime tests use a
+32 MiB thread stack. The failed attempt remains recorded, and this mixed-backend
+runtime evidence does not claim complete LLVM code generation of the native library or
+release qualification.
+
+This is the native integration slice of FA-118, plan section 7.10 and FS-07.
+Passport signing, randomized audit-floor scheduling, full evidence-generation
+propagation, H19 discrimination and the complete packet remain open.
+
 ## 2026-10-23: enforce joint credibility through the learned operator
 
 The learned operator now accepts `fa.learned-joint-publication/1`, a closed
