@@ -1,5 +1,36 @@
 # Implementation status · design revision 0.3
 
+## 2026-10-23: bind held-out joint credibility to learned generation
+
+`FileLearnedConfig::with_required_held_out_joint` freezes the native held-out
+joint policy into the independently retained numerical recipe. All eight policy
+fields, including case/member work limits, are bound alongside the complete
+original configuration. Learned Enable installs the original credibility guard
+inside the same candidate transition and first canonical image. The ordinary,
+raw-predictive, owned-predictive and topology-mediated recovery paths retain
+their existing exact-recipe checks, guards, floors and restricted consumers.
+Legacy recipe bytes are unchanged; separate outer joint enables retain their
+existing profile restrictions. No alternate promotion or weight setter is added.
+
+Five public regression functions are authored for all policy-field mismatches,
+omitted selection, wrapper composition, all three mediated replay/terminal
+lanes, conflicting evaluation bootstraps and rollback after a later numerical
+installation refusal. A causal learned-output case pairs marginally accepted
+complementary-veto regression with native joint refusal, then exercises actual
+nonregressing publication through original automatic and human keys. Recovery
+retains reports while historical capsule retries cannot revive qualification or
+old keys. Independent source review found no blocking defect.
+
+Two complete-library builds using the qualified nightly's official Cranelift
+backend and a standard compiler check were killed by SIGKILL before tests could
+execute on the exhausted shared host. The second runtime attempt used one
+frontend thread and disabled MIR optimization without changing source, tests or
+production limits. Raw failed-attempt logs are retained outside the source tree.
+Compilation, runtime and full release qualification of this increment remain
+pending; no previous passing receipt qualifies these new bytes. Full FA-105 and
+the existing dependency-admission gate remain open. Operator selection follows
+as a separate feature increment.
+
 ## 2026-10-23: repair interrupted learned terminal checkpoint exports
 
 The learned operator now exposes `--recover-terminal-checkpoint` on admission

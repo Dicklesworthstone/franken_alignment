@@ -7,6 +7,7 @@ mod automatic_stop;
 mod identity;
 mod policy_source;
 mod consistency;
+mod held_out_joint;
 
 use super::super::super::super::codec::shared::Writer;
 use crate::action::consequence::activation::tensor::kv::decoder::DecoderModel;
@@ -55,6 +56,7 @@ pub struct FileLearnedConfig {
     forecast_reset_successors: bool,
     text_stream_continuation: bool,
     forecast_text_stream_continuation: bool,
+    held_out_joint: Option<super::super::super::credibility::held_out_joint::HeldOutJointPolicy>,
 }
 impl fmt::Debug for FileLearnedConfig {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -86,7 +88,7 @@ impl FileLearnedConfig {
         w.u64(source.monitor_generation)?;
         w.count(limits.evidence.token_ids)?; w.count(limits.evidence.score_words)?;
         w.count(limits.encoded_bytes)?; w.blob(&archive)?;
-        Ok(Self { model, source, limits, bytes: w.finish().into(), text: None, sidecar_required: false, automatic_stop: None, computed_identity_required: false, policy_source: None, pre_output_forecast: None, owned_pre_output_forecast: None, forecast_reset_successors: false, text_stream_continuation: false, forecast_text_stream_continuation: false })
+        Ok(Self { model, source, limits, bytes: w.finish().into(), text: None, sidecar_required: false, automatic_stop: None, computed_identity_required: false, policy_source: None, pre_output_forecast: None, owned_pre_output_forecast: None, forecast_reset_successors: false, text_stream_continuation: false, forecast_text_stream_continuation: false, held_out_joint: None })
     }
     pub fn encoded_bytes(&self) -> usize { self.bytes.len() }
     pub(super) fn bytes(&self) -> &Rc<[u8]> { &self.bytes }

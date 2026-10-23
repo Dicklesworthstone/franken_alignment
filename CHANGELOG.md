@@ -1,5 +1,18 @@
 # Changelog
 
+## 2026-10-23: preserve joint helper qualification in the learned recipe
+
+- Add `with_required_held_out_joint` to the original immutable learned
+  configuration, binding every native joint-policy field and work allowance.
+- Install the original held-out guard in the same learned bootstrap candidate.
+  Reuse native capped promotion, joint case replay and conflict checks; preserve
+  exact recovery binding across ordinary, predictive and mediated owners.
+- Add five public regressions for real learned two-key publication, a causal
+  complementary-helper regression, recovery invalidation, complete policy pins,
+  terminal custody and failed-bootstrap rollback. Independent source review
+  passed; compiler/runtime attempts were OOM-killed before execution, so the
+  increment remains unqualified pending successful verification.
+
 ## 2026-10-23: repair interrupted learned terminal exports from original custody
 
 - Add explicit `--recover-terminal-checkpoint` to the three learned terminal

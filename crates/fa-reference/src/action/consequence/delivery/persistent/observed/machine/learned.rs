@@ -80,6 +80,12 @@ impl Machine {
                     || self.broker.stop_receipt().is_some() { return Err(Error::WrongState); }
                 let config = config.runtime()?;
                 if config.requires_computed_identity() { self.check_computed_identity_bootstrap()?; }
+                if let Some(policy) = config.required_held_out_joint() {
+                    // The independently bound recipe owns this original guard.
+                    // Reuse native bootstrap/mutual-exclusion checks in the same
+                    // candidate transition, never a second acknowledged image.
+                    self.apply_credibility(&super::super::credibility::CredibilityEvent::EnableHeldOutJoint(policy))?;
+                }
                 config.install(&mut self.broker)?;
                 if let Some(policy) = config.required_policy_source() {
                     self.enable_source(policy, true)?;
