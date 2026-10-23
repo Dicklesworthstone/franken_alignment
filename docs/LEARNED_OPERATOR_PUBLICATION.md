@@ -82,7 +82,7 @@ the selected contracts.
 | Fresh creation | `fa.mediated-create/1` or `/2` | Input forbidden; a new output may be retained |
 | `--continue-generation`, `--after-message`, `--finish-after-message` | `fa.mediated-submit/1` or `/2` | Required before opening the store |
 | `--resume`, passive or reconciled receipts, receipt service | `fa.mediated-submit/1` or `/2`, with no checkpoint output | Required; complete historical requirements remain checked |
-| `--recover-stop`, `--stop-admission`, `--drain-stopped` | `fa.mediated-submit/1` or `/2`; v2 permits explicit paired terminal checkpoint output | Required; exact source cut and complete historical requirements remain checked |
+| `--recover-stop`, `--stop-admission`, `--drain-stopped` | `fa.mediated-submit/1` or `/2`; v2 permits paired output and explicit terminal-checkpoint recovery | Required; the original source/anchor pair and complete historical requirements remain checked |
 
 For example, using independently provisioned files and a fresh output path:
 
@@ -148,8 +148,17 @@ journal capacity. Explicit reconciliation retains the original
 uses the original terminal tail directly. These are distinct finalizers, each
 protected by the same complete recovery checks.
 
-After a Fence withdraws topology availability, the next independent historical
-profile must describe that saved unavailable state. A native live Stop or
+An acknowledged terminal write can outlive its checkpoint exports. Explicit
+`--recover-terminal-checkpoint` permits the three terminal modes to consume the
+original version-2 source checkpoint and its matching old anchor across only
+the same stop's closed terminal suffix, then retain a successor pair. Ordinary
+and source events refuse, every original guard and floor remains required, and
+no live finalizer is exposed. Default terminal, live and receipt modes keep
+their exact-cut selection. See
+[interrupted terminal export recovery](LEARNED_STOP_RECOVERY.md#recover-after-interrupted-checkpoint-export).
+
+For ordinary exact-cut selection after a Fence, the next independent historical
+profile must describe the saved unavailable state. A native live Stop or
 StopProgress without that Fence preserves actual historical availability; it
 does not grant current certification. Reusing mismatched availability, a stale
 source checkpoint or an unretained successor cut refuses without silently

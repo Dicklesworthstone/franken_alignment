@@ -1,5 +1,21 @@
 # Changelog
 
+## 2026-10-23: repair interrupted learned terminal exports from original custody
+
+- Add explicit `--recover-terminal-checkpoint` to the three learned terminal
+  modes. Reuse the original paired version-2 archives after a native terminal
+  write outlives either or both exports, preserving exact source expenditure.
+- Route repair through the operation-bound native terminal cursor. Keep the
+  original predictor, guards, floors, reserve and anchor checks; ordinary live,
+  receipt and default terminal recovery retain exact-cut selection.
+- Preserve native reports and independent export errors, and identify the repair
+  option in source-export failures. Document complete old-pair retry commands
+  without manual counter reconstruction or automatic profile downgrade.
+- Pass four new operator regressions and seven existing checkpoint/failure
+  regressions in the scoped official-Cranelift harness, with complete operator
+  test-source compilation under the standard qualified compiler. Full packet
+  and release qualification remain open.
+
 ## 2026-10-23: recover source custody through a sealed terminal-only cursor
 
 - Add `require_terminal_checkpoint` to both mediated learned recovery variants,

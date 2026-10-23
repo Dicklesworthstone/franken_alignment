@@ -3,6 +3,9 @@
 use super::*;
 use std::io::{self, Write};
 
+#[path = "retained/interrupted.rs"]
+mod interrupted;
+
 struct Case {
     root: Root,
     config: Config,

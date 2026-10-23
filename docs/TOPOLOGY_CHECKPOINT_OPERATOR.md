@@ -126,6 +126,16 @@ accepted only by the three learned terminal modes. Version-1 manual minima
 cannot produce an exact source checkpoint. Both terminal outputs must be new,
 distinct and outside the authority store before any stop mutation occurs.
 
+If an acknowledged terminal write outlives one or both exports, explicitly add
+`--recover-terminal-checkpoint` while selecting the original version-2 source
+checkpoint and its matching original anchor. The separate terminal-only cursor
+can recover across the same stop's Stop/Fence/StopProgress suffix, preserve
+exact spent work, and retain a new pair. It rejects ordinary/source successors,
+changed stop identity and mixed cuts, and exposes no live recovery operation.
+The original exact-cut rule remains in force without this flag and for all
+live and receipt workflows. See
+[interrupted-export recovery](LEARNED_STOP_RECOVERY.md#recover-after-interrupted-checkpoint-export).
+
 ## Failure and cost boundaries
 
 Each export uses private create-new mode, then file and parent synchronization.

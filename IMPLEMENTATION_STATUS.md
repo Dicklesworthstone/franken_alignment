@@ -1,5 +1,35 @@
 # Implementation status · design revision 0.3
 
+## 2026-10-23: repair interrupted learned terminal checkpoint exports
+
+The learned operator now exposes `--recover-terminal-checkpoint` on admission
+stop, later drain and combined stop. This explicit mode consumes the original
+version-2 source checkpoint and matching independently retained history anchor
+through the sealed native terminal cursor. It can recover after either or both
+outputs failed after native acknowledgement, then export a new exact pair
+without manually reconstructing a historical profile. Ordinary live, receipt
+and default terminal selection retain their existing exact-cut checks. A
+different Stop, mixed cuts, version-1 minima, unretained ordinary/source work
+or missing independent requirements cannot select repair.
+
+Four new operator regression functions pass using actual dispatched liabilities
+and output collisions across ordinary, raw-predictive and owned-predictive
+modes. They verify interrupted admission followed by repair and later drain,
+completed clock-free/event-free retries, unchanged source work and documents,
+native floors, independent output failures, absent live inputs, closed option
+parsing, full command dispatch and staging preservation on refusal. All seven
+existing paired-terminal and failed-service checkpoint regressions also pass.
+The operator runtime selection changes only unrelated libtest registration in
+a disposable copy; every test body, assertion, fixture and production statement
+is preserved, selected files are byte-identical and input hashes are checked.
+Execution uses the qualified nightly's official Cranelift backend in a private
+temporary build namespace. The complete unmodified operator test source also
+passes the standard compiler check. A Cargo rerun exhausted shared storage
+while producing output; the same standard compiler invocation with a private
+output directory completed successfully. The full xtask gate was retried and
+still refuses the existing dependency graph before formatting, Clippy or tests.
+Full dependency-admission and release qualification remain separate and open.
+
 ## 2026-10-23: recover retained source custody after interrupted terminal export
 
 Ordinary and predictive mediated learned cursors can now be consumed before

@@ -7,24 +7,31 @@ use crate::workflow::continuation::checkpoint::AcknowledgedOutput;
 use std::{fs, io::Write, path::{Path, PathBuf}, time::{SystemTime, UNIX_EPOCH}};
 
 const CHECKPOINT_OUTPUT: &str = "--retain-topology-checkpoint";
+const CHECKPOINT_RECOVERY: &str = "--recover-terminal-checkpoint";
 
 struct TerminalOutput { archive: AcknowledgedOutput, identity: PathBuf }
 
-fn take_output(args: &[String]) -> Result<(Vec<String>, Option<PathBuf>), String> {
+fn take_options(args: &[String]) -> Result<(Vec<String>, Option<PathBuf>, bool), String> {
     let mut remaining = Vec::new();
     let mut output = None;
+    let mut recover_checkpoint = false;
     let mut index = 0;
     while index < args.len() {
         if args[index] == CHECKPOINT_OUTPUT {
             if index < 5 || output.is_some() { return Err(USAGE.into()); }
             output = Some(super::fields::path(args.get(index + 1).ok_or(USAGE)?)?);
             index += 2;
+        } else if args[index] == CHECKPOINT_RECOVERY {
+            if index < 5 || std::mem::replace(&mut recover_checkpoint, true) {
+                return Err(USAGE.into());
+            }
+            index += 1;
         } else {
             remaining.push(args[index].clone());
             index += 1;
         }
     }
-    Ok((remaining, output))
+    Ok((remaining, output, recover_checkpoint))
 }
 
 fn admit_output(config: &Config, loaded: &Loaded, path: Option<&Path>)
@@ -66,7 +73,7 @@ pub(super) fn command(args: &[String], options: anchors::Options) -> Result<(), 
 pub(super) fn command_with<F>(args: &[String], options: anchors::Options, clock: F,
     elapsed: &mut impl FnMut() -> Duration, out: &mut impl Write) -> Result<(), String>
 where F: FnOnce() -> Result<ElapsedTick, JournalError> {
-    let (args, output_path) = take_output(args)?;
+    let (args, output_path, recover_checkpoint) = take_options(args)?;
     let (args, topology_path) = topology::take_option(&args)?;
     if args.len() != 5 || args[0] != "create-learned-generated" {
         return Err(USAGE.into());
@@ -98,7 +105,8 @@ where F: FnOnce() -> Result<ElapsedTick, JournalError> {
     checkpoint()?;
     let output = admit_output(&config, &loaded, output_path.as_deref())?;
     checkpoint()?;
-    run_phase_retaining_with_elapsed(&config, &loaded, phase, operation, output.as_ref(), clock, elapsed, out)
+    run_phase_retaining_with_elapsed(&config, &loaded, phase, operation, recover_checkpoint,
+        output.as_ref(), clock, elapsed, out)
 }
 
 #[cfg(test)]
@@ -115,15 +123,17 @@ pub(super) fn run_phase_with_elapsed<F>(config: &Config, loaded: &Loaded,
     phase: StopPhase, operation: u64, clock: F,
     elapsed: &mut impl FnMut() -> Duration, out: &mut impl Write) -> Result<(), String>
 where F: FnOnce() -> Result<ElapsedTick, JournalError> {
-    run_phase_retaining_with_elapsed(config, loaded, phase, operation, None, clock, elapsed, out)
+    run_phase_retaining_with_elapsed(config, loaded, phase, operation, false, None, clock, elapsed, out)
 }
 
 fn run_phase_retaining_with_elapsed<F>(config: &Config, loaded: &Loaded,
-    phase: StopPhase, operation: u64, output: Option<&TerminalOutput>, clock: F,
+    phase: StopPhase, operation: u64, recover_checkpoint: bool,
+    output: Option<&TerminalOutput>, clock: F,
     elapsed: &mut impl FnMut() -> Duration, out: &mut impl Write) -> Result<(), String>
 where F: FnOnce() -> Result<ElapsedTick, JournalError> {
     if operation == 0 { return Err("stop operation must be nonzero".into()); }
-    let history = recovery::terminal_selected_with_elapsed(config, loaded, phase, operation, clock, elapsed)
+    let history = recovery::terminal_selected_with_elapsed(config, loaded, phase, operation,
+        recover_checkpoint, clock, elapsed)
         .map_err(unconfirmed)?;
     let (anchor, revision) = match &history {
         TerminalHistory::Admission(history) => (history.history_anchor(), history.snapshot().revision),
@@ -150,7 +160,7 @@ where F: FnOnce() -> Result<ElapsedTick, JournalError> {
         }.map_err(super::debug)?;
         output.archive.retain(&checkpoint)
     }).transpose().map(|_| ()).map_err(|error: String| format!(
-        "native stop acknowledged at revision {}, but terminal topology checkpoint retention failed: {error}; no effect retry was sent; keep previous custody and select new output paths",
+        "native stop acknowledged at revision {}, but terminal topology checkpoint retention failed: {error}; no effect retry was sent; keep previous paired custody and retry with --recover-terminal-checkpoint and new output paths",
         revision));
     // A failed export must not hide the native stop or its remaining liabilities.
     // Conversely a failed/pending report must not hide failed archive retention.

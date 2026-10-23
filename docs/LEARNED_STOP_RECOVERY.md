@@ -83,19 +83,13 @@ resend. Keep the previous custody until both outputs succeed.
 
 Terminal mutation and the two exports are not atomic. If source-checkpoint
 retention fails after the journal advances, the earlier version-2 checkpoint
-is stale; changing only output paths cannot make it reusable. Preserve the
-previous archives and every successful output. Recovery then requires
-independently selected historical requirements, such as a supported version-1
-profile with the correct availability, original source-work minima and all
-other original guards. The command does not infer those requirements or
-automatically downgrade the profile. If the source archive succeeds but the
-standalone anchor fails, the trusted source archive API exposes its exact
-embedded anchor for separate export; this CLI does not extract it automatically.
-
-Reusing the earlier source checkpoint after admission still refuses. An
-independently retained historical version-1 profile remains supported for
-recovery, but its manual source-work minima cannot export an exact terminal
-source checkpoint. No requirement or counter is guessed from recovered history.
+is stale for ordinary exact-cut selection. Preserve the previous paired
+archives and every successful output. The explicit terminal-checkpoint recovery
+mode below can carry that original pair through a verified terminal-only
+successor; changing only output paths does not activate it. No profile is
+automatically downgraded. A separately selected historical version-1 profile
+remains supported with its original requirements, but manual work minima cannot
+produce an exact source checkpoint.
 
 `--stop-admission` appends only the original Stop/Fence transaction. Its
 `fa.admission-stop/1` report distinguishes `stop_acknowledged: true` from
@@ -113,6 +107,54 @@ options. The original monotonic runtime budget begins at command entry and
 covers input admission, complete replay and terminal clock acquisition; it is
 checked both before and after the fallible clock. A completed retry still needs
 no clock and adds no event. Synchronous filesystem work is not preemptible.
+
+## Recover after interrupted checkpoint export
+
+If the native stop acknowledged but one or both exports failed, retain the
+original version-2 profile and its matching original history archive. Retry
+with the same stop operation, new output paths and the explicit
+`--recover-terminal-checkpoint` option:
+
+```text
+supervise_publication create-learned-generated CONFIG LEARNED_RECIPE --stop-admission OPERATION --topology-profile ORIGINAL_PROFILE --history-anchor ORIGINAL_ANCHOR --recover-terminal-checkpoint --retain-history-anchor REPAIRED_ANCHOR --retain-topology-checkpoint REPAIRED_SOURCE
+```
+
+The option also works with `--drain-stopped` and `--recover-stop` in ordinary,
+raw-predictive and owned-predictive modes. It accepts the original exact cut for
+an initial attempt as well as its permitted terminal successors. A repaired
+pair can then be used by an ordinary exact-cut terminal invocation.
+
+The recovery cursor checks the independently retained prefix on the same locked
+journal used for complete learned replay. The older source checkpoint and
+standalone anchor must still describe exactly the same cut. The original graph,
+historical availability, recipe, predictor, policy, guard inventory and terminal
+reserve remain required, and every independent floor is preserved or
+strengthened. A later cut must already contain the same stop operation; only
+its Stop, Fence and StopProgress events may follow the retained prefix. Any
+source check, time observation, publication event, equal-counter fork or
+different stop refuses without mutation or staging cleanup.
+
+The retained documents, source expenditure and last source operation are never
+reconstructed from guesses. Only availability explained by the verified native
+terminal suffix can change: Fence withdraws it and Stop alone preserves it.
+The restricted cursor can acknowledge admission, drain or combined stop; it
+cannot return a live owner, observer, reviewer or receipt-reconciliation path.
+The profile's next inputs and live helper/evidence files remain unopened.
+
+A matching admission retry appends no events or clock call. A later drain uses
+the original settlement rules, and a completed retry needs neither a clock nor
+another event. The selected output pair comes from the sealed native result,
+preserving source work and exact native floors even if the mutable journal
+changes after acknowledgement. Both exports and the report retain their
+independent failure behavior; this option does not make them atomic.
+
+The flag is accepted only by these three terminal modes and requires version-2
+source custody. Ordinary live and receipt recovery retain their strict exact-cut
+rules. Keep the original pair until replacement custody succeeds, and select
+new output files after a collision or partial write. Mixing an older source
+checkpoint with a newly exported anchor still refuses. Trusted custody and
+protection against rolling back both the journal and its retained records remain
+operator assumptions.
 
 ## Separate sealed library phases
 

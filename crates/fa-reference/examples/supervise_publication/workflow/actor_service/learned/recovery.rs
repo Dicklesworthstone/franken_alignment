@@ -1,6 +1,7 @@
 //! Original learned replay, complete guard inventory and receipt-only settlement.
 #[path = "recovery/cooperative.rs"] mod cooperative;
 #[path = "recovery/selected.rs"] mod selected;
+#[path = "recovery/terminal.rs"] mod terminal;
 #[path = "recovery/readonly.rs"] pub(super) mod readonly;
 use cooperative::{Progress, finish_replay};
 use fa_reference::action::consequence::delivery::persistent::observed::stream::FileStreamProposal;
@@ -203,12 +204,23 @@ pub(super) const STOP_ACQUISITION_DEADLINE: &str =
 /// no logical-clock dependency. Drain cannot manufacture a missing admission;
 /// combined completion stays one atomic native transaction, with no fallback.
 pub(super) fn terminal_selected_with_elapsed<F>(config: &Config, loaded: &Loaded,
-    phase: StopPhase, operation: u64, clock: F, elapsed: &mut impl FnMut() -> Duration)
+    phase: StopPhase, operation: u64, recover_checkpoint: bool, clock: F,
+    elapsed: &mut impl FnMut() -> Duration)
     -> Result<TerminalHistory, String>
 where F: FnOnce() -> Result<ElapsedTick, JournalError> {
-    let run = stop_replay(config, loaded, operation, elapsed, Ok)?;
+    if operation == 0 { return Err("stop operation must be nonzero".into()); }
+    let wall = Duration::from_millis(config.timing.runtime_ms);
+    let mut checkpoint = |_: Option<Progress>| {
+        if elapsed() >= wall {
+            Err("learned stop recovery replay deadline reached".into())
+        } else { Ok(()) }
+    };
+    checkpoint(None)?;
+    let run = terminal::Cursor::begin(config, loaded, operation, recover_checkpoint)?;
+    let run = finish_replay(run, &mut checkpoint, |run| run.progress(),
+        |run, done| run.advance(done), Ok)?;
     if phase == StopPhase::Admission {
-        return run.finish_admission_stop(operation).map(TerminalHistory::Admission).map_err(debug);
+        return run.finish_admission_stop().map(TerminalHistory::Admission).map_err(debug);
     }
     let wall = Duration::from_millis(config.timing.runtime_ms);
     let mut expired = false;
@@ -221,14 +233,15 @@ where F: FnOnce() -> Result<ElapsedTick, JournalError> {
         Ok(tick)
     };
     let history = match phase {
-        StopPhase::Combined => run.try_finish_stopped_with_anchor(operation, clock),
-        StopPhase::Drain => run.finish_stopped_drain(operation, clock),
+        StopPhase::Combined => run.try_finish_stopped_with_anchor(clock),
+        StopPhase::Drain => run.finish_stopped_drain(clock),
         StopPhase::Admission => unreachable!("admission returned before clock construction"),
     };
     if expired { return Err(STOP_ACQUISITION_DEADLINE.into()); }
     history.map(TerminalHistory::Completed).map_err(debug)
 }
 
+#[cfg(test)]
 fn stop_replay<T>(config: &Config, loaded: &Loaded, operation: u64,
     elapsed: &mut impl FnMut() -> Duration,
     finish: impl FnOnce(selected::Cursor) -> Result<T, JournalError>) -> Result<T, String>
