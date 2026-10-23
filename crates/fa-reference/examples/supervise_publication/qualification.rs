@@ -17,7 +17,7 @@ pub fn take_option(args: &mut Vec<String>) -> Result<Option<PathBuf>, String> {
     if positions.next().is_some() { return Err("duplicate credibility activation option".into()); }
     let positional = match args.first().map(String::as_str) {
         Some("submit") => 3,
-        Some("submit-checked" | "serve-open" | "create-learned-generated") => 4,
+        Some("submit-checked" | "serve-open" | "create-learned-generated" | "serve-learned-generated") => 4,
         Some("proposal-next" | "serve-open-checked") => 5,
         _ => return Err("credibility activation requires submit, submit-checked, proposal-next, serve-open, serve-open-checked or learned recovery".into()),
     };
@@ -71,6 +71,8 @@ mod tests {
             vec!["proposal-next", "config", "2", "payload", "1000", FLAG, "capsule"],
             vec!["create-learned-generated", "config", "recipe", "peer", "--after-message", "1", FLAG, "capsule"],
             vec!["create-learned-generated", "config", "recipe", "--resume", FLAG, "capsule"],
+            vec!["serve-learned-generated", "config", "sequence", "peer", "--after-message", "1", FLAG, "capsule"],
+            vec!["serve-learned-generated", "config", "sequence", "peer", FLAG, "capsule", "--continue-generation"],
         ] {
             let mut values = args(&values);
             let before = values.clone();
@@ -90,6 +92,9 @@ mod tests {
             vec!["submit", "config", "proposal", FLAG, "--reviewer-profile"],
             vec!["submit", "config", "proposal", FLAG, "capsule", FLAG, "capsule"],
             vec!["submit", FLAG, "capsule"],
+            vec!["serve-learned-generated", "config", "sequence", FLAG, "capsule"],
+            vec!["serve-learned-generated", "config", "sequence", "peer", FLAG],
+            vec!["serve-learned-generated", "config", "sequence", "peer", FLAG, "--continue-generation"],
         ] {
             let mut values = args(&values);
             let before = values.clone();

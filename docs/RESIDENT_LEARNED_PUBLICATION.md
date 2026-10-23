@@ -86,6 +86,15 @@ profile documents. Synchronous file intake is not a preemptible service phase.
 
 ## One original owner across message boundaries
 
+Entries may select the
+[joint learned qualification envelope](LEARNED_JOINT_CREDIBILITY.md) around their
+original recipes. The exact joint policy and both work ceilings must match across
+every entry, alongside the existing numerical, source and predictor contracts.
+The outer command now forwards `--credibility-activation` for explicit resident
+recovery; fresh resident creation still refuses it before startup. The selected
+native guard checks the actual capped helper weights against the original
+baseline before any successful requalification can admit further work.
+
 The invocation creates or recovers one original host and releases one actor
 gateway, driver, human reviewer and, when required, forecast observer. Its
 topology custodian stays attached through numerical preparation, native or

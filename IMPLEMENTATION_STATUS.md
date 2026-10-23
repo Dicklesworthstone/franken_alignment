@@ -1,5 +1,43 @@
 # Implementation status · design revision 0.3
 
+## 2026-10-23: enforce joint credibility through the learned operator
+
+The learned operator now accepts `fa.learned-joint-publication/1`, a closed
+envelope around the complete original version-1 through version-6 recipe. It
+independently selects the native held-out joint policy in both live and
+historical loading. The complete policy travels with the original numerical,
+source, predictor and continuation configuration; mixed resident selections
+refuse before startup. Existing activation still supplies independent campaign
+evidence, derives capped weights and requires the original helper and human
+approvals. The envelope does not supply qualification or a new authority path.
+
+The outer command parser now forwards `--credibility-activation` to
+`serve-learned-generated`, making its existing explicit-recovery path reachable.
+The inner parser still refuses fresh-creation activation before opening inputs.
+Both command usage surfaces and the existing operator/resident contracts describe
+the option and exact joint selection.
+
+Six operator regression functions are authored. The causal lifecycle case covers
+ordinary, raw-predictive and owned-predictive publication: marginally qualifying
+weights lose two complementary vetoes, joint activation refuses without journal,
+epoch, charge, forecast or numerical changes, and a matched nonregressing capsule
+then reaches original native review, a fresh human key and confirmed A/A output.
+Additional cases cover all six recipe versions, malformed/nested/oversized
+envelopes, resident policy equality, full dispatcher routing, all eight policy
+fields before recovery cleanup, and offline original receipts and terminal
+completion without current helper or capsule intake. Existing test bodies and
+fixtures remain intact apart from a shared preparation hook and fixture visibility.
+
+Independent source review found no blocking defect. All fourteen changed Rust
+files pass nonmutating Rust 2024 syntax parsing under the qualified nightly, and
+the scoped diff passes whitespace checks. This is not type-checking or runtime
+execution. Two complete-library runtime builds and the standard compiler check
+were OOM-killed before tests could execute. The standard xtask command itself
+compiles and runs, then refuses the existing dependency graph before formatting,
+Clippy or tests. No gate, source assertion or production bound was weakened.
+The eleven new core/operator regression functions remain unexecuted, and full
+FA-105, dependency admission and release qualification remain open.
+
 ## 2026-10-23: bind held-out joint credibility to learned generation
 
 `FileLearnedConfig::with_required_held_out_joint` freezes the native held-out

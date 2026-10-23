@@ -12,7 +12,7 @@ fn quote(value: &str) -> String {
     format!("\"{}\"", value.replace('\\', "\\\\").replace('"', "\\\""))
 }
 
-fn process_recipe(root: &Root, mode: &str) -> String {
+pub(super) fn process_recipe(root: &Root, mode: &str) -> String {
     let executable = quote(std::env::current_exe().unwrap().to_str().unwrap());
     let directory = quote(root.0.to_str().unwrap());
     let test = quote(&format!("{}::process_child", module_path!().split_once("::").unwrap().1));

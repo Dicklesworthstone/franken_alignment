@@ -179,6 +179,14 @@ runtime execution remain pending because the required RCH daemon is unavailable.
 
 ### Requalify helpers after recovery
 
+Learned recipes can explicitly require the existing native joint credibility
+check through the `fa.learned-joint-publication/1` envelope. It binds the complete
+held-out policy into the original generation configuration across ordinary,
+raw-predictive and owned-predictive modes. A candidate that improves marginal
+helper scores but newly misses a violation or falsely stops a safe case refuses
+before promotion. See [joint learned qualification](LEARNED_JOINT_CREDIBILITY.md)
+for the closed format, resident use, recovery pins and verification limits.
+
 An original held-out qualification is invalidated by the recovery fence. An
 explicit `--continue-generation`, `--after-message` or `--finish-after-message`
 invocation may supply fresh independent evidence with the existing option:

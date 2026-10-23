@@ -1,5 +1,21 @@
 # Changelog
 
+## 2026-10-23: select joint credibility for learned publication and resident recovery
+
+- Add the closed `fa.learned-joint-publication/1` envelope around unchanged
+  version-1 through version-6 learned recipes. Pin the full native policy for
+  ordinary, raw-predictive and owned-predictive creation, continuation and recovery.
+- Connect the advertised resident `--credibility-activation` option through the
+  outer dispatcher while preserving the existing explicit-recovery requirement
+  and fresh-creation refusal. Document the usable commands and selection rules.
+- Add six operator regressions, including the causal loss of complementary
+  helper vetoes and a permitted original native/human-reviewed second message,
+  exact resident policy matching and offline receipt/terminal recovery.
+- Pass independent source review, whitespace checks and syntax parsing for all
+  fourteen changed Rust files. Full compiler/runtime attempts were OOM-killed;
+  the executed xtask gate retains its existing dependency-admission refusal.
+  All eleven new regression functions remain pending execution qualification.
+
 ## 2026-10-23: preserve joint helper qualification in the learned recipe
 
 - Add `with_required_held_out_joint` to the original immutable learned

@@ -1,6 +1,9 @@
 //! Bounded, independently provisioned learned generation and native review inputs.
 #[path = "weights.rs"]
 pub(super) mod weights;
+#[path = "joint.rs"]
+mod joint;
+use joint::HeldOutJointPolicy;
 use weights::WeightsInput;
 use super::{fields::{Assets, Fields, path, MAX_DATA_BYTES}, fit, forecast::ForecastInput,
     monitor::MonitorInput, native::NativeRoster, process::ProcessRecipe};
@@ -65,7 +68,7 @@ struct Recipe {
     tokenization: TokenizationBudget, budget: GenerationBudget, telemetry: GenerationTelemetryBudget,
     sidecar: SidecarIdentity, disclosure: SidecarCongressBudget, native_limits: NativeReviewLimits,
     priority: Vec<KvGroup>, rounds: Vec<u64>, continuation: bool,
-    process: Option<ProcessRecipe>,
+    process: Option<ProcessRecipe>, joint: Option<HeldOutJointPolicy>,
 }
 struct Files {
     configuration: PathBuf, weights: WeightsInput, tokenizer: TokenizerInput, sampling: PathBuf,
@@ -137,6 +140,9 @@ pub(super) fn load(file: &Path, config: &Config, require_native: bool) -> Result
     let generation = if let Some(forecast) = forecast {
         forecast.pin(generation)?.with_forecast_text_stream_continuation().map_err(debug)?
     } else { generation };
+    let generation = if let Some(joint) = recipe.joint {
+        generation.with_required_held_out_joint(joint).map_err(debug)?
+    } else { generation };
     let native = if require_native {
         recipe.files.native.as_ref().map(|path| {
             let roster = NativeRoster::load(path, config, &mut assets)?;
@@ -154,7 +160,7 @@ pub(super) fn load(file: &Path, config: &Config, require_native: bool) -> Result
 }
 impl Recipe {
     fn decode(bytes: &[u8]) -> Result<Self, String> {
-        let mut root = Fields::parse(bytes, MAX_RECIPE_BYTES)?;
+        let (mut root, joint) = joint::decode(bytes)?;
         let version = match root.text("schema")?.as_str() {
             "fa.learned-publication/1" => 1,
             "fa.learned-publication/2" => 2,
@@ -311,7 +317,7 @@ impl Recipe {
             publication: publication_value, binding: binding_value, floor: floor_value, files: files_value,
             max_new_tokens, max_output_bytes, stop_tokens, tokenization, budget, telemetry,
             sidecar: sidecar_identity, disclosure: disclosure_value, native_limits, priority, rounds,
-            continuation: version >= 4, process })
+            continuation: version >= 4, process, joint })
     }
 }
 fn priority(groups: Vec<fa_reference::strict_json::Json>) -> Result<Vec<KvGroup>, String> {

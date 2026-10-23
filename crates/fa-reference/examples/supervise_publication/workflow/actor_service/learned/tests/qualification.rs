@@ -15,6 +15,8 @@ use fa_reference::action::consequence::delivery::persistent::observed::{
 };
 use std::{collections::{BTreeMap, BTreeSet}, path::{Path, PathBuf}};
 
+#[path = "qualification/joint.rs"] mod joint;
+
 struct Seed {
     config: Config,
     first_recipe: PathBuf,
@@ -75,9 +77,16 @@ fn save(root: &Root, request: &CredibilityActivation) -> PathBuf {
 }
 
 fn seed(root: &Root, mode: Option<bool>) -> Seed {
+    seed_with(root, mode, |_, _| {}, activation)
+}
+
+fn seed_with(root: &Root, mode: Option<bool>,
+    provision: impl FnOnce(&mut Config, &Path),
+    first_activation: impl FnOnce(&Config, u64, u64, u64, u64) -> CredibilityActivation) -> Seed {
     let mut config = configured(root);
     let first_recipe = native::write(root);
     if let Some(owned) = mode { super::forecast::install(root, &first_recipe, owned, 60_000); }
+    provision(&mut config, &first_recipe);
     evidence(root, &config, 1, true, false);
     let first = recipe::load(&first_recipe, &config, true).unwrap();
     let (host, reviewer, observer) = recovery::create_selected(&config, &first).unwrap();
@@ -98,7 +107,7 @@ fn seed(root: &Root, mode: Option<bool>) -> Seed {
     let old_capsule = {
         let mut host = driver.supervisor_mut().host_mut().unwrap();
         let state = host.inspect();
-        let old = activation(&config, state.control.sequence, state.control.ledger.epoch, 20, 2);
+        let old = first_activation(&config, state.control.sequence, state.control.ledger.epoch, 20, 2);
         let revision = host.revision();
         host.activate_credibility(revision, old.clone(), &config.profile.committee).unwrap();
         host.check_credibility().unwrap();
