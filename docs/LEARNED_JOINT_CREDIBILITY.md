@@ -116,8 +116,9 @@ The existing held-out activation owns all evidence checks and weight derivation.
 It still requires exact committee and helper identities, current policy and
 control predecessors, bounded evidence age, complete per-stratum observations,
 and the original member/cohort influence caps. The joint guard then compares the
-actual candidate with the baseline, preserving known duplicate roots and every
-original refusal for incomplete, censored, late or insufficient evidence.
+actual candidate with the baseline, preserving the original campaign refusal
+of duplicate evidence roots and every refusal for incomplete, censored, late or
+insufficient evidence.
 See [the native held-out joint contract](HELD_OUT_JOINT_GUARD.md).
 
 Ordinary, raw-predictive and owned-predictive learned recovery already require
@@ -142,28 +143,48 @@ restricted consumers and evidence requirements remain in force.
 
 ## Verification boundary
 
-The regression target is `learned_held_out_joint`. Five authored functions use
-native configuration, creation, activation and recovery boundaries, with
-independent permitted and refused controls. They include actual learned output
-and two-key publication, a causal complementary-helper regression, every policy
-field, all three mediated predictor lanes and failed-installation rollback.
+All five public `learned_held_out_joint` functions and all fifteen public
+`held_out_joint` functions pass. They exercise native configuration, creation,
+activation and recovery with independent permitted and refused controls,
+including actual learned output and two-key publication, every policy field,
+all three mediated predictor lanes and failed-installation rollback.
 
-Independent source review found no blocking defect. Two complete-library
-Cranelift builds and a standard compiler check were killed by the shared host's
-memory exhaustion before any test executed. The runtime retry reduced compiler
-parallelism and MIR optimization; no production guard, test assertion or runtime
-limit changed. Compilation and execution remain pending. Synthetic campaign
-labels test enforcement and are not measurements of real helper reliability.
+All sixteen selected operator functions pass: six new joint-policy regressions,
+seven existing learned-qualification regressions and three outer-parser cases.
+The new lifecycle uses actual learned generation, native helper inference and
+human review across all three forecast modes. A marginally qualified reduction
+from helper weights 5 to 4 loses two complementary vetoes under the frozen
+Congress thresholds; the joint requirement refuses before another request,
+token, forecast, charge or journal change. A closely matched nonregressing
+capsule then reaches the second confirmed publication. The other new cases
+cover all six legacy recipe versions, closed parsing, exact resident selection,
+full command routing, every policy field before recovery cleanup, and offline
+receipt/terminal recovery.
 
-Six additional operator regression functions are authored. The lifecycle case
-uses actual learned generation, native helper inference and human review across
-all three forecast modes. A marginally qualified reduction from helper weights
-5 to 4 loses two complementary vetoes under the frozen Congress thresholds;
-the joint requirement refuses before another request, token, forecast, charge
-or journal change. A closely matched nonregressing capsule then reaches the
-second confirmed publication. Other cases cover all six legacy recipe versions,
-closed parsing, exact resident selection, full command routing, every policy
-field before recovery cleanup, and offline receipt/terminal recovery. These are
-authored assertions, not passing execution results. The standard full xtask
-gate executes and refuses the existing dependency graph before formatting,
-Clippy or tests. The wider qualification gates remain unchanged and open.
+Runtime execution uses `nightly-2026-09-08` and its official Cranelift backend,
+one compiler thread and disabled MIR optimization. The public targets are
+unmodified Cargo targets. The operator harness changes only unrelated test
+registration in a disposable copy: all bodies, assertions, fixtures and
+production remain, selected files are byte-identical and source hashes are
+checked before and after execution. Its successful run uses a 32 MiB libtest
+thread stack; the unchanged binary had overflowed the default stack in an
+existing lifecycle case. This is scoped runtime evidence, not a full operator
+suite or release qualification.
+
+Earlier attempts remain recorded: two complete-library builds and a standard
+compiler check were OOM-killed; an operator preparation stopped when its frozen
+input check detected an intervening public-test correction. Actual execution
+also exposed two older fixtures that incorrectly tried to seal duplicate roots
+and a new assertion that counted the existing four-byte blob prefix as eight.
+Those fixtures were corrected without changing production admission, binary
+encoding, scoring, guards or finite limits. Independent review confirmed the
+corrected controls. Synthetic labels test enforcement and do not measure real
+helper reliability.
+
+The complete unmodified operator test source and both public targets also pass
+the standard qualified compiler's Cargo check. No test-registration changes
+are used for that compiler check.
+
+The standard full xtask command compiles and executes, then refuses the existing
+dependency graph before formatting, Clippy or tests. Full FA-105, dependency
+admission and release qualification remain open.

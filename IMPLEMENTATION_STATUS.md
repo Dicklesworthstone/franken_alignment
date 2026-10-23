@@ -17,7 +17,7 @@ The inner parser still refuses fresh-creation activation before opening inputs.
 Both command usage surfaces and the existing operator/resident contracts describe
 the option and exact joint selection.
 
-Six operator regression functions are authored. The causal lifecycle case covers
+All six new operator regression functions pass. The causal lifecycle case covers
 ordinary, raw-predictive and owned-predictive publication: marginally qualifying
 weights lose two complementary vetoes, joint activation refuses without journal,
 epoch, charge, forecast or numerical changes, and a matched nonregressing capsule
@@ -28,15 +28,26 @@ fields before recovery cleanup, and offline original receipts and terminal
 completion without current helper or capsule intake. Existing test bodies and
 fixtures remain intact apart from a shared preparation hook and fixture visibility.
 
-Independent source review found no blocking defect. All fourteen changed Rust
-files pass nonmutating Rust 2024 syntax parsing under the qualified nightly, and
-the scoped diff passes whitespace checks. This is not type-checking or runtime
-execution. Two complete-library runtime builds and the standard compiler check
-were OOM-killed before tests could execute. The standard xtask command itself
-compiles and runs, then refuses the existing dependency graph before formatting,
-Clippy or tests. No gate, source assertion or production bound was weakened.
-The eleven new core/operator regression functions remain unexecuted, and full
-FA-105, dependency admission and release qualification remain open.
+All sixteen selected operator functions pass, including those six new cases,
+seven existing learned-qualification cases and three outer-parser cases. The
+qualified nightly's official Cranelift backend runs an isolated registration-only
+harness: all test bodies, assertions, fixtures and production are retained,
+selected files are byte-identical, and source hashes match before and after the
+run. The unchanged binary needs an explicit 32 MiB test-thread stack under this
+verification build; its earlier default-stack overflow is retained. An earlier
+preparation also stopped on an intervening public-test source change before
+execution. No production limit or assertion was relaxed.
+
+The complete unmodified operator test source and both public targets also pass
+the standard qualified compiler's Cargo check. No test-registration changes
+are used for that compiler check.
+
+Independent source review found no blocking defect. Earlier complete-library
+builds and a standard check were OOM-killed; those failures remain recorded.
+The standard xtask command compiles and executes, then refuses the existing
+dependency graph before formatting, Clippy or tests. All eleven new core/operator
+functions now have passing scoped runtime evidence. Full FA-105, dependency
+admission and release qualification remain open.
 
 ## 2026-10-23: bind held-out joint credibility to learned generation
 
@@ -50,7 +61,7 @@ their existing exact-recipe checks, guards, floors and restricted consumers.
 Legacy recipe bytes are unchanged; separate outer joint enables retain their
 existing profile restrictions. No alternate promotion or weight setter is added.
 
-Five public regression functions are authored for all policy-field mismatches,
+All five new public regression functions pass for all policy-field mismatches,
 omitted selection, wrapper composition, all three mediated replay/terminal
 lanes, conflicting evaluation bootstraps and rollback after a later numerical
 installation refusal. A causal learned-output case pairs marginally accepted
@@ -59,15 +70,20 @@ nonregressing publication through original automatic and human keys. Recovery
 retains reports while historical capsule retries cannot revive qualification or
 old keys. Independent source review found no blocking defect.
 
-Two complete-library builds using the qualified nightly's official Cranelift
-backend and a standard compiler check were killed by SIGKILL before tests could
-execute on the exhausted shared host. The second runtime attempt used one
-frontend thread and disabled MIR optimization without changing source, tests or
-production limits. Raw failed-attempt logs are retained outside the source tree.
-Compilation, runtime and full release qualification of this increment remain
-pending; no previous passing receipt qualifies these new bytes. Full FA-105 and
-the existing dependency-admission gate remain open. Operator selection follows
-as a separate feature increment.
+All fifteen existing public held-out joint functions also pass. Actual execution
+exposed two fixtures that attempted duplicate-root campaigns, which the original
+ledger already refuses before labels or scoring. They now directly assert that
+admission law and use distinct-root positive/negative controls for insufficient
+evidence and per-case regression under permissive aggregate limits. The new
+wrapper-size assertion now correctly includes the original four-byte blob prefix:
+92 bytes of overhead. No production format, admission or scoring changed.
+
+These twenty public functions execute as unmodified Cargo test targets with the
+qualified nightly's official Cranelift backend, one compiler thread and disabled
+MIR optimization after the earlier OOM-killed attempts. Failed-attempt logs are
+retained. Native and operator source received independent review. The operator
+integration and current compiler/gate qualification are recorded above; full
+FA-105 and dependency admission remain open.
 
 ## 2026-10-23: repair interrupted learned terminal checkpoint exports
 

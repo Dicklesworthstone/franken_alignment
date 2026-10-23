@@ -11,10 +11,13 @@
 - Add six operator regressions, including the causal loss of complementary
   helper vetoes and a permitted original native/human-reviewed second message,
   exact resident policy matching and offline receipt/terminal recovery.
-- Pass independent source review, whitespace checks and syntax parsing for all
-  fourteen changed Rust files. Full compiler/runtime attempts were OOM-killed;
-  the executed xtask gate retains its existing dependency-admission refusal.
-  All eleven new regression functions remain pending execution qualification.
+- Pass all sixteen scoped operator regressions with the qualified nightly's
+  official Cranelift backend, unchanged test bodies and a 32 MiB test-thread
+  stack. Retain earlier OOM, source-freeze and default-stack failures. Independent
+  source review passes; the executed full xtask gate retains its existing
+  dependency-admission refusal. Full release qualification remains open.
+- Pass the standard qualified compiler check for both public targets and the
+  complete unmodified operator test source.
 
 ## 2026-10-23: preserve joint helper qualification in the learned recipe
 
@@ -25,9 +28,12 @@
   exact recovery binding across ordinary, predictive and mediated owners.
 - Add five public regressions for real learned two-key publication, a causal
   complementary-helper regression, recovery invalidation, complete policy pins,
-  terminal custody and failed-bootstrap rollback. Independent source review
-  passed; compiler/runtime attempts were OOM-killed before execution, so the
-  increment remains unqualified pending successful verification.
+  terminal custody and failed-bootstrap rollback. All five new public functions
+  and all fifteen existing held-out joint functions pass with official Cranelift.
+- Correct two old duplicate-root fixtures to assert the original campaign
+  admission law and causal distinct-root controls. Correct the new exact wrapper
+  size to 92 bytes, including the existing four-byte blob prefix. Production
+  encoding, admission and scoring remain unchanged; failed attempts are retained.
 
 ## 2026-10-23: repair interrupted learned terminal exports from original custody
 

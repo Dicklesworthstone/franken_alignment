@@ -208,7 +208,11 @@ fn complete_policy_identity_composes_without_changing_legacy_recipe_bytes() {
     assert_eq!(old.required_held_out_joint(), None); assert_eq!(old, base(false));
     let selected = old.clone().with_required_held_out_joint(policy()).unwrap();
     assert_eq!(selected.required_held_out_joint(), Some(policy())); assert_ne!(selected, old);
-    assert_eq!(old.encoded_bytes(), length); assert_eq!(selected.encoded_bytes(), length + 96);
+    // Two 8-byte domains, the 8-byte sentinel, the original codec's 4-byte
+    // blob length, and all eight 8-byte policy fields: 92 added bytes.
+    const WRAPPER_BYTES: usize = 8 + 8 + 8 + 4 + 8 * 8;
+    assert_eq!(old.encoded_bytes(), length);
+    assert_eq!(selected.encoded_bytes(), length + WRAPPER_BYTES);
     assert_eq!(selected.clone().with_required_held_out_joint(policy()).err(), Some(Error::Duplicate));
     for changed in alternatives() { assert_ne!(old.clone().with_required_held_out_joint(changed).unwrap(), selected); }
     for lane in LANES {

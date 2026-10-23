@@ -75,15 +75,18 @@ fn rows() -> Vec<Row> {
         Row { root: 3, stratum: "effect", truth: Some(LabelVerdict::Safe), votes: [CLEAR, CLEAR] },
     ]
 }
-fn evidence(rows: &[Row]) -> CredibilitySnapshot {
-    let mut ledger = CredibilityLedger::new(Campaign {
+fn campaign(rows: &[Row]) -> Campaign {
+    Campaign {
         scope: EvaluationScope { campaign: 1, model_generation: 1, evaluator_generation: 1, held_out_manifest: [8; 32] },
         label_owner: "independent".into(), helpers: ["a", "b"].into_iter().map(|m| (
             m.into(), HelperGeneration { generation: 1, cohort: m.into() })).collect(),
         strata: rows.iter().map(|r| r.stratum.to_owned()).collect::<BTreeSet<_>>(),
         cases: rows.iter().enumerate().map(|(i, r)| CaseSpec { id: i as u64 + 1,
             stratum: r.stratum.into(), evidence_root: [r.root; 32], dispatch_sequence: 2 }).collect(),
-    }).unwrap();
+    }
+}
+fn evidence(rows: &[Row]) -> CredibilitySnapshot {
+    let mut ledger = CredibilityLedger::new(campaign(rows)).unwrap();
     for (i, row) in rows.iter().enumerate() {
         let id = i as u64 + 1;
         ledger.record_observations(id, ["a", "b"].into_iter().zip(row.votes)
@@ -212,27 +215,48 @@ fn incomplete_and_late_observations_cannot_be_turned_into_successful_holds() {
 }
 
 #[test]
-fn repeated_evidence_roots_count_once_and_conflicting_labels_or_strata_refuse() {
+fn duplicate_evidence_roots_refuse_before_labels_or_joint_scoring() {
     let before = config(0).congress; let after = candidate(&before);
-    let mut cases = rows(); cases[1].root = 1;
+    let report = joint::evaluate(guard(), &before, &after, &evidence(&rows())).unwrap();
+    assert!(report.qualified()); assert_eq!(report.roots.len(), 3);
+    assert_eq!(report.strata["effect"].candidate.violation_roots, 2);
+
+    // Root uniqueness protects the original marginal denominators before any
+    // observations or labels can be recorded. A joint guard must not weaken
+    // that earlier admission law to make its defensive grouping reachable.
+    for changed in 0..3 {
+        let mut cases = rows(); cases[1].root = cases[0].root;
+        match changed {
+            0 => {}
+            1 => cases[1].truth = Some(LabelVerdict::Safe),
+            _ => cases[1].stratum = "other",
+        }
+        assert_eq!(CredibilityLedger::new(campaign(&cases)).unwrap_err(), Error::Duplicate);
+    }
+    // Removing the second independent case leaves one real violation root; it
+    // cannot satisfy the two-root requirement through relabelling or aliasing.
+    let mut cases = rows(); cases.remove(1);
     let report = joint::evaluate(guard(), &before, &after, &evidence(&cases)).unwrap();
     assert_eq!(report.strata["effect"].candidate.violation_roots, 1);
     assert!(report.failures.contains(&HeldOutJointFailure::InsufficientViolationRoots("effect".into())));
-    cases[1].truth = Some(LabelVerdict::Safe);
-    assert_eq!(joint::evaluate(guard(), &before, &after, &evidence(&cases)), Err(Error::Binding));
-    cases[1].truth = Some(LabelVerdict::Violation); cases[1].stratum = "other";
-    assert_eq!(joint::evaluate(guard(), &before, &after, &evidence(&cases)), Err(Error::Binding));
+    assert!(!report.qualified());
 }
 
 #[test]
 fn permissive_aggregate_limits_never_waive_a_new_case_regression() {
     let before = config(5).congress; let after = candidate(&before);
     let policy = HeldOutJointPolicy::new(71, 1, 1, 1, 1_000_000, 1_000_000, HeldOutJointBudget::default()).unwrap();
-    let mut cases = rows(); cases[0].votes = [CLEAR, CLEAR]; cases[1].root = cases[0].root;
+    let mut cases = rows(); cases[0].votes = [CLEAR, CLEAR];
     let report = joint::evaluate(policy, &before, &after, &evidence(&cases)).unwrap();
     assert!(report.roots[&[1; 32]].baseline_failed);
+    assert!(!report.roots[&[2; 32]].baseline_failed);
+    assert!(report.roots[&[2; 32]].candidate_failed);
+    assert_eq!(report.strata["effect"].baseline.escaped_roots, 1);
+    assert_eq!(report.strata["effect"].candidate.escaped_roots, 2);
     assert!(report.failures.contains(&HeldOutJointFailure::RegressedCase(2)));
-    assert!(!report.qualified()); // The already-failed replicate cannot hide it.
+    assert!(!report.qualified()); // Prior misses and loose rates cannot hide it.
+    cases[1].votes = [HOLD, HOLD]; // One extra existing vote preserves this veto.
+    assert!(joint::evaluate(policy, &before, &after, &evidence(&cases)).unwrap().qualified());
 }
 
 #[test]
