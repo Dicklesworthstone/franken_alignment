@@ -15,6 +15,7 @@ use fa_reference::action::consequence::mediation::MAX_CHECK_EDGE_VISITS;
 use std::{io::Cursor, path::{Path, PathBuf}};
 
 #[path = "topology/terminal.rs"] mod terminal;
+#[path = "topology/failure.rs"] mod failure;
 
 const INVENTORY: &[u8] = include_bytes!(concat!(env!("CARGO_MANIFEST_DIR"),
     "/tests/fixtures/authority_topology_inventory.json"));

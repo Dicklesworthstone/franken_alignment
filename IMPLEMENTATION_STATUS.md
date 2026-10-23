@@ -1,5 +1,34 @@
 # Implementation status · design revision 0.3
 
+## 2026-10-23: preserve source work after failed learned service
+
+Learned source retention no longer returns early merely because the service has
+an error. While the original driver still owns a healthy acknowledged host, its
+selected checkpoint captures the admitted documents, actual source expenditure,
+native availability and exact history. The original service failure remains
+first; an export error is appended and independent anchor retention still runs.
+The shared path also serves resident learned sequences. Native capture continues
+to reject a poisoned owner, without issuing live authority or another effect.
+
+All three new `learned_failed_service_` regressions pass across ordinary,
+raw-predictive and owned-predictive modes. They exercise actual initial bypass
+refusal and loss of live inventory, retain spent work and native withdrawal,
+then remove live inputs and perform clock-free, event-free terminal retries
+with the exact saved pair. A late checkpoint collision preserves the competing
+bytes, original error and independent anchor. A real stage-file collision
+latches native storage failure and prevents either archive from being created.
+An initial fixture assertion incorrectly expected bypass coverage to remain
+available; source inspection confirmed `refresh_checked` explicitly withdraws
+every non-Verified cut before Stop. The regression now requires that native
+withdrawal while preserving all expenditure, identity and retry assertions.
+
+The final complete operator test source passes the standard qualified nightly
+check. These three runtime functions pass in the same registration-only scoped
+Cranelift harness described below, with the final source hashes checked against
+the frozen input. Additional existing stop-suite reruns were blocked during
+fixture setup by shared storage exhaustion; they are not counted as passing.
+The full dependency-admission gate and wider packet qualification remain open.
+
 ## 2026-10-23: retain paired topology custody from learned terminal commands
 
 Learned `--stop-admission`, `--drain-stopped` and `--recover-stop` now accept

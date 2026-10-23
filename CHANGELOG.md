@@ -1,5 +1,20 @@
 # Changelog
 
+## 2026-10-23: keep healthy learned source custody after service failure
+
+- Retain selected source checkpoints after learned service errors whenever the
+  original native owner remains healthy. Preserve actual work, acknowledged
+  availability and exact history before cleanup in the shared learned path.
+- Keep the original failure, append checkpoint errors and still attempt the
+  independent history anchor. A poisoned storage owner cannot export either
+  archive; failed work does not acquire certification or trigger another send.
+- Pass three new regressions across all predictor modes covering native source
+  refusal, missing inventory, exact offline terminal retries, output collisions
+  and real storage poison. Require the native withdrawal that precedes Stop on
+  an uncertified cut. The complete operator test source passes the standard
+  compiler check; runtime evidence remains scoped to the qualified nightly's
+  official Cranelift backend, without closing the full gate.
+
 ## 2026-10-23: retain paired learned terminal topology checkpoints
 
 - Add explicit `--retain-topology-checkpoint` to learned admission stop, later

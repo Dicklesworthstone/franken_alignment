@@ -183,16 +183,23 @@ where F: FnMut() -> ElapsedTick {
     Ok(())
 }
 
-/// A failed service cannot mint a healthy source checkpoint. Output failure
-/// remains separate from the original effect and never requests another send.
+/// Preserve the original source work whenever its native owner remains healthy,
+/// including acknowledged refusals and Stop after a service error. Native capture
+/// rejects poisoned owners; an error is never evidence of a different history.
+/// Retention failure remains separate and never requests another effect send.
 pub(super) fn retain(output: Option<&Output>, driver: &FileSupervisedDriver,
     failure: Option<String>) -> Option<String>
 {
-    if failure.is_some() { return failure; }
-    let Some(output) = output else { return None; };
+    let Some(output) = output else { return failure; };
     let result = (|| {
         let host = driver.supervisor().host().map_err(debug)?;
         output.retain(&host, driver.topology())
     })();
-    result.err()
+    match result {
+        Ok(()) => failure,
+        Err(error) => Some(match failure {
+            Some(original) => format!("{original}; {error}"),
+            None => error,
+        }),
+    }
 }

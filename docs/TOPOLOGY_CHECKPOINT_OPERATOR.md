@@ -137,6 +137,15 @@ its charge, overwrite earlier custody, or trigger a resend. Keep the prior
 archives until their successors are durably acknowledged. No source checkpoint
 is produced when recovery/preparation cannot establish the required healthy cut.
 
+For learned services, an acknowledged refusal or Stop can still leave a healthy
+native owner with source expenditure to retain. A service error therefore does
+not suppress its selected source output. The archive records the actual native
+availability, including withdrawal after an uncertified cut or missing input;
+it is neither successful publication nor fresh topology certification. The
+original failure is preserved, checkpoint errors are appended and the separate
+anchor export is attempted independently. A poisoned owner refuses capture
+before either archive is created.
+
 The creation envelope remains 16 KiB/depth 2; its item ceiling is 12 to admit the
 four required fields. The continuation envelope remains 16 KiB/depth 4/64 items.
 The native checkpoint keeps the original per-document and nested history limits;

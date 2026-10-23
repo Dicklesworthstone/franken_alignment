@@ -123,6 +123,17 @@ and operation floors. A recovery fence does not recertify the graph or replenish
 source allowances. Output failures cannot undo an acknowledged publication or
 request another send.
 
+Selected source custody is also retained after a learned service error when the
+original native owner remains healthy. Capture preserves the admitted documents,
+actual spent work, historical availability and exact acknowledged cut before
+cleanup. A rejected native cut or missing inventory explicitly withdraws source
+coverage; the archive retains that unavailable state and the spent check. It
+does not certify the graph or turn the failed request into a publication.
+The original service error remains first, with any checkpoint error appended,
+and the independent history-anchor export is still attempted. A poisoned owner
+refuses both captures. Single-request and resident learned services share this
+retention path; neither capture requests another effect or refunds uncertainty.
+
 Historical operations load only the independently selected original/current
 topology requirements; they do not open `next` live topology files or fresh
 native helper/evidence inputs. Receipt and audit modes refuse a requested new
