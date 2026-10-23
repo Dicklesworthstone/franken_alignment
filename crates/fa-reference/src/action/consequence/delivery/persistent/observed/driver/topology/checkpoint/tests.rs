@@ -14,6 +14,9 @@ use crate::full_input::InputProfileBinding;
 use crate::reducer::Caps;
 use std::{collections::BTreeMap, fs, io::Cursor, path::PathBuf, sync::atomic::{AtomicU64, Ordering}};
 
+#[path = "tests/terminal.rs"]
+mod terminal;
+
 const INVENTORY: &[u8] = include_bytes!(concat!(env!("CARGO_MANIFEST_DIR"),
     "/tests/fixtures/authority_topology_inventory.json"));
 struct Directory(PathBuf);

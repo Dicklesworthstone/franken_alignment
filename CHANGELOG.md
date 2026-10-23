@@ -1,5 +1,17 @@
 # Changelog
 
+## 2026-10-22: carry source checkpoints through native terminal recovery
+
+- Add native checkpoint successors for sealed admission-stop and stopped/drained
+  history. Preserve original documents, source expenditure and last operation;
+  bind exact original history, identity and independently selected profile.
+- Permit only matching Stop, Fence and StopProgress after the saved cut. Preserve
+  native historical availability, exact acknowledged anchor and current floors,
+  without filesystem access, another semantic replay or live authority.
+- Pass six public native integration regressions with the qualified nightly's
+  official Cranelift backend and standard targeted compiler checks. The full
+  library test harness was killed by SIGKILL; five internal cases remain pending.
+
 ## 2026-10-23: exercise native stop and learned terminal integration
 
 - Repair operator test compilation with exhaustive profile-field comparisons,

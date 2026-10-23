@@ -138,8 +138,18 @@ impl FileHistoryAnchor {
     pub(in super::super) fn registration_image(&self, profile: &FileOversightProfile,
         identity: &Path) -> Result<&[u8], Error>
     {
+        self.decoded_events(profile, identity)?;
+        Ok(&self.canonical)
+    }
+
+    // Bounded inspection of this captured cut, never a filesystem reopen or
+    // semantic replay. Only native consumers may inspect original event inputs;
+    // an imported anchor alone still carries no acknowledgment or live role.
+    pub(in super::super) fn decoded_events(&self, profile: &FileOversightProfile,
+        identity: &Path) -> Result<Vec<Event>, Error>
+    {
         let events = journal::decode(profile, identity, &self.canonical)?;
         if events.len() != self.revision { return Err(Error::Binding); }
-        Ok(&self.canonical)
+        Ok(events)
     }
 }

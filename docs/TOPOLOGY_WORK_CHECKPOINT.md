@@ -73,6 +73,31 @@ A failed source read preserves native withdrawal and expenditure; an old cut or
 effect key is never restored. Capture a successor only from the healthy original
 owner. This adds library integration, not automatic CLI checkpoint export/import.
 
+## Terminal checkpoint successors
+
+`TopologyCheckpoint::after_admission_stop(profile, identity, history)` accepts a
+sealed `FileAdmissionStoppedHistory`; `after_stopped` accepts a sealed
+`FileStoppedHistory` from combined recovery, later drain or an exact retry.
+They carry the independently retained source custody to the same acknowledged
+terminal cut. The original bootstrap profile and canonical store identity must
+match. The original decoder and exact prefix checker validate the captured
+journal; only the matching Stop, Fence and StopProgress events may follow the
+saved cut. Even an ordinary time observation or another actual source check
+refuses an older source checkpoint.
+
+Topology/inventory bytes, source expenditure, last operation and limits remain
+unchanged. The exact acknowledged anchor and control/authority floors advance
+with the terminal result. Historical availability follows the actual native
+events: Fence withdraws it, while Stop alone does not fabricate withdrawal.
+This data is neither a live source nor a fresh cut certificate. The methods
+perform bounded parsing/copying, without file access, clocks, semantic replay,
+journal mutation or new authority. Captured acknowledgement remains the selected
+cut even if canonical or source files subsequently change or disappear.
+
+Durable export remains separate from native acknowledgement. Trusted custody,
+joint rollback and unretained work retain their existing limits. The consumer
+must keep the prior archive until the new exact checkpoint is durably retained.
+
 ## Verification status
 
 The original five authored native regression functions cover exact history/work
@@ -85,7 +110,16 @@ checkpoints after actual source work, foreign histories and invalid profiles,
 floors or budgets, and source loss after reinstatement with retained expenditure.
 Existing codecs, reducers and source/driver checks remain unchanged.
 
-These are authored, not executed results. Fresh targeted and full-gate remote-only
+The original results below are historical. Six public terminal regression
+functions in `tests/topology_terminal_checkpoint.rs` cover exact native
+admission/drain/combined cuts, missing live files, unchanged expenditure,
+nonterminal successors, equal-counter forks, binding and truthful Stop-only
+availability. They pass with the qualified nightly's official Cranelift backend.
+Five related internal tests remain authored; building the complete library test
+harness was killed by SIGKILL on the shared host. Current execution evidence and
+qualification limits are recorded in IMPLEMENTATION_STATUS.md.
+
+The original tests were authored, not executed results. Fresh targeted and full-gate remote-only
 RCH commands stopped before compilation with exit 127 because the launcher is
 absent. Rust compilation, tests, rustfmt, Clippy and qualification remain pending.
 The editing checkout is partial. No Beads, roadmap or production gate is closed.

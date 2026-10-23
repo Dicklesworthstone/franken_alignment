@@ -1,5 +1,29 @@
 # Implementation status · design revision 0.3
 
+## 2026-10-22: retain exact topology custody across native terminal cuts
+
+`TopologyCheckpoint::after_admission_stop` and `after_stopped` carry an
+independently retained source checkpoint to a sealed native terminal result.
+The original decoder binds the bootstrap and canonical identity; exact prefix
+comparison and a Stop/Fence/StopProgress-only suffix prevent later unretained
+source work or an equal-counter fork from inheriting old expenditure. Complete
+topology/inventory bytes, work and last source operation remain unchanged.
+The exact captured anchor and native control/authority floors advance together.
+Historical availability follows the real events: a recovery Fence withdraws it,
+while a live Stop without that Fence preserves its historical value. No source,
+observer, live owner, second semantic replay, filesystem access or clock is used.
+
+The standard qualified `nightly-2026-09-08` compiler passes targeted checks for
+the affected operator and the new public `topology_terminal_checkpoint` target.
+All six public regression functions pass using that same nightly's official
+Cranelift backend, including real source refreshes, missing live files,
+binding/floor/graph refusals and a genuine same-path, equal-counter native fork.
+The complete library unit harness reached compilation but was killed by
+SIGKILL on the shared host; five additional internal cases remain unexecuted.
+No assertion or production limit was relaxed. These scoped results do not
+establish the full standard-backend, formatting, Clippy, RCH or release gate;
+the wider FA-014 packet and compilation bridge remain open.
+
 ## 2026-10-23: execute learned terminal and authenticated stop regressions
 
 The operator and both changed integration targets pass targeted `cargo check`

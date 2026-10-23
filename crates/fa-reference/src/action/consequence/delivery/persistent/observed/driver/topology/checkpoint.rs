@@ -1,6 +1,7 @@
 //! Independent source-work custody paired with the exact acknowledged journal.
 //! This is evidence transport, never source authentication or recovered authority.
 mod recovery;
+mod terminal;
 pub use recovery::TopologyCheckpointResume;
 
 use super::{FileDriverTopology, FileOversight, JournalError, LoadedAuthorityTopology,
