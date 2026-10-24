@@ -1,5 +1,64 @@
 # Implementation status · design revision 0.3
 
+## 2026-10-24: check native source leases before numerical work
+
+The generated operator now calls the existing `capture_file_policy_state` gate
+after acknowledging its post-read clock. The native service calls the same gate
+at its final stamped clock before generation, resume or finish preparation.
+Previously those paths observed time without checking the registered source's
+read-start lease. The learned operator already made this explicit check. This
+repair connects that original gate; it adds no journal tag, model kernel, source
+reader, dependency, authority reducer or historical receipt requirement.
+
+A causal test now delays clock samples only after the first intent is durable,
+instead of jumping at an unrelated startup-call ordinal. Before the production
+repair, the complete 113-entry native/generated cut finished **112 passed, one
+failed**, with the expired case still advancing all four numerical positions
+(`j-30078706395382071`). After the repair, **114 passed, zero failed/ignored,
+617 filtered**, on the qualified standard compiler/default stack at `vmi1149989`
+(`j-30078706395382079`). The denominator is all 111 original native/generated
+entries plus three new controls, including registered helper entrypoints. The
+new native pair reads at tick 1000: tick 1009 admits an actual first step, while
+1010 refuses with unchanged numerical state and generation revision.
+
+The same change corrects test oracles for audience text versus reviewed frames,
+whole-frame charges, independently bound helper epochs after a recovery fence,
+and exact `Knowledge::Withheld { authority_required: "own_request" }` responses.
+Full one-byte stream finish cases retain their publication limits while funding
+the tokenizer's existing worst-case generation allocation. Two new actual
+operator controls retain the original undersized allocation and require refusal,
+no text intent, zero publication, charges and reservations. The earlier complete
+111-entry result, **108 passed/three failed**, and all other failed attempts remain
+retained. No production bound, deadline, assertion registration or native source
+contract was relaxed.
+
+The verified Rust source is base `7228d44ad4bf02d9111d9702412cfc27ac128374` plus
+12 owned paths, overlay fingerprint
+`f11b1a91644b45b49a980630e9d6102a061e4e902fac484c65369a16ffa175a2`.
+All 12 pass qualified individual-file formatting. Standard workspace/all-target
+compilation passed at that exact cut (`j-30078706395382085`, `vmi1149989`), with
+warnings retained. The canonical driver executed at the same Rust cut
+on `vmi1152480` (`j-30078706395382086`) and failed the unchanged initial dependency
+admission guard before formatting, Clippy or tests. Its first dispatch refused
+`RCH-I003` before execution; the admitted retry used one Cargo job. No local
+fallback occurred.
+
+The twelve qualified Rust files are committed byte-for-byte in
+`cafce41da3dc909bb93de9d98991158d467c8a86` on
+`train/navyheron/native-source-leases-20261024`. A pre-existing shared Git index
+lock prevented ordinary staging. A private index recorded only the seventeen
+owned code/test/contract/status/tracker paths on that isolated branch; shared
+HEAD, staging and the ambiguous lock are preserved. Integration into shared HEAD
+remains pending resolution of that lock's ownership.
+
+Fourteen original failure IDs now have scoped passing evidence, leaving 37 of
+the preceding 51-ID unresolved inventory. This is not a new complete operator
+suite count. Complete source/package admission, Clippy, operator/workspace runtime
+qualification and the observed transient reviewer startup race remain open on
+the original P0. Raw attempts, normalized source/test review and exact owned-file
+hashes are outside frozen source at
+`/Users/jemanuel/Documents/Codex/2026-10-24/franken-alignment-native-7228d44a/`.
+
 ## 2026-10-24: recover learned owners on the standard test-thread stack
 
 The learned recovery selector now finishes its five original cursor variants in
