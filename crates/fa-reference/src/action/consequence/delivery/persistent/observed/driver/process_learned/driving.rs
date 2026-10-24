@@ -1,5 +1,7 @@
 //! Current original learned provenance and policy around external helper work.
 //! Process replies pass only through the existing source-bound socket protocol.
+mod publication;
+
 use super::{FileProcessDriverProgress, FileProcessSupervisedDriver, FileProcessFailure,
     LearnedProcessStatus, unfinished};
 use super::super::{FileDriverEvent, FileHumanPermit, FileHumanRequest, FileCredentialPermit,

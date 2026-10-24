@@ -2,6 +2,7 @@
 //! Callers supply policy snapshots, never helper-input bytes or a replacement
 //! source. The original driver still owns both keys and final endpoint checks.
 mod computed;
+mod publication;
 mod policy_file;
 pub(in super::super) use policy_file::policy_file_provider;
 

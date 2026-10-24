@@ -102,6 +102,16 @@ sequences and the original check allowance. These requirements are admitted befo
 runtime startup. The invocation retains its unique observer and completed or
 cancelled run history; expired or interrupted measurements cannot admit publication.
 
+An outer [checked-publication envelope](LEARNED_CHECKED_PUBLICATION.md) can require
+the original structured or opaque publication witnesses for every entry. All
+entries retain the same exact native validation, feed, freshness and snapshot
+policy. Each actual Message and Finish binds its own original action and evidence
+before review, then reacquires current evidence during review and at the original
+authorization, dispatch and publication boundaries. Per-attempt source paths and
+witness requests may differ. A failed later basis preserves the prior confirmed
+message and its charge; no prior capture, review or human key supplies the next
+entry's permission.
+
 The invocation creates or recovers one original host and releases one actor
 gateway, driver, human reviewer and, when required, forecast observer. Its
 topology custodian stays attached through numerical preparation, native or

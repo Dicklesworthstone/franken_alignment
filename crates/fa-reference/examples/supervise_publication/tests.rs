@@ -66,7 +66,14 @@ fn proposal(config: &Config, id: u64, payload: &[u8]) -> Vec<u8> {
 fn synthetic_helper_process() {
     let Ok(member) = std::env::var(MEMBER_ENV) else { return; };
     let profile = Config::decode(TEMPLATE).unwrap().profile;
-    let expected = profile.committee.members()[&member].profile_at(0);
+    // The fixture independently provisions its expected recovery epoch. Never
+    // learn this requirement from the untrusted helper request being checked.
+    let policy_epoch = match std::env::var("FA_EXAMPLE_HELPER_POLICY_EPOCH") {
+        Ok(value) => value.parse::<u64>().expect("explicit helper policy epoch"),
+        Err(std::env::VarError::NotPresent) => 0,
+        Err(error) => panic!("invalid helper policy epoch: {error}"),
+    };
+    let expected = profile.committee.members()[&member].profile_at(policy_epoch);
     let mut client = HelperClient::from_process_stdin(expected).unwrap();
     let start = Instant::now();
     loop {

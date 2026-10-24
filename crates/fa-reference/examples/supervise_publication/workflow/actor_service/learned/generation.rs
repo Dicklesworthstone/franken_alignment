@@ -27,6 +27,24 @@ pub(super) struct Session {
 impl Session {
     pub(super) fn new() -> Self { Self::default() }
 
+    /// Return only this session's acknowledged historical custody when generic
+    /// generation ends or hands sampling to the original forecast stepper.
+    pub(super) fn retain_for_control(mut self, host: &mut FileOversight) -> Result<(), String> {
+        if self.interrupted || self.preparation.is_some() {
+            return Err("original generation replay is incomplete or interrupted".into());
+        }
+        let current = host.learned_generation_inspection().map_err(debug)?;
+        if current.pending.is_some()
+            || self.expected.as_ref().is_some_and(|expected| expected != &current.numerical) {
+            return Err("original generation predecessor changed before replay custody transfer".into());
+        }
+        if let Some(carry) = self.carry.take() {
+            let revision = host.revision();
+            carry.retain_for_control(host, revision).map_err(debug)?;
+        }
+        Ok(())
+    }
+
     /// At most 32 original historical reducer calls and ONE finalizer. Return
     /// after the intent ACK, before its numerical operation, even on a warm tail.
     /// The returned count excludes that finalizer and any previously verified

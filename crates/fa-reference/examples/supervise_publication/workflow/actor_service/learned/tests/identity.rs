@@ -47,7 +47,7 @@ fn envelope(root: &Root, inner: &str, id: u64, sequence: u64) -> String {
     format!(r#"{{"schema":"fa.learned-identity-publication/1","identity":{{"passport":"{r}/identity.passport","policy":{{"observer_id":99,"timeout_ticks":10000,"validity_ticks":60000,"max_checks":8}},"check":{id},"measurement_sequence":{sequence},"scalar_products":{MAX_DECODER_PRODUCTS},"observed_manifest":"{r}/observed.manifest"}},"recipe":{inner}}}"#)
 }
 
-fn provision(root: &Root, path: &Path, joint: bool) {
+pub(super) fn provision(root: &Root, path: &Path, joint: bool) {
     fs::write(root.0.join("identity.passport"), identity_wire::encode_passport(&passport(root)).unwrap()).unwrap();
     fs::write(root.0.join("observed.manifest"), identity_wire::encode_manifest(&manifest())).unwrap();
     let mut inner = fs::read_to_string(path).unwrap();

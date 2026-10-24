@@ -36,6 +36,13 @@ result and interruption latch remain authoritative. An acknowledged numerical
 failure remains a failure, including when its historical predecessor is retained
 for subsequent control work.
 
+The runnable learned operator returns its generic generation carry when the
+completed prompt hands sampling to the original forecast stepper and when a
+successful output reaches its required stop token. An interrupted session,
+unfinished preparation, pending intent or changed numerical predecessor refuses
+that transfer. Existing Stop, deadline and fresh-source checkpoints remain
+between the same numerical quanta.
+
 ## Publication acquisition and acknowledgment
 
 Publication input withdrawal, producer freshness persistence and plain capture

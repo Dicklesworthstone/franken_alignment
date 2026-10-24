@@ -73,6 +73,115 @@ Fresh evidence and both original effect keys remain necessary for a new
 publication. Historical inspection cannot manufacture a new capture or turn an
 old receipt into permission to send again.
 
+## Runnable learned operator
+
+The existing learned publication commands accept a closed outer object with
+exactly these fields:
+
+| Field | Value |
+|---|---|
+| `schema` | `"fa.learned-checked-publication/1"` |
+| `publication` | Absolute path to an original supervised witness profile |
+| `recipe` | The complete original learned recipe object, optionally inside the existing identity and joint envelopes |
+
+Canonical composition is `checked(identity(joint(original)))`; either identity
+or joint, or both, may be omitted. The original recipe can be any version from
+`fa.learned-publication/1` through `/6`. Repeated or reversed wrappers, unknown
+fields and unsupported versions refuse. Unwrapped recipes retain their existing
+behavior and exact native configuration bytes.
+
+For example, save that outer object as `/operator/checked-recipe.json`, retaining
+the complete original recipe under its `recipe` field, and use the existing
+commands:
+
+```sh
+supervise_publication create-learned-generated CONFIG /operator/checked-recipe.json REVIEWER_PROFILE
+supervise_publication create-learned-generated CONFIG /operator/checked-recipe.json REVIEWER_PROFILE --actor-profile ACTOR_PROFILE
+supervise_publication create-learned-generated CONFIG /operator/checked-recipe.json --resume
+```
+
+The existing continuation, separately reviewed Finish, resident sequence,
+anchored audit, receipt and terminal commands use the same selection. Their
+original argument, custody and predecessor requirements remain mandatory.
+
+### Supported witness profiles
+
+| Original profile | Source and history contract |
+|---|---|
+| `fa.supervised-witnesses/1` | Original and current action-bound captures, without a change feed |
+| `fa.supervised-witnesses/2` | Captures plus the original change-feed and freshness contract |
+| `fa.supervised-witnesses/3` | Coupled producer image containing its capture and change feed |
+| `fa.supervised-witnesses/5` | Coupled producer with explicit exact-current-snapshot fallback |
+| `fa.supervised-whole-input/1` | Complete opaque producer input with strict change history |
+| `fa.supervised-whole-input/2` | Complete opaque producer input with explicit exact-current-snapshot fallback |
+
+Finite-wait profile `/4` is not supported by this learned composition and refuses
+before startup. A witness profile's separate joint-publication wrapper also
+refuses; use the existing learned joint envelope so its exact qualification
+policy stays part of the learned recipe. Neither requirement is silently dropped.
+
+The outer recipe retains the original 64 KiB limit and adds one bounded nesting
+level. Reading the witness profile consumes the original aggregate learned asset
+allowance. Its schema, producer scope, clock domain and supported mode are checked
+before model loading or durable startup. This admission opens no live capture,
+producer or feed file.
+
+### One evidence binding per actual request
+
+After the original gateway admits a Message or Finish, the operator obtains that
+attempt's actual frozen action and binds its original publication evidence before
+launching native or process helpers. The retained preparation object contains
+readers, not a cached current observation or approval. Each native/process review
+step and the original computed authorization, dispatch and publication driver
+use the existing source-acquisition wrappers around the original learned-input
+provider. A witness file cannot replace a native helper input.
+
+A coupled producer supplies capture and feed from one original image; independent
+sources retain their explicitly sequential acquisition contract. Required source
+eligibility is withdrawn before acquisition. Missing files, stale producer time,
+incomplete history or a relevant change reach the original refusal/sealing path.
+Successful rereading does not renew the producer's timestamp.
+
+Feed catch-up reads its original bootstrap cut from either the standalone native
+registration or the already independently bound learned Enable configuration.
+The same lookup serves atomic feed completion. It does not reconstruct runtime
+configuration from saved bytes or change the existing source, conflicting-history
+or missing-prefix checks.
+
+Completed cooperative generation returns its acknowledged historical replay
+custody to the same live owner. The prompt-to-forecast handoff preserves that
+custody as well, and terminal forecast completion retains its original result.
+Publication acquisition then replays the unverified suffix through the existing
+control cache while still reopening current evidence at every required boundary.
+This prevents repeated full numerical-history replay from consuming a resident
+workflow's deadline. The exact custody and batch rules are documented in
+[learned publication replay](LEARNED_PUBLICATION_REPLAY.md).
+
+The plain-capture preparation path now distinguishes an explicitly absent feed
+from a feed whose state is missing or mismatched. It no longer requests a
+snapshot-fallback status that cannot exist for a valid no-feed owner. Exact
+limits still match first, a selected feed remains mandatory, and a plain profile
+cannot operate a feed-backed owner by omitting its selection.
+
+Resident entries must retain one exact native publication policy. Per-attempt
+source paths and witness requests may differ, but each actual request binds its
+own original evidence. A later failed attempt cannot erase an earlier confirmed
+message, reset forecast or numerical expenditure, reuse either effect key, or
+turn Finish into an unreviewed operation.
+
+If an original binding failure quarantines the owner, final reply grace still
+drives the same authenticated, observation-only actor transport. It can deliver
+the original `ControllerUnavailable` knowledge without consulting a live ledger
+that has become unavailable. That response preserves uncertainty; it is not a
+successful Stop or a nonexecution receipt. The original quarantine, failed
+drain result, request restrictions and reply budgets remain in force.
+
+Historical operations require the independently selected profile file so they
+can reconstruct the exact recipe. They do not require current capture, producer,
+feed, native-helper roster or identity-observation files. The original model,
+tokenizer, fit and other historical replay inputs remain required. An absent or
+changed selected policy fails before staging cleanup or a recovery write.
+
 ## Scope
 
 This is a bounded reference integration of FA-062, plan sections 7.6–7.7, 8.7–8.8

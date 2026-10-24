@@ -1,5 +1,29 @@
 # Changelog
 
+## 2026-10-24: enforce final-publication witnesses in the learned operator
+
+- Add the closed checked-publication envelope around all six original learned
+  recipe versions, with canonical identity/joint composition and exact native
+  recovery binding. Admit six original witness schemas and refuse unsupported
+  stronger selections before startup.
+- Bind each actual Message or Finish before helper launch, then reacquire current
+  sources through the original computed, native and process learned drivers.
+  Preserve sidecar inputs, independent keys, forecasts and all selected guards.
+- Support resident requests and offline receipt/audit/Stop, including exact policy
+  matching and preservation of earlier effects when a later basis fails.
+- Return acknowledged cooperative replay custody instead of discarding it, so
+  checked resident publication completes under its original deadline. Correct
+  direct-capture preparation for owners with no selected change feed.
+- Flush original authenticated ControllerUnavailable responses during final
+  reply grace even after quarantine, without reopening admission or claiming a
+  successful Stop, cancellation or nonexecution.
+- Add twelve operator regression functions and correct original helper text,
+  recovery-epoch and frozen-frame fixture expectations without relaxing guards.
+- Pass all 53 scoped operator functions and 31 public publication/custody
+  functions. Standard production/test-source checks and independent reviews pass;
+  retain failed attempts, the LLVM-harness/Cranelift-library scope and the unchanged
+  full-gate dependency-admission refusal. Full release qualification remains open.
+
 ## 2026-10-24: reuse acknowledged learned history during witness acquisition
 
 - Resolve coupled-producer bootstrap cuts from the independently bound learned

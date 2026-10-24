@@ -75,11 +75,11 @@ impl FileSupervisedDriver {
     }
 }
 
-struct PublicationProvider<'a, P> {
-    inner: P,
-    attempt: Option<u64>,
-    source: &'a PublicationInputFile,
-    reads: &'a mut Vec<Result<FileCaptureIdentity, FileCaptureError>>,
+pub(in super::super) struct PublicationProvider<'a, P> {
+    pub(in super::super) inner: P,
+    pub(in super::super) attempt: Option<u64>,
+    pub(in super::super) source: &'a PublicationInputFile,
+    pub(in super::super) reads: &'a mut Vec<Result<FileCaptureIdentity, FileCaptureError>>,
 }
 impl<P: EvidenceProvider> EvidenceProvider for PublicationProvider<'_, P> {
     fn capture<F>(&mut self, host: &mut FileOversight, action: &FrozenAction, clock: &mut F)

@@ -77,7 +77,7 @@ fn snapshot() -> Snapshot {
 }
 fn evidence(root: &Directory, c: &Config) {
     let data = EvidenceSnapshot::new(EvidenceIdentity { source: 51, generation: 1, scope: c.profile.delivery.scope },
-        snapshot(), ["alpha", "beta"].into_iter().map(|m| (m.to_owned(), format!("independent {m}").into_bytes())).collect()).unwrap();
+        snapshot(), ["alpha", "beta"].into_iter().map(|m| (m.to_owned(), format!("review this fixture: {m}").into_bytes())).collect()).unwrap();
     std::fs::write(root.0.join("evidence.json"), data.encode()).unwrap();
 }
 fn document(c: &Config) -> Vec<u8> {

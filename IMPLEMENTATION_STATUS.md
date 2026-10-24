@@ -1,5 +1,67 @@
 # Implementation status · design revision 0.3
 
+## 2026-10-24: run checked learned publication through real operator boundaries
+
+The closed `fa.learned-checked-publication/1` envelope selects original publication
+witnesses around version-1 through version-6 learned recipes. Canonical optional
+composition is checked(identity(joint(original))). The profile consumes the
+existing aggregate asset allowance; unsupported finite-wait and witness-joint
+selections refuse before startup. Immutable validation, feed, freshness and
+fallback policy enter the independently retained numerical recipe.
+
+Every admitted Message and Finish binds its own original evidence before native
+or process helper launch. The three original learned driver families reacquire
+publication sources around the policy-only learned-input provider, preserving
+actual sidecars, both effect keys, topology, identity and joint qualification.
+Resident entries retain one exact native policy and reacquire each attempt's
+basis. Historical receipt, audit and Stop reconstruct the selected recipe without
+current producer, capture, feed or helper files. Plain capture preparation now
+matches an explicitly absent feed without calling a feed-only fallback getter.
+
+The operator returns its original cooperative replay custody at completed prompt
+and output boundaries instead of dropping it. This uses the preceding native
+cache repair; all source reads, numerical quanta, deadlines and work allowances
+remain unchanged. The earlier resident positive case reached its 60-second wall
+deadline after two confirmed messages. The final positive case completes Message,
+Message and separately reviewed Finish under the original limits. This is a
+bounded regression result, not a latency SLO or statistical benchmark.
+
+An invalid original witness can quarantine the owner. Final reply grace now
+drives the original authenticated observation transport without requiring an
+unavailable live cancellation-status lookup. The actor receives the existing
+`ControllerUnavailable` knowledge; quarantine and failed Stop/drain remain in
+force. The negative resident test requires that exact peer/operator response,
+preserved first effect and charge, no second review and no third actor. It still
+fails on broken connections, timeouts or missing responses.
+
+All 53 scoped operator functions pass, including twelve new checked-publication
+functions and original generation, prediction, joint, identity-recipe, recovery,
+resident, producer-bootstrap and native-checked regressions. Both original child
+entrypoints are registered and exercised by actual processes; their standalone
+no-input invocations are excluded from the 53-function denominator. All 31 public
+publication/custody functions also pass. Standard Cargo checks pass for the
+production operator, the complete unmodified operator test source and the public
+target. Independent source reviews found no blocker.
+
+Runtime uses standard LLVM harnesses linked to the qualified nightly's official
+Cranelift library with 32 MiB stacks. The scoped operator mirror changes only
+unselected test registrations; all bodies, assertions and fixtures remain, with
+source hashes unchanged throughout the successful execution. Earlier failures
+remain retained: producer bootstrap could not see the nested learned selection;
+repeated cold replay exhausted the resident deadline; final response flushing
+queried a quarantined ledger. Existing helper text/epoch and frame-versus-sink
+fixture mismatches were corrected against the original contracts. A fixture name
+collision was caught before execution; no timeout, production budget or gate was
+relaxed to obtain success.
+
+The required full xtask still refuses the existing dependency graph before
+formatting, Clippy or full-suite execution. Six witness-profile forms are admitted;
+the new operator effect tests cover direct captures, coupled strict/fallback
+producers and fallback whole-input mode. Separate-feed and strict whole-input
+selection have parser/configuration coverage here, and the original native
+fallback tests cover evicted history. Full FA-062 packet, deployment and release
+qualification remain open. See [checked learned publication](docs/LEARNED_CHECKED_PUBLICATION.md).
+
 ## 2026-10-24: retain acknowledged replay custody through publication acquisition
 
 Producer catch-up now recognizes the original feed cut inside an independently

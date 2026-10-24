@@ -6,6 +6,7 @@ use super::{Config, Loaded, Deadline, ElapsedTick, FileSupervisedDriver, FileHum
 use super::ingress::{self, Intake};
 use super::super::super::control::Control;
 use super::review::Reviewed;
+use crate::publication::PreparedPublication;
 use fa_reference::action::consequence::delivery::persistent::{
     requests::FileRequestDisposition,
     observed::{
@@ -116,16 +117,29 @@ fn active(status: LearnedProcessStatus) -> bool {
     matches!(status, LearnedProcessStatus::Running | LearnedProcessStatus::Draining)
 }
 
+#[cfg(test)]
 pub(super) fn run<F>(driver: FileSupervisedDriver, config: &mut Config, loaded: &Loaded,
     reviewer: &FileHumanReviewer, control: &mut Control, deadline: &Deadline, time: &mut F) -> Reviewed
 where F: FnMut() -> ElapsedTick {
     run_serviced(driver, config, loaded, reviewer, control, deadline, time, &mut None)
 }
 
-pub(super) fn run_serviced<F>(mut driver: FileSupervisedDriver, config: &mut Config, loaded: &Loaded,
+#[cfg(test)]
+pub(super) fn run_serviced<F>(driver: FileSupervisedDriver, config: &mut Config, loaded: &Loaded,
     reviewer: &FileHumanReviewer, control: &mut Control, deadline: &Deadline, time: &mut F,
     intake: &mut Option<Intake>) -> Reviewed
 where F: FnMut() -> ElapsedTick {
+    run_serviced_checked(driver, config, loaded, reviewer, control, deadline, time, intake, None)
+}
+
+pub(super) fn run_serviced_checked<F>(mut driver: FileSupervisedDriver, config: &mut Config, loaded: &Loaded,
+    reviewer: &FileHumanReviewer, control: &mut Control, deadline: &Deadline, time: &mut F,
+    intake: &mut Option<Intake>, publication: Option<&PreparedPublication<'_>>) -> Reviewed
+where F: FnMut() -> ElapsedTick {
+    if loaded.publication.is_some() != publication.is_some() {
+        return Reviewed { driver, history: None, process: None, stop_requested: false,
+            failure: Some("learned process review requires its original selected publication source".into()) };
+    }
     match ingress::observe(intake, driver.supervisor_mut()) {
         Ok(false) => {},
         result => return Reviewed { driver, history: None, process: None,
@@ -151,7 +165,11 @@ where F: FnMut() -> ElapsedTick {
                 break;
             }
             if !active(run.review().status()) { break; }
-            run.step_from_policy_file(&mut config.source, &mut *time, None).result.map_err(debug)?;
+            match publication {
+                Some(publication) => { publication.step_process_learned(&mut run,
+                    &mut config.source, time, None)?; }
+                None => { run.step_from_policy_file(&mut config.source, &mut *time, None).result.map_err(debug)?; }
+            }
             if active(run.review().status()) {
                 // Children compute asynchronously. Yield only one short real
                 // interval, then reacquire source and time for the next quantum.

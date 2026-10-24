@@ -139,16 +139,24 @@ impl Intake {
         }
     }
 
-    /// Dedicated observation phase: no source reader or clock is accepted.
-    /// Retrying cannot admit another request even with a preinstalled snapshot.
-    /// Cancellation still uses the original ledger, including unknown charges.
-    fn observe(&mut self, supervisor: &mut Supervisor) -> Result<bool, String> {
+    /// Drive only the original authenticated observation transport. A
+    /// quarantined owner can still return its original unavailable response;
+    /// this path never replaces that response with a local status assertion.
+    fn observe_transport(&mut self, supervisor: &mut Supervisor) -> Result<(), String> {
         self.accept()?;
         if self.session.status().active.is_some() {
             let report = supervisor.drive_learned_text_stream_request_observe(
                 &mut self.session, self.selected, drive_budget()).map_err(debug)?;
             self.finish_drive(report);
         }
+        Ok(())
+    }
+
+    /// Dedicated observation phase: no source reader or clock is accepted.
+    /// Retrying cannot admit another request even with a preinstalled snapshot.
+    /// Cancellation still uses the original ledger, including unknown charges.
+    fn observe(&mut self, supervisor: &mut Supervisor) -> Result<bool, String> {
+        self.observe_transport(supervisor)?;
         match supervisor.host().map_err(debug)?.request_status(self.selected.request()) {
             Ok(status) => Ok(matches!(status.disposition,
                 FileRequestDisposition::Admitted { stage: ActionState::Cancelled, .. })),
@@ -189,7 +197,9 @@ impl Intake {
         let started = Instant::now();
         let window = Duration::from_millis(self.profile.reply_ms);
         while started.elapsed() < window && deadline.check(time()).is_ok() {
-            self.observe(supervisor)?;
+            // Allow the existing wire to flush ControllerUnavailable even when
+            // the quarantined ledger cannot supply a live cancellation status.
+            self.observe_transport(supervisor)?;
             let remaining = window.saturating_sub(started.elapsed());
             let pause = self.profile.poll_ms.min(50)
                 .min(u64::try_from(remaining.as_millis()).unwrap_or(u64::MAX));

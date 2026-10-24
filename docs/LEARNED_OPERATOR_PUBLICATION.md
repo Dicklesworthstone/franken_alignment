@@ -30,6 +30,14 @@ publication. It can also wrap the joint-credibility envelope. See
 [computed identity in the learned operator](LEARNED_IDENTITY_OPERATOR.md) for
 the closed format, cancellation, historical selection and trust boundaries.
 
+The optional outer `fa.learned-checked-publication/1` envelope selects the
+original final-publication witness profile. It can wrap the identity and joint
+envelopes, binds complete native validation/feed/freshness requirements into the
+recipe, and reacquires current evidence before each effect boundary. Each actual
+Message and Finish binds its own original evidence before helper review. See
+[checked learned publication](LEARNED_CHECKED_PUBLICATION.md) for supported
+capture/producer profiles, late-change behavior, resident use and offline recovery.
+
 In versions /1 through /5, native helper models execute **inside the supervising process**, with separate
 original evaluator owners and fixed input contracts. They are not helper OS
 processes. Their configured names, models and cohorts do not establish statistical
@@ -173,8 +181,9 @@ source checkpoint or an unretained successor cut refuses without silently
 changing expectations. A matching completed stop retry remains clock-free and
 adds no new fence. Select the newly retained pair for later drain or retry as
 described in [terminal recovery](LEARNED_STOP_RECOVERY.md#separate-operator-phases).
-This bridge does not add the separate plain publication-witness profile to
-learned stream bootstrap.
+Final-publication witnesses are independently selectable through the outer
+[checked learned envelope](LEARNED_CHECKED_PUBLICATION.md). They compose with
+the original topology guard and do not replace its current cut or source custody.
 
 Four operator regression functions cover authenticated actor/native/human
 message publication and Finish across all three predictor modes, anchored

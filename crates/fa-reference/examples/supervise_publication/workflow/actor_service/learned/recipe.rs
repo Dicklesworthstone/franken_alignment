@@ -51,6 +51,7 @@ pub(super) struct Loaded {
     pub anchor_output: Option<PathBuf>,
     pub topology: Option<super::topology::Selection>,
     pub identity: Option<super::identity::Selection>,
+    pub publication: Option<crate::publication::PublicationProfile>,
     pub evidence: LearnedEvidenceLimits,
     pub sidecar: SidecarIdentity,
     pub disclosure: SidecarCongressBudget,
@@ -71,6 +72,7 @@ struct Recipe {
     priority: Vec<KvGroup>, rounds: Vec<u64>, continuation: bool,
     process: Option<ProcessRecipe>, joint: Option<HeldOutJointPolicy>,
     computed_identity: Option<super::identity::profile::Profile>,
+    checked_publication: Option<PathBuf>,
 }
 struct Files {
     configuration: PathBuf, weights: WeightsInput, tokenizer: TokenizerInput, sampling: PathBuf,
@@ -94,6 +96,8 @@ pub(super) fn load(file: &Path, config: &Config, require_native: bool) -> Result
         process.check_roster(config)?;
     }
     let mut assets = Assets::new(recipe.assets_bytes)?;
+    let publication = recipe.checked_publication.as_ref()
+        .map(|path| super::checked::load(path, config, &mut assets)).transpose()?;
     let identity_registration = recipe.computed_identity.as_ref()
         .map(|identity| identity.registration(&mut assets)).transpose()?;
     // The independent binding is never obtained from the archive it checks.
@@ -150,6 +154,10 @@ pub(super) fn load(file: &Path, config: &Config, require_native: bool) -> Result
     let generation = if let Some(registration) = identity_registration {
         generation.with_required_computed_identity_registration(registration).map_err(debug)?
     } else { generation };
+    let generation = if let Some(publication) = &publication {
+        generation.with_required_publication_validation(publication.learned_profile(&config.profile)?)
+            .map_err(debug)?
+    } else { generation };
     let native = if require_native {
         recipe.files.native.as_ref().map(|path| {
             let roster = NativeRoster::load(path, config, &mut assets)?;
@@ -159,7 +167,7 @@ pub(super) fn load(file: &Path, config: &Config, require_native: bool) -> Result
     } else { None };
     Ok(Loaded { request: recipe.request, ttl_ms: recipe.ttl_ms, generation, stream: recipe.publication,
         floor: recipe.floor, recovery_anchor: None, anchor_output: None, topology: None,
-        identity: recipe.computed_identity.map(|identity| identity.selection),
+        identity: recipe.computed_identity.map(|identity| identity.selection), publication,
         evidence: LearnedEvidenceLimits { token_ids: recipe.binding.evidence.token_ids,
             score_words: recipe.binding.evidence.score_words, encoded_bytes: recipe.binding.encoded_bytes },
         sidecar: recipe.sidecar, disclosure: recipe.disclosure, native_limits: recipe.native_limits,
@@ -168,7 +176,7 @@ pub(super) fn load(file: &Path, config: &Config, require_native: bool) -> Result
 }
 impl Recipe {
     fn decode(bytes: &[u8]) -> Result<Self, String> {
-        let (mut root, joint, computed_identity) = super::identity::profile::decode(bytes)?;
+        let (mut root, joint, computed_identity, checked_publication) = super::checked::decode(bytes)?;
         let version = match root.text("schema")?.as_str() {
             "fa.learned-publication/1" => 1,
             "fa.learned-publication/2" => 2,
@@ -325,7 +333,7 @@ impl Recipe {
             publication: publication_value, binding: binding_value, floor: floor_value, files: files_value,
             max_new_tokens, max_output_bytes, stop_tokens, tokenization, budget, telemetry,
             sidecar: sidecar_identity, disclosure: disclosure_value, native_limits, priority, rounds,
-            continuation: version >= 4, process, joint, computed_identity })
+            continuation: version >= 4, process, joint, computed_identity, checked_publication })
     }
 }
 fn priority(groups: Vec<fa_reference::strict_json::Json>) -> Result<Vec<KvGroup>, String> {

@@ -90,6 +90,7 @@ fn validate(config: &Config, entries: &[Entry], peers: &PeerProfile) -> Result<(
     }
     for (index, entry) in entries.iter().enumerate() {
         let loaded = &entry.loaded;
+        super::checked::check_selection(config, loaded)?;
         ingress::check(config, loaded, peers, &entry.actor)?;
         if !loaded.generation.allows_text_stream_continuation()
             || loaded.generation != original.generation || loaded.stream != original.stream {

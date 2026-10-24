@@ -19,6 +19,7 @@
 #[path = "learned/continuation.rs"] mod continuation;
 #[path = "learned/qualification.rs"] mod qualification;
 #[path = "learned/identity.rs"] mod identity;
+#[path = "learned/checked.rs"] mod checked;
 #[path = "learned/stopped.rs"] mod stopped;
 #[path = "learned/topology.rs"] mod topology;
 #[path = "learned/sequence.rs"] mod sequence;
@@ -177,6 +178,7 @@ where F: FnMut() -> ElapsedTick {
             return Err("learned continuation requires the explicitly admitted finite-message recipe".into());
         }
     }
+    checked::check_selection(&config, &loaded)?;
     let start = time();
     let lifetime = loaded.ttl_ms.min(config.timing.runtime_ms);
     let lifetime = actor.map_or(lifetime, |actor| lifetime.min(actor.runtime_ms));
@@ -285,6 +287,7 @@ fn execute_request<F>(mut driver: FileSupervisedDriver, config: &mut Config,
 where F: FnMut() -> ElapsedTick {
     let RequestServices { peers, reviewer, prediction, identity, intake, wire, finishing,
         message_continuation, credibility, stop_operation } = services;
+    let mut publication = None;
     let prepared = (|| {
         if !qualification::prepare(&mut driver, config, credibility,
             (&mut *control, reviewer, deadline), time)? { return Ok(false); }
@@ -330,8 +333,18 @@ where F: FnMut() -> ElapsedTick {
             }
         }
         let status = driver.supervisor().host().map_err(debug)?.request_status(loaded.request).map_err(debug)?;
-        Ok(matches!(status.disposition, FileRequestDisposition::Admitted {
-            stage: ActionState::Reviewing, .. }))
+        let FileRequestDisposition::Admitted { attempt, stage: ActionState::Reviewing, .. } = status.disposition
+            else { return Ok(false); };
+        if let Some(selected) = &loaded.publication {
+            if control.checkpoint(&mut driver, reviewer, deadline, time)? { return Ok(false); }
+            deadline.check(time())?;
+            let mut host = driver.supervisor_mut().host_mut().map_err(debug)?;
+            // Capture the independently selected ORIGINAL image against this
+            // actual Message or Finish before any native/process helper starts.
+            publication = Some(selected.prepare_with_clock(&mut host, attempt, &mut *time)?);
+            deadline.check(time())?;
+        }
+        Ok(true)
     })();
     let mut failure = None;
     let mut history = None;
@@ -341,11 +354,11 @@ where F: FnMut() -> ElapsedTick {
         Ok(false) => {}
         Ok(true) => {
             let reviewed = if intake.is_some() {
-                review::run_serviced(driver, config, loaded, reviewer,
-                    control, deadline, time, intake)
+                review::run_serviced_checked(driver, config, loaded, reviewer,
+                    control, deadline, time, intake, publication.as_ref())
             } else {
-                review::run(driver, config, loaded, reviewer,
-                    control, deadline, time)
+                review::run_checked(driver, config, loaded, reviewer,
+                    control, deadline, time, publication.as_ref())
             };
             driver = reviewed.driver;
             history = reviewed.history;
@@ -368,8 +381,12 @@ where F: FnMut() -> ElapsedTick {
                     loop {
                         deadline.check(time())?;
                         if live.checkpoint(&mut driver, reviewer, deadline, time)? { return Ok(()); }
-                        let event = driver.step_computed_from_policy_file(&mut config.source,
-                            &mut *time, Some(&approval)).result.map_err(debug)?;
+                        let event = match publication.as_ref() {
+                            Some(publication) => publication.step_learned(&mut driver,
+                                &mut config.source, time, Some(&approval))?,
+                            None => driver.step_computed_from_policy_file(&mut config.source,
+                                &mut *time, Some(&approval)).result.map_err(debug)?,
+                        };
                         match event {
                             FileDriverEvent::Dispatched { .. } | FileDriverEvent::PublicationChecked { .. } => {}
                             FileDriverEvent::Reconciled { .. } | FileDriverEvent::Stopped { .. } => return Ok(()),
@@ -436,7 +453,13 @@ where F: FnMut() -> ElapsedTick {
                 prediction.complete_message(&*driver.supervisor().host().map_err(debug)?)?;
             }
             return match current.numerical.status {
-                GenerationStatus::Finished(GenerationStop::StopToken(_)) => Ok(true),
+                GenerationStatus::Finished(GenerationStop::StopToken(_)) => {
+                    if let Some(numerical) = numerical.take() {
+                        let mut host = driver.supervisor_mut().host_mut().map_err(debug)?;
+                        numerical.retain_for_control(&mut host)?;
+                    }
+                    Ok(true)
+                }
                 _ => Err(format!("learned generation did not finish at a quiet monitored stop: {:?}",
                     current.numerical.status)),
             };
@@ -449,7 +472,9 @@ where F: FnMut() -> ElapsedTick {
         if current.numerical.status == GenerationStatus::Generating {
             if let Some(prediction) = prediction.as_deref_mut() {
                 // Prompt replay custody has no role in forecasted sampling.
-                numerical = None;
+                if let Some(numerical) = numerical.take() {
+                    numerical.retain_for_control(&mut host)?;
+                }
                 if !prediction.has_message() {
                     prediction.begin_message(&mut host)?;
                     // Forecast acknowledgment precedes a NEW normal stop,

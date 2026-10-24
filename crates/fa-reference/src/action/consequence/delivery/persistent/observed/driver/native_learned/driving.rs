@@ -1,6 +1,8 @@
 //! One native-model review loop through the ORIGINAL source and effect gates.
 //! Numerical custody is retained across live policy reads and publication. No
 //! caller supplies helper packets, a verdict, a permit or a replacement source.
+mod publication;
+
 use super::{FileNativeDriverProgress, FileNativeSupervisedDriver, NativeReviewStatus};
 use super::super::{FileDriverEvent, FileHumanPermit, FileHumanRequest, FileCredentialPermit,
     JournalError, Phase, observe, sample, stage};

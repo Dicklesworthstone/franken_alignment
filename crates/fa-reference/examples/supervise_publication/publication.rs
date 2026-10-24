@@ -2,6 +2,8 @@
 //! orchestration of the native publication gate, not another validation engine.
 #[path = "publication/native.rs"]
 mod native;
+#[path = "publication/learned.rs"]
+mod learned;
 #[path = "publication/feed.rs"]
 mod feed;
 #[path = "publication/wait.rs"]
@@ -38,7 +40,7 @@ use fa_reference::witness::refinement::RefinementBudget;
 use std::collections::{BTreeMap, BTreeSet};
 use std::path::{Path, PathBuf};
 
-const PROFILE_BYTES: usize = 65_536;
+pub(crate) const PROFILE_BYTES: usize = 65_536;
 
 /// Operator-selected original and live sources are separate. Neither is read by
 /// parsing or receipt-only recovery. Requirements cannot be chosen from a later
@@ -236,8 +238,19 @@ impl PublicationProfile {
         if host.publication_validation_profile().map_err(debug)? != Some(self.limits) {
             return Err("stored publication limits differ from the explicit profile".into());
         }
-        if host.publication_snapshot_fallback_enabled().map_err(debug)? != self.snapshot_fallback {
-            return Err("stored publication history policy differs from the explicit profile".into());
+        match host.publication_change_status() {
+            Ok(_) if self.feed.is_none() => {
+                return Err("stored publication feed differs from the explicit profile".into());
+            }
+            Ok(_) => {
+                if host.publication_snapshot_fallback_enabled().map_err(debug)? != self.snapshot_fallback {
+                    return Err("stored publication history policy differs from the explicit profile".into());
+                }
+            }
+            // The original fallback getter requires a feed. A plain profile
+            // must explicitly match an owner without one before any source I/O.
+            Err(JournalError::Contract(Error::Incomplete)) if self.feed.is_none() => {},
+            Err(error) => return Err(debug(error)),
         }
         Ok(())
     }

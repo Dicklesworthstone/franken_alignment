@@ -3,6 +3,7 @@ use super::{Config, Loaded, Deadline, ElapsedTick, FileSupervisedDriver, FileHum
     debug, plus, refresh};
 use super::ingress::{self, Intake};
 use super::super::super::control::Control;
+use crate::publication::PreparedPublication;
 use fa_reference::action::consequence::activation::monitor::learned::model::KvTap;
 use fa_reference::action::consequence::delivery::persistent::requests::FileRequestDisposition;
 use fa_reference::action::consequence::delivery::persistent::observed::{
@@ -85,6 +86,7 @@ where F: FnMut() -> ElapsedTick {
     })
 }
 
+#[cfg(test)]
 pub(super) fn run<F>(driver: FileSupervisedDriver, config: &mut Config, loaded: &Loaded,
     reviewer: &FileHumanReviewer, control: &mut Control, deadline: &Deadline, time: &mut F) -> Reviewed
 where F: FnMut() -> ElapsedTick {
@@ -94,12 +96,32 @@ where F: FnMut() -> ElapsedTick {
     run_serviced(driver, config, loaded, reviewer, control, deadline, time, &mut None)
 }
 
-pub(super) fn run_serviced<F>(mut driver: FileSupervisedDriver, config: &mut Config, loaded: &Loaded,
+pub(super) fn run_checked<F>(driver: FileSupervisedDriver, config: &mut Config, loaded: &Loaded,
+    reviewer: &FileHumanReviewer, control: &mut Control, deadline: &Deadline, time: &mut F,
+    publication: Option<&PreparedPublication<'_>>) -> Reviewed
+where F: FnMut() -> ElapsedTick {
+    run_serviced_checked(driver, config, loaded, reviewer, control, deadline, time, &mut None, publication)
+}
+
+#[cfg(test)]
+pub(super) fn run_serviced<F>(driver: FileSupervisedDriver, config: &mut Config, loaded: &Loaded,
     reviewer: &FileHumanReviewer, control: &mut Control, deadline: &Deadline, time: &mut F,
     intake: &mut Option<Intake>) -> Reviewed
 where F: FnMut() -> ElapsedTick {
+    run_serviced_checked(driver, config, loaded, reviewer, control, deadline, time, intake, None)
+}
+
+pub(super) fn run_serviced_checked<F>(mut driver: FileSupervisedDriver, config: &mut Config, loaded: &Loaded,
+    reviewer: &FileHumanReviewer, control: &mut Control, deadline: &Deadline, time: &mut F,
+    intake: &mut Option<Intake>, publication: Option<&PreparedPublication<'_>>) -> Reviewed
+where F: FnMut() -> ElapsedTick {
+    if loaded.publication.is_some() != publication.is_some() {
+        return Reviewed { driver, history: None, process: None, stop_requested: false,
+            failure: Some("learned review requires its original selected publication source".into()) };
+    }
     if loaded.process.is_some() {
-        return super::process::run_serviced(driver, config, loaded, reviewer, control, deadline, time, intake);
+        return super::process::run_serviced_checked(driver, config, loaded, reviewer,
+            control, deadline, time, intake, publication);
     }
     match ingress::observe(intake, driver.supervisor_mut()) {
         Ok(false) => {},
@@ -129,7 +151,11 @@ where F: FnMut() -> ElapsedTick {
             let round = run.review().round().round;
             let before = run.review().records().get(&round)
                 .map(|record| (record.members.clone(), record.workers.clone()));
-            run.step_from_policy_file(&mut config.source, &mut *time, None).result.map_err(debug)?;
+            match publication {
+                Some(publication) => { publication.step_native_learned(&mut run,
+                    &mut config.source, time, None)?; }
+                None => { run.step_from_policy_file(&mut config.source, &mut *time, None).result.map_err(debug)?; }
+            }
             let after = run.review().records().get(&round)
                 .map(|record| (record.members.clone(), record.workers.clone()));
             if run.review().status() == NativeReviewStatus::Running && before == after {

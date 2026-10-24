@@ -41,6 +41,18 @@ pub(in super::super) fn decode(bytes: &[u8])
         let (recipe, joint) = joint::decode(bytes)?;
         return Ok((recipe, joint, None));
     }
+    unwrap(json)
+}
+
+/// The canonical checked-publication envelope has already accounted for its
+/// additional depth. Inner identity/joint ordering remains exactly the same.
+pub(in super::super) fn unwrap(json: Json)
+    -> Result<(Fields, Option<joint::HeldOutJointPolicy>, Option<Profile>), String>
+{
+    if json.get("schema").and_then(Json::as_str) != Some(SCHEMA) {
+        let (recipe, joint) = joint::unwrap(json)?;
+        return Ok((recipe, joint, None));
+    }
     let mut wrapper = Fields::new(json)?;
     wrapper.text("schema")?;
     let mut identity = wrapper.object("identity")?;
