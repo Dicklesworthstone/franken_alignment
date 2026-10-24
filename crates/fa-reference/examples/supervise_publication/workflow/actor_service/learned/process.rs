@@ -7,6 +7,7 @@ use super::ingress::{self, Intake};
 use super::super::super::control::Control;
 use super::review::Reviewed;
 use crate::publication::PreparedPublication;
+use fa_reference::action::consequence::delivery::persistent::observed::credential::FileCredentialPermit;
 use fa_reference::action::consequence::delivery::persistent::{
     requests::FileRequestDisposition,
     observed::{
@@ -132,9 +133,18 @@ where F: FnMut() -> ElapsedTick {
     run_serviced_checked(driver, config, loaded, reviewer, control, deadline, time, intake, None)
 }
 
-pub(super) fn run_serviced_checked<F>(mut driver: FileSupervisedDriver, config: &mut Config, loaded: &Loaded,
+pub(super) fn run_serviced_checked<F>(driver: FileSupervisedDriver, config: &mut Config, loaded: &Loaded,
     reviewer: &FileHumanReviewer, control: &mut Control, deadline: &Deadline, time: &mut F,
     intake: &mut Option<Intake>, publication: Option<&PreparedPublication<'_>>) -> Reviewed
+where F: FnMut() -> ElapsedTick {
+    run_serviced_checked_with_credential(driver, config, loaded, reviewer, control,
+        deadline, time, intake, publication, None)
+}
+
+pub(super) fn run_serviced_checked_with_credential<F>(mut driver: FileSupervisedDriver, config: &mut Config, loaded: &Loaded,
+    reviewer: &FileHumanReviewer, control: &mut Control, deadline: &Deadline, time: &mut F,
+    intake: &mut Option<Intake>, publication: Option<&PreparedPublication<'_>>,
+    credential: Option<&FileCredentialPermit>) -> Reviewed
 where F: FnMut() -> ElapsedTick {
     if loaded.publication.is_some() != publication.is_some() {
         return Reviewed { driver, history: None, process: None, stop_requested: false,
@@ -166,9 +176,12 @@ where F: FnMut() -> ElapsedTick {
             }
             if !active(run.review().status()) { break; }
             match publication {
-                Some(publication) => { publication.step_process_learned(&mut run,
-                    &mut config.source, time, None)?; }
-                None => { run.step_from_policy_file(&mut config.source, &mut *time, None).result.map_err(debug)?; }
+                Some(publication) => { publication.step_process_learned_with_credential(&mut run,
+                    &mut config.source, time, None, credential)?; }
+                None => { match credential {
+                    Some(credential) => run.step_from_policy_file_with_credential(&mut config.source, &mut *time, None, credential),
+                    None => run.step_from_policy_file(&mut config.source, &mut *time, None),
+                }.result.map_err(debug)?; }
             }
             if active(run.review().status()) {
                 // Children compute asynchronously. Yield only one short real

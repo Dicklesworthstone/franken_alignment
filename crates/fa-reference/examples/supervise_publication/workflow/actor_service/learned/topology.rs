@@ -170,6 +170,8 @@ where
     if continuing {
         return Err("topology creation cannot replace a recovery contract".into());
     }
+    super::credential::check_creation(loaded)?;
+    let registration = super::credential::registration(loaded)?;
     let mut checkpoint = || {
         deadline.check(time())?;
         if control.pending_peer()? {
@@ -197,7 +199,7 @@ where
                 &config.store,
                 config.profile.clone(),
                 &guards,
-                None,
+                registration,
                 graph,
                 predictor,
                 None,
@@ -209,7 +211,7 @@ where
             &config.store,
             config.profile.clone(),
             &guards,
-            None,
+            registration,
             graph,
             None,
             loaded.generation.clone(),

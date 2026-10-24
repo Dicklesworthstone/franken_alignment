@@ -90,6 +90,11 @@ or joint, or both, may be omitted. The original recipe can be any version from
 fields and unsupported versions refuse. Unwrapped recipes retain their existing
 behavior and exact native configuration bytes.
 
+The optional [credential envelope](LEARNED_CREDENTIAL_PUBLICATION.md) surrounds
+this complete object. Its original live capability composes with every supported
+witness profile, including finite waiting, while retaining both review keys and
+the independently selected credential recovery contract.
+
 For example, save that outer object as `/operator/checked-recipe.json`, retaining
 the complete original recipe under its `recipe` field, and use the existing
 commands:

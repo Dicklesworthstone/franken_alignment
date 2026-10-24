@@ -52,6 +52,7 @@ pub(super) struct Loaded {
     pub topology: Option<super::topology::Selection>,
     pub identity: Option<super::identity::Selection>,
     pub publication: Option<crate::publication::PublicationProfile>,
+    pub credential: Option<super::credential::Selection>,
     pub evidence: LearnedEvidenceLimits,
     pub sidecar: SidecarIdentity,
     pub disclosure: SidecarCongressBudget,
@@ -73,6 +74,7 @@ struct Recipe {
     process: Option<ProcessRecipe>, joint: Option<HeldOutJointPolicy>,
     computed_identity: Option<super::identity::profile::Profile>,
     checked_publication: Option<PathBuf>,
+    credential: Option<PathBuf>,
 }
 struct Files {
     configuration: PathBuf, weights: WeightsInput, tokenizer: TokenizerInput, sampling: PathBuf,
@@ -96,6 +98,8 @@ pub(super) fn load(file: &Path, config: &Config, require_native: bool) -> Result
         process.check_roster(config)?;
     }
     let mut assets = Assets::new(recipe.assets_bytes)?;
+    let mut credential = recipe.credential.as_ref()
+        .map(|path| super::credential::Selection::load(path, config, &mut assets, require_native)).transpose()?;
     let publication = recipe.checked_publication.as_ref()
         .map(|path| super::checked::load(path, config, &mut assets)).transpose()?;
     let identity_registration = recipe.computed_identity.as_ref()
@@ -158,6 +162,9 @@ pub(super) fn load(file: &Path, config: &Config, require_native: bool) -> Result
         generation.with_required_publication_validation(publication.learned_profile(&config.profile)?)
             .map_err(debug)?
     } else { generation };
+    let generation = if let Some(credential) = &credential {
+        generation.with_required_credential_policy(credential.policy.clone()).map_err(debug)?
+    } else { generation };
     let native = if require_native {
         recipe.files.native.as_ref().map(|path| {
             let roster = NativeRoster::load(path, config, &mut assets)?;
@@ -165,9 +172,10 @@ pub(super) fn load(file: &Path, config: &Config, require_native: bool) -> Result
             Ok::<_, String>(roster)
         }).transpose()?
     } else { None };
+    if let Some(credential) = credential.as_mut() { credential.retain_allowance(&assets); }
     Ok(Loaded { request: recipe.request, ttl_ms: recipe.ttl_ms, generation, stream: recipe.publication,
         floor: recipe.floor, recovery_anchor: None, anchor_output: None, topology: None,
-        identity: recipe.computed_identity.map(|identity| identity.selection), publication,
+        identity: recipe.computed_identity.map(|identity| identity.selection), publication, credential,
         evidence: LearnedEvidenceLimits { token_ids: recipe.binding.evidence.token_ids,
             score_words: recipe.binding.evidence.score_words, encoded_bytes: recipe.binding.encoded_bytes },
         sidecar: recipe.sidecar, disclosure: recipe.disclosure, native_limits: recipe.native_limits,
@@ -176,7 +184,7 @@ pub(super) fn load(file: &Path, config: &Config, require_native: bool) -> Result
 }
 impl Recipe {
     fn decode(bytes: &[u8]) -> Result<Self, String> {
-        let (mut root, joint, computed_identity, checked_publication) = super::checked::decode(bytes)?;
+        let (mut root, joint, computed_identity, checked_publication, credential) = super::credential::decode(bytes)?;
         let version = match root.text("schema")?.as_str() {
             "fa.learned-publication/1" => 1,
             "fa.learned-publication/2" => 2,
@@ -333,7 +341,7 @@ impl Recipe {
             publication: publication_value, binding: binding_value, floor: floor_value, files: files_value,
             max_new_tokens, max_output_bytes, stop_tokens, tokenization, budget, telemetry,
             sidecar: sidecar_identity, disclosure: disclosure_value, native_limits, priority, rounds,
-            continuation: version >= 4, process, joint, computed_identity, checked_publication })
+            continuation: version >= 4, process, joint, computed_identity, checked_publication, credential })
     }
 }
 fn priority(groups: Vec<fa_reference::strict_json::Json>) -> Result<Vec<KvGroup>, String> {

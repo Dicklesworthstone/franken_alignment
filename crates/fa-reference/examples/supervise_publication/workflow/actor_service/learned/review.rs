@@ -7,6 +7,7 @@ use crate::publication::PreparedPublication;
 use fa_reference::action::consequence::activation::monitor::learned::model::KvTap;
 use fa_reference::action::consequence::delivery::persistent::requests::FileRequestDisposition;
 use fa_reference::action::consequence::delivery::persistent::observed::{
+    credential::FileCredentialPermit,
     driver::native_learned::{FileNativeDriverLaunch, FileNativeSupervisedDriver},
     helpers::learned::native::{NativeReviewMember, NativeReviewStatus, sequence::FileNativeSidecarSequence},
 };
@@ -111,17 +112,26 @@ where F: FnMut() -> ElapsedTick {
     run_serviced_checked(driver, config, loaded, reviewer, control, deadline, time, intake, None)
 }
 
-pub(super) fn run_serviced_checked<F>(mut driver: FileSupervisedDriver, config: &mut Config, loaded: &Loaded,
+pub(super) fn run_serviced_checked<F>(driver: FileSupervisedDriver, config: &mut Config, loaded: &Loaded,
     reviewer: &FileHumanReviewer, control: &mut Control, deadline: &Deadline, time: &mut F,
     intake: &mut Option<Intake>, publication: Option<&PreparedPublication<'_>>) -> Reviewed
+where F: FnMut() -> ElapsedTick {
+    run_serviced_checked_with_credential(driver, config, loaded, reviewer, control,
+        deadline, time, intake, publication, None)
+}
+
+pub(super) fn run_serviced_checked_with_credential<F>(mut driver: FileSupervisedDriver, config: &mut Config, loaded: &Loaded,
+    reviewer: &FileHumanReviewer, control: &mut Control, deadline: &Deadline, time: &mut F,
+    intake: &mut Option<Intake>, publication: Option<&PreparedPublication<'_>>,
+    credential: Option<&FileCredentialPermit>) -> Reviewed
 where F: FnMut() -> ElapsedTick {
     if loaded.publication.is_some() != publication.is_some() {
         return Reviewed { driver, history: None, process: None, stop_requested: false,
             failure: Some("learned review requires its original selected publication source".into()) };
     }
     if loaded.process.is_some() {
-        return super::process::run_serviced_checked(driver, config, loaded, reviewer,
-            control, deadline, time, intake, publication);
+        return super::process::run_serviced_checked_with_credential(driver, config, loaded, reviewer,
+            control, deadline, time, intake, publication, credential);
     }
     match ingress::observe(intake, driver.supervisor_mut()) {
         Ok(false) => {},
@@ -152,9 +162,12 @@ where F: FnMut() -> ElapsedTick {
             let before = run.review().records().get(&round)
                 .map(|record| (record.members.clone(), record.workers.clone()));
             match publication {
-                Some(publication) => { publication.step_native_learned(&mut run,
-                    &mut config.source, time, None)?; }
-                None => { run.step_from_policy_file(&mut config.source, &mut *time, None).result.map_err(debug)?; }
+                Some(publication) => { publication.step_native_learned_with_credential(&mut run,
+                    &mut config.source, time, None, credential)?; }
+                None => { match credential {
+                    Some(credential) => run.step_from_policy_file_with_credential(&mut config.source, &mut *time, None, credential),
+                    None => run.step_from_policy_file(&mut config.source, &mut *time, None),
+                }.result.map_err(debug)?; }
             }
             let after = run.review().records().get(&round)
                 .map(|record| (record.members.clone(), record.workers.clone()));

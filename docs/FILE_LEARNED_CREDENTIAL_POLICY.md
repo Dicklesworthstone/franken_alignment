@@ -6,6 +6,10 @@ contains the original effect family, route, credential name and adapter-profile
 generation. It contains no broker or provider secret, live credential permit,
 credential-equality result, rotation generation or revocation state.
 
+The [credentialed learned operator](LEARNED_CREDENTIAL_PUBLICATION.md) selects
+this policy through an independent perimeter profile, preflights separately
+provisioned live inputs and carries the original permit through publication.
+
 ## Independent registration before numerical startup
 
 `FileCredentialPolicy::from_inventory` resolves the existing policy from an
