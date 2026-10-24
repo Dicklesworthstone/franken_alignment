@@ -31,6 +31,16 @@ pub struct FileCredentialPolicy {
     pub profile_generation: u64,
 }
 impl FileCredentialPolicy {
+    /// Resolve the ORIGINAL bounded nonsecret policy from independently supplied
+    /// perimeter data. This pure lookup grants no authority and installs no guard.
+    /// Guarded bootstrap revalidates the actual registration before its first
+    /// canonical image; a caller-supplied policy is never sufficient activation.
+    pub fn from_inventory(inventory: &LoadedPerimeterInventory, binding: &BrokerRouteBinding,
+        scope: Scope, target: ResolvedTarget) -> Result<Self, Error>
+    {
+        Self::resolve(inventory, binding, scope, target)
+    }
+
     pub(super) fn check(&self) -> Result<(), Error> {
         for value in [&self.family, &self.route, &self.credential] {
             if value.is_empty() { return Err(Error::InvalidInput); }

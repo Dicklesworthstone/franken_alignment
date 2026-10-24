@@ -1,5 +1,18 @@
 # Changelog
 
+## 2026-10-24: retain exact credential requirements in learned recipes
+
+- Bind the original nonsecret credential policy into the complete learned recipe;
+  require its genuinely installed guard before numerical startup, without adding
+  a permit, secret or caller-asserted registration shortcut.
+- Keep exact policy checks in historical receipts, anchored audits and recovery,
+  while preserving separate dynamic rotation/revocation and old-permit fencing.
+- Add seven public integration functions covering real generated publication,
+  six startup lanes, missing/changed policy, independent credentials, recovery,
+  rotation and revocation. All 39 selected public functions and standard checks
+  of their six complete targets pass. Retain the scoped LLVM/Cranelift evidence
+  and the unchanged full-gate dependency-admission refusal.
+
 ## 2026-10-24: execute the original sequential publication fixtures
 
 - Await the existing intermediate unknown outcome under the original test
