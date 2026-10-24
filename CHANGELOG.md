@@ -1,5 +1,21 @@
 # Changelog
 
+## 2026-10-24: execute the original sequential publication fixtures
+
+- Await the existing intermediate unknown outcome under the original test
+  deadline; fund complete fixture payloads while retaining seven-unit charges.
+- Preserve the original ten-unit cumulative-budget case and add thirteen versus
+  fourteen: both requests are reviewed, but only funded effects dispatch. Check
+  exact cancellation/confirmation, executions and the durable ledger against
+  the original authorization-time reservation contract.
+- Complete the second independent review for a stale target and require exact
+  confirmed nonexecution without changing the actor's original document.
+- Retry only test-fixture socket readiness failures before the same credential
+  checks; retain a stale inode through timeout beside a permitted real peer.
+- Pass all 18 original sequence/parser/client entries plus seven peer entries
+  (25 passed, zero failed/ignored, 707 filtered). Retain both failed attempts;
+  this is test repair, with full qualification and the original P0 still open.
+
 ## 2026-10-24: enforce native source leases before numerical work
 
 - Connect the existing captured-state freshness check after generated source

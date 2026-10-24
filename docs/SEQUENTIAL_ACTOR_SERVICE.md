@@ -102,3 +102,36 @@ The required RCH example-test and full xtask invocations could not start because
 Compilation, Rust test execution, formatting and Clippy remain UNEXECUTED. These
 are implemented source paths and authored regressions, not a qualified release,
 measured throughput, model-performance result or closed roadmap packet.
+
+## Executed sequence boundary (2026-10-24)
+
+The original 18 service, parser and client entries now execute together with
+seven peer-credential/readiness entries: **25 passed, zero failed/ignored,
+707 filtered** on qualified standard RCH worker `vmi1149989`, default stack,
+at `e5b141b0` plus four-path overlay
+`517572c0fd12069b86fc3626083ac9c15f2ebdf0c376410d33a785536312f02b`.
+These Rust bytes are committed in `d218b0b5`. The original 18-entry baseline
+was ten passed/eight failed; the intermediate attempt was sixteen passed/two
+failed. Both failed attempts are retained. This later execution does not erase
+the original exit-127 history above.
+
+The fixtures now poll the native intermediate `Unknown(OutcomeUnknown)` within
+their original deadline, fund their complete payloads while retaining seven-unit
+charges, and wait for actual reviewer listen readiness before checking the same
+kernel peer and audience. The test-only wait retries only `NotFound` and
+`ConnectionRefused`; it neither retries credential failures nor removes sockets.
+A stale-socket timeout preserves the original inode beside a permitted peer.
+
+Plan §7.3 reserves effect rights at **Authorize**, after review, rather than at
+proposal admission. The cumulative-budget test therefore completes both reviews:
+totals ten and thirteen permit only the first seven-unit effect and cancel the
+second before dispatch; total fourteen permits both. The original ten-unit case
+retains its exact seven charged, three available and zero reserved assertions.
+The test checks the actual authorization error and terminal journal disposition;
+its former `NotAdmitted` expectation was incorrect and has been replaced.
+No production reservation rule, bound, wire format or deadline changed.
+
+This is bounded integration-test repair, not a new runtime feature or full
+qualification. The canonical driver still refuses the initial dependency guard;
+complete operator, dependency and Clippy qualification remain open. See
+`IMPLEMENTATION_STATUS.md` for the current execution inventory.
