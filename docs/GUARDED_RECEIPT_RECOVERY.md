@@ -79,6 +79,11 @@ No admission snapshot, helper process, reviewer socket, new approval, evidence
 refresh or effect dispatch is supplied by this path. Returned native roles are
 dropped, and the recovered owner does not escape the command.
 
+An optional `--credibility-activation FILE` after the guarded recovery profile is
+accepted for this receipt-only route but is neither read nor activated. It cannot
+change the recovered policy, grant authority or start another effect. Unguarded
+`resume` and other query/create modes retain their existing option refusal.
+
 ## Archive and output failures do not undo acknowledgment
 
 Input and output must be outside the authority directory. Output must be a new
@@ -121,8 +126,10 @@ unknown charges; and actual CLI dispatch without live evidence or qualification.
 One additional native test pairs missing/incomplete request refusal with original
 recorded admission and successful guarded reconciliation. Existing tests remain.
 
-These tests are authored but unexecuted. Targeted and full-gate RCH dispatches
-stop at missing `rch` before Cargo in this environment. Rust compilation, tests,
-formatting and Clippy remain unqualified; no bead or FA-014 acceptance is closed.
+At original authoring, targeted and full-gate RCH dispatches stopped at missing
+`rch` before Cargo, supplying no compilation, test, formatting or Clippy evidence.
+Later exact-source standard-backend results and remaining qualification failures
+are recorded in [implementation status](../IMPLEMENTATION_STATUS.md); no Bead or
+FA-014 acceptance is closed by the receipt integration.
 This serves plan 16.4/16.5/16.9 and 17.1, FI-A02, with the same journal format,
 actor verbs, original authority semantics and dependency set.
