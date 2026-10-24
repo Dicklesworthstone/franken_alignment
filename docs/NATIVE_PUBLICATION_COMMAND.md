@@ -92,7 +92,8 @@ The independent stop socket is provisioned before the native store. The recovery
 reserve is installed in the FIRST native-only stream image, before decoder/tokenizer
 work; installing it later would violate its original cutoff. Fresh registered source
 capture and a post-read clock precede the text intent and EVERY incremental native
-token. The original source gate decides whether the lease remains valid. Stop is
+token. After acknowledging that clock, the command explicitly checks the original
+captured-state gate; observing time alone does not validate the read-start lease. Stop is
 checked between tokens, and one fixed deadline covers generation and publication:
 expensive inference cannot buy a new approval lifetime.
 
@@ -125,3 +126,24 @@ peer tests and synthetic helper choices do not establish trained detector qualit
 OS isolation, model authenticity or an independent human evaluation. Native replay
 and synchronous file I/O retain their existing cost; this is not a throughput,
 Asupersync admission or hard-real-time result. No Beads or production gate is closed.
+
+### 2026-10-24 execution and source-lease repair
+
+The initial unexecuted attempt above remains historical. A later qualified standard
+RCH run exposed a real missing connection: post-read time was acknowledged without
+calling the existing `capture_file_policy_state` gate before numerical work. The
+command now calls that gate after each refresh. The causal regression delays
+adjacent clock samples only after the first intent is durable, allowing nine ticks
+and refusing ten under a ten-tick source lease. The expired case previously advanced
+all four numerical positions; after the repair it advances none and publishes nothing.
+
+The combined native/generated inventory passed **114 entries, zero failed/ignored,
+617 filtered**, on `vmi1149989` (`j-30078706395382079`), base `7228d44a` plus the
+12-path overlay `f11b1a91644b45b49a980630e9d6102a061e4e902fac484c65369a16ffa175a2`.
+This includes all 111 original entries and three new boundary controls; registered
+helper entrypoints are included, not independent alignment evidence. Earlier
+108/3 and 112/1 results remain retained. Standard workspace/all-target compilation
+also passed at the same Rust cut (`j-30078706395382085`); the canonical driver
+failed unchanged dependency admission (`j-30078706395382086`). Full operator/workspace qualification,
+dependency admission and Clippy remain open; this is bounded synthetic-model
+execution, not production alignment or source authenticity evidence.

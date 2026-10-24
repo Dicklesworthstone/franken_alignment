@@ -1,5 +1,20 @@
 # Changelog
 
+## 2026-10-24: enforce native source leases before numerical work
+
+- Connect the existing captured-state freshness check after generated source
+  refresh and at the native service's final numerical/resume clock. An expired
+  read-start lease now refuses before advancing the model.
+- Pair the actual generated expiry flow with a permitted control and a native
+  1009/1010 boundary. Preserve full one-byte stream finish positives beside
+  undersized generation-allocation refusals.
+- Correct operator test oracles for reviewed frames versus audience text,
+  full-frame charges, fenced helper epochs and exact withheld-ticket responses.
+- Pass all 111 original native/generated entries plus three new controls on the
+  qualified standard RCH compiler and workspace/all-target compilation at the
+  same Rust cut. Retain the failed attempts and original P0;
+  complete dependency, Clippy and operator qualification remain open.
+
 ## 2026-10-24: repair learned recovery's default-stack finalization
 
 - Split the original five recovery finalizers into leaf adapters, preserving
