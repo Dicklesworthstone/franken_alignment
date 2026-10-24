@@ -1,5 +1,21 @@
 # Changelog
 
+## 2026-10-24: complete bounded producer waiting in the learned operator
+
+- Admit the original finite-wait witness profile around learned recipes, using
+  the same immutable native validation/feed/freshness policy as strict capture.
+- Preserve native/process review progress and both original keys during healthy
+  producer lag; keep one prepared final retry allowance and check the original
+  deadline, authenticated Stop and actor cancellation before every retry.
+- Retain strict invalidation, missing-history and post-dispatch behavior, original
+  charges and source-free historical receipts; add no grant or journal format.
+- Add eight real operator regression functions and pass all 68 selected operator
+  functions, alongside the 31 preceding public deferral functions. Standard
+  checks of the full operator test source and all three public targets pass.
+- Retain initial storage failures and the corrected deadline-fixture evidence,
+  independent source review, scoped LLVM/Cranelift execution and the unchanged
+  full-gate dependency-admission refusal. Full packet/release gates remain open.
+
 ## 2026-10-23: preserve learned review through bounded producer catch-up
 
 - Add original capture-or-defer adapters for computed, native and process learned

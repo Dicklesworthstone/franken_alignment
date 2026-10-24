@@ -381,11 +381,19 @@ where F: FnMut() -> ElapsedTick {
                     loop {
                         deadline.check(time())?;
                         if live.checkpoint(&mut driver, reviewer, deadline, time)? { return Ok(()); }
-                        let event = match publication.as_ref() {
-                            Some(publication) => publication.step_learned(&mut driver,
+                        let event = match publication.as_mut() {
+                            Some(publication) => publication.step_learned_or_wait(&mut driver,
                                 &mut config.source, time, Some(&approval))?,
-                            None => driver.step_computed_from_policy_file(&mut config.source,
-                                &mut *time, Some(&approval)).result.map_err(debug)?,
+                            None => Some(driver.step_computed_from_policy_file(&mut config.source,
+                                &mut *time, Some(&approval)).result.map_err(debug)?),
+                        };
+                        let Some(event) = event else {
+                            // This prepared request owns one finite retry budget
+                            // across the whole loop. Yield without replacing its
+                            // action, review, approval, reservation or deadline;
+                            // Stop and actor cancellation are checked above.
+                            super::super::pause(config.timing.poll_ms.clamp(1, 50));
+                            continue;
                         };
                         match event {
                             FileDriverEvent::Dispatched { .. } | FileDriverEvent::PublicationChecked { .. } => {}

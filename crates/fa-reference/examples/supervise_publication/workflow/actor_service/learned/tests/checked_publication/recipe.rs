@@ -62,6 +62,7 @@ fn original_capture_feed_producer_and_whole_input_profiles_remain_explicit_and_s
     let original = fs::read_to_string(&path).unwrap();
     fs::write(&path, envelope(&root, &original)).unwrap();
     let profiles = [(captures(&root, 1), false, false), (captures(&root, 2), true, false),
+        (captures(&root, 4), true, false),
         (profile(&root, &config, false, false), true, false), (profile(&root, &config, true, false), true, true),
         (profile(&root, &config, false, true), true, false), (profile(&root, &config, true, true), true, true)];
     for (document, feed, fallback) in profiles {
@@ -76,7 +77,7 @@ fn original_capture_feed_producer_and_whole_input_profiles_remain_explicit_and_s
     }
     fs::remove_file(root.0.join("weights.safetensors")).unwrap();
     for (document, diagnostic) in [
-        (captures(&root, 4), "finite-wait"),
+        (captures(&root, 4).replace("\"max_retries\":3", "\"max_retries\":0"), "max_retries"),
         (format!(r#"{{"schema":"fa.supervised-joint-publication/1","joint":{JOINT},"publication":{}}}"#,
             profile(&root, &config, false, false)), "learned joint qualification"),
         (profile(&root, &config, false, false).replacen("\"tenant\":1", "\"tenant\":2", 1), "Binding"),

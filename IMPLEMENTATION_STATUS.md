@@ -1,5 +1,52 @@
 # Implementation status · design revision 0.3
 
+## 2026-10-24: finish finite producer catch-up in the learned operator
+
+The checked learned operator now accepts the original finite-wait witness
+profile, `fa.supervised-witnesses/4`. Native and process helper review retain
+their original inputs and paid progress while a valid producer capture lags a
+complete feed. After both original approvals, the same prepared request retains
+its frozen action, review, human key and one finite retry allowance. Each yield
+returns to the unchanged deadline, authenticated Stop and actor-cancellation
+checks before another acquisition. Review acquisitions do not spend final retries.
+
+The existing native waiting diagnostic alone permits that yield. Its Ready,
+human-key, expiry, control-basis and acknowledged-deferral conditions are not
+replaced with an operator guess. Persistent lag exhausts the original bounded
+allowance even with a frozen clock. Relevant changes, missing history and
+post-dispatch lag retain strict refusal or reconciliation, including unknown
+charges. Waiting adds no native grant, journal format or recovery permission.
+
+All 68 selected operator regression functions pass: eight new finite-wait
+functions and sixty existing checked-publication, generation, forecast, joint,
+identity, recovery, resident, bootstrap and native-checked functions. The new
+cases execute actual native/process helpers, real source catch-up and both
+original keys; they cover changed empty-range membership, exact finite retry
+exhaustion, Stop, cancellation, the original accepted deadline, strict
+post-dispatch behavior and historical recovery without live sources. Both
+original child entrypoints are registered and used by real processes; their
+standalone no-input invocations are excluded from the 68-function denominator.
+
+The complete unmodified operator test source and all three public deferral
+integration targets pass standard Cargo check. The preceding 31 native/public
+regressions remain source-identical and passed in this increment. Independent
+source review found no blocker. Runtime uses standard LLVM harnesses linked to
+the qualified nightly's official Cranelift library with 32 MiB stacks; the scoped
+mirror changes only unselected test registrations, with selected files byte
+identical and original source hashes unchanged throughout execution.
+
+Earlier failed attempts remain retained, including shared-storage exhaustion and
+one corrected deadline fixture. That fixture now observes authenticated Pending
+within the allowed lifetime, lets one acknowledged wait complete, then checks
+the authoritative cancellation receipt after expiry without demanding transport
+service beyond the original deadline. No production lifetime or assertion about
+charge, effect, cancellation or numerical expenditure was weakened.
+
+The required full xtask driver was rerun and still stops at the existing
+unchanged dependency-admission guard before formatting, Clippy or full-suite
+execution. Full FA-061/062, deployment and release qualification remain open.
+See [checked learned publication](docs/LEARNED_CHECKED_PUBLICATION.md).
+
 ## 2026-10-23: retain learned review while publication producers catch up
 
 The original computed, native-model and process learned drivers now expose

@@ -111,14 +111,14 @@ original argument, custody and predecessor requirements remain mandatory.
 | `fa.supervised-witnesses/1` | Original and current action-bound captures, without a change feed |
 | `fa.supervised-witnesses/2` | Captures plus the original change-feed and freshness contract |
 | `fa.supervised-witnesses/3` | Coupled producer image containing its capture and change feed |
+| `fa.supervised-witnesses/4` | Independent cut-bound captures and feed with explicit finite producer catch-up |
 | `fa.supervised-witnesses/5` | Coupled producer with explicit exact-current-snapshot fallback |
 | `fa.supervised-whole-input/1` | Complete opaque producer input with strict change history |
 | `fa.supervised-whole-input/2` | Complete opaque producer input with explicit exact-current-snapshot fallback |
 
-Finite-wait profile `/4` is not supported by this learned composition and refuses
-before startup. A witness profile's separate joint-publication wrapper also
-refuses; use the existing learned joint envelope so its exact qualification
-policy stays part of the learned recipe. Neither requirement is silently dropped.
+A witness profile's separate joint-publication wrapper refuses; use the existing
+learned joint envelope so its exact qualification policy stays part of the
+learned recipe. That requirement is never silently dropped.
 
 The outer recipe retains the original 64 KiB limit and adds one bounded nesting
 level. Reading the witness profile consumes the original aggregate learned asset
@@ -162,6 +162,48 @@ from a feed whose state is missing or mismatched. It no longer requests a
 snapshot-fallback status that cannot exist for a valid no-feed owner. Exact
 limits still match first, a selected feed remains mandatory, and a plain profile
 cannot operate a feed-backed owner by omitting its selection.
+
+### Finite producer catch-up
+
+Select `fa.supervised-witnesses/4` with the original independent `original`,
+`current` and `feed` fields, plus `max_retries` in `1..=64`. The original capture
+must contain its explicit producer input cut. The schema retains the original
+structured-witness requirement; it cannot convert a legacy capture or a missing
+feed prefix into eligible evidence. Other schemas retain strict acquisition.
+
+A producer snapshot may lag invalidations in a complete feed. When its identity,
+generation, contents, included cut and structured floors still satisfy the
+original deferral contract, each real read can record a Deferred observation.
+That observation installs no current witness and grants no publication right.
+Missing history, malformed bytes, equivocation, rollback and independent policy
+or helper-input failures retain their original refusal behavior.
+
+Native and process review can continue with their actual learned inputs during
+this lag. Their existing inference, process, poll and phase budgets still apply.
+These review acquisitions do not spend the final-publication retry allowance.
+After the original review and human approval, only the native ready-job waiting
+diagnostic can yield to another acquisition. The same prepared request, frozen
+action, review, approval and any existing reservation survive that yield. The
+next iteration checks the unchanged logical/wall deadline, authenticated Stop
+and actor cancellation before reading again.
+
+`max_retries` bounds extra waiting decisions for that actual prepared request;
+persistent lag therefore permits at most `max_retries + 1` deferred final steps
+before the existing failure/Stop/drain path. A frozen clock cannot reset the
+counter. Each separately admitted resident Message or Finish gets its own finite
+budget, while the existing cumulative numerical and effect accounting remain
+unchanged. No delay extends a human approval, source lease or action deadline.
+
+Waiting is orchestration state, not an additional native grant: `/2` and `/4`
+with identical validation/feed/freshness fields retain identical native policy
+registration. Historical inspection still binds that policy and needs no live
+capture, feed or helper. Recovery fences old jobs and keys instead of replenishing
+an old waiting request. Once dispatch has occurred, acquisition follows the
+original strict first-publication and receipt path, with no new wait window and
+no refund of an unknown outcome. See [supervised capture
+deferral](SUPERVISED_CAPTURE_DEFERRAL.md).
+
+### Resident and historical ownership
 
 Resident entries must retain one exact native publication policy. Per-attempt
 source paths and witness requests may differ, but each actual request binds its
