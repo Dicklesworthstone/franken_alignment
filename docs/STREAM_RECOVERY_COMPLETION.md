@@ -21,10 +21,29 @@ The diagnostic identifies its historical revision rather than claiming that it
 represents a newer faulted owner. The mode summary says reconciliation_attempted,
 not reconciled. No actor wire bytes or authority journal encoding change.
 
-Four new regression functions include a real two-key confirmed request alongside
-an expired dispatched tail, receipt delivery before operator failure, an empty
-repeat sweep with retained irrecoverable debt, a matching published-tail control,
-receipt-only no-sweep behavior, and late timeout after acknowledgment. An explicit
-synthetic refusal tests only report rendering; it is not endpoint evidence.
-Compilation and test execution remain pending the required RCH gate. This is
-unqualified source, not full FA-014 closure or remote exactly-once assurance.
+Retention expiry leaves the original action Unknown and charged. A later native
+sweep visits it again and returns RetentionExpired; it does not perform explicit
+abandonment or produce an empty sweep. The original broker has a separate trusted
+abandonment operation, but these durable hosts have no journaled API for it. That
+missing connection requires its own format, epoch, storage and compatibility
+work; expiry must not stand in for it.
+
+Three native integration functions cover a real two-key confirmed request beside
+an expired dispatched tail, receipt delivery before operator failure, repeated
+Unknown/RetentionExpired accounting, the matching published-tail control,
+receipt-only no-sweep behavior, and late timeout after acknowledgment. Two
+explicitly synthetic diagnostic controls exercise native-refusal rendering and
+empty-sweep reports with retained Unknown or IrrecoverablyUnknown. The latter
+pairs each refusal with an otherwise identical completed report that retains a
+nonzero execution charge. These pure inputs create no endpoint history and are
+not evidence of a persisted irrecoverable transition.
+
+At preparation, compilation and test execution were pending the required RCH
+gate. Full FA-014 closure and remote exactly-once assurance remain unqualified.
+
+On 2026-10-24, exact source `a985f9cd` passed all four original stream-completion
+functions and the new pure diagnostic unit within the 63-function combined
+selection, zero failed/ignored. The native functions retain valid receipt
+delivery beside actual repeated expired-tail liabilities; the two synthetic
+controls remain report-only evidence. All-target compilation passed, while
+Clippy and canonical dependency admission failed. Full qualification stays open.

@@ -1,5 +1,20 @@
 # Changelog
 
+## 2026-10-24: bind forecast and retention fixtures to original native contracts
+
+- Test nonpredictive guarded recovery through its actual native API; preserve
+  exact refusal, canonical/staging bytes, selected single-fence recovery and
+  original raw/owned forecast/work/coverage assertions.
+- Require retention expiry to preserve charged Unknown through repeat stop,
+  drain and receipt service. Keep actual confirmed-publication controls and
+  label the separate empty-sweep renderer inputs as synthetic.
+- Reproduce the original predictive 6/1 and retention 0/4 failures, then pass the
+  complete affected 63-function inventory at `a985f9cd`, zero failed/ignored,
+  681 filtered. Formatting/all-target compilation pass; retain fresh 80-library-
+  error Clippy failure and canonical dependency-admission refusal. Full 744 is
+  pending. Original P0, intermittent investigations and durable abandonment
+  remain open; no production behavior, deadline, format or authority rule changed.
+
 ## 2026-10-24: test genuine pending drain and complete clock acquisition cuts
 
 - Preserve the original replay deadline cuts and add post-clock exact budget

@@ -1,5 +1,61 @@
 # Implementation status · design revision 0.3
 
+## 2026-10-24: test forecast recovery and retained Unknown against native contracts
+
+The original predictive namespace at frozen `bfaea731` reproduced **6 passed,
+1 failed, zero ignored, 736 filtered**, 35.14 seconds. Its negative called a test
+helper that now selects the permitting predictive recovery path. The corrected
+original function calls the native nonpredictive guarded API with the same
+complete requirements and generation, requires exact `Binding`, and checks both
+canonical and staging bytes. Selected raw/owned recovery must append one fence
+and preserve numerical state, forecast identity, coverage loss and paid work;
+the original no-resume assertion remains. At `da8077c7`, all seven predictive
+functions plus the original plain continuation/publication passed **8/0**, zero
+ignored, 735 filtered, 44.43 seconds on qualified standard RCH.
+
+The four original retention functions independently reproduced **0 passed,
+4 failed, zero ignored, 739 filtered**, 1.41 seconds at `bfaea731`. Their expiry
+expectations contradicted the existing native contract: `RetentionExpired`
+retains `Unknown` and its charge. The corrected fixtures assert that exact stage,
+zero reserved units, unchanged execution/payload/stop receipt and retained charges
+through repeated recovery. Valid selected receipts and the actual published-tail
+positive still execute. No expiry reducer, outcome, refund or abandonment is
+manufactured.
+
+A separate explicitly synthetic unit checks empty-sweep report inputs containing
+Unknown or IrrecoverablyUnknown against an otherwise identical completed report
+with the same nonzero charge. It tests the renderer only. The durable hosts still
+have no journaled explicit-abandonment API; that format/epoch/storage feature and
+FA-014 prerequisites remain open. Pure report input does not prove native
+irrecoverable history or satisfy the complete packet.
+
+Combined source `a985f9cdf1c1b196fa5aa649007b456992277aac`, tree
+`20cbe485895be86c581f4af5afd51f8c4f585eae`, passed all **63 selected functions,
+zero failed/ignored, 681 filtered**, 50.20 seconds on standard `vmi1149989`:
+all 50 stop functions, seven predictive, one plain continuation, four original
+stream-completion functions and one pure diagnostic. All five addressed failure
+IDs pass and no previously passing selected ID failed. Overlapping runs and
+child-helper repeats are not added to this denominator. These are fixture and
+verification repairs, not new production capability or independent certification.
+
+Owned formatting and workspace/all-target compilation passed at this exact source.
+Fresh Clippy with warnings denied failed on **80 library errors** before later
+targets. The canonical driver executed and refused the unchanged initial
+dependency-admission guard. Its admission compiler explicitly supports the two
+original reviewed local rows; it is not a finished general-admission path that
+can simply admit the third package. No policy, snapshot hash or lock guard was
+relaxed. The complete unfiltered **744-function** operator run at this same source
+is in progress; no result is yet claimed. This inventory includes nine integrated
+credential-publication functions from the `bfaea731` base and the one new pure
+diagnostic unit. Four prior intermittent-case investigations and original P0
+acceptance remain open.
+
+The first `da8077c7` dispatch on `hz4` refused source-namespace initialization
+before Cargo. Same-ID recovery confirmed terminal exit 1 and acknowledgment;
+the refusal was not testing success and no source fence was removed. Commands,
+raw failures, passing output and receipts remain outside source under
+`/Users/jemanuel/Documents/Codex/2026-10-24/franken-alignment-stop-76bf4d57/`.
+
 ## 2026-10-24: exercise pending stop/drain and every clock boundary
 
 At frozen `76bf4d57`, the complete original stop namespace reproduced **42 passed,

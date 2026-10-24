@@ -152,6 +152,22 @@ independent primary generation and predictor configuration to validate history.
 
 ## Qualification
 
+On 2026-10-24, frozen `da8077c7` passed all seven original loaded predictive
+functions plus the original plain continuation/publication control: eight passed,
+zero failed/ignored, 735 filtered on qualified RCH. The same originals passed
+again in the complete 63-function combined selection at `a985f9cd`; those
+overlapping executions are not added together. This scoped native reference
+evidence does not qualify model calibration or the complete workspace.
+
+The nonpredictive downgrade control calls the original
+`open_guarded_with_learned_generation` with the same independently supplied
+requirements and generation. The operator's test helper selects predictive
+recovery, so calling that helper cannot test a nonpredictive refusal. The native
+refusal must preserve canonical and staging bytes; selected raw/owned recovery
+must acknowledge exactly one fence and retain numerical work, pending forecast,
+coverage loss and the prohibition on resumed sampling. This changes the test
+route, not a production recovery rule or predictor configuration.
+
 Eight artifact test functions cover exact original configurations, closed input,
 model/tap/stream binding, signed zero, GQA widths and exact resource boundaries.
 Seven loaded lifecycle tests use actual original numerical and native reviewer
@@ -162,8 +178,9 @@ They also cover missing custody, expiry or missing policy evidence before
 sampling, owned forecast budget exhaustion, interrupted forecasts, changed
 immutable predictor configuration and recipe downgrade.
 
-These are authored and independently source-reviewed regressions, not executed
-evidence. The prescribed RCH launcher is absent in the restored workspace. After
+Preparation-time status: these were authored and independently source-reviewed
+regressions, not executed evidence. The prescribed RCH launcher was absent in the
+restored workspace. After
 the complete source was frozen, the executor disconnected before this batch's
 syntax or remote-dispatch attempts could start. No operator parse, Rust compile,
 test or workspace qualification is claimed. The deterministic forecast tables
