@@ -7,6 +7,12 @@ use fa_reference::action::consequence::delivery::persistent::observed::guarded::
 };
 use fa_reference::action::consequence::mediation::{CutCheck, MAX_CHECK_EDGE_VISITS};
 use fa_reference::perimeter_inventory::topology::LoadedAuthorityTopology;
+#[path = "../../../../../tests/support/file_oversight.rs"]
+mod native_fixture;
+use fa_reference::action::consequence::oversight::evidence_source::{
+    EvidenceIdentity, EvidenceSnapshot,
+};
+use fa_reference::action::{ActionSpec, ActionState, VERSION};
 use fa_reference::strict_json::{self, Json, Limits};
 use std::{
     cell::Cell,
@@ -79,6 +85,15 @@ fn topology(generation: u64) -> String {
     )
 }
 fn setup(root: &Directory, mediated: bool, full: bool) -> (Config, FileRecoveryFloor) {
+    setup_with_dispatch(root, mediated, full, false)
+}
+
+fn setup_with_dispatch(
+    root: &Directory,
+    mediated: bool,
+    full: bool,
+    dispatched: bool,
+) -> (Config, FileRecoveryFloor) {
     let text = CONFIG
         .replace(
             "/operator/publication-store",
@@ -102,7 +117,7 @@ fn setup(root: &Directory, mediated: bool, full: bool) -> (Config, FileRecoveryF
         campaigns: None,
         credential: None,
     };
-    let (mut host, _) =
+    let (mut host, roles) =
         FileOversight::create_guarded(&c.store, c.profile.clone(), &guards, None).unwrap();
     host.enable_recovery_reserve(host.revision(), RecoveryReserve::terminal())
         .unwrap();
@@ -135,6 +150,71 @@ fn setup(root: &Directory, mediated: bool, full: bool) -> (Config, FileRecoveryF
         ));
     } else {
         host.observe_time(host.revision(), ElapsedTick(1)).unwrap();
+    }
+    if dispatched {
+        // A real native dispatch is needed: an empty Stop/Fence is already
+        // drained and must skip both time acquisition and StopProgress.
+        let captured = EvidenceSnapshot::new(
+            EvidenceIdentity {
+                scope: c.profile.delivery.scope,
+                source: c.source_policy.source.source,
+                generation: 1,
+            },
+            native_fixture::snapshot(),
+            ["alpha", "beta"]
+                .into_iter()
+                .map(|member| (member.to_owned(), b"original controlled evidence".to_vec()))
+                .collect(),
+        )
+        .unwrap();
+        fs::write(root.path("absent-live-evidence.json"), captured.encode()).unwrap();
+        let revision = host.revision();
+        host.refresh_file_source(revision, &mut c.source, ElapsedTick(1))
+            .unwrap();
+        let spec = ActionSpec {
+            version: VERSION,
+            scope: c.profile.delivery.scope,
+            target: Some(host.inspect().target),
+            payload: b"pending".to_vec(),
+            required_witnesses: Vec::new(),
+            policy_epoch: host.inspect().control.ledger.epoch,
+            deadline: ElapsedTick(100),
+            units: 16,
+        };
+        let revision = host.revision();
+        let action = host
+            .propose(revision, 1, spec, captured.snapshot().clone())
+            .unwrap();
+        let inputs = captured.inputs_for(&action, &c.profile.committee).unwrap();
+        native_fixture::review_existing(&mut host, 1, 101, &inputs);
+        let revision = host.revision();
+        let automatic = host
+            .authorize(revision, 1, &inputs, captured.snapshot().clone())
+            .unwrap();
+        let revision = host.revision();
+        let request = host
+            .request_human_approval(revision, 1001, 1, &inputs, ElapsedTick(31))
+            .unwrap();
+        let revision = host.revision();
+        let human = roles.human.approve(&mut host, revision, &request).unwrap();
+        let revision = host.revision();
+        host.dispatch(
+            revision,
+            &automatic,
+            &human,
+            &action,
+            &inputs,
+            captured.snapshot().clone(),
+        )
+        .unwrap();
+        assert_eq!(
+            host.inspect().control.ledger.stages[&1],
+            ActionState::Dispatching
+        );
+        assert_eq!(host.inspect().control.ledger.charged, 16);
+        assert_eq!(host.inspect().control.ledger.reserved, 0);
+        assert_eq!(host.inspect().executions, 0);
+        fs::remove_file(root.path("absent-live-evidence.json")).unwrap();
     }
     if full {
         while host.journal_capacity().unwrap().ordinary_remaining().events != 0 {
@@ -243,89 +323,115 @@ fn args(root: &Directory, phase: Phase) -> Vec<String> {
 #[test]
 fn both_actual_command_routes_preserve_guards_anchors_and_the_three_event_reserve() {
     for mediated in [false, true] {
-        let root = Directory::new();
-        let (c, floor) = setup(&root, mediated, true);
-        let before = fs::read(root.path("before.anchor")).unwrap();
-        fs::write(
-            root.path("phase.json"),
-            document(
-                &root,
-                floor,
-                mediated,
-                true,
-                "before.anchor",
-                Some("stopped.anchor"),
-            ),
-        )
-        .unwrap();
-        let mut out = Vec::new();
-        command_with(
-            &args(&root, Phase::Admission),
-            || panic!("no clock"),
-            &mut || Duration::ZERO,
-            &mut out,
-        )
-        .unwrap();
-        let report = json(&out);
-        assert_eq!(
-            report.get("drain_attempted").unwrap().as_bool(),
-            Some(false)
-        );
-        assert_eq!(report.get("appended_events").unwrap().as_u64(), Some(2));
-        let stopped = FileOversight::read_publication(&c.store, &c.profile).unwrap();
-        assert_eq!(stopped.revision, floor.journal_revision + 2);
-        assert_eq!(stopped.control.ledger.elapsed, Some(ElapsedTick(1)));
-        assert_eq!(anchor(&root, "stopped.anchor").revision(), stopped.revision);
-        let saved = root.bytes();
-        fs::write(
-            root.path("phase.json"),
-            document(&root, floor, mediated, false, "stopped.anchor", None),
-        )
-        .unwrap();
-        crate::command(args(&root, Phase::Admission)).unwrap();
-        assert_eq!(root.bytes(), saved);
-        fs::write(
-            root.path("phase.json"),
-            document(
-                &root,
-                floor,
-                mediated,
-                false,
-                "stopped.anchor",
-                Some("drained.anchor"),
-            ),
-        )
-        .unwrap();
-        out.clear();
-        command_with(
-            &args(&root, Phase::Drain),
-            || Ok(ElapsedTick(2)),
-            &mut || Duration::ZERO,
-            &mut out,
-        )
-        .unwrap();
-        assert_eq!(json(&out).get("drained").unwrap().as_bool(), Some(true));
-        let drained = FileOversight::read_publication(&c.store, &c.profile).unwrap();
-        assert_eq!(drained.revision, floor.journal_revision + 3);
-        assert_eq!(drained.revision as usize, c.profile.delivery.limits.events);
-        assert_eq!(anchor(&root, "drained.anchor").revision(), drained.revision);
-        let saved = root.bytes();
-        fs::write(
-            root.path("phase.json"),
-            document(&root, floor, mediated, false, "drained.anchor", None),
-        )
-        .unwrap();
-        command_with(
-            &args(&root, Phase::Drain),
-            || panic!("completed drain clock"),
-            &mut || Duration::ZERO,
-            &mut Vec::new(),
-        )
-        .unwrap();
-        crate::command(args(&root, Phase::Drain)).unwrap();
-        assert_eq!(root.bytes(), saved);
-        assert_eq!(fs::read(root.path("before.anchor")).unwrap(), before);
-        assert!(!root.path("absent-live-evidence.json").exists());
+        for dispatched in [false, true] {
+            let root = Directory::new();
+            let (c, floor) = setup_with_dispatch(&root, mediated, true, dispatched);
+            let before = fs::read(root.path("before.anchor")).unwrap();
+            fs::write(
+                root.path("phase.json"),
+                document(
+                    &root,
+                    floor,
+                    mediated,
+                    true,
+                    "before.anchor",
+                    Some("stopped.anchor"),
+                ),
+            )
+            .unwrap();
+            let mut out = Vec::new();
+            command_with(
+                &args(&root, Phase::Admission),
+                || panic!("no clock"),
+                &mut || Duration::ZERO,
+                &mut out,
+            )
+            .unwrap();
+            let report = json(&out);
+            assert_eq!(
+                report.get("drain_attempted").unwrap().as_bool(),
+                Some(false)
+            );
+            assert_eq!(report.get("appended_events").unwrap().as_u64(), Some(2));
+            let stopped = FileOversight::read_publication(&c.store, &c.profile).unwrap();
+            assert_eq!(stopped.revision, floor.journal_revision + 2);
+            assert_eq!(stopped.control.ledger.elapsed, Some(ElapsedTick(1)));
+            assert_eq!(anchor(&root, "stopped.anchor").revision(), stopped.revision);
+            let saved = root.bytes();
+            fs::write(
+                root.path("phase.json"),
+                document(&root, floor, mediated, false, "stopped.anchor", None),
+            )
+            .unwrap();
+            crate::command(args(&root, Phase::Admission)).unwrap();
+            assert_eq!(root.bytes(), saved);
+            fs::write(
+                root.path("phase.json"),
+                document(
+                    &root,
+                    floor,
+                    mediated,
+                    false,
+                    "stopped.anchor",
+                    Some("drained.anchor"),
+                ),
+            )
+            .unwrap();
+            out.clear();
+            let clocks = Cell::new(0);
+            command_with(
+                &args(&root, Phase::Drain),
+                || {
+                    assert!(dispatched, "an empty stopped domain must not acquire time");
+                    clocks.set(clocks.get() + 1);
+                    Ok(ElapsedTick(2))
+                },
+                &mut || Duration::ZERO,
+                &mut out,
+            )
+            .unwrap();
+            assert_eq!(json(&out).get("drained").unwrap().as_bool(), Some(true));
+            let drained = FileOversight::read_publication(&c.store, &c.profile).unwrap();
+            assert_eq!(clocks.get(), usize::from(dispatched));
+            assert_eq!(
+                drained.revision,
+                floor.journal_revision + 2 + u64::from(dispatched)
+            );
+            if dispatched {
+                // The SAME original three-event reserve is exactly exhausted.
+                assert_eq!(drained.revision as usize, c.profile.delivery.limits.events);
+                assert_eq!(
+                    drained.control.ledger.stages[&1],
+                    ActionState::ConfirmedNotExecuted
+                );
+            } else {
+                assert_eq!(
+                    drained.revision as usize + 1,
+                    c.profile.delivery.limits.events
+                );
+            }
+            assert_eq!(drained.control.ledger.charged, 0);
+            assert_eq!(drained.control.ledger.reserved, 0);
+            assert_eq!(drained.executions, 0);
+            assert_eq!(anchor(&root, "drained.anchor").revision(), drained.revision);
+            let saved = root.bytes();
+            fs::write(
+                root.path("phase.json"),
+                document(&root, floor, mediated, false, "drained.anchor", None),
+            )
+            .unwrap();
+            command_with(
+                &args(&root, Phase::Drain),
+                || panic!("completed drain clock"),
+                &mut || Duration::ZERO,
+                &mut Vec::new(),
+            )
+            .unwrap();
+            crate::command(args(&root, Phase::Drain)).unwrap();
+            assert_eq!(root.bytes(), saved);
+            assert_eq!(fs::read(root.path("before.anchor")).unwrap(), before);
+            assert!(!root.path("absent-live-evidence.json").exists());
+        }
     }
 }
 
@@ -574,7 +680,7 @@ fn failed_panicking_and_slow_clocks_cannot_undo_the_prior_guarded_admission_stop
     for mediated in [false, true] {
         for mode in 0..3 {
             let root = Directory::new();
-            let (c, floor) = setup(&root, mediated, false);
+            let (c, floor) = setup_with_dispatch(&root, mediated, false, true);
             stop(&root, &c, floor, mediated);
             let p = recipe(
                 &root,
@@ -624,6 +730,10 @@ fn failed_panicking_and_slow_clocks_cannot_undo_the_prior_guarded_admission_stop
             assert!(out.is_empty());
             assert_eq!(root.files(), before);
             assert!(!root.path("after.anchor").exists());
+            let retained = FileOversight::read_publication(&c.store, &c.profile).unwrap();
+            assert_eq!(retained.control.ledger.charged, 16);
+            assert_eq!(retained.control.ledger.stages[&1], ActionState::Unknown);
+            assert_eq!(retained.executions, 0);
             run_with_elapsed(
                 &c,
                 &p,

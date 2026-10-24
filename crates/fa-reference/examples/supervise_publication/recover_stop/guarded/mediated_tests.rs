@@ -508,11 +508,15 @@ fn one_deadline_covers_independent_intake_every_replayed_event_and_ready() {
         fs::write(c.store.join("delivery.pending"), b"preserve on deadline").unwrap();
         let before = root.files();
         let mut calls = 0;
+        let logical = Cell::new(0);
         let error = run_with_elapsed(
             &c,
             &profile,
             900,
-            || panic!("expired stop clock"),
+            || {
+                logical.set(logical.get() + 1);
+                ElapsedTick(2)
+            },
             &mut || {
                 let expired = calls == boundary;
                 calls += 1;
@@ -526,6 +530,8 @@ fn one_deadline_covers_independent_intake_every_replayed_event_and_ready() {
         )
         .unwrap_err();
         assert!(error.contains("deadline"), "{error}");
+        assert_eq!(logical.get(), usize::from(boundary + 1 == total.get()));
+        assert_eq!(calls, boundary + 1);
         assert_eq!(root.files(), before);
     }
     run(&c, &profile, 900, || ElapsedTick(2), &mut Vec::new()).unwrap();
