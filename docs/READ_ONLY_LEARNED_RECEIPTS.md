@@ -100,3 +100,14 @@ and output failure. All original source, deadline and recovery assertions remain
 registered. These five tests and the earlier four remain **UNEXECUTED**: targeted
 and full remote-only RCH launches fail before compilation because the launcher
 is absent. No Rust compiler, formatter, Clippy or runtime qualification is claimed.
+
+## Refusal-state clarification (2026-10-24)
+
+A retained `NotAdmitted` request has no action; an admitted `Denied` request has
+one. Read-only completion must preserve both exact original outcomes, as well
+as confirmed execution and unresolved liabilities. The fixture correction keeps
+both refusal classes in the original read-only message/finish cases, with the
+same byte-for-byte store, staging, source-read and output assertions. See
+[`LEARNED_RECEIPT_SELECTION.md`](LEARNED_RECEIPT_SELECTION.md#retained-nonadmission-and-policy-denial-2026-10-24)
+for the native construction/admission distinction. No live source preflight or
+read-only mutation rule changes; the implementation status names executed cuts.

@@ -78,3 +78,29 @@ the launcher is absent. There is no Rust toolchain here. Git preimage and whites
 checks do not qualify Rust syntax, compilation, tests or performance. One event,
 frame validation and filesystem work remain synchronous; this adds no hard wall-time,
 physical-resource, adversarial-filesystem or production guarantee. FA-014 stays open.
+
+## Retained nonadmission and policy denial (2026-10-24)
+
+The original controller distinguishes two terminal refusals. A complete known
+policy violation creates an admitted `Denied` action. A failed native admission
+can retain `NotAdmitted(error)` without a retained `FrozenAction`. Both must
+remain recoverable; neither is successful publication. Earlier descriptions and
+fixtures above conflated these states when using a known-false policy value.
+
+An already-expired source-only stream envelope is refused before source I/O or
+request retention. That gate is unchanged, and expiry cannot be assumed to
+produce a retained receipt in every learned profile. The retained nonadmission
+fixture instead submits the actual completed model's frame with one mismatched
+semantic epoch in the supplied snapshot. The native broker compares it with the
+actual captured source and records `NotAdmitted(Binding)`, with no action. No
+caller-supplied outcome or replacement request record is installed. Historical
+source-only lookup uses the original retained frame and unchanged deadline,
+including when no action exists. This is a trusted-owner API negative control;
+it does not claim that an expired live actor intake created a request.
+
+The corrective fixture work keeps the original nonadmission obligations and
+adds admitted-denial cases beside the original native/human-confirmed positive
+in the same message, finish, selection and recovery tests. This clarifies the
+existing native contract rather than changing admission or deadline rules.
+Current execution status is recorded in `IMPLEMENTATION_STATUS.md`; authored
+cases and pending remote attempts are not qualification evidence.

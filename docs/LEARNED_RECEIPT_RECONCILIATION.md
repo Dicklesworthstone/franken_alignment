@@ -125,3 +125,16 @@ launcher is absent; no Rust toolchain is available locally. Verified preimages,
 Git blob checks and selected-source whitespace checks do not qualify compilation,
 behavior, formatting, Clippy, performance or production deployment. No gate,
 assertion, dependency requirement or original packet acceptance was weakened.
+
+## Refusal-state clarification (2026-10-24)
+
+The original receipt projection distinguishes native nonadmission with no
+retained action from an admitted terminal policy denial. Reconciliation must
+preserve both, spending the same original three-event transaction without new
+generation, dispatch or permission. The corrective fixtures exercise both
+classes in the original learned and baseline command routes, beside unchanged
+confirmed-publication and unresolved-charge controls. The original selection,
+canonical-byte, staging, timer, floor and acknowledgment checks remain in place.
+See [`LEARNED_RECEIPT_SELECTION.md`](LEARNED_RECEIPT_SELECTION.md#retained-nonadmission-and-policy-denial-2026-10-24)
+for the source-only preflight boundary. This is an existing-contract clarification;
+the implementation status retains the actual execution and qualification limits.
