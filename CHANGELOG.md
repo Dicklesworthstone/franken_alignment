@@ -1,5 +1,22 @@
 # Changelog
 
+## 2026-10-24: reuse acknowledged learned history during witness acquisition
+
+- Resolve coupled-producer bootstrap cuts from the independently bound learned
+  registration while retaining original overlap, source and completeness checks.
+- Reuse the existing replay cache for publication withdrawal, freshness, direct
+  captures and feed batches; retain the exact pre-batch predecessor only after
+  successful acknowledgment and replay every appended event on subsequent use.
+- Add consuming same-owner replay handback without new observations, events,
+  numerical work or effect rights. Preserve newer cached prefixes and return
+  terminal cooperative forecast custody without changing its original result.
+- Pass all ten learned-publication public functions, including four new warm/cold
+  and custody regressions, plus 21 original publication regressions. Independent
+  review passes. Retain the initial missing-dispatch-reacquisition fixture failure
+  and the scoped LLVM-harness/Cranelift-library runtime qualification.
+- Keep the full xtask's existing dependency-admission refusal explicit; full
+  release and performance qualification remain open.
+
 ## 2026-10-23: retain final-publication evidence requirements in learned recipes
 
 - Add exact learned publication-validation registration using the original

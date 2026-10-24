@@ -184,7 +184,15 @@ impl<P> FilePreOutputStepper<P> {
             Preparation::Completion(task) => {
                 let (result, carry) = task.finish_with_continuation(host)?;
                 self.forecast.numerical = host.learned_generation_inspection()?.numerical;
-                self.carry = Some(carry);
+                if self.forecast.numerical.status.is_active() {
+                    self.carry = Some(carry);
+                } else {
+                    // No next numerical quantum can use this terminal carry.
+                    // Keep its acknowledged predecessor for original review
+                    // and source controls, including a recovered output start.
+                    let revision = host.revision();
+                    carry.retain_for_control(host, revision)?;
+                }
                 FilePreOutputQuantum::Completed { result, replayed_events }
             }
         };

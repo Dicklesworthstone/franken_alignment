@@ -50,6 +50,27 @@ impl FileLearnedReplayContinuation {
     /// The event that retired it is NOT included and must still be replayed.
     pub fn verified_events(&self) -> usize { self.through }
 
+    /// Return this acknowledged historical predecessor to the SAME live owner's
+    /// existing control replay cache. This consumes custody without replay,
+    /// inference, I/O, a new event or an effect capability. Every later original
+    /// control operation must still replay the complete unverified suffix.
+    ///
+    /// The caller supplies the current journal revision. A foreign owner, stale
+    /// revision or storage fault refuses; the consumed value is never retried
+    /// cold here. An already retained newer prefix remains in place. This does
+    /// not refresh sources, resume a paused generation or change work allowance.
+    pub fn retain_for_control(self, host: &mut FileOversight, revision: u64)
+        -> Result<(), JournalError>
+    {
+        self.check_owner(host, revision)?;
+        if let Some(current) = &host.learned_replay {
+            current.check_owner(host, revision)?;
+            if current.through >= self.through { return Ok(()); }
+        }
+        host.learned_replay = Some(self);
+        Ok(())
+    }
+
     /// Prepare a new intent under the ORIGINAL next-position, pending, source,
     /// recovery and ordinary-capacity laws. Every event after the retained
     /// prefix, including the previous numerical outcome, is replayed normally.

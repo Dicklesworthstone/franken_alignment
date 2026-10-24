@@ -1,12 +1,13 @@
 //! One acknowledged catch-up cut, using ONLY original notice/heartbeat events.
 use super::{PublicationFeedBatch, PublicationFeedFile, MAX_FEED_RECORDS};
 use super::super::{FileCaptureError, FileOversight, JournalError, JournalFailure, JournalIo};
-use super::super::super::super::super::{Event, Machine, Transition, journal};
+use super::super::super::super::super::{Event, Transition, journal};
 use super::super::super::{FilePublicationCapture, SourceBinding};
 use super::super::super::super::witness_gate::{WitnessEvent, freshness::FreshnessEvent};
 use crate::action::ElapsedTick;
 use crate::action::consequence::delivery::publication_gate::changes::{PublicationChangeReport, PublicationChangeStatus};
 use crate::action::consequence::delivery::publication_gate::changes::freshness::{PublicationFreshnessStatus, PublicationHeartbeat};
+use crate::action::consequence::delivery::persistent::observed::decoder::{DecoderEvent, learned::LearnedEvent};
 use crate::Error;
 use std::io;
 use std::rc::Rc;
@@ -83,7 +84,7 @@ impl FileOversight {
         // The original encoder checks EVERY prefix, including recovery reserves,
         // before candidate execution. No special batch exemption or new wire tag.
         let mut bytes = journal::encode(&self.profile, self.store.identity(), &history)?;
-        let mut candidate = Machine::replay(&self.profile, &self.events)?;
+        let (mut candidate, retain_replay) = self.replay_control_candidate()?;
         let mut changes = Vec::new();
         changes.try_reserve_exact(added - 1).map_err(|_| Error::Limit)?;
         for event in &history[self.events.len()..] {
@@ -126,9 +127,13 @@ impl FileOversight {
             return Err(error);
         }
         for event in &history[self.events.len()..] { self.source_operation_committed(event); }
+        // The retired live owner represents the PRE-batch prefix. Every notice,
+        // heartbeat and capture in this acknowledged suffix still needs replay.
+        let through = self.events.len();
         self.events = history;
-        self.machine = candidate;
+        let retired = std::mem::replace(&mut self.machine, candidate);
         self.fault = None;
+        if retain_replay { self.retain_control_replay(through, retired); }
         Ok(report)
     }
 
@@ -137,9 +142,22 @@ impl FileOversight {
 // Shared by live catch-up and the unexposed atomic completion candidate.
 pub(in crate::action::consequence::delivery::persistent::observed) fn check_feed_overlap(
     history: &[Event], batch: &PublicationFeedBatch, through: u64) -> Result<(), Error> {
-    let bootstrap = history.iter().find_map(|event| match event {
-        Event::PublicationWitness(WitnessEvent::ChangeProfile(policy)) => Some(policy.after), _ => None,
-    }).ok_or(Error::Incomplete)?;
+    let mut bootstrap = None;
+    for event in history {
+        let after = match event {
+            Event::PublicationWitness(WitnessEvent::ChangeProfile(policy)) => Some(policy.after),
+            Event::Decoder(DecoderEvent::Learned(LearnedEvent::Enable(config))) => {
+                // Learned Enable can own the original feed bootstrap. Read only
+                // its independently bound exact runtime recipe, never reconstruct
+                // a configuration or current evidence from saved journal bytes.
+                config.runtime()?.required_publication_validation()
+                    .and_then(|profile| profile.feed).map(|feed| feed.changes.after)
+            }
+            _ => None,
+        };
+        if after.is_some() { bootstrap = after; break; }
+    }
+    let bootstrap = bootstrap.ok_or(Error::Incomplete)?;
     let mut seen = [false; MAX_FEED_RECORDS];
     for event in history {
         let Event::PublicationWitness(WitnessEvent::Change(prior)) = event else { continue; };

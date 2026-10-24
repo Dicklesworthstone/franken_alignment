@@ -1,5 +1,45 @@
 # Implementation status · design revision 0.3
 
+## 2026-10-24: retain acknowledged replay custody through publication acquisition
+
+Producer catch-up now recognizes the original feed cut inside an independently
+bound learned Enable configuration. It uses the exact runtime registration and
+keeps the original source, conflicting-overlap and missing-history checks. This
+repairs the live coupled-producer path for the preceding learned registration.
+
+Publication input withdrawal, freshness persistence, direct capture installation
+and coupled feed ingestion now reuse the existing control replay continuation.
+They retain original preflights, fresh external acquisition, canonical encoding
+and acknowledgment. A successful feed batch retains the actual retired machine
+at its pre-batch event count; every notice, heartbeat and capture in its suffix
+must still replay. Cold owners retain their original behavior.
+
+The consuming `FileLearnedReplayContinuation::retain_for_control` returns an
+already acknowledged same-owner predecessor to the existing cache without a
+write, clock observation, numerical operation or effect key. It rejects foreign,
+stale, recovered and storage-faulted owners, validates existing custody and keeps
+a newer verified prefix. Cooperative raw and owned forecast steppers return their
+terminal carry while preserving the original result and interruption latch.
+
+All 31 public integration functions pass: ten learned publication functions,
+including four new cache/custody regressions, and 21 unchanged witness, snapshot
+fallback and producer-driver functions. Warm and explicitly cold owners retain
+equal publication outcomes, numerical work and independently replayed historical
+state. The producer pair exercises a two-notice/heartbeat/capture batch, lost
+input and contradictory already-acknowledged history. Handback itself leaves
+canonical bytes and live inspection unchanged; actual storage failure remains
+unavailable. The initial twin fixture omitted the required fresh acquisition
+after authorization consumed its capture. That failure is retained; the fixture
+now asserts consumption and reacquires through the original readers before
+dispatch, without weakening the native gate.
+
+Standard compiler checking and independent source review pass. Runtime uses the
+qualified nightly's official Cranelift library and standard LLVM test harnesses
+with 32 MiB stacks. The required full xtask still refuses the unchanged dependency
+graph before formatting, Clippy or full-suite execution. This is a native
+execution improvement, not a performance SLO, full FA-062 packet or release
+qualification. See [learned publication replay](docs/LEARNED_PUBLICATION_REPLAY.md).
+
 ## 2026-10-23: bind final-publication witnesses to learned ownership
 
 `FileLearnedConfig::with_required_publication_validation` freezes the original
