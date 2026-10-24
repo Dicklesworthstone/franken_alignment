@@ -43,6 +43,14 @@ admission guard before formatting, Clippy or tests. Its first dispatch refused
 `RCH-I003` before execution; the admitted retry used one Cargo job. No local
 fallback occurred.
 
+The twelve qualified Rust files are committed byte-for-byte in
+`cafce41da3dc909bb93de9d98991158d467c8a86` on
+`train/navyheron/native-source-leases-20261024`. A pre-existing shared Git index
+lock prevented ordinary staging. A private index recorded only the seventeen
+owned code/test/contract/status/tracker paths on that isolated branch; shared
+HEAD, staging and the ambiguous lock are preserved. Integration into shared HEAD
+remains pending resolution of that lock's ownership.
+
 Fourteen original failure IDs now have scoped passing evidence, leaving 37 of
 the preceding 51-ID unresolved inventory. This is not a new complete operator
 suite count. Complete source/package admission, Clippy, operator/workspace runtime
