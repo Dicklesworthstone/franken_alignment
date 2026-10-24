@@ -40,6 +40,11 @@ The producer's original `opaque` lane must contain a complete native
 a structured snapshot is available. A nonempty structured recipe still requires
 its structured input and cannot fall back to an opaque-only source.
 
+Coupled preparation reports the selected whole-input or structured binding
+context beside the original native error. Missing opaque input retains the native
+`Contract(Incomplete)` refusal and quarantine; diagnostic context performs no
+second source read, changes no acquisition order and supplies no fallback input.
+
 Use the existing commands with this profile:
 
 ```text
