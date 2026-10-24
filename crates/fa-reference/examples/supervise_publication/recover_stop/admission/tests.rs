@@ -2,6 +2,7 @@
 use super::*;
 #[path = "../../../../tests/support/file_oversight.rs"]
 mod fixture;
+use fa_reference::action::ActionState;
 use fa_reference::action::consequence::delivery::persistent::RecoveryReserve;
 use fa_reference::strict_json::{self, Json, Limits};
 use fixture::Directory;
@@ -152,8 +153,52 @@ fn explicit_drain_preserves_original_executed_and_expired_outcomes_after_clock_f
                     .as_array()
                     .unwrap()
                     .len(),
+                0
+            );
+            assert_eq!(
+                value.get("unresolved").unwrap().as_array().unwrap().len(),
                 1
             );
+            let after = FileOversight::read_publication(&c.store, &c.profile).unwrap();
+            assert_eq!(after.control.ledger.stages[&1], ActionState::Unknown);
+            assert_eq!(after.control.ledger.reserved, 0);
+            // Expired retention is still query-only Unknown. A second explicit
+            // drain cannot abandon it, refund it or manufacture nonexecution.
+            let mut repeated = Vec::new();
+            assert!(
+                run_with_elapsed(
+                    &c,
+                    Phase::Drain,
+                    900,
+                    || Ok(ElapsedTick(2000)),
+                    &mut || Duration::ZERO,
+                    &mut repeated
+                )
+                .unwrap_err()
+                .contains("unresolved obligations")
+            );
+            let repeated = json(&repeated);
+            assert_eq!(repeated.get("drained").unwrap().as_bool(), Some(false));
+            assert_eq!(repeated.get("charged").unwrap().as_str(), Some("16"));
+            assert_eq!(
+                repeated
+                    .get("irrecoverable")
+                    .unwrap()
+                    .as_array()
+                    .unwrap()
+                    .len(),
+                0
+            );
+            let retained = FileOversight::read_publication(&c.store, &c.profile).unwrap();
+            assert_eq!(retained.control.ledger.stages[&1], ActionState::Unknown);
+            assert_eq!(
+                retained.control.ledger.charged,
+                after.control.ledger.charged
+            );
+            assert_eq!(retained.control.ledger.reserved, 0);
+            assert_eq!(retained.executions, after.executions);
+            assert_eq!(retained.payload, after.payload);
+            assert_eq!(retained.stop, after.stop);
         }
     }
 }

@@ -12,6 +12,14 @@
   original failures pass with no newly failing ID; retention disagreements stay
   red. Owned formatting/all-target compilation pass, canonical admission still
   fails, and the original P0 remains open. No production behavior changed.
+- Retain the complete operator result at the same source: 726 passed/8 failed,
+  zero ignored/filtered. Three previously passing functions failed outside the
+  stop group and remain under investigation; this is not regression-free
+  qualification. Retain the first Clippy/component refusals; a subsequent
+  admitted Clippy run failed on 80 library errors before later targets.
+- Refresh the complete reviewer-peer target (7 passed) and `fa-journal` package,
+  including 13 compile-fail doctests, at the same frozen source. Preserve their
+  separate denominators and the cancelled-before-start journal attempt.
 
 ## 2026-10-24: reach the intended topology and Andon fixture boundaries
 

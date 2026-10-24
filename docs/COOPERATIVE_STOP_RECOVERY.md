@@ -87,3 +87,11 @@ actual executed versus irrecoverably unknown effects, and elapsed/terminal-clock
 unwinds with corrected retries. Existing command tests are unchanged except for
 registering this new test module. These 14 new tests and the ownership doctests
 remain unexecuted until exact-revision RCH verification; missing RCH is not a pass.
+
+On 2026-10-24, source `81365a31` executed the complete original 50-function
+operator stop namespace on qualified RCH: 48 passed, two retention-state
+disagreements failed, zero ignored. The cumulative budget/lock case and original
+executed/unknown accounting case passed with all original state assertions.
+The complete operator inventory at this source failed 726/8. This is later scoped
+operator evidence; the preparation-time nonexecution statements above remain
+historical, and no library/doctest or full qualification pass is inferred.

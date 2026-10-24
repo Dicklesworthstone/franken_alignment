@@ -78,6 +78,14 @@ transaction or a hard-real-time shutdown guarantee.
 
 ## Verification status
 
+On 2026-10-24, source `81365a31` passed both complete original phase parents
+for capacity/command routing and failed/panicking/slow clocks: two passed, zero
+failed/ignored, 732 filtered on qualified RCH. Empty and dispatched-liability
+cases both executed without changing production clocks or reserve limits. The
+same-source original stop namespace finished 48/2 and the complete operator
+inventory 726/8, so these scoped results do not qualify the entire feature or
+close FA-014. The preparation-time nonexecution account below remains historical.
+
 Eight new regression functions use actual native file owners, original topology
 parsing/certification and the real executable dispatcher. Coverage includes both
 profile versions, source/clock-free stop, stopped topology admission, exact

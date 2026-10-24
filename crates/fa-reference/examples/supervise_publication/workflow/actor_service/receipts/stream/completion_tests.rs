@@ -17,6 +17,7 @@ fn directory() -> Directory {
         NEXT.fetch_add(1, Ordering::Relaxed)
     )))
 }
+use fa_reference::action::ActionState;
 use fa_reference::action::consequence::delivery::persistent::Reconciliation;
 use fa_reference::action::consequence::delivery::persistent::observed::guarded::{
     FileRecoveryFloor, anchored::MAX_HISTORY_ANCHOR_BYTES,
@@ -200,12 +201,18 @@ fn expired_tail_is_reported_after_selected_receipt_and_survives_empty_repeat_swe
         ));
         let error = service.unwrap_err();
         assert!(error.contains("reconciliation is incomplete"));
-        assert!(error.contains("IrrecoverablyUnknown"));
-        if !repeat {
-            assert!(error.contains("RetentionExpired"));
-        } else {
-            assert!(error.contains("sweep=Some({})"), "{error}");
-        }
+        // Retention expiry never performs the native explicit abandonment.
+        // Unknown is visited again on repeat; the empty-sweep projection has a
+        // separate, explicitly synthetic unit control in completion.rs.
+        assert!(
+            error.contains("outstanding={2: Unknown}"),
+            "repeat={repeat}: {error}"
+        );
+        assert!(
+            error.contains("RetentionExpired"),
+            "repeat={repeat}: {error}"
+        );
+        assert!(!error.contains("IrrecoverablyUnknown"));
         let state =
             FileOversight::read_stream_publication(&config.store, &config.profile, settings.stream)
                 .unwrap();
@@ -215,6 +222,11 @@ fn expired_tail_is_reported_after_selected_receipt_and_survives_empty_repeat_swe
             before.publication.control.ledger.charged
         );
         assert_eq!(state.confirmed, before.confirmed);
+        assert_eq!(
+            state.publication.control.ledger.stages[&2],
+            ActionState::Unknown
+        );
+        assert_eq!(state.publication.control.ledger.reserved, 0);
         assert!(!state.published.finished());
     }
 }
@@ -249,6 +261,9 @@ fn matched_published_tail_settles_and_receipt_only_does_not_claim_a_sweep() {
 fn late_expiry_retains_acknowledged_sweep_instead_of_only_a_startup_error() {
     let root = directory();
     let (config, actor, settings, _) = seed(&root, false);
+    let original_state =
+        FileOversight::read_stream_publication(&config.store, &config.profile, settings.stream)
+            .unwrap();
     let canonical = config.store.join("delivery.bin");
     let before = fs::read(&canonical).unwrap();
     let error = serve_reconciled(
@@ -269,9 +284,27 @@ fn late_expiry_retains_acknowledged_sweep_instead_of_only_a_startup_error() {
     assert!(error.contains(EXPIRED));
     assert!(error.contains("acknowledged stream recovery"));
     assert!(error.contains("RetentionExpired"));
-    assert!(error.contains("IrrecoverablyUnknown"));
+    assert!(error.contains("outstanding={2: Unknown}"));
+    assert!(!error.contains("IrrecoverablyUnknown"));
     assert_ne!(fs::read(canonical).unwrap(), before);
     assert!(!actor.socket.exists());
+    let after =
+        FileOversight::read_stream_publication(&config.store, &config.profile, settings.stream)
+            .unwrap();
+    assert_eq!(
+        after.publication.control.ledger.stages[&2],
+        ActionState::Unknown
+    );
+    assert_eq!(
+        after.publication.control.ledger.charged,
+        original_state.publication.control.ledger.charged
+    );
+    assert_eq!(after.publication.control.ledger.reserved, 0);
+    assert_eq!(
+        after.publication.executions,
+        original_state.publication.executions
+    );
+    assert_eq!(after.confirmed, original_state.confirmed);
 }
 
 #[test]

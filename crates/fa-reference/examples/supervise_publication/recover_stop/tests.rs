@@ -3,6 +3,7 @@
 use super::*;
 use crate::{config::CLOCK_DOMAIN, workflow};
 use fa_reference::Snapshot;
+use fa_reference::action::ActionState;
 use fa_reference::action::consequence::delivery::persistent::RecoveryReserve;
 use fa_reference::action::consequence::delivery::persistent::observed::reviewer::client::{
     ReviewClientProgress, ReviewerClient, ReviewerExpectation,
@@ -333,11 +334,50 @@ fn expired_dispatched_work_returns_pending_json_and_retains_its_charge() {
     assert_eq!(json.get("unresolved").unwrap().as_array().unwrap().len(), 1);
     assert_eq!(
         json.get("irrecoverable").unwrap().as_array().unwrap().len(),
-        1
+        0
     );
     let after = FileOversight::read_publication(&c.store, &c.profile).unwrap();
     assert_eq!(after.executions, 0);
     assert_eq!(after.control.ledger.charged, 4);
+    assert_eq!(after.control.ledger.reserved, 0);
+    assert_eq!(after.control.ledger.stages[&1], ActionState::Unknown);
+    assert_eq!(after.payload, before.payload);
+    let mut repeated = Vec::new();
+    assert!(
+        run(&c, operation, || ElapsedTick(tick), &mut repeated)
+            .unwrap_err()
+            .contains("unresolved obligations")
+    );
+    let repeated = output(&repeated);
+    assert_eq!(
+        repeated.get("status").unwrap().as_str(),
+        Some("stopped_pending")
+    );
+    assert_eq!(
+        repeated
+            .get("unresolved")
+            .unwrap()
+            .as_array()
+            .unwrap()
+            .len(),
+        1
+    );
+    assert_eq!(
+        repeated
+            .get("irrecoverable")
+            .unwrap()
+            .as_array()
+            .unwrap()
+            .len(),
+        0
+    );
+    let retained = FileOversight::read_publication(&c.store, &c.profile).unwrap();
+    assert_eq!(retained.control.ledger.stages[&1], ActionState::Unknown);
+    assert_eq!(retained.control.ledger.charged, 4);
+    assert_eq!(retained.control.ledger.reserved, 0);
+    assert_eq!(retained.executions, 0);
+    assert_eq!(retained.payload, after.payload);
+    assert_eq!(retained.stop, after.stop);
 }
 
 #[test]

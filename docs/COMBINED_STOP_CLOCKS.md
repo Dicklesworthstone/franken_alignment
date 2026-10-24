@@ -51,3 +51,12 @@ replacement during acquisition. Existing assertions remain unchanged. These test
 have not executed: remote-only RCH targeted and full xtask launches cannot reach
 Cargo in the editing environment. Source/hash/patch checks are not compilation,
 rustfmt, Clippy, runtime or production qualification. FA-014 remains open.
+
+On 2026-10-24, source `81365a31` executed all 50 original operator stop functions
+on qualified RCH: 48 passed, two retention-state disagreements failed, none were
+ignored. The cumulative Ready/acquisition boundaries and mediated every-cut
+function passed. This later scoped execution does not replace the historical
+unexecuted status above or establish that every public/library target passed.
+The complete operator inventory failed 726/8; canonical dependency admission
+also failed, and a separate Clippy run failed on 80 library errors before later
+targets. FA-014 and full qualification stay open.

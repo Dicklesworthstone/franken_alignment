@@ -31,13 +31,43 @@ capability or independent certification.
 Qualified `nightly-2026-09-08`, default stack and standard compiler settings were
 used. Owned formatting and workspace/all-target compilation passed at this
 source. The canonical driver executed and refused the unchanged initial
-dependency-admission guard before downstream gates. A separate Clippy refresh
-was refused before execution with RCH `missing_runtime`; the qualified-component
-setup job was then refused by slot admission (four estimated cores versus two
-available on the requested worker). There is no fresh Clippy result for this
-source; the earlier 80-error count remains historical. The complete unfiltered
-734-function operator run at this same source is in progress; no result is yet
-claimed. The original P0 and all acceptance criteria remain open.
+dependency-admission guard before downstream gates. The first Clippy refresh
+was refused before execution with RCH `missing_runtime`; its qualified-component
+setup was refused by slot admission (four estimated cores versus two available).
+A subsequent admitted `ts1` run actually executed Clippy with warnings denied
+at this exact source and failed on **80 library errors**, exit 101. That is a
+fresh measurement, not an all-target lint inventory: later targets were not
+reached. The complete unfiltered
+734-function operator run at this source finished **726 passed, 8 failed, zero
+ignored/filtered**, 1115.89 seconds, exit 101. All six addressed stop failures
+passed, but three previously passing functions failed: resident native sequence,
+native checked create/recovery, and recovered qualification. Their actor-response,
+source-reference timeout/broken-pipe and helper-join failure chains remain open;
+no host-timing cause or regression-free result is inferred. Together with the
+five other current failures and one historical intermittent sequence case, nine
+per-ID investigations remain. The original P0 and all acceptance criteria remain
+open.
+
+An unchanged-source control of exactly those three newly failing functions
+passed on admitted `vmi1149989`: **3 passed, zero failed/ignored, 731 filtered**,
+19.75 seconds. This demonstrates that the full-run failures did not reproduce in
+that selected context. It is not a repair or proof of a host cause; all three
+investigations remain open and the failed 726/8 result remains authoritative for
+that full execution. The attempted same-worker control refused slot admission
+under critical disk pressure before tests, without a guard override.
+
+The original explicit reviewer-peer target also passed at this source on
+`vmi1149989`: **7 passed, zero failed/ignored/filtered**, 2.36 seconds, including
+the actual pinned child and both-key publication. Child-helper repeats are not
+added to that denominator. Its independent transport/binding refusals remain
+covered; this does not settle the separate operator or dependency/lint failures.
+
+The complete `fa-journal` package subsequently passed at this same source on
+`vmi1149989`, including all 13 compile-fail doctests; no failures, ignored tests
+or filters were reported. The first attempt remained queued and was cancelled
+before start with terminal exit 130 before this admitted reroute. Package and
+reviewer results are separate inventories, not additions to the 734-function
+operator count or evidence for all workspace compile-fail targets.
 
 Retain the first missing-toolchain refusal, invalid installer-option attempts,
 source-owner-fenced installer refusal, missing-runtime refusal and original
