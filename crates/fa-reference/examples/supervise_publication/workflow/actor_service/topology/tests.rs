@@ -410,7 +410,25 @@ fn plain_and_checked_argument_roles_are_distinct_and_complete() {
         );
         // The actual outer router must also reject mixed topology modes.
         if args.iter().any(|arg| arg == "--topology-profile") {
-            assert_eq!(super::super::command(&args, None), Err(USAGE.into()));
+            let result = super::super::command(&args, None);
+            if args
+                .first()
+                .is_some_and(|mode| mode == "create-learned-generated")
+            {
+                // Learned creation owns its topology option and complete grammar.
+                // Its mixed positional roles must refuse through that owner,
+                // before attempting to read the deliberately missing paths.
+                let error = result.unwrap_err();
+                assert!(
+                    error.starts_with(
+                        "create-learned-generated CONFIG LEARNED_RECIPE REVIEWER_PROFILE "
+                    ),
+                    "{error}"
+                );
+                assert_ne!(error, USAGE);
+            } else {
+                assert_eq!(result, Err(USAGE.into()));
+            }
         }
     }
     assert_eq!(

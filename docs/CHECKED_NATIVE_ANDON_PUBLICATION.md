@@ -40,3 +40,15 @@ preserved except for the new explicit optional publication field in their helper
 Runtime qualification remains pending the repository's required RCH gate.
 Source construction and Git-object checks are not compilation or execution
 evidence.
+
+## Scoped execution update (2026-10-24)
+
+The original stronger-history fixture omitted the required feed for its waiting
+schema and failed before reaching `simple_limits()`. It now decodes a complete
+waiting profile, then requires the specific no-downgrade refusal, with its feed
+still absent and no store created. All four original functions, including plain
+checked creation/recovery and changed/omitted-limit refusals, passed within the
+38-function combined run at `9a8cf8f0` on the qualified standard compiler and
+default stack. See `IMPLEMENTATION_STATUS.md` for exact source and denominators.
+The required canonical driver still refuses dependency admission; this scoped
+result does not qualify a packet, release or stronger-profile composition.

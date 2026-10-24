@@ -174,16 +174,22 @@ fn stronger_publication_history_profiles_refuse_instead_of_downgrading() {
             r#"{{
       "schema":"fa.supervised-witnesses/4","source":91,
       "original":"{}","current":"{}","max_retries":2,
+      "feed":{{"source":41,"path":"{}","after":0,"clock":"unix_milliseconds",
+        "max_age_ms":5000,"lookup":{{"steps":10000,"bytes":1048576}}}},
       "limits":{{"bindings":8,"steps":32,"value_bytes":4096}},
       "requests":[{{"kind":"exact_value","key":7,"role":"policy_input"}}]
     }}"#,
             root.0.join("o").display(),
-            root.0.join("c").display()
+            root.0.join("c").display(),
+            root.0.join("missing-feed.bin").display()
         )
         .as_bytes(),
     )
     .unwrap();
-    assert!(profile.simple_limits().is_err());
+    let error = profile.simple_limits().unwrap_err();
+    assert!(error.contains("not downgraded"), "{error}");
+    assert!(!root.0.join("missing-feed.bin").exists());
+    assert!(!root.0.join("store").exists());
 }
 
 #[test]

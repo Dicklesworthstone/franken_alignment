@@ -80,3 +80,16 @@ attempted through `RCH_REQUIRE_REMOTE=1 rch exec -- ...`. Each failed with exit
 127 because `rch` was missing, before compilation or test execution. No build,
 formatting, Clippy, runtime or release pass is claimed. Existing qualification
 records, acceptance gates and Beads statuses are unchanged.
+
+## Scoped execution update (2026-10-24)
+
+All seven original functions now execute successfully within the 38-function
+combined selection at `9a8cf8f0`, using the qualified standard compiler/default
+stack. This includes actual actor/helper/human sockets, permitted publication,
+human rejection, witness/topology loss, unrelated-change allowance and original
+startup refusals. The outer-routing fixture now expects the learned grammar
+diagnostic for learned-owned topology arguments, while every original direct
+topology refusal retains its exact diagnostic. No production routing changed.
+The earlier exit-127 attempts remain historical failures. Exact source, counts
+and the unchanged canonical dependency-admission refusal are recorded in
+`IMPLEMENTATION_STATUS.md`; complete project qualification remains open.
