@@ -19,6 +19,7 @@ use std::fs::{self, DirBuilder};
 use std::io;
 use std::os::unix::fs::DirBuilderExt;
 use std::os::unix::net::{UnixListener, UnixStream};
+use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::Duration;
 
 #[path = "../../../tests/support/file_oversight.rs"]
@@ -26,6 +27,7 @@ mod fixture;
 
 const OPERATION: u64 = 7;
 const RUNTIME_MS: u64 = 10;
+static NEXT: AtomicU64 = AtomicU64::new(0);
 
 struct Native {
     root: fixture::Directory,
@@ -44,7 +46,15 @@ struct Native {
 
 impl Native {
     fn new() -> Self {
-        let root = fixture::Directory::new();
+        let stamp = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap()
+            .as_nanos();
+        let root = fixture::Directory(crate::test_directory::create(format!(
+            "fa-stop-deadline-{}-{stamp}-{}",
+            std::process::id(),
+            NEXT.fetch_add(1, Ordering::Relaxed)
+        )));
         let directory = root.0.join("peer");
         DirBuilder::new().mode(0o700).create(&directory).unwrap();
         let mut profile = fixture::profile();

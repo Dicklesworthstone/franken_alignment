@@ -13,7 +13,9 @@ use fa_reference::action::consequence::delivery::persistent::observed::reviewer:
     ReviewDecision, ReviewPacket,
 };
 use fa_reference::action::consequence::oversight::actor::{ActorOutcome, ActorProposal, Knowledge};
-use fa_reference::action::consequence::oversight::actor_wire::{Command, WireError, encode_command};
+use fa_reference::action::consequence::oversight::actor_wire::{
+    Command, WireError, encode_command,
+};
 use fa_reference::action::consequence::oversight::evidence_source::{
     EvidenceIdentity, EvidenceSnapshot, FileEvidenceSource,
 };
@@ -37,12 +39,12 @@ static NEXT: AtomicU64 = AtomicU64::new(0);
 struct Directory(PathBuf);
 impl Directory {
     fn new() -> Self {
-        let path = std::env::temp_dir().join(format!(
+        let path = crate::test_directory::create(format!(
             "fa-continuation-{}-{}",
             std::process::id(),
             NEXT.fetch_add(1, Ordering::Relaxed)
         ));
-        std::fs::create_dir(&path).unwrap();
+
         Self(path)
     }
 }
@@ -58,42 +60,66 @@ fn configured(root: &Directory, epoch: u64) -> Config {
     let mut config = Config::decode(TEMPLATE).unwrap();
     config.store = root.0.join("store");
     config.source = FileEvidenceSource::new(
-        root.0.join("evidence.json"), 51, config.profile.delivery.scope, 1_048_576,
-    ).unwrap();
+        root.0.join("evidence.json"),
+        51,
+        config.profile.delivery.scope,
+        1_048_576,
+    )
+    .unwrap();
     config.timing.poll_ms = 1;
     config.timing.runtime_ms = 15_000;
     config.timing.cleanup_ms = 2_000;
-    config.programs = ["alpha", "beta"].into_iter().map(|member| {
-        let program = HelperProgram::new(
-            std::env::current_exe().unwrap(),
-            root.0.clone(),
-            vec!["--exact".into(), CHILD.into(), "--nocapture".into()],
-            BTreeMap::from([
-                (OsString::from(MEMBER), OsString::from(member)),
-                (OsString::from(EPOCH), OsString::from(epoch.to_string())),
-            ]),
-        ).unwrap();
-        (member.to_owned(), program)
-    }).collect();
+    config.programs = ["alpha", "beta"]
+        .into_iter()
+        .map(|member| {
+            let program = HelperProgram::new(
+                std::env::current_exe().unwrap(),
+                root.0.clone(),
+                vec!["--exact".into(), CHILD.into(), "--nocapture".into()],
+                BTreeMap::from([
+                    (OsString::from(MEMBER), OsString::from(member)),
+                    (OsString::from(EPOCH), OsString::from(epoch.to_string())),
+                ]),
+            )
+            .unwrap();
+            (member.to_owned(), program)
+        })
+        .collect();
     config
 }
 
 fn evidence(root: &Directory, config: &Config) {
     let snapshot = EvidenceSnapshot::new(
-        EvidenceIdentity { source: 51, generation: 1, scope: config.profile.delivery.scope },
+        EvidenceIdentity {
+            source: 51,
+            generation: 1,
+            scope: config.profile.delivery.scope,
+        },
         Snapshot {
             semantic_epoch: 1,
             complete: true,
             values: BTreeMap::from([(7, b"ok".to_vec())]),
         },
-        ["alpha", "beta"].into_iter().map(|member| (
-            member.to_owned(), format!("continuation evidence: {member}").into_bytes(),
-        )).collect(),
-    ).unwrap();
+        ["alpha", "beta"]
+            .into_iter()
+            .map(|member| {
+                (
+                    member.to_owned(),
+                    format!("continuation evidence: {member}").into_bytes(),
+                )
+            })
+            .collect(),
+    )
+    .unwrap();
     std::fs::write(root.0.join("evidence.json"), snapshot.encode()).unwrap();
 }
 
-fn document(request: u64, payload: &[u8], target: fa_reference::action::ResolvedTarget, epoch: u64) -> Vec<u8> {
+fn document(
+    request: u64,
+    payload: &[u8],
+    target: fa_reference::action::ResolvedTarget,
+    epoch: u64,
+) -> Vec<u8> {
     encode_command(&Command::Submit {
         request,
         proposal: ActorProposal {
@@ -103,17 +129,20 @@ fn document(request: u64, payload: &[u8], target: fa_reference::action::Resolved
             deadline: ElapsedTick(100_000),
             expected_policy_epoch: epoch,
         },
-    }).unwrap()
+    })
+    .unwrap()
 }
 
 #[test]
 fn synthetic_helper_process() {
-    let Ok(member) = std::env::var(MEMBER) else { return; };
+    let Ok(member) = std::env::var(MEMBER) else {
+        return;
+    };
     let epoch = std::env::var(EPOCH).unwrap().parse::<u64>().unwrap();
     let profile = Config::decode(TEMPLATE).unwrap().profile;
-    let mut client = HelperClient::from_process_stdin(
-        profile.committee.members()[&member].profile_at(epoch),
-    ).unwrap();
+    let mut client =
+        HelperClient::from_process_stdin(profile.committee.members()[&member].profile_at(epoch))
+            .unwrap();
     let started = Instant::now();
     loop {
         assert!(started.elapsed() < Duration::from_secs(10));
@@ -122,11 +151,18 @@ fn synthetic_helper_process() {
             let input = client.input().unwrap();
             assert_eq!(input.member(), member);
             let expected = format!("continuation evidence: {member}");
-            assert!(input.actual_input().submitted_bytes().windows(expected.len())
-                .any(|bytes| bytes == expected.as_bytes()));
+            assert!(
+                input
+                    .actual_input()
+                    .submitted_bytes()
+                    .windows(expected.len())
+                    .any(|bytes| bytes == expected.as_bytes())
+            );
             client.respond(Verdict::Allow, member.as_bytes()).unwrap();
         }
-        if client.phase() == ClientPhase::ReplySent { return; }
+        if client.phase() == ClientPhase::ReplySent {
+            return;
+        }
         std::thread::sleep(Duration::from_millis(1));
     }
 }
@@ -143,8 +179,16 @@ fn reviewer(config: &Config, request: u64) -> std::thread::JoinHandle<ReviewPack
         let stream = loop {
             match UnixStream::connect(&path) {
                 Ok(stream) => break stream,
-                Err(error) if matches!(error.kind(), io::ErrorKind::NotFound | io::ErrorKind::ConnectionRefused) => {
-                    assert!(started.elapsed() < Duration::from_secs(10), "missing review offer: {error:?}");
+                Err(error)
+                    if matches!(
+                        error.kind(),
+                        io::ErrorKind::NotFound | io::ErrorKind::ConnectionRefused
+                    ) =>
+                {
+                    assert!(
+                        started.elapsed() < Duration::from_secs(10),
+                        "missing review offer: {error:?}"
+                    );
                     std::thread::sleep(Duration::from_millis(1));
                 }
                 Err(error) => panic!("review connection: {error:?}"),
@@ -169,8 +213,13 @@ fn reviewer(config: &Config, request: u64) -> std::thread::JoinHandle<ReviewPack
 fn assert_executed(result: &workflow::RunResult) {
     assert!(result.failure.is_none(), "{:?}", result.failure);
     assert_eq!(result.cleanup_pending, 0);
-    assert!(matches!(&result.response.result,
-        Ok(Knowledge::Known { value: ActorOutcome::Executed, .. })));
+    assert!(matches!(
+        &result.response.result,
+        Ok(Knowledge::Known {
+            value: ActorOutcome::Executed,
+            ..
+        })
+    ));
 }
 
 fn first_publication(root: &Directory) -> Vec<u8> {
@@ -195,7 +244,8 @@ fn successive_publications_keep_the_original_budget_history_and_require_fresh_ke
         let epoch = before.control.ledger.epoch.checked_add(1).unwrap();
         let next = document(request, payload, before.target, epoch);
         let human = reviewer(&config, request);
-        let result = submit_existing(config, &next, None, None, || ElapsedTick(1_000 + request)).unwrap();
+        let result =
+            submit_existing(config, &next, None, None, || ElapsedTick(1_000 + request)).unwrap();
         let packet = human.join().unwrap();
         assert_executed(&result);
         assert_eq!(packet.action().spec().payload, payload);
@@ -205,11 +255,17 @@ fn successive_publications_keep_the_original_budget_history_and_require_fresh_ke
         charged += payload.len() as u64;
         assert_eq!(after.executions, request);
         assert_eq!(after.payload, payload);
-        assert_eq!(after.target.expected_version, before.target.expected_version + 1);
+        assert_eq!(
+            after.target.expected_version,
+            before.target.expected_version + 1
+        );
         assert_eq!(after.control.ledger.epoch, epoch);
         assert_eq!(after.control.ledger.charged, charged);
         assert_eq!(after.control.ledger.reserved, 0);
-        assert_eq!(after.control.ledger.available, config.profile.delivery.total - charged);
+        assert_eq!(
+            after.control.ledger.available,
+            config.profile.delivery.total - charged
+        );
         assert_eq!(after.control.ledger.stages.len(), request as usize);
     }
 }
@@ -226,7 +282,10 @@ fn expired_exact_retry_is_query_only_without_source_helpers_or_reviewer() {
     let config = configured(&root, 2);
     let changed = document(1, b"changed", config.profile.delivery.target, 0);
     let conflict = submit_existing(config, &changed, None, None, || ElapsedTick(200_001)).unwrap();
-    assert_eq!(conflict.response.result, Err(WireError::IdempotencyConflict));
+    assert_eq!(
+        conflict.response.result,
+        Err(WireError::IdempotencyConflict)
+    );
     let config = configured(&root, 2);
     let after = FileOversight::read_publication(&config.store, &config.profile).unwrap();
     assert_eq!(after.executions, 1);
@@ -241,11 +300,21 @@ fn new_stale_epoch_is_not_rewritten_to_pass_recovery() {
     first_publication(&root);
     let mut config = configured(&root, 0);
     let before = FileOversight::read_publication(&config.store, &config.profile).unwrap();
-    let stale = document(2, b"not authorized", before.target, before.control.ledger.epoch);
+    let stale = document(
+        2,
+        b"not authorized",
+        before.target,
+        before.control.ledger.epoch,
+    );
     config.programs.clear();
     let result = submit_existing(config, &stale, None, None, || ElapsedTick(1_001)).unwrap();
-    assert!(!matches!(result.response.result,
-        Ok(Knowledge::Known { value: ActorOutcome::Executed, .. })));
+    assert!(!matches!(
+        result.response.result,
+        Ok(Knowledge::Known {
+            value: ActorOutcome::Executed,
+            ..
+        })
+    ));
     assert_eq!(result.cleanup_pending, 0);
     let config = configured(&root, 1);
     let after = FileOversight::read_publication(&config.store, &config.profile).unwrap();
@@ -265,7 +334,12 @@ fn missing_store_and_malformed_documents_never_create_a_replacement() {
     let next = document(1, b"new", config.profile.delivery.target, 1);
     assert!(submit_existing(config, &next, None, None, || ElapsedTick(1_001)).is_err());
     assert!(!store.exists());
-    assert!(submit_existing(configured(&root, 1), b"{}", None, None, || ElapsedTick(1_001)).is_err());
+    assert!(
+        submit_existing(configured(&root, 1), b"{}", None, None, || ElapsedTick(
+            1_001
+        ))
+        .is_err()
+    );
     assert!(!store.exists());
 }
 
