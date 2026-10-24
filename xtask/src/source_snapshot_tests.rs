@@ -53,7 +53,12 @@ const SNAPSHOT_PATHS: &[&str] = &[
     "Cargo.lock",
     "Cargo.toml",
     "LICENSE",
+    "crates/fa-journal/Cargo.toml",
+    "crates/fa-journal/src/lib.rs",
+    "crates/fa-journal/tests/replay.rs",
     "crates/fa-reference/Cargo.toml",
+    "crates/fa-reference/examples/publication.rs",
+    "crates/fa-reference/fixtures/publication.json",
     "crates/fa-reference/src/lib.rs",
     "crates/fa-reference/tests/reference.rs",
     "registry/claims.json",
@@ -119,10 +124,24 @@ impl Sandbox {
             ),
             ("LICENSE", "snapshot test license\n"),
             (
+                "crates/fa-journal/Cargo.toml",
+                "[package]\nname = \"fa-journal\"\n",
+            ),
+            ("crates/fa-journal/src/lib.rs", "pub fn journal() {}\n"),
+            (
+                "crates/fa-journal/tests/replay.rs",
+                "#[test]\nfn replay() {}\n",
+            ),
+            (
                 "crates/fa-reference/Cargo.toml",
                 "[package]\nname = \"fa-reference\"\n",
             ),
             ("crates/fa-reference/src/lib.rs", "pub fn reference() {}\n"),
+            (
+                "crates/fa-reference/examples/publication.rs",
+                "fn main() {}\n",
+            ),
+            ("crates/fa-reference/fixtures/publication.json", "{}\n"),
             (
                 "crates/fa-reference/tests/reference.rs",
                 "#[test]\nfn reference() {}\n",
@@ -289,6 +308,63 @@ fn unlisted_new_rust_source_is_a_discovery_refusal() {
         "unlisted_file",
         "xtask/src/unlisted.rs",
     );
+}
+
+#[test]
+fn publication_example_inputs_cannot_escape_the_reviewed_source_closure() {
+    for relative in [
+        "crates/fa-reference/examples/operator_policy.json",
+        "crates/fa-reference/fixtures/operator_policy.json",
+    ] {
+        let sandbox = Sandbox::new();
+        let manifest = sandbox.manifest_bytes();
+        assert!(verify_sandbox(&sandbox, &manifest).is_verified());
+        sandbox.write(relative, "{\"policy_epoch\":2}\n");
+        assert_refusal(
+            &verify_sandbox(&sandbox, &manifest),
+            "unlisted_file",
+            relative,
+        );
+    }
+}
+
+#[test]
+fn journal_implementation_and_test_inputs_cannot_escape_the_reviewed_source_closure() {
+    for relative in [
+        "crates/fa-journal/src/unreviewed.rs",
+        "crates/fa-journal/tests/unreviewed.rs",
+    ] {
+        let sandbox = Sandbox::new();
+        let manifest = sandbox.manifest_bytes();
+        assert!(verify_sandbox(&sandbox, &manifest).is_verified());
+        sandbox.write(relative, "pub fn unreviewed() {}\n");
+        assert_refusal(
+            &verify_sandbox(&sandbox, &manifest),
+            "unlisted_file",
+            relative,
+        );
+    }
+}
+
+#[test]
+fn reviewed_journal_and_operator_bytes_stay_bound_after_discovery() {
+    for relative in [
+        "crates/fa-journal/Cargo.toml",
+        "crates/fa-journal/src/lib.rs",
+        "crates/fa-journal/tests/replay.rs",
+        "crates/fa-reference/examples/publication.rs",
+        "crates/fa-reference/fixtures/publication.json",
+    ] {
+        let sandbox = Sandbox::new();
+        let manifest = sandbox.manifest_bytes();
+        assert!(verify_sandbox(&sandbox, &manifest).is_verified());
+        sandbox.write(relative, "changed bytes at the same reviewed path\n");
+        assert_refusal(
+            &verify_sandbox(&sandbox, &manifest),
+            "digest_mismatch",
+            relative,
+        );
+    }
 }
 
 #[test]

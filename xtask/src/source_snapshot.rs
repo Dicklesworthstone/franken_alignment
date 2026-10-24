@@ -35,16 +35,21 @@ use crate::json::{Json, Limits as JsonLimits, parse};
 pub const SNAPSHOT_SCHEMA: &str = "fa.source_snapshot/1";
 
 /// Directories whose every regular file is reviewed source.
-pub const SCAN_ROOTS: [&str; 4] = [
+pub const SCAN_ROOTS: [&str; 8] = [
     "crates/fa-reference/src",
     "crates/fa-reference/tests",
+    "crates/fa-reference/examples",
+    "crates/fa-reference/fixtures",
+    "crates/fa-journal/src",
+    "crates/fa-journal/tests",
     "xtask/src",
     "xtask/tests",
 ];
 
 /// Individually named build inputs outside the scan roots.
-pub const EXPLICIT_FILES: [&str; 7] = [
+pub const EXPLICIT_FILES: [&str; 8] = [
     "crates/fa-reference/Cargo.toml",
+    "crates/fa-journal/Cargo.toml",
     "xtask/Cargo.toml",
     "Cargo.toml",
     "Cargo.lock",
@@ -872,9 +877,7 @@ fn hash_many(
                 Phase::Tool,
                 "hash_tool_output_unparsable",
                 &relatives[0],
-                format!(
-                    "expected `<64 hex><two spaces><path>`, got `{line}`; {quoted}"
-                ),
+                format!("expected `<64 hex><two spaces><path>`, got `{line}`; {quoted}"),
             )));
         };
         if !is_sha256_hex(digest) {
@@ -882,9 +885,7 @@ fn hash_many(
                 Phase::Tool,
                 "hash_tool_output_unparsable",
                 &relatives[0],
-                format!(
-                    "tool emitted `{digest}`, not 64 lowercase hex digits; {quoted}"
-                ),
+                format!("tool emitted `{digest}`, not 64 lowercase hex digits; {quoted}"),
             )));
         }
         let echoed = echoed.trim_end();
@@ -1171,13 +1172,7 @@ pub fn verify(root: &Path, manifest: &Manifest, limits: Limits) -> Result<Report
                     match hash_many(tool, &root, tail) {
                         Ok(rows) => {
                             for (relative, digest) in rows {
-                                compare(
-                                    manifest,
-                                    &relative,
-                                    &digest,
-                                    &mut verified,
-                                    &mut findings,
-                                );
+                                compare(manifest, &relative, &digest, &mut verified, &mut findings);
                             }
                         }
                         Err(batch_error) => {
