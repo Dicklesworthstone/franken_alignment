@@ -1,5 +1,50 @@
 # Implementation status · design revision 0.3
 
+## 2026-10-24: exercise pending stop/drain and every clock boundary
+
+At frozen `76bf4d57`, the complete original stop namespace reproduced **42 passed,
+8 failed, zero ignored, 684 filtered** on standard RCH `vmi1149989`. Four fixture
+files now count the existing before/after clock checks, retain the original Ready
+and before-clock cuts, and test the exact post-clock one-short/sufficient budget
+neighbors without releasing the writer lock. Post-acquisition expiry may read
+time once; it still cannot acknowledge a stop or mutate canonical/staged files.
+
+The phase fixtures now use an actual captured policy source, native congress
+review, separate human approval and original dispatch. They retain an empty
+stopped-domain control that performs no clock call or new journal event. A real
+pending counterpart needs the final event of the original three-event reserve
+and a native nonexecution receipt. Failed, panicking and slow clocks preserve
+its stopped `Unknown` state, sixteen charged units, zero executions and all
+original files until an explicit permitted drain. No native reducer, production
+deadline, journal format, authority rule or retention behavior changed.
+
+Exact source `81365a31f59a936c830396b301be83910b4c7dc5`, tree
+`9958d28331a2e4a73ae27176fba14ca9b6491cbe`, passed the two decisive phase parents
+on standard `hz4`: **2 passed, zero failed/ignored, 732 filtered**, 0.19 seconds.
+The complete original stop namespace then finished **48 passed, 2 failed, zero
+ignored, 684 filtered**, 4.99 seconds. Six original failure IDs now pass; zero
+previously passing stop IDs failed. All 50 registrations remain. The two
+retention-state disagreements remain red, with their original assertions intact.
+These are fixture repairs and native reference evidence, not new production
+capability or independent certification.
+
+Qualified `nightly-2026-09-08`, default stack and standard compiler settings were
+used. Owned formatting and workspace/all-target compilation passed at this
+source. The canonical driver executed and refused the unchanged initial
+dependency-admission guard before downstream gates. The complete unfiltered
+734-function operator run at this same source is in progress; no result is yet
+claimed. The original P0 and all acceptance criteria remain open.
+
+Retain the first missing-toolchain refusal, invalid installer-option attempts,
+source-owner-fenced installer refusal, missing-runtime refusal and original
+42/8 runtime failure under
+`/Users/jemanuel/Documents/Codex/2026-10-24/franken-alignment-stop-76bf4d57/`.
+Same-ID recovery confirmed installer exit 1; installation did not reach its
+command. No source fence or shared Git lock was removed, and no local compilation
+fallback occurred. Shared main independently incorporated these four fixture
+files and later credential-publication work. The latter is outside this frozen
+source evidence; the combined working tree is not qualified here.
+
 ## 2026-10-24: verify complete receipt, topology and checked-Andon groups
 
 The combined final selection at `9a8cf8f07b63903394500543e8e688014dad626a`

@@ -52,6 +52,15 @@ stop followed by a needed drain uses the original two-plus-one event reserve.
 The original drain renderer still returns failure for unresolved liabilities;
 no new outcome, refund, publication retry or recovery fence is manufactured.
 
+An empty domain can already be drained immediately after Stop/Fence. It must not
+consume the last reserved event merely to produce a drain-shaped result. The
+capacity and clock-failure fixtures therefore pair that empty, clock-free case
+with an actual source-bound, reviewed and separately human-approved dispatch.
+The latter retains its unknown charge after stopping until a successful native
+drain obtains nonexecution evidence; failed, panicking or slow clock acquisition
+must leave that stopped liability and its files unchanged. Synthetic review
+votes exercise this native mechanism, not human identity or detector quality.
+
 One monotonic elapsed budget begins in the actual command before CONFIG and
 PROFILE intake. The same budget is checked through custody/topology ingestion,
 every original replay event and Ready, and on both sides of a required drain

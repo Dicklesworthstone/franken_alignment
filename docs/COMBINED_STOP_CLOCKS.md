@@ -35,6 +35,13 @@ authentication. The legacy combined command still accepts its existing trusted
 infallible clock function; the newly fallible native boundary makes deadline
 refusal possible without inventing a timestamp or using a panic for control flow.
 
+The deterministic operator fixtures distinguish expiry before acquisition from
+expiry after a completed callback. The latter legitimately makes one logical
+clock call, while still preserving canonical/staged bytes and emitting no native
+acknowledgment. The cumulative-budget case retains the original Ready and
+before-clock cuts and adds the exact post-clock one-short/sufficient neighbors.
+These clarify the existing checkpoints; no deadline or production guard changes.
+
 Four authored regression functions use the original native file owners and
 operator paths for ordinary, base-guarded and topology-mediated recovery. They
 cover slow acquisition with exact full-capacity successful controls and clock-free

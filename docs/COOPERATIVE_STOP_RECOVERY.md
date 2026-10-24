@@ -58,11 +58,14 @@ revision remote-only RCH verifier. Source review is not executed qualification.
 
 `recover-stop CONFIG OPERATION` now uses this stop-only cursor directly. One
 monotonic elapsed budget from CONFIG's existing `timing.runtime_ms` is checked
-before open, before each original event and at Ready. The command executes one
-event per checkpoint; it does not reset the budget on progress or sample logical
-time during replay. Expiry drops exclusive custody without cleanup, a new stop,
-a terminal clock call or an output acknowledgment. A later explicit retry starts
-from the actual canonical file, not a serialized partial replay or saved permit.
+before open, before each original event, at Ready, and immediately before and
+after a required terminal clock acquisition. The command executes one event per
+checkpoint; it does not reset the budget on progress or sample logical time during
+replay. Expiry before acquisition makes no terminal clock call. Expiry during
+acquisition can follow one clock call, but its tick is not accepted and no cleanup,
+new stop or output acknowledgment follows. A later explicit retry starts from the
+actual canonical file, not a serialized partial replay or saved permit. Matching
+already-drained retries skip acquisition and its two checkpoints entirely.
 
 After Ready, the exact stop request comes from the same locked reconstruction,
 not a separate `read_publication` scan. Finalization and JSON reporting keep their

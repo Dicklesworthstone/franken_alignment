@@ -1,5 +1,18 @@
 # Changelog
 
+## 2026-10-24: test genuine pending drain and complete clock acquisition cuts
+
+- Preserve the original replay deadline cuts and add post-clock exact budget
+  neighbors, with unchanged writer custody, files and acknowledgment checks.
+- Use a real source-bound, independently reviewed/human-approved dispatch for
+  phase drain and clock failures; retain the empty clock-free/no-write control.
+  Verify native nonexecution settlement at the original three-event capacity.
+- Reproduce all 50 stop functions at 42 passed/8 failed; then execute the same
+  inventory at `81365a31`: 48 passed/2 failed, zero ignored, 684 filtered. Six
+  original failures pass with no newly failing ID; retention disagreements stay
+  red. Owned formatting/all-target compilation pass, canonical admission still
+  fails, and the original P0 remains open. No production behavior changed.
+
 ## 2026-10-24: reach the intended topology and Andon fixture boundaries
 
 - Supply the waiting profile's required feed before testing its specific
