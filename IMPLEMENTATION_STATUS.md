@@ -1,5 +1,77 @@
 # Implementation status · design revision 0.3
 
+## 2026-10-24: retain native reviewer deadlines while waiting for readiness
+
+The shared native and generated reviewer fixtures now use the existing verified
+readiness helper after the pathname appears, with only the **remaining** original
+ten-second setup allowance. Their original twelve-second protocol limit still
+runs from the same start. This addresses the broad run's actual
+`ConnectionRefused` race; production connection behavior and authentication,
+source, accounting and outcome assertions are unchanged.
+
+The complete original native/generated inventory plus its three existing controls
+and seven peer entries passed: **121 passed, zero failed/ignored, 612 filtered**
+on standard RCH `ts1`, default stack and qualified `nightly-2026-09-08`.
+The exact cut is `3b38f717` plus two-path overlay
+`e03882634c9457cf09adf050c28928fa414c5e47f214f5cad70df9198be5f04d`, committed in
+`bf6b085e41e126359e484f94e0ad2963d590ddb3`. Owned formatting and standard
+workspace/all-target compilation passed at that commit, warnings retained.
+The canonical driver executed there and failed the unchanged initial dependency
+guard before formatting, Clippy or workspace tests. RCH reported the same
+`j-30078706395382216` for these three commands; their separate retained logs,
+commands and start times distinguish them. Exit statuses are respectively 0/0/1.
+
+The complete **702/30 failed** operator result below remains retained. Four of
+those failures have the later checked-capture pass and the native-sharded failure
+now has repaired-source passing evidence. The granular original P0 TODO contains
+exactly 25 remaining unchecked failure IDs. This is not an unfiltered 733-entry
+pass or independent certification. Dependency/source/target/runtime admission,
+Clippy and complete project qualification remain open; no Bead or packet closes.
+
+## 2026-10-24: execute checked continuation with exact capture attempts
+
+The checked-continuation fixture had labeled every capture as native attempt 1,
+including second-action captures and later input changes. The native gate binds
+both attempt and the complete action frame, so it correctly refused those
+captures. Parameterizing the fixture's actual attempt restores the existing
+second-publication workflow without altering production validation.
+
+All eight original checked parents, a new wrong-attempt/permitted-attempt pair
+and the existing unchecked two-publication control passed: **10 passed, zero
+failed/ignored, 723 filtered**, on standard RCH `ts1`, qualified
+`nightly-2026-09-08` and default stack (`j-30078706395382212`). The new pair checks
+exact Binding/cancellation and first-publication retention versus freshly reviewed
+publication, exact second-attempt stages, five/eleven-unit charges and zero
+reservations. Original phantom, missing-witness, missing-topology, both-loss,
+human-rejection, profile, replay-expiry, receipt and CLI assertions remain.
+
+Exact Rust source is `3b38f71721c59c1e1547082d625d698df846e3e2`, the sole fixture
+path added to `d218b0b5`; passing overlay fingerprint
+`699865740dd234c5e6008ba9990026b1dc433eb2395f7af1ad790ce8c7386554`.
+Owned formatting and standard workspace/all-target compilation passed at this
+committed source on `ts1`, warnings retained. The preliminary diagnostic dispatch
+queue-timed-out with `RCH-I001`/exit 103 before execution; its temporary source
+line was byte-restored before repair. It provides no runtime evidence.
+
+Four additional original failure IDs have scoped passing evidence. The full
+732-entry run at the preceding `d218b0b5` completed **702 passed, 30 failed,
+zero ignored/filtered** (`j-30078706395382190`, `vmi1149989`, 1071.38 seconds).
+Comparing its exact outer failure set with the preceding complete 728-entry
+run finds 34 original failures now passing and zero previously passing IDs
+newly failing. That broad run predates this one-path repair/new test (latest
+inventory 733). Its 30 failures remain a failed result, including the four
+checked parents subsequently passing in the separate ten-entry selection.
+
+The broad run also reproduced a real `ConnectionRefused` in the shared native
+reviewer fixture, followed by actor/reviewer deadlines. That sharded case had
+passed in the earlier scoped 114-entry run; its TODO was reopened. The union
+inventory at that point had 26 old failure IDs without a passing latest
+resolution. The later two-path readiness repair and complete 121-entry selection
+above address that race while preserving both original deadline bounds. No red
+result is erased by retrying.
+No production feature, authority rule, dependency, source contract, format or
+deadline changed. Complete qualification and original P0 acceptance remain open.
+
 ## 2026-10-24: execute the original sequential publication integration
 
 The original 18 service/parser/client entries first completed ten passed/eight
@@ -46,8 +118,9 @@ shared HEAD/index and the pre-existing ambiguous index lock; the remaining
 service-fixture commit remains on the isolated branch. Eight additional original
 failure IDs have scoped passing evidence, leaving 29 unresolved IDs in the old
 inventory. That union count is not a complete-suite result. The full 732-entry
-operator inventory at `d218b0b5` is running after a queue-timeout refusal
-(`RCH-I001`, exit 103, no local fallback); it is not yet a pass. Dependency
+operator inventory at `d218b0b5` completed 702 passed/30 failed after a
+queue-timeout refusal (`RCH-I001`, exit 103, no local fallback); see the later
+failure-set and readiness record above. Dependency
 admission, Clippy, full runtime qualification and original P0 acceptance remain
 open. Raw attempts and fresh source/test audit are retained outside source at
 `/Users/jemanuel/Documents/Codex/2026-10-24/franken-alignment-sequence-e5b141b0/`.

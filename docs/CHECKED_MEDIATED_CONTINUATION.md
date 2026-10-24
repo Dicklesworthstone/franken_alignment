@@ -134,3 +134,30 @@ RCH_REQUIRE_REMOTE=1 rch exec -- cargo test --locked -p fa-reference --example s
 RCH_REQUIRE_REMOTE=1 rch exec -- cargo test --locked -p fa-reference --lib action::consequence::delivery::persistent::observed::guarded::recovery
 RCH_REQUIRE_REMOTE=1 rch exec -- cargo run --locked -p xtask -- check
 ```
+
+## Executed attempt-binding boundary — 2026-10-24
+
+The original eight operator regressions passed with one new causal pair and the
+existing unchecked two-publication control: **10 passed, zero failed/ignored,
+723 filtered** on standard RCH worker `ts1`, default stack and qualified
+`nightly-2026-09-08` (`j-30078706395382212`). Source is `d218b0b5` plus the sole
+checked-fixture overlay
+`699865740dd234c5e6008ba9990026b1dc433eb2395f7af1ad790ce8c7386554`, committed
+byte-for-byte in `3b38f71721c59c1e1547082d625d698df846e3e2`.
+
+The capture fixture had hard-coded attempt 1 even for the second action and its
+post-dispatch input changes. The native gate correctly binds both attempt and
+complete action frame. The fixture now names its actual attempt. A new real
+workflow pair retains the wrong attempt 1 beside correct attempt 2: wrong binding
+returns the native Binding error and exact pre-dispatch cancellation, preserving
+the first publication and five-unit charge; correct binding requires fresh helper
+and human review, then retains two publications and eleven charged units. Both
+leave zero reserved rights and check the second native attempt's exact stage.
+
+The original post-dispatch phantom, missing-witness, missing-topology, both-loss,
+human-rejection, profile-selection, replay-expiry, receipt-only and CLI assertions
+remain intact. No production checker, source identity, complete-frame comparison,
+authority, bound, deadline or format changed. This is fixture repair and bounded
+execution evidence, not new product capability or full qualification. The initial
+exit-127 history above remains historical; dependency admission, Clippy and the
+original P0 acceptance remain open.

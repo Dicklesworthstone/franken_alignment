@@ -242,7 +242,12 @@ fn witness_text(root: &Directory) -> String {
 fn witness(root: &Directory) -> PublicationProfile {
     PublicationProfile::decode(witness_text(root).as_bytes()).unwrap()
 }
-fn capture(action: &FrozenAction, generation: u64, keys: &[u64]) -> FilePublicationCapture {
+fn capture(
+    attempt: u64,
+    action: &FrozenAction,
+    generation: u64,
+    keys: &[u64],
+) -> FilePublicationCapture {
     let key = ProjectionKey {
         source: 40,
         branch: action.spec().scope.branch,
@@ -274,7 +279,7 @@ fn capture(action: &FrozenAction, generation: u64, keys: &[u64]) -> FilePublicat
     )
     .unwrap();
     FilePublicationCapture::new(
-        1,
+        attempt,
         FileCaptureIdentity {
             source: 91,
             generation,
@@ -310,7 +315,10 @@ fn captures(root: &Directory, config: &Config, bytes: &[u8]) -> FrozenAction {
         }],
     })
     .unwrap();
-    let packet = capture(&action, 2 * request - 1, &[0, 2, 4]);
+    // This fixture creates exactly attempts 1 and 2 under request keys 1 and 2.
+    // The producer packet must name that attempt as well as the complete action.
+    assert!(matches!(request, 1 | 2));
+    let packet = capture(request, &action, 2 * request - 1, &[0, 2, 4]);
     write_capture(root, "original.bin", &packet);
     write_capture(root, "current.bin", &packet);
     action
@@ -591,11 +599,13 @@ fn resumed_checked_publication_keeps_both_guards_until_after_human_dispatch() {
                         "unrelated" => write_capture(
                             &root,
                             "current.bin",
-                            &capture(&action, 4, &[0, 2, 4, 99]),
+                            &capture(2, &action, 4, &[0, 2, 4, 99]),
                         ),
-                        "phantom" => {
-                            write_capture(&root, "current.bin", &capture(&action, 4, &[0, 1, 2, 4]))
-                        }
+                        "phantom" => write_capture(
+                            &root,
+                            "current.bin",
+                            &capture(2, &action, 4, &[0, 1, 2, 4]),
+                        ),
                         "missing-witness" => fs::remove_file(root.path("current.bin")).unwrap(),
                         "missing-topology" => {
                             fs::remove_file(root.path("live-inventory.json")).unwrap()
@@ -649,6 +659,79 @@ fn resumed_checked_publication_keeps_both_guards_until_after_human_dispatch() {
             bootstrap.delivery.total
         );
         assert!(root.path("second.anchor").exists());
+    }
+}
+
+#[test]
+fn second_capture_requires_its_actual_attempt_before_independent_review() {
+    for captured_attempt in [1, 2] {
+        let root = Directory::new();
+        seed(&root, true);
+        let config = configured(&root, 3);
+        let bytes = document(&config, 2, 3, 2, ElapsedTick(100000));
+        let action = captures(&root, &config, &bytes);
+        let packet = capture(captured_attempt, &action, 3, &[0, 2, 4]);
+        assert_eq!(packet.attempt(), captured_attempt);
+        write_capture(&root, "original.bin", &packet);
+        write_capture(&root, "current.bin", &packet);
+        let publication = witness(&root);
+        let recovery = SubmitProfile::decode(recovery_text(&root, None).as_bytes()).unwrap();
+        let correct = captured_attempt == 2;
+        let human = correct.then(|| reviewer(&config, 2, ReviewDecision::Approve));
+        let store = config.store.clone();
+        let bootstrap = config.profile.clone();
+        let result = submit_selected(
+            config,
+            Submission {
+                document: &bytes,
+                profile: &recovery,
+                peers: None,
+                credibility: None,
+            },
+            &selection(&root),
+            Some(&publication),
+            || ElapsedTick(1001),
+        )
+        .unwrap();
+        if let Some(human) = human {
+            human.join().unwrap();
+        }
+        if correct {
+            assert!(result.failure.is_none(), "{:?}", result.failure);
+        } else {
+            assert!(
+                result
+                    .failure
+                    .as_deref()
+                    .unwrap()
+                    .contains("Contract(Binding)")
+            );
+        }
+        assert!(
+            matches!(result.response.result, Ok(Knowledge::Known { value, .. })
+            if value == if correct { ActorOutcome::Executed } else { ActorOutcome::CancelledBeforeDispatch })
+        );
+        assert_eq!(result.cleanup_pending, 0);
+        let disk = FileOversight::read_publication(&store, &bootstrap).unwrap();
+        assert_eq!(disk.executions, if correct { 2 } else { 1 });
+        assert_eq!(
+            disk.payload,
+            if correct {
+                b"second".as_slice()
+            } else {
+                b"first".as_slice()
+            }
+        );
+        assert_eq!(disk.control.ledger.charged, if correct { 11 } else { 5 });
+        assert_eq!(disk.control.ledger.reserved, 0);
+        assert_eq!(
+            disk.control.ledger.stages.get(&2),
+            Some(&if correct {
+                ActionState::Confirmed
+            } else {
+                ActionState::Cancelled
+            })
+        );
     }
 }
 

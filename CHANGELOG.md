@@ -1,5 +1,26 @@
 # Changelog
 
+## 2026-10-24: connect native reviewer fixtures through bounded readiness
+
+- Reproduce a real native-sharded `ConnectionRefused` in the complete operator
+  run (702 passed, 30 failed), retaining the failed result.
+- Wire the existing verified readiness helper into native/generated fixtures
+  using only their remaining original setup time and unchanged protocol limit.
+- Pass all 121 native/generated/peer entries, owned formatting and standard
+  workspace/all-target compilation. Retain the canonical admission refusal;
+  25 original failure IDs and full qualification remain open.
+
+## 2026-10-24: bind checked-continuation fixtures to the actual attempt
+
+- Correct the capture fixture's hard-coded first attempt for second-action and
+  post-dispatch captures; preserve the native attempt/full-frame binding.
+- Pair a wrong-attempt refusal retaining the original five-unit publication
+  with the matching, freshly reviewed two-publication/eleven-unit path.
+- Pass all eight original checked parents, the new causal pair and the existing
+  unchecked positive (10 passed, zero failed/ignored, 723 filtered), with original
+  phantom, source-loss, topology-loss and human-rejection assertions retained.
+  This is fixture repair; broader qualification and the original P0 stay open.
+
 ## 2026-10-24: execute the original sequential publication fixtures
 
 - Await the existing intermediate unknown outcome under the original test
