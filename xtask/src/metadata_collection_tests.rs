@@ -67,7 +67,7 @@ fn package_names(document: &json::Json) -> BTreeSet<String> {
 }
 
 #[test]
-fn real_cargo_metadata_for_current_workspace_parses_to_closed_package_inventory() {
+fn real_cargo_metadata_reports_the_complete_workspace_without_implying_admission() {
     let root = workspace_root();
 
     let bytes = collect_metadata(&root, COLLECTION_TARGET)
@@ -81,13 +81,62 @@ fn real_cargo_metadata_for_current_workspace_parses_to_closed_package_inventory(
 
     assert_eq!(
         packages.len(),
-        2,
-        "the real metadata inventory must not contain an unapproved extra package"
+        3,
+        "collection must expose every actual package, including unadmitted local source"
     );
     assert_eq!(
         package_names(&document),
-        BTreeSet::from(["fa-reference".to_owned(), "xtask".to_owned()]),
-        "the real metadata collection must expose exactly the closed local package inventory"
+        BTreeSet::from([
+            "fa-journal".to_owned(),
+            "fa-reference".to_owned(),
+            "xtask".to_owned(),
+        ]),
+        "a collector must not hide the journal to make the admission inventory appear closed"
+    );
+
+    let package_id = |name| {
+        packages
+            .iter()
+            .find(|package| package.get("name").and_then(json::Json::as_str) == Some(name))
+            .and_then(|package| package.get("id"))
+            .and_then(json::Json::as_str)
+            .expect("actual package ID")
+    };
+    let journal = document
+        .get("resolve")
+        .and_then(|resolve| resolve.get("nodes"))
+        .and_then(json::Json::as_array)
+        .expect("complete resolved graph")
+        .iter()
+        .find(|node| node.get("id").and_then(json::Json::as_str) == Some(package_id("fa-journal")))
+        .expect("the journal must remain visible as a resolved node");
+    assert_eq!(
+        journal.get("dependencies"),
+        Some(&json::Json::Array(vec![json::Json::String(
+            package_id("fa-reference").to_owned()
+        ),])),
+        "collection must retain the actual journal-to-reference dependency"
+    );
+
+    // Collection is observation, not permission. An independently frozen
+    // two-package profile must still refuse this actual three-package graph.
+    let closed = super::admission::parse_policy(include_bytes!(
+        "../tests/fixtures/admission/policy-closed-inventory.json"
+    ))
+    .expect("the original closed profile remains a valid policy");
+    let report = super::admission::check(&bytes, &closed, COLLECTION_TARGET)
+        .expect("the real resolved graph must reach admission");
+    assert!(
+        !report.is_admitted(),
+        "observing an extra local package cannot admit it"
+    );
+    assert!(
+        report.findings.iter().any(
+            |finding| finding.phase == super::admission::Phase::Inventory
+                && finding.code == "local_package_not_admitted"
+        ),
+        "the journal must be refused at the package boundary: {:?}",
+        report.findings
     );
 }
 
