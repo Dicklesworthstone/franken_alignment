@@ -1,5 +1,21 @@
 # Changelog
 
+## 2026-10-23: retain final-publication evidence requirements in learned recipes
+
+- Add exact learned publication-validation registration using the original
+  witness bootstrap codec and validators, including producer clock domains.
+- Install all selected guards atomically across ordinary, predictive and
+  topology-mediated ownership; preserve identity, joint credibility and old bytes.
+- Bind recovery and historical selection to every original validation, feed,
+  freshness and snapshot-fallback field before replay, cleanup or role release.
+- Pass six new public integration functions and twenty-one unchanged original
+  publication regressions, including actual learned output, both keys, late
+  phantom/opaque-input changes, unchanged receipts and finite validation work.
+- Retain the two initial fixture failures, standard compiler-check evidence and
+  the scoped LLVM-harness/Cranelift-library runtime boundary. Independent source
+  review passes. The full xtask retains its unchanged dependency-admission
+  refusal; full FA-062 and release qualification remain open.
+
 ## 2026-10-24: measure learned identity before publication and audit native Congress
 
 - Add the bounded identity envelope, exact passport/policy binding and unique

@@ -93,6 +93,7 @@ pub(super) struct Machine {
     campaigns: Option<campaigns::CampaignState>,
     file_source: Option<source::SourceState>,
     scope: Scope,
+    clock_domain: u64,
     endpoint: PublicationEndpoint,
     automatic: BTreeMap<u64, Permit>,
     human_keys: BTreeMap<u64, HumanPermit>,
@@ -115,7 +116,7 @@ impl Machine {
         }, &mut endpoint, p.committee.clone())?;
         let reviewer = broker.enable_human_review(p.human)?;
         broker.confirm_fence(endpoint.install_fence(broker.fence_request())?)?;
-        Ok(Self { bootstrap: Some(p.clone()), containment: ContainmentHistory::default(), policy_updates: PolicyUpdates::default(), requests: RequestBook::default(), scope: d.scope, broker, endpoint, reviewer, actions: BTreeMap::new(), sessions: BTreeMap::new(),
+        Ok(Self { bootstrap: Some(p.clone()), containment: ContainmentHistory::default(), policy_updates: PolicyUpdates::default(), requests: RequestBook::default(), scope: d.scope, clock_domain: d.clock_domain, broker, endpoint, reviewer, actions: BTreeMap::new(), sessions: BTreeMap::new(),
             automatic: BTreeMap::new(), human_keys: BTreeMap::new(), envelopes: BTreeMap::new(), clock_ready: false,
             publication_guard: false, generated_text_only: false, credential_policy: None, credential_generation: 0,
             credential_revoked: false, credential_changes: Vec::new(), decoder: None, learned: None, identity: None, campaigns: None, file_source: None, credibility: None, consistency: None, learned_consistency: None, consistency_request: None, mediation: None })

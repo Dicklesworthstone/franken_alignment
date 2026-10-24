@@ -1,5 +1,42 @@
 # Implementation status · design revision 0.3
 
+## 2026-10-23: bind final-publication witnesses to learned ownership
+
+`FileLearnedConfig::with_required_publication_validation` freezes the original
+validation limits and optional complete change-feed, freshness and snapshot
+fallback policies into the independent numerical recipe. The original witness
+codec supplies the disjoint wrapper; existing unselected bytes remain unchanged.
+The same learned Enable transition installs the original guards, including the
+producer clock-domain check, before a numerical owner or first canonical image
+can escape. Plain, raw-predictive, owned-predictive and topology-mediated owners
+retain their separate identity, joint-credibility and recovery-reserve contracts.
+
+All six new public integration functions pass. They exercise every selected
+field, wrapper composition, all six predictor/topology bootstrap lanes, invalid
+limits and clock domains before storage, exact recovery and historical selection
+before cleanup, and actual generated text through original sidecar review and
+both effect keys. Disjoint changes publish; late phantom insertion, opaque epoch
+drift, closure loss and unavailable evidence refuse the obsolete publication.
+Old receipts and numerical expenditure survive recovery. A validation-work
+refusal cannot grant rights or publish an unacknowledged validation report.
+
+All twenty-one unchanged witness, snapshot-fallback and coupled-producer driver
+regressions also pass. The standard qualified compiler checks the production
+library/operator and new public target; runtime uses unchanged LLVM harnesses
+against the qualified nightly's official Cranelift library, with 32 MiB stacks.
+Independent source review found no blocker. The initial new-target run retained
+two fixture failures: an oversized count refused in the original codec before
+bootstrap, and a refused transaction correctly exposed no acknowledged report.
+The fixtures now test the exact native one-over bound and unchanged failed-write
+state; no production validator or assertion was weakened.
+
+The standard full xtask driver executes and refuses the unchanged dependency
+graph before formatting, Clippy or full-suite execution. No admission guard,
+dependency or lockfile was changed to manufacture a passing gate.
+
+This is the native composition slice of FA-062, not full packet or release
+qualification. See [checked learned publication](docs/LEARNED_CHECKED_PUBLICATION.md).
+
 ## 2026-10-24: enforce computed identity in the learned operator and audit native reviews
 
 The learned operator accepts the closed `fa.learned-identity-publication/1`

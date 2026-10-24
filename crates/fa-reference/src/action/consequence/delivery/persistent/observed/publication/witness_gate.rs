@@ -121,6 +121,10 @@ impl FileOversight {
 
     pub fn publication_validation_profile(&self) -> Result<Option<PublicationLimits>, JournalError> {
         if self.fault.is_some() { return Err(JournalError::Unavailable); }
+        if let Some(profile) = self.machine.learned_contract()
+            .and_then(super::super::decoder::learned::FileLearnedConfig::required_publication_validation) {
+            return Ok(Some(profile.limits));
+        }
         Ok(self.events.iter().find_map(|event| match event {
             Event::PublicationWitness(WitnessEvent::Enable(limits)) => Some(*limits), _ => None,
         }))

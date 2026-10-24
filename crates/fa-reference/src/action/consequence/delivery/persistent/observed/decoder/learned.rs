@@ -21,7 +21,7 @@ mod pending_tests;
 mod preparation_tests;
 #[cfg(test)]
 mod continuation_tests;
-pub use config::FileLearnedConfig;
+pub use config::{FileLearnedConfig, FileLearnedPublicationProfile};
 pub use preparation::{FileLearnedReplayContinuation, FileLearnedIntentPreparation, FileLearnedStepPreparation, FileLearnedStepPreparationProgress, FileLearnedStepPreparationStatus};
 pub use recovery::{FileLearnedRecovery, FileLearnedRecoveryProgress, FileLearnedRecoveryStatus};
 pub use message::FileLearnedTextContinuation;

@@ -90,6 +90,17 @@ impl Machine {
                     // candidate transition, never a second acknowledged image.
                     self.apply_credibility(&super::super::credibility::CredibilityEvent::EnableHeldOutJoint(policy))?;
                 }
+                if let Some(publication) = config.required_publication_validation() {
+                    // The recipe owns these ORIGINAL native guards in the same
+                    // first-image transition. Their complete original encodings
+                    // are pinned by the independent recipe, never read as live
+                    // evidence from the journal. Preserve the original clock
+                    // binding even though no separate witness event is emitted.
+                    for event in publication.events() {
+                        event.check_clock_domain(self.clock_domain)?;
+                        self.apply_publication_witness(&event)?;
+                    }
+                }
                 config.install(&mut self.broker)?;
                 if let Some(policy) = config.required_policy_source() {
                     self.enable_source(policy, true)?;
