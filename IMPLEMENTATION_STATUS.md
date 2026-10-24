@@ -1,5 +1,57 @@
 # Implementation status · design revision 0.3
 
+## 2026-10-24: execute the original sequential publication integration
+
+The original 18 service/parser/client entries first completed ten passed/eight
+failed at `e5b141b0` (`j-30078706395382143`, `vmi1149989`). Corrections to fixture
+frames and intermediate-outcome polling reached sixteen passed/two failed
+(`j-30078706395382150`). The final declared selection adds seven peer entries:
+**25 passed, zero failed/ignored, 707 filtered** on the qualified standard
+compiler/default stack (`j-30078706395382170`, `vmi1149989`). Nested child-helper
+runs are not added to that denominator. Retain both failed selections.
+
+This block repairs tests, not the production authorization reducer. It polls
+the existing `Unknown(OutcomeUnknown)` intermediate under the original deadline,
+funds complete fixture payloads without changing their seven-unit charge, and
+waits for actual reviewer listen readiness before the original credential and
+audience checks. The test-only wait retries only `NotFound`/`ConnectionRefused`;
+it times out without removing a stale socket and also admits a permitted peer.
+The immediate production connector retains its original behavior.
+
+The cumulative-budget oracle now follows plan §7.3: reservation occurs at
+Authorize after review. The original ten-unit case remains with seven charged,
+three available and zero reserved; thirteen versus fourteen adds an exact
+one-short/permitted pair. Both requests receive independent reviews. Underfunded
+authorization returns the native Limit error and retains a cancelled second
+request rather than the test's former incorrect `NotAdmitted` expectation.
+The stale second target also receives its independent review, then must return
+exact `ConfirmedNotExecuted`, with original actor bytes and first charge intact.
+
+The four Rust files are committed in `d218b0b5d0bd2440b693e08a4480dcdc89dd1d32`,
+a descendant of shared main's `ad4a2646`, on
+`train/navyheron/native-source-leases-20261024`. Their passing selection used
+base `e5b141b0` plus overlay
+`517572c0fd12069b86fc3626083ac9c15f2ebdf0c376410d33a785536312f02b`;
+the only Rust differences from that base are these four paths. Owned-file
+formatting and standard workspace/all-target compilation passed at the committed
+source (`j-30078706395382180`, `vmi1149989`, warnings retained). Two initial
+source-only dispatches refused invalid option combinations before execution;
+both are retained. The canonical driver at the same commit executed and failed
+the unchanged dependency guard before formatting, Clippy or tests
+(`j-30078706395382184`, `vmi1152480`). No local compilation fallback occurred.
+
+Shared main incorporated the earlier native source-lease commits and three
+current files through `e6e21f09`, `20234ef4` and `ad4a2646`. NavyHeron preserved
+shared HEAD/index and the pre-existing ambiguous index lock; the remaining
+service-fixture commit remains on the isolated branch. Eight additional original
+failure IDs have scoped passing evidence, leaving 29 unresolved IDs in the old
+inventory. That union count is not a complete-suite result. The full 732-entry
+operator inventory at `d218b0b5` is running after a queue-timeout refusal
+(`RCH-I001`, exit 103, no local fallback); it is not yet a pass. Dependency
+admission, Clippy, full runtime qualification and original P0 acceptance remain
+open. Raw attempts and fresh source/test audit are retained outside source at
+`/Users/jemanuel/Documents/Codex/2026-10-24/franken-alignment-sequence-e5b141b0/`.
+
 ## 2026-10-24: check native source leases before numerical work
 
 The generated operator now calls the existing `capture_file_policy_state` gate
