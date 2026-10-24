@@ -13,7 +13,7 @@ use fa_reference::action::consequence::delivery::persistent::observed::reviewer:
     PeerPolicy as ReviewerPolicy, VerifiedReviewerSocket,
 };
 use fa_reference::action::consequence::delivery::persistent::observed::reviewer::wire::ReviewDecision;
-use fa_reference::action::consequence::oversight::actor::ActorProposal;
+use fa_reference::action::consequence::oversight::actor::{ActorOutcome, ActorProposal};
 use fa_reference::action::consequence::oversight::actor_peer::{PeerCredentials, PeerPolicy};
 use fa_reference::action::consequence::oversight::actor_wire::{
     WireResponse, decode_response, encode_command,
@@ -357,6 +357,9 @@ fn stale_second_target_is_not_repaired_after_first_execution() {
     let original = fs::read(&docs[1]).unwrap();
     let child = actor(p.clone(), docs.clone());
     let human = human(reviewer.clone(), 7);
+    // Version conflicts are authoritative endpoint receipts, after both keys.
+    // Even an approval cannot repair the actor's original stale target.
+    let second_human = self::human(reviewer.clone(), 8);
     series::serve(
         c,
         &p,
@@ -371,12 +374,20 @@ fn stale_second_target_is_not_repaired_after_first_execution() {
     )
     .unwrap();
     human.join().unwrap();
+    second_human.join().unwrap();
     let (result, out) = child.join().unwrap();
     assert!(result.is_err());
     let out = responses(&out);
     assert_eq!(out.len(), 2);
     assert!(is_executed(&out[0]));
     assert!(!is_executed(&out[1]));
+    assert!(matches!(
+        &out[1].result,
+        Ok(Knowledge::Known {
+            value: ActorOutcome::ConfirmedNotExecuted,
+            ..
+        })
+    ));
     assert_eq!(fs::read(&docs[1]).unwrap(), original);
     let c = config(&root);
     let disk = FileOversight::read_publication(&c.store, &c.profile).unwrap();
