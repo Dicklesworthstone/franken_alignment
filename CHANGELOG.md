@@ -11,6 +11,9 @@
   three-package metadata while the original two-package admission still refuses.
 - Correct conditional-feature test lookup and complete causal registry sandboxes;
   retain ignored/disabled/mixed-payload refusals and exact finding assertions.
+- Repair underfunded diagnosis fixture actions and occupied-staging writer
+  preconditions; retain all policy, denial, minimality and zero-write assertions.
+  Pass all 21 selected diagnosis functions on the standard compiler.
 - Pass 248 xtask, 46 Native Andon, the original reviewer target and all journal
   targets/doctests on qualified RCH runs. Full admission, Clippy and operator
   qualification remain open; failed attempts remain retained in the status record.

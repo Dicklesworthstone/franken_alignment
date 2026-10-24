@@ -33,10 +33,32 @@ parent regression. Raw attempts, including earlier failures, are retained at
 `/Users/jemanuel/Documents/Codex/2026-10-24/franken-alignment-implementation-0761ea9b/`.
 
 These are bounded reference/enabler results, not production alignment evidence.
-The full qualification bridge remains in progress: the initial lock guard still
-refuses the journal, reviewed source/admission is incomplete, the library Clippy
-baseline reports 80 errors, and the complete publication operator target is
-still undergoing execution. No roadmap packet or Bead is closed by this repair.
+The frozen workspace/all-targets check also passed at `b688a37bc7baea0efce2d53fc1b0bb769e40af86`
+on the qualified standard compiler. The driver at that exact source failed at
+its unchanged lock guard. The complete 727-function publication operator target
+compiled at the earlier source cut, recorded failed functions and then aborted
+on a test-thread stack overflow in
+`learned_command_exact_reopen_refuses_changed_independent_recipe_without_journal_writes`.
+It has no completed suite result. A real child fixture also refused its overlong
+Unix socket address. No registrations or production bounds were changed to
+avoid those failures.
+
+The follow-on diagnosis repair funds payload bytes before original policy
+evaluation, supplies valid permitted controls for each unchanged policy, and
+retains the occupied test-staging bytes before the separate positive writer
+phase. All 21 `diagnosis::` functions pass on the standard compiler at base
+`b688a37b` plus the three owned diagnosis paths (overlay `69126149d57c429e`):
+18 behavioral cases and three renderer cases, zero failed/ignored, 706 unrelated
+functions filtered. Complete search masks, all original policy/denial and
+zero-write assertions, and captured-image versus later-writer checks remain.
+The preliminary policy-only repair and 19/21 intermediate run are retained as
+failures; neither counts as qualification. This proves the selected original
+operator paths, not an admitted effect or complete operator suite.
+
+The full qualification bridge remains in progress: reviewed source/package
+admission is incomplete, the library Clippy baseline reports 80 errors, and
+complete operator/workspace runtime qualification remains open. No roadmap
+packet or Bead is closed by this repair.
 
 ## 2026-10-24: finish finite producer catch-up in the learned operator
 
