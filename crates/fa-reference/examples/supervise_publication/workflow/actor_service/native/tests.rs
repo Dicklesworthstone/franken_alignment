@@ -95,7 +95,8 @@ fn reviewing(
             assert!(started.elapsed() < Duration::from_secs(10));
             pause(1);
         }
-        let mut client = profile.connect_client(91).unwrap();
+        let remaining = Duration::from_secs(10).saturating_sub(started.elapsed());
+        let mut client = profile.connect_client_waiting(91, remaining).unwrap();
         let mut packet = None;
         loop {
             assert!(started.elapsed() < Duration::from_secs(12));

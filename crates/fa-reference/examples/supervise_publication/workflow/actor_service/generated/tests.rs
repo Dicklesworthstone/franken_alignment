@@ -24,7 +24,8 @@ fn review(peers: PeerProfile, decision: ReviewDecision) -> thread::JoinHandle<Re
             );
             thread::sleep(Duration::from_millis(1));
         }
-        let mut client = peers.connect_client(1).unwrap();
+        let remaining = Duration::from_secs(10).saturating_sub(started.elapsed());
+        let mut client = peers.connect_client_waiting(1, remaining).unwrap();
         let mut packet = None;
         loop {
             assert!(started.elapsed() < Duration::from_secs(12));
