@@ -31,7 +31,11 @@ capability or independent certification.
 Qualified `nightly-2026-09-08`, default stack and standard compiler settings were
 used. Owned formatting and workspace/all-target compilation passed at this
 source. The canonical driver executed and refused the unchanged initial
-dependency-admission guard before downstream gates. The complete unfiltered
+dependency-admission guard before downstream gates. A separate Clippy refresh
+was refused before execution with RCH `missing_runtime`; the qualified-component
+setup job was then refused by slot admission (four estimated cores versus two
+available on the requested worker). There is no fresh Clippy result for this
+source; the earlier 80-error count remains historical. The complete unfiltered
 734-function operator run at this same source is in progress; no result is yet
 claimed. The original P0 and all acceptance criteria remain open.
 
