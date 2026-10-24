@@ -4,6 +4,7 @@ use super::{PublicationProfile, PreparedPublication, FileOversightProfile,
     FileSupervisedDriver, FileEvidenceSource, FileHumanPermit, FileDriverEvent,
     ElapsedTick, debug};
 use fa_reference::action::consequence::delivery::persistent::observed::{
+    credential::FileCredentialPermit,
     decoder::learned::FileLearnedPublicationProfile,
     stream::generated::checked::GeneratedPublicationFeed,
     driver::{native_learned::{FileNativeSupervisedDriver, FileNativeDriverEvent},
@@ -47,70 +48,79 @@ impl PreparedPublication<'_> {
         evidence: &mut FileEvidenceSource, time: &mut F, human: Option<&FileHumanPermit>)
         -> Result<FileDriverEvent, String>
     where F: FnMut() -> ElapsedTick {
+        self.step_learned_with_credential(driver, evidence, time, human, None)
+    }
+
+    pub(crate) fn step_learned_with_credential<F>(&self, driver: &mut FileSupervisedDriver,
+        evidence: &mut FileEvidenceSource, time: &mut F, human: Option<&FileHumanPermit>,
+        credential: Option<&FileCredentialPermit>) -> Result<FileDriverEvent, String>
+    where F: FnMut() -> ElapsedTick {
         match self.feed {
             Some(feed) => driver.step_computed_from_policy_file_with_publication_feed(
-                evidence, self.current.reader(), &feed.reader, time, human, None)
+                evidence, self.current.reader(), &feed.reader, time, human, credential)
                 .publication.evidence.result.map_err(debug),
             None => driver.step_computed_from_policy_file_with_publication_source(
-                evidence, self.current.reader(), time, human, None).evidence.result.map_err(debug),
+                evidence, self.current.reader(), time, human, credential).evidence.result.map_err(debug),
         }
     }
 
     /// Yield only for the original acknowledged producer-lag diagnostic. The
     /// caller retains this SAME prepared request, human key and deadline across
     /// yields, servicing Stop and actor cancellation before acquiring again.
-    pub(crate) fn step_learned_or_wait<F>(&mut self, driver: &mut FileSupervisedDriver,
-        evidence: &mut FileEvidenceSource, time: &mut F, human: Option<&FileHumanPermit>)
-        -> Result<Option<FileDriverEvent>, String>
+    pub(crate) fn step_learned_or_wait_with_credential<F>(&mut self, driver: &mut FileSupervisedDriver,
+        evidence: &mut FileEvidenceSource, time: &mut F, human: Option<&FileHumanPermit>,
+        credential: Option<&FileCredentialPermit>) -> Result<Option<FileDriverEvent>, String>
     where F: FnMut() -> ElapsedTick {
-        if self.wait.is_none() { return self.step_learned(driver, evidence, time, human).map(Some); }
+        if self.wait.is_none() {
+            return self.step_learned_with_credential(driver, evidence, time, human, credential).map(Some);
+        }
         let report = driver.step_computed_from_policy_file_with_publication_deferral(evidence,
-            self.current.reader(), self.feed.map(|feed| &feed.reader), time, human, None);
+            self.current.reader(), self.feed.map(|feed| &feed.reader), time, human, credential);
         self.finish_deferral(report)
     }
 
     /// Native numerical reviewers retain their original current-input checks and
     /// cooperative work accounting while observing the same publication sources.
-    pub(crate) fn step_native_learned<F>(&self, driver: &mut FileNativeSupervisedDriver,
-        evidence: &mut FileEvidenceSource, time: &mut F, human: Option<&FileHumanPermit>)
-        -> Result<FileNativeDriverEvent, String>
+    pub(crate) fn step_native_learned_with_credential<F>(&self, driver: &mut FileNativeSupervisedDriver,
+        evidence: &mut FileEvidenceSource, time: &mut F, human: Option<&FileHumanPermit>,
+        credential: Option<&FileCredentialPermit>) -> Result<FileNativeDriverEvent, String>
     where F: FnMut() -> ElapsedTick {
         if self.wait.is_some() {
             // Review can advance with the original learned input while capture
             // is deferred. No publication key exists yet and no catch-up retry
             // is spent; the native final gate still requires fresh witnesses.
             return driver.step_from_policy_file_with_publication_deferral(evidence,
-                self.current.reader(), self.feed.map(|feed| &feed.reader), time, human, None)
+                self.current.reader(), self.feed.map(|feed| &feed.reader), time, human, credential)
                 .step.publication.evidence.result.map_err(debug);
         }
         match self.feed {
             Some(feed) => driver.step_from_policy_file_with_publication_feed(
-                evidence, self.current.reader(), &feed.reader, time, human, None)
+                evidence, self.current.reader(), &feed.reader, time, human, credential)
                 .publication.evidence.result.map_err(debug),
             None => driver.step_from_policy_file_with_publication_source(
-                evidence, self.current.reader(), time, human, None).evidence.result.map_err(debug),
+                evidence, self.current.reader(), time, human, credential).evidence.result.map_err(debug),
         }
     }
 
     /// Process replies still enter through the original source-bound protocol;
     /// publication acquisition creates no alternate vote or process launch path.
-    pub(crate) fn step_process_learned<F>(&self, driver: &mut FileProcessSupervisedDriver,
-        evidence: &mut FileEvidenceSource, time: &mut F, human: Option<&FileHumanPermit>)
-        -> Result<FileProcessDriverEvent, String>
+    pub(crate) fn step_process_learned_with_credential<F>(&self, driver: &mut FileProcessSupervisedDriver,
+        evidence: &mut FileEvidenceSource, time: &mut F, human: Option<&FileHumanPermit>,
+        credential: Option<&FileCredentialPermit>) -> Result<FileProcessDriverEvent, String>
     where F: FnMut() -> ElapsedTick {
         if self.wait.is_some() {
             // Keep polling the original process protocol without charging a
             // final-publication retry for an acknowledged deferred capture.
             return driver.step_from_policy_file_with_publication_deferral(evidence,
-                self.current.reader(), self.feed.map(|feed| &feed.reader), time, human, None)
+                self.current.reader(), self.feed.map(|feed| &feed.reader), time, human, credential)
                 .step.publication.evidence.result.map_err(debug);
         }
         match self.feed {
             Some(feed) => driver.step_from_policy_file_with_publication_feed(
-                evidence, self.current.reader(), &feed.reader, time, human, None)
+                evidence, self.current.reader(), &feed.reader, time, human, credential)
                 .publication.evidence.result.map_err(debug),
             None => driver.step_from_policy_file_with_publication_source(
-                evidence, self.current.reader(), time, human, None).evidence.result.map_err(debug),
+                evidence, self.current.reader(), time, human, credential).evidence.result.map_err(debug),
         }
     }
 }

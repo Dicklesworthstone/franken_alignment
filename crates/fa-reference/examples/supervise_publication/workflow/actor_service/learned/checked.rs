@@ -20,6 +20,16 @@ pub(super) fn decode(bytes: &[u8]) -> Result<Decoded, String> {
         let (recipe, joint, identity) = identity::profile::decode(bytes)?;
         return Ok((recipe, joint, identity, None));
     }
+    unwrap(json)
+}
+
+/// The outer credential envelope has already admitted its one extra level.
+/// Every existing inner envelope still has its original canonical order.
+pub(super) fn unwrap(json: Json) -> Result<Decoded, String> {
+    if json.get("schema").and_then(Json::as_str) != Some(SCHEMA) {
+        let (recipe, joint, identity) = identity::profile::unwrap(json)?;
+        return Ok((recipe, joint, identity, None));
+    }
     let mut wrapper = Fields::new(json)?;
     wrapper.text("schema")?;
     let publication = wrapper.path("publication")?;
@@ -43,6 +53,7 @@ pub(super) fn load(path: &Path, config: &Config, assets: &mut Assets)
 /// native recipe even when a caller constructs a resident entry in memory.
 /// This check performs no source, clock, socket or journal operation.
 pub(super) fn check_selection(config: &Config, loaded: &super::Loaded) -> Result<(), String> {
+    super::credential::check_selection(loaded)?;
     let selected = loaded.publication.as_ref().map(|profile| profile.learned_profile(&config.profile)).transpose()?;
     if loaded.generation.required_publication_validation() != selected {
         return Err("learned publication profile differs from the exact numerical recipe".into());

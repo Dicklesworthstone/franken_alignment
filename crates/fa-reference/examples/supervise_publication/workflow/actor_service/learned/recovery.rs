@@ -36,12 +36,13 @@ pub(super) type TopologyCustody = (Custody,
     Option<fa_reference::action::consequence::delivery::persistent::observed::mediation::FileMediationObserver>);
 
 pub(super) fn create_selected(config: &Config, loaded: &Loaded) -> Result<Custody, String> {
+    super::credential::check_creation(loaded)?;
     if loaded
         .generation
         .required_computed_identity_registration()
-        .is_some()
+        .is_some() || loaded.generation.required_credential_policy().is_some()
     {
-        return create_with_identity(config, loaded);
+        return create_with_guards(config, loaded);
     }
     if loaded.generation.required_pre_output_forecast().is_some()
         || loaded
@@ -67,15 +68,16 @@ pub(super) fn create_selected(config: &Config, loaded: &Loaded) -> Result<Custod
 
 // Keep mutually exclusive native constructors out of the ordinary startup
 // frame. Each path retains its original reserve, guards and separate roles.
-fn create_with_identity(config: &Config, loaded: &Loaded) -> Result<Custody, String> {
+fn create_with_guards(config: &Config, loaded: &Loaded) -> Result<Custody, String> {
     let guards = requirements(config, loaded).guards;
     let reserve = RecoveryReserve::terminal();
+    let registration = super::credential::registration(loaded)?;
     let (host, roles) = if let Some(prediction) = loaded.generation.required_pre_output_forecast() {
         FileOversight::create_predictive_guarded_with_learned_generation_reserved(
             &config.store,
             config.profile.clone(),
             &guards,
-            None,
+            registration,
             prediction.clone(),
             None,
             loaded.generation.clone(),
@@ -87,7 +89,7 @@ fn create_with_identity(config: &Config, loaded: &Loaded) -> Result<Custody, Str
             &config.store,
             config.profile.clone(),
             &guards,
-            None,
+            registration,
             prediction.clone(),
             None,
             loaded.generation.clone(),
@@ -99,7 +101,7 @@ fn create_with_identity(config: &Config, loaded: &Loaded) -> Result<Custody, Str
             &config.store,
             config.profile.clone(),
             &guards,
-            None,
+            registration,
             loaded.generation.clone(),
             reserve,
         )
@@ -151,10 +153,10 @@ pub(super) fn requirements(config: &Config, loaded: &Loaded) -> FileRecoveryRequ
                 .required_computed_identity_registration()
                 .cloned(),
             campaigns: None,
-            credential: None,
+            credential: loaded.generation.required_credential_policy().cloned(),
         },
         effective_policy: config.profile.delivery.policy.clone(),
-        credential_epoch: None,
+        credential_epoch: loaded.credential.as_ref().map(|credential| credential.epoch),
         minimum: loaded.floor,
     }
 }

@@ -24,6 +24,7 @@ use std::path::PathBuf;
 #[path = "checked_publication/recovery.rs"] mod recovery_tests;
 #[path = "checked_publication/sequence.rs"] mod sequence_tests;
 #[path = "checked_publication/deferral.rs"] mod deferral_tests;
+#[path = "checked_publication/credential.rs"] mod credential_tests;
 
 fn structured(scope: Scope, revision: u64, keys: &[u64]) -> FilePublicationInputs {
     let key = ProjectionKey { source: 40, branch: scope.branch, projection: 7, source_epoch: 1 };

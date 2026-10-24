@@ -20,6 +20,7 @@
 #[path = "learned/qualification.rs"] mod qualification;
 #[path = "learned/identity.rs"] mod identity;
 #[path = "learned/checked.rs"] mod checked;
+#[path = "learned/credential.rs"] mod credential;
 #[path = "learned/stopped.rs"] mod stopped;
 #[path = "learned/topology.rs"] mod topology;
 #[path = "learned/sequence.rs"] mod sequence;
@@ -185,6 +186,9 @@ where F: FnMut() -> ElapsedTick {
     let mut deadline = Deadline { logical: plus(start, lifetime)?, started: Instant::now(),
         wall: Duration::from_millis(lifetime) };
     deadline.check(start)?;
+    // Missing/mismatched independent secrets cannot leave a new owner or consume
+    // a recovery fence. The same original deadline bounds these finite reads.
+    let mut credential = credential::prepare(&loaded, continuing, &deadline, &mut time)?;
     // Claim the real authenticated stop endpoint BEFORE store creation/open.
     // The same service and deadline cover replay, generation, review and dispatch.
     let mut control = Control::new(&config, loaded.request, Some(peers))?;
@@ -205,7 +209,8 @@ where F: FnMut() -> ElapsedTick {
     let mut wire = ActorWire::new(port);
     let RequestCycle { driver, response, failure, history, process } = execute_request(
         driver, &mut config, &loaded, RequestServices { peers, reviewer: &reviewer,
-            prediction: &mut prediction, identity: &mut identity, intake: &mut intake, wire: &mut wire,
+            prediction: &mut prediction, identity: &mut identity, credential: &mut credential,
+            intake: &mut intake, wire: &mut wire,
             finishing, message_continuation, credibility, stop_operation: loaded.request },
         &mut control, &mut deadline, &mut time);
     // The anchor exporter preserves incoming errors while still trying its own
@@ -262,6 +267,7 @@ struct RequestServices<'a> {
     reviewer: &'a FileHumanReviewer,
     prediction: &'a mut Option<prediction::Session>,
     identity: &'a mut Option<identity::Session>,
+    credential: &'a mut credential::Session,
     intake: &'a mut Option<ingress::Intake>,
     wire: &'a mut ActorWire<FileLearnedTextStreamActorPort>,
     finishing: Option<u64>,
@@ -285,10 +291,13 @@ fn execute_request<F>(mut driver: FileSupervisedDriver, config: &mut Config,
     loaded: &Loaded, services: RequestServices<'_>, control: &mut Control,
     deadline: &mut Deadline, time: &mut F) -> RequestCycle
 where F: FnMut() -> ElapsedTick {
-    let RequestServices { peers, reviewer, prediction, identity, intake, wire, finishing,
+    let RequestServices { peers, reviewer, prediction, identity, credential, intake, wire, finishing,
         message_continuation, credibility, stop_operation } = services;
     let mut publication = None;
     let prepared = (|| {
+        // Bind only to this genuinely created/recovered owner. A resident run
+        // retains this same permit; retries never reload secrets or renew it.
+        credential.bind(loaded, &*driver.supervisor().host().map_err(debug)?)?;
         if !qualification::prepare(&mut driver, config, credibility,
             (&mut *control, reviewer, deadline), time)? { return Ok(false); }
         if driver.topology().is_some() {
@@ -353,13 +362,8 @@ where F: FnMut() -> ElapsedTick {
         Err(error) => failure = Some(error),
         Ok(false) => {}
         Ok(true) => {
-            let reviewed = if intake.is_some() {
-                review::run_serviced_checked(driver, config, loaded, reviewer,
-                    control, deadline, time, intake, publication.as_ref())
-            } else {
-                review::run_checked(driver, config, loaded, reviewer,
-                    control, deadline, time, publication.as_ref())
-            };
+            let reviewed = review::run_serviced_checked_with_credential(driver, config, loaded, reviewer,
+                control, deadline, time, intake, publication.as_ref(), credential.permit());
             driver = reviewed.driver;
             history = reviewed.history;
             process = reviewed.process;
@@ -382,10 +386,14 @@ where F: FnMut() -> ElapsedTick {
                         deadline.check(time())?;
                         if live.checkpoint(&mut driver, reviewer, deadline, time)? { return Ok(()); }
                         let event = match publication.as_mut() {
-                            Some(publication) => publication.step_learned_or_wait(&mut driver,
-                                &mut config.source, time, Some(&approval))?,
-                            None => Some(driver.step_computed_from_policy_file(&mut config.source,
-                                &mut *time, Some(&approval)).result.map_err(debug)?),
+                            Some(publication) => publication.step_learned_or_wait_with_credential(&mut driver,
+                                &mut config.source, time, Some(&approval), credential.permit())?,
+                            None => Some(match credential.permit() {
+                                Some(permit) => driver.step_computed_from_policy_file_with_credential(
+                                    &mut config.source, &mut *time, Some(&approval), permit),
+                                None => driver.step_computed_from_policy_file(&mut config.source,
+                                    &mut *time, Some(&approval)),
+                            }.result.map_err(debug)?),
                         };
                         let Some(event) = event else {
                             // This prepared request owns one finite retry budget

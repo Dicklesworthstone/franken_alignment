@@ -29,6 +29,28 @@
   `73c7822b`. Retain the failed baseline/probes/candidate and canonical admission
   refusal. Eleven original failure IDs resolved in scope; 14 and the P0 remain open.
 
+## 2026-10-24: connect credentials to the actual learned operator
+
+- Add closed credential recipe/profile selection around the original learned
+  recipes and their checked-publication, identity, joint and forecast envelopes.
+  Resolve the independent perimeter and install the original native guard.
+- Acquire bounded, separately provisioned broker/provider inputs before sockets
+  or owner recovery. Bind one original owner-bound permit and retain it across
+  native/process review, publication waiting and resident Message/Message/Finish.
+- Preserve original reviews and both effect keys. Require exact policy and
+  dynamic credential epoch for owner/receipt/Stop recovery, while anchored past
+  review remains bound to immutable policy and its independent history anchor.
+- Add nine operator integration functions covering permitted publication,
+  credential refusals, all forecast modes, full identity/joint/topology/witness
+  composition, process waiting, source-free historical operations, rotation and
+  resident reuse after provisioning files disappear.
+- Pass all nine new functions and 68 existing operator regressions, plus standard
+  compilation of the complete original operator test source. Preserve concurrent
+  main fixture fixes and pass all five affected native publication cases again.
+  Retain the scoped
+  LLVM/Cranelift runtime evidence, unchanged source hashes and the original full
+  gate's dependency-admission refusal; full qualification remains open.
+
 ## 2026-10-24: connect native reviewer fixtures through bounded readiness
 
 - Reproduce a real native-sharded `ConnectionRefused` in the complete operator

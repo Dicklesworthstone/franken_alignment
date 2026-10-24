@@ -78,6 +78,60 @@ dependency/source/target/runtime admission, Clippy and complete qualification.
 Raw commands, failed attempts and source receipts are retained outside source in
 `/Users/jemanuel/Documents/Codex/2026-10-24/franken-alignment-receipts-24c632f8/`.
 
+## 2026-10-24: run learned publication with the original credential guard
+
+The learned operator now accepts the closed outer credential envelope around all
+six original recipe versions, including checked publication, computed identity,
+joint qualification and forecasting. Its independently loaded perimeter must
+resolve the exact immutable policy before model loading. Original guarded
+constructors install that registration in the first canonical image, including
+mediated topology, before numerical startup.
+
+Live acquisition reads separate bounded broker/provider files under the original
+aggregate asset allowance and deadline. Missing, unequal, empty, oversized or
+aliased inputs refuse before service sockets, owner creation or recovery. The
+actual owner then binds the native non-cloneable permit. One live session carries
+it through native/process review, the original first-publication driver, finite
+publication waiting and resident Message/Message/Finish. Provisioning files need
+not survive binding; neither waiting nor a successor request reopens them. Every
+request still needs its original helper review, automatic key, human approval
+and selected publication witnesses.
+
+Recovery, receipt and Stop/Drain retain the exact credential policy and current
+generation/revoked expectation before cleanup or fencing. Historical loading
+needs no live inventory or credential files. Anchored review audit retains its
+original immutable-policy/history-anchor meaning: epoch-only expectations leave
+the past audit unchanged and grant no present effect right. A changed or omitted
+policy refuses. Secrets and permits never enter the recipe, journal or packets.
+
+All 77 selected operator functions pass on the feature source based on
+`a14a9e5f`: nine new credential functions and 68
+existing publication, waiting, identity/joint, cooperative generation/prediction,
+recovery, resident and native-publication regressions. The new combined test
+publishes through credential, identity, joint, owned-forecast, topology and
+witness guards together; a relevant witness change then refuses despite the same
+valid credential and original reviews. Separate positive cases retain one permit
+after provisioning files disappear during a wait or resident sequence. The
+denominator excludes the two registered subprocess helper entry points, whose
+actual child invocations are not counted again.
+
+Concurrent main fixture fixes through `341b7d45` were then preserved with every
+feature source byte unchanged. All five affected native checked-publication
+functions pass again, and standard Cargo check passes the complete combined
+operator test source. Runtime
+uses the standard LLVM harness with the official Cranelift native library and
+32 MiB test-thread stacks. A verification mirror removes only unselected test
+registration attributes; production and every selected test file/body remain
+unchanged, with original source hashes checked before and after execution. The
+required xtask gate was run again and still refuses the unchanged dependency
+admission check before formatting, Clippy or full-suite execution. These results
+do not establish full workspace or FA-011/014 qualification.
+
+This increment integrates the existing canonical journal publication sink. The
+independent external file endpoint still needs durable send/receipt and
+whole-process recovery integration; no remote provider or hostile-process
+containment is claimed. See [operator selection and usage](docs/LEARNED_CREDENTIAL_PUBLICATION.md).
+
 ## 2026-10-24: retain native reviewer deadlines while waiting for readiness
 
 The shared native and generated reviewer fixtures now use the existing verified
@@ -182,8 +236,8 @@ Cranelift library with 32 MiB test-thread stacks. The required full xtask driver
 was executed and still refuses the existing dependency-admission guard before
 formatting, Clippy or full-suite execution. This is scoped native integration
 for the original journal publication sink, not external-provider containment or
-full FA-011/014 qualification. Runnable credential selection is the next operator
-increment. See [learned credential policy](docs/FILE_LEARNED_CREDENTIAL_POLICY.md).
+full FA-011/014 qualification. The operator increment above consumes this policy
+binding. See [learned credential policy](docs/FILE_LEARNED_CREDENTIAL_POLICY.md).
 
 ## 2026-10-24: execute the original sequential publication integration
 

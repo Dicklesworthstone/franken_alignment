@@ -96,6 +96,14 @@ fn validate(config: &Config, entries: &[Entry], peers: &PeerProfile) -> Result<(
             || loaded.generation != original.generation || loaded.stream != original.stream {
             return Err("every sequence entry must retain the exact original finite generation and stream".into());
         }
+        let same_credential = match (&original.credential, &loaded.credential) {
+            (None, None) => true,
+            (Some(original), Some(selected)) => original.same_resident_selection(selected),
+            _ => false,
+        };
+        if !same_credential {
+            return Err("every sequence entry must retain the original credential policy, epoch and independent inputs".into());
+        }
         if let Some(identity) = &loaded.identity {
             if !identity_checks.insert(identity.check) || identity.measurement_sequence <= identity_sequence {
                 return Err("sequence identity checks must be distinct with increasing measurement sequences".into());
@@ -202,6 +210,9 @@ where F: FnMut() -> ElapsedTick {
         wall: Duration::from_millis(lifetime) };
     let first = &entries[0];
     let deadline = entry_deadline(&global, first, start)?;
+    // The whole fixed sequence retains ONE original credential capability.
+    // Preflight its independent inputs before any socket/store/recovery work.
+    let mut credential = super::credential::prepare(&first.loaded, continuing, &deadline, &mut time)?;
     // Only this fixed operation names the authenticated stop endpoint. Sharing
     // it with each request preserves one socket, candidate quota and outcome.
     let mut control = Control::new(&config, first.loaded.request, Some(peers))?;
@@ -265,7 +276,8 @@ where F: FnMut() -> ElapsedTick {
         };
         let cycle = execute_request(driver, &mut config, &entry.loaded,
             RequestServices { peers, reviewer: &reviewer, prediction: &mut prediction,
-                identity: &mut identity, intake: &mut intake, wire: &mut wire, finishing, message_continuation,
+                identity: &mut identity, credential: &mut credential,
+                intake: &mut intake, wire: &mut wire, finishing, message_continuation,
                 credibility: if index == 0 { credibility } else { None },
                 stop_operation: first.loaded.request },
             &mut control, &mut deadline, &mut time);
