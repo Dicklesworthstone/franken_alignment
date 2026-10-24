@@ -1,5 +1,83 @@
 # Implementation status · design revision 0.3
 
+## 2026-10-24: verify complete receipt, topology and checked-Andon groups
+
+The combined final selection at `9a8cf8f07b63903394500543e8e688014dad626a`
+(tree `1d76b8603a2b7d1ee51ca919bc96a00fef650527`) passed **38 functions,
+zero failed/ignored, 696 filtered**, 99.77 seconds on qualified standard RCH
+`ts1` and the default stack. This includes the 27 receipt functions below,
+all seven topology-service functions and all four checked-Andon functions;
+the overlapping runs are not added together. Actual actor/helper/human
+publication, human rejection, post-dispatch witness/topology loss, unrelated
+changes and unchanged plain checked-bootstrap positives all executed.
+
+Two additional original fixtures were wrong: the waiting profile omitted its
+required feed, and the outer-routing test expected topology usage for a learned
+command that owns its topology grammar. Both original functions reproduced as
+failed at `73c7822b` before correction. The valid waiting profile now reaches
+the specific no-downgrade refusal without reading the absent feed or creating
+a store. The direct topology parser still rejects every original malformed
+argument with its exact diagnostic; learned-owned arguments must instead
+return the learned grammar diagnostic before reading the nonexistent paths.
+No production parser, profile, guard or authority rule changed.
+
+All nine owned Rust files passed qualified formatting and workspace/all-target
+compilation at this final source, warnings retained. The canonical driver again
+executed and refused the unchanged initial dependency-admission guard. Thirteen
+old failure IDs have scoped resolutions in this block. The complete unfiltered
+operator inventory at this source finished **723 passed, 11 failed, zero
+ignored/filtered**, 483.23 seconds, exit 101. Compared with the retained complete
+732-function run's 702/30 result, 19 original failed IDs passed and no previously
+passing ID failed. Two added tests account for the inventory increase; repeated
+or child-helper runs are not added to these counts.
+
+The granular TODO retains the 11 current failures plus one previously failing
+checked learned sequence case that passed this run without a specific repair in
+this block. Its earlier failure remains an intermittent-case investigation, not
+a claimed fix. Complete qualification and original P0 acceptance remain open;
+this is fixture verification, not independent certification. The frozen branch
+excludes concurrent credential-policy work on shared main; this evidence does
+not qualify their combined working tree. Shared staging and the pre-existing
+index lock were preserved; owned changes are committed on the isolated train branch.
+
+## 2026-10-24: distinguish retained nonadmission from admitted policy denial
+
+The learned receipt fixtures now exercise three native outcomes in their original
+message, finish, read-only and settlement functions. A supplied snapshot with one
+mismatched semantic epoch produces retained `NotAdmitted(Binding)` with no action;
+a complete known-false policy creates an admitted `Denied` action; actual native
+review and independent human approval still produce confirmed publication. These
+are fixture corrections, not a new production authorization mechanism. Original
+deadlines, byte/store checks, wrong-selection/floor/anchor controls, interrupted
+clocks, unknown liabilities and spent-work assertions remain in place.
+
+At exact source `73c7822bcfdaf22b17b696c7bb56e0833f420ce8`, all 26 original
+receipt-selection functions plus the new captured-input boundary passed:
+**27 passed, zero failed/ignored, 707 filtered**, 96.37 seconds on standard RCH
+`ts1`, qualified `nightly-2026-09-08`, default stack. The new boundary separately
+checks that already-expired source-only intake performs no source read, clock
+callback or request retention. Historical receipt lookup and recovery retain
+all three outcomes after live assets disappear; no action or outcome is injected.
+Standard workspace/all-target compilation passed with warnings. The canonical
+driver executed and refused the unchanged dependency-admission guard before
+formatting, Clippy or workspace tests.
+
+Retain the original 26-function **15 passed/11 failed** baseline, the incorrect
+expiry probe **0/1**, and the first expanded candidate **15/12**, including its
+new helper regression. Expired learned-stream construction cannot be assumed to
+reach request retention; the corrected test changes only the supplied snapshot
+binding and preserves the expired-intake refusal. The separate `trj` attempt has
+recovered terminal acknowledgment with transport exit 255 and no test result.
+The queued, unstarted candidate was cancelled with exit 130 before redispatch.
+None of those attempts counts as passing evidence.
+
+Eleven original failure-ID TODOs now have scoped passing evidence, leaving 14 at
+this source cut. This is not a full 734-function result or independent
+certification. The original P0 and roadmap acceptances remain open, including
+dependency/source/target/runtime admission, Clippy and complete qualification.
+Raw commands, failed attempts and source receipts are retained outside source in
+`/Users/jemanuel/Documents/Codex/2026-10-24/franken-alignment-receipts-24c632f8/`.
+
 ## 2026-10-24: retain native reviewer deadlines while waiting for readiness
 
 The shared native and generated reviewer fixtures now use the existing verified

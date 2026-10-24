@@ -1,5 +1,34 @@
 # Changelog
 
+## 2026-10-24: reach the intended topology and Andon fixture boundaries
+
+- Supply the waiting profile's required feed before testing its specific
+  no-downgrade refusal; confirm no feed read or store creation occurs.
+- Preserve all direct topology grammar refusals and require the learned grammar
+  diagnostic when learned creation owns the selected topology option.
+- Reproduce both original failures, then pass the complete seven topology and
+  four checked-Andon functions together with all 27 receipt functions: 38 passed,
+  zero failed/ignored, 696 filtered at `9a8cf8f0`, on the standard compiler/default
+  stack. This includes real socket/publication and independent-human controls.
+  Formatting/all-target checks pass; retain the canonical admission refusal.
+  The unfiltered 734-function run finished 723 passed/11 failed, zero ignored or
+  filtered; no previously passing ID newly failed against the prior full run.
+  Retain 12 investigations: 11 current failures and one historical sequence
+  failure that passed without a specific repair. Complete P0 qualification stays open.
+
+## 2026-10-24: preserve three distinct native learned receipt outcomes
+
+- Keep genuine native `NotAdmitted(Binding)` with no action, admitted policy
+  `Denied`, and independently reviewed/human-confirmed execution in the original
+  message, finish, read-only and settlement tests. Preserve original deadlines,
+  byte checks, negative controls, unknown liabilities and charged work.
+- Pair expired new intake's no-I/O/no-clock/no-record refusal with retained
+  receipt recovery after live assets disappear. No production gate changed.
+- Pass all 26 original receipt-selection functions plus one causal boundary
+  (27 passed, zero failed/ignored, 707 filtered) and standard all-target check at
+  `73c7822b`. Retain the failed baseline/probes/candidate and canonical admission
+  refusal. Eleven original failure IDs resolved in scope; 14 and the P0 remain open.
+
 ## 2026-10-24: connect native reviewer fixtures through bounded readiness
 
 - Reproduce a real native-sharded `ConnectionRefused` in the complete operator
