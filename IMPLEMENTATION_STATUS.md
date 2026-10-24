@@ -1,5 +1,43 @@
 # Implementation status · design revision 0.3
 
+## 2026-10-24: restore executable reference checks without granting admission
+
+The Native Andon peer now resolves its existing transport, receipt and nested
+test modules by their original explicit paths. This fixes the workspace's
+all-target compilation failure and makes the original real peer tests reachable.
+A guarded-resume fixture's unmatched format delimiter is corrected. Private,
+short socket fixture directories preserve real Unix and pinned-child transport
+under RCH's deep temporary roots; production still rejects an overlong address.
+The reviewer negative now creates the automatic reservation it asserts survives,
+retaining its original 16-unit assertion and checking that no units were charged.
+
+Source-snapshot discovery now covers reference examples/fixtures and journal
+source/tests/manifest, alongside the original roots. Independent sandbox hashes
+and positive/negative controls reproduce the former omissions and bind changed
+bytes after discovery. No manifest was regenerated and no package was admitted.
+Actual Cargo metadata retains all three workspace packages and their resolved
+journal-to-reference edge; the original two-package policy still refuses it.
+Registry test lookup accepts only sole conditional language-feature payloads,
+while conditional ignore/cfg, nested and mixed payloads still refuse. Negative
+sandboxes now copy the actual retained contracts and example source before their
+single causal mutation; none of their finding assertions were relaxed.
+
+Qualified standard-backend RCH execution at base `4a9fb80e8d34b1cdac65960dcfccc6e43295a9c1`
+plus the corresponding owned-path overlays passed all 248 xtask tests and all 46
+Native Andon tests. The original reviewer target passed six parent regressions
+and its registered helper entrypoint; the pinned child also executed the helper
+with actual credentials. The unchanged journal source passed 81 unit tests,
+143 integration tests and 13 compile-fail doctests. Each target ran unfiltered;
+the child intentionally selects its own helper, not an additional independent
+parent regression. Raw attempts, including earlier failures, are retained at
+`/Users/jemanuel/Documents/Codex/2026-10-24/franken-alignment-implementation-0761ea9b/`.
+
+These are bounded reference/enabler results, not production alignment evidence.
+The full qualification bridge remains in progress: the initial lock guard still
+refuses the journal, reviewed source/admission is incomplete, the library Clippy
+baseline reports 80 errors, and the complete publication operator target is
+still undergoing execution. No roadmap packet or Bead is closed by this repair.
+
 ## 2026-10-24: finish finite producer catch-up in the learned operator
 
 The checked learned operator now accepts the original finite-wait witness

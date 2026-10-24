@@ -36,9 +36,9 @@ These are source-level admission blockers, not declarations that the donor repos
 
 ## Current enforceable scope
 
-The reference workspace contains exactly two dependency-free local packages. `xtask` rejects any lockfile outside this exact inventory. This intentionally crude guard is sound for this closed initial inventory, not a general parser or future package-policy engine. Expanding it requires implementing the complete target-feature/source admission gate first. The 2026-09-07 owned xtask additionally parses actual per-target Cargo metadata, rejects missing or malformed graph evidence, checks feature sets and build/proc-macro/link declarations, and confines actual manifest and target source paths. Its closed-inventory compiler unconditionally refuses external packages; metadata does not inspect all source includes, runtime downloads or build effects. The qualified epoch2 receipt is in `artifacts/execution/2026-09-07-epoch2-receipt.json`; it does not justify relaxing the lock guard. `release-check` refuses release because production qualification is absent.
+The initial admitted profile contains exactly two dependency-free local packages. The current source workspace also contains `fa-journal`, which depends on `fa-reference`; that actual graph is observed by Cargo metadata but is not admitted by the initial policy. `xtask` rejects any lockfile outside the original two-package inventory. This intentionally crude guard is sound for this closed initial inventory, not a general parser or future package-policy engine. Expanding it requires implementing the complete target-feature/source admission gate first. The 2026-09-07 owned xtask additionally parses actual per-target Cargo metadata, rejects missing or malformed graph evidence, checks feature sets and build/proc-macro/link declarations, and confines actual manifest and target source paths. Its closed-inventory compiler unconditionally refuses external packages; metadata does not inspect all source includes, runtime downloads or build effects. The qualified epoch2 receipt is in `artifacts/execution/2026-09-07-epoch2-receipt.json`; it does not justify relaxing the lock guard. `release-check` refuses release because production qualification is absent.
 
-The epoch4 gate additionally verifies `registry/source_snapshot.json`: every regular file under the two crates' source/test roots, the named build/plan inputs, and the six currently embedded registries must match its reviewed SHA-256 inventory exactly. Missing, changed, unlisted and symlinked inputs refuse. The manifest is operator data, outside its own input set; changing it is a review decision, not evidence that new source passed. Refresh it only after reviewing the selected source/input closure, then execute a new gate against that frozen selection. This is an enumerated current compile-input closure, not a generic Rust include resolver. Host SHA-256 tools are trusted operator infrastructure, and an outer freeze is required against concurrent mutation. [The retained receipt](../artifacts/execution/2026-09-07-epoch4-receipt.json) proves execution for that selected snapshot only.
+The epoch4 gate added verification of `registry/source_snapshot.json`: every regular file under its then-selected source/test roots, the named build/plan inputs, and the six embedded registries had to match its reviewed SHA-256 inventory exactly. Missing, changed, unlisted and symlinked inputs refuse. The manifest is operator data, outside its own input set; changing it is a review decision, not evidence that new source passed. Refresh it only after reviewing the selected source/input closure, then execute a new gate against that frozen selection. This is an enumerated current compile-input closure, not a generic Rust include resolver. Host SHA-256 tools are trusted operator infrastructure, and an outer freeze is required against concurrent mutation. [The retained receipt](../artifacts/execution/2026-09-07-epoch4-receipt.json) proves execution for that selected snapshot only.
 
 Official tool contracts: [rustup toolchains](https://rust-lang.github.io/rustup/concepts/toolchains.html), [rustup overrides](https://rust-lang.github.io/rustup/overrides.html), and [Cargo metadata](https://doc.rust-lang.org/cargo/commands/cargo-metadata.html). These explain tool behavior; the stricter admission policy above is this project's design.
 
@@ -55,3 +55,27 @@ The policy records empty local dependency/build-dependency/build-script/proc-mac
 
 
 The admission evaluator compares exact `(source, name, version)` identities, target scopes, resolved edges and activated features. The live metadata path supplies the actual observed graph; missing collection or unreadable graph data remains Unknown and refuses. Hypothetical reviewed rows in compiler unit tests exercise allowed and forbidden target/source cases through this same evaluator. They are not real donor admissions: the separately enforced current policy and unchanged lock guard still admit only the two reviewed local packages.
+
+
+## 2026-10-24 closure-discovery repair; admission still open
+
+Source discovery now includes all eight selected roots: `fa-reference` source,
+tests, examples and fixtures; `fa-journal` source and tests; and xtask source
+and tests. Explicit inputs also include the journal manifest. Unlisted files
+in these roots and same-path changes to reviewed journal/operator inputs refuse
+through the original inventory and digest checks. The existing traversal, byte
+and hash-argument limits are unchanged. This repairs omitted inputs; it does
+not refresh the reviewed manifest, approve the journal, or inspect all arbitrary
+Rust includes and runtime dependencies.
+
+The real metadata collection test retains all three actual package identities
+and the journal-to-reference edge, then demonstrates that the original closed
+two-package policy refuses that graph. Observation never grants admission. The
+full driver still stops at its unchanged lock guard; the reviewed local closure,
+package admission, Clippy and complete target qualification remain required.
+
+Registry reference-test lookup now distinguishes conditional language-feature
+declarations from conditional hiding or ignoring of tests. Only a sole
+`feature(...)` payload receives lexical eligibility; conditional `ignore`,
+`cfg`, nested conditionals and mixed payloads still refuse. This lookup proves
+that a declaration is present, not that it compiled, ran or proved an invariant.

@@ -1075,11 +1075,67 @@ fn attribute_ending_at(tokens: &[RustToken<'_>], end: usize) -> Option<(usize, b
 fn classify_attribute(tokens: &[RustToken<'_>]) -> Attribute {
     match tokens.first() {
         Some(RustToken::Word("ignore")) => Attribute::Ignore,
+        Some(RustToken::Word("cfg_attr")) if conditional_feature_attribute(tokens) => {
+            Attribute::Other
+        }
         Some(RustToken::Word("cfg_attr")) => Attribute::CfgAttr,
         Some(RustToken::Word("cfg")) if cfg_test_attribute(tokens) => Attribute::CfgTest,
         Some(RustToken::Word("cfg")) => Attribute::CfgOther,
         _ => Attribute::Other,
     }
+}
+
+/// A conditional language feature cannot hide or ignore a test. All other
+/// cfg_attr payloads remain ineligible, including feature + ignore mixtures.
+/// This is lexical eligibility only; the compiler still qualifies execution.
+fn conditional_feature_attribute(tokens: &[RustToken<'_>]) -> bool {
+    let [
+        RustToken::Word("cfg_attr"),
+        RustToken::Punctuation('('),
+        body @ ..,
+        RustToken::Punctuation(')'),
+    ] = tokens
+    else {
+        return false;
+    };
+    let mut depth = 0_usize;
+    let mut separator = None;
+    for (index, token) in body.iter().enumerate() {
+        match token {
+            RustToken::Punctuation('(' | '[' | '{') => depth += 1,
+            RustToken::Punctuation(')' | ']' | '}') => {
+                let Some(next) = depth.checked_sub(1) else {
+                    return false;
+                };
+                depth = next;
+            }
+            RustToken::Punctuation(',') if depth == 0 => {
+                separator = Some(index);
+                break;
+            }
+            _ => {}
+        }
+    }
+    let Some(separator) = separator.filter(|index| *index > 0) else {
+        return false;
+    };
+    let [
+        RustToken::Word("feature"),
+        RustToken::Punctuation('('),
+        names @ ..,
+        RustToken::Punctuation(')'),
+    ] = &body[separator + 1..]
+    else {
+        return false;
+    };
+    !names.is_empty()
+        && names.iter().enumerate().all(|(index, token)| {
+            if index % 2 == 0 {
+                matches!(token, RustToken::Word(name) if rust_identifier(name))
+            } else {
+                matches!(token, RustToken::Punctuation(','))
+            }
+        })
 }
 
 fn cfg_test_attribute(tokens: &[RustToken<'_>]) -> bool {
@@ -1532,6 +1588,38 @@ mod tests {
             "current registry inputs must satisfy the owned FA-003 core checks: {:?}",
             report.findings
         );
+    }
+
+    #[test]
+    fn conditional_language_feature_does_not_hide_a_real_test() {
+        for attribute in [
+            "#![cfg_attr(target_os = \"linux\", feature(peer_credentials_unix_socket))]",
+            "#![cfg_attr(all(test, target_os = \"linux\"), feature(peer_credentials_unix_socket, test,))]",
+        ] {
+            let source =
+                format!("{attribute}\n#[cfg(test)] mod tests {{ #[test] fn actual() {{}} }}");
+            assert!(declares_test(&source, "actual"), "{attribute}");
+            assert!(!declares_test(&source, "absent"));
+        }
+    }
+
+    #[test]
+    fn conditional_features_cannot_launder_ignored_or_disabled_tests() {
+        for attribute in [
+            "#![cfg_attr(test, ignore)]",
+            "#![cfg_attr(test, cfg(any()))]",
+            "#![cfg_attr(test, feature(test), ignore)]",
+            "#![cfg_attr(test, feature(test), cfg(any()))]",
+            "#![cfg_attr(test, cfg_attr(test, ignore))]",
+            "#![cfg_attr(test, feature(test),)]",
+            "#![cfg_attr(test, feature(test ignore))]",
+        ] {
+            let source = format!("{attribute}\nmod tests {{ #[test] fn actual() {{}} }}");
+            assert!(!declares_test(&source, "actual"), "{attribute}");
+        }
+        let source =
+            "#![cfg_attr(test, feature(test))]\nmod tests { #[ignore] #[test] fn actual() {} }";
+        assert!(!declares_test(source, "actual"));
     }
 
     #[test]

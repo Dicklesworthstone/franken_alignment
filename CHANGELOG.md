@@ -1,5 +1,20 @@
 # Changelog
 
+## 2026-10-24: repair the compilation and real-test bridge
+
+- Wire the original Native Andon peer modules and nested tests by explicit path;
+  repair the existing guarded-resume fixture's closing format delimiter.
+- Keep real Unix/pinned-child tests on private short fixture paths, paired with
+  production overlong-address refusal; establish the original reviewer test's
+  automatic reservation instead of weakening its accounting assertion.
+- Include journal and operator inputs in source discovery. Preserve actual
+  three-package metadata while the original two-package admission still refuses.
+- Correct conditional-feature test lookup and complete causal registry sandboxes;
+  retain ignored/disabled/mixed-payload refusals and exact finding assertions.
+- Pass 248 xtask, 46 Native Andon, the original reviewer target and all journal
+  targets/doctests on qualified RCH runs. Full admission, Clippy and operator
+  qualification remain open; failed attempts remain retained in the status record.
+
 ## 2026-10-24: complete bounded producer waiting in the learned operator
 
 - Admit the original finite-wait witness profile around learned recipes, using
