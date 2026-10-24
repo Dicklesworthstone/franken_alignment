@@ -6,6 +6,7 @@
 #[allow(dead_code)]
 #[path = "support/learned_text_model.rs"] mod fixture;
 #[path = "support/file_mediation.rs"] mod topology;
+#[path = "learned_publication_validation/deferral.rs"] mod deferral;
 
 use fa_reference::{Error, Snapshot};
 use fa_reference::action::{ElapsedTick, FrozenAction, Purpose, ResolvedTarget, Scope};

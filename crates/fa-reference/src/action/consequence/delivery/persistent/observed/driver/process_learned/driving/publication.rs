@@ -5,7 +5,8 @@ use super::{FileProcessSupervisedDriver, FileProcessDriverEvent};
 use super::super::super::{FileHumanPermit, FileCredentialPermit};
 use super::super::super::evidence::FileEvidenceReport;
 use super::super::super::evidence::publication::{PublicationProvider, FilePublicationDriverReport,
-    feed::{FeedProvider, FileFeedDriverReport}};
+    feed::{FeedProvider, FileFeedDriverReport},
+    deferred::{deferrable_provider, FileDeferrableDriverReport}};
 use super::super::super::learned::evidence::policy_file_provider;
 use super::super::super::super::publication::capture::{PublicationInputFile,
     heartbeat::feed::PublicationFeedFile};
@@ -13,6 +14,35 @@ use crate::action::ElapsedTick;
 use crate::action::consequence::oversight::evidence_source::EvidenceFile;
 
 impl FileProcessSupervisedDriver {
+    /// Reacquire policy and witness data without cancelling live helper children
+    /// solely because a valid cut-bound producer snapshot lags its complete feed.
+    /// Original source-bound replies, review windows, work and cleanup custody
+    /// remain owned by the process sequence. Only its Ready publication phase
+    /// can recommend bounded waiting with the original human key; dispatch stays
+    /// strict and cannot gain a later execution window through this operation.
+    pub fn step_from_policy_file_with_publication_deferral<S, F>(&mut self,
+        evidence: &mut S, source: &PublicationInputFile, feed: Option<&PublicationFeedFile>,
+        clock: F, human: Option<&FileHumanPermit>, credential: Option<&FileCredentialPermit>)
+        -> FileDeferrableDriverReport<FileProcessDriverEvent>
+    where S: EvidenceFile + ?Sized, F: FnMut() -> ElapsedTick {
+        let expected = self.driver.job.as_ref().map(|job| (job.attempt, job.input_revision));
+        let mut observations = Vec::with_capacity(2);
+        let mut source_updates = Vec::with_capacity(2);
+        let mut reads = Vec::with_capacity(2);
+        let mut feeds = Vec::with_capacity(2);
+        let mut captures = Vec::with_capacity(2);
+        let result = self.step_with_provider(clock, &mut deferrable_provider(
+            policy_file_provider(expected, evidence, &mut observations, &mut source_updates),
+            expected.map(|(attempt, _)| attempt), source, feed,
+            &mut reads, &mut feeds, &mut captures), human, credential);
+        let waiting = self.driver.publication_waiting(&result, &reads, &captures, human);
+        FileDeferrableDriverReport { captures, waiting, step: FileFeedDriverReport {
+            feeds, publication: FilePublicationDriverReport {
+                reads, evidence: FileEvidenceReport { observations, source_updates, result },
+            },
+        } }
+    }
+
     /// Reacquire the concrete witness file at the original evidence boundaries,
     /// retaining actual learned input before and after the policy-only file read.
     /// The original source must already be bound to the exact admitted attempt.

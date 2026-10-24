@@ -1,5 +1,19 @@
 # Changelog
 
+## 2026-10-23: preserve learned review through bounded producer catch-up
+
+- Add original capture-or-defer adapters for computed, native and process learned
+  drivers, retaining policy-only sidecar provenance, review custody and all keys.
+- Generalize the existing driver report without changing its ready-job, human
+  approval or acknowledged-deferred waiting checks; preserve strict dispatch.
+- Reuse acknowledged same-owner replay custody for durable deferral while keeping
+  original outcome derivation, suffix validation, fault and acknowledgment rules.
+- Pass all 31 selected public functions, including five new learned warm/cold,
+  invalidation, recovery and failure regressions; pass standard target checks and
+  independent source review. Retain the LLVM-harness/Cranelift-library scope and
+  the unchanged full-gate dependency-admission refusal. Operator finite waiting
+  and complete packet/release qualification remain separate work.
+
 ## 2026-10-24: enforce final-publication witnesses in the learned operator
 
 - Add the closed checked-publication envelope around all six original learned

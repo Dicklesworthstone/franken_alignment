@@ -1,5 +1,44 @@
 # Implementation status · design revision 0.3
 
+## 2026-10-23: retain learned review while publication producers catch up
+
+The original computed, native-model and process learned drivers now expose
+explicit capture-or-defer acquisition around their original policy-only learned
+input provider. A valid snapshot behind a complete change feed remains an
+acknowledged nonpermitting observation, allowing native/process review to
+advance under its original schedule and budgets. Only the original ready-job,
+matching-human-key and Incomplete checks can recommend later bounded waiting.
+Malformed history, unavailable evidence, changed helper input and post-dispatch
+lag retain the original refusal and cleanup behavior. No capture replaces the
+actual learned sidecar, and no review or effect key is synthesized.
+
+The durable capture-or-defer transition also uses the existing same-owner
+control replay cache. It derives Installed/Deferred from the original candidate
+after semantic replay and returns that outcome only after storage acknowledgment.
+Warm owners reuse their acknowledged prefix; cold owners still replay normally,
+and every unverified suffix event remains subject to the original checks.
+
+All 31 selected public regression functions pass: fifteen learned-publication
+cases, including five new learned deferral functions, seven original durable
+deferral cases and nine original driver/socket cases. The new tests exercise
+actual generated output and both original keys, warm/cold historical equality,
+unchanged numerical expenditure, negative key/range and opaque-input changes,
+missing history, equivocation, rollback, recovery fencing, failed withdrawal and
+strict post-dispatch charge preservation. The three complete public test targets
+pass standard Cargo check, and independent source review found no blocker.
+
+Runtime evidence uses standard LLVM harnesses linked to the qualified nightly's
+official Cranelift native library with 32 MiB thread stacks; source hashes remain
+unchanged throughout execution. This is scoped reference evidence, not a full
+LLVM native-library build, performance SLO, deployment or release qualification.
+The required full xtask driver executes and stops at the unchanged existing
+dependency-admission guard before formatting, Clippy or full-suite execution.
+No dependency, journal format, native gate or work allowance changes.
+
+The runnable learned finite-wait profile is the next operator integration slice;
+these native APIs do not themselves add a polling loop. FA-061/062 remain open.
+See [supervised capture deferral](docs/SUPERVISED_CAPTURE_DEFERRAL.md).
+
 ## 2026-10-24: run checked learned publication through real operator boundaries
 
 The closed `fa.learned-checked-publication/1` envelope selects original publication

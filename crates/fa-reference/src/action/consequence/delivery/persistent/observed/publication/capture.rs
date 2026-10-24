@@ -11,7 +11,9 @@ pub mod heartbeat;
 pub use file::{FileCaptureError, PublicationInputFile};
 use super::witnesses::{FilePublicationEvidence, FilePublicationInputs, MAX_PUBLICATION_PACKET_BYTES};
 use super::witness_gate::WitnessEvent;
-use super::super::{Event, FileOversight, JournalError, JournalFailure, JournalIo, Machine, Transition, journal};
+use super::super::{Event, FileOversight, JournalError, JournalFailure, JournalIo, Transition, journal};
+#[cfg(test)]
+use super::super::Machine;
 use crate::action::FrozenAction;
 use crate::action::consequence::delivery::publication_gate::PublicationSourceStatus;
 use crate::action::consequence::delivery::persistent::codec::shared::{Reader, Writer};

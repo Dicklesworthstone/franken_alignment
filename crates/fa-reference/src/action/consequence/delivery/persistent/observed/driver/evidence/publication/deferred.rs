@@ -20,12 +20,12 @@ use std::rc::Rc;
 /// still-reviewed, undispatched job with an unexpired matching human key. The
 /// caller must bound retries and continue servicing stop/cancellation requests.
 #[derive(Debug)]
-pub struct FileDeferrableDriverReport {
+pub struct FileDeferrableDriverReport<T = FileDriverEvent> {
     pub captures: Vec<FileCaptureObservation>,
-    pub step: FileFeedDriverReport<FileDriverEvent>,
-    waiting: Option<FileCaptureObservation>,
+    pub step: FileFeedDriverReport<T>,
+    pub(in super::super::super) waiting: Option<FileCaptureObservation>,
 }
-impl FileDeferrableDriverReport {
+impl<T> FileDeferrableDriverReport<T> {
     pub fn waiting_for_producer(&self) -> Option<FileCaptureObservation> { self.waiting }
 }
 
@@ -88,7 +88,7 @@ impl FileSupervisedDriver {
         } }
     }
 
-    fn publication_waiting(&self, result: &Result<FileDriverEvent, JournalError>,
+    pub(in super::super::super) fn publication_waiting<T>(&self, result: &Result<T, JournalError>,
         reads: &[Result<FileCaptureIdentity, FileCaptureError>], captures: &[FileCaptureObservation],
         human: Option<&FileHumanPermit>) -> Option<FileCaptureObservation>
     {
@@ -111,6 +111,19 @@ impl FileSupervisedDriver {
         if status.disposition != HumanDisposition::Approved || now >= status.expires_at { return None; }
         Some(capture)
     }
+}
+
+// The learned adapters use the SAME capture operation around their original
+// policy-only provider. Sharing construction within the driver cannot replace
+// learned helper input or expose the provider as a public extension point.
+pub(in super::super::super) fn deferrable_provider<'a, P: EvidenceProvider + 'a>(
+    inner: P, attempt: Option<u64>, source: &'a PublicationInputFile,
+    feed: Option<&'a PublicationFeedFile>,
+    reads: &'a mut Vec<Result<FileCaptureIdentity, FileCaptureError>>,
+    feeds: &'a mut Vec<Result<PublicationFeedReport, FileCaptureError>>,
+    captures: &'a mut Vec<FileCaptureObservation>) -> impl EvidenceProvider + 'a
+{
+    DeferrableProvider { inner, attempt, source, feed, reads, feeds, captures }
 }
 
 struct Borrowed<'a, P>(&'a mut P);

@@ -1,7 +1,9 @@
 //! Durable nonpermitting observations of a valid but lagging producer image.
 //! Only the original journal acknowledgment makes this result usable as history.
 use super::{FileCaptureError, FileCaptureIdentity, FilePublicationCapture, PublicationInputFile};
-use super::{Event, FileOversight, JournalError, JournalFailure, JournalIo, Machine, Transition, WitnessEvent, journal};
+use super::{Event, FileOversight, JournalError, JournalFailure, JournalIo, Transition, WitnessEvent, journal};
+#[cfg(test)]
+use super::Machine;
 use crate::action::ActionState;
 use crate::action::consequence::delivery::publication_gate::changes::PublicationCaptureOutcome;
 use crate::Error;
@@ -61,7 +63,7 @@ impl FileOversight {
             kind: std::io::ErrorKind::Other, replacement_may_be_visible: false });
         if self.events.len() >= self.profile.delivery.limits.events { return Err(Error::Limit.into()); }
         let bytes = journal::encode_appended(&self.profile, self.store.identity(), &self.events, &event)?;
-        let mut candidate = Machine::replay(&self.profile, &self.events)?;
+        let (mut candidate, retain_replay) = self.replay_control_candidate()?;
         let result = candidate.apply(&event)?;
         let revision = match &result { Transition::Inputs(revision) => *revision,
             _ => return Err(Error::Binding.into()) };
@@ -79,7 +81,7 @@ impl FileOversight {
             },
             _ => return Err(Error::Binding.into()),
         };
-        self.persist_candidate(event, bytes, candidate, result)?;
+        self.persist_control_candidate(event, bytes, candidate, result, retain_replay)?;
         Ok(FileCaptureObservation { identity, outcome })
     }
 }

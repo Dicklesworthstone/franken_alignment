@@ -45,8 +45,12 @@ between the same numerical quanta.
 
 ## Publication acquisition and acknowledgment
 
-Publication input withdrawal, producer freshness persistence and plain capture
-installation use the existing control-candidate replay and persistence helpers.
+Publication input withdrawal, producer freshness persistence, plain capture
+installation and the explicit capture-or-defer observation use the existing
+control-candidate replay and persistence helpers. A deferred capture still
+installs no current input; retaining historical replay custody cannot make it
+eligible for publication. Its Installed/Deferred result is derived from the
+original applied transition and returned only after storage acknowledgment.
 Coupled producer ingestion uses the same candidate rule. Its cache receives the
 actual retired live machine only after successful storage replacement and records
 the **pre-batch** event count. Every notice, heartbeat and capture in that batch
