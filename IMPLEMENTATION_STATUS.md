@@ -72,6 +72,41 @@ result is erased by retrying.
 No production feature, authority rule, dependency, source contract, format or
 deadline changed. Complete qualification and original P0 acceptance remain open.
 
+## 2026-10-24: pin original credential policy in learned recipes
+
+The original learned configuration now binds an exact nonsecret credential
+policy: effect family, route, credential name and adapter-profile generation.
+The pure public resolver uses the existing perimeter validator. Selection grants
+no authority; learned Enable requires the genuinely installed original guard to
+match before a numerical owner exists. Plain, raw-predictive, owned-predictive
+and mediated guarded constructors retain their original independent registration
+and first-image publication. Unselected recipes keep their exact bytes.
+
+The disjoint bounded recipe wrapper makes omitted or changed policy refuse in
+every learned receipt, review replay, anchored audit and recovery reader before
+numerical replay, staging cleanup or a recovery fence. Dynamic credential
+generation and revocation stay in the original independent recovery requirements.
+Rotation preserves the numerical recipe and the charged action while requiring
+a new original live permit; a recovered or revoked permit cannot regain effect
+rights. No secret, credential-equality assertion or permit enters the recipe.
+
+All 39 public regression functions pass: seven new learned-policy functions,
+seventeen original credential guard/driver/lifecycle/source-completion functions
+and fifteen learned-publication functions. The new tests cover six real guarded
+bootstrap lanes, actual generated OK output after sidecar review and both keys,
+missing/mismatched credentials, policy-field and audit binding, unchanged
+numerical expenditure, rotation, revocation and original nonexecution accounting.
+Standard Cargo check passes all six complete public targets. Independent source
+review found no blocker, and source hashes remained unchanged during execution.
+
+Runtime uses standard LLVM harnesses linked to the qualified nightly's official
+Cranelift library with 32 MiB test-thread stacks. The required full xtask driver
+was executed and still refuses the existing dependency-admission guard before
+formatting, Clippy or full-suite execution. This is scoped native integration
+for the original journal publication sink, not external-provider containment or
+full FA-011/014 qualification. Runnable credential selection is the next operator
+increment. See [learned credential policy](docs/FILE_LEARNED_CREDENTIAL_POLICY.md).
+
 ## 2026-10-24: execute the original sequential publication integration
 
 The original 18 service/parser/client entries first completed ten passed/eight

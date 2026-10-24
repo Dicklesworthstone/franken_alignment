@@ -79,6 +79,13 @@ impl Machine {
                     || !self.containment.updates.is_empty() || !self.containment.checkpoints.is_empty()
                     || self.broker.stop_receipt().is_some() { return Err(Error::WrongState); }
                 let config = config.runtime()?;
+                if let Some(policy) = config.required_credential_policy()
+                    && self.credential_policy.as_ref() != Some(policy) {
+                    // The ORIGINAL guarded bootstrap resolved the independent
+                    // perimeter and installed this policy before learned Enable.
+                    // A recipe assertion alone must never create that guard.
+                    return Err(Error::Binding);
+                }
                 if config.requires_computed_identity() { self.check_computed_identity_bootstrap()?; }
                 if let Some(identity) = config.required_computed_identity_registration()
                     && self.identity_contract() != Some((&identity.passport, identity.policy)) {
