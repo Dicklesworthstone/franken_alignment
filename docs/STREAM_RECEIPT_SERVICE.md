@@ -107,8 +107,10 @@ and finish recovery, missing keys before any recovery mutation, published-but-
 unreconciled history in both observation-only and reconcile-first modes, exact
 configuration/anchor refusals, staging preservation, every pre-fence deadline and
 expiry after Fence, protected socket collisions and closed document/flag parsing.
-These are authored assertions, not executed results. RCH is unavailable in the
-editing runtime; compilation, rustfmt, Clippy and tests remain unverified. No
-pre-existing assertions, dependencies, wire commands, journal encodings, Beads
-statuses or qualification gates change. The two patches advance the reference
+At original authoring, these assertions were unexecuted because RCH was unavailable
+in that editing runtime; no compilation, rustfmt, Clippy or test evidence existed.
+Later exact-source results and remaining failures are recorded in
+[implementation status](../IMPLEMENTATION_STATUS.md). Original assertions,
+dependencies, wire commands, journal encodings and qualification gates remain.
+The integration advances the reference
 FA-107/FA-014 stream recovery path, not full packet or production qualification.

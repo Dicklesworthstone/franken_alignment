@@ -1,5 +1,128 @@
 # Implementation status · design revision 0.3
 
+## 2026-10-24: recover learned owners on the standard test-thread stack
+
+The learned recovery selector now finishes its five original cursor variants in
+separate private leaf adapters. Each adapter calls the same native finalizer and
+returns the same owner and human, identity, consistency and topology roles. The
+unchanged exact-reopen regression previously aborted on the default test-thread
+stack; debugger evidence located a 993,968-byte selector frame. The new dispatcher
+frame is 161,264 bytes, with separate leaf frames; this is not a measurement of
+whole-stack reduction. No stack setting, allocation, schema or authority contract
+was changed.
+
+At base `5df1aeb4f352e11a81bd0413e0007fbe2e8c9d25`, the original regression aborted
+on qualified standard-backend RCH worker `vmi1264463`. The same worker passed the
+unchanged test with only the selector repair (overlay `e19d083abbb3a10c`): one
+passed, 726 unrelated functions filtered. Its changed tokenizer, prompt, sampling,
+monitor and weights controls retain the original unchanged-journal assertions,
+followed by a valid reopen. A complete unfiltered run at that repaired source
+then finished without abort: **368 passed, 359 failed, zero ignored/filtered**
+across all 727 original harness entries. Helper entrypoints are included in that
+denominator and are not independent capability claims.
+
+Of those 359 failed parent functions, 306 explicitly reported a Unix socket path
+length refusal. The shared operator fixtures now create private short directories
+while preserving their unique names and refusing occupied paths. The production
+100-byte limit is unchanged. A new real-socket boundary regression passed on
+`vmi1149989` (RCH `j-30078269650895234`, base `5df1aeb4` plus overlay
+`321ae0d5e40f2eb1f`): a 100-byte socket binds and is secured, while a 101-byte
+profile refuses before journal creation. That run executed one test with 727
+filtered. The follow-on inventory is 728 entries, comprising the original 727
+plus this boundary. That invocation compiled and reached previously blocked
+checked learned publication, then aborted on a second default-stack overflow in
+`checked_learned_publication_rejects_late_phantoms_but_keeps_disjoint_changes_in_all_forecast_modes`.
+That aborted attempt has no completed suite result. Its partial failures remain
+retained alongside the subsequent startup repair and complete result below.
+
+The second debugger trace found 792,112-byte `create_selected` and 644,752-byte
+`topology::start` frames during native learned stream startup. Separating the
+original identity constructor and topology create/recover arms into leaf paths
+preserves their calls, guards, reserves, checkpoint ordering and returned roles.
+The unchanged original checked regression then passed on the same standard
+worker and default stack (overlay `226e8000f19d4a5b`): one function containing
+eight original permitted/disjoint and forbidden/phantom cases, 727 unrelated
+functions filtered. Complete qualification remains open. Additional native
+Stop/deadline and durable raw/cancel/stream fixtures use local short private
+roots without changing the shared disk-only fixtures or their accounting and
+deadline assertions.
+
+Coupled publication preparation also retains its selected whole-input or
+structured context beside the native failure. A missing opaque lane still
+quarantines the owner with `Contract(Incomplete)`; no second acquisition,
+fallback input or changed binding order was introduced. The original early
+missing-input regression retains its assertions and additionally requires that
+native cause. That original regression passes in the follow-on run, alongside
+the original real Stop/deadline and durable raw/cancel/stream cases.
+
+The complete 42-path operator cut finished on the default stack with the
+qualified standard compiler: **664 passed, 64 failed, zero ignored/filtered**, all
+728 registered entries (RCH `j-30078269650895280`, `vmi1149989`). Its Rust bytes
+were subsequently committed through `ac1575e9b9b2e927ff1f9081780de853403f5089`;
+this precedes the one-file shared-option routing fix below. Comparing complete
+failure sets against the preceding 727-entry run finds 295 formerly failing
+original entries now passing and zero formerly passing entries newly failing.
+The extra passed entry is the new socket boundary. Helper entrypoints and
+same-origin retries are not additional independent capabilities. This is still
+a failed operator suite; the 64 original failures remain retained.
+
+The intermediate 43-path Rust cut passed qualified standard-backend workspace/all-target
+compilation on `hz3` (RCH `j-30078269650895290`, base `5df1aeb4` plus overlay
+`0d1b4e62a35b74d1ddb3ac33cb120cc746e274fc0c4ab47467f498b27b7442fb`).
+Warnings remain. All 43 owned Rust files also pass the qualified formatter's
+individual-file check; this does not establish workspace-wide formatting.
+
+The original guarded receipt CLI case exposed a shared-option routing mismatch:
+its implemented receipt-only handler was unreachable with the otherwise unused
+qualification option. The parser now accepts that option only after the exact
+guarded-resume positionals. The handler still never reads or activates it;
+unguarded resume, query and create refusals remain. Missing-profile/file negatives
+were added beside the permitted parse. The complete parser tests and original
+actual CLI regression pass on the subsequent 43-path source cut: four passed, zero
+failed/ignored, 724 filtered, RCH `j-30078269650895300` on `vmi1149989`, overlay
+`0d1b4e62a35b74d1`. This is scoped evidence, not a complete rerun. The first
+substring selection also matched five native qualification functions and
+finished eight passed/one failed, 719 filtered; its original native `Incomplete`
+failure remains open. The subsequent exact-name dispatch on `hz3` was refused
+with `RCH-I006` before execution; no local fallback occurred. The admitted worker
+then executed the four declared exact IDs. No result from those attempts is
+discarded or counted twice.
+
+The canonical driver on that same 43-path cut executed on `vmi1152480`
+(`j-30078269650895295`) and failed at the unchanged initial dependency-admission
+guard before formatting, Clippy or workspace tests. No package, manifest digest,
+production bound, deadline, test-stack size or original assertion was relaxed.
+Three remaining receipt-service fixture constructors now use local private short
+roots. All 18 original functions executed at the 46-path cut: **16 passed, two
+failed, zero ignored, 710 filtered** (`j-30078269650895304`, `vmi1149989`). The
+two failures expect `IrrecoverablyUnknown` after retention expiry, while the
+native broker's `reconcile_pending`/`reconcile_status` contract from `399e87a0`
+explicitly retains `Unknown` and charged liability. No implicit abandonment,
+refund, native transition or expected outcome was changed to manufacture green.
+That contract disagreement remains on the original P0.
+
+The final 46-path Rust cut passed qualified standard workspace/all-target
+compilation (`j-30078269650895312`, `vmi1149989`, base `5df1aeb4` plus overlay
+`0a70ae622cd53623329d40b53556b5129e0dfd339130c7162049ef482c936a0e`). Its changed
+Rust bytes match committed `8e8d77dc4f8da6decb186c51d4bbfe58ffeae54f`. All 46 owned
+files pass the qualified formatter's individual-file check. The canonical driver
+also ran without an overlay at that committed revision (`j-30078269650895313`,
+`vmi1152480`) and failed the unchanged admission guard before formatting, Clippy
+or workspace tests. Warnings, the 80-error library Clippy baseline and complete
+source/package admission remain open.
+
+Thirteen of the 64 failure IDs from the completed 42-path run have subsequent
+scoped passes: the guarded CLI case and twelve receipt cases. The original Bead
+retains those exact IDs and 51 unresolved IDs with the remaining qualification
+work. This is inventory tracking; the complete latest operator suite has not
+rerun, and the selected results cannot be added into a new aggregate suite count.
+
+Raw attempts, normalized original/test diffs and debugger observations are retained
+outside frozen source at
+`/Users/jemanuel/Documents/Codex/2026-10-24/franken-alignment-stack-5df1aeb4/`.
+These repairs do not qualify the full operator, dependency admission, Clippy or
+the canonical workspace gate, and the original P0 Bead remains in progress.
+
 ## 2026-10-24: restore executable reference checks without granting admission
 
 The Native Andon peer now resolves its existing transport, receipt and nested

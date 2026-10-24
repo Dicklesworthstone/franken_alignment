@@ -1,5 +1,32 @@
 # Changelog
 
+## 2026-10-24: repair learned recovery's default-stack finalization
+
+- Split the original five recovery finalizers into leaf adapters, preserving
+  their native calls and returned roles. The original exact-reopen regression
+  now passes on the qualified standard compiler's default test-thread stack.
+- Finish the original 727-entry operator inventory without abort: 368 passed
+  and 359 failed. Preserve every failure and keep complete qualification open.
+- Move shared real Unix fixtures to private short roots without raising native
+  path limits. Pass an actual 100-byte bind beside a 101-byte pre-journal refusal.
+  The follow-on operator run reaches a second stack overflow in checked learned
+  startup. Split the original startup arms into leaf paths and pass its unchanged
+  eight-case phantom/disjoint-change regression on the default stack. Retain the
+  failed attempt and keep full qualification open.
+- Preserve native whole-input binding/capture failures with their selected mode
+  context; keep quarantine, acquisition order and the original native cause.
+- Complete the follow-on 728-entry operator run: 664 passed, 64 failed, zero
+  ignored/filtered. Exact failure-set comparison finds 295 old failures now
+  passing and zero prior passes newly failing. Preserve the failed result.
+- Route the existing guarded receipt CLI through its shared option parser,
+  retaining capsule-free recovery and unguarded/query/create refusals. Pass the
+  four exact CLI/parser functions; retain the initial broader 8/1 selection.
+- Repair three remaining receipt fixture roots. Execute all 18 original receipt
+  functions: 16 pass and two expiry-state contract disagreements remain red.
+- Pass final standard workspace/all-target compilation and owned-file formatting.
+  Retain the committed canonical driver's unchanged admission refusal, remaining
+  runtime/Clippy obligations and detailed original P0 TODO; no Bead closes.
+
 ## 2026-10-24: repair the compilation and real-test bridge
 
 - Wire the original Native Andon peer modules and nested tests by explicit path;
