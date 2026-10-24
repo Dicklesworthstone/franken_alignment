@@ -203,7 +203,7 @@ fn completed(reader: &Reader, result: &resident::SequenceResult,
     assert_eq!(state.control.ledger.charged, charged);
     assert_eq!(state.control.ledger.reserved, 0);
     assert!(state.stop.is_none());
-    let (host, _reviewer, _observer) =
+    let (host, _reviewer, _observer, _identity) =
         recovery::open_selected(&reader.config, &reader.loaded).unwrap();
     let numerical = host.learned_generation_inspection().unwrap().numerical;
     assert_eq!(numerical.position, 6);
@@ -341,7 +341,7 @@ fn actor_cancellation_ends_the_resident_sequence_without_starting_the_next_reque
         assert_eq!(state.control.ledger.charged, 0);
         assert_eq!(state.control.ledger.reserved, 0);
         assert!(state.stop.is_none(), "a request-local cancellation is not a run-wide Stop");
-        let (host, _reviewer, _observer) =
+        let (host, _reviewer, _observer, _identity) =
             recovery::open_selected(&reader.config, &reader.loaded).unwrap();
         let numerical = host.learned_generation_inspection().unwrap().numerical;
         assert_eq!(numerical.position, 4);
@@ -378,7 +378,7 @@ fn a_resident_successor_cannot_refresh_the_original_prediction_lifetime_allowanc
         assert_eq!(state.payload, b"A");
         assert_eq!(state.control.ledger.charged, charged);
         assert_eq!(state.control.ledger.reserved, 0);
-        let (host, _reviewer, _observer) =
+        let (host, _reviewer, _observer, _identity) =
             recovery::open_selected(&reader.config, &reader.loaded).unwrap();
         let numerical = host.learned_generation_inspection().unwrap().numerical;
         assert_eq!(numerical.position, 4);

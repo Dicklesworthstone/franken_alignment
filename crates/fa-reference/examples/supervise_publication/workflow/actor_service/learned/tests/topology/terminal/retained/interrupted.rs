@@ -214,7 +214,7 @@ fn learned_terminal_repair_rejects_native_nonterminal_work_without_cleaning_stag
     let mut case = dispatched(Some(true));
     case.loaded.recovery_anchor = Some(case.saved.history_anchor().clone());
     custody::admit(&case.config, &mut case.loaded, Some(&case.profile), custody::Mode::Historical).unwrap();
-    let (mut host, _, _) = recovery::open_selected(&case.config, &case.loaded).unwrap();
+    let (mut host, _, _, _identity) = recovery::open_selected(&case.config, &case.loaded).unwrap();
     let revision = host.revision();
     host.observe_time(revision, ElapsedTick(1001)).unwrap();
     drop(host);

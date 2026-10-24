@@ -200,7 +200,7 @@ fn actual_peer_publication_uses_all_three_original_predictor_modes_and_the_accep
         assert_eq!(state.control.ledger.charged, packet.action().spec().units);
         assert_eq!(state.control.ledger.reserved, 0);
         let config = configured(&root); let loaded = recipe::load(&path, &config, false).unwrap();
-        let (host, _, _) = recovery::open_selected(&config, &loaded).unwrap();
+        let (host, _, _, _identity) = recovery::open_selected(&config, &loaded).unwrap();
         assert_eq!(host.learned_generation_inspection().unwrap().numerical.sampled_draws, 2);
         assert_eq!(host.learned_text_stream_message_request(1).unwrap().deadline, ElapsedTick(50_000));
     }
@@ -217,7 +217,7 @@ fn rejected_envelopes_and_reconnects_do_not_regenerate_or_create_another_effect(
         let state = inspect(&root, &path); assert_eq!(state.executions, 1);
         assert_eq!(state.control.ledger.stages.len(), 1);
         let config = configured(&root); let loaded = recipe::load(&path, &config, false).unwrap();
-        let (host, _, _) = recovery::open_selected(&config, &loaded).unwrap();
+        let (host, _, _, _identity) = recovery::open_selected(&config, &loaded).unwrap();
         assert_eq!(host.learned_generation_inspection().unwrap().numerical.sampled_draws, 2);
     }
 }
@@ -234,7 +234,7 @@ fn actor_cancellation_stays_request_local_and_keeps_paid_numerical_work_without_
         assert_eq!(state.control.ledger.reserved, 0); assert_eq!(state.control.ledger.charged, 0);
         assert!(state.stop.is_none(), "request cancellation is not an authenticated run-wide Stop");
         let config = configured(&root); let loaded = recipe::load(&path, &config, false).unwrap();
-        let (host, _, _) = recovery::open_selected(&config, &loaded).unwrap();
+        let (host, _, _, _identity) = recovery::open_selected(&config, &loaded).unwrap();
         assert_eq!(host.learned_generation_inspection().unwrap().numerical.sampled_draws, 2);
     }
 }
@@ -275,7 +275,7 @@ fn an_explicit_peer_finish_requires_a_second_review_without_sampling_another_tok
     let packet = packet.unwrap();
     assert!(ReleaseFrame::decode(&packet.action().spec().payload).unwrap().is_finish());
     assert_eq!(inspect(&root, &path).executions, 2);
-    let (host, _, _) = recovery::open_selected(&config, &loaded).unwrap();
+    let (host, _, _, _identity) = recovery::open_selected(&config, &loaded).unwrap();
     assert!(host.stream_snapshot().unwrap().confirmed.finished());
     assert_eq!(host.learned_generation_inspection().unwrap().numerical.sampled_draws, 2);
     assert_eq!(host.learned_text_stream_finish_request(1, 2).unwrap().deadline, ElapsedTick(50_000));
@@ -284,7 +284,7 @@ fn an_explicit_peer_finish_requires_a_second_review_without_sampling_another_tok
 #[test]
 fn observation_phase_cannot_admit_a_missing_request_even_with_an_unused_policy_snapshot() {
     let root = Root::new(); let (mut config, _, loaded) = setup(&root, Model::Plain);
-    let (host, human, _) = recovery::create_selected(&config, &loaded).unwrap();
+    let (host, human, _, _identity) = recovery::create_selected(&config, &loaded).unwrap();
     let (port, supervisor) = host.into_learned_text_stream_actor_gateway().unwrap();
     let mut wire = ActorWire::new(port.clone()); let mut driver = FileSupervisedDriver::new(supervisor);
     let deadline = deadline(); let mut control = Control::new(&config, 1, None).unwrap();
@@ -333,7 +333,7 @@ fn observation_phase_cannot_admit_a_missing_request_even_with_an_unused_policy_s
 #[test]
 fn completed_generation_cannot_substitute_for_a_missing_actor_request() {
     let root = Root::new(); let (mut config, _, loaded) = setup(&root, Model::Plain);
-    let (host, human, _) = recovery::create_selected(&config, &loaded).unwrap();
+    let (host, human, _, _identity) = recovery::create_selected(&config, &loaded).unwrap();
     let (port, supervisor) = host.into_learned_text_stream_actor_gateway().unwrap();
     let mut driver = FileSupervisedDriver::new(supervisor); let deadline = deadline();
     let mut control = Control::new(&config, 1, None).unwrap();

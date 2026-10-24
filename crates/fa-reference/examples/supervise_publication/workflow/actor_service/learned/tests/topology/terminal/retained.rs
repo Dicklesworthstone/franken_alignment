@@ -22,7 +22,7 @@ fn dispatched(mode: Option<bool>) -> Case {
     let (mut config, recipe, loaded) = selected(&root, mode, false);
     let deadline = deadline();
     let mut control = Control::new(&config, 1, None).unwrap();
-    let custody::Started { custody: (host, reviewer, observer), source, .. } =
+    let custody::Started { custody: (host, reviewer, observer, _identity), source, .. } =
         custody::start(&config, &loaded, false, &mut control, &deadline,
             &mut || ElapsedTick(1000)).unwrap();
     let mut prediction = observer.map(|observer| prediction::Session::new(1, observer));

@@ -25,7 +25,7 @@ fn generated(mode: Option<bool>) -> Case {
     if let Some(owned) = mode { super::forecast::install(&root, &path, owned, 60_000); }
     evidence(&root, &config, 1, true, false);
     let loaded = recipe::load(&path, &config, true).unwrap();
-    let (host, reviewer, observer) = recovery::create_selected(&config, &loaded).unwrap();
+    let (host, reviewer, observer, _identity) = recovery::create_selected(&config, &loaded).unwrap();
     let mut forecast = observer.map(|observer| prediction::Session::new(loaded.request, observer));
     let (port, supervisor) = host.into_learned_text_stream_actor_gateway().unwrap();
     let mut driver = FileSupervisedDriver::new(supervisor);
@@ -75,7 +75,7 @@ fn loaded_recovery_yields_and_cancellation_preserves_canonical_and_staged_bytes_
         // Same store/recipe, now permitted: exact original numerical replay,
         // one fence and the original role inventory, not a substitute owner.
         let mut views = Vec::new();
-        let (host, _human, observer) = recovery::open_selected_with_checkpoints(
+        let (host, _human, observer, _identity) = recovery::open_selected_with_checkpoints(
             &case.config, &case.loaded, &mut |view| { views.push(view); Ok(()) }).unwrap();
         assert_eq!(views[0], None);
         let progress: Vec<_> = views.into_iter().flatten().collect();
@@ -115,7 +115,7 @@ fn checkpoint_unwind_releases_original_recovery_lock_without_cleanup_or_fence() 
         }));
         assert!(result.is_err());
         assert_eq!(fs::read(&canonical).unwrap(), original);
-        let (host, _, _) = recovery::open_selected(&case.config, &case.loaded).unwrap();
+        let (host, _, _, _identity) = recovery::open_selected(&case.config, &case.loaded).unwrap();
         assert_eq!(host.learned_generation_inspection().unwrap().numerical, case.numerical);
         assert_eq!(host.inspect().executions, 0);
     }
@@ -138,7 +138,7 @@ fn cooperative_replay_does_not_skip_original_external_floor_checks() {
         assert!(!ready);
         assert_eq!(fs::read(&canonical).unwrap(), original);
         case.loaded.floor = floor;
-        let (host, _, _) = recovery::open_selected(&case.config, &case.loaded).unwrap();
+        let (host, _, _, _identity) = recovery::open_selected(&case.config, &case.loaded).unwrap();
         assert_eq!(host.learned_generation_inspection().unwrap().numerical, case.numerical);
     }
 }

@@ -201,6 +201,10 @@ configuration and work ceilings retain their original exact checks. These
 constructors do not supply a source observation, matching identity, forecast,
 committee vote or human approval.
 
+The [learned operator identity envelope](LEARNED_IDENTITY_OPERATOR.md) selects
+this complete registration for live publication, historical readers and resident
+sequences, retaining original observer custody and cooperative measurement.
+
 2026-10-23: all five new `learned_registered_identity` functions pass, covering
 19 valid individual registration changes, legacy-byte compatibility, joint-policy
 composition, bootstrap rollback, actual same-label parameter substitution with

@@ -5,7 +5,7 @@
 use super::{Config, Loaded, PeerProfile, Deadline, ElapsedTick, Duration, Instant,
     FileHumanReviewer, FileSupervisedDriver, LearnedTextRelease, ActorWire, ActorOutcome, Knowledge, RequestServices,
     RequestCycle, Control, MessageContinuation, debug, plus, clock, cleanup, stop,
-    anchors, topology, prediction, ingress, process, request_preflight, execute_request};
+    anchors, topology, prediction, identity, ingress, process, request_preflight, execute_request};
 use super::super::Profile;
 use fa_reference::action::{ActionState, consequence::delivery::{EndpointOutcome,
     persistent::requests::FileRequestDisposition}};
@@ -82,12 +82,24 @@ fn validate(config: &Config, entries: &[Entry], peers: &PeerProfile) -> Result<(
     let mut objects = BTreeSet::new();
     let mut rounds = BTreeSet::new();
     let mut sockets = BTreeSet::new();
+    let mut identity_checks = BTreeSet::new();
+    let mut identity_sequence = 0;
+    if original.generation.required_computed_identity_registration()
+        .is_some_and(|registration| entries.len() > registration.policy.max_checks) {
+        return Err("sequence exceeds the original identity check allowance".into());
+    }
     for (index, entry) in entries.iter().enumerate() {
         let loaded = &entry.loaded;
         ingress::check(config, loaded, peers, &entry.actor)?;
         if !loaded.generation.allows_text_stream_continuation()
             || loaded.generation != original.generation || loaded.stream != original.stream {
             return Err("every sequence entry must retain the exact original finite generation and stream".into());
+        }
+        if let Some(identity) = &loaded.identity {
+            if !identity_checks.insert(identity.check) || identity.measurement_sequence <= identity_sequence {
+                return Err("sequence identity checks must be distinct with increasing measurement sequences".into());
+            }
+            identity_sequence = identity.measurement_sequence;
         }
         if loaded.request == 0 || !requests.insert(loaded.request)
             || loaded.sidecar.object_id == 0 || !objects.insert(loaded.sidecar.object_id)
@@ -193,10 +205,11 @@ where F: FnMut() -> ElapsedTick {
     // it with each request preserves one socket, candidate quota and outcome.
     let mut control = Control::new(&config, first.loaded.request, Some(peers))?;
     let mut initial_actor = Some(ingress::Bound::bind(&first.actor)?);
-    let topology::Started { custody: (host, reviewer, observer), source, output } =
+    let topology::Started { custody: (host, reviewer, observer, identity_observer), source, output } =
         topology::start(&config, &first.loaded, continuing, &mut control, &deadline, &mut time)?;
     let mut initial_deadline = Some(deadline);
     let mut prediction = observer.map(|observer| prediction::Session::new(first.loaded.request, observer));
+    let mut identity = identity_observer.map(identity::Session::new);
     prediction::check(&host, prediction.as_ref())?;
     let mut initial_continuation = request_preflight(&host, &first.loaded, continuing,
         None, after_message, credibility)?;
@@ -251,7 +264,7 @@ where F: FnMut() -> ElapsedTick {
         };
         let cycle = execute_request(driver, &mut config, &entry.loaded,
             RequestServices { peers, reviewer: &reviewer, prediction: &mut prediction,
-                intake: &mut intake, wire: &mut wire, finishing, message_continuation,
+                identity: &mut identity, intake: &mut intake, wire: &mut wire, finishing, message_continuation,
                 credibility: if index == 0 { credibility } else { None },
                 stop_operation: first.loaded.request },
             &mut control, &mut deadline, &mut time);

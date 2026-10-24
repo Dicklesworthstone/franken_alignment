@@ -25,7 +25,7 @@ fn prepared(mode: Option<bool>) -> Case {
     if let Some(owned) = mode { super::forecast::install(&root, &path, owned, 60_000); }
     evidence(&root, &config, 1, true, false);
     let loaded = recipe::load(&path, &config, true).unwrap();
-    let (host, reviewer, observer) = recovery::create_selected(&config, &loaded).unwrap();
+    let (host, reviewer, observer, _identity) = recovery::create_selected(&config, &loaded).unwrap();
     let mut forecast = observer.map(|observer| prediction::Session::new(loaded.request, observer));
     let (port, supervisor) = host.into_learned_text_stream_actor_gateway().unwrap();
     let mut driver = FileSupervisedDriver::new(supervisor);
@@ -123,7 +123,7 @@ fn live_deadline_cancels_before_open_every_event_and_ready_without_changing_the_
         }
         let limit = deadline();
         let mut calls = 0;
-        let (host, _human, observer) = recovery::open_selected_live(&case.config, &case.loaded,
+        let (host, _human, observer, _identity) = recovery::open_selected_live(&case.config, &case.loaded,
             &mut control, &limit, &mut || { calls += 1; ElapsedTick(1000) }).unwrap();
         assert_eq!(calls, total + 2);
         recovered(&case, &host, observer.is_some(), total);
@@ -177,7 +177,7 @@ fn authenticated_stop_presence_cancels_at_every_live_cut_without_protocol_bytes_
         // Near-identical permitted counterpart: the same history and admitted
         // peer policy with no connection reaches exactly the original fence.
         let mut control = Control::new(&case.config, case.loaded.request, Some(&peers)).unwrap();
-        let (host, _human, observer) = recovery::open_selected_live(&case.config, &case.loaded,
+        let (host, _human, observer, _identity) = recovery::open_selected_live(&case.config, &case.loaded,
             &mut control, &deadline(), &mut || ElapsedTick(1000)).unwrap();
         recovered(&case, &host, observer.is_some(), total);
     }
@@ -195,7 +195,7 @@ fn rejected_process_credentials_cannot_cancel_live_replay_or_receive_protocol_by
         let mut control = Control::new(&case.config, case.loaded.request, Some(&peers)).unwrap();
         let mut client = UnixStream::connect(socket_path(&peers, case.loaded.request)).unwrap();
         let mut calls = 0;
-        let (host, _human, observer) = recovery::open_selected_live(&case.config, &case.loaded,
+        let (host, _human, observer, _identity) = recovery::open_selected_live(&case.config, &case.loaded,
             &mut control, &deadline(), &mut || { calls += 1; ElapsedTick(1000) }).unwrap();
         assert_eq!(calls, total + 2);
         client.set_nonblocking(true).unwrap();

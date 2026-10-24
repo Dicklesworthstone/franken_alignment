@@ -28,7 +28,7 @@ impl Case {
         if let Some(owned) = mode { super::forecast::install(&root, &path, owned, 60_000); }
         evidence(&root, &config, 1, true, false);
         let mut loaded = recipe::load(&path, &config, true).unwrap();
-        let (host, reviewer, observer) = recovery::create_selected(&config, &loaded).unwrap();
+        let (host, reviewer, observer, _identity) = recovery::create_selected(&config, &loaded).unwrap();
         let mut prediction = observer.map(|role| prediction::Session::new(loaded.request, role));
         let (port, supervisor) = host.into_learned_text_stream_actor_gateway().unwrap();
         let mut driver = FileSupervisedDriver::new(supervisor); let mut wire = ActorWire::new(port);
@@ -58,7 +58,7 @@ impl Case {
         let after = if cut == Cut::FinishPending {
             assert_eq!(cleanup(driver, 1000, 1), 0); drop(prediction);
             (path, loaded) = native::next(&root, &config, 2);
-            let (host, reviewer, observer) = recovery::open_selected(&config, &loaded).unwrap();
+            let (host, reviewer, observer, _identity) = recovery::open_selected(&config, &loaded).unwrap();
             let mut prediction = observer.map(|role| prediction::Session::new(loaded.request, role));
             let (port, supervisor) = host.into_learned_text_stream_actor_gateway().unwrap();
             driver = FileSupervisedDriver::new(supervisor); wire = ActorWire::new(port);

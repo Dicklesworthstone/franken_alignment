@@ -63,8 +63,8 @@ fn checked_history(directory: &Path, profile: &FileOversightProfile, round: u64,
     let bytes = storage::read(&identity.join(storage::CANONICAL), profile.delivery.limits.bytes)?;
     let events = journal::decode(profile, &identity, &bytes)?;
     anchor.check(profile, &identity, &events)?;
-    let finish = events.iter().position(|event|
-        matches!(event, Event::Finish(id, ..) if *id == round)).ok_or(Error::Incomplete)?;
+    let finish = events.iter().position(|event| super::finish_round(event) == Some(round))
+        .ok_or(Error::Incomplete)?;
     let completed = u64::try_from(finish + 1).map_err(|_| Error::Limit)?;
     if anchor.revision() < completed { return Err(Error::Incomplete.into()); }
     // The cursor independently checks Begin/Finish ordering and subsequently

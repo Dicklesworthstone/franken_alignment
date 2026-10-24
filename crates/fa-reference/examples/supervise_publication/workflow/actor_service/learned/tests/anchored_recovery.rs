@@ -67,7 +67,7 @@ fn forecast(host: &mut FileOversight, observer: &FileConsistencyObserver, mode: 
 fn serialized_original_prefix_accepts_successors_and_returns_fresh_separate_custody() {
     for mode in MODES {
         let root = Root::new(); let (mut config, _, mut loaded) = configured_owner(&root, mode);
-        let (mut host, _, old_observer) = recovery::create_selected(&config, &loaded).unwrap();
+        let (mut host, _, old_observer, _identity) = recovery::create_selected(&config, &loaded).unwrap();
         prefill(&mut host, &mut config);
         let path = archive(&root, &host); let archive_bytes = fs::read(&path).unwrap();
         loaded.recovery_anchor = Some(anchors::load(&path).unwrap());
@@ -83,7 +83,7 @@ fn serialized_original_prefix_accepts_successors_and_returns_fresh_separate_cust
         let pending = config.store.join("delivery.pending");
         fs::write(&pending, b"retained until verified recovery").unwrap();
         drop(host);
-        let (mut host, _, observer) = recovery::open_selected(&config, &loaded).unwrap();
+        let (mut host, _, observer, _identity) = recovery::open_selected(&config, &loaded).unwrap();
         assert_eq!(host.revision(), before.revision + 1);
         assert_eq!(host.learned_generation_inspection().unwrap().numerical, numerical);
         assert!(host.learned_generation_inspection().unwrap().paused);
@@ -115,16 +115,16 @@ fn serialized_original_prefix_accepts_successors_and_returns_fresh_separate_cust
 fn valid_equal_counter_fork_refuses_selected_anchor_before_cleanup_or_fence() {
     for mode in MODES {
         let root = Root::new(); let (config, _, mut loaded) = configured_owner(&root, mode);
-        let (host, _, _) = recovery::create_selected(&config, &loaded).unwrap();
+        let (host, _, _, _identity) = recovery::create_selected(&config, &loaded).unwrap();
         let bootstrap = disk(&config); drop(host);
         // Both branches use original creation/recovery/time transitions, at the
         // same path and with the same full independently loaded generation.
-        let (mut left, _, _) = recovery::open_selected(&config, &loaded).unwrap();
+        let (mut left, _, _, _identity) = recovery::open_selected(&config, &loaded).unwrap();
         left.observe_time(left.revision(), ElapsedTick(1000)).unwrap();
         let path = archive(&root, &left); let archive_bytes = fs::read(&path).unwrap();
         let left_view = left.inspect(); let left_bytes = disk(&config); drop(left);
         fs::write(config.store.join("delivery.bin"), bootstrap).unwrap();
-        let (mut right, _, _) = recovery::open_selected(&config, &loaded).unwrap();
+        let (mut right, _, _, _identity) = recovery::open_selected(&config, &loaded).unwrap();
         right.observe_time(right.revision(), ElapsedTick(1001)).unwrap();
         let right_view = right.inspect(); let right_bytes = disk(&config); drop(right);
         assert_eq!(right_view.revision, left_view.revision);
@@ -137,7 +137,7 @@ fn valid_equal_counter_fork_refuses_selected_anchor_before_cleanup_or_fence() {
         loaded.floor.authority_epoch = left_view.control.ledger.epoch;
         // The ordinary selected guard accepts this genuine alternate history;
         // the independent full prefix supplies the additional rejection.
-        let (control, _, _) = recovery::open_selected(&config, &loaded).unwrap();
+        let (control, _, _, _identity) = recovery::open_selected(&config, &loaded).unwrap();
         assert_eq!(control.revision(), right_view.revision + 1); drop(control);
         fs::write(config.store.join("delivery.bin"), &right_bytes).unwrap();
         let pending = config.store.join("delivery.pending");
@@ -147,7 +147,7 @@ fn valid_equal_counter_fork_refuses_selected_anchor_before_cleanup_or_fence() {
         assert_eq!(disk(&config), right_bytes); assert_eq!(fs::read(&pending).unwrap(), b"not a receipt");
         assert_eq!(fs::read(&path).unwrap(), archive_bytes);
         fs::write(config.store.join("delivery.bin"), left_bytes).unwrap();
-        let (host, _, observer) = recovery::open_selected(&config, &loaded).unwrap();
+        let (host, _, observer, _identity) = recovery::open_selected(&config, &loaded).unwrap();
         assert_eq!(host.revision(), left_view.revision + 1); assert!(!pending.exists());
         assert_eq!(observer.is_some(), mode != Mode::Legacy);
         assert_eq!(fs::read(path).unwrap(), archive_bytes);
@@ -158,7 +158,7 @@ fn valid_equal_counter_fork_refuses_selected_anchor_before_cleanup_or_fence() {
 fn retained_anchor_rejects_rollback_even_with_zero_external_counter_floors() {
     for mode in MODES {
         let root = Root::new(); let (mut config, _, mut loaded) = configured_owner(&root, mode);
-        let (mut host, _, _) = recovery::create_selected(&config, &loaded).unwrap();
+        let (mut host, _, _, _identity) = recovery::create_selected(&config, &loaded).unwrap();
         let old = disk(&config);
         prefill(&mut host, &mut config);
         let path = archive(&root, &host); let current = disk(&config);
@@ -167,7 +167,7 @@ fn retained_anchor_rejects_rollback_even_with_zero_external_counter_floors() {
         assert_eq!(loaded.floor.journal_revision, 0);
         assert_eq!(loaded.floor.control_sequence, 0); assert_eq!(loaded.floor.authority_epoch, 0);
         fs::write(config.store.join("delivery.bin"), &old).unwrap();
-        let (control, _, _) = recovery::open_selected(&config, &loaded).unwrap();
+        let (control, _, _, _identity) = recovery::open_selected(&config, &loaded).unwrap();
         assert!(control.revision() <= revision); drop(control);
         fs::write(config.store.join("delivery.bin"), &old).unwrap();
         let pending = config.store.join("delivery.pending");
@@ -176,7 +176,7 @@ fn retained_anchor_rejects_rollback_even_with_zero_external_counter_floors() {
         assert_eq!(recovery::open_selected(&config, &loaded).err().unwrap(), "Contract(Stale)");
         assert_eq!(disk(&config), old); assert_eq!(fs::read(&pending).unwrap(), b"rollback staging");
         fs::write(config.store.join("delivery.bin"), current).unwrap();
-        let (host, _, observer) = recovery::open_selected(&config, &loaded).unwrap();
+        let (host, _, observer, _identity) = recovery::open_selected(&config, &loaded).unwrap();
         assert_eq!(host.revision(), revision + 1);
         assert_eq!(host.learned_generation_inspection().unwrap().numerical, numerical);
         assert!(host.learned_generation_inspection().unwrap().paused);
@@ -206,7 +206,7 @@ fn matching_history_anchor_cannot_replace_original_terminal_reserve_or_current_f
             fs::write(&pending, b"guarded staging").unwrap();
             let result = recovery::open_selected(&config, &loaded);
             if case == 0 {
-                let (host, _, observer) = result.unwrap();
+                let (host, _, observer, _identity) = result.unwrap();
                 assert_eq!(host.revision(), revision + 1); assert!(!pending.exists());
                 assert_eq!(observer.is_some(), mode != Mode::Legacy);
             } else {
@@ -221,7 +221,7 @@ fn matching_history_anchor_cannot_replace_original_terminal_reserve_or_current_f
 fn selected_anchor_does_not_admit_a_changed_predictor_or_recipe_downgrade() {
     for mode in [Mode::Raw, Mode::Owned] {
         let root = Root::new(); let (config, recipe_path, loaded) = configured_owner(&root, mode);
-        let (host, _, _) = recovery::create_selected(&config, &loaded).unwrap();
+        let (host, _, _, _identity) = recovery::create_selected(&config, &loaded).unwrap();
         let path = archive(&root, &host); let bytes = disk(&config); let revision = host.revision(); drop(host);
         let forecast_path = root.0.join("forecast.json");
         let original_forecast = fs::read_to_string(&forecast_path).unwrap();
@@ -247,7 +247,7 @@ fn selected_anchor_does_not_admit_a_changed_predictor_or_recipe_downgrade() {
         fs::write(&recipe_path, original_recipe).unwrap();
         let mut restored = recipe::load(&recipe_path, &config, false).unwrap();
         restored.recovery_anchor = Some(anchors::load(&path).unwrap());
-        let (host, _, observer) = recovery::open_selected(&config, &restored).unwrap();
+        let (host, _, observer, _identity) = recovery::open_selected(&config, &restored).unwrap();
         assert_eq!(host.revision(), revision + 1); assert!(observer.is_some()); assert!(!pending.exists());
     }
 }

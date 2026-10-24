@@ -193,7 +193,7 @@ fn final_native_source_loss_blocks_learned_effect_after_both_keys_without_refund
     for mode in [None, Some(false), Some(true)] {
         let root = Root::new(); let (mut config, _, loaded) = selected(&root, mode, false);
         let deadline = deadline(); let mut control = Control::new(&config, 1, None).unwrap();
-        let custody::Started { custody: (host, reviewer, observer), source, .. } =
+        let custody::Started { custody: (host, reviewer, observer, _identity), source, .. } =
             custody::start(&config, &loaded, false, &mut control, &deadline, &mut || ElapsedTick(1000)).unwrap();
         let mut prediction = observer.map(|observer| prediction::Session::new(1, observer));
         let (port, supervisor) = host.into_learned_text_stream_actor_gateway().unwrap();
@@ -228,7 +228,7 @@ fn initial_native_bypass_refuses_before_any_learned_inference_or_effect() {
     for mode in [None, Some(false), Some(true)] {
         let root = Root::new(); let (config, _, loaded) = selected(&root, mode, true);
         let deadline = deadline(); let mut control = Control::new(&config, 1, None).unwrap();
-        let custody::Started { custody: (host, _, _), source, .. } =
+        let custody::Started { custody: (host, _, _, _identity), source, .. } =
             custody::start(&config, &loaded, false, &mut control, &deadline, &mut || ElapsedTick(1000)).unwrap();
         let (_, supervisor) = host.into_learned_text_stream_actor_gateway().unwrap();
         let mut driver = FileSupervisedDriver::new(supervisor);

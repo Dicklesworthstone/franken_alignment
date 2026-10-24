@@ -12,16 +12,38 @@ use fa_reference::action::consequence::delivery::persistent::observed::guarded::
     FileGuardSet, FileRecoveryRequirements,
 };
 use fa_reference::action::consequence::delivery::persistent::observed::consistency::FileConsistencyObserver;
+use fa_reference::action::consequence::delivery::persistent::observed::identity::FileIdentityObserver;
 use fa_reference::action::consequence::delivery::persistent::{JournalError,
     observed::shutdown::recovery::{FileAdmissionStoppedHistory, FileStoppedHistory}};
 #[cfg(test)]
 use fa_reference::action::consequence::delivery::persistent::observed::shutdown::recovery::FileStoppedRecovery;
 
-pub(super) type Custody = (FileOversight, FileHumanReviewer, Option<FileConsistencyObserver>);
+pub(super) type Custody = (FileOversight, FileHumanReviewer, Option<FileConsistencyObserver>,
+    Option<FileIdentityObserver>);
 pub(super) type TopologyCustody = (Custody,
     Option<fa_reference::action::consequence::delivery::persistent::observed::mediation::FileMediationObserver>);
 
 pub(super) fn create_selected(config: &Config, loaded: &Loaded) -> Result<Custody, String> {
+    if loaded.generation.required_computed_identity_registration().is_some() {
+        let guards = requirements(config, loaded).guards;
+        let reserve = RecoveryReserve::terminal();
+        let (host, roles) = if let Some(prediction) = loaded.generation.required_pre_output_forecast() {
+            FileOversight::create_predictive_guarded_with_learned_generation_reserved(
+                &config.store, config.profile.clone(), &guards, None, prediction.clone(),
+                None, loaded.generation.clone(), reserve).map_err(debug)?
+        } else if let Some(prediction) = loaded.generation.required_owned_pre_output_forecast() {
+            FileOversight::create_predictive_guarded_with_owned_learned_consistency_reserved(
+                &config.store, config.profile.clone(), &guards, None, prediction.clone(),
+                None, loaded.generation.clone(), reserve).map_err(debug)?
+        } else {
+            let (host, roles) = FileOversight::create_guarded_with_learned_generation_reserved(
+                &config.store, config.profile.clone(), &guards, None, loaded.generation.clone(),
+                reserve).map_err(debug)?;
+            return Ok((host, roles.human, None, roles.identity_observer));
+        };
+        return Ok((host, roles.oversight.human, Some(roles.consistency_observer),
+            roles.oversight.identity_observer));
+    }
     if loaded.generation.required_pre_output_forecast().is_some()
         || loaded.generation.required_owned_pre_output_forecast().is_some() {
         // The first original stream image pins the predictor AND terminal
@@ -30,10 +52,10 @@ pub(super) fn create_selected(config: &Config, loaded: &Loaded) -> Result<Custod
         let (host, human, observer) = FileOversight::create_with_pre_output_forecast_with_reserve(
             &config.store, config.profile.clone(), loaded.generation.clone(),
             RecoveryReserve::terminal()).map_err(debug)?;
-        return Ok((host, human, Some(observer)));
+        return Ok((host, human, Some(observer), None));
     }
     let (host, human) = create(config, loaded)?;
-    Ok((host, human, None))
+    Ok((host, human, None, None))
 }
 
 pub(super) fn create(config: &Config, loaded: &Loaded)
@@ -51,14 +73,16 @@ pub(super) fn create(config: &Config, loaded: &Loaded)
 pub(super) fn open(config: &Config, loaded: &Loaded)
     -> Result<(FileOversight, FileHumanReviewer), String>
 {
-    let (host, human, _) = open_selected_with_checkpoints(config, loaded, &mut |_| Ok(()))?;
+    let (host, human, _, _) = open_selected_with_checkpoints(config, loaded, &mut |_| Ok(()))?;
     Ok((host, human))
 }
 
 pub(super) fn requirements(config: &Config, loaded: &Loaded) -> FileRecoveryRequirements {
     FileRecoveryRequirements {
         guards: FileGuardSet { stream: Some(loaded.stream), decoder: None, decoder_stop: None,
-            source: Some(config.source_policy), identity: None, campaigns: None, credential: None },
+            source: Some(config.source_policy),
+            identity: loaded.generation.required_computed_identity_registration().cloned(),
+            campaigns: None, credential: None },
         effective_policy: config.profile.delivery.policy.clone(), credential_epoch: None, minimum: loaded.floor,
     }
 }
@@ -262,7 +286,7 @@ fn stop_replay<T>(config: &Config, loaded: &Loaded, operation: u64,
 pub(super) fn resume<F>(config: Config, loaded: Loaded, mut time: F) -> Result<RunResult, String>
 where F: FnMut() -> ElapsedTick {
     // Selection includes policy refusals with no FrozenAction, before fencing.
-    let ((host, _reviewer, _observer), original) = open_receipt(&config, &loaded, None)?;
+    let ((host, _reviewer, _observer, _identity), original) = open_receipt(&config, &loaded, None)?;
     resume_original(config, loaded, host, LearnedTextRelease::Message, original.deadline, &mut time)
 }
 
@@ -271,7 +295,7 @@ pub(super) fn resume_finish<F>(config: Config, loaded: Loaded, after: u64, mut t
 where F: FnMut() -> ElapsedTick {
     super::finish::check_ids(loaded.request, after)?;
     // A wrong predecessor cannot spend a fence or clean staged bytes.
-    let ((host, _reviewer, _observer), original) = open_receipt(&config, &loaded, Some(after))?;
+    let ((host, _reviewer, _observer, _identity), original) = open_receipt(&config, &loaded, Some(after))?;
     resume_original(config, loaded, host, LearnedTextRelease::Finish, original.deadline, &mut time)
 }
 

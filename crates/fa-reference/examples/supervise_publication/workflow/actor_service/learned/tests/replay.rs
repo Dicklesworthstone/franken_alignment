@@ -109,7 +109,7 @@ fn prepared(root: &Root, owned: Option<bool>) -> (Config, Loaded, Loaded) {
     if let Some(owned) = owned { super::forecast::install(root, &path, owned, 60_000); }
     evidence(root, &config, 1, true, false);
     let loaded = recipe::load(&path, &config, true).unwrap();
-    let (host, reviewer, observer) = recovery::create_selected(&config, &loaded).unwrap();
+    let (host, reviewer, observer, _identity) = recovery::create_selected(&config, &loaded).unwrap();
     let mut prediction = observer.map(|observer| prediction::Session::new(loaded.request, observer));
     let (port, supervisor) = host.into_learned_text_stream_actor_gateway().unwrap();
     let mut driver = FileSupervisedDriver::new(supervisor);

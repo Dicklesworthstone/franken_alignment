@@ -29,7 +29,7 @@ fn generated(mode: Option<bool>) -> Case {
     if let Some(owned) = mode { super::forecast::install(&root, &path, owned, 60_000); }
     evidence(&root, &config, 1, true, false);
     let mut loaded = recipe::load(&path, &config, true).unwrap();
-    let (host, reviewer, observer) = recovery::create_selected(&config, &loaded).unwrap();
+    let (host, reviewer, observer, _identity) = recovery::create_selected(&config, &loaded).unwrap();
     let mut prediction = observer.map(|observer| prediction::Session::new(loaded.request, observer));
     let (port, supervisor) = host.into_learned_text_stream_actor_gateway().unwrap();
     let mut driver = FileSupervisedDriver::new(supervisor);
@@ -95,7 +95,7 @@ fn expired_receipt_replay_refuses_before_an_existing_original_writer_lock() {
     for mode in [None, Some(false), Some(true)] {
         let case = generated(mode);
         let reads = case.config.source.status().read_attempts;
-        let (held, _human, _observer) = recovery::open_selected(&case.config, &case.loaded).unwrap();
+        let (held, _human, _observer, _identity) = recovery::open_selected(&case.config, &case.loaded).unwrap();
         let revision = held.revision();
         fs::write(case.config.store.join("delivery.pending"), b"held writer staging").unwrap();
         let original = files(&case.config.store); let mut calls = 0;
@@ -110,7 +110,7 @@ fn expired_receipt_replay_refuses_before_an_existing_original_writer_lock() {
         // The same independently loaded anchored history succeeds with time
         // available, releases original staging, and publishes exactly one fence.
         let mut calls = 0;
-        let (host, _human, observer) = recovery::open_receipt_with_elapsed(
+        let (host, _human, observer, _identity) = recovery::open_receipt_with_elapsed(
             &case.config, &case.loaded, &mut || { calls += 1; Duration::ZERO }).unwrap();
         assert_eq!(calls, usize::try_from(revision).unwrap() + 2);
         assert_eq!(host.revision(), revision + 1);
@@ -154,7 +154,7 @@ fn receipt_wall_deadline_cancels_every_original_event_and_ready_cut_without_fenc
             assert_eq!(files(&case.config.store), original);
         }
         let mut calls = 0;
-        let (host, _human, observer) = recovery::open_receipt_with_elapsed(
+        let (host, _human, observer, _identity) = recovery::open_receipt_with_elapsed(
             &case.config, &case.loaded, &mut || {
                 calls += 1; assert_eq!(files(&case.config.store), original); before
             }).unwrap();

@@ -1,6 +1,7 @@
 //! Join a selected review to its ORIGINAL authorization, dispatch and outcome.
 //! This observer consumes successful Machine transitions; it drives no authority.
 use super::{Error, Event, FileDeliverySnapshot, FileReviewReplay};
+use super::{DecoderEvent, FileLearnedSidecarFinish, LearnedEvent, SidecarEvent};
 use super::super::{BaseEvent, Transition};
 use crate::action::ActionState;
 use crate::action::consequence::Consequence;
@@ -129,6 +130,14 @@ impl EffectTrace {
                 if reviewed_attempt == Some(self.attempt) => {
                 self.applied = Some(AppliedReview { round: *round, revision,
                     input_revision: receipt.input_revision, consequence: receipt.policy.control.decision.consequence });
+            }
+            (Event::Decoder(DecoderEvent::Learned(LearnedEvent::Sidecar(
+                SidecarEvent::Finish { round, .. }))), Transition::LearnedSidecarFinished(result))
+                if reviewed_attempt == Some(self.attempt) => {
+                if let FileLearnedSidecarFinish::Applied { receipt: Ok(receipt), .. } = result.as_ref() {
+                    self.applied = Some(AppliedReview { round: *round, revision,
+                        input_revision: receipt.input_revision, consequence: receipt.policy.control.decision.consequence });
+                }
             }
             (Event::Authorize(attempt, input_revision, _), Transition::Unit) if *attempt == self.attempt => {
                 let applied = self.applied.ok_or(Error::Incomplete)?;

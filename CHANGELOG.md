@@ -1,5 +1,26 @@
 # Changelog
 
+## 2026-10-24: measure learned identity before publication and audit native Congress
+
+- Add the bounded identity envelope, exact passport/policy binding and unique
+  observer custody to ordinary, predictive, mediated and recovered learned owners.
+- Run original token-stepped identity computation before generation; retain
+  interrupted/refused work, withdraw only the current failed challenge and check
+  fresh native validity before separate installation. Preserve both effect keys.
+- Bind historical recipes without live manifest/helper intake and enforce fresh
+  resident check IDs and increasing measurement sequences without resetting budgets.
+- Repair historical audit and effect attribution for actual native learned-sidecar
+  completion, using the original archive and receipt. Refuse selected refinement
+  rounds without fabricating an application; replay them before later applied rounds.
+- Add thirteen operator identity regressions and extend original audit/refinement
+  cases. Correct the old forecast fixture to distinguish time observation from
+  acknowledged native expiry while preserving every no-work and coverage boundary.
+- Pass all 49 scoped operator functions and 25 public identity functions with
+  standard LLVM harnesses against the official Cranelift library. Complete
+  operator/public test-source Cargo checking and independent review pass. Retain
+  failed attempts and the unchanged full-gate dependency-admission refusal; full
+  release qualification remains open.
+
 ## 2026-10-23: pin complete model identity for reserved learned owners
 
 - Add an exact computed-identity registration wrapper around the full original

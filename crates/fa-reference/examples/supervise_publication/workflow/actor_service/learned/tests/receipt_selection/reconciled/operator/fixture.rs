@@ -63,7 +63,7 @@ pub(super) fn finish_sent(root: &Root, mode: Option<bool>, allowed: bool) -> Sen
     let mut loaded = recipe::load(&path2, &config, true).unwrap();
     assert_eq!(first.generation, loaded.generation);
     assert_eq!(cleanup(driver, 1000, 1), 0);
-    let (host, reviewer, observer) = recovery::open_selected(&config, &loaded).unwrap();
+    let (host, reviewer, observer, _identity) = recovery::open_selected(&config, &loaded).unwrap();
     let mut prediction = observer.map(|observer| prediction::Session::new(2, observer));
     let (port, supervisor) = host.into_learned_text_stream_actor_gateway().unwrap();
     let mut driver = FileSupervisedDriver::new(supervisor); let mut wire = ActorWire::new(port);

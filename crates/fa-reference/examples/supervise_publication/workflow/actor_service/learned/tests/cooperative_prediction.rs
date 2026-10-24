@@ -6,16 +6,19 @@ use super::continuation as native;
 use super::super::prediction;
 
 fn configured_forecast(root: &Root, owned: bool) -> (Config, Loaded) {
+    configured_forecast_age(root, owned, 60_000)
+}
+fn configured_forecast_age(root: &Root, owned: bool, age: u64) -> (Config, Loaded) {
     let config = configured(root);
     let path = native::write(root);
-    super::forecast::install(root, &path, owned, 60_000);
+    super::forecast::install(root, &path, owned, age);
     evidence(root, &config, 1, true, false);
     let loaded = recipe::load(&path, &config, true).unwrap();
     (config, loaded)
 }
 fn start(config: &Config, loaded: &Loaded)
     -> (FileHumanReviewer, prediction::Session, FileSupervisedDriver, Wire) {
-    let (host, reviewer, observer) = recovery::create_selected(config, loaded).unwrap();
+    let (host, reviewer, observer, _identity) = recovery::create_selected(config, loaded).unwrap();
     let session = prediction::Session::new(loaded.request, observer.unwrap());
     let (port, supervisor) = host.into_learned_text_stream_actor_gateway().unwrap();
     (reviewer, session, FileSupervisedDriver::new(supervisor), ActorWire::new(port))
@@ -149,7 +152,9 @@ fn missing_evidence_or_workflow_deadline_between_replay_quanta_prevents_the_firs
 fn the_operator_yields_after_intent_and_observes_forecast_expiry_before_completion() {
     for owned in [false, true] {
         for expired in [false, true] {
-            let root = Root::new(); let (mut config, loaded) = configured_forecast(&root, owned);
+            // Expiry is strictly before the workflow deadline, so neither an
+            // old clock nor the outer workflow can cause the forecast refusal.
+            let root = Root::new(); let (mut config, loaded) = configured_forecast_age(&root, owned, 1);
             let (reviewer, mut prediction, mut driver, _) = start(&config, &loaded);
             let deadline = deadline(); let mut control = Control::new(&config, loaded.request, None).unwrap();
             cold_boundary(&mut driver, &mut config, &deadline, &mut prediction);
@@ -167,25 +172,63 @@ fn the_operator_yields_after_intent_and_observes_forecast_expiry_before_completi
             let numerical = host.learned_generation_inspection().unwrap().numerical;
             let pending = host.learned_generation_inspection().unwrap().pending;
             let forecast = host.action_consistency_deadline().unwrap().unwrap();
+            let likelihood = host.action_consistency_snapshot().unwrap().evidence;
+            let owned_work = owned.then(|| host.learned_action_consistency_snapshot().unwrap());
+            assert!(forecast.expires_at < deadline.logical);
             let revision = host.revision();
             if expired { host.observe_time(revision, forecast.expires_at).unwrap(); }
             drop(host);
             let generated = generate_selected(&mut driver, &reviewer, &mut config, &mut control,
-                &deadline, &mut || ElapsedTick(1000), Some(&mut prediction));
-            let host = driver.supervisor().host().unwrap();
+                &deadline, &mut || if expired { forecast.expires_at } else { ElapsedTick(1000) },
+                Some(&mut prediction));
+            let mut host = driver.supervisor_mut().host_mut().unwrap();
             if expired {
-                // The original coverage gate refuses before it can accept a
-                // fresh source or the deliberately older clock callback above.
-                assert!(generated.is_err());
+                // Time observation preserves its original replay semantics.
+                // The forecast's own inclusive deadline rejects completion
+                // without inventing an action outcome or permanent loss event.
+                assert_eq!(generated.unwrap_err(), "Contract(Stale)");
+                assert_eq!(host.inspect().control.ledger.elapsed, Some(forecast.expires_at));
+                assert_eq!(host.learned_generation_inspection().unwrap().numerical, numerical);
+                assert_eq!(host.learned_generation_inspection().unwrap().pending, pending);
+                assert!(!host.action_consistency_snapshot().unwrap().coverage_lost);
+                assert_eq!(host.action_consistency_deadline().unwrap(), Some(forecast));
+                assert_eq!(host.action_consistency_snapshot().unwrap().evidence, likelihood);
+                if let Some(work) = &owned_work {
+                    let current = host.learned_action_consistency_snapshot().unwrap();
+                    assert_eq!(current.work, work.work);
+                    assert_eq!(current.retained_source_bytes, work.retained_source_bytes);
+                }
+                // Only the separate original expiry transaction records
+                // permanent coverage loss. It keeps the unanswered forecast,
+                // pending intent and spent numerical/prediction work intact.
+                let revision = host.revision();
+                assert!(prediction.expire_forecast(&mut host, forecast, forecast.expires_at).unwrap());
+                assert_eq!(host.revision(), revision + 1);
+                assert!(host.action_consistency_snapshot().unwrap().coverage_lost);
+                let revision = host.revision();
+                drop(host);
+                assert!(generate_selected(&mut driver, &reviewer, &mut config, &mut control,
+                    &deadline, &mut || panic!("lost coverage must refuse before another clock or source"),
+                    Some(&mut prediction)).unwrap_err().contains("lost coverage"));
+                host = driver.supervisor_mut().host_mut().unwrap();
+                assert_eq!(host.revision(), revision);
                 assert_eq!(host.learned_generation_inspection().unwrap().numerical, numerical);
                 assert_eq!(host.learned_generation_inspection().unwrap().pending, pending);
                 assert!(host.action_consistency_snapshot().unwrap().coverage_lost);
             } else {
                 assert!(generated.unwrap());
                 assert_eq!(host.learned_generation_inspection().unwrap().numerical.sampled_draws, 2);
+                assert!(!host.action_consistency_snapshot().unwrap().coverage_lost);
             }
             assert_eq!(host.action_consistency_deadline().unwrap(), Some(forecast));
+            assert_eq!(host.action_consistency_snapshot().unwrap().evidence, likelihood);
             assert_eq!(host.action_consistency_snapshot().unwrap().evidence.samples(), 0);
+            if let Some(work) = &owned_work {
+                let current = host.learned_action_consistency_snapshot().unwrap();
+                assert_eq!(current.work, work.work);
+                assert_eq!(current.retained_source_bytes, work.retained_source_bytes);
+            }
+            assert_eq!(host.retained_requests(), 0);
             assert_eq!(host.inspect().executions, 0);
             drop(host); assert_eq!(cleanup(driver, 1000, 1), 0);
         }

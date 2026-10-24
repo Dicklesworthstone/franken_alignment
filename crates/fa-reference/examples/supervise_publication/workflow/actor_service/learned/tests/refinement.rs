@@ -1,12 +1,14 @@
 //! Real coarse uncertainty, retained residuals and fresh native-model decisions.
 //! Numerical fixtures establish this bounded path, not safety-detector quality.
 use super::*;
+use super::super::audit as audit_command;
 use fa_reference::action::consequence::activation::probe::learned::{KvGroup, KvRow, RESIDUAL_HEADER_BYTES};
 use fa_reference::action::consequence::activation::tensor::kv::{experiment::KvSide,
     decoder::MAX_DECODER_PRODUCTS};
 use fa_reference::action::consequence::delivery::persistent::observed::{
     decoder::learned::sidecar::FileLearnedSidecarFinish,
     driver::native_learned::FileNativeSupervisedDriver,
+    replay::FileReviewReplayStatus,
 };
 use fa_reference::action::consequence::oversight::sidecar::{SidecarRefinementOutcome,
     receiver::native::SidecarEvaluationStatus};
@@ -199,9 +201,38 @@ fn progressive_command_buys_exact_residual_then_fresh_native_and_human_keys_publ
             &loaded.generation, id).unwrap();
         assert_eq!(saved.result.archive(), history.history()[index].archive());
     }
+    let anchor = {
+        let host = driver.supervisor().host().unwrap();
+        assert!(matches!(host.review_replay(FIRST),
+            Err(fa_reference::action::consequence::delivery::persistent::JournalError::Contract(
+                fa_reference::Error::Incomplete))));
+        // A refinement is not an application, but it remains part of the exact
+        // replay that reaches the later real application and two-key dispatch.
+        let mut cursor = host.begin_review_replay(SECOND).unwrap();
+        while cursor.progress().status == FileReviewReplayStatus::Replaying {
+            cursor.advance(cursor.progress().replayed_events, 1).unwrap();
+        }
+        let audit = cursor.finish_with_effects().unwrap();
+        let FileLearnedSidecarFinish::Applied { archive, receipt, .. } = &history.history()[1]
+            else { panic!("the successor genuinely applied its fresh review"); };
+        assert_eq!(audit.review().archive(), archive); assert_eq!(audit.review().application(), receipt);
+        assert_eq!(audit.review().application_inputs(), Some(archive.inputs.as_ref()));
+        assert!(audit.effect().selected_review_dispatched());
+        assert_eq!(audit.effect().dispatch().unwrap().authorization().round(), SECOND);
+        host.history_anchor().unwrap()
+    };
     assert_eq!(cleanup(driver, 1000, 1), 0); drop(history);
     fs::remove_file(root.0.join("evidence.json")).unwrap();
     fs::remove_file(root.0.join("native-roster.json")).unwrap();
+    let before = fs::read(config.store.join("delivery.bin")).unwrap();
+    let mut coarse = Vec::new();
+    assert_eq!(audit_command::run(&config, &loaded, FIRST, &anchor, &mut coarse,
+        &mut || Ok(())).unwrap_err(), "Contract(Incomplete)");
+    assert!(coarse.is_empty());
+    let mut refined = Vec::new();
+    audit_command::run(&config, &loaded, SECOND, &anchor, &mut refined, &mut || Ok(())).unwrap();
+    assert!(!refined.is_empty());
+    assert_eq!(fs::read(config.store.join("delivery.bin")).unwrap(), before);
     let outer = fs::read_to_string(root.0.join("recipe.json")).unwrap();
     fs::write(root.0.join("recipe.json"), outer.replace("\"ttl_ms\":60000", "\"ttl_ms\":1")).unwrap();
     let receipt_only = recipe::load(&root.0.join("recipe.json"), &config, false).unwrap();

@@ -22,6 +22,14 @@ explicitly absent or required forecasts. See
 [process-backed learned publication](PROCESS_LEARNED_PUBLICATION.md) for its
 recipe, original process protocol, cleanup and remaining containment boundaries.
 
+The optional `fa.learned-identity-publication/1` envelope binds an independently
+registered complete passport and identity policy to any of these recipes. It
+runs original computed anchor measurements before generation, retains separate
+observer custody through recovery and requires fresh native installation before
+publication. It can also wrap the joint-credibility envelope. See
+[computed identity in the learned operator](LEARNED_IDENTITY_OPERATOR.md) for
+the closed format, cancellation, historical selection and trust boundaries.
+
 In versions /1 through /5, native helper models execute **inside the supervising process**, with separate
 original evaluator owners and fixed input contracts. They are not helper OS
 processes. Their configured names, models and cohorts do not establish statistical

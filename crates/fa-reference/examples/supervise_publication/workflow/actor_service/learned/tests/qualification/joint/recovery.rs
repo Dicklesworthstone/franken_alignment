@@ -20,7 +20,7 @@ fn joint_policy_recovery_pins_every_field_before_cleanup_and_keeps_receipts_and_
     for mode in [None, Some(false), Some(true)] {
         let root = Root::new(); let seed = seeded(&root, mode);
         let mut loaded = recipe::load(&seed.first_recipe, &seed.config, false).unwrap();
-        let (host, human, observer) = recovery::open_selected(&seed.config, &loaded).unwrap();
+        let (host, human, observer, _identity) = recovery::open_selected(&seed.config, &loaded).unwrap();
         assert_eq!(host.held_out_joint_policy().unwrap(), Some(policy()));
         assert!(host.held_out_joint_report(20).unwrap().unwrap().qualified());
         assert!(host.check_credibility().is_err(), "historical success cannot qualify recovered live work");

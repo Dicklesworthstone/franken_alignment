@@ -17,7 +17,7 @@ fn generated_with_config(root: &Root, mode: Option<bool>, mut config: Config)
     if let Some(owned) = mode { super::forecast::install(root, &path, owned, 60_000); }
     evidence(root, &config, 1, true, false);
     let loaded = recipe::load(&path, &config, true).unwrap();
-    let (host, reviewer, observer) = recovery::create_selected(&config, &loaded).unwrap();
+    let (host, reviewer, observer, _identity) = recovery::create_selected(&config, &loaded).unwrap();
     let mut prediction = observer.map(|role| prediction::Session::new(loaded.request, role));
     let (port, supervisor) = host.into_learned_text_stream_actor_gateway().unwrap();
     let mut driver = FileSupervisedDriver::new(supervisor);
@@ -86,7 +86,7 @@ fn recorded_policy_refusal_and_confirmed_message_both_recover_the_original_recei
             assert!(!output.windows(7).any(|word| word == b"payload"));
             let config = configured(&root);
             let recovered = recipe::load(&path, &config, false).unwrap();
-            let (host, _, _) = recovery::open_selected(&config, &recovered).unwrap();
+            let (host, _, _, _identity) = recovery::open_selected(&config, &recovered).unwrap();
             assert_eq!(host.request_status(1).unwrap(), status);
             assert_eq!(host.learned_generation_inspection().unwrap().numerical, numerical);
             assert_eq!(host.inspect().executions, u64::from(allowed));

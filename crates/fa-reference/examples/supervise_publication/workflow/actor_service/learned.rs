@@ -18,6 +18,7 @@
 #[path = "learned/finish.rs"] mod finish;
 #[path = "learned/continuation.rs"] mod continuation;
 #[path = "learned/qualification.rs"] mod qualification;
+#[path = "learned/identity.rs"] mod identity;
 #[path = "learned/stopped.rs"] mod stopped;
 #[path = "learned/topology.rs"] mod topology;
 #[path = "learned/sequence.rs"] mod sequence;
@@ -186,10 +187,11 @@ where F: FnMut() -> ElapsedTick {
     // The same service and deadline cover replay, generation, review and dispatch.
     let mut control = Control::new(&config, loaded.request, Some(peers))?;
     let bound_actor = actor.map(ingress::Bound::bind).transpose()?;
-    let topology::Started { custody: (host, reviewer, observer), source: topology_source,
+    let topology::Started { custody: (host, reviewer, observer, identity_observer), source: topology_source,
         output: topology_output } = topology::start(&config, &loaded, continuing,
             &mut control, &deadline, &mut time)?;
     let mut prediction = observer.map(|observer| prediction::Session::new(loaded.request, observer));
+    let mut identity = identity_observer.map(identity::Session::new);
     prediction::check(&host, prediction.as_ref())?;
     let message_continuation = request_preflight(&host, &loaded, continuing,
         finishing, after_message, credibility)?;
@@ -201,7 +203,7 @@ where F: FnMut() -> ElapsedTick {
     let mut wire = ActorWire::new(port);
     let RequestCycle { driver, response, failure, history, process } = execute_request(
         driver, &mut config, &loaded, RequestServices { peers, reviewer: &reviewer,
-            prediction: &mut prediction, intake: &mut intake, wire: &mut wire,
+            prediction: &mut prediction, identity: &mut identity, intake: &mut intake, wire: &mut wire,
             finishing, message_continuation, credibility, stop_operation: loaded.request },
         &mut control, &mut deadline, &mut time);
     // The anchor exporter preserves incoming errors while still trying its own
@@ -257,6 +259,7 @@ struct RequestServices<'a> {
     peers: &'a PeerProfile,
     reviewer: &'a FileHumanReviewer,
     prediction: &'a mut Option<prediction::Session>,
+    identity: &'a mut Option<identity::Session>,
     intake: &'a mut Option<ingress::Intake>,
     wire: &'a mut ActorWire<FileLearnedTextStreamActorPort>,
     finishing: Option<u64>,
@@ -280,7 +283,7 @@ fn execute_request<F>(mut driver: FileSupervisedDriver, config: &mut Config,
     loaded: &Loaded, services: RequestServices<'_>, control: &mut Control,
     deadline: &mut Deadline, time: &mut F) -> RequestCycle
 where F: FnMut() -> ElapsedTick {
-    let RequestServices { peers, reviewer, prediction, intake, wire, finishing,
+    let RequestServices { peers, reviewer, prediction, identity, intake, wire, finishing,
         message_continuation, credibility, stop_operation } = services;
     let prepared = (|| {
         if !qualification::prepare(&mut driver, config, credibility,
@@ -296,12 +299,16 @@ where F: FnMut() -> ElapsedTick {
                 let mut host = driver.supervisor_mut().host_mut().map_err(debug)?;
                 prediction.finish_request(&mut host)?;
             }
+            if !identity::prepare(&mut driver, config, loaded, identity,
+                (&mut *control, reviewer, deadline), time)? { return Ok(false); }
             LearnedTextRelease::Finish
         } else {
             if let Some(command) = message_continuation {
                 if !continuation::prepare(&mut driver, reviewer, config, command,
                     control, deadline, time)? { return Ok(false); }
             }
+            if !identity::prepare(&mut driver, config, loaded, identity,
+                (&mut *control, reviewer, deadline), time)? { return Ok(false); }
             if !generate_selected(&mut driver, reviewer, config, control,
                 deadline, time, prediction.as_mut())? {
                 return Ok(false);

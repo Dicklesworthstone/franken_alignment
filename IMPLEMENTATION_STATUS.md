@@ -1,5 +1,66 @@
 # Implementation status · design revision 0.3
 
+## 2026-10-24: enforce computed identity in the learned operator and audit native reviews
+
+The learned operator accepts the closed `fa.learned-identity-publication/1`
+envelope around an original version-1 through version-6 recipe, optionally with
+joint credibility inside it. The complete independent passport and identity
+policy are bound to the exact learned configuration in live and historical modes.
+Ordinary, raw-predictive, owned-predictive and topology-mediated paths retain the
+original unique identity observer alongside all existing roles.
+
+Each request executes the original cooperative stimulus measurement before
+generation. Stop and deadline interruption cancel before journal mutation while
+retaining completed work and observer custody. A committed measurement refusal
+closes only its still-current challenge; successful computation observes fresh
+native time before separate matching installation. Recovery requires fresh
+evidence and preserves numerical draws, forecast expenditure and old effect
+liability. Resident sequences bind one registration and require distinct check
+IDs and increasing measurement sequences. Helper Congress and human approval
+remain separate prerequisites for publication.
+
+The first runtime pass exposed an older functional audit gap: native learned
+reviews finish through the original learned-sidecar event, but historical audit
+selected only ordinary Finish. Both read-only extraction and effect attribution
+now consume the actual native archive and application receipt. Exact anchors,
+original numerical witnesses, independent recipe binding and whole-suffix replay
+remain required. A refinement-only round has no application and explicitly
+refuses this export; a later actual application remains auditable after its
+refinement prefix and without current evidence or helper inputs.
+
+All 49 selected operator regression functions pass, including all thirteen new
+identity cases, six original native audit cases, the causal refinement/application
+case, and existing generation, prediction, qualification, recovery and resident
+sequences. The original process fixture is registered and exercised by real child
+processes; its standalone no-input entry is excluded from that count. All 25
+public identity functions pass again with the rebuilt native library. The complete
+unmodified operator test source and both public targets pass standard Cargo check.
+
+Runtime uses standard LLVM harnesses against the qualified nightly's official
+Cranelift library with 32 MiB stacks. The isolated operator harness retains every
+body/assertion/fixture and changes only unselected test registrations; exact source
+hashes agree before and after execution. Independent source review found no blocker.
+This does not claim full LLVM native-library execution or full-suite qualification.
+
+Earlier failed attempts are retained: the first focused run caught the real audit
+gap, the old forecast fixture's incorrect implicit-expiry assumption and the
+verifier's omitted process-child registration. The native audit was fixed; the
+forecast test now asserts pure-time refusal separately from original acknowledged
+expiry, preserving numerical/forecast work and permanent coverage loss. The
+verifier retains the original child entrypoint. A setup-cleanup type error and a
+verifier-only registration parsing refusal were also corrected before final success.
+
+The full standard xtask driver compiles and executes, then refuses the unchanged
+existing dependency graph before formatting, Clippy or full-suite execution. No
+admission guard, production limit, journal format, effect authority or lockfile
+was weakened. Details and boundaries: [computed identity operator](docs/LEARNED_IDENTITY_OPERATOR.md)
+and [anchored native review audit](docs/ANCHORED_REVIEW_AUDIT.md).
+
+This is scoped capability toward FA-118 and FA-020, not complete packet or release
+qualification. Passport authentication, randomized audit-floor scheduling, full
+evidence-generation propagation, H19 discrimination and a distinct public audit
+representation for unattempted refinement applications remain open.
+
 ## 2026-10-23: bind complete identity registration to learned ownership
 
 The immutable learned recipe can now require original-model computation with an

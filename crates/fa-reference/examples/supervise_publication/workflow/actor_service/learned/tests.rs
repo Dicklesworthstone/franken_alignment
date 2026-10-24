@@ -111,3 +111,5 @@ fn executed(wire: &mut Wire, request: u64) -> bool {
 #[path = "tests/topology.rs"] mod mediated_topology;
 
 #[path = "tests/sequence.rs"] mod resident_sequence;
+
+#[path = "tests/identity.rs"] mod identity_tests;

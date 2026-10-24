@@ -120,12 +120,13 @@ where F: FnMut() -> ElapsedTick {
                     None, loaded.generation.clone(), RecoveryReserve::terminal()),
             }.map_err(debug)?;
             let source = prepared.bind(&host, roles.topology_observer)?;
-            Ok(Started { custody: (host, roles.oversight.human, roles.consistency_observer),
+            Ok(Started { custody: (host, roles.oversight.human, roles.consistency_observer,
+                roles.oversight.identity_observer),
                 source: Some(source), output })
         }
         Selection::Recover { selection, history } => {
             if !continuing { return Err("topology recovery inputs cannot create a learned history".into()); }
-            let ((mut host, human, forecast), observer) = recovery::open_selected_live_with_topology(
+            let ((mut host, human, forecast, identity), observer) = recovery::open_selected_live_with_topology(
                 config, loaded, control, deadline, time)?;
             match host.request_status(loaded.request) {
                 Err(JournalError::Contract(Error::Missing)) => {}
@@ -142,7 +143,7 @@ where F: FnMut() -> ElapsedTick {
             let next = selection.next(config, history.clone(), &mut checkpoint)?;
             let observer = observer.ok_or("recovered topology observer custody is missing")?;
             let (source, output) = next.bind(&mut host, observer)?;
-            Ok(Started { custody: (host, human, forecast), source: Some(source), output })
+            Ok(Started { custody: (host, human, forecast, identity), source: Some(source), output })
         }
     }
 }

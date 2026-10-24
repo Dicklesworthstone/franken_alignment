@@ -131,20 +131,23 @@ impl Cursor {
         let (host, roles) = match self {
             Self::Plain(run) => {
                 let (host, roles) = run.finish()?;
-                return Ok(((host, roles.human, None), None));
+                return Ok(((host, roles.human, None, roles.identity_observer), None));
             }
             Self::Raw(run) => run.finish()?,
             Self::Owned(run) => run.finish()?,
             Self::Mediated(run) => {
                 let (host, roles) = run.finish()?;
-                return Ok(((host, roles.oversight.human, roles.consistency_observer), Some(roles.topology_observer)));
+                return Ok(((host, roles.oversight.human, roles.consistency_observer,
+                    roles.oversight.identity_observer), Some(roles.topology_observer)));
             }
             Self::PredictiveMediated(run) => {
                 let (host, roles) = run.finish()?;
-                return Ok(((host, roles.oversight.human, roles.consistency_observer), Some(roles.topology_observer)));
+                return Ok(((host, roles.oversight.human, roles.consistency_observer,
+                    roles.oversight.identity_observer), Some(roles.topology_observer)));
             }
         };
-        Ok(((host, roles.oversight.human, Some(roles.consistency_observer)), None))
+        Ok(((host, roles.oversight.human, Some(roles.consistency_observer),
+            roles.oversight.identity_observer), None))
     }
 
     pub(super) fn finish_receipt(self, request: u64, after: Option<u64>)

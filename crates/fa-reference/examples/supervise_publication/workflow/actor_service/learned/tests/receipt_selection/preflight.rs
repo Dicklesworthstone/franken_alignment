@@ -108,7 +108,7 @@ fn selected_receipt_keeps_ready_deadline_and_full_guard_floor_before_one_fence()
         assert_eq!(files(&config.store), before);
         loaded.floor = floor;
         let mut calls = 0;
-        let ((host, _, observer), selected) = recovery::open_selected_receipt_with_elapsed(
+        let ((host, _, observer, _identity), selected) = recovery::open_selected_receipt_with_elapsed(
             &config, &loaded, None, &mut || { calls += 1; Duration::ZERO }).unwrap();
         assert_eq!(calls, revision as usize + 2);
         assert_eq!(host.revision(), revision + 1);
@@ -185,7 +185,7 @@ fn finish_receipt_selection_preserves_predecessor_and_refused_or_executed_outcom
             fs::write(&next_path, next).unwrap();
             let mut last = recipe::load(&next_path, &config, true).unwrap();
             assert_eq!(last.generation, loaded.generation);
-            let (host, reviewer, observer) = recovery::open_selected(&config, &last).unwrap();
+            let (host, reviewer, observer, _identity) = recovery::open_selected(&config, &last).unwrap();
             let mut prediction = observer.map(|role| prediction::Session::new(2, role));
             let (port, supervisor) = host.into_learned_text_stream_actor_gateway().unwrap();
             let mut driver = FileSupervisedDriver::new(supervisor); let mut wire = ActorWire::new(port);

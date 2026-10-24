@@ -95,6 +95,13 @@ recovery; fresh resident creation still refuses it before startup. The selected
 native guard checks the actual capped helper weights against the original
 baseline before any successful requalification can admit further work.
 
+The outer [computed-identity envelope](LEARNED_IDENTITY_OPERATOR.md) can require
+a fresh original-model measurement for every entry. All entries retain the same
+complete passport and policy, distinct check IDs, strictly increasing measurement
+sequences and the original check allowance. These requirements are admitted before
+runtime startup. The invocation retains its unique observer and completed or
+cancelled run history; expired or interrupted measurements cannot admit publication.
+
 The invocation creates or recovers one original host and releases one actor
 gateway, driver, human reviewer and, when required, forecast observer. Its
 topology custodian stays attached through numerical preparation, native or

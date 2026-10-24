@@ -140,6 +140,17 @@ impl Session {
         }
     }
 
+    // Exercise the original explicit timer transaction without exporting or
+    // duplicating the observer held by the production session.
+    #[cfg(test)]
+    pub(super) fn expire_forecast(&self, host: &mut FileOversight,
+        expected: fa_reference::action::consequence::oversight::consistency::ConsistencyDeadline,
+        at: fa_reference::action::ElapsedTick) -> Result<bool, String>
+    {
+        let revision = host.revision();
+        self.observer.expire_forecast(host, revision, expected, at).map_err(debug)?.map_err(debug)
+    }
+
     pub(super) fn complete_message(&self, host: &FileOversight) -> Result<(), String> {
         check(host, Some(self))?;
         let current = host.learned_generation_inspection().map_err(debug)?.numerical;

@@ -104,7 +104,7 @@ fn one_replayed_settlement_matches_original_three_transitions_byte_for_byte() {
             let original = fs::read(&canonical).unwrap();
             // Independent oracle: original public Fence, Time, and Sweep on
             // this test store, then return the fixture to its pre-settlement cut.
-            let (mut control, _, _) = recovery::open_selected(&case.config, &case.loaded).unwrap();
+            let (mut control, _, _, _identity) = recovery::open_selected(&case.config, &case.loaded).unwrap();
             let numerical = control.learned_generation_inspection().unwrap().numerical;
             let evidence = mode.map(|_| control.action_consistency_snapshot().unwrap());
             let owned = (mode == Some(true)).then(|| control.learned_action_consistency_snapshot().unwrap());

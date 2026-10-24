@@ -6,6 +6,7 @@ use super::{CommitteeInput, Error, Event, FileDeliverySnapshot, FileOversight,
     journal, storage};
 use super::super::Transition;
 use super::{FileReviewEffectReplay, effect::EffectTrace};
+use super::{DecoderEvent, FileLearnedSidecarFinish, LearnedEvent, SidecarEvent, finish_round};
 use super::super::super::MAX_JOURNAL_EVENTS;
 use std::cell::OnceCell;
 use std::fmt;
@@ -120,8 +121,8 @@ impl FileReviewReplayCursor {
         }
         let begin = events.iter().position(|event| matches!(event,
             Event::Begin(_, id, ..) if *id == round)).ok_or(Error::Missing)?;
-        let finish = events.iter().position(|event| matches!(event,
-            Event::Finish(id, ..) if *id == round)).ok_or(Error::Incomplete)?;
+        let finish = events.iter().position(|event| finish_round(event) == Some(round))
+            .ok_or(Error::Incomplete)?;
         if finish <= begin { return Err(Error::Binding.into()); }
         let Event::Begin(attempt, ..) = &events[begin] else { return Err(Error::Binding.into()); };
         let effect = EffectTrace::new(*attempt);
@@ -179,10 +180,8 @@ impl FileReviewReplayCursor {
         let event = &self.events[self.replayed];
         // Finish consumes the original session. Read its attempt before apply;
         // all attribution below waits for the original transition to succeed.
-        let reviewed_attempt = match event {
-            Event::Finish(round, ..) => self.machine.sessions.get(round).map(|session| session.0),
-            _ => None,
-        };
+        let reviewed_attempt = finish_round(event)
+            .and_then(|round| self.machine.sessions.get(&round).map(|session| session.0));
         let transition = self.machine.apply(event)?;
         self.effect.observe(event, &transition, reviewed_attempt, (self.replayed + 1) as u64,
             &self.machine.broker)?;
@@ -192,7 +191,6 @@ impl FileReviewReplayCursor {
             self.capture = Some(session.retain_replay_archive()?);
         }
         if self.replayed == self.finish {
-            let Transition::Reviewed(application) = transition else { return Err(Error::Binding); };
             // Machine removed the consumed session; only this private observer
             // still owns its one-shot output. No archive is reconstructed from
             // a caller-supplied verdict or by running Finish a second time.
@@ -201,13 +199,33 @@ impl FileReviewReplayCursor {
                 .into_inner().ok_or(Error::Incomplete)?;
             let anchor = self.anchor.as_ref().ok_or(Error::Incomplete)?;
             archive.verify(anchor)?;
-            if let Ok(receipt) = &application { archive.verify_receipt(anchor, receipt)?; }
-            let Event::Finish(_, supplied, snapshot) = &self.events[self.replayed] else {
-                return Err(Error::Binding);
+            let (application, inputs, snapshot) = match (event, transition) {
+                (Event::Finish(_, supplied, snapshot), Transition::Reviewed(application)) => {
+                    let inputs = supplied.as_ref().map(|views| CommitteeInput::capture(
+                        archive.inputs.action(), self.machine.broker.contracts(), views.clone())).transpose()?;
+                    (application, inputs, snapshot.clone())
+                }
+                (Event::Decoder(DecoderEvent::Learned(LearnedEvent::Sidecar(
+                    SidecarEvent::Finish { attempt, snapshot, .. }))),
+                    Transition::LearnedSidecarFinished(result)) => {
+                    let FileLearnedSidecarFinish::Applied { receipt, archive: original, .. } = *result else {
+                        // Refinement finished the review but never applied it.
+                        // Do not invent a refusal receipt or an approval for it.
+                        return Err(Error::Incomplete);
+                    };
+                    if original != archive { return Err(Error::Binding); }
+                    // The original Applied path supplied its unchanged packet.
+                    // Read only the retained observation, without a live-source
+                    // eligibility check that could reject an applied denial.
+                    let inputs = self.machine.broker.current_inputs(*attempt)?.cloned()
+                        .ok_or(Error::Incomplete)?;
+                    if &inputs != archive.inputs.as_ref() { return Err(Error::Binding); }
+                    (receipt, Some(inputs), snapshot.clone())
+                }
+                _ => return Err(Error::Binding),
             };
-            let inputs = supplied.as_ref().map(|views| CommitteeInput::capture(
-                archive.inputs.action(), self.machine.broker.contracts(), views.clone())).transpose()?;
-            self.completed = Some(Completed { archive, application, inputs, snapshot: snapshot.clone(),
+            if let Ok(receipt) = &application { archive.verify_receipt(anchor, receipt)?; }
+            self.completed = Some(Completed { archive, application, inputs, snapshot,
                 state: self.machine.snapshot(self.replayed + 1) });
         }
         Ok(())

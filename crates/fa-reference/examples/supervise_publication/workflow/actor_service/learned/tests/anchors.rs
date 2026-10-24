@@ -84,7 +84,7 @@ fn selected_anchor_is_never_defaulted_and_input_is_refused_on_initial_creation()
 #[test]
 fn private_anchor_loader_accepts_original_frame_and_refuses_truncation_trailing_and_oversize_files() {
     let root = Root::new(); let (config, _, loaded) = loaded(&root);
-    let (host, _, _) = recovery::create_selected(&config, &loaded).unwrap();
+    let (host, _, _, _identity) = recovery::create_selected(&config, &loaded).unwrap();
     let anchor = host.history_anchor().unwrap();
     let path = root.0.join("original.anchor"); let bytes = archive(&path, &anchor);
     assert_eq!(custody::load(&path).unwrap(), anchor);
@@ -116,7 +116,7 @@ fn anchor_output_admission_refuses_existing_files_dangling_links_and_store_paren
     assert!(admit(&config, &mut loaded, false, None, Some(&dangling)).is_err());
     assert!(fs::symlink_metadata(&dangling).unwrap().file_type().is_symlink());
     assert!(!config.store.exists());
-    let (host, _, _) = recovery::create_selected(&config, &loaded).unwrap();
+    let (host, _, _, _identity) = recovery::create_selected(&config, &loaded).unwrap();
     let bytes = fs::read(config.store.join("delivery.bin")).unwrap();
     let alias = root.0.join("store-alias"); symlink(&config.store, &alias).unwrap();
     for selected in [config.store.join("new.anchor"), alias.join("new.anchor")] {

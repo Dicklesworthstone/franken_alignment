@@ -26,6 +26,25 @@ FileReviewReplay. Matching an anchored review cannot excuse an invalid later
 transition. The ordinary unanchored APIs keep their original contract and bytes;
 the new callers never retry them after an anchor failure.
 
+## Native learned review completion
+
+The same readers recognize the original learned-sidecar Finish record as well as
+ordinary Finish. They replay the actual native transition and retain its original
+completed archive, application inputs, snapshot and application result. A native
+review therefore remains auditable after computed identity, source and numerical
+preparation, without current helper files or new observations. Anchors still
+cover the selected complete record, and the entire suffix must verify.
+
+Effect tracing follows the actual native application receipt through the original
+authorization, human-key, dispatch and reconciliation events. It does not infer
+execution from a favorable review or synthesize an application result.
+
+A selected learned-sidecar `Refined` round has not attempted policy application.
+The current `FileReviewReplay` application type cannot represent that distinction,
+so exporting that selected round returns `Incomplete` without a report or write.
+Earlier refinement rounds still replay normally before a later auditable `Applied`
+completion. Supporting standalone refinement reports remains a separate API task.
+
 ## Claims and costs
 
 An anchor is independently retained operator data, not a signature or evidence
@@ -128,3 +147,16 @@ learned detection quality, production containment or performance.
 ```sh
 RCH_REQUIRE_REMOTE=1 rch exec -- cargo test --locked -p fa-reference --example supervise_publication audit
 ```
+
+## 2026-10-24 execution update
+
+All six existing operator audit functions now pass with actual native learned
+completion support, including denial, all three forecast modes, wrong recipes,
+output failure and cancellation. The computed-identity offline-history case and
+the real refinement-to-later-application case pass too. The complete operator
+test source passes standard qualified Cargo check. Runtime evidence uses standard
+LLVM test harnesses with the official Cranelift native library; see the
+[identity operator verification](LEARNED_IDENTITY_OPERATOR.md#verification) for
+exact scope, failed attempts and the unchanged dependency-admission gate refusal.
+This update does not claim execution of every earlier native audit test or full
+release qualification.

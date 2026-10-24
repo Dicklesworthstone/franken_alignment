@@ -26,7 +26,7 @@ struct Seed {
     revision: u64,
 }
 
-fn activation(config: &Config, sequence: u64, epoch: u64, operation: u64,
+pub(super) fn activation(config: &Config, sequence: u64, epoch: u64, operation: u64,
     generation: u64) -> CredibilityActivation {
     // Same explicitly synthetic sequence mapping as the original actor-service
     // qualification fixture. Promotion checks the resulting sequence, so the
@@ -89,7 +89,7 @@ fn seed_with(root: &Root, mode: Option<bool>,
     provision(&mut config, &first_recipe);
     evidence(root, &config, 1, true, false);
     let first = recipe::load(&first_recipe, &config, true).unwrap();
-    let (host, reviewer, observer) = recovery::create_selected(&config, &first).unwrap();
+    let (host, reviewer, observer, _identity) = recovery::create_selected(&config, &first).unwrap();
     let mut prediction = observer.map(|observer| prediction::Session::new(1, observer));
     let (port, supervisor) = host.into_learned_text_stream_actor_gateway().unwrap();
     let mut driver = FileSupervisedDriver::new(supervisor);
@@ -134,7 +134,7 @@ struct Live {
 
 fn open(seed: &Seed) -> Live {
     let loaded = recipe::load(&seed.next_recipe, &seed.config, true).unwrap();
-    let (host, reviewer, observer) = recovery::open_selected(&seed.config, &loaded).unwrap();
+    let (host, reviewer, observer, _identity) = recovery::open_selected(&seed.config, &loaded).unwrap();
     assert!(host.learned_generation_inspection().unwrap().paused);
     assert!(host.check_credibility().is_err(), "recovery must invalidate actual prior qualification");
     let prediction = observer.map(|observer| prediction::Session::new(2, observer));
@@ -406,7 +406,7 @@ fn actual_learned_entry_can_retry_omitted_qualification_then_checks_time_after_a
         assert_eq!(result.cleanup_pending, 0);
         let config = configured(&root);
         let loaded = recipe::load(&seed.next_recipe, &config, true).unwrap();
-        let (host, _reviewer, _observer) = recovery::open_selected(&config, &loaded).unwrap();
+        let (host, _reviewer, _observer, _identity) = recovery::open_selected(&config, &loaded).unwrap();
         assert_eq!(host.credibility_change(21).unwrap().reducer_generation, 3,
             "the actual entry must reach the supplied original activation before expiry");
         assert_eq!(host.learned_generation_inspection().unwrap().numerical.sampled_draws, 2);

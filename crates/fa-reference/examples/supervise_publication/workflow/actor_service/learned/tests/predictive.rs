@@ -25,7 +25,7 @@ fn fixture(root: &Root, owned: bool, age: u64) -> (Config, PathBuf, Loaded) {
 
 fn start(config: &Config, loaded: &Loaded)
     -> (FileHumanReviewer, prediction::Session, FileSupervisedDriver, Wire) {
-    let (host, reviewer, observer) = recovery::create_selected(config, loaded).unwrap();
+    let (host, reviewer, observer, _identity) = recovery::create_selected(config, loaded).unwrap();
     assert!(host.action_consistency_required());
     let prediction = prediction::Session::new(loaded.request, observer.unwrap());
     let (port, supervisor) = host.into_learned_text_stream_actor_gateway().unwrap();
@@ -35,7 +35,7 @@ fn start(config: &Config, loaded: &Loaded)
 fn reopen(config: &Config, loaded: &Loaded, driver: FileSupervisedDriver)
     -> (FileHumanReviewer, prediction::Session, FileSupervisedDriver, Wire) {
     assert_eq!(cleanup(driver, 1000, 1), 0);
-    let (host, reviewer, observer) = recovery::open_selected(config, loaded).unwrap();
+    let (host, reviewer, observer, _identity) = recovery::open_selected(config, loaded).unwrap();
     assert!(host.learned_generation_inspection().unwrap().paused);
     assert!(!host.action_consistency_snapshot().unwrap().coverage_lost);
     let prediction = prediction::Session::new(loaded.request, observer.unwrap());
@@ -304,7 +304,7 @@ fn owned_forecast_budget_exhaustion_retains_original_inconclusive_report_without
             }
             assert_eq!(fs::read(config.store.join("delivery.bin")).unwrap(), disk);
             assert_eq!(cleanup(driver, 1000, 1), 0);
-            let (host, _, _) = recovery::open_selected(&config, &loaded).unwrap();
+            let (host, _, _, _identity) = recovery::open_selected(&config, &loaded).unwrap();
             let recovered = host.learned_action_consistency_snapshot().unwrap();
             assert_eq!(recovered.work, charged.work);
             assert_eq!(recovered.retained_source_bytes, charged.retained_source_bytes);
@@ -404,7 +404,7 @@ fn predictive_recovery_retains_unanswered_forecast_and_spent_work_without_rearmi
             let disk = fs::read(config.store.join("delivery.bin")).unwrap();
             assert!(recovery::open(&config, &loaded).is_err());
             assert_eq!(fs::read(config.store.join("delivery.bin")).unwrap(), disk);
-            let (host, reviewer, observer) = recovery::open_selected(&config, &loaded).unwrap();
+            let (host, reviewer, observer, _identity) = recovery::open_selected(&config, &loaded).unwrap();
             assert!(host.learned_generation_inspection().unwrap().paused);
             assert_eq!(host.learned_generation_inspection().unwrap().numerical, numerical);
             assert_eq!(host.action_consistency_deadline().unwrap(), forecast);
@@ -436,7 +436,7 @@ fn predictive_recovery_retains_unanswered_forecast_and_spent_work_without_rearmi
 fn independent_predictor_changes_and_recipe_downgrade_refuse_before_recovery_writes() {
     for owned in [false, true] {
         let root = Root::new(); let (config, path, loaded) = fixture(&root, owned, 60_000);
-        let (host, _, _) = recovery::create_selected(&config, &loaded).unwrap();
+        let (host, _, _, _identity) = recovery::create_selected(&config, &loaded).unwrap();
         let numerical = host.learned_generation_inspection().unwrap().numerical; drop(host);
         let disk = fs::read(config.store.join("delivery.bin")).unwrap();
         let file = root.0.join("forecast.json"); let original = fs::read_to_string(&file).unwrap();
@@ -470,7 +470,7 @@ fn independent_predictor_changes_and_recipe_downgrade_refuse_before_recovery_wri
         assert_eq!(fs::read(config.store.join("delivery.bin")).unwrap(), disk);
         fs::write(&path, recipe).unwrap();
         let original = recipe::load(&path, &config, false).unwrap();
-        let (host, _, observer) = recovery::open_selected(&config, &original).unwrap();
+        let (host, _, observer, _identity) = recovery::open_selected(&config, &original).unwrap();
         assert!(observer.is_some()); assert_eq!(host.learned_generation_inspection().unwrap().numerical, numerical);
         assert!(host.learned_generation_inspection().unwrap().paused);
         assert_eq!(host.action_consistency_snapshot().unwrap().evidence.samples(), 0);

@@ -13,3 +13,17 @@ Eight public integration tests cover review-to-two-key-publication linkage, unch
 Work is bounded by the existing journal, snapshot, transcript and whole-input caps. File inspection uses a full semantic replay and selected-prefix reconstruction, not a constant-time indexed query. No allocation or latency measurement is claimed. This serves plan §§7.3, 9.2, 11.1 and 16.4 / the G2 decision-replay path. Portable authenticated receipt interchange and production qualification remain separate obligations.
 
 Rust compilation, rustfmt, Clippy, unit/integration tests and doctests remain unexecuted because RCH is unavailable in the editing environment. No Beads, qualified test counts, shared integration-owned status documents or production gate states were promoted.
+
+## Native learned-sidecar review records
+
+Ordinary Finish and the original learned-sidecar Finish share the same extraction
+and effect-attribution path. The native `Applied` transition supplies the actual
+archive and application result; the exporter does not manufacture a receipt from
+its reviewed decision. Both in-memory export and file cursors retain the original
+application inputs, completion snapshot, whole-suffix checks and no-authority
+boundary.
+
+A selected native `Refined` completion returns `Incomplete`: its Congress completed
+without attempting policy application, which the current application result type
+cannot express. Earlier refinements remain part of full replay before a later
+applied review. No failed application is fabricated for an unattempted one.

@@ -11,6 +11,8 @@ pub use effect::{AuditedAuthorization, AuditedDispatch, AuditedOutcome, AuditedR
 
 use super::{FileDeliverySnapshot, FileOversight, FileOversightProfile, JournalError,
     journal::{self, Event}, machine::Machine, storage};
+use super::decoder::{DecoderEvent, learned::{LearnedEvent,
+    sidecar::{FileLearnedSidecarFinish, SidecarEvent}}};
 use crate::action::consequence::oversight::{CommitteeInput, ObservedReceipt};
 use crate::action::consequence::oversight::replay::{ObservedDecisionArchive, ObservedReviewAnchor};
 use crate::{Error, Snapshot};
@@ -19,6 +21,9 @@ use std::path::Path;
 /// One historical review, its REAL application result, and the enclosing cut.
 /// A replayable Continue may have been rejected as stale; it is never relabeled
 /// as an applied approval. The reconstructed anchor is not independently trusted.
+/// Native learned-sidecar applications retain their original receipt and archive.
+/// A refinement-only round has no application and reports Incomplete; its original
+/// outcome remains available through learned_sidecar_outcome instead.
 ///
 /// ```compile_fail,E0308
 /// use fa_reference::action::consequence::delivery::persistent::FilePermit;
@@ -49,6 +54,17 @@ impl FileReviewReplay {
     pub fn journal_snapshot(&self) -> &FileDeliverySnapshot { &self.journal }
 }
 
+// Both variants consume the ORIGINAL observed session. This selects a candidate
+// completion only; the original machine must still validate its entire event.
+fn finish_round(event: &Event) -> Option<u64> {
+    match event {
+        Event::Finish(round, ..) => Some(*round),
+        Event::Decoder(DecoderEvent::Learned(LearnedEvent::Sidecar(
+            SidecarEvent::Finish { round, .. }))) => Some(*round),
+        _ => None,
+    }
+}
+
 impl FileOversight {
     /// Supervisor-only pre-vote anchor. Reading never commits or opens a phase.
     /// Also works for an original helper-pool round before its first pump. Once
@@ -61,6 +77,7 @@ impl FileOversight {
     /// Export one explicit completed round from the last ACKNOWLEDGED journal.
     /// Reconstruct in RAM; the live broker, keys, source leases and clock do not
     /// change. Unfinished/abandoned rounds report Incomplete, never a fake verdict.
+    /// A native refinement without an application also reports Incomplete.
     pub fn review_replay(&self, round: u64) -> Result<FileReviewReplay, JournalError> {
         self.begin_review_replay(round)?.complete()
     }
