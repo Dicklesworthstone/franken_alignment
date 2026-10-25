@@ -1,5 +1,20 @@
 # Changelog
 
+## 2026-10-24: route each brokered effect to its exact declared credential
+
+- Add closed perimeter inventory version 2: broker-mediated routes name a
+  same-family broker-held credential. Version 1 keeps its original unambiguous
+  family resolution and refusal behavior; all original resource limits remain.
+- Connect selection through the original concrete file endpoint and learned
+  publication consumers, retaining native reviews, provider separation, owner
+  identity, lifecycle and historical policy binding.
+- Add six native and three learned integration functions covering real positive
+  publication, cross-credential refusals, exact boundaries and original recovery.
+  All 60 selected public and 80 selected operator functions pass; standard Cargo
+  check passes the complete selected public and original operator test targets.
+  Runtime uses LLVM harnesses with the official Cranelift library and 32 MiB
+  stacks. The canonical gate still refuses the unchanged dependency guard.
+
 ## 2026-10-24: keep guarded native startup in separate call frames
 
 - Reproduce a credential-history stack abort in the complete operator attempt

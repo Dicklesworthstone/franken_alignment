@@ -63,6 +63,13 @@ including its declared credential name. The original resolver requires the
 effect scope, `file_write`, broker-mediated credentials, blocked bypass and an
 enforcement trust hop. An asserted policy does not install a guard.
 
+The inventory can select the original version 1 single-broker rule or
+[version 2 explicit route credentials](ROUTE_CREDENTIAL_SELECTION.md). Version 2
+allows multiple broker credentials in one family, with each route naming its own
+declared broker-held credential. The profile's `policy.credential` must match that
+exact selection; an ambiguous version 1 family still refuses. The learned recipe
+envelope and credential-profile schemas remain unchanged.
+
 For live admission, the profile and inventory consume the same aggregate learned
 asset allowance as the original model, fit, tokenizer, monitor and other assets.
 The profile is bounded to 64 KiB; inventory parsing keeps its original native

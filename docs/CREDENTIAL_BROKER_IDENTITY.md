@@ -13,8 +13,11 @@ credentials is incomplete; two or more is ambiguous and returns `Binding`.
 
 Generic inventory loading and `route_for` remain backward compatible. A
 multi-broker family can still be inspected, audited and classified; it simply
-cannot drive the concrete credential broker under v1. A future schema can make
-route-to-credential identity explicit without reinterpreting old documents.
+cannot drive the concrete credential broker under v1. The separately selected
+[version 2 schema](ROUTE_CREDENTIAL_SELECTION.md) now makes route-to-credential
+identity explicit without reinterpreting old documents. Its named selection must
+belong to that route's own family and be held by the broker; no v1 fallback can
+replace a missing or invalid v2 name.
 
 `CredentialBroker` consumes this execution-only lookup both at initial attachment
 and after endpoint reopen. Its immutable inventory therefore cannot switch the

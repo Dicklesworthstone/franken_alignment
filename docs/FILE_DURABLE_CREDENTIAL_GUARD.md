@@ -6,8 +6,9 @@ persisting either secret in the publication journal.
 
 ## Journaled contract, process-local secret capability
 
-`enable_credential_guard` resolves the exact v1 perimeter scope/family/route,
-requires the existing unambiguous broker-credential rule, and durably records only
+`enable_credential_guard` resolves the exact perimeter scope/family/route,
+requires the original v1 unambiguous family credential or an explicit
+[v2 route credential](ROUTE_CREDENTIAL_SELECTION.md), and durably records only
 `FileCredentialPolicy`: family, route, declared credential name and adapter-profile
 generation. The inventory must declare `brokered_effects`, blocked bypass,
 `direct_credential_or_egress`, `file_write`, broker-mediated actor credentials,

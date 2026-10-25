@@ -1,5 +1,48 @@
 # Implementation status · design revision 0.3
 
+## 2026-10-24: select explicit credentials for independent effect routes
+
+Perimeter inventory version 2 now binds each broker-mediated route to one exact
+broker-held credential declared in that route's own family. Multiple file or
+learned-publication routes can therefore use distinct independently provisioned
+credentials without family-wide ambiguity. Unknown, actor-held or cross-family
+names, unsupported mediation and malformed credential objects refuse; there is
+no fallback to a different credential. Every reference consumes the original
+family text budget. All original inventory limits and version 1 admission and
+single-broker effect-resolution rules remain unchanged.
+
+The original CredentialBroker and FileCredentialPolicy resolver consume the
+checked route selection. New integration cases publish to two actual independent
+file endpoints through the original actor, reviews and dispatch capabilities,
+then exercise foreign envelopes, unequal provider secrets, credential lifecycle,
+worker reopening and conservative lost-acknowledgment accounting. Learned cases
+publish both routes in plain, raw-forecast and owned-forecast modes, composing
+identity, joint review and publication witnesses. Exact route/name selection
+remains pinned to historical receipts, audit and guarded recovery after live
+credentials, inventories, helper assets and evidence disappear.
+
+All **60 selected public test functions** across 12 complete integration targets
+and **80 selected operator functions** pass at frozen routing source based on
+`3446fb4a`. These include six new public and three new operator functions. The
+operator denominator excludes its two registered subprocess entry points; actual
+child invocations are not counted again. The three new route functions also
+passed again on the combined `b37bfbea` base; that rerun is not added to these
+denominators. Subsequent main changes through `c3bd4a0e`, including native
+constructor frame isolation and receipt fixtures, are preserved. Standard Cargo
+check passes all selected public targets and the complete original operator
+test target at the initial frozen routing source.
+Runtime uses the standard LLVM test harness, official Cranelift native library
+and 32 MiB test-thread stacks. The operator verification mirror changes only
+unselected registration attributes; production and selected test bodies remain
+unchanged, with original source hashes checked before and after execution.
+
+The canonical xtask gate ran and still refuses the unchanged initial dependency
+admission guard before formatting, Clippy or full-suite execution. No dependency,
+permit, journal-authority or release gate was widened. This increment provides
+explicit routing within the existing trusted-operator perimeter contract, not
+whole-process external-effect recovery, remote-provider authentication or full
+FA-011/014 qualification. See [route credential selection](docs/ROUTE_CREDENTIAL_SELECTION.md).
+
 ## 2026-10-24: isolate guarded startup frames without changing authority
 
 The full `a985f9cd` operator attempt aborted on the integrated credential-history
