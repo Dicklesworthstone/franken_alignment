@@ -2,7 +2,7 @@
 
 ## Current status
 
-The project is a design/reference package. There is no production executable to release. The latest qualified reference batch passed 56 reference unit tests, 16 integration tests, 224 xtask tests and 2 doctests remotely on 2026-09-08; [epoch9](../artifacts/execution/2026-09-08-epoch9-receipt.json) binds the source and raw logs. Compilation, rustfmt, Clippy and tests were **not run** in the revision 0.2 preparation environment; on 2026-09-06 the complete gate passed on one operator host under `nightly-2026-08-31` after the documented `cargo fmt --all` step (logs under `artifacts/execution/`), and failed under that host's rolling `nightly` because its toolchain directory lacks the rustfmt and clippy binaries. `cargo xtask release-check` deliberately returns failure. No fake public key, release target, host credential or GitHub ruleset ID is committed.
+The project is a design/reference package. There is no production executable to release. A historical qualified reference batch passed 56 reference unit tests, 16 integration tests, 224 xtask tests and 2 doctests remotely on 2026-09-08; [epoch9](../artifacts/execution/2026-09-08-epoch9-receipt.json) binds the source and raw logs. Compilation, rustfmt, Clippy and tests were **not run** in the revision 0.2 preparation environment; on 2026-09-06 the complete gate passed on one operator host under `nightly-2026-08-31` after the documented `cargo fmt --all` step (logs under `artifacts/execution/`), and failed under that host's rolling `nightly` because its toolchain directory lacks the rustfmt and clippy binaries. `cargo xtask release-check` deliberately returns failure. No fake public key, release target, host credential or GitHub ruleset ID is committed.
 
 ## Local development commands
 
@@ -11,13 +11,13 @@ From a clean, committed workspace, on an operator machine with rustup and config
 ```bash
 rustup show
 # Format and review source before refreshing its reviewed manifest and committing:
-rustup run nightly-2026-08-31 rustfmt --edition 2024 xtask/src/main.rs
+rustup run nightly-2026-09-08 rustfmt --edition 2024 xtask/src/main.rs
 # Run the frozen committed source remotely; local fallback is forbidden:
 RCH_REQUIRE_REMOTE=1 rch exec --base HEAD --clean-overlay --no-overlay -- \
-  cargo +nightly-2026-09-07 run --locked -p xtask -- check
+  cargo +nightly-2026-09-08 run --locked -p xtask -- check
 ```
 
-The formatting command is an explicit preparation mutation because rustfmt was unavailable when this source was generated; it was applied and committed on 2026-09-06 (18 formatting diffs, no semantic change). Review/commit any formatting changes before freezing the release source. The qualified compiler identity is checked before source-snapshot, dependency-admission, registry and concordance validation. Concordance logs each bound input and emits `CONCORDANCE_JSON`; missing/dangling references stop the gate. The gate then uses `fmt --check`, `check`, `clippy` and `test`, and never fixes source while claiming it was unchanged. The owned std-only JSON reader is already qualified, so there is no serde wait or SKIP path. DSR must execute the same gate against a frozen, clean source snapshot. The source inventory command alone does not run tests.
+The formatting command is an explicit preparation mutation because rustfmt was unavailable when this source was generated; it was applied and committed on 2026-09-06 (18 formatting diffs, no semantic change). Review/commit any formatting changes before freezing the release source. The current driver first checks the initial lockfile inventory, then source hygiene and the qualified compiler identity before source-snapshot, full dependency-admission, registry and concordance validation. The initial inventory presently refuses the additional local `fa-journal` package; it must remain enforced until full admission is implemented and reviewed. See [IMPLEMENTATION_STATUS](../IMPLEMENTATION_STATUS.md) for current source-bound results; the dated receipts above are historical. Concordance logs each bound input and emits `CONCORDANCE_JSON`; missing/dangling references stop the gate. The gate then uses `fmt --check`, `check`, `clippy` and `test`, and never fixes source while claiming it was unchanged. The owned std-only JSON reader is already qualified, so there is no serde wait or SKIP path. DSR must execute the same gate against a frozen, clean source snapshot. The source inventory command alone does not run tests.
 
 ## Register the local quality gate
 

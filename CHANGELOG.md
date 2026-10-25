@@ -1,5 +1,67 @@
 # Changelog
 
+## 2026-10-25: exercise valid client charges and complete stream capacity
+
+- Keep the original payload-charge and finish-slot admission laws. Correct
+  undercharged client/investigation fixtures and overcommitted learned-stream
+  fixtures so their original positive and negative workflows can execute.
+- Require exact retained `Denied` outcomes and control-ledger bases in generated
+  source backpressure cases; preserve immutable retries and no-effect checks.
+- Add a public two-message-plus-finish capacity control and an undercharged-client
+  zero-I/O/unchanged-image control. All-target compilation, 359 docs and all nine
+  public stream tests pass at `93660bf5`. The complete library finishes 2,244
+  passed/81 failed of 2,325, zero ignored/filtered: 32 prior failures now pass,
+  no originally passing ID newly fails, and one new negative passes. Retain all
+  81 failures, 25 library Clippy errors and the canonical admission refusal.
+- Retain the incorrect-revision dispatch and new-regression `E0599` failure,
+  with its explicit API-correct fix. No production behavior, limit or gate closes.
+
+## 2026-10-25: repair intake fault propagation and reduce qualified lint debt
+
+- Preserve exact codec/report bytes and delivery/recovery control flow while
+  removing 55 of 80 original library Clippy errors. Compact four private enum
+  representations without changing public APIs or journal formats; disclose
+  receipt heap allocation during replay as an unmeasured performance tradeoff.
+- Pass formatting of all 48 changed Rust files and standard workspace/all-target
+  compilation at `2f540485`; retain the remaining 25 library Clippy errors,
+  later-target warnings and unchanged canonical admission refusal.
+- Correct six README compiler pins to the already-qualified dated nightly.
+- Preserve both exact `E0451` doctest requirements with complete private-field
+  forgery attempts and permitted API twins. All-target compilation and all 359
+  workspace doc tests pass at `ff1f9094`; runtime tests remain on the separate
+  `2f540485` source cut. Its completed runtime command fails in 36 targets:
+  library 2,137 passed/186 failed of 2,323 and operator 742 passed/two failed
+  of 744. The complete old library control has the same 186 failed IDs;
+  the original P0 and native investigations remain open.
+- Correct the independently authored progressive-wrapper oracle to the original
+  journal's 32-bit words and add wrong-width negatives without changing the
+  production format. The same three parent functions pass at `4281d202` after
+  baseline one passed/two failed. Preserve exact equality and all registrations.
+- Align the actual DSR fragment with the already-qualified compiler. Preserve
+  source/lock guards and retain their snapshot/admission failures.
+- Test likelihood crossing at the documented permitting-review/authorization
+  boundary, with an actual unanimous review and a matched two-key publication
+  control. The original parent function passes at `45829a6c`; exact evidence
+  and reconstruction assertions remain.
+- Correct three shared fixtures to the existing 4,096-token decoder cap and
+  rooted policy graph contract at `26ddac08`. Both original policy leaves stay;
+  no production bound is enlarged. The same 112 parents improve from 24/88
+  to 84/28, with 60 previously failing IDs now passing and zero newly failing ID in that selection.
+
+- Propagate a newly faulted journal from authenticated inbox source preparation
+  to the existing peer pool. Preserve queued redacted reply draining, stop before
+  the next peer and charge the whole failed allowance. Original collision and
+  generated-inbox fault tests plus a matched two-peer success control pass at
+  `ca4ab945`; its seven remaining selected failures are named socket binds.
+- Give named socket tests a private short directory while preserving `TMPDIR`
+  for data and every original credential/publication assertion at `66b2ae6a`.
+  Current formatting, all-target compilation and all 359 doc tests pass.
+  The complete library finishes 2,211 passed/113 failed of 2,324: 73 original
+  failures now pass, no originally passing ID newly fails, and one new positive
+  passes. The inbox/pool/socket selection is 34 passed/one still failing; retain
+  every original assertion and all remaining failures, 25 library Clippy errors
+  and the unchanged canonical admission refusal. Original P0 remains open.
+
 ## 2026-10-24: keep guarded native startup in separate call frames
 
 - Reproduce a credential-history stack abort in the complete operator attempt

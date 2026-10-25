@@ -1,5 +1,228 @@
 # Implementation status · design revision 0.3
 
+## 2026-10-25: validate charged client requests and the stream finish slot
+
+This continuation changes reference tests, fixtures and contract wording; it
+activates no production runtime behavior. The original P0 remains in progress.
+Six learned-stream fixtures now admit seven messages within the existing eight
+delivery slots, preserving the original separate finish slot. Client fixtures
+now declare the full 9,000-byte or 25-byte payload charge; historical-investigation
+fixtures likewise declare their actual payload cost. No production ceiling,
+clock, timeout, wire format or source/authority check is relaxed.
+
+The generated-source peer and named-listener cases now require the original
+`Denied` judgment, exact control-ledger/request/generation basis and retained
+request stage, rather than misclassifying a complete false policy as a
+proposal-construction refusal. The native policy reducer and request book are
+unchanged. Existing exact retry, producer-file repair, private-context redaction,
+no-source-read and no-effect assertions remain.
+
+At frozen `93660bf54711efca2565d7d36c88ce21fb569b16` (tree
+`6963ffe370a06f6073ec136b4958db665067102d`), standard workspace/all-target
+compilation and all 359 workspace doc tests pass. The public `stream_release`
+target passes all nine tests, including two real reference message publications
+and finish within exactly three deliveries, beside rejection at two deliveries.
+These reference ballots and memory endpoints do not qualify a real actor model
+or deployment. The complete 2,325-function library run finishes **2,244 passed/81 failed**,
+zero ignored/filtered, in 1,352.85 seconds. Every prior 2,324 ID remains: **32
+previously failing IDs now pass and zero originally passing ID newly fails**.
+The added undercharged-client negative also passes with unchanged canonical
+bytes, live state and revision and zero peer I/O. All seven batched-client,
+five peer-client, thirteen generated-source API and seven named-listener
+functions pass. Ten of thirteen anchored-investigation functions pass; three
+retain their original failure on a real staging-file collision during a later
+writer operation. Their guards and assertions remain unchanged. Overlapping
+selections are not added to the full inventory as extra evidence.
+
+The first dispatch used an unresolvable revision and stopped before compilation.
+The first new library build at `089eda23` caught two `E0599` calls in the new
+regression: read-only `FileClientInspection` has no recovery encoder. The explicit
+correction compares actual canonical bytes and uses its existing inspection
+fields. Both failed attempts and the corrective commit remain retained; they are
+not test passes. Fifteen continuation Rust paths pass qualified formatting.
+The original plan, license, dependency policy and Bead acceptance remain intact.
+
+Raw continuation logs and normalized source diffs are retained outside frozen
+source under the existing operator evidence directory:
+`/Users/jemanuel/Documents/Codex/2026-10-24/franken-alignment-stop-76bf4d57/`.
+Current Clippy again fails with 25 library errors (14 argument counts, five
+large enum variants, six large error results), before later Clippy targets.
+The canonical command actually executes and refuses the unchanged initial
+admission guard. All 81 remaining library failures, original Bead acceptance,
+full dependency/source admission and the separate older workspace/operator
+failures remain open. This is self-reexecution of bounded reference evidence,
+not independent certification or a complete project gate.
+
+## 2026-10-25: propagate intake journal faults and reduce reference lint debt
+
+The reference inbox now propagates a newly raised source-preparation journal
+fault to the existing peer pool. The pool stops before another peer and charges
+the complete failed allowance; the original inbox can still drain its queued
+redacted refusal. The real collision negative, matched two-peer success and
+queued-reply regression all pass.
+
+At frozen `66b2ae6a1b3ed2177ea8e1ea21c8a41398d22e90` (tree
+`f6287cb90d28c942edd97c635e7d6a1a3b4c3552`), the complete reference library
+finished **2,211 passed/113 failed**, zero ignored/filtered, out of **2,324**, in
+807.28 seconds. The original 2,323 IDs are all retained: **73 original failed IDs
+now pass and zero originally passing ID newly fails**; one new matched positive
+also passes. These are reference-library outcomes, not a complete workspace or
+production pass. All-target compilation, all 359 workspace doc tests and
+formatting of all 58 owned Rust paths pass at this same source. Clippy still
+fails with 25 library diagnostics and the canonical driver still refuses the
+unchanged initial dependency-admission guard. Self-reexecution is not independent
+certification, and no Bead, roadmap packet or production gate is closed.
+
+The original P0 workspace-qualification Bead remains **in progress**. The full
+runtime command at `2f540485` exited 101 with **36 failed Cargo targets**. Its
+reference library finished **2,137 passed/186 failed, zero ignored/filtered, out
+of 2,323**. The complete pre-cleanup `24062cbf` library control has identical
+counts and the same 186 failed IDs; this compares library outcomes, not all
+workspace targets or independent certification. The 744-function operator
+suite finished **742 passed/two failed**, zero ignored/filtered, in 1,621.69
+seconds. The learned checked-publication resident sequence and native
+continuation after second dispatch remain unresolved after peer timeouts or
+BrokenPipe. No deadline or peer budget was widened. The separate xtask target
+passed 248 tests; filtered child helper invocations are not added to parent
+inventories, and no whole-workspace test count is inferred from interleaved logs.
+
+At frozen
+`2f54048572d9d0af36092985e488754c5929c1cc` (tree
+`46e3101f49d21e2f345510bcf0d739ff4323bb54`), all 48 changed Rust files pass
+qualified formatting and the standard workspace/all-target compile check passes.
+Clippy with warnings denied still **fails** with 25 library errors: 14 argument
+counts, five large public enum variants and six large error results. This removes
+55 of the original 80 library diagnostics. Later Clippy targets remain unrun;
+the passing compile check retained their warnings rather than suppressing them.
+
+The source changes preserve report bytes, fixed-width codecs, binding/length
+checks, lazy clock calls and short-circuit delivery/recovery checks. Three
+private receipt-transition variants use a short-lived box; feed ingestion reuses
+the existing capture `Rc` earlier. Public APIs, journal/event formats, authority
+checks and all runtime test behavior are unchanged. The receipt boxes also
+allocate during replay; no allocation, latency, stack-limit or RSS improvement
+has been measured. This is build-enabling reference work, not a new production
+activation or an alignment result.
+
+The canonical driver again exits 1 at the unchanged initial two-package lockfile
+guard. Full dependency admission remains required before admitting `fa-journal`
+there; no guard, package policy, snapshot, golden, compiler/backend, timeout,
+production bound or assertion was relaxed. Six operative README compiler pins
+now match the already-qualified `nightly-2026-09-08` registry.
+
+The complete workspace doc gate at `2f540485` exposed two private-field
+forgery examples whose empty literals produced an uncoded privacy diagnostic,
+so their original `E0451` requirements failed. `ff1f90943195a3a87eab65eddb50ee14dea285f4`
+(tree `b5cb7d449866766a47b9f2d701b45333c902392f`) keeps both `E0451`
+requirements and supplies complete private-field literals attempting to replace
+accepted revision or expiry, beside permitted clone/accessor examples. Dropping
+only doc comments from qualified-formatted old/new source leaves identical
+runtime text in both files. These positives are compile-only API checks, not
+runtime evaluator proof.
+
+At `ff1f9094`, all-target compilation and the full workspace doc gate pass:
+13 journal, three merged reference examples and 343 separate reference tests;
+359 passed, zero failed/ignored/filtered. The earlier baseline was 357 tests,
+355 passed/two failed; its separate one-positive merged harness is included
+here, correcting preliminary per-crate shorthand. The failed full runtime
+workspace command remains attributed to `2f540485`, not relabeled as
+`ff1f9094`. The four older intermittent native investigations remain open,
+alongside the native-continuation failure observed in the new full run.
+
+A separately reviewed inherited oracle repair at
+`4281d2022dfe2007ad22e43c66f040183d0a80a9` keeps production version-six bytes
+unchanged. The manually authored wrapper oracle used 64-bit words where the
+original shared journal uses 32-bit blob/count words. Exact equality remains;
+precision/cap offsets now target those fields, and widening either/both words
+is explicitly rejected. The same three parent configuration functions changed
+from baseline one passed/two failed to three passed/zero failed (2,320 filtered,
+zero ignored). No generated snapshot/golden file was refreshed.
+
+The repository DSR fragment at `054a7ce5` also pins its three Cargo checks to the
+existing qualified compiler, preserving all four checks. Concordance and system
+map attempts still fail on unlisted files/digest mismatches in the old source
+snapshot; the canonical command still refuses lockfile admission. No global DSR
+registry, production profile or manifest refresh was installed. Current source
+requires the original admission/source-closure work before a complete gate can
+pass.
+
+The inherited hosted-likelihood test failed at an assertion that proposal
+recording must refuse on crossing. Stronger diagnostics verified the actual
+positive probe band, configured pair, consumed prediction, true payload event,
+exact alpha and crossing. The original contract gates permitting review and
+authorization instead. At `45829a6c` (tree
+`bb5125c405685e80d6105361e16b6cadb23789c6`), the same parent function passes:
+a crossing records the proposal, refuses an actual unanimous Allow review with
+`Incomplete`, refuses authorization without a journal write and executes zero;
+the matched quiet control obtains both keys and publishes once. Exact likelihood
+replay/reopen assertions remain. This is a separately reviewed test-contract
+repair, not a new production enforcement mechanism.
+
+Three shared test fixtures are corrected at
+`26ddac0862f83e4b8e98e5c9cc39c5d479659e22` (tree
+`1c1afd90d6b736e6dac2673152ba80ceab5abcdb`): the native toy model now uses
+4,096 context tokens, within the unchanged 4,096 hard cap, and two actor-source
+policies explicitly conjoin both original leaves. The original 8,192-token
+fixture and unreachable policy nodes failed before their intended boundaries.
+All 55 owned Rust paths pass qualified formatting and match this frozen source.
+The same 112 affected parent functions improved from baseline 24 passed/88
+failed to 84 passed/28 failed, zero ignored and 2,211 filtered, in 212.27 seconds;
+60 original failures pass and no original passing ID newly fails. The production
+limits, policy graph rules, formats and authority remain unchanged. This selected
+result is separate from the later full current run.
+
+At `ca4ab945`, an actual ingress propagation gap is repaired: failed source
+preparation can queue a redacted actor refusal without adding a ready hint. The
+inbox now returns the original newly raised journal I/O fault to its coordinator,
+so the existing pool stops before another peer and charges the whole issued
+allowance. Subsequent draining of that queued reply from the same faulted inbox
+remains possible. The original collision, second-peer, budget and canonical-byte
+assertions pass, including an added exact `Stage`/`AlreadyExists` check; a new
+matched no-collision positive admits both peers and charges actual socket work.
+The existing generated-inbox storage test also passes its unavailable-reply drain
+and prior-hint checks. The selected run finished 28 passed/seven failed, zero
+ignored, 2,289 filtered out of the new 2,324-parent inventory. All seven failures
+still occurred at named Unix socket bind; they are not credited as passes.
+
+Shortening the shared data-directory spelling was insufficient for `SUN_LEN`.
+`66b2ae6a1b3ed2177ea8e1ea21c8a41398d22e90` (tree
+`f6287cb90d28c942edd97c635e7d6a1a3b4c3552`) restores that spelling and gives
+only the seven named-socket tests their own short, atomically created private
+0700 directory under `/tmp`. Source evidence and journals keep `TMPDIR`; kernel
+credentials, framing, quotas, actual two-key publication and every original
+assertion remain. At that current source, all 58 owned Rust paths pass qualified formatting and
+match the frozen tree; standard workspace/all-target compilation and all 359
+workspace doc tests pass. Clippy still fails with exactly the same 25 library
+diagnostics; later Clippy targets remain unreached. The full 2,324-parent library
+result is reported above, including the new matched positive test. Within it,
+the fixed inbox/pool/socket selection is 34 passed/one failed out of 35, with no
+ignored test. Six named listener functions now pass their original checks,
+including actual two-key publication. The remaining named backpressure test
+reaches its original `ActorOutcome::NotAdmitted` assertion and still fails;
+that assertion was not weakened. All 113 remaining library failures stay open.
+The complete workspace/operator inventory has not been re-executed at this later
+source; its older failures remain separately attributed.
+
+The preceding test-only `34013f95` full library control finished 2,202 passed/121
+failed, zero ignored/filtered, in 754.30 seconds. Its exact 2,323 IDs match the
+original `24062cbf` baseline: 65 original failed IDs now pass and zero passing ID
+newly fails. It does not qualify the later inbox runtime change or socket fix.
+
+Raw logs are outside frozen source at
+`/Users/jemanuel/Documents/Codex/2026-10-24/franken-alignment-stop-76bf4d57/`:
+`clippy-2f54-all-target.log`, `clippy-2f54-final-hz2.jsonl`,
+`clippy-2f54-canonical.log` and `clippy-2f54-workspace-tests.log`. The later
+cut retains `clippy-ff1f-all-target.log`, `clippy-ff1f-workspace-doc-tests.log`,
+`clippy-ff1f-final-hz2.jsonl` and `clippy-ff1f-canonical.log`; its Clippy and
+canonical refresh still fail on the same 25 library diagnostics and initial
+admission guard. All 50 owned Rust paths pass formatting and match `ff1f9094`.
+These are self-verification, not independent certification. Earlier attempts remain
+retained: the `f38ab05a` E0596 introduced by the closure cleanup, its explicit
+reborrow correction, the second-pass formatter mismatch, queued cancellations,
+`hz4` source-initialization refusal, and the superseded `c29f9a06` compile's
+SIGTERM/143 terminal acknowledgment. None is a passing test result. The tracker
+contains the original acceptance plus 25 exact remaining diagnostic TODOs.
+
 ## 2026-10-24: isolate guarded startup frames without changing authority
 
 The full `a985f9cd` operator attempt aborted on the integrated credential-history
