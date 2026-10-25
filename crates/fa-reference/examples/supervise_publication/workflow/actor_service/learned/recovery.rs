@@ -351,6 +351,35 @@ pub(super) fn open_selected_with_checkpoints(
     )
 }
 
+/// A maintenance command receives only a private recovered owner. It selects
+/// the original lifecycle request on the same fully guarded cursor BEFORE the
+/// ordinary recovery Fence. No stale/conflicting operation consumes a Fence or
+/// cleans staged work, and no role escapes into an actor or reviewer service.
+pub(super) fn open_selected_credential_with_checkpoints(
+    config: &Config,
+    loaded: &Loaded,
+    request: super::credential_lifecycle::Request,
+    checkpoint: &mut impl FnMut(Option<Progress>) -> Result<(), String>,
+) -> Result<super::credential_lifecycle::Recovered, String> {
+    if loaded.topology.is_some() {
+        return Err("credential lifecycle does not admit topology custody; a paired source checkpoint successor is required".into());
+    }
+    super::credential::check_selection(loaded)?;
+    if loaded.credential.is_none() || loaded.recovery_anchor.is_none() || loaded.anchor_output.is_none() {
+        return Err("credential lifecycle requires an independent credential selection, history anchor and new retained output".into());
+    }
+    checkpoint(None)?;
+    let recovery = selected::Cursor::begin(config, loaded)?;
+    let recovery = finish_replay(recovery, checkpoint, |run| run.progress(),
+        |run, done| run.advance(done), Ok)?;
+    let (current, retry) = recovery.credential_preflight(request).map_err(debug)?;
+    // Even these immutable guard/operation queries share the original budget.
+    // A late preflight cannot fall through to cleanup and the recovery Fence.
+    checkpoint(Some(recovery.progress()))?;
+    let (host, _, _, _) = recovery.finish().map_err(debug)?;
+    Ok(super::credential_lifecycle::Recovered { host, current, retry })
+}
+
 /// Offline stop uses the same independently guarded replay and every wall-time
 /// checkpoint, including Ready. It never constructs live service custody, reads
 /// current helper/source evidence or consults the terminal clock during replay.

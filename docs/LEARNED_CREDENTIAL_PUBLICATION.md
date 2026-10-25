@@ -122,8 +122,11 @@ must retain the same policy, epoch, inventory selection and credential input
 paths. The same session retains one permit across Message, Message and separately
 reviewed Finish; each request still needs its own original review and human key.
 Removing provisioning files after binding does not revoke a capability. Rotation
-and revocation remain the original native lifecycle transitions, not file edits
-or changes to a later sequence entry.
+and revocation use the original native lifecycle transitions through the
+[offline learned maintenance commands](LEARNED_CREDENTIAL_LIFECYCLE.md).
+They require exclusive owner custody, an independent input history anchor and a
+new retained output. Updating files or a later sequence entry does not perform
+either transition.
 
 ## Recovery, receipts and anchored audit
 
@@ -149,6 +152,22 @@ retained history anchor. Current generation/revoked expectations do not change
 that past review. An epoch-only profile change therefore leaves the same anchored
 audit unchanged; a changed or omitted immutable policy refuses. The audit does
 not attest current credential possession or current permission to publish.
+
+## Rotate or revoke an offline owner
+
+`--rotate-credential OPERATION EXPECTED_GENERATION NEXT_GENERATION` advances the
+native guard by exactly one generation. `--revoke-credential OPERATION
+EXPECTED_GENERATION` permanently closes it to live publication. Both commands
+validate the complete original history and operation before the recovery Fence;
+they require `--history-anchor INPUT --retain-history-anchor NEW_OUTPUT` and do
+not acquire a live credential or resume generation.
+
+The profile independently selects the current epoch. Exact retries return their
+original historical receipt separately from current status, including after a
+later rotation. A deadline or output failure after acknowledgment retains the
+known journal cut and cannot erase the transition. See the
+[command and retention contract](LEARNED_CREDENTIAL_LIFECYCLE.md) for provisioning,
+terminal revocation, ambiguous writes and the current topology restriction.
 
 ## Scope
 

@@ -1,5 +1,9 @@
 //! Cooperative learned recovery with the original complete guard/role contract.
 //! The inner candidate, original reset and sole persistence boundary stay sealed.
+use crate::action::consequence::delivery::credential_broker::{
+    CredentialChangeReceipt, CredentialRotationRequest, CredentialRevocationRequest,
+};
+use crate::action::consequence::delivery::persistent::observed::credential::FileCredentialStatus;
 use super::{FileOversight, FileOversightProfile, FileOversightRoles, FileRecoveryRequirements,
     JournalError, anchored::FileHistoryAnchor, learned::check_profile};
 use super::super::decoder::learned::{FileLearnedConfig, FileLearnedRecovery,
@@ -76,6 +80,32 @@ fn begin(directory: &Path, profile: FileOversightProfile, expected: &FileRecover
 }
 
 impl FileGuardedLearnedRecovery {
+    /// Inspect only the fully replayed, independently guarded credential state.
+    /// This grants no owner, permit, observer or authority and publishes no fence.
+    pub fn credential_status(&self) -> Result<Option<FileCredentialStatus>, JournalError> {
+        self.check_ready()?;
+        Ok(self.inner.verified_guarded_machine()?.credential_status())
+    }
+
+    /// Validate the original rotation, including exact retained-operation retry,
+    /// before cleanup or the recovery fence. Some is the HISTORICAL receipt;
+    /// current generation remains available separately through credential_status.
+    pub fn check_credential_rotation(&self, request: CredentialRotationRequest)
+        -> Result<Option<CredentialChangeReceipt>, JournalError>
+    {
+        self.check_ready()?;
+        Ok(self.inner.verified_guarded_machine()?.check_credential_rotation(request)?)
+    }
+
+    /// Apply the same original revocation preflight without issuing live roles
+    /// or changing canonical/staging bytes. Terminal exact retries remain reads.
+    pub fn check_credential_revocation(&self, request: CredentialRevocationRequest)
+        -> Result<Option<CredentialChangeReceipt>, JournalError>
+    {
+        self.check_ready()?;
+        Ok(self.inner.verified_guarded_machine()?.check_credential_revocation(request)?)
+    }
+
     /// Complete this independently guarded numerical history with the original
     /// single-replacement Fence/Time/Sweep, then return only the selected actor
     /// outcome. Guard failures and bad selection precede clock and mutation.

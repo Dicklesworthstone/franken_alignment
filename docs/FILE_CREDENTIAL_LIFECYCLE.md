@@ -12,6 +12,21 @@ The same atomic canonical replacement and ambiguity rules apply as elsewhere in 
 
 Credential rotation and revocation remain available during a registered evidence-source interruption because they create no source evidence and grant no action authority.
 
+The learned executable exposes these same transitions through
+[`--rotate-credential` and `--revoke-credential`](LEARNED_CREDENTIAL_LIFECYCLE.md).
+The offline adapter requires the complete guarded learned recipe, an independent
+input history anchor and a new output archive. It checks the original operation
+before recovery changes the journal. Each successful invocation still performs
+the original recovery Fence, including exact lifecycle retries; the receipt's
+historical generation is reported separately from the current credential epoch.
+
 Regression source covers old-permit invalidation, exact and conflicting retries, stale generations, terminal revocation with credentialless endpoint sealing/refund, complete authority reopen, and five storage barriers for both rotation and revocation.
 
-This remains trusted operator configuration and ordinary process-memory secret handling, not a cryptographic credential vault. Journal authenticity and anti-rollback storage remain separate requirements. The required RCH runner is unavailable in this environment, so Rust compilation, formatting, Clippy, tests, and doctests remain unexecuted. No Beads or production-gate status is promoted.
+This remains trusted operator configuration and ordinary process-memory secret
+handling, not a cryptographic credential vault. Journal authenticity and
+anti-rollback storage remain separate requirements. The original source handoff
+recorded compilation, formatting, Clippy, tests and doctests as unexecuted because
+its required RCH runner was unavailable. Later scoped native and operator
+execution evidence is recorded in
+[implementation status](../IMPLEMENTATION_STATUS.md); it does not establish full
+workspace or production-gate qualification.

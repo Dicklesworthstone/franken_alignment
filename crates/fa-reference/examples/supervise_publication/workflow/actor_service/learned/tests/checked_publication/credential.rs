@@ -3,6 +3,8 @@
 //! establish provider authentication or hostile-process containment.
 #[path = "credential_routes.rs"]
 mod route_tests;
+#[path = "credential_lifecycle.rs"]
+mod lifecycle_tests;
 
 use super::*;
 use super::super::super::{audit as audit_command, sequence as resident, stopped as stop_command};
