@@ -5,6 +5,9 @@ use super::{
     Config, Custody, FileOversight, Loaded, RecoveryReserve, TopologyCustody, debug, requirements,
 };
 use fa_reference::action::ElapsedTick;
+use fa_reference::action::consequence::delivery::credential_broker::CredentialChangeReceipt;
+use fa_reference::action::consequence::delivery::persistent::observed::credential::FileCredentialStatus;
+use super::super::credential_lifecycle::Request as CredentialRequest;
 #[cfg(test)]
 use fa_reference::action::consequence::delivery::persistent::observed::shutdown::recovery::FileStoppedRecovery;
 use fa_reference::action::consequence::delivery::persistent::requests::actor::receipt::FileLearnedReceiptActorPort;
@@ -167,6 +170,31 @@ impl Cursor {
             Self::Mediated(run) => run.advance(done, 1),
             Self::PredictiveMediated(run) => run.advance(done, 1),
         }
+    }
+
+    /// Validate the exact operation and independently selected current epoch on
+    /// this same original Ready cursor, before staging cleanup or any Fence.
+    /// Topology custody needs a paired source-checkpoint successor and is not
+    /// admitted by this maintenance command.
+    pub(super) fn credential_preflight(&self, request: CredentialRequest)
+        -> Result<(FileCredentialStatus, Option<CredentialChangeReceipt>), JournalError>
+    {
+        let (status, receipt) = match self {
+            Self::Plain(run) => (run.credential_status()?, match request {
+                CredentialRequest::Rotate(request) => run.check_credential_rotation(request)?,
+                CredentialRequest::Revoke(request) => run.check_credential_revocation(request)?,
+            }),
+            Self::Raw(run) => (run.credential_status()?, match request {
+                CredentialRequest::Rotate(request) => run.check_credential_rotation(request)?,
+                CredentialRequest::Revoke(request) => run.check_credential_revocation(request)?,
+            }),
+            Self::Owned(run) => (run.credential_status()?, match request {
+                CredentialRequest::Rotate(request) => run.check_credential_rotation(request)?,
+                CredentialRequest::Revoke(request) => run.check_credential_revocation(request)?,
+            }),
+            Self::Mediated(_) | Self::PredictiveMediated(_) => return Err(fa_reference::Error::Binding.into()),
+        };
+        Ok((status.ok_or(fa_reference::Error::WrongState)?, receipt))
     }
 
     /// Select historical identity on the SAME fully checked replay, before the

@@ -1,5 +1,38 @@
 # Changelog
 
+## 2026-10-25: execute learned credential rotation and revocation
+
+- Add offline `--rotate-credential` and `--revoke-credential` commands using the
+  complete original guarded replay, independent current epoch, input history
+  anchor and new retained output. Invalid operations refuse before the recovery
+  Fence; exact retries keep their historical receipt distinct from current state.
+- Retain acknowledged history across deadlines, output failures and archive
+  races. Preserve unknown effects and their charges without an automatic resend.
+  Plain/raw/owned modes retain identity, joint and publication guards; topology
+  maintenance explicitly refuses pending paired checkpoint succession.
+- Add seven real operator integration functions. All seven and all 60 selected
+  native public functions pass; complete operator Cargo check passes. The broad
+  operator run records 86/87, retaining the existing resident-client 25-second
+  timeout despite three confirmed native executions within its 60-second service
+  budget. A single unchanged diagnostic rerun passed both sequence branches;
+  the original failed run remains recorded and the intermittent case stays open.
+  Runtime uses LLVM harnesses, the official Cranelift library and 32 MiB stacks.
+  The canonical gate still refuses the unchanged dependency guard.
+
+## 2026-10-24: route each brokered effect to its exact declared credential
+
+- Add closed perimeter inventory version 2: broker-mediated routes name a
+  same-family broker-held credential. Version 1 keeps its original unambiguous
+  family resolution and refusal behavior; all original resource limits remain.
+- Connect selection through the original concrete file endpoint and learned
+  publication consumers, retaining native reviews, provider separation, owner
+  identity, lifecycle and historical policy binding.
+- Add six native and three learned integration functions covering real positive
+  publication, cross-credential refusals, exact boundaries and original recovery.
+  All 60 selected public and 80 selected operator functions pass; standard Cargo
+  check passes the complete selected public and original operator test targets.
+  Runtime uses LLVM harnesses with the official Cranelift library and 32 MiB
+  stacks. The canonical gate still refuses the unchanged dependency guard.
 ## 2026-10-25: exercise valid client charges and complete stream capacity
 
 - Keep the original payload-charge and finish-slot admission laws. Correct

@@ -1,6 +1,11 @@
 //! The original durable journal is the publication sink. Independently supplied
 //! secret capabilities add a guard; synthetic models and same-user peers do not
 //! establish provider authentication or hostile-process containment.
+#[path = "credential_routes.rs"]
+mod route_tests;
+#[path = "credential_lifecycle.rs"]
+mod lifecycle_tests;
+
 use super::*;
 use super::super::super::{audit as audit_command, sequence as resident, stopped as stop_command};
 use fa_reference::action::{ActionSpec, ActionState, FrozenAction, VERSION};

@@ -1,5 +1,111 @@
 # Implementation status · design revision 0.3
 
+## 2026-10-25: rotate and revoke credentials through guarded learned recovery
+
+The learned executable now exposes the original durable credential lifecycle:
+`--rotate-credential OPERATION EXPECTED_GENERATION NEXT_GENERATION` and
+`--revoke-credential OPERATION EXPECTED_GENERATION`. Both require exclusive
+offline owner custody, an independently retained input history anchor and a new
+output archive. The closed grammar rejects actor, reviewer, activation, receipt,
+Stop and topology mixtures before input loading. Plain, raw-forecast and
+owned-forecast histories retain their original identity, joint, publication,
+policy, epoch, floor and numerical-recipe checks.
+
+New read-only queries on the original guarded recovery cursors validate the
+operation before staging cleanup or the recovery Fence. They reuse the original
+native lifecycle validation; replay still rejects duplicate events. An exact
+retry returns the historical operation receipt separately from the independently
+selected current generation and revocation state. A later rotation or revocation
+does not rewrite the old receipt. Each successful recovery still acknowledges
+its own Fence; the command does not provision secret bytes, rewrite the selected
+profile or issue a publication capability.
+
+Historical admission needs no live inventory, credential files, helper roster
+or publication evidence. The command performs no new generation, terminal Time,
+Sweep, refund or effect resend. After acknowledgment it attempts to retain the
+latest healthy journal cut even when a deadline, archive export or stdout fails.
+An ambiguous native write leaves the transition/current state unconfirmed and
+retains at most the already acknowledged Fence prefix. The bounded result
+separates receipt, current status, acknowledged revisions and retention status.
+Topology lifecycle remains explicitly refused until paired source-custody
+checkpoint succession exists; its exact-extent guard is unchanged.
+
+At the combined source based on `c3bd4a0e` plus routing commit `47f5dbf8` and this
+increment, standard Cargo check passes the complete original operator test
+target. All **seven new lifecycle functions** pass in their focused run, and all
+**60 public functions** pass across the 12 complete credential/perimeter targets.
+The broader operator selection completes **86 passed, one failed, zero ignored**;
+its two subprocess entry points are not counted as additional tests. Every new
+lifecycle and route function passes in that broad run as well. Overlapping
+focused executions are not added to either denominator.
+
+The sole broad-run failure is the unchanged checked resident-sequence fixture
+`resident_messages_and_finish_reacquire_witnesses_and_preserve_the_first_effect_when_the_next_basis_fails`.
+Its third actor started at 16.952 seconds, the third human-review endpoint became
+ready at 41.704 seconds, and the service completed at 43.182 seconds with
+`failure=None` and all three original `Known(Executed)` receipts. The fixture's
+fixed 25-second actor wait expired before delivery of the final response; its
+join then panicked. The configured actor/service runtime was 60 seconds. Source
+review confirms that this fixture selects no credential policy and calls none of
+the new lifecycle paths. Retain the failed result and the earlier intermittent
+case investigation; this increment does not claim to repair that fixture.
+One exact unchanged diagnostic rerun then passed both the positive sequence and
+the later invalid-evidence case in 32.71 seconds, with all original assertions
+and the same 25-second client cap retained. This confirms intermittent timing at
+this source; it does not turn the earlier 86/87 run into a green full selection.
+
+Runtime uses standard LLVM harnesses, the official Cranelift native library and
+32 MiB test-thread stacks. Selected files and bodies remain unchanged; the
+operator mirror removes only unselected test-registration attributes. Source
+hashes are checked before and after execution. The canonical xtask gate executes
+and still refuses the unchanged initial dependency-admission guard before
+formatting, Clippy or full-suite execution. This is scoped feature evidence, not
+full workspace, default-stack or FA-011/014 qualification. No dependency,
+publication key, effect authority or release gate was widened. See
+[the executable lifecycle contract](docs/LEARNED_CREDENTIAL_LIFECYCLE.md).
+
+## 2026-10-24: select explicit credentials for independent effect routes
+
+Perimeter inventory version 2 now binds each broker-mediated route to one exact
+broker-held credential declared in that route's own family. Multiple file or
+learned-publication routes can therefore use distinct independently provisioned
+credentials without family-wide ambiguity. Unknown, actor-held or cross-family
+names, unsupported mediation and malformed credential objects refuse; there is
+no fallback to a different credential. Every reference consumes the original
+family text budget. All original inventory limits and version 1 admission and
+single-broker effect-resolution rules remain unchanged.
+
+The original CredentialBroker and FileCredentialPolicy resolver consume the
+checked route selection. New integration cases publish to two actual independent
+file endpoints through the original actor, reviews and dispatch capabilities,
+then exercise foreign envelopes, unequal provider secrets, credential lifecycle,
+worker reopening and conservative lost-acknowledgment accounting. Learned cases
+publish both routes in plain, raw-forecast and owned-forecast modes, composing
+identity, joint review and publication witnesses. Exact route/name selection
+remains pinned to historical receipts, audit and guarded recovery after live
+credentials, inventories, helper assets and evidence disappear.
+
+All **60 selected public test functions** across 12 complete integration targets
+and **80 selected operator functions** pass at frozen routing source based on
+`3446fb4a`. These include six new public and three new operator functions. The
+operator denominator excludes its two registered subprocess entry points; actual
+child invocations are not counted again. The three new route functions also
+passed again on the combined `b37bfbea` base; that rerun is not added to these
+denominators. Subsequent main changes through `c3bd4a0e`, including native
+constructor frame isolation and receipt fixtures, are preserved. Standard Cargo
+check passes all selected public targets and the complete original operator
+test target at the initial frozen routing source.
+Runtime uses the standard LLVM test harness, official Cranelift native library
+and 32 MiB test-thread stacks. The operator verification mirror changes only
+unselected registration attributes; production and selected test bodies remain
+unchanged, with original source hashes checked before and after execution.
+
+The canonical xtask gate ran and still refuses the unchanged initial dependency
+admission guard before formatting, Clippy or full-suite execution. No dependency,
+permit, journal-authority or release gate was widened. This increment provides
+explicit routing within the existing trusted-operator perimeter contract, not
+whole-process external-effect recovery, remote-provider authentication or full
+FA-011/014 qualification. See [route credential selection](docs/ROUTE_CREDENTIAL_SELECTION.md).
 ## 2026-10-25: validate charged client requests and the stream finish slot
 
 This continuation changes reference tests, fixtures and contract wording; it

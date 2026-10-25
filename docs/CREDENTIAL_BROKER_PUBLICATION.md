@@ -22,12 +22,13 @@ purpose `1`. The declared effect must be `file_write`; the profile ID is fixed t
 `fa.disposable-file-publication`, and the profile generation is bound to the
 endpoint target's contract version.
 
-The current inventory schema declares broker credentials family-wide rather than
-naming the exact credential used by each route. Accordingly the secret supplied at
-bootstrap is a trusted enforcement-host input. This increment does not claim to
-authenticate that secret against an external provider. It does ensure that a route
-with an actor-direct credential or nonbrokered mediation cannot instantiate this
-adapter.
+Inventory version 1 resolves a single family-wide broker credential. The explicit
+[version 2 schema](ROUTE_CREDENTIAL_SELECTION.md) instead names the exact
+broker-held credential for each route, allowing distinct providers in one family.
+In either version the secret supplied at bootstrap remains a trusted
+enforcement-host input. Route selection does not authenticate that secret against
+an external provider. A route with an actor-direct credential or nonbrokered
+mediation cannot instantiate this adapter.
 
 ## Credential use and recovery
 

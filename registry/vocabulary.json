@@ -391,6 +391,26 @@
       "note": ""
     },
     {
+      "verb": "rotate-credential",
+      "layer": "L5",
+      "class": "mutation",
+      "authority": "independently configured offline operator with exclusive original owner, complete guarded learned history and independent retained history anchor",
+      "idempotency": "original operation identity and expected credential generation; exact retained retries return the original receipt separately from current status; each successful guarded recovery still acknowledges its own Fence",
+      "cost_class": "expensive",
+      "response": "Knowledge<CredentialLifecycleResult> with original change receipt, current epoch and acknowledged history-retention result",
+      "note": "create-learned-generated adapter; exact next native generation only; no actor, helper, live secret acquisition or numerical continuation; new independent anchor output required"
+    },
+    {
+      "verb": "revoke-credential",
+      "layer": "L5",
+      "class": "mutation",
+      "authority": "independently configured offline operator with exclusive original owner, complete guarded learned history and independent retained history anchor",
+      "idempotency": "original operation identity and expected credential generation; exact retained retries return the original receipt separately from current status; each successful guarded recovery still acknowledges its own Fence",
+      "cost_class": "expensive",
+      "response": "Knowledge<CredentialLifecycleResult> with original change receipt, current epoch and acknowledged history-retention result",
+      "note": "create-learned-generated adapter; terminal native revocation preserves receipt, reconciliation and Stop paths; no live secret required; new independent anchor output required"
+    },
+    {
       "verb": "serve-learned-generated",
       "layer": "L4",
       "class": "mutation",

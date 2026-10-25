@@ -63,6 +63,13 @@ including its declared credential name. The original resolver requires the
 effect scope, `file_write`, broker-mediated credentials, blocked bypass and an
 enforcement trust hop. An asserted policy does not install a guard.
 
+The inventory can select the original version 1 single-broker rule or
+[version 2 explicit route credentials](ROUTE_CREDENTIAL_SELECTION.md). Version 2
+allows multiple broker credentials in one family, with each route naming its own
+declared broker-held credential. The profile's `policy.credential` must match that
+exact selection; an ambiguous version 1 family still refuses. The learned recipe
+envelope and credential-profile schemas remain unchanged.
+
 For live admission, the profile and inventory consume the same aggregate learned
 asset allowance as the original model, fit, tokenizer, monitor and other assets.
 The profile is bounded to 64 KiB; inventory parsing keeps its original native
@@ -115,8 +122,11 @@ must retain the same policy, epoch, inventory selection and credential input
 paths. The same session retains one permit across Message, Message and separately
 reviewed Finish; each request still needs its own original review and human key.
 Removing provisioning files after binding does not revoke a capability. Rotation
-and revocation remain the original native lifecycle transitions, not file edits
-or changes to a later sequence entry.
+and revocation use the original native lifecycle transitions through the
+[offline learned maintenance commands](LEARNED_CREDENTIAL_LIFECYCLE.md).
+They require exclusive owner custody, an independent input history anchor and a
+new retained output. Updating files or a later sequence entry does not perform
+either transition.
 
 ## Recovery, receipts and anchored audit
 
@@ -142,6 +152,22 @@ retained history anchor. Current generation/revoked expectations do not change
 that past review. An epoch-only profile change therefore leaves the same anchored
 audit unchanged; a changed or omitted immutable policy refuses. The audit does
 not attest current credential possession or current permission to publish.
+
+## Rotate or revoke an offline owner
+
+`--rotate-credential OPERATION EXPECTED_GENERATION NEXT_GENERATION` advances the
+native guard by exactly one generation. `--revoke-credential OPERATION
+EXPECTED_GENERATION` permanently closes it to live publication. Both commands
+validate the complete original history and operation before the recovery Fence;
+they require `--history-anchor INPUT --retain-history-anchor NEW_OUTPUT` and do
+not acquire a live credential or resume generation.
+
+The profile independently selects the current epoch. Exact retries return their
+original historical receipt separately from current status, including after a
+later rotation. A deadline or output failure after acknowledgment retains the
+known journal cut and cannot erase the transition. See the
+[command and retention contract](LEARNED_CREDENTIAL_LIFECYCLE.md) for provisioning,
+terminal revocation, ambiguous writes and the current topology restriction.
 
 ## Scope
 

@@ -21,6 +21,7 @@
 #[path = "learned/identity.rs"] mod identity;
 #[path = "learned/checked.rs"] mod checked;
 #[path = "learned/credential.rs"] mod credential;
+#[path = "learned/credential_lifecycle.rs"] mod credential_lifecycle;
 #[path = "learned/stopped.rs"] mod stopped;
 #[path = "learned/topology.rs"] mod topology;
 #[path = "learned/sequence.rs"] mod sequence;
@@ -45,7 +46,7 @@ use fa_reference::action::consequence::oversight::{
 use fa_reference::Error;
 use std::{io::Write, path::Path, rc::Rc};
 
-const USAGE: &str = "create-learned-generated CONFIG LEARNED_RECIPE REVIEWER_PROFILE [--continue-generation | --after-message PREVIOUS_REQUEST | --finish-after-message PREVIOUS_REQUEST] [--actor-profile ACTOR_PROFILE] [--credibility-activation CAPSULE] [--topology-profile PATH] [--history-anchor INPUT] [--retain-history-anchor NEW_OUTPUT] | create-learned-generated CONFIG LEARNED_RECIPE --resume [--finish-after-message PREVIOUS_REQUEST] [--topology-profile PATH] [--history-anchor INPUT] [--retain-history-anchor NEW_OUTPUT] | create-learned-generated CONFIG LEARNED_RECIPE (--recover-stop | --stop-admission | --drain-stopped) OPERATION [--topology-profile PATH] [--history-anchor INPUT] [--retain-history-anchor OUTPUT] [--retain-topology-checkpoint NEW_OUTPUT] [--recover-terminal-checkpoint] | create-learned-generated CONFIG LEARNED_RECIPE --audit-review ROUND HISTORY_ANCHOR | create-learned-generated CONFIG LEARNED_RECIPE --resume (--receipts-only | --reconcile-receipts) [--finish-after-message PREVIOUS_REQUEST] [--topology-profile PATH] [--history-anchor INPUT]";
+const USAGE: &str = "create-learned-generated CONFIG LEARNED_RECIPE REVIEWER_PROFILE [--continue-generation | --after-message PREVIOUS_REQUEST | --finish-after-message PREVIOUS_REQUEST] [--actor-profile ACTOR_PROFILE] [--credibility-activation CAPSULE] [--topology-profile PATH] [--history-anchor INPUT] [--retain-history-anchor NEW_OUTPUT] | create-learned-generated CONFIG LEARNED_RECIPE --resume [--finish-after-message PREVIOUS_REQUEST] [--topology-profile PATH] [--history-anchor INPUT] [--retain-history-anchor NEW_OUTPUT] | create-learned-generated CONFIG LEARNED_RECIPE (--recover-stop | --stop-admission | --drain-stopped) OPERATION [--topology-profile PATH] [--history-anchor INPUT] [--retain-history-anchor OUTPUT] [--retain-topology-checkpoint NEW_OUTPUT] [--recover-terminal-checkpoint] | create-learned-generated CONFIG LEARNED_RECIPE (--rotate-credential OPERATION EXPECTED_GENERATION NEXT_GENERATION | --revoke-credential OPERATION EXPECTED_GENERATION) --history-anchor INPUT --retain-history-anchor NEW_OUTPUT | create-learned-generated CONFIG LEARNED_RECIPE --audit-review ROUND HISTORY_ANCHOR | create-learned-generated CONFIG LEARNED_RECIPE --resume (--receipts-only | --reconcile-receipts) [--finish-after-message PREVIOUS_REQUEST] [--topology-profile PATH] [--history-anchor INPUT]";
 
 pub(super) fn sequence_command(args: &[String], credibility: Option<&Path>) -> Result<(), String> {
     sequence::command(args, credibility)
@@ -59,6 +60,12 @@ pub(super) fn command(args: &[String], credibility: Option<&Path>) -> Result<(),
 // selection and workflow; a test clock supplies no publication or reviewer key.
 fn command_with_clock<F>(args: &[String], credibility: Option<&Path>, time: F) -> Result<(), String>
 where F: FnMut() -> ElapsedTick {
+    if args.iter().any(|arg| credential_lifecycle::is_option(arg)) {
+        // Offline credential maintenance owns its complete closed grammar. In
+        // particular no earlier option parser can silently discard actor,
+        // topology, receipt or Stop work before admission.
+        return credential_lifecycle::command(args, credibility);
+    }
     if args.iter().any(|arg| matches!(arg.as_str(), "--receipts-only" | "--reconcile-receipts")) {
         return recovery::readonly::command(args, credibility, &mut std::io::stdout().lock());
     }

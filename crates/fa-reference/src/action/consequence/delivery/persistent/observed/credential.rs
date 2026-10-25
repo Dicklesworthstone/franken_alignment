@@ -137,10 +137,7 @@ impl FileOversight {
     pub fn credential_policy(&self) -> Option<&FileCredentialPolicy> { self.machine.credential_policy.as_ref() }
     pub fn credential_status(&self) -> Result<Option<FileCredentialStatus>, JournalError> {
         if self.fault.is_some() { return Err(JournalError::Unavailable); }
-        Ok(self.machine.credential_policy.as_ref().map(|policy| FileCredentialStatus {
-            policy: policy.clone(), generation: self.machine.credential_generation,
-            revoked: self.machine.credential_revoked, retained_changes: self.machine.credential_changes.len(),
-        }))
+        Ok(self.machine.credential_status())
     }
     pub fn rotate_credential_guard(&mut self, revision: u64, request: CredentialRotationRequest)
         -> Result<CredentialChangeReceipt, JournalError>
