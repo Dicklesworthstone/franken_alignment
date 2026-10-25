@@ -182,8 +182,8 @@ Preparation-time status: these were authored and independently source-reviewed
 regressions, not executed evidence. The prescribed RCH launcher was absent in the
 restored workspace. After
 the complete source was frozen, the executor disconnected before this batch's
-syntax or remote-dispatch attempts could start. No operator parse, Rust compile,
-test or workspace qualification is claimed. The deterministic forecast tables
+syntax or remote-dispatch attempts could start. At that time, no operator parse,
+Rust compile, test or workspace qualification was claimed. The deterministic forecast tables
 do not establish detection quality, calibration, model-family generalization or
 production readiness. FA-111 and its scoped beads remain in progress.
 

@@ -1,5 +1,20 @@
 # Changelog
 
+## 2026-10-24: keep guarded native startup in separate call frames
+
+- Reproduce a credential-history stack abort in the complete operator attempt
+  and a fresh exact-function process. Isolate plain/raw/owned guarded native
+  constructors in private noninlined frames with unchanged guards, credential
+  registration, reserve and separate role custody.
+- Pass the unchanged failing function and all 42 checked-publication/identity
+  functions on the original failing worker at `83cd4443`, zero failed/ignored,
+  702 filtered. Preserve the failed attempts and correct preliminary count
+  estimates without narrowing the module filters.
+- Formatting/all-target compilation pass; Clippy still fails on 80 library
+  errors and canonical dependency admission refuses. Complete operator run:
+  744 passed, zero failed/ignored/filtered, 510.04 seconds at the same source;
+  original P0 and older intermittent investigations remain open.
+
 ## 2026-10-24: bind forecast and retention fixtures to original native contracts
 
 - Test nonpredictive guarded recovery through its actual native API; preserve
@@ -11,8 +26,9 @@
 - Reproduce the original predictive 6/1 and retention 0/4 failures, then pass the
   complete affected 63-function inventory at `a985f9cd`, zero failed/ignored,
   681 filtered. Formatting/all-target compilation pass; retain fresh 80-library-
-  error Clippy failure and canonical dependency-admission refusal. Full 744 is
-  pending. Original P0, intermittent investigations and durable abandonment
+  error Clippy failure and canonical dependency-admission refusal. The full 744
+  attempt aborted on a credential-history stack overflow before its summary;
+  later functions were unrun. Original P0, intermittent investigations and durable abandonment
   remain open; no production behavior, deadline, format or authority rule changed.
 
 ## 2026-10-24: test genuine pending drain and complete clock acquisition cuts

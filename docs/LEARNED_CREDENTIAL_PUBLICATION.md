@@ -145,6 +145,21 @@ not attest current credential possession or current permission to publish.
 
 ## Scope
 
+Guarded startup selects the original plain, raw-predictive or owned-predictive
+native constructor in a separate private call frame. Each path retains the same
+independent guard registration, terminal reserve, generation and separate role
+custody. This avoids aggregating all alternative bootstrap temporaries in an
+already-deep unoptimized startup caller; it grants no weaker credential route.
+
+On 2026-10-24, source `83cd4443` passed all 42 original checked-publication and
+computed-identity functions, including the nine credential functions, on the
+worker where the unchanged credential-history function had independently aborted
+with a stack overflow at `a985f9cd`. The original test profile and stack settings
+were retained. The complete 744-function operator run also passed at this exact
+source, zero failed/ignored/filtered. This is scoped execution, not a static
+stack/RSS bound or full project qualification: lint and dependency admission
+still fail. Global gates are recorded in implementation status below.
+
 This is a bounded integration of the original journal publication sink under
 FA-011/014 and plan sections 8.3–8.8 and 16.4–16.9. The inventory and both inputs
 are trusted operator provisioning. Secret material occupies ordinary process

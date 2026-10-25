@@ -1,5 +1,47 @@
 # Implementation status · design revision 0.3
 
+## 2026-10-24: isolate guarded startup frames without changing authority
+
+The full `a985f9cd` operator attempt aborted on the integrated credential-history
+function with stack overflow/SIGABRT before a complete 744-function summary. A
+fresh exact-function run reproduced that abort on standard `vmi1149989`; it was
+not merely a failure following earlier tests. No stack-size, compiler/backend,
+deadline or assertion change was used to repair it.
+
+`83cd4443116dbccbeccf7bbb75fc1bfc5c8a13aa` (tree
+`094954254ac7e87499977b9eb582de28900b31fc`) keeps the mutually exclusive plain,
+raw-predictive and owned-predictive guarded native constructors in separate
+private noninlined frames. The same complete guards, credential registration,
+terminal reserve, generation and original constructor are selected, and the
+same human/consistency/identity roles are returned. No public interface, source
+or credential rule, journal format, numerical algorithm or outcome changed.
+
+The unchanged history function passed on `ts1`: one passed, zero failed/ignored,
+743 filtered, 3.06 seconds. More decisively, the original failing worker
+`vmi1149989` passed the complete fixed checked-publication and computed-identity
+module filters: **42 passed, zero failed/ignored, 702 filtered**, 262.72 seconds.
+This covers all nine credential functions and their actual publication, both-key,
+rotation, missing/foreign credential, source-free history, composed guard and
+resident-sequence cases. No credential test body was changed. Preliminary 17 and
+33 estimates missed nested modules and are withdrawn; the filters never changed
+and only the actual harness count of 42 is measured evidence. Overlapping runs
+are not added together.
+
+Owned formatting and standard workspace/all-target compilation passed at this
+exact source. Clippy actually failed on 80 library errors before later targets;
+the canonical driver actually refused the unchanged dependency-admission guard.
+The complete unfiltered operator run at `83cd4443` passed **744 functions, zero
+failed/ignored/filtered**, 510.04 seconds, terminal exit 0 on standard `ts1`.
+The clean-overlay receipt binds the exact source and tree above. All original
+743 functions from the `bfaea731` base remain registered, alongside the one new
+pure diagnostic. The earlier aborted run and the 734-function 726/8 execution
+remain separate historical results. Four older intermittent-case investigations
+still lack causal repairs and remain open despite this passing full run; all
+original P0 acceptance remains open for dependency admission, lint and complete
+workspace qualification.
+These results are bounded reference execution, not independent certification,
+provider authentication, a general stack/RSS bound or complete project qualification.
+
 ## 2026-10-24: test forecast recovery and retained Unknown against native contracts
 
 The original predictive namespace at frozen `bfaea731` reproduced **6 passed,
@@ -44,11 +86,17 @@ targets. The canonical driver executed and refused the unchanged initial
 dependency-admission guard. Its admission compiler explicitly supports the two
 original reviewed local rows; it is not a finished general-admission path that
 can simply admit the third package. No policy, snapshot hash or lock guard was
-relaxed. The complete unfiltered **744-function** operator run at this same source
-is in progress; no result is yet claimed. This inventory includes nine integrated
+relaxed. The unfiltered **744-function** operator attempt at this source aborted
+with a stack overflow/SIGABRT in the integrated
+`credential_history_requires_exact_policy_and_rotated_epoch_before_cleanup_without_live_secrets`
+function, exit 101, before a complete summary. Later functions were unrun; this
+is not a 743/1 result. This inventory includes nine integrated
 credential-publication functions from the `bfaea731` base and the one new pure
 diagnostic unit. Four prior intermittent-case investigations and original P0
-acceptance remain open.
+acceptance remain open. The fatal credential-history case triggered the separate
+`83cd4443` startup-frame repair and subsequent evidence recorded above; neither
+the passing 63-function selection nor the aborted full attempt is rewritten as
+a complete operator pass.
 
 The first `da8077c7` dispatch on `hz4` refused source-namespace initialization
 before Cargo. Same-ID recovery confirmed terminal exit 1 and acknowledgment;

@@ -13,7 +13,9 @@ use super::{
     LearnedTextRelease, Loaded, RecoveryReserve, RunResult, cleanup, debug, encode_command,
 };
 use cooperative::{Progress, finish_replay};
-use fa_reference::action::consequence::delivery::persistent::observed::consistency::FileConsistencyObserver;
+use fa_reference::action::consequence::delivery::persistent::observed::consistency::{
+    FileConsistencyConfig, FileConsistencyObserver, learned::FileLearnedConsistencyConfig,
+};
 use fa_reference::action::consequence::delivery::persistent::observed::guarded::{
     FileGuardSet, FileRecoveryRequirements,
 };
@@ -40,7 +42,8 @@ pub(super) fn create_selected(config: &Config, loaded: &Loaded) -> Result<Custod
     if loaded
         .generation
         .required_computed_identity_registration()
-        .is_some() || loaded.generation.required_credential_policy().is_some()
+        .is_some()
+        || loaded.generation.required_credential_policy().is_some()
     {
         return create_with_guards(config, loaded);
     }
@@ -69,22 +72,56 @@ pub(super) fn create_selected(config: &Config, loaded: &Loaded) -> Result<Custod
 // Keep mutually exclusive native constructors out of the ordinary startup
 // frame. Each path retains its original reserve, guards and separate roles.
 fn create_with_guards(config: &Config, loaded: &Loaded) -> Result<Custody, String> {
+    if let Some(prediction) = loaded.generation.required_pre_output_forecast() {
+        create_with_raw_guards(config, loaded, prediction)
+    } else if let Some(prediction) = loaded.generation.required_owned_pre_output_forecast() {
+        create_with_owned_guards(config, loaded, prediction)
+    } else {
+        create_with_plain_guards(config, loaded)
+    }
+}
+
+// Each mutually exclusive constructor owns its temporary owner/role bundle in
+// its own frame. Recombining these paths reserves all three native bootstrap
+// temporaries together in an unoptimized caller's already-deep startup stack.
+#[inline(never)]
+fn create_with_raw_guards(
+    config: &Config,
+    loaded: &Loaded,
+    prediction: &FileConsistencyConfig,
+) -> Result<Custody, String> {
     let guards = requirements(config, loaded).guards;
     let reserve = RecoveryReserve::terminal();
     let registration = super::credential::registration(loaded)?;
-    let (host, roles) = if let Some(prediction) = loaded.generation.required_pre_output_forecast() {
-        FileOversight::create_predictive_guarded_with_learned_generation_reserved(
-            &config.store,
-            config.profile.clone(),
-            &guards,
-            registration,
-            prediction.clone(),
-            None,
-            loaded.generation.clone(),
-            reserve,
-        )
-        .map_err(debug)?
-    } else if let Some(prediction) = loaded.generation.required_owned_pre_output_forecast() {
+    let (host, roles) = FileOversight::create_predictive_guarded_with_learned_generation_reserved(
+        &config.store,
+        config.profile.clone(),
+        &guards,
+        registration,
+        prediction.clone(),
+        None,
+        loaded.generation.clone(),
+        reserve,
+    )
+    .map_err(debug)?;
+    Ok((
+        host,
+        roles.oversight.human,
+        Some(roles.consistency_observer),
+        roles.oversight.identity_observer,
+    ))
+}
+
+#[inline(never)]
+fn create_with_owned_guards(
+    config: &Config,
+    loaded: &Loaded,
+    prediction: &FileLearnedConsistencyConfig,
+) -> Result<Custody, String> {
+    let guards = requirements(config, loaded).guards;
+    let reserve = RecoveryReserve::terminal();
+    let registration = super::credential::registration(loaded)?;
+    let (host, roles) =
         FileOversight::create_predictive_guarded_with_owned_learned_consistency_reserved(
             &config.store,
             config.profile.clone(),
@@ -95,25 +132,30 @@ fn create_with_guards(config: &Config, loaded: &Loaded) -> Result<Custody, Strin
             loaded.generation.clone(),
             reserve,
         )
-        .map_err(debug)?
-    } else {
-        let (host, roles) = FileOversight::create_guarded_with_learned_generation_reserved(
-            &config.store,
-            config.profile.clone(),
-            &guards,
-            registration,
-            loaded.generation.clone(),
-            reserve,
-        )
         .map_err(debug)?;
-        return Ok((host, roles.human, None, roles.identity_observer));
-    };
     Ok((
         host,
         roles.oversight.human,
         Some(roles.consistency_observer),
         roles.oversight.identity_observer,
     ))
+}
+
+#[inline(never)]
+fn create_with_plain_guards(config: &Config, loaded: &Loaded) -> Result<Custody, String> {
+    let guards = requirements(config, loaded).guards;
+    let reserve = RecoveryReserve::terminal();
+    let registration = super::credential::registration(loaded)?;
+    let (host, roles) = FileOversight::create_guarded_with_learned_generation_reserved(
+        &config.store,
+        config.profile.clone(),
+        &guards,
+        registration,
+        loaded.generation.clone(),
+        reserve,
+    )
+    .map_err(debug)?;
+    Ok((host, roles.human, None, roles.identity_observer))
 }
 
 pub(super) fn create(
@@ -156,7 +198,10 @@ pub(super) fn requirements(config: &Config, loaded: &Loaded) -> FileRecoveryRequ
             credential: loaded.generation.required_credential_policy().cloned(),
         },
         effective_policy: config.profile.delivery.policy.clone(),
-        credential_epoch: loaded.credential.as_ref().map(|credential| credential.epoch),
+        credential_epoch: loaded
+            .credential
+            .as_ref()
+            .map(|credential| credential.epoch),
         minimum: loaded.floor,
     }
 }
