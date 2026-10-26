@@ -1,5 +1,16 @@
 # Changelog
 
+## 2026-10-26: complete 9-layer tower legibility, founding epics, and 40/40 invariant reference checks
+
+- Implement and verify the complete 9-layer Tower Legibility surface (`FA-133`–`FA-143`) in `crates/fa-reference`:
+  - `knowledge_surface.rs` (`FA-133`): `Knowledge<T>` lattice laws, agent-surface wire guard refusing bare safety booleans/scalars, and permit-path `Known`-only admission (`FA-INV-039`).
+  - `address_resolver.rs` (`FA-134`): `Address` parser/printer for all 26 `Noun` kinds, `fa_get` with uniform `Withheld` shape, and `fa_related` over the closure DAG and thought graph.
+  - `event_journal.rs` (`FA-135`): 16 `JournalEventKind` transition variants across `L3`–`L8`, wall-clock-independent digests, `fa_tail`, `ReplayClosureFold`, and `decision_replay_from_journal`.
+  - `explain_affordances.rs` (`FA-137`, `FA-138`): `PredicateTree` explanations, renderer-only prose lint, `Affordance`, `fa_why_held`, `fa_next` (hard floors first), and `ProposalEngine::fa_propose`.
+  - `situation_rehearsal.rs` (`FA-136`, `FA-139`–`FA-141`, `FA-143`): `SituationReportFold` with batch-oracle equality, `RehearsalOutcome` (`compile_fail` doctest against `Permit` conversion), `Annotation` (`NonAuthoritative`), `fa_handoff`, `fa_doctor_layers`, and rehearsal of all 10 `docs/AGENT_GUIDE.md` playbooks.
+- Implement and verify the remaining Founding Epics across `typestate_cx.rs` (`FA-117`), `standing_oversight.rs` (`FA-076`–`FA-080`, `FA-120`), `observation_algebra/{rewrites,cost_accounting}.rs` (`FA-070`, `FA-071`, `FA-123`), `governance_assurance.rs` (`FA-116`, `FA-119`, `FA-125`–`FA-127`, `FA-131`, `FA-142`), `elicitation_signatures_manifold.rs` (`FA-106`, `FA-109`, `FA-110`, `FA-112`, `FA-128`), `adversarial_vertical_slice.rs` (`FA-114`, `FA-115`, `FA-122`, `FA-124`, `dmd`), and `xtask/src/{experiments_ledger,tracker_readiness}.rs` (`FA-129`, `FA-003`).
+- Wire all 40 invariants (`FA-INV-001`–`FA-INV-040`) in `registry/invariants.json` to verified `reference_checks` (138 total checks), verify `fa-reference`, `fa-journal`, `xtask`, and `clippy --workspace --all-targets -- -D warnings` on remote RCH workers, and close all 348 live beads in `.beads/issues.jsonl`.
+
 ## 2026-10-12: stop and drain learned histories through sealed recovery
 
 - Add stopped completion to the original learned, guarded, raw-predictive and
