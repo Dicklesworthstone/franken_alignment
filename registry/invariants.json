@@ -107,7 +107,11 @@
       "production_status": "planned",
       "waiver": "forbidden",
       "production_checker": null,
-      "reference_checks": [],
+      "reference_checks": [
+        "crates/fa-reference/src/action/consequence.rs::tests::every_missing_evidence_combination_is_monotone",
+        "crates/fa-reference/src/action/consequence/gate.rs::tests::missing_specialist_keeps_effect_held",
+        "crates/fa-reference/src/action/consequence/gate/containment/session/policy.rs::tests::unknown_does_not_become_permission_through_not_or_any"
+      ],
       "reference_scope": "Selected single-process in-memory behavior only; no durable, concurrent, OS, remote or model-accuracy claim.",
       "required_negative_campaigns": [
         "No implicit widening on lost evidence violation must be rejected without widening authority; real boundary tested at activation."
@@ -116,7 +120,7 @@
         "Registered profile and trusted enforcement boundary execute their specified behavior."
       ],
       "evidence_artifacts": [],
-      "reference_status": "not_implemented_in_rust_revision",
+      "reference_status": "executed_remotely_2026_10_25_pass",
       "founding_ideas": [
         "FI-A01",
         "FI-A13"
@@ -133,7 +137,12 @@
       "production_status": "planned",
       "waiver": "forbidden",
       "production_checker": null,
-      "reference_checks": [],
+      "reference_checks": [
+        "crates/fa-reference/src/lib.rs::tests::reserve_budget_and_duplicate_fail_closed",
+        "crates/fa-reference/src/lib.rs::tests::resolved_non_effect_returns_rights_once",
+        "crates/fa-reference/src/action/consequence/oversight/broker/consistency/learned/lifetime.rs::tests::each_integer_counter_rejects_overflow_and_overdraw",
+        "crates/fa-reference/src/action/consequence/oversight/broker/consistency/learned/lifetime.rs::tests::lifetime_remainder_never_enlarges_a_frozen_per_job_budget"
+      ],
       "reference_scope": "Selected single-process in-memory behavior only; no durable, concurrent, OS, remote or model-accuracy claim.",
       "required_negative_campaigns": [
         "Resource conservation violation must be rejected without widening authority; real boundary tested at activation."
@@ -142,7 +151,7 @@
         "Registered profile and trusted enforcement boundary execute their specified behavior."
       ],
       "evidence_artifacts": [],
-      "reference_status": "not_implemented_in_rust_revision",
+      "reference_status": "executed_remotely_2026_10_25_pass",
       "founding_ideas": [
         "FI-A02",
         "FI-A17"
@@ -192,7 +201,10 @@
       "production_status": "planned",
       "waiver": "forbidden",
       "production_checker": null,
-      "reference_checks": [],
+      "reference_checks": [
+        "crates/fa-reference/src/evidence_view.rs::tests::every_required_manifest_field_causally_invalidates_replay",
+        "crates/fa-reference/src/evidence_view.rs::tests::omission_presence_kind_and_declared_range_are_replay_dependencies"
+      ],
       "reference_scope": "No executable coverage of this production obligation yet.",
       "required_negative_campaigns": [
         "Decision closure honesty violation must be rejected without widening authority; real boundary tested at activation."
@@ -201,7 +213,7 @@
         "Registered profile and trusted enforcement boundary execute their specified behavior."
       ],
       "evidence_artifacts": [],
-      "reference_status": "not_implemented_in_rust_revision",
+      "reference_status": "executed_remotely_2026_10_25_pass",
       "founding_ideas": [
         "FI-A06",
         "FI-I11"
@@ -218,7 +230,10 @@
       "production_status": "planned",
       "waiver": "forbidden",
       "production_checker": null,
-      "reference_checks": [],
+      "reference_checks": [
+        "crates/fa-reference/src/action/consequence/gate/containment/session/policy/controller.rs::tests::foreign_reviews_permits_and_action_substitution_are_refused",
+        "crates/fa-reference/src/perimeter.rs::tests::unknown_route_or_scope_refuses_next_to_an_exact_control"
+      ],
       "reference_scope": "Selected single-process in-memory behavior only; no durable, concurrent, OS, remote or model-accuracy claim.",
       "required_negative_campaigns": [
         "Tenant and purpose isolation violation must be rejected without widening authority; real boundary tested at activation."
@@ -227,7 +242,7 @@
         "Registered profile and trusted enforcement boundary execute their specified behavior."
       ],
       "evidence_artifacts": [],
-      "reference_status": "not_implemented_in_rust_revision",
+      "reference_status": "executed_remotely_2026_10_25_pass",
       "founding_ideas": [
         "FI-A15"
       ],
@@ -243,7 +258,10 @@
       "production_status": "planned",
       "waiver": "forbidden",
       "production_checker": null,
-      "reference_checks": [],
+      "reference_checks": [
+        "crates/fa-reference/src/action/consequence/activation/tensor/kv/experiment.rs::tests::sparse_siblings_do_not_modify_the_base_or_each_other",
+        "crates/fa-reference/src/action/consequence/activation/tensor/kv/experiment.rs::tests::foreign_same_number_experiment_cannot_supply_a_parent"
+      ],
       "reference_scope": "Selected single-process in-memory behavior only; no durable, concurrent, OS, remote or model-accuracy claim.",
       "required_negative_campaigns": [
         "No branch authority cloning violation must be rejected without widening authority; real boundary tested at activation."
@@ -252,7 +270,7 @@
         "Registered profile and trusted enforcement boundary execute their specified behavior."
       ],
       "evidence_artifacts": [],
-      "reference_status": "not_implemented_in_rust_revision",
+      "reference_status": "executed_remotely_2026_10_25_pass",
       "founding_ideas": [
         "FI-A11",
         "FI-I09",
@@ -314,7 +332,11 @@
       "production_status": "planned",
       "waiver": "forbidden",
       "production_checker": null,
-      "reference_checks": [],
+      "reference_checks": [
+        "crates/fa-reference/src/action/consequence/gate/containment/restart_manifest.rs::tests::exact_round_trip_and_profile_binding",
+        "crates/fa-reference/src/action/consequence/gate/containment/restart_manifest.rs::tests::missing_component_reserved_bits_and_unknown_grade_refuse",
+        "crates/fa-reference/src/action/consequence/activation/tensor/kv/decoder/sampling/replay.rs::tests::saved_state_is_comparison_material_never_installed_as_success"
+      ],
       "reference_scope": "No executable coverage of this production obligation yet.",
       "required_negative_campaigns": [
         "Truthful replay grades violation must be rejected without widening authority; real boundary tested at activation."
@@ -323,7 +345,7 @@
         "Registered profile and trusted enforcement boundary execute their specified behavior."
       ],
       "evidence_artifacts": [],
-      "reference_status": "not_implemented_in_rust_revision",
+      "reference_status": "executed_remotely_2026_10_25_pass",
       "founding_ideas": [
         "FI-I03",
         "FI-I05",
@@ -341,7 +363,10 @@
       "production_status": "planned",
       "waiver": "forbidden",
       "production_checker": null,
-      "reference_checks": [],
+      "reference_checks": [
+        "crates/fa-reference/src/action/consequence/congress.rs::tests::offline_promotion_preserves_policy_caps_and_does_not_update_live_weights",
+        "crates/fa-reference/src/action/consequence/congress.rs::tests::helper_deny_is_not_an_exact_disqualifier"
+      ],
       "reference_scope": "No executable coverage of this production obligation yet.",
       "required_negative_campaigns": [
         "Model/policy separation violation must be rejected without widening authority; real boundary tested at activation."
@@ -350,7 +375,7 @@
         "Registered profile and trusted enforcement boundary execute their specified behavior."
       ],
       "evidence_artifacts": [],
-      "reference_status": "not_implemented_in_rust_revision",
+      "reference_status": "executed_remotely_2026_10_25_pass",
       "founding_ideas": [
         "FI-A03",
         "FI-A09",
@@ -369,7 +394,11 @@
       "production_status": "planned",
       "waiver": "forbidden",
       "production_checker": null,
-      "reference_checks": [],
+      "reference_checks": [
+        "crates/fa-reference/src/canonical_json.rs::tests::duplicate_unknown_noncanonical_truncated_and_overflow_inputs_refuse_causally",
+        "crates/fa-reference/src/history.rs::tests::malformed_typed_histories_and_exact_bounds_refuse_before_replay",
+        "crates/fa-reference/src/history.rs::tests::snapshot_and_retained_byte_bounds_refuse_before_replay"
+      ],
       "reference_scope": "No executable coverage of this production obligation yet.",
       "required_negative_campaigns": [
         "Bounded untrusted work violation must be rejected without widening authority; real boundary tested at activation."
@@ -378,7 +407,7 @@
         "Registered profile and trusted enforcement boundary execute their specified behavior."
       ],
       "evidence_artifacts": [],
-      "reference_status": "not_implemented_in_rust_revision"
+      "reference_status": "executed_remotely_2026_10_25_pass"
     },
     {
       "id": "FA-INV-014",
@@ -390,7 +419,10 @@
       "production_status": "planned",
       "waiver": "forbidden",
       "production_checker": null,
-      "reference_checks": [],
+      "reference_checks": [
+        "crates/fa-reference/src/full_input.rs::tests::transform_and_omission_changes_invalidate",
+        "crates/fa-reference/src/evidence_view.rs::tests::capture_and_replay_bind_exact_input_without_reencoding"
+      ],
       "reference_scope": "Selected single-process in-memory behavior only; no durable, concurrent, OS, remote or model-accuracy claim.",
       "required_negative_campaigns": [
         "Source and transformation binding violation must be rejected without widening authority; real boundary tested at activation."
@@ -399,7 +431,7 @@
         "Registered profile and trusted enforcement boundary execute their specified behavior."
       ],
       "evidence_artifacts": [],
-      "reference_status": "not_implemented_in_rust_revision",
+      "reference_status": "executed_remotely_2026_10_25_pass",
       "founding_ideas": [
         "FI-A05",
         "FI-A12",
@@ -417,7 +449,10 @@
       "production_status": "planned",
       "waiver": "forbidden",
       "production_checker": null,
-      "reference_checks": [],
+      "reference_checks": [
+        "crates/fa-reference/src/action/consequence/experiment.rs::tests::deletion_of_the_only_seen_member_does_not_close_a_range",
+        "crates/fa-reference/src/action/consequence/experiment.rs::tests::adjacent_closed_domains_merge_without_filling_a_gap"
+      ],
       "reference_scope": "No executable coverage of this production obligation yet.",
       "required_negative_campaigns": [
         "Retention and deletion honesty violation must be rejected without widening authority; real boundary tested at activation."
@@ -426,7 +461,7 @@
         "Registered profile and trusted enforcement boundary execute their specified behavior."
       ],
       "evidence_artifacts": [],
-      "reference_status": "not_implemented_in_rust_revision"
+      "reference_status": "executed_remotely_2026_10_25_pass"
     },
     {
       "id": "FA-INV-016",
@@ -438,7 +473,10 @@
       "production_status": "planned",
       "waiver": "forbidden",
       "production_checker": null,
-      "reference_checks": [],
+      "reference_checks": [
+        "crates/fa-reference/src/action/consequence/gate/containment/session/policy/controller.rs::tests::complete_policy_round_permit_dispatch_path_uses_derived_witnesses",
+        "crates/fa-reference/src/action/consequence/gate/containment/session/policy.rs::tests::exact_policy_trace_and_witnesses_agree"
+      ],
       "reference_scope": "Selected single-process in-memory behavior only; no durable, concurrent, OS, remote or model-accuracy claim.",
       "required_negative_campaigns": [
         "Deterministic decision closure violation must be rejected without widening authority; real boundary tested at activation."
@@ -447,7 +485,7 @@
         "Registered profile and trusted enforcement boundary execute their specified behavior."
       ],
       "evidence_artifacts": [],
-      "reference_status": "not_implemented_in_rust_revision",
+      "reference_status": "executed_remotely_2026_10_25_pass",
       "founding_ideas": [
         "FI-A14",
         "FI-I03"
@@ -464,7 +502,10 @@
       "production_status": "planned",
       "waiver": "forbidden",
       "production_checker": null,
-      "reference_checks": [],
+      "reference_checks": [
+        "crates/fa-reference/src/action/consequence/activation/identity.rs::tests::matching_dimensions_do_not_substitute_for_capture_identity",
+        "crates/fa-reference/src/standing_oversight.rs::tests::mixed_semantic_generations_unclosed_negation_and_incomplete_frontier_are_refused"
+      ],
       "reference_scope": "Selected single-process in-memory behavior only; no durable, concurrent, OS, remote or model-accuracy claim.",
       "required_negative_campaigns": [
         "Model-space identity violation must be rejected without widening authority; real boundary tested at activation."
@@ -473,7 +514,7 @@
         "Registered profile and trusted enforcement boundary execute their specified behavior."
       ],
       "evidence_artifacts": [],
-      "reference_status": "not_implemented_in_rust_revision",
+      "reference_status": "executed_remotely_2026_10_25_pass",
       "founding_ideas": [
         "FI-A07",
         "FI-A10",
@@ -492,7 +533,10 @@
       "production_status": "planned",
       "waiver": "forbidden",
       "production_checker": null,
-      "reference_checks": [],
+      "reference_checks": [
+        "crates/fa-reference/src/perimeter.rs::tests::complete_exact_brokered_route_is_classified_without_authority",
+        "crates/fa-reference/src/perimeter_inventory.rs::tests::loads_complete_metadata_with_exact_classification_lookup"
+      ],
       "reference_scope": "No executable coverage of this production obligation yet.",
       "required_negative_campaigns": [
         "Enforced effect bounds violation must be rejected without widening authority; real boundary tested at activation."
@@ -501,7 +545,7 @@
         "Registered profile and trusted enforcement boundary execute their specified behavior."
       ],
       "evidence_artifacts": [],
-      "reference_status": "not_implemented_in_rust_revision"
+      "reference_status": "executed_remotely_2026_10_25_pass"
     },
     {
       "id": "FA-INV-019",
@@ -513,7 +557,10 @@
       "production_status": "planned",
       "waiver": "forbidden",
       "production_checker": null,
-      "reference_checks": [],
+      "reference_checks": [
+        "crates/fa-reference/src/action/consequence/congress/credibility.rs::tests::labels_are_bound_to_owner_generation_source_and_case",
+        "crates/fa-reference/src/action/consequence/congress/credibility.rs::tests::predeclared_manifest_prevents_case_aliasing_and_unrepresented_strata"
+      ],
       "reference_scope": "No executable coverage of this production obligation yet.",
       "required_negative_campaigns": [
         "Claim and lineage discipline violation must be rejected without widening authority; real boundary tested at activation."
@@ -522,7 +569,7 @@
         "Registered profile and trusted enforcement boundary execute their specified behavior."
       ],
       "evidence_artifacts": [],
-      "reference_status": "not_implemented_in_rust_revision",
+      "reference_status": "executed_remotely_2026_10_25_pass",
       "founding_ideas": [
         "FI-A18",
         "FI-A14"
@@ -539,7 +586,10 @@
       "production_status": "planned",
       "waiver": "forbidden",
       "production_checker": null,
-      "reference_checks": [],
+      "reference_checks": [
+        "crates/fa-reference/src/action/consequence/gate.rs::tests::suspension_preserves_dispatched_and_unknown_liabilities",
+        "crates/fa-reference/src/action/consequence/delivery/persistent/requests/terminal/cancellation.rs::tests::seals_dispatched_key_and_delayed_publication_cannot_execute"
+      ],
       "reference_scope": "Selected single-process in-memory behavior only; no durable, concurrent, OS, remote or model-accuracy claim.",
       "required_negative_campaigns": [
         "Closed-run admission fence violation must be rejected without widening authority; real boundary tested at activation."
@@ -548,7 +598,7 @@
         "Registered profile and trusted enforcement boundary execute their specified behavior."
       ],
       "evidence_artifacts": [],
-      "reference_status": "not_implemented_in_rust_revision"
+      "reference_status": "executed_remotely_2026_10_25_pass"
     },
     {
       "id": "FA-INV-021",
@@ -715,8 +765,11 @@
       "production_status": "planned",
       "waiver": "forbidden",
       "production_checker": null,
-      "reference_checks": [],
-      "reference_status": "not_implemented_in_rust_revision",
+      "reference_checks": [
+        "crates/fa-reference/src/action/consequence/activation/tensor/kv/experiment.rs::tests::branch_and_retained_edit_limits_do_not_reset_on_controls_or_rebase",
+        "crates/fa-reference/src/action/consequence/activation/tensor/kv/image.rs::tests::freezing_shares_arrays_and_cloning_shares_the_entire_snapshot"
+      ],
+      "reference_status": "executed_remotely_2026_10_25_pass",
       "reference_scope": "Only the declared small logical case; not production protocol/host correctness.",
       "required_negative_campaigns": [
         "Restore an experiment from a pre-dispatch checkpoint."
@@ -741,8 +794,12 @@
       "production_status": "planned",
       "waiver": "forbidden",
       "production_checker": null,
-      "reference_checks": [],
-      "reference_status": "not_implemented_in_rust_revision",
+      "reference_checks": [
+        "crates/fa-reference/src/standing_oversight.rs::tests::support_algebra_preserves_independent_supports_and_rejects_lost_retractions_or_overflow",
+        "crates/fa-reference/src/standing_oversight.rs::tests::incremental_ungated_reachability_matches_batch_oracle_across_inserts_deletes_and_gates",
+        "crates/fa-reference/src/standing_oversight.rs::tests::exponential_support_fanout_coarsens_or_spills_without_false_negatives"
+      ],
+      "reference_status": "executed_remotely_2026_10_25_pass",
       "reference_scope": "Only the declared small logical case; not production protocol/host correctness.",
       "required_negative_campaigns": [
         "Lose the only support retraction for a standing finding."
@@ -767,8 +824,12 @@
       "production_status": "planned",
       "waiver": "forbidden",
       "production_checker": null,
-      "reference_checks": [],
-      "reference_status": "not_implemented_in_rust_revision",
+      "reference_checks": [
+        "crates/fa-reference/src/observation_algebra.rs::tests::decode_rejects_privately_constructed_nonexact_verified_transfer",
+        "crates/fa-reference/src/action/consequence/activation.rs::tests::every_rung_contains_source_and_exact_rung_preserves_all_bits",
+        "crates/fa-reference/src/action/consequence/activation.rs::tests::all_truncations_single_bit_mutations_and_extra_bytes_refuse"
+      ],
+      "reference_status": "executed_remotely_2026_10_25_pass",
       "reference_scope": "Only the declared small logical case; not production protocol/host correctness.",
       "required_negative_campaigns": [
         "Use a same-shaped but wrong-generation receiver base."
@@ -882,7 +943,11 @@
       "production_checker": null,
       "reference_checks": [
         "crates/fa-reference/src/reducer.rs::tests::actor_statement_not_a_reducer_input",
-        "crates/fa-reference/src/reducer.rs::tests::actor_statement_is_refused_alongside_empirical_votes"
+        "crates/fa-reference/src/reducer.rs::tests::actor_statement_is_refused_alongside_empirical_votes",
+        "crates/fa-reference/src/action/consequence.rs::tests::consequence_chain_laws",
+        "crates/fa-reference/src/action/consequence.rs::tests::disqualifier_yields_deny",
+        "crates/fa-reference/src/action/consequence.rs::tests::consequence_encoding_is_injective_and_round_trips",
+        "crates/fa-reference/src/action/consequence.rs::tests::every_missing_evidence_combination_is_monotone"
       ],
       "reference_status": "executed_remotely_2026_09_07_epoch3",
       "reference_scope": "Bounded empirical reducer refuses actor-statement inputs; no actor-facing API, vote secrecy, timing-leakage or production control proof.",
@@ -923,7 +988,10 @@
         "crates/fa-reference/src/reducer.rs::tests::separate_cohorts_each_receive_their_own_cap",
         "crates/fa-reference/src/reducer.rs::tests::input_order_cannot_change_the_reduction",
         "crates/fa-reference/src/reducer.rs::tests::overflow_is_refused_before_an_empirical_result",
-        "crates/fa-reference/src/reducer.rs::tests::same_cohort_max_weights_clip_without_denominator_overflow"
+        "crates/fa-reference/src/reducer.rs::tests::same_cohort_max_weights_clip_without_denominator_overflow",
+        "crates/fa-reference/src/action/consequence/oversight/credibility.rs::tests::quiet_helper_cannot_gain_influence_from_false_alarm_perfection",
+        "crates/fa-reference/src/action/consequence/oversight/credibility.rs::tests::false_stop_budget_persists_across_policy_generations",
+        "crates/fa-reference/src/action/consequence/congress/credibility.rs::tests::independent_truth_rewards_early_dissent_not_early_false_holds"
       ],
       "reference_status": "executed_remotely_2026_09_07_epoch3",
       "reference_scope": "Only per-member/cohort empirical influence caps and caller-trusted exact disqualification are modeled. Floor-proportional cohort clipping discards fractional remainder and grants no authority. Helper selection, attack-conditioned metrics, andon budgets, credibility persistence and rotation remain unimplemented.",
@@ -957,8 +1025,11 @@
       "production_status": "planned",
       "waiver": "forbidden",
       "production_checker": null,
-      "reference_checks": [],
-      "reference_status": "not_implemented_in_rust_revision",
+      "reference_checks": [
+        "crates/fa-reference/src/action/consequence/delivery/persistent/observed/containment/codec.rs::tests::reset_is_an_exact_operation_input_not_a_serialized_authority_receipt",
+        "crates/fa-reference/src/action/consequence/gate.rs::tests::continue_is_not_a_permit_and_cannot_skip_witness_checks"
+      ],
+      "reference_status": "executed_remotely_2026_10_25_pass",
       "reference_scope": "Only the declared small logical case; not production protocol/host correctness.",
       "required_negative_campaigns": [
         "Attempt to paste a winning experiment branch into the live process with its permissions intact; must be refused.",
@@ -993,7 +1064,10 @@
         "crates/fa-reference/src/lib.rs::tests::reset_cannot_refund_unknown",
         "crates/fa-reference/src/lib.rs::tests::reset_refunds_only_reserved_outside_keep",
         "crates/fa-reference/src/lib.rs::tests::reset_keeps_dispatched_liability",
-        "crates/fa-reference/src/lib.rs::tests::reset_overflow_is_before_mutation"
+        "crates/fa-reference/src/lib.rs::tests::reset_overflow_is_before_mutation",
+        "crates/fa-reference/src/action/consequence.rs::tests::reset_requires_narrowing",
+        "crates/fa-reference/src/action/consequence/gate/containment.rs::tests::reset_exhaustion_does_not_publish_partial_accounting_or_actor_state",
+        "crates/fa-reference/src/action/consequence/gate/containment/session/policy/controller.rs::tests::reset_rechecks_new_work_and_never_rolls_policy_back"
       ],
       "reference_status": "executed_remotely_2026_09_07_epoch3",
       "reference_scope": "Bounded in-memory rights arithmetic and monotonic incident count only. No actor restore, persistent counter, escalation threshold, narrowed-authority transition or production-containment claim.",
@@ -1028,8 +1102,11 @@
       "production_status": "planned",
       "waiver": "forbidden",
       "production_checker": null,
-      "reference_checks": [],
-      "reference_status": "not_implemented_in_rust_revision",
+      "reference_checks": [
+        "crates/fa-reference/src/action/consequence/activation/identity.rs::tests::passports_bind_every_manifest_component_and_unique_anchor",
+        "crates/fa-reference/src/action/consequence/activation/identity.rs::tests::inclusive_bounds_allow_registered_drift_but_not_an_average_that_hides_an_outlier"
+      ],
+      "reference_status": "executed_remotely_2026_10_25_pass",
       "reference_scope": "Only the declared small logical case; not production protocol/host correctness.",
       "required_negative_campaigns": [
         "Swap weights behind the same adapter; evidence must become StaleGeneration and the run fenced.",
@@ -1057,8 +1134,11 @@
       "production_status": "planned",
       "waiver": "forbidden",
       "production_checker": null,
-      "reference_checks": [],
-      "reference_status": "not_implemented_in_rust_revision",
+      "reference_checks": [
+        "crates/fa-reference/src/action.rs::tests::exhausted_epoch_refuses_without_restoring_an_old_floor",
+        "crates/fa-reference/src/action/consequence/gate.rs::tests::narrowing_intersects_and_cancels_outside_undispatched_attempts"
+      ],
+      "reference_status": "executed_remotely_2026_10_25_pass",
       "reference_scope": "Only the declared small logical case; not production protocol/host correctness.",
       "required_negative_campaigns": [
         "Promote a grade without an evaluator report; must be refused.",
@@ -1086,8 +1166,11 @@
       "production_status": "planned",
       "waiver": "forbidden",
       "production_checker": null,
-      "reference_checks": [],
-      "reference_status": "not_implemented_in_rust_revision",
+      "reference_checks": [
+        "crates/fa-reference/src/observation_algebra/rewrites.rs::tests::changed_view_bytes_omissions_decision_or_cancellation_order_are_refused",
+        "crates/fa-reference/src/action/consequence/delivery/persistent/observed/containment/codec.rs::tests::lossless_state_encoding_rejects_every_truncation_and_inconsistent_position"
+      ],
+      "reference_status": "executed_remotely_2026_10_25_pass",
       "reference_scope": "Only the declared small logical case; not production protocol/host correctness.",
       "required_negative_campaigns": [
         "Forge a receipt for an unadmitted effect; verifier must reject.",
@@ -1115,8 +1198,11 @@
       "production_status": "planned",
       "waiver": "forbidden",
       "production_checker": null,
-      "reference_checks": [],
-      "reference_status": "not_implemented_in_rust_revision",
+      "reference_checks": [
+        "crates/fa-reference/src/action/consequence/gate.rs::tests::continue_is_not_a_permit_and_cannot_skip_witness_checks",
+        "crates/fa-reference/src/action/consequence/gate/containment/session/policy/controller.rs::tests::foreign_reviews_permits_and_action_substitution_are_refused"
+      ],
+      "reference_status": "executed_remotely_2026_10_25_pass",
       "reference_scope": "Only the declared small logical case; not production protocol/host correctness.",
       "required_negative_campaigns": [
         "Compile-fail test: a function converting ExperimentCx to PermitCx must not compile.",
@@ -1142,8 +1228,11 @@
       "production_status": "planned",
       "waiver": "forbidden",
       "production_checker": null,
-      "reference_checks": [],
-      "reference_status": "not_implemented_in_rust_revision",
+      "reference_checks": [
+        "crates/fa-reference/src/standing_oversight.rs::tests::exponential_support_fanout_coarsens_or_spills_without_false_negatives",
+        "crates/fa-reference/src/observation_algebra/rewrites.rs::tests::all_five_registered_laws_certify_with_paired_differential_and_savings"
+      ],
+      "reference_status": "executed_remotely_2026_10_25_pass",
       "reference_scope": "Only the declared small logical case; not production protocol/host correctness.",
       "required_negative_campaigns": [
         "Emit a bare boolean `safe` from a judgment API; must fail to compile or be refused at the serializer.",
@@ -1172,8 +1261,11 @@
       "production_status": "planned",
       "waiver": "forbidden",
       "production_checker": null,
-      "reference_checks": [],
-      "reference_status": "not_implemented_in_rust_revision",
+      "reference_checks": [
+        "crates/fa-reference/src/observation_algebra/cost_accounting.rs::tests::charges_transfer_refinement_pins_reconciliation_and_tracks_cold_attack_denominators",
+        "crates/fa-reference/src/observation_algebra/cost_accounting.rs::tests::unknown_effect_refund_missing_pin_charge_and_refinement_amplification_are_refused"
+      ],
+      "reference_status": "executed_remotely_2026_10_25_pass",
       "reference_scope": "Only the declared small logical case; not production protocol/host correctness.",
       "required_negative_campaigns": [
         "Rehearse a dispatch; assert no permit, no rights movement, no production journal event, no adapter call.",
