@@ -69,7 +69,13 @@ pub(super) fn open(
     config: &Config,
     loaded: &Loaded,
 ) -> Result<(FileOversight, FileHumanReviewer), String> {
-    let (host, human, _) = open_selected_with_checkpoints(config, loaded, &mut |_| Ok(()))?;
+    let (host, human, _) = finish_replay(
+        selected::Cursor::begin_plain(config, loaded)?,
+        &mut |_| Ok(()),
+        |run| run.progress(),
+        |run, done| run.advance(done),
+        |run| run.finish(),
+    )?;
     Ok((host, human))
 }
 

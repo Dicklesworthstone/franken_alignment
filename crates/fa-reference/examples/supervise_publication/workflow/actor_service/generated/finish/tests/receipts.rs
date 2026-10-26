@@ -146,7 +146,10 @@ fn exact_finish_retry_restores_only_its_local_ticket_even_after_deadline_expiry(
     let mut wrong = ActorWire::new(port.clone());
     let mut wire = ActorWire::new(port);
     let poll = encode_command(&Command::Poll { request: 2 }).unwrap();
-    assert!(wire.exchange(&poll).result.is_err());
+    assert!(matches!(
+        wire.exchange(&poll).result,
+        Ok(Knowledge::Withheld { .. })
+    ));
     let bad = encode_command(&Command::Submit {
         request: 2,
         proposal: FileGeneratedTextActorPort::encode_finish(
@@ -159,7 +162,10 @@ fn exact_finish_retry_restores_only_its_local_ticket_even_after_deadline_expiry(
     })
     .unwrap();
     assert!(wrong.exchange(&bad).result.is_err());
-    assert!(wrong.exchange(&poll).result.is_err());
+    assert!(matches!(
+        wrong.exchange(&poll).result,
+        Ok(Knowledge::Withheld { .. })
+    ));
     let exact = encode_command(&Command::Submit {
         request: 2,
         proposal: FileGeneratedTextActorPort::encode_finish(

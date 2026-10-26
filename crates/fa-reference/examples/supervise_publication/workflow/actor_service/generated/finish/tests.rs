@@ -54,7 +54,6 @@ fn recipe(full: bool) -> Loaded {
     let mut r = loaded(false);
     if full {
         r.stream = StreamProfile::new(9, 1, 1, 1, 1).unwrap();
-        r.text.max_output_bytes = 1;
     }
     r
 }

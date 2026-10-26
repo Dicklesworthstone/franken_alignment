@@ -175,7 +175,12 @@ fn evidence(root: &Directory, c: &Config) {
         snapshot(),
         ["alpha", "beta"]
             .into_iter()
-            .map(|m| (m.to_owned(), format!("independent {m}").into_bytes()))
+            .map(|m| {
+                (
+                    m.to_owned(),
+                    format!("review this fixture: {m}").into_bytes(),
+                )
+            })
             .collect(),
     )
     .unwrap();

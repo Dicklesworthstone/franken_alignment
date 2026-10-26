@@ -333,11 +333,7 @@ fn cancellation_and_receipt_tails_keep_executed_or_unknown_effects_and_full_char
         let mut task = prepare(&mut host);
         ready(&mut task, &host);
         let cursor = task.progress().replayed_events;
-        if executed {
-            host.reconcile(host.revision(), 1).unwrap();
-        } else {
-            host.reconcile(host.revision(), 1).unwrap();
-        }
+        host.reconcile(host.revision(), 1).unwrap();
         let state = host.inspect();
         let bytes = disk(&host);
         task.catch_up(&host, host.revision(), cursor, MAX_JOURNAL_EVENTS)

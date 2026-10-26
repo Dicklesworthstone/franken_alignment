@@ -16,15 +16,26 @@ impl Machine {
         spec: &ActionSpec,
         snapshot: &Snapshot,
     ) -> Result<Transition, Error> {
+        let inspection = self.broker.inspect();
         let prepared = self.requests.prepare(
             request,
             spec,
             self.scope,
-            &self.broker.inspect(),
+            &inspection,
             self.broker.stop_receipt().is_some(),
         )?;
         let allocated = prepared.attempt();
-        let result = self.broker.propose(allocated, spec.clone(), snapshot);
+        let result = if self.consistency_request.is_none()
+            && spec
+                .target
+                .is_some_and(|t| t.expected_version != self.endpoint.target().expected_version)
+        {
+            Err(Error::Stale)
+        } else if self.consistency_request.is_none() && spec.units > inspection.ledger.available {
+            Err(Error::Limit)
+        } else {
+            self.broker.propose(allocated, spec.clone(), snapshot)
+        };
         if let Some((attempt, action)) = self.requests.finish(prepared, result) {
             self.actions.insert(attempt, action);
         }

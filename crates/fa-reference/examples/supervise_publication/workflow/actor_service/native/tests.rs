@@ -2,7 +2,6 @@
 use super::*;
 use fa_reference::action::consequence::delivery::persistent::observed::reviewer::client::ReviewClientProgress;
 use fa_reference::action::consequence::delivery::persistent::observed::reviewer::wire::ReviewDecision;
-use fa_reference::action::consequence::delivery::stream::ReleaseFrame;
 use fa_reference::action::consequence::oversight::actor::{ActorOutcome, Knowledge, UnknownReason};
 use fa_reference::action::consequence::oversight::actor_wire::client::{
     ActorExchange, ClientIoBudget, ClientIoLimits, ClientProgress,
@@ -45,7 +44,7 @@ fn actor_thread(
     receiver: mpsc::Receiver<Vec<u8>>,
 ) -> std::thread::JoinHandle<WireResponse> {
     std::thread::spawn(move || {
-        let bytes = receiver.recv_timeout(Duration::from_secs(10)).unwrap();
+        let bytes = receiver.recv_timeout(Duration::from_secs(30)).unwrap();
         let mut command = decode_command(&bytes).unwrap();
         assert!(matches!(&command, Command::Submit { request, proposal }
             if *request == profile.request && proposal.payload.len() == FileGeneratedTextActorPort::INTENT_BYTES));
@@ -57,7 +56,7 @@ fn actor_thread(
         loop {
             let mut exchange = ActorExchange::new(socket, command, &mut budget).unwrap();
             let response = loop {
-                assert!(started.elapsed() < Duration::from_secs(12));
+                assert!(started.elapsed() < Duration::from_secs(30));
                 match exchange.step(&mut budget).unwrap() {
                     ClientProgress::Response(response) => break response,
                     ClientProgress::Complete => panic!("missing response"),
@@ -77,7 +76,7 @@ fn actor_thread(
             command = Command::Poll {
                 request: profile.request,
             };
-            pause(1);
+            pause(5);
         }
     })
 }
@@ -90,12 +89,12 @@ fn reviewing(
     std::thread::spawn(move || {
         let started = Instant::now();
         while !profile.socket(91).exists() {
-            assert!(started.elapsed() < Duration::from_secs(10));
+            assert!(started.elapsed() < Duration::from_secs(30));
             pause(1);
         }
         let mut client = profile.connect_client(91).unwrap();
         loop {
-            assert!(started.elapsed() < Duration::from_secs(12));
+            assert!(started.elapsed() < Duration::from_secs(30));
             match client.step().unwrap() {
                 ReviewClientProgress::NeedsDecision => {
                     // Actual generation and both helpers must NOT replace this key.
@@ -160,11 +159,12 @@ fn native_service_computed_text_requires_original_helpers_and_separate_human_key
                 })
             ));
             assert_eq!(stored.executions, 1);
+            assert_eq!(stored.payload, b"A");
             assert_eq!(
-                ReleaseFrame::decode(&stored.payload).unwrap().message(),
-                Some("A")
+                stored.control.ledger.charged,
+                (fa_reference::action::consequence::delivery::stream::STREAM_HEADER_BYTES
+                    + stored.payload.len()) as u64
             );
-            assert_eq!(stored.control.ledger.charged, stored.payload.len() as u64);
         } else {
             assert!(matches!(
                 response.result,

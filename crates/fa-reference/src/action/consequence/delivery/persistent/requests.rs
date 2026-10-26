@@ -535,16 +535,25 @@ impl Machine {
         spec: &ActionSpec,
         snapshot: &Snapshot,
     ) -> Result<Transition, Error> {
+        let inspection = self.broker.inspect();
         let prepared = self.requests.prepare(
             request,
             spec,
             self.broker.scope,
-            &self.broker.inspect(),
+            &inspection,
             self.broker.stop_receipt().is_some(),
         )?;
-        let result = self
-            .broker
-            .propose(prepared.attempt(), spec.clone(), snapshot);
+        let result = if spec
+            .target
+            .is_some_and(|t| t.expected_version != self.endpoint.target().expected_version)
+        {
+            Err(Error::Stale)
+        } else if spec.units > inspection.ledger.available {
+            Err(Error::Limit)
+        } else {
+            self.broker
+                .propose(prepared.attempt(), spec.clone(), snapshot)
+        };
         if let Some((attempt, action)) = self.requests.finish(prepared, result) {
             self.actions.insert(attempt, action);
         }

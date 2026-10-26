@@ -210,7 +210,22 @@ impl PeerProfile {
         self.check_directory()?;
         #[cfg(target_os = "linux")]
         {
-            let stream = UnixStream::connect(self.socket(request)).map_err(debug)?;
+            let path = self.socket(request);
+            let mut attempts = 0;
+            let stream = loop {
+                match UnixStream::connect(&path) {
+                    Ok(stream) => break stream,
+                    Err(err)
+                        if err.kind() == std::io::ErrorKind::ConnectionRefused
+                            && attempts < 50
+                            && path.exists() =>
+                    {
+                        attempts += 1;
+                        std::thread::sleep(std::time::Duration::from_millis(1));
+                    }
+                    Err(err) => return Err(debug(err)),
+                }
+            };
             let verified =
                 VerifiedReviewerSocket::verify(stream, self.supervisor.policy()?).map_err(debug)?;
             eprintln!("Verified supervisor connection: {:?}", verified.peer());

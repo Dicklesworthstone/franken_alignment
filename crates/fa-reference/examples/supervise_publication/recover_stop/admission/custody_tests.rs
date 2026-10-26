@@ -25,10 +25,16 @@ fn configured(root: &Directory) -> Config {
     c
 }
 fn owner(root: &Directory) -> Config {
-    let c = configured(root);
-    let (mut host, _) = FileOversight::create(&c.store, c.profile.clone()).unwrap();
+    let mut c = configured(root);
+    c.profile = fixture::profile();
+    let (mut host, reviewer) = FileOversight::create(&c.store, c.profile.clone()).unwrap();
     host.enable_recovery_reserve(host.revision(), RecoveryReserve::terminal())
         .unwrap();
+    host.observe_time(host.revision(), ElapsedTick(1)).unwrap();
+    let keys = fixture::ready(&mut host, &reviewer, 1, b"reviewed-effect");
+    fixture::dispatch(&mut host, &keys);
+    drop(keys);
+    drop(reviewer);
     drop(host);
     c
 }

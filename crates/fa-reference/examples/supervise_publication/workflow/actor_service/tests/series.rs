@@ -8,6 +8,7 @@ use fa_reference::action::consequence::delivery::persistent::observed::reviewer:
 use fa_reference::action::consequence::delivery::persistent::observed::reviewer::peer::{
     PeerPolicy as ReviewerPeerPolicy, VerifiedReviewerSocket,
 };
+use fa_reference::action::consequence::oversight::actor::UnknownReason;
 use fa_reference::action::consequence::oversight::actor_wire::WireError;
 
 fn command(c: &Config, request: u64, version: u64, payload: &[u8], units: u64) -> Command {
@@ -52,7 +53,13 @@ fn finish(
     };
     let (mut stream, mut response) = exchange(stream, command, budget);
     let started = Instant::now();
-    while matches!(response.result, Ok(Knowledge::Pending { .. })) {
+    while matches!(
+        response.result,
+        Ok(Knowledge::Pending { .. }
+            | Knowledge::Unknown {
+                reason: UnknownReason::OutcomeUnknown
+            })
+    ) {
         assert!(started.elapsed() < Duration::from_secs(10));
         pause(2);
         (stream, response) = exchange(stream, Command::Poll { request }, budget);
@@ -163,8 +170,8 @@ fn cancellation_during_first_human_wait_does_not_prevent_second_publication() {
     let c = configured(&root);
     evidence(&root, &c);
     let (actor, reviewer) = profiles(&root, &c);
-    let first = command(&c, 7, 1, b"cancel-me", 7);
-    let second = command(&c, 8, 1, b"permitted", 7); // No first effect, so no version increment.
+    let first = command(&c, 7, 1, b"cancel1", 7);
+    let second = command(&c, 8, 1, b"permit2", 7); // No first effect, so no version increment.
     let wait_for_human = reviewer.socket(7);
     let p = actor.clone();
     let peer = std::thread::spawn(move || {
@@ -202,7 +209,7 @@ fn cancellation_during_first_human_wait_does_not_prevent_second_publication() {
     let c = configured(&root);
     let disk = FileOversight::read_publication(&c.store, &c.profile).unwrap();
     assert_eq!(disk.executions, 1);
-    assert_eq!(disk.payload, b"permitted");
+    assert_eq!(disk.payload, b"permit2");
     assert_eq!(disk.control.ledger.charged, 7);
     assert_eq!(disk.control.ledger.reserved, 0);
     assert!(
@@ -223,7 +230,7 @@ fn later_requests_cannot_refill_the_original_cumulative_spending_budget() {
     evidence(&root, &c);
     let (actor, reviewer) = profiles(&root, &c);
     let first = command(&c, 7, 1, b"first", 7);
-    let second = command(&c, 8, 2, b"over-budget", 7);
+    let second = command(&c, 8, 2, b"overcap", 7);
     let p = actor.clone();
     let profile = c.profile.clone();
     let path = c.store.clone();
@@ -414,7 +421,7 @@ fn second_source_failure_neither_reuses_first_capture_nor_refunds_first_publicat
     evidence(&root, &c);
     let (actor, reviewer) = profiles(&root, &c);
     let first = command(&c, 7, 1, b"first", 7);
-    let second = command(&c, 8, 2, b"needs-source", 7);
+    let second = command(&c, 8, 2, b"missing", 7);
     let p = actor.clone();
     let source = root.0.join("evidence.json");
     let stop_profile = reviewer.clone();

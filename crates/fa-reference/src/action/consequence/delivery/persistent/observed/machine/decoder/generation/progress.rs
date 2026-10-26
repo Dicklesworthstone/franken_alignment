@@ -58,6 +58,9 @@ impl Machine {
         if state.paused || !self.clock_ready {
             return Err(Error::Incomplete);
         }
+        if self.file_source.is_some() {
+            self.broker.capture_policy_state()?;
+        }
         let history = &state.generations;
         let command = history.pending.as_ref().ok_or(Error::Incomplete)?;
         if command.id() != id {

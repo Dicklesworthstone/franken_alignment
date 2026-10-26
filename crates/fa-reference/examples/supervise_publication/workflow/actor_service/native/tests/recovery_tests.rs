@@ -40,6 +40,7 @@ fn seed(config: &mut Config, native: &Inputs, begin: bool, steps: u64) {
         );
     }
     assert_eq!(host.inspect().executions, 0);
+    set_helper_epoch(config, 1);
     // Dropping models a stopped process at an acknowledged cut, NOT a Stop
     // consequence. Ordinary service failure deliberately records Stop instead.
 }
@@ -109,12 +110,7 @@ fn native_recovery_continues_partial_and_complete_intents_with_independent_human
                         ..
                     })
                 ));
-                assert_eq!(
-                    ReleaseFrame::decode(&after.publication.payload)
-                        .unwrap()
-                        .message(),
-                    Some("A")
-                );
+                assert_eq!(after.publication.payload, b"A");
             } else {
                 assert!(matches!(
                     response.result,

@@ -146,13 +146,16 @@ fn explicit_drain_preserves_original_executed_and_expired_outcomes_after_clock_f
         } else {
             assert!(outcome.unwrap_err().contains("unresolved obligations"));
             assert_eq!(
+                value.get("unresolved").unwrap().as_array().unwrap().len(),
+                1
+            );
+            assert!(
                 value
                     .get("irrecoverable")
                     .unwrap()
                     .as_array()
                     .unwrap()
-                    .len(),
-                1
+                    .is_empty()
             );
         }
     }

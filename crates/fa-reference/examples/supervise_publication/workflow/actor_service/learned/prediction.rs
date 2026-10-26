@@ -28,6 +28,28 @@ pub(super) struct Session {
     message: Option<Message>,
 }
 
+pub(super) fn check_live(
+    host: &mut FileOversight,
+    session: Option<&mut Session>,
+) -> Result<(), String> {
+    check(host, session.as_deref())?;
+    if let Some(session) = session
+        && let Some(deadline) = session.message.as_ref().map(|message| match message {
+            Message::Raw(handle) => handle.deadline(),
+            Message::Owned(handle) => handle.deadline(),
+        })
+        && host
+            .inspect()
+            .control
+            .ledger
+            .elapsed
+            .is_some_and(|now| now >= deadline.expires_at)
+    {
+        session.advance_quantum(host)?;
+    }
+    Ok(())
+}
+
 pub(super) fn check(host: &FileOversight, session: Option<&Session>) -> Result<(), String> {
     if host.action_consistency_required() != session.is_some() {
         return Err(

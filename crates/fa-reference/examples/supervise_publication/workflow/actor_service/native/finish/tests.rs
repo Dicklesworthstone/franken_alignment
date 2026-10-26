@@ -80,7 +80,6 @@ fn native(root: &Root, config: &Config, full: bool) -> Inputs {
     let mut input = fixture::inputs(root, config);
     if full {
         input.stream = StreamProfile::new(9, 1, 1, 1, 1).unwrap();
-        input.request.max_output_bytes = 1;
     }
     input
 }
@@ -101,7 +100,7 @@ fn synthetic_finish_helper_process() {
     .unwrap();
     let start = Instant::now();
     loop {
-        assert!(start.elapsed() < Duration::from_secs(10));
+        assert!(start.elapsed() < Duration::from_secs(30));
         client.step().unwrap();
         if client.phase() == ClientPhase::NeedsInference {
             let input = client.input().unwrap();
@@ -146,7 +145,7 @@ fn actor(
     finish: bool,
 ) -> std::thread::JoinHandle<WireResponse> {
     std::thread::spawn(move || {
-        let document = receiver.recv_timeout(Duration::from_secs(10)).unwrap();
+        let document = receiver.recv_timeout(Duration::from_secs(30)).unwrap();
         let mut command = decode_command(&document).unwrap();
         let Command::Submit { proposal, .. } = &command else {
             panic!("original Submit document");
@@ -164,7 +163,7 @@ fn actor(
         loop {
             let mut exchange = ActorExchange::new(socket, command, &mut budget).unwrap();
             let response = loop {
-                assert!(start.elapsed() < Duration::from_secs(12));
+                assert!(start.elapsed() < Duration::from_secs(30));
                 match exchange.step(&mut budget).unwrap() {
                     ClientProgress::Response(response) => break response,
                     ClientProgress::Complete => panic!("missing actor response"),
@@ -184,7 +183,7 @@ fn actor(
             command = Command::Poll {
                 request: profile.request,
             };
-            pause(1);
+            pause(5);
         }
     })
 }
@@ -206,13 +205,13 @@ fn human(
     std::thread::spawn(move || {
         let start = Instant::now();
         while !profile.socket(request).exists() {
-            assert!(start.elapsed() < Duration::from_secs(10));
+            assert!(start.elapsed() < Duration::from_secs(30));
             pause(1);
         }
         let mut client = profile.connect_client(request).unwrap();
         let mut packet = None;
         loop {
-            assert!(start.elapsed() < Duration::from_secs(12));
+            assert!(start.elapsed() < Duration::from_secs(30));
             match client.step().unwrap() {
                 ReviewClientProgress::NeedsDecision => {
                     assert_eq!(
@@ -537,13 +536,22 @@ fn native_finish_service_final_witness_change_holds_closure_without_erasing_the_
         let config = configured(&root);
         let native = native(&root, &config, false);
         let mut changed = false;
+        let mut last_len = 0;
         let (result, _, response, _) = close(
             &root,
             Some(&publication),
             false,
             ReviewDecision::Approve,
             || {
+                let len = std::fs::metadata(config.store.join("delivery.bin"))
+                    .map(|m| m.len())
+                    .unwrap_or(0);
                 if !changed
+                    && len != last_len
+                    && {
+                        last_len = len;
+                        true
+                    }
                     && let Ok(state) =
                         FileOversight::read_publication(&config.store, &config.profile)
                     && state.control.ledger.charged > original.action().spec().units

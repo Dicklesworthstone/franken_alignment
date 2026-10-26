@@ -3,7 +3,6 @@
 use super::super::*;
 use fa_reference::action::consequence::delivery::persistent::observed::reviewer::client::ReviewClientProgress;
 use fa_reference::action::consequence::delivery::persistent::observed::reviewer::wire::ReviewDecision;
-use fa_reference::action::consequence::delivery::stream::ReleaseFrame;
 use fa_reference::action::consequence::oversight::actor::{ActorOutcome, Knowledge, UnknownReason};
 use fa_reference::action::consequence::oversight::actor_wire::client::{
     ActorExchange, ClientIoBudget, ClientIoLimits, ClientProgress,
@@ -214,12 +213,7 @@ fn native_joint_requalification_resumes_original_work_but_never_replaces_the_hum
             assert_eq!(after.publication.executions, u64::from(approve));
             assert_eq!(after.publication.control.ledger.reserved, 0);
             if approve {
-                assert_eq!(
-                    ReleaseFrame::decode(&after.publication.payload)
-                        .unwrap()
-                        .message(),
-                    Some("A")
-                );
+                assert_eq!(after.publication.payload, b"A");
             } else {
                 assert!(after.publication.payload.is_empty());
                 assert_eq!(after.publication.control.ledger.charged, 0);

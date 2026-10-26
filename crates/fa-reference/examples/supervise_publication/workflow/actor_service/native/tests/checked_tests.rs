@@ -132,6 +132,7 @@ fn seed(config: &mut Config, native: &Inputs, publication: &PublicationProfile, 
             .unwrap();
     }
     assert_eq!(host.inspect().executions, 0);
+    set_helper_epoch(config, 1);
 }
 fn executed(response: &WireResponse) -> bool {
     matches!(
@@ -200,15 +201,11 @@ fn native_checked_create_and_recovery_keep_producer_witnesses_and_independent_hu
             assert_eq!(image.publication.executions, u64::from(approve));
             assert_eq!(image.publication.control.ledger.reserved, 0);
             if approve {
-                assert_eq!(
-                    ReleaseFrame::decode(&image.publication.payload)
-                        .unwrap()
-                        .message(),
-                    Some("A")
-                );
+                assert_eq!(image.publication.payload, b"A");
                 assert_eq!(
                     image.publication.control.ledger.charged,
-                    image.publication.payload.len() as u64
+                    (fa_reference::action::consequence::delivery::stream::STREAM_HEADER_BYTES
+                        + image.publication.payload.len()) as u64
                 );
             } else {
                 assert!(image.publication.payload.is_empty());
@@ -245,6 +242,7 @@ fn native_checked_final_publication_rejects_a_late_phantom_but_preserves_disjoin
                 sender: Some(sender),
             };
             let mut changed = false;
+            let mut last_len = 0;
             let result = serve_selected(
                 config,
                 &actor,
@@ -252,7 +250,15 @@ fn native_checked_final_publication_rejects_a_late_phantom_but_preserves_disjoin
                 native,
                 (false, Some(&publication)),
                 || {
+                    let len = std::fs::metadata(store.join("delivery.bin"))
+                        .map(|m| m.len())
+                        .unwrap_or(0);
                     if !changed
+                        && len != last_len
+                        && {
+                            last_len = len;
+                            true
+                        }
                         && let Ok(image) = FileOversight::read_publication(&store, &bootstrap)
                         && image.control.ledger.charged != 0
                         && image.executions == 0
@@ -283,7 +289,8 @@ fn native_checked_final_publication_rejects_a_late_phantom_but_preserves_disjoin
                 if phantom {
                     0
                 } else {
-                    image.payload.len() as u64
+                    (fa_reference::action::consequence::delivery::stream::STREAM_HEADER_BYTES
+                        + image.payload.len()) as u64
                 }
             );
             if phantom {

@@ -251,10 +251,7 @@ fn exact_schedule_capacity_accepts_63_terminal_predecessors_and_refuses_64() {
     let payload = vec![b'x'; 101]; // More than this ORIGINAL authority's 100 units.
     let mut completed = Vec::new();
     for key in 1..=63 {
-        let mut command = f.submit(key, &payload);
-        if let Command::Submit { proposal, .. } = &mut command {
-            proposal.target.object = 999;
-        }
+        let command = f.submit(key, &payload);
         exchange(&mut f, command, key, &completed, true, &calls);
         assert!(matches!(
             f.driver

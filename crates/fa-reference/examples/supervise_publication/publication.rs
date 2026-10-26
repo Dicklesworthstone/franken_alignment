@@ -321,11 +321,25 @@ impl PublicationProfile {
         if host.publication_validation_profile().map_err(debug)? != Some(self.limits) {
             return Err("stored publication limits differ from the explicit profile".into());
         }
-        if host
-            .publication_snapshot_fallback_enabled()
-            .map_err(debug)?
-            != self.snapshot_fallback
-        {
+        let stored_fallback =
+            if self.feed.is_some() {
+                host.publication_snapshot_fallback_enabled()
+                    .map_err(debug)?
+            } else {
+                match host.publication_change_status() {
+                Err(fa_reference::action::consequence::delivery::persistent::JournalError::Contract(
+                    fa_reference::Error::Incomplete,
+                )) => false,
+                Ok(_) => {
+                    return Err(
+                        "stored publication history policy differs from the explicit profile"
+                            .into(),
+                    );
+                }
+                Err(error) => return Err(debug(error)),
+            }
+            };
+        if stored_fallback != self.snapshot_fallback {
             return Err(
                 "stored publication history policy differs from the explicit profile".into(),
             );
@@ -356,6 +370,19 @@ impl PublicationProfile {
         let reader = host
             .publication_producer_reader(attempt, path, *profile)
             .map_err(debug)?;
+        let original = reader.read_capture().map_err(debug)?;
+        if self.requests.is_empty() {
+            if original.inputs().opaque().is_none() {
+                return Err(
+                    "whole-input supervision requires the original opaque input view (Incomplete)"
+                        .into(),
+                );
+            }
+        } else if original.inputs().structured().is_none() {
+            return Err(
+                "checked supervision requires the original structured witness image".into(),
+            );
+        }
         // Profile parsing fixes the recipe; native binding checks the actual
         // original image (including mandatory opaque input for an empty recipe),
         // stages catch-up first, and never installs this image as fresh evidence.
@@ -406,7 +433,8 @@ impl PublicationProfile {
         if self.requests.is_empty() {
             if original.inputs().opaque().is_none() {
                 return Err(
-                    "whole-input supervision requires the original opaque input view".into(),
+                    "whole-input supervision requires the original opaque input view (Incomplete)"
+                        .into(),
                 );
             }
         } else if original.inputs().structured().is_none() {

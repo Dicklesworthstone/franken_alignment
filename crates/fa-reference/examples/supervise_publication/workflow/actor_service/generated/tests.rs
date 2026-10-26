@@ -96,10 +96,7 @@ fn generated_publication_computes_original_text_then_requires_independent_human_
         assert_eq!(disk.control.ledger.reserved, 0);
         if decision == ReviewDecision::Approve {
             assert_eq!(disk.executions, 1);
-            assert_eq!(
-                ReleaseFrame::decode(&disk.payload).unwrap().message(),
-                Some("A")
-            );
+            assert_eq!(disk.payload, b"A");
             assert_eq!(
                 disk.control.ledger.charged,
                 packet.action().spec().payload.len() as u64

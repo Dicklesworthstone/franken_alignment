@@ -72,6 +72,10 @@ impl Cursor {
                 .map(Self::Owned)
                 .map_err(debug);
         }
+        Self::begin_plain(config, loaded)
+    }
+
+    pub(super) fn begin_plain(config: &Config, loaded: &Loaded) -> Result<Self, String> {
         let expected = requirements(config, loaded);
         let run = match loaded.recovery_anchor.as_ref() {
             Some(anchor) => FileOversight::begin_open_guarded_anchored_with_learned_generation(

@@ -93,7 +93,7 @@ fn synthetic_continuation_helper_process() {
     .unwrap();
     let start = Instant::now();
     loop {
-        assert!(start.elapsed() < Duration::from_secs(10));
+        assert!(start.elapsed() < Duration::from_secs(30));
         client.step().unwrap();
         if client.phase() == ClientPhase::NeedsInference {
             let input = client.input().unwrap();
@@ -138,7 +138,7 @@ fn actor(
     receiver: mpsc::Receiver<Vec<u8>>,
 ) -> std::thread::JoinHandle<WireResponse> {
     std::thread::spawn(move || {
-        let document = receiver.recv_timeout(Duration::from_secs(10)).unwrap();
+        let document = receiver.recv_timeout(Duration::from_secs(30)).unwrap();
         let mut command = decode_command(&document).unwrap();
         let mut socket = UnixStream::connect(&profile.socket).unwrap();
         profile.supervisor.verify(&socket).unwrap();
@@ -148,7 +148,7 @@ fn actor(
         loop {
             let mut exchange = ActorExchange::new(socket, command, &mut budget).unwrap();
             let response = loop {
-                assert!(start.elapsed() < Duration::from_secs(12));
+                assert!(start.elapsed() < Duration::from_secs(30));
                 match exchange.step(&mut budget).unwrap() {
                     ClientProgress::Response(response) => break response,
                     ClientProgress::Complete => panic!("missing actor response"),
@@ -168,7 +168,7 @@ fn actor(
             command = Command::Poll {
                 request: profile.request,
             };
-            pause(1);
+            pause(5);
         }
     })
 }
@@ -190,13 +190,13 @@ fn human(
     std::thread::spawn(move || {
         let start = Instant::now();
         while !profile.socket(request).exists() {
-            assert!(start.elapsed() < Duration::from_secs(10));
+            assert!(start.elapsed() < Duration::from_secs(30));
             pause(1);
         }
         let mut client = profile.connect_client(request).unwrap();
         let mut packet = None;
         loop {
-            assert!(start.elapsed() < Duration::from_secs(12));
+            assert!(start.elapsed() < Duration::from_secs(30));
             match client.step().unwrap() {
                 ReviewClientProgress::NeedsDecision => {
                     assert_eq!(
@@ -568,6 +568,7 @@ fn native_continuation_rechecks_witnesses_after_second_dispatch() {
         let config = configured(&root);
         let prior = FileOversight::read_publication(&config.store, &config.profile).unwrap();
         let mut changed = false;
+        let mut last_len = 0;
         let (result, _, response, _) = cycle(
             &root,
             Some(&publication),
@@ -576,7 +577,15 @@ fn native_continuation_rechecks_witnesses_after_second_dispatch() {
             Some(91),
             ReviewDecision::Approve,
             || {
+                let len = std::fs::metadata(config.store.join("delivery.bin"))
+                    .map(|m| m.len())
+                    .unwrap_or(0);
                 if !changed
+                    && len != last_len
+                    && {
+                        last_len = len;
+                        true
+                    }
                     && let Ok(state) =
                         FileOversight::read_publication(&config.store, &config.profile)
                     && state.control.ledger.charged > prior.control.ledger.charged

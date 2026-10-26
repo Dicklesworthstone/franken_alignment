@@ -145,15 +145,11 @@ fn native_tied_checked_creation_and_recovery_still_require_independent_human_app
             assert_eq!(image.publication.executions, u64::from(approve));
             assert_eq!(image.publication.control.ledger.reserved, 0);
             if approve {
-                assert_eq!(
-                    ReleaseFrame::decode(&image.publication.payload)
-                        .unwrap()
-                        .message(),
-                    Some("A")
-                );
+                assert_eq!(image.publication.payload, b"A");
                 assert_eq!(
                     image.publication.control.ledger.charged,
-                    image.publication.payload.len() as u64
+                    (fa_reference::action::consequence::delivery::stream::STREAM_HEADER_BYTES
+                        + image.publication.payload.len()) as u64
                 );
             } else {
                 assert!(image.publication.payload.is_empty());

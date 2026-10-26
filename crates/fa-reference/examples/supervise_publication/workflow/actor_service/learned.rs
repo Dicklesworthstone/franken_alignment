@@ -515,9 +515,9 @@ fn generate_selected<F>(
 where
     F: FnMut() -> ElapsedTick,
 {
-    prediction::check(
-        &*driver.supervisor().host().map_err(debug)?,
-        prediction.as_deref(),
+    prediction::check_live(
+        &mut *driver.supervisor_mut().host_mut().map_err(debug)?,
+        prediction.as_deref_mut(),
     )?;
     if control.checkpoint(driver, reviewer, deadline, time)? {
         return Ok(false);

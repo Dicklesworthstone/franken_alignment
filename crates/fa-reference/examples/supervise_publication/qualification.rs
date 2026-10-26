@@ -26,6 +26,7 @@ pub fn take_option(args: &mut Vec<String>) -> Result<Option<PathBuf>, String> {
         Some("submit") => 3,
         Some("submit-checked" | "serve-open" | "create-learned-generated") => 4,
         Some("proposal-next" | "serve-open-checked") => 5,
+        Some("resume") if args.get(3).map(String::as_str) == Some("--guarded") => 5,
         _ => return Err("credibility activation requires submit, submit-checked, proposal-next, serve-open, serve-open-checked or learned recovery".into()),
     };
     if index < positional

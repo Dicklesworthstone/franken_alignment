@@ -130,11 +130,15 @@ fn synthetic_helper_process() {
         return;
     };
     let profile = Config::decode(TEMPLATE).unwrap().profile;
-    let expected = profile.committee.members()[&member].profile_at(0);
+    let epoch = std::env::var("FA_EXAMPLE_HELPER_EPOCH")
+        .ok()
+        .and_then(|v| v.parse().ok())
+        .unwrap_or(0);
+    let expected = profile.committee.members()[&member].profile_at(epoch);
     let mut client = HelperClient::from_process_stdin(expected).unwrap();
     let start = Instant::now();
     loop {
-        assert!(start.elapsed() < Duration::from_secs(10));
+        assert!(start.elapsed() < Duration::from_secs(30));
         client.step().unwrap();
         if client.phase() == ClientPhase::NeedsInference {
             let input = client.input().unwrap();

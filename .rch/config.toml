@@ -1,11 +1,11 @@
 # rch transfer settings for franken_alignment (a project layer REPLACES the
 # user's exclude list).
 #
-# Same excludes as the fleet default, minus `**/*.safetensors`: fa-reference
-# tracks a 2.8 KB include_bytes! fixture (crates/fa-reference/tests/fixtures/
-# decoder_mixed.safetensors). The user-level weight exclude (meant for multi-GB
-# checkpoints in other repos) kept it off workers, so
-# `cargo check --all-targets` failed with "couldn't read" on every rch worker.
+# Same excludes as the fleet default, minus `**/*.safetensors` and `coverage/`:
+# - fa-reference tracks a 2.8 KB include_bytes! fixture
+#   (crates/fa-reference/tests/fixtures/decoder_mixed.safetensors).
+# - fa-reference defines module directory crates/fa-reference/src/perimeter/coverage/
+#   (containing synthesis.rs), which unanchored `coverage/` excluded from RCH sync.
 [transfer]
 exclude_patterns = [
     "target/",
@@ -51,7 +51,6 @@ exclude_patterns = [
     "**/*.[nN][pP][zZ]",
     "**/*.[gG][gG][uU][fF]",
     "**/*.[gG][gG][mM][lL]",
-    "coverage/",
     ".nyc_output/",
     "perf.data",
     "perf.data.old",

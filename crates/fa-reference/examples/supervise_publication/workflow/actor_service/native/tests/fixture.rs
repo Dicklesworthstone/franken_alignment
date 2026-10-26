@@ -51,29 +51,8 @@ pub(super) fn configured(root: &Root) -> Config {
     .unwrap();
     config.timing.runtime_ms = 15000;
     config.timing.poll_ms = 1;
-    config.timing.cleanup_ms = 2000;
-    config.programs = ["alpha", "beta"]
-        .into_iter()
-        .map(|name| {
-            (
-                name.to_owned(),
-                HelperProgram::new(
-                    std::env::current_exe().unwrap(),
-                    root.0.clone(),
-                    vec![
-                        "--exact".into(),
-                        "tests::synthetic_helper_process".into(),
-                        "--nocapture".into(),
-                    ],
-                    BTreeMap::from([(
-                        OsString::from("FA_EXAMPLE_HELPER_MEMBER"),
-                        OsString::from(name),
-                    )]),
-                )
-                .unwrap(),
-            )
-        })
-        .collect();
+    config.timing.cleanup_ms = 10000;
+    set_helper_epoch(&mut config, 0);
     let evidence = EvidenceSnapshot::new(
         EvidenceIdentity {
             scope: config.profile.delivery.scope,
@@ -99,6 +78,37 @@ pub(super) fn configured(root: &Root) -> Config {
     std::fs::write(root.0.join("evidence.json"), evidence.encode()).unwrap();
     config
 }
+pub(super) fn set_helper_epoch(config: &mut Config, epoch: u64) {
+    let dir = config.store.parent().unwrap().to_path_buf();
+    config.programs = ["alpha", "beta"]
+        .into_iter()
+        .map(|name| {
+            (
+                name.to_owned(),
+                HelperProgram::new(
+                    std::env::current_exe().unwrap(),
+                    dir.clone(),
+                    vec![
+                        "--exact".into(),
+                        "tests::synthetic_helper_process".into(),
+                        "--nocapture".into(),
+                    ],
+                    BTreeMap::from([
+                        (
+                            OsString::from("FA_EXAMPLE_HELPER_MEMBER"),
+                            OsString::from(name),
+                        ),
+                        (
+                            OsString::from("FA_EXAMPLE_HELPER_EPOCH"),
+                            OsString::from(epoch.to_string()),
+                        ),
+                    ]),
+                )
+                .unwrap(),
+            )
+        })
+        .collect();
+}
 pub(super) fn profiles(root: &Root, config: &Config) -> (Profile, PeerProfile) {
     let (socket, _client) = UnixStream::pair().unwrap();
     let id = PeerCredentials::observe(&socket).unwrap();
@@ -121,7 +131,7 @@ pub(super) fn profiles(root: &Root, config: &Config) -> (Profile, PeerProfile) {
     );
     let reviewer = format!(
         r#"{{"version":1,"clock":"unix_milliseconds","scope":{scope},"reviewer_id":77,
-      "socket_directory":"{}","supervisor":{identity},"reviewer":{identity},"candidate_limit":2,"runtime_ms":5000,"poll_ms":1}}"#,
+      "socket_directory":"{}","supervisor":{identity},"reviewer":{identity},"candidate_limit":2,"runtime_ms":15000,"poll_ms":1}}"#,
         root.0.display()
     );
     (

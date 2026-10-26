@@ -28,6 +28,15 @@ impl Directory {
             std::process::id(),
             NEXT.fetch_add(1, Ordering::Relaxed)
         ));
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::DirBuilderExt;
+            std::fs::DirBuilder::new()
+                .mode(0o750)
+                .create(&root)
+                .unwrap();
+        }
+        #[cfg(not(unix))]
         std::fs::create_dir(&root).unwrap();
         Self(root)
     }

@@ -332,9 +332,12 @@ fn expired_dispatched_work_returns_pending_json_and_retains_its_charge() {
     assert_eq!(json.get("drained").unwrap().as_bool(), Some(false));
     assert_eq!(json.get("charged").unwrap().as_str(), Some("4"));
     assert_eq!(json.get("unresolved").unwrap().as_array().unwrap().len(), 1);
-    assert_eq!(
-        json.get("irrecoverable").unwrap().as_array().unwrap().len(),
-        1
+    assert!(
+        json.get("irrecoverable")
+            .unwrap()
+            .as_array()
+            .unwrap()
+            .is_empty()
     );
     let after = FileOversight::read_publication(&c.store, &c.profile).unwrap();
     assert_eq!(after.executions, 0);

@@ -271,7 +271,10 @@ fn exact_source_retry_restores_only_a_local_ticket_without_a_journal_transition(
     let mut refused = ActorWire::new(port.clone());
     let mut wire = ActorWire::new(port);
     let poll = encode_command(&Command::Poll { request: 1 }).unwrap();
-    assert!(wire.exchange(&poll).result.is_err()); // A naked numeric ID is not a ticket.
+    assert!(matches!(
+        wire.exchange(&poll).result,
+        Ok(Knowledge::Withheld { .. })
+    )); // A naked numeric ID is not a ticket.
     let mut wrong = source.clone();
     wrong.generation += 1;
     let wrong = encode_command(&Command::Submit {
@@ -280,7 +283,10 @@ fn exact_source_retry_restores_only_a_local_ticket_without_a_journal_transition(
     })
     .unwrap();
     assert!(refused.exchange(&wrong).result.is_err());
-    assert!(refused.exchange(&poll).result.is_err());
+    assert!(matches!(
+        refused.exchange(&poll).result,
+        Ok(Knowledge::Withheld { .. })
+    ));
     let original = encode_command(&Command::Submit {
         request: 1,
         proposal: FileGeneratedTextActorPort::encode_message(&source).unwrap(),
