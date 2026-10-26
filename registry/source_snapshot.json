@@ -10758,8 +10758,8 @@
     },
     {
       "path": "registry/invariants.json",
-      "bytes": 72755,
-      "sha256": "cea3278b4cf2d8f204dc0fb8f41f7dc990178d4628c355f9e80cd0a00da4255e"
+      "bytes": 73049,
+      "sha256": "28a2c1c086704d2b5610d9e15ccdd10eaa75656efb38672ffe692b62d1b1264a"
     },
     {
       "path": "registry/operation_costs.json",

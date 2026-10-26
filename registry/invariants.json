@@ -898,8 +898,10 @@
       "production_status": "planned",
       "waiver": "forbidden",
       "production_checker": null,
-      "reference_checks": [],
-      "reference_status": "not_implemented_in_rust_revision",
+      "reference_checks": [
+        "crates/fa-reference/src/governance_assurance.rs::tests::assurance_profile_doctor_and_witness_cached_precheck_enforce_all_boundaries"
+      ],
+      "reference_status": "executed_remotely_2026_10_25_pass",
       "reference_scope": "Only the declared small logical case; not production protocol/host correctness.",
       "required_negative_campaigns": [
         "Activate a foreign backend only on one native target."
@@ -923,8 +925,10 @@
       "production_status": "planned",
       "waiver": "forbidden",
       "production_checker": null,
-      "reference_checks": [],
-      "reference_status": "not_implemented_in_rust_revision",
+      "reference_checks": [
+        "crates/fa-reference/src/governance_assurance.rs::tests::control_receipts_verifier_overhead_and_graduated_autonomy_fail_closed"
+      ],
+      "reference_status": "executed_remotely_2026_10_25_pass",
       "reference_scope": "Only the declared small logical case; not production protocol/host correctness.",
       "required_negative_campaigns": [
         "Attempt release with a dry-run or missing-target receipt."
