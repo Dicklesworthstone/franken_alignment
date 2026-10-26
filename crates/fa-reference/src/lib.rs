@@ -26,11 +26,14 @@
 
 pub mod action;
 pub mod address_resolver;
+pub mod adversarial_vertical_slice;
 pub mod canonical_json;
+pub mod elicitation_signatures_manifold;
 pub mod event_journal;
 pub mod evidence_view;
 pub mod explain_affordances;
 pub mod full_input;
+pub mod governance_assurance;
 pub mod history;
 pub mod knowledge_surface;
 pub mod observation_algebra;

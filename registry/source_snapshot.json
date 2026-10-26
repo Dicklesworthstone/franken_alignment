@@ -5757,6 +5757,11 @@
       "sha256": "ef2916694678adf967ce960b661b24d2a4094f1fde5d6b0b412ce4a49d033c02"
     },
     {
+      "path": "crates/fa-reference/src/adversarial_vertical_slice.rs",
+      "bytes": 23067,
+      "sha256": "07b219f249e6b2bdf0de1481a1eb0691f3e94df0fef984475b7f6d31cce372ac"
+    },
+    {
       "path": "crates/fa-reference/src/bin/fa-native-helper.rs",
       "bytes": 983,
       "sha256": "ea45c66e63088021ef48801073570cd0e88a12f10ba1aeccbcfb760b7957870d"
@@ -5797,6 +5802,11 @@
       "sha256": "c5745e1a585030e132cb45e7a5206c8fc967dfc069f13f9ed7b269cc42b1b073"
     },
     {
+      "path": "crates/fa-reference/src/elicitation_signatures_manifold.rs",
+      "bytes": 37496,
+      "sha256": "69227e3d4d3d332aef98ed3e567f9d7ccc8d8c18e3aedf4bce90bde30257285f"
+    },
+    {
       "path": "crates/fa-reference/src/event_journal.rs",
       "bytes": 37015,
       "sha256": "f9aeec247d7281a9e9173e6c0e1121070849621d8390cde4783746327f25a670"
@@ -5817,6 +5827,11 @@
       "sha256": "f184ec899d03963c730ce67fafaf7d14c2e0bce0dcb9dc95fc6584e8e9f72d45"
     },
     {
+      "path": "crates/fa-reference/src/governance_assurance.rs",
+      "bytes": 40784,
+      "sha256": "8745302116e5838a65f2df033a105a7aed0589172c7cf6dc46502a859a761723"
+    },
+    {
       "path": "crates/fa-reference/src/history.rs",
       "bytes": 28236,
       "sha256": "7217034b4a328121184a73e2bacb65cf217c47a13cb2e8ea05f0d6feb6632a66"
@@ -5828,8 +5843,8 @@
     },
     {
       "path": "crates/fa-reference/src/lib.rs",
-      "bytes": 28576,
-      "sha256": "2503dafb5d894187fc1817d37e7c17f256e886f6b33d6ecf1341022cb6fc0fec"
+      "bytes": 28683,
+      "sha256": "f1e5c7a540846def1fc7c70f7b6fd8bb5f126e0320791fbd606239efb5fc07fd"
     },
     {
       "path": "crates/fa-reference/src/observation_algebra.rs",
@@ -10743,8 +10758,8 @@
     },
     {
       "path": "registry/invariants.json",
-      "bytes": 71363,
-      "sha256": "2594b81ebda4b280537ec94a5d3c6b6f8fc8f00c9b69004d525571fa560d7c34"
+      "bytes": 72755,
+      "sha256": "cea3278b4cf2d8f204dc0fb8f41f7dc990178d4628c355f9e80cd0a00da4255e"
     },
     {
       "path": "registry/operation_costs.json",

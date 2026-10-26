@@ -998,7 +998,9 @@
         "crates/fa-reference/src/reducer.rs::tests::same_cohort_max_weights_clip_without_denominator_overflow",
         "crates/fa-reference/src/action/consequence/oversight/credibility.rs::tests::quiet_helper_cannot_gain_influence_from_false_alarm_perfection",
         "crates/fa-reference/src/action/consequence/oversight/credibility.rs::tests::false_stop_budget_persists_across_policy_generations",
-        "crates/fa-reference/src/action/consequence/congress/credibility.rs::tests::independent_truth_rewards_early_dissent_not_early_false_holds"
+        "crates/fa-reference/src/action/consequence/congress/credibility.rs::tests::independent_truth_rewards_early_dissent_not_early_false_holds",
+        "crates/fa-reference/src/governance_assurance.rs::tests::risk_theater_batch_oracle_equality_and_attack_capsule_isolation",
+        "crates/fa-reference/src/adversarial_vertical_slice.rs::tests::helper_hunting_h16_and_evaluator_governed_mitigation_work"
       ],
       "reference_status": "executed_remotely_2026_09_07_epoch3",
       "reference_scope": "Only per-member/cohort empirical influence caps and caller-trusted exact disqualification are modeled. Floor-proportional cohort clipping discards fractional remainder and grants no authority. Helper selection, attack-conditioned metrics, andon budgets, credibility persistence and rotation remain unimplemented.",
@@ -1074,7 +1076,10 @@
         "crates/fa-reference/src/lib.rs::tests::reset_overflow_is_before_mutation",
         "crates/fa-reference/src/action/consequence.rs::tests::reset_requires_narrowing",
         "crates/fa-reference/src/action/consequence/gate/containment.rs::tests::reset_exhaustion_does_not_publish_partial_accounting_or_actor_state",
-        "crates/fa-reference/src/action/consequence/gate/containment/session/policy/controller.rs::tests::reset_rechecks_new_work_and_never_rolls_policy_back"
+        "crates/fa-reference/src/action/consequence/gate/containment/session/policy/controller.rs::tests::reset_rechecks_new_work_and_never_rolls_policy_back",
+        "crates/fa-reference/src/elicitation_signatures_manifold.rs::tests::escalation_reports_and_formal_rights_invariants_hold",
+        "crates/fa-reference/src/adversarial_vertical_slice.rs::tests::rewind_h17_and_multi_party_congress_enforce_isolation_and_caps",
+        "crates/fa-reference/src/adversarial_vertical_slice.rs::tests::live_canaries_h21_and_founding_vertical_slice_e2e_succeed"
       ],
       "reference_status": "executed_remotely_2026_09_07_epoch3",
       "reference_scope": "Bounded in-memory rights arithmetic and monotonic incident count only. No actor restore, persistent counter, escalation threshold, narrowed-authority transition or production-containment claim.",
@@ -1111,7 +1116,10 @@
       "production_checker": null,
       "reference_checks": [
         "crates/fa-reference/src/action/consequence/activation/identity.rs::tests::passports_bind_every_manifest_component_and_unique_anchor",
-        "crates/fa-reference/src/action/consequence/activation/identity.rs::tests::inclusive_bounds_allow_registered_drift_but_not_an_average_that_hides_an_outlier"
+        "crates/fa-reference/src/action/consequence/activation/identity.rs::tests::inclusive_bounds_allow_registered_drift_but_not_an_average_that_hides_an_outlier",
+        "crates/fa-reference/src/elicitation_signatures_manifold.rs::tests::elicitation_corpus_enforces_sandbox_isolation_and_partition_immutability",
+        "crates/fa-reference/src/elicitation_signatures_manifold.rs::tests::signature_library_refuses_topic_lists_stale_tripwires_and_contamination",
+        "crates/fa-reference/src/elicitation_signatures_manifold.rs::tests::manifold_premise_h15_evaluates_id_and_triggers_kill_criterion_on_failure"
       ],
       "reference_status": "executed_remotely_2026_10_25_pass",
       "reference_scope": "Only the declared small logical case; not production protocol/host correctness.",
@@ -1143,7 +1151,8 @@
       "production_checker": null,
       "reference_checks": [
         "crates/fa-reference/src/action.rs::tests::exhausted_epoch_refuses_without_restoring_an_old_floor",
-        "crates/fa-reference/src/action/consequence/gate.rs::tests::narrowing_intersects_and_cancels_outside_undispatched_attempts"
+        "crates/fa-reference/src/action/consequence/gate.rs::tests::narrowing_intersects_and_cancels_outside_undispatched_attempts",
+        "crates/fa-reference/src/governance_assurance.rs::tests::control_receipts_verifier_overhead_and_graduated_autonomy_fail_closed"
       ],
       "reference_status": "executed_remotely_2026_10_25_pass",
       "reference_scope": "Only the declared small logical case; not production protocol/host correctness.",
@@ -1175,7 +1184,8 @@
       "production_checker": null,
       "reference_checks": [
         "crates/fa-reference/src/observation_algebra/rewrites.rs::tests::changed_view_bytes_omissions_decision_or_cancellation_order_are_refused",
-        "crates/fa-reference/src/action/consequence/delivery/persistent/observed/containment/codec.rs::tests::lossless_state_encoding_rejects_every_truncation_and_inconsistent_position"
+        "crates/fa-reference/src/action/consequence/delivery/persistent/observed/containment/codec.rs::tests::lossless_state_encoding_rejects_every_truncation_and_inconsistent_position",
+        "crates/fa-reference/src/governance_assurance.rs::tests::assurance_profile_doctor_and_witness_cached_precheck_enforce_all_boundaries"
       ],
       "reference_status": "executed_remotely_2026_10_25_pass",
       "reference_scope": "Only the declared small logical case; not production protocol/host correctness.",
