@@ -10,6 +10,7 @@ mod admission_negative_tests;
 mod concordance;
 #[cfg(test)]
 mod concordance_tests;
+mod experiments_ledger;
 mod json;
 #[cfg(test)]
 mod json_tests;
@@ -579,6 +580,37 @@ fn check_system_map(root: &Path) -> Result<(), String> {
     Ok(())
 }
 
+fn check_experiments(root: &Path) -> Result<(), String> {
+    let experiments_bytes = read_operator_input(
+        root,
+        "registry/experiments.json",
+        "EXPERIMENTS",
+        "Experiments-ledger",
+    )?;
+    let experiments = json::parse(&experiments_bytes, json::Limits::default())
+        .map_err(|error| format!("Invalid JSON in registry/experiments.json: {error}"))?;
+    let claims_bytes = read_operator_input(
+        root,
+        "registry/claims.json",
+        "EXPERIMENTS",
+        "Experiments-ledger",
+    )?;
+    let claims = json::parse(&claims_bytes, json::Limits::default())
+        .map_err(|error| format!("Invalid JSON in registry/claims.json: {error}"))?;
+    let report = experiments_ledger::check_repository(root, &experiments, &claims);
+    println!("EXPERIMENTS_JSON {}", report.render_json());
+    if !report.is_clean() {
+        return Err(
+            "Experiments preregistration ledger refused; exact findings are in EXPERIMENTS_JSON"
+                .into(),
+        );
+    }
+    println!(
+        "PASS experiments_ledger: protocol digests, freeze dates and promotion rules; not empirical hypothesis execution"
+    );
+    Ok(())
+}
+
 fn check_readiness_report(root: &Path) -> Result<(), String> {
     let issues_bytes = read_operator_input(
         root,
@@ -618,6 +650,7 @@ fn execute() -> Result<(), String> {
             check_concordance(&root, &manifest)?;
             check_system_map(&root)?;
             check_prose(&root)?;
+            check_experiments(&root)?;
             run(&root, "cargo", &["fmt", "--all", "--check"])?;
             run(&root, "cargo", &["check", "--workspace", "--all-targets", "--frozen"])?;
             run(&root, "cargo", &["clippy", "--workspace", "--all-targets", "--frozen", "--", "-D", "warnings"])?;
@@ -645,10 +678,11 @@ fn execute() -> Result<(), String> {
             check_system_map(&root)
         }
         [command] if command == "readiness-report" => check_readiness_report(&root),
+        [command] if command == "experiments-check" => check_experiments(&root),
         [command] if command == "release-check" => {
             Err("Release blocked: no qualified production broker, frozen release toolchain, foundation closure, target matrix or signed proof closure exists yet.".into())
         }
-        _ => Err("Usage: cargo xtask check | concordance-check | system-map-check | prose-check | readiness-report | inventory | release-check".into()),
+        _ => Err("Usage: cargo xtask check | concordance-check | system-map-check | prose-check | experiments-check | readiness-report | inventory | release-check".into()),
     }
 }
 

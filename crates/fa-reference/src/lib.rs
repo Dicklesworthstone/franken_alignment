@@ -35,6 +35,7 @@ pub mod perimeter_inventory;
 pub mod product_frontier;
 pub mod reducer;
 pub mod round;
+pub mod standing_oversight;
 pub mod strict_json;
 pub mod trace_independence;
 pub mod witness;

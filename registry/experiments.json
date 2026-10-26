@@ -144,43 +144,79 @@
     },
     {
       "hypothesis": "H15",
-      "protocol_path": null,
-      "protocol_digest": null,
-      "frozen_on": null,
-      "bound_identities": [],
+      "protocol_path": "docs/experiments/H15.md",
+      "protocol_digest": "d84f37cb6b5f552730dd3f2b21bdda7c0d9936e79b21c98aa53dccec082fa3b8",
+      "frozen_on": "2026-10-25",
+      "bound_identities": [
+        "protocol_schema:fa.experiment_protocol/1",
+        "hypothesis_id:H15",
+        "harness_target:crates/fa-reference::activation::tensor::kv::experiment",
+        "model_family:pinned-local-decoder-v1",
+        "tokenizer_epoch:tokenizer-epoch-1",
+        "codec_profile:sidecar-ladder-v1",
+        "policy_epoch:policy-epoch-1",
+        "holdout_manifest:holdout-h15-manifold-v1"
+      ],
       "result_artifact": null,
       "result_digest": null,
-      "status": "not_preregistered"
+      "status": "preregistered"
     },
     {
       "hypothesis": "H16",
-      "protocol_path": null,
-      "protocol_digest": null,
-      "frozen_on": null,
-      "bound_identities": [],
+      "protocol_path": "docs/experiments/H16.md",
+      "protocol_digest": "37a99689a97e78c750525209e01bd298dc136b72a1b2dd6baa39f160fe8a9f7a",
+      "frozen_on": "2026-10-25",
+      "bound_identities": [
+        "protocol_schema:fa.experiment_protocol/1",
+        "hypothesis_id:H16",
+        "harness_target:crates/fa-reference::action::consequence::activation::monitor",
+        "model_family:pinned-local-decoder-v1",
+        "tokenizer_epoch:tokenizer-epoch-1",
+        "codec_profile:sidecar-ladder-v1",
+        "policy_epoch:policy-epoch-1",
+        "holdout_manifest:holdout-h16-elicitation-v1"
+      ],
       "result_artifact": null,
       "result_digest": null,
-      "status": "not_preregistered"
+      "status": "preregistered"
     },
     {
       "hypothesis": "H17",
-      "protocol_path": null,
-      "protocol_digest": null,
-      "frozen_on": null,
-      "bound_identities": [],
+      "protocol_path": "docs/experiments/H17.md",
+      "protocol_digest": "94d1b6cc92c3fccf7af82915dd6015fdd8a75175f490f0d6869e42769cdec67a",
+      "frozen_on": "2026-10-25",
+      "bound_identities": [
+        "protocol_schema:fa.experiment_protocol/1",
+        "hypothesis_id:H17",
+        "harness_target:crates/fa-reference::action::consequence::gate::containment",
+        "model_family:pinned-local-decoder-v1",
+        "tokenizer_epoch:tokenizer-epoch-1",
+        "codec_profile:kv-checkpoint-r1-r2-v1",
+        "policy_epoch:policy-epoch-1",
+        "holdout_manifest:holdout-h17-rewind-v1"
+      ],
       "result_artifact": null,
       "result_digest": null,
-      "status": "not_preregistered"
+      "status": "preregistered"
     },
     {
       "hypothesis": "H18",
-      "protocol_path": null,
-      "protocol_digest": null,
-      "frozen_on": null,
-      "bound_identities": [],
+      "protocol_path": "docs/experiments/H18.md",
+      "protocol_digest": "d7caa5dee7eda5209a8e58518b96336054423f72664068215376e88d21de49a6",
+      "frozen_on": "2026-10-25",
+      "bound_identities": [
+        "protocol_schema:fa.experiment_protocol/1",
+        "hypothesis_id:H18",
+        "harness_target:crates/fa-reference::action::consequence::congress::credibility",
+        "model_family:pinned-helper-congress-v1",
+        "tokenizer_epoch:tokenizer-epoch-1",
+        "codec_profile:sidecar-ladder-v1",
+        "policy_epoch:policy-epoch-1",
+        "holdout_manifest:holdout-h18-credibility-v1"
+      ],
       "result_artifact": null,
       "result_digest": null,
-      "status": "not_preregistered"
+      "status": "preregistered"
     },
     {
       "hypothesis": "H19",
