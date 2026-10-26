@@ -27,7 +27,9 @@
 pub mod action;
 pub mod address_resolver;
 pub mod canonical_json;
+pub mod event_journal;
 pub mod evidence_view;
+pub mod explain_affordances;
 pub mod full_input;
 pub mod history;
 pub mod knowledge_surface;
@@ -37,6 +39,7 @@ pub mod perimeter_inventory;
 pub mod product_frontier;
 pub mod reducer;
 pub mod round;
+pub mod situation_rehearsal;
 pub mod standing_oversight;
 pub mod strict_json;
 pub mod trace_independence;

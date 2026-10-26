@@ -5797,9 +5797,19 @@
       "sha256": "c5745e1a585030e132cb45e7a5206c8fc967dfc069f13f9ed7b269cc42b1b073"
     },
     {
+      "path": "crates/fa-reference/src/event_journal.rs",
+      "bytes": 37015,
+      "sha256": "f9aeec247d7281a9e9173e6c0e1121070849621d8390cde4783746327f25a670"
+    },
+    {
       "path": "crates/fa-reference/src/evidence_view.rs",
       "bytes": 25678,
       "sha256": "6d9f5f6650b82dd5aad929b52ef83c79c5033a12b464daac8f0a0001649c8b26"
+    },
+    {
+      "path": "crates/fa-reference/src/explain_affordances.rs",
+      "bytes": 35499,
+      "sha256": "e28dc58c1d0e1158ce675bae2ebefe578d44388bed3737486cf698e9aeb07668"
     },
     {
       "path": "crates/fa-reference/src/full_input.rs",
@@ -5818,8 +5828,8 @@
     },
     {
       "path": "crates/fa-reference/src/lib.rs",
-      "bytes": 28495,
-      "sha256": "5b08077a5b8e0bb05e2799837863b9c5640bbed24e0e2a762cb4526b7d2e793f"
+      "bytes": 28576,
+      "sha256": "2503dafb5d894187fc1817d37e7c17f256e886f6b33d6ecf1341022cb6fc0fec"
     },
     {
       "path": "crates/fa-reference/src/observation_algebra.rs",
@@ -5895,6 +5905,11 @@
       "path": "crates/fa-reference/src/round/review.rs",
       "bytes": 30786,
       "sha256": "9d58add6dbd894d5ec7b3d1bc0adc7811ed6088d23fe456aafc16f856a2978e4"
+    },
+    {
+      "path": "crates/fa-reference/src/situation_rehearsal.rs",
+      "bytes": 47874,
+      "sha256": "41f61b54470e768e71ca4eb1ea22e278cffb02545046b5a59d4d89c798e4d8fa"
     },
     {
       "path": "crates/fa-reference/src/standing_oversight.rs",
@@ -10728,8 +10743,8 @@
     },
     {
       "path": "registry/invariants.json",
-      "bytes": 69976,
-      "sha256": "780c8e2c67ffd27dd846aa8ad6b78681a7536886dfa07780741216daf9ea4c3b"
+      "bytes": 71363,
+      "sha256": "2594b81ebda4b280537ec94a5d3c6b6f8fc8f00c9b69004d525571fa560d7c34"
     },
     {
       "path": "registry/operation_costs.json",
