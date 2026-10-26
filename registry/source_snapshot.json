@@ -5752,6 +5752,11 @@
       "sha256": "920d64f327c0d3df211b9a57f747bf3627b50910f0d4cacd790994c9c303c8e1"
     },
     {
+      "path": "crates/fa-reference/src/address_resolver.rs",
+      "bytes": 33238,
+      "sha256": "ef2916694678adf967ce960b661b24d2a4094f1fde5d6b0b412ce4a49d033c02"
+    },
+    {
       "path": "crates/fa-reference/src/bin/fa-native-helper.rs",
       "bytes": 983,
       "sha256": "ea45c66e63088021ef48801073570cd0e88a12f10ba1aeccbcfb760b7957870d"
@@ -5807,14 +5812,19 @@
       "sha256": "7217034b4a328121184a73e2bacb65cf217c47a13cb2e8ea05f0d6feb6632a66"
     },
     {
+      "path": "crates/fa-reference/src/knowledge_surface.rs",
+      "bytes": 46369,
+      "sha256": "f59410b818f932a9121815d7b6454641d6aa29db06cad30adb299ccb7bf7c792"
+    },
+    {
       "path": "crates/fa-reference/src/lib.rs",
-      "bytes": 28420,
-      "sha256": "7b7b3fe6f6baeb6fedcfb80faa63a7d6f1c7cd43703777bff2def97468821792"
+      "bytes": 28495,
+      "sha256": "5b08077a5b8e0bb05e2799837863b9c5640bbed24e0e2a762cb4526b7d2e793f"
     },
     {
       "path": "crates/fa-reference/src/observation_algebra.rs",
-      "bytes": 68799,
-      "sha256": "13f70e48ced397338c84ab0af1e480ef76b31c41488054c86e74c625a76b6254"
+      "bytes": 69201,
+      "sha256": "503247170aa4444b04fe369cec5f5f27e050b424e6cdccf7045720ddf5ce0db3"
     },
     {
       "path": "crates/fa-reference/src/observation_algebra/cost_accounting.rs",
@@ -5905,6 +5915,11 @@
       "path": "crates/fa-reference/src/trace_independence/quotient.rs",
       "bytes": 30526,
       "sha256": "fe29c155ecbc86cbced0bf4a00b14192adfc1247209febed62c9acea3b0f6580"
+    },
+    {
+      "path": "crates/fa-reference/src/typestate_cx.rs",
+      "bytes": 20545,
+      "sha256": "87123bde0d024cd48af9d0efe4d927c8fccabe680c8a830bee4c454d584b385f"
     },
     {
       "path": "crates/fa-reference/src/witness.rs",
@@ -10713,8 +10728,8 @@
     },
     {
       "path": "registry/invariants.json",
-      "bytes": 68786,
-      "sha256": "d3055f7005962d1eb6360f7a219d188e0981b05d8405dad01f8d8d093cafd9bd"
+      "bytes": 69976,
+      "sha256": "780c8e2c67ffd27dd846aa8ad6b78681a7536886dfa07780741216daf9ea4c3b"
     },
     {
       "path": "registry/operation_costs.json",

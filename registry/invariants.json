@@ -1200,7 +1200,9 @@
       "production_checker": null,
       "reference_checks": [
         "crates/fa-reference/src/action/consequence/gate.rs::tests::continue_is_not_a_permit_and_cannot_skip_witness_checks",
-        "crates/fa-reference/src/action/consequence/gate/containment/session/policy/controller.rs::tests::foreign_reviews_permits_and_action_substitution_are_refused"
+        "crates/fa-reference/src/action/consequence/gate/containment/session/policy/controller.rs::tests::foreign_reviews_permits_and_action_substitution_are_refused",
+        "crates/fa-reference/src/typestate_cx.rs::tests::purpose_contexts_gate_their_designated_apis_and_preserve_scope_isolation",
+        "crates/fa-reference/src/typestate_cx.rs::tests::runtime_defense_in_depth_refuses_non_permit_tokens_at_broker_boundary"
       ],
       "reference_status": "executed_remotely_2026_10_25_pass",
       "reference_scope": "Only the declared small logical case; not production protocol/host correctness.",
@@ -1230,7 +1232,14 @@
       "production_checker": null,
       "reference_checks": [
         "crates/fa-reference/src/standing_oversight.rs::tests::exponential_support_fanout_coarsens_or_spills_without_false_negatives",
-        "crates/fa-reference/src/observation_algebra/rewrites.rs::tests::all_five_registered_laws_certify_with_paired_differential_and_savings"
+        "crates/fa-reference/src/observation_algebra/rewrites.rs::tests::all_five_registered_laws_certify_with_paired_differential_and_savings",
+        "crates/fa-reference/src/knowledge_surface.rs::tests::knowledge_join_lattice_laws_and_no_upgrade_from_non_known",
+        "crates/fa-reference/src/knowledge_surface.rs::tests::serializer_accepts_wrapped_safety_types_and_rejects_bare_wire_scalars",
+        "crates/fa-reference/src/knowledge_surface.rs::tests::permit_path_admits_only_known_and_rejects_all_non_known_variants",
+        "crates/fa-reference/src/knowledge_surface.rs::tests::negative_campaign_open_frontier_absent_withheld_leakage_and_stale_reuse",
+        "crates/fa-reference/src/address_resolver.rs::tests::parser_printer_round_trip_for_all_26_nouns_and_rejects_unknown_kinds",
+        "crates/fa-reference/src/address_resolver.rs::tests::fa_get_resolves_all_26_noun_kinds_and_withheld_shape_never_leaks_existence",
+        "crates/fa-reference/src/address_resolver.rs::tests::fa_related_traverses_closure_dag_and_thought_graph_edges_and_lints_raw_ids"
       ],
       "reference_status": "executed_remotely_2026_10_25_pass",
       "reference_scope": "Only the declared small logical case; not production protocol/host correctness.",

@@ -25,10 +25,12 @@
 )]
 
 pub mod action;
+pub mod address_resolver;
 pub mod canonical_json;
 pub mod evidence_view;
 pub mod full_input;
 pub mod history;
+pub mod knowledge_surface;
 pub mod observation_algebra;
 pub mod perimeter;
 pub mod perimeter_inventory;
@@ -38,6 +40,7 @@ pub mod round;
 pub mod standing_oversight;
 pub mod strict_json;
 pub mod trace_independence;
+pub mod typestate_cx;
 pub mod witness;
 
 use std::collections::{BTreeMap, BTreeSet, VecDeque};

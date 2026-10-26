@@ -214,6 +214,24 @@ impl ClosedDomain {
     }
 }
 
+pub(crate) fn construct_closed_domain_for_surface(
+    domain: DomainProjection,
+    revision: u64,
+    control_cut: u64,
+    semantic_epoch: u64,
+    requirement: FrontierRequirement,
+    marker: TrustedClosingMarker,
+) -> Result<ClosedDomain, Error> {
+    ClosedDomain::new(
+        domain,
+        revision,
+        control_cut,
+        semantic_epoch,
+        requirement,
+        marker,
+    )
+}
+
 /// The sole epistemic wrapper permitted for reference-algebra outputs.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum Knowledge<T> {
