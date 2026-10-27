@@ -174,8 +174,8 @@ impl Cursor {
 
     /// Validate the exact operation and independently selected current epoch on
     /// this same original Ready cursor, before staging cleanup or any Fence.
-    /// Topology custody needs a paired source-checkpoint successor and is not
-    /// admitted by this maintenance command.
+    /// Topology maintenance retains the paired source-checkpoint successor;
+    /// these queries never create a source observer or refresh its evidence.
     pub(super) fn credential_preflight(&self, request: CredentialRequest)
         -> Result<(FileCredentialStatus, Option<CredentialChangeReceipt>), JournalError>
     {
@@ -192,7 +192,14 @@ impl Cursor {
                 CredentialRequest::Rotate(request) => run.check_credential_rotation(request)?,
                 CredentialRequest::Revoke(request) => run.check_credential_revocation(request)?,
             }),
-            Self::Mediated(_) | Self::PredictiveMediated(_) => return Err(fa_reference::Error::Binding.into()),
+            Self::Mediated(run) => (run.credential_status()?, match request {
+                CredentialRequest::Rotate(request) => run.check_credential_rotation(request)?,
+                CredentialRequest::Revoke(request) => run.check_credential_revocation(request)?,
+            }),
+            Self::PredictiveMediated(run) => (run.credential_status()?, match request {
+                CredentialRequest::Rotate(request) => run.check_credential_rotation(request)?,
+                CredentialRequest::Revoke(request) => run.check_credential_revocation(request)?,
+            }),
         };
         Ok((status.ok_or(fa_reference::Error::WrongState)?, receipt))
     }

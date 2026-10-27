@@ -6,6 +6,9 @@ use super::*;
 use fa_reference::strict_json::{self, Json, Limits};
 use std::{io, os::unix::fs::DirBuilderExt};
 
+#[path = "credential_lifecycle/topology.rs"]
+mod topology_tests;
+
 const NEXT_SECRET: &[u8] = b"independently-reprovisioned-generation-two-credential-9437";
 
 struct Case {

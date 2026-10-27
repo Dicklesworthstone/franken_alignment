@@ -1,5 +1,43 @@
 # Implementation status · design revision 0.3
 
+## 2026-10-27: maintain credentials on topology-protected learned owners
+
+The offline learned rotation/revocation commands now accept plain, raw-forecast
+and owned-forecast topology histories through the original fully guarded replay.
+An explicit version-2 source checkpoint and matching input history anchor are
+required, together with distinct new history/source output paths outside the
+authority store. Missing pairs, manual version-1 source minima, stale current
+epochs and invalid lifecycle operations refuse before cleanup or the recovery
+Fence. The ordinary exact-extent guard remains unchanged.
+
+Every acknowledged recovery carries the original source bytes, spent work and
+last source operation to the same history cut without reading current source
+files or recertifying the withdrawn graph. The command captures the Fence pair
+before mutation, independently attempts both exports after acknowledgment, and
+reports source and history retention separately. A poisoned write can retain
+only the already acknowledged prefix; an exact retry still reports its original
+receipt separately from today's independently selected credential state.
+
+Four new operator regression functions exercise all three predictor modes,
+rotation/revocation and later historical retries without live assets, original
+receipt preservation, pre-Ready guard refusal, stale/mixed/version-1 custody,
+invalid output selection, deadlines around Fence/mutation/export, independent
+archive races and report-output failure. Rustfmt syntax/formatting passed for
+the new helper and test files. No runtime pass is claimed.
+
+Verification remains limited by the execution environment. The subsequent
+real-source Cargo check of native commit `3d679dbc` exited 101 when it could not
+write metadata because the memory filesystem was full. A real-source direct
+metadata attempt including this operator increment also failed at metadata
+creation before completing even its library target. The combined source
+manifest for that attempt was
+`14611d8a4d2589c9338d0c8acfef3bc04f8ab68f7d66496148dae188be919d65`.
+Isolated temporary-filesystem attempts could not establish their mounts, and
+the execution environment became unavailable again. These are failed attempts,
+not successful compilation, tests or canonical qualification. No dependency,
+source/journal format, authority gate or Bead completion was widened. See
+[credential lifecycle](docs/LEARNED_CREDENTIAL_LIFECYCLE.md).
+
 ## 2026-10-27: retain topology source custody across credential maintenance
 
 The native `TopologyCheckpoint::after_credential_lifecycle` API now carries the

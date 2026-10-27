@@ -1,5 +1,18 @@
 # Changelog
 
+## 2026-10-27: expose topology-aware learned credential maintenance
+
+- Connect offline rotation and revocation to fully guarded topology histories
+  for plain/raw/owned predictor modes. Require exact version-2 paired custody,
+  current credential selection and distinct new output archives before replay.
+- Capture acknowledged Fence custody before mutation and retain source/history
+  independently across deadlines, export races, poisoned writes and stdout
+  failure. Preserve spent source work, historical receipts and unknown effects.
+- Add four operator regression functions covering the positive lifecycle and
+  causal rejection/failure cases. New helper/test formatting passes; Cargo and
+  direct metadata attempts fail for exhausted storage, followed by environment
+  unavailability. Runtime and complete project qualification remain open.
+
 ## 2026-10-27: preserve source custody through native credential maintenance
 
 - Add healthy-owner topology checkpoint succession across only acknowledged

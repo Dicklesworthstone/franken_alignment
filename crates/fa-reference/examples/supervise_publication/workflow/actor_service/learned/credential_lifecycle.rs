@@ -3,7 +3,7 @@
 //! transition. No live publication capability, helper or actor service is made.
 use super::{
     Config, Duration, FileOversight, Instant, JournalError, Loaded, anchors, checked, credential,
-    debug, recipe, recovery,
+    debug, recipe, recovery, topology,
 };
 use fa_reference::action::consequence::delivery::{
     credential_broker::{
@@ -13,7 +13,10 @@ use fa_reference::action::consequence::delivery::{
 };
 use std::{io::Write, path::Path};
 
-const USAGE: &str = "create-learned-generated CONFIG LEARNED_RECIPE (--rotate-credential OPERATION EXPECTED_GENERATION NEXT_GENERATION | --revoke-credential OPERATION EXPECTED_GENERATION) --history-anchor INPUT --retain-history-anchor NEW_OUTPUT";
+#[path = "credential_lifecycle/topology.rs"]
+mod custody;
+
+const USAGE: &str = "create-learned-generated CONFIG LEARNED_RECIPE (--rotate-credential OPERATION EXPECTED_GENERATION NEXT_GENERATION | --revoke-credential OPERATION EXPECTED_GENERATION) --history-anchor INPUT --retain-history-anchor NEW_OUTPUT [--topology-profile PATH --retain-topology-checkpoint NEW_OUTPUT]";
 
 #[derive(Clone, Copy)]
 pub(super) enum Request {
@@ -63,20 +66,12 @@ pub(super) fn command_with(
     if credibility.is_some() {
         return Err("credential lifecycle cannot activate credibility".into());
     }
-    // A Fence/rotation would advance the journal beyond the original paired
-    // topology source checkpoint. Refuse before loading, replay or cleanup;
-    // never weaken that checkpoint's exact-extent contract.
-    if args.iter().any(|arg| {
-        matches!(
-            arg.as_str(),
-            "--topology-profile" | "--retain-topology-checkpoint" | "--recover-terminal-checkpoint"
-        )
-    }) {
-        return Err("credential lifecycle does not admit topology custody; a paired source checkpoint successor is required".into());
-    }
+    let (args, topology_output) = custody::take_options(args)?;
+    let (args, topology_path) = topology::take_option(&args)?;
+    custody::check_pair(topology_path.as_deref(), topology_output.as_deref())?;
     let has_input = args.iter().any(|arg| arg == "--history-anchor");
     let has_output = args.iter().any(|arg| arg == "--retain-history-anchor");
-    let (args, options) = anchors::take_options(args)?;
+    let (args, options) = anchors::take_options(&args)?;
     if !has_input
         || !has_output
         || args.first().map(String::as_str) != Some("create-learned-generated")
@@ -119,7 +114,11 @@ pub(super) fn command_with(
     checkpoint()?;
     options.admit(&config, &mut loaded, true)?;
     checkpoint()?;
-    run(&config, &loaded, request, elapsed, out)
+    topology::admit(&config, &mut loaded, topology_path.as_deref(), topology::Mode::Historical)?;
+    checkpoint()?;
+    let topology_output = custody::admit(&config, &loaded, topology_output.as_deref())?;
+    checkpoint()?;
+    run(&config, &loaded, request, topology_output.as_ref(), elapsed, out)
 }
 
 fn number(text: &str) -> Result<u64, String> {
@@ -145,6 +144,7 @@ fn run(
     config: &Config,
     loaded: &Loaded,
     request: Request,
+    topology_output: Option<&custody::Output>,
     elapsed: &mut impl FnMut() -> Duration,
     out: &mut impl Write,
 ) -> Result<(), String> {
@@ -176,10 +176,27 @@ fn run(
                 previous.revision(),
                 fence_revision,
                 fence_revision,
-                None,
+                Retained::empty(topology_output.is_some()),
                 out,
             );
             return Err(combine(failure, reported.err()));
+        }
+    };
+    // A later ambiguous credential write cannot certify any newer source cut.
+    // Keep the SAME acknowledged Fence pair before attempting that write.
+    let fence_checkpoint = match custody::capture(loaded, &host, &fence_anchor) {
+        Ok(checkpoint) => checkpoint,
+        Err(error) => {
+            let retained = anchors::export_acknowledged(&fence_anchor, output);
+            let failure = format!(
+                "recovery Fence acknowledged at revision {fence_revision}, but its source checkpoint could not be captured: {error}; credential transition was not attempted"
+            );
+            let reported = report(
+                "refused", None, &before, previous.revision(), fence_revision, fence_revision,
+                Retained { history: retained.as_ref().ok().map(|()| fence_revision),
+                    topology: None, topology_required: topology_output.is_some() }, out,
+            );
+            return Err(combine(combine(failure, retained.err()), reported.err()));
         }
     };
     let mut failures = Vec::new();
@@ -203,6 +220,7 @@ fn run(
     }
     if host.storage_failure().is_some() {
         let retained = anchors::export_acknowledged(&fence_anchor, output);
+        let source_retained = custody::retain(topology_output, fence_checkpoint.as_ref());
         let custody = match retained {
             Ok(()) => {
                 format!("acknowledged Fence prefix retained through revision {fence_revision}")
@@ -213,6 +231,11 @@ fn run(
         };
         // No known-current report can be formed after an ambiguous replacement.
         // A retained prefix is not a receipt for the unconfirmed transition.
+        let custody = match source_retained {
+            Ok(Some(revision)) => format!("{custody}; acknowledged Fence source checkpoint retained through revision {revision}"),
+            Ok(None) => custody,
+            Err(error) => format!("{custody}; {error}"),
+        };
         return Err(format!(
             "{}; credential transition and current status are unconfirmed after storage failure; {custody}; no transition was retried",
             failures.join("; ")
@@ -222,27 +245,46 @@ fn run(
         Ok(Some(current)) => current,
         Ok(None) | Err(_) => {
             let retained = anchors::export_acknowledged(&fence_anchor, output);
+            let source_retained = custody::retain(topology_output, fence_checkpoint.as_ref());
             let failure = format!(
                 "recovery Fence acknowledged at revision {fence_revision}, but current credential status is unavailable; no transition was retried"
             );
-            return Err(combine(failure, retained.err()));
+            return Err(combine(combine(failure, retained.err()), source_retained.err()));
         }
     };
     let revision = host.revision();
-    let anchor = match host.history_anchor_after(previous) {
-        Ok(anchor) => anchor,
+    let (anchor, source_checkpoint) = match host.history_anchor_after(previous) {
+        Ok(anchor) => {
+            let checkpoint = match custody::capture(loaded, &host, &anchor) {
+                Ok(checkpoint) => checkpoint,
+                Err(error) => {
+                    failures.push(format!("latest acknowledged source checkpoint could not be captured: {error}"));
+                    None
+                }
+            };
+            (anchor, checkpoint)
+        }
         Err(error) => {
             failures.push(format!(
                 "latest acknowledged history anchor could not be captured: {}",
                 debug(error)
             ));
-            fence_anchor
+            (fence_anchor, fence_checkpoint)
         }
     };
     let retained_revision = match anchors::export_acknowledged(&anchor, output) {
         Ok(()) => Some(anchor.revision()),
         Err(error) => {
             failures.push(format!("history anchor retention failed: {error}; keep the previous archive and select a new output path"));
+            None
+        }
+    };
+    // The two files are independent create-new writes. A failed history export
+    // cannot suppress source retention, nor may a successful one imply the other.
+    let retained_topology = match custody::retain(topology_output, source_checkpoint.as_ref()) {
+        Ok(revision) => revision,
+        Err(error) => {
+            failures.push(error);
             None
         }
     };
@@ -261,7 +303,8 @@ fn run(
         previous.revision(),
         fence_revision,
         revision,
-        retained_revision,
+        Retained { history: retained_revision, topology: retained_topology,
+            topology_required: topology_output.is_some() },
         out,
     ) {
         failures.push(error);
@@ -285,6 +328,17 @@ fn combine(failure: String, other: Option<String>) -> String {
     }
 }
 
+struct Retained {
+    history: Option<u64>,
+    topology: Option<u64>,
+    topology_required: bool,
+}
+impl Retained {
+    fn empty(topology_required: bool) -> Self {
+        Self { history: None, topology: None, topology_required }
+    }
+}
+
 fn report(
     status: &str,
     receipt: Option<CredentialChangeReceipt>,
@@ -292,7 +346,7 @@ fn report(
     anchored_through: u64,
     fence_revision: u64,
     revision: u64,
-    retained_revision: Option<u64>,
+    retained: Retained,
     out: &mut impl Write,
 ) -> Result<(), String> {
     // The bounded report includes only native operation receipts and current
@@ -307,14 +361,18 @@ fn report(
             )
         },
     );
-    let retained =
-        retained_revision.map_or_else(|| "null".to_owned(), |revision| format!("\"{revision}\""));
+    let history_revision =
+        retained.history.map_or_else(|| "null".to_owned(), |revision| format!("\"{revision}\""));
+    let topology_revision =
+        retained.topology.map_or_else(|| "null".to_owned(), |revision| format!("\"{revision}\""));
     let report = format!(
-        "{{\"schema\":\"fa.learned-credential-lifecycle-result/1\",\"status\":\"{status}\",\"knowledge\":{{\"kind\":\"known\",\"basis\":{{\"class\":\"bounded_model\",\"scope\":\"original_credential_lifecycle\",\"authentic_origin\":\"unknown\",\"independent_history_through\":\"{anchored_through}\",\"acknowledged_journal_revision\":\"{revision}\"}},\"value\":{{\"receipt\":{receipt},\"current\":{{\"generation\":\"{}\",\"revoked\":{},\"retained_changes\":\"{}\"}},\"recovery_fence_revision\":\"{fence_revision}\",\"journal_revision\":\"{revision}\",\"history_retained\":{},\"retained_history_revision\":{retained}}}}},\"authority\":\"none\"}}\n",
+        "{{\"schema\":\"fa.learned-credential-lifecycle-result/1\",\"status\":\"{status}\",\"knowledge\":{{\"kind\":\"known\",\"basis\":{{\"class\":\"bounded_model\",\"scope\":\"original_credential_lifecycle\",\"authentic_origin\":\"unknown\",\"independent_history_through\":\"{anchored_through}\",\"acknowledged_journal_revision\":\"{revision}\"}},\"value\":{{\"receipt\":{receipt},\"current\":{{\"generation\":\"{}\",\"revoked\":{},\"retained_changes\":\"{}\"}},\"recovery_fence_revision\":\"{fence_revision}\",\"journal_revision\":\"{revision}\",\"history_retained\":{},\"retained_history_revision\":{history_revision},\"topology_checkpoint_required\":{},\"topology_checkpoint_retained\":{},\"retained_topology_checkpoint_revision\":{topology_revision}}}}},\"authority\":\"none\"}}\n",
         current.generation,
         current.revoked,
         current.retained_changes,
-        retained_revision == Some(revision)
+        retained.history == Some(revision),
+        retained.topology_required,
+        retained.topology_required && retained.topology == Some(revision)
     );
     out.write_all(report.as_bytes())
         .and_then(|()| out.flush())

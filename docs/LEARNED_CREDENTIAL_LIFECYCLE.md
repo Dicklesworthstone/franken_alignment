@@ -76,10 +76,47 @@ the live perimeter inventory, broker/provider secret files and native helper
 roster. Those live files may be absent during revocation or rotation. Their
 absence does not become permission for a later live command.
 
-Topology profiles are explicitly refused before loading or mutation. The current
-paired source checkpoint pins an exact journal extent; acknowledging a lifecycle
-Fence would require a corresponding source-custody successor. This command does
-not relax that contract or strand a topology owner behind a stale checkpoint.
+## Topology-protected owners
+
+Topology-protected plain, raw-forecast and owned-forecast histories use the same
+offline lifecycle command with two additional options:
+
+```sh
+supervise_publication create-learned-generated CONFIG CREDENTIAL_RECIPE \\
+  --rotate-credential 501 1 2 \\
+  --history-anchor /operator/history-before.anchor \\
+  --retain-history-anchor /operator/history-rotated.anchor \\
+  --topology-profile /operator/topology-before.json \\
+  --retain-topology-checkpoint /operator/source-rotated.checkpoint
+```
+
+The topology profile must use `fa.mediated-submit/2` and select the independently
+retained source checkpoint paired with the input history anchor. Its full graph,
+original inventory, source-work expenditure and exact journal extent remain
+mandatory. Version 1 manual work minima cannot establish that custody. The profile
+and new source-checkpoint output must appear together; both outputs must be distinct
+new files outside the authority store. Invalid output selection refuses before
+replay or the recovery Fence.
+
+The command uses historical topology admission and the original guarded learned
+replay. It reads the selected retained documents and numerical recipe, without
+opening current/next topology files, current publication evidence, provider secret
+files or live reviewer endpoints. Every successful recovery still acknowledges
+its own Fence, withdrawing topology availability. Rotation and revocation carry
+the original source documents, spent work and last source operation into the
+matching successor checkpoint. They do not refresh or recertify a topology cut.
+
+Both archives are attempted independently after acknowledgment, including when a
+deadline expires or report output fails. Keep the old pair until the new pair is
+retained. The source checkpoint embeds its exact history anchor; a custodian may
+export that retained anchor when only its separate history-file export failed.
+An old source checkpoint cannot be combined with a newer history anchor, and
+ordinary recovery cannot treat a stale pair as current. A failed source export
+requires explicit recovery of that custody rather than resetting its counters.
+
+For the source profile format, see [topology checkpoint
+operation](TOPOLOGY_CHECKPOINT_OPERATOR.md).
+
 
 ## Native source-custody succession
 
@@ -102,14 +139,18 @@ The mediated learned recovery cursors also expose the existing credential
 status and rotation/revocation preflight after complete guarded replay. These
 queries issue no live roles and mutate no journal. An exact retry's original
 receipt remains distinct from the independently selected current generation.
-The operator topology integration is a separate consumer of these native APIs.
+The offline topology lifecycle command consumes these native APIs and retains
+the exact matching source/history cut.
 
 ## Acknowledgment, deadlines and output
 
 The result schema is `fa.learned-credential-lifecycle-result/1`. Its bounded
 `knowledge` envelope reports the original nonsecret lifecycle receipt, current
 credential status, acknowledged journal and recovery-Fence revisions, and retained
-anchor revision. `status` is `applied`, `already_applied` or `refused`.
+anchor revision. `topology_checkpoint_required`, `topology_checkpoint_retained`
+and `retained_topology_checkpoint_revision` report the separate source export.
+Each retained flag is true only for an archive at the reported acknowledged
+journal revision. `status` is `applied`, `already_applied` or `refused`.
 `authority` is `none`: the report is not a credential or publication permit.
 The stated basis covers the original native lifecycle and independently selected
 history; it does not claim authenticated remote-provider origin.

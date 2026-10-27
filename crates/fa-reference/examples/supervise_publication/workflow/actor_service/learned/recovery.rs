@@ -361,8 +361,10 @@ pub(super) fn open_selected_credential_with_checkpoints(
     request: super::credential_lifecycle::Request,
     checkpoint: &mut impl FnMut(Option<Progress>) -> Result<(), String>,
 ) -> Result<super::credential_lifecycle::Recovered, String> {
-    if loaded.topology.is_some() {
-        return Err("credential lifecycle does not admit topology custody; a paired source checkpoint successor is required".into());
+    if super::topology::history(loaded)?
+        .is_some_and(|history| history.checkpoint().is_none())
+    {
+        return Err("credential topology custody requires an exact v2 source checkpoint".into());
     }
     super::credential::check_selection(loaded)?;
     if loaded.credential.is_none() || loaded.recovery_anchor.is_none() || loaded.anchor_output.is_none() {
