@@ -139,7 +139,7 @@ impl TopologyCheckpoint {
 // only the original declarations which select/withdraw the graph; no graph cut
 // is certified and no journal event is executed again. Fence withdraws topology
 // through Machine::recover_mediation; a check never restores an unavailable graph.
-fn topology_at(events: &[Event]) -> Result<(&AuthorityGraph, bool), Error> {
+pub(super) fn topology_at(events: &[Event]) -> Result<(&AuthorityGraph, bool), Error> {
     let mut graph = None;
     let mut available = false;
     for event in events {
@@ -157,3 +157,4 @@ fn topology_at(events: &[Event]) -> Result<(&AuthorityGraph, bool), Error> {
     }
     Ok((graph.ok_or(Error::Missing)?, available))
 }
+

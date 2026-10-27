@@ -1,5 +1,35 @@
 # Implementation status · design revision 0.3
 
+## 2026-10-27: retain topology source custody across credential maintenance
+
+The native `TopologyCheckpoint::after_credential_lifecycle` API now carries the
+original source documents, spent source allowance and last source operation to
+an acknowledged healthy-owner cut. It verifies the same owner/profile, exact
+history prefix, graph, availability and monotone authority floors. Only native
+Fence/credential rotation/revocation events may extend the retained cut; later
+source checks, numerical work, time, settlement and Stop events refuse. Poisoned
+owners cannot certify an ambiguous mutation, and an earlier acknowledged Fence
+checkpoint remains independently retainable. No source refresh, recertification,
+credential provisioning or effect resend occurs.
+
+The plain and predictive mediated learned recovery cursors expose the original
+credential status and lifecycle preflight only after complete guarded replay.
+Historical retry receipts remain separate from the independently selected
+current epoch. The offline operator integration remains a separate consumer.
+
+Five new native regression functions cover healthy maintenance and old exact
+receipts; unchanged source work without live inputs; source/ordinary/terminal
+suffix rejection; owner/profile/graph/fork/floor binding; and rotation/revocation
+failures at all five native journal barriers. These are authored tests, not
+passing execution evidence. New native source and tests passed rustfmt parsing
+through stdin with nightly-2026-08-31. A metadata-only full-library verification
+attempt relocated module/include paths to memory files while preserving bodies
+and included all seven changed native source/test paths. It exited **137** before
+any success or Rust diagnostic; the execution environment subsequently became
+unavailable. No library typecheck, runtime test, qualified toolchain, Clippy or
+canonical xtask success is claimed. All earlier failures, Beads and gate status
+remain unchanged. See [credential lifecycle](docs/LEARNED_CREDENTIAL_LIFECYCLE.md).
+
 ## 2026-10-25: rotate and revoke credentials through guarded learned recovery
 
 The learned executable now exposes the original durable credential lifecycle:

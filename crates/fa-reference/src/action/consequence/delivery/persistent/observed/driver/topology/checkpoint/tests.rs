@@ -16,6 +16,8 @@ use std::{collections::BTreeMap, fs, io::Cursor, path::PathBuf, sync::atomic::{A
 
 #[path = "tests/terminal.rs"]
 mod terminal;
+#[path = "tests/credential.rs"]
+mod credential;
 
 const INVENTORY: &[u8] = include_bytes!(concat!(env!("CARGO_MANIFEST_DIR"),
     "/tests/fixtures/authority_topology_inventory.json"));
@@ -208,3 +210,4 @@ fn fragmented_interrupted_transport_and_failed_output_keep_original_owner_unchan
         Err(FileHistoryAnchorError::Io(io::ErrorKind::BrokenPipe)));
     assert_eq!(source.checkpoint(&host, document.as_bytes(), INVENTORY).unwrap(), checkpoint);
 }
+

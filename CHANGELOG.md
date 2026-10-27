@@ -1,5 +1,19 @@
 # Changelog
 
+## 2026-10-27: preserve source custody through native credential maintenance
+
+- Add healthy-owner topology checkpoint succession across only acknowledged
+  Fence/Rotate/Revoke events, retaining exact source documents, work, identity,
+  history prefix and monotone floors. Reject foreign, divergent, later ordinary
+  work and poisoned-storage histories without refreshing evidence or authority.
+- Expose original lifecycle preflight on mediated learned recovery after every
+  independent guard passes; preserve historical receipts versus current epoch.
+- Add five native positive/negative regression functions, including all five
+  storage-write barriers for both lifecycle operations. Rustfmt parsing passes
+  for the new native files. The full-library metadata attempt exits 137 before
+  a result and the environment becomes unavailable; execution qualification and
+  all pre-existing project failures remain open.
+
 ## 2026-10-25: execute learned credential rotation and revocation
 
 - Add offline `--rotate-credential` and `--revoke-credential` commands using the

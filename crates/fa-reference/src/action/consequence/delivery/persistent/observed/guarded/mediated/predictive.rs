@@ -12,6 +12,10 @@ use super::super::super::decoder::learned::{FileLearnedConfig, FileLearnedRecove
     FileLearnedRecoveryProgress, FileLearnedRecoveryStatus, checkpoint::FileLearnedResetIntent};
 use super::super::super::shutdown::recovery::{FileAdmissionStoppedHistory, FileStoppedHistory, FileStoppedRecovery};
 use super::super::super::stream::FileStreamProposal;
+use crate::action::consequence::delivery::credential_broker::{
+    CredentialChangeReceipt, CredentialRotationRequest, CredentialRevocationRequest,
+};
+use crate::action::consequence::delivery::persistent::observed::credential::FileCredentialStatus;
 use crate::Error;
 use crate::action::ElapsedTick;
 use crate::action::consequence::delivery::{StopRequest, persistent::RecoveryReserve};
@@ -245,6 +249,32 @@ fn check_machine(profile: &FileOversightProfile, machine: &Machine, events: &[Ev
 }
 
 impl FilePredictiveMediatedLearnedRecovery {
+    /// Inspect credential state only after the original numerical replay and
+    /// every independent topology, predictor, guard and floor check succeeds.
+    /// No cleanup, fence, source observation or live role is produced.
+    pub fn credential_status(&self) -> Result<Option<FileCredentialStatus>, JournalError> {
+        self.check_ready()?;
+        Ok(self.inner.verified_guarded_machine()?.credential_status())
+    }
+
+    /// Check a rotation before the recovery Fence or staging cleanup. An exact
+    /// retry returns its original receipt, independently of today's generation.
+    pub fn check_credential_rotation(&self, request: CredentialRotationRequest)
+        -> Result<Option<CredentialChangeReceipt>, JournalError>
+    {
+        self.check_ready()?;
+        Ok(self.inner.verified_guarded_machine()?.check_credential_rotation(request)?)
+    }
+
+    /// Check the original revocation and retained-operation identity without
+    /// mutating the journal or granting an observer or publication capability.
+    pub fn check_credential_revocation(&self, request: CredentialRevocationRequest)
+        -> Result<Option<CredentialChangeReceipt>, JournalError>
+    {
+        self.check_ready()?;
+        Ok(self.inner.verified_guarded_machine()?.check_credential_revocation(request)?)
+    }
+
     /// Restrict this still-unreplayed predictive cursor to one native terminal
     /// operation after exact retained-source admission. Only the same Stop's
     /// terminal suffix can advance the cut; no source work, weaker predictor or
@@ -419,3 +449,4 @@ impl FilePredictiveMediatedLearnedRecovery {
         self.finish()
     }
 }
+

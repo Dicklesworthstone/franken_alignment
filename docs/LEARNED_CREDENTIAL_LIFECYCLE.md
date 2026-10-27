@@ -81,6 +81,29 @@ paired source checkpoint pins an exact journal extent; acknowledging a lifecycle
 Fence would require a corresponding source-custody successor. This command does
 not relax that contract or strand a topology owner behind a stale checkpoint.
 
+## Native source-custody succession
+
+The native `TopologyCheckpoint::after_credential_lifecycle` API carries an
+independently retained source checkpoint to a healthy original owner's
+acknowledged credential-maintenance cut. It requires the same canonical owner,
+bootstrap profile, exact retained history prefix, graph and monotone authority
+floors. Only original recovery Fence, CredentialRotate and CredentialRevoke
+events may follow that prefix. Source checks, graph updates, numerical work,
+clock/settlement events and Stop history cannot inherit an older source allowance.
+
+The successor retains the original topology and inventory bytes, source-check
+and byte expenditure, and last source operation. A native Fence leaves topology
+unavailable; carrying custody does not recertify it. A poisoned owner cannot
+certify an uncertain write. Callers may capture the acknowledged Fence pair
+before attempting a lifecycle mutation and retain that prefix after failure.
+This API performs no live source reads, credential provisioning or effect resend.
+
+The mediated learned recovery cursors also expose the existing credential
+status and rotation/revocation preflight after complete guarded replay. These
+queries issue no live roles and mutate no journal. An exact retry's original
+receipt remains distinct from the independently selected current generation.
+The operator topology integration is a separate consumer of these native APIs.
+
 ## Acknowledgment, deadlines and output
 
 The result schema is `fa.learned-credential-lifecycle-result/1`. Its bounded

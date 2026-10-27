@@ -1,5 +1,6 @@
 //! Independent source-work custody paired with the exact acknowledged journal.
 //! This is evidence transport, never source authentication or recovered authority.
+mod credential;
 mod recovery;
 mod terminal;
 pub use recovery::TopologyCheckpointResume;
@@ -205,3 +206,4 @@ fn read_bytes(reader: &mut impl Read, len: usize) -> Result<Vec<u8>, FileHistory
 
 #[cfg(test)]
 mod tests;
+
