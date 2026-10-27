@@ -12,7 +12,7 @@ use fa_reference::action::consequence::delivery::{
     },
 };
 
-fn published_with_topology(root: &Root, mode: Option<bool>) -> Case {
+pub(super) fn published_with_topology(root: &Root, mode: Option<bool>) -> Case {
     let (config, path, mut original) = original_topology::selected(root, mode, false);
     if mode == Some(true) {
         super::super::super::super::identity_tests::provision(root, &path, true);
@@ -55,7 +55,7 @@ fn published_with_topology(root: &Root, mode: Option<bool>) -> Case {
     }
 }
 
-fn read_checkpoint(path: &Path) -> TopologyCheckpoint {
+pub(super) fn read_checkpoint(path: &Path) -> TopologyCheckpoint {
     TopologyCheckpoint::read_trusted(
         &mut io::Cursor::new(fs::read(path).unwrap()),
         MAX_TOPOLOGY_CHECKPOINT_BYTES,
@@ -63,7 +63,7 @@ fn read_checkpoint(path: &Path) -> TopologyCheckpoint {
     .unwrap()
 }
 
-fn historical(root: &Root, source: &Path, name: &str) -> PathBuf {
+pub(super) fn historical(root: &Root, source: &Path, name: &str) -> PathBuf {
     let saved = read_checkpoint(source);
     let path = root.0.join(format!("{name}.json"));
     let r = root.0.display();
@@ -74,7 +74,7 @@ fn historical(root: &Root, source: &Path, name: &str) -> PathBuf {
     path
 }
 
-fn topology_arguments(
+pub(super) fn topology_arguments(
     case: &Case,
     anchor: &Path,
     history_output: &Path,
@@ -94,7 +94,7 @@ fn topology_arguments(
     args
 }
 
-fn remove_current_inputs(root: &Root) {
+pub(super) fn remove_current_inputs(root: &Root) {
     drop(remove_live_assets(root));
     fs::remove_file(root.0.join("live-1.json")).unwrap();
     fs::remove_file(root.0.join("inventory-1.json")).unwrap();
@@ -102,7 +102,7 @@ fn remove_current_inputs(root: &Root) {
     assert!(!root.0.join("missing-next-inventory.json").exists());
 }
 
-fn assert_pair(
+pub(super) fn assert_pair(
     original: &TopologyCheckpoint,
     history: &Path,
     source: &Path,
@@ -129,7 +129,7 @@ fn assert_pair(
     saved
 }
 
-fn retention(bytes: &[u8], revision: u64, history: bool, source: bool) {
+pub(super) fn retention(bytes: &[u8], revision: u64, history: bool, source: bool) {
     let parsed = strict_json::parse(bytes, Limits::default()).unwrap();
     let value = parsed.get("knowledge").unwrap().get("value").unwrap();
     assert_eq!(number(value, "journal_revision"), revision);

@@ -8,6 +8,8 @@ use std::{io, os::unix::fs::DirBuilderExt};
 
 #[path = "credential_lifecycle/topology.rs"]
 mod topology_tests;
+#[path = "credential_lifecycle/repair.rs"]
+mod repair_tests;
 
 const NEXT_SECRET: &[u8] = b"independently-reprovisioned-generation-two-credential-9437";
 
@@ -672,6 +674,7 @@ fn closed_lifecycle_grammar_rejects_other_authority_modes_before_any_input_or_re
         &["--topology-profile", "/missing/topology.json"],
         &["--retain-topology-checkpoint", "/missing/new.checkpoint"],
         &["--recover-terminal-checkpoint"],
+        &["--recover-credential-checkpoint"],
         &["--rotate-credential", "502", "1", "2"],
         &["--revoke-credential", "601", "1"],
         &["--history-anchor", "/missing/duplicate.anchor"],

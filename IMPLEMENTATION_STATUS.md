@@ -1,5 +1,65 @@
 # Implementation status · design revision 0.3
 
+## 2026-10-27: repair interrupted topology credential checkpoint exports
+
+The learned credential command now has an explicit
+`--recover-credential-checkpoint` path for a lost successor export. It requires
+the original version-2 source checkpoint and matching independent history anchor,
+the exact original lifecycle request, and the independently selected current
+credential epoch. Only that request's Rotate/Revoke events and recovery Fences
+may extend the retained prefix. Unrelated credential operations, source work,
+Time, settlement and Stop cannot be priced from an older source allowance.
+
+Both mediated learned replay types expose an operation-bound recovery wrapper.
+It retains the original exclusive cursor, numerical/predictor/guard checks,
+canonical history, terminal reserve and independent floor maxima. Its finalizer
+preflights the request before the original Fence, discards live roles, and returns
+a private maintenance owner that can only apply the bound request and capture
+acknowledged history/source custody. Ordinary exact-extent recovery is unchanged.
+The operator routes plain/raw/owned modes through that wrapper and shares the
+existing Fence-first independent export handling, including deadline and output
+failures. No source bytes, spent work, unknown-effect charges or revocation floor
+are reset; topology is not recertified.
+
+Five new native integration functions and three operator functions cover
+successful lost Rotate/Revoke export recovery in all three modes, Fence-only
+interruption, exact historical retries, unrelated suffix/current-epoch/floor/
+reserve refusal, forked history, every replay-drop boundary, and acknowledged
+exports after deadline/stdout failure. Four compile-fail API examples express
+the absence of general recovery and publication-owner escapes. New files passed
+rustfmt parsing; independent static review found no concrete implementation
+defect. These statements describe authored coverage, not runtime passes.
+
+Verification progressed after the earlier failed attempts below: a fresh
+isolated temporary filesystem allowed the real library, library test target,
+publication executable and publication test target at the first two increments
+to pass direct `rustc --edition=2024 --emit=metadata` checks. These checks used
+nightly-2026-08-31, without source rewriting, and established type/borrow checking,
+not execution or canonical qualification.
+
+A subsequent linked-library build intended for focused runtime tests was
+SIGKILLed after 25.56 seconds before a harness existed. Its observed peak RSS was
+600,352 KiB and the shared cgroup OOM-kill counter rose from 62 to 63; no runtime
+test executed. Its snapshot SHA-256 was
+`87a33e5ba1138a348b8e70b6eb08d67c0f7812a6b3fe1b154181cf02d21f6b46`.
+For the combined repair source, real library metadata checking passed with zero
+warnings in 38.59 seconds at source manifest
+`cd0c211d0bbba74853945e89741b2199a974bd7f19bf07c5c5a8a24bbcc283f9`.
+The environment became unavailable during the next library-unit-test target
+compilation, before a result was available; that interrupted attempt is retained.
+
+After recovery, a focused real-source run at the same manifest used
+`-Zthreads=1 --edition=2024 --emit=metadata`: the final library passed in 15.48
+seconds, publication executable in 2.68 seconds, complete publication test target
+in 9.67 seconds, and new native integration-test target in 0.11 seconds. All four
+returned zero. The four forbidden public-surface snippets each failed with the
+expected E0599, and the corresponding permitted API surface type-checked. This
+does not execute the regression bodies or replace the interrupted final library
+unit-test compilation. No runtime, Clippy, full workspace gate, latest qualified
+toolchain or Bead completion is claimed. Prior failures and the unchanged
+dependency-admission gate remain recorded. See
+[credential lifecycle](docs/LEARNED_CREDENTIAL_LIFECYCLE.md).
+
 ## 2026-10-27: maintain credentials on topology-protected learned owners
 
 The offline learned rotation/revocation commands now accept plain, raw-forecast

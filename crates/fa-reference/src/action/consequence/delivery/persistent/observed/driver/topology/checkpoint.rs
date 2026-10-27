@@ -1,6 +1,7 @@
 //! Independent source-work custody paired with the exact acknowledged journal.
 //! This is evidence transport, never source authentication or recovered authority.
 mod credential;
+mod credential_recovery;
 mod recovery;
 mod terminal;
 pub use recovery::TopologyCheckpointResume;

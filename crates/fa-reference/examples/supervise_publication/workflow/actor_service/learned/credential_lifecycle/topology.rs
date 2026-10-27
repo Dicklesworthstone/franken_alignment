@@ -1,7 +1,7 @@
 //! Paired custody for credential maintenance on an exact topology source cut.
 //! The native checkpoint successor owns suffix validation; this adapter only
 //! admits private output paths and exports its already acknowledged result.
-use super::{Config, FileOversight, Loaded, debug, topology};
+use super::{Config, Loaded, debug, owner::Host, topology};
 use crate::workflow::continuation::checkpoint::AcknowledgedOutput;
 use fa_reference::action::consequence::delivery::persistent::observed::{
     driver::topology::checkpoint::TopologyCheckpoint, guarded::anchored::FileHistoryAnchor,
@@ -15,9 +15,12 @@ pub(super) struct Output {
     archive: AcknowledgedOutput,
 }
 
-pub(super) fn take_options(args: &[String]) -> Result<(Vec<String>, Option<PathBuf>), String> {
+pub(super) fn take_options(
+    args: &[String],
+) -> Result<(Vec<String>, Option<PathBuf>, bool), String> {
     let mut remaining = Vec::new();
     let mut output = None;
+    let mut recover_checkpoint = false;
     let mut index = 0;
     while index < args.len() {
         if args[index] == "--recover-terminal-checkpoint" {
@@ -25,7 +28,13 @@ pub(super) fn take_options(args: &[String]) -> Result<(Vec<String>, Option<PathB
                 "credential topology custody cannot use terminal checkpoint recovery".into(),
             );
         }
-        if args[index] == FLAG {
+        if args[index] == "--recover-credential-checkpoint" {
+            if index < 4 || recover_checkpoint {
+                return Err("credential checkpoint recovery must be selected once in credential lifecycle mode".into());
+            }
+            recover_checkpoint = true;
+            index += 1;
+        } else if args[index] == FLAG {
             if index < 4 || output.is_some() {
                 return Err(REQUIRED.into());
             }
@@ -38,13 +47,17 @@ pub(super) fn take_options(args: &[String]) -> Result<(Vec<String>, Option<PathB
             index += 1;
         }
     }
-    Ok((remaining, output))
+    Ok((remaining, output, recover_checkpoint))
 }
 
 /// Reject incomplete topology custody before configuration intake. The two
 /// original parsers still own duplicate flags, paths and remaining mode grammar.
-pub(super) fn check_pair(profile: Option<&Path>, output: Option<&Path>) -> Result<(), String> {
-    if profile.is_some() != output.is_some() {
+pub(super) fn check_pair(
+    profile: Option<&Path>,
+    output: Option<&Path>,
+    recover_checkpoint: bool,
+) -> Result<(), String> {
+    if profile.is_some() != output.is_some() || (recover_checkpoint && profile.is_none()) {
         return Err(REQUIRED.into());
     }
     Ok(())
@@ -80,14 +93,14 @@ pub(super) fn admit(
 /// No current source files are consulted and no source work is replenished.
 pub(super) fn capture(
     loaded: &Loaded,
-    host: &FileOversight,
+    host: &impl Host,
     anchor: &FileHistoryAnchor,
 ) -> Result<Option<TopologyCheckpoint>, String> {
     let Some(history) = topology::history(loaded)? else {
         return Ok(None);
     };
     let saved = history.checkpoint().ok_or(REQUIRED)?;
-    let next = saved.after_credential_lifecycle(host).map_err(debug)?;
+    let next = host.checkpoint(saved).map_err(debug)?;
     if next.history_anchor() != anchor {
         return Err(
             "credential source checkpoint and acknowledged history describe different cuts".into(),

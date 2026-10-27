@@ -82,11 +82,11 @@ Topology-protected plain, raw-forecast and owned-forecast histories use the same
 offline lifecycle command with two additional options:
 
 ```sh
-supervise_publication create-learned-generated CONFIG CREDENTIAL_RECIPE \\
-  --rotate-credential 501 1 2 \\
-  --history-anchor /operator/history-before.anchor \\
-  --retain-history-anchor /operator/history-rotated.anchor \\
-  --topology-profile /operator/topology-before.json \\
+supervise_publication create-learned-generated CONFIG CREDENTIAL_RECIPE \
+  --rotate-credential 501 1 2 \
+  --history-anchor /operator/history-before.anchor \
+  --retain-history-anchor /operator/history-rotated.anchor \
+  --topology-profile /operator/topology-before.json \
   --retain-topology-checkpoint /operator/source-rotated.checkpoint
 ```
 
@@ -117,6 +117,53 @@ requires explicit recovery of that custody rather than resetting its counters.
 For the source profile format, see [topology checkpoint
 operation](TOPOLOGY_CHECKPOINT_OPERATOR.md).
 
+
+## Recover a missing successor export
+
+If a credential change or its recovery Fence was acknowledged but the successor
+source checkpoint could not be retained, keep the original paired archives and
+repeat the **same** lifecycle request with explicit restricted recovery:
+
+```sh
+supervise_publication create-learned-generated CONFIG CREDENTIAL_RECIPE \
+  --rotate-credential 501 1 2 \
+  --history-anchor /operator/history-before.anchor \
+  --retain-history-anchor /operator/history-repaired.anchor \
+  --topology-profile /operator/topology-before.json \
+  --retain-topology-checkpoint /operator/source-repaired.checkpoint \
+  --recover-credential-checkpoint
+```
+
+Select the current credential epoch independently before retrying. If rotation
+501 already advanced the guard to generation 2, the recipe must select generation
+2 even though the retried request still says `501 1 2`. If the first attempt only
+acknowledged its Fence, the current generation remains 1 and recovery may apply
+that same pending request. Revocation uses the same option and its original
+operation ID and expected generation; an acknowledged revocation requires the
+current profile's revoked state.
+
+This option requires version-2 topology custody and its exactly matching input
+history anchor. After that retained prefix, only recovery Fences and the exact
+selected rotation or revocation may appear. A different operation, changed
+arguments, source update, ordinary work, Time, settlement or Stop refuses before
+a new recovery Fence. A later unrelated credential operation requires a retained
+pair that already includes it. The option cannot turn an old checkpoint into a
+general continuation point.
+
+The command retains the original exclusive recovery lock and performs the full
+numerical, predictor, policy, epoch and independent-floor checks. It creates a
+restricted maintenance owner with only the bound lifecycle request and archive
+export operations. It exposes no live publication roles, topology observation,
+numerical generation or raw owner. Original source documents, source work and
+the last source operation carry forward unchanged; topology availability remains
+withdrawn after the Fence.
+
+A completed request returns its original receipt without appending that lifecycle
+event again. Both successor archives are attempted independently, including after
+a deadline or report-output failure. Keep the previous pair until both new
+archives are retained. Ordinary recovery continues to require exact journal
+extent; this explicit command is the bounded repair path for lost maintenance
+exports.
 
 ## Native source-custody succession
 

@@ -15,8 +15,10 @@ use std::{io::Write, path::Path};
 
 #[path = "credential_lifecycle/topology.rs"]
 mod custody;
+#[path = "credential_lifecycle/owner.rs"]
+mod owner;
 
-const USAGE: &str = "create-learned-generated CONFIG LEARNED_RECIPE (--rotate-credential OPERATION EXPECTED_GENERATION NEXT_GENERATION | --revoke-credential OPERATION EXPECTED_GENERATION) --history-anchor INPUT --retain-history-anchor NEW_OUTPUT [--topology-profile PATH --retain-topology-checkpoint NEW_OUTPUT]";
+const USAGE: &str = "create-learned-generated CONFIG LEARNED_RECIPE (--rotate-credential OPERATION EXPECTED_GENERATION NEXT_GENERATION | --revoke-credential OPERATION EXPECTED_GENERATION) --history-anchor INPUT --retain-history-anchor NEW_OUTPUT [--topology-profile PATH --retain-topology-checkpoint NEW_OUTPUT [--recover-credential-checkpoint]]";
 
 #[derive(Clone, Copy)]
 pub(super) enum Request {
@@ -35,8 +37,8 @@ impl Request {
 
 /// This owner stays private to maintenance. The original guard checks supply
 /// both current state and the historical retry receipt before the recovery Fence.
-pub(super) struct Recovered {
-    pub host: FileOversight,
+pub(super) struct Recovered<H = FileOversight> {
+    pub host: H,
     pub current: FileCredentialStatus,
     pub retry: Option<CredentialChangeReceipt>,
 }
@@ -66,9 +68,13 @@ pub(super) fn command_with(
     if credibility.is_some() {
         return Err("credential lifecycle cannot activate credibility".into());
     }
-    let (args, topology_output) = custody::take_options(args)?;
+    let (args, topology_output, recover_checkpoint) = custody::take_options(args)?;
     let (args, topology_path) = topology::take_option(&args)?;
-    custody::check_pair(topology_path.as_deref(), topology_output.as_deref())?;
+    custody::check_pair(
+        topology_path.as_deref(),
+        topology_output.as_deref(),
+        recover_checkpoint,
+    )?;
     let has_input = args.iter().any(|arg| arg == "--history-anchor");
     let has_output = args.iter().any(|arg| arg == "--retain-history-anchor");
     let (args, options) = anchors::take_options(&args)?;
@@ -114,11 +120,24 @@ pub(super) fn command_with(
     checkpoint()?;
     options.admit(&config, &mut loaded, true)?;
     checkpoint()?;
-    topology::admit(&config, &mut loaded, topology_path.as_deref(), topology::Mode::Historical)?;
+    topology::admit(
+        &config,
+        &mut loaded,
+        topology_path.as_deref(),
+        topology::Mode::Historical,
+    )?;
     checkpoint()?;
     let topology_output = custody::admit(&config, &loaded, topology_output.as_deref())?;
     checkpoint()?;
-    run(&config, &loaded, request, topology_output.as_ref(), elapsed, out)
+    run(
+        &config,
+        &loaded,
+        request,
+        topology_output.as_ref(),
+        recover_checkpoint,
+        elapsed,
+        out,
+    )
 }
 
 fn number(text: &str) -> Result<u64, String> {
@@ -145,6 +164,59 @@ fn run(
     loaded: &Loaded,
     request: Request,
     topology_output: Option<&custody::Output>,
+    recover_checkpoint: bool,
+    elapsed: &mut impl FnMut() -> Duration,
+    out: &mut impl Write,
+) -> Result<(), String> {
+    if recover_checkpoint {
+        return run_repaired(config, loaded, request, topology_output, elapsed, out);
+    }
+    let wall = Duration::from_millis(config.timing.runtime_ms);
+    let recovered =
+        recovery::open_selected_credential_with_checkpoints(config, loaded, request, &mut |_| {
+            check_elapsed(elapsed, wall)
+        })?;
+    run_recovered(
+        config,
+        loaded,
+        request,
+        topology_output,
+        recovered,
+        elapsed,
+        out,
+    )
+}
+
+// Mutually exclusive native owners stay in separate startup frames.
+fn run_repaired(
+    config: &Config,
+    loaded: &Loaded,
+    request: Request,
+    topology_output: Option<&custody::Output>,
+    elapsed: &mut impl FnMut() -> Duration,
+    out: &mut impl Write,
+) -> Result<(), String> {
+    let wall = Duration::from_millis(config.timing.runtime_ms);
+    let recovered = recovery::credential::open(config, loaded, request, &mut |_| {
+        check_elapsed(elapsed, wall)
+    })?;
+    run_recovered(
+        config,
+        loaded,
+        request,
+        topology_output,
+        recovered,
+        elapsed,
+        out,
+    )
+}
+
+fn run_recovered<H: owner::Host>(
+    config: &Config,
+    loaded: &Loaded,
+    request: Request,
+    topology_output: Option<&custody::Output>,
+    recovered: Recovered<H>,
     elapsed: &mut impl FnMut() -> Duration,
     out: &mut impl Write,
 ) -> Result<(), String> {
@@ -155,9 +227,7 @@ fn run(
         mut host,
         current: before,
         retry,
-    } = recovery::open_selected_credential_with_checkpoints(config, loaded, request, &mut |_| {
-        check_elapsed(elapsed, wall)
-    })?;
+    } = recovered;
     let fence_revision = host.revision();
     // Capture the acknowledged Fence BEFORE attempting another write. If a
     // later journal replacement becomes ambiguous, this remains an honest
@@ -192,9 +262,18 @@ fn run(
                 "recovery Fence acknowledged at revision {fence_revision}, but its source checkpoint could not be captured: {error}; credential transition was not attempted"
             );
             let reported = report(
-                "refused", None, &before, previous.revision(), fence_revision, fence_revision,
-                Retained { history: retained.as_ref().ok().map(|()| fence_revision),
-                    topology: None, topology_required: topology_output.is_some() }, out,
+                "refused",
+                None,
+                &before,
+                previous.revision(),
+                fence_revision,
+                fence_revision,
+                Retained {
+                    history: retained.as_ref().ok().map(|()| fence_revision),
+                    topology: None,
+                    topology_required: topology_output.is_some(),
+                },
+                out,
             );
             return Err(combine(combine(failure, retained.err()), reported.err()));
         }
@@ -205,7 +284,7 @@ fn run(
     let mut receipt = retry;
     match check_elapsed(elapsed, wall) {
         Err(error) => failures.push(error),
-        Ok(()) => match request.apply(&mut host) {
+        Ok(()) => match host.apply(request) {
             Ok(original) => receipt = Some(original),
             Err(error) => failures.push(format!(
                 "native credential transition failed: {}",
@@ -218,7 +297,7 @@ fn run(
     if let Err(error) = check_elapsed(elapsed, wall) {
         failures.push(error);
     }
-    if host.storage_failure().is_some() {
+    if host.storage_failed() {
         let retained = anchors::export_acknowledged(&fence_anchor, output);
         let source_retained = custody::retain(topology_output, fence_checkpoint.as_ref());
         let custody = match retained {
@@ -232,7 +311,9 @@ fn run(
         // No known-current report can be formed after an ambiguous replacement.
         // A retained prefix is not a receipt for the unconfirmed transition.
         let custody = match source_retained {
-            Ok(Some(revision)) => format!("{custody}; acknowledged Fence source checkpoint retained through revision {revision}"),
+            Ok(Some(revision)) => format!(
+                "{custody}; acknowledged Fence source checkpoint retained through revision {revision}"
+            ),
             Ok(None) => custody,
             Err(error) => format!("{custody}; {error}"),
         };
@@ -249,7 +330,10 @@ fn run(
             let failure = format!(
                 "recovery Fence acknowledged at revision {fence_revision}, but current credential status is unavailable; no transition was retried"
             );
-            return Err(combine(combine(failure, retained.err()), source_retained.err()));
+            return Err(combine(
+                combine(failure, retained.err()),
+                source_retained.err(),
+            ));
         }
     };
     let revision = host.revision();
@@ -258,7 +342,9 @@ fn run(
             let checkpoint = match custody::capture(loaded, &host, &anchor) {
                 Ok(checkpoint) => checkpoint,
                 Err(error) => {
-                    failures.push(format!("latest acknowledged source checkpoint could not be captured: {error}"));
+                    failures.push(format!(
+                        "latest acknowledged source checkpoint could not be captured: {error}"
+                    ));
                     None
                 }
             };
@@ -303,8 +389,11 @@ fn run(
         previous.revision(),
         fence_revision,
         revision,
-        Retained { history: retained_revision, topology: retained_topology,
-            topology_required: topology_output.is_some() },
+        Retained {
+            history: retained_revision,
+            topology: retained_topology,
+            topology_required: topology_output.is_some(),
+        },
         out,
     ) {
         failures.push(error);
@@ -335,7 +424,11 @@ struct Retained {
 }
 impl Retained {
     fn empty(topology_required: bool) -> Self {
-        Self { history: None, topology: None, topology_required }
+        Self {
+            history: None,
+            topology: None,
+            topology_required,
+        }
     }
 }
 
@@ -361,10 +454,12 @@ fn report(
             )
         },
     );
-    let history_revision =
-        retained.history.map_or_else(|| "null".to_owned(), |revision| format!("\"{revision}\""));
-    let topology_revision =
-        retained.topology.map_or_else(|| "null".to_owned(), |revision| format!("\"{revision}\""));
+    let history_revision = retained
+        .history
+        .map_or_else(|| "null".to_owned(), |revision| format!("\"{revision}\""));
+    let topology_revision = retained
+        .topology
+        .map_or_else(|| "null".to_owned(), |revision| format!("\"{revision}\""));
     let report = format!(
         "{{\"schema\":\"fa.learned-credential-lifecycle-result/1\",\"status\":\"{status}\",\"knowledge\":{{\"kind\":\"known\",\"basis\":{{\"class\":\"bounded_model\",\"scope\":\"original_credential_lifecycle\",\"authentic_origin\":\"unknown\",\"independent_history_through\":\"{anchored_through}\",\"acknowledged_journal_revision\":\"{revision}\"}},\"value\":{{\"receipt\":{receipt},\"current\":{{\"generation\":\"{}\",\"revoked\":{},\"retained_changes\":\"{}\"}},\"recovery_fence_revision\":\"{fence_revision}\",\"journal_revision\":\"{revision}\",\"history_retained\":{},\"retained_history_revision\":{history_revision},\"topology_checkpoint_required\":{},\"topology_checkpoint_retained\":{},\"retained_topology_checkpoint_revision\":{topology_revision}}}}},\"authority\":\"none\"}}\n",
         current.generation,

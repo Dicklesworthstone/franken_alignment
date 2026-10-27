@@ -249,6 +249,21 @@ fn check_machine(profile: &FileOversightProfile, machine: &Machine, events: &[Ev
 }
 
 impl FilePredictiveMediatedLearnedRecovery {
+    /// Restrict the still-unreplayed original cursor to one exact credential
+    /// maintenance operation after retained source-checkpoint admission.
+    /// Only its Fence/Rotate/Revoke suffix may explain an unexported cut.
+    /// No live roles, observer, generation control or alternate operation escape.
+    pub fn require_credential_checkpoint(mut self,
+        saved: &super::super::super::driver::topology::checkpoint::TopologyCheckpoint,
+        request: super::credential::FileCredentialMaintenanceRequest)
+        -> Result<super::credential::FileCredentialTopologyRecovery, JournalError>
+    {
+        let progress = self.progress();
+        super::credential::prepare(&self.inner, progress, &mut self.expected.topology,
+            &mut self.expected.oversight.minimum, saved, request)?;
+        Ok(super::credential::FileCredentialTopologyRecovery::predictive(self, saved, request))
+    }
+
     /// Inspect credential state only after the original numerical replay and
     /// every independent topology, predictor, guard and floor check succeeds.
     /// No cleanup, fence, source observation or live role is produced.

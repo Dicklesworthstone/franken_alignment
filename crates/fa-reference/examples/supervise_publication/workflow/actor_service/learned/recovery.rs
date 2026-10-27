@@ -7,6 +7,8 @@ pub(super) mod readonly;
 mod selected;
 #[path = "recovery/terminal.rs"]
 mod terminal;
+#[path = "recovery/credential.rs"]
+pub(super) mod credential;
 use super::{
     ActorWire, Command, Config, Control, Deadline, Duration, ElapsedTick, FileHumanReviewer,
     FileLearnedTextStreamActorPort, FileOversight, FileSupervisedDriver, Instant,

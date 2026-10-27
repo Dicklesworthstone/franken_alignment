@@ -1,5 +1,22 @@
 # Changelog
 
+## 2026-10-27: recover lost topology credential custody exports
+
+- Add operation-bound native credential recovery and a maintenance-only owner.
+  Preserve original guarded replay, exact history, current epoch, independent
+  floor maxima and source expenditure; admit only the same request and Fences.
+- Expose explicit `--recover-credential-checkpoint` for plain/raw/owned learned
+  histories. Complete pending Fence-only maintenance or return the exact original
+  receipt, then independently retain both acknowledged archives.
+- Add five native integration functions, three operator functions and four
+  compile-fail API examples with permitted controls and pre-Fence refusals.
+- Pass real-source metadata checks for the final native library, publication
+  executable, complete publication test target and new native integration target;
+  verify four forbidden owner escapes fail with E0599 and a permitted control
+  compiles. Preserve earlier successful checks and the interrupted large-unit
+  attempt. Linked compilation hit the shared OOM limit before any runtime test;
+  runtime and full project qualification remain open.
+
 ## 2026-10-27: expose topology-aware learned credential maintenance
 
 - Connect offline rotation and revocation to fully guarded topology histories
