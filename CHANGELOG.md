@@ -1,5 +1,17 @@
 # Changelog
 
+## 2026-10-27: retain learned receipt custody from the operator
+
+- Add explicit successor history and paired v2 topology output to learned
+  reconciliation across plain/raw/owned modes. Validate independent matching
+  input custody and distinct new outside-store outputs before the clock.
+- Attempt both archives before late deadline/stdout handling, preserve combined
+  failures and acknowledged revision, and enable the next exact recovery.
+  Passive receipt behavior and the original effect/no-retry rules are unchanged.
+- Add five real operator regression functions. Library, executable, complete
+  operator test target and native integration metadata pass after correcting
+  the service fixture alias; runtime and full workspace qualification remain open.
+
 ## 2026-10-27: preserve custody through native learned receipt settlement
 
 - Retain acknowledged history, snapshot and selected outcome from the original

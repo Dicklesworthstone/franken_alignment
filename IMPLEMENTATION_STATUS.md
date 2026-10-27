@@ -1,5 +1,33 @@
 # Implementation status · design revision 0.3
 
+## 2026-10-27: keep learned receipt settlement reopenable through the operator
+
+The one-shot learned `--resume --reconcile-receipts` command now accepts retained
+history, and paired retained source custody for selected topology histories.
+Plain/raw/owned modes use their original complete guarded cursor and the native
+acknowledged result. Topology output requires an exact v2 checkpoint plus its
+independent input anchor; unsafe, duplicate, mixed and incomplete output
+selections refuse before the settlement clock. Passive receipt mode still
+refuses output retention before configuration intake.
+
+Both selected archives are attempted before a late deadline or response write.
+Errors retain the acknowledged revision and independent export/report failures;
+they never retry the effect. Subsequent passive inspection or further explicit
+reconciliation can select the successor pair without rereading live source
+files or resetting spent source work. Legacy no-output calls retain their
+previous behavior, including the stale old-v2-cut limitation after mutation.
+
+Five new operator regression functions cover message and finish history,
+actual topology publication and later exact recovery in all three modes,
+stale/mixed/manual/unsafe custody, independent output races, late expiry and
+stdout loss. The real library, executable, complete publication test target and
+native receipt integration target pass direct nightly metadata checks. This
+establishes type/borrow checking, not execution. The earlier fixture module-name
+error was corrected before these passing checks. The full library-unit
+metadata attempt remains interrupted by SIGKILL; no runtime or canonical gate
+pass is claimed here. See
+[retained receipt custody](docs/LEARNED_RECEIPT_RECONCILIATION.md#retained-topology-receipt-custody).
+
 ## 2026-10-27: retain exact source custody after learned receipt reconciliation
 
 The original single-replay Fence/Time/Sweep transaction now hands off its

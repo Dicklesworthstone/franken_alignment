@@ -6,6 +6,8 @@ use fa_reference::action::consequence::oversight::actor_wire::WireResponse;
 use std::{io, path::Path};
 #[path = "operator/fixture.rs"]
 mod fixture;
+#[path = "operator/retained.rs"]
+mod retained;
 
 fn encoded(response: &WireResponse) -> Vec<u8> {
     let mut bytes = response.encode();

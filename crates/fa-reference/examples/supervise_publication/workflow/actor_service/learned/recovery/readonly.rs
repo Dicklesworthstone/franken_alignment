@@ -1,6 +1,7 @@
 //! Explicit receipt inspection or settlement on the SAME guarded replay.
 //! Neither mode returns a live owner; a failed mode never falls back to the other.
 #[path = "readonly/service.rs"] pub(in super::super) mod service;
+#[path = "readonly/custody.rs"] mod custody;
 use super::{receipt_replay, selected::Cursor};
 use super::super::{Config, Loaded, Duration, Instant, RunResult, anchors, emit, finish, recipe, topology};
 use fa_reference::action::consequence::oversight::actor_wire::WireResponse;
@@ -10,7 +11,7 @@ use std::{io::Write, path::Path};
 const FLAG: &str = "--receipts-only";
 const USAGE: &str = "create-learned-generated CONFIG LEARNED_RECIPE --resume --receipts-only [--finish-after-message PREVIOUS_REQUEST] [--topology-profile PATH] [--history-anchor INPUT]";
 const RECONCILE_FLAG: &str = "--reconcile-receipts";
-const RECONCILE_USAGE: &str = "create-learned-generated CONFIG LEARNED_RECIPE --resume --reconcile-receipts [--finish-after-message PREVIOUS_REQUEST] [--topology-profile PATH] [--history-anchor INPUT]";
+const RECONCILE_USAGE: &str = "create-learned-generated CONFIG LEARNED_RECIPE --resume --reconcile-receipts [--finish-after-message PREVIOUS_REQUEST] [--topology-profile PATH] [--history-anchor INPUT] [--retain-history-anchor NEW_OUTPUT [--retain-topology-checkpoint NEW_OUTPUT]]";
 const ACKNOWLEDGED_EXPIRED: &str = "learned receipt reconciliation acknowledged; deadline expired before response; inspect with --receipts-only; no effect retry was sent";
 
 #[derive(Clone, Copy)]
@@ -46,7 +47,7 @@ pub(in super::super) fn command(args: &[String], credibility: Option<&Path>,
 pub(in super::super) fn command_with_elapsed(args: &[String], credibility: Option<&Path>,
     output: &mut impl Write, elapsed: &mut impl FnMut() -> Duration) -> Result<(), String>
 {
-    let (config, loaded, after) = load(args, credibility, Mode::ReadOnly, elapsed)?;
+    let (config, loaded, after, _) = load(args, credibility, Mode::ReadOnly, elapsed)?;
     let response = read(&config, &loaded, after, elapsed)?;
     emit(RunResult { response, failure: None, cleanup_pending: 0 }, output)
 }
@@ -58,7 +59,10 @@ pub(in super::super) fn command_reconciled_with_elapsed<F>(args: &[String],
     credibility: Option<&Path>, output: &mut impl Write, clock: F,
     elapsed: &mut impl FnMut() -> Duration) -> Result<(), String>
 where F: FnOnce() -> ElapsedTick {
-    let (config, loaded, after) = load(args, credibility, Mode::Reconcile, elapsed)?;
+    let (config, loaded, after, retained) = load(args, credibility, Mode::Reconcile, elapsed)?;
+    if let Some(retained) = retained {
+        return reconcile_retained(&config, &loaded, after, &retained, clock, elapsed, output);
+    }
     let response = reconcile(&config, &loaded, after, clock, elapsed)?;
     // Same encoder/exit law. A failed stdout write cannot erase the acknowledged
     // transaction or trigger another recovery, helper session or effect retry.
@@ -66,15 +70,22 @@ where F: FnOnce() -> ElapsedTick {
 }
 
 fn load(args: &[String], credibility: Option<&Path>, mode: Mode,
-    elapsed: &mut impl FnMut() -> Duration) -> Result<(Config, Loaded, Option<u64>), String>
+    elapsed: &mut impl FnMut() -> Duration)
+    -> Result<(Config, Loaded, Option<u64>, Option<custody::Outputs>), String>
 {
-    let (args, topology_path) = topology::take_option(args)?;
+    if matches!(mode, Mode::ReadOnly) && args.iter().any(|arg|
+        matches!(arg.as_str(), "--retain-history-anchor" | "--retain-topology-checkpoint"))
+    {
+        return Err(mode.usage().into());
+    }
+    let (args, source_output) = custody::take_option(args)?;
+    let (args, topology_path) = topology::take_option(&args)?;
+    custody::check_options(&args, topology_path.as_deref(), source_output.as_deref())?;
     let usage = mode.usage(); let flag = mode.flag();
     if credibility.is_some() || args.iter().filter(|arg|
         matches!(arg.as_str(), FLAG | RECONCILE_FLAG)).count() != 1
         || !args.iter().any(|arg| arg == flag)
-        || args.iter().any(|arg| matches!(arg.as_str(), "--retain-history-anchor"
-            | "--recover-stop" | "--audit-review" | "--continue-generation"
+        || args.iter().any(|arg| matches!(arg.as_str(), "--recover-stop" | "--audit-review" | "--continue-generation"
             | "--after-message" | "--credibility-activation")) {
         return Err(usage.into());
     }
@@ -94,7 +105,8 @@ fn load(args: &[String], credibility: Option<&Path>, mode: Mode,
     let mut loaded = recipe::load(Path::new(&args[2]), &config, false)?;
     anchors.admit(&config, &mut loaded, true)?;
     topology::admit(&config, &mut loaded, topology_path.as_deref(), topology::Mode::Historical)?;
-    Ok((config, loaded, after))
+    let retained = custody::admit(&config, &loaded, source_output.as_deref())?;
+    Ok((config, loaded, after, retained))
 }
 
 pub(in super::super) fn read(config: &Config, loaded: &Loaded, after: Option<u64>,
@@ -132,6 +144,43 @@ where F: FnOnce() -> ElapsedTick {
         return Err(ACKNOWLEDGED_EXPIRED.into());
     }
     Ok(WireResponse { request: Some(loaded.request), result: Ok(outcome) })
+}
+
+/// Explicit retained settlement completes the original transaction once, then
+/// exports its immutable acknowledged cut before any late deadline/report error.
+fn reconcile_retained<F>(config: &Config, loaded: &Loaded, after: Option<u64>,
+    retained: &custody::Outputs, clock: F, elapsed: &mut impl FnMut() -> Duration,
+    output: &mut impl Write) -> Result<(), String>
+where F: FnOnce() -> ElapsedTick {
+    if loaded.request == 0 { return Err("receipt request must be nonzero".into()); }
+    if let Some(after) = after { finish::check_ids(loaded.request, after)?; }
+    let saved = topology::history(loaded)?.and_then(|history| history.checkpoint());
+    let result = receipt_replay(config, loaded, elapsed, |run| match saved {
+        Some(saved) => run.finish_reconciled_receipt_with_checkpoint(loaded.request, after, saved, clock),
+        None => run.finish_reconciled_receipt_with_history(loaded.request, after, clock),
+    })?;
+    let revision = result.history_anchor().revision();
+    let retention = retained.retain(config, loaded, &result);
+    let acknowledged = format!("learned receipt reconciliation acknowledged at revision {revision}");
+    if elapsed() >= Duration::from_millis(config.timing.runtime_ms) {
+        let error = format!("{acknowledged}; deadline expired before response; no effect retry was sent");
+        return Err(match retention {
+            Ok(()) => error,
+            Err(retention) => format!("{error}; {retention}"),
+        });
+    }
+    let (outcome, _) = result.into_parts();
+    let response = WireResponse { request: Some(loaded.request), result: Ok(outcome) };
+    // Preserve the original actor response and exit law, while retaining both
+    // archive errors even if writing that response fails.
+    let reported = emit(RunResult { response, failure: None, cleanup_pending: 0 }, output);
+    match (retention, reported) {
+        (Ok(()), Ok(())) => Ok(()),
+        (Err(error), Ok(())) | (Ok(()), Err(error)) =>
+            Err(format!("{acknowledged}; {error}; no effect retry was sent")),
+        (Err(retention), Err(report)) =>
+            Err(format!("{acknowledged}; {retention}; {report}; no effect retry was sent")),
+    }
 }
 
 fn check_elapsed(config: &Config, elapsed: &mut impl FnMut() -> Duration) -> Result<(), String> {

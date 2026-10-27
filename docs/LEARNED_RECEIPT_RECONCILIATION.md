@@ -68,8 +68,7 @@ is closed and no repository verification requirement is weakened.
 The original learned publication command now accepts:
 
 ```text
-create-learned-generated CONFIG LEARNED_RECIPE --resume --reconcile-receipts [--history-anchor INPUT]
-create-learned-generated CONFIG LEARNED_RECIPE --resume --reconcile-receipts --finish-after-message PREVIOUS_REQUEST [--history-anchor INPUT]
+create-learned-generated CONFIG LEARNED_RECIPE --resume --reconcile-receipts [--finish-after-message PREVIOUS_REQUEST] [--topology-profile PATH] [--history-anchor INPUT] [--retain-history-anchor NEW_OUTPUT [--retain-topology-checkpoint NEW_OUTPUT]]
 ```
 
 This opt-in path consumes the original ordinary/raw/owned guarded cursor through
@@ -80,13 +79,16 @@ event and Ready. The trusted logical clock is called only by the final native
 transaction, once. No current policy evidence, native helper, reviewer/actor/stop
 socket, new sampled token or refreshed qualification enters settlement.
 
-Both explicit receipt modes use the same closed argument/asset intake. They
-reject mixed or duplicate modes, live continuation, next-message, stop, review
-audit, credibility activation and successor-anchor output before reading input.
-Path-valued anchor parsing precedes boolean flag removal, so a missing anchor
-value cannot be repaired by stripping the reconciliation flag. Required model,
-tokenizer, codec, predictor, full guards, floors and optional old anchor retain
-their exact existing meaning. Missing or mismatched assets have no fallback.
+Both explicit receipt modes retain their closed argument and asset intake.
+They reject mixed or duplicate modes, live continuation, next-message, stop,
+review audit and credibility activation. `--receipts-only` also rejects either
+retained-output flag before configuration intake. Reconciliation admits its
+explicit outputs before replay: paths must be new, absolute, outside the
+authority store and distinct after parent-path normalization. Duplicate,
+unpaired, occupied, unsafe or mixed-cut selections refuse before the trusted
+settlement clock. Path-valued parsing precedes boolean flag removal. Required
+model, tokenizer, codec, predictor, full guards, floors and input anchor retain
+their existing meaning; missing or mismatched assets have no fallback.
 
 `--receipts-only` remains non-mutating and uses its unchanged historical outcome
 finalizer and elapsed-check sequence. Ordinary `--resume` also retains its
@@ -95,13 +97,21 @@ original events even for an already terminal selected record; it is not a
 capacity-free retry. Original sweep outcomes for other keys are not represented
 by the selected actor response. Inspect them independently as needed.
 
-After acknowledgment, a second elapsed check can withhold the response but now
-explicitly reports that reconciliation was acknowledged. It cannot claim that
-nothing changed, roll back a confirmed image or retry an effect. A partial stdout
-failure retains the original response encoder's no-retry behavior. Subsequent
-`--receipts-only` inspection recovers the historical outcome without another
-fence. Only confirmed execution returns the original successful-publication exit
-status; a denied, pending or unresolved result is not relabeled success.
+When retention is selected, both exports are attempted independently before
+the post-acknowledgment elapsed check or stdout write. A late deadline withholds
+the response but still attempts retention. An export failure does not suppress
+the other export or the original response; combined failures are preserved.
+Every such error identifies the acknowledged revision and cannot undo the
+transaction or retry an effect. Only confirmed execution returns the original
+successful-publication exit status; denied, pending or unresolved results are
+not relabeled success.
+
+Commands without retained outputs preserve their previous behavior. Successful
+reconciliation advances the journal by three events, so an older v2 source
+checkpoint no longer satisfies subsequent exact-cut topology recovery. There is
+no receipt counterpart of `--recover-terminal-checkpoint`: an earlier pair is
+not promoted across an unretained suffix after interrupted exports. Keep the
+original archives and every successfully written successor.
 
 The outer actor-service dispatcher now routes BOTH receipt flags. This also
 repairs the existing baseline stream `--reconcile-receipts` path, whose inner
@@ -125,6 +135,56 @@ launcher is absent; no Rust toolchain is available locally. Verified preimages,
 Git blob checks and selected-source whitespace checks do not qualify compilation,
 behavior, formatting, Clippy, performance or production deployment. No gate,
 assertion, dependency requirement or original packet acceptance was weakened.
+
+## Retained topology receipt custody
+
+Selecting `--retain-history-anchor` requires an independent `--history-anchor`.
+Without topology, this retains the complete acknowledged history. With
+`--topology-profile`, both retained-output flags are required, and the selected
+version-2 source checkpoint must contain exactly the independent input anchor.
+Version-1 manual source minima cannot produce a retained source checkpoint.
+The original complete cursor checks the selected source cut before its clock.
+
+Use the existing historical
+[version-2 profile](TOPOLOGY_CHECKPOINT_OPERATOR.md#subsequent-publication),
+omitting its live-source `retain_checkpoint` field. Its `source_checkpoint`
+must select the same cut as `history-0.anchor` below. Initial historical
+documents remain required; receipt recovery does not read the `next` live files.
+
+```sh
+RCH_REQUIRE_REMOTE=1 rch exec -- cargo run --locked -p fa-reference \
+  --example supervise_publication -- \
+  create-learned-generated CONFIG.json LEARNED_RECIPE.json \
+  --resume --reconcile-receipts \
+  --history-anchor /operator/custody/history-0.anchor \
+  --topology-profile /operator/custody/receipts-0.json \
+  --retain-history-anchor /operator/custody/history-1.anchor \
+  --retain-topology-checkpoint /operator/custody/source-1.bin
+```
+
+For an original finish request, also supply
+`--finish-after-message PREVIOUS_REQUEST` with its exact confirmed predecessor.
+
+After both exports succeed, save a new historical profile as
+`/operator/custody/receipts-1.json`, changing `source_checkpoint` to
+`/operator/custody/source-1.bin`. Source work and the last operation have not
+advanced, so the existing valid operation selector remains valid. Inspect the
+same request without another fence:
+
+```sh
+RCH_REQUIRE_REMOTE=1 rch exec -- cargo run --locked -p fa-reference \
+  --example supervise_publication -- \
+  create-learned-generated CONFIG.json LEARNED_RECIPE.json \
+  --resume --receipts-only \
+  --history-anchor /operator/custody/history-1.anchor \
+  --topology-profile /operator/custody/receipts-1.json
+```
+
+Retain the finish predecessor option when inspecting a finish. A further
+explicit reconciliation can select this successor pair and two new output paths;
+it still spends three events and preserves unresolved dispatched charges. The
+old pair remains rejected once the journal advances. These are two independent
+exports, not an atomic multi-file transaction or archive authentication.
 
 ## Refusal-state clarification (2026-10-24)
 

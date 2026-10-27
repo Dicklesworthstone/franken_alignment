@@ -5,6 +5,8 @@ use super::{
     Config, Custody, FileOversight, Loaded, RecoveryReserve, TopologyCustody, debug, requirements,
 };
 use fa_reference::action::ElapsedTick;
+use fa_reference::action::consequence::delivery::persistent::observed::decoder::learned::FileReconciledLearnedReceipt;
+use fa_reference::action::consequence::delivery::persistent::observed::driver::topology::checkpoint::TopologyCheckpoint;
 use fa_reference::action::consequence::delivery::credential_broker::CredentialChangeReceipt;
 use fa_reference::action::consequence::delivery::persistent::observed::credential::FileCredentialStatus;
 use super::super::credential_lifecycle::Request as CredentialRequest;
@@ -340,6 +342,62 @@ impl Cursor {
             Self::Owned(run) => run.finish_reconciled_receipt(request, after, clock),
             Self::Mediated(run) => run.finish_reconciled_receipt(request, after, clock),
             Self::PredictiveMediated(run) => run.finish_reconciled_receipt(request, after, clock),
+        }
+    }
+
+    /// The same complete guarded transaction, retaining its immutable history
+    /// for independent custody without exposing a role or general owner.
+    pub(super) fn finish_reconciled_receipt_with_history<F>(
+        self, request: u64, after: Option<u64>, clock: F,
+    ) -> Result<FileReconciledLearnedReceipt, JournalError>
+    where F: FnOnce() -> ElapsedTick {
+        match self {
+            Self::Plain(run) => run.finish_reconciled_receipt_with_history(request, after, clock),
+            Self::Raw(run) => run.finish_reconciled_receipt_with_history(request, after, clock),
+            Self::Owned(run) => run.finish_reconciled_receipt_with_history(request, after, clock),
+            Self::Mediated(run) => run.finish_reconciled_receipt_with_history(request, after, clock),
+            Self::PredictiveMediated(run) => run.finish_reconciled_receipt_with_history(request, after, clock),
+        }
+    }
+
+    /// Validate selected source custody on this same original replay before
+    /// the trusted clock or any acknowledgment can run.
+    pub(super) fn finish_reconciled_receipt_with_checkpoint<F>(
+        self, request: u64, after: Option<u64>, saved: &TopologyCheckpoint, clock: F,
+    ) -> Result<FileReconciledLearnedReceipt, JournalError>
+    where F: FnOnce() -> ElapsedTick {
+        match self {
+            Self::Plain(run) => run.finish_reconciled_receipt_with_checkpoint(request, after, saved, clock),
+            Self::Raw(run) => run.finish_reconciled_receipt_with_checkpoint(request, after, saved, clock),
+            Self::Owned(run) => run.finish_reconciled_receipt_with_checkpoint(request, after, saved, clock),
+            Self::Mediated(run) => run.finish_reconciled_receipt_with_checkpoint(request, after, saved, clock),
+            Self::PredictiveMediated(run) => run.finish_reconciled_receipt_with_checkpoint(request, after, saved, clock),
+        }
+    }
+
+    pub(super) fn finish_reconciled_receipt_port_with_history<F>(
+        self, request: u64, after: Option<u64>, clock: F,
+    ) -> Result<(FileLearnedReceiptActorPort, FileReconciledLearnedReceipt), JournalError>
+    where F: FnOnce() -> ElapsedTick {
+        match self {
+            Self::Plain(run) => run.finish_reconciled_receipt_port_with_history(request, after, clock),
+            Self::Raw(run) => run.finish_reconciled_receipt_port_with_history(request, after, clock),
+            Self::Owned(run) => run.finish_reconciled_receipt_port_with_history(request, after, clock),
+            Self::Mediated(run) => run.finish_reconciled_receipt_port_with_history(request, after, clock),
+            Self::PredictiveMediated(run) => run.finish_reconciled_receipt_port_with_history(request, after, clock),
+        }
+    }
+
+    pub(super) fn finish_reconciled_receipt_port_with_checkpoint<F>(
+        self, request: u64, after: Option<u64>, saved: &TopologyCheckpoint, clock: F,
+    ) -> Result<(FileLearnedReceiptActorPort, FileReconciledLearnedReceipt), JournalError>
+    where F: FnOnce() -> ElapsedTick {
+        match self {
+            Self::Plain(run) => run.finish_reconciled_receipt_port_with_checkpoint(request, after, saved, clock),
+            Self::Raw(run) => run.finish_reconciled_receipt_port_with_checkpoint(request, after, saved, clock),
+            Self::Owned(run) => run.finish_reconciled_receipt_port_with_checkpoint(request, after, saved, clock),
+            Self::Mediated(run) => run.finish_reconciled_receipt_port_with_checkpoint(request, after, saved, clock),
+            Self::PredictiveMediated(run) => run.finish_reconciled_receipt_port_with_checkpoint(request, after, saved, clock),
         }
     }
 

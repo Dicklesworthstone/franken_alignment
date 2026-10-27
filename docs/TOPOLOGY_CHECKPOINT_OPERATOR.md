@@ -100,12 +100,13 @@ publication run as before. Capture/export occurs under that same owner/source,
 before child cleanup releases custody. Every actually spent check remains spent,
 including initial checks followed by human rejection. No actor field is rewritten.
 
-An existing request remains receipt-only: no next live input, helper, new human
-approval, source check or publication is requested. Omit `retain_checkpoint` in
-that mode; it cannot claim to capture a newly active source. The original history
-export can still occur. Because recovery itself advances the journal, an older
-checkpoint cannot simply be reused indefinitely through this strict operator
-mode; no automatic counter advancement or safe-suffix inference is implied.
+For the generic `submit --guarded` command, an existing request remains
+receipt-only: no next live input, helper, new human approval, source check or
+publication is requested. Omit `retain_checkpoint` in that mode; it cannot claim
+to capture a newly active source. The original history export can still occur.
+Because recovery advances the journal, an older source checkpoint cannot be
+reused indefinitely through that strict operator path. The learned explicit
+receipt-settlement command has the separate paired-custody path below.
 
 ## Learned terminal recovery
 
@@ -120,11 +121,13 @@ or read the profile's next files. The successor pair can be selected by a new
 version-2 profile for later drain or retry. See the full
 [terminal workflow](LEARNED_STOP_RECOVERY.md#separate-operator-phases).
 
-This does not change receipt-only or live continuation selection. The profile
-field `retain_checkpoint` remains a live-source output, while the new flag is
-accepted only by the three learned terminal modes. Version-1 manual minima
-cannot produce an exact source checkpoint. Both terminal outputs must be new,
-distinct and outside the authority store before any stop mutation occurs.
+The profile field `retain_checkpoint` remains a live-source output and is
+rejected by historical recovery. The explicit `--retain-topology-checkpoint`
+flag instead selects acknowledged custody in the learned maintenance modes that
+support it. Version-1 manual minima cannot produce an exact source checkpoint.
+Both terminal outputs must be new, distinct and outside the authority store
+before any stop mutation occurs. Credential maintenance has its own
+[paired-custody workflow](LEARNED_CREDENTIAL_LIFECYCLE.md).
 
 If an acknowledged terminal write outlives one or both exports, explicitly add
 `--recover-terminal-checkpoint` while selecting the original version-2 source
@@ -135,6 +138,32 @@ changed stop identity and mixed cuts, and exposes no live recovery operation.
 The original exact-cut rule remains in force without this flag and for all
 live and receipt workflows. See
 [interrupted-export recovery](LEARNED_STOP_RECOVERY.md#recover-after-interrupted-checkpoint-export).
+
+## Learned receipt reconciliation
+
+The one-shot learned `--resume --reconcile-receipts` path can retain its exact
+acknowledged source/history pair with `--retain-history-anchor NEW_OUTPUT` and
+`--retain-topology-checkpoint NEW_OUTPUT`. Select a v2 `--topology-profile`
+without `retain_checkpoint`, plus an independent `--history-anchor` matching
+the checkpoint's nested anchor. Both outputs are required when retaining
+topology custody. Passive `--receipts-only` rejects both output flags.
+
+Admission checks the new, distinct outside-store paths before replay. The native
+finalizer checks the complete selected source cut before its trusted clock or
+Fence. After the original Fence/Time/Sweep acknowledges, the successor preserves
+source documents, spent checks, read expenditure and last operation, while
+recording the acknowledged floors and unavailable topology. It creates no live
+source and does not read the profile's next files.
+
+Both exports are attempted before a late deadline can withhold the response or
+stdout can fail; neither export suppresses the other. Use the resulting pair
+in a new v2 profile for subsequent exact recovery. No-output reconciliation
+retains its earlier behavior and leaves the old v2 cut stale. Receipt settlement
+does not support the terminal interrupted-export repair flag or infer a source
+successor from an arbitrary later journal.
+
+See [retained topology receipt custody](LEARNED_RECEIPT_RECONCILIATION.md#retained-topology-receipt-custody)
+for the paired-output command and next passive inspection.
 
 ## Failure and cost boundaries
 

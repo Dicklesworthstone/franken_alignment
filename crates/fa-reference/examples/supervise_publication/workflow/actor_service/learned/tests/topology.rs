@@ -16,6 +16,7 @@ use std::{io::Cursor, path::{Path, PathBuf}};
 
 #[path = "topology/terminal.rs"] mod terminal;
 #[path = "topology/failure.rs"] mod failure;
+#[path = "topology/receipts.rs"] mod receipts;
 
 const INVENTORY: &[u8] = include_bytes!(concat!(env!("CARGO_MANIFEST_DIR"),
     "/tests/fixtures/authority_topology_inventory.json"));
