@@ -146,6 +146,45 @@ macro_rules! learned_receipt_ports {
                 let outcome = self.finish_reconciled_receipt(request, finish_after, clock)?;
                 Ok(FileLearnedReceiptActorPort::verified(request, proposal, outcome))
             }
+
+            /// Preserve the SAME acknowledged receipt history separately from
+            /// this immutable actor port. The original source-only envelope is
+            /// encoded before any clock or mutation; custody never enters it.
+            pub fn finish_reconciled_receipt_port_with_history<F>(self, request: u64,
+                finish_after: Option<u64>, clock: F)
+                -> Result<(FileLearnedReceiptActorPort,
+                    crate::action::consequence::delivery::persistent::observed::decoder::learned::FileReconciledLearnedReceipt), JournalError>
+            where F: FnOnce() -> ElapsedTick {
+                let (original, release) = match finish_after {
+                    None => (self.learned_text_stream_message_request(request)?, LearnedTextRelease::Message),
+                    Some(after) => (self.learned_text_stream_finish_request(after, request)?, LearnedTextRelease::Finish),
+                };
+                let proposal = FileLearnedTextStreamActorPort::encode_release(request, release, original.deadline)
+                    .map_err(|_| crate::Error::Binding)?;
+                let receipt = self.finish_reconciled_receipt_with_history(request, finish_after, clock)?;
+                let port = FileLearnedReceiptActorPort::verified(request, proposal, receipt.outcome().clone());
+                Ok((port, receipt))
+            }
+
+            /// Require the exact retained source checkpoint before mutation,
+            /// then expose only the original immutable port and operator custody.
+            pub fn finish_reconciled_receipt_port_with_checkpoint<F>(self, request: u64,
+                finish_after: Option<u64>,
+                saved: &crate::action::consequence::delivery::persistent::observed::driver::topology::checkpoint::TopologyCheckpoint,
+                clock: F)
+                -> Result<(FileLearnedReceiptActorPort,
+                    crate::action::consequence::delivery::persistent::observed::decoder::learned::FileReconciledLearnedReceipt), JournalError>
+            where F: FnOnce() -> ElapsedTick {
+                let (original, release) = match finish_after {
+                    None => (self.learned_text_stream_message_request(request)?, LearnedTextRelease::Message),
+                    Some(after) => (self.learned_text_stream_finish_request(after, request)?, LearnedTextRelease::Finish),
+                };
+                let proposal = FileLearnedTextStreamActorPort::encode_release(request, release, original.deadline)
+                    .map_err(|_| crate::Error::Binding)?;
+                let receipt = self.finish_reconciled_receipt_with_checkpoint(request, finish_after, saved, clock)?;
+                let port = FileLearnedReceiptActorPort::verified(request, proposal, receipt.outcome().clone());
+                Ok((port, receipt))
+            }
         }
     )+ };
 }

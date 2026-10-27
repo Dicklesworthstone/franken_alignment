@@ -1,5 +1,41 @@
 # Implementation status · design revision 0.3
 
+## 2026-10-27: retain exact source custody after learned receipt reconciliation
+
+The original single-replay Fence/Time/Sweep transaction now hands off its
+already acknowledged canonical bytes through a private immutable
+`FileReconciledLearnedReceipt`. All six learned recovery cursor families expose
+history-retaining and independently selected checkpoint finalizers, together
+with sealed actor-port variants. Complete replay, original guards, current
+credential epoch, external floors, request selection, canonical rechecks and
+ordinary capacity remain mandatory. The result carries no Store, owner,
+observer, reviewer or publication permission.
+
+`TopologyCheckpoint::after_reconciled_receipt` accepts only the same complete
+starting source/history cut followed by exactly that one acknowledged
+Fence/Time/Sweep. It preserves original source documents, spent work and last
+source operation; the original fence leaves the graph unavailable. Selected
+checkpoint validation occurs before the trusted clock or mutation. No live
+source is reread, no numerical replay is added to the finalizer, and no unknown
+dispatched effect is retried or refunded by inference.
+
+Four new integration functions exercise actual plain/raw/owned mediated
+publication, exact successor recovery without live source files, all original
+guard/canonical/capacity refusals and independent export failures. A new native
+unit matrix covers all five replacement barriers for both receipt and actor-port
+custody. These are authored runtime regressions, not execution claims.
+
+Real-source nightly-2026-08-31 metadata checks passed for the native library
+and complete mediated receipt integration target. Both forbidden public owner
+escape snippets failed with the expected E0599; the permitted immutable surface
+type-checked. New source/test files passed rustfmt parsing. A first monitored
+linked-library attempt stopped at its own 1.25 GiB resident-memory limit before
+a test harness existed. The full library-unit metadata attempt was then
+SIGKILLed after 66.12 seconds at an observed peak of 1,426,852 KiB, before a
+result; the final unit matrix is not claimed to have type-checked. No runtime
+pass, canonical workspace gate or Bead closure is claimed by this increment. See
+[receipt reconciliation](docs/LEARNED_RECEIPT_RECONCILIATION.md#acknowledged-receipt-history-and-source-custody).
+
 ## 2026-10-27: repair interrupted topology credential checkpoint exports
 
 The learned credential command now has an explicit

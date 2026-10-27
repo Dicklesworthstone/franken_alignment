@@ -14,6 +14,32 @@ mod native_fixture;
 #[allow(dead_code)]
 mod support;
 use support::*;
+#[path = "mediated_learned_receipts/custody.rs"]
+mod retained_custody;
+
+use fa_reference::action::consequence::delivery::persistent::observed::{
+    decoder::learned::FileReconciledLearnedReceipt,
+    driver::topology::{FileDriverTopology, checkpoint::{TopologyCheckpoint, MAX_TOPOLOGY_CHECKPOINT_BYTES}},
+};
+use fa_reference::perimeter_inventory::topology::LoadedAuthorityTopology;
+
+fn source_inventory() -> String {
+    String::from_utf8(include_bytes!("fixtures/authority_topology_inventory.json").to_vec()).unwrap()
+        .replace("Declared topology is not authenticated deployment coverage",
+            "Declared graph only; no operating-system isolation claim")
+}
+fn source_document() -> &'static str {
+    r#"{"schema":"fa.authority-topology/1","generation":1,"inventory_generation":1,
+      "complete_inventory_generation":1,
+      "scope":{"tenant":1,"principal":2,"run":3,"branch":4,"authority":5,"purpose":"effect"},
+      "target":{"adapter":10,"object":11,"contract_version":1,"expected_version":1,"generation":1},
+      "inventory_scope":{"tenant":1,"principal":2,"purpose":1},"family":"file-publication",
+      "nodes":[{"id":1,"kind":"actor"},{"id":2,"kind":"enforcer"},{"id":3,"kind":"sink"}],
+      "edges":[{"id":1,"from":1,"to":2,"channel":"dispatch","route":"publication","provenance":101},
+        {"id":2,"from":2,"to":3,"channel":"dispatch","route":"publication","provenance":102}],
+      "enforcers":[{"node":2,"adapter":10,"contract_version":1,"generation":1,"provenance":90}],
+      "gates":[2],"check_edge_budget":65536,"source_limits":{"checks":32,"read_bytes":67108928}}"#
+}
 use custody::{graph, protocol, certify, fresh_identity, snapshot};
 
 use fa_reference::{Error, Snapshot};
@@ -169,6 +195,26 @@ impl Recovery {
         match self { Self::Plain(run) => run.finish_reconciled_receipt_port(request, None, clock),
             Self::Predictive(run) => run.finish_reconciled_receipt_port(request, None, clock) }
     }
+
+    fn receipt_history<F>(self, request: u64, after: Option<u64>,
+        source: Option<&TopologyCheckpoint>, clock: F)
+        -> Result<FileReconciledLearnedReceipt, JournalError>
+    where F: FnOnce() -> ElapsedTick {
+        match (self, source) {
+            (Self::Plain(run), None) => run.finish_reconciled_receipt_with_history(request, after, clock),
+            (Self::Predictive(run), None) => run.finish_reconciled_receipt_with_history(request, after, clock),
+            (Self::Plain(run), Some(source)) => run.finish_reconciled_receipt_with_checkpoint(request, after, source, clock),
+            (Self::Predictive(run), Some(source)) => run.finish_reconciled_receipt_with_checkpoint(request, after, source, clock),
+        }
+    }
+    fn port_history<F>(self, source: &TopologyCheckpoint, clock: F)
+        -> Result<(FileLearnedReceiptActorPort, FileReconciledLearnedReceipt), JournalError>
+    where F: FnOnce() -> ElapsedTick {
+        match self {
+            Self::Plain(run) => run.finish_reconciled_receipt_port_with_checkpoint(71, None, source, clock),
+            Self::Predictive(run) => run.finish_reconciled_receipt_port_with_checkpoint(71, None, source, clock),
+        }
+    }
     fn finish(self) -> Result<(FileOversight, FileMediatedRoles), JournalError> {
         match self { Self::Plain(run) => run.finish(), Self::Predictive(run) => run.finish() }
     }
@@ -181,15 +227,39 @@ struct History {
     expected: FileMediatedRequirements, anchor: FileHistoryAnchor,
     original: Knowledge<ActorOutcome>, numerical: FileLearnedInspection,
     attempt: u64, charge: u64,
+    topology: Option<TopologyCheckpoint>, early_topology: Option<TopologyCheckpoint>,
 }
 impl History {
     fn new(lane: Lane, cut: Cut, full: bool) -> Self {
+        Self::build(lane, cut, full, false)
+    }
+    fn with_source(lane: Lane, cut: Cut) -> Self { Self::build(lane, cut, false, true) }
+    fn build(lane: Lane, cut: Cut, full: bool, retain_source: bool) -> Self {
         let root = Directory::new(); let p = receipt_profile(); let config = configuration(lane);
         let (mut host, roles) = start(lane, &root, p.clone(), &config);
         host.observe_time(host.revision(), ElapsedTick(1)).unwrap();
         assert!(step(&mut host).sample().is_none());
         assert!(step(&mut host).sample().is_none());
-        assert!(matches!(certify(&mut host, &roles.topology_observer).unwrap(), CutCheck::Verified(_)));
+        let mut source = None;
+        if retain_source {
+            let directory = root.store().parent().unwrap().to_owned();
+            let inventory = source_inventory();
+            let loaded = LoadedAuthorityTopology::from_json_bytes(source_document().as_bytes(), inventory.as_bytes()).unwrap();
+            assert_eq!(loaded.graph(), &graph(1, false));
+            std::fs::write(directory.join("topology.json"), source_document()).unwrap();
+            std::fs::write(directory.join("inventory.json"), &inventory).unwrap();
+            let mut bound = roles.topology_observer.bind_topology_source(&host, host.revision(),
+                directory.join("topology.json"), directory.join("inventory.json"), loaded).unwrap();
+            let revision = host.revision();
+            let refreshed = bound.refresh(&mut host, revision, 1).unwrap();
+            assert!(refreshed.refusal.is_none());
+            assert!(matches!(refreshed.checked, Some(Ok(CutCheck::Verified(_)))));
+            source = Some(FileDriverTopology::new(bound));
+        } else {
+            assert!(matches!(certify(&mut host, &roles.topology_observer).unwrap(), CutCheck::Verified(_)));
+        }
+        let early_topology = source.as_ref().map(|source| source.checkpoint(&host,
+            source_document().as_bytes(), source_inventory().as_bytes()).unwrap());
         match lane {
             Lane::Plain => assert!(roles.consistency_observer.is_none()),
             Lane::Raw | Lane::Owned => {
@@ -244,9 +314,11 @@ impl History {
         let expected = requirements_for(&host, &p, &config);
         let anchor = host.history_anchor().unwrap();
         let numerical = host.learned_generation_inspection().unwrap();
+        let topology = source.as_ref().map(|source| source.checkpoint(&host,
+            source_document().as_bytes(), source_inventory().as_bytes()).unwrap());
         drop(host); drop(supervisor); drop(actor);
         std::fs::write(root.store().join("delivery.pending"), b"preserve receipt staging").unwrap();
-        Self { root, lane, profile: p, config, expected, anchor, original, numerical, attempt, charge }
+        Self { root, lane, profile: p, config, expected, anchor, original, numerical, attempt, charge, topology, early_topology }
     }
     fn files(&self) -> BTreeMap<PathBuf, Vec<u8>> {
         std::fs::read_dir(self.root.store()).unwrap().map(|entry| entry.unwrap().path())

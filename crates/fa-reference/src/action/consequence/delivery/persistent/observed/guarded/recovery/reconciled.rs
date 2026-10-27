@@ -97,6 +97,7 @@ pub(in crate::action::consequence::delivery::persistent::observed) struct Reconc
     pub(in crate::action::consequence::delivery::persistent::observed) owner: FileOversight,
     pub(in crate::action::consequence::delivery::persistent::observed) human: FileHumanReviewer,
     pub(in crate::action::consequence::delivery::persistent::observed) outcomes: PendingReconciliations,
+    pub(in crate::action::consequence::delivery::persistent::observed) anchor: super::super::anchored::FileHistoryAnchor,
 }
 
 impl FileOversight {
@@ -157,7 +158,8 @@ impl FileOversight {
         host.events = history;
         host.machine = machine;
         host.fault = None;
-        Ok(ReconciledHistory { owner: host, human, outcomes })
+        let anchor = super::super::anchored::FileHistoryAnchor::from_acknowledged(count, bytes);
+        Ok(ReconciledHistory { owner: host, human, outcomes, anchor })
     }
 }
 

@@ -1,5 +1,17 @@
 # Changelog
 
+## 2026-10-27: preserve custody through native learned receipt settlement
+
+- Retain acknowledged history, snapshot and selected outcome from the original
+  single Fence/Time/Sweep engine without handing out a writable owner or adding
+  numerical replay. Expose all six guarded cursor families and sealed ports.
+- Validate selected source custody before the clock; derive an exact matching
+  source successor while preserving original documents, spent work, floors and
+  unresolved-effect semantics. Reject stale or unrelated source/history cuts.
+- Add four native integration functions, a five-barrier unit matrix and two
+  compile-fail owner-escape examples. Library/integration metadata and explicit
+  positive/negative API checks pass; runtime qualification remains open.
+
 ## 2026-10-27: recover lost topology credential custody exports
 
 - Add operation-bound native credential recovery and a maintenance-only owner.

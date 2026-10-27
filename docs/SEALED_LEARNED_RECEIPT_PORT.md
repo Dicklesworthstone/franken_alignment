@@ -8,12 +8,14 @@ no Store lock, journal, model, supervisor, source observer or approval role.
 
 ## Original recovery, two explicit modes
 
-The four existing cursor types have two additional consuming methods:
+All six original cursor families expose the consuming receipt methods:
 
 - `FileLearnedRecovery`
 - `FileGuardedLearnedRecovery`
 - `FilePredictiveLearnedRecovery`
 - `FileOwnedPredictiveRecovery`
+- `FileMediatedLearnedRecovery`
+- `FilePredictiveMediatedLearnedRecovery`
 
 After advancing the selected cursor through its complete original history:
 
@@ -96,3 +98,19 @@ limits, dependencies and historical qualification records are unchanged. The
 scope advances the existing FA-107/FA-014 receipt boundary; full packet acceptance
 remains open. The required `br` tool is unavailable, so existing Beads records
 were read but not rewritten by this increment.
+
+## Retained reconciliation custody
+
+`finish_reconciled_receipt_port_with_history` and
+`finish_reconciled_receipt_port_with_checkpoint` return the same sealed
+immutable actor port together with a `FileReconciledLearnedReceipt` for the
+operator. The source-only request envelope is still encoded before the clock or
+any mutation. The selected-checkpoint form validates the exact original source
+cut before the single native Fence/Time/Sweep transaction.
+
+The accompanying result contains acknowledged history and a snapshot, not a
+Store, role or live owner. Its sensitive contents must not be sent over the actor
+protocol. The operator can retain matching history/source archives before
+exposing the port; ordinary Submit equality, Poll ownership, immutable outcomes
+and Cancel refusal are unchanged. See
+[receipt reconciliation](LEARNED_RECEIPT_RECONCILIATION.md#acknowledged-receipt-history-and-source-custody).

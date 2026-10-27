@@ -2,6 +2,8 @@
 //! The existing locked store remains the only externally visible effect sink.
 mod reset;
 mod stopped;
+mod receipt;
+pub use receipt::FileReconciledLearnedReceipt;
 
 use super::{FileHumanReviewer, FileLearnedConfig, FileOversight, FileOversightProfile,
     JournalError, Machine, bind_history, journal, storage};

@@ -329,6 +329,27 @@ impl FileMediatedLearnedRecovery {
         self.inner.finish_reconciled_receipt(request, finish_after, clock)
     }
 
+    /// Retain the same original acknowledged reconciliation cut without a live
+    /// owner. Every independent wrapper guard is checked before the clock.
+    pub fn finish_reconciled_receipt_with_history<F>(self, request: u64,
+        finish_after: Option<u64>, clock: F)
+        -> Result<crate::action::consequence::delivery::persistent::observed::decoder::learned::FileReconciledLearnedReceipt, JournalError>
+    where F: FnOnce() -> ElapsedTick {
+        self.check_ready()?;
+        self.inner.finish_reconciled_receipt_with_history(request, finish_after, clock)
+    }
+
+    /// Admit the exact independently retained source checkpoint on the SAME
+    /// fully guarded cursor before any reconciliation clock or mutation.
+    pub fn finish_reconciled_receipt_with_checkpoint<F>(self, request: u64,
+        finish_after: Option<u64>, saved: &crate::action::consequence::delivery::persistent::observed::driver::topology::checkpoint::TopologyCheckpoint,
+        clock: F)
+        -> Result<crate::action::consequence::delivery::persistent::observed::decoder::learned::FileReconciledLearnedReceipt, JournalError>
+    where F: FnOnce() -> ElapsedTick {
+        self.check_ready()?;
+        self.inner.finish_reconciled_receipt_with_checkpoint(request, finish_after, saved, clock)
+    }
+
     /// Select the original stop predecessor only after the same complete
     /// mediated graph, guard, effective-policy and independent-floor checks.
     pub fn stop_request(&self, operation: u64) -> Result<StopRequest, JournalError> {

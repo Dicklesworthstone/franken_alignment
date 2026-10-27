@@ -127,3 +127,6 @@ fn all_source_stream_intake_storage_barriers_return_no_ticket_and_recovery_never
         assert_eq!(supervisor.host().unwrap().revision(), revision);
     }
 }
+
+#[path = "stream/reconciled_receipt.rs"]
+mod reconciled_receipt;

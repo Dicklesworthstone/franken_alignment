@@ -8,8 +8,8 @@ replayed numerical history again for time and reconciliation transactions.
 `finish_reconciled_receipt(request, finish_after, clock)` now consumes the
 original complete learned recovery into one acknowledged `Fence -> Time -> Sweep`
 replacement. `None` selects a message; `Some(previous)` selects a finish with its
-exact confirmed predecessor. The base learned cursor and ordinary, raw-residual,
-and owned-K/V guarded cursors expose this operation. Each guarded wrapper checks
+exact confirmed predecessor. The base learned cursor, ordinary/raw-residual/owned-K/V guarded cursors and
+both topology-mediated learned cursors expose this operation. Each guarded wrapper checks
 its original independent configuration, policy, inventory and floors before
 forwarding. Optional exact history anchors keep their existing prefix contract.
 
@@ -20,8 +20,8 @@ consistency preflight, reducer, prefix/byte checks, canonical rechecks, staging
 cleanup and single replacement remain in effect. Existing native guarded and
 Andon recovery retain their role-provisioning behavior after acknowledgment.
 
-Learned receipt completion returns only `Knowledge<ActorOutcome>` through the
-existing request-book projection. It issues no observer, reviewer, effect permit
+The original `finish_reconciled_receipt` returns only `Knowledge<ActorOutcome>`
+through the existing request-book projection. It issues no observer, reviewer, effect permit
 or live owner. The sweep queries existing endpoint records; it cannot recreate a
 sendable envelope or repeat publication. Published but unresolved messages may
 become confirmed only from an original receipt. Missing receipts remain Unknown
@@ -138,3 +138,51 @@ canonical-byte, staging, timer, floor and acknowledgment checks remain in place.
 See [`LEARNED_RECEIPT_SELECTION.md`](LEARNED_RECEIPT_SELECTION.md#retained-nonadmission-and-policy-denial-2026-10-24)
 for the source-only preflight boundary. This is an existing-contract clarification;
 the implementation status retains the actual execution and qualification limits.
+
+## Acknowledged receipt history and source custody
+
+The original learned recovery now offers
+`finish_reconciled_receipt_with_history(request, finish_after, clock)`
+on the base, guarded, raw-predictive, owned-predictive, mediated and predictive
+mediated cursors. It returns `FileReconciledLearnedReceipt`: the selected
+redacted outcome, acknowledged snapshot, exact history anchor and revision before
+this one reconciliation. Its fields are private. It contains no Store lock,
+owner, observer, reviewer or publication permission.
+
+The existing fixed Fence/Time/Sweep engine and all selection, replay, capacity,
+clock and canonical-byte checks remain authoritative. After its single
+replacement acknowledges, the engine moves the already encoded replacement
+bytes into the private history-anchor constructor. The history handoff adds no
+numerical replay or fallible post-commit encoding. Failed or ambiguous persistence
+returns no candidate receipt or custody, even if the complete replacement became
+visible. An error cannot establish that no transaction occurred.
+
+For an independently selected topology checkpoint, use
+`finish_reconciled_receipt_with_checkpoint(request, finish_after, saved, clock)`.
+It checks that checkpoint's complete source work, graph, availability, exact
+history extent and prefix, canonical profile/path, and authority floors before
+the trusted clock or mutation. Each guarded wrapper also retains its independent
+current credential epoch, policy, predictor and higher floors. A stale source
+checkpoint cannot be used as a substitute for the exact pre-settlement cut.
+
+`saved.after_reconciled_receipt(profile, identity, &receipt)` derives the
+matching source successor from the immutable result. It accepts only that same
+complete starting cut followed by exactly one Fence/Time/Sweep. It preserves the
+original topology/inventory bytes, spent checks/read allowance and last source
+operation, while retaining the acknowledged floors and unavailable topology.
+No current source files are opened, no graph is recertified and no source budget
+is replenished. Prefix validation decodes and checks the retained original
+history; it does not execute numerical history again.
+
+The sealed actor-port counterparts return the original immutable receipt port
+together with the same operator custody. They encode the original source-only
+message or finish envelope before mutation. Sensitive history and snapshot data
+remain separate from the redacted actor response. The port still cannot cancel,
+admit a new request, refresh an outcome or obtain a live owner.
+
+All export operations remain independent of native acknowledgment. Retain the
+previous source/history pair until its successor has been saved. These APIs do
+not infer a safe suffix from a stale checkpoint, perform a zero-event settlement
+retry, or authenticate operator-provided archives. Unknown dispatched effects
+remain charged unless the original endpoint receipt resolves them; a Fence can
+still cancel undispatched work under the existing native rules.
