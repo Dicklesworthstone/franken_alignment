@@ -12,6 +12,7 @@ use crate::Error;
 use std::collections::BTreeMap;
 use super::super::requests::RequestBook;
 use super::super::governance::{PolicyUpdates, PolicyUpdateReceipt};
+use super::super::abandonment::{Abandonments, FileAbandonReceipt, FileAbandonRequest};
 
 use super::containment::{ContainmentHistory, FileStateReceipt};
 use crate::action::consequence::gate::containment::ResetReceipt;
@@ -50,6 +51,7 @@ pub(super) enum Transition {
     HumansRevoked(HumanRevocation),
     Published(EndpointOutcome),
     Reconciled(Reconciliation),
+    Abandoned(FileAbandonReceipt),
     Swept(BTreeMap<u64, Result<Reconciliation, Error>>),
     Stopped(StopReceipt),
     StopProgressed(FileStopSweep),
@@ -73,6 +75,7 @@ pub(super) struct Machine {
     pub(super) clock_ready: bool,
     pub(super) requests: RequestBook,
     pub(super) policy_updates: PolicyUpdates,
+    pub(super) abandonments: Abandonments,
     pub(super) publication_guard: bool,
     pub(super) generated_text_only: bool,
     pub(super) credential_policy: Option<super::credential::FileCredentialPolicy>,
@@ -116,7 +119,7 @@ impl Machine {
         }, &mut endpoint, p.committee.clone())?;
         let reviewer = broker.enable_human_review(p.human)?;
         broker.confirm_fence(endpoint.install_fence(broker.fence_request())?)?;
-        Ok(Self { bootstrap: Some(p.clone()), containment: ContainmentHistory::default(), policy_updates: PolicyUpdates::default(), requests: RequestBook::default(), scope: d.scope, clock_domain: d.clock_domain, broker, endpoint, reviewer, actions: BTreeMap::new(), sessions: BTreeMap::new(),
+        Ok(Self { bootstrap: Some(p.clone()), containment: ContainmentHistory::default(), policy_updates: PolicyUpdates::default(), abandonments: Abandonments::default(), requests: RequestBook::default(), scope: d.scope, clock_domain: d.clock_domain, broker, endpoint, reviewer, actions: BTreeMap::new(), sessions: BTreeMap::new(),
             automatic: BTreeMap::new(), human_keys: BTreeMap::new(), envelopes: BTreeMap::new(), clock_ready: false,
             publication_guard: false, generated_text_only: false, credential_policy: None, credential_generation: 0,
             credential_revoked: false, credential_changes: Vec::new(), decoder: None, learned: None, identity: None, campaigns: None, file_source: None, credibility: None, consistency: None, learned_consistency: None, consistency_request: None, mediation: None })
@@ -130,6 +133,16 @@ impl Machine {
         FileDeliverySnapshot { revision: revision as u64, control: self.broker.inspect(),
             dispatcher_epoch: self.broker.fence_request().epoch, stop: self.broker.stop_receipt().cloned(),
             target: self.endpoint.target(), payload: self.endpoint.payload().to_vec(), executions: self.endpoint.execution_count() }
+    }
+    // Shared by the live API and a consuming guarded recovery finalizer. This
+    // only checks original state; it neither consumes a handle nor updates the
+    // operation book. Canonical replay still rejects every duplicate event.
+    pub(super) fn preflight_abandon_unknown(&self, request: FileAbandonRequest)
+        -> Result<Option<FileAbandonReceipt>, Error>
+    {
+        let retry = self.abandonments.preflight(&request, &self.broker.inspect())?;
+        if retry.is_none() { self.actions.get(&request.attempt).ok_or(Error::Missing)?; }
+        Ok(retry)
     }
     fn now(&self) -> Result<ElapsedTick, Error> { self.broker.inspect().ledger.elapsed.ok_or(Error::Incomplete) }
     fn historical_withdrawal_tick(&self) -> ElapsedTick { self.broker.inspect().ledger.elapsed.unwrap_or(ElapsedTick(0)) }
@@ -221,7 +234,7 @@ impl Machine {
             self.check_decoder_admission(event)?;
         }
         let without_current_time = matches!(event,
-            Event::Core(BaseEvent::Time(_) | BaseEvent::Cancel(_) | BaseEvent::Fence | BaseEvent::Stop(_) | BaseEvent::StopProgress(_) | BaseEvent::ReserveRecovery(_) | BaseEvent::ReplacePolicy(_))
+            Event::Core(BaseEvent::Time(_) | BaseEvent::Cancel(_) | BaseEvent::Fence | BaseEvent::Stop(_) | BaseEvent::StopProgress(_) | BaseEvent::ReserveRecovery(_) | BaseEvent::ReplacePolicy(_) | BaseEvent::AbandonUnknown(_))
             | Event::InputsUnavailable(..) | Event::Human(_, HumanDecision::Reject | HumanDecision::Revoke) | Event::RevokeHumans
             | Event::PublicationGuard | Event::PublishChecked(..) | Event::PublishCredentialed(..)
             | Event::PublicationWitness(_)
@@ -358,6 +371,16 @@ impl Machine {
                 let outcome = receipt.outcome();
                 self.broker.accept_receipt(receipt)?;
                 return Ok(Transition::Reconciled(Reconciliation::Resolved(outcome)));
+            }
+            BaseEvent::AbandonUnknown(request) => {
+                let action = self.actions.get(&request.attempt).ok_or(Error::Missing)?;
+                let prepared = self.abandonments.prepare(*request, action, &self.broker.inspect())?;
+                self.broker.abandon_unknown(request.attempt)?;
+                // An unresolved live dispatch may still have its sendable
+                // envelope. Permanent uncertainty must remove THIS capability
+                // before the disposition can become the acknowledged image.
+                self.envelopes.remove(&request.attempt);
+                return Ok(Transition::Abandoned(self.abandonments.record(prepared)));
             }
             BaseEvent::Sweep => {
                 let outcomes = self.broker.reconcile_pending(&mut self.endpoint)?;

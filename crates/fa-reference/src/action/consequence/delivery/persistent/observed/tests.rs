@@ -7,6 +7,8 @@ mod recovery_capacity_tests;
 mod policy_update_storage_tests;
 #[path = "containment/storage_tests.rs"]
 mod containment_storage_tests;
+#[path = "abandonment/tests.rs"]
+mod abandonment_tests;
 use super::super::JournalLimits;
 use crate::action::{ActionState, Purpose, ResolvedTarget, Scope, VERSION};
 use crate::action::consequence::congress::{CongressPolicy, MemberPolicy};

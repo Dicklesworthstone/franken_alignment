@@ -128,7 +128,7 @@ impl FileOversight {
             | Event::CredentialRotate(_) | Event::CredentialRevoke(_)
             | Event::Core(BaseEvent::Time(_) | BaseEvent::Cancel(_) | BaseEvent::Fence
                 | BaseEvent::Stop(_) | BaseEvent::StopProgress(_) | BaseEvent::ReplacePolicy(_)
-                | BaseEvent::Reconcile(_) | BaseEvent::Seal(_) | BaseEvent::Sweep)
+                | BaseEvent::Reconcile(_) | BaseEvent::Seal(_) | BaseEvent::Sweep | BaseEvent::AbandonUnknown(_))
             | Event::InputsUnavailable(..) | Event::RevokeHumans | Event::ActorReset(..)
             | Event::Human(_, HumanDecision::Reject | HumanDecision::Revoke))
         { Ok(()) } else { Err(Error::Incomplete) }

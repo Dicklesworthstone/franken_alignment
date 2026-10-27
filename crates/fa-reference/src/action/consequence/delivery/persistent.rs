@@ -9,6 +9,8 @@ mod codec;
 pub mod credibility;
 mod storage;
 mod stopping;
+pub mod abandonment;
+pub use abandonment::{FileAbandonReceipt, FileAbandonRequest};
 pub mod recovery_capacity;
 pub use recovery_capacity::{RecoveryReserve, JournalCapacity, JournalSpace};
 pub mod governance;
@@ -187,6 +189,7 @@ enum Event {
     ReserveRecovery(RecoveryReserve),
     ActivateCredibility(Box<credibility::CredibilityActivation>),
     WithdrawCredibility(credibility::CredibilityWithdrawalRequest),
+    AbandonUnknown(FileAbandonRequest),
 }
 enum Transition {
     Unit,
@@ -200,6 +203,7 @@ enum Transition {
     PolicyUpdated(PolicyUpdateReceipt),
     CredibilityActivated(credibility::CredibilityChange),
     CredibilityWithdrawn(credibility::CredibilityWithdrawal),
+    Abandoned(FileAbandonReceipt),
 }
 
 struct Machine {
@@ -211,6 +215,7 @@ struct Machine {
     clock_ready: bool,
     requests: requests::RequestBook,
     policy_updates: governance::PolicyUpdates,
+    abandonments: abandonment::Abandonments,
 }
 impl Machine {
     fn new(profile: &FileDeliveryProfile) -> Result<Self, Error> {
@@ -226,7 +231,8 @@ impl Machine {
         broker.confirm_fence(endpoint.install_fence(broker.fence_request())?)?;
         Ok(Self { broker, endpoint, actions: BTreeMap::new(), permits: BTreeMap::new(),
             envelopes: BTreeMap::new(), clock_ready: false, requests: requests::RequestBook::default(),
-            policy_updates: governance::PolicyUpdates::default() })
+            policy_updates: governance::PolicyUpdates::default(),
+            abandonments: abandonment::Abandonments::default() })
     }
     fn replay(profile: &FileDeliveryProfile, events: &[Event]) -> Result<Self, Error> {
         let mut machine = Self::new(profile)?;
@@ -249,6 +255,7 @@ impl Machine {
             Event::ActivateCredibility(request) => return self.apply_credibility_activation(request),
             Event::WithdrawCredibility(request) => return self.apply_credibility_withdrawal(request),
             Event::ReplacePolicy(update) => return self.apply_policy_update(update),
+            Event::AbandonUnknown(request) => return self.apply_abandonment(*request),
             Event::SubmitRequest(id, spec, snapshot) => return self.apply_request(*id, spec, snapshot),
             Event::Time(tick) => {
                 self.broker.observe_time(*tick)?;

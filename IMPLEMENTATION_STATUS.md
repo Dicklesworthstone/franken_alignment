@@ -1,5 +1,30 @@
 # Implementation status · design revision 0.3
 
+## 2026-10-27: persist explicit unknown-delivery abandonment
+
+The base and full-input durable publication owners now journal the original
+trusted `Unknown -> IrrecoverablyUnknown` transition. The request binds one
+operation, attempt and control/authority predecessor. Healthy current-revision
+exact retries return the original action-bound receipt without another event;
+conflicting identities, stale predecessors and non-Unknown states refuse.
+
+Abandonment removes only the selected local sendable envelope. It never queries
+or resends an effect, refunds a charge, advances a stream, restores a clock or
+claims nonexecution. Actor polling stays Unknown, and Stop retains the original
+unresolved/irrecoverable liability even after a sweep returns no pending work.
+Published-but-unreconciled bytes and execution counts stay intact. Interrupted
+source acquisition and paused/pending numerical work do not block this restrictive
+operation or become cleared by it.
+
+Canonical tag 18 extends the existing journal without changing legacy bytes;
+unknown-tag readers refuse. The event uses ordinary capacity and preserves the
+existing terminal reserve. Authored positive and causal-negative tests cover
+base/two-key histories, exact retries, forbidden states, canonical replay,
+retained actor/stream/numerical obligations, capacity and five storage barriers.
+Pinned nightly-2026-09-08 rustfmt parsing is the available source check. RCH and
+configured workers are absent, so no compilation, runtime, Clippy or full gate is
+claimed and no bead is closed. See [the contract](docs/DURABLE_UNKNOWN_ABANDONMENT.md).
+
 ## 2026-10-27: keep learned receipt settlement reopenable through the operator
 
 The one-shot learned `--resume --reconcile-receipts` command now accepts retained

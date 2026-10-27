@@ -3,6 +3,7 @@
 use super::super::{FileRequestDisposition, FileRequestStatus};
 use super::super::super::{Event, FileDelivery, JournalError};
 use crate::action::{ActionState, ElapsedTick};
+use crate::Error;
 
 impl FileDelivery {
     /// Settle a cancellation by durable request identity in one replacement.
@@ -49,8 +50,8 @@ impl FileDelivery {
         let cancellation = match stage {
             ActionState::Proposed | ActionState::Prepared | ActionState::Reviewing
             | ActionState::Authorized => Event::Cancel(attempt),
-            ActionState::Dispatching | ActionState::Unknown
-            | ActionState::IrrecoverablyUnknown => Event::Seal(attempt),
+            ActionState::Dispatching | ActionState::Unknown => Event::Seal(attempt),
+            ActionState::IrrecoverablyUnknown => return Err(Error::WrongState.into()),
             ActionState::Confirmed | ActionState::ConfirmedNotExecuted
             | ActionState::Denied | ActionState::Cancelled => return Ok(status),
         };

@@ -132,3 +132,52 @@ fn reconciliation_fault_cannot_duplicate_or_erase_already_published_messages() {
         assert_eq!(after.publication.control.ledger.charged, charged);
     }
 }
+
+#[test]
+fn explicit_unknown_disposition_preserves_the_published_prefix_and_blocks_stream_continuation() {
+    use crate::action::ActionState;
+    use crate::action::consequence::delivery::StopRequest;
+    use crate::action::consequence::delivery::persistent::FileAbandonRequest;
+
+    for published in [false, true] {
+        let root = Directory::new();
+        let (mut host, keys, _) = setup(&root);
+        if published { publish(&mut host, &keys); }
+        host.fence(host.revision()).unwrap();
+        assert!(!host.clock_ready());
+        let before = host.stream_snapshot().unwrap();
+        let control = &before.publication.control;
+        host.abandon_unknown(host.revision(), FileAbandonRequest { operation: 71, attempt: 2,
+            expected_control_sequence: control.sequence,
+            expected_authority_epoch: control.ledger.epoch }).unwrap();
+        let after = host.stream_snapshot().unwrap();
+        assert_eq!(after.confirmed, before.confirmed);
+        assert_eq!(after.published, before.published);
+        assert_eq!(after.confirmed_target, before.confirmed_target);
+        assert_eq!(after.pending, Some(2));
+        assert_eq!(after.publication.executions, if published { 2 } else { 1 });
+        assert_eq!(after.publication.control.ledger.charged, before.publication.control.ledger.charged);
+        assert_eq!(after.publication.control.ledger.stages[&2], ActionState::IrrecoverablyUnknown);
+        host.observe_time(host.revision(), ElapsedTick(2)).unwrap();
+        assert!(host.stream_message_spec("next", ElapsedTick(100)).is_err());
+        assert!(host.stream_finish_spec(ElapsedTick(100)).is_err());
+        if !published {
+            assert_eq!(host.publish_checked(host.revision(), 2, Some(&keys.inputs), snapshot(), ElapsedTick(2)),
+                Err(JournalError::Contract(Error::Missing)));
+        }
+        assert!(host.reconcile_pending(host.revision()).unwrap().is_empty());
+        let control = host.inspect().control;
+        host.request_stop(host.revision(), StopRequest { operation: 72,
+            expected_control_sequence: control.sequence, expected_authority_epoch: control.ledger.epoch }).unwrap();
+        let progress = host.progress_stop(host.revision(), ElapsedTick(3)).unwrap().progress;
+        assert_eq!(progress.unresolved, vec![2]);
+        assert_eq!(progress.irrecoverable, vec![2]);
+        assert!(!progress.drained());
+        drop(host);
+        let durable = FileOversight::read_stream_publication(root.store(), &profile(), stream()).unwrap();
+        assert_eq!(durable.confirmed, before.confirmed);
+        assert_eq!(durable.published, before.published);
+        assert_eq!(durable.pending, Some(2));
+        assert_eq!(durable.publication.control.ledger.stages[&2], ActionState::IrrecoverablyUnknown);
+    }
+}

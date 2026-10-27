@@ -1,5 +1,18 @@
 # Changelog
 
+## 2026-10-27: persist explicit unknown-delivery abandonment
+
+- Add canonical, operation-bound abandonment to the base and full-input durable
+  owners, preserving the original Unknown-to-IrrecoverablyUnknown reducer and
+  returning the original action-bound receipt for exact historical retries.
+- Withdraw only the selected local sendable envelope. Preserve charges, existing
+  effects, actor Unknown status, stream obstruction and Stop's unresolved ledger.
+- Add positive and causal-negative coverage for canonical replay, predecessor
+  conflicts, ordinary capacity, numerical/source interruption and all five native
+  storage barriers. Keep terminal reserves and legacy journal bytes unchanged.
+- Run pinned rustfmt parsing and independent source review. Remote RCH execution
+  is unavailable; compilation, runtime and full qualification remain pending.
+
 ## 2026-10-27: retain learned receipt custody from the operator
 
 - Add explicit successor history and paired v2 topology output to learned

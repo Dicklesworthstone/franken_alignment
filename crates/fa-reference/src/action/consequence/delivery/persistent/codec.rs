@@ -120,6 +120,11 @@ pub(super) fn decode(p: &FileDeliveryProfile, path: &Path, bytes: &[u8]) -> Resu
 
 fn write_event(w: &mut Writer, event: &Event) -> Result<(), Error> {
     match event {
+        Event::AbandonUnknown(request) => {
+            request.check()?;
+            w.u8(18)?; w.u64(request.operation)?; w.u64(request.attempt)?;
+            w.u64(request.expected_control_sequence)?; w.u64(request.expected_authority_epoch)?;
+        }
         Event::ActivateCredibility(request) => {
             w.u8(16)?; w.blob(&credibility::codec::encode_activation(request)?)?;
         }
@@ -178,6 +183,14 @@ fn write_event(w: &mut Writer, event: &Event) -> Result<(), Error> {
 fn read_event(r: &mut Reader<'_>) -> Result<Event, Error> {
     let tag = r.u8()?;
     Ok(match tag {
+        18 => {
+            let request = FileAbandonRequest {
+                operation: r.u64()?, attempt: r.u64()?,
+                expected_control_sequence: r.u64()?, expected_authority_epoch: r.u64()?,
+            };
+            request.check()?;
+            Event::AbandonUnknown(request)
+        }
         16 => Event::ActivateCredibility(Box::new(credibility::codec::decode_activation(
             r.blob(credibility::codec::MAX_ACTIVATION_BYTES)?)?)),
         17 => Event::WithdrawCredibility(credibility::CredibilityWithdrawalRequest {

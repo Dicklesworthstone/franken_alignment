@@ -69,7 +69,7 @@ pub(super) enum Event {
 
 fn core_allowed(event: &BaseEvent) -> bool {
     matches!(event, BaseEvent::Time(_) | BaseEvent::Propose(..) | BaseEvent::Publish(_)
-        | BaseEvent::Reconcile(_) | BaseEvent::Seal(_) | BaseEvent::Cancel(_) | BaseEvent::Fence
+        | BaseEvent::Reconcile(_) | BaseEvent::Seal(_) | BaseEvent::AbandonUnknown(_) | BaseEvent::Cancel(_) | BaseEvent::Fence
         | BaseEvent::Sweep | BaseEvent::Stop(_) | BaseEvent::StopProgress(_) | BaseEvent::SubmitRequest(..) | BaseEvent::ReplacePolicy(_) | BaseEvent::ReserveRecovery(_))
 }
 

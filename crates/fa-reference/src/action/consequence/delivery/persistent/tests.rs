@@ -5,6 +5,8 @@ use super::*;
 mod recovery_capacity_tests;
 #[path = "governance/storage_tests.rs"]
 mod policy_update_storage_tests;
+#[path = "abandonment/tests.rs"]
+mod abandonment_tests;
 use crate::action::{Purpose, VERSION};
 use crate::action::consequence::congress::MemberPolicy;
 use crate::action::consequence::delivery::NonExecutionReason;

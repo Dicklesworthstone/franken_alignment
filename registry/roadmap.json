@@ -406,7 +406,12 @@
         "crates/fa-reference/examples/supervise_publication/workflow/continuation/guarded/mediated/profile.rs",
         "crates/fa-reference/tests/mediated_learned_receipts.rs",
         "docs/LEARNED_OPERATOR_PUBLICATION.md",
-        "docs/LEARNED_RECEIPT_SERVICE.md"
+        "docs/LEARNED_RECEIPT_SERVICE.md",
+        "docs/DURABLE_UNKNOWN_ABANDONMENT.md",
+        "crates/fa-reference/src/action/consequence/delivery/persistent/abandonment.rs",
+        "crates/fa-reference/src/action/consequence/delivery/persistent/abandonment/tests.rs",
+        "crates/fa-reference/src/action/consequence/delivery/persistent/observed/abandonment.rs",
+        "crates/fa-reference/src/action/consequence/delivery/persistent/observed/abandonment/tests.rs"
       ]
     },
     {

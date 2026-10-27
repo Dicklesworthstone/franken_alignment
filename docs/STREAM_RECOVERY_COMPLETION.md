@@ -23,10 +23,12 @@ not reconciled. No actor wire bytes or authority journal encoding change.
 
 Retention expiry leaves the original action Unknown and charged. A later native
 sweep visits it again and returns RetentionExpired; it does not perform explicit
-abandonment or produce an empty sweep. The original broker has a separate trusted
-abandonment operation, but these durable hosts have no journaled API for it. That
-missing connection requires its own format, epoch, storage and compatibility
-work; expiry must not stand in for it.
+abandonment or produce an empty sweep. The original broker's separate trusted
+abandonment operation is now exposed by the [durable owners](DURABLE_UNKNOWN_ABANDONMENT.md),
+with an explicit operation, attempt and authority predecessor. It is never
+selected by this receipt service or by expiry. Its irrecoverable disposition
+stays charged and unresolved in the completion report even when later sweeps
+omit it.
 
 Three native integration functions cover a real two-key confirmed request beside
 an expired dispatched tail, receipt delivery before operator failure, repeated

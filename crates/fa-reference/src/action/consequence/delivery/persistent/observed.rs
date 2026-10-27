@@ -9,6 +9,7 @@ mod machine;
 mod human;
 mod views;
 mod recovery_capacity;
+mod abandonment;
 pub mod governance;
 pub mod containment;
 pub mod helpers;
