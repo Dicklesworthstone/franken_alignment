@@ -31,6 +31,72 @@ xtask gate stop before compilation because the mandatory RCH dispatcher is
 absent (exit 127). Type checking, qualified formatting, Clippy, runtime and full
 FA-014/FA-120 acceptance remain open; scoped bead `.6` remains in progress.
 
+## 2026-10-28: expose complete-corpus policy replay without promotion authority
+
+`supervise_publication policy-replay CONFIG CANDIDATE_JSON` now consumes the
+original native read-only policy replay API. It compares a strictly newer
+candidate with every retained proposal and applied review belonging to the
+current effective policy, including exact denials. Independent configuration
+binds the original journal profile; an explicit expected policy generation
+binds the effective predecessor. The operator cannot choose favorable cases,
+rerun helpers, substitute fresh evidence or return a partial successful corpus.
+
+The bounded `fa.policy-replay/1` report includes both complete policies, original
+and candidate predicate traces, exact tightening/relaxation sets and missing
+observation indices. Unsupported candidate reads remain unknown and require
+prospective shadow observation. A newly reviewable historical case carries no
+helper decision, human approval, dispatch capability or promotion permission.
+Strict input, case and staged-output limits and one elapsed budget cover the
+command. One canonical read can coexist with its writer; it does not recover,
+fence, clean staging, change policy, alter charges or write a campaign artifact.
+
+Ten authored operator regression functions cover real durable proposal/review
+histories, tightening and relaxation, unobserved branches, writer coexistence,
+reopen replay, exact no-mutation controls, malformed histories and candidates,
+closed predicate encodings, resource limits, deadline phases and failed output.
+The complete publication operator test harness, including all existing suites
+and these additions, passed final metadata checking with exit 0 and three
+warnings in support/service/publication code. This is compilation evidence,
+not a runtime pass. Both LLVM and official Cranelift full-library code generation
+were SIGKILLed before execution. The unchanged baseline xtask dependency-admission
+guard still blocks canonical qualification. FA-130 moves to `in_progress`;
+executed evidence, prospective shadow campaigns and full promotion acceptance
+remain open. See [the command contract](docs/POLICY_REPLAY_OPERATOR.md).
+
+## 2026-10-28: complete learned abandonment through the operator
+
+The learned operator accepts `--abandon-unknown REQUEST_JSON` with an independent
+input history anchor and a distinct new retained output. Historical recipe
+loading and the original guarded plain/raw/owned cursors preserve complete
+numerical replay, current policy and credentials, identity, predictor and floors.
+The command needs no live helper roster, provider secret or current evidence.
+Its original argument grammar is closed before file I/O; one invocation budget
+covers intake, every replay event and the pre-acknowledgment boundary.
+
+Originally mediated histories require the exact retained v2 source/history pair
+and both new output archives. A sealed abandonment-only consumer defers source
+extent solely to the native finalizer, which admits the saved cut or exactly
+one matching AbandonUnknown successor. Ordinary live and receipt recovery keep
+their existing exact extent requirement. Source documents, graph, availability,
+spent work and last operation are preserved; no fresh source read is introduced.
+
+After acknowledgment both requested archives are attempted before final output,
+including after late expiry or one export failure. Create-new output races and
+stdout failures preserve successful custody and report the acknowledged revision
+for exact retry. The structured result separates disposition knowledge from the
+still-Unknown effect outcome. It grants no live owner, effect capability, refund,
+clock observation, Fence or stream successor.
+
+Eight authored operator functions complement the six native integration
+functions. The native library and complete native target pass metadata checking;
+the full registered publication operator harness also completed with exit 0,
+including all eight new functions and ten policy-replay functions. Runtime tests
+remain unexecuted after LLVM and Cranelift library builds were SIGKILLed. These
+scoped checks do not clear the unchanged baseline dependency-admission failure,
+full workspace qualification or FA-014. See
+[the learned operator contract](docs/DURABLE_UNKNOWN_ABANDONMENT.md#learned-numerical-histories)
+and [the native contract](docs/LEARNED_UNKNOWN_ABANDONMENT.md).
+
 ## 2026-10-28: preserve authenticated Stop through native learned recovery
 
 The original fully replayed learned cursor and all five guarded wrappers now
@@ -55,6 +121,42 @@ parsing and source review. The required RCH test dispatch stops before compilati
 because `rch` is absent (exit 127); no compilation or test execution is claimed.
 Qualified formatting, Clippy and the full workspace gate remain open. Scoped
 bead `franken_alignment-fa-014-full-hc0s.6` and FA-014/FA-120 remain in progress.
+
+## 2026-10-28: abandon learned Unknown through complete original recovery
+
+The original learned cursor and all guarded learned forms now consume complete
+replay into `FileAbandonedHistory` through `finish_abandoned_with_anchor` or
+`finish_abandoned_with_checkpoint`. The wrappers preserve their independent
+recipe, identity, policy, credential epoch, predictor, topology and counter-floor
+requirements. Finalization rechecks the original canonical bytes and reuses the
+same durable AbandonUnknown reducer and persistence boundary as guarded recovery.
+
+Only the selected Unknown becomes IrrecoverablyUnknown. Its charged exposure,
+unknown endpoint execution, unresolved Stop liability, numerical operation and
+stream barrier remain. The result carries only the immutable receipt, snapshot
+and acknowledged anchor; no recovered role, live owner, Fence, fresh clock,
+endpoint query/send, refund or numerical restart is introduced. Exact operation
+retries return the original receipt without another event, including at capacity.
+
+An independently retained topology checkpoint must match the exact saved cut or
+one matching AbandonUnknown successor before cleanup or mutation. The derived
+checkpoint preserves original documents, graph, availability, work and last
+operation. Archive writes remain separate; an interrupted export can retry from
+that same old pair without replaying an effect or refreshing source budget.
+
+Six new integration functions cover seven native modes, actual publication and
+unexecuted Unknown, full snapshot/stream preservation, exact retries, guard and
+credential mismatches, wrong stages/requests, canonical races, ordinary capacity,
+reserved capacity and available/withdrawn source custody. Independent production
+review found no blocking defect. Standard LLVM and official Cranelift library
+code generation were both SIGKILLed before a test binary existed; these tests
+have no runtime pass. The complete library and new six-function native integration
+target pass Cargo metadata checking on nightly-2026-10-28; no test registration
+or assertion was removed. This scoped result is not a canonical qualification.
+The baseline canonical xtask gate already refuses the existing three-package
+workspace at its unchanged initial dependency-admission guard. Full qualification
+and the FA-014 umbrella remain open. See
+[the native contract](docs/LEARNED_UNKNOWN_ABANDONMENT.md).
 
 ## 2026-10-28: expose guarded learned policy diagnosis and repair search
 

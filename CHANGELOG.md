@@ -12,6 +12,37 @@
   entry and all six learned families. Nine changed operator Rust files pass
   syntax parsing and source review; required RCH execution remains unavailable.
 
+## 2026-10-28: compare candidate policies through the complete retained corpus
+
+- Add the read-only `policy-replay CONFIG CANDIDATE_JSON` operator over the
+  original native current-policy corpus, including retained denials and applied
+  reviews. The caller cannot filter cases or report a successful limited prefix.
+- Report complete policies, predicate traces, tightening and relaxation sets,
+  missing observations, and explicit shadow requirements at decision-replay
+  grade. Grant no promotion, helper vote, fresh evidence or effect authority.
+- Enforce the closed bounded candidate schema, exact effective predecessor,
+  complete-corpus input/case limits, staged output cap and elapsed budget while
+  preserving the writer, staging files, permits, charges and publication state.
+- Add the candidate fixture, command contract and ten operator regression
+  functions. The complete publication test harness passes metadata checking
+  (exit 0, three warnings); runtime tests remain unexecuted after both LLVM and
+  Cranelift library code generation were SIGKILLed. FA-130 is in progress.
+
+## 2026-10-28: expose learned Unknown disposition with retained operator custody
+
+- Add explicit learned `--abandon-unknown` with mandatory independent input and
+  new output history anchors across original plain/raw/owned guarded recovery.
+- Preserve optional paired v2 topology custody through the exact saved cut or one
+  matching abandonment successor, including retry after interrupted exports.
+  Ordinary live and receipt recovery retain their exact source-extent checks.
+- Validate the original closed grammar before file I/O, replay within the
+  invocation budget, and attempt both archives before late expiry or reporting.
+  A failed export or stdout transport keeps the acknowledged native disposition.
+- Add eight operator regression functions for actual Unknown histories, full
+  guards, source expenditure, deadlines, output races and exact retries. The
+  full registered operator harness passes metadata checking; these tests have
+  no runtime pass. Full FA-014 and canonical workspace qualification stay open.
+
 ## 2026-10-28: add authenticated native Stop during learned recovery
 
 - Seal the original fully verified learned cursor behind the existing Stop wire,
@@ -23,6 +54,21 @@
 - Add nine regression functions and three forbidden-owner API examples.
   Thirteen changed native Rust files pass syntax parsing and source review;
   compilation, runtime and full qualification await the unavailable RCH gate.
+
+## 2026-10-28: resolve learned Unknown outcomes without recovering authority
+
+- Add consuming abandonment to the original learned recovery and all guarded
+  plain/raw/owned and mediated forms, preserving complete numerical replay,
+  independent guards, current credentials, policy, topology and floors.
+- Reuse the existing durable AbandonUnknown writer and immutable receipt. Preserve
+  charges, Unknown endpoint knowledge and stream barriers; add no Fence, clock,
+  endpoint call or live owner. Exact retries append no event.
+- Preflight retained source custody before mutation and derive the acknowledged
+  matching checkpoint without resetting source expenditure or availability.
+- Add six real-history integration functions spanning seven modes and executed
+  and unexecuted Unknown. The library and full native test target pass metadata
+  checking; runtime verification remains open after standard and Cranelift
+  library code generation were killed by shared memory pressure.
 
 ## 2026-10-28: explain learned policy denials through the operator
 

@@ -227,6 +227,10 @@ fn actor(mut f: Fields) -> Result<ActorState, String> {
     f.end()?;
     ActorState::new(p, tokens, cache, sampler, position).map_err(debug)
 }
+/// Candidate policy commands share the exact closed supervisor policy grammar.
+pub(crate) fn policy_from_json(value: Json) -> Result<Policy, String> {
+    policy(Fields::new(value, "candidate policy")?)
+}
 fn policy(mut f: Fields) -> Result<Policy, String> {
     let generation = f.u64("generation")?;
     let raw = array(f.take("nodes")?)?; f.end()?;

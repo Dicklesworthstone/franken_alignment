@@ -418,11 +418,19 @@
         "crates/fa-reference/examples/supervise_publication/recover_stop/guarded/abandonment.rs",
         "crates/fa-reference/examples/supervise_publication/recover_stop/guarded/abandonment/tests.rs",
         "crates/fa-reference/examples/supervise_publication/recover_stop/guarded/abandonment/operator_tests.rs",
+        "docs/LEARNED_UNKNOWN_ABANDONMENT.md",
+        "crates/fa-reference/src/action/consequence/delivery/persistent/observed/decoder/learned/recovery/abandonment.rs",
+        "crates/fa-reference/src/action/consequence/delivery/persistent/observed/driver/topology/checkpoint/abandonment.rs",
+        "crates/fa-reference/tests/learned_unknown_abandonment.rs",
         "docs/LEARNED_RECOVERY_STOP_PEER.md",
         "crates/fa-reference/src/action/consequence/delivery/persistent/observed/reviewer/peer/control/recovery.rs",
         "crates/fa-reference/src/action/consequence/delivery/persistent/observed/reviewer/peer/control/recovery/tests.rs",
         "crates/fa-reference/src/action/consequence/delivery/persistent/observed/reviewer/peer/control/recovery/tests/native.rs",
         "crates/fa-reference/src/action/consequence/delivery/persistent/observed/reviewer/peer/control/recovery/tests/native/profiled.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/abandonment.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/abandonment/custody.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/tests/receipt_selection/reconciled/operator/abandonment.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/tests/topology/receipts/abandonment.rs",
         "crates/fa-reference/examples/supervise_publication/workflow/control/recovery.rs",
         "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/recovery/live.rs",
         "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/tests/recovery_control/durable.rs",
@@ -3230,7 +3238,7 @@
       "id": "FA-130",
       "gate": "G2",
       "title": "Policy replay campaigns before promotion",
-      "status": "planned",
+      "status": "in_progress",
       "depends_on": [
         "FA-020",
         "FA-104",
@@ -3248,7 +3256,16 @@
         "Produce executed local evidence; source or prose alone does not close this packet."
       ],
       "owner_role": "governance",
-      "result_artifacts": [],
+      "result_artifacts": [
+        "docs/POLICY_CAMPAIGN_REFERENCE.md",
+        "docs/DURABLE_POLICY_CAMPAIGN_GUARD.md",
+        "docs/POLICY_REPLAY_OPERATOR.md",
+        "crates/fa-reference/examples/supervise_publication/policy_replay.rs",
+        "crates/fa-reference/examples/supervise_publication/policy_replay/input.rs",
+        "crates/fa-reference/examples/supervise_publication/policy_replay/render.rs",
+        "crates/fa-reference/examples/supervise_publication/policy_replay/tests.rs",
+        "crates/fa-reference/fixtures/policy_replay_candidate.json"
+      ],
       "founding_ideas": [
         "FI-A14",
         "FI-A18"

@@ -1,0 +1,18 @@
+{
+  "schema_version": "fa.policy-replay-request/1",
+  "expected_policy_generation": 1,
+  "limits": {
+    "cases": 128,
+    "input_bytes": 1048576,
+    "output_bytes": 4194304
+  },
+  "candidate": {
+    "generation": 2,
+    "nodes": [
+      {"op": "exact_value", "key": 7, "value_hex": "6f6b"},
+      {"op": "payload_at_most", "maximum": 256},
+      {"op": "units_at_most", "maximum": 512},
+      {"op": "all", "children": [0, 1, 2]}
+    ]
+  }
+}
