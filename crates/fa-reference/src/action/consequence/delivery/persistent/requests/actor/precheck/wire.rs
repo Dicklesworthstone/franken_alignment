@@ -1,10 +1,21 @@
 //! Bounded exact-precheck bytes, separately provisioned from submit/poll/cancel.
-//! This codec is not a transport, authentication mechanism or effect authority.
+//! Complete-document codecs are separate from bounded framing and Unix I/O;
+//! Linux peer admission checks kernel credentials, never effect authority.
 mod codec;
 mod response;
+mod channel;
+#[cfg(unix)]
+mod transport;
+#[cfg(target_os = "linux")]
+mod peer;
 
 pub use codec::{PrecheckRequest, decode_precheck_request, encode_precheck_request};
 pub use response::{PrecheckResponseError, PrecheckWireResponse, decode_precheck_response};
+pub use channel::FilePrecheckChannel;
+#[cfg(unix)]
+pub use transport::UnixPrecheckConnection;
+#[cfg(target_os = "linux")]
+pub use peer::FilePrecheckPeerSession;
 use super::{FileActorPrecheckPort, MAX_PRECHECK_QUERIES};
 use crate::action::MAX_PAYLOAD_BYTES;
 use crate::action::consequence::oversight::actor::ActorError;
@@ -87,3 +98,6 @@ impl FilePrecheckWire {
         }
     }
 }
+
+#[cfg(test)]
+mod tests;

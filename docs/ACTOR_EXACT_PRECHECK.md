@@ -32,9 +32,10 @@ The capability is also available through a separate bounded byte adapter,
 `requests::actor::precheck_wire::FilePrecheckWire`. Existing Submit/Poll/Cancel
 commands and process transports do not silently gain policy access. An
 integration must explicitly bind the separately granted port to its chosen
-actor. This is neither a new CLI command nor a socket service; in-process role
-separation and message correlation are not OS isolation or provider
-authentication.
+actor. A bounded Unix connection and Linux kernel-credential peer session now
+carry this same capability across a process transport. They do not create a
+listener, CLI service, deployment profile or provider identity; in-process role
+separation and message correlation are not OS isolation.
 
 ## Bounded actor byte interface
 
@@ -55,8 +56,9 @@ let observation = decode_precheck_response(
 Keep the original disclosure custodian alive on the supervisor side. The adapter
 owns only its weak actor capability and a finite exchange allowance; it cannot
 obtain the host, refresh evidence, observe time, install policy or submit an
-effect. Transport framing, peer authentication, output backpressure and grant
-provisioning remain the integrating host's responsibility.
+effect. The optional transport below supplies framing, output backpressure and
+kernel-peer admission. Grant provisioning, listener ownership, scheduling and
+whole-session deadlines remain the integrating host's responsibility.
 
 Requests use the closed `fa.actor-precheck/1` schema and responses use
 `fa.actor-precheck-response/1`. Decimal-string identifiers retain all u64 bits;
@@ -97,6 +99,78 @@ Repeated allowed queries can infer exact-policy properties. This leakage is
 intentional and bounded by the explicit grant, not eliminated by the byte
 protocol. The full deployment profile options and witness-sensitive caching
 remain separate unfinished FA-142 work; this adapter does not claim them.
+
+## Authenticated precheck process transport
+
+`FilePrecheckChannel` wraps the original wire in bounded newline framing.
+`UnixPrecheckConnection` drives an already connected Unix socket without
+creating a task, runtime or listener. On Linux, use `FilePrecheckPeerSession`
+when the host needs kernel-credential admission before any request is read:
+
+```rust
+use fa_reference::action::consequence::delivery::persistent::requests::actor::precheck_wire::{
+    FilePrecheckPeerSession, FilePrecheckWire, MAX_PRECHECK_FRAME_BYTES,
+};
+use fa_reference::action::consequence::oversight::actor_transport::DriveBudget;
+
+// trusted_peer_policy is independently provisioned, never learned from a request.
+// Keep the original disclosure custodian with the supervisor.
+let wire = FilePrecheckWire::new(precheck, 16)?;
+let mut session = FilePrecheckPeerSession::new(
+    trusted_peer_policy, wire, MAX_PRECHECK_FRAME_BYTES, 4,
+)?;
+session.attach(accepted_socket)?;
+let report = session.drive(DriveBudget::default())?;
+// The host schedules the next bounded drive from report.status.interest().
+```
+
+`PeerPolicy` requires both the supplied UID and GID and can additionally require
+a PID. It verifies this socket's kernel-observed connection credentials before
+reading bytes or moving the original channel. A refused candidate is dropped
+without a response, an evaluation, a parser charge, or disruption of an active
+connection. These credentials do not attest executable code, a remote principal,
+or the later recipient of a transferred descriptor. UID/GID-only policies admit
+all connecting processes with those credentials. The policy must be trusted
+configuration, not an identity inferred from the candidate being checked.
+
+The channel retains at most one bounded input document and one response. A
+newline is mandatory; EOF does not complete a fragment. A one-byte frame excess
+closes the channel before parsing. Pipelined bytes after the first newline stay
+unprocessed until that response is fully written **and flushed**. Native async
+integrations can use `feed`, `pending_output`, `acknowledge_written` and
+`acknowledge_flushed` with the same barrier.
+
+Each `drive` requires positive read-byte, write-byte, frame and I/O-attempt
+allowances within the original transport maxima. It reports actual progress;
+`Interrupted` spends an I/O attempt, `WouldBlock` yields, and terminal socket
+failures latch. Scheduler interest distinguishes buffered local work from
+readability, writability and closure. The borrowed descriptor is a capability
+for the **trusted scheduler**, not an isolation boundary against a hostile host
+that can otherwise use or duplicate it. Socket work is bounded per drive;
+the synchronous exact evaluation is not preempted mid-call, and the host must
+enforce its whole-session deadline and bound rejected candidate attempts.
+
+The session owns one original channel across explicit `disconnect`/`attach`
+cycles. Its frame allowance and the native grant's shared query allowance never
+reset on reconnect. Only transport fragments and unsent replies are discarded;
+an evaluated query stays charged even when its reply is lost. Connection
+admissions have a separate finite limit; rejected candidates do not consume it.
+Exhausting the original wire closes further intake after the final reply drains.
+Repeating a query, including its old label, is new work, not an idempotent retry.
+
+`session.revoke()` irreversibly closes that ingress but does not revoke other
+native port copies. Revoking or dropping the original disclosure instead makes
+every such port return `Withheld`; the session does not renew it. Any original
+owner revision change still makes the captured cut unavailable. No precheck
+frame, reconnect or socket teardown observes time, refreshes a source, issues a
+new grant, consumes a submission ID or changes the journal/effect ledger.
+
+This is a native integrating-host surface, not a new `supervise_publication`
+service. That operator currently acquires its fresh source on a new Submit;
+initial precheck provisioning requires a separately explicit supervisor-owned
+source/clock observation phase. The transport deliberately does not introduce
+one implicitly. Generated, learned, predictive and cumulative-stream histories
+retain the native disclosure refusal rather than falling back to raw proposals.
 
 ## What a result says
 

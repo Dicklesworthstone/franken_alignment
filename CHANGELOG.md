@@ -1,5 +1,16 @@
 # Changelog
 
+## 2026-10-28: expose authenticated bounded precheck transports
+
+- Add separate precheck framing, nonblocking Unix connection and Linux
+  kernel-credential session without widening ordinary actor commands.
+- Authenticate before input; preserve original frame/query allowances across
+  reconnect and response loss, with strict write/flush backpressure.
+- Keep source cuts, revocation, actor review and effect accounting unchanged;
+  no implicit source refresh, grant renewal, listener or runtime is added.
+- Add real-owner, framing and socket regressions. Required remote verification
+  remains unavailable; source and tests are not production qualification.
+
 ## 2026-10-28: recover pending stream containment before fencing
 
 - Add a consuming exact-intent stream reset finalizer to native learned recovery

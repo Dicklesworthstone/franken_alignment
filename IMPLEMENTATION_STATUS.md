@@ -1,5 +1,30 @@
 # Implementation status · design revision 0.3
 
+## 2026-10-28: carry exact prechecks over authenticated process transports
+
+The original separately granted precheck wire now has bounded newline framing,
+a nonblocking Unix connection and a Linux kernel-credential peer session. The
+host independently selects UID/GID and optional PID before any input is read;
+ordinary actor Submit/Poll/Cancel and source-acquisition paths remain unchanged.
+One input and one response enforce write/flush backpressure. Each drive bounds
+socket bytes, frames and I/O attempts and latches terminal failures.
+
+Explicit reconnect keeps the same original channel and wire, preserving both
+entered-frame and shared native query allowances. Lost replies cannot refund
+work. Ingress revocation and native disclosure revocation remain distinct; owner
+revision changes, unavailable source and dropped custodians keep their original
+Unknown/Withheld behavior. No source/clock observation, grant renewal, journal
+event, helper work, request reservation or effect authority is introduced.
+
+Real-owner, framing and socket regression source covers positive disclosures,
+credential refusals, fragmented/pipelined input, exact bounds, backpressure,
+reconnect exhaustion, lost replies and unchanged durable/request state. Required
+RCH verification still cannot start because the dispatcher is absent (exit 127).
+Compilation, runtime tests, qualified formatting, Clippy and production
+qualification remain open. This is not an operator listener/CLI, assurance
+profile or witness-sensitive cache; no Bead or full FA-142 acceptance is closed.
+See [authenticated precheck transport](docs/ACTOR_EXACT_PRECHECK.md#authenticated-precheck-process-transport).
+
 ## 2026-10-28: complete exact pending stream resets before recovery fences
 
 The original learned recovery cursor now exposes `finish_pending_stream_reset`
