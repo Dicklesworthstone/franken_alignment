@@ -169,5 +169,7 @@ impl FileActorPrecheckPort {
     }
 }
 
+pub mod wire;
+
 #[cfg(test)]
 mod tests;

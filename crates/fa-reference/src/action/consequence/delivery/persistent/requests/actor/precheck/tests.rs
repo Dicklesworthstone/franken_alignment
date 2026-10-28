@@ -322,3 +322,5 @@ fn a_source_backed_stream_cannot_obtain_a_raw_proposal_precheck_fallback() {
     let (port, _grant) = disclose(&supervisor, 1);
     known(port.check(1, &proposal(b"ok")).unwrap(), FilePrecheckOutcome::PrecheckPassed, 1);
 }
+
+mod wire;

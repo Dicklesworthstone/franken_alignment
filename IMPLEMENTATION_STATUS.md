@@ -1,5 +1,30 @@
 # Implementation status · design revision 0.3
 
+## 2026-10-27: expose separately granted exact prechecks over bounded bytes
+
+A dedicated actor precheck codec and adapter now wrap the original revocable
+`FileActorPrecheckPort`. The host must explicitly supply that capability;
+ordinary Submit/Poll/Cancel and source-acquiring transports remain unchanged.
+Closed request/response schemas preserve exact identifiers and payloads, reject
+unknown fields and cross-protocol input, and bind responses to the query and
+expected policy epoch. A successful result always requires ordinary review.
+
+The adapter charges each entered frame before parsing and retains a bounded
+per-adapter exchange allowance. All port clones still share the native evaluated
+query allowance and original owner/source invalidation. Coarse Knowledge
+responses contain no policy tree, source values, helper identities, empirical
+review, controller sequence or authority. No helper, source refresh, clock read,
+admission snapshot, request ID, journal event, reservation or permit is consumed.
+
+Regression source covers the strict codecs, actual source-backed outcomes,
+correlation failures, revocation, unavailable owners, parser/evaluation budgets
+and unchanged durable/request state. RCH test and canonical-check attempts exit
+127 because the dispatcher is absent; compilation, formatting, Clippy and tests
+remain unexecuted. Socket authentication/service integration, the full disclosure
+profile schema and witness-sensitive caching are not claimed. FA-142 remains
+in progress with no Bead or production gate closed. See
+[actor precheck](docs/ACTOR_EXACT_PRECHECK.md#bounded-actor-byte-interface).
+
 ## 2026-10-28: include mediated learned histories in the fleet operator
 
 Version-three fleet members may now pair topology_profile with an independent

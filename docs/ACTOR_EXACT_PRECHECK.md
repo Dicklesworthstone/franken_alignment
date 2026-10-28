@@ -28,10 +28,75 @@ accepts actor-supplied scope, witnesses, source data, time or a policy. It retur
 `ActorBasis`. Existing actor observations and wire formats keep `ActorBasis` as
 the default generic parameter and retain their previous variants and meaning.
 
-This increment exposes an in-process Rust capability, not a new CLI command or
-wire operation. Existing process transports do not silently gain policy access.
-An integration must decide explicitly which actor may receive this capability.
-In-process role separation is not OS isolation or provider authentication.
+The capability is also available through a separate bounded byte adapter,
+`requests::actor::precheck_wire::FilePrecheckWire`. Existing Submit/Poll/Cancel
+commands and process transports do not silently gain policy access. An
+integration must explicitly bind the separately granted port to its chosen
+actor. This is neither a new CLI command nor a socket service; in-process role
+separation and message correlation are not OS isolation or provider
+authentication.
+
+## Bounded actor byte interface
+
+```rust
+use fa_reference::action::consequence::delivery::persistent::requests::actor::precheck_wire::{
+    FilePrecheckWire, PrecheckRequest, encode_precheck_request, decode_precheck_response,
+};
+
+let request = PrecheckRequest { query: 9001, proposal };
+let bytes = encode_precheck_request(&request)?;
+let mut wire = FilePrecheckWire::new(precheck, 16)?;
+let response = wire.exchange(&bytes).encode()?;
+let observation = decode_precheck_response(
+    &response, request.query, request.proposal.expected_policy_epoch,
+)?;
+```
+
+Keep the original disclosure custodian alive on the supervisor side. The adapter
+owns only its weak actor capability and a finite exchange allowance; it cannot
+obtain the host, refresh evidence, observe time, install policy or submit an
+effect. Transport framing, peer authentication, output backpressure and grant
+provisioning remain the integrating host's responsibility.
+
+Requests use the closed `fa.actor-precheck/1` schema and responses use
+`fa.actor-precheck-response/1`. Decimal-string identifiers retain all u64 bits;
+payloads use bounded lowercase hexadecimal. The strict parser rejects duplicate
+or extra fields, unsupported versions, invalid numeric spellings, oversized
+payloads and authority-bearing additions. An ordinary actor command is not a
+precheck request. Response encoding has fixed fields and enumerated outcomes;
+no diagnostic string, evidence byte, helper identity or policy tree is included.
+
+Every response is marked `precheck: true`; a passed result must explicitly say
+`review_required: true`. The response decoder checks the original query and
+expected policy epoch, including the nested known basis and stale-generation
+binding. It accepts only the precheck's closed Knowledge states and coarse
+errors, never an effect outcome, permit, pending submission or fabricated
+absence. Decoding verifies representation and correlation, not authenticity
+or truth. Retrying a query is new work, not an idempotent effect operation.
+
+`FilePrecheckWire::new` requires a positive bounded exchange allowance.
+`exchange` charges an entered frame before parsing, including malformed frames.
+Exhaustion performs no further parsing or evaluation. Reconstructing an adapter
+does not reset the native grant's shared evaluation allowance; creating another
+adapter's parser allowance is an explicit host decision, not a global network
+rate limiter. The original grant's conservative invalidation/revocation rules
+are unchanged.
+
+### Declared disclosure boundary
+
+| State | Actor-visible information | Still excluded |
+| --- | --- | --- |
+| No granted capability | No precheck adapter is provisioned | Policy, source and review data |
+| Known pass or denial | Coarse exact outcome; disclosure/query labels, policy epoch and captured clock cut | Predicate trace, literals, source values, helpers, votes and authority |
+| Wrong expected epoch | Supplied and captured public policy epochs | Internal controller sequence and review data |
+| Owner/source unavailable or invalidated | Coarse unknown state | Private failure detail and current internal history |
+| Revoked or dropped custodian | Withheld requiring exact-policy disclosure | Former disclosure data |
+| Malformed or exhausted exchange | Closed coarse error | Partial decoded input and internal diagnostics |
+
+Repeated allowed queries can infer exact-policy properties. This leakage is
+intentional and bounded by the explicit grant, not eliminated by the byte
+protocol. The full deployment profile options and witness-sensitive caching
+remain separate unfinished FA-142 work; this adapter does not claim them.
 
 ## What a result says
 
@@ -131,3 +196,10 @@ Compilation, runtime tests and the full unchanged gate require execution on the
 configured remote builder. Missing launcher/toolchain is not qualification.
 No admission/dispatch semantics, dependency inventory, journal format, policy
 relaxation or production feature gate is changed by enabling these source APIs.
+
+The byte-interface regression source adds request/response round trips, actual
+source-backed pass/deny/stale/unknown/withheld exchanges, malformed/cross-protocol
+input, full-width identifiers, response correlation, strict review-required
+labeling, parser/evaluation budget separation and unchanged journal/request
+state. Targeted and full remote-check attempts exit 127 because `rch` is absent;
+these new tests and compilation have not executed.

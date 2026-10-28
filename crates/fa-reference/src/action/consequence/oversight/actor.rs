@@ -47,7 +47,7 @@ pub struct ActorProposal {
 }
 
 impl ActorProposal {
-    fn validate(&self) -> Result<(), ActorError> {
+    pub(crate) fn validate(&self) -> Result<(), ActorError> {
         if self.units == 0 || self.deadline.0 == 0 || [
             self.target.adapter, self.target.object, self.target.contract_version,
             self.target.expected_version, self.target.generation,

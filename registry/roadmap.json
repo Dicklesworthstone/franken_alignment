@@ -3569,7 +3569,7 @@
       "id": "FA-142",
       "gate": "G2",
       "title": "Policy disclosure profile and actor precheck",
-      "status": "planned",
+      "status": "in_progress",
       "depends_on": [
         "FA-008",
         "FA-107",
@@ -3586,7 +3586,17 @@
         "Produce executed local evidence; source or prose alone does not close this packet."
       ],
       "owner_role": "gate",
-      "result_artifacts": [],
+      "result_artifacts": [
+        "docs/ACTOR_EXACT_PRECHECK.md",
+        "crates/fa-reference/src/action/consequence/delivery/persistent/requests/actor/precheck.rs",
+        "crates/fa-reference/src/action/consequence/delivery/persistent/requests/actor/precheck/wire.rs",
+        "crates/fa-reference/src/action/consequence/delivery/persistent/requests/actor/precheck/wire/codec.rs",
+        "crates/fa-reference/src/action/consequence/delivery/persistent/requests/actor/precheck/wire/response.rs",
+        "crates/fa-reference/src/action/consequence/delivery/persistent/requests/actor/precheck/tests.rs",
+        "crates/fa-reference/src/action/consequence/delivery/persistent/requests/actor/precheck/tests/wire.rs",
+        "crates/fa-reference/src/action/consequence/delivery/persistent/requests/actor.rs",
+        "crates/fa-reference/src/action/consequence/oversight/actor.rs"
+      ],
       "founding_ideas": [
         "FI-A13",
         "FI-A15"

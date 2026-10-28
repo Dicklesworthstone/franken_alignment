@@ -8,6 +8,7 @@ pub mod receipt;
 pub mod learned_intake;
 pub use recovery::FileActorRecoveryPort;
 pub(in crate::action::consequence::delivery::persistent) mod precheck;
+pub use precheck::wire as precheck_wire;
 pub use precheck::{FileActorPrecheckPort, FilePrecheckBasis, FilePrecheckDisclosure,
     FilePrecheckObservation, FilePrecheckOutcome, MAX_PRECHECK_QUERIES};
 mod generated;

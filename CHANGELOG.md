@@ -1,5 +1,17 @@
 # Changelog
 
+## 2026-10-27: add a separately granted actor precheck byte API
+
+- Add strict bounded precheck request/response codecs and an adapter around the
+  original revocable exact-predicate capability, separate from actor submission.
+- Preserve shared evaluation budgets; charge malformed frames to the adapter's
+  own allowance and validate response query/epoch correlation.
+- Require explicit review-required labeling and keep policy internals, empirical
+  review and authority out of every encoded response.
+- Add real-owner and codec regression source plus the declared disclosure table.
+  Remote verification is unavailable; no full profile or production qualification
+  is claimed.
+
 ## 2026-10-28: stop and drain mediated learned fleets from retained source custody
 
 - Extend the existing fleet command to all five learned guard families with
