@@ -1,5 +1,16 @@
 # Changelog
 
+## 2026-10-27: compare candidate policies against guarded learned histories
+
+- Add a read-only finalizer to the original learned cursor and all five guarded
+  wrappers, retaining the complete current-policy corpus and canonical cut.
+- Add the learned operator mode with independent history custody, exact mediated
+  checkpoints, strict candidate grammar and bounded existing report schema.
+- Preserve original numerical/source guards, charges and reservations; no Fence,
+  helper rerun, live recovery, source refresh or policy promotion is introduced.
+- Add native/operator positive and causal-negative regressions. Required remote
+  verification cannot start because RCH is absent; qualification remains open.
+
 ## 2026-10-27: add a separately granted actor precheck byte API
 
 - Add strict bounded precheck request/response codecs and an adapter around the

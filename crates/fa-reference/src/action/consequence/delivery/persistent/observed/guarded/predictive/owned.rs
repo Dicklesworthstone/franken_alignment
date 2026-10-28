@@ -189,6 +189,22 @@ impl FileOwnedPredictiveRecovery {
         self.inner.finish_proposal_investigation()
     }
 
+    /// Compare the complete retained current-policy corpus after the original
+    /// numerical history and EVERY independently selected requirement qualify.
+    /// The inner finalizer rechecks the canonical bytes under the same lock.
+    /// No live owner, campaign key, fence, cleanup or journal mutation escapes.
+    pub fn finish_policy_replay(
+        self,
+        candidate: crate::action::consequence::gate::containment::session::policy::Policy,
+        limits: crate::action::consequence::policy_campaign::ReplayLimits,
+    ) -> Result<(
+        crate::action::consequence::delivery::persistent::FileDeliverySnapshot,
+        crate::action::consequence::policy_campaign::PolicyReplayReport,
+    ), JournalError> {
+        self.check_ready()?;
+        self.inner.finish_policy_replay(candidate, limits)
+    }
+
     /// Complete only the selected Unknown -> IrrecoverablyUnknown disposition
     /// after this cursor's full original guard, numerical, policy, credential
     /// and floor checks. No recovery Fence, clock, live owner or role escapes.

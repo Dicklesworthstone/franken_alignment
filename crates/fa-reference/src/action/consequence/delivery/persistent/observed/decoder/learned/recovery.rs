@@ -4,6 +4,7 @@ mod reset;
 mod stopped;
 mod receipt;
 mod investigation;
+mod policy_replay;
 mod abandonment;
 pub use receipt::FileReconciledLearnedReceipt;
 

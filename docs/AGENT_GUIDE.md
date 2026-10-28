@@ -95,6 +95,15 @@ profile limits and the pending execution-verification boundary.
 2. If the candidate needs observations the retained closures lack, the campaign says `mode: shadow`; do not present shadow as replay.
 3. `fa promote <policy> --campaign <artifact>`; refused without the campaign artifact.
 
+The executable reference mapping is
+[`supervise_publication policy-replay`](POLICY_REPLAY_OPERATOR.md).
+For learned-model histories use the documented `create-learned-generated`
+read-only recovery mode with independent history custody and the original
+guards; do not open them through the ordinary journal reader. Both report
+the complete retained current-policy corpus, not a caller-selected sample.
+`newly_reviewable` conveys no helper approval or promotion permission, and
+`requires_shadow` is a missing-observation result, not an executed shadow run.
+
 ### P7. Running an experiment
 
 1. `fa preregister H<n> --protocol <file>` before any confirmatory data; the ledger records the digest and date.

@@ -9,7 +9,7 @@ use fa_reference::action::consequence::{
 use fa_reference::action::{ActionSpec, Purpose, ResolvedTarget};
 use std::io::{self, Write};
 
-pub(super) fn encode(
+pub(crate) fn encode(
     cut: &FileDeliverySnapshot,
     report: &PolicyReplayReport,
     limits: ReplayLimits,

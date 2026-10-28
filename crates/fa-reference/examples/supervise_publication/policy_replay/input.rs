@@ -12,14 +12,14 @@ use std::{collections::BTreeMap, path::Path};
 pub(super) const CANDIDATE_BYTES: usize = 2 * 1_048_576;
 pub(super) const MAX_OUTPUT_BYTES: usize = 64 * 1_048_576;
 
-pub(super) struct Request {
+pub(crate) struct Request {
     pub expected_policy_generation: u64,
     pub candidate: Policy,
     pub limits: ReplayLimits,
     pub output_bytes: usize,
 }
 impl Request {
-    pub(super) fn read(path: &Path) -> Result<Self, String> {
+    pub(crate) fn read(path: &Path) -> Result<Self, String> {
         Self::decode(&read_regular(path, CANDIDATE_BYTES)?)
     }
     pub(super) fn decode(bytes: &[u8]) -> Result<Self, String> {

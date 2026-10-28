@@ -20,6 +20,51 @@ that effective predecessor. Candidate generation must strictly advance it. This
 command reads an existing journal; use the normal publication workflow first to
 produce retained proposals. An empty current-policy corpus is unavailable.
 
+## Guarded learned histories
+
+Learned-model journals require their original numerical and guard recipe, not
+the ordinary journal reconstructor. Use the existing learned recovery entry:
+
+```sh
+cargo run -p fa-reference --example supervise_publication -- \
+  create-learned-generated /operator/supervisor.json /operator/learned.json \
+  --resume --policy-replay /operator/candidate.json \
+  --history-anchor /custody/history.anchor \
+  --topology-profile /custody/topology.json
+```
+
+Omit `--topology-profile` only for non-mediated histories. Plain, raw-forecast
+and owned-forecast generation are supported both without mediation and with
+the original mediated/predictive-mediated guards. This path requires the
+independently retained history anchor; mediated histories also require their
+exact saved v2 topology/source checkpoint. A manual v1 minimum is not a
+replacement. The original model, tokenizer, codec, predictor, credentials,
+revocation floors and terminal reserve must still match. A missing or
+incompatible guard never falls back to ordinary replay.
+
+This is a read-only recovery finalizer. It acquires the original exclusive
+recovery lock, reconstructs the guarded history, checks the same canonical
+journal again and releases the cursor without recovering a live owner. Unlike
+the ordinary reader, it cannot run beside a live writer. It appends no Fence,
+deletes no staging file, creates no anchor and does not refresh the source,
+load current helper evidence, rerun helpers, or publish an effect. Historical
+numerical computation is replayed to validate the learned history; no new
+generation or helper judgment is produced.
+
+The recipe's request ID does not select the corpus. The native controller still
+includes every retained complete proposal and applied review belonging to the
+current effective policy, including exact denials; older policy generations
+are not relabeled. Candidate input and report schema, shadow requirements and
+promotion exclusions are identical to the ordinary command. The original
+recipe, history and report limits all apply.
+
+One elapsed budget spans admission, one-event recovery advances, the Ready
+boundary, canonical confirmation and staged report output. A synchronous
+bounded step is not preempted mid-step. Missing custody, stale policy,
+incompatible checkpoints, corruption, deadlines and capacity failures yield no
+successful prefix or live recovery. Repeating the read with unchanged inputs
+observes the same cut and leaves all journal and custody bytes unchanged.
+
 ## Candidate request
 
 The committed fixture illustrates a stricter payload limit for the ordinary
@@ -115,12 +160,13 @@ command does not perform the prospective shadow run.
 historical action and observation. It transfers no helper vote, human approval,
 dispatch key or policy-promotion permission. The output explicitly reports
 `authority: not_issued`, `policy_changed: false`, `helpers_rerun: false`,
-`live_evidence_read: false`, and `replay_grade: decision_replay`. It is neither a
-model rerun nor an estimate of safety on unseen actions.
+`live_evidence_read: false`, and `replay_grade: decision_replay`. It is not an estimate of safety on unseen actions. The ordinary command performs
+no numerical replay; the learned command recomputes its original numerical
+history only to validate the retained cut, not to obtain new helper judgments.
 
 ## Read and failure boundary
 
-The command uses `FileOversight::read_policy_replay`, so it can operate while the
+The ordinary command uses `FileOversight::read_policy_replay`, so it can operate while the
 original writer still owns its lock. It reads one canonical image without
 acquiring the writer, applying recovery, advancing authority epochs, deleting
 pending files, refreshing evidence, contacting helpers, or issuing campaigns.
@@ -145,10 +191,16 @@ within `output_bytes` before the first stdout byte. An output-device failure can
 still interrupt transport of that complete encoding; it changes no authority or
 effect state.
 
-The executable tests exercise real durable proposal/review histories, positive
+The regression source exercises real durable proposal/review histories, positive
 relaxation and tightening, unobserved-branch shadow requirements, writer-lock
 coexistence without evidence/helper files, reopen replay, byte-preserving
 no-mutation checks, invalid/truncated/wrong-profile histories, strict request
 admission, all closed predicate encodings, resource exhaustion, deadline phases,
 and output failure. No live policy promotion is exposed by this command; native
 promotion remains governed by [DURABLE_POLICY_CAMPAIGN_GUARD.md](DURABLE_POLICY_CAMPAIGN_GUARD.md).
+
+Learned-command regressions additionally exercise the six guard configurations,
+independent custody, current-policy corpus selection, missing observations,
+strict mode exclusion, deadlines, output failure and byte-preserving reads.
+These added tests and the new native finalizer require execution on the configured
+remote builder; source review is not runtime or production qualification.

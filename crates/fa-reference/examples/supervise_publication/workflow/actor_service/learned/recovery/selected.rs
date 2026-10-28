@@ -291,6 +291,24 @@ impl Cursor {
         }
     }
 
+    /// Complete-corpus observations only, after all original recovery guards.
+    pub(super) fn finish_policy_replay(
+        self,
+        candidate: fa_reference::action::consequence::gate::containment::session::policy::Policy,
+        limits: fa_reference::action::consequence::policy_campaign::ReplayLimits,
+    ) -> Result<(
+        fa_reference::action::consequence::delivery::persistent::FileDeliverySnapshot,
+        fa_reference::action::consequence::policy_campaign::PolicyReplayReport,
+    ), JournalError> {
+        match self {
+            Self::Plain(run) => run.finish_policy_replay(candidate, limits),
+            Self::Raw(run) => run.finish_policy_replay(candidate, limits),
+            Self::Owned(run) => run.finish_policy_replay(candidate, limits),
+            Self::Mediated(run) => run.finish_policy_replay(candidate, limits),
+            Self::PredictiveMediated(run) => run.finish_policy_replay(candidate, limits),
+        }
+    }
+
     pub(super) fn progress(&self) -> Progress {
         match self {
             Self::Plain(run) => run.progress(),

@@ -1,5 +1,30 @@
 # Implementation status · design revision 0.3
 
+## 2026-10-27: replay candidate policies over guarded learned histories
+
+The original learned recovery cursor and all five guarded wrappers now expose a
+read-only policy-replay finalizer. It compares the complete retained
+current-policy proposal/review corpus, including denials, on the same verified
+machine and rechecks its canonical journal under the original exclusive lock.
+Recipe, numerical and predictive validation, custody, revocation floors,
+credentials, terminal reserve and topology/source guards are preserved.
+
+The learned operator entry accepts the existing strict candidate request and
+renders the existing bounded Knowledge report. It requires independent history
+custody and exact v2 checkpoints for mediated modes; recipe request IDs cannot
+filter the corpus. One elapsed allowance covers ingestion, one-event replay,
+Ready, canonical confirmation and staged output. It never creates a live owner,
+appends a Fence, cleans staging, refreshes sources, reruns helpers, or promotes a
+policy. Historical numerical recomputation validates the retained learned cut.
+
+Native and operator regression source covers successful comparisons, complete
+current-policy corpora, all six learned configurations, unsupported observations,
+resource/deadline boundaries, malformed custody and unchanged durable bytes.
+Targeted RCH and canonical-check attempts exit 127 because `rch` is absent.
+Compilation, formatting, Clippy and these tests remain unexecuted; no production
+qualification or Bead closure is claimed. See
+[learned policy replay](docs/POLICY_REPLAY_OPERATOR.md#guarded-learned-histories).
+
 ## 2026-10-27: expose separately granted exact prechecks over bounded bytes
 
 A dedicated actor precheck codec and adapter now wrap the original revocable

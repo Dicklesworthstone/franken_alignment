@@ -5,6 +5,8 @@
 mod input;
 #[path = "policy_replay/render.rs"]
 mod render;
+pub(crate) use input::Request;
+pub(crate) use render::encode;
 #[cfg(test)]
 #[path = "policy_replay/tests.rs"]
 mod tests;

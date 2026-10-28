@@ -1,4 +1,6 @@
 //! Original learned replay, complete guard inventory and receipt-only settlement.
+#[path = "recovery/policy_replay.rs"]
+pub(super) mod policy_replay;
 #[path = "recovery/diagnosis.rs"]
 pub(super) mod diagnosis;
 #[path = "recovery/cooperative.rs"]

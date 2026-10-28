@@ -339,7 +339,21 @@ impl DeniedHistory {
                 let update =
                     PolicyUpdate::new(801, control.sequence, control.ledger.epoch, next).unwrap();
                 let revision = host.revision();
-                host.replace_policy(revision, &update).unwrap();
+                let review = host.request_policy_campaign(revision, &update).unwrap();
+                let revision = host.revision();
+                let permit = oversight
+                    .policy_governor
+                    .as_ref()
+                    .unwrap()
+                    .approve(
+                        &mut host,
+                        revision,
+                        &review,
+                        !review.report().newly_reviewable().is_empty(),
+                    )
+                    .unwrap();
+                let revision = host.revision();
+                host.promote_policy_campaign(revision, &permit).unwrap();
             }
             let revision = host.revision();
             host.observe_time(revision, ElapsedTick(2)).unwrap();
@@ -919,3 +933,6 @@ fn full_ordinary_capacity_and_unusable_staging_do_not_block_immutable_diagnosis(
     assert!(staging.is_dir());
     assert_eq!(history.files(), before);
 }
+
+#[path = "diagnosis/policy_replay.rs"]
+mod policy_replay;

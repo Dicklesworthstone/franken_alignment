@@ -581,3 +581,6 @@ fn topology_diagnosis_requires_the_complete_matching_source_cut_without_current_
         case.unchanged(&changed);
     }
 }
+
+#[path = "diagnosis/policy_replay.rs"]
+mod policy_replay;
