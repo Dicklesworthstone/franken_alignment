@@ -8,6 +8,28 @@ use std::rc::Rc;
 mod phases;
 
 impl FileStopRecovery {
+    // Passive learned resolution releases only the actual original observation
+    // after full numerical/guard checks and a canonical reread under its lock.
+    // It performs no confirmation, cleanup, clock, fence or domain write.
+    pub(in crate::action::consequence::delivery::persistent::observed::shutdown)
+    fn finish_registered_observation(self, campaign: &FileShutdownCampaign, index: usize)
+        -> Result<(FileShutdownObservation, Rc<[u8]>, usize), JournalError>
+    {
+        self.check_ready()?;
+        let domain = campaign.plan.domains.get(index).ok_or(Error::Missing)?;
+        if self.store.identity() != domain.directory.as_path() {
+            return Err(Error::Binding.into());
+        }
+        campaign.check_head_size(index, self.canonical.len())?;
+        campaign.check_canonical_events(index, self.store.identity(), &self.events)?;
+        if self.store.read(self.profile.delivery.limits.bytes)? != self.canonical {
+            return Err(Error::Binding.into());
+        }
+        let observation = observe(domain, &self.machine, &self.events,
+            FileShutdownSource::CanonicalImage, self.last_drain)?;
+        Ok((observation, self.canonical.into(), self.events.len()))
+    }
+
     pub(in crate::action::consequence::delivery::persistent::observed::shutdown) fn begin_registered(
         store: storage::Store, campaign: &FileShutdownCampaign, index: usize,
     ) -> Result<Self, JournalError> {

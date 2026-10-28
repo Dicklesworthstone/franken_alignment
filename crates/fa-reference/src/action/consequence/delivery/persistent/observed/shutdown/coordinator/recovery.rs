@@ -4,6 +4,7 @@ pub(super) mod resolution;
 pub(super) mod cooperative;
 pub(super) mod clocked;
 mod phases;
+pub(super) mod learned;
 mod reserve;
 pub(super) mod fleet;
 #[cfg(test)]

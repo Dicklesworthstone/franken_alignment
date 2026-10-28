@@ -140,7 +140,7 @@ impl FileGuardedRecovery {
     {
         self.check_stopped_ready_with(check)?;
         let Self { profile, store, canonical, events, machine, .. } = self;
-        Ok(FileStopRecovery::from_verified_terminal(profile, store, canonical, events, machine))
+        Ok(FileStopRecovery::from_verified_terminal(profile, store, canonical, events, machine, None))
     }
 
     // Reuse the exact original stop selection, no-clock retry and consuming

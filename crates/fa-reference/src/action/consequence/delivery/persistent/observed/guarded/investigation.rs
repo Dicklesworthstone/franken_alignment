@@ -186,6 +186,15 @@ impl Selection {
     pub(in crate::action::consequence::delivery::persistent::observed) fn apply(&mut self, profile: &FileOversightProfile, machine: &mut Machine,
         index: usize, event: &Event) -> Result<(), JournalError>
     {
+        self.apply_transition(profile, machine, index, event).map(|_| ())
+    }
+
+    // Preserve the original transition for a consuming learned fleet replay.
+    // Ordinary diagnosis still discards it; the reducer is called exactly once.
+    pub(in crate::action::consequence::delivery::persistent::observed)
+    fn apply_transition(&mut self, profile: &FileOversightProfile, machine: &mut Machine,
+        index: usize, event: &Event) -> Result<super::super::Transition, JournalError>
+    {
         // A durable actor key is NOT its allocated attempt. Resolve only the
         // first submission through the original request book, including a
         // retained NotAdmitted disposition. Neither a direct proposal with the
@@ -204,13 +213,13 @@ impl Selection {
                 _ => None,
             }
         } else { None };
-        machine.apply(event)?;
+        let transition = machine.apply(event)?;
         if let Some((request, snapshot)) = source {
             let attempt = match self.identity {
                 ProposalIdentity::Attempt(attempt) => attempt,
                 ProposalIdentity::Request(key) => match machine.requests.status(key)?.disposition {
                     FileRequestDisposition::Admitted { attempt, .. } => attempt,
-                    FileRequestDisposition::NotAdmitted(_) => return Ok(()),
+                    FileRequestDisposition::NotAdmitted(_) => return Ok(transition),
                 },
             };
             if let Some(action) = machine.actions.get(&attempt) {
@@ -224,7 +233,7 @@ impl Selection {
                 self.selected = Some((request, admitted, experiment));
             }
         }
-        Ok(())
+        Ok(transition)
     }
     fn require_selected(&self) -> Result<(), Error> {
         if self.selected.is_some() { Ok(()) } else { Err(Error::Missing) }

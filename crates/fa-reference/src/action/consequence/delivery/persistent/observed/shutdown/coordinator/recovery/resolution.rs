@@ -47,6 +47,18 @@ impl FileShutdownCoordinator {
     pub fn begin_resolve_shutdown_visit(&mut self, revision: u64, visit: usize)
         -> Result<FileShutdownVisitResolution<'_>, JournalError>
     {
+        let (index, attempt, recorded) = self.prepare_resolution(revision, visit)?;
+        match self.campaign.begin_canonical_read(index) {
+            Ok(read) => Ok(FileShutdownVisitResolution { coordinator: self, visit, index, attempt, recorded, read }),
+            Err(error) => Err(self.refuse_resolution(index, attempt, error)),
+        }
+    }
+
+    // One admission protocol for both original ordinary and fully guarded learned
+    // passive readers. No replay or domain write happens in this bookkeeping step.
+    pub(super) fn prepare_resolution(&mut self, revision: u64, visit: usize)
+        -> Result<(usize, usize, Option<u64>), JournalError>
+    {
         if self.unavailable { return Err(JournalError::Unavailable); }
         if revision != self.revision { return Err(Error::Stale.into()); }
         let retained = self.visits.get(visit).ok_or(Error::Missing)?;
@@ -69,22 +81,18 @@ impl FileShutdownCoordinator {
         // Before native read/replay: an unwind cannot reuse older success.
         self.unavailable = true;
         self.check_canonical_image()?;
-        let read = (|| {
-            // Only pending results need a new persisted acknowledgment. Admit
-            // fixed overhead and install the retained-head ceiling before the
-            // original canonical acquisition. Exact refreshes write nothing.
-            if recorded.is_none() {
-                self.campaign.completion_head_limit = Some(self.resolution_head_limit(visit, index)?);
+        // Only a pending result needs new persisted completion capacity. Preserve
+        // the original fixed overhead and whole-head ceiling before acquisition.
+        if recorded.is_none() {
+            match self.resolution_head_limit(visit, index) {
+                Ok(limit) => self.campaign.completion_head_limit = Some(limit),
+                Err(error) => return Err(self.refuse_resolution(index, attempt, error)),
             }
-            self.campaign.begin_canonical_read(index)
-        })();
-        match read {
-            Ok(read) => Ok(FileShutdownVisitResolution { coordinator: self, visit, index, attempt, recorded, read }),
-            Err(error) => Err(self.refuse_resolution(index, attempt, error)),
         }
+        Ok((index, attempt, recorded))
     }
 
-    fn refuse_resolution(&mut self, index: usize, attempt: usize, error: JournalError) -> JournalError {
+    pub(super) fn refuse_resolution(&mut self, index: usize, attempt: usize, error: JournalError) -> JournalError {
         // A domain read refusal or cancellation cannot clear lost coordinator
         // custody. Leave the owner quarantined and preserve both files.
         if let Err(conflict) = self.check_canonical_image() { return conflict; }
@@ -94,7 +102,7 @@ impl FileShutdownCoordinator {
         error
     }
 
-    fn finish_resolution(&mut self, visit: usize, index: usize, attempt: usize,
+    pub(super) fn finish_resolution(&mut self, visit: usize, index: usize, attempt: usize,
         recorded: Option<u64>, result: Result<(FileShutdownObservation, Rc<[u8]>, usize), JournalError>)
         -> Result<FileShutdownObservation, JournalError>
     {

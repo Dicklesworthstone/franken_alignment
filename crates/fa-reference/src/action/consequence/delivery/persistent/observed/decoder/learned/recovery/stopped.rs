@@ -84,10 +84,11 @@ impl FileLearnedRecovery {
     // Private handoff after complete ORIGINAL learned replay. A specialised
     // wrapper must run its full independent checks before delegating here.
     // Never expose the ordinary cursor or reconstruct an unchecked live owner.
+    pub(in crate::action::consequence::delivery::persistent::observed)
     fn into_terminal(self) -> Result<FileStopRecovery, JournalError> {
         self.verified_guarded_machine()?;
-        let Self { profile, store, canonical, events, machine, .. } = self;
-        Ok(FileStopRecovery::from_verified_terminal(profile, store, canonical, events, machine))
+        let Self { profile, store, canonical, events, machine, last_drain, .. } = self;
+        Ok(FileStopRecovery::from_verified_terminal(profile, store, canonical, events, machine, last_drain))
     }
 
     /// Consume completely verified learned history directly into the ORIGINAL

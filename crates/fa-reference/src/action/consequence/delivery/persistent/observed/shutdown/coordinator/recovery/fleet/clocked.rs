@@ -3,6 +3,7 @@
 use super::*;
 mod phases;
 mod selected;
+mod learned;
 use phases::RegisteredPhase;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -90,7 +91,19 @@ impl FileShutdownCoordinator {
 
     fn run_selected_pass<C, P>(&mut self, revision: u64,
         bindings: &[FileShutdownClockBinding], max_events: usize,
+        selection: (VisitSelection<'_>, RegisteredPhase),
+        clock: Option<C>, checkpoint: P) -> Result<FileShutdownClockedRecoveryPass, JournalError>
+    where C: FnMut(FileShutdownClockBinding) -> Result<ElapsedTick, JournalError>,
+        P: FnMut(FileShutdownRecoveryCheckpoint) -> bool,
+    {
+        self.run_selected_pass_with_inputs(revision, bindings, max_events,
+            selection, None, clock, checkpoint)
+    }
+
+    fn run_selected_pass_with_inputs<C, P>(&mut self, revision: u64,
+        bindings: &[FileShutdownClockBinding], max_events: usize,
         (selection, phase): (VisitSelection<'_>, RegisteredPhase),
+        provisions: Option<&[FileShutdownLearnedMember]>,
         mut clock: Option<C>, mut checkpoint: P) -> Result<FileShutdownClockedRecoveryPass, JournalError>
     where C: FnMut(FileShutdownClockBinding) -> Result<ElapsedTick, JournalError>,
         P: FnMut(FileShutdownRecoveryCheckpoint) -> bool,
@@ -99,6 +112,7 @@ impl FileShutdownCoordinator {
         if max_events > MAX_JOURNAL_EVENTS { return Err(Error::Limit.into()); }
         let (ordered, resolutions) = self.prepare_registered_selection(revision, bindings, selection,
             |binding| (binding.domain, binding.clock_domain))?;
+        if let Some(members) = provisions { learned::check_members(&self.campaign.plan, members)?; }
         let mut members = Vec::new();
         members.try_reserve_exact(ordered.len()).map_err(|_| Error::Limit)?;
         members.extend(ordered.into_iter().map(|binding| FileShutdownClockedPassMember {
@@ -108,11 +122,19 @@ impl FileShutdownCoordinator {
             initial_revision: revision, final_revision: revision, members };
         for (member, resolution) in pass.members.iter_mut().zip(resolutions) {
             let binding = member.binding;
+            let inputs = provisions.and_then(|members| members.iter()
+                .find(|member| member.domain == binding.domain))
+                .and_then(|member| member.inputs.as_ref());
             if !checkpoint(FileShutdownRecoveryCheckpoint { domain: binding.domain, replay: None }) { break; }
             let mut cancelled = false;
             if let Some(visit) = resolution {
                 let result = (|| {
-                    let mut read = self.begin_resolve_shutdown_visit(self.revision(), visit)?;
+                    let mut read = match inputs {
+                        Some(inputs) => learned::Resolution::Learned(
+                            self.begin_resolve_learned_shutdown_visit(self.revision(), visit, inputs)?),
+                        None => learned::Resolution::Ordinary(
+                            self.begin_resolve_shutdown_visit(self.revision(), visit)?),
+                    };
                     loop {
                         let progress = read.progress();
                         if !checkpoint(FileShutdownRecoveryCheckpoint { domain: binding.domain, replay: Some(progress) }) {
@@ -141,10 +163,16 @@ impl FileShutdownCoordinator {
                     if !proceed { cancelled = true; }
                     proceed
                 };
-                let result = match phase {
-                    RegisteredPhase::Combined => self.recover_and_drain_with_clock(self.revision(), binding, max_events, acquire, poll),
-                    RegisteredPhase::Admission => self.recover_admission_stop(self.revision(), binding, max_events, poll),
-                    RegisteredPhase::Drain => self.drain_stopped_with_clock(self.revision(), binding, max_events, acquire, poll),
+                let result = match (phase, inputs) {
+                    (RegisteredPhase::Combined, Some(inputs)) => self.recover_learned_and_drain_with_clock(
+                        self.revision(), binding, inputs, max_events, acquire, poll),
+                    (RegisteredPhase::Admission, Some(inputs)) => self.recover_learned_admission_stop(
+                        self.revision(), binding, inputs, max_events, poll),
+                    (RegisteredPhase::Drain, Some(inputs)) => self.drain_learned_stopped_with_clock(
+                        self.revision(), binding, inputs, max_events, acquire, poll),
+                    (RegisteredPhase::Combined, None) => self.recover_and_drain_with_clock(self.revision(), binding, max_events, acquire, poll),
+                    (RegisteredPhase::Admission, None) => self.recover_admission_stop(self.revision(), binding, max_events, poll),
+                    (RegisteredPhase::Drain, None) => self.drain_stopped_with_clock(self.revision(), binding, max_events, acquire, poll),
                 };
                 match result {
                     Ok(Ok(observation)) => member.result = FileShutdownPassResult::Observed(Box::new(observation)),

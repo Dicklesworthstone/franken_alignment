@@ -126,6 +126,23 @@ fn check_history(events: &[Event], expected: &FilePredictiveRequirements) -> Res
 }
 
 impl FilePredictiveLearnedRecovery {
+    // Sealed fleet composition: framing is inspected before event zero, while
+    // extraction requires this wrapper's COMPLETE independent Ready checks.
+    pub(in crate::action::consequence::delivery::persistent::observed)
+    fn shutdown_history(&self)
+        -> (&FileOversightProfile, &[Event], &Path, usize)
+    {
+        self.inner.shutdown_history()
+    }
+
+    pub(in crate::action::consequence::delivery::persistent::observed)
+    fn into_shutdown_terminal(self)
+        -> Result<crate::action::consequence::delivery::persistent::observed::shutdown::recovery::FileStopRecovery, JournalError>
+    {
+        self.check_ready()?;
+        self.inner.into_terminal()
+    }
+
     /// Select one original external request for offline historical policy
     /// diagnosis before any replay. The same exclusive recovery lock, numerical
     /// recipe and independent guard requirements remain held; no new admission

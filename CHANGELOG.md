@@ -1,5 +1,16 @@
 # Changelog
 
+## 2026-10-27: recover and drain learned fleet histories
+
+- Add closed independent learned provisioning to the original fixed-roster fleet
+  coordinator, covering all five guarded forms and explicit ordinary members.
+- Support new combined/admission/drain work and fresh passive retained-visit
+  resolution through one original numerical replay with full guards and custody.
+- Preserve genuine last-drain results, exact v2 terminal source succession,
+  conservative liabilities and the existing complete per-member reports.
+- Add eight real-history native regressions. Syntax checks pass; required remote
+  compiler/test attempts cannot start because RCH is absent. Qualification stays open.
+
 ## 2026-10-28: serve durable Stop during active learned recovery
 
 - Keep the original authenticated peer and finite budgets through complete guarded

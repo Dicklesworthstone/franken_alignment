@@ -20,6 +20,8 @@ mod retained_custody;
 mod checkpoint_repair;
 #[path = "mediated_learned_receipts/diagnosis.rs"]
 mod proposal_diagnosis;
+#[path = "mediated_learned_receipts/fleet.rs"]
+mod fleet_shutdown;
 
 use fa_reference::action::consequence::delivery::persistent::observed::{
     decoder::learned::FileReconciledLearnedReceipt,

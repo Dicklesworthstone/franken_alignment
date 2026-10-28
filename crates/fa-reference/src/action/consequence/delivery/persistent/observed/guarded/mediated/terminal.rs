@@ -75,6 +75,30 @@ pub(super) fn prepare(inner: &FileLearnedRecovery, progress: FileLearnedRecovery
 }
 
 impl FileTerminalTopologyRecovery {
+    // Only fleet internals may inspect the selected framing or consume this
+    // same restricted cursor. The operation restriction and all guards survive.
+    pub(in crate::action::consequence::delivery::persistent::observed)
+    fn shutdown_history(&self)
+        -> (&super::super::super::FileOversightProfile,
+            &[super::super::super::Event], &std::path::Path, usize)
+    {
+        match &self.inner {
+            Inner::Mediated(run) => run.shutdown_history(),
+            Inner::Predictive(run) => run.shutdown_history(),
+        }
+    }
+
+    pub(in crate::action::consequence::delivery::persistent::observed)
+    fn into_shutdown_terminal(self, operation: u64)
+        -> Result<super::super::super::shutdown::recovery::FileStopRecovery, JournalError>
+    {
+        if self.operation != operation { return Err(Error::Binding.into()); }
+        match self.inner {
+            Inner::Mediated(run) => run.into_shutdown_terminal(),
+            Inner::Predictive(run) => run.into_shutdown_terminal(),
+        }
+    }
+
     pub(super) fn mediated(inner: FileMediatedLearnedRecovery, operation: u64) -> Self {
         Self { inner: Inner::Mediated(inner), operation }
     }

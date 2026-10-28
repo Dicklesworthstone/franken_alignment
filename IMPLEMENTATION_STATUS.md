@@ -1,5 +1,35 @@
 # Implementation status · design revision 0.3
 
+## 2026-10-27: recover learned fleet members through original guarded replay
+
+The durable coordinator now accepts a complete immutable per-domain roster for
+ordinary and all five guarded learned families. New combined/admission/drain
+visits and passive retained-visit resolution use the original learned numerical
+cursor, newest whole registered prefix, current guards/credentials/floors,
+predictor, reserve and canonical custody. Learned failure never falls back to
+ordinary replay. The existing full-roster selector, report and coordinator
+bookkeeping remain the only fleet protocol.
+
+Original replay now preserves the actual last StopProgressed result and revision,
+including when proposal diagnosis is attached. Mediated inputs retain the
+original exact v2 source checkpoint across only its permitted terminal successor.
+Passive learned reads hold the original exclusive lock and change no domain
+bytes, staging or clock; pending coordinator completion and exact observed-cut
+refresh retain their original distinct semantics. Unknown/expired liabilities
+and charges remain explicit, with no effect retry or budget reset.
+
+Eight new native integration functions cover six modes, genuine numerical and
+effect histories, both phases, passive reopen, original sweeps, eleven independent
+input mutations, complete roster admission, canonical/cancellation failures,
+mixed missing/busy/corrupt members, selected work and passive quarantine.
+All 22 changed Rust files pass syntax parsing; the five new files are formatted.
+Independent source reviews found no blocker. Required targeted/full RCH commands
+both exited 127 because the dispatcher is absent. No compilation, runtime test,
+Clippy or canonical gate pass is claimed, and Beads remain open.
+Concurrent authenticated recovery-Stop and learned unknown-abandonment work
+through 0c20c06 is preserved. See
+[learned fleet recovery](docs/LEARNED_FLEET_RECOVERY.md).
+
 ## 2026-10-28: acknowledge durable Stop from active learned recovery
 
 Active continuation, next-message and Finish startup now retain the same

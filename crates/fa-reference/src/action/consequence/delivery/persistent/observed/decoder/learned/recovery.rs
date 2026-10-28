@@ -9,7 +9,8 @@ pub use receipt::FileReconciledLearnedReceipt;
 
 use super::{FileHumanReviewer, FileLearnedConfig, FileOversight, FileOversightProfile,
     JournalError, Machine, bind_history, journal, storage};
-use super::super::super::{BaseEvent, Event};
+use super::super::super::{BaseEvent, Event, Transition};
+use super::super::super::shutdown::FileShutdownDrain;
 use super::super::super::guarded::investigation::Selection;
 use super::super::super::super::MAX_JOURNAL_EVENTS;
 use crate::Error;
@@ -62,6 +63,7 @@ pub struct FileLearnedRecovery {
     replayed: usize,
     status: FileLearnedRecoveryStatus,
     investigation: Option<Selection>,
+    last_drain: Option<FileShutdownDrain>,
 }
 
 impl fmt::Debug for FileLearnedRecovery {
@@ -86,7 +88,7 @@ impl FileOversight {
         let machine = Machine::new(&profile)?;
         Ok(FileLearnedRecovery { profile, store, events, machine,
             expected: expected.clone(), canonical, replayed: 0,
-            status: FileLearnedRecoveryStatus::Replaying, investigation: None })
+            status: FileLearnedRecoveryStatus::Replaying, investigation: None, last_drain: None })
     }
 }
 
@@ -136,16 +138,23 @@ impl FileLearnedRecovery {
             // A selected investigation captures the admission in this SAME
             // reducer pass; it never replays numerical history a second time.
             let applied = match self.investigation.as_mut() {
-                Some(selection) => selection.apply(&self.profile, &mut self.machine,
+                Some(selection) => selection.apply_transition(&self.profile, &mut self.machine,
                     self.replayed, &self.events[self.replayed]),
-                None => self.machine.apply(&self.events[self.replayed])
-                    .map(|_| ()).map_err(JournalError::from),
+                None => self.machine.apply(&self.events[self.replayed]).map_err(JournalError::from),
             };
-            if let Err(error) = applied {
-                if let JournalError::Contract(cause) = &error {
-                    self.status = FileLearnedRecoveryStatus::Failed(*cause);
+            let transition = match applied {
+                Ok(transition) => transition,
+                Err(error) => {
+                    if let JournalError::Contract(cause) = &error {
+                        self.status = FileLearnedRecoveryStatus::Failed(*cause);
+                    }
+                    return Err(error);
                 }
-                return Err(error);
+            };
+            if let Transition::StopProgressed(sweep) = transition {
+                self.last_drain = Some(FileShutdownDrain {
+                    journal_revision: (self.replayed + 1) as u64, sweep,
+                });
             }
             self.replayed += 1;
             self.status = FileLearnedRecoveryStatus::Replaying;
@@ -281,6 +290,14 @@ impl FileLearnedRecovery {
         -> (&FileOversightProfile, &[Event], &Path)
     {
         (&self.profile, &self.events, self.store.identity())
+    }
+
+    // Fleet admission inspects this SAME locked image before event zero.
+    // Only a fully checked wrapper may consume the later terminal handoff.
+    pub(in super::super::super) fn shutdown_history(&self)
+        -> (&FileOversightProfile, &[Event], &Path, usize)
+    {
+        (&self.profile, &self.events, self.store.identity(), self.canonical.len())
     }
 
     pub(in super::super::super) fn verified_guarded_machine(&self) -> Result<&Machine, JournalError> {
