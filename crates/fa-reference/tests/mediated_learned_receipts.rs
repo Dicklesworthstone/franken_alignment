@@ -18,6 +18,8 @@ use support::*;
 mod retained_custody;
 #[path = "mediated_learned_receipts/repair.rs"]
 mod checkpoint_repair;
+#[path = "mediated_learned_receipts/diagnosis.rs"]
+mod proposal_diagnosis;
 
 use fa_reference::action::consequence::delivery::persistent::observed::{
     decoder::learned::FileReconciledLearnedReceipt,

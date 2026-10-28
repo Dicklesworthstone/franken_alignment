@@ -1,5 +1,6 @@
 //! Historical admission/review diagnosis through the ORIGINAL durable machine.
-//! No source refresh, helper inference, writer lock, recovery fence or effect.
+//! No source refresh, helper inference, recovery fence or effect. Base readers
+//! avoid the writer lock; learned numerical recovery keeps its exclusive lock.
 use super::{FileRecoveryRequirements, FileOversight, FileOversightProfile, JournalError,
     Machine, Event, BaseEvent, journal, storage};
 use super::super::replay::FileReviewReplay;
@@ -65,6 +66,19 @@ impl FileProposalRepairReport {
     pub fn origin(&self) -> &FileProposalOrigin { &self.origin }
     pub fn search(&self) -> &ProposalRepairReport { &self.search }
 }
+/// Historical policy input and experiments only. A diagnosis cannot supply a
+/// live owner, approval or effect permit, including after learned replay.
+///
+/// ```compile_fail,E0308
+/// use fa_reference::action::consequence::delivery::persistent::observed::FileOversight;
+/// use fa_reference::action::consequence::delivery::persistent::observed::guarded::investigation::FileProposalInvestigation;
+/// fn recover_owner(report: FileProposalInvestigation) -> FileOversight { report }
+/// ```
+/// ```compile_fail,E0308
+/// use fa_reference::action::consequence::delivery::persistent::FilePermit;
+/// use fa_reference::action::consequence::delivery::persistent::observed::guarded::investigation::FileProposalInvestigation;
+/// fn approve(report: FileProposalInvestigation) -> FilePermit { report }
+/// ```
 #[derive(Clone, Debug)]
 pub struct FileProposalInvestigation {
     origin: Rc<FileProposalOrigin>,
@@ -155,7 +169,7 @@ impl FileReviewReplay {
 // same original machine. This state is private until the whole image qualifies.
 #[derive(Clone, Copy)]
 enum ProposalIdentity { Attempt(u64), Request(u64) }
-struct Selection {
+pub(in crate::action::consequence::delivery::persistent::observed) struct Selection {
     identity: ProposalIdentity,
     scope: InterventionScope,
     selected: Option<(Option<u64>, FileDeliverySnapshot, ProposalExperiment)>,
@@ -165,11 +179,11 @@ impl Selection {
         if attempt == 0 { return Err(Error::InvalidInput); }
         Ok(Self { identity: ProposalIdentity::Attempt(attempt), scope, selected: None })
     }
-    fn request(request: u64, scope: InterventionScope) -> Result<Self, Error> {
+    pub(in crate::action::consequence::delivery::persistent::observed) fn request(request: u64, scope: InterventionScope) -> Result<Self, Error> {
         if request == 0 { return Err(Error::InvalidInput); }
         Ok(Self { identity: ProposalIdentity::Request(request), scope, selected: None })
     }
-    fn apply(&mut self, profile: &FileOversightProfile, machine: &mut Machine,
+    pub(in crate::action::consequence::delivery::persistent::observed) fn apply(&mut self, profile: &FileOversightProfile, machine: &mut Machine,
         index: usize, event: &Event) -> Result<(), JournalError>
     {
         // A durable actor key is NOT its allocated attempt. Resolve only the
@@ -215,7 +229,7 @@ impl Selection {
     fn require_selected(&self) -> Result<(), Error> {
         if self.selected.is_some() { Ok(()) } else { Err(Error::Missing) }
     }
-    fn finish(self, directory: &Path, machine: &Machine, count: usize)
+    pub(in crate::action::consequence::delivery::persistent::observed) fn finish(self, directory: &Path, machine: &Machine, count: usize)
         -> Result<FileProposalInvestigation, JournalError>
     {
         let (external_request, admitted, experiment) = self.selected.ok_or(Error::Missing)?;

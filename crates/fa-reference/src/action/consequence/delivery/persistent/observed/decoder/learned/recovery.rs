@@ -3,11 +3,13 @@
 mod reset;
 mod stopped;
 mod receipt;
+mod investigation;
 pub use receipt::FileReconciledLearnedReceipt;
 
 use super::{FileHumanReviewer, FileLearnedConfig, FileOversight, FileOversightProfile,
     JournalError, Machine, bind_history, journal, storage};
 use super::super::super::{BaseEvent, Event};
+use super::super::super::guarded::investigation::Selection;
 use super::super::super::super::MAX_JOURNAL_EVENTS;
 use crate::Error;
 use crate::action::consequence::oversight::actor::{ActorOutcome, Knowledge};
@@ -58,6 +60,7 @@ pub struct FileLearnedRecovery {
     canonical: Vec<u8>,
     replayed: usize,
     status: FileLearnedRecoveryStatus,
+    investigation: Option<Selection>,
 }
 
 impl fmt::Debug for FileLearnedRecovery {
@@ -82,7 +85,7 @@ impl FileOversight {
         let machine = Machine::new(&profile)?;
         Ok(FileLearnedRecovery { profile, store, events, machine,
             expected: expected.clone(), canonical, replayed: 0,
-            status: FileLearnedRecoveryStatus::Replaying })
+            status: FileLearnedRecoveryStatus::Replaying, investigation: None })
     }
 }
 
@@ -129,9 +132,19 @@ impl FileLearnedRecovery {
             // Latch BEFORE the original reducer, including its numerical work.
             // An unwinding caller cannot retry partially applied history.
             self.status = FileLearnedRecoveryStatus::Interrupted;
-            if let Err(error) = self.machine.apply(&self.events[self.replayed]) {
-                self.status = FileLearnedRecoveryStatus::Failed(error);
-                return Err(error.into());
+            // A selected investigation captures the admission in this SAME
+            // reducer pass; it never replays numerical history a second time.
+            let applied = match self.investigation.as_mut() {
+                Some(selection) => selection.apply(&self.profile, &mut self.machine,
+                    self.replayed, &self.events[self.replayed]),
+                None => self.machine.apply(&self.events[self.replayed])
+                    .map(|_| ()).map_err(JournalError::from),
+            };
+            if let Err(error) = applied {
+                if let JournalError::Contract(cause) = &error {
+                    self.status = FileLearnedRecoveryStatus::Failed(*cause);
+                }
+                return Err(error);
             }
             self.replayed += 1;
             self.status = FileLearnedRecoveryStatus::Replaying;

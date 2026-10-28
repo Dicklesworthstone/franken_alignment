@@ -1,5 +1,43 @@
 # Implementation status · design revision 0.3
 
+## 2026-10-28: diagnose learned policy admissions through their original replay
+
+The base learned recovery and all five guarded learned forms now support
+pre-replay selection of one external request and consuming immutable proposal
+diagnosis. This covers plain/raw/owned histories with and without mediation,
+including a frozen hard-policy denial before any helper round exists.
+
+The original admission selector captures the same policy, snapshot, compiled
+witnesses and request-to-attempt mapping during the SAME original reducer pass.
+Complete numerical/suffix replay, each wrapper's original independent guards,
+current credential epoch, policy, floors and topology remain mandatory. The
+offline cursor holds its original exclusive recovery lock and rereads canonical
+bytes before releasing only `FileProposalInvestigation`. It appends no Fence,
+cleans no staging, reads no authority clock and grants no owner or permit.
+NotAdmitted requests never acquire fictional proposals; later outcomes do not
+rewrite admission history. Existing policy counterfactuals and bounded subset
+search consume the immutable result without changing real denial or charges.
+
+Eight new integration functions cover all five wrappers/six mode combinations,
+denied/allowed/non-admitted controls, real message and finish selection,
+registration/drop/lock boundaries, all independent guards and floors, credential
+generation, exact recipe/anchor, malformed and semantically invalid suffixes,
+canonical races, full ordinary capacity and unusable staging. Existing fixture
+tests and assertions are unchanged; the parent gains only the new module.
+
+The complete library passes metadata checking (15.04 seconds), the complete
+26-function native receipt/diagnosis target type-checks, and both new forbidden
+owner/permit snippets produce the expected E0599/E0308. The source manifest is
+`a29149b5729e2c229dc628907c770ebb65edf21dfad35880b93dafcde9af82fd`.
+Initial metadata/link attempts exposed a filename banner accidentally written
+by the integration formatter; the original module was restored and formatted
+normally before the successful checks. The subsequent full Cranelift library
+build was SIGKILLed after 31.69 seconds with a shared-cgroup OOM event, so these
+new tests have no runtime pass at this checkpoint. Previous receipt runtime
+results do not qualify this changed source. Canonical workspace/RCH gates and
+Beads remain open. See
+[the learned diagnosis contract](docs/LEARNED_PROPOSAL_DIAGNOSIS.md).
+
 ## 2026-10-28: repair learned receipt custody before resident actor exchange
 
 The learned resident receipt service now supports

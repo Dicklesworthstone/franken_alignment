@@ -80,6 +80,29 @@ fn begin(directory: &Path, profile: FileOversightProfile, expected: &FileRecover
 }
 
 impl FileGuardedLearnedRecovery {
+    /// Select one original external request for offline historical policy
+    /// diagnosis before any replay. The same exclusive recovery lock, numerical
+    /// recipe and independent guard requirements remain held; no new admission
+    /// or fictional proposal is created for a request that was not admitted.
+    pub fn require_request_proposal_investigation(mut self, request: u64,
+        scope: crate::action::consequence::experiment::InterventionScope)
+        -> Result<Self, JournalError>
+    {
+        self.inner = self.inner.require_request_proposal_investigation(request, scope)?;
+        Ok(self)
+    }
+
+    /// Return only the selected historical policy experiment after the whole
+    /// numerical history and every independent guard qualify. The original
+    /// finalizer rechecks the canonical bytes and releases the lock without
+    /// cleanup, clock, fence, effect or live owner.
+    pub fn finish_proposal_investigation(self)
+        -> Result<crate::action::consequence::delivery::persistent::observed::guarded::investigation::FileProposalInvestigation, JournalError>
+    {
+        self.check_ready()?;
+        self.inner.finish_proposal_investigation()
+    }
+
     /// Inspect only the fully replayed, independently guarded credential state.
     /// This grants no owner, permit, observer or authority and publishes no fence.
     pub fn credential_status(&self) -> Result<Option<FileCredentialStatus>, JournalError> {

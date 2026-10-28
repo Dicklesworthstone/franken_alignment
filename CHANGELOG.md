@@ -1,5 +1,18 @@
 # Changelog
 
+## 2026-10-28: expose immutable learned proposal diagnosis
+
+- Capture one actual learned request's original policy admission during the
+  existing numerical replay, including denials that never reach a helper round.
+- Add consuming diagnosis to the base and all five guarded learned families.
+  Preserve complete guards, current credential epoch, floors, topology, exact
+  canonical custody and the original exclusive-lock boundary.
+- Return only the existing immutable investigation for policy counterfactuals
+  and bounded search; add no Fence, cleanup, clock, effect, owner or permit.
+- Add eight real-history integration functions and two forbidden-capability
+  examples. Library/native-test metadata and both expected-error controls pass;
+  linked runtime verification remains open after a shared-host OOM interruption.
+
 ## 2026-10-28: repair receipt service custody before actor exchange
 
 - Add explicit receipt-checkpoint repair to the resident learned service,
