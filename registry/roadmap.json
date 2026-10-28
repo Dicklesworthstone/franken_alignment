@@ -3626,6 +3626,8 @@
         "crates/fa-reference/src/action/consequence/delivery/persistent/requests/actor/precheck/wire/channel.rs",
         "crates/fa-reference/src/action/consequence/delivery/persistent/requests/actor/precheck/wire/transport.rs",
         "crates/fa-reference/src/action/consequence/delivery/persistent/requests/actor/precheck/wire/peer.rs",
+        "crates/fa-reference/src/action/consequence/delivery/persistent/requests/actor/precheck/wire/client.rs",
+        "crates/fa-reference/src/action/consequence/delivery/persistent/requests/actor/precheck/wire/client/tests.rs",
         "crates/fa-reference/src/action/consequence/delivery/persistent/requests/actor/precheck/wire/tests.rs",
         "crates/fa-reference/src/action/consequence/delivery/persistent/requests/actor/precheck/wire/tests/channel.rs",
         "crates/fa-reference/src/action/consequence/delivery/persistent/requests/actor/precheck/wire/tests/transport.rs",

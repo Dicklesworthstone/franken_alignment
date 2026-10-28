@@ -39,6 +39,15 @@ requires the original recovery lock and exact v2 custody when topology is
 selected. It does not implement the full dispatch/helper `why-held` conjunction.
 See [learned diagnosis](LEARNED_PROPOSAL_DIAGNOSIS.md#learned-operator-command).
 
+For an ordinary source-backed actor, the integrating supervisor can separately
+provision the [exact-precheck peer and client](ACTOR_EXACT_PRECHECK.md#authenticated-precheck-process-transport).
+The native Linux peer authenticates ingress; the actor-side one-shot client
+authenticates the server and receives only a correlated exact observation.
+Keep the disclosure custodian, source/clock observation and grant issuance with
+the supervisor. A passed precheck still requires ordinary submission and review;
+it is not the privileged diagnosis above or a new `fa`/operator CLI. Reconnects
+and lost replies do not replenish the original allowances.
+
 ### P2. Investigating an incident
 
 1. `fa get fa://…/incident/<id>` → the incident with its `Knowledge` status and the addresses of the closures, rounds, evidence and findings it references.

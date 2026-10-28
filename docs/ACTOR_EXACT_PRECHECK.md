@@ -172,6 +172,65 @@ source/clock observation phase. The transport deliberately does not introduce
 one implicitly. Generated, learned, predictive and cumulative-stream histories
 retain the native disclosure refusal rather than falling back to raw proposals.
 
+## Authenticated one-shot client
+
+On Linux, the separate `precheck_wire::client::PrecheckPeerClient` sends one
+request to an independently selected server. It is not the durable actor
+submission client and holds no ticket, journal, source, helper or effect key:
+
+```rust
+use fa_reference::action::consequence::delivery::persistent::requests::actor::precheck_wire::{
+    PrecheckRequest, client::PrecheckPeerClient,
+};
+use fa_reference::action::consequence::oversight::actor_transport::DriveBudget;
+
+let request = PrecheckRequest { query: 9001, proposal };
+let mut client = PrecheckPeerClient::connect(
+    connected_socket, trusted_server_policy, request, expected_policy_epoch,
+)?;
+let report = client.drive(DriveBudget::default())?;
+// Schedule further bounded calls from report.status.interest().
+// A latched report.status.failure is distinct from a server precheck refusal.
+if let Some(response) = client.take_response() {
+    // response.result is the original Knowledge/result, never admission.
+}
+```
+
+Connection establishment is deliberately outside this API: `connect` takes an
+**already connected** `UnixStream`, verifies its kernel peer before sending any
+request bytes, then selects nonblocking I/O. It does not perform a potentially
+blocking pathname connect, clone a socket, spawn a task or install an executor.
+The host must bound establishment and enforce the whole-exchange elapsed limit.
+The fixed server policy must not be inferred from an untrusted socket. The
+independent expected policy epoch must equal the proposal's epoch, including
+when that expected epoch is zero; the original decoder subsequently binds it to
+the returned observation or stale-generation result.
+
+Partial request writes resume without duplication. The complete request and its
+newline must be written and flushed before the client reads a response. It
+retains at most the existing response-byte ceiling and requires one complete
+newline-delimited document. Query, epoch, schema, `precheck` and mandatory
+`review_required` checks use the original strict response decoder. A matching
+server `Capacity`, `Unavailable` or `Withheld` response is a completed response,
+not a client transport failure; no coarse error is converted into a pass.
+
+After the newline, one further bounded read rejects queued trailing bytes,
+including a second response hidden across drive boundaries. EOF or WouldBlock
+confirms only the currently available frame boundary; WouldBlock cannot prove
+that no later peer bytes could arrive. Success closes this one-shot socket, so
+it is never reused for another response. Truncation, malformed or misbound data,
+and terminal I/O errors instead latch failure and close it. An
+Interrupted operation spends an I/O attempt; WouldBlock yields. Zero frame or
+I/O allowance yields without work, and over-limit budgets refuse without
+poisoning an otherwise valid exchange.
+
+`take_response` succeeds at most once. Pending, failed and already-taken states
+return no response and are distinguished by `status`. Later valid drives on a
+terminal client do no I/O. There is no automatic retry or reconnect: a server
+may have charged an evaluation even when its reply is lost, and an explicit new
+query spends new work. Neither a client failure nor a successful pass changes
+the original submission/review, journal or effect accounting.
+
 ## What a result says
 
 `Known(PrecheckPassed)` means the candidate passed the disclosed exact policy
@@ -277,3 +336,12 @@ input, full-width identifiers, response correlation, strict review-required
 labeling, parser/evaluation budget separation and unchanged journal/request
 state. Targeted and full remote-check attempts exit 127 because `rch` is absent;
 these new tests and compilation have not executed.
+
+The process-transport increment adds fourteen runtime regression functions and
+three compile-fail examples. The authenticated client adds eleven runtime
+functions and one compile-fail example, including deterministic partial-I/O
+faults and real source-backed owner/session exchanges. Tests cover one-byte
+drives, no request bytes before authentication, complete flush ordering, exact
+response limits, wrong query/epoch, extra/truncated replies, latched failures,
+unchanged durable state and work retained after a lost reply. These are authored
+regressions, not executed evidence; the required remote runner remains absent.

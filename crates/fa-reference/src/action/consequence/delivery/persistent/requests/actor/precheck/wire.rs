@@ -8,6 +8,8 @@ mod channel;
 mod transport;
 #[cfg(target_os = "linux")]
 mod peer;
+#[cfg(target_os = "linux")]
+pub mod client;
 
 pub use codec::{PrecheckRequest, decode_precheck_request, encode_precheck_request};
 pub use response::{PrecheckResponseError, PrecheckWireResponse, decode_precheck_response};

@@ -1,5 +1,16 @@
 # Changelog
 
+## 2026-10-28: add authenticated one-shot precheck clients
+
+- Verify independently selected server credentials before request bytes and
+  correlate every response to its query and expected policy epoch.
+- Resume bounded partial I/O through a full write/flush/read boundary; reject
+  malformed, truncated and queued trailing replies, and latch terminal errors.
+- Close after one result without automatic retries, actor tickets or authority;
+  preserve original server charges when a reply is lost.
+- Add eleven client regression functions and one compile-fail example, including
+  real-owner/socket exchanges. Remote execution qualification remains pending.
+
 ## 2026-10-28: expose authenticated bounded precheck transports
 
 - Add separate precheck framing, nonblocking Unix connection and Linux

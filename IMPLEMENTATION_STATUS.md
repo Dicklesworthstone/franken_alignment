@@ -1,5 +1,32 @@
 # Implementation status · design revision 0.3
 
+## 2026-10-28: query exact prechecks through an authenticated one-shot client
+
+The Linux precheck client authenticates an already connected server socket before
+writing any request bytes and binds the proposal to the independently expected
+policy epoch. Its bounded nonblocking state machine resumes partial writes,
+flushes the complete request before reading, and accepts one strictly correlated
+Knowledge response. Queued trailing data, malformed/oversized/truncated replies
+and terminal I/O failures latch; successful completion also closes the socket.
+The post-line WouldBlock check describes only currently available bytes, not
+future peer behavior. No socket is reused and no query retries automatically.
+
+Eleven new regression functions and one compile-fail example complement the
+fourteen server functions and three compile-fail examples. They cover scripted
+partial-I/O faults and actual source-backed authenticated owner exchanges,
+one-byte budgets, wrong server/query/epoch, unchanged journal and ordinary review,
+and retained work after reply loss. Independent review corrected a lost-reply
+test's invalid zero server allowance without weakening its charge assertions.
+
+The client creates no listener, pathname connection, runtime, journal, actor
+ticket or effect authority. The integrating host still owns bounded connection
+establishment, scheduling, elapsed deadlines and explicit source/grant issuance;
+no supervisor CLI or full disclosure profile is claimed. Required targeted and
+canonical RCH commands cannot start (dispatcher absent, exit 127). Compilation,
+runtime execution, formatting, Clippy and qualification remain open, with no
+Bead or production gate closed. See
+[the precheck client contract](docs/ACTOR_EXACT_PRECHECK.md#authenticated-one-shot-client).
+
 ## 2026-10-28: carry exact prechecks over authenticated process transports
 
 The original separately granted precheck wire now has bounded newline framing,
