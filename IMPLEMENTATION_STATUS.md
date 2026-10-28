@@ -1,5 +1,43 @@
 # Implementation status · design revision 0.3
 
+## 2026-10-28: expose guarded learned policy diagnosis and repair search
+
+The learned operator now accepts explicit `--resume --explain-proposal` with
+independent history custody. It diagnoses the first exact-policy admission of
+the selected external request, including hard denials with no completed review.
+The original plain/raw/owned cursor, optional mediation, numerical recipe,
+identity/current credentials, floors, policy and terminal reserve remain
+mandatory. Optional topology requires an exact matching v2 source/history pair.
+
+The command registers capture before event zero, performs one complete original
+replay, validates the exact message or finish predecessor, and consumes only the
+immutable native investigation after canonical confirmation. It reuses the
+original predicate-tree renderer, hypothetical payload experiments and bounded
+subset search. Strict original-argv admission prevents mixed live/receipt/repair
+modes and retained-output flags. One elapsed budget covers intake through output.
+
+Learned payload interventions edit hypothetical historical `ActionSpec`
+release-frame bytes. They do not regenerate model text, recompute forecasts,
+validate a new release or confer permission. The report explains historical
+admission policy, not every later helper or dispatch condition. The original
+exclusive recovery lock makes this an offline operator route.
+
+Eight new operator regression functions complement the eight native functions.
+The full native library, complete 26-function integration target, production
+publication executable and complete unchanged publication test target all pass
+real-source metadata checking. The complete operator target took 10.22 seconds
+and includes the earlier receipt-service tests. Both forbidden owner/permit
+examples fail with the expected E0599/E0308.
+
+The additional bounded 256-unit Cranelift library build stopped on shared-cgroup
+OOM after 47.18 seconds, following the previously recorded 16-unit failure.
+No linked library was produced; these sixteen new functions remain unexecuted.
+The earlier formatter integration error was corrected before all passing
+metadata checks. No original assertion, source body or registration was removed.
+The pinned local-nightly checks do not replace canonical workspace/RCH
+qualification, and Beads remain open. See
+[the command and verification record](docs/LEARNED_PROPOSAL_DIAGNOSIS.md#learned-operator-command).
+
 ## 2026-10-28: diagnose learned policy admissions through their original replay
 
 The base learned recovery and all five guarded learned forms now support

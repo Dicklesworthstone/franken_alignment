@@ -88,7 +88,7 @@
       "idempotency": "n/a",
       "cost_class": "cheap",
       "response": "PredicateTree",
-      "note": ""
+      "note": "Reference operator projections: explain-proposal for ordinary source histories and create-learned-generated --resume --explain-proposal for fully guarded learned histories. Learned diagnosis is privileged/offline and performs bounded original numerical replay; --payload/--search uses L7 immutable policy experiments. This is historical admission-policy explanation, not the full dispatch/helper why-held conjunction or a cheap cached lookup."
     },
     {
       "verb": "cost",

@@ -1,5 +1,21 @@
 # Changelog
 
+## 2026-10-28: explain learned policy denials through the operator
+
+- Add explicit learned `--resume --explain-proposal` with independent input
+  custody, exact optional v2 topology pairing and all original numerical guards.
+- Capture admission during the original replay, validate the selected message or
+  finish predecessor, and return an immutable predicate-tree report.
+- Reuse hypothetical payload interventions and bounded complete/cancelled subset
+  search; distinguish encoded release-frame experiments from regenerated text.
+- Reject mixed modes and malformed original arguments before configuration I/O,
+  and enforce the original invocation budget through the pre-output boundary.
+- Add eight operator regressions, bringing this feature to sixteen new native
+  and operator test functions. Full library, native integration, production
+  executable and complete operator-test metadata checks pass.
+- Record both shared-memory OOM link attempts honestly: new runtime tests and
+  canonical qualification remain open; no existing test or assertion is removed.
+
 ## 2026-10-28: expose immutable learned proposal diagnosis
 
 - Capture one actual learned request's original policy admission during the

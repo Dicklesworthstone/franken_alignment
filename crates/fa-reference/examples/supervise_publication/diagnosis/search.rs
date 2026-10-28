@@ -2,13 +2,13 @@
 //! No alternate evaluator, early-success shortcut, or effect-bearing result.
 #[path = "search/menu.rs"] mod menu;
 #[path = "search/render.rs"] mod render;
-pub(super) use menu::Menu;
+pub(crate) use menu::Menu;
 use super::{FileProposalInvestigation, Intervention, InterventionScope, checkpoint, debug, unavailable};
 use fa_reference::action::consequence::delivery::persistent::observed::guarded::investigation::FileProposalRepairReport;
 use fa_reference::action::consequence::experiment::proposal::search::{ProposalSearchBudget, ProposalSearchStatus, MAX_PROPOSAL_SEARCH_CASES, MAX_PROPOSAL_SEARCH_EDIT_BYTES};
 use std::{io::Write, time::Duration};
 
-pub(super) fn run(investigation: &FileProposalInvestigation, menu: &Menu, wall: Duration,
+pub(crate) fn run(investigation: &FileProposalInvestigation, menu: &Menu, wall: Duration,
     elapsed: &mut impl FnMut() -> Duration, out: &mut impl Write) -> Result<(), String>
 {
     let report = evaluate(investigation, menu, wall, elapsed)?;

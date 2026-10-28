@@ -5,7 +5,7 @@ use fa_reference::action::consequence::experiment::NextRequirement;
 use fa_reference::action::consequence::gate::containment::session::policy::{Predicate, Truth};
 use std::io::{self, Write};
 
-pub(super) fn encode(diagnosis: &FileProposalDiagnosis) -> Result<Vec<u8>, String> {
+pub(crate) fn encode(diagnosis: &FileProposalDiagnosis) -> Result<Vec<u8>, String> {
     encode_inner(diagnosis).map_err(|error| format!("encode proposal explanation: {error}"))
 }
 fn encode_inner(diagnosis: &FileProposalDiagnosis) -> io::Result<Vec<u8>> {

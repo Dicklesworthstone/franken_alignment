@@ -67,7 +67,7 @@ fn reconcile(driver: &mut FileSupervisedDriver, config: &mut Config) {
     assert_eq!(config.source.status().read_attempts, reads);
 }
 
-fn confirmed(root: &Root) -> (Config, Loaded, FileHumanReviewer, FileSupervisedDriver, Wire, Deadline) {
+pub(super) fn confirmed(root: &Root) -> (Config, Loaded, FileHumanReviewer, FileSupervisedDriver, Wire, Deadline) {
     confirm_prepared(super::prepared(root, b"allow"))
 }
 

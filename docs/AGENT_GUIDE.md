@@ -29,6 +29,16 @@ Each playbook is a sequence of verbs from [`registry/vocabulary.json`](../regist
 
 Failure branches: `BudgetExhausted` names the budget and the governance transition that could raise it (never raise it yourself to finish a hold); `StaleGeneration` means re-read the situation from the returned predecessor; `OutcomeUnknown` on a dispatched effect means reconcile (P3), never retry.
 
+Implemented reference admission diagnosis: for a learned publication, use
+`supervise_publication create-learned-generated CONFIG LEARNED_RECIPE --resume --explain-proposal --history-anchor INPUT`.
+It reconstructs the first exact-policy admission through the original guarded
+numerical replay, including a denial before a helper round exists. Optional
+`--payload` or `--search` uses immutable policy experiments; sufficient results
+still require fresh independent review. This offline, privileged projection
+requires the original recovery lock and exact v2 custody when topology is
+selected. It does not implement the full dispatch/helper `why-held` conjunction.
+See [learned diagnosis](LEARNED_PROPOSAL_DIAGNOSIS.md#learned-operator-command).
+
 ### P2. Investigating an incident
 
 1. `fa get fa://…/incident/<id>` → the incident with its `Knowledge` status and the addresses of the closures, rounds, evidence and findings it references.

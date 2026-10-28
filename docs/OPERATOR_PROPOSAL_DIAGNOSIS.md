@@ -22,7 +22,15 @@ repair search over this same anchored admission. It has its own explicit
 registration and result schema; see [proposal repair search](OPERATOR_PROPOSAL_SEARCH.md).
 It cannot be combined with `--payload` and does not change the modes below.
 
-## Independent inputs and supported profile
+Learned numerical histories have an explicit independently guarded offline route:
+`create-learned-generated CONFIG LEARNED_RECIPE --resume --explain-proposal --history-anchor INPUT`.
+It uses the same predicate-tree and bounded search consumers, including hard
+policy denials before a review round exists. Its numerical inputs, exact optional
+v2 topology custody and exclusive recovery lock are described in
+[learned proposal diagnosis](LEARNED_PROPOSAL_DIAGNOSIS.md#learned-operator-command).
+The ordinary source-only command below retains its original non-locking contract.
+
+## Independent inputs and supported ordinary profile
 
 `CONFIG` is the existing operator configuration. This command accepts exactly
 the ordinary source-publication guard set: the configured source policy is

@@ -188,3 +188,19 @@ the initial package-admission boundary. This selected result does not qualify
 the complete example, roadmap packet, authorization-filtered agent API or release.
 Raw logs are outside the frozen root at
 `/Users/jemanuel/Documents/Codex/2026-10-24/franken-alignment-implementation-0761ea9b/`.
+
+## Learned publication histories
+
+The same menu, subset search, accounting and report renderer are available through
+`create-learned-generated CONFIG LEARNED_RECIPE --resume --explain-proposal --history-anchor INPUT --search MENU_JSON`.
+This route verifies the original learned/plain/raw/owned and optional topology
+history before producing the immutable investigation. It requires the original
+exclusive recovery lock and, for topology, an exact matching v2 pair. It never
+uses a source-only fallback for numerical history.
+
+For learned streams, payload candidates edit hypothetical historical
+`ActionSpec` release-frame bytes. They do not regenerate text, recompute
+forecasts, issue a valid release or inherit helper approval. Original admission
+and captured ending state remain distinct, and every successful hypothetical
+still requires fresh independent review. See
+[learned command admission and limits](LEARNED_PROPOSAL_DIAGNOSIS.md#learned-operator-command).

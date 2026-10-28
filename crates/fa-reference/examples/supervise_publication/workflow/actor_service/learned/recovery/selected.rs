@@ -1,6 +1,8 @@
 //! Closed selection of the three ORIGINAL fully guarded learned replay cursors.
 //! Live recovery and terminal recovery share the same independent admission.
 use super::cooperative::Progress;
+use fa_reference::action::consequence::experiment::InterventionScope;
+use fa_reference::action::consequence::delivery::persistent::observed::guarded::investigation::FileProposalInvestigation;
 use super::{
     Config, Custody, FileOversight, Loaded, RecoveryReserve, TopologyCustody, debug, requirements,
 };
@@ -195,6 +197,32 @@ impl Cursor {
         run.require_recovery_reserve(RecoveryReserve::terminal())
             .map(Self::Plain)
             .map_err(debug)
+    }
+
+
+    /// Register capture before event zero on each ORIGINAL guarded cursor.
+    pub(super) fn require_request_proposal_investigation(self, request: u64,
+        scope: InterventionScope) -> Result<Self, JournalError>
+    {
+        match self {
+            Self::Plain(run) => run.require_request_proposal_investigation(request, scope).map(Self::Plain),
+            Self::Raw(run) => run.require_request_proposal_investigation(request, scope).map(Self::Raw),
+            Self::Owned(run) => run.require_request_proposal_investigation(request, scope).map(Self::Owned),
+            Self::Mediated(run) => run.require_request_proposal_investigation(request, scope).map(Self::Mediated),
+            Self::PredictiveMediated(run) => run.require_request_proposal_investigation(request, scope).map(Self::PredictiveMediated),
+        }
+    }
+
+    /// Consume only an immutable investigation after complete expected guards.
+    /// No recovery Fence, clock, cleanup, observer or live owner is issued.
+    pub(super) fn finish_proposal_investigation(self) -> Result<FileProposalInvestigation, JournalError> {
+        match self {
+            Self::Plain(run) => run.finish_proposal_investigation(),
+            Self::Raw(run) => run.finish_proposal_investigation(),
+            Self::Owned(run) => run.finish_proposal_investigation(),
+            Self::Mediated(run) => run.finish_proposal_investigation(),
+            Self::PredictiveMediated(run) => run.finish_proposal_investigation(),
+        }
     }
 
     pub(super) fn progress(&self) -> Progress {
