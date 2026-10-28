@@ -159,3 +159,20 @@ executor was unavailable during this change and the required remote-only RCH
 gate has no available worker; no test execution or production qualification is
 claimed. The full FA-120 distributed fence, leases and durable frontier
 acceptance conditions remain open.
+
+## Members performing learned recovery · 2026-10-28
+
+A selected member may now receive this same Stop exchange during active learned
+continuation recovery. Its authenticated peer is retained through complete
+original guarded replay, then the sealed recovery cursor consumes the explicit
+request through native admission Stop/Fence. The client, roster and wire are
+unchanged. Original workflow, member and admitted-peer session limits are not
+renewed while waiting for Ready.
+
+Such an acknowledgment withdraws admission without acquiring an effect clock or
+inventing drain. Existing Unknown effects and unresolved liabilities remain
+pending, so a `stopped_pending` member still prevents a fully drained fleet
+success. A lost reply remains unconfirmed at the client even when the member
+retains native acknowledgment and selected custody. This extends the reachable
+local owner states; distributed ordering, leases and a durable acknowledgment
+frontier remain open. See [the recovery Stop contract](LEARNED_RECOVERY_STOP_PEER.md).

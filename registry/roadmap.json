@@ -422,7 +422,11 @@
         "crates/fa-reference/src/action/consequence/delivery/persistent/observed/reviewer/peer/control/recovery.rs",
         "crates/fa-reference/src/action/consequence/delivery/persistent/observed/reviewer/peer/control/recovery/tests.rs",
         "crates/fa-reference/src/action/consequence/delivery/persistent/observed/reviewer/peer/control/recovery/tests/native.rs",
-        "crates/fa-reference/src/action/consequence/delivery/persistent/observed/reviewer/peer/control/recovery/tests/native/profiled.rs"
+        "crates/fa-reference/src/action/consequence/delivery/persistent/observed/reviewer/peer/control/recovery/tests/native/profiled.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/control/recovery.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/recovery/live.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/tests/recovery_control/durable.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/tests/recovery_control/durable/refusals.rs"
       ]
     },
     {
@@ -2954,7 +2958,11 @@
         "crates/fa-reference/src/action/consequence/delivery/persistent/observed/reviewer/peer/control/recovery.rs",
         "crates/fa-reference/src/action/consequence/delivery/persistent/observed/reviewer/peer/control/recovery/tests.rs",
         "crates/fa-reference/src/action/consequence/delivery/persistent/observed/reviewer/peer/control/recovery/tests/native.rs",
-        "crates/fa-reference/src/action/consequence/delivery/persistent/observed/reviewer/peer/control/recovery/tests/native/profiled.rs"
+        "crates/fa-reference/src/action/consequence/delivery/persistent/observed/reviewer/peer/control/recovery/tests/native/profiled.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/control/recovery.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/recovery/live.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/tests/recovery_control/durable.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/tests/recovery_control/durable/refusals.rs"
       ],
       "founding_ideas": [
         "FI-A02"

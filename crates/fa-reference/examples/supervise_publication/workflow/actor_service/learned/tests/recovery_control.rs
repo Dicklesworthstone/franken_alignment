@@ -1,15 +1,14 @@
 //! Live recovery deadlines and real Linux credential admission at original cuts.
-//! A retained stop connection aborts replay before any Stop protocol or receipt;
-//! these tests do not establish a bound on individual numerical or I/O latency.
+//! A checked connection is retained through the original bounded replay. Only
+//! its explicit nonce-bound request may apply and acknowledge admission Stop.
+//! These tests do not establish a bound on numerical or individual I/O latency.
 #![cfg(target_os = "linux")]
 use super::*;
 use super::super::prediction;
 use crate::workflow::control::socket_path;
 use fa_reference::action::consequence::oversight::learned_host::HostedLearnedInspection;
 use fa_reference::action::consequence::delivery::persistent::observed::reviewer::peer::PeerCredentials;
-use std::{collections::BTreeMap, io::{ErrorKind, Read}, os::unix::net::UnixStream, path::Path};
-
-const STOP_REFUSAL: &str = "learned recovery interrupted by authenticated stop peer; no durable Stop applied or acknowledged";
+use std::{collections::BTreeMap, io::Read, os::unix::net::UnixStream, path::Path};
 
 struct Case {
     root: Root,
@@ -132,7 +131,7 @@ fn live_deadline_cancels_before_open_every_event_and_ready_without_changing_the_
 }
 
 #[test]
-fn authenticated_stop_presence_cancels_at_every_live_cut_without_protocol_bytes_or_acknowledgment() {
+fn authenticated_connection_alone_at_every_live_cut_cannot_acknowledge_stop() {
     for mode in [None, Some(false), Some(true)] {
         let case = prepared(mode);
         let original = files(&case.config.store);
@@ -149,33 +148,36 @@ fn authenticated_stop_presence_cancels_at_every_live_cut_without_protocol_bytes_
                     let cut = calls;
                     calls += 1;
                     if cut == connect_at {
-                        // connect returns after this real candidate is queued;
-                        // the following pending_peer check performs kernel admission.
+                        // Queue a real kernel-authenticated candidate at this
+                        // exact cut, then retain it through the SAME full replay.
                         client = Some(UnixStream::connect(&path).unwrap());
                     }
-                    ElapsedTick(1000)
+                    // The first protocol checkpoint expires before the offer.
+                    // A connected peer has made no explicit Stop request.
+                    if cut == total + 2 { limit.logical } else { ElapsedTick(1000) }
                 });
-            assert_eq!(result.err().as_deref(), Some(STOP_REFUSAL));
-            assert_eq!(calls, connect_at + 1);
+            assert_eq!(result.err().as_deref(), Some("one-shot workflow deadline reached"));
+            assert_eq!(calls, total + 3);
+            assert!(control.recovery_application().is_none());
             assert_eq!(files(&case.config.store), original);
             assert_eq!(events(&case), total);
             let mut client = client.unwrap();
             client.set_nonblocking(true).unwrap();
-            assert_eq!(client.read(&mut [0; 1]).unwrap_err().kind(), ErrorKind::WouldBlock);
-            assert!(control.pending_peer().unwrap());
-            // Retained authenticated custody is not discarded to restart replay.
+            assert_eq!(client.read(&mut [0; 1]).unwrap(), 0);
+            // The failed original session remains terminal. Retrying this
+            // Control cannot renew its budget or start an ordinary live fence.
             let mut retry_calls = 0;
             assert_eq!(recovery::open_selected_live(&case.config, &case.loaded, &mut control,
                 &limit, &mut || { retry_calls += 1; ElapsedTick(1000) }).err().as_deref(),
-                Some(STOP_REFUSAL));
+                Some("one-shot workflow deadline reached"));
             assert_eq!(retry_calls, 1);
+            assert!(control.recovery_application().is_none());
             assert_eq!(files(&case.config.store), original);
             drop(control);
             assert!(!path.exists());
-            assert_eq!(client.read(&mut [0; 1]).unwrap(), 0);
         }
-        // Near-identical permitted counterpart: the same history and admitted
-        // peer policy with no connection reaches exactly the original fence.
+        // Same history and admitted policy without a peer reaches exactly the
+        // original recovery fence and can issue its distinct native roles.
         let mut control = Control::new(&case.config, case.loaded.request, Some(&peers)).unwrap();
         let (host, _human, observer, _identity) = recovery::open_selected_live(&case.config, &case.loaded,
             &mut control, &deadline(), &mut || ElapsedTick(1000)).unwrap();
@@ -223,19 +225,19 @@ fn continuation_entry_uses_live_recovery_before_request_checks_or_a_fence() {
             let result = run(config, loaded, &peers, true, || {
                 calls += 1;
                 if calls == 1 { return ElapsedTick(1000); }
-                // The actual --continue-generation route already established
-                // its original deadline and authenticated stop socket. Its next
-                // clock read must be the live pre-open recovery checkpoint.
-                assert_eq!(calls, 2);
-                if connect {
-                    client = Some(UnixStream::connect(&socket).unwrap());
-                    ElapsedTick(1000)
-                } else { expiry }
+                // The real --continue-generation route establishes its
+                // deadline/socket before the live pre-open recovery checkpoint.
+                if calls == 2 {
+                    if connect { client = Some(UnixStream::connect(&socket).unwrap()); }
+                    else { return expiry; }
+                }
+                assert!(connect && calls <= total + 4);
+                // Silence survives full original replay but is never consent.
+                // Expire at the first protocol checkpoint, before its offer.
+                if calls == total + 4 { expiry } else { ElapsedTick(1000) }
             });
-            assert_eq!(result.err().as_deref(), Some(if connect {
-                STOP_REFUSAL
-            } else { "one-shot workflow deadline reached" }));
-            assert_eq!(calls, 2);
+            assert_eq!(result.err().as_deref(), Some("one-shot workflow deadline reached"));
+            assert_eq!(calls, if connect { total + 4 } else { 2 });
             assert_eq!(files(&store), original);
             assert!(!socket.exists());
             if let Some(mut client) = client {
@@ -257,3 +259,6 @@ fn continuation_entry_uses_live_recovery_before_request_checks_or_a_fence() {
         }
     }
 }
+
+#[path = "recovery_control/durable.rs"]
+mod durable;

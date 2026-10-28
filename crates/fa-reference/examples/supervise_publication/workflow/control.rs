@@ -3,6 +3,9 @@
 use super::{Config, Deadline, FileHumanReviewer, FileSupervisedDriver, PeerProfile};
 use fa_reference::action::ElapsedTick;
 #[cfg(target_os = "linux")]
+#[path = "control/recovery.rs"]
+mod recovery;
+#[cfg(target_os = "linux")]
 use std::path::PathBuf;
 #[cfg(target_os = "linux")]
 use std::{cell::RefCell, rc::Rc};
@@ -72,7 +75,7 @@ use super::{Admission, BoundSocket, Duration, Instant, debug, io, nonce, pause};
 use crate::peers::ReviewStream;
 #[cfg(target_os = "linux")]
 use fa_reference::action::consequence::delivery::persistent::observed::reviewer::peer::control::{
-    StopControlConnection, StopControlPhase, StopControlProgress,
+    StopControlConnection, StopControlPhase, StopControlProgress, StopRecoveryApplication,
 };
 #[cfg(target_os = "linux")]
 use std::os::unix::net::UnixStream;
@@ -87,6 +90,8 @@ struct Service {
     poll_ms: u64,
     outcome: Option<Result<bool, String>>,
     pending: Option<ReviewStream>,
+    pending_since: Option<Instant>,
+    recovery_application: Option<StopRecoveryApplication>,
 }
 #[cfg(target_os = "linux")]
 impl Service {
@@ -98,7 +103,7 @@ impl Service {
         eprintln!("Independent stop endpoint ready: {path:?}");
         Ok(Self { socket, admission, operation, runtime: Duration::from_millis(profile.runtime_ms),
             cleanup: Duration::from_millis(config.timing.cleanup_ms), poll_ms: profile.poll_ms,
-            outcome: None, pending: None })
+            outcome: None, pending: None, pending_since: None, recovery_application: None })
     }
     fn accept_peer(&mut self) -> Result<bool, String> {
         if self.outcome.is_some() || self.pending.is_some() { return Ok(true); }
@@ -112,6 +117,9 @@ impl Service {
             None => return Ok(false),
             Some(ReviewStream::Legacy(_)) => return Err("unchecked stop connection refused".into()),
         };
+        // Recovery retains this SAME authenticated session through replay. Its
+        // finite allowance starts at kernel admission, never at Ready or retry.
+        self.pending_since = Some(Instant::now());
         Ok(true)
     }
     fn checkpoint<F>(&mut self, driver: &mut FileSupervisedDriver, reviewer: &FileHumanReviewer,

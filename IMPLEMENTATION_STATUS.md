@@ -1,5 +1,36 @@
 # Implementation status · design revision 0.3
 
+## 2026-10-28: acknowledge durable Stop from active learned recovery
+
+Active continuation, next-message and Finish startup now retain the same
+kernel-authenticated peer while completing their original one-event guarded
+replay. At Ready the selected plain/raw/owned/mediated cursor enters the sealed
+Stop protocol before ordinary finalization. Only the exact request applies native
+admission Stop/Fence; connection alone cannot mutate or release live custody.
+The original startup and peer-session budgets and finite candidate quota persist,
+and admission errors are latched across retries of the same control object.
+
+Native acknowledgment is cached before late deadlines or reply delivery.
+History and source custody exports are attempted independently from the original
+acknowledged terminal result, preserving source work and successful partner
+archives. Startup returns a clear acknowledged terminal message; it neither
+issues an actor result nor advances helper/source/generation work. Existing CLI
+recipe and credential admission prerequisites still precede socket creation.
+See [operator recovery Stop](docs/LEARNED_RECOVERY_STOP_PEER.md#operator-recovery-integration--2026-10-28).
+
+Ten new real-socket regression functions cover all six configurations, real
+continuation entry, early/middle/Ready arrivals, charged published Unknown
+liabilities, no-peer/rejected-identity controls, malformed/silent peers, quota
+and session exhaustion, guards/floors/canonical binding, late deadlines, lost
+replies and independent export races. Four existing control regression groups
+remain, with connection-only expectations updated to the explicit-request law.
+All nine changed operator Rust files pass syntax parsing and independent review.
+The native and operator increments add 19 regression functions plus three
+compile-fail examples; none has executed here. Both example tests and the full
+xtask gate stop before compilation because the mandatory RCH dispatcher is
+absent (exit 127). Type checking, qualified formatting, Clippy, runtime and full
+FA-014/FA-120 acceptance remain open; scoped bead `.6` remains in progress.
+
 ## 2026-10-28: preserve authenticated Stop through native learned recovery
 
 The original fully replayed learned cursor and all five guarded wrappers now

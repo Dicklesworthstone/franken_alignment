@@ -114,3 +114,22 @@ original native stop owner. They pair timely durable success with connection
 exhaustion before any request and a complete receipt crossing the exact cutoff.
 Current execution results appear in `IMPLEMENTATION_STATUS.md`; they do not
 establish OS-call preemption or a hard real-time stop guarantee.
+
+## Learned recovery before live custody · 2026-10-28
+
+The same `stop-peer` command now reaches active learned continuation, next-message
+and Finish startup while it retains the guarded recovery lock. The supervisor
+holds the checked peer through the same complete original one-event replay, then
+uses `StopRecoveryConnection` before any ordinary recovery Fence or live-role
+handoff. Only the exact explicit request applies native admission Stop/Fence.
+The original session budget starts at kernel admission and does not renew at
+Ready; silence, malformed input or exhausted admission remains terminal.
+
+Admission Stop acquires no effect clock and performs no synthetic drain. Its
+native receipt may acknowledge Stop while reporting pending liabilities. The
+command's existing distinction between `acknowledged` and `drained` remains
+material. Late deadlines, lost replies and independent output failures preserve
+the native history; selected history/source archives are attempted independently.
+See [authenticated recovery Stop](LEARNED_RECOVERY_STOP_PEER.md) for replay,
+source custody, exact retry and the pending execution gate. Earlier CLI recipe
+and credential preparation still precede socket creation.

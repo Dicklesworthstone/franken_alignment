@@ -572,6 +572,21 @@ impl Cursor {
         }
     }
 
+    /// Seal the SAME fully guarded Ready cursor to one explicit authenticated
+    /// admission Stop. The transport receives no live owner or mutable role.
+    #[cfg(target_os = "linux")]
+    pub(super) fn into_recovery_stop(self, operation: u64)
+        -> Result<fa_reference::action::consequence::delivery::persistent::observed::reviewer::peer::control::FileRecoveryStop, JournalError>
+    {
+        match self {
+            Self::Plain(run) => run.into_recovery_stop(operation),
+            Self::Raw(run) => run.into_recovery_stop(operation),
+            Self::Owned(run) => run.into_recovery_stop(operation),
+            Self::Mediated(run) => run.into_recovery_stop(operation),
+            Self::PredictiveMediated(run) => run.into_recovery_stop(operation),
+        }
+    }
+
     pub(super) fn finish_admission_stop(
         self,
         operation: u64,

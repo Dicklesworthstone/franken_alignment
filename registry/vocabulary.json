@@ -238,7 +238,7 @@
       "idempotency": "one original operation per member session; no automatic reconnect or retry after uncertain transmission",
       "cost_class": "bounded roster and per-peer protocol work",
       "response": "Per-domain native stop receipts and explicit unconfirmed outcomes",
-      "note": "supervise_publication operator adapter; preserves original per-domain Stop/drain, not a distributed ordered fence or persistent acknowledgement frontier"
+      "note": "supervise_publication operator adapter; preserves original per-domain Stop/drain, not a distributed ordered fence or persistent acknowledgement frontier; the same authenticated clients can receive native admission-only Stop after complete learned recovery, with unresolved liabilities still pending"
     },
     {
       "verb": "resolve",

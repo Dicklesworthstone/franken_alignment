@@ -8,9 +8,10 @@ uses the existing guarded recovery objects, original exclusive Store lock,
 canonical bytes, independently supplied recipes, external floors and terminal
 recovery reserve. It adds no alternate replay engine or mutable recovery state.
 
-`open_selected_with_checkpoints` checks once before opening the store, before
-each original journal event, and again at Ready before invoking the original
-finish. Its callback receives only optional historical progress, not a candidate
+`ready_selected_with_checkpoints` checks once before opening the store, before
+each original journal event, and again at Ready. The original test-facing
+`open_selected_with_checkpoints` shares that replay; the live path selects its
+original finalizer only after the Ready checkpoint. Its callback receives only optional historical progress, not a candidate
 machine, source writer, human key or consistency observer. Rejecting a checkpoint
 or unwinding drops the recovery object without staged-file cleanup, fencing,
 role issuance or publication. A subsequent explicit attempt must reopen and
@@ -53,7 +54,7 @@ new agent verb, evidence type, runtime dependency or founding-plan semantics is
 introduced. The full packets and their prerequisites remain open. Beads were
 read but not modified because the required `br` command is unavailable.
 
-## Active command deadlines and stop admission · 2026-10-12
+## Active command deadlines and Stop admission · updated 2026-10-28
 
 The continuation, next-message and finish commands now connect those checkpoints
 to the same deadline and authenticated stop endpoint used by generation and
@@ -64,14 +65,22 @@ admission service. Recovery does not renew either limit or create another peer
 admission budget. An unauthenticated candidate does not become a stop request;
 the existing finite candidate quota and its refusal behavior remain in force.
 
-An admitted stop peer interrupts replay before its next event or finish. The
-command returns an explicit recovery-interrupted error and drops the exclusive
-cursor. Canonical and staged files remain unchanged. **No durable Stop was
-applied or acknowledged:** recovery has not issued the original owner and human
-role needed by that protocol. The client therefore receives no Stop challenge
-or receipt from this interrupted attempt. A later invocation must independently
-reopen the store; interruption does not revoke a durable history, undo an old
-effect or create a terminal application record.
+An admitted Stop peer now remains bound to the same complete guarded replay.
+At Ready, the cursor becomes a sealed terminal target before ordinary finish or
+any live-role handoff. Only the peer's complete exact nonce-bound request applies
+the original clock-independent admission Stop/Fence and receives the native
+receipt. Connection alone, incomplete replay or failed guards cannot mutate
+history. The original candidate quota, startup limits and peer session beginning
+at kernel admission remain in force; failures cannot fall back to live startup.
+
+Acknowledged history and pending liabilities survive lost replies and late
+deadlines. Every selected history/source custody output is attempted independently
+before the command reports terminal startup. No helper, next-source refresh,
+effect clock, numerical continuation or artificial drain is introduced. See the
+[authenticated recovery Stop contract](LEARNED_RECOVERY_STOP_PEER.md) for the
+exact operator behavior, custody repair and authored regression coverage. The
+new tests remain pending RCH execution; earlier verification records below are
+historical and do not qualify this implementation.
 
 For an explicit offline durable stop, use
 `create-learned-generated CONFIG LEARNED_RECIPE --recover-stop OPERATION`.

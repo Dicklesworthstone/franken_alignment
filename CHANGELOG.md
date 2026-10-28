@@ -1,5 +1,17 @@
 # Changelog
 
+## 2026-10-28: serve durable Stop during active learned recovery
+
+- Keep the original authenticated peer and finite budgets through complete guarded
+  replay, then select native admission Stop before ordinary live finalization.
+- Latch candidate/admission failures so the same exhausted control cannot fall
+  through into ordinary recovery on retry. Require a full explicit bound request.
+- Retain native acknowledgment across late deadlines and reply loss; attempt
+  independently selected history/source custody without fresh source or helper work.
+- Add ten real-socket regression functions, including the actual continuation
+  entry and all six learned families. Nine changed operator Rust files pass
+  syntax parsing and source review; required RCH execution remains unavailable.
+
 ## 2026-10-28: add authenticated native Stop during learned recovery
 
 - Seal the original fully verified learned cursor behind the existing Stop wire,

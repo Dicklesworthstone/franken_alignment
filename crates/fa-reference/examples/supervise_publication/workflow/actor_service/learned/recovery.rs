@@ -7,6 +7,8 @@ mod cooperative;
 pub(super) mod readonly;
 #[path = "recovery/selected.rs"]
 mod selected;
+#[path = "recovery/live.rs"]
+mod live;
 #[path = "recovery/terminal.rs"]
 mod terminal;
 #[path = "recovery/credential.rs"]
@@ -220,8 +222,8 @@ pub(super) fn open_selected(config: &Config, loaded: &Loaded) -> Result<Custody,
 }
 
 /// Recovery shares the active command's original deadline and authenticated
-/// stop transport. No owner exists yet: admission cancels replay, but cannot
-/// apply the durable Stop protocol or acknowledge a Stop receipt.
+/// Stop transport. A checked peer remains latched through the SAME complete
+/// guarded replay; only its exact request can choose admission Stop at Ready.
 pub(super) fn open_selected_live<F>(
     config: &Config,
     loaded: &Loaded,
@@ -232,17 +234,11 @@ pub(super) fn open_selected_live<F>(
 where
     F: FnMut() -> ElapsedTick,
 {
-    open_selected_with_checkpoints(config, loaded, &mut |_| {
-        deadline.check(time())?;
-        if control.pending_peer()? {
-            return Err("learned recovery interrupted by authenticated stop peer; no durable Stop applied or acknowledged".into());
-        }
-        Ok(())
-    })
+    live::open(config, loaded, control, deadline, time).map(|(custody, _)| custody)
 }
 
 /// Preserve the separately owned topology observer through the SAME one-event
-/// guarded replay. No source read or observer is issued before finalization.
+/// guarded replay. A terminal Stop never issues that observer or binds a source.
 pub(super) fn open_selected_live_with_topology<F>(
     config: &Config,
     loaded: &Loaded,
@@ -253,22 +249,7 @@ pub(super) fn open_selected_live_with_topology<F>(
 where
     F: FnMut() -> ElapsedTick,
 {
-    let mut checkpoint = |_: Option<Progress>| {
-        deadline.check(time())?;
-        if control.pending_peer()? {
-            return Err("learned recovery interrupted by authenticated stop peer; no durable Stop applied or acknowledged".into());
-        }
-        Ok(())
-    };
-    checkpoint(None)?;
-    let recovery = selected::Cursor::begin(config, loaded)?;
-    finish_replay(
-        recovery,
-        &mut checkpoint,
-        |run| run.progress(),
-        |run, done| run.advance(done),
-        |run| run.finish_with_topology(),
-    )
+    live::open(config, loaded, control, deadline, time)
 }
 
 fn open_receipt(
@@ -339,20 +320,27 @@ fn receipt_replay<T>(
 /// after complete verification, before cleanup and the original recovery fence.
 /// An error or unwind drops the original exclusive recovery without finishing.
 /// One event, framing and final persistence remain synchronous operations.
+#[cfg(test)]
 pub(super) fn open_selected_with_checkpoints(
     config: &Config,
     loaded: &Loaded,
     checkpoint: &mut impl FnMut(Option<Progress>) -> Result<(), String>,
 ) -> Result<Custody, String> {
+    ready_selected_with_checkpoints(config, loaded, checkpoint)?.finish().map_err(debug)
+}
+
+/// The production live path and original role-finalizer tests share this exact
+/// admission and one-event replay. Ready retains the SAME exclusive cursor so
+/// the latched peer branch is selected before any native finalization runs.
+fn ready_selected_with_checkpoints(
+    config: &Config,
+    loaded: &Loaded,
+    checkpoint: &mut impl FnMut(Option<Progress>) -> Result<(), String>,
+) -> Result<selected::Cursor, String> {
     checkpoint(None)?;
     let recovery = selected::Cursor::begin(config, loaded)?;
-    finish_replay(
-        recovery,
-        checkpoint,
-        |run| run.progress(),
-        |run, done| run.advance(done),
-        |run| run.finish(),
-    )
+    finish_replay(recovery, checkpoint, |run| run.progress(),
+        |run, done| run.advance(done), Ok)
 }
 
 /// A maintenance command receives only a private recovered owner. It selects
