@@ -84,6 +84,30 @@ struct Files {
 
 pub(super) fn load(file: &Path, config: &Config, require_native: bool) -> Result<Loaded, String> {
     let recipe = Recipe::decode(&read_regular(file, MAX_RECIPE_BYTES)?)?;
+    let mut assets = Assets::new(recipe.assets_bytes)?;
+    load_recipe(recipe, config, require_native, &mut assets)
+}
+
+/// Reuse complete original recipe/model/predictor admission under the fleet's
+/// cumulative input allowance. No live reviewer input is loaded. Failed intake
+/// aborts the caller's preparation; successful reads and failed streamed weight
+/// reads remain charged even when a later guard/asset refuses.
+pub(super) fn load_for_fleet(file: &Path, config: &Config, remaining: &mut usize,
+    forbidden: &[PathBuf]) -> Result<Loaded, String>
+{
+    let mut assets = Assets::for_fleet(*remaining, forbidden)?;
+    let result = (|| {
+        let recipe = Recipe::decode(&assets.read(file, MAX_RECIPE_BYTES)?)?;
+        assets.constrain(recipe.assets_bytes)?;
+        load_recipe(recipe, config, false, &mut assets)
+    })();
+    *remaining = remaining.saturating_sub(assets.consumed());
+    result
+}
+
+fn load_recipe(recipe: Recipe, config: &Config, require_native: bool,
+    assets: &mut Assets) -> Result<Loaded, String>
+{
     if recipe.identity.tenant != config.profile.delivery.scope.tenant
         || !config.profile.delivery.initial_payload.is_empty() {
         return Err("learned text requires the configured tenant and an empty initial publication".into());
@@ -97,18 +121,17 @@ pub(super) fn load(file: &Path, config: &Config, require_native: bool) -> Result
     if let Some(process) = &recipe.process {
         process.check_roster(config)?;
     }
-    let mut assets = Assets::new(recipe.assets_bytes)?;
     let mut credential = recipe.credential.as_ref()
-        .map(|path| super::credential::Selection::load(path, config, &mut assets, require_native)).transpose()?;
+        .map(|path| super::credential::Selection::load(path, config, assets, require_native)).transpose()?;
     let publication = recipe.checked_publication.as_ref()
-        .map(|path| super::checked::load(path, config, &mut assets)).transpose()?;
+        .map(|path| super::checked::load(path, config, assets)).transpose()?;
     let identity_registration = recipe.computed_identity.as_ref()
-        .map(|identity| identity.registration(&mut assets)).transpose()?;
+        .map(|identity| identity.registration(assets)).transpose()?;
     // The independent binding is never obtained from the archive it checks.
     // Closed probe/fit data admission precedes any model weight ingestion.
     let binding = fit::binding(&assets.read(&recipe.files.fit_binding, MAX_DATA_BYTES)?)?;
     let monitor = MonitorInput::decode(&assets.read(&recipe.files.monitor, MAX_KV_MONITOR_ARTIFACT_BYTES)?)?;
-    let forecast = recipe.files.forecast.as_ref().map(|path| ForecastInput::load(path, &mut assets))
+    let forecast = recipe.files.forecast.as_ref().map(|path| ForecastInput::load(path, assets))
         .transpose()?;
     let configuration = assets.read(&recipe.files.configuration, MAX_CONFIG_BYTES)?;
     let negotiated = LlamaConfig::decode(recipe.identity, recipe.context, &configuration).map_err(debug)?;
@@ -132,7 +155,7 @@ pub(super) fn load(file: &Path, config: &Config, require_native: bool) -> Result
     }
     let bound = (8 + MAX_WEIGHT_HEADER_BYTES + 4 * negotiated.profile().parameter_count())
         .min(MAX_WEIGHT_FILE_BYTES).min(config.profile.delivery.limits.bytes);
-    let model = recipe.files.weights.load(&configuration, &negotiated, &mut assets, bound)?;
+    let model = recipe.files.weights.load(&configuration, &negotiated, assets, bound)?;
     let forecast = forecast.map(|input| input.bind(&model, recipe.stream, recipe.publication)).transpose()?;
     let archive = assets.read(&recipe.files.fit_archive, MAX_FIT_ARCHIVE_BYTES)?;
     let codec = fit::replay(&archive, &binding, MAX_FIT_ARCHIVE_BYTES)?;
@@ -167,12 +190,12 @@ pub(super) fn load(file: &Path, config: &Config, require_native: bool) -> Result
     } else { generation };
     let native = if require_native {
         recipe.files.native.as_ref().map(|path| {
-            let roster = NativeRoster::load(path, config, &mut assets)?;
+            let roster = NativeRoster::load(path, config, assets)?;
             roster.check_limits(&recipe.native_limits, recipe.rounds.len())?;
             Ok::<_, String>(roster)
         }).transpose()?
     } else { None };
-    if let Some(credential) = credential.as_mut() { credential.retain_allowance(&assets); }
+    if let Some(credential) = credential.as_mut() { credential.retain_allowance(assets); }
     Ok(Loaded { request: recipe.request, ttl_ms: recipe.ttl_ms, generation, stream: recipe.publication,
         floor: recipe.floor, recovery_anchor: None, anchor_output: None, topology: None,
         identity: recipe.computed_identity.map(|identity| identity.selection), publication, credential,

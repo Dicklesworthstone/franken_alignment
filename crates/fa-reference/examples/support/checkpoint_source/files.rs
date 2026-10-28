@@ -9,7 +9,18 @@ use std::fs::{self, File};
 use std::path::Path;
 
 impl PreparedCheckpoint {
-    pub(crate) fn load(mut self, reads: &mut WeightReadBudget, physical_limit: usize)
+    pub(crate) fn load(self, reads: &mut WeightReadBudget, physical_limit: usize)
+        -> Result<LoadedCheckpoint, CheckpointLoadError>
+    {
+        self.load_with_path_admission(reads, physical_limit, |_| Ok(()))
+    }
+
+    /// Apply a caller's independent custody boundary to every explicit weight
+    /// handle, including nested shards and the static adapter, before opening it.
+    /// Existing numerical readers and cumulative physical-read accounting remain
+    /// the sole owners of checkpoint ingestion.
+    pub(crate) fn load_with_path_admission(mut self, reads: &mut WeightReadBudget,
+        physical_limit: usize, mut admit: impl FnMut(&Path) -> Result<(), String>)
         -> Result<LoadedCheckpoint, CheckpointLoadError>
     {
         let before = reads.usage();
@@ -25,11 +36,13 @@ impl PreparedCheckpoint {
             let mut shards = BTreeMap::new();
             match &self.base {
                 PreparedBase::Single(path) => {
+                    admit(path)?;
                     single = Some(open(path, limit, &mut total)?);
                     work.base_files = 1;
                 }
                 PreparedBase::Sharded { shards: paths, .. } => {
                     for (label, path) in paths {
+                        admit(path)?;
                         shards.insert(label.clone(), open(path, limit, &mut total)?);
                         work.base_files += 1;
                     }
@@ -37,6 +50,7 @@ impl PreparedCheckpoint {
             }
             let mut adapter_file = None;
             if let Some(adapter) = &self.adapter {
+                admit(&adapter.weights)?;
                 let file = open(&adapter.weights, limit, &mut total)?;
                 let bound = (8 + MAX_WEIGHT_HEADER_BYTES + 4 * adapter.work.adapter_parameters)
                     .min(MAX_LORA_WEIGHT_BYTES);

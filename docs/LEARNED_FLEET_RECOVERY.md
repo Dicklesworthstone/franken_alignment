@@ -138,3 +138,147 @@ RCH_REQUIRE_REMOTE=1 rch exec -- cargo +nightly-2026-09-08 run --locked -p xtask
 No local compiler fallback was used. Type checking, tests, doctests, Clippy and
 canonical workspace qualification remain pending; no Bead or full roadmap packet
 is closed. Concurrent authenticated recovery-Stop and learned unknown-abandonment work are preserved in full.
+
+## Runnable learned fleet operator
+
+The Linux reference publication executable reuses the existing fleet operator:
+
+```sh
+supervise_publication shutdown-fleet create /operator/fleet.json
+supervise_publication shutdown-fleet resume /operator/fleet.json
+supervise_publication shutdown-fleet recover /operator/fleet.json
+```
+
+This route consistently defaults to terminal-clock execution. It supports
+ordinary, plain learned, raw-predictive learned and owned-predictive learned
+members in the same fixed roster. The native API above also supports mediation;
+this first operator profile explicitly rejects `topology_profile` rather than
+selecting weaker recovery. The original standalone `shutdown_fleet` command
+retains its ordinary behavior and rejects learned recipes before coordinator
+creation.
+
+The complete original argv is validated before flags are stripped or any
+configuration is opened. Existing explicit phase, selection and coordinator
+custody options are supported:
+
+```sh
+supervise_publication shutdown-fleet create /operator/fleet.json --admission-only
+supervise_publication shutdown-fleet resume /operator/fleet.json --admission-only
+supervise_publication shutdown-fleet recover /operator/fleet.json --drain-only --recover-domain 1
+supervise_publication shutdown-fleet resume /operator/fleet.json --coordinator-anchor /custody/previous.anchor --retain-coordinator-anchor /custody/next.anchor
+```
+
+`--terminal-clocks`, `--admission-only` and `--drain-only` are mutually
+exclusive. `--recover-domain` is available only with recover. Unselected members
+still undergo fresh passive resolution, and the existing full denominator stays
+in the report. A resume of a stopped-but-undrained member reports that fact and
+does not implicitly request a new drain.
+
+### Closed version-three profile
+
+All existing bounds, operation identity and coordinator fields retain their
+meaning. Version three adds a required explicit `plan_archive` choice and an
+optional independent learned recipe per member:
+
+```json
+{
+  "schema_version": "fa.shutdown-fleet/3",
+  "operation": "900",
+  "coordinator": "/operator/fleet-stop",
+  "minimum_revision": "0",
+  "max_visits": 128,
+  "max_head_bytes": 4194304,
+  "coordinator_bytes": 16777216,
+  "input_bytes": 33554432,
+  "runtime_ms": 30000,
+  "replay_events": 8,
+  "plan_archive": null,
+  "members": [
+    {
+      "id": "1",
+      "config": "/custody/learned-domain.json",
+      "history_anchor": "/custody/learned-registration.anchor",
+      "learned_recipe": "/custody/original-learned-recipe.json"
+    },
+    {
+      "id": "2",
+      "config": "/custody/ordinary-domain.json",
+      "history_anchor": "/custody/ordinary-registration.anchor"
+    }
+  ]
+}
+```
+
+These numbers illustrate the schema, not the appropriate allowance for an
+arbitrary model or deployment. A null plan_archive requires every member's
+original independent history anchor. An absolute plan archive instead selects
+the existing archived-roster path, and per-member history_anchor fields refuse.
+The independently retained fixed registration must stay unchanged on reopen;
+the coordinator's own retained heads track subsequent observations.
+
+A member with no learned_recipe explicitly selects ordinary recovery. A learned
+member loads the exact original generation and complete Plain/Raw/Owned guard
+requirements, including current credentials and independently declared floors.
+It requires the original terminal reserve. Omitting a recipe does not downgrade
+an actual numerical journal into supported ordinary history.
+
+### One bounded intake before mutation
+
+All configuration, registration/custody and selected numerical input admission
+finishes before coordinator creation or a member intent. Numerical intake reuses
+the original recipe, tokenizer, model, learned codec, forecast, identity,
+publication-validation and credential loaders with native review disabled.
+
+The SAME input_bytes allowance covers the manifest, configurations, recipe files,
+successful auxiliary asset reads, actual streamed checkpoint weight reads,
+registration/plan archives and selected coordinator custody. A recipe's original
+asset_bytes ceiling is additionally conjoined, never enlarged. Failed streamed
+weight attempts retain their actual charges. Failed input admission aborts the
+command before mutable coordinator work.
+
+Fleet numerical inputs must remain outside every registered authority and
+coordinator directory. Checks cover lexical paths, resolved parent aliases and
+all base/shard/adapter weight handles inside checkpoint source manifests.
+A missing member store is still a legitimate fixed roster entry; resolving its
+existing ancestor does not open or invent that authority. Operator-controlled
+files and ancestors remain assumptions, not an adversarial-filesystem guarantee.
+
+The loader does not read current policy evidence, invoke native/process helper
+programs, open reviewer sockets, generate tokens or publish effects. Numerical
+history replay is still required later; unavailable historical model/tokenizer/
+codec/predictor input is not replaced by live regeneration.
+
+One elapsed budget begins at command entry and covers intake, cooperative replay
+and both sides of each required terminal clock. The old standalone ordinary
+preparation retains its original checkpoint schedule. Synchronous file reads,
+one numerical event, persistence and output are not hard real-time operations.
+
+### Reports, custody and verification
+
+The command uses the existing clocked/phased/selected JSON renderers and
+per-member statuses. Partial, undrained and timed-out work stays visible and
+returns an error. Coordinator custody retention precedes response output.
+Write/flush failure preserves the acknowledged revision and successful archive;
+it never silently retries publication or settlement.
+
+Nine new operator test functions cover real mixed numerical histories, actual
+dispatched liabilities, admission/resume/selected drain, archived busy/missing
+members, exact and one-byte-short cumulative intake, nested foreign-authority
+assets, complete guards and malformed suffixes, deadlines, retained custody
+after write/flush loss and strict original arguments. An independent byte-size
+lower bound prevents vacuous numerical-budget assertions.
+
+All 37 owned native/operator Rust files pass syntax parsing after integration
+with concurrent main work. Only the eight new source/test files were formatted.
+Independent production and fixture reviews found no substantive blocker. The
+new 17 regression functions are **unexecuted**; syntax parsing is not type or
+borrow checking.
+
+The required remote publication test invocation stops with exit 127 because
+rch is absent. Automatic approval review also rejected the standalone
+shutdown_fleet regression invocation because its remote destination was not
+specified and could transmit repository/build inputs. That action was not run.
+No local compiler fallback or remote-export workaround was used. The earlier
+native targeted and canonical workspace attempts also stopped before compilation
+because rch is absent. Compilation, runtime, doctests, Clippy and canonical
+qualification remain open.

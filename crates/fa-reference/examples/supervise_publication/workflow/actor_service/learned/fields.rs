@@ -7,24 +7,84 @@ use std::path::{Component, Path, PathBuf};
 pub(super) const MAX_ASSET_BYTES: usize = 64 * 1024 * 1024;
 pub(super) const MAX_DATA_BYTES: usize = 2 * 1024 * 1024;
 
-pub(super) struct Assets { remaining: usize }
+pub(super) struct Assets {
+    remaining: usize,
+    consumed: usize,
+    forbidden: Option<Vec<PathBuf>>,
+}
 impl Assets {
     pub(super) fn new(limit: usize) -> Result<Self, String> {
         if limit == 0 || limit > MAX_ASSET_BYTES { return Err("invalid aggregate learned asset byte limit".into()); }
-        Ok(Self { remaining: limit })
+        Ok(Self { remaining: limit, consumed: 0, forbidden: None })
+    }
+    /// One fleet allowance covers the recipe and its original numerical assets.
+    /// The recipe's own independent ceiling is conjoined after decoding it.
+    pub(super) fn for_fleet(limit: usize, forbidden: &[PathBuf]) -> Result<Self, String> {
+        if limit == 0 { return Err("fleet input allowance exhausted".into()); }
+        let mut roots = Vec::new();
+        for root in forbidden {
+            if !root.is_absolute() || root.components().any(|part|
+                !matches!(part, Component::RootDir | Component::Normal(_))) {
+                return Err("fleet authority roots must be absolute normalized paths".into());
+            }
+            roots.push(root.clone());
+            roots.push(resolve_root(root)?);
+        }
+        Ok(Self { remaining: limit, consumed: 0, forbidden: Some(roots) })
+    }
+    pub(super) fn constrain(&mut self, limit: usize) -> Result<(), String> {
+        if limit == 0 || limit > MAX_ASSET_BYTES { return Err("invalid aggregate learned asset byte limit".into()); }
+        self.remaining = self.remaining.min(limit);
+        Ok(())
+    }
+    pub(super) fn admit_path(&self, path: &Path) -> Result<(), String> {
+        if let Some(roots) = &self.forbidden {
+            if roots.iter().any(|root| path.starts_with(root)) {
+                return Err("fleet learned assets must be outside every authority store".into());
+            }
+            let canonical = std::fs::canonicalize(path).map_err(debug)?;
+            if roots.iter().any(|root| canonical.starts_with(root)) {
+                return Err("fleet learned asset resolves inside an authority store".into());
+            }
+        }
+        Ok(())
     }
     pub(super) fn read(&mut self, path: &Path, maximum: usize) -> Result<Vec<u8>, String> {
+        self.admit_path(path)?;
         let bytes = read_regular(path, maximum.min(self.remaining))?;
-        self.remaining = self.remaining.checked_sub(bytes.len()).ok_or("learned asset limit exceeded")?;
+        self.charge(bytes.len())?;
         Ok(bytes)
     }
     pub(super) fn remaining(&self) -> usize { self.remaining }
+    pub(super) fn consumed(&self) -> usize { self.consumed }
     /// Charge actual streamed tensor reads, including a failed attempt. An
     /// overrun exhausts the allowance rather than leaving it reusable.
     pub(super) fn charge(&mut self, bytes: usize) -> Result<(), String> {
         let before = self.remaining;
         self.remaining = self.remaining.saturating_sub(bytes);
+        self.consumed = self.consumed.saturating_add(bytes);
         if bytes > before { Err("learned asset limit exceeded".into()) } else { Ok(()) }
+    }
+}
+
+// A registered authority may be offline or absent. Resolve its existing
+// ancestor without opening a Store, preserving every missing suffix component.
+fn resolve_root(root: &Path) -> Result<PathBuf, String> {
+    let mut ancestor = root.to_path_buf();
+    let mut suffix = Vec::new();
+    loop {
+        match std::fs::symlink_metadata(&ancestor) {
+            Ok(_) => {
+                let mut canonical = std::fs::canonicalize(&ancestor).map_err(debug)?;
+                for component in suffix.into_iter().rev() { canonical.push(component); }
+                return Ok(canonical);
+            }
+            Err(error) if error.kind() == std::io::ErrorKind::NotFound => {
+                suffix.push(ancestor.file_name().ok_or("missing fleet authority ancestor")?.to_os_string());
+                if !ancestor.pop() { return Err("missing fleet authority ancestor".into()); }
+            }
+            Err(error) => return Err(debug(error)),
+        }
     }
 }
 

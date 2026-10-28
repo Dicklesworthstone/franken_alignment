@@ -152,3 +152,14 @@ were attempted through `RCH_REQUIRE_REMOTE=1 rch exec`; the launcher is absent,
 so no Rust compilation, test, formatting or Clippy pass is claimed. This worktree
 contains selected files, not a full checkout. No FA-014 closure, production
 activation, authenticated producer or simultaneous cross-domain stop is claimed.
+
+## Learned numerical members
+
+The publication executable now provides
+`supervise_publication shutdown-fleet create|recover|resume PROFILE` using this
+same coordinator, custody and report machinery. Its closed version-three profile
+adds independent plain/raw/owned learned recipes and one shared numerical-input
+allowance. That route defaults to terminal clocks; the standalone ordinary entry
+above retains its existing behavior and rejects learned recipe selection.
+See [the learned fleet contract](LEARNED_FLEET_RECOVERY.md#runnable-learned-fleet-operator)
+for the exact profile, phases, limitations and unexecuted verification scope.

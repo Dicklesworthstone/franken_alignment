@@ -39,6 +39,10 @@ use std::path::Path;
 type Port = FileActorPort<FileOversight>;
 const USAGE: &str = "serve-create|serve-open CONFIG ACTOR_PROFILE REVIEWER_PROFILE; serve-create-checked|serve-open-checked CONFIG ACTOR_PROFILE REVIEWER_PROFILE WITNESS_PROFILE; actor-submit ACTOR_PROFILE SUBMIT_JSON [SUBMIT_JSON ...]; serve-open and serve-open-checked also accept --credibility-activation EVIDENCE_FILE; all serve modes accept a final --requests 7,8,9 option OR --peers ACTOR_PROFILE [ACTOR_PROFILE ...]";
 
+pub(crate) fn shutdown_fleet(args: &[String], output: &mut impl std::io::Write) -> Result<(), String> {
+    learned::fleet_command(args, output)
+}
+
 pub(crate) fn command(args: &[String], credibility: Option<&Path>) -> Result<(), String> {
     if args.first().is_some_and(|mode| mode == "serve-learned-generated") {
         return learned::sequence_command(args, credibility);

@@ -6,6 +6,8 @@ use fa_reference::action::consequence::delivery::persistent::observed::{
     guarded::anchored::{FileHistoryAnchor, MAX_HISTORY_ANCHOR_BYTES},
     shutdown::{FileShutdownDomain, FileShutdownMember, FileShutdownPlan,
         MAX_SHUTDOWN_ATTEMPTS, MAX_SHUTDOWN_DOMAINS, MAX_SHUTDOWN_HEAD_BYTES}};
+use fa_reference::action::consequence::delivery::persistent::observed::shutdown::coordinator::FileShutdownLearnedMember;
+use super::LearnedLoader;
 use std::{collections::BTreeMap, fs::{self, File}, io::{Cursor, Read},
     os::unix::fs::{MetadataExt, PermissionsExt}, path::{Component, Path, PathBuf}, time::Duration};
 
@@ -17,7 +19,7 @@ pub(super) mod custody;
 const MANIFEST_BYTES: usize = 256 * 1024;
 const INPUT_BYTES: usize = 128 * 1024 * 1024;
 const ANCHOR_OVERHEAD: usize = MAX_HISTORY_ANCHOR_BYTES - MAX_JOURNAL_BYTES;
-struct Member { id: u64, config: PathBuf, anchor: Option<PathBuf> }
+struct Member { id: u64, config: PathBuf, anchor: Option<PathBuf>, learned_recipe: Option<PathBuf> }
 pub(super) struct Spec {
     pub coordinator: PathBuf,
     pub minimum_revision: u64,
@@ -32,7 +34,11 @@ pub(super) struct Spec {
     members: Vec<Member>,
     plan_archive: Option<PathBuf>,
 }
-pub(super) struct Prepared { pub spec: Spec, pub plan: FileShutdownPlan, remaining_input_bytes: usize }
+pub(super) struct Prepared {
+    pub spec: Spec, pub plan: FileShutdownPlan,
+    pub learned: Vec<FileShutdownLearnedMember>,
+    remaining_input_bytes: usize,
+}
 
 impl Spec {
     pub fn read(path: &Path) -> Result<Self, String> {
@@ -43,9 +49,14 @@ impl Spec {
         let json = strict_json::parse(bytes, Limits { max_bytes: MANIFEST_BYTES, max_depth: 6,
             max_items: 1024, max_string_bytes: 4096 }).map_err(|e| format!("fleet profile JSON: {e:?}"))?;
         let mut f = Fields::new(json)?;
-        let plan_archive = match f.text("schema_version")?.as_str() {
-            "fa.shutdown-fleet/1" => None,
-            "fa.shutdown-fleet/2" => Some(path(f.text("plan_archive")?)?),
+        let (version, plan_archive) = match f.text("schema_version")?.as_str() {
+            "fa.shutdown-fleet/1" => (1, None),
+            "fa.shutdown-fleet/2" => (2, Some(path(f.text("plan_archive")?)?)),
+            "fa.shutdown-fleet/3" => (3, match f.take("plan_archive")? {
+                Json::Null => None,
+                Json::String(value) => Some(path(value)?),
+                _ => return Err("v3 plan_archive must be null or an absolute archive path".into()),
+            }),
             _ => return Err("unknown fleet profile".into()),
         };
         let operation = f.id("operation")?;
@@ -65,12 +76,22 @@ impl Spec {
             let mut m = Fields::new(item)?;
             let id = m.id("id")?; let config = path(m.text("config")?)?;
             let anchor = if plan_archive.is_none() { Some(path(m.text("history_anchor")?)?) } else { None };
+            let learned_recipe = if version == 3 {
+                if m.0.contains_key("topology_profile") {
+                    return Err("this fleet operator profile does not admit topology-mediated learned inputs".into());
+                }
+                match m.0.remove("learned_recipe") {
+                    None => None,
+                    Some(Json::String(value)) => Some(path(value)?),
+                    Some(_) => return Err("learned_recipe must be an absolute recipe path".into()),
+                }
+            } else { None };
             m.end()?;
             if id == 0 || members.iter().any(|m| m.id == id || m.config == config
                 || anchor.as_ref().is_some_and(|path| m.anchor.as_ref() == Some(path))) {
                 return Err("duplicate or zero fleet member identity/custody".into());
             }
-            members.push(Member { id, config, anchor });
+            members.push(Member { id, config, anchor, learned_recipe });
         }
         f.end()?;
         if visits < members.len() { return Err("visit allowance cannot cover the fixed roster".into()); }
@@ -79,6 +100,13 @@ impl Spec {
     }
 
     pub fn prepare(self, manifest: &Path, check: &mut impl FnMut() -> Result<(), String>) -> Result<Prepared, String> {
+        self.prepare_with_learned(manifest, check, &mut super::unavailable_learned)
+    }
+
+    pub fn prepare_with_learned(self, manifest: &Path,
+        check: &mut impl FnMut() -> Result<(), String>, loader: &mut LearnedLoader<'_>)
+        -> Result<Prepared, String>
+    {
         check()?;
         // Require the canonical existing parent spelling, so a symlinked parent
         // cannot place this writable coordinator inside an input authority store.
@@ -91,6 +119,9 @@ impl Spec {
             check()?;
             let bytes = charged(&member.config, CONFIG_BYTES, &mut remaining)?;
             private_paths.push(fs::canonicalize(&member.config).map_err(err)?);
+            if let Some(recipe) = &member.learned_recipe {
+                private_paths.push(fs::canonicalize(recipe).map_err(err)?);
+            }
             let config = Config::decode(&bytes)?;
             check()?;
             if config.profile.delivery.clock_domain != CLOCK_DOMAIN { return Err("unsupported member clock".into()); }
@@ -119,9 +150,26 @@ impl Spec {
                 return Err("fleet custody must be outside all authority stores".into());
             }
         }
+        // Numerical inputs share this SAME cumulative input allowance and are
+        // admitted outside EVERY registered authority/coordinator directory.
+        // The loader returns only immutable independently selected inputs; no
+        // domain owner is opened and no coordinator intent exists at this point.
+        let mut excluded = vec![self.coordinator.clone()];
+        excluded.extend(configurations.iter().map(|config| config.store.clone()));
+        let mut learned = Vec::new();
+        for (member, config) in self.members.iter().zip(&configurations) {
+            let inputs = if let Some(recipe) = member.learned_recipe.as_deref() {
+                check()?;
+                let inputs = loader(config, recipe, &mut remaining, &excluded)?;
+                check()?;
+                Some(inputs)
+            } else { None };
+            learned.push(FileShutdownLearnedMember { domain: member.id, inputs });
+        }
+        learned.sort_by_key(|member| member.domain);
         if let Some(archive) = &self.plan_archive {
             let plan = archive::load(&self, archive, configurations, &mut remaining, check)?;
-            return Ok(Prepared { spec: self, plan, remaining_input_bytes: remaining });
+            return Ok(Prepared { spec: self, plan, learned, remaining_input_bytes: remaining });
         }
         let mut domains = Vec::new(); let mut retained = 0_usize;
         for (member, config) in self.members.iter().zip(configurations) {
@@ -139,7 +187,7 @@ impl Spec {
         }
         let plan = FileShutdownPlan::new(self.operation, domains, self.visits, self.head_bytes).map_err(err)?;
         check()?;
-        Ok(Prepared { spec: self, plan, remaining_input_bytes: remaining })
+        Ok(Prepared { spec: self, plan, learned, remaining_input_bytes: remaining })
     }
 }
 

@@ -1,5 +1,17 @@
 # Changelog
 
+## 2026-10-27: add the learned offline fleet command
+
+- Add `supervise_publication shutdown-fleet` with mixed ordinary/plain/raw/owned
+  members, terminal clocks, full-roster resume, explicit phases and selection.
+- Reuse the original coordinator, retained custody, report renderers and complete
+  guarded numerical recipe; closed v3 input refuses unsupported mediation.
+- Conserve one fleet input allowance across recipe/assets/streamed weights and
+  archives; exclude all authority roots, including nested checkpoint paths.
+- Add nine real-history operator regressions. All 37 owned Rust files parse;
+  seventeen new native/operator functions remain unexecuted because remote
+  verification is unavailable, with one invocation blocked by approval review.
+
 ## 2026-10-27: recover and drain learned fleet histories
 
 - Add closed independent learned provisioning to the original fixed-roster fleet

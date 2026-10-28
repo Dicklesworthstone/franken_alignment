@@ -228,7 +228,7 @@
       "idempotency": "fence id",
       "cost_class": "moderate",
       "response": "FenceRecord",
-      "note": ""
+      "note": "Reference offline mapping: supervise_publication shutdown-fleet uses the existing durable fixed-roster Stop/Drain coordinator with explicit ordinary or independently guarded learned inputs. Full numerical replay is bounded work, not a cached control lookup. Reports retain every member and its native acknowledgment/liabilities; they do not establish a simultaneous distributed fence, partition lease or globally ordered post-fence frontier. See docs/LEARNED_FLEET_RECOVERY.md."
     },
     {
       "verb": "stop-fleet",

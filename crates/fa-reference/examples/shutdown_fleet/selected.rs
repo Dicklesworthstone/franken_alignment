@@ -62,5 +62,14 @@ pub(super) fn command_with(args: &[String], clock: impl FnMut() -> Result<Elapse
         selection.phase, Some(&selection.domains))
 }
 
+pub(super) fn command_with_learned(args: &[String],
+    clock: impl FnMut() -> Result<ElapsedTick, String>, elapsed: &mut impl FnMut() -> Duration,
+    loader: &mut LearnedLoader<'_>, out: &mut impl Write) -> Result<(), String>
+{
+    let selection = parse(args)?;
+    terminal::command_for_selection_with_learned(&selection.args, clock, elapsed, out,
+        selection.phase, Some(&selection.domains), Some(loader))
+}
+
 #[cfg(test)]
 #[path = "selected_tests.rs"] mod tests;

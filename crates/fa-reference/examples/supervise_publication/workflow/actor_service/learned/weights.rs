@@ -46,7 +46,8 @@ impl WeightsInput {
                 if physical == 0 { return Err("no learned asset allowance remains for checkpoint weights".into()); }
                 let mut reads = WeightReadBudget::new(physical + 1, prepared.weight_read_calls_limit())
                     .map_err(|error| format!("{error:?}"))?;
-                let result = prepared.load(&mut reads, physical);
+                let result = prepared.load_with_path_admission(&mut reads, physical,
+                    |path| assets.admit_path(path));
                 let charged = assets.charge(reads.usage().bytes_read);
                 match result {
                     Ok(loaded) => { charged?; Ok(loaded.model) }

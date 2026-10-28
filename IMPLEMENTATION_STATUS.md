@@ -1,5 +1,38 @@
 # Implementation status · design revision 0.3
 
+## 2026-10-27: expose bounded learned fleet shutdown through the operator
+
+`supervise_publication shutdown-fleet` now drives the original durable
+coordinator for mixed ordinary/plain/raw/owned learned rosters. It defaults to
+terminal clocks and supports create/recover/resume, separate admission/drain,
+explicit member selection and original retained coordinator custody. Complete
+original argv is validated before stripping; no learned failure selects an
+ordinary fallback. Closed v3 profiles require explicit archived-plan or member
+anchor custody and independent learned recipes. Operator topology remains an
+explicit refusal; the native mediated path is available separately.
+
+Numerical intake reuses the original recipe and predictor loaders before any
+coordinator mutation. Recipe files, auxiliary assets, actual streamed weights,
+history/plan/coordinator archives share the existing cumulative input allowance,
+conjoined with each recipe's original ceiling. Every numerical path, including
+nested base/shard/adapter files, must remain outside every authority/coordinator
+root. No helper, current evidence, live generation or publication is invoked.
+
+Nine new operator functions complement eight native functions. They cover actual
+mixed histories and dispatched liabilities, phases and passive resume, explicit
+selected work, busy/missing archived members, exact/one-short aggregate intake,
+foreign-authority assets, floors/suffixes, deadlines, custody and output loss.
+All 37 owned Rust files pass syntax parsing after concurrent-main integration,
+with only eight new files formatted. Independent source reviews found no blocker.
+
+The prescribed remote publication test attempt exits 127 because RCH is absent.
+Automatic approval review rejected the standalone fleet regression command
+because an unspecified remote destination could receive repository/build inputs;
+that action was not run. No local fallback or export workaround was used.
+These 17 tests, compilation, Clippy and canonical qualification remain open.
+Concurrent authenticated Stop, unknown-abandonment and policy-replay work is
+preserved. See [learned fleet command](docs/LEARNED_FLEET_RECOVERY.md#runnable-learned-fleet-operator).
+
 ## 2026-10-27: recover learned fleet members through original guarded replay
 
 The durable coordinator now accepts a complete immutable per-domain roster for
