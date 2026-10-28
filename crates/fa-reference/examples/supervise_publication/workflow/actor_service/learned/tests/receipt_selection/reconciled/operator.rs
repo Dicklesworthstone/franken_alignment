@@ -8,6 +8,8 @@ use std::{io, path::Path};
 mod fixture;
 #[path = "operator/retained.rs"]
 mod retained;
+#[path = "operator/abandonment.rs"]
+mod abandonment;
 
 fn encoded(response: &WireResponse) -> Vec<u8> {
     let mut bytes = response.encode();

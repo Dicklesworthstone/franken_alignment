@@ -216,6 +216,84 @@ retried through the same complete guards and independent history custody. A
 successful retry acknowledges the existing disposition without resending the
 effect or appending another event.
 
+## Learned numerical histories
+
+The learned operator accepts the same closed `fa.abandon-unknown/1` request
+through its original recipe and independently retained history:
+
+```text
+supervise_publication create-learned-generated CONFIG LEARNED_RECIPE \
+  --abandon-unknown REQUEST_JSON \
+  --history-anchor INPUT_ANCHOR \
+  --retain-history-anchor NEW_OUTPUT_ANCHOR
+```
+
+The complete command grammar is checked before options are removed or files are
+opened. Both history paths are mandatory. The command cannot combine abandonment
+with resume, receipt reconciliation, Stop, credential rotation or revocation,
+reviewer/actor service, generation continuation or credibility activation.
+
+Historical recipe loading preserves the exact original model, tokenizer,
+numerical budgets, learned monitor, raw or owned predictor, computed identity,
+checked-publication policy and independently selected current credential epoch.
+It does not load live helper rosters, provider secrets or current evidence. One
+original guarded cursor replays the complete journal in one-event quanta, with
+elapsed-budget checks before opening, at every event and at Ready. The consuming
+native finalizer appends only the selected ordinary-capacity `AbandonUnknown`
+event, or confirms an exact historical retry. It does not issue a recovery
+Fence, acquire effect time, advance numerical work, refund exposure or expose a
+live owner or sendable envelope. Dispatching and already confirmed attempts
+remain ineligible; a timeout is not sufficient evidence for abandonment.
+
+### Paired topology custody
+
+An originally mediated learned history additionally requires its original v2
+`fa.mediated-submit/2` profile and a separate new source-checkpoint output:
+
+```text
+supervise_publication create-learned-generated CONFIG LEARNED_RECIPE \
+  --abandon-unknown REQUEST_JSON \
+  --history-anchor INPUT_ANCHOR \
+  --retain-history-anchor NEW_OUTPUT_ANCHOR \
+  --topology-profile RETAINED_TOPOLOGY_PROFILE \
+  --retain-topology-checkpoint NEW_OUTPUT_CHECKPOINT
+```
+
+The profile's retained checkpoint and the independent history anchor must name
+the same original cut. Manual v1 source minima cannot establish this complete
+custody. The native checkpoint finalizer verifies the original topology,
+availability and floors before cleanup or mutation. The acknowledged successor
+copies the exact retained topology and inventory documents, source work and last
+source operation, while advancing the paired history anchor and its floors.
+Availability remains unchanged because abandonment performs no recovery Fence
+or source refresh. No current or next live topology document is read.
+
+If acknowledgment succeeds but either output fails, retain the original input
+pair and retry the exact original request with fresh output paths. This
+restricted consumer permits either the saved exact cut or exactly one matching
+`AbandonUnknown` successor after it. An unrelated suffix, changed operation,
+changed predecessor or mismatched input pair refuses before staging cleanup.
+Ordinary live and receipt recovery retain their existing exact source-extent
+requirement; they cannot reuse this interrupted-export allowance.
+
+### Learned acknowledgment and reporting
+
+After acknowledgment, both independently requested exports are attempted before
+the final stdout report, even if a deadline expires or either export fails.
+Outputs use the existing outside-store, create-new, private-file and sync
+boundaries. Existing outputs are never overwritten. A late deadline, archive
+failure or stdout failure returns an error naming the current acknowledged
+revision and directs an exact retry; it cannot erase the native disposition.
+
+The bounded `fa.learned-abandon-unknown-result/1` report includes separate
+`history_anchor_retained` and `topology_checkpoint_retained` results (the latter
+is null when no topology was selected), the native charged liability and
+unresolved/irrecoverable IDs. The disposition has a bounded-model `Knowledge`
+basis and `authority: "none"`; the effect outcome remains
+`Unknown { OutcomeUnknown }`, including when the original endpoint execution is
+already present but was never confirmed to the actor. No private model, source,
+action payload, provider credential or archive bytes are reported.
+
 ## Validation boundary
 
 The authored base and two-key regression cases exercise original dispatches,

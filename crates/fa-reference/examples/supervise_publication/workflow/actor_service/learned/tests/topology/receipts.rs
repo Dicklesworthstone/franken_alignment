@@ -20,6 +20,10 @@ struct Case {
 }
 
 fn dispatched(mode: Option<bool>, published: bool) -> Case {
+    dispatched_at(mode, published, false)
+}
+
+fn dispatched_at(mode: Option<bool>, published: bool, unknown: bool) -> Case {
     let root = Root::new();
     let (mut config, recipe, loaded) = selected(&root, mode, false);
     let deadline = deadline();
@@ -82,6 +86,23 @@ fn dispatched(mode: Option<bool>, published: bool) -> Case {
                 .unwrap(),
             FileDriverEvent::PublicationChecked { .. }
         ));
+    }
+    if unknown {
+        use fa_reference::action::consequence::delivery::persistent::Reconciliation;
+        let mut host = driver.supervisor_mut().host_mut().unwrap();
+        let expected = if published {
+            // Complete the original checked publication before its retained
+            // receipt expires. Unknown may never drive a second publication.
+            let expires = ElapsedTick(config.profile.delivery.retention_ticks.checked_add(1000).unwrap());
+            let revision = host.revision();
+            host.observe_time(revision, expires).unwrap();
+            Reconciliation::RetentionExpired
+        } else {
+            Reconciliation::AwaitingResolution
+        };
+        let revision = host.revision();
+        assert_eq!(host.reconcile(revision, 1).unwrap(), expected);
+        assert_eq!(host.inspect().control.ledger.stages[&1], ActionState::Unknown);
     }
     assert!(matches!(
         response(&mut wire, 1).result,
@@ -615,3 +636,5 @@ fn retained_topology_receipts_attempt_both_archives_before_late_failures() {
 
 #[path = "receipts/repair.rs"]
 mod repair;
+#[path = "receipts/abandonment.rs"]
+mod abandonment;

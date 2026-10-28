@@ -43,6 +43,25 @@ pub(super) type Custody = (
 pub(super) type TopologyCustody = (Custody,
     Option<fa_reference::action::consequence::delivery::persistent::observed::mediation::FileMediationObserver>);
 
+/// Replay the complete original numerical and guard contract on one cursor,
+/// then consume it into observations only. Every event and Ready is a deadline
+/// boundary; neither an effect clock nor the live recovery Fence is acquired.
+pub(super) fn abandon_selected_with_checkpoints(
+    config: &Config,
+    loaded: &Loaded,
+    request: fa_reference::action::consequence::delivery::persistent::abandonment::FileAbandonRequest,
+    checkpoint: &mut impl FnMut(Option<Progress>) -> Result<(), String>,
+) -> Result<fa_reference::action::consequence::delivery::persistent::observed::guarded::recovery::FileAbandonedHistory, String> {
+    checkpoint(None)?;
+    let run = selected::AbandonmentCursor::begin(config, loaded)?;
+    finish_replay(
+        run, checkpoint,
+        selected::AbandonmentCursor::progress,
+        selected::AbandonmentCursor::advance,
+        |run| run.finish(request),
+    )
+}
+
 pub(super) fn create_selected(config: &Config, loaded: &Loaded) -> Result<Custody, String> {
     super::credential::check_creation(loaded)?;
     if loaded

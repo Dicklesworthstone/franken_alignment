@@ -32,7 +32,7 @@ pub(crate) fn command(args: &[String], out: &mut impl Write) -> Result<(), Strin
     run_with_elapsed(&config, &profile, request, &mut || started.elapsed(), out)
 }
 
-fn decode_request(bytes: &[u8]) -> Result<FileAbandonRequest, String> {
+pub(crate) fn decode_request(bytes: &[u8]) -> Result<FileAbandonRequest, String> {
     let json = strict_json::parse(
         bytes,
         Limits {

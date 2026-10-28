@@ -17,8 +17,10 @@ use fa_reference::action::consequence::delivery::persistent::observed::shutdown:
 use fa_reference::action::consequence::delivery::persistent::requests::actor::receipt::FileLearnedReceiptActorPort;
 use fa_reference::action::consequence::delivery::persistent::{
     JournalError,
+    abandonment::FileAbandonRequest,
     observed::{
         guarded::{
+            recovery::FileAbandonedHistory,
             learned_recovery::FileGuardedLearnedRecovery,
             mediated::{
                 FileMediatedRequirements,
@@ -46,6 +48,62 @@ pub(super) enum Cursor {
     Owned(FileOwnedPredictiveRecovery),
     Mediated(FileMediatedLearnedRecovery),
     PredictiveMediated(FilePredictiveMediatedLearnedRecovery),
+}
+
+#[derive(Clone, Copy)]
+enum SourceCut {
+    Exact,
+    Abandonment,
+}
+
+/// This sealed operator cursor cannot finish into a live owner. Only its native
+/// abandonment finalizer may defer the ordinary topology extent check, and that
+/// finalizer checks the saved cut or one exact matching disposition successor.
+pub(super) struct AbandonmentCursor<'a> {
+    cursor: Cursor,
+    checkpoint: Option<&'a TopologyCheckpoint>,
+}
+
+impl<'a> AbandonmentCursor<'a> {
+    pub(super) fn begin(config: &Config, loaded: &'a Loaded) -> Result<Self, String> {
+        let anchor = loaded.recovery_anchor.as_ref()
+            .ok_or("learned abandonment requires an independent input history anchor")?;
+        let checkpoint = super::super::topology::history(loaded)?
+            .map(|history| {
+                let saved = history.checkpoint().ok_or(
+                    "learned abandonment requires an exact v2 topology checkpoint; manual source minima cannot establish custody")?;
+                if saved.history_anchor() != anchor {
+                    return Err("abandonment source checkpoint and input history anchor describe different cuts".into());
+                }
+                Ok::<_, String>(saved)
+            }).transpose()?;
+        let cursor = Cursor::begin_with_source_cut(config, loaded, SourceCut::Abandonment)?;
+        Ok(Self { cursor, checkpoint })
+    }
+
+    pub(super) fn progress(&self) -> Progress { self.cursor.progress() }
+    pub(super) fn advance(&mut self, done: usize) -> Result<Progress, JournalError> {
+        self.cursor.advance(done)
+    }
+    pub(super) fn finish(self, request: FileAbandonRequest)
+        -> Result<FileAbandonedHistory, JournalError>
+    {
+        macro_rules! finish {
+            ($run:expr) => {
+                match self.checkpoint {
+                    Some(saved) => $run.finish_abandoned_with_checkpoint(request, saved),
+                    None => $run.finish_abandoned_with_anchor(request),
+                }
+            };
+        }
+        match self.cursor {
+            Cursor::Plain(run) => finish!(run),
+            Cursor::Raw(run) => finish!(run),
+            Cursor::Owned(run) => finish!(run),
+            Cursor::Mediated(run) => finish!(run),
+            Cursor::PredictiveMediated(run) => finish!(run),
+        }
+    }
 }
 
 /// Original mediated replay, sealed to receipt-cut recovery. This deliberately
@@ -93,6 +151,12 @@ pub(super) fn begin_receipt_checkpoint_repair(
 
 impl Cursor {
     pub(super) fn begin(config: &Config, loaded: &Loaded) -> Result<Self, String> {
+        Self::begin_with_source_cut(config, loaded, SourceCut::Exact)
+    }
+
+    fn begin_with_source_cut(config: &Config, loaded: &Loaded, source_cut: SourceCut)
+        -> Result<Self, String>
+    {
         if let Some(history) = super::super::topology::history(loaded)? {
             let anchor = loaded
                 .recovery_anchor
@@ -128,7 +192,9 @@ impl Cursor {
                         .map(Self::Mediated)
                 }
             }.map_err(debug)?;
-            history.check_extent(run.progress().total_events)?;
+            if matches!(source_cut, SourceCut::Exact) {
+                history.check_extent(run.progress().total_events)?;
+            }
             return Ok(run);
         }
         if let Some(prediction) = loaded.generation.required_pre_output_forecast() {

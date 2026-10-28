@@ -111,6 +111,14 @@ pub(super) struct Sent {
 }
 
 pub(super) fn sent(root: &Root, mode: Option<bool>, published: bool) -> Sent {
+    sent_at(root, mode, published, false)
+}
+
+fn unknown(root: &Root, mode: Option<bool>, published: bool) -> Sent {
+    sent_at(root, mode, published, true)
+}
+
+fn sent_at(root: &Root, mode: Option<bool>, published: bool, unknown: bool) -> Sent {
     let (mut config, path, mut loaded, reviewer, mut driver, mut wire, deadline) =
         generated(root, mode);
     submit(
@@ -141,6 +149,23 @@ pub(super) fn sent(root: &Root, mode: Option<bool>, published: bool) -> Sent {
                 .unwrap(),
             FileDriverEvent::PublicationChecked { .. }
         ));
+    }
+    if unknown {
+        use fa_reference::action::consequence::delivery::persistent::Reconciliation;
+        let mut host = driver.supervisor_mut().host_mut().unwrap();
+        let expected = if published {
+            // Complete the original checked publication before its retained
+            // receipt expires. Unknown may never drive a second publication.
+            let expires = ElapsedTick(config.profile.delivery.retention_ticks.checked_add(1000).unwrap());
+            let revision = host.revision();
+            host.observe_time(revision, expires).unwrap();
+            Reconciliation::RetentionExpired
+        } else {
+            Reconciliation::AwaitingResolution
+        };
+        let revision = host.revision();
+        assert_eq!(host.reconcile(revision, 1).unwrap(), expected);
+        assert_eq!(host.inspect().control.ledger.stages[&1], ActionState::Unknown);
     }
     assert!(matches!(
         response(&mut wire, 1).result,
