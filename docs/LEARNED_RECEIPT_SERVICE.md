@@ -15,12 +15,13 @@ supervise_publication create-learned-generated CONFIG FINISH_RECIPE --resume --s
 ```
 
 The same finish selection is available with `--reconcile-receipts`. The argument
-order is closed: one selected mode, one actor profile, one mandatory input
-anchor, and at most one explicit finish predecessor. Credibility activation,
-reviewer/live-generation flags, stop, audit, successor-anchor output and mixed
-receipt modes are rejected; they cannot silently select a less guarded route.
-Existing single-shot learned receipt commands and raw/stream receipt services
-retain their behavior.
+order is closed: one actor profile, one mandatory input anchor, at most one
+explicit finish predecessor, and one selected mode as the final argument.
+Reconciliation also accepts explicit retained outputs, described below.
+Credibility activation, reviewer/live-generation flags, stop, audit and mixed
+receipt modes are rejected; passive mode also rejects either retained-output
+flag before configuration intake. Existing no-output learned receipt commands
+and raw/stream receipt services retain their behavior.
 
 ## Provisioning and startup
 
@@ -28,8 +29,9 @@ retain their behavior.
 and learned numerical inputs. Plain learned, required raw-residual forecasts and
 required owned-K/V forecasts use their corresponding original guarded cursors.
 For a topology-mediated learned history, also supply `--topology-profile PATH`
-with the existing `fa.mediated-submit/1` or `/2` historical contract and no new
-source-checkpoint output. Both sealed mediated cursors retain complete guard,
+with the existing `fa.mediated-submit/1` or `/2` historical contract. Retained
+source/history output requires the exact version-2 checkpoint pair; version-1
+manual minima cannot establish complete source custody. Both sealed mediated cursors retain complete guard,
 predictor, original/current topology, availability, floor, anchor and exact
 reserve checks before selecting a receipt. The input anchor is mandatory in
 every topology recovery mode. Historical admission never opens the profile's
@@ -57,8 +59,9 @@ The input anchor is mandatory and uses the original independently retained
 `FileHistoryAnchor` archive. Existing admission requires its canonical path to
 be outside the mutable authority store. This path check does not establish
 independent ownership, authenticate the custodian or protect joint rollback.
-Retain the archive and actual recovery floors independently. The service does
-not write or advance a successor anchor.
+Retain the archive and actual recovery floors independently. Passive service
+does not advance the journal or export a successor. Explicit reconciliation can
+retain the acknowledged pair when the output options below are selected.
 
 One monotonic invocation budget begins before configuration ingestion and is
 clamped to the smaller CONFIG/ACTOR_PROFILE runtime. Startup checks it after
@@ -84,7 +87,8 @@ cleanup, sync or journal replacement. It needs no spare journal capacity.
 Canonical and staged bytes remain unchanged. Pending and unknown outcomes remain
 pending and unknown, including a publication not yet reconciled into its receipt.
 
-`--reconcile-receipts` instead consumes `finish_reconciled_receipt_port`. The
+`--reconcile-receipts` consumes `finish_reconciled_receipt_port`, or its
+history/checkpoint-retaining counterpart when outputs are selected. The
 original fixed `Fence -> Time -> Sweep` transaction must acknowledge before the
 immutable port is issued. It observes its one trusted logical clock only after
 replay/selection; queries original endpoint receipts without sending an effect;
@@ -97,6 +101,56 @@ After successful reconciliation, a deadline or service error explicitly reports
 that reconciliation was acknowledged. Failure to start or complete transport
 cannot undo that cut or imply that no publication occurred. Observe it again
 with passive receipt mode rather than inventing another effect request.
+
+## Retain custody before serving reconciled receipts
+
+For a topology-mediated learned history, select an existing exact v2
+source/history pair and distinct new outputs:
+
+```sh
+supervise_publication create-learned-generated CONFIG.json LEARNED_RECIPE.json \
+  --resume --serve-receipts ACTOR_PROFILE.json \
+  --history-anchor /operator/custody/history-0.anchor \
+  --topology-profile /operator/custody/receipts-0.json \
+  --retain-history-anchor /operator/custody/history-1.anchor \
+  --retain-topology-checkpoint /operator/custody/source-1.bin \
+  --reconcile-receipts
+```
+
+The historical profile omits the live-source `retain_checkpoint` field.
+Its nested source anchor must exactly equal the independent input anchor.
+Non-topology reconciliation can select only `--retain-history-anchor` with its
+mandatory input. Topology retention requires both outputs, an exact v2 profile
+and the matching input anchor. A finish additionally selects
+`--finish-after-message PREVIOUS_REQUEST` before the final mode.
+
+Both outputs must be new absolute paths, distinct after parent normalization,
+and outside the authority store. Option and path admission precede replay.
+Original request selection, socket binding/security and the pre-finalization
+deadline checks still precede the trusted clock and replacement. In particular,
+an occupied socket leaves the journal and staged files unchanged.
+
+The native finalizer validates the complete selected source cut before mutation
+and captures the acknowledged canonical bytes under the original recovery lock.
+After acknowledgment, the service attempts both archives independently before
+checking the late deadline or constructing a peer session. An export failure
+serves no receipt and reports the acknowledged revision; a successful partner
+archive remains retained. The socket was already bound for precommit validation,
+but no actor frames are processed before retention succeeds. A later deadline
+or rejected peer cannot erase the retained pair or trigger another effect.
+
+The successor retains original source documents, spent work and last source
+operation, with the acknowledged floors and unavailable topology. No live source
+is read or recertified. History and snapshot contents stay with the operator;
+the actor still receives only the original redacted immutable observation.
+
+Use the successor anchor and a new historical profile pointing to the successor
+source checkpoint for subsequent passive service or explicit reconciliation.
+See [retained receipt custody](LEARNED_RECEIPT_RECONCILIATION.md#retained-topology-receipt-custody)
+for profile selection and the next passive command. No-output reconciliation
+preserves the previous behavior and makes an older v2 checkpoint stale when the
+journal advances. Interrupted receipt exports have no automatic suffix-repair
+mode; preserve the original and every successfully written successor archive.
 
 ## What the actor can access
 
@@ -163,3 +217,17 @@ contracts. It adds no production dependency, journal tag, wire command or
 alternative numerical/authority engine. Full packet acceptance remains open.
 The required `br` tool is unavailable; existing Beads records and qualification
 gates were not rewritten to claim completion.
+
+## Retained-custody verification, 2026-10-27
+
+Four new service regression functions exercise actual topology-backed learned
+publication across plain/raw/owned modes, paired retention before peer exchange,
+reconnect and Cancel refusal, independent archive races, late deadline and
+kernel-peer rejection, malformed selections and occupied-socket refusal.
+The complete original operator test target type-checks, including these bodies.
+Their runtime execution remains open: full harness generation with both LLVM
+and the matching official Cranelift backend reached the bounded memory watchdog.
+The native integration target passes all nine functions, including its four new
+custody controls. See the
+[combined verification record](LEARNED_RECEIPT_RECONCILIATION.md#verification-update-2026-10-27)
+for scope and the separate interrupted full library-unit check.

@@ -365,3 +365,5 @@ fn real_service_command_loads_only_historical_assets_and_closes_its_option_gramm
     let mut invalid = base; invalid.push("--reconcile-receipts".into());
     assert!(crate::command(invalid).unwrap_err().contains("--serve-receipts ACTOR_PROFILE"));
 }
+
+#[path = "receipt_service/custody.rs"] mod custody_tests;

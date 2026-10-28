@@ -246,3 +246,29 @@ not infer a safe suffix from a stale checkpoint, perform a zero-event settlement
 retry, or authenticate operator-provided archives. Unknown dispatched effects
 remain charged unless the original endpoint receipt resolves them; a Fence can
 still cancel undispatched work under the existing native rules.
+
+## Verification update, 2026-10-27
+
+The complete unchanged `mediated_learned_receipts` integration target now runs
+successfully: **9 passed, 0 failed**, including all four new native custody
+functions. It uses actual native publication/reconciliation and all three
+guarded learned modes. The integration harness was compiled with LLVM and
+linked to the matching official nightly-2026-08-31 Cranelift library; test
+threads had 32 MiB stacks. These synthetic scenarios establish the exercised
+contracts, not forecast quality or deployment qualification.
+
+The real native library, publication executable, complete publication test
+target and mediated receipt target also pass direct metadata checking. Both
+new forbidden owner-access snippets fail with E0599 and the permitted immutable
+surface compiles. The new five one-shot and four resident-service regression
+functions type-check in the complete operator target but remain unexecuted.
+Full operator harness builds with LLVM, serialized LLVM and Cranelift stopped
+at a 1.7 GiB resident-memory watchdog before a harness existed. The full library
+unit metadata attempt was SIGKILLed before completion, so the new five-barrier
+unit matrix has neither a completed full-target typecheck nor a runtime pass.
+No source, test body, assertion, dependency gate or qualification requirement was
+removed to obtain the successful scoped checks.
+
+The runtime and metadata results above precede concurrent main commit
+`0fb1c1b`, whose abandonment implementation is preserved during integration.
+They do not claim verification of that new event or its regression cases.

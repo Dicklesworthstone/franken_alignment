@@ -1,5 +1,20 @@
 # Changelog
 
+## 2026-10-27: retain receipt service custody before peer exchange
+
+- Add retained history and paired v2 source checkpoints to explicit learned
+  receipt services. Preserve pre-clock socket refusal and original guarded
+  replay; attempt both archives before a late deadline or actor exchange.
+- Refuse to serve an unretained selected result after an export failure, preserve
+  the acknowledged revision and successful partner archive, and keep source
+  expenditure and immutable actor permissions unchanged.
+- Add four service regression functions. The complete native mediated receipt
+  target passes 9/9, including four new custody tests. Full operator metadata
+  and explicit immutable API checks pass; nine new operator/service functions
+  remain unexecuted because bounded full harness builds exceed memory. Preserve
+  the separate interrupted library-unit attempt and unchanged full-project gates.
+
+
 ## 2026-10-27: persist explicit unknown-delivery abandonment
 
 - Add canonical, operation-bound abandonment to the base and full-input durable

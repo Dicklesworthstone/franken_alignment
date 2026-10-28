@@ -1,5 +1,55 @@
 # Implementation status · design revision 0.3
 
+## 2026-10-27: retain learned receipt service custody before actor exchange
+
+The resident learned `--serve-receipts ... --reconcile-receipts` command now
+supports retained history and paired v2 topology checkpoints through the same
+original complete cursor and native immutable acknowledged result. It admits
+matching independent input and distinct new outside-store outputs before
+replay. Original request checks and socket binding/security still precede the
+clock and mutation, preserving the occupied-socket zero-write contract.
+
+After acknowledgment, both archive writes are attempted before late deadline
+handling or peer-session construction. Any export failure serves no receipt,
+keeps any successful partner archive and reports the acknowledged revision.
+Successful retention remains valid after a later deadline or rejected peer.
+The actor receives only its original sealed redacted observation; it gains no
+history archive, cancellation, owner or publication capability. No-output and
+passive service selection retain their existing contracts.
+
+Four new service regression functions cover original publication and subsequent
+passive recovery in all three modes, retention before real client/reconnect
+exchange, Cancel refusal, independent output races, late expiry, actual kernel
+credential rejection, malformed custody and pre-clock socket collision. Together
+with the five one-shot functions, four native integration functions and one
+five-barrier native unit matrix, this wave adds fourteen regression functions
+and two compile-fail owner-escape examples.
+
+Verification before the concurrent abandonment commit: the complete unchanged native
+`mediated_learned_receipts` target passes **9/9**, including its four new custody
+functions, in 30.06 seconds. Its LLVM harness links the matching official
+nightly-2026-08-31 Cranelift library with 32 MiB test-thread stacks. Library,
+publication executable, complete publication test target and native integration
+target all pass real-source metadata checks; both forbidden snippets fail with
+the expected E0599 and the permitted API control compiles. The exact 1,880-file
+Rust source manifest is
+`faf70c2a3ced6a4b0d7cc25a58885914a9466168371aa1a86bb7b482d7f0eca9`.
+
+The earlier first linked-library attempt stopped at its own 1.25 GiB watchdog;
+a later full library build succeeded. Full operator harness generation with
+LLVM (22.57 seconds), serialized LLVM (24.17 seconds) and Cranelift (22.57
+seconds) stopped at the 1.7 GiB watchdog before an executable existed. The nine
+new operator/service functions therefore type-check but remain unexecuted.
+The full library-unit metadata attempt was SIGKILLed after 66.12 seconds, and
+the new native barrier matrix has no completed full-target typecheck or runtime
+result. Initial service fixture-name diagnostics were fixed before the successful
+metadata checks; no original assertions or source bodies were weakened.
+The concurrent main commit `0fb1c1b` is preserved in full; these execution
+results precede that integration and do not qualify its new abandonment event.
+Canonical workspace qualification, existing dependency-admission failures and
+Beads remain open. See [receipt service](docs/LEARNED_RECEIPT_SERVICE.md#retain-custody-before-serving-reconciled-receipts).
+
+
 ## 2026-10-27: persist explicit unknown-delivery abandonment
 
 The base and full-input durable publication owners now journal the original
