@@ -68,7 +68,12 @@ impl History {
 }
 impl Selection {
     pub(crate) fn read(path: &Path) -> Result<Self, String> {
-        Self::decode(&crate::config::read_regular(path, PROFILE_BYTES)?)
+        Self::read_with_reader(path, &mut crate::config::read_regular)
+    }
+    pub(crate) fn read_with_reader(path: &Path,
+        read: &mut dyn FnMut(&Path, usize) -> Result<Vec<u8>, String>) -> Result<Self, String>
+    {
+        Self::decode(&read(path, PROFILE_BYTES)?)
     }
     pub(crate) fn decode(bytes: &[u8]) -> Result<Self, String> {
         let value = strict_json::parse(bytes, Limits { max_bytes: PROFILE_BYTES,
@@ -107,6 +112,7 @@ impl Selection {
         Ok(Self { initial, basis, next, operation, output })
     }
     pub(crate) fn retention_requested(&self) -> bool { self.output.is_some() }
+    pub(crate) fn checkpoint_selected(&self) -> bool { matches!(&self.basis, Basis::Checkpoint(_)) }
     /// The independently selected destination can retain a terminal cut without
     /// loading or binding the next live topology/inventory documents.
     #[cfg(target_os = "linux")]
@@ -114,12 +120,31 @@ impl Selection {
     pub(crate) fn history(&self, config: &Config, checkpoint: &mut impl FnMut() -> Result<(), String>)
         -> Result<History, String>
     {
-        let initial = self.initial.load(config, checkpoint)?;
+        self.history_selected(config, None, checkpoint, &mut crate::config::read_regular)
+    }
+    /// The fleet supplies an independently normalized declared store and an
+    /// admitted cumulative reader. Only historical inputs are opened; `next`
+    /// retains its original live-source path and is never used by this adapter.
+    pub(crate) fn history_with_reader(&self, config: &Config, store: &Path,
+        checkpoint: &mut dyn FnMut() -> Result<(), String>,
+        read: &mut dyn FnMut(&Path, usize) -> Result<Vec<u8>, String>) -> Result<History, String>
+    {
+        self.history_selected(config, Some(store), checkpoint, read)
+    }
+    fn history_selected(&self, config: &Config, store: Option<&Path>,
+        checkpoint: &mut dyn FnMut() -> Result<(), String>,
+        read: &mut dyn FnMut(&Path, usize) -> Result<Vec<u8>, String>) -> Result<History, String>
+    {
+        let initial = self.initial.documents_with_reader(config, store, checkpoint, read)?.loaded;
         let (current, available, work, last_operation, saved) = match &self.basis {
             Basis::Manual { current, available, work, last_operation } =>
-                (current.load(config, checkpoint)?, *available, *work, *last_operation, None),
+                (current.documents_with_reader(config, store, checkpoint, read)?.loaded,
+                    *available, *work, *last_operation, None),
             Basis::Checkpoint(path) => {
-                let saved = checkpoint::read(config, path, checkpoint)?;
+                let saved = match store {
+                    Some(store) => checkpoint::read_with_reader(config, path, Some(store), checkpoint, read)?,
+                    None => checkpoint::read(config, path, &mut || checkpoint())?,
+                };
                 (saved.expected().clone(), saved.available(), saved.work(), saved.last_operation(), Some(saved))
             }
         };
@@ -172,24 +197,28 @@ impl Pair {
         if topology == inventory { return Err("topology and inventory paths must differ".into()); }
         Ok(Self { topology, inventory })
     }
-    fn load(&self, config: &Config, checkpoint: &mut impl FnMut() -> Result<(), String>)
-        -> Result<LoadedAuthorityTopology, String>
-    {
-        Ok(self.documents(config, checkpoint)?.loaded)
-    }
     fn documents(&self, config: &Config, checkpoint: &mut impl FnMut() -> Result<(), String>)
         -> Result<Documents, String>
     {
+        self.documents_with_reader(config, None, checkpoint, &mut crate::config::read_regular)
+    }
+    fn documents_with_reader(&self, config: &Config, store: Option<&Path>,
+        checkpoint: &mut dyn FnMut() -> Result<(), String>,
+        read: &mut dyn FnMut(&Path, usize) -> Result<Vec<u8>, String>) -> Result<Documents, String>
+    {
         checkpoint()?;
-        let store = fs::canonicalize(&config.store).map_err(debug)?;
+        let store = match store {
+            Some(store) => store.to_path_buf(),
+            None => fs::canonicalize(&config.store).map_err(debug)?,
+        };
         let topology_path = fs::canonicalize(&self.topology).map_err(debug)?;
         let inventory_path = fs::canonicalize(&self.inventory).map_err(debug)?;
         if topology_path == inventory_path || topology_path.starts_with(&store) || inventory_path.starts_with(&store) {
             return Err("distinct topology inputs require custody outside the authority store".into());
         }
-        let topology = crate::config::read_regular(&self.topology, MAX_TOPOLOGY_BYTES)?;
+        let topology = read(&self.topology, MAX_TOPOLOGY_BYTES)?;
         checkpoint()?;
-        let inventory = crate::config::read_regular(&self.inventory, MAX_INVENTORY_BYTES)?;
+        let inventory = read(&self.inventory, MAX_INVENTORY_BYTES)?;
         checkpoint()?;
         let loaded = LoadedAuthorityTopology::from_json_bytes(&topology, &inventory).map_err(debug)?;
         if !loaded.graph().binds(config.profile.delivery.scope, config.profile.delivery.target) {

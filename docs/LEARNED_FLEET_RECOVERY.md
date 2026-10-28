@@ -150,10 +150,10 @@ supervise_publication shutdown-fleet recover /operator/fleet.json
 ```
 
 This route consistently defaults to terminal-clock execution. It supports
-ordinary, plain learned, raw-predictive learned and owned-predictive learned
-members in the same fixed roster. The native API above also supports mediation;
-this first operator profile explicitly rejects `topology_profile` rather than
-selecting weaker recovery. The original standalone `shutdown_fleet` command
+ordinary members and all five learned guard families in the same fixed roster:
+plain, raw-predictive, owned-predictive, mediated and predictive-mediated.
+Mediated members select both an original v2 topology profile and its independent
+source-history anchor, covering plain/raw/owned numerical generation. The original standalone `shutdown_fleet` command
 retains its ordinary behavior and rejects learned recipes before coordinator
 creation.
 
@@ -178,7 +178,8 @@ does not implicitly request a new drain.
 
 All existing bounds, operation identity and coordinator fields retain their
 meaning. Version three adds a required explicit `plan_archive` choice and an
-optional independent learned recipe per member:
+optional independent learned recipe per member, with paired topology custody
+for mediated members:
 
 ```json
 {
@@ -217,10 +218,56 @@ The independently retained fixed registration must stay unchanged on reopen;
 the coordinator's own retained heads track subsequent observations.
 
 A member with no learned_recipe explicitly selects ordinary recovery. A learned
-member loads the exact original generation and complete Plain/Raw/Owned guard
+member loads the exact original generation and complete independently selected guard
 requirements, including current credentials and independently declared floors.
 It requires the original terminal reserve. Omitting a recipe does not downgrade
 an actual numerical journal into supported ordinary history.
+
+### Mediated members retain an independent source cut
+
+A version-three learned member may also provide both topology fields:
+
+```json
+{
+  "id": "3",
+  "config": "/custody/mediated-domain.json",
+  "history_anchor": "/custody/original-fleet-registration.anchor",
+  "learned_recipe": "/custody/original-learned-recipe.json",
+  "topology_profile": "/custody/historical-topology-v2.json",
+  "topology_history_anchor": "/custody/retained-source-cut.anchor"
+}
+```
+
+Both topology fields require learned_recipe and must be present together.
+They select the original mediated or predictive-mediated requirements for
+plain, raw-predictive or owned-predictive generation. There is no new journal
+format or weaker recovery route.
+
+The topology history anchor is independent custody for the exact source
+checkpoint selected by the original fa.mediated-submit/2 profile. It is not
+inferred from that checkpoint. The fixed fleet registration remains unchanged;
+the source cut may be later, and the native learned cursor checks the entire
+registered prefix as well as the source cut. An unrelated anchor/checkpoint pair
+refuses before coordinator creation.
+
+Historical loading reuses the original topology/profile, graph-binding and
+checkpoint validators. It requires v2 retained source work; v1 manual minima and
+fresh checkpoint output requests refuse. The same retained pair can qualify
+admission Stop, passive resume, explicit Drain and passive resume after Drain
+through only the native terminal successor sequence. Previously spent checks,
+reserved read bytes and source operation identity remain conserved.
+
+Only the historical profile, initial graph/inventory, selected checkpoint and
+its independent source anchor are loaded. The profile's next live graph and
+inventory are not opened. No refresh, new source binding or replenished source
+allowance is provisioned.
+
+All of these successful reads share the same input_bytes allowance with
+numerical recipes and assets, registration/plan custody and coordinator custody.
+Every opened nested input path is checked against every registered
+authority/coordinator root. An absent member store is resolved through an existing ancestor without
+opening it, so native visits can report that member unavailable while reachable
+members still stop.
 
 ### One bounded intake before mutation
 
@@ -231,7 +278,8 @@ publication-validation and credential loaders with native review disabled.
 
 The SAME input_bytes allowance covers the manifest, configurations, recipe files,
 successful auxiliary asset reads, actual streamed checkpoint weight reads,
-registration/plan archives and selected coordinator custody. A recipe's original
+registration/plan archives, selected coordinator custody and historical topology
+inputs. A recipe's original
 asset_bytes ceiling is additionally conjoined, never enlarged. Failed streamed
 weight attempts retain their actual charges. Failed input admission aborts the
 command before mutable coordinator work.
@@ -268,11 +316,17 @@ assets, complete guards and malformed suffixes, deadlines, retained custody
 after write/flush loss and strict original arguments. An independent byte-size
 lower bound prevents vacuous numerical-budget assertions.
 
-All 37 owned native/operator Rust files pass syntax parsing after integration
-with concurrent main work. Only the eight new source/test files were formatted.
+Five additional operator functions cover all three mediated numerical modes
+through admission/passive/drain/passive, a source cut later than registration,
+unchanged actual source expenditure, independently counted five-file topology
+intake, nested authority aliases, missing members with selected retry, and
+closed paired v2 custody with positive controls.
+
+All 41 owned native/operator Rust files pass syntax parsing after integration
+with concurrent main work. All ten new source/test files are formatted.
 Independent production and fixture reviews found no substantive blocker. The
-new 17 regression functions are **unexecuted**; syntax parsing is not type or
-borrow checking.
+new 22 regression functions (eight native and fourteen operator) are
+**unexecuted**; syntax parsing is not type or borrow checking.
 
 The required remote publication test invocation stops with exit 127 because
 rch is absent. Automatic approval review also rejected the standalone

@@ -7,7 +7,7 @@ use fa_reference::action::consequence::delivery::persistent::observed::{
     shutdown::{FileShutdownDomain, FileShutdownMember, FileShutdownPlan,
         MAX_SHUTDOWN_ATTEMPTS, MAX_SHUTDOWN_DOMAINS, MAX_SHUTDOWN_HEAD_BYTES}};
 use fa_reference::action::consequence::delivery::persistent::observed::shutdown::coordinator::FileShutdownLearnedMember;
-use super::LearnedLoader;
+use super::{LearnedLoader, LearnedTopologyPaths};
 use std::{collections::BTreeMap, fs::{self, File}, io::{Cursor, Read},
     os::unix::fs::{MetadataExt, PermissionsExt}, path::{Component, Path, PathBuf}, time::Duration};
 
@@ -19,7 +19,10 @@ pub(super) mod custody;
 const MANIFEST_BYTES: usize = 256 * 1024;
 const INPUT_BYTES: usize = 128 * 1024 * 1024;
 const ANCHOR_OVERHEAD: usize = MAX_HISTORY_ANCHOR_BYTES - MAX_JOURNAL_BYTES;
-struct Member { id: u64, config: PathBuf, anchor: Option<PathBuf>, learned_recipe: Option<PathBuf> }
+struct Member {
+    id: u64, config: PathBuf, anchor: Option<PathBuf>, learned_recipe: Option<PathBuf>,
+    topology: Option<LearnedTopologyPaths>,
+}
 pub(super) struct Spec {
     pub coordinator: PathBuf,
     pub minimum_revision: u64,
@@ -77,13 +80,22 @@ impl Spec {
             let id = m.id("id")?; let config = path(m.text("config")?)?;
             let anchor = if plan_archive.is_none() { Some(path(m.text("history_anchor")?)?) } else { None };
             let learned_recipe = if version == 3 {
-                if m.0.contains_key("topology_profile") {
-                    return Err("this fleet operator profile does not admit topology-mediated learned inputs".into());
-                }
                 match m.0.remove("learned_recipe") {
                     None => None,
                     Some(Json::String(value)) => Some(path(value)?),
                     Some(_) => return Err("learned_recipe must be an absolute recipe path".into()),
+                }
+            } else { None };
+            let topology = if version == 3 {
+                match (m.0.remove("topology_profile"), m.0.remove("topology_history_anchor")) {
+                    (None, None) => None,
+                    (Some(Json::String(profile)), Some(Json::String(anchor))) => {
+                        if learned_recipe.is_none() {
+                            return Err("fleet topology custody requires an independent learned_recipe".into());
+                        }
+                        Some(LearnedTopologyPaths { profile: path(profile)?, history_anchor: path(anchor)? })
+                    }
+                    _ => return Err("topology_profile and topology_history_anchor must be paired absolute paths".into()),
                 }
             } else { None };
             m.end()?;
@@ -91,7 +103,7 @@ impl Spec {
                 || anchor.as_ref().is_some_and(|path| m.anchor.as_ref() == Some(path))) {
                 return Err("duplicate or zero fleet member identity/custody".into());
             }
-            members.push(Member { id, config, anchor, learned_recipe });
+            members.push(Member { id, config, anchor, learned_recipe, topology });
         }
         f.end()?;
         if visits < members.len() { return Err("visit allowance cannot cover the fixed roster".into()); }
@@ -121,6 +133,10 @@ impl Spec {
             private_paths.push(fs::canonicalize(&member.config).map_err(err)?);
             if let Some(recipe) = &member.learned_recipe {
                 private_paths.push(fs::canonicalize(recipe).map_err(err)?);
+            }
+            if let Some(topology) = &member.topology {
+                private_paths.push(fs::canonicalize(&topology.profile).map_err(err)?);
+                private_paths.push(fs::canonicalize(&topology.history_anchor).map_err(err)?);
             }
             let config = Config::decode(&bytes)?;
             check()?;
@@ -160,7 +176,7 @@ impl Spec {
         for (member, config) in self.members.iter().zip(&configurations) {
             let inputs = if let Some(recipe) = member.learned_recipe.as_deref() {
                 check()?;
-                let inputs = loader(config, recipe, &mut remaining, &excluded)?;
+                let inputs = loader(config, recipe, member.topology.as_ref(), &mut remaining, &excluded, check)?;
                 check()?;
                 Some(inputs)
             } else { None };

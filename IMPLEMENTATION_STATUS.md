@@ -1,5 +1,36 @@
 # Implementation status · design revision 0.3
 
+## 2026-10-28: include mediated learned histories in the fleet operator
+
+Version-three fleet members may now pair topology_profile with an independent
+topology_history_anchor beside their learned recipe. The original v2 historical
+profile, graph/inventory binding and trusted checkpoint decoders select mediated
+or predictive-mediated guards for plain/raw/owned numerical generation. The
+fixed registration remains unchanged; a later source cut must independently
+match its checkpoint, strengthen the original floors and pass native prefix
+qualification before a member can acknowledge Stop or Drain.
+
+The same cumulative input allowance now charges historical topology profiles,
+initial documents, exact source checkpoints and independent source anchors.
+All opened nested paths remain outside every registered authority/coordinator
+root. Declared stores resolve through existing ancestors without opening absent
+members, preserving the full fleet report and progress for reachable controls.
+The loader never opens next live topology files, binds a new source or resets
+spent source work. Manual v1 minima and fresh output requests refuse before
+mutable coordinator work. Existing ordinary/non-topology checkpoint schedules
+and original nonfleet readers retain their behavior.
+
+Five focused operator regressions cover all three mediated predictor selections
+through admission/passive/drain/passive, source cuts later than fixed
+registration, actual spent work, exact/one-short total intake, foreign-authority
+nested assets, missing members with explicit retry, and malformed or mixed
+custody with positive controls. All 41 owned Rust files pass syntax parsing and
+ten new files are formatted. Independent source reviews found no blocker.
+The 22 new native/operator functions remain unexecuted under the existing
+RCH/approval constraints; no production qualification or packet closure
+is inferred from source review. See
+[mediated fleet custody](docs/LEARNED_FLEET_RECOVERY.md#mediated-members-retain-an-independent-source-cut).
+
 ## 2026-10-27: expose bounded learned fleet shutdown through the operator
 
 `supervise_publication shutdown-fleet` now drives the original durable

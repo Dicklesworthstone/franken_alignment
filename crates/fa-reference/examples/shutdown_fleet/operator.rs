@@ -14,9 +14,15 @@ use crate::config::Config;
 use fa_reference::action::consequence::delivery::persistent::observed::shutdown::FileShutdownPlan;
 use std::{io::Write, path::{Path, PathBuf}, time::{Duration, Instant, SystemTime, UNIX_EPOCH}};
 
-pub(crate) type LearnedLoader<'a> = dyn FnMut(&Config, &Path, &mut usize, &[PathBuf])
+pub(crate) struct LearnedTopologyPaths {
+    pub profile: PathBuf,
+    pub history_anchor: PathBuf,
+}
+pub(crate) type LearnedLoader<'a> = dyn FnMut(&Config, &Path, Option<&LearnedTopologyPaths>,
+    &mut usize, &[PathBuf], &mut dyn FnMut() -> Result<(), String>)
     -> Result<FileShutdownLearnedInputs, String> + 'a;
-fn unavailable_learned(_: &Config, _: &Path, _: &mut usize, _: &[PathBuf])
+fn unavailable_learned(_: &Config, _: &Path, _: Option<&LearnedTopologyPaths>,
+    _: &mut usize, _: &[PathBuf], _: &mut dyn FnMut() -> Result<(), String>)
     -> Result<FileShutdownLearnedInputs, String>
 {
     Err("learned fleet members require supervise_publication shutdown-fleet with independent recipes".into())

@@ -1,5 +1,16 @@
 # Changelog
 
+## 2026-10-28: stop and drain mediated learned fleets from retained source custody
+
+- Extend the existing fleet command to all five learned guard families with
+  paired independent v2 topology/source custody for plain/raw/owned generation.
+- Reuse original graph/checkpoint validators under the one fleet input allowance
+  and global authority exclusions, including absent member stores.
+- Preserve fixed registration, later exact source cuts and spent source work
+  across admission, passive resume and Drain without reading next live files.
+- Add five focused operator regressions for real histories, bounds, unavailable
+  members, selected retry and malformed custody. Runtime qualification stays open.
+
 ## 2026-10-27: add the learned offline fleet command
 
 - Add `supervise_publication shutdown-fleet` with mixed ordinary/plain/raw/owned

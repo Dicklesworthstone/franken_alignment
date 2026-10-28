@@ -81,13 +81,26 @@ fn retention_error(error: String) -> String {
 pub(super) fn read(config: &Config, path: &Path,
     checkpoint: &mut impl FnMut() -> Result<(), String>) -> Result<TopologyCheckpoint, String>
 {
+    read_with_reader(config, path, None, checkpoint, &mut read_regular)
+}
+
+// Fleet intake supplies the same reader with one cumulative byte allowance and
+// every authority exclusion. Its normalized declared store may be offline; the
+// original path, checkpoint decoder and scope/resource checks remain unchanged.
+pub(super) fn read_with_reader(config: &Config, path: &Path, store: Option<&Path>,
+    checkpoint: &mut dyn FnMut() -> Result<(), String>,
+    read: &mut dyn FnMut(&Path, usize) -> Result<Vec<u8>, String>) -> Result<TopologyCheckpoint, String>
+{
     checkpoint()?;
     validate_path(path)?;
-    let store = fs::canonicalize(&config.store).map_err(debug)?;
+    let store = match store {
+        Some(store) => store.to_path_buf(),
+        None => fs::canonicalize(&config.store).map_err(debug)?,
+    };
     if fs::canonicalize(path).map_err(debug)?.starts_with(&store) {
         return Err("topology checkpoints require custody outside the authority store".into());
     }
-    let bytes = read_regular(path, MAX_TOPOLOGY_CHECKPOINT_BYTES)?;
+    let bytes = read(path, MAX_TOPOLOGY_CHECKPOINT_BYTES)?;
     checkpoint()?;
     let saved = TopologyCheckpoint::read_trusted(&mut Cursor::new(bytes), MAX_TOPOLOGY_CHECKPOINT_BYTES).map_err(debug)?;
     if !saved.expected().graph().binds(config.profile.delivery.scope, config.profile.delivery.target) {

@@ -158,8 +158,8 @@ activation, authenticated producer or simultaneous cross-domain stop is claimed.
 The publication executable now provides
 `supervise_publication shutdown-fleet create|recover|resume PROFILE` using this
 same coordinator, custody and report machinery. Its closed version-three profile
-adds independent plain/raw/owned learned recipes and one shared numerical-input
-allowance. That route defaults to terminal clocks; the standalone ordinary entry
+adds independent learned recipes, paired v2 topology/source custody for mediated
+members, and one shared allowance for numerical and historical topology input. That route defaults to terminal clocks; the standalone ordinary entry
 above retains its existing behavior and rejects learned recipe selection.
 See [the learned fleet contract](LEARNED_FLEET_RECOVERY.md#runnable-learned-fleet-operator)
 for the exact profile, phases, limitations and unexecuted verification scope.

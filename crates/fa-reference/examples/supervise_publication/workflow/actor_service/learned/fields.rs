@@ -69,7 +69,7 @@ impl Assets {
 
 // A registered authority may be offline or absent. Resolve its existing
 // ancestor without opening a Store, preserving every missing suffix component.
-fn resolve_root(root: &Path) -> Result<PathBuf, String> {
+pub(super) fn resolve_root(root: &Path) -> Result<PathBuf, String> {
     let mut ancestor = root.to_path_buf();
     let mut suffix = Vec::new();
     loop {

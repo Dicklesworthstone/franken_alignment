@@ -630,3 +630,6 @@ fn archived_mixed_roster_keeps_busy_and_missing_domains_visible_then_recovers_on
     assert_eq!(fleet.files(), complete);
     assert_eq!(fleet.coordinated(), coordinator);
 }
+
+#[path = "fleet/topology.rs"]
+mod topology;
