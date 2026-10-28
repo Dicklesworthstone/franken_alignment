@@ -1,5 +1,30 @@
 # Implementation status · design revision 0.3
 
+## 2026-10-28: preserve authenticated Stop through native learned recovery
+
+The original fully replayed learned cursor and all five guarded wrappers now
+produce a sealed Stop-only transport target after their complete independent
+requirements pass. The same authenticated Linux peer and unchanged nonce-bound
+Stop client can consume the original clock-independent admission Stop/Fence
+transaction without releasing a live owner, reviewer, source writer or weaker
+cursor. Connection presence alone does not mutate history. Existing numerical
+work, Unknown effects, charges and unresolved drain state remain conservative.
+
+Native acknowledgment and the original history anchor survive receipt loss;
+storage failures remain Unconfirmed. Exact historical retry confirms without
+another Stop, clock sample or replacement. No journal/wire format, runtime,
+dependency or agent-verb change is introduced. See the
+[native recovery Stop contract](docs/LEARNED_RECOVERY_STOP_PEER.md).
+
+Nine regression functions cover real guarded histories, all six configurations,
+partial replay, binding and credential refusals, fragmented/lost replies, exact
+retry, canonical substitution and all five storage barriers. Three compile-fail
+examples forbid owner/role escape. All 13 changed native Rust files pass syntax
+parsing and source review. The required RCH test dispatch stops before compilation
+because `rch` is absent (exit 127); no compilation or test execution is claimed.
+Qualified formatting, Clippy and the full workspace gate remain open. Scoped
+bead `franken_alignment-fa-014-full-hc0s.6` and FA-014/FA-120 remain in progress.
+
 ## 2026-10-28: expose guarded learned policy diagnosis and repair search
 
 The learned operator now accepts explicit `--resume --explain-proposal` with

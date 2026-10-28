@@ -84,6 +84,26 @@ impl StopControlReceipt {
             }
         }
     }
+    // An admission-only result has no fabricated drain or clock observation.
+    // The original progress may already be drained when no obligation exists;
+    // unresolved effects remain explicitly pending in the unchanged wire type.
+    pub(super) fn project_admission(binding: StopBinding,
+        result: &Result<crate::action::consequence::delivery::persistent::observed::shutdown::recovery::FileAdmissionStoppedHistory, JournalError>) -> Self
+    {
+        match result {
+            Ok(history) => {
+                let stop = history.snapshot().stop.as_ref().expect("acknowledged admission stop");
+                Self { binding,
+                    status: if history.progress().drained() { StopStatus::StoppedDrained }
+                        else { StopStatus::StoppedPending },
+                    control_sequence: stop.control_sequence(),
+                    revocation_floor: stop.revocation_floor(),
+                    dispatcher_epoch: stop.dispatcher_epoch() }
+            }
+            Err(_) => Self { binding, status: StopStatus::Unconfirmed,
+                control_sequence: 0, revocation_floor: 0, dispatcher_epoch: 0 },
+        }
+    }
     pub(super) fn encode(self) -> Result<[u8; RECEIPT_BYTES], Error> {
         let mut bytes = [0; RECEIPT_BYTES];
         bytes[..OFFER_BYTES].copy_from_slice(&self.binding.offer()?);

@@ -8,6 +8,32 @@ use crate::action::consequence::delivery::{StopRequest,
         shutdown::recovery::{FileAdmissionStoppedHistory, FileStopRecovery, FileStoppedHistory, FileStoppedRecovery}}};
 
 impl FileLearnedRecovery {
+    /// Consume the SAME fully replayed learned cursor into a nonce-bound
+    /// Stop-only transport target. No ordinary recovery Fence, live owner,
+    /// reviewer, predictor or numerical continuation escapes. Its independently
+    /// selected outer wrapper must recheck all original requirements first.
+    ///
+    /// A retained recovery reserve is mandatory, as on the live Stop transport;
+    /// this never installs or refills one. The original fixed Stop/Fence consumer
+    /// checks exact capacity and canonical custody only after an explicit request.
+    #[cfg(target_os = "linux")]
+    pub fn into_recovery_stop(self, operation: u64)
+        -> Result<crate::action::consequence::delivery::persistent::observed::reviewer::peer::control::FileRecoveryStop, JournalError>
+    {
+        use crate::action::consequence::delivery::persistent::observed::{
+            BaseEvent, Event, reviewer::{client::ReviewerExpectation,
+                peer::control::FileRecoveryStop},
+        };
+        let request = self.stop_request(operation)?;
+        if !self.events.iter().any(|event| matches!(event,
+            Event::Core(BaseEvent::ReserveRecovery(_)))) {
+            return Err(Error::Incomplete.into());
+        }
+        let expected = ReviewerExpectation { reviewer: self.profile.human.reviewer_id,
+            scope: self.profile.delivery.scope, clock_domain: self.profile.delivery.clock_domain };
+        Ok(FileRecoveryStop::from_verified(self.into_terminal()?, expected, request))
+    }
+
     /// Select the original control predecessor only after complete learned
     /// replay. A matching historical stop retains its exact original request;
     /// another operation cannot take it over. This request grants no live role.

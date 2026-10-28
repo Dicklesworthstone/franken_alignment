@@ -1,5 +1,17 @@
 # Changelog
 
+## 2026-10-28: add authenticated native Stop during learned recovery
+
+- Seal the original fully verified learned cursor behind the existing Stop wire,
+  retaining complete plain/raw/owned/mediated guards and the original lock.
+- Apply only an explicit nonce-bound request through native admission Stop/Fence;
+  preserve Unknown charges, paid numerical work and unresolved drain state.
+- Retain native acknowledgment across reply failure, and confirm exact retries
+  without another event, clock observation, replacement or live-owner handoff.
+- Add nine regression functions and three forbidden-owner API examples.
+  Thirteen changed native Rust files pass syntax parsing and source review;
+  compilation, runtime and full qualification await the unavailable RCH gate.
+
 ## 2026-10-28: explain learned policy denials through the operator
 
 - Add explicit learned `--resume --explain-proposal` with independent input

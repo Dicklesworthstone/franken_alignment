@@ -454,6 +454,18 @@ impl FilePredictiveMediatedLearnedRecovery {
         self.inner.finish_reconciled_receipt_with_checkpoint(request, finish_after, saved, clock)
     }
 
+    /// Transfer only a fixed Stop target after rechecking this wrapper's
+    /// COMPLETE original recipe, guards, policy, credentials and history floors.
+    /// The original private replay and exclusive lock survive; no weaker cursor,
+    /// live owner or role is released before or after the nonce-bound exchange.
+    #[cfg(target_os = "linux")]
+    pub fn into_recovery_stop(self, operation: u64)
+        -> Result<crate::action::consequence::delivery::persistent::observed::reviewer::peer::control::FileRecoveryStop, JournalError>
+    {
+        self.check_ready()?;
+        self.inner.into_recovery_stop(operation)
+    }
+
     /// Select the original stop predecessor after the complete predictor,
     /// topology, guard, policy and independent-floor requirements pass.
     pub fn stop_request(&self, operation: u64) -> Result<StopRequest, JournalError> {

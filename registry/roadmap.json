@@ -417,7 +417,12 @@
         "crates/fa-reference/src/action/consequence/delivery/persistent/observed/guarded/recovery/abandonment/tests/mediated.rs",
         "crates/fa-reference/examples/supervise_publication/recover_stop/guarded/abandonment.rs",
         "crates/fa-reference/examples/supervise_publication/recover_stop/guarded/abandonment/tests.rs",
-        "crates/fa-reference/examples/supervise_publication/recover_stop/guarded/abandonment/operator_tests.rs"
+        "crates/fa-reference/examples/supervise_publication/recover_stop/guarded/abandonment/operator_tests.rs",
+        "docs/LEARNED_RECOVERY_STOP_PEER.md",
+        "crates/fa-reference/src/action/consequence/delivery/persistent/observed/reviewer/peer/control/recovery.rs",
+        "crates/fa-reference/src/action/consequence/delivery/persistent/observed/reviewer/peer/control/recovery/tests.rs",
+        "crates/fa-reference/src/action/consequence/delivery/persistent/observed/reviewer/peer/control/recovery/tests/native.rs",
+        "crates/fa-reference/src/action/consequence/delivery/persistent/observed/reviewer/peer/control/recovery/tests/native/profiled.rs"
       ]
     },
     {
@@ -2944,7 +2949,12 @@
         "crates/fa-reference/examples/supervise_publication/stop_fleet.rs",
         "crates/fa-reference/examples/supervise_publication/stop_fleet/profile.rs",
         "crates/fa-reference/examples/supervise_publication/stop_fleet/tests.rs",
-        "crates/fa-reference/examples/supervise_publication/peers.rs"
+        "crates/fa-reference/examples/supervise_publication/peers.rs",
+        "docs/LEARNED_RECOVERY_STOP_PEER.md",
+        "crates/fa-reference/src/action/consequence/delivery/persistent/observed/reviewer/peer/control/recovery.rs",
+        "crates/fa-reference/src/action/consequence/delivery/persistent/observed/reviewer/peer/control/recovery/tests.rs",
+        "crates/fa-reference/src/action/consequence/delivery/persistent/observed/reviewer/peer/control/recovery/tests/native.rs",
+        "crates/fa-reference/src/action/consequence/delivery/persistent/observed/reviewer/peer/control/recovery/tests/native/profiled.rs"
       ],
       "founding_ideas": [
         "FI-A02"

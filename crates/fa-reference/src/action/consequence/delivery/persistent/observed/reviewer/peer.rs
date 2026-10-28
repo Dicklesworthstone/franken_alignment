@@ -81,6 +81,16 @@ impl VerifiedReviewerSocket {
         control::StopControlConnection::new(host, reviewer, operation, self.stream, session)
     }
 
+    /// Stop-only exchange over the SAME authenticated socket and fully verified
+    /// recovery cursor. It returns no live owner or reviewer role. Admission
+    /// withdraws only after the exact original nonce-bound Stop request arrives;
+    /// a connected or silent peer does not mutate the canonical history.
+    pub fn into_recovery_stop_connection(self, target: control::FileRecoveryStop,
+        session: [u8; 32]) -> Result<control::StopRecoveryConnection<UnixStream>, ReviewerError>
+    {
+        control::StopRecoveryConnection::new(target, self.stream, session)
+    }
+
     pub fn into_stop_client(self, expected: ReviewerExpectation, operation: u64)
         -> Result<control::StopClient<UnixStream>, Error>
     {

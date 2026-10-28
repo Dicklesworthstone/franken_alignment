@@ -3,6 +3,8 @@
 //! alternative ledger, autonomous task or new effect capability exists here.
 mod wire;
 mod client;
+mod recovery;
+pub use recovery::{FileRecoveryStop, StopRecoveryApplication, StopRecoveryConnection};
 pub use wire::{StopBinding, StopControlReceipt, StopStatus};
 pub use client::{StopClient, StopClientPhase, StopClientProgress};
 use wire::{OFFER_BYTES, RECEIPT_BYTES};

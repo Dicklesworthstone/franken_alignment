@@ -246,6 +246,18 @@ impl FileGuardedLearnedRecovery {
         Ok((host, roles))
     }
 
+    /// Transfer only a fixed Stop target after rechecking this wrapper's
+    /// COMPLETE original recipe, guards, policy, credentials and history floors.
+    /// The original private replay and exclusive lock survive; no weaker cursor,
+    /// live owner or role is released before or after the nonce-bound exchange.
+    #[cfg(target_os = "linux")]
+    pub fn into_recovery_stop(self, operation: u64)
+        -> Result<crate::action::consequence::delivery::persistent::observed::reviewer::peer::control::FileRecoveryStop, JournalError>
+    {
+        self.check_ready()?;
+        self.inner.into_recovery_stop(operation)
+    }
+
     /// Select the original stop predecessor only after the complete independent
     /// guard, effective-policy, credential and recovery-floor contract passes.
     pub fn stop_request(&self, operation: u64) -> Result<StopRequest, JournalError> {
