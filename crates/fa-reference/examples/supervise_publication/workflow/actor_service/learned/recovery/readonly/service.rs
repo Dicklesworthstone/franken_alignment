@@ -7,11 +7,21 @@ use crate::workflow::actor_service::{
     ActorWire, BoundSocket, PeerSession, Profile, receipts::serve_session,
 };
 use fa_reference::action::ElapsedTick;
-use fa_reference::action::consequence::delivery::persistent::observed::decoder::learned::FileLearnedRecoveryStatus;
+use fa_reference::action::consequence::delivery::persistent::observed::{
+    decoder::learned::FileLearnedRecoveryStatus,
+    guarded::mediated::receipt::FileReceiptTopologyRecovery,
+};
 
-const USAGE: &str = "create-learned-generated CONFIG LEARNED_RECIPE --resume --serve-receipts ACTOR_PROFILE --history-anchor INPUT [--topology-profile PATH] [--finish-after-message PREVIOUS_REQUEST] [--retain-history-anchor NEW_OUTPUT [--retain-topology-checkpoint NEW_OUTPUT]] (--receipts-only | --reconcile-receipts)";
+const USAGE: &str = "create-learned-generated CONFIG LEARNED_RECIPE --resume --serve-receipts ACTOR_PROFILE --history-anchor INPUT [--topology-profile PATH] [--finish-after-message PREVIOUS_REQUEST] [--retain-history-anchor NEW_OUTPUT [--retain-topology-checkpoint NEW_OUTPUT]] [--recover-receipt-checkpoint] (--receipts-only | --reconcile-receipts)";
 const EXPIRED: &str = "learned receipt service startup deadline reached";
 const ACKNOWLEDGED: &str = "learned receipt reconciliation acknowledged";
+
+// The repair cursor owns only the one selected message/finish and the original
+// checkpoint. It cannot be upgraded to general recovery or live actor admission.
+enum ReceiptRecovery {
+    Original(Cursor),
+    Repair(FileReceiptTopologyRecovery),
+}
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub(in super::super::super) enum Mode {
@@ -49,7 +59,13 @@ pub(in super::super::super) fn command_with<F>(
 where
     F: FnOnce() -> ElapsedTick,
 {
-    let (args, source_output) = custody::take_option(args)?;
+    let mode_at_end = matches!(args.last().map(String::as_str),
+        Some("--receipts-only" | "--reconcile-receipts"));
+    let (args, repair) = custody::take_repair_option(args).map_err(|_| USAGE.to_owned())?;
+    if repair && !mode_at_end {
+        return Err(USAGE.into());
+    }
+    let (args, source_output) = custody::take_option(&args)?;
     let (args, topology_path) = topology::take_option(&args)?;
     // Preserve the original fixed service prefix and mandatory input position.
     // Shared parsers may remove only independently admitted archive options.
@@ -71,11 +87,11 @@ where
         _ => return Err(USAGE.into()),
     };
     if mode == Mode::Passive
-        && (source_output.is_some() || args.iter().any(|arg| arg == "--retain-history-anchor"))
+        && (repair || source_output.is_some() || args.iter().any(|arg| arg == "--retain-history-anchor"))
     {
         return Err(USAGE.into());
     }
-    custody::check_options(&args, topology_path.as_deref(), source_output.as_deref())?;
+    custody::check_repair_options(&args, topology_path.as_deref(), source_output.as_deref(), repair)?;
     // Path-valued options precede mode removal, so a missing path cannot consume
     // a boolean flag or be repaired by removing it from a neighboring option.
     let (args, anchor_options) = anchors::take_options(&args)?;
@@ -111,7 +127,7 @@ where
         topology_path.as_deref(),
         topology::Mode::Historical,
     )?;
-    let outputs = custody::admit(&config, &loaded, source_output.as_deref())?;
+    let outputs = custody::admit_repair(&config, &loaded, source_output.as_deref(), repair)?;
     let report = serve_with_custody(
         &config,
         &loaded,
@@ -197,17 +213,33 @@ where
         finish::check_ids(loaded.request, after)?;
     }
     actor.check_host(config)?;
+    if let Some(outputs) = outputs {
+        // A create-new archive must not name the socket that this service is
+        // about to bind. Check canonical parents before replay or settlement.
+        outputs.check_service_socket(&actor.socket)?;
+    }
     checkpoint(wall, elapsed)?;
     // The existing cursor chooses exact plain/raw/owned guards and checks the
     // independently supplied anchor, complete recipe and original terminal reserve.
-    let mut run = Cursor::begin(config, loaded)?;
+    let mut run = if outputs.is_some_and(custody::Outputs::repair_requested) {
+        ReceiptRecovery::Repair(super::super::selected::begin_receipt_checkpoint_repair(
+            config, loaded, after,
+        )?)
+    } else {
+        ReceiptRecovery::Original(Cursor::begin(config, loaded)?)
+    };
     loop {
         checkpoint(wall, elapsed)?;
-        let progress = run.progress();
+        let progress = match &run {
+            ReceiptRecovery::Original(run) => run.progress(),
+            ReceiptRecovery::Repair(run) => run.progress(),
+        };
         match progress.status {
             FileLearnedRecoveryStatus::Replaying => {
-                run.advance(progress.replayed_events)
-                    .map_err(crate::config::debug)?;
+                match &mut run {
+                    ReceiptRecovery::Original(run) => run.advance(progress.replayed_events),
+                    ReceiptRecovery::Repair(run) => run.advance(progress.replayed_events, 1),
+                }.map_err(crate::config::debug)?;
             }
             FileLearnedRecoveryStatus::Ready => break,
             _ => return Err("original learned receipt replay is unavailable".into()),
@@ -215,8 +247,10 @@ where
     }
     // Existence, kind and exact accepted finish predecessor precede socket
     // binding, clock and mutation. A missing selection cannot spend a fence.
-    run.receipt(loaded.request, after)
-        .map_err(crate::config::debug)?;
+    match &run {
+        ReceiptRecovery::Original(run) => run.receipt(loaded.request, after).map(|_| ()),
+        ReceiptRecovery::Repair(run) => run.check_request(),
+    }.map_err(crate::config::debug)?;
     let socket = BoundSocket::bind(&actor.socket, None)?;
     actor.secure_socket()?;
     checkpoint(wall, elapsed)?;
@@ -225,13 +259,24 @@ where
             "learned receipt service finalization unconfirmed: {error:?}; no effect retry was sent"
         )
     };
-    let port = match mode {
-        Mode::Passive => run
-            .finish_receipt_port(loaded.request, after)
-            .map_err(unconfirmed)?,
-        Mode::Reconcile => {
-            if let Some(outputs) = outputs {
-                let acknowledged = match topology::history(loaded)? {
+    let (port, acknowledged) = match (mode, run) {
+        (Mode::Passive, ReceiptRecovery::Original(run)) => (
+            run.finish_receipt_port(loaded.request, after).map_err(unconfirmed)?,
+            None,
+        ),
+        (Mode::Passive, ReceiptRecovery::Repair(_)) => {
+            return Err("passive receipt service cannot repair checkpoint custody".into());
+        }
+        (Mode::Reconcile, ReceiptRecovery::Repair(run)) => {
+            // A complete saved-cut triplet is only confirmed and re-exported;
+            // the native cursor cannot read this clock or append another event.
+            let (port, result) = run.finish_reconciled_receipt_port_with_history(clock)
+                .map_err(unconfirmed)?;
+            (port, Some(result))
+        }
+        (Mode::Reconcile, ReceiptRecovery::Original(run)) => {
+            if outputs.is_some() {
+                let result = match topology::history(loaded)? {
                     Some(history) => {
                         let saved = history.checkpoint().ok_or(
                             "receipt service custody requires an exact v2 source checkpoint",
@@ -248,22 +293,22 @@ where
                         after,
                         clock,
                     ),
-                }
-                .map_err(unconfirmed)?;
-                let (port, result) = acknowledged;
-                // The native replacement has ACKNOWLEDGED. Retain both archives
-                // before checking a late deadline or exposing the immutable port.
-                // A failed export cannot request another sweep or effect send.
-                outputs.retain(config, loaded, &result).map_err(|error| format!(
-                    "{ACKNOWLEDGED} at revision {}; custody retention failed: {error}; no receipt was served and no effect retry was sent",
-                    result.history_anchor().revision()))?;
-                port
+                }.map_err(unconfirmed)?;
+                (result.0, Some(result.1))
             } else {
-                run.finish_reconciled_receipt_port(loaded.request, after, clock)
-                    .map_err(unconfirmed)?
+                (run.finish_reconciled_receipt_port(loaded.request, after, clock)
+                    .map_err(unconfirmed)?, None)
             }
         }
     };
+    if let Some(result) = acknowledged {
+        // A fresh replacement or existing canonical triplet has ACKNOWLEDGED.
+        // Both independent exports precede a late deadline or actor exchange.
+        let outputs = outputs.ok_or("receipt service acknowledged without selected custody outputs")?;
+        outputs.retain(config, loaded, &result).map_err(|error| format!(
+            "{ACKNOWLEDGED} at revision {}; custody retention failed: {error}; no receipt was served and no effect retry was sent",
+            result.history_anchor().revision()))?;
+    }
     // The recovered Store lock, live generation state and roles are gone.
     // Caller configuration and immutable recipes may remain; neither reaches
     // transport. The port retains only the selected exact envelope and outcome.

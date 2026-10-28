@@ -1,5 +1,40 @@
 # Implementation status · design revision 0.3
 
+## 2026-10-28: repair learned receipt custody before resident actor exchange
+
+The learned resident receipt service now supports
+`--recover-receipt-checkpoint` with the original matching v2 source/history pair,
+both fresh outputs and final `--reconcile-receipts` mode. It consumes the same
+sealed native recovery with full plain/raw/owned guards and bounded replay.
+Exact historical selection and socket binding/security precede native
+confirmation or settlement; both exports precede late deadline handling or
+any actor-frame exchange. Failed retention serves no receipt while preserving
+successful partner archives and the confirmed revision.
+
+Retained output paths are now rejected if they alias the service socket,
+including canonical-parent/ancestor aliases. This check runs before recovery
+for both ordinary retained reconciliation and explicit repair. Original
+immediate option values and final mode position also remain validated.
+No source budget is refreshed, no unknown effect is resent, and the actor gains
+only its original immutable selected outcome.
+
+Six new service regression functions cover actual source-backed publication,
+lost exports/repeated repair, reconnect, independent output races, late expiry,
+kernel-peer rejection, malformed input/floors, canonical/cleanup/suffix failures
+and 36 archive/socket collision combinations with a positive exchange control.
+Together this wave adds **22 regression functions** (nine native, seven one-shot,
+six service) and two forbidden wrapper-owner examples.
+
+All **18 native receipt tests pass**, including the nine new cases; both
+compile-fail controls refuse owner escape. The final production executable
+passes metadata checking and changed sources pass syntax parsing and independent
+review. The thirteen new operator/service functions remain unexecuted and lack
+a completed final full-target metadata result: shared-cgroup OOM events stopped
+the full operator checks before a harness existed. No assertions or registrations
+were weakened. Concurrent main changes are preserved; canonical workspace/RCH
+qualification and Beads remain open. See
+[resident repair](docs/LEARNED_RECEIPT_SERVICE.md#repair-interrupted-exports-before-serving).
+
 ## 2026-10-28: expose receipt checkpoint repair through the learned operator
 
 The one-shot learned command now accepts `--recover-receipt-checkpoint` only

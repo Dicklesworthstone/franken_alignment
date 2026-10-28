@@ -367,3 +367,5 @@ fn real_service_command_loads_only_historical_assets_and_closes_its_option_gramm
 }
 
 #[path = "receipt_service/custody.rs"] mod custody_tests;
+
+#[path = "receipt_service/repair.rs"] mod repair_tests;

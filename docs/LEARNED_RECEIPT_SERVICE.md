@@ -17,7 +17,8 @@ supervise_publication create-learned-generated CONFIG FINISH_RECIPE --resume --s
 The same finish selection is available with `--reconcile-receipts`. The argument
 order is closed: one actor profile, one mandatory input anchor, at most one
 explicit finish predecessor, and one selected mode as the final argument.
-Reconciliation also accepts explicit retained outputs, described below.
+Reconciliation also accepts explicit retained outputs and the narrowly scoped
+`--recover-receipt-checkpoint` option, described below.
 Credibility activation, reviewer/live-generation flags, stop, audit and mixed
 receipt modes are rejected; passive mode also rejects either retained-output
 flag before configuration intake. Existing no-output learned receipt commands
@@ -125,7 +126,10 @@ and the matching input anchor. A finish additionally selects
 `--finish-after-message PREVIOUS_REQUEST` before the final mode.
 
 Both outputs must be new absolute paths, distinct after parent normalization,
-and outside the authority store. Option and path admission precede replay.
+and outside the authority store. Neither may name the service socket, including
+through a symlinked parent or ancestor alias. The socket and both output paths
+are compared using canonical parents before recovery begins. Option and path
+admission precede replay.
 Original request selection, socket binding/security and the pre-finalization
 deadline checks still precede the trusted clock and replacement. In particular,
 an occupied socket leaves the journal and staged files unchanged.
@@ -149,8 +153,59 @@ source checkpoint for subsequent passive service or explicit reconciliation.
 See [retained receipt custody](LEARNED_RECEIPT_RECONCILIATION.md#retained-topology-receipt-custody)
 for profile selection and the next passive command. No-output reconciliation
 preserves the previous behavior and makes an older v2 checkpoint stale when the
-journal advances. Interrupted receipt exports have no automatic suffix-repair
-mode; preserve the original and every successfully written successor archive.
+journal advances. Interrupted receipt exports require the explicit restricted
+repair mode below; preserve the original and every successfully written
+successor archive.
+
+
+## Repair interrupted exports before serving
+
+Use the original independent matching v2 source/history pair, two fresh output
+paths, and `--recover-receipt-checkpoint` before the final reconciliation mode:
+
+```sh
+supervise_publication create-learned-generated CONFIG.json LEARNED_RECIPE.json \
+  --resume --serve-receipts ACTOR_PROFILE.json \
+  --history-anchor /operator/custody/history-0.anchor \
+  --topology-profile /operator/custody/receipts-0.json \
+  --retain-history-anchor /operator/custody/history-repaired.anchor \
+  --retain-topology-checkpoint /operator/custody/source-repaired.bin \
+  --recover-receipt-checkpoint --reconcile-receipts
+```
+
+Keep the original selected request and, for a finish, its exact
+`--finish-after-message PREVIOUS_REQUEST` before the final mode. Missing or
+mismatched custody, version-1 manual minima, incomplete outputs, duplicate/mixed
+flags and passive repair refuse before recovery. Original immediate option
+values are validated before stripping any flag. The original fixed actor
+profile/input prefix and final-mode position remain required.
+
+The service uses the same restricted native repair cursor as the one-shot
+operator, with full original plain/raw/owned numerical replay, guards, current
+credential epoch, source history, floors and reserve. At the unchanged cut it
+performs the original settlement. With exactly one complete Fence/Time/Sweep
+after the saved prefix, it confirms that existing cut with canonical reread,
+synchronization and cleanup, without another clock, event, replacement or sweep.
+Every partial, extra or unrelated suffix refuses. See
+[the native repair contract](LEARNED_RECEIPT_RECONCILIATION.md#recover-source-custody-after-interrupted-receipt-exports).
+
+Archive/socket alias checks run before opening recovery. After complete replay,
+the exact historical request and finish predecessor are checked before the
+socket is bound and secured. Occupied or insecure sockets therefore refuse
+before native confirmation, cleanup or mutation. The original invocation
+deadline still covers every replay event, Ready and finalization.
+
+Both independent archives are attempted before late-deadline handling or
+construction of a peer session. Any requested retention failure serves no
+receipt, preserves a successful partner archive and reports the confirmed
+revision. A later deadline or rejected kernel peer cannot erase successful
+retention. No actor frames can initiate repair, reconciliation or source work.
+
+The original sealed port carries only its exact historical envelope and
+redacted outcome. Unknown remains Unknown, Cancel remains refused, and reconnect
+does not refresh the observation. Choose new output paths for another explicit
+repair invocation while the permitted successor remains current. Successful
+repair supports later passive service from the newly retained matching pair.
 
 ## What the actor can access
 
@@ -231,3 +286,25 @@ The native integration target passes all nine functions, including its four new
 custody controls. See the
 [combined verification record](LEARNED_RECEIPT_RECONCILIATION.md#verification-update-2026-10-27)
 for scope and the separate interrupted full library-unit check.
+
+## Receipt repair verification, 2026-10-28
+
+Six new resident regression functions are authored against the real original
+service fixtures. They cover all three learned modes, loss of either/both
+archives, repeated recovery and exact sealed-port reconnect, independent output
+races, retention before late expiry or rejected kernel credentials, malformed
+options/custody, higher floors, occupied sockets, changed canonical bytes,
+partial/unrelated suffixes and real confirmation-cleanup failure. The archive/
+socket collision function covers 36 mode/selection/output/alias combinations,
+then includes a valid real peer exchange control. Existing fixture bodies and
+assertions are retained; only narrow visibility is shared with the new tests.
+
+The final production executable passes direct metadata checking, and all
+18 native receipt integration tests pass. Changed Rust sources pass syntax
+parsing and independent review. The complete operator test metadata/build
+attempts were interrupted by shared host OOM pressure before a runnable harness
+or final full-target typecheck existed. These six new resident functions,
+together with the seven new one-shot functions, remain unexecuted. No tests,
+assertions or libtest registrations were removed. See the
+[operator verification record](LEARNED_RECEIPT_RECONCILIATION.md#operator-repair-verification-2026-10-28)
+for the actual attempts; canonical workspace/RCH gates and Beads remain open.

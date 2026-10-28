@@ -8,10 +8,10 @@ use fa_reference::action::consequence::delivery::persistent::observed::driver::t
 };
 use std::io::Cursor;
 
-struct TopologyCase {
-    case: Case,
-    original: TopologyCheckpoint,
-    profile: PathBuf,
+pub(super) struct TopologyCase {
+    pub(super) case: Case,
+    pub(super) original: TopologyCheckpoint,
+    pub(super) profile: PathBuf,
 }
 
 fn historical(root: &Root, source: &Path, operation: u64, name: &str) -> PathBuf {
@@ -34,7 +34,7 @@ fn historical(root: &Root, source: &Path, operation: u64, name: &str) -> PathBuf
     path
 }
 
-fn published(mode: Option<bool>) -> TopologyCase {
+pub(super) fn published(mode: Option<bool>) -> TopologyCase {
     let root = Root::new();
     let (mut config, path, loaded) = topology_fixture::selected(&root, mode, false);
     let deadline = deadline();
@@ -190,7 +190,7 @@ fn published(mode: Option<bool>) -> TopologyCase {
     }
 }
 
-fn args(
+pub(super) fn args(
     setup: &TopologyCase,
     input: &Path,
     profile: &Path,
@@ -231,13 +231,13 @@ fn args(
     args
 }
 
-fn source(path: &Path) -> TopologyCheckpoint {
+pub(super) fn source(path: &Path) -> TopologyCheckpoint {
     let bytes = fs::read(path).unwrap();
     TopologyCheckpoint::read_trusted(&mut Cursor::new(bytes), MAX_TOPOLOGY_CHECKPOINT_BYTES)
         .unwrap()
 }
 
-fn same_source(original: &TopologyCheckpoint, current: &TopologyCheckpoint, revision: u64) {
+pub(super) fn same_source(original: &TopologyCheckpoint, current: &TopologyCheckpoint, revision: u64) {
     assert_eq!(current.history_anchor().revision(), revision);
     assert_eq!(current.topology_bytes(), original.topology_bytes());
     assert_eq!(current.inventory_bytes(), original.inventory_bytes());
@@ -249,7 +249,7 @@ fn same_source(original: &TopologyCheckpoint, current: &TopologyCheckpoint, revi
     assert!(current.minimum().authority_epoch >= original.minimum().authority_epoch);
 }
 
-fn pair(setup: &TopologyCase, history: &Path, source_path: &Path, revision: u64) {
+pub(super) fn pair(setup: &TopologyCase, history: &Path, source_path: &Path, revision: u64) {
     let current = source(source_path);
     same_source(&setup.original, &current, revision);
     assert_eq!(
@@ -258,7 +258,7 @@ fn pair(setup: &TopologyCase, history: &Path, source_path: &Path, revision: u64)
     );
 }
 
-fn serve_command(
+pub(super) fn serve_command(
     setup: &TopologyCase,
     args: &[String],
     mode: Mode,

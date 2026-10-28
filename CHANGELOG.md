@@ -1,5 +1,18 @@
 # Changelog
 
+## 2026-10-28: repair receipt service custody before actor exchange
+
+- Add explicit receipt-checkpoint repair to the resident learned service,
+  retaining full guarded replay and pre-confirmation request/socket validation.
+- Attempt both new archives before late expiry or peer exchange; a retention
+  failure serves no receipt and keeps successful custody without an effect retry.
+- Reject archive destinations that alias the service socket, including canonical
+  parent/ancestor aliases, before opening recovery in ordinary and repair modes.
+- Add six service regressions. This wave totals 22 new regression functions
+  and two forbidden-owner examples. All 18 native receipt tests and production
+  executable metadata pass; thirteen new operator/service functions remain
+  unexecuted and final full-target checks remain blocked by shared OOM pressure.
+
 ## 2026-10-28: add explicit learned receipt checkpoint repair command
 
 - Add `--recover-receipt-checkpoint` with required matching v2 input custody,
