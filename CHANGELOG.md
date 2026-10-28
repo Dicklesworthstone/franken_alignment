@@ -1,5 +1,19 @@
 # Changelog
 
+## 2026-10-27: add guarded recovery and operator access for unknown abandonment
+
+- Consume complete base/mediated recovery into an acknowledged disposition,
+  snapshot and retained history anchor without exposing a live owner, appending
+  a Fence, refreshing evidence or resending an effect.
+- Add the closed `abandon-unknown` command, immutable request schema, independent
+  input/output custody, cooperative deadline checks and exact-request recovery
+  after acknowledged retention/report failures.
+- Preserve Unknown endpoint knowledge, charges, unresolved Stop liabilities and
+  stream barriers; register the existing resolve mapping and operator playbook.
+- Add nine guarded and twelve operator regression functions. All fourteen
+  changed Rust files pass syntax parsing; compilation and execution remain
+  pending the required remote RCH gate.
+
 ## 2026-10-27: retain receipt service custody before peer exchange
 
 - Add retained history and paired v2 source checkpoints to explicit learned

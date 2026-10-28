@@ -4,6 +4,7 @@
 #[path = "guarded/profile.rs"] mod profile;
 #[path = "guarded/recovery.rs"] mod recovery;
 #[path = "guarded/phases.rs"] pub(super) mod phases;
+#[path = "guarded/abandonment.rs"] pub(crate) mod abandonment;
 pub(crate) use profile::{CreationOutput, Custody, Profile, ResumeProfile, SubmitProfile};
 use super::{Config, debug, report};
 use fa_reference::action::ElapsedTick;

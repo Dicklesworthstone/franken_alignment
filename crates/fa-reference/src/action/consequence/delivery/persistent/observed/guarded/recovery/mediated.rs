@@ -11,6 +11,7 @@ use std::path::Path;
 
 mod reconciled;
 mod stopped;
+mod abandonment;
 pub use reconciled::ReconciledMediatedOwner;
 
 /// One frozen canonical image and exclusive writer lock. A poll executes at most

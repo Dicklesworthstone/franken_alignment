@@ -1,6 +1,6 @@
 # Agent guide: operating FrankenAlignment from the driver's seat
 
-**Who this is for.** An AI agent (or a human using the same surface) that operates, investigates or supervises a FrankenAlignment deployment: the operator agent, not the controlled actor. Developer conventions are in [`AGENTS.md`](../AGENTS.md); the one-page model is [`docs/SYSTEM_MAP.md`](SYSTEM_MAP.md). Everything here describes the prospective surface of plan §17; none of these commands exists as code today.
+**Who this is for.** An AI agent (or a human using the same surface) that operates, investigates or supervises a FrankenAlignment deployment: the operator agent, not the controlled actor. Developer conventions are in [`AGENTS.md`](../AGENTS.md); the one-page model is [`docs/SYSTEM_MAP.md`](SYSTEM_MAP.md). The `fa ...` commands describe the prospective surface of plan §17. Implemented reference adapters are identified explicitly below; they do not establish the complete deployment surface.
 
 **The contract you can rely on.** Every value you receive carries its epistemic status; every object has an address; every mutation is idempotent with an expected predecessor; every rehearsal is labeled and can never mint a permit; every error is a plan (it names what would change it). You never need to guess whether a number is measured, whether an absence is observed or merely unobserved, or whether a command changed the world.
 
@@ -43,8 +43,28 @@ The actor gets no channel into this playbook. Its statements, if any, enter only
 ### P3. An effect's outcome is unknown
 
 1. `fa situation --scope run` lists it under unknown effects with its adapter's idempotency contract.
-2. If the adapter is `RemoteIdempotent`: `fa resolve <attempt> --reconcile` re-queries under the same key. If `NonIdempotent`: `fa resolve <attempt> --disposition <ConfirmedNotExecuted|Confirmed|IrrecoverablyUnknown>` requires an independently established outcome and the authority to record it.
-3. Never `propose` the same effect again to "make sure"; the reserved units stay charged until reconciled (plan §25.3).
+2. If the adapter is `RemoteIdempotent`: `fa resolve <attempt> --reconcile` re-queries under the same key. If `NonIdempotent`: `fa resolve <attempt> --disposition <ConfirmedNotExecuted|Confirmed>` requires an independently established outcome and the authority to record it. Selecting `IrrecoverablyUnknown` instead records a permanent unresolved liability; it never establishes whether the effect executed.
+3. Never `propose` the same effect again to "make sure". Unknown and irrecoverably unknown effects retain their conservative charge; retention expiry alone never selects abandonment (plan §25.3).
+
+**Implemented source-publication reference mapping.** The trusted supervisor may
+explicitly record that final unresolved disposition with
+`supervise_publication abandon-unknown CONFIG REQUEST_JSON --guarded RECOVERY_PROFILE`.
+Supply the original attempt, an operation ID and independently selected control
+sequence/authority epoch in the closed `fa.abandon-unknown/1` request. `CONFIG`
+and the `fa.guarded-abandon/1` or `/2` recovery profile must select the complete
+applicable guards and independently retained input history. The profile also
+requires a new output archive outside the authority store. This consumes guarded recovery without returning a live
+owner or advancing the predecessor through a Fence. It removes only the selected
+sendable envelope and records `IrrecoverablyUnknown`; actor outcomes remain
+Unknown, streams remain blocked, and Stop still lists the liability as unresolved
+and irrecoverable. An empty pending sweep is not a drained domain.
+
+Keep the exact original request after acknowledgment, including when anchor
+retention or stdout fails. A retry with that same request returns its original
+receipt without another event; select a new output archive for the retry. Do not
+invent a new operation or resubmit the effect. See
+[the durable abandonment contract](DURABLE_UNKNOWN_ABANDONMENT.md) for schemas,
+profile limits and the pending execution-verification boundary.
 
 ### P4. A helper needs promotion, demotion or rotation
 
@@ -92,4 +112,4 @@ The actor gets no channel into this playbook. Its statements, if any, enter only
 
 ## What this guide does not do
 
-It does not grant authority; every verb's authority requirement is in the vocabulary registry and enforced by purpose contexts. It does not describe the controlled actor's surface, which is deliberately narrower (refusal codes, remedial actions and, under an `exact_predicates` disclosure profile, `fa precheck`). And it does not claim any command exists yet; see [`IMPLEMENTATION_STATUS.md`](../IMPLEMENTATION_STATUS.md).
+It does not grant authority; every verb's authority requirement is in the vocabulary registry and enforced by purpose contexts. It does not describe the controlled actor's surface, which is deliberately narrower (refusal codes, remedial actions and, under an `exact_predicates` disclosure profile, `fa precheck`). The explicit reference mappings do not claim the prospective `fa` CLI or a complete deployment exists; see [`IMPLEMENTATION_STATUS.md`](../IMPLEMENTATION_STATUS.md).

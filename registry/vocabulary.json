@@ -248,7 +248,7 @@
       "idempotency": "attempt id",
       "cost_class": "varies",
       "response": "Outcome",
-      "note": ""
+      "note": "Reference mapping: supervise_publication abandon-unknown CONFIG REQUEST_JSON --guarded RECOVERY_PROFILE records only IrrecoverablyUnknown. The trusted supervisor supplies the original attempt, a nonzero operation ID, exact control-sequence/authority-epoch predecessor, complete guards and independent history custody. An exact operation/request retry returns the original receipt; changed bindings refuse. Bounded canonical replay plus one ordinary-capacity journal event preserves all charges and unresolved stream barriers; no live authority escapes. The Knowledge result acknowledges disposition while the endpoint outcome remains Unknown. See docs/DURABLE_UNKNOWN_ABANDONMENT.md."
     },
     {
       "verb": "verify",

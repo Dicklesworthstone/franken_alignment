@@ -5,8 +5,9 @@ use fa_reference::action::ElapsedTick;
 use fa_reference::action::consequence::delivery::{StopRequest, persistent::observed::{
     guarded::{anchored::FileHistoryAnchor,
         mediated::{FileMediatedRecovery, FileMediatedRequirements, FileTopologyRequirement},
-        recovery::{FileGuardedRecovery, FileGuardedRecoveryProgress}},
+        recovery::{FileAbandonedHistory, FileGuardedRecovery, FileGuardedRecoveryProgress}},
     shutdown::recovery::{FileAdmissionStoppedHistory, FileStoppedHistory}}};
+use fa_reference::action::consequence::delivery::persistent::abandonment::FileAbandonRequest;
 
 // These variants are private to the executable. Neither can be converted into
 // the other; all mode-specific validation remains in its original library type.
@@ -52,6 +53,17 @@ impl Recovery {
     pub(super) fn stop_request(&self, operation: u64) -> Result<StopRequest, JournalError> {
         match self { Self::Base(run) => run.stop_request(operation),
             Self::Mediated(run) => run.stop_request(operation) }
+    }
+
+    // This consuming path cannot return a live owner or silently acquire a
+    // recovery Fence that changes the supplied abandonment predecessor.
+    pub(super) fn finish_abandoned_with_anchor(self, request: FileAbandonRequest)
+        -> Result<FileAbandonedHistory, JournalError>
+    {
+        match self {
+            Self::Base(run) => run.finish_abandoned_with_anchor(request),
+            Self::Mediated(run) => run.finish_abandoned_with_anchor(request),
+        }
     }
 
     // Forward only to the selected sealed cursor; it rechecks its complete

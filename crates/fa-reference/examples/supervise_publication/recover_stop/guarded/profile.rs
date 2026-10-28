@@ -32,10 +32,11 @@ impl Profile {
             max_items: 32, max_string_bytes: 4096 }).map_err(debug)?;
         let mut root = object(json)?;
         let version = take(&mut root, "schema_version")?;
-        // Only the stop reader may select v2. Receipt and new-work profiles
+        // Only the stop and abandonment readers may select v2. Receipt and new-work profiles
         // retain their exact original schema; no other mode ignores topology.
-        let mediated = schema == "fa.guarded-stop/1"
-            && version.as_str() == Some("fa.guarded-stop/2");
+        let mediated = matches!((schema, version.as_str()),
+            ("fa.guarded-stop/1", Some("fa.guarded-stop/2"))
+            | ("fa.guarded-abandon/1", Some("fa.guarded-abandon/2")));
         if !mediated && version.as_str() != Some(schema) {
             return Err(unsupported.into());
         }
@@ -102,6 +103,26 @@ impl Profile {
         }).transpose()?;
         Ok(Custody { anchor, output })
     }
+}
+
+/// Explicit disposition has its own closed schema and requires a new independent
+/// output archive. A stop/resume profile cannot accidentally select this action.
+pub(super) struct AbandonProfile(Profile);
+impl AbandonProfile {
+    pub(super) fn read(path: &Path) -> Result<Self, String> {
+        Self::decode(&read_regular(path, PROFILE_BYTES)?)
+    }
+
+    pub(super) fn decode(bytes: &[u8]) -> Result<Self, String> {
+        let profile = Profile::decode_schema(bytes, "fa.guarded-abandon/1",
+            "unsupported guarded abandonment profile")?;
+        if profile.output.is_none() {
+            return Err("guarded abandonment requires retain_history_anchor for a new output file".into());
+        }
+        Ok(Self(profile))
+    }
+
+    pub(super) fn profile(&self) -> &Profile { &self.0 }
 }
 
 /// Schema-separated receipt recovery. A stop profile is never a live-recovery

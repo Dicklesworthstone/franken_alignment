@@ -15,6 +15,8 @@ pub use andon::FileAndonRecovery;
 pub mod mediated;
 
 mod stopped;
+mod abandonment;
+pub use abandonment::FileAbandonedHistory;
 mod publication;
 pub use publication::FilePublicationRecoveryRequirements;
 mod reconciled;

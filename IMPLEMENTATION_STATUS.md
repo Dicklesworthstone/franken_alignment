@@ -1,5 +1,42 @@
 # Implementation status · design revision 0.3
 
+## 2026-10-27: expose guarded unknown abandonment through the offline operator
+
+The base and mediated guarded recovery cursors now consume the same fully
+replayed private state into an explicit abandonment receipt, acknowledged
+snapshot and exact history anchor. They recheck their complete independent
+requirements and canonical bytes, retain ordinary-capacity admission, and never
+return a live owner or append a recovery Fence that changes the selected
+predecessor. Exact retries preserve the original receipt and return the current
+acknowledged cut without another event, including at physical journal capacity.
+
+The Unix reference executable now accepts
+`supervise_publication abandon-unknown CONFIG REQUEST_JSON --guarded RECOVERY_PROFILE`.
+Its closed request and separate base/mediated profile schemas require independent
+input custody and a new outside-store output archive. One monotonic budget covers
+input admission and cooperative replay. After native acknowledgment, retention
+and reporting are both attempted even after a late deadline or independent
+output failure. Errors name the acknowledged revision and direct exact-request
+retry; they cannot imply that an effect was undone or resend it.
+
+The bounded report wraps the known disposition in Knowledge while its endpoint
+outcome stays Unknown. Charges, prior effects, unresolved Stop liabilities and
+blocked stream successors remain intact. The command uses the exact original
+source-publication guard inventory and does not downgrade learned, numerical or
+prediction/evaluation profiles into a weaker recovery path. The existing
+`resolve` vocabulary entry and P3 operator playbook identify this implementation.
+
+Nine guarded and twelve operator regression functions cover native state/byte
+equivalence, full guard and predecessor refusals, canonical forks/suffixes,
+interrupted replay, terminal reserve, all five storage barriers, required output
+custody, pre/post-acknowledgment deadlines, output races and lost responses.
+All fourteen changed Rust files passed the pinned nightly rustfmt syntax parser;
+the report template and registry JSON were also checked without Rust execution.
+Independent source reviews found no blocker. Compilation, runtime tests, Clippy
+and the canonical gate remain unverified because RCH is unavailable. The
+FA-014 scoped bead remains in progress. See
+[the complete contract and command schemas](docs/DURABLE_UNKNOWN_ABANDONMENT.md).
+
 ## 2026-10-27: retain learned receipt service custody before actor exchange
 
 The resident learned `--serve-receipts ... --reconcile-receipts` command now

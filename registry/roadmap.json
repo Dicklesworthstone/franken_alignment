@@ -411,7 +411,13 @@
         "crates/fa-reference/src/action/consequence/delivery/persistent/abandonment.rs",
         "crates/fa-reference/src/action/consequence/delivery/persistent/abandonment/tests.rs",
         "crates/fa-reference/src/action/consequence/delivery/persistent/observed/abandonment.rs",
-        "crates/fa-reference/src/action/consequence/delivery/persistent/observed/abandonment/tests.rs"
+        "crates/fa-reference/src/action/consequence/delivery/persistent/observed/abandonment/tests.rs",
+        "crates/fa-reference/src/action/consequence/delivery/persistent/observed/guarded/recovery/abandonment.rs",
+        "crates/fa-reference/src/action/consequence/delivery/persistent/observed/guarded/recovery/abandonment/tests.rs",
+        "crates/fa-reference/src/action/consequence/delivery/persistent/observed/guarded/recovery/abandonment/tests/mediated.rs",
+        "crates/fa-reference/examples/supervise_publication/recover_stop/guarded/abandonment.rs",
+        "crates/fa-reference/examples/supervise_publication/recover_stop/guarded/abandonment/tests.rs",
+        "crates/fa-reference/examples/supervise_publication/recover_stop/guarded/abandonment/operator_tests.rs"
       ]
     },
     {

@@ -1,4 +1,6 @@
 //! Actual source-publication operator, original journals and independent files.
+#[path = "guarded/abandonment/operator_tests.rs"]
+mod abandonment_operator_tests;
 use super::super::guarded::{self, Profile};
 use super::*;
 use fa_reference::action::consequence::delivery::persistent::{
