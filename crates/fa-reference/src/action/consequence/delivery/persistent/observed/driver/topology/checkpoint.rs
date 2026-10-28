@@ -4,6 +4,7 @@ mod credential;
 mod credential_recovery;
 mod recovery;
 mod reconciled;
+mod abandonment;
 mod terminal;
 pub use recovery::TopologyCheckpointResume;
 

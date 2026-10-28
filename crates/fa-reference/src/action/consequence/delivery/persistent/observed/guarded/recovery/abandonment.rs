@@ -2,7 +2,7 @@
 //! No live owner, role, fresh observation or recovered effect envelope escapes.
 use super::{
     BaseEvent, Event, FileGuardedRecovery, FileGuardedRecoveryStatus, FileHistoryAnchor,
-    JournalError, Transition, journal,
+    FileOversightProfile, JournalError, Machine, Transition, journal, storage,
 };
 use crate::Error;
 use crate::action::consequence::delivery::persistent::{
@@ -41,6 +41,58 @@ impl FileAbandonedHistory {
     pub fn history_anchor(&self) -> &FileHistoryAnchor {
         &self.anchor
     }
+
+    // Shared ORIGINAL persistence boundary for completely verified private
+    // recovery machines. Each concrete cursor must first enforce its complete
+    // independent guard contract; no public caller or weaker cursor escapes.
+    pub(in crate::action::consequence::delivery::persistent::observed)
+    fn finish_verified(
+        profile: FileOversightProfile,
+        store: storage::Store,
+        canonical: Vec<u8>,
+        events: Vec<Event>,
+        mut machine: Machine,
+        request: FileAbandonRequest,
+    ) -> Result<Self, JournalError> {
+        let previous = machine.preflight_abandon_unknown(request)?;
+        if store.read(profile.delivery.limits.bytes)? != canonical {
+            return Err(Error::Binding.into());
+        }
+        if let Some(receipt) = previous {
+            let snapshot = machine.snapshot(events.len());
+            store.confirm_and_cleanup()?;
+            let anchor = FileHistoryAnchor::from_acknowledged(events.len(), canonical);
+            return Ok(Self {
+                receipt,
+                snapshot,
+                anchor,
+            });
+        }
+
+        let event = Event::Core(BaseEvent::AbandonUnknown(request));
+        // Canonical prefix admission enforces ordinary capacity before the
+        // private reducer changes state or any staging file is touched.
+        let bytes = journal::encode_appended(&profile, store.identity(), &events, &event)?;
+        let receipt = match machine.apply(&event)? {
+            Transition::Abandoned(receipt) => receipt,
+            _ => unreachable!("abandonment transition"),
+        };
+        let count = events.len().checked_add(1).ok_or(Error::Overflow)?;
+        let snapshot = machine.snapshot(count);
+        // No second replay or exported candidate exists. Recheck the exact
+        // canonical bytes after preflight, before cleanup and publication.
+        if store.read(profile.delivery.limits.bytes)? != canonical {
+            return Err(Error::Binding.into());
+        }
+        store.confirm_and_cleanup()?;
+        store.replace(&bytes)?;
+        let anchor = FileHistoryAnchor::from_acknowledged(count, bytes);
+        Ok(Self {
+            receipt,
+            snapshot,
+            anchor,
+        })
+    }
 }
 
 impl FileGuardedRecovery {
@@ -71,7 +123,7 @@ impl FileGuardedRecovery {
     // Sealed composition: specialised cursors must supply their COMPLETE
     // original requirements; callers cannot replace this with a weaker check.
     pub(super) fn finish_abandoned_checked_with_anchor(
-        mut self,
+        self,
         request: FileAbandonRequest,
         check: impl FnOnce(&Self) -> Result<(), Error>,
     ) -> Result<FileAbandonedHistory, JournalError> {
@@ -83,45 +135,9 @@ impl FileGuardedRecovery {
             FileGuardedRecoveryStatus::Replaying => return Err(Error::Incomplete.into()),
         }
         check(&self)?;
-        let previous = self.machine.preflight_abandon_unknown(request)?;
-        if self.store.read(self.profile.delivery.limits.bytes)? != self.canonical {
-            return Err(Error::Binding.into());
-        }
-        if let Some(receipt) = previous {
-            let snapshot = self.machine.snapshot(self.events.len());
-            self.store.confirm_and_cleanup()?;
-            let anchor = FileHistoryAnchor::from_acknowledged(self.events.len(), self.canonical);
-            return Ok(FileAbandonedHistory {
-                receipt,
-                snapshot,
-                anchor,
-            });
-        }
-
-        let event = Event::Core(BaseEvent::AbandonUnknown(request));
-        // Canonical prefix admission enforces ordinary capacity before the
-        // private reducer changes state or any staging file is touched.
-        let bytes =
-            journal::encode_appended(&self.profile, self.store.identity(), &self.events, &event)?;
-        let receipt = match self.machine.apply(&event)? {
-            Transition::Abandoned(receipt) => receipt,
-            _ => unreachable!("abandonment transition"),
-        };
-        let count = self.events.len().checked_add(1).ok_or(Error::Overflow)?;
-        let snapshot = self.machine.snapshot(count);
-        // No second replay or exported candidate exists. Recheck the exact
-        // canonical bytes after preflight, before cleanup and publication.
-        if self.store.read(self.profile.delivery.limits.bytes)? != self.canonical {
-            return Err(Error::Binding.into());
-        }
-        self.store.confirm_and_cleanup()?;
-        self.store.replace(&bytes)?;
-        let anchor = FileHistoryAnchor::from_acknowledged(count, bytes);
-        Ok(FileAbandonedHistory {
-            receipt,
-            snapshot,
-            anchor,
-        })
+        FileAbandonedHistory::finish_verified(
+            self.profile, self.store, self.canonical, self.events, self.machine, request,
+        )
     }
 }
 

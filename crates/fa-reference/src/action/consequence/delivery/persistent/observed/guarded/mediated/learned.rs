@@ -217,6 +217,31 @@ impl FileMediatedLearnedRecovery {
         self.inner.finish_proposal_investigation()
     }
 
+    /// Complete only the selected Unknown -> IrrecoverablyUnknown disposition
+    /// after this cursor's full original guard, numerical, policy, credential
+    /// and floor checks. No recovery Fence, clock, live owner or role escapes.
+    /// Exact retries retain the original receipt without another event; charges
+    /// and blocked stream successors remain unchanged.
+    pub fn finish_abandoned_with_anchor(
+        self,
+        request: crate::action::consequence::delivery::persistent::abandonment::FileAbandonRequest,
+    ) -> Result<super::super::recovery::FileAbandonedHistory, JournalError> {
+        self.check_ready()?;
+        self.inner.finish_abandoned_with_anchor(request)
+    }
+
+    /// Preserve independently selected source custody through only this exact
+    /// native abandonment. The saved cut or its one matching event is checked
+    /// before cleanup or mutation, retaining every original wrapper requirement.
+    pub fn finish_abandoned_with_checkpoint(
+        self,
+        request: crate::action::consequence::delivery::persistent::abandonment::FileAbandonRequest,
+        saved: &crate::action::consequence::delivery::persistent::observed::driver::topology::checkpoint::TopologyCheckpoint,
+    ) -> Result<super::super::recovery::FileAbandonedHistory, JournalError> {
+        self.check_ready()?;
+        self.inner.finish_abandoned_with_checkpoint(request, saved)
+    }
+
     /// Restrict this original cursor to repairing source custody across either
     /// the exact retained cut or one complete Fence/Time/Sweep successor. Full
     /// independent replay remains mandatory; no live recovery owner can escape.
