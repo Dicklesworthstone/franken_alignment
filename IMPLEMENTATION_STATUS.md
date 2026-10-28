@@ -1,5 +1,38 @@
 # Implementation status · design revision 0.3
 
+## 2026-10-28: repair interrupted learned receipt checkpoint exports natively
+
+A sealed `FileReceiptTopologyRecovery` now consumes the original mediated
+plain/raw/owned learned cursor with one independently retained v2 source
+checkpoint and selected historical request. It admits only the unchanged exact
+cut or exactly one Fence/Time/Sweep successor. Full original numerical replay,
+policy/predictor/current-credential checks, terminal reserve, selected message or
+finish predecessor and independently strengthened floors remain required.
+
+At the unchanged cut it performs the original one-clock, three-event settlement.
+At the complete successor it rereads canonical bytes, synchronizes storage and
+cleans verified staging without another clock, event, replacement or sweep.
+Failed confirmation returns no candidate custody. No owner or source-observation
+capability escapes. Source work and last operation remain unchanged; unresolved
+effects remain charged. The triplet proves source succession, not a triggering
+request or single-batch provenance. Partial, reordered, repeated, source,
+credential, Stop and AbandonUnknown suffixes refuse. Ordinary recovery stays
+strict.
+
+The complete native receipt target passes **18/18** in 59.96 seconds, including
+all nine new repair functions and all existing tests. The first run passed
+16/18; the two new fixtures were corrected to supply the original predictive
+finish forecast and to respect native Sweep clock readiness before testing an
+invalid suffix. No production guard or original assertion was weakened. Real
+library/integration metadata checks and the full linked library pass; both new
+owner-escape snippets fail with E0599. The library source manifest is
+`aeff8b3660d0a0097345c7944f46b625bab4808b40bdefa18732a0499e3d68bf`.
+Checks use nightly-2026-08-31, the matching official Cranelift library and the
+unchanged LLVM integration harness with 32 MiB stacks. They include concurrent
+main source through `fcc8fe766` but do not qualify every abandonment case.
+Canonical workspace/RCH gates and Beads remain open. See
+[the native repair contract](docs/LEARNED_RECEIPT_RECONCILIATION.md#recover-source-custody-after-interrupted-receipt-exports).
+
 ## 2026-10-27: expose guarded unknown abandonment through the offline operator
 
 The base and mediated guarded recovery cursors now consume the same fully

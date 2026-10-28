@@ -249,6 +249,33 @@ fn check_machine(profile: &FileOversightProfile, machine: &Machine, events: &[Ev
 }
 
 impl FilePredictiveMediatedLearnedRecovery {
+    /// Restrict this original cursor to repairing source custody across either
+    /// the exact retained cut or one complete Fence/Time/Sweep successor. Full
+    /// independent replay remains mandatory; no live recovery owner can escape.
+    /// The selected historical request need not have triggered the old sweep.
+    pub fn require_receipt_checkpoint(mut self,
+        saved: &super::super::super::driver::topology::checkpoint::TopologyCheckpoint,
+        request: u64, finish_after: Option<u64>)
+        -> Result<super::receipt::FileReceiptTopologyRecovery, JournalError>
+    {
+        let progress = self.progress();
+        let reconciled = super::receipt::prepare(&self.inner, progress,
+            &mut self.expected.topology, &mut self.expected.oversight.minimum, saved)?;
+        Ok(super::receipt::FileReceiptTopologyRecovery::predictive(
+            self, saved, request, finish_after, reconciled))
+    }
+
+    // Only the restricted checkpoint wrapper can confirm an already replayed
+    // settlement. The original full requirements are repeated before cleanup.
+    pub(super) fn confirm_reconciled_receipt_with_history(self, request: u64,
+        finish_after: Option<u64>,
+        saved: &super::super::super::driver::topology::checkpoint::TopologyCheckpoint)
+        -> Result<crate::action::consequence::delivery::persistent::observed::decoder::learned::FileReconciledLearnedReceipt, JournalError>
+    {
+        self.check_ready()?;
+        self.inner.confirm_reconciled_receipt_with_history(request, finish_after, saved)
+    }
+
     /// Restrict the still-unreplayed original cursor to one exact credential
     /// maintenance operation after retained source-checkpoint admission.
     /// Only its Fence/Rotate/Revoke suffix may explain an unexported cut.

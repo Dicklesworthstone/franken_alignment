@@ -241,9 +241,11 @@ remain separate from the redacted actor response. The port still cannot cancel,
 admit a new request, refresh an outcome or obtain a live owner.
 
 All export operations remain independent of native acknowledgment. Retain the
-previous source/history pair until its successor has been saved. These APIs do
-not infer a safe suffix from a stale checkpoint, perform a zero-event settlement
-retry, or authenticate operator-provided archives. Unknown dispatched effects
+previous source/history pair until its successor has been saved. These ordinary
+exact-cut finalizers do not infer a safe suffix from a stale checkpoint, perform
+a zero-event settlement retry, or authenticate operator-provided archives. The
+separate restricted repair cursor below handles the specifically checked
+receipt successor. Unknown dispatched effects
 remain charged unless the original endpoint receipt resolves them; a Fence can
 still cancel undispatched work under the existing native rules.
 
@@ -272,3 +274,103 @@ removed to obtain the successful scoped checks.
 The runtime and metadata results above precede concurrent main commit
 `0fb1c1b`, whose abandonment implementation is preserved during integration.
 They do not claim verification of that new event or its regression cases.
+
+## Recover source custody after interrupted receipt exports
+
+An acknowledged receipt reconciliation can leave the journal three events ahead
+of the independently retained source/history pair if either export fails.
+Ordinary exact-cut recovery correctly rejects that older source checkpoint.
+The explicit native repair entry point on `FileMediatedLearnedRecovery` and
+`FilePredictiveMediatedLearnedRecovery` is:
+
+```rust,ignore
+let mut repair = recovery.require_receipt_checkpoint(
+    &saved_source_checkpoint, request, finish_after,
+)?;
+// Advance this same cursor through its complete original bounded replay.
+while repair.progress().status == FileLearnedRecoveryStatus::Replaying {
+    let done = repair.progress().replayed_events;
+    repair.advance(done, 1)?;
+}
+repair.check_request()?;
+let receipt = repair.finish_reconciled_receipt_with_history(trusted_clock)?;
+let successor = saved_source_checkpoint.after_reconciled_receipt(
+    &profile, &store_identity, &receipt,
+)?;
+```
+
+Admission must happen before any replay. It requires the original exact terminal
+reserve and checks the selected checkpoint's profile, store identity, history
+prefix, source work, graph and original availability. Saved authority/control/
+revision minima strengthen the independently selected floors; they never replace
+higher floors. The original policy, inventory, predictor and current credential
+epoch requirements remain mandatory throughout full numerical replay.
+
+The private `FileReceiptTopologyRecovery` has two accepted source boundaries:
+
+| Events after the retained exact prefix | Finalization |
+| --- | --- |
+| None | Execute the original single Fence/Time/Sweep transaction, with one trusted clock call and the original ordinary-capacity requirements. |
+| Exactly Fence, Time, Sweep | Recheck the complete replay and selected request, reread canonical bytes, synchronize storage and clean verified staging, then return the existing immutable acknowledged cut. |
+
+The second branch adds no event, calls no clock and performs no journal
+replacement or new sweep. It still performs full original replay, canonical
+filesystem reads, file/directory synchronization and cleanup. Failed confirmation
+or cleanup returns no candidate receipt or custody. This is not a zero-I/O
+shortcut. It can confirm an already present triplet at full ordinary capacity;
+an unchanged cut still cannot spend terminal-only capacity on settlement.
+
+Every other suffix refuses, including a partial or reordered triplet, another
+Fence or triplet, source/numerical work, credential maintenance, Stop and
+AbandonUnknown. A changed profile, store path, prefix, source state, higher floor,
+current credential epoch, request kind or finish predecessor also refuses.
+Dropping an incomplete cursor does not clean staging or mutate the journal.
+Existing exact-cut recovery APIs remain strict.
+
+The result carries the original selected historical message or finish, exact
+history and snapshot, and the saved source boundary in `reconciled_from()`.
+The journal-wide Sweep does not encode the triggering request or command.
+A literal triplet produced by three separate original native transactions is
+also valid source succession; repair makes no claim of single-batch provenance
+or of which request triggered it.
+
+`finish_reconciled_receipt_port_with_history(clock)` on the same restricted
+cursor returns the existing sealed receipt port plus this operator custody.
+It freezes the entire original source-only envelope before confirmation or
+mutation. Neither finalizer exposes a Store, live owner, source observer,
+reviewer or an alternate recovery operation. The successor retains identical
+source documents, work expenditure and last source operation; it does not read
+next live files, recertify the graph or replenish a source budget. Unknown and
+irrecoverably unknown effects remain charged and cannot be resent by repair.
+
+The old matching pair can be used repeatedly while this exact triplet remains
+current. Keep it and every successful successor export until both new archives
+are retained. These files remain independent operator custody, not an atomic
+multi-file transaction or protection against jointly rolling back the archives
+and journal.
+
+## Repair verification, 2026-10-28
+
+The complete unchanged `mediated_learned_receipts` target passes **18/18**
+in 59.96 seconds, including all nine new repair functions and all nine existing
+receipt/custody functions. The new cases exercise plain, raw and owned modes,
+lost exports and repeated repair, a literal separately written triplet, exact
+finish selection, ordinary exhaustion, independent credential generation and
+higher floors, unsafe suffixes including AbandonUnknown, changed canonical bytes,
+and a real staged-cleanup failure followed by successful confirmation.
+
+The first run passed 16/18. The two failures were corrected in fixture setup:
+predictive finish 72 now obtains its own original forecast after confirmed
+message 71, and the reordered-suffix case first proves that Sweep without Time
+refuses before constructing the valid wrong-order control. Native production
+contracts and original assertions were not weakened.
+
+The real library and integration target pass metadata checking. The full
+library links using the matching official nightly-2026-08-31 Cranelift backend;
+the unchanged LLVM integration harness links against it with 32 MiB test-thread
+stacks. Both new forbidden wrapper-owner snippets fail with the expected E0599.
+The exact production-library source manifest is
+`aeff8b3660d0a0097345c7944f46b625bab4808b40bdefa18732a0499e3d68bf`.
+These checks include the integrated concurrent main source through `fcc8fe766`,
+but do not constitute execution of all abandonment regressions. Canonical
+workspace/RCH qualification and Beads remain open.

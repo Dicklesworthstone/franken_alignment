@@ -8,9 +8,11 @@ use crate::action::consequence::delivery::persistent::FileDeliverySnapshot;
 use crate::action::consequence::oversight::actor::{ActorOutcome, Knowledge};
 use std::fmt;
 
-/// One original fixed Fence/Time/Sweep replacement and its selected actor
-/// observation. The original exclusive recovery lock captures the exact bytes;
-/// the returned value holds no Store, observer, reviewer or live owner.
+/// One acknowledged Fence/Time/Sweep successor and its selected historical
+/// actor observation. The original exclusive recovery lock captures the exact
+/// bytes; the returned value holds no Store, observer, reviewer or live owner.
+/// A source-cut repair can confirm the same literal triplet originally written
+/// across native transactions. No triggering-request identity is carried.
 ///
 /// The history and snapshot are sensitive operator evidence. Only outcome()
 /// supplies the existing redacted actor projection. External archive retention
@@ -52,7 +54,8 @@ impl FileReconciledLearnedReceipt {
     pub fn history_anchor(&self) -> &FileHistoryAnchor {
         &self.anchor
     }
-    /// Exact complete source history BEFORE this one reconciliation transaction.
+    /// Exact retained source boundary immediately before this Fence/Time/Sweep
+    /// successor. It identifies no request or command that triggered the sweep.
     pub fn reconciled_from(&self) -> u64 {
         self.reconciled_from
     }
@@ -62,6 +65,41 @@ impl FileReconciledLearnedReceipt {
 }
 
 impl FileLearnedRecovery {
+    // Only the sealed mediated checkpoint repair wrapper calls this after its
+    // complete independent guards. It confirms a visible canonical triplet,
+    // including an earlier ambiguous DirectorySync, without a new transaction.
+    pub(in crate::action::consequence::delivery::persistent::observed)
+    fn confirm_reconciled_receipt_with_history(self, request: u64,
+        finish_after: Option<u64>, saved: &TopologyCheckpoint)
+        -> Result<FileReconciledLearnedReceipt, JournalError>
+    {
+        let machine = self.verified_guarded_machine()?;
+        let reconciled_from = saved.history_anchor().revision();
+        if self.events.len() as u64 != reconciled_from.checked_add(3).ok_or(crate::Error::Overflow)? {
+            return Err(crate::Error::Stale.into());
+        }
+        saved.reconciled_successor_available(&self.profile, self.store.identity(), &self.events)?;
+        let snapshot = machine.snapshot(self.events.len());
+        let floor = saved.minimum();
+        if snapshot.control.sequence < floor.control_sequence
+            || snapshot.control.ledger.epoch < floor.authority_epoch {
+            return Err(crate::Error::Stale.into());
+        }
+        match finish_after {
+            None => { self.learned_text_stream_message_request(request)?; }
+            Some(after) => { self.learned_text_stream_finish_request(after, request)?; }
+        }
+        let outcome = machine.requests.status(request)?.actor_observation();
+        if self.store.read(self.profile.delivery.limits.bytes)? != self.canonical {
+            return Err(crate::Error::Binding.into());
+        }
+        // Existing terminal recovery uses this same durability confirmation.
+        // Staged bytes are never promoted; failed sync/cleanup returns no result.
+        self.store.confirm_and_cleanup()?;
+        let anchor = FileHistoryAnchor::from_acknowledged(self.events.len(), self.canonical);
+        Ok(FileReconciledLearnedReceipt { outcome, snapshot, anchor, reconciled_from })
+    }
+
     /// Perform the original selected reconciliation and retain its acknowledged
     /// canonical bytes. Selection, full replay, clock ordering, ordinary capacity,
     /// canonical rechecks, cleanup and the single replacement remain unchanged.

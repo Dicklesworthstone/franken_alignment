@@ -16,6 +16,8 @@ mod support;
 use support::*;
 #[path = "mediated_learned_receipts/custody.rs"]
 mod retained_custody;
+#[path = "mediated_learned_receipts/repair.rs"]
+mod checkpoint_repair;
 
 use fa_reference::action::consequence::delivery::persistent::observed::{
     decoder::learned::FileReconciledLearnedReceipt,
@@ -137,19 +139,42 @@ fn configuration(lane: Lane) -> FileLearnedConfig {
     }
 }
 
-fn start(lane: Lane, root: &Directory, p: FileOversightProfile, config: &FileLearnedConfig)
-    -> (FileOversight, FileMediatedRoles)
+fn start(lane: Lane, root: &Directory, p: FileOversightProfile, config: &FileLearnedConfig,
+    credential: bool, reserved: bool) -> (FileOversight, FileMediatedRoles)
 {
-    let g = guards(config);
-    if lane == Lane::Plain {
-        FileOversight::create_mediated_guarded_with_learned_generation_reserved(
-            root.store(), p, &g, None, graph(1, false), Some(protocol()), config.clone(),
-            RecoveryReserve::terminal()).unwrap()
-    } else {
-        FileOversight::create_predictive_mediated_guarded_with_learned_generation_reserved(
-            root.store(), p, &g, None, graph(1, false), prediction(config), Some(protocol()), config.clone(),
-            RecoveryReserve::terminal()).unwrap()
+    use fa_reference::action::consequence::delivery::credential_broker::{BrokerRouteBinding, CredentialRotationRequest};
+    use fa_reference::action::consequence::delivery::persistent::observed::{
+        credential::{FILE_OVERSIGHT_CREDENTIAL_PROFILE, FileCredentialPolicy},
+        guarded::FileCredentialRegistration,
+    };
+    use fa_reference::perimeter_inventory::LoadedPerimeterInventory;
+    let mut g = guards(config);
+    let inventory = LoadedPerimeterInventory::from_json_bytes(source_inventory()
+        .replace("reference-publication", FILE_OVERSIGHT_CREDENTIAL_PROFILE).as_bytes()).unwrap();
+    let binding = BrokerRouteBinding { family: "file-publication".into(), route: "publication".into() };
+    let registration = credential.then_some(FileCredentialRegistration { inventory: &inventory, binding: &binding });
+    if credential {
+        g.credential = Some(FileCredentialPolicy::from_inventory(&inventory, &binding,
+            p.delivery.scope, p.delivery.target).unwrap());
     }
+    let (mut host, roles) = match (lane, reserved) {
+        (Lane::Plain, true) => FileOversight::create_mediated_guarded_with_learned_generation_reserved(
+            root.store(), p, &g, registration, graph(1, false), Some(protocol()), config.clone(),
+            RecoveryReserve::terminal()),
+        (Lane::Plain, false) => FileOversight::create_mediated_guarded_with_learned_generation(
+            root.store(), p, &g, registration, graph(1, false), Some(protocol()), config.clone()),
+        (_, true) => FileOversight::create_predictive_mediated_guarded_with_learned_generation_reserved(
+            root.store(), p, &g, registration, graph(1, false), prediction(config), Some(protocol()), config.clone(),
+            RecoveryReserve::terminal()),
+        (_, false) => FileOversight::create_predictive_mediated_guarded_with_learned_generation(
+            root.store(), p, &g, registration, graph(1, false), prediction(config), Some(protocol()), config.clone()),
+    }.unwrap();
+    if credential {
+        host.rotate_credential_guard(host.revision(), CredentialRotationRequest {
+            operation: 901, expected_generation: 1, next_generation: 2,
+        }).unwrap();
+    }
+    (host, roles)
 }
 
 fn requirements_for(host: &FileOversight, p: &FileOversightProfile, config: &FileLearnedConfig)
@@ -157,8 +182,14 @@ fn requirements_for(host: &FileOversight, p: &FileOversightProfile, config: &Fil
 {
     let control = host.inspect().control;
     let topology = host.mediation_snapshot().unwrap();
+    let mut guards = guards(config);
+    guards.credential = host.credential_policy().cloned();
+    let credential_epoch = host.credential_status().unwrap().map(|status|
+        fa_reference::action::consequence::delivery::persistent::observed::guarded::FileCredentialEpoch {
+            generation: status.generation, revoked: status.revoked,
+        });
     FileMediatedRequirements { oversight: FileRecoveryRequirements {
-        guards: guards(config), effective_policy: p.delivery.policy.clone(), credential_epoch: None,
+        guards, effective_policy: p.delivery.policy.clone(), credential_epoch,
         minimum: FileRecoveryFloor { journal_revision: host.revision(), control_sequence: control.sequence,
             authority_epoch: control.ledger.epoch },
     }, topology: FileTopologyRequirement { initial: graph(1, false), current: topology.graph,
@@ -221,7 +252,7 @@ impl Recovery {
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-enum Cut { Sent, Published, Confirmed }
+enum Cut { Sent, Published, Confirmed, FinishPending }
 struct History {
     root: Directory, lane: Lane, profile: FileOversightProfile, config: FileLearnedConfig,
     expected: FileMediatedRequirements, anchor: FileHistoryAnchor,
@@ -235,8 +266,13 @@ impl History {
     }
     fn with_source(lane: Lane, cut: Cut) -> Self { Self::build(lane, cut, false, true) }
     fn build(lane: Lane, cut: Cut, full: bool, retain_source: bool) -> Self {
+        Self::build_configured(lane, cut, full.then_some(0), retain_source, false, true)
+    }
+    fn build_configured(lane: Lane, cut: Cut, ordinary_remaining: Option<usize>,
+        retain_source: bool, credential: bool, reserved: bool) -> Self
+    {
         let root = Directory::new(); let p = receipt_profile(); let config = configuration(lane);
-        let (mut host, roles) = start(lane, &root, p.clone(), &config);
+        let (mut host, roles) = start(lane, &root, p.clone(), &config, credential, reserved);
         host.observe_time(host.revision(), ElapsedTick(1)).unwrap();
         assert!(step(&mut host).sample().is_none());
         assert!(step(&mut host).sample().is_none());
@@ -295,19 +331,36 @@ impl History {
                 let receipt = host.publish_checked(revision, attempt, Some(&input), snapshot(), ElapsedTick(3)).unwrap();
                 assert_eq!(receipt.outcome, EndpointOutcome::Executed { resulting_version: 2 });
                 assert_eq!(host.inspect().executions, 1);
-                if cut == Cut::Confirmed { let revision = host.revision(); host.reconcile(revision, attempt).unwrap(); }
+                if matches!(cut, Cut::Confirmed | Cut::FinishPending) { let revision = host.revision(); host.reconcile(revision, attempt).unwrap(); }
             }
             (attempt, charge)
         };
-        if full {
+        if cut == Cut::FinishPending {
+            // A confirmed message makes the finish derivable, but predictive
+            // lanes still require their own original request-keyed forecast.
+            if lane != Lane::Plain {
+                let mode = if lane == Lane::Raw { Mode::Raw } else { Mode::Owned };
+                let mut host = supervisor.host_mut().unwrap();
+                mode.forecast(&mut host, roles.consistency_observer.as_ref().unwrap(), 72).unwrap().unwrap();
+            }
+            let revision = supervisor.host().unwrap().revision();
+            supervisor.set_snapshot(revision, Some(snapshot())).unwrap();
+            actor.submit(72, LearnedTextRelease::Finish, ElapsedTick(100)).unwrap();
+            supervisor.host().unwrap().learned_text_stream_finish_request(71, 72).unwrap();
+        }
+        if let Some(remaining) = ordinary_remaining {
             let mut host = supervisor.host_mut().unwrap();
-            while host.journal_capacity().unwrap().ordinary_remaining().events != 0 {
+            while host.journal_capacity().unwrap().ordinary_remaining().events > remaining {
                 let revision = host.revision(); host.observe_time(revision, ElapsedTick(4)).unwrap();
             }
-            assert_eq!(host.journal_capacity().unwrap().remaining().events, RecoveryReserve::terminal().events);
+            assert_eq!(host.journal_capacity().unwrap().ordinary_remaining().events, remaining);
+            if reserved {
+                assert_eq!(host.journal_capacity().unwrap().remaining().events,
+                    remaining + RecoveryReserve::terminal().events);
+            }
         }
         let original = actor.poll(&ticket);
-        if cut == Cut::Confirmed {
+        if matches!(cut, Cut::Confirmed | Cut::FinishPending) {
             assert!(matches!(original, Knowledge::Known { value: ActorOutcome::Executed, .. }));
         } else { assert!(matches!(original, Knowledge::Unknown { .. })); }
         let host = supervisor.host().unwrap();

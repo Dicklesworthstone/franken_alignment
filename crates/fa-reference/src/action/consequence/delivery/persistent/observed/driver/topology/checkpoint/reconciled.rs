@@ -11,6 +11,33 @@ use crate::action::consequence::delivery::persistent::{
 use std::path::Path;
 
 impl TopologyCheckpoint {
+    // Restricted source-cut repair, before the original numerical replay. A
+    // sweep has no triggering-request identity, so this proves only the source
+    // cut and expenditure. Full replay and request selection remain mandatory.
+    pub(in crate::action::consequence::delivery::persistent::observed)
+    fn reconciled_successor_available(&self, profile: &FileOversightProfile,
+        identity: &Path, events: &[Event]) -> Result<bool, Error>
+    {
+        check_work(&self.expected, self.work, self.last_operation)?;
+        self.history.check(profile, identity, events)?;
+        let after = usize::try_from(self.history.revision()).map_err(|_| Error::Limit)?;
+        let (graph, available) = super::terminal::topology_at(&events[..after])?;
+        if graph != self.expected.graph() || available != self.available {
+            return Err(Error::Binding);
+        }
+        let expected_available = match &events[after..] {
+            [] => available,
+            [Event::Core(BaseEvent::Fence), Event::Core(BaseEvent::Time(_)),
+                Event::Core(BaseEvent::Sweep)] => false,
+            _ => return Err(Error::Stale),
+        };
+        let (graph, available) = super::terminal::topology_at(events)?;
+        if graph != self.expected.graph() || available != expected_available {
+            return Err(Error::Binding);
+        }
+        Ok(available)
+    }
+
     // The same COMPLETE original cursor calls this before the clock or mutation.
     // No public candidate or caller-supplied snapshot can reach this seam.
     pub(in crate::action::consequence::delivery::persistent::observed) fn check_reconciled_start(

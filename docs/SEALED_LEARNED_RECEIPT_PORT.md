@@ -114,3 +114,22 @@ protocol. The operator can retain matching history/source archives before
 exposing the port; ordinary Submit equality, Poll ownership, immutable outcomes
 and Cancel refusal are unchanged. See
 [receipt reconciliation](LEARNED_RECEIPT_RECONCILIATION.md#acknowledged-receipt-history-and-source-custody).
+
+## Repair a retained receipt checkpoint
+
+The mediated plain/raw/owned recovery families can first consume their original
+cursor through `require_receipt_checkpoint(saved, request, finish_after)`.
+The returned `FileReceiptTopologyRecovery` is restricted to the selected
+historical receipt and has no owner or general recovery escape. After full
+original guarded replay, `finish_reconciled_receipt_port_with_history(clock)`
+freezes the exact original request envelope and returns only the immutable port
+and operator custody.
+
+At the unchanged saved cut it performs the original reconciliation. With exactly
+one complete Fence/Time/Sweep successor it confirms canonical storage and cleanup
+without another clock call, event, replacement or sweep. Other suffixes refuse.
+The source work and original Unknown liabilities remain unchanged. A verified
+triplet establishes source succession, not which request caused its Sweep.
+The actor's original exact Submit, Poll and Cancel contracts remain unchanged;
+the sensitive archive never enters the actor protocol. See
+[the complete repair contract](LEARNED_RECEIPT_RECONCILIATION.md#recover-source-custody-after-interrupted-receipt-exports).

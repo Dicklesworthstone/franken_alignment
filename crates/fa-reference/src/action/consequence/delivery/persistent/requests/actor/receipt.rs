@@ -192,5 +192,24 @@ learned_receipt_ports!(FileLearnedRecovery, FileGuardedLearnedRecovery,
     FilePredictiveLearnedRecovery, FileOwnedPredictiveRecovery,
     FileMediatedLearnedRecovery, FilePredictiveMediatedLearnedRecovery);
 
+impl crate::action::consequence::delivery::persistent::observed::guarded::mediated::receipt::FileReceiptTopologyRecovery {
+    /// Repair the selected source cut and expose only its original immutable
+    /// receipt port plus operator custody. The exact envelope is encoded before
+    /// canonical confirmation or mutation. The journal-wide old sweep does not
+    /// identify a triggering request; this port observes the selected history.
+    pub fn finish_reconciled_receipt_port_with_history<F>(self, clock: F)
+        -> Result<(FileLearnedReceiptActorPort,
+            crate::action::consequence::delivery::persistent::observed::decoder::learned::FileReconciledLearnedReceipt), JournalError>
+    where F: FnOnce() -> ElapsedTick {
+        let (request, after, original) = self.selected_request()?;
+        let release = if after.is_some() { LearnedTextRelease::Finish } else { LearnedTextRelease::Message };
+        let proposal = FileLearnedTextStreamActorPort::encode_release(request, release, original.deadline)
+            .map_err(|_| crate::Error::Binding)?;
+        let receipt = self.finish_reconciled_receipt_with_history(clock)?;
+        let port = FileLearnedReceiptActorPort::verified(request, proposal, receipt.outcome().clone());
+        Ok((port, receipt))
+    }
+}
+
 #[cfg(test)]
 mod tests;

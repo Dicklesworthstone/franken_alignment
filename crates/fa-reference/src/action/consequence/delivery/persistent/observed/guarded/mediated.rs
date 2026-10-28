@@ -7,6 +7,7 @@ pub mod learned;
 pub mod predictive;
 pub mod terminal;
 pub mod credential;
+pub mod receipt;
 pub use inspection::{FileMediatedSnapshot, FileTopologyUpdateRecord};
 pub use super::recovery::mediated::FileMediatedRecovery;
 

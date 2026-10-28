@@ -1,5 +1,19 @@
 # Changelog
 
+## 2026-10-28: recover native custody after interrupted receipt exports
+
+- Add a sealed mediated plain/raw/owned recovery cursor for an exact retained
+  source cut or one checked Fence/Time/Sweep successor. Keep full original guards,
+  current credential epoch, floors, reserve and exact historical selection.
+- Confirm an existing successor with canonical reread, synchronization and
+  staged cleanup, without a new clock, event, replacement, sweep or live owner.
+  Preserve original source expenditure and Unknown liabilities.
+- Return the original immutable receipt or sealed actor port with matching
+  source/history custody. Reject every partial, extra or unrelated suffix.
+- Add nine repair regressions and two forbidden-owner examples. The complete
+  native receipt target passes 18/18 after correcting two new fixture setups;
+  library/integration checks pass. Canonical workspace qualification stays open.
+
 ## 2026-10-27: add guarded recovery and operator access for unknown abandonment
 
 - Consume complete base/mediated recovery into an acknowledged disposition,
