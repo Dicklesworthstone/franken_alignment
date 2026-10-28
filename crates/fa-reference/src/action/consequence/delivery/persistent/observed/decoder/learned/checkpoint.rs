@@ -8,6 +8,8 @@ use std::rc::Rc;
 
 mod inspection;
 mod reset;
+mod stream;
+pub use stream::FileLearnedStreamCheckpoint;
 pub use super::preparation::{FileLearnedCheckpointPreparation, FileLearnedCheckpointPreparationProgress,
     FileLearnedResetPreparation, FileLearnedResetPreparationProgress};
 #[cfg(test)]
@@ -56,6 +58,9 @@ pub(in super::super::super) enum CheckpointEvent {
     BeginReset(Rc<FileLearnedResetIntent>),
     Reset { operation: u64, witness: Rc<[u8]> },
     Capture { checkpoint: u64, actor_revision: u64, epoch: u64, witness: Rc<[u8]> },
+    StreamCapture { checkpoint: u64, actor_revision: u64, epoch: u64, witness: Rc<[u8]> },
+    BeginStreamReset { intent: Rc<FileLearnedResetIntent>, first_incident_sequence: u64 },
+    StreamReset { operation: u64, witness: Rc<[u8]> },
 }
 
 impl FileOversight {
@@ -117,6 +122,20 @@ impl FileOversight {
 pub(in super::super::super) fn write(w: &mut Writer, event: &CheckpointEvent) -> Result<(), Error> {
     match event {
         CheckpointEvent::BeginReset(intent) => { w.u8(1)?; reset::write_intent(w, intent)?; }
+        CheckpointEvent::BeginStreamReset { intent, first_incident_sequence } => {
+            if *first_incident_sequence == 0 { return Err(Error::InvalidInput); }
+            w.u8(4)?; reset::write_intent(w, intent)?; w.u64(*first_incident_sequence)?;
+        }
+        CheckpointEvent::StreamReset { operation, witness } => {
+            if *operation == 0 { return Err(Error::InvalidInput); }
+            check_witness(witness)?;
+            w.u8(5)?; w.u64(*operation)?; w.blob(witness)?;
+        }
+        CheckpointEvent::StreamCapture { checkpoint, actor_revision, epoch, witness } => {
+            if *checkpoint == 0 { return Err(Error::InvalidInput); }
+            check_witness(witness)?;
+            w.u8(3)?; w.u64(*checkpoint)?; w.u64(*actor_revision)?; w.u64(*epoch)?; w.blob(witness)?;
+        }
         CheckpointEvent::Reset { operation, witness } => {
             if *operation == 0 { return Err(Error::InvalidInput); }
             check_witness(witness)?;
@@ -133,6 +152,26 @@ pub(in super::super::super) fn write(w: &mut Writer, event: &CheckpointEvent) ->
 pub(in super::super::super) fn read(r: &mut Reader<'_>) -> Result<CheckpointEvent, Error> {
     match r.u8()? {
         1 => Ok(CheckpointEvent::BeginReset(Rc::new(reset::read_intent(r)?))),
+        4 => {
+            let intent = Rc::new(reset::read_intent(r)?);
+            let first_incident_sequence = r.u64()?;
+            if first_incident_sequence == 0 { return Err(Error::InvalidInput); }
+            Ok(CheckpointEvent::BeginStreamReset { intent, first_incident_sequence })
+        }
+        5 => {
+            let operation = r.u64()?;
+            if operation == 0 { return Err(Error::InvalidInput); }
+            let witness = r.blob(MAX_WITNESS_BYTES)?;
+            check_witness(witness)?;
+            Ok(CheckpointEvent::StreamReset { operation, witness: Rc::from(witness) })
+        }
+        3 => {
+            let checkpoint = r.u64()?; let actor_revision = r.u64()?; let epoch = r.u64()?;
+            if checkpoint == 0 { return Err(Error::InvalidInput); }
+            let witness = r.blob(MAX_WITNESS_BYTES)?;
+            check_witness(witness)?;
+            Ok(CheckpointEvent::StreamCapture { checkpoint, actor_revision, epoch, witness: Rc::from(witness) })
+        }
         2 => {
             let operation = r.u64()?;
             if operation == 0 { return Err(Error::InvalidInput); }

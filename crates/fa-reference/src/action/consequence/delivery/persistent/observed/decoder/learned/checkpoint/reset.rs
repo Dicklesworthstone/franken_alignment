@@ -99,6 +99,7 @@ impl FileOversight {
         -> Result<Result<HostedLearnedResetReceipt, Error>, JournalError>
     {
         if self.fault.is_some() { return Err(JournalError::Unavailable); }
+        self.machine.check_learned_reset_kind(operation, false)?;
         if let Some(result) = self.machine.learned_reset_result_optional(operation)? { return Ok(result); }
         self.check_learned_reset_completion(revision, operation)?;
         self.events.try_reserve(1).map_err(|_| Error::Limit)?;

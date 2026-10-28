@@ -1,5 +1,32 @@
 # Implementation status · design revision 0.3
 
+## 2026-10-28: restore learned stream state within the confirmed audience boundary
+
+Plain learned text streams now have separate native and durable checkpoint/reset
+APIs. They bind the exact original target, profile, confirmed message boundaries
+and text output offset, plus a strictly later supervisor-declared incident
+control frontier. The shared original reset engine restores actual KV/sampler
+state while preserving lifetime work, spent rights, current policy and published
+history; it narrows authority, withdraws old keys and increments the original
+incident counter. A later-message reset can preserve confirmed A and subsequently
+publish only B after fresh observation and ordinary two-key approval.
+
+Pending/Unknown deliveries, exposed or confirmed boundary changes, Finished
+streams, consumed later-message requests and any installed action-consistency
+predictor refuse. Exact retries retain original outcomes without re-audit; a
+recovery Fence leaves interrupted intents blocked. New tags 3/4/5 and disjoint
+stream witness domains preserve the old tag 0/1/2 encodings and legacy refusals.
+
+Sixteen authored runtime regression functions plus two compile-fail examples
+cover actual numerical continuation, authority/accounting conservation, all five
+storage barriers, original/new wire compatibility, exact limits, failed audits,
+recovery and incident escalation. Independent source reviews corrected concrete
+visibility and fixture-buffer defects. All fifteen changed Rust files pass syntax
+parsing. Required targeted and canonical RCH commands both exit 127 because the
+dispatcher is absent. Compilation, runtime
+and production qualification remain open; no full roadmap acceptance is closed.
+See [learned stream containment](docs/LEARNED_STREAM_CONTAINMENT.md).
+
 ## 2026-10-27: replay candidate policies over guarded learned histories
 
 The original learned recovery cursor and all five guarded wrappers now expose a

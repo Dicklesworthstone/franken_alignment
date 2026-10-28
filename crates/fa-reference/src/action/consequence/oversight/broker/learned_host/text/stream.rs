@@ -115,6 +115,22 @@ impl OversightBroker {
         Ok(())
     }
 
+    // A numerical checkpoint cannot cross this receipt-confirmed audience cut.
+    // No decoded output, pending send or matching concatenated text substitutes
+    // for the exact original target, profile and complete message boundaries.
+    pub(in super::super) fn learned_stream_checkpoint_basis(&self)
+        -> Result<(ResolvedTarget, StreamView, usize, bool), Error>
+    {
+        if self.stream_pending().is_some() { return Err(Error::Incomplete); }
+        let host = self.learned_host.as_ref().ok_or(Error::Incomplete)?;
+        let basis = host.text_stream.as_ref().ok_or(Error::Binding)?;
+        let (target, view) = self.stream_state().ok_or(Error::Binding)?;
+        if view.finished() { return Err(Error::WrongState); }
+        if target != basis.target || view != &basis.view { return Err(Error::Stale); }
+        if basis.forecast_messages { return Err(Error::Incomplete); }
+        Ok((target, view.clone(), host.run.host_text_output_start()?, basis.continuation))
+    }
+
     pub fn learned_text_stream_required(&self) -> bool {
         self.learned_host.as_ref().is_some_and(|host| host.text_stream.is_some())
     }

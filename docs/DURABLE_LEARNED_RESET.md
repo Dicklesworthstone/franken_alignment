@@ -114,7 +114,9 @@ fence and numerical pause. No additional reset incident is generated. A NEW
 supervisor instruction may also reset a recovered held run that has no pending
 reset; it names the fresh control predecessor and still leaves generation paused
 until explicit resume. Installed automatic stops and incident-threshold suspension
-remain terminal. Cumulative audience-stream owners remain excluded.
+remain terminal. These legacy APIs continue to exclude cumulative audience-stream
+owners. The explicit [versioned stream path](LEARNED_STREAM_CONTAINMENT.md)
+permits restoration only within an unchanged confirmed publication boundary.
 
 ## Effects and regression sources
 

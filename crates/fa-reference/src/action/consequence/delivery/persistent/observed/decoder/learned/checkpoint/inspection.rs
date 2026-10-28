@@ -64,7 +64,8 @@ impl FileOversight {
         let machine = Machine::replay(profile, &events)?;
         let intent = events.iter().find_map(|event| match event {
             Event::Decoder(DecoderEvent::Learned(LearnedEvent::Checkpoint(
-                CheckpointEvent::BeginReset(intent)))) if intent.control().operation == operation =>
+                CheckpointEvent::BeginReset(intent) | CheckpointEvent::BeginStreamReset { intent, .. })))
+                if intent.control().operation == operation =>
                     Some(intent.as_ref().clone()),
             _ => None,
         });

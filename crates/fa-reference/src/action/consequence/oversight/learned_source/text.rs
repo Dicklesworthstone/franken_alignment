@@ -125,6 +125,12 @@ impl ObservedLearnedGeneration {
         Ok(())
     }
 
+    // Captured only by the original stream containment owner. This historical
+    // offset is not derivable from a concatenated publication byte string.
+    pub(crate) fn host_text_output_start(&self) -> Result<usize, Error> {
+        Ok(self.text.as_ref().ok_or(Error::Binding)?.output_start)
+    }
+
     pub fn text_bound(&self) -> bool { self.text.is_some() }
     pub fn text_prompt(&self) -> Option<&str> { self.text.as_ref().map(|text| text.prompt.as_str()) }
     pub fn text_tokenizer(&self) -> Option<&ByteBpe> { self.text.as_ref().map(|text| &text.tokenizer) }

@@ -96,9 +96,10 @@ human key when enabled. The old observation handle becomes `Closed` on a
 successful restore and unavailable on any admitted failure.
 
 Plain completed-message learned text retains its original tokenizer, prompt and
-output policy through this private restore. Cumulative text-stream owners are
-excluded: their audience-visible frontier requires a separate protocol that a
-numerical rewind cannot satisfy. Automatic-stop incidents are terminal; this
+output policy through this private restore. These legacy APIs exclude cumulative
+text-stream owners: their audience-visible frontier requires a separate protocol.
+The [explicit versioned stream path](LEARNED_STREAM_CONTAINMENT.md) binds the
+unchanged confirmed audience boundary and original message offset before reset. Automatic-stop incidents are terminal; this
 API never clears or replaces them. A held run without an installed automatic
 stop may rewind to an earlier quiet checkpoint, but replaying the same next
 token must still pass the unchanged original monitor.

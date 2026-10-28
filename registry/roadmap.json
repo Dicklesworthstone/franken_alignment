@@ -2594,7 +2594,15 @@
         "Produce executed local evidence; source or prose alone does not close this packet."
       ],
       "owner_role": "gate",
-      "result_artifacts": [],
+      "result_artifacts": [
+        "docs/LEARNED_STREAM_CONTAINMENT.md",
+        "docs/DURABLE_LEARNED_RESET.md",
+        "crates/fa-reference/src/action/consequence/oversight/broker/learned_host/checkpoint/stream.rs",
+        "crates/fa-reference/src/action/consequence/delivery/persistent/observed/decoder/learned/checkpoint/stream.rs",
+        "crates/fa-reference/src/action/consequence/delivery/persistent/observed/machine/learned/checkpoint/stream.rs",
+        "crates/fa-reference/tests/learned_text_stream_durable/continuation/checkpoints.rs",
+        "crates/fa-reference/src/action/consequence/delivery/persistent/observed/decoder/learned/config/text/intake/tests/stream_checkpoint.rs"
+      ],
       "founding_ideas": [
         "FI-A09",
         "FI-A16",

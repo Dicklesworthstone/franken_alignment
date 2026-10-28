@@ -15,6 +15,10 @@ use std::collections::{BTreeMap, BTreeSet};
 use std::fmt;
 use std::rc::Rc;
 
+mod stream;
+pub use stream::{HostedLearnedStreamCheckpointHandle, HostedLearnedStreamResetRequest};
+pub(crate) use stream::StreamCheckpointBasis;
+
 /// References a private ORIGINAL numerical checkpoint paired with its original
 /// authority checkpoint. It carries no cache, sampler, live source or permit.
 #[derive(Clone)]
@@ -69,7 +73,11 @@ pub struct HostedLearnedRecoveryUsage {
 }
 
 #[derive(Debug)]
-struct PairedCheckpoint { control: CheckpointHandle, numerical: GenerationKvCheckpoint }
+struct PairedCheckpoint {
+    control: CheckpointHandle,
+    numerical: GenerationKvCheckpoint,
+    stream: Option<StreamCheckpointBasis>,
+}
 #[derive(Debug)]
 pub(super) struct RecoveryState {
     issuer: Rc<()>,
@@ -107,12 +115,18 @@ impl OversightBroker {
     pub fn capture_hosted_learned_checkpoint(&mut self, id: u64, expected_actor_revision: u64)
         -> Result<HostedLearnedCheckpointHandle, Error>
     {
+        self.capture_hosted_learned_checkpoint_inner(id, expected_actor_revision, None)
+    }
+
+    fn capture_hosted_learned_checkpoint_inner(&mut self, id: u64, expected_actor_revision: u64,
+        stream: Option<StreamCheckpointBasis>) -> Result<HostedLearnedCheckpointHandle, Error>
+    {
         if self.enforce_learned_host_stop()?.is_some() || self.enforce_consistency_stop()?.is_some()
             || self.inspect().suspended || self.stop_receipt().is_some() { return Err(Error::WrongState); }
         if expected_actor_revision != self.actor_revision() { return Err(Error::Stale); }
         if id == 0 { return Err(Error::InvalidInput); }
         let host = self.learned_host.as_ref().ok_or(Error::Incomplete)?;
-        if host.text_stream.is_some() { return Err(Error::Incomplete); }
+        if host.text_stream.is_some() != stream.is_some() { return Err(Error::Incomplete); }
         if host.fault.is_some() || host.run.position() == 0 || !host.run.status().is_active()
             || host.run.observation().availability() != LearnedAvailability::Ready
         { return Err(Error::WrongState); }
@@ -125,6 +139,8 @@ impl OversightBroker {
         let numerical = original.checkpoint_kv(DecoderRestoreBudget { cache_values: MAX_MODEL_KV_VALUES })?;
         // Fixed model/policy objects are shared. Charge retained logical state
         // including histories, logits and the original sampler representation.
+        let stream_bytes = stream.as_ref().map(StreamCheckpointBasis::retained_bytes)
+            .transpose()?.unwrap_or(0);
         let bytes = actor.tokens().len().checked_mul(4)
             .and_then(|n| n.checked_add(actor.cache().len()))
             .and_then(|n| n.checked_add(actor.sampler().len()))
@@ -133,11 +149,12 @@ impl OversightBroker {
             .and_then(|n| n.checked_add(original.samples().len().checked_mul(68)?))
             .and_then(|n| n.checked_add(original.spec().prompt().len().checked_mul(4)?))
             .and_then(|n| n.checked_add(original.spec().stop_tokens().len().checked_mul(4)?))
+            .and_then(|n| n.checked_add(stream_bytes))
             .and_then(|n| n.checked_add(host.recovery.usage.checkpoint_bytes)).ok_or(Error::Limit)?;
         if bytes > MAX_RETAINED_STATE_BYTES { return Err(Error::Limit); }
         let control = self.delivery.capture_checkpoint(id, expected_actor_revision)?;
         let host = self.learned_host.as_mut().expect("validated learned owner");
-        host.recovery.checkpoints.insert(id, PairedCheckpoint { control, numerical });
+        host.recovery.checkpoints.insert(id, PairedCheckpoint { control, numerical, stream });
         host.recovery.usage.checkpoints += 1;
         host.recovery.usage.checkpoint_bytes = bytes;
         Ok(HostedLearnedCheckpointHandle { issuer: Rc::clone(&host.recovery.issuer), id })
@@ -161,14 +178,17 @@ impl OversightBroker {
         if self.enforce_learned_host_stop()?.is_some() || self.enforce_consistency_stop()?.is_some() {
             return Err(Error::WrongState);
         }
-        let result = self.reset_hosted_learned_inner(request);
+        let result = self.reset_hosted_learned_inner(request, None);
         if result.is_err() { self.enforce_learned_host_stop()?; }
         result
     }
 
-    fn reset_hosted_learned_inner(&mut self, request: HostedLearnedResetRequest)
-        -> Result<HostedLearnedResetReceipt, Error>
+    fn reset_hosted_learned_inner(&mut self, request: HostedLearnedResetRequest,
+        first_incident_sequence: Option<u64>) -> Result<HostedLearnedResetReceipt, Error>
     {
+        if let Some(first) = first_incident_sequence {
+            self.check_hosted_learned_stream_reset(&request.checkpoint, first)?;
+        }
         let inspection = self.inspect();
         if inspection.suspended || self.stop_receipt().is_some() { return Err(Error::WrongState); }
         if request.expected_control_sequence != inspection.sequence
@@ -179,13 +199,14 @@ impl OversightBroker {
             || request.binding.evidence_root == [0; 32] { return Err(Error::InvalidInput); }
         let host = self.learned_host.as_mut().ok_or(Error::Incomplete)?;
         if !Rc::ptr_eq(&request.checkpoint.issuer, &host.recovery.issuer) { return Err(Error::Binding); }
-        if host.text_stream.is_some() { return Err(Error::Incomplete); }
+        if host.text_stream.is_some() != first_incident_sequence.is_some() { return Err(Error::Incomplete); }
         if host.fault.is_some() || matches!(host.run.status(), GenerationStatus::Failed(_))
             || !matches!(host.run.observation().availability(), LearnedAvailability::Ready | LearnedAvailability::Held)
         { return Err(Error::WrongState); }
         if self.started_rounds.contains(&request.binding.round)
             || host.recovery.reset_rounds.contains(&request.binding.round) { return Err(Error::Duplicate); }
         let saved = host.recovery.checkpoints.get(&request.checkpoint.id).ok_or(Error::Missing)?;
+        if saved.stream.is_some() != first_incident_sequence.is_some() { return Err(Error::Binding); }
         if !saved.numerical.status().is_active() { return Err(Error::WrongState); }
         // A checkpoint ahead of the active logical timeline is not a rewind.
         generation_work(host.run.work(), saved.numerical.work(), subtract)?;

@@ -1,5 +1,18 @@
 # Changelog
 
+## 2026-10-28: add stream-bound learned checkpoint restoration
+
+- Add separate native and durable stream checkpoint/reset APIs within one exact
+  confirmed audience boundary, including the original text message offset.
+- Reuse original audited restoration, cumulative quotas, narrow authority,
+  spent-rights conservation and escalating incident accounting; require fresh
+  accepted-token evidence and original approvals before another publication.
+- Bind supervisor-declared incident order and exact retry identity. Refuse
+  unresolved/changed publication, consumed continuation requests and installed
+  predictors; preserve interrupted intent barriers and legacy wire forms.
+- Add sixteen substantive runtime regression functions and two compile-fail
+  examples. Required RCH commands cannot start; runtime qualification stays open.
+
 ## 2026-10-27: compare candidate policies against guarded learned histories
 
 - Add a read-only finalizer to the original learned cursor and all five guarded

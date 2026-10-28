@@ -8,18 +8,22 @@ use crate::action::consequence::activation::tensor::kv::decoder::sampling::monit
     GenerationTelemetryWork, GenerationWork,
 };
 use crate::action::consequence::gate::containment::MAX_CHECKPOINTS;
-use crate::action::consequence::oversight::learned_host::checkpoint::HostedLearnedCheckpointHandle;
+use crate::action::consequence::oversight::learned_host::checkpoint::{
+    HostedLearnedCheckpointHandle, HostedLearnedStreamCheckpointHandle,
+};
 use crate::action::consequence::oversight::learned_source::LearnedAvailability;
 use crate::Error;
 use std::collections::BTreeMap;
 use std::rc::Rc;
 
 mod reset;
+mod stream;
 
 #[derive(Default)]
 pub(super) struct CheckpointHistory {
     resets: reset::ResetHistory,
     captures: BTreeMap<u64, (FileLearnedCheckpointInfo, HostedLearnedCheckpointHandle)>,
+    stream_captures: BTreeMap<u64, (FileLearnedCheckpointInfo, HostedLearnedStreamCheckpointHandle)>,
 }
 
 impl Machine {
@@ -27,6 +31,7 @@ impl Machine {
         -> Result<FileLearnedCheckpointInfo, Error>
     {
         let state = self.learned.as_ref().ok_or(Error::Incomplete)?;
+        if state.checkpoints.stream_captures.contains_key(&id) { return Err(Error::Binding); }
         Ok(state.checkpoints.captures.get(&id).ok_or(Error::Missing)?.0)
     }
     pub(in super::super::super) fn check_learned_capture(&self, id: u64, revision: u64, epoch: u64)
@@ -36,8 +41,12 @@ impl Machine {
         if self.pending_learned_step().is_some() || self.pending_learned_reset().is_some() { return Err(Error::Incomplete); }
         let state = self.learned.as_ref().ok_or(Error::Incomplete)?;
         if state.paused || !self.clock_ready { return Err(Error::Incomplete); }
-        if state.checkpoints.captures.contains_key(&id) { return Err(Error::Duplicate); }
-        if state.checkpoints.captures.len() >= MAX_CHECKPOINTS { return Err(Error::Limit); }
+        if state.checkpoints.captures.contains_key(&id) || state.checkpoints.stream_captures.contains_key(&id) {
+            return Err(Error::Duplicate);
+        }
+        if state.checkpoints.captures.len() + state.checkpoints.stream_captures.len() >= MAX_CHECKPOINTS {
+            return Err(Error::Limit);
+        }
         let actual = self.broker.hosted_learned_generation()?;
         if actual.actor_revision != revision || self.broker.inspect().ledger.epoch != epoch { return Err(Error::Stale); }
         if actual.position == 0 || !actual.status.is_active() || actual.host_failure.is_some()
@@ -58,6 +67,16 @@ impl Machine {
     }
     pub(super) fn apply_learned_checkpoint(&mut self, event: &CheckpointEvent) -> Result<Transition, Error> {
         match event {
+            CheckpointEvent::BeginStreamReset { intent, first_incident_sequence } =>
+                self.apply_learned_stream_reset_intent(intent, *first_incident_sequence),
+            CheckpointEvent::StreamReset { operation, witness } => self.apply_learned_stream_reset(*operation, witness),
+            CheckpointEvent::StreamCapture { checkpoint, actor_revision, epoch, witness } => {
+                self.execute_learned_stream_capture(*checkpoint, *actor_revision, *epoch)?;
+                if self.learned_stream_capture_witness(*checkpoint)?.as_slice() != witness.as_ref() {
+                    return Err(Error::Binding);
+                }
+                Ok(Transition::Unit)
+            }
             CheckpointEvent::BeginReset(intent) => self.apply_learned_reset_intent(intent),
             CheckpointEvent::Reset { operation, witness } => self.apply_learned_reset(*operation, witness),
             CheckpointEvent::Capture { checkpoint, actor_revision, epoch, witness } => {

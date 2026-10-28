@@ -879,7 +879,9 @@
         "H17"
       ],
       "invariants": [
-        "FA-INV-034"
+        "FA-INV-034",
+        "FA-INV-005",
+        "FA-INV-003"
       ]
     },
     {
