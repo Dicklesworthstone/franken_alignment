@@ -1,5 +1,34 @@
 # Implementation status · design revision 0.3
 
+## 2026-10-28: expose receipt checkpoint repair through the learned operator
+
+The one-shot learned command now accepts `--recover-receipt-checkpoint` only
+with explicit resume/reconciliation, an independent input anchor, an exactly
+matching v2 source checkpoint and both fresh retained outputs. It delegates to
+the sealed native repair cursor with the original plain/raw/owned guards,
+current credential epoch, reserve, higher floors and one-event replay budget.
+Ordinary recovery remains exact-cut; unsafe or unrelated suffixes cannot repair
+custody.
+
+The original current cut settles once; an existing exact Fence/Time/Sweep
+successor confirms without another clock, event or replacement. Both exports
+are attempted before late expiry or stdout, successful partner archives survive,
+and combined failures name the confirmed revision. Original immediate path and
+finish values are checked before option stripping. The guarded-abandonment test
+module now has its explicit nested path, repairing a concrete full-target
+compilation error without altering assertions.
+
+Seven new one-shot regression functions cover lost exports, repeated repair,
+all modes, original finish selection, malformed custody/options, unsafe suffixes,
+floors and post-confirmation failures. The production executable passes metadata
+checking; the complete native suite passes 18/18. Changed sources pass syntax
+parsing and independent review. Full operator metadata/build attempts were
+interrupted by shared-cgroup OOM pressure, including SIGKILL of the unmodified
+Cranelift harness at 33.31 seconds. These seven tests remain unexecuted and lack
+a completed final full-target metadata result. Canonical workspace/RCH gates
+and Beads remain open. See
+[the operator repair command](docs/LEARNED_RECEIPT_RECONCILIATION.md#explicit-operator-repair-after-interrupted-exports).
+
 ## 2026-10-28: repair interrupted learned receipt checkpoint exports natively
 
 A sealed `FileReceiptTopologyRecovery` now consumes the original mediated

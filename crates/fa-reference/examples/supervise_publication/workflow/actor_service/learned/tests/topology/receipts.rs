@@ -612,3 +612,6 @@ fn retained_topology_receipts_attempt_both_archives_before_late_failures() {
         assert_no_live_inputs(&case);
     }
 }
+
+#[path = "receipts/repair.rs"]
+mod repair;

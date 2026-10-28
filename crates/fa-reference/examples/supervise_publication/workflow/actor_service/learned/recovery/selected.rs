@@ -46,6 +46,49 @@ pub(super) enum Cursor {
     PredictiveMediated(FilePredictiveMediatedLearnedRecovery),
 }
 
+/// Original mediated replay, sealed to receipt-cut recovery. This deliberately
+/// does not pass through Cursor::begin or weaken its ordinary exact-extent rule.
+/// The native wrapper alone admits [] or one literal Fence/Time/Sweep suffix.
+pub(super) fn begin_receipt_checkpoint_repair(
+    config: &Config, loaded: &Loaded, after: Option<u64>,
+) -> Result<fa_reference::action::consequence::delivery::persistent::observed::guarded::mediated::receipt::FileReceiptTopologyRecovery, String> {
+    let history = super::super::topology::history(loaded)?
+        .ok_or("receipt checkpoint recovery requires an explicit v2 topology profile")?;
+    let saved = history.checkpoint()
+        .ok_or("receipt checkpoint recovery cannot use manual source minima")?;
+    let anchor = loaded.recovery_anchor.as_ref()
+        .ok_or("receipt checkpoint recovery requires an independent input history anchor")?;
+    if saved.history_anchor() != anchor {
+        return Err("receipt checkpoint and input history anchor describe different cuts".into());
+    }
+    let predictor = loaded.generation.required_pre_output_forecast()
+        .map(|config| FileMediatedPredictor::Raw(config.clone()))
+        .or_else(|| loaded.generation.required_owned_pre_output_forecast()
+            .map(|config| FileMediatedPredictor::Owned(config.clone())));
+    match predictor {
+        Some(prediction) => {
+            let expected = FilePredictiveMediatedRequirements {
+                oversight: requirements(config, loaded), topology: history.requirement.clone(),
+                prediction, evaluation: None,
+            };
+            FileOversight::begin_open_predictive_mediated_guarded_anchored_with_learned_generation(
+                &config.store, config.profile.clone(), &expected, &loaded.generation, anchor)
+                .and_then(|run| run.require_recovery_reserve(RecoveryReserve::terminal()))
+                .and_then(|run| run.require_receipt_checkpoint(saved, loaded.request, after))
+                .map_err(debug)
+        }
+        None => {
+            let expected = FileMediatedRequirements { oversight: requirements(config, loaded),
+                topology: history.requirement.clone(), prediction: None, evaluation: None };
+            FileOversight::begin_open_mediated_guarded_anchored_with_learned_generation(
+                &config.store, config.profile.clone(), &expected, &loaded.generation, anchor)
+                .and_then(|run| run.require_recovery_reserve(RecoveryReserve::terminal()))
+                .and_then(|run| run.require_receipt_checkpoint(saved, loaded.request, after))
+                .map_err(debug)
+        }
+    }
+}
+
 impl Cursor {
     pub(super) fn begin(config: &Config, loaded: &Loaded) -> Result<Self, String> {
         if let Some(history) = super::super::topology::history(loaded)? {

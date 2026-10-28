@@ -11,7 +11,7 @@ use std::{io::Write, path::Path};
 const FLAG: &str = "--receipts-only";
 const USAGE: &str = "create-learned-generated CONFIG LEARNED_RECIPE --resume --receipts-only [--finish-after-message PREVIOUS_REQUEST] [--topology-profile PATH] [--history-anchor INPUT]";
 const RECONCILE_FLAG: &str = "--reconcile-receipts";
-const RECONCILE_USAGE: &str = "create-learned-generated CONFIG LEARNED_RECIPE --resume --reconcile-receipts [--finish-after-message PREVIOUS_REQUEST] [--topology-profile PATH] [--history-anchor INPUT] [--retain-history-anchor NEW_OUTPUT [--retain-topology-checkpoint NEW_OUTPUT]]";
+const RECONCILE_USAGE: &str = "create-learned-generated CONFIG LEARNED_RECIPE --resume --reconcile-receipts [--finish-after-message PREVIOUS_REQUEST] [--topology-profile PATH] [--history-anchor INPUT] [--retain-history-anchor NEW_OUTPUT [--retain-topology-checkpoint NEW_OUTPUT]] [--recover-receipt-checkpoint]";
 const ACKNOWLEDGED_EXPIRED: &str = "learned receipt reconciliation acknowledged; deadline expired before response; inspect with --receipts-only; no effect retry was sent";
 
 #[derive(Clone, Copy)]
@@ -74,13 +74,14 @@ fn load(args: &[String], credibility: Option<&Path>, mode: Mode,
     -> Result<(Config, Loaded, Option<u64>, Option<custody::Outputs>), String>
 {
     if matches!(mode, Mode::ReadOnly) && args.iter().any(|arg|
-        matches!(arg.as_str(), "--retain-history-anchor" | "--retain-topology-checkpoint"))
+        matches!(arg.as_str(), "--retain-history-anchor" | "--retain-topology-checkpoint" | "--recover-receipt-checkpoint"))
     {
         return Err(mode.usage().into());
     }
-    let (args, source_output) = custody::take_option(args)?;
+    let (args, repair) = custody::take_repair_option(args)?;
+    let (args, source_output) = custody::take_option(&args)?;
     let (args, topology_path) = topology::take_option(&args)?;
-    custody::check_options(&args, topology_path.as_deref(), source_output.as_deref())?;
+    custody::check_repair_options(&args, topology_path.as_deref(), source_output.as_deref(), repair)?;
     let usage = mode.usage(); let flag = mode.flag();
     if credibility.is_some() || args.iter().filter(|arg|
         matches!(arg.as_str(), FLAG | RECONCILE_FLAG)).count() != 1
@@ -93,7 +94,9 @@ fn load(args: &[String], credibility: Option<&Path>, mode: Mode,
     // stripping our boolean flag out of another option's value position.
     let (mut args, anchors) = anchors::take_options(&args)?;
     let at = args.iter().position(|arg| arg == flag).ok_or(usage)?;
-    if at < 4 { return Err(usage.into()); }
+    if at < 4 || args.get(at - 1).map(String::as_str) == Some("--finish-after-message") {
+        return Err(usage.into());
+    }
     args.remove(at);
     let (args, after) = finish::take_option(&args)?;
     if args.len() != 4 || args[0] != "create-learned-generated" || args[3] != "--resume"
@@ -105,7 +108,7 @@ fn load(args: &[String], credibility: Option<&Path>, mode: Mode,
     let mut loaded = recipe::load(Path::new(&args[2]), &config, false)?;
     anchors.admit(&config, &mut loaded, true)?;
     topology::admit(&config, &mut loaded, topology_path.as_deref(), topology::Mode::Historical)?;
-    let retained = custody::admit(&config, &loaded, source_output.as_deref())?;
+    let retained = custody::admit_repair(&config, &loaded, source_output.as_deref(), repair)?;
     Ok((config, loaded, after, retained))
 }
 
@@ -154,14 +157,28 @@ fn reconcile_retained<F>(config: &Config, loaded: &Loaded, after: Option<u64>,
 where F: FnOnce() -> ElapsedTick {
     if loaded.request == 0 { return Err("receipt request must be nonzero".into()); }
     if let Some(after) = after { finish::check_ids(loaded.request, after)?; }
-    let saved = topology::history(loaded)?.and_then(|history| history.checkpoint());
-    let result = receipt_replay(config, loaded, elapsed, |run| match saved {
-        Some(saved) => run.finish_reconciled_receipt_with_checkpoint(loaded.request, after, saved, clock),
-        None => run.finish_reconciled_receipt_with_history(loaded.request, after, clock),
-    })?;
+    let result = if retained.repair_requested() {
+        // The SAME original one-event driver preserves pre-open and Ready
+        // deadline checkpoints. The sealed result contains no live owner.
+        check_elapsed(config, elapsed)?;
+        let run = super::selected::begin_receipt_checkpoint_repair(config, loaded, after)?;
+        super::finish_replay(run, &mut |_| check_elapsed(config, elapsed),
+            |run| run.progress(), |run, done| run.advance(done, 1),
+            |run| run.finish_reconciled_receipt_with_history(clock))?
+    } else {
+        let saved = topology::history(loaded)?.and_then(|history| history.checkpoint());
+        receipt_replay(config, loaded, elapsed, |run| match saved {
+            Some(saved) => run.finish_reconciled_receipt_with_checkpoint(loaded.request, after, saved, clock),
+            None => run.finish_reconciled_receipt_with_history(loaded.request, after, clock),
+        })?
+    };
     let revision = result.history_anchor().revision();
     let retention = retained.retain(config, loaded, &result);
-    let acknowledged = format!("learned receipt reconciliation acknowledged at revision {revision}");
+    let acknowledged = if retained.repair_requested() {
+        format!("learned receipt checkpoint recovery confirmed at revision {revision}")
+    } else {
+        format!("learned receipt reconciliation acknowledged at revision {revision}")
+    };
     if elapsed() >= Duration::from_millis(config.timing.runtime_ms) {
         let error = format!("{acknowledged}; deadline expired before response; no effect retry was sent");
         return Err(match retention {

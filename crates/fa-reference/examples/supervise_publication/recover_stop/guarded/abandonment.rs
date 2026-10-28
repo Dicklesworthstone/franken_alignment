@@ -215,4 +215,5 @@ fn report(
 }
 
 #[cfg(test)]
+#[path = "abandonment/tests.rs"]
 pub(in crate::recover_stop) mod tests;

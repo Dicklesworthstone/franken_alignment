@@ -68,7 +68,7 @@ is closed and no repository verification requirement is weakened.
 The original learned publication command now accepts:
 
 ```text
-create-learned-generated CONFIG LEARNED_RECIPE --resume --reconcile-receipts [--finish-after-message PREVIOUS_REQUEST] [--topology-profile PATH] [--history-anchor INPUT] [--retain-history-anchor NEW_OUTPUT [--retain-topology-checkpoint NEW_OUTPUT]]
+create-learned-generated CONFIG LEARNED_RECIPE --resume --reconcile-receipts [--finish-after-message PREVIOUS_REQUEST] [--topology-profile PATH] [--history-anchor INPUT] [--retain-history-anchor NEW_OUTPUT [--retain-topology-checkpoint NEW_OUTPUT]] [--recover-receipt-checkpoint]
 ```
 
 This opt-in path consumes the original ordinary/raw/owned guarded cursor through
@@ -108,10 +108,11 @@ not relabeled success.
 
 Commands without retained outputs preserve their previous behavior. Successful
 reconciliation advances the journal by three events, so an older v2 source
-checkpoint no longer satisfies subsequent exact-cut topology recovery. There is
-no receipt counterpart of `--recover-terminal-checkpoint`: an earlier pair is
-not promoted across an unretained suffix after interrupted exports. Keep the
-original archives and every successfully written successor.
+checkpoint no longer satisfies subsequent ordinary exact-cut topology recovery.
+The explicit `--recover-receipt-checkpoint` option below can confirm only the
+strictly checked receipt successor from the original matching pair. The separate
+terminal recovery flag does not apply. Keep the original archives and every
+successfully written successor.
 
 The outer actor-service dispatcher now routes BOTH receipt flags. This also
 repairs the existing baseline stream `--reconcile-receipts` path, whose inner
@@ -183,8 +184,10 @@ RCH_REQUIRE_REMOTE=1 rch exec -- cargo run --locked -p fa-reference \
 Retain the finish predecessor option when inspecting a finish. A further
 explicit reconciliation can select this successor pair and two new output paths;
 it still spends three events and preserves unresolved dispatched charges. The
-old pair remains rejected once the journal advances. These are two independent
-exports, not an atomic multi-file transaction or archive authentication.
+old pair remains rejected by ordinary recovery once the journal advances;
+the explicit repair option below accepts only its narrow receipt successor.
+These are two independent exports, not an atomic multi-file transaction or
+archive authentication.
 
 ## Refusal-state clarification (2026-10-24)
 
@@ -374,3 +377,85 @@ The exact production-library source manifest is
 These checks include the integrated concurrent main source through `fcc8fe766`,
 but do not constitute execution of all abandonment regressions. Canonical
 workspace/RCH qualification and Beads remain open.
+
+## Explicit operator repair after interrupted exports
+
+If reconciliation completed but either retained output was lost or failed, use
+the original independently retained matching pair with
+`--recover-receipt-checkpoint` and two fresh output paths:
+
+```sh
+supervise_publication create-learned-generated CONFIG.json LEARNED_RECIPE.json \
+  --resume --reconcile-receipts --recover-receipt-checkpoint \
+  --history-anchor /operator/custody/history-0.anchor \
+  --topology-profile /operator/custody/receipts-0.json \
+  --retain-history-anchor /operator/custody/history-repaired.anchor \
+  --retain-topology-checkpoint /operator/custody/source-repaired.bin
+```
+
+Keep the original selected recipe/request. A finish also requires
+`--finish-after-message PREVIOUS_REQUEST` for its exact confirmed predecessor.
+The topology profile must use the original v2 `source_checkpoint` and omit its
+live-source `retain_checkpoint` field. Its nested history must exactly equal the
+independent input anchor. Both outputs are mandatory, new, distinct, absolute
+and outside the authority store. Version-1 manual minima, missing/mixed input
+custody, passive mode and incomplete output selections refuse. Original immediate
+path and finish values are validated before any flags are removed, so stripping
+one option cannot repair a neighboring malformed argument.
+
+The command opens the original plain/raw/owned mediated recovery with all
+independent guards, then consumes it into the sealed native repair cursor.
+The ordinary selected-cursor route keeps its exact source-extent checks. One
+monotonic budget and one-event cooperative replay cover intake, pre-open, every
+event and Ready. No live driver, source observer or numerical continuation is
+created.
+
+At the unchanged original cut, this explicit reconciliation still performs its
+one original three-event settlement and clock call. If exactly one complete
+Fence/Time/Sweep already follows the saved prefix, the command confirms that
+existing cut and exports matching custody without another clock, event or
+replacement. A partial, additional or unrelated suffix refuses; repair cannot
+reconstruct arbitrary missing custody. The full native confirmation and
+selection rules above apply, including current credential epoch, higher floors
+and real filesystem synchronization.
+
+Both archives are attempted before late deadline handling or stdout. A failed
+archive does not suppress its partner or the original redacted response, and
+combined reporting/retention failures retain the confirmed revision. Late
+expiry withholds the response but still attempts both archives. Keep any
+successful output and choose new paths on the next repair attempt. Repeating
+repair from the original pair is valid only while the exact permitted successor
+remains current. Unknown outcomes retain their original charge and exit law;
+repair is never an effect retry.
+
+After both exports succeed, point a new historical v2 profile at
+`source-repaired.bin` and use the matching `history-repaired.anchor` for passive
+receipt inspection or the next independently authorized operation. Merely
+reissuing ordinary reconciliation from that successor still spends another
+transaction; use `--receipts-only` for observation.
+
+## Operator repair verification, 2026-10-28
+
+Seven new one-shot regression functions cover actual retained publication in
+plain/raw/owned modes, loss of either/both exports and repeated repair, unchanged
+cut settlement and successor selection, closed grammar and original immediate
+option values, mixed/manual/unsafe custody and higher floors, real partial/extra
+native suffixes, deadline/stdout/output races, and an actual finish with its exact
+confirmed predecessor.
+
+The final production publication executable passes direct metadata checking in
+4.01 seconds; the complete native receipt target passes 18/18 as recorded above.
+Changed Rust files pass syntax parsing and independent source review. Full
+operator-test metadata first found a real missing explicit module path in the
+concurrently added guarded-abandonment tests; the path is corrected without
+changing those test bodies or assertions.
+
+Full operator-test verification remains incomplete. A subsequent metadata check
+was stopped after 55.27 seconds when the shared cgroup OOM count increased; the
+unmodified full Cranelift harness build was SIGKILLed after 33.31 seconds
+(934,376 KiB observed peak) with another shared OOM event. A final lightweight
+metadata attempt was interrupted after 14.35 seconds by a further shared OOM
+event. No operator harness was produced, so the seven new one-shot functions
+have no runtime pass or completed final full-target metadata result. No source,
+test body, libtest registration, assertion or gate was removed to fit the host.
+Canonical workspace/RCH qualification remains open.

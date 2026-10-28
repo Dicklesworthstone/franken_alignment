@@ -1,5 +1,18 @@
 # Changelog
 
+## 2026-10-28: add explicit learned receipt checkpoint repair command
+
+- Add `--recover-receipt-checkpoint` with required matching v2 input custody,
+  explicit reconciliation and two fresh output archives across plain/raw/owned
+  modes. Preserve complete guards, cooperative replay and strict ordinary recovery.
+- Repair the permitted existing successor without another settlement; retain
+  both archives before late deadline/stdout failures and preserve combined errors.
+- Validate original immediate option values before stripping flags, and correct
+  the nested guarded-abandonment test module path found by compiler checking.
+- Add seven one-shot regressions. Production executable metadata and all 18
+  native receipt tests pass. Full operator checks hit shared OOM pressure;
+  new one-shot tests remain unexecuted and final full-target typechecking is open.
+
 ## 2026-10-28: recover native custody after interrupted receipt exports
 
 - Add a sealed mediated plain/raw/owned recovery cursor for an exact retained

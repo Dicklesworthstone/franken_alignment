@@ -159,11 +159,18 @@ Both exports are attempted before a late deadline can withhold the response or
 stdout can fail; neither export suppresses the other. Use the resulting pair
 in a new v2 profile for subsequent exact recovery. No-output reconciliation
 retains its earlier behavior and leaves the old v2 cut stale. Receipt settlement
-does not support the terminal interrupted-export repair flag or infer a source
-successor from an arbitrary later journal.
+has its own explicit `--recover-receipt-checkpoint` option; the terminal repair
+flag does not apply. Select the original matching v2/source-history pair and
+both new outputs with `--resume --reconcile-receipts`. The restricted original
+cursor accepts only that unchanged cut or exactly one Fence/Time/Sweep successor.
+An existing successor is fully replayed and confirmed with real synchronization
+and cleanup, without another clock, event, replacement or source read. Partial,
+extra or unrelated suffixes refuse. Ordinary exact-cut recovery remains strict.
 
 See [retained topology receipt custody](LEARNED_RECEIPT_RECONCILIATION.md#retained-topology-receipt-custody)
-for the paired-output command and next passive inspection.
+for the paired-output command and next passive inspection, and
+[explicit receipt repair](LEARNED_RECEIPT_RECONCILIATION.md#explicit-operator-repair-after-interrupted-exports)
+for recovery after a lost export.
 
 ## Failure and cost boundaries
 
