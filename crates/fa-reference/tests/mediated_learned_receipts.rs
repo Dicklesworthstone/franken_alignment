@@ -22,6 +22,8 @@ mod checkpoint_repair;
 mod proposal_diagnosis;
 #[path = "mediated_learned_receipts/fleet.rs"]
 mod fleet_shutdown;
+#[path = "mediated_learned_receipts/stream_reset_recovery.rs"]
+mod stream_reset_recovery;
 
 use fa_reference::action::consequence::delivery::persistent::observed::{
     decoder::learned::FileReconciledLearnedReceipt,

@@ -1,5 +1,19 @@
 # Changelog
 
+## 2026-10-28: recover pending stream containment before fencing
+
+- Add a consuming exact-intent stream reset finalizer to native learned recovery
+  and its guarded plain and mediated plain wrappers.
+- Preserve the declared incident frontier, confirmed audience, original audit,
+  spent work, independent guards and role custody through one completion-plus-Fence
+  replacement; completion cannot spend terminal recovery reserve.
+- Keep ordinary quarantine and post-Fence/Stop refusals. Exact completed retries
+  add only the original Fence, without another audit, incident or budget refill.
+- Add nineteen runtime regression functions and one compile-fail example,
+  including actual mediated source refresh and guarded policy promotion. Nine
+  changed Rust files pass syntax parsing; RCH attempts exit 127 and runtime
+  qualification remains open.
+
 ## 2026-10-28: add stream-bound learned checkpoint restoration
 
 - Add separate native and durable stream checkpoint/reset APIs within one exact

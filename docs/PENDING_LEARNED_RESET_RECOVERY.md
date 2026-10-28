@@ -61,6 +61,26 @@ effects, infer nonexecution, or refund an unknown send. Existing reconciliation
 and sealing obtain the endpoint's original outcomes separately. The local journal
 is the sole publication sink; this is not a distributed transaction protocol.
 
+### Plain learned text streams
+
+Stream-kind checkpoints use the separate
+`finish_pending_stream_reset(&expected_intent, first_incident_sequence)` on the
+base, guarded plain and mediated plain learned recovery cursors. The retained
+intent and independently selected incident frontier must both match the original
+`BeginStreamReset`. The original stream checkpoint binds the exact confirmed
+audience, message boundaries and text output offset; recovery cannot cross a
+publication change or reinterpret a legacy checkpoint.
+
+This path completes the original stream reset privately, checks its ordinary
+journal allowance, and uses the same sole completion-plus-Fence replacement.
+Both guarded wrappers retain their full contract checks before and after the
+reset. A completed exact retry only fences; an unrelated pending instruction,
+previous Fence or Stop, changed predecessor, partial replay or missing intent
+refuses without exposing a role. Predictors remain outside the supported stream
+reset scope, and legacy `finish_pending_reset` still refuses stream operations.
+See [learned stream containment](LEARNED_STREAM_CONTAINMENT.md) for the complete
+API, numerical/accounting constraints and authored recovery coverage.
+
 Logical reset accounting describes the single journaled operation. Replaying
 history and repeating an unacknowledged recovery can do physical work again.
 There is no cross-process CPU escrow, anti-rollback store, cryptographic source

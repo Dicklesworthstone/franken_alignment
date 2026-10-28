@@ -47,10 +47,11 @@ or failure, including its actual retained costs and containment state.
 
 The file handle exposes only `id()` and `info()`. It contains no numerical
 state, actor, source, reviewer or effect rights. Old handles must be reacquired
-after recovery. Stream and legacy checkpoint handles are distinct types; legacy
-capture/reset, cooperative preparation and pending-reset recovery cannot execute
-stream operations. Generic immutable reset-result inspection can read either
-kind without obtaining execution authority.
+after recovery. Stream and legacy checkpoint handles are distinct types. Legacy
+capture/reset, cooperative preparation and `finish_pending_reset` cannot execute
+stream operations. The separate `finish_pending_stream_reset` path below retains
+the stream kind and independently selected incident frontier. Generic immutable
+reset-result inspection can read either kind without obtaining execution authority.
 
 ## Exact audience and incident boundaries
 
@@ -116,6 +117,68 @@ recovery Fence; neither a fresh clock nor a newer expected epoch can complete
 that original ambiguous instruction. Existing settlement and terminal
 containment remain available.
 
+## Explicit recovery before the Fence
+
+An acknowledged `BeginStreamReset` can survive a process failure without its
+completion. The supervisor can deliberately complete that exact instruction at
+its original predecessor, before any recovery Fence, with:
+
+```rust
+recovery.finish_pending_stream_reset(&expected_intent, first_incident_sequence)
+```
+
+The consuming finalizer is available on the original `FileLearnedRecovery`,
+`FileGuardedLearnedRecovery` and plain `FileMediatedLearnedRecovery`. Use the
+appropriate original `begin_open_*` constructor and advance its numerical replay
+to `Ready`. Independently retain the checkpoint ID, `FileResetRequest` and
+`KvRestartBudget` as `FileLearnedResetIntent::for_recovery`, plus the exact declared
+incident frontier. Constructing this expectation neither creates an intent nor
+selects a checkpoint on the caller's behalf.
+
+Before a new audit, the finalizer requires the full original intent, stream kind,
+incident frontier, control/actor/authority predecessor, uninterrupted status and
+confirmed audience boundary to match. It also checks ordinary completion event
+capacity, separate Fence capacity and the exact canonical bytes under the same
+exclusive lock. The original stream reset performs the audit, restoration,
+remaining-budget intersection and incident escalation. Its success or actual
+failure becomes the original completion witness. The encoder checks every
+prefix, including the completion's ordinary byte allowance; terminal reserve
+cannot pay for the completion merely because a Fence follows it.
+
+The original `finish` rechecks the same canonical input and publishes completion
+and Fence in one acknowledged replacement. No intermediate reset-only owner,
+reviewer or role bundle escapes. The guarded variants check their full independent
+requirements both before and after private preparation, including effective
+policy, credentials and history floors; mediation also retains its topology and
+source contract. They provision only the original fresh role types after the
+replacement succeeds. This adds no predictive reset path or weaker guard fallback.
+
+After success, inspect `learned_reset_result(operation)` for the recorded inner
+outcome. The recovered owner is paused and lacks fresh time. A successful
+restoration starts with Empty source evidence; independently authorized time and
+resume, a new accepted token and the original publication approvals remain
+necessary. A failure remains a failure with its admitted work retained.
+
+After an ambiguous write, the exact already-completed intent and incident
+frontier receive only ordinary Fence recovery. No second audit, incident or
+refund occurs. A different pending instruction takes precedence and refuses an
+attempt to recover an older completed command. Incomplete or failed replay,
+missing intents, changed commands/frontiers, old checkpoint kinds and a prior
+Fence or Stop return no owner. Ordinary `finish` and synchronous open still
+quarantine unresolved intents; this explicit method cannot rebase one into the
+new epoch.
+
+The cursor is consumed on failure or unwind. Failed storage can expose the old
+pending image or the complete new image, never an acknowledged intermediate
+reset result. Physical replay and unacknowledged audit work can recur after a
+process failure; logical retained charges are not a cross-process CPU escrow.
+Storage and an individual original numerical event remain synchronous.
+
+See [pending learned reset recovery](PENDING_LEARNED_RESET_RECOVERY.md) for the
+shared composition, independent custody and retry contract.
+
+## Wire compatibility
+
 Legacy event tags 0/1/2 and legacy witness layouts remain unchanged. The explicit
 new forms use tags 3 (`StreamCapture`), 4 (`BeginStreamReset`) and 5
 (`StreamReset`). New capture/reset witness domains are `FALSCP\0\x01` and
@@ -141,13 +204,29 @@ failed audits without work refunds. Two compile-fail examples prohibit treating
 a stream checkpoint as either a permit or a legacy checkpoint. Existing legacy
 test assertions remain unchanged.
 
-Independent source reviews found and corrected a child-method visibility error
-and a test-only codec ceiling that was too small for native witnesses. These are
-authored tests, not an executed pass count. The required targeted and canonical
-commands both exited 127 because `rch` is absent:
+Nineteen additional runtime regression functions exercise the original completion
+and Fence transaction, every partial replay cut, exact completed retries,
+unrelated pending commands, guarded policy/credential/history requirements,
+fresh-role continuation, all five storage barriers, canonical substitution before
+and after preparation, exact ordinary event/byte limits, preserved audit failures
+and a consumed candidate on unwind. The mediated positive uses actual original
+file-source reads, identity and campaign guards, an original generated proposal
+and independently approved native policy promotion. After recovery, only the
+fresh observer can install a newer graph and certify a new source cut before
+resumed generation. A further compile-fail example prohibits reusing the consumed
+recovery cursor. These are authored cases pending remote execution.
+
+Independent source reviews found and corrected a child-method visibility error,
+a test-only codec ceiling that was too small for native witnesses, and a mediated
+fixture that incorrectly treated an authority-epoch advance as a control-sequence
+advance. The corrected fixture explicitly checks the distinction and uses actual
+native policy promotion to order its incident frontier. The initial fifteen
+changed Rust files and the nine recovery-increment Rust files pass syntax
+parsing. These are authored tests, not an executed pass count. The latest required
+targeted and canonical commands both exited 127 because `rch` is absent:
 
 ```sh
-RCH_REQUIRE_REMOTE=1 rch exec -- cargo test --locked -p fa-reference --lib --test learned_text_stream_durable
+RCH_REQUIRE_REMOTE=1 rch exec -- cargo test --locked -p fa-reference --lib --test learned_text_stream_durable --test mediated_learned_receipts
 RCH_REQUIRE_REMOTE=1 rch exec -- cargo run --locked -p xtask -- check
 ```
 

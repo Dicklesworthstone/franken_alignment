@@ -2601,7 +2601,14 @@
         "crates/fa-reference/src/action/consequence/delivery/persistent/observed/decoder/learned/checkpoint/stream.rs",
         "crates/fa-reference/src/action/consequence/delivery/persistent/observed/machine/learned/checkpoint/stream.rs",
         "crates/fa-reference/tests/learned_text_stream_durable/continuation/checkpoints.rs",
-        "crates/fa-reference/src/action/consequence/delivery/persistent/observed/decoder/learned/config/text/intake/tests/stream_checkpoint.rs"
+        "crates/fa-reference/src/action/consequence/delivery/persistent/observed/decoder/learned/config/text/intake/tests/stream_checkpoint.rs",
+        "docs/PENDING_LEARNED_RESET_RECOVERY.md",
+        "crates/fa-reference/src/action/consequence/delivery/persistent/observed/decoder/learned/recovery/reset.rs",
+        "crates/fa-reference/src/action/consequence/delivery/persistent/observed/guarded/learned_recovery.rs",
+        "crates/fa-reference/src/action/consequence/delivery/persistent/observed/guarded/mediated/learned.rs",
+        "crates/fa-reference/tests/learned_text_stream_durable/continuation/checkpoints/recovery.rs",
+        "crates/fa-reference/src/action/consequence/delivery/persistent/observed/decoder/learned/config/text/intake/tests/stream_checkpoint/recovery.rs",
+        "crates/fa-reference/tests/mediated_learned_receipts/stream_reset_recovery.rs"
       ],
       "founding_ideas": [
         "FI-A09",

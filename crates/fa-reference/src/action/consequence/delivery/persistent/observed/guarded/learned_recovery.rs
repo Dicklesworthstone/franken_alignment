@@ -386,6 +386,19 @@ impl FileGuardedLearnedRecovery {
         self.finish()
     }
 
+    /// Complete the exact retained stream reset before the original recovery
+    /// fence. The complete guard contract is checked before and after the
+    /// private native reset; its stream kind and declared incident frontier must
+    /// match. Only the original completion-plus-fence transaction exposes the
+    /// paused owner and fresh roles. Exact completed retries add only a fence.
+    pub fn finish_pending_stream_reset(mut self, intent: &FileLearnedResetIntent,
+        first_incident_sequence: u64) -> Result<(FileOversight, FileOversightRoles), JournalError>
+    {
+        self.check_ready()?;
+        self.inner = self.inner.prepare_pending_stream_reset(intent, first_incident_sequence)?;
+        self.finish()
+    }
+
     #[cfg(test)]
     pub(in super::super) fn fail_once(&self, operation: super::super::super::JournalIo) {
         self.inner.fail_once(operation);

@@ -550,5 +550,18 @@ impl FileMediatedLearnedRecovery {
         self.inner = self.inner.prepare_pending_reset(intent)?;
         self.finish()
     }
+
+    /// Complete the exact retained stream reset at its declared incident
+    /// frontier before fencing. Topology and every independent guard are checked
+    /// before and after the same native reset. Only the original atomic
+    /// completion-plus-fence replacement provisions the paused owner and fresh
+    /// mediated roles; exact completed retries do not repeat an audit or incident.
+    pub fn finish_pending_stream_reset(mut self, intent: &FileLearnedResetIntent,
+        first_incident_sequence: u64) -> Result<(FileOversight, FileMediatedRoles), JournalError>
+    {
+        self.check_ready()?;
+        self.inner = self.inner.prepare_pending_stream_reset(intent, first_incident_sequence)?;
+        self.finish()
+    }
 }
 

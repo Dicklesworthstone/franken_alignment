@@ -1,5 +1,37 @@
 # Implementation status · design revision 0.3
 
+## 2026-10-28: complete exact pending stream resets before recovery fences
+
+The original learned recovery cursor now exposes `finish_pending_stream_reset`
+to complete an already acknowledged stream intent at its unchanged predecessor.
+It requires the exact independently retained instruction and incident frontier,
+original audience boundary and complete Ready replay. Completion uses ordinary
+journal capacity; the original Fence follows in the same canonical replacement.
+No live owner or role escapes preparation, encoding, storage failure or unwind.
+
+Guarded plain and mediated plain wrappers check their complete original policy,
+credential, floor and source/topology requirements before and after preparation,
+then provision the original fresh roles after persistence. Exact completed
+retries only fence, without another audit or incident. Missing or changed
+instructions, unrelated pending work and previously fenced/stopped intents
+refuse. Ordinary open retains quarantine behavior; predictor stream restoration
+is still unsupported. Returned numerical owners remain paused until fresh time
+and independently authorized resume, and restored evidence starts Empty.
+
+Nineteen new runtime regression functions cover real numerical restoration,
+guarded fresh-role continuation, exact retries, partial replay, canonical
+substitution, all five storage barriers, ordinary event/byte reserves and
+acknowledged audit failures. A full mediated fixture retains actual file-source
+refresh, identity, evaluation and campaign guards; its native policy promotion
+establishes the strict control frontier, while topology rebind advances only the
+authority epoch. A consuming compile-fail example prevents cursor reuse.
+
+All nine changed Rust files pass syntax parsing after independent source review.
+The targeted tests and canonical check through RCH both exit 127 because the
+dispatcher is absent. Compilation, runtime tests, formatting, Clippy and full
+qualification remain pending; the scoped Bead and FA-108 acceptance remain open.
+See [stream recovery](docs/LEARNED_STREAM_CONTAINMENT.md#explicit-recovery-before-the-fence).
+
 ## 2026-10-28: restore learned stream state within the confirmed audience boundary
 
 Plain learned text streams now have separate native and durable checkpoint/reset

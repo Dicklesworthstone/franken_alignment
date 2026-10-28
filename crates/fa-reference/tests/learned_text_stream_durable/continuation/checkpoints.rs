@@ -1,6 +1,8 @@
 //! Original stream rewind within one unchanged confirmed publication boundary.
 //! Synthetic tiny-model histories exercise state/authority conservation only;
 //! the supervisor-declared incident frontier is not an authenticated detector.
+#[path = "checkpoints/recovery.rs"]
+mod recovery;
 use super::*;
 use fa_reference::action::consequence::{
     activation::tensor::kv::{
