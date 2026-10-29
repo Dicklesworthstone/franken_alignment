@@ -3619,6 +3619,11 @@
       "owner_role": "gate",
       "result_artifacts": [
         "docs/ACTOR_EXACT_PRECHECK.md",
+        "docs/LIVE_ACTOR_PRECHECK.md",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/precheck.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/precheck/profile.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/precheck/tests.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/tests/precheck_service.rs",
         "crates/fa-reference/src/action/consequence/delivery/persistent/requests/actor/precheck.rs",
         "crates/fa-reference/src/action/consequence/delivery/persistent/requests/actor/precheck/wire.rs",
         "crates/fa-reference/src/action/consequence/delivery/persistent/requests/actor/precheck/wire/codec.rs",

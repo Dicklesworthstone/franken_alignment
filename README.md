@@ -49,6 +49,12 @@ stop-only peers to active supervisors while they own their journals, with a
 complete per-member acknowledgement/drain report and no automatic retry.
 Its new source remains pending execution qualification.
 
+Ordinary live actors can use an [explicit exact-precheck endpoint](docs/LIVE_ACTOR_PRECHECK.md)
+before submitting a consequential proposal. The supervisor captures one bounded
+source/time cut, preserves its original lease and disclosure allowance, and
+still requires fresh admission plus independent review on actual Submit.
+The new integration and its regression tests remain pending execution qualification.
+
 The [native worker also yields during input tokenization](docs/COOPERATIVE_NATIVE_INPUT.md)
 under its existing absolute deadline and process-step allowance, before starting
 monitored inference. It preserves the complete original request and spent work.

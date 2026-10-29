@@ -1,5 +1,34 @@
 # Implementation status · design revision 0.3
 
+## 2026-10-28: integrate exact prechecks into the ordinary live supervisor
+
+The four ordinary single-request serve modes now accept an explicit final
+`--precheck-profile` option. A strict public connection profile selects exact
+disclosure, independent expected epoch, separate secure socket and finite work.
+Default operation is unchanged; unsupported service combinations and recorded
+request disclosure are refused rather than downgraded.
+
+After independent stop setup/checkpoint, the original supervisor prepares one
+source/time intake and retains one native grant. Sidecar scheduling checks the
+captured source lease, acknowledged clock floor, unchanged owner revision and
+elapsed allowance. Reconnects retain original budgets; query faults retire only
+the sidecar, never invoke ordinary stop/drain or append a query journal event.
+Actual Submit still performs fresh source acquisition, helper review and human
+approval. The sidecar closes before review and on every outer workflow exit.
+
+Ten component and four actual-service/grammar regression functions cover allowed
+and denied prechecks, unchanged owner bytes, later ordinary execution, source
+changes before Submit, rejected peers, finite reconnects, lost replies, socket
+collisions and lease/clock boundaries. Independent review repaired a post-intake
+clock rollback gap and partial-I/O assumptions in the fixtures.
+
+Required targeted example tests and the canonical check cannot start because
+`rch` is absent (exit 127); `br` is also absent, so no tracker state is changed.
+Compilation, runtime tests, formatting, Clippy and production qualification are
+not claimed. This is cooperative reference orchestration, not hard syscall
+preemption, full assurance-profile disclosure or witness caching. FA-142 and its
+remaining acceptance stay open. See [the live precheck contract](docs/LIVE_ACTOR_PRECHECK.md).
+
 ## 2026-10-28: query exact prechecks through an authenticated one-shot client
 
 The Linux precheck client authenticates an already connected server socket before

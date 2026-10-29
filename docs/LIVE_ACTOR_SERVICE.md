@@ -23,6 +23,14 @@ and stop commands continue to use the separate reviewer profile. Never provision
 the private Config, journal directory, producer data or reviewer credentials to
 the actor as a substitute for this role split.
 
+Ordinary single-request serve modes can explicitly add a separate
+[`--precheck-profile PRECHECK_PROFILE` endpoint](LIVE_ACTOR_PRECHECK.md). It captures
+one source/time cut under supervisor control, retains one bounded disclosure,
+and retires on the original source lease or owner revision. Precheck traffic
+cannot renew it or replace the fresh source acquisition on an actual Submit.
+The option is absent by default and does not apply to the sequence, multi-peer,
+receipt, topology or generated service variants.
+
 One service invocation handles **one independently selected request ID**. This is
 not a multi-request daemon. A new accepted request passes through fresh native
 file-source admission, then the same `execute_serviced` workflow as file-based

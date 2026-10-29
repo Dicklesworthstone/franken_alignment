@@ -1,5 +1,16 @@
 # Changelog
 
+## 2026-10-28: serve exact prechecks beside ordinary actor admission
+
+- Add an explicit single-request supervisor option with a strict public profile,
+  separate authenticated endpoint and one original source-backed disclosure.
+- Enforce original source lease, monotonic clock and owner revision; retain
+  lifetime work across reconnects without query-triggered source or grant renewal.
+- Isolate precheck framing/transport failures from ordinary stop, journal and
+  publication work; actual Submit still requires fresh source and both keys.
+- Add fourteen component/service/grammar regressions and document fixed leakage;
+  execution qualification remains pending because the required runner is absent.
+
 ## 2026-10-28: add authenticated one-shot precheck clients
 
 - Verify independently selected server credentials before request bytes and

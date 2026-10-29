@@ -44,9 +44,12 @@ provision the [exact-precheck peer and client](ACTOR_EXACT_PRECHECK.md#authentic
 The native Linux peer authenticates ingress; the actor-side one-shot client
 authenticates the server and receives only a correlated exact observation.
 Keep the disclosure custodian, source/clock observation and grant issuance with
-the supervisor. A passed precheck still requires ordinary submission and review;
-it is not the privileged diagnosis above or a new `fa`/operator CLI. Reconnects
-and lost replies do not replenish the original allowances.
+the supervisor. The [ordinary live service's explicit precheck option](LIVE_ACTOR_PRECHECK.md)
+wires that bootstrap to a separate endpoint and enforces the original source
+lease; other service modes have no fallback. A passed precheck still requires
+ordinary submission and review, not the privileged diagnosis above. Reconnects
+and lost replies do not replenish the original allowances. This is a scoped
+reference integration, not the complete prospective `fa` surface.
 
 ### P2. Investigating an incident
 

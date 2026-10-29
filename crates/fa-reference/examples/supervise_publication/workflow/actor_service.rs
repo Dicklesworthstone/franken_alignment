@@ -24,6 +24,8 @@ mod native;
 mod tokenizer;
 #[path = "actor_service/topology.rs"]
 mod topology;
+#[path = "actor_service/precheck.rs"]
+mod precheck;
 use profile::Profile;
 use super::{ActionState, ActorWire, BoundSocket, Config, Deadline, Duration, ElapsedTick,
     ExecuteServices, FileOversight, FileRequestDisposition, FileSupervisedDriver, Instant,
@@ -37,13 +39,35 @@ use fa_reference::action::consequence::oversight::actor_transport::DriveBudget;
 use std::path::Path;
 
 type Port = FileActorPort<FileOversight>;
-const USAGE: &str = "serve-create|serve-open CONFIG ACTOR_PROFILE REVIEWER_PROFILE; serve-create-checked|serve-open-checked CONFIG ACTOR_PROFILE REVIEWER_PROFILE WITNESS_PROFILE; actor-submit ACTOR_PROFILE SUBMIT_JSON [SUBMIT_JSON ...]; serve-open and serve-open-checked also accept --credibility-activation EVIDENCE_FILE; all serve modes accept a final --requests 7,8,9 option OR --peers ACTOR_PROFILE [ACTOR_PROFILE ...]";
+const USAGE: &str = "serve-create|serve-open CONFIG ACTOR_PROFILE REVIEWER_PROFILE; serve-create-checked|serve-open-checked CONFIG ACTOR_PROFILE REVIEWER_PROFILE WITNESS_PROFILE; actor-submit ACTOR_PROFILE SUBMIT_JSON [SUBMIT_JSON ...]; serve-open and serve-open-checked also accept --credibility-activation EVIDENCE_FILE; all serve modes accept a final --requests 7,8,9 option OR --peers ACTOR_PROFILE [ACTOR_PROFILE ...]; ordinary single-request serve modes alternatively accept --precheck-profile PRECHECK_PROFILE";
+
+// Own the complete opt-in grammar before a different service can consume an
+// option and silently omit the requested disclosure boundary. No file is read
+// until the mode, position and exact ordinary-service arity have been checked.
+fn take_precheck_option(args: &[String]) -> Result<(&[String], Option<&Path>), String> {
+    let mut positions = args.iter().enumerate().filter(|(_, arg)| *arg == "--precheck-profile");
+    let Some((index, _)) = positions.next() else { return Ok((args, None)); };
+    if positions.next().is_some() || index + 2 != args.len() {
+        return Err("--precheck-profile requires exactly one final profile path".into());
+    }
+    let expected = match args.first().map(String::as_str) {
+        Some("serve-create" | "serve-open") => 4,
+        Some("serve-create-checked" | "serve-open-checked") => 5,
+        _ => return Err("precheck disclosure is supported only by ordinary single-request serve modes".into()),
+    };
+    if index != expected || args[1..index].iter().any(|value| value.starts_with("--"))
+        || args[index + 1].is_empty() || args[index + 1].starts_with("--") {
+        return Err("precheck disclosure cannot be combined with sequence, multi-peer, receipt, topology or generated service modes".into());
+    }
+    Ok((&args[..index], Some(Path::new(&args[index + 1]))))
+}
 
 pub(crate) fn shutdown_fleet(args: &[String], output: &mut impl std::io::Write) -> Result<(), String> {
     learned::fleet_command(args, output)
 }
 
 pub(crate) fn command(args: &[String], credibility: Option<&Path>) -> Result<(), String> {
+    let (args, precheck_path) = take_precheck_option(args)?;
     if args.first().is_some_and(|mode| mode == "serve-learned-generated") {
         return learned::sequence_command(args, credibility);
     }
@@ -91,6 +115,11 @@ pub(crate) fn command(args: &[String], credibility: Option<&Path>) -> Result<(),
     let actor = Profile::read(Path::new(&args[2]))?;
     let reviewer = PeerProfile::read(Path::new(&args[3]))?;
     let publication = if checked { Some(PublicationProfile::read(Path::new(&args[4]))?) } else { None };
+    let precheck = precheck_path.map(precheck::Settings::read).transpose()?;
+    if let Some(settings) = precheck.as_ref() {
+        return serve_selected_with_precheck(config, &actor, &reviewer, publication.as_ref(),
+            existing, credibility, None, Some(settings), super::clock);
+    }
     if let Some(requests) = requests {
         return series::serve(config, &actor, &reviewer, publication.as_ref(),
             series::Options { requests: &requests, open: existing, credibility }, super::clock);
@@ -117,9 +146,19 @@ where F: FnMut() -> ElapsedTick {
     serve_selected(config, actor, reviewer_profile, publication, open, credibility, None, time)
 }
 
-pub(super) fn serve_selected<F>(mut config: Config, actor: &Profile, reviewer_profile: &PeerProfile,
+pub(super) fn serve_selected<F>(config: Config, actor: &Profile, reviewer_profile: &PeerProfile,
     publication: Option<&PublicationProfile>, open: bool, credibility: Option<&Path>,
-    topology: Option<super::continuation::creation::topology::Selection>, mut time: F)
+    topology: Option<super::continuation::creation::topology::Selection>, time: F)
+    -> Result<(), String>
+where F: FnMut() -> ElapsedTick {
+    serve_selected_with_precheck(config, actor, reviewer_profile, publication, open,
+        credibility, topology, None, time)
+}
+
+fn serve_selected_with_precheck<F>(mut config: Config, actor: &Profile, reviewer_profile: &PeerProfile,
+    publication: Option<&PublicationProfile>, open: bool, credibility: Option<&Path>,
+    topology: Option<super::continuation::creation::topology::Selection>,
+    precheck_settings: Option<&precheck::Settings>, mut time: F)
     -> Result<(), String>
 where F: FnMut() -> ElapsedTick {
     if !open && credibility.is_some() {
@@ -127,6 +166,9 @@ where F: FnMut() -> ElapsedTick {
     }
     if topology.is_some() && open {
         return Err("topology-supervised live service requires an explicit create mode".into());
+    }
+    if precheck_settings.is_some() && topology.is_some() {
+        return Err("precheck disclosure has no topology-service fallback".into());
     }
     // The native mediated bootstrap currently composes plain witness limits.
     // Feed, waiting, snapshot and joint contracts must never be reduced to those
@@ -136,6 +178,7 @@ where F: FnMut() -> ElapsedTick {
             "topology-supervised checked creation requires the plain witness profile; feed, wait, snapshot and joint contracts are not downgraded".to_owned())).transpose()?
     } else { None };
     actor.check_host(&config)?; reviewer_profile.check_host(&config)?;
+    if let Some(settings) = precheck_settings { settings.check_host(&config, actor, reviewer_profile)?; }
     if actor.socket == reviewer_profile.socket(actor.request)
         || actor.socket == super::control::socket_path(reviewer_profile, actor.request) {
         return Err("actor, human-review and stop sockets must be distinct".into());
@@ -171,6 +214,9 @@ where F: FnMut() -> ElapsedTick {
         Err(JournalError::Contract(Error::Missing)) => false,
         Err(error) => return Err(debug(error)),
     };
+    if recorded && precheck_settings.is_some() {
+        return Err("recorded requests are observation-only and cannot acquire a new precheck disclosure".into());
+    }
     if !recorded {
         if let Some(path) = credibility {
             deadline.check(time())?;
@@ -201,6 +247,7 @@ where F: FnMut() -> ElapsedTick {
     let mut early_control = if recorded { None } else {
         Some(super::control::Control::new(&config, actor.request, Some(reviewer_profile))?)
     };
+    let mut precheck: Option<precheck::Service> = None;
     let session = PeerSession::new(actor.actor, ActorWire::new(port), actor.channels(), actor.connections).map_err(debug)?;
     let mut ingress = Intake { socket, session, selected: actor.request, attempted: 0, maximum: actor.candidates };
     eprintln!("Live actor endpoint ready: {:?}; request={}", actor.socket, actor.request);
@@ -210,6 +257,18 @@ where F: FnMut() -> ElapsedTick {
             // helpers or treats the old request as a new admission.
             resume_existing(&mut driver, actor.request, &mut time)?;
         }
+        if let Some(settings) = precheck_settings {
+            // Independent stop wins before the one supervisor-owned bootstrap,
+            // just as it does before ordinary actor-triggered source acquisition.
+            deadline.check(time())?;
+            if let Some(control) = &mut early_control {
+                if control.checkpoint(&mut driver, &reviewer, &deadline, &mut time)? {
+                    return Ok(());
+                }
+            }
+            precheck = Some(precheck::Service::start(settings, actor, reviewer_profile,
+                &mut config, &mut driver, &deadline, &mut time)?);
+        }
         loop {
             deadline.check(time())?;
             if let Some(control) = &mut early_control {
@@ -217,6 +276,11 @@ where F: FnMut() -> ElapsedTick {
                 if control.checkpoint(&mut driver, &reviewer, &deadline, &mut time)? {
                     return Ok(());
                 }
+            }
+            if let Some(service) = &mut precheck {
+                // Precheck transport faults retire this sidecar only. They must
+                // not enter stop(), mutate the journal or cancel ordinary work.
+                service.checkpoint(&driver, time());
             }
             if recorded {
                 // Do not spend the reply grace before an actor has connected.
@@ -239,6 +303,7 @@ where F: FnMut() -> ElapsedTick {
             }
             pause(actor.poll_ms);
         }
+        if let Some(service) = &mut precheck { service.retire(); }
         let status = driver.supervisor().host().map_err(debug)?.request_status(actor.request).map_err(debug)?;
         if !matches!(status.disposition, FileRequestDisposition::Admitted { stage: ActionState::Reviewing, .. }) {
             return Ok(());
@@ -255,6 +320,9 @@ where F: FnMut() -> ElapsedTick {
             ExecuteServices { peers: Some(reviewer_profile), publication, ingress: &mut pump,
                 stop: early_control.take() }, &mut time)
     })();
+    // Neither helper execution nor terminal reply grace can keep the original
+    // admission-time disclosure alive. Every early/failed exit closes it too.
+    if let Some(service) = &mut precheck { service.retire(); }
     let mut failure = match work {
         Ok(()) => None,
         Err(error) => Some(match stop(&mut driver, actor.request, &mut time) {

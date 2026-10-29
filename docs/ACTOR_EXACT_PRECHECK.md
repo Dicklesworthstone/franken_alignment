@@ -165,12 +165,14 @@ owner revision change still makes the captured cut unavailable. No precheck
 frame, reconnect or socket teardown observes time, refreshes a source, issues a
 new grant, consumes a submission ID or changes the journal/effect ledger.
 
-This is a native integrating-host surface, not a new `supervise_publication`
-service. That operator currently acquires its fresh source on a new Submit;
-initial precheck provisioning requires a separately explicit supervisor-owned
-source/clock observation phase. The transport deliberately does not introduce
-one implicitly. Generated, learned, predictive and cumulative-stream histories
-retain the native disclosure refusal rather than falling back to raw proposals.
+The native transport does not implicitly create a source/clock observation.
+The [ordinary live operator service](LIVE_ACTOR_PRECHECK.md) now offers an
+explicit optional bootstrap and separately named endpoint. It retains one grant,
+checks the original source lease on every scheduling turn, and isolates precheck
+transport failures from the ordinary stop/journal path. Actual Submit still
+performs its original fresh acquisition. Generated, learned, predictive and
+cumulative-stream histories retain the native disclosure refusal rather than
+falling back to raw proposals.
 
 ## Authenticated one-shot client
 

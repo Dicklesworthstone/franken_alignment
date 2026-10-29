@@ -585,3 +585,6 @@ fn failed_actor_output_does_not_retransmit_an_executed_request() {
 
 #[path = "tests/series.rs"]
 mod sequential;
+
+#[path = "tests/precheck_service.rs"]
+mod precheck_service;
