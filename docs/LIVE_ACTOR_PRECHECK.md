@@ -62,6 +62,70 @@ of the option disables disclosure. `none` and `full` are not alternate values
 silently treated as exact disclosure. This is not the complete signed E27
 assurance-profile schema or its production qualification.
 
+## Actor-only command
+
+```text
+supervise_publication actor-precheck ACTOR_PROFILE PRECHECK_PROFILE PRECHECK_JSON
+```
+
+The command accepts exactly these three files and no supervisor options. The
+top-level dispatcher preserves that grammar before it can remove a credibility,
+durability, topology or other option. It opens neither private Config nor the
+evidence/journal. A request is the existing strict `fa.actor-precheck/1` document,
+not a Submit command; its query label does not have to equal the ordinary actor
+request ID. For the sample target in the publication fixture:
+
+```json
+{
+  "schema": "fa.actor-precheck/1",
+  "operation": "precheck",
+  "query": "9001",
+  "target": {
+    "adapter": "10",
+    "object": "11",
+    "contract_version": "1",
+    "expected_version": "1",
+    "generation": "1"
+  },
+  "payload_hex": "6e6574776f726b",
+  "units": "7",
+  "deadline": "100000",
+  "expected_policy_epoch": "0"
+}
+```
+
+These are illustrative fields, not current deployment clocks or target IDs.
+Use an independently chosen current target, epoch and deadline in the deployed
+clock domain. Full-width IDs are decimal strings in the request, while the
+strict public profiles use JSON integer fields. The command does not repair a
+stale request, select another target or synthesize a deadline.
+
+It validates the request's epoch against the public precheck profile, connects
+only to the separate precheck socket and authenticates the connected supervisor
+before sending proposal bytes. The original native client binds query, epoch
+and closed response schema; the command additionally requires every Known result
+to name the selected `disclosure_id` before printing it.
+
+There is exactly one native exchange, without polling a new query, reconnecting
+or retrying. Lifetime work is capped at 4,096 socket I/O attempts, one native
+maximum request plus newline, and one response ceiling plus newline and a single
+trailing-data probe byte. Partial I/O, Interrupted and WouldBlock spend the same
+remaining lifetime allowance. One elapsed allowance starts before profile reads
+and uses the smaller of the actor and precheck runtimes.
+
+Stdout is only the original newline-terminated native response. A zero exit
+status requires `Known(PrecheckPassed)` and still means `review_required: true`,
+not admission or permission. A valid denial, Unknown, Withheld, Stale or native
+wire refusal is printed unchanged and returns nonzero. Authentication, input,
+binding and transport failures before output do not print a fabricated result.
+The query may nevertheless have spent server work before a reply was lost.
+
+File reads, pathname connection and stdout writes are synchronous cooperative
+boundaries, as in the existing operator, not preemptible deadlines. Time is
+checked around them and native drives. A failed or late-returning stdout write
+can leave a partial or complete response visible despite a nonzero exit. Treat
+that as an output/transport failure, not a reason to resend automatically.
+
 ## One bootstrap, no query-triggered renewal
 
 After owner/deployment checks and independent stop setup, an initial stop
@@ -82,13 +146,15 @@ future submission or an unobserved producer change.
 
 At most one candidate is accepted per turn, and the native drive enters at most
 one frame with bounded socket work. Kernel UID/GID and optional PID checks happen
-before request bytes. Candidate attempts, admitted connections, entered frames
+before request bytes are read. Candidate attempts, admitted connections, entered frames
 and native queries retain their original separate lifetime allowances across
 reconnects. Complete malformed requests spend parser work, not a new source read;
 lost replies never refund a completed evaluation.
 
-Truncated/overlong frames, terminal transport failures and exhausted service
-limits close only this endpoint and revoke its disclosure. They do not call the
+Truncated/overlong frames, terminal transport failures and exhausted frame,
+candidate or connection limits close only this endpoint and revoke its disclosure.
+Native query exhaustion returns `Capacity` under the remaining frame/service
+bounds; it does not allocate another allowance. These failures do not call the
 ordinary workflow's stop/drain, create a request, cancel work or append a journal
 event. Aggregate diagnostics contain retirement reason and counters, not proposal
 content. Independent stop is serviced first on each ordinary intake turn.
@@ -125,6 +191,12 @@ publication workflow, changed source before actual Submit, and malformed
 precheck traffic followed by successful ordinary execution. They also cover
 strict configuration, no-clobber paths, finite work, lost responses, lease/clock
 expiry and unchanged durable state during queries.
+
+The operator-client increment adds fourteen client/dispatch regression functions
+plus two real client-to-sidecar integration functions. They check authentication
+before bytes, complete strict/correlated output, independent disclosure binding,
+lifetime work/elapsed bounds, no resend on loss/output failure, unchanged owner
+state, and fresh ordinary admission after a real successful operator precheck.
 
 The operator remains synchronous and cooperatively scheduled, not a new executor
 or hard real-time service. Clock checks do not preempt filesystem, kernel or

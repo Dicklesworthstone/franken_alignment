@@ -30,6 +30,9 @@ and retires on the original source lease or owner revision. Precheck traffic
 cannot renew it or replace the fresh source acquisition on an actual Submit.
 The option is absent by default and does not apply to the sequence, multi-peer,
 receipt, topology or generated service variants.
+The matching actor-only command is `actor-precheck ACTOR_PROFILE PRECHECK_PROFILE
+PRECHECK_JSON`; it performs one authenticated query and never submits or retries
+the proposal. Its native response remains explicitly precheck/review-required.
 
 One service invocation handles **one independently selected request ID**. This is
 not a multi-request daemon. A new accepted request passes through fresh native

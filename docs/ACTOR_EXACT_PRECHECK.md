@@ -176,6 +176,12 @@ falling back to raw proposals.
 
 ## Authenticated one-shot client
 
+The [actor-only operator command](LIVE_ACTOR_PRECHECK.md#actor-only-command)
+uses this native client with public profiles and a bounded proposal document.
+It adds one cumulative socket-work/elapsed allowance and an independently
+selected disclosure ID, without opening private Config, source or journal.
+Pathname connection and output remain synchronous cooperative operator steps.
+
 On Linux, the separate `precheck_wire::client::PrecheckPeerClient` sends one
 request to an independently selected server. It is not the durable actor
 submission client and holds no ticket, journal, source, helper or effect key:

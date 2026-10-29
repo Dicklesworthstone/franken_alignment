@@ -53,6 +53,8 @@ Ordinary live actors can use an [explicit exact-precheck endpoint](docs/LIVE_ACT
 before submitting a consequential proposal. The supervisor captures one bounded
 source/time cut, preserves its original lease and disclosure allowance, and
 still requires fresh admission plus independent review on actual Submit.
+The matching `actor-precheck` command uses public profiles, one authenticated
+exchange and the original Knowledge response without submitting or retrying.
 The new integration and its regression tests remain pending execution qualification.
 
 The [native worker also yields during input tokenization](docs/COOPERATIVE_NATIVE_INPUT.md)

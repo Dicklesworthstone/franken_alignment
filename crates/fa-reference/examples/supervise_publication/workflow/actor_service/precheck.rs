@@ -4,6 +4,8 @@
 #[path = "precheck/profile.rs"]
 mod profile;
 pub(super) use profile::Settings;
+#[path = "precheck/client.rs"]
+pub(super) mod client;
 
 use super::{BoundSocket, Config, Deadline, Duration, ElapsedTick, FileSupervisedDriver,
     Instant, PeerProfile, Profile, debug, io, plus};

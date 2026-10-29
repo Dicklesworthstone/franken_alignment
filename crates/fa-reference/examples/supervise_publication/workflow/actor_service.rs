@@ -66,6 +66,12 @@ pub(crate) fn shutdown_fleet(args: &[String], output: &mut impl std::io::Write) 
     learned::fleet_command(args, output)
 }
 
+// The actor-only command owns its grammar before shared supervisor options are
+// stripped. It never opens Config or routes through ordinary Submit dispatch.
+pub(crate) fn precheck_command(args: &[String], output: &mut impl std::io::Write) -> Result<(), String> {
+    precheck::client::command(args, output)
+}
+
 pub(crate) fn command(args: &[String], credibility: Option<&Path>) -> Result<(), String> {
     let (args, precheck_path) = take_precheck_option(args)?;
     if args.first().is_some_and(|mode| mode == "serve-learned-generated") {

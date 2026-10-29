@@ -1,5 +1,16 @@
 # Changelog
 
+## 2026-10-28: add the actor-only precheck operator command
+
+- Wire public actor/precheck profiles and strict query documents to the original
+  authenticated one-shot client, without private supervisor inputs or Submit.
+- Check independently selected epoch and disclosure; preserve one lifetime
+  I/O/elapsed allowance and never retry on transport, loss or output failure.
+- Print only native Knowledge/refusal responses; success remains an exact pass
+  with mandatory later review, never effect authority.
+- Add sixteen client/dispatch/real-service regression functions. Source-reviewed
+  implementation remains pending execution under the required remote runner.
+
 ## 2026-10-28: serve exact prechecks beside ordinary actor admission
 
 - Add an explicit single-request supervisor option with a strict public profile,

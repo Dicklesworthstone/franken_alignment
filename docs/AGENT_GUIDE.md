@@ -51,6 +51,14 @@ ordinary submission and review, not the privileged diagnosis above. Reconnects
 and lost replies do not replenish the original allowances. This is a scoped
 reference integration, not the complete prospective `fa` surface.
 
+The actor can run `supervise_publication actor-precheck ACTOR_PROFILE
+PRECHECK_PROFILE PRECHECK_JSON` using only its public profiles and proposal.
+Consume the original Knowledge response: a zero exit requires a passed exact
+precheck, still explicitly requiring review. Denials and other valid refusals
+render their response with a nonzero exit; transport/output failures never cause
+an automatic resend or an ordinary submission. A later Submit uses its original
+separate contract and independently fresh source.
+
 ### P2. Investigating an incident
 
 1. `fa get fa://…/incident/<id>` → the incident with its `Knowledge` status and the addresses of the closures, rounds, evidence and findings it references.

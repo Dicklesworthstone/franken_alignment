@@ -1,5 +1,35 @@
 # Implementation status · design revision 0.3
 
+## 2026-10-28: expose actor-only exact prechecks through the operator command
+
+`supervise_publication actor-precheck ACTOR_PROFILE PRECHECK_PROFILE PRECHECK_JSON`
+now consumes the original authenticated native client. Its closed grammar runs
+before shared supervisor flags can be removed; it opens only public profiles and
+the actor's proposal, never private Config, evidence or journal. It checks the
+independently configured epoch, authenticates the server before proposal bytes,
+and binds Known responses to the selected disclosure before stdout.
+
+One cumulative byte/call allowance and one elapsed allowance cover the query;
+partial I/O cannot refresh them. No automatic retry, reconnect, Submit, ticket or
+effect key is created. Stdout remains the original native response. Success is
+only an exact pass still marked review-required; valid denials and other native
+refusals render unchanged with nonzero exit. Failed or late stdout can leave
+partial/complete response bytes without causing a resend. File/connect/output
+operations remain synchronous cooperative boundaries, not hard preemption.
+
+Fourteen client/dispatch regression functions and two actual operator-to-sidecar
+functions cover authentication before bytes, strict correlation/disclosure,
+closed argument dispatch, malformed/truncated/extra output, lifetime limits,
+lost responses and output failure, unchanged durable state, and a following
+ordinary Submit that still acquires fresh source and enters review. Independent
+review found no remaining concrete source blocker after the corrections recorded
+in the preceding server increment.
+
+Required targeted example tests and canonical RCH check again cannot start
+because `rch` is absent (exit 127). No compilation, runtime test, formatting,
+Clippy, full assurance-profile or production qualification is claimed; no tracker
+or gate is closed. See [the operator client contract](docs/LIVE_ACTOR_PRECHECK.md#actor-only-command).
+
 ## 2026-10-28: integrate exact prechecks into the ordinary live supervisor
 
 The four ordinary single-request serve modes now accept an explicit final

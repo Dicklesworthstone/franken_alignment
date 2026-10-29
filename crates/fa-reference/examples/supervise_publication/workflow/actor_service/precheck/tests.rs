@@ -1,5 +1,7 @@
 //! Real durable owners and local peer sockets. These fixtures test enforcement,
 //! not source authenticity, detector quality or a qualified production runtime.
+#[path = "tests/client_service.rs"]
+mod client_service;
 use super::*;
 use super::super::prepare_host;
 use fa_reference::Snapshot;
