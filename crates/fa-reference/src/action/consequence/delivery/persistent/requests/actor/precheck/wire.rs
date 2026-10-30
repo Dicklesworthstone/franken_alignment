@@ -4,6 +4,7 @@
 mod codec;
 mod response;
 pub mod discovery;
+pub mod policy;
 mod channel;
 #[cfg(unix)]
 mod transport;

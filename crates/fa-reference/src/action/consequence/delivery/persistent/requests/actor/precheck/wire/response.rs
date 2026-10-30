@@ -61,6 +61,14 @@ pub(super) fn encode_envelope<T>(schema: &str, marker: &str, bound: Option<u64>,
     result: &Result<Observation<T>, PrecheckWireError>,
     known: impl FnOnce(&T) -> Result<String, PrecheckResponseError>,
 ) -> Result<Vec<u8>, PrecheckResponseError> {
+    encode_envelope_bounded(schema, marker, bound, result, MAX_PRECHECK_RESPONSE_BYTES, known)
+}
+
+// Only a compiled codec selects a larger ceiling; legacy codecs retain 1024.
+pub(super) fn encode_envelope_bounded<T>(schema: &str, marker: &str, bound: Option<u64>,
+    result: &Result<Observation<T>, PrecheckWireError>, max_bytes: usize,
+    known: impl FnOnce(&T) -> Result<String, PrecheckResponseError>,
+) -> Result<Vec<u8>, PrecheckResponseError> {
     if bound == Some(0) { return Err(PrecheckResponseError::Binding); }
     let query = bound.map_or_else(|| "null".to_owned(), |query| format!("\"{query}\""));
     let body = match result {
@@ -75,7 +83,7 @@ pub(super) fn encode_envelope<T>(schema: &str, marker: &str, bound: Option<u64>,
     };
     let bytes = format!("{{\"schema\":\"{schema}\",\"{marker}\":true,\"query\":{query},{body}}}")
         .into_bytes();
-    if bytes.len() > MAX_PRECHECK_RESPONSE_BYTES { return Err(PrecheckResponseError::Capacity); }
+    if bytes.len() > max_bytes { return Err(PrecheckResponseError::Capacity); }
     Ok(bytes)
 }
 
@@ -83,10 +91,17 @@ pub(super) fn decode_envelope<T>(bytes: &[u8], query: u64, expected_policy_epoch
     schema: &str, marker: &str, max_items: usize,
     known: impl FnOnce(&Object) -> Result<T, PrecheckResponseError>,
 ) -> Result<Decoded<T>, PrecheckResponseError> {
-    if query == 0 { return Err(PrecheckResponseError::Binding); }
-    let parsed = strict_json::parse(bytes, Limits {
+    decode_envelope_bounded(bytes, query, expected_policy_epoch, schema, marker, Limits {
         max_bytes: MAX_PRECHECK_RESPONSE_BYTES, max_depth: 5, max_items, max_string_bytes: 64,
-    }).map_err(|error| match error.kind {
+    }, known)
+}
+
+pub(super) fn decode_envelope_bounded<T>(bytes: &[u8], query: u64, expected_policy_epoch: u64,
+    schema: &str, marker: &str, limits: Limits,
+    known: impl FnOnce(&Object) -> Result<T, PrecheckResponseError>,
+) -> Result<Decoded<T>, PrecheckResponseError> {
+    if query == 0 { return Err(PrecheckResponseError::Binding); }
+    let parsed = strict_json::parse(bytes, limits).map_err(|error| match error.kind {
         ErrorKind::SizeLimit | ErrorKind::DepthLimit | ErrorKind::ItemLimit | ErrorKind::StringLimit =>
             PrecheckResponseError::Capacity,
         _ => PrecheckResponseError::Malformed,
