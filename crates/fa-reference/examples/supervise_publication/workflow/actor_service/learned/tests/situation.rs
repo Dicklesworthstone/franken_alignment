@@ -204,3 +204,4 @@ fn learned_report_output_failure_does_not_recover_or_rewrite_the_live_owner() {
     assert_eq!(out.bytes, expected[..3]); assert_eq!(out.writes, 2);
     assert_eq!(host.inspect(), state); assert_eq!(files(&config), original);
 }
+mod fleet;

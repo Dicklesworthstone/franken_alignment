@@ -112,3 +112,4 @@ fn complete(json: &Json) -> bool { value(json).get("enumeration_complete").unwra
 
 mod command_tests;
 mod output_tests;
+mod fleet;

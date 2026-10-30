@@ -58,8 +58,8 @@ pub struct FileSituationFleetProgress {
 }
 
 enum Member {
-    Reading(FileSituationReplay),
-    Known(FileSituation),
+    Reading(Box<FileSituationReplay>),
+    Known(Box<FileSituation>),
     Unknown(FileSituationReadFailure),
 }
 
@@ -113,7 +113,7 @@ impl FileSituationFleetReplay {
             let member = match cursor {
                 None => Member::Unknown(FileSituationReadFailure::InputUnavailable),
                 Some(cursor) if cursor.progress().status == FileSituationReplayStatus::Ready => capture(cursor),
-                Some(cursor) => Member::Reading(cursor),
+                Some(cursor) => Member::Reading(Box::new(cursor)),
             };
             (id, member)
         }).collect();
@@ -158,7 +158,7 @@ impl FileSituationFleetReplay {
                 Err(_) => Member::Unknown(FileSituationReadFailure::ReplayRejected),
                 Ok(progress) => {
                     self.checked += 1;
-                    if progress.status == FileSituationReplayStatus::Ready { capture(cursor) }
+                    if progress.status == FileSituationReplayStatus::Ready { capture(*cursor) }
                     else { Member::Reading(cursor) }
                 }
             };
@@ -172,7 +172,7 @@ impl FileSituationFleetReplay {
         let mut known = 0;
         for (id, member) in self.members {
             let result = match member {
-                Member::Known(situation) => { known += 1; Ok(situation) }
+                Member::Known(situation) => { known += 1; Ok(*situation) }
                 Member::Unknown(reason) => Err(reason),
                 Member::Reading(_) => return Err(Error::Incomplete.into()),
             };
@@ -200,7 +200,7 @@ impl FileSituationFleetReplay {
 }
 fn capture(cursor: FileSituationReplay) -> Member {
     match cursor.finish() {
-        Ok(situation) => Member::Known(situation),
+        Ok(situation) => Member::Known(Box::new(situation)),
         Err(_) => Member::Unknown(FileSituationReadFailure::CaptureRejected),
     }
 }

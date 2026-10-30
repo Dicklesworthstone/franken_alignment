@@ -1,5 +1,6 @@
 //! Privileged historical situation read, never recovery or live admission.
 mod render;
+mod fleet;
 use crate::config::{Config, debug, read_regular};
 use fa_reference::action::consequence::delivery::persistent::observed::{FileOversight,
     guarded::anchored::{FileHistoryAnchor, MAX_HISTORY_ANCHOR_BYTES},
@@ -8,7 +9,7 @@ use fa_reference::action::consequence::delivery::persistent::observed::{FileOver
 use fa_reference::action::consequence::oversight::actor::Knowledge;
 use std::{io::Write, path::Path, time::{Duration, Instant}};
 
-const USAGE: &str = "situation CONFIG [--history-anchor INPUT] [--page-size 1..64] [--learned-recipe RECIPE]";
+const USAGE: &str = "situation CONFIG [--history-anchor INPUT] [--page-size 1..64] [--learned-recipe RECIPE] | situation --fleet FLEET_PROFILE";
 const MAX_OUTPUT_BYTES: usize = 4 * 1024 * 1024;
 
 struct Arguments<'a> { config: &'a Path, anchor: Option<&'a Path>, recipe: Option<&'a Path>, page_size: usize }
@@ -39,6 +40,8 @@ impl<'a> Arguments<'a> {
 }
 
 pub(crate) fn command(args: &[String], out: &mut impl Write) -> Result<(), String> {
+    // Fleet selection owns the complete argv before ordinary or mutation flags.
+    if args.iter().any(|arg| arg == "--fleet") { return fleet::command(args, out); }
     // Own the complete argv before shared live/credential flags can be removed.
     let selected = Arguments::parse(args)?;
     #[cfg(not(target_os = "linux"))]
