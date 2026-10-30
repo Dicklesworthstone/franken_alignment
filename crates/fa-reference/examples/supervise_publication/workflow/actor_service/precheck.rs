@@ -94,18 +94,23 @@ impl Service {
             lease.validate_at(now).map_err(debug)?;
             (host.revision(), lease)
         };
-        let (port, disclosure) = match settings.cache {
-            Some(limits) => {
-                // One cache for this original grant, retained inside its
-                // custodian. Reconnects neither replace it nor renew any work.
-                let cache = driver.supervisor().precheck_cache(limits).map_err(debug)?;
-                driver.supervisor().disclose_exact_precheck_cached(
-                    revision, settings.disclosure_id, settings.query_limit, &cache)
-            }
-            None => driver.supervisor().disclose_exact_precheck(
-                revision, settings.disclosure_id, settings.query_limit),
-        }.map_err(debug)?;
-        let wire = FilePrecheckWire::new(port, settings.exchange_limit).map_err(debug)?;
+        // One owner-bound cache and one native grant for the selected lifetime.
+        // No request or reconnect can change disclosure or replenish work.
+        let cache = settings.cache.map(|limits|
+            driver.supervisor().precheck_cache(limits).map_err(debug)).transpose()?;
+        let (wire, disclosure) = if settings.full_policy {
+            let (port, disclosure) = driver.supervisor().disclose_full_precheck(
+                revision, settings.disclosure_id, settings.query_limit, cache.as_ref()).map_err(debug)?;
+            (FilePrecheckWire::with_policy(port, settings.exchange_limit).map_err(debug)?, disclosure)
+        } else {
+            let (port, disclosure) = match cache.as_ref() {
+                Some(cache) => driver.supervisor().disclose_exact_precheck_cached(
+                    revision, settings.disclosure_id, settings.query_limit, cache),
+                None => driver.supervisor().disclose_exact_precheck(
+                    revision, settings.disclosure_id, settings.query_limit),
+            }.map_err(debug)?;
+            (FilePrecheckWire::new(port, settings.exchange_limit).map_err(debug)?, disclosure)
+        };
         let session = FilePrecheckPeerSession::new(actor.actor, wire, MAX_PRECHECK_FRAME_BYTES,
             settings.connection_limit).map_err(debug)?;
         let logical_end = requested_end.min(lease.expires_at());
@@ -223,3 +228,7 @@ mod tests;
 #[cfg(test)]
 #[path = "precheck/cache_tests.rs"]
 mod cache_tests;
+
+#[cfg(test)]
+#[path = "precheck/policy_tests.rs"]
+mod policy_tests;

@@ -24,6 +24,7 @@ pub(crate) struct Settings {
     pub(super) connection_limit: u64,
     pub(super) runtime_ms: u64,
     pub(super) cache: Option<PrecheckCacheLimits>,
+    pub(super) full_policy: bool,
 }
 
 impl Settings {
@@ -38,13 +39,31 @@ impl Settings {
             max_items: 64,
             max_string_bytes: 4_096,
         }).map_err(debug)?)?;
-        let cached = match fields.text("schema")?.as_str() {
-            "fa.actor-precheck-service/1" => false,
-            "fa.actor-precheck-service/2" => true,
+        let (cached, full_policy) = match fields.text("schema")?.as_str() {
+            "fa.actor-precheck-service/1" => (false, false),
+            "fa.actor-precheck-service/2" => (true, false),
+            "fa.actor-precheck-service/3" => (true, true),
             _ => return Err("unsupported precheck service schema".into()),
         };
-        if fields.text("policy_disclosure")? != "exact_predicates" {
-            return Err("precheck requires the explicit exact_predicates service profile".into());
+        let disclosure = if full_policy { "full" } else { "exact_predicates" };
+        if fields.text("policy_disclosure")? != disclosure {
+            return Err("policy disclosure does not match the selected service schema".into());
+        }
+        // Full literals are an explicit operator choice, not a default or a
+        // request-selected escalation. The declared leakage cannot be softened.
+        if full_policy {
+            let mut leakage = Fields::new(fields.take("leakage")?)?;
+            for (key, expected) in [
+                ("policy_structure", "disclosed"), ("policy_literals", "disclosed"),
+                ("source_values", "withheld"), ("helper_feedback", "withheld"),
+                ("consequences", "withheld"), ("timing", "observable"),
+                ("query_usage", "observable"),
+            ] {
+                if leakage.text(key)? != expected {
+                    return Err("full-policy leakage declaration does not match the native boundary".into());
+                }
+            }
+            leakage.end()?;
         }
         let socket = PathBuf::from(fields.text("socket")?);
         if !socket.is_absolute() || socket.file_name().is_none()
@@ -81,11 +100,14 @@ impl Settings {
             return Err("precheck disclosure, work or lifetime limit is out of range".into());
         }
         Ok(Self { socket, expected_policy_epoch, disclosure_id, query_limit,
-            exchange_limit, candidate_limit, connection_limit, runtime_ms, cache })
+            exchange_limit, candidate_limit, connection_limit, runtime_ms, cache, full_policy })
     }
 
     /// Public actor-side checks, with no private Config, source or journal access.
     pub(crate) fn check_actor(&self, actor: &Profile) -> Result<(), String> {
+        if self.full_policy && self.cache.is_none() {
+            return Err("full-policy service requires explicit cache limits".into());
+        }
         if let Some(limits) = self.cache { limits.validate().map_err(debug)?; }
         if self.socket == actor.socket {
             return Err("precheck and ordinary actor sockets must be distinct".into());

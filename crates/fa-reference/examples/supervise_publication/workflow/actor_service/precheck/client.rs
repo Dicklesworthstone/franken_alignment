@@ -2,6 +2,7 @@
 //! Explicit single/batch exact queries and discovery; no submission or retry.
 mod batch;
 mod discovery;
+mod policy;
 use super::Settings;
 use super::super::{Profile, debug, pause};
 use crate::config::read_regular;
@@ -20,7 +21,7 @@ use std::os::unix::net::UnixStream;
 use std::path::Path;
 use std::time::{Duration, Instant};
 
-const USAGE: &str = "actor-precheck ACTOR_PROFILE PRECHECK_PROFILE PRECHECK_JSON; alternatively actor-precheck --batch|--first-pass ACTOR_PROFILE PRECHECK_PROFILE PRECHECK_JSON [PRECHECK_JSON ...]; or actor-precheck --capabilities ACTOR_PROFILE PRECHECK_PROFILE QUERY";
+const USAGE: &str = "actor-precheck ACTOR_PROFILE PRECHECK_PROFILE PRECHECK_JSON; alternatively actor-precheck --batch|--first-pass ACTOR_PROFILE PRECHECK_PROFILE PRECHECK_JSON [PRECHECK_JSON ...]; or actor-precheck --capabilities|--policy ACTOR_PROFILE PRECHECK_PROFILE QUERY";
 const MAX_IO_CALLS: usize = 4_096;
 
 /// Closed grammar, before opening any input. Neither public profile is a
@@ -28,6 +29,9 @@ const MAX_IO_CALLS: usize = 4_096;
 pub(in crate::workflow::actor_service) fn command(args: &[String], out: &mut impl Write)
     -> Result<(), String>
 {
+    if args.first().is_some_and(|arg| arg == "actor-precheck")
+        && args.get(1).is_some_and(|arg| arg == "--policy")
+    { return policy::command(args, out); }
     if args.first().is_some_and(|arg| arg == "actor-precheck")
         && args.get(1).is_some_and(|arg| arg == "--capabilities")
     { return discovery::command(args, out); }
