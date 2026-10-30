@@ -60,6 +60,31 @@ The 196,608-byte response ceiling covers the complete admitted policy, including
 64 KiB of hex-encoded literals; no truncation or lossy summary substitutes for it.
 Legacy precheck and capability envelopes retain their original 1,024-byte bounds.
 
+## Authenticated mixed transport
+
+`FilePrecheckWire::with_policy` consumes the distinct full-policy port. The
+ordinary constructor remains exact-only: a valid policy request receives
+Withheld, not an implicit upgrade. Both paths use the original owner eligibility
+checks and charge entered native reads; malformed frames spend only parser work.
+Full policy, exact evaluation and capability discovery share one finite wire and
+grant. Reconnection cannot replenish either. The legacy typed `exchange` stays
+precheck-only even when its containing wire has full access.
+
+On Linux, `PrecheckPolicyClient::connect_policy` uses the same authenticated
+one-shot I/O engine with a separately selected response codec. Authentication and
+independent epoch validation happen before request bytes. Only the full codec
+allocates the 196,608-byte receive ceiling; old clients retain 1,024 bytes. The
+channel also allocates its larger bounded reply storage only for a full wire.
+Complete writes and flushes still precede further frames. Partial I/O, queued
+trailing data, EOF, transport failure and terminal closure retain their original
+semantics. The host still owns connection establishment and lifetime deadlines.
+
+Discovery on a full port/wire reports the coherent pair `policy_disclosure: full`
+and `policy_contents: available`; a deliberately narrowed exact handle reports
+the original exact-only pair. All other secrecy and no-authority facts remain
+unchanged. Older discovery decoders fail closed on the new pair. The declared
+endpoint does not assert that a later query has reserved capacity or a live lease.
+
 ## Verification status
 
 Ten new regression functions and one compile-fail example cover real source-backed
@@ -69,3 +94,11 @@ closed grammars, invalid graph forms, private-field refusal and protocol separat
 They are authored tests, not executed evidence. The editing environment lacks
 `rch`, `cargo` and a Rust toolchain; compilation, formatting, runtime tests and
 qualification remain pending. No bead or acceptance gate is closed.
+
+Seven additional real-owner/framing/authenticated-transport functions cover
+exact-versus-full access, mixed operations, parser charging, flush backpressure,
+lost output, ordinary review, owner changes, authentication and epoch binding.
+Three scripted shared-engine functions cover maximum literal responses, the
+exact byte ceiling, partial I/O without resend, malformed boundaries and
+unchanged legacy response limits. These ten additional functions are also
+unexecuted; no socket runtime or throughput result is claimed.

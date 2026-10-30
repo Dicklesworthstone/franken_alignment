@@ -12,6 +12,8 @@ use super::{
 };
 use super::discovery::{MAX_CAPABILITIES_REQUEST_BYTES, PrecheckCapabilitiesRequest,
     PrecheckCapabilitiesResponse, decode_capabilities_response};
+use super::policy::{MAX_POLICY_REQUEST_BYTES, MAX_POLICY_RESPONSE_BYTES,
+    PolicyRequest, PolicyResponse, decode_policy_response};
 use crate::action::consequence::oversight::actor_peer::{
     PeerCredentials, PeerPolicy, PeerRefusal, PeerSetupStage,
 };
@@ -98,6 +100,8 @@ pub struct PrecheckPeerClient<R = PrecheckWireResponse> {
 /// The same authenticated, bounded, one-shot I/O engine, with a discovery codec.
 /// A discovery observation cannot be taken as an exact-policy pass.
 pub type PrecheckCapabilitiesClient = PrecheckPeerClient<PrecheckCapabilitiesResponse>;
+/// Full definition observations use a distinct codec and bounded receive buffer.
+pub type PrecheckPolicyClient = PrecheckPeerClient<PolicyResponse>;
 
 impl<R> fmt::Debug for PrecheckPeerClient<R> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -131,6 +135,21 @@ impl PrecheckPeerClient<PrecheckCapabilitiesResponse> {
             let document = request.encode().map_err(PrecheckClientError::Request)?;
             Exchange::from_document(document, request.query, expected_policy_epoch,
                 MAX_CAPABILITIES_REQUEST_BYTES, decode_capabilities_response)
+        })
+    }
+}
+
+impl PrecheckPeerClient<PolicyResponse> {
+    pub fn connect_policy(socket: UnixStream, policy: PeerPolicy,
+        request: PolicyRequest, expected_policy_epoch: u64,
+    ) -> Result<Self, PrecheckClientError> {
+        Self::authenticated(socket, policy, || {
+            if request.expected_policy_epoch != expected_policy_epoch {
+                return Err(PrecheckClientError::ExpectedPolicyEpoch);
+            }
+            let document = request.encode().map_err(PrecheckClientError::Request)?;
+            Exchange::from_document_bounded(document, request.query, expected_policy_epoch,
+                MAX_POLICY_REQUEST_BYTES, MAX_POLICY_RESPONSE_BYTES, decode_policy_response)
         })
     }
 }
@@ -194,7 +213,7 @@ struct Exchange<R = PrecheckWireResponse> {
     written: usize,
     query: u64,
     expected_policy_epoch: u64,
-    input: [u8; MAX_PRECHECK_RESPONSE_BYTES],
+    input: Vec<u8>,
     input_len: usize,
     phase: PrecheckClientPhase,
     failure: Option<PrecheckClientError>,
@@ -214,16 +233,28 @@ impl Exchange {
 }
 
 impl<R> Exchange<R> {
-    fn from_document(mut document: Vec<u8>, query: u64, expected_policy_epoch: u64,
+    fn from_document(document: Vec<u8>, query: u64, expected_policy_epoch: u64,
         maximum: usize, decode: fn(&[u8], u64, u64) -> Result<R, PrecheckResponseError>,
     ) -> Result<Self, PrecheckClientError> {
-        if document.len() > maximum {
+        Self::from_document_bounded(document, query, expected_policy_epoch, maximum,
+            MAX_PRECHECK_RESPONSE_BYTES, decode)
+    }
+
+    fn from_document_bounded(mut document: Vec<u8>, query: u64, expected_policy_epoch: u64,
+        maximum: usize, response_limit: usize,
+        decode: fn(&[u8], u64, u64) -> Result<R, PrecheckResponseError>,
+    ) -> Result<Self, PrecheckClientError> {
+        if document.len() > maximum || response_limit == 0 || response_limit > MAX_POLICY_RESPONSE_BYTES {
             return Err(PrecheckClientError::Request(PrecheckWireError::Capacity));
         }
         document.try_reserve(1).map_err(|_| PrecheckClientError::Request(PrecheckWireError::Capacity))?;
         document.push(b'\n');
+        let mut input = Vec::new();
+        input.try_reserve_exact(response_limit)
+            .map_err(|_| PrecheckClientError::Request(PrecheckWireError::Capacity))?;
+        input.resize(response_limit, 0);
         Ok(Self { request: document, written: 0, query, expected_policy_epoch,
-            input: [0; MAX_PRECHECK_RESPONSE_BYTES], input_len: 0,
+            input, input_len: 0,
             phase: PrecheckClientPhase::Writing, failure: None, response: None, decode })
     }
 
@@ -310,7 +341,7 @@ impl<R> Exchange<R> {
                 else { self.phase = PrecheckClientPhase::Confirming; }
                 return;
             }
-            if self.input_len == MAX_PRECHECK_RESPONSE_BYTES {
+            if self.input_len == self.input.len() {
                 self.fail(PrecheckClientError::ResponseTooLarge);
                 return;
             }
@@ -352,3 +383,6 @@ impl<R> Exchange<R> {
 
 #[cfg(test)]
 mod tests;
+
+#[cfg(test)]
+mod policy_tests;

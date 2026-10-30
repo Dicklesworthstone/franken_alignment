@@ -1,6 +1,7 @@
 //! Exact decimal identifiers and lower-case hexadecimal payloads, no new parser.
 use super::{MAX_PRECHECK_FRAME_BYTES, PrecheckWireError};
 use super::discovery::{self, PrecheckCapabilitiesRequest, MAX_CAPABILITIES_REQUEST_BYTES};
+use super::policy::{self, PolicyRequest, MAX_POLICY_REQUEST_BYTES};
 use crate::action::{ElapsedTick, MAX_PAYLOAD_BYTES, ResolvedTarget};
 use crate::action::consequence::oversight::actor::ActorProposal;
 use crate::strict_json::{self, ErrorKind, Json, Limits};
@@ -16,6 +17,7 @@ pub struct PrecheckRequest {
 pub(super) enum WireRequest {
     Precheck(PrecheckRequest),
     Capabilities(PrecheckCapabilitiesRequest),
+    Policy(PolicyRequest),
 }
 
 // The mixed endpoint parses once under its ORIGINAL finite frame allowance.
@@ -27,6 +29,9 @@ pub(super) fn decode_wire_request(bytes: &[u8]) -> Result<WireRequest, PrecheckW
     if text(root, "schema")? == discovery::REQUEST_SCHEMA {
         if bytes.len() > MAX_CAPABILITIES_REQUEST_BYTES { return Err(PrecheckWireError::Capacity); }
         discovery::decode_request_value(&parsed).map(WireRequest::Capabilities)
+    } else if text(root, "schema")? == policy::REQUEST_SCHEMA {
+        if bytes.len() > MAX_POLICY_REQUEST_BYTES { return Err(PrecheckWireError::Capacity); }
+        policy::decode_request_value(&parsed).map(WireRequest::Policy)
     } else {
         decode_precheck_value(&parsed).map(WireRequest::Precheck)
     }

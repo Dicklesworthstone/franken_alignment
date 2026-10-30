@@ -79,7 +79,7 @@ fn proposal() -> ActorProposal {
 }
 fn response(query: u64, epoch: u64, remaining_queries: usize) -> PrecheckCapabilitiesResponse {
     PrecheckCapabilitiesResponse { query: Some(query), result: Ok(Knowledge::Known {
-        value: PrecheckCapabilities { remaining_queries, witness_cache: false }, basis: FilePrecheckBasis {
+        value: PrecheckCapabilities { remaining_queries, witness_cache: false, full_policy: false }, basis: FilePrecheckBasis {
             disclosure: u64::MAX, query, policy_epoch: epoch, observed_at: ElapsedTick(u64::MAX),
         },
     }) }

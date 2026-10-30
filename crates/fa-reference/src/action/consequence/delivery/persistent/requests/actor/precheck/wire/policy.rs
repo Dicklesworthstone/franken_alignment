@@ -66,6 +66,16 @@ impl FileActorPolicyPort {
     /// Deliberate narrowing: this handle cannot be converted back into full access.
     pub fn prechecks(&self) -> FileActorPrecheckPort { self.precheck.clone() }
 
+    /// Same charged discovery read, describing this stronger capability rather
+    /// than the deliberately narrowed exact-only handle returned by prechecks().
+    pub fn capabilities(&self, query: u64, expected_policy_epoch: u64)
+        -> Result<super::discovery::PrecheckCapabilitiesObservation, ActorError>
+    {
+        let mut observation = self.precheck.capabilities(query, expected_policy_epoch)?;
+        if let Knowledge::Known { value, .. } = &mut observation { value.disclose_definition(); }
+        Ok(observation)
+    }
+
     /// One entered read is charged before validation/cloning. No evaluator, clock,
     /// source read, helper, admission snapshot, journal or effect is touched.
     pub fn policy(&self, query: u64, expected_policy_epoch: u64)

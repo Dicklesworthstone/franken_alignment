@@ -198,3 +198,5 @@ fn native_refusals_roundtrip_without_fabricating_a_definition() {
         assert!(PolicyResponse { query: Some(1), result }.encode().is_err());
     }
 }
+
+mod transport;

@@ -70,6 +70,7 @@ impl PrecheckWireError {
 /// Precheck is an existing registered rehearsal verb, not submit admission.
 pub struct FilePrecheckWire {
     port: FileActorPrecheckPort,
+    policy: Option<policy::FileActorPolicyPort>,
     remaining: usize,
 }
 impl fmt::Debug for FilePrecheckWire {
@@ -82,8 +83,23 @@ impl FilePrecheckWire {
         if exchanges == 0 || exchanges > MAX_PRECHECK_EXCHANGES {
             return Err(PrecheckWireError::Capacity);
         }
-        Ok(Self { port, remaining: exchanges })
+        Ok(Self { port, policy: None, remaining: exchanges })
     }
+    /// Only the distinct supervisor-issued full port enables definition reads.
+    /// Cloning/narrowing this port never replenishes its original native budget.
+    pub fn with_policy(port: policy::FileActorPolicyPort, exchanges: usize)
+        -> Result<Self, PrecheckWireError>
+    {
+        let mut wire = Self::new(port.prechecks(), exchanges)?;
+        wire.policy = Some(port);
+        Ok(wire)
+    }
+
+    pub(super) fn response_limit(&self) -> usize {
+        if self.policy.is_some() { policy::MAX_POLICY_RESPONSE_BYTES }
+        else { MAX_PRECHECK_RESPONSE_BYTES }
+    }
+
     pub fn remaining_exchanges(&self) -> usize { self.remaining }
 
     /// Original precheck-only typed entry. Discovery does not become a pass.
@@ -95,7 +111,7 @@ impl FilePrecheckWire {
         }
     }
 
-    /// Complete-document transport entry, without newline framing. Both verbs
+    /// Complete-document transport entry, without newline framing. All read verbs
     /// spend the SAME exchange allowance before parsing and the SAME native
     /// query allowance after valid decoding. No reconnect can renew either.
     /// Unclassifiable parser/version/capacity refusals retain the original
@@ -106,8 +122,21 @@ impl FilePrecheckWire {
             Ok(codec::WireRequest::Precheck(request)) => self.evaluate(request).encode(),
             Ok(codec::WireRequest::Capabilities(request)) => discovery::PrecheckCapabilitiesResponse {
                 query: Some(request.query),
-                result: self.port.capabilities(request.query, request.expected_policy_epoch)
-                    .map_err(PrecheckWireError::from),
+                result: match &self.policy {
+                    Some(port) => port.capabilities(request.query, request.expected_policy_epoch),
+                    None => self.port.capabilities(request.query, request.expected_policy_epoch),
+                }.map_err(PrecheckWireError::from),
+            }.encode(),
+            Ok(codec::WireRequest::Policy(request)) => policy::PolicyResponse {
+                query: Some(request.query),
+                result: match &self.policy {
+                    Some(port) => port.policy(request.query, request.expected_policy_epoch),
+                    // A valid request cannot upgrade an exact-only endpoint.
+                    // Retain the same eligibility and entered-query accounting.
+                    None => self.port.with_disclosure(|_| Ok(super::Knowledge::Withheld {
+                        authority_required: "exact_policy_disclosure",
+                    })),
+                }.map_err(PrecheckWireError::from),
             }.encode(),
             Err(error) => Self::refusal(error).encode(),
         }

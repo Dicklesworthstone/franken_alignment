@@ -1,7 +1,7 @@
 //! Bounded precheck framing with one reply and a mandatory write/flush barrier.
 //! No source acquisition, clock observation, grant renewal or effect operation.
 
-use super::{FilePrecheckWire, MAX_PRECHECK_FRAME_BYTES, MAX_PRECHECK_RESPONSE_BYTES,
+use super::{FilePrecheckWire, MAX_PRECHECK_FRAME_BYTES,
     PrecheckWireError};
 use crate::action::consequence::oversight::actor_wire::{ChannelState, CloseReason, FeedResult};
 use std::fmt;
@@ -40,7 +40,7 @@ impl FilePrecheckChannel {
         let mut input = Vec::new();
         input.try_reserve_exact(frame_bytes).map_err(|_| PrecheckWireError::Capacity)?;
         let mut output = Vec::new();
-        output.try_reserve_exact(MAX_PRECHECK_RESPONSE_BYTES + 1)
+        output.try_reserve_exact(wire.response_limit() + 1)
             .map_err(|_| PrecheckWireError::Capacity)?;
         Ok(Self { wire, input, output, written: 0, frame_bytes, closed: None })
     }
@@ -73,7 +73,7 @@ impl FilePrecheckChannel {
                 self.input.clear();
                 self.written = 0;
                 match response {
-                    Ok(bytes) if bytes.len() <= MAX_PRECHECK_RESPONSE_BYTES => {
+                    Ok(bytes) if bytes.len() <= self.wire.response_limit() => {
                         self.output.extend_from_slice(&bytes);
                         self.output.push(b'\n');
                     }
