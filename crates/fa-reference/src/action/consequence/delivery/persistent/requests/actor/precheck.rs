@@ -124,6 +124,47 @@ impl FileActorPrecheckPort {
     pub fn check(&self, query: u64, proposal: &ActorProposal)
         -> Result<FilePrecheckObservation, ActorError>
     {
+        self.with_disclosure(|grant| {
+            let projection = &grant.projection;
+            let unknown = || Knowledge::Unknown { reason: UnknownReason::ControllerUnavailable };
+            if query == 0 { return Err(ActorError::MalformedProposal); }
+            if proposal.payload.len() > MAX_PAYLOAD_BYTES || proposal.payload.len() as u64 > proposal.units {
+                return Err(ActorError::Capacity);
+            }
+            let action = FrozenAction::freeze(ActionSpec { version: VERSION, scope: projection.scope,
+                target: Some(proposal.target), payload: proposal.payload.clone(), required_witnesses: Vec::new(),
+                policy_epoch: proposal.expected_policy_epoch, deadline: proposal.deadline, units: proposal.units })
+                .map_err(|_| ActorError::MalformedProposal)?;
+            if proposal.expected_policy_epoch != projection.epoch {
+                return Ok(Knowledge::Stale { generation: proposal.expected_policy_epoch, current: projection.epoch });
+            }
+            // Exact resource/target screens use the captured ORIGINAL owner state.
+            // They do not create a shadow admission or reserve available units.
+            let denied = projection.stopped || proposal.target != projection.target
+                || projection.ceiling.as_ref().is_some_and(|ceiling| !ceiling.contains(proposal.target))
+                || projection.now >= proposal.deadline || proposal.units > projection.available;
+            let value = if denied { FilePrecheckOutcome::DeniedByPolicy } else {
+                let evaluation = match projection.policy.evaluate(&action, &projection.snapshot) {
+                    Ok(evaluation) => evaluation,
+                    Err(Error::Limit | Error::Overflow) => return Err(ActorError::Capacity),
+                    Err(_) => return Ok(unknown()),
+                };
+                if evaluation.trace().iter().any(|step| step.result == Truth::Unknown) { return Ok(unknown()); }
+                if evaluation.certifiable() { FilePrecheckOutcome::PrecheckPassed }
+                else { FilePrecheckOutcome::DeniedByPolicy }
+            };
+            Ok(Knowledge::Known { value, basis: FilePrecheckBasis {
+                disclosure: grant.id, query, policy_epoch: projection.epoch, observed_at: projection.now,
+            } })
+        })
+    }
+
+    // One eligibility and lifetime-accounting boundary for exact evaluation and
+    // capability discovery. Keep the original owner borrow through the read.
+    // No callback can obtain a mutable owner or reset this disclosure's budget.
+    fn with_disclosure<T>(&self,
+        read: impl FnOnce(&Disclosure) -> Result<Knowledge<T, FilePrecheckBasis>, ActorError>,
+    ) -> Result<Knowledge<T, FilePrecheckBasis>, ActorError> {
         let Some(grant) = self.disclosure.upgrade() else {
             return Ok(Knowledge::Withheld { authority_required: "exact_policy_disclosure" });
         };
@@ -135,37 +176,9 @@ impl FileActorPrecheckPort {
             || state.host.capture_file_policy_state().is_err() { return Ok(unknown()); }
         let remaining = grant.remaining.get();
         if remaining == 0 { return Err(ActorError::Capacity); }
-        // Charge before any fallible freeze/evaluation (including an unwind).
+        // Charge before any fallible validation/evaluation, including an unwind.
         grant.remaining.set(remaining - 1);
-        if query == 0 { return Err(ActorError::MalformedProposal); }
-        if proposal.payload.len() > MAX_PAYLOAD_BYTES || proposal.payload.len() as u64 > proposal.units {
-            return Err(ActorError::Capacity);
-        }
-        let action = FrozenAction::freeze(ActionSpec { version: VERSION, scope: projection.scope,
-            target: Some(proposal.target), payload: proposal.payload.clone(), required_witnesses: Vec::new(),
-            policy_epoch: proposal.expected_policy_epoch, deadline: proposal.deadline, units: proposal.units })
-            .map_err(|_| ActorError::MalformedProposal)?;
-        if proposal.expected_policy_epoch != projection.epoch {
-            return Ok(Knowledge::Stale { generation: proposal.expected_policy_epoch, current: projection.epoch });
-        }
-        // Exact resource/target screens use the captured ORIGINAL owner state.
-        // They do not create a shadow admission or reserve available units.
-        let denied = projection.stopped || proposal.target != projection.target
-            || projection.ceiling.as_ref().is_some_and(|ceiling| !ceiling.contains(proposal.target))
-            || projection.now >= proposal.deadline || proposal.units > projection.available;
-        let value = if denied { FilePrecheckOutcome::DeniedByPolicy } else {
-            let evaluation = match projection.policy.evaluate(&action, &projection.snapshot) {
-                Ok(evaluation) => evaluation,
-                Err(Error::Limit | Error::Overflow) => return Err(ActorError::Capacity),
-                Err(_) => return Ok(unknown()),
-            };
-            if evaluation.trace().iter().any(|step| step.result == Truth::Unknown) { return Ok(unknown()); }
-            if evaluation.certifiable() { FilePrecheckOutcome::PrecheckPassed }
-            else { FilePrecheckOutcome::DeniedByPolicy }
-        };
-        Ok(Knowledge::Known { value, basis: FilePrecheckBasis {
-            disclosure: grant.id, query, policy_epoch: projection.epoch, observed_at: projection.now,
-        } })
+        read(&grant)
     }
 }
 

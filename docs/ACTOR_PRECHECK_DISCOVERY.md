@@ -1,0 +1,51 @@
+# Source-bound exact-precheck capability discovery
+
+`FileActorPrecheckPort::capabilities(query, expected_policy_epoch)` describes the
+explicitly granted exact-precheck endpoint using the original `Knowledge` wrapper
+and `FilePrecheckBasis`. Ordinary actor ports cannot self-grant this interface.
+Discovery is not an exact-policy pass, admission, helper approval or effect key.
+
+A Known result reports the remaining **shared** native query allowance after
+charging this read. It is not a reservation. Discovery, exact evaluations, clones,
+repeated labels and entered invalid queries spend the same finite allowance.
+The same original-owner borrow, storage/source eligibility, revision binding and
+custodian revocation protect both operations. Stale expected epochs retain Stale;
+unavailable owners retain Unknown; revoked grants retain Withheld. None of these
+reads refreshes a source, observes a clock, consumes the admission snapshot or
+writes a journal event. Results describe the captured observation tick only.
+
+The bounded codec is exposed under `precheck_wire::discovery`. Requests use
+`fa.actor-precheck-capabilities/1`, operation `capabilities`, and decimal-string
+`query` and `expected_policy_epoch` fields. The 256-byte input ceiling, duplicate
+key rejection and closed fields prohibit embedded proposals, supervisor options
+or caller-selected disclosure levels. Query zero is invalid; epoch zero is valid.
+
+Responses use the separate `fa.actor-precheck-capabilities-response/1` schema and
+`informational: true`. Known values explicitly declare `exact_predicates` /
+`exact_policy`, withheld policy contents/helper feedback/source values, unavailable
+source refresh and witness caching, captured-cut observations, label-only
+correlation, observable timing, no signed profile, no effect authority and required
+ordinary review. These are compiled endpoint facts, not imported assertions.
+Unsupported full disclosure or congress dry runs cannot silently masquerade as
+this endpoint. The response cannot be decoded as a precheck pass or vice versa.
+
+The original precheck and discovery codecs share one epistemic envelope decoder,
+including strict query/epoch/basis correlation and refusal handling. The old
+precheck format and its original parser limits are retained. A capabilities
+response uses the same 1,024-byte ceiling with its own finite item allowance.
+Maximum-width schema vectors fit in 256/1,024 bytes respectively.
+
+This increment supplies the native read and strict complete-document codecs.
+It does not yet dispatch discovery through live sockets or the operator CLI.
+It is also not the full signed E27 assurance-profile implementation, a deployment
+attestation, an instance nonce, a source-renewal interface or witness caching.
+The disclosed remaining count and timing can reveal other use of the same grant;
+credential/scope separation remains the operator's responsibility.
+
+Seven regression functions and one compile-fail example cover real source-backed
+owners, unchanged durable/source/request state, later ordinary review, shared
+exhaustion, revocation/unavailability, strict codecs, full-width IDs, refusal of
+stronger claims and byte compatibility with the original precheck outcomes.
+These tests are authored, not executed: the required RCH test/check/Clippy commands
+cannot start (`rch` absent, exit 127); formatting cannot start (`cargo` absent,
+exit 127). No compilation, runtime success, qualification or bead closure is claimed.

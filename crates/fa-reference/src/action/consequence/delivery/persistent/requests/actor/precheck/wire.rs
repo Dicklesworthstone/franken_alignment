@@ -3,6 +3,7 @@
 //! Linux peer admission checks kernel credentials, never effect authority.
 mod codec;
 mod response;
+pub mod discovery;
 mod channel;
 #[cfg(unix)]
 mod transport;
