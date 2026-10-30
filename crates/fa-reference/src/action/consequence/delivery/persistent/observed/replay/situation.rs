@@ -1,6 +1,7 @@
 //! Bounded, supervisor-only situation pages from one ORIGINAL publication cut.
 //! Inspection never obtains a live owner, refreshes evidence, fences or sends.
 mod learned;
+pub mod fleet;
 
 use super::{Event, FileOversight, FileOversightProfile, JournalError, Machine, journal, storage};
 use super::super::guarded::anchored::FileHistoryAnchor;
