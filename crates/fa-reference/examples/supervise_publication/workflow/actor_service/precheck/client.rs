@@ -1,6 +1,7 @@
 //! Actor-side exact precheck, separate from submission and private host config.
-//! Explicit single/batch exact queries; no submission, retry, ticket or effect key.
+//! Explicit single/batch exact queries and discovery; no submission or retry.
 mod batch;
+mod discovery;
 use super::Settings;
 use super::super::{Profile, debug, pause};
 use crate::config::read_regular;
@@ -19,7 +20,7 @@ use std::os::unix::net::UnixStream;
 use std::path::Path;
 use std::time::{Duration, Instant};
 
-const USAGE: &str = "actor-precheck ACTOR_PROFILE PRECHECK_PROFILE PRECHECK_JSON; alternatively actor-precheck --batch|--first-pass ACTOR_PROFILE PRECHECK_PROFILE PRECHECK_JSON [PRECHECK_JSON ...]";
+const USAGE: &str = "actor-precheck ACTOR_PROFILE PRECHECK_PROFILE PRECHECK_JSON; alternatively actor-precheck --batch|--first-pass ACTOR_PROFILE PRECHECK_PROFILE PRECHECK_JSON [PRECHECK_JSON ...]; or actor-precheck --capabilities ACTOR_PROFILE PRECHECK_PROFILE QUERY";
 const MAX_IO_CALLS: usize = 4_096;
 
 /// Closed grammar, before opening any input. Neither public profile is a
@@ -27,6 +28,9 @@ const MAX_IO_CALLS: usize = 4_096;
 pub(in crate::workflow::actor_service) fn command(args: &[String], out: &mut impl Write)
     -> Result<(), String>
 {
+    if args.first().is_some_and(|arg| arg == "actor-precheck")
+        && args.get(1).is_some_and(|arg| arg == "--capabilities")
+    { return discovery::command(args, out); }
     if args.first().is_some_and(|arg| arg == "actor-precheck")
         && args.get(1).is_some_and(|arg| matches!(arg.as_str(), "--batch" | "--first-pass"))
     { return batch::command(args, out); }
@@ -130,10 +134,11 @@ fn drive_client(client: PrecheckPeerClient, poll_ms: u64, wall: Duration,
 }
 
 // Batch members borrow the SAME remaining work; neither a new connection nor a
-// completed response replenishes it. Single-query behavior uses the same loop.
-fn drive_client_shared(mut client: PrecheckPeerClient, poll_ms: u64, wall: Duration,
+// completed response replenishes it. Discovery uses this loop with its pinned
+// native response type, not a second transport or another deadline mechanism.
+fn drive_client_shared<R>(mut client: PrecheckPeerClient<R>, poll_ms: u64, wall: Duration,
     work: &mut Work, mut elapsed: impl FnMut() -> Duration,
-) -> Result<PrecheckWireResponse, String> {
+) -> Result<R, String> {
     loop {
         check_elapsed(elapsed(), wall)?;
         let budget = work.budget(client.status().phase)?;

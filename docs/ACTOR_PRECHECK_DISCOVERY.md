@@ -59,8 +59,41 @@ budgets, trailing-data probe and terminal closure apply. No reconnect, retry or
 source renewal occurs, even when a response was lost after charging server work.
 The host still owns connection establishment and cumulative elapsed/work bounds.
 
-Operator CLI integration remains separate. This is not the full signed E27
-assurance-profile implementation, a deployment
+## Actor-only operator command
+
+```text
+supervise_publication actor-precheck --capabilities ACTOR_PROFILE PRECHECK_PROFILE QUERY
+```
+
+`QUERY` is a nonzero canonical decimal u64 label, not an actor request ID or an
+input pathname. The closed grammar is checked before any files or shared
+supervisor options can be consumed. Only the two existing public connection
+profiles are read. The command opens no proposal, private Config, evidence or
+journal. It connects only to the already provisioned precheck endpoint; it cannot
+start that endpoint or grant itself disclosure. The existing supervisor
+`--precheck-profile` opt-in and its private source bootstrap are still required.
+
+One authenticated native discovery exchange uses the independently configured
+policy epoch. A Known response must also bind the selected disclosure ID before
+stdout. Output is the original newline-terminated native response, with no
+wrapper or generated capability assertions. Known information returns zero,
+including a count of zero remaining queries; this is not a successful policy
+precheck. Valid Unknown, Withheld, Stale and native refusals are printed unchanged
+and return nonzero. Authentication, correlation, framing and transport failures
+print no fabricated response and never fall back to Submit or precheck.
+
+One lifetime work allowance caps the command at 4,096 socket I/O attempts,
+257 request bytes and 1,026 response/probe bytes. The elapsed allowance begins
+before reading profiles and uses the smaller configured runtime. It is checked
+around native drives, connection, file and output boundaries. Synchronous file,
+connect and stdout operations are cooperative, not preemptible deadlines.
+A failed or late output operation can leave partial or complete response bytes;
+it does not cause a retry. Discovering capabilities spends the original server
+query/frame/connection allowances: it does not reserve work for a later batch.
+
+## Verification and remaining scope
+
+This is not the full signed E27 assurance-profile implementation, a deployment
 attestation, an instance nonce, a source-renewal interface or witness caching.
 The disclosed remaining count and timing can reveal other use of the same grant;
 credential/scope separation remains the operator's responsibility.
@@ -73,6 +106,10 @@ The transport functions add mixed-verb accounting, parser-only refusals,
 fragmentation/flush barriers, actual authenticated one-byte drives, preserved
 ordinary review, no bytes before authentication, lost-reply accounting, response
 correlation/type separation and malformed/truncated/extra response boundaries.
-These tests are authored, not executed: the required RCH test/check/Clippy commands
+Eight operator regression functions additionally cover public-profile-only
+reads, unchanged native output and exit semantics, selected disclosure binding,
+strict top-level grammar and full-width labels, authentication-before-bytes,
+malformed/lost replies, lifetime I/O/elapsed exhaustion and partial output.
+These 22 tests are authored, not executed: the required RCH test/check/Clippy commands
 cannot start (`rch` absent, exit 127); formatting cannot start (`cargo` absent,
 exit 127). No compilation, runtime success, qualification or bead closure is claimed.
