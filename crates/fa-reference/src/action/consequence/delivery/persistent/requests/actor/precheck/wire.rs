@@ -12,6 +12,7 @@ mod peer;
 #[cfg(target_os = "linux")]
 pub mod client;
 
+pub use super::cache;
 pub use codec::{PrecheckRequest, decode_precheck_request, encode_precheck_request};
 pub use response::{PrecheckResponseError, PrecheckWireResponse, decode_precheck_response};
 pub use channel::FilePrecheckChannel;
@@ -129,3 +130,5 @@ impl FilePrecheckWire {
 
 #[cfg(test)]
 mod tests;
+#[cfg(test)]
+mod cache_tests;

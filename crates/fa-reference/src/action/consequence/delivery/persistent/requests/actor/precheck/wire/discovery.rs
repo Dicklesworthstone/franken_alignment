@@ -13,9 +13,12 @@ const RESPONSE_SCHEMA: &str = "fa.actor-precheck-capabilities-response/1";
 /// and all port clones, measured AFTER this discovery query was charged. It is
 /// not a reservation, independent allowance or promise about a later query.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub struct PrecheckCapabilities { remaining_queries: usize }
+pub struct PrecheckCapabilities { remaining_queries: usize, witness_cache: bool }
 impl PrecheckCapabilities {
     pub fn remaining_queries(self) -> usize { self.remaining_queries }
+    /// Exact memoization was explicitly selected for THIS grant. It is not a
+    /// promise of a hit, a source refresh, or a reusable review/permission result.
+    pub fn witness_cache_enabled(self) -> bool { self.witness_cache }
 }
 pub type PrecheckCapabilitiesObservation = Knowledge<PrecheckCapabilities, FilePrecheckBasis>;
 
@@ -39,7 +42,7 @@ impl FileActorPrecheckPort {
                 return Ok(Knowledge::Stale { generation: expected_policy_epoch, current: projection.epoch });
             }
             Ok(Knowledge::Known {
-                value: PrecheckCapabilities { remaining_queries: grant.remaining.get() },
+                value: PrecheckCapabilities { remaining_queries: grant.remaining.get(), witness_cache: grant.cache.is_some() },
                 basis: FilePrecheckBasis { disclosure: grant.id, query,
                     policy_epoch: projection.epoch, observed_at: projection.now },
             })
@@ -116,7 +119,10 @@ impl PrecheckCapabilitiesResponse {
         encode_envelope(RESPONSE_SCHEMA, "informational", self.query, &self.result, |value| {
             if value.remaining_queries >= MAX_PRECHECK_QUERIES { return Err(PrecheckResponseError::Capacity); }
             let mut members = Vec::with_capacity(TEXT_FIELDS.len() + BOOL_FIELDS.len() + 1);
-            for (key, value) in TEXT_FIELDS { members.push(format!("\"{key}\":\"{value}\"")); }
+            for (key, text) in TEXT_FIELDS {
+                let text = if key == "witness_cache" && value.witness_cache { "exact_witnesses" } else { text };
+                members.push(format!("\"{key}\":\"{text}\""));
+            }
             for (key, value) in BOOL_FIELDS { members.push(format!("\"{key}\":{value}")); }
             members.push(format!("\"remaining_queries\":\"{}\"", value.remaining_queries));
             Ok(format!("\"value\":{{{}}}", members.join(",")))
@@ -134,8 +140,13 @@ pub fn decode_capabilities_response(bytes: &[u8], query: u64, expected_policy_ep
             if value.len() != TEXT_FIELDS.len() + BOOL_FIELDS.len() + 1 {
                 return Err(PrecheckResponseError::Malformed);
             }
+            let witness_cache = match text(value, "witness_cache")? {
+                "unavailable" => false,
+                "exact_witnesses" => true,
+                _ => return Err(PrecheckResponseError::Malformed),
+            };
             for (key, expected) in TEXT_FIELDS {
-                if text(value, key)? != expected { return Err(PrecheckResponseError::Malformed); }
+                if key != "witness_cache" && text(value, key)? != expected { return Err(PrecheckResponseError::Malformed); }
             }
             for (key, expected) in BOOL_FIELDS {
                 if value.get(key).and_then(Json::as_bool) != Some(expected) {
@@ -145,7 +156,7 @@ pub fn decode_capabilities_response(bytes: &[u8], query: u64, expected_policy_ep
             let remaining_queries = usize::try_from(decimal(value, "remaining_queries", true)?)
                 .map_err(|_| PrecheckResponseError::Capacity)?;
             if remaining_queries >= MAX_PRECHECK_QUERIES { return Err(PrecheckResponseError::Capacity); }
-            Ok(PrecheckCapabilities { remaining_queries })
+            Ok(PrecheckCapabilities { remaining_queries, witness_cache })
         })?;
     Ok(PrecheckCapabilitiesResponse { query, result })
 }
