@@ -1,5 +1,7 @@
 //! Bounded, supervisor-only situation pages from one ORIGINAL publication cut.
 //! Inspection never obtains a live owner, refreshes evidence, fences or sends.
+mod learned;
+
 use super::{Event, FileOversight, FileOversightProfile, JournalError, Machine, journal, storage};
 use super::super::guarded::anchored::FileHistoryAnchor;
 use crate::action::{ActionState, ElapsedTick, ResolvedTarget, Scope};
@@ -269,11 +271,7 @@ impl FileOversight {
     pub fn begin_read_situation(directory: impl AsRef<Path>, profile: &FileOversightProfile,
         anchor: Option<&FileHistoryAnchor>) -> Result<FileSituationReplay, JournalError>
     {
-        super::super::super::codec::validate_profile(&profile.delivery)?;
-        let identity = storage::identity(directory.as_ref())?;
-        let bytes = storage::read(&identity.join(storage::CANONICAL), profile.delivery.limits.bytes)?;
-        let events = journal::decode(profile, &identity, &bytes)?;
-        if let Some(anchor) = anchor { anchor.check(profile, &identity, &events)?; }
+        let events = read_events(directory.as_ref(), profile, anchor)?;
         FileSituationReplay::new(profile, events, anchor.map(FileHistoryAnchor::revision))
     }
 
@@ -282,6 +280,19 @@ impl FileOversight {
     {
         Self::begin_read_situation(directory, profile, anchor)?.complete()
     }
+}
+
+// One bounded canonical image supplies both independent-prefix checking and
+// every later transition. Recipe binding must not reopen a different image.
+fn read_events(directory: &Path, profile: &FileOversightProfile,
+    anchor: Option<&FileHistoryAnchor>) -> Result<Vec<Event>, JournalError>
+{
+    super::super::super::codec::validate_profile(&profile.delivery)?;
+    let identity = storage::identity(directory)?;
+    let bytes = storage::read(&identity.join(storage::CANONICAL), profile.delivery.limits.bytes)?;
+    let events = journal::decode(profile, &identity, &bytes)?;
+    if let Some(anchor) = anchor { anchor.check(profile, &identity, &events)?; }
+    Ok(events)
 }
 
 #[cfg(test)]
