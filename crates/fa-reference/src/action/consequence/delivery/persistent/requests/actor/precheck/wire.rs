@@ -84,21 +84,46 @@ impl FilePrecheckWire {
     }
     pub fn remaining_exchanges(&self) -> usize { self.remaining }
 
-    /// Process one complete bounded document. Parse failures never disclose a
-    /// partially decoded query label. A pass remains review-required observation.
+    /// Original precheck-only typed entry. Discovery does not become a pass.
     pub fn exchange(&mut self, document: &[u8]) -> PrecheckWireResponse {
-        if self.remaining == 0 {
-            return PrecheckWireResponse { query: None, result: Err(PrecheckWireError::Capacity) };
+        if let Err(error) = self.enter() { return Self::refusal(error); }
+        match decode_precheck_request(document) {
+            Ok(request) => self.evaluate(request),
+            Err(error) => Self::refusal(error),
         }
+    }
+
+    /// Complete-document transport entry, without newline framing. Both verbs
+    /// spend the SAME exchange allowance before parsing and the SAME native
+    /// query allowance after valid decoding. No reconnect can renew either.
+    /// Unclassifiable parser/version/capacity refusals retain the original
+    /// precheck error envelope; discovery clients must fail closed on it.
+    pub fn exchange_frame(&mut self, document: &[u8]) -> Result<Vec<u8>, PrecheckResponseError> {
+        if let Err(error) = self.enter() { return Self::refusal(error).encode(); }
+        match codec::decode_wire_request(document) {
+            Ok(codec::WireRequest::Precheck(request)) => self.evaluate(request).encode(),
+            Ok(codec::WireRequest::Capabilities(request)) => discovery::PrecheckCapabilitiesResponse {
+                query: Some(request.query),
+                result: self.port.capabilities(request.query, request.expected_policy_epoch)
+                    .map_err(PrecheckWireError::from),
+            }.encode(),
+            Err(error) => Self::refusal(error).encode(),
+        }
+    }
+
+    fn enter(&mut self) -> Result<(), PrecheckWireError> {
+        if self.remaining == 0 { return Err(PrecheckWireError::Capacity); }
         self.remaining -= 1;
-        let request = match decode_precheck_request(document) {
-            Ok(request) => request,
-            Err(error) => return PrecheckWireResponse { query: None, result: Err(error) },
-        };
-        PrecheckWireResponse {
-            query: Some(request.query),
-            result: self.port.check(request.query, &request.proposal).map_err(PrecheckWireError::from),
-        }
+        Ok(())
+    }
+
+    fn refusal(error: PrecheckWireError) -> PrecheckWireResponse {
+        PrecheckWireResponse { query: None, result: Err(error) }
+    }
+
+    fn evaluate(&self, request: PrecheckRequest) -> PrecheckWireResponse {
+        PrecheckWireResponse { query: Some(request.query),
+            result: self.port.check(request.query, &request.proposal).map_err(PrecheckWireError::from) }
     }
 }
 

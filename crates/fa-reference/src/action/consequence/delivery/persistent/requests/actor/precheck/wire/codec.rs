@@ -1,5 +1,6 @@
 //! Exact decimal identifiers and lower-case hexadecimal payloads, no new parser.
 use super::{MAX_PRECHECK_FRAME_BYTES, PrecheckWireError};
+use super::discovery::{self, PrecheckCapabilitiesRequest, MAX_CAPABILITIES_REQUEST_BYTES};
 use crate::action::{ElapsedTick, MAX_PAYLOAD_BYTES, ResolvedTarget};
 use crate::action::consequence::oversight::actor::ActorProposal;
 use crate::strict_json::{self, ErrorKind, Json, Limits};
@@ -12,15 +13,41 @@ pub struct PrecheckRequest {
     pub proposal: ActorProposal,
 }
 
+pub(super) enum WireRequest {
+    Precheck(PrecheckRequest),
+    Capabilities(PrecheckCapabilitiesRequest),
+}
+
+// The mixed endpoint parses once under its ORIGINAL finite frame allowance.
+// Individual grammars remain closed; capability documents also retain their
+// smaller byte ceiling. No parse error can echo a partially decoded query.
+pub(super) fn decode_wire_request(bytes: &[u8]) -> Result<WireRequest, PrecheckWireError> {
+    let parsed = parse_request(bytes)?;
+    let root = parsed.as_object().ok_or(PrecheckWireError::MalformedRequest)?;
+    if text(root, "schema")? == discovery::REQUEST_SCHEMA {
+        if bytes.len() > MAX_CAPABILITIES_REQUEST_BYTES { return Err(PrecheckWireError::Capacity); }
+        discovery::decode_request_value(&parsed).map(WireRequest::Capabilities)
+    } else {
+        decode_precheck_value(&parsed).map(WireRequest::Precheck)
+    }
+}
+
 pub fn decode_precheck_request(bytes: &[u8]) -> Result<PrecheckRequest, PrecheckWireError> {
-    let parsed = strict_json::parse(bytes, Limits {
+    decode_precheck_value(&parse_request(bytes)?)
+}
+
+fn parse_request(bytes: &[u8]) -> Result<Json, PrecheckWireError> {
+    strict_json::parse(bytes, Limits {
         max_bytes: MAX_PRECHECK_FRAME_BYTES, max_depth: 4, max_items: 64,
         max_string_bytes: MAX_PAYLOAD_BYTES * 2,
     }).map_err(|error| match error.kind {
         ErrorKind::SizeLimit | ErrorKind::DepthLimit | ErrorKind::ItemLimit | ErrorKind::StringLimit =>
             PrecheckWireError::Capacity,
         _ => PrecheckWireError::MalformedRequest,
-    })?;
+    })
+}
+
+fn decode_precheck_value(parsed: &Json) -> Result<PrecheckRequest, PrecheckWireError> {
     let root = parsed.as_object().ok_or(PrecheckWireError::MalformedRequest)?;
     let schema = text(root, "schema")?;
     if schema != "fa.actor-precheck/1" { return Err(PrecheckWireError::UnsupportedVersion); }

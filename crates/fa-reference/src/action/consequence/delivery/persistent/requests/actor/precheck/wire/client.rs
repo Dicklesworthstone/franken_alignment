@@ -1,4 +1,4 @@
-//! One correlated precheck against an explicitly authenticated local server.
+//! One correlated query against an explicitly authenticated local server.
 //!
 //! This is not the actor submission client: it creates no ticket, effect key,
 //! journal, retry, reconnect or runtime. A lost reply may still have consumed the
@@ -10,6 +10,8 @@ use super::{
     PrecheckResponseError, PrecheckWireError, PrecheckWireResponse, decode_precheck_response,
     encode_precheck_request,
 };
+use super::discovery::{MAX_CAPABILITIES_REQUEST_BYTES, PrecheckCapabilitiesRequest,
+    PrecheckCapabilitiesResponse, decode_capabilities_response};
 use crate::action::consequence::oversight::actor_peer::{
     PeerCredentials, PeerPolicy, PeerRefusal, PeerSetupStage,
 };
@@ -80,18 +82,24 @@ pub struct PrecheckClientDriveReport {
 /// EOF or WouldBlock after that line confirms only the currently available frame
 /// boundary: WouldBlock does not prove that no future peer bytes could arrive.
 /// The socket is closed on completion and never reused for another exchange.
+/// Response types select compiled codecs through separate authenticated
+/// constructors; callers cannot install their own decoder or raw request bytes.
 ///
 /// ```compile_fail,E0599
 /// use fa_reference::action::consequence::delivery::persistent::requests::actor::precheck_wire::client::PrecheckPeerClient;
 /// fn no_effect(client: PrecheckPeerClient) { client.submit(1); }
 /// ```
-pub struct PrecheckPeerClient {
+pub struct PrecheckPeerClient<R = PrecheckWireResponse> {
     socket: Option<UnixStream>,
     credentials: PeerCredentials,
-    exchange: Exchange,
+    exchange: Exchange<R>,
 }
 
-impl fmt::Debug for PrecheckPeerClient {
+/// The same authenticated, bounded, one-shot I/O engine, with a discovery codec.
+/// A discovery observation cannot be taken as an exact-policy pass.
+pub type PrecheckCapabilitiesClient = PrecheckPeerClient<PrecheckCapabilitiesResponse>;
+
+impl<R> fmt::Debug for PrecheckPeerClient<R> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("PrecheckPeerClient")
             .field("credentials", &self.credentials)
@@ -105,11 +113,31 @@ impl PrecheckPeerClient {
     /// operation or blocking connection attempt. Any refusal closes this candidate
     /// without sending bytes. The expected epoch is independent caller context and
     /// must agree with the request, including when the expected epoch is zero.
-    pub fn connect(
-        socket: UnixStream,
-        policy: PeerPolicy,
-        request: PrecheckRequest,
+    pub fn connect(socket: UnixStream, policy: PeerPolicy, request: PrecheckRequest,
         expected_policy_epoch: u64,
+    ) -> Result<Self, PrecheckClientError> {
+        Self::authenticated(socket, policy, || Exchange::new(request, expected_policy_epoch))
+    }
+}
+
+impl PrecheckPeerClient<PrecheckCapabilitiesResponse> {
+    pub fn connect_capabilities(socket: UnixStream, policy: PeerPolicy,
+        request: PrecheckCapabilitiesRequest, expected_policy_epoch: u64,
+    ) -> Result<Self, PrecheckClientError> {
+        Self::authenticated(socket, policy, || {
+            if request.expected_policy_epoch != expected_policy_epoch {
+                return Err(PrecheckClientError::ExpectedPolicyEpoch);
+            }
+            let document = request.encode().map_err(PrecheckClientError::Request)?;
+            Exchange::from_document(document, request.query, expected_policy_epoch,
+                MAX_CAPABILITIES_REQUEST_BYTES, decode_capabilities_response)
+        })
+    }
+}
+
+impl<R> PrecheckPeerClient<R> {
+    fn authenticated(socket: UnixStream, policy: PeerPolicy,
+        build: impl FnOnce() -> Result<Exchange<R>, PrecheckClientError>,
     ) -> Result<Self, PrecheckClientError> {
         let credentials = policy.verify(&socket).map_err(|error| {
             PrecheckClientError::Peer(if error.kind() == io::ErrorKind::PermissionDenied {
@@ -118,7 +146,7 @@ impl PrecheckPeerClient {
                 PeerRefusal::Io { stage: PeerSetupStage::Credentials, kind: error.kind() }
             })
         })?;
-        let exchange = Exchange::new(request, expected_policy_epoch)?;
+        let exchange = build()?;
         socket.set_nonblocking(true).map_err(|error| {
             PrecheckClientError::Peer(PeerRefusal::Io {
                 stage: PeerSetupStage::Nonblocking, kind: error.kind(),
@@ -156,14 +184,12 @@ impl PrecheckPeerClient {
     /// Exactly one strict correlated response, including a valid server-side
     /// refusal. None means pending, failed, or already taken; inspect status to
     /// distinguish them. The returned Knowledge never carries effect authority.
-    pub fn take_response(&mut self) -> Option<PrecheckWireResponse> {
-        self.exchange.response.take()
-    }
+    pub fn take_response(&mut self) -> Option<R> { self.exchange.response.take() }
 }
 
 // Private reusable I/O core permits deterministic partial-I/O fault tests, not
 // an unauthenticated public transport constructor. Production uses UnixStream.
-struct Exchange {
+struct Exchange<R = PrecheckWireResponse> {
     request: Vec<u8>,
     written: usize,
     query: u64,
@@ -172,7 +198,8 @@ struct Exchange {
     input_len: usize,
     phase: PrecheckClientPhase,
     failure: Option<PrecheckClientError>,
-    response: Option<PrecheckWireResponse>,
+    response: Option<R>,
+    decode: fn(&[u8], u64, u64) -> Result<R, PrecheckResponseError>,
 }
 
 impl Exchange {
@@ -180,16 +207,24 @@ impl Exchange {
         if request.proposal.expected_policy_epoch != expected_policy_epoch {
             return Err(PrecheckClientError::ExpectedPolicyEpoch);
         }
-        let query = request.query;
-        let mut document = encode_precheck_request(&request).map_err(PrecheckClientError::Request)?;
-        if document.len() > MAX_PRECHECK_FRAME_BYTES {
+        let document = encode_precheck_request(&request).map_err(PrecheckClientError::Request)?;
+        Self::from_document(document, request.query, expected_policy_epoch,
+            MAX_PRECHECK_FRAME_BYTES, decode_precheck_response)
+    }
+}
+
+impl<R> Exchange<R> {
+    fn from_document(mut document: Vec<u8>, query: u64, expected_policy_epoch: u64,
+        maximum: usize, decode: fn(&[u8], u64, u64) -> Result<R, PrecheckResponseError>,
+    ) -> Result<Self, PrecheckClientError> {
+        if document.len() > maximum {
             return Err(PrecheckClientError::Request(PrecheckWireError::Capacity));
         }
         document.try_reserve(1).map_err(|_| PrecheckClientError::Request(PrecheckWireError::Capacity))?;
         document.push(b'\n');
         Ok(Self { request: document, written: 0, query, expected_policy_epoch,
             input: [0; MAX_PRECHECK_RESPONSE_BYTES], input_len: 0,
-            phase: PrecheckClientPhase::Writing, failure: None, response: None })
+            phase: PrecheckClientPhase::Writing, failure: None, response: None, decode })
     }
 
     fn status(&self) -> PrecheckClientStatus {
@@ -285,7 +320,7 @@ impl Exchange {
     }
 
     fn finish(&mut self) {
-        match decode_precheck_response(&self.input[..self.input_len], self.query, self.expected_policy_epoch) {
+        match (self.decode)(&self.input[..self.input_len], self.query, self.expected_policy_epoch) {
             Ok(response) => {
                 self.response = Some(response);
                 self.input_len = 0;

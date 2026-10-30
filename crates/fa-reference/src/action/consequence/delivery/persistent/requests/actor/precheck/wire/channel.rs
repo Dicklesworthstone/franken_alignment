@@ -69,7 +69,7 @@ impl FilePrecheckChannel {
             if byte == b'\n' {
                 // exchange charges BEFORE parsing. A later encoding or output
                 // failure never refunds that allowance or replays the request.
-                let response = self.wire.exchange(&self.input).encode();
+                let response = self.wire.exchange_frame(&self.input);
                 self.input.clear();
                 self.written = 0;
                 match response {
