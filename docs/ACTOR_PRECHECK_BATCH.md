@@ -12,6 +12,22 @@ an explicit actor-only grammar owned before supervisor options are removed. It
 uses the same public profiles and strict `fa.actor-precheck/1` request documents
 as [the single-query client](LIVE_ACTOR_PRECHECK.md#actor-only-command).
 
+## Stop at the first passing candidate
+
+```text
+supervise_publication actor-precheck --first-pass ACTOR_PROFILE PRECHECK_PROFILE QUERY_1_JSON QUERY_2_JSON ...
+```
+
+This explicit ordered-search mode prevalidates the **entire** input set using the
+same worst-case bounds, then checks candidates in order. It stops successfully
+only after an exact passing native response has been emitted and elapsed checks
+have completed. Later candidates are not connected or sent, conserving remaining
+server disclosure and connection allowances. The last emitted response identifies
+the passing query; the client does not copy a proposal, mint a ticket or Submit it.
+Known denials continue the search; an all-denied search exits nonzero. All other
+refusals and failures stop just as in batch mode. An invalid later document is
+still rejected before any query, even if an earlier candidate might have passed.
+
 ## Input and work bounds
 
 A batch has 1–16 documents. Its count must fit the independently configured
@@ -44,8 +60,10 @@ preemptible deadlines.
 
 Stdout contains one original native JSON response per completed query, in input
 order, with no wrapper or fabricated result. Known denials are emitted and do
-not stop screening. A successful exit requires every candidate to have a Known
-result and at least one exact `PrecheckPassed`. An all-denied batch exits nonzero.
+not stop screening. In `--batch` mode, a successful exit requires every candidate to have a Known
+result and at least one exact `PrecheckPassed`. In `--first-pass` mode, later
+candidates are intentionally not evaluated after the first pass. An all-denied
+batch or search exits nonzero.
 
 Unknown, Withheld, Stale or a native wire refusal is emitted unchanged, then
 terminates the batch with a nonzero exit. Transport/authentication/input/binding
@@ -69,9 +87,12 @@ it adds no permission, policy evaluator, grant renewal or witness cache.
 
 ## Verification
 
-Five focused source-level regression functions cover grammar, independent limits,
-duplicate labels/epoch binding, aggregate work exhaustion and disclosed-cut
-continuity. They are added tests, not evidence of execution. The editing
+Five focused regression functions cover grammar, independent limits, duplicate
+labels/epoch binding, aggregate work exhaustion and disclosed-cut continuity.
+Fourteen additional scripted-socket regression functions cover native output and
+ordered stopping, all-denied/inconclusive results, full preflight, retained input,
+lost replies, partial stdout, authentication/correlation, changed cuts and closed
+executable dispatch. These are added tests, not evidence of execution. The editing
 environment has neither the required `rch` runner nor a Rust toolchain; no
 compilation, formatting, Clippy, runtime pass or qualification is claimed.
 No bead or acceptance gate is closed.

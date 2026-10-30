@@ -13,28 +13,32 @@ use std::os::unix::net::UnixStream;
 use std::path::Path;
 use std::time::{Duration, Instant};
 
-const USAGE: &str = "actor-precheck --batch ACTOR_PROFILE PRECHECK_PROFILE PRECHECK_JSON [PRECHECK_JSON ...]";
+const USAGE: &str = "actor-precheck --batch|--first-pass ACTOR_PROFILE PRECHECK_PROFILE PRECHECK_JSON [PRECHECK_JSON ...]";
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum Mode { All, FirstPass }
 const MAX_DOCUMENTS: usize = 16;
 // Also bound aggregate retained input, not just the number of documents. Each
 // individual document still obeys the original native frame and payload limits.
 const MAX_INPUT_BYTES: usize = 4 * MAX_PRECHECK_FRAME_BYTES;
 
 pub(super) fn command(args: &[String], out: &mut impl Write) -> Result<(), String> {
-    let documents = arguments(args)?;
+    let (mode, documents) = arguments(args)?;
     let started = Instant::now();
     let actor = Profile::read(Path::new(&args[2]))?;
     check_time(started, Duration::from_millis(actor.runtime_ms))?;
     let settings = Settings::read(Path::new(&args[3]))?;
     let documents: Vec<_> = documents.iter().map(Path::new).collect();
-    query(&actor, &settings, &documents, started, out)
+    query(mode, &actor, &settings, &documents, started, out)
 }
 
-fn arguments(args: &[String]) -> Result<&[String], String> {
+fn arguments(args: &[String]) -> Result<(Mode, &[String]), String> {
     if !(5..=MAX_DOCUMENTS + 4).contains(&args.len())
-        || args[0] != "actor-precheck" || args[1] != "--batch"
+        || args[0] != "actor-precheck"
+        || !matches!(args[1].as_str(), "--batch" | "--first-pass")
         || args[2..].iter().any(|arg| arg.is_empty() || arg.starts_with("--"))
     { return Err(USAGE.into()); }
-    Ok(&args[4..])
+    let mode = if args[1] == "--first-pass" { Mode::FirstPass } else { Mode::All };
+    Ok((mode, &args[4..]))
 }
 
 fn check_count(count: usize, settings: &Settings) -> Result<(), String> {
@@ -107,7 +111,7 @@ fn record_basis(response: &PrecheckWireResponse, observed_at: &mut Option<Elapse
     Ok(true)
 }
 
-fn query(actor: &Profile, settings: &Settings, documents: &[&Path], started: Instant,
+fn query(mode: Mode, actor: &Profile, settings: &Settings, documents: &[&Path], started: Instant,
     out: &mut impl Write,
 ) -> Result<(), String> {
     let wall = Duration::from_millis(actor.runtime_ms.min(settings.runtime_ms));
@@ -137,6 +141,9 @@ fn query(actor: &Profile, settings: &Settings, documents: &[&Path], started: Ins
             return Err("precheck batch incomplete; see original refusal; no further query or retry was sent".into());
         }
         any_pass |= passed;
+        // Explicit ordered search conserves the remaining disclosure allowance.
+        // A successful write and the same elapsed checks precede this return.
+        if passed && mode == Mode::FirstPass { return Ok(()); }
     }
     if any_pass { Ok(()) } else {
         Err("precheck batch found no passing candidate; no submission was sent".into())
@@ -186,7 +193,9 @@ mod tests {
         }
         let args: Vec<_> = ["actor-precheck", "--batch", "a", "p", "q1", "q2"]
             .into_iter().map(str::to_owned).collect();
-        assert_eq!(arguments(&args).unwrap(), &args[4..]);
+        assert_eq!(arguments(&args).unwrap(), (Mode::All, &args[4..]));
+        let mut args = args; args[1] = "--first-pass".into();
+        assert_eq!(arguments(&args).unwrap(), (Mode::FirstPass, &args[4..]));
     }
 
     #[test]
@@ -245,4 +254,6 @@ mod tests {
             result: Ok(Knowledge::Unknown { reason: UnknownReason::ControllerUnavailable }) };
         assert!(!record_basis(&unknown, &mut at).unwrap());
     }
+
+    mod sockets;
 }

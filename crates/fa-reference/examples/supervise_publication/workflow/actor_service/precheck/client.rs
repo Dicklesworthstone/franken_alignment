@@ -19,7 +19,7 @@ use std::os::unix::net::UnixStream;
 use std::path::Path;
 use std::time::{Duration, Instant};
 
-const USAGE: &str = "actor-precheck ACTOR_PROFILE PRECHECK_PROFILE PRECHECK_JSON";
+const USAGE: &str = "actor-precheck ACTOR_PROFILE PRECHECK_PROFILE PRECHECK_JSON; alternatively actor-precheck --batch|--first-pass ACTOR_PROFILE PRECHECK_PROFILE PRECHECK_JSON [PRECHECK_JSON ...]";
 const MAX_IO_CALLS: usize = 4_096;
 
 /// Closed grammar, before opening any input. Neither public profile is a
@@ -28,7 +28,7 @@ pub(in crate::workflow::actor_service) fn command(args: &[String], out: &mut imp
     -> Result<(), String>
 {
     if args.first().is_some_and(|arg| arg == "actor-precheck")
-        && args.get(1).is_some_and(|arg| arg == "--batch")
+        && args.get(1).is_some_and(|arg| matches!(arg.as_str(), "--batch" | "--first-pass"))
     { return batch::command(args, out); }
     if args.len() != 4 || args[0] != "actor-precheck"
         || args[1..].iter().any(|arg| arg.starts_with("--"))
