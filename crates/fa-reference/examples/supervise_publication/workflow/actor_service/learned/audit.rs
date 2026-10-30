@@ -180,3 +180,6 @@ mod boundary_tests {
         assert!(report.0.bytes().all(|byte| byte == b'x'));
     }
 }
+
+#[path = "audit/situation.rs"]
+mod situation;

@@ -60,3 +60,50 @@ RCH testing and the canonical check cannot start because `rch` is absent; Cargo
 formatting also cannot start because `cargo` is absent (exit 127). Whitespace and
 source-preservation review are not compilation, runtime tests or qualification.
 No bead or full FA-136 acceptance condition is closed.
+
+## Operator command
+
+```text
+supervise_publication situation CONFIG --learned-recipe RECIPE
+supervise_publication situation CONFIG --learned-recipe RECIPE --history-anchor INPUT --page-size 32
+```
+
+Recipe selection is explicit, unique and order-independent with the existing
+optional anchor and page size. It is admitted by the situation command's closed
+grammar before shared mutation/credential options or file reads. The ordinary
+no-recipe command is unchanged. This recipe integration uses the existing Linux
+operator profile; other platforms refuse the option before opening configuration,
+not through an ordinary-history fallback.
+
+The same offline loader used by learned review auditing admits checkpoint-source,
+model, tokenizer, fit, monitor and predictor assets. Its native-reviewer loading
+flag is false. Model assets required to recompute historical numerical work are
+still necessary; the live evidence file, native reviewer roster/models, helper
+programs, credential secret, control listener and live reviewer are not used.
+Nothing starts or resumes the live generation. The selected original generator
+and, when required, its owned-K/V predictor select the matching native reader.
+
+The invocation's elapsed allowance begins before CONFIG and also covers anchor
+intake, recipe loading, image binding, every replay event, rendering and stdout.
+It is never renewed after loading. Loading itself remains synchronous and bounded
+by the existing recipe contracts; a checkpoint after it does not preempt a slow
+read or numerical operation. The command prints nothing before full replay.
+
+Output remains `fa.publication-situation/1` JSONL with the existing historical
+basis, immutable pages, page/total byte ceilings and exit-status contract. A
+successful report is not successful publication, fresh eligibility or evidence
+of detector quality. Missing/changed assets, wrong recipes, invalid custody,
+replay failure, deadlines and output failures never trigger weaker replay,
+recovery, repair, another output attempt or an automatic effect retry.
+
+Six additional loaded-operator regression functions exercise pending publication
+without live evidence/reviewer assets, plain/raw/owned recipes, omitted or changed
+recipes and missing model assets, all loader/binding deadline checkpoints,
+anchored rollback, and partial stdout with unchanged live state. Two grammar
+functions cover option order, duplicates, missing values and mutation-option
+rejection before files. Together with the eight native functions, these sixteen
+new runtime tests remain unexecuted: required RCH native/operator/canonical and
+Clippy commands cannot start, and Cargo formatting cannot start (exit 127).
+Original base hashes and narrowly scoped modifications are checked separately;
+those checks do not establish compilation or runtime correctness. Existing tests
+and the broader FA-136 acceptance conditions are unchanged.
