@@ -1,5 +1,6 @@
 //! Actor-side exact precheck, separate from submission and private host config.
-//! One native authenticated exchange; no polling, retry, ticket or effect key.
+//! Explicit single/batch exact queries; no submission, retry, ticket or effect key.
+mod batch;
 use super::Settings;
 use super::super::{Profile, debug, pause};
 use crate::config::read_regular;
@@ -26,6 +27,9 @@ const MAX_IO_CALLS: usize = 4_096;
 pub(in crate::workflow::actor_service) fn command(args: &[String], out: &mut impl Write)
     -> Result<(), String>
 {
+    if args.first().is_some_and(|arg| arg == "actor-precheck")
+        && args.get(1).is_some_and(|arg| arg == "--batch")
+    { return batch::command(args, out); }
     if args.len() != 4 || args[0] != "actor-precheck"
         || args[1..].iter().any(|arg| arg.starts_with("--"))
     { return Err(USAGE.into()); }
@@ -119,8 +123,16 @@ fn exchange(socket: UnixStream, actor: &Profile, settings: &Settings,
 
 // The private clock seam permits deadline-boundary regression tests without
 // timing races. Production always uses the original command's elapsed Instant.
-fn drive_client(mut client: PrecheckPeerClient, poll_ms: u64, wall: Duration,
-    mut work: Work, mut elapsed: impl FnMut() -> Duration,
+fn drive_client(client: PrecheckPeerClient, poll_ms: u64, wall: Duration,
+    mut work: Work, elapsed: impl FnMut() -> Duration,
+) -> Result<PrecheckWireResponse, String> {
+    drive_client_shared(client, poll_ms, wall, &mut work, elapsed)
+}
+
+// Batch members borrow the SAME remaining work; neither a new connection nor a
+// completed response replenishes it. Single-query behavior uses the same loop.
+fn drive_client_shared(mut client: PrecheckPeerClient, poll_ms: u64, wall: Duration,
+    work: &mut Work, mut elapsed: impl FnMut() -> Duration,
 ) -> Result<PrecheckWireResponse, String> {
     loop {
         check_elapsed(elapsed(), wall)?;
@@ -144,6 +156,18 @@ fn drive_client(mut client: PrecheckPeerClient, poll_ms: u64, wall: Duration,
 fn write_response(response: &PrecheckWireResponse, settings: &Settings,
     out: &mut impl Write,
 ) -> Result<(), String> {
+    if !emit_response(response, settings, out)? {
+        return Err("precheck did not pass; see original response; no retry was sent".into());
+    }
+    // A pass remains review_required; no ordinary submission is performed here.
+    Ok(())
+}
+
+// Emit the original native response without converting a denial into a transport
+// error. The single-query command and bounded candidate batch choose exit status.
+fn emit_response(response: &PrecheckWireResponse, settings: &Settings,
+    out: &mut impl Write,
+) -> Result<bool, String> {
     // The generic native codec binds query/epoch. This selected CLI profile also
     // names a disclosure, so a different grant at the same epoch is not accepted.
     if let Ok(Knowledge::Known { basis, .. }) = &response.result {
@@ -154,11 +178,8 @@ fn write_response(response: &PrecheckWireResponse, settings: &Settings,
     let bytes = response.encode().map_err(debug)?;
     out.write_all(&bytes).and_then(|()| out.write_all(b"\n")).and_then(|()| out.flush())
         .map_err(|error| format!("native precheck response received, output failed: {error}; no retry was sent"))?;
-    if !matches!(&response.result, Ok(Knowledge::Known { value: FilePrecheckOutcome::PrecheckPassed, .. })) {
-        return Err("precheck did not pass; see original response; no retry was sent".into());
-    }
-    // A pass remains review_required; no ordinary submission is performed here.
-    Ok(())
+    Ok(matches!(&response.result,
+        Ok(Knowledge::Known { value: FilePrecheckOutcome::PrecheckPassed, .. })))
 }
 
 #[cfg(test)]
