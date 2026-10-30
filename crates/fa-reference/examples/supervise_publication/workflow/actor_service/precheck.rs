@@ -94,8 +94,17 @@ impl Service {
             lease.validate_at(now).map_err(debug)?;
             (host.revision(), lease)
         };
-        let (port, disclosure) = driver.supervisor().disclose_exact_precheck(
-            revision, settings.disclosure_id, settings.query_limit).map_err(debug)?;
+        let (port, disclosure) = match settings.cache {
+            Some(limits) => {
+                // One cache for this original grant, retained inside its
+                // custodian. Reconnects neither replace it nor renew any work.
+                let cache = driver.supervisor().precheck_cache(limits).map_err(debug)?;
+                driver.supervisor().disclose_exact_precheck_cached(
+                    revision, settings.disclosure_id, settings.query_limit, &cache)
+            }
+            None => driver.supervisor().disclose_exact_precheck(
+                revision, settings.disclosure_id, settings.query_limit),
+        }.map_err(debug)?;
         let wire = FilePrecheckWire::new(port, settings.exchange_limit).map_err(debug)?;
         let session = FilePrecheckPeerSession::new(actor.actor, wire, MAX_PRECHECK_FRAME_BYTES,
             settings.connection_limit).map_err(debug)?;
@@ -210,3 +219,7 @@ impl Service {
 #[cfg(test)]
 #[path = "precheck/tests.rs"]
 mod tests;
+
+#[cfg(test)]
+#[path = "precheck/cache_tests.rs"]
+mod cache_tests;

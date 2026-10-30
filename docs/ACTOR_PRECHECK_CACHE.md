@@ -64,8 +64,9 @@ not retained. Cache-borrow unavailability also runs the original evaluator, not
 a cached pass or a permissive substitute. Supervisor-only aggregate counters
 report cached-path evaluations, hits, invalidations, evictions and skipped
 retention; they are not latency measurements or endpoint-wide work accounting.
-Debug output and actor responses do not expose entries, policy/source values,
-cache keys, counters or helper material. Timing remains an observable channel.
+Supervisor Debug output contains aggregate status, never entries or their
+policy/source values. Actor responses contain no cache keys, hit counters or
+helper material. Timing remains an observable channel.
 
 Capability discovery reports `witness_cache: "exact_witnesses"` only for a
 selected cached grant; ordinary grants retain `"unavailable"` and their original
@@ -73,10 +74,59 @@ bytes. The strict decoder accepts only those two spellings, not full-policy or
 congress-replay claims. Older decoders fail closed on the new spelling. Exact
 precheck responses and their `review_required` semantics do not change.
 
+## Live service opt-in
+
+The existing ordinary single-request `--precheck-profile` option also accepts
+`fa.actor-precheck-service/2`. Version two requires both `cache_entries` and
+`cache_bytes`; there is no implicit cache size, permissive fallback or new verb.
+All other profile fields keep their version-one meanings. For example:
+
+```json
+{
+  "schema": "fa.actor-precheck-service/2",
+  "policy_disclosure": "exact_predicates",
+  "socket": "/srv/fa-actors/precheck-7.sock",
+  "expected_policy_epoch": 0,
+  "disclosure_id": 81,
+  "query_limit": 16,
+  "exchange_limit": 32,
+  "candidate_limit": 16,
+  "connection_limit": 8,
+  "runtime_ms": 10000,
+  "cache_entries": 16,
+  "cache_bytes": 262144
+}
+```
+
+Use independently selected live target/epoch/timing context; these are example
+fields, not a current deployment. Version-one profiles remain uncached and reject
+cache fields. A version-two profile missing either limit, containing duplicate
+or unknown fields, selecting an unsupported disclosure, or exceeding native
+cache limits is rejected. Programmatically constructed settings also validate
+cache limits before clock/source/bootstrap/listener work.
+
+The original supervisor performs its source/time bootstrap, then creates one
+owner-bound cache and one cached grant. The grant retains the cache for the
+same finite service lifetime, including explicitly admitted reconnects. Cache
+creation failure is not silently converted into an uncached service. A query
+that cannot fit the selected retention budget still runs the original evaluator;
+this is the native bounded cache contract, not a different disclosure mode.
+
+No scheduler, authentication, independent-stop, owner-revision, source-lease or
+elapsed guard is removed. A warmed cache cannot revive the listener after
+retirement. Actual Submit always reacquires evidence: changed source can deny a
+proposal that passed a precheck, while unchanged source still enters ordinary
+helper/human review. No cache result authorizes publication.
+
+Single-query, batch, first-pass and capability clients accept the same public
+version-two profile. Discovery reports the actual native grant selection; the
+profile alone cannot enable caching on a separately configured server. Original
+precheck response bytes and all shared work charges remain unchanged.
+
 ## Verification status
 
 Ten differential regression functions cover positive/negative/range witnesses,
-unselected arms, all action fields, policy/source generations, incomplete data,
+unselected arms, full action-key binding, policy/source generations, incomplete data,
 exact/one-short byte limits, FIFO eviction and the earlier-range-member limit
 case. Eight real-owner/wire functions cover reuse across explicit new grants,
 unchanged durable/source state, ordinary review, deadline screens, exhaustion,
@@ -84,8 +134,12 @@ revocation, source expiry/withdrawal, owner identity/lifetime, disabled defaults
 and bounded strict capability responses. One compile-fail example denies a cache
 handle the ability to issue a grant.
 
-The eighteen functions are authored, not executed. Targeted tests and the
-canonical check could not start because `rch` is absent (exit 127); formatting
+Eight additional live-profile/service functions cover explicit limits and closed
+schemas, default/cached response parity, cumulative work across reconnects,
+fresh-source Submit after a warm cache, lease/clock/wall/stop retirement, invalid
+programmatic settings, kernel-peer refusal and retention-too-small fallback.
+The 26 functions are authored, not executed. Targeted native and operator tests
+and the canonical check could not start because `rch` is absent (exit 127); formatting
 could not start because `cargo` is absent (exit 127). Git whitespace checks and
 original-blob preservation checks passed. A separately constructed maximum-width
 cached-discovery JSON fixture is 714 bytes under the 1,024-byte ceiling; that is

@@ -1,6 +1,7 @@
 //! Public opt-in for one exact-predicate sidecar, not the private Config.
 use super::super::{Config, PeerProfile, Profile};
 use crate::config::{debug, read_regular};
+use fa_reference::action::consequence::delivery::persistent::requests::actor::precheck_wire::cache::PrecheckCacheLimits;
 use fa_reference::action::consequence::delivery::persistent::requests::actor::precheck_wire::MAX_PRECHECK_EXCHANGES;
 use fa_reference::action::consequence::delivery::persistent::requests::actor::MAX_PRECHECK_QUERIES;
 use fa_reference::action::consequence::oversight::actor_peer::MAX_PEER_CONNECTIONS;
@@ -22,6 +23,7 @@ pub(crate) struct Settings {
     pub(super) candidate_limit: u64,
     pub(super) connection_limit: u64,
     pub(super) runtime_ms: u64,
+    pub(super) cache: Option<PrecheckCacheLimits>,
 }
 
 impl Settings {
@@ -36,9 +38,12 @@ impl Settings {
             max_items: 64,
             max_string_bytes: 4_096,
         }).map_err(debug)?)?;
-        if fields.text("schema")? != "fa.actor-precheck-service/1"
-            || fields.text("policy_disclosure")? != "exact_predicates"
-        {
+        let cached = match fields.text("schema")?.as_str() {
+            "fa.actor-precheck-service/1" => false,
+            "fa.actor-precheck-service/2" => true,
+            _ => return Err("unsupported precheck service schema".into()),
+        };
+        if fields.text("policy_disclosure")? != "exact_predicates" {
             return Err("precheck requires the explicit exact_predicates service profile".into());
         }
         let socket = PathBuf::from(fields.text("socket")?);
@@ -56,6 +61,16 @@ impl Settings {
         let candidate_limit = fields.number("candidate_limit")?;
         let connection_limit = fields.number("connection_limit")?;
         let runtime_ms = fields.number("runtime_ms")?;
+        // Cache selection is explicit and closed: v1 never consumes v2 fields,
+        // and v2 never substitutes defaults for missing or invalid limits.
+        let cache = if cached {
+            let limits = PrecheckCacheLimits {
+                entries: usize::try_from(fields.number("cache_entries")?).map_err(debug)?,
+                retained_bytes: usize::try_from(fields.number("cache_bytes")?).map_err(debug)?,
+            };
+            limits.validate().map_err(debug)?;
+            Some(limits)
+        } else { None };
         fields.end()?;
         if disclosure_id == 0 || query_limit == 0 || query_limit > MAX_PRECHECK_QUERIES
             || exchange_limit == 0 || exchange_limit > MAX_PRECHECK_EXCHANGES
@@ -66,11 +81,12 @@ impl Settings {
             return Err("precheck disclosure, work or lifetime limit is out of range".into());
         }
         Ok(Self { socket, expected_policy_epoch, disclosure_id, query_limit,
-            exchange_limit, candidate_limit, connection_limit, runtime_ms })
+            exchange_limit, candidate_limit, connection_limit, runtime_ms, cache })
     }
 
     /// Public actor-side checks, with no private Config, source or journal access.
     pub(crate) fn check_actor(&self, actor: &Profile) -> Result<(), String> {
+        if let Some(limits) = self.cache { limits.validate().map_err(debug)?; }
         if self.socket == actor.socket {
             return Err("precheck and ordinary actor sockets must be distinct".into());
         }

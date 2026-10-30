@@ -23,7 +23,7 @@ or caller-selected disclosure levels. Query zero is invalid; epoch zero is valid
 Responses use the separate `fa.actor-precheck-capabilities-response/1` schema and
 `informational: true`. Known values explicitly declare `exact_predicates` /
 `exact_policy`, withheld policy contents/helper feedback/source values, unavailable
-source refresh and witness caching, captured-cut observations, label-only
+source refresh, captured-cut observations, label-only
 correlation, observable timing, no signed profile, no effect authority and required
 ordinary review. These are compiled endpoint facts, not imported assertions.
 Unsupported full disclosure or congress dry runs cannot silently masquerade as
@@ -34,6 +34,13 @@ including strict query/epoch/basis correlation and refusal handling. The old
 precheck format and its original parser limits are retained. A capabilities
 response uses the same 1,024-byte ceiling with its own finite item allowance.
 Maximum-width schema vectors fit in 256/1,024 bytes respectively.
+
+Witness caching is disabled by default (`witness_cache: "unavailable"`). An
+explicitly cached native grant, including the version-two live service profile,
+reports `"exact_witnesses"` instead. The current decoder accepts exactly these
+two spellings; older decoders fail closed on the new spelling. This reports
+selection, not a hit or reserved work. Discovery never populates the cache or
+resets query allowances. See [the cache contract](ACTOR_PRECHECK_CACHE.md).
 
 ## Authenticated live transport
 
@@ -94,7 +101,7 @@ query/frame/connection allowances: it does not reserve work for a later batch.
 ## Verification and remaining scope
 
 This is not the full signed E27 assurance-profile implementation, a deployment
-attestation, an instance nonce, a source-renewal interface or witness caching.
+attestation, an instance nonce, a source-renewal interface or cached congress review.
 The disclosed remaining count and timing can reveal other use of the same grant;
 credential/scope separation remains the operator's responsibility.
 
