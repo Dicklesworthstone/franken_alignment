@@ -2,6 +2,7 @@
 //! No provider, helper, human endpoint, writer, or external effect is invoked.
 
 mod anchored;
+pub mod situation;
 mod cursor;
 mod effect;
 mod learned;
