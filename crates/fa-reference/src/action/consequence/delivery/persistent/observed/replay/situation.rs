@@ -6,6 +6,7 @@ pub mod fleet;
 use super::{Event, FileOversight, FileOversightProfile, JournalError, Machine, journal, storage};
 use super::super::guarded::anchored::FileHistoryAnchor;
 use crate::action::{ActionState, ElapsedTick, ResolvedTarget, Scope};
+use crate::address::{Address, AddressKind};
 use crate::action::consequence::oversight::actor::Knowledge;
 use crate::Error;
 use std::{fmt, path::Path, rc::Rc};
@@ -57,6 +58,8 @@ pub struct FileSituationSummary {
 /// helper inputs/votes, keys, empirical review or inferred nonexecution receipt.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct FileSituationAttempt {
+    /// Canonical registered identity for this attempt within its authority tenant.
+    pub address: Address,
     pub attempt: u64,
     pub stage: ActionState,
     pub target: ResolvedTarget,
@@ -156,7 +159,8 @@ impl FileSituation {
             if stage == ActionState::IrrecoverablyUnknown {
                 summary.irrecoverably_unknown_attempts += 1;
             }
-            attempts.push(FileSituationAttempt { attempt, stage,
+            let address = Address::new(profile.delivery.scope.tenant, AddressKind::Attempt, attempt, None)?;
+            attempts.push(FileSituationAttempt { address, attempt, stage,
                 target: action.target.ok_or(Error::Incomplete)?, units: action.units,
                 payload_bytes: action.payload.len(), proposal_policy_epoch: action.policy_epoch,
                 deadline: action.deadline });

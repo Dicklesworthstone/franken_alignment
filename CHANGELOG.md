@@ -1,5 +1,16 @@
 # Changelog
 
+## 2026-10-30: add canonical typed FA addresses to publication situations
+
+- Add a dependency-free parser/printer for the normative
+  `fa://<tenant>/<kind>/<id>[@generation]` scheme and all 26 registered nouns.
+- Reject unknown kinds and noncanonical aliases including zero/leading-zero IDs,
+  malformed generations, path suffixes, query/fragment syntax and overflow.
+- Attach typed `attempt` addresses to replay-verified publication situation rows
+  and emit them in the operator JSONL without changing authority or replay state.
+- Add noun round-trip, malformed-input and identity-separation tests plus real
+  situation assertions. Execution remains pending because RCH/Cargo are absent.
+
 ## 2026-10-28: add the actor-only precheck operator command
 
 - Wire public actor/precheck profiles and strict query documents to the original

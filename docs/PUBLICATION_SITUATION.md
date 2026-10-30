@@ -53,6 +53,19 @@ writer may advance after capture without changing any of its remaining pages.
 The immutable report retains bounded attempt metadata, not the full journal,
 source snapshots or helper sessions after replay finishes.
 
+## Canonical attempt addresses
+
+Every exported attempt now carries the registered canonical identity
+`fa://<tenant>/attempt/<id>`. The tenant comes from the independently supplied
+publication scope; the attempt ID is the exact journal key. The address is a
+typed value in the reference library, not a formatted convenience string and not
+a capability. Parsing accepts only the exact registered noun set from
+`registry/vocabulary.json`, rejects unknown kinds, zero IDs, leading-zero aliases,
+extra path/query/fragment syntax and malformed generations, and round-trips one
+canonical spelling. This is the first executable FA-134 foundation needed by the
+full FA-136 address-pagination contract; general resolution, authorization
+filtering and `fa get` / `fa related` remain separate open work.
+
 ## What is reported
 
 Whole-cut accounting is repeated on every page: available, reserved and charged
@@ -60,7 +73,7 @@ units, policy/dispatcher epochs, suspension and recorded stop status, execution
 count, total attempts, retained actor-request count, and pending/unresolved/
 terminal attempt counts. Page boundaries do not shrink these totals.
 
-Each attempt includes its original stage, exact target identity, requested units,
+Each attempt includes its canonical address, original stage, exact target identity, requested units,
 payload byte count, proposal epoch and deadline. Payload bytes, witnesses,
 policy literals, helper inputs, votes, credentials and permits are not exported.
 This remains a privileged supervisor surface, not a redacted actor protocol.
@@ -87,8 +100,7 @@ Compilation, runtime execution, formatting and Clippy are pending. The required
 remote RCH runner and Cargo are absent in this editing environment. Source and
 whitespace review do not establish passing tests. No bead, production gate or
 full FA-136 acceptance is closed. Source authenticity, deployment authorization,
-numerical recipe selection, fleet folds, general address resolution and planner
-ranking remain separate obligations.
+numerical recipe selection, general address resolution and planner ranking remain separate obligations.
 
 ## Operator command
 

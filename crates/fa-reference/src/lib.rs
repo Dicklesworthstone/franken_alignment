@@ -4,6 +4,7 @@
 #![cfg_attr(target_os = "linux", feature(peer_credentials_unix_socket))]
 
 pub mod action;
+pub mod address;
 pub mod canonical_json;
 pub mod evidence_view;
 pub mod full_input;

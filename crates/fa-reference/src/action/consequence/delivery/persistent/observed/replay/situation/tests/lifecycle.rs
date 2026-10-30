@@ -6,13 +6,15 @@ fn real_unresolved_work_is_first_and_every_page_retains_whole_cut_accounting() {
     propose(&mut host, 1, false); propose(&mut host, 2, true); dispatch(&mut host, &reviewer, 9);
     let before = host.inspect(); let files = root.files();
     let report = host.situation().unwrap(); let (first, basis) = page(&report, None, 1);
-    assert_eq!(first.attempts[0].attempt, 9); assert_eq!(first.summary.attempts, 3);
+    assert_eq!(first.attempts[0].attempt, 9); assert_eq!(first.attempts[0].address.to_string(), "fa://1/attempt/9");
+    assert_eq!(first.summary.attempts, 3);
     assert_eq!((first.summary.unresolved_attempts, first.summary.pending_attempts, first.summary.terminal_attempts), (1, 1, 1));
     assert_eq!((first.summary.charged_units, first.summary.reserved_units), (16, 0));
     assert_eq!(basis.origin, FileSituationOrigin::AcknowledgedOwner);
     assert_eq!((basis.journal_revision, basis.control_sequence), (host.revision(), before.control.sequence));
     let (second, again) = page(&report, first.next.as_ref(), 1);
-    assert_eq!(second.attempts[0].attempt, 2); assert_eq!(second.summary, first.summary); assert_eq!(again, basis);
+    assert_eq!(second.attempts[0].attempt, 2); assert_eq!(second.attempts[0].address.to_string(), "fa://1/attempt/2");
+    assert_eq!(second.summary, first.summary); assert_eq!(again, basis);
     let (last, _) = page(&report, second.next.as_ref(), 1);
     assert_eq!(last.attempts[0].attempt, 1); assert!(last.next.is_none());
     assert_eq!(last.attempts[0].stage, ActionState::Denied);

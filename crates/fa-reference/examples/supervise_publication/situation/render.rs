@@ -20,11 +20,11 @@ pub(super) fn page(page: &FileSituationPage, basis: FileSituationBasis) -> Resul
     for row in &page.attempts {
         let target = row.target;
         rows.push(format!(concat!(
-            "{{\"attempt\":\"{}\",\"stage\":\"{}\",\"target\":{{",
+            "{{\"address\":\"{}\",\"attempt\":\"{}\",\"stage\":\"{}\",\"target\":{{",
             "\"adapter\":\"{}\",\"object\":\"{}\",\"contract_version\":\"{}\",",
             "\"expected_version\":\"{}\",\"generation\":\"{}\"}},",
             "\"units\":\"{}\",\"payload_bytes\":\"{}\",\"proposal_policy_epoch\":\"{}\",\"deadline\":\"{}\"}}"),
-            row.attempt, stage(row.stage), target.adapter, target.object, target.contract_version,
+            row.address, row.attempt, stage(row.stage), target.adapter, target.object, target.contract_version,
             target.expected_version, target.generation, row.units, row.payload_bytes,
             row.proposal_policy_epoch, row.deadline.0));
     }
