@@ -1,12 +1,14 @@
 //! Original native-model sidecar sequences feeding the ORIGINAL supervised publication job.
 //! The numerical sequence and the actor gateway have one owner during review.
 //! Handoff retains the original work records and cannot manufacture either key.
-use super::{FileDriverPhase, FileSupervisedDriver, Job, Phase, admitted, observe, stage};
-use super::super::{FileOversight, JournalError};
-use super::super::decoder::learned::sidecar::{FileLearnedSidecar, FileLearnedSidecarFinish};
-use super::super::helpers::learned::native::{NativeReviewCost, NativeReviewLimits, NativeReviewStatus,
-    sequence::{FileNativeSidecarSequence, NativeSequenceRosters}};
 use super::super::super::requests::actor::FileActorSupervisor;
+use super::super::decoder::learned::sidecar::{FileLearnedSidecar, FileLearnedSidecarFinish};
+use super::super::helpers::learned::native::{
+    NativeReviewCost, NativeReviewLimits, NativeReviewStatus,
+    sequence::{FileNativeSidecarSequence, NativeSequenceRosters},
+};
+use super::super::{FileOversight, JournalError};
+use super::{FileDriverPhase, FileSupervisedDriver, Job, Phase, admitted, observe, stage};
 use crate::action::consequence::Consequence;
 use crate::action::consequence::oversight::learned_host::sidecar::workers::LearnedWorkerRound;
 use crate::action::{ActionState, ElapsedTick};
@@ -70,7 +72,9 @@ pub struct FileNativeSupervisedDriver {
 }
 impl fmt::Debug for FileNativeSupervisedDriver {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("FileNativeSupervisedDriver").field("progress", &self.progress()).finish_non_exhaustive()
+        f.debug_struct("FileNativeSupervisedDriver")
+            .field("progress", &self.progress())
+            .finish_non_exhaustive()
     }
 }
 
@@ -89,62 +93,122 @@ impl FileSupervisedDriver {
     /// consumes the driver so an unrelated socket review cannot take its slot.
     /// Setup computes no new helper token and issues neither key; historical
     /// numerical replay still belongs to the original journal transactions.
-    pub fn start_native_learned_sequence(mut self, launch: FileNativeDriverLaunch,
-        snapshot: Snapshot, now: ElapsedTick)
-        -> Result<FileNativeSupervisedDriver, Box<FileNativeDriverSetupError>>
-    {
+    pub fn start_native_learned_sequence(
+        mut self,
+        launch: FileNativeDriverLaunch,
+        snapshot: Snapshot,
+        now: ElapsedTick,
+    ) -> Result<FileNativeSupervisedDriver, Box<FileNativeDriverSetupError>> {
         let request = launch.request;
         let result = (|| {
-            if self.job.is_some() || self.learned_probe_review().is_some() { return Err(JournalError::from(Error::WrongState)); }
+            if self.job.is_some() || self.learned_probe_review().is_some() {
+                return Err(JournalError::from(Error::WrongState));
+            }
             self.ensure_child_slot()?;
             let mut host = self.supervisor.host_mut()?;
-            if host.storage_failure().is_some() { return Err(JournalError::Unavailable); }
-            if launch.journal_revision != host.revision() { return Err(Error::Stale.into()); }
+            if host.storage_failure().is_some() {
+                return Err(JournalError::Unavailable);
+            }
+            if launch.journal_revision != host.revision() {
+                return Err(Error::Stale.into());
+            }
             let (attempt, current) = admitted(host.request_status(request)?)?;
-            if current != ActionState::Reviewing { return Err(Error::WrongState.into()); }
-            if attempt != launch.sidecar.attempt() { return Err(Error::Binding.into()); }
+            if current != ActionState::Reviewing {
+                return Err(Error::WrongState.into());
+            }
+            if attempt != launch.sidecar.attempt() {
+                return Err(Error::Binding.into());
+            }
             let action = host.request_action(request)?.clone();
             let input = host.current_learned_sidecar(&launch.sidecar)?;
-            if input.action() != &action { return Err(Error::Binding.into()); }
+            if input.action() != &action {
+                return Err(Error::Binding.into());
+            }
             let input = input.clone();
             let input_revision = host.input_revision(attempt)?;
-            if input_revision != launch.sidecar.input_revision() { return Err(Error::Stale.into()); }
-            if !snapshot.complete { return Err(Error::Incomplete.into()); }
+            if input_revision != launch.sidecar.input_revision() {
+                return Err(Error::Stale.into());
+            }
+            if !snapshot.complete {
+                return Err(Error::Incomplete.into());
+            }
             observe(&mut host, now)?;
             let revision = host.revision();
-            let review = host.begin_native_sidecar_sequence(revision, launch.sidecar,
-                launch.rounds, launch.rosters, launch.limits, snapshot)?;
-            self.job = Some(Job { issuer: Rc::clone(&host.issuer), request, attempt, action,
-                inputs: Some(input), input_revision, control_sequence: None, pool: None,
-                permit: None, phase: Phase::Review });
+            let review = host.begin_native_sidecar_sequence(
+                revision,
+                launch.sidecar,
+                launch.rounds,
+                launch.rosters,
+                launch.limits,
+                snapshot,
+            )?;
+            self.job = Some(Job {
+                issuer: Rc::clone(&host.issuer),
+                request,
+                attempt,
+                action,
+                inputs: Some(input),
+                input_revision,
+                control_sequence: None,
+                pool: None,
+                permit: None,
+                phase: Phase::Review,
+            });
             Ok((review, input_revision))
         })();
         match result {
-            Ok((review, input_revision)) => Ok(FileNativeSupervisedDriver { driver: self, review, request, input_revision }),
-            Err(error) => Err(Box::new(FileNativeDriverSetupError { error, driver: self })),
+            Ok((review, input_revision)) => Ok(FileNativeSupervisedDriver {
+                driver: self,
+                review,
+                request,
+                input_revision,
+            }),
+            Err(error) => Err(Box::new(FileNativeDriverSetupError {
+                error,
+                driver: self,
+            })),
         }
     }
 }
 
 impl FileNativeSupervisedDriver {
-    pub fn supervisor(&self) -> &FileActorSupervisor<FileOversight> { self.driver.supervisor() }
+    pub fn supervisor(&self) -> &FileActorSupervisor<FileOversight> {
+        self.driver.supervisor()
+    }
     /// Trusted original-host integration only; never give this role to the actor.
-    pub fn supervisor_mut(&mut self) -> &mut FileActorSupervisor<FileOversight> { self.driver.supervisor_mut() }
-    pub fn review(&self) -> &FileNativeSidecarSequence { &self.review }
+    pub fn supervisor_mut(&mut self) -> &mut FileActorSupervisor<FileOversight> {
+        self.driver.supervisor_mut()
+    }
+    pub fn review(&self) -> &FileNativeSidecarSequence {
+        &self.review
+    }
     pub fn progress(&self) -> FileNativeDriverProgress {
-        FileNativeDriverProgress { request: self.request, review_revision: self.review.revision(),
-            status: self.review.status(), polls: self.review.polls(), reservation: self.review.reservation(),
-            input_revision: self.input_revision, phase: self.driver.phase() }
+        FileNativeDriverProgress {
+            request: self.request,
+            review_revision: self.review.revision(),
+            status: self.review.status(),
+            polls: self.review.polls(),
+            reservation: self.review.reservation(),
+            input_revision: self.input_revision,
+            phase: self.driver.phase(),
+        }
     }
 
     /// One ORIGINAL cooperative numerical/protocol quantum. Refinement starts
     /// another original round; the old input cannot reach publication Ready.
     /// The caller's snapshot is a trusted policy observation, not a helper vote.
-    pub fn advance(&mut self, expected_revision: u64, now: ElapsedTick, snapshot: Snapshot)
-        -> Result<FileNativeDriverProgress, JournalError>
-    {
-        if expected_revision != self.review.revision() { return Err(Error::Stale.into()); }
-        if self.review.status() != NativeReviewStatus::Running { return Err(Error::WrongState.into()); }
+    pub fn advance(
+        &mut self,
+        expected_revision: u64,
+        now: ElapsedTick,
+        snapshot: Snapshot,
+    ) -> Result<FileNativeDriverProgress, JournalError> {
+        if expected_revision != self.review.revision() {
+            return Err(Error::Stale.into());
+        }
+        if self.review.status() != NativeReviewStatus::Running {
+            return Err(Error::WrongState.into());
+        }
         {
             let mut host = self.driver.supervisor.host_mut()?;
             let job = self.driver.job.as_mut().ok_or(Error::Missing)?;
@@ -162,25 +226,40 @@ impl FileNativeSupervisedDriver {
                 if matches!(current, ActionState::Dispatching | ActionState::Unknown) {
                     job.permit = None;
                     job.phase = Phase::Reconcile;
-                } else { job.close(); }
+                } else {
+                    job.close();
+                }
             } else {
-                if !snapshot.complete { return Err(Error::Incomplete.into()); }
+                if !snapshot.complete {
+                    return Err(Error::Incomplete.into());
+                }
                 observe(&mut host, now)?;
-                let result = self.review.advance(&mut host, expected_revision, now, snapshot);
+                let result = self
+                    .review
+                    .advance(&mut host, expected_revision, now, snapshot);
                 if self.review.status() == NativeReviewStatus::Failed {
                     job.close();
                 }
                 // Only an ORIGINAL acknowledged refinement advances the input
                 // predecessor. A changed host revision alone is not admission.
-                if let Some(input_revision) = self.review.history().iter().rev().find_map(|event| {
-                    match event {
-                        FileLearnedSidecarFinish::Refined { input_revision, .. } => Some(*input_revision),
-                        _ => None,
-                    }
-                }) { self.input_revision = input_revision; }
+                if let Some(input_revision) =
+                    self.review
+                        .history()
+                        .iter()
+                        .rev()
+                        .find_map(|event| match event {
+                            FileLearnedSidecarFinish::Refined { input_revision, .. } => {
+                                Some(*input_revision)
+                            }
+                            _ => None,
+                        })
+                {
+                    self.input_revision = input_revision;
+                }
                 result?;
                 if self.review.status() == NativeReviewStatus::Running
-                    && job.input_revision != self.input_revision {
+                    && job.input_revision != self.input_revision
+                {
                     // Keep the next concrete source capture on the ORIGINAL
                     // acknowledged refined input, even when callers mix manual
                     // quanta with the complete native loop. This grants no key.
@@ -191,22 +270,25 @@ impl FileNativeSupervisedDriver {
                     // Close BEFORE fallible handoff checks or allocations. Only
                     // this original acknowledged Continue can set Ready again.
                     job.close();
-                    let Some(FileLearnedSidecarFinish::Applied { receipt, .. }) = self.review.history().last() else {
+                    let Some(FileLearnedSidecarFinish::Applied { receipt, .. }) =
+                        self.review.history().last()
+                    else {
                         return Err(Error::Incomplete.into());
                     };
-                    if let Ok(receipt) = receipt {
-                        if receipt.policy.control.decision.consequence == Consequence::Continue {
-                            let input_revision = self.input_revision;
-                            if host.input_revision(job.attempt)? != input_revision
-                                || host.inspect().control.sequence != receipt.policy.control.sequence
-                                || self.review.input().action() != &job.action {
-                                return Err(Error::Stale.into());
-                            }
-                            job.inputs = Some(self.review.input().clone());
-                            job.input_revision = input_revision;
-                            job.control_sequence = Some(receipt.policy.control.sequence);
-                            job.phase = Phase::Ready;
+                    if let Ok(receipt) = receipt
+                        && receipt.policy.control.decision.consequence == Consequence::Continue
+                    {
+                        let input_revision = self.input_revision;
+                        if host.input_revision(job.attempt)? != input_revision
+                            || host.inspect().control.sequence != receipt.policy.control.sequence
+                            || self.review.input().action() != &job.action
+                        {
+                            return Err(Error::Stale.into());
                         }
+                        job.inputs = Some(self.review.input().clone());
+                        job.input_revision = input_revision;
+                        job.control_sequence = Some(receipt.policy.control.sequence);
+                        job.phase = Phase::Ready;
                     }
                 }
             }
@@ -219,7 +301,9 @@ impl FileNativeSupervisedDriver {
     /// A journal failure leaves the same owner and retained work inspectable.
     /// This cannot refund a dispatched/unknown effect or manufacture a result.
     pub fn cancel(&mut self, expected_revision: u64) -> Result<(), JournalError> {
-        if expected_revision != self.review.revision() { return Err(Error::Stale.into()); }
+        if expected_revision != self.review.revision() {
+            return Err(Error::Stale.into());
+        }
         if self.review.status() == NativeReviewStatus::Running {
             self.review.cancel(expected_revision)?;
         }
@@ -231,13 +315,25 @@ impl FileNativeSupervisedDriver {
     /// The finished driver keeps the existing fresh-evidence, both-key, final
     /// publication and unknown-reconciliation checks without reimplementing them.
     pub fn into_handoff(mut self) -> Result<FileNativeDriverHandoff, Box<Self>> {
-        if self.review.status() == NativeReviewStatus::Running { return Err(Box::new(self)); }
-        if let Some(job) = &mut self.driver.job {
-            if job.phase == Phase::Review { job.close(); }
+        if self.review.status() == NativeReviewStatus::Running {
+            return Err(Box::new(self));
         }
-        if self.driver.job.as_ref().is_some_and(|job| job.phase == Phase::Closed) {
+        if let Some(job) = &mut self.driver.job
+            && job.phase == Phase::Review
+        {
+            job.close();
+        }
+        if self
+            .driver
+            .job
+            .as_ref()
+            .is_some_and(|job| job.phase == Phase::Closed)
+        {
             self.driver.job = None;
         }
-        Ok(FileNativeDriverHandoff { driver: self.driver, review: self.review })
+        Ok(FileNativeDriverHandoff {
+            driver: self.driver,
+            review: self.review,
+        })
     }
 }

@@ -1,12 +1,12 @@
 //! Control-plane cleanup and query-only recovery using the same locked owner.
 mod settlement;
-use super::{FileSupervisedDriver, Job, Phase, admitted, stage};
-use super::super::super::{FileStopSweep, JournalError, Reconciliation};
 use super::super::super::governance::{PolicyUpdate, PolicyUpdateReceipt};
 use super::super::super::requests::FileRequestStatus;
+use super::super::super::{FileStopSweep, JournalError, Reconciliation};
+use super::{FileSupervisedDriver, Job, Phase, admitted, stage};
+use crate::Error;
 use crate::action::consequence::delivery::{StopReceipt, StopRequest};
 use crate::action::{ActionState, ElapsedTick};
-use crate::Error;
 use std::collections::BTreeMap;
 use std::rc::Rc;
 
@@ -15,13 +15,27 @@ impl FileSupervisedDriver {
     /// approvals or publication phase. Works with unavailable helper inputs and
     /// no reviewer role. The next step still needs an explicit fresh clock.
     pub fn resume_reconciliation(&mut self, request: u64) -> Result<(), JournalError> {
-        if self.job.is_some() { return Err(Error::WrongState.into()); }
+        if self.job.is_some() {
+            return Err(Error::WrongState.into());
+        }
         let host = self.supervisor.host()?;
         let (attempt, state) = admitted(host.request_status(request)?)?;
-        if !matches!(state, ActionState::Dispatching | ActionState::Unknown) { return Err(Error::WrongState.into()); }
+        if !matches!(state, ActionState::Dispatching | ActionState::Unknown) {
+            return Err(Error::WrongState.into());
+        }
         let action = host.request_action(request)?.clone();
-        self.job = Some(Job { issuer: Rc::clone(&host.issuer), request, attempt, action, inputs: None, input_revision: 0,
-            control_sequence: None, pool: None, permit: None, phase: Phase::Reconcile });
+        self.job = Some(Job {
+            issuer: Rc::clone(&host.issuer),
+            request,
+            attempt,
+            action,
+            inputs: None,
+            input_revision: 0,
+            control_sequence: None,
+            pool: None,
+            permit: None,
+            phase: Phase::Reconcile,
+        });
         Ok(())
     }
 
@@ -32,7 +46,10 @@ impl FileSupervisedDriver {
         let request = self.job.as_ref().ok_or(Error::Missing)?.request;
         let result = (|| {
             let mut host = self.supervisor.host_mut()?;
-            self.job.as_ref().ok_or(Error::Missing)?.check_owner(&host)?;
+            self.job
+                .as_ref()
+                .ok_or(Error::Missing)?
+                .check_owner(&host)?;
             let revision = host.revision();
             host.cancel_request(revision, request)?;
             host.request_status(request)
@@ -41,11 +58,20 @@ impl FileSupervisedDriver {
             let (_, state) = admitted(*status)?;
             let job = self.job.as_mut().expect("retained active request");
             job.permit = None;
-            if matches!(state, ActionState::Dispatching | ActionState::Unknown) { job.phase = Phase::Reconcile; }
-            else { job.close(); }
+            if matches!(state, ActionState::Dispatching | ActionState::Unknown) {
+                job.phase = Phase::Reconcile;
+            } else {
+                job.close();
+            }
         }
         self.reap_helpers();
-        if self.job.as_ref().is_some_and(|job| job.phase == Phase::Closed) { self.job = None; }
+        if self
+            .job
+            .as_ref()
+            .is_some_and(|job| job.phase == Phase::Closed)
+        {
+            self.job = None;
+        }
         result
     }
 
@@ -54,9 +80,10 @@ impl FileSupervisedDriver {
     /// Both original event slots must fit before either advances. A failed sweep
     /// cannot consume the final slot by leaving behind a separate Time event.
     /// Per-attempt unresolved results remain explicit; nothing is resent.
-    pub fn reconcile_pending(&mut self, now: ElapsedTick)
-        -> Result<BTreeMap<u64, Result<Reconciliation, Error>>, JournalError>
-    {
+    pub fn reconcile_pending(
+        &mut self,
+        now: ElapsedTick,
+    ) -> Result<BTreeMap<u64, Result<Reconciliation, Error>>, JournalError> {
         let result = (|| {
             let mut host = self.supervisor.host_mut()?;
             let revision = host.revision();
@@ -95,15 +122,31 @@ impl FileSupervisedDriver {
 
     fn release_stopped_job(&mut self) {
         let closed = self.supervisor.host().is_ok_and(|host| {
-            host.storage_failure().is_some() || host.inspect().stop.is_some()
+            host.storage_failure().is_some()
+                || host.inspect().stop.is_some()
                 || self.job.as_ref().is_some_and(|job| {
-                    stage(&host, job.request).is_ok_and(|state| !matches!(state,
-                        ActionState::Reviewing | ActionState::Authorized | ActionState::Dispatching | ActionState::Unknown))
+                    stage(&host, job.request).is_ok_and(|state| {
+                        !matches!(
+                            state,
+                            ActionState::Reviewing
+                                | ActionState::Authorized
+                                | ActionState::Dispatching
+                                | ActionState::Unknown
+                        )
+                    })
                 })
         });
-        if closed { if let Some(job) = &mut self.job { job.close(); } }
+        if closed && let Some(job) = &mut self.job {
+            job.close();
+        }
         self.reap_helpers();
-        if self.job.as_ref().is_some_and(|job| job.phase == Phase::Closed) { self.job = None; }
+        if self
+            .job
+            .as_ref()
+            .is_some_and(|job| job.phase == Phase::Closed)
+        {
+            self.job = None;
+        }
     }
 }
 
@@ -118,12 +161,16 @@ impl FileSupervisedDriver {
     /// Earlier dispatches retain their publication/reconciliation phases and
     /// charges. An enabled first-publication guard still revalidates at execution;
     /// policy updates do not disable it. This method never resends an effect.
-    pub fn replace_policy(&mut self, revision: u64, update: &PolicyUpdate)
-        -> Result<PolicyUpdateReceipt, JournalError>
-    {
+    pub fn replace_policy(
+        &mut self,
+        revision: u64,
+        update: &PolicyUpdate,
+    ) -> Result<PolicyUpdateReceipt, JournalError> {
         let result = (|| {
             let mut host = self.supervisor.host_mut()?;
-            if let Some(job) = &self.job { job.check_owner(&host)?; }
+            if let Some(job) = &self.job {
+                job.check_owner(&host)?;
+            }
             host.replace_policy(revision, update)
         })();
         self.reap_helpers();
@@ -135,13 +182,16 @@ impl FileSupervisedDriver {
     /// The next driver step retains its original Stopped event. No clock,
     /// observation provider, helper vote or new human approval is acquired here.
     /// A sent effect retains its charged outcome/publication obligations.
-    pub fn reset_actor(&mut self, checkpoint: &super::super::containment::FileCheckpoint,
-        request: super::super::containment::FileResetRequest)
-        -> Result<crate::action::consequence::gate::containment::ResetReceipt, JournalError>
-    {
+    pub fn reset_actor(
+        &mut self,
+        checkpoint: &super::super::containment::FileCheckpoint,
+        request: super::super::containment::FileResetRequest,
+    ) -> Result<crate::action::consequence::gate::containment::ResetReceipt, JournalError> {
         let result = (|| {
             let mut host = self.supervisor.host_mut()?;
-            if let Some(job) = &self.job { job.check_owner(&host)?; }
+            if let Some(job) = &self.job {
+                job.check_owner(&host)?;
+            }
             let revision = host.revision();
             host.reset_actor(revision, checkpoint, request)
         })();
@@ -156,12 +206,15 @@ impl FileSupervisedDriver {
     /// so an exact retry cannot terminate a newer helper cohort. Dispatched work
     /// keeps its guarded publication/reconciliation phase and charged liability.
     /// This method does not read evidence, sample time or issue an approval.
-    pub fn replace_file_source(&mut self, request: super::super::source::FileSourceReplacement)
-        -> Result<crate::action::consequence::delivery::PolicySourceChange, JournalError>
-    {
+    pub fn replace_file_source(
+        &mut self,
+        request: super::super::source::FileSourceReplacement,
+    ) -> Result<crate::action::consequence::delivery::PolicySourceChange, JournalError> {
         let result = (|| {
             let mut host = self.supervisor.host_mut()?;
-            if let Some(job) = &self.job { job.check_owner(&host)?; }
+            if let Some(job) = &self.job {
+                job.check_owner(&host)?;
+            }
             let revision = host.revision();
             host.replace_file_source(revision, request)
         })();
@@ -180,22 +233,36 @@ impl FileSupervisedDriver {
         use super::super::super::requests::FileRequestDisposition;
         {
             let host = self.supervisor.host()?;
-            if host.storage_failure().is_some() { return Err(JournalError::Unavailable); }
+            if host.storage_failure().is_some() {
+                return Err(JournalError::Unavailable);
+            }
             if let Some(job) = &self.job {
                 job.check_owner(&host)?;
-                if job.request != request { return Err(Error::Binding.into()); }
+                if job.request != request {
+                    return Err(Error::Binding.into());
+                }
             }
             let terminal = match host.request_status(request)?.disposition {
                 FileRequestDisposition::NotAdmitted(_) => true,
-                FileRequestDisposition::Admitted { stage, .. } => matches!(stage,
-                    ActionState::Cancelled | ActionState::Denied
-                    | ActionState::Confirmed | ActionState::ConfirmedNotExecuted),
+                FileRequestDisposition::Admitted { stage, .. } => matches!(
+                    stage,
+                    ActionState::Cancelled
+                        | ActionState::Denied
+                        | ActionState::Confirmed
+                        | ActionState::ConfirmedNotExecuted
+                ),
             };
-            if !terminal { return Err(Error::WrongState.into()); }
+            if !terminal {
+                return Err(Error::WrongState.into());
+            }
         }
-        if let Some(job) = &mut self.job { job.close(); }
+        if let Some(job) = &mut self.job {
+            job.close();
+        }
         self.reap_helpers();
-        if !self.helpers_reaped() { return Ok(false); }
+        if !self.helpers_reaped() {
+            return Ok(false);
+        }
         // The original owner retains all history and liabilities. Only terminal
         // local handles and confirmed-reaped child records are discarded.
         self.ensure_child_slot()?;

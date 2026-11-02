@@ -1,20 +1,12 @@
 //! Original learned replay, complete guard inventory and receipt-only settlement.
-#[path = "recovery/policy_replay.rs"]
-pub(super) mod policy_replay;
-#[path = "recovery/diagnosis.rs"]
-pub(super) mod diagnosis;
 #[path = "recovery/cooperative.rs"]
 mod cooperative;
 #[path = "recovery/readonly.rs"]
 pub(super) mod readonly;
 #[path = "recovery/selected.rs"]
 mod selected;
-#[path = "recovery/live.rs"]
-mod live;
 #[path = "recovery/terminal.rs"]
 mod terminal;
-#[path = "recovery/credential.rs"]
-pub(super) mod credential;
 use super::{
     ActorWire, Command, Config, Control, Deadline, Duration, ElapsedTick, FileHumanReviewer,
     FileLearnedTextStreamActorPort, FileOversight, FileSupervisedDriver, Instant,
@@ -44,25 +36,6 @@ pub(super) type Custody = (
 );
 pub(super) type TopologyCustody = (Custody,
     Option<fa_reference::action::consequence::delivery::persistent::observed::mediation::FileMediationObserver>);
-
-/// Replay the complete original numerical and guard contract on one cursor,
-/// then consume it into observations only. Every event and Ready is a deadline
-/// boundary; neither an effect clock nor the live recovery Fence is acquired.
-pub(super) fn abandon_selected_with_checkpoints(
-    config: &Config,
-    loaded: &Loaded,
-    request: fa_reference::action::consequence::delivery::persistent::abandonment::FileAbandonRequest,
-    checkpoint: &mut impl FnMut(Option<Progress>) -> Result<(), String>,
-) -> Result<fa_reference::action::consequence::delivery::persistent::observed::guarded::recovery::FileAbandonedHistory, String> {
-    checkpoint(None)?;
-    let run = selected::AbandonmentCursor::begin(config, loaded)?;
-    finish_replay(
-        run, checkpoint,
-        selected::AbandonmentCursor::progress,
-        selected::AbandonmentCursor::advance,
-        |run| run.finish(request),
-    )
-}
 
 pub(super) fn create_selected(config: &Config, loaded: &Loaded) -> Result<Custody, String> {
     super::credential::check_creation(loaded)?;
@@ -243,8 +216,8 @@ pub(super) fn open_selected(config: &Config, loaded: &Loaded) -> Result<Custody,
 }
 
 /// Recovery shares the active command's original deadline and authenticated
-/// Stop transport. A checked peer remains latched through the SAME complete
-/// guarded replay; only its exact request can choose admission Stop at Ready.
+/// stop transport. No owner exists yet: admission cancels replay, but cannot
+/// apply the durable Stop protocol or acknowledge a Stop receipt.
 pub(super) fn open_selected_live<F>(
     config: &Config,
     loaded: &Loaded,
@@ -255,11 +228,17 @@ pub(super) fn open_selected_live<F>(
 where
     F: FnMut() -> ElapsedTick,
 {
-    live::open(config, loaded, control, deadline, time).map(|(custody, _)| custody)
+    open_selected_with_checkpoints(config, loaded, &mut |_| {
+        deadline.check(time())?;
+        if control.pending_peer()? {
+            return Err("learned recovery interrupted by authenticated stop peer; no durable Stop applied or acknowledged".into());
+        }
+        Ok(())
+    })
 }
 
 /// Preserve the separately owned topology observer through the SAME one-event
-/// guarded replay. A terminal Stop never issues that observer or binds a source.
+/// guarded replay. No source read or observer is issued before finalization.
 pub(super) fn open_selected_live_with_topology<F>(
     config: &Config,
     loaded: &Loaded,
@@ -270,7 +249,22 @@ pub(super) fn open_selected_live_with_topology<F>(
 where
     F: FnMut() -> ElapsedTick,
 {
-    live::open(config, loaded, control, deadline, time)
+    let mut checkpoint = |_: Option<Progress>| {
+        deadline.check(time())?;
+        if control.pending_peer()? {
+            return Err("learned recovery interrupted by authenticated stop peer; no durable Stop applied or acknowledged".into());
+        }
+        Ok(())
+    };
+    checkpoint(None)?;
+    let recovery = selected::Cursor::begin(config, loaded)?;
+    finish_replay(
+        recovery,
+        &mut checkpoint,
+        |run| run.progress(),
+        |run, done| run.advance(done),
+        |run| run.finish_with_topology(),
+    )
 }
 
 fn open_receipt(
@@ -341,58 +335,20 @@ fn receipt_replay<T>(
 /// after complete verification, before cleanup and the original recovery fence.
 /// An error or unwind drops the original exclusive recovery without finishing.
 /// One event, framing and final persistence remain synchronous operations.
-#[cfg(test)]
 pub(super) fn open_selected_with_checkpoints(
     config: &Config,
     loaded: &Loaded,
     checkpoint: &mut impl FnMut(Option<Progress>) -> Result<(), String>,
 ) -> Result<Custody, String> {
-    ready_selected_with_checkpoints(config, loaded, checkpoint)?.finish().map_err(debug)
-}
-
-/// The production live path and original role-finalizer tests share this exact
-/// admission and one-event replay. Ready retains the SAME exclusive cursor so
-/// the latched peer branch is selected before any native finalization runs.
-fn ready_selected_with_checkpoints(
-    config: &Config,
-    loaded: &Loaded,
-    checkpoint: &mut impl FnMut(Option<Progress>) -> Result<(), String>,
-) -> Result<selected::Cursor, String> {
     checkpoint(None)?;
     let recovery = selected::Cursor::begin(config, loaded)?;
-    finish_replay(recovery, checkpoint, |run| run.progress(),
-        |run, done| run.advance(done), Ok)
-}
-
-/// A maintenance command receives only a private recovered owner. It selects
-/// the original lifecycle request on the same fully guarded cursor BEFORE the
-/// ordinary recovery Fence. No stale/conflicting operation consumes a Fence or
-/// cleans staged work, and no role escapes into an actor or reviewer service.
-pub(super) fn open_selected_credential_with_checkpoints(
-    config: &Config,
-    loaded: &Loaded,
-    request: super::credential_lifecycle::Request,
-    checkpoint: &mut impl FnMut(Option<Progress>) -> Result<(), String>,
-) -> Result<super::credential_lifecycle::Recovered, String> {
-    if super::topology::history(loaded)?
-        .is_some_and(|history| history.checkpoint().is_none())
-    {
-        return Err("credential topology custody requires an exact v2 source checkpoint".into());
-    }
-    super::credential::check_selection(loaded)?;
-    if loaded.credential.is_none() || loaded.recovery_anchor.is_none() || loaded.anchor_output.is_none() {
-        return Err("credential lifecycle requires an independent credential selection, history anchor and new retained output".into());
-    }
-    checkpoint(None)?;
-    let recovery = selected::Cursor::begin(config, loaded)?;
-    let recovery = finish_replay(recovery, checkpoint, |run| run.progress(),
-        |run, done| run.advance(done), Ok)?;
-    let (current, retry) = recovery.credential_preflight(request).map_err(debug)?;
-    // Even these immutable guard/operation queries share the original budget.
-    // A late preflight cannot fall through to cleanup and the recovery Fence.
-    checkpoint(Some(recovery.progress()))?;
-    let (host, _, _, _) = recovery.finish().map_err(debug)?;
-    Ok(super::credential_lifecycle::Recovered { host, current, retry })
+    finish_replay(
+        recovery,
+        checkpoint,
+        |run| run.progress(),
+        |run, done| run.advance(done),
+        |run| run.finish(),
+    )
 }
 
 /// Offline stop uses the same independently guarded replay and every wall-time

@@ -1,14 +1,20 @@
 //! One acknowledged catch-up cut, using ONLY original notice/heartbeat events.
-use super::{PublicationFeedBatch, PublicationFeedFile, MAX_FEED_RECORDS};
-use super::super::{FileCaptureError, FileOversight, JournalError, JournalFailure, JournalIo};
 use super::super::super::super::super::{Event, Transition, journal};
-use super::super::super::{FilePublicationCapture, SourceBinding};
 use super::super::super::super::witness_gate::{WitnessEvent, freshness::FreshnessEvent};
-use crate::action::ElapsedTick;
-use crate::action::consequence::delivery::publication_gate::changes::{PublicationChangeReport, PublicationChangeStatus};
-use crate::action::consequence::delivery::publication_gate::changes::freshness::{PublicationFreshnessStatus, PublicationHeartbeat};
-use crate::action::consequence::delivery::persistent::observed::decoder::{DecoderEvent, learned::LearnedEvent};
+use super::super::super::{FilePublicationCapture, SourceBinding};
+use super::super::{FileCaptureError, FileOversight, JournalError, JournalFailure, JournalIo};
+use super::{MAX_FEED_RECORDS, PublicationFeedBatch, PublicationFeedFile};
 use crate::Error;
+use crate::action::ElapsedTick;
+use crate::action::consequence::delivery::persistent::observed::decoder::{
+    DecoderEvent, learned::LearnedEvent,
+};
+use crate::action::consequence::delivery::publication_gate::changes::freshness::{
+    PublicationFreshnessStatus, PublicationHeartbeat,
+};
+use crate::action::consequence::delivery::publication_gate::changes::{
+    PublicationChangeReport, PublicationChangeStatus,
+};
 use std::io;
 use std::rc::Rc;
 
@@ -26,7 +32,7 @@ pub struct PublicationFeedReport {
 // Initial requirements and current observations use different ORIGINAL events.
 // This private choice cannot be supplied by an actor or imported from a report.
 enum FeedObservation {
-    Current(FilePublicationCapture),
+    Current(Rc<FilePublicationCapture>),
     Original(u64, Rc<SourceBinding>),
 }
 
@@ -40,57 +46,109 @@ impl FileOversight {
     /// successful read, clock unwind, conflicting history, capacity, replay or I/O
     /// failure quarantines the owner. Recovery fences old keys; never infer an
     /// effect outcome or a refund from this API's failure.
-    pub fn refresh_publication_feed<F>(&mut self, revision: u64, source: &PublicationFeedFile, mut clock: F)
-        -> Result<Result<PublicationFeedReport, FileCaptureError>, JournalError>
-    where F: FnMut() -> ElapsedTick {
+    pub fn refresh_publication_feed<F>(
+        &mut self,
+        revision: u64,
+        source: &PublicationFeedFile,
+        mut clock: F,
+    ) -> Result<Result<PublicationFeedReport, FileCaptureError>, JournalError>
+    where
+        F: FnMut() -> ElapsedTick,
+    {
         self.publication_changes_unavailable(revision, source.source())?;
-        let batch = match source.read_batch() { Ok(batch) => batch, Err(error) => return Ok(Err(error)) };
-        self.fault = Some(JournalFailure { operation: JournalIo::Stage,
-            kind: io::ErrorKind::Other, replacement_may_be_visible: false });
+        let batch = match source.read_batch() {
+            Ok(batch) => batch,
+            Err(error) => return Ok(Err(error)),
+        };
+        self.fault = Some(JournalFailure {
+            operation: JournalIo::Stage,
+            kind: io::ErrorKind::Other,
+            replacement_may_be_visible: false,
+        });
         let now = clock();
         self.install_feed_observation(batch, now, None).map(Ok)
     }
 
     pub(in crate::action::consequence::delivery::persistent::observed) fn install_feed_observation(
-        &mut self, batch: PublicationFeedBatch, now: ElapsedTick, capture: Option<FilePublicationCapture>)
-        -> Result<PublicationFeedReport, JournalError>
-    {
-        self.install_feed(batch, now, capture.map(FeedObservation::Current))
+        &mut self,
+        batch: PublicationFeedBatch,
+        now: ElapsedTick,
+        capture: Option<FilePublicationCapture>,
+    ) -> Result<PublicationFeedReport, JournalError> {
+        self.install_feed(
+            batch,
+            now,
+            capture.map(Rc::new).map(FeedObservation::Current),
+        )
     }
 
     pub(in crate::action::consequence::delivery::persistent::observed) fn install_feed_binding(
-        &mut self, batch: PublicationFeedBatch, now: ElapsedTick,
-        attempt: u64, binding: Rc<SourceBinding>) -> Result<PublicationFeedReport, JournalError>
-    {
-        self.install_feed(batch, now, Some(FeedObservation::Original(attempt, binding)))
+        &mut self,
+        batch: PublicationFeedBatch,
+        now: ElapsedTick,
+        attempt: u64,
+        binding: Rc<SourceBinding>,
+    ) -> Result<PublicationFeedReport, JournalError> {
+        self.install_feed(
+            batch,
+            now,
+            Some(FeedObservation::Original(attempt, binding)),
+        )
     }
 
-    fn install_feed(&mut self, batch: PublicationFeedBatch, now: ElapsedTick,
-        observation: Option<FeedObservation>) -> Result<PublicationFeedReport, JournalError>
-    {
+    fn install_feed(
+        &mut self,
+        batch: PublicationFeedBatch,
+        now: ElapsedTick,
+        observation: Option<FeedObservation>,
+    ) -> Result<PublicationFeedReport, JournalError> {
         let before = self.machine.broker.publication_change_status()?.through;
         check_feed_overlap(&self.events, &batch, before)?;
         // A packet's retained window is not proof of earlier omitted records.
-        let pending = batch.records.iter().filter(|record| batch.after <= before && record.sequence > before);
-        let added = pending.clone().count().checked_add(1).ok_or(Error::Overflow)?;
-        let count = self.events.len().checked_add(added)
-            .and_then(|count| count.checked_add(usize::from(observation.is_some()))).ok_or(Error::Overflow)?;
-        if count > self.profile.delivery.limits.events { return Err(Error::Limit.into()); }
+        let pending = batch
+            .records
+            .iter()
+            .filter(|record| batch.after <= before && record.sequence > before);
+        let added = pending
+            .clone()
+            .count()
+            .checked_add(1)
+            .ok_or(Error::Overflow)?;
+        let count = self
+            .events
+            .len()
+            .checked_add(added)
+            .and_then(|count| count.checked_add(usize::from(observation.is_some())))
+            .ok_or(Error::Overflow)?;
+        if count > self.profile.delivery.limits.events {
+            return Err(Error::Limit.into());
+        }
         let mut history = Vec::new();
         history.try_reserve_exact(count).map_err(|_| Error::Limit)?;
         history.extend(self.events.iter().cloned());
-        for record in pending { history.push(Event::PublicationWitness(WitnessEvent::Change(*record))); }
-        history.push(Event::PublicationWitness(WitnessEvent::Freshness(FreshnessEvent::Observed(batch.heartbeat, now))));
+        for record in pending {
+            history.push(Event::PublicationWitness(WitnessEvent::Change(*record)));
+        }
+        history.push(Event::PublicationWitness(WitnessEvent::Freshness(
+            FreshnessEvent::Observed(batch.heartbeat, now),
+        )));
         // The original encoder checks EVERY prefix, including recovery reserves,
         // before candidate execution. No special batch exemption or new wire tag.
         let mut bytes = journal::encode(&self.profile, self.store.identity(), &history)?;
         let (mut candidate, retain_replay) = self.replay_control_candidate()?;
         let mut changes = Vec::new();
-        changes.try_reserve_exact(added - 1).map_err(|_| Error::Limit)?;
+        changes
+            .try_reserve_exact(added - 1)
+            .map_err(|_| Error::Limit)?;
         for event in &history[self.events.len()..] {
             candidate.apply(event)?;
             if matches!(event, Event::PublicationWitness(WitnessEvent::Change(_))) {
-                changes.push(candidate.broker.publication_change_report()?.ok_or(Error::Incomplete)?);
+                changes.push(
+                    candidate
+                        .broker
+                        .publication_change_report()?
+                        .ok_or(Error::Incomplete)?,
+                );
             }
         }
         if let Some(observation) = observation {
@@ -100,16 +158,25 @@ impl FileOversight {
                     // Catch-up may have withdrawn the attempt again. Its NEW
                     // revision, not the pre-read revision, owns this capture.
                     let expected = candidate.broker.publication_input_revision(attempt)?;
-                    (Event::PublicationWitness(WitnessEvent::Captured(attempt, expected, Rc::new(capture))), false)
+                    (
+                        Event::PublicationWitness(WitnessEvent::Captured(
+                            attempt, expected, capture,
+                        )),
+                        false,
+                    )
                 }
                 FeedObservation::Original(attempt, binding) => {
                     // Binding at the caught-up cut does not install a current
                     // observation, run a helper, or replace an existing recipe.
-                    (Event::PublicationWitness(WitnessEvent::SourceBind(attempt, binding)), true)
+                    (
+                        Event::PublicationWitness(WitnessEvent::SourceBind(attempt, binding)),
+                        true,
+                    )
                 }
             };
             self.check_source_admission(&event)?;
-            bytes = journal::encode_appended(&self.profile, self.store.identity(), &history, &event)?;
+            bytes =
+                journal::encode_appended(&self.profile, self.store.identity(), &history, &event)?;
             candidate.preflight_consistency(&event)?;
             match (initial, candidate.apply(&event)?) {
                 (true, Transition::Unit) | (false, Transition::Inputs(_)) => {}
@@ -117,31 +184,46 @@ impl FileOversight {
             }
             history.push(event);
         }
-        let report = PublicationFeedReport { heartbeat: batch.heartbeat, before, changes,
+        let report = PublicationFeedReport {
+            heartbeat: batch.heartbeat,
+            before,
+            changes,
             status: candidate.broker.publication_change_status()?,
-            freshness: candidate.broker.publication_change_freshness()? };
-        self.fault = Some(JournalFailure { operation: JournalIo::Stage,
-            kind: io::ErrorKind::Other, replacement_may_be_visible: true });
+            freshness: candidate.broker.publication_change_freshness()?,
+        };
+        self.fault = Some(JournalFailure {
+            operation: JournalIo::Stage,
+            kind: io::ErrorKind::Other,
+            replacement_may_be_visible: true,
+        });
         if let Err(error) = self.store.replace(&bytes) {
-            if let JournalError::Io(failure) = &error { self.fault = Some(failure.clone()); }
+            if let JournalError::Io(failure) = &error {
+                self.fault = Some(failure.clone());
+            }
             return Err(error);
         }
-        for event in &history[self.events.len()..] { self.source_operation_committed(event); }
+        for event in &history[self.events.len()..] {
+            self.source_operation_committed(event);
+        }
         // The retired live owner represents the PRE-batch prefix. Every notice,
         // heartbeat and capture in this acknowledged suffix still needs replay.
         let through = self.events.len();
         self.events = history;
         let retired = std::mem::replace(&mut self.machine, candidate);
         self.fault = None;
-        if retain_replay { self.retain_control_replay(through, retired); }
+        if retain_replay {
+            self.retain_control_replay(through, retired);
+        }
         Ok(report)
     }
-
 }
 
 // Shared by live catch-up and the unexposed atomic completion candidate.
 pub(in crate::action::consequence::delivery::persistent::observed) fn check_feed_overlap(
-    history: &[Event], batch: &PublicationFeedBatch, through: u64) -> Result<(), Error> {
+    history: &[Event],
+    batch: &PublicationFeedBatch,
+    through: u64,
+) -> Result<(), Error> {
     let mut bootstrap = None;
     for event in history {
         let after = match event {
@@ -150,23 +232,38 @@ pub(in crate::action::consequence::delivery::persistent::observed) fn check_feed
                 // Learned Enable can own the original feed bootstrap. Read only
                 // its independently bound exact runtime recipe, never reconstruct
                 // a configuration or current evidence from saved journal bytes.
-                config.runtime()?.required_publication_validation()
-                    .and_then(|profile| profile.feed).map(|feed| feed.changes.after)
+                config
+                    .runtime()?
+                    .required_publication_validation()
+                    .and_then(|profile| profile.feed)
+                    .map(|feed| feed.changes.after)
             }
             _ => None,
         };
-        if after.is_some() { bootstrap = after; break; }
+        if after.is_some() {
+            bootstrap = after;
+            break;
+        }
     }
     let bootstrap = bootstrap.ok_or(Error::Incomplete)?;
     let mut seen = [false; MAX_FEED_RECORDS];
     for event in history {
-        let Event::PublicationWitness(WitnessEvent::Change(prior)) = event else { continue; };
-        if prior.source != batch.heartbeat.source || prior.sequence <= batch.after
-            || prior.sequence > batch.heartbeat.through { continue; }
-        let position = usize::try_from(prior.sequence - batch.after - 1).map_err(|_| Error::Limit)?;
+        let Event::PublicationWitness(WitnessEvent::Change(prior)) = event else {
+            continue;
+        };
+        if prior.source != batch.heartbeat.source
+            || prior.sequence <= batch.after
+            || prior.sequence > batch.heartbeat.through
+        {
+            continue;
+        }
+        let position =
+            usize::try_from(prior.sequence - batch.after - 1).map_err(|_| Error::Limit)?;
         // Include earlier out-of-order notices too. Same sequence different
         // contents is not a retry, even if both would conservatively withdraw.
-        if batch.records.get(position) != Some(prior) { return Err(Error::Binding); }
+        if batch.records.get(position) != Some(prior) {
+            return Err(Error::Binding);
+        }
         seen[position] = true;
     }
     for (position, record) in batch.records.iter().enumerate() {

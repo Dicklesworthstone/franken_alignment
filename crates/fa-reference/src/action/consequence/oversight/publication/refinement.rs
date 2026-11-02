@@ -75,9 +75,13 @@ impl PublicationJudgment {
         };
         PublicationRefinement {
             judgment: self,
-            structured: self.structured.as_ref().zip(basis.structured)
-                .map(|(judgment, (snapshot, frontiers))| judgment.begin_refinement(snapshot, frontiers)),
-            opaque: self.opaque.as_ref().zip(basis.opaque)
+            structured: self.structured.as_ref().zip(basis.structured).map(
+                |(judgment, (snapshot, frontiers))| judgment.begin_refinement(snapshot, frontiers),
+            ),
+            opaque: self
+                .opaque
+                .as_ref()
+                .zip(basis.opaque)
                 .map(|(judgment, actual)| OpaqueComparison::new(judgment, actual)),
             ceiling,
             total: RefinementBudget::default(),
@@ -87,14 +91,22 @@ impl PublicationJudgment {
 }
 
 impl PublicationRefinement<'_> {
-    pub fn action(&self) -> &FrozenAction { self.judgment.action() }
-    pub fn total_work(&self) -> RefinementBudget { self.total }
-    pub fn ceiling(&self) -> RefinementBudget { self.ceiling }
+    pub fn action(&self) -> &FrozenAction {
+        self.judgment.action()
+    }
+    pub fn total_work(&self) -> RefinementBudget {
+        self.total
+    }
+    pub fn ceiling(&self) -> RefinementBudget {
+        self.ceiling
+    }
 
     /// Discard unfinished comparison and return work already performed. No
     /// success report, source-capture refresh or refundable resource is returned.
     #[must_use]
-    pub fn cancel(self) -> RefinementBudget { self.total }
+    pub fn cancel(self) -> RefinementBudget {
+        self.total
+    }
 
     /// Advance both original evidence lanes under ONE per-poll allowance and
     /// ONE fixed lifetime ceiling. A depleted poll can resume; a depleted total
@@ -102,10 +114,14 @@ impl PublicationRefinement<'_> {
     /// no additional work. Even single-byte polls never rescan a completed prefix.
     pub fn advance(&mut self, budget: RefinementBudget) -> PublicationProgress {
         let mut spent = RefinementBudget::default();
-        if let Some(outcome) = self.terminal { return self.report(outcome, spent); }
+        if let Some(outcome) = self.terminal {
+            return self.report(outcome, spent);
+        }
         let available = RefinementBudget {
             steps: budget.steps.min(self.ceiling.steps - self.total.steps),
-            value_bytes: budget.value_bytes.min(self.ceiling.value_bytes - self.total.value_bytes),
+            value_bytes: budget
+                .value_bytes
+                .min(self.ceiling.value_bytes - self.total.value_bytes),
         };
         if let Some(cursor) = &mut self.structured {
             let report = cursor.advance(available);
@@ -113,15 +129,19 @@ impl PublicationRefinement<'_> {
             self.charge(spent);
             let outcome = match report.outcome {
                 RefinementOutcome::StillValid => None,
-                RefinementOutcome::Invalidated { reason, witness } => Some(
-                    PublicationOutcome::Invalidated(PublicationInvalidation::Structured { reason, witness }),
-                ),
-                RefinementOutcome::NeedsRefinement { minimum } => Some(
-                    PublicationOutcome::NeedsRefinement { minimum },
-                ),
+                RefinementOutcome::Invalidated { reason, witness } => {
+                    Some(PublicationOutcome::Invalidated(
+                        PublicationInvalidation::Structured { reason, witness },
+                    ))
+                }
+                RefinementOutcome::NeedsRefinement { minimum } => {
+                    Some(PublicationOutcome::NeedsRefinement { minimum })
+                }
                 RefinementOutcome::Refused(error) => Some(PublicationOutcome::Refused(error)),
             };
-            if let Some(outcome) = outcome { return self.finish_poll(outcome, spent); }
+            if let Some(outcome) = outcome {
+                return self.finish_poll(outcome, spent);
+            }
             self.structured = None;
         }
         if let Some(cursor) = &mut self.opaque {
@@ -135,12 +155,16 @@ impl PublicationRefinement<'_> {
             spent.value_bytes += work.value_bytes;
             match outcome {
                 OpaqueOutcome::Equal => self.opaque = None,
-                OpaqueOutcome::Changed => return self.finish_poll(
-                    PublicationOutcome::Invalidated(PublicationInvalidation::OpaqueInput), spent,
-                ),
-                OpaqueOutcome::Pending(minimum) => return self.finish_poll(
-                    PublicationOutcome::NeedsRefinement { minimum }, spent,
-                ),
+                OpaqueOutcome::Changed => {
+                    return self.finish_poll(
+                        PublicationOutcome::Invalidated(PublicationInvalidation::OpaqueInput),
+                        spent,
+                    );
+                }
+                OpaqueOutcome::Pending(minimum) => {
+                    return self
+                        .finish_poll(PublicationOutcome::NeedsRefinement { minimum }, spent);
+                }
             }
         }
         self.finish_poll(PublicationOutcome::StillValid, spent)
@@ -154,13 +178,16 @@ impl PublicationRefinement<'_> {
         self.total.value_bytes += work.value_bytes;
     }
 
-    fn finish_poll(&mut self, mut outcome: PublicationOutcome, spent: RefinementBudget) -> PublicationProgress {
-        if let PublicationOutcome::NeedsRefinement { minimum } = outcome {
-            if minimum.steps > self.ceiling.steps - self.total.steps
-                || minimum.value_bytes > self.ceiling.value_bytes - self.total.value_bytes
-            {
-                outcome = PublicationOutcome::Refused(Error::Limit);
-            }
+    fn finish_poll(
+        &mut self,
+        mut outcome: PublicationOutcome,
+        spent: RefinementBudget,
+    ) -> PublicationProgress {
+        if let PublicationOutcome::NeedsRefinement { minimum } = outcome
+            && (minimum.steps > self.ceiling.steps - self.total.steps
+                || minimum.value_bytes > self.ceiling.value_bytes - self.total.value_bytes)
+        {
+            outcome = PublicationOutcome::Refused(Error::Limit);
         }
         if !matches!(outcome, PublicationOutcome::NeedsRefinement { .. }) {
             self.terminal = Some(outcome);
@@ -169,7 +196,11 @@ impl PublicationRefinement<'_> {
     }
 
     fn report(&self, outcome: PublicationOutcome, spent: RefinementBudget) -> PublicationProgress {
-        PublicationProgress { outcome, spent, total: self.total }
+        PublicationProgress {
+            outcome,
+            spent,
+            total: self.total,
+        }
     }
 }
 
@@ -198,7 +229,11 @@ struct OpaqueComparison<'a> {
 
 impl<'a> OpaqueComparison<'a> {
     fn new(judgment: &'a OpaqueJudgment, actual: &'a ActualHelperInput) -> Self {
-        Self { captured: judgment.witness().actual_input(), actual, stage: OpaqueStage::Header }
+        Self {
+            captured: judgment.witness().actual_input(),
+            actual,
+            stage: OpaqueStage::Header,
+        }
     }
 
     fn advance(&mut self, budget: RefinementBudget) -> (OpaqueOutcome, RefinementBudget) {
@@ -207,26 +242,44 @@ impl<'a> OpaqueComparison<'a> {
             // Empty components and finished phases require no scan. At most
             // four such transitions can occur between charged steps.
             match self.stage {
-                OpaqueStage::Submitted(offset) if offset == self.captured.submitted_bytes().len() => {
-                    self.stage = OpaqueStage::Profile(0); continue;
+                OpaqueStage::Submitted(offset)
+                    if offset == self.captured.submitted_bytes().len() =>
+                {
+                    self.stage = OpaqueStage::Profile(0);
+                    continue;
                 }
-                OpaqueStage::Profile(offset) if offset == self.captured.input_profile().profile_bytes.len() => {
-                    self.stage = OpaqueStage::Part(0); continue;
+                OpaqueStage::Profile(offset)
+                    if offset == self.captured.input_profile().profile_bytes.len() =>
+                {
+                    self.stage = OpaqueStage::Part(0);
+                    continue;
                 }
                 OpaqueStage::Part(index) if index == self.captured.ordered_parts().len() => {
-                    self.stage = OpaqueStage::Omission(0); continue;
+                    self.stage = OpaqueStage::Omission(0);
+                    continue;
                 }
                 OpaqueStage::Omission(index) if index == self.captured.omissions().len() => {
-                    self.stage = OpaqueStage::Done(true); continue;
+                    self.stage = OpaqueStage::Done(true);
+                    continue;
                 }
-                OpaqueStage::Done(equal) => return (
-                    if equal { OpaqueOutcome::Equal } else { OpaqueOutcome::Changed }, spent,
-                ),
+                OpaqueStage::Done(equal) => {
+                    return (
+                        if equal {
+                            OpaqueOutcome::Equal
+                        } else {
+                            OpaqueOutcome::Changed
+                        },
+                        spent,
+                    );
+                }
                 _ => {}
             }
             let minimum = RefinementBudget {
                 steps: 1,
-                value_bytes: u64::from(matches!(self.stage, OpaqueStage::Submitted(_) | OpaqueStage::Profile(_))),
+                value_bytes: u64::from(matches!(
+                    self.stage,
+                    OpaqueStage::Submitted(_) | OpaqueStage::Profile(_)
+                )),
             };
             let remaining_bytes = budget.value_bytes - spent.value_bytes;
             if spent.steps == budget.steps || remaining_bytes < minimum.value_bytes {
@@ -242,17 +295,28 @@ impl<'a> OpaqueComparison<'a> {
                         && left.policy_epoch == right.policy_epoch
                         && left.model_epoch == right.model_epoch
                         && left.profile_bytes.len() == right.profile_bytes.len()
-                        && self.captured.submitted_bytes().len() == self.actual.submitted_bytes().len()
+                        && self.captured.submitted_bytes().len()
+                            == self.actual.submitted_bytes().len()
                         && self.captured.ordered_parts().len() == self.actual.ordered_parts().len()
                         && self.captured.omissions().len() == self.actual.omissions().len();
-                    self.stage = if equal { OpaqueStage::Submitted(0) } else { OpaqueStage::Done(false) };
+                    self.stage = if equal {
+                        OpaqueStage::Submitted(0)
+                    } else {
+                        OpaqueStage::Done(false)
+                    };
                 }
                 OpaqueStage::Submitted(offset) | OpaqueStage::Profile(offset) => {
                     let submitted = matches!(self.stage, OpaqueStage::Submitted(_));
                     let (left, right) = if submitted {
-                        (self.captured.submitted_bytes(), self.actual.submitted_bytes())
+                        (
+                            self.captured.submitted_bytes(),
+                            self.actual.submitted_bytes(),
+                        )
                     } else {
-                        (self.captured.input_profile().profile_bytes.as_slice(), self.actual.input_profile().profile_bytes.as_slice())
+                        (
+                            self.captured.input_profile().profile_bytes.as_slice(),
+                            self.actual.input_profile().profile_bytes.as_slice(),
+                        )
                     };
                     let bytes = remaining_bytes.min((left.len() - offset) as u64) as usize;
                     let end = offset + bytes;
@@ -266,14 +330,21 @@ impl<'a> OpaqueComparison<'a> {
                     };
                 }
                 OpaqueStage::Part(index) => {
-                    self.stage = if self.captured.ordered_parts()[index] == self.actual.ordered_parts()[index] {
+                    self.stage = if self.captured.ordered_parts()[index]
+                        == self.actual.ordered_parts()[index]
+                    {
                         OpaqueStage::Part(index + 1)
-                    } else { OpaqueStage::Done(false) };
+                    } else {
+                        OpaqueStage::Done(false)
+                    };
                 }
                 OpaqueStage::Omission(index) => {
-                    self.stage = if self.captured.omissions()[index] == self.actual.omissions()[index] {
-                        OpaqueStage::Omission(index + 1)
-                    } else { OpaqueStage::Done(false) };
+                    self.stage =
+                        if self.captured.omissions()[index] == self.actual.omissions()[index] {
+                            OpaqueStage::Omission(index + 1)
+                        } else {
+                            OpaqueStage::Done(false)
+                        };
                 }
                 OpaqueStage::Done(_) => unreachable!("terminal handled before charging"),
             }
@@ -285,9 +356,13 @@ impl<'a> OpaqueComparison<'a> {
 /// and its full historical charge happen in validate BEFORE this call; internal
 /// chunk accounting is deliberately not substituted into existing journal data.
 /// OpaqueJudgment::valid_at remains an independent eager differential oracle.
-pub(super) fn opaque_equal(judgment: &OpaqueJudgment, actual: &ActualHelperInput) -> Result<bool, Error> {
+pub(super) fn opaque_equal(
+    judgment: &OpaqueJudgment,
+    actual: &ActualHelperInput,
+) -> Result<bool, Error> {
     let (outcome, _) = OpaqueComparison::new(judgment, actual).advance(RefinementBudget {
-        steps: u64::MAX, value_bytes: u64::MAX,
+        steps: u64::MAX,
+        value_bytes: u64::MAX,
     });
     match outcome {
         OpaqueOutcome::Equal => Ok(true),

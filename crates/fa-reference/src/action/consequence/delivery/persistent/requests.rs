@@ -7,9 +7,9 @@ pub mod actor;
 mod terminal;
 
 use super::{Event, FileDelivery, FrozenAction, JournalError, Machine, Transition};
-use crate::action::{ActionSpec, ActionState, Scope};
 use crate::action::consequence::gate::ControlInspection;
 use crate::action::consequence::gate::containment::session::policy::controller::Proposal;
+use crate::action::{ActionSpec, ActionState, Scope};
 use crate::{Error, Snapshot};
 use std::collections::BTreeMap;
 
@@ -55,15 +55,25 @@ pub(super) struct PreparedRequest {
     bytes: usize,
 }
 impl PreparedRequest {
-    pub(super) fn attempt(&self) -> u64 { self.attempt }
+    pub(super) fn attempt(&self) -> u64 {
+        self.attempt
+    }
 }
 impl RequestBook {
-    pub(super) fn len(&self) -> usize { self.records.len() }
-    pub(super) fn bytes(&self) -> usize { self.bytes }
+    pub(super) fn len(&self) -> usize {
+        self.records.len()
+    }
+    pub(super) fn bytes(&self) -> usize {
+        self.bytes
+    }
     pub(super) fn status(&self, request: u64) -> Result<FileRequestStatus, Error> {
         Ok(self.records.get(&request).ok_or(Error::Missing)?.status)
     }
-    pub(super) fn retry(&self, request: u64, spec: &ActionSpec) -> Result<Option<FileRequestStatus>, Error> {
+    pub(super) fn retry(
+        &self,
+        request: u64,
+        spec: &ActionSpec,
+    ) -> Result<Option<FileRequestStatus>, Error> {
         match self.records.get(&request) {
             Some(record) if &record.spec == spec => Ok(Some(record.status)),
             Some(_) => Err(Error::Binding),
@@ -71,48 +81,110 @@ impl RequestBook {
         }
     }
 
-    pub(super) fn prepare(&self, request: u64, spec: &ActionSpec, scope: Scope,
-        inspection: &ControlInspection, stopping: bool) -> Result<PreparedRequest, Error>
-    {
-        if request == 0 { return Err(Error::InvalidInput); }
-        if self.records.contains_key(&request) { return Err(Error::Duplicate); }
-        if inspection.suspended || stopping { return Err(Error::WrongState); }
-        if !spec.required_witnesses.is_empty() { return Err(Error::InvalidInput); }
+    pub(super) fn prepare(
+        &self,
+        request: u64,
+        spec: &ActionSpec,
+        scope: Scope,
+        inspection: &ControlInspection,
+        stopping: bool,
+    ) -> Result<PreparedRequest, Error> {
+        if request == 0 {
+            return Err(Error::InvalidInput);
+        }
+        if self.records.contains_key(&request) {
+            return Err(Error::Duplicate);
+        }
+        if inspection.suspended || stopping {
+            return Err(Error::WrongState);
+        }
+        if !spec.required_witnesses.is_empty() {
+            return Err(Error::InvalidInput);
+        }
         // Structure is not policy approval. Policy refusals are retained by
         // finish rather than retried under this key with a different snapshot.
         FrozenAction::freeze(spec.clone())?;
-        if spec.scope != scope { return Err(Error::Binding); }
-        if self.records.len() >= MAX_FILE_REQUESTS { return Err(Error::Limit); }
-        let bytes = self.bytes.checked_add(spec.payload.len()).ok_or(Error::Limit)?;
-        if bytes > MAX_FILE_REQUEST_BYTES { return Err(Error::Limit); }
+        if spec.scope != scope {
+            return Err(Error::Binding);
+        }
+        if self.records.len() >= MAX_FILE_REQUESTS {
+            return Err(Error::Limit);
+        }
+        let bytes = self
+            .bytes
+            .checked_add(spec.payload.len())
+            .ok_or(Error::Limit)?;
+        if bytes > MAX_FILE_REQUEST_BYTES {
+            return Err(Error::Limit);
+        }
         let attempt = self.next_attempt(inspection)?;
-        Ok(PreparedRequest { request, attempt, spec: spec.clone(), bytes })
+        Ok(PreparedRequest {
+            request,
+            attempt,
+            spec: spec.clone(),
+            bytes,
+        })
     }
 
     /// The SAME allocation rule can be inspected before a payload exists. This
     /// does not reserve an ID or admit a request; refused admissions still count.
     pub(super) fn next_attempt(&self, inspection: &ControlInspection) -> Result<u64, Error> {
-        let maximum = inspection.ledger.stages.keys().copied()
-            .chain(self.records.values().map(|row| row.allocated_attempt)).max().unwrap_or(0);
+        let maximum = inspection
+            .ledger
+            .stages
+            .keys()
+            .copied()
+            .chain(self.records.values().map(|row| row.allocated_attempt))
+            .max()
+            .unwrap_or(0);
         maximum.checked_add(1).ok_or(Error::Overflow)
     }
 
     /// No policy evaluator or outcome reducer lives here. The original proposal
     /// result supplies both the frozen action and actual initial ledger stage.
-    pub(super) fn finish(&mut self, prepared: PreparedRequest, result: Result<Proposal, Error>)
-        -> Option<(u64, FrozenAction)>
-    {
-        let PreparedRequest { request, attempt, spec, bytes } = prepared;
+    pub(super) fn finish(
+        &mut self,
+        prepared: PreparedRequest,
+        result: Result<Proposal, Error>,
+    ) -> Option<(u64, FrozenAction)> {
+        let PreparedRequest {
+            request,
+            attempt,
+            spec,
+            bytes,
+        } = prepared;
         let (disposition, action) = match result {
-            Ok(proposal) => (FileRequestDisposition::Admitted { attempt, stage: proposal.state },
-                Some((attempt, proposal.action))),
+            Ok(proposal) => (
+                FileRequestDisposition::Admitted {
+                    attempt,
+                    stage: proposal.state,
+                },
+                Some((attempt, proposal.action)),
+            ),
             Err(error) => (FileRequestDisposition::NotAdmitted(error), None),
         };
-        let generation = u64::from(!matches!(disposition,
-            FileRequestDisposition::Admitted { stage: ActionState::Proposed | ActionState::Prepared
-                | ActionState::Reviewing | ActionState::Authorized, .. }));
-        self.records.insert(request, RequestRecord { spec, allocated_attempt: attempt,
-            status: FileRequestStatus { request, generation, disposition } });
+        let generation = u64::from(!matches!(
+            disposition,
+            FileRequestDisposition::Admitted {
+                stage: ActionState::Proposed
+                    | ActionState::Prepared
+                    | ActionState::Reviewing
+                    | ActionState::Authorized,
+                ..
+            }
+        ));
+        self.records.insert(
+            request,
+            RequestRecord {
+                spec,
+                allocated_attempt: attempt,
+                status: FileRequestStatus {
+                    request,
+                    generation,
+                    disposition,
+                },
+            },
+        );
         self.bytes = bytes;
         action
     }
@@ -122,12 +194,23 @@ impl RequestBook {
     pub(super) fn refresh(&mut self, inspection: &ControlInspection) -> Result<(), Error> {
         for record in self.records.values_mut() {
             if let FileRequestDisposition::Admitted { attempt, stage } = record.status.disposition {
-                let current = *inspection.ledger.stages.get(&attempt).ok_or(Error::Missing)?;
+                let current = *inspection
+                    .ledger
+                    .stages
+                    .get(&attempt)
+                    .ok_or(Error::Missing)?;
                 if current != stage {
                     if projection_class(current) != projection_class(stage) {
-                        record.status.generation = record.status.generation.checked_add(1).ok_or(Error::Overflow)?;
+                        record.status.generation = record
+                            .status
+                            .generation
+                            .checked_add(1)
+                            .ok_or(Error::Overflow)?;
                     }
-                    record.status.disposition = FileRequestDisposition::Admitted { attempt, stage: current };
+                    record.status.disposition = FileRequestDisposition::Admitted {
+                        attempt,
+                        stage: current,
+                    };
                 }
             }
         }
@@ -141,17 +224,27 @@ impl FileDelivery {
     /// supplied predecessor, clock or snapshot; it performs no new admission.
     /// Changed action fields conflict. A storage fault never returns old state
     /// as a successful retry while a newer journal may already be visible.
-    pub fn submit_request(&mut self, revision: u64, request: u64, spec: ActionSpec,
-        snapshot: Snapshot) -> Result<FileRequestStatus, JournalError>
-    {
-        if self.fault.is_some() { return Err(JournalError::Unavailable); }
-        if let Some(status) = self.machine.requests.retry(request, &spec)? { return Ok(status); }
+    pub fn submit_request(
+        &mut self,
+        revision: u64,
+        request: u64,
+        spec: ActionSpec,
+        snapshot: Snapshot,
+    ) -> Result<FileRequestStatus, JournalError> {
+        if self.fault.is_some() {
+            return Err(JournalError::Unavailable);
+        }
+        if let Some(status) = self.machine.requests.retry(request, &spec)? {
+            return Ok(status);
+        }
         self.transact(revision, Event::SubmitRequest(request, spec, snapshot))?;
         self.request_status(request)
     }
 
     pub fn request_status(&self, request: u64) -> Result<FileRequestStatus, JournalError> {
-        if self.fault.is_some() { return Err(JournalError::Unavailable); }
+        if self.fault.is_some() {
+            return Err(JournalError::Unavailable);
+        }
         Ok(self.machine.requests.status(request)?)
     }
 
@@ -161,9 +254,11 @@ impl FileDelivery {
         let status = self.request_status(request)?;
         match status.disposition {
             FileRequestDisposition::NotAdmitted(_) => Err(Error::WrongState.into()),
-            FileRequestDisposition::Admitted { attempt, .. } => {
-                self.machine.actions.get(&attempt).ok_or_else(|| Error::Missing.into())
-            }
+            FileRequestDisposition::Admitted { attempt, .. } => self
+                .machine
+                .actions
+                .get(&attempt)
+                .ok_or_else(|| Error::Missing.into()),
         }
     }
 
@@ -172,16 +267,26 @@ impl FileDelivery {
     /// assert nonexecution, release a charge, delete a key or create a resend.
     pub fn cancel_request(&mut self, revision: u64, request: u64) -> Result<(), JournalError> {
         let status = self.request_status(request)?;
-        if let FileRequestDisposition::Admitted { attempt, stage } = status.disposition {
-            if matches!(stage, ActionState::Proposed | ActionState::Prepared
-                | ActionState::Reviewing | ActionState::Authorized)
-            { return self.cancel(revision, attempt); }
+        if let FileRequestDisposition::Admitted { attempt, stage } = status.disposition
+            && matches!(
+                stage,
+                ActionState::Proposed
+                    | ActionState::Prepared
+                    | ActionState::Reviewing
+                    | ActionState::Authorized
+            )
+        {
+            return self.cancel(revision, attempt);
         }
         Ok(())
     }
 
-    pub fn retained_requests(&self) -> usize { self.machine.requests.len() }
-    pub fn retained_request_bytes(&self) -> usize { self.machine.requests.bytes() }
+    pub fn retained_requests(&self) -> usize {
+        self.machine.requests.len()
+    }
+    pub fn retained_request_bytes(&self) -> usize {
+        self.machine.requests.bytes()
+    }
 
     /// Read the original broker's accepted terminal evidence by durable request
     /// identity, including after restart. No old process-local permit is needed
@@ -197,13 +302,24 @@ impl FileDelivery {
         let FileRequestDisposition::Admitted { attempt, stage } = status.disposition else {
             return Ok(None);
         };
-        if matches!(stage, ActionState::Proposed | ActionState::Prepared | ActionState::Reviewing
-            | ActionState::Authorized | ActionState::Denied | ActionState::Cancelled)
-        {
+        if matches!(
+            stage,
+            ActionState::Proposed
+                | ActionState::Prepared
+                | ActionState::Reviewing
+                | ActionState::Authorized
+                | ActionState::Denied
+                | ActionState::Cancelled
+        ) {
             return Ok(None);
         }
         let receipt = self.machine.broker.resolution(attempt)?;
-        if receipt.is_none() && matches!(stage, ActionState::Confirmed | ActionState::ConfirmedNotExecuted) {
+        if receipt.is_none()
+            && matches!(
+                stage,
+                ActionState::Confirmed | ActionState::ConfirmedNotExecuted
+            )
+        {
             return Err(Error::Incomplete.into());
         }
         Ok(receipt.map(super::super::EndpointReceipt::outcome))
@@ -251,17 +367,25 @@ impl FileDelivery {
         if attempt != key.attempt {
             return Err(Error::Binding.into());
         }
-        if matches!(stage, ActionState::Confirmed | ActionState::ConfirmedNotExecuted) {
-            return self.request_resolution(request)?.ok_or_else(|| Error::Incomplete.into());
+        if matches!(
+            stage,
+            ActionState::Confirmed | ActionState::ConfirmedNotExecuted
+        ) {
+            return self
+                .request_resolution(request)?
+                .ok_or_else(|| Error::Incomplete.into());
         }
         if stage != ActionState::Authorized {
             return Err(Error::WrongState.into());
         }
-        let mut transitions = self.commit_request_events(revision, &[
-            Event::Dispatch(attempt, snapshot),
-            Event::Publish(attempt),
-            Event::Reconcile(attempt),
-        ])?;
+        let mut transitions = self.commit_request_events(
+            revision,
+            &[
+                Event::Dispatch(attempt, snapshot),
+                Event::Publish(attempt),
+                Event::Reconcile(attempt),
+            ],
+        )?;
         match transitions.pop() {
             Some(Transition::Reconciled(super::Reconciliation::Resolved(outcome))) => Ok(outcome),
             _ => unreachable!("publication followed by original receipt reconciliation"),
@@ -303,11 +427,10 @@ impl FileDelivery {
             issuer: std::rc::Rc::new(()),
             fault: None,
         };
-        let mut transitions = host.commit_request_events(host.revision(), &[
-            Event::Fence,
-            Event::Time(observed_tick),
-            Event::Sweep,
-        ])?;
+        let mut transitions = host.commit_request_events(
+            host.revision(),
+            &[Event::Fence, Event::Time(observed_tick), Event::Sweep],
+        )?;
         let outcomes = match transitions.pop() {
             Some(Transition::Swept(outcomes)) => outcomes,
             _ => unreachable!("recovery ends with original pending sweep"),
@@ -324,10 +447,8 @@ impl FileDelivery {
         revision: u64,
         observed_tick: crate::action::ElapsedTick,
     ) -> Result<PendingReconciliations, JournalError> {
-        let mut transitions = self.commit_request_events(revision, &[
-            Event::Time(observed_tick),
-            Event::Sweep,
-        ])?;
+        let mut transitions =
+            self.commit_request_events(revision, &[Event::Time(observed_tick), Event::Sweep])?;
         match transitions.pop() {
             Some(Transition::Swept(outcomes)) => Ok(outcomes),
             _ => unreachable!("clocked reconciliation ends with original sweep"),
@@ -350,14 +471,21 @@ impl FileDelivery {
         if next.is_empty() || next.len() > 3 {
             return Err(Error::InvalidInput.into());
         }
-        let count = self.events.len().checked_add(next.len()).ok_or(Error::Overflow)?;
+        let count = self
+            .events
+            .len()
+            .checked_add(next.len())
+            .ok_or(Error::Overflow)?;
         if count > self.profile.limits.events {
             return Err(Error::Limit.into());
         }
         // Validate the first new input before cloning any history. Every next
         // prefix uses the existing codec, including its recovery-capacity law.
         let mut bytes = super::codec::encode_appended(
-            &self.profile, self.store.identity(), &self.events, &next[0],
+            &self.profile,
+            self.store.identity(),
+            &self.events,
+            &next[0],
         )?;
         let mut history = Vec::new();
         history.try_reserve_exact(count).map_err(|_| Error::Limit)?;
@@ -365,13 +493,18 @@ impl FileDelivery {
         for (index, event) in next.iter().enumerate() {
             if index != 0 {
                 bytes = super::codec::encode_appended(
-                    &self.profile, self.store.identity(), &history, event,
+                    &self.profile,
+                    self.store.identity(),
+                    &history,
+                    event,
                 )?;
             }
             history.push(event.clone());
         }
         let mut transitions = Vec::new();
-        transitions.try_reserve_exact(next.len()).map_err(|_| Error::Limit)?;
+        transitions
+            .try_reserve_exact(next.len())
+            .map_err(|_| Error::Limit)?;
         let mut candidate = Machine::replay(&self.profile, &self.events)?;
         for event in next {
             transitions.push(candidate.apply(event)?);
@@ -396,12 +529,22 @@ impl FileDelivery {
 }
 
 impl Machine {
-    pub(super) fn apply_request(&mut self, request: u64, spec: &ActionSpec,
-        snapshot: &Snapshot) -> Result<Transition, Error>
-    {
-        let prepared = self.requests.prepare(request, spec, self.broker.scope,
-            &self.broker.inspect(), self.broker.stop_receipt().is_some())?;
-        let result = self.broker.propose(prepared.attempt(), spec.clone(), snapshot);
+    pub(super) fn apply_request(
+        &mut self,
+        request: u64,
+        spec: &ActionSpec,
+        snapshot: &Snapshot,
+    ) -> Result<Transition, Error> {
+        let prepared = self.requests.prepare(
+            request,
+            spec,
+            self.broker.scope,
+            &self.broker.inspect(),
+            self.broker.stop_receipt().is_some(),
+        )?;
+        let result = self
+            .broker
+            .propose(prepared.attempt(), spec.clone(), snapshot);
         if let Some((attempt, action)) = self.requests.finish(prepared, result) {
             self.actions.insert(attempt, action);
         }
@@ -415,7 +558,10 @@ impl Machine {
 
 fn projection_class(stage: ActionState) -> u8 {
     match stage {
-        ActionState::Proposed | ActionState::Prepared | ActionState::Reviewing | ActionState::Authorized => 0,
+        ActionState::Proposed
+        | ActionState::Prepared
+        | ActionState::Reviewing
+        | ActionState::Authorized => 0,
         ActionState::Dispatching | ActionState::Unknown | ActionState::IrrecoverablyUnknown => 1,
         ActionState::Confirmed => 2,
         ActionState::Denied => 3,
@@ -428,16 +574,16 @@ fn projection_class(stage: ActionState) -> u8 {
 mod completion_tests {
     mod terminal;
 
-    use super::*;
     use super::super::{
-        FileDeliveryProfile, FilePermit, JournalIo, JournalLimits, Reconciliation,
-        ReferenceBallot, ReferenceReview,
+        FileDeliveryProfile, FilePermit, JournalIo, JournalLimits, Reconciliation, ReferenceBallot,
+        ReferenceReview,
     };
-    use crate::action::{ElapsedTick, Purpose, ResolvedTarget, VERSION};
+    use super::*;
     use crate::action::consequence::congress::{CongressPolicy, MemberPolicy};
     use crate::action::consequence::delivery::{EndpointOutcome, NonExecutionReason};
-    use crate::action::consequence::gate::containment::{ActorState, RestartGrade, RestartProfile};
     use crate::action::consequence::gate::containment::session::policy::{Policy, Predicate};
+    use crate::action::consequence::gate::containment::{ActorState, RestartGrade, RestartProfile};
+    use crate::action::{ElapsedTick, Purpose, ResolvedTarget, VERSION};
     use crate::reducer::Caps;
     use crate::round::Verdict;
     use std::path::PathBuf;
@@ -448,15 +594,20 @@ mod completion_tests {
     impl Directory {
         fn new() -> Self {
             let time = std::time::SystemTime::now()
-                .duration_since(std::time::UNIX_EPOCH).unwrap().as_nanos();
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap()
+                .as_nanos();
             let root = std::env::temp_dir().join(format!(
                 "fa-request-completion-{}-{time}-{}",
-                std::process::id(), NEXT.fetch_add(1, Ordering::Relaxed),
+                std::process::id(),
+                NEXT.fetch_add(1, Ordering::Relaxed),
             ));
             std::fs::create_dir(&root).unwrap();
             Self(root)
         }
-        fn store(&self) -> PathBuf { self.0.join("publication") }
+        fn store(&self) -> PathBuf {
+            self.0.join("publication")
+        }
     }
     impl Drop for Directory {
         fn drop(&mut self) {
@@ -468,31 +619,67 @@ mod completion_tests {
 
     fn profile() -> FileDeliveryProfile {
         let target = ResolvedTarget {
-            adapter: 10, object: 11, contract_version: 1, expected_version: 1, generation: 1,
+            adapter: 10,
+            object: 11,
+            contract_version: 1,
+            expected_version: 1,
+            generation: 1,
         };
         FileDeliveryProfile {
             scope: Scope {
-                tenant: 1, principal: 2, run: 3, branch: 4, authority: 5, purpose: Purpose::Effect,
+                tenant: 1,
+                principal: 2,
+                run: 3,
+                branch: 4,
+                authority: 5,
+                purpose: Purpose::Effect,
             },
             total: 100,
             max_attempts: 8,
-            actor: ActorState::new(RestartProfile {
-                id: 1, generation: 1, host_generation: 1, model_generation: 1,
-                tokenizer_generation: 1, state_schema_generation: 1,
-                grade: RestartGrade::FunctionalRestart,
-            }, vec![1], vec![2], vec![3], 1).unwrap(),
+            actor: ActorState::new(
+                RestartProfile {
+                    id: 1,
+                    generation: 1,
+                    host_generation: 1,
+                    model_generation: 1,
+                    tokenizer_generation: 1,
+                    state_schema_generation: 1,
+                    grade: RestartGrade::FunctionalRestart,
+                },
+                vec![1],
+                vec![2],
+                vec![3],
+                1,
+            )
+            .unwrap(),
             suspend_at_incident: 3,
-            policy: Policy::new(1, vec![Predicate::ExactValue {
-                key: 7, value: b"ok".to_vec(),
-            }]).unwrap(),
+            policy: Policy::new(
+                1,
+                vec![Predicate::ExactValue {
+                    key: 7,
+                    value: b"ok".to_vec(),
+                }],
+            )
+            .unwrap(),
             congress: CongressPolicy {
                 generation: 1,
-                members: BTreeMap::from([("reviewer".to_owned(), MemberPolicy {
-                    cohort: "reference".to_owned(), weight: 1,
-                })]),
-                caps: Caps { per_member: 1, per_cohort: 1 },
-                continue_minimum: 1, continue_hold_maximum: 0, narrow_at: 2,
-                suspend_at: 3, minimum_members: 1, minimum_cohorts: 1,
+                members: BTreeMap::from([(
+                    "reviewer".to_owned(),
+                    MemberPolicy {
+                        cohort: "reference".to_owned(),
+                        weight: 1,
+                    },
+                )]),
+                caps: Caps {
+                    per_member: 1,
+                    per_cohort: 1,
+                },
+                continue_minimum: 1,
+                continue_hold_maximum: 0,
+                narrow_at: 2,
+                suspend_at: 3,
+                minimum_members: 1,
+                minimum_cohorts: 1,
             },
             narrowed_targets: vec![target],
             target,
@@ -506,34 +693,57 @@ mod completion_tests {
 
     fn snapshot() -> Snapshot {
         Snapshot {
-            semantic_epoch: 1, complete: true,
+            semantic_epoch: 1,
+            complete: true,
             values: BTreeMap::from([(7, b"ok".to_vec())]),
         }
     }
 
     fn authorize_request(host: &mut FileDelivery, request: u64) -> (FilePermit, FrozenAction) {
         let spec = ActionSpec {
-            version: VERSION, scope: profile().scope, target: Some(host.inspect().target),
-            payload: b"visible".to_vec(), required_witnesses: Vec::new(),
+            version: VERSION,
+            scope: profile().scope,
+            target: Some(host.inspect().target),
+            payload: b"visible".to_vec(),
+            required_witnesses: Vec::new(),
             policy_epoch: host.inspect().control.ledger.epoch,
-            deadline: ElapsedTick(100), units: 16,
+            deadline: ElapsedTick(100),
+            units: 16,
         };
-        let status = host.submit_request(host.revision(), request, spec, snapshot()).unwrap();
+        let status = host
+            .submit_request(host.revision(), request, spec, snapshot())
+            .unwrap();
         let FileRequestDisposition::Admitted { attempt, .. } = status.disposition else {
             panic!("positive request admission");
         };
         let action = host.request_action(request).unwrap().clone();
-        host.review(host.revision(), ReferenceReview {
-            attempt, round: attempt + 100, evidence_root: [9; 32], snapshot: snapshot(),
-            ballots: BTreeMap::from([("reviewer".to_owned(), ReferenceBallot {
-                verdict: Verdict::Allow, salt: b"reference-salt".to_vec(),
-            })]),
-        }).unwrap();
-        let key = host.authorize(host.revision(), attempt, snapshot()).unwrap();
+        host.review(
+            host.revision(),
+            ReferenceReview {
+                attempt,
+                round: attempt + 100,
+                evidence_root: [9; 32],
+                snapshot: snapshot(),
+                ballots: BTreeMap::from([(
+                    "reviewer".to_owned(),
+                    ReferenceBallot {
+                        verdict: Verdict::Allow,
+                        salt: b"reference-salt".to_vec(),
+                    },
+                )]),
+            },
+        )
+        .unwrap();
+        let key = host
+            .authorize(host.revision(), attempt, snapshot())
+            .unwrap();
         (key, action)
     }
 
-    fn prepared(root: &Directory, p: &FileDeliveryProfile) -> (FileDelivery, FilePermit, FrozenAction) {
+    fn prepared(
+        root: &Directory,
+        p: &FileDeliveryProfile,
+    ) -> (FileDelivery, FilePermit, FrozenAction) {
         let mut host = FileDelivery::create(root.store(), p.clone()).unwrap();
         host.observe_time(host.revision(), ElapsedTick(1)).unwrap();
         let (key, action) = authorize_request(&mut host, 700);
@@ -546,8 +756,13 @@ mod completion_tests {
         let p = profile();
         let (mut host, key, action) = prepared(&root, &p);
         let revision = host.revision();
-        let outcome = EndpointOutcome::Executed { resulting_version: 2 };
-        assert_eq!(host.commit_request_publication(revision, 700, &key, &action, snapshot()), Ok(outcome));
+        let outcome = EndpointOutcome::Executed {
+            resulting_version: 2,
+        };
+        assert_eq!(
+            host.commit_request_publication(revision, 700, &key, &action, snapshot()),
+            Ok(outcome)
+        );
         assert_eq!(host.revision(), revision + 3);
         let after = host.inspect();
         assert_eq!(after.executions, 1);
@@ -555,19 +770,36 @@ mod completion_tests {
         assert_eq!(after.control.ledger.available, 84);
         assert_eq!(after.control.ledger.reserved, 0);
         assert_eq!(after.control.ledger.charged, 16);
-        assert_eq!(after.control.ledger.stages[&key.attempt()], ActionState::Confirmed);
+        assert_eq!(
+            after.control.ledger.stages[&key.attempt()],
+            ActionState::Confirmed
+        );
         assert_eq!(host.request_status(700).unwrap().generation, 2);
-        assert_eq!(FileDelivery::read_publication(root.store(), &p).unwrap(), after);
+        assert_eq!(
+            FileDelivery::read_publication(root.store(), &p).unwrap(),
+            after
+        );
         // This is historical retry, not a fresh authorization against this
         // intentionally incomplete snapshot or stale journal predecessor.
-        assert_eq!(host.commit_request_publication(revision, 700, &key, &action, Snapshot::default()), Ok(outcome));
+        assert_eq!(
+            host.commit_request_publication(revision, 700, &key, &action, Snapshot::default()),
+            Ok(outcome)
+        );
         assert_eq!(host.inspect(), after);
         drop(host);
         let mut reopened = FileDelivery::open(root.store(), p).unwrap();
         assert_eq!(reopened.inspect().executions, 1);
         assert_eq!(reopened.inspect().control.ledger.charged, 16);
-        assert_eq!(reopened.commit_request_publication(reopened.revision(), 700, &key, &action, snapshot()),
-            Err(JournalError::Contract(Error::Binding)));
+        assert_eq!(
+            reopened.commit_request_publication(
+                reopened.revision(),
+                700,
+                &key,
+                &action,
+                snapshot()
+            ),
+            Err(JournalError::Contract(Error::Binding))
+        );
     }
 
     #[test]
@@ -578,14 +810,23 @@ mod completion_tests {
         let before = host.inspect();
         let mut changed = snapshot();
         changed.values.insert(7, b"changed".to_vec());
-        assert_eq!(host.commit_request_publication(host.revision(), 700, &key, &action, changed),
-            Err(JournalError::Contract(Error::Binding)));
+        assert_eq!(
+            host.commit_request_publication(host.revision(), 700, &key, &action, changed),
+            Err(JournalError::Contract(Error::Binding))
+        );
         assert_eq!(host.inspect(), before);
-        assert_eq!(FileDelivery::read_publication(root.store(), &p).unwrap(), before);
+        assert_eq!(
+            FileDelivery::read_publication(root.store(), &p).unwrap(),
+            before
+        );
         assert!(host.storage_failure().is_none());
         assert_eq!(before.control.ledger.reserved, 16);
-        assert_eq!(host.commit_request_publication(host.revision(), 700, &key, &action, snapshot()),
-            Ok(EndpointOutcome::Executed { resulting_version: 2 }));
+        assert_eq!(
+            host.commit_request_publication(host.revision(), 700, &key, &action, snapshot()),
+            Ok(EndpointOutcome::Executed {
+                resulting_version: 2
+            })
+        );
     }
 
     #[test]
@@ -598,14 +839,23 @@ mod completion_tests {
         let mut changed = action.spec().clone();
         changed.payload = b"substituted".to_vec();
         let changed = FrozenAction::freeze(changed).unwrap();
-        assert_eq!(host.commit_request_publication(host.revision(), 700, &key, &changed, snapshot()),
-            Err(JournalError::Contract(Error::Binding)));
-        assert_eq!(host.commit_request_publication(host.revision(), 700, &foreign, &action, snapshot()),
-            Err(JournalError::Contract(Error::Binding)));
-        assert_eq!(host.commit_request_publication(host.revision(), 999, &key, &action, snapshot()),
-            Err(JournalError::Contract(Error::Missing)));
+        assert_eq!(
+            host.commit_request_publication(host.revision(), 700, &key, &changed, snapshot()),
+            Err(JournalError::Contract(Error::Binding))
+        );
+        assert_eq!(
+            host.commit_request_publication(host.revision(), 700, &foreign, &action, snapshot()),
+            Err(JournalError::Contract(Error::Binding))
+        );
+        assert_eq!(
+            host.commit_request_publication(host.revision(), 999, &key, &action, snapshot()),
+            Err(JournalError::Contract(Error::Missing))
+        );
         assert_eq!(host.inspect(), before);
-        assert!(host.commit_request_publication(host.revision(), 700, &key, &action, snapshot()).is_ok());
+        assert!(
+            host.commit_request_publication(host.revision(), 700, &key, &action, snapshot())
+                .is_ok()
+        );
     }
 
     #[test]
@@ -614,15 +864,23 @@ mod completion_tests {
         let p = profile();
         let (mut host, key, action) = prepared(&root, &p);
         let before = host.inspect();
-        assert_eq!(host.commit_request_publication(host.revision() - 1, 700, &key, &action, snapshot()),
-            Err(JournalError::Contract(Error::Stale)));
+        assert_eq!(
+            host.commit_request_publication(host.revision() - 1, 700, &key, &action, snapshot()),
+            Err(JournalError::Contract(Error::Stale))
+        );
         assert_eq!(host.inspect(), before);
-        host.observe_time(host.revision(), ElapsedTick(100)).unwrap();
+        host.observe_time(host.revision(), ElapsedTick(100))
+            .unwrap();
         let expired = host.inspect();
-        assert_eq!(host.commit_request_publication(host.revision(), 700, &key, &action, snapshot()),
-            Err(JournalError::Contract(Error::Stale)));
+        assert_eq!(
+            host.commit_request_publication(host.revision(), 700, &key, &action, snapshot()),
+            Err(JournalError::Contract(Error::Stale))
+        );
         assert_eq!(host.inspect(), expired);
-        assert_eq!(FileDelivery::read_publication(root.store(), &p).unwrap(), expired);
+        assert_eq!(
+            FileDelivery::read_publication(root.store(), &p).unwrap(),
+            expired
+        );
         host.cancel_request(host.revision(), 700).unwrap();
         assert_eq!(host.inspect().control.ledger.available, 100);
         assert_eq!(host.inspect().executions, 0);
@@ -637,48 +895,82 @@ mod completion_tests {
             let (mut host, key, action) = prepared(&root, &p);
             assert_eq!(host.revision(), 4);
             let before = host.inspect();
-            let result = host.commit_request_publication(host.revision(), 700, &key, &action, snapshot());
+            let result =
+                host.commit_request_publication(host.revision(), 700, &key, &action, snapshot());
             if limit == 6 {
                 assert_eq!(result, Err(JournalError::Contract(Error::Limit)));
                 assert_eq!(host.inspect(), before);
-                assert_eq!(FileDelivery::read_publication(root.store(), &p).unwrap(), before);
+                assert_eq!(
+                    FileDelivery::read_publication(root.store(), &p).unwrap(),
+                    before
+                );
                 assert!(host.storage_failure().is_none());
             } else {
-                assert_eq!(result, Ok(EndpointOutcome::Executed { resulting_version: 2 }));
+                assert_eq!(
+                    result,
+                    Ok(EndpointOutcome::Executed {
+                        resulting_version: 2
+                    })
+                );
                 assert_eq!(host.revision(), 7);
-                assert_eq!(FileDelivery::read_publication(root.store(), &p).unwrap().executions, 1);
+                assert_eq!(
+                    FileDelivery::read_publication(root.store(), &p)
+                        .unwrap()
+                        .executions,
+                    1
+                );
             }
         }
     }
 
     #[test]
     fn every_storage_barrier_preserves_atomic_visibility_and_poisons_retries() {
-        for barrier in [JournalIo::Stage, JournalIo::Write, JournalIo::FileSync,
-            JournalIo::Rename, JournalIo::DirectorySync]
-        {
+        for barrier in [
+            JournalIo::Stage,
+            JournalIo::Write,
+            JournalIo::FileSync,
+            JournalIo::Rename,
+            JournalIo::DirectorySync,
+        ] {
             let root = Directory::new();
             let p = profile();
             let (mut host, key, action) = prepared(&root, &p);
             let before = host.inspect();
             host.store.fail_once(barrier);
-            assert!(matches!(host.commit_request_publication(host.revision(), 700, &key, &action, snapshot()),
-                Err(JournalError::Io(_))));
+            assert!(matches!(
+                host.commit_request_publication(host.revision(), 700, &key, &action, snapshot()),
+                Err(JournalError::Io(_))
+            ));
             assert_eq!(host.inspect(), before);
             assert!(!host.clock_ready());
-            assert_eq!(host.commit_request_publication(host.revision(), 700, &key, &action, snapshot()),
-                Err(JournalError::Unavailable));
+            assert_eq!(
+                host.commit_request_publication(host.revision(), 700, &key, &action, snapshot()),
+                Err(JournalError::Unavailable)
+            );
             let disk = FileDelivery::read_publication(root.store(), &p).unwrap();
             let replaced = barrier == JournalIo::DirectorySync;
             assert_eq!(disk.executions, u64::from(replaced));
             assert_eq!(disk.control.ledger.charged, if replaced { 16 } else { 0 });
             assert_eq!(disk.control.ledger.reserved, if replaced { 0 } else { 16 });
-            assert_eq!(disk.control.ledger.stages[&key.attempt()],
-                if replaced { ActionState::Confirmed } else { ActionState::Authorized });
-            assert_eq!(disk.revision, before.revision + if replaced { 3 } else { 0 });
+            assert_eq!(
+                disk.control.ledger.stages[&key.attempt()],
+                if replaced {
+                    ActionState::Confirmed
+                } else {
+                    ActionState::Authorized
+                }
+            );
+            assert_eq!(
+                disk.revision,
+                before.revision + if replaced { 3 } else { 0 }
+            );
             drop(host);
             let recovered = FileDelivery::open(root.store(), p).unwrap();
             assert_eq!(recovered.inspect().executions, u64::from(replaced));
-            assert_eq!(recovered.inspect().control.ledger.available, if replaced { 84 } else { 100 });
+            assert_eq!(
+                recovered.inspect().control.ledger.available,
+                if replaced { 84 } else { 100 }
+            );
             assert_eq!(recovered.inspect().control.ledger.reserved, 0);
         }
     }
@@ -688,23 +980,44 @@ mod completion_tests {
         let root = Directory::new();
         let p = profile();
         let (mut host, key, action) = prepared(&root, &p);
-        host.dispatch(host.revision(), &key, &action, snapshot()).unwrap();
-        let outcome = EndpointOutcome::Executed { resulting_version: 2 };
+        host.dispatch(host.revision(), &key, &action, snapshot())
+            .unwrap();
+        let outcome = EndpointOutcome::Executed {
+            resulting_version: 2,
+        };
         assert_eq!(host.publish(host.revision(), key.attempt()), Ok(outcome));
         assert_eq!(host.request_resolution(700), Ok(None));
         let revision = host.revision();
         drop(host);
-        let (mut recovered, results) = FileDelivery::open_reconciled(root.store(), p.clone(), ElapsedTick(2)).unwrap();
+        let (mut recovered, results) =
+            FileDelivery::open_reconciled(root.store(), p.clone(), ElapsedTick(2)).unwrap();
         assert!(recovered.clock_ready());
         assert_eq!(recovered.revision(), revision + 3);
-        assert_eq!(results[&key.attempt()], Ok(Reconciliation::Resolved(outcome)));
+        assert_eq!(
+            results[&key.attempt()],
+            Ok(Reconciliation::Resolved(outcome))
+        );
         assert_eq!(recovered.request_resolution(700), Ok(Some(outcome)));
         assert_eq!(recovered.inspect().executions, 1);
         assert_eq!(recovered.inspect().control.ledger.charged, 16);
-        assert_eq!(recovered.inspect().control.ledger.stages[&key.attempt()], ActionState::Confirmed);
-        assert_eq!(FileDelivery::read_publication(root.store(), &p).unwrap(), recovered.inspect());
-        assert_eq!(recovered.commit_request_publication(recovered.revision(), 700, &key, &action, snapshot()),
-            Err(JournalError::Contract(Error::Binding)));
+        assert_eq!(
+            recovered.inspect().control.ledger.stages[&key.attempt()],
+            ActionState::Confirmed
+        );
+        assert_eq!(
+            FileDelivery::read_publication(root.store(), &p).unwrap(),
+            recovered.inspect()
+        );
+        assert_eq!(
+            recovered.commit_request_publication(
+                recovered.revision(),
+                700,
+                &key,
+                &action,
+                snapshot()
+            ),
+            Err(JournalError::Contract(Error::Binding))
+        );
     }
 
     #[test]
@@ -712,28 +1025,56 @@ mod completion_tests {
         let root = Directory::new();
         let p = profile();
         let (mut host, key, action) = prepared(&root, &p);
-        host.dispatch(host.revision(), &key, &action, snapshot()).unwrap();
+        host.dispatch(host.revision(), &key, &action, snapshot())
+            .unwrap();
         drop(host);
-        let (mut recovered, results) = FileDelivery::open_reconciled(root.store(), p.clone(), ElapsedTick(2)).unwrap();
-        assert_eq!(results[&key.attempt()], Ok(Reconciliation::AwaitingResolution));
+        let (mut recovered, results) =
+            FileDelivery::open_reconciled(root.store(), p.clone(), ElapsedTick(2)).unwrap();
+        assert_eq!(
+            results[&key.attempt()],
+            Ok(Reconciliation::AwaitingResolution)
+        );
         assert_eq!(recovered.request_resolution(700), Ok(None));
         assert_eq!(recovered.inspect().executions, 0);
         assert_eq!(recovered.inspect().control.ledger.charged, 16);
-        let results = recovered.reconcile_pending_at(recovered.revision(), ElapsedTick(99)).unwrap();
-        assert_eq!(results[&key.attempt()], Ok(Reconciliation::AwaitingResolution));
+        let results = recovered
+            .reconcile_pending_at(recovered.revision(), ElapsedTick(99))
+            .unwrap();
+        assert_eq!(
+            results[&key.attempt()],
+            Ok(Reconciliation::AwaitingResolution)
+        );
         assert_eq!(recovered.inspect().control.ledger.charged, 16);
-        let outcome = EndpointOutcome::NotExecuted { reason: NonExecutionReason::DeadlineElapsed };
-        let results = recovered.reconcile_pending_at(recovered.revision(), ElapsedTick(100)).unwrap();
-        assert_eq!(results[&key.attempt()], Ok(Reconciliation::Resolved(outcome)));
+        let outcome = EndpointOutcome::NotExecuted {
+            reason: NonExecutionReason::DeadlineElapsed,
+        };
+        let results = recovered
+            .reconcile_pending_at(recovered.revision(), ElapsedTick(100))
+            .unwrap();
+        assert_eq!(
+            results[&key.attempt()],
+            Ok(Reconciliation::Resolved(outcome))
+        );
         assert_eq!(recovered.request_resolution(700), Ok(Some(outcome)));
         assert_eq!(recovered.inspect().control.ledger.available, 100);
         assert_eq!(recovered.inspect().control.ledger.reserved, 0);
         assert_eq!(recovered.inspect().control.ledger.charged, 0);
-        assert_eq!(recovered.inspect().control.ledger.stages[&key.attempt()], ActionState::ConfirmedNotExecuted);
+        assert_eq!(
+            recovered.inspect().control.ledger.stages[&key.attempt()],
+            ActionState::ConfirmedNotExecuted
+        );
         assert_eq!(recovered.inspect().executions, 0);
         assert_eq!(recovered.inspect().payload, b"initial");
-        assert_eq!(FileDelivery::read_publication(root.store(), &p).unwrap(), recovered.inspect());
-        assert!(recovered.reconcile_pending_at(recovered.revision(), ElapsedTick(100)).unwrap().is_empty());
+        assert_eq!(
+            FileDelivery::read_publication(root.store(), &p).unwrap(),
+            recovered.inspect()
+        );
+        assert!(
+            recovered
+                .reconcile_pending_at(recovered.revision(), ElapsedTick(100))
+                .unwrap()
+                .is_empty()
+        );
         assert_eq!(recovered.inspect().control.ledger.available, 100);
     }
 
@@ -744,13 +1085,22 @@ mod completion_tests {
         let (host, _key, _action) = prepared(&root, &p);
         let before = host.inspect();
         drop(host);
-        assert!(matches!(FileDelivery::open_reconciled(root.store(), p.clone(), ElapsedTick(0)),
-            Err(JournalError::Contract(Error::Stale))));
-        assert_eq!(FileDelivery::read_publication(root.store(), &p).unwrap(), before);
-        let (recovered, results) = FileDelivery::open_reconciled(root.store(), p, ElapsedTick(2)).unwrap();
+        assert!(matches!(
+            FileDelivery::open_reconciled(root.store(), p.clone(), ElapsedTick(0)),
+            Err(JournalError::Contract(Error::Stale))
+        ));
+        assert_eq!(
+            FileDelivery::read_publication(root.store(), &p).unwrap(),
+            before
+        );
+        let (recovered, results) =
+            FileDelivery::open_reconciled(root.store(), p, ElapsedTick(2)).unwrap();
         assert!(results.is_empty());
         assert!(recovered.clock_ready());
-        assert_eq!(recovered.inspect().control.ledger.epoch, before.control.ledger.epoch + 1);
+        assert_eq!(
+            recovered.inspect().control.ledger.epoch,
+            before.control.ledger.epoch + 1
+        );
         assert_eq!(recovered.inspect().control.ledger.available, 100);
         assert_eq!(recovered.inspect().executions, 0);
         assert_eq!(recovered.request_resolution(700), Ok(None));
@@ -768,7 +1118,10 @@ mod completion_tests {
             let result = FileDelivery::open_reconciled(root.store(), p.clone(), ElapsedTick(2));
             if limit == 6 {
                 assert!(matches!(result, Err(JournalError::Contract(Error::Limit))));
-                assert_eq!(FileDelivery::read_publication(root.store(), &p).unwrap(), before);
+                assert_eq!(
+                    FileDelivery::read_publication(root.store(), &p).unwrap(),
+                    before
+                );
             } else {
                 let (recovered, results) = result.unwrap();
                 assert!(results.is_empty());
@@ -781,33 +1134,58 @@ mod completion_tests {
 
     #[test]
     fn clocked_reconciliation_faults_expose_neither_candidate_time_nor_receipt() {
-        for barrier in [JournalIo::Stage, JournalIo::Write, JournalIo::FileSync,
-            JournalIo::Rename, JournalIo::DirectorySync]
-        {
+        for barrier in [
+            JournalIo::Stage,
+            JournalIo::Write,
+            JournalIo::FileSync,
+            JournalIo::Rename,
+            JournalIo::DirectorySync,
+        ] {
             let root = Directory::new();
             let p = profile();
             let (mut host, key, action) = prepared(&root, &p);
-            host.dispatch(host.revision(), &key, &action, snapshot()).unwrap();
+            host.dispatch(host.revision(), &key, &action, snapshot())
+                .unwrap();
             host.publish(host.revision(), key.attempt()).unwrap();
             let before = host.inspect();
             host.store.fail_once(barrier);
-            assert!(matches!(host.reconcile_pending_at(host.revision(), ElapsedTick(2)), Err(JournalError::Io(_))));
+            assert!(matches!(
+                host.reconcile_pending_at(host.revision(), ElapsedTick(2)),
+                Err(JournalError::Io(_))
+            ));
             assert_eq!(host.inspect(), before);
             assert_eq!(host.request_resolution(700), Err(JournalError::Unavailable));
             let disk = FileDelivery::read_publication(root.store(), &p).unwrap();
             let replaced = barrier == JournalIo::DirectorySync;
-            assert_eq!(disk.revision, before.revision + if replaced { 2 } else { 0 });
-            assert_eq!(disk.control.ledger.elapsed, Some(ElapsedTick(if replaced { 2 } else { 1 })));
-            assert_eq!(disk.control.ledger.stages[&key.attempt()],
-                if replaced { ActionState::Confirmed } else { ActionState::Dispatching });
+            assert_eq!(
+                disk.revision,
+                before.revision + if replaced { 2 } else { 0 }
+            );
+            assert_eq!(
+                disk.control.ledger.elapsed,
+                Some(ElapsedTick(if replaced { 2 } else { 1 }))
+            );
+            assert_eq!(
+                disk.control.ledger.stages[&key.attempt()],
+                if replaced {
+                    ActionState::Confirmed
+                } else {
+                    ActionState::Dispatching
+                }
+            );
             assert_eq!(disk.executions, 1);
             assert_eq!(disk.control.ledger.charged, 16);
             drop(host);
-            let (recovered, results) = FileDelivery::open_reconciled(root.store(), p, ElapsedTick(3)).unwrap();
+            let (recovered, results) =
+                FileDelivery::open_reconciled(root.store(), p, ElapsedTick(3)).unwrap();
             assert_eq!(results.is_empty(), replaced);
             assert_eq!(recovered.inspect().executions, 1);
-            assert_eq!(recovered.request_resolution(700),
-                Ok(Some(EndpointOutcome::Executed { resulting_version: 2 })));
+            assert_eq!(
+                recovered.request_resolution(700),
+                Ok(Some(EndpointOutcome::Executed {
+                    resulting_version: 2
+                }))
+            );
         }
     }
 
@@ -817,19 +1195,46 @@ mod completion_tests {
         let p = profile();
         let (mut host, first, first_action) = prepared(&root, &p);
         let (second, second_action) = authorize_request(&mut host, 701);
-        assert_eq!(host.commit_request_publication(host.revision(), 700, &first, &first_action, snapshot()),
-            Ok(EndpointOutcome::Executed { resulting_version: 2 }));
-        let outcome = EndpointOutcome::NotExecuted { reason: NonExecutionReason::VersionConflict };
+        assert_eq!(
+            host.commit_request_publication(
+                host.revision(),
+                700,
+                &first,
+                &first_action,
+                snapshot()
+            ),
+            Ok(EndpointOutcome::Executed {
+                resulting_version: 2
+            })
+        );
+        let outcome = EndpointOutcome::NotExecuted {
+            reason: NonExecutionReason::VersionConflict,
+        };
         let revision = host.revision();
-        assert_eq!(host.commit_request_publication(revision, 701, &second, &second_action, snapshot()), Ok(outcome));
+        assert_eq!(
+            host.commit_request_publication(revision, 701, &second, &second_action, snapshot()),
+            Ok(outcome)
+        );
         let after = host.inspect();
         assert_eq!(after.executions, 1);
         assert_eq!(after.control.ledger.available, 84);
         assert_eq!(after.control.ledger.reserved, 0);
         assert_eq!(after.control.ledger.charged, 16);
         assert_eq!(host.request_resolution(701), Ok(Some(outcome)));
-        assert_eq!(host.commit_request_publication(revision, 701, &second, &second_action, Snapshot::default()), Ok(outcome));
+        assert_eq!(
+            host.commit_request_publication(
+                revision,
+                701,
+                &second,
+                &second_action,
+                Snapshot::default()
+            ),
+            Ok(outcome)
+        );
         assert_eq!(host.inspect(), after);
-        assert_eq!(FileDelivery::read_publication(root.store(), &p).unwrap(), after);
+        assert_eq!(
+            FileDelivery::read_publication(root.store(), &p).unwrap(),
+            after
+        );
     }
 }

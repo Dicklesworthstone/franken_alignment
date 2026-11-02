@@ -7,26 +7,32 @@
 
 mod codec;
 pub mod credibility;
-mod storage;
-mod stopping;
-pub mod abandonment;
-pub use abandonment::{FileAbandonReceipt, FileAbandonRequest};
 pub mod recovery_capacity;
-pub use recovery_capacity::{RecoveryReserve, JournalCapacity, JournalSpace};
+mod stopping;
+mod storage;
+pub use recovery_capacity::{JournalCapacity, JournalSpace, RecoveryReserve};
 pub mod governance;
 pub use governance::{PolicyUpdate, PolicyUpdateReceipt};
-pub mod requests;
 pub mod observed;
+pub mod requests;
 pub use stopping::FileStopSweep;
 #[cfg(test)]
 mod tests;
 
-use super::{DeliveryBroker, DispatchEnvelope, EndpointOutcome, EndpointStatus, PublicationEndpoint, StopReceipt, StopRequest};
 use super::super::congress::CongressPolicy;
-use super::super::gate::{ControlInspection, TargetCeiling};
 use super::super::gate::containment::ActorState;
-use super::super::gate::containment::session::policy::{Policy, controller::{ControllerConfig, PolicyReceipt}};
-use crate::action::{ActionSpec, ActionState, ElapsedTick, FrozenAction, Permit, ResolvedTarget, Scope};
+use super::super::gate::containment::session::policy::{
+    Policy,
+    controller::{ControllerConfig, PolicyReceipt},
+};
+use super::super::gate::{ControlInspection, TargetCeiling};
+use super::{
+    DeliveryBroker, DispatchEnvelope, EndpointOutcome, EndpointStatus, PublicationEndpoint,
+    StopReceipt, StopRequest,
+};
+use crate::action::{
+    ActionSpec, ActionState, ElapsedTick, FrozenAction, Permit, ResolvedTarget, Scope,
+};
 use crate::round::Verdict;
 use crate::{Error, Snapshot};
 use std::collections::BTreeMap;
@@ -41,13 +47,25 @@ pub const MAX_SNAPSHOT_ENTRIES: usize = 256;
 pub const MAX_SNAPSHOT_BYTES: usize = 256 * 1024;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub struct JournalLimits { pub events: usize, pub bytes: usize }
+pub struct JournalLimits {
+    pub events: usize,
+    pub bytes: usize,
+}
 impl Default for JournalLimits {
-    fn default() -> Self { Self { events: MAX_JOURNAL_EVENTS, bytes: MAX_JOURNAL_BYTES } }
+    fn default() -> Self {
+        Self {
+            events: MAX_JOURNAL_EVENTS,
+            bytes: MAX_JOURNAL_BYTES,
+        }
+    }
 }
 impl JournalLimits {
     fn check(self) -> Result<(), Error> {
-        if self.events == 0 || self.events > MAX_JOURNAL_EVENTS || self.bytes == 0 || self.bytes > MAX_JOURNAL_BYTES {
+        if self.events == 0
+            || self.events > MAX_JOURNAL_EVENTS
+            || self.bytes == 0
+            || self.bytes > MAX_JOURNAL_BYTES
+        {
             return Err(Error::Limit);
         }
         Ok(())
@@ -78,8 +96,11 @@ pub struct FileDeliveryProfile {
 }
 impl fmt::Debug for FileDeliveryProfile {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("FileDeliveryProfile").field("scope", &self.scope)
-            .field("target", &self.target).field("limits", &self.limits).finish_non_exhaustive()
+        f.debug_struct("FileDeliveryProfile")
+            .field("scope", &self.scope)
+            .field("target", &self.target)
+            .field("limits", &self.limits)
+            .finish_non_exhaustive()
     }
 }
 
@@ -87,7 +108,10 @@ impl fmt::Debug for FileDeliveryProfile {
 /// reconstructs commitments/reveals and evaluates the fixed congress roster.
 /// An omitted member stays missing; this API does not authenticate a helper.
 #[derive(Clone)]
-pub struct ReferenceBallot { pub verdict: Verdict, pub salt: Vec<u8> }
+pub struct ReferenceBallot {
+    pub verdict: Verdict,
+    pub salt: Vec<u8>,
+}
 #[derive(Clone)]
 pub struct ReferenceReview {
     pub attempt: u64,
@@ -98,8 +122,11 @@ pub struct ReferenceReview {
 }
 impl fmt::Debug for ReferenceReview {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("ReferenceReview").field("attempt", &self.attempt)
-            .field("round", &self.round).field("ballots", &self.ballots.len()).finish_non_exhaustive()
+        f.debug_struct("ReferenceReview")
+            .field("attempt", &self.attempt)
+            .field("round", &self.round)
+            .field("ballots", &self.ballots.len())
+            .finish_non_exhaustive()
     }
 }
 
@@ -111,11 +138,28 @@ impl fmt::Debug for ReferenceReview {
 /// fn duplicate(key: FilePermit) { let _ = key.clone(); }
 /// ```
 #[derive(Debug)]
-pub struct FilePermit { issuer: Rc<()>, attempt: u64 }
-impl FilePermit { pub fn attempt(&self) -> u64 { self.attempt } }
+pub struct FilePermit {
+    issuer: Rc<()>,
+    attempt: u64,
+}
+impl FilePermit {
+    pub fn attempt(&self) -> u64 {
+        self.attempt
+    }
+}
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum JournalIo { Directory, Lock, Read, Stage, Write, FileSync, Rename, DirectorySync, Cleanup }
+pub enum JournalIo {
+    Directory,
+    Lock,
+    Read,
+    Stage,
+    Write,
+    FileSync,
+    Rename,
+    DirectorySync,
+    Cleanup,
+}
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct JournalFailure {
     pub operation: JournalIo,
@@ -125,15 +169,31 @@ pub struct JournalFailure {
     pub replacement_may_be_visible: bool,
 }
 #[derive(Clone, Debug, PartialEq, Eq)]
-pub enum JournalError { Contract(Error), Io(JournalFailure), Busy, Unavailable, InvalidFile }
-impl From<Error> for JournalError { fn from(error: Error) -> Self { Self::Contract(error) } }
+pub enum JournalError {
+    Contract(Error),
+    Io(JournalFailure),
+    Busy,
+    Unavailable,
+    InvalidFile,
+}
+impl From<Error> for JournalError {
+    fn from(error: Error) -> Self {
+        Self::Contract(error)
+    }
+}
 impl fmt::Display for JournalError {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result { write!(f, "{self:?}") }
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{self:?}")
+    }
 }
 impl std::error::Error for JournalError {}
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum Reconciliation { Resolved(EndpointOutcome), AwaitingResolution, RetentionExpired }
+pub enum Reconciliation {
+    Resolved(EndpointOutcome),
+    AwaitingResolution,
+    RetentionExpired,
+}
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct FileDeliverySnapshot {
     pub revision: u64,
@@ -164,8 +224,11 @@ pub struct FileDelivery {
 }
 impl fmt::Debug for FileDelivery {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("FileDelivery").field("revision", &self.revision())
-            .field("clock_ready", &self.clock_ready()).field("fault", &self.fault).finish_non_exhaustive()
+        f.debug_struct("FileDelivery")
+            .field("revision", &self.revision())
+            .field("clock_ready", &self.clock_ready())
+            .field("fault", &self.fault)
+            .finish_non_exhaustive()
     }
 }
 
@@ -189,12 +252,11 @@ enum Event {
     ReserveRecovery(RecoveryReserve),
     ActivateCredibility(Box<credibility::CredibilityActivation>),
     WithdrawCredibility(credibility::CredibilityWithdrawalRequest),
-    AbandonUnknown(FileAbandonRequest),
 }
 enum Transition {
     Unit,
     Proposed(FrozenAction),
-    Reviewed(PolicyReceipt),
+    Reviewed(Box<PolicyReceipt>),
     Published(EndpointOutcome),
     Reconciled(Reconciliation),
     Swept(BTreeMap<u64, Result<Reconciliation, Error>>),
@@ -203,7 +265,6 @@ enum Transition {
     PolicyUpdated(PolicyUpdateReceipt),
     CredibilityActivated(credibility::CredibilityChange),
     CredibilityWithdrawn(credibility::CredibilityWithdrawal),
-    Abandoned(FileAbandonReceipt),
 }
 
 struct Machine {
@@ -215,28 +276,46 @@ struct Machine {
     clock_ready: bool,
     requests: requests::RequestBook,
     policy_updates: governance::PolicyUpdates,
-    abandonments: abandonment::Abandonments,
 }
 impl Machine {
     fn new(profile: &FileDeliveryProfile) -> Result<Self, Error> {
         codec::validate_profile(profile)?;
-        let mut endpoint = PublicationEndpoint::new(profile.target, profile.initial_payload.clone(),
-            profile.retention_ticks, profile.max_deliveries)?;
-        let mut broker = DeliveryBroker::new(ControllerConfig {
-            scope: profile.scope, total: profile.total, max_attempts: profile.max_attempts,
-            actor: profile.actor.clone(), suspend_at_incident: profile.suspend_at_incident,
-            policy: profile.policy.clone(), congress: profile.congress.clone(),
-            narrowed_targets: TargetCeiling::new(&profile.narrowed_targets)?,
-        }, &mut endpoint)?;
+        let mut endpoint = PublicationEndpoint::new(
+            profile.target,
+            profile.initial_payload.clone(),
+            profile.retention_ticks,
+            profile.max_deliveries,
+        )?;
+        let mut broker = DeliveryBroker::new(
+            ControllerConfig {
+                scope: profile.scope,
+                total: profile.total,
+                max_attempts: profile.max_attempts,
+                actor: profile.actor.clone(),
+                suspend_at_incident: profile.suspend_at_incident,
+                policy: profile.policy.clone(),
+                congress: profile.congress.clone(),
+                narrowed_targets: TargetCeiling::new(&profile.narrowed_targets)?,
+            },
+            &mut endpoint,
+        )?;
         broker.confirm_fence(endpoint.install_fence(broker.fence_request())?)?;
-        Ok(Self { broker, endpoint, actions: BTreeMap::new(), permits: BTreeMap::new(),
-            envelopes: BTreeMap::new(), clock_ready: false, requests: requests::RequestBook::default(),
+        Ok(Self {
+            broker,
+            endpoint,
+            actions: BTreeMap::new(),
+            permits: BTreeMap::new(),
+            envelopes: BTreeMap::new(),
+            clock_ready: false,
+            requests: requests::RequestBook::default(),
             policy_updates: governance::PolicyUpdates::default(),
-            abandonments: abandonment::Abandonments::default() })
+        })
     }
     fn replay(profile: &FileDeliveryProfile, events: &[Event]) -> Result<Self, Error> {
         let mut machine = Self::new(profile)?;
-        for event in events { machine.apply(event)?; }
+        for event in events {
+            machine.apply(event)?;
+        }
         Ok(machine)
     }
     fn apply(&mut self, event: &Event) -> Result<Transition, Error> {
@@ -245,18 +324,35 @@ impl Machine {
         Ok(result)
     }
     fn apply_inner(&mut self, event: &Event) -> Result<Transition, Error> {
-        if matches!(event, Event::Propose(..) | Event::Review(..) | Event::Authorize(..)
-            | Event::Dispatch(..) | Event::Publish(..) | Event::Reconcile(..) | Event::Seal(..) | Event::Sweep | Event::SubmitRequest(..))
-            && !self.clock_ready { return Err(Error::Incomplete); }
+        if matches!(
+            event,
+            Event::Propose(..)
+                | Event::Review(..)
+                | Event::Authorize(..)
+                | Event::Dispatch(..)
+                | Event::Publish(..)
+                | Event::Reconcile(..)
+                | Event::Seal(..)
+                | Event::Sweep
+                | Event::SubmitRequest(..)
+        ) && !self.clock_ready
+        {
+            return Err(Error::Incomplete);
+        }
         match event {
             // Canonical admission validates this marker and every following prefix.
             // It grants no rights and changes no original authority transition.
             Event::ReserveRecovery(_) => {}
-            Event::ActivateCredibility(request) => return self.apply_credibility_activation(request),
-            Event::WithdrawCredibility(request) => return self.apply_credibility_withdrawal(request),
+            Event::ActivateCredibility(request) => {
+                return self.apply_credibility_activation(request);
+            }
+            Event::WithdrawCredibility(request) => {
+                return self.apply_credibility_withdrawal(request);
+            }
             Event::ReplacePolicy(update) => return self.apply_policy_update(update),
-            Event::AbandonUnknown(request) => return self.apply_abandonment(*request),
-            Event::SubmitRequest(id, spec, snapshot) => return self.apply_request(*id, spec, snapshot),
+            Event::SubmitRequest(id, spec, snapshot) => {
+                return self.apply_request(*id, spec, snapshot);
+            }
             Event::Time(tick) => {
                 self.broker.observe_time(*tick)?;
                 self.endpoint.observe_time(*tick)?;
@@ -268,15 +364,24 @@ impl Machine {
                 return Ok(Transition::Proposed(proposal.action));
             }
             Event::Review(input) => {
-                let mut session = self.broker.begin_review(input.attempt, input.round, input.evidence_root, &input.snapshot)?;
+                let mut session = self.broker.begin_review(
+                    input.attempt,
+                    input.round,
+                    input.evidence_root,
+                    &input.snapshot,
+                )?;
                 for (member, ballot) in &input.ballots {
                     let commitment = session.commitment(member, ballot.verdict, &ballot.salt)?;
                     session.commit(member, commitment)?;
                 }
                 session.open_reveals()?;
-                for (member, ballot) in &input.ballots { session.reveal(member, ballot.verdict, &ballot.salt)?; }
-                let receipt = self.broker.apply_review(session.finish()?, &input.snapshot)?;
-                return Ok(Transition::Reviewed(receipt));
+                for (member, ballot) in &input.ballots {
+                    session.reveal(member, ballot.verdict, &ballot.salt)?;
+                }
+                let receipt = self
+                    .broker
+                    .apply_review(session.finish()?, &input.snapshot)?;
+                return Ok(Transition::Reviewed(Box::new(receipt)));
             }
             Event::Authorize(id, snapshot) => {
                 let permit = self.broker.authorize(*id, snapshot)?;
@@ -314,22 +419,37 @@ impl Machine {
                 // preserves each result, including unresolved/expired liabilities.
                 // It may atomically seal expired requests; it NEVER resends them.
                 let results = self.broker.reconcile_pending(&mut self.endpoint)?;
-                return Ok(Transition::Swept(results.into_iter()
-                    .map(|(id, result)| (id, result.map(project_status))).collect()));
+                return Ok(Transition::Swept(
+                    results
+                        .into_iter()
+                        .map(|(id, result)| (id, result.map(project_status)))
+                        .collect(),
+                ));
             }
             Event::Stop(request) => return self.apply_stop(*request),
             Event::StopProgress(tick) => return self.apply_stop_progress(*tick),
-            Event::Cancel(id) => { self.broker.cancel(*id)?; self.permits.remove(id); }
+            Event::Cancel(id) => {
+                self.broker.cancel(*id)?;
+                self.permits.remove(id);
+            }
             Event::Fence => {
                 // The original authority keeps spent rights and its suspension.
                 // Only undispatched attempts are eligible for cancellation/refund.
                 self.broker.revoke_epoch()?;
                 for (id, stage) in self.broker.inspect().ledger.stages {
-                    if matches!(stage, ActionState::Proposed | ActionState::Prepared
-                        | ActionState::Reviewing | ActionState::Authorized) { self.broker.cancel(id)?; }
+                    if matches!(
+                        stage,
+                        ActionState::Proposed
+                            | ActionState::Prepared
+                            | ActionState::Reviewing
+                            | ActionState::Authorized
+                    ) {
+                        self.broker.cancel(id)?;
+                    }
                 }
                 let fence = self.broker.restart_dispatcher()?;
-                self.broker.confirm_fence(self.endpoint.install_fence(fence)?)?;
+                self.broker
+                    .confirm_fence(self.endpoint.install_fence(fence)?)?;
                 self.permits.clear();
                 self.envelopes.clear(); // Old dispatches may be queried, NEVER resent.
                 self.clock_ready = false;
@@ -338,10 +458,15 @@ impl Machine {
         Ok(Transition::Unit)
     }
     fn snapshot(&self, revision: usize) -> FileDeliverySnapshot {
-        FileDeliverySnapshot { revision: revision as u64, control: self.broker.inspect(),
-            dispatcher_epoch: self.broker.dispatcher_epoch(), stop: self.broker.stop_receipt().cloned(),
-            target: self.endpoint.target(), payload: self.endpoint.payload().to_vec(),
-            executions: self.endpoint.execution_count() }
+        FileDeliverySnapshot {
+            revision: revision as u64,
+            control: self.broker.inspect(),
+            dispatcher_epoch: self.broker.dispatcher_epoch(),
+            stop: self.broker.stop_receipt().cloned(),
+            target: self.endpoint.target(),
+            payload: self.endpoint.payload().to_vec(),
+            executions: self.endpoint.execution_count(),
+        }
     }
 }
 
@@ -356,26 +481,46 @@ fn project_status(status: EndpointStatus) -> Reconciliation {
 impl FileDelivery {
     /// Provision a NEW protected directory. Existing paths, even empty ones,
     /// cannot be mistaken for permission to initialize another copy of rights.
-    pub fn create(directory: impl AsRef<Path>, profile: FileDeliveryProfile) -> Result<Self, JournalError> {
+    pub fn create(
+        directory: impl AsRef<Path>,
+        profile: FileDeliveryProfile,
+    ) -> Result<Self, JournalError> {
         let machine = Machine::new(&profile)?;
         let store = storage::Store::create(directory.as_ref())?;
         let bytes = codec::encode(&profile, store.identity(), &[])?;
         store.replace(&bytes)?;
-        Ok(Self { profile, store, events: Vec::new(), machine, issuer: Rc::new(()), fault: None })
+        Ok(Self {
+            profile,
+            store,
+            events: Vec::new(),
+            machine,
+            issuer: Rc::new(()),
+            fault: None,
+        })
     }
 
     /// Rebuild both original reducers from the complete canonical history, then
     /// durably fence old permissions BEFORE exposing a writable owner. No pending
     /// effect is resent or refunded. A fresh process-independent time observation
     /// is mandatory even when the archive contains a recent-looking saved tick.
-    pub fn open(directory: impl AsRef<Path>, profile: FileDeliveryProfile) -> Result<Self, JournalError> {
+    pub fn open(
+        directory: impl AsRef<Path>,
+        profile: FileDeliveryProfile,
+    ) -> Result<Self, JournalError> {
         profile.limits.check()?;
         let store = storage::Store::open(directory.as_ref())?;
         let bytes = store.read(profile.limits.bytes)?;
         let events = codec::decode(&profile, store.identity(), &bytes)?;
         let machine = Machine::replay(&profile, &events)?;
         store.confirm_and_cleanup()?;
-        let mut host = Self { profile, store, events, machine, issuer: Rc::new(()), fault: None };
+        let mut host = Self {
+            profile,
+            store,
+            events,
+            machine,
+            issuer: Rc::new(()),
+            fault: None,
+        };
         host.transact(host.revision(), Event::Fence)?;
         Ok(host)
     }
@@ -383,91 +528,161 @@ impl FileDelivery {
     /// Read one immutable canonical replacement. Pure replay cannot expose an
     /// authority or publish a side effect. The returned elapsed tick is HISTORY,
     /// not proof that the corresponding permission window is still current.
-    pub fn read_publication(directory: impl AsRef<Path>, profile: &FileDeliveryProfile) -> Result<FileDeliverySnapshot, JournalError> {
+    pub fn read_publication(
+        directory: impl AsRef<Path>,
+        profile: &FileDeliveryProfile,
+    ) -> Result<FileDeliverySnapshot, JournalError> {
         let identity = storage::identity(directory.as_ref())?;
         let bytes = storage::read(&identity.join(storage::CANONICAL), profile.limits.bytes)?;
         let events = codec::decode(profile, &identity, &bytes)?;
         Ok(Machine::replay(profile, &events)?.snapshot(events.len()))
     }
 
-    pub fn revision(&self) -> u64 { self.events.len() as u64 }
-    pub fn inspect(&self) -> FileDeliverySnapshot { self.machine.snapshot(self.events.len()) }
-    pub fn clock_ready(&self) -> bool { self.fault.is_none() && self.machine.clock_ready }
-    pub fn storage_failure(&self) -> Option<&JournalFailure> { self.fault.as_ref() }
+    pub fn revision(&self) -> u64 {
+        self.events.len() as u64
+    }
+    pub fn inspect(&self) -> FileDeliverySnapshot {
+        self.machine.snapshot(self.events.len())
+    }
+    pub fn clock_ready(&self) -> bool {
+        self.fault.is_none() && self.machine.clock_ready
+    }
+    pub fn storage_failure(&self) -> Option<&JournalFailure> {
+        self.fault.as_ref()
+    }
 
     pub fn observe_time(&mut self, revision: u64, tick: ElapsedTick) -> Result<(), JournalError> {
-        self.transact(revision, Event::Time(tick))?; Ok(())
+        self.transact(revision, Event::Time(tick))?;
+        Ok(())
     }
-    pub fn propose(&mut self, revision: u64, attempt: u64, spec: ActionSpec,
-        snapshot: Snapshot) -> Result<FrozenAction, JournalError>
-    {
+    pub fn propose(
+        &mut self,
+        revision: u64,
+        attempt: u64,
+        spec: ActionSpec,
+        snapshot: Snapshot,
+    ) -> Result<FrozenAction, JournalError> {
         match self.transact(revision, Event::Propose(attempt, spec, snapshot))? {
-            Transition::Proposed(action) => Ok(action), _ => unreachable!("proposal transition"),
+            Transition::Proposed(action) => Ok(action),
+            _ => unreachable!("proposal transition"),
         }
     }
-    pub fn review(&mut self, revision: u64, input: ReferenceReview) -> Result<PolicyReceipt, JournalError> {
+    pub fn review(
+        &mut self,
+        revision: u64,
+        input: ReferenceReview,
+    ) -> Result<PolicyReceipt, JournalError> {
         match self.transact(revision, Event::Review(input))? {
-            Transition::Reviewed(receipt) => Ok(receipt), _ => unreachable!("review transition"),
+            Transition::Reviewed(receipt) => Ok(*receipt),
+            _ => unreachable!("review transition"),
         }
     }
-    pub fn authorize(&mut self, revision: u64, attempt: u64, snapshot: Snapshot) -> Result<FilePermit, JournalError> {
+    pub fn authorize(
+        &mut self,
+        revision: u64,
+        attempt: u64,
+        snapshot: Snapshot,
+    ) -> Result<FilePermit, JournalError> {
         self.transact(revision, Event::Authorize(attempt, snapshot))?;
-        Ok(FilePermit { issuer: Rc::clone(&self.issuer), attempt })
+        Ok(FilePermit {
+            issuer: Rc::clone(&self.issuer),
+            attempt,
+        })
     }
-    pub fn dispatch(&mut self, revision: u64, key: &FilePermit,
-        exact_action: &FrozenAction, snapshot: Snapshot) -> Result<(), JournalError>
-    {
+    pub fn dispatch(
+        &mut self,
+        revision: u64,
+        key: &FilePermit,
+        exact_action: &FrozenAction,
+        snapshot: Snapshot,
+    ) -> Result<(), JournalError> {
         if !Rc::ptr_eq(&self.issuer, &key.issuer)
-            || self.machine.actions.get(&key.attempt) != Some(exact_action) { return Err(Error::Binding.into()); }
-        self.transact(revision, Event::Dispatch(key.attempt, snapshot))?; Ok(())
+            || self.machine.actions.get(&key.attempt) != Some(exact_action)
+        {
+            return Err(Error::Binding.into());
+        }
+        self.transact(revision, Event::Dispatch(key.attempt, snapshot))?;
+        Ok(())
     }
-    pub fn publish(&mut self, revision: u64, attempt: u64) -> Result<EndpointOutcome, JournalError> {
+    pub fn publish(
+        &mut self,
+        revision: u64,
+        attempt: u64,
+    ) -> Result<EndpointOutcome, JournalError> {
         match self.transact(revision, Event::Publish(attempt))? {
-            Transition::Published(outcome) => Ok(outcome), _ => unreachable!("publication transition"),
+            Transition::Published(outcome) => Ok(outcome),
+            _ => unreachable!("publication transition"),
         }
     }
-    pub fn reconcile(&mut self, revision: u64, attempt: u64) -> Result<Reconciliation, JournalError> {
+    pub fn reconcile(
+        &mut self,
+        revision: u64,
+        attempt: u64,
+    ) -> Result<Reconciliation, JournalError> {
         match self.transact(revision, Event::Reconcile(attempt))? {
-            Transition::Reconciled(outcome) => Ok(outcome), _ => unreachable!("reconciliation transition"),
+            Transition::Reconciled(outcome) => Ok(outcome),
+            _ => unreachable!("reconciliation transition"),
         }
     }
-    pub fn seal_unexecuted(&mut self, revision: u64, attempt: u64) -> Result<Reconciliation, JournalError> {
+    pub fn seal_unexecuted(
+        &mut self,
+        revision: u64,
+        attempt: u64,
+    ) -> Result<Reconciliation, JournalError> {
         match self.transact(revision, Event::Seal(attempt))? {
-            Transition::Reconciled(outcome) => Ok(outcome), _ => unreachable!("sealing transition"),
+            Transition::Reconciled(outcome) => Ok(outcome),
+            _ => unreachable!("sealing transition"),
         }
     }
     /// One durable transition over the original pending-reconciliation sweep.
     /// Per-attempt failures remain explicit, and successful sibling settlements
     /// commit together. Storage failure returns NONE of the candidate outcomes.
     /// This never supplies new evidence, permits, clocks or sendable envelopes.
-    pub fn reconcile_pending(&mut self, revision: u64)
-        -> Result<BTreeMap<u64, Result<Reconciliation, Error>>, JournalError>
-    {
+    pub fn reconcile_pending(
+        &mut self,
+        revision: u64,
+    ) -> Result<BTreeMap<u64, Result<Reconciliation, Error>>, JournalError> {
         match self.transact(revision, Event::Sweep)? {
-            Transition::Swept(outcomes) => Ok(outcomes), _ => unreachable!("sweep transition"),
+            Transition::Swept(outcomes) => Ok(outcomes),
+            _ => unreachable!("sweep transition"),
         }
     }
     pub fn cancel(&mut self, revision: u64, attempt: u64) -> Result<(), JournalError> {
-        self.transact(revision, Event::Cancel(attempt))?; Ok(())
+        self.transact(revision, Event::Cancel(attempt))?;
+        Ok(())
     }
     pub fn fence(&mut self, revision: u64) -> Result<(), JournalError> {
-        self.transact(revision, Event::Fence)?; Ok(())
+        self.transact(revision, Event::Fence)?;
+        Ok(())
     }
 
     fn transact(&mut self, revision: u64, event: Event) -> Result<Transition, JournalError> {
-        if self.fault.is_some() { return Err(JournalError::Unavailable); }
-        if revision != self.revision() { return Err(Error::Stale.into()); }
-        if self.events.len() >= self.profile.limits.events { return Err(Error::Limit.into()); }
+        if self.fault.is_some() {
+            return Err(JournalError::Unavailable);
+        }
+        if revision != self.revision() {
+            return Err(Error::Stale.into());
+        }
+        if self.events.len() >= self.profile.limits.events {
+            return Err(Error::Limit.into());
+        }
         // Bound/encode the new inputs before replay or cloning a history. The
         // candidate is a private, non-effectful projection, not a second sink.
-        let bytes = codec::encode_appended(&self.profile, self.store.identity(), &self.events, &event)?;
+        let bytes =
+            codec::encode_appended(&self.profile, self.store.identity(), &self.events, &event)?;
         let mut candidate = Machine::replay(&self.profile, &self.events)?;
         let result = candidate.apply(&event)?;
         self.events.try_reserve(1).map_err(|_| Error::Limit)?;
         if let Err(error) = self.store.replace(&bytes) {
-            if let JournalError::Io(failure) = &error { self.fault = Some(failure.clone()); }
-            else { self.fault = Some(JournalFailure { operation: JournalIo::Stage,
-                kind: io::ErrorKind::Other, replacement_may_be_visible: true }); }
+            if let JournalError::Io(failure) = &error {
+                self.fault = Some(failure.clone());
+            } else {
+                self.fault = Some(JournalFailure {
+                    operation: JournalIo::Stage,
+                    kind: io::ErrorKind::Other,
+                    replacement_may_be_visible: true,
+                });
+            }
             // Do not return a permit, outcome or refund after ambiguous I/O.
             // inspect() remains the last fully acknowledged state; disk may be
             // newer. Both are unavailable for new effects until exclusive reopen.

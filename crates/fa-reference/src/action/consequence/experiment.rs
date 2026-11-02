@@ -53,7 +53,13 @@ impl InterventionScope {
         if unique.len() != keys.len() {
             return Err(Error::Duplicate);
         }
-        Ok(Self { id, payload, target, units, keys: unique })
+        Ok(Self {
+            id,
+            payload,
+            target,
+            units,
+            keys: unique,
+        })
     }
 }
 
@@ -115,16 +121,36 @@ pub struct CounterfactualReport {
 }
 
 impl CounterfactualReport {
-    pub fn scope(&self) -> u64 { self.scope }
-    pub fn attempt(&self) -> u64 { self.attempt }
-    pub fn round(&self) -> u64 { self.round }
-    pub fn baseline(&self) -> Truth { self.baseline }
-    pub fn counterfactual(&self) -> Truth { self.counterfactual }
-    pub fn trace(&self) -> &[Truth] { &self.trace }
-    pub fn changes(&self) -> &[NodeChange] { &self.changes }
-    pub fn interventions(&self) -> &[Intervention] { &self.interventions }
-    pub fn next_requirement(&self) -> NextRequirement { self.next }
-    pub fn empirical_status(&self) -> EmpiricalStatus { self.empirical }
+    pub fn scope(&self) -> u64 {
+        self.scope
+    }
+    pub fn attempt(&self) -> u64 {
+        self.attempt
+    }
+    pub fn round(&self) -> u64 {
+        self.round
+    }
+    pub fn baseline(&self) -> Truth {
+        self.baseline
+    }
+    pub fn counterfactual(&self) -> Truth {
+        self.counterfactual
+    }
+    pub fn trace(&self) -> &[Truth] {
+        &self.trace
+    }
+    pub fn changes(&self) -> &[NodeChange] {
+        &self.changes
+    }
+    pub fn interventions(&self) -> &[Intervention] {
+        &self.interventions
+    }
+    pub fn next_requirement(&self) -> NextRequirement {
+        self.next
+    }
+    pub fn empirical_status(&self) -> EmpiricalStatus {
+        self.empirical
+    }
 }
 
 /// Stores data only. There is no constructor from a controller, checkpoint
@@ -154,31 +180,45 @@ impl PolicyExperiment {
         // before admitting interventions. No omitted provider rows are invented.
         let trace = evidence.evaluate(&expected.policy, &expected.action)?;
         if trace.len() != baseline.evaluation().trace().len()
-            || trace.iter().zip(baseline.evaluation().trace())
+            || trace
+                .iter()
+                .zip(baseline.evaluation().trace())
                 .any(|(result, step)| *result != step.result)
         {
             return Err(Error::Binding);
         }
-        Ok(Self { anchor: expected.clone(), baseline, evidence, scope })
+        Ok(Self {
+            anchor: expected.clone(),
+            baseline,
+            evidence,
+            scope,
+        })
     }
 
-    pub fn baseline(&self) -> &ReplayedDecision { &self.baseline }
+    pub fn baseline(&self) -> &ReplayedDecision {
+        &self.baseline
+    }
 
     /// Each branch starts from the immutable baseline, not the previous branch.
     /// Errors leave it intact. Even an empty/no-op branch is historical data,
     /// and an exact-policy repair still requires a new independent congress.
     pub fn run(&self, edits: &[Intervention]) -> Result<CounterfactualReport, Error> {
-        let (action, evidence, changed) = apply_interventions(
-            &self.anchor.action, &self.evidence, &self.scope, edits,
-        )?;
+        let (action, evidence, changed) =
+            apply_interventions(&self.anchor.action, &self.evidence, &self.scope, edits)?;
         let trace = evidence.evaluate(&self.anchor.policy, &action)?;
         let result = *trace.last().ok_or(Error::InvalidInput)?;
-        let changes = trace.iter().zip(self.baseline.evaluation().trace())
-            .enumerate().filter_map(|(node, (after, before))| {
+        let changes = trace
+            .iter()
+            .zip(self.baseline.evaluation().trace())
+            .enumerate()
+            .filter_map(|(node, (after, before))| {
                 (*after != before.result).then_some(NodeChange {
-                    node, baseline: before.result, counterfactual: *after,
+                    node,
+                    baseline: before.result,
+                    counterfactual: *after,
                 })
-            }).collect();
+            })
+            .collect();
         let next = match result {
             Truth::Violated => NextRequirement::ExactPolicyViolation,
             Truth::Satisfied if !trace.contains(&Truth::Unknown) => {
@@ -208,7 +248,9 @@ impl PolicyExperiment {
 // Shared by archived congress experiments and proposal-only diagnosis. Edits
 // never manufacture coverage, inherit witnesses, or retain production purpose.
 fn apply_interventions(
-    baseline: &FrozenAction, original: &EvidenceSlice, scope: &InterventionScope,
+    baseline: &FrozenAction,
+    original: &EvidenceSlice,
+    scope: &InterventionScope,
     edits: &[Intervention],
 ) -> Result<(FrozenAction, EvidenceSlice, bool), Error> {
     validate_edit_bounds(edits)?;
@@ -230,24 +272,38 @@ fn apply_interventions(
         }
         match edit {
             Intervention::Payload(payload) => {
-                if !scope.payload { return Err(Error::Binding); }
+                if !scope.payload {
+                    return Err(Error::Binding);
+                }
                 changed |= spec.payload != *payload;
                 spec.payload = payload.clone();
             }
             Intervention::Target(target) => {
-                if !scope.target { return Err(Error::Binding); }
+                if !scope.target {
+                    return Err(Error::Binding);
+                }
                 changed |= spec.target != Some(*target);
                 spec.target = Some(*target);
             }
             Intervention::Units(units) => {
-                if !scope.units { return Err(Error::Binding); }
+                if !scope.units {
+                    return Err(Error::Binding);
+                }
                 changed |= spec.units != *units;
                 spec.units = *units;
             }
-            Intervention::Key { key, expected, replacement } => {
-                if !scope.keys.contains(key) { return Err(Error::Binding); }
+            Intervention::Key {
+                key,
+                expected,
+                replacement,
+            } => {
+                if !scope.keys.contains(key) {
+                    return Err(Error::Binding);
+                }
                 let actual = original.lookup(*key).ok_or(Error::Incomplete)?;
-                if actual != expected.as_deref() { return Err(Error::Stale); }
+                if actual != expected.as_deref() {
+                    return Err(Error::Stale);
+                }
                 changed |= expected != replacement;
                 evidence.values.insert(*key, replacement.clone());
             }
@@ -259,23 +315,33 @@ fn apply_interventions(
 }
 
 fn validate_edit_bounds(edits: &[Intervention]) -> Result<(), Error> {
-    if edits.len() > MAX_INTERVENTIONS { return Err(Error::Limit); }
+    if edits.len() > MAX_INTERVENTIONS {
+        return Err(Error::Limit);
+    }
     let mut bytes = 0_usize;
     for edit in edits {
         let size = match edit {
             Intervention::Payload(value) => {
-                if value.len() > MAX_PAYLOAD_BYTES { return Err(Error::Limit); }
+                if value.len() > MAX_PAYLOAD_BYTES {
+                    return Err(Error::Limit);
+                }
                 value.len()
             }
-            Intervention::Key { expected, replacement, .. } => {
-                expected.as_ref().map_or(0, Vec::len)
-                    .checked_add(replacement.as_ref().map_or(0, Vec::len))
-                    .ok_or(Error::Limit)?
-            }
+            Intervention::Key {
+                expected,
+                replacement,
+                ..
+            } => expected
+                .as_ref()
+                .map_or(0, Vec::len)
+                .checked_add(replacement.as_ref().map_or(0, Vec::len))
+                .ok_or(Error::Limit)?,
             _ => 0,
         };
         bytes = bytes.checked_add(size).ok_or(Error::Limit)?;
-        if bytes > MAX_INTERVENTION_BYTES { return Err(Error::Limit); }
+        if bytes > MAX_INTERVENTION_BYTES {
+            return Err(Error::Limit);
+        }
     }
     Ok(())
 }
@@ -290,7 +356,9 @@ struct EvidenceSlice {
 
 impl EvidenceSlice {
     fn new(observations: &[ReadWitness]) -> Result<Self, Error> {
-        if observations.len() > MAX_REQUIRED_WITNESSES { return Err(Error::Limit); }
+        if observations.len() > MAX_REQUIRED_WITNESSES {
+            return Err(Error::Limit);
+        }
         let mut values = BTreeMap::new();
         let mut closed = Vec::new();
         let mut empty = Vec::new();
@@ -298,9 +366,12 @@ impl EvidenceSlice {
         for observation in observations {
             match observation {
                 ReadWitness::Exact { key, value } => {
-                    bytes = bytes.checked_add(value.as_ref().map_or(0, Vec::len))
+                    bytes = bytes
+                        .checked_add(value.as_ref().map_or(0, Vec::len))
                         .ok_or(Error::Limit)?;
-                    if bytes > MAX_WITNESS_BYTES { return Err(Error::Limit); }
+                    if bytes > MAX_WITNESS_BYTES {
+                        return Err(Error::Limit);
+                    }
                     if values.get(key).is_some_and(|previous| previous != value) {
                         return Err(Error::Binding);
                     }
@@ -310,7 +381,9 @@ impl EvidenceSlice {
                     }
                 }
                 ReadWitness::EmptyRange { start, end } => {
-                    if start >= end { return Err(Error::InvalidInput); }
+                    if start >= end {
+                        return Err(Error::InvalidInput);
+                    }
                     closed.push((*start, *end));
                     empty.push((*start, *end));
                 }
@@ -324,15 +397,18 @@ impl EvidenceSlice {
         closed.sort_unstable();
         let mut merged: Vec<(u64, u64)> = Vec::new();
         for (start, end) in closed {
-            if let Some(last) = merged.last_mut() {
-                if start <= last.1 {
-                    last.1 = last.1.max(end);
-                    continue;
-                }
+            if let Some(last) = merged.last_mut()
+                && start <= last.1
+            {
+                last.1 = last.1.max(end);
+                continue;
             }
             merged.push((start, end));
         }
-        Ok(Self { values, closed: merged })
+        Ok(Self {
+            values,
+            closed: merged,
+        })
     }
 
     /// Outer None is unobserved; Some(None) is a known absence.
@@ -340,7 +416,9 @@ impl EvidenceSlice {
         if let Some(value) = self.values.get(&key) {
             return Some(value.as_deref());
         }
-        self.closed.iter().any(|(start, end)| *start <= key && key < *end)
+        self.closed
+            .iter()
+            .any(|(start, end)| *start <= key && key < *end)
             .then_some(None)
     }
 
@@ -348,16 +426,26 @@ impl EvidenceSlice {
         let mut bytes = 0_usize;
         for value in self.values.values().flatten() {
             bytes = bytes.checked_add(value.len()).ok_or(Error::Limit)?;
-            if bytes > MAX_WITNESS_BYTES { return Err(Error::Limit); }
+            if bytes > MAX_WITNESS_BYTES {
+                return Err(Error::Limit);
+            }
         }
         Ok(())
     }
 
     fn range_truth(&self, start: u64, end: u64) -> Truth {
-        if self.values.range(start..end).any(|(_, value)| value.is_some()) {
+        if self
+            .values
+            .range(start..end)
+            .any(|(_, value)| value.is_some())
+        {
             return Truth::Violated;
         }
-        if self.closed.iter().any(|(left, right)| *left <= start && end <= *right) {
+        if self
+            .closed
+            .iter()
+            .any(|(left, right)| *left <= start && end <= *right)
+        {
             Truth::Satisfied
         } else {
             Truth::Unknown
@@ -373,13 +461,18 @@ impl EvidenceSlice {
                 Predicate::ExactValue { key, .. } | Predicate::Absent { key } => {
                     self.lookup(*key).flatten()
                 }
-                Predicate::EmptyRange { start, end } => {
-                    self.values.range(*start..*end).find_map(|(_, value)| value.as_deref())
-                }
+                Predicate::EmptyRange { start, end } => self
+                    .values
+                    .range(*start..*end)
+                    .find_map(|(_, value)| value.as_deref()),
                 _ => None,
             };
-            bytes = bytes.checked_add(observed.map_or(0, <[u8]>::len)).ok_or(Error::Limit)?;
-            if bytes > MAX_WITNESS_BYTES { return Err(Error::Limit); }
+            bytes = bytes
+                .checked_add(observed.map_or(0, <[u8]>::len))
+                .ok_or(Error::Limit)?;
+            if bytes > MAX_WITNESS_BYTES {
+                return Err(Error::Limit);
+            }
             let value = match node {
                 Predicate::TargetIs(target) => truth(action.spec().target == Some(*target)),
                 Predicate::PayloadIs(payload) => truth(action.spec().payload == *payload),
@@ -395,7 +488,10 @@ impl EvidenceSlice {
                 },
                 Predicate::EmptyRange { start, end } => self.range_truth(*start, *end),
                 Predicate::All(children) => {
-                    if children.iter().any(|child| trace[*child] == Truth::Violated) {
+                    if children
+                        .iter()
+                        .any(|child| trace[*child] == Truth::Violated)
+                    {
                         Truth::Violated
                     } else if children.iter().any(|child| trace[*child] == Truth::Unknown) {
                         Truth::Unknown
@@ -404,7 +500,10 @@ impl EvidenceSlice {
                     }
                 }
                 Predicate::Any(children) => {
-                    if children.iter().any(|child| trace[*child] == Truth::Satisfied) {
+                    if children
+                        .iter()
+                        .any(|child| trace[*child] == Truth::Satisfied)
+                    {
                         Truth::Satisfied
                     } else if children.iter().any(|child| trace[*child] == Truth::Unknown) {
                         Truth::Unknown
@@ -425,7 +524,11 @@ impl EvidenceSlice {
 }
 
 fn truth(value: bool) -> Truth {
-    if value { Truth::Satisfied } else { Truth::Violated }
+    if value {
+        Truth::Satisfied
+    } else {
+        Truth::Violated
+    }
 }
 
 #[cfg(test)]
@@ -434,9 +537,11 @@ mod tests {
 
     #[test]
     fn deletion_of_the_only_seen_member_does_not_close_a_range() {
-        let mut evidence = EvidenceSlice::new(&[
-            ReadWitness::Exact { key: 15, value: Some(vec![1]) },
-        ]).unwrap();
+        let mut evidence = EvidenceSlice::new(&[ReadWitness::Exact {
+            key: 15,
+            value: Some(vec![1]),
+        }])
+        .unwrap();
         assert_eq!(evidence.range_truth(10, 20), Truth::Violated);
         evidence.values.insert(15, None);
         assert_eq!(evidence.range_truth(10, 20), Truth::Unknown);
@@ -449,10 +554,14 @@ mod tests {
     fn adjacent_closed_domains_merge_without_filling_a_gap() {
         let mut evidence = EvidenceSlice::new(&[
             ReadWitness::EmptyRange { start: 10, end: 14 },
-            ReadWitness::Exact { key: 14, value: None },
+            ReadWitness::Exact {
+                key: 14,
+                value: None,
+            },
             ReadWitness::EmptyRange { start: 15, end: 20 },
             ReadWitness::EmptyRange { start: 21, end: 25 },
-        ]).unwrap();
+        ])
+        .unwrap();
         assert_eq!(evidence.range_truth(10, 20), Truth::Satisfied);
         assert_eq!(evidence.range_truth(10, 25), Truth::Unknown);
         evidence.values.insert(12, Some(vec![9]));
@@ -463,54 +572,99 @@ mod tests {
 
     #[test]
     fn contradictory_observations_are_not_repaired_by_last_write_wins() {
-        assert!(matches!(EvidenceSlice::new(&[
-            ReadWitness::Exact { key: 1, value: None },
-            ReadWitness::Exact { key: 1, value: Some(vec![1]) },
-        ]), Err(Error::Binding)));
-        assert!(matches!(EvidenceSlice::new(&[
-            ReadWitness::Exact { key: 1, value: Some(vec![1]) },
-            ReadWitness::EmptyRange { start: 0, end: 2 },
-        ]), Err(Error::Binding)));
+        assert!(matches!(
+            EvidenceSlice::new(&[
+                ReadWitness::Exact {
+                    key: 1,
+                    value: None
+                },
+                ReadWitness::Exact {
+                    key: 1,
+                    value: Some(vec![1])
+                },
+            ]),
+            Err(Error::Binding)
+        ));
+        assert!(matches!(
+            EvidenceSlice::new(&[
+                ReadWitness::Exact {
+                    key: 1,
+                    value: Some(vec![1])
+                },
+                ReadWitness::EmptyRange { start: 0, end: 2 },
+            ]),
+            Err(Error::Binding)
+        ));
     }
 
     #[test]
     fn maximum_key_is_exact_without_an_overflowing_successor() {
         let evidence = EvidenceSlice::new(&[
-            ReadWitness::Exact { key: u64::MAX, value: Some(vec![1]) },
-            ReadWitness::EmptyRange { start: u64::MAX - 2, end: u64::MAX },
-        ]).unwrap();
+            ReadWitness::Exact {
+                key: u64::MAX,
+                value: Some(vec![1]),
+            },
+            ReadWitness::EmptyRange {
+                start: u64::MAX - 2,
+                end: u64::MAX,
+            },
+        ])
+        .unwrap();
         assert_eq!(evidence.lookup(u64::MAX), Some(Some(&[1][..])));
         assert_eq!(evidence.lookup(u64::MAX - 1), Some(None));
-        assert_eq!(evidence.range_truth(u64::MAX - 2, u64::MAX), Truth::Satisfied);
+        assert_eq!(
+            evidence.range_truth(u64::MAX - 2, u64::MAX),
+            Truth::Satisfied
+        );
     }
 
     #[test]
     fn evidence_bounds_count_duplicate_retained_occurrences() {
         let value = vec![1; MAX_WITNESS_BYTES / 2];
-        let observation = ReadWitness::Exact { key: 1, value: Some(value) };
+        let observation = ReadWitness::Exact {
+            key: 1,
+            value: Some(value),
+        };
         assert!(EvidenceSlice::new(&[observation.clone(), observation.clone()]).is_ok());
-        assert!(matches!(EvidenceSlice::new(&[
-            observation.clone(), observation.clone(), observation,
-        ]), Err(Error::Limit)));
-        let empty = ReadWitness::Exact { key: 0, value: None };
+        assert!(matches!(
+            EvidenceSlice::new(&[observation.clone(), observation.clone(), observation,]),
+            Err(Error::Limit)
+        ));
+        let empty = ReadWitness::Exact {
+            key: 0,
+            value: None,
+        };
         assert!(EvidenceSlice::new(&vec![empty.clone(); MAX_REQUIRED_WITNESSES]).is_ok());
-        assert!(matches!(EvidenceSlice::new(&vec![
-            empty; MAX_REQUIRED_WITNESSES + 1
-        ]), Err(Error::Limit)));
+        assert!(matches!(
+            EvidenceSlice::new(&vec![empty; MAX_REQUIRED_WITNESSES + 1]),
+            Err(Error::Limit)
+        ));
     }
 
     #[test]
     fn intervention_limits_are_checked_before_copying_input_bytes() {
-        assert!(validate_edit_bounds(&[
-            Intervention::Payload(vec![0; MAX_INTERVENTION_BYTES]),
-        ]).is_ok());
-        assert_eq!(validate_edit_bounds(&[
-            Intervention::Payload(vec![0; MAX_INTERVENTION_BYTES]),
-            Intervention::Key { key: 0, expected: None, replacement: Some(vec![1]) },
-        ]), Err(Error::Limit));
-        assert_eq!(validate_edit_bounds(&vec![
-            Intervention::Units(1); MAX_INTERVENTIONS + 1
-        ]), Err(Error::Limit));
-        assert_eq!(InterventionScope::new(1, false, false, false, &[1, 1]), Err(Error::Duplicate));
+        assert!(
+            validate_edit_bounds(&[Intervention::Payload(vec![0; MAX_INTERVENTION_BYTES]),])
+                .is_ok()
+        );
+        assert_eq!(
+            validate_edit_bounds(&[
+                Intervention::Payload(vec![0; MAX_INTERVENTION_BYTES]),
+                Intervention::Key {
+                    key: 0,
+                    expected: None,
+                    replacement: Some(vec![1])
+                },
+            ]),
+            Err(Error::Limit)
+        );
+        assert_eq!(
+            validate_edit_bounds(&vec![Intervention::Units(1); MAX_INTERVENTIONS + 1]),
+            Err(Error::Limit)
+        );
+        assert_eq!(
+            InterventionScope::new(1, false, false, false, &[1, 1]),
+            Err(Error::Duplicate)
+        );
     }
 }

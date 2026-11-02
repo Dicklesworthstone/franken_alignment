@@ -3,14 +3,16 @@
 //! caller supplies helper packets, a verdict, a permit or a replacement source.
 mod publication;
 
-use super::{FileNativeDriverProgress, FileNativeSupervisedDriver, NativeReviewStatus};
-use super::super::{FileDriverEvent, FileHumanPermit, FileHumanRequest, FileCredentialPermit,
-    JournalError, Phase, observe, sample, stage};
 use super::super::evidence::FileEvidenceReport;
 use super::super::learned::evidence::{current_provider, policy_file_provider};
 use super::super::provider::EvidenceProvider;
-use crate::action::{ActionState, ElapsedTick};
+use super::super::{
+    FileCredentialPermit, FileDriverEvent, FileHumanPermit, FileHumanRequest, JournalError, Phase,
+    observe, sample, stage,
+};
+use super::{FileNativeDriverProgress, FileNativeSupervisedDriver, NativeReviewStatus};
 use crate::action::consequence::oversight::evidence_source::EvidenceFile;
+use crate::action::{ActionState, ElapsedTick};
 use crate::{Error, Snapshot};
 
 /// Supervisor-only progress. Original actor tickets keep their existing
@@ -26,18 +28,32 @@ impl FileNativeSupervisedDriver {
     /// current learned input before and after each policy callback, including
     /// every refinement and both captures around automatic reservation. A
     /// completed native review yields before requesting or consuming either key.
-    pub fn step<F, P>(&mut self, clock: F, snapshot: P, human: Option<&FileHumanPermit>)
-        -> Result<FileNativeDriverEvent, JournalError>
-    where F: FnMut() -> ElapsedTick, P: FnMut() -> Result<Snapshot, Error> {
+    pub fn step<F, P>(
+        &mut self,
+        clock: F,
+        snapshot: P,
+        human: Option<&FileHumanPermit>,
+    ) -> Result<FileNativeDriverEvent, JournalError>
+    where
+        F: FnMut() -> ElapsedTick,
+        P: FnMut() -> Result<Snapshot, Error>,
+    {
         self.step_current(clock, snapshot, human, None)
     }
 
     /// The existing credential is consulted only by the original publication
     /// gate. Numerical work, human review and reservation do not consume it.
-    pub fn step_with_credential<F, P>(&mut self, clock: F, snapshot: P,
-        human: Option<&FileHumanPermit>, credential: &FileCredentialPermit)
-        -> Result<FileNativeDriverEvent, JournalError>
-    where F: FnMut() -> ElapsedTick, P: FnMut() -> Result<Snapshot, Error> {
+    pub fn step_with_credential<F, P>(
+        &mut self,
+        clock: F,
+        snapshot: P,
+        human: Option<&FileHumanPermit>,
+        credential: &FileCredentialPermit,
+    ) -> Result<FileNativeDriverEvent, JournalError>
+    where
+        F: FnMut() -> ElapsedTick,
+        P: FnMut() -> Result<Snapshot, Error>,
+    {
         self.step_current(clock, snapshot, human, Some(credential))
     }
 
@@ -46,98 +62,205 @@ impl FileNativeSupervisedDriver {
     /// policy-only sources use their original durable floors and read-start lease;
     /// legacy sources retain their reader-local guarantees. Current learned
     /// provenance is checked before reading; query-only settlement never reads.
-    pub fn step_from_policy_file<S, F>(&mut self, source: &mut S, clock: F,
-        human: Option<&FileHumanPermit>) -> FileEvidenceReport<FileNativeDriverEvent>
-    where S: EvidenceFile + ?Sized, F: FnMut() -> ElapsedTick {
+    pub fn step_from_policy_file<S, F>(
+        &mut self,
+        source: &mut S,
+        clock: F,
+        human: Option<&FileHumanPermit>,
+    ) -> FileEvidenceReport<FileNativeDriverEvent>
+    where
+        S: EvidenceFile + ?Sized,
+        F: FnMut() -> ElapsedTick,
+    {
         self.step_policy_file(source, clock, human, None)
     }
 
-    pub fn step_from_policy_file_with_credential<S, F>(&mut self, source: &mut S,
-        clock: F, human: Option<&FileHumanPermit>, credential: &FileCredentialPermit)
-        -> FileEvidenceReport<FileNativeDriverEvent>
-    where S: EvidenceFile + ?Sized, F: FnMut() -> ElapsedTick {
+    pub fn step_from_policy_file_with_credential<S, F>(
+        &mut self,
+        source: &mut S,
+        clock: F,
+        human: Option<&FileHumanPermit>,
+        credential: &FileCredentialPermit,
+    ) -> FileEvidenceReport<FileNativeDriverEvent>
+    where
+        S: EvidenceFile + ?Sized,
+        F: FnMut() -> ElapsedTick,
+    {
         self.step_policy_file(source, clock, human, Some(credential))
     }
 
     /// Request, never approve, the independent human key using the original
     /// CURRENT learned input. The separately held reviewer still supplies it.
-    pub fn request_human_approval(&mut self, key: u64, expires_at: ElapsedTick,
-        now: ElapsedTick) -> Result<FileHumanRequest, JournalError>
-    {
-        if self.review.status() == NativeReviewStatus::Running { return Err(Error::WrongState.into()); }
-        self.driver.request_learned_human_approval(key, expires_at, now)
+    pub fn request_human_approval(
+        &mut self,
+        key: u64,
+        expires_at: ElapsedTick,
+        now: ElapsedTick,
+    ) -> Result<FileHumanRequest, JournalError> {
+        if self.review.status() == NativeReviewStatus::Running {
+            return Err(Error::WrongState.into());
+        }
+        self.driver
+            .request_learned_human_approval(key, expires_at, now)
     }
 
     /// Refresh policy and freeze the original human request without acquiring
     /// the independent reviewer. A running/failed congress cannot request a key.
-    pub fn request_human_approval_from_policy_file<S, F>(&mut self, source: &mut S,
-        key: u64, expires_at: ElapsedTick, clock: F) -> FileEvidenceReport<FileHumanRequest>
-    where S: EvidenceFile + ?Sized, F: FnMut() -> ElapsedTick {
+    pub fn request_human_approval_from_policy_file<S, F>(
+        &mut self,
+        source: &mut S,
+        key: u64,
+        expires_at: ElapsedTick,
+        clock: F,
+    ) -> FileEvidenceReport<FileHumanRequest>
+    where
+        S: EvidenceFile + ?Sized,
+        F: FnMut() -> ElapsedTick,
+    {
         if self.review.status() == NativeReviewStatus::Running {
-            return FileEvidenceReport { observations: Vec::new(), source_updates: Vec::new(),
-                result: Err(Error::WrongState.into()) };
+            return FileEvidenceReport {
+                observations: Vec::new(),
+                source_updates: Vec::new(),
+                result: Err(Error::WrongState.into()),
+            };
         }
-        self.driver.request_learned_human_approval_from_policy_file(source, key, expires_at, clock)
+        self.driver
+            .request_learned_human_approval_from_policy_file(source, key, expires_at, clock)
     }
 
     pub fn next_review_deadline(&self) -> Option<ElapsedTick> {
-        if self.review.status() != NativeReviewStatus::Running { return None; }
-        let now = self.supervisor().host().ok()?.inspect().control.ledger.elapsed?;
+        if self.review.status() != NativeReviewStatus::Running {
+            return None;
+        }
+        let now = self
+            .supervisor()
+            .host()
+            .ok()?
+            .inspect()
+            .control
+            .ledger
+            .elapsed?;
         let window = self.review.round().window;
-        Some(if now < window.commit_by { window.commit_by } else { window.reveal_by })
+        Some(if now < window.commit_by {
+            window.commit_by
+        } else {
+            window.reveal_by
+        })
     }
 
-    fn step_current<F, P>(&mut self, clock: F, snapshot: P, human: Option<&FileHumanPermit>,
-        credential: Option<&FileCredentialPermit>) -> Result<FileNativeDriverEvent, JournalError>
-    where F: FnMut() -> ElapsedTick, P: FnMut() -> Result<Snapshot, Error> {
-        let expected = self.driver.job.as_ref().map(|job| (job.attempt, job.input_revision));
-        self.step_with_provider(clock, &mut current_provider(expected, snapshot), human, credential)
+    fn step_current<F, P>(
+        &mut self,
+        clock: F,
+        snapshot: P,
+        human: Option<&FileHumanPermit>,
+        credential: Option<&FileCredentialPermit>,
+    ) -> Result<FileNativeDriverEvent, JournalError>
+    where
+        F: FnMut() -> ElapsedTick,
+        P: FnMut() -> Result<Snapshot, Error>,
+    {
+        let expected = self
+            .driver
+            .job
+            .as_ref()
+            .map(|job| (job.attempt, job.input_revision));
+        self.step_with_provider(
+            clock,
+            &mut current_provider(expected, snapshot),
+            human,
+            credential,
+        )
     }
 
-    fn step_policy_file<S, F>(&mut self, source: &mut S, clock: F,
-        human: Option<&FileHumanPermit>, credential: Option<&FileCredentialPermit>)
-        -> FileEvidenceReport<FileNativeDriverEvent>
-    where S: EvidenceFile + ?Sized, F: FnMut() -> ElapsedTick {
+    fn step_policy_file<S, F>(
+        &mut self,
+        source: &mut S,
+        clock: F,
+        human: Option<&FileHumanPermit>,
+        credential: Option<&FileCredentialPermit>,
+    ) -> FileEvidenceReport<FileNativeDriverEvent>
+    where
+        S: EvidenceFile + ?Sized,
+        F: FnMut() -> ElapsedTick,
+    {
         let mut observations = Vec::with_capacity(2);
         let mut source_updates = Vec::with_capacity(2);
-        let expected = self.driver.job.as_ref().map(|job| (job.attempt, job.input_revision));
-        let result = self.step_with_provider(clock,
-            &mut policy_file_provider(expected, source, &mut observations, &mut source_updates), human, credential);
-        FileEvidenceReport { observations, source_updates, result }
+        let expected = self
+            .driver
+            .job
+            .as_ref()
+            .map(|job| (job.attempt, job.input_revision));
+        let result = self.step_with_provider(
+            clock,
+            &mut policy_file_provider(expected, source, &mut observations, &mut source_updates),
+            human,
+            credential,
+        );
+        FileEvidenceReport {
+            observations,
+            source_updates,
+            result,
+        }
     }
 
-    fn step_with_provider<F, P>(&mut self, mut clock: F, provider: &mut P,
-        human: Option<&FileHumanPermit>, credential: Option<&FileCredentialPermit>)
-        -> Result<FileNativeDriverEvent, JournalError>
-    where F: FnMut() -> ElapsedTick, P: EvidenceProvider {
+    fn step_with_provider<F, P>(
+        &mut self,
+        mut clock: F,
+        provider: &mut P,
+        human: Option<&FileHumanPermit>,
+        credential: Option<&FileCredentialPermit>,
+    ) -> Result<FileNativeDriverEvent, JournalError>
+    where
+        F: FnMut() -> ElapsedTick,
+        P: EvidenceProvider,
+    {
         self.driver.reap_helpers();
         if self.review.status() != NativeReviewStatus::Running {
             // A caught original numerical unwind may leave a Reviewing job,
             // never a usable result. Preserve Ready and query-only obligations.
-            if let Some(job) = &mut self.driver.job {
-                if job.phase == Phase::Review { job.close(); }
+            if let Some(job) = &mut self.driver.job
+                && job.phase == Phase::Review
+            {
+                job.close();
             }
-            if self.driver.job.as_ref().is_some_and(|job| job.phase == Phase::Closed) {
+            if self
+                .driver
+                .job
+                .as_ref()
+                .is_some_and(|job| job.phase == Phase::Closed)
+            {
                 self.driver.job = None;
             }
-            return self.driver.step_with_provider(clock, provider, human, credential)
+            return self
+                .driver
+                .step_with_provider(clock, provider, human, credential)
                 .map(FileNativeDriverEvent::Driver);
         }
-        let mut pending = NativeObservation { owner: self, acknowledged: false };
+        let mut pending = NativeObservation {
+            owner: self,
+            acknowledged: false,
+        };
         let result = pending.owner.advance_with_provider(&mut clock, provider);
         pending.acknowledged = result.is_ok();
         result.map(FileNativeDriverEvent::Review)
     }
 
-    fn advance_with_provider<F, P>(&mut self, clock: &mut F, provider: &mut P)
-        -> Result<FileNativeDriverProgress, JournalError>
-    where F: FnMut() -> ElapsedTick, P: EvidenceProvider {
+    fn advance_with_provider<F, P>(
+        &mut self,
+        clock: &mut F,
+        provider: &mut P,
+    ) -> Result<FileNativeDriverProgress, JournalError>
+    where
+        F: FnMut() -> ElapsedTick,
+        P: EvidenceProvider,
+    {
         let revision = self.review.revision();
         let live = {
             let host = self.supervisor().host()?;
             let job = self.driver.job.as_ref().ok_or(Error::Missing)?;
             job.check_owner(&host)?;
-            host.storage_failure().is_none() && host.inspect().stop.is_none()
+            host.storage_failure().is_none()
+                && host.inspect().stop.is_none()
                 && stage(&host, self.request)? == ActionState::Reviewing
         };
         if !live {
@@ -151,8 +274,12 @@ impl FileNativeSupervisedDriver {
             let mut host = self.driver.supervisor.host_mut()?;
             observe(&mut host, clock())?;
             let captured = sample(&mut host, job, provider, clock)?;
-            if let Some(error) = captured.failure { return Err(error.into()); }
-            if captured.evidence.inputs.as_ref() != job.inputs.as_ref() { return Err(Error::Stale.into()); }
+            if let Some(error) = captured.failure {
+                return Err(error.into());
+            }
+            if captured.evidence.inputs.as_ref() != job.inputs.as_ref() {
+                return Err(Error::Stale.into());
+            }
             let now = clock();
             observe(&mut host, now)?;
             (now, captured.evidence.snapshot)
@@ -172,12 +299,16 @@ struct NativeObservation<'a> {
 }
 impl Drop for NativeObservation<'_> {
     fn drop(&mut self) {
-        if self.acknowledged { return; }
+        if self.acknowledged {
+            return;
+        }
         if self.owner.review.status() == NativeReviewStatus::Running {
             let _ = self.owner.review.cancel(self.owner.review.revision());
         }
-        if let Some(job) = &mut self.owner.driver.job {
-            if job.phase != Phase::Reconcile { job.close(); }
+        if let Some(job) = &mut self.owner.driver.job
+            && job.phase != Phase::Reconcile
+        {
+            job.close();
         }
         self.owner.driver.reap_helpers();
     }

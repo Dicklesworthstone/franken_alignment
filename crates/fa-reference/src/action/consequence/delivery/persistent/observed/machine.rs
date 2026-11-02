@@ -1,36 +1,45 @@
 //! All decisions and accounting belong to the ORIGINAL OversightBroker.
 //! Replaying this machine has no filesystem or process/network endpoint.
-use super::{FileOversightProfile, journal::{Event, HumanDecision}, views::Views};
-use super::super::{Event as BaseEvent, FileDeliverySnapshot, FileStopSweep, Reconciliation, project_status};
 use super::super::super::{DispatchEnvelope, EndpointOutcome, PublicationEndpoint, StopReceipt};
+use super::super::governance::{PolicyUpdateReceipt, PolicyUpdates};
+use super::super::requests::RequestBook;
+use super::super::{
+    Event as BaseEvent, FileDeliverySnapshot, FileStopSweep, Reconciliation, project_status,
+};
+use super::{
+    FileOversightProfile,
+    journal::{Event, HumanDecision},
+    views::Views,
+};
+use crate::Error;
 use crate::action::consequence::gate::TargetCeiling;
 use crate::action::consequence::gate::containment::session::policy::controller::ControllerConfig;
-use crate::action::consequence::oversight::{CommitteeInput, ObservedReceipt, ObservedSession, OversightBroker};
-use crate::action::consequence::oversight::human::{HumanPermit, HumanRequest, HumanReviewer, HumanRevocation};
+use crate::action::consequence::oversight::human::{
+    HumanPermit, HumanRequest, HumanReviewer, HumanRevocation,
+};
+use crate::action::consequence::oversight::{
+    CommitteeInput, ObservedReceipt, ObservedSession, OversightBroker,
+};
 use crate::action::{ActionState, ElapsedTick, FrozenAction, Permit, Scope};
-use crate::Error;
 use std::collections::BTreeMap;
-use super::super::requests::RequestBook;
-use super::super::governance::{PolicyUpdates, PolicyUpdateReceipt};
-use super::super::abandonment::{Abandonments, FileAbandonReceipt, FileAbandonRequest};
 
 use super::containment::{ContainmentHistory, FileStateReceipt};
 use crate::action::consequence::gate::containment::ResetReceipt;
 
-mod containment;
-mod requests;
-mod governance;
-mod publication;
-mod source;
-mod credential;
 mod campaigns;
-mod stream;
-mod identity;
-mod decoder;
-mod learned;
-mod credibility;
 mod consistency;
+mod containment;
+mod credential;
+mod credibility;
+mod decoder;
+mod governance;
+mod identity;
+mod learned;
 mod mediation;
+mod publication;
+mod requests;
+mod source;
+mod stream;
 
 pub(super) enum Transition {
     LearnedSidecarFinished(Box<super::decoder::learned::sidecar::FileLearnedSidecarFinish>),
@@ -46,12 +55,11 @@ pub(super) enum Transition {
     ActorReset(ResetReceipt),
     Proposed(FrozenAction),
     Inputs(u64),
-    Reviewed(Result<ObservedReceipt, Error>),
+    Reviewed(Result<Box<ObservedReceipt>, Error>),
     HumanRequested(HumanRequest),
     HumansRevoked(HumanRevocation),
     Published(EndpointOutcome),
     Reconciled(Reconciliation),
-    Abandoned(FileAbandonReceipt),
     Swept(BTreeMap<u64, Result<Reconciliation, Error>>),
     Stopped(StopReceipt),
     StopProgressed(FileStopSweep),
@@ -75,7 +83,6 @@ pub(super) struct Machine {
     pub(super) clock_ready: bool,
     pub(super) requests: RequestBook,
     pub(super) policy_updates: PolicyUpdates,
-    pub(super) abandonments: Abandonments,
     pub(super) publication_guard: bool,
     pub(super) generated_text_only: bool,
     pub(super) credential_policy: Option<super::credential::FileCredentialPolicy>,
@@ -87,7 +94,8 @@ pub(super) struct Machine {
     pub(super) consistency: Option<std::rc::Rc<super::consistency::FileConsistencyConfig>>,
     // Immutable source/timing contract, retained outside numerical checkpoints.
     // This is the original EnableLearned input, not another forecast ledger.
-    pub(super) learned_consistency: Option<std::rc::Rc<super::consistency::learned::FileLearnedConsistencyConfig>>,
+    pub(super) learned_consistency:
+        Option<std::rc::Rc<super::consistency::learned::FileLearnedConsistencyConfig>>,
     // External key and its original next-attempt allocation, never effect rights.
     pub(super) consistency_request: Option<(u64, u64)>,
     decoder: Option<decoder::DecoderState>,
@@ -107,45 +115,101 @@ impl Machine {
     pub(super) fn new(p: &FileOversightProfile) -> Result<Self, Error> {
         super::super::codec::validate_profile(&p.delivery)?;
         let d = &p.delivery;
-        let endpoint = PublicationEndpoint::new(d.target, d.initial_payload.clone(), d.retention_ticks, d.max_deliveries)?;
+        let endpoint = PublicationEndpoint::new(
+            d.target,
+            d.initial_payload.clone(),
+            d.retention_ticks,
+            d.max_deliveries,
+        )?;
         Self::with_endpoint(p, endpoint)
     }
-    fn with_endpoint(p: &FileOversightProfile, mut endpoint: PublicationEndpoint) -> Result<Self, Error> {
+    fn with_endpoint(
+        p: &FileOversightProfile,
+        mut endpoint: PublicationEndpoint,
+    ) -> Result<Self, Error> {
         let d = &p.delivery;
-        let mut broker = OversightBroker::new(ControllerConfig {
-            scope: d.scope, total: d.total, max_attempts: d.max_attempts, actor: d.actor.clone(),
-            suspend_at_incident: d.suspend_at_incident, policy: d.policy.clone(), congress: d.congress.clone(),
-            narrowed_targets: TargetCeiling::new(&d.narrowed_targets)?,
-        }, &mut endpoint, p.committee.clone())?;
+        let mut broker = OversightBroker::new(
+            ControllerConfig {
+                scope: d.scope,
+                total: d.total,
+                max_attempts: d.max_attempts,
+                actor: d.actor.clone(),
+                suspend_at_incident: d.suspend_at_incident,
+                policy: d.policy.clone(),
+                congress: d.congress.clone(),
+                narrowed_targets: TargetCeiling::new(&d.narrowed_targets)?,
+            },
+            &mut endpoint,
+            p.committee.clone(),
+        )?;
         let reviewer = broker.enable_human_review(p.human)?;
         broker.confirm_fence(endpoint.install_fence(broker.fence_request())?)?;
-        Ok(Self { bootstrap: Some(p.clone()), containment: ContainmentHistory::default(), policy_updates: PolicyUpdates::default(), abandonments: Abandonments::default(), requests: RequestBook::default(), scope: d.scope, clock_domain: d.clock_domain, broker, endpoint, reviewer, actions: BTreeMap::new(), sessions: BTreeMap::new(),
-            automatic: BTreeMap::new(), human_keys: BTreeMap::new(), envelopes: BTreeMap::new(), clock_ready: false,
-            publication_guard: false, generated_text_only: false, credential_policy: None, credential_generation: 0,
-            credential_revoked: false, credential_changes: Vec::new(), decoder: None, learned: None, identity: None, campaigns: None, file_source: None, credibility: None, consistency: None, learned_consistency: None, consistency_request: None, mediation: None })
+        Ok(Self {
+            bootstrap: Some(p.clone()),
+            containment: ContainmentHistory::default(),
+            policy_updates: PolicyUpdates::default(),
+            requests: RequestBook::default(),
+            scope: d.scope,
+            clock_domain: d.clock_domain,
+            broker,
+            endpoint,
+            reviewer,
+            actions: BTreeMap::new(),
+            sessions: BTreeMap::new(),
+            automatic: BTreeMap::new(),
+            human_keys: BTreeMap::new(),
+            envelopes: BTreeMap::new(),
+            clock_ready: false,
+            publication_guard: false,
+            generated_text_only: false,
+            credential_policy: None,
+            credential_generation: 0,
+            credential_revoked: false,
+            credential_changes: Vec::new(),
+            decoder: None,
+            learned: None,
+            identity: None,
+            campaigns: None,
+            file_source: None,
+            credibility: None,
+            consistency: None,
+            learned_consistency: None,
+            consistency_request: None,
+            mediation: None,
+        })
     }
     pub(super) fn replay(p: &FileOversightProfile, events: &[Event]) -> Result<Self, Error> {
         let mut machine = Self::new(p)?;
-        for event in events { machine.apply(event)?; }
+        for event in events {
+            machine.apply(event)?;
+        }
         Ok(machine)
     }
     pub(super) fn snapshot(&self, revision: usize) -> FileDeliverySnapshot {
-        FileDeliverySnapshot { revision: revision as u64, control: self.broker.inspect(),
-            dispatcher_epoch: self.broker.fence_request().epoch, stop: self.broker.stop_receipt().cloned(),
-            target: self.endpoint.target(), payload: self.endpoint.payload().to_vec(), executions: self.endpoint.execution_count() }
+        FileDeliverySnapshot {
+            revision: revision as u64,
+            control: self.broker.inspect(),
+            dispatcher_epoch: self.broker.fence_request().epoch,
+            stop: self.broker.stop_receipt().cloned(),
+            target: self.endpoint.target(),
+            payload: self.endpoint.payload().to_vec(),
+            executions: self.endpoint.execution_count(),
+        }
     }
-    // Shared by the live API and a consuming guarded recovery finalizer. This
-    // only checks original state; it neither consumes a handle nor updates the
-    // operation book. Canonical replay still rejects every duplicate event.
-    pub(super) fn preflight_abandon_unknown(&self, request: FileAbandonRequest)
-        -> Result<Option<FileAbandonReceipt>, Error>
-    {
-        let retry = self.abandonments.preflight(&request, &self.broker.inspect())?;
-        if retry.is_none() { self.actions.get(&request.attempt).ok_or(Error::Missing)?; }
-        Ok(retry)
+    fn now(&self) -> Result<ElapsedTick, Error> {
+        self.broker
+            .inspect()
+            .ledger
+            .elapsed
+            .ok_or(Error::Incomplete)
     }
-    fn now(&self) -> Result<ElapsedTick, Error> { self.broker.inspect().ledger.elapsed.ok_or(Error::Incomplete) }
-    fn historical_withdrawal_tick(&self) -> ElapsedTick { self.broker.inspect().ledger.elapsed.unwrap_or(ElapsedTick(0)) }
+    fn historical_withdrawal_tick(&self) -> ElapsedTick {
+        self.broker
+            .inspect()
+            .ledger
+            .elapsed
+            .unwrap_or(ElapsedTick(0))
+    }
     fn observe(&mut self, tick: ElapsedTick) -> Result<(), Error> {
         self.broker.observe_time(tick)?;
         self.endpoint.observe_time(tick)?;
@@ -153,16 +217,28 @@ impl Machine {
         Ok(())
     }
     fn capture(&self, attempt: u64, views: &Views) -> Result<CommitteeInput, Error> {
-        CommitteeInput::capture(self.actions.get(&attempt).ok_or(Error::Missing)?, self.broker.contracts(), views.clone())
+        CommitteeInput::capture(
+            self.actions.get(&attempt).ok_or(Error::Missing)?,
+            self.broker.contracts(),
+            views.clone(),
+        )
     }
     fn current(&self, attempt: u64, revision: u64) -> Result<CommitteeInput, Error> {
-        if self.broker.input_revision(attempt)? != revision { return Err(Error::Stale); }
-        let current = self.broker.current_inputs(attempt)?.cloned().ok_or(Error::Incomplete)?;
+        if self.broker.input_revision(attempt)? != revision {
+            return Err(Error::Stale);
+        }
+        let current = self
+            .broker
+            .current_inputs(attempt)?
+            .cloned()
+            .ok_or(Error::Incomplete)?;
         self.check_source_inputs(&current)?;
         Ok(current)
     }
     fn withdraw_keys(&mut self) -> Result<HumanRevocation, Error> {
-        let result = self.reviewer.revoke_all(self.historical_withdrawal_tick())?;
+        let result = self
+            .reviewer
+            .revoke_all(self.historical_withdrawal_tick())?;
         self.human_keys.clear();
         Ok(result)
     }
@@ -181,12 +257,19 @@ impl Machine {
         self.withdraw_keys()?;
         self.broker.revoke_epoch()?;
         for (id, stage) in self.broker.inspect().ledger.stages {
-            if matches!(stage, ActionState::Proposed | ActionState::Prepared | ActionState::Reviewing | ActionState::Authorized) {
+            if matches!(
+                stage,
+                ActionState::Proposed
+                    | ActionState::Prepared
+                    | ActionState::Reviewing
+                    | ActionState::Authorized
+            ) {
                 self.broker.cancel(id)?;
             }
         }
         let fence = self.broker.restart_dispatcher()?;
-        self.broker.confirm_fence(self.endpoint.install_fence(fence)?)?;
+        self.broker
+            .confirm_fence(self.endpoint.install_fence(fence)?)?;
         self.clear_sendable();
         self.withdraw_source()?;
         self.clock_ready = false;
@@ -199,7 +282,9 @@ impl Machine {
         // Then use the SAME original admission, stop cleanup and request refresh.
         self.check_generated_text_origin(event)?;
         let derived = match event {
-            Event::TextMessage(request, snapshot) => Some(self.decoder_text_message_event(request, snapshot)?),
+            Event::TextMessage(request, snapshot) => {
+                Some(self.decoder_text_message_event(request, snapshot)?)
+            }
             _ => None,
         };
         let event = derived.as_ref().unwrap_or(event);
@@ -209,11 +294,15 @@ impl Machine {
         // ORIGINAL consistency stop even when its returned observation refuses.
         // Complete the SAME manual-stop cleanup before this event is published.
         // Decoder events and recovery fences already perform their own cleanup.
-        if !was_stopped && matches!(event, Event::Consistency(_)
-            | Event::Core(BaseEvent::Propose(..) | BaseEvent::SubmitRequest(..))) {
-            if let Some(request) = self.broker.stop_receipt().map(|receipt| receipt.request()) {
-                self.apply_core(&BaseEvent::Stop(request))?;
-            }
+        if !was_stopped
+            && matches!(
+                event,
+                Event::Consistency(_)
+                    | Event::Core(BaseEvent::Propose(..) | BaseEvent::SubmitRequest(..))
+            )
+            && let Some(request) = self.broker.stop_receipt().map(|receipt| receipt.request())
+        {
+            self.apply_core(&BaseEvent::Stop(request))?;
         }
         self.requests.refresh(&self.broker.inspect())?;
         self.bootstrap = None;
@@ -226,22 +315,55 @@ impl Machine {
         // Incident evaluation remains available while inference is paused or
         // stopped. Assessments and held-out withdrawal cannot resume inference
         // or restore an effect key; evidence loss must remain durably recordable.
-        if !matches!(event, Event::Credibility(super::credibility::CredibilityEvent::Assess(..)
-            | super::credibility::CredibilityEvent::WithdrawHeldOut(_))
-            | Event::Consistency(super::consistency::ConsistencyEvent::Unavailable
-                | super::consistency::ConsistencyEvent::Expire(..)) | Event::Mediation(_)
-            | Event::PublicationWitness(_)) {
+        if !matches!(
+            event,
+            Event::Credibility(
+                super::credibility::CredibilityEvent::Assess(..)
+                    | super::credibility::CredibilityEvent::WithdrawHeldOut(_)
+            ) | Event::Consistency(
+                super::consistency::ConsistencyEvent::Unavailable
+                    | super::consistency::ConsistencyEvent::Expire(..)
+            ) | Event::Mediation(_)
+                | Event::PublicationWitness(_)
+        ) {
             self.check_decoder_admission(event)?;
         }
-        let without_current_time = matches!(event,
-            Event::Core(BaseEvent::Time(_) | BaseEvent::Cancel(_) | BaseEvent::Fence | BaseEvent::Stop(_) | BaseEvent::StopProgress(_) | BaseEvent::ReserveRecovery(_) | BaseEvent::ReplacePolicy(_) | BaseEvent::AbandonUnknown(_))
-            | Event::InputsUnavailable(..) | Event::Human(_, HumanDecision::Reject | HumanDecision::Revoke) | Event::RevokeHumans
-            | Event::PublicationGuard | Event::PublishChecked(..) | Event::PublishCredentialed(..)
-            | Event::PublicationWitness(_)
-            | Event::CredentialGuard(_) | Event::CredentialRotate(_) | Event::CredentialRevoke(_) | Event::Campaign(_)
-            | Event::StreamBootstrap(_) | Event::GeneratedStreamBootstrap(_) | Event::Identity(_) | Event::Decoder(_) | Event::Credibility(_) | Event::Consistency(_) | Event::Mediation(_)
-            | Event::Source(_) | Event::ActorState(_) | Event::ActorCheckpoint(..) | Event::ActorReset(..));
-        if !without_current_time && !self.clock_ready { return Err(Error::Incomplete); }
+        let without_current_time = matches!(
+            event,
+            Event::Core(
+                BaseEvent::Time(_)
+                    | BaseEvent::Cancel(_)
+                    | BaseEvent::Fence
+                    | BaseEvent::Stop(_)
+                    | BaseEvent::StopProgress(_)
+                    | BaseEvent::ReserveRecovery(_)
+                    | BaseEvent::ReplacePolicy(_)
+            ) | Event::InputsUnavailable(..)
+                | Event::Human(_, HumanDecision::Reject | HumanDecision::Revoke)
+                | Event::RevokeHumans
+                | Event::PublicationGuard
+                | Event::PublishChecked(..)
+                | Event::PublishCredentialed(..)
+                | Event::PublicationWitness(_)
+                | Event::CredentialGuard(_)
+                | Event::CredentialRotate(_)
+                | Event::CredentialRevoke(_)
+                | Event::Campaign(_)
+                | Event::StreamBootstrap(_)
+                | Event::GeneratedStreamBootstrap(_)
+                | Event::Identity(_)
+                | Event::Decoder(_)
+                | Event::Credibility(_)
+                | Event::Consistency(_)
+                | Event::Mediation(_)
+                | Event::Source(_)
+                | Event::ActorState(_)
+                | Event::ActorCheckpoint(..)
+                | Event::ActorReset(..)
+        );
+        if !without_current_time && !self.clock_ready {
+            return Err(Error::Incomplete);
+        }
         match event {
             // Source-linked inputs are expanded exactly once by apply above.
             Event::TextMessage(..) => return Err(Error::Binding),
@@ -259,45 +381,83 @@ impl Machine {
             }
             Event::Campaign(event) => return self.apply_campaign(event),
             Event::ActorState(update) => return self.record_actor_state(update),
-            Event::ActorCheckpoint(id, revision, epoch) => return self.capture_actor_checkpoint(*id, *revision, *epoch),
+            Event::ActorCheckpoint(id, revision, epoch) => {
+                return self.capture_actor_checkpoint(*id, *revision, *epoch);
+            }
             Event::ActorReset(id, request) => return self.reset_actor(*id, request),
             Event::Source(event) => return self.apply_source(event),
             Event::CredentialGuard(policy) => return self.enable_credential_guard(policy),
             Event::CredentialRotate(request) => return self.rotate_credential(*request),
             Event::CredentialRevoke(request) => return self.revoke_credential(*request),
             Event::PublicationGuard => return self.enable_publication_guard(),
-            Event::PublishChecked(id, views, snapshot, tick) => return self.publish_checked(*id, views.as_ref(), snapshot, *tick, false),
-            Event::PublishCredentialed(id, views, snapshot, tick) => return self.publish_checked(*id, views.as_ref(), snapshot, *tick, true),
+            Event::PublishChecked(id, views, snapshot, tick) => {
+                return self.publish_checked(*id, views.as_ref(), snapshot, *tick, false);
+            }
+            Event::PublishCredentialed(id, views, snapshot, tick) => {
+                return self.publish_checked(*id, views.as_ref(), snapshot, *tick, true);
+            }
             Event::Core(event) => return self.apply_core(event),
             Event::Inputs(id, revision, views) => {
                 let inputs = self.capture(*id, views)?;
                 self.check_source_inputs(&inputs)?;
-                return Ok(Transition::Inputs(self.broker.record_inputs(*id, *revision, inputs)?));
+                return Ok(Transition::Inputs(
+                    self.broker.record_inputs(*id, *revision, inputs)?,
+                ));
             }
-            Event::InputsUnavailable(id, revision) => return Ok(Transition::Inputs(self.broker.inputs_unavailable(*id, *revision)?)),
+            Event::InputsUnavailable(id, revision) => {
+                return Ok(Transition::Inputs(
+                    self.broker.inputs_unavailable(*id, *revision)?,
+                ));
+            }
             Event::Begin(id, round, root, window, snapshot) => {
-                let session = self.broker.begin_review(*id, *round, *root, *window, snapshot)?;
+                let session = self
+                    .broker
+                    .begin_review(*id, *round, *root, *window, snapshot)?;
                 self.sessions.insert(*round, (*id, session));
             }
             Event::Commit(round, member, digest) => {
                 let now = self.now()?;
-                self.sessions.get_mut(round).ok_or(Error::Missing)?.1.commit_from_worker(member, *digest, now)?;
+                self.sessions
+                    .get_mut(round)
+                    .ok_or(Error::Missing)?
+                    .1
+                    .commit_from_worker(member, *digest, now)?;
             }
             Event::OpenReveals(round) => {
                 let now = self.now()?;
-                self.sessions.get_mut(round).ok_or(Error::Missing)?.1.open_reveals(now)?;
+                self.sessions
+                    .get_mut(round)
+                    .ok_or(Error::Missing)?
+                    .1
+                    .open_reveals(now)?;
             }
             Event::Reveal(round, member, verdict, salt) => {
                 let now = self.now()?;
-                self.sessions.get_mut(round).ok_or(Error::Missing)?.1.reveal(member, *verdict, salt, now)?;
+                self.sessions
+                    .get_mut(round)
+                    .ok_or(Error::Missing)?
+                    .1
+                    .reveal(member, *verdict, salt, now)?;
             }
             Event::Finish(round, supplied, snapshot) => {
                 let id = self.sessions.get(round).ok_or(Error::Missing)?.0;
-                let current = supplied.as_ref().map(|views| self.capture(id, views)).transpose()?;
+                let current = supplied
+                    .as_ref()
+                    .map(|views| self.capture(id, views))
+                    .transpose()?;
                 let now = self.now()?;
-                let review = self.sessions.get_mut(round).ok_or(Error::Missing)?.1.finish(now)?;
+                let review = self
+                    .sessions
+                    .get_mut(round)
+                    .ok_or(Error::Missing)?
+                    .1
+                    .finish(now)?;
                 self.sessions.remove(round);
-                return Ok(Transition::Reviewed(self.broker.apply_review(review, current.as_ref(), snapshot)));
+                return Ok(Transition::Reviewed(
+                    self.broker
+                        .apply_review(review, current.as_ref(), snapshot)
+                        .map(Box::new),
+                ));
             }
             Event::Authorize(id, revision, snapshot) => {
                 let current = self.current(*id, *revision)?;
@@ -306,7 +466,10 @@ impl Machine {
             }
             Event::RequestHuman(request, id, revision, expires) => {
                 let current = self.current(*id, *revision)?;
-                return Ok(Transition::HumanRequested(self.broker.request_human_approval(*request, *id, Some(&current), *expires)?));
+                return Ok(Transition::HumanRequested(
+                    self.broker
+                        .request_human_approval(*request, *id, Some(&current), *expires)?,
+                ));
             }
             Event::Human(request, decision) => {
                 let evidence = self.broker.human_request(*request)?;
@@ -317,11 +480,13 @@ impl Machine {
                         self.human_keys.insert(*request, key);
                     }
                     HumanDecision::Reject => {
-                        self.reviewer.reject(&evidence, self.historical_withdrawal_tick())?;
+                        self.reviewer
+                            .reject(&evidence, self.historical_withdrawal_tick())?;
                         self.human_keys.remove(request);
                     }
                     HumanDecision::Revoke => {
-                        self.reviewer.revoke(&evidence, self.historical_withdrawal_tick())?;
+                        self.reviewer
+                            .revoke(&evidence, self.historical_withdrawal_tick())?;
                         self.human_keys.remove(request);
                     }
                 }
@@ -332,7 +497,13 @@ impl Machine {
                 let automatic = self.automatic.get(id).ok_or(Error::Missing)?;
                 let human = self.human_keys.get(request).ok_or(Error::Missing)?;
                 let action = self.actions.get(id).ok_or(Error::Missing)?;
-                let envelope = self.broker.dispatch_with_human(automatic, human, action, Some(&current), snapshot)?;
+                let envelope = self.broker.dispatch_with_human(
+                    automatic,
+                    human,
+                    action,
+                    Some(&current),
+                    snapshot,
+                )?;
                 self.envelopes.insert(*id, envelope);
                 self.automatic.remove(id);
                 self.human_keys.remove(request);
@@ -347,23 +518,39 @@ impl Machine {
             BaseEvent::ReplacePolicy(update) => return self.apply_policy_update(update),
             BaseEvent::Time(tick) => self.observe(*tick)?,
             BaseEvent::Propose(id, spec, snapshot) => {
-                let result = self.broker.propose(*id, spec.clone(), snapshot).map(|proposal| proposal.action);
-                if let Ok(action) = &result { self.actions.insert(*id, action.clone()); }
+                let result = self
+                    .broker
+                    .propose(*id, spec.clone(), snapshot)
+                    .map(|proposal| proposal.action);
+                if let Ok(action) = &result {
+                    self.actions.insert(*id, action.clone());
+                }
                 // A valid observed category was consumed BEFORE downstream
                 // admission. Its native refusal must not rewind the likelihood.
-                return if self.consistency.is_some() { Ok(Transition::ConsistencyProposed(result)) }
-                    else { result.map(Transition::Proposed) };
+                return if self.consistency.is_some() {
+                    Ok(Transition::ConsistencyProposed(result))
+                } else {
+                    result.map(Transition::Proposed)
+                };
             }
-            BaseEvent::SubmitRequest(request, spec, snapshot) => return self.apply_request(*request, spec, snapshot),
+            BaseEvent::SubmitRequest(request, spec, snapshot) => {
+                return self.apply_request(*request, spec, snapshot);
+            }
             BaseEvent::Publish(id) => {
-                if self.publication_guard { return Err(Error::Incomplete); }
-                let receipt = self.endpoint.deliver(self.envelopes.get(id).ok_or(Error::Missing)?)?;
+                if self.publication_guard {
+                    return Err(Error::Incomplete);
+                }
+                let receipt = self
+                    .endpoint
+                    .deliver(self.envelopes.get(id).ok_or(Error::Missing)?)?;
                 return Ok(Transition::Published(receipt.outcome()));
             }
             BaseEvent::Reconcile(id) => {
                 let query = self.broker.status_query(*id)?;
                 let status = self.endpoint.status(&query)?;
-                return Ok(Transition::Reconciled(project_status(self.broker.reconcile_status(&query, status)?)));
+                return Ok(Transition::Reconciled(project_status(
+                    self.broker.reconcile_status(&query, status)?,
+                )));
             }
             BaseEvent::Seal(id) => {
                 let query = self.broker.status_query(*id)?;
@@ -372,21 +559,19 @@ impl Machine {
                 self.broker.accept_receipt(receipt)?;
                 return Ok(Transition::Reconciled(Reconciliation::Resolved(outcome)));
             }
-            BaseEvent::AbandonUnknown(request) => {
-                let action = self.actions.get(&request.attempt).ok_or(Error::Missing)?;
-                let prepared = self.abandonments.prepare(*request, action, &self.broker.inspect())?;
-                self.broker.abandon_unknown(request.attempt)?;
-                // An unresolved live dispatch may still have its sendable
-                // envelope. Permanent uncertainty must remove THIS capability
-                // before the disposition can become the acknowledged image.
-                self.envelopes.remove(&request.attempt);
-                return Ok(Transition::Abandoned(self.abandonments.record(prepared)));
-            }
             BaseEvent::Sweep => {
                 let outcomes = self.broker.reconcile_pending(&mut self.endpoint)?;
-                return Ok(Transition::Swept(outcomes.into_iter().map(|(id, result)| (id, result.map(project_status))).collect()));
+                return Ok(Transition::Swept(
+                    outcomes
+                        .into_iter()
+                        .map(|(id, result)| (id, result.map(project_status)))
+                        .collect(),
+                ));
             }
-            BaseEvent::Cancel(id) => { self.broker.cancel(*id)?; self.automatic.remove(id); }
+            BaseEvent::Cancel(id) => {
+                self.broker.cancel(*id)?;
+                self.automatic.remove(id);
+            }
             BaseEvent::Fence => self.recover()?,
             BaseEvent::Stop(request) => {
                 let receipt = self.broker.request_stop(*request)?;
@@ -402,7 +587,11 @@ impl Machine {
                 self.observe(*tick)?;
                 let sweep = self.broker.progress_stop(&mut self.endpoint)?;
                 return Ok(Transition::StopProgressed(FileStopSweep {
-                    outcomes: sweep.outcomes.into_iter().map(|(id, result)| (id, result.map(project_status))).collect(),
+                    outcomes: sweep
+                        .outcomes
+                        .into_iter()
+                        .map(|(id, result)| (id, result.map(project_status)))
+                        .collect(),
                     progress: sweep.progress,
                 }));
             }
