@@ -32,9 +32,8 @@ are held in process memory; equality is not a cryptographic authentication
 protocol or constant-time secret comparison. The file adapter is not a real
 remote provider, no encrypted credential vault is implemented, and whole-process
 loss of credential lifecycle state remains outside this increment. The current
-version 1 perimeter schema declares broker credentials family-wide. Explicit
-[version 2 route credential selection](ROUTE_CREDENTIAL_SELECTION.md) resolves
-that naming boundary while preserving this independent secret-provisioning rule.
+perimeter schema also declares broker credentials family-wide rather than binding
+each route to a specific named credential; that is a separate schema boundary.
 
 New source coverage includes bootstrap mismatch, successful independently supplied
 agreement, mismatch-safe rotation, idempotent matching rotation, file publication,

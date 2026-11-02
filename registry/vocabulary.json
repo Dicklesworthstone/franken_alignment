@@ -88,7 +88,7 @@
       "idempotency": "n/a",
       "cost_class": "cheap",
       "response": "PredicateTree",
-      "note": "Reference operator projections: explain-proposal for ordinary source histories and create-learned-generated --resume --explain-proposal for fully guarded learned histories. Learned diagnosis is privileged/offline and performs bounded original numerical replay; --payload/--search uses L7 immutable policy experiments. This is historical admission-policy explanation, not the full dispatch/helper why-held conjunction or a cheap cached lookup."
+      "note": ""
     },
     {
       "verb": "cost",
@@ -228,7 +228,7 @@
       "idempotency": "fence id",
       "cost_class": "moderate",
       "response": "FenceRecord",
-      "note": "Reference offline mapping: supervise_publication shutdown-fleet uses the existing durable fixed-roster Stop/Drain coordinator with explicit ordinary or independently guarded learned inputs. Full numerical replay is bounded work, not a cached control lookup. Reports retain every member and its native acknowledgment/liabilities; they do not establish a simultaneous distributed fence, partition lease or globally ordered post-fence frontier. See docs/LEARNED_FLEET_RECOVERY.md."
+      "note": ""
     },
     {
       "verb": "stop-fleet",
@@ -238,7 +238,7 @@
       "idempotency": "one original operation per member session; no automatic reconnect or retry after uncertain transmission",
       "cost_class": "bounded roster and per-peer protocol work",
       "response": "Per-domain native stop receipts and explicit unconfirmed outcomes",
-      "note": "supervise_publication operator adapter; preserves original per-domain Stop/drain, not a distributed ordered fence or persistent acknowledgement frontier; the same authenticated clients can receive native admission-only Stop after complete learned recovery, with unresolved liabilities still pending"
+      "note": "supervise_publication operator adapter; preserves original per-domain Stop/drain, not a distributed ordered fence or persistent acknowledgement frontier"
     },
     {
       "verb": "resolve",
@@ -248,7 +248,7 @@
       "idempotency": "attempt id",
       "cost_class": "varies",
       "response": "Outcome",
-      "note": "Reference mapping: supervise_publication abandon-unknown CONFIG REQUEST_JSON --guarded RECOVERY_PROFILE records only IrrecoverablyUnknown. The trusted supervisor supplies the original attempt, a nonzero operation ID, exact control-sequence/authority-epoch predecessor, complete guards and independent history custody. An exact operation/request retry returns the original receipt; changed bindings refuse. Bounded canonical replay plus one ordinary-capacity journal event preserves all charges and unresolved stream barriers; no live authority escapes. The Knowledge result acknowledges disposition while the endpoint outcome remains Unknown. See docs/DURABLE_UNKNOWN_ABANDONMENT.md."
+      "note": ""
     },
     {
       "verb": "verify",
@@ -389,26 +389,6 @@
       "cost_class": "cheap",
       "response": "ExperimentRow",
       "note": ""
-    },
-    {
-      "verb": "rotate-credential",
-      "layer": "L5",
-      "class": "mutation",
-      "authority": "independently configured offline operator with exclusive original owner, complete guarded learned history and independent retained history anchor",
-      "idempotency": "original operation identity and expected credential generation; exact retained retries return the original receipt separately from current status; each successful guarded recovery still acknowledges its own Fence",
-      "cost_class": "expensive",
-      "response": "Knowledge<CredentialLifecycleResult> with original change receipt, current epoch and acknowledged history-retention result",
-      "note": "create-learned-generated adapter; exact next native generation only; no actor, helper, live secret acquisition or numerical continuation; new independent anchor output required"
-    },
-    {
-      "verb": "revoke-credential",
-      "layer": "L5",
-      "class": "mutation",
-      "authority": "independently configured offline operator with exclusive original owner, complete guarded learned history and independent retained history anchor",
-      "idempotency": "original operation identity and expected credential generation; exact retained retries return the original receipt separately from current status; each successful guarded recovery still acknowledges its own Fence",
-      "cost_class": "expensive",
-      "response": "Knowledge<CredentialLifecycleResult> with original change receipt, current epoch and acknowledged history-retention result",
-      "note": "create-learned-generated adapter; terminal native revocation preserves receipt, reconciliation and Stop paths; no live secret required; new independent anchor output required"
     },
     {
       "verb": "serve-learned-generated",
