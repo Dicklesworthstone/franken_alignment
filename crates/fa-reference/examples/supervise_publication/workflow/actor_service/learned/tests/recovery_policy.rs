@@ -1,6 +1,9 @@
 //! Explicit recovery policy selection through real learned journal transitions.
 //! Tiny model fixtures exercise custody and exact binding, not policy quality,
 //! independent operator authentication or deployment effectiveness.
+#[path = "recovery_policy/campaign.rs"]
+mod campaign;
+
 use super::*;
 use super::continuation as native;
 use super::super::{anchors, sequence as resident, topology};
@@ -206,8 +209,9 @@ fn expected_policy_does_not_discover_or_admit_an_unselected_campaign_guard() {
     let original = recipe::load(&path, &config, false).unwrap();
     let (mut host, _human, _forecast, _identity) =
         recovery::create_selected(&config, &original).unwrap();
-    let expected = policy(2, 256);
-    replace(&mut host, &expected);
+    // Campaign mode is an opt-in before any control transition; policy
+    // replacement would make this Enable invalid before reaching recovery.
+    let expected = config.profile.delivery.policy.clone();
     let _governor = host.enable_policy_campaigns(host.revision(),
         ReplayLimits { cases: 4, input_bytes: 1_048_576 }, 4).unwrap();
     let archive = root.0.join("campaign-history.anchor");
@@ -217,7 +221,7 @@ fn expected_policy_does_not_discover_or_admit_an_unselected_campaign_guard() {
     fs::write(&pending, b"unselected campaign custody").unwrap();
     drop(host);
 
-    let selected_path = selected(&root, &path, 2, 256);
+    let selected_path = selected(&root, &path, 1, 512);
     let mut loaded = recipe::load(&selected_path, &config, false).unwrap();
     bind_anchor(&root, &config, &mut loaded, &archive);
     assert_eq!(loaded.expected_policy, expected);

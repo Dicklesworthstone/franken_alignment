@@ -99,6 +99,9 @@ fn validate(config: &Config, entries: &[Entry], peers: &PeerProfile) -> Result<(
         if loaded.expected_policy != original.expected_policy {
             return Err("every sequence entry must retain the independently selected effective policy".into());
         }
+        if loaded.expected_campaigns != original.expected_campaigns {
+            return Err("every sequence entry must retain the independently selected campaign guard".into());
+        }
         let same_credential = match (&original.credential, &loaded.credential) {
             (None, None) => true,
             (Some(original), Some(selected)) => original.same_resident_selection(selected),

@@ -1,5 +1,16 @@
 # Changelog
 
+## 2026-11-04: recover campaign-protected learned histories
+
+- Add a closed recovery envelope selecting the exact native campaign guard and
+  full effective policy, with nonzero bounded limits before asset intake.
+- Feed that inventory into the original guarded recovery paths; preserve
+  legacy absence checks, native recovery fencing and current policy receipts.
+- Reject recovery-only guard selection at creation and require identical
+  campaign selection throughout resident sequences.
+- Add genuine campaign promotion/recovery and causal guard mismatch tests.
+  Required RCH execution remains unavailable, so qualification stays open.
+
 ## 2026-11-04: bind changed policies during learned recovery
 
 - Add a closed outer recipe envelope carrying the complete independently

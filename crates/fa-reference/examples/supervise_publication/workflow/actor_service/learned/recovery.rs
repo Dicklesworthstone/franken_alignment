@@ -204,7 +204,7 @@ pub(super) fn requirements(config: &Config, loaded: &Loaded) -> FileRecoveryRequ
                 .generation
                 .required_computed_identity_registration()
                 .cloned(),
-            campaigns: None,
+            campaigns: loaded.expected_campaigns,
             credential: loaded.generation.required_credential_policy().cloned(),
         },
         effective_policy: loaded.expected_policy.clone(),

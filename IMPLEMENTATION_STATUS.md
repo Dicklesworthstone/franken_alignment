@@ -1,5 +1,28 @@
 # Implementation status · design revision 0.3
 
+## 2026-11-04: recover campaign-protected learned histories
+
+The closed `fa.learned-recovery-policy/2` envelope selects the original full
+effective policy and exact native campaign guard limits independently of the
+journal. Shared learned recovery requirements now carry that complete guard
+inventory, allowing native campaign-protected histories to reach the same
+guarded Ready cut after acknowledged policy promotion. Legacy recipes and `/1`
+continue to require campaigns to be absent.
+
+This is a recovery-only selection: every new-owner creation path rejects it
+before source or journal preparation, and resident entries must retain the
+same exact guard. It issues no governor or policy approval. Native recovery
+continues to revoke outstanding approvals, preserve promoted policies and
+receipts, and require fresh source/time and ordinary effect review.
+
+Regression source exercises real campaign promotion, original numerical
+continuation, complete guard mismatch refusal with unchanged canonical/staged
+bytes, creation and resident selection, parser bounds and stale approval keys.
+The required `RCH_REQUIRE_REMOTE=1 rch exec -- cargo run --locked -p xtask -- check`
+could not start because `rch` is absent (exit 127). Compilation, runtime tests,
+Clippy and complete qualification remain pending; no packet or bead is closed.
+See `docs/LEARNED_RECOVERY_POLICY.md` for the supported schema and custody rules.
+
 ## 2026-11-04: recover independently expected effective policies
 
 A new optional outer learned-recipe envelope,

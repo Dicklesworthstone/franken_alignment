@@ -27,7 +27,7 @@ use fa_reference::action::consequence::activation::tensor::kv::decoder::{
 use fa_reference::action::consequence::activation::tensor::kv::model::learned::replay::archive::MAX_FIT_ARCHIVE_BYTES;
 use fa_reference::action::consequence::activation::probe::training::decoder::kv::MAX_KV_MONITOR_ARTIFACT_BYTES;
 use fa_reference::action::consequence::delivery::persistent::observed::{
-    decoder::learned::FileLearnedConfig, guarded::FileRecoveryFloor,
+    decoder::learned::FileLearnedConfig, guarded::{FileCampaignRequirement, FileRecoveryFloor},
     helpers::learned::native::{NativeReviewCost, NativeReviewLimits},
 };
 use fa_reference::action::consequence::delivery::persistent::observed::guarded::anchored::FileHistoryAnchor;
@@ -53,6 +53,8 @@ pub(super) struct Loaded {
     /// Independently supplied recovery expectation, separate from bootstrap
     /// configuration and the numerical recipe. Never inferred from the journal.
     pub expected_policy: Policy,
+    /// Exact recovery-only inventory. None requires that campaigns are absent.
+    pub expected_campaigns: Option<FileCampaignRequirement>,
     pub recovery_anchor: Option<FileHistoryAnchor>,
     pub anchor_output: Option<PathBuf>,
     pub topology: Option<super::topology::Selection>,
@@ -82,6 +84,7 @@ struct Recipe {
     checked_publication: Option<PathBuf>,
     credential: Option<PathBuf>,
     expected_policy: Option<Policy>,
+    expected_campaigns: Option<FileCampaignRequirement>,
 }
 struct Files {
     configuration: PathBuf, weights: WeightsInput, tokenizer: TokenizerInput, sampling: PathBuf,
@@ -100,6 +103,9 @@ pub(super) fn load(file: &Path, config: &Config, require_native: bool) -> Result
 pub(super) fn check_creation(config: &Config, loaded: &Loaded) -> Result<(), String> {
     if loaded.expected_policy != config.profile.delivery.policy {
         return Err("new learned history requires the configured bootstrap policy; a recovery expectation cannot replace it".into());
+    }
+    if loaded.expected_campaigns.is_some() {
+        return Err("new learned history cannot install a recovery-only campaign guard".into());
     }
     Ok(())
 }
@@ -215,6 +221,7 @@ fn load_recipe(recipe: Recipe, config: &Config, require_native: bool,
     Ok(Loaded { request: recipe.request, ttl_ms: recipe.ttl_ms, generation, stream: recipe.publication,
         floor: recipe.floor, recovery_anchor: None, anchor_output: None, topology: None,
         expected_policy: recipe.expected_policy.unwrap_or_else(|| config.profile.delivery.policy.clone()),
+        expected_campaigns: recipe.expected_campaigns,
         identity: recipe.computed_identity.map(|identity| identity.selection), publication, credential,
         evidence: LearnedEvidenceLimits { token_ids: recipe.binding.evidence.token_ids,
             score_words: recipe.binding.evidence.score_words, encoded_bytes: recipe.binding.encoded_bytes },
@@ -224,8 +231,12 @@ fn load_recipe(recipe: Recipe, config: &Config, require_native: bool,
 }
 impl Recipe {
     fn decode(bytes: &[u8]) -> Result<Self, String> {
-        let (mut root, joint, computed_identity, checked_publication, credential, expected_policy) =
+        let (mut root, joint, computed_identity, checked_publication, credential, recovery) =
             recovery_policy::decode(bytes)?;
+        let (expected_policy, expected_campaigns) = match recovery {
+            Some(expected) => (Some(expected.policy), expected.campaigns),
+            None => (None, None),
+        };
         let version = match root.text("schema")?.as_str() {
             "fa.learned-publication/1" => 1,
             "fa.learned-publication/2" => 2,
@@ -383,7 +394,7 @@ impl Recipe {
             max_new_tokens, max_output_bytes, stop_tokens, tokenization, budget, telemetry,
             sidecar: sidecar_identity, disclosure: disclosure_value, native_limits, priority, rounds,
             continuation: version >= 4, process, joint, computed_identity, checked_publication, credential,
-            expected_policy })
+            expected_policy, expected_campaigns })
     }
 }
 fn priority(groups: Vec<fa_reference::strict_json::Json>) -> Result<Vec<KvGroup>, String> {

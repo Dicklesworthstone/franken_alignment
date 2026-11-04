@@ -1,4 +1,4 @@
-# Independently expected policy during learned recovery
+# Independently expected policy and campaign guards during learned recovery
 
 An acknowledged policy replacement changes the effective policy without
 rewriting the store's bootstrap profile. Recovery must verify both facts:
@@ -50,6 +50,38 @@ Existing recipes without this envelope continue to expect the exact bootstrap
 policy from Config. There is no implicit lookup of the current policy in the
 journal and no automatic upgrade when an old expectation refuses recovery.
 
+### Histories with policy campaigns
+
+Use `fa.learned-recovery-policy/2` when the original history has the native
+policy-campaign guard enabled. This version requires the full effective policy
+and the exact independently retained campaign configuration:
+
+```text
+{
+  "schema": "fa.learned-recovery-policy/2",
+  "effective_policy": POLICY_OBJECT,
+  "campaigns": {
+    "cases": 16,
+    "input_bytes": 1048576,
+    "max_campaigns": 8
+  },
+  "recipe": EXISTING_RECIPE_OBJECT
+}
+```
+
+The three example limits must be replaced by the original guard's values; they
+are not defaults. Each is a positive integer. Native upper bounds are 5,120
+retained replay cases, 32 MiB of replay input and 64 campaigns. Missing, null,
+duplicate, unknown, zero and over-limit fields refuse before model asset intake.
+The envelope remains outermost and cannot be nested or reordered with `/1`.
+
+Legacy recipes and `/1` require campaigns to be **absent**. `/2` requires an
+enabled guard with exactly the selected limits; it does not accept an absent
+guard, different limits, or a guard discovered from the journal. Even larger
+selected limits are a mismatch, not a safe substitution. The selection is
+comparison data only: it neither enables campaigns nor approves or promotes a
+candidate policy, and the operator exposes no policy governor through it.
+
 ## What recovery verifies
 
 The selected recipe retains the expected policy alongside its original
@@ -72,10 +104,13 @@ stream-reset recovery still requires its exact original intent and retained
 anchor, and credential maintenance still preflights the exact requested
 credential change.
 
-This increment admits histories with an acknowledged direct native policy
-replacement under their already supported guard set. A campaign-enabled history
-still needs an independently supported campaign guard; the envelope does not
-discover or admit that inventory from the journal.
+The envelope admits histories with acknowledged direct native policy replacement
+and, with `/2`, histories protected by the original policy-campaign guard,
+including a policy changed through its replay/approval/promotion protocol.
+Both use the same complete guarded replay, never a weaker open path. Its recovery
+Fence preserves promoted policy and receipts while revoking outstanding campaign
+approvals; a recipe cannot resurrect a lost promotion key. The numerical recipe,
+source freshness and later independent effect review retain their original rules.
 
 ## Creation and resident sequences
 
@@ -84,11 +119,19 @@ Both ordinary learned creation and topology creation reject an expected policy
 that differs from the Config bootstrap before creating a journal. Supplying the
 same full bootstrap policy explicitly is allowed.
 
+The campaign selection is recovery-only. Every new-owner creation entry rejects
+`/2`, including when its effective policy equals the bootstrap. It cannot install
+an extra guard after creation or mint a new governor implicitly. Provision an
+original campaign-enabled history through the native guarded interfaces and
+retain its exact configuration independently before selecting recovery.
+
 Every recipe in one resident learned sequence must select the same expected
 effective policy. This equality covers the complete policy, including its
 generation and predicate contents. A later recipe cannot silently change the
 expectation established for the original owner. Wrap each member recipe as
 needed; the sequence profile itself keeps its existing grammar.
+Campaign selection is also identical across all entries, including absence and
+each original limit. A successor cannot silently add, drop or resize the guard.
 
 ## Using a changed policy
 
@@ -107,7 +150,10 @@ for that check.
 Continue to supply the independently retained history anchor and recovery floors
 required by the selected operation. The envelope proves no prefix authenticity,
 creates no fresh observation and supplies no effect authority. Its purpose is
-to make an explicit expected policy available to the original native verifier.
+to make explicit policy and guard expectations available to the original native
+verifier. Plain, raw-predictive, owned-predictive and topology recovery, terminal
+operations, credential maintenance and fleet members share that verifier input;
+each operation still requires its own independently selected custody data.
 
 ## Verification
 
