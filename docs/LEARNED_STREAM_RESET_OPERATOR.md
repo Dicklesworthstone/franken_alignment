@@ -35,7 +35,10 @@ expected native profile, not an attestation about an external model or process.
 The actual numerical/text recipe and full guarded history still have to match.
 
 `LEARNED_RECIPE` supplies the independently retained original numerical and
-text-stream contracts. Recovery does not read current source/helper evidence,
+text-stream contracts. If the history contains an acknowledged policy
+replacement, select the full expected effective policy through the independent
+[recovery policy envelope](LEARNED_RECOVERY_POLICY.md), while retaining the
+original bootstrap Config. Recovery does not read current source/helper evidence,
 launch inference workers, or obtain a fresh publication approval. This increment
 supports plain guarded learned text streams. Predictive and mediated/topology
 histories are rejected, without downgrading them to a plain profile.

@@ -1,5 +1,33 @@
 # Implementation status · design revision 0.3
 
+## 2026-11-04: recover independently expected effective policies
+
+A new optional outer learned-recipe envelope,
+`fa.learned-recovery-policy/1`, binds the complete independently supplied
+effective Policy without changing the original bootstrap Config or numerical
+recipe. Legacy recipes still expect the bootstrap policy. Guarded recovery
+compares the full selected policy at Ready; a different predicate at the same
+generation is a mismatch, not a generation-only match.
+
+All native learned creation entries reject an expectation different from the
+bootstrap before owner/source preparation. Every resident sequence member must
+retain the same full expectation. Plain, raw, owned and mediated guarded
+recovery, maintenance, terminal and fleet selections share the original full
+requirements. Campaign-enabled histories still require supported independent
+campaign guard selection and remain outside this increment.
+
+Six regression cases use genuine native policy replacement and original
+numerical continuation, preserve canonical/staging bytes on policy mismatch,
+exercise creation and resident refusal boundaries, and retain legacy/composed
+recipe parsing. Production paths and tests received independent source/API
+review. Compilation, runtime execution and the canonical gate remain pending:
+RCH is unavailable, and the executor disconnected during final implementation.
+
+Historical audit and situation projections retain their existing read-only
+contracts; this recovery expectation is not an added policy assertion in those
+outputs. See `docs/LEARNED_RECOVERY_POLICY.md` for the exact supported scope.
+No roadmap acceptance or qualification gate has been weakened or closed.
+
 ## 2026-11-04: complete acknowledged stream resets through the operator
 
 `create-learned-generated ... --complete-stream-reset` now selects the original

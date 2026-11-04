@@ -28,6 +28,16 @@ pub(super) fn decode(bytes: &[u8]) -> Result<Decoded, String> {
         let (recipe, joint, identity, publication) = checked::decode(bytes)?;
         return Ok((recipe, joint, identity, publication, None));
     }
+    unwrap(json)
+}
+
+/// The explicit recovery-policy envelope has already bounded its additional
+/// level. Preserve the original canonical ordering of every inner envelope.
+pub(super) fn unwrap(json: Json) -> Result<Decoded, String> {
+    if json.get("schema").and_then(Json::as_str) != Some(SCHEMA) {
+        let (recipe, joint, identity, publication) = checked::unwrap(json)?;
+        return Ok((recipe, joint, identity, publication, None));
+    }
     let mut wrapper = Fields::new(json)?;
     wrapper.text("schema")?;
     let credential = wrapper.path("credential")?;

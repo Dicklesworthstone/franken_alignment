@@ -3,6 +3,8 @@
 pub(super) mod weights;
 #[path = "joint.rs"]
 pub(super) mod joint;
+#[path = "recovery_policy.rs"]
+mod recovery_policy;
 use joint::HeldOutJointPolicy;
 use weights::WeightsInput;
 use super::{fields::{Assets, Fields, path, MAX_DATA_BYTES}, fit, forecast::ForecastInput,
@@ -30,6 +32,7 @@ use fa_reference::action::consequence::delivery::persistent::observed::{
 };
 use fa_reference::action::consequence::delivery::persistent::observed::guarded::anchored::FileHistoryAnchor;
 use fa_reference::action::consequence::delivery::stream::StreamProfile;
+use fa_reference::action::consequence::gate::containment::session::policy::Policy;
 use fa_reference::action::consequence::oversight::{
     decoder_monitoring::{DecoderBindingLimits, LearnedDecoderBindingLimits},
     learned_source::{LearnedEvidenceLimits, text::{LearnedTextConfig, LearnedTextCompletion, LearnedTextOutputPolicy}},
@@ -47,6 +50,9 @@ pub(super) struct Loaded {
     pub generation: FileLearnedConfig,
     pub stream: StreamProfile,
     pub floor: FileRecoveryFloor,
+    /// Independently supplied recovery expectation, separate from bootstrap
+    /// configuration and the numerical recipe. Never inferred from the journal.
+    pub expected_policy: Policy,
     pub recovery_anchor: Option<FileHistoryAnchor>,
     pub anchor_output: Option<PathBuf>,
     pub topology: Option<super::topology::Selection>,
@@ -75,6 +81,7 @@ struct Recipe {
     computed_identity: Option<super::identity::profile::Profile>,
     checked_publication: Option<PathBuf>,
     credential: Option<PathBuf>,
+    expected_policy: Option<Policy>,
 }
 struct Files {
     configuration: PathBuf, weights: WeightsInput, tokenizer: TokenizerInput, sampling: PathBuf,
@@ -86,6 +93,15 @@ pub(super) fn load(file: &Path, config: &Config, require_native: bool) -> Result
     let recipe = Recipe::decode(&read_regular(file, MAX_RECIPE_BYTES)?)?;
     let mut assets = Assets::new(recipe.assets_bytes)?;
     load_recipe(recipe, config, require_native, &mut assets)
+}
+
+/// A recovery expectation verifies an acknowledged replacement; it cannot
+/// create a new history under a policy absent from its bootstrap configuration.
+pub(super) fn check_creation(config: &Config, loaded: &Loaded) -> Result<(), String> {
+    if loaded.expected_policy != config.profile.delivery.policy {
+        return Err("new learned history requires the configured bootstrap policy; a recovery expectation cannot replace it".into());
+    }
+    Ok(())
 }
 
 /// Reuse complete original recipe/model/predictor admission under the fleet's
@@ -198,6 +214,7 @@ fn load_recipe(recipe: Recipe, config: &Config, require_native: bool,
     if let Some(credential) = credential.as_mut() { credential.retain_allowance(assets); }
     Ok(Loaded { request: recipe.request, ttl_ms: recipe.ttl_ms, generation, stream: recipe.publication,
         floor: recipe.floor, recovery_anchor: None, anchor_output: None, topology: None,
+        expected_policy: recipe.expected_policy.unwrap_or_else(|| config.profile.delivery.policy.clone()),
         identity: recipe.computed_identity.map(|identity| identity.selection), publication, credential,
         evidence: LearnedEvidenceLimits { token_ids: recipe.binding.evidence.token_ids,
             score_words: recipe.binding.evidence.score_words, encoded_bytes: recipe.binding.encoded_bytes },
@@ -207,7 +224,8 @@ fn load_recipe(recipe: Recipe, config: &Config, require_native: bool,
 }
 impl Recipe {
     fn decode(bytes: &[u8]) -> Result<Self, String> {
-        let (mut root, joint, computed_identity, checked_publication, credential) = super::credential::decode(bytes)?;
+        let (mut root, joint, computed_identity, checked_publication, credential, expected_policy) =
+            recovery_policy::decode(bytes)?;
         let version = match root.text("schema")?.as_str() {
             "fa.learned-publication/1" => 1,
             "fa.learned-publication/2" => 2,
@@ -364,7 +382,8 @@ impl Recipe {
             publication: publication_value, binding: binding_value, floor: floor_value, files: files_value,
             max_new_tokens, max_output_bytes, stop_tokens, tokenization, budget, telemetry,
             sidecar: sidecar_identity, disclosure: disclosure_value, native_limits, priority, rounds,
-            continuation: version >= 4, process, joint, computed_identity, checked_publication, credential })
+            continuation: version >= 4, process, joint, computed_identity, checked_publication, credential,
+            expected_policy })
     }
 }
 fn priority(groups: Vec<fa_reference::strict_json::Json>) -> Result<Vec<KvGroup>, String> {

@@ -434,7 +434,10 @@
         "crates/fa-reference/examples/supervise_publication/workflow/control/recovery.rs",
         "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/recovery/live.rs",
         "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/tests/recovery_control/durable.rs",
-        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/tests/recovery_control/durable/refusals.rs"
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/tests/recovery_control/durable/refusals.rs",
+        "docs/LEARNED_RECOVERY_POLICY.md",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/recovery_policy.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/tests/recovery_policy.rs"
       ]
     },
     {

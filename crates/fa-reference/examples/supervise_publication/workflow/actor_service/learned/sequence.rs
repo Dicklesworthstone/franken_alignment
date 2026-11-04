@@ -96,6 +96,9 @@ fn validate(config: &Config, entries: &[Entry], peers: &PeerProfile) -> Result<(
             || loaded.generation != original.generation || loaded.stream != original.stream {
             return Err("every sequence entry must retain the exact original finite generation and stream".into());
         }
+        if loaded.expected_policy != original.expected_policy {
+            return Err("every sequence entry must retain the independently selected effective policy".into());
+        }
         let same_credential = match (&original.credential, &loaded.credential) {
             (None, None) => true,
             (Some(original), Some(selected)) => original.same_resident_selection(selected),

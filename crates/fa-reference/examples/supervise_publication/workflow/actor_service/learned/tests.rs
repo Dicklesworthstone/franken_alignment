@@ -27,6 +27,8 @@ use super::*;
 #[path = "tests/qualification.rs"] mod qualification;
 #[path = "tests/stopped.rs"] mod stopped;
 #[path = "tests/stream_reset.rs"] mod stream_reset;
+
+#[path = "tests/recovery_policy.rs"] mod recovery_policy;
 use fixture::{Root, configured, evidence};
 use fa_reference::action::consequence::delivery::persistent::observed::{
     helpers::learned::native::{NativeReviewStatus, NativeMemberRecord, sequence::FileNativeSidecarSequence},

@@ -1,5 +1,17 @@
 # Changelog
 
+## 2026-11-04: bind changed policies during learned recovery
+
+- Add a closed outer recipe envelope carrying the complete independently
+  expected effective policy; preserve bootstrap and numerical recipe identity.
+- Apply the expectation through the existing guarded requirements for learned
+  recovery, maintenance, terminal operations and fleet members.
+- Reject non-bootstrap expectations at all new-owner creation paths and require
+  full policy consistency across resident sequence entries.
+- Add six native policy-replacement, continuation, mismatch, creation, campaign,
+  resident and parser regressions. Independent source/API review is complete;
+  type checking and execution remain pending under the required RCH runner.
+
 ## 2026-11-04: expose pending learned-stream reset recovery
 
 - Add an explicit offline command completing the original acknowledged stream

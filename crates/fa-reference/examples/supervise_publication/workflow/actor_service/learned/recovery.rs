@@ -46,6 +46,7 @@ pub(super) type TopologyCustody = (Custody,
     Option<fa_reference::action::consequence::delivery::persistent::observed::mediation::FileMediationObserver>);
 
 pub(super) fn create_selected(config: &Config, loaded: &Loaded) -> Result<Custody, String> {
+    super::recipe::check_creation(config, loaded)?;
     super::credential::check_creation(loaded)?;
     if loaded
         .generation
@@ -170,6 +171,7 @@ pub(super) fn create(
     config: &Config,
     loaded: &Loaded,
 ) -> Result<(FileOversight, FileHumanReviewer), String> {
+    super::recipe::check_creation(config, loaded)?;
     // The FIRST original image includes stream, numerical recipe, mandatory
     // learned provenance, policy-only source and terminal recovery reserve.
     // Reserve installation must precede the original learned Enable event.
@@ -205,7 +207,7 @@ pub(super) fn requirements(config: &Config, loaded: &Loaded) -> FileRecoveryRequ
             campaigns: None,
             credential: loaded.generation.required_credential_policy().cloned(),
         },
-        effective_policy: config.profile.delivery.policy.clone(),
+        effective_policy: loaded.expected_policy.clone(),
         credential_epoch: loaded
             .credential
             .as_ref()

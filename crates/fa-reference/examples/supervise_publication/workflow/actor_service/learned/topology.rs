@@ -170,6 +170,7 @@ where
     if continuing {
         return Err("topology creation cannot replace a recovery contract".into());
     }
+    super::recipe::check_creation(config, loaded)?;
     super::credential::check_creation(loaded)?;
     let registration = super::credential::registration(loaded)?;
     let mut checkpoint = || {
