@@ -317,6 +317,21 @@ impl FileMediatedLearnedRecovery {
         Ok(super::credential::FileCredentialTopologyRecovery::mediated(self, saved, request))
     }
 
+    /// Seal this unreplayed cursor to the exact stream-reset command already
+    /// retained with the source checkpoint. Only its completion and recovery
+    /// Fence may explain an unexported successor; no source work is refreshed.
+    pub fn require_stream_reset_checkpoint(mut self,
+        saved: &super::super::super::driver::topology::checkpoint::TopologyCheckpoint,
+        intent: &FileLearnedResetIntent, first_incident_sequence: u64)
+        -> Result<super::stream_reset::FileStreamResetTopologyRecovery, JournalError>
+    {
+        let progress = self.progress();
+        super::stream_reset::prepare(&self.inner, progress, &mut self.expected.topology,
+            &mut self.expected.oversight.minimum, saved, intent, first_incident_sequence)?;
+        Ok(super::stream_reset::FileStreamResetTopologyRecovery::new(
+            self, intent, first_incident_sequence))
+    }
+
     /// Inspect credential state only after the original numerical replay and
     /// every independent topology, predictor, guard and floor check succeeds.
     /// No cleanup, fence, source observation or live role is produced.

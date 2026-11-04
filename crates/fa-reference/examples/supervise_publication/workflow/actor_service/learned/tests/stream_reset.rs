@@ -725,7 +725,8 @@ fn invalid_combinations_fail_before_the_nonexistent_config_or_any_owner() {
         vec!["--continue-generation"],
         vec!["--history-anchor", "/held/second.anchor"],
         vec!["--stop-profile"],
-        vec!["--topology-profile", "/held/topology.json"],
+        vec!["--topology-profile"],
+        vec!["--topology-profile", "/held/first.json", "--topology-profile", "/held/second.json"],
         vec!["--actor-profile", "/held/actor.json"],
     ] {
         let mut args = valid.clone();
@@ -887,3 +888,6 @@ fn an_authenticated_stop_interrupts_the_pending_reset_before_any_completion() {
     assert_eq!(history.journal_revision(), case.before.revision + 2);
     assert_eq!(disk(&case), canonical);
 }
+
+#[path = "stream_reset/topology.rs"]
+mod topology;

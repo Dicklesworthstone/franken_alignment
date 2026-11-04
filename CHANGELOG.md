@@ -1,5 +1,17 @@
 # Changelog
 
+## 2026-11-04: recover topology-backed stream resets with paired custody
+
+- Admit exact retained source/history pairs in the learned stream-reset operator
+  without reading next-source files or refreshing the old topology.
+- Add a sealed original recovery cursor and operation-bound source successors;
+  lost reset exports can retry without repeating audits or source expenditure.
+- Preserve checked Stop priority through Ready and attempt both acknowledged
+  history/source exports even when one export fails.
+- Add causal numerical, custody, retry, suffix-refusal, deadline and Stop
+  regression source. Predictive resets and compound reset/Stop export-loss
+  repair remain unsupported; required RCH execution and qualification are pending.
+
 ## 2026-11-04: support explicit whole-piece BPE in native workflows
 
 - Add immutable whole-piece-first BPE with exact original vocabulary IDs,

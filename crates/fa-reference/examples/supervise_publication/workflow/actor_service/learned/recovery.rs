@@ -15,6 +15,8 @@ mod selected;
 mod terminal;
 #[path = "recovery/live.rs"]
 mod live;
+#[path = "recovery/stream_reset.rs"]
+pub(super) mod stream_reset;
 use super::{
     ActorWire, Command, Config, Control, Deadline, Duration, ElapsedTick, FileHumanReviewer,
     FileLearnedTextStreamActorPort, FileOversight, FileSupervisedDriver, Instant,

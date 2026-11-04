@@ -1,5 +1,38 @@
 # Implementation status · design revision 0.3
 
+## 2026-11-04: topology custody during original stream-reset recovery
+
+The learned stream-reset operator now accepts an explicit topology profile for
+non-predictive mediated histories. It requires an exact v2 source checkpoint
+paired with the independently retained input history anchor, plus distinct new
+history and source output paths. Manual source minima cannot substitute for the
+original source documents, expenditure, graph and operation frontier. Historical
+intake never reads the declared next-source files or refreshes topology.
+
+A sealed native cursor binds the complete original reset intent and incident
+frontier before replay. Only that operation's completion and recovery Fence may
+follow the saved cut; availability can withdraw, independent floors can only
+strengthen, and every original policy/guard check remains mandatory. A reset
+whose checkpoint export failed can retry with its original paired custody
+without repeating its audit, incident, refund or source work.
+
+Authenticated Stop retains priority at every replay boundary, including Ready,
+through the original native Stop handoff. After either acknowledged completion
+or Stop, history and source exports are attempted independently. Reporting keeps
+acknowledgment distinct from retention and does not return a resumed actor.
+Predictive histories retain their native stream-reset refusal. If a reset source
+export and both subsequent Stop exports are lost, the old pair's compound reset/Stop
+suffix has no existing operator repair route; it refuses and requires preserving
+the journal and prior custody rather than retrying reset completion.
+
+Regression source covers actual numerical restoration and audit refusal,
+original source work, paired output admission, lost exports and exact retries,
+unrelated suffixes, changed commands/frontiers, deadline cancellation and checked
+Stop at Ready. Independent source review and syntax/whitespace checks do not
+establish execution. The required RCH runner is unavailable; compile, runtime,
+formatting, Clippy and full qualification remain pending, with no packet or bead
+closed. See `docs/LEARNED_STREAM_RESET_OPERATOR.md` for exact supported paths.
+
 ## 2026-11-04: explicit whole-piece BPE through native operator intake
 
 An independently selected `MergePolicy::WholePieceFirst` now supports the

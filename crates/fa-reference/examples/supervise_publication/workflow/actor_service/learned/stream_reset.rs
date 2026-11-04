@@ -1,11 +1,16 @@
 //! Complete one independently specified original stream-reset intent before its
-//! recovery Fence. No new checkpoint, reset intent, clock observation or publication is issued.
+//! recovery Fence. No new numerical checkpoint, reset intent, clock observation or publication is issued.
 use super::{
     Config, Control, Deadline, Duration, ElapsedTick, FileOversight, Instant, Loaded,
-    PeerProfile, anchors, checked, debug, fields, plus, recipe, recovery,
+    PeerProfile, anchors, checked, debug, fields, plus, recipe, recovery, topology,
 };
 use crate::config::read_regular;
-use fa_reference::action::consequence::delivery::persistent::observed::decoder::learned::checkpoint::FileLearnedResetIntent;
+use crate::workflow::continuation::checkpoint::AcknowledgedOutput;
+use fa_reference::action::consequence::delivery::persistent::observed::{
+    decoder::learned::checkpoint::FileLearnedResetIntent,
+    driver::topology::checkpoint::TopologyCheckpoint,
+    shutdown::recovery::FileAdmissionStoppedHistory,
+};
 use std::{
     collections::BTreeSet,
     fs,
@@ -16,7 +21,7 @@ use std::{
 #[path = "stream_reset/request.rs"]
 mod request;
 
-const USAGE: &str = "create-learned-generated CONFIG LEARNED_RECIPE --complete-stream-reset RESET_REQUEST --history-anchor INPUT --retain-history-anchor NEW_OUTPUT [--stop-profile PEER_PROFILE]";
+const USAGE: &str = "create-learned-generated CONFIG LEARNED_RECIPE --complete-stream-reset RESET_REQUEST --history-anchor INPUT --retain-history-anchor NEW_OUTPUT [--topology-profile TOPOLOGY_PROFILE] [--stop-profile PEER_PROFILE]";
 const REQUEST_BYTES: usize = 262_144;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -29,8 +34,8 @@ pub(super) fn decode(bytes: &[u8]) -> Result<Request, String> {
     request::decode(bytes)
 }
 
-/// Validate the whole grammar before stripping any option. Unsupported live,
-/// predictive and topology selections cannot be reinterpreted as reset data.
+/// Validate the whole grammar before stripping any option. Unsupported live
+/// and predictive selections cannot be reinterpreted as reset data.
 fn arguments(args: &[String]) -> Result<(Vec<String>, Option<PathBuf>), String> {
     if args.len() < 9
         || args.first().map(String::as_str) != Some("create-learned-generated")
@@ -52,7 +57,7 @@ fn arguments(args: &[String]) -> Result<(Vec<String>, Option<PathBuf>), String> 
         let flag = args[at].as_str();
         if !matches!(
             flag,
-            "--history-anchor" | "--retain-history-anchor" | "--stop-profile"
+            "--history-anchor" | "--retain-history-anchor" | "--stop-profile" | "--topology-profile"
         ) || !seen.insert(flag)
         {
             return Err(USAGE.into());
@@ -100,6 +105,7 @@ where
         return Err("stream-reset recovery cannot activate credibility".into());
     }
     let (args, stop_profile) = arguments(args)?;
+    let (args, topology_profile) = topology::take_option(&args)?;
     let (args, options) = anchors::take_options(&args)?;
     let start = time();
     let config = Config::read_learned_stream_reset(Path::new(&args[1]))?;
@@ -117,6 +123,9 @@ where
     checked::check_selection(&config, &loaded)?;
     deadline.check(time())?;
     options.admit(&config, &mut loaded, true)?;
+    // Admit historical source custody plus its output destination. This does
+    // not invoke selection.next, bind a source, or read any next-source files.
+    topology::admit(&config, &mut loaded, topology_profile.as_deref(), topology::Mode::Live)?;
     check_selection(&loaded)?;
     deadline.check(time())?;
     let peers = stop_profile.as_deref().map(PeerProfile::read).transpose()?;
@@ -136,13 +145,9 @@ where
     )
 }
 
-/// Until a native source-checkpoint successor exists, mediated histories cannot
-/// retain exact source custody through this command. Predictive histories have
-/// no stream-reset contract. Neither selection is downgraded to plain recovery.
+/// Topology requires exact paired source/history custody. Predictive histories
+/// retain their original native refusal and cannot downgrade to plain recovery.
 fn check_selection(loaded: &Loaded) -> Result<(), String> {
-    if loaded.topology.is_some() {
-        return Err("stream-reset recovery does not support topology histories".into());
-    }
     if loaded.generation.required_pre_output_forecast().is_some()
         || loaded
             .generation
@@ -154,8 +159,23 @@ fn check_selection(loaded: &Loaded) -> Result<(), String> {
     if loaded.generation.text_stream_profile().is_none() {
         return Err("stream-reset recovery requires the original learned text stream".into());
     }
-    if loaded.recovery_anchor.is_none() || loaded.anchor_output.is_none() {
+    let anchor = loaded.recovery_anchor.as_ref()
+        .ok_or("stream-reset recovery requires an independent input history anchor and a new retained output")?;
+    if loaded.anchor_output.is_none() {
         return Err("stream-reset recovery requires an independent input history anchor and a new retained output".into());
+    }
+    if let Some(selected) = loaded.topology.as_ref() {
+        let topology::Selection::Recover { selection, history } = selected else {
+            return Err("topology creation inputs cannot complete a historical stream reset".into());
+        };
+        let saved = history.checkpoint()
+            .ok_or("stream-reset recovery requires an exact v2 topology checkpoint; manual source minima cannot establish custody")?;
+        if saved.history_anchor() != anchor {
+            return Err("stream-reset source checkpoint and input history anchor describe different cuts".into());
+        }
+        if selection.acknowledged_output().is_none() {
+            return Err("stream-reset topology recovery requires a new retained topology checkpoint output".into());
+        }
     }
     Ok(())
 }
@@ -176,13 +196,17 @@ where
 {
     checked::check_selection(config, loaded)?;
     check_selection(loaded)?;
-    let ((host, _human, _forecast, _identity), _topology) =
-        recovery::complete_stream_reset_live(
+    let source = SourceRetention::admit(config, loaded)?;
+    let host = match source.as_ref() {
+        Some(source) => recovery::stream_reset::complete(
+            config, loaded, request, source, control, deadline, time),
+        None => recovery::complete_stream_reset_live(
             config, loaded, &request.intent, request.first_incident_sequence,
             control, deadline, time,
-        ).map_err(|error| format!(
-            "native stream-reset completion is unconfirmed: {error}; inspect the original history before choosing a retry"
-        ))?;
+        ).map(|((host, _human, _forecast, _identity), _topology)| host),
+    }.map_err(|error| format!(
+        "native stream-reset completion is unconfirmed: {error}; inspect the original history before choosing a retry"
+    ))?;
 
     // Native completion and Fence are already acknowledged. Retention and a
     // truthful report are both attempted even when time or output later fails.
@@ -190,6 +214,12 @@ where
     let retained = retain(&host, loaded);
     if let Err(error) = &retained {
         failures.push(format!("history anchor retention failed: {error}"));
+    }
+    // Each archive describes this same acknowledged cut. Failure of either
+    // export cannot suppress the other or justify repeating the reset audit.
+    let source_retained = source.as_ref().map(|source| source.retain(&host, request));
+    if let Some(Err(error)) = &source_retained {
+        failures.push(format!("topology checkpoint retention failed: {error}"));
     }
     let late = deadline.check(time()).is_err();
     if late {
@@ -235,6 +265,7 @@ where
         restored,
         &refunded,
         retained.is_ok(),
+        source_retained.as_ref().map(Result::is_ok),
         late,
         output,
     ) {
@@ -249,7 +280,7 @@ where
         Ok(())
     } else {
         Err(format!(
-            "native stream reset acknowledged at revision {}: {}; preserve the original expectation and input anchor; retry only that exact expectation with a new output path",
+            "native stream reset acknowledged at revision {}: {}; preserve the original expectation and paired input custody; retry only that exact expectation with new output paths",
             host.revision(),
             failures.join("; ")
         ))
@@ -276,6 +307,7 @@ fn report(
     restored: bool,
     refunded: &str,
     retained: bool,
+    source_retained: Option<bool>,
     late: bool,
     output: &mut impl Write,
 ) -> Result<(), String> {
@@ -283,6 +315,7 @@ fn report(
     let generation = host.learned_generation_inspection().map_err(debug)?;
     let usage = host.learned_recovery_usage().map_err(debug)?;
     let actor = host.actor_snapshot().map_err(debug)?;
+    let source_retained = source_retained.map_or("null", |retained| if retained { "true" } else { "false" });
     // Only fixed labels and bounded original numeric observations reach stdout.
     // Counters are decimal strings, preserving the entire u64 range.
     let text = format!(
@@ -294,7 +327,8 @@ fn report(
             "\"position\":\"{}\",\"sampled_draws\":\"{}\",\"paused\":{},\"incident_count\":\"{}\",",
             "\"charged\":\"{}\",\"reserved\":\"{}\",\"refunded_units\":{},\"executions\":\"{}\",",
             "\"restart_attempts\":\"{}\",\"reserved_cache_values\":\"{}\",\"values_restored\":\"{}\",",
-            "\"history_anchor_retained\":{},\"deadline_reached\":{},\"authority\":\"none\"}}\n"
+            "\"history_anchor_retained\":{},\"topology_checkpoint_retained\":{},",
+            "\"deadline_reached\":{},\"authority\":\"none\"}}\n"
         ),
         status,
         restored,
@@ -317,10 +351,59 @@ fn report(
         usage.reserved_cache_values,
         usage.values_restored,
         retained,
+        source_retained,
         late,
     );
     output
         .write_all(text.as_bytes())
         .and_then(|()| output.flush())
         .map_err(debug)
+}
+
+/// Independent output destinations are admitted before replay. Only an exact
+/// native successor can advance this retained source work; next-source files and
+/// live observers are never used for reset completion or terminal retention.
+pub(super) struct SourceRetention<'a> {
+    pub(super) saved: &'a TopologyCheckpoint,
+    archive: AcknowledgedOutput,
+    identity: PathBuf,
+}
+impl<'a> SourceRetention<'a> {
+    fn admit(config: &Config, loaded: &'a Loaded) -> Result<Option<Self>, String> {
+        let Some(topology::Selection::Recover { selection, history }) = loaded.topology.as_ref() else {
+            return Ok(None);
+        };
+        let saved = history.checkpoint().ok_or("missing exact stream-reset source checkpoint")?;
+        let path = selection.acknowledged_output().ok_or("missing new stream-reset source output")?;
+        let archive = AcknowledgedOutput::admit(config, path)?;
+        if loaded.anchor_output.as_deref() == Some(archive.path()) {
+            return Err("history anchor and topology checkpoint outputs must be distinct new files".into());
+        }
+        let identity = fs::canonicalize(&config.store).map_err(debug)?;
+        Ok(Some(Self { saved, archive, identity }))
+    }
+
+    fn retain(&self, host: &FileOversight, request: &Request) -> Result<(), String> {
+        let successor = self.saved.after_learned_stream_reset(host,
+            &request.intent, request.first_incident_sequence).map_err(debug)?;
+        self.archive.retain(&successor)
+    }
+
+    pub(super) fn retain_stop(&self, config: &Config, loaded: &Loaded,
+        stopped: &FileAdmissionStoppedHistory, request: &Request,
+    ) -> Result<(), String> {
+        let history = loaded.anchor_output.as_deref().ok_or_else(|| "missing new retained history output".to_owned())
+            .and_then(|path| anchors::export_acknowledged(stopped.history_anchor(), path))
+            .map_err(|error| format!("history anchor retention failed: {error}"));
+        let topology = self.saved.after_stream_reset_admission_stop(&config.profile,
+            &self.identity, stopped, &request.intent, request.first_incident_sequence)
+            .map_err(debug).and_then(|saved| self.archive.retain(&saved))
+            .map_err(|error| format!("terminal topology checkpoint retention failed: {error}"));
+        let failures: Vec<_> = [history, topology].into_iter().filter_map(Result::err).collect();
+        if failures.is_empty() { Ok(()) } else {
+            Err(format!(
+                "{}; preserve previous paired custody, canonical stopped history, and the Stop receipt; use terminal checkpoint recovery for a Stop/Fence-only successor; repair of an unexported stream-reset completion followed by Stop is not implemented by this operator",
+                failures.join("; ")))
+        }
+    }
 }

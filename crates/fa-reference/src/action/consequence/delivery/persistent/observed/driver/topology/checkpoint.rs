@@ -6,6 +6,7 @@ mod recovery;
 mod reconciled;
 mod abandonment;
 mod terminal;
+mod stream_reset;
 pub use recovery::TopologyCheckpointResume;
 
 use super::{FileDriverTopology, FileOversight, JournalError, LoadedAuthorityTopology,

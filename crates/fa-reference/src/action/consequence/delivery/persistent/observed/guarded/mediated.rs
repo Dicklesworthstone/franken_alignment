@@ -8,6 +8,7 @@ pub mod predictive;
 pub mod terminal;
 pub mod credential;
 pub mod receipt;
+pub mod stream_reset;
 pub use inspection::{FileMediatedSnapshot, FileTopologyUpdateRecord};
 pub use super::recovery::mediated::FileMediatedRecovery;
 

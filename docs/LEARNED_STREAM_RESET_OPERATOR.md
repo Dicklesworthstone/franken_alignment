@@ -1,10 +1,10 @@
 # Recover an acknowledged learned-stream reset
 
 This operator completes an already acknowledged native `BeginStreamReset` after
-a crash. It implements the plain guarded recovery path described in
+a crash. It implements the plain and nonpredictive mediated guarded recovery paths described in
 [PENDING_LEARNED_RESET_RECOVERY.md](PENDING_LEARNED_RESET_RECOVERY.md) and
 [LEARNED_STREAM_CONTAINMENT.md](LEARNED_STREAM_CONTAINMENT.md). It does not capture
-a checkpoint or begin a fresh reset. The original intent, numerical recipe,
+a new numerical checkpoint or begin a fresh reset. The original intent, numerical recipe,
 confirmed audience, and incident frontier must already exist.
 
 This is the recovery form of the registered `reset` mutation in
@@ -19,13 +19,14 @@ supervise_publication create-learned-generated CONFIG LEARNED_RECIPE \
   --complete-stream-reset RESET_REQUEST \
   --history-anchor INPUT_ANCHOR \
   --retain-history-anchor NEW_OUTPUT_ANCHOR \
+  [--topology-profile TOPOLOGY_PROFILE] \
   [--stop-profile PEER_PROFILE]
 ```
 
 This is a Linux operator mode. All paths are absolute. The complete argument
 list belongs to this mode before shared options are removed. Generation,
-continuation, credibility activation, topology, and other maintenance flags are
-not accepted.
+continuation, credibility activation, and other maintenance flags are not accepted.
+Topology selection uses the independently retained source checkpoint described below.
 
 `CONFIG` supplies the original bootstrap profile. This recovery mode can read an
 explicit `actor.grade: "functional_restart"` declaration; it never upgrades an
@@ -40,8 +41,9 @@ replacement, select the full expected effective policy through the independent
 [recovery policy envelope](LEARNED_RECOVERY_POLICY.md), while retaining the
 original bootstrap Config. Recovery does not read current source/helper evidence,
 launch inference workers, or obtain a fresh publication approval. This increment
-supports plain guarded learned text streams. Predictive and mediated/topology
-histories are rejected, without downgrading them to a plain profile.
+supports plain guarded learned text streams and their nonpredictive mediated
+histories. Predictive histories retain their native stream-reset refusal and are
+never downgraded to a plain profile.
 
 `RESET_REQUEST` and `INPUT_ANCHOR` are separately retained files outside the
 mutable authority store. The anchor must be an exact original acknowledged
@@ -53,6 +55,37 @@ current journal.
 must already exist. Admission rejects an existing destination; the actual
 acknowledged export repeats create-new admission, writes a private file, and
 synchronizes the file and parent directory. The input archive is not overwritten.
+
+## Topology source custody
+
+A mediated history additionally requires `--topology-profile TOPOLOGY_PROFILE`.
+Use the existing closed `fa.mediated-submit/2` profile with `source_checkpoint`
+and `retain_checkpoint`. The source checkpoint must contain the same exact
+history anchor as `INPUT_ANCHOR`, including the original `BeginStreamReset`
+intent and incident frontier. Manual v1 source minima and a checkpoint from
+before the intent cannot establish this custody.
+
+`retain_checkpoint` must name a new file outside the authority store, distinct
+from `NEW_OUTPUT_ANCHOR`. Both destinations are admitted before replay. The
+profile's independently selected `initial` documents still pin the original
+graph. The `next` paths remain required by the existing profile grammar but are
+not opened, bound, or certified by reset recovery. Current live topology,
+inventory, source evidence, and helper files are not needed for this operation.
+
+The sealed `FileStreamResetTopologyRecovery` retains the original guarded replay
+and exclusive lock. Its source-cut admission allows only the selected original
+`StreamReset` completion and recovery `Fence` records after the retained prefix.
+A changed command, frontier, topology update, source check, time observation,
+receipt reconciliation, or unrelated numerical work refuses before cleanup or
+mutation. Every original guard, effective-policy requirement, current credential
+epoch, and independent recovery floor still applies.
+
+After acknowledgment, `TopologyCheckpoint::after_learned_stream_reset` pairs the
+new native history with the original source documents, spent work, and last
+source operation. A recovery Fence withdraws topology availability. No source
+allowance is refilled, and the new checkpoint does not certify a current cut.
+Subsequent live publication still requires the existing newer-source/rebind and
+native source-check path.
 
 ## Request format
 
@@ -133,9 +166,11 @@ reset completion, or Fence.
 When `--stop-profile` is selected, the existing peer-authenticated Stop transport
 is serviced at those same checkpoints. A pending checked peer takes the original
 terminal recovery-Stop path at Ready **before** reset completion or live role
-issuance. An acknowledged Stop retains its resulting history anchor when an
-output destination was selected. A silent or failed admitted session does not
-fall through into reset recovery.
+issuance. An acknowledged Stop attempts both its resulting history anchor and,
+when selected, the operation-bound topology checkpoint, preserving their original
+source work. This also covers a Stop winning during an exact retry after an
+earlier reset completion outlived its export. A silent or failed admitted session
+does not fall through into reset recovery.
 
 With no pending Stop, the cursor invokes the native
 `finish_pending_stream_reset` finalizer before ordinary recovery can fence the
@@ -152,8 +187,8 @@ cooperative boundaries; the elapsed budget is not a hard preemption guarantee.
 
 ## Outcomes and retained custody
 
-After native acknowledgment, the command attempts anchor retention and then
-emits one `fa.learned-stream-reset-result/1` JSON object. Acknowledgment is
+After native acknowledgment, the command attempts history-anchor retention and
+any selected topology-checkpoint retention independently, then emits one `fa.learned-stream-reset-result/1` JSON object. Acknowledgment is
 separate from the original reset result:
 
 | `outcome` | Meaning | Exit result |
@@ -166,8 +201,9 @@ separate from the original reset result:
 The report includes the operation, checkpoint, incident frontier, revision,
 control sequence, authority epoch, numerical position and sampling counters,
 paused state, incident count, charged/reserved rights, original refund result,
-effect execution count, restart work, and anchor-retention status. Counters are
-decimal strings. `authority: "none"` is explicit: this report is historical
+effect execution count, restart work, and anchor-retention status.
+`topology_checkpoint_retained` is `true` or `false` for a selected topology
+checkpoint and `null` for a plain history. Counters are decimal strings. `authority: "none"` is explicit: this report is historical
 evidence.
 
 A late deadline, retention failure, or failed/partial stdout after acknowledgment
@@ -179,20 +215,45 @@ from extending the original operation budget.
 
 An exact retry of an already completed intent adds only the ordinary recovery
 Fence. It does not repeat the reset audit, count another incident, or refill
-restart work. Preserve the same expectation and independently retained input
-anchor, inspect the original history, and select a new output path for any
-deliberate retry. A changed expectation or newer pending operation refuses.
+restart work. A mediated exact retry also preserves the same source-work
+counters even if an earlier output could not be retained. Preserve the same
+expectation and independently retained input anchor/source-checkpoint pair,
+inspect the original history, and select new output paths for any deliberate
+retry. One successful export never substitutes for the missing half of its pair.
+A changed expectation or newer pending operation refuses.
 An intent already interrupted by Fence or Stop stays interrupted.
+
+A terminal Stop is a separate recovery boundary. If only Stop/Fence followed the
+original input pair and a Stop export fails, use the existing terminal checkpoint
+recovery path with new output destinations. The reset command does not reopen a
+stopped suffix. There is one explicit remaining compound-loss limitation: if a
+reset completion already outlived its exports, a later Stop is acknowledged, and
+its successor exports also fail, the original pair now precedes both reset and
+Stop records. The current generic terminal repair cannot accept that mixed suffix,
+and this increment does not add a dedicated terminal-only repair for it. Preserve
+the original paired archives, canonical stopped history, and any received Stop
+receipt for a separately reviewed native recovery. Retrying `--complete-stream-reset`, supplying manual
+source minima, or weakening expected guards cannot repair that custody.
 
 ## Source and verification
 
 The operator, strict request decoder, and authored regressions are in
 `examples/supervise_publication/workflow/actor_service/learned/stream_reset.rs`,
-its `stream_reset/request.rs` module, and `tests/stream_reset.rs`. Recovery
-delegates to the original selected cursor and native stream-reset finalizer;
-there is no replacement reset algorithm.
+its `stream_reset/request.rs` and `recovery/stream_reset.rs` modules, and
+`tests/stream_reset.rs` with `tests/stream_reset/topology.rs`. The native source
+successor and sealed mediated cursor are in the corresponding
+`observed/driver/topology/checkpoint/stream_reset.rs` and
+`observed/guarded/mediated/stream_reset.rs` modules. Recovery delegates to the
+original numerical stream-reset finalizer; there is no replacement reset algorithm.
 
 The tests use real numerical checkpoints, native review and reset operations,
-canonical journals, independent anchors, and command-file parsing. Runtime
-execution and type checking remain pending under the required RCH runner.
+canonical journals, independent anchors/source checkpoints, and command-file
+parsing. Topology cases cover absent live files, lost source export and exact
+retry without additional audit/incident/source work, acknowledged audit refusal,
+changed intent/frontier/budget, an incomplete retained prefix, unrelated successor
+work, paired-output admission, deadline cancellation through Ready, and an
+authenticated Stop arriving at Ready both before numerical completion and after
+an earlier completion whose exports were lost. These are
+authored source regressions: runtime execution and type checking remain pending
+under the required RCH runner.
 This increment does not close FA-108 or establish a production restart grade.
