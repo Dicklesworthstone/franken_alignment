@@ -69,3 +69,8 @@ mod v2_assets;
 mod unicode_json;
 #[path = "tests/v2.rs"]
 mod v2;
+#[allow(dead_code)]
+#[path = "../../../../tests/support/native_worker_grammar_assets.rs"]
+mod grammar_assets;
+#[path = "tests/grammar.rs"]
+mod grammar;

@@ -50,20 +50,42 @@ impl SamplingPolicy {
     /// Check bounds before scanning or sorting, including scores discarded by
     /// top-k. NaN/Inf never become an implicit forbidden-token mask.
     pub fn distribution(&self, logits: &[f32], budget: SamplingBudget) -> Result<SamplingDistribution, Error> {
+        self.distribution_with_allowed(logits, budget, None)
+    }
+
+    // Native helper grammar only. Filtering is before top-k/nucleus, but AFTER
+    // the original full-vocabulary admission and finite checks. The caller must
+    // supply a nonempty, strictly increasing set of original token IDs.
+    fn distribution_with_allowed(&self, logits: &[f32], budget: SamplingBudget,
+        allowed: Option<&[u32]>) -> Result<SamplingDistribution, Error>
+    {
         if budget.vocabulary > MAX_DECODER_VOCABULARY || logits.len() > budget.vocabulary {
             return Err(Error::Limit);
         }
         if logits.len() != self.vocabulary { return Err(Error::Binding); }
         if logits.iter().any(|score| !score.is_finite()) { return Err(Error::InvalidInput); }
+        if let Some(tokens) = allowed {
+            if tokens.is_empty() { return Err(Error::Incomplete); }
+            if tokens.len() > self.vocabulary { return Err(Error::Limit); }
+            if tokens.iter().any(|token| *token as usize >= logits.len())
+                || tokens.windows(2).any(|pair| pair[0] >= pair[1])
+            { return Err(Error::InvalidInput); }
+        }
         let mut candidates = Vec::new();
-        candidates.try_reserve_exact(logits.len()).map_err(|_| Error::Limit)?;
-        candidates.extend(logits.iter().enumerate().map(|(token, score)| Candidate {
-            token: token as u32, value: f64::from(*score),
-        }));
+        candidates.try_reserve_exact(allowed.map_or(logits.len(), |tokens| tokens.len())).map_err(|_| Error::Limit)?;
+        if let Some(tokens) = allowed {
+            candidates.extend(tokens.iter().map(|token| Candidate {
+                token: *token, value: f64::from(logits[*token as usize]),
+            }));
+        } else {
+            candidates.extend(logits.iter().enumerate().map(|(token, score)| Candidate {
+                token: token as u32, value: f64::from(*score),
+            }));
+        }
         // Signed zero is a numerical tie, unlike f64::total_cmp's zero ordering.
         candidates.sort_unstable_by(|a, b| b.value.partial_cmp(&a.value)
             .expect("all input scores finite").then_with(|| a.token.cmp(&b.token)));
-        let after_top_k = if self.top_k == 0 { candidates.len() } else { self.top_k };
+        let after_top_k = if self.top_k == 0 { candidates.len() } else { self.top_k.min(candidates.len()) };
         candidates.truncate(after_top_k);
         let maximum = candidates[0].value;
         let mut mass = 0.0;
@@ -220,9 +242,22 @@ impl Sampler {
         self.snapshot = prepared.next;
         Ok(prepared.sample)
     }
+
+    pub(crate) fn sample_allowed(&mut self, logits: &[f32], budget: SamplingBudget,
+        allowed: &[u32]) -> Result<SampledToken, Error>
+    {
+        let prepared = self.prepare_with_allowed(logits, budget, Some(allowed))?;
+        self.snapshot = prepared.next;
+        Ok(prepared.sample)
+    }
+
     fn prepare(&self, logits: &[f32], budget: SamplingBudget) -> Result<PreparedSample, Error> {
+        self.prepare_with_allowed(logits, budget, None)
+    }
+
+    fn prepare_with_allowed(&self, logits: &[f32], budget: SamplingBudget, allowed: Option<&[u32]>) -> Result<PreparedSample, Error> {
         let draw = self.snapshot.draws.checked_add(1).ok_or(Error::Overflow)?;
-        let distribution = self.snapshot.policy.distribution(logits, budget)?;
+        let distribution = self.snapshot.policy.distribution_with_allowed(logits, budget, allowed)?;
         let mut next = self.snapshot.clone();
         let random_word = xoshiro(&mut next.state);
         next.draws = draw;
@@ -254,6 +289,55 @@ fn xoshiro(s: &mut [u64; 4]) -> u64 {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn grammar_filter_precedes_top_k_and_retains_full_scan_and_singleton_draw() {
+        let policy = SamplingPolicy::new(1, 1, 4, 1.0, 3, 0.8).unwrap();
+        let mut sampler = Sampler::seeded(policy, 2, 3).unwrap();
+        let sample = sampler.sample_allowed(&[100.0, 90.0, 2.0, 80.0],
+            SamplingBudget { vocabulary: 4 }, &[2]).unwrap();
+        assert_eq!(sample.token, 2); assert_eq!(sample.probability, 1.0);
+        assert_eq!(sample.draw, 1); assert_eq!(sampler.snapshot().draws(), 1);
+        assert_eq!(sample.work, SamplingWork { logits_scanned: 4, exponentials: 1,
+            retained_candidates: 1, zero_weights: 0 });
+    }
+
+    #[test]
+    fn whole_vocabulary_filter_preserves_original_sampling_exactly() {
+        for top_k in [0, 1, 3, 4] {
+            for top_p in [0.3, 1.0] {
+                let policy = SamplingPolicy::new(1, 1, 4, 0.7, top_k, top_p).unwrap();
+                let mut original = Sampler::seeded(policy.clone(), 2, 47).unwrap();
+                let mut filtered = Sampler::seeded(policy, 2, 47).unwrap();
+                for _ in 0..8 {
+                    let logits = [0.0, -0.0, -1.0, 0.5];
+                    let budget = SamplingBudget { vocabulary: 4 };
+                    assert_eq!(original.sample(&logits, budget).unwrap(),
+                        filtered.sample_allowed(&logits, budget, &[0, 1, 2, 3]).unwrap());
+                    assert_eq!(original.snapshot(), filtered.snapshot());
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn excluded_nonfinite_logits_and_invalid_support_never_advance_random_state() {
+        let policy = SamplingPolicy::new(1, 1, 3, 1.0, 1, 1.0).unwrap();
+        let mut sampler = Sampler::seeded(policy, 2, 3).unwrap();
+        let initial = sampler.snapshot(); let budget = SamplingBudget { vocabulary: 3 };
+        for bad in [f32::NAN, f32::INFINITY, f32::NEG_INFINITY] {
+            assert_eq!(sampler.sample_allowed(&[1.0, bad, 2.0], budget, &[0]), Err(Error::InvalidInput));
+            assert_eq!(sampler.snapshot(), initial);
+        }
+        for support in [vec![], vec![3], vec![0, 0], vec![2, 0]] {
+            assert!(sampler.sample_allowed(&[1.0, 2.0, 3.0], budget, &support).is_err());
+            assert_eq!(sampler.snapshot(), initial);
+        }
+        assert_eq!(sampler.sample_allowed(&[1.0, 2.0, 3.0],
+            SamplingBudget { vocabulary: 1 }, &[0]), Err(Error::Limit));
+        assert_eq!(sampler.snapshot(), initial);
+    }
+
     #[test]
     fn zero_and_last_grid_point_never_select_underflowed_mass() {
         let p = SamplingPolicy::new(1, 1, 3, 0.000001, 0, 1.0).unwrap();

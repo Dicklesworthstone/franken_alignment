@@ -1,5 +1,18 @@
 # Changelog
 
+## 2026-11-04: constrain native helper verdict generation
+
+- Add an explicit finite byte grammar for allow/hold/deny/abstain plus a fully
+  sampled and monitored terminal, using original tokenizer IDs and model logits.
+- Preserve full-vocabulary work/finite checks, original PRNG and monitor holds;
+  commit grammar state with the numerical token and prohibit unbound replay.
+- Add worker manifest /5 across original single/sharded/LoRA loading, retaining
+  unrestricted semantics and closed fields for every previous manifest.
+- Add nineteen sampler/evaluator/loader/spawned-worker regression functions,
+  including an invalid higher-scored token versus valid constrained inference.
+- Source/syntax checks passed; mandatory RCH compilation and runtime execution
+  remain unavailable, with calibration and qualification explicitly pending.
+
 ## 2026-11-04: capture and initiate learned stream resets from the operator
 
 - Add exact offline checkpoint capture and independent reset initiation before

@@ -1,5 +1,39 @@
 # Implementation status · design revision 0.3
 
+## 2026-11-04: constrain native helper sampling to a finite verdict grammar
+
+NativeEvaluator can now explicitly select FiniteWordsV1 before input admission.
+The fixed language is the exact bytes allow, hold, deny or abstain followed by
+a registered sampled and fully reviewed terminal. Compilation uses actual
+immutable tokenizer bytes and original token IDs, including byte and merged
+paths; it does not insert an answer, alter the prompt or repair malformed text.
+
+The original sampler validates and accounts for the full vocabulary before
+filtering, then applies its existing temperature/top-k/nucleus arithmetic and
+PRNG. Grammar and random state commit with the actual numerical token before
+fallible monitoring. Holds, incomplete terminals and spent allowances cannot
+reroll or become a vote. The evaluator keeps decoder ownership private, and
+grammar-bearing host checkpoint/replay is explicitly refused rather than losing
+unrecorded state. Existing sampler and helper-policy APIs remain compatible.
+
+The closed fa.native-worker/5 manifest selects finite-words-v1 or unrestricted,
+with explicit adapter null or the original static-LoRA profile. All existing
+single/sharded/tokenizer/rotary/adapted loader paths use the selection before
+returning a worker. Versions /1 through /4 preserve unrestricted semantics and
+their exact old fields. Grammar selection changes the judgment distribution and
+belongs in the independently registered helper/input profile and generation.
+
+Nineteen new regression functions cover sampler equivalence/full scan and finite
+checks, all words and merged paths, actual input-dependent numerical inference,
+held answers/terminals, immutable selection, budgets, closed manifests and real
+spawned-worker commit/reveal including LoRA. The decisive checkpoint fixture
+scores invalid x above valid allow: unrestricted output fails while finite
+sampling computes the lower-scored valid verdict. Sixteen Rust files passed
+syntax/whitespace checks; independent source/API review found no concrete
+blocker after correcting constructor and private sampler-call compatibility.
+The required RCH runner is still unavailable. Compilation, runtime tests,
+formatting, Clippy, calibration and FA-018 qualification remain pending.
+
 ## 2026-11-04: capture and initiate original learned-stream containment
 
 The operator now exposes --capture-stream-checkpoint and --begin-stream-reset

@@ -11,6 +11,8 @@ pub use incremental::{NativeEvaluationProgress, NativeEvaluationWork};
 
 #[cfg(test)]
 mod tests;
+#[cfg(test)]
+mod grammar_tests;
 
 use super::super::helper_workers::wire::WorkerInput;
 use crate::action::consequence::activation::monitor::decoder::sampled::generation::{
@@ -79,6 +81,17 @@ impl NativeHelperPolicy {
     }
 }
 
+/// Independently selected output semantics, never a worker-request field.
+/// This changes the helper's judgment distribution and belongs in the operator's
+/// registered input-profile/generation. A valid grammar says nothing about truth.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum NativeVerdictGrammar {
+    /// Existing unrestricted sampling followed by strict complete-output parsing.
+    Unrestricted,
+    /// Exactly allow, hold, deny or abstain, then a sampled reviewed stop control.
+    FiniteWordsV1,
+}
+
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum NativeEvaluationError {
     Contract(Error),
@@ -131,6 +144,7 @@ pub struct NativeEvaluator {
     input: Option<WorkerInput>,
     report: Option<TextGenerationReport>,
     admission_steps: usize,
+    verdict_grammar: NativeVerdictGrammar,
 }
 impl fmt::Debug for NativeEvaluator {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -145,10 +159,31 @@ impl NativeEvaluator {
         if decoder.position() != 0 || decoder.sampled_draws() != 0
             || decoder.status() != MonitoringStatus::Ready { return Err(Error::WrongState); }
         policy.check_tokenizer(decoder.tokenizer())?;
-        Ok(Self { execution: incremental::Execution::Decoder(Box::new(decoder)), policy, status: NativeEvaluationStatus::AwaitingInput, input: None, report: None, admission_steps: 0 })
+        Ok(Self { execution: incremental::Execution::Decoder(Box::new(decoder)), policy, status: NativeEvaluationStatus::AwaitingInput, input: None, report: None, admission_steps: 0,
+            verdict_grammar: NativeVerdictGrammar::Unrestricted })
+    }
+
+    /// Select a grammar on a fresh sole evaluator before accepting any input.
+    /// No words, control spellings or prompt prefixes are inserted. Sampling
+    /// retains the original model, PRNG, budget and compulsory layer reviews;
+    /// only tokens extending the finite output language are eligible. Rejected,
+    /// held or truncated output still cannot become a vote.
+    pub fn with_verdict_grammar(mut self, grammar: NativeVerdictGrammar) -> Result<Self, Error> {
+        if self.status != NativeEvaluationStatus::AwaitingInput
+            || self.verdict_grammar != NativeVerdictGrammar::Unrestricted
+        { return Err(Error::WrongState); }
+        let incremental::Execution::Decoder(decoder) = &mut self.execution else {
+            return Err(Error::WrongState);
+        };
+        if grammar == NativeVerdictGrammar::FiniteWordsV1 {
+            decoder.install_native_verdict_grammar(&self.policy.stop_tokens)?;
+        }
+        self.verdict_grammar = grammar;
+        Ok(self)
     }
 
     pub fn policy(&self) -> &NativeHelperPolicy { &self.policy }
+    pub fn verdict_grammar(&self) -> NativeVerdictGrammar { self.verdict_grammar }
     pub fn status(&self) -> NativeEvaluationStatus { self.status }
     /// Historical source data, not current evidence or an authority handle.
     pub fn input(&self) -> Option<&WorkerInput> { self.input.as_ref() }

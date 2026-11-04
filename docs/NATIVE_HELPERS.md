@@ -20,6 +20,14 @@ malformed bytes and truncated output do not produce a vote. A monitor hold,
 budget exhaustion, input refusal or missing terminal cannot become an implicit
 Allow, Hold or Abstain. Only registered non-text controls may stop generation.
 
+Fresh evaluators can explicitly select `NativeVerdictGrammar::FiniteWordsV1`
+to constrain sampling to those four byte words and a reviewed terminal. The
+original sampler, full-vocabulary work accounting and all-layer monitors remain
+in use; valid grammar is not a truth judgment. Existing evaluators default to
+unrestricted sampling followed by strict parsing. The runnable worker exposes
+the selection in `fa.native-worker/5`; see [finite verdict grammar](NATIVE_VERDICT_GRAMMAR.md)
+for the exact API, manifest, compatibility and causal acceptance coverage.
+
 Each evaluator attempts one request. Its no-retry latch is installed before any
 fallible inference work and survives a caught unwind. It retains the original
 numerical report even for a held, truncated or invalid response. Reported work

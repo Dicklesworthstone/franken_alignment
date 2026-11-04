@@ -7,7 +7,7 @@ mod rotary;
 #[path = "config/lora.rs"]
 mod lora;
 use checkpoint::CheckpointFiles;
-use fa_reference::action::consequence::oversight::helper_client::native::NativeHelperPolicy;
+use fa_reference::action::consequence::oversight::helper_client::native::{NativeHelperPolicy, NativeVerdictGrammar};
 use fa_reference::action::consequence::oversight::helper_client::native::process::{
     NativeProcessBudget, NativeProcessError, NativeProcessReport, inherited_worker_socket, run_native_worker,
 };
@@ -72,6 +72,7 @@ struct Manifest {
     files: [PathBuf; 4],
     checkpoint: CheckpointFiles,
     tokenizer_format: NativeTokenizerFormat,
+    verdict_grammar: NativeVerdictGrammar,
     adapter: Option<lora::LoraFiles>,
     stream: u64,
     salt_file: PathBuf,
@@ -92,9 +93,13 @@ impl Manifest {
             Some("fa.native-worker/2") => 2,
             Some("fa.native-worker/3") => 3,
             Some("fa.native-worker/4") => 4,
+            Some("fa.native-worker/5") => 5,
             _ => return Err(LaunchError::Field("schema")),
         };
-        let fields: &[&str] = if version == 4 {
+        let fields: &[&str] = if version == 5 {
+            &["schema", "input", "decoder", "policy", "files", "stream",
+                "salt_file", "lifetime", "startup", "tokenizer_format", "adapter", "verdict_grammar"]
+        } else if version == 4 {
             &["schema", "input", "decoder", "policy", "files", "stream",
                 "salt_file", "lifetime", "startup", "tokenizer_format", "adapter"]
         } else if version >= 2 {
@@ -107,6 +112,13 @@ impl Manifest {
         let r = object(&json, fields, "$")?;
         let tokenizer_format = if version >= 2 { checkpoint::tokenizer_format(&r["tokenizer_format"])? }
             else { NativeTokenizerFormat::NativeArchive };
+        let verdict_grammar = if version == 5 {
+            match r["verdict_grammar"].as_str() {
+                Some("unrestricted") => NativeVerdictGrammar::Unrestricted,
+                Some("finite-words-v1") => NativeVerdictGrammar::FiniteWordsV1,
+                _ => return Err(LaunchError::Field("verdict_grammar")),
+            }
+        } else { NativeVerdictGrammar::Unrestricted };
         let input = object(&r["input"], &["id", "bytes_hex", "model_epoch", "tokenizer_epoch", "policy_epoch"], "input")?;
         let profile = InputProfileBinding { profile_id: u64_field(input, "id")?,
             profile_bytes: hex(&input["bytes_hex"])?, model_epoch: u64_field(input, "model_epoch")?,
@@ -128,7 +140,9 @@ impl Manifest {
             decoder_profile.with_rotary_scaling(rotary::parse(&decoder["rotary"])?)
                 .map_err(LaunchError::Contract)?
         } else { decoder_profile };
-        let adapter = if version == 4 { Some(lora::parse(&r["adapter"], &decoder_profile)?) } else { None };
+        let adapter = if version == 4 || (version == 5 && r["adapter"] != Json::Null) {
+            Some(lora::parse(&r["adapter"], &decoder_profile)?)
+        } else { None };
         let p = object(&r["policy"], &["max_new_tokens", "stop_tokens", "max_output_bytes", "tokenization", "generation"], "policy")?;
         let tokens = p["stop_tokens"].as_array().ok_or(LaunchError::Field("stop_tokens"))?;
         if tokens.len() > MAX_STOP_TOKENS { return Err(LaunchError::Limit); }
@@ -145,7 +159,7 @@ impl Manifest {
         let startup = object(&r["startup"], &["asset_bytes", "asset_calls", "weight_bytes", "weight_calls"], "startup")?;
         let checkpoint = if version >= 2 { CheckpointFiles::parse(&files["weights"])? }
             else { CheckpointFiles::Single(path(&files["weights"], "weights")?) };
-        let result = Self { policy, checkpoint, tokenizer_format, adapter, files: [path(&files["configuration"], "configuration")?,
+        let result = Self { policy, checkpoint, tokenizer_format, verdict_grammar, adapter, files: [path(&files["configuration"], "configuration")?,
             path(&files["tokenizer"], "tokenizer")?, path(&files["monitoring"], "monitoring")?,
             path(&files["sampling"], "sampling")?],
             stream: u64_field(r, "stream")?, salt_file: path(&r["salt_file"], "salt_file")?,

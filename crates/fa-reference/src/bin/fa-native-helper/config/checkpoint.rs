@@ -74,8 +74,8 @@ impl Manifest {
     pub(super) fn load(&self, assets: &mut NativeAssetReadBudget, weights: &mut WeightReadBudget)
         -> Result<NativeEvaluator, LaunchError>
     {
-        if let Some(adapter) = &self.adapter { return self.load_lora(adapter, assets, weights); }
-        match &self.checkpoint {
+        let evaluator = if let Some(adapter) = &self.adapter { self.load_lora(adapter, assets, weights) }
+        else { match &self.checkpoint {
             CheckpointFiles::Single(weight_path) => {
                 let request = NativeFileBootstrap { policy: &self.policy, stream: self.stream,
                     files: NativeHelperFiles { configuration: &self.files[0], tokenizer: &self.files[1],
@@ -92,6 +92,7 @@ impl Manifest {
                 NativeEvaluator::from_llama_shard_files_with_tokenizer_format(request, assets, weights, self.tokenizer_format)
                     .map(|(evaluator, _)| evaluator).map_err(LaunchError::ShardedStartup)
             }
-        }
+        } }?;
+        evaluator.with_verdict_grammar(self.verdict_grammar).map_err(LaunchError::Contract)
     }
 }

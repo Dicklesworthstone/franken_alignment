@@ -19,6 +19,15 @@ use fixture::configure;
 use process::{exchange, exchange_frame, no_vote, no_vote_frame};
 
 #[test]
+fn worker_v5_grammar_wraps_actual_static_adapter_and_rotary_execution() {
+    let mut fixture = assets::Fixture::new(false); configure(&mut fixture, 1, false, true);
+    fixture.manifest = fixture.manifest.replace("\"schema\":\"fa.native-worker/4\"",
+        "\"schema\":\"fa.native-worker/5\",\"verdict_grammar\":\"finite-words-v1\"");
+    fixture.save();
+    exchange(&fixture, b"?", Verdict::Deny); exchange(&fixture, b"!", Verdict::Allow);
+}
+
+#[test]
 fn worker_v4_adapter_changes_actual_independent_commit_reveal_for_rank_one_and_two() {
     for rank in [1, 2] {
         for json in [false, true] {

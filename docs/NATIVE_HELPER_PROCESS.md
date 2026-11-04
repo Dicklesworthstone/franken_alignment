@@ -55,12 +55,20 @@ used for responses; the original socket carries the original wire frames. The
 existing launcher's private stderr carries bounded failure diagnostics, never
 prompt bytes, output text, raw profile bytes or the provisioned salt.
 
-The manifest is strict `fa.native-worker/1` JSON. Every field below is mandatory;
+The base manifest below is strict `fa.native-worker/1` JSON. Every field below is mandatory;
 unknown/duplicate fields, implicit epochs, relative asset paths, malformed numeric
-values and alternate schema versions refuse. `bytes_hex` is lowercase hexadecimal
+values and undeclared schema extensions refuse. `bytes_hex` is lowercase hexadecimal
 for EXACT InputProfileBinding bytes, including non-UTF-8. The decoder profile is
 an independent operator expectation, not guessed from checkpoint metadata. The
 ordinary native startup still binds it against the tokenizer/config/monitors.
+
+The explicit `fa.native-worker/5` profile adds finite verdict-grammar selection
+to the existing single/sharded, tokenizer, rotary and static-LoRA loading paths.
+It requires `verdict_grammar` and an explicit `adapter` (null for no adapter),
+while preserving every other applicable independent field. See
+[finite verdict grammar](NATIVE_VERDICT_GRAMMAR.md) for the exact selection.
+Earlier manifest versions keep unrestricted output sampling and their original
+closed fields; they never silently inherit the new grammar.
 
 This example has the synthetic test model's shape and stop ID; real assets need
 their actual registered profile and control IDs, not these illustrative numbers.
