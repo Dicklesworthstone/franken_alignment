@@ -12,7 +12,7 @@ use fa_reference::action::consequence::gate::containment::RestartGrade;
 use fa_reference::action::consequence::oversight::actor_peer::PeerCredentials;
 use std::{os::unix::net::UnixStream, path::{Path, PathBuf}};
 
-fn config_file(root: &Root, grade: &str) -> PathBuf {
+pub(super) fn config_file(root: &Root, grade: &str) -> PathBuf {
     let text = include_str!(concat!(env!("CARGO_MANIFEST_DIR"),
         "/fixtures/supervised_publication.json"))
         .replace("/operator/publication-store", root.0.join("store").to_str().unwrap())
@@ -28,7 +28,7 @@ fn config_file(root: &Root, grade: &str) -> PathBuf {
     path
 }
 
-fn peers_file(root: &Root, config: &Config) -> (PathBuf, PeerProfile) {
+pub(super) fn peers_file(root: &Root, config: &Config) -> (PathBuf, PeerProfile) {
     let (socket, _client) = UnixStream::pair().unwrap();
     let p = PeerCredentials::observe(&socket).unwrap();
     let s = config.profile.delivery.scope;

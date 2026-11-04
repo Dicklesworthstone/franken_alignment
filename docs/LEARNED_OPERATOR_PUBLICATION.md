@@ -832,6 +832,18 @@ replaced after its result is known.
 
 ## Original transitions and recovery
 
+Fresh single-request creation can select `--campaign-profile PATH` to install
+the original mandatory policy-campaign guard in its first image. Continuation
+and recovery cannot use this creation flag to add governance after work begins;
+they must independently require the installed inventory. See
+[LEARNED_CAMPAIGN_CREATION.md](LEARNED_CAMPAIGN_CREATION.md).
+
+A plain functional-restart Message command can also select
+`--checkpoint-before-generation PROFILE` to capture the exact original quiet
+numerical boundary before its next sampled token. This is explicit supervisor
+capture, with ordinary numerical, review and human gates retained. See the live
+capture contract in [LEARNED_STREAM_RESET_OPERATOR.md](LEARNED_STREAM_RESET_OPERATOR.md).
+
 Creation first admits the external recipe and native inputs. The first original
 store image includes the stream, exact learned generation recipe, mandatory
 sidecar provenance, policy-only source requirement and original terminal recovery

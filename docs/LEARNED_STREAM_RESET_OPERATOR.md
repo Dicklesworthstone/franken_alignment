@@ -11,6 +11,61 @@ the original numerical recipe, confirmed audience and native containment rules.
 
 ## Capture and independent initiation
 
+### Capture during healthy generation
+
+A single live Message command can select a checkpoint before its next sampled
+token, after the original prompt is complete or immediately after an explicit
+message continuation:
+
+```text
+supervise_publication create-learned-generated CONFIG LEARNED_RECIPE REVIEWER_PROFILE \
+  --checkpoint-before-generation CHECKPOINT_PROFILE \
+  --retain-history-anchor NEW_OUTPUT_ANCHOR
+```
+
+The closed profile `fa.learned-generation-checkpoint/1` selects three canonical
+unsigned decimal strings:
+
+```json
+{
+  "schema": "fa.learned-generation-checkpoint/1",
+  "checkpoint": "71",
+  "expected_position": "2",
+  "expected_sampled_draws": "0"
+}
+```
+
+The selected original numerical recipe already binds the model and stream.
+Checkpoint ID and position must be nonzero; the position and draw count must
+match the actual quiet `Generating` boundary exactly. The example describes a
+two-token prompt before its first sample. A continued message instead selects
+the cumulative position and draw count after the previous confirmed message.
+The command refuses a mismatched or already crossed boundary before drawing
+output; it does not wait until a later position happens to match the document.
+
+The actual original capture binds the current actor revision, authority epoch,
+control sequence and complete confirmed audience. It is durably acknowledged
+before another Stop/source/deadline check and before the next sampled-token
+intent. Capture retains its existing synchronous full historical replay and
+serialization costs; ordinary generation remains cooperatively stepped. This
+option performs no reset, grants no publication key, and leaves all monitor,
+native congress and independent human review requirements in force.
+
+This live selection requires an explicit `functional_restart` configuration and
+a plain nonpredictive stream. It composes with fresh campaign provisioning,
+actor/precheck service and existing anchor options. It cannot be used for
+Finish, historical maintenance, resident sequences or topology-backed capture.
+Use a fresh checkpoint ID. A repeated ID refuses before generation; an already
+acknowledged capture remains in history and ordinary continuation can omit the
+new-capture flag. The usual anchor export is attempted at request completion.
+
+A stream checkpoint remains eligible only within its captured confirmed audience
+boundary. Successful publication changes that boundary. Existing failure paths
+still apply their original Stop/drain behavior; this option does not implement
+automatic incident reset or make a terminally stopped owner resettable.
+
+### Capture an existing quiet prefix or initiate reset
+
 ```text
 supervise_publication create-learned-generated CONFIG LEARNED_RECIPE \
   --capture-stream-checkpoint CHECKPOINT_REQUEST \

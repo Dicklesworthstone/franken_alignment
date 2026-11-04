@@ -28,6 +28,8 @@ use super::*;
 #[path = "tests/qualification.rs"] mod qualification;
 #[path = "tests/stopped.rs"] mod stopped;
 #[path = "tests/stream_reset.rs"] mod stream_reset;
+#[path = "tests/checkpoint_on_generation.rs"] mod checkpoint_on_generation;
+#[path = "tests/campaign_creation.rs"] mod campaign_creation;
 
 #[path = "tests/recovery_policy.rs"] mod recovery_policy;
 use fixture::{Root, configured, evidence};

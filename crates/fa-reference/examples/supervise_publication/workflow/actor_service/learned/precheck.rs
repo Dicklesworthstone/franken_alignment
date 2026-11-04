@@ -18,7 +18,8 @@ pub(super) fn take_option(args: &[String]) -> Result<(Vec<String>, Option<&Path>
     if path.is_empty() || path.starts_with("--") { return Err(USAGE.into()); }
     let mut remaining = args[..at].to_vec();
     remaining.extend_from_slice(&args[at + 2..]);
-    let (_, actor) = super::ingress::take_option(&remaining)?;
+    let (live, _) = super::campaigns::take_option(&remaining)?;
+    let (_, actor) = super::ingress::take_option(&live)?;
     if actor.is_none() { return Err(USAGE.into()); }
     Ok((remaining, Some(Path::new(path))))
 }

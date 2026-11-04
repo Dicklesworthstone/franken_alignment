@@ -53,10 +53,14 @@ pub(super) struct Loaded {
     /// Independently supplied recovery expectation, separate from bootstrap
     /// configuration and the numerical recipe. Never inferred from the journal.
     pub expected_policy: Policy,
-    /// Exact recovery-only inventory. None requires that campaigns are absent.
+    /// Exact required inventory. None requires that campaigns are absent.
     pub expected_campaigns: Option<FileCampaignRequirement>,
+    /// Explicit first-image selection. Recovery expectations alone cannot
+    /// install a guard in a new owner or enable it after work has begun.
+    pub creation_campaigns: Option<FileCampaignRequirement>,
     pub recovery_anchor: Option<FileHistoryAnchor>,
     pub anchor_output: Option<PathBuf>,
+    pub checkpoint_on_generation: Option<super::checkpoint_on_generation::Selection>,
     pub topology: Option<super::topology::Selection>,
     pub identity: Option<super::identity::Selection>,
     pub publication: Option<crate::publication::PublicationProfile>,
@@ -104,7 +108,7 @@ pub(super) fn check_creation(config: &Config, loaded: &Loaded) -> Result<(), Str
     if loaded.expected_policy != config.profile.delivery.policy {
         return Err("new learned history requires the configured bootstrap policy; a recovery expectation cannot replace it".into());
     }
-    if loaded.expected_campaigns.is_some() {
+    if loaded.expected_campaigns != loaded.creation_campaigns {
         return Err("new learned history cannot install a recovery-only campaign guard".into());
     }
     Ok(())
@@ -220,8 +224,10 @@ fn load_recipe(recipe: Recipe, config: &Config, require_native: bool,
     if let Some(credential) = credential.as_mut() { credential.retain_allowance(assets); }
     Ok(Loaded { request: recipe.request, ttl_ms: recipe.ttl_ms, generation, stream: recipe.publication,
         floor: recipe.floor, recovery_anchor: None, anchor_output: None, topology: None,
+        checkpoint_on_generation: None,
         expected_policy: recipe.expected_policy.unwrap_or_else(|| config.profile.delivery.policy.clone()),
         expected_campaigns: recipe.expected_campaigns,
+        creation_campaigns: None,
         identity: recipe.computed_identity.map(|identity| identity.selection), publication, credential,
         evidence: LearnedEvidenceLimits { token_ids: recipe.binding.evidence.token_ids,
             score_words: recipe.binding.evidence.score_words, encoded_bytes: recipe.binding.encoded_bytes },

@@ -1,5 +1,16 @@
 # Changelog
 
+## 2026-11-04: provision campaign governance and live learned checkpoints
+
+- Add explicit first-image campaign provisioning to single learned creation,
+  composing the original guarded bootstrap with plain/raw/owned predictors.
+- Add an exact live checkpoint selection at the original completed-prompt or
+  continued-message boundary before the next sampled intent.
+- Preserve independent recovery inventory, finite work, confirmed audience,
+  Stop/deadline servicing and separate native/human publication gates.
+- Add ten CLI/native regression functions with meaningful permitted/refused
+  counterparts. Source and syntax checks passed; RCH execution remains pending.
+
 ## 2026-11-04: select finite verdict grammars in learned native rosters
 
 - Connect explicitly selected per-member verdict grammars to every original

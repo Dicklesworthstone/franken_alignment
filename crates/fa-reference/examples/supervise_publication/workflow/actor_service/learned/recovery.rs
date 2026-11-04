@@ -57,6 +57,7 @@ pub(super) fn create_selected(config: &Config, loaded: &Loaded) -> Result<Custod
         .required_computed_identity_registration()
         .is_some()
         || loaded.generation.required_credential_policy().is_some()
+        || loaded.creation_campaigns.is_some()
     {
         return create_with_guards(config, loaded);
     }
@@ -176,6 +177,10 @@ pub(super) fn create(
     loaded: &Loaded,
 ) -> Result<(FileOversight, FileHumanReviewer), String> {
     super::recipe::check_creation(config, loaded)?;
+    if loaded.creation_campaigns.is_some() {
+        let (host, human, _, _) = create_with_plain_guards(config, loaded)?;
+        return Ok((host, human));
+    }
     // The FIRST original image includes stream, numerical recipe, mandatory
     // learned provenance, policy-only source and terminal recovery reserve.
     // Reserve installation must precede the original learned Enable event.

@@ -30,6 +30,8 @@
 #[path = "learned/sequence.rs"] mod sequence;
 #[path = "learned/stream_reset.rs"] mod stream_reset;
 #[path = "learned/stream_checkpoint.rs"] mod stream_checkpoint;
+#[path = "learned/checkpoint_on_generation.rs"] mod checkpoint_on_generation;
+#[path = "learned/campaigns.rs"] mod campaigns;
 use recipe::Loaded;
 use super::super::{Config, Deadline, Duration, ElapsedTick, FileOversight, FileHumanReviewer,
     FileDriverEvent, FileDriverPhase, FileSupervisedDriver, Instant, PeerProfile,
@@ -51,7 +53,7 @@ use fa_reference::action::consequence::oversight::{
 use fa_reference::Error;
 use std::{io::Write, path::Path, rc::Rc};
 
-const USAGE: &str = "create-learned-generated CONFIG LEARNED_RECIPE REVIEWER_PROFILE [--continue-generation | --after-message PREVIOUS_REQUEST | --finish-after-message PREVIOUS_REQUEST] [--actor-profile ACTOR_PROFILE [--precheck-profile PRECHECK_PROFILE]] [--credibility-activation CAPSULE] [--topology-profile PATH] [--history-anchor INPUT] [--retain-history-anchor NEW_OUTPUT] | create-learned-generated CONFIG LEARNED_RECIPE --resume [--finish-after-message PREVIOUS_REQUEST] [--topology-profile PATH] [--history-anchor INPUT] [--retain-history-anchor NEW_OUTPUT] | create-learned-generated CONFIG LEARNED_RECIPE (--recover-stop | --stop-admission | --drain-stopped) OPERATION [--topology-profile PATH] [--history-anchor INPUT] [--retain-history-anchor OUTPUT] [--retain-topology-checkpoint NEW_OUTPUT] [--recover-terminal-checkpoint] | create-learned-generated CONFIG LEARNED_RECIPE --audit-review ROUND HISTORY_ANCHOR | create-learned-generated CONFIG LEARNED_RECIPE --resume (--receipts-only | --reconcile-receipts) [--finish-after-message PREVIOUS_REQUEST] [--topology-profile PATH] [--history-anchor INPUT]";
+const USAGE: &str = "create-learned-generated CONFIG LEARNED_RECIPE REVIEWER_PROFILE [--continue-generation | --after-message PREVIOUS_REQUEST | --finish-after-message PREVIOUS_REQUEST] [--actor-profile ACTOR_PROFILE [--precheck-profile PRECHECK_PROFILE]] [--campaign-profile PATH] [--checkpoint-before-generation PROFILE] [--credibility-activation CAPSULE] [--topology-profile PATH] [--history-anchor INPUT] [--retain-history-anchor NEW_OUTPUT] | create-learned-generated CONFIG LEARNED_RECIPE --resume [--finish-after-message PREVIOUS_REQUEST] [--topology-profile PATH] [--history-anchor INPUT] [--retain-history-anchor NEW_OUTPUT] | create-learned-generated CONFIG LEARNED_RECIPE (--recover-stop | --stop-admission | --drain-stopped) OPERATION [--topology-profile PATH] [--history-anchor INPUT] [--retain-history-anchor OUTPUT] [--retain-topology-checkpoint NEW_OUTPUT] [--recover-terminal-checkpoint] | create-learned-generated CONFIG LEARNED_RECIPE --audit-review ROUND HISTORY_ANCHOR | create-learned-generated CONFIG LEARNED_RECIPE --resume (--receipts-only | --reconcile-receipts) [--finish-after-message PREVIOUS_REQUEST] [--topology-profile PATH] [--history-anchor INPUT]";
 
 /// The shared fleet coordinator owns the complete create/recover/resume grammar.
 pub(super) fn fleet_command(args: &[String], output: &mut impl Write) -> Result<(), String> {
@@ -70,9 +72,10 @@ pub(super) fn command(args: &[String], credibility: Option<&Path>) -> Result<(),
 // selection and workflow; a test clock supplies no publication or reviewer key.
 fn command_with_clock<F>(args: &[String], credibility: Option<&Path>, time: F) -> Result<(), String>
 where F: FnMut() -> ElapsedTick {
+    let (args, checkpoint_path) = checkpoint_on_generation::take_option(args)?;
     // An optional disclosure owns the complete live grammar before another
     // mode can consume it. Without the option the original argv is unchanged.
-    let (args, precheck_path) = precheck::take_option(args)?;
+    let (args, precheck_path) = precheck::take_option(&args)?;
     let args = args.as_slice();
     // These independent historical and maintenance modes own the complete argv.
     // No live option stripper may remove an incompatible mode or output first.
@@ -113,7 +116,8 @@ where F: FnMut() -> ElapsedTick {
         let (args, anchors) = anchors::take_options(args)?;
         return stopped::command(&args, anchors);
     }
-    let (args, actor_path) = ingress::take_option(args)?;
+    let (args, campaign_profile) = campaigns::take_option(args)?;
+    let (args, actor_path) = ingress::take_option(&args)?;
     let (args, anchors) = anchors::take_options(&args)?;
     let (args, topology_path) = topology::take_option(&args)?;
     let (args, after_message) = continuation::take_option(&args)?;
@@ -139,6 +143,7 @@ where F: FnMut() -> ElapsedTick {
         Config::read_learned_generation(Path::new(&args[1]))?
     };
     if args[3] == "--resume" {
+        if campaign_profile.is_some() { return Err("campaign provisioning requires fresh learned creation".into()); }
         // Receipt recovery never reads a current helper-evidence capsule. An
         // optional capsule cannot turn historical outcome lookup into live work.
         let mut loaded = recipe::load(Path::new(&args[2]), &config, false)?;
@@ -159,9 +164,11 @@ where F: FnMut() -> ElapsedTick {
         precheck::check(settings, &config, actor.as_ref(), &peers)?;
     }
     let mut loaded = recipe::load(Path::new(&args[2]), &config, true)?;
+    campaigns::admit(&config, &mut loaded, campaign_profile.as_deref(), live_continuation)?;
     anchors.admit(&config, &mut loaded, live_continuation)?;
     topology::admit(&config, &mut loaded, topology_path.as_deref(),
         if live_continuation { topology::Mode::Live } else { topology::Mode::Create })?;
+    loaded.checkpoint_on_generation = checkpoint_path.map(checkpoint_on_generation::Selection::read).transpose()?;
     let result = match actor.as_ref() {
         Some(actor) => run_with_actor_precheck(config, loaded, &peers, live_continuation,
             finishing, after_message, credibility, Some(actor), precheck.as_ref(), time)?,
@@ -235,6 +242,10 @@ where F: FnMut() -> ElapsedTick {
     peers.check_host(&config)?;
     if let Some(actor) = actor { ingress::check(&config, &loaded, peers, actor)?; }
     if let Some(settings) = precheck { precheck::check(settings, &config, actor, peers)?; }
+    if let Some(selected) = loaded.checkpoint_on_generation {
+        if finishing.is_some() { return Err("Finish cannot capture an active numerical checkpoint".into()); }
+        selected.check(&config, &loaded)?;
+    }
     if let Some(after) = finishing { finish::check_ids(loaded.request, after)?; }
     if let Some(after) = after_message {
         continuation::check_ids(loaded.request, after)?;
@@ -264,6 +275,7 @@ where F: FnMut() -> ElapsedTick {
     prediction::check(&host, prediction.as_ref())?;
     let message_continuation = request_preflight(&host, &loaded, continuing,
         finishing, after_message, credibility)?;
+    if let Some(selected) = loaded.checkpoint_on_generation { selected.check_owner(&host)?; }
     let (port, supervisor) = host.into_learned_text_stream_actor_gateway().map_err(debug)?;
     let release = if finishing.is_some() { LearnedTextRelease::Finish } else { LearnedTextRelease::Message };
     let mut intake = bound_actor.map(|bound| bound.attach(port.clone(), release, deadline.logical)).transpose()?;
@@ -388,8 +400,8 @@ where F: FnMut() -> ElapsedTick {
             }
             if !identity::prepare(&mut driver, config, loaded, identity,
                 (&mut *control, reviewer, deadline), time)? { return Ok(false); }
-            if !generate_selected(&mut driver, reviewer, config, control,
-                deadline, time, prediction.as_mut())? {
+            if !generate_with_checkpoint(&mut driver, reviewer, config, control,
+                deadline, time, (prediction.as_mut(), loaded.checkpoint_on_generation))? {
                 return Ok(false);
             }
             LearnedTextRelease::Message
@@ -507,10 +519,23 @@ where F: FnMut() -> ElapsedTick {
     generate_selected(driver, reviewer, config, control, deadline, time, None)
 }
 
+#[cfg(test)]
 fn generate_selected<F>(driver: &mut FileSupervisedDriver, reviewer: &FileHumanReviewer,
     config: &mut Config, control: &mut Control, deadline: &Deadline, time: &mut F,
-    mut prediction: Option<&mut prediction::Session>) -> Result<bool, String>
+    prediction: Option<&mut prediction::Session>) -> Result<bool, String>
 where F: FnMut() -> ElapsedTick {
+    generate_with_checkpoint(driver, reviewer, config, control, deadline, time, (prediction, None))
+}
+
+fn generate_with_checkpoint<F>(driver: &mut FileSupervisedDriver, reviewer: &FileHumanReviewer,
+    config: &mut Config, control: &mut Control, deadline: &Deadline, time: &mut F,
+    selection: (Option<&mut prediction::Session>, Option<checkpoint_on_generation::Selection>))
+    -> Result<bool, String>
+where F: FnMut() -> ElapsedTick {
+    let (mut prediction, mut checkpoint) = selection;
+    if let Some(selected) = checkpoint {
+        selected.check_owner(&*driver.supervisor().host().map_err(debug)?)?;
+    }
     prediction::check(&*driver.supervisor().host().map_err(debug)?, prediction.as_deref())?;
     if control.checkpoint(driver, reviewer, deadline, time)? { return Ok(false); }
     refresh(driver, config, deadline, time)?;
@@ -532,6 +557,9 @@ where F: FnMut() -> ElapsedTick {
         let current = driver.supervisor().host().map_err(debug)?
             .learned_generation_inspection().map_err(debug)?;
         if !current.numerical.status.is_active() {
+            if checkpoint.is_some() {
+                return Err("generation ended before its selected checkpoint boundary".into());
+            }
             if let Some(prediction) = prediction.as_deref() {
                 prediction.complete_message(&*driver.supervisor().host().map_err(debug)?)?;
             }
@@ -553,6 +581,15 @@ where F: FnMut() -> ElapsedTick {
         let mut host = driver.supervisor_mut().host_mut().map_err(debug)?;
         prediction::check(&host, prediction.as_deref())?;
         if current.numerical.status == GenerationStatus::Generating {
+            if let Some(selected) = checkpoint.take() {
+                if let Some(numerical) = numerical.take() {
+                    numerical.retain_for_control(&mut host)?;
+                }
+                selected.capture(&mut host)?;
+                // Acknowledge capture before another Stop/source/deadline check
+                // and before even the first sampled-token intent is admitted.
+                continue;
+            }
             if let Some(prediction) = prediction.as_deref_mut() {
                 // Prompt replay custody has no role in forecasted sampling.
                 if let Some(numerical) = numerical.take() {

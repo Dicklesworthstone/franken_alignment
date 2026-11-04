@@ -1,5 +1,31 @@
 # Implementation status · design revision 0.3
 
+## 2026-11-04: provision campaign guards and capture live learned checkpoints
+
+Single learned creation now accepts an independently selected campaign profile
+and installs the original mandatory governance guard in its first acknowledged
+image. The original plain/raw/owned guarded constructors preserve all other
+guards and separate roles. Recovery-only descriptions cannot create the guard,
+and recovery still requires its exact independently selected inventory. Native
+policy replacement without campaign approval remains refused.
+
+The same live Message workflow can explicitly select a fresh checkpoint ID and
+exact numerical position/draw count. At the first quiet Generating boundary it
+acknowledges the original stream checkpoint before any new sampled intent, then
+returns to normal Stop/source/deadline servicing. Initial and continued-message
+boundaries preserve cumulative work and confirmed audience. This plain,
+functional-restart selection grants no reset or review key; ordinary failure
+Stop/drain behavior and same-audience reset eligibility remain unchanged.
+
+Ten new regression functions cover real CLI/native/human publication, both
+predictor bootstrap roles, exact anchored campaign recovery, healthy and
+continued checkpoint capture, causal wrong-cut/no-draw and human-rejection
+controls, duplicate IDs, deadline expiry and closed/incompatible grammars.
+Ten Rust files passed syntax/whitespace review; independent source review found
+no concrete blocker. RCH remains unavailable, so compilation, execution,
+formatting, Clippy and production qualification remain pending. Original live
+checkpoint capture still includes synchronous full replay and serialization.
+
 ## 2026-11-04: use finite verdict grammars in learned publication reviews
 
 The actual learned publication NativeRoster can now explicitly select the
