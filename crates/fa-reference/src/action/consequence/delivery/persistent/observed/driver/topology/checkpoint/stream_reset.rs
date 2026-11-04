@@ -119,6 +119,53 @@ impl TopologyCheckpoint {
             snapshot.control.sequence, snapshot.control.ledger.epoch)
     }
 
+
+    // A recovery-only terminal capability may repair a lost source export even
+    // when this exact stream reset completed before the selected Stop. Unlike
+    // reset completion, this admission REQUIRES a matching Stop already in the
+    // original locked history; it cannot create a first Stop or another Fence.
+    // Full guarded semantic replay still validates every reset/terminal witness.
+    pub(in super::super::super::super) fn stopped_stream_reset_successor_available(
+        &self, profile: &FileOversightProfile, identity: &Path, events: &[Event],
+        intent: &FileLearnedResetIntent, first_incident_sequence: u64, operation: u64,
+    ) -> Result<bool, Error> {
+        if operation == 0 { return Err(Error::InvalidInput); }
+        self.check_stream_reset_prefix(profile, identity, events, intent, first_incident_sequence)?;
+        let after = usize::try_from(self.history.revision()).map_err(|_| Error::Limit)?;
+        let reset_operation = intent.control().operation;
+        let mut completed = events[..after].iter().any(|event| matches!(event,
+            Event::Decoder(DecoderEvent::Learned(LearnedEvent::Checkpoint(
+                CheckpointEvent::StreamReset { operation: original, .. },
+            ))) if *original == reset_operation));
+        let mut stopped = events[..after].iter().rev().find_map(|event| match event {
+            Event::Core(BaseEvent::Stop(request)) => Some(*request), _ => None,
+        });
+        if stopped.is_some_and(|request| request.operation != operation) {
+            return Err(Error::Duplicate);
+        }
+        for event in &events[after..] {
+            match event {
+                Event::Decoder(DecoderEvent::Learned(LearnedEvent::Checkpoint(
+                    CheckpointEvent::StreamReset { operation: original, .. },
+                ))) if !completed && stopped.is_none() && *original == reset_operation => {
+                    completed = true;
+                }
+                Event::Core(BaseEvent::Stop(request)) if request.operation == operation => {
+                    if stopped.is_some_and(|original| original != *request) {
+                        return Err(Error::Binding);
+                    }
+                    stopped = Some(*request);
+                }
+                Event::Core(BaseEvent::Fence) if completed || stopped.is_some() => {}
+                _ => return Err(Error::Stale),
+            }
+        }
+        if stopped.is_none() { return Err(Error::Missing); }
+        let (graph, available) = super::terminal::topology_at(events)?;
+        if graph != self.expected.graph() { return Err(Error::Binding); }
+        Ok(available)
+    }
+
     fn stream_reset_successor(&self,
         history: super::FileHistoryAnchor, available: bool,
         control_sequence: u64, authority_epoch: u64,

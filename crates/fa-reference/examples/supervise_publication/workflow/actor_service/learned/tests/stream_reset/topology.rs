@@ -476,3 +476,9 @@ fn stop_at_ready(completed_first: bool) {
     }
     assert_eq!(disk(&case.case), canonical);
 }
+
+#[path = "topology/native_terminal.rs"]
+mod native_terminal;
+
+#[path = "topology/terminal.rs"]
+mod terminal;

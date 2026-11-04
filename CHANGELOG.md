@@ -1,5 +1,16 @@
 # Changelog
 
+## 2026-11-04: recover paired custody after a recorded stream reset and Stop
+
+- Add a sealed terminal-only native cursor requiring the exact reset intent,
+  incident frontier and an already recorded matching admission Stop.
+- Expose --recover-stopped-stream-reset to repair paired source/history exports
+  after compound export loss through original full guarded replay.
+- Confirm the native Stop with zero appended events, preserve source work and
+  liabilities, and attempt both exports despite output or deadline failures.
+- Add ten causal native/operator regression functions. Independent source review
+  completed; executor/RCH unavailability leaves compilation and execution pending.
+
 ## 2026-11-04: continue and maintain recovered functional histories
 
 - Admit explicit native functional-restart profile expectations across guarded

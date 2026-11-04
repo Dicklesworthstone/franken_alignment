@@ -332,6 +332,28 @@ impl FileMediatedLearnedRecovery {
             self, intent, first_incident_sequence))
     }
 
+
+    /// Restrict this unreplayed cursor to confirming one ALREADY recorded Stop
+    /// after the independently selected stream reset. The original source cut
+    /// may precede its exact completion/Fence and matching Stop/Fence suffix.
+    /// No new reset, first Stop, recovery Fence, clock or live owner can escape.
+    /// Full original policy, guard, credential, topology and floor checks remain
+    /// mandatory; missing Stop or unrelated source/numerical work refuses.
+    pub fn require_stopped_stream_reset_checkpoint(mut self,
+        saved: &super::super::super::driver::topology::checkpoint::TopologyCheckpoint,
+        intent: &FileLearnedResetIntent, first_incident_sequence: u64, operation: u64)
+        -> Result<super::stream_reset::FileStoppedStreamResetRecovery, JournalError>
+    {
+        let progress = self.progress();
+        let selection = super::stream_reset::StoppedStreamResetSelection {
+            intent, first_incident_sequence, operation,
+        };
+        super::stream_reset::prepare_stopped(&self.inner, progress,
+            &mut self.expected.topology, &mut self.expected.oversight.minimum,
+            saved, selection)?;
+        Ok(super::stream_reset::FileStoppedStreamResetRecovery::new(self, operation))
+    }
+
     /// Inspect credential state only after the original numerical replay and
     /// every independent topology, predictor, guard and floor check succeeds.
     /// No cleanup, fence, source observation or live role is produced.

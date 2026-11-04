@@ -253,24 +253,60 @@ retry. One successful export never substitutes for the missing half of its pair.
 A changed expectation or newer pending operation refuses.
 An intent already interrupted by Fence or Stop stays interrupted.
 
-A terminal Stop is a separate recovery boundary. If only Stop/Fence followed the
-original input pair and a Stop export fails, use the existing terminal checkpoint
-recovery path with new output destinations. The reset command does not reopen a
-stopped suffix. There is one explicit remaining compound-loss limitation: if a
-reset completion already outlived its exports, a later Stop is acknowledged, and
-its successor exports also fail, the original pair now precedes both reset and
-Stop records. The current generic terminal repair cannot accept that mixed suffix,
-and this increment does not add a dedicated terminal-only repair for it. Preserve
-the original paired archives, canonical stopped history, and any received Stop
-receipt for a separately reviewed native recovery. Retrying `--complete-stream-reset`, supplying manual
-source minima, or weakening expected guards cannot repair that custody.
+## Recover paired archives after a recorded Stop
+
+If the original reset completed but its exports were lost, and an admission Stop
+was subsequently acknowledged but its exports were also lost, the old source and
+history pair precedes both operations. Recover that exact terminal cut with:
+
+```text
+supervise_publication create-learned-generated CONFIG LEARNED_RECIPE \
+  --recover-stopped-stream-reset RESET_REQUEST STOP_OPERATION \
+  --history-anchor ORIGINAL_INPUT_ANCHOR \
+  --retain-history-anchor NEW_STOPPED_ANCHOR \
+  --topology-profile TOPOLOGY_PROFILE
+```
+
+The closed command requires the same independently retained reset request,
+original numerical recipe, and exact v2 source/history pair, together with the
+nonzero canonical decimal operation of the already recorded Stop. The topology
+profile must select a new source-checkpoint output, distinct from the new history
+output. It also supports an admission Stop that won while reset completion was
+still pending. That reset remains pending and interrupted.
+
+The sealed native `FileStoppedStreamResetRecovery` first proves that the matching
+Stop already exists in the locked canonical history. The original complete
+guarded replay then verifies the exact profile, reset intent, incident frontier,
+policy, source inventory, credential epoch and independent floors. Only the
+selected reset completion, admission Stop and recovery Fence suffix is accepted.
+A missing or changed Stop, changed reset expectation, unrelated time/source work
+or later settlement `StopProgress` refuses this repair mode.
+
+Confirmation uses the original exact Stop retry. It appends zero reset, Stop,
+Fence, clock or source events and never returns a live owner or reset finalizer.
+The original canonical-byte recheck and durable confirmation still apply;
+successful confirmation may clean unrelated staging under that native contract.
+Dropping an incomplete or Ready cursor confirms nothing and does not clean it.
+
+Both acknowledged archive exports are attempted before reporting, even if one
+fails or the original deadline has elapsed. The command emits the existing
+`fa.admission-stop/1` report with `appended_events: 0`, the original Stop receipt,
+and its remaining liabilities. It does not attempt settlement. Failed output or
+retention returns a nonzero diagnostic without repeating either operation. Keep
+the original paired archives and choose new output paths for a deliberate retry.
+A newly retained exact terminal pair also supports a zero-event repeat.
+
+The generic terminal checkpoint recovery path remains available for its original
+Stop/Fence-only successors. This dedicated mode supplies the extra independently
+selected reset identity needed to recover a compound reset/Stop suffix.
 
 ## Source and verification
 
 The operator, strict request decoder, and authored regressions are in
 `examples/supervise_publication/workflow/actor_service/learned/stream_reset.rs`,
 its `stream_reset/request.rs` and `recovery/stream_reset.rs` modules, and
-`tests/stream_reset.rs` with `tests/stream_reset/topology.rs`. The native source
+`tests/stream_reset.rs` with `tests/stream_reset/topology.rs` and its
+`native_terminal.rs` and `terminal.rs` children. The native source
 successor and sealed mediated cursor are in the corresponding
 `observed/driver/topology/checkpoint/stream_reset.rs` and
 `observed/guarded/mediated/stream_reset.rs` modules. Recovery delegates to the
@@ -284,6 +320,10 @@ changed intent/frontier/budget, an incomplete retained prefix, unrelated success
 work, paired-output admission, deadline cancellation through Ready, and an
 authenticated Stop arriving at Ready both before numerical completion and after
 an earlier completion whose exports were lost. These are
-authored source regressions: runtime execution and type checking remain pending
+authored source regressions. The terminal repair cases additionally cover
+missing or mismatched Stop refusal, original canonical-byte confirmation,
+incomplete and dropped replay, independent floors, zero-event retries from old
+and new custody pairs, output races, deadlines, and the actual executable grammar.
+Runtime execution and type checking remain pending
 under the required RCH runner.
 This increment does not close FA-108 or establish a production restart grade.

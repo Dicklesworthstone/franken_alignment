@@ -55,3 +55,32 @@ where F: FnMut() -> ElapsedTick {
     let (host, _roles) = run.finish_pending_stream_reset().map_err(debug)?;
     Ok(host)
 }
+
+
+/// Confirm an already recorded terminal cut across the selected reset suffix.
+/// Complete original guarded replay precedes the sealed zero-event Stop retry.
+#[inline(never)]
+pub(in super::super) fn recover_stopped<F>(
+    config: &Config, loaded: &Loaded, request: &Request, source: &SourceRetention<'_>,
+    operation: u64, deadline: &Deadline, time: &mut F,
+) -> Result<fa_reference::action::consequence::delivery::persistent::observed::shutdown::recovery::FileAdmissionStoppedHistory, String>
+where F: FnMut() -> ElapsedTick {
+    let history = topology::history(loaded)?
+        .ok_or("stopped stream-reset recovery requires an explicit topology profile")?;
+    let anchor = loaded.recovery_anchor.as_ref()
+        .ok_or("stopped stream-reset recovery requires an independent input history anchor")?;
+    let expected = FileMediatedRequirements {
+        oversight: requirements(config, loaded), topology: history.requirement.clone(),
+        prediction: None, evaluation: None,
+    };
+    let mut checkpoint = |_: Option<Progress>| deadline.check(time());
+    checkpoint(None)?;
+    let run = FileOversight::begin_open_mediated_guarded_anchored_with_learned_generation(
+        &config.store, config.profile.clone(), &expected, &loaded.generation, anchor)
+        .and_then(|run| run.require_recovery_reserve(RecoveryReserve::terminal()))
+        .and_then(|run| run.require_stopped_stream_reset_checkpoint(source.saved,
+            &request.intent, request.first_incident_sequence, operation)).map_err(debug)?;
+    let run = finish_replay(run, &mut checkpoint, |run| run.progress(),
+        |run, done| run.advance(done, 1), Ok)?;
+    run.finish_admission_stop().map_err(debug)
+}

@@ -20,6 +20,8 @@ use std::{
 
 #[path = "stream_reset/request.rs"]
 mod request;
+#[path = "stream_reset/terminal.rs"]
+pub(super) mod terminal;
 
 const USAGE: &str = "create-learned-generated CONFIG LEARNED_RECIPE --complete-stream-reset RESET_REQUEST --history-anchor INPUT --retain-history-anchor NEW_OUTPUT [--topology-profile TOPOLOGY_PROFILE] [--stop-profile PEER_PROFILE]";
 const REQUEST_BYTES: usize = 262_144;
@@ -402,7 +404,7 @@ impl<'a> SourceRetention<'a> {
         let failures: Vec<_> = [history, topology].into_iter().filter_map(Result::err).collect();
         if failures.is_empty() { Ok(()) } else {
             Err(format!(
-                "{}; preserve previous paired custody, canonical stopped history, and the Stop receipt; use terminal checkpoint recovery for a Stop/Fence-only successor; repair of an unexported stream-reset completion followed by Stop is not implemented by this operator",
+                "{}; preserve previous paired custody, canonical stopped history, and the Stop receipt; use --recover-stopped-stream-reset with the exact reset request and recorded Stop operation, paired inputs and new output paths",
                 failures.join("; ")))
         }
     }

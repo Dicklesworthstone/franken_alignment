@@ -1,5 +1,31 @@
 # Implementation status · design revision 0.3
 
+## 2026-11-04: terminal custody repair across stream reset and admission Stop
+
+A new sealed FileStoppedStreamResetRecovery repairs the documented compound
+export-loss gap: independently retained custody can precede an original stream
+reset completion and its subsequent admission Stop. Before full original guarded
+replay, admission requires the exact recorded reset intent and incident frontier,
+original source/history pair and already recorded selected Stop. The wrapper
+exposes only progress, bounded advance and exact terminal confirmation.
+
+The --recover-stopped-stream-reset operator uses that cursor with two distinct
+new output destinations. Native confirmation appends zero journal events and
+retains source expenditure, incident/accounting history and terminal liabilities.
+It cannot start a Stop, complete a pending reset, settle liabilities or issue a
+live owner. Original canonical revalidation and durable staging cleanup still
+apply. Both exports are attempted even if one fails or the original deadline
+expires; a new pair can be confirmed again without recording another event.
+
+Ten authored native/operator regression functions cover real pending-Stop and
+completed-reset-Stop histories, old/new pair retries, absent and changed Stop or
+reset expectations, independent guard floors, canonical changes and cleanup
+failure, unrelated successor events, early/Ready/late deadlines, output races
+and root executable routing. Later StopProgress/settlement suffixes remain outside
+this dedicated repair mode. Independent source review is complete; the workspace
+and required RCH runner remain unavailable, so syntax/type checking, execution
+and qualification of this increment are still pending.
+
 ## 2026-11-04: functional-history recovery through the operator lifecycle
 
 The explicit functional-restart Config reader now serves original guarded
@@ -69,10 +95,9 @@ Authenticated Stop retains priority at every replay boundary, including Ready,
 through the original native Stop handoff. After either acknowledged completion
 or Stop, history and source exports are attempted independently. Reporting keeps
 acknowledgment distinct from retention and does not return a resumed actor.
-Predictive histories retain their native stream-reset refusal. If a reset source
-export and both subsequent Stop exports are lost, the old pair's compound reset/Stop
-suffix has no existing operator repair route; it refuses and requires preserving
-the journal and prior custody rather than retrying reset completion.
+Predictive histories retain their native stream-reset refusal. Compound reset/Stop export loss is now handled by the dedicated terminal-only
+repair described above, using the independently retained reset request and
+recorded Stop operation. Reset completion itself still refuses stopped suffixes.
 
 Regression source covers actual numerical restoration and audit refusal,
 original source work, paired output admission, lost exports and exact retries,

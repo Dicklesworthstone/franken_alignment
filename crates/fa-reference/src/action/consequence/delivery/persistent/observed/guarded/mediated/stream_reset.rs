@@ -90,3 +90,91 @@ impl FileStreamResetTopologyRecovery {
         self.inner.finish_pending_stream_reset(&self.intent, self.first_incident_sequence)
     }
 }
+
+
+/// The original complete guarded replay, restricted to confirming a matching
+/// Stop already recorded after the independently selected stream-reset intent.
+/// This repairs paired custody after completion and Stop exports were both lost.
+/// Exact source bytes/work and every independent guard remain mandatory.
+///
+/// The pre-replay admission proves that Stop is already recorded. Its native
+/// exact retry therefore acknowledges the same history without adding reset,
+/// Stop, Fence, time or source events. It exposes only a sealed stopped history,
+/// never a live owner, observer, reset finalizer, drain clock or first-Stop path.
+///
+/// ```compile_fail,E0599
+/// use fa_reference::action::consequence::delivery::persistent::observed::guarded::mediated::stream_reset::FileStoppedStreamResetRecovery;
+/// fn resume(run: FileStoppedStreamResetRecovery) { run.finish_pending_stream_reset(); }
+/// ```
+/// ```compile_fail,E0599
+/// use fa_reference::action::consequence::delivery::persistent::observed::guarded::mediated::stream_reset::FileStoppedStreamResetRecovery;
+/// fn escape(run: FileStoppedStreamResetRecovery) { run.finish(); }
+/// ```
+#[must_use = "confirm the selected acknowledged Stop or drop without changing storage"]
+pub struct FileStoppedStreamResetRecovery {
+    inner: FileMediatedLearnedRecovery,
+    operation: u64,
+}
+impl fmt::Debug for FileStoppedStreamResetRecovery {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("FileStoppedStreamResetRecovery")
+            .field("operation", &self.operation)
+            .field("progress", &self.progress()).finish_non_exhaustive()
+    }
+}
+
+pub(super) struct StoppedStreamResetSelection<'a> {
+    pub(super) intent: &'a FileLearnedResetIntent,
+    pub(super) first_incident_sequence: u64,
+    pub(super) operation: u64,
+}
+
+pub(super) fn prepare_stopped(inner: &FileLearnedRecovery,
+    progress: FileLearnedRecoveryProgress, topology: &mut FileTopologyRequirement,
+    minimum: &mut FileRecoveryFloor, saved: &TopologyCheckpoint,
+    selection: StoppedStreamResetSelection<'_>,
+) -> Result<(), JournalError> {
+    if progress.replayed_events != 0 || progress.status != FileLearnedRecoveryStatus::Replaying {
+        return Err(Error::WrongState.into());
+    }
+    check_recovery_reserve(inner, RecoveryReserve::terminal())?;
+    if &topology.current != saved.expected().graph() || topology.available != saved.available() {
+        return Err(Error::Binding.into());
+    }
+    let (profile, events, identity) = inner.guarded_history();
+    let available = saved.stopped_stream_reset_successor_available(profile, identity,
+        events, selection.intent, selection.first_incident_sequence, selection.operation)?;
+    let floor = saved.minimum();
+    minimum.journal_revision = minimum.journal_revision.max(floor.journal_revision);
+    minimum.control_sequence = minimum.control_sequence.max(floor.control_sequence);
+    minimum.authority_epoch = minimum.authority_epoch.max(floor.authority_epoch);
+    topology.available = available;
+    Ok(())
+}
+
+impl FileStoppedStreamResetRecovery {
+    pub(super) fn new(inner: FileMediatedLearnedRecovery, operation: u64) -> Self {
+        Self { inner, operation }
+    }
+    pub fn progress(&self) -> FileLearnedRecoveryProgress { self.inner.progress() }
+    /// Advance the SAME original bounded replay under all independent guards.
+    /// Incomplete, failed and dropped cursors acknowledge nothing.
+    pub fn advance(&mut self, expected_events: usize, max_events: usize)
+        -> Result<FileLearnedRecoveryProgress, JournalError> {
+        self.inner.advance(expected_events, max_events)
+    }
+    /// Confirm only the original native Stop already proved by admission and
+    /// full guarded replay. Native canonical-byte revalidation and staging
+    /// confirmation still must succeed before any acknowledged history escapes.
+    /// No additional Stop, Fence, clock, reset audit or source work occurs.
+    ///
+    /// Pair the sealed result with the original source checkpoint through
+    /// TopologyCheckpoint::after_stream_reset_admission_stop, then independently
+    /// retain both archives. Export failure cannot undo the existing Stop.
+    pub fn finish_admission_stop(self)
+        -> Result<super::super::super::shutdown::recovery::FileAdmissionStoppedHistory, JournalError>
+    {
+        let request = self.inner.stop_request(self.operation)?;
+        self.inner.finish_admission_stop(request)
+    }
+}

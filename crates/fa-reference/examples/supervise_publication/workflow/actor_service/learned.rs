@@ -70,6 +70,9 @@ fn command_with_clock<F>(args: &[String], credibility: Option<&Path>, time: F) -
 where F: FnMut() -> ElapsedTick {
     // These independent historical and maintenance modes own the complete argv.
     // No live option stripper may remove an incompatible mode or output first.
+    if args.iter().any(|arg| arg == "--recover-stopped-stream-reset") {
+        return stream_reset::terminal::command(args, credibility, time, &mut std::io::stdout().lock());
+    }
     if args.iter().any(|arg| arg == "--complete-stream-reset") {
         return stream_reset::command(args, credibility, time, &mut std::io::stdout().lock());
     }
