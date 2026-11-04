@@ -71,6 +71,10 @@ fn allowance() -> KvRestartBudget {
 }
 
 fn prepared(root: &Root, audit_failure: bool, fenced: bool) -> Case {
+    prepared_control(root, audit_failure, fenced, true)
+}
+
+fn prepared_control(root: &Root, audit_failure: bool, fenced: bool, begin: bool) -> Case {
     let mut config = configured(root);
     let original = &config.profile.delivery.actor;
     let mut declared = original.profile();
@@ -161,14 +165,16 @@ fn prepared(root: &Root, audit_failure: bool, fenced: bool) -> Case {
             budget.audit.monitoring.probe_coordinates = 0;
         }
         let intent = FileLearnedResetIntent::for_recovery(saved.id(), control, budget).unwrap();
-        host.begin_learned_stream_reset(
-            host.revision(),
-            &saved,
-            intent.control().clone(),
-            intent.budget(),
-            first,
-        )
-        .unwrap();
+        if begin {
+            host.begin_learned_stream_reset(
+                host.revision(),
+                &saved,
+                intent.control().clone(),
+                intent.budget(),
+                first,
+            )
+            .unwrap();
+        }
         assert_eq!(host.learned_recovery_usage().unwrap().restart_attempts, 0);
         if fenced {
             host.fence(host.revision()).unwrap();
@@ -897,3 +903,6 @@ mod lifecycle;
 
 #[path = "stream_reset/observations.rs"]
 mod observations;
+
+#[path = "stream_reset/control.rs"]
+mod control;

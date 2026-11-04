@@ -24,6 +24,8 @@ mod continuation_tests;
 pub use config::{FileLearnedConfig, FileLearnedPublicationProfile};
 pub use preparation::{FileLearnedReplayContinuation, FileLearnedIntentPreparation, FileLearnedStepPreparation, FileLearnedStepPreparationProgress, FileLearnedStepPreparationStatus};
 pub use recovery::{FileLearnedRecovery, FileLearnedRecoveryProgress, FileLearnedRecoveryStatus, FileReconciledLearnedReceipt};
+pub use recovery::{FileLearnedStreamCheckpointRequest, FileLearnedStreamControlHistory,
+    FileLearnedStreamControlReceipt};
 pub use message::FileLearnedTextContinuation;
 
 use super::{DecoderEvent, MAX_WITNESS_BYTES};

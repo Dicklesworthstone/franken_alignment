@@ -1,5 +1,16 @@
 # Changelog
 
+## 2026-11-04: capture and initiate learned stream resets from the operator
+
+- Add exact offline checkpoint capture and independent reset initiation before
+  the existing original reset-completion workflow.
+- Use sealed fully guarded native finalizers, with no Fence or live role, and
+  return immutable acknowledged history plus an independently retained anchor.
+- Recover lost exports by exact zero-event retries; preserve original capacity,
+  incident, audience, work and interruption contracts.
+- Add eleven native/operator regression functions and complete source/syntax
+  review. Required RCH compilation and runtime validation remain unavailable.
+
 ## 2026-11-04: precheck actual learned releases through the actor service
 
 - Add a separate native learned-release disclosure that evaluates the original

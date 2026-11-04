@@ -1,5 +1,33 @@
 # Implementation status · design revision 0.3
 
+## 2026-11-04: capture and initiate original learned-stream containment
+
+The operator now exposes --capture-stream-checkpoint and --begin-stream-reset
+for plain nonpredictive histories. Capture requires an independently selected
+exact active numerical cut; initiation requires the complete original reset
+request and incident frontier. These close the missing operator entry points
+before the already available pending-reset completion command.
+
+New sealed guarded finalizers retain the original exclusive replay lock and
+check all independent requirements before and after native preparation. They
+record the original StreamCapture or BeginStreamReset event, return only an
+immutable receipt/history/anchor, and do not append a Fence or issue live roles.
+Exact retries append zero events; a lost export cannot repeat capture or reset
+work. Native control/actor/epoch/audience binding, ordinary journal capacity,
+terminal reserve, cumulative work and original interruption rules remain intact.
+
+Seven native and four operator regression functions cover actual imported-model
+capture, initiation followed by original completion, exact retries and lost
+output, independent coordinate/intent/guard mismatches, incomplete or changed
+canonical history, Ready deadline cancellation, all five storage barriers and
+ordinary-versus-terminal capacity. Fifteen edited Rust files passed syntax and
+whitespace checks; independent source/API review found no concrete blocker.
+RCH remains unavailable, so compilation, runtime execution and qualification
+are pending. Capture needs an existing eligible quiet prefix and released owner
+lock; it does not generate one. Predictive rearming and topology-backed fresh
+capture/initiation remain outside this increment; existing mediated completion
+retains its exact paired-custody contract.
+
 ## 2026-11-04: exact precheck for original learned actor releases
 
 A single live learned actor can now select an authenticated v1 exact-predicate

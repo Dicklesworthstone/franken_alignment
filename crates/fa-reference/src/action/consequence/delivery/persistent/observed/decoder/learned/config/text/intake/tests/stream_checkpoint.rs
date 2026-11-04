@@ -634,3 +634,4 @@ fn a_failed_stream_restart_audit_is_acknowledged_once_and_cannot_refund_its_work
 }
 
 mod recovery;
+mod control;

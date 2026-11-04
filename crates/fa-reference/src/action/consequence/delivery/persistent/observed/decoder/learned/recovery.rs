@@ -6,7 +6,10 @@ mod receipt;
 mod investigation;
 mod policy_replay;
 mod abandonment;
+mod stream_control;
 pub use receipt::FileReconciledLearnedReceipt;
+pub use stream_control::{FileLearnedStreamCheckpointRequest, FileLearnedStreamControlHistory,
+    FileLearnedStreamControlReceipt};
 
 use super::{FileHumanReviewer, FileLearnedConfig, FileOversight, FileOversightProfile,
     JournalError, Machine, bind_history, journal, storage};

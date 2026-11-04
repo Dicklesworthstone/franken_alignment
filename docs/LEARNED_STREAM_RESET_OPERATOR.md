@@ -1,11 +1,97 @@
-# Recover an acknowledged learned-stream reset
+# Capture, initiate and recover a learned-stream reset
 
-This operator completes an already acknowledged native `BeginStreamReset` after
-a crash. It implements the plain and nonpredictive mediated guarded recovery paths described in
+The operator can capture an eligible original numerical stream checkpoint,
+initiate an independently selected reset, and complete an already acknowledged
+native `BeginStreamReset` after a crash. Completion implements the plain and
+nonpredictive mediated guarded recovery paths described in
 [PENDING_LEARNED_RESET_RECOVERY.md](PENDING_LEARNED_RESET_RECOVERY.md) and
-[LEARNED_STREAM_CONTAINMENT.md](LEARNED_STREAM_CONTAINMENT.md). It does not capture
-a new numerical checkpoint or begin a fresh reset. The original intent, numerical recipe,
-confirmed audience, and incident frontier must already exist.
+[LEARNED_STREAM_CONTAINMENT.md](LEARNED_STREAM_CONTAINMENT.md). Capture and fresh
+initiation currently support plain nonpredictive histories. Each operation uses
+the original numerical recipe, confirmed audience and native containment rules.
+
+## Capture and independent initiation
+
+```text
+supervise_publication create-learned-generated CONFIG LEARNED_RECIPE \
+  --capture-stream-checkpoint CHECKPOINT_REQUEST \
+  --history-anchor INPUT_ANCHOR --retain-history-anchor NEW_OUTPUT_ANCHOR
+
+supervise_publication create-learned-generated CONFIG LEARNED_RECIPE \
+  --begin-stream-reset RESET_REQUEST \
+  --history-anchor INPUT_ANCHOR --retain-history-anchor NEW_OUTPUT_ANCHOR
+```
+
+These are bounded offline operations. They acquire the original exclusive
+history lock and replay every numerical and guarded transition. They do not
+return a live owner or reviewer, observe fresh source/time, perform inference,
+or publish output. A selected active owner must first release its lock. Capture
+requires an already acknowledged quiet, active numerical prefix with an
+unchanged confirmed audience; the command does not prefill or resume generation
+to manufacture one. A functional restart grade must have been selected at native
+bootstrap. The single learned creation command now admits an explicit
+`functional_restart` declaration, while `audit_only` remains insufficient for
+paired numerical checkpoint capture.
+
+The capture document has the closed schema `fa.learned-stream-checkpoint/1`.
+All eight coordinates are independently supplied canonical decimal strings:
+
+```json
+{
+  "schema": "fa.learned-stream-checkpoint/1",
+  "checkpoint": "1",
+  "expected_journal_revision": "12",
+  "expected_actor_revision": "2",
+  "expected_authority_epoch": "0",
+  "expected_control_sequence": "0",
+  "expected_stream": "11",
+  "expected_position": "1",
+  "expected_sampled_draws": "0"
+}
+```
+
+The numbers illustrate the complete shape, not a current history. Checkpoint ID,
+stream and position must be nonzero. The actual journal revision, actor revision,
+authority epoch, control sequence, numerical stream, position and sampled draws
+must match exactly before capture. The command never fills missing coordinates
+from the mutable store. Unknown/duplicate fields, noncanonical numbers and
+unsupported declarations refuse before mutation.
+
+Initiation uses the complete existing `fa.learned-stream-reset-recovery/1`
+document below, including the independently selected checkpoint, original
+control request, restart budget and first incident sequence. The native law
+requires capture before the declared incident frontier. A saved checkpoint does
+not authorize a different audience, restore spent numerical allowances, reduce
+incident history or refund effects.
+
+Both finalizers recheck the complete independent guards, effective policy,
+credential epoch and recovery floors before and after preparing their original
+native event. Capture appends one `StreamCapture`; initiation appends one
+`BeginStreamReset`. Neither appends a recovery Fence. In particular, initiation
+must leave the exact pending intent uninterrupted for `--complete-stream-reset`.
+Use the resulting anchor as that completion command's input. An ordinary reopen
+between initiation and completion can fence the intent and make it ineligible.
+
+Exact retries append zero events. Capture matches the original capture's event
+index and all coordinates; initiation matches the entire original intent and
+incident frontier. An already completed reset is reported as historical
+completion without initiating or auditing it again. A changed or interrupted
+intent is refused. Original ordinary journal capacity funds these events; the
+terminal reserve is not available to them.
+
+The result schema is `fa.learned-stream-control-result/1`, with outcome
+`captured`, `already_captured`, `pending`, `already_pending` or
+`already_completed`. It reports native revision, counters and independent anchor
+retention with `authority: "none"`. After acknowledgment, archive export and
+reporting are both attempted even if a deadline or output fails. Preserve the
+same request and old anchor, then choose a new export path to recover a lost
+acknowledgment without duplicating capture or initiation.
+
+These two modes reject topology/predictive selections and all live-service,
+credibility or maintenance combinations. Existing reset **completion** continues
+to support exact nonpredictive topology custody as described below. Predictive
+stream reset still requires a separate forecast-rearming contract.
+
+## Complete an existing reset
 
 This is the recovery form of the registered `reset` mutation in
 `registry/vocabulary.json`: the recorded original intent carries the prior

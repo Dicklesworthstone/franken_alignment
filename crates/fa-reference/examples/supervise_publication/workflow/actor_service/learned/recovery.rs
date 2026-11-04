@@ -17,6 +17,8 @@ mod terminal;
 mod live;
 #[path = "recovery/stream_reset.rs"]
 pub(super) mod stream_reset;
+#[path = "recovery/stream_checkpoint.rs"]
+pub(super) mod stream_checkpoint;
 use super::{
     ActorWire, Command, Config, Control, Deadline, Duration, ElapsedTick, FileHumanReviewer,
     FileLearnedTextStreamActorPort, FileOversight, FileSupervisedDriver, Instant,
